@@ -33,6 +33,8 @@ function renderBoard(progKey, prog){
   h += `</div><div class="progress"><span>${done} of ${total} done</span><div class="bar"><i style="width:${pct}%"></i></div></div></div>`;
   if(!PROGRAMS[progKey]) h += `<div class="notice">Program ${progKey} is scheduled this week but hasn't been added yet, so Program A is shown.</div>`;
   if(!Object.keys(cfg.rm).length && !hideTip()) h += `<div class="notice tip"><span>Targets use your last logged weight. Add a 1RM (in Settings or when you log a set) to get phase-based targets instead.</span><button class="btn sm ghost" data-act="hidetip">Got it</button></div>`;
+  const since = daysSinceBackup(); const anyLogs = Object.values(logs).some(l=>l&&l.length);
+  if(mcp && anyLogs && !backupSnoozed && (since==null || since>=7)) h += `<div class="notice tip"><span>${since==null?'Your training data hasn\u2019t been backed up to GitHub yet.':`Last GitHub backup was ${since} days ago.`}</span><span><button class="btn sm" data-act="backup" ${backupBusy?'disabled':''}>${backupBusy?'Backing up…':'Back up now'}</button> <button class="btn sm ghost" data-act="snooze">Later</button></span></div>`;
   if(storeMode==='local' && !hideTip('hidelocal')) h += `<div class="notice tip"><span>${window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export on the Progress tab to back it up.'}</span><button class="btn sm ghost" data-act="hidetip" data-k="hidelocal">Got it</button></div>`;
   if(mDay==null){ mDay = 1; for(let d=1; d<=6; d++){ const l=cols[d]; if(l.some(s=>!week.done[s.id])){ mDay=d; break; } } }
   h += `<div class="daytabs" role="tablist" aria-label="Day">${[1,2,3,4,5,6].map(d=>{ const l=cols[d], n=l.filter(s=>week.done[s.id]).length; const full=l.length&&n===l.length; return `<button role="tab" data-act="mday" data-day="${d}" aria-selected="${d===mDay}" class="${full?'full':''}"><b>D${d}</b><span>${full?'✓':`${n}/${l.length}`}</span></button>`; }).join('')}</div>`;
@@ -155,7 +157,7 @@ function renderHistory(){
 function renderProgress(){
   if(!weekHist && !historyLoading) loadHistory();
   const hasLogs = Object.values(logs).some(l=>l&&l.length);
-  const exp = dl && hasLogs ? `<div class="actions" style="justify-content:flex-end;margin-bottom:12px"><button class="btn" data-act="export">Export log (CSV)</button></div>` : '';
+  const exp = dl && hasLogs ? `<div class="actions" style="justify-content:flex-end;margin-bottom:12px">${mcp?`<button class="btn primary" data-act="backup" ${backupBusy?'disabled':''}>${backupBusy?'Backing up…':'Back up to GitHub'}</button>`:''}<button class="btn" data-act="xlsx" data-w="all">Download Excel</button><button class="btn" data-act="xlsx" data-w="week">This week (Excel)</button><button class="btn" data-act="export">CSV</button></div>${backupMsg?`<p class="bkmsg ${backupMsg.kind}" style="text-align:right">${esc(backupMsg.text)}${backupMsg.url?` <a href="${esc(backupMsg.url)}" target="_blank" rel="noopener">View commit</a>`:''}</p>`:''}` : '';
   return renderHistory() + exp + renderLifts();
 }
 function renderLifts(){
@@ -188,6 +190,8 @@ function renderSettings(){
   h += `<section class="panel"><h2>Phases</h2><p>Target weight = your 1RM × the phase %. Rounded to 2.5 lb under 50 lb, 5 lb above.</p><div class="tbl"><table><thead><tr><th>Phase</th><th>% of 1RM</th><th>Sets × reps</th></tr></thead><tbody>
     ${PH_KEYS.map(k=>`<tr><td><span class="dot" data-p="${k}"></span> ${PHASES[k].label}</td><td><input type="number" id="pct-${k}" min="0" max="110" step="1" value="${cfg.pct[k]??PHASES[k].pct}" data-act="pct" data-p="${k}"> %</td><td><input class="wide" id="rx-${k}" value="${esc(cfg.rxOverride[k]||PHASES[k].rx)}" data-act="rxo" data-p="${k}"></td></tr>`).join('')}
   </tbody></table></div><label class="inline" for="rest-s">Rest between sets <input type="number" id="rest-s" min="0" max="600" step="15" value="${cfg.rest??90}" data-act="rests" style="width:80px"> seconds</label><p>The percentages are placeholders until you set your own. Isometric holds are usually judged by time and effort more than by % of a lifting max.</p></section>`;
+
+  h += backupPanel();
 
   const ALL_SLOTS=[...slotsFor(PROGRAMS.A),...slotsFor(PROGRAMS.B)];
   const weighted = allExIds().filter(id=> ALL_SLOTS.some(s=>s.items.some(i=>i.ex===id && i.w!=null)));

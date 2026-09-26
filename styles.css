@@ -124,6 +124,10 @@ body.timing{padding-bottom:130px}
 .chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:14px}
 .chip.s{background:var(--m1);border-color:var(--m1)}
 .chip.p{background:var(--m4);border-color:var(--m4);color:var(--accent-ink);font-weight:600}
+.bkmsg{font-size:14px;margin:0}
+.bkmsg.ok{color:var(--exp)}
+.bkmsg.err{color:var(--str)}
+.bkmsg.info{color:var(--muted)}
 .saveflag{font-size:12px;color:var(--muted)}
 
 /* Board */
