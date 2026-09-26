@@ -33,7 +33,7 @@ document.addEventListener('click', e=>{
   if(a==='edup'||a==='eddown'){ const i=Number(t.dataset.i), j=i+(a==='edup'?-1:1); const prog=editableProgram(); const sl=prog.days[edDay-1].slots; if(j<0||j>=sl.length) return; [sl[i],sl[j]]=[sl[j],sl[i]]; saveProgram(edProg,prog); render(); return; }
   if(a==='eddel'){ if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent='Remove?'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent='Remove'; } },3000); return; } const prog=editableProgram(); prog.days[edDay-1].slots.splice(Number(t.dataset.i),1); saveProgram(edProg,prog); render(); return; }
   if(a==='edreset'){ if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent=`Tap again to reset Program ${edProg}`; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent=`Reset Program ${edProg} to the original`; } },3000); return; } PROGRAMS[edProg]=BUILTIN[edProg]; removeDoc('programs/'+edProg); render(); flag('Reset'); return; }
-  if(a==='hidetip'){ try{ localStorage.setItem('ironlog:hidetip','1'); }catch(e){} render(); return; }
+  if(a==='hidetip'){ try{ localStorage.setItem('ironlog:'+(t.dataset.k||'hidetip'),'1'); }catch(e){} render(); return; }
   if(a==='mday'){ mDay=Number(t.dataset.day); render(); window.scrollTo({top:0}); return; }
   if(a==='setprog'){ const k=t.dataset.p; if(k===programFor(weekStart)) week.prog=null; else week.prog=k; saveWeek(); render(); }
   if(a==='pull'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; slotsFor(prog).forEach(s=>{ if(s.day<5 && (week.moved[s.id]||s.day)<5 && !week.done[s.id]) week.moved[s.id]=5; }); saveWeek(); render(); }
