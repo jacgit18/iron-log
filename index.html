@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Iron Log: a weekly workout board with A/B program rotation, phase-based targets, timers and a muscle map.">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif;background:#fafafa}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Iron Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Iron Log</h1>
+    <div class="meta">
+      <span class="pill prog" id="progPill">Program A</span>
+      <span class="pill" id="modePill">Mode 1</span>
+      <span class="saveflag" id="saveFlag"></span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-board" aria-selected="true" data-tab="board">Board</button>
+      <button role="tab" id="tab-progress" aria-selected="false" data-tab="progress">Progress</button>
+      <button role="tab" id="tab-body" aria-selected="false" data-tab="body">Muscles</button>
+      <button role="tab" id="tab-program" aria-selected="false" data-tab="program">Program</button>
+      <button role="tab" id="tab-settings" aria-selected="false" data-tab="settings">Settings</button>
+    </nav>
+  </header>
+  <main id="view"></main>
+</div>
+<div id="modal"></div>
+<button id="restfab" class="fab" data-act="rest" hidden>Rest timer</button>
+<div id="timerbar" class="timerbar" hidden role="timer" aria-live="off"><div class="tb-bar"><i id="tb-bar"></i></div><div class="tb-row"><div class="tb-main"><span id="tb-label" class="tb-label"></span><span id="tb-time" class="tb-time">0:00</span></div><div class="tb-btns"><button class="btn sm" data-act="tbminus" aria-label="15 seconds less">−15</button><button class="btn sm" data-act="tbplus" aria-label="15 seconds more">+15</button><button class="btn sm" id="tb-pause" data-act="tbpause">Pause</button><button class="btn sm" data-act="tbstop">Stop</button></div></div></div>
+
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/render.js"></script>
+<script src="js/timers.js"></script>
+<script src="js/muscles.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/events.js"></script>
+</body>
+</html>
