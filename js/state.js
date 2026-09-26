@@ -71,6 +71,7 @@ const normWeek = w => ({prog:(w&&w.prog)||null, done:{...(w&&w.done)}, moved:{..
 async function init(){
   render();
   initDownloads();
+  initBackup();
   try{ db = (window.claude && window.claude.use) ? await window.claude.use('db') : null; }catch(e){ db=null; }
   if(!db){
     storeMode='local'; ready.cfg = ready.logs = ready.programs = true;

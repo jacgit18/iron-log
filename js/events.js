@@ -2,7 +2,8 @@
 let downOnScrim = false;
 document.addEventListener('pointerdown', e=>{ downOnScrim = !!(e.target.classList && e.target.classList.contains('scrim')); }, true);
 function blocked(){ if(isReady()) return false; flag('Still loading your data…'); render(); return true; }
-const MUTATE = new Set(['tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
+let backupSnoozed = false;
+const MUTATE = new Set(['backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
 document.addEventListener('click', e=>{
   const t = e.target.closest('[data-act]'); if(!t) return;
   const a = t.dataset.act;
@@ -20,6 +21,9 @@ document.addEventListener('click', e=>{
   if(a==='tagreset'){ if(cfg.muscleMap) delete cfg.muscleMap[tagDraft.ex]; saveCfg(); closeModal(); render(); return; }
   if(a==='tagsave'){ const st=tagDraft.st; const o={p:M_KEYS.filter(m=>st[m]==='p'), s:M_KEYS.filter(m=>st[m]==='s')}; if(tagDraft.mob) o.mob=true; cfg.muscleMap = cfg.muscleMap||{}; cfg.muscleMap[tagDraft.ex]=o; saveCfg(); closeModal(); render(); flag('Muscles saved'); return; }
   if(a==='export'){ exportCsv(t); return; }
+  if(a==='xlsx'){ downloadExcel(t.dataset.w, t); return; }
+  if(a==='backup'){ backupToGitHub(t); return; }
+  if(a==='snooze'){ backupSnoozed = true; render(); return; }
   if(a==='repeat'){ quickLog(t.dataset.slot, Number(t.dataset.idx)); return; }
   if(a==='rest'){ startRest(); return; }
   if(a==='hold'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const sl=slotsFor(prog).find(x=>x.id===t.dataset.slot); if(!sl) return; const i=Number(t.dataset.idx); const hp=holdPlan(sl,i); startHold(exInfo(sl.items[i].ex).n, hp.sets, hp.hold); return; }
@@ -57,6 +61,7 @@ document.addEventListener('change', e=>{
   if(a==='m2e'){ cfg.m2Even=t.value; saveCfg(); render(); }
   if(a==='pct'){ const n=Number(t.value); if(t.value!=='' && !isNaN(n)) { cfg.pct[t.dataset.p]=n; saveCfg(); } }
   if(a==='rxo'){ const v=t.value.trim(); if(v && v!==PHASES[t.dataset.p].rx) cfg.rxOverride[t.dataset.p]=v; else delete cfg.rxOverride[t.dataset.p]; saveCfg(); }
+  if(a==='bkrepo'){ const v=t.value.trim(); if(/^[\w.-]+\/[\w.-]+$/.test(v)){ cfg.backup = {...backupCfg(), repo:v, hashes:{}}; saveCfg(); backupMsg=null; } else { backupMsg = {kind:'err', text:'Use the form owner/repo, for example jacgit18/iron-log-data.'}; render(); } return; }
   if(a==='rests'){ const n=Number(t.value); if(t.value!=='' && n>=0){ cfg.rest=n; saveCfg(); } return; }
   if(a==='bodysec'){ bodySec = t.checked; render(); return; }
   if(a==='rm'){ const n=Number(t.value); if(t.value===''||!(n>0)) delete cfg.rm[t.dataset.ex]; else cfg.rm[t.dataset.ex]=n; saveCfg(); }
