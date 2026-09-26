@@ -1,8 +1,47 @@
-# Iron Log
+<p align="center">
+  <img src="docs/images/banner.png" alt="Iron Log: a weekly training board for A/B program rotation, phase-based targets and a muscle map" width="100%">
+</p>
 
-A single-page workout tracker built around a weekly board. It runs two training programs (A and B) on a rotation schedule, sets targets for each exercise by training phase, and shows which muscles a program trains.
+<p align="center">
+  <a href="https://jacgit18.github.io/iron-log/"><b>Open the app</b></a> ·
+  <a href="#features">Features</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#running-it">Running it</a>
+</p>
 
-Plain HTML, CSS and JavaScript. There is no build step, no framework and nothing to install.
+<p align="center">
+  <a href="https://jacgit18.github.io/iron-log/"><img alt="Live on GitHub Pages" src="https://img.shields.io/badge/live-GitHub%20Pages-1F5E5B"></a>
+  <img alt="No build step" src="https://img.shields.io/badge/build-none-1F5E5B">
+  <img alt="Vanilla JS" src="https://img.shields.io/badge/stack-HTML%20%C2%B7%20CSS%20%C2%B7%20JS-1F5E5B">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1F5E5B"></a>
+</p>
+
+Iron Log is a single-page workout tracker built around a weekly board. It runs two training programs (A and B) on a rotation schedule, sets targets for each exercise by training phase, and shows which muscles a program trains.
+
+It's plain HTML, CSS and JavaScript. There is no build step, no framework and nothing to install.
+
+## Screenshots
+
+<sub>Screenshots use sample data.</sub>
+
+![Weekly board with six training days, check-offs and phase-tagged exercise cards](docs/images/board.png)
+
+| Phone: one day at a time | Logging a set | Isometric hold timer |
+| :---: | :---: | :---: |
+| <img src="docs/images/mobile-board.png" alt="Phone view of the board" width="260"> | <img src="docs/images/mobile-log.png" alt="Log sheet with a suggested heavier target" width="260"> | <img src="docs/images/mobile-timer.png" alt="Hold timer counting down" width="260"> |
+
+| Muscle map | Progress |
+| :---: | :---: |
+| <img src="docs/images/muscles.png" alt="Front and back body map shaded by weekly sets" width="420"> | <img src="docs/images/progress.png" alt="Weekly history and per-exercise charts" width="420"> |
+
+<details>
+<summary>More: dark mode, muscle detail, program editor</summary>
+
+![Board in dark mode](docs/images/board-dark.png)
+![Muscle detail listing the exercises that train the hamstrings](docs/images/muscles-detail.png)
+![Program editor](docs/images/editor.png)
+
+</details>
 
 ## Features
 
@@ -16,31 +55,15 @@ Plain HTML, CSS and JavaScript. There is no build step, no framework and nothing
 - **Suggestions to go heavier.** After two separate days in a row with every set completed, the target goes up by +2.5 lb (under 50 lb) or +5 lb. For isometric work, it waits until you've held 30 s on every set.
 - **Fast logging.** Log weight, sets and reps (or hold seconds for isometrics). A "Same as last" button repeats your previous entry in one tap.
 - **Timers.** A hold countdown on isometric exercises that rests between sets and starts the next hold, plus a general rest timer.
-- **Progress.** A weight-over-time chart for each exercise, a 12-week record of days completed, and CSV export.
+- **Progress.** A weight-over-time chart for each exercise (one phase per chart), a 12-week record of days completed, and CSV export.
 - **Muscle map.** Front and back body diagrams shaded by weekly sets per muscle group. Tap a muscle to see the exercises that train it. You can edit the muscle tags for any exercise.
 - **Program editor.** Add, edit, reorder and remove exercises (single, superset or either/or) for any day of either program.
 - **Works on phones.** On a phone you see one day at a time and swipe between days, with bottom navigation and large tap targets. It follows light and dark mode.
 
 ## Running it
 
+- **Hosted:** open **[jacgit18.github.io/iron-log](https://jacgit18.github.io/iron-log/)**.
 - **Locally:** open `index.html` in a browser, or serve the folder (`python3 -m http.server`) and open `http://localhost:8000`.
-- **Hosted:** enable GitHub Pages for this repo (Settings → Pages → deploy from the `main` branch, root folder) and open the Pages URL.
-
-## Project layout
-
-```
-index.html        page markup
-styles.css        all styles (light and dark themes)
-js/data.js        built-in programs, exercises, phases
-js/state.js       dates, settings, storage, helpers
-js/render.js      board, progress, settings and log screens
-js/timers.js      hold and rest timers
-js/muscles.js     muscle map and exercise→muscle tags
-js/editor.js      program editor
-js/events.js      input handling and startup
-```
-
-The scripts are plain (non-module) scripts loaded in order and share one global scope.
 
 ## Where data is stored
 
@@ -48,11 +71,43 @@ Run on its own, the app saves everything in your browser's `localStorage`. That 
 
 When it's published as a Claude artifact, it uses the artifact's shared database instead (`window.claude`), so the log follows you across devices. The code checks which of the two is available and picks it at runtime.
 
+## Project layout
+
+```
+index.html                    page markup
+styles.css                    all styles (light and dark themes)
+js/data.js                    built-in programs, exercises, phases
+js/state.js                   dates, settings, storage, helpers
+js/render.js                  board, progress, settings and log screens
+js/timers.js                  hold and rest timers
+js/muscles.js                 muscle map and exercise→muscle tags
+js/editor.js                  program editor
+js/events.js                  input handling and startup
+assets/logo.svg               logo and favicon
+tools/screenshots.mjs         generates docs/images/ with sample data
+tools/banner.html             README banner template
+.github/workflows/            regenerates screenshots on feature branches
+```
+
+The scripts are plain (non-module) scripts loaded in order and share one global scope.
+
 ## Customizing
 
 The two built-in programs are the `PROGRAM_A` and `PROGRAM_B` objects in `js/data.js`. The default muscle tags are in `MUSCLE_MAP` in `js/muscles.js`. You can also change both from inside the app (the Program tab, and Edit on the Muscles tab), and those changes are saved on top of the built-in defaults.
 
 The phase percentages (Strength 85%, Isometric 75%, Hypertrophy 65%, Explosive 45%) are placeholders. Change them in Settings.
+
+## Development
+
+Changes are made on feature branches and merged into `main` through pull requests. `main` is what GitHub Pages serves.
+
+When a pull request's branch changes the app, the **README screenshots** workflow regenerates `docs/images/` and commits the new images to that branch, so they merge along with the change. To run it locally:
+
+```bash
+npm install --no-save playwright
+npx playwright install chromium
+node tools/screenshots.mjs
+```
 
 ## Notes
 

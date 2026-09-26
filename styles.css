@@ -200,7 +200,8 @@ body.timing{padding-bottom:130px}
 .plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
 .pcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left}
 .pcard h3{margin:0;font-size:19px;font-weight:600}
-.pstats{display:flex;gap:16px;font-size:13px;color:var(--muted)}
+.pstats{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--muted)}
+.pstats span{white-space:nowrap}
 .pstats b{color:var(--ink);font-size:16px}
 .chart text{fill:var(--muted);font-size:11px;font-family:Barlow,sans-serif}
 .chart .grid{stroke:var(--line);stroke-width:1}
@@ -272,6 +273,7 @@ body.timing{padding-bottom:130px}
   .wknum{grid-column:1/-1;margin-top:-4px}
   .sheet{max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom, 0px))}
   .actions .btn{flex:1;min-height:44px}
+  .actions [data-act=fillLast]{flex-basis:100%;margin-right:0!important}
   .scrim{padding:0}
   .sheet{border-radius:14px 14px 0 0}
 }

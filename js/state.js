@@ -62,9 +62,9 @@ function saveLog(exId){ save('logs/'+exId, {entries: logs[exId]||[]}); }
 function subscribeWeek(){
   if(unsubWeek){ unsubWeek(); unsubWeek=null; }
   const key = weekKey();
-  if(!db){ week = normWeek(LS.get('weeks/'+key)); ready.week = storeMode==='local'; render(); return; }
-  week = normWeek(null); ready.week = false;
-  unsubWeek = db.doc('weeks/'+key).onSnapshot(s=>{ if(key!==weekKey()) return; if(s.metadata.hasPendingWrites) return; week = normWeek(s.exists? s.data(): null); ready.week = true; render(); }, ()=>flag('Couldn’t load this week. Reload the page.'));
+  if(!db){ week = normWeek(LS.get('weeks/'+key)); ready.week = storeMode==='local'; if(ready.week) mDay = null; render(); return; }
+  week = normWeek(null); ready.week = false; let first = true;
+  unsubWeek = db.doc('weeks/'+key).onSnapshot(s=>{ if(key!==weekKey()) return; if(s.metadata.hasPendingWrites) return; week = normWeek(s.exists? s.data(): null); ready.week = true; if(first){ first = false; mDay = null; } render(); }, ()=>flag('Couldn’t load this week. Reload the page.'));
 }
 const normWeek = w => ({prog:(w&&w.prog)||null, done:{...(w&&w.done)}, moved:{...(w&&w.moved)}, ph:{...(w&&w.ph)}, warm:JSON.parse(JSON.stringify((w&&w.warm)||{}))});
 

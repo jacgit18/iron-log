@@ -33,7 +33,7 @@ function renderBoard(progKey, prog){
   h += `</div><div class="progress"><span>${done} of ${total} done</span><div class="bar"><i style="width:${pct}%"></i></div></div></div>`;
   if(!PROGRAMS[progKey]) h += `<div class="notice">Program ${progKey} is scheduled this week but hasn't been added yet, so Program A is shown.</div>`;
   if(!Object.keys(cfg.rm).length && !hideTip()) h += `<div class="notice tip"><span>Targets use your last logged weight. Add a 1RM (in Settings or when you log a set) to get phase-based targets instead.</span><button class="btn sm ghost" data-act="hidetip">Got it</button></div>`;
-  if(storeMode==='local') h += `<div class="notice">${window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export on the Progress tab to back it up.'}</div>`;
+  if(storeMode==='local' && !hideTip('hidelocal')) h += `<div class="notice tip"><span>${window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export on the Progress tab to back it up.'}</span><button class="btn sm ghost" data-act="hidetip" data-k="hidelocal">Got it</button></div>`;
   if(mDay==null){ mDay = 1; for(let d=1; d<=6; d++){ const l=cols[d]; if(l.some(s=>!week.done[s.id])){ mDay=d; break; } } }
   h += `<div class="daytabs" role="tablist" aria-label="Day">${[1,2,3,4,5,6].map(d=>{ const l=cols[d], n=l.filter(s=>week.done[s.id]).length; const full=l.length&&n===l.length; return `<button role="tab" data-act="mday" data-day="${d}" aria-selected="${d===mDay}" class="${full?'full':''}"><b>D${d}</b><span>${full?'✓':`${n}/${l.length}`}</span></button>`; }).join('')}</div>`;
   h += `<div class="board">`;
@@ -164,9 +164,11 @@ function renderLifts(){
   ids.sort((a,b)=> (lastLog(b).d).localeCompare(lastLog(a).d));
   return `<div class="plist">${ids.map(id=>{
     const L = logs[id], last=L[L.length-1];
-    const ws = L.map(e=>Number(e.w)).filter(n=>!isNaN(n)&&n>0);
+    const same = L.filter(e=>(e.ph||null)===(last.ph||null));
+    const ws = same.map(e=>Number(e.w)).filter(n=>!isNaN(n)&&n>0);
     const best = ws.length? Math.max(...ws): null;
-    return `<button class="pcard" data-act="detail" data-ex="${id}"><h3>${esc(exInfo(id).n)}</h3><div class="pstats"><span>Last <b>${esc(describe(last))}</b></span>${best!=null?`<span>Best <b>${best} lb</b></span>`:''}<span>Sessions <b>${L.length}</b></span></div>${lineChart(L,320,110)}</button>`;
+    const phName = last.ph ? PHASES[last.ph].label : 'No phase';
+    return `<button class="pcard" data-act="detail" data-ex="${id}"><h3>${esc(exInfo(id).n)}</h3><div class="pstats"><span>Last <b>${esc(describe(last))}</b></span>${best!=null?`<span>Best <b>${best} lb</b></span>`:''}<span>Sessions <b>${L.length}</b></span></div><span class="note"><span class="dot" data-p="${last.ph||''}"></span> ${phName} trend${same.length<L.length?` · ${L.length-same.length} other-phase session${L.length-same.length>1?'s':''} not shown`:''}</span>${lineChart(same,320,110)}</button>`;
   }).join('')}</div>`;
 }
 
@@ -224,13 +226,13 @@ function openLog(slotId, idx){
   phSel.addEventListener('change', ()=>{ const p=phSel.value; const nt=targetOf(it,p||null); document.getElementById('f-w').value = nt.w??''; const r=rxOf(it,p||null).match(/(\d+)\s*×\s*(\d+)/); document.getElementById('f-s').value=r?r[1]:''; document.getElementById('f-r').value=r?r[2]:''; document.getElementById('f-r-wrap').firstChild.textContent = p==='iso'?'Hold (s)':'Reps'; });
   document.getElementById('f-w').focus();
 }
-function hideTip(){ try{ return localStorage.getItem('ironlog:hidetip')==='1'; }catch(e){ return false; } }
+function hideTip(k='hidetip'){ try{ return localStorage.getItem('ironlog:'+k)==='1'; }catch(e){ return false; } }
 function defaultLogDate(){ const today=new Date(); const end=addDays(weekStart,6); return (today>=weekStart && today<=addDays(end,1)) ? ymd(today) : ymd(weekStart); }
 function closeModal(){ document.getElementById('modal').innerHTML=''; }
 
 function openDetail(exId){
   const L = (logs[exId]||[]);
-  document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><div class="sheet" style="max-width:640px"><h2 class="cond">${esc(exInfo(exId).n)}</h2>${lineChart(L)}
+  document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><div class="sheet" style="max-width:640px"><h2 class="cond">${esc(exInfo(exId).n)}</h2>${(()=>{ const last=L[L.length-1]; if(!last) return ''; const same=L.filter(e=>(e.ph||null)===(last.ph||null)); return `<p class="note">${last.ph?PHASES[last.ph].label:'No phase'} trend (the phase you logged most recently). The table lists every session.</p>`+lineChart(same); })()}
   <table class="hist"><thead><tr><th>Date</th><th>Phase</th><th class="num">Load</th><th class="num">Volume</th><th>Note</th><th></th></tr></thead><tbody>
   ${L.map((e,i)=>({e,i})).reverse().map(({e,i})=>`<tr><td>${fmtShort(parse(e.d))}</td><td>${e.ph?PHASES[e.ph].label:'—'}</td><td class="num">${e.w!=null&&e.w!==''?e.w+' lb':'BW'}</td><td class="num">${e.sec?`${e.s}×${e.sec}s`:`${e.s||'?'}×${e.r||'?'}`}</td><td>${esc(e.n||'')}</td><td><button class="btn sm ghost" data-act="dellog" data-ex="${exId}" data-i="${i}" aria-label="Delete entry">✕</button></td></tr>`).join('')}
   </tbody></table><div class="actions"><button class="btn" data-act="close">Close</button></div></div></div>`;
