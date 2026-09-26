@@ -17,14 +17,19 @@ on:
 permissions:
   contents: write
 
+# One run per branch; a newer push cancels the older run.
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   screenshots:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
       - run: npm install --no-save --no-package-lock playwright@1.49.1
       - run: npx playwright install --with-deps chromium
       - run: node tools/screenshots.mjs
@@ -35,4 +40,5 @@ jobs:
           git add docs/images
           if git diff --cached --quiet; then echo "Images unchanged"; exit 0; fi
           git commit -m "Update README screenshots"
+          git pull --rebase origin "$GITHUB_REF_NAME"
           git push
