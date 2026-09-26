@@ -160,7 +160,7 @@ async function backupToGitHub(btn){
 function daysSinceBackup(){ const l = cfg.backup && cfg.backup.last; if(!l) return null; return Math.floor((Date.now() - new Date(l.at).getTime())/864e5); }
 function backupPanel(){
   const b = backupCfg(); const l = b.last;
-  let h = `<section class="panel"><h2>Excel &amp; backups</h2><p>Download your data as Excel, or save it to a private GitHub repo: <b>iron-log.xlsx</b> (summary, every session, weekly totals, settings) plus one workbook per week in <b>weeks/</b>.</p>`;
+  let h = `<section class="panel"><h2>Excel &amp; backups</h2><p><b>iron-log.xlsx</b> has a summary per exercise, every session, weekly totals and your settings. Each week also gets its own workbook with the plan and what you logged${mcp?', saved in <b>weeks/</b> when you back up to GitHub':''}.</p>`;
   h += `<div class="actions" style="justify-content:flex-start">${dl?'<button class="btn" data-act="xlsx" data-w="all">Download Excel</button><button class="btn" data-act="xlsx" data-w="week">Download this week</button>':''}</div>`;
   if(mcp){
     h += `<label class="field">Backup repo (owner/name)<input id="bk-repo" data-act="bkrepo" value="${esc(b.repo)}" placeholder="owner/repo"></label>`;
