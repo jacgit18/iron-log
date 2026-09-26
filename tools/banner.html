@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+  html,body{margin:0;width:1280px;height:640px;overflow:hidden}
+  body{background:#EEF0EC;color:#1A1E1C;font-family:Barlow,system-ui,sans-serif;position:relative}
+  .wrap{display:grid;grid-template-columns:1fr 330px;gap:40px;height:100%;padding:0 80px 0 88px;box-sizing:border-box;align-items:center}
+  .mark{display:flex;align-items:center;gap:22px}
+  .mark img{width:96px;height:96px}
+  h1{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;font-size:132px;line-height:.9;letter-spacing:.03em;text-transform:uppercase;margin:0;white-space:nowrap}
+  p{font-size:28px;line-height:1.35;color:#3E4843;margin:28px 0 30px;max-width:22em}
+  .chips{display:flex;flex-wrap:wrap;gap:10px}
+  .chip{font-weight:600;font-size:19px;padding:8px 16px;border-radius:999px;background:#fff;border:1px solid #D2D7D1}
+  .chip i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:1px}
+  .phone{width:330px;height:560px;border-radius:40px;background:#1A1E1C;padding:12px;box-sizing:border-box;box-shadow:0 30px 60px rgba(20,30,25,.22);align-self:center;margin-top:40px}
+  .phone img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:30px;display:block}
+  .stripe{position:absolute;left:0;right:0;bottom:0;height:10px;display:grid;grid-template-columns:repeat(4,1fr)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div>
+      <div class="mark"><img src="../assets/logo.svg" alt=""><h1>Iron Log</h1></div>
+      <p>A weekly training board for A/B program rotation, phase-based targets and a muscle map.</p>
+      <div class="chips">
+        <span class="chip"><i style="background:#B63A28"></i>Strength</span>
+        <span class="chip"><i style="background:#8F6A00"></i>Isometric</span>
+        <span class="chip"><i style="background:#2A56A0"></i>Hypertrophy</span>
+        <span class="chip"><i style="background:#2B7348"></i>Explosive</span>
+      </div>
+    </div>
+    <div class="phone"><img src="../docs/images/mobile-board.png" alt=""></div>
+  </div>
+  <div class="stripe"><span style="background:#B63A28"></span><span style="background:#8F6A00"></span><span style="background:#2A56A0"></span><span style="background:#2B7348"></span></div>
+</body>
+</html>
