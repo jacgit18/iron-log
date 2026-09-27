@@ -45,16 +45,17 @@ It's plain HTML, CSS and JavaScript. There is no build step, no framework and no
 
 ## Features
 
-- **Weekly board.** One column per training day (Sunday to Saturday week). You can check off exercises one at a time or a whole day at once. When equipment is taken, drag a card to another day (or use "Move to" on a phone). Day 5 is a make-up day that can pull in anything left unfinished. **Skip** takes an exercise out of this week's counts without deleting it, and checking it off later undoes the skip. Done and skipped exercises drop to the bottom of their day, so what's left is always on top.
+- **Weekly board.** One column per training day (Sunday to Saturday week). You can check off exercises one at a time or a whole day at once. In a superset each exercise has its own checkbox and counts on its own; an either/or counts once, whichever option you do. When equipment is taken, drag a card to another day (or use "Move to" on a phone). Day 5 is a make-up day that can pull in anything left unfinished. **Skip** takes an exercise out of this week's counts without deleting it, and checking it off later undoes the skip. Done and skipped exercises drop to the bottom of their day, so what's left is always on top.
 - **Program rotation.** There are three modes:
   1. Program A only.
   2. A and B alternate by month (even and odd months), and you can switch any single week by hand.
   3. A and B swap every 6 months.
 - **Training phases.** Every exercise is tagged Strength, Isometric, Hypertrophy or Explosive, with a default sets × reps for each. You can change the phase for a single week or save it as the new default.
 - **Targets.** Enter a 1-rep max and the target becomes 1RM × the phase's %. Without a 1RM, the target is your last logged weight in that phase.
-- **Suggestions to go heavier.** After two separate days in a row with every set completed, the target goes up by +2.5 lb (under 50 lb) or +5 lb. For isometric work, it waits until you've held 30 s on every set.
+- **Suggestions to go heavier.** After two separate days in a row with every planned set completed at the working weight, the target goes up by +2.5 lb (under 50 lb) or +5 lb. For isometric work, it waits until you've held 30 s on every set.
 - **Body weight.** Log it once a week from the top of the board. The Progress tab shows the latest weight, the change over about four weeks and a trend chart, and it's included in the Excel and data exports.
-- **Fast logging.** Log weight, sets and reps (or hold seconds for isometrics). A "Same as last" button repeats your previous entry in one tap.
+- **Fast logging, set by set.** The log sheet has one row per planned set, prefilled with the target weight and reps (or hold seconds for isometrics). Change set 1 and the rest follow until you edit them. A "Same as last" button repeats your previous session in one tap.
+- **Stall alerts.** When your last 3 sessions of a lift (same phase, across at least 2 weeks) show no gain in weight or reps, the card and the lift list show a "Stalled" tag. It stays quiet while the app is already suggesting a heavier weight.
 - **Timers.** A hold countdown on isometric exercises that rests between sets and starts the next hold, plus a general rest timer.
 - **Progress.** Headline numbers for the week, sets logged per week, weight change by exercise over the last 8 weeks, a muscles-by-week heatmap of what you actually trained, a weight-over-time chart for each exercise (one phase per chart) and a 12-week record of days completed.
 - **Excel export.** Download an overall workbook (summary, every session with the muscles it trains, weekly sets per muscle, weekly totals, settings) or a workbook for a single week, or export plain CSV. In the Claude version, **Back up to GitHub** commits the same workbooks to a private repo.

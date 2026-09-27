@@ -22,8 +22,7 @@ function render(){
 function renderBoard(progKey, prog){
   const slots = slotsFor(prog);
   const cols = currentLayout(slots);
-  const skippedN = slots.filter(s=>isSkipped(s)).length;
-  const total = slots.length - skippedN, done = slots.filter(s=>week.done[s.id] && !isSkipped(s)).length;
+  const {total, done, skipped:skippedN} = tally(slots);
   const pct = total? Math.round(done/total*100):0;
   const end = addDays(weekStart,6);
   let h = '';
@@ -38,27 +37,26 @@ function renderBoard(progKey, prog){
   if(mcp && anyLogs && !backupSnoozed && (since==null || since>=7)) h += `<div class="notice tip"><span>${since==null?'Your training data hasn\u2019t been backed up to GitHub yet.':`Last GitHub backup was ${since} days ago.`}</span><span><button class="btn sm" data-act="backup" ${backupBusy?'disabled':''}>${backupBusy?'Backing up…':'Back up now'}</button> <button class="btn sm ghost" data-act="snooze">Later</button></span></div>`;
   if(storeMode==='local' && !hideTip('hidelocal')) h += `<div class="notice tip"><span>${window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export on the Progress tab to back it up.'}</span><button class="btn sm ghost" data-act="hidetip" data-k="hidelocal">Got it</button></div>`;
   h += bodyRow();
-  if(mDay==null){ mDay = 1; for(let d=1; d<=6; d++){ const l=cols[d]; if(l.some(s=>!week.done[s.id] && !isSkipped(s))){ mDay=d; break; } } }
-  h += `<div class="daytabs" role="tablist" aria-label="Day">${[1,2,3,4,5,6].map(d=>{ const l=cols[d].filter(s=>!isSkipped(s)), n=l.filter(s=>week.done[s.id]).length; const full=l.length&&n===l.length; return `<button role="tab" data-act="mday" data-day="${d}" aria-selected="${d===mDay}" class="${full?'full':''}"><b>D${d}</b><span>${full?'✓':`${n}/${l.length}`}</span></button>`; }).join('')}</div>`;
+  if(mDay==null){ mDay = 1; for(let d=1; d<=6; d++){ const l=cols[d]; if(l.some(s=>isOpen(s))){ mDay=d; break; } } }
+  h += `<div class="daytabs" role="tablist" aria-label="Day">${[1,2,3,4,5,6].map(d=>{ const {total:n1, done:n, full} = tally(cols[d]); return `<button role="tab" data-act="mday" data-day="${d}" aria-selected="${d===mDay}" class="${full?'full':''}"><b>D${d}</b><span>${full?'✓':`${n}/${n1}`}</span></button>`; }).join('')}</div>`;
   h += `<div class="board">`;
   for(let d=1; d<=6; d++){
     const dayDef = prog.days[d-1];
     const list = cols[d];
-    const act = list.filter(s=>!isSkipped(s)); const dn = act.filter(s=>week.done[s.id]).length;
-    const all = act.length>0 && dn===act.length;
-    h += `<section class="col${all?' complete':''}${d===mDay?' sel':''}" data-day="${d}"><div class="colhead"><input type="checkbox" class="chk" id="day-${d}" data-act="day" data-day="${d}" ${all?'checked':''} aria-label="Mark all of Day ${d} done"><div><h3>${dayDef.title}</h3>${dayDef.sub?`<div class="sub">${esc(dayDef.sub)}</div>`:''}</div><span class="count">${dn}/${act.length}</span></div>`;
+    const {total:dt, done:dn, full:all} = tally(list);
+    h += `<section class="col${all?' complete':''}${d===mDay?' sel':''}" data-day="${d}"><div class="colhead"><input type="checkbox" class="chk" id="day-${d}" data-act="day" data-day="${d}" ${all?'checked':''} aria-label="Mark all of Day ${d} done"><div><h3>${dayDef.title}</h3>${dayDef.sub?`<div class="sub">${esc(dayDef.sub)}</div>`:''}</div><span class="count">${dn}/${dt}</span></div>`;
     const w = week.warm[d]||{};
     h += `<div class="warm"><span class="tag">Warm-up</span>${WARMUP.map(x=>`<label><input type="checkbox" class="chk" id="warm-${d}-${x.id}" data-act="warm" data-day="${d}" data-w="${x.id}" ${w[x.id]?'checked':''}>${x.id==='sled'&&prog.warm?prog.warm:x.n} <span class="rx">· ${x.rx}</span></label>`).join('')}</div>`;
     if(dayDef.makeup){
-      const pending = slots.filter(s=>s.day<5 && (week.moved[s.id]||s.day)<5 && !week.done[s.id] && !isSkipped(s)).length;
+      const pending = slots.filter(s=>s.day<5 && (week.moved[s.id]||s.day)<5 && isOpen(s)).length;
       h += `<div class="makeup">Make-up day for anything skipped. ${pending?`<button class="btn sm" data-act="pull">Pull in ${pending} unfinished</button>`:''}</div>`;
     }
     // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
-    const open = list.filter(s=>!week.done[s.id] && !isSkipped(s));
-    const finished = [...list.filter(s=>week.done[s.id] && !isSkipped(s)), ...list.filter(s=>isSkipped(s))];
+    const open = list.filter(s=>isOpen(s));
+    const finished = [...list.filter(s=>!isOpen(s) && !isSkipped(s)), ...list.filter(s=>isSkipped(s))];
     let lastSec = null;
     open.forEach(s=>{ const sec = s.day===d ? s.sec : 'Moved here'; if(sec!==lastSec){ h+=`<div class="sect">${esc(sec)}</div>`; lastSec=sec; } h += renderCard(s, d); });
-    if(finished.length){ const nd = finished.filter(s=>!isSkipped(s)).length, ns = finished.length - nd;
+    if(finished.length){ const {done:nd, skipped:ns} = tally(finished);
       h += `<div class="sect donesect">${[nd?`${nd} done`:'', ns?`${ns} skipped`:''].filter(Boolean).join(' · ')}</div>`;
       finished.forEach(s=>{ h += renderCard(s, d); }); }
     h += `</section>`;
@@ -68,10 +66,11 @@ function renderBoard(progKey, prog){
 }
 
 function renderCard(s, curDay){
-  const done = !!week.done[s.id]; const sk = isSkipped(s);
+  const done = isDone(s); const sk = isSkipped(s);
   const label = s.type==='superset' ? 'Superset' : s.type==='either' ? 'Either / or' : '';
   let h = `<article class="card${done?' done':''}${sk?' skipped':''}" draggable="true" data-slot="${s.id}">`;
-  h += `<div class="row1"><input type="checkbox" class="chk" id="chk-${s.id}" data-act="check" data-slot="${s.id}" ${done?'checked':''} aria-label="Mark done"><div style="flex:1;display:flex;flex-direction:column;gap:2px">`;
+  const paired = isPaired(s);
+  h += `<div class="row1">${paired?'':`<input type="checkbox" class="chk" id="chk-${s.id}" data-act="check" data-slot="${s.id}" ${done?'checked':''} aria-label="Mark done">`}<div style="flex:1;display:flex;flex-direction:column;gap:2px">`;
   if(label || s.tier) h += `<span class="tag">${[s.tier,label].filter(Boolean).join(' · ')}</span>`;
   if(s.day!==curDay) h += `<span class="moved">From Day ${s.day}</span>`;
   if(sk) h += `<span class="skiptag">Skipped this week</span>`;
@@ -79,7 +78,8 @@ function renderCard(s, curDay){
   s.items.forEach((it,idx)=>{
     if(idx>0 && s.type==='either') h += `<div class="or">or</div>`;
     const ph = phaseOf(s, idx), ex = exInfo(it.ex), t = targetOf(it, ph), last = lastLog(it.ex, ph);
-    h += `<div class="ex"><div class="exname">${s.type==='superset'?(idx===0?'A · ':'B · '):''}${esc(ex.n)}${ex.url?`<a href="${ex.url}" target="_blank" rel="noopener" aria-label="Video">▶ video</a>`:''}</div>`;
+    const idone = paired && isItemDone(s, idx);
+    h += `<div class="ex${idone?' idone':''}"><div class="exname">${paired?`<input type="checkbox" class="chk" id="chk-${s.id}-${idx}" data-act="icheck" data-slot="${s.id}" data-idx="${idx}" ${idone?'checked':''} aria-label="Mark ${esc(ex.n)} done">`:''}${s.type==='superset'?(idx===0?'A · ':'B · '):''}${esc(ex.n)}${ex.url?`<a href="${ex.url}" target="_blank" rel="noopener" aria-label="Video">▶ video</a>`:''}</div>`;
     h += `<div class="exline"><select class="phase" data-p="${ph||''}" data-act="phase" data-slot="${s.id}" data-idx="${idx}" aria-label="Phase">${!ph?'<option value="" selected>Set phase</option>':''}${PH_KEYS.map(k=>`<option value="${k}" ${k===ph?'selected':''}>${PHASES[k].label}</option>`).join('')}</select>`;
     const rx = rxOf(it, ph);
     if(rx) h += `<span class="rx">${esc(rx)}</span>`;
@@ -89,6 +89,7 @@ function renderCard(s, curDay){
     h += `<button class="btn sm logbtn" data-act="log" data-slot="${s.id}" data-idx="${idx}">Log</button></div>`;
     if(it.note) h += `<div class="note">${esc(it.note)}</div>`;
     if(last) h += `<div class="lastlog">Last: ${esc(describe(last))} · ${fmtShort(parse(last.d))}</div>`;
+    const st = stallOf(it.ex, ph); if(st) h += `<div class="stall" tabindex="0" data-tip="No gain in weight or reps over your last 3 sessions since ${fmtShort(parse(st.since))}.">Stalled · no gain in 3 sessions</div>`;
     h += `</div>`;
   });
   if(s.note) h += `<div class="note">${esc(s.note)}</div>`;
@@ -97,21 +98,22 @@ function renderCard(s, curDay){
   return h + `</article>`;
 }
 
+// Weight-over-time line. Drawn in HTML + a stretched SVG path so labels stay a readable size at any width.
 function lineChart(entries, w=560, hgt=180, label='Weight over time'){
-  const pts = entries.filter(e=>e.w!=null && e.w!=='').map(e=>({x:parse(e.d).getTime(), y:Number(e.w)}));
+  const pts = entries.filter(e=>e.w!=null && e.w!=='').map(e=>({x:parse(e.d).getTime(), y:Number(e.w), d:e.d}));
   if(pts.length<2) return `<p class="note">Log at least two sessions with a weight to see a trend.</p>`;
-  const L=40,R=12,T=12,B=26;
   const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
   let x0=Math.min(...xs), x1=Math.max(...xs); if(x0===x1){x0-=864e5;x1+=864e5}
-  let y0=Math.min(...ys), y1=Math.max(...ys); const span=Math.max(y1-y0,10); const step = [2.5,5,10,20,25,50,100].find(s=>span/s<=5)||100;
-  y0=Math.floor((y0-step*0.5)/step)*step; if(y0<0)y0=0; y1=Math.ceil((y1+step*0.5)/step)*step;
-  const sx=x=>L+(x-x0)/(x1-x0)*(w-L-R), sy=y=>T+(1-(y-y0)/(y1-y0))*(hgt-T-B);
-  let g=''; for(let v=y0; v<=y1+1e-9; v+=step){ g+=`<line class="grid" x1="${L}" x2="${w-R}" y1="${sy(v)}" y2="${sy(v)}"/><text x="${L-6}" y="${sy(v)+4}" text-anchor="end">${v}</text>`; }
-  const d = pts.map((p,i)=>`${i?'L':'M'}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join('');
-  const area = `${d}L${sx(pts[pts.length-1].x).toFixed(1)},${sy(y0)}L${sx(pts[0].x).toFixed(1)},${sy(y0)}Z`;
-  const dots = pts.map((p,i)=> (i===pts.length-1 ? `<circle class="end" cx="${sx(p.x)}" cy="${sy(p.y)}" r="4.5"/>` : `<circle class="pt" cx="${sx(p.x)}" cy="${sy(p.y)}" r="3"/>`) + `<circle class="hit" cx="${sx(p.x)}" cy="${sy(p.y)}" r="11" data-tip="${fmtShort(new Date(p.x))}: ${p.y} lb"/>`).join('');
-  const lab = `<text x="${L}" y="${hgt-6}">${fmtShort(new Date(x0))}</text><text x="${w-R}" y="${hgt-6}" text-anchor="end">${fmtShort(new Date(x1))}</text>`;
-  return `<svg class="chart" viewBox="0 0 ${w} ${hgt}" width="100%" role="img" aria-label="${esc(label)}">${g}<path class="ar" d="${area}"/><path class="ln" d="${d}"/>${dots}${lab}</svg>`;
+  const maxTicks = hgt < 150 ? 3 : 4;
+  let y0=Math.min(...ys), y1=Math.max(...ys); const span=Math.max(y1-y0, 5);
+  const step = [1,2.5,5,10,20,25,50,100,200].find(s=>span/s <= maxTicks-1) || 250;
+  y0=Math.floor(y0/step)*step; y1=Math.ceil(y1/step)*step; if(y1===y0) y1 = y0+step; if(y0<0) y0=0;
+  const px = x => (x-x0)/(x1-x0)*100, py = y => (1-(y-y0)/(y1-y0))*100;
+  let grid=''; for(let v=y0; v<=y1+1e-9; v+=step) grid += `<span style="bottom:${(v-y0)/(y1-y0)*100}%"><b>${Math.round(v*10)/10}</b></span>`;
+  const d = pts.map((p,i)=>`${i?'L':'M'}${px(p.x).toFixed(2)},${py(p.y).toFixed(2)}`).join('');
+  const area = `${d}L${px(pts[pts.length-1].x).toFixed(2)},100L${px(pts[0].x).toFixed(2)},100Z`;
+  const dots = pts.map((p,i)=>`<i class="ldot${i===pts.length-1?' end':''}" style="left:${px(p.x)}%;top:${py(p.y)}%" data-tip="${fmtShort(parse(p.d))}: ${p.y} lb"></i>`).join('');
+  return `<div class="lchart" style="height:${hgt}px" role="img" aria-label="${esc(label)}: ${pts.map(p=>`${fmtShort(parse(p.d))} ${p.y} lb`).join(', ')}"><div class="lgrid">${grid}</div><div class="lplot"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="ar" d="${area}"/><path class="ln" d="${d}"/></svg>${dots}</div><div class="lx"><span>${fmtShort(new Date(x0))}</span><span>${fmtShort(new Date(x1))}</span></div></div>`;
 }
 
 let dl = undefined; // downloads namespace: undefined = not checked, null = unavailable
@@ -119,8 +121,8 @@ const blobSave = { save: async ({filename, data}) => { const url=URL.createObjec
 async function initDownloads(){ try{ dl = (window.claude && window.claude.use) ? await window.claude.use('downloads') : blobSave; }catch(e){ dl=null; } if(tab==='progress') render(); }
 function csvCell(v){ const t = v==null ? '' : String(v); return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t; }
 function buildCsv(){
-  const rows = [['date','exercise','phase','weight_lb','sets','reps','hold_s','primary_muscles','secondary_muscles','note','program_slot','week_of']];
-  Object.keys(logs).forEach(id=> (logs[id]||[]).forEach(e=> rows.push([e.d, exInfo(id).n, e.ph?PHASES[e.ph].label:'', e.w??'', e.s??'', e.r??'', e.sec??'', muscleNames(id,'p'), muscleNames(id,'s'), e.n||'', e.slot||'', e.wk||''])));
+  const rows = [['date','exercise','phase','weight_lb','sets','reps','hold_s','set_detail','primary_muscles','secondary_muscles','note','program_slot','week_of']];
+  Object.keys(logs).forEach(id=> (logs[id]||[]).forEach(e=> rows.push([e.d, exInfo(id).n, e.ph?PHASES[e.ph].label:'', e.w??'', e.s??'', e.r??'', e.sec??'', setDetail(e), muscleNames(id,'p'), muscleNames(id,'s'), e.n||'', e.slot||'', e.wk||''])));
   const body = rows.slice(1).sort((a,b)=> a[0]===b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0]));
   return [rows[0], ...body].map(r=>r.map(csvCell).join(',')).join('\r\n');
 }
@@ -145,10 +147,9 @@ function weekSummary(key, w){
   const start = parse(key); const pk = (cfg.mode===2 && (w.prog==='A'||w.prog==='B')) ? w.prog : programFor(start);
   const prog = PROGRAMS[pk]||PROGRAMS.A; const slots = slotsFor(prog);
   const cols = {1:[],2:[],3:[],4:[],5:[],6:[]}; slots.forEach(s=>cols[(w.moved&&w.moved[s.id])||s.day].push(s));
-  const done = w.done||{}; const skip = s => isSkipped(s, w);
-  const days = [1,2,3,4,5,6].map(d=>{ const l=cols[d].filter(s=>!skip(s)); const n=l.filter(s=>done[s.id]).length; return l.length ? (n===l.length ? 2 : n>0 ? 1 : 0) : 0; });
-  const skipped = slots.filter(skip).length;
-  return {key, start, pk, days, full: days.filter(x=>x===2).length, ex: slots.filter(s=>done[s.id] && !skip(s)).length, total: slots.length - skipped, skipped};
+  const days = [1,2,3,4,5,6].map(d=>{ const t = tally(cols[d], w); return t.full ? 2 : t.done > 0 ? 1 : 0; });
+  const t = tally(slots, w);
+  return {key, start, pk, days, full: days.filter(x=>x===2).length, ex: t.done, total: t.total, skipped: t.skipped};
 }
 function renderHistory(){
   const weeks = {...(weekHist||{})}; weeks[weekKey()] = week; // live view of the shown week
@@ -180,7 +181,7 @@ function renderLifts(){
     const ws = same.map(e=>Number(e.w)).filter(n=>!isNaN(n)&&n>0);
     const best = ws.length? Math.max(...ws): null;
     const phName = last.ph ? PHASES[last.ph].label : 'No phase';
-    return `<button class="pcard" data-act="detail" data-ex="${id}"><h3>${esc(exInfo(id).n)}</h3><div class="pstats"><span>Last <b>${esc(describe(last))}</b></span>${best!=null?`<span>Best <b>${best} lb</b></span>`:''}<span>Sessions <b>${L.length}</b></span></div><span class="note"><span class="dot" data-p="${last.ph||''}"></span> ${phName} trend${same.length<L.length?` · ${L.length-same.length} other-phase session${L.length-same.length>1?'s':''} not shown`:''}</span>${lineChart(same,320,110)}</button>`;
+    return `<button class="pcard" data-act="detail" data-ex="${id}"><h3>${esc(exInfo(id).n)}</h3><div class="pstats"><span>Last <b>${esc(describe(last))}</b></span>${best!=null?`<span>Best <b>${best} lb</b></span>`:''}<span>Sessions <b>${L.length}</b></span></div>${(st=>st?`<span class="stall">Stalled · no gain in 3 sessions</span>`:'')(stallOf(id, last.ph||null))}<span class="note"><span class="dot" data-p="${last.ph||''}"></span> ${phName} trend${same.length<L.length?` · ${L.length-same.length} other-phase session${L.length-same.length>1?'s':''} not shown`:''}</span>${lineChart(same,320,110)}</button>`;
   }).join('')}</div>`;
 }
 
@@ -225,21 +226,39 @@ function openLog(slotId, idx){
     <div class="target"><span>Target<br><b>${t.w!=null?t.w+' lb':(t.src||'—')}</b></span><span>Prescription<br><b>${esc(rx||'—')}</b></span>${t.w!=null?`<span class="note" style="align-self:end">${esc(t.src)}</span>`:''}</div>
     <div class="fields">
       <label class="field">Phase<select id="f-ph">${!ph?'<option value="">None</option>':''}${PH_KEYS.map(k=>`<option value="${k}" ${k===ph?'selected':''}>${PHASES[k].label}</option>`).join('')}</select></label>
-      <label class="field">Weight (lb)<input id="f-w" type="number" inputmode="decimal" step="any" min="0" value="${t.w??''}" placeholder="BW"></label>
-      <label class="field">Sets<input id="f-s" type="number" inputmode="numeric" value="${m?m[1]:''}"></label>
-      <label class="field" id="f-r-wrap">${iso?'Hold (s)':'Reps'}<input id="f-r" type="number" inputmode="numeric" value="${iso?(m?m[2]:''):(m?m[2]:'')}"></label>
       <label class="field">1RM (lb)<input id="f-rm" type="number" inputmode="decimal" step="any" min="0" value="${cfg.rm[it.ex]??''}" placeholder="not set"></label>
       <label class="field">Date<input id="f-d" type="date" value="${defaultLogDate()}"></label>
     </div>
+    <div class="setbox"><div class="sethead"><span>Set</span><span>Weight (lb)</span><span></span><span id="f-rlabel">${iso?'Hold (s)':'Reps'}</span></div><div id="f-sets">${setRowsHtml(planRows(it, ph), iso)}</div>
+      <div class="setbtns"><button type="button" class="btn sm" data-act="addset">+ Set</button><button type="button" class="btn sm ghost" data-act="delset">− Set</button><span class="note">Change set 1 and the sets below follow, until you edit them.</span></div><p class="note" id="f-err" hidden></p></div>
     <label class="field">Note<input id="f-n" type="text" placeholder="Form, how it felt, equipment"></label>
     <label class="inline"><input type="checkbox" id="f-def"> Make this phase the default for this slot</label>
-    <label class="inline"><input type="checkbox" id="f-done" ${s.items.length===1?'checked':''}> Check off the card</label>
+    <label class="inline"><input type="checkbox" id="f-done" checked> ${isPaired(s)?'Check off this exercise':'Check off the card'}</label>
     <div class="actions">${lastLog(it.ex, ph)?`<button type="button" class="btn" data-act="fillLast" style="margin-right:auto">Fill last: ${esc(describe(lastLog(it.ex, ph)))}</button>`:''}<button type="button" class="btn" data-act="close">Cancel</button><button type="submit" class="btn primary">Save set</button></div>
-    ${hist.length?`<div><div class="sect" style="padding:0 0 4px">Recent</div><table class="hist"><thead><tr><th>Date</th><th>Phase</th><th class="num">Load</th><th class="num">Volume</th></tr></thead><tbody>${hist.map(e=>`<tr><td>${fmtShort(parse(e.d))}</td><td>${e.ph?PHASES[e.ph].label:'—'}</td><td class="num">${e.w!=null&&e.w!==''?e.w+' lb':'BW'}</td><td class="num">${e.sec?`${e.s}×${e.sec}s`:`${e.s||'?'}×${e.r||'?'}`}</td></tr>`).join('')}</tbody></table></div>`:''}
+    ${hist.length?`<div><div class="sect" style="padding:0 0 4px">Recent</div><table class="hist"><thead><tr><th>Date</th><th>Phase</th><th class="num">Load</th><th class="num">Sets</th></tr></thead><tbody>${hist.map(e=>`<tr><td>${fmtShort(parse(e.d))}</td><td>${e.ph?PHASES[e.ph].label:'—'}</td><td class="num">${e.w!=null&&e.w!==''?e.w+' lb':'BW'}</td><td class="num">${esc(volText(e))}</td></tr>`).join('')}</tbody></table></div>`:''}
   </form></div>`;
   const phSel = document.getElementById('f-ph');
-  phSel.addEventListener('change', ()=>{ const p=phSel.value; const nt=targetOf(it,p||null); document.getElementById('f-w').value = nt.w??''; const r=rxOf(it,p||null).match(/(\d+)\s*×\s*(\d+)/); document.getElementById('f-s').value=r?r[1]:''; document.getElementById('f-r').value=r?r[2]:''; document.getElementById('f-r-wrap').firstChild.textContent = p==='iso'?'Hold (s)':'Reps'; });
-  document.getElementById('f-w').focus();
+  phSel.addEventListener('change', ()=>{ const p=phSel.value||null; fillSetRows(planRows(it, p), p==='iso'); });
+  const box = document.getElementById('f-sets');
+  box.addEventListener('input', e=>{ const t=e.target; if(!t.dataset || t.dataset.set==null) return; t.dataset.touched='1'; const i=Number(t.dataset.set), k=t.dataset.k;
+    box.querySelectorAll(`input[data-k="${k}"]`).forEach(x=>{ if(Number(x.dataset.set)>i && x.dataset.touched!=='1') x.value=t.value; }); });
+  const first = document.getElementById('f-w-0'); if(first) first.focus();
+}
+// Set rows in the log sheet
+function planRows(it, ph){
+  const iso = ph==='iso'; const m = rxOf(it, ph).match(/(\d+)\s*×\s*(\d+)/); const n = m ? Number(m[1]) : 3; const t = targetOf(it, ph);
+  const reps = m ? Number(m[2]) : null; const hold = iso ? ((lastLog(it.ex,'iso')||{}).sec || reps) : null;
+  return Array.from({length:n}, ()=> iso ? {w:t.w??null, sec:hold} : {w:t.w??null, r:reps});
+}
+function setRowsHtml(rows, iso){
+  return rows.map((x,i)=>`<div class="setrow"><span class="setn">${i+1}</span><input id="f-w-${i}" data-set="${i}" data-k="w" type="number" inputmode="decimal" step="any" min="0" value="${x.w??''}" placeholder="BW" aria-label="Set ${i+1} weight in lb"><span class="setx">×</span><input id="f-r-${i}" data-set="${i}" data-k="r" type="number" inputmode="numeric" step="any" min="0" value="${(iso?x.sec:x.r)??''}" aria-label="Set ${i+1} ${iso?'hold in seconds':'reps'}"></div>`).join('');
+}
+function fillSetRows(rows, iso){ const box = document.getElementById('f-sets'); if(!box) return; box.innerHTML = setRowsHtml(rows, iso); document.getElementById('f-rlabel').textContent = iso ? 'Hold (s)' : 'Reps'; }
+function readSetRows(){
+  const iso = (document.getElementById('f-ph').value||null)==='iso'; const out = [];
+  document.querySelectorAll('#f-sets .setrow').forEach((row,i)=>{ const g = id => { const v = document.getElementById(id+i).value; return v==='' ? null : Number(v); };
+    const w = g('f-w-'), r = g('f-r-'); if(w==null && r==null) return; out.push(iso ? {w, sec:r} : {w, r}); });
+  return {sets:out, iso};
 }
 function hideTip(k='hidetip'){ try{ return localStorage.getItem('ironlog:'+k)==='1'; }catch(e){ return false; } }
 function defaultLogDate(){ const today=new Date(); const end=addDays(weekStart,6); return (today>=weekStart && today<=addDays(end,1)) ? ymd(today) : ymd(weekStart); }
@@ -249,6 +268,6 @@ function openDetail(exId){
   const L = (logs[exId]||[]);
   document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><div class="sheet" style="max-width:640px"><h2 class="cond">${esc(exInfo(exId).n)}</h2>${(()=>{ const last=L[L.length-1]; if(!last) return ''; const same=L.filter(e=>(e.ph||null)===(last.ph||null)); return `<p class="note">${last.ph?PHASES[last.ph].label:'No phase'} trend (the phase you logged most recently). The table lists every session.</p>`+lineChart(same); })()}
   <table class="hist"><thead><tr><th>Date</th><th>Phase</th><th class="num">Load</th><th class="num">Volume</th><th>Note</th><th></th></tr></thead><tbody>
-  ${L.map((e,i)=>({e,i})).reverse().map(({e,i})=>`<tr><td>${fmtShort(parse(e.d))}</td><td>${e.ph?PHASES[e.ph].label:'—'}</td><td class="num">${e.w!=null&&e.w!==''?e.w+' lb':'BW'}</td><td class="num">${e.sec?`${e.s}×${e.sec}s`:`${e.s||'?'}×${e.r||'?'}`}</td><td>${esc(e.n||'')}</td><td><button class="btn sm ghost" data-act="dellog" data-ex="${exId}" data-i="${i}" aria-label="Delete entry">✕</button></td></tr>`).join('')}
+  ${L.map((e,i)=>({e,i})).reverse().map(({e,i})=>`<tr><td>${fmtShort(parse(e.d))}</td><td>${e.ph?PHASES[e.ph].label:'—'}</td><td class="num">${e.w!=null&&e.w!==''?e.w+' lb':'BW'}</td><td class="num">${esc(volText(e))}</td><td>${esc(e.n||'')}</td><td><button class="btn sm ghost" data-act="dellog" data-ex="${exId}" data-i="${i}" aria-label="Delete entry">✕</button></td></tr>`).join('')}
   </tbody></table><div class="actions"><button class="btn" data-act="close">Close</button></div></div></div>`;
 }
