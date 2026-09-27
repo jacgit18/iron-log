@@ -3,7 +3,7 @@ let downOnScrim = false;
 document.addEventListener('pointerdown', e=>{ downOnScrim = !!(e.target.classList && e.target.classList.contains('scrim')); }, true);
 function blocked(){ if(isReady()) return false; flag('Still loading your data…'); render(); return true; }
 let backupSnoozed = false;
-const MUTATE = new Set(['progname','bwsave','bwdel','impmerge','impreplace','imppaste','libload','libdel','skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
+const MUTATE = new Set(['icheck','progname','bwsave','bwdel','impmerge','impreplace','imppaste','libload','libdel','skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
 document.addEventListener('click', e=>{
   const t = e.target.closest('[data-act]'); if(!t) return;
   const a = t.dataset.act;
@@ -12,7 +12,9 @@ document.addEventListener('click', e=>{
   if(a==='prev'||a==='next'||a==='today'){ mDay=null; weekStart = a==='today'? monday(new Date()) : addDays(weekStart, a==='prev'?-7:7); subscribeWeek(); render(); }
   if(a==='log'){ openLog(t.dataset.slot, Number(t.dataset.idx)); }
   if(a==='detail'){ openDetail(t.dataset.ex); }
-  if(a==='fillLast'){ const f=document.getElementById('logform'); const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const sl=slotsFor(prog).find(x=>x.id===f.dataset.slot); const i=Number(f.dataset.idx); const L=lastLog(sl.items[i].ex, document.getElementById('f-ph').value||null); if(!L) return; document.getElementById('f-w').value=L.w??''; document.getElementById('f-s').value=L.s??''; document.getElementById('f-r').value=(L.sec??L.r)??''; return; }
+  if(a==='fillLast'){ const f=document.getElementById('logform'); const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const sl=slotsFor(prog).find(x=>x.id===f.dataset.slot); const i=Number(f.dataset.idx); const L=lastLog(sl.items[i].ex, document.getElementById('f-ph').value||null); if(!L) return; const ph=document.getElementById('f-ph').value||null; fillSetRows(setsOfEntry(L), ph==='iso'); return; }
+  if(a==='addset'){ const {sets, iso}=readSetRows(); const all=[...document.querySelectorAll('#f-sets .setrow')].length; const rows=[...document.querySelectorAll('#f-sets .setrow')].map((_,i)=>({w:(v=>v===''?null:Number(v))(document.getElementById('f-w-'+i).value), [iso?'sec':'r']:(v=>v===''?null:Number(v))(document.getElementById('f-r-'+i).value)})); const last=rows[rows.length-1]||{w:null}; rows.push({...last}); fillSetRows(rows, iso); return; }
+  if(a==='delset'){ const n=document.querySelectorAll('#f-sets .setrow').length; if(n>1) document.querySelectorAll('#f-sets .setrow')[n-1].remove(); return; }
   if(a==='muscle'){ bodySel = t.dataset.m || null; render(); return; }
   if(a==='bodyprog'){ bodyView = t.dataset.p; render(); return; }
   if(a==='tagex'){ openTagEditor(t.dataset.ex); return; }
@@ -49,8 +51,8 @@ document.addEventListener('click', e=>{
   if(a==='hidetip'){ try{ localStorage.setItem('ironlog:'+(t.dataset.k||'hidetip'),'1'); }catch(e){} render(); return; }
   if(a==='mday'){ mDay=Number(t.dataset.day); render(); window.scrollTo({top:0}); return; }
   if(a==='setprog'){ const k=t.dataset.p; if(k===programFor(weekStart)) week.prog=null; else week.prog=k; saveWeek(); render(); }
-  if(a==='pull'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; slotsFor(prog).forEach(s=>{ if(s.day<5 && (week.moved[s.id]||s.day)<5 && !week.done[s.id] && !isSkipped(s)) week.moved[s.id]=5; }); saveWeek(); render(); }
-  if(a==='skip'){ const id=t.dataset.slot; week.skipped = week.skipped||{}; if(week.skipped[id]) delete week.skipped[id]; else { week.skipped[id]=true; delete week.done[id]; } saveWeek(); render(); flag(week.skipped[id]?'Skipped for this week':'Skip undone'); return; }
+  if(a==='pull'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; slotsFor(prog).forEach(s=>{ if(s.day<5 && (week.moved[s.id]||s.day)<5 && isOpen(s)) week.moved[s.id]=5; }); saveWeek(); render(); }
+  if(a==='skip'){ const id=t.dataset.slot; week.skipped = week.skipped||{}; if(week.skipped[id]) delete week.skipped[id]; else { week.skipped[id]=true; const s=slotById(id); if(s) clearDone(s); else delete week.done[id]; } saveWeek(); render(); flag(week.skipped[id]?'Skipped for this week':'Skip undone'); return; }
   if(a==='dellog'){ if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent='Delete?'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent='✕'; } },3000); return; } const ex=t.dataset.ex, i=Number(t.dataset.i); logs[ex].splice(i,1); saveLog(ex); render(); openDetail(ex); }
 });
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{ tab=b.dataset.tab; if(tab==='progress') { weekHist=null; } render(); }));
@@ -60,8 +62,8 @@ document.addEventListener('change', e=>{
   if(t.id==='imp-file'){ if(!blocked()) readImportFile(t.files&&t.files[0]); t.value=''; return; }
   const a = t.dataset && t.dataset.act; if(!a) return;
   if(MUTATE.has(a) && blocked()) return;
-  if(a==='check'){ if(t.checked){ week.done[t.dataset.slot]=true; if(week.skipped) delete week.skipped[t.dataset.slot]; } else delete week.done[t.dataset.slot]; saveWeek(); render(); }
-  if(a==='day'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const d=Number(t.dataset.day); currentLayout(slotsFor(prog))[d].forEach(s=>{ if(isSkipped(s)) return; if(t.checked) week.done[s.id]=true; else delete week.done[s.id]; }); saveWeek(); render(); }
+  if(a==='check'||a==='icheck'){ const s=slotById(t.dataset.slot); if(!s) return; if(a==='icheck') setItemDone(s, Number(t.dataset.idx), t.checked); else setCardDone(s, t.checked); saveWeek(); render(); }
+  if(a==='day'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const d=Number(t.dataset.day); currentLayout(slotsFor(prog))[d].forEach(s=>{ if(isSkipped(s)) return; setCardDone(s, t.checked); }); saveWeek(); render(); }
   if(a==='warm'){ const d=t.dataset.day; week.warm[d]=week.warm[d]||{}; week.warm[d][t.dataset.w]=t.checked; saveWeek(); }
   if(a==='move'){ moveSlot(t.dataset.slot, Number(t.value)); }
   if(a==='phase'){ week.ph[`${t.dataset.slot}:${t.dataset.idx}`]=t.value; saveWeek(); render(); }
@@ -96,8 +98,9 @@ document.addEventListener('submit', e=>{
   const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const s=slotsFor(prog).find(x=>x.id===slotId); const it=s.items[idx];
   const ph=document.getElementById('f-ph').value||null;
   const num = id => { const v=document.getElementById(id).value; return v===''?null:Number(v); };
-  const entry = {d:document.getElementById('f-d').value||ymd(new Date()), ph, w:num('f-w'), s:num('f-s'), n:document.getElementById('f-n').value.trim()||undefined, slot:slotId, wk:weekKey()};
-  if(ph==='iso') entry.sec=num('f-r'); else entry.r=num('f-r');
+  const {sets, iso} = readSetRows(); const err = document.getElementById('f-err');
+  if(!sets.length){ err.hidden=false; err.textContent='Enter at least one set.'; return; }
+  const entry = {d:document.getElementById('f-d').value||ymd(new Date()), ph, ...summarizeSets(sets, iso), n:document.getElementById('f-n').value.trim()||undefined, slot:slotId, wk:weekKey()};
   const arr = logs[it.ex] = [...(logs[it.ex]||[]), JSON.parse(JSON.stringify(entry))];
   arr.sort((a,b)=>a.d.localeCompare(b.d));
   saveLog(it.ex);
@@ -106,7 +109,7 @@ document.addEventListener('submit', e=>{
   if(document.getElementById('f-def').checked && ph){ cfg.phDef[key]=ph; delete week.ph[key]; saveCfg(); }
   const rmv=document.getElementById('f-rm').value; const rmn=Number(rmv);
   if(rmv==='' ? cfg.rm[it.ex]!=null : (rmn>0 && rmn!==cfg.rm[it.ex])){ if(rmv==='') delete cfg.rm[it.ex]; else cfg.rm[it.ex]=rmn; saveCfg(); }
-  if(document.getElementById('f-done').checked){ week.done[slotId]=true; if(week.skipped) delete week.skipped[slotId]; }
+  if(document.getElementById('f-done').checked) setItemDone(s, idx, true);
   saveWeek(); closeModal(); render();
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });

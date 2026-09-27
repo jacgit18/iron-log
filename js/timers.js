@@ -44,13 +44,13 @@ function holdPlan(slot, idx){
 function addEntry(slot, idx, entry, {check}={}){
   const it = slot.items[idx]; const arr = logs[it.ex] = [...(logs[it.ex]||[]), JSON.parse(JSON.stringify(entry))];
   arr.sort((a,b)=>a.d.localeCompare(b.d)); saveLog(it.ex);
-  if(check){ week.done[slot.id]=true; if(week.skipped) delete week.skipped[slot.id]; }
+  if(check) setItemDone(slot, idx, true);
   saveWeek();
 }
 function quickLog(slotId, idx){
   const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const sl=slotsFor(prog).find(x=>x.id===slotId); if(!sl) return;
   const ph = phaseOf(sl, idx); const last = lastLog(sl.items[idx].ex, ph); if(!last) return;
-  const e = {d:defaultLogDate(), ph:last.ph||null, w:last.w, s:last.s, slot:slotId, wk:weekKey()}; if(last.sec!=null) e.sec=last.sec; else e.r=last.r;
-  addEntry(sl, idx, e, {check: sl.items.length===1 || sl.items.every((it,k)=>k===idx || (logs[it.ex]||[]).some(x=>x.wk===weekKey() && x.slot===slotId))});
+  const e = {d:defaultLogDate(), ph:last.ph||null, w:last.w, s:last.s, slot:slotId, wk:weekKey()}; if(last.sec!=null) e.sec=last.sec; else e.r=last.r; if(Array.isArray(last.sets)) e.sets = JSON.parse(JSON.stringify(last.sets));
+  addEntry(sl, idx, e, {check: true});
   render(); flag(`Logged ${describe(e)}`);
 }

@@ -18,7 +18,7 @@ async function allWeeks(){
   return w;
 }
 const phaseLabel = p => p ? PHASES[p].label : '';
-const entryVolume = e => (e.sec || !(Number(e.w)>0) || !e.s || !e.r) ? '' : Number(e.w)*Number(e.s)*Number(e.r);
+const entryVolume = e => { if(e.sec) return ''; const v = setsOfEntry(e).reduce((a,x)=>a+(Number(x.w)>0 && Number(x.r)>0 ? Number(x.w)*Number(x.r) : 0),0); return v || ''; };
 function weekOfDate(d){ return ymd(monday(parse(d))); }
 function sheet(X, rows, widths){
   const ws = X.utils.aoa_to_sheet(rows);
@@ -27,13 +27,14 @@ function sheet(X, rows, widths){
   return ws;
 }
 function muscleNames(id, role){ const t = tagsOf(id); if(!t || t.mob) return t && t.mob ? (role==='p' ? 'Mobility' : '') : ''; return (t[role]||[]).map(m=>MUSCLES[m] ? MUSCLES[m].n : m).join(', '); }
+const setDetail = e => Array.isArray(e.sets) && e.sets.length ? e.sets.map(x=>`${x.w!=null?x.w:'BW'}×${setVal(x)}`).join(', ') : '';
 function sessionRows(filter){
   const rows = [];
-  Object.keys(logs).forEach(id=> (logs[id]||[]).forEach(e=>{ if(!filter || filter(e)) rows.push([e.d, e.wk||weekOfDate(e.d), exInfo(id).n, phaseLabel(e.ph), e.w??'', e.s??'', e.sec?'':(e.r??''), e.sec??'', entryVolume(e), muscleNames(id,'p'), muscleNames(id,'s'), e.n||'', e.slot||'']); }));
+  Object.keys(logs).forEach(id=> (logs[id]||[]).forEach(e=>{ if(!filter || filter(e)) rows.push([e.d, e.wk||weekOfDate(e.d), exInfo(id).n, phaseLabel(e.ph), e.w??'', e.s??'', e.sec?'':(e.r??''), e.sec??'', setDetail(e), entryVolume(e), muscleNames(id,'p'), muscleNames(id,'s'), e.n||'', e.slot||'']); }));
   rows.sort((a,b)=> a[0]===b[0] ? a[2].localeCompare(b[2]) : a[0].localeCompare(b[0]));
-  return [['Date','Week of','Exercise','Phase','Weight (lb)','Sets','Reps','Hold (s)','Volume (lb)','Primary muscles','Secondary muscles','Note','Program slot'], ...rows];
+  return [['Date','Week of','Exercise','Phase','Weight (lb)','Sets','Reps','Hold (s)','Set by set','Volume (lb)','Primary muscles','Secondary muscles','Note','Program slot'], ...rows];
 }
-const SESSION_COLS = [11,11,34,13,11,6,6,9,12,28,28,30,14];
+const SESSION_COLS = [11,11,34,13,11,6,6,9,26,12,28,28,30,14];
 
 function buildOverallWorkbook(X, weeks){
   const wb = X.utils.book_new();
@@ -87,7 +88,7 @@ function buildWeekWorkbook(X, key, w){
   slots.forEach(s=> s.items.forEach((it,idx)=>{
     const ph = (w.ph&&w.ph[`${s.id}:${idx}`]) ?? cfg.phDef[`${s.id}:${idx}`] ?? it.ph ?? null;
     const moved = w.moved && w.moved[s.id];
-    plan.push([s.day, moved||s.day, s.sec||'', s.tier||'', s.type==='single'?'':s.type, exInfo(it.ex).n, phaseLabel(ph), rxOf(it, ph), it.w??(it.bw?'BW':''), (w.skipped&&w.skipped[s.id])?'Skipped':(w.done&&w.done[s.id])?'Yes':'No']);
+    plan.push([s.day, moved||s.day, s.sec||'', s.tier||'', s.type==='single'?'':s.type, exInfo(it.ex).n, phaseLabel(ph), rxOf(it, ph), it.w??(it.bw?'BW':''), (w.skipped&&w.skipped[s.id])?'Skipped':isItemDone(s, idx, normWeek(w))?'Yes':'No']);
   }));
   X.utils.book_append_sheet(wb, sheet(X, plan, [11,11,11,10,9,34,13,16,18,6]), 'Plan');
   X.utils.book_append_sheet(wb, sheet(X, n, SESSION_COLS), 'Logged');
