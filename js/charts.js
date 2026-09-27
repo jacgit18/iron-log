@@ -48,7 +48,7 @@ function kpiTiles(keys, byWeek, changes){
   return `<div class="kpis">${
     tile('This week', `${r.ex}<small> of ${r.total}</small>`, `exercises done · ${r.full} of 6 days${r.skipped?` · ${r.skipped} skipped`:''}`)}${
     tile('Sets, last 4 weeks', `${fmtSets(s4)}`, prev==null ? 'A comparison with the previous 4 weeks starts after 8 weeks of logs' : `${signed(s4-prev)} vs the 4 weeks before`)}${
-    tile('Lifts going up', changes.length ? `${up}<small> of ${changes.length}</small>` : '—', changes.length ? 'heavier now than at the start of the last 8 weeks' : 'Log a lift with weight on two days to track it')}</div>`;
+    tile('Lifts going up', changes.length ? `${up}<small> of ${changes.length}</small>` : '—', changes.length ? 'heavier now than at the start of the last 8 weeks' : 'Log a lift with weight on two days to track it')}${bodyTile()}</div>`;
 }
 
 function setsChart(keys, byWeek){
@@ -107,10 +107,10 @@ function muscleHeat(keys){
 
 function renderTrends(){
   const hasLogs = Object.values(logs).some(l=>l&&l.length);
-  if(!hasLogs) return '';
+  if(!hasLogs && !body.length) return '';
   const keys = trendWeeks(12, 4); const byWeek = setsByWeek(keys);
   const changes = weightChanges(keys[Math.max(0, keys.length-8)]);
-  return kpiTiles(keys, byWeek, changes) + `<div class="tgrid">${setsChart(keys, byWeek)}${changeChart(changes)}</div>` + muscleHeat(keys);
+  return kpiTiles(keys, byWeek, changes) + `<div class="tgrid">${setsChart(keys, byWeek)}${changeChart(changes)}${bodyChart()}</div>` + muscleHeat(keys);
 }
 
 /* Tooltip for any [data-tip] mark: hover with a mouse, tap or focus on touch/keyboard. */
@@ -130,3 +130,42 @@ document.addEventListener('pointerdown', e=>{ if(e.pointerType==='mouse') return
 document.addEventListener('focusin', e=>{ const t = e.target.closest && e.target.closest('[data-tip]'); if(t) showTooltip(t); });
 document.addEventListener('focusout', hideTooltip);
 window.addEventListener('scroll', hideTooltip, {passive:true});
+
+/* ---------- Body weight ---------- */
+let bwEditing = false;
+const bwSorted = () => [...body].filter(e=>e && e.wk && Number(e.w)>0).sort((a,b)=>a.wk.localeCompare(b.wk));
+const fmtLb = n => `${Math.round(Number(n)*10)/10}`;
+function bwPrevious(wk){ const l = bwSorted().filter(e=>e.wk < wk); return l[l.length-1] || null; }
+function bodyRow(){
+  const wk = weekKey(); const cur = body.find(e=>e.wk===wk); const prev = bwPrevious(wk);
+  const isNow = wk === ymd(monday(new Date()));
+  const label = isNow ? 'Body weight this week' : `Body weight, week of ${fmtShort(weekStart)}`;
+  if(cur && !bwEditing){
+    const diff = prev ? Number(cur.w) - Number(prev.w) : null;
+    return `<div class="bwrow"><span class="bwl">${label}</span><b>${fmtLb(cur.w)} lb</b>${diff!=null?`<span class="note">${diff===0?'same as':`${signed(diff,1)} lb vs`} ${fmtShort(parse(prev.d))}</span>`:''}<button class="btn sm ghost" data-act="bwedit">Edit</button></div>`;
+  }
+  return `<form class="bwrow" id="bwform" novalidate><label class="bwl" for="bw-in">${label}</label><span class="bwin"><input id="bw-in" type="number" inputmode="decimal" step="any" min="0" value="${cur?fmtLb(cur.w):''}" placeholder="${prev?fmtLb(prev.w):'lb'}" aria-label="${label} in pounds"> lb</span><button type="submit" class="btn sm primary">Save</button>${cur?'<button type="button" class="btn sm ghost" data-act="bwcancel">Cancel</button>':''}</form>`;
+}
+function saveBodyWeight(v){
+  const n = Number(v); if(!(n>0 && n<1500)){ flag('Enter your weight in lb'); return; }
+  const wk = weekKey(); const today = ymd(new Date()); const d = (today >= wk && today <= ymd(addDays(weekStart,6))) ? today : wk;
+  body = [...body.filter(e=>e.wk!==wk), {wk, d, w:Math.round(n*10)/10}].sort((a,b)=>a.wk.localeCompare(b.wk));
+  saveBody(); bwEditing = false; render(); flag('Body weight saved');
+}
+function bodyTile(){
+  const L = bwSorted(); if(!L.length) return '';
+  const last = L[L.length-1]; const cut = ymd(addDays(parse(last.wk), -28));
+  const base = [...L].reverse().find(e=>e.wk <= cut) || (L.length>1 ? L[0] : null);
+  const diff = base ? last.w - base.w : null;
+  return `<div class="kpi"><span class="kl">Body weight</span><span class="kv">${fmtLb(last.w)}<small> lb</small></span><span class="ks">${diff==null?`Logged ${fmtShort(parse(last.d))}`:`${signed(diff,1)} lb since ${fmtShort(parse(base.d))}`}</span></div>`;
+}
+function bodyChart(){
+  const L = bwSorted();
+  let h = `<section class="panel tchart"><h2>Body weight</h2>`;
+  if(!L.length) return h + `<p class="note">Log your weight once a week from the top of the Board. It shows here as a trend.</p></section>`;
+  h += L.length>1 ? lineChart(L.map(e=>({d:e.d, w:e.w})), 560, 180, 'Body weight over time') : `<p class="note">One more weekly weigh-in and the trend line starts.</p>`;
+  const rec = [...L].reverse().slice(0, 6);
+  h += `<table class="hist bwtab"><thead><tr><th>Date</th><th class="num">Weight</th><th class="num">Change</th><th></th></tr></thead><tbody>${rec.map((e,i)=>{ const p = rec[i+1]; return `<tr><td>${fmtShort(parse(e.d))}</td><td class="num">${fmtLb(e.w)} lb</td><td class="num">${p?`${signed(e.w-p.w,1)}`:'—'}</td><td class="num"><button class="btn sm ghost" data-act="bwdel" data-wk="${e.wk}" aria-label="Delete ${fmtShort(parse(e.d))}">✕</button></td></tr>`; }).join('')}</tbody></table>`;
+  if(L.length>6) h += `<p class="note">Showing the latest 6 of ${L.length}. All of them are in the Excel and data exports.</p>`;
+  return h + `</section>`;
+}

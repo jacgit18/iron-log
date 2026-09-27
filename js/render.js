@@ -2,7 +2,7 @@
 function render(){
   const progKey = activeProgKey();
   const prog = PROGRAMS[progKey] || PROGRAMS.A;
-  document.getElementById('progPill').textContent = `Program ${progKey}`;
+  document.getElementById('progPill').textContent = progName(progKey);
   document.getElementById('modePill').textContent = `Mode ${cfg.mode}`;
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.tab===tab)));
   const v = document.getElementById('view');
@@ -30,13 +30,14 @@ function renderBoard(progKey, prog){
   h += `<div class="weekbar"><div class="weeknav"><button class="btn sm" data-act="prev" aria-label="Previous week">‹</button><h2 class="cond">${fmtShort(weekStart)} – ${fmtShort(end)}</h2><button class="btn sm" data-act="next" aria-label="Next week">›</button>`;
   if(ymd(monday(new Date()))!==weekKey()) h+=`<button class="btn sm ghost" data-act="today">This week</button>`;
   h += `<label class="seg modesel" for="board-mode"><span class="sr">Mode</span><select id="board-mode" data-act="mode" aria-label="Program mode">${[[1,'Mode 1 · A only'],[2,'Mode 2 · monthly'],[3,'Mode 3 · 6 months']].map(([m,t])=>`<option value="${m}" ${cfg.mode===m?'selected':''}>${t}</option>`).join('')}</select></label>`;
-  if(cfg.mode===2){ const auto=programFor(weekStart); h += `<div class="seg" role="group" aria-label="Program this week">${['A','B'].map(k=>`<button class="${k===progKey?'on':''}" data-act="setprog" data-p="${k}" aria-pressed="${k===progKey}">Program ${k}</button>`).join('')}</div><span class="saveflag">${progKey===auto?'Set by month':`Switched · month default is ${auto}`}</span>`; }
+  if(cfg.mode===2){ const auto=programFor(weekStart); h += `<div class="seg" role="group" aria-label="Program this week">${['A','B'].map(k=>`<button class="${k===progKey?'on':''}" data-act="setprog" data-p="${k}" aria-pressed="${k===progKey}">${esc(progName(k))}</button>`).join('')}</div><span class="saveflag">${progKey===auto?'Set by month':`Switched · month default is ${esc(progName(auto))}`}</span>`; }
   h += `</div><div class="progress"><span>${done} of ${total} done${skippedN?` · ${skippedN} skipped`:''}</span><div class="bar"><i style="width:${pct}%"></i></div></div></div>`;
-  if(!PROGRAMS[progKey]) h += `<div class="notice">Program ${progKey} is scheduled this week but hasn't been added yet, so Program A is shown.</div>`;
+  if(!PROGRAMS[progKey]) h += `<div class="notice">${esc(progName(progKey))} is scheduled this week but hasn't been added yet, so ${esc(progName('A'))} is shown.</div>`;
   if(!Object.keys(cfg.rm).length && !hideTip()) h += `<div class="notice tip"><span>Targets use your last logged weight. Add a 1RM (in Settings or when you log a set) to get phase-based targets instead.</span><button class="btn sm ghost" data-act="hidetip">Got it</button></div>`;
   const since = daysSinceBackup(); const anyLogs = Object.values(logs).some(l=>l&&l.length);
   if(mcp && anyLogs && !backupSnoozed && (since==null || since>=7)) h += `<div class="notice tip"><span>${since==null?'Your training data hasn\u2019t been backed up to GitHub yet.':`Last GitHub backup was ${since} days ago.`}</span><span><button class="btn sm" data-act="backup" ${backupBusy?'disabled':''}>${backupBusy?'Backing up…':'Back up now'}</button> <button class="btn sm ghost" data-act="snooze">Later</button></span></div>`;
   if(storeMode==='local' && !hideTip('hidelocal')) h += `<div class="notice tip"><span>${window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export on the Progress tab to back it up.'}</span><button class="btn sm ghost" data-act="hidetip" data-k="hidelocal">Got it</button></div>`;
+  h += bodyRow();
   if(mDay==null){ mDay = 1; for(let d=1; d<=6; d++){ const l=cols[d]; if(l.some(s=>!week.done[s.id] && !isSkipped(s))){ mDay=d; break; } } }
   h += `<div class="daytabs" role="tablist" aria-label="Day">${[1,2,3,4,5,6].map(d=>{ const l=cols[d].filter(s=>!isSkipped(s)), n=l.filter(s=>week.done[s.id]).length; const full=l.length&&n===l.length; return `<button role="tab" data-act="mday" data-day="${d}" aria-selected="${d===mDay}" class="${full?'full':''}"><b>D${d}</b><span>${full?'✓':`${n}/${l.length}`}</span></button>`; }).join('')}</div>`;
   h += `<div class="board">`;
@@ -96,7 +97,7 @@ function renderCard(s, curDay){
   return h + `</article>`;
 }
 
-function lineChart(entries, w=560, hgt=180){
+function lineChart(entries, w=560, hgt=180, label='Weight over time'){
   const pts = entries.filter(e=>e.w!=null && e.w!=='').map(e=>({x:parse(e.d).getTime(), y:Number(e.w)}));
   if(pts.length<2) return `<p class="note">Log at least two sessions with a weight to see a trend.</p>`;
   const L=40,R=12,T=12,B=26;
@@ -108,9 +109,9 @@ function lineChart(entries, w=560, hgt=180){
   let g=''; for(let v=y0; v<=y1+1e-9; v+=step){ g+=`<line class="grid" x1="${L}" x2="${w-R}" y1="${sy(v)}" y2="${sy(v)}"/><text x="${L-6}" y="${sy(v)+4}" text-anchor="end">${v}</text>`; }
   const d = pts.map((p,i)=>`${i?'L':'M'}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join('');
   const area = `${d}L${sx(pts[pts.length-1].x).toFixed(1)},${sy(y0)}L${sx(pts[0].x).toFixed(1)},${sy(y0)}Z`;
-  const dots = pts.map((p,i)=> i===pts.length-1 ? `<circle class="end" cx="${sx(p.x)}" cy="${sy(p.y)}" r="4.5"/>` : `<circle class="pt" cx="${sx(p.x)}" cy="${sy(p.y)}" r="3"/>`).join('');
+  const dots = pts.map((p,i)=> (i===pts.length-1 ? `<circle class="end" cx="${sx(p.x)}" cy="${sy(p.y)}" r="4.5"/>` : `<circle class="pt" cx="${sx(p.x)}" cy="${sy(p.y)}" r="3"/>`) + `<circle class="hit" cx="${sx(p.x)}" cy="${sy(p.y)}" r="11" data-tip="${fmtShort(new Date(p.x))}: ${p.y} lb"/>`).join('');
   const lab = `<text x="${L}" y="${hgt-6}">${fmtShort(new Date(x0))}</text><text x="${w-R}" y="${hgt-6}" text-anchor="end">${fmtShort(new Date(x1))}</text>`;
-  return `<svg class="chart" viewBox="0 0 ${w} ${hgt}" width="100%" role="img" aria-label="Weight over time">${g}<path class="ar" d="${area}"/><path class="ln" d="${d}"/>${dots}${lab}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${w} ${hgt}" width="100%" role="img" aria-label="${esc(label)}">${g}<path class="ar" d="${area}"/><path class="ln" d="${d}"/>${dots}${lab}</svg>`;
 }
 
 let dl = undefined; // downloads namespace: undefined = not checked, null = unavailable
@@ -188,7 +189,7 @@ function renderSettings(){
   const months = Array.from({length:12},(_,i)=>{ const dt=new Date(yr,i,1); const p=programFor(dt); return `<div class="${p==='B'?'b':''}${i===now.getMonth()?' now':''}">${MON[i][0]}<br>${p}</div>`; }).join('');
   let h = `<div class="settings">`;
   h += `<section class="panel"><h2>Program mode</h2><div class="modes">
-    ${[[1,'Program A only','Run Program A every week.'],[2,'Alternate monthly','Program A in even months, B in odd months.'],[3,'Swap every 6 months','Six months on one program, then six on the other.']].map(([m,t,dsc])=>`<label class="mode"><input type="radio" name="mode" id="mode-${m}" value="${m}" data-act="mode" ${cfg.mode===m?'checked':''}><div><b>Mode ${m} · ${t}</b><span>${dsc}</span></div></label>`).join('')}
+    ${[[1,`${esc(progName('A'))} only`,`Run ${esc(progName('A'))} every week.`],[2,'Alternate monthly',`${esc(progName('A'))} and ${esc(progName('B'))} take turns by month.`],[3,'Swap every 6 months','Six months on one program, then six on the other.']].map(([m,t,dsc])=>`<label class="mode"><input type="radio" name="mode" id="mode-${m}" value="${m}" data-act="mode" ${cfg.mode===m?'checked':''}><div><b>Mode ${m} · ${t}</b><span>${dsc}</span></div></label>`).join('')}
   </div>`;
   if(cfg.mode===3) h += `<div class="inline" style="flex-wrap:wrap"><label for="m3s">First block starts in</label><select id="m3s" class="btn sm" data-act="m3s">${MON.map((m,i)=>`<option value="${i+1}" ${cfg.m3Start===i+1?'selected':''}>${m}</option>`).join('')}</select><label for="m3f">on</label><select id="m3f" class="btn sm" data-act="m3f">${['A','B'].map(p=>`<option ${cfg.m3First===p?'selected':''}>${p}</option>`).join('')}</select></div>`;
   if(cfg.mode===2) h += `<div class="inline"><label for="m2e">Even months run</label><select id="m2e" class="btn sm" data-act="m2e">${['A','B'].map(p=>`<option ${cfg.m2Even===p?'selected':''}>${p}</option>`).join('')}</select></div>`;

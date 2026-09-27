@@ -3,7 +3,7 @@ let downOnScrim = false;
 document.addEventListener('pointerdown', e=>{ downOnScrim = !!(e.target.classList && e.target.classList.contains('scrim')); }, true);
 function blocked(){ if(isReady()) return false; flag('Still loading your data…'); render(); return true; }
 let backupSnoozed = false;
-const MUTATE = new Set(['impmerge','impreplace','imppaste','libload','libdel','skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
+const MUTATE = new Set(['progname','bwsave','bwdel','impmerge','impreplace','imppaste','libload','libdel','skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
 document.addEventListener('click', e=>{
   const t = e.target.closest('[data-act]'); if(!t) return;
   const a = t.dataset.act;
@@ -21,6 +21,9 @@ document.addEventListener('click', e=>{
   if(a==='tagreset'){ if(cfg.muscleMap) delete cfg.muscleMap[tagDraft.ex]; saveCfg(); closeModal(); render(); return; }
   if(a==='tagsave'){ const st=tagDraft.st; const o={p:M_KEYS.filter(m=>st[m]==='p'), s:M_KEYS.filter(m=>st[m]==='s')}; if(tagDraft.mob) o.mob=true; cfg.muscleMap = cfg.muscleMap||{}; cfg.muscleMap[tagDraft.ex]=o; saveCfg(); closeModal(); render(); flag('Muscles saved'); return; }
   if(a==='export'){ exportCsv(t); return; }
+  if(a==='bwedit'){ bwEditing=true; render(); const i=document.getElementById('bw-in'); if(i) i.focus(); return; }
+  if(a==='bwcancel'){ bwEditing=false; render(); return; }
+  if(a==='bwdel'){ if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent='Delete?'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent='✕'; } },3000); return; } body = body.filter(x=>x.wk!==t.dataset.wk); saveBody(); render(); flag('Deleted'); return; }
   if(a==='dataexp'){ downloadData(t); return; }
   if(a==='impmerge'||a==='impreplace'){ if(a==='impreplace' && t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent='Tap again to replace'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent='Replace my data'; } },3000); return; } applyImport(a==='impmerge'?'merge':'replace'); return; }
   if(a==='imppaste'){ const v=(document.getElementById('imp-text')||{}).value||''; if(!v.trim()){ flag('Paste the file contents first'); return; } try{ importDraft={data:parseDataFile(v), name:'Pasted data'}; renderImportSheet(); }catch(e){ flag(e.message); } return; }
@@ -42,7 +45,7 @@ document.addEventListener('click', e=>{
   if(a==='libload'||a==='libdel'){ const id = t.dataset.orig ? 'orig' : t.dataset.id; const lbl = a==='libload'?'Load':'Delete';
     if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent = a==='libload' ? `Tap to load into ${edProg}` : 'Delete?'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent=lbl; } },3000); return; }
     if(a==='libload') loadVersion(id); else { library = library.filter(it=>it.id!==id); saveLibrary(); render(); flag('Deleted'); } return; }
-  if(a==='edreset'){ if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent=`Tap again to reset Program ${edProg}`; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent=`Reset Program ${edProg} to the original`; } },3000); return; } PROGRAMS[edProg]=BUILTIN[edProg]; removeDoc('programs/'+edProg); render(); flag('Reset'); return; }
+  if(a==='edreset'){ if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent=`Tap again to reset ${progName(edProg)}`; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent=`Reset ${progName(edProg)} to the original`; } },3000); return; } PROGRAMS[edProg]=BUILTIN[edProg]; removeDoc('programs/'+edProg); render(); flag('Reset'); return; }
   if(a==='hidetip'){ try{ localStorage.setItem('ironlog:'+(t.dataset.k||'hidetip'),'1'); }catch(e){} render(); return; }
   if(a==='mday'){ mDay=Number(t.dataset.day); render(); window.scrollTo({top:0}); return; }
   if(a==='setprog'){ const k=t.dataset.p; if(k===programFor(weekStart)) week.prog=null; else week.prog=k; saveWeek(); render(); }
@@ -63,6 +66,7 @@ document.addEventListener('change', e=>{
   if(a==='move'){ moveSlot(t.dataset.slot, Number(t.value)); }
   if(a==='phase'){ week.ph[`${t.dataset.slot}:${t.dataset.idx}`]=t.value; saveWeek(); render(); }
   if(a==='sedraft'){ readSlotForm(); renderSlotSheet(); return; }
+  if(a==='progname'){ const k=t.dataset.p, v=t.value.trim().slice(0,40); cfg.progNames = {...(cfg.progNames||{})}; if(v && v!==`Program ${k}`) cfg.progNames[k]=v; else delete cfg.progNames[k]; saveCfg(); render(); flag('Renamed'); return; }
   if(a==='edsub'){ const prog=editableProgram(); const v=t.value.trim(); if(v) prog.days[edDay-1].sub=v; else delete prog.days[edDay-1].sub; saveProgram(edProg,prog); return; }
   if(a==='mode'){ cfg.mode=Number(t.value); saveCfg(); render(); }
   if(a==='m3s'){ cfg.m3Start=Number(t.value); saveCfg(); render(); }
@@ -83,6 +87,7 @@ function moveSlot(slotId, day){
 }
 
 document.addEventListener('submit', e=>{
+  if(e.target.id==='bwform'){ e.preventDefault(); if(!blocked()) saveBodyWeight(document.getElementById('bw-in').value); return; }
   if(e.target.id==='libform'){ e.preventDefault(); if(!blocked()) saveCurrentAs(document.getElementById('lib-name').value); return; }
   if(e.target.id==='slotform'){ e.preventDefault(); if(!blocked()) saveSlotForm(); return; }
   if(e.target.id!=='logform') return; e.preventDefault();
