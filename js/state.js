@@ -66,7 +66,7 @@ function subscribeWeek(){
   week = normWeek(null); ready.week = false; let first = true;
   unsubWeek = db.doc('weeks/'+key).onSnapshot(s=>{ if(key!==weekKey()) return; if(s.metadata.hasPendingWrites) return; week = normWeek(s.exists? s.data(): null); ready.week = true; if(first){ first = false; mDay = null; } render(); }, ()=>flag('Couldn’t load this week. Reload the page.'));
 }
-const normWeek = w => ({prog:(w&&w.prog)||null, done:{...(w&&w.done)}, moved:{...(w&&w.moved)}, ph:{...(w&&w.ph)}, warm:JSON.parse(JSON.stringify((w&&w.warm)||{}))});
+const normWeek = w => ({prog:(w&&w.prog)||null, done:{...(w&&w.done)}, skipped:{...(w&&w.skipped)}, moved:{...(w&&w.moved)}, ph:{...(w&&w.ph)}, warm:JSON.parse(JSON.stringify((w&&w.warm)||{}))});
 
 async function init(){
   render();
@@ -121,6 +121,7 @@ function baseTargetOf(item, ph){
 }
 const lastLog = (exId, ph) => { const l=(logs[exId]||[]).filter(e=>ph===undefined || (e.ph||null)===(ph||null)); return l.length? l[l.length-1] : null; };
 function describe(e){ if(!e) return ''; const load = e.w!=null && e.w!=='' ? `${e.w} lb` : 'BW'; const vol = e.sec? `${e.s||'?'} × ${e.sec}s` : `${e.s||'?'} × ${e.r||'?'}`; return `${load} · ${vol}`; }
+const isSkipped = (s, w=week) => !!(w.skipped && w.skipped[s.id]);
 function currentLayout(slots){
   const cols = {1:[],2:[],3:[],4:[],5:[],6:[]};
   slots.forEach(s=>{ const d = week.moved[s.id] || s.day; cols[d].push(s); });

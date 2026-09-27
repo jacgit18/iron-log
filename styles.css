@@ -155,6 +155,11 @@ body.timing{padding-bottom:130px}
 .card[draggable="true"]{cursor:grab}
 .card.dragging{opacity:.4}
 .card.done{background:transparent;box-shadow:none}
+.card.skipped{background:transparent;box-shadow:none;border-style:dashed}
+.card.skipped .ex,.card.skipped .row1 .tag{opacity:.45}
+.card.skipped .exname{text-decoration:line-through;text-decoration-style:dashed}
+.skiptag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--iso)}
+.skipbtn{margin-left:auto}
 .card.done .exname{color:var(--done);text-decoration:line-through;text-decoration-thickness:1px}
 .card .row1{display:flex;gap:8px;align-items:flex-start}
 .card .tag,.edrow .tag{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}

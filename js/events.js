@@ -3,7 +3,7 @@ let downOnScrim = false;
 document.addEventListener('pointerdown', e=>{ downOnScrim = !!(e.target.classList && e.target.classList.contains('scrim')); }, true);
 function blocked(){ if(isReady()) return false; flag('Still loading your data…'); render(); return true; }
 let backupSnoozed = false;
-const MUTATE = new Set(['backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
+const MUTATE = new Set(['skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
 document.addEventListener('click', e=>{
   const t = e.target.closest('[data-act]'); if(!t) return;
   const a = t.dataset.act;
@@ -40,7 +40,8 @@ document.addEventListener('click', e=>{
   if(a==='hidetip'){ try{ localStorage.setItem('ironlog:'+(t.dataset.k||'hidetip'),'1'); }catch(e){} render(); return; }
   if(a==='mday'){ mDay=Number(t.dataset.day); render(); window.scrollTo({top:0}); return; }
   if(a==='setprog'){ const k=t.dataset.p; if(k===programFor(weekStart)) week.prog=null; else week.prog=k; saveWeek(); render(); }
-  if(a==='pull'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; slotsFor(prog).forEach(s=>{ if(s.day<5 && (week.moved[s.id]||s.day)<5 && !week.done[s.id]) week.moved[s.id]=5; }); saveWeek(); render(); }
+  if(a==='pull'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; slotsFor(prog).forEach(s=>{ if(s.day<5 && (week.moved[s.id]||s.day)<5 && !week.done[s.id] && !isSkipped(s)) week.moved[s.id]=5; }); saveWeek(); render(); }
+  if(a==='skip'){ const id=t.dataset.slot; week.skipped = week.skipped||{}; if(week.skipped[id]) delete week.skipped[id]; else { week.skipped[id]=true; delete week.done[id]; } saveWeek(); render(); flag(week.skipped[id]?'Skipped for this week':'Skip undone'); return; }
   if(a==='dellog'){ if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent='Delete?'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent='✕'; } },3000); return; } const ex=t.dataset.ex, i=Number(t.dataset.i); logs[ex].splice(i,1); saveLog(ex); render(); openDetail(ex); }
 });
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{ tab=b.dataset.tab; if(tab==='progress') { weekHist=null; } render(); }));
@@ -48,8 +49,8 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 document.addEventListener('change', e=>{
   const t = e.target; const a = t.dataset && t.dataset.act; if(!a) return;
   if(MUTATE.has(a) && blocked()) return;
-  if(a==='check'){ if(t.checked) week.done[t.dataset.slot]=true; else delete week.done[t.dataset.slot]; saveWeek(); render(); }
-  if(a==='day'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const d=Number(t.dataset.day); currentLayout(slotsFor(prog))[d].forEach(s=>{ if(t.checked) week.done[s.id]=true; else delete week.done[s.id]; }); saveWeek(); render(); }
+  if(a==='check'){ if(t.checked){ week.done[t.dataset.slot]=true; if(week.skipped) delete week.skipped[t.dataset.slot]; } else delete week.done[t.dataset.slot]; saveWeek(); render(); }
+  if(a==='day'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const d=Number(t.dataset.day); currentLayout(slotsFor(prog))[d].forEach(s=>{ if(isSkipped(s)) return; if(t.checked) week.done[s.id]=true; else delete week.done[s.id]; }); saveWeek(); render(); }
   if(a==='warm'){ const d=t.dataset.day; week.warm[d]=week.warm[d]||{}; week.warm[d][t.dataset.w]=t.checked; saveWeek(); }
   if(a==='move'){ moveSlot(t.dataset.slot, Number(t.value)); }
   if(a==='phase'){ week.ph[`${t.dataset.slot}:${t.dataset.idx}`]=t.value; saveWeek(); render(); }
@@ -91,7 +92,7 @@ document.addEventListener('submit', e=>{
   if(document.getElementById('f-def').checked && ph){ cfg.phDef[key]=ph; delete week.ph[key]; saveCfg(); }
   const rmv=document.getElementById('f-rm').value; const rmn=Number(rmv);
   if(rmv==='' ? cfg.rm[it.ex]!=null : (rmn>0 && rmn!==cfg.rm[it.ex])){ if(rmv==='') delete cfg.rm[it.ex]; else cfg.rm[it.ex]=rmn; saveCfg(); }
-  if(document.getElementById('f-done').checked) week.done[slotId]=true;
+  if(document.getElementById('f-done').checked){ week.done[slotId]=true; if(week.skipped) delete week.skipped[slotId]; }
   saveWeek(); closeModal(); render();
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
