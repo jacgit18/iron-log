@@ -194,6 +194,7 @@ function renderSettings(){
     ${PH_KEYS.map(k=>`<tr><td><span class="dot" data-p="${k}"></span> ${PHASES[k].label}</td><td><input type="number" id="pct-${k}" min="0" max="110" step="1" value="${cfg.pct[k]??PHASES[k].pct}" data-act="pct" data-p="${k}"> %</td><td><input class="wide" id="rx-${k}" value="${esc(cfg.rxOverride[k]||PHASES[k].rx)}" data-act="rxo" data-p="${k}"></td></tr>`).join('')}
   </tbody></table></div><label class="inline" for="rest-s">Rest between sets <input type="number" id="rest-s" min="0" max="600" step="any" value="${cfg.rest??90}" data-act="rests" style="width:80px"> seconds</label><p>The percentages are placeholders until you set your own. Isometric holds are usually judged by time and effort more than by % of a lifting max.</p></section>`;
 
+  h += dataPanel();
   h += backupPanel();
 
   const ALL_SLOTS=[...slotsFor(PROGRAMS.A),...slotsFor(PROGRAMS.B)];
