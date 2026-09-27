@@ -3,7 +3,7 @@ let downOnScrim = false;
 document.addEventListener('pointerdown', e=>{ downOnScrim = !!(e.target.classList && e.target.classList.contains('scrim')); }, true);
 function blocked(){ if(isReady()) return false; flag('Still loading your data…'); render(); return true; }
 let backupSnoozed = false;
-const MUTATE = new Set(['libload','libdel','skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
+const MUTATE = new Set(['impmerge','impreplace','imppaste','libload','libdel','skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
 document.addEventListener('click', e=>{
   const t = e.target.closest('[data-act]'); if(!t) return;
   const a = t.dataset.act;
@@ -21,6 +21,9 @@ document.addEventListener('click', e=>{
   if(a==='tagreset'){ if(cfg.muscleMap) delete cfg.muscleMap[tagDraft.ex]; saveCfg(); closeModal(); render(); return; }
   if(a==='tagsave'){ const st=tagDraft.st; const o={p:M_KEYS.filter(m=>st[m]==='p'), s:M_KEYS.filter(m=>st[m]==='s')}; if(tagDraft.mob) o.mob=true; cfg.muscleMap = cfg.muscleMap||{}; cfg.muscleMap[tagDraft.ex]=o; saveCfg(); closeModal(); render(); flag('Muscles saved'); return; }
   if(a==='export'){ exportCsv(t); return; }
+  if(a==='dataexp'){ downloadData(t); return; }
+  if(a==='impmerge'||a==='impreplace'){ if(a==='impreplace' && t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent='Tap again to replace'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent='Replace my data'; } },3000); return; } applyImport(a==='impmerge'?'merge':'replace'); return; }
+  if(a==='imppaste'){ const v=(document.getElementById('imp-text')||{}).value||''; if(!v.trim()){ flag('Paste the file contents first'); return; } try{ importDraft={data:parseDataFile(v), name:'Pasted data'}; renderImportSheet(); }catch(e){ flag(e.message); } return; }
   if(a==='xlsx'){ downloadExcel(t.dataset.w, t); return; }
   if(a==='backup'){ backupToGitHub(t); return; }
   if(a==='snooze'){ backupSnoozed = true; render(); return; }
@@ -50,7 +53,9 @@ document.addEventListener('click', e=>{
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{ tab=b.dataset.tab; if(tab==='progress') { weekHist=null; } render(); }));
 
 document.addEventListener('change', e=>{
-  const t = e.target; const a = t.dataset && t.dataset.act; if(!a) return;
+  const t = e.target;
+  if(t.id==='imp-file'){ if(!blocked()) readImportFile(t.files&&t.files[0]); t.value=''; return; }
+  const a = t.dataset && t.dataset.act; if(!a) return;
   if(MUTATE.has(a) && blocked()) return;
   if(a==='check'){ if(t.checked){ week.done[t.dataset.slot]=true; if(week.skipped) delete week.skipped[t.dataset.slot]; } else delete week.done[t.dataset.slot]; saveWeek(); render(); }
   if(a==='day'){ const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const d=Number(t.dataset.day); currentLayout(slotsFor(prog))[d].forEach(s=>{ if(isSkipped(s)) return; if(t.checked) week.done[s.id]=true; else delete week.done[s.id]; }); saveWeek(); render(); }

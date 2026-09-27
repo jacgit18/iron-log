@@ -80,7 +80,7 @@ async function init(){
     library = ((LS.get('library/main')||{}).items)||[];
     applyProgram('A', LS.get('programs/A')); applyProgram('B', LS.get('programs/B'));
     const c = LS.get('config/main'); if(c) cfg = {...structuredClone(DEFAULT_CFG), ...c};
-    Object.keys(EX).forEach(id=>{ const l=LS.get('logs/'+id); if(l&&l.entries) logs[id]=l.entries; });
+    try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith('ironlog:logs/')){ const l=LS.get(k.slice(8)); if(l&&l.entries) logs[k.slice(13)]=l.entries; } } }catch(e){}
     subscribeWeek(); return;
   }
   storeMode='db';
