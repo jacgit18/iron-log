@@ -22,7 +22,8 @@ function render(){
 function renderBoard(progKey, prog){
   const slots = slotsFor(prog);
   const cols = currentLayout(slots);
-  const total = slots.length, done = slots.filter(s=>week.done[s.id]).length;
+  const skippedN = slots.filter(s=>isSkipped(s)).length;
+  const total = slots.length - skippedN, done = slots.filter(s=>week.done[s.id] && !isSkipped(s)).length;
   const pct = total? Math.round(done/total*100):0;
   const end = addDays(weekStart,6);
   let h = '';
@@ -30,25 +31,25 @@ function renderBoard(progKey, prog){
   if(ymd(monday(new Date()))!==weekKey()) h+=`<button class="btn sm ghost" data-act="today">This week</button>`;
   h += `<label class="seg modesel" for="board-mode"><span class="sr">Mode</span><select id="board-mode" data-act="mode" aria-label="Program mode">${[[1,'Mode 1 · A only'],[2,'Mode 2 · monthly'],[3,'Mode 3 · 6 months']].map(([m,t])=>`<option value="${m}" ${cfg.mode===m?'selected':''}>${t}</option>`).join('')}</select></label>`;
   if(cfg.mode===2){ const auto=programFor(weekStart); h += `<div class="seg" role="group" aria-label="Program this week">${['A','B'].map(k=>`<button class="${k===progKey?'on':''}" data-act="setprog" data-p="${k}" aria-pressed="${k===progKey}">Program ${k}</button>`).join('')}</div><span class="saveflag">${progKey===auto?'Set by month':`Switched · month default is ${auto}`}</span>`; }
-  h += `</div><div class="progress"><span>${done} of ${total} done</span><div class="bar"><i style="width:${pct}%"></i></div></div></div>`;
+  h += `</div><div class="progress"><span>${done} of ${total} done${skippedN?` · ${skippedN} skipped`:''}</span><div class="bar"><i style="width:${pct}%"></i></div></div></div>`;
   if(!PROGRAMS[progKey]) h += `<div class="notice">Program ${progKey} is scheduled this week but hasn't been added yet, so Program A is shown.</div>`;
   if(!Object.keys(cfg.rm).length && !hideTip()) h += `<div class="notice tip"><span>Targets use your last logged weight. Add a 1RM (in Settings or when you log a set) to get phase-based targets instead.</span><button class="btn sm ghost" data-act="hidetip">Got it</button></div>`;
   const since = daysSinceBackup(); const anyLogs = Object.values(logs).some(l=>l&&l.length);
   if(mcp && anyLogs && !backupSnoozed && (since==null || since>=7)) h += `<div class="notice tip"><span>${since==null?'Your training data hasn\u2019t been backed up to GitHub yet.':`Last GitHub backup was ${since} days ago.`}</span><span><button class="btn sm" data-act="backup" ${backupBusy?'disabled':''}>${backupBusy?'Backing up…':'Back up now'}</button> <button class="btn sm ghost" data-act="snooze">Later</button></span></div>`;
   if(storeMode==='local' && !hideTip('hidelocal')) h += `<div class="notice tip"><span>${window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export on the Progress tab to back it up.'}</span><button class="btn sm ghost" data-act="hidetip" data-k="hidelocal">Got it</button></div>`;
-  if(mDay==null){ mDay = 1; for(let d=1; d<=6; d++){ const l=cols[d]; if(l.some(s=>!week.done[s.id])){ mDay=d; break; } } }
-  h += `<div class="daytabs" role="tablist" aria-label="Day">${[1,2,3,4,5,6].map(d=>{ const l=cols[d], n=l.filter(s=>week.done[s.id]).length; const full=l.length&&n===l.length; return `<button role="tab" data-act="mday" data-day="${d}" aria-selected="${d===mDay}" class="${full?'full':''}"><b>D${d}</b><span>${full?'✓':`${n}/${l.length}`}</span></button>`; }).join('')}</div>`;
+  if(mDay==null){ mDay = 1; for(let d=1; d<=6; d++){ const l=cols[d]; if(l.some(s=>!week.done[s.id] && !isSkipped(s))){ mDay=d; break; } } }
+  h += `<div class="daytabs" role="tablist" aria-label="Day">${[1,2,3,4,5,6].map(d=>{ const l=cols[d].filter(s=>!isSkipped(s)), n=l.filter(s=>week.done[s.id]).length; const full=l.length&&n===l.length; return `<button role="tab" data-act="mday" data-day="${d}" aria-selected="${d===mDay}" class="${full?'full':''}"><b>D${d}</b><span>${full?'✓':`${n}/${l.length}`}</span></button>`; }).join('')}</div>`;
   h += `<div class="board">`;
   for(let d=1; d<=6; d++){
     const dayDef = prog.days[d-1];
     const list = cols[d];
-    const dn = list.filter(s=>week.done[s.id]).length;
-    const all = list.length>0 && dn===list.length;
-    h += `<section class="col${all?' complete':''}${d===mDay?' sel':''}" data-day="${d}"><div class="colhead"><input type="checkbox" class="chk" id="day-${d}" data-act="day" data-day="${d}" ${all?'checked':''} aria-label="Mark all of Day ${d} done"><div><h3>${dayDef.title}</h3>${dayDef.sub?`<div class="sub">${esc(dayDef.sub)}</div>`:''}</div><span class="count">${dn}/${list.length}</span></div>`;
+    const act = list.filter(s=>!isSkipped(s)); const dn = act.filter(s=>week.done[s.id]).length;
+    const all = act.length>0 && dn===act.length;
+    h += `<section class="col${all?' complete':''}${d===mDay?' sel':''}" data-day="${d}"><div class="colhead"><input type="checkbox" class="chk" id="day-${d}" data-act="day" data-day="${d}" ${all?'checked':''} aria-label="Mark all of Day ${d} done"><div><h3>${dayDef.title}</h3>${dayDef.sub?`<div class="sub">${esc(dayDef.sub)}</div>`:''}</div><span class="count">${dn}/${act.length}</span></div>`;
     const w = week.warm[d]||{};
     h += `<div class="warm"><span class="tag">Warm-up</span>${WARMUP.map(x=>`<label><input type="checkbox" class="chk" id="warm-${d}-${x.id}" data-act="warm" data-day="${d}" data-w="${x.id}" ${w[x.id]?'checked':''}>${x.id==='sled'&&prog.warm?prog.warm:x.n} <span class="rx">· ${x.rx}</span></label>`).join('')}</div>`;
     if(dayDef.makeup){
-      const pending = slots.filter(s=>s.day<5 && (week.moved[s.id]||s.day)<5 && !week.done[s.id]).length;
+      const pending = slots.filter(s=>s.day<5 && (week.moved[s.id]||s.day)<5 && !week.done[s.id] && !isSkipped(s)).length;
       h += `<div class="makeup">Make-up day for anything skipped. ${pending?`<button class="btn sm" data-act="pull">Pull in ${pending} unfinished</button>`:''}</div>`;
     }
     let lastSec = null;
@@ -60,12 +61,13 @@ function renderBoard(progKey, prog){
 }
 
 function renderCard(s, curDay){
-  const done = !!week.done[s.id];
+  const done = !!week.done[s.id]; const sk = isSkipped(s);
   const label = s.type==='superset' ? 'Superset' : s.type==='either' ? 'Either / or' : '';
-  let h = `<article class="card${done?' done':''}" draggable="true" data-slot="${s.id}">`;
+  let h = `<article class="card${done?' done':''}${sk?' skipped':''}" draggable="true" data-slot="${s.id}">`;
   h += `<div class="row1"><input type="checkbox" class="chk" id="chk-${s.id}" data-act="check" data-slot="${s.id}" ${done?'checked':''} aria-label="Mark done"><div style="flex:1;display:flex;flex-direction:column;gap:2px">`;
   if(label || s.tier) h += `<span class="tag">${[s.tier,label].filter(Boolean).join(' · ')}</span>`;
   if(s.day!==curDay) h += `<span class="moved">From Day ${s.day}</span>`;
+  if(sk) h += `<span class="skiptag">Skipped this week</span>`;
   h += `</div></div>`;
   s.items.forEach((it,idx)=>{
     if(idx>0 && s.type==='either') h += `<div class="or">or</div>`;
@@ -84,7 +86,7 @@ function renderCard(s, curDay){
   });
   if(s.note) h += `<div class="note">${esc(s.note)}</div>`;
   const cur = week.moved[s.id]||s.day;
-  h += `<div class="cardfoot"><label for="mv-${s.id}">Move to</label><select id="mv-${s.id}" data-act="move" data-slot="${s.id}">${[1,2,3,4,5,6].map(d=>`<option value="${d}" ${d===cur?'selected':''}>Day ${d}${d===s.day?' (planned)':''}</option>`).join('')}</select></div>`;
+  h += `<div class="cardfoot"><label for="mv-${s.id}">Move to</label><select id="mv-${s.id}" data-act="move" data-slot="${s.id}">${[1,2,3,4,5,6].map(d=>`<option value="${d}" ${d===cur?'selected':''}>Day ${d}${d===s.day?' (planned)':''}</option>`).join('')}</select><button class="btn sm ghost skipbtn" data-act="skip" data-slot="${s.id}" aria-pressed="${sk}">${sk?'Undo skip':'Skip'}</button></div>`;
   return h + `</article>`;
 }
 
@@ -136,9 +138,10 @@ function weekSummary(key, w){
   const start = parse(key); const pk = (cfg.mode===2 && (w.prog==='A'||w.prog==='B')) ? w.prog : programFor(start);
   const prog = PROGRAMS[pk]||PROGRAMS.A; const slots = slotsFor(prog);
   const cols = {1:[],2:[],3:[],4:[],5:[],6:[]}; slots.forEach(s=>cols[(w.moved&&w.moved[s.id])||s.day].push(s));
-  const done = w.done||{};
-  const days = [1,2,3,4,5,6].map(d=>{ const l=cols[d]; const n=l.filter(s=>done[s.id]).length; return l.length ? (n===l.length ? 2 : n>0 ? 1 : 0) : 0; });
-  return {key, start, pk, days, full: days.filter(x=>x===2).length, ex: slots.filter(s=>done[s.id]).length, total: slots.length};
+  const done = w.done||{}; const skip = s => isSkipped(s, w);
+  const days = [1,2,3,4,5,6].map(d=>{ const l=cols[d].filter(s=>!skip(s)); const n=l.filter(s=>done[s.id]).length; return l.length ? (n===l.length ? 2 : n>0 ? 1 : 0) : 0; });
+  const skipped = slots.filter(skip).length;
+  return {key, start, pk, days, full: days.filter(x=>x===2).length, ex: slots.filter(s=>done[s.id] && !skip(s)).length, total: slots.length - skipped, skipped};
 }
 function renderHistory(){
   const weeks = {...(weekHist||{})}; weeks[weekKey()] = week; // live view of the shown week

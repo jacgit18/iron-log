@@ -44,7 +44,7 @@ function holdPlan(slot, idx){
 function addEntry(slot, idx, entry, {check}={}){
   const it = slot.items[idx]; const arr = logs[it.ex] = [...(logs[it.ex]||[]), JSON.parse(JSON.stringify(entry))];
   arr.sort((a,b)=>a.d.localeCompare(b.d)); saveLog(it.ex);
-  if(check) week.done[slot.id]=true;
+  if(check){ week.done[slot.id]=true; if(week.skipped) delete week.skipped[slot.id]; }
   saveWeek();
 }
 function quickLog(slotId, idx){

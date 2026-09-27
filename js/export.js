@@ -56,12 +56,12 @@ function buildOverallWorkbook(X, weeks){
   Object.values(mv).sort((a,b)=> a.k===b.k ? (b.p+b.s/2)-(a.p+a.s/2) : a.k.localeCompare(b.k)).forEach(r=> mus.push([r.k, MUSCLES[r.m] ? MUSCLES[r.m].n : r.m, r.p, r.s, r.p + r.s/2]));
   X.utils.book_append_sheet(wb, sheet(X, mus, [12,24,13,15,14]), 'Muscles');
   // Weeks
-  const wk = [['Week of','Program','Days complete','Exercises done','Exercises planned','% done','Sessions logged']];
+  const wk = [['Week of','Program','Days complete','Exercises done','Exercises planned','Skipped','% done','Sessions logged']];
   Object.keys(weeks).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort().forEach(k=>{
     const r = weekSummary(k, weeks[k]); const n = Object.values(logs).reduce((a,L)=>a+L.filter(e=>(e.wk||weekOfDate(e.d))===k).length,0);
-    if(r.ex || n) wk.push([k, r.pk, r.full, r.ex, r.total, r.total?Math.round(r.ex/r.total*100):0, n]);
+    if(r.ex || n || r.skipped) wk.push([k, r.pk, r.full, r.ex, r.total, r.skipped, r.total?Math.round(r.ex/r.total*100):0, n]);
   });
-  X.utils.book_append_sheet(wb, sheet(X, wk, [12,9,14,15,17,8,15]), 'Weeks');
+  X.utils.book_append_sheet(wb, sheet(X, wk, [12,9,14,15,17,9,8,15]), 'Weeks');
   // Settings
   const st = [['Setting','Value'], ['Mode', cfg.mode], ['Rest between sets (s)', cfg.rest??90]];
   PH_KEYS.forEach(p=> st.push([`${PHASES[p].label} % of 1RM`, cfg.pct[p]??PHASES[p].pct]));
@@ -77,13 +77,13 @@ function buildWeekWorkbook(X, key, w){
   const prog = PROGRAMS[r.pk]||PROGRAMS.A; const slots = slotsFor(prog);
   const n = sessionRows(e=>(e.wk||weekOfDate(e.d))===key);
   X.utils.book_append_sheet(wb, sheet(X, [
-    ['Week of', key], ['Program', r.pk], ['Days complete', `${r.full} of 6`], ['Exercises done', `${r.ex} of ${r.total}`], ['Sessions logged', n.length-1]
+    ['Week of', key], ['Program', r.pk], ['Days complete', `${r.full} of 6`], ['Exercises done', `${r.ex} of ${r.total}`], ['Skipped', r.skipped], ['Sessions logged', n.length-1]
   ], [18,14]), 'Summary');
   const plan = [['Planned day','Done on day','Section','Tier','Type','Exercise','Phase','Sets × reps','Program weight (lb)','Done']];
   slots.forEach(s=> s.items.forEach((it,idx)=>{
     const ph = (w.ph&&w.ph[`${s.id}:${idx}`]) ?? cfg.phDef[`${s.id}:${idx}`] ?? it.ph ?? null;
     const moved = w.moved && w.moved[s.id];
-    plan.push([s.day, moved||s.day, s.sec||'', s.tier||'', s.type==='single'?'':s.type, exInfo(it.ex).n, phaseLabel(ph), rxOf(it, ph), it.w??(it.bw?'BW':''), (w.done&&w.done[s.id])?'Yes':'No']);
+    plan.push([s.day, moved||s.day, s.sec||'', s.tier||'', s.type==='single'?'':s.type, exInfo(it.ex).n, phaseLabel(ph), rxOf(it, ph), it.w??(it.bw?'BW':''), (w.skipped&&w.skipped[s.id])?'Skipped':(w.done&&w.done[s.id])?'Yes':'No']);
   }));
   X.utils.book_append_sheet(wb, sheet(X, plan, [11,11,11,10,9,34,13,16,18,6]), 'Plan');
   X.utils.book_append_sheet(wb, sheet(X, n, SESSION_COLS), 'Logged');
@@ -113,7 +113,7 @@ async function initBackup(){
 }
 const backupCfg = () => ({repo:'jacgit18/iron-log-data', branch:'main', hashes:{}, ...(cfg.backup||{})});
 function hashStr(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h>>>0).toString(36); }
-function weekFingerprint(key, w){ const L = Object.keys(logs).sort().map(id=>[id, (logs[id]||[]).filter(e=>(e.wk||weekOfDate(e.d))===key)]); return hashStr(JSON.stringify([w.done, w.moved, w.ph, w.prog, L, PROGRAMS[weekSummary(key,w).pk]])); }
+function weekFingerprint(key, w){ const L = Object.keys(logs).sort().map(id=>[id, (logs[id]||[]).filter(e=>(e.wk||weekOfDate(e.d))===key)]); return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, L, PROGRAMS[weekSummary(key,w).pk]])); }
 let backupBusy = false, backupMsg = null;
 function backupError(e){
   const c = e && e.code;
