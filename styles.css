@@ -61,6 +61,8 @@ header.top h1{font-size:30px;margin:0;font-weight:700;text-transform:uppercase;l
 .edtop{display:flex;flex-wrap:wrap;gap:8px;padding-block:8px 12px}
 .edtop .seg{margin-left:0;flex-wrap:wrap}
 .edpanel{max-width:760px}
+.lib .edrow.inuse{border-color:var(--accent)}
+.libsave{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
 .edlist{display:flex;flex-direction:column;gap:6px}
 .edrow{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg)}
 .edmain{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 220px}
