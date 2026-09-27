@@ -53,13 +53,14 @@ It's plain HTML, CSS and JavaScript. There is no build step, no framework and no
 - **Training phases.** Every exercise is tagged Strength, Isometric, Hypertrophy or Explosive, with a default sets × reps for each. You can change the phase for a single week or save it as the new default.
 - **Targets.** Enter a 1-rep max and the target becomes 1RM × the phase's %. Without a 1RM, the target is your last logged weight in that phase.
 - **Suggestions to go heavier.** After two separate days in a row with every set completed, the target goes up by +2.5 lb (under 50 lb) or +5 lb. For isometric work, it waits until you've held 30 s on every set.
+- **Body weight.** Log it once a week from the top of the board. The Progress tab shows the latest weight, the change over about four weeks and a trend chart, and it's included in the Excel and data exports.
 - **Fast logging.** Log weight, sets and reps (or hold seconds for isometrics). A "Same as last" button repeats your previous entry in one tap.
 - **Timers.** A hold countdown on isometric exercises that rests between sets and starts the next hold, plus a general rest timer.
 - **Progress.** Headline numbers for the week, sets logged per week, weight change by exercise over the last 8 weeks, a muscles-by-week heatmap of what you actually trained, a weight-over-time chart for each exercise (one phase per chart) and a 12-week record of days completed.
 - **Excel export.** Download an overall workbook (summary, every session with the muscles it trains, weekly sets per muscle, weekly totals, settings) or a workbook for a single week, or export plain CSV. In the Claude version, **Back up to GitHub** commits the same workbooks to a private repo.
 - **Export and import.** One JSON file holds everything: the log, weekly check-offs, programs, saved versions and settings. Import it with **Add to my data** (keeps what's here and fills in what's missing) or **Replace my data** (makes the app match the file).
 - **Muscle map.** Front and back body diagrams shaded by weekly sets per muscle group. Tap a muscle to see the exercises that train it. You can edit the muscle tags for any exercise.
-- **Program editor.** Add, edit, reorder and remove exercises (single, superset or either/or) for any day of either program. **Saved versions** keep named copies of a program; the built-in original is always kept, and loading a version saves the current one first so nothing is lost.
+- **Program editor.** Add, edit, reorder and remove exercises (single, superset or either/or) for any day of either program. Rename either program; the new name shows everywhere, while A and B still drive the rotation. **Saved versions** keep named copies of a program; the built-in original is always kept, and loading a version saves the current one first so nothing is lost.
 - **Works on phones.** On a phone you see one day at a time and swipe between days, with bottom navigation and large tap targets. It follows light and dark mode.
 
 ## Running it

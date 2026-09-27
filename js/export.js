@@ -62,8 +62,12 @@ function buildOverallWorkbook(X, weeks){
     if(r.ex || n || r.skipped) wk.push([k, r.pk, r.full, r.ex, r.total, r.skipped, r.total?Math.round(r.ex/r.total*100):0, n]);
   });
   X.utils.book_append_sheet(wb, sheet(X, wk, [12,9,14,15,17,9,8,15]), 'Weeks');
+  // Body weight
+  const bwl = bwSorted(); const bws = [['Week of','Date','Body weight (lb)','Change (lb)']];
+  bwl.forEach((e,i)=> bws.push([e.wk, e.d, e.w, i ? Math.round((e.w - bwl[i-1].w)*10)/10 : '']));
+  X.utils.book_append_sheet(wb, sheet(X, bws, [12,12,17,12]), 'Body weight');
   // Settings
-  const st = [['Setting','Value'], ['Mode', cfg.mode], ['Rest between sets (s)', cfg.rest??90]];
+  const st = [['Setting','Value'], ['Mode', cfg.mode], ['Rest between sets (s)', cfg.rest??90], ['Program A name', progName('A')], ['Program B name', progName('B')]];
   PH_KEYS.forEach(p=> st.push([`${PHASES[p].label} % of 1RM`, cfg.pct[p]??PHASES[p].pct]));
   Object.keys(cfg.rm).sort().forEach(id=> st.push([`1RM: ${exInfo(id).n}`, cfg.rm[id]]));
   st.push(['Exported', new Date().toISOString()]);
@@ -191,7 +195,7 @@ async function buildDataFile(){
   Object.keys(weeks).filter(k=>WEEK_RE.test(k)).sort().forEach(k=>{ const w = normWeek(weeks[k]); if(w.prog || [w.done,w.skipped,w.moved,w.ph,w.warm].some(o=>Object.keys(o).length)) W[k] = w; });
   const P = {}; ['A','B'].forEach(k=>{ if(PROGRAMS[k] !== BUILTIN[k]) P[k] = progBody(PROGRAMS[k]); });
   const L = {}; Object.keys(logs).sort().forEach(id=>{ if(logs[id] && logs[id].length) L[id] = logs[id]; });
-  return {app:'iron-log', format:DATA_FORMAT, exportedAt:new Date().toISOString(), config:structuredClone(cfg), programs:P, library:structuredClone(library), logs:L, weeks:W};
+  return {app:'iron-log', format:DATA_FORMAT, exportedAt:new Date().toISOString(), config:structuredClone(cfg), programs:P, library:structuredClone(library), logs:L, weeks:W, body:bwSorted()};
 }
 async function downloadData(btn){
   if(!dl) return; if(btn) btn.disabled = true;
@@ -201,14 +205,15 @@ async function downloadData(btn){
 }
 function dataStats(d){
   const L = Object.values(d.logs||{}); const sets = L.reduce((a,l)=>a+l.length,0);
-  return {entries:sets, exercises:L.filter(l=>l.length).length, weeks:Object.keys(d.weeks||{}).length, programs:Object.keys(d.programs||{}), saved:(d.library||[]).length};
+  return {entries:sets, exercises:L.filter(l=>l.length).length, weeks:Object.keys(d.weeks||{}).length, programs:Object.keys(d.programs||{}), saved:(d.library||[]).length, body:(d.body||[]).length};
 }
 function parseDataFile(text){
   let d; try{ d = JSON.parse(text); }catch(e){ throw new Error('That file isn’t valid JSON.'); }
   if(!d || d.app!=='iron-log') throw new Error('That isn’t an Iron Log data file.');
   if(!(d.format>=1)) throw new Error('Unknown file format.');
   if(d.format > DATA_FORMAT) throw new Error('This file is from a newer version of Iron Log. Update the app first.');
-  const out = {exportedAt:d.exportedAt, config:(d.config&&typeof d.config==='object')?d.config:{}, programs:{}, library:[], logs:{}, weeks:{}};
+  const out = {exportedAt:d.exportedAt, config:(d.config&&typeof d.config==='object')?d.config:{}, programs:{}, library:[], logs:{}, weeks:{}, body:[]};
+  (Array.isArray(d.body)?d.body:[]).forEach(e=>{ if(e && WEEK_RE.test(e.wk) && typeof e.d==='string' && Number(e.w)>0 && !out.body.some(x=>x.wk===e.wk)) out.body.push({wk:e.wk, d:e.d, w:Number(e.w)}); });
   ['A','B'].forEach(k=>{ const p = d.programs&&d.programs[k]; if(p && Array.isArray(p.days) && p.days.length===6) out.programs[k] = p; });
   (Array.isArray(d.library)?d.library:[]).forEach(it=>{ if(it && it.id && it.prog && Array.isArray(it.prog.days) && it.prog.days.length===6) out.library.push(it); });
   Object.entries(d.logs||{}).forEach(([id,l])=>{ if(/^[\w.~:@+-]{1,200}$/.test(id) && Array.isArray(l)){ const ok = l.filter(e=>e && typeof e.d==='string'); if(ok.length) out.logs[id] = ok; } });
@@ -226,8 +231,8 @@ function renderImportSheet(){
   document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-label="Import data">
     <h2 class="cond">Import data</h2>
     <p><b>${esc(importDraft.name||'File')}</b>, exported ${esc(when)}:</p>
-    <ul class="implist"><li>${s.entries} logged session${s.entries===1?'':'s'} across ${s.exercises} exercise${s.exercises===1?'':'s'}</li><li>${s.weeks} week${s.weeks===1?'':'s'} of check-offs</li><li>${s.programs.length?`Edited Program ${s.programs.join(' and ')}`:'Original programs'}${s.saved?` · ${s.saved} saved version${s.saved===1?'':'s'}`:''}</li><li>Settings, 1RMs and muscle tags</li></ul>
-    <p class="note"><b>Add to my data</b> keeps everything here and adds what's missing: new sessions, weeks and saved versions. If both have an edited program, yours stays and the file's is added to Saved versions.</p>
+    <ul class="implist"><li>${s.entries} logged session${s.entries===1?'':'s'} across ${s.exercises} exercise${s.exercises===1?'':'s'}</li><li>${s.weeks} week${s.weeks===1?'':'s'} of check-offs</li><li>${s.programs.length?`Edited Program ${s.programs.join(' and ')}`:'Original programs'}${s.saved?` · ${s.saved} saved version${s.saved===1?'':'s'}`:''}</li>${s.body?`<li>${s.body} body weight entr${s.body===1?'y':'ies'}</li>`:''}<li>Settings, 1RMs and muscle tags</li></ul>
+    <p class="note"><b>Add to my data</b> keeps everything here and adds what's missing: new sessions, weeks, body weights and saved versions. If both have an edited program, yours stays and the file's is added to Saved versions.</p>
     <p class="note"><b>Replace my data</b> makes this app match the file exactly. Anything here that isn't in the file is deleted${cur.entries?`, including ${cur.entries} logged session${cur.entries===1?'':'s'}`:''}. ${dl?'Export your current data first if you might want it back.':''}</p>
     ${importBusy?'<p class="note">Importing…</p>':''}
     ${dl?'<div class="actions" style="justify-content:flex-start"><button type="button" class="btn sm ghost" data-act="dataexp">Export current data first</button></div>':''}
@@ -253,6 +258,7 @@ async function applyImport(mode){
       cfg = {...structuredClone(DEFAULT_CFG), ...structuredClone(d.config), backup: d.config.backup || cfg.backup}; if(!cfg.backup) delete cfg.backup; saveCfg();
       ['A','B'].forEach(k=>{ if(d.programs[k]) saveProgram(k, structuredClone(d.programs[k])); else if(PROGRAMS[k] !== BUILTIN[k]){ PROGRAMS[k] = BUILTIN[k]; removeDoc('programs/'+k); } });
       library = structuredClone(d.library); saveLibrary();
+      body = structuredClone(d.body); saveBody();
       Object.keys(logs).forEach(id=>{ if(!d.logs[id]){ delete logs[id]; removeDoc('logs/'+id); } });
       Object.entries(d.logs).forEach(([id,l])=>{ logs[id] = structuredClone(l); saveLog(id); });
       Object.keys(localWeeks).forEach(k=>{ if(WEEK_RE.test(k) && !d.weeks[k]) removeDoc('weeks/'+k); });
@@ -260,14 +266,15 @@ async function applyImport(mode){
       week = normWeek(d.weeks[weekKey()]); saveWeek();
     } else {
       const C = d.config; let ch = false;
-      ['rm','phDef','ex','muscleMap','rxOverride'].forEach(k=>{ const src = C[k]; if(src && typeof src==='object'){ cfg[k] = cfg[k]||{}; Object.keys(src).forEach(x=>{ if(cfg[k][x]==null){ cfg[k][x] = structuredClone(src[x]); ch = true; } }); } });
+      ['rm','phDef','ex','muscleMap','rxOverride','progNames'].forEach(k=>{ const src = C[k]; if(src && typeof src==='object'){ cfg[k] = cfg[k]||{}; Object.keys(src).forEach(x=>{ if(cfg[k][x]==null){ cfg[k][x] = structuredClone(src[x]); ch = true; } }); } });
       if(ch) saveCfg();
       const lib = [...library]; const have = new Set(lib.map(it=>it.id));
       d.library.forEach(it=>{ if(!have.has(it.id)){ lib.push(structuredClone(it)); have.add(it.id); } });
       ['A','B'].forEach(k=>{ const p = d.programs[k]; if(!p) return;
         if(PROGRAMS[k] === BUILTIN[k]) saveProgram(k, structuredClone(p));
-        else if(!sameProg(PROGRAMS[k], p) && !lib.some(it=>sameProg(it.prog, p))) lib.push({id:Date.now().toString(36)+k+Math.random().toString(36).slice(2,6), name:`Program ${k} from import · ${today}`, from:k, at:new Date().toISOString(), prog:progBody(p)}); });
+        else if(!sameProg(PROGRAMS[k], p) && !lib.some(it=>sameProg(it.prog, p))) lib.push({id:Date.now().toString(36)+k+Math.random().toString(36).slice(2,6), name:`${progName(k)} from import · ${today}`, from:k, at:new Date().toISOString(), prog:progBody(p)}); });
       if(lib.length !== library.length){ library = lib; saveLibrary(); }
+      const addB = d.body.filter(e=>!body.some(x=>x.wk===e.wk)); if(addB.length){ body = [...body, ...addB].sort((a,b)=>a.wk.localeCompare(b.wk)); saveBody(); }
       Object.entries(d.logs).forEach(([id,l])=>{ const m = mergeEntries(logs[id]||[], l); if(m.length !== (logs[id]||[]).length){ logs[id] = m; saveLog(id); } });
       Object.entries(d.weeks).forEach(([k,w])=>{
         if(k===weekKey()){ const m = mergeWeek(week, w); if(JSON.stringify(m)!==JSON.stringify(normWeek(week))){ week = m; saveWeek(); } return; }
@@ -278,7 +285,7 @@ async function applyImport(mode){
   }catch(e){ importBusy = false; flag('Import failed'); renderImportSheet(); }
 }
 function dataPanel(){
-  let h = `<section class="panel"><h2>Export &amp; import</h2><p>One file with everything: your log, weekly check-offs, programs, saved versions and settings. Use it to keep a copy, move to another device or app, or go back to an earlier state.</p>`;
+  let h = `<section class="panel"><h2>Export &amp; import</h2><p>One file with everything: your log, weekly check-offs, body weight, programs, saved versions and settings. Use it to keep a copy, move to another device or app, or go back to an earlier state.</p>`;
   h += `<div class="actions" style="justify-content:flex-start">${dl?'<button class="btn primary" data-act="dataexp">Export all data</button>':''}<label class="btn filebtn">Import from file<input type="file" id="imp-file" accept=".json,application/json" hidden></label></div>`;
   h += `<details class="imppaste"><summary>Can't pick a file? Paste its contents instead</summary><textarea id="imp-text" rows="4" placeholder="Paste the contents of an iron-log-data file"></textarea><div class="actions" style="justify-content:flex-start"><button class="btn sm" data-act="imppaste">Review import</button></div></details>`;
   return h + `</section>`;

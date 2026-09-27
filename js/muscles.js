@@ -89,7 +89,7 @@ function renderBody(){
   if(!bodyView) bodyView = activeProgKey();
   const {vol, untagged} = muscleVolume(bodyView);
   const cur = activeProgKey();
-  let h = `<div class="edtop"><div class="seg" role="group" aria-label="Program">${['A','B'].map(k=>`<button class="${k===bodyView?'on':''}" data-act="bodyprog" data-p="${k}" aria-pressed="${k===bodyView}">Program ${k}${k===cur?' · on board':''}</button>`).join('')}</div></div>`;
+  let h = `<div class="edtop"><div class="seg" role="group" aria-label="Program">${['A','B'].map(k=>`<button class="${k===bodyView?'on':''}" data-act="bodyprog" data-p="${k}" aria-pressed="${k===bodyView}">${esc(progName(k))}${k===cur?' · on board':''}</button>`).join('')}</div></div>`;
   h += `<div class="bodywrap"><div class="figs">${figure(FRONT,'Front',vol)}${figure(BACK,'Back',vol)}</div><div class="bodyside">`;
   h += `<div class="legend"><span><i class="sw l0"></i>Not trained</span><span><i class="sw l1"></i>1–4 sets</span><span><i class="sw l2"></i>5–9</span><span><i class="sw l3"></i>10–20</span><span><i class="sw l4"></i>Over 20</span><span class="note">per week</span></div>
   <label class="inline"><input type="checkbox" id="body-sec" data-act="bodysec" ${bodySec?'checked':''}> Count secondary work (as half a set)</label>`;
@@ -98,7 +98,7 @@ function renderBody(){
     v.ex.forEach(e=>{ const k=e.ex+'|'+e.role; (grouped[k] = grouped[k] || {...e, days:[]}).days.push(e.day); });
     const rows = Object.values(grouped).sort((a,b)=> a.role===b.role ? a.days[0]-b.days[0] : a.role==='p'?-1:1);
     h += `<section class="panel"><div class="inline" style="justify-content:space-between"><h2>${MUSCLES[bodySel].n}</h2><button class="btn sm ghost" data-act="muscle" data-m="">Close</button></div>
-      <p>${v.sets ? `About <b>${fmtSets(v.sets)}</b> sets a week in Program ${bodyView}.${bodySec?' Secondary work counts as half a set.':' Primary work only.'}` : `Nothing in Program ${bodyView} trains this.`}</p>
+      <p>${v.sets ? `About <b>${fmtSets(v.sets)}</b> sets a week in ${esc(progName(bodyView))}.${bodySec?' Secondary work counts as half a set.':' Primary work only.'}` : `Nothing in ${esc(progName(bodyView))} trains this.`}</p>
       ${rows.length?`<div class="mlist">${rows.map(r=>`<div class="mrow"><span class="role ${r.role}">${r.role==='p'?'Primary':'Secondary'}</span><span class="mname">${esc(exInfo(r.ex).n)}${r.either?' <small>(either/or)</small>':''}</span><span class="mdays">${[...new Set(r.days)].sort().map(d=>'D'+d).join(' ')}</span><button class="btn sm ghost" data-act="tagex" data-ex="${r.ex}">Edit</button></div>`).join('')}</div>`:''}
     </section>`;
   } else {

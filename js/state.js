@@ -18,9 +18,10 @@ let mDay = null; // day shown on phones
 let db = null;
 let unsubWeek = null;
 let storeMode = 'loading';
-const ready = {cfg:false, logs:false, week:false, programs:false, lib:false};
-const isReady = () => ready.cfg && ready.logs && ready.week && ready.programs && ready.lib;
+const ready = {cfg:false, logs:false, week:false, programs:false, lib:false, body:false};
+const isReady = () => ready.cfg && ready.logs && ready.week && ready.programs && ready.lib && ready.body;
 let library = []; // saved program versions
+let body = []; // body weight: [{wk, d, w}], one per week
 
 function programFor(date){
   const m = date.getMonth()+1; // 1..12
@@ -29,6 +30,7 @@ function programFor(date){
   return 'A';
 }
 const weekKey = () => ymd(weekStart);
+const progName = k => (cfg.progNames && cfg.progNames[k]) || `Program ${k}`;
 function activeProgKey(){ return (cfg.mode===2 && (week.prog==='A'||week.prog==='B')) ? week.prog : programFor(weekStart); }
 
 /* ---------- Storage (db with local fallback) ---------- */
@@ -58,6 +60,7 @@ let flagT, flagHold=0; function flag(t){ const el=document.getElementById('saveF
 function removeDoc(path){ if(!db){ try{ localStorage.removeItem('ironlog:'+path); }catch(e){} return; } save(path, {__delete:true}); }
 function saveCfg(){ save('config/main', cfg); }
 function saveWeek(){ save('weeks/'+weekKey(), week); }
+function saveBody(){ save('body/main', {entries: body}); }
 function saveLibrary(){ save('library/main', {items: library}); }
 function saveLog(exId){ save('logs/'+exId, {entries: logs[exId]||[]}); }
 
@@ -76,7 +79,8 @@ async function init(){
   initBackup();
   try{ db = (window.claude && window.claude.use) ? await window.claude.use('db') : null; }catch(e){ db=null; }
   if(!db){
-    storeMode='local'; ready.cfg = ready.logs = ready.programs = ready.lib = true;
+    storeMode='local'; ready.cfg = ready.logs = ready.programs = ready.lib = ready.body = true;
+    body = ((LS.get('body/main')||{}).entries)||[];
     library = ((LS.get('library/main')||{}).items)||[];
     applyProgram('A', LS.get('programs/A')); applyProgram('B', LS.get('programs/B'));
     const c = LS.get('config/main'); if(c) cfg = {...structuredClone(DEFAULT_CFG), ...c};
@@ -85,6 +89,7 @@ async function init(){
   }
   storeMode='db';
   db.collection('programs').onSnapshot(s=>{ if(s.metadata.hasPendingWrites) return; const m={}; s.docs.forEach(d=>m[d.id]=d.data()); applyProgram('A', m.A); applyProgram('B', m.B); ready.programs = true; render(); }, ()=>flag('Couldn’t load your programs. Reload the page.'));
+  db.doc('body/main').onSnapshot(s=>{ if(s.metadata.hasPendingWrites) return; body = s.exists ? [...((s.data()||{}).entries||[])] : []; ready.body = true; render(); }, ()=>flag('Couldn’t load body weight. Reload the page.'));
   db.doc('library/main').onSnapshot(s=>{ if(s.metadata.hasPendingWrites) return; library = s.exists ? [...((s.data()||{}).items||[])] : []; ready.lib = true; render(); }, ()=>flag('Couldn’t load saved programs. Reload the page.'));
   db.doc('config/main').onSnapshot(s=>{ if(s.metadata.hasPendingWrites) return; if(s.exists) cfg = {...structuredClone(DEFAULT_CFG), ...structuredClone(s.data())}; ready.cfg = true; render(); }, ()=>flag('Couldn’t load settings. Reload the page.'));
   db.collection('logs').onSnapshot(s=>{ if(s.metadata.hasPendingWrites) return; const next={}; s.docs.forEach(d=>{ next[d.id] = [...((d.data()||{}).entries||[])]; }); logs=next; ready.logs = true; render(); }, ()=>flag('Couldn’t load your log. Reload the page.'));
