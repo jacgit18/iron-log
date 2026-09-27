@@ -189,14 +189,14 @@ function renderSettings(){
 
   h += `<section class="panel"><h2>Phases</h2><p>Target weight = your 1RM × the phase %. Rounded to 2.5 lb under 50 lb, 5 lb above.</p><div class="tbl"><table><thead><tr><th>Phase</th><th>% of 1RM</th><th>Sets × reps</th></tr></thead><tbody>
     ${PH_KEYS.map(k=>`<tr><td><span class="dot" data-p="${k}"></span> ${PHASES[k].label}</td><td><input type="number" id="pct-${k}" min="0" max="110" step="1" value="${cfg.pct[k]??PHASES[k].pct}" data-act="pct" data-p="${k}"> %</td><td><input class="wide" id="rx-${k}" value="${esc(cfg.rxOverride[k]||PHASES[k].rx)}" data-act="rxo" data-p="${k}"></td></tr>`).join('')}
-  </tbody></table></div><label class="inline" for="rest-s">Rest between sets <input type="number" id="rest-s" min="0" max="600" step="15" value="${cfg.rest??90}" data-act="rests" style="width:80px"> seconds</label><p>The percentages are placeholders until you set your own. Isometric holds are usually judged by time and effort more than by % of a lifting max.</p></section>`;
+  </tbody></table></div><label class="inline" for="rest-s">Rest between sets <input type="number" id="rest-s" min="0" max="600" step="any" value="${cfg.rest??90}" data-act="rests" style="width:80px"> seconds</label><p>The percentages are placeholders until you set your own. Isometric holds are usually judged by time and effort more than by % of a lifting max.</p></section>`;
 
   h += backupPanel();
 
   const ALL_SLOTS=[...slotsFor(PROGRAMS.A),...slotsFor(PROGRAMS.B)];
   const weighted = allExIds().filter(id=> ALL_SLOTS.some(s=>s.items.some(i=>i.ex===id && i.w!=null)));
   h += `<section class="panel" style="grid-column:1/-1"><h2>1-rep maxes</h2><p>Enter a 1RM to switch that exercise's target from the program weight to a phase-based weight. Leave blank to keep the program weight.</p><div class="tbl"><table><thead><tr><th>Exercise</th><th>Program weight</th><th>1RM (lb)</th><th>Best logged</th></tr></thead><tbody>
-    ${weighted.map(id=>{ const ws=[...new Set(ALL_SLOTS.flatMap(s=>s.items.filter(i=>i.ex===id&&i.w!=null).map(i=>i.w)))]; const best=(logs[id]||[]).map(e=>Number(e.w)).filter(n=>n>0); return `<tr><td>${esc(exInfo(id).n)}</td><td>${ws.join(' / ')} lb</td><td><input type="number" id="rm-${id}" min="0" step="2.5" value="${cfg.rm[id]??''}" data-act="rm" data-ex="${id}" placeholder="—"></td><td>${best.length?Math.max(...best)+' lb':'—'}</td></tr>`; }).join('')}
+    ${weighted.map(id=>{ const ws=[...new Set(ALL_SLOTS.flatMap(s=>s.items.filter(i=>i.ex===id&&i.w!=null).map(i=>i.w)))]; const best=(logs[id]||[]).map(e=>Number(e.w)).filter(n=>n>0); return `<tr><td>${esc(exInfo(id).n)}</td><td>${ws.join(' / ')} lb</td><td><input type="number" id="rm-${id}" min="0" step="any" value="${cfg.rm[id]??''}" data-act="rm" data-ex="${id}" placeholder="—"></td><td>${best.length?Math.max(...best)+' lb':'—'}</td></tr>`; }).join('')}
   </tbody></table></div></section>`;
   return h + `</div>`;
 }
@@ -209,15 +209,15 @@ function openLog(slotId, idx){
   const iso = ph==='iso';
   const rx = rxOf(it, ph); const m = rx.match(/(\d+)\s*×\s*(\d+)/);
   const hist = (logs[it.ex]||[]).slice(-6).reverse();
-  document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><form class="sheet" id="logform" data-slot="${slotId}" data-idx="${idx}">
+  document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><form class="sheet" id="logform" novalidate data-slot="${slotId}" data-idx="${idx}">
     <h2 class="cond">${esc(ex.n)}</h2>
     <div class="target"><span>Target<br><b>${t.w!=null?t.w+' lb':(t.src||'—')}</b></span><span>Prescription<br><b>${esc(rx||'—')}</b></span>${t.w!=null?`<span class="note" style="align-self:end">${esc(t.src)}</span>`:''}</div>
     <div class="fields">
       <label class="field">Phase<select id="f-ph">${!ph?'<option value="">None</option>':''}${PH_KEYS.map(k=>`<option value="${k}" ${k===ph?'selected':''}>${PHASES[k].label}</option>`).join('')}</select></label>
-      <label class="field">Weight (lb)<input id="f-w" type="number" inputmode="decimal" step="2.5" value="${t.w??''}" placeholder="BW"></label>
+      <label class="field">Weight (lb)<input id="f-w" type="number" inputmode="decimal" step="any" min="0" value="${t.w??''}" placeholder="BW"></label>
       <label class="field">Sets<input id="f-s" type="number" inputmode="numeric" value="${m?m[1]:''}"></label>
       <label class="field" id="f-r-wrap">${iso?'Hold (s)':'Reps'}<input id="f-r" type="number" inputmode="numeric" value="${iso?(m?m[2]:''):(m?m[2]:'')}"></label>
-      <label class="field">1RM (lb)<input id="f-rm" type="number" inputmode="decimal" step="2.5" min="0" value="${cfg.rm[it.ex]??''}" placeholder="not set"></label>
+      <label class="field">1RM (lb)<input id="f-rm" type="number" inputmode="decimal" step="any" min="0" value="${cfg.rm[it.ex]??''}" placeholder="not set"></label>
       <label class="field">Date<input id="f-d" type="date" value="${defaultLogDate()}"></label>
     </div>
     <label class="field">Note<input id="f-n" type="text" placeholder="Form, how it felt, equipment"></label>

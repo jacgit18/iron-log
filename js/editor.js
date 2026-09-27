@@ -41,11 +41,11 @@ function renderSlotSheet(){
     <label class="field">Exercise<select id="se-ex-${k}" data-act="sedraft">${it.ex===''?'<option value="" selected>Choose…</option>':''}${exIds.map(id=>`<option value="${id}" ${id===it.ex?'selected':''}>${esc(exInfo(id).n)}</option>`).join('')}<option value="__new" ${it.ex==='__new'?'selected':''}>+ New exercise…</option></select></label>
     ${it.ex==='__new'?`<div class="fields"><label class="field">Name<input id="se-nn-${k}" value="${esc(it.nn||'')}" placeholder="e.g. Cable Lateral Raise"></label><label class="field">Video link (optional)<input id="se-nu-${k}" type="url" value="${esc(it.nu||'')}" placeholder="https://"></label></div>`:''}
     <div class="fields"><label class="field">Phase<select id="se-ph-${k}"><option value="" ${!it.ph?'selected':''}>None</option>${PH_KEYS.map(p=>`<option value="${p}" ${p===it.ph?'selected':''}>${PHASES[p].label}</option>`).join('')}</select></label>
-    <label class="field">Weight (lb)<input id="se-w-${k}" type="number" inputmode="decimal" step="0.5" value="${it.w??''}" placeholder="—"></label>
+    <label class="field">Weight (lb)<input id="se-w-${k}" type="number" inputmode="decimal" step="any" min="0" value="${it.w??''}" placeholder="—"></label>
     <label class="field">Sets × reps<input id="se-rx-${k}" value="${esc(it.rx)}" placeholder="phase default"></label></div>
     <label class="inline"><input type="checkbox" id="se-bw-${k}" ${it.bw?'checked':''}> Bodyweight</label>
     <label class="field">Note<input id="se-no-${k}" value="${esc(it.note)}" placeholder="Form cue, setup"></label></fieldset>`;
-  document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><form class="sheet" id="slotform">
+  document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><form class="sheet" id="slotform" novalidate>
     <h2 class="cond">${d.idx==null?'Add exercise':'Edit exercise'} · Program ${edProg}</h2>
     <div class="fields">
       <label class="field">Type<select id="se-type" data-act="sedraft"><option value="single" ${d.type==='single'?'selected':''}>Single</option><option value="superset" ${d.type==='superset'?'selected':''}>Superset (A → B)</option><option value="either" ${d.type==='either'?'selected':''}>Either / or</option></select></label>
