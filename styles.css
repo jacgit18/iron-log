@@ -211,6 +211,7 @@ body.timing{padding-bottom:130px}
 .chk:checked{background:var(--accent);border-color:var(--accent)}
 .chk:checked::after{content:"";width:10px;height:6px;border-left:2.5px solid var(--accent-ink);border-bottom:2.5px solid var(--accent-ink);transform:rotate(-45deg) translate(1px,-1px)}
 .sect{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:6px 2px 0}
+.sect.donesect{border-top:1px solid var(--line);margin-top:6px;padding-top:10px}
 .warm{display:flex;flex-direction:column;gap:4px;background:var(--surface);border-radius:8px;padding:8px 10px;font-size:13px}
 .warm label{display:flex;gap:8px;align-items:center}
 .warm .chk{width:18px;height:18px}
