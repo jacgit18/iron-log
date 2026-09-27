@@ -56,7 +56,7 @@ It's plain HTML, CSS and JavaScript. There is no build step, no framework and no
 - **Fast logging.** Log weight, sets and reps (or hold seconds for isometrics). A "Same as last" button repeats your previous entry in one tap.
 - **Timers.** A hold countdown on isometric exercises that rests between sets and starts the next hold, plus a general rest timer.
 - **Progress.** A weight-over-time chart for each exercise (one phase per chart) and a 12-week record of days completed.
-- **Excel export.** Download an overall workbook (summary, every session, weekly totals, settings) or a workbook for a single week, or export plain CSV. In the Claude version, **Back up to GitHub** commits the same workbooks to a private repo.
+- **Excel export.** Download an overall workbook (summary, every session with the muscles it trains, weekly sets per muscle, weekly totals, settings) or a workbook for a single week, or export plain CSV. In the Claude version, **Back up to GitHub** commits the same workbooks to a private repo.
 - **Muscle map.** Front and back body diagrams shaded by weekly sets per muscle group. Tap a muscle to see the exercises that train it. You can edit the muscle tags for any exercise.
 - **Program editor.** Add, edit, reorder and remove exercises (single, superset or either/or) for any day of either program.
 - **Works on phones.** On a phone you see one day at a time and swipe between days, with bottom navigation and large tap targets. It follows light and dark mode.

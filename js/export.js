@@ -26,13 +26,14 @@ function sheet(X, rows, widths){
   if(rows.length>1) ws['!autofilter'] = {ref: X.utils.encode_range({s:{r:0,c:0}, e:{r:rows.length-1, c:rows[0].length-1}})};
   return ws;
 }
+function muscleNames(id, role){ const t = tagsOf(id); if(!t || t.mob) return t && t.mob ? (role==='p' ? 'Mobility' : '') : ''; return (t[role]||[]).map(m=>MUSCLES[m] ? MUSCLES[m].n : m).join(', '); }
 function sessionRows(filter){
   const rows = [];
-  Object.keys(logs).forEach(id=> (logs[id]||[]).forEach(e=>{ if(!filter || filter(e)) rows.push([e.d, e.wk||weekOfDate(e.d), exInfo(id).n, phaseLabel(e.ph), e.w??'', e.s??'', e.sec?'':(e.r??''), e.sec??'', entryVolume(e), e.n||'', e.slot||'']); }));
+  Object.keys(logs).forEach(id=> (logs[id]||[]).forEach(e=>{ if(!filter || filter(e)) rows.push([e.d, e.wk||weekOfDate(e.d), exInfo(id).n, phaseLabel(e.ph), e.w??'', e.s??'', e.sec?'':(e.r??''), e.sec??'', entryVolume(e), muscleNames(id,'p'), muscleNames(id,'s'), e.n||'', e.slot||'']); }));
   rows.sort((a,b)=> a[0]===b[0] ? a[2].localeCompare(b[2]) : a[0].localeCompare(b[0]));
-  return [['Date','Week of','Exercise','Phase','Weight (lb)','Sets','Reps','Hold (s)','Volume (lb)','Note','Program slot'], ...rows];
+  return [['Date','Week of','Exercise','Phase','Weight (lb)','Sets','Reps','Hold (s)','Volume (lb)','Primary muscles','Secondary muscles','Note','Program slot'], ...rows];
 }
-const SESSION_COLS = [11,11,34,13,11,6,6,9,12,30,14];
+const SESSION_COLS = [11,11,34,13,11,6,6,9,12,28,28,30,14];
 
 function buildOverallWorkbook(X, weeks){
   const wb = X.utils.book_new();
@@ -47,6 +48,13 @@ function buildOverallWorkbook(X, weeks){
   });
   X.utils.book_append_sheet(wb, sheet(X, sum, [34,13,9,12,12,15,16,15,11,9]), 'Summary');
   X.utils.book_append_sheet(wb, sheet(X, sessionRows(), SESSION_COLS), 'Sessions');
+  // Muscles: logged sets per muscle per week (secondary work counts half)
+  const mv = {};
+  Object.keys(logs).forEach(id=>{ const t = tagsOf(id); if(!t || t.mob) return; (logs[id]||[]).forEach(e=>{ const k = e.wk||weekOfDate(e.d); const sets = Number(e.s)||0; if(!sets) return;
+    [['p',1],['s',0.5]].forEach(([role,f])=> (t[role]||[]).forEach(m=>{ const key = k+'|'+m; const r = mv[key] = mv[key] || {k, m, p:0, s:0}; r[role] += sets; })); }); });
+  const mus = [['Week of','Muscle','Primary sets','Secondary sets','Weighted sets']];
+  Object.values(mv).sort((a,b)=> a.k===b.k ? (b.p+b.s/2)-(a.p+a.s/2) : a.k.localeCompare(b.k)).forEach(r=> mus.push([r.k, MUSCLES[r.m] ? MUSCLES[r.m].n : r.m, r.p, r.s, r.p + r.s/2]));
+  X.utils.book_append_sheet(wb, sheet(X, mus, [12,24,13,15,14]), 'Muscles');
   // Weeks
   const wk = [['Week of','Program','Days complete','Exercises done','Exercises planned','% done','Sessions logged']];
   Object.keys(weeks).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort().forEach(k=>{

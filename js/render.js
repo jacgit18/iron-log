@@ -110,8 +110,8 @@ const blobSave = { save: async ({filename, data}) => { const url=URL.createObjec
 async function initDownloads(){ try{ dl = (window.claude && window.claude.use) ? await window.claude.use('downloads') : blobSave; }catch(e){ dl=null; } if(tab==='progress') render(); }
 function csvCell(v){ const t = v==null ? '' : String(v); return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t; }
 function buildCsv(){
-  const rows = [['date','exercise','phase','weight_lb','sets','reps','hold_s','note','program_slot','week_of']];
-  Object.keys(logs).forEach(id=> (logs[id]||[]).forEach(e=> rows.push([e.d, exInfo(id).n, e.ph?PHASES[e.ph].label:'', e.w??'', e.s??'', e.r??'', e.sec??'', e.n||'', e.slot||'', e.wk||''])));
+  const rows = [['date','exercise','phase','weight_lb','sets','reps','hold_s','primary_muscles','secondary_muscles','note','program_slot','week_of']];
+  Object.keys(logs).forEach(id=> (logs[id]||[]).forEach(e=> rows.push([e.d, exInfo(id).n, e.ph?PHASES[e.ph].label:'', e.w??'', e.s??'', e.r??'', e.sec??'', muscleNames(id,'p'), muscleNames(id,'s'), e.n||'', e.slot||'', e.wk||''])));
   const body = rows.slice(1).sort((a,b)=> a[0]===b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0]));
   return [rows[0], ...body].map(r=>r.map(csvCell).join(',')).join('\r\n');
 }
