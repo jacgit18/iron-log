@@ -161,7 +161,7 @@ function renderProgress(){
   if(!weekHist && !historyLoading) loadHistory();
   const hasLogs = Object.values(logs).some(l=>l&&l.length);
   const exp = dl && hasLogs ? `<div class="actions" style="justify-content:flex-end;margin-bottom:12px">${mcp?`<button class="btn primary" data-act="backup" ${backupBusy?'disabled':''}>${backupBusy?'Backing up…':'Back up to GitHub'}</button>`:''}<button class="btn" data-act="xlsx" data-w="all">Download Excel</button><button class="btn" data-act="xlsx" data-w="week">This week (Excel)</button><button class="btn" data-act="export">CSV</button></div>${backupMsg?`<p class="bkmsg ${backupMsg.kind}" style="text-align:right">${esc(backupMsg.text)}${backupMsg.url?` <a href="${esc(backupMsg.url)}" target="_blank" rel="noopener">View commit</a>`:''}</p>`:''}` : '';
-  return renderHistory() + exp + renderLifts();
+  return renderTrends() + renderHistory() + exp + renderLifts();
 }
 function renderLifts(){
   const ids = Object.keys(logs).filter(id=>logs[id].length);

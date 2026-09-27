@@ -55,7 +55,7 @@ It's plain HTML, CSS and JavaScript. There is no build step, no framework and no
 - **Suggestions to go heavier.** After two separate days in a row with every set completed, the target goes up by +2.5 lb (under 50 lb) or +5 lb. For isometric work, it waits until you've held 30 s on every set.
 - **Fast logging.** Log weight, sets and reps (or hold seconds for isometrics). A "Same as last" button repeats your previous entry in one tap.
 - **Timers.** A hold countdown on isometric exercises that rests between sets and starts the next hold, plus a general rest timer.
-- **Progress.** A weight-over-time chart for each exercise (one phase per chart) and a 12-week record of days completed.
+- **Progress.** Headline numbers for the week, sets logged per week, weight change by exercise over the last 8 weeks, a muscles-by-week heatmap of what you actually trained, a weight-over-time chart for each exercise (one phase per chart) and a 12-week record of days completed.
 - **Excel export.** Download an overall workbook (summary, every session with the muscles it trains, weekly sets per muscle, weekly totals, settings) or a workbook for a single week, or export plain CSV. In the Claude version, **Back up to GitHub** commits the same workbooks to a private repo.
 - **Export and import.** One JSON file holds everything: the log, weekly check-offs, programs, saved versions and settings. Import it with **Add to my data** (keeps what's here and fills in what's missing) or **Replace my data** (makes the app match the file).
 - **Muscle map.** Front and back body diagrams shaded by weekly sets per muscle group. Tap a muscle to see the exercises that train it. You can edit the muscle tags for any exercise.
@@ -85,6 +85,7 @@ js/state.js                   dates, settings, storage, helpers
 js/render.js                  board, progress, settings and log screens
 js/timers.js                  hold and rest timers
 js/muscles.js                 muscle map and exercise→muscle tags
+js/charts.js                  trend charts on the Progress tab
 js/editor.js                  program editor
 js/export.js                  Excel export and GitHub backup
 js/events.js                  input handling and startup
