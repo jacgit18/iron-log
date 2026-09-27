@@ -21,8 +21,47 @@ function renderEditor(){
   });
   h += `</div><div class="actions" style="justify-content:flex-start"><button class="btn primary" data-act="edadd">Add exercise</button></div></section>`;
   h += `<p class="note" style="margin-top:12px">Changes apply to every week that uses Program ${edProg}. Your logged sets stay as they are.</p>`;
-  if(custom) h += `<p><button class="btn sm ghost" data-act="edreset">Reset Program ${edProg} to the original</button></p>`;
+  h += renderLibrary(custom);
   return h;
+}
+/* ---------- Saved program versions ---------- */
+const progBody = p => { const b = structuredClone(p); delete b.key; return b; };
+const sameProg = (a, b) => JSON.stringify(progBody(a)) === JSON.stringify(progBody(b));
+const libDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${fmtShort(d)}, ${d.getFullYear()}`; };
+function progStats(p){ const n = p.days.reduce((a,d)=>a+d.slots.length,0); return `${n} exercise${n===1?'':'s'}`; }
+function renderLibrary(custom){
+  const cur = PROGRAMS[edProg];
+  let h = `<section class="panel edpanel lib" style="margin-top:16px"><h2>Saved versions</h2>`;
+  h += `<p class="note">Load a version into Program ${edProg}. Whatever Program ${edProg} has now is saved here first if it isn't already, so loading never loses anything.</p>`;
+  h += `<div class="edlist">`;
+  const row = (name, meta, inUse, loadAttrs, extra='') => `<div class="edrow${inUse?' inuse':''}"><div class="edmain"><b>${esc(name)}</b><span class="note">${meta}</span></div><div class="edbtns">${inUse?`<span class="pill">In use</span>`:`<button class="btn sm" data-act="libload" ${loadAttrs}>Load</button>`}${extra}</div></div>`;
+  h += row(`Original Program ${edProg}`, `Built in · ${progStats(BUILTIN[edProg])} · always kept`, !custom, `data-orig="1"`);
+  const items = [...library].sort((a,b)=>(b.at||'').localeCompare(a.at||''));
+  items.forEach(it=>{
+    const inUse = custom && sameProg(it.prog, cur);
+    h += row(it.name, `From Program ${it.from} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto?' · auto-saved':''}`, inUse, `data-id="${it.id}"`, `<button class="btn sm ghost" data-act="libdel" data-id="${it.id}">Delete</button>`);
+  });
+  if(!items.length) h += `<p class="note">No saved copies yet.</p>`;
+  h += `</div>`;
+  const saved = !custom || library.some(it=>sameProg(it.prog, cur));
+  h += `<form class="libsave" id="libform" novalidate><label class="field" style="flex:1">Save Program ${edProg} as<input id="lib-name" maxlength="60" placeholder="e.g. Program ${edProg} · ${MON[new Date().getMonth()]} ${new Date().getFullYear()}"></label><button type="submit" class="btn primary">Save a copy</button></form>`;
+  if(!saved) h += `<p class="note">Program ${edProg} has changes that aren't in a saved copy yet.</p>`;
+  return h + `</section>`;
+}
+function libSnapshot(name, prog, from, auto){ const it = {id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), name, from, at: new Date().toISOString(), prog: progBody(prog)}; if(auto) it.auto = true; library = [...library, it]; return it; }
+function saveCurrentAs(name){
+  const cur = PROGRAMS[edProg];
+  const nm = name.trim() || `Program ${edProg} · ${libDate(new Date().toISOString())}`;
+  libSnapshot(nm, cur, edProg, false); saveLibrary(); render(); flag('Copy saved');
+}
+function loadVersion(target){
+  const cur = PROGRAMS[edProg]; const custom = cur !== BUILTIN[edProg];
+  const next = target === 'orig' ? BUILTIN[edProg] : (library.find(it=>it.id===target)||{}).prog;
+  if(!next) return;
+  if(custom && !library.some(it=>sameProg(it.prog, cur))){ libSnapshot(`Program ${edProg} before loading · ${libDate(new Date().toISOString())}`, cur, edProg, true); saveLibrary(); }
+  if(target === 'orig'){ PROGRAMS[edProg] = BUILTIN[edProg]; removeDoc('programs/'+edProg); }
+  else saveProgram(edProg, structuredClone(next));
+  render(); flag('Loaded');
 }
 function saveProgram(k, prog){ const body = structuredClone(prog); delete body.key; PROGRAMS[k] = {...body, key:k}; save('programs/'+k, body); }
 function editableProgram(){ return structuredClone(PROGRAMS[edProg]); }
