@@ -52,8 +52,14 @@ function renderBoard(progKey, prog){
       const pending = slots.filter(s=>s.day<5 && (week.moved[s.id]||s.day)<5 && !week.done[s.id] && !isSkipped(s)).length;
       h += `<div class="makeup">Make-up day for anything skipped. ${pending?`<button class="btn sm" data-act="pull">Pull in ${pending} unfinished</button>`:''}</div>`;
     }
+    // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
+    const open = list.filter(s=>!week.done[s.id] && !isSkipped(s));
+    const finished = [...list.filter(s=>week.done[s.id] && !isSkipped(s)), ...list.filter(s=>isSkipped(s))];
     let lastSec = null;
-    list.forEach(s=>{ const sec = s.day===d ? s.sec : 'Moved here'; if(sec!==lastSec){ h+=`<div class="sect">${esc(sec)}</div>`; lastSec=sec; } h += renderCard(s, d); });
+    open.forEach(s=>{ const sec = s.day===d ? s.sec : 'Moved here'; if(sec!==lastSec){ h+=`<div class="sect">${esc(sec)}</div>`; lastSec=sec; } h += renderCard(s, d); });
+    if(finished.length){ const nd = finished.filter(s=>!isSkipped(s)).length, ns = finished.length - nd;
+      h += `<div class="sect donesect">${[nd?`${nd} done`:'', ns?`${ns} skipped`:''].filter(Boolean).join(' · ')}</div>`;
+      finished.forEach(s=>{ h += renderCard(s, d); }); }
     h += `</section>`;
   }
   h += `</div>`;

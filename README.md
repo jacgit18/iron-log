@@ -45,7 +45,7 @@ It's plain HTML, CSS and JavaScript. There is no build step, no framework and no
 
 ## Features
 
-- **Weekly board.** One column per training day (Sunday to Saturday week). You can check off exercises one at a time or a whole day at once. When equipment is taken, drag a card to another day (or use "Move to" on a phone). Day 5 is a make-up day that can pull in anything left unfinished. **Skip** takes an exercise out of this week's counts without deleting it, and checking it off later undoes the skip.
+- **Weekly board.** One column per training day (Sunday to Saturday week). You can check off exercises one at a time or a whole day at once. When equipment is taken, drag a card to another day (or use "Move to" on a phone). Day 5 is a make-up day that can pull in anything left unfinished. **Skip** takes an exercise out of this week's counts without deleting it, and checking it off later undoes the skip. Done and skipped exercises drop to the bottom of their day, so what's left is always on top.
 - **Program rotation.** There are three modes:
   1. Program A only.
   2. A and B alternate by month (even and odd months), and you can switch any single week by hand.
