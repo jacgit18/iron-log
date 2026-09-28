@@ -8,9 +8,11 @@ on:
     branches-ignore: [main]
     paths:
       - 'index.html'
-      - 'styles.css'
-      - 'js/**'
-      - 'assets/**'
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
       - 'tools/**'
       - '.github/workflows/screenshots.yml'
 
@@ -30,6 +32,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: npm
+      - run: npm ci
       - run: npm install --no-save --no-package-lock playwright@1.49.1
       - run: npx playwright install --with-deps chromium
       - run: node tools/screenshots.mjs
