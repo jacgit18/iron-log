@@ -6,6 +6,7 @@ import Board from './components/board/Board.jsx';
 import LogSheet from './components/sheets/LogSheet.jsx';
 import DetailSheet from './components/sheets/DetailSheet.jsx';
 import TimerBar from './components/TimerBar.jsx';
+import Progress from './components/progress/Progress.jsx';
 
 const TABS = [['board', 'Board'], ['progress', 'Progress'], ['body', 'Muscles'], ['program', 'Program'], ['settings', 'Settings']];
 
@@ -55,7 +56,7 @@ export default function App() {
           </nav>
         </header>
         <main id="view">
-          {tab === 'board' ? <Board /> : <NotPortedYet name={TABS.find(([k]) => k === tab)[1]} />}
+          {tab === 'board' ? <Board /> : tab === 'progress' ? <Progress /> : <NotPortedYet name={TABS.find(([k]) => k === tab)[1]} />}
         </main>
       </div>
       <Modal />

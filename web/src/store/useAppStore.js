@@ -6,6 +6,11 @@ import {
   setCardDone, setItemDone, clearDone, isSkipped, isOpen, currentLayout, moveClashes, defaultLogDate,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
+import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
+import {
+  loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
+  backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL,
+} from '../lib/export.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
 // binding from the original app (window.claude.use('db')); without it everything uses localStorage.
@@ -13,6 +18,18 @@ let db = null;
 let unsubWeek = null;
 let flagT = null, flagHold = 0;
 let initStarted = false;
+let histPromise = null;
+
+// Outside the Claude host, downloads are a plain blob link.
+const blobSave = {
+  save: async ({ filename, data }) => {
+    const url = URL.createObjectURL(new Blob([data], { type: 'text/csv' }));
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { status: 'saved' };
+  },
+};
 
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
 
@@ -42,6 +59,40 @@ export const useAppStore = create((set, get) => ({
   ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false },
   moveNote: null, // heads-up after a move puts the same exercise on the same or a neighboring day
   modal: null, // {type:'log', slotId, idx} | {type:'detail', exId}
+  weekHist: null, // every saved week, loaded on demand for Progress and exports
+  historyLoading: false,
+  dl: undefined, // downloads handle: undefined = not checked yet, null = unavailable
+  mcp: undefined, // connector handle for GitHub backup (Claude-hosted only)
+  backupBusy: false,
+  backupMsg: null, // {kind:'info'|'ok'|'err', text, url?}
+  snoozeBackup: false,
+
+  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body }; },
+
+  // Callers that arrive while a load is running wait for that same load.
+  loadHistory() {
+    if (histPromise) return histPromise;
+    set({ historyLoading: true });
+    histPromise = (async () => {
+      const out = {};
+      try {
+        if (db) { const snap = await db.collection('weeks').get(); snap.docs.forEach(d => { if (d.exists) out[d.id] = d.data(); }); }
+        else {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('ironlog:weeks/')) { const v = LS.get(k.slice(8)); if (v) out[k.slice(14)] = v; }
+          }
+        }
+      } catch { /* show what loaded */ }
+      set({ weekHist: out, historyLoading: false });
+    })().finally(() => { histPromise = null; });
+    return histPromise;
+  },
+  // All saved weeks, with the week on screen taken live from state.
+  async allWeeks() {
+    if (!get().weekHist) await get().loadHistory();
+    return { ...(get().weekHist || {}), [get().weekKey()]: get().week };
+  },
 
   isReady: () => { const r = get().ready; return r.cfg && r.logs && r.week && r.programs && r.lib && r.body; },
   weekKey: () => ymd(get().weekStart),
@@ -53,7 +104,8 @@ export const useAppStore = create((set, get) => ({
   // Every write is refused until all data has loaded, so a half-loaded week never overwrites the saved one.
   blocked() { if (get().isReady()) return false; flag('Still loading your data…'); return true; },
 
-  setTab: tab => set({ tab }),
+  // Opening Progress reloads the saved weeks so the history is never stale.
+  setTab: tab => set(tab === 'progress' ? { tab, weekHist: null } : { tab }),
   setMDay: mDay => set({ mDay }),
   openModal: modal => set({ modal }),
   closeModal: () => set({ modal: null }),
@@ -184,9 +236,93 @@ export const useAppStore = create((set, get) => ({
     set(state => ({ body: state.body.filter(x => x.wk !== wk) })); get().saveBody(); flag('Deleted');
   },
 
+  exporting: null, // which export is running: 'csv' | 'xlsx-all' | 'xlsx-week' | 'data'
+
+  async runExport(kind, fn) {
+    const dl = get().dl; if (!dl || get().exporting) return;
+    set({ exporting: kind });
+    try { await fn(dl); flag('Exported'); }
+    catch (e) {
+      const c = e && e.code;
+      if (c === 'declined') { /* user closed the save prompt */ }
+      else if (c === 'rate_limited') flag('A save prompt is already open');
+      else if (kind === 'csv') { flag('Export isn’t available here'); set({ dl: null }); }
+      else flag(e && e.message && !c ? e.message : 'Export isn’t available here');
+    } finally { set({ exporting: null }); }
+  },
+  exportCsv() { return get().runExport('csv', dl => dl.save({ filename: `iron-log-${ymd(new Date())}.csv`, data: buildCsv(get().snapshot()) })); },
+  downloadExcel(which) {
+    return get().runExport(`xlsx-${which}`, async dl => {
+      const X = await loadXLSX(); const S = get().snapshot();
+      const wb = which === 'week' ? buildWeekWorkbook(X, S, get().weekKey(), get().week) : buildOverallWorkbook(X, S, await get().allWeeks());
+      const data = X.write(wb, { type: 'array', bookType: 'xlsx', compression: true });
+      await dl.save({ filename: which === 'week' ? `iron-log-week-${get().weekKey()}.xlsx` : `iron-log-${ymd(new Date())}.xlsx`, data });
+    });
+  },
+  downloadData() {
+    return get().runExport('data', async dl => {
+      const d = buildDataFile(get().snapshot(), await get().allWeeks());
+      await dl.save({ filename: `iron-log-data-${ymd(new Date())}.json`, data: JSON.stringify(d, null, 1) });
+    });
+  },
+  snooze: () => set({ snoozeBackup: true }),
+
+  async backupToGitHub() {
+    const mcp = get().mcp; if (!mcp || get().backupBusy) return;
+    set({ backupBusy: true, backupMsg: { kind: 'info', text: 'Building Excel files…' } });
+    const b = backupCfg(get().cfg); b.hashes = { ...b.hashes };
+    const [owner, repo] = String(b.repo).split('/'); let sent = 0;
+    try {
+      if (!owner || !repo) throw new Error('Set the backup repo as owner/name in Settings.');
+      const X = await loadXLSX(); const weeks = await get().allWeeks(); const S = get().snapshot();
+      const b64 = wb => X.write(wb, { type: 'base64', bookType: 'xlsx', compression: true });
+      const upserts = [
+        { path: 'iron-log.xlsx', content: b64(buildOverallWorkbook(X, S, weeks)), encoding: 'base64' },
+        { path: 'iron-log-data.json', content: utf8b64(JSON.stringify(buildDataFile(S, weeks), null, 1)), encoding: 'base64' },
+      ];
+      const hashes = { ...b.hashes }; const changed = [];
+      Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => {
+        const w = weeks[k]; const r = weekSummary(S.cfg, S.programs, k, w);
+        const hasLogs = Object.values(S.logs).some(L => L.some(e => entryWeek(e) === k));
+        if (!r.ex && !hasLogs) return;
+        const fp = weekFingerprint(S, k, w); if (hashes[k] === fp) return;
+        upserts.push({ path: `weeks/${k}.xlsx`, content: b64(buildWeekWorkbook(X, S, k, w)), encoding: 'base64' }); hashes[k] = fp; changed.push(k);
+      });
+      // The connector accepts about 1 MB per call, so large first backups go in several commits.
+      const batches = []; let cur = [], curSize = 0;
+      upserts.forEach(u => { if (cur.length && curSize + u.content.length > 700000) { batches.push(cur); cur = []; curSize = 0; } cur.push(u); curSize += u.content.length; });
+      if (cur.length) batches.push(cur);
+      if (batches.some(bt => bt.length === 1 && bt[0].content.length > 950000)) throw new Error('One of the workbooks is too large to send. Ask Claude to split the backup.');
+      const base = `Backup ${ymd(new Date())}: overall workbook + data file${changed.length ? ` + ${changed.length} week file${changed.length > 1 ? 's' : ''}` : ''}`;
+      let url = `https://github.com/${owner}/${repo}`;
+      for (let i = 0; i < batches.length; i++) {
+        set({ backupMsg: { kind: 'info', text: `Sending ${batches[i].length} file${batches[i].length > 1 ? 's' : ''} to ${owner}/${repo}${batches.length > 1 ? ` (part ${i + 1} of ${batches.length})` : ''}…` } });
+        const msg = batches.length > 1 ? `${base} (part ${i + 1} of ${batches.length})` : base;
+        const res = await mcp.callTool(GH_SERVER, GH_TOOL, { tools: [{ tool_slug: 'GITHUB_COMMIT_MULTIPLE_FILES', arguments: { owner, repo, branch: b.branch || 'main', message: msg, upserts: batches[i] } }], sync_response_to_workbench: false, thought: 'Back up Iron Log training data to the private data repo.', current_step: 'BACKUP' }, { cache: false });
+        const p = res && res.payload; const r0 = p && p.data && p.data.results && p.data.results[0];
+        if (!(r0 && r0.response && r0.response.successful)) {
+          const why = (r0 && (r0.error || (r0.response && r0.response.error))) || (p && p.error) || 'GitHub rejected the backup.';
+          throw new Error((typeof why === 'string' ? why.slice(0, 300) : 'GitHub rejected the backup.') + (sent ? ` (${sent} file${sent > 1 ? 's were' : ' was'} saved before this.)` : ''));
+        }
+        const d = r0.response.data || {}; url = d.commit_url || (d.commit && d.commit.html_url) || url;
+        sent += batches[i].length;
+        // Record progress so a retry skips weeks that already went through.
+        batches[i].forEach(u => { const m = u.path.match(/^weeks\/(.+)\.xlsx$/); if (m) b.hashes[m[1]] = hashes[m[1]]; });
+      }
+      get().mutateCfg(c => { c.backup = { ...b, hashes, last: { at: new Date().toISOString(), url, files: upserts.length } }; });
+      set({ backupMsg: { kind: 'ok', text: `Backed up ${upserts.length} file${upserts.length > 1 ? 's' : ''}.`, url } });
+    } catch (e) {
+      set({ backupMsg: { kind: 'err', text: backupError(e) } });
+      if (sent) get().mutateCfg(c => { c.backup = { ...b }; });
+    } finally { set({ backupBusy: false }); }
+  },
+
   async init() {
     if (initStarted) return; // StrictMode runs mount effects twice in dev; subscribe once
     initStarted = true;
+    const host = window.claude && window.claude.use ? window.claude : null;
+    (async () => { try { set({ dl: host ? await host.use('downloads') : blobSave }); } catch { set({ dl: null }); } })();
+    (async () => { try { set({ mcp: host ? await host.use('mcp') : null }); } catch { set({ mcp: null }); } })();
     try { db = (window.claude && window.claude.use) ? await window.claude.use('db') : null; } catch { db = null; }
     if (!db) {
       const cfgRaw = LS.get('config/main');
