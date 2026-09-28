@@ -1,5 +1,5 @@
 // Renders the PWA icons in public/icons/ from public/logo.svg.
-// Usage (from web/): npm i -D playwright && npx playwright install chromium && node scripts/make-icons.mjs
+// Usage: npm i -D playwright && npx playwright install chromium && node scripts/make-icons.mjs
 import { chromium } from 'playwright';
 import { readFile, mkdir } from 'node:fs/promises';
 

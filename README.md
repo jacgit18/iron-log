@@ -11,14 +11,15 @@
 
 <p align="center">
   <a href="https://jacgit18.github.io/iron-log/"><img alt="Live on GitHub Pages" src="https://img.shields.io/badge/live-GitHub%20Pages-1F5E5B"></a>
-  <img alt="No build step" src="https://img.shields.io/badge/build-none-1F5E5B">
-  <img alt="Vanilla JS" src="https://img.shields.io/badge/stack-HTML%20%C2%B7%20CSS%20%C2%B7%20JS-1F5E5B">
+  <img alt="React and Vite" src="https://img.shields.io/badge/stack-React%20%C2%B7%20Vite%20%C2%B7%20Zustand-1F5E5B">
+  <img alt="Installable, works offline" src="https://img.shields.io/badge/PWA-installable%20%C2%B7%20offline-1F5E5B">
+  <img alt="Built to WCAG 2.2 AAA" src="https://img.shields.io/badge/accessibility-WCAG%202.2%20AAA-1F5E5B">
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1F5E5B"></a>
 </p>
 
 Iron Log is a single-page workout tracker built around a weekly board. It runs two training programs (A and B) on a rotation schedule, sets targets for each exercise by training phase, and shows which muscles a program trains.
 
-It's plain HTML, CSS and JavaScript. There is no build step, no framework and nothing to install.
+It's a React app built with Vite. You can install it on your phone or computer like any other app, and it works with no connection. It was built and tested against WCAG 2.2 at level AAA.
 
 ## Screenshots
 
@@ -59,63 +60,81 @@ It's plain HTML, CSS and JavaScript. There is no build step, no framework and no
 - **Timers.** A hold countdown on isometric exercises that rests between sets and starts the next hold, plus a general rest timer.
 - **Progress.** Headline numbers for the week, sets logged per week, weight change by exercise over the last 8 weeks, a muscles-by-week heatmap of what you actually trained, a weight-over-time chart for each exercise (one line per phase when you train a lift in more than one) and a 12-week record of days completed.
 - **Excel export.** Download an overall workbook (summary, every session with the muscles it trains, weekly sets per muscle, weekly totals, settings) or a workbook for a single week, or export plain CSV. In the Claude version, **Back up to GitHub** commits the same workbooks to a private repo.
-- **Export and import.** One JSON file holds everything: the log, weekly check-offs, programs, saved versions and settings. Import it with **Add to my data** (keeps what's here and fills in what's missing) or **Replace my data** (makes the app match the file).
+- **Export and import.** One JSON file holds everything: the log, weekly check-offs, programs, saved versions and settings. Import it with **Add to my data** (keeps what's here and fills in what's missing) or **Replace my data** (makes the app match the file). An Iron Log Excel workbook can also be imported as a partial backup: it brings back logged sessions, body weight, 1RMs and main settings, but not weekly check-offs or edited programs.
 - **Muscle map.** Front and back body diagrams shaded by weekly sets per muscle group. Tap a muscle to see the exercises that train it. You can edit the muscle tags for any exercise.
 - **Program editor.** Add, edit, reorder and remove exercises (single, superset or either/or) for any day of either program. Rename either program; the new name shows everywhere, while A and B still drive the rotation. **Create a program** from a copy of A or B: it lives in your program library, where you can build and rename it without touching the board, then load it into A or B when you're ready to train it. **Saved versions** keep named copies of a program; the built-in original is always kept, and loading a version saves the current one first so nothing is lost.
-- **Works on phones.** On a phone you see one day at a time and swipe between days, with bottom navigation and large tap targets. It follows light and dark mode.
+- **Works on phones.** On a phone you see one day at a time and swipe between days, with bottom navigation and large tap targets.
+- **Install it, use it offline.** Install from Settings → App on this device (or Add to Home Screen on iPhone). Everything, including logging, the timers and Excel export, works without a connection. New versions wait for you: a banner offers to reload, so an update never interrupts a workout.
+- **Accessible.** Full keyboard use, screen-reader labels and announcements, 7:1 text contrast in light and dark, 44×44 px tap targets, no time limits, and nothing shown by colour alone. **Help** explains the app and its training terms and abbreviations. Settings → Appearance picks light, dark or your device's setting, and roomier text spacing.
 
 ## Running it
 
-- **Hosted:** open **[jacgit18.github.io/iron-log](https://jacgit18.github.io/iron-log/)**.
-- **Locally:** open `index.html` in a browser, or serve the folder (`python3 -m http.server`) and open `http://localhost:8000`.
+- **Hosted:** open **[jacgit18.github.io/iron-log](https://jacgit18.github.io/iron-log/)**, then install it from Settings if you like.
+- **Locally** (Node 20.19+ or 22.12+):
+
+  ```bash
+  npm ci
+  npm run dev        # development server at http://localhost:5173
+  npm run build      # production build in dist/ (set BASE_PATH=/iron-log/ for a sub-path)
+  npm run preview    # serve the production build, with the service worker, to test offline and install
+  ```
 
 ## Where data is stored
 
-Run on its own, the app saves everything in your browser's `localStorage`. That data stays on that device and that browser only, and clearing site data erases it. Use **Export all data** in Settings to keep a backup you can import again.
+Run on its own, the app saves everything in your browser's `localStorage`. That data stays on that device and that browser only, and clearing site data erases it. Use **Export all data** in Settings to keep a backup you can import again. When the app is installed, or you choose **Keep my data on this device**, it asks the browser not to clear that storage when space runs low.
+
+On iPhone and iPad, the Home Screen app has its own storage, separate from Safari. To move a log between them, export from one and import into the other.
 
 When it's published as a Claude artifact, it uses the artifact's shared database instead (`window.claude`), so the log follows you across devices. The code checks which of the two is available and picks it at runtime.
 
-The Claude version can also back up to a private GitHub repo through the viewer's GitHub connector. It writes `iron-log.xlsx`, the full `iron-log-data.json` export, plus `weeks/YYYY-MM-DD.xlsx` for each week that changed since the last backup. The Excel library (SheetJS) loads only when you export.
+The Claude version can also back up to a private GitHub repo through the viewer's GitHub connector. It writes `iron-log.xlsx`, the full `iron-log-data.json` export, plus `weeks/YYYY-MM-DD.xlsx` for each week that changed since the last backup. The Excel library (SheetJS) is bundled with the app and loads only when you use Excel.
 
 ## Project layout
 
 ```
-index.html                    page markup
-styles.css                    all styles (light and dark themes)
-js/data.js                    built-in programs, exercises, phases
-js/state.js                   dates, settings, storage, helpers
-js/render.js                  board, progress, settings and log screens
-js/timers.js                  hold and rest timers
-js/muscles.js                 muscle map and exercise→muscle tags
-js/charts.js                  trend charts on the Progress tab
-js/editor.js                  program editor
-js/export.js                  Excel export and GitHub backup
-js/events.js                  input handling and startup
-assets/logo.svg               logo and favicon
+index.html                    page shell
+vite.config.js                build, PWA manifest and service worker settings
+src/main.jsx                  startup (fonts, appearance, PWA)
+src/App.jsx                   header, tabs, dialogs
+src/styles.css                all styles (light and dark themes)
+src/lib/data.js               built-in programs, exercises, phases
+src/lib/logic.js              targets, stalls, progression, what counts as done
+src/lib/muscles.js            muscle map shapes and exercise→muscle tags
+src/lib/trends.js             Progress tab calculations
+src/lib/export.js             CSV/Excel export, data file, GitHub backup
+src/lib/excelImport.js        importing an Excel workbook
+src/lib/storage.js            localStorage / Claude database save queue
+src/lib/pwa.js                install and persistent-storage helpers
+src/store/                    app state (Zustand): main store, editor, settings, timer
+src/components/               Board, Progress, Muscles, Program, Settings, dialogs, charts
+src/hooks/                    focus keeping and tooltips
+public/                       logo and app icons
+scripts/make-icons.mjs        renders public/icons/ from the logo
 tools/screenshots.mjs         generates docs/images/ with sample data
 tools/banner.html             README banner template
-.github/workflows/            regenerates screenshots on feature branches
+.github/workflows/            deploys to GitHub Pages; regenerates screenshots on feature branches
 ```
-
-The scripts are plain (non-module) scripts loaded in order and share one global scope.
 
 ## Customizing
 
-The two built-in programs are the `PROGRAM_A` and `PROGRAM_B` objects in `js/data.js`. The default muscle tags are in `MUSCLE_MAP` in `js/muscles.js`. You can also change both from inside the app (the Program tab, and Edit on the Muscles tab), and those changes are saved on top of the built-in defaults.
+The two built-in programs are the `PROGRAM_A` and `PROGRAM_B` objects in `src/lib/data.js`. The default muscle tags are in `MUSCLE_MAP` in `src/lib/muscles.js`. You can also change both from inside the app (the Program tab, and Edit on the Muscles tab), and those changes are saved on top of the built-in defaults.
 
 The phase percentages (Strength 85%, Isometric 75%, Hypertrophy 65%, Explosive 45%) are placeholders. Change them in Settings.
 
 ## Development
 
-Changes are made on feature branches and merged into `main` through pull requests. `main` is what GitHub Pages serves.
+Changes are made on feature branches and merged into `main` through pull requests. Every push to `main` runs the **Deploy to GitHub Pages** workflow, which lints, builds for `/iron-log/` and publishes the result. (In the repository's Settings → Pages, the source must be **GitHub Actions**.)
 
 When a pull request's branch changes the app, the **README screenshots** workflow regenerates `docs/images/` and commits the new images to that branch, so they merge along with the change. To run it locally:
 
 ```bash
+npm ci
 npm install --no-save playwright
 npx playwright install chromium
-node tools/screenshots.mjs
+node tools/screenshots.mjs      # builds the app, then takes the screenshots
 ```
+
+`npm run lint` checks the code with oxlint.
 
 ## Notes
 

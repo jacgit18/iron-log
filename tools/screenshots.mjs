@@ -1,6 +1,7 @@
-// Generates the README images in docs/images/ using sample data.
-// Usage: npm i -D playwright && npx playwright install chromium && node tools/screenshots.mjs
+// Generates the README images in docs/images/ using sample data. Builds the app first.
+// Usage: npm ci && npm i --no-save playwright && npx playwright install chromium && node tools/screenshots.mjs
 import { chromium } from 'playwright';
+import { execSync } from 'node:child_process';
 import http from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -9,15 +10,19 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const OUT = join(ROOT, 'docs', 'images');
 const NOW = new Date('2026-09-24T18:30:00-04:00'); // a Thursday; week of Sun Sep 20
-const TYPES = { '.html':'text/html', '.css':'text/css', '.js':'text/javascript', '.mjs':'text/javascript', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json' };
+const DIST = join(ROOT, 'dist');
+const TYPES = { '.html':'text/html', '.css':'text/css', '.js':'text/javascript', '.mjs':'text/javascript', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json', '.webmanifest':'application/manifest+json', '.woff2':'font/woff2' };
 
-// ---- static server for the repo ----
+execSync('npm run build', { cwd: ROOT, stdio: 'inherit' });
+
+// ---- static server: the built app, plus the repo's tools/, docs/ and public/ for the banner page ----
 const server = http.createServer(async (req, res) => {
   try {
     let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (p.endsWith('/')) p += 'index.html';
-    const file = normalize(join(ROOT, p));
-    if (!file.startsWith(ROOT)) { res.writeHead(403).end(); return; }
+    const dir = /^\/(tools|docs|public)\//.test(p) ? ROOT : DIST;
+    const file = normalize(join(dir, p));
+    if (!file.startsWith(dir)) { res.writeHead(403).end(); return; }
     const body = await readFile(file);
     res.writeHead(200, { 'content-type': TYPES[extname(file)] || 'application/octet-stream' }).end(body);
   } catch { res.writeHead(404).end(); }
@@ -62,7 +67,8 @@ Object.entries(weeks).forEach(([k, v]) => seed[`ironlog:weeks/${k}`] = v);
 
 const browser = await chromium.launch();
 async function open({ width, height, dpr = 2, dark = false, mobile = false }) {
-  const ctx = await browser.newContext({ viewport:{ width, height }, deviceScaleFactor:dpr, colorScheme: dark ? 'dark' : 'light', isMobile:mobile, hasTouch:mobile, timezoneId:'America/New_York' });
+  // No service worker, so "Ready to work offline" never shows up in a screenshot.
+  const ctx = await browser.newContext({ viewport:{ width, height }, deviceScaleFactor:dpr, colorScheme: dark ? 'dark' : 'light', isMobile:mobile, hasTouch:mobile, timezoneId:'America/New_York', serviceWorkers:'block' });
   await ctx.addInitScript(s => { for (const [k, v] of Object.entries(s)) localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); }, seed);
   const page = await ctx.newPage();
   await page.clock.install({ time: NOW });
@@ -87,12 +93,12 @@ for (const dark of [false, true]) {
 {
   const { ctx, page } = await open({ width:390, height:844, dpr:2, mobile:true });
   await shot(page, 'mobile-board.png');
-  await page.click('[data-act=log][data-slot="B-d2s5"][data-idx="0"]');
+  await page.click('#log-B-d2s5-0');
   await page.waitForTimeout(200);
   await shot(page, 'mobile-log.png');
-  await page.click('#logform [data-act=close]');
-  await page.click('[data-act=mday][data-day="3"]');
-  await page.click('[data-act=hold][data-slot="B-d3s6"]');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.click('#daytab-3');
+  await page.click('#hold-B-d3s6-0');
   await page.clock.runFor(9000);
   await shot(page, 'mobile-timer.png');
   await ctx.close();
@@ -103,7 +109,7 @@ for (const dark of [false, true]) {
   const { ctx, page } = await open({ width:1440, height:1000, dpr:1.5 });
   await page.click('#tab-body'); await page.waitForTimeout(200);
   await shot(page, 'muscles.png');
-  await page.locator('path[data-m="hamstrings"]').first().click(); await page.waitForTimeout(200);
+  await page.getByRole('button', { name: /^Hamstrings/ }).click(); await page.waitForTimeout(200);
   await shot(page, 'muscles-detail.png');
   await page.click('#tab-progress'); await page.waitForTimeout(400);
   await shot(page, 'progress.png');
@@ -114,7 +120,7 @@ for (const dark of [false, true]) {
 
 // Banner (uses mobile-board.png, so it runs last)
 {
-  const ctx = await browser.newContext({ viewport:{ width:1280, height:640 }, deviceScaleFactor:2 });
+  const ctx = await browser.newContext({ viewport:{ width:1280, height:640 }, deviceScaleFactor:2, serviceWorkers:'block' });
   const page = await ctx.newPage();
   await page.goto(BASE + '/tools/banner.html');
   await page.waitForLoadState('networkidle').catch(() => {});
