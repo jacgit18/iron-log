@@ -142,9 +142,10 @@ export default function Board() {
           const t = tally(cols[d], week);
           return (
             <button type="button" role="tab" key={d} id={`daytab-${d}`} aria-selected={d === day} aria-controls={`col-${d}`} tabIndex={d === day ? 0 : -1}
-              className={t.full ? 'full' : ''} aria-label={`Day ${d}, ${t.full ? 'all done' : `${t.done} of ${t.total} done`}`}
+              // The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
+              className={t.full ? 'full' : ''} aria-label={`D${d} ${t.full ? '✓' : `${t.done}/${t.total}`}: Day ${d}, ${t.full ? 'all done' : `${t.done} of ${t.total} done`}`}
               onClick={() => { st.setMDay(d); window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' }); }}>
-              <b aria-hidden="true">D{d}</b><span aria-hidden="true">{t.full ? '✓' : `${t.done}/${t.total}`}</span>
+              <b aria-hidden="true">D{d}</b>{' '}<span aria-hidden="true">{t.full ? '✓' : `${t.done}/${t.total}`}</span>
             </button>
           );
         })}
