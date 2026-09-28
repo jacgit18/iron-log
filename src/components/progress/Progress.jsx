@@ -55,15 +55,15 @@ export function BackupMessage() {
 }
 
 function ExportBar() {
-  const dl = useAppStore(s => s.dl); const mcp = useAppStore(s => s.mcp);
+  const dl = useAppStore(s => s.dl); const canBackup = useAppStore(s => !!(s.mcp || (s.ghDirect && s.ghToken)));
   const busy = useAppStore(s => s.backupBusy); const exporting = useAppStore(s => s.exporting);
   const hasLogs = useAppStore(s => Object.values(s.logs).some(l => l && l.length));
-  const { backupToGitHub, downloadExcel, exportCsv } = useAppStore.getState();
+  const { backupNow, downloadExcel, exportCsv } = useAppStore.getState();
   if (!dl || !hasLogs) return null;
   return (
     <>
       <div className="actions" style={{ justifyContent: 'flex-end', marginBottom: 12 }}>
-        {mcp && <button type="button" className="btn primary" disabled={busy} onClick={backupToGitHub}>{busy ? 'Backing up…' : 'Back up to GitHub'}</button>}
+        {canBackup && <button type="button" className="btn primary" disabled={busy} onClick={backupNow}>{busy ? 'Backing up…' : 'Back up to GitHub'}</button>}
         <button type="button" className="btn" disabled={!!exporting} onClick={() => downloadExcel('all')}>Download Excel</button>
         <button type="button" className="btn" disabled={!!exporting} onClick={() => downloadExcel('week')}>This week (Excel)</button>
         <button type="button" className="btn" disabled={!!exporting} onClick={exportCsv}>CSV</button>

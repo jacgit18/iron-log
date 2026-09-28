@@ -160,5 +160,14 @@ export function backupError(e) {
   if (c === 'not_granted' || c === 'capability_disabled' || c === 'capability_removed') return 'GitHub backup isn’t available in this view.';
   return (e && e.message) ? e.message : 'Backup failed.';
 }
-export function daysSinceBackup(cfg) { const l = cfg.backup && cfg.backup.last; if (!l) return null; return Math.floor((Date.now() - new Date(l.at).getTime()) / 864e5); }
+export const daysSince = last => (last ? Math.floor((Date.now() - new Date(last.at).getTime()) / 864e5) : null);
+export const daysSinceBackup = cfg => daysSince(cfg.backup && cfg.backup.last);
+
+/* ---------- GitHub backup (standalone app: GitHub REST API with the viewer's token) ---------- */
+export const ghCfg = cfg => ({ repo: 'jacgit18/iron-log', branch: 'data', ...(cfg.ghBackup || {}) });
+// Same value for the same data, whenever it was exported and whatever the backup bookkeeping says.
+export function dataFingerprint(d) {
+  const config = { ...d.config }; delete config.backup; delete config.ghBackup;
+  return hashStr(JSON.stringify({ ...d, exportedAt: null, config }));
+}
 export const todayStamp = () => ymd(new Date());

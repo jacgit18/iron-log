@@ -4,7 +4,7 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../lib/dates.js';
 import { programFor, progName, programWeights, bestByPhase } from '../../lib/logic.js';
-import { backupCfg } from '../../lib/export.js';
+import { backupCfg, ghCfg } from '../../lib/export.js';
 import CommitInput from '../CommitInput.jsx';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
@@ -192,8 +192,55 @@ function BackupPanel() {
         </p>
       </>}
       {mcp === null && window.claude && <p className="note">GitHub backup needs the Composio connector, which isn't available in this view.</p>}
-      <BackupMessage />
+      {st.ghDirect ? <GitHubBackup /> : <BackupMessage />}
     </section>
+  );
+}
+
+// Standalone app: back up to a GitHub repo with a token the viewer pastes in once per device.
+function GitHubBackup() {
+  const cfg = useAppStore(s => s.cfg); const token = useAppStore(s => s.ghToken); const busy = useAppStore(s => s.backupBusy);
+  const st = useAppStore.getState(); const [draft, setDraft] = useState('');
+  const g = ghCfg(cfg); const l = g.last;
+  const saveToken = () => { if (st.setGhToken(draft)) setDraft(''); };
+  return (
+    <div className="ghbk">
+      <h3>Back up to GitHub</h3>
+      <p>Saves <b>iron-log.xlsx</b> and <b>iron-log-data.json</b> in one commit on the <b>{g.branch}</b> branch of <b>{g.repo}</b>, so every backup stays in that branch's history. If the repository is public, anyone can see these files. <b>Restore from GitHub</b> reads the data file back, for example on a new phone.</p>
+      <label className="field">Repository (owner/name)
+        <CommitInput key={`ghrepo:${g.repo}`} id="gh-repo" value={g.repo} placeholder="owner/repo" autoCapitalize="off" spellCheck={false} onCommit={st.setGhRepo} />
+      </label>
+      {token ? (
+        <div className="actions" style={{ justifyContent: 'flex-start', alignItems: 'center' }}>
+          <span className="note">A token is saved in this browser.</span>
+          <button type="button" className="btn sm ghost" onClick={st.forgetGhToken}>Remove token</button>
+        </div>
+      ) : (
+        <form className="field" onSubmit={e => { e.preventDefault(); saveToken(); }}>
+          <label htmlFor="gh-token">GitHub token (stays in this browser, never in a backup)</label>
+          <div className="actions" style={{ justifyContent: 'flex-start', marginTop: 4 }}>
+            <input id="gh-token" type="password" autoComplete="off" autoCapitalize="off" spellCheck={false} value={draft} onChange={e => setDraft(e.target.value)} placeholder="github_pat_…" />
+            <button type="submit" className="btn sm">Save token</button>
+          </div>
+        </form>
+      )}
+      <div className="actions" style={{ justifyContent: 'flex-start' }}>
+        <button type="button" className="btn primary" disabled={busy || !token} onClick={st.backupDirect}>{busy ? 'Working…' : 'Back up to GitHub'}</button>
+        <button type="button" className="btn" disabled={busy} onClick={st.restoreFromGitHub}>Restore from GitHub</button>
+      </div>
+      <BackupMessage />
+      <p className="note">{l ? <>Last backup from this device {fmtShort(new Date(l.at))}, {new Date(l.at).getFullYear()} · <a href={l.url} target="_blank" rel="noopener noreferrer">view on GitHub</a></> : 'No backups from this device yet.'}</p>
+      <details className="imppaste">
+        <summary>How to make a token</summary>
+        <ol>
+          <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub → Settings → Fine-grained tokens → Generate new token</a>.</li>
+          <li>Give it a name, like “Iron Log on my phone”, and an expiration date.</li>
+          <li>Under <b>Repository access</b>, choose <b>Only select repositories</b> and pick <b>{g.repo}</b>.</li>
+          <li>Under <b>Permissions → Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>. Nothing else is needed.</li>
+          <li>Generate the token, copy it, and paste it above. Do this once on each device you use.</li>
+        </ol>
+      </details>
+    </div>
   );
 }
 

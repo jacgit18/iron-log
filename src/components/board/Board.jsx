@@ -5,7 +5,7 @@ import { WARMUP, slotsFor } from '../../lib/data.js';
 import { monday, ymd, addDays, fmtShort } from '../../lib/dates.js';
 import { tally, currentLayout, isOpen, isSkipped, programFor, progName } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
-import { daysSinceBackup } from '../../lib/export.js';
+import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
@@ -23,13 +23,13 @@ export default function Board() {
   const storeMode = useAppStore(s => s.storeMode);
   const moveNote = useAppStore(s => s.moveNote);
   const mDay = useAppStore(s => s.mDay);
-  const mcp = useAppStore(s => s.mcp);
+  const canBackup = useAppStore(s => !!(s.mcp || (s.ghDirect && s.ghToken)));
   const snoozeBackup = useAppStore(s => s.snoozeBackup);
   const backupBusy = useAppStore(s => s.backupBusy);
   const anyLogs = useAppStore(s => Object.values(s.logs).some(l => l && l.length));
   const today = useToday(s => s.today);
   const st = useAppStore.getState();
-  const sinceBackup = daysSinceBackup(cfg);
+  const sinceBackup = daysSince(st.lastBackup());
 
   const progKey = st.activeProgKey();
   const prog = programs[progKey] || programs.A;
@@ -108,18 +108,18 @@ export default function Board() {
           <button type="button" className="btn sm ghost" onClick={() => hideTip('hidetip')}>Got it</button>
         </div>
       )}
-      {mcp && anyLogs && !snoozeBackup && (sinceBackup == null || sinceBackup >= 7) && (
+      {canBackup && anyLogs && !snoozeBackup && (sinceBackup == null || sinceBackup >= 7) && (
         <div className="notice tip">
           <span>{sinceBackup == null ? 'Your training data hasn’t been backed up to GitHub yet.' : `Last GitHub backup was ${sinceBackup} days ago.`}</span>
           <span>
-            <button type="button" className="btn sm" disabled={backupBusy} onClick={st.backupToGitHub}>{backupBusy ? 'Backing up…' : 'Back up now'}</button>{' '}
+            <button type="button" className="btn sm" disabled={backupBusy} onClick={st.backupNow}>{backupBusy ? 'Backing up…' : 'Back up now'}</button>{' '}
             <button type="button" className="btn sm ghost" onClick={st.snooze}>Later</button>
           </span>
         </div>
       )}
       {storeMode === 'local' && !tipHidden('hidelocal') && (
         <div className="notice tip">
-          <span>{window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export on the Progress tab to back it up.'}</span>
+          <span>{window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Back it up to GitHub in Settings, or use Export on the Progress tab.'}</span>
           <button type="button" className="btn sm ghost" onClick={() => hideTip('hidelocal')}>Got it</button>
         </div>
       )}

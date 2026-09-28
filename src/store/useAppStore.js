@@ -11,8 +11,9 @@ import { settingsSlice } from './settingsSlice.js';
 import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
 import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
-  backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL,
+  backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile,
 } from '../lib/export.js';
+import { commitFiles, readFile, validRepo } from '../lib/github.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
 // binding from the original app (window.claude.use('db')); without it everything uses localStorage.
@@ -32,6 +33,13 @@ const blobSave = {
     return { status: 'saved' };
   },
 };
+
+// The GitHub token for the standalone app. Kept in this browser only, outside the config, because the
+// config is written into the backup files.
+const TOKEN_KEY = 'ironlog-gh-token';
+const readToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
+// Standalone (e.g. GitHub Pages) rather than inside the Claude host, which backs up through its connector.
+const standalone = typeof window !== 'undefined' && !window.claude;
 
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
 
@@ -79,6 +87,8 @@ export const useAppStore = create((set, get) => ({
   backupBusy: false,
   backupMsg: null, // {kind:'info'|'ok'|'err', text, url?}
   snoozeBackup: false,
+  ghDirect: standalone, // back up with the viewer's own GitHub token
+  ghToken: standalone ? readToken() : '',
 
   // Muscles tab view state; kept here so it survives switching tabs, like the original.
   bodyView: null, // 'A' | 'B'; null = the program on the board
@@ -341,6 +351,64 @@ export const useAppStore = create((set, get) => ({
     } catch (e) {
       set({ backupMsg: { kind: 'err', text: backupError(e) } });
       if (sent) get().mutateCfg(c => { c.backup = { ...b }; });
+    } finally { set({ backupBusy: false }); }
+  },
+
+  // Whichever GitHub backup this view has: the Claude connector, or a token pasted in on this device.
+  canBackup: () => !!(get().mcp || (get().ghDirect && get().ghToken)),
+  backupNow: () => (get().mcp ? get().backupToGitHub() : get().backupDirect()),
+  lastBackup: () => (get().mcp ? backupCfg(get().cfg).last : ghCfg(get().cfg).last) || null,
+
+  setGhToken(raw) {
+    const v = String(raw || '').trim();
+    if (!v) { set({ backupMsg: { kind: 'err', text: 'Paste the token first.' } }); return false; }
+    try { localStorage.setItem(TOKEN_KEY, v); } catch { /* storage unavailable: keep it for this visit */ }
+    set({ ghToken: v, backupMsg: { kind: 'ok', text: 'Token saved in this browser.' } });
+    return true;
+  },
+  forgetGhToken() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+    set({ ghToken: '', backupMsg: { kind: 'info', text: 'Token removed from this browser.' } });
+  },
+  setGhRepo(raw) {
+    const v = String(raw || '').trim();
+    if (!validRepo(v)) { set({ backupMsg: { kind: 'err', text: 'Use the form owner/repo, for example jacgit18/iron-log.' } }); return false; }
+    if (get().mutateCfg(c => { c.ghBackup = { ...ghCfg(c), repo: v, hash: null }; })) set({ backupMsg: null });
+    return true;
+  },
+
+  // One commit with the Excel workbook and the full data file, on the backup branch.
+  async backupDirect() {
+    if (get().backupBusy || get().blocked()) return;
+    const token = get().ghToken; const g = ghCfg(get().cfg);
+    if (!token) { set({ backupMsg: { kind: 'err', text: 'Paste a GitHub token in Settings first.' } }); return; }
+    set({ backupBusy: true, backupMsg: { kind: 'info', text: 'Building the Excel and data files…' } });
+    try {
+      const X = await loadXLSX(); const weeks = await get().allWeeks(); const S = get().snapshot();
+      const data = buildDataFile(S, weeks); const fp = dataFingerprint(data);
+      if (g.last && fp === g.hash) { set({ backupMsg: { kind: 'ok', text: 'Nothing new since the last backup.', url: g.last.url } }); return; }
+      set({ backupMsg: { kind: 'info', text: `Sending to ${g.repo}…` } });
+      const files = [
+        { path: 'iron-log.xlsx', content: X.write(buildOverallWorkbook(X, S, weeks), { type: 'base64', bookType: 'xlsx', compression: true }) },
+        { path: 'iron-log-data.json', content: utf8b64(JSON.stringify(data, null, 1)) },
+      ];
+      const { url } = await commitFiles({ token, repo: g.repo, branch: g.branch, files, message: `Backup ${ymd(new Date())}` });
+      get().mutateCfg(c => { c.ghBackup = { ...ghCfg(c), hash: fp, last: { at: new Date().toISOString(), url } }; });
+      set({ backupMsg: { kind: 'ok', text: `Backed up to the ${g.branch} branch of ${g.repo}.`, url } });
+    } catch (e) {
+      set({ backupMsg: { kind: 'err', text: (e && e.message) || 'Backup failed.' } });
+    } finally { set({ backupBusy: false }); }
+  },
+  // Reads the latest data file from the backup branch and opens the usual import review.
+  async restoreFromGitHub() {
+    if (get().backupBusy || get().blocked()) return;
+    const g = ghCfg(get().cfg);
+    set({ backupBusy: true, backupMsg: { kind: 'info', text: `Reading the backup from ${g.repo}…` } });
+    try {
+      const text = await readFile({ token: get().ghToken, repo: g.repo, branch: g.branch, path: 'iron-log-data.json' });
+      set({ importDraft: { data: parseDataFile(text), name: `Backup from ${g.repo}`, kind: 'json' }, importError: '', modal: { type: 'import' }, backupMsg: null });
+    } catch (e) {
+      set({ backupMsg: { kind: 'err', text: (e && e.message) || 'Couldn’t read the backup.' } });
     } finally { set({ backupBusy: false }); }
   },
 
