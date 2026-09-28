@@ -348,6 +348,7 @@ body.timing{padding-bottom:130px}
 .settings{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));align-items:start}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .panel h2{margin:0;font-size:22px;font-weight:700;text-transform:uppercase}
+.ghbk{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}.ghbk h3{margin:0 0 4px;font-size:18px}.ghbk input[type=password]{flex:1 1 220px;min-width:0}.ghbk ol{padding-left:20px}
 .panel p{margin:0;color:var(--muted);font-size:14px;max-width:60ch}
 .modes{display:flex;flex-direction:column;gap:8px}
 .mode{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}

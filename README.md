@@ -60,7 +60,7 @@ It's a React app built with Vite. You can install it on your phone or computer l
 - **Timers.** A hold countdown on isometric exercises that rests between sets and starts the next hold, plus a general rest timer.
 - **Progress.** Headline numbers for the week, sets logged per week, weight change by exercise over the last 8 weeks, a muscles-by-week heatmap of what you actually trained, a weight-over-time chart for each exercise (one line per phase when you train a lift in more than one) and a 12-week record of days completed.
 - **Excel export.** Download an overall workbook (summary, every session with the muscles it trains, weekly sets per muscle, weekly totals, settings) or a workbook for a single week, or export plain CSV. In the Claude version, **Back up to GitHub** commits the same workbooks to a private repo.
-- **Export and import.** One JSON file holds everything: the log, weekly check-offs, programs, saved versions and settings. Import it with **Add to my data** (keeps what's here and fills in what's missing) or **Replace my data** (makes the app match the file). An Iron Log Excel workbook can also be imported as a partial backup: it brings back logged sessions, body weight, 1RMs and main settings, but not weekly check-offs or edited programs.
+- **Export and import.** One JSON file holds everything: the log, weekly check-offs, programs, saved versions and settings. Import it with **Add to my data** (keeps what's here and fills in what's missing) or **Replace my data** (makes the app match the file). An Iron Log Excel workbook can also be imported as a partial backup: it brings back logged sessions (checking each one off on the board in the week it was logged), body weight, 1RMs and main settings, but not skipped or moved cards or edited programs.
 - **Muscle map.** Front and back body diagrams shaded by weekly sets per muscle group. Tap a muscle to see the exercises that train it. You can edit the muscle tags for any exercise.
 - **Program editor.** Add, edit, reorder and remove exercises (single, superset or either/or) for any day of either program. Rename either program; the new name shows everywhere, while A and B still drive the rotation. **Create a program** from a copy of A or B: it lives in your program library, where you can build and rename it without touching the board, then load it into A or B when you're ready to train it. **Saved versions** keep named copies of a program; the built-in original is always kept, and loading a version saves the current one first so nothing is lost.
 - **Works on phones.** On a phone you see one day at a time and swipe between days, with bottom navigation and large tap targets.
@@ -88,6 +88,8 @@ On iPhone and iPad, the Home Screen app has its own storage, separate from Safar
 
 When it's published as a Claude artifact, it uses the artifact's shared database instead (`window.claude`), so the log follows you across devices. The code checks which of the two is available and picks it at runtime.
 
+**Back up to GitHub** (Settings → Excel & backups) saves `iron-log.xlsx` and the full `iron-log-data.json` in one commit to the `data` branch of a repository, `jacgit18/iron-log` unless you change it. Each backup is a new commit, so the branch history keeps every backup, and the branch holds only those two files, so a backup never starts a deploy. It needs a fine-grained personal access token with **Contents: Read and write** on that one repository, pasted in once per device; the token stays in that browser and is never written into a backup. **Restore from GitHub** reads `iron-log-data.json` back through the usual import review (a public repository needs no token for this), which is how you set up a new phone. The Board reminds you when the last backup is a week old. In this repository `main` only changes through pull requests, so a backup token can't change the app.
+
 The Claude version can also back up to a private GitHub repo through the viewer's GitHub connector. It writes `iron-log.xlsx`, the full `iron-log-data.json` export, plus `weeks/YYYY-MM-DD.xlsx` for each week that changed since the last backup. The Excel library (SheetJS) is bundled with the app and loads only when you use Excel.
 
 ## Project layout
@@ -103,6 +105,7 @@ src/lib/logic.js              targets, stalls, progression, what counts as done
 src/lib/muscles.js            muscle map shapes and exercise→muscle tags
 src/lib/trends.js             Progress tab calculations
 src/lib/export.js             CSV/Excel export, data file, GitHub backup
+src/lib/github.js             GitHub REST calls for backup and restore (standalone app)
 src/lib/excelImport.js        importing an Excel workbook
 src/lib/storage.js            localStorage / Claude database save queue
 src/lib/pwa.js                install and persistent-storage helpers

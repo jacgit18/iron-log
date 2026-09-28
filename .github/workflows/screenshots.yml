@@ -2,10 +2,11 @@ name: README screenshots
 
 # Regenerates docs/images/ on feature branches whenever the app or the
 # screenshot tooling changes, and commits the result back to that branch.
+# The data branch only holds the app's GitHub backups, so it's left alone.
 on:
   workflow_dispatch:
   push:
-    branches-ignore: [main]
+    branches-ignore: [main, data]
     paths:
       - 'index.html'
       - 'src/**'
