@@ -42,11 +42,10 @@ export default function App() {
   const saveFlag = useAppStore(s => s.saveFlag);
   const ready = useAppStore(s => s.isReady());
   const progKey = useAppStore(s => s.activeProgKey());
-  const { init, setTab, closeModal, openModal } = useAppStore.getState();
+  const { setTab, closeModal, openModal } = useAppStore.getState();
   useTooltips();
   useFocusKeeper();
 
-  useEffect(() => { init(); }, [init]);
   const label = TABS.find(([k]) => k === tab)[1];
   useEffect(() => { document.title = `${label} · Iron Log`; }, [label]);
 
@@ -75,7 +74,6 @@ export default function App() {
           <div className="meta">
             <span className="pill prog">{progName(cfg, progKey)}</span>
             <span className="pill">Mode {cfg.mode}</span>
-            <span className="saveflag" role="status" aria-live="polite" aria-atomic="true">{!ready && !saveFlag ? 'Loading…' : saveFlag}</span>
           </div>
           <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
           <nav className="tabs" aria-label="Sections">
@@ -86,6 +84,8 @@ export default function App() {
               ))}
             </div>
           </nav>
+          {/* Its own line with a fixed height, so a message appearing or clearing never moves the page. */}
+          <p className="saveflag" role="status" aria-live="polite" aria-atomic="true">{!ready && !saveFlag ? 'Loading…' : saveFlag}</p>
         </header>
         <UpdateBanner />
         <main>
