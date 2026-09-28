@@ -175,6 +175,7 @@ export function planRows(cfg, logs, it, ph) {
 }
 
 // Today when viewing the current week (or the day after it ends), otherwise the viewed week's Sunday.
-export function defaultLogDate(weekStart) { const today = new Date(); const end = addDays(weekStart, 6); return (today >= weekStart && today <= addDays(end, 1)) ? ymd(today) : ymd(weekStart); }
+// Compared as dates, not instants, so the whole of that next day counts.
+export function defaultLogDate(weekStart) { const today = ymd(new Date()); return (today >= ymd(weekStart) && today <= ymd(addDays(weekStart, 7))) ? today : ymd(weekStart); }
 
 export const normWeek = w => ({ prog: (w && w.prog) || null, done: { ...(w && w.done) }, skipped: { ...(w && w.skipped) }, moved: { ...(w && w.moved) }, ph: { ...(w && w.ph) }, warm: JSON.parse(JSON.stringify((w && w.warm) || {})) });
