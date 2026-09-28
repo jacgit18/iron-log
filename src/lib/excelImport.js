@@ -2,9 +2,11 @@
    The workbook is a report, not a backup: it has every logged session, body weight and the main
    settings, but not weekly check-offs, edited programs, saved versions or phase defaults. This turns
    what it does have into the same shape as a parsed JSON data file, so the normal merge can add it. */
-import { EX, PHASES, PH_KEYS } from './data.js';
+import { EX, PHASES, PH_KEYS, slotsFor } from './data.js';
+import { parseDate } from './dates.js';
+import { activeProgKey, normWeek, setItemDone } from './logic.js';
 import { MUSCLES, MUSCLE_MAP } from './muscles.js';
-import { WEEK_RE } from './trends.js';
+import { WEEK_RE, entryWeek } from './trends.js';
 import { loadXLSX } from './export.js';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -111,4 +113,22 @@ export async function parseExcelExport(buffer, cfg) {
   });
 
   return { exportedAt, config, programs: {}, library: [], logs, weeks: {}, body, excel: { settings, skipped, newExercises: Object.values(newEx).map(e => e.n) } };
+}
+
+// A workbook has no check-offs, but every session names the program slot it was logged from, so each
+// one checks its exercise off in the week it was logged. `weeks` are the saved weeks here, which decide
+// the program a week ran. Returns {weekKey: week} holding only those check-offs, ready to merge.
+export function checkOffsFromLogs(cfg, programs, logs, weeks) {
+  const out = {};
+  Object.entries(logs).forEach(([ex, L]) => L.forEach(e => {
+    if (!e.slot) return;
+    const k = entryWeek(e); if (!WEEK_RE.test(k)) return;
+    const w = out[k] || (out[k] = normWeek({ prog: weeks[k] && weeks[k].prog }));
+    const prog = programs[activeProgKey(cfg, w, parseDate(k))] || programs.A;
+    const s = slotsFor(prog).find(x => x.id === e.slot);
+    const i = s ? s.items.findIndex(it => it.ex === ex) : -1;
+    if (i >= 0) setItemDone(w, s, i, true);
+  }));
+  Object.keys(out).forEach(k => { if (!Object.keys(out[k].done).length) delete out[k]; });
+  return out;
 }

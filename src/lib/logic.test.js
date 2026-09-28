@@ -1,8 +1,10 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { parseDate } from './dates.js';
+import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
+  programWeights, bestByPhase,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -143,5 +145,24 @@ describe('defaultLogDate', () => {
   it('is the week start for any other week', () => {
     expect(at(2026, 8, 28, 8)).toBe('2026-09-20');
     expect(at(2026, 8, 19, 8)).toBe('2026-09-20');
+  });
+});
+
+describe('weights per phase for the 1RM table', () => {
+  const both = [...slotsFor(BUILTIN.A), ...slotsFor(BUILTIN.B)];
+  it('lists each program weight with its phase', () => {
+    expect(programWeights(cfg(), both, 'chestpress')).toEqual([{ ph: 'strength', w: 35 }, { ph: 'hyp', w: 25 }]);
+    expect(programWeights(cfg(), both, 'hack')).toEqual([{ ph: 'hyp', w: 270 }]);
+  });
+  it('follows a phase default set for a slot', () => {
+    expect(programWeights(cfg({ phDef: { 'A-d1s6:0': 'hyp' } }), slotsFor(BUILTIN.A), 'chestpress')).toEqual([{ ph: 'hyp', w: 25 }, { ph: 'hyp', w: 35 }]);
+  });
+  it('gives the best logged weight in each phase', () => {
+    const L = [{ d: '1', ph: 'strength', w: 40 }, { d: '2', ph: 'hyp', w: 30 }, { d: '3', ph: 'strength', w: 45 }, { d: '4', w: 20 }, { d: '5', ph: 'hyp', w: '' }];
+    expect(bestByPhase(L)).toEqual([{ ph: 'strength', w: 45 }, { ph: 'hyp', w: 30 }, { ph: null, w: 20 }]);
+    expect(bestByPhase(undefined)).toEqual([]);
+  });
+  it('Cable Punch ISO hold starts at 30 lb', () => {
+    expect(programWeights(cfg(), slotsFor(BUILTIN.B), 'cablepunch')).toEqual([{ ph: 'iso', w: 30 }]);
   });
 });

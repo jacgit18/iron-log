@@ -3,7 +3,9 @@ import * as X from 'xlsx';
 import { BUILTIN } from './data.js';
 import { DEFAULT_CFG } from './logic.js';
 import { buildOverallWorkbook, buildWeekWorkbook } from './export.js';
-import { parseExcelExport, entryKey } from './excelImport.js';
+import { parseExcelExport, entryKey, checkOffsFromLogs } from './excelImport.js';
+import { isDone, isItemDone, normWeek } from './logic.js';
+import { slotsFor } from './data.js';
 
 const cfg = () => ({ ...structuredClone(DEFAULT_CFG), mode: 2, rest: 60, rm: { hack: 400 }, ex: { myhold: { n: 'My Hold' } } });
 const S = () => ({
@@ -73,5 +75,45 @@ describe('Excel import', () => {
     const other = X.utils.book_new(); X.utils.book_append_sheet(other, X.utils.aoa_to_sheet([['a']]), 'Sheet1');
     await expect(parseExcelExport(toBytes(other), cfg())).rejects.toThrow('isn’t an Iron Log Excel export');
     await expect(parseExcelExport(new TextEncoder().encode('hello').buffer, cfg())).rejects.toThrow();
+  });
+});
+
+describe('check-offs from imported sessions', () => {
+  const programs = { A: BUILTIN.A, B: BUILTIN.B };
+  const slot = (k, id) => slotsFor(BUILTIN[k]).find(s => s.id === id);
+
+  it('checks off each logged exercise in the week it was logged', () => {
+    const logs = {
+      hack: [{ d: '2026-09-22', ph: 'hyp', w: 270, s: 4, r: 15, slot: 'A-d3s1' }],
+      chestpress: [{ d: '2026-09-23', ph: 'hyp', w: 25, s: 4, r: 15, slot: 'A-d2s5', wk: '2026-09-20' }],
+      zercher: [{ d: '2026-09-30', ph: 'strength', w: 50, s: 4, r: 6, slot: 'A-d1s6' }],
+    };
+    const weeks = checkOffsFromLogs(DEFAULT_CFG, programs, logs, {});
+    expect(Object.keys(weeks).sort()).toEqual(['2026-09-20', '2026-09-27']);
+    const w = weeks['2026-09-20'];
+    expect(isDone(slot('A', 'A-d3s1'), w)).toBe(true);
+    // Only the logged half of a superset.
+    expect([isItemDone(slot('A', 'A-d2s5'), 0, w), isItemDone(slot('A', 'A-d2s5'), 1, w)]).toEqual([false, true]);
+    expect(isItemDone(slot('A', 'A-d1s6'), 1, weeks['2026-09-27'])).toBe(true);
+  });
+
+  it('uses the program that week ran and skips sessions it cannot place', () => {
+    const c = { ...DEFAULT_CFG, mode: 2, m2Even: 'A' }; // September (odd month) runs Program B
+    const logs = {
+      farmers: [{ d: '2026-09-22', ph: 'strength', w: 40, s: 3, r: 6, slot: 'B-d2s1' }],
+      hack: [{ d: '2026-09-22', w: 270, s: 4, r: 15, slot: 'A-d3s1' }, { d: '2026-09-22', w: 270, s: 4, r: 15 }],
+    };
+    const w = checkOffsFromLogs(c, programs, logs, {})['2026-09-20'];
+    expect(w.done).toEqual({ 'B-d2s1': true, 'B-d2s1#0': true });
+    // A saved week that was switched to Program A uses A's cards instead.
+    const wA = checkOffsFromLogs(c, programs, logs, { '2026-09-20': normWeek({ prog: 'A' }) })['2026-09-20'];
+    expect(wA.done).toEqual({ 'A-d3s1': true });
+  });
+
+  it('works on sessions read back from an exported workbook', async () => {
+    const s = S(); s.logs.hack[0].slot = 'A-d3s1';
+    const d = await parseExcelExport(toBytes(buildOverallWorkbook(X, s, {})), cfg());
+    const weeks = checkOffsFromLogs({ ...DEFAULT_CFG }, programs, d.logs, {});
+    expect(weeks['2026-09-20'].done).toEqual({ 'A-d3s1': true });
   });
 });

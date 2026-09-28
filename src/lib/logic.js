@@ -1,4 +1,4 @@
-import { PHASES, exInfo } from './data.js';
+import { PHASES, PH_KEYS, exInfo } from './data.js';
 import { monday, ymd, parseDate, addDays } from './dates.js';
 
 /* ---------- Config defaults ---------- */
@@ -60,6 +60,25 @@ export function baseTargetOf(cfg, logs, item, ph) {
   return { w: null, src: '' };
 }
 export const lastLog = (logs, exId, ph) => { const l = (logs[exId] || []).filter(e => ph === undefined || (e.ph || null) === (ph || null)); return l.length ? l[l.length - 1] : null; };
+
+// One lift can run in several phases (Chest Press: Strength on one day, Hypertrophy on another), so the
+// 1RM table lists weights per phase: [{ph, w}], in phase order, "no phase" last.
+const phaseOrder = ph => (ph ? PH_KEYS.indexOf(ph) : PH_KEYS.length);
+const byPhase = (a, b) => phaseOrder(a.ph) - phaseOrder(b.ph) || a.w - b.w;
+export function programWeights(cfg, slots, exId) {
+  const out = [];
+  slots.forEach(s => s.items.forEach((it, i) => {
+    if (it.ex !== exId || it.w == null) return;
+    const ph = cfg.phDef[itemKey(s, i)] ?? it.ph ?? null;
+    if (!out.some(x => x.ph === ph && x.w === it.w)) out.push({ ph, w: it.w });
+  }));
+  return out.sort(byPhase);
+}
+export function bestByPhase(entries) {
+  const best = {};
+  (entries || []).forEach(e => { const w = Number(e.w); const ph = e.ph || null; if (w > 0 && !(best[ph] >= w)) best[ph] = w; });
+  return Object.keys(best).map(k => ({ ph: k === 'null' ? null : k, w: best[k] })).sort(byPhase);
+}
 
 /* ---------- Per-set logging ----------
    An entry keeps each set in e.sets: [{w, r}] (or [{w, sec}] for holds). It also keeps summary fields that

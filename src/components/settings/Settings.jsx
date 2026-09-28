@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../lib/dates.js';
-import { programFor, progName } from '../../lib/logic.js';
+import { programFor, progName, programWeights, bestByPhase } from '../../lib/logic.js';
 import { backupCfg } from '../../lib/export.js';
 import CommitInput from '../CommitInput.jsx';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
@@ -197,6 +197,13 @@ function BackupPanel() {
   );
 }
 
+// One line per phase, e.g. "35 lb · Strength", so a lift trained in two phases shows which weight is which.
+function PhaseWeights({ list }) {
+  return list.map(({ ph, w }) => (
+    <div key={`${ph}:${w}`} className="phw"><span className="dot" data-p={ph || undefined} /> {w} lb · {ph ? PHASES[ph].label : 'No phase'}</div>
+  ));
+}
+
 function RmPanel() {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs); const programs = useAppStore(s => s.programs);
   const st = useAppStore.getState();
@@ -211,14 +218,13 @@ function RmPanel() {
           <thead><tr><th>Exercise</th><th>Program weight</th><th>1RM (lb)</th><th>Best logged</th></tr></thead>
           <tbody>
             {weighted.map(id => {
-              const ws = [...new Set(all.flatMap(s => s.items.filter(i => i.ex === id && i.w != null).map(i => i.w)))];
-              const best = (logs[id] || []).map(e => Number(e.w)).filter(n => n > 0);
+              const best = bestByPhase(logs[id]);
               return (
                 <tr key={id}>
                   <td>{exInfo(cfg, id).n}</td>
-                  <td>{ws.join(' / ')} lb</td>
-                  <td><CommitInput key={`${id}:${cfg.rm[id] ?? ''}`} type="number" id={`rm-${id}`} min="0" step="any" value={cfg.rm[id] ?? ''} placeholder="—" onCommit={v => st.setRm(id, v)} /></td>
-                  <td>{best.length ? Math.max(...best) + ' lb' : '—'}</td>
+                  <td><PhaseWeights list={programWeights(cfg, all, id)} /></td>
+                  <td><CommitInput key={`${id}:${cfg.rm[id] ?? ''}`} type="number" id={`rm-${id}`} aria-label={`${exInfo(cfg, id).n} 1RM (lb)`} min="0" step="any" value={cfg.rm[id] ?? ''} placeholder="—" onCommit={v => st.setRm(id, v)} /></td>
+                  <td>{best.length ? <PhaseWeights list={best} /> : '—'}</td>
                 </tr>
               );
             })}

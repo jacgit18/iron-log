@@ -272,6 +272,7 @@ body.timing{padding-bottom:130px}
 .phase[data-p="hyp"]{background:var(--hyp-bg);color:var(--hyp)}
 .phase[data-p="iso"]{background:var(--iso-bg);color:var(--iso)}
 .phase[data-p="exp"]{background:var(--exp-bg);color:var(--exp)}
+.phw{white-space:nowrap}.phw+.phw{margin-top:4px}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--none)}
 .dot[data-p="strength"]{background:var(--str)}.dot[data-p="hyp"]{background:var(--hyp)}.dot[data-p="iso"]{background:var(--iso)}.dot[data-p="exp"]{background:var(--exp)}
 .logbtn{margin-left:auto}

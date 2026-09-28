@@ -158,7 +158,7 @@ const PROGRAM_B = {
       { sec: 'Regular', tier: 'Accessory', items: [I('wristpd', 'hyp', 33)] },
       { sec: 'Regular', tier: 'Accessory', items: [I('platerot', 'strength', 10)] },
       { sec: 'Regular', ...EITHER_DELT },
-      { sec: 'Supersets', tier: 'Accessory', type: 'superset', items: [I('cablepunch', 'iso', 3, { rx: '4 × 30 s hold' }), I('cablerow', 'exp', 30)] },
+      { sec: 'Supersets', tier: 'Accessory', type: 'superset', items: [I('cablepunch', 'iso', 30, { rx: '4 × 30 s hold' }), I('cablerow', 'exp', 30)] },
       { sec: 'Home', items: [I('grip', 'strength', 200)] },
       { sec: 'Home', items: [I('deskbands', null, null, { bw: true })] },
     ] },
@@ -190,7 +190,7 @@ const PROGRAM_B = {
       { sec: 'Plyometric', items: [I('splitjump', 'exp', null, { bw: true, rx: '3 × 5', note: 'Vertical drive, soft landings' })] },
       { sec: 'Plyometric', items: [I('depthcombo', 'exp', null, { bw: true, rx: '4 × 5', note: 'Controlled landings' })] },
       { sec: 'Supersets', tier: 'Primary', type: 'superset', items: [I('arnold', 'strength', 35), I('zercher', 'strength', 50)] },
-      { sec: 'Supersets', tier: 'Accessory', type: 'superset', items: [I('cablepunch', 'iso', 3, { rx: '4 × 30 s hold' }), I('cablerow', 'exp', 30)] },
+      { sec: 'Supersets', tier: 'Accessory', type: 'superset', items: [I('cablepunch', 'iso', 30, { rx: '4 × 30 s hold' }), I('cablerow', 'exp', 30)] },
     ] },
   ],
 };
