@@ -1,17 +1,8 @@
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-
-// The store runs against browser storage; give it an in-memory one, like a fresh browser.
-const mem = {};
-vi.stubGlobal('localStorage', {
-  getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); }, removeItem: k => { delete mem[k]; },
-  key: i => Object.keys(mem)[i] ?? null, get length() { return Object.keys(mem).length; },
-});
-vi.stubGlobal('window', globalThis);
-vi.stubGlobal('document', { addEventListener() {}, removeEventListener() {}, visibilityState: 'visible' });
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { mem, clearStorage, saved } from '../test/browserStubs.js';
 
 let useAppStore, BUILTIN, DEFAULT_CFG;
 const st = () => useAppStore.getState();
-const saved = k => JSON.parse(mem['ironlog:' + k] || 'null');
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
@@ -20,7 +11,7 @@ beforeAll(async () => {
   await st().init();
 });
 beforeEach(() => {
-  Object.keys(mem).forEach(k => delete mem[k]);
+  clearStorage();
   useAppStore.setState({ logs: {}, week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} }, body: [], library: [], cfg: structuredClone(DEFAULT_CFG), programs: { A: BUILTIN.A, B: BUILTIN.B }, weekHist: null });
 });
 
