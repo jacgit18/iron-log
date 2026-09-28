@@ -1,8 +1,8 @@
 /* ---------- Storage (db with local fallback) ---------- */
 export const LS = {
-  get(k) { try { return JSON.parse(localStorage.getItem('ironlog:' + k)); } catch (e) { return null; } },
-  set(k, v) { try { localStorage.setItem('ironlog:' + k, JSON.stringify(v)); } catch (e) { /* ignore */ } },
-  remove(k) { try { localStorage.removeItem('ironlog:' + k); } catch (e) { /* ignore */ } },
+  get(k) { try { return JSON.parse(localStorage.getItem('ironlog:' + k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem('ironlog:' + k, JSON.stringify(v)); } catch { /* ignore */ } },
+  remove(k) { try { localStorage.removeItem('ironlog:' + k); } catch { /* ignore */ } },
 };
 
 // One write at a time per doc path; coalesces to the latest value if writes queue up while offline/slow.

@@ -1,5 +1,5 @@
-import { PHASES } from './data.js';
-import { monday, ymd, parseDate } from './dates.js';
+import { PHASES, exInfo } from './data.js';
+import { monday, ymd, parseDate, addDays } from './dates.js';
 
 /* ---------- Config defaults ---------- */
 export const DEFAULT_CFG = { muscleMap: {}, ex: {}, mode: 1, m3Start: 1, m3First: 'A', m2Even: 'A', pct: { strength: 85, iso: 75, hyp: 65, exp: 45 }, rxOverride: {}, rm: {}, phDef: {} };
@@ -15,7 +15,6 @@ export const progName = (cfg, k) => (cfg.progNames && cfg.progNames[k]) || `Prog
 export function activeProgKey(cfg, week, weekStart) { return (cfg.mode === 2 && (week.prog === 'A' || week.prog === 'B')) ? week.prog : programFor(cfg, weekStart); }
 
 /* ---------- Small helpers ---------- */
-export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const round = w => w < 50 ? Math.round(w / 2.5) * 2.5 : Math.round(w / 5) * 5;
 export const itemKey = (slot, idx) => `${slot.id}:${idx}`;
 export function phaseOf(cfg, week, slot, idx) { const k = itemKey(slot, idx); return week.ph[k] ?? cfg.phDef[k] ?? slot.items[idx].ph ?? null; }
@@ -139,5 +138,43 @@ export function currentLayout(week, slots) {
   slots.forEach(s => { const d = week.moved[s.id] || s.day; cols[d].push(s); });
   return cols;
 }
+
+// Same exercise already on the target day, the day before, or the day after (skipped cards don't count).
+export function moveClashes(cfg, week, slots, s, day) {
+  const cols = currentLayout(week, slots); const out = [];
+  [[day, 'the same day'], [day + 1, 'the day after'], [day - 1, 'the day before']].forEach(([d, rel]) => {
+    if (!cols[d]) return;
+    cols[d].forEach(o => {
+      if (o.id === s.id || isSkipped(o, week)) return;
+      s.items.forEach((it, i) => {
+        o.items.forEach((ot, j) => {
+          if (ot.ex !== it.ex) return;
+          const p = phaseOf(cfg, week, o, j), q = phaseOf(cfg, week, s, i);
+          const ph = p ? ` (${PHASES[p].label}${q && q !== p ? ` there, ${PHASES[q].label} here` : ''})` : '';
+          const name = exInfo(cfg, it.ex).n;
+          out.push(d === day ? `${name} is already on Day ${d}${ph}, so you'd train it twice that day.` : `${name} is also on Day ${d}${ph}, ${rel}, so you'd train it on back-to-back days.`);
+        });
+      });
+    });
+  });
+  return [...new Set(out)];
+}
+
+export function holdPlan(cfg, week, logs, slot, idx) {
+  const it = slot.items[idx]; const ph = phaseOf(cfg, week, slot, idx); const rx = rxOf(cfg, it, ph);
+  const m = rx.match(/(\d+)\s*×\s*(\d+)(?:\s*[–-]\s*(\d+))?/); const sets = m ? Number(m[1]) : 4;
+  const last = lastLog(logs, it.ex, 'iso'); const hold = (last && last.sec) ? Number(last.sec) : (m ? Number(m[2]) : 30);
+  return { sets, hold };
+}
+
+// Starting set rows for the log sheet: the prescription's set count, prefilled with the target.
+export function planRows(cfg, logs, it, ph) {
+  const iso = ph === 'iso'; const m = rxOf(cfg, it, ph).match(/(\d+)\s*×\s*(\d+)/); const n = m ? Number(m[1]) : 3; const t = targetOf(cfg, logs, it, ph);
+  const reps = m ? Number(m[2]) : null; const hold = iso ? ((lastLog(logs, it.ex, 'iso') || {}).sec || reps) : null;
+  return Array.from({ length: n }, () => iso ? { w: t.w ?? null, sec: hold } : { w: t.w ?? null, r: reps });
+}
+
+// Today when viewing the current week (or the day after it ends), otherwise the viewed week's Sunday.
+export function defaultLogDate(weekStart) { const today = new Date(); const end = addDays(weekStart, 6); return (today >= weekStart && today <= addDays(end, 1)) ? ymd(today) : ymd(weekStart); }
 
 export const normWeek = w => ({ prog: (w && w.prog) || null, done: { ...(w && w.done) }, skipped: { ...(w && w.skipped) }, moved: { ...(w && w.moved) }, ph: { ...(w && w.ph) }, warm: JSON.parse(JSON.stringify((w && w.warm) || {})) });
