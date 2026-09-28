@@ -16,6 +16,7 @@ import SlotSheet from './components/sheets/SlotSheet.jsx';
 import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
 import ImportSheet from './components/sheets/ImportSheet.jsx';
 import HelpSheet from './components/sheets/HelpSheet.jsx';
+import UpdateBanner from './components/UpdateBanner.jsx';
 
 const TABS = [['board', 'Board', Board], ['progress', 'Progress', Progress], ['body', 'Muscles', Muscles], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
@@ -86,6 +87,7 @@ export default function App() {
             </div>
           </nav>
         </header>
+        <UpdateBanner />
         <main>
           <div id="view" role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}><View /></div>
         </main>

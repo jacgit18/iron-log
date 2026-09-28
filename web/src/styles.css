@@ -488,3 +488,5 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 :root[data-spacing="roomy"] .panel{gap:28px}
 :root[data-spacing="roomy"] .glossary{gap:24px}
 :root[data-spacing="roomy"] p + p{margin-top:1.4em}
+.updatebar{margin-top:0}
+.updatebar .actions{margin:0;gap:6px}

@@ -6,6 +6,7 @@ import { programFor, progName } from '../../lib/logic.js';
 import { backupCfg } from '../../lib/export.js';
 import CommitInput from '../CommitInput.jsx';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
+import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { BackupMessage } from '../progress/Progress.jsx';
 
 function ModePanel() {
@@ -71,6 +72,36 @@ function AppearancePanel() {
       </fieldset>
       <label className="inline"><input type="checkbox" checked={a.roomy} onChange={e => upd({ roomy: e.target.checked })} /> Roomier text (more space between lines and paragraphs)</label>
       <p>Saved on this device only.</p>
+    </section>
+  );
+}
+
+function DevicePanel() {
+  const { installEvent, installed, persisted } = usePwa();
+  const storeMode = useAppStore(s => s.storeMode);
+  return (
+    <section className="panel">
+      <h2>App on this device</h2>
+      {installed ? <p>Iron Log is installed. It opens from your home screen and works without a connection.</p>
+        : installEvent ? (
+          <>
+            <p>Install Iron Log to open it from your home screen like any other app. It works without a connection.</p>
+            <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn primary" onClick={install}>Install app</button></div>
+          </>
+        ) : isIOS() ? (
+          <>
+            <p>To install on iPhone or iPad, open this page in Safari, then:</p>
+            <ol className="helpsteps"><li>Tap the Share button.</li><li>Tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>.</li></ol>
+          </>
+        ) : <p>This page already works offline once loaded. To install it, use your browser's “Install app” or “Add to Home screen” menu item.</p>}
+      {storeMode === 'local' && (persisted
+        ? <p>Your data is kept on this device and won't be cleared to free up space.</p>
+        : persisted === false ? (
+          <>
+            <p>Your log is stored in this browser. If the device runs low on space, the browser may clear it. Keep a copy with Export all data.</p>
+            <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn" onClick={keepData}>Keep my data on this device</button></div>
+          </>
+        ) : null)}
     </section>
   );
 }
@@ -203,6 +234,7 @@ export default function Settings() {
     <div className="settings">
       <ModePanel />
       <AppearancePanel />
+      <DevicePanel />
       <PhasePanel />
       <DataPanel key={importCount} />
       <BackupPanel />
