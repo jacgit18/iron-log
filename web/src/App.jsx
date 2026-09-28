@@ -3,32 +3,33 @@ import { useAppStore } from './store/useAppStore.js';
 import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import Board from './components/board/Board.jsx';
-import LogSheet from './components/sheets/LogSheet.jsx';
-import DetailSheet from './components/sheets/DetailSheet.jsx';
-import TimerBar from './components/TimerBar.jsx';
 import Progress from './components/progress/Progress.jsx';
 import Muscles from './components/muscles/Muscles.jsx';
-import TagSheet from './components/sheets/TagSheet.jsx';
 import Editor from './components/program/Editor.jsx';
+import Settings from './components/settings/Settings.jsx';
+import TimerBar from './components/TimerBar.jsx';
+import LogSheet from './components/sheets/LogSheet.jsx';
+import DetailSheet from './components/sheets/DetailSheet.jsx';
+import TagSheet from './components/sheets/TagSheet.jsx';
 import SlotSheet from './components/sheets/SlotSheet.jsx';
 import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
+import ImportSheet from './components/sheets/ImportSheet.jsx';
 
-const TABS = [['board', 'Board'], ['progress', 'Progress'], ['body', 'Muscles'], ['program', 'Program'], ['settings', 'Settings']];
-
-function NotPortedYet({ name }) {
-  return <div className="empty">The {name} tab hasn't been moved to React yet. It's next on the list.</div>;
-}
+const TABS = [['board', 'Board', Board], ['progress', 'Progress', Progress], ['body', 'Muscles', Muscles], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
 function Modal() {
   const modal = useAppStore(s => s.modal);
   const slotExists = useAppStore(s => (s.modal && s.modal.type === 'log' ? !!s.slotById(s.modal.slotId) : true));
   if (!modal || !slotExists) return null;
-  if (modal.type === 'log') return <LogSheet key={`${modal.slotId}:${modal.idx}`} slotId={modal.slotId} idx={modal.idx} />;
-  if (modal.type === 'detail') return <DetailSheet exId={modal.exId} />;
-  if (modal.type === 'tags') return <TagSheet key={modal.exId} exId={modal.exId} />;
-  if (modal.type === 'slot') return <SlotSheet key={`slot-${modal.idx}`} idx={modal.idx} />;
-  if (modal.type === 'newprog') return <NewProgramSheet />;
-  return null;
+  switch (modal.type) {
+    case 'log': return <LogSheet key={`${modal.slotId}:${modal.idx}`} slotId={modal.slotId} idx={modal.idx} />;
+    case 'detail': return <DetailSheet exId={modal.exId} />;
+    case 'tags': return <TagSheet key={modal.exId} exId={modal.exId} />;
+    case 'slot': return <SlotSheet key={`slot-${modal.idx}`} idx={modal.idx} />;
+    case 'newprog': return <NewProgramSheet />;
+    case 'import': return <ImportSheet />;
+    default: return null;
+  }
 }
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, [closeModal]);
 
+  const View = TABS.find(([k]) => k === tab)[2];
   return (
     <>
       <div className="wrap">
@@ -63,13 +65,7 @@ export default function App() {
             ))}
           </nav>
         </header>
-        <main id="view">
-          {tab === 'board' ? <Board />
-            : tab === 'progress' ? <Progress />
-              : tab === 'body' ? <Muscles />
-                : tab === 'program' ? <Editor />
-                : <NotPortedYet name={TABS.find(([k]) => k === tab)[1]} />}
-        </main>
+        <main id="view"><View /></main>
       </div>
       <Modal />
       <TimerBar />

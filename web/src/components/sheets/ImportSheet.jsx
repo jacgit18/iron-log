@@ -1,0 +1,40 @@
+import { useAppStore } from '../../store/useAppStore.js';
+import { dataStats, libDate } from '../../lib/export.js';
+import Sheet from '../Sheet.jsx';
+import ArmedButton from '../ArmedButton.jsx';
+
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+export default function ImportSheet() {
+  const draft = useAppStore(s => s.importDraft);
+  const busy = useAppStore(s => s.importBusy);
+  const dl = useAppStore(s => s.dl);
+  const logs = useAppStore(s => s.logs);
+  const st = useAppStore.getState();
+  if (!draft) return null;
+  const d = draft.data; const s = dataStats(d);
+  const cur = dataStats({ logs });
+  const when = d.exportedAt ? libDate(d.exportedAt) : 'an unknown date';
+  return (
+    <Sheet role="dialog" aria-label="Import data">
+      <h2 className="cond">Import data</h2>
+      <p><b>{draft.name || 'File'}</b>, exported {when}:</p>
+      <ul className="implist">
+        <li>{plural(s.entries, 'logged session', 'logged sessions')} across {plural(s.exercises, 'exercise', 'exercises')}</li>
+        <li>{plural(s.weeks, 'week', 'weeks')} of check-offs</li>
+        <li>{s.programs.length ? `Edited Program ${s.programs.join(' and ')}` : 'Original programs'}{s.saved ? ` · ${plural(s.saved, 'saved version', 'saved versions')}` : ''}</li>
+        {s.body > 0 && <li>{s.body} body weight entr{s.body === 1 ? 'y' : 'ies'}</li>}
+        <li>Settings, 1RMs and muscle tags</li>
+      </ul>
+      <p className="note"><b>Add to my data</b> keeps everything here and adds what's missing: new sessions, weeks, body weights and saved versions. If both have an edited program, yours stays and the file's is added to Saved versions.</p>
+      <p className="note"><b>Replace my data</b> makes this app match the file exactly. Anything here that isn't in the file is deleted{cur.entries ? `, including ${plural(cur.entries, 'logged session', 'logged sessions')}` : ''}. {dl ? 'Export your current data first if you might want it back.' : ''}</p>
+      {busy && <p className="note">Importing…</p>}
+      {dl && <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn sm ghost" onClick={st.downloadData}>Export current data first</button></div>}
+      <div className="actions impact">
+        <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
+        <ArmedButton className="btn" disabled={busy} label="Replace my data" armedLabel="Tap again to replace" onConfirm={() => st.applyImport('replace')} />
+        <button type="button" className="btn primary" disabled={busy} onClick={() => st.applyImport('merge')}>Add to my data</button>
+      </div>
+    </Sheet>
+  );
+}

@@ -3,10 +3,10 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, BUILTIN, exInfo } from '../../lib/data.js';
 import { progName } from '../../lib/logic.js';
 import { sameProg, libDate } from '../../lib/export.js';
+import { MON } from '../../lib/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
 
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const progStats = p => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
 
 function slotSummary(cfg, sl) {
