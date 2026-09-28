@@ -92,7 +92,7 @@ function LiftList() {
           <button type="button" className="pcard" key={id} onClick={() => openModal({ type: 'detail', exId: id })}>
             <h3>{exInfo(cfg, id).n}</h3>
             <div className="pstats">
-              <span>Last <b>{describe(last)}</b></span>
+              <span>Last <b>{describe(last)}</b>{last.auto && ' (from check-off)'}</span>
               {best != null && <span>Best{multi ? ` ${phName.toLowerCase()}` : ''} <b>{best} lb</b></span>}
               <span>Sessions <b>{L.length}</b></span>
             </div>

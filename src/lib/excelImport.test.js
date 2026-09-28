@@ -117,3 +117,13 @@ describe('check-offs from imported sessions', () => {
     expect(weeks['2026-09-20'].done).toEqual({ 'A-d3s1': true });
   });
 });
+
+describe('entries logged by check-offs', () => {
+  it('stay marked through an Excel export and import', async () => {
+    const s = S(); s.logs.hack[0].auto = true;
+    const d = await parseExcelExport(toBytes(buildOverallWorkbook(X, s, {})), cfg());
+    expect(d.logs.hack[0].auto).toBe(true);
+    expect(d.logs.hack[0].n).toBeUndefined();
+    expect(entryKey(d.logs.hack[0])).toBe(entryKey(s.logs.hack[0]));
+  });
+});

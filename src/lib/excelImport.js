@@ -4,7 +4,7 @@
    what it does have into the same shape as a parsed JSON data file, so the normal merge can add it. */
 import { EX, PHASES, PH_KEYS, slotsFor } from './data.js';
 import { parseDate } from './dates.js';
-import { activeProgKey, normWeek, setItemDone } from './logic.js';
+import { activeProgKey, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
 import { MUSCLES, MUSCLE_MAP } from './muscles.js';
 import { WEEK_RE, entryWeek } from './trends.js';
 import { loadXLSX } from './export.js';
@@ -76,7 +76,7 @@ export async function parseExcelExport(buffer, cfg) {
     const e = { d: String(d), ph: phaseKey(phase), w: num(w), s: num(s) };
     if (num(hold) != null) e.sec = num(hold); else e.r = num(reps);
     const sets = parseSetDetail(detail); if (sets) e.sets = sets;
-    if (note) e.n = String(note);
+    if (note === AUTO_NOTE) e.auto = true; else if (note) e.n = String(note);
     if (slot) e.slot = String(slot);
     if (WEEK_RE.test(String(wk))) e.wk = String(wk);
     (logs[id] = logs[id] || []).push(e);
