@@ -7,6 +7,8 @@ import LogSheet from './components/sheets/LogSheet.jsx';
 import DetailSheet from './components/sheets/DetailSheet.jsx';
 import TimerBar from './components/TimerBar.jsx';
 import Progress from './components/progress/Progress.jsx';
+import Muscles from './components/muscles/Muscles.jsx';
+import TagSheet from './components/sheets/TagSheet.jsx';
 
 const TABS = [['board', 'Board'], ['progress', 'Progress'], ['body', 'Muscles'], ['program', 'Program'], ['settings', 'Settings']];
 
@@ -20,6 +22,7 @@ function Modal() {
   if (!modal || !slotExists) return null;
   if (modal.type === 'log') return <LogSheet key={`${modal.slotId}:${modal.idx}`} slotId={modal.slotId} idx={modal.idx} />;
   if (modal.type === 'detail') return <DetailSheet exId={modal.exId} />;
+  if (modal.type === 'tags') return <TagSheet key={modal.exId} exId={modal.exId} />;
   return null;
 }
 
@@ -56,7 +59,10 @@ export default function App() {
           </nav>
         </header>
         <main id="view">
-          {tab === 'board' ? <Board /> : tab === 'progress' ? <Progress /> : <NotPortedYet name={TABS.find(([k]) => k === tab)[1]} />}
+          {tab === 'board' ? <Board />
+            : tab === 'progress' ? <Progress />
+              : tab === 'body' ? <Muscles />
+                : <NotPortedYet name={TABS.find(([k]) => k === tab)[1]} />}
         </main>
       </div>
       <Modal />

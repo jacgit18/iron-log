@@ -67,6 +67,20 @@ export const useAppStore = create((set, get) => ({
   backupMsg: null, // {kind:'info'|'ok'|'err', text, url?}
   snoozeBackup: false,
 
+  // Muscles tab view state; kept here so it survives switching tabs, like the original.
+  bodyView: null, // 'A' | 'B'; null = the program on the board
+  bodySel: null, // selected muscle key
+  bodySec: true, // count secondary work as half a set
+  setBodyView: bodyView => set({ bodyView }),
+  selectMuscle: bodySel => set({ bodySel }),
+  setBodySec: bodySec => set({ bodySec }),
+  saveTags(exId, tags) {
+    if (get().mutateCfg(c => { c.muscleMap = c.muscleMap || {}; c.muscleMap[exId] = tags; })) { set({ modal: null }); flag('Muscles saved'); }
+  },
+  resetTags(exId) {
+    if (get().mutateCfg(c => { if (c.muscleMap) delete c.muscleMap[exId]; })) set({ modal: null });
+  },
+
   snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body }; },
 
   // Callers that arrive while a load is running wait for that same load.
