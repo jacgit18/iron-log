@@ -1,14 +1,14 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-09-28T18:35:34.487Z",
+ "exportedAt": "2026-09-28T18:54:54.305Z",
  "config": {
   "muscleMap": {},
   "ex": {},
-  "mode": 1,
+  "mode": 2,
   "m3Start": 1,
   "m3First": "A",
-  "m2Even": "A",
+  "m2Even": "B",
   "pct": {
    "strength": 85,
    "iso": 75,
@@ -16,13 +16,59 @@
    "exp": 45
   },
   "rxOverride": {},
-  "rm": {},
-  "phDef": {}
+  "rm": {
+   "latpd": 90,
+   "wristpd": 55,
+   "platerot": 35,
+   "innerthigh": 200,
+   "chestpress": 45,
+   "zercher": 80,
+   "zottman": 30,
+   "kbleg": 30,
+   "grip": 300,
+   "canoe": 45,
+   "suitcase": 30,
+   "reardelt": 80,
+   "facepull": 50,
+   "legext": 80,
+   "cablecrunch": 100,
+   "hipthrust": 400,
+   "db6": 20,
+   "hack": 400,
+   "pallof": 40,
+   "cablerow": 70,
+   "arnold": 45,
+   "dbclean": 45,
+   "latpdbi": 90,
+   "outerthigh": 180,
+   "farmers": 65,
+   "dblunge": 65,
+   "ohtri": 30,
+   "bss": 65,
+   "legcurl": 100,
+   "cablepunch": 50
+  },
+  "phDef": {
+   "A-d1s1:0": "hyp"
+  },
+  "ghBackup": {
+   "repo": "jacgit18/iron-log",
+   "branch": "data",
+   "hash": null,
+   "last": {
+    "at": "2026-09-28T18:35:37.468Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/138916336d14cef33096f4e5064ad02f4e4b4ef1"
+   }
+  },
+  "progNames": {
+   "A": "Program A - Unilateral",
+   "B": "Program B - Bilateral"
+  }
  },
  "programs": {},
  "library": [],
  "logs": {
-  "arnold": [
+  "chestpress": [
    {
     "d": "2026-09-28",
     "ph": "strength",
@@ -47,93 +93,10 @@
       "r": 6
      }
     ],
-    "slot": "A-d4s4",
+    "slot": "A-d1s6",
     "wk": "2026-09-27",
     "auto": true
-   }
-  ],
-  "cablecrunch": [
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": 60,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 60,
-      "r": 6
-     },
-     {
-      "w": 60,
-      "r": 6
-     },
-     {
-      "w": 60,
-      "r": 6
-     },
-     {
-      "w": 60,
-      "r": 6
-     }
-    ],
-    "slot": "A-d2s4",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
-  "cablerow": [
-   {
-    "d": "2026-09-28",
-    "ph": "exp",
-    "w": 30,
-    "s": 3,
-    "r": 10,
-    "sets": [
-     {
-      "w": 30,
-      "r": 10
-     },
-     {
-      "w": 30,
-      "r": 10
-     },
-     {
-      "w": 30,
-      "r": 10
-     }
-    ],
-    "slot": "A-d3s7",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
-  "canoe": [
-   {
-    "d": "2026-09-28",
-    "ph": null,
-    "w": 10,
-    "s": 3,
-    "sets": [
-     {
-      "w": 10,
-      "r": null
-     },
-     {
-      "w": 10,
-      "r": null
-     },
-     {
-      "w": 10,
-      "r": null
-     }
-    ],
-    "slot": "A-d1s9",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
-  "chestpress": [
+   },
    {
     "d": "2026-09-28",
     "ph": "hyp",
@@ -159,197 +122,6 @@
      }
     ],
     "slot": "A-d2s5",
-    "wk": "2026-09-27",
-    "auto": true
-   },
-   {
-    "d": "2026-09-28",
-    "ph": "hyp",
-    "w": 25,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 25,
-      "r": 15
-     },
-     {
-      "w": 25,
-      "r": 15
-     },
-     {
-      "w": 25,
-      "r": 15
-     },
-     {
-      "w": 25,
-      "r": 15
-     }
-    ],
-    "slot": "A-d4s5",
-    "wk": "2026-09-27",
-    "auto": true
-   },
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": 40,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 40,
-      "r": 6
-     },
-     {
-      "w": 40,
-      "r": 6
-     },
-     {
-      "w": 40,
-      "r": 6
-     },
-     {
-      "w": 40,
-      "r": 6
-     }
-    ],
-    "slot": "A-d1s6",
-    "wk": "2026-09-27"
-   },
-   {
-    "d": "2026-10-04",
-    "ph": "strength",
-    "w": 60,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 60,
-      "r": 6
-     },
-     {
-      "w": 60,
-      "r": 6
-     },
-     {
-      "w": 60,
-      "r": 6
-     },
-     {
-      "w": 60,
-      "r": 6
-     }
-    ],
-    "slot": "A-d1s6",
-    "wk": "2026-10-04"
-   },
-   {
-    "d": "2026-10-04",
-    "ph": "hyp",
-    "w": 80,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 80,
-      "r": 15
-     },
-     {
-      "w": 80,
-      "r": 15
-     },
-     {
-      "w": 80,
-      "r": 15
-     },
-     {
-      "w": 80,
-      "r": 15
-     }
-    ],
-    "slot": "A-d4s5",
-    "wk": "2026-10-04"
-   }
-  ],
-  "db6": [
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": 10,
-    "s": 2,
-    "r": 6,
-    "sets": [
-     {
-      "w": 10,
-      "r": 6
-     },
-     {
-      "w": 10,
-      "r": 6
-     }
-    ],
-    "slot": "A-d2s8",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
-  "dip": [
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": null,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": null,
-      "r": 6
-     },
-     {
-      "w": null,
-      "r": 6
-     },
-     {
-      "w": null,
-      "r": 6
-     },
-     {
-      "w": null,
-      "r": 6
-     }
-    ],
-    "slot": "A-d2s6",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
-  "facepull": [
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": 30,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 30,
-      "r": 6
-     },
-     {
-      "w": 30,
-      "r": 6
-     },
-     {
-      "w": 30,
-      "r": 6
-     },
-     {
-      "w": 30,
-      "r": 6
-     }
-    ],
-    "slot": "A-d3s6",
     "wk": "2026-09-27",
     "auto": true
    }
@@ -412,34 +184,6 @@
     "slot": "A-d2s5",
     "wk": "2026-09-27",
     "auto": true
-   },
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": 320,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 320,
-      "r": 6
-     },
-     {
-      "w": 320,
-      "r": 6
-     },
-     {
-      "w": 320,
-      "r": 6
-     },
-     {
-      "w": 320,
-      "r": 6
-     }
-    ],
-    "slot": "A-d4s5",
-    "wk": "2026-09-27",
-    "auto": true
    }
   ],
   "innerthigh": [
@@ -472,62 +216,6 @@
     "auto": true
    }
   ],
-  "kbleg": [
-   {
-    "d": "2026-09-28",
-    "ph": "iso",
-    "w": 15,
-    "s": 3,
-    "sec": 15,
-    "sets": [
-     {
-      "w": 15,
-      "sec": 15
-     },
-     {
-      "w": 15,
-      "sec": 15
-     },
-     {
-      "w": 15,
-      "sec": 15
-     }
-    ],
-    "slot": "A-d1s7",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
-  "kneeraise": [
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": null,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": null,
-      "r": 6
-     },
-     {
-      "w": null,
-      "r": 6
-     },
-     {
-      "w": null,
-      "r": 6
-     },
-     {
-      "w": null,
-      "r": 6
-     }
-    ],
-    "slot": "A-d2s6",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
   "latpd": [
    {
     "d": "2026-09-28",
@@ -554,6 +242,33 @@
      }
     ],
     "slot": "A-d1s1",
+    "wk": "2026-09-27"
+   },
+   {
+    "d": "2026-09-28",
+    "ph": "hyp",
+    "w": 45,
+    "s": 4,
+    "r": 15,
+    "sets": [
+     {
+      "w": 45,
+      "r": 15
+     },
+     {
+      "w": 45,
+      "r": 15
+     },
+     {
+      "w": 45,
+      "r": 15
+     },
+     {
+      "w": 45,
+      "r": 15
+     }
+    ],
+    "slot": "A-d3s2",
     "wk": "2026-09-27",
     "auto": true
    }
@@ -588,66 +303,6 @@
     "auto": true
    }
   ],
-  "pallof": [
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": 30,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 30,
-      "r": 6
-     },
-     {
-      "w": 30,
-      "r": 6
-     },
-     {
-      "w": 30,
-      "r": 6
-     },
-     {
-      "w": 30,
-      "r": 6
-     }
-    ],
-    "slot": "A-d3s7",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
-  "platerot": [
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": 10,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 10,
-      "r": 6
-     },
-     {
-      "w": 10,
-      "r": 6
-     },
-     {
-      "w": 10,
-      "r": 6
-     },
-     {
-      "w": 10,
-      "r": 6
-     }
-    ],
-    "slot": "A-d1s3",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
   "reardelt": [
    {
     "d": "2026-09-28",
@@ -676,55 +331,32 @@
     "slot": "A-d2s2",
     "wk": "2026-09-27",
     "auto": true
-   }
-  ],
-  "romanadd": [
+   },
    {
     "d": "2026-09-28",
-    "ph": null,
-    "w": null,
-    "s": 3,
+    "ph": "iso",
+    "w": 50,
+    "s": 4,
+    "sec": 15,
     "sets": [
      {
-      "w": null,
-      "r": null
+      "w": 50,
+      "sec": 15
      },
      {
-      "w": null,
-      "r": null
+      "w": 50,
+      "sec": 15
      },
      {
-      "w": null,
-      "r": null
+      "w": 50,
+      "sec": 15
+     },
+     {
+      "w": 50,
+      "sec": 15
      }
     ],
-    "slot": "A-d1s5",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
-  "suitcase": [
-   {
-    "d": "2026-09-28",
-    "ph": null,
-    "w": 20,
-    "s": 3,
-    "r": 4,
-    "sets": [
-     {
-      "w": 20,
-      "r": 4
-     },
-     {
-      "w": 20,
-      "r": 4
-     },
-     {
-      "w": 20,
-      "r": 4
-     }
-    ],
-    "slot": "A-d2s1",
+    "slot": "A-d3s6",
     "wk": "2026-09-27",
     "auto": true
    }
@@ -757,6 +389,34 @@
     "slot": "A-d1s2",
     "wk": "2026-09-27",
     "auto": true
+   },
+   {
+    "d": "2026-09-28",
+    "ph": "hyp",
+    "w": 33,
+    "s": 4,
+    "r": 15,
+    "sets": [
+     {
+      "w": 33,
+      "r": 15
+     },
+     {
+      "w": 33,
+      "r": 15
+     },
+     {
+      "w": 33,
+      "r": 15
+     },
+     {
+      "w": 33,
+      "r": 15
+     }
+    ],
+    "slot": "A-d3s3",
+    "wk": "2026-09-27",
+    "auto": true
    }
   ],
   "zercher": [
@@ -787,60 +447,6 @@
     "slot": "A-d1s6",
     "wk": "2026-09-27",
     "auto": true
-   },
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": 50,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 50,
-      "r": 6
-     },
-     {
-      "w": 50,
-      "r": 6
-     },
-     {
-      "w": 50,
-      "r": 6
-     },
-     {
-      "w": 50,
-      "r": 6
-     }
-    ],
-    "slot": "A-d4s4",
-    "wk": "2026-09-27",
-    "auto": true
-   }
-  ],
-  "zottman": [
-   {
-    "d": "2026-09-28",
-    "ph": "hyp",
-    "w": 15,
-    "s": 3,
-    "r": 15,
-    "sets": [
-     {
-      "w": 15,
-      "r": 15
-     },
-     {
-      "w": 15,
-      "r": 15
-     },
-     {
-      "w": 15,
-      "r": 15
-     }
-    ],
-    "slot": "A-d1s7",
-    "wk": "2026-09-27",
-    "auto": true
    }
   ]
  },
@@ -850,45 +456,34 @@
    "done": {
     "A-d1s1": true,
     "A-d1s2": true,
-    "A-d1s3": true,
     "A-d1s4": true,
-    "A-d1s5": true,
-    "A-d1s7": true,
+    "A-d1s6": true,
     "A-d1s8": true,
-    "A-d1s9": true,
+    "A-d2s3": true,
+    "A-d2s5": true,
+    "A-d3s2": true,
+    "A-d3s3": true,
     "A-d2s2": true,
     "A-d2s2#0": true,
-    "A-d2s3": true,
-    "A-d2s4": true,
-    "A-d2s5": true,
+    "A-d3s6": true,
+    "A-d3s6#0": true
+   },
+   "skipped": {
+    "A-d1s9": true,
+    "A-d1s5": true,
+    "A-d1s3": true,
+    "A-d2s1": true,
     "A-d2s6": true,
     "A-d2s8": true,
-    "A-d2s1": true,
-    "A-d3s7": true,
-    "A-d3s6": true,
-    "A-d3s6#1": true,
-    "A-d4s4": true,
-    "A-d4s5": true,
-    "A-d1s6": true
+    "A-d2s7": true
    },
-   "skipped": {},
-   "moved": {},
-   "ph": {},
-   "warm": {
-    "1": {
-     "shadow": true,
-     "sled": true
-    }
-   }
-  },
-  "2026-10-04": {
-   "prog": null,
-   "done": {
-    "A-d1s6#0": true,
-    "A-d4s5#1": true
+   "moved": {
+    "A-d3s2": 2,
+    "A-d3s3": 2,
+    "A-d2s4": 3,
+    "A-d1s7": 3,
+    "A-d3s6": 1
    },
-   "skipped": {},
-   "moved": {},
    "ph": {},
    "warm": {}
   }
