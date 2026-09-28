@@ -18,8 +18,9 @@ function ExcelImport({ draft, s, busy }) {
         {s.body > 0 && <li>{s.body} body weight entr{s.body === 1 ? 'y' : 'ies'}</li>}
         {rms > 0 && <li>{plural(rms, 'one-rep max', 'one-rep maxes')} (1RM) and program names, where you haven't set them here</li>}
         {d.excel.newExercises.length > 0 && <li>New exercises added to your list: {d.excel.newExercises.join(', ')}</li>}
+        {s.entries > 0 && <li>Check-offs on the board: each session checks off its exercise in the week it was logged</li>}
       </ul>
-      <p className="notice"><b>Not in an Excel file:</b> which exercises you checked off each week, edited programs, saved program versions and phase defaults. Those stay as they are here. If you still have the <b>iron-log-data .json</b> file, import that instead to get everything.</p>
+      <p className="notice"><b>Not in an Excel file:</b> cards you skipped or moved, edited programs, saved program versions and phase defaults. Those stay as they are here. If you still have the <b>iron-log-data .json</b> file, import that instead to get everything.</p>
       {hasSettings && (
         <label className="inline"><input type="checkbox" checked={!!draft.useSettings} onChange={e => st.setImportUseSettings(e.target.checked)} /> Also use the file's program mode{x.mode ? ` (Mode ${x.mode})` : ''}, rest time and phase percentages</label>
       )}

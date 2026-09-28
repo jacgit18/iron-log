@@ -2,7 +2,7 @@ import { BUILTIN, PHASES } from '../lib/data.js';
 import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
 import { parseDataFile, mergeEntries, mergeWeek, sameProg, progBody, libDate, backupCfg } from '../lib/export.js';
 import { WEEK_RE } from '../lib/trends.js';
-import { parseExcelExport, entryKey } from '../lib/excelImport.js';
+import { parseExcelExport, entryKey, checkOffsFromLogs } from '../lib/excelImport.js';
 
 // Settings tab actions + the full-data import. `flag` is the save-status helper from the app store.
 export const settingsSlice = (set, get, flag) => ({
@@ -77,12 +77,14 @@ export const settingsSlice = (set, get, flag) => ({
         set({ week: normWeek(d.weeks[wk]) }); get().saveWeek();
       } else {
         if (draft.kind === 'excel') {
-          Object.keys(d.logs).forEach(id => { const have = new Set((get().logs[id] || []).map(entryKey)); d.logs[id] = d.logs[id].filter(e => !have.has(entryKey(e))); });
           const xs = d.excel.settings;
           if (draft.useSettings && (xs.mode || xs.rest != null || xs.pct)) {
             set(st => ({ cfg: { ...st.cfg, ...(xs.mode ? { mode: xs.mode } : {}), ...(xs.rest != null ? { rest: xs.rest } : {}), pct: { ...st.cfg.pct, ...(xs.pct || {}) } } }));
             get().saveCfg();
           }
+          // Every session in the file checks off, including ones already logged here; the weeks merge below.
+          d.weeks = checkOffsFromLogs(get().cfg, get().programs, d.logs, localWeeks);
+          Object.keys(d.logs).forEach(id => { const have = new Set((get().logs[id] || []).map(entryKey)); d.logs[id] = d.logs[id].filter(e => !have.has(entryKey(e))); });
         }
         const C = d.config; let ch = false; const cfg = structuredClone(get().cfg);
         ['rm', 'phDef', 'ex', 'muscleMap', 'rxOverride', 'progNames'].forEach(k => {
