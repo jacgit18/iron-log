@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useToday } from '../../store/useToday.js';
 import { WARMUP, slotsFor } from '../../lib/data.js';
 import { monday, ymd, addDays, fmtShort } from '../../lib/dates.js';
 import { tally, currentLayout, isOpen, isSkipped, programFor, progName } from '../../lib/logic.js';
@@ -9,6 +10,8 @@ import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
 
+// Cards moved in from another day are grouped under their own heading.
+const secOf = (s, day) => (s.day === day ? s.sec : 'Moved here');
 const MODES = [[1, 'Mode 1 · A only'], [2, 'Mode 2 · monthly'], [3, 'Mode 3 · 6 months']];
 const tipHidden = k => LS.get(k) === 1; // stored as the string "1", same as the vanilla app
 
@@ -24,6 +27,7 @@ export default function Board() {
   const snoozeBackup = useAppStore(s => s.snoozeBackup);
   const backupBusy = useAppStore(s => s.backupBusy);
   const anyLogs = useAppStore(s => Object.values(s.logs).some(l => l && l.length));
+  const today = useToday(s => s.today);
   const st = useAppStore.getState();
   const sinceBackup = daysSinceBackup(cfg);
 
@@ -73,7 +77,7 @@ export default function Board() {
           <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}>‹</button>
           <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
           <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}>›</button>
-          {ymd(monday(new Date())) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
+          {ymd(monday(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
           <label className="seg modesel" htmlFor="board-mode">
             <span className="sr">Mode</span>
             <select id="board-mode" aria-label="Program mode" value={cfg.mode} onChange={e => st.setMode(Number(e.target.value))}>
@@ -157,7 +161,6 @@ export default function Board() {
           const open = list.filter(s => isOpen(s, week));
           const finished = [...list.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...list.filter(s => isSkipped(s, week))];
           const ft = tally(finished, week);
-          let lastSec = null;
           return (
             <section
               key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`}
@@ -190,9 +193,9 @@ export default function Board() {
                   {pending > 0 && <button type="button" className="btn sm" onClick={st.pullUnfinished}>Pull in {pending} unfinished</button>}
                 </div>
               )}
-              {open.map(s => {
-                const sec = s.day === d ? s.sec : 'Moved here';
-                const newSec = sec !== lastSec; lastSec = sec;
+              {open.map((s, i) => {
+                const sec = secOf(s, d);
+                const newSec = i === 0 || sec !== secOf(open[i - 1], d);
                 return (
                   <Fragment key={s.id}>
                     {newSec && <div className="sect">{sec}</div>}

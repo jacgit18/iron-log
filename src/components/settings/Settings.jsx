@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../lib/dates.js';
 import { programFor, progName } from '../../lib/logic.js';
@@ -11,7 +12,7 @@ import { BackupMessage } from '../progress/Progress.jsx';
 
 function ModePanel() {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
-  const now = new Date(); const yr = now.getFullYear();
+  const now = useToday(s => s.today); const yr = now.getFullYear();
   const a = progName(cfg, 'A'), b = progName(cfg, 'B');
   const modes = [[1, `${a} only`, `Run ${a} every week.`], [2, 'Alternate monthly', `${a} and ${b} take turns by month.`], [3, 'Swap every 6 months', 'Six months on one program, then six on the other.']];
   return (
