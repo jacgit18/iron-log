@@ -36,6 +36,7 @@ function renderBoard(progKey, prog){
   const since = daysSinceBackup(); const anyLogs = Object.values(logs).some(l=>l&&l.length);
   if(mcp && anyLogs && !backupSnoozed && (since==null || since>=7)) h += `<div class="notice tip"><span>${since==null?'Your training data hasn\u2019t been backed up to GitHub yet.':`Last GitHub backup was ${since} days ago.`}</span><span><button class="btn sm" data-act="backup" ${backupBusy?'disabled':''}>${backupBusy?'Backing up…':'Back up now'}</button> <button class="btn sm ghost" data-act="snooze">Later</button></span></div>`;
   if(storeMode==='local' && !hideTip('hidelocal')) h += `<div class="notice tip"><span>${window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export on the Progress tab to back it up.'}</span><button class="btn sm ghost" data-act="hidetip" data-k="hidelocal">Got it</button></div>`;
+  if(typeof moveNote!=='undefined' && moveNote && moveNote.week===weekKey()) h += `<div class="notice movewarn" role="status"><div><b>Heads-up:</b> ${moveNote.lines.map(esc).join(' ')}</div><div class="actions"><button class="btn sm" data-act="undomove">Move back to Day ${moveNote.from}</button><button class="btn sm ghost" data-act="okmove">Keep it</button></div></div>`;
   h += bodyRow();
   if(mDay==null){ mDay = 1; for(let d=1; d<=6; d++){ const l=cols[d]; if(l.some(s=>isOpen(s))){ mDay=d; break; } } }
   h += `<div class="daytabs" role="tablist" aria-label="Day">${[1,2,3,4,5,6].map(d=>{ const {total:n1, done:n, full} = tally(cols[d]); return `<button role="tab" data-act="mday" data-day="${d}" aria-selected="${d===mDay}" class="${full?'full':''}"><b>D${d}</b><span>${full?'✓':`${n}/${n1}`}</span></button>`; }).join('')}</div>`;
@@ -98,22 +99,35 @@ function renderCard(s, curDay){
   return h + `</article>`;
 }
 
-// Weight-over-time line. Drawn in HTML + a stretched SVG path so labels stay a readable size at any width.
-function lineChart(entries, w=560, hgt=180, label='Weight over time'){
-  const pts = entries.filter(e=>e.w!=null && e.w!=='').map(e=>({x:parse(e.d).getTime(), y:Number(e.w), d:e.d}));
-  if(pts.length<2) return `<p class="note">Log at least two sessions with a weight to see a trend.</p>`;
-  const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+// Weight-over-time line(s). Drawn in HTML + a stretched SVG path so labels stay a readable size at any width.
+// With byPhase, each training phase gets its own line (phase-hued, with its own marker shape and a legend).
+function lineChart(entries, w=560, hgt=180, label='Weight over time', {byPhase=false}={}){
+  const all = entries.filter(e=>e.w!=null && e.w!=='' && Number(e.w)>0).map(e=>({x:parse(e.d).getTime(), y:Number(e.w), d:e.d, ph:e.ph||''}));
+  const groups = {}; all.forEach(p=>{ const k = byPhase ? p.ph : '_'; (groups[k] = groups[k] || []).push(p); });
+  const order = [...PH_KEYS, '', '_'];
+  const series = Object.keys(groups).sort((a,b)=>order.indexOf(a)-order.indexOf(b)).map(k=>{ const byDay = {}; groups[k].forEach(p=>{ byDay[p.d]=p; }); return {k, pts:Object.keys(byDay).sort().map(d=>byDay[d])}; }).filter(sr=>sr.pts.length);
+  if(!series.some(sr=>sr.pts.length>=2)) return `<p class="note">Log at least two sessions with a weight to see a trend.</p>`;
+  const multi = series.length > 1;
+  const xs = all.map(p=>p.x), ys = all.map(p=>p.y);
   let x0=Math.min(...xs), x1=Math.max(...xs); if(x0===x1){x0-=864e5;x1+=864e5}
   const maxTicks = hgt < 150 ? 3 : 4;
   let y0=Math.min(...ys), y1=Math.max(...ys); const span=Math.max(y1-y0, 5);
   const step = [1,2.5,5,10,20,25,50,100,200].find(s=>span/s <= maxTicks-1) || 250;
   y0=Math.floor(y0/step)*step; y1=Math.ceil(y1/step)*step; if(y1===y0) y1 = y0+step; if(y0<0) y0=0;
   const px = x => (x-x0)/(x1-x0)*100, py = y => (1-(y-y0)/(y1-y0))*100;
+  const name = k => k==='_' ? '' : k ? PHASES[k].label : 'No phase';
   let grid=''; for(let v=y0; v<=y1+1e-9; v+=step) grid += `<span style="bottom:${(v-y0)/(y1-y0)*100}%"><b>${Math.round(v*10)/10}</b></span>`;
-  const d = pts.map((p,i)=>`${i?'L':'M'}${px(p.x).toFixed(2)},${py(p.y).toFixed(2)}`).join('');
-  const area = `${d}L${px(pts[pts.length-1].x).toFixed(2)},100L${px(pts[0].x).toFixed(2)},100Z`;
-  const dots = pts.map((p,i)=>`<i class="ldot${i===pts.length-1?' end':''}" style="left:${px(p.x)}%;top:${py(p.y)}%" data-tip="${fmtShort(parse(p.d))}: ${p.y} lb"></i>`).join('');
-  return `<div class="lchart" style="height:${hgt}px" role="img" aria-label="${esc(label)}: ${pts.map(p=>`${fmtShort(parse(p.d))} ${p.y} lb`).join(', ')}"><div class="lgrid">${grid}</div><div class="lplot"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="ar" d="${area}"/><path class="ln" d="${d}"/></svg>${dots}</div><div class="lx"><span>${fmtShort(new Date(x0))}</span><span>${fmtShort(new Date(x1))}</span></div></div>`;
+  let paths = '', dots = '';
+  series.forEach(sr=>{
+    const P = sr.pts, cls = multi ? ` s-${sr.k||'none'}` : '';
+    const d = P.map((p,i)=>`${i?'L':'M'}${px(p.x).toFixed(2)},${py(p.y).toFixed(2)}`).join('');
+    if(!multi && P.length>1) paths += `<path class="ar" d="${d}L${px(P[P.length-1].x).toFixed(2)},100L${px(P[0].x).toFixed(2)},100Z"/>`;
+    if(P.length>1) paths += `<path class="ln${cls}" d="${d}"/>`;
+    dots += P.map((p,i)=>`<i class="ldot${cls}${i===P.length-1?' end':''}" style="left:${px(p.x)}%;top:${py(p.y)}%" data-tip="${multi?name(sr.k)+' · ':''}${fmtShort(parse(p.d))}: ${p.y} lb"></i>`).join('');
+  });
+  const legend = multi ? `<div class="lleg">${series.map(sr=>{ const last = sr.pts[sr.pts.length-1]; return `<span><i class="lsw s-${sr.k||'none'}"></i>${name(sr.k)} <b>${last.y} lb</b></span>`; }).join('')}</div>` : '';
+  const aria = series.map(sr=>`${multi?name(sr.k)+': ':''}${sr.pts.map(p=>`${fmtShort(parse(p.d))} ${p.y} lb`).join(', ')}`).join('; ');
+  return `${legend}<div class="lchart" style="height:${hgt}px" role="img" aria-label="${esc(label)}. ${esc(aria)}"><div class="lgrid">${grid}</div><div class="lplot"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${paths}</svg>${dots}</div><div class="lx"><span>${fmtShort(new Date(x0))}</span><span>${fmtShort(new Date(x1))}</span></div></div>`;
 }
 
 let dl = undefined; // downloads namespace: undefined = not checked, null = unavailable
@@ -181,7 +195,9 @@ function renderLifts(){
     const ws = same.map(e=>Number(e.w)).filter(n=>!isNaN(n)&&n>0);
     const best = ws.length? Math.max(...ws): null;
     const phName = last.ph ? PHASES[last.ph].label : 'No phase';
-    return `<button class="pcard" data-act="detail" data-ex="${id}"><h3>${esc(exInfo(id).n)}</h3><div class="pstats"><span>Last <b>${esc(describe(last))}</b></span>${best!=null?`<span>Best <b>${best} lb</b></span>`:''}<span>Sessions <b>${L.length}</b></span></div>${(st=>st?`<span class="stall">Stalled · no gain in 3 sessions</span>`:'')(stallOf(id, last.ph||null))}<span class="note"><span class="dot" data-p="${last.ph||''}"></span> ${phName} trend${same.length<L.length?` · ${L.length-same.length} other-phase session${L.length-same.length>1?'s':''} not shown`:''}</span>${lineChart(same,320,110)}</button>`;
+    const phs = [...new Set(L.map(e=>e.ph||null))]; const multi = phs.length > 1;
+    const stalled = phs.filter(p=>stallOf(id, p)).map(p=>p ? PHASES[p].label : 'No phase');
+    return `<button class="pcard" data-act="detail" data-ex="${id}"><h3>${esc(exInfo(id).n)}</h3><div class="pstats"><span>Last <b>${esc(describe(last))}</b></span>${best!=null?`<span>Best${multi?` ${phName.toLowerCase()}`:''} <b>${best} lb</b></span>`:''}<span>Sessions <b>${L.length}</b></span></div>${stalled.length?`<span class="stall">Stalled${multi?` (${stalled.join(', ')})`:''} · no gain in 3 sessions</span>`:''}${multi?'':`<span class="note"><span class="dot" data-p="${last.ph||''}"></span> ${phName} trend</span>`}${lineChart(L,320,110,'Weight over time',{byPhase:multi})}</button>`;
   }).join('')}</div>`;
 }
 
@@ -266,7 +282,7 @@ function closeModal(){ document.getElementById('modal').innerHTML=''; }
 
 function openDetail(exId){
   const L = (logs[exId]||[]);
-  document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><div class="sheet" style="max-width:640px"><h2 class="cond">${esc(exInfo(exId).n)}</h2>${(()=>{ const last=L[L.length-1]; if(!last) return ''; const same=L.filter(e=>(e.ph||null)===(last.ph||null)); return `<p class="note">${last.ph?PHASES[last.ph].label:'No phase'} trend (the phase you logged most recently). The table lists every session.</p>`+lineChart(same); })()}
+  document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><div class="sheet" style="max-width:640px"><h2 class="cond">${esc(exInfo(exId).n)}</h2>${(()=>{ const last=L[L.length-1]; if(!last) return ''; const phs=[...new Set(L.map(e=>e.ph||null))]; return `<p class="note">${phs.length>1?'One line per phase you train this lift in. Tap a point for the date and weight.':`${last.ph?PHASES[last.ph].label:'No phase'} trend.`} The table lists every session.</p>`+lineChart(L, 560, 200, 'Weight over time', {byPhase:phs.length>1}); })()}
   <table class="hist"><thead><tr><th>Date</th><th>Phase</th><th class="num">Load</th><th class="num">Volume</th><th>Note</th><th></th></tr></thead><tbody>
   ${L.map((e,i)=>({e,i})).reverse().map(({e,i})=>`<tr><td>${fmtShort(parse(e.d))}</td><td>${e.ph?PHASES[e.ph].label:'—'}</td><td class="num">${e.w!=null&&e.w!==''?e.w+' lb':'BW'}</td><td class="num">${esc(volText(e))}</td><td>${esc(e.n||'')}</td><td><button class="btn sm ghost" data-act="dellog" data-ex="${exId}" data-i="${i}" aria-label="Delete entry">✕</button></td></tr>`).join('')}
   </tbody></table><div class="actions"><button class="btn" data-act="close">Close</button></div></div></div>`;

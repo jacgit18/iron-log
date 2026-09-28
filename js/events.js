@@ -3,13 +3,15 @@ let downOnScrim = false;
 document.addEventListener('pointerdown', e=>{ downOnScrim = !!(e.target.classList && e.target.classList.contains('scrim')); }, true);
 function blocked(){ if(isReady()) return false; flag('Still loading your data…'); render(); return true; }
 let backupSnoozed = false;
-const MUTATE = new Set(['icheck','progname','bwsave','bwdel','impmerge','impreplace','imppaste','libload','libdel','skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
+const MUTATE = new Set(['undomove','icheck','progname','bwsave','bwdel','impmerge','impreplace','imppaste','libload','libdel','skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
 document.addEventListener('click', e=>{
   const t = e.target.closest('[data-act]'); if(!t) return;
   const a = t.dataset.act;
   if(MUTATE.has(a) && blocked()) return;
   if(a==='close'){ if(e.target===t && (!t.classList.contains('scrim') || downOnScrim)) closeModal(); return; }
-  if(a==='prev'||a==='next'||a==='today'){ mDay=null; weekStart = a==='today'? monday(new Date()) : addDays(weekStart, a==='prev'?-7:7); subscribeWeek(); render(); }
+  if(a==='undomove'){ if(moveNote && moveNote.week===weekKey()){ const n=moveNote; moveNote=null; const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const s=slotsFor(prog).find(x=>x.id===n.slot); if(s){ if(n.from===s.day) delete week.moved[n.slot]; else week.moved[n.slot]=n.from; saveWeek(); } render(); flag(`Moved back to Day ${n.from}`); } return; }
+  if(a==='okmove'){ moveNote=null; render(); return; }
+  if(a==='prev'||a==='next'||a==='today'){ mDay=null; moveNote=null; weekStart = a==='today'? monday(new Date()) : addDays(weekStart, a==='prev'?-7:7); subscribeWeek(); render(); }
   if(a==='log'){ openLog(t.dataset.slot, Number(t.dataset.idx)); }
   if(a==='detail'){ openDetail(t.dataset.ex); }
   if(a==='fillLast'){ const f=document.getElementById('logform'); const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const sl=slotsFor(prog).find(x=>x.id===f.dataset.slot); const i=Number(f.dataset.idx); const L=lastLog(sl.items[i].ex, document.getElementById('f-ph').value||null); if(!L) return; const ph=document.getElementById('f-ph').value||null; fillSetRows(setsOfEntry(L), ph==='iso'); return; }
@@ -82,10 +84,28 @@ document.addEventListener('change', e=>{
   if(a==='rm'){ const n=Number(t.value); if(t.value===''||!(n>0)) delete cfg.rm[t.dataset.ex]; else cfg.rm[t.dataset.ex]=n; saveCfg(); }
 });
 
+let moveNote = null; // warning shown on the board after a move puts the same exercise on the same or a neighboring day
 function moveSlot(slotId, day){
   const prog=PROGRAMS[activeProgKey()]||PROGRAMS.A; const s=slotsFor(prog).find(x=>x.id===slotId); if(!s) return;
+  const from = week.moved[slotId] || s.day;
   if(day===s.day) delete week.moved[slotId]; else week.moved[slotId]=day;
-  saveWeek(); render(); flag(`Moved to Day ${day}`);
+  const clashes = moveClashes(s, day, prog);
+  moveNote = clashes.length ? {slot:slotId, from, to:day, week:weekKey(), lines:clashes} : null;
+  saveWeek(); render(); flag(clashes.length ? `Moved to Day ${day} · heads-up` : `Moved to Day ${day}`);
+  if(clashes.length){ const n=document.querySelector('.movewarn'); if(n) n.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+}
+// Same exercise already on the target day, the day before, or the day after (skipped cards don't count).
+function moveClashes(s, day, prog){
+  const cols = currentLayout(slotsFor(prog)); const out = [];
+  [[day,'the same day'],[day+1,'the day after'],[day-1,'the day before']].forEach(([d, rel])=>{
+    if(!cols[d]) return;
+    cols[d].forEach(o=>{ if(o.id===s.id || isSkipped(o)) return;
+      s.items.forEach((it, i)=>{ o.items.forEach((ot, j)=>{ if(ot.ex!==it.ex) return;
+        const p = phaseOf(o, j), q = phaseOf(s, i);
+        const ph = p ? ` (${PHASES[p].label}${q&&q!==p?` there, ${PHASES[q].label} here`:''})` : '';
+        out.push(d===day ? `${exInfo(it.ex).n} is already on Day ${d}${ph}, so you'd train it twice that day.` : `${exInfo(it.ex).n} is also on Day ${d}${ph}, ${rel}, so you'd train it on back-to-back days.`); }); }); });
+  });
+  return [...new Set(out)];
 }
 
 document.addEventListener('submit', e=>{
