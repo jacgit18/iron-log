@@ -9,6 +9,9 @@ import TimerBar from './components/TimerBar.jsx';
 import Progress from './components/progress/Progress.jsx';
 import Muscles from './components/muscles/Muscles.jsx';
 import TagSheet from './components/sheets/TagSheet.jsx';
+import Editor from './components/program/Editor.jsx';
+import SlotSheet from './components/sheets/SlotSheet.jsx';
+import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
 
 const TABS = [['board', 'Board'], ['progress', 'Progress'], ['body', 'Muscles'], ['program', 'Program'], ['settings', 'Settings']];
 
@@ -23,6 +26,8 @@ function Modal() {
   if (modal.type === 'log') return <LogSheet key={`${modal.slotId}:${modal.idx}`} slotId={modal.slotId} idx={modal.idx} />;
   if (modal.type === 'detail') return <DetailSheet exId={modal.exId} />;
   if (modal.type === 'tags') return <TagSheet key={modal.exId} exId={modal.exId} />;
+  if (modal.type === 'slot') return <SlotSheet key={`slot-${modal.idx}`} idx={modal.idx} />;
+  if (modal.type === 'newprog') return <NewProgramSheet />;
   return null;
 }
 
@@ -62,6 +67,7 @@ export default function App() {
           {tab === 'board' ? <Board />
             : tab === 'progress' ? <Progress />
               : tab === 'body' ? <Muscles />
+                : tab === 'program' ? <Editor />
                 : <NotPortedYet name={TABS.find(([k]) => k === tab)[1]} />}
         </main>
       </div>

@@ -6,6 +6,7 @@ import {
   setCardDone, setItemDone, clearDone, isSkipped, isOpen, currentLayout, moveClashes, defaultLogDate,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
+import { editorSlice } from './editorSlice.js';
 import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
 import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
@@ -45,6 +46,7 @@ export function flag(t) {
 }
 
 export const useAppStore = create((set, get) => ({
+  ...editorSlice(set, get, flag),
   cfg: structuredClone(DEFAULT_CFG),
   weekStart: monday(new Date()),
   week: normWeek(null),
