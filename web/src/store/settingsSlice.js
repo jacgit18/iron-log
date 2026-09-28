@@ -2,11 +2,14 @@ import { BUILTIN, PHASES } from '../lib/data.js';
 import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
 import { parseDataFile, mergeEntries, mergeWeek, sameProg, progBody, libDate, backupCfg } from '../lib/export.js';
 import { WEEK_RE } from '../lib/trends.js';
+import { parseExcelExport, entryKey } from '../lib/excelImport.js';
 
 // Settings tab actions + the full-data import. `flag` is the save-status helper from the app store.
 export const settingsSlice = (set, get, flag) => ({
-  importDraft: null, // {data, name} once a file has been read and checked
+  importDraft: null, // {data, name, kind: 'json'|'excel', useSettings} once a file has been read and checked
   importBusy: false,
+  importError: '', // shown next to the import controls until the next attempt
+  setImportUseSettings: v => set(s => ({ importDraft: s.importDraft && { ...s.importDraft, useSettings: v } })),
   importCount: 0, // bumps after each import so the import panel resets (paste box closed and cleared)
 
   setPct(p, raw) { const n = Number(raw); if (raw !== '' && !isNaN(n)) get().mutateCfg(c => { c.pct[p] = n; }); },
@@ -22,14 +25,28 @@ export const settingsSlice = (set, get, flag) => ({
 
   async readImportFile(file) {
     if (!file || get().blocked()) return;
-    try { const text = await file.text(); set({ importDraft: { data: parseDataFile(text), name: file.name }, modal: { type: 'import' } }); }
-    catch (e) { set({ importDraft: null }); flag(e.message || 'Couldn’t read that file'); }
+    set({ importError: '' });
+    try {
+      const buf = await file.arrayBuffer(); const head = new Uint8Array(buf.slice(0, 4));
+      const zip = head[0] === 0x50 && head[1] === 0x4b; // .xlsx files are zip archives ("PK")
+      if (zip || /\.xlsx$/i.test(file.name)) {
+        set({ importDraft: { data: await parseExcelExport(buf, get().cfg), name: file.name, kind: 'excel', useSettings: true }, modal: { type: 'import' } });
+        return;
+      }
+      if (/\.csv$/i.test(file.name)) throw new Error('That’s the CSV export, which can’t be imported. Use the iron-log-data .json file from “Export all data”, or the Excel workbook.');
+      const text = new TextDecoder().decode(buf);
+      set({ importDraft: { data: parseDataFile(text), name: file.name, kind: 'json' }, modal: { type: 'import' } });
+    } catch (e) {
+      const msg = e.message || 'Couldn’t read that file';
+      set({ importDraft: null, importError: msg }); flag(msg);
+    }
   },
   pasteImport(text) {
     if (get().blocked()) return;
-    if (!text.trim()) { flag('Paste the file contents first'); return; }
-    try { set({ importDraft: { data: parseDataFile(text), name: 'Pasted data' }, modal: { type: 'import' } }); }
-    catch (e) { flag(e.message); }
+    set({ importError: '' });
+    if (!text.trim()) { set({ importError: 'Paste the file contents first' }); flag('Paste the file contents first'); return; }
+    try { set({ importDraft: { data: parseDataFile(text), name: 'Pasted data', kind: 'json' }, modal: { type: 'import' } }); }
+    catch (e) { set({ importError: e.message }); flag(e.message); }
   },
 
   // 'merge' keeps everything here and adds what's missing; 'replace' makes the app match the file exactly.
@@ -59,6 +76,14 @@ export const settingsSlice = (set, get, flag) => ({
         Object.entries(d.weeks).forEach(([k, w]) => { if (k !== wk) get().saveDoc('weeks/' + k, w); });
         set({ week: normWeek(d.weeks[wk]) }); get().saveWeek();
       } else {
+        if (draft.kind === 'excel') {
+          Object.keys(d.logs).forEach(id => { const have = new Set((get().logs[id] || []).map(entryKey)); d.logs[id] = d.logs[id].filter(e => !have.has(entryKey(e))); });
+          const xs = d.excel.settings;
+          if (draft.useSettings && (xs.mode || xs.rest != null || xs.pct)) {
+            set(st => ({ cfg: { ...st.cfg, ...(xs.mode ? { mode: xs.mode } : {}), ...(xs.rest != null ? { rest: xs.rest } : {}), pct: { ...st.cfg.pct, ...(xs.pct || {}) } } }));
+            get().saveCfg();
+          }
+        }
         const C = d.config; let ch = false; const cfg = structuredClone(get().cfg);
         ['rm', 'phDef', 'ex', 'muscleMap', 'rxOverride', 'progNames'].forEach(k => {
           const src = C[k];
@@ -87,7 +112,7 @@ export const settingsSlice = (set, get, flag) => ({
           if (!localWeeks[k] || JSON.stringify(m) !== JSON.stringify(normWeek(localWeeks[k]))) get().saveDoc('weeks/' + k, m);
         });
       }
-      set(s => ({ weekHist: null, importDraft: null, importBusy: false, modal: null, importCount: s.importCount + 1 }));
+      set(s => ({ weekHist: null, importDraft: null, importBusy: false, importError: '', modal: null, importCount: s.importCount + 1 }));
       flag(mode === 'replace' ? 'Data replaced' : 'Data added');
     } catch {
       set({ importBusy: false }); flag('Import failed');

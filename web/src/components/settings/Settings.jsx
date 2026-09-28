@@ -108,17 +108,20 @@ function PhasePanel() {
 
 function DataPanel() {
   const dl = useAppStore(s => s.dl); const exporting = useAppStore(s => s.exporting); const st = useAppStore.getState();
+  const importError = useAppStore(s => s.importError);
   const [paste, setPaste] = useState('');
   return (
     <section className="panel">
       <h2>Export &amp; import</h2>
       <p>One file with everything: your log, weekly check-offs, body weight, programs, saved versions and settings. Use it to keep a copy, move to another device or app, or go back to an earlier state.</p>
+      <p>To import, use that <b>iron-log-data .json</b> file. An Iron Log <b>Excel</b> workbook also works as a partial backup: it brings back your logged sessions, body weight and main settings.</p>
       <div className="actions" style={{ justifyContent: 'flex-start' }}>
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <label className="btn filebtn">Import from file
-          <input type="file" id="imp-file" accept=".json,application/json" hidden onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
+          <input type="file" id="imp-file" accept=".json,application/json,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden aria-describedby={importError ? 'imp-err' : undefined} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
       </div>
+      {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
       <details className="imppaste">
         <summary>Can't pick a file? Paste its contents instead</summary>
         <textarea id="imp-text" rows={4} placeholder="Paste the contents of an iron-log-data file" value={paste} onChange={e => setPaste(e.target.value)} />

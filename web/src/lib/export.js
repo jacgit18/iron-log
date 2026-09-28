@@ -7,18 +7,8 @@ import { MUSCLES, tagsOf, muscleNames } from './muscles.js';
 import { WEEK_RE, weekOfDate, entryWeek, weekSummary } from './trends.js';
 import { bwSorted } from './body.js';
 
-const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-let xlsxPromise = null;
-export function loadXLSX() {
-  if (window.XLSX) return Promise.resolve(window.XLSX);
-  if (!xlsxPromise) xlsxPromise = new Promise((resolve, reject) => {
-    const s = document.createElement('script'); s.src = XLSX_URL; s.async = true;
-    s.onload = () => (window.XLSX ? resolve(window.XLSX) : reject(new Error('Excel library failed to load')));
-    s.onerror = () => { xlsxPromise = null; reject(new Error('Excel library failed to load')); };
-    document.head.appendChild(s);
-  });
-  return xlsxPromise;
-}
+// SheetJS is bundled (0.20.x, patched for reading untrusted files) and loaded only when needed.
+export const loadXLSX = () => import('xlsx').catch(() => { throw new Error('Excel library failed to load'); });
 
 export const phaseLabel = p => (p ? PHASES[p].label : '');
 const entryVolume = e => { if (e.sec) return ''; const v = setsOfEntry(e).reduce((a, x) => a + (Number(x.w) > 0 && Number(x.r) > 0 ? Number(x.w) * Number(x.r) : 0), 0); return v || ''; };

@@ -5,6 +5,34 @@ import ArmedButton from '../ArmedButton.jsx';
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
+function ExcelImport({ draft, s, busy }) {
+  const st = useAppStore.getState();
+  const d = draft.data; const x = d.excel.settings; const rms = Object.keys(d.config.rm).length;
+  const hasSettings = x.mode || x.rest != null || x.pct;
+  return (
+    <Sheet aria-label="Import from Excel">
+      <h2 className="cond">Import from Excel</h2>
+      <p><b>{draft.name}</b>{d.exportedAt ? `, exported ${libDate(d.exportedAt)}` : ''}. This workbook brings back:</p>
+      <ul className="implist">
+        <li>{plural(s.entries, 'logged session', 'logged sessions')} across {plural(s.exercises, 'exercise', 'exercises')}. Sessions you already have here are skipped.</li>
+        {s.body > 0 && <li>{s.body} body weight entr{s.body === 1 ? 'y' : 'ies'}</li>}
+        {rms > 0 && <li>{plural(rms, 'one-rep max', 'one-rep maxes')} (1RM) and program names, where you haven't set them here</li>}
+        {d.excel.newExercises.length > 0 && <li>New exercises added to your list: {d.excel.newExercises.join(', ')}</li>}
+      </ul>
+      <p className="notice"><b>Not in an Excel file:</b> which exercises you checked off each week, edited programs, saved program versions and phase defaults. Those stay as they are here. If you still have the <b>iron-log-data .json</b> file, import that instead to get everything.</p>
+      {hasSettings && (
+        <label className="inline"><input type="checkbox" checked={!!draft.useSettings} onChange={e => st.setImportUseSettings(e.target.checked)} /> Also use the file's program mode{x.mode ? ` (Mode ${x.mode})` : ''}, rest time and phase percentages</label>
+      )}
+      {d.excel.skipped > 0 && <p className="note">{plural(d.excel.skipped, 'row', 'rows')} without a date or exercise couldn't be read and will be left out.</p>}
+      {busy && <p className="note">Importing…</p>}
+      <div className="actions impact">
+        <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
+        <button type="button" className="btn primary" disabled={busy || (!s.entries && !s.body && !rms)} onClick={() => st.applyImport('merge')}>Add to my data</button>
+      </div>
+    </Sheet>
+  );
+}
+
 export default function ImportSheet() {
   const draft = useAppStore(s => s.importDraft);
   const busy = useAppStore(s => s.importBusy);
@@ -13,6 +41,7 @@ export default function ImportSheet() {
   const st = useAppStore.getState();
   if (!draft) return null;
   const d = draft.data; const s = dataStats(d);
+  if (draft.kind === 'excel') return <ExcelImport draft={draft} s={s} busy={busy} />;
   const cur = dataStats({ logs });
   const when = d.exportedAt ? libDate(d.exportedAt) : 'an unknown date';
   return (
