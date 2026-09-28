@@ -3,7 +3,7 @@ let downOnScrim = false;
 document.addEventListener('pointerdown', e=>{ downOnScrim = !!(e.target.classList && e.target.classList.contains('scrim')); }, true);
 function blocked(){ if(isReady()) return false; flag('Still loading your data…'); render(); return true; }
 let backupSnoozed = false;
-const MUTATE = new Set(['undomove','icheck','progname','bwsave','bwdel','impmerge','impreplace','imppaste','libload','libdel','skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
+const MUTATE = new Set(['newprog','undomove','icheck','progname','bwsave','bwdel','impmerge','impreplace','imppaste','libload','libdel','skip','backup','bkrepo','tagsave','tagreset','repeat','rests','edsub','edup','eddown','eddel','edreset','edadd','edit','check','day','warm','move','phase','mode','m3s','m3f','m2e','pct','rxo','rm','setprog','pull','dellog','log']);
 document.addEventListener('click', e=>{
   const t = e.target.closest('[data-act]'); if(!t) return;
   const a = t.dataset.act;
@@ -44,11 +44,14 @@ document.addEventListener('click', e=>{
   if(a==='edday'){ edDay=Number(t.dataset.day); render(); return; }
   if(a==='edadd'){ openSlotEditor(null); return; }
   if(a==='edit'){ openSlotEditor(Number(t.dataset.i)); return; }
-  if(a==='edup'||a==='eddown'){ const i=Number(t.dataset.i), j=i+(a==='edup'?-1:1); const prog=editableProgram(); const sl=prog.days[edDay-1].slots; if(j<0||j>=sl.length) return; [sl[i],sl[j]]=[sl[j],sl[i]]; saveProgram(edProg,prog); render(); return; }
-  if(a==='eddel'){ if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent='Remove?'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent='Remove'; } },3000); return; } const prog=editableProgram(); prog.days[edDay-1].slots.splice(Number(t.dataset.i),1); saveProgram(edProg,prog); render(); return; }
+  if(a==='edup'||a==='eddown'){ const i=Number(t.dataset.i), j=i+(a==='edup'?-1:1); const prog=editableProgram(); const sl=prog.days[edDay-1].slots; if(j<0||j>=sl.length) return; [sl[i],sl[j]]=[sl[j],sl[i]]; saveEdited(prog); render(); return; }
+  if(a==='eddel'){ if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent='Remove?'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent='Remove'; } },3000); return; } const prog=editableProgram(); prog.days[edDay-1].slots.splice(Number(t.dataset.i),1); saveEdited(prog); render(); return; }
   if(a==='libload'||a==='libdel'){ const id = t.dataset.orig ? 'orig' : t.dataset.id; const lbl = a==='libload'?'Load':'Delete';
-    if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent = a==='libload' ? `Tap to load into ${edProg}` : 'Delete?'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent=lbl; } },3000); return; }
-    if(a==='libload') loadVersion(id); else { library = library.filter(it=>it.id!==id); saveLibrary(); render(); flag('Deleted'); } return; }
+    const slot = t.dataset.slot || edProg; const lbl0 = t.textContent;
+    if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent = a==='libload' ? `Tap to load into ${progName(slot)}` : 'Delete?'; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent=lbl0; } },3000); return; }
+    if(a==='libload') loadVersion(id, slot); else { library = library.filter(it=>it.id!==id); if(edProg==='L:'+id) edProg=null; saveLibrary(); render(); flag('Deleted'); } return; }
+  if(a==='libedit'){ edProg='L:'+t.dataset.id; edDay=1; render(); window.scrollTo({top:0}); return; }
+  if(a==='newprog'){ openNewProgram(); return; }
   if(a==='edreset'){ if(t.dataset.armed!=='1'){ t.dataset.armed='1'; t.textContent=`Tap again to reset ${progName(edProg)}`; setTimeout(()=>{ if(t.isConnected){ t.dataset.armed=''; t.textContent=`Reset ${progName(edProg)} to the original`; } },3000); return; } PROGRAMS[edProg]=BUILTIN[edProg]; removeDoc('programs/'+edProg); render(); flag('Reset'); return; }
   if(a==='hidetip'){ try{ localStorage.setItem('ironlog:'+(t.dataset.k||'hidetip'),'1'); }catch(e){} render(); return; }
   if(a==='mday'){ mDay=Number(t.dataset.day); render(); window.scrollTo({top:0}); return; }
@@ -70,8 +73,9 @@ document.addEventListener('change', e=>{
   if(a==='move'){ moveSlot(t.dataset.slot, Number(t.value)); }
   if(a==='phase'){ week.ph[`${t.dataset.slot}:${t.dataset.idx}`]=t.value; saveWeek(); render(); }
   if(a==='sedraft'){ readSlotForm(); renderSlotSheet(); return; }
+  if(a==='progname' && t.dataset.p==='L'){ const it=edItem(); const v=t.value.trim().slice(0,60); if(it && v){ library=library.map(x=>x.id===it.id?{...x, name:v}:x); saveLibrary(); render(); flag('Renamed'); } else render(); return; }
   if(a==='progname'){ const k=t.dataset.p, v=t.value.trim().slice(0,40); cfg.progNames = {...(cfg.progNames||{})}; if(v && v!==`Program ${k}`) cfg.progNames[k]=v; else delete cfg.progNames[k]; saveCfg(); render(); flag('Renamed'); return; }
-  if(a==='edsub'){ const prog=editableProgram(); const v=t.value.trim(); if(v) prog.days[edDay-1].sub=v; else delete prog.days[edDay-1].sub; saveProgram(edProg,prog); return; }
+  if(a==='edsub'){ const prog=editableProgram(); const v=t.value.trim(); if(v) prog.days[edDay-1].sub=v; else delete prog.days[edDay-1].sub; saveEdited(prog); return; }
   if(a==='mode'){ cfg.mode=Number(t.value); saveCfg(); render(); }
   if(a==='m3s'){ cfg.m3Start=Number(t.value); saveCfg(); render(); }
   if(a==='m3f'){ cfg.m3First=t.value; saveCfg(); render(); }
@@ -109,6 +113,7 @@ function moveClashes(s, day, prog){
 }
 
 document.addEventListener('submit', e=>{
+  if(e.target.id==='newprogform'){ e.preventDefault(); if(!blocked()) createProgram(document.getElementById('np-name').value, document.getElementById('np-from').value); return; }
   if(e.target.id==='bwform'){ e.preventDefault(); if(!blocked()) saveBodyWeight(document.getElementById('bw-in').value); return; }
   if(e.target.id==='libform'){ e.preventDefault(); if(!blocked()) saveCurrentAs(document.getElementById('lib-name').value); return; }
   if(e.target.id==='slotform'){ e.preventDefault(); if(!blocked()) saveSlotForm(); return; }

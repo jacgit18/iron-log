@@ -2,14 +2,28 @@
 let edProg = null, edDay = 1, slotDraft = null;
 const SECTIONS = ['Regular','Supersets','Plyometric','Home'];
 function slotSummary(sl){ const names = sl.items.map(i=>exInfo(i.ex).n); return sl.type==='superset' ? names.join(' → ') : sl.type==='either' ? names.join(' or ') : names[0]; }
+// What the editor is working on: 'A' / 'B' (programs in the rotation) or 'L:<id>' (a program in the library).
+const isLibEd = () => typeof edProg==='string' && edProg.startsWith('L:');
+const edItem = () => isLibEd() ? library.find(it=>it.id===edProg.slice(2)) || null : null;
+function curEdProg(){ const it = edItem(); return it ? {...it.prog, key:'N'} : PROGRAMS[edProg]; }
+const edName = () => { const it = edItem(); return it ? it.name : progName(edProg); };
+function saveEdited(prog){
+  const it = edItem();
+  if(it){ const body = progBody(prog); library = library.map(x=>x.id===it.id ? {...x, prog:body} : x); saveLibrary(); }
+  else saveProgram(edProg, prog);
+}
 function renderEditor(){
-  if(!edProg) edProg = activeProgKey();
-  const prog = PROGRAMS[edProg]; const day = prog.days[edDay-1];
-  const custom = prog !== BUILTIN[edProg];
-  let h = `<div class="edtop"><div class="seg" role="group" aria-label="Program to edit">${['A','B'].map(k=>`<button class="${k===edProg?'on':''}" data-act="edprog" data-p="${k}" aria-pressed="${k===edProg}">${esc(progName(k))}</button>`).join('')}</div>`;
+  if(!edProg || (isLibEd() && !edItem())) edProg = activeProgKey();
+  const lib = isLibEd(); const item = edItem();
+  const prog = curEdProg(); const day = prog.days[edDay-1];
+  const custom = !lib && prog !== BUILTIN[edProg];
+  let h = `<div class="edtop"><div class="seg" role="group" aria-label="Program to edit">${['A','B'].map(k=>`<button class="${k===edProg?'on':''}" data-act="edprog" data-p="${k}" aria-pressed="${k===edProg}">${esc(progName(k))}</button>`).join('')}${lib?`<button class="on" aria-pressed="true" data-act="edprog" data-p="${edProg}">${esc(item.name)}</button>`:''}</div>`;
   h += `<div class="seg" role="group" aria-label="Day to edit">${[1,2,3,4,5,6].map(d=>`<button class="${d===edDay?'on':''}" data-act="edday" data-day="${d}" aria-pressed="${d===edDay}">Day ${d}</button>`).join('')}</div></div>`;
-  h += `<label class="field progname">Name of Program ${edProg}<input id="prog-name" data-act="progname" data-p="${edProg}" maxlength="40" value="${esc((cfg.progNames||{})[edProg]||'')}" placeholder="Program ${edProg}"></label>`;
-  h += `<section class="panel edpanel"><div class="inline" style="flex-wrap:wrap"><h2 style="margin-right:auto">${esc(progName(edProg))} · ${esc(day.title)}</h2></div>`;
+  if(lib){
+    h += `<div class="notice tip libnote"><span><b>${esc(item.name)}</b> is in your library, not in the rotation. Build it here, then load it into ${esc(progName('A'))} or ${esc(progName('B'))} when you're ready to train it.</span></div>`;
+    h += `<label class="field progname">Program name<input id="prog-name" data-act="progname" data-p="L" maxlength="60" value="${esc(item.name)}"></label>`;
+  } else h += `<label class="field progname">Name of Program ${edProg}<input id="prog-name" data-act="progname" data-p="${edProg}" maxlength="40" value="${esc((cfg.progNames||{})[edProg]||'')}" placeholder="Program ${edProg}"></label>`;
+  h += `<section class="panel edpanel"><div class="inline" style="flex-wrap:wrap"><h2 style="margin-right:auto">${esc(edName())} · ${esc(day.title)}</h2></div>`;
   h += `<label class="field">Day label<input id="ed-sub" data-act="edsub" value="${esc(day.sub||'')}" placeholder="e.g. Lower body + reactive power"></label>`;
   h += `<div class="edlist">`;
   if(!day.slots.length) h += `<p class="note">No exercises on this day yet.</p>`;
@@ -21,8 +35,8 @@ function renderEditor(){
       <div class="edbtns"><button class="btn sm" data-act="edup" data-i="${i}" aria-label="Move up" ${i===0?'disabled':''}>↑</button><button class="btn sm" data-act="eddown" data-i="${i}" aria-label="Move down" ${i===day.slots.length-1?'disabled':''}>↓</button><button class="btn sm" data-act="edit" data-i="${i}">Edit</button><button class="btn sm ghost" data-act="eddel" data-i="${i}">Remove</button></div></div>`;
   });
   h += `</div><div class="actions" style="justify-content:flex-start"><button class="btn primary" data-act="edadd">Add exercise</button></div></section>`;
-  h += `<p class="note" style="margin-top:12px">Changes apply to every week that uses ${esc(progName(edProg))}. Your logged sets stay as they are.</p>`;
-  h += renderLibrary(custom);
+  h += `<p class="note" style="margin-top:12px">${lib ? 'Changes are saved to this library program only. Nothing on the board changes until you load it into A or B.' : `Changes apply to every week that uses ${esc(progName(edProg))}. Your logged sets stay as they are.`}</p>`;
+  h += lib ? renderLibItemPanel(item) : renderLibrary(custom);
   return h;
 }
 /* ---------- Saved program versions ---------- */
@@ -32,7 +46,7 @@ const libDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${fmtS
 function progStats(p){ const n = p.days.reduce((a,d)=>a+d.slots.length,0); return `${n} exercise${n===1?'':'s'}`; }
 function renderLibrary(custom){
   const cur = PROGRAMS[edProg];
-  let h = `<section class="panel edpanel lib" style="margin-top:16px"><h2>Saved versions</h2>`;
+  let h = `<section class="panel edpanel lib" style="margin-top:16px"><div class="inline" style="justify-content:space-between;flex-wrap:wrap"><h2>Program library</h2><button class="btn" data-act="newprog">Create a program</button></div>`;
   h += `<p class="note">Load a version into ${esc(progName(edProg))}. Whatever ${esc(progName(edProg))} has now is saved here first if it isn't already, so loading never loses anything.</p>`;
   h += `<div class="edlist">`;
   const row = (name, meta, inUse, loadAttrs, extra='') => `<div class="edrow${inUse?' inuse':''}"><div class="edmain"><b>${esc(name)}</b><span class="note">${meta}</span></div><div class="edbtns">${inUse?`<span class="pill">In use</span>`:`<button class="btn sm" data-act="libload" ${loadAttrs}>Load</button>`}${extra}</div></div>`;
@@ -40,14 +54,43 @@ function renderLibrary(custom){
   const items = [...library].sort((a,b)=>(b.at||'').localeCompare(a.at||''));
   items.forEach(it=>{
     const inUse = custom && sameProg(it.prog, cur);
-    h += row(it.name, `From ${esc(progName(it.from))} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto?' · auto-saved':''}`, inUse, `data-id="${it.id}"`, `<button class="btn sm ghost" data-act="libdel" data-id="${it.id}">Delete</button>`);
+    h += row(it.name, `${it.created?'Created from':'From'} ${esc(progName(it.from))} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto?' · auto-saved':''}`, inUse, `data-id="${it.id}"`, `<button class="btn sm" data-act="libedit" data-id="${it.id}">Edit</button><button class="btn sm ghost" data-act="libdel" data-id="${it.id}">Delete</button>`);
   });
-  if(!items.length) h += `<p class="note">No saved copies yet.</p>`;
+  if(!items.length) h += `<p class="note">No saved or created programs yet.</p>`;
   h += `</div>`;
   const saved = !custom || library.some(it=>sameProg(it.prog, cur));
   h += `<form class="libsave" id="libform" novalidate><label class="field" style="flex:1">Save ${esc(progName(edProg))} as<input id="lib-name" maxlength="60" placeholder="e.g. ${esc(progName(edProg))} · ${MON[new Date().getMonth()]} ${new Date().getFullYear()}"></label><button type="submit" class="btn primary">Save a copy</button></form>`;
   if(!saved) h += `<p class="note">${esc(progName(edProg))} has changes that aren't in a saved copy yet.</p>`;
   return h + `</section>`;
+}
+function renderLibItemPanel(it){
+  let h = `<section class="panel edpanel lib" style="margin-top:16px"><h2>Put it into the rotation</h2>`;
+  h += `<p class="note">Loading replaces what's in that slot. The program there now is saved to the library first if it isn't already, so nothing is lost. ${esc(it.name)} stays in the library too.</p>`;
+  h += `<div class="actions" style="justify-content:flex-start;flex-wrap:wrap">${['A','B'].map(k=>`<button class="btn primary" data-act="libload" data-id="${it.id}" data-slot="${k}">Load into ${esc(progName(k))}</button>`).join('')}<button class="btn ghost" data-act="libdel" data-id="${it.id}">Delete program</button></div>`;
+  return h + `</section>`;
+}
+function openNewProgram(){
+  document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><form class="sheet" id="newprogform" novalidate>
+    <h2 class="cond">Create a program</h2>
+    <p class="note">It starts as a copy you can change freely. It goes into your program library, not the rotation, until you load it into A or B.</p>
+    <label class="field">Name<input id="np-name" maxlength="60" placeholder="e.g. Winter strength block" required></label>
+    <label class="field">Start from<select id="np-from">${['A','B'].map(k=>`<option value="${k}" ${k===activeProgKey()?'selected':''}>A copy of ${esc(progName(k))} (Program ${k})</option>`).join('')}</select></label>
+    <p class="note" id="np-err" hidden></p>
+    <div class="actions"><button type="button" class="btn" data-act="close">Cancel</button><button type="submit" class="btn primary">Create and edit</button></div>
+  </form></div>`;
+  document.getElementById('np-name').focus();
+}
+function createProgram(name, from){
+  const nm = name.trim(); if(!nm){ const e = document.getElementById('np-err'); if(e){ e.hidden=false; e.textContent='Give the program a name.'; } return; }
+  const it = libSnapshot(nm, PROGRAMS[from]||PROGRAMS.A, from, false); it.created = true;
+  // Give the copy its own slot ids so check-offs and phase defaults never mix with the program it came from;
+  // carry the source's saved phase defaults over to the new ids.
+  const pre = 'P' + it.id.slice(-5); const src = slotsFor(PROGRAMS[from]||PROGRAMS.A); let k = 0, cfgChanged = false;
+  it.prog.days.forEach((d, di)=>d.slots.forEach((sl, si)=>{ const old = src[k++]; const nid = `${pre}-d${di+1}s${si+1}`;
+    if(old) old.items.forEach((_, i)=>{ const v = cfg.phDef[`${old.id}:${i}`]; if(v){ cfg.phDef[`${nid}:${i}`] = v; cfgChanged = true; } });
+    sl.id = nid; }));
+  library = library.map(x=>x.id===it.id ? it : x);
+  if(cfgChanged) saveCfg(); saveLibrary(); edProg = 'L:' + it.id; edDay = 1; closeModal(); render(); window.scrollTo({top:0}); flag('Program created');
 }
 function libSnapshot(name, prog, from, auto){ const it = {id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), name, from, at: new Date().toISOString(), prog: progBody(prog)}; if(auto) it.auto = true; library = [...library, it]; return it; }
 function saveCurrentAs(name){
@@ -55,21 +98,23 @@ function saveCurrentAs(name){
   const nm = name.trim() || `${progName(edProg)} · ${libDate(new Date().toISOString())}`;
   libSnapshot(nm, cur, edProg, false); saveLibrary(); render(); flag('Copy saved');
 }
-function loadVersion(target){
-  const cur = PROGRAMS[edProg]; const custom = cur !== BUILTIN[edProg];
-  const next = target === 'orig' ? BUILTIN[edProg] : (library.find(it=>it.id===target)||{}).prog;
+function loadVersion(target, slot=edProg){
+  if(slot!=='A' && slot!=='B') return;
+  const cur = PROGRAMS[slot]; const custom = cur !== BUILTIN[slot];
+  const src = target === 'orig' ? null : library.find(it=>it.id===target);
+  const next = target === 'orig' ? BUILTIN[slot] : (src||{}).prog;
   if(!next) return;
-  if(custom && !library.some(it=>sameProg(it.prog, cur))){ libSnapshot(`${progName(edProg)} before loading · ${libDate(new Date().toISOString())}`, cur, edProg, true); saveLibrary(); }
-  if(target === 'orig'){ PROGRAMS[edProg] = BUILTIN[edProg]; removeDoc('programs/'+edProg); }
-  else saveProgram(edProg, structuredClone(next));
-  render(); flag('Loaded');
+  if(custom && !library.some(it=>sameProg(it.prog, cur))){ libSnapshot(`${progName(slot)} before loading · ${libDate(new Date().toISOString())}`, cur, slot, true); saveLibrary(); }
+  if(target === 'orig'){ PROGRAMS[slot] = BUILTIN[slot]; removeDoc('programs/'+slot); }
+  else saveProgram(slot, structuredClone(next));
+  edProg = slot; render(); flag(src ? `${src.name} is now in ${progName(slot)}` : 'Loaded');
 }
 function saveProgram(k, prog){ const body = structuredClone(prog); delete body.key; PROGRAMS[k] = {...body, key:k}; save('programs/'+k, body); }
-function editableProgram(){ return structuredClone(PROGRAMS[edProg]); }
-function newSlotId(){ return `${edProg}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2,5)}`; }
+function editableProgram(){ return structuredClone(curEdProg()); }
+function newSlotId(){ return `${isLibEd()?'N':edProg}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2,5)}`; }
 function blankItem(){ return {ex:'', ph:'strength', w:null, bw:false, rx:'', note:''}; }
 function openSlotEditor(i){
-  const prog = PROGRAMS[edProg];
+  const prog = curEdProg();
   const base = i==null ? {id:null, sec:'Regular', tier:'Accessory', type:'single', items:[blankItem()], note:''} : structuredClone(prog.days[edDay-1].slots[i]);
   base.type = base.type||'single'; base.day = edDay; base.idx = i;
   base.items = base.items.map(it=>({...blankItem(), ...it, rx:it.rx||'', note:it.note||''}));
@@ -86,7 +131,7 @@ function renderSlotSheet(){
     <label class="inline"><input type="checkbox" id="se-bw-${k}" ${it.bw?'checked':''}> Bodyweight</label>
     <label class="field">Note<input id="se-no-${k}" value="${esc(it.note)}" placeholder="Form cue, setup"></label></fieldset>`;
   document.getElementById('modal').innerHTML = `<div class="scrim" data-act="close"><form class="sheet" id="slotform" novalidate>
-    <h2 class="cond">${d.idx==null?'Add exercise':'Edit exercise'} · ${esc(progName(edProg))}</h2>
+    <h2 class="cond">${d.idx==null?'Add exercise':'Edit exercise'} · ${esc(edName())}</h2>
     <div class="fields">
       <label class="field">Type<select id="se-type" data-act="sedraft"><option value="single" ${d.type==='single'?'selected':''}>Single</option><option value="superset" ${d.type==='superset'?'selected':''}>Superset (A → B)</option><option value="either" ${d.type==='either'?'selected':''}>Either / or</option></select></label>
       <label class="field">Section<select id="se-sec">${[...new Set([...SECTIONS, d.sec])].map(x=>`<option ${x===d.sec?'selected':''}>${esc(x)}</option>`).join('')}</select></label>
@@ -119,8 +164,8 @@ function saveSlotForm(){
   const prog = editableProgram();
   if(d.idx!=null) prog.days[edDay-1].slots.splice(d.idx,1);
   const target = prog.days[d.day-1].slots;
-  const orig = d.idx!=null ? PROGRAMS[edProg].days[edDay-1].slots[d.idx] : null;
+  const orig = d.idx!=null ? curEdProg().days[edDay-1].slots[d.idx] : null;
   if(orig && d.day===edDay && orig.sec===slot.sec) target.splice(d.idx,0,slot);
   else { let at=-1; target.forEach((x,j)=>{ if(x.sec===slot.sec) at=j; }); if(at<0) at = slot.sec==='Home' ? target.length-1 : target.findIndex(x=>x.sec==='Home')-1; if(at<-1) at=target.length-1; target.splice(at+1,0,slot); }
-  saveProgram(edProg, prog); closeModal(); render(); flag(d.day===edDay?'Saved':`Saved to Day ${d.day}`);
+  saveEdited(prog); closeModal(); render(); flag(d.day===edDay?'Saved':`Saved to Day ${d.day}`);
 }
