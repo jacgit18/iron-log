@@ -35,15 +35,24 @@ const blobSave = {
 
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
 
+// Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
+// "Saved" / "Loading…" never replaces a message you haven't had the chance to act on yet.
 export function flag(t) {
-  const now = Date.now();
-  if ((t === 'Saved' || t === 'Loading…' || t === '') && now < flagHold) return;
-  if (t !== 'Saved' && t !== 'Loading…' && t !== '' && !/^Not saved|^Could/.test(t)) flagHold = now + 2500;
+  const routine = t === 'Saved' || t === 'Loading…' || t === '';
+  if (routine && flagHold) return;
+  flagHold = !routine && !/^Not saved|^Could/.test(t);
   useAppStore.setState({ saveFlag: t });
   clearTimeout(flagT);
-  const clear = () => useAppStore.setState(s => (s.saveFlag === t ? { saveFlag: '' } : {}));
-  if (t === 'Saved') flagT = setTimeout(clear, 1500);
-  else if (flagHold > now) flagT = setTimeout(clear, 3500);
+  if (!t) return;
+  // Arm after this event finishes, so the tap that caused the message doesn't clear it.
+  flagT = setTimeout(() => {
+    const clear = () => {
+      ['pointerdown', 'keydown'].forEach(ev => document.removeEventListener(ev, clear, true));
+      flagHold = false;
+      useAppStore.setState(s => (s.saveFlag === t ? { saveFlag: '' } : {}));
+    };
+    ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, clear, true));
+  }, 0);
 }
 
 export const useAppStore = create((set, get) => ({

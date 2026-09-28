@@ -460,3 +460,12 @@ input[type=checkbox]:not(.chk),input[type=radio]{width:24px;height:24px;flex:non
   .bcols,.bgrid{right:auto;width:max(calc(100% - 30px),calc(var(--n) * 46px))}
   .bgrid{left:0;width:max(100%,calc(var(--n) * 46px + 30px))}
 }
+
+/* ---- Focus not obscured (2.4.12): keep focused controls clear of the fixed/sticky bars ---- */
+html{scroll-padding-bottom:84px}
+html:has(body.timing){scroll-padding-bottom:140px}
+@media (max-width:700px){
+  html{scroll-padding-top:calc(76px + env(safe-area-inset-top, 0px));scroll-padding-bottom:calc(140px + env(safe-area-inset-bottom, 0px))}
+  html:has(body.timing){scroll-padding-bottom:calc(230px + env(safe-area-inset-bottom, 0px))}
+  .col .colhead{padding-top:12px}
+}
