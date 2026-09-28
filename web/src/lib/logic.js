@@ -83,12 +83,12 @@ export function volText(e) {
   if (isUniform(e)) return e.sec ? `${e.s || '?'} × ${e.sec}s` : `${e.s || '?'} × ${e.r || '?'}`;
   const S = e.sets; if (S.every(x => x.w === S[0].w)) return S.map(setVal).join(', ');
   const groups = []; S.forEach(x => { const g = groups[groups.length - 1]; if (g && g.w === x.w) g.v.push(setVal(x)); else groups.push({ w: x.w, v: [setVal(x)] }); });
-  return groups.map(g => `${g.w != null ? g.w + ' lb' : 'BW'} × ${g.v.join(', ')}`).join(' · ');
+  return groups.map(g => `${g.w != null ? g.w + ' lb' : 'bodyweight'} × ${g.v.join(', ')}`).join(' · ');
 }
 export function describe(e) {
   if (!e) return '';
   const S = e.sets; if (!isUniform(e) && !S.every(x => x.w === S[0].w)) return volText(e);
-  const load = e.w != null && e.w !== '' ? `${e.w} lb` : 'BW'; return `${load} · ${volText(e)}`;
+  const load = e.w != null && e.w !== '' ? `${e.w} lb` : 'bodyweight'; return `${load} · ${volText(e)}`;
 }
 
 /* ---------- What counts: the one rule every count in the app uses ---------- */

@@ -15,6 +15,7 @@ import TagSheet from './components/sheets/TagSheet.jsx';
 import SlotSheet from './components/sheets/SlotSheet.jsx';
 import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
 import ImportSheet from './components/sheets/ImportSheet.jsx';
+import HelpSheet from './components/sheets/HelpSheet.jsx';
 
 const TABS = [['board', 'Board', Board], ['progress', 'Progress', Progress], ['body', 'Muscles', Muscles], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
@@ -29,6 +30,7 @@ function Modal() {
     case 'slot': return <SlotSheet key={`slot-${modal.idx}`} idx={modal.idx} />;
     case 'newprog': return <NewProgramSheet />;
     case 'import': return <ImportSheet />;
+    case 'help': return <HelpSheet />;
     default: return null;
   }
 }
@@ -39,7 +41,7 @@ export default function App() {
   const saveFlag = useAppStore(s => s.saveFlag);
   const ready = useAppStore(s => s.isReady());
   const progKey = useAppStore(s => s.activeProgKey());
-  const { init, setTab, closeModal } = useAppStore.getState();
+  const { init, setTab, closeModal, openModal } = useAppStore.getState();
   useTooltips();
   useFocusKeeper();
 
@@ -74,6 +76,7 @@ export default function App() {
             <span className="pill">Mode {cfg.mode}</span>
             <span className="saveflag" role="status" aria-live="polite" aria-atomic="true">{!ready && !saveFlag ? 'Loading…' : saveFlag}</span>
           </div>
+          <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
           <nav className="tabs" aria-label="Sections">
             <div role="tablist" aria-label="Sections" className="tablist" onKeyDown={onTabKey}>
               {TABS.map(([k, l]) => (

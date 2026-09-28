@@ -5,6 +5,7 @@ import { MON, fmtShort } from '../../lib/dates.js';
 import { programFor, progName } from '../../lib/logic.js';
 import { backupCfg } from '../../lib/export.js';
 import CommitInput from '../CommitInput.jsx';
+import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import { BackupMessage } from '../progress/Progress.jsx';
 
 function ModePanel() {
@@ -47,6 +48,29 @@ function ModePanel() {
       <div className="months">
         {MON.map((m, i) => { const p = programFor(cfg, new Date(yr, i, 1)); return <div key={m} className={`${p === 'B' ? 'b' : ''}${i === now.getMonth() ? ' now' : ''}`}>{m[0]}<br />{p}</div>; })}
       </div>
+    </section>
+  );
+}
+
+function AppearancePanel() {
+  const [a, setA] = useState(getAppearance);
+  const upd = patch => setA(setAppearance(patch));
+  return (
+    <section className="panel">
+      <h2>Appearance</h2>
+      <fieldset className="plain">
+        <legend>Colours</legend>
+        <div className="modes">
+          {[['system', 'Match this device', 'Light or dark, following your system setting.'], ['light', 'Light', 'Dark text on a light background.'], ['dark', 'Dark', 'Light text on a dark background.']].map(([k, t, d]) => (
+            <label className="mode" key={k}>
+              <input type="radio" name="theme" value={k} checked={a.theme === k} onChange={() => upd({ theme: k })} />
+              <div><b>{t}</b><span>{d}</span></div>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <label className="inline"><input type="checkbox" checked={a.roomy} onChange={e => upd({ roomy: e.target.checked })} /> Roomier text (more space between lines and paragraphs)</label>
+      <p>Saved on this device only.</p>
     </section>
   );
 }
@@ -146,7 +170,7 @@ function RmPanel() {
   return (
     <section className="panel" style={{ gridColumn: '1/-1' }}>
       <h2>1-rep maxes</h2>
-      <p>Enter a 1RM to switch that exercise's target from the program weight to a phase-based weight. Leave blank to keep the program weight.</p>
+      <p>Enter a one-rep max (1RM, the most you can lift once) to switch that exercise's target from the program weight to a phase-based weight. Leave blank to keep the program weight.</p>
       <div className="tbl">
         <table>
           <thead><tr><th>Exercise</th><th>Program weight</th><th>1RM (lb)</th><th>Best logged</th></tr></thead>
@@ -175,6 +199,7 @@ export default function Settings() {
   return (
     <div className="settings">
       <ModePanel />
+      <AppearancePanel />
       <PhasePanel />
       <DataPanel key={importCount} />
       <BackupPanel />

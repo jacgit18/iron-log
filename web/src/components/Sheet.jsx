@@ -26,10 +26,13 @@ export default function Sheet({ as: Tag = 'div', className = '', children, ...re
     };
   }, [titleId]);
 
-  // Sheets that focus their own first field do it in their effect; otherwise focus the first control.
+  // Forms start on their first field (or the one they focus themselves). Other sheets start on the
+  // dialog itself, so reading begins at the top and focus never lands on a destructive button.
   useEffect(() => {
-    if (!ref.current.contains(document.activeElement)) (ref.current.querySelector(FOCUSABLE) || ref.current).focus();
-  }, []);
+    if (ref.current.contains(document.activeElement)) return;
+    const first = Tag === 'form' && ref.current.querySelector(FOCUSABLE);
+    (first || ref.current).focus();
+  }, [Tag]);
 
   const trap = e => {
     if (e.key !== 'Tab') return;

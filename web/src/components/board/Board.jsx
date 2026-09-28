@@ -100,7 +100,7 @@ export default function Board() {
       {!programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
       {!Object.keys(cfg.rm).length && !tipHidden('hidetip') && (
         <div className="notice tip">
-          <span>Targets use your last logged weight. Add a 1RM (in Settings or when you log a set) to get phase-based targets instead.</span>
+          <span>Targets use your last logged weight. Add a one-rep max (1RM) in Settings or when you log a set to get phase-based targets instead.</span>
           <button type="button" className="btn sm ghost" onClick={() => hideTip('hidetip')}>Got it</button>
         </div>
       )}

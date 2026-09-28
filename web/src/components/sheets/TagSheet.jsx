@@ -32,7 +32,7 @@ export default function TagSheet({ exId }) {
           const v = draft.st[m];
           return (
             <button type="button" key={m} className={`chip ${v || ''}`} aria-pressed={!!v} onClick={() => cycle(m)}>
-              {MUSCLES[m].n}{v === 'p' ? ' · P' : v === 's' ? ' · S' : ''}
+              {MUSCLES[m].n}{v === 'p' ? ' · primary' : v === 's' ? ' · secondary' : ''}
             </button>
           );
         })}

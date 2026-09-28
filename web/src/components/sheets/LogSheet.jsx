@@ -85,7 +85,7 @@ export default function LogSheet({ slotId, idx }) {
           {rows.map((r, i) => (
             <div className="setrow" key={i}>
               <span className="setn">{i + 1}</span>
-              <input ref={i === 0 ? firstRef : null} type="number" inputMode="decimal" step="any" min="0" value={r.w} placeholder="BW"
+              <input ref={i === 0 ? firstRef : null} type="number" inputMode="decimal" step="any" min="0" value={r.w} placeholder="bodyweight"
                 aria-label={`Set ${i + 1} weight in lb`} onChange={e => editCell(i, 'w', e.target.value)} />
               <span className="setx">×</span>
               <input type="number" inputMode="numeric" step="any" min="0" value={r.r}
@@ -123,7 +123,7 @@ export default function LogSheet({ slotId, idx }) {
                 <tr key={i}>
                   <td>{fmtShort(parseDate(e.d))}</td>
                   <td>{e.ph ? PHASES[e.ph].label : '—'}</td>
-                  <td className="num">{e.w != null && e.w !== '' ? `${e.w} lb` : 'BW'}</td>
+                  <td className="num">{e.w != null && e.w !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
                   <td className="num">{volText(e)}</td>
                 </tr>
               ))}

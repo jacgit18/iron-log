@@ -142,7 +142,7 @@ export default function Editor() {
                   <div className="edmain">
                     {tag && <span className="tag">{tag}</span>}
                     <b>{slotSummary(cfg, sl)}</b>
-                    <span className="note">{sl.items.map(it => [it.ph ? PHASES[it.ph].label : 'No phase', it.w != null ? it.w + ' lb' : (it.bw ? 'BW' : ''), it.rx || ''].filter(Boolean).join(' · ')).join('  |  ')}</span>
+                    <span className="note">{sl.items.map(it => [it.ph ? PHASES[it.ph].label : 'No phase', it.w != null ? it.w + ' lb' : (it.bw ? 'bodyweight' : ''), it.rx || ''].filter(Boolean).join(' · ')).join('  |  ')}</span>
                   </div>
                   <div className="edbtns">
                     <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}>↑</button>

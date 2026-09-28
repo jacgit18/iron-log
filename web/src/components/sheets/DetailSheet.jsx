@@ -31,7 +31,7 @@ export default function DetailSheet({ exId }) {
             <tr key={`${i}-${e.d}`}>
               <td>{fmtShort(parseDate(e.d))}</td>
               <td>{e.ph ? PHASES[e.ph].label : '—'}</td>
-              <td className="num">{e.w != null && e.w !== '' ? `${e.w} lb` : 'BW'}</td>
+              <td className="num">{e.w != null && e.w !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
               <td className="num">{volText(e)}</td>
               <td>{e.n || ''}</td>
               <td><ArmedButton className="btn sm ghost" aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onConfirm={() => deleteLog(exId, i)} /></td>
