@@ -11,6 +11,14 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const num = v => (v === '' || v == null || isNaN(Number(v)) ? null : Number(v));
 const phaseKey = label => PH_KEYS.find(k => PHASES[k].label === label) || null;
 const muscleKey = name => Object.keys(MUSCLES).find(k => MUSCLES[k].n === name);
+// Dates are exported as "YYYY-MM-DD" text, but Excel and Google Sheets turn them into real dates
+// when the file is opened and saved again; those come back as serial numbers.
+const pad = n => String(n).padStart(2, '0');
+const dateText = (X, v) => {
+  if (typeof v !== 'number') return String(v);
+  const p = X.SSF.parse_date_code(v);
+  return p ? `${p.y}-${pad(p.m)}-${pad(p.d)}` : String(v);
+};
 
 // "41×15, 42×15" / "BW×30s" / "BW×?"  →  [{w, r}] or [{w, sec}]
 function parseSetDetail(s) {
@@ -59,7 +67,8 @@ export async function parseExcelExport(buffer, cfg) {
 
   const logs = {}; const tags = {}; let skipped = 0;
   for (const r of sessions.slice(1)) {
-    const [d, wk, name, phase, w, s, reps, hold, detail, , prim, sec, note, slot] = r.map(v => (typeof v === 'string' ? v.trim() : v));
+    const [d0, wk0, name, phase, w, s, reps, hold, detail, , prim, sec, note, slot] = r.map(v => (typeof v === 'string' ? v.trim() : v));
+    const d = dateText(X, d0), wk = dateText(X, wk0);
     if (!DATE_RE.test(String(d)) || !name) { skipped++; continue; }
     const id = idFor(String(name));
     const e = { d: String(d), ph: phaseKey(phase), w: num(w), s: num(s) };
@@ -84,7 +93,8 @@ export async function parseExcelExport(buffer, cfg) {
   });
 
   const body = [];
-  (rows('Body weight') || []).slice(1).forEach(([wk, d, w]) => {
+  (rows('Body weight') || []).slice(1).forEach(([wk0, d0, w]) => {
+    const wk = dateText(X, wk0), d = dateText(X, d0);
     if (WEEK_RE.test(String(wk)) && DATE_RE.test(String(d)) && num(w) > 0 && !body.some(x => x.wk === wk)) body.push({ wk: String(wk), d: String(d), w: num(w) });
   });
 

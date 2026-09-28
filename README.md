@@ -77,6 +77,7 @@ It's a React app built with Vite. You can install it on your phone or computer l
   npm run dev        # development server at http://localhost:5173
   npm run build      # production build in dist/ (set BASE_PATH=/iron-log/ for a sub-path)
   npm run preview    # serve the production build, with the service worker, to test offline and install
+  npm test           # unit tests (Vitest)
   ```
 
 ## Where data is stored
@@ -123,7 +124,7 @@ The phase percentages (Strength 85%, Isometric 75%, Hypertrophy 65%, Explosive 4
 
 ## Development
 
-Changes are made on feature branches and merged into `main` through pull requests. Every push to `main` runs the **Deploy to GitHub Pages** workflow, which lints, builds for `/iron-log/` and publishes the result. (In the repository's Settings → Pages, the source must be **GitHub Actions**.)
+Changes are made on feature branches and merged into `main` through pull requests. Every pull request runs the **Tests** workflow (lint and unit tests). Every push to `main` runs the **Deploy to GitHub Pages** workflow, which lints, tests, builds for `/iron-log/` and publishes the result. (In the repository's Settings → Pages, the source must be **GitHub Actions**.)
 
 When a pull request's branch changes the app, the **README screenshots** workflow regenerates `docs/images/` and commits the new images to that branch, so they merge along with the change. To run it locally:
 
@@ -134,7 +135,7 @@ npx playwright install chromium
 node tools/screenshots.mjs      # builds the app, then takes the screenshots
 ```
 
-`npm run lint` checks the code with oxlint.
+`npm run lint` checks the code with oxlint. `npm test` runs the unit tests in `src/lib/*.test.js`, which cover the program rotation, done and skipped counts, progression and stall detection, and the data file and Excel import and export.
 
 ## Notes
 
