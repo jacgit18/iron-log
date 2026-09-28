@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { ymd, parseDate, fmtShort } from '../../lib/dates.js';
 import {
@@ -15,6 +16,7 @@ export default function LogSheet({ slotId, idx }) {
   const week = useAppStore(s => s.week);
   const logs = useAppStore(s => s.logs);
   const weekStart = useAppStore(s => s.weekStart);
+  const today = useToday(s => s.today);
   const st = useAppStore.getState();
   const s = st.slotById(slotId);
   const it = s.items[idx]; const ex = exInfo(cfg, it.ex);
@@ -51,7 +53,7 @@ export default function LogSheet({ slotId, idx }) {
     const sets = rows.map(r => ({ w: num(r.w), v: num(r.r) })).filter(x => x.w != null || x.v != null)
       .map(x => (iso ? { w: x.w, sec: x.v } : { w: x.w, r: x.v }));
     if (!sets.length) { setErr('Enter at least one set.'); return; }
-    const entry = { d: date || ymd(new Date()), ph: phv, ...summarizeSets(sets, iso), slot: slotId, wk: st.weekKey() };
+    const entry = { d: date || ymd(today), ph: phv, ...summarizeSets(sets, iso), slot: slotId, wk: st.weekKey() };
     if (note.trim()) entry.n = note.trim();
     const rmVal = rm === '' ? null : Number(rm);
     if (st.submitLog(slotId, idx, { entry, ph: phv, makeDefault, rm: rmVal, done })) st.closeModal();

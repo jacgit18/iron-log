@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useToday } from '../../store/useToday.js';
 import { PHASES, exInfo } from '../../lib/data.js';
 import { monday, ymd, parseDate, addDays, fmtShort } from '../../lib/dates.js';
 import { describe, lastLog, stallOf } from '../../lib/logic.js';
@@ -11,10 +12,11 @@ function History() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
   const weekHist = useAppStore(s => s.weekHist); const loading = useAppStore(s => s.historyLoading);
   const week = useAppStore(s => s.week); const wk = useAppStore(s => s.weekKey());
+  const today = useToday(s => s.today);
   if (!weekHist && loading) return <section className="panel"><h2>Weekly history</h2><p>Loading…</p></section>;
 
   const weeks = { ...(weekHist || {}), [wk]: week }; // live view of the shown week
-  const thisSun = ymd(monday(new Date()));
+  const thisSun = ymd(monday(today));
   const active = Object.keys(weeks).filter(k => WEEK_RE.test(k) && k <= thisSun && weekSummary(cfg, programs, k, weeks[k]).ex > 0).sort();
   const keys = [];
   if (active.length) { let d = parseDate(thisSun); const first = parseDate(active[0]); while (d >= first && keys.length < 12) { keys.push(ymd(d)); d = addDays(d, -7); } }

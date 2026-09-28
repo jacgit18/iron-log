@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useToday } from '../../store/useToday.js';
 import { PHASES, BUILTIN, exInfo } from '../../lib/data.js';
 import { progName } from '../../lib/logic.js';
 import { sameProg, libDate } from '../../lib/export.js';
@@ -30,6 +31,7 @@ function Library({ k, custom }) {
   const cfg = useAppStore(s => s.cfg); const library = useAppStore(s => s.library); const programs = useAppStore(s => s.programs);
   const st = useAppStore.getState();
   const [name, setName] = useState('');
+  const today = useToday(s => s.today);
   const cur = programs[k]; const pn = progName(cfg, k);
   const items = [...library].sort((a, b) => (b.at || '').localeCompare(a.at || ''));
   const saved = !custom || library.some(it => sameProg(it.prog, cur));
@@ -57,7 +59,7 @@ function Library({ k, custom }) {
       </div>
       <form className="libsave" noValidate onSubmit={e => { e.preventDefault(); st.saveCurrentAs(name); setName(''); }}>
         <label className="field" style={{ flex: 1 }}>Save {pn} as
-          <input id="lib-name" maxLength={60} value={name} onChange={e => setName(e.target.value)} placeholder={`e.g. ${pn} · ${MON[new Date().getMonth()]} ${new Date().getFullYear()}`} />
+          <input id="lib-name" maxLength={60} value={name} onChange={e => setName(e.target.value)} placeholder={`e.g. ${pn} · ${MON[today.getMonth()]} ${today.getFullYear()}`} />
         </label>
         <button type="submit" className="btn primary">Save a copy</button>
       </form>
@@ -100,7 +102,6 @@ export default function Editor() {
   const lib = !!item; const day = prog.days[edDay - 1];
   const custom = !lib && prog !== BUILTIN[k];
   const edName = lib ? item.name : progName(cfg, k);
-  let lastSec = null;
 
   return (
     <>
@@ -133,7 +134,7 @@ export default function Editor() {
         <div className="edlist">
           {!day.slots.length && <p className="note">No exercises on this day yet.</p>}
           {day.slots.map((sl, i) => {
-            const newSec = sl.sec !== lastSec; lastSec = sl.sec;
+            const newSec = i === 0 || sl.sec !== day.slots[i - 1].sec;
             const tag = [sl.tier, sl.type === 'superset' ? 'Superset' : sl.type === 'either' ? 'Either / or' : ''].filter(Boolean).join(' · ');
             return (
               <Fragment key={sl.id || i}>
