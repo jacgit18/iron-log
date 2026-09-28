@@ -205,3 +205,8 @@ export function slotsFor(prog) {
   prog.days.forEach((d, di) => d.slots.forEach((s, si) => out.push({ ...s, id: s.id || `${prog.key}-d${di + 1}s${si + 1}`, day: di + 1, type: s.type || 'single' })));
   return out;
 }
+
+// A saved/edited program only replaces the built-in one when it has the right shape.
+export function resolveProgram(k, data) { return (data && Array.isArray(data.days) && data.days.length === 6) ? { ...structuredClone(data), key: k } : BUILTIN[k]; }
+export const exInfo = (cfg, id) => EX[id] || (cfg.ex && cfg.ex[id]) || { n: id };
+export const allExIds = cfg => [...new Set([...Object.keys(EX), ...Object.keys(cfg.ex || {})])];
