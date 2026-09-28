@@ -17,7 +17,10 @@ export default function TimerBar() {
     <div className="timerbar" role="timer" aria-live="off" data-mode={t.mode === 'hold' ? 'hold' : 'rest'}>
       <div className="tb-bar"><i style={{ width: `${Math.max(0, Math.min(100, (1 - r / t.dur) * 100))}%` }} /></div>
       <div className="tb-row">
-        <div className="tb-main"><span className="tb-label">{label}</span><span className="tb-time">{mmss(r)}</span></div>
+        <div className="tb-main">
+          <span className="tb-label" aria-live="polite">{label}</span>
+          <span className="tb-time">{mmss(r)}</span>
+        </div>
         <div className="tb-btns">
           <button type="button" className="btn sm" aria-label="15 seconds less" onClick={() => t.nudge(-15)}>−15</button>
           <button type="button" className="btn sm" aria-label="15 seconds more" onClick={() => t.nudge(15)}>+15</button>

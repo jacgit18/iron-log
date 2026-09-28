@@ -17,9 +17,12 @@ export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
   const done = isDone(s, week); const sk = isSkipped(s, week); const paired = isPaired(s);
   const label = s.type === 'superset' ? 'Superset' : s.type === 'either' ? 'Either / or' : '';
   const cur = week.moved[s.id] || s.day;
+  const names = s.items.map(i => exInfo(cfg, i.ex).n);
+  const cardName = s.type === 'superset' ? names.join(' → ') : s.type === 'either' ? names.join(' or ') : names[0];
 
   return (
     <article
+      aria-labelledby={`h-${s.id}-0`}
       className={`card${done ? ' done' : ''}${sk ? ' skipped' : ''}${dragging ? ' dragging' : ''}`}
       draggable="true"
       onDragStart={e => onDragStart(e, s.id)}
@@ -27,7 +30,7 @@ export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
     >
       <div className="row1">
         {!paired && (
-          <input type="checkbox" className="chk" id={`chk-${s.id}`} checked={done} aria-label="Mark done"
+          <input type="checkbox" className="chk" id={`chk-${s.id}`} checked={done} aria-label={`Mark ${cardName} done`}
             onChange={e => checkCard(s.id, e.target.checked)} />
         )}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -53,11 +56,11 @@ export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
                   <input type="checkbox" className="chk" id={`chk-${s.id}-${idx}`} checked={idone} aria-label={`Mark ${ex.n} done`}
                     onChange={e => checkItem(s.id, idx, e.target.checked)} />
                 )}
-                {s.type === 'superset' ? (idx === 0 ? 'A · ' : 'B · ') : ''}{ex.n}
-                {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label="Video">▶ video</a>}
+                <h4 className="exh" id={`h-${s.id}-${idx}`}>{s.type === 'superset' ? (idx === 0 ? 'A · ' : 'B · ') : ''}{ex.n}</h4>
+                {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`Video: ${ex.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>video</a>}
               </div>
               <div className="exline">
-                <select className="phase" data-p={ph || ''} aria-label="Phase" value={ph || ''}
+                <select className="phase" id={`ph-${s.id}-${idx}`} data-p={ph || ''} aria-label={`Phase for ${ex.n}`} value={ph || ''}
                   onChange={e => setPhase(s.id, idx, e.target.value)}>
                   {!ph && <option value="">Set phase</option>}
                   {PH_KEYS.map(k => <option key={k} value={k}>{PHASES[k].label}</option>)}
@@ -66,13 +69,13 @@ export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
                 {t.w != null
                   ? <span className={`tw${t.up ? ' up' : ''}`}>{t.up ? '↑ ' : ''}{t.w} lb <small>{t.src}</small></span>
                   : t.src && <span className="rx">{t.src}</span>}
-                {hp && <button type="button" className="btn sm" onClick={() => startHold(ex.n, hp.sets, hp.hold)}>Hold {hp.sets}×{hp.hold}s</button>}
-                {last && <button type="button" className="btn sm" title={`Log ${describe(last)} again`} onClick={() => quickLog(s.id, idx)}>Same as last</button>}
-                <button type="button" className="btn sm logbtn" onClick={() => openModal({ type: 'log', slotId: s.id, idx })}>Log</button>
+                {hp && <button type="button" className="btn sm" id={`hold-${s.id}-${idx}`} aria-label={`Hold ${hp.sets}×${hp.hold}s: ${ex.n}`} onClick={() => startHold(ex.n, hp.sets, hp.hold)}>Hold {hp.sets}×{hp.hold}s</button>}
+                {last && <button type="button" className="btn sm" id={`rep-${s.id}-${idx}`} aria-label={`Same as last: log ${ex.n} again, ${describe(last)}`} onClick={() => quickLog(s.id, idx)}>Same as last</button>}
+                <button type="button" className="btn sm logbtn" id={`log-${s.id}-${idx}`} aria-label={`Log ${ex.n}`} onClick={() => openModal({ type: 'log', slotId: s.id, idx })}>Log</button>
               </div>
               {it.note && <div className="note">{it.note}</div>}
               {last && <div className="lastlog">Last: {describe(last)} · {fmtShort(parseDate(last.d))}</div>}
-              {st && <div className="stall" tabIndex={0} data-tip={`No gain in weight or reps over your last 3 sessions since ${fmtShort(parseDate(st.since))}.`}>Stalled · no gain in 3 sessions</div>}
+              {st && <div className="stall" id={`stall-${s.id}-${idx}`} tabIndex={0} data-tip={`No gain in weight or reps over your last 3 sessions since ${fmtShort(parseDate(st.since))}.`}>Stalled · no gain in 3 sessions</div>}
             </div>
           </Fragment>
         );
@@ -81,10 +84,10 @@ export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
       {s.note && <div className="note">{s.note}</div>}
       <div className="cardfoot">
         <label htmlFor={`mv-${s.id}`}>Move to</label>
-        <select id={`mv-${s.id}`} value={cur} onChange={e => moveSlot(s.id, Number(e.target.value))}>
+        <select id={`mv-${s.id}`} aria-label={`Move to (${cardName})`} value={cur} onChange={e => moveSlot(s.id, Number(e.target.value))}>
           {[1, 2, 3, 4, 5, 6].map(d => <option key={d} value={d}>Day {d}{d === s.day ? ' (planned)' : ''}</option>)}
         </select>
-        <button type="button" className="btn sm ghost skipbtn" aria-pressed={sk} onClick={() => skipCard(s.id)}>{sk ? 'Undo skip' : 'Skip'}</button>
+        <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={sk ? `Undo skip for ${cardName}` : `Skip ${cardName} this week`} onClick={() => skipCard(s.id)}>{sk ? 'Undo skip' : 'Skip'}</button>
       </div>
     </article>
   );

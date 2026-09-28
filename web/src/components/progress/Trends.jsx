@@ -45,19 +45,19 @@ function SetsChart({ keys, byWeek }) {
       <h2>Sets logged per week</h2>
       {!total ? <p className="note">Logged sets show up here, one bar per week.</p> : (
         <>
-          <div className="bars" role="img" aria-label={`Sets logged per week: ${keys.map(k => `week of ${fmtShort(parseDate(k))}, ${fmtSets(byWeek[k].sets)}`).join('; ')}`}>
-            <div className="bgrid">{grid.map(v => <span key={v} style={{ bottom: `${v / top * 100}%` }}><b>{v}</b></span>)}</div>
-            <div className="bcols">
+          <div className="bars">
+            <div className="bgrid" aria-hidden="true">{grid.map(v => <span key={v} style={{ bottom: `${v / top * 100}%` }}><b>{v}</b></span>)}</div>
+            <div className="bcols" role="list" aria-label="Sets logged per week">
               {keys.map((k, i) => {
                 const r = byWeek[k]; const cur = k === thisSun; const pct = r.sets / top * 100;
                 const tip = `Week of ${fmtShort(parseDate(k))}${cur ? ' (so far)' : ''}: ${fmtSets(r.sets)} set${r.sets === 1 ? '' : 's'} in ${r.sessions} session${r.sessions === 1 ? '' : 's'}`;
                 return (
-                  <div key={k} className={`bcol${cur ? ' cur' : ''}`} data-tip={tip} tabIndex={0} aria-label={tip}>
-                    <div className="bplot">
+                  <div key={k} role="listitem" className={`bcol${cur ? ' cur' : ''}`} data-tip={tip} tabIndex={0} aria-label={tip}>
+                    <div className="bplot" aria-hidden="true">
                       {r.sets > 0 && <i style={{ height: `${pct}%` }} />}
                       {cur && r.sets > 0 && <em style={{ bottom: `${pct}%` }}>{fmtSets(r.sets)}</em>}
                     </div>
-                    <span className={`bx${(keys.length - 1 - i) % 2 ? ' alt' : ''}`}>{cur ? 'Now' : mdLabel(k)}</span>
+                    <span aria-hidden="true" className={`bx${(keys.length - 1 - i) % 2 ? ' alt' : ''}`}>{cur ? 'Now' : mdLabel(k)}</span>
                   </div>
                 );
               })}
@@ -85,13 +85,13 @@ function ChangeChart({ changes }) {
   return (
     <section className="panel tchart">
       <h2>Weight change by exercise</h2>
-      <div className={`chg${mixed ? ' mixed' : ''}`}>
+      <div className={`chg${mixed ? ' mixed' : ''}`} role="list" aria-label="Weight change by exercise">
         {shown.map(c => {
           const w = Math.abs(c.pct) / lim * span; const dir = c.pct > 0 ? 'up' : c.pct < 0 ? 'down' : 'flat';
           const name = exInfo(cfg, c.id).n;
           const tip = `${name} · ${c.ph ? PHASES[c.ph].label : 'No phase'}: ${c.w0} → ${c.w1} lb (${signed(c.pct, 0)}%) from ${fmtShort(parseDate(c.d0))} to ${fmtShort(parseDate(c.d1))}, ${c.n} sessions`;
           return (
-            <div key={`${c.id}|${c.ph}`} className="chrow" data-tip={tip} tabIndex={0} aria-label={tip}>
+            <div key={`${c.id}|${c.ph}`} role="listitem" className="chrow" data-tip={tip} tabIndex={0} aria-label={tip}>
               <span className="chn"><span className="dot" data-p={c.ph || ''} />{name}</span>
               <span className="chbar"><span className="axis" />
                 {dir === 'flat' ? <i className="flat" /> : <i className={dir} style={{ [dir === 'up' ? 'left' : 'right']: `${dir === 'up' ? zero : 100 - zero}%`, width: `${w}%` }} />}
@@ -116,7 +116,7 @@ function BodyChart() {
       <h2>Body weight</h2>
       {L.length > 1 ? <LineChart entries={L.map(e => ({ d: e.d, w: e.w }))} height={180} label="Body weight over time" /> : <p className="note">One more weekly weigh-in and the trend line starts.</p>}
       <table className="hist bwtab">
-        <thead><tr><th>Date</th><th className="num">Weight</th><th className="num">Change</th><th /></tr></thead>
+        <thead><tr><th>Date</th><th className="num">Weight</th><th className="num">Change</th><th><span className="sr">Delete</span></th></tr></thead>
         <tbody>
           {rec.map((e, i) => {
             const p = rec[i + 1];
@@ -145,22 +145,29 @@ function MuscleHeat({ keys }) {
       <h2>Muscles trained per week</h2>
       {!any ? <p className="note">Once you log sessions, this shows which muscles got work each week. Grey means none.</p> : (
         <>
-          <div className="heat" style={{ gridTemplateColumns: `minmax(96px,160px) repeat(${K.length},minmax(0,72px))` }} role="table" aria-label="Sets per muscle per week">
-            <span role="columnheader" />
-            {K.map((k, i) => <span key={k} className={`hx${(K.length - 1 - i) % 2 ? ' alt' : ''}`} role="columnheader">{k === thisSun ? 'Now' : mdLabel(k)}</span>)}
+          <div className="sr"><table>
+            <caption>Sets per muscle per week, from what you logged</caption>
+            <thead><tr><th scope="col">Muscle</th>{K.map(k => <th scope="col" key={k}>Week of {fmtShort(parseDate(k))}{k === thisSun ? ' (so far)' : ''}</th>)}</tr></thead>
+            <tbody>
+              {M_KEYS.map(m => <tr key={m}><th scope="row">{MUSCLES[m].n}</th>{K.map(k => <td key={k}>{data[m][k] ? fmtSets(data[m][k]) : '0'}</td>)}</tr>)}
+            </tbody>
+          </table></div>
+          <div className="heat" aria-hidden="true" style={{ gridTemplateColumns: `minmax(96px,160px) repeat(${K.length},minmax(0,72px))` }}>
+            <span />
+            {K.map((k, i) => <span key={k} className={`hx${(K.length - 1 - i) % 2 ? ' alt' : ''}`}>{k === thisSun ? 'Now' : mdLabel(k)}</span>)}
             {M_KEYS.flatMap(m => {
               const row = K.map(k => data[m][k]); const none = row.every(v => !v);
               return [
-                <span key={m} className={`hn${none ? ' none' : ''}`} role="rowheader">{MUSCLES[m].n}</span>,
+                <span key={m} className={`hn${none ? ' none' : ''}`}>{MUSCLES[m].n}</span>,
                 ...K.map((k, i) => {
                   const v = row[i];
                   const tip = `${MUSCLES[m].n}, week of ${fmtShort(parseDate(k))}${k === thisSun ? ' (so far)' : ''}: ${v ? fmtSets(v) + ' set' + (v === 1 ? '' : 's') : 'not trained'}`;
-                  return <i key={`${m}-${k}`} className={`hc l${level(v)}${k === thisSun ? ' cur' : ''}`} role="cell" data-tip={tip} aria-label={tip} />;
+                  return <i key={`${m}-${k}`} className={`hc l${level(v)}${k === thisSun ? ' cur' : ''}`} data-tip={tip} />;
                 }),
               ];
             })}
           </div>
-          <div className="legend heatleg"><span className="sw l0" />none <span className="sw l1" />1–4 <span className="sw l2" />5–9 <span className="sw l3" />10–20 <span className="sw l4" />20+ sets</div>
+          <div className="legend heatleg" aria-hidden="true"><span className="sw l0" />none <span className="sw l1" />1–4 <span className="sw l2" />5–9 <span className="sw l3" />10–20 <span className="sw l4" />20+ sets</div>
           <p className="note">From what you logged, not the plan. Secondary muscles count as half a set, the same as the Muscles tab.</p>
         </>
       )}
@@ -176,6 +183,7 @@ export default function Trends() {
   const changes = weightChanges(cfg, logs, keys[Math.max(0, keys.length - 8)]);
   return (
     <>
+      <h2 className="sr">Summary</h2>
       <KpiTiles keys={keys} byWeek={byWeek} changes={changes} />
       <div className="tgrid">
         <SetsChart keys={keys} byWeek={byWeek} />

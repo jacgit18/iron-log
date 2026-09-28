@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAppStore } from './store/useAppStore.js';
 import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
+import useFocusKeeper from './hooks/useFocusKeeper.js';
 import Board from './components/board/Board.jsx';
 import Progress from './components/progress/Progress.jsx';
 import Muscles from './components/muscles/Muscles.jsx';
@@ -40,8 +41,21 @@ export default function App() {
   const progKey = useAppStore(s => s.activeProgKey());
   const { init, setTab, closeModal } = useAppStore.getState();
   useTooltips();
+  useFocusKeeper();
 
   useEffect(() => { init(); }, [init]);
+  const label = TABS.find(([k]) => k === tab)[1];
+  useEffect(() => { document.title = `${label} · Iron Log`; }, [label]);
+
+  // Tabs pattern: arrows / Home / End move between tabs and select them.
+  const onTabKey = e => {
+    const i = TABS.findIndex(([k]) => k === tab);
+    const n = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+    if (n == null) return;
+    e.preventDefault();
+    const k = TABS[(n + TABS.length) % TABS.length][0];
+    setTab(k); document.getElementById(`tab-${k}`).focus();
+  };
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') closeModal(); };
     document.addEventListener('keydown', onKey);
@@ -51,24 +65,30 @@ export default function App() {
   const View = TABS.find(([k]) => k === tab)[2];
   return (
     <>
+      <a className="skip" href="#view">Skip to content</a>
       <div className="wrap">
         <header className="top">
           <h1>Iron Log</h1>
           <div className="meta">
             <span className="pill prog">{progName(cfg, progKey)}</span>
             <span className="pill">Mode {cfg.mode}</span>
-            <span className="saveflag">{!ready && !saveFlag ? 'Loading…' : saveFlag}</span>
+            <span className="saveflag" role="status" aria-live="polite" aria-atomic="true">{!ready && !saveFlag ? 'Loading…' : saveFlag}</span>
           </div>
-          <nav className="tabs" role="tablist">
-            {TABS.map(([k, label]) => (
-              <button type="button" role="tab" key={k} id={`tab-${k}`} aria-selected={tab === k} onClick={() => setTab(k)}>{label}</button>
-            ))}
+          <nav className="tabs" aria-label="Sections">
+            <div role="tablist" aria-label="Sections" className="tablist" onKeyDown={onTabKey}>
+              {TABS.map(([k, l]) => (
+                <button type="button" role="tab" key={k} id={`tab-${k}`} aria-selected={tab === k} aria-controls="view"
+                  tabIndex={tab === k ? 0 : -1} onClick={() => setTab(k)}>{l}</button>
+              ))}
+            </div>
           </nav>
         </header>
-        <main id="view"><View /></main>
+        <main>
+          <div id="view" role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}><View /></div>
+        </main>
       </div>
       <Modal />
-      <TimerBar />
+      <aside className="timer-region" aria-label="Timer"><TimerBar /></aside>
     </>
   );
 }

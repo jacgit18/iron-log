@@ -66,8 +66,8 @@ function PhasePanel() {
               return (
                 <tr key={k}>
                   <td><span className="dot" data-p={k} /> {PHASES[k].label}</td>
-                  <td><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} min="0" max="110" step="1" value={pct} onCommit={v => st.setPct(k, v)} /> %</td>
-                  <td><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} value={rx} onCommit={v => st.setRxOverride(k, v)} /></td>
+                  <td><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={v => st.setPct(k, v)} /> %</td>
+                  <td><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={v => st.setRxOverride(k, v)} /></td>
                 </tr>
               );
             })}

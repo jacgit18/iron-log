@@ -98,7 +98,7 @@ export default function LogSheet({ slotId, idx }) {
           <button type="button" className="btn sm ghost" onClick={() => setRows(rs => (rs.length > 1 ? rs.slice(0, -1) : rs))}>− Set</button>
           <span className="note">Change set 1 and the sets below follow, until you edit them.</span>
         </div>
-        {err && <p className="note">{err}</p>}
+        {err && <p className="note err" role="alert" id="log-err">{err}</p>}
       </div>
       <label className="field">Note
         <input type="text" value={note} placeholder="Form, how it felt, equipment" onChange={e => setNote(e.target.value)} />

@@ -25,7 +25,7 @@ export default function DetailSheet({ exId }) {
         </>
       )}
       <table className="hist">
-        <thead><tr><th>Date</th><th>Phase</th><th className="num">Load</th><th className="num">Volume</th><th>Note</th><th /></tr></thead>
+        <thead><tr><th>Date</th><th>Phase</th><th className="num">Load</th><th className="num">Volume</th><th>Note</th><th><span className="sr">Delete</span></th></tr></thead>
         <tbody>
           {L.map((e, i) => ({ e, i })).reverse().map(({ e, i }) => (
             <tr key={`${i}-${e.d}`}>
@@ -34,7 +34,7 @@ export default function DetailSheet({ exId }) {
               <td className="num">{e.w != null && e.w !== '' ? `${e.w} lb` : 'BW'}</td>
               <td className="num">{volText(e)}</td>
               <td>{e.n || ''}</td>
-              <td><ArmedButton className="btn sm ghost" aria-label="Delete entry" label="✕" armedLabel="Delete?" onConfirm={() => deleteLog(exId, i)} /></td>
+              <td><ArmedButton className="btn sm ghost" aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onConfirm={() => deleteLog(exId, i)} /></td>
             </tr>
           ))}
         </tbody>

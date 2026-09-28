@@ -1,18 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
-// Destructive action that needs a second tap within 3 seconds; the label changes to confirm.
-export default function ArmedButton({ label, armedLabel, onConfirm, ...rest }) {
+// Destructive action that needs a second press to confirm. It stays armed until you press it again or
+// move away (no time limit), and the armed state is part of its accessible name.
+export default function ArmedButton({ label, armedLabel, onConfirm, onBlur, ...rest }) {
   const [armed, setArmed] = useState(false);
-  const t = useRef(null);
-  useEffect(() => () => clearTimeout(t.current), []);
+  const name = rest['aria-label'];
   return (
     <button
       type="button"
       {...rest}
-      onClick={() => {
-        if (!armed) { setArmed(true); clearTimeout(t.current); t.current = setTimeout(() => setArmed(false), 3000); return; }
-        clearTimeout(t.current); setArmed(false); onConfirm();
-      }}
+      aria-label={armed && name ? `${armedLabel} ${name}` : name}
+      onBlur={e => { setArmed(false); onBlur?.(e); }}
+      onClick={() => { if (!armed) { setArmed(true); return; } setArmed(false); onConfirm(); }}
     >{armed ? armedLabel : label}</button>
   );
 }

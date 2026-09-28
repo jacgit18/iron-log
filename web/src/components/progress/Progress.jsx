@@ -34,14 +34,14 @@ function History() {
           <div className="wkrow" key={r.key}>
             <span className="wkdate">{fmtShort(r.start)}{r.key === thisSun && <> <small>this week</small></>}</span>
             <span className="pill">{r.pk}</span>
-            <span className="cells" aria-label={`${r.full} of 6 days complete`}>
-              {r.days.map((x, i) => <i key={i} className={`c${x}`} title={`Day ${i + 1}: ${x === 2 ? 'complete' : x === 1 ? 'partial' : 'not started'}`} />)}
+            <span className="cells" role="img" aria-label={`${r.full} of 6 days complete: ${r.days.map((x, i) => `day ${i + 1} ${x === 2 ? 'complete' : x === 1 ? 'partly done' : 'not started'}`).join(', ')}`}>
+              {r.days.map((x, i) => <i key={i} className={`c${x}`} />)}
             </span>
             <span className="wknum"><b>{r.full}</b>/6 days · {r.ex}/{r.total}</span>
           </div>
         ))}
       </div>
-      <p className="note"><i className="cleg c2" /> complete <i className="cleg c1" /> partly done <i className="cleg c0" /> not started</p>
+      <p className="note" aria-hidden="true"><i className="cleg c2" /> complete <i className="cleg c1" /> partly done <i className="cleg c0" /> not started</p>
     </section>
   );
 }

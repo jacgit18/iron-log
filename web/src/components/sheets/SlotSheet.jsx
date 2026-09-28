@@ -89,7 +89,7 @@ export default function SlotSheet({ idx }) {
       </div>
       {d.items.map((it, k) => <ItemFields key={k} it={it} k={k} type={d.type} exIds={exIds} cfg={cfg} onChange={setItem} />)}
       <label className="field">Card note<input value={d.note} placeholder="e.g. Whichever is free" onChange={e => setD(x => ({ ...x, note: e.target.value }))} /></label>
-      {err && <p className="note">{err}</p>}
+      {err && <p className="note err" role="alert">{err}</p>}
       <div className="actions">
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
         <button type="submit" className="btn primary">Save</button>

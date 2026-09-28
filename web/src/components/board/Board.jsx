@@ -5,6 +5,7 @@ import { monday, ymd, addDays, fmtShort } from '../../lib/dates.js';
 import { tally, currentLayout, isOpen, isSkipped, programFor, progName } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSinceBackup } from '../../lib/export.js';
+import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
 
@@ -43,7 +44,7 @@ export default function Board() {
   const hideTip = k => { LS.set(k, 1); forceTips(n => n + 1); };
 
   const moveRef = useRef(null);
-  useEffect(() => { if (moveRef.current) moveRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [moveNote]);
+  useEffect(() => { if (moveRef.current) moveRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [moveNote]);
 
   // Desktop drag and drop between day columns.
   const [dragId, setDragId] = useState(null);
@@ -129,13 +130,17 @@ export default function Board() {
       )}
       <BodyWeightRow key={wk} />
 
-      <div className="daytabs" role="tablist" aria-label="Day">
+      <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
+        const n = { ArrowRight: day + 1, ArrowLeft: day - 1, Home: 1, End: 6 }[e.key]; if (n == null) return;
+        e.preventDefault(); const d = ((n - 1 + 6) % 6) + 1; st.setMDay(d); document.getElementById(`daytab-${d}`).focus();
+      }}>
         {[1, 2, 3, 4, 5, 6].map(d => {
           const t = tally(cols[d], week);
           return (
-            <button type="button" role="tab" key={d} aria-selected={d === day} className={t.full ? 'full' : ''}
-              onClick={() => { st.setMDay(d); window.scrollTo({ top: 0 }); }}>
-              <b>D{d}</b><span>{t.full ? '✓' : `${t.done}/${t.total}`}</span>
+            <button type="button" role="tab" key={d} id={`daytab-${d}`} aria-selected={d === day} aria-controls={`col-${d}`} tabIndex={d === day ? 0 : -1}
+              className={t.full ? 'full' : ''} aria-label={`Day ${d}, ${t.full ? 'all done' : `${t.done} of ${t.total} done`}`}
+              onClick={() => { st.setMDay(d); window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' }); }}>
+              <b aria-hidden="true">D{d}</b><span aria-hidden="true">{t.full ? '✓' : `${t.done}/${t.total}`}</span>
             </button>
           );
         })}
@@ -155,7 +160,7 @@ export default function Board() {
           let lastSec = null;
           return (
             <section
-              key={d}
+              key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`}
               className={`col${t.full ? ' complete' : ''}${d === day ? ' sel' : ''}${overDay === d ? ' over' : ''}`}
               onDragOver={e => { if (!dragId) return; e.preventDefault(); setOverDay(d); }}
               onDrop={e => { if (!dragId) return; e.preventDefault(); const id = dragId; onDragEnd(); st.moveSlot(id, d); }}
@@ -164,7 +169,7 @@ export default function Board() {
                 <input type="checkbox" className="chk" id={`day-${d}`} checked={t.full} aria-label={`Mark all of Day ${d} done`}
                   onChange={e => st.checkDay(d, e.target.checked)} />
                 <div>
-                  <h3>{dayDef.title}</h3>
+                  <h3 id={`colh-${d}`}>{dayDef.title}</h3>
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                 </div>
                 <span className="count">{t.done}/{t.total}</span>

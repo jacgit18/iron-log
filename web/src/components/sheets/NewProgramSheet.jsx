@@ -18,13 +18,13 @@ export default function NewProgramSheet() {
     <Sheet as="form" noValidate onSubmit={submit}>
       <h2 className="cond">Create a program</h2>
       <p className="note">It starts as a copy you can change freely. It goes into your program library, not the rotation, until you load it into A or B.</p>
-      <label className="field">Name<input maxLength={60} value={name} autoFocus required placeholder="e.g. Winter strength block" onChange={e => setName(e.target.value)} /></label>
+      <label className="field">Name<input maxLength={60} value={name} required aria-invalid={!!err} aria-describedby={err ? 'np-err' : undefined} placeholder="e.g. Winter strength block" onChange={e => setName(e.target.value)} /></label>
       <label className="field">Start from
         <select value={from} onChange={e => setFrom(e.target.value)}>
           {['A', 'B'].map(k => <option key={k} value={k}>A copy of {progName(cfg, k)} (Program {k})</option>)}
         </select>
       </label>
-      {err && <p className="note">{err}</p>}
+      {err && <p className="note err" role="alert" id="np-err">{err}</p>}
       <div className="actions">
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
         <button type="submit" className="btn primary">Create and edit</button>

@@ -19,7 +19,7 @@ function LibRow({ name, meta, inUse, onLoad, loadLabel, extra }) {
     <div className={`edrow${inUse ? ' inuse' : ''}`}>
       <div className="edmain"><b>{name}</b><span className="note">{meta}</span></div>
       <div className="edbtns">
-        {inUse ? <span className="pill">In use</span> : <ArmedButton className="btn sm" label="Load" armedLabel={loadLabel} onConfirm={onLoad} />}
+        {inUse ? <span className="pill">In use</span> : <ArmedButton className="btn sm" aria-label={`Load ${name}`} label="Load" armedLabel={loadLabel} onConfirm={onLoad} />}
         {extra}
       </div>
     </div>
@@ -48,8 +48,8 @@ function Library({ k, custom }) {
             key={it.id} name={it.name} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k)}
             meta={`${it.created ? 'Created from' : 'From'} ${progName(cfg, it.from)} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto ? ' · auto-saved' : ''}`}
             extra={<>
-              <button type="button" className="btn sm" onClick={() => { st.setEdProg('L:' + it.id); st.setEdDay(1); window.scrollTo({ top: 0 }); }}>Edit</button>
-              <ArmedButton className="btn sm ghost" label="Delete" armedLabel="Delete?" onConfirm={() => st.deleteLibItem(it.id)} />
+              <button type="button" className="btn sm" aria-label={`Edit ${it.name}`} onClick={() => { st.setEdProg('L:' + it.id); st.setEdDay(1); window.scrollTo({ top: 0 }); }}>Edit</button>
+              <ArmedButton className="btn sm ghost" aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Delete?" onConfirm={() => st.deleteLibItem(it.id)} />
             </>}
           />
         ))}
@@ -91,6 +91,11 @@ export default function Editor() {
   const st = useAppStore.getState();
   // Pin the editor to the program it opened on, like the original, so it doesn't follow later board changes.
   useEffect(() => { if (edProg !== k) st.setEdProg(k); }, [edProg, k, st]);
+  // When the panel that held the focused button is replaced (edit/create/load), land on the editor heading.
+  useEffect(() => {
+    const a = document.activeElement;
+    if (!a || a === document.body || !a.isConnected) document.getElementById('ed-title')?.focus();
+  }, [k]);
 
   const lib = !!item; const day = prog.days[edDay - 1];
   const custom = !lib && prog !== BUILTIN[k];
@@ -121,7 +126,7 @@ export default function Editor() {
         </label>
       )}
       <section className="panel edpanel">
-        <div className="inline" style={{ flexWrap: 'wrap' }}><h2 style={{ marginRight: 'auto' }}>{edName} · {day.title}</h2></div>
+        <div className="inline" style={{ flexWrap: 'wrap' }}><h2 id="ed-title" tabIndex={-1} style={{ marginRight: 'auto' }}>{edName} · {day.title}</h2></div>
         <label className="field">Day label
           <CommitInput key={`${k}:${edDay}:${day.sub || ''}`} id="ed-sub" value={day.sub || ''} placeholder="e.g. Lower body + reactive power" onCommit={st.setDaySub} />
         </label>
@@ -140,10 +145,10 @@ export default function Editor() {
                     <span className="note">{sl.items.map(it => [it.ph ? PHASES[it.ph].label : 'No phase', it.w != null ? it.w + ' lb' : (it.bw ? 'BW' : ''), it.rx || ''].filter(Boolean).join(' · ')).join('  |  ')}</span>
                   </div>
                   <div className="edbtns">
-                    <button type="button" className="btn sm" aria-label="Move up" disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}>↑</button>
-                    <button type="button" className="btn sm" aria-label="Move down" disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}>↓</button>
-                    <button type="button" className="btn sm" onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
-                    <ArmedButton className="btn sm ghost" label="Remove" armedLabel="Remove?" onConfirm={() => st.removeEdSlot(i)} />
+                    <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}>↑</button>
+                    <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}>↓</button>
+                    <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
+                    <ArmedButton className="btn sm ghost" id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Remove?" onConfirm={() => st.removeEdSlot(i)} />
                   </div>
                 </div>
               </Fragment>
