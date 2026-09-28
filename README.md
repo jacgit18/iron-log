@@ -139,7 +139,7 @@ npx playwright install chromium
 node tools/screenshots.mjs      # builds the app, then takes the screenshots
 ```
 
-`npm run lint` checks the code with oxlint. `npm test` runs the unit tests in `src/lib/*.test.js`, which cover the program rotation, done and skipped counts, progression and stall detection, and the data file and Excel import and export.
+`npm run lint` checks the code with oxlint. `npm test` runs the unit tests (`*.test.js` next to the code in `src/lib` and `src/store`). They cover the program rotation, done and skipped counts, check-offs, progression and stalls, the Progress numbers, muscle volume, the program editor, the timers, GitHub backup, and import and export. `src/test/fixtures/iron-log-data.v1.json` is a sample data file that pins down the backup format: if its test fails, the format changed, so bump the format number rather than editing the sample.
 
 ## Notes
 
