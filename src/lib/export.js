@@ -2,7 +2,9 @@
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
 import { PHASES, PH_KEYS, BUILTIN, slotsFor, exInfo } from './data.js';
 import { ymd, fmtShort } from './dates.js';
-import { setsOfEntry, setVal, rxOf, isItemDone, normWeek, progName } from './logic.js';
+import { setsOfEntry, setVal, rxOf, isItemDone, normWeek, progName, AUTO_NOTE } from './logic.js';
+
+const noteOf = e => e.n || (e.auto ? AUTO_NOTE : '');
 import { MUSCLES, tagsOf, muscleNames } from './muscles.js';
 import { WEEK_RE, weekOfDate, entryWeek, weekSummary } from './trends.js';
 import { bwSorted } from './body.js';
@@ -19,7 +21,7 @@ export function buildCsv(S) {
   const { cfg, logs } = S;
   const head = ['date', 'exercise', 'phase', 'weight_lb', 'sets', 'reps', 'hold_s', 'set_detail', 'primary_muscles', 'secondary_muscles', 'note', 'program_slot', 'week_of'];
   const rows = [];
-  Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => rows.push([e.d, exInfo(cfg, id).n, e.ph ? PHASES[e.ph].label : '', e.w ?? '', e.s ?? '', e.r ?? '', e.sec ?? '', setDetail(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), e.n || '', e.slot || '', e.wk || ''])));
+  Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => rows.push([e.d, exInfo(cfg, id).n, e.ph ? PHASES[e.ph].label : '', e.w ?? '', e.s ?? '', e.r ?? '', e.sec ?? '', setDetail(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), noteOf(e), e.slot || '', e.wk || ''])));
   rows.sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0])));
   return [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
 }
@@ -32,7 +34,7 @@ function sheet(X, rows, widths) {
 }
 function sessionRows(S, filter) {
   const { cfg, logs } = S; const rows = [];
-  Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => { if (!filter || filter(e)) rows.push([e.d, e.wk || weekOfDate(e.d), exInfo(cfg, id).n, phaseLabel(e.ph), e.w ?? '', e.s ?? '', e.sec ? '' : (e.r ?? ''), e.sec ?? '', setDetail(e), entryVolume(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), e.n || '', e.slot || '']); }));
+  Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => { if (!filter || filter(e)) rows.push([e.d, e.wk || weekOfDate(e.d), exInfo(cfg, id).n, phaseLabel(e.ph), e.w ?? '', e.s ?? '', e.sec ? '' : (e.r ?? ''), e.sec ?? '', setDetail(e), entryVolume(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), noteOf(e), e.slot || '']); }));
   rows.sort((a, b) => (a[0] === b[0] ? a[2].localeCompare(b[2]) : a[0].localeCompare(b[0])));
   return [['Date', 'Week of', 'Exercise', 'Phase', 'Weight (lb)', 'Sets', 'Reps', 'Hold (s)', 'Set by set', 'Volume (lb)', 'Primary muscles', 'Secondary muscles', 'Note', 'Program slot'], ...rows];
 }

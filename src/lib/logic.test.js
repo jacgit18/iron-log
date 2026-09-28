@@ -4,7 +4,7 @@ import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
-  programWeights, bestByPhase,
+  programWeights, bestByPhase, autoLogs,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -164,5 +164,39 @@ describe('weights per phase for the 1RM table', () => {
   });
   it('Cable Punch ISO hold starts at 30 lb', () => {
     expect(programWeights(cfg(), slotsFor(BUILTIN.B), 'cablepunch')).toEqual([{ ph: 'iso', w: 30 }]);
+  });
+});
+
+describe('check-offs log the planned numbers', () => {
+  const slots = slotsFor(BUILTIN.A);
+  const run = (logs, before, after) => autoLogs(cfg(), logs, slots, normWeek(before), normWeek(after), '2026-09-20', '2026-09-22');
+
+  it('logs the card’s target when an exercise is checked off', () => {
+    const out = run({}, {}, { done: { 'A-d3s1': true } });
+    expect(out.hack).toEqual([{ d: '2026-09-22', ph: 'hyp', w: 270, s: 4, r: 15, sets: Array(4).fill({ w: 270, r: 15 }), slot: 'A-d3s1', wk: '2026-09-20', auto: true }]);
+  });
+  it('logs each half of a superset as it is checked', () => {
+    const one = run({}, {}, { done: { 'A-d2s5#1': true } });
+    expect(Object.keys(one)).toEqual(['chestpress']);
+    const both = run({}, {}, { done: { 'A-d2s5': true } });
+    expect(Object.keys(both).sort()).toEqual(['chestpress', 'hipthrust']);
+    expect(both.hipthrust[0]).toMatchObject({ ph: 'strength', w: 320, s: 4, r: 6 });
+  });
+  it('does not log over a session already logged for that card this week', () => {
+    const logs = { hack: [{ d: '2026-09-21', ph: 'hyp', w: 275, s: 4, r: 12, slot: 'A-d3s1', wk: '2026-09-20' }] };
+    expect(run(logs, {}, { done: { 'A-d3s1': true } })).toEqual({});
+  });
+  it('removes only its own entry when unchecked', () => {
+    const real = { d: '2026-09-13', ph: 'hyp', w: 270, s: 4, r: 15, slot: 'A-d3s1', wk: '2026-09-13' };
+    const auto = { d: '2026-09-22', ph: 'hyp', w: 270, s: 4, r: 15, slot: 'A-d3s1', wk: '2026-09-20', auto: true };
+    expect(run({ hack: [real, auto] }, { done: { 'A-d3s1': true } }, {})).toEqual({ hack: [real] });
+    const realThisWeek = { ...real, d: '2026-09-21', wk: '2026-09-20' };
+    expect(run({ hack: [realThisWeek] }, { done: { 'A-d3s1': true } }, {})).toEqual({}); // what you logged stays
+  });
+  it('does not raise the suggested weight or flag a stall on check-offs alone', () => {
+    const a = (d, wk) => ({ d, ph: 'hyp', w: 270, s: 4, r: 15, slot: 'A-d3s1', wk, auto: true });
+    const logs = { hack: [a('2026-09-01', '2026-08-30'), a('2026-09-08', '2026-09-06'), a('2026-09-15', '2026-09-13')] };
+    expect(targetOf(cfg(), logs, { ex: 'hack', ph: 'hyp' }, 'hyp')).toEqual({ w: 270, src: 'last session' });
+    expect(stallOf(cfg(), logs, 'hack', 'hyp')).toBeNull();
   });
 });

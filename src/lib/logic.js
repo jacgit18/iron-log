@@ -22,8 +22,10 @@ export function rxOf(cfg, item, ph) { if (item.rx && ph === item.ph) return item
 
 // Stall: the last 3 sessions of a lift in one phase (one per day) never went above the first of them in weight,
 // the latest didn't beat the first on total reps (or hold time), and they span at least 2 different weeks. Not flagged when the app is already suggesting a heavier weight.
+// Both use only sessions you logged yourself: check-offs log the target, so counting them would raise
+// the suggested weight on check-offs alone and call a lift stalled that you never logged.
 export function stallOf(cfg, logs, exId, ph) {
-  const byDay = {}; (logs[exId] || []).filter(e => (e.ph || null) === (ph || null)).forEach(e => { byDay[e.d] = e; });
+  const byDay = {}; (logs[exId] || []).filter(e => !e.auto && (e.ph || null) === (ph || null)).forEach(e => { byDay[e.d] = e; });
   const L = Object.keys(byDay).sort().map(d => byDay[d]).slice(-3);
   if (L.length < 3 || L.some(e => !(Number(e.w) > 0))) return null;
   const w0 = Number(L[0].w); if (L.some(e => Number(e.w) > w0)) return null;
@@ -34,7 +36,7 @@ export function stallOf(cfg, logs, exId, ph) {
   return { w: Number(L[2].w), since: L[0].d, n: 3 };
 }
 export function progressionOf(cfg, logs, item, ph) {
-  const byDay = {}; (logs[item.ex] || []).filter(e => (e.ph || null) === (ph || null)).forEach(e => { byDay[e.d] = e; });
+  const byDay = {}; (logs[item.ex] || []).filter(e => !e.auto && (e.ph || null) === (ph || null)).forEach(e => { byDay[e.d] = e; });
   const L = Object.keys(byDay).sort().map(d => byDay[d]);
   if (L.length < 2) return null;
   const [a, b] = L.slice(-2); const w = Number(b.w);
@@ -191,6 +193,32 @@ export function planRows(cfg, logs, it, ph) {
   const iso = ph === 'iso'; const m = rxOf(cfg, it, ph).match(/(\d+)\s*×\s*(\d+)/); const n = m ? Number(m[1]) : 3; const t = targetOf(cfg, logs, it, ph);
   const reps = m ? Number(m[2]) : null; const hold = iso ? ((lastLog(logs, it.ex, 'iso') || {}).sec || reps) : null;
   return Array.from({ length: n }, () => iso ? { w: t.w ?? null, sec: hold } : { w: t.w ?? null, r: reps });
+}
+
+/* ---------- Check-offs log the plan ----------
+   Checking an exercise off without logging it records the target shown on its card (marked auto), so it
+   shows in Progress. Unchecking removes that entry, and logging real numbers for the slot that week
+   replaces it. Returns only the exercises whose entries changed: {exId: entries}. */
+export const AUTO_NOTE = 'From check-off';
+const weekOfEntry = e => e.wk || ymd(monday(parseDate(e.d)));
+export function autoLogs(cfg, logs, slots, before, after, wk, date) {
+  const out = {};
+  slots.forEach(s => s.items.forEach((it, i) => {
+    const was = isItemDone(s, i, before), now = isItemDone(s, i, after);
+    if (was === now) return;
+    const L = out[it.ex] || logs[it.ex] || [];
+    const here = e => e.slot === s.id && weekOfEntry(e) === wk;
+    if (now) {
+      if (L.some(here)) return; // already logged for this card this week
+      const ph = phaseOf(cfg, after, s, i);
+      const e = { d: date, ph, ...summarizeSets(planRows(cfg, logs, it, ph), ph === 'iso'), slot: s.id, wk, auto: true };
+      out[it.ex] = [...L, e].sort((a, b) => a.d.localeCompare(b.d));
+    } else {
+      const keep = L.filter(e => !(e.auto && here(e)));
+      if (keep.length !== L.length) out[it.ex] = keep;
+    }
+  }));
+  return out;
 }
 
 // Today when viewing the current week (or the day after it ends), otherwise the viewed week's Sunday.

@@ -6,6 +6,7 @@ import { MON, fmtShort } from '../../lib/dates.js';
 import { programFor, progName, programWeights, bestByPhase } from '../../lib/logic.js';
 import { backupCfg, ghCfg } from '../../lib/export.js';
 import CommitInput from '../CommitInput.jsx';
+import ArmedButton from '../ArmedButton.jsx';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { BackupMessage } from '../progress/Progress.jsx';
@@ -197,6 +198,40 @@ function BackupPanel() {
   );
 }
 
+const ERASE = [
+  ['logs', 'Logged sessions', 'every weight, set and rep, including ones logged by check-offs'],
+  ['weeks', 'Weekly check-offs', 'checked, skipped and moved cards, and phase changes, for every week'],
+  ['body', 'Body weight', ''],
+  ['programs', 'Edited programs and saved versions', 'the board goes back to the original programs'],
+  ['settings', 'Settings and 1RMs', 'program mode, rest time, phase percentages, 1RMs, phase defaults, custom exercises and muscle tags'],
+];
+function ErasePanel() {
+  const dl = useAppStore(s => s.dl); const exporting = useAppStore(s => s.exporting); const storeMode = useAppStore(s => s.storeMode);
+  const st = useAppStore.getState();
+  const [sel, setSel] = useState(() => Object.fromEntries(ERASE.map(([k]) => [k, true])));
+  const any = Object.values(sel).some(Boolean);
+  return (
+    <section className="panel erase">
+      <h2>Erase data</h2>
+      <p>Deletes what you check below {storeMode === 'db' ? 'from your saved data' : 'from this browser'}, to start the tracker over. It can't be undone here, so export your data or back up to GitHub first.</p>
+      <fieldset>
+        <legend className="sr">What to erase</legend>
+        {ERASE.map(([k, label, hint]) => (
+          <label className="inline" key={k}>
+            <input type="checkbox" checked={sel[k]} onChange={e => setSel(v => ({ ...v, [k]: e.target.checked }))} />
+            <span><b>{label}</b>{hint && <span className="note">: {hint}</span>}</span>
+          </label>
+        ))}
+      </fieldset>
+      <p className="note">Kept: display options, your GitHub token and backup settings, and backups you've already made. If you back up after erasing, the backup saves the erased state, and earlier backups stay in the branch history.</p>
+      <div className="actions" style={{ justifyContent: 'flex-start' }}>
+        {dl && <button type="button" className="btn" disabled={!!exporting} onClick={st.downloadData}>Export all data first</button>}
+        <ArmedButton className="btn danger" disabled={!any} label="Erase selected data" armedLabel="Tap again to erase" onConfirm={() => st.eraseData(sel)} />
+      </div>
+    </section>
+  );
+}
+
 // Standalone app: back up to a GitHub repo with a token the viewer pastes in once per device.
 function GitHubBackup() {
   const cfg = useAppStore(s => s.cfg); const token = useAppStore(s => s.ghToken); const busy = useAppStore(s => s.backupBusy);
@@ -293,6 +328,7 @@ export default function Settings() {
       <DataPanel key={importCount} />
       <BackupPanel />
       <RmPanel />
+      <ErasePanel />
     </div>
   );
 }

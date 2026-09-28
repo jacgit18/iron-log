@@ -1,7 +1,7 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, exInfo } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../lib/dates.js';
-import { volText } from '../../lib/logic.js';
+import { volText, AUTO_NOTE } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import LineChart from '../LineChart.jsx';
@@ -33,7 +33,7 @@ export default function DetailSheet({ exId }) {
               <td>{e.ph ? PHASES[e.ph].label : '—'}</td>
               <td className="num">{e.w != null && e.w !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
               <td className="num">{volText(e)}</td>
-              <td>{e.n || ''}</td>
+              <td>{e.n || (e.auto ? AUTO_NOTE : '')}</td>
               <td><ArmedButton className="btn sm ghost" aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onConfirm={() => deleteLog(exId, i)} /></td>
             </tr>
           ))}

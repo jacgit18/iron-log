@@ -217,6 +217,8 @@ body.timing{padding-bottom:130px}
 .bkmsg{font-size:14px;margin:0}
 .bkmsg.ok{color:var(--exp)}
 .bkmsg.err{color:var(--str)}
+.btn.danger{color:var(--str);background:var(--str-bg);border-color:var(--str)}
+.erase label.inline{display:flex;margin:6px 0}.erase fieldset{border:0;margin:0;padding:0}
 .bkmsg.info{color:var(--muted)}
 .saveflag{font-size:12px;color:var(--muted)}
 

@@ -3,7 +3,7 @@ import { BUILTIN, resolveProgram, slotsFor } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
-  setCardDone, setItemDone, clearDone, isSkipped, isOpen, currentLayout, moveClashes, defaultLogDate,
+  setCardDone, setItemDone, clearDone, isSkipped, isOpen, currentLayout, moveClashes, defaultLogDate, autoLogs,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -169,15 +169,27 @@ export const useAppStore = create((set, get) => ({
     const week = structuredClone(get().week); fn(week); set({ week }); get().saveWeek(); return true;
   },
 
-  checkCard(slotId, on) { const s = get().slotById(slotId); if (s) get().mutateWeek(w => setCardDone(w, s, on)); },
-  checkItem(slotId, idx, on) { const s = get().slotById(slotId); if (s) get().mutateWeek(w => setItemDone(w, s, idx, on)); },
+  // A change to check-offs from the board: exercises that became done log their planned numbers,
+  // and ones that were unchecked (or skipped) lose that entry.
+  mutateChecks(fn) {
+    const slots = get().activeSlots(); const before = get().week;
+    if (!get().mutateWeek(fn)) return false;
+    const changed = autoLogs(get().cfg, get().logs, slots, before, get().week, get().weekKey(), defaultLogDate(get().weekStart));
+    if (Object.keys(changed).length) {
+      set(state => ({ logs: { ...state.logs, ...changed } }));
+      Object.keys(changed).forEach(id => get().saveLog(id));
+    }
+    return true;
+  },
+  checkCard(slotId, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setCardDone(w, s, on)); },
+  checkItem(slotId, idx, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setItemDone(w, s, idx, on)); },
   checkDay(day, on) {
     const slots = get().activeSlots();
-    get().mutateWeek(w => currentLayout(w, slots)[day].forEach(s => { if (!isSkipped(s, w)) setCardDone(w, s, on); }));
+    get().mutateChecks(w => currentLayout(w, slots)[day].forEach(s => { if (!isSkipped(s, w)) setCardDone(w, s, on); }));
   },
   skipCard(slotId) {
     const s = get().slotById(slotId); let skipped = false;
-    const ok = get().mutateWeek(w => {
+    const ok = get().mutateChecks(w => {
       w.skipped = w.skipped || {};
       if (w.skipped[slotId]) delete w.skipped[slotId];
       else { w.skipped[slotId] = true; skipped = true; if (s) clearDone(w, s); else delete w.done[slotId]; }
@@ -221,7 +233,9 @@ export const useAppStore = create((set, get) => ({
     if (get().blocked()) return false;
     const s = get().slotById(slotId); if (!s) return false;
     const ex = s.items[idx].ex;
-    const arr = [...(get().logs[ex] || []), structuredClone(entry)].sort((a, b) => a.d.localeCompare(b.d));
+    // Real numbers replace the planned ones a check-off logged for this card this week.
+    const planned = e => e.auto && e.slot === entry.slot && e.wk === entry.wk;
+    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), structuredClone(entry)].sort((a, b) => a.d.localeCompare(b.d));
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
     if (check) get().mutateWeek(w => setItemDone(w, s, idx, true));
     return true;
@@ -258,6 +272,32 @@ export const useAppStore = create((set, get) => ({
     if (get().blocked()) return;
     const arr = [...(get().logs[exId] || [])]; arr.splice(i, 1);
     set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId);
+  },
+
+  // Erase parts of the data: {logs, weeks, body, programs, settings}. Display options, the GitHub token
+  // and the GitHub backup settings are kept; backups already made aren't touched.
+  async eraseData(parts) {
+    if (get().blocked()) return false;
+    if (parts.weeks) {
+      const all = await get().allWeeks();
+      Object.keys(all).forEach(k => { if (WEEK_RE.test(k)) get().removeDoc('weeks/' + k); });
+      set({ week: normWeek(null), weekHist: null, moveNote: null, mDay: null });
+    }
+    if (parts.logs) { Object.keys(get().logs).forEach(id => get().removeDoc('logs/' + id)); set({ logs: {} }); }
+    if (parts.body) { set({ body: [] }); get().saveBody(); }
+    if (parts.programs) {
+      ['A', 'B'].forEach(k => get().removeDoc('programs/' + k));
+      set({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [] }); get().saveLibrary();
+    }
+    if (parts.settings) {
+      const { backup, ghBackup } = get().cfg; const cfg = structuredClone(DEFAULT_CFG);
+      if (backup) cfg.backup = backup;
+      if (ghBackup) cfg.ghBackup = { ...ghBackup, hash: null };
+      set({ cfg }); get().saveCfg();
+    }
+    set({ modal: null, backupMsg: null });
+    flag('Data erased');
+    return true;
   },
 
   saveBodyWeight(v) {
