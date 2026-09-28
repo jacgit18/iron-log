@@ -75,7 +75,7 @@ export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
               </div>
               {it.note && <div className="note">{it.note}</div>}
               {last && <div className="lastlog">Last: {describe(last)} · {fmtShort(parseDate(last.d))}</div>}
-              {st && <div className="stall" id={`stall-${s.id}-${idx}`} tabIndex={0} data-tip={`No gain in weight or reps over your last 3 sessions since ${fmtShort(parseDate(st.since))}.`}>Stalled · no gain in 3 sessions</div>}
+              {st && <div className="stall">Stalled since {fmtShort(parseDate(st.since))} · no gain in weight or reps in 3 sessions</div>}
             </div>
           </Fragment>
         );

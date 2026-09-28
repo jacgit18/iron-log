@@ -45,7 +45,7 @@ function SetsChart({ keys, byWeek }) {
       <h2>Sets logged per week</h2>
       {!total ? <p className="note">Logged sets show up here, one bar per week.</p> : (
         <>
-          <div className="bars">
+          <div className="bars" style={{ '--n': keys.length }}>
             <div className="bgrid" aria-hidden="true">{grid.map(v => <span key={v} style={{ bottom: `${v / top * 100}%` }}><b>{v}</b></span>)}</div>
             <div className="bcols" role="list" aria-label="Sets logged per week">
               {keys.map((k, i) => {
@@ -63,7 +63,7 @@ function SetsChart({ keys, byWeek }) {
               })}
             </div>
           </div>
-          <p className="note">Every set you log, all exercises together. The faded bar is this week so far.</p>
+          <p className="note">Every set you log, all exercises together. The striped bar is this week so far.</p>
         </>
       )}
     </section>
