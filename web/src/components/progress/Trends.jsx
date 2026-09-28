@@ -162,7 +162,7 @@ function MuscleHeat({ keys }) {
                 ...K.map((k, i) => {
                   const v = row[i];
                   const tip = `${MUSCLES[m].n}, week of ${fmtShort(parseDate(k))}${k === thisSun ? ' (so far)' : ''}: ${v ? fmtSets(v) + ' set' + (v === 1 ? '' : 's') : 'not trained'}`;
-                  return <i key={`${m}-${k}`} className={`hc l${level(v)}${k === thisSun ? ' cur' : ''}`} data-tip={tip} />;
+                  return <i key={`${m}-${k}`} className={`hc l${level(v)}${k === thisSun ? ' cur' : ''}`} data-tip={tip}>{v ? fmtSets(v) : ''}</i>;
                 }),
               ];
             })}
