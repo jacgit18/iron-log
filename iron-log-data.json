@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-09-28T18:54:54.305Z",
+ "exportedAt": "2026-09-29T15:54:15.142Z",
  "config": {
   "muscleMap": {},
   "ex": {},
@@ -49,7 +49,10 @@
    "cablepunch": 50
   },
   "phDef": {
-   "A-d1s1:0": "hyp"
+   "A-d1s1:0": "hyp",
+   "A-d3s9:0": "iso",
+   "A-d4s1:0": "strength",
+   "A-d1s7:1": "iso"
   },
   "ghBackup": {
    "repo": "jacgit18/iron-log",
@@ -65,9 +68,775 @@
    "B": "Program B - Bilateral"
   }
  },
- "programs": {},
+ "programs": {
+  "A": {
+   "days": [
+    {
+     "title": "Day 1",
+     "slots": [
+      {
+       "sec": "Regular",
+       "tier": "Primary",
+       "items": [
+        {
+         "ex": "latpd",
+         "ph": "hyp",
+         "w": 45
+        }
+       ],
+       "id": "A-d1s1"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "wristpd",
+         "ph": "hyp",
+         "w": 33
+        }
+       ],
+       "id": "A-d1s2"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "platerot",
+         "ph": "strength",
+         "w": 10
+        }
+       ],
+       "id": "A-d1s3"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "innerthigh",
+         "ph": "strength",
+         "w": 180
+        }
+       ],
+       "id": "A-d1s4"
+      },
+      {
+       "id": "A-d1s5",
+       "sec": "Regular",
+       "items": [
+        {
+         "ex": "romanadd",
+         "ph": "strength",
+         "w": null,
+         "bw": true,
+         "note": "On the back-extension bench"
+        }
+       ],
+       "tier": "Accessory"
+      },
+      {
+       "sec": "Supersets",
+       "tier": "Primary",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "chestpress",
+         "ph": "strength",
+         "w": 35
+        },
+        {
+         "ex": "zercher",
+         "ph": "strength",
+         "w": 50
+        }
+       ],
+       "id": "A-d1s6"
+      },
+      {
+       "sec": "Supersets",
+       "tier": "Accessory",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "zottman",
+         "ph": "hyp",
+         "w": 15,
+         "rx": "3 × 15"
+        },
+        {
+         "ex": "kbleg",
+         "ph": "iso",
+         "w": 15,
+         "rx": "3 × 15 s hold"
+        }
+       ],
+       "id": "A-d1s7"
+      },
+      {
+       "sec": "Home",
+       "items": [
+        {
+         "ex": "grip",
+         "ph": "strength",
+         "w": 200
+        }
+       ],
+       "id": "A-d1s8"
+      },
+      {
+       "sec": "Home",
+       "items": [
+        {
+         "ex": "canoe",
+         "ph": null,
+         "w": 10
+        }
+       ],
+       "id": "A-d1s9"
+      }
+     ]
+    },
+    {
+     "title": "Day 2",
+     "slots": [
+      {
+       "sec": "Regular",
+       "tier": "Primary",
+       "items": [
+        {
+         "ex": "suitcase",
+         "ph": null,
+         "w": 20,
+         "rx": "3 × 4 each arm"
+        }
+       ],
+       "id": "A-d2s1"
+      },
+      {
+       "sec": "Regular",
+       "type": "either",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "reardelt",
+         "ph": "iso",
+         "w": 50,
+         "rx": "4 × 15 s per arm"
+        },
+        {
+         "ex": "facepull",
+         "ph": "strength",
+         "w": 30
+        }
+       ],
+       "note": "Whichever is free",
+       "id": "A-d2s2"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "legext",
+         "ph": "iso",
+         "w": 50,
+         "rx": "4 × 30 s"
+        }
+       ],
+       "id": "A-d2s3"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "cablecrunch",
+         "ph": "strength",
+         "w": 60
+        }
+       ],
+       "id": "A-d2s4"
+      },
+      {
+       "sec": "Supersets",
+       "tier": "Primary",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "hipthrust",
+         "ph": "strength",
+         "w": 320
+        },
+        {
+         "ex": "chestpress",
+         "ph": "hyp",
+         "w": 25
+        }
+       ],
+       "id": "A-d2s5"
+      },
+      {
+       "sec": "Supersets",
+       "tier": "Accessory",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "dip",
+         "ph": "strength",
+         "w": null,
+         "bw": true,
+         "note": "Bodyweight, working toward +10 lb"
+        },
+        {
+         "ex": "kneeraise",
+         "ph": "strength",
+         "w": null,
+         "bw": true
+        }
+       ],
+       "id": "A-d2s6"
+      },
+      {
+       "sec": "Home",
+       "items": [
+        {
+         "ex": "grip",
+         "ph": "strength",
+         "w": 200
+        }
+       ],
+       "id": "A-d2s7"
+      },
+      {
+       "sec": "Home",
+       "items": [
+        {
+         "ex": "db6",
+         "ph": "strength",
+         "w": 10,
+         "rx": "2 × 6"
+        }
+       ],
+       "id": "A-d2s8"
+      }
+     ]
+    },
+    {
+     "title": "Day 3",
+     "slots": [
+      {
+       "sec": "Regular",
+       "tier": "Primary",
+       "items": [
+        {
+         "ex": "hack",
+         "ph": "hyp",
+         "w": 270,
+         "note": "Feet low on the plate, narrow stance for quads"
+        }
+       ],
+       "id": "A-d3s1"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Primary",
+       "items": [
+        {
+         "ex": "latpd",
+         "ph": "hyp",
+         "w": 45
+        }
+       ],
+       "id": "A-d3s2"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "wristpd",
+         "ph": "hyp",
+         "w": 33
+        }
+       ],
+       "id": "A-d3s3"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "platerot",
+         "ph": "strength",
+         "w": 10
+        }
+       ],
+       "id": "A-d3s4"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "legext",
+         "ph": "iso",
+         "w": 50,
+         "rx": "4 × 30 s"
+        }
+       ],
+       "id": "A-d3s5"
+      },
+      {
+       "sec": "Regular",
+       "type": "either",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "reardelt",
+         "ph": "iso",
+         "w": 50,
+         "rx": "4 × 15 s per arm"
+        },
+        {
+         "ex": "facepull",
+         "ph": "strength",
+         "w": 30
+        }
+       ],
+       "note": "Whichever is free",
+       "id": "A-d3s6"
+      },
+      {
+       "sec": "Supersets",
+       "tier": "Accessory",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "pallof",
+         "ph": "strength",
+         "w": 30
+        },
+        {
+         "ex": "cablerow",
+         "ph": "exp",
+         "w": 30
+        }
+       ],
+       "id": "A-d3s7"
+      },
+      {
+       "sec": "Home",
+       "items": [
+        {
+         "ex": "grip",
+         "ph": "strength",
+         "w": 200
+        }
+       ],
+       "id": "A-d3s8"
+      },
+      {
+       "id": "A-d3s9",
+       "sec": "Home",
+       "items": [
+        {
+         "ex": "deskbands",
+         "ph": "iso",
+         "w": null,
+         "bw": true
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Day 4",
+     "slots": [
+      {
+       "sec": "Regular",
+       "tier": "Primary",
+       "items": [
+        {
+         "ex": "suitcase",
+         "ph": null,
+         "w": 20,
+         "rx": "3 × 4 each arm"
+        }
+       ],
+       "id": "A-d4s1"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "innerthigh",
+         "ph": "strength",
+         "w": 180
+        }
+       ],
+       "id": "A-d4s2"
+      },
+      {
+       "sec": "Regular",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "romanadd",
+         "ph": null,
+         "w": null,
+         "bw": true,
+         "note": "On the back-extension bench"
+        }
+       ],
+       "id": "A-d4s3"
+      },
+      {
+       "sec": "Supersets",
+       "tier": "Primary",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "arnold",
+         "ph": "strength",
+         "w": 35
+        },
+        {
+         "ex": "zercher",
+         "ph": "strength",
+         "w": 50
+        }
+       ],
+       "id": "A-d4s4"
+      },
+      {
+       "sec": "Supersets",
+       "tier": "Primary",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "hipthrust",
+         "ph": "strength",
+         "w": 320
+        },
+        {
+         "ex": "chestpress",
+         "ph": "hyp",
+         "w": 25
+        }
+       ],
+       "id": "A-d4s5"
+      },
+      {
+       "sec": "Supersets",
+       "tier": "Accessory",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "zottman",
+         "ph": "hyp",
+         "w": 15,
+         "rx": "3 × 15"
+        },
+        {
+         "ex": "kbleg",
+         "ph": "iso",
+         "w": 15,
+         "rx": "3 × 15 s hold"
+        }
+       ],
+       "id": "A-d4s6"
+      },
+      {
+       "sec": "Home",
+       "items": [
+        {
+         "ex": "grip",
+         "ph": "strength",
+         "w": 200
+        }
+       ],
+       "id": "A-d4s7"
+      },
+      {
+       "sec": "Home",
+       "items": [
+        {
+         "ex": "deskbands",
+         "ph": null,
+         "w": null,
+         "bw": true
+        }
+       ],
+       "id": "A-d4s8"
+      }
+     ]
+    },
+    {
+     "title": "Day 5",
+     "sub": "Upper body + rotational power",
+     "makeup": true,
+     "slots": [
+      {
+       "sec": "Regular",
+       "items": [
+        {
+         "ex": "cablecrunch",
+         "ph": "strength",
+         "w": 60
+        }
+       ],
+       "id": "A-d5s1"
+      },
+      {
+       "sec": "Regular",
+       "items": [
+        {
+         "ex": "dbclean",
+         "ph": "exp",
+         "w": 20
+        }
+       ],
+       "id": "A-d5s2"
+      },
+      {
+       "sec": "Regular",
+       "items": [
+        {
+         "ex": "hack",
+         "ph": "hyp",
+         "w": 270,
+         "note": "Feet low on the plate, narrow stance for quads"
+        }
+       ],
+       "id": "A-d5s3"
+      },
+      {
+       "sec": "Regular",
+       "type": "either",
+       "tier": "Accessory",
+       "items": [
+        {
+         "ex": "reardelt",
+         "ph": "iso",
+         "w": 50,
+         "rx": "4 × 15 s per arm"
+        },
+        {
+         "ex": "facepull",
+         "ph": "strength",
+         "w": 30
+        }
+       ],
+       "note": "Whichever is free",
+       "id": "A-d5s4"
+      },
+      {
+       "sec": "Plyometric",
+       "items": [
+        {
+         "ex": "trxpike",
+         "ph": "exp",
+         "w": null,
+         "bw": true
+        }
+       ],
+       "id": "A-d5s5"
+      },
+      {
+       "sec": "Plyometric",
+       "items": [
+        {
+         "ex": "trxrow",
+         "ph": "exp",
+         "w": null,
+         "bw": true
+        }
+       ],
+       "id": "A-d5s6"
+      },
+      {
+       "sec": "Plyometric",
+       "items": [
+        {
+         "ex": "medball",
+         "ph": "exp",
+         "w": null
+        }
+       ],
+       "id": "A-d5s7"
+      },
+      {
+       "sec": "Plyometric",
+       "items": [
+        {
+         "ex": "latwall",
+         "ph": "exp",
+         "w": null,
+         "bw": true
+        }
+       ],
+       "id": "A-d5s8"
+      },
+      {
+       "sec": "Home",
+       "items": [
+        {
+         "ex": "db6",
+         "ph": "strength",
+         "w": 10,
+         "rx": "2 × 6"
+        }
+       ],
+       "id": "A-d5s9"
+      },
+      {
+       "sec": "Home",
+       "items": [
+        {
+         "ex": "spinal",
+         "ph": null,
+         "w": null,
+         "bw": true
+        }
+       ],
+       "id": "A-d5s10"
+      }
+     ]
+    },
+    {
+     "title": "Day 6",
+     "sub": "Lower body + reactive power",
+     "slots": [
+      {
+       "sec": "Plyometric",
+       "items": [
+        {
+         "ex": "pogo",
+         "ph": "exp",
+         "w": null,
+         "bw": true,
+         "rx": "3 × 10"
+        }
+       ],
+       "id": "A-d6s1"
+      },
+      {
+       "sec": "Plyometric",
+       "items": [
+        {
+         "ex": "skater",
+         "ph": "exp",
+         "w": null,
+         "bw": true,
+         "rx": "3 × 5, hold 3 s"
+        }
+       ],
+       "id": "A-d6s2"
+      },
+      {
+       "sec": "Plyometric",
+       "items": [
+        {
+         "ex": "splitjump",
+         "ph": "exp",
+         "w": null,
+         "bw": true,
+         "rx": "3 × 5",
+         "note": "Vertical drive, soft landings"
+        }
+       ],
+       "id": "A-d6s3"
+      },
+      {
+       "sec": "Plyometric",
+       "items": [
+        {
+         "ex": "depthcombo",
+         "ph": "exp",
+         "w": null,
+         "bw": true,
+         "rx": "4 × 5",
+         "note": "Controlled landings"
+        }
+       ],
+       "id": "A-d6s4"
+      },
+      {
+       "sec": "Supersets",
+       "tier": "Primary",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "arnold",
+         "ph": "strength",
+         "w": 35
+        },
+        {
+         "ex": "zercher",
+         "ph": "strength",
+         "w": 50
+        }
+       ],
+       "id": "A-d6s5"
+      },
+      {
+       "sec": "Supersets",
+       "tier": "Accessory",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "pallof",
+         "ph": "strength",
+         "w": 30
+        },
+        {
+         "ex": "cablerow",
+         "ph": "exp",
+         "w": 30
+        }
+       ],
+       "id": "A-d6s6"
+      }
+     ]
+    }
+   ]
+  }
+ },
  "library": [],
  "logs": {
+  "cablecrunch": [
+   {
+    "d": "2026-09-29",
+    "ph": "strength",
+    "w": 85,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 85,
+      "r": 6
+     },
+     {
+      "w": 85,
+      "r": 6
+     },
+     {
+      "w": 85,
+      "r": 6
+     },
+     {
+      "w": 85,
+      "r": 6
+     }
+    ],
+    "slot": "A-d2s4",
+    "wk": "2026-09-27",
+    "auto": true
+   }
+  ],
   "chestpress": [
    {
     "d": "2026-09-28",
@@ -124,6 +893,35 @@
     "slot": "A-d2s5",
     "wk": "2026-09-27",
     "auto": true
+   }
+  ],
+  "deskbands": [
+   {
+    "d": "2026-09-29",
+    "ph": "iso",
+    "w": null,
+    "s": 4,
+    "sec": 30,
+    "sets": [
+     {
+      "w": null,
+      "sec": 30
+     },
+     {
+      "w": null,
+      "sec": 30
+     },
+     {
+      "w": null,
+      "sec": 30
+     },
+     {
+      "w": null,
+      "sec": 30
+     }
+    ],
+    "slot": "A-d3s9",
+    "wk": "2026-09-27"
    }
   ],
   "grip": [
@@ -216,6 +1014,54 @@
     "auto": true
    }
   ],
+  "kbleg": [
+   {
+    "d": "2026-09-29",
+    "ph": "iso",
+    "w": 20,
+    "s": 3,
+    "sec": 15,
+    "sets": [
+     {
+      "w": 20,
+      "sec": 15
+     },
+     {
+      "w": 20,
+      "sec": 15
+     },
+     {
+      "w": 20,
+      "sec": 15
+     }
+    ],
+    "slot": "A-d1s7",
+    "wk": "2026-09-27"
+   },
+   {
+    "d": "2026-09-29",
+    "ph": "iso",
+    "w": 15,
+    "s": 3,
+    "sec": 15,
+    "sets": [
+     {
+      "w": 15,
+      "sec": 15
+     },
+     {
+      "w": 15,
+      "sec": 15
+     },
+     {
+      "w": 15,
+      "sec": 15
+     }
+    ],
+    "slot": "A-d1s7",
+    "wk": "2026-09-27"
+   }
+  ],
   "latpd": [
    {
     "d": "2026-09-28",
@@ -301,6 +1147,34 @@
     "slot": "A-d2s3",
     "wk": "2026-09-27",
     "auto": true
+   },
+   {
+    "d": "2026-09-29",
+    "ph": "iso",
+    "w": 60,
+    "s": 4,
+    "sec": 30,
+    "sets": [
+     {
+      "w": 60,
+      "sec": 30
+     },
+     {
+      "w": 60,
+      "sec": 30
+     },
+     {
+      "w": 60,
+      "sec": 30
+     },
+     {
+      "w": 60,
+      "sec": 30
+     }
+    ],
+    "slot": "A-d3s5",
+    "wk": "2026-09-27",
+    "auto": true
    }
   ],
   "reardelt": [
@@ -359,6 +1233,35 @@
     "slot": "A-d3s6",
     "wk": "2026-09-27",
     "auto": true
+   }
+  ],
+  "suitcase": [
+   {
+    "d": "2026-09-29",
+    "ph": "strength",
+    "w": 25,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 25,
+      "r": 6
+     },
+     {
+      "w": 25,
+      "r": 6
+     },
+     {
+      "w": 25,
+      "r": 6
+     },
+     {
+      "w": 25,
+      "r": 6
+     }
+    ],
+    "slot": "A-d4s1",
+    "wk": "2026-09-27"
    }
   ],
   "wristpd": [
@@ -448,6 +1351,32 @@
     "wk": "2026-09-27",
     "auto": true
    }
+  ],
+  "zottman": [
+   {
+    "d": "2026-09-29",
+    "ph": "hyp",
+    "w": 20,
+    "s": 3,
+    "r": 15,
+    "sets": [
+     {
+      "w": 20,
+      "r": 15
+     },
+     {
+      "w": 20,
+      "r": 15
+     },
+     {
+      "w": 20,
+      "r": 15
+     }
+    ],
+    "slot": "A-d1s7",
+    "wk": "2026-09-27",
+    "auto": true
+   }
   ]
  },
  "weeks": {
@@ -466,7 +1395,10 @@
     "A-d2s2": true,
     "A-d2s2#0": true,
     "A-d3s6": true,
-    "A-d3s6#0": true
+    "A-d3s6#0": true,
+    "A-d2s4": true,
+    "A-d1s7": true,
+    "A-d3s5": true
    },
    "skipped": {
     "A-d1s9": true,
@@ -475,7 +1407,9 @@
     "A-d2s1": true,
     "A-d2s6": true,
     "A-d2s8": true,
-    "A-d2s7": true
+    "A-d2s7": true,
+    "A-d3s7": true,
+    "A-d3s4": true
    },
    "moved": {
     "A-d3s2": 2,
