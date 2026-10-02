@@ -1,6 +1,6 @@
 /* ---------- CSV / Excel export, full data file, GitHub backup helpers ----------
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
-import { PHASES, PH_KEYS, BUILTIN, slotsFor, exInfo, hasValidDays, withAllDays } from './data.js';
+import { PHASES, PH_KEYS, BUILTIN, slotsFor, exInfo, hasValidDays, withAllDays, DAY_COUNT } from './data.js';
 import { ymd, fmtShort } from './dates.js';
 import { setsOfEntry, setVal, rxOf, isItemDone, normWeek, progName, AUTO_NOTE } from './logic.js';
 
@@ -127,7 +127,7 @@ export function buildWeekWorkbook(X, S, key, w) {
   const slots = slotsFor(programs[r.pk] || programs.A);
   const n = sessionRows(S, e => entryWeek(e) === key);
   X.utils.book_append_sheet(wb, sheet(X, [
-    ['Week of', key], ['Program', r.pk], ['Days complete', `${r.full} of 6`], ['Exercises done', `${r.ex} of ${r.total}`], ['Skipped', r.skipped], ['Sessions logged', n.length - 1],
+    ['Week of', key], ['Program', r.pk], ['Days complete', `${r.full} of ${DAY_COUNT}`], ['Exercises done', `${r.ex} of ${r.total}`], ['Skipped', r.skipped], ['Sessions logged', n.length - 1],
   ], [18, 14]), 'Summary');
   const plan = [['Planned day', 'Done on day', 'Section', 'Tier', 'Type', 'Exercise', 'Phase', 'Sets × reps', 'Program weight (lb)', 'Done']];
   const nw = normWeek(w);

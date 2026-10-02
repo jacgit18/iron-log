@@ -18,12 +18,12 @@ describe('weekSummary: the weekly history row', () => {
 
   it('marks each day complete, partly done or not started, and counts exercises', () => {
     const r = weekSummary(cfg(), programs, '2026-09-20', w);
-    expect(r.days).toEqual([1, 0, 2, 0, 0, 0]); // day 1 half done, day 2 only a skipped card, day 3 complete
+    expect(r.days).toEqual([1, 0, 2, 0, 0, 0, 0]); // day 1 half done, day 2 only a skipped card, day 3 complete
     expect(r).toMatchObject({ key: '2026-09-20', pk: 'A', full: 1, ex: 3, total: 4, skipped: 1 });
   });
   it('counts a moved card on the day it was moved to', () => {
     const r = weekSummary(cfg(), programs, '2026-09-20', { ...w, moved: { d: 1 } });
-    expect(r.days).toEqual([1, 0, 0, 0, 0, 0]);
+    expect(r.days).toEqual([1, 0, 0, 0, 0, 0, 0]);
     expect(r.full).toBe(0);
   });
   it('uses the program that week ran', () => {
@@ -31,8 +31,19 @@ describe('weekSummary: the weekly history row', () => {
     expect(weekSummary(cfg({ mode: 2, m2Even: 'A' }), programs, '2026-09-20', { ...w, prog: 'A' }).pk).toBe('A'); // switched that week
     expect(weekSummary(cfg({ mode: 1 }), programs, '2026-09-20', { ...w, prog: 'B' }).pk).toBe('A'); // mode 1 is always A
   });
+  it('counts the rest day as complete and shifts later workouts one day', () => {
+    // Rest on day 2: a, b stay on day 1; c (planned day 2) shows on day 3; d (planned day 3) on day 4.
+    const r = weekSummary(cfg(), programs, '2026-09-20', { done: { a: true, 'b#0': true, 'b#1': true, c: true }, skipped: {}, moved: {}, rest: 2 });
+    expect(r.days).toEqual([2, 2, 2, 0, 0, 0, 0]);
+    expect(r.full).toBe(3);
+    expect(r).toMatchObject({ ex: 4, total: 5 }); // the rest day adds no exercises
+  });
+  it('reads 6 days with an empty, non-rest Day 7', () => {
+    const all = { done: { a: true, 'b#0': true, 'b#1': true, c: true, d: true }, skipped: {}, moved: {} };
+    expect(weekSummary(cfg(), programs, '2026-09-20', all).days).toEqual([2, 2, 2, 0, 0, 0, 0]);
+  });
   it('an empty week has nothing done', () => {
-    expect(weekSummary(cfg(), programs, '2026-09-20', { done: {}, moved: {} })).toMatchObject({ days: [0, 0, 0, 0, 0, 0], full: 0, ex: 0, total: 5, skipped: 0 });
+    expect(weekSummary(cfg(), programs, '2026-09-20', { done: {}, moved: {} })).toMatchObject({ days: [0, 0, 0, 0, 0, 0, 0], full: 0, ex: 0, total: 5, skipped: 0 });
   });
 });
 
