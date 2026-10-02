@@ -242,6 +242,7 @@ body.timing{padding-bottom:130px}
 .colhead{display:flex;align-items:flex-start;gap:8px;padding:2px 2px 4px}
 .colhead h3{margin:0;font-size:21px;font-weight:700;text-transform:uppercase;line-height:1.05}
 .colhead .sub{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px}
+.colhead .daydate{color:var(--ink);font-weight:600}
 .colhead .count{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
 .restchk{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px;color:var(--muted)}
 .swaps{display:flex;gap:4px;margin-left:8px}
@@ -394,7 +395,7 @@ body.timing{padding-bottom:130px}
   .weeknav h2{min-width:0;font-size:20px}
   .progress{width:100%}
   .bar{flex:1}
-  .daytabs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;position:sticky;top:env(safe-area-inset-top, 0px);z-index:10;background:var(--bg);padding-block:6px 8px}
+  .daytabs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;position:sticky;top:env(safe-area-inset-top, 0px);z-index:10;background:var(--bg);padding-block:6px 8px}
   .daytabs button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 0;display:flex;flex-direction:column;align-items:center;gap:1px;color:var(--muted)}
   .daytabs b{font-family:"Barlow Condensed","Barlow Condensed Fallback",sans-serif;font-size:17px;color:var(--ink)}
   .daytabs span{font-size:11px}
