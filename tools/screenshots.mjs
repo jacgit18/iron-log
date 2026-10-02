@@ -1,6 +1,6 @@
 // Generates the README images in docs/images/ using sample data. Builds the app first.
-// Usage: npm ci && npm i --no-save playwright && npx playwright install chromium && node tools/screenshots.mjs
-import { chromium } from 'playwright';
+// Usage: npm ci && npx playwright install chromium && npm run screenshots   (SHOT_OUT=dir writes somewhere else)
+import { chromium } from '@playwright/test';
 import { execSync } from 'node:child_process';
 import http from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -8,7 +8,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const OUT = join(ROOT, 'docs', 'images');
+const OUT = process.env.SHOT_OUT || join(ROOT, 'docs', 'images');
 const NOW = new Date('2026-09-24T18:30:00-04:00'); // a Thursday; week of Sun Sep 20
 const DIST = join(ROOT, 'dist');
 const TYPES = { '.html':'text/html', '.css':'text/css', '.js':'text/javascript', '.mjs':'text/javascript', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json', '.webmanifest':'application/manifest+json', '.woff2':'font/woff2' };
@@ -131,4 +131,4 @@ for (const dark of [false, true]) {
 
 await browser.close();
 server.close();
-console.log('Screenshots written to docs/images/');
+console.log(`Screenshots written to ${OUT}`);

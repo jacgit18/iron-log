@@ -124,6 +124,8 @@ src/hooks/                    focus keeping and tooltips
 public/                       logo and app icons
 scripts/make-icons.mjs        renders public/icons/ from the logo
 tools/screenshots.mjs         generates docs/images/ with sample data
+tools/visual-diff.mjs         pixel-compares two screenshot folders for the PR comment
+e2e/                          Playwright browser and accessibility tests
 tools/banner.html             README banner template
 .github/workflows/            deploys to GitHub Pages; regenerates screenshots on feature branches
 ```
@@ -136,15 +138,15 @@ The phase percentages (Strength 85%, Isometric 75%, Hypertrophy 65%, Explosive 4
 
 ## Development
 
-Changes are made on feature branches and merged into `main` through pull requests. Every pull request runs the **Tests** workflow (lint and unit tests). Every push to `main` runs the **Deploy to GitHub Pages** workflow, which lints, tests, builds for `/iron-log/` and publishes the result. (In the repository's Settings → Pages, the source must be **GitHub Actions**.)
+Changes are made on feature branches and merged into `main` through pull requests. Every pull request runs the **Tests** workflow (lint, unit tests, and the Playwright browser tests in `e2e/`, which include an accessibility scan). It also uploads the built app as an `app-preview` artifact you can download and open with `npx vite preview`. Every push to `main` runs the **Deploy to GitHub Pages** workflow, which lints, tests, builds for `/iron-log/` and publishes the result. (In the repository's Settings → Pages, the source must be **GitHub Actions**.)
 
-When a pull request's branch changes the app, the **README screenshots** workflow regenerates `docs/images/` and commits the new images to that branch, so they merge along with the change. To run it locally:
+When a pull request's branch changes the app, the **README screenshots** workflow regenerates `docs/images/` and commits the new images to that branch, so they merge along with the change. If the branch has an open pull request, the workflow also comments before, after and pixel-diff images against `main` (`tools/visual-diff.mjs`), so there is no need to attach screenshots by hand. The comparison images are kept on the `pr-screenshots` branch. To run things locally:
 
 ```bash
 npm ci
-npm install --no-save playwright
 npx playwright install chromium
-node tools/screenshots.mjs      # builds the app, then takes the screenshots
+npm run screenshots             # builds the app, then takes the screenshots
+npm run e2e                     # builds the app and runs the browser tests
 ```
 
 `npm run lint` checks the code with oxlint. `npm test` runs the unit tests (`*.test.js` next to the code in `src/lib` and `src/store`). They cover the program rotation, done and skipped counts, check-offs, progression and stalls, the Progress numbers, muscle volume, the program editor, the timers, GitHub backup, and import and export. `src/test/fixtures/iron-log-data.v1.json` is a sample data file that pins down the backup format: if its test fails, the format changed, so bump the format number rather than editing the sample.

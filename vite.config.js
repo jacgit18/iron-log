@@ -36,6 +36,8 @@ function noWellKnownFallback() {
 // BASE_PATH lets the same build run at a sub-path (e.g. /iron-log/ on GitHub Pages).
 export default defineConfig({
   base,
+  // Playwright's specs in e2e/ are run by `npm run e2e`, not Vitest.
+  test: { exclude: ['**/node_modules/**', 'e2e/**'] },
   plugins: [
     react(),
     preloadTitleFont(),
