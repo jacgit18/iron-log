@@ -3,8 +3,13 @@ name: README screenshots
 # Regenerates docs/images/ on feature branches whenever the app or the
 # screenshot tooling changes, and commits the result back to that branch.
 # The data branch only holds the app's GitHub backups, so it's left alone.
+# If the branch has an open pull request, it also comments before/after/diff images against main,
+# so nobody has to take screenshots by hand. The comparison images live on the pr-screenshots branch.
 on:
   workflow_dispatch:
+  # A PR opened after the first push still gets its screenshot comment.
+  pull_request:
+    types: [opened, reopened]
   push:
     branches-ignore: [main, data]
     paths:
@@ -19,10 +24,11 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 # One run per branch; a newer push cancels the older run.
 concurrency:
-  group: screenshots-${{ github.ref }}
+  group: screenshots-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -30,20 +36,50 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm install --no-save --no-package-lock playwright@1.49.1
       - run: npx playwright install --with-deps chromium
-      - run: node tools/screenshots.mjs
+      - run: npm run screenshots
+      - name: Compare with main and comment on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          PR=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -z "$PR" ]; then echo "No open pull request for $BRANCH"; exit 0; fi
+          mkdir -p "$RUNNER_TEMP/base/docs"
+          git archive origin/main docs/images | tar -x -C "$RUNNER_TEMP/base"
+          OUT="$RUNNER_TEMP/pr-$PR"
+          PREFIX="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/pr-screenshots/pr-$PR/"
+          node tools/visual-diff.mjs "$RUNNER_TEMP/base/docs/images" docs/images "$OUT" "$PREFIX"
+          # Publish the comparison images (replacing any from an earlier push of this PR).
+          PUB="$RUNNER_TEMP/pub"
+          git clone --depth 1 --branch pr-screenshots "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" "$PUB" 2>/dev/null \
+            || { git init -q "$PUB"; git -C "$PUB" checkout -q -b pr-screenshots; git -C "$PUB" remote add origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"; }
+          rm -rf "$PUB/pr-$PR"; mkdir -p "$PUB/pr-$PR"; cp "$OUT"/*.png "$PUB/pr-$PR/" 2>/dev/null || true
+          git -C "$PUB" add -A
+          if ! git -C "$PUB" diff --cached --quiet; then
+            git -C "$PUB" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Screenshots for PR $PR"
+            git -C "$PUB" push -q origin pr-screenshots
+          fi
+          # One comment per PR, updated in place.
+          ID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --jq '[.[] | select(.body | contains("<!-- visual-diff -->"))][0].id // empty')
+          if [ -n "$ID" ]; then gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$ID" -F body=@"$OUT/comment.md" >/dev/null
+          else gh pr comment "$PR" --body-file "$OUT/comment.md"; fi
       - name: Commit updated images
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/images
           if git diff --cached --quiet; then echo "Images unchanged"; exit 0; fi
           git commit -m "Update README screenshots"
-          git pull --rebase origin "$GITHUB_REF_NAME"
+          git pull --rebase origin "$BRANCH"
           git push
