@@ -205,6 +205,13 @@ export function altDay(cfg, week, slots, s, day, from) {
   return null;
 }
 
+/* ---------- Yesterday's leftovers ---------- */
+export const todayCol = date => date.getDay() + 1; // the week runs Sunday (column 1) to Saturday (column 7)
+// Cards in column c with nothing checked that aren't skipped; none on the rest column.
+export const leftovers = (week, slots, c) => (dayAt(week, c) == null ? [] : currentLayout(week, slots)[c].filter(s => !isSkipped(s, week) && !s.items.some((_, i) => isItemDone(s, i, week))));
+// Later columns a batch can move to: not the rest day and not already finished.
+export function moveTargets(week, slots, c) { const cols = currentLayout(week, slots); return DAYS.filter(d => d > c && dayAt(week, d) != null && !tally(cols[d], week).full); }
+
 export function holdPlan(cfg, week, logs, slot, idx) {
   const it = slot.items[idx]; const ph = phaseOf(cfg, week, slot, idx); const rx = rxOf(cfg, it, ph);
   const m = rx.match(/(\d+)\s*×\s*(\d+)(?:\s*[–-]\s*(\d+))?/); const sets = m ? Number(m[1]) : 4;

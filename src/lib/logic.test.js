@@ -4,7 +4,7 @@ import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
-  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate,
+  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -381,5 +381,31 @@ describe('normWeek keeps restOn only with a rest day', () => {
     expect(normWeek({ rest: 9, restOn: '2026-09-29' })).not.toHaveProperty('restOn');
     ['9/29/2026', '2026-9-29', 20260929, null, '', {}].forEach(v => expect(normWeek({ rest: 3, restOn: v })).not.toHaveProperty('restOn'));
     expect(normWeek(null)).not.toHaveProperty('restOn');
+  });
+});
+
+describe('yesterday’s leftovers', () => {
+  const mk = (id, day, type = 'single', n = 1) => ({ id, day, type, items: Array.from({ length: n }, () => ({ ex: 'hack', ph: 'hyp' })) });
+  const slots = [mk('a', 3), mk('b', 3), mk('c', 3), mk('p', 3, 'superset', 2), mk('d', 4)];
+  const ids = l => l.map(s => s.id);
+
+  it('todayCol: the week runs Sunday (column 1) to Saturday (column 7)', () => {
+    expect(todayCol(parseDate('2026-09-27'))).toBe(1);
+    expect(todayCol(parseDate('2026-09-30'))).toBe(4);
+    expect(todayCol(parseDate('2026-10-03'))).toBe(7);
+  });
+  it('counts only cards with nothing checked that are not skipped', () => {
+    const w = normWeek({ done: { a: true, 'p#0': true }, skipped: { b: true } });
+    expect(ids(leftovers(w, slots, 3))).toEqual(['c']);
+    expect(ids(leftovers(normWeek({}), slots, 3))).toEqual(['a', 'b', 'c', 'p']);
+  });
+  it('follows swapped days and gives nothing on the rest column', () => {
+    expect(ids(leftovers(normWeek({ order: [1, 2, 4, 3, 5, 6, 7] }), slots, 3))).toEqual(['d']);
+    expect(leftovers(normWeek({ rest: 3 }), slots, 3)).toEqual([]);
+  });
+  it('moveTargets: later columns that are not finished and not the rest day', () => {
+    const w = normWeek({ done: { d: true }, rest: 6 });
+    expect(moveTargets(w, slots, 3)).toEqual([5, 7]); // 4 is finished, 6 is the rest day
+    expect(moveTargets(normWeek({}), slots, 7)).toEqual([]);
   });
 });

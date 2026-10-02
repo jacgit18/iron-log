@@ -20,6 +20,7 @@ const GLOSSARY = [
   ['Mobility', 'Stretching or movement work. It isn’t counted toward any muscle.'],
   ['Warm-up', 'Short exercises before each day’s session.'],
   ['Make-up day', 'Day 5 is meant for anything you skipped earlier in the week. Use Move to put exercises there.'],
+  ['Unchecked yesterday', 'When yesterday still has exercises with nothing checked, a notice at the top of the board offers to skip them all or move them all to a later day. Not now hides it until tomorrow.'],
   ['Skip', 'Leaves an exercise out of this week’s counts without deleting it.'],
   ['D1 to D7', 'Day 1 to Day 7 of the week’s plan.'],
   ['Rest day', 'Tick Rest day on a day to rest. Your workouts from that day on move one day later, and the rest day counts as done. Untick to undo. You can’t add one while Day 7 has exercises.'],

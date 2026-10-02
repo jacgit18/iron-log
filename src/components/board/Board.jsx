@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { WARMUP, slotsFor } from '../../lib/data.js';
 import { monday, ymd, addDays, fmtShort, fmtDayDate } from '../../lib/dates.js';
-import { tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate } from '../../lib/logic.js';
+import { tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
@@ -65,6 +65,14 @@ export default function Board() {
 
   const [, forceTips] = useState(0);
   const hideTip = k => { LS.set(k, 1); forceTips(n => n + 1); };
+
+  // Yesterday's column (this week only, not on Sunday): cards with nothing checked, unless hidden for today.
+  const yCol = todayCol(today) - 1; const todayKey = ymd(today);
+  const left = ymd(monday(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey ? leftovers(week, slots, yCol) : [];
+  const targets = left.length ? moveTargets(week, slots, yCol) : [];
+  const [pick, setPick] = useState(null);
+  const moveTo = targets.includes(pick) ? pick : targets[0];
+  const hideLeftovers = () => { LS.set('hideleftovers', todayKey); forceTips(n => n + 1); };
 
   const moveRef = useRef(null);
   useEffect(() => { if (moveRef.current) moveRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [moveNote]);
@@ -140,6 +148,24 @@ export default function Board() {
         <div className="notice tip">
           <span>{window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Back it up to GitHub in Settings, or use Export on the Progress tab.'}</span>
           <button type="button" className="btn sm ghost" onClick={() => hideTip('hidelocal')}>Got it</button>
+        </div>
+      )}
+      {left.length > 0 && (
+        <div className="notice leftovers" role="status">
+          <div>Day {yCol} has {left.length} unchecked exercise{left.length > 1 ? 's' : ''}.</div>
+          <div className="actions">
+            <button type="button" className="btn sm" onClick={() => st.skipCards(left.map(s => s.id))}>Skip all {left.length}</button>
+            {targets.length > 0 && (
+              <span className="inline">
+                <label htmlFor="leftover-to">Move to</label>
+                <select id="leftover-to" value={moveTo} onChange={e => setPick(Number(e.target.value))}>
+                  {targets.map(c => <option key={c} value={c}>Day {c}{c === yCol + 1 ? ' (today)' : ''}</option>)}
+                </select>
+                <button type="button" className="btn sm" onClick={() => st.moveCards(left.map(s => s.id), moveTo)}>Move</button>
+              </span>
+            )}
+            <button type="button" className="btn sm ghost" onClick={hideLeftovers}>Not now</button>
+          </div>
         </div>
       )}
       {showMove && (

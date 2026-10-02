@@ -71,8 +71,9 @@ header.top h1{font-size:30px;margin:0;font-weight:700;text-transform:uppercase;l
 .bar{width:140px;height:8px;border-radius:4px;background:var(--sunk);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent)}
 .notice{background:var(--warn-bg);color:var(--warn-ink);padding:8px 12px;border-radius:8px;font-size:14px;margin-block:0 12px}
-.notice.movewarn{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
-.notice.movewarn .actions{margin:0;gap:6px}
+.notice.movewarn,.notice.leftovers{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+.notice.movewarn .actions,.notice.leftovers .actions{margin:0;gap:6px;align-items:center}
+.notice.leftovers .inline{flex-wrap:wrap;gap:6px}
 .notice.tip{display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--sunk);color:var(--ink)}
 .edtop{display:flex;flex-wrap:wrap;gap:8px;padding-block:8px 12px}
 .edtop .seg{margin-left:0;flex-wrap:wrap}
