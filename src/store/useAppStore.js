@@ -539,6 +539,14 @@ export const useAppStore = create((set, get) => ({
       if (!Object.keys(c.liftGoals).length) delete c.liftGoals;
     })) flag('Goal removed');
   },
+  // Replace one logged session with edited numbers (kept sorted by date). It counts as logged by hand, not as a check-off.
+  updateLog(exId, i, entry) {
+    if (get().blocked()) return;
+    const arr = [...(get().logs[exId] || [])]; arr[i] = structuredClone(entry);
+    arr.sort((a, b) => a.d.localeCompare(b.d));
+    set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId);
+    flag('Session updated');
+  },
   deleteLog(exId, i) {
     if (get().blocked()) return;
     const arr = [...(get().logs[exId] || [])]; arr.splice(i, 1);
