@@ -109,6 +109,7 @@ export const useAppStore = create((set, get) => ({
   storeMode: 'loading',
   saveFlag: '',
   ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false },
+  uncheckNote: null, // after an uncheck removed logged entries: {week, text, entries: {exId: [entry]}, done: {key: wasDone}}
   moveNote: null, // heads-up after a move puts the same exercise on the same or a neighboring day
   modal: null, // {type:'log', slotId, idx} | {type:'detail', exId}
   weekHist: null, // every saved week, loaded on demand for Progress and exports
@@ -211,11 +212,34 @@ export const useAppStore = create((set, get) => ({
       set(state => ({ logs: { ...state.logs, ...changed } }));
       Object.keys(changed).forEach(id => get().saveLog(id));
     }
-    const real = e => !e.auto;
-    const gone = Object.keys(changed).reduce((n, id) => n + Math.max(0, (logs[id] || []).filter(real).length - changed[id].filter(real).length), 0);
-    if (gone) flag(`Unchecked · removed ${gone} logged ${gone === 1 ? 'entry' : 'entries'}`);
+    // Entries you logged yourself that this removed, kept so the uncheck can be undone.
+    const entries = {}; let gone = 0;
+    Object.keys(changed).forEach(id => {
+      const kept = new Set(changed[id].map(e => JSON.stringify(e)));
+      const lost = (logs[id] || []).filter(e => !e.auto && !kept.has(JSON.stringify(e)));
+      if (lost.length) { entries[id] = lost; gone += lost.length; }
+    });
+    if (gone && removeLogged) {
+      const done = {}; const after = get().week.done || {};
+      new Set([...Object.keys(before.done || {}), ...Object.keys(after)]).forEach(k => { if (!!(before.done || {})[k] !== !!after[k]) done[k] = !!(before.done || {})[k]; });
+      set({ uncheckNote: { week: get().weekKey(), text: `Unchecked · removed ${gone} logged ${gone === 1 ? 'entry' : 'entries'}.`, entries, done } });
+    } else if (get().uncheckNote) set({ uncheckNote: null }); // any other check-off change replaces the old notice
     return true;
   },
+  // Put back what the last uncheck removed: the entries, and the ticks.
+  undoUncheck() {
+    const n = get().uncheckNote; if (!n || n.week !== get().weekKey() || get().blocked()) return;
+    set({ uncheckNote: null });
+    const logs = { ...get().logs };
+    Object.entries(n.entries).forEach(([id, lost]) => {
+      const have = new Set((logs[id] || []).map(e => JSON.stringify(e)));
+      logs[id] = [...(logs[id] || []), ...lost.filter(e => !have.has(JSON.stringify(e)))].sort((a, b) => a.d.localeCompare(b.d));
+    });
+    set({ logs }); Object.keys(n.entries).forEach(id => get().saveLog(id));
+    get().mutateWeek(w => { w.done = w.done || {}; Object.entries(n.done).forEach(([k, on]) => { if (on) w.done[k] = true; else delete w.done[k]; }); });
+    flag('Put back');
+  },
+  dismissUncheck: () => set({ uncheckNote: null }),
   checkCard(slotId, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setCardDone(w, s, on), { removeLogged: true }); },
   checkItem(slotId, idx, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setItemDone(w, s, idx, on), { removeLogged: true }); },
   checkDay(day, on) {
@@ -474,7 +498,7 @@ export const useAppStore = create((set, get) => ({
     if (parts.weeks) {
       const all = await get().allWeeks();
       Object.keys(all).forEach(k => { if (WEEK_RE.test(k)) get().removeDoc('weeks/' + k); });
-      set({ week: normWeek(null), weekHist: null, moveNote: null, mDay: null });
+      set({ week: normWeek(null), weekHist: null, moveNote: null, uncheckNote: null, mDay: null });
     }
     if (parts.logs) { Object.keys(get().logs).forEach(id => get().removeDoc('logs/' + id)); set({ logs: {} }); }
     if (parts.body) { set({ body: [] }); get().saveBody(); }

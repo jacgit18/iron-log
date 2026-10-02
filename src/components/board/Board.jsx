@@ -61,6 +61,8 @@ export default function Board() {
   const pct = total ? Math.round(done / total * 100) : 0;
   const wk = ymd(weekStart);
   const showMove = moveNote && moveNote.week === wk;
+  const uncheckNote = useAppStore(s => s.uncheckNote);
+  const showUncheck = uncheckNote && uncheckNote.week === wk;
 
   // Phones show one day; default to the first day that still has open work.
   let day = mDay;
@@ -180,6 +182,15 @@ export default function Board() {
               </span>
             )}
             <button type="button" className="btn sm ghost" onClick={hideLeftovers}>Not now</button>
+          </div>
+        </div>
+      )}
+      {showUncheck && (
+        <div className="notice" role="status">
+          <div>{uncheckNote.text}</div>
+          <div className="actions">
+            <button type="button" className="btn sm" onClick={st.undoUncheck}>Undo</button>
+            <button type="button" className="btn sm ghost" onClick={st.dismissUncheck}>Dismiss</button>
           </div>
         </div>
       )}
