@@ -1,0 +1,8 @@
+# Iron Log
+
+> A weekly workout board: two training programs (A and B) on a rotation schedule, targets for each exercise by training phase, set-by-set logging, timers, progress charts, weight goals and a muscle map. It's an installable offline web app, and data stays on the device.
+
+## Links
+
+- [Open the app](https://jacgit18.github.io/iron-log/): the live app on GitHub Pages
+- [Source and README](https://github.com/jacgit18/iron-log): features, screenshots and how to run it
