@@ -20,13 +20,13 @@ These change how days and exercises are stored. Do them together so the data str
 
 - [x] Add a Day 7 to the board. It starts empty, and exercises can be added whenever.
 - [x] Add a Rest day checkbox to each day. Ticking it inserts a rest day there and moves the later workouts one day later (blocked while Day 7 has exercises). A rest day counts as a complete day, and its exercises aren't in it, so volume numbers aren't inflated.
-- [ ] Add an exercise to the current day from the board.
-- [ ] Add stretches to the board, as a card type that doesn't need weight or reps.
-- [ ] Add an optional video link to each exercise.
-- [ ] Specify equipment for each exercise (dumbbell, bar, machine, bodyweight, etc.).
-- [ ] Add a Filter to sort exercises on the board by muscle group.
-- [ ] Set a default phase for an exercise that applies to all future instances of that exercise.
-- [ ] Add spinal waves as a bodyweight mobility exercise.
+- [x] Add an exercise to the current day from the board.
+- [x] Add stretches to the board, as a card type that doesn't need weight or reps.
+- [x] Add an optional video link to each exercise.
+- [x] Specify equipment for each exercise (dumbbell, bar, machine, bodyweight, etc.).
+- [x] Add a Filter to sort exercises on the board by muscle group.
+- [x] Set a default phase for an exercise that applies to all future instances of that exercise.
+- [x] Add spinal waves as a bodyweight mobility exercise.
 
 ## 3. Backend, database and Google login (together)
 

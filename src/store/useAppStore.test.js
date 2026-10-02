@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { mem, clearStorage, saved } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally;
+let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf;
 const st = () => useAppStore.getState();
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
   ({ BUILTIN } = await import('../lib/data.js'));
-  ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally } = await import('../lib/logic.js'));
+  ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf } = await import('../lib/logic.js'));
   await st().init();
 });
 beforeEach(() => {
@@ -365,5 +365,99 @@ describe('experiment board', () => {
   it('Erase programs clears the list', async () => {
     add(); await st().eraseData({ programs: true });
     expect(st().experiments).toEqual([]);
+  });
+});
+
+describe('exercise details, default phase and adding to a day', () => {
+  it('keeps a video link, equipment and stretch over a built-in exercise, and can clear them', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    expect(exInfo(st().cfg, 'hack')).toMatchObject({ n: 'Hack Squat', eq: 'machine' });
+    expect(st().saveExerciseDetails('hack', { url: 'https://example.com/v', eq: 'barbell', stretch: false, ph: '' })).toBeNull();
+    expect(exInfo(st().cfg, 'hack')).toMatchObject({ n: 'Hack Squat', url: 'https://example.com/v', eq: 'barbell' });
+    st().saveExerciseDetails('hack', { url: '', eq: '', stretch: false, ph: '' });
+    expect(exInfo(st().cfg, 'hack').url).toBeFalsy();
+    expect(exInfo(st().cfg, 'hack').eq).toBeFalsy();
+    expect(st().saveExerciseDetails('hack', { url: 'nope', eq: '', stretch: false, ph: '' })).toMatch(/https/);
+  });
+  it('an exercise default phase applies to every card, but a slot default or a week pick still wins', () => {
+    const sl = st().activeSlots(); const a = sl.find(s => s.id === 'A-d1s6'); const b = sl.find(s => s.id === 'A-d4s5'); // chest press: strength, then hypertrophy
+    st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: 'iso' });
+    expect(phaseOf(st().cfg, st().week, a, 0)).toBe('iso');
+    expect(phaseOf(st().cfg, st().week, b, 1)).toBe('iso');
+    st().setPhase('A-d1s6', 0, 'exp');
+    expect(phaseOf(st().cfg, st().week, a, 0)).toBe('exp');
+    st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: '' });
+    expect(phaseOf(st().cfg, st().week, b, 1)).toBe('hyp');
+  });
+  it('adds an exercise or a new stretch to one day of this week only', () => {
+    expect(st().addExerciseToDay(2, { ex: 'facepull', ph: 'hyp', note: 'light' })).toBeNull();
+    expect(st().addExerciseToDay(2, { ex: '__new', nn: 'Hip 90/90', ne: 'bodyweight', ns: true, ph: 'hyp' })).toBeNull();
+    const extras = st().activeSlots().filter(s => s.added);
+    expect(extras).toHaveLength(2);
+    expect(extras[0].items[0]).toMatchObject({ ex: 'facepull', ph: 'hyp' });
+    expect(extras[1].items[0].ph).toBeNull(); // a stretch has no phase
+    expect(st().addExerciseToDay(2, { ex: '', nn: '' })).toMatch(/Choose/);
+    st().checkCard(extras[1].id, true);
+    expect(st().logs['hip-90-90']).toBeUndefined(); // and nothing to log
+    expect(st().week.done[extras[1].id]).toBe(true);
+  });
+});
+
+describe('mobility phase', () => {
+  it('has its own sets × reps, and never turns a 1RM into a target', async () => {
+    const { PHASES, PH_KEYS } = await import('../lib/data.js');
+    const { rxOf, baseTargetOf } = await import('../lib/logic.js');
+    expect(PH_KEYS).toContain('mob');
+    expect(PHASES.mob.label).toBe('Mobility');
+    expect(rxOf(st().cfg, { ex: 'canoe' }, 'mob')).toBe('2 × 30 s');
+    const cfg = { ...st().cfg, rm: { canoe: 100 } };
+    expect(baseTargetOf(cfg, {}, { ex: 'canoe', w: 10 }, 'mob')).toMatchObject({ w: 10, src: 'program' });
+    st().saveExerciseDetails('canoe', { url: '', eq: '', stretch: false, ph: 'mob' });
+    expect(st().cfg.exPh.canoe).toBe('mob');
+  });
+});
+
+describe('equipment from the log sheet', () => {
+  it('changing it updates the exercise everywhere, and the new options exist', async () => {
+    const { exInfo, EQUIPMENT } = await import('../lib/data.js');
+    expect(EQUIPMENT).toMatchObject({ ezbar: 'EZ bar', shortbar: 'Short barbell' });
+    const entry = { d: '2026-10-01', ph: 'hyp', w: 270, s: 4, r: 15 };
+    expect(st().submitLog('A-d3s1', 0, { entry, ph: 'hyp', eq: 'ezbar' })).toBe(true);
+    expect(exInfo(st().cfg, 'hack').eq).toBe('ezbar');
+    expect(exInfo(st().cfg, 'hack').n).toBe('Hack Squat');
+    st().submitLog('A-d3s1', 0, { entry, ph: 'hyp', eq: 'machine' }); // back to the built-in value: no leftover override
+    expect(st().cfg.ex.hack).toBeUndefined();
+    st().submitLog('A-d3s1', 0, { entry, ph: 'hyp' }); // untouched
+    expect(exInfo(st().cfg, 'hack').eq).toBe('machine');
+  });
+});
+
+describe('adding to every week', () => {
+  it('puts the exercise in this day of the program, in its section, for every week', () => {
+    expect(st().addExerciseToDay(2, { ex: 'facepull', ph: 'hyp', note: 'light' }, 'program')).toBeNull();
+    const day2 = st().programs.A.days[1].slots;
+    const i = day2.findIndex(x => x.items[0].ex === 'facepull' && x.sec === 'Regular' && x.items[0].note === 'light');
+    expect(i).toBeGreaterThan(-1);
+    expect(day2[i + 1].sec).not.toBe('Regular'); // after the last Regular card, before the Supersets
+    expect(st().activeSlots().filter(s => s.added)).toHaveLength(0); // not a one-week card
+    expect(saved('programs/A').days[1].slots.some(x => x.items[0].note === 'light')).toBe(true);
+  });
+  it('a new stretch joins the program as a Stretches card with no phase', () => {
+    st().addExerciseToDay(3, { ex: '__new', nn: 'Hip 90/90', ns: true }, 'program');
+    const sl = st().programs.A.days[2].slots.find(x => x.sec === 'Stretches');
+    expect(sl.items[0].ph).toBeNull();
+    expect(st().cfg.ex['hip-90-90'].stretch).toBe(true);
+  });
+});
+
+describe('the board add button', () => {
+  it('opens the full add sheet for the program day shown in that column', () => {
+    st().openAddToProgram(2);
+    expect(st().modal).toMatchObject({ type: 'slot', idx: null });
+    expect(st().edDay).toBe(2);
+    expect(st().edKey()).toBe('A');
+    st().openAddToProgram(3, 'stretch');
+    expect(st().modal.preset).toBe('stretch');
+    st().closeModal();
   });
 });

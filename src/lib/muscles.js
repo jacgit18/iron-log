@@ -1,6 +1,6 @@
 /* ---------- Muscle map ---------- */
-import { slotsFor } from './data.js';
-import { phaseOf, rxOf, colOf, weekSlots } from './logic.js';
+import { slotsFor, exInfo } from './data.js';
+import { phaseOf, defaultPhase, rxOf, colOf, weekSlots } from './logic.js';
 
 export const MUSCLES = {
   traps: { n: 'Traps' }, frontdelt: { n: 'Front delts' }, sidedelt: { n: 'Side delts' }, reardelt: { n: 'Rear delts' },
@@ -65,6 +65,18 @@ export const BACK = [
 ];
 
 export const tagsOf =(cfg, id) => (cfg.muscleMap && cfg.muscleMap[id]) || MUSCLE_MAP[id] || null;
+// Board filter: a card matches when any of its exercises trains the muscle (primary or secondary) and uses the equipment.
+// muscle 'stretch' matches stretches.
+export function matchesFilter(cfg, s, { muscle = '', eq = '' }) {
+  return s.items.some(it => {
+    const info = exInfo(cfg, it.ex);
+    if (eq && info.eq !== eq) return false;
+    if (!muscle) return true;
+    if (muscle === 'stretch') return !!info.stretch;
+    const tg = tagsOf(cfg, it.ex);
+    return !!tg && !tg.mob && [...(tg.p || []), ...(tg.s || [])].includes(muscle);
+  });
+}
 export const level = s => s <= 0 ? 0 : s < 5 ? 1 : s < 10 ? 2 : s <= 20 ? 3 : 4;
 export const fmtSets = n => (Math.round(n * 2) / 2).toString();
 // Planned weekly sets per muscle for a program. `live` uses this week's phases and moves.
@@ -72,8 +84,9 @@ export function muscleVolume(cfg, week, prog, live, withSecondary) {
   const vol = {}; M_KEYS.forEach(k => { vol[k] = { sets: 0, ex: [] }; });
   const untagged = new Set();
   (live ? weekSlots(prog, week) : slotsFor(prog)).forEach(sl => sl.items.forEach((it, idx) => {
+    if (exInfo(cfg, it.ex).stretch) return; // stretches aren't counted
     const tg = tagsOf(cfg, it.ex); if (!tg) { untagged.add(it.ex); return; } if (tg.mob) return;
-    const ph = live ? phaseOf(cfg, week, sl, idx) : (cfg.phDef[`${sl.id}:${idx}`] ?? it.ph ?? null);
+    const ph = live ? phaseOf(cfg, week, sl, idx) : defaultPhase(cfg, sl, idx);
     const m = rxOf(cfg, it, ph).match(/(\d+)\s*×/); const sets = (m ? Number(m[1]) : 3) * (sl.type === 'either' ? 0.5 : 1);
     const day = live ? colOf(week, week.moved[sl.id] || sl.day) : sl.day;
     (withSecondary ? [['p', 1], ['s', 0.5]] : [['p', 1]]).forEach(([k, f]) => (tg[k] || []).forEach(mu => {

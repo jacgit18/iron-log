@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
-import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
+import { PHASES, PH_KEYS, EQUIPMENT, exInfo } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../lib/dates.js';
 import {
   DAYS, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, describe, holdPlan,
@@ -35,32 +35,36 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
             onChange={e => checkCard(s.id, e.target.checked)} />
         )}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {(label || s.tier || s.experiment) && <span className="tag">{[s.experiment && 'Experiment', s.tier, label].filter(Boolean).join(' · ')}</span>}
+          {(label || s.tier || s.experiment) && <span className="tag">{[s.experiment && (s.added ? 'Added' : 'Experiment'), s.tier, label].filter(Boolean).join(' · ')}</span>}
           {week.moved[s.id] && <span className="moved">From Day {planned}</span>}
           {sk && <span className="skiptag">Skipped this week</span>}
         </div>
       </div>
 
       {s.items.map((it, idx) => {
-        const ph = phaseOf(cfg, week, s, idx); const ex = exInfo(cfg, it.ex);
-        const t = targetOf(cfg, logs, it, ph); const last = lastLog(logs, it.ex, ph);
+        const ex = exInfo(cfg, it.ex); const stretch = !!ex.stretch;
+        const ph = stretch ? null : phaseOf(cfg, week, s, idx);
+        const t = targetOf(cfg, logs, it, ph); const last = stretch ? null : lastLog(logs, it.ex, ph);
         const idone = paired && isItemDone(s, idx, week);
         const rx = rxOf(cfg, it, ph);
-        const st = stallOf(cfg, logs, it.ex, ph);
+        const st = stretch ? null : stallOf(cfg, logs, it.ex, ph);
         const hp = ph === 'iso' ? holdPlan(cfg, week, logs, s, idx) : null;
         return (
           <Fragment key={idx}>
             {idx > 0 && s.type === 'either' && <div className="or">or</div>}
-            <div className={`ex${idone ? ' idone' : ''}`}>
+            <div className={`ex${idone ? ' idone' : ''}${ex.eq && EQUIPMENT[ex.eq] ? ' haseq' : ''}`}>
+              {ex.eq && EQUIPMENT[ex.eq] && <span className="tag exeq">{EQUIPMENT[ex.eq]}</span>}
               <div className="exname">
                 {paired && (
                   <input type="checkbox" className="chk" id={`chk-${s.id}-${idx}`} checked={idone} aria-label={`Mark ${ex.n} done`}
                     onChange={e => checkItem(s.id, idx, e.target.checked)} />
                 )}
                 <h4 className="exh" id={`h-${s.id}-${idx}`}>{s.type === 'superset' ? (idx === 0 ? 'A · ' : 'B · ') : ''}{ex.n}</h4>
+                {stretch && <span className="tag exstretch">Stretch</span>}
                 {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`Video: ${ex.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>video</a>}
+                <button type="button" className="btn sm ghost" id={`det-${s.id}-${idx}`} aria-label={`Details: ${ex.n}`} onClick={() => openModal({ type: 'exercise', exId: it.ex })}>Details</button>
               </div>
-              <div className="exline">
+              {stretch ? (it.rx && <div className="exline"><span className="rx">{it.rx}</span></div>) : <div className="exline">
                 <select className="phase" id={`ph-${s.id}-${idx}`} data-p={ph || ''} aria-label={`Phase for ${ex.n}`} value={ph || ''}
                   onChange={e => setPhase(s.id, idx, e.target.value)}>
                   {!ph && <option value="">Set phase</option>}
@@ -73,7 +77,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
                 {hp && <button type="button" className="btn sm" id={`hold-${s.id}-${idx}`} aria-label={`Hold ${hp.sets}×${hp.hold}s: ${ex.n}`} onClick={() => startHold(ex.n, hp.sets, hp.hold)}>Hold {hp.sets}×{hp.hold}s</button>}
                 {last && <button type="button" className="btn sm" id={`rep-${s.id}-${idx}`} aria-label={`Same as last: log ${ex.n} again, ${describe(last)}`} onClick={() => quickLog(s.id, idx)}>Same as last</button>}
                 <button type="button" className="btn sm logbtn" id={`log-${s.id}-${idx}`} aria-label={`Log ${ex.n}`} onClick={() => openModal({ type: 'log', slotId: s.id, idx })}>Log</button>
-              </div>
+              </div>}
               {it.note && <div className="note">{it.note}</div>}
               {last && <div className="lastlog">Last: {describe(last)} · {fmtShort(parseDate(last.d))}</div>}
               {st && <div className="stall">Stalled since {fmtShort(parseDate(st.since))} · no gain in weight or reps in 3 sessions</div>}

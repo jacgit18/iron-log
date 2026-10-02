@@ -519,3 +519,30 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .expcard{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
 .expcard .actions{justify-content:flex-start;align-items:center}
 .expcard select{min-height:44px}
+
+/* Board filter and per-day add button */
+.filterbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px;margin:8px 0}
+.filterbar .field{min-width:160px}
+.addbtn{align-self:flex-start;margin:2px 0 6px}
+
+/* Equipment sits in the top-right corner of each exercise; the name leaves room for it. */
+.ex{position:relative}
+.ex.haseq .exname{padding-right:84px}
+.exeq{position:absolute;top:0;right:0}
+.ex + .ex .exeq{top:8px}
+.exstretch{margin-left:6px}
+
+/* Mobility phase */
+:root{--mob:#5B2A86;--mob-bg:#EEE3F7;--s-mob:#8e44ad}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--mob:#D3B3F2;--mob-bg:#2E2038;--s-mob:#a566c7}}
+:root[data-theme="dark"]{--mob:#D3B3F2;--mob-bg:#2E2038;--s-mob:#a566c7}
+.phase[data-p="mob"]{background:var(--mob-bg);color:var(--mob)}
+.dot[data-p="mob"]{background:var(--mob)}
+.lplot .ln.s-mob{stroke:var(--s-mob)}
+.ldot.s-mob::after{box-shadow:0 0 0 2px var(--s-mob);border-radius:3px;width:6px;height:12px;left:19px;top:16px}
+.ldot.end.s-mob::after{background:var(--s-mob);width:6px;height:12px;left:19px;top:16px}
+.lsw.s-mob{background:var(--s-mob);border-radius:2px;width:6px;height:12px}
+
+/* Stretches sit under the warm-up on each day */
+.stretches{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.stretchhead{display:flex;align-items:center;justify-content:space-between;gap:8px}

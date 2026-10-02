@@ -12,7 +12,7 @@ function ItemFields({ it, k, type, cfg, onChange }) {
   return (
     <fieldset className="edit-item">
       <legend>{legend}</legend>
-      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} />
+      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} stretch={!!it.ns} onName={nm => up({ nm })} onUrl={nu => up({ nu })} onEq={ne => up({ ne })} onStretch={ns => up({ ns })} />
       <div className="fields">
         <label className="field">Phase
           <select value={it.ph || ''} onChange={e => up({ ph: e.target.value || null })}>
@@ -31,12 +31,12 @@ function ItemFields({ it, k, type, cfg, onChange }) {
   );
 }
 
-export default function SlotSheet({ idx }) {
+export default function SlotSheet({ idx, preset }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const edDay = useAppStore(s => s.edDay);
   const [d, setD] = useState(() => {
-    const src = idx == null ? { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' } : structuredClone(st.edProgram().days[edDay - 1].slots[idx]);
+    const src = idx == null ? (preset === 'stretch' ? { id: null, sec: 'Stretches', tier: '', type: 'single', items: [{ ...blankItem(), ph: null, ns: true }], note: '' } : { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' }) : structuredClone(st.edProgram().days[edDay - 1].slots[idx]);
     // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
     return { ...src, type: src.type || 'single', day: edDay, idx, note: src.note || '', tier: src.tier || '', items: src.items.map(it => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
   });
@@ -46,7 +46,7 @@ export default function SlotSheet({ idx }) {
   const setItem = (k, patch) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
   const submit = e => {
     e.preventDefault();
-    const clean = { ...d, note: d.note.trim(), items: d.items.map(it => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim() })) };
+    const clean = { ...d, note: d.note.trim(), items: d.items.map(it => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne || '', ns: !!it.ns })) };
     const msg = st.saveSlot(clean);
     if (msg) setErr(msg);
   };

@@ -1,10 +1,18 @@
 import { BUILTIN, slotsFor, newExId } from '../lib/data.js';
-import { progName } from '../lib/logic.js';
+import { progName, dayAt } from '../lib/logic.js';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
-export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home'];
+export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home', 'Stretches'];
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 export const blankItem = () => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
+
+// A new card goes after the last card in the same section; a new section goes before Home (Home goes last).
+export function insertSlot(target, slot) {
+  let at = -1; target.forEach((x, j) => { if (x.sec === slot.sec) at = j; });
+  if (at < 0) at = slot.sec === 'Home' ? target.length - 1 : target.findIndex(x => x.sec === 'Home') - 1;
+  if (at < -1) at = target.length - 1;
+  target.splice(at + 1, 0, slot);
+}
 
 // Program tab state + actions. `flag` is the save-status helper from the app store.
 export const editorSlice = (set, get, flag) => ({
@@ -21,6 +29,13 @@ export const editorSlice = (set, get, flag) => ({
   edProgram() { const it = get().edItem(); return it ? { ...it.prog, key: 'N' } : get().programs[get().edKey()]; },
   edName() { const it = get().edItem(); return it ? it.name : progName(get().cfg, get().edKey()); },
 
+  // The board's + Add exercise: the add sheet, aimed at the program day shown in column `col`.
+  openAddToProgram(col, preset) {
+    const pd = dayAt(get().week, col);
+    if (pd == null) { flag('That is your rest day'); return; }
+    const ak = get().activeProgKey();
+    set({ edProg: get().programs[ak] ? ak : 'A', edDay: pd, modal: { type: 'slot', idx: null, preset } });
+  },
   setEdProg: edProg => set({ edProg }),
   setEdDay: edDay => set({ edDay }),
 
@@ -114,7 +129,7 @@ export const editorSlice = (set, get, flag) => ({
     const slugFor = name => newExId(get().cfg, name, newEx);
     const items = d.items.map(it => {
       let ex = it.ex;
-      if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}) }; }
+      if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}), ...(it.ns ? { stretch: true } : {}) }; }
       const o = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
     });
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex, newEx); });
@@ -127,11 +142,7 @@ export const editorSlice = (set, get, flag) => ({
       const target = prog.days[d.day - 1].slots;
       if (orig && d.day === edDay && orig.sec === slot.sec) target.splice(d.idx, 0, slot);
       else {
-        // After the last card in the same section; a new section goes before Home (Home goes last).
-        let at = -1; target.forEach((x, j) => { if (x.sec === slot.sec) at = j; });
-        if (at < 0) at = slot.sec === 'Home' ? target.length - 1 : target.findIndex(x => x.sec === 'Home') - 1;
-        if (at < -1) at = target.length - 1;
-        target.splice(at + 1, 0, slot);
+        insertSlot(target, slot);
       }
     });
     set({ modal: null });
