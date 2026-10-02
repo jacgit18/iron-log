@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ymd, parseDate, monday, addDays, fmtShort } from './dates.js';
+import { ymd, parseDate, monday, addDays, fmtShort, fmtDayDate } from './dates.js';
 
 describe('dates', () => {
   it('formats and parses local calendar dates', () => {
@@ -18,5 +18,12 @@ describe('dates', () => {
     expect(ymd(addDays(parseDate('2026-12-27'), 7))).toBe('2027-01-03');
     expect(ymd(addDays(parseDate('2026-03-07'), 1))).toBe('2026-03-08');
     expect(ymd(addDays(parseDate('2026-11-01'), 7))).toBe('2026-11-08');
+  });
+
+  it('formats a day label with the weekday and a padded month/day', () => {
+    expect(fmtDayDate('2026-09-27')).toBe('Sunday 09/27');
+    expect(fmtDayDate('2026-10-01')).toBe('Thursday 10/01');
+    expect(fmtDayDate('2026-10-03')).toBe('Saturday 10/03');
+    expect(fmtDayDate('2027-01-05')).toBe('Tuesday 01/05');
   });
 });

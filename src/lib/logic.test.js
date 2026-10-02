@@ -4,7 +4,7 @@ import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
-  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, pullable,
+  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, pullable, dayDate,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -327,5 +327,46 @@ describe('stray moved values', () => {
   });
   it('normWeek keeps only moved days 1..7', () => {
     expect(normWeek({ moved: { a: 3, b: 9, c: '4', d: 'x' } }).moved).toEqual({ a: 3, c: 4 });
+  });
+});
+
+describe('dayDate: the date a board was worked', () => {
+  const card = (id, ex) => ({ id, day: 1, type: 'single', items: [{ ex }] });
+  const a = card('a', 'hack'), b = card('b', 'legext');
+  const WK = '2026-09-27';
+  const entry = (slot, d, extra = {}) => ({ d, slot, wk: WK, w: 100, s: 3, r: 5, ...extra });
+
+  it('is null when nothing is logged', () => {
+    expect(dayDate([a, b], {}, WK)).toBeNull();
+    expect(dayDate([], { hack: [entry('a', '2026-09-29')] }, WK)).toBeNull();
+  });
+  it('is the earliest date among the cards in the column', () => {
+    const logs = { hack: [entry('a', '2026-09-30')], legext: [entry('b', '2026-09-29')] };
+    expect(dayDate([a, b], logs, WK)).toBe('2026-09-29');
+  });
+  it('ignores other weeks and cards that are not in the column', () => {
+    const logs = { hack: [entry('a', '2026-09-22', { wk: '2026-09-20' }), entry('a', '2026-09-30')], legext: [entry('b', '2026-09-28')] };
+    expect(dayDate([a], logs, WK)).toBe('2026-09-30');
+  });
+  it('works out the week from the date when an entry has no week field', () => {
+    const e = { d: '2026-09-29', slot: 'a', w: 100, s: 3, r: 5 };
+    expect(dayDate([a], { hack: [e] }, WK)).toBe('2026-09-29');
+    expect(dayDate([a], { hack: [e] }, '2026-09-20')).toBeNull();
+  });
+  it('counts hand-logged sessions and every exercise of a pair', () => {
+    const pair = { id: 'p', day: 1, type: 'superset', items: [{ ex: 'hack' }, { ex: 'legext' }] };
+    expect(dayDate([pair], { legext: [entry('p', '2026-10-01', { auto: undefined })] }, WK)).toBe('2026-10-01');
+  });
+});
+
+describe('normWeek keeps restOn only with a rest day', () => {
+  it('keeps a well-formed restOn alongside a valid rest', () => {
+    expect(normWeek({ rest: 3, restOn: '2026-09-29' }).restOn).toBe('2026-09-29');
+  });
+  it('drops it without a rest day or when malformed', () => {
+    expect(normWeek({ restOn: '2026-09-29' })).not.toHaveProperty('restOn');
+    expect(normWeek({ rest: 9, restOn: '2026-09-29' })).not.toHaveProperty('restOn');
+    ['9/29/2026', '2026-9-29', 20260929, null, '', {}].forEach(v => expect(normWeek({ rest: 3, restOn: v })).not.toHaveProperty('restOn'));
+    expect(normWeek(null)).not.toHaveProperty('restOn');
   });
 });

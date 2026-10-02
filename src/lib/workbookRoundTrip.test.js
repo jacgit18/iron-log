@@ -66,4 +66,32 @@ describe('workbook round trip', () => {
     const weeks = { '2030-01-06': { done: { x: true }, order: [1, 1, 3, 4, 5, 6, 7] } };
     expect(parseDataFile(JSON.stringify(buildDataFile(S, weeks))).weeks['2030-01-06']).not.toHaveProperty('order');
   });
+
+  it('keeps the rest day’s date through the JSON file, the workbook and an Excel re-save', async () => {
+    const weeks = { ...raw.weeks, '2030-01-06': { done: {}, rest: 3, restOn: '2030-01-08' } };
+    const viaJson = parseDataFile(JSON.stringify(buildDataFile(S, weeks)));
+    const wb = buildOverallWorkbook(X, S, weeks);
+    const viaXlsx = await parseExcelExport(bytes(wb), DEFAULT_CFG);
+    // What Excel and Google Sheets do on save: ISO date text in the date columns becomes a real date.
+    const resaved = X.read(bytes(wb), { type: 'array' });
+    const ws = resaved.Sheets['Check-offs'];
+    const toDate = c => { const [y, m, d] = c.v.split('-').map(Number); return { t: 'd', v: new Date(Date.UTC(y, m - 1, d)) }; };
+    const isIso = c => c && c.t === 's' && /^\d{4}-\d{2}-\d{2}$/.test(c.v);
+    let restOnConverted = false;
+    Object.keys(ws).filter(k => /^A([2-9]|\d\d+)$/.test(k)).forEach(k => {
+      const row = k.slice(1);
+      if (isIso(ws[k])) ws[k] = toDate(ws[k]);
+      if (ws['B' + row] && ws['B' + row].v === 'restOn' && isIso(ws['D' + row])) { ws['D' + row] = toDate(ws['D' + row]); restOnConverted = true; }
+    });
+    expect(restOnConverted).toBe(true);
+    const viaResave = await parseExcelExport(bytes(resaved), DEFAULT_CFG);
+    expect(viaJson.weeks['2030-01-06'].restOn).toBe('2030-01-08');
+    expect(viaXlsx.weeks['2030-01-06'].restOn).toBe('2030-01-08');
+    expect(viaResave.weeks['2030-01-06'].restOn).toBe('2030-01-08');
+  });
+
+  it('ignores a rest date that has no rest day', async () => {
+    const weeks = { '2030-01-06': { done: { x: true }, restOn: '2030-01-08' } };
+    expect(parseDataFile(JSON.stringify(buildDataFile(S, weeks))).weeks['2030-01-06']).not.toHaveProperty('restOn');
+  });
 });

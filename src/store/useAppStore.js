@@ -205,7 +205,8 @@ export const useAppStore = create((set, get) => ({
     const w = get().week;
     if (w.rest !== n && restBlocked(w, get().activeSlots())) { flag('Day 7 has exercises, so there is no room to add a rest day. Move or clear them, or swap the empty day back to the end.'); return false; }
     set({ moveNote: null });
-    return get().mutateWeek(x => { if (x.rest === n) delete x.rest; else x.rest = n; });
+    const date = defaultLogDate(get().weekStart);
+    return get().mutateWeek(x => { if (x.rest === n) { delete x.rest; delete x.restOn; } else { x.rest = n; x.restOn = x.restOn || date; } });
   },
   // Swap displayed column d with its neighbor d + dir, for this week. Swapping with the rest column moves the rest day.
   swapDays(d, dir) {

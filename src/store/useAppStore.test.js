@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { mem, clearStorage, saved } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout;
+let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate;
 const st = () => useAppStore.getState();
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
   ({ BUILTIN } = await import('../lib/data.js'));
-  ({ DEFAULT_CFG, currentLayout } = await import('../lib/logic.js'));
+  ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate } = await import('../lib/logic.js'));
   await st().init();
 });
 beforeEach(() => {
@@ -218,5 +218,38 @@ describe('swap days', () => {
     st().swapDays(6, 1);
     expect(st().week.done['A-d6s1']).toBe(true);
     expect(ids(7)).toContain('A-d6s1');
+  });
+});
+
+describe('day dates', () => {
+  it('stamps the rest day with today’s date, keeps it when the rest day moves, and clears it on untick', () => {
+    st().setRestDay(3);
+    expect(st().week.restOn).toBe(defaultLogDate(st().weekStart));
+    st().mutateWeek(w => { w.restOn = '2026-01-04'; });
+    st().setRestDay(2); // moves the rest day
+    expect(st().week.rest).toBe(2);
+    expect(st().week.restOn).toBe('2026-01-04');
+    st().swapDays(2, 1); // the swap arrows move it too
+    expect(st().week.rest).toBe(3);
+    expect(st().week.restOn).toBe('2026-01-04');
+    st().setRestDay(3); // untick
+    expect(st().week.rest).toBeUndefined();
+    expect(st().week.restOn).toBeUndefined();
+    st().setRestDay(3); // ticking again stamps a fresh date
+    expect(st().week.restOn).toBe(defaultLogDate(st().weekStart));
+  });
+  it('a check-off dates its board, and unchecking removes the date', () => {
+    const cards = () => currentLayout(st().week, st().activeSlots())[3];
+    expect(dayDate(cards(), st().logs, st().weekKey())).toBeNull();
+    st().checkCard('A-d3s1', true);
+    expect(dayDate(cards(), st().logs, st().weekKey())).toBe(defaultLogDate(st().weekStart));
+    st().checkCard('A-d3s1', false);
+    expect(dayDate(cards(), st().logs, st().weekKey())).toBeNull();
+  });
+  it('the date stays with the workout when days are swapped', () => {
+    st().checkCard('A-d6s1', true);
+    st().swapDays(6, 1);
+    const col7 = currentLayout(st().week, st().activeSlots())[7];
+    expect(dayDate(col7, st().logs, st().weekKey())).toBe(defaultLogDate(st().weekStart));
   });
 });

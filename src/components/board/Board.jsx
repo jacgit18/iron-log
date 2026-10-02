@@ -2,8 +2,8 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { WARMUP, slotsFor } from '../../lib/data.js';
-import { monday, ymd, addDays, fmtShort } from '../../lib/dates.js';
-import { tally, currentLayout, isOpen, pullable, isSkipped, programFor, progName, DAYS, dayAt, dayTitle } from '../../lib/logic.js';
+import { monday, ymd, addDays, fmtShort, fmtDayDate } from '../../lib/dates.js';
+import { tally, currentLayout, isOpen, pullable, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
@@ -36,6 +36,7 @@ export default function Board() {
   const cfg = useAppStore(s => s.cfg);
   const week = useAppStore(s => s.week);
   const weekStart = useAppStore(s => s.weekStart);
+  const logs = useAppStore(s => s.logs);
   const programs = useAppStore(s => s.programs);
   const storeMode = useAppStore(s => s.storeMode);
   const moveNote = useAppStore(s => s.moveNote);
@@ -175,7 +176,7 @@ export default function Board() {
           const pd = dayAt(week, d); // the program day shown here; null for the rest day
           if (pd == null) return (
             <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}`}>
-              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div></div><SwapArrows d={d} /></div>
+              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div>{week.restOn && <div className="sub daydate">{fmtDayDate(week.restOn)}</div>}</div><SwapArrows d={d} /></div>
               <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => st.setRestDay(d)} /> Rest day</label>
               {cols[d].length > 0 ? (
                 <>
@@ -187,6 +188,7 @@ export default function Board() {
           );
           const dayDef = prog.days[pd - 1];
           const list = cols[d];
+          const date = dayDate(list, logs, wk);
           const t = tally(list, week);
           const warm = week.warm[pd] || {};
           const pending = dayDef.makeup ? pullable(week, slots).length : 0;
@@ -206,6 +208,7 @@ export default function Board() {
                   onChange={e => st.checkDay(d, e.target.checked)} />
                 <div>
                   <h3 id={`colh-${d}`}>{dayTitle(dayDef, d)}</h3>
+                  {date && <div className="sub daydate">{fmtDayDate(date)}</div>}
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                 </div>
                 <span className="count">{t.done}/{t.total}</span>

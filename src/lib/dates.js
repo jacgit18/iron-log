@@ -6,3 +6,5 @@ export function monday(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.
 export const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 export const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export const fmtShort = d => `${MON[d.getMonth()]} ${d.getDate()}`;
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const fmtDayDate = s => { const d = parseDate(s); return `${DAY_NAMES[d.getDay()]} ${pad(d.getMonth() + 1)}/${pad(d.getDate())}`; }; // "Sunday 09/27"

@@ -4,8 +4,9 @@
    reading format 1, don't edit the fixture to match. */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { parseDataFile, buildDataFile, dataStats, mergeWeek, DATA_FORMAT } from './export.js';
+import { parseDataFile, buildDataFile, dataStats, mergeWeek, weekFingerprint, DATA_FORMAT } from './export.js';
 import { BUILTIN, withAllDays } from './data.js';
+import { DEFAULT_CFG } from './logic.js';
 
 const text = readFileSync(new URL('../test/fixtures/iron-log-data.v1.json', import.meta.url), 'utf8');
 const raw = JSON.parse(text);
@@ -101,4 +102,20 @@ it('mergeWeek keeps this device’s order, falls back to the other side, and ign
   expect(mergeWeek({}, { order: b }).order).toEqual(b);
   expect(mergeWeek({ order: [1, 1, 3, 4, 5, 6, 7] }, { order: b }).order).toEqual(b);
   expect(mergeWeek({}, {})).not.toHaveProperty('order');
+});
+
+it('mergeWeek keeps this device’s rest date and falls back to the other side’s', () => {
+  expect(mergeWeek({ rest: 2, restOn: '2026-09-29' }, { rest: 2, restOn: '2026-09-30' }).restOn).toBe('2026-09-29');
+  expect(mergeWeek({ rest: 2 }, { rest: 2, restOn: '2026-09-30' }).restOn).toBe('2026-09-30');
+  expect(mergeWeek({}, { rest: 4, restOn: '2026-09-30' })).toMatchObject({ rest: 4, restOn: '2026-09-30' });
+  expect(mergeWeek({}, { restOn: '2026-09-30' })).not.toHaveProperty('restOn');
+  const other = mergeWeek({ rest: 2 }, { rest: 5, restOn: '2026-09-30' });
+  expect(other.rest).toBe(2);
+  expect(other).not.toHaveProperty('restOn');
+});
+
+it('weekFingerprint changes when the rest date does', () => {
+  const S = { cfg: structuredClone(DEFAULT_CFG), logs: {}, programs: { A: BUILTIN.A, B: BUILTIN.B } };
+  const a = weekFingerprint(S, '2030-01-06', { rest: 2, restOn: '2030-01-08' }), b = weekFingerprint(S, '2030-01-06', { rest: 2, restOn: '2030-01-09' });
+  expect(a).not.toBe(b);
 });
