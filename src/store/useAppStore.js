@@ -496,16 +496,19 @@ export const useAppStore = create((set, get) => ({
     get().addEntry(slotId, idx, entry);
     get().applyExerciseUrl(it.ex, url);
     const { cfg, week } = get();
+    // Every card of this exercise in the shown week, on any day (added cards included).
+    const sameEx = (get().activeSlots()).flatMap(sl => sl.items.map((x, i) => x.ex === it.ex && `${sl.id}:${i}`).filter(Boolean));
     const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
     const cfgChange = eqChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
     if (cfgChange) get().mutateCfg(c => {
       if (eqChange) setOverride(c, it.ex, { eq });
-      if (makeExDefault && ph) { setExerciseDefault(c, it.ex, ph, get().programs, get().library); delete c.phDef[key]; }
+      if (makeExDefault && ph) { setExerciseDefault(c, it.ex, ph, get().programs, get().library); sameEx.forEach(k => { delete c.phDef[k]; }); }
       if (makeDefault && ph) c.phDef[key] = ph; // after the exercise default, so ticking both keeps this slot's
       if (rm === null) delete c.rm[it.ex]; else if (rm > 0) c.rm[it.ex] = rm;
     });
     get().mutateWeek(w => {
       if (ph && ph !== phaseOf(cfg, week, s, idx)) w.ph[key] = ph;
+      if (makeExDefault && ph) sameEx.forEach(k => { delete w.ph[k]; });
       if ((makeDefault || makeExDefault) && ph) delete w.ph[key];
       if (done) setItemDone(w, s, idx, true);
     });
