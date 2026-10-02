@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { BUILTIN, resolveProgram, slotsFor, padLibrary } from '../lib/data.js';
+import { BUILTIN, resolveProgram, padLibrary, exInfo, newExId } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
-  setCardDone, setItemDone, clearDone, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, altDay, defaultLogDate, autoLogs,
+  setCardDone, setItemDone, clearDone, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -41,6 +41,8 @@ const readToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } 
 // Standalone (e.g. GitHub Pages) rather than inside the Claude host, which backs up through its connector.
 const standalone = typeof window !== 'undefined' && !window.claude;
 
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
@@ -73,11 +75,12 @@ export const useAppStore = create((set, get) => ({
   tab: 'board',
   mDay: null, // day shown on phones; null = pick the first day with open work
   library: [], // saved program versions
+  experiments: [], // exercises to try: [{id, ex, ph, note}]
   body: [], // body weight: [{wk, d, w}], one per week
   programs: { A: BUILTIN.A, B: BUILTIN.B },
   storeMode: 'loading',
   saveFlag: '',
-  ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false },
+  ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false },
   moveNote: null, // heads-up after a move puts the same exercise on the same or a neighboring day
   modal: null, // {type:'log', slotId, idx} | {type:'detail', exId}
   weekHist: null, // every saved week, loaded on demand for Progress and exports
@@ -104,7 +107,7 @@ export const useAppStore = create((set, get) => ({
     if (get().mutateCfg(c => { if (c.muscleMap) delete c.muscleMap[exId]; })) set({ modal: null });
   },
 
-  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body }; },
+  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments }; },
 
   // Callers that arrive while a load is running wait for that same load.
   loadHistory() {
@@ -131,11 +134,11 @@ export const useAppStore = create((set, get) => ({
     return { ...(get().weekHist || {}), [get().weekKey()]: get().week };
   },
 
-  isReady: () => { const r = get().ready; return r.cfg && r.logs && r.week && r.programs && r.lib && r.body; },
+  isReady: () => { const r = get().ready; return r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp; },
   weekKey: () => ymd(get().weekStart),
   activeProgKey: () => activeProgKey(get().cfg, get().week, get().weekStart),
   activeProgram: () => { const s = get(); return s.programs[s.activeProgKey()] || s.programs.A; },
-  activeSlots: () => slotsFor(get().activeProgram()),
+  activeSlots: () => weekSlots(get().activeProgram(), get().week),
   slotById: id => get().activeSlots().find(x => x.id === id),
 
   // Every write is refused until all data has loaded, so a half-loaded week never overwrites the saved one.
@@ -151,6 +154,7 @@ export const useAppStore = create((set, get) => ({
   saveWeek() { queue.save('weeks/' + get().weekKey(), get().week); },
   saveBody() { queue.save('body/main', { entries: get().body }); },
   saveLibrary() { queue.save('library/main', { items: get().library }); },
+  saveExperiments() { queue.save('experiments/main', { items: get().experiments }); },
   saveLog(exId) { queue.save('logs/' + exId, { entries: get().logs[exId] || [] }); },
   saveProgram(k, prog) {
     const body = structuredClone(prog); delete body.key;
@@ -212,6 +216,37 @@ export const useAppStore = create((set, get) => ({
     const fromShown = colOf(week0, week0.moved[cards[0].id] || cards[0].day);
     set({ moveNote: lines.length ? { batch, fromShown, to: day, week: get().weekKey(), lines } : null });
     flag(`Moved ${cards.length} to Day ${day}${lines.length ? ' · heads-up' : ''}`);
+  },
+  // Experiment board: a list of exercises to try, added to a day of the viewed week as a card for that week.
+  setExperiments(experiments) { set({ experiments }); get().saveExperiments(); },
+  saveExperiment(d) {
+    if (get().blocked()) return null;
+    if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
+    if (d.ex === '__new' && d.nu && !/^https?:\/\//.test(d.nu)) return 'Video link should start with https://';
+    let ex = d.ex;
+    if (ex === '__new') { ex = newExId(get().cfg, d.nn); get().mutateCfg(c => { c.ex[ex] = { n: d.nn, ...(d.nu ? { url: d.nu } : {}) }; }); }
+    const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim() };
+    const list = get().experiments;
+    get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
+    set({ modal: null }); flag('Saved'); return null;
+  },
+  deleteExperiment(id) { if (get().blocked()) return; get().setExperiments(get().experiments.filter(x => x.id !== id)); flag('Deleted'); },
+  addToDay(entryId, col) {
+    const e = get().experiments.find(x => x.id === entryId); if (!e) return false;
+    const pd = dayAt(get().week, col); if (pd == null) { flag('That is your rest day'); return false; }
+    const ok = get().mutateWeek(w => { w.extra = [...(w.extra || []), { id: uid('X-'), day: pd, ex: e.ex, ph: e.ph ?? null, note: e.note || '' }]; });
+    if (ok) flag(`Added ${exInfo(get().cfg, e.ex).n} to Day ${col}`);
+    return ok;
+  },
+  removeExtra(slotId) {
+    const s = get().slotById(slotId); if (!s || !s.experiment) return;
+    const ok = get().mutateChecks(w => {
+      clearDone(w, s); delete w.skipped[slotId]; delete w.moved[slotId]; delete w.ph[`${slotId}:0`];
+      w.extra = (w.extra || []).filter(x => x.id !== slotId); if (!w.extra.length) delete w.extra;
+    });
+    if (!ok) return;
+    if (get().moveNote && get().moveNote.slot === slotId) set({ moveNote: null });
+    flag('Removed from this week');
   },
   setWarm(day, wid, on) {
     const pd = dayAt(get().week, day); if (pd == null) return;
@@ -337,7 +372,7 @@ export const useAppStore = create((set, get) => ({
     if (parts.body) { set({ body: [] }); get().saveBody(); }
     if (parts.programs) {
       ['A', 'B'].forEach(k => get().removeDoc('programs/' + k));
-      set({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [] }); get().saveLibrary();
+      set({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], experiments: [] }); get().saveLibrary(); get().saveExperiments();
     }
     if (parts.settings) {
       const { backup, ghBackup } = get().cfg; const cfg = structuredClone(DEFAULT_CFG);
@@ -523,9 +558,10 @@ export const useAppStore = create((set, get) => ({
         cfg: cfgRaw ? { ...structuredClone(DEFAULT_CFG), ...cfgRaw } : state.cfg,
         body: (LS.get('body/main') || {}).entries || [],
         library: padLibrary((LS.get('library/main') || {}).items || []),
+        experiments: (LS.get('experiments/main') || {}).items || [],
         logs,
         programs: { A: resolveProgram('A', LS.get('programs/A')), B: resolveProgram('B', LS.get('programs/B')) },
-        ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true },
+        ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true, exp: true },
       }));
       subscribeWeek();
       return;
@@ -545,6 +581,10 @@ export const useAppStore = create((set, get) => ({
       if (s.metadata.hasPendingWrites) return;
       set(state => ({ library: s.exists ? padLibrary([...((s.data() || {}).items || [])]) : [], ...markReady('lib')(state) }));
     }, () => flag('Couldn’t load saved programs. Reload the page.'));
+    db.doc('experiments/main').onSnapshot(s => {
+      if (s.metadata.hasPendingWrites) return;
+      set(state => ({ experiments: s.exists ? [...((s.data() || {}).items || [])] : [], ...markReady('exp')(state) }));
+    }, () => flag('Couldn’t load your experiments. Reload the page.'));
     db.doc('config/main').onSnapshot(s => {
       if (s.metadata.hasPendingWrites) return;
       set(state => ({ cfg: s.exists ? { ...structuredClone(DEFAULT_CFG), ...structuredClone(s.data()) } : state.cfg, ...markReady('cfg')(state) }));

@@ -1,4 +1,4 @@
-import { BUILTIN, EX, slotsFor } from '../lib/data.js';
+import { BUILTIN, slotsFor, newExId } from '../lib/data.js';
 import { progName } from '../lib/logic.js';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
@@ -111,12 +111,7 @@ export const editorSlice = (set, get, flag) => ({
       if (it.ex === '__new' && it.nu && !/^https?:\/\//.test(it.nu)) return 'Video link should start with https://';
     }
     const newEx = {};
-    const slugFor = name => {
-      const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'exercise';
-      const known = { ...get().cfg.ex, ...newEx }; let id = base, n = 2;
-      while (EX[id] || (known[id] && known[id].n !== name)) id = `${base}-${n++}`;
-      return id;
-    };
+    const slugFor = name => newExId(get().cfg, name, newEx);
     const items = d.items.map(it => {
       let ex = it.ex;
       if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}) }; }

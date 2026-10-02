@@ -220,3 +220,11 @@ export function slotsFor(prog) {
 export function resolveProgram(k, data) { return hasValidDays(data) ? withAllDays({ ...structuredClone(data), key: k }) : BUILTIN[k]; }
 export const exInfo = (cfg, id) => EX[id] || (cfg.ex && cfg.ex[id]) || { n: id };
 export const allExIds = cfg => [...new Set([...Object.keys(EX), ...Object.keys(cfg.ex || {})])];
+
+// A new custom exercise's id from its name, unique among the built-ins and cfg.ex (`taken` adds ids being created now).
+export function newExId(cfg, name, taken = {}) {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'exercise';
+  const known = { ...cfg.ex, ...taken }; let id = base, n = 2;
+  while (EX[id] || (known[id] && known[id].n !== name)) id = `${base}-${n++}`;
+  return id;
+}

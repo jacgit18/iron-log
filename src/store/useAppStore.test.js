@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { mem, clearStorage, saved } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate;
+let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally;
 const st = () => useAppStore.getState();
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
   ({ BUILTIN } = await import('../lib/data.js'));
-  ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate } = await import('../lib/logic.js'));
+  ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally } = await import('../lib/logic.js'));
   await st().init();
 });
 beforeEach(() => {
@@ -286,5 +286,78 @@ describe('bulk skip and move (yesterday’s leftovers)', () => {
     expect(st().week.moved['A-d6s1']).toBeUndefined();
     expect(st().week.moved['A-d6s5']).toBeUndefined();
     expect(st().moveNote).toBeNull();
+  });
+});
+
+describe('experiment board', () => {
+  beforeEach(() => useAppStore.setState({ experiments: [] }));
+  const add = (ex = 'hack', ph = 'hyp', note = '') => { st().saveExperiment({ ex, ph, note }); return st().experiments.at(-1); };
+
+  it('adds, edits and deletes entries, and saves them', () => {
+    const e = add('hack', 'hyp', 'try light');
+    expect(e).toMatchObject({ ex: 'hack', ph: 'hyp', note: 'try light' });
+    expect(saved('experiments/main').items).toHaveLength(1);
+    st().saveExperiment({ id: e.id, ex: 'hack', ph: 'strength', note: '' });
+    expect(st().experiments).toEqual([{ id: e.id, ex: 'hack', ph: 'strength', note: '' }]);
+    st().deleteExperiment(e.id);
+    expect(st().experiments).toEqual([]);
+    expect(saved('experiments/main').items).toEqual([]);
+  });
+  it('creates a new exercise from a typed name, and asks for one when missing', () => {
+    expect(st().saveExperiment({ ex: '__new', nn: 'Cable Lateral Raise', ph: null, note: '' })).toBeNull();
+    const e = st().experiments.at(-1);
+    expect(st().cfg.ex[e.ex].n).toBe('Cable Lateral Raise');
+    expect(st().saveExperiment({ ex: '__new', nn: '' })).toMatch(/Choose an exercise/);
+    expect(st().saveExperiment({ ex: '' })).toMatch(/Choose an exercise/);
+  });
+  it('adds an entry to a day of this week as a card that follows swaps, and keeps the entry', () => {
+    const e = add();
+    st().swapDays(6, 1); // column 7 shows the Day 6 workout
+    expect(st().addToDay(e.id, 7)).toBe(true);
+    const x = st().week.extra[0];
+    expect(x).toMatchObject({ day: 6, ex: 'hack', ph: 'hyp' });
+    expect(x.id).toMatch(/^X-/);
+    expect(currentLayout(st().week, st().activeSlots())[7].map(s => s.id)).toContain(x.id);
+    expect(saved('weeks/' + st().weekKey()).extra).toHaveLength(1);
+    expect(st().experiments).toHaveLength(1);
+  });
+  it('refuses the rest day', () => {
+    const e = add(); st().setRestDay(3);
+    expect(st().addToDay(e.id, 3)).toBe(false);
+    expect(st().week.extra).toBeUndefined();
+  });
+  it('an added card counts, checks off with a planned log, and Remove undoes it all', () => {
+    const e = add('legext', 'hyp');
+    const before = tally(st().activeSlots(), st().week).total;
+    st().addToDay(e.id, 2);
+    const id = st().week.extra[0].id;
+    expect(tally(st().activeSlots(), st().week).total).toBe(before + 1);
+    st().checkCard(id, true);
+    st().setPhase(id, 0, 'strength');
+    expect(st().logs.legext.some(x => x.slot === id && x.auto)).toBe(true);
+    st().removeExtra(id);
+    expect(st().week.extra).toBeUndefined();
+    expect(st().week.done[id]).toBeUndefined();
+    expect(st().week.ph[`${id}:0`]).toBeUndefined();
+    expect((st().logs.legext || []).some(x => x.slot === id)).toBe(false);
+    expect(tally(st().activeSlots(), st().week).total).toBe(before);
+  });
+  it('Remove keeps sets you logged by hand', () => {
+    const e = add('legext', 'hyp'); st().addToDay(e.id, 2); const id = st().week.extra[0].id; const wk = st().weekKey();
+    st().submitLog(id, 0, { entry: { d: wk, ph: 'hyp', w: 50, s: 3, r: 12, slot: id, wk }, ph: 'hyp', done: true });
+    st().removeExtra(id);
+    expect(st().logs.legext.some(x => x.slot === id && !x.auto)).toBe(true);
+  });
+  it('Remove only works on experiment cards', () => {
+    st().removeExtra('A-d1s1');
+    expect(st().activeSlots().some(s => s.id === 'A-d1s1')).toBe(true);
+  });
+  it('deleting an entry leaves the cards already added', () => {
+    const e = add(); st().addToDay(e.id, 2); st().deleteExperiment(e.id);
+    expect(st().week.extra).toHaveLength(1);
+  });
+  it('Erase programs clears the list', async () => {
+    add(); await st().eraseData({ programs: true });
+    expect(st().experiments).toEqual([]);
   });
 });
