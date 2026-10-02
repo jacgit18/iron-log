@@ -21,7 +21,8 @@ const GLOSSARY = [
   ['Warm-up', 'Short exercises before each day’s session.'],
   ['Make-up day', 'Day 5. You can pull in anything left unfinished from Days 1 to 4.'],
   ['Skip', 'Leaves an exercise out of this week’s counts without deleting it.'],
-  ['D1 to D6', 'Day 1 to Day 6 of the week’s plan.'],
+  ['D1 to D7', 'Day 1 to Day 7 of the week’s plan.'],
+  ['Rest day', 'Tick Rest day on a day to rest. Your workouts from that day on move one day later, and the rest day counts as done. Untick to undo. You can’t add one while Day 7 has exercises.'],
   ['Mode 1, 2, 3', 'How the two programs take turns: Program A only; A and B by month; or six months each.'],
 ];
 
@@ -33,7 +34,7 @@ export default function HelpSheet() {
       <section aria-labelledby="help-how">
         <h3 id="help-how">How Iron Log works</h3>
         <ol className="helpsteps">
-          <li><b>Board.</b> Each day of your plan is a column. Tick an exercise when you have done it. On a phone, use the day buttons (D1 to D6) to change days.</li>
+          <li><b>Board.</b> Each day of your plan is a column. Tick an exercise when you have done it. On a phone, use the day buttons (D1 to D7) to change days.</li>
           <li><b>Log.</b> Press Log on an exercise to record the weight and reps of each set. Same as last copies your previous session.</li>
           <li><b>Targets.</b> The weight shown on each exercise is a suggestion. It goes up when you complete all your sets two sessions in a row.</li>
           <li><b>Move or skip.</b> If equipment is busy, use Move to put an exercise on another day, or Skip to leave it out this week.</li>

@@ -243,6 +243,7 @@ body.timing{padding-bottom:130px}
 .colhead h3{margin:0;font-size:21px;font-weight:700;text-transform:uppercase;line-height:1.05}
 .colhead .sub{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px}
 .colhead .count{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+.restchk{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px;color:var(--muted)}
 .col.complete .colhead h3{color:var(--accent)}
 .chk{appearance:none;width:22px;height:22px;flex:none;border:2px solid var(--muted);border-radius:6px;background:var(--surface);display:grid;place-content:center;margin:0;cursor:pointer}
 .chk:checked{background:var(--accent);border-color:var(--accent)}

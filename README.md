@@ -25,7 +25,7 @@ It's a React app built with Vite. You can install it on your phone or computer l
 
 <sub>Screenshots use sample data.</sub>
 
-![Weekly board with six training days, check-offs and phase-tagged exercise cards](docs/images/board.png)
+![Weekly board with seven days (six training days and a rest day), check-offs and phase-tagged exercise cards](docs/images/board.png)
 
 | Phone: one day at a time | Logging a set | Isometric hold timer |
 | :---: | :---: | :---: |
@@ -47,6 +47,7 @@ It's a React app built with Vite. You can install it on your phone or computer l
 ## Features
 
 - **Weekly board.** One column per training day (Sunday to Saturday week). You can check off exercises one at a time or a whole day at once. In a superset each exercise has its own checkbox and counts on its own; an either/or counts once, whichever option you do. When equipment is taken, drag a card to another day (or use "Move to" on a phone). If the move puts an exercise on the same day as, or the day next to, another session of that exercise, a heads-up says so and offers to move it back. Day 5 is a make-up day that can pull in anything left unfinished. **Skip** takes an exercise out of this week's counts without deleting it, and checking it off later undoes the skip. Checking off an exercise you haven't logged also logs its planned numbers (the target weight and sets × reps on the card), marked "from check-off", so it shows in Progress; unchecking removes that entry, and logging your real numbers replaces it. Done and skipped exercises drop to the bottom of their day, so what's left is always on top.
+- **Rest day.** Tick Rest day on any day of the week and your workouts from that day on move one day later. Untick to put them back.
 - **Program rotation.** There are three modes:
   1. Program A only.
   2. A and B alternate by month (even and odd months), and you can switch any single week by hand.

@@ -4,7 +4,7 @@ import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../lib/dates.js';
 import {
-  isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, describe, holdPlan,
+  DAYS, shownDay, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, describe, holdPlan,
 } from '../../lib/logic.js';
 
 export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
@@ -16,7 +16,7 @@ export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
 
   const done = isDone(s, week); const sk = isSkipped(s, week); const paired = isPaired(s);
   const label = s.type === 'superset' ? 'Superset' : s.type === 'either' ? 'Either / or' : '';
-  const cur = week.moved[s.id] || s.day;
+  const cur = shownDay(week.rest, week.moved[s.id] || s.day);
   const names = s.items.map(i => exInfo(cfg, i.ex).n);
   const cardName = s.type === 'superset' ? names.join(' → ') : s.type === 'either' ? names.join(' or ') : names[0];
 
@@ -85,7 +85,7 @@ export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
       <div className="cardfoot">
         <label htmlFor={`mv-${s.id}`}>Move to</label>
         <select id={`mv-${s.id}`} aria-label={`Move to (${cardName})`} value={cur} onChange={e => moveSlot(s.id, Number(e.target.value))}>
-          {[1, 2, 3, 4, 5, 6].map(d => <option key={d} value={d}>Day {d}{d === s.day ? ' (planned)' : ''}</option>)}
+          {DAYS.map(d => <option key={d} value={d} disabled={d === week.rest}>Day {d}{d === week.rest ? ' (rest)' : d === shownDay(week.rest, s.day) ? ' (planned)' : ''}</option>)}
         </select>
         <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={sk ? `Undo skip for ${cardName}` : `Skip ${cardName} this week`} onClick={() => skipCard(s.id)}>{sk ? 'Undo skip' : 'Skip'}</button>
       </div>
