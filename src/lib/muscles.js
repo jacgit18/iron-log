@@ -126,3 +126,16 @@ export function muscleNames(cfg, id, role) {
   const t = tagsOf(cfg, id); if (!t || t.mob) return t && t.mob ? (role === 'p' ? 'Mobility' : '') : '';
   return (t[role] || []).map(m => MUSCLES[m] ? MUSCLES[m].n : m).join(', ');
 }
+
+// The muscle tags an exercise has, as editable state: { mob, st: { muscle: 'p' | 's' } }.
+export const draftOfTags = (cfg, exId) => {
+  const tg = tagsOf(cfg, exId) || {}; const st = {};
+  (tg.p || []).forEach(m => { st[m] = 'p'; }); (tg.s || []).forEach(m => { st[m] = 's'; });
+  return { mob: !!tg.mob, st };
+};
+export const tagsOfDraft = draft => {
+  const o = { p: M_KEYS.filter(m => draft.st[m] === 'p'), s: M_KEYS.filter(m => draft.st[m] === 's') };
+  if (draft.mob) o.mob = true;
+  return o;
+};
+

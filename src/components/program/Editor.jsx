@@ -7,6 +7,7 @@ import { sameProg, libDate } from '../../lib/export.js';
 import { MON } from '../../lib/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
+import ExerciseLibrary from './ExerciseLibrary.jsx';
 
 const progStats = p => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
 
@@ -84,7 +85,7 @@ function LibItemPanel({ it }) {
   );
 }
 
-export default function Editor() {
+function ProgramEditor() {
   const cfg = useAppStore(s => s.cfg);
   const edDay = useAppStore(s => s.edDay); const edProg = useAppStore(s => s.edProg);
   const k = useAppStore(s => s.edKey()); const item = useAppStore(s => s.edItem());
@@ -164,6 +165,22 @@ export default function Editor() {
         {lib ? 'Changes are saved to this library program only. Nothing on the board changes until you load it into A or B.' : `Changes apply to every week that uses ${progName(cfg, k)}. Your logged sets stay as they are.`}
       </p>
       {lib ? <LibItemPanel it={item} /> : <Library k={k} custom={custom} />}
+    </>
+  );
+}
+
+// The Program tab: the programs, and the library of every exercise.
+export default function Editor() {
+  const [view, setView] = useState('program');
+  return (
+    <>
+      <div className="edtop">
+        <div className="seg" role="group" aria-label="Program tab view">
+          <button type="button" className={view === 'program' ? 'on' : ''} aria-pressed={view === 'program'} onClick={() => setView('program')}>Programs</button>
+          <button type="button" className={view === 'exercises' ? 'on' : ''} aria-pressed={view === 'exercises'} onClick={() => setView('exercises')}>Exercise library</button>
+        </div>
+      </div>
+      {view === 'program' ? <ProgramEditor /> : <ExerciseLibrary />}
     </>
   );
 }

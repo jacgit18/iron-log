@@ -67,7 +67,7 @@ From a review of the current screens. None of these are committed to: pick what 
 
 ### Before the backend (changes what is stored)
 
-- [ ] 55. Exercise library page: every exercise with its equipment, video link, default phase and muscle tags, edited in one place. This settles how per-exercise settings are stored, which is easier to do before they go into a database.
+- [x] 55. Exercise library page: every exercise with its equipment, video link, default phase, 1RM and muscle tags, edited in one place. On the Program tab. Per-exercise settings stay in `cfg.ex`, `cfg.exPh`, `cfg.rm` and `cfg.muscleMap`.
 - [ ] 38. A tick per set in the Log sheet (and start the rest timer between sets). Changes the shape of a logged entry.
 - [x] 33. Undo after unchecking something you logged: the board shows how many entries were removed with an Undo that puts back the entries and the tick.
 

@@ -563,3 +563,10 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .chbar .goaltick.past.hi::after{left:0;border-left-color:var(--ink)}
 .chbar .goaltick.past.lo::after{right:2px;border-right-color:var(--ink)}
 .chv .chgoal{display:block;line-height:1.2}
+
+/* Exercise library */
+.exrows{display:flex;flex-direction:column}
+.exrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.exrow:last-child{border-bottom:0}
+.exmain{display:flex;flex-direction:column;gap:2px;min-width:0}
+.exmain a{font-size:13px;text-decoration:none}
