@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { FEATURES } from '../lib/features.js';
 import { allExIds, exInfo, findExId, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
 
 // Type an exercise: suggestions come from the catalog (built-in and your own); a name that isn't there yet
@@ -34,7 +35,7 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', stretch = f
               </select>
             </label>
           )}
-          {onStretch && <label className="inline"><input type="checkbox" checked={stretch} onChange={e => onStretch(e.target.checked)} /> Stretch or mobility (no weight or reps)</label>}
+          {onStretch && FEATURES.stretches && <label className="inline"><input type="checkbox" checked={stretch} onChange={e => onStretch(e.target.checked)} /> Stretch or mobility (no weight or reps)</label>}
         </>
       )}
     </>

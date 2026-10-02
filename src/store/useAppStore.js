@@ -13,6 +13,7 @@ import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
   backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile,
 } from '../lib/export.js';
+import { FEATURES } from '../lib/features.js';
 import { loadView, saveView } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
 import { commitFiles, readFile, validRepo } from '../lib/github.js';
@@ -279,7 +280,7 @@ export const useAppStore = create((set, get) => ({
     const url = (d.url || '').trim();
     if (!isVideoUrl(url)) return VIDEO_ERR;
     get().mutateCfg(c => {
-      setOverride(c, exId, { url, eq: d.eq || '', stretch: d.stretch });
+      setOverride(c, exId, { url, eq: d.eq || '', ...(FEATURES.stretches ? { stretch: d.stretch } : {}) }); // a hidden setting is left as it is
       c.exPh = c.exPh || {};
       if (d.ph && !d.stretch) c.exPh[exId] = d.ph; else delete c.exPh[exId]; // a stretch has no phase
     });

@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { mem, clearStorage, saved } from '../test/browserStubs.js';
+import { FEATURES } from '../lib/features.js';
+
+// Most tests cover the stretch feature as built; one block checks it switched off.
+FEATURES.stretches = true;
 
 let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf;
 const st = () => useAppStore.getState();
@@ -522,5 +526,20 @@ describe('bug check fixes', () => {
     expect(exInfo(st().cfg, 'canoe').stretch).toBe(true);
     expect(exInfo(st().cfg, 'deskbands').stretch).toBe(true);
     expect(st().activeSlots().filter(s => s.items[0].ex === 'canoe').every(s => s.sec === 'Home')).toBe(true);
+  });
+});
+
+describe('stretch feature switched off', () => {
+  it('Canoe Stretch and Desk Bands are normal cards that log, and Details leaves the hidden setting alone', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    FEATURES.stretches = false;
+    try {
+      expect(exInfo(st().cfg, 'canoe').stretch).toBeUndefined();
+      st().checkCard('A-d3s9', true); // Desk Bands, Day 3 (Home)
+      expect(st().logs.deskbands).toHaveLength(1);
+      st().saveExerciseDetails('canoe', { url: '', eq: 'barbell', stretch: false, ph: '' });
+      expect(st().cfg.ex.canoe && st().cfg.ex.canoe.stretch).toBeFalsy(); // no override written
+      expect(st().cfg.ex.canoe?.stretch).toBeUndefined();
+    } finally { FEATURES.stretches = true; }
   });
 });

@@ -1,8 +1,9 @@
 import { BUILTIN, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { progName, dayAt } from '../lib/logic.js';
+import { FEATURES } from '../lib/features.js';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
-export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home', 'Stretches'];
+export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home', ...(FEATURES.stretches ? ['Stretches'] : [])];
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 export const blankItem = () => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
 

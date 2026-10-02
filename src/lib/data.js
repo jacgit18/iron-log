@@ -1,3 +1,5 @@
+import { FEATURES } from './features.js';
+
 /* ---------- Program data ---------- */
 export const PHASES = {
   strength: { label: 'Strength', rx: '4 × 6', pct: 85 },
@@ -228,7 +230,11 @@ export function resolveProgram(k, data) { return hasValidDays(data) ? withAllDay
 export const VIDEO_ERR = 'Video link should start with https://';
 export const isVideoUrl = s => !s || !s.trim() || /^https?:\/\//.test(s.trim()); // empty is fine: the link is optional
 // What you set on an exercise (video link, equipment, stretch) is kept in cfg.ex and layers over the built-in entry.
-export const exInfo = (cfg, id) => ({ ...(EX[id] || { n: id }), ...(cfg.ex && cfg.ex[id]) });
+export function exInfo(cfg, id) {
+  const o = { ...(EX[id] || { n: id }), ...(cfg.ex && cfg.ex[id]) };
+  if (!FEATURES.stretches) delete o.stretch; // switched off: every exercise is a normal card
+  return o;
+}
 export const allExIds = cfg => [...new Set([...Object.keys(EX), ...Object.keys(cfg.ex || {})])];
 
 // A new custom exercise's id from its name, unique among the built-ins and cfg.ex (`taken` adds ids being created now).

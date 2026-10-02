@@ -1,7 +1,9 @@
+import { FEATURES } from '../lib/features.js';
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_CFG, normWeek } from './logic.js';
 import { muscleVolume, muscleNames, tagsOf, level, fmtSets, matchesFilter } from './muscles.js';
 
+FEATURES.stretches = true; // these tests cover the stretch feature as built
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
 // Day 1: Hack Squat, Hypertrophy (4 × 15)   Day 2: Farmers Carry or DB Lunge, Strength (4 × 6)
 // Day 3: Canoe Stretch (mobility)           Day 4: an exercise with no muscle tags

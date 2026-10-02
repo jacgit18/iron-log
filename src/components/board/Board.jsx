@@ -9,6 +9,7 @@ import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
+import { FEATURES } from '../../lib/features.js';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
 
@@ -189,7 +190,7 @@ export default function Board() {
           <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
             <option value="">All muscles</option>
             {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-            <option value="stretch">Stretches</option>
+            {FEATURES.stretches && <option value="stretch">Stretches</option>}
           </select>
         </label>
         <label className="field">Equipment
@@ -279,13 +280,13 @@ export default function Board() {
                   </label>
                 ))}
               </div>
-              <div className="stretches" role="group" aria-label={`Stretches, Day ${d}`}>
+              {FEATURES.stretches && <div className="stretches" role="group" aria-label={`Stretches, Day ${d}`}>
                 <div className="stretchhead">
                   <span className="tag">Stretches</span>
                   <button type="button" className="btn sm ghost" id={`addstretch-${d}`} aria-label={`Add a stretch to Day ${d}`} onClick={() => st.openAddToProgram(d, 'stretch')}>+ Add stretch</button>
                 </div>
                 {stretches.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
-              </div>
+              </div>}
               {filtering && vis.length === 0 && stretches.length === 0 && <p className="note">Nothing here matches the filter.</p>}
               {open.map((s, i) => {
                 const sec = secOf(s, pd);

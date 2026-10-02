@@ -1,5 +1,6 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.jsx';
+import { FEATURES } from '../../lib/features.js';
 
 const GLOSSARY = [
   ['1RM (one-rep max)', 'The heaviest weight you can lift once with good form. Enter it and targets are worked out as a percentage of it.'],
@@ -8,8 +9,8 @@ const GLOSSARY = [
   ['Sets × reps', 'How much to do, for example 4 × 6 means 4 sets of 6 repetitions. For holds, 4 × 30 s means 4 holds of 30 seconds.'],
   ['Experiments', 'A list under the board of exercises you want to try. Add one to a day of this week and it shows as a normal card for that week only; Remove takes it off again. The list itself stays for later weeks.'],
   ['Add exercise', 'Each day has a + Add exercise button. It opens the add sheet where you pick Primary or Accessory, the section, and single, superset or either/or, and it joins that day of the program every week. + This week only adds a one-week card instead (Remove takes it off again).'],
-  ['Stretch', 'An exercise marked as a stretch or mobility has no weight, reps or phase, only a checkbox, and isn’t counted toward muscles. Stretches are listed under the Warm-up on each day.'],
-  ['Details', 'Each exercise card has a Details button for its video link, equipment, stretch setting and a default phase that applies to every card with that exercise.'],
+  FEATURES.stretches && ['Stretch', 'An exercise marked as a stretch or mobility has no weight, reps or phase, only a checkbox, and isn’t counted toward muscles. Stretches are listed under the Warm-up on each day.'],
+  ['Details', 'Each exercise card has a Details button for its video link, equipment and a default phase that applies to every card with that exercise.'],
   ['Filter', 'Above the days, filter the board by muscle (primary or secondary) or by equipment. It only hides cards; the counts stay the same.'],
   ['Phase', 'The goal of an exercise right now. Each phase has its own sets, reps and share of your 1RM. Mobility is for stretching and mobility work: it has sets and reps but no share of a 1RM.'],
   ['Strength', 'Heavy weight, few reps (about 85% of your 1RM).'],
@@ -52,7 +53,7 @@ export default function HelpSheet() {
       <section aria-labelledby="help-words">
         <h3 id="help-words">Words and abbreviations</h3>
         <dl className="glossary">
-          {GLOSSARY.map(([t, d]) => <div key={t}><dt>{t}</dt><dd>{d}</dd></div>)}
+          {GLOSSARY.filter(Boolean).map(([t, d]) => <div key={t}><dt>{t}</dt><dd>{d}</dd></div>)}
         </dl>
       </section>
       <div className="actions"><button type="button" className="btn" onClick={closeModal}>Close</button></div>

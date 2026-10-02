@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
 import Sheet from '../Sheet.jsx';
+import { FEATURES } from '../../lib/features.js';
 
 // What you can set on one exercise: video link, equipment, whether it's a stretch, and the phase it
 // starts in on every card (a card's own saved or one-week phase still wins).
@@ -23,7 +24,7 @@ export default function ExerciseSheet({ exId }) {
           {EQ_KEYS.map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
         </select>
       </label>
-      <label className="inline"><input type="checkbox" checked={d.stretch} onChange={e => up({ stretch: e.target.checked })} /> Stretch or mobility (no weight or reps)</label>
+      {FEATURES.stretches && <label className="inline"><input type="checkbox" checked={d.stretch} onChange={e => up({ stretch: e.target.checked })} /> Stretch or mobility (no weight or reps)</label>}
       {!d.stretch && (
         <label className="field">Default phase for every card with this exercise
           <select value={d.ph} onChange={e => up({ ph: e.target.value })}>
