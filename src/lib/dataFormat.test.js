@@ -109,6 +109,9 @@ it('mergeWeek keeps this deviceâ€™s rest date and falls back to the other sideâ€
   expect(mergeWeek({ rest: 2 }, { rest: 2, restOn: '2026-09-30' }).restOn).toBe('2026-09-30');
   expect(mergeWeek({}, { rest: 4, restOn: '2026-09-30' })).toMatchObject({ rest: 4, restOn: '2026-09-30' });
   expect(mergeWeek({}, { restOn: '2026-09-30' })).not.toHaveProperty('restOn');
+  const other = mergeWeek({ rest: 2 }, { rest: 5, restOn: '2026-09-30' });
+  expect(other.rest).toBe(2);
+  expect(other).not.toHaveProperty('restOn');
 });
 
 it('weekFingerprint changes when the rest date does', () => {

@@ -24,7 +24,7 @@ const GLOSSARY = [
   ['D1 to D7', 'Day 1 to Day 7 of the week’s plan.'],
   ['Rest day', 'Tick Rest day on a day to rest. Your workouts from that day on move one day later, and the rest day counts as done. Untick to undo. You can’t add one while Day 7 has exercises.'],
   ['Swap arrows', 'The ← and → on each day swap it with the day beside it for this week only. The workouts trade places and the day labels stay in order. Swapping with the rest day moves your rest day.'],
-  ['Day date', 'Once you check something off on a day, its header shows the weekday and date you did it, for example Sunday 09/27. A rest day shows the date you ticked it.'],
+  ['Day date', 'Once you check something off on a day, its header shows the weekday and date the exercises were logged or checked off, for example Sunday 09/27. Check-offs made while viewing another week are dated to the first day of that week (Sunday), and a rest day shows the date you ticked it.'],
   ['Mode 1, 2, 3', 'How the two programs take turns: Program A only; A and B by month; or six months each.'],
 ];
 

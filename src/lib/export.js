@@ -187,7 +187,7 @@ export function mergeWeek(a, b) {
   const w = normWeek(a); const o = normWeek(b);
   w.prog = w.prog || o.prog;
   if (!w.rest && o.rest) w.rest = o.rest;
-  if (w.rest && !w.restOn && o.restOn) w.restOn = o.restOn;
+  if (w.rest && !w.restOn && o.restOn && o.rest === w.rest) w.restOn = o.restOn;
   if (!w.order && o.order) w.order = o.order;
   ['moved', 'ph'].forEach(k => { w[k] = { ...o[k], ...w[k] }; });
   Object.keys(o.warm).forEach(d => { w.warm[d] = { ...o.warm[d], ...(w.warm[d] || {}) }; });
