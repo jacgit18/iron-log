@@ -244,6 +244,10 @@ body.timing{padding-bottom:130px}
 .colhead .sub{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px}
 .colhead .count{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
 .restchk{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px;color:var(--muted)}
+.swaps{display:flex;gap:4px;margin-left:8px}
+.colhead .swaps{margin-left:auto}
+.colhead .count + .swaps{margin-left:8px}
+.swapbtn{min-width:44px;min-height:44px;padding:0;font-size:18px;line-height:1}
 .col.complete .colhead h3{color:var(--accent)}
 .chk{appearance:none;width:22px;height:22px;flex:none;border:2px solid var(--muted);border-radius:6px;background:var(--surface);display:grid;place-content:center;margin:0;cursor:pointer}
 .chk:checked{background:var(--accent);border-color:var(--accent)}

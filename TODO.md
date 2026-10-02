@@ -54,6 +54,7 @@ These change how days and exercises are stored. Do them together so the data str
 
 ## 6. UX improvements and fixes
 
+- [x] Add arrows on each day to swap its position with the next day, for the current week only.
 - [ ] Preserve board view state on page refresh (currently goes back to board).
 - [ ] When the app opens, start on the current week.
 - [ ] Remove the unfinished pull button; instead, show a notification about the previous day with unchecked exercises and offer to bulk skip them or move to a specific unfinished day.

@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { WARMUP, slotsFor } from '../../lib/data.js';
 import { monday, ymd, addDays, fmtShort } from '../../lib/dates.js';
-import { tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, programDay, dayTitle } from '../../lib/logic.js';
+import { tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
@@ -14,6 +14,21 @@ import BodyWeightRow from './BodyWeightRow.jsx';
 const secOf = (s, day) => (s.day === day ? s.sec : 'Moved here');
 const MODES = [[1, 'Mode 1 · A only'], [2, 'Mode 2 · monthly'], [3, 'Mode 3 · 6 months']];
 const tipHidden = k => LS.get(k) === 1; // stored as the string "1", same as the vanilla app
+
+// Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
+function SwapArrows({ d }) {
+  const swap = dir => {
+    useAppStore.getState().swapDays(d, dir);
+    const e = d + dir;
+    requestAnimationFrame(() => (document.getElementById(`swap-${e}-${dir}`) || document.getElementById(`swap-${e}-${-dir}`))?.focus());
+  };
+  return (
+    <span className="swaps">
+      {d > 1 && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}--1`} aria-label={`Swap Day ${d} with Day ${d - 1}`} onClick={() => swap(-1)}><span aria-hidden="true">←</span></button>}
+      {d < DAYS.length && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}-1`} aria-label={`Swap Day ${d} with Day ${d + 1}`} onClick={() => swap(1)}><span aria-hidden="true">→</span></button>}
+    </span>
+  );
+}
 
 export default function Board() {
   const cfg = useAppStore(s => s.cfg);
@@ -155,15 +170,15 @@ export default function Board() {
 
       <div className="board">
         {DAYS.map(d => {
-          const pd = programDay(rest, d); // the program day shown here; null for the rest day
+          const pd = dayAt(week, d); // the program day shown here; null for the rest day
           if (pd == null) return (
             <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}`}>
-              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div></div></div>
+              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div></div><SwapArrows d={d} /></div>
               <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => st.setRestDay(d)} /> Rest day</label>
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
-                  {cols[d].map(s => <Card key={s.id} s={s} curDay={d} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                  {cols[d].map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
                 </>
               ) : <p className="note">Your workouts moved one day later. Untick to put them back.</p>}
             </section>
@@ -192,6 +207,7 @@ export default function Board() {
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                 </div>
                 <span className="count">{t.done}/{t.total}</span>
+                <SwapArrows d={d} />
               </div>
               <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => st.setRestDay(d)} /> Rest day</label>
               <div className="warm">
@@ -216,14 +232,14 @@ export default function Board() {
                 return (
                   <Fragment key={s.id}>
                     {newSec && <div className="sect">{sec}</div>}
-                    <Card s={s} curDay={d} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />
+                    <Card s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />
                   </Fragment>
                 );
               })}
               {finished.length > 0 && (
                 <>
                   <div className="sect donesect">{[ft.done ? `${ft.done} done` : '', ft.skipped ? `${ft.skipped} skipped` : ''].filter(Boolean).join(' · ')}</div>
-                  {finished.map(s => <Card key={s.id} s={s} curDay={d} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                  {finished.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
                 </>
               )}
             </section>
