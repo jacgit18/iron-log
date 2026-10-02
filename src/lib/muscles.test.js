@@ -1,7 +1,7 @@
 import { FEATURES } from '../lib/features.js';
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_CFG, normWeek } from './logic.js';
-import { muscleVolume, muscleNames, tagsOf, level, fmtSets, matchesFilter } from './muscles.js';
+import { muscleVolume, muscleNames, tagsOf, level, fmtSets, matchesFilter, muscleRank } from './muscles.js';
 
 FEATURES.stretches = true; // these tests cover the stretch feature as built
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -102,5 +102,17 @@ describe('board filter', () => {
     const { vol, untagged } = muscleVolume(c, normWeek(null), p, false, true);
     expect(Object.values(vol).every(v => v.sets === 0)).toBe(true);
     expect(untagged).toEqual([]);
+  });
+});
+
+describe('board sort by muscle', () => {
+  const card = (...ex) => ({ id: 'c', items: ex.map(e => ({ ex: e })) });
+  it('ranks primary before secondary before cards that skip the muscle', () => {
+    const c = cfg();
+    expect(muscleRank(c, card('hack'), 'quads')).toBe(0);
+    expect(muscleRank(c, card('hack'), 'glutes')).toBe(1);
+    expect(muscleRank(c, card('hack'), 'chest')).toBe(2);
+    expect(muscleRank(c, card('hipthrust', 'chestpress'), 'chest')).toBe(0); // a superset ranks by its best exercise
+    expect(muscleRank(c, card('canoe'), 'quads')).toBe(2); // mobility isn't counted
   });
 });
