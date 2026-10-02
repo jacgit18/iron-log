@@ -93,6 +93,9 @@ export default function Board() {
 
   const moveRef = useRef(null);
   useEffect(() => { if (moveRef.current) moveRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [moveNote]);
+  // The undo notice sits above the days, so bring it into view when it appears (you're usually scrolled down at a card).
+  const uncheckRef = useRef(null);
+  useEffect(() => { if (uncheckRef.current) uncheckRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [uncheckNote]);
 
   // Desktop drag and drop between day columns.
   const [dragId, setDragId] = useState(null);
@@ -186,7 +189,7 @@ export default function Board() {
         </div>
       )}
       {showUncheck && (
-        <div className="notice" role="status">
+        <div className="notice" role="status" ref={uncheckRef}>
           <div>{uncheckNote.text}</div>
           <div className="actions">
             <button type="button" className="btn sm" onClick={st.undoUncheck}>Undo</button>
