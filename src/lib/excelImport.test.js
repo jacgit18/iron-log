@@ -152,3 +152,10 @@ describe('CSV import (fallback)', () => {
     await expect(parseCsvExport('a,b\n1,2', cfg())).rejects.toThrow('isn’t an Iron Log CSV export');
   });
 });
+
+it('rebuilds check-offs for experiment cards from logged sessions', () => {
+  const logs = { hack: [{ d: '2026-09-29', slot: 'X-1', wk: '2026-09-27', w: 100, s: 3, r: 5 }] };
+  const weeks = { '2026-09-27': { extra: [{ id: 'X-1', day: 2, ex: 'hack', ph: null }] } };
+  const out = checkOffsFromLogs(structuredClone(DEFAULT_CFG), { A: BUILTIN.A, B: BUILTIN.B }, logs, weeks);
+  expect(out['2026-09-27'].done['X-1']).toBe(true);
+});

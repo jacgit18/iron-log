@@ -16,6 +16,13 @@ const programs = { A: prog('A'), B: prog('B') };
 describe('weekSummary: the weekly history row', () => {
   const w = { done: { a: true, 'b#0': true, d: true }, skipped: { c: true }, moved: {} };
 
+  it('counts experiment cards added to the week', () => {
+    const x = { done: { 'X-1': true }, skipped: {}, moved: {}, extra: [{ id: 'X-1', day: 2, ex: 'legext', ph: null }] };
+    const r = weekSummary(cfg(), programs, '2026-09-20', x);
+    expect(r).toMatchObject({ ex: 1, total: 6 });
+    expect(r.days[1]).toBe(1); // Day 2: c open, X-1 done
+  });
+
   it('follows a swapped day order', () => {
     // Workouts 1 and 2 swapped: the day-1 cards (a, b) sit in column 2, the day-2 card (c) in column 1.
     const r = weekSummary(cfg(), programs, '2026-09-20', { done: { a: true, 'b#0': true, 'b#1': true }, skipped: {}, moved: {}, order: [2, 1, 3, 4, 5, 6, 7] });

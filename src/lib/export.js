@@ -1,8 +1,8 @@
 /* ---------- CSV / Excel export, full data file, GitHub backup helpers ----------
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
-import { PHASES, PH_KEYS, BUILTIN, slotsFor, exInfo, hasValidDays, withAllDays, DAY_COUNT } from './data.js';
+import { PHASES, PH_KEYS, BUILTIN, exInfo, hasValidDays, withAllDays, DAY_COUNT } from './data.js';
 import { ymd, fmtShort } from './dates.js';
-import { setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
+import { weekSlots, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
 
 const noteOf = e => e.n || (e.auto ? AUTO_NOTE : '');
 import { MUSCLES, tagsOf, muscleNames } from './muscles.js';
@@ -127,7 +127,7 @@ function addDataSheets(X, wb, S, weeks) {
 export function buildWeekWorkbook(X, S, key, w) {
   const { cfg, programs } = S; const wb = X.utils.book_new();
   const r = weekSummary(cfg, programs, key, w);
-  const slots = slotsFor(programs[r.pk] || programs.A);
+  const slots = weekSlots(programs[r.pk] || programs.A, w);
   const n = sessionRows(S, e => entryWeek(e) === key);
   X.utils.book_append_sheet(wb, sheet(X, [
     ['Week of', key], ['Program', r.pk], ['Days complete', `${r.full} of ${DAY_COUNT}`], ['Exercises done', `${r.ex} of ${r.total}`], ['Skipped', r.skipped], ['Sessions logged', n.length - 1],

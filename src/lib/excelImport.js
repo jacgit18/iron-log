@@ -2,9 +2,9 @@
    The workbook is a report, not a backup: it has every logged session, body weight and the main
    settings, but not weekly check-offs, edited programs, saved versions or phase defaults. This turns
    what it does have into the same shape as a parsed JSON data file, so the normal merge can add it. */
-import { EX, PHASES, PH_KEYS, slotsFor } from './data.js';
+import { EX, PHASES, PH_KEYS } from './data.js';
 import { parseDate } from './dates.js';
-import { activeProgKey, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
+import { weekSlots, activeProgKey, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
 import { MUSCLES, MUSCLE_MAP } from './muscles.js';
 import { WEEK_RE, entryWeek } from './trends.js';
 import { loadXLSX, normalizeData } from './export.js';
@@ -193,7 +193,7 @@ export function checkOffsFromLogs(cfg, programs, logs, weeks) {
     const k = entryWeek(e); if (!WEEK_RE.test(k)) return;
     const w = out[k] || (out[k] = normWeek({ prog: weeks[k] && weeks[k].prog }));
     const prog = programs[activeProgKey(cfg, w, parseDate(k))] || programs.A;
-    const s = slotsFor(prog).find(x => x.id === e.slot);
+    const s = weekSlots(prog, weeks[k] || {}).find(x => x.id === e.slot);
     const i = s ? s.items.findIndex(it => it.ex === ex) : -1;
     if (i >= 0) setItemDone(w, s, i, true);
   }));

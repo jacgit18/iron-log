@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { BUILTIN } from './data.js';
+import * as X from 'xlsx';
+import { BUILTIN, exInfo } from './data.js';
 import { DEFAULT_CFG } from './logic.js';
-import { buildCsv, buildDataFile, parseDataFile, mergeEntries, mergeWeek } from './export.js';
+import { buildWeekWorkbook, buildCsv, buildDataFile, parseDataFile, mergeEntries, mergeWeek } from './export.js';
 
 const snapshot = () => ({
   cfg: { ...structuredClone(DEFAULT_CFG), rm: { hack: 400 } },
@@ -67,4 +68,11 @@ describe('merging', () => {
     expect(w.skipped).toEqual({ c: true });
     expect(w.moved).toEqual({ a: 3, b: 2 });
   });
+});
+
+it('the week workbook lists experiment cards on the Plan sheet', () => {
+  const S = { cfg: structuredClone(DEFAULT_CFG), logs: {}, programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], body: [], experiments: [] };
+  const w = { done: { 'X-1': true }, extra: [{ id: 'X-1', day: 2, ex: 'hack', ph: 'hyp' }] };
+  const rows = X.utils.sheet_to_json(buildWeekWorkbook(X, S, '2026-09-27', w).Sheets.Plan, { header: 1 });
+  expect(rows.some(r => r[2] === 'Experiment' && r[5] === exInfo(S.cfg, 'hack').n && r[9] === 'Yes')).toBe(true);
 });
