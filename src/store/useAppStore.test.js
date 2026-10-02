@@ -531,6 +531,14 @@ describe('bug check fixes', () => {
     const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
     expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('hyp');
   });
+  it('"default everywhere" also beats a phase picked for another day of the same week', () => {
+    const slots = st().activeSlots(); const seen = {}; let pair = null;
+    slots.forEach(sl => sl.items.forEach((x, i) => { if (seen[x.ex] && seen[x.ex][0].id !== sl.id && !pair) pair = [seen[x.ex], [sl, i]]; (seen[x.ex] = seen[x.ex] || [sl, i]); }));
+    const [[a, ai], [b, bi]] = pair;
+    st().mutateWeek(w => { w.ph[`${b.id}:${bi}`] = 'strength'; });
+    st().submitLog(a.id, ai, { entry: { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 }, ph: 'hyp', makeExDefault: true });
+    expect(phaseOf(st().cfg, st().week, st().activeSlots().find(x => x.id === b.id), bi)).toBe('hyp');
+  });
   it('a one-week card keeps the phase picked when it was added, even with an exercise default', () => {
     st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: 'iso' });
     st().addExerciseToDay(2, { ex: 'chestpress', ph: 'hyp' });
