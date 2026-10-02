@@ -402,3 +402,17 @@ describe('exercise details, default phase and adding to a day', () => {
     expect(st().week.done[extras[1].id]).toBe(true);
   });
 });
+
+describe('mobility phase', () => {
+  it('has its own sets × reps, and never turns a 1RM into a target', async () => {
+    const { PHASES, PH_KEYS } = await import('../lib/data.js');
+    const { rxOf, baseTargetOf } = await import('../lib/logic.js');
+    expect(PH_KEYS).toContain('mob');
+    expect(PHASES.mob.label).toBe('Mobility');
+    expect(rxOf(st().cfg, { ex: 'canoe' }, 'mob')).toBe('2 × 30 s');
+    const cfg = { ...st().cfg, rm: { canoe: 100 } };
+    expect(baseTargetOf(cfg, {}, { ex: 'canoe', w: 10 }, 'mob')).toMatchObject({ w: 10, src: 'program' });
+    st().saveExerciseDetails('canoe', { url: '', eq: '', stretch: false, ph: 'mob' });
+    expect(st().cfg.exPh.canoe).toBe('mob');
+  });
+});

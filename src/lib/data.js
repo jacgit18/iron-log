@@ -4,6 +4,7 @@ export const PHASES = {
   iso: { label: 'Isometric', rx: '4 × 15–30 s', pct: 75 },
   hyp: { label: 'Hypertrophy', rx: '4 × 15', pct: 65 },
   exp: { label: 'Explosive', rx: '3 × 10', pct: 45 },
+  mob: { label: 'Mobility', rx: '2 × 30 s', pct: 0 }, // no 1RM share
 };
 export const PH_KEYS = Object.keys(PHASES);
 export const DAY_COUNT = 7;

@@ -531,3 +531,14 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .exeq{position:absolute;top:0;right:0}
 .ex + .ex .exeq{top:8px}
 .exstretch{margin-left:6px}
+
+/* Mobility phase */
+:root{--mob:#5B2A86;--mob-bg:#EEE3F7;--s-mob:#8e44ad}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--mob:#D3B3F2;--mob-bg:#2E2038;--s-mob:#a566c7}}
+:root[data-theme="dark"]{--mob:#D3B3F2;--mob-bg:#2E2038;--s-mob:#a566c7}
+.phase[data-p="mob"]{background:var(--mob-bg);color:var(--mob)}
+.dot[data-p="mob"]{background:var(--mob)}
+.lplot .ln.s-mob{stroke:var(--s-mob)}
+.ldot.s-mob::after{box-shadow:0 0 0 2px var(--s-mob);border-radius:3px;width:6px;height:12px;left:19px;top:16px}
+.ldot.end.s-mob::after{background:var(--s-mob);width:6px;height:12px;left:19px;top:16px}
+.lsw.s-mob{background:var(--s-mob);border-radius:2px;width:6px;height:12px}

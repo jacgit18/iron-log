@@ -57,7 +57,7 @@ It's a React app built with Vite. You can install it on your phone or computer l
   1. Program A only.
   2. A and B alternate by month (even and odd months), and you can switch any single week by hand.
   3. A and B swap every 6 months.
-- **Training phases.** Every exercise is tagged Strength, Isometric, Hypertrophy or Explosive, with a default sets × reps for each. You can change the phase for a single week or save it as the new default.
+- **Training phases.** Every exercise is tagged Strength, Isometric, Hypertrophy, Explosive or Mobility, with a default sets × reps for each. You can change the phase for a single week or save it as the new default.
 - **Targets.** Enter a 1-rep max and the target becomes 1RM × the phase's %. Without a 1RM, the target is your last logged weight in that phase.
 - **Suggestions to go heavier.** After two separate logged days in a row with every planned set completed at the working weight, the target goes up by +2.5 lb (under 50 lb) or +5 lb. For isometric work, it waits until you've held 30 s on every set.
 - **Body weight.** Log it once a week from the top of the board. The Progress tab shows the latest weight, the change over about four weeks and a trend chart, and it's included in the Excel and data exports.

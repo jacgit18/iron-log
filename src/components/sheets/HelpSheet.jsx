@@ -11,7 +11,7 @@ const GLOSSARY = [
   ['Stretch', 'An exercise marked as a stretch or mobility has no weight, reps or phase, only a checkbox, and isn’t counted toward muscles.'],
   ['Details', 'Each exercise card has a Details button for its video link, equipment, stretch setting and a default phase that applies to every card with that exercise.'],
   ['Filter', 'Above the days, filter the board by muscle (primary or secondary) or by equipment. It only hides cards; the counts stay the same.'],
-  ['Phase', 'The goal of an exercise right now. Each phase has its own sets, reps and share of your 1RM.'],
+  ['Phase', 'The goal of an exercise right now. Each phase has its own sets, reps and share of your 1RM. Mobility is for stretching and mobility work: it has sets and reps but no share of a 1RM.'],
   ['Strength', 'Heavy weight, few reps (about 85% of your 1RM).'],
   ['Isometric (ISO)', 'Holding still under load instead of moving, timed in seconds. The Hold button runs the timer.'],
   ['Hypertrophy', 'Moderate weight, more reps, to build muscle size (about 65% of your 1RM).'],
