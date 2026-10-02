@@ -7,6 +7,7 @@ import { describe, lastLog, stallOf } from '../../lib/logic.js';
 import { WEEK_RE, weekSummary } from '../../lib/trends.js';
 import Trends from './Trends.jsx';
 import LineChart from '../LineChart.jsx';
+import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 
 function History() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
@@ -76,6 +77,7 @@ function ExportBar() {
 function LiftList() {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
   const openModal = useAppStore(s => s.openModal);
+  const today = useToday(s => s.today);
   const ids = Object.keys(logs).filter(id => logs[id].length);
   if (!ids.length) return <div className="empty">No sessions logged yet. Tap <b>Log</b> on any exercise card to record weight, sets and reps.</div>;
   ids.sort((a, b) => lastLog(logs, b).d.localeCompare(lastLog(logs, a).d));
@@ -87,6 +89,7 @@ function LiftList() {
         const best = ws.length ? Math.max(...ws) : null;
         const phName = last.ph ? PHASES[last.ph].label : 'No phase';
         const phs = [...new Set(L.map(e => e.ph || null))]; const multi = phs.length > 1;
+        const goals = liftGoalsStatus(cfg, id, L, today);
         const stalled = phs.filter(p => stallOf(cfg, logs, id, p)).map(p => (p ? PHASES[p].label : 'No phase'));
         return (
           <button type="button" className="pcard" key={id} onClick={() => openModal({ type: 'detail', exId: id })}>
@@ -96,6 +99,7 @@ function LiftList() {
               {best != null && <span>Best{multi ? ` ${phName.toLowerCase()}` : ''} <b>{best} lb</b></span>}
               <span>Sessions <b>{L.length}</b></span>
             </div>
+            {goals.map(g => <span key={g.key} className={`note${g.reached ? ' goalmet' : ''}`}>{liftGoalNote(g)}</span>)}
             {stalled.length > 0 && <span className="stall">Stalled{multi ? ` (${stalled.join(', ')})` : ''} · no gain in 3 sessions</span>}
             {!multi && <span className="note"><span className="dot" data-p={last.ph || ''} /> {phName} trend</span>}
             <LineChart entries={L} height={110} byPhase={multi} />

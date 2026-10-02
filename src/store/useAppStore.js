@@ -15,6 +15,7 @@ import {
 } from '../lib/export.js';
 import { FEATURES } from '../lib/features.js';
 import { bwSorted } from '../lib/body.js';
+import { bestLift, liftGoalsOf, goalPhaseLabel, GOAL_KEYS } from '../lib/liftGoal.js';
 import { loadView, saveView } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
 import { commitFiles, readFile, validRepo } from '../lib/github.js';
@@ -408,6 +409,8 @@ export const useAppStore = create((set, get) => ({
     if (get().blocked()) return false;
     const s = get().slotById(slotId); if (!s) return false;
     const it = s.items[idx]; const key = `${slotId}:${idx}`;
+    const goals = liftGoalsOf(get().cfg, it.ex).filter(([k]) => k === 'any' || k === (entry.ph || null));
+    const before = goals.map(([k]) => bestLift(get().logs[it.ex], k));
     get().addEntry(slotId, idx, entry);
     get().applyExerciseUrl(it.ex, url);
     const { cfg, week } = get();
@@ -424,7 +427,35 @@ export const useAppStore = create((set, get) => ({
       if ((makeDefault || makeExDefault) && ph) delete w.ph[key];
       if (done) setItemDone(w, s, idx, true);
     });
+    const hit = goals.find(([k, g], i) => { const after = bestLift(get().logs[it.ex], k); return after && after.w >= g.w && !(before[i] && before[i].w >= g.w); });
+    if (hit) flag(`Goal reached: ${hit[1].w} lb on ${exInfo(get().cfg, it.ex).n}${hit[0] !== 'any' ? ` (${goalPhaseLabel(hit[0])})` : ''}`);
     return true;
+  },
+  // Weight you want to lift on an exercise, in one phase or any ('any'), optionally by a date. Your best so far
+  // in that phase is kept as the starting point. Passing `from` moves an existing goal to a different phase.
+  setLiftGoal(exId, key, raw, by, from) {
+    if (get().blocked()) return false;
+    if (!GOAL_KEYS.includes(key)) { flag('Pick a phase for the goal'); return false; }
+    const n = Number(raw); if (!(n > 0 && n < 5000)) { flag('Enter a goal weight in lb'); return false; }
+    if (by && !/^\d{4}-\d{2}-\d{2}$/.test(by)) { flag('Enter the goal date as a date'); return false; }
+    const G = (get().cfg.liftGoals || {})[exId] || {};
+    if (key !== from && G[key]) { flag(`There's already a ${goalPhaseLabel(key).toLowerCase()} goal`); return false; }
+    const w = Math.round(n * 10) / 10; const old = G[from ?? key];
+    const best = bestLift(get().logs[exId], key);
+    const start = old && old.w === w && (from ?? key) === key ? old.start : (best ? best.w : 0); // changing only the date keeps the start
+    get().mutateCfg(c => {
+      const g = { ...((c.liftGoals || {})[exId] || {}) }; if (from && from !== key) delete g[from];
+      g[key] = { w, start, ...(by ? { by } : {}) };
+      c.liftGoals = { ...(c.liftGoals || {}), [exId]: g };
+    });
+    flag('Goal saved'); return true;
+  },
+  clearLiftGoal(exId, key) {
+    if (get().mutateCfg(c => {
+      const G = c.liftGoals && c.liftGoals[exId]; if (!G) return;
+      delete G[key]; if (!Object.keys(G).length) delete c.liftGoals[exId];
+      if (!Object.keys(c.liftGoals).length) delete c.liftGoals;
+    })) flag('Goal removed');
   },
   deleteLog(exId, i) {
     if (get().blocked()) return;

@@ -6,6 +6,7 @@ import { ymd, parseDate, addDays, fmtShort } from '../../lib/dates.js';
 import { MUSCLES, M_KEYS, level, fmtSets } from '../../lib/muscles.js';
 import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, niceStep, mdLabel } from '../../lib/trends.js';
 import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
+import { liftGoalStatus, goalPhaseLabel } from '../../lib/liftGoal.js';
 import LineChart from '../LineChart.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
@@ -72,8 +73,16 @@ function SetsChart({ keys, byWeek }) {
   );
 }
 
+// The goal a row of the change chart is measured against: the goal for that phase, or else the any-phase goal.
+function rowGoal(cfg, logs, c, today) {
+  const G = (cfg.liftGoals || {})[c.id]; if (!G) return null;
+  const k = c.ph && G[c.ph] ? c.ph : G.any ? 'any' : null;
+  return k ? liftGoalStatus(G[k], logs[c.id], today, k) : null;
+}
+
 function ChangeChart({ changes }) {
-  const cfg = useAppStore(s => s.cfg);
+  const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
+  const today = useToday(s => s.today);
   if (!changes.length) return (
     <section className="panel tchart"><h2>Weight change by exercise</h2>
       <p className="note">Once you log the same lift with weight on two different days, this shows how much heavier (or lighter) it is now, over the last 8 weeks.</p>
@@ -81,29 +90,38 @@ function ChangeChart({ changes }) {
   );
   const downs = changes.filter(c => c.pct < 0).slice(-4);
   const shown = [...changes.filter(c => c.pct >= 0).slice(0, 10 - downs.length), ...downs];
-  const lim = Math.max(10, ...shown.map(c => Math.abs(c.pct)));
-  const mixed = shown.some(c => c.pct < 0); const zero = mixed ? 50 : 0, span = mixed ? 50 : 100;
+  // A goal is drawn as a tick at the % change it would be from the first weight. The scale stretches to fit goals,
+  // up to twice the bars' own scale; a goal past that sits at the end, pointing on.
+  const goals = shown.map(c => { const g = rowGoal(cfg, logs, c, today); return g ? { ...g, gp: (g.target - c.w0) / c.w0 * 100 } : null; });
+  const barLim = Math.max(10, ...shown.map(c => Math.abs(c.pct)));
+  const lim = Math.max(barLim, ...goals.filter(Boolean).map(g => Math.min(Math.abs(g.gp), barLim * 2)));
+  const mixed = shown.some(c => c.pct < 0) || goals.some(g => g && g.gp < 0); const zero = mixed ? 50 : 0, span = mixed ? 50 : 100;
   const more = changes.length - shown.length;
   return (
     <section className="panel tchart">
       <h2>Weight change by exercise</h2>
       <div className={`chg${mixed ? ' mixed' : ''}`} role="list" aria-label="Weight change by exercise">
-        {shown.map(c => {
+        {shown.map((c, i) => {
           const w = Math.abs(c.pct) / lim * span; const dir = c.pct > 0 ? 'up' : c.pct < 0 ? 'down' : 'flat';
-          const name = exInfo(cfg, c.id).n;
-          const tip = `${name} · ${c.ph ? PHASES[c.ph].label : 'No phase'}: ${c.w0} → ${c.w1} lb (${signed(c.pct, 0)}%) from ${fmtShort(parseDate(c.d0))} to ${fmtShort(parseDate(c.d1))}, ${c.n} sessions`;
+          const name = exInfo(cfg, c.id).n; const g = goals[i];
+          const goalTip = g ? `. Goal ${fmtLb(g.target)} lb${g.key === 'any' ? '' : ` (${goalPhaseLabel(g.key)})`}: ${g.reached ? 'reached' : `${fmtLb(g.left)} lb to go`}` : '';
+          const tip = `${name} · ${c.ph ? PHASES[c.ph].label : 'No phase'}: ${c.w0} → ${c.w1} lb (${signed(c.pct, 0)}%) from ${fmtShort(parseDate(c.d0))} to ${fmtShort(parseDate(c.d1))}, ${c.n} sessions${goalTip}`;
+          const past = g && Math.abs(g.gp) > lim; const gx = g ? zero + Math.max(-lim, Math.min(lim, g.gp)) / lim * span : 0;
           return (
             <div key={`${c.id}|${c.ph}`} role="listitem" className="chrow" data-tip={tip} tabIndex={0} aria-label={tip}>
               <span className="chn"><span className="dot" data-p={c.ph || ''} />{name}</span>
               <span className="chbar"><span className="axis" />
                 {dir === 'flat' ? <i className="flat" /> : <i className={dir} style={{ [dir === 'up' ? 'left' : 'right']: `${dir === 'up' ? zero : 100 - zero}%`, width: `${w}%` }} />}
+                {g && <b className={`goaltick${g.reached ? ' met' : ''}${past ? ` past ${g.gp < 0 ? 'lo' : 'hi'}` : ''}`} style={{ left: `${gx}%` }} />}
               </span>
-              <span className="chv">{signed(c.pct, 0)}% <small>{c.w0}→{c.w1}</small></span>
+              <span className="chv">{signed(c.pct, 0)}% <small>{c.w0}→{c.w1}</small>
+                {g && <small className="chgoal">{g.reached ? `goal ${fmtLb(g.target)} met` : `goal ${fmtLb(g.target)}`}</small>}
+              </span>
             </div>
           );
         })}
       </div>
-      <p className="note">First vs latest weight in the same phase, last 8 weeks.{more > 0 ? ` ${more} more in the lift list below.` : ''} The dot shows the phase.</p>
+      <p className="note">First vs latest weight in the same phase, last 8 weeks.{more > 0 ? ` ${more} more in the lift list below.` : ''} The dot shows the phase{goals.some(Boolean) ? ', and the tick marks your weight goal for that phase (or any phase)' : ''}.</p>
     </section>
   );
 }
