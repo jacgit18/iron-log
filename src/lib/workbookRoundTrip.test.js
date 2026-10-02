@@ -63,15 +63,22 @@ describe('workbook round trip', () => {
     const weeks = { ...raw.weeks, '2030-01-06': { done: {}, rest: 3 } };
     const viaJson = parseDataFile(JSON.stringify(buildDataFile(S, weeks)));
     const viaXlsx = await parseExcelExport(bytes(buildOverallWorkbook(X, S, weeks)), DEFAULT_CFG);
-    expect(viaJson.weeks['2030-01-06'].rest).toBe(3);
-    expect(viaXlsx.weeks['2030-01-06'].rest).toBe(3);
+    expect(viaJson.weeks['2030-01-06'].rest).toEqual([3]);
+    expect(viaXlsx.weeks['2030-01-06'].rest).toEqual([3]);
   });
 
+  it('keeps several rest days through the JSON file and the workbook', async () => {
+    const weeks = { ...raw.weeks, '2030-01-06': { done: {}, rest: [2, 5] } };
+    const viaJson = parseDataFile(JSON.stringify(buildDataFile(S, weeks)));
+    const viaXlsx = await parseExcelExport(bytes(buildOverallWorkbook(X, S, weeks)), DEFAULT_CFG);
+    expect(viaJson.weeks['2030-01-06'].rest).toEqual([2, 5]);
+    expect(viaXlsx.weeks['2030-01-06'].rest).toEqual([2, 5]);
+  });
   it('keeps the rest day once Excel or Sheets has re-saved the workbook', async () => {
     const weeks = { ...raw.weeks, '2030-01-06': { done: {}, rest: 3 } };
     const wb = X.read(bytes(buildOverallWorkbook(X, S, weeks)), { type: 'array' });
     const viaXlsx = await parseExcelExport(bytes(wb), DEFAULT_CFG);
-    expect(viaXlsx.weeks['2030-01-06'].rest).toBe(3);
+    expect(viaXlsx.weeks['2030-01-06'].rest).toEqual([3]);
   });
 
   it('keeps a week’s swapped order and rest day through the JSON file and the workbook', async () => {
@@ -80,7 +87,7 @@ describe('workbook round trip', () => {
     const viaXlsx = await parseExcelExport(bytes(buildOverallWorkbook(X, S, weeks)), DEFAULT_CFG);
     expect(viaJson.weeks['2030-01-06'].order).toEqual([2, 1, 3, 4, 5, 6, 7]);
     expect(viaXlsx.weeks['2030-01-06'].order).toEqual([2, 1, 3, 4, 5, 6, 7]);
-    expect(viaXlsx.weeks['2030-01-06'].rest).toBe(3);
+    expect(viaXlsx.weeks['2030-01-06'].rest).toEqual([3]);
   });
 
   it('keeps the order once Excel or Sheets has re-saved the workbook', async () => {

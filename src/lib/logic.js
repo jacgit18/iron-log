@@ -159,23 +159,31 @@ export function tally(slots, w) {
   return { total, done, skipped, full: total > 0 && done === total };
 }
 /* ---------- Days and the rest day ----------
-   week.rest = N inserts a rest day at displayed position N: workouts on program days N and later
-   show one day later. The layout is derived, so nothing stored changes and unticking undoes it. */
+   week.rest = [N, ...] lists the rest days (displayed columns, ascending). Workouts fill the other columns in
+   order, so each rest day pushes later workouts one day later. The layout is derived, so nothing stored
+   changes and unticking undoes it. A workout pushed past the last column is hidden, and only skipped ones may be. */
 export const DAYS = Array.from({ length: DAY_COUNT }, (_, i) => i + 1);
-export const shownDay = (rest, d) => (rest && d >= rest ? Math.min(d + 1, DAY_COUNT) : d);
-export const programDay = (rest, d) => (!rest || d < rest ? d : d === rest ? null : d - 1);
+export const restsOf = w => (w && Array.isArray(w.rest) ? w.rest : w && Number.isInteger(w.rest) ? [w.rest] : []); // a single number is how older files stored it
+export const shownDay = (rest, d) => { let c = d; for (const r of rest || []) if (r <= c) c++; return c; }; // may pass DAY_COUNT: off the board
+export const programDay = (rest, d) => ((rest || []).includes(d) ? null : d - (rest || []).filter(r => r < d).length);
 // week.order[i] = the program day shown at workout position i + 1 (absent = normal order).
 export const isOrder = o => Array.isArray(o) && o.length === DAY_COUNT && o.every(v => Number.isInteger(v) && v >= 1 && v <= DAY_COUNT) && new Set(o).size === DAY_COUNT;
 export const orderOf = w => (w && isOrder(w.order) ? w.order : DAYS);
 export const posOf = (w, d) => { const i = orderOf(w).indexOf(d); return i >= 0 ? i + 1 : Math.min(Math.max(Math.round(d) || 1, 1), DAY_COUNT); }; // always 1..7, even for a stray value
-export const colOf = (w, d) => shownDay(w.rest, posOf(w, d)); // displayed column of a program day
-export const dayAt = (w, c) => { const p = programDay(w.rest, c); return p == null ? null : orderOf(w)[p - 1]; }; // program day shown in column c; null on the rest column
+export const colOf = (w, d) => shownDay(restsOf(w), posOf(w, d)); // displayed column of a program day
+export const dayAt = (w, c) => { const p = programDay(restsOf(w), c); return p == null ? null : orderOf(w)[p - 1]; }; // program day shown in column c; null on the rest column
 export const dayTitle = (day, d) => (!day.title || /^Day \d+$/.test(day.title) ? `Day ${d}` : day.title);
-// The shift would push a workout off the board when something sits in the last workout position.
-export const restBlocked = (week, slots) => slots.some(s => posOf(week, (week.moved && week.moved[s.id]) || s.day) === DAY_COUNT);
+const colOfSlot = (week, s) => colOf(week, (week.moved && week.moved[s.id]) || s.day);
+// Cards that a rest day on column n would push off the board (on top of the week's current rest days).
+export const overflowSlots = (week, slots, n = 1) => {
+  const rest = [...new Set([...restsOf(week), n])].sort((a, b) => a - b);
+  return slots.filter(s => shownDay(rest, posOf(week, (week.moved && week.moved[s.id]) || s.day)) > DAY_COUNT);
+};
+// A rest day would push a workout off the board (skipped ones may go; they come back when the rest day is unticked).
+export const restBlocked = (week, slots, n) => overflowSlots(week, slots, n).some(s => !isSkipped(s, week));
 export function currentLayout(week, slots) {
   const cols = Object.fromEntries(DAYS.map(d => [d, []]));
-  slots.forEach(s => cols[colOf(week, (week.moved && week.moved[s.id]) || s.day)].push(s));
+  slots.forEach(s => { const c = colOfSlot(week, s); if (cols[c]) cols[c].push(s); });
   return cols;
 }
 
@@ -282,8 +290,8 @@ export function defaultLogDate(weekStart) { const today = ymd(new Date()); retur
 export const normWeek = w => {
   const out = { prog: (w && w.prog) || null, done: { ...(w && w.done) }, skipped: { ...(w && w.skipped) }, moved: { ...(w && w.moved) }, ph: { ...(w && w.ph) }, warm: JSON.parse(JSON.stringify((w && w.warm) || {})) };
   out.moved = Object.fromEntries(Object.entries(out.moved).map(([k, v]) => [k, Number(v)]).filter(([, v]) => Number.isInteger(v) && v >= 1 && v <= DAY_COUNT));
-  const rest = Number(w && w.rest);
-  if (Number.isInteger(rest) && rest >= 1 && rest <= DAY_COUNT) out.rest = rest;
+  const rest = [...new Set([].concat((w && w.rest) ?? []).map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= DAY_COUNT))].sort((a, b) => a - b);
+  if (rest.length) out.rest = rest;
   if (isOrder(w && w.order) && w.order.some((v, i) => v !== i + 1)) out.order = [...w.order];
   if (out.rest && typeof (w && w.restOn) === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.restOn)) out.restOn = w.restOn;
   if (Array.isArray(w && w.extra)) { const seen = new Set(); const ex = w.extra.filter(x => isExtra(x) && !seen.has(x.id) && seen.add(x.id)).map(x => ({ id: x.id, day: x.day, ex: x.ex, ph: x.ph ?? null, note: (x.note || '').slice(0, 200), ...(x.add ? { add: true } : {}) })); if (ex.length) out.extra = ex; }

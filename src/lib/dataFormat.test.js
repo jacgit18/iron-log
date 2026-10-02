@@ -91,8 +91,8 @@ describe('iron-log-data.json, format 1', () => {
 });
 
 it('mergeWeek keeps a rest day from either side, preferring this device', () => {
-  expect(mergeWeek({ rest: 2 }, { rest: 5 }).rest).toBe(2);
-  expect(mergeWeek({}, { rest: 5 }).rest).toBe(5);
+  expect(mergeWeek({ rest: 2 }, { rest: 5 }).rest).toEqual([2]);
+  expect(mergeWeek({}, { rest: 5 }).rest).toEqual([5]);
   expect(mergeWeek({}, {})).not.toHaveProperty('rest');
 });
 
@@ -107,10 +107,10 @@ it('mergeWeek keeps this device’s order, falls back to the other side, and ign
 it('mergeWeek keeps this device’s rest date and falls back to the other side’s', () => {
   expect(mergeWeek({ rest: 2, restOn: '2026-09-29' }, { rest: 2, restOn: '2026-09-30' }).restOn).toBe('2026-09-29');
   expect(mergeWeek({ rest: 2 }, { rest: 2, restOn: '2026-09-30' }).restOn).toBe('2026-09-30');
-  expect(mergeWeek({}, { rest: 4, restOn: '2026-09-30' })).toMatchObject({ rest: 4, restOn: '2026-09-30' });
+  expect(mergeWeek({}, { rest: 4, restOn: '2026-09-30' })).toMatchObject({ rest: [4], restOn: '2026-09-30' });
   expect(mergeWeek({}, { restOn: '2026-09-30' })).not.toHaveProperty('restOn');
   const other = mergeWeek({ rest: 2 }, { rest: 5, restOn: '2026-09-30' });
-  expect(other.rest).toBe(2);
+  expect(other.rest).toEqual([2]);
   expect(other).not.toHaveProperty('restOn');
 });
 

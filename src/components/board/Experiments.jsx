@@ -11,12 +11,12 @@ export default function Experiments({ day, onDragStart, onDragEnd }) {
   const cfg = useAppStore(s => s.cfg);
   const items = useAppStore(s => s.experiments);
   const logs = useAppStore(s => s.logs);
-  const rest = useAppStore(s => s.week.rest);
+  const rest = useAppStore(s => s.week.rest) || [];
   const weekStart = useAppStore(s => s.weekStart);
   const today = useToday(s => s.today);
   const st = useAppStore.getState();
   const [pick, setPick] = useState({});
-  const days = DAYS.filter(d => d !== rest);
+  const days = DAYS.filter(d => !rest.includes(d));
   const start = ymd(monday(today)) === ymd(weekStart) ? todayCol(today) : day;
   const def = days.includes(start) ? start : days[0];
   return (
