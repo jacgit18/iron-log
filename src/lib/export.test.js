@@ -85,3 +85,11 @@ describe('import tab choices', () => {
     expect(['muscleMap', 'ex', 'progNames', 'rm', 'mode'].map(cfgSection)).toEqual(['muscles', 'program', 'program', 'settings', 'settings']);
   });
 });
+
+describe('old Day 5/6 subtitles', () => {
+  it('are dropped from saved programs when they load', async () => {
+    const { withAllDays } = await import('./data.js');
+    const p = withAllDays({ days: [{ title: 'Day 5', sub: 'Upper body + rotational power', slots: [] }, { title: 'Day 6', sub: 'Lower body + reactive power', slots: [] }, { title: 'Day 1', sub: 'Mine', slots: [] }] });
+    expect(p.days.slice(0, 3).map(d => d.sub)).toEqual([undefined, undefined, 'Mine']);
+  });
+});

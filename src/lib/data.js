@@ -12,8 +12,10 @@ export const PH_KEYS = Object.keys(PHASES);
 export const DAY_COUNT = 7;
 // Programs saved before Day 7 existed have 6 days; they get an empty seventh.
 export const hasValidDays = p => !!p && Array.isArray(p.days) && p.days.length >= 6 && p.days.length <= DAY_COUNT;
+// Day 5 and 6 once shipped with these subtitles; saved copies of the program still carry them.
+const OLD_SUBS = new Set(['Upper body + rotational power', 'Lower body + reactive power']);
 export function withAllDays(prog) {
-  const days = prog.days.slice();
+  const days = prog.days.map(d => (d && OLD_SUBS.has(d.sub) ? (({ sub, ...rest }) => rest)(d) : d)); // eslint-disable-line no-unused-vars
   while (days.length < DAY_COUNT) days.push({ title: `Day ${days.length + 1}`, slots: [] });
   return { ...prog, days };
 }
