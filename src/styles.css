@@ -511,3 +511,10 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 :root[data-spacing="roomy"] p + p{margin-top:1.4em}
 .updatebar{margin-top:0}
 .updatebar .actions{margin:0;gap:6px}
+
+.experiments{margin-top:16px;background:var(--sunk);border-radius:10px;padding:10px 12px}
+.exphead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.exphead h2{margin:0;font-size:21px;text-transform:uppercase}
+.explist{list-style:none;margin:8px 0 0;padding:0 0 6px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(240px,280px);gap:10px;overflow-x:auto}
+.expcard{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.expcard .actions{justify-content:flex-start;align-items:center}

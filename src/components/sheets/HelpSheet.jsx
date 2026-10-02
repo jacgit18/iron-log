@@ -6,6 +6,7 @@ const GLOSSARY = [
   ['lb', 'Pounds, the unit for every weight in the app.'],
   ['Bodyweight', 'No added weight: the exercise uses your own body.'],
   ['Sets × reps', 'How much to do, for example 4 × 6 means 4 sets of 6 repetitions. For holds, 4 × 30 s means 4 holds of 30 seconds.'],
+  ['Experiments', 'A list under the board of exercises you want to try. Add one to a day of this week and it shows as a normal card for that week only; Remove takes it off again. The list itself stays for later weeks.'],
   ['Phase', 'The goal of an exercise right now. Each phase has its own sets, reps and share of your 1RM.'],
   ['Strength', 'Heavy weight, few reps (about 85% of your 1RM).'],
   ['Isometric (ISO)', 'Holding still under load instead of moving, timed in seconds. The Hold button runs the timer.'],

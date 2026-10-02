@@ -11,7 +11,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
   const cfg = useAppStore(st => st.cfg);
   const week = useAppStore(st => st.week);
   const logs = useAppStore(st => st.logs);
-  const { checkCard, checkItem, setPhase, quickLog, openModal, moveSlot, skipCard } = useAppStore.getState();
+  const { checkCard, checkItem, setPhase, quickLog, openModal, moveSlot, skipCard, removeExtra } = useAppStore.getState();
   const startHold = useTimerStore(st => st.startHold);
 
   const done = isDone(s, week); const sk = isSkipped(s, week); const paired = isPaired(s);
@@ -35,7 +35,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
             onChange={e => checkCard(s.id, e.target.checked)} />
         )}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {(label || s.tier) && <span className="tag">{[s.tier, label].filter(Boolean).join(' · ')}</span>}
+          {(label || s.tier || s.experiment) && <span className="tag">{[s.experiment && 'Experiment', s.tier, label].filter(Boolean).join(' · ')}</span>}
           {week.moved[s.id] && <span className="moved">From Day {planned}</span>}
           {sk && <span className="skiptag">Skipped this week</span>}
         </div>
@@ -89,6 +89,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
           {DAYS.map(d => <option key={d} value={d} disabled={d === week.rest}>Day {d}{d === week.rest ? ' (rest)' : d === planned ? ' (planned)' : ''}</option>)}
         </select>
         <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={sk ? `Undo skip for ${cardName}` : `Skip ${cardName} this week`} onClick={() => skipCard(s.id)}>{sk ? 'Undo skip' : 'Skip'}</button>
+        {s.experiment && <button type="button" className="btn sm ghost" id={`rm-${s.id}`} aria-label={`Remove ${cardName} from this week`} onClick={() => removeExtra(s.id)}>Remove</button>}
       </div>
     </article>
   );

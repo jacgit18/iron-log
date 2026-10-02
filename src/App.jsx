@@ -13,6 +13,7 @@ import LogSheet from './components/sheets/LogSheet.jsx';
 import DetailSheet from './components/sheets/DetailSheet.jsx';
 import TagSheet from './components/sheets/TagSheet.jsx';
 import SlotSheet from './components/sheets/SlotSheet.jsx';
+import ExperimentSheet from './components/sheets/ExperimentSheet.jsx';
 import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
 import ImportSheet from './components/sheets/ImportSheet.jsx';
 import HelpSheet from './components/sheets/HelpSheet.jsx';
@@ -29,6 +30,7 @@ function Modal() {
     case 'detail': return <DetailSheet exId={modal.exId} />;
     case 'tags': return <TagSheet key={modal.exId} exId={modal.exId} />;
     case 'slot': return <SlotSheet key={`slot-${modal.idx}`} idx={modal.idx} />;
+    case 'experiment': return <ExperimentSheet key={modal.id || 'new'} id={modal.id} />;
     case 'newprog': return <NewProgramSheet />;
     case 'import': return <ImportSheet />;
     case 'help': return <HelpSheet />;
