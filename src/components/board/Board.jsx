@@ -127,7 +127,7 @@ export default function Board() {
         <div className="notice movewarn" role="status" ref={moveRef}>
           <div><b>Heads-up:</b> {moveNote.lines.join(' ')}</div>
           <div className="actions">
-            <button type="button" className="btn sm" onClick={st.undoMove}>Move back to Day {moveNote.from}</button>
+            <button type="button" className="btn sm" onClick={st.undoMove}>Move back to Day {moveNote.fromShown}</button>
             <button type="button" className="btn sm ghost" onClick={st.dismissMove}>Keep it</button>
           </div>
         </div>
