@@ -1,7 +1,7 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import { exInfo } from '../../lib/data.js';
 import { progName } from '../../lib/logic.js';
-import { MUSCLES, M_KEYS, SIL, FRONT, BACK, level, fmtSets, muscleVolume } from '../../lib/muscles.js';
+import { MUSCLES, M_KEYS, SIL, FRONT, BACK, level, fmtSets, muscleVolumeAll } from '../../lib/muscles.js';
 
 const MIRROR = 'matrix(-1 0 0 1 200 0)';
 
@@ -27,12 +27,15 @@ function Figure({ shapes, label, vol, sel, onPick }) {
   );
 }
 
-function MuscleDetail({ m, v, prog, withSec }) {
+function MuscleDetail({ m, v, keys, withSec }) {
   const cfg = useAppStore(s => s.cfg);
   const { selectMuscle, openModal } = useAppStore.getState();
   const grouped = {};
-  v.ex.forEach(e => { const k = e.ex + '|' + e.role; (grouped[k] = grouped[k] || { ...e, days: [] }).days.push(e.day); });
-  const rows = Object.values(grouped).sort((a, b) => (a.role === b.role ? a.days[0] - b.days[0] : a.role === 'p' ? -1 : 1));
+  v.ex.forEach(e => { const k = e.ex + '|' + e.role; const g = (grouped[k] = grouped[k] || { ...e, at: {} }); (g.at[e.prog] = g.at[e.prog] || new Set()).add(e.day); });
+  const first = r => Math.min(...Object.values(r.at).flatMap(s => [...s]));
+  const rows = Object.values(grouped).sort((a, b) => (a.role === b.role ? first(a) - first(b) : a.role === 'p' ? -1 : 1));
+  const where = r => keys.filter(k => r.at[k]).map(k => `${keys.length > 1 ? progName(cfg, k) + ': ' : ''}${[...r.at[k]].sort().map(d => 'D' + d).join(' ')}`).join(' · ');
+  const progs = keys.map(k => progName(cfg, k)).join(' and ');
   return (
     <section className="panel">
       <div className="inline" style={{ justifyContent: 'space-between' }}>
@@ -41,8 +44,8 @@ function MuscleDetail({ m, v, prog, withSec }) {
       </div>
       <p>
         {v.sets
-          ? <>About <b>{fmtSets(v.sets)}</b> sets a week in {progName(cfg, prog)}.{withSec ? ' Secondary work counts as half a set.' : ' Primary work only.'}</>
-          : `Nothing in ${progName(cfg, prog)} trains this.`}
+          ? <>About <b>{fmtSets(v.sets)}</b> sets a week{keys.length > 1 ? `, averaged across ${progs}` : ''}.{withSec ? ' Secondary work counts as half a set.' : ' Primary work only.'}</>
+          : `Nothing in ${progs} trains this.`}
       </p>
       {rows.length > 0 && (
         <div className="mlist">
@@ -50,7 +53,7 @@ function MuscleDetail({ m, v, prog, withSec }) {
             <div className="mrow" key={`${r.ex}|${r.role}`}>
               <span className={`role ${r.role}`}>{r.role === 'p' ? 'Primary' : 'Secondary'}</span>
               <span className="mname">{exInfo(cfg, r.ex).n}{r.either && <> <small>(either/or)</small></>}</span>
-              <span className="mdays">{[...new Set(r.days)].sort().map(d => 'D' + d).join(' ')}</span>
+              <span className="mdays">{where(r)}</span>
               <button type="button" className="btn sm ghost" onClick={() => openModal({ type: 'tags', exId: r.ex })}>Edit</button>
             </div>
           ))}
@@ -89,25 +92,15 @@ function Ranking({ vol, onPick }) {
 }
 
 export default function Muscles() {
-  const cfg = useAppStore(s => s.cfg); const week = useAppStore(s => s.week);
+  const cfg = useAppStore(s => s.cfg);
   const programs = useAppStore(s => s.programs);
-  const bodyView = useAppStore(s => s.bodyView); const sel = useAppStore(s => s.bodySel); const withSec = useAppStore(s => s.bodySec);
-  const cur = useAppStore(s => s.activeProgKey());
-  const { setBodyView, selectMuscle, setBodySec, openModal } = useAppStore.getState();
-  const view = bodyView || cur;
-  const { vol, untagged } = muscleVolume(cfg, week, programs[view] || programs.A, view === cur, withSec);
+  const sel = useAppStore(s => s.bodySel); const withSec = useAppStore(s => s.bodySec);
+  const { selectMuscle, setBodySec, openModal } = useAppStore.getState();
+  const { vol, untagged, keys } = muscleVolumeAll(cfg, programs, withSec);
 
   return (
     <>
-      <div className="edtop">
-        <div className="seg" role="group" aria-label="Program">
-          {['A', 'B'].map(k => (
-            <button type="button" key={k} className={k === view ? 'on' : ''} aria-pressed={k === view} onClick={() => setBodyView(k)}>
-              {progName(cfg, k)}{k === cur ? ' · on board' : ''}
-            </button>
-          ))}
-        </div>
-      </div>
+      <p className="note">Every exercise in {keys.map(k => progName(cfg, k)).join(' and ')}. Sets are per week, averaged across the programs.</p>
       <div className="bodywrap">
         <div className="figs">
           <Figure shapes={FRONT} label="Front" vol={vol} sel={sel} onPick={selectMuscle} />
@@ -119,7 +112,7 @@ export default function Muscles() {
             <span><i className="sw l3" />10–20</span><span><i className="sw l4" />Over 20</span><span className="note">per week</span>
           </div>
           <label className="inline"><input type="checkbox" id="body-sec" checked={withSec} onChange={e => setBodySec(e.target.checked)} /> Count secondary work (as half a set)</label>
-          {sel ? <MuscleDetail m={sel} v={vol[sel]} prog={view} withSec={withSec} /> : <Ranking vol={vol} onPick={selectMuscle} />}
+          {sel ? <MuscleDetail m={sel} v={vol[sel]} keys={keys} withSec={withSec} /> : <Ranking vol={vol} onPick={selectMuscle} />}
           {untagged.length > 0 && (
             <section className="panel">
               <h2>Not mapped yet</h2>

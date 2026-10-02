@@ -1,7 +1,7 @@
 import { FEATURES } from '../lib/features.js';
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_CFG, normWeek } from './logic.js';
-import { muscleVolume, muscleNames, tagsOf, level, fmtSets, matchesFilter, muscleRank } from './muscles.js';
+import { muscleVolume, muscleNames, tagsOf, level, fmtSets, matchesFilter, muscleRank, muscleVolumeAll } from './muscles.js';
 
 FEATURES.stretches = true; // these tests cover the stretch feature as built
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -114,5 +114,16 @@ describe('board sort by muscle', () => {
     expect(muscleRank(c, card('hack'), 'chest')).toBe(2);
     expect(muscleRank(c, card('hipthrust', 'chestpress'), 'chest')).toBe(0); // a superset ranks by its best exercise
     expect(muscleRank(c, card('canoe'), 'quads')).toBe(2); // mobility isn't counted
+  });
+});
+
+describe('muscles across every program', () => {
+  it('lists exercises from A and B, averages sets per week, and remembers where each one is', () => {
+    const A = { key: 'A', days: [{ slots: [{ id: 'a1', items: [{ ex: 'hack', ph: 'hyp' }] }] }] }; // 4 sets quads
+    const B = { key: 'B', days: [{ slots: [] }, { slots: [{ id: 'b1', items: [{ ex: 'legext', ph: 'hyp' }] }] }] }; // 4 sets quads, Day 2
+    const { vol, keys } = muscleVolumeAll(cfg(), { A, B }, false);
+    expect(keys).toEqual(['A', 'B']);
+    expect(vol.quads.sets).toBe(4); // (4 + 4) / 2
+    expect(vol.quads.ex.map(e => [e.ex, e.prog, e.day])).toEqual([['hack', 'A', 1], ['legext', 'B', 2]]);
   });
 });
