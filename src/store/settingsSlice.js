@@ -73,6 +73,7 @@ export const settingsSlice = (set, get, flag) => ({
           else if (get().programs[k] !== BUILTIN[k]) { set(s => ({ programs: { ...s.programs, [k]: BUILTIN[k] } })); get().removeDoc('programs/' + k); }
         });
         set({ library: structuredClone(d.library), body: structuredClone(d.body) }); get().saveLibrary(); get().saveBody();
+        set({ experiments: structuredClone(d.experiments || []) }); get().saveExperiments();
         const logs = {};
         Object.keys(get().logs).forEach(id => { if (!d.logs[id]) get().removeDoc('logs/' + id); });
         Object.entries(d.logs).forEach(([id, l]) => { logs[id] = structuredClone(l); });
@@ -107,6 +108,8 @@ export const settingsSlice = (set, get, flag) => ({
           }
         });
         if (lib.length !== library.length) { set({ library: lib }); get().saveLibrary(); }
+        const exps = get().experiments; const haveE = new Set(exps.map(e => e.id)); const addE = (d.experiments || []).filter(e => !haveE.has(e.id));
+        if (addE.length) get().setExperiments([...exps, ...structuredClone(addE)]);
         const body = get().body; const addB = d.body.filter(e => !body.some(x => x.wk === e.wk));
         if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); }
         Object.entries(d.logs).forEach(([id, l]) => {

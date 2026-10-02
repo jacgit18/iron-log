@@ -4,7 +4,7 @@ import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
-  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets, weekSlots,
+  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets, weekSlots, normExperiments,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -436,5 +436,14 @@ describe('experiment cards on a week', () => {
   it('experiment cards lay out by program day, so they follow the rest-day shift', () => {
     const w = normWeek({ extra: [x], rest: 2 });
     expect(currentLayout(w, weekSlots(prog, w))[4].map(c => c.id)).toEqual(['X-a1']);
+  });
+});
+
+describe('normExperiments', () => {
+  it('keeps valid entries once each and drops malformed ones', () => {
+    const e = { id: 'E1', ex: 'hack', ph: 'hyp', note: 'n' };
+    expect(normExperiments([e, { ...e }, { id: '', ex: 'hack' }, { id: 'E2', ex: '' }, { id: 'E3', ex: 'hack', ph: 'zzz' }, null, 'x', { id: 'E4', ex: 'legext' }]))
+      .toEqual([e, { id: 'E4', ex: 'legext', ph: null, note: '' }]);
+    expect(normExperiments(undefined)).toEqual([]);
   });
 });
