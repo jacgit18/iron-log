@@ -3,7 +3,7 @@ import { BUILTIN, resolveProgram, slotsFor, padLibrary } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
-  setCardDone, setItemDone, clearDone, isSkipped, pullable, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, defaultLogDate, autoLogs,
+  setCardDone, setItemDone, clearDone, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, altDay, defaultLogDate, autoLogs,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -228,10 +228,6 @@ export const useAppStore = create((set, get) => ({
   setPhase(slotId, idx, ph) { get().mutateWeek(w => { w.ph[`${slotId}:${idx}`] = ph; }); },
   setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); get().mutateWeek(w => { w.prog = k === auto ? null : k; }); },
   setMode(mode) { get().mutateCfg(c => { c.mode = mode; }); },
-  pullUnfinished() {
-    const slots = get().activeSlots();
-    get().mutateWeek(w => { pullable(w, slots).forEach(s => { w.moved[s.id] = 5; }); });
-  },
 
   moveSlot(slotId, day) {
     const s = get().slotById(slotId); if (!s) return;
@@ -242,8 +238,9 @@ export const useAppStore = create((set, get) => ({
     const ok = get().mutateWeek(w => { if (pd === s.day) delete w.moved[slotId]; else w.moved[slotId] = pd; });
     if (!ok) return;
     const { cfg, week } = get();
-    const clashes = moveClashes(cfg, week, get().activeSlots(), s, day);
-    set({ moveNote: clashes.length ? { slot: slotId, from, fromShown: colOf(week0, from), to: day, week: get().weekKey(), lines: clashes } : null });
+    const slots = get().activeSlots(); const clashes = moveClashes(cfg, week, slots, s, day);
+    const fromShown = colOf(week0, from);
+    set({ moveNote: clashes.length ? { slot: slotId, from, fromShown, to: day, week: get().weekKey(), lines: clashes, alt: altDay(cfg, week, slots, s, day, fromShown) } : null });
     flag(clashes.length ? `Moved to Day ${day} · heads-up` : `Moved to Day ${day}`);
   },
   undoMove() {

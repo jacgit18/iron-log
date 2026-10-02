@@ -111,7 +111,7 @@ const PROGRAM_A = {
       { sec: 'Home', items: [I('grip', 'strength', 200)] },
       { sec: 'Home', items: [I('deskbands', null, null, { bw: true })] },
     ] },
-    { title: 'Day 5', sub: 'Upper body + rotational power', makeup: true, slots: [
+    { title: 'Day 5', makeup: true, slots: [
       { sec: 'Regular', items: [I('cablecrunch', 'strength', 60)] },
       { sec: 'Regular', items: [I('dbclean', 'exp', 20)] },
       { sec: 'Regular', items: [I('hack', 'hyp', 270, { note: 'Feet low on the plate, narrow stance for quads' })] },
@@ -123,7 +123,7 @@ const PROGRAM_A = {
       { sec: 'Home', items: [I('db6', 'strength', 10, { rx: '2 × 6' })] },
       { sec: 'Home', items: [I('spinal', null, null, { bw: true })] },
     ] },
-    { title: 'Day 6', sub: 'Lower body + reactive power', slots: [
+    { title: 'Day 6', slots: [
       { sec: 'Plyometric', items: [I('pogo', 'exp', null, { bw: true, rx: '3 × 10' })] },
       { sec: 'Plyometric', items: [I('skater', 'exp', null, { bw: true, rx: '3 × 5, hold 3 s' })] },
       { sec: 'Plyometric', items: [I('splitjump', 'exp', null, { bw: true, rx: '3 × 5', note: 'Vertical drive, soft landings' })] },
@@ -182,7 +182,7 @@ const PROGRAM_B = {
       { sec: 'Home', items: [I('grip', 'strength', 200)] },
       { sec: 'Home', items: [I('deskbands', null, null, { bw: true })] },
     ] },
-    { title: 'Day 5', sub: 'Upper body + rotational power', makeup: true, slots: [
+    { title: 'Day 5', makeup: true, slots: [
       { sec: 'Regular', items: [I('cablecrunch', 'strength', 60)] },
       { sec: 'Regular', items: [I('dbclean', 'exp', 20)] },
       { sec: 'Regular', ...EITHER_DELT },
@@ -193,7 +193,7 @@ const PROGRAM_B = {
       { sec: 'Home', items: [I('db6', 'strength', 10, { rx: '2 × 6' })] },
       { sec: 'Home', items: [I('spinal', null, null, { bw: true })] },
     ] },
-    { title: 'Day 6', sub: 'Lower body + reactive power', slots: [
+    { title: 'Day 6', slots: [
       { sec: 'Plyometric', items: [I('pogo', 'exp', null, { bw: true, rx: '3 × 10' })] },
       { sec: 'Plyometric', items: [I('skater', 'exp', null, { bw: true, rx: '3 × 5, hold 3 s' })] },
       { sec: 'Plyometric', items: [I('splitjump', 'exp', null, { bw: true, rx: '3 × 5', note: 'Vertical drive, soft landings' })] },

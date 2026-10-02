@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { WARMUP, slotsFor } from '../../lib/data.js';
 import { monday, ymd, addDays, fmtShort, fmtDayDate } from '../../lib/dates.js';
-import { tally, currentLayout, isOpen, pullable, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate } from '../../lib/logic.js';
+import { tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
@@ -146,6 +146,7 @@ export default function Board() {
         <div className="notice movewarn" role="status" ref={moveRef}>
           <div><b>Heads-up:</b> {moveNote.lines.join(' ')}</div>
           <div className="actions">
+            {moveNote.alt && <button type="button" className="btn sm" onClick={() => st.moveSlot(moveNote.slot, moveNote.alt)}>Move to Day {moveNote.alt} instead</button>}
             <button type="button" className="btn sm" onClick={st.undoMove}>Move back to Day {moveNote.fromShown}</button>
             <button type="button" className="btn sm ghost" onClick={st.dismissMove}>Keep it</button>
           </div>
@@ -191,7 +192,6 @@ export default function Board() {
           const date = dayDate(list, logs, wk);
           const t = tally(list, week);
           const warm = week.warm[pd] || {};
-          const pending = dayDef.makeup ? pullable(week, slots).length : 0;
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const open = list.filter(s => isOpen(s, week));
           const finished = [...list.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...list.filter(s => isSkipped(s, week))];
@@ -225,12 +225,6 @@ export default function Board() {
                   </label>
                 ))}
               </div>
-              {dayDef.makeup && (
-                <div className="makeup">
-                  Make-up day for anything skipped.{' '}
-                  {pending > 0 && <button type="button" className="btn sm" onClick={st.pullUnfinished}>Pull in {pending} unfinished</button>}
-                </div>
-              )}
               {open.map((s, i) => {
                 const sec = secOf(s, pd);
                 const newSec = i === 0 || sec !== secOf(open[i - 1], pd);

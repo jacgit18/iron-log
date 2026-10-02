@@ -4,7 +4,7 @@ import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
-  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, pullable, dayDate,
+  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -301,19 +301,32 @@ describe('swapped day order', () => {
   });
 });
 
-describe('pullable: unfinished workouts that sit before the make-up', () => {
+describe('altDay: the nearest day a moved card would not clash', () => {
   const mk = (id, day) => ({ id, day, type: 'single', items: [{ ex: 'hack', ph: 'hyp' }] });
-  const slots = [mk('a', 1), mk('d4', 4), mk('d6', 6)];
-  const idsOf = r => r.map(s => s.id);
-  it('with no order is the Day 1-4 workouts', () => {
-    expect(idsOf(pullable({ moved: {} }, slots))).toEqual(['a', 'd4']);
-    expect(idsOf(pullable({}, slots))).toEqual(['a', 'd4']);
+  const other = (id, day) => ({ id, day, type: 'single', items: [{ ex: 'legext', ph: 'hyp' }] });
+  const c = cfg();
+  it('picks the nearest clash-free day, the later one on a tie', () => {
+    // Hack is already on Day 4; the moved card (home Day 7) was dropped on Day 4 too.
+    const slots = [mk('a', 4), mk('x', 7)];
+    const w = normWeek({ moved: { x: 4 } });
+    expect(altDay(c, w, slots, slots[1], 4, 7)).toBe(6); // Days 3 and 5 sit next to Day 4; 6 and 2 tie, 6 wins
   });
-  it('follows a swapped order: Day 4 sits after the make-up, Day 6 before it', () => {
-    const w = { moved: {}, order: [1, 2, 3, 5, 4, 6, 7] };
-    expect(idsOf(pullable(w, slots))).toEqual(['a']);
-    expect(idsOf(pullable({ moved: {}, order: [1, 2, 3, 4, 6, 5, 7] }, slots))).toEqual(['a', 'd4', 'd6']);
-    expect(idsOf(pullable({ moved: {}, order: [1, 2, 3, 6, 5, 4, 7] }, slots))).toEqual(['a', 'd6']);
+  it('skips the day the card came from', () => {
+    const slots = [mk('a', 4), mk('x', 6)];
+    expect(altDay(c, normWeek({ moved: { x: 4 } }), slots, slots[1], 4, 6)).toBe(2);
+  });
+  it('skips the rest day', () => {
+    const slots = [mk('a', 4), mk('x', 7)];
+    expect(altDay(c, normWeek({ moved: { x: 4 }, rest: 6 }), slots, slots[1], 4, 7)).toBe(2);
+  });
+  it('ignores other exercises and skipped cards', () => {
+    const slots = [mk('a', 1), other('b', 3), mk('s', 3), mk('x', 7)];
+    const w = normWeek({ moved: { x: 2 }, skipped: { s: true } });
+    expect(altDay(c, w, slots, slots[3], 2, 7)).toBe(3); // Day 3 only has a different exercise and a skipped Hack
+  });
+  it('is null when every other day clashes', () => {
+    const slots = [mk('a', 1), mk('b', 3), mk('c', 5), mk('d', 7), mk('x', 2)];
+    expect(altDay(c, normWeek({ moved: { x: 4 } }), slots, slots[4], 4, 2)).toBeNull();
   });
 });
 

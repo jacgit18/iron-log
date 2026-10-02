@@ -168,7 +168,6 @@ export const colOf = (w, d) => shownDay(w.rest, posOf(w, d)); // displayed colum
 export const dayAt = (w, c) => { const p = programDay(w.rest, c); return p == null ? null : orderOf(w)[p - 1]; }; // program day shown in column c; null on the rest column
 export const dayTitle = (day, d) => (!day.title || /^Day \d+$/.test(day.title) ? `Day ${d}` : day.title);
 // The shift would push a workout off the board when something sits in the last workout position.
-export const pullable = (w, slots) => { const mp = posOf(w, 5); return slots.filter(s => posOf(w, s.day) < mp && posOf(w, (w.moved && w.moved[s.id]) || s.day) < mp && isOpen(s, w)); }; // unfinished workouts that sit before the make-up
 export const restBlocked = (week, slots) => slots.some(s => posOf(week, (week.moved && week.moved[s.id]) || s.day) === DAY_COUNT);
 export function currentLayout(week, slots) {
   const cols = Object.fromEntries(DAYS.map(d => [d, []]));
@@ -195,6 +194,15 @@ export function moveClashes(cfg, week, slots, s, day) {
     });
   });
   return [...new Set(out)];
+}
+
+// Nearest column to `day` where the card wouldn't clash, skipping the rest day and `from`; a tie goes to the later day.
+export function altDay(cfg, week, slots, s, day, from) {
+  for (let k = 1; k < DAY_COUNT; k++) for (const c of [day + k, day - k]) {
+    if (c < 1 || c > DAY_COUNT || c === from || dayAt(week, c) == null) continue;
+    if (!moveClashes(cfg, week, slots, s, c).length) return c;
+  }
+  return null;
 }
 
 export function holdPlan(cfg, week, logs, slot, idx) {

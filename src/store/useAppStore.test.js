@@ -200,11 +200,17 @@ describe('swap days', () => {
     st().undoMove();
     expect(st().week.moved['A-d1s1']).toBeUndefined();
   });
-  it('make-up pulls in workouts by position, not program day', () => {
-    st().swapDays(4, 1); // Day 4 workout now sits after the make-up column
-    st().pullUnfinished();
-    expect(st().week.moved['A-d4s1']).toBeUndefined();
-    expect(st().week.moved['A-d1s1']).toBe(5);
+  it('a move that clashes suggests a clash-free day, and moving there clears the heads-up', () => {
+    // A-d6s5 (Arnold Press + Zercher Squat) is also on Day 4 as A-d4s4; Day 5 sits right after it.
+    st().moveSlot('A-d6s5', 5);
+    expect(st().moveNote.lines.length).toBeGreaterThan(0);
+    expect(st().moveNote.alt).toBe(7); // Day 6 is where it came from; Day 7 is empty
+    st().moveSlot('A-d6s5', st().moveNote.alt);
+    expect(st().moveNote).toBeNull();
+  });
+  it('a move with no clash has no suggestion', () => {
+    st().moveSlot('A-d6s5', 7);
+    expect(st().moveNote).toBeNull();
   });
   it('keeps a warm-up tick with its workout across a swap', () => {
     st().swapDays(6, 1);
