@@ -447,3 +447,10 @@ describe('normExperiments', () => {
     expect(normExperiments(undefined)).toEqual([]);
   });
 });
+describe('experiment note length', () => {
+  it('caps a long note at 200 characters on an entry and on a week card', () => {
+    const long = 'n'.repeat(300);
+    expect(normExperiments([{ id: 'E1', ex: 'hack', note: long }])[0].note).toHaveLength(200);
+    expect(normWeek({ extra: [{ id: 'X-1', day: 2, ex: 'hack', note: long }] }).extra[0].note).toHaveLength(200);
+  });
+});

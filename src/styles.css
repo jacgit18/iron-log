@@ -272,7 +272,7 @@ body.timing{padding-bottom:130px}
 .card.done .exname,.card .ex.idone .exname{color:var(--done);text-decoration:line-through;text-decoration-thickness:1px}
 .exname .chk{margin-right:8px;vertical-align:-4px}
 .card .row1{display:flex;gap:8px;align-items:flex-start}
-.card .tag,.edrow .tag{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.card .tag,.edrow .tag,.expcard .tag{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .card .moved{font-size:11px;color:var(--accent);font-weight:600}
 .ex{display:flex;flex-direction:column;gap:4px}
 .ex + .ex{border-top:1px dashed var(--line);padding-top:8px}
@@ -518,3 +518,4 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .explist{list-style:none;margin:8px 0 0;padding:0 0 6px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(240px,280px);gap:10px;overflow-x:auto}
 .expcard{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
 .expcard .actions{justify-content:flex-start;align-items:center}
+.expcard select{min-height:44px}

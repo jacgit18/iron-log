@@ -181,7 +181,7 @@ const isExtra = x => !!x && typeof x.id === 'string' && /^X-[\w-]{1,60}$/.test(x
 export function normExperiments(list) {
   const seen = new Set();
   return (Array.isArray(list) ? list : []).filter(e => e && typeof e.id === 'string' && e.id !== '' && e.id.length <= 200 && typeof e.ex === 'string' && e.ex !== '' && (e.ph == null || PH_KEYS.includes(e.ph)) && (e.note == null || typeof e.note === 'string') && !seen.has(e.id) && seen.add(e.id))
-    .map(e => ({ id: e.id, ex: e.ex, ph: e.ph ?? null, note: e.note || '' }));
+    .map(e => ({ id: e.id, ex: e.ex, ph: e.ph ?? null, note: (e.note || '').slice(0, 200) }));
 }
 export const extraSlots = w => (w.extra || []).map(x => ({ id: x.id, day: x.day, type: 'single', sec: 'Experiment', experiment: true, items: [{ ex: x.ex, ph: x.ph }], ...(x.note ? { note: x.note } : {}) }));
 // The week's cards: the program's, then the experiment cards added to this week.
@@ -281,6 +281,6 @@ export const normWeek = w => {
   if (Number.isInteger(rest) && rest >= 1 && rest <= DAY_COUNT) out.rest = rest;
   if (isOrder(w && w.order) && w.order.some((v, i) => v !== i + 1)) out.order = [...w.order];
   if (out.rest && typeof (w && w.restOn) === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.restOn)) out.restOn = w.restOn;
-  if (Array.isArray(w && w.extra)) { const seen = new Set(); const ex = w.extra.filter(x => isExtra(x) && !seen.has(x.id) && seen.add(x.id)).map(x => ({ id: x.id, day: x.day, ex: x.ex, ph: x.ph ?? null, note: x.note || '' })); if (ex.length) out.extra = ex; }
+  if (Array.isArray(w && w.extra)) { const seen = new Set(); const ex = w.extra.filter(x => isExtra(x) && !seen.has(x.id) && seen.add(x.id)).map(x => ({ id: x.id, day: x.day, ex: x.ex, ph: x.ph ?? null, note: (x.note || '').slice(0, 200) })); if (ex.length) out.extra = ex; }
   return out;
 };

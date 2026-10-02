@@ -89,7 +89,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
           {DAYS.map(d => <option key={d} value={d} disabled={d === week.rest}>Day {d}{d === week.rest ? ' (rest)' : d === planned ? ' (planned)' : ''}</option>)}
         </select>
         <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={sk ? `Undo skip for ${cardName}` : `Skip ${cardName} this week`} onClick={() => skipCard(s.id)}>{sk ? 'Undo skip' : 'Skip'}</button>
-        {s.experiment && <button type="button" className="btn sm ghost" id={`rm-${s.id}`} aria-label={`Remove ${cardName} from this week`} onClick={() => removeExtra(s.id)}>Remove</button>}
+        {s.experiment && <button type="button" className="btn sm ghost" id={`rm-${s.id}`} aria-label={`Remove ${cardName} from this week`} onClick={() => { removeExtra(s.id); if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => document.getElementById(`colh-${cur}`)?.focus()); }}>Remove</button>}
       </div>
     </article>
   );

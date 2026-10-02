@@ -35,7 +35,7 @@ export default function ExperimentSheet({ id }) {
           {PH_KEYS.map(p => <option key={p} value={p}>{PHASES[p].label}</option>)}
         </select>
       </label>
-      <label className="field">Note<input value={d.note} placeholder="e.g. Saw it on YouTube, try light" onChange={e => up({ note: e.target.value })} /></label>
+      <label className="field">Note<input maxLength={200} value={d.note} placeholder="e.g. Saw it on YouTube, try light" onChange={e => up({ note: e.target.value })} /></label>
       {err && <p className="note err" role="alert">{err}</p>}
       <div className="actions">
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>

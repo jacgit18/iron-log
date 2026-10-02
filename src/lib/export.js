@@ -163,7 +163,7 @@ export function buildDataFile(S, weeks) {
 }
 export function dataStats(d) {
   const L = Object.values(d.logs || {}); const sets = L.reduce((a, l) => a + l.length, 0);
-  return { entries: sets, exercises: L.filter(l => l.length).length, weeks: Object.keys(d.weeks || {}).length, programs: Object.keys(d.programs || {}), saved: (d.library || []).length, body: (d.body || []).length };
+  return { entries: sets, exercises: L.filter(l => l.length).length, weeks: Object.keys(d.weeks || {}).length, programs: Object.keys(d.programs || {}), saved: (d.library || []).length, body: (d.body || []).length, experiments: (d.experiments || []).length };
 }
 export function parseDataFile(text) {
   let d; try { d = JSON.parse(text); } catch { throw new Error('That file isn’t valid JSON.'); }

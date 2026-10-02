@@ -22,7 +22,7 @@ export default function Experiments({ day, onDragStart, onDragEnd }) {
   return (
     <section className="experiments" aria-labelledby="exp-h">
       <div className="exphead">
-        <h2 id="exp-h" className="cond">Experiments</h2>
+        <h2 id="exp-h" className="cond" tabIndex={-1}>Experiments</h2>
         <button type="button" className="btn sm" onClick={() => st.openModal({ type: 'experiment' })}>+ Add exercise</button>
       </div>
       {!items.length ? <p className="note">Keep exercises you want to try here, then add them to a day.</p> : (
@@ -36,12 +36,12 @@ export default function Experiments({ day, onDragStart, onDragEnd }) {
                 {last && <div className="lastlog">Last: {describe(last)}</div>}
                 <div className="actions">
                   <label htmlFor={`exp-to-${e.id}`}>Add to</label>
-                  <select id={`exp-to-${e.id}`} value={to} onChange={ev => setPick(p => ({ ...p, [e.id]: Number(ev.target.value) }))}>
+                  <select id={`exp-to-${e.id}`} aria-label={`Add to (${n})`} value={to} onChange={ev => setPick(p => ({ ...p, [e.id]: Number(ev.target.value) }))}>
                     {days.map(d => <option key={d} value={d}>Day {d}</option>)}
                   </select>
                   <button type="button" className="btn sm" aria-label={`Add ${n} to Day ${to}`} onClick={() => st.addToDay(e.id, to)}>Add</button>
                   <button type="button" className="btn sm ghost" aria-label={`Edit ${n}`} onClick={() => st.openModal({ type: 'experiment', id: e.id })}>Edit</button>
-                  <ArmedButton className="btn sm ghost" label="Delete" armedLabel="Confirm delete" aria-label={`Delete ${n}`} onConfirm={() => st.deleteExperiment(e.id)} />
+                  <ArmedButton className="btn sm ghost" label="Delete" armedLabel="Confirm delete" aria-label={`Delete ${n}`} onConfirm={() => { st.deleteExperiment(e.id); if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => document.getElementById('exp-h')?.focus()); }} />
                 </div>
               </li>
             );

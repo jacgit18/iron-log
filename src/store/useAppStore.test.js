@@ -348,6 +348,12 @@ describe('experiment board', () => {
     st().removeExtra(id);
     expect(st().logs.legext.some(x => x.slot === id && !x.auto)).toBe(true);
   });
+  it('Remove clears a heads-up about a bulk move that included the card', () => {
+    const e = add('legext', 'hyp'); st().addToDay(e.id, 2); const id = st().week.extra[0].id;
+    useAppStore.setState({ moveNote: { batch: { [id]: null }, week: st().weekKey(), lines: ['x'], fromShown: 2, to: 3 } });
+    st().removeExtra(id);
+    expect(st().moveNote).toBeNull();
+  });
   it('Remove only works on experiment cards', () => {
     st().removeExtra('A-d1s1');
     expect(st().activeSlots().some(s => s.id === 'A-d1s1')).toBe(true);

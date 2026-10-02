@@ -225,7 +225,7 @@ export const useAppStore = create((set, get) => ({
     if (d.ex === '__new' && d.nu && !/^https?:\/\//.test(d.nu)) return 'Video link should start with https://';
     let ex = d.ex;
     if (ex === '__new') { ex = newExId(get().cfg, d.nn); get().mutateCfg(c => { c.ex[ex] = { n: d.nn, ...(d.nu ? { url: d.nu } : {}) }; }); }
-    const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim() };
+    const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim().slice(0, 200) };
     const list = get().experiments;
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
     set({ modal: null }); flag('Saved'); return null;
@@ -245,7 +245,7 @@ export const useAppStore = create((set, get) => ({
       w.extra = (w.extra || []).filter(x => x.id !== slotId); if (!w.extra.length) delete w.extra;
     });
     if (!ok) return;
-    if (get().moveNote && get().moveNote.slot === slotId) set({ moveNote: null });
+    if (get().moveNote && (get().moveNote.slot === slotId || (get().moveNote.batch && slotId in get().moveNote.batch))) set({ moveNote: null });
     flag('Removed from this week');
   },
   setWarm(day, wid, on) {

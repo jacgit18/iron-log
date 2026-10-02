@@ -87,7 +87,7 @@ export default function Board() {
   // Swipe between days on phones.
   const swipe = useRef(null);
   const onTouchStart = e => {
-    if (e.target.closest('select,input,button,a')) { swipe.current = null; return; }
+    if (e.target.closest('select,input,button,a,.explist')) { swipe.current = null; return; }
     swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
   const onTouchEnd = e => {
@@ -234,7 +234,7 @@ export default function Board() {
                 <input type="checkbox" className="chk" id={`day-${d}`} checked={t.full} aria-label={`Mark all of Day ${d} done`}
                   onChange={e => st.checkDay(d, e.target.checked)} />
                 <div>
-                  <h3 id={`colh-${d}`}>{dayTitle(dayDef, d)}</h3>
+                  <h3 id={`colh-${d}`} tabIndex={-1}>{dayTitle(dayDef, d)}</h3>
                   {date && <div className="sub daydate">{fmtDayDate(date)}</div>}
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                 </div>
