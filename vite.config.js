@@ -21,12 +21,25 @@ function preloadTitleFont() {
   };
 }
 
+// The dev and preview servers answer any unknown path with the app's index.html, so a request for
+// /.well-known/ai-catalog.json (Lighthouse's agentic audit) got HTML and failed as malformed. There's no such
+// file, so say so with a 404, the same as GitHub Pages does.
+function noWellKnownFallback() {
+  const notFound = (req, res, next) => { if (req.url.startsWith('/.well-known/')) { res.statusCode = 404; res.end(); } else next(); };
+  return {
+    name: 'no-well-known-fallback',
+    configureServer: server => { server.middlewares.use(notFound); },
+    configurePreviewServer: server => { server.middlewares.use(notFound); },
+  };
+}
+
 // BASE_PATH lets the same build run at a sub-path (e.g. /iron-log/ on GitHub Pages).
 export default defineConfig({
   base,
   plugins: [
     react(),
     preloadTitleFont(),
+    noWellKnownFallback(),
     VitePWA({
       // Updates wait for you: a banner offers to reload, so a new version never interrupts a workout.
       registerType: 'prompt',
