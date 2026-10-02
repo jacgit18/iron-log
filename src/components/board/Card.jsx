@@ -5,6 +5,7 @@ import { PHASES, PH_KEYS, EQUIPMENT, exInfo, videoLabel } from '../../lib/data.j
 import { parseDate, fmtShort } from '../../lib/dates.js';
 import {
   DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, describe, holdPlan,
+  restsOf,
 } from '../../lib/logic.js';
 
 export default function Card({ s, onDragStart, onDragEnd, dragging }) {
@@ -90,7 +91,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
       <div className="cardfoot">
         <label htmlFor={`mv-${s.id}`}>Move to</label>
         <select id={`mv-${s.id}`} aria-label={`Move to (${cardName})`} value={cur} onChange={e => moveSlot(s.id, Number(e.target.value))}>
-          {DAYS.map(d => <option key={d} value={d} disabled={d === week.rest}>Day {d}{d === week.rest ? ' (rest)' : d === planned ? ' (planned)' : ''}</option>)}
+          {DAYS.map(d => <option key={d} value={d} disabled={restsOf(week).includes(d)}>Day {d}{restsOf(week).includes(d) ? ' (rest)' : d === planned ? ' (planned)' : ''}</option>)}
         </select>
         <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={sk ? `Undo skip for ${cardName}` : `Skip ${cardName} this week`} onClick={() => skipCard(s.id)}>{sk ? 'Undo skip' : 'Skip'}</button>
         {s.experiment && <button type="button" className="btn sm ghost" id={`rm-${s.id}`} aria-label={`Remove ${cardName} from this week`} onClick={() => { removeExtra(s.id); if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => document.getElementById(`colh-${cur}`)?.focus()); }}>Remove</button>}

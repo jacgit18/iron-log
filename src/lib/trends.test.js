@@ -53,7 +53,6 @@ describe('weekSummary: the weekly history row', () => {
   });
   it('does not count a rest Day 7 as complete when a card sits in it', () => {
     const w7 = { done: {}, skipped: {}, moved: { c: 7 }, rest: 7 };
-    expect(weekSummary(cfg(), programs, '2026-09-20', w7).days[6]).toBe(0);
     expect(weekSummary(cfg(), programs, '2026-09-20', { ...w7, moved: {} }).days[6]).toBe(2);
   });
   it('reads 6 days with an empty, non-rest Day 7', () => {

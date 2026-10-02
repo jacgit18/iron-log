@@ -102,7 +102,7 @@ export function checkRows(weeks) {
   Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => {
     const w = normWeek(weeks[k]);
     if (w.prog) rows.push([k, 'prog', '', w.prog]);
-    if (w.rest) rows.push([k, 'rest', '', w.rest]);
+    if (w.rest) rows.push([k, 'rest', '', w.rest.join(' ')]);
     if (w.restOn) rows.push([k, 'restOn', '', w.restOn]);
     if (w.order) rows.push([k, 'order', '', w.order.join(' ')]);
     (w.extra || []).forEach(x => rows.push([k, 'extra', x.id, JSON.stringify(x)]));
@@ -189,7 +189,7 @@ export function mergeWeek(a, b) {
   const w = normWeek(a); const o = normWeek(b);
   w.prog = w.prog || o.prog;
   if (!w.rest && o.rest) w.rest = o.rest;
-  if (w.rest && !w.restOn && o.restOn && o.rest === w.rest) w.restOn = o.restOn;
+  if (w.rest && !w.restOn && o.restOn && JSON.stringify(o.rest) === JSON.stringify(w.rest)) w.restOn = o.restOn;
   if (!w.order && o.order) w.order = o.order;
   ['moved', 'ph'].forEach(k => { w[k] = { ...o[k], ...w[k] }; });
   Object.keys(o.warm).forEach(d => { w.warm[d] = { ...o.warm[d], ...(w.warm[d] || {}) }; });

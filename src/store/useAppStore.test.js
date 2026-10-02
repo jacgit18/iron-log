@@ -113,17 +113,39 @@ describe('rest day', () => {
 
   it('shifts later workouts one day, saves the week, and clears on a second tick', () => {
     expect(st().setRestDay(3)).toBe(true);
-    expect(st().week.rest).toBe(3);
-    expect(saved('weeks/' + st().weekKey()).rest).toBe(3);
+    expect(st().week.rest).toEqual([3]);
+    expect(saved('weeks/' + st().weekKey()).rest).toEqual([3]);
     expect(ids(3)).toEqual([]);
     expect(ids(4)).toContain('A-d3s1');
     expect(st().setRestDay(3)).toBe(true);
     expect(st().week.rest).toBeUndefined();
     expect(ids(3)).toContain('A-d3s1');
   });
-  it('moves the rest day when another day is ticked', () => {
-    st().setRestDay(3); st().setRestDay(2);
-    expect(st().week.rest).toBe(2);
+  it('reports the workouts a second rest day would push off the week', () => {
+    st().mutateWeek(w => { w.skipped['A-d6s1'] = true; });
+    st().setRestDay(3);
+    expect(st().restOverflow(2).length).toBeGreaterThan(0); // the rest of Day 6 would still fall off
+  });
+  it('allows several rest days and unticks one at a time', () => {
+    st().setRestDay(2); st().setRestDay(5, { skipOverflow: true });
+    expect(st().week.rest).toEqual([2, 5]);
+    st().setRestDay(2);
+    expect(st().week.rest).toEqual([5]);
+    st().setRestDay(5);
+    expect(st().week.rest).toBeUndefined();
+    expect(st().week.restOn).toBeUndefined();
+  });
+  it('refuses a rest day that pushes workouts off the week, unless told to skip them', () => {
+    st().setRestDay(1);
+    const over = st().restOverflow(2);
+    expect(over.length).toBeGreaterThan(0);
+    expect(st().setRestDay(2)).toBe(false);
+    expect(st().week.rest).toEqual([1]);
+    expect(st().setRestDay(2, { skipOverflow: true })).toBe(true);
+    expect(st().week.rest).toEqual([1, 2]);
+    over.forEach(s => expect(st().week.skipped[s.id]).toBe(true));
+    st().setRestDay(2);
+    expect(st().week.rest).toEqual([1]);
   });
   it('is blocked, with a message, when Day 7 has exercises', () => {
     st().mutateWeek(w => { w.moved['A-d3s1'] = 7; });
@@ -181,10 +203,10 @@ describe('swap days', () => {
   it('swapping a workout with the rest column moves the rest day', () => {
     st().setRestDay(3);
     expect(st().swapDays(2, 1)).toBe(true); // Day 2 workout <-> rest at column 3
-    expect(st().week.rest).toBe(2);
+    expect(st().week.rest).toEqual([2]);
     expect(st().week.order).toBeUndefined();
     expect(st().swapDays(2, 1)).toBe(true); // rest at 2 <-> column 3 workout
-    expect(st().week.rest).toBe(3);
+    expect(st().week.rest).toEqual([3]);
   });
   it('swaps two workouts across a rest day', () => {
     st().setRestDay(3);
@@ -254,11 +276,11 @@ describe('day dates', () => {
     st().setRestDay(3);
     expect(st().week.restOn).toBe(defaultLogDate(st().weekStart));
     st().mutateWeek(w => { w.restOn = '2026-01-04'; });
-    st().setRestDay(2); // moves the rest day
-    expect(st().week.rest).toBe(2);
+    st().swapDays(3, -1); // the swap arrows move the rest day
+    expect(st().week.rest).toEqual([2]);
     expect(st().week.restOn).toBe('2026-01-04');
-    st().swapDays(2, 1); // the swap arrows move it too
-    expect(st().week.rest).toBe(3);
+    st().swapDays(2, 1);
+    expect(st().week.rest).toEqual([3]);
     expect(st().week.restOn).toBe('2026-01-04');
     st().setRestDay(3); // untick
     expect(st().week.rest).toBeUndefined();

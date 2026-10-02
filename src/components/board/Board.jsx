@@ -4,7 +4,7 @@ import { useToday } from '../../store/useToday.js';
 import { WARMUP, EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { monday, ymd, addDays, fmtShort, fmtDayDate } from '../../lib/dates.js';
-import { weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
+import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
@@ -20,13 +20,13 @@ const tipHidden = k => LS.get(k) === 1; // stored as the string "1", same as the
 
 // Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
 function SwapArrows({ d }) {
-  const rest = useAppStore(s => s.week.rest);
+  const rest = useAppStore(s => s.week.rest) || [];
   const swap = dir => {
     if (!useAppStore.getState().swapDays(d, dir)) return;
     const e = d + dir;
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => (document.getElementById(`swap-${e}-${dir}`) || document.getElementById(`swap-${e}-${-dir}`))?.focus());
   };
-  const label = n => (d === rest ? `Move rest day to Day ${n}` : n === rest ? `Swap Day ${d} with the rest day` : `Swap Day ${d} with Day ${n}`);
+  const label = n => (rest.includes(d) ? (rest.includes(n) ? `Day ${n} is also a rest day` : `Move rest day to Day ${n}`) : rest.includes(n) ? `Swap Day ${d} with the rest day` : `Swap Day ${d} with Day ${n}`);
   return (
     <span className="swaps">
       {d > 1 && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}--1`} aria-label={label(d - 1)} onClick={() => swap(-1)}><span aria-hidden="true">←</span></button>}
@@ -56,7 +56,7 @@ export default function Board() {
   const prog = programs[progKey] || programs.A;
   const slots = weekSlots(prog, week);
   const cols = currentLayout(week, slots);
-  const rest = week.rest || null;
+  const rest = restsOf(week);
   const { total, done, skipped: skippedN } = tally(slots, week);
   const pct = total ? Math.round(done / total * 100) : 0;
   const wk = ymd(weekStart);
@@ -66,8 +66,14 @@ export default function Board() {
 
   // Phones show one day; default to the first day that still has open work.
   let day = mDay;
-  if (day == null) { day = DAYS.find(d => d !== rest); for (const d of DAYS) { if (d !== rest && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
+  if (day == null) { day = DAYS.find(d => !rest.includes(d)); for (const d of DAYS) { if (!rest.includes(d) && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
 
+  // Ticking a rest day that would push workouts off the week asks first: skip them for the week, or cancel and move them yourself.
+  const tickRest = d => {
+    const over = st.restOverflow(d);
+    if (over.length && !window.confirm(`A rest day on Day ${d} pushes ${over.length === 1 ? 'a workout' : `${over.length} workouts`} off the week:\n\n${over.map(s => `• ${s.items.map(it => exInfo(cfg, it.ex).n).join(' + ')}`).join('\n')}\n\nOK skips ${over.length === 1 ? 'it' : 'them'} for this week. Cancel lets you move ${over.length === 1 ? 'it' : 'them'} first.`)) return;
+    st.setRestDay(d, { skipOverflow: true });
+  };
   const [, forceTips] = useState(0);
   const hideTip = k => { LS.set(k, 1); forceTips(n => n + 1); };
 
@@ -232,7 +238,7 @@ export default function Board() {
         e.preventDefault(); const d = ((n - 1 + DAYS.length) % DAYS.length) + 1; st.setMDay(d); document.getElementById(`daytab-${d}`).focus();
       }}>
         {DAYS.map(d => {
-          const t = tally(cols[d], week); const isRest = d === rest;
+          const t = tally(cols[d], week); const isRest = rest.includes(d);
           const short = isRest ? 'Rest' : t.full ? '✓' : `${t.done}/${t.total}`;
           return (
             <button type="button" role="tab" key={d} id={`daytab-${d}`} aria-selected={d === day} aria-controls={`col-${d}`} tabIndex={d === day ? 0 : -1}
@@ -251,7 +257,7 @@ export default function Board() {
           if (pd == null) return (
             <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}`}>
               <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div>{week.restOn && <div className="sub daydate">{fmtDayDate(week.restOn)}</div>}</div><SwapArrows d={d} /></div>
-              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => st.setRestDay(d)} /> Rest day</label>
+              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /> Rest day</label>
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
@@ -291,7 +297,7 @@ export default function Board() {
                 <span className="count">{t.done}/{t.total}</span>
                 <SwapArrows d={d} />
               </div>
-              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => st.setRestDay(d)} /> Rest day</label>
+              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /> Rest day</label>
               <div className="addrow">
                 <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>
                 <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>

@@ -30,8 +30,8 @@ const GLOSSARY = [
   ['Unchecked yesterday', 'When yesterday still has exercises with nothing checked, a notice at the top of the board offers to skip them all or move them all to a later day. Not now hides it until tomorrow.'],
   ['Skip', 'Leaves an exercise out of this week’s counts without deleting it.'],
   ['D1 to D7', 'Day 1 to Day 7 of the week’s plan.'],
-  ['Rest day', 'Tick Rest day on a day to rest. Your workouts from that day on move one day later, and the rest day counts as done. Untick to undo. You can’t add one while Day 7 has exercises.'],
-  ['Swap arrows', 'The ← and → on each day swap it with the day beside it for this week only. The workouts trade places and the day labels stay in order. Swapping with the rest day moves your rest day.'],
+  ['Rest day', 'Tick Rest day on a day to rest. Your workouts from that day on move one day later, and the rest day counts as done. Untick to undo. You can tick more than one. If a rest day would push workouts off the end of the week, you’re asked to skip them for that week (they come back when you untick) or cancel and move them yourself first.'],
+  ['Swap arrows', 'The ← and → on each day swap it with the day beside it for this week only. The workouts trade places and the day labels stay in order. Swapping with a rest day moves that rest day.'],
   ['Day date', 'Once you check something off on a day, its header shows the weekday and date the exercises were logged or checked off, for example Sunday 09/27. Check-offs made while viewing another week are dated to the first day of that week (Sunday), and a rest day shows the date you ticked it.'],
   ['Mode 1, 2, 3', 'How the two programs take turns: Program A only; A and B by month; or six months each.'],
 ];

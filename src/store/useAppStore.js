@@ -3,7 +3,7 @@ import { BUILTIN, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, fin
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
-  setCardDone, setItemDone, clearDone, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
+  setCardDone, setItemDone, clearDone, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -391,20 +391,33 @@ export const useAppStore = create((set, get) => ({
     const pd = dayAt(get().week, day); if (pd == null) return;
     get().mutateWeek(w => { w.warm[pd] = w.warm[pd] || {}; w.warm[pd][wid] = on; });
   },
-  // Tick or untick the rest day. One per week; ticking another day moves it.
-  setRestDay(n) {
-    const w = get().week;
-    if (w.rest !== n && restBlocked(w, get().activeSlots())) { flag('Day 7 has exercises, so there is no room to add a rest day. Move or clear them, or swap the empty day back to the end.'); return false; }
+  // Cards a rest day on column n would push off the board and that are still in play (not skipped).
+  restOverflow(n) { const w = get().week; return restsOf(w).includes(n) ? [] : overflowSlots(w, get().activeSlots(), n).filter(s => !isSkipped(s, w)); },
+  // Tick or untick a rest day. A week can have several. Ticking one that would push workouts off the board is
+  // refused unless skipOverflow is set, which skips those workouts for the week (unticking brings them back).
+  setRestDay(n, { skipOverflow = false } = {}) {
+    const w = get().week; const on = restsOf(w).includes(n);
+    const over = get().restOverflow(n);
+    if (over.length) {
+      if (!skipOverflow) { flag(`A rest day on Day ${n} would push ${over.length === 1 ? 'a workout' : `${over.length} workouts`} off the week. Move ${over.length === 1 ? 'it' : 'them'} or skip ${over.length === 1 ? 'it' : 'them'} for this week first.`); return false; }
+      get().skipCards(over.map(s => s.id));
+    }
     set({ moveNote: null });
     const date = defaultLogDate(get().weekStart);
-    return get().mutateWeek(x => { if (x.rest === n) { delete x.rest; delete x.restOn; } else { x.rest = n; x.restOn = x.restOn || date; } });
+    return get().mutateWeek(x => {
+      const rest = restsOf(x);
+      if (on) { const left = rest.filter(r => r !== n); if (left.length) x.rest = left; else { delete x.rest; delete x.restOn; } }
+      else { x.rest = [...rest, n].sort((a, b) => a - b); x.restOn = x.restOn || date; }
+    });
   },
-  // Swap displayed column d with its neighbor d + dir, for this week. Swapping with the rest column moves the rest day.
+  // Swap displayed column d with its neighbor d + dir, for this week. Swapping with a rest column moves that rest day.
   swapDays(d, dir) {
     const e = d + dir; if (e < 1 || e > DAYS.length) return false;
-    const w = get().week; const restInvolved = w.rest === d || w.rest === e;
+    const w = get().week; const rest = restsOf(w); const dRest = rest.includes(d), eRest = rest.includes(e);
+    if (dRest && eRest) return false;
+    const restInvolved = dRest || eRest;
     const ok = get().mutateWeek(x => {
-      if (restInvolved) x.rest = x.rest === d ? e : d;
+      if (restInvolved) x.rest = restsOf(x).map(r => (r === d ? e : r === e ? d : r)).sort((a, b) => a - b);
       else {
         const a = dayAt(x, d), b = dayAt(x, e); const o = [...orderOf(x)];
         const i = o.indexOf(a), j = o.indexOf(b); [o[i], o[j]] = [o[j], o[i]];
@@ -413,7 +426,7 @@ export const useAppStore = create((set, get) => ({
     });
     if (!ok) return false;
     set({ moveNote: null, mDay: e });
-    flag(restInvolved ? `Rest day moved to Day ${get().week.rest}` : `Day ${d} swapped with Day ${e}`);
+    flag(restInvolved ? `Rest day moved to Day ${dRest ? e : d}` : `Day ${d} swapped with Day ${e}`);
     return true;
   },
   setPhase(slotId, idx, ph) { get().mutateWeek(w => { w.ph[`${slotId}:${idx}`] = ph; }); },
