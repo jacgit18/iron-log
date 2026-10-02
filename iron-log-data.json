@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-02T02:07:31.201Z",
+ "exportedAt": "2026-10-02T04:16:19.007Z",
  "config": {
   "muscleMap": {},
   "ex": {},
@@ -57,10 +57,10 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "1wv3ui2",
+   "hash": "1r0xg3l",
    "last": {
-    "at": "2026-09-29T15:54:17.929Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/4dd7dada1e211378d5bb8a4b5a86908dde5c7e7a"
+    "at": "2026-10-02T02:07:33.781Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/34dcc108fb277928b41a6ef04e695a35b5d7f16f"
    }
   },
   "progNames": {
@@ -801,6 +801,10 @@
        "id": "A-d6s6"
       }
      ]
+    },
+    {
+     "title": "Day 7",
+     "slots": []
     }
    ]
   }
@@ -1637,7 +1641,14 @@
     "A-d3s1": 4,
     "A-d4s6": 5,
     "A-d2s1": 5,
-    "A-d6s5": 5
+    "A-d6s5": 5,
+    "A-d5s8": 6,
+    "A-d5s7": 6,
+    "A-d5s6": 6,
+    "A-d5s5": 6,
+    "A-d5s4": 6,
+    "A-d5s2": 6,
+    "A-d5s1": 6
    },
    "ph": {},
    "warm": {}
