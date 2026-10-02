@@ -7,7 +7,7 @@ import { parseDate } from './dates.js';
 import { activeProgKey, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
 import { MUSCLES, MUSCLE_MAP } from './muscles.js';
 import { WEEK_RE, entryWeek } from './trends.js';
-import { loadXLSX } from './export.js';
+import { loadXLSX, normalizeData } from './export.js';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const num = v => (v === '' || v == null || isNaN(Number(v)) ? null : Number(v));
@@ -69,10 +69,10 @@ export async function parseExcelExport(buffer, cfg) {
 
   const logs = {}; const tags = {}; let skipped = 0;
   for (const r of sessions.slice(1)) {
-    const [d0, wk0, name, phase, w, s, reps, hold, detail, , prim, sec, note, slot] = r.map(v => (typeof v === 'string' ? v.trim() : v));
+    const [d0, wk0, name, phase, w, s, reps, hold, detail, , prim, sec, note, slot, exId] = r.map(v => (typeof v === 'string' ? v.trim() : v));
     const d = dateText(X, d0), wk = dateText(X, wk0);
     if (!DATE_RE.test(String(d)) || !name) { skipped++; continue; }
-    const id = idFor(String(name));
+    const id = exId ? String(exId) : idFor(String(name));
     const e = { d: String(d), ph: phaseKey(phase), w: num(w), s: num(s) };
     if (num(hold) != null) e.sec = num(hold); else e.r = num(reps);
     const sets = parseSetDetail(detail); if (sets) e.sets = sets;
@@ -112,7 +112,66 @@ export async function parseExcelExport(buffer, cfg) {
     else { const p = PH_KEYS.find(key => k === `${PHASES[key].label} % of 1RM`); if (p && num(v) != null) (settings.pct = settings.pct || {})[p] = num(v); }
   });
 
-  return { exportedAt, config, programs: {}, library: [], logs, weeks: {}, body, excel: { settings, skipped, newExercises: Object.values(newEx).map(e => e.n) } };
+  const excel = { settings, skipped, newExercises: Object.values(newEx).map(e => e.n) };
+  const full = readDataSheets(X, rows);
+  if (full) {
+    // A whole-backup workbook: every table is there, so it imports exactly like the JSON data file.
+    const data = normalizeData({ ...full, exportedAt, logs, body });
+    return { ...data, excel: { ...excel, complete: true } };
+  }
+  return { exportedAt, config, programs: {}, library: [], logs, weeks: {}, body, excel };
+}
+
+const str = v => (v == null ? '' : String(v));
+const put = (o, k, v) => { if (v !== '' && v != null) o[k] = v; };
+function readProgram(rows, warm) {
+  const days = [];
+  rows.forEach(r => {
+    const [, day, title, sub, makeup, slotNo, id, sec, tier, type, note, ex, , ph, w, bw, rx, itemNote] = r;
+    const di = num(day) - 1; if (!(di >= 0)) return;
+    const d = days[di] = days[di] || { title: str(title), slots: [] };
+    put(d, 'sub', str(sub)); if (str(makeup) === 'Yes') d.makeup = true;
+    if (!num(slotNo)) return;
+    const s = d.slots[num(slotNo) - 1] = d.slots[num(slotNo) - 1] || { items: [] };
+    put(s, 'id', str(id)); put(s, 'sec', str(sec)); put(s, 'tier', str(tier)); put(s, 'type', str(type)); put(s, 'note', str(note));
+    if (!ex) return;
+    const it = { ex: str(ex), ph: str(ph) || null, w: num(w) };
+    if (str(bw) === 'Yes') it.bw = true; put(it, 'rx', str(rx)); put(it, 'note', str(itemNote));
+    s.items.push(it);
+  });
+  for (let i = 0; i < days.length; i++) { days[i] = days[i] || { title: `Day ${i + 1}`, slots: [] }; days[i].slots = days[i].slots.filter(Boolean); }
+  const prog = { days };
+  if (warm) prog.warm = warm;
+  return prog;
+}
+function readWeeks(X, rows) {
+  const weeks = {};
+  rows.forEach(([wk0, kind, key, v]) => {
+    const wk = dateText(X, wk0); if (!WEEK_RE.test(wk)) return;
+    const w = weeks[wk] = weeks[wk] || normWeek();
+    key = str(key);
+    if (kind === 'prog') w.prog = str(v);
+    else if (kind === 'done' || kind === 'skipped') w[kind][key] = true;
+    else if (kind === 'moved') w.moved[key] = num(v);
+    else if (kind === 'phase') w.ph[key] = str(v);
+    else if (kind === 'warm') { const [day, item] = key.split('/'); (w.warm[day] = w.warm[day] || {})[item] = str(v) === 'Yes'; }
+  });
+  return weeks;
+}
+// The data sheets of a whole-backup workbook, as a data-file-shaped object; null for older workbooks without them.
+function readDataSheets(X, rows) {
+  const prog = rows('Programs'), info = rows('Program info'), lib = rows('Saved versions'), checks = rows('Check-offs'), conf = rows('Config');
+  if (!prog || !info || !lib || !checks || !conf) return null;
+  const warms = Object.fromEntries(info.slice(1).map(([o, w]) => [str(o), str(w)]));
+  const owners = {}; prog.slice(1).forEach(r => { (owners[str(r[0])] = owners[str(r[0])] || []).push(r); });
+  const programs = {}; ['A', 'B'].forEach(k => { if (owners[k]) programs[k] = readProgram(owners[k], warms[k]); });
+  const library = lib.slice(1).filter(r => r[0] !== '').map(([id, name, from, at, auto, created]) => {
+    const it = { id: str(id), name: str(name), at: str(at), prog: readProgram(owners[str(id)] || [], warms[str(id)]) };
+    put(it, 'from', str(from)); if (str(auto) === 'Yes') it.auto = true; if (str(created) === 'Yes') it.created = true; return it;
+  });
+  const config = {};
+  conf.slice(1).forEach(([k, v]) => { try { config[str(k)] = JSON.parse(str(v)); } catch { /* skip an unreadable setting */ } });
+  return { config, programs, library, weeks: readWeeks(X, checks.slice(1)) };
 }
 
 // A workbook has no check-offs, but every session names the program slot it was logged from, so each

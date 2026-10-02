@@ -55,8 +55,18 @@ describe('Excel import', () => {
     expect(resaved.body).toEqual(plain.body);
   });
 
-  it('creates custom exercises for names it does not know', async () => {
-    const bytes = toBytes(buildOverallWorkbook(X, S(), {}));
+  it('keeps custom exercise ids from a full workbook', async () => {
+    const d = await parseExcelExport(toBytes(buildOverallWorkbook(X, S(), {})), { ...structuredClone(DEFAULT_CFG) });
+    expect(d.excel).toMatchObject({ complete: true, newExercises: [] });
+    expect(d.config.ex).toEqual({ myhold: { n: 'My Hold' } });
+    expect(d.logs.myhold).toHaveLength(1);
+  });
+
+  it('creates custom exercises for names it does not know (older workbooks)', async () => {
+    const wb = buildOverallWorkbook(X, S(), {});
+    ['Programs', 'Program info', 'Saved versions', 'Check-offs', 'Config'].forEach(n => { delete wb.Sheets[n]; wb.SheetNames = wb.SheetNames.filter(x => x !== n); });
+    Object.keys(wb.Sheets.Sessions).filter(k => /^O\d+$/.test(k)).forEach(k => delete wb.Sheets.Sessions[k]);
+    const bytes = toBytes(wb);
     const d = await parseExcelExport(bytes, { ...structuredClone(DEFAULT_CFG) }); // "My Hold" isn't defined here
     expect(d.excel.newExercises).toEqual(['My Hold']);
     expect(d.config.ex).toEqual({ 'my-hold': { n: 'My Hold' } });

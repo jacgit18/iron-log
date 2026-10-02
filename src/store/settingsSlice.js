@@ -30,7 +30,9 @@ export const settingsSlice = (set, get, flag) => ({
       const buf = await file.arrayBuffer(); const head = new Uint8Array(buf.slice(0, 4));
       const zip = head[0] === 0x50 && head[1] === 0x4b; // .xlsx files are zip archives ("PK")
       if (zip || /\.xlsx$/i.test(file.name)) {
-        set({ importDraft: { data: await parseExcelExport(buf, get().cfg), name: file.name, kind: 'excel', useSettings: true }, modal: { type: 'import' } });
+        const data = await parseExcelExport(buf, get().cfg);
+        // A whole-backup workbook imports like the JSON data file; older ones only bring back sessions, body weight and settings.
+        set({ importDraft: { data, name: file.name, kind: data.excel.complete ? 'json' : 'excel', useSettings: true }, modal: { type: 'import' } });
         return;
       }
       if (/\.csv$/i.test(file.name)) throw new Error('That’s the CSV export, which can’t be imported. Use the iron-log-data .json file from “Export all data”, or the Excel workbook.');

@@ -8,8 +8,9 @@ Work through these in order, one at a time, and check for bugs after each.
 
 ## 1. Fix imports and pick one file format (before the backend)
 
-- [ ] Fix the Excel import bug. JSON imports work but Excel doesn't. Reproduce it with a real file that fails.
-- [ ] Make Excel (.xlsx) the one format for both export and import. Put each table (program, logs, body weight, settings) on its own sheet so an exported file imports back unchanged.
+- [x] Excel import bug: no failing file turned up (the re-saved-dates bug was already fixed in #16). The real gap was that workbooks only brought back part of the data; see the next item.
+- [x] Make Excel (.xlsx) the one format for both export and import. Programs, saved versions, check-offs, config, sessions and body weight each have a sheet, and an exported workbook imports back the same as the JSON file.
+  - Still to do: remove the old partial-import path for workbooks made before this change, once nobody has those.
 - [ ] Accept CSV as an import fallback only.
 - [ ] Keep JSON import until the backend exists, because it is the only full-detail backup for now. It gets removed in step 4.
 
@@ -23,6 +24,10 @@ These change how days and exercises are stored. Do them together so the data str
 - [ ] Add an exercise to the current day from the board.
 - [ ] Add stretches to the board, as a card type that doesn't need weight or reps.
 - [ ] Add an optional video link to each exercise.
+- [ ] Specify equipment for each exercise (dumbbell, bar, machine, bodyweight, etc.).
+- [ ] Add a Filter to sort exercises on the board by muscle group.
+- [ ] Set a default phase for an exercise that applies to all future instances of that exercise.
+- [ ] Add spinal waves as a bodyweight mobility exercise.
 
 ## 3. Backend, database and Google login (together)
 
@@ -38,6 +43,20 @@ These change how days and exercises are stored. Do them together so the data str
 - [ ] Stop using localStorage as the main place data is saved.
 - [ ] Turn "Erase data" into "delete my account data".
 - [ ] Update the README and the training skill with each removal so they stay in sync.
+
+## 5. Advanced features and integrations (post-backend)
+
+- [ ] Google Fit API integration to pull activity and weight data.
+- [ ] Weight goals feature (set targets and track progress).
+- [ ] Import medical records and add AI assessment of medical information.
+- [ ] Warn when you skip an exercise too many times that's on your program.
+- [ ] Improve weight entry UX: catch and prevent common mistakes (e.g., wrong weight entered for an exercise).
+
+## 6. UX improvements and fixes
+
+- [ ] Preserve board view state on page refresh (currently goes back to board).
+- [ ] When the app opens, start on the current week.
+- [ ] Remove the unfinished pull button; instead, show a notification about the previous day with unchecked exercises and offer to bulk skip them or move to a specific unfinished day.
 
 ## Anytime
 

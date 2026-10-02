@@ -147,7 +147,7 @@ function DataPanel() {
     <section className="panel">
       <h2>Export &amp; import</h2>
       <p>One file with everything: your log, weekly check-offs, body weight, programs, saved versions and settings. Use it to keep a copy, move to another device or app, or go back to an earlier state.</p>
-      <p>To import, use that <b>iron-log-data .json</b> file. An Iron Log <b>Excel</b> workbook also works as a partial backup: it brings back your logged sessions, body weight and main settings.</p>
+      <p>To import, use the <b>iron-log.xlsx</b> workbook or the <b>iron-log-data .json</b> file. Both bring back everything. Workbooks exported by an older version of the app only bring back logged sessions, body weight and main settings.</p>
       <div className="actions" style={{ justifyContent: 'flex-start' }}>
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <label className="btn filebtn">Import from file
@@ -173,7 +173,7 @@ function BackupPanel() {
   return (
     <section className="panel">
       <h2>Excel &amp; backups</h2>
-      <p><b>iron-log.xlsx</b> has a summary per exercise, every session, weekly totals and your settings. Each week also gets its own workbook with the plan and what you logged{mcp && <>, saved in <b>weeks/</b> when you back up to GitHub</>}.</p>
+      <p><b>iron-log.xlsx</b> has a summary per exercise, every session, weekly totals, your settings, and your programs and check-offs, so it can be imported back whole. Each week also gets its own workbook with the plan and what you logged{mcp && <>, saved in <b>weeks/</b> when you back up to GitHub</>}.</p>
       <div className="actions" style={{ justifyContent: 'flex-start' }}>
         {dl && <>
           <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
