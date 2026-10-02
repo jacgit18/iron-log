@@ -259,7 +259,6 @@ body.timing{padding-bottom:130px}
 .warm label{display:flex;gap:8px;align-items:center}
 .warm .chk{width:18px;height:18px}
 .warm .chk:checked::after{width:8px;height:5px}
-.makeup{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
 .card[draggable="true"]{cursor:grab}
