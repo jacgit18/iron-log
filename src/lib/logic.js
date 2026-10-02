@@ -217,6 +217,12 @@ export function planRows(cfg, logs, it, ph) {
    replaces it. Returns only the exercises whose entries changed: {exId: entries}. */
 export const AUTO_NOTE = 'From check-off';
 const weekOfEntry = e => e.wk || ymd(monday(parseDate(e.d)));
+// The day a board was worked: the earliest date among this week's log entries for the cards in it.
+export function dayDate(cards, logs, wk) {
+  let first = null;
+  cards.forEach(s => s.items.forEach(it => (logs[it.ex] || []).forEach(e => { if (e.slot === s.id && e.d && weekOfEntry(e) === wk && (!first || e.d < first)) first = e.d; })));
+  return first;
+}
 export function autoLogs(cfg, logs, slots, before, after, wk, date) {
   const out = {};
   slots.forEach(s => s.items.forEach((it, i) => {
@@ -247,5 +253,6 @@ export const normWeek = w => {
   const rest = Number(w && w.rest);
   if (Number.isInteger(rest) && rest >= 1 && rest <= DAY_COUNT) out.rest = rest;
   if (isOrder(w && w.order) && w.order.some((v, i) => v !== i + 1)) out.order = [...w.order];
+  if (out.rest && typeof (w && w.restOn) === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.restOn)) out.restOn = w.restOn;
   return out;
 };
