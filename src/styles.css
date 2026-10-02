@@ -525,7 +525,9 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .filterbar .field{min-width:160px}
 .addbtn{align-self:flex-start;margin:2px 0 6px}
 
-/* Equipment sits at the right end of the exercise's name row, level with the checkbox. */
-.exname{display:flex;align-items:center;flex-wrap:wrap;gap:0 4px}
-.exeq{margin-left:auto}
+/* Equipment sits in the top-right corner of each exercise; the name leaves room for it. */
+.ex{position:relative}
+.ex.haseq .exname{padding-right:84px}
+.exeq{position:absolute;top:0;right:0}
+.ex + .ex .exeq{top:8px}
 .exstretch{margin-left:6px}
