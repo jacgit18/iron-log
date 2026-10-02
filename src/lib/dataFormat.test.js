@@ -94,3 +94,11 @@ it('mergeWeek keeps a rest day from either side, preferring this device', () => 
   expect(mergeWeek({}, { rest: 5 }).rest).toBe(5);
   expect(mergeWeek({}, {})).not.toHaveProperty('rest');
 });
+
+it('mergeWeek keeps this device’s order, falls back to the other side, and ignores an invalid one', () => {
+  const a = [2, 1, 3, 4, 5, 6, 7], b = [1, 2, 3, 4, 5, 7, 6];
+  expect(mergeWeek({ order: a }, { order: b }).order).toEqual(a);
+  expect(mergeWeek({}, { order: b }).order).toEqual(b);
+  expect(mergeWeek({ order: [1, 1, 3, 4, 5, 6, 7] }, { order: b }).order).toEqual(b);
+  expect(mergeWeek({}, {})).not.toHaveProperty('order');
+});

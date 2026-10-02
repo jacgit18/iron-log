@@ -45,4 +45,25 @@ describe('workbook round trip', () => {
     const viaXlsx = await parseExcelExport(bytes(wb), DEFAULT_CFG);
     expect(viaXlsx.weeks['2030-01-06'].rest).toBe(3);
   });
+
+  it('keeps a week’s swapped order and rest day through the JSON file and the workbook', async () => {
+    const weeks = { ...raw.weeks, '2030-01-06': { done: {}, rest: 3, order: [2, 1, 3, 4, 5, 6, 7] } };
+    const viaJson = parseDataFile(JSON.stringify(buildDataFile(S, weeks)));
+    const viaXlsx = await parseExcelExport(bytes(buildOverallWorkbook(X, S, weeks)), DEFAULT_CFG);
+    expect(viaJson.weeks['2030-01-06'].order).toEqual([2, 1, 3, 4, 5, 6, 7]);
+    expect(viaXlsx.weeks['2030-01-06'].order).toEqual([2, 1, 3, 4, 5, 6, 7]);
+    expect(viaXlsx.weeks['2030-01-06'].rest).toBe(3);
+  });
+
+  it('keeps the order once Excel or Sheets has re-saved the workbook', async () => {
+    const weeks = { ...raw.weeks, '2030-01-06': { done: {}, order: [1, 2, 3, 4, 5, 7, 6] } };
+    const wb = X.read(bytes(buildOverallWorkbook(X, S, weeks)), { type: 'array' });
+    const viaXlsx = await parseExcelExport(bytes(wb), DEFAULT_CFG);
+    expect(viaXlsx.weeks['2030-01-06'].order).toEqual([1, 2, 3, 4, 5, 7, 6]);
+  });
+
+  it('ignores an order that is not a clean permutation', () => {
+    const weeks = { '2030-01-06': { done: { x: true }, order: [1, 1, 3, 4, 5, 6, 7] } };
+    expect(parseDataFile(JSON.stringify(buildDataFile(S, weeks))).weeks['2030-01-06']).not.toHaveProperty('order');
+  });
 });

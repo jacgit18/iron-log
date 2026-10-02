@@ -158,6 +158,7 @@ function readWeeks(X, rows) {
     key = str(key);
     if (kind === 'prog') w.prog = str(v);
     else if (kind === 'rest') { const n = num(v); if (n >= 1) w.rest = n; }
+    else if (kind === 'order') w.order = str(v).split(/[\s,]+/).filter(Boolean).map(Number);
     else if (kind === 'done' || kind === 'skipped') w[kind][key] = true;
     else if (kind === 'moved') w.moved[key] = num(v);
     else if (kind === 'phase') w.ph[key] = str(v);
