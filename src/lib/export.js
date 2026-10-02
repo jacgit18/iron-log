@@ -34,11 +34,11 @@ function sheet(X, rows, widths) {
 }
 function sessionRows(S, filter) {
   const { cfg, logs } = S; const rows = [];
-  Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => { if (!filter || filter(e)) rows.push([e.d, e.wk || weekOfDate(e.d), exInfo(cfg, id).n, phaseLabel(e.ph), e.w ?? '', e.s ?? '', e.sec ? '' : (e.r ?? ''), e.sec ?? '', setDetail(e), entryVolume(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), noteOf(e), e.slot || '']); }));
+  Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => { if (!filter || filter(e)) rows.push([e.d, e.wk || weekOfDate(e.d), exInfo(cfg, id).n, phaseLabel(e.ph), e.w ?? '', e.s ?? '', e.sec ? '' : (e.r ?? ''), e.sec ?? '', setDetail(e), entryVolume(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), noteOf(e), e.slot || '', id]); }));
   rows.sort((a, b) => (a[0] === b[0] ? a[2].localeCompare(b[2]) : a[0].localeCompare(b[0])));
-  return [['Date', 'Week of', 'Exercise', 'Phase', 'Weight (lb)', 'Sets', 'Reps', 'Hold (s)', 'Set by set', 'Volume (lb)', 'Primary muscles', 'Secondary muscles', 'Note', 'Program slot'], ...rows];
+  return [['Date', 'Week of', 'Exercise', 'Phase', 'Weight (lb)', 'Sets', 'Reps', 'Hold (s)', 'Set by set', 'Volume (lb)', 'Primary muscles', 'Secondary muscles', 'Note', 'Program slot', 'Exercise id'], ...rows];
 }
-const SESSION_COLS = [11, 11, 34, 13, 11, 6, 6, 9, 26, 12, 28, 28, 30, 14];
+const SESSION_COLS = [11, 11, 34, 13, 11, 6, 6, 9, 26, 12, 28, 28, 30, 14, 16];
 
 export function buildOverallWorkbook(X, S, weeks) {
   const { cfg, logs, programs, body } = S; const wb = X.utils.book_new();
@@ -77,7 +77,48 @@ export function buildOverallWorkbook(X, S, weeks) {
   Object.keys(cfg.rm).sort().forEach(id => st.push([`1RM: ${exInfo(cfg, id).n}`, cfg.rm[id]]));
   st.push(['Exported', new Date().toISOString()]);
   X.utils.book_append_sheet(wb, sheet(X, st, [34, 24]), 'Settings');
+  addDataSheets(X, wb, S, weeks);
   return wb;
+}
+
+/* ---------- Data sheets: what the workbook holds beyond the readable report, so it imports back whole ---------- */
+export const PROG_HEAD = ['Program', 'Day', 'Day title', 'Day subtitle', 'Make-up day', 'Slot #', 'Slot id', 'Section', 'Tier', 'Type', 'Slot note', 'Exercise id', 'Exercise', 'Phase', 'Weight (lb)', 'Bodyweight', 'Rx', 'Item note'];
+const dayCells = d => [d.title ?? '', d.sub ?? '', d.makeup ? 'Yes' : ''];
+export function programRows(cfg, owner, prog) {
+  const rows = [];
+  prog.days.forEach((d, di) => {
+    if (!d.slots.length) rows.push([owner, di + 1, ...dayCells(d), '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    d.slots.forEach((s, si) => {
+      const base = [owner, di + 1, ...dayCells(d), si + 1, s.id ?? '', s.sec ?? '', s.tier ?? '', s.type ?? '', s.note ?? ''];
+      if (!s.items.length) rows.push([...base, '', '', '', '', '', '', '']);
+      s.items.forEach(it => rows.push([...base, it.ex, exInfo(cfg, it.ex).n, it.ph ?? '', it.w ?? '', it.bw ? 'Yes' : '', it.rx ?? '', it.note ?? '']));
+    });
+  });
+  return rows;
+}
+export const CHECK_HEAD = ['Week of', 'Kind', 'Key', 'Value'];
+export function checkRows(weeks) {
+  const rows = [];
+  Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => {
+    const w = normWeek(weeks[k]);
+    if (w.prog) rows.push([k, 'prog', '', w.prog]);
+    ['done', 'skipped'].forEach(kind => Object.keys(w[kind]).forEach(id => { if (w[kind][id]) rows.push([k, kind, id, 'Yes']); }));
+    Object.entries(w.moved).forEach(([id, day]) => rows.push([k, 'moved', id, day]));
+    Object.entries(w.ph).forEach(([id, ph]) => rows.push([k, 'phase', id, ph]));
+    Object.entries(w.warm).forEach(([day, o]) => Object.entries(o).forEach(([item, v]) => rows.push([k, 'warm', `${day}/${item}`, v ? 'Yes' : 'No'])));
+  });
+  return rows;
+}
+function addDataSheets(X, wb, S, weeks) {
+  const { cfg, programs, library } = S;
+  const prow = [], info = [['Program', 'Warm-up']];
+  ['A', 'B'].forEach(k => { if (programs[k] !== BUILTIN[k]) { prow.push(...programRows(cfg, k, programs[k])); info.push([k, programs[k].warm ?? '']); } });
+  library.forEach(it => { prow.push(...programRows(cfg, it.id, it.prog)); info.push([it.id, it.prog.warm ?? '']); });
+  X.utils.book_append_sheet(wb, sheet(X, [PROG_HEAD, ...prow], [10, 5, 12, 26, 10, 7, 12, 11, 10, 9, 24, 14, 30, 11, 11, 10, 16, 24]), 'Programs');
+  X.utils.book_append_sheet(wb, sheet(X, info, [12, 40]), 'Program info');
+  X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Name', 'From', 'Saved at', 'Auto-saved', 'Created'], ...library.map(it => [it.id, it.name, it.from ?? '', it.at ?? '', it.auto ? 'Yes' : '', it.created ? 'Yes' : ''])], [14, 36, 7, 26, 11, 9]), 'Saved versions');
+  X.utils.book_append_sheet(wb, sheet(X, [CHECK_HEAD, ...checkRows(weeks)], [12, 9, 24, 12]), 'Check-offs');
+  X.utils.book_append_sheet(wb, sheet(X, [['Setting', 'Value (JSON)'], ...Object.keys(cfg).sort().map(k => [k, JSON.stringify(cfg[k])])], [18, 60]), 'Config');
 }
 
 export function buildWeekWorkbook(X, S, key, w) {
@@ -124,6 +165,10 @@ export function parseDataFile(text) {
   if (!d || d.app !== 'iron-log') throw new Error('That isn’t an Iron Log data file.');
   if (!(d.format >= 1)) throw new Error('Unknown file format.');
   if (d.format > DATA_FORMAT) throw new Error('This file is from a newer version of Iron Log. Update the app first.');
+  return normalizeData(d);
+}
+// Checks and cleans a data-file-shaped object. Used for both the JSON file and a full Excel workbook.
+export function normalizeData(d) {
   const out = { exportedAt: d.exportedAt, config: (d.config && typeof d.config === 'object') ? d.config : {}, programs: {}, library: [], logs: {}, weeks: {}, body: [] };
   (Array.isArray(d.body) ? d.body : []).forEach(e => { if (e && WEEK_RE.test(e.wk) && typeof e.d === 'string' && Number(e.w) > 0 && !out.body.some(x => x.wk === e.wk)) out.body.push({ wk: e.wk, d: e.d, w: Number(e.w) }); });
   ['A', 'B'].forEach(k => { const p = d.programs && d.programs[k]; if (p && Array.isArray(p.days) && p.days.length === 6) out.programs[k] = p; });
@@ -132,7 +177,9 @@ export function parseDataFile(text) {
   Object.entries(d.weeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k) && w && typeof w === 'object') out.weeks[k] = normWeek(w); });
   return out;
 }
-export function mergeEntries(a, b) { const seen = new Set(a.map(e => JSON.stringify(e))); const out = [...a]; b.forEach(e => { const k = JSON.stringify(e); if (!seen.has(k)) { seen.add(k); out.push(e); } }); return out.sort((x, y) => x.d.localeCompare(y.d)); }
+// A stored `wk` that is just the week of the entry's date carries no information, so it doesn't make two entries different.
+const sameKey = e => JSON.stringify(e.wk === weekOfDate(e.d) ? { ...e, wk: undefined } : e);
+export function mergeEntries(a, b) { const seen = new Set(a.map(sameKey)); const out = [...a]; b.forEach(e => { const k = sameKey(e); if (!seen.has(k)) { seen.add(k); out.push(e); } }); return out.sort((x, y) => x.d.localeCompare(y.d)); }
 export function mergeWeek(a, b) {
   const w = normWeek(a); const o = normWeek(b);
   w.prog = w.prog || o.prog;

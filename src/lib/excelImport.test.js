@@ -3,7 +3,8 @@ import * as X from 'xlsx';
 import { BUILTIN } from './data.js';
 import { DEFAULT_CFG } from './logic.js';
 import { buildOverallWorkbook, buildWeekWorkbook } from './export.js';
-import { parseExcelExport, entryKey, checkOffsFromLogs } from './excelImport.js';
+import { buildCsv } from './export.js';
+import { parseExcelExport, parseCsvExport, entryKey, checkOffsFromLogs } from './excelImport.js';
 import { isDone, isItemDone, normWeek } from './logic.js';
 import { slotsFor } from './data.js';
 
@@ -55,8 +56,18 @@ describe('Excel import', () => {
     expect(resaved.body).toEqual(plain.body);
   });
 
-  it('creates custom exercises for names it does not know', async () => {
-    const bytes = toBytes(buildOverallWorkbook(X, S(), {}));
+  it('keeps custom exercise ids from a full workbook', async () => {
+    const d = await parseExcelExport(toBytes(buildOverallWorkbook(X, S(), {})), { ...structuredClone(DEFAULT_CFG) });
+    expect(d.excel).toMatchObject({ complete: true, newExercises: [] });
+    expect(d.config.ex).toEqual({ myhold: { n: 'My Hold' } });
+    expect(d.logs.myhold).toHaveLength(1);
+  });
+
+  it('creates custom exercises for names it does not know (older workbooks)', async () => {
+    const wb = buildOverallWorkbook(X, S(), {});
+    ['Programs', 'Program info', 'Saved versions', 'Check-offs', 'Config'].forEach(n => { delete wb.Sheets[n]; wb.SheetNames = wb.SheetNames.filter(x => x !== n); });
+    Object.keys(wb.Sheets.Sessions).filter(k => /^O\d+$/.test(k)).forEach(k => delete wb.Sheets.Sessions[k]);
+    const bytes = toBytes(wb);
     const d = await parseExcelExport(bytes, { ...structuredClone(DEFAULT_CFG) }); // "My Hold" isn't defined here
     expect(d.excel.newExercises).toEqual(['My Hold']);
     expect(d.config.ex).toEqual({ 'my-hold': { n: 'My Hold' } });
@@ -125,5 +136,19 @@ describe('entries logged by check-offs', () => {
     expect(d.logs.hack[0].auto).toBe(true);
     expect(d.logs.hack[0].n).toBeUndefined();
     expect(entryKey(d.logs.hack[0])).toBe(entryKey(s.logs.hack[0]));
+  });
+});
+
+describe('CSV import (fallback)', () => {
+  it('reads back the sessions from the CSV export', async () => {
+    const s = S(); s.logs.hack[0].n = 'Felt, "heavy"';
+    const d = await parseCsvExport(buildCsv(s), cfg());
+    expect(d.logs.hack).toEqual([s.logs.hack[0]]);
+    expect(d.logs.myhold).toHaveLength(1);
+    expect(d.excel).toMatchObject({ csv: true, skipped: 0 });
+    expect(entryKey(d.logs.hack[0])).toBe(entryKey(s.logs.hack[0]));
+  });
+  it('rejects other CSV files', async () => {
+    await expect(parseCsvExport('a,b\n1,2', cfg())).rejects.toThrow('isn’t an Iron Log CSV export');
   });
 });
