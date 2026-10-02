@@ -232,7 +232,7 @@ export const isVideoUrl = s => !s || !s.trim() || /^https?:\/\//.test(s.trim());
 // What you set on an exercise (video link, equipment, stretch) is kept in cfg.ex and layers over the built-in entry.
 export function exInfo(cfg, id) {
   const o = { ...(EX[id] || { n: id }), ...(cfg.ex && cfg.ex[id]) };
-  if (!FEATURES.stretches) delete o.stretch; // switched off: every exercise is a normal card
+  if (!FEATURES.stretches && o.stretch !== undefined) o.stretch = undefined; // switched off: every exercise is a normal card
   return o;
 }
 export const allExIds = cfg => [...new Set([...Object.keys(EX), ...Object.keys(cfg.ex || {})])];

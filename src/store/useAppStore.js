@@ -51,8 +51,18 @@ const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(
 function setOverride(c, exId, vals) {
   const base = EX[exId] || {}; const o = { ...(c.ex[exId] || {}) };
   Object.entries(vals).forEach(([k, v]) => { if (v && v !== base[k]) o[k] = v; else if (v) delete o[k]; else if (base[k]) o[k] = k === 'stretch' ? false : ''; else delete o[k]; });
-  if (!EX[exId] && !o.n) o.n = (c.ex[exId] && c.ex[exId].n) || exId;
+  if (!EX[exId] && !o.n) o.n = exId;
   if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
+}
+
+// An exercise's default phase for every card. Slot defaults saved for that exercise would outrank it, so they go;
+// a slot default saved afterwards wins again.
+function setExerciseDefault(c, exId, ph, programs, library) {
+  c.exPh = c.exPh || {};
+  if (ph) c.exPh[exId] = ph; else delete c.exPh[exId];
+  if (!ph) return;
+  const progs = [...Object.values(programs), ...library.map(it => ({ ...it.prog, key: 'N' }))];
+  progs.forEach(p => { try { slotsFor(p).forEach(sl => sl.items.forEach((x, i) => { if (x.ex === exId) delete c.phDef[`${sl.id}:${i}`]; })); } catch { /* a malformed saved program */ } });
 }
 
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
@@ -128,9 +138,9 @@ export const useAppStore = create((set, get) => ({
   // Callers that arrive while a load is running wait for that same load.
   loadHistory() {
     if (histPromise) return histPromise;
-    if (get().storeMode === 'loading') return Promise.resolve(); // the data source isn't known yet; Progress asks again once it is
     set({ historyLoading: true });
     histPromise = (async () => {
+      await dataSourceKnown(); // reading before the data source is known would return local or empty weeks
       const out = {};
       try {
         if (db) { const snap = await db.collection('weeks').get(); snap.docs.forEach(d => { if (d.exists) out[d.id] = d.data(); }); }
@@ -165,7 +175,7 @@ export const useAppStore = create((set, get) => ({
   setTab: tab => set(tab === 'progress' ? { tab, weekHist: null } : { tab }),
   setMDay: mDay => set({ mDay }),
   openModal: modal => set({ modal }),
-  closeModal: () => { const r = get().edReturn; set(r ? { modal: null, ...r, edReturn: null } : { modal: null }); },
+  closeModal: () => set({ modal: null }),
 
   saveCfg() { queue.save('config/main', get().cfg); },
   saveWeek() { queue.save('weeks/' + get().weekKey(), get().week); },
@@ -270,7 +280,11 @@ export const useAppStore = create((set, get) => ({
     if (d.ex !== '__new') get().applyExerciseUrl(ex, d.nu);
     const stretch = !!exInfo(get().cfg, ex).stretch;
     const note = (d.note || '').trim().slice(0, 200);
-    const ok = get().mutateWeek(w => { w.extra = [...(w.extra || []), { id: uid('X-'), day: pd, ex, ph: stretch ? null : d.ph || null, note, add: true }]; });
+    const ph = stretch ? null : d.ph || null; const exDef = (get().cfg.exPh || {})[ex]; const id = uid('X-');
+    const ok = get().mutateWeek(w => {
+      w.extra = [...(w.extra || []), { id, day: pd, ex, ph, note, add: true }];
+      if (ph && exDef && ph !== exDef) w.ph[`${id}:0`] = ph; // picked over the exercise default: a one-week pick, like the card's phase menu
+    });
     if (!ok) return null;
     set({ modal: null }); flag(`Added ${exInfo(get().cfg, ex).n} to Day ${col}`); return null;
   },
@@ -281,8 +295,8 @@ export const useAppStore = create((set, get) => ({
     if (!isVideoUrl(url)) return VIDEO_ERR;
     get().mutateCfg(c => {
       setOverride(c, exId, { url, eq: d.eq || '', ...(FEATURES.stretches ? { stretch: d.stretch } : {}) }); // a hidden setting is left as it is
-      c.exPh = c.exPh || {};
-      if (d.ph && !d.stretch) c.exPh[exId] = d.ph; else delete c.exPh[exId]; // a stretch has no phase
+      const ph = d.stretch ? '' : d.ph; // a stretch has no phase
+      if (ph !== ((c.exPh || {})[exId] || '')) setExerciseDefault(c, exId, ph, get().programs, get().library);
     });
     set({ modal: null }); flag('Exercise saved'); return null;
   },
@@ -401,14 +415,9 @@ export const useAppStore = create((set, get) => ({
     const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
     const cfgChange = eqChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
     if (cfgChange) get().mutateCfg(c => {
-      if (makeDefault && ph) c.phDef[key] = ph;
       if (eqChange) setOverride(c, it.ex, { eq });
-      if (makeExDefault && ph) {
-        c.exPh = c.exPh || {}; c.exPh[it.ex] = ph;
-        // "Everywhere": slot defaults saved for this exercise would outrank it, so they go.
-        Object.values(get().programs).forEach(p => slotsFor(p).forEach(sl => sl.items.forEach((x, i) => { if (x.ex === it.ex) delete c.phDef[`${sl.id}:${i}`]; })));
-        if (!makeDefault) delete c.phDef[key];
-      }
+      if (makeExDefault && ph) { setExerciseDefault(c, it.ex, ph, get().programs, get().library); delete c.phDef[key]; }
+      if (makeDefault && ph) c.phDef[key] = ph; // after the exercise default, so ticking both keeps this slot's
       if (rm === null) delete c.rm[it.ex]; else if (rm > 0) c.rm[it.ex] = rm;
     });
     get().mutateWeek(w => {
@@ -671,8 +680,16 @@ useAppStore.subscribe((s, prev) => {
 // were looking at the week that just ended; browsing elsewhere stays put.
 useToday.subscribe((s, prev) => {
   const st = useAppStore.getState();
-  if (ymd(st.weekStart) === ymd(monday(prev.today)) && ymd(monday(s.today)) !== ymd(st.weekStart)) { st.closeModal(); st.gotoWeek('today'); } // an open sheet points at last week's cards
+  if (ymd(st.weekStart) === ymd(monday(prev.today)) && ymd(monday(s.today)) !== ymd(st.weekStart)) { if (st.modal && (st.modal.type === 'log' || st.modal.type === 'dayadd')) st.closeModal(); st.gotoWeek('today'); } // those sheets point at last week's cards
 });
+
+// Resolves once init knows where data lives (this browser or the host database).
+function dataSourceKnown() {
+  return new Promise(res => {
+    if (useAppStore.getState().storeMode !== 'loading') { res(); return; }
+    const un = useAppStore.subscribe(s => { if (s.storeMode !== 'loading') { un(); res(); } });
+  });
+}
 
 function subscribeWeek() {
   if (unsubWeek) { unsubWeek(); unsubWeek = null; }

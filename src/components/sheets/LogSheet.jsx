@@ -8,7 +8,8 @@ import {
 } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 
-const toRow = (x, iso) => ({ w: x.w ?? '', r: (iso ? x.sec : x.r) ?? '', tw: false, tr: false });
+// Older entries in a timed phase may hold reps (Mobility was counted in reps before), so each side falls back to the other.
+const toRow = (x, iso) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x.r : x.r ?? x.sec) ?? '', tw: false, tr: false });
 const num = v => (v === '' ? null : Number(v));
 
 export default function LogSheet({ slotId, idx }) {

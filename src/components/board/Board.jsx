@@ -248,7 +248,7 @@ export default function Board() {
           const vis = shown(cards);
           const open = vis.filter(s => isOpen(s, week));
           const finished = [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))];
-          const ft = tally(cards.filter(s => !isOpen(s, week)), week); // the filter hides cards but never changes counts
+          const ft = tally(finished, week); // counts the cards under the header (the day's own count ignores the filter)
           return (
             <section
               key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`}

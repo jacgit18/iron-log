@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo, exerciseChoice } from '../../lib/data.js';
 import { SECTIONS, blankItem } from '../../store/editorSlice.js';
-import { DAYS } from '../../lib/logic.js';
+import { DAYS, progName } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 import ExerciseField from '../ExerciseField.jsx';
 
@@ -31,14 +31,15 @@ function ItemFields({ it, k, type, cfg, onChange }) {
   );
 }
 
-export default function SlotSheet({ idx, preset, col }) {
+// `target` ({key, day}) comes from the board's + Add exercise; without it the sheet edits the Program tab's selection.
+export default function SlotSheet({ idx, preset, col, target }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
-  const edDay = useAppStore(s => s.edDay);
+  const edDay = useAppStore(s => (target ? target.day : s.edDay));
   const [d, setD] = useState(() => {
     const src = idx == null ? (preset === 'stretch' ? { id: null, sec: 'Stretches', tier: '', type: 'single', items: [{ ...blankItem(), ph: null, ns: true }], note: '' } : { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' }) : structuredClone(st.edProgram().days[edDay - 1].slots[idx]);
     // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
-    return { ...src, type: src.type || 'single', day: edDay, idx, note: src.note || '', tier: src.tier || '', items: src.items.map(it => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
+    return { ...src, type: src.type || 'single', day: edDay, idx, target, note: src.note || '', tier: src.tier || '', items: src.items.map(it => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
   });
   const [err, setErr] = useState('');
 
@@ -53,7 +54,7 @@ export default function SlotSheet({ idx, preset, col }) {
 
   return (
     <Sheet as="form" noValidate onSubmit={submit}>
-      <h2 className="cond">{d.idx == null ? (preset === 'stretch' ? 'Add stretch' : 'Add exercise') : 'Edit exercise'} · {st.edName()}</h2>
+      <h2 className="cond">{d.idx == null ? (preset === 'stretch' ? 'Add stretch' : 'Add exercise') : 'Edit exercise'} · {target ? progName(cfg, target.key) : st.edName()}</h2>
       <div className="fields">
         <label className="field">Type
           <select value={d.type} onChange={e => setType(e.target.value)}>
@@ -76,7 +77,7 @@ export default function SlotSheet({ idx, preset, col }) {
               {DAYS.map(x => <option key={x} value={x}>Day {x}</option>)}
             </select>
           </label>
-        ) : <p className="note">Goes on Day {col} every week.</p>}
+        ) : <p className="note">{col === d.day ? `Goes on Day ${col} every week.` : `Goes on Day ${d.day} of the program every week (shown as Day ${col} this week).`}</p>}
       </div>
       {d.items.map((it, k) => <ItemFields key={k} it={it} k={k} type={d.type} cfg={cfg} onChange={setItem} />)}
       <label className="field">Card note<input value={d.note} placeholder="e.g. Whichever is free" onChange={e => setD(x => ({ ...x, note: e.target.value }))} /></label>

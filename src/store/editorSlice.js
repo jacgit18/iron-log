@@ -19,7 +19,6 @@ export function insertSlot(target, slot) {
 export const editorSlice = (set, get, flag) => ({
   edProg: null, // 'A' | 'B' (in the rotation) or 'L:<id>' (a library program); null = the one on the board
   edDay: 1,
-  edReturn: null, // Program tab state to restore after an add from the board
 
   // Resolved editor target: falls back to the board's program when unset or the library item is gone.
   edKey() {
@@ -31,13 +30,13 @@ export const editorSlice = (set, get, flag) => ({
   edProgram() { const it = get().edItem(); return it ? { ...it.prog, key: 'N' } : get().programs[get().edKey()]; },
   edName() { const it = get().edItem(); return it ? it.name : progName(get().cfg, get().edKey()); },
 
-  // The board's + Add exercise: the add sheet, aimed at the program day shown in column `col`. The Program
-  // tab's own choice of program and day is put back when the sheet closes (edReturn).
+  // The board's + Add exercise: the add sheet, aimed at the program on the board and the program day shown in
+  // column `col`. The target travels with the sheet, so the Program tab's own selection is untouched.
   openAddToProgram(col, preset) {
     const pd = dayAt(get().week, col);
     if (pd == null) { flag('That is your rest day'); return; }
-    const ak = get().activeProgKey(); const { edProg, edDay } = get();
-    set({ edReturn: { edProg, edDay }, edProg: get().programs[ak] ? ak : 'A', edDay: pd, modal: { type: 'slot', idx: null, preset, col } });
+    const ak = get().activeProgKey();
+    set({ modal: { type: 'slot', idx: null, preset, col, target: { key: get().programs[ak] ? ak : 'A', day: pd } } });
   },
   setEdProg: edProg => set({ edProg }),
   setEdDay: edDay => set({ edDay }),
@@ -137,18 +136,18 @@ export const editorSlice = (set, get, flag) => ({
       const o = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
     });
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex, newEx); });
-    const k = get().edKey(); const edDay = get().edDay;
+    const k = d.target ? d.target.key : get().edKey(); const edDay = d.target ? d.target.day : get().edDay;
     const slot = { id: d.id || `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, sec: d.sec, items };
     if (d.tier) slot.tier = d.tier; if (d.type !== 'single') slot.type = d.type; if (d.note) slot.note = d.note;
     const orig = d.idx != null ? get().edProgram().days[edDay - 1].slots[d.idx] : null;
-    get().editProgram(prog => {
+    const apply = prog => {
       if (d.idx != null) prog.days[edDay - 1].slots.splice(d.idx, 1);
       const target = prog.days[d.day - 1].slots;
       if (orig && d.day === edDay && orig.sec === slot.sec) target.splice(d.idx, 0, slot);
-      else {
-        insertSlot(target, slot);
-      }
-    });
+      else insertSlot(target, slot);
+    };
+    if (d.target) { const prog = structuredClone(get().programs[k]); apply(prog); get().saveProgram(k, prog); } // from the board
+    else get().editProgram(apply);
     get().closeModal();
     flag(d.day === edDay ? 'Saved' : `Saved to Day ${d.day}`);
     return null;

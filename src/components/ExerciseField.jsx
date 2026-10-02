@@ -8,14 +8,13 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', stretch = f
   const names = [...new Set(allExIds(cfg).map(x => exInfo(cfg, x).n))].sort((a, b) => a.localeCompare(b));
   const known = name.trim() !== '' ? findExId(cfg, name) : null;
   const isNew = name.trim() !== '' && !known;
-  // Picking an existing exercise fills in its saved video link, so it can be seen and changed here. A link
-  // filled in that way is cleared again when the name stops matching; a link you typed yourself is kept.
+  // Picking an existing exercise shows its saved video link, so what you save is that exercise's link (edited or not).
+  // A link shown that way is cleared when the name stops matching; one typed for a new exercise is kept.
   const filled = useRef(null);
   useEffect(() => {
     if (!onUrl) return;
-    const auto = filled.current != null && url === filled.current;
-    if (known) { if (!url.trim() || auto) { const u = exInfo(cfg, known).url || ''; filled.current = u; onUrl(u); } }
-    else if (auto) { filled.current = null; onUrl(''); }
+    if (known) { const u = exInfo(cfg, known).url || ''; filled.current = u; onUrl(u); }
+    else if (filled.current != null && url === filled.current) { filled.current = null; onUrl(''); }
   }, [known]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>

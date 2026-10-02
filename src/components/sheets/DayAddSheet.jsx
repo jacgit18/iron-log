@@ -18,7 +18,7 @@ export default function DayAddSheet({ col }) {
     <Sheet as="form" noValidate onSubmit={submit}>
       <h2 className="cond">Add to Day {col}, this week</h2>
       <p className="note">For this week only. Your program doesn't change.</p>
-      <ExerciseField cfg={cfg} id="day-ex" name={d.name} url={d.nu} eq={d.ne} stretch={d.ns} onName={name => up({ name })} onUrl={nu => up({ nu })} onEq={ne => up({ ne })} onStretch={ns => up({ ns })} />
+      <ExerciseField cfg={cfg} id="day-ex" name={d.name} url={d.nu} eq={d.ne} stretch={d.ns} onName={name => { const k = findExId(cfg, name); const def = k && cfg.exPh && cfg.exPh[k]; up({ name, ...(def ? { ph: def } : {}) }); }} onUrl={nu => up({ nu })} onEq={ne => up({ ne })} onStretch={ns => up({ ns })} />
       {!isStretch && (
         <label className="field">Phase
           <select value={d.ph || ''} onChange={e => up({ ph: e.target.value || null })}>

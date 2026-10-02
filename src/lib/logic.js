@@ -20,11 +20,7 @@ export const isTimed = ph => ph === 'iso' || ph === 'mob';
 export const round = w => w < 50 ? Math.round(w / 2.5) * 2.5 : Math.round(w / 5) * 5;
 export const itemKey = (slot, idx) => `${slot.id}:${idx}`;
 // A phase picked for one week beats the slot's saved default, which beats the exercise's default (all its cards), which beats the program's.
-// A one-week card's own phase is the pick made when it was added, so it beats the exercise default.
-export function defaultPhase(cfg, slot, idx) {
-  const it = slot.items[idx]; const exDef = cfg.exPh && cfg.exPh[it.ex];
-  return cfg.phDef[itemKey(slot, idx)] ?? (slot.experiment ? it.ph ?? exDef : exDef ?? it.ph) ?? null;
-}
+export const defaultPhase = (cfg, slot, idx) => cfg.phDef[itemKey(slot, idx)] ?? (cfg.exPh && cfg.exPh[slot.items[idx].ex]) ?? slot.items[idx].ph ?? null;
 export function phaseOf(cfg, week, slot, idx) { return week.ph[itemKey(slot, idx)] ?? defaultPhase(cfg, slot, idx); }
 export function rxOf(cfg, item, ph) { if (item.rx && ph === item.ph) return item.rx; if (ph) return cfg.rxOverride[ph] || PHASES[ph].rx; return item.rx || ''; }
 

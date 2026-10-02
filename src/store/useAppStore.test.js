@@ -16,7 +16,7 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   clearStorage();
-  useAppStore.setState({ logs: {}, week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} }, body: [], library: [], experiments: [], modal: null, edProg: null, edDay: 1, edReturn: null, cfg: structuredClone(DEFAULT_CFG), programs: { A: BUILTIN.A, B: BUILTIN.B }, weekHist: null });
+  useAppStore.setState({ logs: {}, week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} }, body: [], library: [], experiments: [], modal: null, edProg: null, edDay: 1, cfg: structuredClone(DEFAULT_CFG), programs: { A: BUILTIN.A, B: BUILTIN.B }, weekHist: null });
 });
 
 // Program A runs in mode 1; A-d3s1 is Hack Squat (Hypertrophy, 270 lb, 4 × 15).
@@ -439,21 +439,21 @@ describe('equipment from the log sheet', () => {
 });
 
 describe('the board add button', () => {
-  it('opens the full add sheet for the program day shown in that column', () => {
-    st().openAddToProgram(2);
-    expect(st().modal).toMatchObject({ type: 'slot', idx: null });
-    expect(st().edDay).toBe(2);
-    expect(st().edKey()).toBe('A');
-    st().openAddToProgram(3, 'stretch');
-    expect(st().modal.preset).toBe('stretch');
-    st().closeModal();
-  });
-  it('puts the Program tab back the way it was when the sheet closes', () => {
+  it('aims the add sheet at the board program and the program day shown in that column', () => {
     useAppStore.setState({ edProg: 'B', edDay: 5 });
     st().openAddToProgram(2);
-    expect(st().edKey()).toBe('A');
+    expect(st().modal).toMatchObject({ type: 'slot', idx: null, col: 2, target: { key: 'A', day: 2 } });
+    expect(st().edProg).toBe('B'); expect(st().edDay).toBe(5); // the Program tab is untouched
     st().closeModal();
-    expect(st().edProg).toBe('B'); expect(st().edDay).toBe(5);
+  });
+  it('saves to that program day, not the Program tab selection', () => {
+    useAppStore.setState({ edProg: 'B', edDay: 5 });
+    st().openAddToProgram(2);
+    const before = st().programs.A.days[1].slots.length;
+    expect(st().saveSlot({ id: null, sec: 'Regular', tier: 'Accessory', type: 'single', day: 2, idx: null, note: '', target: st().modal.target, items: [{ ex: 'facepull', ph: 'hyp', w: null, rx: '', note: '' }] })).toBeNull();
+    expect(st().programs.A.days[1].slots).toHaveLength(before + 1);
+    expect(st().programs.B.days[4].slots.some(x => x.items[0].ex === 'facepull' && x.sec === 'Regular' && x.tier === 'Accessory' && x.id.includes('-x'))).toBe(false);
+    expect(st().modal).toBeNull();
   });
 });
 
@@ -514,12 +514,34 @@ describe('bug check fixes', () => {
     st().checkCard('A-d3s1', false);
     expect(st().logs.hack).toEqual([]);
   });
-  it('history waits for the data source instead of caching an empty result', async () => {
+  it('history waits for the data source instead of reading too early', async () => {
     const mode = st().storeMode;
     useAppStore.setState({ storeMode: 'loading', weekHist: null });
-    await st().loadHistory();
-    expect(st().weekHist).toBeNull();
+    mem['ironlog:weeks/2026-01-04'] = JSON.stringify({ done: { x: true } });
+    const p = st().loadHistory();
+    await Promise.resolve();
+    expect(st().weekHist).toBeNull(); // still waiting
     useAppStore.setState({ storeMode: mode });
+    await p;
+    expect(st().weekHist['2026-01-04']).toBeTruthy();
+  });
+  it('ticking both default boxes keeps the slot default', () => {
+    const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
+    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp', makeDefault: true, makeExDefault: true });
+    expect(st().cfg.phDef['A-d1s6:0']).toBe('hyp');
+    expect(st().cfg.exPh.chestpress).toBe('hyp');
+  });
+  it('the Details default phase also replaces slot defaults for that exercise', () => {
+    useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
+    st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: 'iso' });
+    const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
+    expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('iso');
+  });
+  it('"default everywhere" on a one-week card shows the new default', () => {
+    st().addExerciseToDay(2, { ex: 'chestpress', ph: 'hyp' });
+    const card = st().activeSlots().find(s => s.added);
+    st().submitLog(card.id, 0, { entry: { d: '2026-10-01', ph: 'strength', w: 35, s: 4, r: 6 }, ph: 'strength', makeExDefault: true });
+    expect(phaseOf(st().cfg, st().week, st().slotById(card.id), 0)).toBe('strength');
   });
   it('built-in Canoe Stretch and Desk Bands are stretches but stay in their Home section', async () => {
     const { exInfo } = await import('../lib/data.js');
