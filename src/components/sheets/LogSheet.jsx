@@ -28,6 +28,7 @@ export default function LogSheet({ slotId, idx }) {
   const [rows, setRows] = useState(() => planRows(cfg, logs, it, ph0).map(x => toRow(x, ph0 === 'iso')));
   const [note, setNote] = useState('');
   const [eq, setEq] = useState(ex.eq || '');
+  const [url, setUrl] = useState(ex.url || '');
   const [makeDefault, setMakeDefault] = useState(false);
   const [makeExDefault, setMakeExDefault] = useState(false);
   const [done, setDone] = useState(true);
@@ -55,10 +56,11 @@ export default function LogSheet({ slotId, idx }) {
     const sets = rows.map(r => ({ w: num(r.w), v: num(r.r) })).filter(x => x.w != null || x.v != null)
       .map(x => (iso ? { w: x.w, sec: x.v } : { w: x.w, r: x.v }));
     if (!sets.length) { setErr('Enter at least one set.'); return; }
+    if (url.trim() && !/^https?:\/\//.test(url.trim())) { setErr('Video link should start with https://'); return; }
     const entry = { d: date || ymd(today), ph: phv, ...summarizeSets(sets, iso), slot: slotId, wk: st.weekKey() };
     if (note.trim()) entry.n = note.trim();
     const rmVal = rm === '' ? null : Number(rm);
-    if (st.submitLog(slotId, idx, { entry, ph: phv, makeDefault, makeExDefault, rm: rmVal, done, eq })) st.closeModal();
+    if (st.submitLog(slotId, idx, { entry, ph: phv, makeDefault, makeExDefault, rm: rmVal, done, eq, url })) st.closeModal();
   };
 
   return (
@@ -106,6 +108,10 @@ export default function LogSheet({ slotId, idx }) {
       </div>
       <label className="field">Note
         <input type="text" value={note} placeholder="Form, how it felt, equipment" onChange={e => setNote(e.target.value)} />
+      </label>
+      <label className="field">Video link (optional)
+        <input type="url" value={url} placeholder="https://" onChange={e => setUrl(e.target.value)} />
+        <span className="note">Saved for {ex.n} on every day and every week.</span>
       </label>
       <label className="field">Equipment
         <select value={eq} onChange={e => setEq(e.target.value)}>

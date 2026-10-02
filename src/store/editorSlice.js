@@ -123,13 +123,14 @@ export const editorSlice = (set, get, flag) => ({
     if (get().blocked()) return null;
     for (const it of d.items) {
       if (!it.ex || (it.ex === '__new' && !it.nn)) return 'Choose an exercise, or type a name for the new one.';
-      if (it.ex === '__new' && it.nu && !/^https?:\/\//.test(it.nu)) return 'Video link should start with https://';
+      if (it.nu && !/^https?:\/\//.test(it.nu.trim())) return 'Video link should start with https://';
     }
     const newEx = {};
     const slugFor = name => newExId(get().cfg, name, newEx);
     const items = d.items.map(it => {
       let ex = it.ex;
       if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}), ...(it.ns ? { stretch: true } : {}) }; }
+      else get().applyExerciseUrl(ex, it.nu);
       const o = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
     });
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex, newEx); });

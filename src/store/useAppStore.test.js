@@ -461,3 +461,31 @@ describe('the board add button', () => {
     st().closeModal();
   });
 });
+
+describe('video link on an existing exercise', () => {
+  it('the experiment sheet save updates the link everywhere', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    expect(st().saveExperiment({ ex: 'hack', ph: 'hyp', nu: 'https://example.com/hack' })).toBeNull();
+    expect(exInfo(st().cfg, 'hack').url).toBe('https://example.com/hack');
+    expect(st().saveExperiment({ ex: 'hack', ph: 'hyp', nu: 'nope' })).toMatch(/https/);
+    st().saveExperiment({ ex: 'hack', ph: 'hyp', nu: '' }); // clearing removes it
+    expect(exInfo(st().cfg, 'hack').url).toBeFalsy();
+  });
+  it('keeps a link that is already there when it is not changed', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    st().saveExperiment({ ex: 'canoe', ph: null, nu: 'https://youtu.be/yR6EnBqjKNs' });
+    expect(st().cfg.ex.canoe).toBeUndefined();
+    expect(exInfo(st().cfg, 'canoe').url).toBe('https://youtu.be/yR6EnBqjKNs');
+  });
+});
+
+describe('video link from the log sheet', () => {
+  it('saving a log with a new link updates the exercise for every card', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    const entry = { d: '2026-10-01', ph: 'hyp', w: 270, s: 4, r: 15 };
+    st().submitLog('A-d3s1', 0, { entry, ph: 'hyp', url: 'https://example.com/hack' });
+    expect(exInfo(st().cfg, 'hack').url).toBe('https://example.com/hack');
+    st().submitLog('A-d3s1', 0, { entry, ph: 'hyp' }); // field not offered: link left alone
+    expect(exInfo(st().cfg, 'hack').url).toBe('https://example.com/hack');
+  });
+});
