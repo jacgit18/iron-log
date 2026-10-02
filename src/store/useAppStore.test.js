@@ -461,3 +461,20 @@ describe('the board add button', () => {
     st().closeModal();
   });
 });
+
+describe('video link on an existing exercise', () => {
+  it('the experiment sheet save updates the link everywhere', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    expect(st().saveExperiment({ ex: 'hack', ph: 'hyp', nu: 'https://example.com/hack' })).toBeNull();
+    expect(exInfo(st().cfg, 'hack').url).toBe('https://example.com/hack');
+    expect(st().saveExperiment({ ex: 'hack', ph: 'hyp', nu: 'nope' })).toMatch(/https/);
+    st().saveExperiment({ ex: 'hack', ph: 'hyp', nu: '' }); // clearing removes it
+    expect(exInfo(st().cfg, 'hack').url).toBeFalsy();
+  });
+  it('keeps a link that is already there when it is not changed', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    st().saveExperiment({ ex: 'canoe', ph: null, nu: 'https://youtu.be/yR6EnBqjKNs' });
+    expect(st().cfg.ex.canoe).toBeUndefined();
+    expect(exInfo(st().cfg, 'canoe').url).toBe('https://youtu.be/yR6EnBqjKNs');
+  });
+});

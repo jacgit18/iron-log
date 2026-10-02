@@ -51,6 +51,12 @@ function overrideOf(c, exId, vals) {
   Object.entries(vals).forEach(([k, v]) => { if (v && v !== base[k]) o[k] = v; else if (v) delete o[k]; else if (base[k]) o[k] = k === 'stretch' ? false : ''; else delete o[k]; });
   return o;
 }
+// A video link typed for an existing exercise replaces its saved one everywhere.
+function setUrl(c, exId, url) {
+  const o = overrideOf(c, exId, { url });
+  if (!EX[exId] && !o.n) o.n = exId;
+  if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
+}
 // Equipment for one exercise, applied everywhere it appears.
 function setEquipment(c, exId, eq) {
   const o = overrideOf(c, exId, { eq });
@@ -241,14 +247,21 @@ export const useAppStore = create((set, get) => ({
   saveExperiment(d) {
     if (get().blocked()) return null;
     if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
-    if (d.ex === '__new' && d.nu && !/^https?:\/\//.test(d.nu)) return 'Video link should start with https://';
+    if (d.nu && !/^https?:\/\//.test(d.nu.trim())) return 'Video link should start with https://';
     const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
+    if (d.ex !== '__new') get().applyExerciseUrl(ex, d.nu);
     const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim().slice(0, 200) };
     const list = get().experiments;
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
     set({ modal: null }); flag('Saved'); return null;
   },
   // A typed name that isn't in the catalog yet becomes a custom exercise (video link, equipment and stretch optional). Returns its id.
+  applyExerciseUrl(ex, raw) {
+    if (raw == null) return; // not offered by this caller: leave the saved link alone
+    const url = (raw || '').trim();
+    if (url === (exInfo(get().cfg, ex).url || '')) return;
+    get().mutateCfg(c => setUrl(c, ex, url));
+  },
   createExercise(d) {
     const ex = newExId(get().cfg, d.nn);
     get().mutateCfg(c => { c.ex[ex] = { n: d.nn, ...(d.nu ? { url: d.nu } : {}), ...(d.ne ? { eq: d.ne } : {}), ...(d.ns ? { stretch: true } : {}) }; });
@@ -258,9 +271,10 @@ export const useAppStore = create((set, get) => ({
   addExerciseToDay(col, d, scope = 'week') {
     if (get().blocked()) return null;
     if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
-    if (d.ex === '__new' && d.nu && !/^https?:\/\//.test(d.nu)) return 'Video link should start with https://';
+    if (d.nu && !/^https?:\/\//.test(d.nu.trim())) return 'Video link should start with https://';
     const pd = dayAt(get().week, col); if (pd == null) return 'That is your rest day.';
     const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
+    if (d.ex !== '__new') get().applyExerciseUrl(ex, d.nu);
     const stretch = !!exInfo(get().cfg, ex).stretch;
     const note = (d.note || '').trim().slice(0, 200);
     if (scope === 'program') {
