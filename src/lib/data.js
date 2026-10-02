@@ -18,7 +18,7 @@ export function withAllDays(prog) {
 export const padLibrary = items => items.map(it => (it && hasValidDays(it.prog) ? { ...it, prog: withAllDays(it.prog) } : it));
 
 export const EQUIPMENT = {
-  barbell: 'Barbell', dumbbell: 'Dumbbell', kettlebell: 'Kettlebell', cable: 'Cable', machine: 'Machine', bodyweight: 'Bodyweight',
+  barbell: 'Barbell', shortbar: 'Short barbell', ezbar: 'EZ bar', dumbbell: 'Dumbbell', kettlebell: 'Kettlebell', cable: 'Cable', machine: 'Machine', bodyweight: 'Bodyweight',
   band: 'Band', trx: 'TRX', plate: 'Plate', medball: 'Med ball', other: 'Other',
 };
 export const EQ_KEYS = Object.keys(EQUIPMENT);

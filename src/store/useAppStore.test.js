@@ -416,3 +416,18 @@ describe('mobility phase', () => {
     expect(st().cfg.exPh.canoe).toBe('mob');
   });
 });
+
+describe('equipment from the log sheet', () => {
+  it('changing it updates the exercise everywhere, and the new options exist', async () => {
+    const { exInfo, EQUIPMENT } = await import('../lib/data.js');
+    expect(EQUIPMENT).toMatchObject({ ezbar: 'EZ bar', shortbar: 'Short barbell' });
+    const entry = { d: '2026-10-01', ph: 'hyp', w: 270, s: 4, r: 15 };
+    expect(st().submitLog('A-d3s1', 0, { entry, ph: 'hyp', eq: 'ezbar' })).toBe(true);
+    expect(exInfo(st().cfg, 'hack').eq).toBe('ezbar');
+    expect(exInfo(st().cfg, 'hack').n).toBe('Hack Squat');
+    st().submitLog('A-d3s1', 0, { entry, ph: 'hyp', eq: 'machine' }); // back to the built-in value: no leftover override
+    expect(st().cfg.ex.hack).toBeUndefined();
+    st().submitLog('A-d3s1', 0, { entry, ph: 'hyp' }); // untouched
+    expect(exInfo(st().cfg, 'hack').eq).toBe('machine');
+  });
+});

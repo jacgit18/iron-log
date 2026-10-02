@@ -45,6 +45,19 @@ const standalone = typeof window !== 'undefined' && !window.claude;
 
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
+// What you set on an exercise (video link, equipment, stretch) is stored in cfg.ex as only what differs from the built-in entry.
+function overrideOf(c, exId, vals) {
+  const base = EX[exId] || {}; const o = { ...(c.ex[exId] || {}) };
+  Object.entries(vals).forEach(([k, v]) => { if (v && v !== base[k]) o[k] = v; else if (v) delete o[k]; else if (base[k]) o[k] = k === 'stretch' ? false : ''; else delete o[k]; });
+  return o;
+}
+// Equipment for one exercise, applied everywhere it appears.
+function setEquipment(c, exId, eq) {
+  const o = overrideOf(c, exId, { eq });
+  if (!EX[exId] && !o.n) o.n = exId;
+  if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
+}
+
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
@@ -259,9 +272,7 @@ export const useAppStore = create((set, get) => ({
     const url = (d.url || '').trim();
     if (url && !/^https?:\/\//.test(url)) return 'Video link should start with https://';
     get().mutateCfg(c => {
-      const base = EX[exId] || {}; const o = { ...(c.ex[exId] || {}) };
-      const put = (k, v) => { if (v && v !== base[k]) o[k] = v; else if (v && v === base[k]) delete o[k]; else if (base[k]) o[k] = k === 'stretch' ? false : ''; else delete o[k]; };
-      put('url', url); put('eq', d.eq || ''); put('stretch', d.stretch);
+      const o = overrideOf(c, exId, { url, eq: d.eq || '', stretch: d.stretch });
       if (!EX[exId] && !o.n) o.n = exInfo(get().cfg, exId).n;
       if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
       c.exPh = c.exPh || {};
@@ -374,15 +385,17 @@ export const useAppStore = create((set, get) => ({
     if (get().addEntry(slotId, idx, e, { check: true })) flag(`Logged ${describe(e)}`);
   },
   // The log sheet's save: entry + optional phase change / phase default / 1RM / check-off.
-  submitLog(slotId, idx, { entry, ph, makeDefault, makeExDefault, rm, done }) {
+  submitLog(slotId, idx, { entry, ph, makeDefault, makeExDefault, rm, done, eq }) {
     if (get().blocked()) return false;
     const s = get().slotById(slotId); if (!s) return false;
     const it = s.items[idx]; const key = `${slotId}:${idx}`;
     get().addEntry(slotId, idx, entry);
     const { cfg, week } = get();
-    const cfgChange = ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
+    const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
+    const cfgChange = eqChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
     if (cfgChange) get().mutateCfg(c => {
       if (makeDefault && ph) c.phDef[key] = ph;
+      if (eqChange) setEquipment(c, it.ex, eq);
       if (makeExDefault && ph) { c.exPh = c.exPh || {}; c.exPh[it.ex] = ph; }
       if (rm === null) delete c.rm[it.ex]; else if (rm > 0) c.rm[it.ex] = rm;
     });
