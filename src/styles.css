@@ -519,3 +519,8 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .expcard{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
 .expcard .actions{justify-content:flex-start;align-items:center}
 .expcard select{min-height:44px}
+
+/* Board filter and per-day add button */
+.filterbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px;margin:8px 0}
+.filterbar .field{min-width:160px}
+.addbtn{align-self:flex-start;margin:2px 0 6px}

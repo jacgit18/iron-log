@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { mem, clearStorage, saved } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally;
+let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf;
 const st = () => useAppStore.getState();
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
   ({ BUILTIN } = await import('../lib/data.js'));
-  ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally } = await import('../lib/logic.js'));
+  ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf } = await import('../lib/logic.js'));
   await st().init();
 });
 beforeEach(() => {
@@ -42,8 +42,10 @@ describe('checking off on the board', () => {
     st().checkDay(3, true);
     const day3 = st().activeSlots().filter(s => s.day === 3);
     // An either/or card logs the one option it counts as done (the first, when none was picked).
+    // Stretches (Desk Bands) have no weight or reps, so checking them off logs nothing.
     const exIds = [...new Set(day3.flatMap(s => (s.type === 'either' ? s.items.slice(0, 1) : s.items).map(i => i.ex)))];
-    exIds.forEach(id => expect(st().logs[id]?.length, id).toBe(1));
+    exIds.filter(id => id !== 'deskbands').forEach(id => expect(st().logs[id]?.length, id).toBe(1));
+    expect(st().logs.deskbands).toBeUndefined();
     expect(st().logs.facepull).toBeUndefined();
     st().skipCard('A-d3s1');
     expect(st().logs.hack).toEqual([]);
@@ -365,5 +367,40 @@ describe('experiment board', () => {
   it('Erase programs clears the list', async () => {
     add(); await st().eraseData({ programs: true });
     expect(st().experiments).toEqual([]);
+  });
+});
+
+describe('exercise details, default phase and adding to a day', () => {
+  it('keeps a video link, equipment and stretch over a built-in exercise, and can clear them', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    expect(exInfo(st().cfg, 'hack')).toMatchObject({ n: 'Hack Squat', eq: 'machine' });
+    expect(st().saveExerciseDetails('hack', { url: 'https://example.com/v', eq: 'barbell', stretch: false, ph: '' })).toBeNull();
+    expect(exInfo(st().cfg, 'hack')).toMatchObject({ n: 'Hack Squat', url: 'https://example.com/v', eq: 'barbell' });
+    st().saveExerciseDetails('hack', { url: '', eq: '', stretch: false, ph: '' });
+    expect(exInfo(st().cfg, 'hack').url).toBeFalsy();
+    expect(exInfo(st().cfg, 'hack').eq).toBeFalsy();
+    expect(st().saveExerciseDetails('hack', { url: 'nope', eq: '', stretch: false, ph: '' })).toMatch(/https/);
+  });
+  it('an exercise default phase applies to every card, but a slot default or a week pick still wins', () => {
+    const sl = st().activeSlots(); const a = sl.find(s => s.id === 'A-d1s6'); const b = sl.find(s => s.id === 'A-d4s5'); // chest press: strength, then hypertrophy
+    st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: 'iso' });
+    expect(phaseOf(st().cfg, st().week, a, 0)).toBe('iso');
+    expect(phaseOf(st().cfg, st().week, b, 1)).toBe('iso');
+    st().setPhase('A-d1s6', 0, 'exp');
+    expect(phaseOf(st().cfg, st().week, a, 0)).toBe('exp');
+    st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: '' });
+    expect(phaseOf(st().cfg, st().week, b, 1)).toBe('hyp');
+  });
+  it('adds an exercise or a new stretch to one day of this week only', () => {
+    expect(st().addExerciseToDay(2, { ex: 'facepull', ph: 'hyp', note: 'light' })).toBeNull();
+    expect(st().addExerciseToDay(2, { ex: '__new', nn: 'Hip 90/90', ne: 'bodyweight', ns: true, ph: 'hyp' })).toBeNull();
+    const extras = st().activeSlots().filter(s => s.added);
+    expect(extras).toHaveLength(2);
+    expect(extras[0].items[0]).toMatchObject({ ex: 'facepull', ph: 'hyp' });
+    expect(extras[1].items[0].ph).toBeNull(); // a stretch has no phase
+    expect(st().addExerciseToDay(2, { ex: '', nn: '' })).toMatch(/Choose/);
+    st().checkCard(extras[1].id, true);
+    expect(st().logs['hip-90-90']).toBeUndefined(); // and nothing to log
+    expect(st().week.done[extras[1].id]).toBe(true);
   });
 });

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BUILTIN, resolveProgram, padLibrary, exInfo, newExId } from '../lib/data.js';
+import { BUILTIN, resolveProgram, padLibrary, EX, exInfo, newExId } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
@@ -229,12 +229,45 @@ export const useAppStore = create((set, get) => ({
     if (get().blocked()) return null;
     if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
     if (d.ex === '__new' && d.nu && !/^https?:\/\//.test(d.nu)) return 'Video link should start with https://';
-    let ex = d.ex;
-    if (ex === '__new') { ex = newExId(get().cfg, d.nn); get().mutateCfg(c => { c.ex[ex] = { n: d.nn, ...(d.nu ? { url: d.nu } : {}) }; }); }
+    const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
     const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim().slice(0, 200) };
     const list = get().experiments;
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
     set({ modal: null }); flag('Saved'); return null;
+  },
+  // A typed name that isn't in the catalog yet becomes a custom exercise (video link, equipment and stretch optional). Returns its id.
+  createExercise(d) {
+    const ex = newExId(get().cfg, d.nn);
+    get().mutateCfg(c => { c.ex[ex] = { n: d.nn, ...(d.nu ? { url: d.nu } : {}), ...(d.ne ? { eq: d.ne } : {}), ...(d.ns ? { stretch: true } : {}) }; });
+    return ex;
+  },
+  // Add an exercise straight to a day of the viewed week. Only this week gets the card; the program doesn't change.
+  addExerciseToDay(col, d) {
+    if (get().blocked()) return null;
+    if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
+    if (d.ex === '__new' && d.nu && !/^https?:\/\//.test(d.nu)) return 'Video link should start with https://';
+    const pd = dayAt(get().week, col); if (pd == null) return 'That is your rest day.';
+    const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
+    const stretch = !!exInfo(get().cfg, ex).stretch;
+    const ok = get().mutateWeek(w => { w.extra = [...(w.extra || []), { id: uid('X-'), day: pd, ex, ph: stretch ? null : d.ph || null, note: (d.note || '').trim().slice(0, 200), add: true }]; });
+    if (!ok) return null;
+    set({ modal: null }); flag(`Added ${exInfo(get().cfg, ex).n} to Day ${col}`); return null;
+  },
+  // Video link, equipment and stretch for any exercise, and the phase it defaults to on every card.
+  saveExerciseDetails(exId, d) {
+    if (get().blocked()) return null;
+    const url = (d.url || '').trim();
+    if (url && !/^https?:\/\//.test(url)) return 'Video link should start with https://';
+    get().mutateCfg(c => {
+      const base = EX[exId] || {}; const o = { ...(c.ex[exId] || {}) };
+      const put = (k, v) => { if (v && v !== base[k]) o[k] = v; else if (v && v === base[k]) delete o[k]; else if (base[k]) o[k] = k === 'stretch' ? false : ''; else delete o[k]; };
+      put('url', url); put('eq', d.eq || ''); put('stretch', d.stretch);
+      if (!EX[exId] && !o.n) o.n = exInfo(get().cfg, exId).n;
+      if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
+      c.exPh = c.exPh || {};
+      if (d.ph) c.exPh[exId] = d.ph; else delete c.exPh[exId];
+    });
+    set({ modal: null }); flag('Exercise saved'); return null;
   },
   deleteExperiment(id) { if (get().blocked()) return; get().setExperiments(get().experiments.filter(x => x.id !== id)); flag('Deleted'); },
   addToDay(entryId, col) {
@@ -341,20 +374,21 @@ export const useAppStore = create((set, get) => ({
     if (get().addEntry(slotId, idx, e, { check: true })) flag(`Logged ${describe(e)}`);
   },
   // The log sheet's save: entry + optional phase change / phase default / 1RM / check-off.
-  submitLog(slotId, idx, { entry, ph, makeDefault, rm, done }) {
+  submitLog(slotId, idx, { entry, ph, makeDefault, makeExDefault, rm, done }) {
     if (get().blocked()) return false;
     const s = get().slotById(slotId); if (!s) return false;
     const it = s.items[idx]; const key = `${slotId}:${idx}`;
     get().addEntry(slotId, idx, entry);
     const { cfg, week } = get();
-    const cfgChange = (makeDefault && ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
+    const cfgChange = ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
     if (cfgChange) get().mutateCfg(c => {
       if (makeDefault && ph) c.phDef[key] = ph;
+      if (makeExDefault && ph) { c.exPh = c.exPh || {}; c.exPh[it.ex] = ph; }
       if (rm === null) delete c.rm[it.ex]; else if (rm > 0) c.rm[it.ex] = rm;
     });
     get().mutateWeek(w => {
       if (ph && ph !== phaseOf(cfg, week, s, idx)) w.ph[key] = ph;
-      if (makeDefault && ph) delete w.ph[key];
+      if ((makeDefault || makeExDefault) && ph) delete w.ph[key];
       if (done) setItemDone(w, s, idx, true);
     });
     return true;

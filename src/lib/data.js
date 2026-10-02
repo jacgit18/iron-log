@@ -16,51 +16,57 @@ export function withAllDays(prog) {
 }
 export const padLibrary = items => items.map(it => (it && hasValidDays(it.prog) ? { ...it, prog: withAllDays(it.prog) } : it));
 
+export const EQUIPMENT = {
+  barbell: 'Barbell', dumbbell: 'Dumbbell', kettlebell: 'Kettlebell', cable: 'Cable', machine: 'Machine', bodyweight: 'Bodyweight',
+  band: 'Band', trx: 'TRX', plate: 'Plate', medball: 'Med ball', other: 'Other',
+};
+export const EQ_KEYS = Object.keys(EQUIPMENT);
+
 export const EX = {
-  latpd: { n: 'Lat Pulldown, alternating single-arm' },
-  wristpd: { n: 'Cable Wrist Pulldown' },
-  platerot: { n: 'Plate Torso Rotation' },
-  innerthigh: { n: 'Inner Thigh Abduction' },
-  romanadd: { n: 'Roman Chair Hip Adduction', url: 'https://www.youtube.com/watch?v=j5HWZOfIePI' },
-  chestpress: { n: 'Chest Press' },
-  zercher: { n: 'Seated Zercher Good Morning', url: 'https://youtu.be/ahfSSi4MVJQ' },
-  zottman: { n: 'Zottman Curl' },
-  kbleg: { n: 'Kettlebell Leg Raise' },
-  grip: { n: 'Grip Trainer' },
-  canoe: { n: 'Canoe Stretch', url: 'https://youtu.be/yR6EnBqjKNs' },
-  suitcase: { n: 'Suitcase Bottom-Up, single-arm' },
-  reardelt: { n: 'Side Rear Delt Fly' },
-  facepull: { n: 'Face Pull' },
-  legext: { n: 'Leg Extension ISO hold' },
-  cablecrunch: { n: 'Kneeling Cable Ab Crunch' },
-  hipthrust: { n: 'Hip Thrust' },
-  dip: { n: 'Wide Tricep Dip' },
-  kneeraise: { n: 'Hanging Knee Raise' },
-  db6: { n: 'DB 6 Ways' },
-  hack: { n: 'Hack Squat' },
-  pallof: { n: 'Pallof Press' },
-  cablerow: { n: 'Explosive Unilateral Cable Row', url: 'https://youtu.be/OrAcowGGU2U' },
-  deskbands: { n: 'Desk Bands', url: 'https://youtu.be/o_uZcQnXaFA' },
-  arnold: { n: 'Arnold Press' },
-  dbclean: { n: 'DB Clean & Jerk Press' },
-  trxpike: { n: 'TRX Pike Push-Up', url: 'https://youtu.be/GIWNRslPEv4' },
-  trxrow: { n: 'TRX Wide-Grip Row', url: 'https://youtu.be/o9M1k6OzI-g' },
-  medball: { n: 'Med Ball Rotational Scoop', url: 'https://youtu.be/xmQfXggU2mU' },
-  latwall: { n: 'Lateral Wall Push', url: 'https://youtu.be/tIFjnucY09Q' },
-  spinal: { n: 'Spinal Waves', url: 'https://youtu.be/KCfh_wCssK8' },
-  pogo: { n: 'Pogo Hops', url: 'https://youtu.be/iU-TKr4YesM' },
-  skater: { n: 'Lateral Bound / Skater Hop with Stick', url: 'https://youtu.be/4nTDP0G3nhc' },
-  splitjump: { n: 'Split Squat Jumps', url: 'https://www.youtube.com/watch?v=4DMvFDaqIys' },
-  depthcombo: { n: 'Depth Drop → Broad Jump → Box Jump', url: 'https://youtu.be/GZLyZCqF8BQ' },
-  latpdbi: { n: 'Lat Pulldown' },
-  outerthigh: { n: 'Outer Thigh Adduction' },
-  qlext: { n: 'Side Lateral QL Extension', url: 'https://www.youtube.com/watch?v=UaydER2VIUc' },
-  farmers: { n: 'Farmers Carry' },
-  dblunge: { n: 'DB Lunge' },
-  ohtri: { n: 'Overhead Tricep Extension' },
-  bss: { n: 'Bulgarian Split Squat' },
-  legcurl: { n: 'Prone Leg Curl' },
-  cablepunch: { n: 'Cable Punch ISO hold' },
+  latpd: { n: 'Lat Pulldown, alternating single-arm', eq: 'cable' },
+  wristpd: { n: 'Cable Wrist Pulldown', eq: 'cable' },
+  platerot: { n: 'Plate Torso Rotation', eq: 'plate' },
+  innerthigh: { n: 'Inner Thigh Abduction', eq: 'machine' },
+  romanadd: { n: 'Roman Chair Hip Adduction', url: 'https://www.youtube.com/watch?v=j5HWZOfIePI', eq: 'bodyweight' },
+  chestpress: { n: 'Chest Press', eq: 'machine' },
+  zercher: { n: 'Seated Zercher Good Morning', url: 'https://youtu.be/ahfSSi4MVJQ', eq: 'barbell' },
+  zottman: { n: 'Zottman Curl', eq: 'dumbbell' },
+  kbleg: { n: 'Kettlebell Leg Raise', eq: 'kettlebell' },
+  grip: { n: 'Grip Trainer', eq: 'other' },
+  canoe: { n: 'Canoe Stretch', url: 'https://youtu.be/yR6EnBqjKNs', eq: 'bodyweight', stretch: true },
+  suitcase: { n: 'Suitcase Bottom-Up, single-arm', eq: 'kettlebell' },
+  reardelt: { n: 'Side Rear Delt Fly', eq: 'cable' },
+  facepull: { n: 'Face Pull', eq: 'cable' },
+  legext: { n: 'Leg Extension ISO hold', eq: 'machine' },
+  cablecrunch: { n: 'Kneeling Cable Ab Crunch', eq: 'cable' },
+  hipthrust: { n: 'Hip Thrust', eq: 'machine' },
+  dip: { n: 'Wide Tricep Dip', eq: 'bodyweight' },
+  kneeraise: { n: 'Hanging Knee Raise', eq: 'bodyweight' },
+  db6: { n: 'DB 6 Ways', eq: 'dumbbell' },
+  hack: { n: 'Hack Squat', eq: 'machine' },
+  pallof: { n: 'Pallof Press', eq: 'cable' },
+  cablerow: { n: 'Explosive Unilateral Cable Row', url: 'https://youtu.be/OrAcowGGU2U', eq: 'cable' },
+  deskbands: { n: 'Desk Bands', url: 'https://youtu.be/o_uZcQnXaFA', eq: 'band', stretch: true },
+  arnold: { n: 'Arnold Press', eq: 'dumbbell' },
+  dbclean: { n: 'DB Clean & Jerk Press', eq: 'dumbbell' },
+  trxpike: { n: 'TRX Pike Push-Up', url: 'https://youtu.be/GIWNRslPEv4', eq: 'trx' },
+  trxrow: { n: 'TRX Wide-Grip Row', url: 'https://youtu.be/o9M1k6OzI-g', eq: 'trx' },
+  medball: { n: 'Med Ball Rotational Scoop', url: 'https://youtu.be/xmQfXggU2mU', eq: 'medball' },
+  latwall: { n: 'Lateral Wall Push', url: 'https://youtu.be/tIFjnucY09Q', eq: 'bodyweight' },
+  spinal: { n: 'Spinal Waves', url: 'https://youtu.be/KCfh_wCssK8', eq: 'bodyweight', stretch: true },
+  pogo: { n: 'Pogo Hops', url: 'https://youtu.be/iU-TKr4YesM', eq: 'bodyweight' },
+  skater: { n: 'Lateral Bound / Skater Hop with Stick', url: 'https://youtu.be/4nTDP0G3nhc', eq: 'bodyweight' },
+  splitjump: { n: 'Split Squat Jumps', url: 'https://www.youtube.com/watch?v=4DMvFDaqIys', eq: 'bodyweight' },
+  depthcombo: { n: 'Depth Drop → Broad Jump → Box Jump', url: 'https://youtu.be/GZLyZCqF8BQ', eq: 'bodyweight' },
+  latpdbi: { n: 'Lat Pulldown', eq: 'cable' },
+  outerthigh: { n: 'Outer Thigh Adduction', eq: 'machine' },
+  qlext: { n: 'Side Lateral QL Extension', url: 'https://www.youtube.com/watch?v=UaydER2VIUc', eq: 'machine' },
+  farmers: { n: 'Farmers Carry', eq: 'dumbbell' },
+  dblunge: { n: 'DB Lunge', eq: 'dumbbell' },
+  ohtri: { n: 'Overhead Tricep Extension', eq: 'cable' },
+  bss: { n: 'Bulgarian Split Squat', eq: 'dumbbell' },
+  legcurl: { n: 'Prone Leg Curl', eq: 'machine' },
+  cablepunch: { n: 'Cable Punch ISO hold', eq: 'cable' },
 };
 
 // item: {ex, ph, w (lb), bw, rx (custom when phase==ph), note}
@@ -218,7 +224,8 @@ export function slotsFor(prog) {
 
 // A saved/edited program only replaces the built-in one when it has the right shape.
 export function resolveProgram(k, data) { return hasValidDays(data) ? withAllDays({ ...structuredClone(data), key: k }) : BUILTIN[k]; }
-export const exInfo = (cfg, id) => EX[id] || (cfg.ex && cfg.ex[id]) || { n: id };
+// What you set on an exercise (video link, equipment, stretch) is kept in cfg.ex and layers over the built-in entry.
+export const exInfo = (cfg, id) => ({ ...(EX[id] || { n: id }), ...(cfg.ex && cfg.ex[id]) });
 export const allExIds = cfg => [...new Set([...Object.keys(EX), ...Object.keys(cfg.ex || {})])];
 
 // A new custom exercise's id from its name, unique among the built-ins and cfg.ex (`taken` adds ids being created now).

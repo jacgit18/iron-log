@@ -114,7 +114,7 @@ export const editorSlice = (set, get, flag) => ({
     const slugFor = name => newExId(get().cfg, name, newEx);
     const items = d.items.map(it => {
       let ex = it.ex;
-      if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}) }; }
+      if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}), ...(it.ns ? { stretch: true } : {}) }; }
       const o = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
     });
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex, newEx); });

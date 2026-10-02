@@ -2,7 +2,7 @@
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
 import { PHASES, PH_KEYS, BUILTIN, exInfo, hasValidDays, withAllDays, DAY_COUNT } from './data.js';
 import { ymd, fmtShort } from './dates.js';
-import { weekSlots, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
+import { weekSlots, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
 
 const noteOf = e => e.n || (e.auto ? AUTO_NOTE : '');
 import { MUSCLES, tagsOf, muscleNames } from './muscles.js';
@@ -137,7 +137,7 @@ export function buildWeekWorkbook(X, S, key, w) {
   const plan = [['Planned day', 'Done on day', 'Section', 'Tier', 'Type', 'Exercise', 'Phase', 'Sets × reps', 'Program weight (lb)', 'Done']];
   const nw = normWeek(w);
   slots.forEach(s => s.items.forEach((it, idx) => {
-    const ph = (w.ph && w.ph[`${s.id}:${idx}`]) ?? cfg.phDef[`${s.id}:${idx}`] ?? it.ph ?? null;
+    const ph = (w.ph && w.ph[`${s.id}:${idx}`]) ?? defaultPhase(cfg, s, idx);
     const moved = w.moved && w.moved[s.id];
     plan.push([colOf(nw, s.day), colOf(nw, moved || s.day), s.sec || '', s.tier || '', s.type === 'single' ? '' : s.type, exInfo(cfg, it.ex).n, phaseLabel(ph), rxOf(cfg, it, ph), it.w ?? (it.bw ? 'BW' : ''), (w.skipped && w.skipped[s.id]) ? 'Skipped' : isItemDone(s, idx, nw) ? 'Yes' : 'No']);
   }));

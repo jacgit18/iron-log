@@ -2,7 +2,7 @@ import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
 import { monday, ymd, parseDate, addDays } from './dates.js';
 
 /* ---------- Config defaults ---------- */
-export const DEFAULT_CFG = { muscleMap: {}, ex: {}, mode: 1, m3Start: 1, m3First: 'A', m2Even: 'A', pct: { strength: 85, iso: 75, hyp: 65, exp: 45 }, rxOverride: {}, rm: {}, phDef: {} };
+export const DEFAULT_CFG = { muscleMap: {}, ex: {}, mode: 1, m3Start: 1, m3First: 'A', m2Even: 'A', pct: { strength: 85, iso: 75, hyp: 65, exp: 45 }, rxOverride: {}, rm: {}, phDef: {}, exPh: {} };
 
 /* ---------- Program rotation ---------- */
 export function programFor(cfg, date) {
@@ -17,7 +17,9 @@ export function activeProgKey(cfg, week, weekStart) { return (cfg.mode === 2 && 
 /* ---------- Small helpers ---------- */
 export const round = w => w < 50 ? Math.round(w / 2.5) * 2.5 : Math.round(w / 5) * 5;
 export const itemKey = (slot, idx) => `${slot.id}:${idx}`;
-export function phaseOf(cfg, week, slot, idx) { const k = itemKey(slot, idx); return week.ph[k] ?? cfg.phDef[k] ?? slot.items[idx].ph ?? null; }
+// A phase picked for one week beats the slot's saved default, which beats the exercise's default (all its cards), which beats the program's.
+export const defaultPhase = (cfg, slot, idx) => cfg.phDef[itemKey(slot, idx)] ?? (cfg.exPh && cfg.exPh[slot.items[idx].ex]) ?? slot.items[idx].ph ?? null;
+export function phaseOf(cfg, week, slot, idx) { return week.ph[itemKey(slot, idx)] ?? defaultPhase(cfg, slot, idx); }
 export function rxOf(cfg, item, ph) { if (item.rx && ph === item.ph) return item.rx; if (ph) return cfg.rxOverride[ph] || PHASES[ph].rx; return item.rx || ''; }
 
 // Stall: the last 3 sessions of a lift in one phase (one per day) never went above the first of them in weight,
@@ -71,7 +73,7 @@ export function programWeights(cfg, slots, exId) {
   const out = [];
   slots.forEach(s => s.items.forEach((it, i) => {
     if (it.ex !== exId || it.w == null) return;
-    const ph = cfg.phDef[itemKey(s, i)] ?? it.ph ?? null;
+    const ph = defaultPhase(cfg, s, i);
     if (!out.some(x => x.ph === ph && x.w === it.w)) out.push({ ph, w: it.w });
   }));
   return out.sort(byPhase);
@@ -176,14 +178,14 @@ export function currentLayout(week, slots) {
 }
 
 /* ---------- Experiment cards (week.extra) ---------- */
-const isExtra = x => !!x && typeof x.id === 'string' && /^X-[\w-]{1,60}$/.test(x.id) && Number.isInteger(x.day) && x.day >= 1 && x.day <= DAY_COUNT && typeof x.ex === 'string' && x.ex !== '' && (x.ph == null || PH_KEYS.includes(x.ph)) && (x.note == null || typeof x.note === 'string');
+const isExtra = x => !!x && typeof x.id === 'string' && /^X-[\w-]{1,60}$/.test(x.id) && Number.isInteger(x.day) && x.day >= 1 && x.day <= DAY_COUNT && typeof x.ex === 'string' && x.ex !== '' && (x.ph == null || PH_KEYS.includes(x.ph)) && (x.note == null || typeof x.note === 'string') && (x.add == null || typeof x.add === 'boolean');
 // The Experiment list from a file or another device: valid entries, each id once.
 export function normExperiments(list) {
   const seen = new Set();
   return (Array.isArray(list) ? list : []).filter(e => e && typeof e.id === 'string' && e.id !== '' && e.id.length <= 200 && typeof e.ex === 'string' && e.ex !== '' && (e.ph == null || PH_KEYS.includes(e.ph)) && (e.note == null || typeof e.note === 'string') && !seen.has(e.id) && seen.add(e.id))
     .map(e => ({ id: e.id, ex: e.ex, ph: e.ph ?? null, note: (e.note || '').slice(0, 200) }));
 }
-export const extraSlots = w => (w.extra || []).map(x => ({ id: x.id, day: x.day, type: 'single', sec: 'Experiment', experiment: true, items: [{ ex: x.ex, ph: x.ph }], ...(x.note ? { note: x.note } : {}) }));
+export const extraSlots = w => (w.extra || []).map(x => ({ id: x.id, day: x.day, type: 'single', sec: x.add ? 'Added' : 'Experiment', experiment: true, ...(x.add ? { added: true } : {}), items: [{ ex: x.ex, ph: x.ph }], ...(x.note ? { note: x.note } : {}) }));
 // The week's cards: the program's, then the experiment cards added to this week.
 export const weekSlots = (prog, w) => [...slotsFor(prog), ...extraSlots(normWeek(w))];
 
@@ -254,7 +256,7 @@ export function autoLogs(cfg, logs, slots, before, after, wk, date) {
   const out = {};
   slots.forEach(s => s.items.forEach((it, i) => {
     const was = isItemDone(s, i, before), now = isItemDone(s, i, after);
-    if (was === now) return;
+    if (was === now || exInfo(cfg, it.ex).stretch) return; // a stretch has no weight or reps to log
     const L = out[it.ex] || logs[it.ex] || [];
     const here = e => e.slot === s.id && weekOfEntry(e) === wk;
     if (now) {
@@ -281,6 +283,6 @@ export const normWeek = w => {
   if (Number.isInteger(rest) && rest >= 1 && rest <= DAY_COUNT) out.rest = rest;
   if (isOrder(w && w.order) && w.order.some((v, i) => v !== i + 1)) out.order = [...w.order];
   if (out.rest && typeof (w && w.restOn) === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.restOn)) out.restOn = w.restOn;
-  if (Array.isArray(w && w.extra)) { const seen = new Set(); const ex = w.extra.filter(x => isExtra(x) && !seen.has(x.id) && seen.add(x.id)).map(x => ({ id: x.id, day: x.day, ex: x.ex, ph: x.ph ?? null, note: (x.note || '').slice(0, 200) })); if (ex.length) out.extra = ex; }
+  if (Array.isArray(w && w.extra)) { const seen = new Set(); const ex = w.extra.filter(x => isExtra(x) && !seen.has(x.id) && seen.add(x.id)).map(x => ({ id: x.id, day: x.day, ex: x.ex, ph: x.ph ?? null, note: (x.note || '').slice(0, 200), ...(x.add ? { add: true } : {}) })); if (ex.length) out.extra = ex; }
   return out;
 };

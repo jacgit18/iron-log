@@ -28,6 +28,7 @@ export default function LogSheet({ slotId, idx }) {
   const [rows, setRows] = useState(() => planRows(cfg, logs, it, ph0).map(x => toRow(x, ph0 === 'iso')));
   const [note, setNote] = useState('');
   const [makeDefault, setMakeDefault] = useState(false);
+  const [makeExDefault, setMakeExDefault] = useState(false);
   const [done, setDone] = useState(true);
   const [err, setErr] = useState('');
   const firstRef = useRef(null);
@@ -56,7 +57,7 @@ export default function LogSheet({ slotId, idx }) {
     const entry = { d: date || ymd(today), ph: phv, ...summarizeSets(sets, iso), slot: slotId, wk: st.weekKey() };
     if (note.trim()) entry.n = note.trim();
     const rmVal = rm === '' ? null : Number(rm);
-    if (st.submitLog(slotId, idx, { entry, ph: phv, makeDefault, rm: rmVal, done })) st.closeModal();
+    if (st.submitLog(slotId, idx, { entry, ph: phv, makeDefault, makeExDefault, rm: rmVal, done })) st.closeModal();
   };
 
   return (
@@ -106,6 +107,7 @@ export default function LogSheet({ slotId, idx }) {
         <input type="text" value={note} placeholder="Form, how it felt, equipment" onChange={e => setNote(e.target.value)} />
       </label>
       {!s.experiment && <label className="inline"><input type="checkbox" checked={makeDefault} onChange={e => setMakeDefault(e.target.checked)} /> Make this phase the default for this slot</label>}
+      <label className="inline"><input type="checkbox" checked={makeExDefault} onChange={e => setMakeExDefault(e.target.checked)} /> Make this phase the default for {ex.n} everywhere</label>
       <label className="inline"><input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)} /> {isPaired(s) ? 'Check off this exercise' : 'Check off the card'}</label>
       <div className="actions">
         {last && (

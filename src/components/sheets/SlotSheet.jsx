@@ -12,7 +12,7 @@ function ItemFields({ it, k, type, cfg, onChange }) {
   return (
     <fieldset className="edit-item">
       <legend>{legend}</legend>
-      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} />
+      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} stretch={!!it.ns} onName={nm => up({ nm })} onUrl={nu => up({ nu })} onEq={ne => up({ ne })} onStretch={ns => up({ ns })} />
       <div className="fields">
         <label className="field">Phase
           <select value={it.ph || ''} onChange={e => up({ ph: e.target.value || null })}>
@@ -46,7 +46,7 @@ export default function SlotSheet({ idx }) {
   const setItem = (k, patch) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
   const submit = e => {
     e.preventDefault();
-    const clean = { ...d, note: d.note.trim(), items: d.items.map(it => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim() })) };
+    const clean = { ...d, note: d.note.trim(), items: d.items.map(it => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne || '', ns: !!it.ns })) };
     const msg = st.saveSlot(clean);
     if (msg) setErr(msg);
   };

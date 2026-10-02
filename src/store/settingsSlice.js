@@ -93,7 +93,7 @@ export const settingsSlice = (set, get, flag) => ({
           Object.keys(d.logs).forEach(id => { const have = new Set((get().logs[id] || []).map(entryKey)); d.logs[id] = d.logs[id].filter(e => !have.has(entryKey(e))); });
         }
         const C = d.config; let ch = false; const cfg = structuredClone(get().cfg);
-        ['rm', 'phDef', 'ex', 'muscleMap', 'rxOverride', 'progNames'].forEach(k => {
+        ['rm', 'phDef', 'exPh', 'ex', 'muscleMap', 'rxOverride', 'progNames'].forEach(k => {
           const src = C[k];
           if (src && typeof src === 'object') { cfg[k] = cfg[k] || {}; Object.keys(src).forEach(x => { if (cfg[k][x] == null) { cfg[k][x] = structuredClone(src[x]); ch = true; } }); }
         });

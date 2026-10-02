@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { WARMUP } from '../../lib/data.js';
+import { WARMUP, EQUIPMENT, EQ_KEYS } from '../../lib/data.js';
+import { MUSCLES, M_KEYS, matchesFilter } from '../../lib/muscles.js';
 import { monday, ymd, addDays, fmtShort, fmtDayDate } from '../../lib/dates.js';
 import { weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
@@ -71,6 +72,9 @@ export default function Board() {
   const yCol = todayCol(today) - 1; const todayKey = ymd(today);
   const left = ymd(monday(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
+  const [filter, setFilter] = useState({ muscle: '', eq: '' });
+  const filtering = !!(filter.muscle || filter.eq);
+  const shown = list => (filtering ? list.filter(s => matchesFilter(cfg, s, filter)) : list);
   const [pick, setPick] = useState(null);
   const moveTo = targets.includes(pick) ? pick : targets[0];
   const hideLeftovers = () => { LS.set('hideleftovers', todayKey); forceTips(n => n + 1); };
@@ -180,6 +184,23 @@ export default function Board() {
         </div>
       )}
       <BodyWeightRow key={wk} />
+      <div className="filterbar" role="group" aria-label="Filter exercises">
+        <label className="field">Muscle
+          <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
+            <option value="">All muscles</option>
+            {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
+            <option value="stretch">Stretches</option>
+          </select>
+        </label>
+        <label className="field">Equipment
+          <select value={filter.eq} onChange={e => setFilter(f => ({ ...f, eq: e.target.value }))}>
+            <option value="">All equipment</option>
+            {EQ_KEYS.map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
+          </select>
+        </label>
+        {filtering && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear filter</button>}
+        {filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, filter)).length} of {slots.length} cards</span>}
+      </div>
 
       <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
         const n = { ArrowRight: day + 1, ArrowLeft: day - 1, Home: 1, End: DAYS.length }[e.key]; if (n == null) return;
@@ -209,7 +230,7 @@ export default function Board() {
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
-                  {cols[d].map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                  {shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
                 </>
               ) : <p className="note">Your workouts moved one day later. Untick to put them back.</p>}
             </section>
@@ -220,8 +241,9 @@ export default function Board() {
           const t = tally(list, week);
           const warm = week.warm[pd] || {};
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
-          const open = list.filter(s => isOpen(s, week));
-          const finished = [...list.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...list.filter(s => isSkipped(s, week))];
+          const vis = shown(list);
+          const open = vis.filter(s => isOpen(s, week));
+          const finished = [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))];
           const ft = tally(finished, week);
           return (
             <section
@@ -242,6 +264,7 @@ export default function Board() {
                 <SwapArrows d={d} />
               </div>
               <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => st.setRestDay(d)} /> Rest day</label>
+              <button type="button" className="btn sm addbtn" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Add exercise</button>
               <div className="warm">
                 <span className="tag">Warm-up</span>
                 {WARMUP.map(x => (
@@ -252,6 +275,7 @@ export default function Board() {
                   </label>
                 ))}
               </div>
+              {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
               {open.map((s, i) => {
                 const sec = secOf(s, pd);
                 const newSec = i === 0 || sec !== secOf(open[i - 1], pd);
