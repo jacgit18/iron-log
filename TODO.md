@@ -21,6 +21,7 @@ These change how days and exercises are stored. Do them together so the data str
 - [ ] Add a Day 7 to the board. It starts empty, and exercises can be added whenever.
 - [ ] Add a Rest lane. Dragging any day into it makes that day a rest day and checks it off, even if it has exercises.
   - Decide whether a rest day's exercises count as done in Progress. Recommendation: leave them out so volume numbers aren't inflated.
+- [ ] Add an Experiment board: a standing list of new exercises to try that spans all weeks (not tied to a program's days). Pull an exercise from it into a day when ready. Design it separately after Day 7 and the Rest lane.
 - [ ] Add an exercise to the current day from the board.
 - [ ] Add stretches to the board, as a card type that doesn't need weight or reps.
 - [ ] Add an optional video link to each exercise.
