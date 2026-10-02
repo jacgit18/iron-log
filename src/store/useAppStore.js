@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { BUILTIN, resolveProgram, slotsFor } from '../lib/data.js';
+import { BUILTIN, resolveProgram, slotsFor, padLibrary } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
-  setCardDone, setItemDone, clearDone, isSkipped, isOpen, currentLayout, moveClashes, defaultLogDate, autoLogs,
+  setCardDone, setItemDone, clearDone, isSkipped, isOpen, currentLayout, programDay, shownDay, restBlocked, moveClashes, defaultLogDate, autoLogs,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -196,7 +196,17 @@ export const useAppStore = create((set, get) => ({
     });
     if (ok) flag(skipped ? 'Skipped for this week' : 'Skip undone');
   },
-  setWarm(day, wid, on) { get().mutateWeek(w => { w.warm[day] = w.warm[day] || {}; w.warm[day][wid] = on; }); },
+  setWarm(day, wid, on) {
+    const pd = programDay(get().week.rest, day); if (pd == null) return;
+    get().mutateWeek(w => { w.warm[pd] = w.warm[pd] || {}; w.warm[pd][wid] = on; });
+  },
+  // Tick or untick the rest day. One per week; ticking another day moves it.
+  setRestDay(n) {
+    const w = get().week;
+    if (w.rest !== n && restBlocked(w, get().activeSlots())) { flag('Day 7 has exercises, so there is no room to add a rest day. Move or clear them first.'); return false; }
+    set({ moveNote: null });
+    return get().mutateWeek(x => { if (x.rest === n) delete x.rest; else x.rest = n; });
+  },
   setPhase(slotId, idx, ph) { get().mutateWeek(w => { w.ph[`${slotId}:${idx}`] = ph; }); },
   setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); get().mutateWeek(w => { w.prog = k === auto ? null : k; }); },
   setMode(mode) { get().mutateCfg(c => { c.mode = mode; }); },
@@ -207,18 +217,21 @@ export const useAppStore = create((set, get) => ({
 
   moveSlot(slotId, day) {
     const s = get().slotById(slotId); if (!s) return;
+    const rest = get().week.rest;
+    const pd = programDay(rest, day); // `day` is the displayed day; cards are stored by program day
+    if (pd == null) { flag('That is your rest day'); return; }
     const from = get().week.moved[slotId] || s.day;
-    const ok = get().mutateWeek(w => { if (day === s.day) delete w.moved[slotId]; else w.moved[slotId] = day; });
+    const ok = get().mutateWeek(w => { if (pd === s.day) delete w.moved[slotId]; else w.moved[slotId] = pd; });
     if (!ok) return;
     const { cfg, week } = get();
     const clashes = moveClashes(cfg, week, get().activeSlots(), s, day);
-    set({ moveNote: clashes.length ? { slot: slotId, from, to: day, week: get().weekKey(), lines: clashes } : null });
+    set({ moveNote: clashes.length ? { slot: slotId, from, fromShown: shownDay(rest, from), to: day, week: get().weekKey(), lines: clashes } : null });
     flag(clashes.length ? `Moved to Day ${day} · heads-up` : `Moved to Day ${day}`);
   },
   undoMove() {
     const n = get().moveNote; if (!n || n.week !== get().weekKey()) return;
     const s = get().slotById(n.slot); set({ moveNote: null });
-    if (s && get().mutateWeek(w => { if (n.from === s.day) delete w.moved[n.slot]; else w.moved[n.slot] = n.from; })) flag(`Moved back to Day ${n.from}`);
+    if (s && get().mutateWeek(w => { if (n.from === s.day) delete w.moved[n.slot]; else w.moved[n.slot] = n.from; })) flag(`Moved back to Day ${n.fromShown}`);
   },
   dismissMove: () => set({ moveNote: null }),
 
@@ -472,7 +485,7 @@ export const useAppStore = create((set, get) => ({
         storeMode: 'local',
         cfg: cfgRaw ? { ...structuredClone(DEFAULT_CFG), ...cfgRaw } : state.cfg,
         body: (LS.get('body/main') || {}).entries || [],
-        library: (LS.get('library/main') || {}).items || [],
+        library: padLibrary((LS.get('library/main') || {}).items || []),
         logs,
         programs: { A: resolveProgram('A', LS.get('programs/A')), B: resolveProgram('B', LS.get('programs/B')) },
         ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true },
@@ -493,7 +506,7 @@ export const useAppStore = create((set, get) => ({
     }, () => flag('Couldn’t load body weight. Reload the page.'));
     db.doc('library/main').onSnapshot(s => {
       if (s.metadata.hasPendingWrites) return;
-      set(state => ({ library: s.exists ? [...((s.data() || {}).items || [])] : [], ...markReady('lib')(state) }));
+      set(state => ({ library: s.exists ? padLibrary([...((s.data() || {}).items || [])]) : [], ...markReady('lib')(state) }));
     }, () => flag('Couldn’t load saved programs. Reload the page.'));
     db.doc('config/main').onSnapshot(s => {
       if (s.metadata.hasPendingWrites) return;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo, allExIds } from '../../lib/data.js';
 import { SECTIONS, blankItem } from '../../store/editorSlice.js';
+import { DAYS } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 
 function ItemFields({ it, k, type, exIds, cfg, onChange }) {
@@ -83,7 +84,7 @@ export default function SlotSheet({ idx }) {
         </label>
         <label className="field">Day
           <select value={d.day} onChange={e => setD(x => ({ ...x, day: Number(e.target.value) }))}>
-            {[1, 2, 3, 4, 5, 6].map(x => <option key={x} value={x}>Day {x}</option>)}
+            {DAYS.map(x => <option key={x} value={x}>Day {x}</option>)}
           </select>
         </label>
       </div>

@@ -4,7 +4,7 @@ import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
-  programWeights, bestByPhase, autoLogs,
+  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -198,5 +198,51 @@ describe('check-offs log the planned numbers', () => {
     const logs = { hack: [a('2026-09-01', '2026-08-30'), a('2026-09-08', '2026-09-06'), a('2026-09-15', '2026-09-13')] };
     expect(targetOf(cfg(), logs, { ex: 'hack', ph: 'hyp' }, 'hyp')).toEqual({ w: 270, src: 'last session' });
     expect(stallOf(cfg(), logs, 'hack', 'hyp')).toBeNull();
+  });
+});
+
+describe('rest day layout', () => {
+  const sl = (id, day) => ({ id, day, type: 'single', items: [{ ex: 'hack' }] });
+  const slots = [sl('a', 1), sl('b', 3), sl('c', 6)];
+  const ids = cols => Object.fromEntries(Object.entries(cols).map(([d, l]) => [d, l.map(s => s.id)]));
+
+  it('maps program days to displayed days around the rest position', () => {
+    expect(DAYS).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect([1, 2, 3, 4, 5, 6].map(d => shownDay(3, d))).toEqual([1, 2, 4, 5, 6, 7]);
+    expect(DAYS.map(d => programDay(3, d))).toEqual([1, 2, null, 3, 4, 5, 6]);
+    expect(shownDay(null, 4)).toBe(4);
+    expect(programDay(undefined, 4)).toBe(4);
+  });
+  it('lays the week out with no rest day', () => {
+    expect(ids(currentLayout({ moved: {} }, slots))).toEqual({ 1: ['a'], 2: [], 3: ['b'], 4: [], 5: [], 6: ['c'], 7: [] });
+  });
+  it('inserts an empty rest column and shifts later workouts one day', () => {
+    expect(ids(currentLayout({ moved: {}, rest: 3 }, slots))).toEqual({ 1: ['a'], 2: [], 3: [], 4: ['b'], 5: [], 6: [], 7: ['c'] });
+  });
+  it('with rest on Day 7 a day-7 slot still lands in column 7', () => {
+    expect(ids(currentLayout({ moved: {}, rest: 7 }, [sl('a', 1), sl('d', 7)]))).toEqual({ 1: ['a'], 2: [], 3: [], 4: [], 5: [], 6: [], 7: ['d'] });
+  });
+  it('shifts moved cards too', () => {
+    expect(ids(currentLayout({ moved: { a: 5 }, rest: 3 }, slots))[6]).toEqual(['a']);
+  });
+  it('clamps a card that would fall off the end into the last column instead of losing it', () => {
+    const cols = currentLayout({ moved: {}, rest: 2 }, [...slots, sl('d', 7)]);
+    expect(cols[7].map(s => s.id).sort()).toEqual(['c', 'd']);
+  });
+  it('blocks a rest day when a card sits on program day 7', () => {
+    expect(restBlocked({ moved: {} }, slots)).toBe(false);
+    expect(restBlocked({ moved: {} }, [...slots, sl('d', 7)])).toBe(true);
+    expect(restBlocked({ moved: { c: 7 } }, slots)).toBe(true);
+  });
+  it('titles a day by its position, keeping custom titles', () => {
+    expect(dayTitle({ title: 'Day 4' }, 5)).toBe('Day 5');
+    expect(dayTitle({}, 2)).toBe('Day 2');
+    expect(dayTitle({ title: 'Leg day' }, 2)).toBe('Leg day');
+  });
+  it('normWeek keeps a valid rest day and drops anything else', () => {
+    expect(normWeek({ rest: 3 }).rest).toBe(3);
+    expect(normWeek({ rest: '3' }).rest).toBe(3);
+    ['x', 0, 8, null, undefined, 2.5].forEach(v => expect(normWeek({ rest: v })).not.toHaveProperty('rest'));
+    expect(normWeek(null)).not.toHaveProperty('rest');
   });
 });

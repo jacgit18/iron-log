@@ -1,6 +1,6 @@
 /* ---------- Muscle map ---------- */
 import { slotsFor } from './data.js';
-import { phaseOf, rxOf } from './logic.js';
+import { phaseOf, rxOf, shownDay } from './logic.js';
 
 export const MUSCLES = {
   traps: { n: 'Traps' }, frontdelt: { n: 'Front delts' }, sidedelt: { n: 'Side delts' }, reardelt: { n: 'Rear delts' },
@@ -75,7 +75,7 @@ export function muscleVolume(cfg, week, prog, live, withSecondary) {
     const tg = tagsOf(cfg, it.ex); if (!tg) { untagged.add(it.ex); return; } if (tg.mob) return;
     const ph = live ? phaseOf(cfg, week, sl, idx) : (cfg.phDef[`${sl.id}:${idx}`] ?? it.ph ?? null);
     const m = rxOf(cfg, it, ph).match(/(\d+)\s*×/); const sets = (m ? Number(m[1]) : 3) * (sl.type === 'either' ? 0.5 : 1);
-    const day = (live && week.moved[sl.id]) || sl.day;
+    const day = live ? shownDay(week.rest, week.moved[sl.id] || sl.day) : sl.day;
     (withSecondary ? [['p', 1], ['s', 0.5]] : [['p', 1]]).forEach(([k, f]) => (tg[k] || []).forEach(mu => {
       if (!vol[mu]) return;
       vol[mu].sets += sets * f; vol[mu].ex.push({ ex: it.ex, role: k, day, sets, either: sl.type === 'either' });

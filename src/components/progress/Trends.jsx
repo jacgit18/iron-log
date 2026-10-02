@@ -1,5 +1,5 @@
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, exInfo } from '../../lib/data.js';
+import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { ymd, parseDate, addDays, fmtShort } from '../../lib/dates.js';
 import { MUSCLES, M_KEYS, level, fmtSets } from '../../lib/muscles.js';
 import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, niceStep, mdLabel } from '../../lib/trends.js';
@@ -27,7 +27,7 @@ function KpiTiles({ keys, byWeek, changes }) {
   }
   return (
     <div className="kpis">
-      <Kpi label="This week" value={<>{r.ex}<small> of {r.total}</small></>} sub={`exercises done · ${r.full} of 6 days${r.skipped ? ` · ${r.skipped} skipped` : ''}`} />
+      <Kpi label="This week" value={<>{r.ex}<small> of {r.total}</small></>} sub={`exercises done · ${r.full} of ${DAY_COUNT} days${r.skipped ? ` · ${r.skipped} skipped` : ''}`} />
       <Kpi label="Sets, last 4 weeks" value={fmtSets(s4)} sub={prev == null ? 'A comparison with the previous 4 weeks starts after 8 weeks of logs' : `${signed(s4 - prev)} vs the 4 weeks before`} />
       <Kpi label="Lifts going up" value={changes.length ? <>{up}<small> of {changes.length}</small></> : '—'} sub={changes.length ? 'heavier now than at the start of the last 8 weeks' : 'Log a lift with weight on two days to track it'} />
       {bw && <Kpi label="Body weight" value={<>{fmtLb(bw.last.w)}<small> lb</small></>} sub={bw.diff == null ? `Logged ${fmtShort(parseDate(bw.last.d))}` : `${signed(bw.diff, 1)} lb since ${fmtShort(parseDate(bw.base.d))}`} />}

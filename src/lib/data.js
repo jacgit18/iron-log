@@ -6,6 +6,15 @@ export const PHASES = {
   exp: { label: 'Explosive', rx: '3 × 10', pct: 45 },
 };
 export const PH_KEYS = Object.keys(PHASES);
+export const DAY_COUNT = 7;
+// Programs saved before Day 7 existed have 6 days; they get an empty seventh.
+export const hasValidDays = p => !!p && Array.isArray(p.days) && p.days.length >= 6 && p.days.length <= DAY_COUNT;
+export function withAllDays(prog) {
+  const days = prog.days.slice();
+  while (days.length < DAY_COUNT) days.push({ title: `Day ${days.length + 1}`, slots: [] });
+  return { ...prog, days };
+}
+export const padLibrary = items => items.map(it => (it && hasValidDays(it.prog) ? { ...it, prog: withAllDays(it.prog) } : it));
 
 export const EX = {
   latpd: { n: 'Lat Pulldown, alternating single-arm' },
@@ -197,6 +206,7 @@ const PROGRAM_B = {
 export const WARMUP = [{ id: 'shadow', n: 'Shadow box', rx: 'as you feel' }, { id: 'sled', n: 'Sled push → lateral pull', rx: '1 × 3, explosive' }];
 
 PROGRAM_A.key = 'A'; PROGRAM_B.key = 'B';
+[PROGRAM_A, PROGRAM_B].forEach(p => { p.days = withAllDays(p).days; });
 [PROGRAM_A, PROGRAM_B].forEach(p => p.days.forEach((d, di) => d.slots.forEach((sl, si) => { sl.id = `${p.key}-d${di + 1}s${si + 1}`; })));
 export const BUILTIN = { A: PROGRAM_A, B: PROGRAM_B };
 
@@ -207,6 +217,6 @@ export function slotsFor(prog) {
 }
 
 // A saved/edited program only replaces the built-in one when it has the right shape.
-export function resolveProgram(k, data) { return (data && Array.isArray(data.days) && data.days.length === 6) ? { ...structuredClone(data), key: k } : BUILTIN[k]; }
+export function resolveProgram(k, data) { return hasValidDays(data) ? withAllDays({ ...structuredClone(data), key: k }) : BUILTIN[k]; }
 export const exInfo = (cfg, id) => EX[id] || (cfg.ex && cfg.ex[id]) || { n: id };
 export const allExIds = cfg => [...new Set([...Object.keys(EX), ...Object.keys(cfg.ex || {})])];

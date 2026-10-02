@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { WARMUP, slotsFor } from '../../lib/data.js';
 import { monday, ymd, addDays, fmtShort } from '../../lib/dates.js';
-import { tally, currentLayout, isOpen, isSkipped, programFor, progName } from '../../lib/logic.js';
+import { tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, programDay, dayTitle } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
@@ -35,6 +35,7 @@ export default function Board() {
   const prog = programs[progKey] || programs.A;
   const slots = slotsFor(prog);
   const cols = currentLayout(week, slots);
+  const rest = week.rest || null;
   const { total, done, skipped: skippedN } = tally(slots, week);
   const pct = total ? Math.round(done / total * 100) : 0;
   const wk = ymd(weekStart);
@@ -42,7 +43,7 @@ export default function Board() {
 
   // Phones show one day; default to the first day that still has open work.
   let day = mDay;
-  if (day == null) { day = 1; for (let d = 1; d <= 6; d++) { if (cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
+  if (day == null) { day = DAYS.find(d => d !== rest); for (const d of DAYS) { if (d !== rest && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
 
   const [, forceTips] = useState(0);
   const hideTip = k => { LS.set(k, 1); forceTips(n => n + 1); };
@@ -66,7 +67,7 @@ export default function Board() {
     const s0 = swipe.current; swipe.current = null;
     if (!s0 || !window.matchMedia('(max-width:700px)').matches) return;
     const dx = e.changedTouches[0].clientX - s0.x, dy = e.changedTouches[0].clientY - s0.y;
-    if (Math.abs(dx) > 70 && Math.abs(dy) < 45) { const n = Math.min(6, Math.max(1, day + (dx < 0 ? 1 : -1))); if (n !== day) st.setMDay(n); }
+    if (Math.abs(dx) > 70 && Math.abs(dy) < 45) { const n = Math.min(DAYS.length, Math.max(1, day + (dx < 0 ? 1 : -1))); if (n !== day) st.setMDay(n); }
   };
 
   const auto = programFor(cfg, weekStart);
@@ -127,7 +128,7 @@ export default function Board() {
         <div className="notice movewarn" role="status" ref={moveRef}>
           <div><b>Heads-up:</b> {moveNote.lines.join(' ')}</div>
           <div className="actions">
-            <button type="button" className="btn sm" onClick={st.undoMove}>Move back to Day {moveNote.from}</button>
+            <button type="button" className="btn sm" onClick={st.undoMove}>Move back to Day {moveNote.fromShown}</button>
             <button type="button" className="btn sm ghost" onClick={st.dismissMove}>Keep it</button>
           </div>
         </div>
@@ -135,28 +136,42 @@ export default function Board() {
       <BodyWeightRow key={wk} />
 
       <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
-        const n = { ArrowRight: day + 1, ArrowLeft: day - 1, Home: 1, End: 6 }[e.key]; if (n == null) return;
-        e.preventDefault(); const d = ((n - 1 + 6) % 6) + 1; st.setMDay(d); document.getElementById(`daytab-${d}`).focus();
+        const n = { ArrowRight: day + 1, ArrowLeft: day - 1, Home: 1, End: DAYS.length }[e.key]; if (n == null) return;
+        e.preventDefault(); const d = ((n - 1 + DAYS.length) % DAYS.length) + 1; st.setMDay(d); document.getElementById(`daytab-${d}`).focus();
       }}>
-        {[1, 2, 3, 4, 5, 6].map(d => {
-          const t = tally(cols[d], week);
+        {DAYS.map(d => {
+          const t = tally(cols[d], week); const isRest = d === rest;
+          const short = isRest ? 'Rest' : t.full ? '✓' : `${t.done}/${t.total}`;
           return (
             <button type="button" role="tab" key={d} id={`daytab-${d}`} aria-selected={d === day} aria-controls={`col-${d}`} tabIndex={d === day ? 0 : -1}
               // The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
-              className={t.full ? 'full' : ''} aria-label={`D${d} ${t.full ? '✓' : `${t.done}/${t.total}`}: Day ${d}, ${t.full ? 'all done' : `${t.done} of ${t.total} done`}`}
+              className={isRest || t.full ? 'full' : ''} aria-label={`D${d} ${short}: Day ${d}, ${isRest ? 'rest day' : t.full ? 'all done' : `${t.done} of ${t.total} done`}`}
               onClick={() => { st.setMDay(d); window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' }); }}>
-              <b aria-hidden="true">D{d}</b>{' '}<span aria-hidden="true">{t.full ? '✓' : `${t.done}/${t.total}`}</span>
+              <b aria-hidden="true">D{d}</b>{' '}<span aria-hidden="true">{short}</span>
             </button>
           );
         })}
       </div>
 
       <div className="board">
-        {[1, 2, 3, 4, 5, 6].map(d => {
-          const dayDef = prog.days[d - 1];
+        {DAYS.map(d => {
+          const pd = programDay(rest, d); // the program day shown here; null for the rest day
+          if (pd == null) return (
+            <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}`}>
+              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div></div></div>
+              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => st.setRestDay(d)} /> Rest day</label>
+              {cols[d].length > 0 ? (
+                <>
+                  <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
+                  {cols[d].map(s => <Card key={s.id} s={s} curDay={d} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                </>
+              ) : <p className="note">Your workouts moved one day later. Untick to put them back.</p>}
+            </section>
+          );
+          const dayDef = prog.days[pd - 1];
           const list = cols[d];
           const t = tally(list, week);
-          const warm = week.warm[d] || {};
+          const warm = week.warm[pd] || {};
           const pending = dayDef.makeup ? slots.filter(s => s.day < 5 && (week.moved[s.id] || s.day) < 5 && isOpen(s, week)).length : 0;
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const open = list.filter(s => isOpen(s, week));
@@ -173,11 +188,12 @@ export default function Board() {
                 <input type="checkbox" className="chk" id={`day-${d}`} checked={t.full} aria-label={`Mark all of Day ${d} done`}
                   onChange={e => st.checkDay(d, e.target.checked)} />
                 <div>
-                  <h3 id={`colh-${d}`}>{dayDef.title}</h3>
+                  <h3 id={`colh-${d}`}>{dayTitle(dayDef, d)}</h3>
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                 </div>
                 <span className="count">{t.done}/{t.total}</span>
               </div>
+              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => st.setRestDay(d)} /> Rest day</label>
               <div className="warm">
                 <span className="tag">Warm-up</span>
                 {WARMUP.map(x => (
@@ -195,8 +211,8 @@ export default function Board() {
                 </div>
               )}
               {open.map((s, i) => {
-                const sec = secOf(s, d);
-                const newSec = i === 0 || sec !== secOf(open[i - 1], d);
+                const sec = secOf(s, pd);
+                const newSec = i === 0 || sec !== secOf(open[i - 1], pd);
                 return (
                   <Fragment key={s.id}>
                     {newSec && <div className="sect">{sec}</div>}

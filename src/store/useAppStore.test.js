@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { mem, clearStorage, saved } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, DEFAULT_CFG;
+let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout;
 const st = () => useAppStore.getState();
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
   ({ BUILTIN } = await import('../lib/data.js'));
-  ({ DEFAULT_CFG } = await import('../lib/logic.js'));
+  ({ DEFAULT_CFG, currentLayout } = await import('../lib/logic.js'));
   await st().init();
 });
 beforeEach(() => {
@@ -82,5 +82,55 @@ describe('erase data', () => {
     expect(Object.keys(mem).filter(k => /^ironlog:(logs|weeks|programs)\//.test(k))).toEqual([]);
     expect(saved('body/main').entries).toEqual([]);
     expect(s.saveFlag).toBe('Data erased');
+  });
+});
+
+// Program A: A-d1s1 is on Day 1, A-d3s1 (Hack Squat) on Day 3; Day 7 is empty.
+describe('rest day', () => {
+  const ids = d => currentLayout(st().week, st().activeSlots())[d].map(s => s.id);
+
+  it('shifts later workouts one day, saves the week, and clears on a second tick', () => {
+    expect(st().setRestDay(3)).toBe(true);
+    expect(st().week.rest).toBe(3);
+    expect(saved('weeks/' + st().weekKey()).rest).toBe(3);
+    expect(ids(3)).toEqual([]);
+    expect(ids(4)).toContain('A-d3s1');
+    expect(st().setRestDay(3)).toBe(true);
+    expect(st().week.rest).toBeUndefined();
+    expect(ids(3)).toContain('A-d3s1');
+  });
+  it('moves the rest day when another day is ticked', () => {
+    st().setRestDay(3); st().setRestDay(2);
+    expect(st().week.rest).toBe(2);
+  });
+  it('is blocked, with a message, when Day 7 has exercises', () => {
+    st().mutateWeek(w => { w.moved['A-d3s1'] = 7; });
+    expect(st().setRestDay(2)).toBe(false);
+    expect(st().week.rest).toBeUndefined();
+  });
+  it('moves a card to the program day behind a displayed day', () => {
+    st().setRestDay(3);
+    st().moveSlot('A-d1s1', 5); // displayed Day 5 is program Day 4
+    expect(st().week.moved['A-d1s1']).toBe(4);
+    expect(ids(5)).toContain('A-d1s1');
+    st().undoMove();
+    expect(st().week.moved['A-d1s1']).toBeUndefined();
+  });
+  it('refuses to move a card onto the rest day', () => {
+    st().setRestDay(3);
+    st().moveSlot('A-d1s1', 3);
+    expect(st().week.moved['A-d1s1']).toBeUndefined();
+  });
+  it('keeps a warm-up tick with its workout when the rest day is toggled', () => {
+    st().setRestDay(3);
+    st().setWarm(4, 'shadow', true); // displayed Day 4 is program Day 3
+    expect(st().week.warm[3]).toEqual({ shadow: true });
+    st().setRestDay(3);
+    expect(st().week.warm[3].shadow).toBe(true);
+  });
+  it('checks off a displayed day', () => {
+    st().setRestDay(3);
+    st().checkDay(4, true); // displayed Day 4 holds program Day 3
+    expect(st().week.done['A-d3s1']).toBe(true);
   });
 });

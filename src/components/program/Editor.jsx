@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, BUILTIN, exInfo } from '../../lib/data.js';
-import { progName } from '../../lib/logic.js';
+import { progName, DAYS } from '../../lib/logic.js';
 import { sameProg, libDate } from '../../lib/export.js';
 import { MON } from '../../lib/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
@@ -111,7 +111,7 @@ export default function Editor() {
           {lib && <button type="button" className="on" aria-pressed="true">{item.name}</button>}
         </div>
         <div className="seg" role="group" aria-label="Day to edit">
-          {[1, 2, 3, 4, 5, 6].map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}</button>)}
+          {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}</button>)}
         </div>
       </div>
       {lib ? (

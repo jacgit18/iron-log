@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { PHASES, exInfo } from '../../lib/data.js';
+import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { monday, ymd, parseDate, addDays, fmtShort } from '../../lib/dates.js';
 import { describe, lastLog, stallOf } from '../../lib/logic.js';
 import { WEEK_RE, weekSummary } from '../../lib/trends.js';
@@ -29,17 +29,17 @@ function History() {
     <section className="panel hist-panel">
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <h2>Weekly history</h2>
-        {mean && <span className="note">Average {mean} of 6 days completed over {past.length} past week{past.length > 1 ? 's' : ''}</span>}
+        {mean && <span className="note">Average {mean} of {DAY_COUNT} days completed over {past.length} past week{past.length > 1 ? 's' : ''}</span>}
       </div>
       <div className="weeks">
         {rows.map(r => (
           <div className="wkrow" key={r.key}>
             <span className="wkdate">{fmtShort(r.start)}{r.key === thisSun && <> <small>this week</small></>}</span>
             <span className="pill">{r.pk}</span>
-            <span className="cells" role="img" aria-label={`${r.full} of 6 days complete: ${r.days.map((x, i) => `day ${i + 1} ${x === 2 ? 'complete' : x === 1 ? 'partly done' : 'not started'}`).join(', ')}`}>
+            <span className="cells" role="img" aria-label={`${r.full} of ${DAY_COUNT} days complete: ${r.days.map((x, i) => `day ${i + 1} ${x === 2 ? 'complete' : x === 1 ? 'partly done' : 'not started'}`).join(', ')}`}>
               {r.days.map((x, i) => <i key={i} className={`c${x}`} />)}
             </span>
-            <span className="wknum"><b>{r.full}</b>/6 days · {r.ex}/{r.total}</span>
+            <span className="wknum"><b>{r.full}</b>/{DAY_COUNT} days · {r.ex}/{r.total}</span>
           </div>
         ))}
       </div>

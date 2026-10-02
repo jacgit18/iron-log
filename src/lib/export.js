@@ -1,8 +1,8 @@
 /* ---------- CSV / Excel export, full data file, GitHub backup helpers ----------
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
-import { PHASES, PH_KEYS, BUILTIN, slotsFor, exInfo } from './data.js';
+import { PHASES, PH_KEYS, BUILTIN, slotsFor, exInfo, hasValidDays, withAllDays, DAY_COUNT } from './data.js';
 import { ymd, fmtShort } from './dates.js';
-import { setsOfEntry, setVal, rxOf, isItemDone, normWeek, progName, AUTO_NOTE } from './logic.js';
+import { setsOfEntry, setVal, rxOf, isItemDone, normWeek, shownDay, progName, AUTO_NOTE } from './logic.js';
 
 const noteOf = e => e.n || (e.auto ? AUTO_NOTE : '');
 import { MUSCLES, tagsOf, muscleNames } from './muscles.js';
@@ -102,6 +102,7 @@ export function checkRows(weeks) {
   Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => {
     const w = normWeek(weeks[k]);
     if (w.prog) rows.push([k, 'prog', '', w.prog]);
+    if (w.rest) rows.push([k, 'rest', '', w.rest]);
     ['done', 'skipped'].forEach(kind => Object.keys(w[kind]).forEach(id => { if (w[kind][id]) rows.push([k, kind, id, 'Yes']); }));
     Object.entries(w.moved).forEach(([id, day]) => rows.push([k, 'moved', id, day]));
     Object.entries(w.ph).forEach(([id, ph]) => rows.push([k, 'phase', id, ph]));
@@ -127,14 +128,14 @@ export function buildWeekWorkbook(X, S, key, w) {
   const slots = slotsFor(programs[r.pk] || programs.A);
   const n = sessionRows(S, e => entryWeek(e) === key);
   X.utils.book_append_sheet(wb, sheet(X, [
-    ['Week of', key], ['Program', r.pk], ['Days complete', `${r.full} of 6`], ['Exercises done', `${r.ex} of ${r.total}`], ['Skipped', r.skipped], ['Sessions logged', n.length - 1],
+    ['Week of', key], ['Program', r.pk], ['Days complete', `${r.full} of ${DAY_COUNT}`], ['Exercises done', `${r.ex} of ${r.total}`], ['Skipped', r.skipped], ['Sessions logged', n.length - 1],
   ], [18, 14]), 'Summary');
   const plan = [['Planned day', 'Done on day', 'Section', 'Tier', 'Type', 'Exercise', 'Phase', 'Sets × reps', 'Program weight (lb)', 'Done']];
   const nw = normWeek(w);
   slots.forEach(s => s.items.forEach((it, idx) => {
     const ph = (w.ph && w.ph[`${s.id}:${idx}`]) ?? cfg.phDef[`${s.id}:${idx}`] ?? it.ph ?? null;
     const moved = w.moved && w.moved[s.id];
-    plan.push([s.day, moved || s.day, s.sec || '', s.tier || '', s.type === 'single' ? '' : s.type, exInfo(cfg, it.ex).n, phaseLabel(ph), rxOf(cfg, it, ph), it.w ?? (it.bw ? 'BW' : ''), (w.skipped && w.skipped[s.id]) ? 'Skipped' : isItemDone(s, idx, nw) ? 'Yes' : 'No']);
+    plan.push([shownDay(nw.rest, s.day), shownDay(nw.rest, moved || s.day), s.sec || '', s.tier || '', s.type === 'single' ? '' : s.type, exInfo(cfg, it.ex).n, phaseLabel(ph), rxOf(cfg, it, ph), it.w ?? (it.bw ? 'BW' : ''), (w.skipped && w.skipped[s.id]) ? 'Skipped' : isItemDone(s, idx, nw) ? 'Yes' : 'No']);
   }));
   X.utils.book_append_sheet(wb, sheet(X, plan, [11, 11, 11, 10, 9, 34, 13, 16, 18, 6]), 'Plan');
   X.utils.book_append_sheet(wb, sheet(X, n, SESSION_COLS), 'Logged');
@@ -151,7 +152,7 @@ export const DATA_FORMAT = 1;
 export function utf8b64(s) { const b = new TextEncoder().encode(s); let bin = ''; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); }
 export function buildDataFile(S, weeks) {
   const { cfg, logs, programs, library, body } = S; const W = {};
-  Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
+  Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || w.rest || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
   const P = {}; ['A', 'B'].forEach(k => { if (programs[k] !== BUILTIN[k]) P[k] = progBody(programs[k]); });
   const L = {}; Object.keys(logs).sort().forEach(id => { if (logs[id] && logs[id].length) L[id] = logs[id]; });
   return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body) };
@@ -171,8 +172,8 @@ export function parseDataFile(text) {
 export function normalizeData(d) {
   const out = { exportedAt: d.exportedAt, config: (d.config && typeof d.config === 'object') ? d.config : {}, programs: {}, library: [], logs: {}, weeks: {}, body: [] };
   (Array.isArray(d.body) ? d.body : []).forEach(e => { if (e && WEEK_RE.test(e.wk) && typeof e.d === 'string' && Number(e.w) > 0 && !out.body.some(x => x.wk === e.wk)) out.body.push({ wk: e.wk, d: e.d, w: Number(e.w) }); });
-  ['A', 'B'].forEach(k => { const p = d.programs && d.programs[k]; if (p && Array.isArray(p.days) && p.days.length === 6) out.programs[k] = p; });
-  (Array.isArray(d.library) ? d.library : []).forEach(it => { if (it && it.id && it.prog && Array.isArray(it.prog.days) && it.prog.days.length === 6) out.library.push(it); });
+  ['A', 'B'].forEach(k => { const p = d.programs && d.programs[k]; if (hasValidDays(p)) out.programs[k] = withAllDays(p); });
+  (Array.isArray(d.library) ? d.library : []).forEach(it => { if (it && it.id && hasValidDays(it.prog)) out.library.push({ ...it, prog: withAllDays(it.prog) }); });
   Object.entries(d.logs || {}).forEach(([id, l]) => { if (/^[\w.~:@+-]{1,200}$/.test(id) && Array.isArray(l)) { const ok = l.filter(e => e && typeof e.d === 'string'); if (ok.length) out.logs[id] = ok; } });
   Object.entries(d.weeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k) && w && typeof w === 'object') out.weeks[k] = normWeek(w); });
   return out;
@@ -183,6 +184,7 @@ export function mergeEntries(a, b) { const seen = new Set(a.map(sameKey)); const
 export function mergeWeek(a, b) {
   const w = normWeek(a); const o = normWeek(b);
   w.prog = w.prog || o.prog;
+  if (!w.rest && o.rest) w.rest = o.rest;
   ['moved', 'ph'].forEach(k => { w[k] = { ...o[k], ...w[k] }; });
   Object.keys(o.warm).forEach(d => { w.warm[d] = { ...o.warm[d], ...(w.warm[d] || {}) }; });
   w.done = { ...o.done, ...w.done }; w.skipped = { ...o.skipped, ...w.skipped }; Object.keys(w.done).forEach(id => delete w.skipped[id]);
@@ -197,7 +199,7 @@ function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h
 export function weekFingerprint(S, key, w) {
   const { cfg, logs, programs } = S;
   const L = Object.keys(logs).sort().map(id => [id, (logs[id] || []).filter(e => entryWeek(e) === key)]);
-  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, L, programs[weekSummary(cfg, programs, key, w).pk]]));
+  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, normWeek(w).rest, L, programs[weekSummary(cfg, programs, key, w).pk]]));
 }
 export function backupError(e) {
   const c = e && e.code;
