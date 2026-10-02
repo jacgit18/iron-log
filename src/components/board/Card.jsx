@@ -52,15 +52,15 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
         return (
           <Fragment key={idx}>
             {idx > 0 && s.type === 'either' && <div className="or">or</div>}
-            <div className={`ex${idone ? ' idone' : ''}`}>
+            <div className={`ex${idone ? ' idone' : ''}${ex.eq && EQUIPMENT[ex.eq] ? ' haseq' : ''}`}>
+              {ex.eq && EQUIPMENT[ex.eq] && <span className="tag exeq">{EQUIPMENT[ex.eq]}</span>}
               <div className="exname">
                 {paired && (
                   <input type="checkbox" className="chk" id={`chk-${s.id}-${idx}`} checked={idone} aria-label={`Mark ${ex.n} done`}
                     onChange={e => checkItem(s.id, idx, e.target.checked)} />
                 )}
                 <h4 className="exh" id={`h-${s.id}-${idx}`}>{s.type === 'superset' ? (idx === 0 ? 'A · ' : 'B · ') : ''}{ex.n}</h4>
-                {stretch && <span className="tag">Stretch</span>}
-                {ex.eq && EQUIPMENT[ex.eq] && <span className="tag">{EQUIPMENT[ex.eq]}</span>}
+                {stretch && <span className="tag exstretch">Stretch</span>}
                 {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`Video: ${ex.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>video</a>}
                 <button type="button" className="btn sm ghost" id={`det-${s.id}-${idx}`} aria-label={`Details: ${ex.n}`} onClick={() => openModal({ type: 'exercise', exId: it.ex })}>Details</button>
               </div>
