@@ -37,9 +37,25 @@ describe('checking off on the board', () => {
     st().submitLog('A-d3s1', 0, { entry: { d: wk, ph: 'hyp', w: 275, s: 4, r: 12, slot: 'A-d3s1', wk }, ph: 'hyp', done: true });
     expect(st().logs.hack).toEqual([expect.objectContaining({ w: 275, r: 12 })]);
     expect(st().logs.hack[0].auto).toBeUndefined();
-    // Unchecking now leaves what you logged alone.
+    // Unchecking removes what you logged for the card this week too.
     st().checkCard('A-d3s1', false);
-    expect(st().logs.hack).toHaveLength(1);
+    expect(st().logs.hack).toEqual([]);
+    expect(st().uncheckNote.text).toMatch(/removed 1 logged entry/);
+  });
+
+  it('unchecking leaves entries from other weeks and other cards alone, and skipping keeps what you logged', () => {
+    const wk = st().weekKey();
+    const old = { d: '2026-01-04', ph: 'hyp', w: 250, s: 4, r: 12, slot: 'A-d3s1', wk: '2026-01-04' };
+    useAppStore.setState({ logs: { hack: [old] } });
+    st().submitLog('A-d3s1', 0, { entry: { d: wk, ph: 'hyp', w: 275, s: 4, r: 12, slot: 'A-d3s1', wk }, ph: 'hyp', done: true });
+    st().submitLog('A-d1s1', 0, { entry: { d: wk, ph: 'hyp', w: 45, s: 4, r: 12, slot: 'A-d1s1', wk }, ph: 'hyp', done: true });
+    st().skipCard('A-d3s1'); // skipping isn't unchecking
+    expect(st().logs.hack).toHaveLength(2);
+    st().skipCard('A-d3s1'); // undo the skip
+    st().checkCard('A-d3s1', true);
+    st().checkCard('A-d3s1', false);
+    expect(st().logs.hack).toEqual([old]);
+    expect(st().logs.latpd).toHaveLength(1); // the other card's log is untouched
   });
 
   it('checking a whole day logs every card on it, and skipping a card removes its entry', () => {
@@ -611,5 +627,37 @@ describe('lift weight goal', () => {
     st().setLiftGoal('hack', 'hyp', '300');
     st().submitLog('A-d3s1', 0, { entry: { d: wk, ph: 'hyp', w: 305, s: 4, r: 10, slot: 'A-d3s1', wk }, ph: 'hyp', done: true });
     expect(st().saveFlag).toMatch(/^Goal reached: 300 lb on .* \(Hypertrophy\)/);
+  });
+});
+
+describe('undoing an uncheck', () => {
+  const logIt = () => { const wk = st().weekKey(); st().submitLog('A-d3s1', 0, { entry: { d: wk, ph: 'hyp', w: 275, s: 4, r: 12, slot: 'A-d3s1', wk }, ph: 'hyp', done: true }); };
+  it('puts back the entries and the tick', () => {
+    logIt();
+    st().checkCard('A-d3s1', false);
+    expect(st().logs.hack).toEqual([]);
+    st().undoUncheck();
+    expect(st().logs.hack).toEqual([expect.objectContaining({ w: 275, r: 12 })]);
+    expect(st().week.done['A-d3s1']).toBe(true);
+    expect(st().uncheckNote).toBeNull();
+    expect(saved('logs/hack').entries).toHaveLength(1);
+  });
+  it('does not duplicate an entry or drop one logged in between', () => {
+    logIt();
+    st().checkCard('A-d3s1', false);
+    const wk = st().weekKey();
+    st().addEntry('A-d3s1', 0, { d: wk, ph: 'hyp', w: 280, s: 3, r: 10, slot: 'A-d3s1', wk });
+    st().undoUncheck();
+    expect(st().logs.hack.map(e => e.w).sort()).toEqual([275, 280]);
+    st().undoUncheck(); // nothing left to undo
+    expect(st().logs.hack).toHaveLength(2);
+  });
+  it('only offers undo when something you logged was removed, and a new check-off replaces the offer', () => {
+    st().checkCard('A-d3s1', true); st().checkCard('A-d3s1', false); // check-off entry only
+    expect(st().uncheckNote).toBeNull();
+    logIt(); st().checkCard('A-d3s1', false);
+    expect(st().uncheckNote).not.toBeNull();
+    st().checkCard('A-d1s1', true);
+    expect(st().uncheckNote).toBeNull();
   });
 });

@@ -254,7 +254,8 @@ export function dayDate(cards, logs, wk) {
   cards.forEach(s => s.items.forEach(it => (logs[it.ex] || []).forEach(e => { if (e.slot === s.id && e.d && weekOfEntry(e) === wk && (!first || e.d < first)) first = e.d; })));
   return first;
 }
-export function autoLogs(cfg, logs, slots, before, after, wk, date) {
+// removeLogged: unticking also removes what you logged yourself for the card this week (the checkboxes do; skipping doesn't).
+export function autoLogs(cfg, logs, slots, before, after, wk, date, { removeLogged = false } = {}) {
   const out = {};
   slots.forEach(s => s.items.forEach((it, i) => {
     const was = isItemDone(s, i, before), now = isItemDone(s, i, after);
@@ -267,7 +268,7 @@ export function autoLogs(cfg, logs, slots, before, after, wk, date) {
       const e = { d: date, ph, ...summarizeSets(planRows(cfg, logs, it, ph), isTimed(ph)), slot: s.id, wk, auto: true };
       out[it.ex] = [...L, e].sort((a, b) => a.d.localeCompare(b.d));
     } else {
-      const keep = L.filter(e => !(e.auto && here(e)));
+      const keep = L.filter(e => !((removeLogged || e.auto) && here(e)));
       if (keep.length !== L.length) out[it.ex] = keep;
     }
   }));
