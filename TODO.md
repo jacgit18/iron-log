@@ -34,6 +34,7 @@ These change how days and exercises are stored. Do them together so the data str
 - [ ] Add Google login. Each user's data is tied to their account.
 - [ ] Keep it offline-first for gym use: queue saves and sync them later, building on `makeSaveQueue`.
 - [ ] Add a one-time "upload my existing data" step so data already on the phone isn't lost.
+- [ ] Possibly exercise catalog what api to use any free options
 
 ## 4. Remove the stand-in features (only once the backend is working)
 
