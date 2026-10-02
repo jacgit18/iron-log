@@ -9,7 +9,7 @@ export default function DayAddSheet({ col, stretch: asStretch = false }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const [d, setD] = useState({ name: '', nu: '', ne: '', ns: asStretch, ph: 'strength', note: '' });
-  const [scope, setScope] = useState('week');
+  const [scope, setScope] = useState('program');
   const [err, setErr] = useState('');
   const up = patch => setD(x => ({ ...x, ...patch }));
   const known = findExId(cfg, d.name);
@@ -20,8 +20,8 @@ export default function DayAddSheet({ col, stretch: asStretch = false }) {
       <h2 className="cond">{asStretch ? 'Add a stretch' : 'Add an exercise'} to Day {col}</h2>
       <fieldset className="edit-item">
         <legend>Add it to</legend>
-        <label className="inline"><input type="radio" name="add-scope" checked={scope === 'week'} onChange={() => setScope('week')} /> This week only</label>
         <label className="inline"><input type="radio" name="add-scope" checked={scope === 'program'} onChange={() => setScope('program')} /> Every week (this day in the program)</label>
+        <label className="inline"><input type="radio" name="add-scope" checked={scope === 'week'} onChange={() => setScope('week')} /> This week only</label>
       </fieldset>
       <ExerciseField cfg={cfg} id="day-ex" name={d.name} url={d.nu} eq={d.ne} stretch={d.ns} onName={name => up({ name })} onUrl={nu => up({ nu })} onEq={ne => up({ ne })} onStretch={ns => up({ ns })} />
       {!isStretch && (
