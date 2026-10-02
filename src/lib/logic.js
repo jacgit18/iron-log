@@ -1,4 +1,4 @@
-import { PHASES, PH_KEYS, exInfo, DAY_COUNT } from './data.js';
+import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
 import { monday, ymd, parseDate, addDays } from './dates.js';
 
 /* ---------- Config defaults ---------- */
@@ -175,6 +175,12 @@ export function currentLayout(week, slots) {
   return cols;
 }
 
+/* ---------- Experiment cards (week.extra) ---------- */
+const isExtra = x => !!x && typeof x.id === 'string' && /^X-[\w-]{1,60}$/.test(x.id) && Number.isInteger(x.day) && x.day >= 1 && x.day <= DAY_COUNT && typeof x.ex === 'string' && x.ex !== '' && (x.ph == null || PH_KEYS.includes(x.ph)) && (x.note == null || typeof x.note === 'string');
+export const extraSlots = w => (w.extra || []).map(x => ({ id: x.id, day: x.day, type: 'single', sec: 'Experiment', experiment: true, items: [{ ex: x.ex, ph: x.ph }], ...(x.note ? { note: x.note } : {}) }));
+// The week's cards: the program's, then the experiment cards added to this week.
+export const weekSlots = (prog, w) => [...slotsFor(prog), ...extraSlots(normWeek(w))];
+
 // Same exercise already on the target day, the day before, or the day after (skipped cards don't count).
 export function moveClashes(cfg, week, slots, s, day) {
   const cols = currentLayout(week, slots); const out = [];
@@ -269,5 +275,6 @@ export const normWeek = w => {
   if (Number.isInteger(rest) && rest >= 1 && rest <= DAY_COUNT) out.rest = rest;
   if (isOrder(w && w.order) && w.order.some((v, i) => v !== i + 1)) out.order = [...w.order];
   if (out.rest && typeof (w && w.restOn) === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.restOn)) out.restOn = w.restOn;
+  if (Array.isArray(w && w.extra)) { const seen = new Set(); const ex = w.extra.filter(x => isExtra(x) && !seen.has(x.id) && seen.add(x.id)).map(x => ({ id: x.id, day: x.day, ex: x.ex, ph: x.ph ?? null, note: x.note || '' })); if (ex.length) out.extra = ex; }
   return out;
 };

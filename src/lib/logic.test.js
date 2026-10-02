@@ -4,7 +4,7 @@ import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
-  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets,
+  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets, weekSlots,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -407,5 +407,34 @@ describe('yesterday’s leftovers', () => {
     const w = normWeek({ done: { d: true }, rest: 6 });
     expect(moveTargets(w, slots, 3)).toEqual([5, 7]); // 4 is finished, 6 is the rest day
     expect(moveTargets(normWeek({}), slots, 7)).toEqual([]);
+  });
+});
+
+describe('experiment cards on a week', () => {
+  const prog = { key: 'T', days: [{ slots: [{ id: 'p1', items: [{ ex: 'hack' }] }] }, ...Array.from({ length: 6 }, () => ({ slots: [] }))] };
+  const x = { id: 'X-a1', day: 3, ex: 'legext', ph: 'hyp', note: 'try light' };
+
+  it('weekSlots adds the week’s experiment cards after the program’s', () => {
+    const s = weekSlots(prog, { extra: [x] });
+    expect(s.map(c => c.id)).toEqual(['p1', 'X-a1']);
+    expect(s[1]).toEqual({ id: 'X-a1', day: 3, type: 'single', sec: 'Experiment', experiment: true, items: [{ ex: 'legext', ph: 'hyp' }], note: 'try light' });
+  });
+  it('weekSlots without extras is the program’s cards; an empty note is left off', () => {
+    expect(weekSlots(prog, {}).map(c => c.id)).toEqual(['p1']);
+    expect(weekSlots(prog, null).map(c => c.id)).toEqual(['p1']);
+    expect(weekSlots(prog, { extra: [{ ...x, note: '' }] })[1]).not.toHaveProperty('note');
+  });
+  it('normWeek keeps valid experiment cards and drops malformed ones', () => {
+    const bad = [{ ...x, id: 'nope' }, { ...x, id: 'X-b', day: 8 }, { ...x, id: 'X-c', ex: '' }, { ...x, id: 'X-d', ph: 'zzz' }, { ...x, id: 'X-e', note: 5 }, { ...x, id: 'X-f', day: '3' }, null, 'x'];
+    expect(normWeek({ extra: [x, ...bad] }).extra).toEqual([x]);
+    expect(normWeek({ extra: [{ id: 'X-g', day: 2, ex: 'hack' }] }).extra).toEqual([{ id: 'X-g', day: 2, ex: 'hack', ph: null, note: '' }]);
+    expect(normWeek({ extra: [x, { ...x, note: 'dup' }] }).extra).toEqual([x]);
+    expect(normWeek({ extra: [] })).not.toHaveProperty('extra');
+    expect(normWeek({ extra: 'x' })).not.toHaveProperty('extra');
+    expect(normWeek({})).not.toHaveProperty('extra');
+  });
+  it('experiment cards lay out by program day, so they follow the rest-day shift', () => {
+    const w = normWeek({ extra: [x], rest: 2 });
+    expect(currentLayout(w, weekSlots(prog, w))[4].map(c => c.id)).toEqual(['X-a1']);
   });
 });
