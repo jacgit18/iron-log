@@ -42,10 +42,8 @@ describe('checking off on the board', () => {
     st().checkDay(3, true);
     const day3 = st().activeSlots().filter(s => s.day === 3);
     // An either/or card logs the one option it counts as done (the first, when none was picked).
-    // Stretches (Desk Bands) have no weight or reps, so checking them off logs nothing.
     const exIds = [...new Set(day3.flatMap(s => (s.type === 'either' ? s.items.slice(0, 1) : s.items).map(i => i.ex)))];
-    exIds.filter(id => id !== 'deskbands').forEach(id => expect(st().logs[id]?.length, id).toBe(1));
-    expect(st().logs.deskbands).toBeUndefined();
+    exIds.forEach(id => expect(st().logs[id]?.length, id).toBe(1));
     expect(st().logs.facepull).toBeUndefined();
     st().skipCard('A-d3s1');
     expect(st().logs.hack).toEqual([]);

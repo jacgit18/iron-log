@@ -90,7 +90,7 @@ describe('board filter', () => {
     expect(matchesFilter(c, card('hack'), { muscle: 'chest' })).toBe(false);
     expect(matchesFilter(c, card('hack'), { muscle: 'quads', eq: 'machine' })).toBe(true);
     expect(matchesFilter(c, card('hack'), { eq: 'cable' })).toBe(false);
-    expect(matchesFilter(c, card('canoe'), { muscle: 'stretch' })).toBe(true);
+    expect(matchesFilter(cfg({ ex: { 'hip-90': { n: 'Hip 90/90', stretch: true } } }), card('hip-90'), { muscle: 'stretch' })).toBe(true);
     expect(matchesFilter(c, card('hack'), { muscle: 'stretch' })).toBe(false);
     expect(matchesFilter(c, card('hack'), {})).toBe(true);
   });
