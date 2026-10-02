@@ -410,11 +410,12 @@ export const useAppStore = create((set, get) => ({
     if (get().addEntry(slotId, idx, e, { check: true })) flag(`Logged ${describe(e)}`);
   },
   // The log sheet's save: entry + optional phase change / phase default / 1RM / check-off.
-  submitLog(slotId, idx, { entry, ph, makeDefault, makeExDefault, rm, done, eq }) {
+  submitLog(slotId, idx, { entry, ph, makeDefault, makeExDefault, rm, done, eq, url }) {
     if (get().blocked()) return false;
     const s = get().slotById(slotId); if (!s) return false;
     const it = s.items[idx]; const key = `${slotId}:${idx}`;
     get().addEntry(slotId, idx, entry);
+    get().applyExerciseUrl(it.ex, url);
     const { cfg, week } = get();
     const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
     const cfgChange = eqChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));

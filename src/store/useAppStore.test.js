@@ -478,3 +478,14 @@ describe('video link on an existing exercise', () => {
     expect(exInfo(st().cfg, 'canoe').url).toBe('https://youtu.be/yR6EnBqjKNs');
   });
 });
+
+describe('video link from the log sheet', () => {
+  it('saving a log with a new link updates the exercise for every card', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    const entry = { d: '2026-10-01', ph: 'hyp', w: 270, s: 4, r: 15 };
+    st().submitLog('A-d3s1', 0, { entry, ph: 'hyp', url: 'https://example.com/hack' });
+    expect(exInfo(st().cfg, 'hack').url).toBe('https://example.com/hack');
+    st().submitLog('A-d3s1', 0, { entry, ph: 'hyp' }); // field not offered: link left alone
+    expect(exInfo(st().cfg, 'hack').url).toBe('https://example.com/hack');
+  });
+});
