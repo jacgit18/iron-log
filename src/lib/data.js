@@ -228,6 +228,14 @@ export function slotsFor(prog) {
 // A saved/edited program only replaces the built-in one when it has the right shape.
 export function resolveProgram(k, data) { return hasValidDays(data) ? withAllDays({ ...structuredClone(data), key: k }) : BUILTIN[k]; }
 export const VIDEO_ERR = 'Video link should start with https://';
+// "Watch on YouTube" / "Watch on Instagram" from the link's host; unknown hosts show their domain.
+const PLATFORMS = { 'youtube.com': 'YouTube', 'youtu.be': 'YouTube', 'instagram.com': 'Instagram', 'tiktok.com': 'TikTok', 'vimeo.com': 'Vimeo', 'facebook.com': 'Facebook', 'fb.watch': 'Facebook', 'x.com': 'X', 'twitter.com': 'X' };
+export function videoLabel(url) {
+  let host;
+  try { host = new URL(String(url).trim()).hostname.toLowerCase().replace(/^(www|m)\./, ''); } catch { return 'Watch video'; }
+  const hit = Object.keys(PLATFORMS).find(h => host === h || host.endsWith('.' + h));
+  return `Watch on ${hit ? PLATFORMS[hit] : host}`;
+}
 export const isVideoUrl = s => !s || !s.trim() || /^https?:\/\//.test(s.trim()); // empty is fine: the link is optional
 // What you set on an exercise (video link, equipment, stretch) is kept in cfg.ex and layers over the built-in entry.
 export function exInfo(cfg, id) {

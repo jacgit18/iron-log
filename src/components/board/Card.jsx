@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
-import { PHASES, PH_KEYS, EQUIPMENT, exInfo } from '../../lib/data.js';
+import { PHASES, PH_KEYS, EQUIPMENT, exInfo, videoLabel } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../lib/dates.js';
 import {
   DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, describe, holdPlan,
@@ -61,7 +61,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
                 )}
                 <h4 className="exh" id={`h-${s.id}-${idx}`}>{s.type === 'superset' ? (idx === 0 ? 'A · ' : 'B · ') : ''}{ex.n}</h4>
                 {stretch && <span className="tag exstretch">Stretch</span>}
-                {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`Video: ${ex.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>video</a>}
+                {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(ex.url)}: ${ex.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(ex.url)}</a>}
                 <button type="button" className="btn sm ghost" id={`det-${s.id}-${idx}`} aria-label={`Details: ${ex.n}`} onClick={() => openModal({ type: 'exercise', exId: it.ex })}>Details</button>
               </div>
               {stretch ? (it.rx && <div className="exline"><span className="rx">{it.rx}</span></div>) : <div className="exline">
