@@ -7,6 +7,7 @@ import {
   phaseOf, isTimed, targetOf, rxOf, lastLog, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
 } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
+import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 
 // Older entries in a timed phase may hold reps (Mobility was counted in reps before), so each side falls back to the other.
 const toRow = (x, iso) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x.r : x.r ?? x.sec) ?? '', tw: false, tr: false });
@@ -42,6 +43,7 @@ export default function LogSheet({ slotId, idx }) {
   const rx = rxOf(cfg, it, ph0);
   const last = lastLog(logs, it.ex, phv);
   const hist = (logs[it.ex] || []).slice(-6).reverse();
+  const goals = liftGoalsStatus(cfg, it.ex, logs[it.ex], today, phv);
 
   const changePhase = v => { setPh(v); const p = v || null; setRows(planRows(cfg, logs, it, p).map(x => toRow(x, isTimed(p)))); };
   // Editing a set fills the same field in later sets, until those are edited themselves.
@@ -71,6 +73,7 @@ export default function LogSheet({ slotId, idx }) {
         <span>Target<br /><b>{t.w != null ? `${t.w} lb` : (t.src || '—')}</b></span>
         <span>Prescription<br /><b>{rx || '—'}</b></span>
         {t.w != null && <span className="note" style={{ alignSelf: 'end' }}>{t.src}</span>}
+        {goals.map(g => <span key={g.key} className="note" style={{ alignSelf: 'end' }}>{liftGoalNote(g)}</span>)}
       </div>
       <div className="fields">
         <label className="field">Phase

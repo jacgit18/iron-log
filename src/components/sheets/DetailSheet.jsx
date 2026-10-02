@@ -5,6 +5,7 @@ import { volText, AUTO_NOTE } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import LineChart from '../LineChart.jsx';
+import LiftGoal from '../progress/LiftGoal.jsx';
 
 export default function DetailSheet({ exId }) {
   const cfg = useAppStore(s => s.cfg);
@@ -24,6 +25,7 @@ export default function DetailSheet({ exId }) {
           <LineChart entries={L} height={200} byPhase={multi} />
         </>
       )}
+      <LiftGoal exId={exId} />
       <table className="hist">
         <thead><tr><th>Date</th><th>Phase</th><th className="num">Load</th><th className="num">Volume</th><th>Note</th><th><span className="sr">Delete</span></th></tr></thead>
         <tbody>

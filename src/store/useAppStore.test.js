@@ -582,3 +582,34 @@ describe('body weight goal', () => {
     expect(st().cfg.bwGoal.start.w).toBe(200);
   });
 });
+
+describe('lift weight goal', () => {
+  it('saves a goal per phase with your best in that phase as its start, and can remove one', () => {
+    useAppStore.setState({ logs: { hack: [{ d: '2026-09-20', ph: 'strength', w: 300, s: 4, r: 6 }, { d: '2026-09-27', ph: 'hyp', w: 270, s: 4, r: 12 }] } });
+    expect(st().setLiftGoal('hack', 'hyp', '315', '2026-12-01')).toBe(true);
+    expect(st().setLiftGoal('hack', 'any', '350')).toBe(true);
+    expect(st().cfg.liftGoals.hack).toEqual({ hyp: { w: 315, start: 270, by: '2026-12-01' }, any: { w: 350, start: 300 } });
+    expect(st().setLiftGoal('hack', 'hyp', 'abc')).toBe(false);
+    expect(st().setLiftGoal('hack', 'nope', '300')).toBe(false);
+    st().clearLiftGoal('hack', 'hyp');
+    expect(st().cfg.liftGoals.hack).toEqual({ any: { w: 350, start: 300 } });
+    st().clearLiftGoal('hack', 'any');
+    expect(st().cfg.liftGoals).toBeUndefined();
+  });
+  it('moves a goal to another phase, but not onto one that has a goal', () => {
+    useAppStore.setState({ logs: { hack: [{ d: '2026-09-20', ph: 'strength', w: 300, s: 4, r: 6 }] } });
+    st().setLiftGoal('hack', 'hyp', '300'); st().setLiftGoal('hack', 'any', '350');
+    expect(st().setLiftGoal('hack', 'any', '320', '', 'hyp')).toBe(false);
+    expect(st().setLiftGoal('hack', 'strength', '320', '', 'hyp')).toBe(true);
+    expect(st().cfg.liftGoals.hack).toEqual({ strength: { w: 320, start: 300 }, any: { w: 350, start: 300 } });
+  });
+  it('says so when a logged set reaches a goal in its phase', () => {
+    st().setLiftGoal('hack', 'strength', '280');
+    const wk = st().weekKey();
+    st().submitLog('A-d3s1', 0, { entry: { d: wk, ph: 'hyp', w: 285, s: 4, r: 10, slot: 'A-d3s1', wk }, ph: 'hyp', done: true });
+    expect(st().saveFlag).not.toMatch(/^Goal reached/);
+    st().setLiftGoal('hack', 'hyp', '300');
+    st().submitLog('A-d3s1', 0, { entry: { d: wk, ph: 'hyp', w: 305, s: 4, r: 10, slot: 'A-d3s1', wk }, ph: 'hyp', done: true });
+    expect(st().saveFlag).toMatch(/^Goal reached: 300 lb on .* \(Hypertrophy\)/);
+  });
+});
