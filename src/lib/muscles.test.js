@@ -69,4 +69,14 @@ describe('muscle helpers', () => {
   it('shows sets to the nearest half', () => {
     expect([2, 2.25, 3.2, 7.5].map(fmtSets)).toEqual(['2', '2.5', '3', '7.5']);
   });
+  it('the live view counts experiment cards added to the week; the plan view does not', () => {
+    const c = cfg();
+    const base = muscleVolume(c, normWeek({}), prog, true, false).vol;
+    const w = normWeek({ extra: [{ id: 'X-1', day: 2, ex: 'hack', ph: 'hyp' }] });
+    const live = muscleVolume(c, w, prog, true, false).vol;
+    const grew = Object.keys(live).filter(k => live[k].sets > base[k].sets);
+    expect(grew.length).toBeGreaterThan(0);
+    expect(live[grew[0]].ex.some(e => e.ex === 'hack' && e.day === 2)).toBe(true);
+    expect(muscleVolume(c, w, prog, false, false).vol).toEqual(muscleVolume(c, normWeek({}), prog, false, false).vol);
+  });
 });

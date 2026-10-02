@@ -2,9 +2,9 @@
    The workbook is a report, not a backup: it has every logged session, body weight and the main
    settings, but not weekly check-offs, edited programs, saved versions or phase defaults. This turns
    what it does have into the same shape as a parsed JSON data file, so the normal merge can add it. */
-import { EX, PHASES, PH_KEYS, slotsFor } from './data.js';
+import { EX, PHASES, PH_KEYS } from './data.js';
 import { parseDate } from './dates.js';
-import { activeProgKey, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
+import { weekSlots, activeProgKey, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
 import { MUSCLES, MUSCLE_MAP } from './muscles.js';
 import { WEEK_RE, entryWeek } from './trends.js';
 import { loadXLSX, normalizeData } from './export.js';
@@ -125,7 +125,7 @@ export async function parseExcelExport(buffer, cfg) {
     const data = normalizeData({ ...full, exportedAt, logs, body });
     return { ...data, excel: { ...excel, complete: true } };
   }
-  return { exportedAt, config, programs: {}, library: [], logs, weeks: {}, body, excel };
+  return { exportedAt, config, programs: {}, library: [], logs, weeks: {}, body, experiments: [], excel };
 }
 
 const str = v => (v == null ? '' : String(v));
@@ -160,6 +160,7 @@ function readWeeks(X, rows) {
     else if (kind === 'rest') { const n = num(v); if (n >= 1) w.rest = n; }
     else if (kind === 'restOn') { const t = dateText(X, v); if (WEEK_RE.test(t)) w.restOn = t; }
     else if (kind === 'order') w.order = str(v).split(/[\s,]+/).filter(Boolean).map(Number);
+    else if (kind === 'extra') { try { (w.extra = w.extra || []).push(JSON.parse(str(v))); } catch { /* skip an unreadable card */ } }
     else if (kind === 'done' || kind === 'skipped') w[kind][key] = true;
     else if (kind === 'moved') w.moved[key] = num(v);
     else if (kind === 'phase') w.ph[key] = str(v);
@@ -169,7 +170,7 @@ function readWeeks(X, rows) {
 }
 // The data sheets of a whole-backup workbook, as a data-file-shaped object; null for older workbooks without them.
 function readDataSheets(X, rows) {
-  const prog = rows('Programs'), info = rows('Program info'), lib = rows('Saved versions'), checks = rows('Check-offs'), conf = rows('Config');
+  const prog = rows('Programs'), info = rows('Program info'), lib = rows('Saved versions'), checks = rows('Check-offs'), conf = rows('Config'), exps = rows('Experiments');
   if (!prog || !info || !lib || !checks || !conf) return null;
   const warms = Object.fromEntries(info.slice(1).map(([o, w]) => [str(o), str(w)]));
   const owners = {}; prog.slice(1).forEach(r => { (owners[str(r[0])] = owners[str(r[0])] || []).push(r); });
@@ -180,7 +181,8 @@ function readDataSheets(X, rows) {
   });
   const config = {};
   conf.slice(1).forEach(([k, v]) => { try { config[str(k)] = JSON.parse(str(v)); } catch { /* skip an unreadable setting */ } });
-  return { config, programs, library, weeks: readWeeks(X, checks.slice(1)) };
+  const experiments = exps ? exps.slice(1).filter(r => r[0] !== '' && r[0] != null).map(([id, ex, , ph, note]) => ({ id: str(id), ex: str(ex), ph: str(ph) || null, note: str(note) })) : [];
+  return { config, programs, library, weeks: readWeeks(X, checks.slice(1)), experiments };
 }
 
 // A workbook has no check-offs, but every session names the program slot it was logged from, so each
@@ -193,7 +195,7 @@ export function checkOffsFromLogs(cfg, programs, logs, weeks) {
     const k = entryWeek(e); if (!WEEK_RE.test(k)) return;
     const w = out[k] || (out[k] = normWeek({ prog: weeks[k] && weeks[k].prog }));
     const prog = programs[activeProgKey(cfg, w, parseDate(k))] || programs.A;
-    const s = slotsFor(prog).find(x => x.id === e.slot);
+    const s = weekSlots(prog, weeks[k] || {}).find(x => x.id === e.slot);
     const i = s ? s.items.findIndex(it => it.ex === ex) : -1;
     if (i >= 0) setItemDone(w, s, i, true);
   }));

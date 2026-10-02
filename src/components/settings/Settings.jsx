@@ -146,7 +146,7 @@ function DataPanel() {
   return (
     <section className="panel">
       <h2>Export &amp; import</h2>
-      <p>One file with everything: your log, weekly check-offs, body weight, programs, saved versions and settings. Use it to keep a copy, move to another device or app, or go back to an earlier state.</p>
+      <p>One file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Use it to keep a copy, move to another device or app, or go back to an earlier state.</p>
       <p>To import, use the <b>iron-log.xlsx</b> workbook or the <b>iron-log-data .json</b> file. Both bring back everything. A <b>.csv</b> export only brings back logged sessions. Workbooks exported by an older version of the app only bring back logged sessions, body weight and main settings.</p>
       <div className="actions" style={{ justifyContent: 'flex-start' }}>
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
@@ -202,7 +202,7 @@ const ERASE = [
   ['logs', 'Logged sessions', 'every weight, set and rep, including ones logged by check-offs'],
   ['weeks', 'Weekly check-offs', 'checked, skipped and moved cards, and phase changes, for every week'],
   ['body', 'Body weight', ''],
-  ['programs', 'Edited programs and saved versions', 'the board goes back to the original programs'],
+  ['programs', 'Edited programs, saved versions and the Experiment list', 'the board goes back to the original programs'],
   ['settings', 'Settings and 1RMs', 'program mode, rest time, phase percentages, 1RMs, phase defaults, custom exercises and muscle tags'],
 ];
 function ErasePanel() {

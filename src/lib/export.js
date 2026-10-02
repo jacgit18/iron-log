@@ -1,8 +1,8 @@
 /* ---------- CSV / Excel export, full data file, GitHub backup helpers ----------
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
-import { PHASES, PH_KEYS, BUILTIN, slotsFor, exInfo, hasValidDays, withAllDays, DAY_COUNT } from './data.js';
+import { PHASES, PH_KEYS, BUILTIN, exInfo, hasValidDays, withAllDays, DAY_COUNT } from './data.js';
 import { ymd, fmtShort } from './dates.js';
-import { setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
+import { weekSlots, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
 
 const noteOf = e => e.n || (e.auto ? AUTO_NOTE : '');
 import { MUSCLES, tagsOf, muscleNames } from './muscles.js';
@@ -105,6 +105,7 @@ export function checkRows(weeks) {
     if (w.rest) rows.push([k, 'rest', '', w.rest]);
     if (w.restOn) rows.push([k, 'restOn', '', w.restOn]);
     if (w.order) rows.push([k, 'order', '', w.order.join(' ')]);
+    (w.extra || []).forEach(x => rows.push([k, 'extra', x.id, JSON.stringify(x)]));
     ['done', 'skipped'].forEach(kind => Object.keys(w[kind]).forEach(id => { if (w[kind][id]) rows.push([k, kind, id, 'Yes']); }));
     Object.entries(w.moved).forEach(([id, day]) => rows.push([k, 'moved', id, day]));
     Object.entries(w.ph).forEach(([id, ph]) => rows.push([k, 'phase', id, ph]));
@@ -113,13 +114,14 @@ export function checkRows(weeks) {
   return rows;
 }
 function addDataSheets(X, wb, S, weeks) {
-  const { cfg, programs, library } = S;
+  const { cfg, programs, library, experiments } = S;
   const prow = [], info = [['Program', 'Warm-up']];
   ['A', 'B'].forEach(k => { if (programs[k] !== BUILTIN[k]) { prow.push(...programRows(cfg, k, programs[k])); info.push([k, programs[k].warm ?? '']); } });
   library.forEach(it => { prow.push(...programRows(cfg, it.id, it.prog)); info.push([it.id, it.prog.warm ?? '']); });
   X.utils.book_append_sheet(wb, sheet(X, [PROG_HEAD, ...prow], [10, 5, 12, 26, 10, 7, 12, 11, 10, 9, 24, 14, 30, 11, 11, 10, 16, 24]), 'Programs');
   X.utils.book_append_sheet(wb, sheet(X, info, [12, 40]), 'Program info');
   X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Name', 'From', 'Saved at', 'Auto-saved', 'Created'], ...library.map(it => [it.id, it.name, it.from ?? '', it.at ?? '', it.auto ? 'Yes' : '', it.created ? 'Yes' : ''])], [14, 36, 7, 26, 11, 9]), 'Saved versions');
+  X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Exercise id', 'Exercise', 'Phase', 'Note'], ...(experiments || []).map(e => [e.id, e.ex, exInfo(cfg, e.ex).n, e.ph ?? '', e.note ?? ''])], [14, 16, 30, 11, 40]), 'Experiments');
   X.utils.book_append_sheet(wb, sheet(X, [CHECK_HEAD, ...checkRows(weeks)], [12, 9, 24, 12]), 'Check-offs');
   X.utils.book_append_sheet(wb, sheet(X, [['Setting', 'Value (JSON)'], ...Object.keys(cfg).sort().map(k => [k, JSON.stringify(cfg[k])])], [18, 60]), 'Config');
 }
@@ -127,7 +129,7 @@ function addDataSheets(X, wb, S, weeks) {
 export function buildWeekWorkbook(X, S, key, w) {
   const { cfg, programs } = S; const wb = X.utils.book_new();
   const r = weekSummary(cfg, programs, key, w);
-  const slots = slotsFor(programs[r.pk] || programs.A);
+  const slots = weekSlots(programs[r.pk] || programs.A, w);
   const n = sessionRows(S, e => entryWeek(e) === key);
   X.utils.book_append_sheet(wb, sheet(X, [
     ['Week of', key], ['Program', r.pk], ['Days complete', `${r.full} of ${DAY_COUNT}`], ['Exercises done', `${r.ex} of ${r.total}`], ['Skipped', r.skipped], ['Sessions logged', n.length - 1],
@@ -154,14 +156,14 @@ export const DATA_FORMAT = 1;
 export function utf8b64(s) { const b = new TextEncoder().encode(s); let bin = ''; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); }
 export function buildDataFile(S, weeks) {
   const { cfg, logs, programs, library, body } = S; const W = {};
-  Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || w.rest || w.order || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
+  Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || w.rest || w.order || w.extra || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
   const P = {}; ['A', 'B'].forEach(k => { if (programs[k] !== BUILTIN[k]) P[k] = progBody(programs[k]); });
   const L = {}; Object.keys(logs).sort().forEach(id => { if (logs[id] && logs[id].length) L[id] = logs[id]; });
-  return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body) };
+  return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body), experiments: normExperiments(S.experiments) };
 }
 export function dataStats(d) {
   const L = Object.values(d.logs || {}); const sets = L.reduce((a, l) => a + l.length, 0);
-  return { entries: sets, exercises: L.filter(l => l.length).length, weeks: Object.keys(d.weeks || {}).length, programs: Object.keys(d.programs || {}), saved: (d.library || []).length, body: (d.body || []).length };
+  return { entries: sets, exercises: L.filter(l => l.length).length, weeks: Object.keys(d.weeks || {}).length, programs: Object.keys(d.programs || {}), saved: (d.library || []).length, body: (d.body || []).length, experiments: (d.experiments || []).length };
 }
 export function parseDataFile(text) {
   let d; try { d = JSON.parse(text); } catch { throw new Error('That file isn’t valid JSON.'); }
@@ -172,7 +174,7 @@ export function parseDataFile(text) {
 }
 // Checks and cleans a data-file-shaped object. Used for both the JSON file and a full Excel workbook.
 export function normalizeData(d) {
-  const out = { exportedAt: d.exportedAt, config: (d.config && typeof d.config === 'object') ? d.config : {}, programs: {}, library: [], logs: {}, weeks: {}, body: [] };
+  const out = { exportedAt: d.exportedAt, config: (d.config && typeof d.config === 'object') ? d.config : {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: normExperiments(d.experiments) };
   (Array.isArray(d.body) ? d.body : []).forEach(e => { if (e && WEEK_RE.test(e.wk) && typeof e.d === 'string' && Number(e.w) > 0 && !out.body.some(x => x.wk === e.wk)) out.body.push({ wk: e.wk, d: e.d, w: Number(e.w) }); });
   ['A', 'B'].forEach(k => { const p = d.programs && d.programs[k]; if (hasValidDays(p)) out.programs[k] = withAllDays(p); });
   (Array.isArray(d.library) ? d.library : []).forEach(it => { if (it && it.id && hasValidDays(it.prog)) out.library.push({ ...it, prog: withAllDays(it.prog) }); });
@@ -191,6 +193,7 @@ export function mergeWeek(a, b) {
   if (!w.order && o.order) w.order = o.order;
   ['moved', 'ph'].forEach(k => { w[k] = { ...o[k], ...w[k] }; });
   Object.keys(o.warm).forEach(d => { w.warm[d] = { ...o.warm[d], ...(w.warm[d] || {}) }; });
+  const have = new Set((w.extra || []).map(x => x.id)); const more = (o.extra || []).filter(x => !have.has(x.id)); if (more.length) w.extra = [...(w.extra || []), ...more];
   w.done = { ...o.done, ...w.done }; w.skipped = { ...o.skipped, ...w.skipped }; Object.keys(w.done).forEach(id => delete w.skipped[id]);
   return w;
 }
@@ -204,7 +207,7 @@ export function weekFingerprint(S, key, w) {
   const { cfg, logs, programs } = S;
   const L = Object.keys(logs).sort().map(id => [id, (logs[id] || []).filter(e => entryWeek(e) === key)]);
   const nw = normWeek(w);
-  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, nw.rest, nw.order, nw.restOn, L, programs[weekSummary(cfg, programs, key, w).pk]]));
+  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, nw.rest, nw.order, nw.restOn, nw.extra, L, programs[weekSummary(cfg, programs, key, w).pk]]));
 }
 export function backupError(e) {
   const c = e && e.code;

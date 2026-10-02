@@ -1,6 +1,6 @@
-import { BUILTIN, slotsFor, exInfo } from './data.js';
+import { BUILTIN, exInfo } from './data.js';
 import { monday, ymd, parseDate, addDays } from './dates.js';
-import { programFor, tally, currentLayout, DAYS } from './logic.js';
+import { programFor, weekSlots, tally, currentLayout, DAYS } from './logic.js';
 import { M_KEYS, tagsOf } from './muscles.js';
 
 export const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -14,7 +14,7 @@ export const niceStep = max => [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 100
 export function weekSummary(cfg, programs, key, w) {
   const start = parseDate(key);
   const pk = (cfg.mode === 2 && (w.prog === 'A' || w.prog === 'B')) ? w.prog : programFor(cfg, start);
-  const prog = programs[pk] || programs.A || BUILTIN.A; const slots = slotsFor(prog);
+  const prog = programs[pk] || programs.A || BUILTIN.A; const slots = weekSlots(prog, w);
   const cols = currentLayout({ ...w, moved: w.moved || {} }, slots);
   const days = DAYS.map(d => { if (d === w.rest && !cols[d].length) return 2; const t = tally(cols[d], w); return t.full ? 2 : t.done > 0 ? 1 : 0; });
   const t = tally(slots, w);

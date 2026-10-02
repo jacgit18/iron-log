@@ -20,7 +20,7 @@ describe('workbook round trip', () => {
     const viaJson = parseDataFile(JSON.stringify(buildDataFile(S, raw.weeks)));
     const viaXlsx = await parseExcelExport(bytes(buildOverallWorkbook(X, S, raw.weeks)), DEFAULT_CFG);
     expect(viaXlsx.excel.complete).toBe(true);
-    for (const k of ['config', 'programs', 'library', 'weeks', 'body']) expect(prune(viaXlsx[k]), k).toEqual(prune(viaJson[k]));
+    for (const k of ['config', 'programs', 'library', 'weeks', 'body', 'experiments']) expect(prune(viaXlsx[k]), k).toEqual(prune(viaJson[k]));
     expect(prune(noDerivedWk(viaXlsx.logs))).toEqual(prune(noDerivedWk(viaJson.logs)));
   });
 
@@ -29,6 +29,34 @@ describe('workbook round trip', () => {
     const viaJson = parseDataFile(JSON.stringify(buildDataFile(S, raw.weeks)));
     const viaXlsx = await parseExcelExport(bytes(wb), DEFAULT_CFG);
     expect(prune(viaXlsx.programs)).toEqual(prune(viaJson.programs));
+  });
+
+  const exps = [{ id: 'E1', ex: 'hack', ph: 'hyp', note: 'try light' }, { id: 'E2', ex: 'legext', ph: null, note: '' }];
+  const weeksX = () => ({ ...raw.weeks, '2030-01-06': { done: { 'X-1': true }, extra: [{ id: 'X-1', day: 2, ex: 'hack', ph: 'hyp', note: '' }] } });
+
+  it('keeps the experiment list and added cards through the JSON file and the workbook (and a re-save)', async () => {
+    const SX = { ...S, experiments: exps };
+    const viaJson = parseDataFile(JSON.stringify(buildDataFile(SX, weeksX())));
+    const wb = buildOverallWorkbook(X, SX, weeksX());
+    const viaXlsx = await parseExcelExport(bytes(wb), DEFAULT_CFG);
+    const viaResave = await parseExcelExport(bytes(X.read(bytes(wb), { type: 'array' })), DEFAULT_CFG);
+    for (const d of [viaJson, viaXlsx, viaResave]) {
+      expect(d.experiments).toEqual(exps);
+      expect(d.weeks['2030-01-06'].extra).toEqual([{ id: 'X-1', day: 2, ex: 'hack', ph: 'hyp', note: '' }]);
+    }
+  });
+
+  it('a workbook made before the Experiments sheet still imports as a full backup', async () => {
+    const wb = buildOverallWorkbook(X, { ...S, experiments: exps }, raw.weeks);
+    delete wb.Sheets.Experiments; wb.SheetNames = wb.SheetNames.filter(n => n !== 'Experiments');
+    const d = await parseExcelExport(bytes(wb), DEFAULT_CFG);
+    expect(d.excel.complete).toBe(true);
+    expect(d.experiments).toEqual([]);
+  });
+
+  it('a JSON file without experiments imports with an empty list', () => {
+    const f = buildDataFile(S, raw.weeks); delete f.experiments;
+    expect(parseDataFile(JSON.stringify(f)).experiments).toEqual([]);
   });
 
   it('keeps a week’s rest day through the JSON file and the workbook', async () => {

@@ -1,14 +1,15 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { WARMUP, slotsFor } from '../../lib/data.js';
+import { WARMUP } from '../../lib/data.js';
 import { monday, ymd, addDays, fmtShort, fmtDayDate } from '../../lib/dates.js';
-import { tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
+import { weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
+import Experiments from './Experiments.jsx';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s, day) => (s.day === day ? s.sec : 'Moved here');
@@ -51,7 +52,7 @@ export default function Board() {
 
   const progKey = st.activeProgKey();
   const prog = programs[progKey] || programs.A;
-  const slots = slotsFor(prog);
+  const slots = weekSlots(prog, week);
   const cols = currentLayout(week, slots);
   const rest = week.rest || null;
   const { total, done, skipped: skippedN } = tally(slots, week);
@@ -86,7 +87,7 @@ export default function Board() {
   // Swipe between days on phones.
   const swipe = useRef(null);
   const onTouchStart = e => {
-    if (e.target.closest('select,input,button,a')) { swipe.current = null; return; }
+    if (e.target.closest('select,input,button,a,.explist')) { swipe.current = null; return; }
     swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
   const onTouchEnd = e => {
@@ -227,13 +228,13 @@ export default function Board() {
               key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`}
               className={`col${t.full ? ' complete' : ''}${d === day ? ' sel' : ''}${overDay === d ? ' over' : ''}`}
               onDragOver={e => { if (!dragId) return; e.preventDefault(); setOverDay(d); }}
-              onDrop={e => { if (!dragId) return; e.preventDefault(); const id = dragId; onDragEnd(); st.moveSlot(id, d); }}
+              onDrop={e => { if (!dragId) return; e.preventDefault(); const id = dragId; onDragEnd(); if (id.startsWith('exp:')) st.addToDay(id.slice(4), d); else st.moveSlot(id, d); }}
             >
               <div className="colhead">
                 <input type="checkbox" className="chk" id={`day-${d}`} checked={t.full} aria-label={`Mark all of Day ${d} done`}
                   onChange={e => st.checkDay(d, e.target.checked)} />
                 <div>
-                  <h3 id={`colh-${d}`}>{dayTitle(dayDef, d)}</h3>
+                  <h3 id={`colh-${d}`} tabIndex={-1}>{dayTitle(dayDef, d)}</h3>
                   {date && <div className="sub daydate">{fmtDayDate(date)}</div>}
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                 </div>
@@ -271,6 +272,7 @@ export default function Board() {
           );
         })}
       </div>
+      <Experiments day={day} onDragStart={onDragStart} onDragEnd={onDragEnd} />
     </div>
   );
 }

@@ -53,10 +53,11 @@ export default function ImportSheet() {
         <li>{plural(s.entries, 'logged session', 'logged sessions')} across {plural(s.exercises, 'exercise', 'exercises')}</li>
         <li>{plural(s.weeks, 'week', 'weeks')} of check-offs</li>
         <li>{s.programs.length ? `Edited Program ${s.programs.join(' and ')}` : 'Original programs'}{s.saved ? ` · ${plural(s.saved, 'saved version', 'saved versions')}` : ''}</li>
+        {s.experiments > 0 && <li>{plural(s.experiments, 'exercise to try', 'exercises to try')}</li>}
         {s.body > 0 && <li>{s.body} body weight entr{s.body === 1 ? 'y' : 'ies'}</li>}
         <li>Settings, 1RMs and muscle tags</li>
       </ul>
-      <p className="note"><b>Add to my data</b> keeps everything here and adds what's missing: new sessions, weeks, body weights and saved versions. If both have an edited program, yours stays and the file's is added to Saved versions.</p>
+      <p className="note"><b>Add to my data</b> keeps everything here and adds what's missing: new sessions, weeks, body weights, saved versions and Experiment entries. If both have an edited program, yours stays and the file's is added to Saved versions.</p>
       <p className="note"><b>Replace my data</b> makes this app match the file exactly. Anything here that isn't in the file is deleted{cur.entries ? `, including ${plural(cur.entries, 'logged session', 'logged sessions')}` : ''}. {dl ? 'Export your current data first if you might want it back.' : ''}</p>
       {busy && <p className="note">Importing…</p>}
       {dl && <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn sm ghost" onClick={st.downloadData}>Export current data first</button></div>}

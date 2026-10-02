@@ -105,7 +105,7 @@ export default function LogSheet({ slotId, idx }) {
       <label className="field">Note
         <input type="text" value={note} placeholder="Form, how it felt, equipment" onChange={e => setNote(e.target.value)} />
       </label>
-      <label className="inline"><input type="checkbox" checked={makeDefault} onChange={e => setMakeDefault(e.target.checked)} /> Make this phase the default for this slot</label>
+      {!s.experiment && <label className="inline"><input type="checkbox" checked={makeDefault} onChange={e => setMakeDefault(e.target.checked)} /> Make this phase the default for this slot</label>}
       <label className="inline"><input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)} /> {isPaired(s) ? 'Check off this exercise' : 'Check off the card'}</label>
       <div className="actions">
         {last && (
