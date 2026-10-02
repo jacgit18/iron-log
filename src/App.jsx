@@ -34,7 +34,7 @@ function Modal() {
     case 'slot': return <SlotSheet key={`slot-${modal.idx}`} idx={modal.idx} />;
     case 'experiment': return <ExperimentSheet key={modal.id || 'new'} id={modal.id} />;
     case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;
-    case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
+    case 'dayadd': return <DayAddSheet key={`${modal.col}:${!!modal.stretch}`} col={modal.col} stretch={!!modal.stretch} />;
     case 'newprog': return <NewProgramSheet />;
     case 'import': return <ImportSheet />;
     case 'help': return <HelpSheet />;

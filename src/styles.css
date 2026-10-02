@@ -542,3 +542,7 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .ldot.s-mob::after{box-shadow:0 0 0 2px var(--s-mob);border-radius:3px;width:6px;height:12px;left:19px;top:16px}
 .ldot.end.s-mob::after{background:var(--s-mob);width:6px;height:12px;left:19px;top:16px}
 .lsw.s-mob{background:var(--s-mob);border-radius:2px;width:6px;height:12px}
+
+/* Stretches sit under the warm-up on each day */
+.stretches{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.stretchhead{display:flex;align-items:center;justify-content:space-between;gap:8px}

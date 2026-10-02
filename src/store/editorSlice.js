@@ -6,6 +6,14 @@ export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home'];
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 export const blankItem = () => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
 
+// A new card goes after the last card in the same section; a new section goes before Home (Home goes last).
+export function insertSlot(target, slot) {
+  let at = -1; target.forEach((x, j) => { if (x.sec === slot.sec) at = j; });
+  if (at < 0) at = slot.sec === 'Home' ? target.length - 1 : target.findIndex(x => x.sec === 'Home') - 1;
+  if (at < -1) at = target.length - 1;
+  target.splice(at + 1, 0, slot);
+}
+
 // Program tab state + actions. `flag` is the save-status helper from the app store.
 export const editorSlice = (set, get, flag) => ({
   edProg: null, // 'A' | 'B' (in the rotation) or 'L:<id>' (a library program); null = the one on the board
@@ -127,11 +135,7 @@ export const editorSlice = (set, get, flag) => ({
       const target = prog.days[d.day - 1].slots;
       if (orig && d.day === edDay && orig.sec === slot.sec) target.splice(d.idx, 0, slot);
       else {
-        // After the last card in the same section; a new section goes before Home (Home goes last).
-        let at = -1; target.forEach((x, j) => { if (x.sec === slot.sec) at = j; });
-        if (at < 0) at = slot.sec === 'Home' ? target.length - 1 : target.findIndex(x => x.sec === 'Home') - 1;
-        if (at < -1) at = target.length - 1;
-        target.splice(at + 1, 0, slot);
+        insertSlot(target, slot);
       }
     });
     set({ modal: null });

@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { WARMUP, EQUIPMENT, EQ_KEYS } from '../../lib/data.js';
+import { WARMUP, EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
 import { MUSCLES, M_KEYS, matchesFilter } from '../../lib/muscles.js';
 import { monday, ymd, addDays, fmtShort, fmtDayDate } from '../../lib/dates.js';
 import { weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
@@ -241,7 +241,9 @@ export default function Board() {
           const t = tally(list, week);
           const warm = week.warm[pd] || {};
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
-          const vis = shown(list);
+          const isStretchCard = s => s.items.every(it => exInfo(cfg, it.ex).stretch);
+          const stretches = shown(list).filter(isStretchCard); // shown under the warm-up
+          const vis = shown(list).filter(s => !isStretchCard(s));
           const open = vis.filter(s => isOpen(s, week));
           const finished = [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))];
           const ft = tally(finished, week);
@@ -275,7 +277,14 @@ export default function Board() {
                   </label>
                 ))}
               </div>
-              {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
+              <div className="stretches" role="group" aria-label={`Stretches, Day ${d}`}>
+                <div className="stretchhead">
+                  <span className="tag">Stretches</span>
+                  <button type="button" className="btn sm ghost" id={`addstretch-${d}`} aria-label={`Add a stretch to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d, stretch: true })}>+ Add stretch</button>
+                </div>
+                {stretches.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+              </div>
+              {filtering && vis.length === 0 && stretches.length === 0 && <p className="note">Nothing here matches the filter.</p>}
               {open.map((s, i) => {
                 const sec = secOf(s, pd);
                 const newSec = i === 0 || sec !== secOf(open[i - 1], pd);

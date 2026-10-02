@@ -431,3 +431,21 @@ describe('equipment from the log sheet', () => {
     expect(exInfo(st().cfg, 'hack').eq).toBe('machine');
   });
 });
+
+describe('adding to every week', () => {
+  it('puts the exercise in this day of the program, in its section, for every week', () => {
+    expect(st().addExerciseToDay(2, { ex: 'facepull', ph: 'hyp', note: 'light' }, 'program')).toBeNull();
+    const day2 = st().programs.A.days[1].slots;
+    const i = day2.findIndex(x => x.items[0].ex === 'facepull' && x.sec === 'Regular' && x.items[0].note === 'light');
+    expect(i).toBeGreaterThan(-1);
+    expect(day2[i + 1].sec).not.toBe('Regular'); // after the last Regular card, before the Supersets
+    expect(st().activeSlots().filter(s => s.added)).toHaveLength(0); // not a one-week card
+    expect(saved('programs/A').days[1].slots.some(x => x.items[0].note === 'light')).toBe(true);
+  });
+  it('a new stretch joins the program as a Stretches card with no phase', () => {
+    st().addExerciseToDay(3, { ex: '__new', nn: 'Hip 90/90', ns: true }, 'program');
+    const sl = st().programs.A.days[2].slots.find(x => x.sec === 'Stretches');
+    expect(sl.items[0].ph).toBeNull();
+    expect(st().cfg.ex['hip-90-90'].stretch).toBe(true);
+  });
+});

@@ -2,11 +2,11 @@ import { create } from 'zustand';
 import { BUILTIN, resolveProgram, padLibrary, EX, exInfo, newExId } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
-  DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
+  DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
-import { editorSlice } from './editorSlice.js';
+import { editorSlice, insertSlot } from './editorSlice.js';
 import { settingsSlice } from './settingsSlice.js';
 import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
 import {
@@ -255,14 +255,25 @@ export const useAppStore = create((set, get) => ({
     return ex;
   },
   // Add an exercise straight to a day of the viewed week. Only this week gets the card; the program doesn't change.
-  addExerciseToDay(col, d) {
+  addExerciseToDay(col, d, scope = 'week') {
     if (get().blocked()) return null;
     if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
     if (d.ex === '__new' && d.nu && !/^https?:\/\//.test(d.nu)) return 'Video link should start with https://';
     const pd = dayAt(get().week, col); if (pd == null) return 'That is your rest day.';
     const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
     const stretch = !!exInfo(get().cfg, ex).stretch;
-    const ok = get().mutateWeek(w => { w.extra = [...(w.extra || []), { id: uid('X-'), day: pd, ex, ph: stretch ? null : d.ph || null, note: (d.note || '').trim().slice(0, 200), add: true }]; });
+    const note = (d.note || '').trim().slice(0, 200);
+    if (scope === 'program') {
+      // Every week: the card joins this day of the program on the board, in the section it belongs to.
+      const ak = get().activeProgKey(); const key = get().programs[ak] ? ak : 'A';
+      const prog = structuredClone(get().programs[key]);
+      const slot = { id: `${key}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, sec: stretch ? 'Stretches' : 'Regular', items: [{ ex, ph: stretch ? null : d.ph || null, w: null, ...(note ? { note } : {}) }] };
+      if (!stretch) slot.tier = 'Accessory';
+      insertSlot(prog.days[pd - 1].slots, slot);
+      get().saveProgram(key, prog);
+      set({ modal: null }); flag(`Added ${exInfo(get().cfg, ex).n} to Day ${col} of ${progName(get().cfg, key)}, every week`); return null;
+    }
+    const ok = get().mutateWeek(w => { w.extra = [...(w.extra || []), { id: uid('X-'), day: pd, ex, ph: stretch ? null : d.ph || null, note, add: true }]; });
     if (!ok) return null;
     set({ modal: null }); flag(`Added ${exInfo(get().cfg, ex).n} to Day ${col}`); return null;
   },
