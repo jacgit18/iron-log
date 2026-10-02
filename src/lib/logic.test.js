@@ -4,7 +4,7 @@ import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
-  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt,
+  programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, isOrder, orderOf, posOf, colOf, dayAt, pullable,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -298,5 +298,34 @@ describe('swapped day order', () => {
     expect(normWeek(null)).not.toHaveProperty('order');
     const src = [2, 1, 3, 4, 5, 6, 7]; const out = normWeek({ order: src }).order; out[0] = 9;
     expect(src[0]).toBe(2);
+  });
+});
+
+describe('pullable: unfinished workouts that sit before the make-up', () => {
+  const mk = (id, day) => ({ id, day, type: 'single', items: [{ ex: 'hack', ph: 'hyp' }] });
+  const slots = [mk('a', 1), mk('d4', 4), mk('d6', 6)];
+  const idsOf = r => r.map(s => s.id);
+  it('with no order is the Day 1-4 workouts', () => {
+    expect(idsOf(pullable({ moved: {} }, slots))).toEqual(['a', 'd4']);
+    expect(idsOf(pullable({}, slots))).toEqual(['a', 'd4']);
+  });
+  it('follows a swapped order: Day 4 sits after the make-up, Day 6 before it', () => {
+    const w = { moved: {}, order: [1, 2, 3, 5, 4, 6, 7] };
+    expect(idsOf(pullable(w, slots))).toEqual(['a']);
+    expect(idsOf(pullable({ moved: {}, order: [1, 2, 3, 4, 6, 5, 7] }, slots))).toEqual(['a', 'd4', 'd6']);
+    expect(idsOf(pullable({ moved: {}, order: [1, 2, 3, 6, 5, 4, 7] }, slots))).toEqual(['a', 'd6']);
+  });
+});
+
+describe('stray moved values', () => {
+  const mk = id => ({ id, day: 2, type: 'single', items: [{ ex: 'hack', ph: 'hyp' }] });
+  it.each([9, 0])('currentLayout copes with moved %s', v => {
+    const cols = currentLayout({ moved: { a: v } }, [mk('a')]);
+    const at = Object.keys(cols).filter(c => cols[c].some(s => s.id === 'a'));
+    expect(at.length).toBe(1);
+    expect(+at[0]).toBeGreaterThanOrEqual(1); expect(+at[0]).toBeLessThanOrEqual(7);
+  });
+  it('normWeek keeps only moved days 1..7', () => {
+    expect(normWeek({ moved: { a: 3, b: 9, c: '4', d: 'x' } }).moved).toEqual({ a: 3, c: 4 });
   });
 });

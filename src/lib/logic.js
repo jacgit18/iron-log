@@ -163,11 +163,12 @@ export const programDay = (rest, d) => (!rest || d < rest ? d : d === rest ? nul
 // week.order[i] = the program day shown at workout position i + 1 (absent = normal order).
 export const isOrder = o => Array.isArray(o) && o.length === DAY_COUNT && o.every(v => Number.isInteger(v) && v >= 1 && v <= DAY_COUNT) && new Set(o).size === DAY_COUNT;
 export const orderOf = w => (w && isOrder(w.order) ? w.order : DAYS);
-export const posOf = (w, d) => orderOf(w).indexOf(d) + 1;
+export const posOf = (w, d) => { const i = orderOf(w).indexOf(d); return i >= 0 ? i + 1 : Math.min(Math.max(Math.round(d) || 1, 1), DAY_COUNT); }; // always 1..7, even for a stray value
 export const colOf = (w, d) => shownDay(w.rest, posOf(w, d)); // displayed column of a program day
 export const dayAt = (w, c) => { const p = programDay(w.rest, c); return p == null ? null : orderOf(w)[p - 1]; }; // program day shown in column c; null on the rest column
 export const dayTitle = (day, d) => (!day.title || /^Day \d+$/.test(day.title) ? `Day ${d}` : day.title);
 // The shift would push a workout off the board when something sits in the last workout position.
+export const pullable = (w, slots) => { const mp = posOf(w, 5); return slots.filter(s => posOf(w, s.day) < mp && posOf(w, (w.moved && w.moved[s.id]) || s.day) < mp && isOpen(s, w)); }; // unfinished workouts that sit before the make-up
 export const restBlocked = (week, slots) => slots.some(s => posOf(week, (week.moved && week.moved[s.id]) || s.day) === DAY_COUNT);
 export function currentLayout(week, slots) {
   const cols = Object.fromEntries(DAYS.map(d => [d, []]));
@@ -242,6 +243,7 @@ export function defaultLogDate(weekStart) { const today = ymd(new Date()); retur
 
 export const normWeek = w => {
   const out = { prog: (w && w.prog) || null, done: { ...(w && w.done) }, skipped: { ...(w && w.skipped) }, moved: { ...(w && w.moved) }, ph: { ...(w && w.ph) }, warm: JSON.parse(JSON.stringify((w && w.warm) || {})) };
+  out.moved = Object.fromEntries(Object.entries(out.moved).map(([k, v]) => [k, Number(v)]).filter(([, v]) => Number.isInteger(v) && v >= 1 && v <= DAY_COUNT));
   const rest = Number(w && w.rest);
   if (Number.isInteger(rest) && rest >= 1 && rest <= DAY_COUNT) out.rest = rest;
   if (isOrder(w && w.order) && w.order.some((v, i) => v !== i + 1)) out.order = [...w.order];

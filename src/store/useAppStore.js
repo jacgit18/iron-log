@@ -3,7 +3,7 @@ import { BUILTIN, resolveProgram, slotsFor, padLibrary } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
-  setCardDone, setItemDone, clearDone, isSkipped, isOpen, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, defaultLogDate, autoLogs,
+  setCardDone, setItemDone, clearDone, isSkipped, pullable, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, defaultLogDate, autoLogs,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -203,7 +203,7 @@ export const useAppStore = create((set, get) => ({
   // Tick or untick the rest day. One per week; ticking another day moves it.
   setRestDay(n) {
     const w = get().week;
-    if (w.rest !== n && restBlocked(w, get().activeSlots())) { flag('Day 7 has exercises, so there is no room to add a rest day. Move or clear them first.'); return false; }
+    if (w.rest !== n && restBlocked(w, get().activeSlots())) { flag('Day 7 has exercises, so there is no room to add a rest day. Move or clear them, or swap the empty day back to the end.'); return false; }
     set({ moveNote: null });
     return get().mutateWeek(x => { if (x.rest === n) delete x.rest; else x.rest = n; });
   },
@@ -229,7 +229,7 @@ export const useAppStore = create((set, get) => ({
   setMode(mode) { get().mutateCfg(c => { c.mode = mode; }); },
   pullUnfinished() {
     const slots = get().activeSlots();
-    get().mutateWeek(w => slots.forEach(s => { if (s.day < 5 && (w.moved[s.id] || s.day) < 5 && isOpen(s, w)) w.moved[s.id] = 5; }));
+    get().mutateWeek(w => { pullable(w, slots).forEach(s => { w.moved[s.id] = 5; }); });
   },
 
   moveSlot(slotId, day) {

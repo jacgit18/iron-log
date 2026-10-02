@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { WARMUP, slotsFor } from '../../lib/data.js';
 import { monday, ymd, addDays, fmtShort } from '../../lib/dates.js';
-import { tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle } from '../../lib/logic.js';
+import { tally, currentLayout, isOpen, pullable, isSkipped, programFor, progName, DAYS, dayAt, dayTitle } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
@@ -17,15 +17,17 @@ const tipHidden = k => LS.get(k) === 1; // stored as the string "1", same as the
 
 // Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
 function SwapArrows({ d }) {
+  const rest = useAppStore(s => s.week.rest);
   const swap = dir => {
-    useAppStore.getState().swapDays(d, dir);
+    if (!useAppStore.getState().swapDays(d, dir)) return;
     const e = d + dir;
-    requestAnimationFrame(() => (document.getElementById(`swap-${e}-${dir}`) || document.getElementById(`swap-${e}-${-dir}`))?.focus());
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => (document.getElementById(`swap-${e}-${dir}`) || document.getElementById(`swap-${e}-${-dir}`))?.focus());
   };
+  const label = n => (d === rest ? `Move rest day to Day ${n}` : n === rest ? `Swap Day ${d} with the rest day` : `Swap Day ${d} with Day ${n}`);
   return (
     <span className="swaps">
-      {d > 1 && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}--1`} aria-label={`Swap Day ${d} with Day ${d - 1}`} onClick={() => swap(-1)}><span aria-hidden="true">←</span></button>}
-      {d < DAYS.length && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}-1`} aria-label={`Swap Day ${d} with Day ${d + 1}`} onClick={() => swap(1)}><span aria-hidden="true">→</span></button>}
+      {d > 1 && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}--1`} aria-label={label(d - 1)} onClick={() => swap(-1)}><span aria-hidden="true">←</span></button>}
+      {d < DAYS.length && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}-1`} aria-label={label(d + 1)} onClick={() => swap(1)}><span aria-hidden="true">→</span></button>}
     </span>
   );
 }
@@ -187,7 +189,7 @@ export default function Board() {
           const list = cols[d];
           const t = tally(list, week);
           const warm = week.warm[pd] || {};
-          const pending = dayDef.makeup ? slots.filter(s => s.day < 5 && (week.moved[s.id] || s.day) < 5 && isOpen(s, week)).length : 0;
+          const pending = dayDef.makeup ? pullable(week, slots).length : 0;
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const open = list.filter(s => isOpen(s, week));
           const finished = [...list.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...list.filter(s => isSkipped(s, week))];

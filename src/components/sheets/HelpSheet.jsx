@@ -19,11 +19,11 @@ const GLOSSARY = [
   ['Primary / secondary muscles', 'Muscles an exercise mainly works, and ones it works less. Secondary work counts as half a set on the Muscles tab.'],
   ['Mobility', 'Stretching or movement work. It isn’t counted toward any muscle.'],
   ['Warm-up', 'Short exercises before each day’s session.'],
-  ['Make-up day', 'Normally Day 5 (a rest day earlier in the week shifts it later). You can pull in anything left unfinished from Days 1 to 4.'],
+  ['Make-up day', 'Normally Day 5 (a rest day earlier in the week shifts it later). You can pull in anything left unfinished from the days before it.'],
   ['Skip', 'Leaves an exercise out of this week’s counts without deleting it.'],
   ['D1 to D7', 'Day 1 to Day 7 of the week’s plan.'],
   ['Rest day', 'Tick Rest day on a day to rest. Your workouts from that day on move one day later, and the rest day counts as done. Untick to undo. You can’t add one while Day 7 has exercises.'],
-  ['Swap arrows', 'The ← and → on each day swap it with the next day for this week only. The workouts trade places and the day labels stay in order. Swapping with the rest day moves your rest day.'],
+  ['Swap arrows', 'The ← and → on each day swap it with the day beside it for this week only. The workouts trade places and the day labels stay in order. Swapping with the rest day moves your rest day.'],
   ['Mode 1, 2, 3', 'How the two programs take turns: Program A only; A and B by month; or six months each.'],
 ];
 

@@ -191,6 +191,21 @@ describe('swap days', () => {
     st().moveSlot('A-d1s1', 1); // back to its home column
     expect(st().week.moved['A-d1s1']).toBeUndefined();
   });
+  it('moving after a swap can be undone, and the note remembers the home column', () => {
+    st().swapDays(4, 1); // columns 4 and 5 now show workouts 5 and 4
+    st().moveSlot('A-d1s1', 4);
+    expect(st().week.moved['A-d1s1']).toBe(5);
+    const n = st().moveNote;
+    expect(n.fromShown).toBe(1);
+    st().undoMove();
+    expect(st().week.moved['A-d1s1']).toBeUndefined();
+  });
+  it('make-up pulls in workouts by position, not program day', () => {
+    st().swapDays(4, 1); // Day 4 workout now sits after the make-up column
+    st().pullUnfinished();
+    expect(st().week.moved['A-d4s1']).toBeUndefined();
+    expect(st().week.moved['A-d1s1']).toBe(5);
+  });
   it('keeps a warm-up tick with its workout across a swap', () => {
     st().swapDays(6, 1);
     st().setWarm(7, 'shadow', true); // column 7 shows the Day 6 workout
