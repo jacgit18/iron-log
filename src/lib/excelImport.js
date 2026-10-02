@@ -45,17 +45,8 @@ function slugFor(name, taken) {
 // Same fields as the app writes, so an entry that's already here isn't added twice.
 export const entryKey = e => JSON.stringify([e.d, e.ph || null, e.w ?? null, e.s ?? null, e.r ?? null, e.sec ?? null, e.sets || null, e.n || null]);
 
-export async function parseExcelExport(buffer, cfg) {
-  const X = await loadXLSX();
-  let wb;
-  try { wb = X.read(buffer, { type: 'array' }); } catch { throw new Error('That file couldn’t be read as an Excel workbook.'); }
-  const rows = name => (wb.Sheets[name] ? X.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '', raw: true }) : null);
-  const sessions = rows('Sessions');
-  if (!sessions || String(sessions[0]?.[2]) !== 'Exercise' || String(sessions[0]?.[0]) !== 'Date') {
-    if (rows('Plan')) throw new Error('That’s a single-week Excel file. Import the main iron-log workbook, or better, the iron-log-data .json file.');
-    throw new Error('That isn’t an Iron Log Excel export.');
-  }
-
+// Sessions rows (the Sessions sheet's columns, header first) → logs, new custom exercises and muscle tags.
+function readSessions(X, sessions, cfg) {
   // Exercise names → ids: built-in names, then your custom exercises, then new custom ones.
   const known = { ...(cfg.ex || {}) }; const byName = {};
   Object.entries(EX).forEach(([id, e]) => { byName[e.n] = id; });
@@ -93,6 +84,21 @@ export async function parseExcelExport(buffer, cfg) {
     const same = def && JSON.stringify({ mob: !!def.mob, p: def.p || [], s: def.s || [] }) === JSON.stringify({ mob: !!tg.mob, p: tg.p || [], s: tg.s || [] });
     if (!same) muscleMap[id] = tg;
   });
+  return { logs, newEx, muscleMap, skipped, idFor };
+}
+
+export async function parseExcelExport(buffer, cfg) {
+  const X = await loadXLSX();
+  let wb;
+  try { wb = X.read(buffer, { type: 'array' }); } catch { throw new Error('That file couldn’t be read as an Excel workbook.'); }
+  const rows = name => (wb.Sheets[name] ? X.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '', raw: true }) : null);
+  const sessions = rows('Sessions');
+  if (!sessions || String(sessions[0]?.[2]) !== 'Exercise' || String(sessions[0]?.[0]) !== 'Date') {
+    if (rows('Plan')) throw new Error('That’s a single-week Excel file. Import the main iron-log workbook, or better, the iron-log-data .json file.');
+    throw new Error('That isn’t an Iron Log Excel export.');
+  }
+
+  const { logs, newEx, muscleMap, skipped, idFor } = readSessions(X, sessions, cfg);
 
   const body = [];
   (rows('Body weight') || []).slice(1).forEach(([wk0, d0, w]) => {
@@ -190,4 +196,32 @@ export function checkOffsFromLogs(cfg, programs, logs, weeks) {
   }));
   Object.keys(out).forEach(k => { if (!Object.keys(out[k].done).length) delete out[k]; });
   return out;
+}
+
+/* ---------- CSV (the iron-log.csv export), as a fallback: sessions only ---------- */
+function csvRows(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); cell = ''; rows.push(row); row = []; }
+    else cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(v => v !== ''));
+}
+export async function parseCsvExport(text, cfg) {
+  const X = await loadXLSX();
+  const r = csvRows(text.replace(/^\uFEFF/, ''));
+  const head = (r[0] || []).map(v => v.trim().toLowerCase());
+  if (head[0] !== 'date' || head[1] !== 'exercise') throw new Error('That isn’t an Iron Log CSV export.');
+  const at = n => head.indexOf(n);
+  const sessions = [[], ...r.slice(1).map(c => {
+    const g = n => (at(n) >= 0 ? c[at(n)] ?? '' : '');
+    return [g('date'), g('week_of'), g('exercise'), g('phase'), g('weight_lb'), g('sets'), g('reps'), g('hold_s'), g('set_detail'), '', g('primary_muscles'), g('secondary_muscles'), g('note'), g('program_slot'), ''];
+  })];
+  const { logs, newEx, muscleMap, skipped } = readSessions(X, sessions, cfg);
+  return { exportedAt: undefined, config: { rm: {}, ex: newEx, muscleMap, progNames: {} }, programs: {}, library: [], logs, weeks: {}, body: [], excel: { settings: {}, skipped, newExercises: Object.values(newEx).map(e => e.n), csv: true } };
 }

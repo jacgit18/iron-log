@@ -10,9 +10,9 @@ function ExcelImport({ draft, s, busy }) {
   const d = draft.data; const x = d.excel.settings; const rms = Object.keys(d.config.rm).length;
   const hasSettings = x.mode || x.rest != null || x.pct;
   return (
-    <Sheet aria-label="Import from Excel">
-      <h2 className="cond">Import from Excel</h2>
-      <p><b>{draft.name}</b>{d.exportedAt ? `, exported ${libDate(d.exportedAt)}` : ''}. This workbook brings back:</p>
+    <Sheet aria-label={d.excel.csv ? 'Import from CSV' : 'Import from Excel'}>
+      <h2 className="cond">{d.excel.csv ? 'Import from CSV' : 'Import from Excel'}</h2>
+      <p><b>{draft.name}</b>{d.exportedAt ? `, exported ${libDate(d.exportedAt)}` : ''}. {d.excel.csv ? 'This CSV file brings back' : 'This workbook brings back'}:</p>
       <ul className="implist">
         <li>{plural(s.entries, 'logged session', 'logged sessions')} across {plural(s.exercises, 'exercise', 'exercises')}. Sessions you already have here are skipped.</li>
         {s.body > 0 && <li>{s.body} body weight entr{s.body === 1 ? 'y' : 'ies'}</li>}

@@ -3,7 +3,8 @@ import * as X from 'xlsx';
 import { BUILTIN } from './data.js';
 import { DEFAULT_CFG } from './logic.js';
 import { buildOverallWorkbook, buildWeekWorkbook } from './export.js';
-import { parseExcelExport, entryKey, checkOffsFromLogs } from './excelImport.js';
+import { buildCsv } from './export.js';
+import { parseExcelExport, parseCsvExport, entryKey, checkOffsFromLogs } from './excelImport.js';
 import { isDone, isItemDone, normWeek } from './logic.js';
 import { slotsFor } from './data.js';
 
@@ -135,5 +136,19 @@ describe('entries logged by check-offs', () => {
     expect(d.logs.hack[0].auto).toBe(true);
     expect(d.logs.hack[0].n).toBeUndefined();
     expect(entryKey(d.logs.hack[0])).toBe(entryKey(s.logs.hack[0]));
+  });
+});
+
+describe('CSV import (fallback)', () => {
+  it('reads back the sessions from the CSV export', async () => {
+    const s = S(); s.logs.hack[0].n = 'Felt, "heavy"';
+    const d = await parseCsvExport(buildCsv(s), cfg());
+    expect(d.logs.hack).toEqual([s.logs.hack[0]]);
+    expect(d.logs.myhold).toHaveLength(1);
+    expect(d.excel).toMatchObject({ csv: true, skipped: 0 });
+    expect(entryKey(d.logs.hack[0])).toBe(entryKey(s.logs.hack[0]));
+  });
+  it('rejects other CSV files', async () => {
+    await expect(parseCsvExport('a,b\n1,2', cfg())).rejects.toThrow('isn’t an Iron Log CSV export');
   });
 });

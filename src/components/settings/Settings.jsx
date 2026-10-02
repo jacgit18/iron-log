@@ -147,11 +147,11 @@ function DataPanel() {
     <section className="panel">
       <h2>Export &amp; import</h2>
       <p>One file with everything: your log, weekly check-offs, body weight, programs, saved versions and settings. Use it to keep a copy, move to another device or app, or go back to an earlier state.</p>
-      <p>To import, use the <b>iron-log.xlsx</b> workbook or the <b>iron-log-data .json</b> file. Both bring back everything. Workbooks exported by an older version of the app only bring back logged sessions, body weight and main settings.</p>
+      <p>To import, use the <b>iron-log.xlsx</b> workbook or the <b>iron-log-data .json</b> file. Both bring back everything. A <b>.csv</b> export only brings back logged sessions. Workbooks exported by an older version of the app only bring back logged sessions, body weight and main settings.</p>
       <div className="actions" style={{ justifyContent: 'flex-start' }}>
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <label className="btn filebtn">Import from file
-          <input type="file" id="imp-file" accept=".json,application/json,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden aria-describedby={importError ? 'imp-err' : undefined} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
+          <input type="file" id="imp-file" accept=".json,application/json,.csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden aria-describedby={importError ? 'imp-err' : undefined} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
       </div>
       {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}

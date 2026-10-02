@@ -11,8 +11,8 @@ Work through these in order, one at a time, and check for bugs after each.
 - [x] Excel import bug: no failing file turned up (the re-saved-dates bug was already fixed in #16). The real gap was that workbooks only brought back part of the data; see the next item.
 - [x] Make Excel (.xlsx) the one format for both export and import. Programs, saved versions, check-offs, config, sessions and body weight each have a sheet, and an exported workbook imports back the same as the JSON file.
   - Still to do: remove the old partial-import path for workbooks made before this change, once nobody has those.
-- [ ] Accept CSV as an import fallback only.
-- [ ] Keep JSON import until the backend exists, because it is the only full-detail backup for now. It gets removed in step 4.
+- [x] Accept CSV as an import fallback only (sessions only).
+- [x] Keep JSON import until the backend exists, because it is the only full-detail backup for now. It gets removed in step 4.
 
 ## 2. Board and exercise changes (before the backend)
 
