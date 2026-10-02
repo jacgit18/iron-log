@@ -266,7 +266,8 @@ export default function Board() {
                 <SwapArrows d={d} />
               </div>
               <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => st.setRestDay(d)} /> Rest day</label>
-              <button type="button" className="btn sm addbtn" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Add exercise</button>
+              <button type="button" className="btn sm addbtn" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>
+              <button type="button" className="btn sm ghost addbtn" id={`addweek-${d}`} aria-label={`Add an exercise to Day ${d} for this week only`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ This week only</button>
               <div className="warm">
                 <span className="tag">Warm-up</span>
                 {WARMUP.map(x => (
@@ -280,7 +281,7 @@ export default function Board() {
               <div className="stretches" role="group" aria-label={`Stretches, Day ${d}`}>
                 <div className="stretchhead">
                   <span className="tag">Stretches</span>
-                  <button type="button" className="btn sm ghost" id={`addstretch-${d}`} aria-label={`Add a stretch to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d, stretch: true })}>+ Add stretch</button>
+                  <button type="button" className="btn sm ghost" id={`addstretch-${d}`} aria-label={`Add a stretch to Day ${d}`} onClick={() => st.openAddToProgram(d, 'stretch')}>+ Add stretch</button>
                 </div>
                 {stretches.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
               </div>

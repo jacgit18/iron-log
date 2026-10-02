@@ -449,3 +449,15 @@ describe('adding to every week', () => {
     expect(st().cfg.ex['hip-90-90'].stretch).toBe(true);
   });
 });
+
+describe('the board add button', () => {
+  it('opens the full add sheet for the program day shown in that column', () => {
+    st().openAddToProgram(2);
+    expect(st().modal).toMatchObject({ type: 'slot', idx: null });
+    expect(st().edDay).toBe(2);
+    expect(st().edKey()).toBe('A');
+    st().openAddToProgram(3, 'stretch');
+    expect(st().modal.preset).toBe('stretch');
+    st().closeModal();
+  });
+});

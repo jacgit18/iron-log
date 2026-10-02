@@ -1,8 +1,8 @@
 import { BUILTIN, slotsFor, newExId } from '../lib/data.js';
-import { progName } from '../lib/logic.js';
+import { progName, dayAt } from '../lib/logic.js';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
-export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home'];
+export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home', 'Stretches'];
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 export const blankItem = () => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
 
@@ -29,6 +29,13 @@ export const editorSlice = (set, get, flag) => ({
   edProgram() { const it = get().edItem(); return it ? { ...it.prog, key: 'N' } : get().programs[get().edKey()]; },
   edName() { const it = get().edItem(); return it ? it.name : progName(get().cfg, get().edKey()); },
 
+  // The board's + Add exercise: the add sheet, aimed at the program day shown in column `col`.
+  openAddToProgram(col, preset) {
+    const pd = dayAt(get().week, col);
+    if (pd == null) { flag('That is your rest day'); return; }
+    const ak = get().activeProgKey();
+    set({ edProg: get().programs[ak] ? ak : 'A', edDay: pd, modal: { type: 'slot', idx: null, preset } });
+  },
   setEdProg: edProg => set({ edProg }),
   setEdDay: edDay => set({ edDay }),
 

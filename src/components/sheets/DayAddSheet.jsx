@@ -9,20 +9,15 @@ export default function DayAddSheet({ col, stretch: asStretch = false }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const [d, setD] = useState({ name: '', nu: '', ne: '', ns: asStretch, ph: 'strength', note: '' });
-  const [scope, setScope] = useState('program');
   const [err, setErr] = useState('');
   const up = patch => setD(x => ({ ...x, ...patch }));
   const known = findExId(cfg, d.name);
   const isStretch = known ? !!exInfo(cfg, known).stretch : d.ns;
-  const submit = e => { e.preventDefault(); const msg = st.addExerciseToDay(col, { ...exerciseChoice(cfg, d.name), nu: d.nu.trim(), ne: d.ne, ns: d.ns, ph: d.ph, note: d.note }, scope); if (msg) setErr(msg); };
+  const submit = e => { e.preventDefault(); const msg = st.addExerciseToDay(col, { ...exerciseChoice(cfg, d.name), nu: d.nu.trim(), ne: d.ne, ns: d.ns, ph: d.ph, note: d.note }, 'week'); if (msg) setErr(msg); };
   return (
     <Sheet as="form" noValidate onSubmit={submit}>
-      <h2 className="cond">{asStretch ? 'Add a stretch' : 'Add an exercise'} to Day {col}</h2>
-      <fieldset className="edit-item">
-        <legend>Add it to</legend>
-        <label className="inline"><input type="radio" name="add-scope" checked={scope === 'program'} onChange={() => setScope('program')} /> Every week (this day in the program)</label>
-        <label className="inline"><input type="radio" name="add-scope" checked={scope === 'week'} onChange={() => setScope('week')} /> This week only</label>
-      </fieldset>
+      <h2 className="cond">Add to Day {col}, this week</h2>
+      <p className="note">For this week only. Your program doesn't change.</p>
       <ExerciseField cfg={cfg} id="day-ex" name={d.name} url={d.nu} eq={d.ne} stretch={d.ns} onName={name => up({ name })} onUrl={nu => up({ nu })} onEq={ne => up({ ne })} onStretch={ns => up({ ns })} />
       {!isStretch && (
         <label className="field">Phase

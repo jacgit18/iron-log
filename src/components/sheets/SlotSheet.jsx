@@ -31,12 +31,12 @@ function ItemFields({ it, k, type, cfg, onChange }) {
   );
 }
 
-export default function SlotSheet({ idx }) {
+export default function SlotSheet({ idx, preset }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const edDay = useAppStore(s => s.edDay);
   const [d, setD] = useState(() => {
-    const src = idx == null ? { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' } : structuredClone(st.edProgram().days[edDay - 1].slots[idx]);
+    const src = idx == null ? (preset === 'stretch' ? { id: null, sec: 'Stretches', tier: '', type: 'single', items: [{ ...blankItem(), ph: null, ns: true }], note: '' } : { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' }) : structuredClone(st.edProgram().days[edDay - 1].slots[idx]);
     // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
     return { ...src, type: src.type || 'single', day: edDay, idx, note: src.note || '', tier: src.tier || '', items: src.items.map(it => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
   });
