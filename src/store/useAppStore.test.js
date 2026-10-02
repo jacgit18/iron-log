@@ -134,3 +134,74 @@ describe('rest day', () => {
     expect(st().week.done['A-d3s1']).toBe(true);
   });
 });
+
+describe('swap days', () => {
+  const ids = d => currentLayout(st().week, st().activeSlots())[d].map(s => s.id);
+
+  it('swaps two columns for this week, saves the order, and follows the workout on a phone', () => {
+    expect(st().swapDays(6, 1)).toBe(true);
+    expect(st().week.order).toEqual([1, 2, 3, 4, 5, 7, 6]);
+    expect(saved('weeks/' + st().weekKey()).order).toEqual([1, 2, 3, 4, 5, 7, 6]);
+    expect(ids(6)).toEqual([]);
+    expect(ids(7)).toContain('A-d6s1');
+    expect(st().mDay).toBe(7);
+  });
+  it('swapping back removes the order', () => {
+    st().swapDays(6, 1); st().swapDays(7, -1);
+    expect(st().week.order).toBeUndefined();
+    expect(ids(6)).toContain('A-d6s1');
+  });
+  it('does nothing past the ends', () => {
+    expect(st().swapDays(1, -1)).toBe(false);
+    expect(st().swapDays(7, 1)).toBe(false);
+    expect(st().week.order).toBeUndefined();
+  });
+  it('swapping a workout with the rest column moves the rest day', () => {
+    st().setRestDay(3);
+    expect(st().swapDays(2, 1)).toBe(true); // Day 2 workout <-> rest at column 3
+    expect(st().week.rest).toBe(2);
+    expect(st().week.order).toBeUndefined();
+    expect(st().swapDays(2, 1)).toBe(true); // rest at 2 <-> column 3 workout
+    expect(st().week.rest).toBe(3);
+  });
+  it('swaps two workouts across a rest day', () => {
+    st().setRestDay(3);
+    expect(st().swapDays(4, 1)).toBe(true); // columns 4 and 5 show workouts 3 and 4
+    expect(st().week.order).toEqual([1, 2, 4, 3, 5, 6, 7]);
+    expect(ids(4)).toContain('A-d4s1');
+    expect(ids(5)).toContain('A-d3s1');
+  });
+  it('never touches the hidden last workout position while a rest day is set', () => {
+    st().setRestDay(3);
+    for (let d = 1; d <= 6; d++) st().swapDays(d, 1);
+    expect((st().week.order || [])[6] ?? 7).toBe(7);
+  });
+  it('blocks a rest day when the empty day has been swapped away from the end, and allows it once it is back', () => {
+    st().swapDays(6, 1); // the Day 6 workout now sits last
+    expect(st().setRestDay(2)).toBe(false);
+    expect(st().week.rest).toBeUndefined();
+    st().swapDays(7, -1);
+    expect(st().setRestDay(2)).toBe(true);
+  });
+  it('moves a card onto the workout shown in the column, and undo restores it', () => {
+    st().swapDays(6, 1);
+    st().moveSlot('A-d1s1', 7); // column 7 shows the Day 6 workout
+    expect(st().week.moved['A-d1s1']).toBe(6);
+    expect(ids(7)).toContain('A-d1s1');
+    st().moveSlot('A-d1s1', 1); // back to its home column
+    expect(st().week.moved['A-d1s1']).toBeUndefined();
+  });
+  it('keeps a warm-up tick with its workout across a swap', () => {
+    st().swapDays(6, 1);
+    st().setWarm(7, 'shadow', true); // column 7 shows the Day 6 workout
+    expect(st().week.warm[6]).toEqual({ shadow: true });
+    st().swapDays(7, -1);
+    expect(st().week.warm[6].shadow).toBe(true);
+  });
+  it('keeps a check-off with its workout across a swap', () => {
+    st().checkCard('A-d6s1', true);
+    st().swapDays(6, 1);
+    expect(st().week.done['A-d6s1']).toBe(true);
+    expect(ids(7)).toContain('A-d6s1');
+  });
+});
