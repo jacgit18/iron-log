@@ -4,7 +4,7 @@
    reading format 1, don't edit the fixture to match. */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { parseDataFile, buildDataFile, dataStats, DATA_FORMAT } from './export.js';
+import { parseDataFile, buildDataFile, dataStats, mergeWeek, DATA_FORMAT } from './export.js';
 import { BUILTIN, withAllDays } from './data.js';
 
 const text = readFileSync(new URL('../test/fixtures/iron-log-data.v1.json', import.meta.url), 'utf8');
@@ -87,4 +87,10 @@ describe('iron-log-data.json, format 1', () => {
     const padded = { ...raw, programs: { A: withAllDays(raw.programs.A) }, library: raw.library.map(it => ({ ...it, prog: withAllDays(it.prog) })) };
     expect({ ...again, exportedAt: raw.exportedAt }).toEqual(padded);
   });
+});
+
+it('mergeWeek keeps a rest day from either side, preferring this device', () => {
+  expect(mergeWeek({ rest: 2 }, { rest: 5 }).rest).toBe(2);
+  expect(mergeWeek({}, { rest: 5 }).rest).toBe(5);
+  expect(mergeWeek({}, {})).not.toHaveProperty('rest');
 });
