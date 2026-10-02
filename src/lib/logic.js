@@ -15,6 +15,8 @@ export const progName = (cfg, k) => (cfg.progNames && cfg.progNames[k]) || `Prog
 export function activeProgKey(cfg, week, weekStart) { return (cfg.mode === 2 && (week.prog === 'A' || week.prog === 'B')) ? week.prog : programFor(cfg, weekStart); }
 
 /* ---------- Small helpers ---------- */
+// Phases whose sets are held for time (seconds) rather than counted in reps.
+export const isTimed = ph => ph === 'iso' || ph === 'mob';
 export const round = w => w < 50 ? Math.round(w / 2.5) * 2.5 : Math.round(w / 5) * 5;
 export const itemKey = (slot, idx) => `${slot.id}:${idx}`;
 // A phase picked for one week beats the slot's saved default, which beats the exercise's default (all its cards), which beats the program's.
@@ -45,7 +47,7 @@ export function progressionOf(cfg, logs, item, ph) {
   if (!(w > 0) || !(Number(a.w) >= w)) return null;
   const m = rxOf(cfg, item, ph).match(/(\d+)\s*×\s*(\d+)/); if (!m) return null;
   const sets = Number(m[1]), reps = Number(m[2]);
-  const full = e => setsOfEntry(e).filter(x => Number(x.w) >= w && (ph === 'iso' ? Number(x.sec) >= 30 : Number(x.r) >= reps)).length >= sets;
+  const full = e => setsOfEntry(e).filter(x => Number(x.w) >= w && (isTimed(ph) ? Number(x.sec) >= 30 : Number(x.r) >= reps)).length >= sets;
   if (!full(a) || !full(b)) return null;
   return { w: w + (w < 50 ? 2.5 : 5), from: w };
 }
@@ -229,14 +231,14 @@ export function moveTargets(week, slots, c) { const cols = currentLayout(week, s
 export function holdPlan(cfg, week, logs, slot, idx) {
   const it = slot.items[idx]; const ph = phaseOf(cfg, week, slot, idx); const rx = rxOf(cfg, it, ph);
   const m = rx.match(/(\d+)\s*×\s*(\d+)(?:\s*[–-]\s*(\d+))?/); const sets = m ? Number(m[1]) : 4;
-  const last = lastLog(logs, it.ex, 'iso'); const hold = (last && last.sec) ? Number(last.sec) : (m ? Number(m[2]) : 30);
+  const last = lastLog(logs, it.ex, ph); const hold = (last && last.sec) ? Number(last.sec) : (m ? Number(m[2]) : 30);
   return { sets, hold };
 }
 
 // Starting set rows for the log sheet: the prescription's set count, prefilled with the target.
 export function planRows(cfg, logs, it, ph) {
-  const iso = ph === 'iso'; const m = rxOf(cfg, it, ph).match(/(\d+)\s*×\s*(\d+)/); const n = m ? Number(m[1]) : 3; const t = targetOf(cfg, logs, it, ph);
-  const reps = m ? Number(m[2]) : null; const hold = iso ? ((lastLog(logs, it.ex, 'iso') || {}).sec || reps) : null;
+  const iso = isTimed(ph); const m = rxOf(cfg, it, ph).match(/(\d+)\s*×\s*(\d+)/); const n = m ? Number(m[1]) : 3; const t = targetOf(cfg, logs, it, ph);
+  const reps = m ? Number(m[2]) : null; const hold = iso ? ((lastLog(logs, it.ex, ph) || {}).sec || reps) : null;
   return Array.from({ length: n }, () => iso ? { w: t.w ?? null, sec: hold } : { w: t.w ?? null, r: reps });
 }
 
@@ -256,13 +258,13 @@ export function autoLogs(cfg, logs, slots, before, after, wk, date) {
   const out = {};
   slots.forEach(s => s.items.forEach((it, i) => {
     const was = isItemDone(s, i, before), now = isItemDone(s, i, after);
-    if (was === now || exInfo(cfg, it.ex).stretch) return; // a stretch has no weight or reps to log
+    if (was === now || (now && exInfo(cfg, it.ex).stretch)) return; // a stretch has no weight or reps to log
     const L = out[it.ex] || logs[it.ex] || [];
     const here = e => e.slot === s.id && weekOfEntry(e) === wk;
     if (now) {
       if (L.some(here)) return; // already logged for this card this week
       const ph = phaseOf(cfg, after, s, i);
-      const e = { d: date, ph, ...summarizeSets(planRows(cfg, logs, it, ph), ph === 'iso'), slot: s.id, wk, auto: true };
+      const e = { d: date, ph, ...summarizeSets(planRows(cfg, logs, it, ph), isTimed(ph)), slot: s.id, wk, auto: true };
       out[it.ex] = [...L, e].sort((a, b) => a.d.localeCompare(b.d));
     } else {
       const keep = L.filter(e => !(e.auto && here(e)));

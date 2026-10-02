@@ -5,20 +5,20 @@ import Sheet from '../Sheet.jsx';
 import ExerciseField from '../ExerciseField.jsx';
 
 // Add an exercise (or a stretch) to one day of the week on screen. Only this week gets it; the program doesn't change.
-export default function DayAddSheet({ col, stretch: asStretch = false }) {
+export default function DayAddSheet({ col }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
-  const [d, setD] = useState({ name: '', nu: '', ne: '', ns: asStretch, ph: 'strength', note: '' });
+  const [d, setD] = useState({ name: '', nu: '', ne: '', ns: false, ph: 'strength', note: '' });
   const [err, setErr] = useState('');
   const up = patch => setD(x => ({ ...x, ...patch }));
   const known = findExId(cfg, d.name);
   const isStretch = known ? !!exInfo(cfg, known).stretch : d.ns;
-  const submit = e => { e.preventDefault(); const msg = st.addExerciseToDay(col, { ...exerciseChoice(cfg, d.name), nu: d.nu.trim(), ne: d.ne, ns: d.ns, ph: d.ph, note: d.note }, 'week'); if (msg) setErr(msg); };
+  const submit = e => { e.preventDefault(); const msg = st.addExerciseToDay(col, { ...exerciseChoice(cfg, d.name), nu: d.nu.trim(), ne: d.ne, ns: d.ns, ph: d.ph, note: d.note }); if (msg) setErr(msg); };
   return (
     <Sheet as="form" noValidate onSubmit={submit}>
       <h2 className="cond">Add to Day {col}, this week</h2>
       <p className="note">For this week only. Your program doesn't change.</p>
-      <ExerciseField cfg={cfg} id="day-ex" name={d.name} url={d.nu} eq={d.ne} stretch={d.ns} onName={name => up({ name })} onUrl={nu => up({ nu })} onEq={ne => up({ ne })} onStretch={ns => up({ ns })} />
+      <ExerciseField cfg={cfg} id="day-ex" name={d.name} url={d.nu} eq={d.ne} stretch={d.ns} onName={name => { const k = findExId(cfg, name); const def = k && cfg.exPh && cfg.exPh[k]; up({ name, ...(def ? { ph: def } : {}) }); }} onUrl={nu => up({ nu })} onEq={ne => up({ ne })} onStretch={ns => up({ ns })} />
       {!isStretch && (
         <label className="field">Phase
           <select value={d.ph || ''} onChange={e => up({ ph: e.target.value || null })}>

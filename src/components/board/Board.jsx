@@ -2,13 +2,14 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { WARMUP, EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
-import { MUSCLES, M_KEYS, matchesFilter } from '../../lib/muscles.js';
+import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { monday, ymd, addDays, fmtShort, fmtDayDate } from '../../lib/dates.js';
 import { weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
+import { FEATURES } from '../../lib/features.js';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
 
@@ -73,8 +74,17 @@ export default function Board() {
   const left = ymd(monday(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
   const [filter, setFilter] = useState({ muscle: '', eq: '' });
-  const filtering = !!(filter.muscle || filter.eq);
-  const shown = list => (filtering ? list.filter(s => matchesFilter(cfg, s, filter)) : list);
+  // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
+  const filtering = !!filter.eq;
+  const sorting = !!filter.muscle;
+  const rank = s => muscleRank(cfg, s, filter.muscle);
+  const shown = list => {
+    const l = filtering ? list.filter(s => matchesFilter(cfg, s, { eq: filter.eq })) : list;
+    return sorting ? l.map(s => [s, rank(s)]).sort((a, b) => a[1] - b[1]).map(([s]) => s) : l; // stable: program order within a rank
+  };
+  const muscleName = filter.muscle === 'stretch' ? 'Stretches' : filter.muscle ? MUSCLES[filter.muscle].n : '';
+  const RANK_SEC = [`Primary: ${muscleName}`, `Secondary: ${muscleName}`, 'Other'];
+  const headOf = (s, day) => (sorting ? RANK_SEC[rank(s)] : secOf(s, day));
   const [pick, setPick] = useState(null);
   const moveTo = targets.includes(pick) ? pick : targets[0];
   const hideLeftovers = () => { LS.set('hideleftovers', todayKey); forceTips(n => n + 1); };
@@ -184,12 +194,12 @@ export default function Board() {
         </div>
       )}
       <BodyWeightRow key={wk} />
-      <div className="filterbar" role="group" aria-label="Filter exercises">
-        <label className="field">Muscle
+      <div className="filterbar" role="group" aria-label="Sort and filter exercises">
+        <label className="field">Sort by muscle
           <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
-            <option value="">All muscles</option>
+            <option value="">Program order</option>
             {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-            <option value="stretch">Stretches</option>
+            {FEATURES.stretches && <option value="stretch">Stretches</option>}
           </select>
         </label>
         <label className="field">Equipment
@@ -198,8 +208,9 @@ export default function Board() {
             {EQ_KEYS.map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
           </select>
         </label>
-        {filtering && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear filter</button>}
-        {filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, filter)).length} of {slots.length} cards</span>}
+        {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear</button>}
+        {filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
+        {sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
       </div>
 
       <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
@@ -242,11 +253,12 @@ export default function Board() {
           const warm = week.warm[pd] || {};
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const isStretchCard = s => s.items.every(it => exInfo(cfg, it.ex).stretch);
-          const stretches = shown(list).filter(isStretchCard); // shown under the warm-up
-          const vis = shown(list).filter(s => !isStretchCard(s));
+          const cards = list.filter(s => !isStretchCard(s));
+          const stretches = shown(list.filter(isStretchCard)); // shown under the warm-up
+          const vis = shown(cards);
           const open = vis.filter(s => isOpen(s, week));
           const finished = [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))];
-          const ft = tally(finished, week);
+          const ft = tally(finished, week); // counts the cards under the header (the day's own count ignores the filter)
           return (
             <section
               key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`}
@@ -266,8 +278,10 @@ export default function Board() {
                 <SwapArrows d={d} />
               </div>
               <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => st.setRestDay(d)} /> Rest day</label>
-              <button type="button" className="btn sm addbtn" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>
-              <button type="button" className="btn sm ghost addbtn" id={`addweek-${d}`} aria-label={`Add an exercise to Day ${d} for this week only`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ This week only</button>
+              <div className="addrow">
+                <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>
+                <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>
+              </div>
               <div className="warm">
                 <span className="tag">Warm-up</span>
                 {WARMUP.map(x => (
@@ -278,17 +292,17 @@ export default function Board() {
                   </label>
                 ))}
               </div>
-              <div className="stretches" role="group" aria-label={`Stretches, Day ${d}`}>
+              {FEATURES.stretches && <div className="stretches" role="group" aria-label={`Stretches, Day ${d}`}>
                 <div className="stretchhead">
                   <span className="tag">Stretches</span>
                   <button type="button" className="btn sm ghost" id={`addstretch-${d}`} aria-label={`Add a stretch to Day ${d}`} onClick={() => st.openAddToProgram(d, 'stretch')}>+ Add stretch</button>
                 </div>
                 {stretches.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
-              </div>
+              </div>}
               {filtering && vis.length === 0 && stretches.length === 0 && <p className="note">Nothing here matches the filter.</p>}
               {open.map((s, i) => {
-                const sec = secOf(s, pd);
-                const newSec = i === 0 || sec !== secOf(open[i - 1], pd);
+                const sec = headOf(s, pd);
+                const newSec = i === 0 || sec !== headOf(open[i - 1], pd);
                 return (
                   <Fragment key={s.id}>
                     {newSec && <div className="sect">{sec}</div>}

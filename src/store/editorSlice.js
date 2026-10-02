@@ -1,8 +1,9 @@
-import { BUILTIN, slotsFor, newExId } from '../lib/data.js';
+import { BUILTIN, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { progName, dayAt } from '../lib/logic.js';
+import { FEATURES } from '../lib/features.js';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
-export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home', 'Stretches'];
+export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home', ...(FEATURES.stretches ? ['Stretches'] : [])];
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 export const blankItem = () => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
 
@@ -29,12 +30,13 @@ export const editorSlice = (set, get, flag) => ({
   edProgram() { const it = get().edItem(); return it ? { ...it.prog, key: 'N' } : get().programs[get().edKey()]; },
   edName() { const it = get().edItem(); return it ? it.name : progName(get().cfg, get().edKey()); },
 
-  // The board's + Add exercise: the add sheet, aimed at the program day shown in column `col`.
+  // The board's + Add exercise: the add sheet, aimed at the program on the board and the program day shown in
+  // column `col`. The target travels with the sheet, so the Program tab's own selection is untouched.
   openAddToProgram(col, preset) {
     const pd = dayAt(get().week, col);
     if (pd == null) { flag('That is your rest day'); return; }
     const ak = get().activeProgKey();
-    set({ edProg: get().programs[ak] ? ak : 'A', edDay: pd, modal: { type: 'slot', idx: null, preset } });
+    set({ modal: { type: 'slot', idx: null, preset, col, target: { key: get().programs[ak] ? ak : 'A', day: pd } } });
   },
   setEdProg: edProg => set({ edProg }),
   setEdDay: edDay => set({ edDay }),
@@ -123,7 +125,7 @@ export const editorSlice = (set, get, flag) => ({
     if (get().blocked()) return null;
     for (const it of d.items) {
       if (!it.ex || (it.ex === '__new' && !it.nn)) return 'Choose an exercise, or type a name for the new one.';
-      if (it.nu && !/^https?:\/\//.test(it.nu.trim())) return 'Video link should start with https://';
+      if (!isVideoUrl(it.nu)) return VIDEO_ERR;
     }
     const newEx = {};
     const slugFor = name => newExId(get().cfg, name, newEx);
@@ -134,19 +136,19 @@ export const editorSlice = (set, get, flag) => ({
       const o = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
     });
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex, newEx); });
-    const k = get().edKey(); const edDay = get().edDay;
+    const k = d.target ? d.target.key : get().edKey(); const edDay = d.target ? d.target.day : get().edDay;
     const slot = { id: d.id || `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, sec: d.sec, items };
     if (d.tier) slot.tier = d.tier; if (d.type !== 'single') slot.type = d.type; if (d.note) slot.note = d.note;
     const orig = d.idx != null ? get().edProgram().days[edDay - 1].slots[d.idx] : null;
-    get().editProgram(prog => {
+    const apply = prog => {
       if (d.idx != null) prog.days[edDay - 1].slots.splice(d.idx, 1);
       const target = prog.days[d.day - 1].slots;
       if (orig && d.day === edDay && orig.sec === slot.sec) target.splice(d.idx, 0, slot);
-      else {
-        insertSlot(target, slot);
-      }
-    });
-    set({ modal: null });
+      else insertSlot(target, slot);
+    };
+    if (d.target) { const prog = structuredClone(get().programs[k]); apply(prog); get().saveProgram(k, prog); } // from the board
+    else get().editProgram(apply);
+    get().closeModal();
     flag(d.day === edDay ? 'Saved' : `Saved to Day ${d.day}`);
     return null;
   },

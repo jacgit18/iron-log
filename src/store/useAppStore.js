@@ -1,18 +1,19 @@
 import { create } from 'zustand';
-import { BUILTIN, resolveProgram, padLibrary, EX, exInfo, newExId } from '../lib/data.js';
+import { BUILTIN, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
-  DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
+  DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
-import { editorSlice, insertSlot } from './editorSlice.js';
+import { editorSlice } from './editorSlice.js';
 import { settingsSlice } from './settingsSlice.js';
 import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
 import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
   backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile,
 } from '../lib/export.js';
+import { FEATURES } from '../lib/features.js';
 import { loadView, saveView } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
 import { commitFiles, readFile, validRepo } from '../lib/github.js';
@@ -45,23 +46,23 @@ const standalone = typeof window !== 'undefined' && !window.claude;
 
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
-// What you set on an exercise (video link, equipment, stretch) is stored in cfg.ex as only what differs from the built-in entry.
-function overrideOf(c, exId, vals) {
+// What you set on an exercise (video link, equipment, stretch) applies everywhere it appears. cfg.ex keeps only
+// what differs from the built-in entry; clearing a built-in value stores '' (or false) so the merge hides it.
+function setOverride(c, exId, vals) {
   const base = EX[exId] || {}; const o = { ...(c.ex[exId] || {}) };
   Object.entries(vals).forEach(([k, v]) => { if (v && v !== base[k]) o[k] = v; else if (v) delete o[k]; else if (base[k]) o[k] = k === 'stretch' ? false : ''; else delete o[k]; });
-  return o;
-}
-// A video link typed for an existing exercise replaces its saved one everywhere.
-function setUrl(c, exId, url) {
-  const o = overrideOf(c, exId, { url });
   if (!EX[exId] && !o.n) o.n = exId;
   if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
 }
-// Equipment for one exercise, applied everywhere it appears.
-function setEquipment(c, exId, eq) {
-  const o = overrideOf(c, exId, { eq });
-  if (!EX[exId] && !o.n) o.n = exId;
-  if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
+
+// An exercise's default phase for every card. Slot defaults saved for that exercise would outrank it, so they go;
+// a slot default saved afterwards wins again.
+function setExerciseDefault(c, exId, ph, programs, library) {
+  c.exPh = c.exPh || {};
+  if (ph) c.exPh[exId] = ph; else delete c.exPh[exId];
+  if (!ph) return;
+  const progs = [...Object.values(programs), ...library.map(it => ({ ...it.prog, key: 'N' }))];
+  progs.forEach(p => { try { slotsFor(p).forEach(sl => sl.items.forEach((x, i) => { if (x.ex === exId) delete c.phDef[`${sl.id}:${i}`]; })); } catch { /* a malformed saved program */ } });
 }
 
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
@@ -139,6 +140,7 @@ export const useAppStore = create((set, get) => ({
     if (histPromise) return histPromise;
     set({ historyLoading: true });
     histPromise = (async () => {
+      await dataSourceKnown(); // reading before the data source is known would return local or empty weeks
       const out = {};
       try {
         if (db) { const snap = await db.collection('weeks').get(); snap.docs.forEach(d => { if (d.exists) out[d.id] = d.data(); }); }
@@ -247,7 +249,7 @@ export const useAppStore = create((set, get) => ({
   saveExperiment(d) {
     if (get().blocked()) return null;
     if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
-    if (d.nu && !/^https?:\/\//.test(d.nu.trim())) return 'Video link should start with https://';
+    if (!isVideoUrl(d.nu)) return VIDEO_ERR;
     const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
     if (d.ex !== '__new') get().applyExerciseUrl(ex, d.nu);
     const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim().slice(0, 200) };
@@ -255,39 +257,34 @@ export const useAppStore = create((set, get) => ({
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
     set({ modal: null }); flag('Saved'); return null;
   },
-  // A typed name that isn't in the catalog yet becomes a custom exercise (video link, equipment and stretch optional). Returns its id.
+  // A link typed for an existing exercise replaces its saved one everywhere.
   applyExerciseUrl(ex, raw) {
     if (raw == null) return; // not offered by this caller: leave the saved link alone
     const url = (raw || '').trim();
     if (url === (exInfo(get().cfg, ex).url || '')) return;
-    get().mutateCfg(c => setUrl(c, ex, url));
+    get().mutateCfg(c => setOverride(c, ex, { url }));
   },
+  // A typed name that isn't in the catalog yet becomes a custom exercise (video link, equipment and stretch optional). Returns its id.
   createExercise(d) {
     const ex = newExId(get().cfg, d.nn);
     get().mutateCfg(c => { c.ex[ex] = { n: d.nn, ...(d.nu ? { url: d.nu } : {}), ...(d.ne ? { eq: d.ne } : {}), ...(d.ns ? { stretch: true } : {}) }; });
     return ex;
   },
   // Add an exercise straight to a day of the viewed week. Only this week gets the card; the program doesn't change.
-  addExerciseToDay(col, d, scope = 'week') {
+  addExerciseToDay(col, d) {
     if (get().blocked()) return null;
     if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
-    if (d.nu && !/^https?:\/\//.test(d.nu.trim())) return 'Video link should start with https://';
+    if (!isVideoUrl(d.nu)) return VIDEO_ERR;
     const pd = dayAt(get().week, col); if (pd == null) return 'That is your rest day.';
     const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
     if (d.ex !== '__new') get().applyExerciseUrl(ex, d.nu);
     const stretch = !!exInfo(get().cfg, ex).stretch;
     const note = (d.note || '').trim().slice(0, 200);
-    if (scope === 'program') {
-      // Every week: the card joins this day of the program on the board, in the section it belongs to.
-      const ak = get().activeProgKey(); const key = get().programs[ak] ? ak : 'A';
-      const prog = structuredClone(get().programs[key]);
-      const slot = { id: `${key}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, sec: stretch ? 'Stretches' : 'Regular', items: [{ ex, ph: stretch ? null : d.ph || null, w: null, ...(note ? { note } : {}) }] };
-      if (!stretch) slot.tier = 'Accessory';
-      insertSlot(prog.days[pd - 1].slots, slot);
-      get().saveProgram(key, prog);
-      set({ modal: null }); flag(`Added ${exInfo(get().cfg, ex).n} to Day ${col} of ${progName(get().cfg, key)}, every week`); return null;
-    }
-    const ok = get().mutateWeek(w => { w.extra = [...(w.extra || []), { id: uid('X-'), day: pd, ex, ph: stretch ? null : d.ph || null, note, add: true }]; });
+    const ph = stretch ? null : d.ph || null; const exDef = (get().cfg.exPh || {})[ex]; const id = uid('X-');
+    const ok = get().mutateWeek(w => {
+      w.extra = [...(w.extra || []), { id, day: pd, ex, ph, note, add: true }];
+      if (ph && exDef && ph !== exDef) w.ph[`${id}:0`] = ph; // picked over the exercise default: a one-week pick, like the card's phase menu
+    });
     if (!ok) return null;
     set({ modal: null }); flag(`Added ${exInfo(get().cfg, ex).n} to Day ${col}`); return null;
   },
@@ -295,13 +292,11 @@ export const useAppStore = create((set, get) => ({
   saveExerciseDetails(exId, d) {
     if (get().blocked()) return null;
     const url = (d.url || '').trim();
-    if (url && !/^https?:\/\//.test(url)) return 'Video link should start with https://';
+    if (!isVideoUrl(url)) return VIDEO_ERR;
     get().mutateCfg(c => {
-      const o = overrideOf(c, exId, { url, eq: d.eq || '', stretch: d.stretch });
-      if (!EX[exId] && !o.n) o.n = exInfo(get().cfg, exId).n;
-      if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
-      c.exPh = c.exPh || {};
-      if (d.ph) c.exPh[exId] = d.ph; else delete c.exPh[exId];
+      setOverride(c, exId, { url, eq: d.eq || '', ...(FEATURES.stretches ? { stretch: d.stretch } : {}) }); // a hidden setting is left as it is
+      const ph = d.stretch ? '' : d.ph; // a stretch has no phase
+      if (ph !== ((c.exPh || {})[exId] || '')) setExerciseDefault(c, exId, ph, get().programs, get().library);
     });
     set({ modal: null }); flag('Exercise saved'); return null;
   },
@@ -420,9 +415,9 @@ export const useAppStore = create((set, get) => ({
     const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
     const cfgChange = eqChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
     if (cfgChange) get().mutateCfg(c => {
-      if (makeDefault && ph) c.phDef[key] = ph;
-      if (eqChange) setEquipment(c, it.ex, eq);
-      if (makeExDefault && ph) { c.exPh = c.exPh || {}; c.exPh[it.ex] = ph; }
+      if (eqChange) setOverride(c, it.ex, { eq });
+      if (makeExDefault && ph) { setExerciseDefault(c, it.ex, ph, get().programs, get().library); delete c.phDef[key]; }
+      if (makeDefault && ph) c.phDef[key] = ph; // after the exercise default, so ticking both keeps this slot's
       if (rm === null) delete c.rm[it.ex]; else if (rm > 0) c.rm[it.ex] = rm;
     });
     get().mutateWeek(w => {
@@ -685,8 +680,16 @@ useAppStore.subscribe((s, prev) => {
 // were looking at the week that just ended; browsing elsewhere stays put.
 useToday.subscribe((s, prev) => {
   const st = useAppStore.getState();
-  if (ymd(st.weekStart) === ymd(monday(prev.today)) && ymd(monday(s.today)) !== ymd(st.weekStart)) st.gotoWeek('today');
+  if (ymd(st.weekStart) === ymd(monday(prev.today)) && ymd(monday(s.today)) !== ymd(st.weekStart)) { if (st.modal && (st.modal.type === 'log' || st.modal.type === 'dayadd')) st.closeModal(); st.gotoWeek('today'); } // those sheets point at last week's cards
 });
+
+// Resolves once init knows where data lives (this browser or the host database).
+function dataSourceKnown() {
+  return new Promise(res => {
+    if (useAppStore.getState().storeMode !== 'loading') { res(); return; }
+    const un = useAppStore.subscribe(s => { if (s.storeMode !== 'loading') { un(); res(); } });
+  });
+}
 
 function subscribeWeek() {
   if (unsubWeek) { unsubWeek(); unsubWeek = null; }

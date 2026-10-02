@@ -31,10 +31,10 @@ function Modal() {
     case 'log': return <LogSheet key={`${modal.slotId}:${modal.idx}`} slotId={modal.slotId} idx={modal.idx} />;
     case 'detail': return <DetailSheet exId={modal.exId} />;
     case 'tags': return <TagSheet key={modal.exId} exId={modal.exId} />;
-    case 'slot': return <SlotSheet key={`slot-${modal.idx}-${modal.preset || ''}`} idx={modal.idx} preset={modal.preset} />;
+    case 'slot': return <SlotSheet key={`slot-${modal.idx}-${modal.preset || ''}`} idx={modal.idx} preset={modal.preset} col={modal.col} target={modal.target} />;
     case 'experiment': return <ExperimentSheet key={modal.id || 'new'} id={modal.id} />;
     case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;
-    case 'dayadd': return <DayAddSheet key={`${modal.col}:${!!modal.stretch}`} col={modal.col} stretch={!!modal.stretch} />;
+    case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
     case 'newprog': return <NewProgramSheet />;
     case 'import': return <ImportSheet />;
     case 'help': return <HelpSheet />;

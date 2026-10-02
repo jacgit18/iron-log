@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
+import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
 import { ymd, parseDate, fmtShort } from '../../lib/dates.js';
 import {
-  phaseOf, targetOf, rxOf, lastLog, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
+  phaseOf, isTimed, targetOf, rxOf, lastLog, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
 } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 
-const toRow = (x, iso) => ({ w: x.w ?? '', r: (iso ? x.sec : x.r) ?? '', tw: false, tr: false });
+// Older entries in a timed phase may hold reps (Mobility was counted in reps before), so each side falls back to the other.
+const toRow = (x, iso) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x.r : x.r ?? x.sec) ?? '', tw: false, tr: false });
 const num = v => (v === '' ? null : Number(v));
 
 export default function LogSheet({ slotId, idx }) {
@@ -25,7 +26,7 @@ export default function LogSheet({ slotId, idx }) {
   const [ph, setPh] = useState(ph0 || '');
   const [rm, setRm] = useState(cfg.rm[it.ex] ?? '');
   const [date, setDate] = useState(() => defaultLogDate(weekStart));
-  const [rows, setRows] = useState(() => planRows(cfg, logs, it, ph0).map(x => toRow(x, ph0 === 'iso')));
+  const [rows, setRows] = useState(() => planRows(cfg, logs, it, ph0).map(x => toRow(x, isTimed(ph0))));
   const [note, setNote] = useState('');
   const [eq, setEq] = useState(ex.eq || '');
   const [url, setUrl] = useState(ex.url || '');
@@ -36,13 +37,13 @@ export default function LogSheet({ slotId, idx }) {
   const firstRef = useRef(null);
   useEffect(() => { firstRef.current?.focus(); }, []);
 
-  const phv = ph || null; const iso = phv === 'iso';
+  const phv = ph || null; const iso = isTimed(phv);
   const t = targetOf(cfg, logs, it, ph0);
   const rx = rxOf(cfg, it, ph0);
   const last = lastLog(logs, it.ex, phv);
   const hist = (logs[it.ex] || []).slice(-6).reverse();
 
-  const changePhase = v => { setPh(v); const p = v || null; setRows(planRows(cfg, logs, it, p).map(x => toRow(x, p === 'iso'))); };
+  const changePhase = v => { setPh(v); const p = v || null; setRows(planRows(cfg, logs, it, p).map(x => toRow(x, isTimed(p)))); };
   // Editing a set fills the same field in later sets, until those are edited themselves.
   const editCell = (i, k, v) => setRows(rs => rs.map((r, j) => {
     const touched = k === 'w' ? 'tw' : 'tr';
@@ -56,7 +57,7 @@ export default function LogSheet({ slotId, idx }) {
     const sets = rows.map(r => ({ w: num(r.w), v: num(r.r) })).filter(x => x.w != null || x.v != null)
       .map(x => (iso ? { w: x.w, sec: x.v } : { w: x.w, r: x.v }));
     if (!sets.length) { setErr('Enter at least one set.'); return; }
-    if (url.trim() && !/^https?:\/\//.test(url.trim())) { setErr('Video link should start with https://'); return; }
+    if (!isVideoUrl(url)) { setErr(VIDEO_ERR); return; }
     const entry = { d: date || ymd(today), ph: phv, ...summarizeSets(sets, iso), slot: slotId, wk: st.weekKey() };
     if (note.trim()) entry.n = note.trim();
     const rmVal = rm === '' ? null : Number(rm);

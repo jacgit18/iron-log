@@ -77,6 +77,17 @@ export function matchesFilter(cfg, s, { muscle = '', eq = '' }) {
     return !!tg && !tg.mob && [...(tg.p || []), ...(tg.s || [])].includes(muscle);
   });
 }
+// Board sort by muscle: 0 = an exercise on the card trains it as a primary muscle, 1 = as a secondary one,
+// 2 = not at all. muscle 'stretch' puts stretches first.
+export function muscleRank(cfg, s, muscle) {
+  let best = 2;
+  s.items.forEach(it => {
+    if (muscle === 'stretch') { if (exInfo(cfg, it.ex).stretch) best = 0; return; }
+    const tg = tagsOf(cfg, it.ex); if (!tg || tg.mob) return;
+    if ((tg.p || []).includes(muscle)) best = 0; else if ((tg.s || []).includes(muscle) && best > 1) best = 1;
+  });
+  return best;
+}
 export const level = s => s <= 0 ? 0 : s < 5 ? 1 : s < 10 ? 2 : s <= 20 ? 3 : 4;
 export const fmtSets = n => (Math.round(n * 2) / 2).toString();
 // Planned weekly sets per muscle for a program. `live` uses this week's phases and moves.

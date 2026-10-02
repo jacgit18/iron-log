@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { FEATURES } from '../lib/features.js';
 import { allExIds, exInfo, findExId, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
 
 // Type an exercise: suggestions come from the catalog (built-in and your own); a name that isn't there yet
@@ -7,8 +8,14 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', stretch = f
   const names = [...new Set(allExIds(cfg).map(x => exInfo(cfg, x).n))].sort((a, b) => a.localeCompare(b));
   const known = name.trim() !== '' ? findExId(cfg, name) : null;
   const isNew = name.trim() !== '' && !known;
-  // Picking an existing exercise fills in its saved video link, so it can be seen and changed here.
-  useEffect(() => { if (known && onUrl) onUrl(exInfo(cfg, known).url || ''); }, [known]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Picking an existing exercise shows its saved video link, so what you save is that exercise's link (edited or not).
+  // A link shown that way is cleared when the name stops matching; one typed for a new exercise is kept.
+  const filled = useRef(null);
+  useEffect(() => {
+    if (!onUrl) return;
+    if (known) { const u = exInfo(cfg, known).url || ''; filled.current = u; onUrl(u); }
+    else if (filled.current != null && url === filled.current) { filled.current = null; onUrl(''); }
+  }, [known]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       <label className="field">Exercise
@@ -27,7 +34,7 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', stretch = f
               </select>
             </label>
           )}
-          {onStretch && <label className="inline"><input type="checkbox" checked={stretch} onChange={e => onStretch(e.target.checked)} /> Stretch or mobility (no weight or reps)</label>}
+          {onStretch && FEATURES.stretches && <label className="inline"><input type="checkbox" checked={stretch} onChange={e => onStretch(e.target.checked)} /> Stretch or mobility (no weight or reps)</label>}
         </>
       )}
     </>
