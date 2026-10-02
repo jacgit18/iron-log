@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseDataFile, buildDataFile, dataStats, DATA_FORMAT } from './export.js';
-import { BUILTIN } from './data.js';
+import { BUILTIN, withAllDays } from './data.js';
 
 const text = readFileSync(new URL('../test/fixtures/iron-log-data.v1.json', import.meta.url), 'utf8');
 const raw = JSON.parse(text);
@@ -39,7 +39,7 @@ describe('iron-log-data.json, format 1', () => {
 
   it('keeps an edited program: six days, slot ids, supersets, either/or, notes', () => {
     const A = d.programs.A;
-    expect(A.days).toHaveLength(6);
+    expect(A.days).toHaveLength(7);
     expect(A.warm).toBe('Row 5 min');
     expect(A.days[0].slots.map(s => s.id)).toEqual(['A-d1s1', 'A-d1s2']);
     expect(A.days[0].slots[1]).toMatchObject({ type: 'superset', items: [{ ex: 'chestpress' }, { ex: 'zercher' }] });
@@ -48,8 +48,12 @@ describe('iron-log-data.json, format 1', () => {
     expect(d.programs.B).toBeUndefined(); // built-in programs aren't written
   });
 
+  it('pads a 6-day program from an old backup with an empty Day 7', () => {
+    expect(d.programs.A.days[6]).toEqual({ title: 'Day 7', slots: [] });
+  });
+
   it('keeps saved versions, including automatic ones', () => {
-    expect(d.library.map(it => [it.id, it.from, !!it.auto, it.prog.days.length])).toEqual([['mk3x9a1b', 'A', false, 6], ['mk3xauto', 'B', true, 6]]);
+    expect(d.library.map(it => [it.id, it.from, !!it.auto, it.prog.days.length])).toEqual([['mk3x9a1b', 'A', false, 7], ['mk3xauto', 'B', true, 7]]);
   });
 
   it('keeps every kind of logged session', () => {
@@ -79,6 +83,8 @@ describe('iron-log-data.json, format 1', () => {
   it('writes back exactly what it read, so nothing is lost on a round trip', () => {
     const S = { cfg: d.config, logs: d.logs, programs: { A: { ...d.programs.A, key: 'A' }, B: BUILTIN.B }, library: d.library, body: d.body };
     const again = buildDataFile(S, d.weeks);
-    expect({ ...again, exportedAt: raw.exportedAt }).toEqual(raw);
+    // the fixture is an old 6-day backup, so what comes back has the empty Day 7 added
+    const padded = { ...raw, programs: { A: withAllDays(raw.programs.A) }, library: raw.library.map(it => ({ ...it, prog: withAllDays(it.prog) })) };
+    expect({ ...again, exportedAt: raw.exportedAt }).toEqual(padded);
   });
 });

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BUILTIN, resolveProgram, slotsFor } from '../lib/data.js';
+import { BUILTIN, resolveProgram, slotsFor, padLibrary } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
@@ -472,7 +472,7 @@ export const useAppStore = create((set, get) => ({
         storeMode: 'local',
         cfg: cfgRaw ? { ...structuredClone(DEFAULT_CFG), ...cfgRaw } : state.cfg,
         body: (LS.get('body/main') || {}).entries || [],
-        library: (LS.get('library/main') || {}).items || [],
+        library: padLibrary((LS.get('library/main') || {}).items || []),
         logs,
         programs: { A: resolveProgram('A', LS.get('programs/A')), B: resolveProgram('B', LS.get('programs/B')) },
         ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true },
@@ -493,7 +493,7 @@ export const useAppStore = create((set, get) => ({
     }, () => flag('Couldn’t load body weight. Reload the page.'));
     db.doc('library/main').onSnapshot(s => {
       if (s.metadata.hasPendingWrites) return;
-      set(state => ({ library: s.exists ? [...((s.data() || {}).items || [])] : [], ...markReady('lib')(state) }));
+      set(state => ({ library: s.exists ? padLibrary([...((s.data() || {}).items || [])]) : [], ...markReady('lib')(state) }));
     }, () => flag('Couldn’t load saved programs. Reload the page.'));
     db.doc('config/main').onSnapshot(s => {
       if (s.metadata.hasPendingWrites) return;

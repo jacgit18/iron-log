@@ -1,6 +1,6 @@
 /* ---------- CSV / Excel export, full data file, GitHub backup helpers ----------
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
-import { PHASES, PH_KEYS, BUILTIN, slotsFor, exInfo } from './data.js';
+import { PHASES, PH_KEYS, BUILTIN, slotsFor, exInfo, hasValidDays, withAllDays } from './data.js';
 import { ymd, fmtShort } from './dates.js';
 import { setsOfEntry, setVal, rxOf, isItemDone, normWeek, progName, AUTO_NOTE } from './logic.js';
 
@@ -171,8 +171,8 @@ export function parseDataFile(text) {
 export function normalizeData(d) {
   const out = { exportedAt: d.exportedAt, config: (d.config && typeof d.config === 'object') ? d.config : {}, programs: {}, library: [], logs: {}, weeks: {}, body: [] };
   (Array.isArray(d.body) ? d.body : []).forEach(e => { if (e && WEEK_RE.test(e.wk) && typeof e.d === 'string' && Number(e.w) > 0 && !out.body.some(x => x.wk === e.wk)) out.body.push({ wk: e.wk, d: e.d, w: Number(e.w) }); });
-  ['A', 'B'].forEach(k => { const p = d.programs && d.programs[k]; if (p && Array.isArray(p.days) && p.days.length === 6) out.programs[k] = p; });
-  (Array.isArray(d.library) ? d.library : []).forEach(it => { if (it && it.id && it.prog && Array.isArray(it.prog.days) && it.prog.days.length === 6) out.library.push(it); });
+  ['A', 'B'].forEach(k => { const p = d.programs && d.programs[k]; if (hasValidDays(p)) out.programs[k] = withAllDays(p); });
+  (Array.isArray(d.library) ? d.library : []).forEach(it => { if (it && it.id && hasValidDays(it.prog)) out.library.push({ ...it, prog: withAllDays(it.prog) }); });
   Object.entries(d.logs || {}).forEach(([id, l]) => { if (/^[\w.~:@+-]{1,200}$/.test(id) && Array.isArray(l)) { const ok = l.filter(e => e && typeof e.d === 'string'); if (ok.length) out.logs[id] = ok; } });
   Object.entries(d.weeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k) && w && typeof w === 'object') out.weeks[k] = normWeek(w); });
   return out;
