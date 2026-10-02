@@ -4,7 +4,7 @@ import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, exInfo } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../lib/dates.js';
 import {
-  DAYS, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, describe, holdPlan,
+  DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, describe, holdPlan,
 } from '../../lib/logic.js';
 
 export default function Card({ s, onDragStart, onDragEnd, dragging }) {
@@ -48,7 +48,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
         const idone = paired && isItemDone(s, idx, week);
         const rx = rxOf(cfg, it, ph);
         const st = stretch ? null : stallOf(cfg, logs, it.ex, ph);
-        const hp = ph === 'iso' ? holdPlan(cfg, week, logs, s, idx) : null;
+        const hp = isTimed(ph) ? holdPlan(cfg, week, logs, s, idx) : null;
         return (
           <Fragment key={idx}>
             {idx > 0 && s.type === 'either' && <div className="or">or</div>}

@@ -242,11 +242,12 @@ export default function Board() {
           const warm = week.warm[pd] || {};
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const isStretchCard = s => s.items.every(it => exInfo(cfg, it.ex).stretch);
-          const stretches = shown(list).filter(isStretchCard); // shown under the warm-up
-          const vis = shown(list).filter(s => !isStretchCard(s));
+          const cards = list.filter(s => !isStretchCard(s));
+          const stretches = shown(list.filter(isStretchCard)); // shown under the warm-up
+          const vis = shown(cards);
           const open = vis.filter(s => isOpen(s, week));
           const finished = [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))];
-          const ft = tally(finished, week);
+          const ft = tally(cards.filter(s => !isOpen(s, week)), week); // the filter hides cards but never changes counts
           return (
             <section
               key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`}

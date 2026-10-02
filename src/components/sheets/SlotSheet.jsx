@@ -31,7 +31,7 @@ function ItemFields({ it, k, type, cfg, onChange }) {
   );
 }
 
-export default function SlotSheet({ idx, preset }) {
+export default function SlotSheet({ idx, preset, col }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const edDay = useAppStore(s => s.edDay);
@@ -53,7 +53,7 @@ export default function SlotSheet({ idx, preset }) {
 
   return (
     <Sheet as="form" noValidate onSubmit={submit}>
-      <h2 className="cond">{d.idx == null ? 'Add exercise' : 'Edit exercise'} · {st.edName()}</h2>
+      <h2 className="cond">{d.idx == null ? (preset === 'stretch' ? 'Add stretch' : 'Add exercise') : 'Edit exercise'} · {st.edName()}</h2>
       <div className="fields">
         <label className="field">Type
           <select value={d.type} onChange={e => setType(e.target.value)}>
@@ -70,11 +70,13 @@ export default function SlotSheet({ idx, preset }) {
             <option value="">None</option><option value="Primary">Primary</option><option value="Accessory">Accessory</option>
           </select>
         </label>
-        <label className="field">Day
-          <select value={d.day} onChange={e => setD(x => ({ ...x, day: Number(e.target.value) }))}>
-            {DAYS.map(x => <option key={x} value={x}>Day {x}</option>)}
-          </select>
-        </label>
+        {col == null ? (
+          <label className="field">Day
+            <select value={d.day} onChange={e => setD(x => ({ ...x, day: Number(e.target.value) }))}>
+              {DAYS.map(x => <option key={x} value={x}>Day {x}</option>)}
+            </select>
+          </label>
+        ) : <p className="note">Goes on Day {col} every week.</p>}
       </div>
       {d.items.map((it, k) => <ItemFields key={k} it={it} k={k} type={d.type} cfg={cfg} onChange={setItem} />)}
       <label className="field">Card note<input value={d.note} placeholder="e.g. Whichever is free" onChange={e => setD(x => ({ ...x, note: e.target.value }))} /></label>

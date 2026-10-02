@@ -12,7 +12,7 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   clearStorage();
-  useAppStore.setState({ logs: {}, week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} }, body: [], library: [], cfg: structuredClone(DEFAULT_CFG), programs: { A: BUILTIN.A, B: BUILTIN.B }, weekHist: null });
+  useAppStore.setState({ logs: {}, week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} }, body: [], library: [], experiments: [], modal: null, edProg: null, edDay: 1, edReturn: null, cfg: structuredClone(DEFAULT_CFG), programs: { A: BUILTIN.A, B: BUILTIN.B }, weekHist: null });
 });
 
 // Program A runs in mode 1; A-d3s1 is Hack Squat (Hypertrophy, 270 lb, 4 × 15).
@@ -43,7 +43,9 @@ describe('checking off on the board', () => {
     const day3 = st().activeSlots().filter(s => s.day === 3);
     // An either/or card logs the one option it counts as done (the first, when none was picked).
     const exIds = [...new Set(day3.flatMap(s => (s.type === 'either' ? s.items.slice(0, 1) : s.items).map(i => i.ex)))];
-    exIds.forEach(id => expect(st().logs[id]?.length, id).toBe(1));
+    // Stretches (Desk Bands) have no weight or reps, so checking them off logs nothing.
+    exIds.filter(id => id !== 'deskbands').forEach(id => expect(st().logs[id]?.length, id).toBe(1));
+    expect(st().logs.deskbands).toBeUndefined();
     expect(st().logs.facepull).toBeUndefined();
     st().skipCard('A-d3s1');
     expect(st().logs.hack).toEqual([]);
@@ -432,24 +434,6 @@ describe('equipment from the log sheet', () => {
   });
 });
 
-describe('adding to every week', () => {
-  it('puts the exercise in this day of the program, in its section, for every week', () => {
-    expect(st().addExerciseToDay(2, { ex: 'facepull', ph: 'hyp', note: 'light' }, 'program')).toBeNull();
-    const day2 = st().programs.A.days[1].slots;
-    const i = day2.findIndex(x => x.items[0].ex === 'facepull' && x.sec === 'Regular' && x.items[0].note === 'light');
-    expect(i).toBeGreaterThan(-1);
-    expect(day2[i + 1].sec).not.toBe('Regular'); // after the last Regular card, before the Supersets
-    expect(st().activeSlots().filter(s => s.added)).toHaveLength(0); // not a one-week card
-    expect(saved('programs/A').days[1].slots.some(x => x.items[0].note === 'light')).toBe(true);
-  });
-  it('a new stretch joins the program as a Stretches card with no phase', () => {
-    st().addExerciseToDay(3, { ex: '__new', nn: 'Hip 90/90', ns: true }, 'program');
-    const sl = st().programs.A.days[2].slots.find(x => x.sec === 'Stretches');
-    expect(sl.items[0].ph).toBeNull();
-    expect(st().cfg.ex['hip-90-90'].stretch).toBe(true);
-  });
-});
-
 describe('the board add button', () => {
   it('opens the full add sheet for the program day shown in that column', () => {
     st().openAddToProgram(2);
@@ -459,6 +443,13 @@ describe('the board add button', () => {
     st().openAddToProgram(3, 'stretch');
     expect(st().modal.preset).toBe('stretch');
     st().closeModal();
+  });
+  it('puts the Program tab back the way it was when the sheet closes', () => {
+    useAppStore.setState({ edProg: 'B', edDay: 5 });
+    st().openAddToProgram(2);
+    expect(st().edKey()).toBe('A');
+    st().closeModal();
+    expect(st().edProg).toBe('B'); expect(st().edDay).toBe(5);
   });
 });
 
@@ -487,5 +478,49 @@ describe('video link from the log sheet', () => {
     expect(exInfo(st().cfg, 'hack').url).toBe('https://example.com/hack');
     st().submitLog('A-d3s1', 0, { entry, ph: 'hyp' }); // field not offered: link left alone
     expect(exInfo(st().cfg, 'hack').url).toBe('https://example.com/hack');
+  });
+});
+
+describe('bug check fixes', () => {
+  it('"default everywhere" from the log beats a slot default saved earlier', () => {
+    useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
+    const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
+    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp', makeExDefault: true });
+    const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
+    expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('hyp');
+  });
+  it('a one-week card keeps the phase picked when it was added, even with an exercise default', () => {
+    st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: 'iso' });
+    st().addExerciseToDay(2, { ex: 'chestpress', ph: 'hyp' });
+    const card = st().activeSlots().find(s => s.added);
+    expect(phaseOf(st().cfg, st().week, card, 0)).toBe('hyp');
+  });
+  it('Mobility sets are held for time, like Isometric', async () => {
+    const { planRows } = await import('../lib/logic.js');
+    expect(planRows(st().cfg, {}, { ex: 'canoe' }, 'mob')).toEqual([{ w: null, sec: 30 }, { w: null, sec: 30 }]);
+  });
+  it('a stretch saved in Details keeps no hidden default phase', () => {
+    st().saveExerciseDetails('hack', { url: '', eq: '', stretch: true, ph: 'iso' });
+    expect(st().cfg.exPh.hack).toBeUndefined();
+  });
+  it('unchecking a card removes its check-off entry even after the exercise became a stretch', () => {
+    st().checkCard('A-d3s1', true);
+    expect(st().logs.hack).toHaveLength(1);
+    st().saveExerciseDetails('hack', { url: '', eq: '', stretch: true, ph: '' });
+    st().checkCard('A-d3s1', false);
+    expect(st().logs.hack).toEqual([]);
+  });
+  it('history waits for the data source instead of caching an empty result', async () => {
+    const mode = st().storeMode;
+    useAppStore.setState({ storeMode: 'loading', weekHist: null });
+    await st().loadHistory();
+    expect(st().weekHist).toBeNull();
+    useAppStore.setState({ storeMode: mode });
+  });
+  it('built-in Canoe Stretch and Desk Bands are stretches but stay in their Home section', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    expect(exInfo(st().cfg, 'canoe').stretch).toBe(true);
+    expect(exInfo(st().cfg, 'deskbands').stretch).toBe(true);
+    expect(st().activeSlots().filter(s => s.items[0].ex === 'canoe').every(s => s.sec === 'Home')).toBe(true);
   });
 });

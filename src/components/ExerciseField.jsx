@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { allExIds, exInfo, findExId, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
 
 // Type an exercise: suggestions come from the catalog (built-in and your own); a name that isn't there yet
@@ -7,8 +7,15 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', stretch = f
   const names = [...new Set(allExIds(cfg).map(x => exInfo(cfg, x).n))].sort((a, b) => a.localeCompare(b));
   const known = name.trim() !== '' ? findExId(cfg, name) : null;
   const isNew = name.trim() !== '' && !known;
-  // Picking an existing exercise fills in its saved video link, so it can be seen and changed here.
-  useEffect(() => { if (known && onUrl) onUrl(exInfo(cfg, known).url || ''); }, [known]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Picking an existing exercise fills in its saved video link, so it can be seen and changed here. A link
+  // filled in that way is cleared again when the name stops matching; a link you typed yourself is kept.
+  const filled = useRef(null);
+  useEffect(() => {
+    if (!onUrl) return;
+    const auto = filled.current != null && url === filled.current;
+    if (known) { if (!url.trim() || auto) { const u = exInfo(cfg, known).url || ''; filled.current = u; onUrl(u); } }
+    else if (auto) { filled.current = null; onUrl(''); }
+  }, [known]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       <label className="field">Exercise

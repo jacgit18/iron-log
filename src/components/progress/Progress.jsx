@@ -109,7 +109,8 @@ function LiftList() {
 export default function Progress() {
   const weekHist = useAppStore(s => s.weekHist); const loading = useAppStore(s => s.historyLoading);
   const loadHistory = useAppStore(s => s.loadHistory);
-  useEffect(() => { if (!weekHist && !loading) loadHistory(); }, [weekHist, loading, loadHistory]);
+  const storeMode = useAppStore(s => s.storeMode); // history waits until the data source is known
+  useEffect(() => { if (!weekHist && !loading && storeMode !== 'loading') loadHistory(); }, [weekHist, loading, storeMode, loadHistory]);
   return (
     <>
       <Trends />

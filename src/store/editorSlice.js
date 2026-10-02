@@ -1,4 +1,4 @@
-import { BUILTIN, slotsFor, newExId } from '../lib/data.js';
+import { BUILTIN, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { progName, dayAt } from '../lib/logic.js';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
@@ -18,6 +18,7 @@ export function insertSlot(target, slot) {
 export const editorSlice = (set, get, flag) => ({
   edProg: null, // 'A' | 'B' (in the rotation) or 'L:<id>' (a library program); null = the one on the board
   edDay: 1,
+  edReturn: null, // Program tab state to restore after an add from the board
 
   // Resolved editor target: falls back to the board's program when unset or the library item is gone.
   edKey() {
@@ -29,12 +30,13 @@ export const editorSlice = (set, get, flag) => ({
   edProgram() { const it = get().edItem(); return it ? { ...it.prog, key: 'N' } : get().programs[get().edKey()]; },
   edName() { const it = get().edItem(); return it ? it.name : progName(get().cfg, get().edKey()); },
 
-  // The board's + Add exercise: the add sheet, aimed at the program day shown in column `col`.
+  // The board's + Add exercise: the add sheet, aimed at the program day shown in column `col`. The Program
+  // tab's own choice of program and day is put back when the sheet closes (edReturn).
   openAddToProgram(col, preset) {
     const pd = dayAt(get().week, col);
     if (pd == null) { flag('That is your rest day'); return; }
-    const ak = get().activeProgKey();
-    set({ edProg: get().programs[ak] ? ak : 'A', edDay: pd, modal: { type: 'slot', idx: null, preset } });
+    const ak = get().activeProgKey(); const { edProg, edDay } = get();
+    set({ edReturn: { edProg, edDay }, edProg: get().programs[ak] ? ak : 'A', edDay: pd, modal: { type: 'slot', idx: null, preset, col } });
   },
   setEdProg: edProg => set({ edProg }),
   setEdDay: edDay => set({ edDay }),
@@ -123,7 +125,7 @@ export const editorSlice = (set, get, flag) => ({
     if (get().blocked()) return null;
     for (const it of d.items) {
       if (!it.ex || (it.ex === '__new' && !it.nn)) return 'Choose an exercise, or type a name for the new one.';
-      if (it.nu && !/^https?:\/\//.test(it.nu.trim())) return 'Video link should start with https://';
+      if (!isVideoUrl(it.nu)) return VIDEO_ERR;
     }
     const newEx = {};
     const slugFor = name => newExId(get().cfg, name, newEx);
@@ -146,7 +148,7 @@ export const editorSlice = (set, get, flag) => ({
         insertSlot(target, slot);
       }
     });
-    set({ modal: null });
+    get().closeModal();
     flag(d.day === edDay ? 'Saved' : `Saved to Day ${d.day}`);
     return null;
   },
