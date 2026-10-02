@@ -34,6 +34,7 @@ These change how days and exercises are stored. Do them together so the data str
 - [ ] Add Google login. Each user's data is tied to their account.
 - [ ] Keep it offline-first for gym use: queue saves and sync them later, building on `makeSaveQueue`.
 - [ ] Add a one-time "upload my existing data" step so data already on the phone isn't lost.
+- [ ] Possibly exercise catalog what api to use any free options
 
 ## 4. Remove the stand-in features (only once the backend is working)
 
@@ -53,8 +54,8 @@ These change how days and exercises are stored. Do them together so the data str
 
 ## 6. UX improvements and fixes
 
-- [ ] Preserve board view state on page refresh (currently goes back to board).
-- [ ] When the app opens, start on the current week.
+- [x] Keep the tab and the phone day picker across a page refresh (per browser tab; a fresh open starts clean).
+- [x] Always open on the current week, and an app left open past the end of the week moves on to the new one.
 
 ## Anytime
 
