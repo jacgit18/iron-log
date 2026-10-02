@@ -196,6 +196,23 @@ export const useAppStore = create((set, get) => ({
     });
     if (ok) flag(skipped ? 'Skipped for this week' : 'Skip undone');
   },
+  // Yesterday's leftovers: skip or move a batch of cards at once.
+  skipCards(ids) {
+    const ok = get().mutateChecks(w => ids.forEach(id => { const s = get().slotById(id); w.skipped[id] = true; if (s) clearDone(w, s); }));
+    if (ok) flag(`Skipped ${ids.length} for this week`);
+  },
+  moveCards(ids, day) {
+    const week0 = get().week; const pd = dayAt(week0, day);
+    if (pd == null) { flag('That is your rest day'); return; }
+    const cards = ids.map(id => get().slotById(id)).filter(Boolean); if (!cards.length) return;
+    const batch = Object.fromEntries(cards.map(s => [s.id, week0.moved[s.id] ?? null])); // what undo puts back
+    if (!get().mutateWeek(w => cards.forEach(s => { if (pd === s.day) delete w.moved[s.id]; else w.moved[s.id] = pd; }))) return;
+    const { cfg, week } = get(); const slots = get().activeSlots();
+    const lines = [...new Set(cards.flatMap(s => moveClashes(cfg, week, slots, s, day)))];
+    const fromShown = colOf(week0, week0.moved[cards[0].id] || cards[0].day);
+    set({ moveNote: lines.length ? { batch, fromShown, to: day, week: get().weekKey(), lines } : null });
+    flag(`Moved ${cards.length} to Day ${day}${lines.length ? ' · heads-up' : ''}`);
+  },
   setWarm(day, wid, on) {
     const pd = dayAt(get().week, day); if (pd == null) return;
     get().mutateWeek(w => { w.warm[pd] = w.warm[pd] || {}; w.warm[pd][wid] = on; });
@@ -245,6 +262,11 @@ export const useAppStore = create((set, get) => ({
   },
   undoMove() {
     const n = get().moveNote; if (!n || n.week !== get().weekKey()) return;
+    if (n.batch) {
+      set({ moveNote: null });
+      if (get().mutateWeek(w => Object.entries(n.batch).forEach(([id, v]) => { if (v == null) delete w.moved[id]; else w.moved[id] = v; }))) flag(`Moved back to Day ${n.fromShown}`);
+      return;
+    }
     const s = get().slotById(n.slot); set({ moveNote: null });
     if (s && get().mutateWeek(w => { if (n.from === s.day) delete w.moved[n.slot]; else w.moved[n.slot] = n.from; })) flag(`Moved back to Day ${n.fromShown}`);
   },

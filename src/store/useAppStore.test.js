@@ -259,3 +259,32 @@ describe('day dates', () => {
     expect(dayDate(col7, st().logs, st().weekKey())).toBe(defaultLogDate(st().weekStart));
   });
 });
+
+describe('bulk skip and move (yesterday’s leftovers)', () => {
+  it('skips every card it is given', () => {
+    st().skipCards(['A-d1s1', 'A-d1s2']);
+    expect(st().week.skipped).toMatchObject({ 'A-d1s1': true, 'A-d1s2': true });
+    expect(saved('weeks/' + st().weekKey()).skipped['A-d1s2']).toBe(true);
+  });
+  it('moves every card to the workout shown in the column, following swaps', () => {
+    st().swapDays(6, 1); // column 7 now shows the Day 6 workout
+    st().moveCards(['A-d1s1', 'A-d1s2'], 7);
+    expect(st().week.moved).toMatchObject({ 'A-d1s1': 6, 'A-d1s2': 6 });
+  });
+  it('refuses the rest column', () => {
+    st().setRestDay(3);
+    st().moveCards(['A-d1s1'], 3);
+    expect(st().week.moved['A-d1s1']).toBeUndefined();
+  });
+  it('warns about clashes, and undo puts the whole batch back', () => {
+    // A-d6s5 (Arnold Press + Zercher Squat) is also on Day 4, right before column 5.
+    st().moveCards(['A-d6s1', 'A-d6s5'], 5);
+    expect(st().week.moved).toMatchObject({ 'A-d6s1': 5, 'A-d6s5': 5 });
+    expect(st().moveNote.lines.length).toBeGreaterThan(0);
+    expect(st().moveNote.fromShown).toBe(6);
+    st().undoMove();
+    expect(st().week.moved['A-d6s1']).toBeUndefined();
+    expect(st().week.moved['A-d6s5']).toBeUndefined();
+    expect(st().moveNote).toBeNull();
+  });
+});
