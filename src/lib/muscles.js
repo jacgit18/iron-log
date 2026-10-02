@@ -1,6 +1,6 @@
 /* ---------- Muscle map ---------- */
 import { slotsFor, exInfo } from './data.js';
-import { phaseOf, defaultPhase, rxOf, colOf, weekSlots } from './logic.js';
+import { normWeek, phaseOf, defaultPhase, rxOf, colOf, weekSlots } from './logic.js';
 
 export const MUSCLES = {
   traps: { n: 'Traps' }, frontdelt: { n: 'Front delts' }, sidedelt: { n: 'Side delts' }, reardelt: { n: 'Rear delts' },
@@ -106,6 +106,20 @@ export function muscleVolume(cfg, week, prog, live, withSecondary) {
     }));
   }));
   return { vol, untagged: [...untagged] };
+}
+
+// Every exercise across the rotation's programs on one map. Sets are averaged per program week, so the
+// shading still means "sets in a typical week"; each exercise remembers which program and day it's on.
+export function muscleVolumeAll(cfg, programs, withSecondary) {
+  const keys = ['A', 'B'].filter(k => programs[k]);
+  const vol = {}; M_KEYS.forEach(k => { vol[k] = { sets: 0, ex: [] }; });
+  const untagged = new Set();
+  keys.forEach(k => {
+    const r = muscleVolume(cfg, normWeek(null), programs[k], false, withSecondary);
+    M_KEYS.forEach(m => { vol[m].sets += r.vol[m].sets / keys.length; r.vol[m].ex.forEach(e => vol[m].ex.push({ ...e, prog: k })); });
+    r.untagged.forEach(id => untagged.add(id));
+  });
+  return { vol, untagged: [...untagged], keys };
 }
 
 export function muscleNames(cfg, id, role) {

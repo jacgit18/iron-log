@@ -120,10 +120,8 @@ export const useAppStore = create((set, get) => ({
   ghToken: standalone ? readToken() : '',
 
   // Muscles tab view state; kept here so it survives switching tabs, like the original.
-  bodyView: null, // 'A' | 'B'; null = the program on the board
   bodySel: null, // selected muscle key
   bodySec: true, // count secondary work as half a set
-  setBodyView: bodyView => set({ bodyView }),
   selectMuscle: bodySel => set({ bodySel }),
   setBodySec: bodySec => set({ bodySec }),
   saveTags(exId, tags) {
