@@ -43,7 +43,7 @@ export default function Board() {
 
   // Phones show one day; default to the first day that still has open work.
   let day = mDay;
-  if (day == null) { day = 1; for (const d of DAYS) { if (d !== rest && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
+  if (day == null) { day = DAYS.find(d => d !== rest); for (const d of DAYS) { if (d !== rest && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
 
   const [, forceTips] = useState(0);
   const hideTip = k => { LS.set(k, 1); forceTips(n => n + 1); };
@@ -157,10 +157,15 @@ export default function Board() {
         {DAYS.map(d => {
           const pd = programDay(rest, d); // the program day shown here; null for the rest day
           if (pd == null) return (
-            <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`} className={`col rest complete${d === day ? ' sel' : ''}`}>
-              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub">Rest day</div></div></div>
-              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} checked onChange={() => st.setRestDay(d)} /> Rest day</label>
-              <p className="note">Your workouts moved one day later. Untick to put them back.</p>
+            <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}`}>
+              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div></div></div>
+              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => st.setRestDay(d)} /> Rest day</label>
+              {cols[d].length > 0 ? (
+                <>
+                  <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
+                  {cols[d].map(s => <Card key={s.id} s={s} curDay={d} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                </>
+              ) : <p className="note">Your workouts moved one day later. Untick to put them back.</p>}
             </section>
           );
           const dayDef = prog.days[pd - 1];
@@ -188,7 +193,7 @@ export default function Board() {
                 </div>
                 <span className="count">{t.done}/{t.total}</span>
               </div>
-              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} checked={false} onChange={() => st.setRestDay(d)} /> Rest day</label>
+              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => st.setRestDay(d)} /> Rest day</label>
               <div className="warm">
                 <span className="tag">Warm-up</span>
                 {WARMUP.map(x => (

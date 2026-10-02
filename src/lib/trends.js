@@ -16,7 +16,7 @@ export function weekSummary(cfg, programs, key, w) {
   const pk = (cfg.mode === 2 && (w.prog === 'A' || w.prog === 'B')) ? w.prog : programFor(cfg, start);
   const prog = programs[pk] || programs.A || BUILTIN.A; const slots = slotsFor(prog);
   const cols = currentLayout({ ...w, moved: w.moved || {} }, slots);
-  const days = DAYS.map(d => { if (d === w.rest) return 2; const t = tally(cols[d], w); return t.full ? 2 : t.done > 0 ? 1 : 0; });
+  const days = DAYS.map(d => { if (d === w.rest && !cols[d].length) return 2; const t = tally(cols[d], w); return t.full ? 2 : t.done > 0 ? 1 : 0; });
   const t = tally(slots, w);
   return { key, start, pk, days, full: days.filter(x => x === 2).length, ex: t.done, total: t.total, skipped: t.skipped };
 }

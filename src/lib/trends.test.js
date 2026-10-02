@@ -38,6 +38,11 @@ describe('weekSummary: the weekly history row', () => {
     expect(r.full).toBe(3);
     expect(r).toMatchObject({ ex: 4, total: 5 }); // the rest day adds no exercises
   });
+  it('does not count a rest Day 7 as complete when a card sits in it', () => {
+    const w7 = { done: {}, skipped: {}, moved: { c: 7 }, rest: 7 };
+    expect(weekSummary(cfg(), programs, '2026-09-20', w7).days[6]).toBe(0);
+    expect(weekSummary(cfg(), programs, '2026-09-20', { ...w7, moved: {} }).days[6]).toBe(2);
+  });
   it('reads 6 days with an empty, non-rest Day 7', () => {
     const all = { done: { a: true, 'b#0': true, 'b#1': true, c: true, d: true }, skipped: {}, moved: {} };
     expect(weekSummary(cfg(), programs, '2026-09-20', all).days).toEqual([2, 2, 2, 0, 0, 0, 0]);

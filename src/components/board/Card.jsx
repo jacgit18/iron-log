@@ -17,6 +17,7 @@ export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
   const done = isDone(s, week); const sk = isSkipped(s, week); const paired = isPaired(s);
   const label = s.type === 'superset' ? 'Superset' : s.type === 'either' ? 'Either / or' : '';
   const cur = shownDay(week.rest, week.moved[s.id] || s.day);
+  const planned = shownDay(week.rest, s.day);
   const names = s.items.map(i => exInfo(cfg, i.ex).n);
   const cardName = s.type === 'superset' ? names.join(' → ') : s.type === 'either' ? names.join(' or ') : names[0];
 
@@ -35,7 +36,7 @@ export default function Card({ s, curDay, onDragStart, onDragEnd, dragging }) {
         )}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {(label || s.tier) && <span className="tag">{[s.tier, label].filter(Boolean).join(' · ')}</span>}
-          {s.day !== curDay && <span className="moved">From Day {s.day}</span>}
+          {planned !== curDay && <span className="moved">From Day {planned}</span>}
           {sk && <span className="skiptag">Skipped this week</span>}
         </div>
       </div>

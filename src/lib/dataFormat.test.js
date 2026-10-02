@@ -37,7 +37,7 @@ describe('iron-log-data.json, format 1', () => {
     expect(d.config).not.toHaveProperty('token');
   });
 
-  it('keeps an edited program: six days, slot ids, supersets, either/or, notes', () => {
+  it('keeps an edited program: seven days, slot ids, supersets, either/or, notes', () => {
     const A = d.programs.A;
     expect(A.days).toHaveLength(7);
     expect(A.warm).toBe('Row 5 min');

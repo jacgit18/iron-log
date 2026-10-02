@@ -219,6 +219,9 @@ describe('rest day layout', () => {
   it('inserts an empty rest column and shifts later workouts one day', () => {
     expect(ids(currentLayout({ moved: {}, rest: 3 }, slots))).toEqual({ 1: ['a'], 2: [], 3: [], 4: ['b'], 5: [], 6: [], 7: ['c'] });
   });
+  it('with rest on Day 7 a day-7 slot still lands in column 7', () => {
+    expect(ids(currentLayout({ moved: {}, rest: 7 }, [sl('a', 1), sl('d', 7)]))).toEqual({ 1: ['a'], 2: [], 3: [], 4: [], 5: [], 6: [], 7: ['d'] });
+  });
   it('shifts moved cards too', () => {
     expect(ids(currentLayout({ moved: { a: 5 }, rest: 3 }, slots))[6]).toEqual(['a']);
   });

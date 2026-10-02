@@ -135,7 +135,7 @@ export function buildWeekWorkbook(X, S, key, w) {
   slots.forEach(s => s.items.forEach((it, idx) => {
     const ph = (w.ph && w.ph[`${s.id}:${idx}`]) ?? cfg.phDef[`${s.id}:${idx}`] ?? it.ph ?? null;
     const moved = w.moved && w.moved[s.id];
-    plan.push([s.day, shownDay(w.rest, moved || s.day), s.sec || '', s.tier || '', s.type === 'single' ? '' : s.type, exInfo(cfg, it.ex).n, phaseLabel(ph), rxOf(cfg, it, ph), it.w ?? (it.bw ? 'BW' : ''), (w.skipped && w.skipped[s.id]) ? 'Skipped' : isItemDone(s, idx, nw) ? 'Yes' : 'No']);
+    plan.push([shownDay(nw.rest, s.day), shownDay(nw.rest, moved || s.day), s.sec || '', s.tier || '', s.type === 'single' ? '' : s.type, exInfo(cfg, it.ex).n, phaseLabel(ph), rxOf(cfg, it, ph), it.w ?? (it.bw ? 'BW' : ''), (w.skipped && w.skipped[s.id]) ? 'Skipped' : isItemDone(s, idx, nw) ? 'Yes' : 'No']);
   }));
   X.utils.book_append_sheet(wb, sheet(X, plan, [11, 11, 11, 10, 9, 34, 13, 16, 18, 6]), 'Plan');
   X.utils.book_append_sheet(wb, sheet(X, n, SESSION_COLS), 'Logged');
@@ -199,7 +199,7 @@ function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h
 export function weekFingerprint(S, key, w) {
   const { cfg, logs, programs } = S;
   const L = Object.keys(logs).sort().map(id => [id, (logs[id] || []).filter(e => entryWeek(e) === key)]);
-  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, w.rest, L, programs[weekSummary(cfg, programs, key, w).pk]]));
+  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, normWeek(w).rest, L, programs[weekSummary(cfg, programs, key, w).pk]]));
 }
 export function backupError(e) {
   const c = e && e.code;

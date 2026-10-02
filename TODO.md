@@ -20,7 +20,7 @@ These change how days and exercises are stored. Do them together so the data str
 
 - [x] Add a Day 7 to the board. It starts empty, and exercises can be added whenever.
 - [x] Add a Rest day checkbox to each day. Ticking it inserts a rest day there and moves the later workouts one day later (blocked while Day 7 has exercises). A rest day counts as a complete day, and its exercises aren't in it, so volume numbers aren't inflated.
-- [ ] Add an Experiment board: a standing list of new exercises to try that spans all weeks (not tied to a program's days). Pull an exercise from it into a day when ready. Design it separately after Day 7 and the Rest lane.
+- [ ] Add an Experiment board: a standing list of new exercises to try that spans all weeks (not tied to a program's days). Pull an exercise from it into a day when ready. Design it separately after Day 7 and the Rest day.
 - [ ] Add an exercise to the current day from the board.
 - [ ] Add stretches to the board, as a card type that doesn't need weight or reps.
 - [ ] Add an optional video link to each exercise.
