@@ -103,6 +103,7 @@ export function checkRows(weeks) {
     const w = normWeek(weeks[k]);
     if (w.prog) rows.push([k, 'prog', '', w.prog]);
     if (w.rest) rows.push([k, 'rest', '', w.rest]);
+    if (w.restOn) rows.push([k, 'restOn', '', w.restOn]);
     if (w.order) rows.push([k, 'order', '', w.order.join(' ')]);
     ['done', 'skipped'].forEach(kind => Object.keys(w[kind]).forEach(id => { if (w[kind][id]) rows.push([k, kind, id, 'Yes']); }));
     Object.entries(w.moved).forEach(([id, day]) => rows.push([k, 'moved', id, day]));
@@ -186,6 +187,7 @@ export function mergeWeek(a, b) {
   const w = normWeek(a); const o = normWeek(b);
   w.prog = w.prog || o.prog;
   if (!w.rest && o.rest) w.rest = o.rest;
+  if (w.rest && !w.restOn && o.restOn) w.restOn = o.restOn;
   if (!w.order && o.order) w.order = o.order;
   ['moved', 'ph'].forEach(k => { w[k] = { ...o[k], ...w[k] }; });
   Object.keys(o.warm).forEach(d => { w.warm[d] = { ...o.warm[d], ...(w.warm[d] || {}) }; });
@@ -201,7 +203,8 @@ function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h
 export function weekFingerprint(S, key, w) {
   const { cfg, logs, programs } = S;
   const L = Object.keys(logs).sort().map(id => [id, (logs[id] || []).filter(e => entryWeek(e) === key)]);
-  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, normWeek(w).rest, normWeek(w).order, L, programs[weekSummary(cfg, programs, key, w).pk]]));
+  const nw = normWeek(w);
+  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, nw.rest, nw.order, nw.restOn, L, programs[weekSummary(cfg, programs, key, w).pk]]));
 }
 export function backupError(e) {
   const c = e && e.code;

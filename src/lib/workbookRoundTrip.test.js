@@ -66,4 +66,20 @@ describe('workbook round trip', () => {
     const weeks = { '2030-01-06': { done: { x: true }, order: [1, 1, 3, 4, 5, 6, 7] } };
     expect(parseDataFile(JSON.stringify(buildDataFile(S, weeks))).weeks['2030-01-06']).not.toHaveProperty('order');
   });
+
+  it('keeps the rest day’s date through the JSON file, the workbook and an Excel re-save', async () => {
+    const weeks = { ...raw.weeks, '2030-01-06': { done: {}, rest: 3, restOn: '2030-01-08' } };
+    const viaJson = parseDataFile(JSON.stringify(buildDataFile(S, weeks)));
+    const wb = buildOverallWorkbook(X, S, weeks);
+    const viaXlsx = await parseExcelExport(bytes(wb), DEFAULT_CFG);
+    const viaResave = await parseExcelExport(bytes(X.read(bytes(wb), { type: 'array' })), DEFAULT_CFG);
+    expect(viaJson.weeks['2030-01-06'].restOn).toBe('2030-01-08');
+    expect(viaXlsx.weeks['2030-01-06'].restOn).toBe('2030-01-08');
+    expect(viaResave.weeks['2030-01-06'].restOn).toBe('2030-01-08');
+  });
+
+  it('ignores a rest date that has no rest day', async () => {
+    const weeks = { '2030-01-06': { done: { x: true }, restOn: '2030-01-08' } };
+    expect(parseDataFile(JSON.stringify(buildDataFile(S, weeks))).weeks['2030-01-06']).not.toHaveProperty('restOn');
+  });
 });
