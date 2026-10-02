@@ -76,3 +76,12 @@ it('the week workbook lists experiment cards on the Plan sheet', () => {
   const rows = X.utils.sheet_to_json(buildWeekWorkbook(X, S, '2026-09-27', w).Sheets.Plan, { header: 1 });
   expect(rows.some(r => r[2] === 'Experiment' && r[5] === exInfo(S.cfg, 'hack').n && r[9] === 'Yes')).toBe(true);
 });
+
+describe('import tab choices', () => {
+  it('selects every tab unless one is switched off', async () => {
+    const { importSel, cfgSection } = await import('./export.js');
+    expect(importSel({})).toEqual({ board: true, progress: true, muscles: true, program: true, settings: true });
+    expect(importSel({ sel: { progress: false } })).toMatchObject({ progress: false, board: true });
+    expect(['muscleMap', 'ex', 'progNames', 'rm', 'mode'].map(cfgSection)).toEqual(['muscles', 'program', 'program', 'settings', 'settings']);
+  });
+});
