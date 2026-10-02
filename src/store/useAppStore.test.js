@@ -37,9 +37,25 @@ describe('checking off on the board', () => {
     st().submitLog('A-d3s1', 0, { entry: { d: wk, ph: 'hyp', w: 275, s: 4, r: 12, slot: 'A-d3s1', wk }, ph: 'hyp', done: true });
     expect(st().logs.hack).toEqual([expect.objectContaining({ w: 275, r: 12 })]);
     expect(st().logs.hack[0].auto).toBeUndefined();
-    // Unchecking now leaves what you logged alone.
+    // Unchecking removes what you logged for the card this week too.
     st().checkCard('A-d3s1', false);
-    expect(st().logs.hack).toHaveLength(1);
+    expect(st().logs.hack).toEqual([]);
+    expect(st().saveFlag).toMatch(/removed 1 logged entry/);
+  });
+
+  it('unchecking leaves entries from other weeks and other cards alone, and skipping keeps what you logged', () => {
+    const wk = st().weekKey();
+    const old = { d: '2026-01-04', ph: 'hyp', w: 250, s: 4, r: 12, slot: 'A-d3s1', wk: '2026-01-04' };
+    useAppStore.setState({ logs: { hack: [old] } });
+    st().submitLog('A-d3s1', 0, { entry: { d: wk, ph: 'hyp', w: 275, s: 4, r: 12, slot: 'A-d3s1', wk }, ph: 'hyp', done: true });
+    st().submitLog('A-d1s1', 0, { entry: { d: wk, ph: 'hyp', w: 45, s: 4, r: 12, slot: 'A-d1s1', wk }, ph: 'hyp', done: true });
+    st().skipCard('A-d3s1'); // skipping isn't unchecking
+    expect(st().logs.hack).toHaveLength(2);
+    st().skipCard('A-d3s1'); // undo the skip
+    st().checkCard('A-d3s1', true);
+    st().checkCard('A-d3s1', false);
+    expect(st().logs.hack).toEqual([old]);
+    expect(st().logs.latpd).toHaveLength(1); // the other card's log is untouched
   });
 
   it('checking a whole day logs every card on it, and skipping a card removes its entry', () => {

@@ -202,21 +202,25 @@ export const useAppStore = create((set, get) => ({
 
   // A change to check-offs from the board: exercises that became done log their planned numbers,
   // and ones that were unchecked (or skipped) lose that entry.
-  mutateChecks(fn) {
-    const slots = get().activeSlots(); const before = get().week;
+  // `removeLogged`: unticking a box also removes the entries you logged yourself for that card this week.
+  mutateChecks(fn, { removeLogged = false } = {}) {
+    const slots = get().activeSlots(); const before = get().week; const logs = get().logs;
     if (!get().mutateWeek(fn)) return false;
-    const changed = autoLogs(get().cfg, get().logs, slots, before, get().week, get().weekKey(), defaultLogDate(get().weekStart));
+    const changed = autoLogs(get().cfg, logs, slots, before, get().week, get().weekKey(), defaultLogDate(get().weekStart), { removeLogged });
     if (Object.keys(changed).length) {
       set(state => ({ logs: { ...state.logs, ...changed } }));
       Object.keys(changed).forEach(id => get().saveLog(id));
     }
+    const real = e => !e.auto;
+    const gone = Object.keys(changed).reduce((n, id) => n + Math.max(0, (logs[id] || []).filter(real).length - changed[id].filter(real).length), 0);
+    if (gone) flag(`Unchecked · removed ${gone} logged ${gone === 1 ? 'entry' : 'entries'}`);
     return true;
   },
-  checkCard(slotId, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setCardDone(w, s, on)); },
-  checkItem(slotId, idx, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setItemDone(w, s, idx, on)); },
+  checkCard(slotId, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setCardDone(w, s, on), { removeLogged: true }); },
+  checkItem(slotId, idx, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setItemDone(w, s, idx, on), { removeLogged: true }); },
   checkDay(day, on) {
     const slots = get().activeSlots();
-    get().mutateChecks(w => currentLayout(w, slots)[day].forEach(s => { if (!isSkipped(s, w)) setCardDone(w, s, on); }));
+    get().mutateChecks(w => currentLayout(w, slots)[day].forEach(s => { if (!isSkipped(s, w)) setCardDone(w, s, on); }), { removeLogged: true });
   },
   skipCard(slotId) {
     const s = get().slotById(slotId); let skipped = false;
