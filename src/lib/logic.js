@@ -1,4 +1,4 @@
-import { PHASES, PH_KEYS, exInfo } from './data.js';
+import { PHASES, PH_KEYS, exInfo, DAY_COUNT } from './data.js';
 import { monday, ymd, parseDate, addDays } from './dates.js';
 
 /* ---------- Config defaults ---------- */
@@ -154,9 +154,18 @@ export function tally(slots, w) {
   slots.forEach(s => { if (isSkipped(s, w)) { skipped++; return; } total += unitsOf(s); done += doneUnitsOf(s, w); });
   return { total, done, skipped, full: total > 0 && done === total };
 }
+/* ---------- Days and the rest day ----------
+   week.rest = N inserts a rest day at displayed position N: workouts on program days N and later
+   show one day later. The layout is derived, so nothing stored changes and unticking undoes it. */
+export const DAYS = Array.from({ length: DAY_COUNT }, (_, i) => i + 1);
+export const shownDay = (rest, d) => (rest && d >= rest ? Math.min(d + 1, DAY_COUNT) : d);
+export const programDay = (rest, d) => (!rest || d < rest ? d : d === rest ? null : d - 1);
+export const dayTitle = (day, d) => (!day.title || /^Day \d+$/.test(day.title) ? `Day ${d}` : day.title);
+// The shift would push a workout off the board when something is already on the last day.
+export const restBlocked = (week, slots) => slots.some(s => ((week.moved && week.moved[s.id]) || s.day) === DAY_COUNT);
 export function currentLayout(week, slots) {
-  const cols = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
-  slots.forEach(s => { const d = week.moved[s.id] || s.day; cols[d].push(s); });
+  const cols = Object.fromEntries(DAYS.map(d => [d, []]));
+  slots.forEach(s => cols[shownDay(week.rest, (week.moved && week.moved[s.id]) || s.day)].push(s));
   return cols;
 }
 
@@ -225,4 +234,9 @@ export function autoLogs(cfg, logs, slots, before, after, wk, date) {
 // Compared as dates, not instants, so the whole of that next day counts.
 export function defaultLogDate(weekStart) { const today = ymd(new Date()); return (today >= ymd(weekStart) && today <= ymd(addDays(weekStart, 7))) ? today : ymd(weekStart); }
 
-export const normWeek = w => ({ prog: (w && w.prog) || null, done: { ...(w && w.done) }, skipped: { ...(w && w.skipped) }, moved: { ...(w && w.moved) }, ph: { ...(w && w.ph) }, warm: JSON.parse(JSON.stringify((w && w.warm) || {})) });
+export const normWeek = w => {
+  const out = { prog: (w && w.prog) || null, done: { ...(w && w.done) }, skipped: { ...(w && w.skipped) }, moved: { ...(w && w.moved) }, ph: { ...(w && w.ph) }, warm: JSON.parse(JSON.stringify((w && w.warm) || {})) };
+  const rest = Number(w && w.rest);
+  if (Number.isInteger(rest) && rest >= 1 && rest <= DAY_COUNT) out.rest = rest;
+  return out;
+};
