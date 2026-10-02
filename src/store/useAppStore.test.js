@@ -675,3 +675,54 @@ describe('undoing an uncheck', () => {
     expect(st().week.done['A-d3s1']).toBe(true);
   });
 });
+
+describe('exercise library', () => {
+  it('saves name, video, equipment, 1RM, default phase and muscles in one go', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    expect(st().createLibraryExercise({ name: '  Cable   Lateral Raise ', url: 'https://example.com/v', eq: 'cable', rm: '40', ph: 'hyp', tags: { p: ['sidedelt'], s: ['traps'] } })).toBeNull();
+    const id = Object.keys(st().cfg.ex).find(k => st().cfg.ex[k].n === 'Cable Lateral Raise');
+    expect(exInfo(st().cfg, id)).toMatchObject({ n: 'Cable Lateral Raise', url: 'https://example.com/v', eq: 'cable' });
+    expect(st().cfg.rm[id]).toBe(40); expect(st().cfg.exPh[id]).toBe('hyp');
+    expect(st().cfg.muscleMap[id]).toEqual({ p: ['sidedelt'], s: ['traps'] });
+    expect(st().modal).toBeNull();
+  });
+  it('refuses a missing, duplicate or bad-link new exercise', () => {
+    expect(st().createLibraryExercise({ name: '  ' })).toMatch(/name/);
+    expect(st().createLibraryExercise({ name: 'hack squat' })).toMatch(/already/);
+    expect(st().createLibraryExercise({ name: 'New thing', url: 'nope' })).toMatch(/https/);
+    expect(Object.keys(st().cfg.ex)).toEqual([]);
+  });
+  it('renames your own exercise but not a built-in, and refuses a name that is taken', () => {
+    st().createLibraryExercise({ name: 'My Lift' });
+    const id = Object.keys(st().cfg.ex)[0];
+    expect(st().saveExerciseDetails(id, { name: 'Hack Squat' })).toMatch(/already/);
+    expect(st().saveExerciseDetails(id, { name: 'Renamed Lift' })).toBeNull();
+    expect(st().cfg.ex[id].n).toBe('Renamed Lift');
+    st().saveExerciseDetails('hack', { name: 'Something Else' });
+    expect(st().cfg.ex.hack && st().cfg.ex.hack.n).toBeUndefined();
+  });
+  it('1RM and muscles: clearing the 1RM, and going back to the default muscles', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    st().saveExerciseDetails('hack', { rm: '400', tags: { p: ['hamstrings'], s: [] } });
+    expect(st().cfg.rm.hack).toBe(400); expect(st().cfg.muscleMap.hack).toEqual({ p: ['hamstrings'], s: [] });
+    st().saveExerciseDetails('hack', { rm: '', tags: null });
+    expect(st().cfg.rm.hack).toBeUndefined(); expect(st().cfg.muscleMap.hack).toBeUndefined();
+    st().saveExerciseDetails('hack', { tags: { p: ['quads'], s: ['adductors', 'glutes'] } }); // same as the default
+    expect(st().cfg.muscleMap.hack).toBeUndefined();
+    st().saveExerciseDetails('hack', { rm: '350' }); // fields left out stay as they were
+    expect(exInfo(st().cfg, 'hack')).toMatchObject({ eq: 'machine' });
+    expect(st().cfg.muscleMap.hack).toBeUndefined();
+  });
+  it('deletes only your own exercises that nothing uses', () => {
+    st().createLibraryExercise({ name: 'Throwaway', rm: '10', tags: { p: ['chest'], s: [] } });
+    const id = Object.keys(st().cfg.ex)[0];
+    expect(st().deleteExercise('hack')).toMatch(/Built-in/);
+    useAppStore.setState({ logs: { [id]: [{ d: '2026-10-01', w: 10, s: 1, r: 1 }] } });
+    expect(st().deleteExercise(id)).toMatch(/in your logs/);
+    useAppStore.setState({ logs: {}, experiments: [{ id: 'e1', ex: id, ph: null, note: '' }] });
+    expect(st().deleteExercise(id)).toMatch(/Experiment board/);
+    useAppStore.setState({ experiments: [] });
+    expect(st().deleteExercise(id)).toBeNull();
+    expect(st().cfg.ex[id]).toBeUndefined(); expect(st().cfg.rm[id]).toBeUndefined(); expect(st().cfg.muscleMap[id]).toBeUndefined();
+  });
+});

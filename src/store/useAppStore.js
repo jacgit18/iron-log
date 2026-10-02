@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { BUILTIN, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
+import { BUILTIN, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
-  DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
+  DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
@@ -15,6 +15,8 @@ import {
 } from '../lib/export.js';
 import { FEATURES } from '../lib/features.js';
 import { bwSorted } from '../lib/body.js';
+import { usageOf } from '../lib/exerciseLibrary.js';
+import { MUSCLE_MAP } from '../lib/muscles.js';
 import { bestLift, liftGoalsOf, goalPhaseLabel, GOAL_KEYS } from '../lib/liftGoal.js';
 import { loadView, saveView } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
@@ -66,6 +68,8 @@ function setExerciseDefault(c, exId, ph, programs, library) {
   const progs = [...Object.values(programs), ...library.map(it => ({ ...it.prog, key: 'N' }))];
   progs.forEach(p => { try { slotsFor(p).forEach(sl => sl.items.forEach((x, i) => { if (x.ex === exId) delete c.phDef[`${sl.id}:${i}`]; })); } catch { /* a malformed saved program */ } });
 }
+
+const sameTags = (a, b) => JSON.stringify([[...(a.p || [])].sort(), [...(a.s || [])].sort(), !!a.mob]) === JSON.stringify([[...(b.p || [])].sort(), [...(b.s || [])].sort(), !!b.mob]);
 
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
 
@@ -320,17 +324,50 @@ export const useAppStore = create((set, get) => ({
     if (!ok) return null;
     set({ modal: null }); flag(`Added ${exInfo(get().cfg, ex).n} to Day ${col}`); return null;
   },
-  // Video link, equipment and stretch for any exercise, and the phase it defaults to on every card.
+  // Everything set on one exercise, applied to every card with it: video link, equipment, stretch, default phase,
+  // and (when given) name (your own exercises), 1RM ('' removes it) and muscle tags (null = back to the default).
   saveExerciseDetails(exId, d) {
     if (get().blocked()) return null;
-    const url = (d.url || '').trim();
+    const url = d.url === undefined ? undefined : (d.url || '').trim();
     if (!isVideoUrl(url)) return VIDEO_ERR;
+    const custom = !EX[exId]; const name = d.name != null ? d.name.trim().replace(/\s+/g, ' ') : null;
+    if (custom && name != null) {
+      if (!name) return 'Give the exercise a name.';
+      const other = findExId(get().cfg, name); if (other && other !== exId) return 'Another exercise already has that name.';
+    }
     get().mutateCfg(c => {
-      setOverride(c, exId, { url, eq: d.eq || '', ...(FEATURES.stretches ? { stretch: d.stretch } : {}) }); // a hidden setting is left as it is
+      // Fields left out stay as they were; a hidden setting (stretch, while the feature is off) is left alone.
+      setOverride(c, exId, { ...(url !== undefined ? { url } : {}), ...(d.eq !== undefined ? { eq: d.eq || '' } : {}), ...(FEATURES.stretches && d.stretch !== undefined ? { stretch: d.stretch } : {}) });
+      if (custom && name) c.ex[exId] = { ...c.ex[exId], n: name };
       const ph = d.stretch ? '' : d.ph; // a stretch has no phase
-      if (ph !== ((c.exPh || {})[exId] || '')) setExerciseDefault(c, exId, ph, get().programs, get().library);
+      if (ph !== undefined && ph !== ((c.exPh || {})[exId] || '')) setExerciseDefault(c, exId, ph, get().programs, get().library);
+      if (d.rm !== undefined) { const n = Number(d.rm); if (d.rm === '' || d.rm === null || !(n > 0)) delete c.rm[exId]; else c.rm[exId] = n; }
+      if (d.tags !== undefined) {
+        c.muscleMap = c.muscleMap || {};
+        if (d.tags === null || (MUSCLE_MAP[exId] && sameTags(d.tags, MUSCLE_MAP[exId]))) delete c.muscleMap[exId]; else c.muscleMap[exId] = d.tags;
+      }
     });
     set({ modal: null }); flag('Exercise saved'); return null;
+  },
+  // A new exercise for the library, not on any card yet. Returns an error message, or null when saved.
+  createLibraryExercise(d) {
+    if (get().blocked()) return null;
+    const nn = (d.name || '').trim().replace(/\s+/g, ' ');
+    if (!nn) return 'Give the exercise a name.';
+    if (findExId(get().cfg, nn)) return 'That exercise is already in the library.';
+    if (!isVideoUrl(d.url)) return VIDEO_ERR;
+    const id = get().createExercise({ nn });
+    return get().saveExerciseDetails(id, { ...d, name: nn });
+  },
+  // Only your own exercises, and only when nothing uses them, so no card or log ends up pointing at a missing name.
+  deleteExercise(exId) {
+    if (get().blocked()) return null;
+    if (EX[exId]) return 'Built-in exercises can’t be deleted.';
+    const u = usageOf(exId, get());
+    const where = [u.programs.length && `in ${u.programs.map(k => progName(get().cfg, k)).join(' and ')}`, u.versions && 'in a saved version', u.experiments && 'on the Experiment board', u.logs && 'in your logs'].filter(Boolean);
+    if (where.length) return `It is still used ${where.join(', ')}. Remove it there first.`;
+    get().mutateCfg(c => { delete c.ex[exId]; delete c.rm[exId]; if (c.exPh) delete c.exPh[exId]; if (c.muscleMap) delete c.muscleMap[exId]; });
+    set({ modal: null }); flag('Exercise deleted'); return null;
   },
   deleteExperiment(id) { if (get().blocked()) return; get().setExperiments(get().experiments.filter(x => x.id !== id)); flag('Deleted'); },
   addToDay(entryId, col) {
