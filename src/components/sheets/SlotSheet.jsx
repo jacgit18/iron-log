@@ -1,29 +1,18 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, PH_KEYS, exInfo, allExIds } from '../../lib/data.js';
+import { PHASES, PH_KEYS, exInfo, exerciseChoice } from '../../lib/data.js';
 import { SECTIONS, blankItem } from '../../store/editorSlice.js';
 import { DAYS } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
+import ExerciseField from '../ExerciseField.jsx';
 
-function ItemFields({ it, k, type, exIds, cfg, onChange }) {
+function ItemFields({ it, k, type, cfg, onChange }) {
   const up = patch => onChange(k, patch);
   const legend = type === 'superset' ? (k ? 'B' : 'A') : type === 'either' ? (k ? 'Or' : 'Option 1') : 'Exercise';
   return (
     <fieldset className="edit-item">
       <legend>{legend}</legend>
-      <label className="field">Exercise
-        <select value={it.ex} onChange={e => up({ ex: e.target.value })}>
-          {it.ex === '' && <option value="">Choose…</option>}
-          {exIds.map(id => <option key={id} value={id}>{exInfo(cfg, id).n}</option>)}
-          <option value="__new">+ New exercise…</option>
-        </select>
-      </label>
-      {it.ex === '__new' && (
-        <div className="fields">
-          <label className="field">Name<input value={it.nn || ''} placeholder="e.g. Cable Lateral Raise" onChange={e => up({ nn: e.target.value })} /></label>
-          <label className="field">Video link (optional)<input type="url" value={it.nu || ''} placeholder="https://" onChange={e => up({ nu: e.target.value })} /></label>
-        </div>
-      )}
+      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} />
       <div className="fields">
         <label className="field">Phase
           <select value={it.ph || ''} onChange={e => up({ ph: e.target.value || null })}>
@@ -49,16 +38,15 @@ export default function SlotSheet({ idx }) {
   const [d, setD] = useState(() => {
     const src = idx == null ? { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' } : structuredClone(st.edProgram().days[edDay - 1].slots[idx]);
     // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
-    return { ...src, type: src.type || 'single', day: edDay, idx, note: src.note || '', tier: src.tier || '', items: src.items.map(it => ({ ...blankItem(), ...it, w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
+    return { ...src, type: src.type || 'single', day: edDay, idx, note: src.note || '', tier: src.tier || '', items: src.items.map(it => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
   });
   const [err, setErr] = useState('');
-  const exIds = allExIds(cfg).sort((a, b) => exInfo(cfg, a).n.localeCompare(exInfo(cfg, b).n));
 
   const setType = type => setD(x => { const want = type === 'single' ? 1 : 2; const items = x.items.slice(0, want); while (items.length < want) items.push({ ...blankItem(), w: '' }); return { ...x, type, items }; });
   const setItem = (k, patch) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
   const submit = e => {
     e.preventDefault();
-    const clean = { ...d, note: d.note.trim(), items: d.items.map(it => ({ ...it, w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nn: (it.nn || '').trim(), nu: (it.nu || '').trim() })) };
+    const clean = { ...d, note: d.note.trim(), items: d.items.map(it => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim() })) };
     const msg = st.saveSlot(clean);
     if (msg) setErr(msg);
   };
@@ -88,7 +76,7 @@ export default function SlotSheet({ idx }) {
           </select>
         </label>
       </div>
-      {d.items.map((it, k) => <ItemFields key={k} it={it} k={k} type={d.type} exIds={exIds} cfg={cfg} onChange={setItem} />)}
+      {d.items.map((it, k) => <ItemFields key={k} it={it} k={k} type={d.type} cfg={cfg} onChange={setItem} />)}
       <label className="field">Card note<input value={d.note} placeholder="e.g. Whichever is free" onChange={e => setD(x => ({ ...x, note: e.target.value }))} /></label>
       {err && <p className="note err" role="alert">{err}</p>}
       <div className="actions">

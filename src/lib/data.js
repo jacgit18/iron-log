@@ -228,3 +228,8 @@ export function newExId(cfg, name, taken = {}) {
   while (EX[id] || (known[id] && known[id].n !== name)) id = `${base}-${n++}`;
   return id;
 }
+// Typed exercise names: matched to the catalog (built-in and your own) ignoring case and extra spaces.
+const nameKey = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+export const findExId = (cfg, name) => { const k = nameKey(name); return k ? allExIds(cfg).find(id => nameKey(exInfo(cfg, id).n) === k) ?? null : null; };
+// What the add/edit sheets save for a typed name: an existing exercise, or '__new' with the cleaned name to create.
+export const exerciseChoice = (cfg, name) => { const n = String(name || '').trim().replace(/\s+/g, ' '); const id = findExId(cfg, n); return id ? { ex: id, nn: '' } : { ex: n ? '__new' : '', nn: n }; };
