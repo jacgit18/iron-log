@@ -3,7 +3,7 @@ import { BUILTIN, resolveProgram, slotsFor, padLibrary } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, activeProgKey, programFor, phaseOf, lastLog, describe,
-  setCardDone, setItemDone, clearDone, isSkipped, isOpen, currentLayout, programDay, shownDay, restBlocked, moveClashes, defaultLogDate, autoLogs,
+  setCardDone, setItemDone, clearDone, isSkipped, pullable, currentLayout, dayAt, colOf, orderOf, DAYS, restBlocked, moveClashes, defaultLogDate, autoLogs,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -197,35 +197,52 @@ export const useAppStore = create((set, get) => ({
     if (ok) flag(skipped ? 'Skipped for this week' : 'Skip undone');
   },
   setWarm(day, wid, on) {
-    const pd = programDay(get().week.rest, day); if (pd == null) return;
+    const pd = dayAt(get().week, day); if (pd == null) return;
     get().mutateWeek(w => { w.warm[pd] = w.warm[pd] || {}; w.warm[pd][wid] = on; });
   },
   // Tick or untick the rest day. One per week; ticking another day moves it.
   setRestDay(n) {
     const w = get().week;
-    if (w.rest !== n && restBlocked(w, get().activeSlots())) { flag('Day 7 has exercises, so there is no room to add a rest day. Move or clear them first.'); return false; }
+    if (w.rest !== n && restBlocked(w, get().activeSlots())) { flag('Day 7 has exercises, so there is no room to add a rest day. Move or clear them, or swap the empty day back to the end.'); return false; }
     set({ moveNote: null });
     return get().mutateWeek(x => { if (x.rest === n) delete x.rest; else x.rest = n; });
+  },
+  // Swap displayed column d with its neighbor d + dir, for this week. Swapping with the rest column moves the rest day.
+  swapDays(d, dir) {
+    const e = d + dir; if (e < 1 || e > DAYS.length) return false;
+    const w = get().week; const restInvolved = w.rest === d || w.rest === e;
+    const ok = get().mutateWeek(x => {
+      if (restInvolved) x.rest = x.rest === d ? e : d;
+      else {
+        const a = dayAt(x, d), b = dayAt(x, e); const o = [...orderOf(x)];
+        const i = o.indexOf(a), j = o.indexOf(b); [o[i], o[j]] = [o[j], o[i]];
+        if (o.every((v, k) => v === k + 1)) delete x.order; else x.order = o;
+      }
+    });
+    if (!ok) return false;
+    set({ moveNote: null, mDay: e });
+    flag(restInvolved ? `Rest day moved to Day ${get().week.rest}` : `Day ${d} swapped with Day ${e}`);
+    return true;
   },
   setPhase(slotId, idx, ph) { get().mutateWeek(w => { w.ph[`${slotId}:${idx}`] = ph; }); },
   setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); get().mutateWeek(w => { w.prog = k === auto ? null : k; }); },
   setMode(mode) { get().mutateCfg(c => { c.mode = mode; }); },
   pullUnfinished() {
     const slots = get().activeSlots();
-    get().mutateWeek(w => slots.forEach(s => { if (s.day < 5 && (w.moved[s.id] || s.day) < 5 && isOpen(s, w)) w.moved[s.id] = 5; }));
+    get().mutateWeek(w => { pullable(w, slots).forEach(s => { w.moved[s.id] = 5; }); });
   },
 
   moveSlot(slotId, day) {
     const s = get().slotById(slotId); if (!s) return;
-    const rest = get().week.rest;
-    const pd = programDay(rest, day); // `day` is the displayed day; cards are stored by program day
+    const week0 = get().week;
+    const pd = dayAt(week0, day); // `day` is the displayed column; cards are stored by program day
     if (pd == null) { flag('That is your rest day'); return; }
-    const from = get().week.moved[slotId] || s.day;
+    const from = week0.moved[slotId] || s.day;
     const ok = get().mutateWeek(w => { if (pd === s.day) delete w.moved[slotId]; else w.moved[slotId] = pd; });
     if (!ok) return;
     const { cfg, week } = get();
     const clashes = moveClashes(cfg, week, get().activeSlots(), s, day);
-    set({ moveNote: clashes.length ? { slot: slotId, from, fromShown: shownDay(rest, from), to: day, week: get().weekKey(), lines: clashes } : null });
+    set({ moveNote: clashes.length ? { slot: slotId, from, fromShown: colOf(week0, from), to: day, week: get().weekKey(), lines: clashes } : null });
     flag(clashes.length ? `Moved to Day ${day} · heads-up` : `Moved to Day ${day}`);
   },
   undoMove() {
