@@ -270,7 +270,7 @@ export default function Board() {
               <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => st.setRestDay(d)} /> Rest day</label>
               <div className="addrow">
                 <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>
-                <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>Only this week</button>
+                <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>
               </div>
               <div className="warm">
                 <span className="tag">Warm-up</span>
