@@ -652,12 +652,26 @@ describe('undoing an uncheck', () => {
     st().undoUncheck(); // nothing left to undo
     expect(st().logs.hack).toHaveLength(2);
   });
-  it('only offers undo when something you logged was removed, and a new check-off replaces the offer', () => {
-    st().checkCard('A-d3s1', true); st().checkCard('A-d3s1', false); // check-off entry only
-    expect(st().uncheckNote).toBeNull();
-    logIt(); st().checkCard('A-d3s1', false);
-    expect(st().uncheckNote).not.toBeNull();
+  it('offers undo for any uncheck, and a new check-off replaces the offer', () => {
+    st().checkCard('A-d3s1', true);
+    expect(st().uncheckNote).toBeNull(); // ticking isn't an uncheck
+    st().checkCard('A-d3s1', false); // only a check-off entry was there
+    expect(st().uncheckNote.text).toBe('Unchecked Hack Squat.');
     st().checkCard('A-d1s1', true);
     expect(st().uncheckNote).toBeNull();
+  });
+  it('undoing a plain uncheck ticks the card again and brings back its check-off entry', () => {
+    st().checkCard('A-d3s1', true);
+    st().checkCard('A-d3s1', false);
+    expect(st().logs.hack).toEqual([]);
+    st().undoUncheck();
+    expect(st().week.done['A-d3s1']).toBe(true);
+    expect(st().logs.hack).toEqual([expect.objectContaining({ auto: true, slot: 'A-d3s1' })]);
+  });
+  it('names the day when a whole day is unticked', () => {
+    st().checkDay(3, true); st().checkDay(3, false);
+    expect(st().uncheckNote.text).toMatch(/^Unchecked Day 3/);
+    st().undoUncheck();
+    expect(st().week.done['A-d3s1']).toBe(true);
   });
 });

@@ -204,7 +204,8 @@ export const useAppStore = create((set, get) => ({
   // A change to check-offs from the board: exercises that became done log their planned numbers,
   // and ones that were unchecked (or skipped) lose that entry.
   // `removeLogged`: unticking a box also removes the entries you logged yourself for that card this week.
-  mutateChecks(fn, { removeLogged = false } = {}) {
+  // A box that was unticked leaves an Undo notice (`label` names what was unticked).
+  mutateChecks(fn, { removeLogged = false, label = '' } = {}) {
     const slots = get().activeSlots(); const before = get().week; const logs = get().logs;
     if (!get().mutateWeek(fn)) return false;
     const changed = autoLogs(get().cfg, logs, slots, before, get().week, get().weekKey(), defaultLogDate(get().weekStart), { removeLogged });
@@ -219,10 +220,12 @@ export const useAppStore = create((set, get) => ({
       const lost = (logs[id] || []).filter(e => !e.auto && !kept.has(JSON.stringify(e)));
       if (lost.length) { entries[id] = lost; gone += lost.length; }
     });
-    if (gone && removeLogged) {
-      const done = {}; const after = get().week.done || {};
-      new Set([...Object.keys(before.done || {}), ...Object.keys(after)]).forEach(k => { if (!!(before.done || {})[k] !== !!after[k]) done[k] = !!(before.done || {})[k]; });
-      set({ uncheckNote: { week: get().weekKey(), text: `Unchecked · removed ${gone} logged ${gone === 1 ? 'entry' : 'entries'}.`, entries, done } });
+    const done = {}; const after = get().week.done || {};
+    new Set([...Object.keys(before.done || {}), ...Object.keys(after)]).forEach(k => { if (!!(before.done || {})[k] !== !!after[k]) done[k] = !!(before.done || {})[k]; });
+    const unticked = Object.values(done).some(Boolean);
+    if (removeLogged && unticked) {
+      const text = `Unchecked${label ? ' ' + label : ''}${gone ? ` · removed ${gone} logged ${gone === 1 ? 'entry' : 'entries'}` : ''}.`;
+      set({ uncheckNote: { week: get().weekKey(), text, entries, done } });
     } else if (get().uncheckNote) set({ uncheckNote: null }); // any other check-off change replaces the old notice
     return true;
   },
@@ -236,15 +239,16 @@ export const useAppStore = create((set, get) => ({
       logs[id] = [...(logs[id] || []), ...lost.filter(e => !have.has(JSON.stringify(e)))].sort((a, b) => a.d.localeCompare(b.d));
     });
     set({ logs }); Object.keys(n.entries).forEach(id => get().saveLog(id));
-    get().mutateWeek(w => { w.done = w.done || {}; Object.entries(n.done).forEach(([k, on]) => { if (on) w.done[k] = true; else delete w.done[k]; }); });
+    // Ticking again through the check-off path, so a card without logged numbers gets its check-off entry back too.
+    get().mutateChecks(w => { w.done = w.done || {}; Object.entries(n.done).forEach(([k, on]) => { if (on) w.done[k] = true; else delete w.done[k]; }); });
     flag('Put back');
   },
   dismissUncheck: () => set({ uncheckNote: null }),
-  checkCard(slotId, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setCardDone(w, s, on), { removeLogged: true }); },
-  checkItem(slotId, idx, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setItemDone(w, s, idx, on), { removeLogged: true }); },
+  checkCard(slotId, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setCardDone(w, s, on), { removeLogged: true, label: s.items.map(it => exInfo(get().cfg, it.ex).n).join(' → ') }); },
+  checkItem(slotId, idx, on) { const s = get().slotById(slotId); if (s) get().mutateChecks(w => setItemDone(w, s, idx, on), { removeLogged: true, label: exInfo(get().cfg, s.items[idx].ex).n }); },
   checkDay(day, on) {
     const slots = get().activeSlots();
-    get().mutateChecks(w => currentLayout(w, slots)[day].forEach(s => { if (!isSkipped(s, w)) setCardDone(w, s, on); }), { removeLogged: true });
+    get().mutateChecks(w => currentLayout(w, slots)[day].forEach(s => { if (!isSkipped(s, w)) setCardDone(w, s, on); }), { removeLogged: true, label: `Day ${day}` });
   },
   skipCard(slotId) {
     const s = get().slotById(slotId); let skipped = false;
