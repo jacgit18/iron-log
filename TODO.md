@@ -47,7 +47,7 @@ These change how days and exercises are stored. Do them together so the data str
 ## 5. Advanced features and integrations (post-backend)
 
 - [ ] Google Fit API integration to pull activity and weight data.
-- [ ] Weight goals feature (set targets and track progress).
+- [x] Weight goals feature (set targets and track progress).
 - [ ] Import medical records and add AI assessment of medical information.
 - [ ] Warn when you skip an exercise too many times that's on your program.
 - [ ] Improve weight entry UX: catch and prevent common mistakes (e.g., wrong weight entered for an exercise).

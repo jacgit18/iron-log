@@ -2,12 +2,19 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { monday, ymd, parseDate, fmtShort } from '../../lib/dates.js';
-import { bwSorted, fmtLb, signed } from '../../lib/body.js';
+import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
+
+function GoalNote({ goal, body, today }) {
+  const g = goalStatus(goal, body, today);
+  if (!g || !g.last) return null;
+  return <span className="note">Goal {fmtLb(g.target)} lb · {g.reached ? 'reached' : `${fmtLb(Math.abs(g.left))} lb to go`}</span>;
+}
 
 export default function BodyWeightRow() {
   const body = useAppStore(s => s.body);
   const weekStart = useAppStore(s => s.weekStart);
   const saveBodyWeight = useAppStore(s => s.saveBodyWeight);
+  const goal = useAppStore(s => s.cfg.bwGoal);
   const today = useToday(s => s.today);
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState('');
@@ -24,6 +31,7 @@ export default function BodyWeightRow() {
         <span className="bwl">{label}</span>
         <b>{fmtLb(cur.w)} lb</b>
         {diff != null && <span className="note">{diff === 0 ? 'same as' : `${signed(diff, 1)} lb vs`} {fmtShort(parseDate(prev.d))}</span>}
+        {goal && <GoalNote goal={goal} body={body} today={today} />}
         <button type="button" className="btn sm ghost" onClick={() => { setValue(fmtLb(cur.w)); setEditing(true); }}>Edit</button>
       </div>
     );

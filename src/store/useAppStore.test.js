@@ -565,3 +565,20 @@ describe('stretch feature switched off', () => {
     } finally { FEATURES.stretches = true; }
   });
 });
+
+describe('body weight goal', () => {
+  it('saves a target with the latest weigh-in as its start, and can remove it', () => {
+    useAppStore.setState({ body: [{ wk: '2026-09-27', d: '2026-09-27', w: 195 }] });
+    expect(st().setBodyGoal('180', '2026-12-01')).toBe(true);
+    expect(st().cfg.bwGoal).toEqual({ w: 180, start: { w: 195, d: '2026-09-27' }, by: '2026-12-01' });
+    expect(st().setBodyGoal('abc')).toBe(false);
+    st().clearBodyGoal();
+    expect(st().cfg.bwGoal).toBeUndefined();
+  });
+  it('a goal set before any weigh-in starts from the first one', () => {
+    st().setBodyGoal('180');
+    expect(st().cfg.bwGoal.start).toBeUndefined();
+    st().saveBodyWeight(200);
+    expect(st().cfg.bwGoal.start.w).toBe(200);
+  });
+});
