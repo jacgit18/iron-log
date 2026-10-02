@@ -36,7 +36,7 @@ Written first (TDD), alongside the existing test files:
 - Card moves map displayed days back to program days around the rest day.
 - Migration: a 6-day program, saved version or backup gains an empty Day 7.
 - A round-trip through the Excel workbook and JSON that keeps `week.rest`.
-- Components: the checkbox on each day header, blocked-tick message, renumbered labels, day tabs showing "Rest".
+- Components: the repo has no component test setup, so the checkbox, blocked-tick message, renumbered labels and the "Rest" day tab are checked by hand in the running app. The logic they use lives in tested lib and store functions.
 
 ## Docs
 
