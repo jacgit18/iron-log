@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { ymd, parseDate, addDays, fmtShort } from '../../lib/dates.js';
 import { MUSCLES, M_KEYS, level, fmtSets } from '../../lib/muscles.js';
 import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, niceStep, mdLabel } from '../../lib/trends.js';
-import { bwSorted, fmtLb, signed } from '../../lib/body.js';
+import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
 import LineChart from '../LineChart.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
@@ -106,15 +108,66 @@ function ChangeChart({ changes }) {
   );
 }
 
+// Target body weight: set it, see how far there is to go, and the weekly pace needed to hit a date.
+function BodyGoal() {
+  const cfg = useAppStore(s => s.cfg); const body = useAppStore(s => s.body);
+  const today = useToday(s => s.today);
+  const { setBodyGoal, clearBodyGoal } = useAppStore.getState();
+  const goal = cfg.bwGoal || null;
+  const [editing, setEditing] = useState(false);
+  const [w, setW] = useState(''); const [by, setBy] = useState('');
+  const g = goalStatus(goal, body, today);
+  const edit = () => { setW(goal ? fmtLb(goal.w) : ''); setBy(goal && goal.by ? goal.by : ''); setEditing(true); };
+  if (editing || !goal) {
+    return (
+      <form className="bwgoal" noValidate onSubmit={e => { e.preventDefault(); if (setBodyGoal(w, by)) setEditing(false); }}>
+        <h3>Weight goal</h3>
+        <div className="fields">
+          <label className="field">Target (lb)<input type="number" inputMode="decimal" step="any" min="0" value={w} onChange={e => setW(e.target.value)} /></label>
+          <label className="field">By (optional)<input type="date" value={by} onChange={e => setBy(e.target.value)} /></label>
+        </div>
+        <div className="actions">
+          {goal && <button type="button" className="btn sm" onClick={() => setEditing(false)}>Cancel</button>}
+          <button type="submit" className="btn sm primary">Save goal</button>
+        </div>
+      </form>
+    );
+  }
+  const lines = [];
+  if (g && g.last) {
+    if (g.reached) lines.push('Goal reached.');
+    else lines.push(`${fmtLb(Math.abs(g.left))} lb to ${g.dir === 'gain' ? 'gain' : 'lose'}, from ${fmtLb(g.start)} lb when you set it.`);
+    if (g.pace != null) lines.push(`Recent pace: ${signed(g.pace, 1)} lb a week.`);
+    if (!g.reached && g.need != null) lines.push(`To hit it by ${fmtShort(parseDate(g.by))}: ${signed(g.need, 1)} lb a week.`);
+    if (!g.reached && g.by && g.weeksLeft != null && g.weeksLeft <= 0) lines.push(`The date (${fmtShort(parseDate(g.by))}) has passed.`);
+  } else lines.push('Log your weight on the Board to start tracking it.');
+  return (
+    <div className="bwgoal">
+      <h3>Weight goal: {fmtLb(goal.w)} lb{goal.by ? ` by ${fmtShort(parseDate(goal.by))}` : ''}</h3>
+      {g && g.last && (
+        <div className="goalbar" role="img" aria-label={`${g.pct}% of the way to ${fmtLb(goal.w)} lb`}>
+          <div className="bar"><i style={{ width: `${g.pct}%` }} /></div><span>{g.pct}%</span>
+        </div>
+      )}
+      {lines.map(t => <p className="note" key={t}>{t}</p>)}
+      <div className="actions">
+        <button type="button" className="btn sm" onClick={edit}>Change goal</button>
+        <ArmedButton className="btn sm ghost" label="Remove goal" armedLabel="Confirm remove" onConfirm={clearBodyGoal} />
+      </div>
+    </div>
+  );
+}
+
 function BodyChart() {
   const body = useAppStore(s => s.body); const deleteBodyWeight = useAppStore(s => s.deleteBodyWeight);
   const L = bwSorted(body);
-  if (!L.length) return <section className="panel tchart"><h2>Body weight</h2><p className="note">Log your weight once a week from the top of the Board. It shows here as a trend.</p></section>;
+  if (!L.length) return <section className="panel tchart"><h2>Body weight</h2><p className="note">Log your weight once a week from the top of the Board. It shows here as a trend.</p><BodyGoal /></section>;
   const rec = [...L].reverse().slice(0, 6);
   return (
     <section className="panel tchart">
       <h2>Body weight</h2>
       {L.length > 1 ? <LineChart entries={L.map(e => ({ d: e.d, w: e.w }))} height={180} label="Body weight over time" /> : <p className="note">One more weekly weigh-in and the trend line starts.</p>}
+      <BodyGoal />
       <table className="hist bwtab">
         <thead><tr><th>Date</th><th className="num">Weight</th><th className="num">Change</th><th><span className="sr">Delete</span></th></tr></thead>
         <tbody>

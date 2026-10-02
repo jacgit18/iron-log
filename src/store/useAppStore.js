@@ -14,6 +14,7 @@ import {
   backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile,
 } from '../lib/export.js';
 import { FEATURES } from '../lib/features.js';
+import { bwSorted } from '../lib/body.js';
 import { loadView, saveView } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
 import { commitFiles, readFile, validRepo } from '../lib/github.js';
@@ -463,8 +464,20 @@ export const useAppStore = create((set, get) => ({
     const wk = get().weekKey(); const today = ymd(new Date());
     const d = (today >= wk && today <= ymd(addDays(get().weekStart, 6))) ? today : wk;
     set(state => ({ body: [...state.body.filter(e => e.wk !== wk), { wk, d, w: Math.round(n * 10) / 10 }].sort((a, b) => a.wk.localeCompare(b.wk)) }));
-    get().saveBody(); flag('Body weight saved'); return true;
+    get().saveBody();
+    const g = get().cfg.bwGoal; if (g && !g.start) get().mutateCfg(c => { c.bwGoal = { ...g, start: { w: Math.round(n * 10) / 10, d } }; }); // first weigh-in after setting a goal
+    flag('Body weight saved'); return true;
   },
+  // Target body weight, optionally by a date. Where you are now is kept as the starting point for progress.
+  setBodyGoal(raw, by) {
+    if (get().blocked()) return false;
+    const n = Number(raw); if (!(n > 0 && n < 1500)) { flag('Enter a target weight in lb'); return false; }
+    if (by && !/^\d{4}-\d{2}-\d{2}$/.test(by)) { flag('Enter the goal date as a date'); return false; }
+    const L = bwSorted(get().body); const last = L[L.length - 1];
+    const goal = { w: Math.round(n * 10) / 10, ...(last ? { start: { w: last.w, d: last.d } } : {}), ...(by ? { by } : {}) };
+    get().mutateCfg(c => { c.bwGoal = goal; }); flag('Goal saved'); return true;
+  },
+  clearBodyGoal() { if (get().mutateCfg(c => { delete c.bwGoal; })) flag('Goal removed'); },
   deleteBodyWeight(wk) {
     if (get().blocked()) return;
     set(state => ({ body: state.body.filter(x => x.wk !== wk) })); get().saveBody(); flag('Deleted');

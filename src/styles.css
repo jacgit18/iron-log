@@ -547,3 +547,9 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .stretches{display:flex;flex-direction:column;gap:6px;margin:6px 0}
 .stretchhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .addrow{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px}
+
+/* Body weight goal */
+.bwgoal{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.bwgoal h3{margin:0 0 6px;font-size:15px}
+.goalbar{display:flex;align-items:center;gap:8px;margin:4px 0}
+.goalbar .bar{flex:1;max-width:260px}
