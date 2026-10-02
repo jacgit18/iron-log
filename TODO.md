@@ -53,8 +53,8 @@ These change how days and exercises are stored. Do them together so the data str
 
 ## 6. UX improvements and fixes
 
-- [ ] Preserve board view state on page refresh (currently goes back to board).
-- [ ] When the app opens, start on the current week.
+- [x] Keep the tab and the phone day picker across a page refresh (per browser tab; a fresh open starts clean).
+- [x] Always open on the current week, and an app left open past the end of the week moves on to the new one.
 
 ## Anytime
 

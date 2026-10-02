@@ -13,6 +13,8 @@ import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
   backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile,
 } from '../lib/export.js';
+import { loadView, saveView } from '../lib/viewState.js';
+import { useToday } from './useToday.js';
 import { commitFiles, readFile, validRepo } from '../lib/github.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
@@ -65,6 +67,10 @@ export function flag(t) {
   }, 0);
 }
 
+const restored = loadView(ymd(new Date()));
+let keepMDay = restored.mDay != null; // the first week load must not clear a restored phone day
+const loadedMDay = state => { const m = keepMDay ? state.mDay : null; keepMDay = false; return m; };
+
 export const useAppStore = create((set, get) => ({
   ...editorSlice(set, get, flag),
   ...settingsSlice(set, get, flag),
@@ -72,8 +78,8 @@ export const useAppStore = create((set, get) => ({
   weekStart: monday(new Date()),
   week: normWeek(null),
   logs: {}, // exId -> [entries]
-  tab: 'board',
-  mDay: null, // day shown on phones; null = pick the first day with open work
+  tab: restored.tab || 'board',
+  mDay: restored.mDay ?? null, // day shown on phones; null = pick the first day with open work
   library: [], // saved program versions
   experiments: [], // exercises to try: [{id, ex, ph, note}]
   body: [], // body weight: [{wk, d, w}], one per week
@@ -598,12 +604,23 @@ export const useAppStore = create((set, get) => ({
   },
 }));
 
+// Remember the tab and phone day across a refresh.
+useAppStore.subscribe((s, prev) => {
+  if (s.tab !== prev.tab || s.mDay !== prev.mDay) saveView(ymd(useToday.getState().today), s);
+});
+// An installed app left open past the end of the week moves on to the new week, but only if you
+// were looking at the week that just ended; browsing elsewhere stays put.
+useToday.subscribe((s, prev) => {
+  const st = useAppStore.getState();
+  if (ymd(st.weekStart) === ymd(monday(prev.today)) && ymd(monday(s.today)) !== ymd(st.weekStart)) st.gotoWeek('today');
+});
+
 function subscribeWeek() {
   if (unsubWeek) { unsubWeek(); unsubWeek = null; }
   const key = useAppStore.getState().weekKey();
   if (!db) {
     const ready = useAppStore.getState().storeMode === 'local';
-    useAppStore.setState(state => ({ week: normWeek(LS.get('weeks/' + key)), mDay: ready ? null : state.mDay, ready: { ...state.ready, week: ready } }));
+    useAppStore.setState(state => ({ week: normWeek(LS.get('weeks/' + key)), mDay: ready ? loadedMDay(state) : state.mDay, ready: { ...state.ready, week: ready } }));
     return;
   }
   useAppStore.setState(state => ({ week: normWeek(null), ready: { ...state.ready, week: false } }));
@@ -612,7 +629,7 @@ function subscribeWeek() {
     if (key !== useAppStore.getState().weekKey()) return;
     if (s.metadata.hasPendingWrites) return;
     const week = normWeek(s.exists ? s.data() : null);
-    useAppStore.setState(state => ({ week, mDay: first ? null : state.mDay, ready: { ...state.ready, week: true } }));
+    useAppStore.setState(state => ({ week, mDay: first ? loadedMDay(state) : state.mDay, ready: { ...state.ready, week: true } }));
     first = false;
   }, () => flag('Couldn’t load this week. Reload the page.'));
 }
