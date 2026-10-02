@@ -1,5 +1,5 @@
 import { useAppStore } from '../../store/useAppStore.js';
-import { dataStats, libDate } from '../../lib/export.js';
+import { dataStats, libDate, importSel } from '../../lib/export.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
@@ -44,27 +44,33 @@ export default function ImportSheet() {
   const d = draft.data; const s = dataStats(d);
   if (draft.kind === 'excel') return <ExcelImport draft={draft} s={s} busy={busy} />;
   const cur = dataStats({ logs });
+  const sel = importSel(draft); const none = !Object.values(sel).some(Boolean);
+  const rows = [
+    ['board', 'Board', [plural(s.weeks, 'week', 'weeks') + ' of check-offs', s.body > 0 && `${s.body} body weight entr${s.body === 1 ? 'y' : 'ies'}`, s.experiments > 0 && plural(s.experiments, 'exercise to try', 'exercises to try')].filter(Boolean).join(', ')],
+    ['progress', 'Progress', `${plural(s.entries, 'logged session', 'logged sessions')} across ${plural(s.exercises, 'exercise', 'exercises')}`],
+    ['muscles', 'Muscles', 'muscle tags'],
+    ['program', 'Program', (s.programs.length ? `edited Program ${s.programs.join(' and ')}` : 'original programs') + (s.saved ? `, ${plural(s.saved, 'saved version', 'saved versions')}` : '') + ', custom exercises'],
+    ['settings', 'Settings', 'program mode, rest time, phase percentages and 1RMs'],
+  ];
   const when = d.exportedAt ? libDate(d.exportedAt) : 'an unknown date';
   return (
     <Sheet role="dialog" aria-label="Import data">
       <h2 className="cond">Import data</h2>
       <p><b>{draft.name || 'File'}</b>, exported {when}:</p>
+      <p className="note">Pick what to bring in from each tab.</p>
       <ul className="implist">
-        <li>{plural(s.entries, 'logged session', 'logged sessions')} across {plural(s.exercises, 'exercise', 'exercises')}</li>
-        <li>{plural(s.weeks, 'week', 'weeks')} of check-offs</li>
-        <li>{s.programs.length ? `Edited Program ${s.programs.join(' and ')}` : 'Original programs'}{s.saved ? ` · ${plural(s.saved, 'saved version', 'saved versions')}` : ''}</li>
-        {s.experiments > 0 && <li>{plural(s.experiments, 'exercise to try', 'exercises to try')}</li>}
-        {s.body > 0 && <li>{s.body} body weight entr{s.body === 1 ? 'y' : 'ies'}</li>}
-        <li>Settings, 1RMs and muscle tags</li>
+        {rows.map(([k, label, text]) => (
+          <li key={k}><label className="inline"><input type="checkbox" checked={sel[k]} onChange={e => st.setImportSection(k, e.target.checked)} /> <b>{label}:</b> {text}</label></li>
+        ))}
       </ul>
       <p className="note"><b>Add to my data</b> keeps everything here and adds what's missing: new sessions, weeks, body weights, saved versions and Experiment entries. If both have an edited program, yours stays and the file's is added to Saved versions.</p>
-      <p className="note"><b>Replace my data</b> makes this app match the file exactly. Anything here that isn't in the file is deleted{cur.entries ? `, including ${plural(cur.entries, 'logged session', 'logged sessions')}` : ''}. {dl ? 'Export your current data first if you might want it back.' : ''}</p>
+      <p className="note"><b>Replace my data</b> makes the ticked tabs match the file exactly. Anything on those tabs here that isn't in the file is deleted{cur.entries ? `, including ${plural(cur.entries, 'logged session', 'logged sessions')}` : ''}. {dl ? 'Export your current data first if you might want it back.' : ''}</p>
       {busy && <p className="note">Importing…</p>}
       {dl && <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn sm ghost" onClick={st.downloadData}>Export current data first</button></div>}
       <div className="actions impact">
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
-        <ArmedButton className="btn" disabled={busy} label="Replace my data" armedLabel="Tap again to replace" onConfirm={() => st.applyImport('replace')} />
-        <button type="button" className="btn primary" disabled={busy} onClick={() => st.applyImport('merge')}>Add to my data</button>
+        <ArmedButton className="btn" disabled={busy || none} label="Replace my data" armedLabel="Tap again to replace" onConfirm={() => st.applyImport('replace')} />
+        <button type="button" className="btn primary" disabled={busy || none} onClick={() => st.applyImport('merge')}>Add to my data</button>
       </div>
     </Sheet>
   );

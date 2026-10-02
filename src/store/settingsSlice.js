@@ -1,6 +1,6 @@
 import { BUILTIN, PHASES } from '../lib/data.js';
 import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
-import { parseDataFile, mergeEntries, mergeWeek, sameProg, progBody, libDate, backupCfg } from '../lib/export.js';
+import { parseDataFile, importSel, cfgSection, mergeEntries, mergeWeek, sameProg, progBody, libDate, backupCfg } from '../lib/export.js';
 import { WEEK_RE } from '../lib/trends.js';
 import { parseExcelExport, parseCsvExport, entryKey, checkOffsFromLogs } from '../lib/excelImport.js';
 
@@ -10,6 +10,7 @@ export const settingsSlice = (set, get, flag) => ({
   importBusy: false,
   importError: '', // shown next to the import controls until the next attempt
   setImportUseSettings: v => set(s => ({ importDraft: s.importDraft && { ...s.importDraft, useSettings: v } })),
+  setImportSection: (k, v) => set(s => ({ importDraft: s.importDraft && { ...s.importDraft, sel: { ...importSel(s.importDraft), [k]: v } } })),
   importCount: 0, // bumps after each import so the import panel resets (paste box closed and cleared)
 
   setPct(p, raw) { const n = Number(raw); if (raw !== '' && !isNaN(n)) get().mutateCfg(c => { c.pct[p] = n; }); },
@@ -60,27 +61,37 @@ export const settingsSlice = (set, get, flag) => ({
     if (!draft || get().importBusy || get().blocked()) return;
     set({ importBusy: true });
     try {
-      const d = draft.data; const today = libDate(new Date().toISOString());
+      const d = draft.data; const on = draft.kind === 'excel' ? importSel({}) : importSel(draft); const today = libDate(new Date().toISOString());
       const localWeeks = await get().allWeeks();
       const wk = get().weekKey();
       if (mode === 'replace') {
-        const prevBackup = get().cfg.backup;
-        const cfg = { ...structuredClone(DEFAULT_CFG), ...structuredClone(d.config), backup: d.config.backup || prevBackup };
-        if (!cfg.backup) delete cfg.backup;
-        set({ cfg }); get().saveCfg();
-        ['A', 'B'].forEach(k => {
-          if (d.programs[k]) get().saveProgram(k, structuredClone(d.programs[k]));
-          else if (get().programs[k] !== BUILTIN[k]) { set(s => ({ programs: { ...s.programs, [k]: BUILTIN[k] } })); get().removeDoc('programs/' + k); }
+        const cur = get().cfg; const incoming = { ...structuredClone(DEFAULT_CFG), ...structuredClone(d.config) };
+        const cfg = {};
+        new Set([...Object.keys(cur), ...Object.keys(incoming)]).forEach(k => {
+          const v = k === 'backup' ? (d.config.backup || cur.backup) : on[cfgSection(k)] ? incoming[k] : cur[k];
+          if (v !== undefined) cfg[k] = v;
         });
-        set({ library: structuredClone(d.library), body: structuredClone(d.body) }); get().saveLibrary(); get().saveBody();
-        set({ experiments: structuredClone(d.experiments || []) }); get().saveExperiments();
-        const logs = {};
-        Object.keys(get().logs).forEach(id => { if (!d.logs[id]) get().removeDoc('logs/' + id); });
-        Object.entries(d.logs).forEach(([id, l]) => { logs[id] = structuredClone(l); });
-        set({ logs }); Object.keys(logs).forEach(id => get().saveLog(id));
-        Object.keys(localWeeks).forEach(k => { if (WEEK_RE.test(k) && !d.weeks[k]) get().removeDoc('weeks/' + k); });
-        Object.entries(d.weeks).forEach(([k, w]) => { if (k !== wk) get().saveDoc('weeks/' + k, w); });
-        set({ week: normWeek(d.weeks[wk]) }); get().saveWeek();
+        set({ cfg }); get().saveCfg();
+        if (on.program) {
+          ['A', 'B'].forEach(k => {
+            if (d.programs[k]) get().saveProgram(k, structuredClone(d.programs[k]));
+            else if (get().programs[k] !== BUILTIN[k]) { set(s => ({ programs: { ...s.programs, [k]: BUILTIN[k] } })); get().removeDoc('programs/' + k); }
+          });
+          set({ library: structuredClone(d.library) }); get().saveLibrary();
+        }
+        if (on.board) {
+          set({ body: structuredClone(d.body) }); get().saveBody();
+          set({ experiments: structuredClone(d.experiments || []) }); get().saveExperiments();
+          Object.keys(localWeeks).forEach(k => { if (WEEK_RE.test(k) && !d.weeks[k]) get().removeDoc('weeks/' + k); });
+          Object.entries(d.weeks).forEach(([k, w]) => { if (k !== wk) get().saveDoc('weeks/' + k, w); });
+          set({ week: normWeek(d.weeks[wk]) }); get().saveWeek();
+        }
+        if (on.progress) {
+          const logs = {};
+          Object.keys(get().logs).forEach(id => { if (!d.logs[id]) get().removeDoc('logs/' + id); });
+          Object.entries(d.logs).forEach(([id, l]) => { logs[id] = structuredClone(l); });
+          set({ logs }); Object.keys(logs).forEach(id => get().saveLog(id));
+        }
       } else {
         if (draft.kind === 'excel') {
           const xs = d.excel.settings;
@@ -93,30 +104,30 @@ export const settingsSlice = (set, get, flag) => ({
           Object.keys(d.logs).forEach(id => { const have = new Set((get().logs[id] || []).map(entryKey)); d.logs[id] = d.logs[id].filter(e => !have.has(entryKey(e))); });
         }
         const C = d.config; let ch = false; const cfg = structuredClone(get().cfg);
-        ['rm', 'phDef', 'exPh', 'ex', 'muscleMap', 'rxOverride', 'progNames'].forEach(k => {
+        ['rm', 'phDef', 'exPh', 'ex', 'muscleMap', 'rxOverride', 'progNames'].filter(k => on[cfgSection(k)]).forEach(k => {
           const src = C[k];
           if (src && typeof src === 'object') { cfg[k] = cfg[k] || {}; Object.keys(src).forEach(x => { if (cfg[k][x] == null) { cfg[k][x] = structuredClone(src[x]); ch = true; } }); }
         });
         if (ch) { set({ cfg }); get().saveCfg(); }
         const library = get().library; const lib = [...library]; const have = new Set(lib.map(it => it.id));
-        d.library.forEach(it => { if (!have.has(it.id)) { lib.push(structuredClone(it)); have.add(it.id); } });
+        if (on.program) d.library.forEach(it => { if (!have.has(it.id)) { lib.push(structuredClone(it)); have.add(it.id); } });
         ['A', 'B'].forEach(k => {
-          const p = d.programs[k]; if (!p) return; const cur = get().programs[k];
+          const p = on.program && d.programs[k]; if (!p) return; const cur = get().programs[k];
           if (cur === BUILTIN[k]) get().saveProgram(k, structuredClone(p));
           else if (!sameProg(cur, p) && !lib.some(it => sameProg(it.prog, p))) {
             lib.push({ id: Date.now().toString(36) + k + Math.random().toString(36).slice(2, 6), name: `${progName(get().cfg, k)} from import · ${today}`, from: k, at: new Date().toISOString(), prog: progBody(p) });
           }
         });
         if (lib.length !== library.length) { set({ library: lib }); get().saveLibrary(); }
-        const exps = get().experiments; const haveE = new Set(exps.map(e => e.id)); const addE = (d.experiments || []).filter(e => !haveE.has(e.id));
+        const exps = get().experiments; const haveE = new Set(exps.map(e => e.id)); const addE = !on.board ? [] : (d.experiments || []).filter(e => !haveE.has(e.id));
         if (addE.length) get().setExperiments([...exps, ...structuredClone(addE)]);
-        const body = get().body; const addB = d.body.filter(e => !body.some(x => x.wk === e.wk));
+        const body = get().body; const addB = !on.board ? [] : d.body.filter(e => !body.some(x => x.wk === e.wk));
         if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); }
-        Object.entries(d.logs).forEach(([id, l]) => {
+        Object.entries(on.progress ? d.logs : {}).forEach(([id, l]) => {
           const cur = get().logs[id] || []; const m = mergeEntries(cur, l);
           if (m.length !== cur.length) { set(s => ({ logs: { ...s.logs, [id]: m } })); get().saveLog(id); }
         });
-        Object.entries(d.weeks).forEach(([k, w]) => {
+        Object.entries(on.board ? d.weeks : {}).forEach(([k, w]) => {
           if (k === wk) { const m = mergeWeek(get().week, w); if (JSON.stringify(m) !== JSON.stringify(normWeek(get().week))) { set({ week: m }); get().saveWeek(); } return; }
           const m = localWeeks[k] ? mergeWeek(localWeeks[k], w) : w;
           if (!localWeeks[k] || JSON.stringify(m) !== JSON.stringify(normWeek(localWeeks[k]))) get().saveDoc('weeks/' + k, m);
