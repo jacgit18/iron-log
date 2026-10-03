@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-03T00:13:45.811Z",
+ "exportedAt": "2026-10-03T00:33:46.539Z",
  "config": {
   "muscleMap": {},
   "ex": {
@@ -55,7 +55,6 @@
   },
   "phDef": {
    "A-d1s1:0": "hyp",
-   "A-d4s1:0": "strength",
    "A-d1s7:1": "iso",
    "A-d1s3:0": "strength"
   },
@@ -64,15 +63,16 @@
    "romanadd": "strength",
    "deskbands": "iso",
    "spinal": "mob",
-   "platerot": "strength"
+   "platerot": "strength",
+   "suitcase": "strength"
   },
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": null,
+   "hash": "glvchv",
    "last": {
-    "at": "2026-10-02T02:07:33.781Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/34dcc108fb277928b41a6ef04e695a35b5d7f16f"
+    "at": "2026-10-03T00:13:47.807Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/bc31dfa37bf7c23ac9b50000268dc6adfb9813c0"
    }
   },
   "progNames": {
@@ -1128,7 +1128,9 @@
   ],
   "innerthigh": [
    {
-    "d": "2026-09-28",
+    "slot": "A-d1s4",
+    "wk": "2026-09-27",
+    "d": "2026-09-27",
     "ph": "strength",
     "w": 180,
     "s": 4,
@@ -1150,10 +1152,7 @@
       "w": 180,
       "r": 6
      }
-    ],
-    "slot": "A-d1s4",
-    "wk": "2026-09-27",
-    "auto": true
+    ]
    },
    {
     "d": "2026-09-30",
@@ -1237,7 +1236,7 @@
     "wk": "2026-09-27"
    },
    {
-    "d": "2026-09-28",
+    "d": "2026-09-29",
     "ph": "hyp",
     "w": 45,
     "s": 4,
@@ -1261,8 +1260,7 @@
      }
     ],
     "slot": "A-d3s2",
-    "wk": "2026-09-27",
-    "auto": true
+    "wk": "2026-09-27"
    }
   ],
   "legext": [
@@ -1347,7 +1345,7 @@
       "sec": 15
      }
     ],
-    "slot": "A-d2s2",
+    "slot": "A-d3s6",
     "wk": "2026-09-27",
     "auto": true
    },
@@ -1375,9 +1373,8 @@
       "sec": 15
      }
     ],
-    "slot": "A-d3s6",
-    "wk": "2026-09-27",
-    "auto": true
+    "slot": "A-d2s2",
+    "wk": "2026-09-27"
    }
   ],
   "suitcase": [
@@ -1407,36 +1404,62 @@
     ],
     "slot": "A-d4s1",
     "wk": "2026-09-27"
+   },
+   {
+    "d": "2026-10-02",
+    "ph": "strength",
+    "w": 25,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 25,
+      "r": 6
+     },
+     {
+      "w": 25,
+      "r": 6
+     },
+     {
+      "w": 25,
+      "r": 6
+     },
+     {
+      "w": 25,
+      "r": 6
+     }
+    ],
+    "slot": "A-d4s1",
+    "wk": "2026-09-27"
    }
   ],
   "wristpd": [
    {
-    "d": "2026-09-28",
+    "d": "2026-09-27",
     "ph": "hyp",
-    "w": 33,
+    "w": 30,
     "s": 4,
     "r": 15,
     "sets": [
      {
-      "w": 33,
+      "w": 30,
       "r": 15
      },
      {
-      "w": 33,
+      "w": 30,
       "r": 15
      },
      {
-      "w": 33,
+      "w": 30,
       "r": 15
      },
      {
-      "w": 33,
+      "w": 30,
       "r": 15
      }
     ],
     "slot": "A-d1s2",
-    "wk": "2026-09-27",
-    "auto": true
+    "wk": "2026-09-27"
    },
    {
     "d": "2026-09-28",
@@ -1469,7 +1492,9 @@
   ],
   "zercher": [
    {
-    "d": "2026-09-28",
+    "slot": "A-d1s6",
+    "wk": "2026-09-27",
+    "d": "2026-09-27",
     "ph": "strength",
     "w": 50,
     "s": 4,
@@ -1491,10 +1516,7 @@
       "w": 50,
       "r": 6
      }
-    ],
-    "slot": "A-d1s6",
-    "wk": "2026-09-27",
-    "auto": true
+    ]
    },
    {
     "d": "2026-09-30",
@@ -1570,16 +1592,12 @@
    "prog": null,
    "done": {
     "A-d1s1": true,
-    "A-d1s2": true,
     "A-d1s4": true,
     "A-d1s6": true,
     "A-d1s8": true,
     "A-d2s3": true,
     "A-d2s5": true,
-    "A-d3s2": true,
     "A-d3s3": true,
-    "A-d2s2": true,
-    "A-d2s2#0": true,
     "A-d3s6": true,
     "A-d3s6#0": true,
     "A-d2s4": true,
@@ -1590,7 +1608,11 @@
     "A-d4s2": true,
     "A-d4s4": true,
     "A-d6s5": true,
-    "A-d5s3": true
+    "A-d5s3": true,
+    "A-d2s2": true,
+    "A-d2s2#0": true,
+    "A-d3s2": true,
+    "A-d1s2": true
    },
    "skipped": {
     "A-d1s9": true,
