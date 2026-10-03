@@ -296,7 +296,7 @@ function RmPanel() {
   const all = [...slotsFor(programs.A), ...slotsFor(programs.B)];
   const weighted = allExIds(cfg).filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
   return (
-    <section className="panel" style={{ gridColumn: '1/-1' }}>
+    <section className="panel wide">
       <h2>1-rep maxes</h2>
       <p>Enter a one-rep max (1RM, the most you can lift once) to switch that exercise's target from the program weight to a phase-based weight. Leave blank to keep the program weight.</p>
       <div className="tbl">
@@ -325,14 +325,18 @@ export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
   return (
     <div className="settings">
-      <ModePanel />
-      <AppearancePanel />
-      <DevicePanel />
-      <PhasePanel />
-      <DataPanel key={importCount} />
-      <BackupPanel />
+      <div className="scol">
+        <ModePanel />
+        <PhasePanel />
+        <AppearancePanel />
+        <DevicePanel />
+      </div>
+      <div className="scol">
+        <DataPanel key={importCount} />
+        <BackupPanel />
+        <ErasePanel />
+      </div>
       <RmPanel />
-      <ErasePanel />
     </div>
   );
 }
