@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-03T00:36:39.728Z",
+ "exportedAt": "2026-10-03T13:49:21.053Z",
  "config": {
   "muscleMap": {},
   "ex": {
@@ -80,6 +80,13 @@
    "A": "Program A - Unilateral",
    "B": "Program B - Bilateral"
   },
+  "bwGoal": {
+   "w": 155,
+   "start": {
+    "w": 130,
+    "d": "2026-10-02"
+   }
+  },
   "liftGoals": {
    "deadlift": {
     "exp": {
@@ -94,13 +101,6 @@
      "w": 225,
      "start": 0
     }
-   }
-  },
-  "bwGoal": {
-   "w": 155,
-   "start": {
-    "w": 130,
-    "d": "2026-10-02"
    }
   }
  },
@@ -1576,7 +1576,19 @@
     "A-d5s10": true,
     "A-d2s1": true,
     "A-d4s6": true,
-    "A-d1s3": true
+    "A-d1s3": true,
+    "A-d5s1": true,
+    "A-d5s2": true,
+    "A-d5s4": true,
+    "A-d5s5": true,
+    "A-d5s6": true,
+    "A-d5s7": true,
+    "A-d5s8": true,
+    "A-d6s1": true,
+    "A-d6s2": true,
+    "A-d6s3": true,
+    "A-d6s4": true,
+    "A-d6s6": true
    },
    "moved": {
     "A-d3s2": 2,
@@ -1599,7 +1611,8 @@
    "ph": {},
    "warm": {},
    "rest": [
-    6
+    6,
+    7
    ],
    "restOn": "2026-10-02"
   }
