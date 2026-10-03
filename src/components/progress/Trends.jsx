@@ -223,7 +223,7 @@ function MuscleHeat({ keys }) {
               {M_KEYS.map(m => <tr key={m}><th scope="row">{MUSCLES[m].n}</th>{K.map(k => <td key={k}>{data[m][k] ? fmtSets(data[m][k]) : '0'}</td>)}</tr>)}
             </tbody>
           </table></div>
-          <div className="heat" aria-hidden="true" style={{ gridTemplateColumns: `minmax(96px,160px) repeat(${K.length},minmax(0,72px))` }}>
+          <div className="heat" aria-hidden="true" style={{ gridTemplateColumns: `minmax(96px,160px) repeat(${K.length},minmax(0,1fr))` }}>
             <span />
             {K.map((k, i) => <span key={k} className={`hx${(K.length - 1 - i) % 2 ? ' alt' : ''}`}>{k === thisSun ? 'Now' : mdLabel(k)}</span>)}
             {M_KEYS.flatMap(m => {
