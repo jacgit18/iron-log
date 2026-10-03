@@ -35,21 +35,43 @@ These change how days and exercises are stored. Do them together so the data str
 - [ ] Keep it offline-first for gym use: queue saves and sync them later, building on `makeSaveQueue`.
 - [ ] Add a one-time "upload my existing data" step so data already on the phone isn't lost.
 - [ ] Possibly exercise catalog what api to use any free options
+  - If the app goes multi-user this is close to required: use it to prefill muscles, equipment and video links so new users don't type every exercise.
+
+### Multi-user readiness (if the app is opened to other people)
+
+The app began as a single-user gym app. These are the gaps that only matter once other people use it. Do them with step 3 unless noted.
+
+- [ ] Starter programs for new users (PPL, upper/lower, full body, 5x5) and a "build my own" flow, with a choice of days per week. The board currently assumes a fixed 7-day layout.
+- [ ] Check that no personal defaults (exercises, 1RMs, weight goals, phase names, Day 5/6 subtitles) leak into a new account's starting state.
+- [ ] Move the first-run guide (item 58) into this step instead of after the backend.
+- [ ] Explain jargon in the app (phase, superset, "Same as last", 1RM) with one-line tooltips or a glossary.
+- [ ] Auto-progression suggestions ("you hit 3×8, try +5 lb"). Builds on the plateau hint (75).
+- [ ] Account screen: profile, sign out, last-synced time and a visible offline/sync status.
+- [ ] Conflict handling when one account is used on two devices, so last-write-wins doesn't silently lose a workout.
+- [ ] Privacy policy and terms, with a clear data-deletion path (see step 4). Needed before launch because of Google login and body-weight data.
+- [ ] In-app "report a problem" that attaches the app version and sync state (alongside the feedback form link at the bottom).
+- [ ] Week-start choice (Sunday or Monday) and locale date formats. lb/kg (62) becomes required, not optional.
+- [ ] Screen-reader testing of the log flow with real devices.
+- [ ] Opt-in, privacy-respecting analytics and crash reporting, so problems new users hit are visible.
+- [ ] Test the install prompt and update banner with people unfamiliar with the app.
+- [ ] Optional, only for growth: share or import a program by link or file; coach or training-partner view. Skip public profiles and leaderboards until the basics work.
 
 ## 4. Remove the stand-in features (only once the backend is working)
 
 - [ ] Remove GitHub backup and restore (#18).
 - [ ] Remove JSON import.
 - [ ] Stop using localStorage as the main place data is saved.
-- [ ] Turn "Erase data" into "delete my account data".
+- [ ] Turn "Erase data" into "delete my account data". Launch-blocking if other people use the app.
 - [ ] Update the README and the training skill with each removal so they stay in sync.
 
 ## 5. Advanced features and integrations (post-backend)
 
 - [ ] Google Fit API integration to pull activity and weight data.
 - [x] Weight goals feature (set targets and track progress).
-- [ ] Import medical records and add AI assessment of medical information.
+- [ ] Import medical records and add AI assessment of medical information. Decide whether to build this at all before multi-user launch: it brings health-data regulation, disclaimers and the highest risk of the list.
+- [ ] supplement log
 - [ ] Warn when you skip an exercise too many times that's on your program.
+- [ ] Plateau/deload hint: flag lifts that haven't progressed in about 4 weeks (75).
 - [ ] Improve weight entry UX: catch and prevent common mistakes (e.g., wrong weight entered for an exercise).
 
 ## 6. UX improvements and fixes
@@ -70,6 +92,8 @@ From a review of the current screens. None of these are committed to: pick what 
 - [x] 55. Exercise library page: every exercise with its equipment, video link, default phase, 1RM and muscle tags, edited in one place. On the Program tab. Per-exercise settings stay in `cfg.ex`, `cfg.exPh`, `cfg.rm` and `cfg.muscleMap`.
 - [ ] 38. A tick per set in the Log sheet (and start the rest timer between sets). Changes the shape of a logged entry.
 - [x] 33. Undo after unchecking something you logged: the board shows how many entries were removed with an Undo that puts back the entries and the tick.
+- [ ] 61. Per-exercise notes ("seat at 4, elbows tucked"), shown in the Log sheet. Adds a field to each exercise's stored settings.
+- [ ] 62. lb/kg unit toggle. Store one canonical unit and convert on display, so the choice has to be settled before the data goes into a database.
 
 ### Any time: phone and board layout (most useful first)
 
@@ -106,6 +130,7 @@ From a review of the current screens. None of these are committed to: pick what 
 - [ ] 21. Bigger or menu-based swap arrows.
 - [ ] 22. Collapse the warm-up once it's done.
 - [ ] 23. Collapse finished days into a summary.
+- [ ] 69. Session summary after finishing a day (total volume, PRs, time). Item 23 collapses finished days but doesn't summarize them.
 - [ ] 24. Explain an empty day ("Nothing planned · + Add exercise") instead of 0/0.
 - [ ] 26. Let section headings (Regular, Supersets, Home) collapse.
 - [ ] 27. Make Details a small icon next to the name.
@@ -126,6 +151,10 @@ From a review of the current screens. None of these are committed to: pick what 
 - [ ] 39. +/− 5 lb and +/− 1 rep buttons.
 - [ ] 41. Dock or shrink the Rest timer button, and move it up when a sheet opens.
 - [ ] 42. Show the running time on the Rest timer button.
+- [ ] 63. Plate calculator: show plates per side ("45 + 25 + 5") next to the target weight, and flag weights that can't be loaded (helps catch wrong-weight entries, see step 5).
+- [ ] 64. Warm-up set generator: suggest ramp-up sets (e.g. 50/70/85%) from the target weight or 1RM.
+- [ ] 65. Show estimated 1RM live in the Log sheet from weight × reps, so a PR is visible before saving.
+- [ ] 66. Settings toggle for timer vibration (it is always on now).
 
 ### Any time: Progress, Muscles and Program tabs
 
@@ -140,16 +169,23 @@ From a review of the current screens. None of these are committed to: pick what 
 - [ ] 51. Program: drag cards to reorder.
 - [ ] 52. Program: a whole-week overview next to the one-day editor.
 - [ ] 53. Program: show which program is being edited and which is on the board.
+- [ ] 67. Charts: a "view as table" toggle and a text summary for each chart, for screen readers (WCAG AAA).
 
 ### Any time: across the app
 
 - [ ] 57. Messages: short notices at the bottom of the screen, with Undo where it applies, instead of the easy-to-miss line under the header.
 - [ ] 59. Recheck dark mode and contrast for the newer pieces (Mobility purple, equipment labels, goal bar).
+- [ ] 68. PR celebration: a badge or toast on save when a set beats the best weight or estimated 1RM.
+- [ ] 70. Helpful empty states on Progress, Muscles and Trends instead of blank charts.
+- [ ] 71. React error boundary with a "Something went wrong, export your data" fallback, so a render error isn't a white screen.
+- [ ] 72. Code-split the heavy tabs and the xlsx library (lazy load) to keep the offline PWA's first load small.
+- [ ] 73. Keyboard shortcuts on desktop (e.g. L to log, T for the timer) with a list in Settings.
+- [ ] 74. Printable week view, or share a session summary with `navigator.share`.
 
 ### After the backend
 
-- [ ] 54. Regroup Settings into Training, Data and App. Do this after step 4, because the Data section changes when GitHub backup and JSON import are removed.
-- [ ] 58. First-run guide (pick a program, log a set, check a day). Do this once sign-in exists, so it can include signing in and syncing.
+- [ ] 54. Regroup Settings into Training, Data and App. Do this after step 4, because the Data section changes when GitHub backup and JSON import are removed. If the app goes multi-user, do it before launch, since an Account section will crowd Settings.
+- [ ] 58. First-run guide (pick a program, log a set, check a day). Do this once sign-in exists, so it can include signing in and syncing. If the app goes multi-user, it moves into the "Multi-user readiness" list under step 3.
 
 ## Anytime
 
