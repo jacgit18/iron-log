@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../lib/dates.js';
-import { programFor, progName, programWeights, bestByPhase } from '../../lib/logic.js';
+import { programFor, progName, programWeights, bestByPhase, round } from '../../lib/logic.js';
 import { backupCfg, ghCfg } from '../../lib/export.js';
 import CommitInput from '../CommitInput.jsx';
 import ArmedButton from '../ArmedButton.jsx';
@@ -280,10 +280,14 @@ function GitHubBackup() {
 }
 
 // One line per phase, e.g. "35 lb · Strength", so a lift trained in two phases shows which weight is which.
-function PhaseWeights({ list }) {
-  return list.map(({ ph, w }) => (
-    <div key={`${ph}:${w}`} className="phw"><span className="dot" data-p={ph || undefined} /> {w} lb · {ph ? PHASES[ph].label : 'No phase'}</div>
-  ));
+// With a 1RM given, each phase line also shows what that phase's % of the 1RM works out to, to compare with the logged weight.
+function PhaseWeights({ list, rm, cfg }) {
+  return list.map(({ ph, w }) => {
+    const pct = ph && cfg ? (cfg.pct[ph] ?? PHASES[ph].pct) : 0;
+    return (
+      <div key={`${ph}:${w}`} className="phw"><span className="dot" data-p={ph || undefined} /> {w} lb · {ph ? PHASES[ph].label : 'No phase'}{rm > 0 && pct > 0 ? ` · target ${round(rm * pct / 100)} lb (${pct}% of 1RM)` : ''}</div>
+    );
+  });
 }
 
 function RmPanel() {
@@ -306,7 +310,7 @@ function RmPanel() {
                   <td>{exInfo(cfg, id).n}</td>
                   <td><PhaseWeights list={programWeights(cfg, all, id)} /></td>
                   <td><CommitInput key={`${id}:${cfg.rm[id] ?? ''}`} type="number" id={`rm-${id}`} aria-label={`${exInfo(cfg, id).n} 1RM (lb)`} min="0" step="any" value={cfg.rm[id] ?? ''} placeholder="—" onCommit={v => st.setRm(id, v)} /></td>
-                  <td>{best.length ? <PhaseWeights list={best} /> : '—'}</td>
+                  <td>{best.length ? <PhaseWeights list={best} rm={cfg.rm[id]} cfg={cfg} /> : '—'}</td>
                 </tr>
               );
             })}
