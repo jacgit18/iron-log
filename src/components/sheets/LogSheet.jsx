@@ -31,8 +31,6 @@ export default function LogSheet({ slotId, idx }) {
   const [note, setNote] = useState('');
   const [eq, setEq] = useState(ex.eq || '');
   const [url, setUrl] = useState(ex.url || '');
-  const [makeDefault, setMakeDefault] = useState(false);
-  const [makeExDefault, setMakeExDefault] = useState(false);
   const [done, setDone] = useState(true);
   const [err, setErr] = useState('');
   const firstRef = useRef(null);
@@ -63,7 +61,7 @@ export default function LogSheet({ slotId, idx }) {
     const entry = { d: date || ymd(today), ph: phv, ...summarizeSets(sets, iso), slot: slotId, wk: st.weekKey() };
     if (note.trim()) entry.n = note.trim();
     const rmVal = rm === '' ? null : Number(rm);
-    if (st.submitLog(slotId, idx, { entry, ph: phv, makeDefault, makeExDefault, rm: rmVal, done, eq, url })) st.closeModal();
+    if (st.submitLog(slotId, idx, { entry, ph: phv, rm: rmVal, done, eq, url })) st.closeModal();
   };
 
   return (
@@ -124,8 +122,7 @@ export default function LogSheet({ slotId, idx }) {
         </select>
         <span className="note">Changing it updates {ex.n} everywhere.</span>
       </label>
-      {!s.experiment && <label className="inline"><input type="checkbox" checked={makeDefault} onChange={e => setMakeDefault(e.target.checked)} /> Make this phase the default for this slot</label>}
-      <label className="inline"><input type="checkbox" checked={makeExDefault} onChange={e => setMakeExDefault(e.target.checked)} /> Make this phase the default for {ex.n} everywhere</label>
+      <p className="note">Saving makes this phase the default for {ex.n} on every card, so it is where you start next time.</p>
       <label className="inline"><input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)} /> {isPaired(s) ? 'Check off this exercise' : 'Check off the card'}</label>
       <div className="actions">
         {last && (

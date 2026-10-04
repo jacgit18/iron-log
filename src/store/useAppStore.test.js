@@ -613,11 +613,15 @@ describe('bug check fixes', () => {
     await p;
     expect(st().weekHist['2026-01-04']).toBeTruthy();
   });
-  it('ticking both default boxes keeps the slot default', () => {
+  it('saving a log makes its phase the exercise default and clears older slot and week picks', () => {
+    useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
+    st().setPhase('A-d1s6', 0, 'iso');
     const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
-    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp', makeDefault: true, makeExDefault: true });
-    expect(st().cfg.phDef['A-d1s6:0']).toBe('hyp');
+    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp' });
     expect(st().cfg.exPh.chestpress).toBe('hyp');
+    expect(st().cfg.phDef['A-d1s6:0']).toBeUndefined();
+    expect(st().week.ph['A-d1s6:0']).toBeUndefined();
+    expect(phaseOf(st().cfg, st().week, st().slotById('A-d1s6'), 0)).toBe('hyp');
   });
   it('the Details default phase also replaces slot defaults for that exercise', () => {
     useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
