@@ -4,7 +4,7 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
 import { ymd, parseDate, fmtShort } from '../../lib/dates.js';
 import {
-  phaseOf, isTimed, targetOf, rxOf, lastLog, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
+  phaseOf, progName, isTimed, targetOf, rxOf, lastLog, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
 } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
@@ -122,7 +122,7 @@ export default function LogSheet({ slotId, idx }) {
         </select>
         <span className="note">Changing it updates {ex.n} everywhere.</span>
       </label>
-      <p className="note">Saving makes this phase the default for {ex.n} on every card, so it is where you start next time.</p>
+      <p className="note">Saving makes this phase the default for this {ex.n} card in {progName(cfg, st.activeProgKey())}, so it is where you start next time. Other cards and the other program keep theirs.</p>
       <label className="inline"><input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)} /> {isPaired(s) ? 'Check off this exercise' : 'Check off the card'}</label>
       <div className="actions">
         {last && (

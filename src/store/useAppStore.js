@@ -513,28 +513,29 @@ export const useAppStore = create((set, get) => ({
     if (Array.isArray(last.sets)) e.sets = structuredClone(last.sets);
     if (get().addEntry(slotId, idx, e, { check: true })) flag(`Logged ${describe(e)}`);
   },
-  // The log sheet's save: the entry, and the phase it was logged in becomes that exercise's default everywhere, so it is
-  // the starting point next time. Also the 1RM, equipment, link and check-off.
+  // The log sheet's save: the entry, and the phase it was logged in becomes the default for this card (this exercise in
+  // this slot of the current program), so it is the starting point next time. Cards of the same exercise elsewhere and
+  // the other program keep theirs. A card added for one week only has no slot to remember, so it just keeps the pick for that week.
+  // Also the 1RM, equipment, link and check-off.
   submitLog(slotId, idx, { entry, ph, rm, done, eq, url }) {
     if (get().blocked()) return false;
     const s = get().slotById(slotId); if (!s) return false;
-    const it = s.items[idx];
+    const it = s.items[idx]; const key = `${slotId}:${idx}`;
     const goals = liftGoalsOf(get().cfg, it.ex).filter(([k]) => k === 'any' || k === (entry.ph || null));
     const before = goals.map(([k]) => bestLift(get().logs[it.ex], k));
     get().addEntry(slotId, idx, entry);
     get().applyExerciseUrl(it.ex, url);
-    const { cfg } = get();
-    // Every card of this exercise in the shown week, on any day (added cards included).
-    const sameEx = (get().activeSlots()).flatMap(sl => sl.items.map((x, i) => x.ex === it.ex && `${sl.id}:${i}`).filter(Boolean));
+    const { cfg, week } = get();
     const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
-    const cfgChange = eqChange || ph || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
+    const cfgChange = eqChange || (ph && !s.experiment && cfg.phDef[key] !== ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
     if (cfgChange) get().mutateCfg(c => {
       if (eqChange) setOverride(c, it.ex, { eq });
-      if (ph) { setExerciseDefault(c, it.ex, ph, get().programs, get().library); sameEx.forEach(k => { delete c.phDef[k]; }); }
+      if (ph && !s.experiment) c.phDef[key] = ph;
       if (rm === null) delete c.rm[it.ex]; else if (rm > 0) c.rm[it.ex] = rm;
     });
     get().mutateWeek(w => {
-      if (ph) sameEx.forEach(k => { delete w.ph[k]; }); // the new default covers every card of this exercise
+      if (ph && !s.experiment) delete w.ph[key]; // the new default covers it
+      else if (ph && ph !== phaseOf(cfg, week, s, idx)) w.ph[key] = ph; // added for this week only: keep the pick for the week
       if (done) setItemDone(w, s, idx, true);
     });
     const hit = goals.find(([k, g], i) => { const after = bestLift(get().logs[it.ex], k); return after && after.w >= g.w && !(before[i] && before[i].w >= g.w); });

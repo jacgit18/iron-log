@@ -571,20 +571,19 @@ describe('video link from the log sheet', () => {
 });
 
 describe('bug check fixes', () => {
-  it('"default everywhere" from the log beats a slot default saved earlier', () => {
+  it('a saved log beats a slot default saved earlier, for that card', () => {
     useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
     const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
-    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp', makeExDefault: true });
-    const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
-    expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('hyp');
+    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp' });
+    expect(phaseOf(st().cfg, st().week, st().slotById('A-d1s6'), 0)).toBe('hyp');
   });
-  it('"default everywhere" also beats a phase picked for another day of the same week', () => {
+  it('a saved log leaves other cards of the same exercise, and the other program, alone', () => {
     const slots = st().activeSlots(); const seen = {}; let pair = null;
     slots.forEach(sl => sl.items.forEach((x, i) => { if (seen[x.ex] && seen[x.ex][0].id !== sl.id && !pair) pair = [seen[x.ex], [sl, i]]; (seen[x.ex] = seen[x.ex] || [sl, i]); }));
-    const [[a, ai], [b, bi]] = pair;
-    st().mutateWeek(w => { w.ph[`${b.id}:${bi}`] = 'strength'; });
-    st().submitLog(a.id, ai, { entry: { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 }, ph: 'hyp', makeExDefault: true });
-    expect(phaseOf(st().cfg, st().week, st().activeSlots().find(x => x.id === b.id), bi)).toBe('hyp');
+    const [[a, ai], [b, bi]] = pair; const before = phaseOf(st().cfg, st().week, b, bi);
+    st().submitLog(a.id, ai, { entry: { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 }, ph: 'hyp' });
+    expect(phaseOf(st().cfg, st().week, st().slotById(b.id), bi)).toBe(before);
+    expect(Object.keys(st().cfg.phDef).every(k => k.startsWith('A-'))).toBe(true); // keyed to this program's card ids
   });
   it('a one-week card keeps the phase picked when it was added, even with an exercise default', () => {
     st().saveExerciseDetails('chestpress', { url: '', eq: '', ph: 'iso' });
@@ -613,13 +612,14 @@ describe('bug check fixes', () => {
     await p;
     expect(st().weekHist['2026-01-04']).toBeTruthy();
   });
-  it('saving a log makes its phase the exercise default and clears older slot and week picks', () => {
+  it('saving a log makes its phase the default for that card only, clearing its week pick', () => {
     useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
     st().setPhase('A-d1s6', 0, 'iso');
     const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
     st().submitLog('A-d1s6', 0, { entry, ph: 'hyp' });
-    expect(st().cfg.exPh.chestpress).toBe('hyp');
-    expect(st().cfg.phDef['A-d1s6:0']).toBeUndefined();
+    expect(st().cfg.phDef['A-d1s6:0']).toBe('hyp');
+    expect(st().cfg.exPh && st().cfg.exPh.chestpress).toBeUndefined(); // not the exercise everywhere
+    expect(st().cfg.phDef['A-d2s5:1']).toBeUndefined(); // another card with Chest Press
     expect(st().week.ph['A-d1s6:0']).toBeUndefined();
     expect(phaseOf(st().cfg, st().week, st().slotById('A-d1s6'), 0)).toBe('hyp');
   });
@@ -629,11 +629,12 @@ describe('bug check fixes', () => {
     const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
     expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('iso');
   });
-  it('"default everywhere" on a one-week card shows the new default', () => {
+  it('logging a one-week card in another phase keeps that phase for the week only', () => {
     st().addExerciseToDay(2, { ex: 'chestpress', ph: 'hyp' });
     const card = st().activeSlots().find(s => s.added);
-    st().submitLog(card.id, 0, { entry: { d: '2026-10-01', ph: 'strength', w: 35, s: 4, r: 6 }, ph: 'strength', makeExDefault: true });
+    st().submitLog(card.id, 0, { entry: { d: '2026-10-01', ph: 'strength', w: 35, s: 4, r: 6 }, ph: 'strength' });
     expect(phaseOf(st().cfg, st().week, st().slotById(card.id), 0)).toBe('strength');
+    expect(st().cfg.phDef[`${card.id}:0`]).toBeUndefined();
   });
   it('built-in Canoe Stretch and Desk Bands are normal cards that log, in their Home section', () => {
     st().checkCard('A-d3s9', true); // Desk Bands, Day 3 (Home)
