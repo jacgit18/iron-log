@@ -93,6 +93,7 @@ for (const dark of [false, true]) {
 {
   const { ctx, page } = await open({ width:390, height:844, dpr:2, mobile:true });
   await shot(page, 'mobile-board.png');
+  await page.click('#daytab-2');
   await page.click('#log-B-d2s5-0');
   await page.waitForTimeout(200);
   await shot(page, 'mobile-log.png');
