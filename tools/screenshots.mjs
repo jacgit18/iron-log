@@ -108,11 +108,11 @@ for (const dark of [false, true]) {
 // Muscles, progress, program editor (desktop)
 {
   const { ctx, page } = await open({ width:1440, height:1000, dpr:1.5 });
-  await page.click('#tab-body'); await page.waitForTimeout(200);
+  await page.click('#tab-progress'); await page.click('#prog-muscles'); await page.waitForTimeout(200);
   await shot(page, 'muscles.png');
   await page.getByRole('button', { name: /^Hamstrings/ }).click(); await page.waitForTimeout(200);
   await shot(page, 'muscles-detail.png');
-  await page.click('#tab-progress'); await page.waitForTimeout(400);
+  await page.click('#prog-trends'); await page.waitForTimeout(400);
   await shot(page, 'progress.png');
   await page.click('#tab-program'); await page.waitForTimeout(200);
   await shot(page, 'editor.png');
