@@ -1,7 +1,7 @@
 // Where you were in the app, kept for this browser tab only so a refresh puts you back. A fresh
 // open starts clean (board, current week). The week itself is never kept: it always opens on today's.
 const KEY = 'ironlog-view';
-const TABS = ['board', 'progress', 'body', 'program', 'settings'];
+const TABS = ['board', 'stretches', 'supplements', 'progress', 'body', 'program', 'settings'];
 
 export function loadView(day) {
   try {

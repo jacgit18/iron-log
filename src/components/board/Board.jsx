@@ -10,7 +10,6 @@ import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import WarmUp from './WarmUp.jsx';
-import { FEATURES } from '../../lib/features.js';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
 
@@ -91,7 +90,7 @@ export default function Board() {
     const l = filtering ? list.filter(s => matchesFilter(cfg, s, { eq: filter.eq })) : list;
     return sorting ? l.map(s => [s, rank(s)]).sort((a, b) => a[1] - b[1]).map(([s]) => s) : l; // stable: program order within a rank
   };
-  const muscleName = filter.muscle === 'stretch' ? 'Stretches' : filter.muscle ? MUSCLES[filter.muscle].n : '';
+  const muscleName = filter.muscle ? MUSCLES[filter.muscle].n : '';
   const RANK_SEC = [`Primary: ${muscleName}`, `Secondary: ${muscleName}`, 'Other'];
   const headOf = (s, day) => (sorting ? RANK_SEC[rank(s)] : secOf(s, day));
   const [pick, setPick] = useState(null);
@@ -220,7 +219,6 @@ export default function Board() {
           <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
             <option value="">Program order</option>
             {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-            {FEATURES.stretches && <option value="stretch">Stretches</option>}
           </select>
         </label>
         <label className="field">Equipment
@@ -273,10 +271,7 @@ export default function Board() {
           const t = tally(list, week);
           const warm = week.warm[pd] || {};
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
-          const isStretchCard = s => s.items.every(it => exInfo(cfg, it.ex).stretch);
-          const cards = list.filter(s => !isStretchCard(s));
-          const stretches = shown(list.filter(isStretchCard)); // shown under the warm-up
-          const vis = shown(cards);
+          const vis = shown(list);
           const open = vis.filter(s => isOpen(s, week));
           const finished = [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))];
           const ft = tally(finished, week); // counts the cards under the header (the day's own count ignores the filter)
@@ -304,14 +299,7 @@ export default function Board() {
                 <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>
               </div>
               <WarmUp d={d} warm={warm} />
-              {FEATURES.stretches && <div className="stretches" role="group" aria-label={`Stretches, Day ${d}`}>
-                <div className="stretchhead">
-                  <span className="tag">Stretches</span>
-                  <button type="button" className="btn sm ghost" id={`addstretch-${d}`} aria-label={`Add a stretch to Day ${d}`} onClick={() => st.openAddToProgram(d, 'stretch')}>+ Add stretch</button>
-                </div>
-                {stretches.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
-              </div>}
-              {filtering && vis.length === 0 && stretches.length === 0 && <p className="note">Nothing here matches the filter.</p>}
+              {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
               {open.map((s, i) => {
                 const sec = headOf(s, pd);
                 const newSec = i === 0 || sec !== headOf(open[i - 1], pd);

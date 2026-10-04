@@ -8,6 +8,8 @@ const noteOf = e => e.n || (e.auto ? AUTO_NOTE : '');
 import { MUSCLES, tagsOf, muscleNames } from './muscles.js';
 import { WEEK_RE, weekOfDate, entryWeek, weekSummary } from './trends.js';
 import { bwSorted } from './body.js';
+import { normStretches, normStretchWeek, stretchWeekEmpty } from './stretches.js';
+import { normSupplements } from './water.js';
 
 // SheetJS is bundled (0.20.x, patched for reading untrusted files) and loaded only when needed.
 export const loadXLSX = () => import('xlsx').catch(() => { throw new Error('Excel library failed to load'); });
@@ -159,11 +161,17 @@ export function buildDataFile(S, weeks) {
   Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || w.rest || w.order || w.extra || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
   const P = {}; ['A', 'B'].forEach(k => { if (programs[k] !== BUILTIN[k]) P[k] = progBody(programs[k]); });
   const L = {}; Object.keys(logs).sort().forEach(id => { if (logs[id] && logs[id].length) L[id] = logs[id]; });
-  return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body), experiments: normExperiments(S.experiments) };
+  return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body), experiments: normExperiments(S.experiments), ...wellnessOut(S) };
+}
+// Stretches (library, experiments, weekly check-offs) and supplements (water). Left out when the snapshot has none, so older files read the same.
+function wellnessOut(S) {
+  if (!S.stretches) return {};
+  const SW = {}; Object.keys(S.stretchWeeks || {}).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normStretchWeek(S.stretchWeeks[k]); if (!stretchWeekEmpty(w)) SW[k] = w; });
+  return { stretches: { items: structuredClone(S.stretches), experiments: structuredClone(S.stretchExps || []) }, stretchWeeks: SW, supplements: normSupplements(S.supp) };
 }
 export function dataStats(d) {
   const L = Object.values(d.logs || {}); const sets = L.reduce((a, l) => a + l.length, 0);
-  return { entries: sets, exercises: L.filter(l => l.length).length, weeks: Object.keys(d.weeks || {}).length, programs: Object.keys(d.programs || {}), saved: (d.library || []).length, body: (d.body || []).length, experiments: (d.experiments || []).length };
+  return { entries: sets, exercises: L.filter(l => l.length).length, weeks: Object.keys(d.weeks || {}).length, programs: Object.keys(d.programs || {}), saved: (d.library || []).length, body: (d.body || []).length, experiments: (d.experiments || []).length, stretches: d.stretches ? d.stretches.items.length : 0, stretchWeeks: Object.keys(d.stretchWeeks || {}).length, waterDays: d.supplements ? Object.keys(d.supplements.water).length : 0 };
 }
 export function parseDataFile(text) {
   let d; try { d = JSON.parse(text); } catch { throw new Error('That file isn’t valid JSON.'); }
@@ -174,7 +182,8 @@ export function parseDataFile(text) {
 }
 // Checks and cleans a data-file-shaped object. Used for both the JSON file and a full Excel workbook.
 export function normalizeData(d) {
-  const out = { exportedAt: d.exportedAt, config: (d.config && typeof d.config === 'object') ? d.config : {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: normExperiments(d.experiments) };
+  const out = { exportedAt: d.exportedAt, config: (d.config && typeof d.config === 'object') ? d.config : {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: normExperiments(d.experiments), stretches: d.stretches ? normStretches(d.stretches) : null, stretchWeeks: {}, supplements: d.supplements ? normSupplements(d.supplements) : null };
+  Object.entries(d.stretchWeeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k)) { const n = normStretchWeek(w); if (!stretchWeekEmpty(n)) out.stretchWeeks[k] = n; } });
   (Array.isArray(d.body) ? d.body : []).forEach(e => { if (e && WEEK_RE.test(e.wk) && typeof e.d === 'string' && Number(e.w) > 0 && !out.body.some(x => x.wk === e.wk)) out.body.push({ wk: e.wk, d: e.d, w: Number(e.w) }); });
   ['A', 'B'].forEach(k => { const p = d.programs && d.programs[k]; if (hasValidDays(p)) out.programs[k] = progBody(withAllDays({ ...p, key: k })); });
   (Array.isArray(d.library) ? d.library : []).forEach(it => { if (it && it.id && hasValidDays(it.prog)) out.library.push({ ...it, prog: withAllDays(it.prog) }); });
@@ -182,9 +191,9 @@ export function normalizeData(d) {
   Object.entries(d.weeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k) && w && typeof w === 'object') out.weeks[k] = normWeek(w); });
   return out;
 }
-// Import choices follow the app's tabs. Board: check-offs, body weight, exercises to try. Progress: logged sessions.
+// Import choices follow the app's tabs. Workout (key 'board'): check-offs, body weight, exercises to try. Progress: logged sessions.
 // Muscles: muscle tags. Program: edited programs, saved versions, custom exercises. Settings: everything else in the config.
-export const IMPORT_SECTIONS = [['board', 'Board'], ['progress', 'Progress'], ['muscles', 'Muscles'], ['program', 'Program'], ['settings', 'Settings']];
+export const IMPORT_SECTIONS = [['board', 'Workout'], ['progress', 'Progress'], ['muscles', 'Muscles'], ['program', 'Program'], ['stretches', 'Stretches'], ['supplements', 'Supplements'], ['settings', 'Settings']];
 export const importSel = draft => Object.fromEntries(IMPORT_SECTIONS.map(([k]) => [k, !draft.sel || draft.sel[k] !== false]));
 export const cfgSection = k => (k === 'muscleMap' ? 'muscles' : ['ex', 'progNames', 'phDef', 'exPh'].includes(k) ? 'program' : 'settings');
 // A stored `wk` that is just the week of the entry's date carries no information, so it doesn't make two entries different.

@@ -1,9 +1,7 @@
-import { FEATURES } from '../lib/features.js';
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_CFG, normWeek } from './logic.js';
 import { muscleVolume, muscleNames, tagsOf, level, fmtSets, matchesFilter, muscleRank, muscleVolumeAll } from './muscles.js';
 
-FEATURES.stretches = true; // these tests cover the stretch feature as built
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
 // Day 1: Hack Squat, Hypertrophy (4 × 15)   Day 2: Farmers Carry or DB Lunge, Strength (4 × 6)
 // Day 3: Canoe Stretch (mobility)           Day 4: an exercise with no muscle tags
@@ -85,23 +83,14 @@ describe('muscle helpers', () => {
 
 describe('board filter', () => {
   const card = ex => ({ id: 'c', items: [{ ex }] });
-  it('matches primary and secondary muscles, equipment and stretches', () => {
+  it('matches primary and secondary muscles, equipment', () => {
     const c = cfg();
     expect(matchesFilter(c, card('hack'), { muscle: 'quads' })).toBe(true);
     expect(matchesFilter(c, card('hack'), { muscle: 'glutes' })).toBe(true); // secondary
     expect(matchesFilter(c, card('hack'), { muscle: 'chest' })).toBe(false);
     expect(matchesFilter(c, card('hack'), { muscle: 'quads', eq: 'machine' })).toBe(true);
     expect(matchesFilter(c, card('hack'), { eq: 'cable' })).toBe(false);
-    expect(matchesFilter(cfg({ ex: { 'hip-90': { n: 'Hip 90/90', stretch: true } } }), card('hip-90'), { muscle: 'stretch' })).toBe(true);
-    expect(matchesFilter(c, card('hack'), { muscle: 'stretch' })).toBe(false);
     expect(matchesFilter(c, card('hack'), {})).toBe(true);
-  });
-  it('leaves a custom stretch out of the muscle counts', () => {
-    const c = cfg({ ex: { 'hip-90': { n: 'Hip 90/90', stretch: true } } });
-    const p = { key: 'T', days: [{ slots: [{ id: 'x', items: [{ ex: 'hip-90', ph: null }] }] }] };
-    const { vol, untagged } = muscleVolume(c, normWeek(null), p, false, true);
-    expect(Object.values(vol).every(v => v.sets === 0)).toBe(true);
-    expect(untagged).toEqual([]);
   });
 });
 

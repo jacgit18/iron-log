@@ -21,7 +21,7 @@ describe('iron-log-data.json, format 1', () => {
   });
 
   it('reads every part of the file', () => {
-    expect(dataStats(d)).toEqual({ entries: 5, exercises: 4, weeks: 2, programs: ['A'], saved: 2, body: 2, experiments: 0 });
+    expect(dataStats(d)).toEqual({ entries: 5, exercises: 4, weeks: 2, programs: ['A'], saved: 2, body: 2, experiments: 0, stretches: 0, stretchWeeks: 0, waterDays: 0 });
   });
 
   it('keeps settings: mode, rest, phase %, prescriptions, 1RMs, phase defaults, custom exercises and tags, names', () => {

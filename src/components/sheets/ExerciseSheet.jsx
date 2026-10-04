@@ -5,7 +5,6 @@ import { MUSCLE_MAP, draftOfTags, tagsOfDraft } from '../../lib/muscles.js';
 import MuscleChips from '../muscles/MuscleChips.jsx';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
-import { FEATURES } from '../../lib/features.js';
 
 // Everything about one exercise in one place: name (your own exercises), video link, equipment, the phase it starts
 // in on every card (a card's own saved or one-week phase still wins), 1RM and muscles. Without an exId it makes a
@@ -16,7 +15,7 @@ export default function ExerciseSheet({ exId }) {
   const isNew = exId == null; const custom = isNew || !EX[exId];
   const info = isNew ? { n: '' } : exInfo(cfg, exId);
   const [d, setD] = useState(() => ({
-    name: info.n, url: info.url || '', eq: info.eq || '', stretch: !!info.stretch,
+    name: info.n, url: info.url || '', eq: info.eq || '',
     ph: (!isNew && cfg.exPh && cfg.exPh[exId]) || '', rm: !isNew && cfg.rm[exId] != null ? String(cfg.rm[exId]) : '',
   }));
   const [tags, setTags] = useState(() => (isNew ? { mob: false, st: {} } : draftOfTags(cfg, exId)));
@@ -48,15 +47,12 @@ export default function ExerciseSheet({ exId }) {
           <input type="number" inputMode="decimal" step="any" min="0" value={d.rm} placeholder="not set" onChange={e => up({ rm: e.target.value })} />
         </label>
       </div>
-      {FEATURES.stretches && <label className="inline"><input type="checkbox" checked={d.stretch} onChange={e => up({ stretch: e.target.checked })} /> Stretch or mobility (no weight or reps)</label>}
-      {!d.stretch && (
         <label className="field">Default phase for every card with this exercise
           <select value={d.ph} onChange={e => up({ ph: e.target.value })}>
             <option value="">Use each card's own</option>
             {PH_KEYS.map(p => <option key={p} value={p}>{PHASES[p].label}</option>)}
           </select>
         </label>
-      )}
       <fieldset className="edit-item">
         <legend>Muscles</legend>
         <p className="note">Tap a muscle to cycle: not used → secondary → primary.</p>

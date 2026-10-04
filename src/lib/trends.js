@@ -10,6 +10,9 @@ export const mdLabel = k => { const d = parseDate(k); return `${d.getMonth() + 1
 const setsOf = e => { const n = Number(e.s); return n > 0 ? n : 0; };
 export const niceStep = max => [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find(s => max / s <= 4) || 1000;
 
+// The weekly goal: this many full days of the week's seven.
+export const WEEK_GOAL_DAYS = 6;
+
 // Totals for any saved week, using the program that week ran.
 export function weekSummary(cfg, programs, key, w) {
   const start = parseDate(key);

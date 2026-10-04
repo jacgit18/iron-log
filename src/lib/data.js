@@ -1,4 +1,3 @@
-import { FEATURES } from './features.js';
 
 /* ---------- Program data ---------- */
 export const PHASES = {
@@ -63,7 +62,7 @@ export const EX = {
   zottman: { n: 'Zottman Curl', eq: 'dumbbell' },
   kbleg: { n: 'Kettlebell Leg Raise', eq: 'kettlebell' },
   grip: { n: 'Grip Trainer', eq: 'other' },
-  canoe: { n: 'Canoe Stretch', url: 'https://youtu.be/yR6EnBqjKNs', eq: 'barbell', stretch: true },
+  canoe: { n: 'Canoe Stretch', url: 'https://youtu.be/yR6EnBqjKNs', eq: 'barbell' },
   suitcase: { n: 'Suitcase Bottom-Up, single-arm', eq: 'kettlebell' },
   reardelt: { n: 'Side Rear Delt Fly', eq: 'cable' },
   facepull: { n: 'Face Pull', eq: 'cable' },
@@ -76,7 +75,7 @@ export const EX = {
   hack: { n: 'Hack Squat', eq: 'machine' },
   pallof: { n: 'Pallof Press', eq: 'cable' },
   cablerow: { n: 'Explosive Unilateral Cable Row', url: 'https://youtu.be/OrAcowGGU2U', eq: 'cable' },
-  deskbands: { n: 'Desk Bands', url: 'https://youtu.be/o_uZcQnXaFA', eq: 'band', stretch: true },
+  deskbands: { n: 'Desk Bands', url: 'https://youtu.be/o_uZcQnXaFA', eq: 'band' },
   arnold: { n: 'Arnold Press', eq: 'dumbbell' },
   dbclean: { n: 'DB Clean & Jerk Press', eq: 'dumbbell' },
   trxpike: { n: 'TRX Pike Push-Up', url: 'https://youtu.be/GIWNRslPEv4', eq: 'trx' },
@@ -267,10 +266,9 @@ export function videoLabel(url) {
   return `Watch on ${hit ? PLATFORMS[hit] : host}`;
 }
 export const isVideoUrl = s => !s || !s.trim() || /^https?:\/\//.test(s.trim()); // empty is fine: the link is optional
-// What you set on an exercise (video link, equipment, stretch) is kept in cfg.ex and layers over the built-in entry.
+// What you set on an exercise (video link, equipment) is kept in cfg.ex and layers over the built-in entry.
 export function exInfo(cfg, id) {
   const o = { ...(EX[id] || { n: id }), ...(cfg.ex && cfg.ex[id]) };
-  if (!FEATURES.stretches && o.stretch !== undefined) o.stretch = undefined; // switched off: every exercise is a normal card
   return o;
 }
 export const allExIds = cfg => [...new Set([...Object.keys(EX), ...Object.keys(cfg.ex || {})])];

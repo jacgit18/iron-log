@@ -43,12 +43,12 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
       </div>
 
       {s.items.map((it, idx) => {
-        const ex = exInfo(cfg, it.ex); const stretch = !!ex.stretch;
-        const ph = stretch ? null : phaseOf(cfg, week, s, idx);
-        const t = targetOf(cfg, logs, it, ph); const last = stretch ? null : lastLog(logs, it.ex, ph);
+        const ex = exInfo(cfg, it.ex);
+        const ph = phaseOf(cfg, week, s, idx);
+        const t = targetOf(cfg, logs, it, ph); const last = lastLog(logs, it.ex, ph);
         const idone = paired && isItemDone(s, idx, week);
         const rx = rxOf(cfg, it, ph);
-        const st = stretch ? null : stallOf(cfg, logs, it.ex, ph);
+        const st = stallOf(cfg, logs, it.ex, ph);
         const hp = isTimed(ph) ? holdPlan(cfg, week, logs, s, idx) : null;
         return (
           <Fragment key={idx}>
@@ -61,11 +61,10 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
                     onChange={e => checkItem(s.id, idx, e.target.checked)} />
                 )}
                 <h4 className="exh" id={`h-${s.id}-${idx}`}>{s.type === 'superset' ? (idx === 0 ? 'A · ' : 'B · ') : ''}{ex.n}</h4>
-                {stretch && <span className="tag exstretch">Stretch</span>}
                 {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(ex.url)}: ${ex.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(ex.url)}</a>}
                 <button type="button" className="btn sm ghost" id={`det-${s.id}-${idx}`} aria-label={`Details: ${ex.n}`} onClick={() => openModal({ type: 'exercise', exId: it.ex })}>Details</button>
               </div>
-              {stretch ? (it.rx && <div className="exline"><span className="rx">{it.rx}</span></div>) : <div className="exline">
+              <div className="exline">
                 <select className="phase" id={`ph-${s.id}-${idx}`} data-p={ph || ''} aria-label={`Phase for ${ex.n}`} value={ph || ''}
                   onChange={e => setPhase(s.id, idx, e.target.value)}>
                   {!ph && <option value="">Set phase</option>}
@@ -78,7 +77,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
                 {hp && <button type="button" className="btn sm" id={`hold-${s.id}-${idx}`} aria-label={`Hold ${hp.sets}×${hp.hold}s: ${ex.n}`} onClick={() => startHold(ex.n, hp.sets, hp.hold)}>Hold {hp.sets}×{hp.hold}s</button>}
                 {last && <button type="button" className="btn sm" id={`rep-${s.id}-${idx}`} aria-label={`Same as last: log ${ex.n} again, ${describe(last)}`} onClick={() => quickLog(s.id, idx)}>Same as last</button>}
                 <button type="button" className="btn sm logbtn" id={`log-${s.id}-${idx}`} aria-label={`Log ${ex.n}`} onClick={() => openModal({ type: 'log', slotId: s.id, idx })}>Log</button>
-              </div>}
+              </div>
               {it.note && <div className="note">{it.note}</div>}
               {last && <div className="lastlog">Last: {describe(last)} · {fmtShort(parseDate(last.d))}</div>}
               {st && <div className="stall">Stalled since {fmtShort(parseDate(st.since))} · no gain in weight or reps in 3 sessions</div>}
