@@ -3,7 +3,7 @@ import { useAppStore } from './store/useAppStore.js';
 import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
-import Board from './components/board/Board.jsx';
+import BoardTab from './components/board/BoardTab.jsx';
 import Daily from './components/daily/Daily.jsx';
 import Progress from './components/progress/Progress.jsx';
 import Editor from './components/program/Editor.jsx';
@@ -23,7 +23,7 @@ import ImportSheet from './components/sheets/ImportSheet.jsx';
 import HelpSheet from './components/sheets/HelpSheet.jsx';
 import UpdateBanner from './components/UpdateBanner.jsx';
 
-const TABS = [['board', 'Workout', Board], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
+const TABS = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
 function Modal() {
   const modal = useAppStore(s => s.modal);

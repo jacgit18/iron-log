@@ -18,7 +18,7 @@ function ExcelImport({ draft, s, busy }) {
         {s.body > 0 && <li>{s.body} body weight entr{s.body === 1 ? 'y' : 'ies'}</li>}
         {rms > 0 && <li>{plural(rms, 'one-rep max', 'one-rep maxes')} (1RM) and program names, where you haven't set them here</li>}
         {d.excel.newExercises.length > 0 && <li>New exercises added to your list: {d.excel.newExercises.join(', ')}</li>}
-        {s.entries > 0 && <li>Check-offs on the Workout tab: each session checks off its exercise in the week it was logged</li>}
+        {s.entries > 0 && <li>Check-offs on the Board: each session checks off its exercise in the week it was logged</li>}
       </ul>
       <p className="notice"><b>Not in an Excel file:</b> cards you skipped or moved, edited programs, saved program versions and phase defaults. Those stay as they are here. If you still have the <b>iron-log-data .json</b> file, import that instead to get everything.</p>
       {hasSettings && (
@@ -46,7 +46,7 @@ export default function ImportSheet() {
   const cur = dataStats({ logs });
   const sel = importSel(draft); const none = !Object.values(sel).some(Boolean);
   const rows = [
-    ['board', 'Workout', [plural(s.weeks, 'week', 'weeks') + ' of check-offs', s.body > 0 && `${s.body} body weight entr${s.body === 1 ? 'y' : 'ies'}`, s.experiments > 0 && plural(s.experiments, 'exercise to try', 'exercises to try')].filter(Boolean).join(', ')],
+    ['board', 'Board', [plural(s.weeks, 'week', 'weeks') + ' of check-offs', s.body > 0 && `${s.body} body weight entr${s.body === 1 ? 'y' : 'ies'}`, s.experiments > 0 && plural(s.experiments, 'exercise to try', 'exercises to try')].filter(Boolean).join(', ')],
     ['progress', 'Progress', `${plural(s.entries, 'logged session', 'logged sessions')} across ${plural(s.exercises, 'exercise', 'exercises')}`],
     ['muscles', 'Muscles', 'muscle tags'],
     ['program', 'Program', (s.programs.length ? `edited Program ${s.programs.join(' and ')}` : 'original programs') + (s.saved ? `, ${plural(s.saved, 'saved version', 'saved versions')}` : '') + ', custom exercises'],

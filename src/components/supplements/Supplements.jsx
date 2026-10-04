@@ -65,7 +65,7 @@ function WaterGoal({ goal, mode }) {
   const s = useAppStore.getState();
   const [editing, setEditing] = useState(false); const [v, setV] = useState('');
   const text = goal.source === 'weight' ? `Goal: ${fmtOz(goal.oz)} oz, half your ${fmtOz(goal.lb)} lb body weight`
-    : goal.source === 'default' ? `Goal: ${fmtOz(goal.oz)} oz (log your body weight on the Workout tab to set it from your weight)` : `Goal: ${fmtOz(goal.oz)} oz, set by you`;
+    : goal.source === 'default' ? `Goal: ${fmtOz(goal.oz)} oz (log your body weight on the Board to set it from your weight)` : `Goal: ${fmtOz(goal.oz)} oz, set by you`;
   if (!editing) return <div className="inline"><span className="note">{text}</span><button type="button" className="btn sm ghost" id="water-goal-edit" onClick={() => { setV(fmtOz(goal.oz)); setEditing(true); }}>Change goal</button></div>;
   return (
     <form className="inline" noValidate style={{ flexWrap: 'wrap' }} onSubmit={e => { e.preventDefault(); if (s.setWaterGoal(v)) setEditing(false); }}>
