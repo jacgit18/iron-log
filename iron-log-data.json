@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-04T17:18:01.117Z",
+ "exportedAt": "2026-10-04T22:49:49.235Z",
  "config": {
   "muscleMap": {},
   "ex": {
@@ -63,7 +63,8 @@
    "ohtri": 30,
    "bss": 65,
    "legcurl": 100,
-   "cablepunch": 50
+   "cablepunch": 50,
+   "clean-jerk-overhead-press": 45
   },
   "phDef": {
    "A-d1s1:0": "hyp",
@@ -104,13 +105,6 @@
    "A": "Program A - Unilateral",
    "B": "Program B - Bilateral"
   },
-  "bwGoal": {
-   "w": 155,
-   "start": {
-    "w": 130,
-    "d": "2026-10-02"
-   }
-  },
   "liftGoals": {
    "deadlift": {
     "exp": {
@@ -125,6 +119,13 @@
      "w": 225,
      "start": 0
     }
+   }
+  },
+  "bwGoal": {
+   "w": 155,
+   "start": {
+    "w": 130,
+    "d": "2026-10-02"
    }
   }
  },
@@ -1977,8 +1978,10 @@
     "wk": "2026-09-27"
    }
   ],
-  "dbclean": [
+  "clean-jerk-overhead-press": [
    {
+    "slot": "B-d5s2",
+    "wk": "2026-10-04",
     "d": "2026-10-04",
     "ph": "exp",
     "w": 20,
@@ -1997,10 +2000,7 @@
       "w": 20,
       "r": 10
      }
-    ],
-    "slot": "B-d5s2",
-    "wk": "2026-10-04",
-    "auto": true
+    ]
    }
   ],
   "depthcombo": [
@@ -2788,7 +2788,12 @@
     "A-d6s2": true,
     "A-d6s3": true,
     "A-d6s4": true,
-    "A-d6s6": true
+    "A-d6s6": true,
+    "A-sled1": true,
+    "A-sled2": true,
+    "A-sled3": true,
+    "A-sled4": true,
+    "A-sled5": true
    },
    "moved": {
     "A-d3s2": 2,
@@ -2824,9 +2829,9 @@
     "B-d6s3": true,
     "B-d6s6": true,
     "B-d6s4": true,
-    "B-d5s2": true,
     "B-d1s3": true,
-    "B-sled6": true
+    "B-sled6": true,
+    "B-d5s2": true
    },
    "skipped": {
     "B-d6s5": true
@@ -2867,5 +2872,150 @@
    "ph": "strength",
    "note": ""
   }
- ]
+ ],
+ "stretches": {
+  "items": [
+   {
+    "id": "scarecrow",
+    "n": "Scarecrow",
+    "group": "Bands",
+    "tier": "primary",
+    "url": "https://youtu.be/qzNQ3_TQHDs"
+   },
+   {
+    "id": "v-raise",
+    "n": "V Raise",
+    "group": "Bands",
+    "tier": "primary",
+    "url": "https://youtu.be/5WBdE0TSoUQ",
+    "note": "Cross"
+   },
+   {
+    "id": "spinal-twist",
+    "n": "Supine Spinal Twist",
+    "group": "Back",
+    "tier": "primary",
+    "url": "https://www.youtube.com/watch?v=mNdJti7ZwKI"
+   },
+   {
+    "id": "reverse-plank",
+    "n": "Reverse Plank",
+    "group": "Back",
+    "tier": "primary",
+    "url": "https://youtu.be/mwaEHn2mZsE"
+   },
+   {
+    "id": "crab-position",
+    "n": "Crab Position",
+    "group": "Back",
+    "tier": "primary",
+    "url": "https://youtu.be/2AWWezRz3cI",
+    "note": "Flow into it from the reverse plank"
+   },
+   {
+    "id": "hip-switch-90",
+    "n": "90/90 Hip Switch",
+    "group": "Back",
+    "tier": "primary",
+    "url": "https://www.youtube.com/watch?v=qq_Z7sAmVrA"
+   },
+   {
+    "id": "sky-squat-reach",
+    "n": "Sky Squat Reach",
+    "group": "Squatting",
+    "tier": "primary",
+    "url": "https://www.youtube.com/watch?v=Zv1wILGzeec",
+    "note": "Or Deep Squat Band Single Arm Reach, or BJJ Hip Switch to Extension"
+   },
+   {
+    "id": "bjj-roll-up",
+    "n": "BJJ Roll Up",
+    "group": "Squatting",
+    "tier": "primary"
+   },
+   {
+    "id": "duck-walk",
+    "n": "Duck Walk",
+    "group": "Squatting",
+    "tier": "primary"
+   },
+   {
+    "id": "wall-angels",
+    "n": "Wall Angels",
+    "group": "Standing",
+    "tier": "primary",
+    "url": "https://youtu.be/ywYi4rBhRBQ"
+   },
+   {
+    "id": "shoulder-arm-circles",
+    "n": "Shoulder and Arm Circles",
+    "group": "Standing",
+    "tier": "primary"
+   },
+   {
+    "id": "up-kicks-leg-swings",
+    "n": "Up Kicks or Leg Swings",
+    "group": "Standing",
+    "tier": "primary"
+   },
+   {
+    "id": "superman-roll",
+    "n": "Grounded Superman Roll",
+    "group": "On stomach",
+    "tier": "secondary"
+   },
+   {
+    "id": "scorpion",
+    "n": "Scorpion Stretch",
+    "group": "On stomach",
+    "tier": "secondary",
+    "url": "https://youtu.be/uNDfgnWN2G0",
+    "note": "Be on the side of your face"
+   },
+   {
+    "id": "prayer-stretch",
+    "n": "Elevated Prayer Stretch",
+    "group": "Squatting",
+    "tier": "secondary",
+    "url": "https://youtu.be/c7cnNg6rBes",
+    "note": "On a bench or cube"
+   },
+   {
+    "id": "twisted-arms",
+    "n": "Twisted Arms",
+    "group": "Standing",
+    "tier": "secondary"
+   },
+   {
+    "id": "twisted-leg-reach",
+    "n": "Twisted Leg Reach",
+    "group": "Standing",
+    "tier": "secondary"
+   },
+   {
+    "id": "deep-squat-band-reach",
+    "n": "Deep Squat Band Single Arm Reach",
+    "group": "Squatting",
+    "tier": "",
+    "url": "https://youtu.be/qQCc_zulZpg"
+   },
+   {
+    "id": "bjj-hip-switch-ext",
+    "n": "BJJ Hip Switch to Extension",
+    "group": "Squatting",
+    "tier": ""
+   }
+  ],
+  "experiments": []
+ },
+ "stretchWeeks": {},
+ "supplements": {
+  "waterGoal": 64,
+  "waterMode": "weight",
+  "water": {
+   "2026-10-04": [
+    22
+   ]
+  }
+ }
 }
