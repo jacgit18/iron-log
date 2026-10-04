@@ -1,13 +1,16 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-03T13:49:21.053Z",
+ "exportedAt": "2026-10-04T12:55:27.786Z",
  "config": {
   "muscleMap": {},
   "ex": {
    "deadlift": {
     "n": "Deadlift",
     "eq": "barbell"
+   },
+   "zercher": {
+    "eq": "shortbar"
    }
   },
   "mode": 2,
@@ -56,7 +59,13 @@
   "phDef": {
    "A-d1s1:0": "hyp",
    "A-d1s7:1": "iso",
-   "A-d1s3:0": "strength"
+   "A-d1s3:0": "strength",
+   "B-d6s2:0": "exp",
+   "B-d6s3:0": "exp",
+   "B-d6s6:1": "exp",
+   "B-d6s6:0": "iso",
+   "B-d6s4:0": "exp",
+   "B-d6s5:1": "strength"
   },
   "exPh": {
    "canoe": "iso",
@@ -65,15 +74,21 @@
    "spinal": "mob",
    "platerot": "strength",
    "suitcase": "strength",
-   "qlext": "strength"
+   "qlext": "strength",
+   "skater": "exp",
+   "splitjump": "exp",
+   "cablerow": "exp",
+   "cablepunch": "iso",
+   "depthcombo": "exp",
+   "zercher": "strength"
   },
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "5oi19c",
+   "hash": "15dqvqq",
    "last": {
-    "at": "2026-10-03T00:33:48.747Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/575e42b0dddf1fec3435ae130c83ec09596aaa61"
+    "at": "2026-10-03T13:49:23.534Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/20cd6d3d4efda877aa668cc99be7edb20a759be7"
    }
   },
   "progNames": {
@@ -918,6 +933,64 @@
     ]
    }
   ],
+  "cablepunch": [
+   {
+    "slot": "B-d6s6",
+    "wk": "2026-10-04",
+    "d": "2026-10-04",
+    "ph": "iso",
+    "w": 30,
+    "s": 4,
+    "sec": 15,
+    "sets": [
+     {
+      "w": 30,
+      "sec": 15
+     },
+     {
+      "w": 30,
+      "sec": 15
+     },
+     {
+      "w": 30,
+      "sec": 15
+     },
+     {
+      "w": 30,
+      "sec": 15
+     }
+    ]
+   }
+  ],
+  "cablerow": [
+   {
+    "d": "2026-10-04",
+    "ph": "exp",
+    "w": 30,
+    "s": 4,
+    "r": 10,
+    "sets": [
+     {
+      "w": 30,
+      "r": 10
+     },
+     {
+      "w": 30,
+      "r": 10
+     },
+     {
+      "w": 30,
+      "r": 10
+     },
+     {
+      "w": 30,
+      "r": 10
+     }
+    ],
+    "slot": "B-d6s6",
+    "wk": "2026-10-04"
+   }
+  ],
   "chestpress": [
    {
     "d": "2026-09-28",
@@ -965,6 +1038,57 @@
     ],
     "slot": "A-d4s5",
     "wk": "2026-09-27"
+   }
+  ],
+  "dbclean": [
+   {
+    "d": "2026-10-04",
+    "ph": "exp",
+    "w": 20,
+    "s": 3,
+    "r": 10,
+    "sets": [
+     {
+      "w": 20,
+      "r": 10
+     },
+     {
+      "w": 20,
+      "r": 10
+     },
+     {
+      "w": 20,
+      "r": 10
+     }
+    ],
+    "slot": "B-d5s2",
+    "wk": "2026-10-04",
+    "auto": true
+   }
+  ],
+  "depthcombo": [
+   {
+    "d": "2026-10-04",
+    "ph": "exp",
+    "w": null,
+    "s": 3,
+    "r": 5,
+    "sets": [
+     {
+      "w": null,
+      "r": 5
+     },
+     {
+      "w": null,
+      "r": 5
+     },
+     {
+      "w": null,
+      "r": 5
+     }
+    ],
+    "slot": "B-d6s4",
+    "wk": "2026-10-04"
    }
   ],
   "grip": [
@@ -1292,6 +1416,31 @@
     "wk": "2026-09-27"
    }
   ],
+  "pogo": [
+   {
+    "d": "2026-10-04",
+    "ph": "exp",
+    "w": null,
+    "s": 3,
+    "r": 10,
+    "sets": [
+     {
+      "w": null,
+      "r": 10
+     },
+     {
+      "w": null,
+      "r": 10
+     },
+     {
+      "w": null,
+      "r": 10
+     }
+    ],
+    "slot": "B-d6s1",
+    "wk": "2026-10-04"
+   }
+  ],
   "reardelt": [
    {
     "slot": "A-d3s6",
@@ -1346,6 +1495,56 @@
     ],
     "slot": "A-d2s2",
     "wk": "2026-09-27"
+   }
+  ],
+  "skater": [
+   {
+    "d": "2026-10-04",
+    "ph": "exp",
+    "w": null,
+    "s": 3,
+    "r": 10,
+    "sets": [
+     {
+      "w": null,
+      "r": 10
+     },
+     {
+      "w": null,
+      "r": 10
+     },
+     {
+      "w": null,
+      "r": 10
+     }
+    ],
+    "slot": "B-d6s2",
+    "wk": "2026-10-04"
+   }
+  ],
+  "splitjump": [
+   {
+    "d": "2026-10-04",
+    "ph": "exp",
+    "w": null,
+    "s": 3,
+    "r": 10,
+    "sets": [
+     {
+      "w": null,
+      "r": 10
+     },
+     {
+      "w": null,
+      "r": 10
+     },
+     {
+      "w": null,
+      "r": 10
+     }
+    ],
+    "slot": "B-d6s3",
+    "wk": "2026-10-04"
    }
   ],
   "suitcase": [
@@ -1432,6 +1631,25 @@
     "slot": "A-d3s3",
     "wk": "2026-09-27",
     "auto": true
+   },
+   {
+    "slot": "B-d1s3",
+    "wk": "2026-10-04",
+    "d": "2026-10-04",
+    "ph": "hyp",
+    "w": 33,
+    "s": 2,
+    "r": 15,
+    "sets": [
+     {
+      "w": 33,
+      "r": 15
+     },
+     {
+      "w": 33,
+      "r": 15
+     }
+    ]
    }
   ],
   "zercher": [
@@ -1503,6 +1721,33 @@
     ],
     "slot": "A-d6s5",
     "wk": "2026-09-27"
+   },
+   {
+    "d": "2026-10-04",
+    "ph": "strength",
+    "w": 50,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 50,
+      "r": 6
+     },
+     {
+      "w": 50,
+      "r": 6
+     },
+     {
+      "w": 50,
+      "r": 6
+     },
+     {
+      "w": 50,
+      "r": 6
+     }
+    ],
+    "slot": "B-d6s5",
+    "wk": "2026-10-04"
    }
   ],
   "zottman": [
@@ -1615,6 +1860,36 @@
     7
    ],
    "restOn": "2026-10-02"
+  },
+  "2026-10-04": {
+   "prog": null,
+   "done": {
+    "B-d6s1": true,
+    "B-d6s2": true,
+    "B-d6s3": true,
+    "B-d6s6": true,
+    "B-d6s4": true,
+    "B-d5s2": true,
+    "B-d1s3": true
+   },
+   "skipped": {
+    "B-d6s5": true
+   },
+   "moved": {
+    "B-d5s2": 6,
+    "B-d1s3": 6
+   },
+   "ph": {},
+   "warm": {},
+   "order": [
+    6,
+    1,
+    2,
+    3,
+    4,
+    5,
+    7
+   ]
   }
  },
  "body": [
@@ -1622,6 +1897,11 @@
    "wk": "2026-09-27",
    "d": "2026-10-02",
    "w": 130
+  },
+  {
+   "wk": "2026-10-04",
+   "d": "2026-10-04",
+   "w": 130.2
   }
  ],
  "experiments": [
