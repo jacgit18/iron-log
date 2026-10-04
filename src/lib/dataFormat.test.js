@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseDataFile, buildDataFile, dataStats, mergeWeek, weekFingerprint, DATA_FORMAT } from './export.js';
 import { BUILTIN, withAllDays } from './data.js';
+import { progBody } from './export.js';
 import { DEFAULT_CFG } from './logic.js';
 
 const text = readFileSync(new URL('../test/fixtures/iron-log-data.v1.json', import.meta.url), 'utf8');
@@ -42,9 +43,9 @@ describe('iron-log-data.json, format 1', () => {
     const A = d.programs.A;
     expect(A.days).toHaveLength(7);
     expect(A.warm).toBe('Row 5 min');
-    expect(A.days[0].slots.map(s => s.id).slice(0, 2)).toEqual(['A-d1s1', 'A-d1s2']);
-    expect(A.days[0].slots[1]).toMatchObject({ type: 'superset', items: [{ ex: 'chestpress' }, { ex: 'zercher' }] });
-    expect(A.days[1].slots[0]).toMatchObject({ type: 'either', note: 'Whichever is free', items: [{ ex: 'reardelt', rx: '4 × 15 s per arm' }, { ex: 'facepull' }] });
+    expect(A.days[0].slots.map(s => s.id).slice(0, 3)).toEqual(['A-sled1', 'A-d1s1', 'A-d1s2']);
+    expect(A.days[0].slots[2]).toMatchObject({ type: 'superset', items: [{ ex: 'chestpress' }, { ex: 'zercher' }] });
+    expect(A.days[1].slots[1]).toMatchObject({ type: 'either', note: 'Whichever is free', items: [{ ex: 'reardelt', rx: '4 × 15 s per arm' }, { ex: 'facepull' }] });
     expect(A.days[4]).toMatchObject({ sub: 'Make-up', makeup: true });
     expect(d.programs.B).toBeUndefined(); // built-in programs aren't written
   });
@@ -85,7 +86,7 @@ describe('iron-log-data.json, format 1', () => {
     const S = { cfg: d.config, logs: d.logs, programs: { A: { ...d.programs.A, key: 'A' }, B: BUILTIN.B }, library: d.library, body: d.body };
     const again = buildDataFile(S, d.weeks);
     // the fixture is an old 6-day backup, so what comes back has the empty Day 7 added; the old file has no experiments, so an empty list is added
-    const padded = { ...raw, experiments: [], programs: { A: withAllDays(raw.programs.A) }, library: raw.library.map(it => ({ ...it, prog: withAllDays(it.prog) })) };
+    const padded = { ...raw, experiments: [], programs: { A: progBody(withAllDays({ ...raw.programs.A, key: 'A' })) }, library: raw.library.map(it => ({ ...it, prog: withAllDays(it.prog) })) };
     expect({ ...again, exportedAt: raw.exportedAt }).toEqual(padded);
   });
 });

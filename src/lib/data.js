@@ -14,15 +14,35 @@ export const DAY_COUNT = 7;
 export const hasValidDays = p => !!p && Array.isArray(p.days) && p.days.length >= 6 && p.days.length <= DAY_COUNT;
 // Day 5 and 6 once shipped with these subtitles; saved copies of the program still carry them.
 const OLD_SUBS = new Set(['Upper body + rotational power', 'Lower body + reactive power']);
-// The sled push used to be a warm-up checkbox. It is now an optional Explosive card (1 × 3) on every day that has
-// exercises, once per program (`sledAdded`), so deleting it later sticks. Appended, so existing slot ids don't shift.
-const sledCard = key => ({ sec: 'Optional', note: 'Optional', items: [{ ex: key === 'B' ? 'sled' : 'sledlat', ph: 'exp', w: null, rx: '1 × 3' }] });
+// The sled push used to be a warm-up checkbox. It is now an optional Explosive card (1 × 3), first on every day that
+// has exercises. Added once per program (`sledAdded`), so deleting it later sticks; `sledTop` marks that it has been
+// moved to the top once. Cards that already have ids keep them, so nothing else on the day changes identity.
+const isSled = sl => !!sl && Array.isArray(sl.items) && sl.items.some(it => it.ex === 'sled' || it.ex === 'sledlat');
+const sledCard = (key, di) => ({ id: `${key}-sled${di + 1}`, sec: 'Optional', note: 'Optional', items: [{ ex: key === 'B' ? 'sled' : 'sledlat', ph: 'exp', w: null, rx: '1 × 3' }] });
+function withSled(prog, days) {
+  const key = prog.key || 'N';
+  const hasSled = days.some(d => d && Array.isArray(d.slots) && d.slots.some(isSled));
+  const add = !prog.sledAdded && !hasSled;
+  if (prog.sledTop && !add) return days;
+  const taken = new Set();
+  days.forEach((d, di) => (d && d.slots || []).forEach((sl, si) => { if (!isSled(sl)) taken.add(sl.id || `${key}-d${di + 1}s${si + 1}`); }));
+  return days.map((d, di) => {
+    if (!d || !Array.isArray(d.slots) || !d.slots.length) return d;
+    const slots = d.slots.map((sl, si) => (sl.id ? sl : { ...sl, id: `${key}-d${di + 1}s${si + 1}` }));
+    const sled = slots.filter(isSled).map(sl => {
+      let id = sl.id; if (taken.has(id)) id = `${key}-sled${di + 1}`;
+      while (taken.has(id)) id += '_';
+      taken.add(id); return id === sl.id ? sl : { ...sl, id };
+    });
+    if (add) sled.push(sledCard(key, di));
+    return { ...d, slots: [...sled, ...slots.filter(sl => !isSled(sl))] };
+  });
+}
 export function withAllDays(prog) {
   let days = prog.days.map(d => (d && OLD_SUBS.has(d.sub) ? (({ sub, ...rest }) => rest)(d) : d)); // eslint-disable-line no-unused-vars
-  const sled = !prog.sledAdded && !days.some(d => d && d.slots && d.slots.some(sl => sl.items.some(it => it.ex === 'sled' || it.ex === 'sledlat')));
-  if (sled) days = days.map(d => (d && d.slots && d.slots.length ? { ...d, slots: [...d.slots, sledCard(prog.key)] } : d));
+  days = withSled(prog, days);
   while (days.length < DAY_COUNT) days.push({ title: `Day ${days.length + 1}`, slots: [] });
-  return { ...prog, days, sledAdded: true };
+  return { ...prog, days, sledAdded: true, sledTop: true };
 }
 export const padLibrary = items => items.map(it => (it && hasValidDays(it.prog) ? { ...it, prog: withAllDays(it.prog) } : it));
 
@@ -225,8 +245,8 @@ export const WARMUP = [{ id: 'shadow', n: 'Shadow box', rx: 'as you feel' }];
 export const warmupOf = cfg => (Array.isArray(cfg.warmup) ? cfg.warmup : WARMUP);
 
 PROGRAM_A.key = 'A'; PROGRAM_B.key = 'B';
-[PROGRAM_A, PROGRAM_B].forEach(p => { p.days = withAllDays(p).days; });
-[PROGRAM_A, PROGRAM_B].forEach(p => p.days.forEach((d, di) => d.slots.forEach((sl, si) => { sl.id = `${p.key}-d${di + 1}s${si + 1}`; })));
+[PROGRAM_A, PROGRAM_B].forEach(p => Object.assign(p, withAllDays(p)));
+[PROGRAM_A, PROGRAM_B].forEach(p => p.days.forEach((d, di) => d.slots.forEach((sl, si) => { sl.id = sl.id || `${p.key}-d${di + 1}s${si + 1}`; })));
 export const BUILTIN = { A: PROGRAM_A, B: PROGRAM_B };
 
 export function slotsFor(prog) {

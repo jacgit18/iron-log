@@ -98,11 +98,11 @@ describe('warm-up list', () => {
 });
 
 describe('sled cards', () => {
-  it('are Optional Explosive 1 × 3 cards on every day with exercises, push → lateral pull in A and push → pull in B', () => {
+  it('are Optional Explosive 1 × 3 cards, first on every day with exercises, push → lateral pull in A and push → pull in B', () => {
     [['A', 'sledlat'], ['B', 'sled']].forEach(([k, ex]) => {
       const days = BUILTIN[k].days.filter(d => d.slots.length);
       expect(days.length).toBeGreaterThan(0);
-      days.forEach(d => expect(d.slots.at(-1)).toMatchObject({ note: 'Optional', items: [{ ex, ph: 'exp', rx: '1 × 3' }] }));
+      days.forEach(d => expect(d.slots[0]).toMatchObject({ note: 'Optional', items: [{ ex, ph: 'exp', rx: '1 × 3' }] }));
     });
   });
   it('are added once to a saved program, so deleting one stays deleted', () => {
@@ -112,6 +112,19 @@ describe('sled cards', () => {
     expect(once.days[1].slots).toHaveLength(0);
     const trimmed = { ...once, days: once.days.map((d, i) => (i ? d : { ...d, slots: d.slots.slice(0, 1) })) };
     expect(withAllDays(trimmed).days[0].slots).toHaveLength(1);
+  });
+  it('move to the top of a saved program, and never share an id with another card', () => {
+    // A saved program where the sled card sits last and has the same id as an earlier card (a gap left by a deleted one).
+    const sled = { id: 'A-d1s2', sec: 'Optional', items: [{ ex: 'sledlat', ph: 'exp', rx: '1 × 3' }] };
+    const saved = { key: 'A', days: [{ title: 'Day 1', slots: [{ id: 'A-d1s1', sec: 'Regular', items: [{ ex: 'hack' }] }, { id: 'A-d1s2', sec: 'Regular', items: [{ ex: 'latpd' }] }, sled] }, ...Array.from({ length: 5 }, (_, i) => ({ title: `Day ${i + 2}`, slots: [] }))] };
+    const slots = withAllDays(saved).days[0].slots;
+    expect(slots.map(sl => sl.items[0].ex)).toEqual(['sledlat', 'hack', 'latpd']);
+    expect(new Set(slots.map(sl => sl.id)).size).toBe(3);
+    expect(slots.slice(1).map(sl => sl.id)).toEqual(['A-d1s1', 'A-d1s2']); // the other cards keep their ids
+  });
+  it('keep positional ids on cards that had none when the sled card goes in front', () => {
+    const slots = withAllDays({ key: 'A', days: [{ title: 'Day 1', slots: [{ sec: 'Regular', items: [{ ex: 'hack' }] }] }, ...Array.from({ length: 5 }, (_, i) => ({ title: `Day ${i + 2}`, slots: [] }))] }).days[0].slots;
+    expect(slots.map(sl => sl.id)).toEqual(['A-sled1', 'A-d1s1']);
   });
 });
 

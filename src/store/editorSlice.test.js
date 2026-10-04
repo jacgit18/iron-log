@@ -26,8 +26,8 @@ describe('editing a program', () => {
   it('saves an edited copy and never changes the built-in program', () => {
     const before = builtinA();
     st().moveEdSlot(0, 1);
-    expect(ids(day1()).slice(0, 2)).toEqual(['A-d1s2', 'A-d1s1']);
-    expect(saved('programs/A').days[0].slots[0].id).toBe('A-d1s2');
+    expect(ids(day1()).slice(0, 2)).toEqual(['A-d1s1', 'A-sled1']); // the sled card is first
+    expect(saved('programs/A').days[0].slots[0].id).toBe('A-d1s1');
     expect(builtinA()).toEqual(before);
     expect(st().programs.A).not.toBe(BUILTIN.A);
   });
@@ -55,11 +55,11 @@ describe('editing a program', () => {
 describe('the add/edit exercise sheet', () => {
   it('adds a card after the last one in its section, and a new section before Home', () => {
     expect(st().saveSlot(newCard())).toBeNull();
-    expect(day1()[5]).toMatchObject({ sec: 'Regular', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] });
+    expect(day1()[6]).toMatchObject({ sec: 'Regular', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] });
     st().saveSlot(newCard({ sec: 'Plyometric' }));
-    expect(day1().map(s => s.sec).slice(-4)).toEqual(['Plyometric', 'Home', 'Home', 'Optional']);
+    expect(day1().map(s => s.sec).slice(-3)).toEqual(['Plyometric', 'Home', 'Home']);
     st().saveSlot(newCard({ sec: 'Home' }));
-    expect(day1().at(-2).items[0].ex).toBe('arnold'); // lands before the trailing Optional sled card
+    expect(day1().at(-1).items[0].ex).toBe('arnold');
   });
   it('keeps an edited card in its place with its id', () => {
     const orig = day1()[2];
@@ -77,7 +77,7 @@ describe('the add/edit exercise sheet', () => {
   it('creates a new exercise from a typed name', () => {
     st().saveSlot(newCard({ items: [{ ex: '__new', nn: 'Sled Drag', nu: 'https://example.com/v', ph: 'exp', w: null, bw: true }] }));
     expect(st().cfg.ex['sled-drag']).toEqual({ n: 'Sled Drag', url: 'https://example.com/v' });
-    expect(day1()[5].items[0]).toEqual({ ex: 'sled-drag', ph: 'exp', w: null, bw: true });
+    expect(day1()[6].items[0]).toEqual({ ex: 'sled-drag', ph: 'exp', w: null, bw: true });
   });
   it('says what’s missing instead of saving', () => {
     expect(st().saveSlot(newCard({ items: [{ ex: '' }] }))).toMatch(/Choose an exercise/);
@@ -126,7 +126,7 @@ describe('names, saved versions and loading', () => {
 
 describe('creating a program', () => {
   it('copies A or B into the library with its own card ids and phase defaults', () => {
-    useAppStore.setState(s => ({ cfg: { ...s.cfg, phDef: { 'A-d1s1:0': 'strength' } } }));
+    useAppStore.setState(s => ({ cfg: { ...s.cfg, phDef: { 'A-sled1:0': 'strength' } } }));
     expect(st().createProgram('My plan', 'A')).toBe(true);
     const it = st().library[0];
     expect(it).toMatchObject({ name: 'My plan', from: 'A', created: true });
