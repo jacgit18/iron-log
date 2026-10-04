@@ -49,7 +49,7 @@ export default function ExerciseLibrary() {
           return (
             <div className="exrow" key={r.id}>
               <div className="exmain">
-                <b>{r.name}</b>{r.custom && <span className="tag">Yours</span>}
+                <b>{r.name}</b>
                 <span className="note">{[...meta, where].join(' · ')}</span>
                 <span className="note">{muscles || 'No muscles tagged yet'}</span>
                 {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.name} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(r.url)}</a>}
