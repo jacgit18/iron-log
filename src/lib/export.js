@@ -191,9 +191,9 @@ export function normalizeData(d) {
   Object.entries(d.weeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k) && w && typeof w === 'object') out.weeks[k] = normWeek(w); });
   return out;
 }
-// Import choices follow the app's tabs. Workout (key 'board'): check-offs, body weight, exercises to try. Progress: logged sessions.
+// Import choices follow the app's tabs. Board: check-offs, body weight, exercises to try. Progress: logged sessions.
 // Muscles: muscle tags. Program: edited programs, saved versions, custom exercises. Settings: everything else in the config.
-export const IMPORT_SECTIONS = [['board', 'Workout'], ['progress', 'Progress'], ['muscles', 'Muscles'], ['program', 'Program'], ['stretches', 'Stretches'], ['supplements', 'Supplements'], ['settings', 'Settings']];
+export const IMPORT_SECTIONS = [['board', 'Board'], ['progress', 'Progress'], ['muscles', 'Muscles'], ['program', 'Program'], ['stretches', 'Stretches'], ['supplements', 'Supplements'], ['settings', 'Settings']];
 export const importSel = draft => Object.fromEntries(IMPORT_SECTIONS.map(([k]) => [k, !draft.sel || draft.sel[k] !== false]));
 export const cfgSection = k => (k === 'muscleMap' ? 'muscles' : ['ex', 'progNames', 'phDef', 'exPh'].includes(k) ? 'program' : 'settings');
 // A stored `wk` that is just the week of the entry's date carries no information, so it doesn't make two entries different.

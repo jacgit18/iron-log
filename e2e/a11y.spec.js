@@ -5,7 +5,7 @@ const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wc
 
 // Each view is reached by clicking these in order.
 for (const [name, clicks] of [
-  ['workout', []], ['stretches', ['#tab-daily']], ['supplements', ['#tab-daily', '#daily-supplements']], ['medical', ['#tab-daily', '#daily-medical']],
+  ['workout', []], ['stretches', ['#board-stretches']], ['supplements', ['#tab-daily', '#daily-supplements']], ['medical', ['#tab-daily', '#daily-medical']],
   ['progress', ['#tab-progress']], ['muscles', ['#tab-progress', '#prog-muscles']], ['program editor', ['#tab-program']],
 ]) {
   test(`${name} has no accessibility violations`, async ({ page }) => {
@@ -23,9 +23,10 @@ test('stretch library has no accessibility violations', async ({ page }) => {
 });
 
 test('ticking a stretch and logging water both stick', async ({ page }) => {
-  await page.click('#tab-daily');
+  await page.click('#board-stretches');
   await page.locator('#sday-4').check();
   await expect(page.locator('#sday-4')).toBeChecked();
+  await page.click('#tab-daily');
   await page.click('#daily-supplements');
   await page.click('#water-16\\.9');
   await expect(page.getByRole('status').filter({ hasText: '16.9' }).first()).toBeVisible();
