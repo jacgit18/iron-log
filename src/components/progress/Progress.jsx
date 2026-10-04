@@ -6,6 +6,7 @@ import { monday, ymd, parseDate, addDays, fmtShort } from '../../lib/dates.js';
 import { describe, lastLog, stallOf } from '../../lib/logic.js';
 import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
 import Trends from './Trends.jsx';
+import Muscles from '../muscles/Muscles.jsx';
 import LineChart from '../LineChart.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 
@@ -111,7 +112,7 @@ function LiftList() {
   );
 }
 
-export default function Progress() {
+function ProgressMain() {
   const weekHist = useAppStore(s => s.weekHist); const loading = useAppStore(s => s.historyLoading);
   const loadHistory = useAppStore(s => s.loadHistory);
   const storeMode = useAppStore(s => s.storeMode); // history waits until the data source is known
@@ -122,6 +123,22 @@ export default function Progress() {
       <History />
       <ExportBar />
       <LiftList />
+    </>
+  );
+}
+
+// Progress, with the muscle map one switch away.
+export default function Progress() {
+  const view = useAppStore(s => s.progView); const setProgView = useAppStore(s => s.setProgView);
+  return (
+    <>
+      <div className="edtop">
+        <div className="seg" role="group" aria-label="Progress section">
+          <button type="button" id="prog-trends" className={view === 'trends' ? 'on' : ''} aria-pressed={view === 'trends'} onClick={() => setProgView('trends')}>Progress</button>
+          <button type="button" id="prog-muscles" className={view === 'muscles' ? 'on' : ''} aria-pressed={view === 'muscles'} onClick={() => setProgView('muscles')}>Muscles</button>
+        </div>
+      </div>
+      {view === 'muscles' ? <Muscles /> : <ProgressMain />}
     </>
   );
 }

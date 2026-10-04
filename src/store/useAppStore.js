@@ -130,6 +130,8 @@ export const useAppStore = create((set, get) => ({
   ghToken: standalone ? readToken() : '',
 
   // Muscles tab view state; kept here so it survives switching tabs, like the original.
+  progView: 'trends', // Progress tab: 'trends' or 'muscles'
+  setProgView: progView => set({ progView }),
   bodySel: null, // selected muscle key
   bodySec: true, // count secondary work as half a set
   selectMuscle: bodySel => set({ bodySel }),
