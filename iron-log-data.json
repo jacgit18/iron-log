@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-04T16:53:09.205Z",
+ "exportedAt": "2026-10-04T17:18:01.117Z",
  "config": {
   "muscleMap": {},
   "ex": {
@@ -104,6 +104,13 @@
    "A": "Program A - Unilateral",
    "B": "Program B - Bilateral"
   },
+  "bwGoal": {
+   "w": 155,
+   "start": {
+    "w": 130,
+    "d": "2026-10-02"
+   }
+  },
   "liftGoals": {
    "deadlift": {
     "exp": {
@@ -118,13 +125,6 @@
      "w": 225,
      "start": 0
     }
-   }
-  },
-  "bwGoal": {
-   "w": 155,
-   "start": {
-    "w": 130,
-    "d": "2026-10-02"
    }
   }
  },
@@ -718,17 +718,6 @@
        "sec": "Regular",
        "items": [
         {
-         "ex": "dbclean",
-         "ph": "exp",
-         "w": 20
-        }
-       ],
-       "id": "A-d5s2"
-      },
-      {
-       "sec": "Regular",
-       "items": [
-        {
          "ex": "hack",
          "ph": "hyp",
          "w": 270,
@@ -935,6 +924,17 @@
         }
        ],
        "id": "A-d6s6"
+      },
+      {
+       "id": "A-d5s2",
+       "sec": "Regular",
+       "items": [
+        {
+         "ex": "clean-jerk-overhead-press",
+         "ph": "exp",
+         "w": 20
+        }
+       ]
       }
      ]
     },
