@@ -158,7 +158,7 @@ function BodyGoal() {
     if (g.pace != null) lines.push(`Recent pace: ${signed(g.pace, 1)} lb a week.`);
     if (!g.reached && g.need != null) lines.push(`To hit it by ${fmtShort(parseDate(g.by))}: ${signed(g.need, 1)} lb a week.`);
     if (!g.reached && g.by && g.weeksLeft != null && g.weeksLeft <= 0) lines.push(`The date (${fmtShort(parseDate(g.by))}) has passed.`);
-  } else lines.push('Log your weight on the Board to start tracking it.');
+  } else lines.push('Log your weight on the Workout tab to start tracking it.');
   return (
     <div className="bwgoal">
       <h3>Weight goal: {fmtLb(goal.w)} lb{goal.by ? ` by ${fmtShort(parseDate(goal.by))}` : ''}</h3>
@@ -179,7 +179,7 @@ function BodyGoal() {
 function BodyChart() {
   const body = useAppStore(s => s.body); const deleteBodyWeight = useAppStore(s => s.deleteBodyWeight);
   const L = bwSorted(body);
-  if (!L.length) return <section className="panel tchart"><h2>Body weight</h2><p className="note">Log your weight once a week from the top of the Board. It shows here as a trend.</p><BodyGoal /></section>;
+  if (!L.length) return <section className="panel tchart"><h2>Body weight</h2><p className="note">Log your weight once a week from the top of the Workout tab. It shows here as a trend.</p><BodyGoal /></section>;
   const rec = [...L].reverse().slice(0, 6);
   return (
     <section className="panel tchart">

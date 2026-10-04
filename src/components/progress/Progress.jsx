@@ -4,7 +4,7 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { monday, ymd, parseDate, addDays, fmtShort } from '../../lib/dates.js';
 import { describe, lastLog, stallOf } from '../../lib/logic.js';
-import { WEEK_RE, weekSummary } from '../../lib/trends.js';
+import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
 import Trends from './Trends.jsx';
 import LineChart from '../LineChart.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
@@ -24,13 +24,14 @@ function History() {
   else keys.push(thisSun);
   const rows = keys.map(k => weekSummary(cfg, programs, k, weeks[k] || { done: {}, moved: {} }));
   const past = rows.filter(r => r.key !== thisSun);
+  const met = past.filter(r => r.full >= WEEK_GOAL_DAYS).length;
   const mean = past.length ? (past.reduce((a, r) => a + r.full, 0) / past.length).toFixed(1) : null;
 
   return (
     <section className="panel hist-panel">
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <h2>Weekly history</h2>
-        {mean && <span className="note">Average {mean} of {DAY_COUNT} days completed over {past.length} past week{past.length > 1 ? 's' : ''}</span>}
+        {mean && <span className="note">Goal {WEEK_GOAL_DAYS} days a week · met in {met} of {past.length} past week{past.length > 1 ? 's' : ''} · average {mean} days</span>}
       </div>
       <div className="weeks">
         {rows.map(r => (
@@ -40,7 +41,7 @@ function History() {
             <span className="cells" role="img" aria-label={`${r.full} of ${DAY_COUNT} days complete: ${r.days.map((x, i) => `day ${i + 1} ${x === 2 ? 'complete' : x === 1 ? 'partly done' : 'not started'}`).join(', ')}`}>
               {r.days.map((x, i) => <i key={i} className={`c${x}`} />)}
             </span>
-            <span className="wknum"><b>{r.full}</b>/{DAY_COUNT} days · {r.ex}/{r.total}</span>
+            <span className="wknum"><b>{r.full}</b>/{WEEK_GOAL_DAYS} days{r.full >= WEEK_GOAL_DAYS ? ' · goal met' : ''} · {r.ex}/{r.total}</span>
           </div>
         ))}
       </div>

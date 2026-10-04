@@ -4,6 +4,8 @@ import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
 import Board from './components/board/Board.jsx';
+import Stretches from './components/stretches/Stretches.jsx';
+import Supplements from './components/supplements/Supplements.jsx';
 import Progress from './components/progress/Progress.jsx';
 import Muscles from './components/muscles/Muscles.jsx';
 import Editor from './components/program/Editor.jsx';
@@ -15,13 +17,15 @@ import TagSheet from './components/sheets/TagSheet.jsx';
 import SlotSheet from './components/sheets/SlotSheet.jsx';
 import ExerciseSheet from './components/sheets/ExerciseSheet.jsx';
 import DayAddSheet from './components/sheets/DayAddSheet.jsx';
+import { StretchSheet, StretchExpSheet } from './components/sheets/StretchSheets.jsx';
+import SupplementSheet from './components/sheets/SupplementSheet.jsx';
 import ExperimentSheet from './components/sheets/ExperimentSheet.jsx';
 import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
 import ImportSheet from './components/sheets/ImportSheet.jsx';
 import HelpSheet from './components/sheets/HelpSheet.jsx';
 import UpdateBanner from './components/UpdateBanner.jsx';
 
-const TABS = [['board', 'Board', Board], ['progress', 'Progress', Progress], ['body', 'Muscles', Muscles], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
+const TABS = [['board', 'Workout', Board], ['stretches', 'Stretches', Stretches], ['supplements', 'Supplements', Supplements], ['progress', 'Progress', Progress], ['body', 'Muscles', Muscles], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
 function Modal() {
   const modal = useAppStore(s => s.modal);
@@ -31,8 +35,11 @@ function Modal() {
     case 'log': return <LogSheet key={`${modal.slotId}:${modal.idx}`} slotId={modal.slotId} idx={modal.idx} />;
     case 'detail': return <DetailSheet exId={modal.exId} />;
     case 'tags': return <TagSheet key={modal.exId} exId={modal.exId} />;
-    case 'slot': return <SlotSheet key={`slot-${modal.idx}-${modal.preset || ''}`} idx={modal.idx} preset={modal.preset} col={modal.col} target={modal.target} />;
+    case 'slot': return <SlotSheet key={`slot-${modal.idx}`} idx={modal.idx} col={modal.col} target={modal.target} />;
     case 'experiment': return <ExperimentSheet key={modal.id || 'new'} id={modal.id} />;
+    case 'stretch': return <StretchSheet key={modal.id || 'new'} id={modal.id} />;
+    case 'stretchexp': return <StretchExpSheet key={modal.id || 'new'} id={modal.id} />;
+    case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} />;
     case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;
     case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
     case 'newprog': return <NewProgramSheet />;

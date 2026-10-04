@@ -2,6 +2,7 @@ import { BUILTIN, PHASES } from '../lib/data.js';
 import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
 import { parseDataFile, importSel, cfgSection, mergeEntries, mergeWeek, sameProg, progBody, libDate, backupCfg } from '../lib/export.js';
 import { WEEK_RE } from '../lib/trends.js';
+import { normStretchWeek } from '../lib/stretches.js';
 import { parseExcelExport, parseCsvExport, entryKey, checkOffsFromLogs } from '../lib/excelImport.js';
 
 // Settings tab actions + the full-data import. `flag` is the save-status helper from the app store.
@@ -86,6 +87,14 @@ export const settingsSlice = (set, get, flag) => ({
           Object.entries(d.weeks).forEach(([k, w]) => { if (k !== wk) get().saveDoc('weeks/' + k, w); });
           set({ week: normWeek(d.weeks[wk]) }); get().saveWeek();
         }
+        if (on.stretches && d.stretches) {
+          get().setStretchDoc(d.stretches); get().saveStretches();
+          const have = await get().stretchWeekKeys();
+          have.forEach(k => { if (!d.stretchWeeks[k]) get().removeDoc('stretchweeks/' + k); });
+          Object.entries(d.stretchWeeks).forEach(([k, w]) => { if (k !== wk) get().saveDoc('stretchweeks/' + k, w); });
+          set({ strWeek: d.stretchWeeks[wk] ? structuredClone(d.stretchWeeks[wk]) : normStretchWeek(null) }); get().saveStrWeek();
+        }
+        if (on.supplements && d.supplements) { set({ supp: structuredClone(d.supplements) }); get().saveSupp(); }
         if (on.progress) {
           const logs = {};
           Object.keys(get().logs).forEach(id => { if (!d.logs[id]) get().removeDoc('logs/' + id); });
@@ -121,6 +130,28 @@ export const settingsSlice = (set, get, flag) => ({
         if (lib.length !== library.length) { set({ library: lib }); get().saveLibrary(); }
         const exps = get().experiments; const haveE = new Set(exps.map(e => e.id)); const addE = !on.board ? [] : (d.experiments || []).filter(e => !haveE.has(e.id));
         if (addE.length) get().setExperiments([...exps, ...structuredClone(addE)]);
+        if (on.stretches && d.stretches) {
+          const items = get().stretches; const ids = new Set(items.map(x => x.id)); const names = new Set(items.map(x => x.n.toLowerCase()));
+          const addS = d.stretches.items.filter(x => !ids.has(x.id) && !names.has(x.n.toLowerCase()));
+          const exps = get().stretchExps; const eIds = new Set(exps.map(x => x.id)); const addX = d.stretches.experiments.filter(x => !eIds.has(x.id));
+          if (addS.length || addX.length) { set({ stretches: [...items, ...structuredClone(addS)], stretchExps: [...exps, ...structuredClone(addX)] }); get().saveStretches(); }
+          const mergeSW = (a, b) => { const x = normStretchWeek(a); const have = new Set(x.extra.map(e => e.id)); return { done: { ...b.done, ...x.done }, skipped: { ...b.skipped, ...x.skipped }, extra: [...x.extra, ...b.extra.filter(e => !have.has(e.id))] }; };
+          const localSW = await get().stretchWeeksAll();
+          Object.entries(d.stretchWeeks).forEach(([k, w]) => {
+            if (k === wk) { const m = mergeSW(get().strWeek, w); if (JSON.stringify(m) !== JSON.stringify(get().strWeek)) { set({ strWeek: m }); get().saveStrWeek(); } return; }
+            const m = localSW[k] ? mergeSW(localSW[k], w) : w;
+            if (JSON.stringify(m) !== JSON.stringify(localSW[k] ? normStretchWeek(localSW[k]) : null)) get().saveDoc('stretchweeks/' + k, m);
+          });
+        }
+        if (on.supplements && d.supplements) {
+          const cur = get().supp; const water = { ...cur.water }; let ch = false;
+          Object.entries(d.supplements.water).forEach(([k, l]) => { if (!water[k]) { water[k] = l; ch = true; } });
+          const items = structuredClone(cur.items); const have = new Set(items.map(x => x.id));
+          d.supplements.items.forEach(x => { if (!have.has(x.id)) { items.push(x); have.add(x.id); ch = true; } });
+          const taken = structuredClone(cur.taken);
+          Object.entries(d.supplements.taken).forEach(([k, t]) => { const m = { ...t, ...(taken[k] || {}) }; if (JSON.stringify(m) !== JSON.stringify(taken[k] || null)) { taken[k] = m; ch = true; } });
+          if (ch) { set({ supp: { ...cur, water, items, taken } }); get().saveSupp(); }
+        }
         const body = get().body; const addB = !on.board ? [] : d.body.filter(e => !body.some(x => x.wk === e.wk));
         if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); }
         Object.entries(on.progress ? d.logs : {}).forEach(([id, l]) => {

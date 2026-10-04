@@ -1,9 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { mem, clearStorage, saved } from '../test/browserStubs.js';
-import { FEATURES } from '../lib/features.js';
-
-// Most tests cover the stretch feature as built; one block checks it switched off.
-FEATURES.stretches = true;
 
 let useAppStore, BUILTIN, warmupOf, withAllDays, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf;
 const st = () => useAppStore.getState();
@@ -74,9 +70,7 @@ describe('checking off on the board', () => {
     const day3 = st().activeSlots().filter(s => s.day === 3);
     // An either/or card logs the one option it counts as done (the first, when none was picked).
     const exIds = [...new Set(day3.flatMap(s => (s.type === 'either' ? s.items.slice(0, 1) : s.items).map(i => i.ex)))];
-    // Stretches (Desk Bands) have no weight or reps, so checking them off logs nothing.
-    exIds.filter(id => id !== 'deskbands').forEach(id => expect(st().logs[id]?.length, id).toBe(1));
-    expect(st().logs.deskbands).toBeUndefined();
+    exIds.forEach(id => expect(st().logs[id]?.length, id).toBe(1));
     expect(st().logs.facepull).toBeUndefined();
     st().skipCard('A-d3s1');
     expect(st().logs.hack).toEqual([]);
@@ -469,37 +463,34 @@ describe('experiment board', () => {
 });
 
 describe('exercise details, default phase and adding to a day', () => {
-  it('keeps a video link, equipment and stretch over a built-in exercise, and can clear them', async () => {
+  it('keeps a video link and equipment over a built-in exercise, and can clear them', async () => {
     const { exInfo } = await import('../lib/data.js');
     expect(exInfo(st().cfg, 'hack')).toMatchObject({ n: 'Hack Squat', eq: 'machine' });
-    expect(st().saveExerciseDetails('hack', { url: 'https://example.com/v', eq: 'barbell', stretch: false, ph: '' })).toBeNull();
+    expect(st().saveExerciseDetails('hack', { url: 'https://example.com/v', eq: 'barbell', ph: '' })).toBeNull();
     expect(exInfo(st().cfg, 'hack')).toMatchObject({ n: 'Hack Squat', url: 'https://example.com/v', eq: 'barbell' });
-    st().saveExerciseDetails('hack', { url: '', eq: '', stretch: false, ph: '' });
+    st().saveExerciseDetails('hack', { url: '', eq: '', ph: '' });
     expect(exInfo(st().cfg, 'hack').url).toBeFalsy();
     expect(exInfo(st().cfg, 'hack').eq).toBeFalsy();
-    expect(st().saveExerciseDetails('hack', { url: 'nope', eq: '', stretch: false, ph: '' })).toMatch(/https/);
+    expect(st().saveExerciseDetails('hack', { url: 'nope', eq: '', ph: '' })).toMatch(/https/);
   });
   it('an exercise default phase applies to every card, but a slot default or a week pick still wins', () => {
     const sl = st().activeSlots(); const a = sl.find(s => s.id === 'A-d1s6'); const b = sl.find(s => s.id === 'A-d4s5'); // chest press: strength, then hypertrophy
-    st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: 'iso' });
+    st().saveExerciseDetails('chestpress', { url: '', eq: '', ph: 'iso' });
     expect(phaseOf(st().cfg, st().week, a, 0)).toBe('iso');
     expect(phaseOf(st().cfg, st().week, b, 1)).toBe('iso');
     st().setPhase('A-d1s6', 0, 'exp');
     expect(phaseOf(st().cfg, st().week, a, 0)).toBe('exp');
-    st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: '' });
+    st().saveExerciseDetails('chestpress', { url: '', eq: '', ph: '' });
     expect(phaseOf(st().cfg, st().week, b, 1)).toBe('hyp');
   });
-  it('adds an exercise or a new stretch to one day of this week only', () => {
+  it('adds an exercise or a new one to one day of this week only', () => {
     expect(st().addExerciseToDay(2, { ex: 'facepull', ph: 'hyp', note: 'light' })).toBeNull();
-    expect(st().addExerciseToDay(2, { ex: '__new', nn: 'Hip 90/90', ne: 'bodyweight', ns: true, ph: 'hyp' })).toBeNull();
+    expect(st().addExerciseToDay(2, { ex: '__new', nn: 'Hip 90/90', ne: 'bodyweight', ph: 'hyp' })).toBeNull();
     const extras = st().activeSlots().filter(s => s.added);
     expect(extras).toHaveLength(2);
     expect(extras[0].items[0]).toMatchObject({ ex: 'facepull', ph: 'hyp' });
-    expect(extras[1].items[0].ph).toBeNull(); // a stretch has no phase
+    expect(extras[1].items[0].ph).toBe('hyp');
     expect(st().addExerciseToDay(2, { ex: '', nn: '' })).toMatch(/Choose/);
-    st().checkCard(extras[1].id, true);
-    expect(st().logs['hip-90-90']).toBeUndefined(); // and nothing to log
-    expect(st().week.done[extras[1].id]).toBe(true);
   });
 });
 
@@ -512,7 +503,7 @@ describe('mobility phase', () => {
     expect(rxOf(st().cfg, { ex: 'canoe' }, 'mob')).toBe('2 × 30 s');
     const cfg = { ...st().cfg, rm: { canoe: 100 } };
     expect(baseTargetOf(cfg, {}, { ex: 'canoe', w: 10 }, 'mob')).toMatchObject({ w: 10, src: 'program' });
-    st().saveExerciseDetails('canoe', { url: '', eq: '', stretch: false, ph: 'mob' });
+    st().saveExerciseDetails('canoe', { url: '', eq: '', ph: 'mob' });
     expect(st().cfg.exPh.canoe).toBe('mob');
   });
 });
@@ -596,7 +587,7 @@ describe('bug check fixes', () => {
     expect(phaseOf(st().cfg, st().week, st().activeSlots().find(x => x.id === b.id), bi)).toBe('hyp');
   });
   it('a one-week card keeps the phase picked when it was added, even with an exercise default', () => {
-    st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: 'iso' });
+    st().saveExerciseDetails('chestpress', { url: '', eq: '', ph: 'iso' });
     st().addExerciseToDay(2, { ex: 'chestpress', ph: 'hyp' });
     const card = st().activeSlots().find(s => s.added);
     expect(phaseOf(st().cfg, st().week, card, 0)).toBe('hyp');
@@ -605,14 +596,9 @@ describe('bug check fixes', () => {
     const { planRows } = await import('../lib/logic.js');
     expect(planRows(st().cfg, {}, { ex: 'canoe' }, 'mob')).toEqual([{ w: null, sec: 30 }, { w: null, sec: 30 }]);
   });
-  it('a stretch saved in Details keeps no hidden default phase', () => {
-    st().saveExerciseDetails('hack', { url: '', eq: '', stretch: true, ph: 'iso' });
-    expect(st().cfg.exPh.hack).toBeUndefined();
-  });
-  it('unchecking a card removes its check-off entry even after the exercise became a stretch', () => {
+  it('unchecking a card removes its check-off entry', () => {
     st().checkCard('A-d3s1', true);
     expect(st().logs.hack).toHaveLength(1);
-    st().saveExerciseDetails('hack', { url: '', eq: '', stretch: true, ph: '' });
     st().checkCard('A-d3s1', false);
     expect(st().logs.hack).toEqual([]);
   });
@@ -635,7 +621,7 @@ describe('bug check fixes', () => {
   });
   it('the Details default phase also replaces slot defaults for that exercise', () => {
     useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
-    st().saveExerciseDetails('chestpress', { url: '', eq: '', stretch: false, ph: 'iso' });
+    st().saveExerciseDetails('chestpress', { url: '', eq: '', ph: 'iso' });
     const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
     expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('iso');
   });
@@ -645,26 +631,10 @@ describe('bug check fixes', () => {
     st().submitLog(card.id, 0, { entry: { d: '2026-10-01', ph: 'strength', w: 35, s: 4, r: 6 }, ph: 'strength', makeExDefault: true });
     expect(phaseOf(st().cfg, st().week, st().slotById(card.id), 0)).toBe('strength');
   });
-  it('built-in Canoe Stretch and Desk Bands are stretches but stay in their Home section', async () => {
-    const { exInfo } = await import('../lib/data.js');
-    expect(exInfo(st().cfg, 'canoe').stretch).toBe(true);
-    expect(exInfo(st().cfg, 'deskbands').stretch).toBe(true);
+  it('built-in Canoe Stretch and Desk Bands are normal cards that log, in their Home section', () => {
+    st().checkCard('A-d3s9', true); // Desk Bands, Day 3 (Home)
+    expect(st().logs.deskbands).toHaveLength(1);
     expect(st().activeSlots().filter(s => s.items[0].ex === 'canoe').every(s => s.sec === 'Home')).toBe(true);
-  });
-});
-
-describe('stretch feature switched off', () => {
-  it('Canoe Stretch and Desk Bands are normal cards that log, and Details leaves the hidden setting alone', async () => {
-    const { exInfo } = await import('../lib/data.js');
-    FEATURES.stretches = false;
-    try {
-      expect(exInfo(st().cfg, 'canoe').stretch).toBeUndefined();
-      st().checkCard('A-d3s9', true); // Desk Bands, Day 3 (Home)
-      expect(st().logs.deskbands).toHaveLength(1);
-      st().saveExerciseDetails('canoe', { url: '', eq: 'barbell', stretch: false, ph: '' });
-      expect(st().cfg.ex.canoe && st().cfg.ex.canoe.stretch).toBeFalsy(); // no override written
-      expect(st().cfg.ex.canoe?.stretch).toBeUndefined();
-    } finally { FEATURES.stretches = true; }
   });
 });
 

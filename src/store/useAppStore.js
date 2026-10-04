@@ -8,12 +8,14 @@ import {
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
 import { settingsSlice } from './settingsSlice.js';
+import { wellnessSlice } from './wellnessSlice.js';
+import { normStretches, normStretchWeek } from '../lib/stretches.js';
+import { normSupplements } from '../lib/water.js';
 import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
 import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
   backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile,
 } from '../lib/export.js';
-import { FEATURES } from '../lib/features.js';
 import { bwSorted } from '../lib/body.js';
 import { usageOf } from '../lib/exerciseLibrary.js';
 import { MUSCLE_MAP } from '../lib/muscles.js';
@@ -50,11 +52,11 @@ const standalone = typeof window !== 'undefined' && !window.claude;
 
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
-// What you set on an exercise (video link, equipment, stretch) applies everywhere it appears. cfg.ex keeps only
+// What you set on an exercise (video link, equipment) applies everywhere it appears. cfg.ex keeps only
 // what differs from the built-in entry; clearing a built-in value stores '' (or false) so the merge hides it.
 function setOverride(c, exId, vals) {
   const base = EX[exId] || {}; const o = { ...(c.ex[exId] || {}) };
-  Object.entries(vals).forEach(([k, v]) => { if (v && v !== base[k]) o[k] = v; else if (v) delete o[k]; else if (base[k]) o[k] = k === 'stretch' ? false : ''; else delete o[k]; });
+  Object.entries(vals).forEach(([k, v]) => { if (v && v !== base[k]) o[k] = v; else if (v) delete o[k]; else if (base[k]) o[k] = ''; else delete o[k]; });
   if (!EX[exId] && !o.n) o.n = exId;
   if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
 }
@@ -100,6 +102,7 @@ const loadedMDay = state => { const m = keepMDay ? state.mDay : null; keepMDay =
 export const useAppStore = create((set, get) => ({
   ...editorSlice(set, get, flag),
   ...settingsSlice(set, get, flag),
+  ...wellnessSlice(set, get, flag),
   cfg: structuredClone(DEFAULT_CFG),
   weekStart: monday(new Date()),
   week: normWeek(null),
@@ -112,7 +115,7 @@ export const useAppStore = create((set, get) => ({
   programs: { A: BUILTIN.A, B: BUILTIN.B },
   storeMode: 'loading',
   saveFlag: '',
-  ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false },
+  ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false, str: false, strWeek: false, supp: false },
   uncheckNote: null, // after an uncheck removed logged entries: {week, text, entries: {exId: [entry]}, done: {key: wasDone}}
   moveNote: null, // heads-up after a move puts the same exercise on the same or a neighboring day
   modal: null, // {type:'log', slotId, idx} | {type:'detail', exId}
@@ -138,7 +141,24 @@ export const useAppStore = create((set, get) => ({
     if (get().mutateCfg(c => { if (c.muscleMap) delete c.muscleMap[exId]; })) set({ modal: null });
   },
 
-  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments }; },
+  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp }; },
+
+  // The snapshot plus every saved stretch week (the week on screen taken live), for the data file.
+  async stretchWeeksAll() {
+    const out = {};
+    try {
+      if (db) { const snap = await db.collection('stretchweeks').get(); snap.docs.forEach(d => { if (d.exists) out[d.id] = d.data(); }); }
+      else {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('ironlog:stretchweeks/')) { const v = LS.get(k.slice(8)); if (v) out[k.slice(21)] = v; }
+        }
+      }
+    } catch { /* back up what loaded */ }
+    return out;
+  },
+  async stretchWeekKeys() { return Object.keys(await get().stretchWeeksAll()); },
+  async fullSnapshot() { return { ...get().snapshot(), stretchWeeks: { ...(await get().stretchWeeksAll()), [get().weekKey()]: get().strWeek } }; },
 
   // Callers that arrive while a load is running wait for that same load.
   loadHistory() {
@@ -166,7 +186,7 @@ export const useAppStore = create((set, get) => ({
     return { ...(get().weekHist || {}), [get().weekKey()]: get().week };
   },
 
-  isReady: () => { const r = get().ready; return r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp; },
+  isReady: () => { const r = get().ready; return r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strWeek && r.supp; },
   weekKey: () => ymd(get().weekStart),
   activeProgKey: () => activeProgKey(get().cfg, get().week, get().weekStart),
   activeProgram: () => { const s = get(); return s.programs[s.activeProgKey()] || s.programs.A; },
@@ -300,10 +320,10 @@ export const useAppStore = create((set, get) => ({
     if (url === (exInfo(get().cfg, ex).url || '')) return;
     get().mutateCfg(c => setOverride(c, ex, { url }));
   },
-  // A typed name that isn't in the catalog yet becomes a custom exercise (video link, equipment and stretch optional). Returns its id.
+  // A typed name that isn't in the catalog yet becomes a custom exercise (video link and equipment optional). Returns its id.
   createExercise(d) {
     const ex = newExId(get().cfg, d.nn);
-    get().mutateCfg(c => { c.ex[ex] = { n: d.nn, ...(d.nu ? { url: d.nu } : {}), ...(d.ne ? { eq: d.ne } : {}), ...(d.ns ? { stretch: true } : {}) }; });
+    get().mutateCfg(c => { c.ex[ex] = { n: d.nn, ...(d.nu ? { url: d.nu } : {}), ...(d.ne ? { eq: d.ne } : {}) }; });
     return ex;
   },
   // Add an exercise straight to a day of the viewed week. Only this week gets the card; the program doesn't change.
@@ -314,9 +334,8 @@ export const useAppStore = create((set, get) => ({
     const pd = dayAt(get().week, col); if (pd == null) return 'That is your rest day.';
     const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
     if (d.ex !== '__new') get().applyExerciseUrl(ex, d.nu);
-    const stretch = !!exInfo(get().cfg, ex).stretch;
     const note = (d.note || '').trim().slice(0, 200);
-    const ph = stretch ? null : d.ph || null; const exDef = (get().cfg.exPh || {})[ex]; const id = uid('X-');
+    const ph = d.ph || null; const exDef = (get().cfg.exPh || {})[ex]; const id = uid('X-');
     const ok = get().mutateWeek(w => {
       w.extra = [...(w.extra || []), { id, day: pd, ex, ph, note, add: true }];
       if (ph && exDef && ph !== exDef) w.ph[`${id}:0`] = ph; // picked over the exercise default: a one-week pick, like the card's phase menu
@@ -324,7 +343,7 @@ export const useAppStore = create((set, get) => ({
     if (!ok) return null;
     set({ modal: null }); flag(`Added ${exInfo(get().cfg, ex).n} to Day ${col}`); return null;
   },
-  // Everything set on one exercise, applied to every card with it: video link, equipment, stretch, default phase,
+  // Everything set on one exercise, applied to every card with it: video link, equipment, default phase,
   // and (when given) name (your own exercises), 1RM ('' removes it) and muscle tags (null = back to the default).
   saveExerciseDetails(exId, d) {
     if (get().blocked()) return null;
@@ -336,10 +355,10 @@ export const useAppStore = create((set, get) => ({
       const other = findExId(get().cfg, name); if (other && other !== exId) return 'Another exercise already has that name.';
     }
     get().mutateCfg(c => {
-      // Fields left out stay as they were; a hidden setting (stretch, while the feature is off) is left alone.
-      setOverride(c, exId, { ...(url !== undefined ? { url } : {}), ...(d.eq !== undefined ? { eq: d.eq || '' } : {}), ...(FEATURES.stretches && d.stretch !== undefined ? { stretch: d.stretch } : {}) });
+      // Fields left out stay as they were.
+      setOverride(c, exId, { ...(url !== undefined ? { url } : {}), ...(d.eq !== undefined ? { eq: d.eq || '' } : {}) });
       if (custom && name) c.ex[exId] = { ...c.ex[exId], n: name };
-      const ph = d.stretch ? '' : d.ph; // a stretch has no phase
+      const ph = d.ph;
       if (ph !== undefined && ph !== ((c.exPh || {})[exId] || '')) setExerciseDefault(c, exId, ph, get().programs, get().library);
       if (d.rm !== undefined) { const n = Number(d.rm); if (d.rm === '' || d.rm === null || !(n > 0)) delete c.rm[exId]; else c.rm[exId] = n; }
       if (d.tags !== undefined) {
@@ -638,7 +657,7 @@ export const useAppStore = create((set, get) => ({
   },
   downloadData() {
     return get().runExport('data', async dl => {
-      const d = buildDataFile(get().snapshot(), await get().allWeeks());
+      const d = buildDataFile(await get().fullSnapshot(), await get().allWeeks());
       await dl.save({ filename: `iron-log-data-${ymd(new Date())}.json`, data: JSON.stringify(d, null, 1) });
     });
   },
@@ -651,7 +670,7 @@ export const useAppStore = create((set, get) => ({
     const [owner, repo] = String(b.repo).split('/'); let sent = 0;
     try {
       if (!owner || !repo) throw new Error('Set the backup repo as owner/name in Settings.');
-      const X = await loadXLSX(); const weeks = await get().allWeeks(); const S = get().snapshot();
+      const X = await loadXLSX(); const weeks = await get().allWeeks(); const S = await get().fullSnapshot();
       const b64 = wb => X.write(wb, { type: 'base64', bookType: 'xlsx', compression: true });
       const upserts = [
         { path: 'iron-log.xlsx', content: b64(buildOverallWorkbook(X, S, weeks)), encoding: 'base64' },
@@ -724,7 +743,7 @@ export const useAppStore = create((set, get) => ({
     if (!token) { set({ backupMsg: { kind: 'err', text: 'Paste a GitHub token in Settings first.' } }); return; }
     set({ backupBusy: true, backupMsg: { kind: 'info', text: 'Building the Excel and data files…' } });
     try {
-      const X = await loadXLSX(); const weeks = await get().allWeeks(); const S = get().snapshot();
+      const X = await loadXLSX(); const weeks = await get().allWeeks(); const S = await get().fullSnapshot();
       const data = buildDataFile(S, weeks); const fp = dataFingerprint(data);
       if (g.last && fp === g.hash) { set({ backupMsg: { kind: 'ok', text: 'Nothing new since the last backup.', url: g.last.url } }); return; }
       set({ backupMsg: { kind: 'info', text: `Sending to ${g.repo}…` } });
@@ -774,9 +793,12 @@ export const useAppStore = create((set, get) => ({
         body: (LS.get('body/main') || {}).entries || [],
         library: padLibrary((LS.get('library/main') || {}).items || []),
         experiments: (LS.get('experiments/main') || {}).items || [],
+        stretches: normStretches(LS.get('stretches/main')).items,
+        stretchExps: normStretches(LS.get('stretches/main')).experiments,
+        supp: normSupplements(LS.get('supplements/main')),
         logs,
         programs: { A: resolveProgram('A', LS.get('programs/A')), B: resolveProgram('B', LS.get('programs/B')) },
-        ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true, exp: true },
+        ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true, exp: true, str: true, supp: true },
       }));
       subscribeWeek();
       return;
@@ -800,6 +822,15 @@ export const useAppStore = create((set, get) => ({
       if (s.metadata.hasPendingWrites) return;
       set(state => ({ experiments: s.exists ? [...((s.data() || {}).items || [])] : [], ...markReady('exp')(state) }));
     }, () => flag('Couldn’t load your experiments. Reload the page.'));
+    db.doc('stretches/main').onSnapshot(s => {
+      if (s.metadata.hasPendingWrites) return;
+      const d = normStretches(s.exists ? s.data() : null);
+      set(state => ({ stretches: d.items, stretchExps: d.experiments, ...markReady('str')(state) }));
+    }, () => flag('Couldn’t load your stretches. Reload the page.'));
+    db.doc('supplements/main').onSnapshot(s => {
+      if (s.metadata.hasPendingWrites) return;
+      set(state => ({ supp: normSupplements(s.exists ? s.data() : null), ...markReady('supp')(state) }));
+    }, () => flag('Couldn’t load supplements. Reload the page.'));
     db.doc('config/main').onSnapshot(s => {
       if (s.metadata.hasPendingWrites) return;
       set(state => ({ cfg: s.exists ? { ...structuredClone(DEFAULT_CFG), ...structuredClone(s.data()) } : state.cfg, ...markReady('cfg')(state) }));
@@ -832,7 +863,24 @@ function dataSourceKnown() {
   });
 }
 
+let unsubStrWeek = null;
+function subscribeStretchWeek() {
+  if (unsubStrWeek) { unsubStrWeek(); unsubStrWeek = null; }
+  const key = useAppStore.getState().weekKey();
+  if (!db) {
+    const ready = useAppStore.getState().storeMode === 'local';
+    useAppStore.setState(state => ({ strWeek: normStretchWeek(LS.get('stretchweeks/' + key)), ready: { ...state.ready, strWeek: ready } }));
+    return;
+  }
+  useAppStore.setState(state => ({ strWeek: normStretchWeek(null), ready: { ...state.ready, strWeek: false } }));
+  unsubStrWeek = db.doc('stretchweeks/' + key).onSnapshot(s => {
+    if (key !== useAppStore.getState().weekKey() || s.metadata.hasPendingWrites) return;
+    useAppStore.setState(state => ({ strWeek: normStretchWeek(s.exists ? s.data() : null), ready: { ...state.ready, strWeek: true } }));
+  }, () => flag('Couldn’t load this week’s stretches. Reload the page.'));
+}
+
 function subscribeWeek() {
+  subscribeStretchWeek();
   if (unsubWeek) { unsubWeek(); unsubWeek = null; }
   const key = useAppStore.getState().weekKey();
   if (!db) {

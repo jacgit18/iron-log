@@ -399,7 +399,7 @@ body.timing{padding-bottom:130px}
   header.top{padding-block:12px 6px;gap:8px 12px}
   header.top h1{font-size:24px}
   .tabs{position:fixed;left:0;right:0;bottom:0;margin:0;border-radius:0;z-index:15;padding:6px 8px calc(6px + env(safe-area-inset-bottom, 0px));background:var(--surface);border-top:1px solid var(--line);justify-content:space-around}
-  .tabs button{flex:1;padding:10px 0;font-size:13.5px;min-width:0}
+  .tabs button{flex:1;padding:10px 0;font-size:12px;min-width:0}
   .weekbar{gap:8px}
   .weeknav h2{min-width:0;font-size:20px}
   .progress{width:100%}
@@ -539,7 +539,6 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .ex.haseq .exname{padding-right:84px}
 .exeq{position:absolute;top:0;right:0}
 .ex + .ex .exeq{top:8px}
-.exstretch{margin-left:6px}
 
 /* Mobility phase */
 :root{--mob:#5B2A86;--mob-bg:#EEE3F7;--s-mob:#8e44ad}
@@ -552,9 +551,6 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .ldot.end.s-mob::after{background:var(--s-mob);width:6px;height:12px;left:19px;top:16px}
 .lsw.s-mob{background:var(--s-mob);border-radius:2px;width:6px;height:12px}
 
-/* Stretches sit under the warm-up on each day */
-.stretches{display:flex;flex-direction:column;gap:6px;margin:6px 0}
-.stretchhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .addrow{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px}
 
 /* Body weight goal */

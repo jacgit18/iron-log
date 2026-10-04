@@ -8,6 +8,8 @@ import { MON } from '../../lib/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
+import StretchLibrary from './StretchLibrary.jsx';
+import SupplementLibrary from './SupplementLibrary.jsx';
 
 const progStats = p => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
 
@@ -178,9 +180,11 @@ export default function Editor() {
         <div className="seg" role="group" aria-label="Program tab view">
           <button type="button" className={view === 'program' ? 'on' : ''} aria-pressed={view === 'program'} onClick={() => setView('program')}>Programs</button>
           <button type="button" className={view === 'exercises' ? 'on' : ''} aria-pressed={view === 'exercises'} onClick={() => setView('exercises')}>Exercise library</button>
+          <button type="button" className={view === 'stretches' ? 'on' : ''} aria-pressed={view === 'stretches'} onClick={() => setView('stretches')}>Stretch library</button>
+          <button type="button" className={view === 'supplements' ? 'on' : ''} aria-pressed={view === 'supplements'} onClick={() => setView('supplements')}>Supplement library</button>
         </div>
       </div>
-      {view === 'program' ? <ProgramEditor /> : <ExerciseLibrary />}
+      {view === 'program' ? <ProgramEditor /> : view === 'stretches' ? <StretchLibrary /> : view === 'supplements' ? <SupplementLibrary /> : <ExerciseLibrary />}
     </>
   );
 }

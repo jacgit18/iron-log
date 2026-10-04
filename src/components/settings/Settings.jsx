@@ -202,7 +202,7 @@ const ERASE = [
   ['logs', 'Logged sessions', 'every weight, set and rep, including ones logged by check-offs'],
   ['weeks', 'Weekly check-offs', 'checked, skipped and moved cards, and phase changes, for every week'],
   ['body', 'Body weight', ''],
-  ['programs', 'Edited programs, saved versions and the Experiment list', 'the board goes back to the original programs'],
+  ['programs', 'Edited programs, saved versions and the Experiment list', 'the Workout tab goes back to the original programs'],
   ['settings', 'Settings and 1RMs', 'program mode, rest time, phase percentages, 1RMs, phase defaults, custom exercises and muscle tags'],
 ];
 function ErasePanel() {

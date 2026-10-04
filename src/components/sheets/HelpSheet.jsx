@@ -1,6 +1,5 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.jsx';
-import { FEATURES } from '../../lib/features.js';
 
 const GLOSSARY = [
   ['1RM (one-rep max)', 'The heaviest weight you can lift once with good form. Enter it and targets are worked out as a percentage of it.'],
@@ -9,8 +8,7 @@ const GLOSSARY = [
   ['Sets × reps', 'How much to do, for example 4 × 6 means 4 sets of 6 repetitions. For holds, 4 × 30 s means 4 holds of 30 seconds.'],
   ['Experiments', 'A list under the board of exercises you want to try. Add one to a day of this week and it shows as a normal card for that week only; Remove takes it off again. The list itself stays for later weeks.'],
   ['Add exercise', 'Each day has a + Add exercise button. It opens the add sheet where you pick Primary or Accessory, the section, and single, superset or either/or, and it joins that day of the program every week. + Only this week adds a one-week card instead (Remove takes it off again).'],
-  FEATURES.stretches && ['Stretch', 'An exercise marked as a stretch or mobility has no weight, reps or phase, only a checkbox, and isn’t counted toward muscles. Stretches are listed under the Warm-up on each day.'],
-  ['Details', `Each exercise card has a Details button for its name (your own exercises), video link, equipment, 1RM, muscles${FEATURES.stretches ? ', stretch setting' : ''} and a default phase that applies to every card with that exercise.`],
+  ['Details', 'Each exercise card has a Details button for its name (your own exercises), video link, equipment, 1RM, muscles and a default phase that applies to every card with that exercise.'],
   ['Exercise library', 'On the Program tab, Exercise library lists every exercise with what is set on it. Search, filter by equipment or muscle, edit one exercise in one place, or add a new one. Changes apply everywhere it is used.'],
   ['Sort and filter', 'Above the days, Sort by muscle lists the cards that train that muscle first in each day (primary, then secondary, then the rest). Equipment hides cards that use something else. The day counts stay the same.'],
   ['Phase', 'The goal of an exercise right now. Each phase has its own sets, reps and share of your 1RM. Mobility is for stretching and mobility work: like Isometric its sets are holds in seconds, and it has no share of a 1RM.'],
@@ -44,10 +42,11 @@ export default function HelpSheet() {
       <section aria-labelledby="help-how">
         <h3 id="help-how">How Iron Log works</h3>
         <ol className="helpsteps">
-          <li><b>Board.</b> Each day of your plan is a column. Tick an exercise when you have done it. On a phone, use the day buttons (D1 to D7) to change days.</li>
+          <li><b>Workout.</b> Each day of your plan is a column. Tick an exercise when you have done it. On a phone, use the day buttons (D1 to D7) to change days.</li>
           <li><b>Log.</b> Press Log on an exercise to record the weight and reps of each set. Same as last copies your previous session.</li>
           <li><b>Targets.</b> The weight shown on each exercise is a suggestion. It goes up when you complete all your sets two sessions in a row.</li>
           <li><b>Move or skip.</b> If equipment is busy, use Move to put an exercise on another day, or Skip to leave it out this week.</li>
+          <li><b>Stretches</b> is a daily stretch routine laid out like the Workout week: tick each stretch, add one to try from Experiments. Edit the routine in Program, Stretch library. <b>Supplements</b> logs the water you drink, by cup or bottle size, against a daily goal.</li>
           <li><b>Progress</b> shows your trends, <b>Muscles</b> shows which muscles your plan trains, <b>Program</b> lets you change the plan, and <b>Settings</b> holds your 1RMs, backups and display options.</li>
         </ol>
       </section>

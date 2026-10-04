@@ -1,0 +1,105 @@
+/* ---------- Stretches: the routine, the library and the week's check-offs ----------
+   items: [{id, n, url, note, group, tier}]. tier 'primary' is on the board every day, 'secondary' sits under
+   "Once in a while", '' is only kept in the library. Order in the array is the order shown.
+   A stretch week is {done: {"<day 0-6>:<id>": true}, skipped: {"<day 0-6>": true}, extra: [{id, day, n, url, note}]}: the week's check-offs,
+   plus stretches added to one day from the Experiment list. */
+
+const S = (id, n, group, tier, extra = {}) => ({ id, n, group, tier, ...extra });
+const yt = id => `https://youtu.be/${id}`;
+export const DEFAULT_STRETCHES = [
+  S('scarecrow', 'Scarecrow', 'Bands', 'primary', { url: yt('qzNQ3_TQHDs') }),
+  S('v-raise', 'V Raise', 'Bands', 'primary', { url: yt('5WBdE0TSoUQ'), note: 'Cross' }),
+  S('spinal-twist', 'Supine Spinal Twist', 'Back', 'primary', { url: 'https://www.youtube.com/watch?v=mNdJti7ZwKI' }),
+  S('reverse-plank', 'Reverse Plank', 'Back', 'primary', { url: yt('mwaEHn2mZsE') }),
+  S('crab-position', 'Crab Position', 'Back', 'primary', { url: yt('2AWWezRz3cI'), note: 'Flow into it from the reverse plank' }),
+  S('hip-switch-90', '90/90 Hip Switch', 'Back', 'primary', { url: 'https://www.youtube.com/watch?v=qq_Z7sAmVrA' }),
+  S('sky-squat-reach', 'Sky Squat Reach', 'Squatting', 'primary', { url: 'https://www.youtube.com/watch?v=Zv1wILGzeec', note: 'Or Deep Squat Band Single Arm Reach, or BJJ Hip Switch to Extension' }),
+  S('bjj-roll-up', 'BJJ Roll Up', 'Squatting', 'primary'),
+  S('duck-walk', 'Duck Walk', 'Squatting', 'primary'),
+  S('wall-angels', 'Wall Angels', 'Standing', 'primary', { url: yt('ywYi4rBhRBQ') }),
+  S('shoulder-arm-circles', 'Shoulder and Arm Circles', 'Standing', 'primary'),
+  S('up-kicks-leg-swings', 'Up Kicks or Leg Swings', 'Standing', 'primary'),
+  S('superman-roll', 'Grounded Superman Roll', 'On stomach', 'secondary'),
+  S('scorpion', 'Scorpion Stretch', 'On stomach', 'secondary', { url: yt('uNDfgnWN2G0'), note: 'Be on the side of your face' }),
+  S('prayer-stretch', 'Elevated Prayer Stretch', 'Squatting', 'secondary', { url: yt('c7cnNg6rBes'), note: 'On a bench or cube' }),
+  S('twisted-arms', 'Twisted Arms', 'Standing', 'secondary'),
+  S('twisted-leg-reach', 'Twisted Leg Reach', 'Standing', 'secondary'),
+  S('deep-squat-band-reach', 'Deep Squat Band Single Arm Reach', 'Squatting', '', { url: yt('qQCc_zulZpg') }),
+  S('bjj-hip-switch-ext', 'BJJ Hip Switch to Extension', 'Squatting', ''),
+];
+
+export const TIERS = [['primary', 'Every day'], ['secondary', 'Once in a while'], ['', 'Library only']];
+export const tierLabel = t => (TIERS.find(([k]) => k === t) || TIERS[2])[1];
+export const STRETCH_DAYS = 7;
+export const DEFAULT_GROUP = 'Other';
+
+const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+const goodUrl = u => !u || /^https?:\/\//.test(u);
+
+// Whatever was saved, cleaned: bad rows dropped, ids unique. A doc that was never saved is the default routine.
+export function normStretches(d) {
+  if (!d || typeof d !== 'object' || !Array.isArray(d.items)) return { items: structuredClone(DEFAULT_STRETCHES), experiments: normExperiments(d && d.experiments) };
+  const seen = new Set(); const items = [];
+  d.items.forEach(x => {
+    if (!x || typeof x !== 'object' || !str(x.id, 60) || !str(x.n, 80) || seen.has(x.id)) return;
+    seen.add(x.id);
+    items.push({ id: x.id, n: str(x.n, 80), group: str(x.group, 40) || DEFAULT_GROUP, tier: x.tier === 'primary' || x.tier === 'secondary' ? x.tier : '', ...(goodUrl(str(x.url, 500)) && str(x.url, 500) ? { url: str(x.url, 500) } : {}), ...(str(x.note, 200) ? { note: str(x.note, 200) } : {}) });
+  });
+  return { items, experiments: normExperiments(d.experiments) };
+}
+export function normExperiments(list) {
+  const seen = new Set();
+  return (Array.isArray(list) ? list : []).filter(x => x && typeof x === 'object' && str(x.id, 60) && str(x.n, 80) && !seen.has(x.id) && seen.add(x.id))
+    .map(x => ({ id: x.id, n: str(x.n, 80), ...(goodUrl(str(x.url, 500)) && str(x.url, 500) ? { url: str(x.url, 500) } : {}), ...(str(x.note, 200) ? { note: str(x.note, 200) } : {}) }));
+}
+export function normStretchWeek(w) {
+  const out = { done: {}, skipped: {}, extra: [] };
+  if (!w || typeof w !== 'object') return out;
+  if (w.done && typeof w.done === 'object') Object.keys(w.done).forEach(k => { if (w.done[k] && /^[0-6]:.+/.test(k)) out.done[k] = true; });
+  if (w.skipped && typeof w.skipped === 'object') Object.keys(w.skipped).forEach(k => { if (w.skipped[k] && /^[0-6]$/.test(k)) out.skipped[k] = true; });
+  (Array.isArray(w.extra) ? w.extra : []).forEach(x => {
+    if (x && typeof x === 'object' && str(x.id, 60) && str(x.n, 80) && Number.isInteger(x.day) && x.day >= 0 && x.day < STRETCH_DAYS && !out.extra.some(e => e.id === x.id)) {
+      out.extra.push({ id: x.id, day: x.day, n: str(x.n, 80), ...(goodUrl(str(x.url, 500)) && str(x.url, 500) ? { url: str(x.url, 500) } : {}), ...(str(x.note, 200) ? { note: str(x.note, 200) } : {}) });
+    }
+  });
+  return out;
+}
+export const stretchWeekEmpty = w => !Object.keys(w.done).length && !Object.keys(w.skipped).length && !w.extra.length;
+
+// Items of one tier, grouped by their group name in order of first appearance.
+export function groupsOf(items, tier) {
+  const out = [];
+  items.filter(i => i.tier === tier).forEach(i => {
+    let g = out.find(x => x.name === i.group);
+    if (!g) { g = { name: i.group, items: [] }; out.push(g); }
+    g.items.push(i);
+  });
+  return out;
+}
+export const doneKey = (day, id) => `${day}:${id}`;
+export const isStretchDone = (week, day, id) => !!week.done[doneKey(day, id)];
+export const isDaySkipped = (week, day) => !!week.skipped[day];
+export const extrasOn = (week, day) => week.extra.filter(x => x.day === day);
+
+// A day counts its every-day stretches and what was added to it; "once in a while" ones don't count toward done.
+export function dayTally(items, week, day) {
+  if (isDaySkipped(week, day)) return { done: 0, total: 0, full: false, skipped: true };
+  const ids = [...items.filter(i => i.tier === 'primary').map(i => i.id), ...extrasOn(week, day).map(x => x.id)];
+  const done = ids.filter(id => isStretchDone(week, day, id)).length;
+  return { done, total: ids.length, full: ids.length > 0 && done === ids.length };
+}
+export const weekDaysDone = (items, week) => Array.from({ length: STRETCH_DAYS }, (_, d) => d).filter(d => dayTally(items, week, d).full).length;
+export const weekDaysCounted = week => STRETCH_DAYS - Object.keys(week.skipped).length; // a skipped day isn't counted for or against the week
+
+// Drop check-offs for a stretch that was deleted from the library.
+export function withoutStretch(week, id) {
+  const done = {}; Object.keys(week.done).forEach(k => { if (k.slice(2) !== id) done[k] = true; });
+  return { ...week, done };
+}
+
+export function newStretchId(items, name) {
+  const base = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'stretch';
+  const taken = new Set(items.map(i => i.id)); let id = base, n = 2;
+  while (taken.has(id)) id = `${base}-${n++}`;
+  return id;
+}

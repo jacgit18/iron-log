@@ -269,7 +269,7 @@ export function autoLogs(cfg, logs, slots, before, after, wk, date, { removeLogg
   const out = {};
   slots.forEach(s => s.items.forEach((it, i) => {
     const was = isItemDone(s, i, before), now = isItemDone(s, i, after);
-    if (was === now || (now && exInfo(cfg, it.ex).stretch)) return; // a stretch has no weight or reps to log
+    if (was === now) return;
     const L = out[it.ex] || logs[it.ex] || [];
     const here = e => e.slot === s.id && weekOfEntry(e) === wk;
     if (now) {

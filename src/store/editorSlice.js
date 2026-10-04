@@ -1,9 +1,8 @@
 import { BUILTIN, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { progName, dayAt } from '../lib/logic.js';
-import { FEATURES } from '../lib/features.js';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
-export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home', ...(FEATURES.stretches ? ['Stretches'] : [])];
+export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home'];
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 export const blankItem = () => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
 
@@ -32,11 +31,11 @@ export const editorSlice = (set, get, flag) => ({
 
   // The board's + Add exercise: the add sheet, aimed at the program on the board and the program day shown in
   // column `col`. The target travels with the sheet, so the Program tab's own selection is untouched.
-  openAddToProgram(col, preset) {
+  openAddToProgram(col) {
     const pd = dayAt(get().week, col);
     if (pd == null) { flag('That is your rest day'); return; }
     const ak = get().activeProgKey();
-    set({ modal: { type: 'slot', idx: null, preset, col, target: { key: get().programs[ak] ? ak : 'A', day: pd } } });
+    set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd } } });
   },
   setEdProg: edProg => set({ edProg }),
   setEdDay: edDay => set({ edDay }),
@@ -131,7 +130,7 @@ export const editorSlice = (set, get, flag) => ({
     const slugFor = name => newExId(get().cfg, name, newEx);
     const items = d.items.map(it => {
       let ex = it.ex;
-      if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}), ...(it.ns ? { stretch: true } : {}) }; }
+      if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}) }; }
       else get().applyExerciseUrl(ex, it.nu);
       const o = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
     });

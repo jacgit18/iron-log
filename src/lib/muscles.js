@@ -67,23 +67,20 @@ export const BACK = [
 
 export const tagsOf =(cfg, id) => (cfg.muscleMap && cfg.muscleMap[id]) || MUSCLE_MAP[id] || null;
 // Board filter: a card matches when any of its exercises trains the muscle (primary or secondary) and uses the equipment.
-// muscle 'stretch' matches stretches.
 export function matchesFilter(cfg, s, { muscle = '', eq = '' }) {
   return s.items.some(it => {
     const info = exInfo(cfg, it.ex);
     if (eq && info.eq !== eq) return false;
     if (!muscle) return true;
-    if (muscle === 'stretch') return !!info.stretch;
     const tg = tagsOf(cfg, it.ex);
     return !!tg && !tg.mob && [...(tg.p || []), ...(tg.s || [])].includes(muscle);
   });
 }
 // Board sort by muscle: 0 = an exercise on the card trains it as a primary muscle, 1 = as a secondary one,
-// 2 = not at all. muscle 'stretch' puts stretches first.
+// 2 = not at all.
 export function muscleRank(cfg, s, muscle) {
   let best = 2;
   s.items.forEach(it => {
-    if (muscle === 'stretch') { if (exInfo(cfg, it.ex).stretch) best = 0; return; }
     const tg = tagsOf(cfg, it.ex); if (!tg || tg.mob) return;
     if ((tg.p || []).includes(muscle)) best = 0; else if ((tg.s || []).includes(muscle) && best > 1) best = 1;
   });
@@ -96,7 +93,6 @@ export function muscleVolume(cfg, week, prog, live, withSecondary) {
   const vol = {}; M_KEYS.forEach(k => { vol[k] = { sets: 0, ex: [] }; });
   const untagged = new Set();
   (live ? weekSlots(prog, week) : slotsFor(prog)).forEach(sl => sl.items.forEach((it, idx) => {
-    if (exInfo(cfg, it.ex).stretch) return; // stretches aren't counted
     const tg = tagsOf(cfg, it.ex); if (!tg) { untagged.add(it.ex); return; } if (tg.mob) return;
     const ph = live ? phaseOf(cfg, week, sl, idx) : defaultPhase(cfg, sl, idx);
     const m = rxOf(cfg, it, ph).match(/(\d+)\s*×/); const sets = (m ? Number(m[1]) : 3) * (sl.type === 'either' ? 0.5 : 1);
