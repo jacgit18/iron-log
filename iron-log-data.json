@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-04T15:24:02.315Z",
+ "exportedAt": "2026-10-04T15:29:02.177Z",
  "config": {
   "muscleMap": {},
   "ex": {
@@ -16,6 +16,10 @@
     "n": "Split Stance Cable Hip Rotation",
     "url": "https://youtu.be/ixIEilUM2aY",
     "eq": "cable"
+   },
+   "clean-jerk-overhead-press": {
+    "n": "Clean Jerk & Overhead Press",
+    "eq": "dumbbell"
    }
   },
   "mode": 2,
@@ -90,10 +94,10 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "15dqvqq",
+   "hash": "jd0ayc",
    "last": {
-    "at": "2026-10-03T13:49:23.534Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/20cd6d3d4efda877aa668cc99be7edb20a759be7"
+    "at": "2026-10-04T15:24:05.090Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/31a63f35c5396fef9883932e703c0f0dd264248e"
    }
   },
   "progNames": {
@@ -1426,17 +1430,6 @@
       },
       {
        "sec": "Regular",
-       "items": [
-        {
-         "ex": "dbclean",
-         "ph": "exp",
-         "w": 20
-        }
-       ],
-       "id": "B-d5s2"
-      },
-      {
-       "sec": "Regular",
        "type": "either",
        "tier": "Accessory",
        "items": [
@@ -1621,6 +1614,17 @@
         }
        ],
        "id": "B-d6s6"
+      },
+      {
+       "id": "B-d5s2",
+       "sec": "Regular",
+       "items": [
+        {
+         "ex": "clean-jerk-overhead-press",
+         "ph": "exp",
+         "w": 20
+        }
+       ]
       }
      ]
     },
