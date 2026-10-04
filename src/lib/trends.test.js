@@ -44,16 +44,16 @@ describe('weekSummary: the weekly history row', () => {
     expect(weekSummary(cfg({ mode: 2, m2Even: 'A' }), programs, '2026-09-20', { ...w, prog: 'A' }).pk).toBe('A'); // switched that week
     expect(weekSummary(cfg({ mode: 1 }), programs, '2026-09-20', { ...w, prog: 'B' }).pk).toBe('A'); // mode 1 is always A
   });
-  it('counts the rest day as complete and shifts later workouts one day', () => {
+  it('leaves the rest day as not started and shifts later workouts one day', () => {
     // Rest on day 2: a, b stay on day 1; c (planned day 2) shows on day 3; d (planned day 3) on day 4.
     const r = weekSummary(cfg(), programs, '2026-09-20', { done: { a: true, 'b#0': true, 'b#1': true, c: true }, skipped: {}, moved: {}, rest: 2 });
-    expect(r.days).toEqual([2, 2, 2, 0, 0, 0, 0]);
-    expect(r.full).toBe(3);
+    expect(r.days).toEqual([2, 0, 2, 0, 0, 0, 0]);
+    expect(r.full).toBe(2);
     expect(r).toMatchObject({ ex: 4, total: 5 }); // the rest day adds no exercises
   });
-  it('does not count a rest Day 7 as complete when a card sits in it', () => {
+  it('does not count a rest Day 7 as complete', () => {
     const w7 = { done: {}, skipped: {}, moved: { c: 7 }, rest: 7 };
-    expect(weekSummary(cfg(), programs, '2026-09-20', { ...w7, moved: {} }).days[6]).toBe(2);
+    expect(weekSummary(cfg(), programs, '2026-09-20', { ...w7, moved: {} }).days[6]).toBe(0);
   });
   it('reads 6 days with an empty, non-rest Day 7', () => {
     const all = { done: { a: true, 'b#0': true, 'b#1': true, c: true, d: true }, skipped: {}, moved: {} };
