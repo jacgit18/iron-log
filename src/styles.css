@@ -395,14 +395,12 @@ body.timing{padding-bottom:130px}
 .tbl td:first-child{min-width:110px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:700px){
-  :root{--tabbar:105px}
+  :root{--tabbar:58px}
   body{padding-bottom:calc(var(--tabbar) + 72px + env(safe-area-inset-bottom, 0px))}
   header.top{padding-block:12px 6px;gap:8px 12px}
   header.top h1{font-size:24px}
   .tabs{position:fixed;left:0;right:0;bottom:0;margin:0;border-radius:0;z-index:15;padding:6px 8px calc(6px + env(safe-area-inset-bottom, 0px));background:var(--surface);border-top:1px solid var(--line);justify-content:space-around}
-  .tabs .tablist{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
-  .tabs button{padding:10px 2px;font-size:13px;min-width:0}
-  @media (max-width:340px){.tabs button{font-size:11.5px;padding-inline:0}}
+  .tabs button{flex:1;padding:10px 0;font-size:13.5px;min-width:0}
   .weekbar{gap:8px}
   .weeknav h2{min-width:0;font-size:20px}
   .progress{width:100%}

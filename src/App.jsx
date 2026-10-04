@@ -4,10 +4,8 @@ import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
 import Board from './components/board/Board.jsx';
-import Stretches from './components/stretches/Stretches.jsx';
-import Supplements from './components/supplements/Supplements.jsx';
+import Daily from './components/daily/Daily.jsx';
 import Progress from './components/progress/Progress.jsx';
-import Muscles from './components/muscles/Muscles.jsx';
 import Editor from './components/program/Editor.jsx';
 import Settings from './components/settings/Settings.jsx';
 import TimerBar from './components/TimerBar.jsx';
@@ -25,7 +23,7 @@ import ImportSheet from './components/sheets/ImportSheet.jsx';
 import HelpSheet from './components/sheets/HelpSheet.jsx';
 import UpdateBanner from './components/UpdateBanner.jsx';
 
-const TABS = [['board', 'Workout', Board], ['stretches', 'Stretches', Stretches], ['supplements', 'Supplements', Supplements], ['progress', 'Progress', Progress], ['body', 'Muscles', Muscles], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
+const TABS = [['board', 'Workout', Board], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
 function Modal() {
   const modal = useAppStore(s => s.modal);

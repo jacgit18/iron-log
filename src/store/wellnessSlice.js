@@ -14,6 +14,9 @@ export const wellnessSlice = (set, get, flag) => ({
   strWeek: normStretchWeek(null), // the viewed week's check-offs
   supp: normSupplements(null), // {waterGoal, water: {date: [oz]}}
 
+  dailyView: 'stretches', // which section of the Daily tab is open
+  setDailyView: dailyView => set({ dailyView }),
+
   saveStretches() { get().saveDoc('stretches/main', { items: get().stretches, experiments: get().stretchExps }); },
   saveStrWeek() { get().saveDoc('stretchweeks/' + get().weekKey(), get().strWeek); },
   saveSupp() { get().saveDoc('supplements/main', get().supp); },

@@ -13,8 +13,8 @@ describe('view state', () => {
     expect(loadView('2026-10-02')).toEqual({ tab: 'progress', mDay: 3 });
   });
   it('drops the phone day on a later day but keeps the tab', () => {
-    saveView('2026-10-02', { tab: 'body', mDay: 3 });
-    expect(loadView('2026-10-03')).toEqual({ tab: 'body' });
+    saveView('2026-10-02', { tab: 'daily', mDay: 3 });
+    expect(loadView('2026-10-03')).toEqual({ tab: 'daily' });
   });
   it('ignores junk and missing storage', () => {
     store['ironlog-view'] = '{"tab":"nope","mDay":99,"day":"x"}';
