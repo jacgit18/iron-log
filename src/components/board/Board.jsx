@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { WARMUP, EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
+import { EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { monday, ymd, addDays, fmtShort, fmtDayDate } from '../../lib/dates.js';
 import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
@@ -9,6 +9,7 @@ import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
+import WarmUp from './WarmUp.jsx';
 import { FEATURES } from '../../lib/features.js';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
@@ -302,16 +303,7 @@ export default function Board() {
                 <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>
                 <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>
               </div>
-              <div className="warm">
-                <span className="tag">Warm-up</span>
-                {WARMUP.map(x => (
-                  <label key={x.id}>
-                    <input type="checkbox" className="chk" id={`warm-${d}-${x.id}`} checked={!!warm[x.id]}
-                      onChange={e => st.setWarm(d, x.id, e.target.checked)} />
-                    {x.id === 'sled' && prog.warm ? prog.warm : x.n} <span className="rx">· {x.rx}</span>
-                  </label>
-                ))}
-              </div>
+              <WarmUp d={d} warm={warm} />
               {FEATURES.stretches && <div className="stretches" role="group" aria-label={`Stretches, Day ${d}`}>
                 <div className="stretchhead">
                   <span className="tag">Stretches</span>

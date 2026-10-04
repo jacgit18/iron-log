@@ -259,6 +259,9 @@ body.timing{padding-bottom:130px}
 .sect.donesect{border-top:1px solid var(--line);margin-top:6px;padding-top:10px}
 .warm{display:flex;flex-direction:column;gap:4px;background:var(--surface);border-radius:8px;padding:8px 10px;font-size:13px}
 .warm label{display:flex;gap:8px;align-items:center}
+.warmhead,.warmrow{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.warmadd{display:flex;flex-wrap:wrap;gap:6px}
+.warmadd input{flex:1 1 120px;min-width:0}
 .warm .chk{width:18px;height:18px}
 .warm .chk:checked::after{width:8px;height:5px}
 

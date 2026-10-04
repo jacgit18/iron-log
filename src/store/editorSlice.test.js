@@ -33,7 +33,7 @@ describe('editing a program', () => {
   });
   it('does nothing when moving past either end', () => {
     st().moveEdSlot(0, -1);
-    st().moveEdSlot(8, 1);
+    st().moveEdSlot(9, 1);
     expect(ids(day1())).toEqual(builtinA());
   });
   it('removes a card and sets or clears a day’s subtitle', () => {
@@ -48,7 +48,7 @@ describe('editing a program', () => {
     st().setEdDay(3);
     st().removeEdSlot(0);
     expect(st().edProgram().days[2].slots).toHaveLength(BUILTIN.A.days[2].slots.length - 1);
-    expect(day1()).toHaveLength(9);
+    expect(day1()).toHaveLength(10);
   });
 });
 
@@ -57,15 +57,15 @@ describe('the add/edit exercise sheet', () => {
     expect(st().saveSlot(newCard())).toBeNull();
     expect(day1()[5]).toMatchObject({ sec: 'Regular', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] });
     st().saveSlot(newCard({ sec: 'Plyometric' }));
-    expect(day1().map(s => s.sec).slice(-3)).toEqual(['Plyometric', 'Home', 'Home']);
+    expect(day1().map(s => s.sec).slice(-4)).toEqual(['Plyometric', 'Home', 'Home', 'Optional']);
     st().saveSlot(newCard({ sec: 'Home' }));
-    expect(day1().at(-1).items[0].ex).toBe('arnold');
+    expect(day1().at(-2).items[0].ex).toBe('arnold'); // lands before the trailing Optional sled card
   });
   it('keeps an edited card in its place with its id', () => {
     const orig = day1()[2];
     st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15 }] }));
     expect(day1()[2]).toMatchObject({ id: orig.id, items: [{ ex: 'platerot', ph: 'hyp', w: 15 }] });
-    expect(day1()).toHaveLength(9);
+    expect(day1()).toHaveLength(10);
   });
   it('moves an edited card to another day', () => {
     const orig = day1()[0];
@@ -139,7 +139,7 @@ describe('creating a program', () => {
     st().createProgram('My plan', 'A');
     st().removeEdSlot(0);
     expect(st().programs.A).toBe(BUILTIN.A);
-    expect(st().library[0].prog.days[0].slots).toHaveLength(8);
+    expect(st().library[0].prog.days[0].slots).toHaveLength(9);
     st().renameLibItem('Renamed');
     expect(st().edName()).toBe('Renamed');
   });
