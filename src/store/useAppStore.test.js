@@ -5,12 +5,12 @@ import { FEATURES } from '../lib/features.js';
 // Most tests cover the stretch feature as built; one block checks it switched off.
 FEATURES.stretches = true;
 
-let useAppStore, BUILTIN, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf;
+let useAppStore, BUILTIN, warmupOf, withAllDays, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf;
 const st = () => useAppStore.getState();
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
-  ({ BUILTIN } = await import('../lib/data.js'));
+  ({ BUILTIN, warmupOf, withAllDays } = await import('../lib/data.js'));
   ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf } = await import('../lib/logic.js'));
   await st().init();
 });
@@ -80,6 +80,38 @@ describe('checking off on the board', () => {
     expect(st().logs.facepull).toBeUndefined();
     st().skipCard('A-d3s1');
     expect(st().logs.hack).toEqual([]);
+  });
+});
+
+describe('warm-up list', () => {
+  it('starts with Shadow box only, and items can be added and removed', () => {
+    expect(warmupOf(st().cfg).map(x => x.id)).toEqual(['shadow']);
+    expect(st().addWarmup('  ', '')).toBe(false);
+    expect(st().addWarmup(' Band pull-aparts ', '2 × 15')).toBe(true);
+    const [a, b] = warmupOf(st().cfg);
+    expect(b).toMatchObject({ n: 'Band pull-aparts', rx: '2 × 15' });
+    st().removeWarmup(a.id);
+    expect(warmupOf(st().cfg).map(x => x.n)).toEqual(['Band pull-aparts']);
+    st().removeWarmup(b.id);
+    expect(warmupOf(st().cfg)).toEqual([]); // an emptied list stays empty
+  });
+});
+
+describe('sled cards', () => {
+  it('are Optional Explosive 1 × 3 cards on every day with exercises, push → lateral pull in A and push → pull in B', () => {
+    [['A', 'sledlat'], ['B', 'sled']].forEach(([k, ex]) => {
+      const days = BUILTIN[k].days.filter(d => d.slots.length);
+      expect(days.length).toBeGreaterThan(0);
+      days.forEach(d => expect(d.slots.at(-1)).toMatchObject({ note: 'Optional', items: [{ ex, ph: 'exp', rx: '1 × 3' }] }));
+    });
+  });
+  it('are added once to a saved program, so deleting one stays deleted', () => {
+    const saved = { days: [{ title: 'Day 1', slots: [{ sec: 'Regular', items: [{ ex: 'hack' }] }] }, { title: 'Day 2', slots: [] }, ...Array.from({ length: 4 }, (_, i) => ({ title: `Day ${i + 3}`, slots: [] }))] };
+    const once = withAllDays(saved);
+    expect(once.days[0].slots).toHaveLength(2);
+    expect(once.days[1].slots).toHaveLength(0);
+    const trimmed = { ...once, days: once.days.map((d, i) => (i ? d : { ...d, slots: d.slots.slice(0, 1) })) };
+    expect(withAllDays(trimmed).days[0].slots).toHaveLength(1);
   });
 });
 

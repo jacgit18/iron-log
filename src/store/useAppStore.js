@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BUILTIN, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
+import { BUILTIN, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
@@ -391,6 +391,12 @@ export const useAppStore = create((set, get) => ({
     const pd = dayAt(get().week, day); if (pd == null) return;
     get().mutateWeek(w => { w.warm[pd] = w.warm[pd] || {}; w.warm[pd][wid] = on; });
   },
+  addWarmup(n, rx) {
+    const name = String(n || '').trim().slice(0, 60); if (!name) return false;
+    get().mutateCfg(c => { c.warmup = [...warmupOf(c), { id: `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, n: name, rx: String(rx || '').trim().slice(0, 40) }]; });
+    return true;
+  },
+  removeWarmup(id) { get().mutateCfg(c => { c.warmup = warmupOf(c).filter(x => x.id !== id); }); },
   // Cards a rest day on column n would push off the board and that are still in play (not skipped).
   restOverflow(n) { const w = get().week; return restsOf(w).includes(n) ? [] : overflowSlots(w, get().activeSlots(), n).filter(s => !isSkipped(s, w)); },
   // Tick or untick a rest day. A week can have several. Ticking one that would push workouts off the board is

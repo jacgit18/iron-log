@@ -14,10 +14,15 @@ export const DAY_COUNT = 7;
 export const hasValidDays = p => !!p && Array.isArray(p.days) && p.days.length >= 6 && p.days.length <= DAY_COUNT;
 // Day 5 and 6 once shipped with these subtitles; saved copies of the program still carry them.
 const OLD_SUBS = new Set(['Upper body + rotational power', 'Lower body + reactive power']);
+// The sled push used to be a warm-up checkbox. It is now an optional Explosive card (1 × 3) on every day that has
+// exercises, once per program (`sledAdded`), so deleting it later sticks. Appended, so existing slot ids don't shift.
+const sledCard = key => ({ sec: 'Optional', note: 'Optional', items: [{ ex: key === 'B' ? 'sled' : 'sledlat', ph: 'exp', w: null, rx: '1 × 3' }] });
 export function withAllDays(prog) {
-  const days = prog.days.map(d => (d && OLD_SUBS.has(d.sub) ? (({ sub, ...rest }) => rest)(d) : d)); // eslint-disable-line no-unused-vars
+  let days = prog.days.map(d => (d && OLD_SUBS.has(d.sub) ? (({ sub, ...rest }) => rest)(d) : d)); // eslint-disable-line no-unused-vars
+  const sled = !prog.sledAdded && !days.some(d => d && d.slots && d.slots.some(sl => sl.items.some(it => it.ex === 'sled' || it.ex === 'sledlat')));
+  if (sled) days = days.map(d => (d && d.slots && d.slots.length ? { ...d, slots: [...d.slots, sledCard(prog.key)] } : d));
   while (days.length < DAY_COUNT) days.push({ title: `Day ${days.length + 1}`, slots: [] });
-  return { ...prog, days };
+  return { ...prog, days, sledAdded: true };
 }
 export const padLibrary = items => items.map(it => (it && hasValidDays(it.prog) ? { ...it, prog: withAllDays(it.prog) } : it));
 
@@ -72,6 +77,8 @@ export const EX = {
   bss: { n: 'Bulgarian Split Squat', eq: 'dumbbell' },
   legcurl: { n: 'Prone Leg Curl', eq: 'machine' },
   cablepunch: { n: 'Cable Punch ISO hold', eq: 'cable' },
+  sledlat: { n: 'Sled push → lateral pull', eq: 'other' },
+  sled: { n: 'Sled push → pull', eq: 'other' },
 };
 
 // item: {ex, ph, w (lb), bw, rx (custom when phase==ph), note}
@@ -147,7 +154,6 @@ const PROGRAM_A = {
 
 const EITHER_CARRY = { type: 'either', tier: 'Primary', items: [I('farmers', 'strength', 40), I('dblunge', 'strength', 40)], note: 'Whichever is free' };
 const PROGRAM_B = {
-  warm: 'Sled push → pull',
   days: [
     { title: 'Day 1', slots: [
       { sec: 'Regular', tier: 'Primary', items: [I('latpdbi', 'hyp', 45)] },
@@ -214,7 +220,9 @@ const PROGRAM_B = {
     ] },
   ],
 };
-export const WARMUP = [{ id: 'shadow', n: 'Shadow box', rx: 'as you feel' }, { id: 'sled', n: 'Sled push → lateral pull', rx: '1 × 3, explosive' }];
+export const WARMUP = [{ id: 'shadow', n: 'Shadow box', rx: 'as you feel' }];
+// The warm-up list is editable: cfg.warmup replaces the default once the user changes it.
+export const warmupOf = cfg => (Array.isArray(cfg.warmup) ? cfg.warmup : WARMUP);
 
 PROGRAM_A.key = 'A'; PROGRAM_B.key = 'B';
 [PROGRAM_A, PROGRAM_B].forEach(p => { p.days = withAllDays(p).days; });

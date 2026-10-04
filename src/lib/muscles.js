@@ -33,6 +33,7 @@ export const MUSCLE_MAP = {
   farmers: { p: ['forearms', 'traps'], s: ['obliques', 'abs'] }, dblunge: { p: ['quads', 'glutes'], s: ['adductors', 'hamstrings'] },
   ohtri: { p: ['triceps'] }, bss: { p: ['quads', 'glutes'], s: ['adductors', 'hamstrings'] }, legcurl: { p: ['hamstrings'], s: ['calves'] },
   cablepunch: { p: ['obliques', 'abs'], s: ['chest', 'frontdelt'] },
+  sledlat: { p: ['quads', 'glutes'], s: ['lats', 'obliques', 'calves'] }, sled: { p: ['quads', 'glutes'], s: ['lats', 'upperback', 'calves'] },
 };
 // Left-half shapes (x < 100); mirrored for the right side.
 export const SIL = 'M100 44 L92 44 L92 56 Q72 58 62 62 Q50 66 48 84 L50 132 L44 170 L44 212 Q47 226 54 228 Q60 226 60 212 L64 150 L68 112 L72 150 L72 200 L68 214 Q64 270 72 322 Q68 360 74 404 L70 414 L97 414 L96 372 Q98 340 96 322 Q100 280 99 250 L100 244 Z';
