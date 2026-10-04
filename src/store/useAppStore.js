@@ -3,7 +3,7 @@ import { BUILTIN, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, fin
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
-  setCardDone, setItemDone, clearDone, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
+  setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -259,13 +259,13 @@ export const useAppStore = create((set, get) => ({
     const ok = get().mutateChecks(w => {
       w.skipped = w.skipped || {};
       if (w.skipped[slotId]) delete w.skipped[slotId];
-      else { w.skipped[slotId] = true; skipped = true; if (s) clearDone(w, s); else delete w.done[slotId]; }
+      else { w.skipped[slotId] = true; skipped = true; if (s) clearForSkip(w, s); else delete w.done[slotId]; }
     });
     if (ok) flag(skipped ? 'Skipped for this week' : 'Skip undone');
   },
   // Yesterday's leftovers: skip or move a batch of cards at once.
   skipCards(ids) {
-    const ok = get().mutateChecks(w => ids.forEach(id => { const s = get().slotById(id); w.skipped[id] = true; if (s) clearDone(w, s); }));
+    const ok = get().mutateChecks(w => ids.forEach(id => { const s = get().slotById(id); w.skipped[id] = true; if (s) clearForSkip(w, s); }));
     if (ok) flag(`Skipped ${ids.length} for this week`);
   },
   moveCards(ids, day) {

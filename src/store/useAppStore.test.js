@@ -58,6 +58,17 @@ describe('checking off on the board', () => {
     expect(st().logs.latpd).toHaveLength(1); // the other card's log is untouched
   });
 
+  it('skipping a half-done superset keeps the ticked exercise done', () => {
+    const slot = st().activeSlots().find(s => s.id === 'A-d1s6');
+    st().checkItem('A-d1s6', 0, true);
+    st().skipCard('A-d1s6');
+    expect(st().week.skipped['A-d1s6']).toBe(true);
+    expect(st().week.done['A-d1s6#0']).toBe(true);
+    expect(tally([slot], st().week)).toMatchObject({ total: 1, done: 1, skipped: 1 });
+    st().skipCard('A-d1s6'); // undo the skip: the tick is still there
+    expect(st().week.done['A-d1s6#0']).toBe(true);
+  });
+
   it('checking a whole day logs every card on it, and skipping a card removes its entry', () => {
     st().checkDay(3, true);
     const day3 = st().activeSlots().filter(s => s.day === 3);

@@ -143,6 +143,8 @@ export const unitsOf = s => s.type === 'superset' ? s.items.length : 1;
 export const doneUnitsOf = (s, w) => s.type === 'superset' ? s.items.filter((_, i) => isItemDone(s, i, w)).length : (isDone(s, w) ? 1 : 0);
 
 export function clearDone(week, s) { if (!week.done) return; delete week.done[s.id]; s.items.forEach((_, i) => delete week.done[itemKey2(s, i)]); }
+// Skipping a card clears its done marks, except the exercises already ticked in a half-done superset: those stay done.
+export function clearForSkip(week, s) { if (s.type === 'superset' && !(week.done && week.done[s.id])) return; clearDone(week, s); }
 export function setCardDone(week, s, on) { clearDone(week, s); if (on) { week.done[s.id] = true; if (week.skipped) delete week.skipped[s.id]; } }
 export function setItemDone(week, s, idx, on) {
   if (!isPaired(s)) return setCardDone(week, s, on);
@@ -155,7 +157,7 @@ export function setItemDone(week, s, idx, on) {
 // Totals for any list of cards. Skipped cards are left out of total and done.
 export function tally(slots, w) {
   let total = 0, done = 0, skipped = 0;
-  slots.forEach(s => { if (isSkipped(s, w)) { skipped++; return; } total += unitsOf(s); done += doneUnitsOf(s, w); });
+  slots.forEach(s => { if (isSkipped(s, w)) { skipped++; if (s.type === 'superset') { const n = doneUnitsOf(s, w); total += n; done += n; } return; } total += unitsOf(s); done += doneUnitsOf(s, w); });
   return { total, done, skipped, full: total > 0 && done === total };
 }
 /* ---------- Days and the rest day ----------
