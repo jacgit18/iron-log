@@ -23,7 +23,7 @@ import { MUSCLE_MAP } from '../lib/muscles.js';
 import { bestLift, liftGoalsOf, goalPhaseLabel, GOAL_KEYS } from '../lib/liftGoal.js';
 import { loadView, saveView } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
-import { validRm, validLiftGoalLb, validBodyLb, normEntry, normEntries, normBody, normProgram, normLibrary } from '../lib/validate.js';
+import { validRm, validLiftGoalLb, validBodyLb, normEntry, normEntries, normBody, normProgram, normLibrary, nowStamp, SCHEMA_VERSION } from '../lib/validate.js';
 import { commitFiles, readFile, validRepo } from '../lib/github.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
@@ -240,10 +240,10 @@ export const useAppStore = create((set, get) => ({
     // Keep a loaded history in step, so an export, backup, import or erase after visiting another week sees this edit.
     if (get().weekHist) set(s => ({ weekHist: { ...s.weekHist, [key]: s.week } }));
   },
-  saveBody() { queue.save('body/main', { entries: get().body }); },
-  saveLibrary() { queue.save('library/main', { items: get().library }); },
-  saveExperiments() { queue.save('experiments/main', { items: get().experiments }); },
-  saveLog(exId) { queue.save('logs/' + exId, { entries: get().logs[exId] || [] }); },
+  saveBody() { queue.save('body/main', { schema: SCHEMA_VERSION, entries: get().body }); },
+  saveLibrary() { queue.save('library/main', { schema: SCHEMA_VERSION, items: get().library }); },
+  saveExperiments() { queue.save('experiments/main', { schema: SCHEMA_VERSION, items: get().experiments }); },
+  saveLog(exId) { queue.save('logs/' + exId, { schema: SCHEMA_VERSION, entries: get().logs[exId] || [] }); },
   saveProgram(k, prog) {
     const body = structuredClone(prog); delete body.key;
     set(state => ({ programs: { ...state.programs, [k]: { ...body, key: k } } }));
@@ -588,7 +588,7 @@ export const useAppStore = create((set, get) => ({
     const ex = s.items[idx].ex;
     // Real numbers replace the planned ones a check-off logged for this card this week.
     const planned = e => e.auto && e.slot === entry.slot && e.wk === entry.wk;
-    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...clean, id: clean.id || newEntryId() }].sort((a, b) => a.d.localeCompare(b.d));
+    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...clean, id: clean.id || newEntryId(), updatedAt: nowStamp() }].sort((a, b) => a.d.localeCompare(b.d));
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
     // Ticked the way the board ticks: picking the other half of an either/or drops the first one's check-off, and it can finish a day.
     if (check) get().mutateChecks(w => setItemDone(w, s, idx, true));
@@ -669,7 +669,7 @@ export const useAppStore = create((set, get) => ({
     const clean = normEntry(entry); if (!clean) { flag('That session has an invalid date'); return false; }
     const L = get().logs[exId] || []; const i = findEntry(L, target);
     if (i < 0) { flag('That session changed meanwhile. Open it again.'); return false; }
-    const arr = [...L]; arr[i] = { ...clean, id: entryId(L[i]) };
+    const arr = [...L]; arr[i] = { ...clean, id: entryId(L[i]), updatedAt: nowStamp() };
     arr.sort((a, b) => a.d.localeCompare(b.d));
     set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId);
     flag('Session updated'); return true;
@@ -715,7 +715,7 @@ export const useAppStore = create((set, get) => ({
     const n = Number(v); if (!validBodyLb(n)) { flag('Enter your weight in lb'); return false; }
     const wk = get().weekKey(); const today = ymd(new Date());
     const d = (today >= wk && today <= ymd(addDays(get().weekStart, 6))) ? today : wk;
-    set(state => ({ body: [...state.body.filter(e => e.wk !== wk), { wk, d, w: Math.round(n * 10) / 10 }].sort((a, b) => a.wk.localeCompare(b.wk)) }));
+    set(state => ({ body: [...state.body.filter(e => e.wk !== wk), { wk, d, w: Math.round(n * 10) / 10, updatedAt: nowStamp() }].sort((a, b) => a.wk.localeCompare(b.wk)) }));
     get().saveBody();
     const g = get().cfg.bwGoal; if (g && !g.start) get().mutateCfg(c => { c.bwGoal = { ...g, start: { w: Math.round(n * 10) / 10, d } }; }); // first weigh-in after setting a goal
     flag('Body weight saved'); return true;

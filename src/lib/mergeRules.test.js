@@ -13,6 +13,15 @@ describe('mergeEntries', () => {
   it('skips an incoming entry whose id exists, even if its content differs (local wins)', () => {
     expect(mergeEntries([real()], [real({ w: 999 })])).toEqual([real()]);
   });
+  it('same id: the incoming copy replaces this one only when both have an updatedAt and it is later', () => {
+    const old = real({ updatedAt: '2026-10-05T10:00:00.000Z' });
+    const later = real({ w: 120, updatedAt: '2026-10-05T11:00:00.000Z' });
+    expect(mergeEntries([old], [later])).toEqual([later]);                       // edited later elsewhere: it wins
+    expect(mergeEntries([later], [old])).toEqual([later]);                       // older copy: this device wins
+    expect(mergeEntries([old], [{ ...later, updatedAt: old.updatedAt }])).toEqual([old]); // same time: this device wins
+    expect(mergeEntries([real()], [later])).toEqual([real()]);                   // this one has no timestamp: stays
+    expect(mergeEntries([old], [real({ w: 120 })])).toEqual([old]);              // incoming has none: stays
+  });
   it('skips an incoming entry whose content matches, even under another id', () => {
     expect(mergeEntries([real()], [real({ id: 'other' })])).toEqual([real()]);
   });

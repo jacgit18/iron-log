@@ -33,6 +33,13 @@ LIMITS.hold = { max: 86400 };    // seconds
 LIMITS.sets = { max: 200 };
 LIMITS.text = { note: 500, id: 100, slot: 80 };
 
+// Version of the stored document shapes (logs, body, library, experiments). Bump when a shape changes, so a migration knows what it is reading.
+export const SCHEMA_VERSION = 1;
+// When a record was last changed by the user: an ISO date-time. Lets a merge (or a server) tell which of two copies is newer.
+export const nowStamp = () => new Date().toISOString();
+export const validStamp = s => typeof s === 'string' && s.length <= 40 && /^\d{4}-\d{2}-\d{2}T/.test(s) && !Number.isNaN(Date.parse(s));
+const stampOf = e => (validStamp(e.updatedAt) ? e.updatedAt : undefined);
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export const validDate = s => {
   if (typeof s !== 'string' || !DATE_RE.test(s)) return false;
@@ -75,6 +82,7 @@ export function normEntry(e) {
   if (validDate(e.wk)) out.wk = e.wk;
   const id = text(e.id, LIMITS.text.id); if (id) out.id = id;
   if (e.auto === true) out.auto = true;
+  const at = stampOf(e); if (at) out.updatedAt = at;
   return out;
 }
 export const normEntries = list => (Array.isArray(list) ? list : []).map(normEntry).filter(Boolean);
@@ -85,7 +93,8 @@ export function normBody(list) {
   (Array.isArray(list) ? list : []).forEach(e => {
     if (!isObj(e) || !validDate(e.wk) || !validDate(e.d) || out.some(x => x.wk === e.wk)) return;
     const w = cleanNum(e.w, validBodyLb); if (w == null) return;
-    out.push({ wk: e.wk, d: e.d, w });
+    const at = stampOf(e);
+    out.push({ wk: e.wk, d: e.d, w, ...(at ? { updatedAt: at } : {}) });
   });
   return out;
 }

@@ -1,4 +1,5 @@
 import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
+import { nowStamp } from './validate.js';
 import { monday, ymd, parseDate, addDays } from './dates.js';
 
 /* ---------- Config defaults ---------- */
@@ -454,7 +455,7 @@ export const newEntryId = () => 'L' + Date.now().toString(36) + Math.random().to
 // The planned numbers a check-off logs for item i of card s.
 export function autoEntry(cfg, logs, s, i, week, wk, date) {
   const it = s.items[i]; const ph = phaseOf(cfg, week, s, i);
-  return { id: newEntryId(), d: date, ph, ...summarizeSets(planRows(cfg, logs, it, ph), isTimed(ph)), slot: s.id, wk, auto: true };
+  return { id: newEntryId(), d: date, ph, ...summarizeSets(planRows(cfg, logs, it, ph), isTimed(ph)), slot: s.id, wk, auto: true, updatedAt: nowStamp() };
 }
 export function autoLogs(cfg, logs, slots, before, after, wk, date, { removeLogged = false } = {}) {
   const out = {};

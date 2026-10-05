@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BUILTIN } from './data.js';
-import { normProgram, normLibrary, normEntry, normEntries, normBody, setError, validDate, validBodyLb, validLiftGoalLb, validRest, validPct, validRm, validMode, validOz, validGoal } from './validate.js';
+import { validStamp, SCHEMA_VERSION, normProgram, normLibrary, normEntry, normEntries, normBody, setError, validDate, validBodyLb, validLiftGoalLb, validRest, validPct, validRm, validMode, validOz, validGoal } from './validate.js';
 import { normalizeData, normConfig } from './export.js';
 import { normWeek } from './logic.js';
 
@@ -176,4 +176,19 @@ describe('normProgram and normLibrary', () => {
     expect(d.programs.B).toBeUndefined();
     expect(d.library.map(x => x.id)).toEqual(['v1']);
   });
+});
+
+describe('updatedAt', () => {
+  it('accepts ISO date-times and nothing else', () => {
+    ['2026-10-05T10:00:00.000Z', '2026-10-05T10:00:00+02:00'].forEach(v => expect(validStamp(v)).toBe(true));
+    ['2026-10-05', 'yesterday', '', null, 5, '2026-13-45T99:00:00Z', 'x'.repeat(50)].forEach(v => expect(validStamp(v)).toBe(false));
+  });
+  it('is kept on sessions and body weights when valid and dropped when not', () => {
+    const at = '2026-10-05T10:00:00.000Z';
+    expect(normEntry({ d: '2026-10-05', updatedAt: at }).updatedAt).toBe(at);
+    expect('updatedAt' in normEntry({ d: '2026-10-05', updatedAt: 'soon' })).toBe(false);
+    expect(normBody([{ wk: '2026-10-05', d: '2026-10-05', w: 180, updatedAt: at }])[0].updatedAt).toBe(at);
+    expect('updatedAt' in normBody([{ wk: '2026-10-05', d: '2026-10-05', w: 180, updatedAt: 1 }])[0]).toBe(false);
+  });
+  it('schema version starts at 1', () => { expect(SCHEMA_VERSION).toBe(1); });
 });
