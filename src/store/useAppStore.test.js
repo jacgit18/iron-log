@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { mem, clearStorage, saved } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, warmupOf, withAllDays, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf;
+let useAppStore, BUILTIN, warmupOf, withAllDays, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf, orderOf;
 const st = () => useAppStore.getState();
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
   ({ BUILTIN, warmupOf, withAllDays } = await import('../lib/data.js'));
-  ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf } = await import('../lib/logic.js'));
+  ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf, orderOf } = await import('../lib/logic.js'));
   await st().init();
 });
 beforeEach(() => {
@@ -794,38 +794,73 @@ describe('exercise library', () => {
 });
 
 // Program A: Leg Extension is on Days 2 and 3, so finishing Day 2 suggests a new order for Days 3 to 6 (the empty Day 7 stays last).
-describe('a new day order after a day is finished', () => {
+describe('a suggestion after a day is finished', () => {
   const day2 = () => currentLayout(st().week, st().activeSlots())[2];
+  // The cards that make a day count as finished: not the Optional sled, not Home cards.
+  const workout = () => day2().filter(s => s.sec !== 'Optional' && s.sec !== 'Home');
   beforeEach(() => useAppStore.setState({ orderNote: null, orderSkip: [] }));
 
-  it('finishing a day by its box suggests an order; Apply writes it and Put back restores it', () => {
+  // Program A: Leg Extension (A-d3s5) is on Days 2 and 3.
+  it('finishing Day 2 suggests moving one card; Apply moves it and Put back restores it', () => {
     st().checkDay(2, true);
     const n = st().orderNote;
-    expect(n.doneCol).toBe(2);
-    expect(n.next.order).toEqual([1, 2, 6, 5, 4, 3, 7]);
-    expect(n.lines.length).toBeGreaterThan(1);
-    expect(st().week.order).toBeUndefined(); // nothing changes until Apply
+    expect(n).toMatchObject({ kind: 'card', doneCol: 2, prev: { slot: 'A-d3s5', moved: null }, next: { slot: 'A-d3s5', moved: 4 }, applied: false });
+    expect(n.lines.join(' ')).toBe('Leg Extension ISO hold is on Day 2 and Day 3. Moving Leg Extension ISO hold from Day 3 to Day 4 fixes it.');
+    expect(st().week.moved).toEqual({}); // nothing changes until Apply
     expect(st().applyOrder()).toBe(true);
-    expect(st().week.order).toEqual([1, 2, 6, 5, 4, 3, 7]);
-    expect(saved('weeks/' + st().weekKey()).order).toEqual([1, 2, 6, 5, 4, 3, 7]);
+    expect(st().week.moved).toEqual({ 'A-d3s5': 4 });
+    expect(saved('weeks/' + st().weekKey()).moved).toEqual({ 'A-d3s5': 4 });
+    expect(st().week.order).toBeUndefined();
     expect(st().orderNote.applied).toBe(true);
     expect(st().canUndoOrder()).toBe(true);
     expect(st().undoOrder()).toBe(true);
-    expect(st().week.order).toBeUndefined();
+    expect(st().week.moved).toEqual({});
     expect(st().orderNote).toBeNull();
+  });
+  it('Put back of a card that was already moved puts it back where it was', () => {
+    // Leg Extension's entry already says Day 3 (where it is), and another card was moved earlier this week.
+    st().mutateWeek(w => { w.moved['A-d3s5'] = 3; w.moved['A-d1s1'] = 5; });
+    st().checkDay(2, true);
+    expect(st().orderNote.prev).toEqual({ slot: 'A-d3s5', moved: 3 });
+    st().applyOrder();
+    expect(st().week.moved).toEqual({ 'A-d1s1': 5, 'A-d3s5': 4 });
+    st().undoOrder();
+    expect(st().week.moved).toEqual({ 'A-d1s1': 5, 'A-d3s5': 3 });
+  });
+  it('Put back is refused once that card was moved again', () => {
+    st().checkDay(2, true); st().applyOrder();
+    st().mutateWeek(w => { w.moved['A-d3s5'] = 6; });
+    expect(st().canUndoOrder()).toBe(false);
+    expect(st().undoOrder()).toBe(false);
+    expect(st().week.moved['A-d3s5']).toBe(6);
   });
   it('after Apply there is still room for a rest day: nothing is pushed off the week', () => {
     st().checkDay(1, true);
     expect(st().applyOrder()).toBe(true);
-    expect(st().week.order[6]).toBe(7); // the empty Day 7 stayed last
+    expect(orderOf(st().week)[6]).toBe(7); // the empty Day 7 stayed last
     expect(st().restOverflow(2)).toEqual([]);
     expect(st().setRestDay(2)).toBe(true);
     expect(Object.keys(st().week.skipped)).toEqual([]);
   });
-  it('ticking the last card of a day raises it, and not before', () => {
-    const cards = day2();
+  it('ticking the last workout card raises it, with the sled and Home cards left unticked', () => {
+    const cards = workout();
+    expect(day2().length).toBeGreaterThan(cards.length); // there are sled and Home cards to leave alone
     cards.slice(0, -1).forEach(s => { st().checkCard(s.id, true); expect(st().orderNote).toBeNull(); });
     st().checkCard(cards[cards.length - 1].id, true);
+    expect(st().orderNote.doneCol).toBe(2);
+    expect(tally(day2(), st().week).full).toBe(false); // the day's box stays unticked
+  });
+  it('ticking a Home card on a finished day raises nothing new', () => {
+    st().checkDay(2, true); st().dismissOrder();
+    useAppStore.setState({ orderSkip: [] });
+    const home = day2().find(s => s.sec === 'Home');
+    st().checkCard(home.id, false); st().checkCard(home.id, true);
+    expect(st().orderNote).toBeNull();
+  });
+  it('finishing a day by skipping its last card raises it too', () => {
+    const cards = workout();
+    cards.slice(0, -1).forEach(s => st().checkCard(s.id, true));
+    st().skipCard(cards[cards.length - 1].id);
     expect(st().orderNote.doneCol).toBe(2);
   });
   it('unticking clears a suggestion not yet applied, and raises none', () => {
@@ -833,17 +868,11 @@ describe('a new day order after a day is finished', () => {
     st().checkDay(2, false);
     expect(st().orderNote).toBeNull();
   });
-  it('skipping the last open card finishes the day without a suggestion', () => {
-    const cards = day2();
-    cards.slice(0, -1).forEach(s => st().checkCard(s.id, true));
-    st().skipCard(cards[cards.length - 1].id);
-    expect(tally(day2(), st().week).full).toBe(true);
-    expect(st().orderNote).toBeNull();
-  });
-  it('can move the rest day, which keeps its date', () => {
+  it('moving the rest day still comes first, and keeps its date', () => {
     st().setRestDay(6);
     const restOn = st().week.restOn;
     st().checkDay(2, true);
+    expect(st().orderNote.kind).toBe('order');
     expect(st().orderNote.next.rest).toEqual([3]);
     st().applyOrder();
     expect(st().week.rest).toEqual([3]);
@@ -852,8 +881,23 @@ describe('a new day order after a day is finished', () => {
     st().undoOrder();
     expect(st().week.rest).toEqual([6]);
   });
-  it('Put back is refused once the order was changed some other way', () => {
-    st().checkDay(2, true); st().applyOrder();
+  it('a day order wins when one card cannot fix it: Apply writes it, Put back restores it, refused once changed', () => {
+    // Hack Squat twice on Day 3 (next to Day 2's) and Leg Extension on Days 3 and 4: moving one card fixes one pair
+    // at most, swapping whole days fixes both.
+    const day = (...exs) => ({ title: '', slots: exs.map(ex => ({ items: [{ ex, ph: 'hyp' }] })) });
+    const prog = { ...BUILTIN.A, days: [day('latpd'), day('hack'), day('hack', 'hack', 'legext'), day('legext', 'wristpd'), day('platerot'), day('cablecrunch'), day()] };
+    useAppStore.setState({ programs: { A: prog, B: BUILTIN.B } });
+    st().checkDay(2, true);
+    const n = st().orderNote;
+    expect(n.kind).toBe('order');
+    expect(n.next.order).not.toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(st().applyOrder()).toBe(true);
+    expect(st().week.order).toEqual(n.next.order);
+    expect(st().week.moved).toEqual({});
+    expect(st().undoOrder()).toBe(true);
+    expect(st().week.order).toBeUndefined();
+    st().checkDay(2, false); useAppStore.setState({ orderNote: null, orderSkip: [] }); st().checkDay(2, true);
+    st().applyOrder();
     st().mutateWeek(w => { w.order = [2, 1, 3, 4, 5, 6, 7]; });
     expect(st().canUndoOrder()).toBe(false);
     expect(st().undoOrder()).toBe(false);
@@ -876,15 +920,17 @@ describe('a new day order after a day is finished', () => {
   });
 });
 
-// Through the store: Apply only moves days (check-offs, logs, skips and moves stay), and Put back restores the week exactly.
-describe('applying a suggested order keeps every card and can be put back exactly', () => {
+// Through the store: Apply changes only the order and rest days, or one card's week.moved, and Put back restores
+// the week exactly. Every rest day, finishing each early day, on both programs.
+describe('applying a suggestion keeps every card and can be put back exactly', () => {
   beforeEach(() => useAppStore.setState({ orderNote: null, orderSkip: [] }));
   const where = () => { const m = {}; Object.entries(currentLayout(st().week, st().activeSlots())).forEach(([c, l]) => l.forEach(s => { (m[s.id] = m[s.id] || []).push(Number(c)); })); return m; };
 
-  [null, 2, 3, 4, 5, 6, 7].forEach(rest => [1, 2, 3, 4].forEach(day => {
-    it(`rest ${rest ?? 'none'}, finishing Day ${day}`, () => {
+  ['A', 'B'].forEach(prog => [null, 2, 3, 4, 5, 6, 7].forEach(rest => [1, 2, 3, 4].forEach(day => {
+    it(`Program ${prog}, rest ${rest ?? 'none'}, finishing Day ${day}`, () => {
+      st().setWeekProg(prog);
       if (rest) st().setRestDay(rest);
-      st().checkCard('A-d6s2', true); // a check-off elsewhere in the week
+      st().checkCard(`${prog}-d6s2`, true); // a check-off elsewhere in the week
       st().checkDay(day, true);
       const n = st().orderNote; if (!n) return; // nothing to suggest here
       const before = structuredClone(st().week); const logs = structuredClone(st().logs); const pos = where();
@@ -894,14 +940,23 @@ describe('applying a suggested order keeps every card and can be put back exactl
       Object.values(moved).forEach(cs => expect(cs.length).toBe(1)); // none duplicated
       expect(after.done).toEqual(before.done);
       expect(after.skipped).toEqual(before.skipped);
-      expect(after.moved).toEqual(before.moved);
       expect(after.restOn).toEqual(before.restOn);
       expect(st().logs).toEqual(logs);
+      if (n.kind === 'card') {
+        expect(after.order).toEqual(before.order);
+        expect(after.rest).toEqual(before.rest);
+        const { [n.next.slot]: _, ...rest0 } = after.moved; const { [n.next.slot]: __, ...rest1 } = before.moved; // eslint-disable-line no-unused-vars
+        expect(rest0).toEqual(rest1); // only that card's entry changed
+        Object.keys(pos).forEach(id => { if (id !== n.next.slot) expect(moved[id]).toEqual(pos[id]); }); // every other card stays
+        expect(moved[n.next.slot]).not.toEqual(pos[n.next.slot]);
+      } else {
+        expect(after.moved).toEqual(before.moved);
+      }
       expect(st().undoOrder()).toBe(true);
       expect(st().week).toEqual(before);
       expect(where()).toEqual(pos);
     });
-  }));
+  })));
 });
 
 describe('log sheet target', () => {

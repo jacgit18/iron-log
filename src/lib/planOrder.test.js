@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { BUILTIN, DAY_COUNT } from './data.js';
 import {
   DEFAULT_CFG, DAYS, normWeek, weekSlots, currentLayout, planOrder, clashCount, isOrder, orderOf, restsOf,
-  isItemDone, isSkipped, overflowSlots, dayAt,
+  isItemDone, isSkipped, overflowSlots, dayAt, planCard, planFix, countsForClash, countsForFinish, dailyExercises,
 } from './logic.js';
 
 // A small seeded random generator, so a failure always reproduces with the same seed.
@@ -15,7 +15,8 @@ function rng(seed) {
 const pick = (r, xs) => xs[Math.floor(r() * xs.length)];
 const shuffle = (r, xs) => { const a = [...xs]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
-// A made-up program: 1-6 cards per day from a small exercise pool (so repeats are common), some days left empty.
+// A made-up program: 1-6 cards per day from a small exercise pool (so repeats are common), some days left empty,
+// with supersets, either/or, Home and Optional cards.
 function randomSlots(r) {
   const pool = ['sq', 'bench', 'row', 'press', 'curl', 'lunge', 'dl', 'pull'];
   const slots = [];
@@ -27,6 +28,7 @@ function randomSlots(r) {
       if (kind < 0.15) slots.push({ id: `d${d}s${i}`, day: d, type: 'superset', items: [{ ex: pick(r, pool) }, { ex: pick(r, pool) }] });
       else if (kind < 0.25) slots.push({ id: `d${d}s${i}`, day: d, type: 'either', items: [{ ex: pick(r, pool) }, { ex: pick(r, pool) }] });
       else if (kind < 0.35) slots.push({ id: `d${d}s${i}`, day: d, type: 'single', sec: 'Home', items: [{ ex: pick(r, pool) }] });
+      else if (kind < 0.4) slots.push({ id: `d${d}s${i}`, day: d, type: 'single', sec: 'Optional', items: [{ ex: pick(r, pool) }] });
       else slots.push({ id: `d${d}s${i}`, day: d, type: 'single', items: [{ ex: pick(r, pool) }] });
     }
   });
@@ -166,4 +168,124 @@ describe('planOrder never loses, duplicates or splits a card', () => {
       if (plan) expect(Object.keys(plan).sort()).toEqual(['after', 'before', 'lines', 'order', 'rest']);
     }
   });
+});
+
+/* ---------- v2: moving one card ----------
+   Every legal single-card move, found independently of planCard, so its choice can be checked against them all. */
+function cardMoves(week, slots, doneCol) {
+  const cols = currentLayout(week, slots); const daily = dailyExercises(week, slots).sort().join();
+  const open = DAYS.filter(c => c > doneCol && dayAt(week, c) != null && cols[c].length > 0 && !started(week, cols[c]));
+  const out = [];
+  open.forEach(from => cols[from].forEach(s => {
+    if (!countsForClash(s) || isSkipped(s, week)) return;
+    if (!cols[from].some(o => o !== s && countsForFinish(o))) return; // never empties a day
+    open.forEach(to => {
+      if (to === from) return;
+      if (cols[to].some(o => !isSkipped(o, week) && countsForClash(o) && o.items.some(x => s.items.some(it => it.ex === x.ex)))) return; // no same-day double
+      const pd = dayAt(week, to);
+      const moved = { ...week.moved }; if (pd === s.day) delete moved[s.id]; else moved[s.id] = pd;
+      const cand = { ...week, moved };
+      if (dailyExercises(cand, slots).sort().join() !== daily) return; // every-day exercises unchanged
+      out.push({ slot: s.id, from, to, pd, cand, after: clashCount(cand, slots, doneCol) });
+    });
+  }));
+  return out;
+}
+
+// Every promise planCard makes, checked on one week and finished column.
+function checkCard(cfg, week, slots, doneCol) {
+  const copy = structuredClone(week);
+  const plan = planCard(cfg, week, slots, doneCol);
+  expect(week).toEqual(copy); // not mutated
+  const before = clashCount(week, slots, doneCol);
+  const moves = cardMoves(week, slots, doneCol);
+  const min = Math.min(Infinity, ...moves.map(m => m.after));
+  if (!plan) { expect(before === 0 || !(min < before), 'a card move would have helped').toBe(true); return null; }
+
+  expect(Object.keys(plan).sort()).toEqual(['after', 'before', 'from', 'lines', 'pd', 'slot', 'to']);
+  const chosen = moves.find(m => m.slot === plan.slot && m.to === plan.to);
+  expect(chosen, `move ${plan.slot} -> ${plan.to} is legal`).toBeTruthy();
+  expect(plan.pd).toBe(chosen.pd);
+  expect(plan.from).toBe(chosen.from);
+
+  // The best one: fewest repeats, then nearest, then the later day.
+  expect(plan.before).toBe(before);
+  expect(plan.after).toBe(min);
+  expect(plan.after).toBe(chosen.after);
+  expect(plan.after).toBeLessThan(plan.before);
+  const near = Math.min(...moves.filter(m => m.after === min).map(m => Math.abs(m.to - m.from)));
+  expect(Math.abs(plan.to - plan.from)).toBe(near);
+
+  // Applied: that card is on the target once, every other card stays put, fixed columns are untouched.
+  const b = where(week, slots), a = where(chosen.cand, slots);
+  expect([...a.keys()].sort()).toEqual([...b.keys()].sort());
+  slots.forEach(s => {
+    expect((a.get(s.id) || []).length, `card ${s.id} appears once`).toBe((b.get(s.id) || []).length);
+    if (s.id === plan.slot) expect(a.get(s.id)).toEqual([plan.to]);
+    else expect(a.get(s.id), `card ${s.id} stays`).toEqual(b.get(s.id));
+  });
+  const colsB = currentLayout(week, slots), colsA = currentLayout(chosen.cand, slots);
+  DAYS.forEach(c => {
+    if (c <= doneCol || started(week, colsB[c]) || dayAt(week, c) == null || colsB[c].length === 0) expect(colsA[c].map(s => s.id), `column ${c} is fixed`).toEqual(colsB[c].map(s => s.id));
+  });
+  expect(colsA[plan.from].some(countsForFinish), 'the day it left keeps a workout').toBe(true);
+  expect(plan.lines.at(-1)).toMatch(new RegExp(`^Moving .+ from Day ${plan.from} to Day ${plan.to} (fixes it|leaves \\d+ back-to-back repeats? instead of ${plan.before})\\.$`));
+  return plan;
+}
+
+// planFix picks rest day first, then a card, then a reorder only when it leaves fewer repeats.
+function checkFix(cfg, week, slots, doneCol) {
+  const fix = planFix(cfg, week, slots, doneCol);
+  const order = planOrder(cfg, week, slots, doneCol); const card = planCard(cfg, week, slots, doneCol);
+  // A rest-day-only order keeps the workouts in the same sequence.
+  const seq = w => DAYS.filter(c => !restsOf(w).includes(c)).map(c => dayAt(w, c)).join();
+  const restOnly = order && seq({ ...week, order: order.order, rest: order.rest }) === seq(week);
+  if (!order && !card) expect(fix).toBeNull();
+  else if (restOnly) expect(fix).toEqual({ kind: 'order', ...order });
+  else if (card && (!order || card.after <= order.after)) expect(fix).toEqual({ kind: 'card', ...card });
+  else expect(fix).toEqual({ kind: 'order', ...order });
+  return fix;
+}
+
+describe('planCard moves one card and never loses, duplicates or misplaces any', () => {
+  const cfg = structuredClone(DEFAULT_CFG);
+
+  it('on the built-in programs, from every finished day, with random rest days, orders and moves', () => {
+    let plans = 0;
+    ['A', 'B'].forEach(k => {
+      const slots = weekSlots(BUILTIN[k], normWeek(null));
+      for (let seed = 1; seed <= 150; seed++) {
+        const w = randomWeek(rng(seed * 13 + k.charCodeAt(0)), slots);
+        DAYS.forEach(c => { const x = finish(w, slots, c); if (checkCard(cfg, x, slots, c)) plans++; checkFix(cfg, x, slots, c); });
+      }
+    });
+    expect(plans).toBeGreaterThan(50);
+  }, 60000);
+
+  it('on random programs with supersets, either/or, Home and Optional cards and empty days', () => {
+    let plans = 0, cards = 0, orders = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const r = rng(seed + 5000);
+      const slots = randomSlots(r);
+      const w = randomWeek(r, slots);
+      DAYS.forEach(c => {
+        const x = finish(w, slots, c);
+        if (checkCard(cfg, x, slots, c)) plans++;
+        const f = checkFix(cfg, x, slots, c); if (f?.kind === 'card') cards++; if (f?.kind === 'order') orders++;
+      });
+    }
+    expect(plans).toBeGreaterThan(100);
+    expect(cards).toBeGreaterThan(50); // both kinds really get chosen
+    expect(orders).toBeGreaterThan(20);
+  }, 60000);
+
+  it('on a clean week of each built-in program, with each single rest day', () => {
+    ['A', 'B'].forEach(k => {
+      const slots = weekSlots(BUILTIN[k], normWeek(null));
+      [null, ...DAYS].forEach(rest => {
+        let w = normWeek(rest ? { rest: [rest] } : null);
+        DAYS.forEach(c => { w = finish(w, slots, c); checkCard(cfg, w, slots, c); checkFix(cfg, w, slots, c); });
+      });
+    });
+  }, 60000);
 });
