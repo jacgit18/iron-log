@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-05T10:49:05.478Z",
+ "exportedAt": "2026-10-05T10:56:54.679Z",
  "config": {
   "muscleMap": {},
   "ex": {
@@ -105,13 +105,6 @@
    "A": "Program A - Unilateral",
    "B": "Program B - Bilateral"
   },
-  "bwGoal": {
-   "w": 155,
-   "start": {
-    "w": 130,
-    "d": "2026-10-02"
-   }
-  },
   "liftGoals": {
    "deadlift": {
     "exp": {
@@ -126,6 +119,13 @@
      "w": 225,
      "start": 0
     }
+   }
+  },
+  "bwGoal": {
+   "w": 155,
+   "start": {
+    "w": 130,
+    "d": "2026-10-02"
    }
   }
  },
@@ -3052,7 +3052,8 @@
     "B-d5s2": 6,
     "B-d1s3": 6,
     "B-d1s9": 2,
-    "B-d1s5": 5
+    "B-d1s5": 5,
+    "B-d2s8": 1
    },
    "ph": {},
    "warm": {},
@@ -3222,7 +3223,18 @@
   ],
   "experiments": []
  },
- "stretchWeeks": {},
+ "stretchWeeks": {
+  "2026-10-04": {
+   "done": {
+    "0:spinal-twist": true,
+    "0:reverse-plank": true,
+    "0:bjj-roll-up": true,
+    "0:duck-walk": true
+   },
+   "skipped": {},
+   "extra": []
+  }
+ },
  "supplements": {
   "waterGoal": 64,
   "waterMode": "weight",
