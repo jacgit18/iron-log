@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-05T10:48:43.321Z",
+ "exportedAt": "2026-10-05T10:49:05.478Z",
  "config": {
   "muscleMap": {},
   "ex": {
@@ -95,10 +95,10 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "jd0ayc",
+   "hash": "w210d7",
    "last": {
-    "at": "2026-10-04T15:24:05.090Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/31a63f35c5396fef9883932e703c0f0dd264248e"
+    "at": "2026-10-05T10:48:46.014Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/97bdc9b38051ba269c0413b769896aa3cf71c092"
    }
   },
   "progNames": {
@@ -3228,6 +3228,9 @@
   "waterMode": "weight",
   "water": {
    "2026-10-04": [
+    22
+   ],
+   "2026-10-05": [
     22
    ]
   },
