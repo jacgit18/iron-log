@@ -2,7 +2,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.jsx';
 
 const GLOSSARY = [
-  ['1RM (one-rep max)', 'The heaviest weight you can lift once with good form. Enter it and the first target in each phase is worked out as a percentage of it.'],
+  ['1RM (one-rep max)', 'The heaviest weight you can lift once with good form. It is kept for reference and doesn’t set targets.'],
   ['lb', 'Pounds, the unit for every weight in the app.'],
   ['Bodyweight', 'No added weight: the exercise uses your own body.'],
   ['Sets × reps', 'How much to do, for example 4 × 6 means 4 sets of 6 repetitions. For holds, 4 × 30 s means 4 holds of 30 seconds.'],
@@ -16,7 +16,7 @@ const GLOSSARY = [
   ['Isometric (ISO)', 'Holding still under load instead of moving, timed in seconds. The Hold button runs the timer.'],
   ['Hypertrophy', 'Moderate weight, more reps, to build muscle size (about 65% of your 1RM).'],
   ['Explosive', 'Light weight moved as fast as possible, for power (about 45% of your 1RM).'],
-  ['Target', 'The weight suggested for today: the weight you last logged in that phase, or else your 1RM, or the program weight.'],
+  ['Target', 'The weight suggested for today: the weight you last logged in that phase, or else the program weight.'],
   ['Stalled', 'Your last 3 sessions of a lift, over at least 2 weeks, didn’t go up in weight or reps.'],
   ['Superset (A → B)', 'Two exercises done back to back. Each has its own checkbox.'],
   ['Either / or', 'Do one of the two, whichever equipment is free. It counts once.'],

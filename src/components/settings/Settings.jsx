@@ -113,7 +113,7 @@ function PhasePanel() {
   return (
     <section className="panel">
       <h2>Phases</h2>
-      <p>Target weight = your 1RM × the phase %, until you log that exercise in the phase. After that, the target starts from the weight you last logged. Rounded to 2.5 lb under 50 lb, 5 lb above.</p>
+      <p>Each phase has default sets × reps. The target weight starts from the weight you last logged for that exercise in that phase, otherwise the program's weight. The % of 1RM is only for comparing with your 1RM below; it doesn't set targets.</p>
       <div className="tbl">
         <table>
           <thead><tr><th>Phase</th><th>% of 1RM</th><th>Sets × reps</th></tr></thead>
@@ -285,7 +285,7 @@ function PhaseWeights({ list, rm, cfg }) {
   return list.map(({ ph, w }) => {
     const pct = ph && cfg ? (cfg.pct[ph] ?? PHASES[ph].pct) : 0;
     return (
-      <div key={`${ph}:${w}`} className="phw"><span className="dot" data-p={ph || undefined} /> {w} lb · {ph ? PHASES[ph].label : 'No phase'}{rm > 0 && pct > 0 ? ` · target ${round(rm * pct / 100)} lb (${pct}% of 1RM)` : ''}</div>
+      <div key={`${ph}:${w}`} className="phw"><span className="dot" data-p={ph || undefined} /> {w} lb · {ph ? PHASES[ph].label : 'No phase'}{rm > 0 && pct > 0 ? ` · ${pct}% of 1RM is ${round(rm * pct / 100)} lb` : ''}</div>
     );
   });
 }
@@ -298,7 +298,7 @@ function RmPanel() {
   return (
     <section className="panel wide">
       <h2>1-rep maxes</h2>
-      <p>Enter a one-rep max (1RM, the most you can lift once) to switch that exercise's target from the program weight to a phase-based weight. Leave blank to keep the program weight.</p>
+      <p>Keep a one-rep max (1RM, the most you can lift once) for reference. It shows next to your logged weights but doesn't set targets: those start from the weight you last logged.</p>
       <div className="tbl">
         <table>
           <thead><tr><th>Exercise</th><th>Program weight</th><th>1RM (lb)</th><th>Best logged</th></tr></thead>
