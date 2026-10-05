@@ -72,8 +72,9 @@ describe('progression and stalls', () => {
     const logs = { hack: [e('2026-09-01', 270, 15), e('2026-09-08', 270, 12)] };
     expect(progressionOf(cfg(), logs, item, 'hyp')).toBeNull();
   });
-  it('uses the 1RM percentage when a 1RM is set', () => {
-    expect(targetOf(cfg({ rm: { hack: 400 } }), {}, item, 'hyp')).toEqual({ w: 260, src: '65% of 1RM' });
+  it('ignores a 1RM: the target is the last logged weight, else the program weight', () => {
+    expect(targetOf(cfg({ rm: { hack: 400 } }), {}, { ...item, w: 270 }, 'hyp')).toEqual({ w: 270, src: 'program' });
+    expect(targetOf(cfg({ rm: { hack: 400 } }), { hack: [e('2026-09-01', 255, 12)] }, { ...item, w: 270 }, 'hyp')).toMatchObject({ w: 255, src: 'last session' });
   });
   it('flags a stall over three sessions in two weeks with no gain', () => {
     const logs = { hack: [e('2026-09-01', 270, 12), e('2026-09-03', 270, 12), e('2026-09-08', 270, 12)] };

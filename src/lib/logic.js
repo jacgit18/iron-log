@@ -56,9 +56,9 @@ export function targetOf(cfg, logs, item, ph) {
   if (up && (base.w == null || up.w > base.w)) return { w: up.w, src: `up from ${up.from} lb`, up: true };
   return base;
 }
+// The starting weight: the weight last logged for this exercise in this phase (on any card), else the program's weight.
+// A 1RM is kept for reference but does not set targets.
 export function baseTargetOf(cfg, logs, item, ph) {
-  const rm = cfg.rm[item.ex];
-  if (rm && ph && (cfg.pct[ph] ?? PHASES[ph].pct) > 0) { return { w: round(rm * (cfg.pct[ph] ?? PHASES[ph].pct) / 100), src: `${cfg.pct[ph] ?? PHASES[ph].pct}% of 1RM` }; }
   const last = lastLog(logs, item.ex, ph);
   if (last && last.w != null && last.w !== '' && Number(last.w) > 0) return { w: Number(last.w), src: 'last session' };
   if (item.w != null) return { w: item.w, src: 'program' };

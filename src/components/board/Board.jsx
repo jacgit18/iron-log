@@ -155,12 +155,6 @@ export default function Board() {
       </div>
 
       {!programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
-      {!Object.keys(cfg.rm).length && !tipHidden('hidetip') && (
-        <div className="notice tip">
-          <span>Targets use your last logged weight. Add a one-rep max (1RM) in Settings or when you log a set to get phase-based targets instead.</span>
-          <button type="button" className="btn sm ghost" onClick={() => hideTip('hidetip')}>Got it</button>
-        </div>
-      )}
       {canBackup && anyLogs && !snoozeBackup && (sinceBackup == null || sinceBackup >= 7) && (
         <div className="notice tip">
           <span>{sinceBackup == null ? 'Your training data hasn’t been backed up to GitHub yet.' : `Last GitHub backup was ${sinceBackup} days ago.`}</span>

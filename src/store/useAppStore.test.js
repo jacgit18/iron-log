@@ -586,6 +586,16 @@ describe('bug check fixes', () => {
     st().submitLog(a.id, ai, { entry: { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 }, ph: 'hyp', makeExDefault: true });
     expect(phaseOf(st().cfg, st().week, st().activeSlots().find(x => x.id === b.id), bi)).toBe('hyp');
   });
+  it('a 1RM does not set the target; a weight you log does, for the same exercise and phase on other days', async () => {
+    const { targetOf, planRows } = await import('../lib/logic.js');
+    useAppStore.setState({ cfg: { ...st().cfg, rm: { hack: 300 } } });
+    const other = st().slotById('A-d5s3'); expect(other.items[0].ex).toBe('hack');
+    expect(phaseOf(st().cfg, st().week, other, 0)).toBe('hyp');
+    expect(targetOf(st().cfg, st().logs, other.items[0], 'hyp')).toMatchObject({ w: 270, src: 'program' }); // not 65% of the 1RM
+    st().submitLog('A-d3s1', 0, { entry: { d: '2026-10-01', ph: 'hyp', w: 280, s: 4, r: 15 }, ph: 'hyp' });
+    expect(targetOf(st().cfg, st().logs, other.items[0], 'hyp')).toMatchObject({ w: 280, src: 'last session' });
+    expect(planRows(st().cfg, st().logs, other.items[0], 'hyp')[0].w).toBe(280);
+  });
   it('a one-week card keeps the phase picked when it was added, even with an exercise default', () => {
     st().saveExerciseDetails('chestpress', { url: '', eq: '', ph: 'iso' });
     st().addExerciseToDay(2, { ex: 'chestpress', ph: 'hyp' });
