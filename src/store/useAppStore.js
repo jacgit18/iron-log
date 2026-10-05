@@ -194,6 +194,8 @@ export const useAppStore = create((set, get) => ({
   activeProgram: () => { const s = get(); return s.programs[s.activeProgKey()] || s.programs.A; },
   activeSlots: () => weekSlots(get().activeProgram(), get().week),
   slotById: id => get().activeSlots().find(x => x.id === id),
+  // The log sheet needs both its card and the exercise at that position; a program replaced from elsewhere can remove either.
+  logTargetExists: (slotId, idx) => { const s = get().slotById(slotId); return !!(s && s.items[idx]); },
 
   // Every write is refused until all data has loaded, so a half-loaded week never overwrites the saved one.
   blocked() { if (get().isReady()) return false; flag('Still loading your data…'); return true; },
