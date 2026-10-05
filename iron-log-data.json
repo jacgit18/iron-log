@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-05T16:24:29.097Z",
+ "exportedAt": "2026-10-05T17:18:53.948Z",
  "config": {
   "muscleMap": {},
   "ex": {
@@ -95,10 +95,10 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "w210d7",
+   "hash": "pwpexa",
    "last": {
-    "at": "2026-10-05T10:48:46.014Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/97bdc9b38051ba269c0413b769896aa3cf71c092"
+    "at": "2026-10-05T16:24:32.013Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/73c1da16e69b595cd367f894c0821fd86b56c162"
    }
   },
   "progNames": {
@@ -2061,6 +2061,27 @@
     ]
    }
   ],
+  "db6": [
+   {
+    "d": "2026-10-05",
+    "ph": "strength",
+    "w": 5,
+    "s": 2,
+    "r": 6,
+    "sets": [
+     {
+      "w": 5,
+      "r": 6
+     },
+     {
+      "w": 5,
+      "r": 6
+     }
+    ],
+    "slot": "B-d2s8",
+    "wk": "2026-10-04"
+   }
+  ],
   "depthcombo": [
    {
     "d": "2026-10-04",
@@ -2113,6 +2134,34 @@
     ],
     "slot": "A-d1s8",
     "wk": "2026-09-27",
+    "auto": true
+   },
+   {
+    "d": "2026-10-05",
+    "ph": "strength",
+    "w": 200,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 200,
+      "r": 6
+     },
+     {
+      "w": 200,
+      "r": 6
+     },
+     {
+      "w": 200,
+      "r": 6
+     },
+     {
+      "w": 200,
+      "r": 6
+     }
+    ],
+    "slot": "B-d1s10",
+    "wk": "2026-10-04",
     "auto": true
    }
   ],
@@ -3041,7 +3090,9 @@
     "B-d1s11": true,
     "B-d1s8": true,
     "B-d1s2": true,
-    "B-d1s6": true
+    "B-d1s6": true,
+    "B-d1s10": true,
+    "B-d2s8": true
    },
    "skipped": {
     "B-d6s5": true,
