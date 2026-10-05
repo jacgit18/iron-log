@@ -10,7 +10,7 @@ import { WEEK_RE, weekOfDate, entryWeek, weekSummary } from './trends.js';
 import { bwSorted } from './body.js';
 import { normStretches, normStretchWeek, stretchWeekEmpty } from './stretches.js';
 import { normSupplements } from './water.js';
-import { validMode, validRest, validPct, validRm, validBodyLb, validLiftGoalLb, normEntries, normBody, normProgram, normLibrary } from './validate.js';
+import { validMode, validRest, validPct, validRm, validBodyLb, validLiftGoalLb, normEntries, normBody, normProgram, normLibrary, validStamp } from './validate.js';
 import { validRepo } from './github.js';
 
 // SheetJS is bundled (0.20.x, patched for reading untrusted files) and loaded only when needed.
@@ -231,17 +231,26 @@ export const entryId = e => e.id || 'k' + hash(sameKey(e));
 export const findEntry = (L, target) => (target.id ? L.findIndex(x => x.id === target.id) : L.findIndex(x => !x.id && sameKey(x) === sameKey(target)));
 // Adds b's entries that a doesn't have. A check-off (auto) entry is one per card and week: it isn't added next to
 // any entry for that card and week, and a session logged by hand replaces it, as on the board.
+// Same id on both sides: this device's copy stays, unless both carry an updatedAt and the incoming one is later (it was edited
+// after this one), in which case it replaces it. Copies without a timestamp (older data, Excel files) never replace anything.
 export function mergeEntries(a, b) {
   let out = [...a]; const ids = new Set(a.map(entryId)); const keys = new Set(a.map(sameKey));
   b.forEach(e => {
-    if (ids.has(entryId(e)) || keys.has(sameKey(e))) return;
+    const id = entryId(e);
+    if (ids.has(id)) {
+      const i = out.findIndex(x => entryId(x) === id);
+      if (i >= 0 && newer(e, out[i])) { out[i] = { ...e, id }; keys.add(sameKey(e)); }
+      return;
+    }
+    if (keys.has(sameKey(e))) return;
     const card = x => !!(e.slot && e.wk) && x.slot === e.slot && x.wk === e.wk;
     if (e.auto && out.some(card)) return;
     if (!e.auto) out = out.filter(x => !(x.auto && card(x)));
-    out.push(e); ids.add(entryId(e)); keys.add(sameKey(e));
+    out.push(e); ids.add(id); keys.add(sameKey(e));
   });
   return out.sort((x, y) => x.d.localeCompare(y.d));
 }
+const newer = (x, y) => validStamp(x.updatedAt) && validStamp(y.updatedAt) && Date.parse(x.updatedAt) > Date.parse(y.updatedAt);
 export function mergeWeek(a, b) {
   const w = normWeek(a); const o = normWeek(b);
   w.prog = w.prog || o.prog;

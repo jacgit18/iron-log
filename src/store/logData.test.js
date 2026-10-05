@@ -284,4 +284,25 @@ describe('log data: db sync', () => {
     expect(st().cfg.rm).toEqual({ bench: 200, squat: 400 }); // only missing 1RMs are added
     expect(st().cfg.rest).toBe(90); // other settings are not touched by a merge
   });
+
+  it('T1 a session is stamped when added and again when edited, keeps its id, and is saved with the schema version', async () => {
+    const { saved } = await import('../test/browserStubs.js');
+    st().submitLog('A-d1s1', 0, { entry: sheetEntry('A-d1s1', [{ w: 45, r: 12 }]), ph: 'hyp', done: false });
+    const exId = Object.keys(st().logs)[0]; const e = st().logs[exId][0];
+    expect(e.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(e.id).toBeTruthy();
+    await new Promise(r => setTimeout(r, 5));
+    expect(st().updateLog(exId, e, { ...e, n: 'felt good' })).toBe(true);
+    const e2 = st().logs[exId][0];
+    expect(e2.id).toBe(e.id); expect(e2.n).toBe('felt good');
+    expect(Date.parse(e2.updatedAt)).toBeGreaterThan(Date.parse(e.updatedAt));
+    expect(saved('logs/' + exId).schema).toBe(1);
+  });
+
+  it('T2 a body weight is stamped, and check-offs are stamped', () => {
+    st().saveBodyWeight(180);
+    expect(st().body[0].updatedAt).toMatch(/^\d{4}-/);
+    st().checkCard('A-d3s1', true);
+    expect(Object.values(st().logs).flat()[0].updatedAt).toMatch(/^\d{4}-/);
+  });
 });
