@@ -159,3 +159,12 @@ it('rebuilds check-offs for experiment cards from logged sessions', () => {
   const out = checkOffsFromLogs(structuredClone(DEFAULT_CFG), { A: BUILTIN.A, B: BUILTIN.B }, logs, weeks);
   expect(out['2026-09-27'].done['X-1']).toBe(true);
 });
+
+describe('hostile workbooks', () => {
+  it('ignores a Check-offs key that would write onto Object.prototype', async () => {
+    const wb = buildOverallWorkbook(X, S(), {});
+    X.utils.sheet_add_aoa(wb.Sheets['Check-offs'], [['2026-09-20', 'warm', '__proto__/polluted', 'Yes']], { origin: -1 });
+    await parseExcelExport(toBytes(wb), cfg());
+    expect(({}).polluted).toBeUndefined();
+  });
+});

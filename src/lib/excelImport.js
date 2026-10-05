@@ -10,6 +10,8 @@ import { WEEK_RE, entryWeek } from './trends.js';
 import { loadXLSX, normalizeData } from './export.js';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// Keys that would reach Object.prototype if used as a property name on a plain object.
+const UNSAFE_KEY = new Set(['__proto__', 'constructor', 'prototype']);
 const num = v => (v === '' || v == null || isNaN(Number(v)) ? null : Number(v));
 const phaseKey = label => PH_KEYS.find(k => PHASES[k].label === label) || null;
 const muscleKey = name => Object.keys(MUSCLES).find(k => MUSCLES[k].n === name);
@@ -48,7 +50,7 @@ export const entryKey = e => JSON.stringify([e.d, e.ph || null, e.w ?? null, e.s
 // Sessions rows (the Sessions sheet's columns, header first) → logs, new custom exercises and muscle tags.
 function readSessions(X, sessions, cfg) {
   // Exercise names → ids: built-in names, then your custom exercises, then new custom ones.
-  const known = { ...(cfg.ex || {}) }; const byName = {};
+  const known = { ...(cfg.ex || {}) }; const byName = Object.create(null);
   Object.entries(EX).forEach(([id, e]) => { byName[e.n] = id; });
   Object.entries(known).forEach(([id, e]) => { if (e && e.n && !byName[e.n]) byName[e.n] = id; });
   const newEx = {};
@@ -70,6 +72,7 @@ function readSessions(X, sessions, cfg) {
     if (note === AUTO_NOTE) e.auto = true; else if (note) e.n = String(note);
     if (slot) e.slot = String(slot);
     if (WEEK_RE.test(String(wk))) e.wk = String(wk);
+    if (UNSAFE_KEY.has(id)) { skipped++; continue; }
     (logs[id] = logs[id] || []).push(e);
     if (!tags[id]) tags[id] = { prim: String(prim || ''), sec: String(sec || '') };
   }
@@ -164,7 +167,7 @@ function readWeeks(X, rows) {
     else if (kind === 'done' || kind === 'skipped') w[kind][key] = true;
     else if (kind === 'moved') w.moved[key] = num(v);
     else if (kind === 'phase') w.ph[key] = str(v);
-    else if (kind === 'warm') { const [day, item] = key.split('/'); (w.warm[day] = w.warm[day] || {})[item] = str(v) === 'Yes'; }
+    else if (kind === 'warm') { const [day, item] = key.split('/'); if (!UNSAFE_KEY.has(day) && !UNSAFE_KEY.has(item)) (w.warm[day] = w.warm[day] || {})[item] = str(v) === 'Yes'; }
   });
   return weeks;
 }
@@ -173,7 +176,7 @@ function readDataSheets(X, rows) {
   const prog = rows('Programs'), info = rows('Program info'), lib = rows('Saved versions'), checks = rows('Check-offs'), conf = rows('Config'), exps = rows('Experiments');
   if (!prog || !info || !lib || !checks || !conf) return null;
   const warms = Object.fromEntries(info.slice(1).map(([o, w]) => [str(o), str(w)]));
-  const owners = {}; prog.slice(1).forEach(r => { (owners[str(r[0])] = owners[str(r[0])] || []).push(r); });
+  const owners = Object.create(null); prog.slice(1).forEach(r => { (owners[str(r[0])] = owners[str(r[0])] || []).push(r); });
   const programs = {}; ['A', 'B'].forEach(k => { if (owners[k]) programs[k] = readProgram(owners[k], warms[k]); });
   const library = lib.slice(1).filter(r => r[0] !== '').map(([id, name, from, at, auto, created]) => {
     const it = { id: str(id), name: str(name), at: str(at), prog: readProgram(owners[str(id)] || [], warms[str(id)]) };

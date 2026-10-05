@@ -93,3 +93,23 @@ describe('old Day 5/6 subtitles', () => {
     expect(p.days.slice(0, 3).map(d => d.sub)).toEqual([undefined, undefined, 'Mine']);
   });
 });
+
+describe('a data file with bad shapes', () => {
+  const parse = over => parseDataFile(JSON.stringify({ ...buildDataFile(snapshot(), {}), ...over }));
+  it('drops config values of the wrong type instead of passing them on', () => {
+    const d = parse({ config: { pct: null, rm: 'x', mode: 9, rest: Infinity, keep: 1 } });
+    expect(d.config).toEqual({ keep: 1 });
+  });
+  it('clears an unknown phase so exports do not throw', () => {
+    const d = parse({ logs: { hack: [{ d: '2026-09-21', ph: 'bogus', w: 100, s: 3, r: 5 }] } });
+    expect(d.logs.hack[0].ph).toBeNull();
+    expect(() => buildCsv({ ...snapshot(), logs: d.logs })).not.toThrow();
+  });
+  it('csv export tolerates an unknown phase already in the logs', () => {
+    expect(() => buildCsv({ ...snapshot(), logs: { hack: [{ d: '2026-09-21', ph: 'bogus', w: 1, s: 1, r: 1 }] } })).not.toThrow();
+  });
+  it('skips a log id of __proto__', () => {
+    const text = JSON.stringify({ ...buildDataFile(snapshot(), {}) }).replace('"logs":{', '"logs":{"__proto__":[{"d":"2026-09-21"}],');
+    expect(Object.getPrototypeOf(parseDataFile(text).logs)).toBe(Object.prototype);
+  });
+});
