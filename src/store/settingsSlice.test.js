@@ -365,6 +365,18 @@ describe('edge cases when replacing', () => {
     await st().applyImport('replace');
     expect(st().cfg.ghBackup.repo).toBe('me/mine');
   });
+  it('leaves everything as it was when the file cannot be applied', async () => {
+    useAppStore.setState({ body: [{ wk: '2026-01-05', d: '2026-01-05', w: 200 }], logs: { hack: [entry('2026-09-21')] } });
+    const before = structuredClone(st().cfg);
+    // A log value that can't be copied makes the plan step throw after the config was already worked out.
+    useAppStore.setState({ importDraft: { kind: 'json', name: 'x', data: { config: { ...structuredClone(DEFAULT_CFG), rest: 12 }, programs: {}, library: [], logs: { hack: [{ d: '2026-09-22', bad: () => 1 }] }, weeks: {}, body: [], stretchWeeks: {} } } });
+    await st().applyImport('replace');
+    expect(st().saveFlag).toBe('Import failed');
+    expect(st().cfg).toEqual(before);
+    expect(st().body).toHaveLength(1);
+    expect(st().logs.hack).toHaveLength(1);
+    expect(saved('config/main')).toBeNull();
+  });
   it('does not report success when the browser refused a write', async () => {
     const orig = localStorage.setItem;
     localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
