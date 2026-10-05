@@ -4,7 +4,7 @@ import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
-  planFix, isFinished, autoEntry, newEntryId,
+  planFix, isFinished, autoEntry, newEntryId, normExperiments,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -15,7 +15,7 @@ import { normSupplements } from '../lib/water.js';
 import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
 import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
-  backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile, entryId, findEntry,
+  backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile, entryId, findEntry, normConfig,
 } from '../lib/export.js';
 import { bwSorted } from '../lib/body.js';
 import { usageOf } from '../lib/exerciseLibrary.js';
@@ -23,6 +23,7 @@ import { MUSCLE_MAP } from '../lib/muscles.js';
 import { bestLift, liftGoalsOf, goalPhaseLabel, GOAL_KEYS } from '../lib/liftGoal.js';
 import { loadView, saveView } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
+import { validRm, validLiftGoalLb, validBodyLb, normEntry, normEntries, normBody, normProgram, normLibrary } from '../lib/validate.js';
 import { commitFiles, readFile, validRepo } from '../lib/github.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
@@ -98,6 +99,8 @@ const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t), onFailed: (
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
 // "Saved" / "Loading…" never replaces a message you haven't had the chance to act on yet.
+// A stored program comes back only if it has the right shape, cleaned; otherwise the built-in one.
+const loadProgram = (k, data) => resolveProgram(k, normProgram(data, k));
 export function flag(t) {
   const routine = t === 'Saved' || t === 'Loading…' || t === '';
   if (routine && flagHold) return;
@@ -438,7 +441,7 @@ export const useAppStore = create((set, get) => ({
       if (custom && name) c.ex[exId] = { ...c.ex[exId], n: name };
       const ph = d.ph;
       if (ph !== undefined && ph !== ((c.exPh || {})[exId] || '')) setExerciseDefault(c, exId, ph, get().programs, get().library);
-      if (d.rm !== undefined) { const n = Number(d.rm); if (d.rm === '' || d.rm === null || !(n > 0)) delete c.rm[exId]; else c.rm[exId] = n; }
+      if (d.rm !== undefined) { const n = Number(d.rm); if (d.rm === '' || d.rm === null || !validRm(n)) delete c.rm[exId]; else c.rm[exId] = n; }
       if (d.tags !== undefined) {
         c.muscleMap = c.muscleMap || {};
         if (d.tags === null || (MUSCLE_MAP[exId] && sameTags(d.tags, MUSCLE_MAP[exId]))) delete c.muscleMap[exId]; else c.muscleMap[exId] = d.tags;
@@ -581,10 +584,11 @@ export const useAppStore = create((set, get) => ({
   addEntry(slotId, idx, entry, { check } = {}) {
     if (get().blocked()) return false;
     const s = get().slotById(slotId); if (!s) return false;
+    const clean = normEntry(entry); if (!clean) { flag('That session has an invalid date'); return false; }
     const ex = s.items[idx].ex;
     // Real numbers replace the planned ones a check-off logged for this card this week.
     const planned = e => e.auto && e.slot === entry.slot && e.wk === entry.wk;
-    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...structuredClone(entry), id: entry.id || newEntryId() }].sort((a, b) => a.d.localeCompare(b.d));
+    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...clean, id: clean.id || newEntryId() }].sort((a, b) => a.d.localeCompare(b.d));
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
     // Ticked the way the board ticks: picking the other half of an either/or drops the first one's check-off, and it can finish a day.
     if (check) get().mutateChecks(w => setItemDone(w, s, idx, true));
@@ -608,7 +612,7 @@ export const useAppStore = create((set, get) => ({
     const it = s.items[idx]; const key = `${slotId}:${idx}`;
     const goals = liftGoalsOf(get().cfg, it.ex).filter(([k]) => k === 'any' || k === (entry.ph || null));
     const before = goals.map(([k]) => bestLift(get().logs[it.ex], k));
-    get().addEntry(slotId, idx, entry);
+    if (!get().addEntry(slotId, idx, entry)) return false; // refused (invalid date): nothing else from the sheet is applied
     get().applyExerciseUrl(it.ex, url);
     const { cfg, week } = get();
     // Every card of this exercise in the shown week, on any day (added cards included).
@@ -636,7 +640,7 @@ export const useAppStore = create((set, get) => ({
   setLiftGoal(exId, key, raw, by, from) {
     if (get().blocked()) return false;
     if (!GOAL_KEYS.includes(key)) { flag('Pick a phase for the goal'); return false; }
-    const n = Number(raw); if (!(n > 0 && n < 5000)) { flag('Enter a goal weight in lb'); return false; }
+    const n = Number(raw); if (!validLiftGoalLb(n)) { flag('Enter a goal weight in lb'); return false; }
     if (by && !/^\d{4}-\d{2}-\d{2}$/.test(by)) { flag('Enter the goal date as a date'); return false; }
     const G = (get().cfg.liftGoals || {})[exId] || {};
     if (key !== from && G[key]) { flag(`There's already a ${goalPhaseLabel(key).toLowerCase()} goal`); return false; }
@@ -662,9 +666,10 @@ export const useAppStore = create((set, get) => ({
   // (another device) can't make the edit land on a different session. It keeps its identity.
   updateLog(exId, target, entry) {
     if (get().blocked()) return false;
+    const clean = normEntry(entry); if (!clean) { flag('That session has an invalid date'); return false; }
     const L = get().logs[exId] || []; const i = findEntry(L, target);
     if (i < 0) { flag('That session changed meanwhile. Open it again.'); return false; }
-    const arr = [...L]; arr[i] = { ...structuredClone(entry), id: entryId(L[i]) };
+    const arr = [...L]; arr[i] = { ...clean, id: entryId(L[i]) };
     arr.sort((a, b) => a.d.localeCompare(b.d));
     set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId);
     flag('Session updated'); return true;
@@ -707,7 +712,7 @@ export const useAppStore = create((set, get) => ({
 
   saveBodyWeight(v) {
     if (get().blocked()) return false;
-    const n = Number(v); if (!(n > 0 && n < 1500)) { flag('Enter your weight in lb'); return false; }
+    const n = Number(v); if (!validBodyLb(n)) { flag('Enter your weight in lb'); return false; }
     const wk = get().weekKey(); const today = ymd(new Date());
     const d = (today >= wk && today <= ymd(addDays(get().weekStart, 6))) ? today : wk;
     set(state => ({ body: [...state.body.filter(e => e.wk !== wk), { wk, d, w: Math.round(n * 10) / 10 }].sort((a, b) => a.wk.localeCompare(b.wk)) }));
@@ -718,7 +723,7 @@ export const useAppStore = create((set, get) => ({
   // Target body weight, optionally by a date. Where you are now is kept as the starting point for progress.
   setBodyGoal(raw, by) {
     if (get().blocked()) return false;
-    const n = Number(raw); if (!(n > 0 && n < 1500)) { flag('Enter a target weight in lb'); return false; }
+    const n = Number(raw); if (!validBodyLb(n)) { flag('Enter a target weight in lb'); return false; }
     if (by && !/^\d{4}-\d{2}-\d{2}$/.test(by)) { flag('Enter the goal date as a date'); return false; }
     const L = bwSorted(get().body); const last = L[L.length - 1];
     const goal = { w: Math.round(n * 10) / 10, ...(last ? { start: { w: last.w, d: last.d } } : {}), ...(by ? { by } : {}) };
@@ -882,20 +887,20 @@ export const useAppStore = create((set, get) => ({
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
-          if (k && k.startsWith('ironlog:logs/')) { const l = LS.get(k.slice(8)); if (l && l.entries) logs[k.slice(13)] = l.entries; }
+          if (k && k.startsWith('ironlog:logs/')) { const l = LS.get(k.slice(8)); if (l && l.entries) { const L = normEntries(l.entries); if (L.length) logs[k.slice(13)] = L; } }
         }
       } catch { /* storage unavailable */ }
       set(state => ({
         storeMode: 'local',
-        cfg: cfgRaw ? { ...structuredClone(DEFAULT_CFG), ...cfgRaw } : state.cfg,
-        body: (LS.get('body/main') || {}).entries || [],
-        library: padLibrary((LS.get('library/main') || {}).items || []),
-        experiments: (LS.get('experiments/main') || {}).items || [],
+        cfg: cfgRaw ? { ...structuredClone(DEFAULT_CFG), ...normConfig(cfgRaw) } : state.cfg,
+        body: normBody((LS.get('body/main') || {}).entries),
+        library: padLibrary(normLibrary((LS.get('library/main') || {}).items)),
+        experiments: normExperiments((LS.get('experiments/main') || {}).items),
         stretches: normStretches(LS.get('stretches/main')).items,
         stretchExps: normStretches(LS.get('stretches/main')).experiments,
         supp: normSupplements(LS.get('supplements/main')),
         logs,
-        programs: { A: resolveProgram('A', LS.get('programs/A')), B: resolveProgram('B', LS.get('programs/B')) },
+        programs: { A: loadProgram('A', LS.get('programs/A')), B: loadProgram('B', LS.get('programs/B')) },
         ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true, exp: true, str: true, supp: true },
       }));
       if (typeof window.addEventListener === 'function') window.addEventListener('storage', fromOtherTab);
@@ -906,20 +911,20 @@ export const useAppStore = create((set, get) => ({
     const markReady = k => state => ({ ready: { ...state.ready, [k]: true } });
     db.collection('programs').onSnapshot(s => {
       const m = {}; s.docs.forEach(d => { m[d.id] = d.data(); });
-      const pick = (state, k) => (queue.pending('programs/' + k) ? state.programs[k] : resolveProgram(k, m[k]));
+      const pick = (state, k) => (queue.pending('programs/' + k) ? state.programs[k] : loadProgram(k, m[k]));
       set(state => ({ programs: { A: pick(state, 'A'), B: pick(state, 'B') }, ...markReady('programs')(state) }));
     }, () => flag('Couldn’t load your programs. Reload the page.'));
     db.doc('body/main').onSnapshot(s => {
       if (queue.pending('body/main')) return;
-      set(state => ({ body: s.exists ? [...((s.data() || {}).entries || [])] : [], ...markReady('body')(state) }));
+      set(state => ({ body: s.exists ? normBody((s.data() || {}).entries) : [], ...markReady('body')(state) }));
     }, () => flag('Couldn’t load body weight. Reload the page.'));
     db.doc('library/main').onSnapshot(s => {
       if (queue.pending('library/main')) return;
-      set(state => ({ library: s.exists ? padLibrary([...((s.data() || {}).items || [])]) : [], ...markReady('lib')(state) }));
+      set(state => ({ library: s.exists ? padLibrary(normLibrary((s.data() || {}).items)) : [], ...markReady('lib')(state) }));
     }, () => flag('Couldn’t load saved programs. Reload the page.'));
     db.doc('experiments/main').onSnapshot(s => {
       if (queue.pending('experiments/main')) return;
-      set(state => ({ experiments: s.exists ? [...((s.data() || {}).items || [])] : [], ...markReady('exp')(state) }));
+      set(state => ({ experiments: s.exists ? normExperiments((s.data() || {}).items) : [], ...markReady('exp')(state) }));
     }, () => flag('Couldn’t load your experiments. Reload the page.'));
     db.doc('stretches/main').onSnapshot(s => {
       if (queue.pending('stretches/main')) return;
@@ -932,12 +937,12 @@ export const useAppStore = create((set, get) => ({
     }, () => flag('Couldn’t load supplements. Reload the page.'));
     db.doc('config/main').onSnapshot(s => {
       if (queue.pending('config/main')) return;
-      set(state => ({ cfg: s.exists ? { ...structuredClone(DEFAULT_CFG), ...structuredClone(s.data()) } : state.cfg, ...markReady('cfg')(state) }));
+      set(state => ({ cfg: s.exists ? { ...structuredClone(DEFAULT_CFG), ...normConfig(structuredClone(s.data())) } : state.cfg, ...markReady('cfg')(state) }));
     }, () => flag('Couldn’t load settings. Reload the page.'));
     // Every snapshot is applied, so another device's change is never skipped (Firestore sends nothing more when this
     // device's own write is confirmed). Only an exercise this device is still writing keeps what it holds: that is newer.
     db.collection('logs').onSnapshot(s => {
-      const next = {}; s.docs.forEach(d => { next[d.id] = [...((d.data() || {}).entries || [])]; });
+      const next = {}; s.docs.forEach(d => { next[d.id] = normEntries((d.data() || {}).entries); });
       set(state => {
         const logs = {};
         new Set([...Object.keys(next), ...Object.keys(state.logs)]).forEach(id => {
@@ -966,9 +971,9 @@ export function fromOtherTab(e) {
   else if (path.startsWith('weeks/')) { if (st.weekHist) set(s => ({ weekHist: { ...s.weekHist, [path.slice(6)]: v } })); }
   else if (path === 'config/main') set(s => ({ cfg: v ? { ...structuredClone(DEFAULT_CFG), ...v } : s.cfg }));
   else if (path === 'body/main') set({ body: (v || {}).entries || [] });
-  else if (path === 'library/main') set({ library: padLibrary((v || {}).items || []) });
-  else if (path === 'experiments/main') set({ experiments: (v || {}).items || [] });
-  else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: resolveProgram(k, v) } })); }
+  else if (path === 'library/main') set({ library: padLibrary(normLibrary((v || {}).items)) });
+  else if (path === 'experiments/main') set({ experiments: normExperiments((v || {}).items) });
+  else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: loadProgram(k, v) } })); }
   else if (path === 'stretches/main') { const d = normStretches(v); set({ stretches: d.items, stretchExps: d.experiments }); }
   else if (path === 'supplements/main') set({ supp: normSupplements(v) });
   else if (path === 'stretchweeks/' + wk) set({ strWeek: normStretchWeek(v) });

@@ -3,6 +3,7 @@
    one can be taken back; cups are just ounces / 8. */
 
 import { normItems, normTaken } from './supplements.js';
+import { validOz, validGoal } from './validate.js';
 
 export const CUP_OZ = 8;
 export const DEFAULT_GOAL_OZ = 64; // 8 cups
@@ -24,8 +25,7 @@ const r1 = n => Math.round(n * 10) / 10;
 export const fmtOz = n => `${r1(n)}`;
 export const cupsOf = oz => r1(oz / CUP_OZ);
 export const sumOz = list => r1((list || []).reduce((a, n) => a + n, 0));
-export const validOz = n => Number.isFinite(n) && n > 0 && n <= 200;
-export const validGoal = n => Number.isFinite(n) && n >= 8 && n <= 500;
+export { validOz, validGoal };
 
 export function normSupplements(d) {
   const out = { waterGoal: DEFAULT_GOAL_OZ, waterMode: 'weight', water: {}, items: [], taken: {} };

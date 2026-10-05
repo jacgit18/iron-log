@@ -8,11 +8,12 @@ import { weekSlots, activeProgKey, normWeek, setItemDone, AUTO_NOTE } from './lo
 import { MUSCLES, MUSCLE_MAP } from './muscles.js';
 import { WEEK_RE, entryWeek } from './trends.js';
 import { loadXLSX, normalizeData } from './export.js';
+import { validMode, validRest, validPct, validRm, validBodyLb, normEntries } from './validate.js';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 // Keys that would reach Object.prototype if used as a property name on a plain object.
 const UNSAFE_KEY = new Set(['__proto__', 'constructor', 'prototype']);
-const num = v => (v === '' || v == null || isNaN(Number(v)) ? null : Number(v));
+const num = v => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
 const phaseKey = label => PH_KEYS.find(k => PHASES[k].label === label) || null;
 const muscleKey = name => Object.keys(MUSCLES).find(k => MUSCLES[k].n === name);
 // Dates are exported as "YYYY-MM-DD" text, but Excel and Google Sheets turn them into real dates
@@ -76,7 +77,8 @@ function readSessions(X, sessions, cfg) {
     (logs[id] = logs[id] || []).push(e);
     if (!tags[id]) tags[id] = { prim: String(prim || ''), sec: String(sec || '') };
   }
-  Object.values(logs).forEach(L => L.sort((a, b) => a.d.localeCompare(b.d)));
+  // Same cleaning as a JSON file: a session on a date that doesn't exist (2026-02-31) or with numbers out of range is fixed or skipped.
+  Object.keys(logs).forEach(id => { const L = normEntries(logs[id]); skipped += logs[id].length - L.length; if (L.length) logs[id] = L.sort((a, b) => a.d.localeCompare(b.d)); else delete logs[id]; });
 
   // Muscle tags, only where they differ from the built-in ones (e.g. new exercises or ones you re-tagged).
   const muscleMap = {};
@@ -106,19 +108,19 @@ export async function parseExcelExport(buffer, cfg) {
   const body = [];
   (rows('Body weight') || []).slice(1).forEach(([wk0, d0, w]) => {
     const wk = dateText(X, wk0), d = dateText(X, d0);
-    if (WEEK_RE.test(String(wk)) && DATE_RE.test(String(d)) && num(w) > 0 && !body.some(x => x.wk === wk)) body.push({ wk: String(wk), d: String(d), w: num(w) });
+    if (WEEK_RE.test(String(wk)) && DATE_RE.test(String(d)) && validBodyLb(num(w)) && !body.some(x => x.wk === wk)) body.push({ wk: String(wk), d: String(d), w: num(w) });
   });
 
   const config = { rm: {}, ex: newEx, muscleMap, progNames: {} };
   const settings = {}; let exportedAt;
   (rows('Settings') || []).slice(1).forEach(([k, v]) => {
     k = String(k);
-    if (k === 'Mode' && [1, 2, 3].includes(num(v))) settings.mode = num(v);
-    else if (k === 'Rest between sets (s)' && num(v) >= 0) settings.rest = num(v);
+    if (k === 'Mode' && validMode(num(v))) settings.mode = num(v);
+    else if (k === 'Rest between sets (s)' && validRest(num(v))) settings.rest = num(v);
     else if (/^Program [AB] name$/.test(k) && v && v !== `Program ${k[8]}`) config.progNames[k[8]] = String(v).slice(0, 40);
-    else if (k.startsWith('1RM: ') && num(v) > 0) config.rm[idFor(k.slice(5))] = num(v);
+    else if (k.startsWith('1RM: ') && validRm(num(v))) config.rm[idFor(k.slice(5))] = num(v);
     else if (k === 'Exported') exportedAt = String(v);
-    else { const p = PH_KEYS.find(key => k === `${PHASES[key].label} % of 1RM`); if (p && num(v) != null) (settings.pct = settings.pct || {})[p] = num(v); }
+    else { const p = PH_KEYS.find(key => k === `${PHASES[key].label} % of 1RM`); if (p && validPct(num(v))) (settings.pct = settings.pct || {})[p] = num(v); }
   });
 
   const excel = { settings, skipped, newExercises: Object.values(newEx).map(e => e.n) };

@@ -490,8 +490,20 @@ export function autoLogs(cfg, logs, slots, before, after, wk, date, { removeLogg
 // Compared as dates, not instants, so the whole of that next day counts.
 export function defaultLogDate(weekStart) { const today = ymd(new Date()); return (today >= ymd(weekStart) && today <= ymd(addDays(weekStart, 7))) ? today : ymd(weekStart); }
 
+// A plain object's entries as a new object, keeping the ones `f(value)` maps to something (not undefined). Keys must look
+// like the app's own (card keys such as "A-d1s1:0" or "ss#0", day and warm-up ids): short, no control characters, not a prototype key.
+// oxlint-disable-next-line no-control-regex
+const KEY_RE = /^[^\x00-\x1f]{1,100}$/;
+const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
+const cleanMap = (o, f) => {
+  const out = {};
+  if (o && typeof o === 'object' && !Array.isArray(o)) Object.entries(o).forEach(([k, v]) => { if (KEY_RE.test(k) && !UNSAFE.has(k)) { const x = f(v); if (x !== undefined) out[k] = x; } });
+  return out;
+};
+const flagOf = v => (v ? true : undefined);
 export const normWeek = w => {
-  const out = { prog: (w && w.prog) || null, done: { ...(w && w.done) }, skipped: { ...(w && w.skipped) }, moved: { ...(w && w.moved) }, ph: { ...(w && w.ph) }, warm: JSON.parse(JSON.stringify((w && w.warm) || {})) };
+  const out = { prog: w && (w.prog === 'A' || w.prog === 'B') ? w.prog : null, done: cleanMap(w && w.done, flagOf), skipped: cleanMap(w && w.skipped, flagOf), moved: cleanMap(w && w.moved, v => v), ph: cleanMap(w && w.ph, v => (PH_KEYS.includes(v) ? v : undefined)), warm: {} };
+  Object.entries(cleanMap(w && w.warm, v => v)).forEach(([day, items]) => { const m = cleanMap(items, v => (typeof v === 'boolean' ? v : undefined)); if (Object.keys(m).length) out.warm[day] = m; });
   out.moved = Object.fromEntries(Object.entries(out.moved).map(([k, v]) => [k, Number(v)]).filter(([, v]) => Number.isInteger(v) && v >= 1 && v <= DAY_COUNT));
   const rest = [...new Set([].concat((w && w.rest) ?? []).map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= DAY_COUNT))].sort((a, b) => a - b);
   if (rest.length) out.rest = rest;
