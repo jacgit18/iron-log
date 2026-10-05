@@ -43,15 +43,25 @@ async function request(token, repo, method, path, body, raw) {
 export const validRepo = r => /^[\w.-]+\/[\w.-]+$/.test(String(r || ''));
 const heads = branch => `heads/${branch.split('/').map(encodeURIComponent).join('/')}`;
 
+// The Git Data API refuses to work on a repo with no commits at all. One file through the Contents API makes the first commit
+// (on the default branch); after that the usual blob/tree/commit calls work, including for a new branch.
+const seedEmptyRepo = call => call('PUT', '/contents/README.md', { message: 'Start the backup repo', content: 'SXJvbiBMb2cgYmFja3VwcyBsaXZlIGluIHRoaXMgcmVwby4K' });
+
 // Commit files ({path, content: base64}) to `branch` in one commit. Returns {sha, url}.
 export async function commitFiles({ token, repo, branch, files, message }) {
   const call = (method, path, body) => request(token, repo, method, path, body);
+  let seeded = false;
   for (let attempt = 0; ; attempt++) {
     let parent = null;
     try { parent = (await call('GET', `/git/ref/${heads(branch)}`)).object.sha; }
-    catch (e) { if (e.status !== 404) throw e; await call('GET', ''); /* is it the repo that's missing? */ }
+    catch (e) {
+      if (e.status === 409 && !seeded) { await seedEmptyRepo(call); seeded = true; continue; } // a repo with no commits answers 409 to every Git Data call
+      if (e.status !== 404) throw e; await call('GET', ''); /* is it the repo that's missing? */
+    }
     const baseTree = parent ? (await call('GET', `/git/commits/${parent}`)).tree.sha : null;
-    const blobs = await Promise.all(files.map(f => call('POST', '/git/blobs', { content: f.content, encoding: 'base64' })));
+    let blobs;
+    try { blobs = await Promise.all(files.map(f => call('POST', '/git/blobs', { content: f.content, encoding: 'base64' }))); }
+    catch (e) { if (e.status === 409 && !parent && !seeded) { await seedEmptyRepo(call); seeded = true; continue; } throw e; }
     const tree = await call('POST', '/git/trees', {
       ...(baseTree ? { base_tree: baseTree } : {}),
       tree: files.map((f, i) => ({ path: f.path, mode: '100644', type: 'blob', sha: blobs[i].sha })),

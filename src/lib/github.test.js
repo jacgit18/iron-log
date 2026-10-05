@@ -43,6 +43,35 @@ describe('GitHub backup', () => {
     expect(calls[0].headers.Authorization).toBe('Bearer t');
   });
 
+  it('starts an empty repo with one file, then backs up as usual', async () => {
+    let seeded = false;
+    const calls = fakeGitHub({
+      ...writes,
+      'GET /git/ref/heads/data': () => (seeded ? [404, {}] : [409, { message: 'Git Repository is empty.' }]),
+      'PUT /contents/README.md': () => { seeded = true; return [201, {}]; },
+      'GET ': [200, {}],
+      'POST /git/refs': [201, {}],
+    });
+    const r = await commitFiles({ token: 't', repo: 'me/log', branch: 'data', files, message: 'Backup' });
+    expect(r.sha).toBe('commit2');
+    expect(calls.map(c => c.key).slice(0, 3)).toEqual(['GET /git/ref/heads/data', 'PUT /contents/README.md', 'GET /git/ref/heads/data']);
+    expect(calls.find(c => c.key === 'POST /git/refs').body).toEqual({ ref: 'refs/heads/data', sha: 'commit2' });
+  });
+
+  it('starts an empty repo when the first blob is refused with a 409', async () => {
+    let seeded = false;
+    const calls = fakeGitHub({
+      ...writes,
+      'POST /git/blobs': c => (seeded ? [201, { sha: `blob${c.length}` }] : [409, { message: 'Git Repository is empty.' }]),
+      'GET /git/ref/heads/data': [404, {}],
+      'PUT /contents/README.md': () => { seeded = true; return [201, {}]; },
+      'GET ': [200, {}],
+      'POST /git/refs': [201, {}],
+    });
+    await commitFiles({ token: 't', repo: 'me/log', branch: 'data', files, message: 'Backup' });
+    expect(calls.filter(c => c.key === 'PUT /contents/README.md')).toHaveLength(1);
+  });
+
   it('creates the branch with only the data files the first time', async () => {
     const calls = fakeGitHub({
       ...writes,

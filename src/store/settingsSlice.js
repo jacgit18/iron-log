@@ -2,7 +2,7 @@ import { BUILTIN, PHASES } from '../lib/data.js';
 import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
 import { parseDataFile, importSel, cfgSection, mergeEntries, mergeWeek, sameProg, progBody, libDate, backupCfg } from '../lib/export.js';
 import { WEEK_RE } from '../lib/trends.js';
-import { normStretchWeek } from '../lib/stretches.js';
+import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { parseExcelExport, parseCsvExport, entryKey, checkOffsFromLogs } from '../lib/excelImport.js';
 
 // Settings tab actions + the full-data import. `flag` is the save-status helper from the app store.
@@ -66,41 +66,48 @@ export const settingsSlice = (set, get, flag) => ({
       const localWeeks = await get().allWeeks();
       const wk = get().weekKey();
       if (mode === 'replace') {
+        // Plan first (everything that can throw: cloning, normalizing, reading), then apply. A failure while
+        // planning leaves the app exactly as it was; the apply step only sets state and queues saves.
         const cur = get().cfg; const incoming = { ...structuredClone(DEFAULT_CFG), ...structuredClone(d.config) };
         const cfg = {};
         new Set([...Object.keys(cur), ...Object.keys(incoming)]).forEach(k => {
           const v = k === 'backup' ? (d.config.backup || cur.backup) : k === 'ghBackup' ? cur.ghBackup : on[cfgSection(k)] ? incoming[k] : cur[k];
           if (v !== undefined) cfg[k] = v;
         });
-        set({ cfg }); get().saveCfg();
+        const patch = { cfg }; const docs = []; const removes = []; const saves = ['saveCfg']; const progSaves = [];
         if (on.program) {
+          const programs = { ...get().programs };
           ['A', 'B'].forEach(k => {
-            if (d.programs[k]) get().saveProgram(k, structuredClone(d.programs[k]));
-            else if (get().programs[k] !== BUILTIN[k]) { set(s => ({ programs: { ...s.programs, [k]: BUILTIN[k] } })); get().removeDoc('programs/' + k); }
+            if (d.programs[k]) progSaves.push([k, structuredClone(d.programs[k])]);
+            else if (programs[k] !== BUILTIN[k]) { programs[k] = BUILTIN[k]; removes.push('programs/' + k); }
           });
-          set({ library: structuredClone(d.library) }); get().saveLibrary();
+          patch.programs = programs; patch.library = structuredClone(d.library); saves.push('saveLibrary');
         }
         if (on.board) {
-          set({ body: structuredClone(d.body) }); get().saveBody();
-          set({ experiments: structuredClone(d.experiments || []) }); get().saveExperiments();
-          Object.keys(localWeeks).forEach(k => { if (WEEK_RE.test(k) && !d.weeks[k]) get().removeDoc('weeks/' + k); });
-          Object.entries(d.weeks).forEach(([k, w]) => { if (k !== wk) get().saveDoc('weeks/' + k, w); });
-          set({ week: normWeek(d.weeks[wk]) }); get().saveWeek();
+          patch.body = structuredClone(d.body); patch.experiments = structuredClone(d.experiments || []); saves.push('saveBody', 'saveExperiments');
+          Object.keys(localWeeks).forEach(k => { if (WEEK_RE.test(k) && !d.weeks[k]) removes.push('weeks/' + k); });
+          Object.entries(d.weeks).forEach(([k, w]) => { if (k !== wk) docs.push(['weeks/' + k, structuredClone(w)]); });
+          patch.week = normWeek(d.weeks[wk]); saves.push('saveWeek');
         }
         if (on.stretches && d.stretches) {
-          get().setStretchDoc(d.stretches); get().saveStretches();
-          const have = await get().stretchWeekKeys();
-          have.forEach(k => { if (!d.stretchWeeks[k]) get().removeDoc('stretchweeks/' + k); });
-          Object.entries(d.stretchWeeks).forEach(([k, w]) => { if (k !== wk) get().saveDoc('stretchweeks/' + k, w); });
-          set({ strWeek: d.stretchWeeks[wk] ? structuredClone(d.stretchWeeks[wk]) : normStretchWeek(null) }); get().saveStrWeek();
+          const st = normStretches(d.stretches); patch.stretches = st.items; patch.stretchExps = st.experiments; saves.push('saveStretches');
+          (await get().stretchWeekKeys()).forEach(k => { if (!d.stretchWeeks[k]) removes.push('stretchweeks/' + k); });
+          Object.entries(d.stretchWeeks).forEach(([k, w]) => { if (k !== wk) docs.push(['stretchweeks/' + k, structuredClone(w)]); });
+          patch.strWeek = d.stretchWeeks[wk] ? structuredClone(d.stretchWeeks[wk]) : normStretchWeek(null); saves.push('saveStrWeek');
         }
-        if (on.supplements && d.supplements) { set({ supp: structuredClone(d.supplements) }); get().saveSupp(); }
+        if (on.supplements && d.supplements) { patch.supp = structuredClone(d.supplements); saves.push('saveSupp'); }
+        let newLogs = null;
         if (on.progress) {
-          const logs = {};
-          Object.keys(get().logs).forEach(id => { if (!d.logs[id]) get().removeDoc('logs/' + id); });
-          Object.entries(d.logs).forEach(([id, l]) => { logs[id] = structuredClone(l); });
-          set({ logs }); Object.keys(logs).forEach(id => get().saveLog(id));
+          newLogs = {}; Object.entries(d.logs).forEach(([id, l]) => { newLogs[id] = structuredClone(l); });
+          Object.keys(get().logs).forEach(id => { if (!d.logs[id]) removes.push('logs/' + id); });
+          patch.logs = newLogs;
         }
+        set(patch);
+        saves.forEach(f => get()[f]());
+        progSaves.forEach(([k, body]) => get().saveProgram(k, body));
+        docs.forEach(([path, data]) => get().saveDoc(path, data));
+        removes.forEach(path => get().removeDoc(path));
+        if (newLogs) Object.keys(newLogs).forEach(id => get().saveLog(id));
       } else {
         if (draft.kind === 'excel') {
           const xs = d.excel.settings;
