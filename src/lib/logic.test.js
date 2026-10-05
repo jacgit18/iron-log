@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { parseDate } from './dates.js';
 import { BUILTIN, slotsFor } from './data.js';
 import {
-  DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
+  DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, backoffOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
   programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, overflowSlots, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets, weekSlots, normExperiments,
   dayClash, clashCount, dailyExercises, planOrder, countsForClash, countsForFinish, isFinished, planCard, planFix,
@@ -77,15 +77,80 @@ describe('progression and stalls', () => {
     expect(targetOf(cfg({ rm: { hack: 400 } }), {}, { ...item, w: 270 }, 'hyp')).toEqual({ w: 270, src: 'program' });
     expect(targetOf(cfg({ rm: { hack: 400 } }), { hack: [e('2026-09-01', 255, 12)] }, { ...item, w: 270 }, 'hyp')).toMatchObject({ w: 255, src: 'last session' });
   });
-  it('flags a stall over three sessions in two weeks with no gain', () => {
-    const logs = { hack: [e('2026-09-01', 270, 12), e('2026-09-03', 270, 12), e('2026-09-08', 270, 12)] };
+  it('flags a stall over three weeks with no gain', () => {
+    const logs = { hack: [e('2026-09-01', 270, 12), e('2026-09-08', 270, 12), e('2026-09-15', 270, 12)] };
     expect(stallOf(cfg(), logs, 'hack', 'hyp')).toEqual({ w: 270, since: '2026-09-01', n: 3 });
   });
-  it('is not a stall when reps went up or all in one week', () => {
-    const more = { hack: [e('2026-09-01', 270, 10), e('2026-09-03', 270, 11), e('2026-09-08', 270, 12)] };
+  it('is not a stall when reps went up, or within two weeks', () => {
+    const more = { hack: [e('2026-09-01', 270, 10), e('2026-09-08', 270, 11), e('2026-09-15', 270, 12)] };
     expect(stallOf(cfg(), more, 'hack', 'hyp')).toBeNull();
     const oneWeek = { hack: [e('2026-09-06', 270, 12), e('2026-09-07', 270, 12), e('2026-09-08', 270, 12)] };
     expect(stallOf(cfg(), oneWeek, 'hack', 'hyp')).toBeNull();
+    const twoWeeks = { hack: [e('2026-09-01', 270, 12), e('2026-09-03', 270, 12), e('2026-09-08', 270, 12), e('2026-09-10', 270, 12)] };
+    expect(stallOf(cfg(), twoWeeks, 'hack', 'hyp')).toBeNull();
+  });
+  it('judges each week on its best session, so lighter back-off days do not count', () => {
+    // Three times a week: one heavy day, two days at about 90%. The heavy day goes up each week.
+    const s = (d, w, r) => ({ d, ph: 'strength', w, s: 4, r });
+    const climbing = { zercher: [
+      s('2026-08-31', 200, 6), s('2026-09-02', 180, 6), s('2026-09-04', 180, 6),
+      s('2026-09-07', 205, 6), s('2026-09-09', 185, 6), s('2026-09-11', 185, 6),
+      s('2026-09-14', 210, 5), s('2026-09-16', 190, 6), s('2026-09-18', 190, 6),
+    ] };
+    expect(stallOf(cfg(), climbing, 'zercher', 'strength')).toBeNull();
+    // The heavy day stays at 200 with the same reps for 3 weeks: stalled since the first of those weeks' best.
+    const flat = { zercher: [
+      s('2026-08-31', 200, 5), s('2026-09-02', 180, 6),
+      s('2026-09-07', 200, 5), s('2026-09-09', 180, 6),
+      s('2026-09-14', 200, 5), s('2026-09-16', 180, 6),
+    ] };
+    expect(stallOf(cfg(), flat, 'zercher', 'strength')).toEqual({ w: 200, since: '2026-08-31', n: 3 });
+  });
+  it('never flags Explosive or Mobility as stalled', () => {
+    const x = ph => ({ row: ['2026-09-01', '2026-09-08', '2026-09-15'].map(d => ({ d, ph, w: 60, s: 3, r: 5 })) });
+    expect(stallOf(cfg(), x('exp'), 'row', 'exp')).toBeNull();
+    expect(stallOf(cfg(), x('mob'), 'row', 'mob')).toBeNull();
+    expect(stallOf(cfg(), x('hyp'), 'row', 'hyp')).not.toBeNull();
+  });
+});
+
+describe('back off', () => {
+  const z = { ex: 'zercher', ph: 'strength' };
+  const s = (d, w, reps) => ({ d, ph: 'strength', ...summarizeSets(reps.map(r => ({ w, r })), false) });
+  const h = (d, w, secs) => ({ d, ph: 'iso', ...summarizeSets(secs.map(sec => ({ w, sec })), true) });
+
+  it('Strength: a set at 4 or fewer of 6, two sessions in a row, suggests 5–10% lighter', () => {
+    const logs = { zercher: [s('2026-09-01', 225, [6, 6, 5, 4]), s('2026-09-03', 225, [6, 5, 4, 4])] };
+    expect(backoffOf(cfg(), logs, z, 'strength')).toEqual({ w: 225, lo: 205, hi: 215, since: '2026-09-01' });
+  });
+  it('Strength: one bad session, or sets that only dropped to 5, is not a back-off', () => {
+    expect(backoffOf(cfg(), { zercher: [s('2026-09-01', 225, [6, 6, 6, 6]), s('2026-09-03', 225, [6, 5, 4, 4])] }, z, 'strength')).toBeNull();
+    expect(backoffOf(cfg(), { zercher: [s('2026-09-01', 225, [6, 6, 5, 5]), s('2026-09-03', 225, [6, 5, 5, 5])] }, z, 'strength')).toBeNull();
+  });
+  it('follows the prescription on the card (4 × 8 backs off at 6 or fewer)', () => {
+    const logs = { zercher: [s('2026-09-01', 225, [8, 8, 7, 6]), s('2026-09-03', 225, [8, 7, 6, 6])] };
+    expect(backoffOf(cfg(), logs, { ...z, rx: '4 × 8' }, 'strength')).toMatchObject({ lo: 205, hi: 215 });
+    expect(backoffOf(cfg(), logs, z, 'strength')).toBeNull(); // 6 is on target for 4 × 6
+  });
+  it('Isometric: holds under 15 s twice in a row drop one weight step', () => {
+    const logs = { legext: [h('2026-09-01', 70, [30, 20, 14]), h('2026-09-03', 70, [25, 12, 10])] };
+    expect(backoffOf(cfg(), logs, { ex: 'legext', ph: 'iso' }, 'iso')).toEqual({ w: 70, lo: 65, hi: 65, since: '2026-09-01' });
+    const ok = { legext: [h('2026-09-01', 70, [30, 20, 15]), h('2026-09-03', 70, [25, 15, 15])] };
+    expect(backoffOf(cfg(), ok, { ex: 'legext', ph: 'iso' }, 'iso')).toBeNull();
+  });
+  it('keeps light weights on the 2.5 lb step, and stops at the lightest step', () => {
+    const light = { curl: [s('2026-09-01', 30, [6, 4]), s('2026-09-03', 30, [6, 3])] };
+    expect(backoffOf(cfg(), light, { ex: 'curl' }, 'strength')).toMatchObject({ lo: 27.5, hi: 27.5 });
+    const lightest = { curl: [s('2026-09-01', 2.5, [6, 4]), s('2026-09-03', 2.5, [6, 3])] };
+    expect(backoffOf(cfg(), lightest, { ex: 'curl' }, 'strength')).toBeNull();
+  });
+  it('has no rule for Hypertrophy or Explosive, and ignores check-offs and entries with no per-set reps', () => {
+    const hy = { hack: [{ d: '2026-09-01', ph: 'hyp', w: 270, s: 4, r: 3 }, { d: '2026-09-03', ph: 'hyp', w: 270, s: 4, r: 3 }] };
+    expect(backoffOf(cfg(), hy, { ex: 'hack' }, 'hyp')).toBeNull();
+    const auto = { zercher: [{ ...s('2026-09-01', 225, [4, 4]), auto: true }, { ...s('2026-09-03', 225, [4, 4]), auto: true }] };
+    expect(backoffOf(cfg(), auto, z, 'strength')).toBeNull();
+    const noReps = { zercher: [{ d: '2026-09-01', ph: 'strength', w: 225, s: 4 }, { d: '2026-09-03', ph: 'strength', w: 225, s: 4 }] };
+    expect(backoffOf(cfg(), noReps, z, 'strength')).toBeNull();
   });
 });
 

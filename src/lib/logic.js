@@ -24,24 +24,56 @@ export const defaultPhase = (cfg, slot, idx) => cfg.phDef[itemKey(slot, idx)] ??
 export function phaseOf(cfg, week, slot, idx) { return week.ph[itemKey(slot, idx)] ?? defaultPhase(cfg, slot, idx); }
 export function rxOf(cfg, item, ph) { if (item.rx && ph === item.ph) return item.rx; if (ph) return cfg.rxOverride[ph] || PHASES[ph].rx; return item.rx || ''; }
 
-// Stall: the last 3 sessions of a lift in one phase (one per day) never went above the first of them in weight,
-// the latest didn't beat the first on total reps (or hold time), and they span at least 2 different weeks. Not flagged when the app is already suggesting a heavier weight.
-// Both use only sessions you logged yourself: check-offs log the target, so counting them would raise
-// the suggested weight on check-offs alone and call a lift stalled that you never logged.
-export function stallOf(cfg, logs, exId, ph) {
+// Sessions you logged yourself for a lift in one phase, one per day, oldest first.
+// Check-offs log the target, so counting them would raise the suggested weight on check-offs alone
+// and call a lift stalled that you never logged.
+function sessionsOf(logs, exId, ph) {
   const byDay = {}; (logs[exId] || []).filter(e => !e.auto && (e.ph || null) === (ph || null)).forEach(e => { byDay[e.d] = e; });
-  const L = Object.keys(byDay).sort().map(d => byDay[d]).slice(-3);
+  return Object.keys(byDay).sort().map(d => byDay[d]);
+}
+const workOf = e => setsOfEntry(e).reduce((a, x) => a + (Number(x.sec ?? x.r) || 0), 0); // total reps (or hold seconds)
+const step = w => (w < 50 ? 2.5 : 5);
+
+// Stall: a lift is judged on its best session of each week (heaviest, then most reps), so lighter back-off days
+// in a week trained 2–3 times don't count against it. Stalled when the last 3 training weeks never went above the
+// first of them in weight and the latest didn't beat the first on total reps (or hold time). Explosive work
+// progresses on speed rather than load and Mobility has no load, so neither is flagged. Not flagged when the app is
+// already suggesting a heavier weight.
+export function stallOf(cfg, logs, exId, ph) {
+  if (ph === 'exp' || ph === 'mob') return null;
+  const best = {};
+  sessionsOf(logs, exId, ph).forEach(e => {
+    const wk = e.wk || ymd(monday(parseDate(e.d))); const b = best[wk];
+    if (!b || Number(e.w) > Number(b.w) || (Number(e.w) === Number(b.w) && workOf(e) > workOf(b))) best[wk] = e;
+  });
+  const L = Object.keys(best).sort().map(k => best[k]).slice(-3);
   if (L.length < 3 || L.some(e => !(Number(e.w) > 0))) return null;
   const w0 = Number(L[0].w); if (L.some(e => Number(e.w) > w0)) return null;
-  if (new Set(L.map(e => e.wk || ymd(monday(parseDate(e.d))))).size < 2) return null;
-  const work = e => setsOfEntry(e).reduce((a, x) => a + (Number(x.sec ?? x.r) || 0), 0); // total reps (or hold seconds)
-  if (Number(L[2].w) === w0 && work(L[2]) > work(L[0])) return null; // same weight but more reps: still progressing
+  if (Number(L[2].w) === w0 && workOf(L[2]) > workOf(L[0])) return null; // same weight but more reps: still progressing
   if (progressionOf(cfg, logs, { ex: exId }, ph)) return null;
   return { w: Number(L[2].w), since: L[0].d, n: 3 };
 }
+
+// Back off: the last two sessions in a row fell well short of the prescription.
+// Strength: a set 2 or more reps under the target (4 or fewer on a 4 × 6); drop 5–10% and rebuild.
+// Isometric: a hold shorter than the bottom of the range (under 15 s on 15–30 s); drop one weight step.
+// Other phases have no back-off rule. Shown instead of a stall.
+export function backoffOf(cfg, logs, item, ph) {
+  if (ph !== 'strength' && ph !== 'iso') return null;
+  const m = rxOf(cfg, item, ph).match(/(\d+)\s*×\s*(\d+)/); if (!m) return null;
+  const target = Number(m[2]);
+  const L = sessionsOf(logs, item.ex, ph).slice(-2);
+  if (L.length < 2 || L.some(e => !(Number(e.w) > 0))) return null;
+  const short = e => setsOfEntry(e).some(x => (ph === 'iso' ? x.sec != null && Number(x.sec) < target : x.r != null && Number(x.r) <= target - 2));
+  if (!L.every(short)) return null;
+  const w = Number(L[1].w);
+  if (w - step(w) <= 0) return null; // already the lightest step
+  if (ph === 'iso') return { w, lo: w - step(w), hi: w - step(w), since: L[0].d };
+  const hi = Math.min(round(w * 0.95), w - step(w));
+  return { w, lo: Math.min(round(w * 0.9), hi), hi, since: L[0].d };
+}
 export function progressionOf(cfg, logs, item, ph) {
-  const byDay = {}; (logs[item.ex] || []).filter(e => !e.auto && (e.ph || null) === (ph || null)).forEach(e => { byDay[e.d] = e; });
-  const L = Object.keys(byDay).sort().map(d => byDay[d]);
+  const L = sessionsOf(logs, item.ex, ph);
   if (L.length < 2) return null;
   const [a, b] = L.slice(-2); const w = Number(b.w);
   if (!(w > 0) || !(Number(a.w) >= w)) return null;
