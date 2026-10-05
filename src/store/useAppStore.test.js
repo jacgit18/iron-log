@@ -571,6 +571,19 @@ describe('video link from the log sheet', () => {
 });
 
 describe('bug check fixes', () => {
+  it('a weight you log becomes the starting weight for that exercise on other days, even with a 1RM set', async () => {
+    const { targetOf, planRows } = await import('../lib/logic.js');
+    useAppStore.setState({ cfg: { ...st().cfg, rm: { hack: 300 } } });
+    const other = st().slotById('A-d5s3'); expect(other.items[0].ex).toBe('hack');
+    const phOther = phaseOf(st().cfg, st().week, other, 0);
+    expect(targetOf(st().cfg, st().logs, other.items[0], phOther).src).toMatch(/1RM/); // nothing logged yet: the 1RM seeds it
+    st().submitLog('A-d3s1', 0, { entry: { d: '2026-10-01', ph: 'hyp', w: 280, s: 4, r: 15 }, ph: 'hyp' });
+    expect(phOther).toBe('hyp');
+    expect(targetOf(st().cfg, st().logs, other.items[0], 'hyp')).toMatchObject({ w: 280, src: 'last session' });
+    expect(planRows(st().cfg, st().logs, other.items[0], 'hyp')[0].w).toBe(280);
+    st().checkCard('A-d5s3', true); // a check-off logs the target; it doesn't move the starting weight
+    expect(targetOf(st().cfg, st().logs, other.items[0], 'hyp').w).toBe(280);
+  });
   it('a saved log beats a slot default saved earlier, for that card', () => {
     useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
     const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };

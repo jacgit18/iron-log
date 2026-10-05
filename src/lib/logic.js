@@ -56,8 +56,14 @@ export function targetOf(cfg, logs, item, ph) {
   if (up && (base.w == null || up.w > base.w)) return { w: up.w, src: `up from ${up.from} lb`, up: true };
   return base;
 }
+// The starting weight: the weight you last logged yourself for this exercise in this phase (on any card), else the
+// phase's share of your 1RM, else the last check-off, else the program's weight. Logging a weight therefore sets where
+// you start next time, even when a 1RM is set; the 1RM only seeds a phase you haven't logged yet.
+const hasWeight = e => !!e && e.w != null && e.w !== '' && Number(e.w) > 0;
 export function baseTargetOf(cfg, logs, item, ph) {
   const rm = cfg.rm[item.ex];
+  const mine = (logs[item.ex] || []).filter(e => !e.auto && (e.ph || null) === (ph || null)); const lastMine = mine[mine.length - 1];
+  if (hasWeight(lastMine)) return { w: Number(lastMine.w), src: 'last session' };
   if (rm && ph && (cfg.pct[ph] ?? PHASES[ph].pct) > 0) { return { w: round(rm * (cfg.pct[ph] ?? PHASES[ph].pct) / 100), src: `${cfg.pct[ph] ?? PHASES[ph].pct}% of 1RM` }; }
   const last = lastLog(logs, item.ex, ph);
   if (last && last.w != null && last.w !== '' && Number(last.w) > 0) return { w: Number(last.w), src: 'last session' };

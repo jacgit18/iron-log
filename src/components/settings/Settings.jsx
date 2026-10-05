@@ -113,7 +113,7 @@ function PhasePanel() {
   return (
     <section className="panel">
       <h2>Phases</h2>
-      <p>Target weight = your 1RM × the phase %. Rounded to 2.5 lb under 50 lb, 5 lb above.</p>
+      <p>Target weight = your 1RM × the phase %, until you log that exercise in the phase. After that, the target starts from the weight you last logged. Rounded to 2.5 lb under 50 lb, 5 lb above.</p>
       <div className="tbl">
         <table>
           <thead><tr><th>Phase</th><th>% of 1RM</th><th>Sets × reps</th></tr></thead>
