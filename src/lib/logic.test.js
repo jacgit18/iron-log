@@ -175,7 +175,7 @@ describe('check-offs log the planned numbers', () => {
 
   it('logs the card’s target when an exercise is checked off', () => {
     const out = run({}, {}, { done: { 'A-d3s1': true } });
-    expect(out.hack).toEqual([{ d: '2026-09-22', ph: 'hyp', w: 270, s: 4, r: 15, sets: Array(4).fill({ w: 270, r: 15 }), slot: 'A-d3s1', wk: '2026-09-20', auto: true }]);
+    expect(out.hack).toEqual([{ id: expect.stringMatching(/^L/), d: '2026-09-22', ph: 'hyp', w: 270, s: 4, r: 15, sets: Array(4).fill({ w: 270, r: 15 }), slot: 'A-d3s1', wk: '2026-09-20', auto: true }]);
   });
   it('logs each half of a superset as it is checked', () => {
     const one = run({}, {}, { done: { 'A-d2s5#1': true } });

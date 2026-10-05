@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../lib/dates.js';
 import { volText, AUTO_NOTE, isTimed, setsOfEntry, summarizeSets } from '../../lib/logic.js';
+import { entryId, findEntry } from '../../lib/export.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import LineChart from '../LineChart.jsx';
@@ -10,7 +11,7 @@ import LiftGoal from '../progress/LiftGoal.jsx';
 
 const num = v => (v === '' ? null : Number(v));
 
-function EditEntry({ exId, i, entry, onDone }) {
+function EditEntry({ exId, entry, onDone }) {
   const { updateLog } = useAppStore.getState();
   const [date, setDate] = useState(entry.d);
   const [ph, setPh] = useState(entry.ph || '');
@@ -27,7 +28,7 @@ function EditEntry({ exId, i, entry, onDone }) {
     const { w, s, r, sec, sets: _s, auto, n, d, ph: _p, ...rest } = entry; // eslint-disable-line no-unused-vars
     const next = { ...rest, d: date, ph: ph || null, ...summarizeSets(sets, iso) };
     if (note.trim()) next.n = note.trim();
-    updateLog(exId, i, next); onDone();
+    updateLog(exId, entry, next); onDone(); // found by identity: the list may have changed while this was open
   };
   return (
     <form className="setbox" noValidate onSubmit={save} aria-label="Edit session">
@@ -67,7 +68,8 @@ export default function DetailSheet({ exId }) {
   const cfg = useAppStore(s => s.cfg);
   const L = useAppStore(s => s.logs[exId]) || [];
   const { deleteLog, closeModal } = useAppStore.getState();
-  const [editing, setEditing] = useState(null);
+  const [editing, setEditing] = useState(null); // the entry as it was when Edit was tapped
+  const editOpen = editing && findEntry(L, editing) >= 0; // gone or changed meanwhile: the form closes
   const last = L[L.length - 1];
   const multi = new Set(L.map(e => e.ph || null)).size > 1;
 
@@ -83,20 +85,20 @@ export default function DetailSheet({ exId }) {
         </>
       )}
       <LiftGoal exId={exId} />
-      {editing != null && L[editing] && <EditEntry key={editing} exId={exId} i={editing} entry={L[editing]} onDone={() => setEditing(null)} />}
+      {editOpen && <EditEntry key={entryId(editing)} exId={exId} entry={editing} onDone={() => setEditing(null)} />}
       <table className="hist">
         <thead><tr><th>Date</th><th>Phase</th><th className="num">Load</th><th className="num">Volume</th><th>Note</th><th><span className="sr">Edit or delete</span></th></tr></thead>
         <tbody>
           {L.map((e, i) => ({ e, i })).reverse().map(({ e, i }) => (
-            <tr key={`${i}-${e.d}`}>
+            <tr key={`${entryId(e)}-${i}`}>
               <td>{fmtShort(parseDate(e.d))}</td>
               <td>{e.ph ? PHASES[e.ph].label : '—'}</td>
               <td className="num">{e.w != null && e.w !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
               <td className="num">{volText(e)}</td>
               <td>{e.n || (e.auto ? AUTO_NOTE : '')}</td>
               <td style={{ whiteSpace: 'nowrap' }}>
-                <button type="button" className="btn sm ghost" aria-label={`Edit entry from ${fmtShort(parseDate(e.d))}`} onClick={() => setEditing(i)}>Edit</button>{' '}
-                <ArmedButton className="btn sm ghost" aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onConfirm={() => { setEditing(null); deleteLog(exId, i); }} />
+                <button type="button" className="btn sm ghost" aria-label={`Edit entry from ${fmtShort(parseDate(e.d))}`} onClick={() => setEditing(e)}>Edit</button>{' '}
+                <ArmedButton className="btn sm ghost" aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onConfirm={() => { setEditing(null); deleteLog(exId, e); }} />
               </td>
             </tr>
           ))}
