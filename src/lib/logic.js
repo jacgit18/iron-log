@@ -231,6 +231,87 @@ export function altDay(cfg, week, slots, s, day, from) {
   return null;
 }
 
+/* ---------- A new day order after a day is finished ----------
+   A clash is the same exercise on two neighboring columns. An exercise on every workout day is left out:
+   no order can split it, and so are Home cards (daily habits) and either/or cards (you pick whichever is free).
+   planOrder only suggests; the store writes week.order and week.rest on Apply. */
+export const countsForClash = s => s.sec !== 'Home' && s.type !== 'either';
+const exOfCol = (list, w, skip) => new Set(list.filter(s => !isSkipped(s, w) && countsForClash(s)).flatMap(s => s.items.map(it => it.ex)).filter(ex => !skip.has(ex)));
+const dailyOf = (cols, w) => {
+  const days = DAYS.map(d => exOfCol(cols[d], w, new Set())).filter(x => x.size);
+  return days.length < 2 ? new Set() : new Set([...days[0]].filter(ex => days.every(x => x.has(ex))));
+};
+const pairClash = (cols, w, skip, a, b) => { const x = exOfCol(cols[b] || [], w, skip); return [...exOfCol(cols[a] || [], w, skip)].filter(ex => x.has(ex)); };
+const countFrom = (cols, w, skip, from) => DAYS.filter(c => c >= from && c < DAY_COUNT).reduce((n, c) => n + pairClash(cols, w, skip, c, c + 1).length, 0);
+export const dailyExercises = (week, slots) => { const cols = currentLayout(week, slots); return [...dailyOf(cols, week)]; };
+export const dayClash = (week, slots, a, b) => { const cols = currentLayout(week, slots); return pairClash(cols, week, dailyOf(cols, week), a, b); };
+export const clashCount = (week, slots, from) => { const cols = currentLayout(week, slots); return countFrom(cols, week, dailyOf(cols, week), from); };
+
+// Every distinct arrangement of `items` (repeats allowed), the given order first.
+function arrangements(items) {
+  const out = []; const used = items.map(() => false); const cur = [];
+  (function go() {
+    if (cur.length === items.length) { out.push([...cur]); return; }
+    const tried = new Set();
+    items.forEach((it, i) => { if (used[i] || tried.has(it)) return; tried.add(it); used[i] = true; cur.push(it); go(); cur.pop(); used[i] = false; });
+  })();
+  return out;
+}
+
+// After column doneCol is finished: the order of the later, unstarted columns (rest days included) with the fewest
+// back-to-back repeats. Moving a rest day comes first: if that alone (workouts in the same order) cuts the repeats,
+// it is the suggestion. Otherwise workouts may be reordered too. Ties go to the one that reorders the fewest
+// workouts, then changes the fewest columns.
+// Returns null unless it has fewer repeats than now; otherwise { order, rest, before, after, lines }.
+export function planOrder(cfg, week, slots, doneCol) {
+  const cols = currentLayout(week, slots); const skip = dailyOf(cols, week);
+  const rest = restsOf(week); const order = orderOf(week);
+  const before = countFrom(cols, week, skip, doneCol);
+  if (!before) return null;
+  const R = 'R'; const items = DAYS.map(c => (rest.includes(c) ? R : dayAt(week, c)));
+  // An empty day stays put: it is where a rest day goes, so moving it could leave a rest day no room on the board.
+  const movable = DAYS.filter(c => c > doneCol && (items[c - 1] === R || (cols[c].length > 0 && !cols[c].some(s => s.items.some((_, i) => isItemDone(s, i, week))))));
+  if (movable.length < 2) return null;
+  const hidden = order.slice(DAY_COUNT - rest.length);
+  const seq = items.filter(x => x !== R); const at = d => seq.indexOf(d);
+  let best = null, bestRest = null;
+  const better = (key, b) => { const k = b ? key.findIndex((v, i) => v !== b.key[i]) : -1; return !b || (k >= 0 && key[k] < b.key[k]); };
+  for (const arr of arrangements(movable.map(c => items[c - 1]))) {
+    const next = [...items]; movable.forEach((c, i) => { next[c - 1] = arr[i]; });
+    const cand = { ...week, rest: DAYS.filter(c => next[c - 1] === R), order: [...next.filter(x => x !== R), ...hidden] };
+    const ws = next.filter(x => x !== R); let inv = 0;
+    for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) if (at(ws[i]) > at(ws[j])) inv++;
+    const key = [countFrom(currentLayout(cand, slots), cand, skip, doneCol), inv, next.filter((x, i) => x !== items[i]).length];
+    if (better(key, best)) best = { key, next, cand };
+    if (inv === 0 && better(key, bestRest)) bestRest = { key, next, cand };
+  }
+  if (bestRest && bestRest.key[0] < before) best = bestRest;
+  const after = best.key[0];
+  if (after >= before) return null;
+  // Words: what clashes now, and what the new order changes.
+  const name = ex => exInfo(cfg, ex).n;
+  const list = xs => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0]);
+  const lines = DAYS.filter(c => c >= doneCol && c < DAY_COUNT).flatMap(c => {
+    const shared = pairClash(cols, week, skip, c, c + 1); if (!shared.length) return [];
+    return [`${list(shared.map(name))} ${shared.length > 1 ? 'are' : 'is'} on Day ${c} and Day ${c + 1}.`];
+  });
+  const changed = DAYS.filter(c => best.next[c - 1] !== items[c - 1]);
+  const empty = x => !cols[colOf(week, x)].length;
+  const label = x => (x === R ? 'Rest' : empty(x) ? 'empty day' : `Day ${colOf(week, x)}'s workout`);
+  const the = x => (x === R ? 'your rest day' : empty(x) ? 'the empty day' : `Day ${colOf(week, x)}'s workout`);
+  // Say it plainly when it is one swap of two workouts, or one day moved with the ones between shifting along.
+  let what = changed.length === 2 && !changed.some(c => items[c - 1] === R || best.next[c - 1] === R) ? `Swapping Day ${changed[0]} and Day ${changed[1]}` : null;
+  const from = [...DAYS.filter(c => items[c - 1] === R), ...DAYS.filter(c => items[c - 1] !== R)].map(c => c - 1); // a rest day first
+  for (const p of from) for (let q = 0; !what && q < DAY_COUNT; q++) {
+    const m = [...items]; const [x] = m.splice(p, 1); m.splice(q, 0, x);
+    if (p !== q && m.every((v, i) => v === best.next[i])) what = `Moving ${the(x)} from Day ${p + 1} to Day ${q + 1}`;
+  }
+  const outcome = after ? `leaves ${after} back-to-back repeat${after > 1 ? 's' : ''} instead of ${before}.` : 'fixes it.';
+  const first = changed[0], last = changed[changed.length - 1];
+  lines.push(what ? `${what} ${outcome}` : `New order for Days ${first} to ${last}: ${DAYS.filter(c => c >= first && c <= last).map(c => label(best.next[c - 1])).join(', ')}. That ${outcome}`);
+  return { order: best.cand.order, rest: best.cand.rest, before, after, lines };
+}
+
 /* ---------- Yesterday's leftovers ---------- */
 export const todayCol = date => date.getDay() + 1; // the week runs Sunday (column 1) to Saturday (column 7)
 // Cards in column c with nothing checked that aren't skipped; none on the rest column.

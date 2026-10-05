@@ -792,3 +792,114 @@ describe('exercise library', () => {
     expect(st().cfg.ex[id]).toBeUndefined(); expect(st().cfg.rm[id]).toBeUndefined(); expect(st().cfg.muscleMap[id]).toBeUndefined();
   });
 });
+
+// Program A: Leg Extension is on Days 2 and 3, so finishing Day 2 suggests a new order for Days 3 to 6 (the empty Day 7 stays last).
+describe('a new day order after a day is finished', () => {
+  const day2 = () => currentLayout(st().week, st().activeSlots())[2];
+  beforeEach(() => useAppStore.setState({ orderNote: null, orderSkip: [] }));
+
+  it('finishing a day by its box suggests an order; Apply writes it and Put back restores it', () => {
+    st().checkDay(2, true);
+    const n = st().orderNote;
+    expect(n.doneCol).toBe(2);
+    expect(n.next.order).toEqual([1, 2, 6, 5, 4, 3, 7]);
+    expect(n.lines.length).toBeGreaterThan(1);
+    expect(st().week.order).toBeUndefined(); // nothing changes until Apply
+    expect(st().applyOrder()).toBe(true);
+    expect(st().week.order).toEqual([1, 2, 6, 5, 4, 3, 7]);
+    expect(saved('weeks/' + st().weekKey()).order).toEqual([1, 2, 6, 5, 4, 3, 7]);
+    expect(st().orderNote.applied).toBe(true);
+    expect(st().canUndoOrder()).toBe(true);
+    expect(st().undoOrder()).toBe(true);
+    expect(st().week.order).toBeUndefined();
+    expect(st().orderNote).toBeNull();
+  });
+  it('after Apply there is still room for a rest day: nothing is pushed off the week', () => {
+    st().checkDay(1, true);
+    expect(st().applyOrder()).toBe(true);
+    expect(st().week.order[6]).toBe(7); // the empty Day 7 stayed last
+    expect(st().restOverflow(2)).toEqual([]);
+    expect(st().setRestDay(2)).toBe(true);
+    expect(Object.keys(st().week.skipped)).toEqual([]);
+  });
+  it('ticking the last card of a day raises it, and not before', () => {
+    const cards = day2();
+    cards.slice(0, -1).forEach(s => { st().checkCard(s.id, true); expect(st().orderNote).toBeNull(); });
+    st().checkCard(cards[cards.length - 1].id, true);
+    expect(st().orderNote.doneCol).toBe(2);
+  });
+  it('unticking clears a suggestion not yet applied, and raises none', () => {
+    st().checkDay(2, true);
+    st().checkDay(2, false);
+    expect(st().orderNote).toBeNull();
+  });
+  it('skipping the last open card finishes the day without a suggestion', () => {
+    const cards = day2();
+    cards.slice(0, -1).forEach(s => st().checkCard(s.id, true));
+    st().skipCard(cards[cards.length - 1].id);
+    expect(tally(day2(), st().week).full).toBe(true);
+    expect(st().orderNote).toBeNull();
+  });
+  it('can move the rest day, which keeps its date', () => {
+    st().setRestDay(6);
+    const restOn = st().week.restOn;
+    st().checkDay(2, true);
+    expect(st().orderNote.next.rest).toEqual([3]);
+    st().applyOrder();
+    expect(st().week.rest).toEqual([3]);
+    expect(st().week.order).toBeUndefined();
+    expect(st().week.restOn).toBe(restOn);
+    st().undoOrder();
+    expect(st().week.rest).toEqual([6]);
+  });
+  it('Put back is refused once the order was changed some other way', () => {
+    st().checkDay(2, true); st().applyOrder();
+    st().mutateWeek(w => { w.order = [2, 1, 3, 4, 5, 6, 7]; });
+    expect(st().canUndoOrder()).toBe(false);
+    expect(st().undoOrder()).toBe(false);
+    expect(st().week.order).toEqual([2, 1, 3, 4, 5, 6, 7]);
+  });
+  it('Dismiss keeps the same suggestion from coming back this session', () => {
+    st().checkDay(2, true);
+    st().dismissOrder();
+    expect(st().orderNote).toBeNull();
+    st().checkDay(2, false); st().checkDay(2, true);
+    expect(st().orderNote).toBeNull();
+  });
+  it('a swap, a rest day or a card move clears it', () => {
+    st().checkDay(2, true); st().swapDays(5, 1);
+    expect(st().orderNote).toBeNull();
+    st().checkDay(2, false); st().swapDays(5, 1); st().checkDay(2, true); st().setRestDay(6);
+    expect(st().orderNote).toBeNull();
+    st().setRestDay(6); st().checkDay(2, false); st().checkDay(2, true); st().moveSlot('A-d6s1', 5);
+    expect(st().orderNote).toBeNull();
+  });
+});
+
+// Through the store: Apply only moves days (check-offs, logs, skips and moves stay), and Put back restores the week exactly.
+describe('applying a suggested order keeps every card and can be put back exactly', () => {
+  beforeEach(() => useAppStore.setState({ orderNote: null, orderSkip: [] }));
+  const where = () => { const m = {}; Object.entries(currentLayout(st().week, st().activeSlots())).forEach(([c, l]) => l.forEach(s => { (m[s.id] = m[s.id] || []).push(Number(c)); })); return m; };
+
+  [null, 2, 3, 4, 5, 6, 7].forEach(rest => [1, 2, 3, 4].forEach(day => {
+    it(`rest ${rest ?? 'none'}, finishing Day ${day}`, () => {
+      if (rest) st().setRestDay(rest);
+      st().checkCard('A-d6s2', true); // a check-off elsewhere in the week
+      st().checkDay(day, true);
+      const n = st().orderNote; if (!n) return; // nothing to suggest here
+      const before = structuredClone(st().week); const logs = structuredClone(st().logs); const pos = where();
+      expect(st().applyOrder()).toBe(true);
+      const after = st().week; const moved = where();
+      expect(Object.keys(moved).sort()).toEqual(Object.keys(pos).sort()); // no card lost or added
+      Object.values(moved).forEach(cs => expect(cs.length).toBe(1)); // none duplicated
+      expect(after.done).toEqual(before.done);
+      expect(after.skipped).toEqual(before.skipped);
+      expect(after.moved).toEqual(before.moved);
+      expect(after.restOn).toEqual(before.restOn);
+      expect(st().logs).toEqual(logs);
+      expect(st().undoOrder()).toBe(true);
+      expect(st().week).toEqual(before);
+      expect(where()).toEqual(pos);
+    });
+  }));
+});

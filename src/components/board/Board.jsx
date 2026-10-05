@@ -61,6 +61,8 @@ export default function Board() {
   const pct = total ? Math.round(done / total * 100) : 0;
   const wk = ymd(weekStart);
   const showMove = moveNote && moveNote.week === wk;
+  const orderNote = useAppStore(s => s.orderNote);
+  const showOrder = orderNote && orderNote.week === wk;
   const uncheckNote = useAppStore(s => s.uncheckNote);
   const showUncheck = uncheckNote && uncheckNote.week === wk;
 
@@ -99,6 +101,11 @@ export default function Board() {
 
   const moveRef = useRef(null);
   useEffect(() => { if (moveRef.current) moveRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [moveNote]);
+  // A suggested day order: bring it into view when it appears, and after Apply put focus on Put back.
+  const orderRef = useRef(null); const putBackRef = useRef(null);
+  useEffect(() => { if (orderRef.current && orderNote && !orderNote.applied) orderRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [orderNote]);
+  const orderApplied = !!(showOrder && orderNote.applied);
+  useEffect(() => { if (orderApplied && putBackRef.current) putBackRef.current.focus(); }, [orderApplied]);
   // The undo notice sits above the days, so bring it into view when it appears (you're usually scrolled down at a card).
   const uncheckRef = useRef(null);
   useEffect(() => { if (uncheckRef.current) uncheckRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [uncheckNote]);
@@ -204,6 +211,16 @@ export default function Board() {
             {moveNote.alt && <button type="button" className="btn sm" onClick={() => st.moveSlot(moveNote.slot, moveNote.alt)}>Move to Day {moveNote.alt} instead</button>}
             <button type="button" className="btn sm" onClick={st.undoMove}>Move back to Day {moveNote.fromShown}</button>
             <button type="button" className="btn sm ghost" onClick={st.dismissMove}>Keep it</button>
+          </div>
+        </div>
+      )}
+      {showOrder && (
+        <div className="notice movewarn" role="status" ref={orderRef}>
+          {orderNote.applied ? <div>Order changed for this week.</div> : <div><b>Back-to-back:</b> {orderNote.lines.join(' ')}</div>}
+          <div className="actions">
+            {!orderNote.applied && <button type="button" className="btn sm" onClick={st.applyOrder}>Apply</button>}
+            {orderNote.applied && st.canUndoOrder() && <button type="button" className="btn sm" ref={putBackRef} onClick={st.undoOrder}>Put back</button>}
+            <button type="button" className="btn sm ghost" onClick={st.dismissOrder}>{orderNote.applied ? 'Done' : 'Dismiss'}</button>
           </div>
         </div>
       )}
