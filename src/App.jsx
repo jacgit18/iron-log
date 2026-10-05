@@ -27,7 +27,7 @@ const TABS = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progres
 
 function Modal() {
   const modal = useAppStore(s => s.modal);
-  const slotExists = useAppStore(s => (s.modal && s.modal.type === 'log' ? !!s.slotById(s.modal.slotId) : true));
+  const slotExists = useAppStore(s => (s.modal && s.modal.type === 'log' ? s.logTargetExists(s.modal.slotId, s.modal.idx) : true));
   if (!modal || !slotExists) return null;
   switch (modal.type) {
     case 'log': return <LogSheet key={`${modal.slotId}:${modal.idx}`} slotId={modal.slotId} idx={modal.idx} />;

@@ -903,3 +903,12 @@ describe('applying a suggested order keeps every card and can be put back exactl
     });
   }));
 });
+
+describe('log sheet target', () => {
+  it('is gone when the card, or the exercise at that position, no longer exists', () => {
+    const card = st().activeSlots().find(s => s.type === 'single');
+    expect(st().logTargetExists(card.id, 0)).toBe(true);
+    expect(st().logTargetExists(card.id, card.items.length)).toBe(false); // the program now has fewer exercises on that card
+    expect(st().logTargetExists('no-such-card', 0)).toBe(false);
+  });
+});
