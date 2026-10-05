@@ -2,6 +2,7 @@ import { BUILTIN, PHASES } from '../lib/data.js';
 import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
 import { parseDataFile, importSel, cfgSection, mergeEntries, mergeWeek, sameProg, progBody, libDate, backupCfg } from '../lib/export.js';
 import { WEEK_RE } from '../lib/trends.js';
+import { validPct, validRest, validRm } from '../lib/validate.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { parseExcelExport, parseCsvExport, entryKey, checkOffsFromLogs } from '../lib/excelImport.js';
 
@@ -14,10 +15,10 @@ export const settingsSlice = (set, get, flag) => ({
   setImportSection: (k, v) => set(s => ({ importDraft: s.importDraft && { ...s.importDraft, sel: { ...importSel(s.importDraft), [k]: v } } })),
   importCount: 0, // bumps after each import so the import panel resets (paste box closed and cleared)
 
-  setPct(p, raw) { const n = Number(raw); if (raw === '' || !(n >= 0 && n <= 110)) return false; get().mutateCfg(c => { c.pct[p] = n; }); },
+  setPct(p, raw) { const n = Number(raw); if (raw === '' || !validPct(n)) return false; get().mutateCfg(c => { c.pct[p] = n; }); },
   setRxOverride(p, raw) { const v = raw.trim(); get().mutateCfg(c => { if (v && v !== PHASES[p].rx) c.rxOverride[p] = v; else delete c.rxOverride[p]; }); },
-  setRest(raw) { const n = Number(raw); if (raw === '' || !(n >= 0 && n <= 600)) return false; get().mutateCfg(c => { c.rest = n; }); },
-  setRm(exId, raw) { const n = Number(raw); if (raw !== '' && !(n > 0) && get().cfg.rm[exId] == null) return false; get().mutateCfg(c => { if (raw === '' || !(n > 0)) delete c.rm[exId]; else c.rm[exId] = n; }); }, // 0 or empty clears a saved 1RM; junk with nothing saved is rejected so the field reverts
+  setRest(raw) { const n = Number(raw); if (raw === '' || !validRest(n)) return false; get().mutateCfg(c => { c.rest = n; }); },
+  setRm(exId, raw) { const n = Number(raw); if (raw !== '' && !validRm(n) && get().cfg.rm[exId] == null) return false; get().mutateCfg(c => { if (raw === '' || !validRm(n)) delete c.rm[exId]; else c.rm[exId] = n; }); }, // 0 or empty clears a saved 1RM; junk with nothing saved is rejected so the field reverts
   setCfgField(k, v) { get().mutateCfg(c => { c[k] = v; }); },
   setBackupRepo(raw) {
     const v = raw.trim();

@@ -8,6 +8,7 @@ import {
 } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
+import { setError } from '../../lib/validate.js';
 
 // Older entries in a timed phase may hold reps (Mobility was counted in reps before), so each side falls back to the other.
 const toRow = (x, iso) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x.r : x.r ?? x.sec) ?? '', tw: false, tr: false });
@@ -59,6 +60,7 @@ export default function LogSheet({ slotId, idx }) {
     const sets = rows.map(r => ({ w: num(r.w), v: num(r.r) })).filter(x => x.w != null || x.v != null)
       .map(x => (iso ? { w: x.w, sec: x.v } : { w: x.w, r: x.v }));
     if (!sets.length) { setErr('Enter at least one set.'); return; }
+    const bad = setError(sets, iso); if (bad) { setErr(bad); return; }
     if (!isVideoUrl(url)) { setErr(VIDEO_ERR); return; }
     const entry = { d: date || ymd(today), ph: phv, ...summarizeSets(sets, iso), slot: slotId, wk: st.weekKey() };
     if (note.trim()) entry.n = note.trim();

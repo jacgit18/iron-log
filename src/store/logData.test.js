@@ -235,4 +235,53 @@ describe('log data: db sync', () => {
       expect(fdb.docs.get('logs/hack').entries).toContainEqual(remote); // and must not overwrite it in the db
     } finally { delete globalThis.claude; }
   });
+
+  it('V1 a session with an impossible date is refused at add and edit, and out-of-range numbers are cleaned', () => {
+    expect(st().submitLog('A-d1s1', 0, { entry: sheetEntry('A-d1s1', [{ w: 45, r: 12 }], { d: '2026-02-31' }), ph: 'hyp', done: false })).toBeFalsy();
+    expect(total()).toBe(0);
+    st().submitLog('A-d1s1', 0, { entry: sheetEntry('A-d1s1', [{ w: 45, r: 99999 }]), ph: 'hyp', done: false });
+    const e = st().logs['lat-pulldown'] ? st().logs['lat-pulldown'][0] : Object.values(st().logs)[0][0];
+    expect(e.r).toBeNull();
+    expect(st().updateLog(Object.keys(st().logs)[0], e, { ...e, d: 'nope' })).toBe(false);
+  });
+
+  it('V2 a partial Excel import cleans sessions and settings', async () => {
+    const X = await loadXLSX();
+    const wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([['Date', 'Week of', 'Exercise', 'Phase', 'Weight (lb)', 'Sets', 'Reps', 'Hold (s)', 'Set detail', '', 'Primary', 'Secondary', 'Note', 'Slot', 'Id'],
+      ['2026-10-05', '2026-10-05', 'Bench Press', '', 135, 3, 8, '', '', '', '', '', '', '', ''],
+      ['2026-02-31', '2026-10-05', 'Bench Press', '', 135, 3, 8, '', '', '', '', '', '', '', '']]), 'Sessions');
+    X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([['Setting', 'Value'], ['Rest between sets (s)', 999999], ['Mode', 7]]), 'Settings');
+    const bytes = new Uint8Array(X.write(wb, { type: 'array', bookType: 'xlsx' }));
+    await st().readImportFile(file('iron-log.xlsx', bytes));
+    const d = st().importDraft.data;
+    expect(Object.values(d.logs).flat()).toHaveLength(1);
+    expect(d.excel.skipped).toBe(1);
+    expect(d.excel.settings.rest).toBeUndefined();
+    expect(d.excel.settings.mode).toBeUndefined();
+  });
+
+  it('M1 merge-import keeps this device\'s body weight, stretches, water and settings, and adds only what is missing', async () => {
+    const supp = { waterGoal: 64, waterMode: 'weight', water: { '2026-10-05': [8, 8] }, items: [], taken: {} };
+    useAppStore.setState(s => ({
+      body: [{ wk: '2026-10-05', d: '2026-10-06', w: 180 }],
+      stretches: [{ id: 's1', n: 'Hamstring', group: 'Legs', tier: '' }],
+      supp,
+      cfg: { ...s.cfg, rm: { bench: 200 }, rest: 90 },
+    }));
+    const text = JSON.stringify({
+      app: 'iron-log', format: 1,
+      config: { rm: { bench: 300, squat: 400 }, rest: 45 },
+      body: [{ wk: '2026-10-05', d: '2026-10-07', w: 190 }, { wk: '2026-10-12', d: '2026-10-13', w: 185 }],
+      stretches: { items: [{ id: 's9', n: 'hamstring', group: 'Legs' }, { id: 's2', n: 'Calf', group: 'Legs' }], experiments: [] },
+      supplements: { water: { '2026-10-05': [16], '2026-10-06': [8] }, items: [], taken: {} },
+    });
+    await st().readImportFile(file('iron-log-data.json', text));
+    await st().applyImport('merge');
+    expect(st().body).toEqual([{ wk: '2026-10-05', d: '2026-10-06', w: 180 }, { wk: '2026-10-12', d: '2026-10-13', w: 185 }]); // this device's week wins; a new week is added
+    expect(st().stretches.map(x => x.n)).toEqual(['Hamstring', 'Calf']); // same name (any case) is not added twice
+    expect(st().supp.water).toEqual({ '2026-10-05': [8, 8], '2026-10-06': [8] }); // a day this device has stays as it is
+    expect(st().cfg.rm).toEqual({ bench: 200, squat: 400 }); // only missing 1RMs are added
+    expect(st().cfg.rest).toBe(90); // other settings are not touched by a merge
+  });
 });

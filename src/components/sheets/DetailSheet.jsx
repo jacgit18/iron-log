@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../lib/dates.js';
 import { volText, AUTO_NOTE, isTimed, setsOfEntry, summarizeSets } from '../../lib/logic.js';
+import { setError } from '../../lib/validate.js';
 import { entryId, findEntry } from '../../lib/export.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
@@ -24,6 +25,7 @@ function EditEntry({ exId, entry, onDone }) {
     e.preventDefault();
     const sets = rows.map(r => ({ w: num(r.w), v: num(r.r) })).filter(x => x.w != null || x.v != null).map(x => (iso ? { w: x.w, sec: x.v } : { w: x.w, r: x.v }));
     if (!sets.length) { setErr('Enter at least one set.'); return; }
+    const bad = setError(sets, iso); if (bad) { setErr(bad); return; }
     if (!date) { setErr('Pick a date.'); return; }
     const { w, s, r, sec, sets: _s, auto, n, d, ph: _p, ...rest } = entry; // eslint-disable-line no-unused-vars
     const next = { ...rest, d: date, ph: ph || null, ...summarizeSets(sets, iso) };
