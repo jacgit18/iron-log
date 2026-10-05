@@ -25,8 +25,9 @@ export function makeSaveQueue({ getDb, onFlag }) {
         } catch (e) {
           onFlag(e && e.code === 'quota_exceeded' ? 'Storage full' : 'Not saved, retrying…');
           await new Promise(r => setTimeout(r, 1500));
-          if (!q.next) q.next = body;
-          if (e && (e.code === 'invalid_argument' || e.code === 'revoked' || e.code === 'not_granted')) { q.next = null; onFlag('Could not save'); }
+          // A permanent error drops this write only; a newer one queued meanwhile still gets its try.
+          if (e && (e.code === 'invalid_argument' || e.code === 'revoked' || e.code === 'not_granted')) onFlag('Could not save');
+          else if (!q.next) q.next = body;
         }
       }
       q.busy = false;

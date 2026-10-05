@@ -910,6 +910,38 @@ describe('a suggestion after a day is finished', () => {
     st().checkDay(2, false); st().checkDay(2, true);
     expect(st().orderNote).toBeNull();
   });
+  it('finishing a day from the log sheet or with quick log raises it too', () => {
+    const cards = workout(); const last = cards[cards.length - 1]; const idx = last.items.length - 1; const wk = st().weekKey();
+    const upToLast = () => { cards.slice(0, -1).forEach(s => st().checkCard(s.id, true)); last.items.slice(0, -1).forEach((_, i) => st().checkItem(last.id, i, true)); };
+    upToLast();
+    st().submitLog(last.id, idx, { entry: { d: wk, ph: 'hyp', w: 10, s: 3, r: 10, slot: last.id, wk }, ph: null, done: true });
+    expect(st().orderNote).toMatchObject({ kind: 'card', doneCol: 2 });
+    st().checkDay(2, false); useAppStore.setState({ orderNote: null, logs: {} });
+    upToLast();
+    const ex = last.items[idx].ex; const ph = phaseOf(st().cfg, st().week, last, idx);
+    useAppStore.setState({ logs: { ...st().logs, [ex]: [{ d: '2026-01-04', ph, w: 10, s: 3, r: 10, slot: last.id, wk: '2026-01-04' }] } });
+    st().quickLog(last.id, idx);
+    expect(st().orderNote).toMatchObject({ kind: 'card', doneCol: 2 });
+  });
+  it('starting the day it would move a card from redoes it, so Apply never moves a ticked card', () => {
+    st().checkDay(2, true);
+    expect(st().orderNote.next).toEqual({ slot: 'A-d3s5', moved: 4 });
+    st().checkCard('A-d3s5', true); // Day 3 is started now, so it stays put
+    if (st().orderNote) expect(st().orderNote.next.slot).not.toBe('A-d3s5');
+    st().applyOrder();
+    expect(st().week.moved['A-d3s5']).toBeUndefined();
+  });
+  it('Apply is refused when the board changed in a way it didn\'t see, and changing the week\'s program clears it', () => {
+    st().checkDay(2, true);
+    const n = st().orderNote;
+    useAppStore.setState({ week: { ...st().week, moved: { 'A-d3s5': 6 } } }); // as if from another device
+    expect(st().applyOrder()).toBe(false);
+    expect(st().week.moved).toEqual({ 'A-d3s5': 6 });
+    expect(st().orderNote).toBeNull();
+    useAppStore.setState({ orderNote: n, week: { ...st().week, moved: {} } });
+    st().setWeekProg('B');
+    expect(st().orderNote).toBeNull();
+  });
   it('a swap, a rest day or a card move clears it', () => {
     st().checkDay(2, true); st().swapDays(5, 1);
     expect(st().orderNote).toBeNull();
@@ -965,5 +997,17 @@ describe('log sheet target', () => {
     expect(st().logTargetExists(card.id, 0)).toBe(true);
     expect(st().logTargetExists(card.id, card.items.length)).toBe(false); // the program now has fewer exercises on that card
     expect(st().logTargetExists('no-such-card', 0)).toBe(false);
+  });
+});
+
+describe('the loaded week history stays current', () => {
+  it('an edit made on another week is in allWeeks after coming back', async () => {
+    useAppStore.setState({ weekHist: {} }); // history already loaded, as after opening Progress or an export
+    st().gotoWeek('prev'); const prev = st().weekKey();
+    useAppStore.setState(s => ({ ready: Object.fromEntries(Object.keys(s.ready).map(k => [k, true])) }));
+    st().checkCard('A-d3s1', true);
+    st().gotoWeek('today');
+    const all = await st().allWeeks();
+    expect(all[prev].done['A-d3s1']).toBe(true);
   });
 });

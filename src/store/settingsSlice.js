@@ -171,7 +171,8 @@ export const settingsSlice = (set, get, flag) => ({
           if (!localWeeks[k] || JSON.stringify(m) !== JSON.stringify(normWeek(localWeeks[k]))) get().saveDoc('weeks/' + k, m);
         });
       }
-      set(s => ({ weekHist: null, importDraft: null, importBusy: false, importError: '', modal: null, importCount: s.importCount + 1 }));
+      // Undo and suggestion notes describe the data before the import: none of them may write it back.
+      set(s => ({ weekHist: null, moveNote: null, orderNote: null, uncheckNote: null, importDraft: null, importBusy: false, importError: '', modal: null, importCount: s.importCount + 1 }));
       if (get().saveFlag !== 'Storage full') flag(mode === 'replace' ? 'Data replaced' : 'Data added'); // some writes were refused: keep that warning
     } catch {
       set({ importBusy: false }); flag('Import failed');

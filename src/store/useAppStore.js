@@ -84,6 +84,16 @@ const writeMoved = (w, { slot, moved }) => { if (moved == null) delete w.moved[s
 // What a suggestion note holds now: { order, rest } for a day order, { slot, moved } for one card.
 const noteState = (n, w) => (n.kind === 'card' ? { slot: n.next.slot, moved: w.moved[n.next.slot] ?? null } : { order: [...orderOf(w)], rest: restsOf(w) });
 const sameState = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// The note for a planFix result: `next` is what Apply writes, `prev` what Put back restores.
+const noteFor = (plan, week, slots, wk, doneCol) => {
+  const note = { kind: plan.kind, week: wk, doneCol, lines: plan.lines, applied: false };
+  if (plan.kind === 'card') {
+    const s = slots.find(x => x.id === plan.slot);
+    return { ...note, prev: { slot: plan.slot, moved: week.moved[plan.slot] ?? null }, next: { slot: plan.slot, moved: plan.pd === s.day ? null : plan.pd } };
+  }
+  return { ...note, prev: { order: [...orderOf(week)], rest: restsOf(week) }, next: { order: plan.order, rest: plan.rest } };
+};
+const sameNote = (a, b) => sameState([a.kind, a.lines, a.next], [b.kind, b.lines, b.next]);
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
@@ -220,7 +230,11 @@ export const useAppStore = create((set, get) => ({
   closeModal: () => set({ modal: null }),
 
   saveCfg() { queue.save('config/main', get().cfg); },
-  saveWeek() { queue.save('weeks/' + get().weekKey(), get().week); },
+  saveWeek() {
+    const key = get().weekKey(); queue.save('weeks/' + key, get().week);
+    // Keep a loaded history in step, so an export, backup, import or erase after visiting another week sees this edit.
+    if (get().weekHist) set(s => ({ weekHist: { ...s.weekHist, [key]: s.week } }));
+  },
   saveBody() { queue.save('body/main', { entries: get().body }); },
   saveLibrary() { queue.save('library/main', { items: get().library }); },
   saveExperiments() { queue.save('experiments/main', { items: get().experiments }); },
@@ -276,17 +290,18 @@ export const useAppStore = create((set, get) => ({
   suggestOrder(slots, before) {
     const { cfg, week } = get(); const wk = get().weekKey();
     const a = currentLayout(week, slots), b = currentLayout(before, slots);
+    // One not yet applied follows the board: redone for its day (a tick may have started a day it would move), or
+    // dropped once that day isn't finished or nothing helps any more.
     const n = get().orderNote;
-    if (n && !n.applied && n.week === wk && !isFinished(a[n.doneCol], week)) set({ orderNote: null });
+    if (n && !n.applied && n.week === wk) {
+      const plan = isFinished(a[n.doneCol], week) && planFix(cfg, week, slots, n.doneCol);
+      const fresh = plan && noteFor(plan, week, slots, wk, n.doneCol);
+      if (!fresh) set({ orderNote: null }); else if (!sameNote(fresh, n)) set({ orderNote: fresh });
+    }
     const doneCol = DAYS.find(c => isFinished(a[c], week) && !isFinished(b[c], before));
     if (doneCol == null || get().orderSkip.includes(`${wk}:${doneCol}`)) return;
     const plan = planFix(cfg, week, slots, doneCol);
-    if (!plan) return;
-    const note = { kind: plan.kind, week: wk, doneCol, lines: plan.lines, applied: false };
-    if (plan.kind === 'card') {
-      const s = slots.find(x => x.id === plan.slot);
-      set({ orderNote: { ...note, prev: { slot: plan.slot, moved: week.moved[plan.slot] ?? null }, next: { slot: plan.slot, moved: plan.pd === s.day ? null : plan.pd } } });
-    } else set({ orderNote: { ...note, prev: { order: [...orderOf(week)], rest: restsOf(week) }, next: { order: plan.order, rest: plan.rest } } });
+    if (plan) set({ orderNote: noteFor(plan, week, slots, wk, doneCol) });
   },
   canUndoOrder() {
     const n = get().orderNote;
@@ -294,6 +309,9 @@ export const useAppStore = create((set, get) => ({
   },
   applyOrder() {
     const n = get().orderNote; if (!n || n.applied || n.week !== get().weekKey()) return false;
+    // Only while it still fits the board: a change it didn't see (another device, the week's program) drops it.
+    const slots = get().activeSlots(); const plan = planFix(get().cfg, get().week, slots, n.doneCol);
+    if (!plan || !sameNote(noteFor(plan, get().week, slots, n.week, n.doneCol), n)) { set({ orderNote: null }); flag('The board changed, so that suggestion no longer fits'); return false; }
     if (!get().mutateWeek(w => (n.kind === 'card' ? writeMoved(w, n.next) : writeOrder(w, n.next)))) return false;
     set({ orderNote: { ...n, applied: true }, moveNote: null });
     flag(n.kind === 'card' ? 'Moved for this week' : 'Order changed for this week');
@@ -512,7 +530,7 @@ export const useAppStore = create((set, get) => ({
     return true;
   },
   setPhase(slotId, idx, ph) { get().mutateWeek(w => { w.ph[`${slotId}:${idx}`] = ph; }); },
-  setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); get().mutateWeek(w => { w.prog = k === auto ? null : k; }); },
+  setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { w.prog = k === auto ? null : k; })) set({ orderNote: null }); },
   setMode(mode) { get().mutateCfg(c => { c.mode = mode; }); },
 
   moveSlot(slotId, day) {
@@ -557,7 +575,8 @@ export const useAppStore = create((set, get) => ({
     const planned = e => e.auto && e.slot === entry.slot && e.wk === entry.wk;
     const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), structuredClone(entry)].sort((a, b) => a.d.localeCompare(b.d));
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
-    if (check) get().mutateWeek(w => setItemDone(w, s, idx, true));
+    // A tick from the log sheet can finish a day, like one on the board.
+    if (check) { const slots = get().activeSlots(), before = get().week; if (get().mutateWeek(w => setItemDone(w, s, idx, true))) get().suggestOrder(slots, before); }
     return true;
   },
   quickLog(slotId, idx) {
@@ -589,12 +608,14 @@ export const useAppStore = create((set, get) => ({
       if (makeDefault && ph) c.phDef[key] = ph; // after the exercise default, so ticking both keeps this slot's
       if (rm === null) delete c.rm[it.ex]; else if (rm > 0) c.rm[it.ex] = rm;
     });
-    get().mutateWeek(w => {
+    const slots = get().activeSlots();
+    const ticked = get().mutateWeek(w => {
       if (ph && ph !== phaseOf(cfg, week, s, idx)) w.ph[key] = ph;
       if (makeExDefault && ph) sameEx.forEach(k => { delete w.ph[k]; });
       if ((makeDefault || makeExDefault) && ph) delete w.ph[key];
       if (done) setItemDone(w, s, idx, true);
     });
+    if (ticked && done) get().suggestOrder(slots, week);
     const hit = goals.find(([k, g], i) => { const after = bestLift(get().logs[it.ex], k); return after && after.w >= g.w && !(before[i] && before[i].w >= g.w); });
     if (hit) flag(`Goal reached: ${hit[1].w} lb on ${exInfo(get().cfg, it.ex).n}${hit[0] !== 'any' ? ` (${goalPhaseLabel(hit[0])})` : ''}`);
     return true;
