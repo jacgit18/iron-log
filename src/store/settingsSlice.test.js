@@ -288,6 +288,13 @@ describe('replacing with imported data', () => {
     expect(saved('weeks/2020-01-06').done).toEqual({ 'A-d1s1': true });
     expect(st().saveFlag).toBe('Data replaced');
   });
+  it('clears the undo and suggestion notes, which describe the data before it', async () => {
+    const wk = st().weekKey();
+    useAppStore.setState({ uncheckNote: { week: wk, text: 'x', entries: {}, done: {} }, moveNote: { week: wk, slot: 'A-d1s1', lines: [] }, orderNote: { week: wk, kind: 'card', applied: false } });
+    st().pasteImport(dataText());
+    await st().applyImport('replace');
+    expect(st()).toMatchObject({ uncheckNote: null, moveNote: null, orderNote: null });
+  });
   it('replaces stretches and supplements only when the file has them', async () => {
     const wk = st().weekKey();
     st().pasteImport(dataText());
