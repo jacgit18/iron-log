@@ -571,7 +571,22 @@ describe('video link from the log sheet', () => {
 });
 
 describe('bug check fixes', () => {
-  it('a weight you log becomes the starting weight for that exercise on other days; a 1RM does not set it', async () => {
+  it('"default everywhere" from the log beats a slot default saved earlier', () => {
+    useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
+    const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
+    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp', makeExDefault: true });
+    const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
+    expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('hyp');
+  });
+  it('"default everywhere" also beats a phase picked for another day of the same week', () => {
+    const slots = st().activeSlots(); const seen = {}; let pair = null;
+    slots.forEach(sl => sl.items.forEach((x, i) => { if (seen[x.ex] && seen[x.ex][0].id !== sl.id && !pair) pair = [seen[x.ex], [sl, i]]; (seen[x.ex] = seen[x.ex] || [sl, i]); }));
+    const [[a, ai], [b, bi]] = pair;
+    st().mutateWeek(w => { w.ph[`${b.id}:${bi}`] = 'strength'; });
+    st().submitLog(a.id, ai, { entry: { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 }, ph: 'hyp', makeExDefault: true });
+    expect(phaseOf(st().cfg, st().week, st().activeSlots().find(x => x.id === b.id), bi)).toBe('hyp');
+  });
+  it('a 1RM does not set the target; a weight you log does, for the same exercise and phase on other days', async () => {
     const { targetOf, planRows } = await import('../lib/logic.js');
     useAppStore.setState({ cfg: { ...st().cfg, rm: { hack: 300 } } });
     const other = st().slotById('A-d5s3'); expect(other.items[0].ex).toBe('hack');
@@ -580,27 +595,6 @@ describe('bug check fixes', () => {
     st().submitLog('A-d3s1', 0, { entry: { d: '2026-10-01', ph: 'hyp', w: 280, s: 4, r: 15 }, ph: 'hyp' });
     expect(targetOf(st().cfg, st().logs, other.items[0], 'hyp')).toMatchObject({ w: 280, src: 'last session' });
     expect(planRows(st().cfg, st().logs, other.items[0], 'hyp')[0].w).toBe(280);
-  });
-  it('a saved log beats a slot default saved earlier, for that card', () => {
-    useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
-    const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
-    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp' });
-    expect(phaseOf(st().cfg, st().week, st().slotById('A-d1s6'), 0)).toBe('hyp');
-  });
-  it('a phase and weight saved on one day show on the exercise\'s other days, even if they were in another phase', async () => {
-    const { targetOf } = await import('../lib/logic.js');
-    const cards = st().activeSlots().flatMap(sl => sl.items.map((x, i) => x.ex === 'chestpress' && [sl, i]).filter(Boolean));
-    const phases = new Set(cards.map(([sl, i]) => phaseOf(st().cfg, st().week, sl, i))); expect(phases.size).toBeGreaterThan(1); // Strength on one day, Hypertrophy on another
-    const [[a, ai], [b, bi]] = [cards[0], cards[cards.length - 1]];
-    st().submitLog(a.id, ai, { entry: { d: '2026-10-01', ph: 'iso', w: 42.5, s: 4, sec: 20 }, ph: 'iso' });
-    const nb = st().slotById(b.id);
-    expect(phaseOf(st().cfg, st().week, nb, bi)).toBe('iso');
-    expect(targetOf(st().cfg, st().logs, nb.items[bi], 'iso')).toMatchObject({ w: 42.5, src: 'last session' });
-  });
-  it('a saved log leaves other exercises and the other program alone', () => {
-    st().submitLog('A-d1s6', 0, { entry: { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 }, ph: 'hyp' });
-    const cp = new Set(st().activeSlots().flatMap(sl => sl.items.map((x, i) => x.ex === 'chestpress' && `${sl.id}:${i}`).filter(Boolean)));
-    expect(Object.keys(st().cfg.phDef).every(k => k.startsWith('A-') && cp.has(k))).toBe(true); // only this program's Chest Press cards
   });
   it('a one-week card keeps the phase picked when it was added, even with an exercise default', () => {
     st().saveExerciseDetails('chestpress', { url: '', eq: '', ph: 'iso' });
@@ -629,16 +623,11 @@ describe('bug check fixes', () => {
     await p;
     expect(st().weekHist['2026-01-04']).toBeTruthy();
   });
-  it('saving a log makes its phase the default for every card of that exercise in the program, clearing week picks', () => {
-    useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
-    st().setPhase('A-d1s6', 0, 'iso');
+  it('ticking both default boxes keeps the slot default', () => {
     const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
-    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp' });
-    const cards = st().activeSlots().flatMap(sl => sl.items.map((x, i) => x.ex === 'chestpress' && [sl, i]).filter(Boolean));
-    expect(cards.length).toBeGreaterThan(1);
-    cards.forEach(([sl, i]) => expect(phaseOf(st().cfg, st().week, sl, i)).toBe('hyp'));
-    expect(st().week.ph['A-d1s6:0']).toBeUndefined();
-    expect(st().cfg.exPh && st().cfg.exPh.chestpress).toBeUndefined(); // not the exercise everywhere: Program B is untouched
+    st().submitLog('A-d1s6', 0, { entry, ph: 'hyp', makeDefault: true, makeExDefault: true });
+    expect(st().cfg.phDef['A-d1s6:0']).toBe('hyp');
+    expect(st().cfg.exPh.chestpress).toBe('hyp');
   });
   it('the Details default phase also replaces slot defaults for that exercise', () => {
     useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
@@ -646,12 +635,11 @@ describe('bug check fixes', () => {
     const s6 = st().activeSlots().find(s => s.id === 'A-d1s6');
     expect(phaseOf(st().cfg, st().week, s6, 0)).toBe('iso');
   });
-  it('logging a one-week card in another phase keeps that phase for the week only', () => {
+  it('"default everywhere" on a one-week card shows the new default', () => {
     st().addExerciseToDay(2, { ex: 'chestpress', ph: 'hyp' });
     const card = st().activeSlots().find(s => s.added);
-    st().submitLog(card.id, 0, { entry: { d: '2026-10-01', ph: 'strength', w: 35, s: 4, r: 6 }, ph: 'strength' });
+    st().submitLog(card.id, 0, { entry: { d: '2026-10-01', ph: 'strength', w: 35, s: 4, r: 6 }, ph: 'strength', makeExDefault: true });
     expect(phaseOf(st().cfg, st().week, st().slotById(card.id), 0)).toBe('strength');
-    expect(st().cfg.phDef[`${card.id}:0`]).toBeUndefined();
   });
   it('built-in Canoe Stretch and Desk Bands are normal cards that log, in their Home section', () => {
     st().checkCard('A-d3s9', true); // Desk Bands, Day 3 (Home)
