@@ -4,7 +4,7 @@ import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
-  planOrder, tally,
+  planFix, isFinished,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -79,6 +79,11 @@ const writeOrder = (w, { order, rest }) => {
   if (order.every((v, k) => v === k + 1)) delete w.order; else w.order = [...order];
   if (rest.length) w.rest = [...rest]; else { delete w.rest; delete w.restOn; }
 };
+// One card's place for the week: `moved` is its week.moved value, null for its own day.
+const writeMoved = (w, { slot, moved }) => { if (moved == null) delete w.moved[slot]; else w.moved[slot] = moved; };
+// What a suggestion note holds now: { order, rest } for a day order, { slot, moved } for one card.
+const noteState = (n, w) => (n.kind === 'card' ? { slot: n.next.slot, moved: w.moved[n.next.slot] ?? null } : { order: [...orderOf(w)], rest: restsOf(w) });
+const sameState = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
@@ -124,7 +129,7 @@ export const useAppStore = create((set, get) => ({
   ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false, str: false, strWeek: false, supp: false },
   uncheckNote: null, // after an uncheck removed logged entries: {week, text, entries: {exId: [entry]}, done: {key: wasDone}}
   moveNote: null, // heads-up after a move puts the same exercise on the same or a neighboring day
-  orderNote: null, // after a day is finished: {week, doneCol, prev, next, lines, applied}; prev/next are {order, rest}
+  orderNote: null, // after a day is finished: {kind, week, doneCol, prev, next, lines, applied}; prev/next are {order, rest} for kind 'order', {slot, moved} for kind 'card'
   orderSkip: [], // 'week:column' suggestions dismissed this session
   modal: null, // {type:'log', slotId, idx} | {type:'detail', exId}
   weekHist: null, // every saved week, loaded on demand for Progress and exports
@@ -259,41 +264,46 @@ export const useAppStore = create((set, get) => ({
     const done = {}; const after = get().week.done || {};
     new Set([...Object.keys(before.done || {}), ...Object.keys(after)]).forEach(k => { if (!!(before.done || {})[k] !== !!after[k]) done[k] = !!(before.done || {})[k]; });
     const unticked = Object.values(done).some(Boolean);
-    get().suggestOrder(slots, before, Object.values(done).some(v => !v));
+    get().suggestOrder(slots, before);
     if (removeLogged && unticked) {
       const text = `Unchecked${label ? ' ' + label : ''}${gone ? ` · removed ${gone} logged ${gone === 1 ? 'entry' : 'entries'}` : ''}.`;
       set({ uncheckNote: { week: get().weekKey(), text, entries, done } });
     } else if (get().uncheckNote) set({ uncheckNote: null }); // any other check-off change replaces the old notice
     return true;
   },
-  // A tick that finished a column suggests a new order for the days ahead (planOrder); unticking drops one not yet applied.
-  suggestOrder(slots, before, ticked) {
+  // A check-off change (tick or skip) that finished a column suggests a fix for the days ahead (planFix): moving the
+  // rest day, one card, or the day order. A change that un-finishes that column drops one not yet applied.
+  suggestOrder(slots, before) {
     const { cfg, week } = get(); const wk = get().weekKey();
     const a = currentLayout(week, slots), b = currentLayout(before, slots);
     const n = get().orderNote;
-    if (n && !n.applied && n.week === wk && !tally(a[n.doneCol], week).full) set({ orderNote: null });
-    if (!ticked) return;
-    const doneCol = DAYS.find(c => tally(a[c], week).full && !tally(b[c], before).full);
+    if (n && !n.applied && n.week === wk && !isFinished(a[n.doneCol], week)) set({ orderNote: null });
+    const doneCol = DAYS.find(c => isFinished(a[c], week) && !isFinished(b[c], before));
     if (doneCol == null || get().orderSkip.includes(`${wk}:${doneCol}`)) return;
-    const plan = planOrder(cfg, week, slots, doneCol);
-    if (plan) set({ orderNote: { week: wk, doneCol, prev: { order: [...orderOf(week)], rest: restsOf(week) }, next: { order: plan.order, rest: plan.rest }, lines: plan.lines, applied: false } });
+    const plan = planFix(cfg, week, slots, doneCol);
+    if (!plan) return;
+    const note = { kind: plan.kind, week: wk, doneCol, lines: plan.lines, applied: false };
+    if (plan.kind === 'card') {
+      const s = slots.find(x => x.id === plan.slot);
+      set({ orderNote: { ...note, prev: { slot: plan.slot, moved: week.moved[plan.slot] ?? null }, next: { slot: plan.slot, moved: plan.pd === s.day ? null : plan.pd } } });
+    } else set({ orderNote: { ...note, prev: { order: [...orderOf(week)], rest: restsOf(week) }, next: { order: plan.order, rest: plan.rest } } });
   },
   canUndoOrder() {
-    const n = get().orderNote; const w = get().week;
-    return !!(n && n.applied && n.week === get().weekKey() && orderOf(w).join() === n.next.order.join() && restsOf(w).join() === n.next.rest.join());
+    const n = get().orderNote;
+    return !!(n && n.applied && n.week === get().weekKey() && sameState(noteState(n, get().week), n.next));
   },
   applyOrder() {
     const n = get().orderNote; if (!n || n.applied || n.week !== get().weekKey()) return false;
-    if (!get().mutateWeek(w => writeOrder(w, n.next))) return false;
+    if (!get().mutateWeek(w => (n.kind === 'card' ? writeMoved(w, n.next) : writeOrder(w, n.next)))) return false;
     set({ orderNote: { ...n, applied: true }, moveNote: null });
-    flag('Order changed for this week');
+    flag(n.kind === 'card' ? 'Moved for this week' : 'Order changed for this week');
     return true;
   },
   undoOrder() {
     const n = get().orderNote; if (!get().canUndoOrder()) return false;
-    if (!get().mutateWeek(w => writeOrder(w, n.prev))) return false;
+    if (!get().mutateWeek(w => (n.kind === 'card' ? writeMoved(w, n.prev) : writeOrder(w, n.prev)))) return false;
     set({ orderNote: null });
-    flag('Order put back');
+    flag(n.kind === 'card' ? 'Move put back' : 'Order put back');
     return true;
   },
   dismissOrder() {

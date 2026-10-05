@@ -5,7 +5,7 @@ import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
   programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, overflowSlots, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets, weekSlots, normExperiments,
-  dayClash, clashCount, dailyExercises, planOrder, countsForClash,
+  dayClash, clashCount, dailyExercises, planOrder, countsForClash, countsForFinish, isFinished, planCard, planFix,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -341,8 +341,9 @@ describe('altDay: the nearest day a moved card would not clash', () => {
     expect(altDay(c, w, slots, slots[3], 2, 7)).toBe(3); // Day 3 only has a different exercise and a skipped Hack
   });
   it('is null when every other day clashes', () => {
-    const slots = [mk('a', 1), mk('b', 3), mk('c', 5), mk('d', 7), mk('x', 2)];
-    expect(altDay(c, normWeek({ moved: { x: 4 } }), slots, slots[4], 4, 2)).toBeNull();
+    // Leg Extension on Days 2, 4 and 6, so Hack is not on every workout day (that would make it never clash).
+    const slots = [mk('a', 1), mk('b', 3), mk('c', 5), mk('d', 7), other('o2', 2), other('o4', 4), other('o6', 6), mk('x', 2)];
+    expect(altDay(c, normWeek({ moved: { x: 4 } }), slots, slots[7], 4, 2)).toBeNull();
   });
 });
 
@@ -597,5 +598,132 @@ describe('planOrder: a new day order after a day is finished', () => {
     expect(plan.order.slice(0, 3)).toEqual([1, 2, 3]);
     expect(plan.order[3]).not.toBe(5);
     expect(plan.after).toBe(0);
+  });
+});
+
+describe('moving cards follows the planner\'s clash rule', () => {
+  const sl = (id, day, ex, more = {}) => ({ id, day, type: 'single', items: [{ ex }], ...more });
+  const c = cfg({ ex: { sq: { n: 'Squat' }, b: { n: 'Bench' }, r: { n: 'Row' }, sled: { n: 'Sled' }, grip: { n: 'Grip' } } });
+  it('Home and either/or cards give no back-to-back warning, either moving or sitting next door', () => {
+    const w = normWeek(null);
+    const home = sl('h', 1, 'grip', { sec: 'Home' }); const home3 = sl('h3', 3, 'grip', { sec: 'Home' });
+    expect(moveClashes(c, w, [home, home3, sl('x', 5, 'b')], home, 2)).toEqual([]);
+    expect(moveClashes(c, w, [home, sl('g3', 3, 'grip'), sl('x', 5, 'b')], home, 2)).toEqual([]); // a moved Home card next to a regular one
+    const either = { id: 'e', day: 3, type: 'either', items: [{ ex: 'sq' }, { ex: 'r' }] };
+    const sq = sl('s', 1, 'sq');
+    expect(moveClashes(c, w, [sq, either, sl('x', 5, 'b')], sq, 2)).toEqual([]);
+    expect(moveClashes(c, w, [sq, sl('y', 3, 'sq')], sq, 2)).toHaveLength(1); // a normal card still warns
+  });
+  it('an exercise on every other workout day (the sled) gives no back-to-back warning', () => {
+    const slots = [1, 2, 3, 4, 5, 6].map(d => sl(`sl${d}`, d, 'sled')).concat([sl('b1', 1, 'b'), sl('r6', 6, 'r')]);
+    expect(moveClashes(c, normWeek(null), slots, slots[1], 7)).toEqual([]);
+  });
+  it('the same exercise twice on one day still warns, Home cards and the sled included', () => {
+    const slots = [1, 2, 3, 4, 5, 6].map(d => sl(`sl${d}`, d, 'sled')).concat([sl('h1', 1, 'grip', { sec: 'Home' }), sl('h4', 4, 'grip', { sec: 'Home' })]);
+    expect(moveClashes(c, normWeek(null), slots, slots[1], 3)[0]).toMatch(/Sled is already on Day 3/);
+    expect(moveClashes(c, normWeek(null), slots, slots[6], 4)[0]).toMatch(/Grip is already on Day 4/);
+  });
+});
+
+describe('isFinished: a day is done when its workout is, Home and Optional cards aside', () => {
+  const sl = (id, more = {}) => ({ id, day: 1, type: 'single', items: [{ ex: id }], ...more });
+  const day = [sl('sled', { sec: 'Optional' }), sl('a', { sec: 'Regular' }), sl('b', { sec: 'Plyometric' }), { id: 'ss', day: 1, type: 'superset', sec: 'Supersets', items: [{ ex: 'p' }, { ex: 'q' }] }, sl('grip', { sec: 'Home' })];
+  const w = (done, skipped = {}) => normWeek({ done, skipped });
+  it('counts every card but Home and Optional ones', () => {
+    expect(countsForFinish(day[0])).toBe(false);
+    expect(countsForFinish(day[4])).toBe(false);
+    expect(countsForFinish(day[1])).toBe(true);
+    expect(countsForFinish(sl('x'))).toBe(true); // no section
+  });
+  it('is finished with the sled and Home cards left unticked', () => {
+    expect(isFinished(day, w({ a: true, b: true, 'ss#0': true, 'ss#1': true }))).toBe(true);
+  });
+  it('is not finished with half a superset or a card left', () => {
+    expect(isFinished(day, w({ a: true, b: true, 'ss#0': true }))).toBe(false);
+    expect(isFinished(day, w({ a: true, 'ss#0': true, 'ss#1': true, sled: true, grip: true }))).toBe(false);
+  });
+  it('a skip counts as dealt with, but a day of only skips is not finished', () => {
+    expect(isFinished(day, w({ a: true, 'ss#0': true, 'ss#1': true }, { b: true }))).toBe(true);
+    expect(isFinished(day, w({}, { a: true, b: true, ss: true }))).toBe(false);
+  });
+  it('a day of only Home or Optional cards, or no cards, is never finished', () => {
+    expect(isFinished([day[0], day[4]], w({ sled: true, grip: true }))).toBe(false);
+    expect(isFinished([], w({}))).toBe(false);
+  });
+});
+
+describe('planCard and planFix: moving one card when a day is finished', () => {
+  const sl = (id, day, ex, more = {}) => ({ id, day, type: 'single', items: [{ ex }], ...more });
+  const c = cfg({ ex: { sq: { n: 'Squat' }, b: { n: 'Bench' }, r: { n: 'Row' }, p: { n: 'Press' }, k: { n: 'Curl' }, l: { n: 'Lunge' } } });
+  const done = (...ids) => Object.fromEntries(ids.map(id => [id, true]));
+  // Two cards a day, Squat on Days 2 and 3 only, Day 7 empty.
+  const two = [sl('a', 1, 'b'), sl('a2', 1, 'l'), sl('b', 2, 'sq'), sl('b2', 2, 'r'), sl('c', 3, 'sq'), sl('c2', 3, 'p'),
+    sl('d', 4, 'k'), sl('d2', 4, 'b'), sl('e', 5, 'r'), sl('e2', 5, 'l'), sl('f', 6, 'p'), sl('f2', 6, 'k')];
+  const fin2 = (more = {}) => normWeek({ moved: {}, done: done('a', 'a2', 'b', 'b2'), ...more });
+
+  it('moves the clashing card to the nearest day that fixes it', () => {
+    const plan = planCard(c, fin2(), two, 2);
+    expect(plan).toMatchObject({ slot: 'c', from: 3, to: 4, pd: 4, before: 1, after: 0 });
+    expect(plan.lines.join(' ')).toBe('Squat is on Day 2 and Day 3. Moving Squat from Day 3 to Day 4 fixes it.');
+  });
+  it('never targets a started day or the rest column, and stores the program day', () => {
+    // Rest on column 5: columns 1-4 show workouts 1-4, then rest, then workouts 5 and 6. Day 4 is started.
+    const plan = planCard(c, fin2({ rest: [5], done: done('a', 'a2', 'b', 'b2', 'd') }), two, 2);
+    expect(plan).toMatchObject({ slot: 'c', from: 3, to: 6, pd: 5 });
+  });
+  it('never targets an empty day, or a day that already has that exercise', () => {
+    // Squat on Days 2, 3 and 5. Day 7 (empty) and Day 5 (Squat twice that day) would score clash-free; neither is allowed.
+    const slots = [sl('a', 1, 'b'), sl('b', 2, 'sq'), sl('c', 3, 'sq'), sl('c2', 3, 'p'), sl('d', 4, 'k'), sl('e', 5, 'sq'), sl('e2', 5, 'r'), sl('f', 6, 'l')];
+    expect(planCard(c, normWeek({ moved: {}, done: done('a', 'b') }), slots, 2)).toBeNull();
+  });
+  it('moves a superset whole, and names it', () => {
+    const slots = two.map(s => (s.id === 'c' ? { id: 'c', day: 3, type: 'superset', items: [{ ex: 'sq' }, { ex: 'r' }] } : s));
+    const plan = planCard(c, fin2(), slots, 2);
+    expect(plan.slot).toBe('c');
+    expect(plan.lines.at(-1)).toBe('Moving the Squat + Row superset from Day 3 to Day 4 leaves 1 back-to-back repeat instead of 2.'); // Row is on Day 5 too
+    expect(currentLayout({ ...fin2(), moved: { c: plan.pd } }, slots)[plan.to].map(s => s.id)).toContain('c');
+  });
+  it('never empties the day a card leaves', () => {
+    const lone = two.filter(s => s.id !== 'c2'); // Squat is alone on Day 3
+    expect(planCard(c, fin2(), lone, 2)).toBeNull();
+    const withHome = [...lone, sl('h3', 3, 'grip', { sec: 'Home' })]; // a Home card left behind doesn't count
+    expect(planCard(c, fin2(), withHome, 2)).toBeNull();
+  });
+  it('ignores Home and either/or cards, which never clash, and never moves them', () => {
+    const slots = [...two.filter(s => s.id !== 'c'), sl('h', 3, 'sq', { sec: 'Home' }), { id: 'x', day: 3, type: 'either', items: [{ ex: 'sq' }, { ex: 'k' }] }];
+    expect(planCard(c, fin2(), slots, 2)).toBeNull(); // nothing to fix
+  });
+  it('returns null when no single card fixes or reduces it', () => {
+    const slots = [...two, sl('c3', 3, 'sq')]; // two Squat cards on Day 3: moving one leaves the other
+    expect(planCard(c, fin2(), slots, 2)).toBeNull();
+  });
+  it('leaves the week it was given alone', () => {
+    const w = fin2(); const copy = structuredClone(w);
+    planCard(c, w, two, 2); planFix(c, w, two, 2);
+    expect(w).toEqual(copy);
+  });
+
+  it('planFix: a card move beats a day reorder that fixes no more', () => {
+    const fix = planFix(c, fin2(), two, 2);
+    expect(planOrder(c, fin2(), two, 2).after).toBe(0); // a reorder would fix it too
+    expect(fix).toMatchObject({ kind: 'card', slot: 'c', to: 4, after: 0 });
+  });
+  it('planFix: moving the rest day still comes first', () => {
+    const fix = planFix(c, fin2({ rest: [6] }), two, 2);
+    expect(fix.kind).toBe('order');
+    expect(fix.rest).toEqual([3]);
+    expect(fix.order).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+  it('planFix: a reorder wins only when it leaves fewer repeats', () => {
+    // Squat twice on Day 3 (next to Day 2) and Press on Days 3 and 4: one card fixes one pair, a reorder fixes both.
+    const slots = [sl('a', 1, 'b'), sl('b', 2, 'sq'), sl('c', 3, 'sq'), sl('c2', 3, 'sq'), sl('c3', 3, 'p'), sl('d', 4, 'p'), sl('d2', 4, 'k'), sl('e', 5, 'r'), sl('f', 6, 'l')];
+    const w = normWeek({ moved: {}, done: done('a', 'b') });
+    expect(planCard(c, w, slots, 2).after).toBe(1);
+    const fix = planFix(c, w, slots, 2);
+    expect(fix.kind).toBe('order');
+    expect(fix.after).toBe(0);
+  });
+  it('planFix: null when nothing helps', () => {
+    expect(planFix(c, fin2({ done: done('a', 'a2', 'b', 'b2', 'c') }), two, 2)).toBeNull(); // Day 3 is started
   });
 });

@@ -160,6 +160,13 @@ export function tally(slots, w) {
   slots.forEach(s => { if (isSkipped(s, w)) { skipped++; if (s.type === 'superset') { const n = doneUnitsOf(s, w); total += n; done += n; } return; } total += unitsOf(s); done += doneUnitsOf(s, w); });
   return { total, done, skipped, full: total > 0 && done === total };
 }
+// A day is finished when its workout is: every card but Home and Optional ones (the sled) ticked or skipped, and at
+// least one ticked. tally(...).full still needs every card; this is only what raises a back-to-back suggestion.
+export const countsForFinish = s => s.sec !== 'Home' && s.sec !== 'Optional';
+export function isFinished(slots, w) {
+  const xs = slots.filter(countsForFinish);
+  return xs.length > 0 && xs.every(s => isSkipped(s, w) || doneUnitsOf(s, w) === unitsOf(s)) && xs.some(s => doneUnitsOf(s, w) > 0);
+}
 /* ---------- Days and the rest day ----------
    week.rest = [N, ...] lists the rest days (displayed columns, ascending). Workouts fill the other columns in
    order, so each rest day pushes later workouts one day later. The layout is derived, so nothing stored
@@ -202,13 +209,18 @@ export const extraSlots = w => (w.extra || []).map(x => ({ id: x.id, day: x.day,
 export const weekSlots = (prog, w) => [...slotsFor(prog), ...extraSlots(normWeek(w))];
 
 // Same exercise already on the target day, the day before, or the day after (skipped cards don't count).
+// Back-to-back follows the planner's rule: Home and either/or cards never clash, and neither does an exercise on
+// every other workout day (the sled). The same exercise twice on one day always warns.
 export function moveClashes(cfg, week, slots, s, day) {
   const cols = currentLayout(week, slots); const out = [];
+  const daily = dailyOf(currentLayout(week, slots.filter(o => o.id !== s.id)), week);
   [[day, 'the same day'], [day + 1, 'the day after'], [day - 1, 'the day before']].forEach(([d, rel]) => {
-    if (!cols[d]) return;
+    const near = d !== day;
+    if (!cols[d] || (near && !countsForClash(s))) return;
     cols[d].forEach(o => {
-      if (o.id === s.id || isSkipped(o, week)) return;
+      if (o.id === s.id || isSkipped(o, week) || (near && !countsForClash(o))) return;
       s.items.forEach((it, i) => {
+        if (near && daily.has(it.ex)) return;
         o.items.forEach((ot, j) => {
           if (ot.ex !== it.ex) return;
           const p = phaseOf(cfg, week, o, j), q = phaseOf(cfg, week, s, i);
@@ -258,19 +270,31 @@ function arrangements(items) {
   return out;
 }
 
+// Columns after doneCol a suggestion may change: rest columns, and workout columns with cards and nothing checked.
+// An empty day stays put: it is where a rest day goes, so moving it could leave a rest day no room on the board.
+const movableCols = (week, cols, doneCol) => DAYS.filter(c => c > doneCol && (dayAt(week, c) == null || (cols[c].length > 0 && !cols[c].some(s => s.items.some((_, i) => isItemDone(s, i, week))))));
+const listOf = xs => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0]);
+// What clashes now, one line per neighboring pair from the finished column on.
+const clashLines = (cfg, cols, week, skip, doneCol) => DAYS.filter(c => c >= doneCol && c < DAY_COUNT).flatMap(c => {
+  const shared = pairClash(cols, week, skip, c, c + 1); if (!shared.length) return [];
+  return [`${listOf(shared.map(ex => exInfo(cfg, ex).n))} ${shared.length > 1 ? 'are' : 'is'} on Day ${c} and Day ${c + 1}.`];
+});
+const lexLess = (a, b) => { const k = a.findIndex((v, i) => v !== b[i]); return k >= 0 && a[k] < b[k]; };
+const outcomeOf = (before, after) => (after ? `leaves ${after} back-to-back repeat${after > 1 ? 's' : ''} instead of ${before}.` : 'fixes it.');
+
 // After column doneCol is finished: the order of the later, unstarted columns (rest days included) with the fewest
 // back-to-back repeats. Moving a rest day comes first: if that alone (workouts in the same order) cuts the repeats,
 // it is the suggestion. Otherwise workouts may be reordered too. Ties go to the one that reorders the fewest
 // workouts, then changes the fewest columns.
 // Returns null unless it has fewer repeats than now; otherwise { order, rest, before, after, lines }.
-export function planOrder(cfg, week, slots, doneCol) {
+function searchOrder(cfg, week, slots, doneCol) {
   const cols = currentLayout(week, slots); const skip = dailyOf(cols, week);
   const rest = restsOf(week); const order = orderOf(week);
   const before = countFrom(cols, week, skip, doneCol);
   if (!before) return null;
   const R = 'R'; const items = DAYS.map(c => (rest.includes(c) ? R : dayAt(week, c)));
   // An empty day stays put: it is where a rest day goes, so moving it could leave a rest day no room on the board.
-  const movable = DAYS.filter(c => c > doneCol && (items[c - 1] === R || (cols[c].length > 0 && !cols[c].some(s => s.items.some((_, i) => isItemDone(s, i, week))))));
+  const movable = movableCols(week, cols, doneCol);
   if (movable.length < 2) return null;
   const hidden = order.slice(DAY_COUNT - rest.length);
   const seq = items.filter(x => x !== R); const at = d => seq.indexOf(d);
@@ -285,16 +309,12 @@ export function planOrder(cfg, week, slots, doneCol) {
     if (better(key, best)) best = { key, next, cand };
     if (inv === 0 && better(key, bestRest)) bestRest = { key, next, cand };
   }
-  if (bestRest && bestRest.key[0] < before) best = bestRest;
+  const restOnly = !!(bestRest && bestRest.key[0] < before);
+  if (restOnly) best = bestRest;
   const after = best.key[0];
   if (after >= before) return null;
   // Words: what clashes now, and what the new order changes.
-  const name = ex => exInfo(cfg, ex).n;
-  const list = xs => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0]);
-  const lines = DAYS.filter(c => c >= doneCol && c < DAY_COUNT).flatMap(c => {
-    const shared = pairClash(cols, week, skip, c, c + 1); if (!shared.length) return [];
-    return [`${list(shared.map(name))} ${shared.length > 1 ? 'are' : 'is'} on Day ${c} and Day ${c + 1}.`];
-  });
+  const lines = clashLines(cfg, cols, week, skip, doneCol);
   const changed = DAYS.filter(c => best.next[c - 1] !== items[c - 1]);
   const empty = x => !cols[colOf(week, x)].length;
   const label = x => (x === R ? 'Rest' : empty(x) ? 'empty day' : `Day ${colOf(week, x)}'s workout`);
@@ -306,10 +326,62 @@ export function planOrder(cfg, week, slots, doneCol) {
     const m = [...items]; const [x] = m.splice(p, 1); m.splice(q, 0, x);
     if (p !== q && m.every((v, i) => v === best.next[i])) what = `Moving ${the(x)} from Day ${p + 1} to Day ${q + 1}`;
   }
-  const outcome = after ? `leaves ${after} back-to-back repeat${after > 1 ? 's' : ''} instead of ${before}.` : 'fixes it.';
+  const outcome = outcomeOf(before, after);
   const first = changed[0], last = changed[changed.length - 1];
   lines.push(what ? `${what} ${outcome}` : `New order for Days ${first} to ${last}: ${DAYS.filter(c => c >= first && c <= last).map(c => label(best.next[c - 1])).join(', ')}. That ${outcome}`);
-  return { order: best.cand.order, rest: best.cand.rest, before, after, lines };
+  return { order: best.cand.order, rest: best.cand.rest, before, after, lines, restOnly };
+}
+export function planOrder(cfg, week, slots, doneCol) {
+  const plan = searchOrder(cfg, week, slots, doneCol); if (!plan) return null;
+  const out = { ...plan }; delete out.restOnly;
+  return out;
+}
+
+
+// After column doneCol is finished: the one card move with the fewest back-to-back repeats. The card sits in a
+// movable workout column and counts for clashes; it goes to another movable workout column that doesn't already have
+// one of its exercises. The day it leaves keeps a card that counts toward finishing, and the move must not change
+// which exercises are on every workout day (that would hide a repeat rather than fix it).
+// Ties go to the target nearest the card, then the later day, then the first card on the board.
+// Returns null unless it has fewer repeats than now; otherwise { slot, from, to, pd, before, after, lines }.
+export function planCard(cfg, week, slots, doneCol) {
+  const cols = currentLayout(week, slots); const skip = dailyOf(cols, week);
+  const before = countFrom(cols, week, skip, doneCol);
+  if (!before) return null;
+  const open = movableCols(week, cols, doneCol).filter(c => dayAt(week, c) != null);
+  const exs = list => new Set(list.filter(o => !isSkipped(o, week) && countsForClash(o)).flatMap(o => o.items.map(it => it.ex)));
+  const sameSet = (a, b) => a.size === b.size && [...a].every(x => b.has(x));
+  let best = null;
+  open.forEach(from => cols[from].forEach(s => {
+    if (!countsForClash(s) || isSkipped(s, week)) return;
+    if (!cols[from].some(o => o !== s && countsForFinish(o))) return;
+    open.forEach(to => {
+      if (to === from) return;
+      const there = exs(cols[to]); if (s.items.some(it => there.has(it.ex))) return;
+      const next = { ...cols, [from]: cols[from].filter(o => o !== s), [to]: [...cols[to], s] };
+      if (!sameSet(dailyOf(next, week), skip)) return;
+      const key = [countFrom(next, week, skip, doneCol), Math.abs(to - from), -to];
+      if (!best || lexLess(key, best.key)) best = { key, s, from, to };
+    });
+  }));
+  if (!best || best.key[0] >= before) return null;
+  const { s, from, to } = best; const after = best.key[0];
+  const names = s.items.map(it => exInfo(cfg, it.ex).n);
+  const what = s.type === 'superset' ? `the ${names.join(' + ')} superset` : names[0];
+  const lines = [...clashLines(cfg, cols, week, skip, doneCol), `Moving ${what} from Day ${from} to Day ${to} ${outcomeOf(before, after)}`];
+  return { slot: s.id, from, to, pd: dayAt(week, to), before, after, lines };
+}
+
+// What to suggest when a day is finished, smallest change first: moving the rest day (if that alone cuts the
+// repeats), then one card, then a new day order, which wins only when it leaves fewer repeats than the card move.
+// Returns null, { kind: 'order', order, rest, before, after, lines } or { kind: 'card', slot, from, to, pd, before, after, lines }.
+export function planFix(cfg, week, slots, doneCol) {
+  const order = searchOrder(cfg, week, slots, doneCol);
+  const asOrder = () => { const o = { kind: 'order', ...order }; delete o.restOnly; return o; };
+  if (order && order.restOnly) return asOrder();
+  const card = planCard(cfg, week, slots, doneCol);
+  if (card && (!order || card.after <= order.after)) return { kind: 'card', ...card };
+  return order ? asOrder() : null;
 }
 
 /* ---------- Yesterday's leftovers ---------- */

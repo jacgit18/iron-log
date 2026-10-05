@@ -41,17 +41,21 @@ test('accepting skips the pushed-off workouts and both rest days stay ticked', a
   await expect(restBox(page, 3)).toBeChecked();
 });
 
-test('finishing a day suggests a new order; Apply moves the days and focuses Put back, which restores them', async ({ page }) => {
-  // Program A: Leg Extension is on Days 2 and 3, so finishing Day 2 suggests a new order for Days 3 to 6.
-  await page.locator('#day-2').check();
+test('finishing a day\'s workout suggests moving one card; Apply moves it and focuses Put back, which restores it', async ({ page }) => {
+  // Program A: Leg Extension is on Days 2 and 3. Tick Day 2's workout cards one by one, leaving the sled and Home
+  // cards unticked; the suggestion moves Day 3's Leg Extension (A-d3s5) to Day 4.
+  for (const id of ['A-d2s1', 'A-d2s2-0', 'A-d2s3', 'A-d2s4', 'A-d2s5-0', 'A-d2s5-1', 'A-d2s6-0', 'A-d2s6-1']) await page.locator(`#chk-${id}`).check();
+  await expect(page.locator('#chk-A-sled2')).not.toBeChecked();
+  await expect(page.locator('#day-2')).not.toBeChecked(); // the day's box waits for the sled and Home cards
   const note = page.getByRole('status').filter({ hasText: 'Back-to-back' });
-  await expect(note).toContainText('Leg Extension ISO hold is on Day 2 and Day 3.');
-  await expect(page.locator('#col-3 #chk-A-d3s1')).toHaveCount(1);
+  await expect(note).toContainText('Leg Extension ISO hold is on Day 2 and Day 3. Moving Leg Extension ISO hold from Day 3 to Day 4 fixes it.');
+  await expect(page.locator('#col-3 #chk-A-d3s5')).toHaveCount(1);
   await note.getByRole('button', { name: 'Apply' }).click();
-  await expect(page.locator('#col-6 #chk-A-d3s1')).toHaveCount(1); // the Day 3 workout moved to Day 6
+  await expect(page.locator('#col-4 #chk-A-d3s5')).toHaveCount(1); // just that card moved
+  await expect(page.locator('#col-3 #chk-A-d3s1')).toHaveCount(1); // the rest of Day 3 stayed
   const putBack = page.getByRole('button', { name: 'Put back' });
   await expect(putBack).toBeFocused();
   await putBack.click();
-  await expect(page.locator('#col-3 #chk-A-d3s1')).toHaveCount(1);
+  await expect(page.locator('#col-3 #chk-A-d3s5')).toHaveCount(1);
   await expect(putBack).toHaveCount(0);
 });

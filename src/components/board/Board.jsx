@@ -216,7 +216,7 @@ export default function Board() {
       )}
       {showOrder && (
         <div className="notice movewarn" role="status" ref={orderRef}>
-          {orderNote.applied ? <div>Order changed for this week.</div> : <div><b>Back-to-back:</b> {orderNote.lines.join(' ')}</div>}
+          {orderNote.applied ? <div>{orderNote.kind === 'card' ? 'Moved for this week.' : 'Order changed for this week.'}</div> : <div><b>Back-to-back:</b> {orderNote.lines.join(' ')}</div>}
           <div className="actions">
             {!orderNote.applied && <button type="button" className="btn sm" onClick={st.applyOrder}>Apply</button>}
             {orderNote.applied && st.canUndoOrder() && <button type="button" className="btn sm" ref={putBackRef} onClick={st.undoOrder}>Put back</button>}
