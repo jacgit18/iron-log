@@ -4,7 +4,7 @@ import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, exInfo, videoLabel } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../lib/dates.js';
 import {
-  DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, describe, holdPlan,
+  DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, backoffOf, describe, holdPlan,
   restsOf,
 } from '../../lib/logic.js';
 
@@ -48,7 +48,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
         const t = targetOf(cfg, logs, it, ph); const last = lastLog(logs, it.ex, ph);
         const idone = paired && isItemDone(s, idx, week);
         const rx = rxOf(cfg, it, ph);
-        const st = stallOf(cfg, logs, it.ex, ph);
+        const bo = backoffOf(cfg, logs, it, ph); const st = !bo && stallOf(cfg, logs, it.ex, ph);
         const hp = isTimed(ph) ? holdPlan(cfg, week, logs, s, idx) : null;
         return (
           <Fragment key={idx}>
@@ -80,7 +80,8 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
               </div>
               {it.note && <div className="note">{it.note}</div>}
               {last && <div className="lastlog">Last: {describe(last)} · {fmtShort(parseDate(last.d))}</div>}
-              {st && <div className="stall">Stalled since {fmtShort(parseDate(st.since))} · no gain in weight or reps in 3 sessions</div>}
+              {bo && <div className="stall">Back off · {ph === 'iso' ? 'holds fell short' : 'reps fell short'} 2 sessions in a row. Try {bo.lo === bo.hi ? bo.lo : `${bo.lo}–${bo.hi}`} lb and rebuild</div>}
+              {st && <div className="stall">Stalled since {fmtShort(parseDate(st.since))} · no gain in 3 weeks. Check sleep and recovery before pushing harder</div>}
             </div>
           </Fragment>
         );

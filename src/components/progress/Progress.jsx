@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { monday, ymd, parseDate, addDays, fmtShort } from '../../lib/dates.js';
-import { describe, lastLog, stallOf } from '../../lib/logic.js';
+import { describe, lastLog, stallOf, backoffOf } from '../../lib/logic.js';
 import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
 import Trends from './Trends.jsx';
 import Muscles from '../muscles/Muscles.jsx';
@@ -92,7 +92,9 @@ function LiftList() {
         const phName = last.ph ? PHASES[last.ph].label : 'No phase';
         const phs = [...new Set(L.map(e => e.ph || null))]; const multi = phs.length > 1;
         const goals = liftGoalsStatus(cfg, id, L, today);
-        const stalled = phs.filter(p => stallOf(cfg, logs, id, p)).map(p => (p ? PHASES[p].label : 'No phase'));
+        const label = p => (p ? PHASES[p].label : 'No phase');
+        const backoff = phs.filter(p => backoffOf(cfg, logs, { ex: id }, p));
+        const stalled = phs.filter(p => !backoff.includes(p) && stallOf(cfg, logs, id, p)).map(label);
         return (
           <button type="button" className="pcard" key={id} onClick={() => openModal({ type: 'detail', exId: id })}>
             <h3>{exInfo(cfg, id).n}</h3>
@@ -102,7 +104,8 @@ function LiftList() {
               <span>Sessions <b>{L.length}</b></span>
             </div>
             {goals.map(g => <span key={g.key} className={`note${g.reached ? ' goalmet' : ''}`}>{liftGoalNote(g)}</span>)}
-            {stalled.length > 0 && <span className="stall">Stalled{multi ? ` (${stalled.join(', ')})` : ''} · no gain in 3 sessions</span>}
+            {backoff.length > 0 && <span className="stall">Back off{multi ? ` (${backoff.map(label).join(', ')})` : ''} · fell short 2 sessions in a row</span>}
+            {stalled.length > 0 && <span className="stall">Stalled{multi ? ` (${stalled.join(', ')})` : ''} · no gain in 3 weeks</span>}
             {!multi && <span className="note"><span className="dot" data-p={last.ph || ''} /> {phName} trend</span>}
             <LineChart entries={L} height={110} byPhase={multi} />
           </button>
