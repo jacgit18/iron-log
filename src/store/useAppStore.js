@@ -4,7 +4,7 @@ import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
-  planFix, isFinished,
+  planFix, isFinished, autoEntry, newEntryId,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -15,7 +15,7 @@ import { normSupplements } from '../lib/water.js';
 import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
 import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
-  backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile,
+  backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile, entryId, findEntry,
 } from '../lib/export.js';
 import { bwSorted } from '../lib/body.js';
 import { usageOf } from '../lib/exerciseLibrary.js';
@@ -94,7 +94,7 @@ const noteFor = (plan, week, slots, wk, doneCol) => {
   return { ...note, prev: { order: [...orderOf(week)], rest: restsOf(week) }, next: { order: plan.order, rest: plan.rest } };
 };
 const sameNote = (a, b) => sameState([a.kind, a.lines, a.next], [b.kind, b.lines, b.next]);
-const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
+const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t), onFailed: (paths, refused) => useAppStore.setState(s => ({ unsaved: paths, refusals: s.refusals + (refused ? 1 : 0) })) });
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
 // "Saved" / "Loading…" never replaces a message you haven't had the chance to act on yet.
@@ -128,6 +128,8 @@ export const useAppStore = create((set, get) => ({
   weekStart: monday(new Date()),
   week: normWeek(null),
   logs: {}, // exId -> [entries]
+  unsaved: [], // doc paths whose last write was refused (storage full, permission): kept until a write succeeds
+  refusals: 0, // writes refused so far this session
   tab: restored.tab || 'board',
   mDay: restored.mDay ?? null, // day shown on phones; null = pick the first day with open work
   library: [], // saved program versions
@@ -529,7 +531,16 @@ export const useAppStore = create((set, get) => ({
     flag(restInvolved ? `Rest day moved to Day ${dRest ? e : d}` : `Day ${d} swapped with Day ${e}`);
     return true;
   },
-  setPhase(slotId, idx, ph) { get().mutateWeek(w => { w.ph[`${slotId}:${idx}`] = ph; }); },
+  setPhase(slotId, idx, ph) {
+    if (!get().mutateWeek(w => { w.ph[`${slotId}:${idx}`] = ph; })) return;
+    // A check-off already logged for it is redone in the new phase, so Progress and the next target see what was planned.
+    const s = get().slotById(slotId); if (!s || !s.items[idx]) return;
+    const ex = s.items[idx].ex; const wk = get().weekKey(); const L = get().logs[ex] || [];
+    const k = L.findIndex(e => e.auto && e.slot === slotId && e.wk === wk); if (k < 0) return;
+    const others = { ...get().logs, [ex]: L.filter((_, j) => j !== k) };
+    const arr = [...L]; arr[k] = { ...autoEntry(get().cfg, others, s, idx, get().week, wk, L[k].d), id: L[k].id || newEntryId() };
+    set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
+  },
   setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { w.prog = k === auto ? null : k; })) set({ orderNote: null }); },
   setMode(mode) { get().mutateCfg(c => { c.mode = mode; }); },
 
@@ -573,16 +584,18 @@ export const useAppStore = create((set, get) => ({
     const ex = s.items[idx].ex;
     // Real numbers replace the planned ones a check-off logged for this card this week.
     const planned = e => e.auto && e.slot === entry.slot && e.wk === entry.wk;
-    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), structuredClone(entry)].sort((a, b) => a.d.localeCompare(b.d));
+    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...structuredClone(entry), id: entry.id || newEntryId() }].sort((a, b) => a.d.localeCompare(b.d));
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
-    // A tick from the log sheet can finish a day, like one on the board.
-    if (check) { const slots = get().activeSlots(), before = get().week; if (get().mutateWeek(w => setItemDone(w, s, idx, true))) get().suggestOrder(slots, before); }
+    // Ticked the way the board ticks: picking the other half of an either/or drops the first one's check-off, and it can finish a day.
+    if (check) get().mutateChecks(w => setItemDone(w, s, idx, true));
     return true;
   },
   quickLog(slotId, idx) {
     const s = get().slotById(slotId); if (!s) return;
     const { cfg, week, logs } = get();
     const last = lastLog(logs, s.items[idx].ex, phaseOf(cfg, week, s, idx)); if (!last) return;
+    // Once per card and week: a second tap (the button stays on the card) would log the session twice.
+    if ((logs[s.items[idx].ex] || []).some(e => !e.auto && e.slot === slotId && e.wk === get().weekKey())) { flag('Already logged this week'); return; }
     const e = { d: defaultLogDate(get().weekStart), ph: last.ph || null, w: last.w, s: last.s, slot: slotId, wk: get().weekKey() };
     if (last.sec != null) e.sec = last.sec; else e.r = last.r;
     if (Array.isArray(last.sets)) e.sets = structuredClone(last.sets);
@@ -608,14 +621,12 @@ export const useAppStore = create((set, get) => ({
       if (makeDefault && ph) c.phDef[key] = ph; // after the exercise default, so ticking both keeps this slot's
       if (rm === null) delete c.rm[it.ex]; else if (rm > 0) c.rm[it.ex] = rm;
     });
-    const slots = get().activeSlots();
-    const ticked = get().mutateWeek(w => {
+    get().mutateChecks(w => {
       if (ph && ph !== phaseOf(cfg, week, s, idx)) w.ph[key] = ph;
       if (makeExDefault && ph) sameEx.forEach(k => { delete w.ph[k]; });
       if ((makeDefault || makeExDefault) && ph) delete w.ph[key];
       if (done) setItemDone(w, s, idx, true);
     });
-    if (ticked && done) get().suggestOrder(slots, week);
     const hit = goals.find(([k, g], i) => { const after = bestLift(get().logs[it.ex], k); return after && after.w >= g.w && !(before[i] && before[i].w >= g.w); });
     if (hit) flag(`Goal reached: ${hit[1].w} lb on ${exInfo(get().cfg, it.ex).n}${hit[0] !== 'any' ? ` (${goalPhaseLabel(hit[0])})` : ''}`);
     return true;
@@ -647,18 +658,26 @@ export const useAppStore = create((set, get) => ({
     })) flag('Goal removed');
   },
   // Replace one logged session with edited numbers (kept sorted by date). It counts as logged by hand, not as a check-off.
-  updateLog(exId, i, entry) {
-    if (get().blocked()) return;
-    const arr = [...(get().logs[exId] || [])]; arr[i] = structuredClone(entry);
+  // `target` is the entry as it was shown: found by identity, not position, so a list that changed meanwhile
+  // (another device) can't make the edit land on a different session. It keeps its identity.
+  updateLog(exId, target, entry) {
+    if (get().blocked()) return false;
+    const L = get().logs[exId] || []; const i = findEntry(L, target);
+    if (i < 0) { flag('That session changed meanwhile. Open it again.'); return false; }
+    const arr = [...L]; arr[i] = { ...structuredClone(entry), id: entryId(L[i]) };
     arr.sort((a, b) => a.d.localeCompare(b.d));
     set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId);
-    flag('Session updated');
+    flag('Session updated'); return true;
   },
-  deleteLog(exId, i) {
-    if (get().blocked()) return;
-    const arr = [...(get().logs[exId] || [])]; arr.splice(i, 1);
-    set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId);
+  deleteLog(exId, target) {
+    if (get().blocked()) return false;
+    const L = get().logs[exId] || []; const i = findEntry(L, target);
+    if (i < 0) { flag('That session changed meanwhile. Open it again.'); return false; }
+    const arr = [...L]; arr.splice(i, 1);
+    set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId); return true;
   },
+  // Try the writes that were refused again (after freeing space, or signing back in).
+  retryUnsaved() { queue.retryFailed(); },
 
   // Erase parts of the data: {logs, weeks, body, programs, settings}. Display options, the GitHub token
   // and the GitHub backup settings are kept; backups already made aren't touched.
@@ -669,7 +688,7 @@ export const useAppStore = create((set, get) => ({
       Object.keys(all).forEach(k => { if (WEEK_RE.test(k)) get().removeDoc('weeks/' + k); });
       set({ week: normWeek(null), weekHist: null, moveNote: null, orderNote: null, uncheckNote: null, mDay: null });
     }
-    if (parts.logs) { Object.keys(get().logs).forEach(id => get().removeDoc('logs/' + id)); set({ logs: {} }); }
+    if (parts.logs) { Object.keys(get().logs).forEach(id => get().removeDoc('logs/' + id)); set({ logs: {}, uncheckNote: null }); } // its Undo would bring them back
     if (parts.body) { set({ body: [] }); get().saveBody(); }
     if (parts.programs) {
       ['A', 'B'].forEach(k => get().removeDoc('programs/' + k));
@@ -879,49 +898,81 @@ export const useAppStore = create((set, get) => ({
         programs: { A: resolveProgram('A', LS.get('programs/A')), B: resolveProgram('B', LS.get('programs/B')) },
         ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true, exp: true, str: true, supp: true },
       }));
+      if (typeof window.addEventListener === 'function') window.addEventListener('storage', fromOtherTab);
       subscribeWeek();
       return;
     }
     set({ storeMode: 'db' });
     const markReady = k => state => ({ ready: { ...state.ready, [k]: true } });
     db.collection('programs').onSnapshot(s => {
-      if (s.metadata.hasPendingWrites) return;
       const m = {}; s.docs.forEach(d => { m[d.id] = d.data(); });
-      set(state => ({ programs: { A: resolveProgram('A', m.A), B: resolveProgram('B', m.B) }, ...markReady('programs')(state) }));
+      const pick = (state, k) => (queue.pending('programs/' + k) ? state.programs[k] : resolveProgram(k, m[k]));
+      set(state => ({ programs: { A: pick(state, 'A'), B: pick(state, 'B') }, ...markReady('programs')(state) }));
     }, () => flag('Couldn’t load your programs. Reload the page.'));
     db.doc('body/main').onSnapshot(s => {
-      if (s.metadata.hasPendingWrites) return;
+      if (queue.pending('body/main')) return;
       set(state => ({ body: s.exists ? [...((s.data() || {}).entries || [])] : [], ...markReady('body')(state) }));
     }, () => flag('Couldn’t load body weight. Reload the page.'));
     db.doc('library/main').onSnapshot(s => {
-      if (s.metadata.hasPendingWrites) return;
+      if (queue.pending('library/main')) return;
       set(state => ({ library: s.exists ? padLibrary([...((s.data() || {}).items || [])]) : [], ...markReady('lib')(state) }));
     }, () => flag('Couldn’t load saved programs. Reload the page.'));
     db.doc('experiments/main').onSnapshot(s => {
-      if (s.metadata.hasPendingWrites) return;
+      if (queue.pending('experiments/main')) return;
       set(state => ({ experiments: s.exists ? [...((s.data() || {}).items || [])] : [], ...markReady('exp')(state) }));
     }, () => flag('Couldn’t load your experiments. Reload the page.'));
     db.doc('stretches/main').onSnapshot(s => {
-      if (s.metadata.hasPendingWrites) return;
+      if (queue.pending('stretches/main')) return;
       const d = normStretches(s.exists ? s.data() : null);
       set(state => ({ stretches: d.items, stretchExps: d.experiments, ...markReady('str')(state) }));
     }, () => flag('Couldn’t load your stretches. Reload the page.'));
     db.doc('supplements/main').onSnapshot(s => {
-      if (s.metadata.hasPendingWrites) return;
+      if (queue.pending('supplements/main')) return;
       set(state => ({ supp: normSupplements(s.exists ? s.data() : null), ...markReady('supp')(state) }));
     }, () => flag('Couldn’t load supplements. Reload the page.'));
     db.doc('config/main').onSnapshot(s => {
-      if (s.metadata.hasPendingWrites) return;
+      if (queue.pending('config/main')) return;
       set(state => ({ cfg: s.exists ? { ...structuredClone(DEFAULT_CFG), ...structuredClone(s.data()) } : state.cfg, ...markReady('cfg')(state) }));
     }, () => flag('Couldn’t load settings. Reload the page.'));
+    // Every snapshot is applied, so another device's change is never skipped (Firestore sends nothing more when this
+    // device's own write is confirmed). Only an exercise this device is still writing keeps what it holds: that is newer.
     db.collection('logs').onSnapshot(s => {
-      if (s.metadata.hasPendingWrites) return;
       const next = {}; s.docs.forEach(d => { next[d.id] = [...((d.data() || {}).entries || [])]; });
-      set(state => ({ logs: next, ...markReady('logs')(state) }));
+      set(state => {
+        const logs = {};
+        new Set([...Object.keys(next), ...Object.keys(state.logs)]).forEach(id => {
+          const v = queue.pending('logs/' + id) ? state.logs[id] : next[id];
+          if (v) logs[id] = v;
+        });
+        return { logs, ...markReady('logs')(state) };
+      });
     }, () => flag('Couldn’t load your log. Reload the page.'));
     subscribeWeek();
   },
 }));
+
+// Saved on this device: another tab (or the installed app next to a browser tab) wrote this data. Take its copy, so
+// this tab's next save of it doesn't put back what it held before.
+export function fromOtherTab(e) {
+  if (!e || !e.key || !e.key.startsWith('ironlog:')) return;
+  const path = e.key.slice(8); let v = null;
+  try { v = e.newValue == null ? null : JSON.parse(e.newValue); } catch { return; }
+  const st = useAppStore.getState(); const set = useAppStore.setState; const wk = st.weekKey();
+  if (path.startsWith('logs/')) {
+    const id = path.slice(5); const logs = { ...st.logs };
+    if (v && v.entries) logs[id] = v.entries; else delete logs[id];
+    set({ logs });
+  } else if (path === 'weeks/' + wk) set({ week: normWeek(v) });
+  else if (path.startsWith('weeks/')) { if (st.weekHist) set(s => ({ weekHist: { ...s.weekHist, [path.slice(6)]: v } })); }
+  else if (path === 'config/main') set(s => ({ cfg: v ? { ...structuredClone(DEFAULT_CFG), ...v } : s.cfg }));
+  else if (path === 'body/main') set({ body: (v || {}).entries || [] });
+  else if (path === 'library/main') set({ library: padLibrary((v || {}).items || []) });
+  else if (path === 'experiments/main') set({ experiments: (v || {}).items || [] });
+  else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: resolveProgram(k, v) } })); }
+  else if (path === 'stretches/main') { const d = normStretches(v); set({ stretches: d.items, stretchExps: d.experiments }); }
+  else if (path === 'supplements/main') set({ supp: normSupplements(v) });
+  else if (path === 'stretchweeks/' + wk) set({ strWeek: normStretchWeek(v) });
+}
 
 // Remember the tab and phone day across a refresh.
 useAppStore.subscribe((s, prev) => {
@@ -953,7 +1004,7 @@ function subscribeStretchWeek() {
   }
   useAppStore.setState(state => ({ strWeek: normStretchWeek(null), ready: { ...state.ready, strWeek: false } }));
   unsubStrWeek = db.doc('stretchweeks/' + key).onSnapshot(s => {
-    if (key !== useAppStore.getState().weekKey() || s.metadata.hasPendingWrites) return;
+    if (key !== useAppStore.getState().weekKey() || queue.pending('stretchweeks/' + key)) return;
     useAppStore.setState(state => ({ strWeek: normStretchWeek(s.exists ? s.data() : null), ready: { ...state.ready, strWeek: true } }));
   }, () => flag('Couldn’t load this week’s stretches. Reload the page.'));
 }
@@ -970,8 +1021,7 @@ function subscribeWeek() {
   useAppStore.setState(state => ({ week: normWeek(null), ready: { ...state.ready, week: false } }));
   let first = true;
   unsubWeek = db.doc('weeks/' + key).onSnapshot(s => {
-    if (key !== useAppStore.getState().weekKey()) return;
-    if (s.metadata.hasPendingWrites) return;
+    if (key !== useAppStore.getState().weekKey() || queue.pending('weeks/' + key)) return;
     const week = normWeek(s.exists ? s.data() : null);
     useAppStore.setState(state => ({ week, mDay: first ? loadedMDay(state) : state.mDay, ready: { ...state.ready, week: true } }));
     first = false;

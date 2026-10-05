@@ -418,23 +418,39 @@ export function dayDate(cards, logs, wk) {
   return first;
 }
 // removeLogged: unticking also removes what you logged yourself for the card this week (the checkboxes do; skipping doesn't).
+export const newEntryId = () => 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+// The planned numbers a check-off logs for item i of card s.
+export function autoEntry(cfg, logs, s, i, week, wk, date) {
+  const it = s.items[i]; const ph = phaseOf(cfg, week, s, i);
+  return { id: newEntryId(), d: date, ph, ...summarizeSets(planRows(cfg, logs, it, ph), isTimed(ph)), slot: s.id, wk, auto: true };
+}
 export function autoLogs(cfg, logs, slots, before, after, wk, date, { removeLogged = false } = {}) {
   const out = {};
-  slots.forEach(s => s.items.forEach((it, i) => {
-    const was = isItemDone(s, i, before), now = isItemDone(s, i, after);
-    if (was === now) return;
-    const L = out[it.ex] || logs[it.ex] || [];
+  slots.forEach(s => {
     const here = e => e.slot === s.id && weekOfEntry(e) === wk;
-    if (now) {
-      if (L.some(here)) return; // already logged for this card this week
-      const ph = phaseOf(cfg, after, s, i);
-      const e = { d: date, ph, ...summarizeSets(planRows(cfg, logs, it, ph), isTimed(ph)), slot: s.id, wk, auto: true };
-      out[it.ex] = [...L, e].sort((a, b) => a.d.localeCompare(b.d));
-    } else {
-      const keep = L.filter(e => !((removeLogged || e.auto) && here(e)));
-      if (keep.length !== L.length) out[it.ex] = keep;
-    }
-  }));
+    let unticked = false;
+    s.items.forEach((it, i) => {
+      const was = isItemDone(s, i, before), now = isItemDone(s, i, after);
+      if (was === now) return;
+      const L = out[it.ex] || logs[it.ex] || [];
+      if (now) {
+        if (L.some(here)) return; // already logged for this card this week
+        out[it.ex] = [...L, autoEntry(cfg, logs, s, i, after, wk, date)].sort((a, b) => a.d.localeCompare(b.d));
+      } else {
+        unticked = true;
+        const keep = L.filter(e => !((removeLogged || e.auto) && here(e)));
+        if (keep.length !== L.length) out[it.ex] = keep;
+      }
+    });
+    // A check-off logged under an exercise the card no longer has (it was changed in the Program tab) goes too.
+    if (!unticked) return;
+    const mine = new Set(s.items.map(it => it.ex));
+    Object.keys(logs).forEach(ex => {
+      if (mine.has(ex)) return;
+      const L = out[ex] || logs[ex] || []; const keep = L.filter(e => !(e.auto && here(e)));
+      if (keep.length !== L.length) out[ex] = keep;
+    });
+  });
   return out;
 }
 

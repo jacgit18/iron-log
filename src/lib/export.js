@@ -206,9 +206,33 @@ export function normalizeData(d) {
 export const IMPORT_SECTIONS = [['board', 'Board'], ['progress', 'Progress'], ['muscles', 'Muscles'], ['program', 'Program'], ['stretches', 'Stretches'], ['supplements', 'Supplements'], ['settings', 'Settings']];
 export const importSel = draft => Object.fromEntries(IMPORT_SECTIONS.map(([k]) => [k, !draft.sel || draft.sel[k] !== false]));
 export const cfgSection = k => (k === 'muscleMap' ? 'muscles' : ['ex', 'progNames', 'phDef', 'exPh'].includes(k) ? 'program' : 'settings');
-// A stored `wk` that is just the week of the entry's date carries no information, so it doesn't make two entries different.
-const sameKey = e => JSON.stringify(e.wk === weekOfDate(e.d) ? { ...e, wk: undefined } : e);
-export function mergeEntries(a, b) { const seen = new Set(a.map(sameKey)); const out = [...a]; b.forEach(e => { const k = sameKey(e); if (!seen.has(k)) { seen.add(k); out.push(e); } }); return out.sort((x, y) => x.d.localeCompare(y.d)); }
+/* ---------- Which logged sessions are the same one ----------
+   An entry's values in a fixed field order, so the same session matches however its fields were written (a workbook
+   rebuilds entries in another key order). The id is left out, and a stored `wk` that is just the week of the date
+   carries no information. */
+const kv = v => (v === '' || v == null ? null : Number(v));
+export const sameKey = e => JSON.stringify([e.d, e.ph || null, kv(e.w), kv(e.s), kv(e.r), kv(e.sec),
+  Array.isArray(e.sets) && e.sets.length ? e.sets.map(x => [kv(x.w), kv(x.r), kv(x.sec)]) : null,
+  e.n || null, !!e.auto, e.slot || null, e.wk && e.wk !== weekOfDate(e.d) ? e.wk : null]);
+const hash = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h.toString(36); };
+// An entry's identity: its id, or for one saved before entries had ids, a hash of its values. Editing such an entry
+// stores that hash as its id, so an older copy of it (from a backup) is still known as the same session.
+export const entryId = e => e.id || 'k' + hash(sameKey(e));
+// Where `target` (an entry as it was read) is in list L now, or -1 if it is gone or changed meanwhile.
+export const findEntry = (L, target) => (target.id ? L.findIndex(x => x.id === target.id) : L.findIndex(x => !x.id && sameKey(x) === sameKey(target)));
+// Adds b's entries that a doesn't have. A check-off (auto) entry is one per card and week: it isn't added next to
+// any entry for that card and week, and a session logged by hand replaces it, as on the board.
+export function mergeEntries(a, b) {
+  let out = [...a]; const ids = new Set(a.map(entryId)); const keys = new Set(a.map(sameKey));
+  b.forEach(e => {
+    if (ids.has(entryId(e)) || keys.has(sameKey(e))) return;
+    const card = x => !!(e.slot && e.wk) && x.slot === e.slot && x.wk === e.wk;
+    if (e.auto && out.some(card)) return;
+    if (!e.auto) out = out.filter(x => !(x.auto && card(x)));
+    out.push(e); ids.add(entryId(e)); keys.add(sameKey(e));
+  });
+  return out.sort((x, y) => x.d.localeCompare(y.d));
+}
 export function mergeWeek(a, b) {
   const w = normWeek(a); const o = normWeek(b);
   w.prog = w.prog || o.prog;

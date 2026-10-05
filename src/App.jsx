@@ -51,6 +51,8 @@ export default function App() {
   const tab = useAppStore(s => s.tab);
   const cfg = useAppStore(s => s.cfg);
   const saveFlag = useAppStore(s => s.saveFlag);
+  const unsaved = useAppStore(s => s.unsaved);
+  const storeMode = useAppStore(s => s.storeMode);
   const ready = useAppStore(s => s.isReady());
   const progKey = useAppStore(s => s.activeProgKey());
   const { setTab, closeModal, openModal } = useAppStore.getState();
@@ -99,6 +101,13 @@ export default function App() {
           <p className="saveflag" role="status" aria-live="polite" aria-atomic="true">{!ready && !saveFlag ? 'Loading…' : saveFlag}</p>
         </header>
         <UpdateBanner />
+        {/* Stays until the writes go through: a passing message isn't enough when data would be gone on reload. */}
+        {unsaved.length > 0 && (
+          <div className="notice movewarn" role="alert">
+            <div><b>Not saved:</b> {unsaved.length === 1 ? 'a change' : `${unsaved.length} changes`} couldn’t be saved on this device{storeMode === 'local' ? ' (storage is full)' : ''}, and would be lost on reload. Free some space or export a backup, then try again.</div>
+            <div className="actions"><button type="button" className="btn sm" onClick={() => useAppStore.getState().retryUnsaved()}>Try again</button></div>
+          </div>
+        )}
         <main>
           <div id="view" role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}><View /></div>
         </main>

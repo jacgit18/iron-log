@@ -102,12 +102,14 @@ export const settingsSlice = (set, get, flag) => ({
           Object.keys(get().logs).forEach(id => { if (!d.logs[id]) removes.push('logs/' + id); });
           patch.logs = newLogs;
         }
+        const refused = get().refusals;
         set(patch);
         saves.forEach(f => get()[f]());
         progSaves.forEach(([k, body]) => get().saveProgram(k, body));
         docs.forEach(([path, data]) => get().saveDoc(path, data));
-        removes.forEach(path => get().removeDoc(path));
         if (newLogs) Object.keys(newLogs).forEach(id => get().saveLog(id));
+        // Old data goes only once the file's data is written: a write refused (storage full) keeps it, so nothing is lost.
+        if (get().refusals === refused) removes.forEach(path => get().removeDoc(path));
       } else {
         if (draft.kind === 'excel') {
           const xs = d.excel.settings;
