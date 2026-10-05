@@ -5,6 +5,7 @@ import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
   programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, overflowSlots, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets, weekSlots, normExperiments,
+  dayClash, clashCount, dailyExercises, planOrder, countsForClash,
 } from './logic.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -467,5 +468,134 @@ describe('experiment note length', () => {
     const long = 'n'.repeat(300);
     expect(normExperiments([{ id: 'E1', ex: 'hack', note: long }])[0].note).toHaveLength(200);
     expect(normWeek({ extra: [{ id: 'X-1', day: 2, ex: 'hack', note: long }] }).extra[0].note).toHaveLength(200);
+  });
+});
+
+describe('planOrder: a new day order after a day is finished', () => {
+  // Each card trains one named exercise; `sq` is the one that repeats.
+  const sl = (id, day, ex) => ({ id, day, type: 'single', items: [{ ex }] });
+  const c = cfg({ ex: { sq: { n: 'Squat' }, b: { n: 'Bench' }, r: { n: 'Row' }, p: { n: 'Press' }, k: { n: 'Curl' }, l: { n: 'Lunge' } } });
+  const done = (...ids) => Object.fromEntries(ids.map(id => [id, true]));
+  // Workouts 1-6 in program order; Squat on Days 2 and 3; Day 7 empty.
+  const six = [sl('a', 1, 'b'), sl('b', 2, 'sq'), sl('c', 3, 'sq'), sl('d', 4, 'r'), sl('e', 5, 'p'), sl('f', 6, 'k')];
+
+  it('dayClash lists the exercises two columns share, leaving out skipped cards and rest columns', () => {
+    const w = normWeek({ moved: {} });
+    expect(dayClash(w, six, 2, 3)).toEqual(['sq']);
+    expect(dayClash(w, six, 3, 4)).toEqual([]);
+    expect(dayClash(normWeek({ moved: {}, skipped: { c: true } }), six, 2, 3)).toEqual([]);
+    expect(dayClash(normWeek({ moved: {}, rest: [3] }), six, 2, 3)).toEqual([]);
+  });
+  it('dayClash matches an exercise inside a superset', () => {
+    const slots = [sl('a', 1, 'b'), { id: 'ss', day: 2, type: 'superset', items: [{ ex: 'r' }, { ex: 'b' }] }, sl('c', 3, 'k')];
+    expect(dayClash(normWeek({ moved: {} }), slots, 1, 2)).toEqual(['b']);
+  });
+  it('names several shared exercises in a list and never moves an empty day', () => {
+    const slots = [sl('a', 1, 'b'), sl('a2', 1, 'r'), sl('a3', 1, 'p'), sl('b', 2, 'b'), sl('b2', 2, 'r'), sl('b3', 2, 'p'), sl('c', 3, 'k'), sl('d', 4, 'l'), sl('e', 5, 'sq'), sl('f', 6, 'sq')];
+    const plan = planOrder(c, normWeek({ moved: {}, done: done('a', 'a2', 'a3') }), slots, 1);
+    expect(plan.lines[0]).toBe('Bench, Row and Press are on Day 1 and Day 2.');
+    expect(plan.order[6]).toBe(7); // the empty Day 7 stays last, where a rest day can go
+  });
+  it('ignores an exercise that is on every workout day, since no order can split it', () => {
+    const slots = [...six, ...[1, 2, 3, 4, 5, 6].map(d => sl(`g${d}`, d, 'l'))];
+    const w = normWeek({ moved: {} });
+    expect(dailyExercises(w, slots)).toEqual(['l']);
+    expect(dayClash(w, slots, 1, 2)).toEqual([]);
+    expect(clashCount(w, slots, 1)).toBe(1); // only the Squat pair
+  });
+  it('leaves out Home cards and either/or cards', () => {
+    const home = { ...sl('h3', 3, 'b'), sec: 'Home' };
+    const either = { id: 'e3', day: 3, type: 'either', items: [{ ex: 'b' }, { ex: 'r' }] };
+    expect(countsForClash(home)).toBe(false);
+    expect(countsForClash(either)).toBe(false);
+    expect(countsForClash(six[0])).toBe(true);
+    const w = normWeek({ moved: {} });
+    expect(dayClash(w, [...six, { ...sl('h4', 4, 'r'), sec: 'Home' }, { ...sl('h5', 5, 'r'), sec: 'Home' }], 4, 5)).toEqual([]);
+    expect(dayClash(w, [...six, { id: 'e1', day: 4, type: 'either', items: [{ ex: 'p' }, { ex: 'k' }] }], 4, 5)).toEqual([]);
+  });
+  it('clashCount counts neighboring pairs from a column on', () => {
+    const w = normWeek({ moved: {} });
+    expect(clashCount(w, six, 1)).toBe(1);
+    expect(clashCount(w, six, 3)).toBe(0); // the Day 2-3 pair is behind column 3
+  });
+
+  it('finishing Day 2 moves the next Squat day later, by the nearest swap', () => {
+    const w = normWeek({ moved: {}, done: done('a', 'b') });
+    const plan = planOrder(c, w, six, 2);
+    expect(plan.order).toEqual([1, 2, 4, 3, 5, 6, 7]);
+    expect(plan.rest).toEqual([]);
+    expect(plan.before).toBe(1);
+    expect(plan.after).toBe(0);
+    expect(plan.lines.join(' ')).toBe('Squat is on Day 2 and Day 3. Swapping Day 3 and Day 4 fixes it.');
+  });
+  it('returns null when nothing ahead clashes', () => {
+    const spread = [sl('a', 1, 'b'), sl('b', 2, 'sq'), sl('c', 3, 'r'), sl('d', 4, 'sq'), sl('e', 5, 'p')];
+    expect(planOrder(c, normWeek({ moved: {}, done: done('a') }), spread, 1)).toBeNull();
+  });
+  it('returns null when the clash is with a day you have started', () => {
+    const w = normWeek({ moved: {}, done: done('a', 'b', 'c') }); // Day 3 is started (here, finished too)
+    expect(planOrder(c, w, six, 2)).toBeNull();
+  });
+  it('never moves the finished day, earlier days or a day with a check-off', () => {
+    // Squat on Days 1-5 and Day 6 started: only columns 2-5 and 7 can move.
+    const slots = [1, 2, 3, 4, 5].map(d => sl(`s${d}`, d, 'sq')).concat([sl('f', 6, 'k'), sl('f2', 6, 'r'), sl('h', 7, 'b')]);
+    const w = normWeek({ moved: {}, done: done('s1', 'f') });
+    const plan = planOrder(c, w, slots, 1);
+    expect(plan.order[0]).toBe(1);
+    expect(plan.order[5]).toBe(6);
+  });
+  it('can only reduce a clash it cannot fix, and says how many are left', () => {
+    // Squat on Days 1-5, others on 6 and 7: after the finished Day 1, columns 3, 5 and 7 hold three Squats apart;
+    // the fourth touches two neighbors wherever it goes.
+    const slots = [1, 2, 3, 4, 5].map(d => sl(`s${d}`, d, 'sq')).concat([sl('f', 6, 'k'), sl('h', 7, 'b')]);
+    const plan = planOrder(c, normWeek({ moved: {}, done: done('s1') }), slots, 1);
+    expect(plan.before).toBe(4);
+    expect(plan.after).toBe(2);
+    expect(plan.lines.join(' ')).toMatch(/That leaves 2 back-to-back repeats instead of 4\.$/);
+    const one = [1, 2, 3].map(d => sl(`s${d}`, d, 'sq')).concat([sl('f', 4, 'k'), sl('h', 5, 'b'), sl('i', 6, 'r'), sl('j', 7, 'p')]);
+    const sw = planOrder(c, normWeek({ moved: {}, done: done('s1', 's2') }), one, 2); // Days 1-2 are behind; only the 2-3 pair counts
+    expect(sw.after).toBe(0);
+  });
+
+  it('moves the rest day between two Squat days rather than reordering workouts', () => {
+    // Rest on column 6: columns show workouts 1-5, rest, 6. Squat on workouts 3 and 4 (columns 3 and 4).
+    const slots = [sl('a', 1, 'b'), sl('b2', 2, 'r'), sl('c', 3, 'sq'), sl('d', 4, 'sq'), sl('e', 5, 'p'), sl('f', 6, 'k')];
+    const w = normWeek({ moved: {}, rest: [6], restOn: '2026-10-05', done: done('a', 'b2', 'c') });
+    const plan = planOrder(c, w, slots, 3);
+    expect(plan.rest).toEqual([4]);
+    expect(plan.order).toEqual([1, 2, 3, 4, 5, 6, 7]); // the workouts keep their order and shift one day later
+    expect(plan.lines.join(' ')).toBe('Squat is on Day 3 and Day 4. Moving your rest day from Day 6 to Day 4 fixes it.');
+  });
+  it('moves the rest day first when that alone cuts the repeats, even if a reorder would fix more', () => {
+    // Columns: 1 b+sq, 2 sq+r, 3 r, 4 p, 5 k, rest on 6, 7 l. Finished Day 1: Squat on 1-2 and Row on 2-3.
+    const slots = [sl('a', 1, 'b'), sl('a2', 1, 'sq'), sl('b2', 2, 'sq'), sl('b3', 2, 'r'), sl('c', 3, 'r'), sl('d', 4, 'p'), sl('e', 5, 'k'), sl('f', 6, 'l')];
+    const plan = planOrder(c, normWeek({ moved: {}, rest: [6], done: done('a', 'a2') }), slots, 1);
+    expect(plan.rest).toEqual([3]); // Day 2 or Day 3 both split one pair; Day 3 moves fewer days
+    expect(plan.order).toEqual([1, 2, 3, 4, 5, 6, 7]); // no workout reordered
+    expect(plan.lines.at(-1)).toBe('Moving your rest day from Day 6 to Day 3 leaves 1 back-to-back repeat instead of 2.');
+  });
+  it('describes a rest day trading places with a neighbor as a rest day move', () => {
+    const slots = [sl('a', 1, 'b'), sl('b2', 2, 'sq'), sl('c', 3, 'sq'), sl('e', 5, 'k'), sl('f', 6, 'l')];
+    const plan = planOrder(c, normWeek({ moved: {}, rest: [4], done: done('a', 'b2') }), slots, 2);
+    expect(plan.lines.at(-1)).toBe('Moving your rest day from Day 4 to Day 3 fixes it.');
+  });
+  it('keeps an earlier rest day where it is, and keeps the hidden workout off the board', () => {
+    // Rest on column 2: columns show workouts 1, rest, 2-6; workout 7 is hidden.
+    const slots = [sl('a', 1, 'b'), sl('b2', 2, 'r'), sl('c', 3, 'sq'), sl('d', 4, 'sq'), sl('e', 5, 'p'), sl('f', 6, 'k')];
+    const w = normWeek({ moved: {}, rest: [2], done: done('a', 'b2') }); // finished column 3 (workout 2)
+    const plan = planOrder(c, w, slots, 3);
+    expect(plan.rest).toEqual([2]);
+    expect(plan.order[6]).toBe(7);
+    expect(plan.after).toBe(0);
+  });
+  it('works on top of a swapped order, and a moved card travels with its workout', () => {
+    // Order swaps workouts 4 and 5; the Squat card from Day 1 was moved onto workout 3.
+    const slots = [sl('a', 1, 'b'), sl('x', 1, 'sq'), sl('b2', 2, 'r'), sl('c', 3, 'p'), sl('d', 4, 'k'), sl('e', 5, 'sq'), sl('f', 6, 'l')];
+    const w = normWeek({ moved: { x: 3 }, order: [1, 2, 3, 5, 4, 6, 7], done: done('a', 'b2', 'c', 'x') });
+    // Column 3 (workout 3, now holding Squat) is finished; column 4 shows workout 5 with Squat.
+    const plan = planOrder(c, w, slots, 3);
+    expect(plan.order.slice(0, 3)).toEqual([1, 2, 3]);
+    expect(plan.order[3]).not.toBe(5);
+    expect(plan.after).toBe(0);
   });
 });

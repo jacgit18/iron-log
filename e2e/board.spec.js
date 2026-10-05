@@ -40,3 +40,18 @@ test('accepting skips the pushed-off workouts and both rest days stay ticked', a
   await expect(restBox(page, 5)).not.toBeChecked();
   await expect(restBox(page, 3)).toBeChecked();
 });
+
+test('finishing a day suggests a new order; Apply moves the days and focuses Put back, which restores them', async ({ page }) => {
+  // Program A: Leg Extension is on Days 2 and 3, so finishing Day 2 suggests a new order for Days 3 to 6.
+  await page.locator('#day-2').check();
+  const note = page.getByRole('status').filter({ hasText: 'Back-to-back' });
+  await expect(note).toContainText('Leg Extension ISO hold is on Day 2 and Day 3.');
+  await expect(page.locator('#col-3 #chk-A-d3s1')).toHaveCount(1);
+  await note.getByRole('button', { name: 'Apply' }).click();
+  await expect(page.locator('#col-6 #chk-A-d3s1')).toHaveCount(1); // the Day 3 workout moved to Day 6
+  const putBack = page.getByRole('button', { name: 'Put back' });
+  await expect(putBack).toBeFocused();
+  await putBack.click();
+  await expect(page.locator('#col-3 #chk-A-d3s1')).toHaveCount(1);
+  await expect(putBack).toHaveCount(0);
+});

@@ -30,6 +30,7 @@ const GLOSSARY = [
   ['D1 to D7', 'Day 1 to Day 7 of the week’s plan.'],
   ['Rest day', 'Tick Rest day on a day to rest. Your workouts from that day on move one day later, and the rest day counts as done. Untick to undo. You can tick more than one. If a rest day would push workouts off the end of the week, you’re asked to skip them for that week (they come back when you untick) or cancel and move them yourself first.'],
   ['Swap arrows', 'The ← and → on each day swap it with the day beside it for this week only. The workouts trade places and the day labels stay in order. Swapping with a rest day moves that rest day.'],
+  ['Back-to-back', 'When you finish a day, the app checks the days still ahead this week. If the same exercise is on two days in a row, it suggests a new order (it may move your rest day). Apply changes this week only, and Put back undoes it. Days you have started and empty days stay put. Home cards, either/or cards and an exercise that is on every day are ignored.'],
   ['Day date', 'Once you check something off on a day, its header shows the weekday and date the exercises were logged or checked off, for example Sunday 09/27. Check-offs made while viewing another week are dated to the first day of that week (Sunday), and a rest day shows the date you ticked it.'],
   ['Mode 1, 2, 3', 'How the two programs take turns: Program A only; A and B by month; or six months each.'],
 ];

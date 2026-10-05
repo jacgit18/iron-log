@@ -4,6 +4,7 @@ import { monday, ymd, addDays } from '../lib/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
+  planOrder, tally,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { editorSlice } from './editorSlice.js';
@@ -73,6 +74,11 @@ function setExerciseDefault(c, exId, ph, programs, library) {
 
 const sameTags = (a, b) => JSON.stringify([[...(a.p || [])].sort(), [...(a.s || [])].sort(), !!a.mob]) === JSON.stringify([[...(b.p || [])].sort(), [...(b.s || [])].sort(), !!b.mob]);
 
+// Write a day order and rest days onto a week (the normal order is stored as no order). restOn stays with the rest days.
+const writeOrder = (w, { order, rest }) => {
+  if (order.every((v, k) => v === k + 1)) delete w.order; else w.order = [...order];
+  if (rest.length) w.rest = [...rest]; else { delete w.rest; delete w.restOn; }
+};
 const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t) });
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
@@ -118,6 +124,8 @@ export const useAppStore = create((set, get) => ({
   ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false, str: false, strWeek: false, supp: false },
   uncheckNote: null, // after an uncheck removed logged entries: {week, text, entries: {exId: [entry]}, done: {key: wasDone}}
   moveNote: null, // heads-up after a move puts the same exercise on the same or a neighboring day
+  orderNote: null, // after a day is finished: {week, doneCol, prev, next, lines, applied}; prev/next are {order, rest}
+  orderSkip: [], // 'week:column' suggestions dismissed this session
   modal: null, // {type:'log', slotId, idx} | {type:'detail', exId}
   weekHist: null, // every saved week, loaded on demand for Progress and exports
   historyLoading: false,
@@ -251,11 +259,46 @@ export const useAppStore = create((set, get) => ({
     const done = {}; const after = get().week.done || {};
     new Set([...Object.keys(before.done || {}), ...Object.keys(after)]).forEach(k => { if (!!(before.done || {})[k] !== !!after[k]) done[k] = !!(before.done || {})[k]; });
     const unticked = Object.values(done).some(Boolean);
+    get().suggestOrder(slots, before, Object.values(done).some(v => !v));
     if (removeLogged && unticked) {
       const text = `Unchecked${label ? ' ' + label : ''}${gone ? ` · removed ${gone} logged ${gone === 1 ? 'entry' : 'entries'}` : ''}.`;
       set({ uncheckNote: { week: get().weekKey(), text, entries, done } });
     } else if (get().uncheckNote) set({ uncheckNote: null }); // any other check-off change replaces the old notice
     return true;
+  },
+  // A tick that finished a column suggests a new order for the days ahead (planOrder); unticking drops one not yet applied.
+  suggestOrder(slots, before, ticked) {
+    const { cfg, week } = get(); const wk = get().weekKey();
+    const a = currentLayout(week, slots), b = currentLayout(before, slots);
+    const n = get().orderNote;
+    if (n && !n.applied && n.week === wk && !tally(a[n.doneCol], week).full) set({ orderNote: null });
+    if (!ticked) return;
+    const doneCol = DAYS.find(c => tally(a[c], week).full && !tally(b[c], before).full);
+    if (doneCol == null || get().orderSkip.includes(`${wk}:${doneCol}`)) return;
+    const plan = planOrder(cfg, week, slots, doneCol);
+    if (plan) set({ orderNote: { week: wk, doneCol, prev: { order: [...orderOf(week)], rest: restsOf(week) }, next: { order: plan.order, rest: plan.rest }, lines: plan.lines, applied: false } });
+  },
+  canUndoOrder() {
+    const n = get().orderNote; const w = get().week;
+    return !!(n && n.applied && n.week === get().weekKey() && orderOf(w).join() === n.next.order.join() && restsOf(w).join() === n.next.rest.join());
+  },
+  applyOrder() {
+    const n = get().orderNote; if (!n || n.applied || n.week !== get().weekKey()) return false;
+    if (!get().mutateWeek(w => writeOrder(w, n.next))) return false;
+    set({ orderNote: { ...n, applied: true }, moveNote: null });
+    flag('Order changed for this week');
+    return true;
+  },
+  undoOrder() {
+    const n = get().orderNote; if (!get().canUndoOrder()) return false;
+    if (!get().mutateWeek(w => writeOrder(w, n.prev))) return false;
+    set({ orderNote: null });
+    flag('Order put back');
+    return true;
+  },
+  dismissOrder() {
+    const n = get().orderNote; if (!n) return;
+    set({ orderNote: null, orderSkip: n.applied ? get().orderSkip : [...get().orderSkip, `${n.week}:${n.doneCol}`] });
   },
   // Put back what the last uncheck removed: the entries, and the ticks.
   undoUncheck() {
@@ -298,6 +341,7 @@ export const useAppStore = create((set, get) => ({
     const cards = ids.map(id => get().slotById(id)).filter(Boolean); if (!cards.length) return;
     const batch = Object.fromEntries(cards.map(s => [s.id, week0.moved[s.id] ?? null])); // what undo puts back
     if (!get().mutateWeek(w => cards.forEach(s => { if (pd === s.day) delete w.moved[s.id]; else w.moved[s.id] = pd; }))) return;
+    set({ orderNote: null });
     const { cfg, week } = get(); const slots = get().activeSlots();
     const lines = [...new Set(cards.flatMap(s => moveClashes(cfg, week, slots, s, day)))];
     const fromShown = colOf(week0, week0.moved[cards[0].id] || cards[0].day);
@@ -430,7 +474,7 @@ export const useAppStore = create((set, get) => ({
       if (!skipOverflow) { flag(`A rest day on Day ${n} would push ${over.length === 1 ? 'a workout' : `${over.length} workouts`} off the week. Move ${over.length === 1 ? 'it' : 'them'} or skip ${over.length === 1 ? 'it' : 'them'} for this week first.`); return false; }
       get().skipCards(over.map(s => s.id));
     }
-    set({ moveNote: null });
+    set({ moveNote: null, orderNote: null });
     const date = defaultLogDate(get().weekStart);
     return get().mutateWeek(x => {
       const rest = restsOf(x);
@@ -453,7 +497,7 @@ export const useAppStore = create((set, get) => ({
       }
     });
     if (!ok) return false;
-    set({ moveNote: null, mDay: e });
+    set({ moveNote: null, orderNote: null, mDay: e });
     flag(restInvolved ? `Rest day moved to Day ${dRest ? e : d}` : `Day ${d} swapped with Day ${e}`);
     return true;
   },
@@ -469,6 +513,7 @@ export const useAppStore = create((set, get) => ({
     const from = week0.moved[slotId] || s.day;
     const ok = get().mutateWeek(w => { if (pd === s.day) delete w.moved[slotId]; else w.moved[slotId] = pd; });
     if (!ok) return;
+    set({ orderNote: null });
     const { cfg, week } = get();
     const slots = get().activeSlots(); const clashes = moveClashes(cfg, week, slots, s, day);
     const fromShown = colOf(week0, from);
@@ -489,7 +534,7 @@ export const useAppStore = create((set, get) => ({
 
   gotoWeek(which) {
     const cur = get().weekStart;
-    set({ mDay: null, moveNote: null, weekStart: which === 'today' ? monday(new Date()) : addDays(cur, which === 'prev' ? -7 : 7) });
+    set({ mDay: null, moveNote: null, orderNote: null, weekStart: which === 'today' ? monday(new Date()) : addDays(cur, which === 'prev' ? -7 : 7) });
     subscribeWeek();
   },
 
@@ -591,7 +636,7 @@ export const useAppStore = create((set, get) => ({
     if (parts.weeks) {
       const all = await get().allWeeks();
       Object.keys(all).forEach(k => { if (WEEK_RE.test(k)) get().removeDoc('weeks/' + k); });
-      set({ week: normWeek(null), weekHist: null, moveNote: null, uncheckNote: null, mDay: null });
+      set({ week: normWeek(null), weekHist: null, moveNote: null, orderNote: null, uncheckNote: null, mDay: null });
     }
     if (parts.logs) { Object.keys(get().logs).forEach(id => get().removeDoc('logs/' + id)); set({ logs: {} }); }
     if (parts.body) { set({ body: [] }); get().saveBody(); }

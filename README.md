@@ -55,6 +55,7 @@ It's a React app built with Vite. You can install it on your phone or computer l
 - **Sort and filter.** Sort by muscle to list the cards that train it first in each day (primary, then secondary, then the rest), or filter by equipment to hide the others. Neither changes the day counts.
 - **Rest days.** Tick Rest day on any day of the week and your workouts from that day on move one day later. You can tick more than one; if that would push workouts off the end of the week, you are asked to skip them for that week (they return when you untick) or cancel and move them yourself. Untick to put them back.
 - **Swap days.** Small arrows on each day swap it with its neighbor for the current week. The next week starts in your program's normal order.
+- **Fewer back-to-back repeats.** Finishing a day checks the rest of the week. If the same exercise lands on two days in a row, the board suggests a new order for the days ahead, moving the rest day if that helps. You apply it with one button and can put it back.
 - **Day dates.** Each day's header shows the weekday and date once something on it is logged or checked off, so you can see which days you trained.
 - **Program rotation.** There are three modes:
   1. Program A only.
