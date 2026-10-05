@@ -587,13 +587,20 @@ describe('bug check fixes', () => {
     st().submitLog('A-d1s6', 0, { entry, ph: 'hyp' });
     expect(phaseOf(st().cfg, st().week, st().slotById('A-d1s6'), 0)).toBe('hyp');
   });
-  it('a saved log leaves other cards of the same exercise, and the other program, alone', () => {
-    const slots = st().activeSlots(); const seen = {}; let pair = null;
-    slots.forEach(sl => sl.items.forEach((x, i) => { if (seen[x.ex] && seen[x.ex][0].id !== sl.id && !pair) pair = [seen[x.ex], [sl, i]]; (seen[x.ex] = seen[x.ex] || [sl, i]); }));
-    const [[a, ai], [b, bi]] = pair; const before = phaseOf(st().cfg, st().week, b, bi);
-    st().submitLog(a.id, ai, { entry: { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 }, ph: 'hyp' });
-    expect(phaseOf(st().cfg, st().week, st().slotById(b.id), bi)).toBe(before);
-    expect(Object.keys(st().cfg.phDef).every(k => k.startsWith('A-'))).toBe(true); // keyed to this program's card ids
+  it('a phase and weight saved on one day show on the exercise\'s other days, even if they were in another phase', async () => {
+    const { targetOf } = await import('../lib/logic.js');
+    const cards = st().activeSlots().flatMap(sl => sl.items.map((x, i) => x.ex === 'chestpress' && [sl, i]).filter(Boolean));
+    const phases = new Set(cards.map(([sl, i]) => phaseOf(st().cfg, st().week, sl, i))); expect(phases.size).toBeGreaterThan(1); // Strength on one day, Hypertrophy on another
+    const [[a, ai], [b, bi]] = [cards[0], cards[cards.length - 1]];
+    st().submitLog(a.id, ai, { entry: { d: '2026-10-01', ph: 'iso', w: 42.5, s: 4, sec: 20 }, ph: 'iso' });
+    const nb = st().slotById(b.id);
+    expect(phaseOf(st().cfg, st().week, nb, bi)).toBe('iso');
+    expect(targetOf(st().cfg, st().logs, nb.items[bi], 'iso')).toMatchObject({ w: 42.5, src: 'last session' });
+  });
+  it('a saved log leaves other exercises and the other program alone', () => {
+    st().submitLog('A-d1s6', 0, { entry: { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 }, ph: 'hyp' });
+    const cp = new Set(st().activeSlots().flatMap(sl => sl.items.map((x, i) => x.ex === 'chestpress' && `${sl.id}:${i}`).filter(Boolean)));
+    expect(Object.keys(st().cfg.phDef).every(k => k.startsWith('A-') && cp.has(k))).toBe(true); // only this program's Chest Press cards
   });
   it('a one-week card keeps the phase picked when it was added, even with an exercise default', () => {
     st().saveExerciseDetails('chestpress', { url: '', eq: '', ph: 'iso' });
@@ -622,16 +629,16 @@ describe('bug check fixes', () => {
     await p;
     expect(st().weekHist['2026-01-04']).toBeTruthy();
   });
-  it('saving a log makes its phase the default for that card only, clearing its week pick', () => {
+  it('saving a log makes its phase the default for every card of that exercise in the program, clearing week picks', () => {
     useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });
     st().setPhase('A-d1s6', 0, 'iso');
     const entry = { d: '2026-10-01', ph: 'hyp', w: 35, s: 4, r: 15 };
     st().submitLog('A-d1s6', 0, { entry, ph: 'hyp' });
-    expect(st().cfg.phDef['A-d1s6:0']).toBe('hyp');
-    expect(st().cfg.exPh && st().cfg.exPh.chestpress).toBeUndefined(); // not the exercise everywhere
-    expect(st().cfg.phDef['A-d2s5:1']).toBeUndefined(); // another card with Chest Press
+    const cards = st().activeSlots().flatMap(sl => sl.items.map((x, i) => x.ex === 'chestpress' && [sl, i]).filter(Boolean));
+    expect(cards.length).toBeGreaterThan(1);
+    cards.forEach(([sl, i]) => expect(phaseOf(st().cfg, st().week, sl, i)).toBe('hyp'));
     expect(st().week.ph['A-d1s6:0']).toBeUndefined();
-    expect(phaseOf(st().cfg, st().week, st().slotById('A-d1s6'), 0)).toBe('hyp');
+    expect(st().cfg.exPh && st().cfg.exPh.chestpress).toBeUndefined(); // not the exercise everywhere: Program B is untouched
   });
   it('the Details default phase also replaces slot defaults for that exercise', () => {
     useAppStore.setState({ cfg: { ...st().cfg, phDef: { 'A-d1s6:0': 'strength' } } });

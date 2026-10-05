@@ -122,7 +122,7 @@ export default function LogSheet({ slotId, idx }) {
         </select>
         <span className="note">Changing it updates {ex.n} everywhere.</span>
       </label>
-      <p className="note">Saving makes this phase the default for this {ex.n} card in {progName(cfg, st.activeProgKey())}, so it is where you start next time. Other cards and the other program keep theirs.</p>
+      <p className="note">Saving makes this phase the default for every {ex.n} card in {progName(cfg, st.activeProgKey())}, on any day, so it is where you start next time. The other program keeps its own.</p>
       <label className="inline"><input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)} /> {isPaired(s) ? 'Check off this exercise' : 'Check off the card'}</label>
       <div className="actions">
         {last && (
