@@ -14,10 +14,10 @@ export const settingsSlice = (set, get, flag) => ({
   setImportSection: (k, v) => set(s => ({ importDraft: s.importDraft && { ...s.importDraft, sel: { ...importSel(s.importDraft), [k]: v } } })),
   importCount: 0, // bumps after each import so the import panel resets (paste box closed and cleared)
 
-  setPct(p, raw) { const n = Number(raw); if (raw !== '' && !isNaN(n)) get().mutateCfg(c => { c.pct[p] = n; }); },
+  setPct(p, raw) { const n = Number(raw); if (raw === '' || !(n >= 0 && n <= 110)) return false; get().mutateCfg(c => { c.pct[p] = n; }); },
   setRxOverride(p, raw) { const v = raw.trim(); get().mutateCfg(c => { if (v && v !== PHASES[p].rx) c.rxOverride[p] = v; else delete c.rxOverride[p]; }); },
-  setRest(raw) { const n = Number(raw); if (raw !== '' && n >= 0) get().mutateCfg(c => { c.rest = n; }); },
-  setRm(exId, raw) { const n = Number(raw); get().mutateCfg(c => { if (raw === '' || !(n > 0)) delete c.rm[exId]; else c.rm[exId] = n; }); },
+  setRest(raw) { const n = Number(raw); if (raw === '' || !(n >= 0 && n <= 600)) return false; get().mutateCfg(c => { c.rest = n; }); },
+  setRm(exId, raw) { const n = Number(raw); if (raw !== '' && !(n > 0) && get().cfg.rm[exId] == null) return false; get().mutateCfg(c => { if (raw === '' || !(n > 0)) delete c.rm[exId]; else c.rm[exId] = n; }); }, // 0 or empty clears a saved 1RM; junk with nothing saved is rejected so the field reverts
   setCfgField(k, v) { get().mutateCfg(c => { c[k] = v; }); },
   setBackupRepo(raw) {
     const v = raw.trim();
@@ -69,7 +69,7 @@ export const settingsSlice = (set, get, flag) => ({
         const cur = get().cfg; const incoming = { ...structuredClone(DEFAULT_CFG), ...structuredClone(d.config) };
         const cfg = {};
         new Set([...Object.keys(cur), ...Object.keys(incoming)]).forEach(k => {
-          const v = k === 'backup' ? (d.config.backup || cur.backup) : on[cfgSection(k)] ? incoming[k] : cur[k];
+          const v = k === 'backup' ? (d.config.backup || cur.backup) : k === 'ghBackup' ? cur.ghBackup : on[cfgSection(k)] ? incoming[k] : cur[k];
           if (v !== undefined) cfg[k] = v;
         });
         set({ cfg }); get().saveCfg();
@@ -165,7 +165,7 @@ export const settingsSlice = (set, get, flag) => ({
         });
       }
       set(s => ({ weekHist: null, importDraft: null, importBusy: false, importError: '', modal: null, importCount: s.importCount + 1 }));
-      flag(mode === 'replace' ? 'Data replaced' : 'Data added');
+      if (get().saveFlag !== 'Storage full') flag(mode === 'replace' ? 'Data replaced' : 'Data added'); // some writes were refused: keep that warning
     } catch {
       set({ importBusy: false }); flag('Import failed');
     }

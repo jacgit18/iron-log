@@ -39,8 +39,8 @@ export default function LogSheet({ slotId, idx }) {
   useEffect(() => { firstRef.current?.focus(); }, []);
 
   const phv = ph || null; const iso = isTimed(phv);
-  const t = targetOf(cfg, logs, it, ph0);
-  const rx = rxOf(cfg, it, ph0);
+  const t = targetOf(cfg, logs, it, phv);
+  const rx = rxOf(cfg, it, phv);
   const last = lastLog(logs, it.ex, phv);
   const hist = (logs[it.ex] || []).slice(-6).reverse();
   const goals = liftGoalsStatus(cfg, it.ex, logs[it.ex], today, phv);

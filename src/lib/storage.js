@@ -1,7 +1,7 @@
 /* ---------- Storage (db with local fallback) ---------- */
 export const LS = {
   get(k) { try { return JSON.parse(localStorage.getItem('ironlog:' + k)); } catch { return null; } },
-  set(k, v) { try { localStorage.setItem('ironlog:' + k, JSON.stringify(v)); } catch { /* ignore */ } },
+  set(k, v) { try { localStorage.setItem('ironlog:' + k, JSON.stringify(v)); return true; } catch { return false; } }, // false: the browser refused the write (storage full or blocked)
   remove(k) { try { localStorage.removeItem('ironlog:' + k); } catch { /* ignore */ } },
 };
 
@@ -13,7 +13,7 @@ export function makeSaveQueue({ getDb, onFlag }) {
     const db = getDb();
     const q = queues[path] || (queues[path] = { busy: false, next: null });
     q.next = structuredClone(data);
-    if (!db) { LS.set(path, q.next); q.next = null; return; }
+    if (!db) { if (!LS.set(path, q.next)) onFlag('Storage full'); q.next = null; return; }
     if (q.busy) return;
     const run = async () => {
       q.busy = true;

@@ -414,8 +414,7 @@ export const useAppStore = create((set, get) => ({
   },
   addWarmup(n, rx) {
     const name = String(n || '').trim().slice(0, 60); if (!name) return false;
-    get().mutateCfg(c => { c.warmup = [...warmupOf(c), { id: `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, n: name, rx: String(rx || '').trim().slice(0, 40) }]; });
-    return true;
+    return get().mutateCfg(c => { c.warmup = [...warmupOf(c), { id: `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, n: name, rx: String(rx || '').trim().slice(0, 40) }]; });
   },
   removeWarmup(id) { get().mutateCfg(c => { c.warmup = warmupOf(c).filter(x => x.id !== id); }); },
   // Cards a rest day on column n would push off the board and that are still in play (not skipped).

@@ -37,7 +37,7 @@ describe('settings fields', () => {
     st().setPct('hyp', '70');
     expect(st().cfg.pct.hyp).toBe(70);
     expect(saved('config/main').pct.hyp).toBe(70);
-    st().setPct('hyp', ''); st().setPct('hyp', 'abc');
+    expect(st().setPct('hyp', '')).toBe(false); expect(st().setPct('hyp', 'abc')).toBe(false); expect(st().setPct('hyp', '500')).toBe(false);
     expect(st().cfg.pct.hyp).toBe(70);
   });
   it('sets an Rx override, and clears it when blank or equal to the default', () => {
@@ -51,7 +51,7 @@ describe('settings fields', () => {
   it('sets the rest time and rejects blank or negative values', () => {
     st().setRest('90');
     expect(st().cfg.rest).toBe(90);
-    st().setRest(''); st().setRest('-5');
+    expect(st().setRest('')).toBe(false); expect(st().setRest('-5')).toBe(false); expect(st().setRest('1e999')).toBe(false);
     expect(st().cfg.rest).toBe(90);
   });
   it('sets a one-rep max, and removes it when blank, zero or negative', () => {
@@ -358,6 +358,22 @@ describe('edge cases while reading', () => {
 });
 
 describe('edge cases when replacing', () => {
+  it('keeps the local GitHub backup settings, even when the file has none', async () => {
+    useAppStore.setState(s => ({ cfg: { ...s.cfg, ghBackup: { repo: 'me/mine', branch: 'data', hash: 'h' } } }));
+    const cfg = structuredClone(DEFAULT_CFG); delete cfg.ghBackup;
+    st().pasteImport(dataText({ cfg }));
+    await st().applyImport('replace');
+    expect(st().cfg.ghBackup.repo).toBe('me/mine');
+  });
+  it('does not report success when the browser refused a write', async () => {
+    const orig = localStorage.setItem;
+    localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
+    try {
+      st().pasteImport(dataText({ logs: { hack: [entry('2026-09-21')] } }));
+      await st().applyImport('replace');
+    } finally { localStorage.setItem = orig; }
+    expect(st().saveFlag).toBe('Storage full');
+  });
   const bare = over => ({ kind: 'json', name: 'x', data: { config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], stretchWeeks: {}, ...over } });
 
   it('keeps the local backup target unless the file has its own, and ignores keys of a section left out', async () => {

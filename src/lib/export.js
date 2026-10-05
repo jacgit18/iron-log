@@ -14,7 +14,7 @@ import { normSupplements } from './water.js';
 // SheetJS is bundled (0.20.x, patched for reading untrusted files) and loaded only when needed.
 export const loadXLSX = () => import('xlsx').catch(() => { throw new Error('Excel library failed to load'); });
 
-export const phaseLabel = p => (p ? PHASES[p].label : '');
+export const phaseLabel = p => (p ? (PHASES[p] ? PHASES[p].label : '') : '');
 const entryVolume = e => { if (e.sec) return ''; const v = setsOfEntry(e).reduce((a, x) => a + (Number(x.w) > 0 && Number(x.r) > 0 ? Number(x.w) * Number(x.r) : 0), 0); return v || ''; };
 const setDetail = e => (Array.isArray(e.sets) && e.sets.length ? e.sets.map(x => `${x.w != null ? x.w : 'BW'}×${setVal(x)}`).join(', ') : '');
 
@@ -23,7 +23,7 @@ export function buildCsv(S) {
   const { cfg, logs } = S;
   const head = ['date', 'exercise', 'phase', 'weight_lb', 'sets', 'reps', 'hold_s', 'set_detail', 'primary_muscles', 'secondary_muscles', 'note', 'program_slot', 'week_of'];
   const rows = [];
-  Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => rows.push([e.d, exInfo(cfg, id).n, e.ph ? PHASES[e.ph].label : '', e.w ?? '', e.s ?? '', e.r ?? '', e.sec ?? '', setDetail(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), noteOf(e), e.slot || '', e.wk || ''])));
+  Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => rows.push([e.d, exInfo(cfg, id).n, phaseLabel(e.ph), e.w ?? '', e.s ?? '', e.r ?? '', e.sec ?? '', setDetail(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), noteOf(e), e.slot || '', e.wk || ''])));
   rows.sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0])));
   return [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
 }
@@ -180,14 +180,24 @@ export function parseDataFile(text) {
   if (d.format > DATA_FORMAT) throw new Error('This file is from a newer version of Iron Log. Update the app first.');
   return normalizeData(d);
 }
+// The config from a file: the keys the app reads as plain objects must be plain objects, or it would throw on every load.
+const CFG_OBJECTS = ['muscleMap', 'ex', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'liftGoals'];
+export function normConfig(c) {
+  if (!c || typeof c !== 'object' || Array.isArray(c)) return {};
+  const out = { ...c };
+  CFG_OBJECTS.forEach(k => { if (k in out && (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k]))) delete out[k]; });
+  if ('mode' in out && ![1, 2, 3].includes(out.mode)) delete out.mode;
+  if ('rest' in out && !(Number.isFinite(out.rest) && out.rest >= 0 && out.rest <= 600)) delete out.rest;
+  return out;
+}
 // Checks and cleans a data-file-shaped object. Used for both the JSON file and a full Excel workbook.
 export function normalizeData(d) {
-  const out = { exportedAt: d.exportedAt, config: (d.config && typeof d.config === 'object') ? d.config : {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: normExperiments(d.experiments), stretches: d.stretches ? normStretches(d.stretches) : null, stretchWeeks: {}, supplements: d.supplements ? normSupplements(d.supplements) : null };
+  const out = { exportedAt: d.exportedAt, config: normConfig(d.config), programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: normExperiments(d.experiments), stretches: d.stretches ? normStretches(d.stretches) : null, stretchWeeks: {}, supplements: d.supplements ? normSupplements(d.supplements) : null };
   Object.entries(d.stretchWeeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k)) { const n = normStretchWeek(w); if (!stretchWeekEmpty(n)) out.stretchWeeks[k] = n; } });
   (Array.isArray(d.body) ? d.body : []).forEach(e => { if (e && WEEK_RE.test(e.wk) && typeof e.d === 'string' && Number(e.w) > 0 && !out.body.some(x => x.wk === e.wk)) out.body.push({ wk: e.wk, d: e.d, w: Number(e.w) }); });
   ['A', 'B'].forEach(k => { const p = d.programs && d.programs[k]; if (hasValidDays(p)) out.programs[k] = progBody(withAllDays({ ...p, key: k })); });
   (Array.isArray(d.library) ? d.library : []).forEach(it => { if (it && it.id && hasValidDays(it.prog)) out.library.push({ ...it, prog: withAllDays(it.prog) }); });
-  Object.entries(d.logs || {}).forEach(([id, l]) => { if (/^[\w.~:@+-]{1,200}$/.test(id) && Array.isArray(l)) { const ok = l.filter(e => e && typeof e.d === 'string'); if (ok.length) out.logs[id] = ok; } });
+  Object.entries(d.logs || {}).forEach(([id, l]) => { if (id !== '__proto__' && /^[\w.~:@+-]{1,200}$/.test(id) && Array.isArray(l)) { const ok = l.filter(e => e && typeof e.d === 'string').map(e => (e.ph != null && !PH_KEYS.includes(e.ph) ? { ...e, ph: null } : e)); if (ok.length) out.logs[id] = ok; } });
   Object.entries(d.weeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k) && w && typeof w === 'object') out.weeks[k] = normWeek(w); });
   return out;
 }
