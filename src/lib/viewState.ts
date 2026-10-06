@@ -3,11 +3,11 @@
 const KEY = 'ironlog-view';
 const TABS = ['board', 'daily', 'progress', 'program', 'settings'];
 
-export function loadView(day) {
+export function loadView(day: string): { tab?: string; mDay?: number } {
   try {
-    const v = JSON.parse(sessionStorage.getItem(KEY));
+    const v = JSON.parse(sessionStorage.getItem(KEY) ?? 'null');
     if (!v || typeof v !== 'object') return {};
-    const out = {};
+    const out: { tab?: string; mDay?: number } = {};
     if (TABS.includes(v.tab)) out.tab = v.tab;
     // The phone's day picker only makes sense on the day it was set.
     if (v.day === day && Number.isInteger(v.mDay) && v.mDay >= 1 && v.mDay <= 7) out.mDay = v.mDay;
@@ -15,6 +15,6 @@ export function loadView(day) {
   } catch { return {}; }
 }
 
-export function saveView(day, { tab, mDay }) {
+export function saveView(day: string, { tab, mDay }: { tab?: string; mDay?: number | null }) {
   try { sessionStorage.setItem(KEY, JSON.stringify({ tab, mDay, day })); } catch { /* private mode: just don't remember */ }
 }

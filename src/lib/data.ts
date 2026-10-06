@@ -1,24 +1,26 @@
 
+import type { DayDraft, EquipmentKey, ExerciseInfo, FlatSlot, PhaseKey, Program, ProgramCfg, ProgramDraft, ProgramItem, SlotDraft } from '../types.ts';
+
 /* ---------- Program data ---------- */
-export const PHASES = {
+export const PHASES: Record<PhaseKey, { label: string; rx: string; pct: number }> = {
   strength: { label: 'Strength', rx: '4 × 6', pct: 85 },
   iso: { label: 'Isometric', rx: '4 × 15–30 s', pct: 75 },
   hyp: { label: 'Hypertrophy', rx: '4 × 15', pct: 65 },
   exp: { label: 'Explosive', rx: '3 × 10', pct: 45 },
   mob: { label: 'Mobility', rx: '2 × 30 s', pct: 0 }, // no 1RM share
 };
-export const PH_KEYS = Object.keys(PHASES);
+export const PH_KEYS = Object.keys(PHASES) as PhaseKey[];
 export const DAY_COUNT = 7;
 // Programs saved before Day 7 existed have 6 days; they get an empty seventh.
-export const hasValidDays = p => !!p && Array.isArray(p.days) && p.days.length >= 6 && p.days.length <= DAY_COUNT;
+export const hasValidDays = (p: unknown): p is { days: unknown[] } => !!p && Array.isArray((p as { days?: unknown }).days) && (p as { days: unknown[] }).days.length >= 6 && (p as { days: unknown[] }).days.length <= DAY_COUNT;
 // Day 5 and 6 once shipped with these subtitles; saved copies of the program still carry them.
 const OLD_SUBS = new Set(['Upper body + rotational power', 'Lower body + reactive power']);
 // The sled push used to be a warm-up checkbox. It is now an optional Explosive card (1 × 3), first on every day that
 // has exercises. Added once per program (`sledAdded`), so deleting it later sticks; `sledTop` marks that it has been
 // moved to the top once. Cards that already have ids keep them, so nothing else on the day changes identity.
-const isSled = sl => !!sl && Array.isArray(sl.items) && sl.items.some(it => it.ex === 'sled' || it.ex === 'sledlat');
-const sledCard = (key, di) => ({ id: `${key}-sled${di + 1}`, sec: 'Optional', note: 'Optional', items: [{ ex: key === 'B' ? 'sled' : 'sledlat', ph: 'exp', w: null, rx: '1 × 3' }] });
-function withSled(prog, days) {
+const isSled = (sl: SlotDraft | null | undefined) => !!sl && Array.isArray(sl.items) && sl.items.some(it => it.ex === 'sled' || it.ex === 'sledlat');
+const sledCard = (key: string, di: number): SlotDraft => ({ id: `${key}-sled${di + 1}`, sec: 'Optional', note: 'Optional', items: [{ ex: key === 'B' ? 'sled' : 'sledlat', ph: 'exp', w: null, rx: '1 × 3' }] });
+function withSled(prog: ProgramDraft, days: DayDraft[]): DayDraft[] {
   const key = prog.key || 'N';
   const hasSled = days.some(d => d && Array.isArray(d.slots) && d.slots.some(isSled));
   const add = !prog.sledAdded && !hasSled;
@@ -37,21 +39,22 @@ function withSled(prog, days) {
     return { ...d, slots: [...sled, ...slots.filter(sl => !isSled(sl))] };
   });
 }
-export function withAllDays(prog) {
-  let days = prog.days.map(d => (d && OLD_SUBS.has(d.sub) ? (({ sub, ...rest }) => rest)(d) : d)); // eslint-disable-line no-unused-vars
+// Every slot of the result has an id (withSled gives each non-empty day's slots theirs), so it is a full Program.
+export function withAllDays(prog: ProgramDraft): Program {
+  let days: DayDraft[] = prog.days.map(d => (d && d.sub && OLD_SUBS.has(d.sub) ? (({ sub, ...rest }) => rest)(d) : d)); // eslint-disable-line no-unused-vars
   days = withSled(prog, days);
   while (days.length < DAY_COUNT) days.push({ title: `Day ${days.length + 1}`, slots: [] });
-  return { ...prog, days, sledAdded: true, sledTop: true };
+  return { ...prog, days, sledAdded: true, sledTop: true } as Program;
 }
-export const padLibrary = items => items.map(it => (it && hasValidDays(it.prog) ? { ...it, prog: withAllDays(it.prog) } : it));
+export const padLibrary = <T extends { prog?: unknown }>(items: T[]): T[] => items.map(it => (it && hasValidDays(it.prog) ? { ...it, prog: withAllDays(it.prog as ProgramDraft) } : it));
 
-export const EQUIPMENT = {
+export const EQUIPMENT: Record<EquipmentKey, string> = {
   barbell: 'Barbell', shortbar: 'Short barbell', ezbar: 'EZ bar', dumbbell: 'Dumbbell', kettlebell: 'Kettlebell', cable: 'Cable', machine: 'Machine', bodyweight: 'Bodyweight',
   band: 'Band', trx: 'TRX', plate: 'Plate', medball: 'Med ball', other: 'Other',
 };
-export const EQ_KEYS = Object.keys(EQUIPMENT);
+export const EQ_KEYS = Object.keys(EQUIPMENT) as EquipmentKey[];
 
-export const EX = {
+export const EX: Record<string, ExerciseInfo> = {
   latpd: { n: 'Lat Pulldown, alternating single-arm', eq: 'cable' },
   wristpd: { n: 'Cable Wrist Pulldown', eq: 'cable' },
   platerot: { n: 'Plate Torso Rotation', eq: 'plate' },
@@ -101,10 +104,10 @@ export const EX = {
 };
 
 // item: {ex, ph, w (lb), bw, rx (custom when phase==ph), note}
-const I = (ex, ph, w, extra = {}) => ({ ex, ph, w, ...extra });
-const EITHER_DELT = { type: 'either', tier: 'Accessory', items: [I('reardelt', 'iso', 50, { rx: '4 × 15 s per arm' }), I('facepull', 'strength', 30)], note: 'Whichever is free' };
+const I = (ex: string, ph: PhaseKey | null, w: number | null, extra: Partial<ProgramItem> = {}): ProgramItem => ({ ex, ph, w, ...extra });
+const EITHER_DELT: Omit<SlotDraft, 'sec'> = { type: 'either', tier: 'Accessory', items: [I('reardelt', 'iso', 50, { rx: '4 × 15 s per arm' }), I('facepull', 'strength', 30)], note: 'Whichever is free' };
 
-const PROGRAM_A = {
+const PROGRAM_A: ProgramDraft = {
   days: [
     { title: 'Day 1', slots: [
       { sec: 'Regular', tier: 'Primary', items: [I('latpd', 'hyp', 45)] },
@@ -171,8 +174,8 @@ const PROGRAM_A = {
   ],
 };
 
-const EITHER_CARRY = { type: 'either', tier: 'Primary', items: [I('farmers', 'strength', 40), I('dblunge', 'strength', 40)], note: 'Whichever is free' };
-const PROGRAM_B = {
+const EITHER_CARRY: Omit<SlotDraft, 'sec'> = { type: 'either', tier: 'Primary', items: [I('farmers', 'strength', 40), I('dblunge', 'strength', 40)], note: 'Whichever is free' };
+const PROGRAM_B: ProgramDraft = {
   days: [
     { title: 'Day 1', slots: [
       { sec: 'Regular', tier: 'Primary', items: [I('latpdbi', 'hyp', 45)] },
@@ -241,47 +244,47 @@ const PROGRAM_B = {
 };
 export const WARMUP = [{ id: 'shadow', n: 'Shadow box', rx: 'as you feel' }];
 // The warm-up list is editable: cfg.warmup replaces the default once the user changes it.
-export const warmupOf = cfg => (Array.isArray(cfg.warmup) ? cfg.warmup : WARMUP);
+export const warmupOf = (cfg: ProgramCfg) => (Array.isArray(cfg.warmup) ? cfg.warmup : WARMUP);
 
 PROGRAM_A.key = 'A'; PROGRAM_B.key = 'B';
 [PROGRAM_A, PROGRAM_B].forEach(p => Object.assign(p, withAllDays(p)));
 [PROGRAM_A, PROGRAM_B].forEach(p => p.days.forEach((d, di) => d.slots.forEach((sl, si) => { sl.id = sl.id || `${p.key}-d${di + 1}s${si + 1}`; })));
-export const BUILTIN = { A: PROGRAM_A, B: PROGRAM_B };
+export const BUILTIN = { A: PROGRAM_A, B: PROGRAM_B } as Record<'A' | 'B', Program>;
 
-export function slotsFor(prog) {
-  const out = [];
+export function slotsFor(prog: Program): FlatSlot[] {
+  const out: FlatSlot[] = [];
   prog.days.forEach((d, di) => d.slots.forEach((s, si) => out.push({ ...s, id: s.id || `${prog.key}-d${di + 1}s${si + 1}`, day: di + 1, type: s.type || 'single' })));
   return out;
 }
 
 // A saved/edited program only replaces the built-in one when it has the right shape.
-export function resolveProgram(k, data) { return hasValidDays(data) ? withAllDays({ ...structuredClone(data), key: k }) : BUILTIN[k]; }
+export function resolveProgram(k: 'A' | 'B', data: unknown): Program { return hasValidDays(data) ? withAllDays({ ...structuredClone(data as Program), key: k }) : BUILTIN[k]; }
 export const VIDEO_ERR = 'Video link should start with https://';
 // "Watch on YouTube" / "Watch on Instagram" from the link's host; unknown hosts show their domain.
-const PLATFORMS = { 'youtube.com': 'YouTube', 'youtu.be': 'YouTube', 'instagram.com': 'Instagram', 'tiktok.com': 'TikTok', 'vimeo.com': 'Vimeo', 'facebook.com': 'Facebook', 'fb.watch': 'Facebook', 'x.com': 'X', 'twitter.com': 'X' };
-export function videoLabel(url) {
-  let host;
+const PLATFORMS: Record<string, string> = { 'youtube.com': 'YouTube', 'youtu.be': 'YouTube', 'instagram.com': 'Instagram', 'tiktok.com': 'TikTok', 'vimeo.com': 'Vimeo', 'facebook.com': 'Facebook', 'fb.watch': 'Facebook', 'x.com': 'X', 'twitter.com': 'X' };
+export function videoLabel(url: unknown): string {
+  let host: string;
   try { host = new URL(String(url).trim()).hostname.toLowerCase().replace(/^(www|m)\./, ''); } catch { return 'Watch video'; }
   const hit = Object.keys(PLATFORMS).find(h => host === h || host.endsWith('.' + h));
   return `Watch on ${hit ? PLATFORMS[hit] : host}`;
 }
-export const isVideoUrl = s => !s || !s.trim() || /^https?:\/\//.test(s.trim()); // empty is fine: the link is optional
+export const isVideoUrl = (s: string | null | undefined) => !s || !s.trim() || /^https?:\/\//.test(s.trim()); // empty is fine: the link is optional
 // What you set on an exercise (video link, equipment) is kept in cfg.ex and layers over the built-in entry.
-export function exInfo(cfg, id) {
-  const o = { ...(EX[id] || { n: id }), ...(cfg.ex && cfg.ex[id]) };
+export function exInfo(cfg: ProgramCfg, id: string): ExerciseInfo {
+  const o: ExerciseInfo = { ...(EX[id] || { n: id }), ...(cfg.ex && cfg.ex[id]) };
   return o;
 }
-export const allExIds = cfg => [...new Set([...Object.keys(EX), ...Object.keys(cfg.ex || {})])];
+export const allExIds = (cfg: ProgramCfg) => [...new Set([...Object.keys(EX), ...Object.keys(cfg.ex || {})])];
 
 // A new custom exercise's id from its name, unique among the built-ins and cfg.ex (`taken` adds ids being created now).
-export function newExId(cfg, name, taken = {}) {
+export function newExId(cfg: ProgramCfg, name: string, taken: Record<string, { n?: string }> = {}): string {
   const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'exercise';
   const known = { ...cfg.ex, ...taken }; let id = base, n = 2;
   while (EX[id] || (known[id] && known[id].n !== name)) id = `${base}-${n++}`;
   return id;
 }
 // Typed exercise names: matched to the catalog (built-in and your own) ignoring case and extra spaces.
-const nameKey = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
-export const findExId = (cfg, name) => { const k = nameKey(name); return k ? allExIds(cfg).find(id => nameKey(exInfo(cfg, id).n) === k) ?? null : null; };
+const nameKey = (s: unknown) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+export const findExId = (cfg: ProgramCfg, name: unknown) => { const k = nameKey(name); return k ? allExIds(cfg).find(id => nameKey(exInfo(cfg, id).n) === k) ?? null : null; };
 // What the add/edit sheets save for a typed name: an existing exercise, or '__new' with the cleaned name to create.
-export const exerciseChoice = (cfg, name) => { const n = String(name || '').trim().replace(/\s+/g, ' '); const id = findExId(cfg, n); return id ? { ex: id, nn: '' } : { ex: n ? '__new' : '', nn: n }; };
+export const exerciseChoice = (cfg: ProgramCfg, name: unknown) => { const n = String(name || '').trim().replace(/\s+/g, ' '); const id = findExId(cfg, n); return id ? { ex: id, nn: '' } : { ex: n ? '__new' : '', nn: n }; };

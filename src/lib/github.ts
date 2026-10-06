@@ -6,11 +6,12 @@
 const API = 'https://api.github.com';
 
 export class GitHubError extends Error {
-  constructor(message, status) { super(message); this.status = status; }
+  status: number;
+  constructor(message: string, status: number) { super(message); this.status = status; }
 }
 
 // Why a request failed, in words that say what to do next.
-function explain(status, rateLimited, repo, hasToken) {
+function explain(status: number, rateLimited: boolean, repo: string, hasToken: boolean) {
   if (status === 401) return 'GitHub didn’t accept the token. It may have expired or been revoked; create a new one and paste it in.';
   if (rateLimited) return 'GitHub’s limit for requests without a token was reached. Try again in an hour, or paste your token first.';
   if (status === 403) return `The token can’t write to ${repo}. Give it “Contents: Read and write” on that repository.`;
@@ -18,8 +19,8 @@ function explain(status, rateLimited, repo, hasToken) {
   return `GitHub answered with an error (${status}). Try again in a minute.`;
 }
 
-async function request(token, repo, method, path, body, raw) {
-  let res;
+async function request(token: string | undefined, repo: string, method: string, path: string, body?: unknown, raw?: boolean): Promise<any> {
+  let res: Response;
   try {
     res = await fetch(`${API}/repos/${repo}${path}`, {
       method,
@@ -40,28 +41,29 @@ async function request(token, repo, method, path, body, raw) {
   throw new GitHubError(explain(res.status, rateLimited, repo, !!token), res.status);
 }
 
-export const validRepo = r => /^[\w.-]+\/[\w.-]+$/.test(String(r || ''));
-const heads = branch => `heads/${branch.split('/').map(encodeURIComponent).join('/')}`;
+export const validRepo = (r: unknown) => /^[\w.-]+\/[\w.-]+$/.test(String(r || ''));
+const heads = (branch: string) => `heads/${branch.split('/').map(encodeURIComponent).join('/')}`;
 
 // The Git Data API refuses to work on a repo with no commits at all. One file through the Contents API makes the first commit
 // (on the default branch); after that the usual blob/tree/commit calls work, including for a new branch.
-const seedEmptyRepo = call => call('PUT', '/contents/README.md', { message: 'Start the backup repo', content: 'SXJvbiBMb2cgYmFja3VwcyBsaXZlIGluIHRoaXMgcmVwby4K' });
+const seedEmptyRepo = (call: (method: string, path: string, body?: unknown) => Promise<unknown>) => call('PUT', '/contents/README.md', { message: 'Start the backup repo', content: 'SXJvbiBMb2cgYmFja3VwcyBsaXZlIGluIHRoaXMgcmVwby4K' });
 
 // Commit files ({path, content: base64}) to `branch` in one commit. Returns {sha, url}.
-export async function commitFiles({ token, repo, branch, files, message }) {
-  const call = (method, path, body) => request(token, repo, method, path, body);
+export async function commitFiles({ token, repo, branch, files, message }: { token?: string; repo: string; branch: string; files: { path: string; content: string }[]; message: string }): Promise<{ sha: string; url: string }> {
+  const call = (method: string, path: string, body?: unknown) => request(token, repo, method, path, body);
   let seeded = false;
   for (let attempt = 0; ; attempt++) {
-    let parent = null;
+    let parent: string | null = null;
     try { parent = (await call('GET', `/git/ref/${heads(branch)}`)).object.sha; }
-    catch (e) {
+    catch (err) {
+      const e = err as GitHubError;
       if (e.status === 409 && !seeded) { await seedEmptyRepo(call); seeded = true; continue; } // a repo with no commits answers 409 to every Git Data call
       if (e.status !== 404) throw e; await call('GET', ''); /* is it the repo that's missing? */
     }
     const baseTree = parent ? (await call('GET', `/git/commits/${parent}`)).tree.sha : null;
-    let blobs;
+    let blobs: { sha: string }[];
     try { blobs = await Promise.all(files.map(f => call('POST', '/git/blobs', { content: f.content, encoding: 'base64' }))); }
-    catch (e) { if (e.status === 409 && !parent && !seeded) { await seedEmptyRepo(call); seeded = true; continue; } throw e; }
+    catch (err) { const e = err as GitHubError; if (e.status === 409 && !parent && !seeded) { await seedEmptyRepo(call); seeded = true; continue; } throw e; }
     const tree = await call('POST', '/git/trees', {
       ...(baseTree ? { base_tree: baseTree } : {}),
       tree: files.map((f, i) => ({ path: f.path, mode: '100644', type: 'blob', sha: blobs[i].sha })),
@@ -70,7 +72,8 @@ export async function commitFiles({ token, repo, branch, files, message }) {
     try {
       if (parent) await call('PATCH', `/git/refs/${heads(branch)}`, { sha: commit.sha, force: false });
       else await call('POST', '/git/refs', { ref: `refs/heads/${branch}`, sha: commit.sha });
-    } catch (e) {
+    } catch (err) {
+      const e = err as GitHubError;
       // Another device backed up in between: build on top of its commit instead.
       if ((e.status === 422 || e.status === 409) && attempt < 2) continue;
       throw e;
@@ -80,10 +83,11 @@ export async function commitFiles({ token, repo, branch, files, message }) {
 }
 
 // Read one text file from `branch`. The token is optional for a public repo.
-export async function readFile({ token, repo, branch, path }) {
+export async function readFile({ token, repo, branch, path }: { token?: string; repo: string; branch: string; path: string }): Promise<string> {
   try {
     return await request(token, repo, 'GET', `/contents/${path}?ref=${encodeURIComponent(branch)}`, null, true);
-  } catch (e) {
+  } catch (err) {
+    const e = err as GitHubError;
     // A public repo can be read without a token, so an expired token shouldn't stop a restore.
     if (e.status === 401 && token) return readFile({ repo, branch, path });
     if (e.status === 404) throw new GitHubError(`No backup was found on the “${branch}” branch of ${repo}.`, 404);
