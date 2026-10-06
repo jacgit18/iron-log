@@ -102,11 +102,59 @@ export interface ProgramCfg {
   warmup?: WarmupItem[];
 }
 
-/** A card flattened out of a program: its day number (1-based) and a type that is never missing. */
-export type FlatSlot = Omit<ProgramSlot, 'type'> & { day: number; type: SlotType };
+/** An exercise on a card. Cards from a program carry a weight; Experiment cards carry only the exercise and phase. */
+export type CardItem = Pick<ProgramItem, 'ex' | 'ph'> & Partial<Omit<ProgramItem, 'ex' | 'ph'>>;
+
+/** A card on the board: a program slot flattened out (or an Experiment card) with its day number (1-based) and a type that is never missing. */
+export type FlatSlot = Omit<ProgramSlot, 'type' | 'items'> & { day: number; type: SlotType; items: CardItem[]; experiment?: true; added?: true };
 
 /* Programs as they exist before ids are filled in: the built-in data and old saved copies have slots without an `id`.
    `withAllDays` (lib/data) gives every slot one, so what it returns is a full `Program`. */
 export type SlotDraft = Omit<ProgramSlot, 'id'> & { id?: string };
 export type DayDraft = Omit<ProgramDay, 'slots'> & { slots: SlotDraft[] };
 export type ProgramDraft = Omit<Program, 'days'> & { days: DayDraft[] };
+
+/* ---------- Settings, weeks and logs ---------- */
+export type ProgKey = 'A' | 'B';
+
+/** The settings document (cfg). Only the keys the training logic reads are listed. */
+export interface Cfg extends ProgramCfg {
+  muscleMap: Record<string, unknown>;
+  mode: 1 | 2 | 3;
+  m3Start: number;
+  m3First: ProgKey;
+  m2Even: ProgKey;
+  pct: Partial<Record<PhaseKey, number>>;
+  rxOverride: Partial<Record<PhaseKey, string>>;
+  rm: Record<string, unknown>;
+  phDef: Record<string, PhaseKey | null>;
+  exPh: Record<string, PhaseKey | null>;
+  progNames?: Partial<Record<ProgKey, string>>;
+}
+
+/** An Experiment (or added) card on one week. */
+export interface ExtraCard {
+  id: string;
+  day: number;
+  ex: string;
+  ph: PhaseKey | null;
+  note?: string;
+  add?: true;
+}
+
+/** One week's state. Keys are card ids ("A-d1s1"), item keys ("A-d1s1#0" / "A-d1s1:0") and day numbers. */
+export interface Week {
+  prog: ProgKey | null;
+  done: Record<string, true>;
+  skipped: Record<string, true>;
+  moved: Record<string, number>;
+  ph: Record<string, PhaseKey>;
+  warm: Record<string, Record<string, boolean>>;
+  rest?: number[];
+  order?: number[];
+  restOn?: string;
+  extra?: ExtraCard[];
+}
+
+/** Logged sessions by exercise id, oldest first. */
+export type Logs = Record<string, LogEntry[]>;
