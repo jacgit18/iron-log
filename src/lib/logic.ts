@@ -18,7 +18,7 @@ export function programFor(cfg: Cfg, date: Date): ProgKey {
   if (cfg.mode === 3) { const idx = Math.floor((((m - cfg.m3Start) % 12) + 12) % 12 / 6); return idx === 0 ? cfg.m3First : (cfg.m3First === 'A' ? 'B' : 'A'); }
   return 'A';
 }
-export const progName = (cfg: Cfg, k: ProgKey) => (cfg.progNames && cfg.progNames[k]) || `Program ${k}`;
+export const progName = (cfg: Cfg, k: string) => (cfg.progNames && cfg.progNames[k]) || `Program ${k}`;
 export function activeProgKey(cfg: Cfg, week: WeekIn, weekStart: Date): ProgKey { return (cfg.mode === 2 && (week.prog === 'A' || week.prog === 'B')) ? week.prog : programFor(cfg, weekStart); }
 
 /* ---------- Small helpers ---------- */
@@ -512,7 +512,7 @@ const cleanMap = <T>(o: unknown, f: (v: any) => T | undefined): Record<string, T
   return out;
 };
 const flagOf = (v: unknown) => (v ? true : undefined);
-export const normWeek = (w: any): Week => {
+export const normWeek = (w?: any): Week => {
   const out: Week = { prog: w && (w.prog === 'A' || w.prog === 'B') ? w.prog : null, done: cleanMap(w && w.done, flagOf), skipped: cleanMap(w && w.skipped, flagOf), moved: cleanMap(w && w.moved, v => v), ph: cleanMap(w && w.ph, v => (PH_KEYS.includes(v) ? v : undefined)), warm: {} };
   Object.entries(cleanMap(w && w.warm, v => v)).forEach(([day, items]) => { const m = cleanMap(items, v => (typeof v === 'boolean' ? v : undefined)); if (Object.keys(m).length) out.warm[day] = m; });
   out.moved = Object.fromEntries(Object.entries(out.moved).map(([k, v]) => [k, Number(v)] as [string, number]).filter(([, v]) => Number.isInteger(v) && v >= 1 && v <= DAY_COUNT));
