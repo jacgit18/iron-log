@@ -119,6 +119,7 @@ export type ProgKey = 'A' | 'B';
 
 /** The settings document (cfg). Only the keys the training logic reads are listed. */
 export interface Cfg extends ProgramCfg {
+  ex: Record<string, Partial<ExerciseInfo>>; // what you set on an exercise, layered over the built-in entry
   muscleMap: Record<string, MuscleTags>;
   mode: 1 | 2 | 3;
   m3Start: number;
@@ -129,7 +130,7 @@ export interface Cfg extends ProgramCfg {
   rm: Record<string, number>;
   phDef: Record<string, PhaseKey | null>;
   exPh: Record<string, PhaseKey | null>;
-  progNames?: Partial<Record<ProgKey, string>>;
+  progNames?: Record<string, string>; // program key ('A', 'B') -> your name for it
   bwGoal?: BodyGoal;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
   rest?: number; // rest timer, seconds
@@ -137,7 +138,7 @@ export interface Cfg extends ProgramCfg {
   ghBackup?: Partial<BackupCfg>; // GitHub backup from the standalone app
 }
 
-export interface BackupCfg { repo: string; branch: string; hashes: Record<string, string>; last?: { at: string } }
+export interface BackupCfg { repo: string; branch: string; hashes: Record<string, string>; hash?: string | null; last?: { at: string; url?: string; files?: number } }
 
 /** An Experiment (or added) card on one week. */
 export interface ExtraCard {

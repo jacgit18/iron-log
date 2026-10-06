@@ -1,13 +1,15 @@
 import { BUILTIN, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { progName, dayAt } from '../lib/logic.js';
+import type { Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
+import type { ExerciseInfo, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
 export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home'];
-const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const newId = (): string => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 export const blankItem = () => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
 
 // A new card goes after the last card in the same section; a new section goes before Home (Home goes last).
-export function insertSlot(target, slot) {
+export function insertSlot(target: ProgramSlot[], slot: ProgramSlot) {
   let at = -1; target.forEach((x, j) => { if (x.sec === slot.sec) at = j; });
   if (at < 0) at = slot.sec === 'Home' ? target.length - 1 : target.findIndex(x => x.sec === 'Home') - 1;
   if (at < -1) at = target.length - 1;
@@ -15,7 +17,7 @@ export function insertSlot(target, slot) {
 }
 
 // Program tab state + actions. `flag` is the save-status helper from the app store.
-export const editorSlice = (set, get, flag) => ({
+export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSlice => ({
   edProg: null, // 'A' | 'B' (in the rotation) or 'L:<id>' (a library program); null = the one on the board
   edDay: 1,
 
@@ -69,7 +71,7 @@ export const editorSlice = (set, get, flag) => ({
   },
 
   libSnapshot(name, prog, from, auto) {
-    const it = { id: newId(), name, from, at: new Date().toISOString(), prog: progBody(prog) };
+    const it: LibraryItem = { id: newId(), name, from: from as ProgKey, at: new Date().toISOString(), prog: progBody(prog) as Program };
     if (auto) it.auto = true;
     set({ library: [...get().library, it] });
     return it;
@@ -107,7 +109,7 @@ export const editorSlice = (set, get, flag) => ({
     const it = get().libSnapshot(name.trim(), srcProg, from, false); it.created = true;
     // The copy gets its own slot ids so check-offs and phase defaults never mix with the program it came from;
     // the source's saved phase defaults carry over to the new ids.
-    const pre = 'P' + it.id.slice(-5); const src = slotsFor(srcProg); const phDef = {}; let k = 0;
+    const pre = 'P' + it.id.slice(-5); const src = slotsFor(srcProg); const phDef: Record<string, PhaseKey | null> = {}; let k = 0;
     it.prog.days.forEach((d, di) => d.slots.forEach((sl, si) => {
       const old = src[k++]; const nid = `${pre}-d${di + 1}s${si + 1}`;
       if (old) old.items.forEach((_, i) => { const v = get().cfg.phDef[`${old.id}:${i}`]; if (v) phDef[`${nid}:${i}`] = v; });
@@ -126,20 +128,20 @@ export const editorSlice = (set, get, flag) => ({
       if (!it.ex || (it.ex === '__new' && !it.nn)) return 'Choose an exercise, or type a name for the new one.';
       if (!isVideoUrl(it.nu)) return VIDEO_ERR;
     }
-    const newEx = {};
-    const slugFor = name => newExId(get().cfg, name, newEx);
-    const items = d.items.map(it => {
+    const newEx: Record<string, Partial<ExerciseInfo>> = {};
+    const slugFor = (name: string) => newExId(get().cfg, name, newEx);
+    const items = d.items.map((it: any) => {
       let ex = it.ex;
       if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}) }; }
       else get().applyExerciseUrl(ex, it.nu);
-      const o = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
+      const o: ProgramItem = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
     });
-    if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex, newEx); });
+    if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, newEx); });
     const k = d.target ? d.target.key : get().edKey(); const edDay = d.target ? d.target.day : get().edDay;
-    const slot = { id: d.id || `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, sec: d.sec, items };
+    const slot: ProgramSlot = { id: d.id || `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, sec: d.sec, items };
     if (d.tier) slot.tier = d.tier; if (d.type !== 'single') slot.type = d.type; if (d.note) slot.note = d.note;
     const orig = d.idx != null ? get().edProgram().days[edDay - 1].slots[d.idx] : null;
-    const apply = prog => {
+    const apply = (prog: Program) => {
       if (d.idx != null) prog.days[edDay - 1].slots.splice(d.idx, 1);
       const target = prog.days[d.day - 1].slots;
       if (orig && d.day === edDay && orig.sec === slot.sec) target.splice(d.idx, 0, slot);

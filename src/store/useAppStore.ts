@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import type { AppState, OrderNote, OrderState } from './types.ts';
+import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Week } from '../types.ts';
 import { BUILTIN, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { monday, ymd, addDays } from '../lib/dates.js';
 import {
@@ -28,15 +30,15 @@ import { commitFiles, readFile, validRepo } from '../lib/github.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
 // binding from the original app (window.claude.use('db')); without it everything uses localStorage.
-let db = null;
-let unsubWeek = null;
-let flagT = null, flagHold = 0;
+let db: any = null; // the host's database handle (Firestore-like), or null for local storage
+let unsubWeek: (() => void) | null = null;
+let flagT: ReturnType<typeof setTimeout> | null = null, flagHold: boolean | number = 0;
 let initStarted = false;
-let histPromise = null;
+let histPromise: Promise<void> | null = null;
 
 // Outside the Claude host, downloads are a plain blob link.
 const blobSave = {
-  save: async ({ filename, data }) => {
+  save: async ({ filename, data }: { filename: string; data: BlobPart }) => {
     const url = URL.createObjectURL(new Blob([data], { type: 'text/csv' }));
     const a = document.createElement('a'); a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); a.remove();
@@ -52,12 +54,12 @@ const readToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } 
 // Standalone (e.g. GitHub Pages) rather than inside the Claude host, which backs up through its connector.
 const standalone = typeof window !== 'undefined' && !window.claude;
 
-const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const uid = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 // What you set on an exercise (video link, equipment) applies everywhere it appears. cfg.ex keeps only
 // what differs from the built-in entry; clearing a built-in value stores '' (or false) so the merge hides it.
-function setOverride(c, exId, vals) {
-  const base = EX[exId] || {}; const o = { ...(c.ex[exId] || {}) };
+function setOverride(c: Cfg, exId: string, vals: Record<string, unknown>) {
+  const base: Record<string, any> = EX[exId] || {}; const o: Record<string, any> = { ...(c.ex[exId] || {}) };
   Object.entries(vals).forEach(([k, v]) => { if (v && v !== base[k]) o[k] = v; else if (v) delete o[k]; else if (base[k]) o[k] = ''; else delete o[k]; });
   if (!EX[exId] && !o.n) o.n = exId;
   if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
@@ -65,48 +67,48 @@ function setOverride(c, exId, vals) {
 
 // An exercise's default phase for every card. Slot defaults saved for that exercise would outrank it, so they go;
 // a slot default saved afterwards wins again.
-function setExerciseDefault(c, exId, ph, programs, library) {
+function setExerciseDefault(c: Cfg, exId: string, ph: PhaseKey | null | '', programs: Record<string, Program>, library: LibraryItem[]) {
   c.exPh = c.exPh || {};
   if (ph) c.exPh[exId] = ph; else delete c.exPh[exId];
   if (!ph) return;
   const progs = [...Object.values(programs), ...library.map(it => ({ ...it.prog, key: 'N' }))];
-  progs.forEach(p => { try { slotsFor(p).forEach(sl => sl.items.forEach((x, i) => { if (x.ex === exId) delete c.phDef[`${sl.id}:${i}`]; })); } catch { /* a malformed saved program */ } });
+  progs.forEach(p => { try { slotsFor(p as Program).forEach(sl => sl.items.forEach((x, i) => { if (x.ex === exId) delete c.phDef[`${sl.id}:${i}`]; })); } catch { /* a malformed saved program */ } });
 }
 
-const sameTags = (a, b) => JSON.stringify([[...(a.p || [])].sort(), [...(a.s || [])].sort(), !!a.mob]) === JSON.stringify([[...(b.p || [])].sort(), [...(b.s || [])].sort(), !!b.mob]);
+const sameTags = (a: Record<string, any>, b: Record<string, any>) => JSON.stringify([[...(a.p || [])].sort(), [...(a.s || [])].sort(), !!a.mob]) === JSON.stringify([[...(b.p || [])].sort(), [...(b.s || [])].sort(), !!b.mob]);
 
 // Write a day order and rest days onto a week (the normal order is stored as no order). restOn stays with the rest days.
-const writeOrder = (w, { order, rest }) => {
+const writeOrder = (w: Week, { order, rest }: { order: number[]; rest: number[] }) => {
   if (order.every((v, k) => v === k + 1)) delete w.order; else w.order = [...order];
   if (rest.length) w.rest = [...rest]; else { delete w.rest; delete w.restOn; }
 };
 // One card's place for the week: `moved` is its week.moved value, null for its own day.
-const writeMoved = (w, { slot, moved }) => { if (moved == null) delete w.moved[slot]; else w.moved[slot] = moved; };
+const writeMoved = (w: Week, { slot, moved }: { slot: string; moved: number | null }) => { if (moved == null) delete w.moved[slot]; else w.moved[slot] = moved; };
 // What a suggestion note holds now: { order, rest } for a day order, { slot, moved } for one card.
-const noteState = (n, w) => (n.kind === 'card' ? { slot: n.next.slot, moved: w.moved[n.next.slot] ?? null } : { order: [...orderOf(w)], rest: restsOf(w) });
-const sameState = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const noteState = (n: OrderNote, w: Week): OrderState => (n.kind === 'card' ? { slot: n.next.slot, moved: w.moved[n.next.slot] ?? null } : { order: [...orderOf(w)], rest: restsOf(w) });
+const sameState = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 // The note for a planFix result: `next` is what Apply writes, `prev` what Put back restores.
-const noteFor = (plan, week, slots, wk, doneCol) => {
+const noteFor = (plan: any, week: Week, slots: FlatSlot[], wk: string, doneCol: number): OrderNote => {
   const note = { kind: plan.kind, week: wk, doneCol, lines: plan.lines, applied: false };
   if (plan.kind === 'card') {
-    const s = slots.find(x => x.id === plan.slot);
+    const s = slots.find(x => x.id === plan.slot)!;
     return { ...note, prev: { slot: plan.slot, moved: week.moved[plan.slot] ?? null }, next: { slot: plan.slot, moved: plan.pd === s.day ? null : plan.pd } };
   }
   return { ...note, prev: { order: [...orderOf(week)], rest: restsOf(week) }, next: { order: plan.order, rest: plan.rest } };
 };
-const sameNote = (a, b) => sameState([a.kind, a.lines, a.next], [b.kind, b.lines, b.next]);
-const queue = makeSaveQueue({ getDb: () => db, onFlag: t => flag(t), onFailed: (paths, refused) => useAppStore.setState(s => ({ unsaved: paths, refusals: s.refusals + (refused ? 1 : 0) })) });
+const sameNote = (a: OrderNote, b: OrderNote) => sameState([a.kind, a.lines, a.next], [b.kind, b.lines, b.next]);
+const queue = makeSaveQueue({ getDb: () => db, onFlag: (t: string) => flag(t), onFailed: (paths: string[], refused: boolean) => useAppStore.setState(s => ({ unsaved: paths, refusals: s.refusals + (refused ? 1 : 0) })) });
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
 // "Saved" / "Loading…" never replaces a message you haven't had the chance to act on yet.
 // A stored program comes back only if it has the right shape, cleaned; otherwise the built-in one.
-const loadProgram = (k, data) => resolveProgram(k, normProgram(data, k));
-export function flag(t) {
+const loadProgram = (k: 'A' | 'B', data: unknown) => resolveProgram(k, normProgram(data, k));
+export function flag(t: string) {
   const routine = t === 'Saved' || t === 'Loading…' || t === '';
   if (routine && flagHold) return;
   flagHold = !routine && !/^Not saved|^Could/.test(t);
   useAppStore.setState({ saveFlag: t });
-  clearTimeout(flagT);
+  if (flagT) clearTimeout(flagT);
   if (!t) return;
   // Arm after this event finishes, so the tap that caused the message doesn't clear it.
   flagT = setTimeout(() => {
@@ -121,9 +123,9 @@ export function flag(t) {
 
 const restored = loadView(ymd(new Date()));
 let keepMDay = restored.mDay != null; // the first week load must not clear a restored phone day
-const loadedMDay = state => { const m = keepMDay ? state.mDay : null; keepMDay = false; return m; };
+const loadedMDay = (state: AppState) => { const m = keepMDay ? state.mDay : null; keepMDay = false; return m; };
 
-export const useAppStore = create((set, get) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   ...editorSlice(set, get, flag),
   ...settingsSlice(set, get, flag),
   ...wellnessSlice(set, get, flag),
@@ -175,9 +177,9 @@ export const useAppStore = create((set, get) => ({
 
   // The snapshot plus every saved stretch week (the week on screen taken live), for the data file.
   async stretchWeeksAll() {
-    const out = {};
+    const out: Record<string, any> = {};
     try {
-      if (db) { const snap = await db.collection('stretchweeks').get(); snap.docs.forEach(d => { if (d.exists) out[d.id] = d.data(); }); }
+      if (db) { const snap = await db.collection('stretchweeks').get(); snap.docs.forEach((d: any) => { if (d.exists) out[d.id] = d.data(); }); }
       else {
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
@@ -196,9 +198,9 @@ export const useAppStore = create((set, get) => ({
     set({ historyLoading: true });
     histPromise = (async () => {
       await dataSourceKnown(); // reading before the data source is known would return local or empty weeks
-      const out = {};
+      const out: Record<string, any> = {};
       try {
-        if (db) { const snap = await db.collection('weeks').get(); snap.docs.forEach(d => { if (d.exists) out[d.id] = d.data(); }); }
+        if (db) { const snap = await db.collection('weeks').get(); snap.docs.forEach((d: any) => { if (d.exists) out[d.id] = d.data(); }); }
         else {
           for (let i = 0; i < localStorage.length; i++) {
             const k = localStorage.key(i);
@@ -246,7 +248,7 @@ export const useAppStore = create((set, get) => ({
   saveLog(exId) { queue.save('logs/' + exId, { schema: SCHEMA_VERSION, entries: get().logs[exId] || [] }); },
   saveProgram(k, prog) {
     const body = structuredClone(prog); delete body.key;
-    set(state => ({ programs: { ...state.programs, [k]: { ...body, key: k } } }));
+    set(state => ({ programs: { ...state.programs, [k]: { ...body, key: k as Program['key'] } } }));
     queue.save('programs/' + k, body);
   },
   saveDoc: (path, data) => queue.save(path, data),
@@ -274,13 +276,13 @@ export const useAppStore = create((set, get) => ({
       Object.keys(changed).forEach(id => get().saveLog(id));
     }
     // Entries you logged yourself that this removed, kept so the uncheck can be undone.
-    const entries = {}; let gone = 0;
+    const entries: Logs = {}; let gone = 0;
     Object.keys(changed).forEach(id => {
       const kept = new Set(changed[id].map(e => JSON.stringify(e)));
       const lost = (logs[id] || []).filter(e => !e.auto && !kept.has(JSON.stringify(e)));
       if (lost.length) { entries[id] = lost; gone += lost.length; }
     });
-    const done = {}; const after = get().week.done || {};
+    const done: Record<string, boolean> = {}; const after = get().week.done || {};
     new Set([...Object.keys(before.done || {}), ...Object.keys(after)]).forEach(k => { if (!!(before.done || {})[k] !== !!after[k]) done[k] = !!(before.done || {})[k]; });
     const unticked = Object.values(done).some(Boolean);
     get().suggestOrder(slots, before);
@@ -323,7 +325,7 @@ export const useAppStore = create((set, get) => ({
     return true;
   },
   undoOrder() {
-    const n = get().orderNote; if (!get().canUndoOrder()) return false;
+    const n = get().orderNote; if (!n || !get().canUndoOrder()) return false;
     if (!get().mutateWeek(w => (n.kind === 'card' ? writeMoved(w, n.prev) : writeOrder(w, n.prev)))) return false;
     set({ orderNote: null });
     flag(n.kind === 'card' ? 'Move put back' : 'Order put back');
@@ -371,7 +373,7 @@ export const useAppStore = create((set, get) => ({
   moveCards(ids, day) {
     const week0 = get().week; const pd = dayAt(week0, day);
     if (pd == null) { flag('That is your rest day'); return; }
-    const cards = ids.map(id => get().slotById(id)).filter(Boolean); if (!cards.length) return;
+    const cards = ids.map(id => get().slotById(id)).filter((s): s is FlatSlot => !!s); if (!cards.length) return;
     const batch = Object.fromEntries(cards.map(s => [s.id, week0.moved[s.id] ?? null])); // what undo puts back
     if (!get().mutateWeek(w => cards.forEach(s => { if (pd === s.day) delete w.moved[s.id]; else w.moved[s.id] = pd; }))) return;
     set({ orderNote: null });
@@ -484,7 +486,8 @@ export const useAppStore = create((set, get) => ({
       w.extra = (w.extra || []).filter(x => x.id !== slotId); if (!w.extra.length) delete w.extra;
     });
     if (!ok) return;
-    if (get().moveNote && (get().moveNote.slot === slotId || (get().moveNote.batch && slotId in get().moveNote.batch))) set({ moveNote: null });
+    const mn = get().moveNote;
+    if (mn && (mn.slot === slotId || (mn.batch && slotId in mn.batch))) set({ moveNote: null });
     flag('Removed from this week');
   },
   setWarm(day, wid, on) {
@@ -524,7 +527,7 @@ export const useAppStore = create((set, get) => ({
     const ok = get().mutateWeek(x => {
       if (restInvolved) x.rest = restsOf(x).map(r => (r === d ? e : r === e ? d : r)).sort((a, b) => a - b);
       else {
-        const a = dayAt(x, d), b = dayAt(x, e); const o = [...orderOf(x)];
+        const a = dayAt(x, d) as number, b = dayAt(x, e) as number; const o = [...orderOf(x)];
         const i = o.indexOf(a), j = o.indexOf(b); [o[i], o[j]] = [o[j], o[i]];
         if (o.every((v, k) => v === k + 1)) delete x.order; else x.order = o;
       }
@@ -566,11 +569,11 @@ export const useAppStore = create((set, get) => ({
     const n = get().moveNote; if (!n || n.week !== get().weekKey()) return;
     if (n.batch) {
       set({ moveNote: null });
-      if (get().mutateWeek(w => Object.entries(n.batch).forEach(([id, v]) => { if (v == null) delete w.moved[id]; else w.moved[id] = v; }))) flag(`Moved back to Day ${n.fromShown}`);
+      if (get().mutateWeek(w => Object.entries(n.batch!).forEach(([id, v]) => { if (v == null) delete w.moved[id]; else w.moved[id] = v; }))) flag(`Moved back to Day ${n.fromShown}`);
       return;
     }
-    const s = get().slotById(n.slot); set({ moveNote: null });
-    if (s && get().mutateWeek(w => { if (n.from === s.day) delete w.moved[n.slot]; else w.moved[n.slot] = n.from; })) flag(`Moved back to Day ${n.fromShown}`);
+    const s = get().slotById(n.slot!); set({ moveNote: null });
+    if (s && get().mutateWeek(w => { if (n.from === s.day) delete w.moved[n.slot!]; else w.moved[n.slot!] = n.from as number; })) flag(`Moved back to Day ${n.fromShown}`);
   },
   dismissMove: () => set({ moveNote: null }),
 
@@ -587,7 +590,7 @@ export const useAppStore = create((set, get) => ({
     const clean = normEntry(entry); if (!clean) { flag('That session has an invalid date'); return false; }
     const ex = s.items[idx].ex;
     // Real numbers replace the planned ones a check-off logged for this card this week.
-    const planned = e => e.auto && e.slot === entry.slot && e.wk === entry.wk;
+    const planned = (e: any) => e.auto && e.slot === entry.slot && e.wk === entry.wk;
     const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...clean, id: clean.id || newEntryId(), updatedAt: nowStamp() }].sort((a, b) => a.d.localeCompare(b.d));
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
     // Ticked the way the board ticks: picking the other half of an either/or drops the first one's check-off, and it can finish a day.
@@ -600,7 +603,7 @@ export const useAppStore = create((set, get) => ({
     const last = lastLog(logs, s.items[idx].ex, phaseOf(cfg, week, s, idx)); if (!last) return;
     // Once per card and week: a second tap (the button stays on the card) would log the session twice.
     if ((logs[s.items[idx].ex] || []).some(e => !e.auto && e.slot === slotId && e.wk === get().weekKey())) { flag('Already logged this week'); return; }
-    const e = { d: defaultLogDate(get().weekStart), ph: last.ph || null, w: last.w, s: last.s, slot: slotId, wk: get().weekKey() };
+    const e: LogEntry = { d: defaultLogDate(get().weekStart), ph: last.ph || null, w: last.w, s: last.s, slot: slotId, wk: get().weekKey() };
     if (last.sec != null) e.sec = last.sec; else e.r = last.r;
     if (Array.isArray(last.sets)) e.sets = structuredClone(last.sets);
     if (get().addEntry(slotId, idx, e, { check: true })) flag(`Logged ${describe(e)}`);
@@ -616,7 +619,7 @@ export const useAppStore = create((set, get) => ({
     get().applyExerciseUrl(it.ex, url);
     const { cfg, week } = get();
     // Every card of this exercise in the shown week, on any day (added cards included).
-    const sameEx = (get().activeSlots()).flatMap(sl => sl.items.map((x, i) => x.ex === it.ex && `${sl.id}:${i}`).filter(Boolean));
+    const sameEx = (get().activeSlots()).flatMap(sl => sl.items.map((x, i) => x.ex === it.ex && `${sl.id}:${i}`).filter((k): k is string => !!k));
     const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
     const cfgChange = eqChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
     if (cfgChange) get().mutateCfg(c => {
@@ -657,8 +660,8 @@ export const useAppStore = create((set, get) => ({
   clearLiftGoal(exId, key) {
     if (get().mutateCfg(c => {
       const G = c.liftGoals && c.liftGoals[exId]; if (!G) return;
-      delete G[key]; if (!Object.keys(G).length) delete c.liftGoals[exId];
-      if (!Object.keys(c.liftGoals).length) delete c.liftGoals;
+      delete G[key]; if (!Object.keys(G).length) delete c.liftGoals![exId];
+      if (!Object.keys(c.liftGoals!).length) delete c.liftGoals;
     })) flag('Goal removed');
   },
   // Replace one logged session with edited numbers (kept sorted by date). It counts as logged by hand, not as a check-off.
@@ -741,7 +744,8 @@ export const useAppStore = create((set, get) => ({
     const dl = get().dl; if (!dl || get().exporting) return;
     set({ exporting: kind });
     try { await fn(dl); flag('Exported'); }
-    catch (e) {
+    catch (err) {
+      const e = err as { code?: string; message?: string } | null;
       const c = e && e.code;
       if (c === 'declined') { /* user closed the save prompt */ }
       else if (c === 'rate_limited') flag('A save prompt is already open');
@@ -774,7 +778,7 @@ export const useAppStore = create((set, get) => ({
     try {
       if (!owner || !repo) throw new Error('Set the backup repo as owner/name in Settings.');
       const X = await loadXLSX(); const weeks = await get().allWeeks(); const S = await get().fullSnapshot();
-      const b64 = wb => X.write(wb, { type: 'base64', bookType: 'xlsx', compression: true });
+      const b64 = (wb: any) => X.write(wb, { type: 'base64', bookType: 'xlsx', compression: true });
       const upserts = [
         { path: 'iron-log.xlsx', content: b64(buildOverallWorkbook(X, S, weeks)), encoding: 'base64' },
         { path: 'iron-log-data.json', content: utf8b64(JSON.stringify(buildDataFile(S, weeks), null, 1)), encoding: 'base64' },
@@ -788,7 +792,7 @@ export const useAppStore = create((set, get) => ({
         upserts.push({ path: `weeks/${k}.xlsx`, content: b64(buildWeekWorkbook(X, S, k, w)), encoding: 'base64' }); hashes[k] = fp; changed.push(k);
       });
       // The connector accepts about 1 MB per call, so large first backups go in several commits.
-      const batches = []; let cur = [], curSize = 0;
+      const batches: any[][] = []; let cur: any[] = [], curSize = 0;
       upserts.forEach(u => { if (cur.length && curSize + u.content.length > 700000) { batches.push(cur); cur = []; curSize = 0; } cur.push(u); curSize += u.content.length; });
       if (cur.length) batches.push(cur);
       if (batches.some(bt => bt.length === 1 && bt[0].content.length > 950000)) throw new Error('One of the workbooks is too large to send. Ask Claude to split the backup.');
@@ -811,7 +815,7 @@ export const useAppStore = create((set, get) => ({
       get().mutateCfg(c => { c.backup = { ...b, hashes, last: { at: new Date().toISOString(), url, files: upserts.length } }; });
       set({ backupMsg: { kind: 'ok', text: `Backed up ${upserts.length} file${upserts.length > 1 ? 's' : ''}.`, url } });
     } catch (e) {
-      set({ backupMsg: { kind: 'err', text: backupError(e) } });
+      set({ backupMsg: { kind: 'err', text: backupError(e as any) } });
       if (sent) get().mutateCfg(c => { c.backup = { ...b }; });
     } finally { set({ backupBusy: false }); }
   },
@@ -858,7 +862,7 @@ export const useAppStore = create((set, get) => ({
       get().mutateCfg(c => { c.ghBackup = { ...ghCfg(c), hash: fp, last: { at: new Date().toISOString(), url } }; });
       set({ backupMsg: { kind: 'ok', text: `Backed up to the ${g.branch} branch of ${g.repo}.`, url } });
     } catch (e) {
-      set({ backupMsg: { kind: 'err', text: (e && e.message) || 'Backup failed.' } });
+      set({ backupMsg: { kind: 'err', text: (e as Error | null)?.message || 'Backup failed.' } });
     } finally { set({ backupBusy: false }); }
   },
   // Reads the latest data file from the backup branch and opens the usual import review.
@@ -870,20 +874,20 @@ export const useAppStore = create((set, get) => ({
       const text = await readFile({ token: get().ghToken, repo: g.repo, branch: g.branch, path: 'iron-log-data.json' });
       set({ importDraft: { data: parseDataFile(text), name: `Backup from ${g.repo}`, kind: 'json' }, importError: '', modal: { type: 'import' }, backupMsg: null });
     } catch (e) {
-      set({ backupMsg: { kind: 'err', text: (e && e.message) || 'Couldn’t read the backup.' } });
+      set({ backupMsg: { kind: 'err', text: (e as Error | null)?.message || 'Couldn’t read the backup.' } });
     } finally { set({ backupBusy: false }); }
   },
 
   async init() {
     if (initStarted) return; // StrictMode runs mount effects twice in dev; subscribe once
     initStarted = true;
-    const host = window.claude && window.claude.use ? window.claude : null;
+    const host = window.claude && window.claude.use ? (window.claude as { use: (name: string) => Promise<any> }) : null;
     (async () => { try { set({ dl: host ? await host.use('downloads') : blobSave }); } catch { set({ dl: null }); } })();
     (async () => { try { set({ mcp: host ? await host.use('mcp') : null }); } catch { set({ mcp: null }); } })();
     try { db = (window.claude && window.claude.use) ? await window.claude.use('db') : null; } catch { db = null; }
     if (!db) {
       const cfgRaw = LS.get('config/main');
-      const logs = {};
+      const logs: Logs = {};
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
@@ -908,43 +912,43 @@ export const useAppStore = create((set, get) => ({
       return;
     }
     set({ storeMode: 'db' });
-    const markReady = k => state => ({ ready: { ...state.ready, [k]: true } });
-    db.collection('programs').onSnapshot(s => {
-      const m = {}; s.docs.forEach(d => { m[d.id] = d.data(); });
-      const pick = (state, k) => (queue.pending('programs/' + k) ? state.programs[k] : loadProgram(k, m[k]));
+    const markReady = (k: any) => (state: any) => ({ ready: { ...state.ready, [k]: true } });
+    db.collection('programs').onSnapshot((s: any) => {
+      const m: Record<string, any> = {}; s.docs.forEach((d: any) => { m[d.id] = d.data(); });
+      const pick = (state: any, k: any) => (queue.pending('programs/' + k) ? state.programs[k] : loadProgram(k, m[k]));
       set(state => ({ programs: { A: pick(state, 'A'), B: pick(state, 'B') }, ...markReady('programs')(state) }));
     }, () => flag('Couldn’t load your programs. Reload the page.'));
-    db.doc('body/main').onSnapshot(s => {
+    db.doc('body/main').onSnapshot((s: any) => {
       if (queue.pending('body/main')) return;
       set(state => ({ body: s.exists ? normBody((s.data() || {}).entries) : [], ...markReady('body')(state) }));
     }, () => flag('Couldn’t load body weight. Reload the page.'));
-    db.doc('library/main').onSnapshot(s => {
+    db.doc('library/main').onSnapshot((s: any) => {
       if (queue.pending('library/main')) return;
       set(state => ({ library: s.exists ? padLibrary(normLibrary((s.data() || {}).items)) : [], ...markReady('lib')(state) }));
     }, () => flag('Couldn’t load saved programs. Reload the page.'));
-    db.doc('experiments/main').onSnapshot(s => {
+    db.doc('experiments/main').onSnapshot((s: any) => {
       if (queue.pending('experiments/main')) return;
       set(state => ({ experiments: s.exists ? normExperiments((s.data() || {}).items) : [], ...markReady('exp')(state) }));
     }, () => flag('Couldn’t load your experiments. Reload the page.'));
-    db.doc('stretches/main').onSnapshot(s => {
+    db.doc('stretches/main').onSnapshot((s: any) => {
       if (queue.pending('stretches/main')) return;
       const d = normStretches(s.exists ? s.data() : null);
       set(state => ({ stretches: d.items, stretchExps: d.experiments, ...markReady('str')(state) }));
     }, () => flag('Couldn’t load your stretches. Reload the page.'));
-    db.doc('supplements/main').onSnapshot(s => {
+    db.doc('supplements/main').onSnapshot((s: any) => {
       if (queue.pending('supplements/main')) return;
       set(state => ({ supp: normSupplements(s.exists ? s.data() : null), ...markReady('supp')(state) }));
     }, () => flag('Couldn’t load supplements. Reload the page.'));
-    db.doc('config/main').onSnapshot(s => {
+    db.doc('config/main').onSnapshot((s: any) => {
       if (queue.pending('config/main')) return;
       set(state => ({ cfg: s.exists ? { ...structuredClone(DEFAULT_CFG), ...normConfig(structuredClone(s.data())) } : state.cfg, ...markReady('cfg')(state) }));
     }, () => flag('Couldn’t load settings. Reload the page.'));
     // Every snapshot is applied, so another device's change is never skipped (Firestore sends nothing more when this
     // device's own write is confirmed). Only an exercise this device is still writing keeps what it holds: that is newer.
-    db.collection('logs').onSnapshot(s => {
-      const next = {}; s.docs.forEach(d => { next[d.id] = normEntries((d.data() || {}).entries); });
+    db.collection('logs').onSnapshot((s: any) => {
+      const next: Logs = {}; s.docs.forEach((d: any) => { next[d.id] = normEntries((d.data() || {}).entries); });
       set(state => {
-        const logs = {};
+        const logs: Logs = {};
         new Set([...Object.keys(next), ...Object.keys(state.logs)]).forEach(id => {
           const v = queue.pending('logs/' + id) ? state.logs[id] : next[id];
           if (v) logs[id] = v;
@@ -958,7 +962,7 @@ export const useAppStore = create((set, get) => ({
 
 // Saved on this device: another tab (or the installed app next to a browser tab) wrote this data. Take its copy, so
 // this tab's next save of it doesn't put back what it held before.
-export function fromOtherTab(e) {
+export function fromOtherTab(e: { key?: string | null; newValue?: string | null } | null) {
   if (!e || !e.key || !e.key.startsWith('ironlog:')) return;
   const path = e.key.slice(8); let v = null;
   try { v = e.newValue == null ? null : JSON.parse(e.newValue); } catch { return; }
@@ -973,7 +977,7 @@ export function fromOtherTab(e) {
   else if (path === 'body/main') set({ body: (v || {}).entries || [] });
   else if (path === 'library/main') set({ library: padLibrary(normLibrary((v || {}).items)) });
   else if (path === 'experiments/main') set({ experiments: normExperiments((v || {}).items) });
-  else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: loadProgram(k, v) } })); }
+  else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: loadProgram(k as 'A' | 'B', v) } })); }
   else if (path === 'stretches/main') { const d = normStretches(v); set({ stretches: d.items, stretchExps: d.experiments }); }
   else if (path === 'supplements/main') set({ supp: normSupplements(v) });
   else if (path === 'stretchweeks/' + wk) set({ strWeek: normStretchWeek(v) });
@@ -992,13 +996,13 @@ useToday.subscribe((s, prev) => {
 
 // Resolves once init knows where data lives (this browser or the host database).
 function dataSourceKnown() {
-  return new Promise(res => {
+  return new Promise<void>(res => {
     if (useAppStore.getState().storeMode !== 'loading') { res(); return; }
     const un = useAppStore.subscribe(s => { if (s.storeMode !== 'loading') { un(); res(); } });
   });
 }
 
-let unsubStrWeek = null;
+let unsubStrWeek: (() => void) | null = null;
 function subscribeStretchWeek() {
   if (unsubStrWeek) { unsubStrWeek(); unsubStrWeek = null; }
   const key = useAppStore.getState().weekKey();
@@ -1008,7 +1012,7 @@ function subscribeStretchWeek() {
     return;
   }
   useAppStore.setState(state => ({ strWeek: normStretchWeek(null), ready: { ...state.ready, strWeek: false } }));
-  unsubStrWeek = db.doc('stretchweeks/' + key).onSnapshot(s => {
+  unsubStrWeek = db.doc('stretchweeks/' + key).onSnapshot((s: any) => {
     if (key !== useAppStore.getState().weekKey() || queue.pending('stretchweeks/' + key)) return;
     useAppStore.setState(state => ({ strWeek: normStretchWeek(s.exists ? s.data() : null), ready: { ...state.ready, strWeek: true } }));
   }, () => flag('Couldn’t load this week’s stretches. Reload the page.'));
@@ -1025,7 +1029,7 @@ function subscribeWeek() {
   }
   useAppStore.setState(state => ({ week: normWeek(null), ready: { ...state.ready, week: false } }));
   let first = true;
-  unsubWeek = db.doc('weeks/' + key).onSnapshot(s => {
+  unsubWeek = db.doc('weeks/' + key).onSnapshot((s: any) => {
     if (key !== useAppStore.getState().weekKey() || queue.pending('weeks/' + key)) return;
     const week = normWeek(s.exists ? s.data() : null);
     useAppStore.setState(state => ({ week, mDay: first ? loadedMDay(state) : state.mDay, ready: { ...state.ready, week: true } }));

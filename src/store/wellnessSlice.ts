@@ -1,14 +1,15 @@
 import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
+import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN } from '../lib/water.js';
 
-const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const r1 = n => Math.round(n * 10) / 10;
+const uid = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const r1 = (n: number) => Math.round(n * 10) / 10;
 
 // Stretches tab (routine and library, Experiment list, the week's check-offs) and Supplements tab (water log).
 // `flag` is the save-status helper from the app store.
-export const wellnessSlice = (set, get, flag) => ({
+export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): WellnessSlice => ({
   stretches: structuredClone(DEFAULT_STRETCHES), // the library: [{id, n, url, note, group, tier}]
   stretchExps: [], // stretches to try: [{id, n, url, note}]
   strWeek: normStretchWeek(null), // the viewed week's check-offs

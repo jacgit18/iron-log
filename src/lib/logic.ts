@@ -18,7 +18,7 @@ export function programFor(cfg: Cfg, date: Date): ProgKey {
   if (cfg.mode === 3) { const idx = Math.floor((((m - cfg.m3Start) % 12) + 12) % 12 / 6); return idx === 0 ? cfg.m3First : (cfg.m3First === 'A' ? 'B' : 'A'); }
   return 'A';
 }
-export const progName = (cfg: Cfg, k: ProgKey) => (cfg.progNames && cfg.progNames[k]) || `Program ${k}`;
+export const progName = (cfg: Cfg, k: string) => (cfg.progNames && cfg.progNames[k]) || `Program ${k}`;
 export function activeProgKey(cfg: Cfg, week: WeekIn, weekStart: Date): ProgKey { return (cfg.mode === 2 && (week.prog === 'A' || week.prog === 'B')) ? week.prog : programFor(cfg, weekStart); }
 
 /* ---------- Small helpers ---------- */
