@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_STRETCHES, normStretches, normStretchWeek, groupsOf, dayTally, weekDaysDone, weekDaysCounted, withoutStretch, newStretchId } from './stretches.js';
-import { goalFor, normSupplements, sumOz, cupsOf, validOz, lastDays } from './water.js';
+import { goalFor, boostOz, normSupplements, sumOz, cupsOf, validOz, lastDays } from './water.js';
 import { ymd } from './dates.js';
 
 describe('stretch routine', () => {
@@ -46,6 +46,20 @@ describe('water goal', () => {
   });
 });
 
+describe('water goal boosts', () => {
+  const body = [{ wk: '2026-09-27', d: '2026-09-30', w: 180 }];
+  it('adds 16 oz for a hot day and 12 oz per 30 minutes of training', () => {
+    expect(boostOz({ hot: true, mins: 90 })).toEqual({ hot: 16, train: 36, oz: 52 });
+    expect(boostOz(undefined).oz).toBe(0);
+    const s = normSupplements({ boost: { '2026-10-01': { hot: true, mins: 60 } } });
+    expect(goalFor(s, body, '2026-10-01')).toMatchObject({ baseOz: 90, oz: 130 });
+    expect(goalFor(s, body, '2026-10-02').oz).toBe(90); // other days are untouched
+  });
+  it('drops bad boost entries when cleaning a doc', () => {
+    expect(normSupplements({ boost: { '2026-10-01': { hot: 'yes', mins: 9999 }, '2026-10-02': { mins: 45.4 }, bad: { hot: true } } }).boost).toEqual({ '2026-10-02': { mins: 45 } });
+  });
+});
+
 describe('water', () => {
   it('sums ounces and converts to cups', () => {
     expect(sumOz([16.9, 8, 32])).toBe(56.9);
@@ -53,8 +67,8 @@ describe('water', () => {
     expect(validOz(0)).toBe(false); expect(validOz(500)).toBe(false); expect(validOz(16.9)).toBe(true);
   });
   it('cleans a saved doc and defaults the goal to 64 oz', () => {
-    expect(normSupplements(null)).toEqual({ waterGoal: 64, waterMode: 'weight', water: {}, items: [], taken: {} });
-    expect(normSupplements({ waterGoal: 1, water: { '2026-10-01': [8, -2, 'x', 12], bad: [8], '2026-10-02': [] } })).toEqual({ waterGoal: 64, waterMode: 'weight', water: { '2026-10-01': [8, 12] }, items: [], taken: {} });
+    expect(normSupplements(null)).toEqual({ waterGoal: 64, waterMode: 'weight', water: {}, boost: {}, items: [], taken: {} });
+    expect(normSupplements({ waterGoal: 1, water: { '2026-10-01': [8, -2, 'x', 12], bad: [8], '2026-10-02': [] } })).toEqual({ waterGoal: 64, waterMode: 'weight', water: { '2026-10-01': [8, 12] }, boost: {}, items: [], taken: {} });
   });
   it('lists the last days oldest first', () => {
     const r = lastDays({ '2026-10-04': [8, 8] }, new Date(2026, 9, 4), 3, ymd);

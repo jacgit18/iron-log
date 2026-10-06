@@ -156,11 +156,13 @@ export const settingsSlice = (set, get, flag) => ({
         if (on.supplements && d.supplements) {
           const cur = get().supp; const water = { ...cur.water }; let ch = false;
           Object.entries(d.supplements.water).forEach(([k, l]) => { if (!water[k]) { water[k] = l; ch = true; } });
+          const boost = { ...(cur.boost || {}) };
+          Object.entries(d.supplements.boost || {}).forEach(([k, b]) => { if (!boost[k]) { boost[k] = b; ch = true; } });
           const items = structuredClone(cur.items); const have = new Set(items.map(x => x.id));
           d.supplements.items.forEach(x => { if (!have.has(x.id)) { items.push(x); have.add(x.id); ch = true; } });
           const taken = structuredClone(cur.taken);
           Object.entries(d.supplements.taken).forEach(([k, t]) => { const m = { ...t, ...(taken[k] || {}) }; if (JSON.stringify(m) !== JSON.stringify(taken[k] || null)) { taken[k] = m; ch = true; } });
-          if (ch) { set({ supp: { ...cur, water, items, taken } }); get().saveSupp(); }
+          if (ch) { set({ supp: { ...cur, water, boost, items, taken } }); get().saveSupp(); }
         }
         const body = get().body; const addB = !on.board ? [] : d.body.filter(e => !body.some(x => x.wk === e.wk));
         if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); }

@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../lib/dates.js';
 import { SLOTS, scheduled, scheduleOf, slotTally } from '../../lib/supplements.js';
-import { BOTTLES, CUP_OZ, OZ_PER_LB, fmtOz, cupsOf, sumOz, lastDays, goalFor } from '../../lib/water.js';
+import { HOT_OZ, TRAIN_OZ_PER_30, BOTTLES, CUP_OZ, OZ_PER_LB, fmtOz, cupsOf, sumOz, lastDays, goalFor } from '../../lib/water.js';
 
 function Slot({ slot, label, date, items, taken, editing }) {
   const s = useAppStore.getState();
@@ -64,9 +64,9 @@ function Schedule({ date, supp }) {
 function WaterGoal({ goal, mode }) {
   const s = useAppStore.getState();
   const [editing, setEditing] = useState(false); const [v, setV] = useState('');
-  const text = goal.source === 'weight' ? `Goal: ${fmtOz(goal.oz)} oz, half your ${fmtOz(goal.lb)} lb body weight`
-    : goal.source === 'default' ? `Goal: ${fmtOz(goal.oz)} oz (log your body weight on the Board to set it from your weight)` : `Goal: ${fmtOz(goal.oz)} oz, set by you`;
-  if (!editing) return <div className="inline"><span className="note">{text}</span><button type="button" className="btn sm ghost" id="water-goal-edit" onClick={() => { setV(fmtOz(goal.oz)); setEditing(true); }}>Change goal</button></div>;
+  const text = goal.source === 'weight' ? `Base goal: ${fmtOz(goal.baseOz)} oz, half your ${fmtOz(goal.lb)} lb body weight`
+    : goal.source === 'default' ? `Base goal: ${fmtOz(goal.baseOz)} oz (log your body weight on the Board to set it from your weight)` : `Base goal: ${fmtOz(goal.baseOz)} oz, set by you`;
+  if (!editing) return <div className="inline"><span className="note">{text}</span><button type="button" className="btn sm ghost" id="water-goal-edit" onClick={() => { setV(fmtOz(goal.baseOz)); setEditing(true); }}>Change goal</button></div>;
   return (
     <form className="inline" noValidate style={{ flexWrap: 'wrap' }} onSubmit={e => { e.preventDefault(); if (s.setWaterGoal(v)) setEditing(false); }}>
       <label className="field">Fixed daily goal (oz)<input type="number" inputMode="decimal" min="8" max="500" step="any" value={v} autoFocus onChange={e => setV(e.target.value)} /></label>
@@ -74,6 +74,21 @@ function WaterGoal({ goal, mode }) {
       {mode === 'fixed' && <button type="button" className="btn sm" onClick={() => { s.setWaterByWeight(); setEditing(false); }}>Use my weight ({OZ_PER_LB} oz per lb)</button>}
       <button type="button" className="btn sm ghost" onClick={() => setEditing(false)}>Cancel</button>
     </form>
+  );
+}
+
+function Boost({ date, boost, extra }) {
+  const s = useAppStore.getState(); const [m, setM] = useState(''); const mins = boost && boost.mins ? String(boost.mins) : '';
+  useEffect(() => { setM(mins); }, [date, mins]);
+  return (
+    <div>
+      <div className="sect">Hot day or training</div>
+      <div className="inline" style={{ flexWrap: 'wrap' }}>
+        <label><input type="checkbox" className="chk" id="water-hot" checked={!!(boost && boost.hot)} onChange={e => s.setWaterBoost(date, { hot: e.target.checked })} /> Hot day (+{HOT_OZ} oz)</label>
+        <label className="field">Training (minutes)<input id="water-train" type="number" inputMode="numeric" min="0" max="600" step="5" value={m} onChange={e => setM(e.target.value)} onBlur={() => { if (m !== mins) s.setWaterBoost(date, { mins: m }); }} /></label>
+      </div>
+      <p className="note">{extra.oz > 0 ? `+${fmtOz(extra.oz)} oz on the goal${extra.hot ? ` (heat ${fmtOz(extra.hot)}` : ''}${extra.hot && extra.train ? ', ' : extra.hot ? ')' : ''}${extra.train ? `${extra.hot ? '' : ' ('}training ${fmtOz(extra.train)})` : ''}` : `Adds ${TRAIN_OZ_PER_30} oz per 30 minutes of training and ${HOT_OZ} oz on a hot day.`}</p>
+    </div>
   );
 }
 
@@ -151,6 +166,7 @@ export default function Supplements() {
             </ul>
           )}
         </div>
+        <Boost date={date} boost={supp.boost[date]} extra={gi.extra} />
         <WaterGoal goal={gi} mode={supp.waterMode} />
       </section>
       <section className="panel" style={{ marginTop: 16 }} aria-labelledby="water7-h">
