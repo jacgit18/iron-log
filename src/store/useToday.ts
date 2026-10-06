@@ -3,7 +3,7 @@ import { ymd } from '../lib/dates.js';
 
 // Today's date as app state, so "this week", the history and the month grid move on when the day
 // changes, including when the installed app is left open overnight.
-export const useToday = create(() => ({ today: new Date() }));
+export const useToday = create<{ today: Date }>(() => ({ today: new Date() }));
 
 function refresh() {
   const now = new Date();
