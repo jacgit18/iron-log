@@ -165,3 +165,26 @@ export type Logs = Record<string, LogEntry[]>;
 export interface BodyGoal { w: number; start?: { w: number; d?: string }; by?: string }
 /** A lift goal for one exercise and key ('any' or a phase). */
 export interface LiftGoal { w: number; start?: number; by?: string }
+
+/* ---------- Supplements, water and stretches ---------- */
+export type SupplementSlot = 'morning' | 'noon' | 'night' | '';
+export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string }
+/** What was ticked off on each day: {"YYYY-MM-DD": {<id>: true}}. */
+export type Taken = Record<string, Record<string, true>>;
+export interface Boost { hot?: true; mins?: number }
+/** The supplements document, which also holds the water log. Water amounts are ounces. */
+export interface Supplements {
+  waterGoal: number;
+  waterMode: 'weight' | 'fixed';
+  water: Record<string, number[]>;
+  boost: Record<string, Boost>;
+  items: SupplementItem[];
+  taken: Taken;
+}
+
+export type StretchTier = 'primary' | 'secondary' | '';
+export interface Stretch { id: string; n: string; group: string; tier: StretchTier; url?: string; note?: string }
+export interface StretchExperiment { id: string; n: string; url?: string; note?: string }
+export interface StretchExtra extends StretchExperiment { day: number }
+/** One week of stretch check-offs; keys of `done` are "<day 0-6>:<id>". */
+export interface StretchWeek { done: Record<string, true>; skipped: Record<string, true>; extra: StretchExtra[] }

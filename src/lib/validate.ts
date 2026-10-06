@@ -53,7 +53,7 @@ export const validHold = (n: unknown) => fin(n) && n >= 0 && n <= LIMITS.hold.ma
 export const validSetCount = (n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= LIMITS.sets.max;
 
 // '' / null → null; a number or numeric string that passes `ok` → the number; anything else → undefined (invalid).
-type Obj = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+type Obj = Record<string, any>;
 const cleanNum = (v: unknown, ok: (n: number) => boolean): number | null | undefined => {
   if (v === '' || v == null) return null;
   if (typeof v === 'string' && !v.trim()) return null;
