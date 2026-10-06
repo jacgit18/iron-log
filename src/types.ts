@@ -119,7 +119,7 @@ export type ProgKey = 'A' | 'B';
 
 /** The settings document (cfg). Only the keys the training logic reads are listed. */
 export interface Cfg extends ProgramCfg {
-  muscleMap: Record<string, unknown>;
+  muscleMap: Record<string, MuscleTags>;
   mode: 1 | 2 | 3;
   m3Start: number;
   m3First: ProgKey;
@@ -188,3 +188,10 @@ export interface StretchExperiment { id: string; n: string; url?: string; note?:
 export interface StretchExtra extends StretchExperiment { day: number }
 /** One week of stretch check-offs; keys of `done` are "<day 0-6>:<id>". */
 export interface StretchWeek { done: Record<string, true>; skipped: Record<string, true>; extra: StretchExtra[] }
+
+/* ---------- Muscles ---------- */
+export type MuscleKey = 'traps' | 'frontdelt' | 'sidedelt' | 'reardelt' | 'chest' | 'biceps' | 'triceps' | 'forearms'
+  | 'abs' | 'obliques' | 'lats' | 'upperback' | 'lowerback' | 'glutes' | 'abductors' | 'adductors' | 'hipflexors'
+  | 'quads' | 'hamstrings' | 'calves' | 'shins';
+/** What an exercise trains: primary (p) and secondary (s) muscles, or `mob` for mobility work that is not counted. */
+export interface MuscleTags { p?: MuscleKey[]; s?: MuscleKey[]; mob?: true }

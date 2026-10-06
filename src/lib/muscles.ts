@@ -1,17 +1,18 @@
 /* ---------- Muscle map ---------- */
 import { slotsFor, exInfo } from './data.js';
 import { normWeek, phaseOf, defaultPhase, rxOf, colOf, weekSlots } from './logic.js';
+import type { Cfg, FlatSlot as Slot, MuscleKey, MuscleTags, Program, Week } from '../types.ts';
 
-export const MUSCLES = {
+export const MUSCLES: Record<MuscleKey, { n: string }> = {
   traps: { n: 'Traps' }, frontdelt: { n: 'Front delts' }, sidedelt: { n: 'Side delts' }, reardelt: { n: 'Rear delts' },
   chest: { n: 'Chest' }, biceps: { n: 'Biceps' }, triceps: { n: 'Triceps' }, forearms: { n: 'Forearms & grip' },
   abs: { n: 'Abs' }, obliques: { n: 'Obliques' }, lats: { n: 'Lats' }, upperback: { n: 'Upper back' }, lowerback: { n: 'Lower back' },
   glutes: { n: 'Glutes' }, abductors: { n: 'Outer hip (abductors)' }, adductors: { n: 'Inner thigh (adductors)' }, hipflexors: { n: 'Hip flexors' },
   quads: { n: 'Quads' }, hamstrings: { n: 'Hamstrings' }, calves: { n: 'Calves' }, shins: { n: 'Shins' },
 };
-export const M_KEYS = Object.keys(MUSCLES);
+export const M_KEYS = Object.keys(MUSCLES) as MuscleKey[];
 // Default tags: p = primary, s = secondary. mob = mobility/stretch, not counted.
-export const MUSCLE_MAP = {
+export const MUSCLE_MAP: Record<string, MuscleTags> = {
   latpd: { p: ['lats'], s: ['biceps', 'upperback', 'reardelt'] }, latpdbi: { p: ['lats'], s: ['biceps', 'upperback', 'reardelt'] },
   wristpd: { p: ['forearms'] }, platerot: { p: ['obliques'], s: ['abs'] },
   innerthigh: { p: ['adductors'] }, outerthigh: { p: ['abductors'], s: ['glutes'] }, romanadd: { p: ['adductors'], s: ['obliques'] },
@@ -37,7 +38,7 @@ export const MUSCLE_MAP = {
 };
 // Left-half shapes (x < 100); mirrored for the right side.
 export const SIL = 'M100 44 L92 44 L92 56 Q72 58 62 62 Q50 66 48 84 L50 132 L44 170 L44 212 Q47 226 54 228 Q60 226 60 212 L64 150 L68 112 L72 150 L72 200 L68 214 Q64 270 72 322 Q68 360 74 404 L70 414 L97 414 L96 372 Q98 340 96 322 Q100 280 99 250 L100 244 Z';
-export const FRONT = [
+export const FRONT: [MuscleKey, string][] = [
   ['traps', 'M78 60 Q86 54 92 52 L92 58 Q86 60 80 63 Z'],
   ['sidedelt', 'M64 61 Q51 63 49 78 Q50 84 54 85 Q56 71 67 65 Z'],
   ['frontdelt', 'M69 64 Q58 70 57 85 Q62 92 70 90 Q74 77 77 66 Z'],
@@ -51,7 +52,7 @@ export const FRONT = [
   ['adductors', 'M92 223 Q98 227 98 234 L96 282 Q88 272 87 242 Z'],
   ['shins', 'M78 336 Q74 362 78 396 L86 396 Q88 362 86 336 Z'],
 ];
-export const BACK = [
+export const BACK: [MuscleKey, string][] = [
   ['traps', 'M84 48 L100 44 L100 98 Q90 86 72 66 Q80 58 84 48 Z'],
   ['reardelt', 'M66 62 Q52 66 50 82 Q56 88 66 86 Q70 74 72 66 Z'],
   ['lats', 'M70 78 Q66 102 76 132 Q86 150 97 158 L98 124 Q84 112 78 96 Z'],
@@ -65,39 +66,41 @@ export const BACK = [
   ['calves', 'M76 334 Q70 358 78 382 L90 382 Q96 358 90 334 Z'],
 ];
 
-export const tagsOf =(cfg, id) => (cfg.muscleMap && cfg.muscleMap[id]) || MUSCLE_MAP[id] || null;
+export const tagsOf = (cfg: Cfg, id: string): MuscleTags | null => (cfg.muscleMap && cfg.muscleMap[id]) || MUSCLE_MAP[id] || null;
 // Board filter: a card matches when any of its exercises trains the muscle (primary or secondary) and uses the equipment.
-export function matchesFilter(cfg, s, { muscle = '', eq = '' }) {
+export function matchesFilter(cfg: Cfg, s: Slot, { muscle = '', eq = '' }: { muscle?: string; eq?: string }) {
   return s.items.some(it => {
     const info = exInfo(cfg, it.ex);
     if (eq && info.eq !== eq) return false;
     if (!muscle) return true;
     const tg = tagsOf(cfg, it.ex);
-    return !!tg && !tg.mob && [...(tg.p || []), ...(tg.s || [])].includes(muscle);
+    return !!tg && !tg.mob && ([...(tg.p || []), ...(tg.s || [])] as string[]).includes(muscle);
   });
 }
 // Board sort by muscle: 0 = an exercise on the card trains it as a primary muscle, 1 = as a secondary one,
 // 2 = not at all.
-export function muscleRank(cfg, s, muscle) {
+export function muscleRank(cfg: Cfg, s: Slot, muscle: string) {
   let best = 2;
   s.items.forEach(it => {
     const tg = tagsOf(cfg, it.ex); if (!tg || tg.mob) return;
-    if ((tg.p || []).includes(muscle)) best = 0; else if ((tg.s || []).includes(muscle) && best > 1) best = 1;
+    if (((tg.p || []) as string[]).includes(muscle)) best = 0; else if (((tg.s || []) as string[]).includes(muscle) && best > 1) best = 1;
   });
   return best;
 }
-export const level = s => s <= 0 ? 0 : s < 5 ? 1 : s < 10 ? 2 : s <= 20 ? 3 : 4;
-export const fmtSets = n => (Math.round(n * 2) / 2).toString();
+type VolEntry = { ex: string; role: 'p' | 's'; day: number; sets: number; either: boolean };
+const emptyVolume = () => Object.fromEntries(M_KEYS.map(k => [k, { sets: 0, ex: [] as VolEntry[] }])) as Record<MuscleKey, { sets: number; ex: VolEntry[] }>;
+export const level = (s: number) => s <= 0 ? 0 : s < 5 ? 1 : s < 10 ? 2 : s <= 20 ? 3 : 4;
+export const fmtSets = (n: number) => (Math.round(n * 2) / 2).toString();
 // Planned weekly sets per muscle for a program. `live` uses this week's phases and moves.
-export function muscleVolume(cfg, week, prog, live, withSecondary) {
-  const vol = {}; M_KEYS.forEach(k => { vol[k] = { sets: 0, ex: [] }; });
-  const untagged = new Set();
+export function muscleVolume(cfg: Cfg, week: Week, prog: Program, live: boolean, withSecondary?: boolean) {
+  const vol = emptyVolume();
+  const untagged = new Set<string>();
   (live ? weekSlots(prog, week) : slotsFor(prog)).forEach(sl => sl.items.forEach((it, idx) => {
     const tg = tagsOf(cfg, it.ex); if (!tg) { untagged.add(it.ex); return; } if (tg.mob) return;
     const ph = live ? phaseOf(cfg, week, sl, idx) : defaultPhase(cfg, sl, idx);
     const m = rxOf(cfg, it, ph).match(/(\d+)\s*×/); const sets = (m ? Number(m[1]) : 3) * (sl.type === 'either' ? 0.5 : 1);
     const day = live ? colOf(week, week.moved[sl.id] || sl.day) : sl.day;
-    (withSecondary ? [['p', 1], ['s', 0.5]] : [['p', 1]]).forEach(([k, f]) => (tg[k] || []).forEach(mu => {
+    ((withSecondary ? [['p', 1], ['s', 0.5]] : [['p', 1]]) as ['p' | 's', number][]).forEach(([k, f]) => (tg[k] || []).forEach(mu => {
       if (!vol[mu]) return;
       vol[mu].sets += sets * f; vol[mu].ex.push({ ex: it.ex, role: k, day, sets, either: sl.type === 'either' });
     }));
@@ -107,10 +110,10 @@ export function muscleVolume(cfg, week, prog, live, withSecondary) {
 
 // Every exercise across the rotation's programs on one map. Sets are averaged per program week, so the
 // shading still means "sets in a typical week"; each exercise remembers which program and day it's on.
-export function muscleVolumeAll(cfg, programs, withSecondary) {
+export function muscleVolumeAll(cfg: Cfg, programs: Record<string, Program>, withSecondary?: boolean) {
   const keys = ['A', 'B'].filter(k => programs[k]);
-  const vol = {}; M_KEYS.forEach(k => { vol[k] = { sets: 0, ex: [] }; });
-  const untagged = new Set();
+  const vol = emptyVolume() as Record<MuscleKey, { sets: number; ex: (VolEntry & { prog?: string })[] }>;
+  const untagged = new Set<string>();
   keys.forEach(k => {
     const r = muscleVolume(cfg, normWeek(null), programs[k], false, withSecondary);
     M_KEYS.forEach(m => { vol[m].sets += r.vol[m].sets / keys.length; r.vol[m].ex.forEach(e => vol[m].ex.push({ ...e, prog: k })); });
@@ -119,19 +122,19 @@ export function muscleVolumeAll(cfg, programs, withSecondary) {
   return { vol, untagged: [...untagged], keys };
 }
 
-export function muscleNames(cfg, id, role) {
+export function muscleNames(cfg: Cfg, id: string, role: 'p' | 's') {
   const t = tagsOf(cfg, id); if (!t || t.mob) return t && t.mob ? (role === 'p' ? 'Mobility' : '') : '';
   return (t[role] || []).map(m => MUSCLES[m] ? MUSCLES[m].n : m).join(', ');
 }
 
 // The muscle tags an exercise has, as editable state: { mob, st: { muscle: 'p' | 's' } }.
-export const draftOfTags = (cfg, exId) => {
-  const tg = tagsOf(cfg, exId) || {}; const st = {};
+export const draftOfTags = (cfg: Cfg, exId: string) => {
+  const tg: MuscleTags = tagsOf(cfg, exId) || {}; const st: Partial<Record<MuscleKey, 'p' | 's'>> = {};
   (tg.p || []).forEach(m => { st[m] = 'p'; }); (tg.s || []).forEach(m => { st[m] = 's'; });
   return { mob: !!tg.mob, st };
 };
-export const tagsOfDraft = draft => {
-  const o = { p: M_KEYS.filter(m => draft.st[m] === 'p'), s: M_KEYS.filter(m => draft.st[m] === 's') };
+export const tagsOfDraft = (draft: { mob?: boolean; st: Partial<Record<MuscleKey, 'p' | 's'>> }) => {
+  const o: MuscleTags = { p: M_KEYS.filter(m => draft.st[m] === 'p'), s: M_KEYS.filter(m => draft.st[m] === 's') };
   if (draft.mob) o.mob = true;
   return o;
 };
