@@ -79,3 +79,34 @@ export interface LibraryItem {
   created?: true;
   prog: Program;
 }
+
+export type EquipmentKey = 'barbell' | 'shortbar' | 'ezbar' | 'dumbbell' | 'kettlebell' | 'cable' | 'machine' | 'bodyweight'
+  | 'band' | 'trx' | 'plate' | 'medball' | 'other';
+
+/** An exercise in the catalog: built-ins, layered with what the user set in `cfg.ex`. */
+export interface ExerciseInfo {
+  n: string;
+  url?: string;
+  eq?: EquipmentKey;
+}
+
+export interface WarmupItem {
+  id: string;
+  n: string;
+  rx: string;
+}
+
+/** The slice of the settings document that the program/exercise helpers read. */
+export interface ProgramCfg {
+  ex?: Record<string, Partial<ExerciseInfo>>;
+  warmup?: WarmupItem[];
+}
+
+/** A card flattened out of a program: its day number (1-based) and a type that is never missing. */
+export type FlatSlot = Omit<ProgramSlot, 'type'> & { day: number; type: SlotType };
+
+/* Programs as they exist before ids are filled in: the built-in data and old saved copies have slots without an `id`.
+   `withAllDays` (lib/data) gives every slot one, so what it returns is a full `Program`. */
+export type SlotDraft = Omit<ProgramSlot, 'id'> & { id?: string };
+export type DayDraft = Omit<ProgramDay, 'slots'> & { slots: SlotDraft[] };
+export type ProgramDraft = Omit<Program, 'days'> & { days: DayDraft[] };
