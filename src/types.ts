@@ -126,13 +126,18 @@ export interface Cfg extends ProgramCfg {
   m2Even: ProgKey;
   pct: Partial<Record<PhaseKey, number>>;
   rxOverride: Partial<Record<PhaseKey, string>>;
-  rm: Record<string, unknown>;
+  rm: Record<string, number>;
   phDef: Record<string, PhaseKey | null>;
   exPh: Record<string, PhaseKey | null>;
   progNames?: Partial<Record<ProgKey, string>>;
   bwGoal?: BodyGoal;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
+  rest?: number; // rest timer, seconds
+  backup?: BackupCfg; // GitHub backup through the Claude host's connector
+  ghBackup?: Partial<BackupCfg>; // GitHub backup from the standalone app
 }
+
+export interface BackupCfg { repo: string; branch: string; hashes: Record<string, string>; last?: { at: string } }
 
 /** An Experiment (or added) card on one week. */
 export interface ExtraCard {
@@ -195,3 +200,36 @@ export type MuscleKey = 'traps' | 'frontdelt' | 'sidedelt' | 'reardelt' | 'chest
   | 'quads' | 'hamstrings' | 'calves' | 'shins';
 /** What an exercise trains: primary (p) and secondary (s) muscles, or `mob` for mobility work that is not counted. */
 export interface MuscleTags { p?: MuscleKey[]; s?: MuscleKey[]; mob?: true }
+
+/* ---------- Snapshots and the data file ---------- */
+/** An exercise to try (an Experiment list entry). */
+export interface Experiment { id: string; ex: string; ph: PhaseKey | null; note: string }
+
+/** What the export and backup builders read: the app's state at one moment. */
+export interface Snapshot {
+  cfg: Cfg;
+  logs: Logs;
+  programs: Record<string, Program>;
+  library: LibraryItem[];
+  body: BodyEntry[];
+  experiments?: Experiment[];
+  stretches?: Stretch[];
+  stretchExps?: StretchExperiment[];
+  stretchWeeks?: Record<string, StretchWeek>;
+  supp?: Supplements;
+}
+
+/** A data file after `normalizeData` has checked and cleaned it. `config` holds only the keys the file had. */
+export interface DataFile {
+  exportedAt?: string;
+  config: Partial<Cfg>;
+  programs: Record<string, Program>;
+  library: LibraryItem[];
+  logs: Logs;
+  weeks: Record<string, Week>;
+  body: BodyEntry[];
+  experiments: Experiment[];
+  stretches: { items: Stretch[]; experiments: StretchExperiment[] } | null;
+  stretchWeeks: Record<string, StretchWeek>;
+  supplements: Supplements | null;
+}
