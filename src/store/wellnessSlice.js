@@ -1,7 +1,7 @@
 import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
-import { validOz, validGoal, normSupplements } from '../lib/water.js';
+import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN } from '../lib/water.js';
 
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const r1 = n => Math.round(n * 10) / 10;
@@ -169,6 +169,18 @@ export const wellnessSlice = (set, get, flag) => ({
   setWaterGoal(raw) {
     const n = Number(raw); if (!validGoal(n)) { flag('Enter a daily goal between 8 and 500 oz'); return false; }
     return get().mutateSupp(s => { s.waterGoal = r1(n); s.waterMode = 'fixed'; });
+  },
+  // Extra water for a hot day or for training minutes. Clears the day's entry when both are off.
+  setWaterBoost(date, patch) {
+    if (patch.mins !== undefined && patch.mins !== '') {
+      const m = Number(patch.mins); if (!Number.isFinite(m) || m < 0 || m > MAX_TRAIN_MIN) { flag(`Enter training minutes, up to ${MAX_TRAIN_MIN}`); return false; }
+    }
+    return get().mutateSupp(s => {
+      const b = { ...((s.boost || {})[date] || {}) }; s.boost = { ...(s.boost || {}) };
+      if (patch.hot !== undefined) { if (patch.hot) b.hot = true; else delete b.hot; }
+      if (patch.mins !== undefined) { const m = Math.round(Number(patch.mins)); if (m > 0) b.mins = m; else delete b.mins; }
+      if (Object.keys(b).length) s.boost[date] = b; else delete s.boost[date];
+    });
   },
   setWaterByWeight() { return get().mutateSupp(s => { s.waterMode = 'weight'; }); },
 });
