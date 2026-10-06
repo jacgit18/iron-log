@@ -1,3 +1,5 @@
+import type { Appearance } from '../../lib/appearance.ts';
+import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -58,7 +60,7 @@ function ModePanel() {
 
 function AppearancePanel() {
   const [a, setA] = useState(getAppearance);
-  const upd = (patch: any) => setA(setAppearance(patch));
+  const upd = (patch: Partial<Appearance>) => setA(setAppearance(patch));
   return (
     <section className="panel">
       <h2>Appearance</h2>
@@ -67,7 +69,7 @@ function AppearancePanel() {
         <div className="modes">
           {[['system', 'Match this device', 'Light or dark, following your system setting.'], ['light', 'Light', 'Dark text on a light background.'], ['dark', 'Dark', 'Light text on a dark background.']].map(([k, t, d]) => (
             <label className="mode" key={k}>
-              <input type="radio" name="theme" value={k} checked={a.theme === k} onChange={() => upd({ theme: k })} />
+              <input type="radio" name="theme" value={k} checked={a.theme === k} onChange={() => upd({ theme: k as Appearance['theme'] })} />
               <div><b>{t}</b><span>{d}</span></div>
             </label>
           ))}
@@ -124,8 +126,8 @@ function PhasePanel() {
               return (
                 <tr key={k}>
                   <td><span className="dot" data-p={k} /> {PHASES[k].label}</td>
-                  <td>{PHASES[k].pct === 0 ? '—' : <><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={(v: any) => st.setPct(k, v)} /> %</>}</td>
-                  <td><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={(v: any) => st.setRxOverride(k, v)} /></td>
+                  <td>{PHASES[k].pct === 0 ? '—' : <><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={(v) => st.setPct(k, v)} /> %</>}</td>
+                  <td><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={(v) => st.setRxOverride(k, v)} /></td>
                 </tr>
               );
             })}
@@ -282,11 +284,11 @@ function GitHubBackup() {
 
 // One line per phase, e.g. "35 lb · Strength", so a lift trained in two phases shows which weight is which.
 // With a 1RM given, each phase line also shows what that phase's % of the 1RM works out to, to compare with the logged weight.
-function PhaseWeights({ list, rm, cfg }: { list: any; rm?: any; cfg?: any }) {
-  return list.map(({ ph, w }: { ph: any; w: any }) => {
+function PhaseWeights({ list, rm, cfg }: { list: { ph: PhaseKey | null; w: number }[]; rm?: number; cfg?: Cfg }) {
+  return list.map(({ ph, w }) => {
     const pct = ph && cfg ? (cfg.pct[ph] ?? PHASES[ph as PhaseKey].pct) : 0;
     return (
-      <div key={`${ph}:${w}`} className="phw"><span className="dot" data-p={ph || undefined} /> {w} lb · {ph ? PHASES[ph as PhaseKey].label : 'No phase'}{rm > 0 && pct > 0 ? ` · ${pct}% of 1RM is ${round(rm * pct / 100)} lb` : ''}</div>
+      <div key={`${ph}:${w}`} className="phw"><span className="dot" data-p={ph || undefined} /> {w} lb · {ph ? PHASES[ph as PhaseKey].label : 'No phase'}{rm! > 0 && pct > 0 ? ` · ${pct}% of 1RM is ${round(rm! * pct / 100)} lb` : ''}</div>
     );
   });
 }
@@ -310,7 +312,7 @@ function RmPanel() {
                 <tr key={id}>
                   <td>{exInfo(cfg, id).n}</td>
                   <td><PhaseWeights list={programWeights(cfg, all, id)} /></td>
-                  <td><CommitInput key={`${id}:${cfg.rm[id] ?? ''}`} type="number" id={`rm-${id}`} aria-label={`${exInfo(cfg, id).n} 1RM (lb)`} min="0" step="any" value={cfg.rm[id] ?? ''} placeholder="—" onCommit={(v: any) => st.setRm(id, v)} /></td>
+                  <td><CommitInput key={`${id}:${cfg.rm[id] ?? ''}`} type="number" id={`rm-${id}`} aria-label={`${exInfo(cfg, id).n} 1RM (lb)`} min="0" step="any" value={cfg.rm[id] ?? ''} placeholder="—" onCommit={(v) => st.setRm(id, v)} /></td>
                   <td>{best.length ? <PhaseWeights list={best} rm={cfg.rm[id]} cfg={cfg} /> : '—'}</td>
                 </tr>
               );

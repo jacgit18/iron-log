@@ -1,5 +1,5 @@
-import type { EquipmentKey, LogEntry, PhaseKey } from '../../types.ts';
-import { useEffect, useRef, useState } from 'react';
+import type { EquipmentKey, LogEntry, LogSet, PhaseKey } from '../../types.ts';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
@@ -12,10 +12,10 @@ import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 import { setError } from '../../lib/validate.js';
 
 // Older entries in a timed phase may hold reps (Mobility was counted in reps before), so each side falls back to the other.
-const toRow = (x: any, iso: any) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x.r : x.r ?? x.sec) ?? '', tw: false, tr: false });
-const num = (v: any) => (v === '' ? null : Number(v));
+const toRow = (x: LogSet, iso: boolean) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x.r : x.r ?? x.sec) ?? '', tw: false, tr: false });
+const num = (v: string | number) => (v === '' ? null : Number(v));
 
-export default function LogSheet({ slotId, idx }: { slotId: any; idx: any }) {
+export default function LogSheet({ slotId, idx }: { slotId: string; idx: number }) {
   const cfg = useAppStore(s => s.cfg);
   const week = useAppStore(s => s.week);
   const logs = useAppStore(s => s.logs);
@@ -47,16 +47,16 @@ export default function LogSheet({ slotId, idx }: { slotId: any; idx: any }) {
   const hist = (logs[it.ex] || []).slice(-6).reverse();
   const goals = liftGoalsStatus(cfg, it.ex, logs[it.ex], today, phv);
 
-  const changePhase = (v: any) => { setPh(v); const p = v || null; setRows(planRows(cfg, logs, it, p).map(x => toRow(x, isTimed(p)))); };
+  const changePhase = (v: PhaseKey | '') => { setPh(v); const p = v || null; setRows(planRows(cfg, logs, it, p).map(x => toRow(x, isTimed(p)))); };
   // Editing a set fills the same field in later sets, until those are edited themselves.
-  const editCell = (i: any, k: any, v: any) => setRows(rs => rs.map((r, j) => {
+  const editCell = (i: number, k: string, v: string | boolean) => setRows(rs => rs.map((r, j) => {
     const touched = k === 'w' ? 'tw' : 'tr';
     if (j === i) return { ...r, [k]: v, [touched]: true };
     if (j > i && !r[touched]) return { ...r, [k]: v };
     return r;
   }));
 
-  const submit = (e: any) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     const sets = rows.map(r => ({ w: num(r.w), v: num(r.r) })).filter(x => x.w != null || x.v != null)
       .map(x => (iso ? { w: x.w, sec: x.v } : { w: x.w, r: x.v }));
@@ -80,7 +80,7 @@ export default function LogSheet({ slotId, idx }: { slotId: any; idx: any }) {
       </div>
       <div className="fields">
         <label className="field">Phase
-          <select value={ph} onChange={e => changePhase(e.target.value)}>
+          <select value={ph} onChange={e => changePhase(e.target.value as PhaseKey | '')}>
             {!ph0 && <option value="">None</option>}
             {PH_KEYS.map(k => <option key={k} value={k}>{PHASES[k].label}</option>)}
           </select>

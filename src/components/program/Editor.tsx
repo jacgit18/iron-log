@@ -1,5 +1,6 @@
+import type { Cfg, LibraryItem, Program, ProgramSlot } from '../../types.ts';
 import type { ProgKey } from '../../types.ts';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, BUILTIN, exInfo } from '../../lib/data.js';
@@ -12,14 +13,14 @@ import ExerciseLibrary from './ExerciseLibrary.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import SupplementLibrary from './SupplementLibrary.jsx';
 
-const progStats = (p: any) => { const n = p.days.reduce((a: any, d: any) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
+const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
 
-function slotSummary(cfg: any, sl: any) {
-  const names = sl.items.map((i: any) => exInfo(cfg, i.ex).n);
+function slotSummary(cfg: Cfg, sl: ProgramSlot) {
+  const names = sl.items.map(i => exInfo(cfg, i.ex).n);
   return sl.type === 'superset' ? names.join(' → ') : sl.type === 'either' ? names.join(' or ') : names[0];
 }
 
-function LibRow({ name, meta, inUse, onLoad, loadLabel, extra }: { name: any; meta: any; inUse: any; onLoad: any; loadLabel: any; extra?: any }) {
+function LibRow({ name, meta, inUse, onLoad, loadLabel, extra }: { name: string; meta: string; inUse: boolean; onLoad: () => void; loadLabel: string; extra?: ReactNode }) {
   return (
     <div className={`edrow${inUse ? ' inuse' : ''}`}>
       <div className="edmain"><b>{name}</b><span className="note">{meta}</span></div>
@@ -31,7 +32,7 @@ function LibRow({ name, meta, inUse, onLoad, loadLabel, extra }: { name: any; me
   );
 }
 
-function Library({ k, custom }: { k: any; custom: any }) {
+function Library({ k, custom }: { k: string; custom: boolean }) {
   const cfg = useAppStore(s => s.cfg); const library = useAppStore(s => s.library); const programs = useAppStore(s => s.programs);
   const st = useAppStore.getState();
   const [name, setName] = useState('');
@@ -48,10 +49,10 @@ function Library({ k, custom }: { k: any; custom: any }) {
       </div>
       <p className="note">Load a version into {pn}. Whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
       <div className="edlist">
-        <LibRow name={`Original ${pn}`} meta={`Built in · ${progStats(BUILTIN[k as ProgKey])} · always kept`} inUse={!custom} loadLabel={loadLabel} onLoad={() => st.loadVersion('orig', k)} />
+        <LibRow name={`Original ${pn}`} meta={`Built in · ${progStats(BUILTIN[k as ProgKey])} · always kept`} inUse={!custom} loadLabel={loadLabel} onLoad={() => st.loadVersion('orig', k as ProgKey)} />
         {items.map(it => (
           <LibRow
-            key={it.id} name={it.name} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k)}
+            key={it.id} name={it.name} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k as ProgKey)}
             meta={`${it.created ? 'Created from' : 'From'} ${progName(cfg, it.from as string)} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto ? ' · auto-saved' : ''}`}
             extra={<>
               <button type="button" className="btn sm" aria-label={`Edit ${it.name}`} onClick={() => { st.setEdProg('L:' + it.id); st.setEdDay(1); window.scrollTo({ top: 0 }); }}>Edit</button>
@@ -72,7 +73,7 @@ function Library({ k, custom }: { k: any; custom: any }) {
   );
 }
 
-function LibItemPanel({ it }: { it: any }) {
+function LibItemPanel({ it }: { it: LibraryItem }) {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
   return (
     <section className="panel edpanel lib" style={{ marginTop: 16 }}>
@@ -127,7 +128,7 @@ function ProgramEditor() {
         </>
       ) : (
         <label className="field progname">Name of Program {k}
-          <CommitInput key={`${k}:${(cfg.progNames || {})[k] || ''}`} id="prog-name" maxLength={40} value={(cfg.progNames || {})[k] || ''} placeholder={`Program ${k}`} onCommit={(v: any) => st.renameProgram(k as ProgKey, v)} />
+          <CommitInput key={`${k}:${(cfg.progNames || {})[k] || ''}`} id="prog-name" maxLength={40} value={(cfg.progNames || {})[k] || ''} placeholder={`Program ${k}`} onCommit={(v) => st.renameProgram(k as ProgKey, v)} />
         </label>
       )}
       <section className="panel edpanel">

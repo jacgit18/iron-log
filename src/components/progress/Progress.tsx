@@ -93,7 +93,7 @@ function LiftList() {
         const phName = last.ph ? PHASES[last.ph].label : 'No phase';
         const phs = [...new Set(L.map(e => e.ph || null))]; const multi = phs.length > 1;
         const goals = liftGoalsStatus(cfg, id, L, today);
-        const label = (p: any) => (p ? PHASES[p as PhaseKey].label : 'No phase');
+        const label = (p: PhaseKey | null) => (p ? PHASES[p as PhaseKey].label : 'No phase');
         const backoff = phs.filter(p => backoffOf(cfg, logs, { ex: id }, p));
         const stalled = phs.filter(p => !backoff.includes(p) && stallOf(cfg, logs, id, p)).map(label);
         return (

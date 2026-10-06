@@ -167,6 +167,9 @@ export interface Week {
 /** Logged sessions by exercise id, oldest first. */
 export type Logs = Record<string, LogEntry[]>;
 
+/** First vs latest working weight of one exercise and phase over a window (see lib/trends weightChanges). */
+export interface WeightChange { id: string; ph: string | null; w0: number; w1: number; d0: string; d1: string; n: number; pct: number }
+
 /** Body-weight goal: the target, where you were when you set it, and an optional ISO date. */
 export interface BodyGoal { w: number; start?: { w: number; d?: string }; by?: string }
 /** A lift goal for one exercise and key ('any' or a phase). */

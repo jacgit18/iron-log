@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import type { FlatSlot } from '../../types.ts';
+import { Fragment, useEffect, useRef, useState, type DragEvent, type TouchEvent } from 'react';
 import type { MuscleKey, ProgKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -15,19 +16,19 @@ import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
 
 // Cards moved in from another day are grouped under their own heading.
-const secOf = (s: any, day: any) => (s.day === day ? s.sec : 'Moved here');
+const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
 const MODES = [[1, 'Mode 1 · A only'], [2, 'Mode 2 · monthly'], [3, 'Mode 3 · 6 months']];
-const tipHidden = (k: any) => LS.get(k) === 1; // stored as the string "1", same as the vanilla app
+const tipHidden = (k: string) => LS.get(k) === 1; // stored as the string "1", same as the vanilla app
 
 // Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
-function SwapArrows({ d }: { d: any }) {
+function SwapArrows({ d }: { d: number }) {
   const rest = useAppStore(s => s.week.rest) || [];
-  const swap = (dir: any) => {
+  const swap = (dir: number) => {
     if (!useAppStore.getState().swapDays(d, dir)) return;
     const e = d + dir;
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => (document.getElementById(`swap-${e}-${dir}`) || document.getElementById(`swap-${e}-${-dir}`))?.focus());
   };
-  const label = (n: any) => (rest.includes(d) ? (rest.includes(n) ? `Day ${n} is also a rest day` : `Move rest day to Day ${n}`) : rest.includes(n) ? `Swap Day ${d} with the rest day` : `Swap Day ${d} with Day ${n}`);
+  const label = (n: number) => (rest.includes(d) ? (rest.includes(n) ? `Day ${n} is also a rest day` : `Move rest day to Day ${n}`) : rest.includes(n) ? `Swap Day ${d} with the rest day` : `Swap Day ${d} with Day ${n}`);
   return (
     <span className="swaps">
       {d > 1 && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}--1`} aria-label={label(d - 1)} onClick={() => swap(-1)}><span aria-hidden="true">←</span></button>}
@@ -72,13 +73,13 @@ export default function Board() {
   if (day == null) { day = DAYS.find(d => !rest.includes(d)) ?? null; for (const d of DAYS) { if (!rest.includes(d) && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
 
   // Ticking a rest day that would push workouts off the week asks first: skip them for the week, or cancel and move them yourself.
-  const tickRest = (d: any) => {
+  const tickRest = (d: number) => {
     const over = st.restOverflow(d);
     if (over.length && !window.confirm(`A rest day on Day ${d} pushes ${over.length === 1 ? 'a workout' : `${over.length} workouts`} off the week:\n\n${over.map(s => `• ${s.items.map(it => exInfo(cfg, it.ex).n).join(' + ')}`).join('\n')}\n\nOK skips ${over.length === 1 ? 'it' : 'them'} for this week. Cancel lets you move ${over.length === 1 ? 'it' : 'them'} first.`)) return;
     st.setRestDay(d, { skipOverflow: true });
   };
   const [, forceTips] = useState(0);
-  const hideTip = (k: any) => { LS.set(k, 1); forceTips(n => n + 1); };
+  const hideTip = (k: string) => { LS.set(k, 1); forceTips(n => n + 1); };
 
   // Yesterday's column (this week only, not on Sunday): cards with nothing checked, unless hidden for today.
   const yCol = todayCol(today) - 1; const todayKey = ymd(today);
@@ -88,14 +89,14 @@ export default function Board() {
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
   const filtering = !!filter.eq;
   const sorting = !!filter.muscle;
-  const rank = (s: any) => muscleRank(cfg, s, filter.muscle);
-  const shown = (list: any) => {
-    const l = filtering ? list.filter((s: any) => matchesFilter(cfg, s, { eq: filter.eq })) : list;
-    return sorting ? l.map((s: any) => [s, rank(s)]).sort((a: any, b: any) => a[1] - b[1]).map(([s]: any) => s) : l; // stable: program order within a rank
+  const rank = (s: FlatSlot) => muscleRank(cfg, s, filter.muscle);
+  const shown = (list: FlatSlot[]) => {
+    const l = filtering ? list.filter((s) => matchesFilter(cfg, s, { eq: filter.eq })) : list;
+    return sorting ? l.map(s => [s, rank(s)] as const).sort((a, b) => a[1] - b[1]).map(([s]) => s) : l; // stable: program order within a rank
   };
   const muscleName = filter.muscle ? MUSCLES[filter.muscle as MuscleKey].n : '';
   const RANK_SEC = [`Primary: ${muscleName}`, `Secondary: ${muscleName}`, 'Other'];
-  const headOf = (s: any, day: any) => (sorting ? RANK_SEC[rank(s)] : secOf(s, day));
+  const headOf = (s: FlatSlot, day: number) => (sorting ? RANK_SEC[rank(s)] : secOf(s, day));
   const [pick, setPick] = useState<number | null>(null);
   const moveTo = targets.includes(pick as number) ? pick : targets[0];
   const hideLeftovers = () => { LS.set('hideleftovers', todayKey); forceTips(n => n + 1); };
@@ -114,16 +115,16 @@ export default function Board() {
   // Desktop drag and drop between day columns.
   const [dragId, setDragId] = useState<string | null>(null);
   const [overDay, setOverDay] = useState<number | null>(null);
-  const onDragStart = (e: any, id: any) => { setDragId(id); try { e.dataTransfer.setData('text/plain', id); e.dataTransfer.effectAllowed = 'move'; } catch { /* old browsers */ } };
+  const onDragStart = (e: DragEvent, id: string) => { setDragId(id); try { e.dataTransfer!.setData('text/plain', id); e.dataTransfer!.effectAllowed = 'move'; } catch { /* old browsers */ } };
   const onDragEnd = () => { setDragId(null); setOverDay(null); };
 
   // Swipe between days on phones.
   const swipe = useRef<{ x: number; y: number } | null>(null);
-  const onTouchStart = (e: any) => {
-    if (e.target.closest('select,input,button,a,.explist')) { swipe.current = null; return; }
+  const onTouchStart = (e: TouchEvent) => {
+    if ((e.target as Element).closest('select,input,button,a,.explist')) { swipe.current = null; return; }
     swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
-  const onTouchEnd = (e: any) => {
+  const onTouchEnd = (e: TouchEvent) => {
     const s0 = swipe.current; swipe.current = null;
     if (!s0 || !window.matchMedia('(max-width:700px)').matches) return;
     const dx = e.changedTouches[0].clientX - s0.x, dy = e.changedTouches[0].clientY - s0.y;
@@ -272,7 +273,7 @@ export default function Board() {
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
-                  {shown(cols[d]).map((s: any) => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                  {shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
                 </>
               ) : <p className="note">Your workouts moved one day later. Untick to put them back.</p>}
             </section>
@@ -284,8 +285,8 @@ export default function Board() {
           const warm = week.warm[pd] || {};
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const vis = shown(list);
-          const open = vis.filter((s: any) => isOpen(s, week));
-          const finished = [...vis.filter((s: any) => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter((s: any) => isSkipped(s, week))];
+          const open = vis.filter(s => isOpen(s, week));
+          const finished = [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))];
           const ft = tally(finished, week); // counts the cards under the header (the day's own count ignores the filter)
           return (
             <section
@@ -312,7 +313,7 @@ export default function Board() {
               </div>
               <WarmUp d={d} warm={warm} />
               {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
-              {open.map((s: any, i: any) => {
+              {open.map((s, i) => {
                 const sec = headOf(s, pd);
                 const newSec = i === 0 || sec !== headOf(open[i - 1], pd);
                 return (
@@ -332,7 +333,7 @@ export default function Board() {
           );
         })}
       </div>
-      <Experiments day={day} onDragStart={onDragStart} onDragEnd={onDragEnd} />
+      <Experiments day={day as number} onDragStart={onDragStart} onDragEnd={onDragEnd} />
     </div>
   );
 }

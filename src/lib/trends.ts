@@ -1,4 +1,4 @@
-import type { Cfg, LogEntry, Logs, Program, Week } from '../types.ts';
+import type { Cfg, LogEntry, Logs, Program, Week, WeightChange } from '../types.ts';
 import { BUILTIN, exInfo } from './data.js';
 import { monday, ymd, parseDate, addDays } from './dates.js';
 import { programFor, weekSlots, tally, currentLayout, DAYS } from './logic.js';
@@ -51,7 +51,7 @@ export function muscleWeeks(cfg: Cfg, logs: Logs, keys: string[]) {
 }
 // First vs latest working weight per exercise and phase, over the window.
 export function weightChanges(cfg: Cfg, logs: Logs, sinceKey: string) {
-  const rows: { id: string; ph: string | null; w0: number; w1: number; d0: string; d1: string; n: number; pct: number }[] = [];
+  const rows: WeightChange[] = [];
   Object.entries(logs).forEach(([id, L]) => {
     const by: Record<string, LogEntry[]> = {}; L.forEach(e => { const w = Number(e.w); if (!(w > 0) || entryWeek(e) < sinceKey) return; (by[e.ph || ''] = by[e.ph || ''] || []).push(e); });
     Object.entries(by).forEach(([ph, E]) => {

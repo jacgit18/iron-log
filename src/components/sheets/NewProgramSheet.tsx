@@ -1,5 +1,5 @@
 import type { ProgKey } from '../../types.ts';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { progName } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
@@ -10,7 +10,7 @@ export default function NewProgramSheet() {
   const [name, setName] = useState('');
   const [from, setFrom] = useState(() => st.activeProgKey());
   const [err, setErr] = useState('');
-  const submit = (e: any) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) { setErr('Give the program a name.'); return; }
     if (st.createProgram(name, from)) window.scrollTo({ top: 0 });

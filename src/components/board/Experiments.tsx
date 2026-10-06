@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type DragEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, exInfo } from '../../lib/data.js';
@@ -7,7 +7,7 @@ import { ymd, monday } from '../../lib/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 
 // The Experiment board: exercises to try, added to a day of the viewed week. `day` is the column shown on phones.
-export default function Experiments({ day, onDragStart, onDragEnd }: { day: any; onDragStart: any; onDragEnd: any }) {
+export default function Experiments({ day, onDragStart, onDragEnd }: { day: number; onDragStart: (e: DragEvent, id: string) => void; onDragEnd: () => void }) {
   const cfg = useAppStore(s => s.cfg);
   const items = useAppStore(s => s.experiments);
   const logs = useAppStore(s => s.logs);

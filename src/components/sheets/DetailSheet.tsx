@@ -1,5 +1,5 @@
-import type { LogEntry } from '../../types.ts';
-import { useState } from 'react';
+import type { LogEntry, PhaseKey } from '../../types.ts';
+import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../lib/dates.js';
@@ -11,25 +11,25 @@ import ArmedButton from '../ArmedButton.jsx';
 import LineChart from '../LineChart.jsx';
 import LiftGoal from '../progress/LiftGoal.jsx';
 
-const num = (v: any) => (v === '' ? null : Number(v));
+const num = (v: string | number) => (v === '' ? null : Number(v));
 
-function EditEntry({ exId, entry, onDone }: { exId: any; entry: any; onDone: any }) {
+function EditEntry({ exId, entry, onDone }: { exId: string; entry: LogEntry; onDone: () => void }) {
   const { updateLog } = useAppStore.getState();
   const [date, setDate] = useState(entry.d);
-  const [ph, setPh] = useState(entry.ph || '');
+  const [ph, setPh] = useState<PhaseKey | ''>(entry.ph || '');
   const [note, setNote] = useState(entry.auto ? '' : entry.n || '');
   const iso = isTimed(ph || null);
   const [rows, setRows] = useState(() => setsOfEntry(entry).map(x => ({ w: x.w ?? '', r: (x.sec ?? x.r) ?? '' })));
   const [err, setErr] = useState('');
-  const edit = (j: any, k: any, v: any) => setRows(rs => rs.map((r, n) => (n === j ? { ...r, [k]: v } : r)));
-  const save = (e: any) => {
+  const edit = (j: number, k: 'w' | 'r', v: string) => setRows(rs => rs.map((r, n) => (n === j ? { ...r, [k]: v } : r)));
+  const save = (e: FormEvent) => {
     e.preventDefault();
     const sets = rows.map(r => ({ w: num(r.w), v: num(r.r) })).filter(x => x.w != null || x.v != null).map(x => (iso ? { w: x.w, sec: x.v } : { w: x.w, r: x.v }));
     if (!sets.length) { setErr('Enter at least one set.'); return; }
     const bad = setError(sets, iso); if (bad) { setErr(bad); return; }
     if (!date) { setErr('Pick a date.'); return; }
     const { w, s, r, sec, sets: _s, auto, n, d, ph: _p, ...rest } = entry; // eslint-disable-line no-unused-vars
-    const next = { ...rest, d: date, ph: ph || null, ...summarizeSets(sets, iso) };
+    const next: LogEntry = { ...rest, d: date, ph: ph || null, ...summarizeSets(sets, iso) };
     if (note.trim()) next.n = note.trim();
     updateLog(exId, entry, next); onDone(); // found by identity: the list may have changed while this was open
   };
@@ -38,7 +38,7 @@ function EditEntry({ exId, entry, onDone }: { exId: any; entry: any; onDone: any
       <div className="fields">
         <label className="field">Date<input type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
         <label className="field">Phase
-          <select value={ph} onChange={e => setPh(e.target.value)}>
+          <select value={ph} onChange={e => setPh(e.target.value as PhaseKey | '')}>
             <option value="">None</option>
             {PH_KEYS.map(k => <option key={k} value={k}>{PHASES[k].label}</option>)}
           </select>
@@ -67,7 +67,7 @@ function EditEntry({ exId, entry, onDone }: { exId: any; entry: any; onDone: any
   );
 }
 
-export default function DetailSheet({ exId }: { exId: any }) {
+export default function DetailSheet({ exId }: { exId: string }) {
   const cfg = useAppStore(s => s.cfg);
   const L = useAppStore(s => s.logs[exId]) || [];
   const { deleteLog, closeModal } = useAppStore.getState();

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import type { Cfg, EquipmentKey, SlotType } from '../../types.ts';
 import type { PhaseChoice } from '../../store/types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -38,7 +38,7 @@ function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; 
 }
 
 // `target` ({key, day}) comes from the board's + Add exercise; without it the sheet edits the Program tab's selection.
-export default function SlotSheet({ idx, col, target }: { idx: any; col: any; target: any }) {
+export default function SlotSheet({ idx, col, target }: { idx: number | null; col?: number; target?: { key: string; day: number } | null }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const edDay = useAppStore(s => (target ? target.day : s.edDay));
@@ -51,9 +51,9 @@ export default function SlotSheet({ idx, col, target }: { idx: any; col: any; ta
 
   const setType = (type: SlotType) => setD(x => { const want = type === 'single' ? 1 : 2; const items = x.items.slice(0, want); while (items.length < want) items.push({ ...blankItem(), w: '', nm: '' }); return { ...x, type, items }; });
   const setItem = (k: number, patch: Partial<ItemState>) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
-  const submit = (e: any) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
-    const clean = { ...d, note: d.note.trim(), items: d.items.map((it: any) => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne || '' })) };
+    const clean = { ...d, note: d.note.trim(), items: d.items.map((it) => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: (it.ne || '') as EquipmentKey | '' })) };
     const msg = st.saveSlot(clean);
     if (msg) setErr(msg);
   };
@@ -68,25 +68,25 @@ export default function SlotSheet({ idx, col, target }: { idx: any; col: any; ta
           </select>
         </label>
         <label className="field">Section
-          <select value={d.sec} onChange={e => setD((x: any) => ({ ...x, sec: e.target.value }))}>
+          <select value={d.sec} onChange={e => setD((x) => ({ ...x, sec: e.target.value }))}>
             {[...new Set([...SECTIONS, d.sec])].map(x => <option key={x} value={x}>{x}</option>)}
           </select>
         </label>
         <label className="field">Tier
-          <select value={d.tier} onChange={e => setD((x: any) => ({ ...x, tier: e.target.value }))}>
+          <select value={d.tier} onChange={e => setD((x) => ({ ...x, tier: e.target.value }))}>
             <option value="">None</option><option value="Primary">Primary</option><option value="Accessory">Accessory</option>
           </select>
         </label>
         {col == null ? (
           <label className="field">Day
-            <select value={d.day} onChange={e => setD((x: any) => ({ ...x, day: Number(e.target.value) }))}>
+            <select value={d.day} onChange={e => setD((x) => ({ ...x, day: Number(e.target.value) }))}>
               {DAYS.map(x => <option key={x} value={x}>Day {x}</option>)}
             </select>
           </label>
         ) : <p className="note">{col === d.day ? `Goes on Day ${col} every week.` : `Goes on Day ${d.day} of the program every week (shown as Day ${col} this week).`}</p>}
       </div>
-      {d.items.map((it: any, k: any) => <ItemFields key={k} it={it} k={k} type={d.type} cfg={cfg} onChange={setItem} />)}
-      <label className="field">Card note<input value={d.note} placeholder="e.g. Whichever is free" onChange={e => setD((x: any) => ({ ...x, note: e.target.value }))} /></label>
+      {d.items.map((it, k) => <ItemFields key={k} it={it} k={k} type={d.type} cfg={cfg} onChange={setItem} />)}
+      <label className="field">Card note<input value={d.note} placeholder="e.g. Whichever is free" onChange={e => setD((x) => ({ ...x, note: e.target.value }))} /></label>
       {err && <p className="note err" role="alert">{err}</p>}
       <div className="actions">
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>

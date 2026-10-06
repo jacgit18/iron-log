@@ -1,13 +1,16 @@
+import type { ImportDraft } from '../../store/types.ts';
+import type { ExcelImport as ExcelData } from '../../lib/excelImport.ts';
+type Stats = ReturnType<typeof dataStats>;
 import { useAppStore } from '../../store/useAppStore.js';
 import { dataStats, libDate, importSel } from '../../lib/export.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
-const plural = (n: any, one: any, many: any) => `${n} ${n === 1 ? one : many}`;
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-function ExcelImport({ draft, s, busy }: { draft: any; s: any; busy: any }) {
+function ExcelImport({ draft, s, busy }: { draft: ImportDraft & { data: ExcelData }; s: Stats; busy: boolean }) {
   const st = useAppStore.getState();
-  const d = draft.data; const x = d.excel.settings; const rms = Object.keys(d.config.rm).length;
+  const d = draft.data; const x = d.excel.settings; const rms = Object.keys(d.config.rm ?? {}).length;
   const hasSettings = x.mode || x.rest != null || x.pct;
   return (
     <Sheet aria-label={d.excel.csv ? 'Import from CSV' : 'Import from Excel'}>
@@ -42,7 +45,7 @@ export default function ImportSheet() {
   const st = useAppStore.getState();
   if (!draft) return null;
   const d = draft.data; const s = dataStats(d);
-  if (draft.kind === 'excel') return <ExcelImport draft={draft} s={s} busy={busy} />;
+  if (draft.kind === 'excel') return <ExcelImport draft={draft as ImportDraft & { data: ExcelData }} s={s} busy={busy} />;
   const cur = dataStats({ logs });
   const sel = importSel(draft); const none = !Object.values(sel).some(Boolean);
   const rows = [
