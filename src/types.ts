@@ -63,7 +63,7 @@ export interface ProgramDay {
 
 export interface Program {
   days: ProgramDay[];
-  key?: 'A' | 'B';
+  key?: 'A' | 'B' | 'N'; // 'N': a saved version, which belongs to neither rotation program
   warm?: string;
   sledAdded?: true;
   sledTop?: true;
@@ -130,6 +130,8 @@ export interface Cfg extends ProgramCfg {
   phDef: Record<string, PhaseKey | null>;
   exPh: Record<string, PhaseKey | null>;
   progNames?: Partial<Record<ProgKey, string>>;
+  bwGoal?: BodyGoal;
+  liftGoals?: Record<string, Record<string, LiftGoal>>;
 }
 
 /** An Experiment (or added) card on one week. */
@@ -158,3 +160,8 @@ export interface Week {
 
 /** Logged sessions by exercise id, oldest first. */
 export type Logs = Record<string, LogEntry[]>;
+
+/** Body-weight goal: the target, where you were when you set it, and an optional ISO date. */
+export interface BodyGoal { w: number; start?: { w: number; d?: string }; by?: string }
+/** A lift goal for one exercise and key ('any' or a phase). */
+export interface LiftGoal { w: number; start?: number; by?: string }
