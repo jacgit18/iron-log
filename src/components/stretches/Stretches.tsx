@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import type { Stretch, StretchTier, StretchWeek } from '../../types.ts';
+import type { AppState } from '../../store/types.ts';
+import { useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { monday, ymd, addDays, fmtShort, parseDate, DAY_NAMES } from '../../lib/dates.js';
@@ -9,11 +11,11 @@ import ArmedButton from '../ArmedButton.jsx';
 
 const DAYS7 = Array.from({ length: STRETCH_DAYS }, (_, i) => i);
 
-function Link({ n, url }: { n: any; url: any }) {
+function Link({ n, url }: { n: string; url?: string }) {
   return url ? <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(url)}: ${n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(url)}</a> : null;
 }
 
-function Row({ d, s, id, n, url, note, extra }: { d: any; s: any; id: any; n: any; url: any; note: any; extra?: any }) {
+function Row({ d, s, id, n, url, note, extra }: { d: number; s: AppState; id: string; n: string; url?: string; note?: string; extra?: ReactNode }) {
   const week = useAppStore(x => x.strWeek);
   const done = isStretchDone(week, d, id);
   return (
@@ -29,22 +31,22 @@ function Row({ d, s, id, n, url, note, extra }: { d: any; s: any; id: any; n: an
   );
 }
 
-function GroupCard({ d, name, items, tier }: { d: any; name: any; items: any; tier: any }) {
+function GroupCard({ d, name, items, tier }: { d: number; name: string; items: Stretch[]; tier: StretchTier }) {
   const s = useAppStore.getState();
   const week = useAppStore(x => x.strWeek);
-  const ids = items.map((i: any) => i.id); const all = ids.every((id: any) => isStretchDone(week, d, id));
+  const ids = items.map((i) => i.id); const all = ids.every((id) => isStretchDone(week, d, id));
   return (
     <article className={`card${all ? ' done' : ''}`} aria-label={`${name}, ${tier}`}>
       <div className="row1">
         <input type="checkbox" className="chk" id={`sgrp-${d}-${tier}-${name}`} checked={all} aria-label={`Mark all of ${name} done`} onChange={e => s.setStretchesDone(d, ids, e.target.checked)} />
         <span className="tag" style={{ alignSelf: 'center' }}>{name}</span>
       </div>
-      {items.map((i: any) => <Row key={i.id} d={d} s={s} id={i.id} n={i.n} url={i.url} note={i.note} />)}
+      {items.map((i) => <Row key={i.id} d={d} s={s} id={i.id} n={i.n} url={i.url} note={i.note} />)}
     </article>
   );
 }
 
-function Summary({ items, week, today, wk }: { items: any; week: any; today: any; wk: any }) {
+function Summary({ items, week, today, wk }: { items: Stretch[]; week: StretchWeek; today: Date; wk: string }) {
   const thisWeek = ymd(monday(today)) === wk;
   const t = thisWeek ? dayTally(items, week, today.getDay()) : null;
   const days = weekDaysDone(items, week);
@@ -57,7 +59,7 @@ function Summary({ items, week, today, wk }: { items: any; week: any; today: any
   );
 }
 
-function Experiments({ day }: { day: any }) {
+function Experiments({ day }: { day: number }) {
   const items = useAppStore(x => x.stretchExps);
   const s = useAppStore.getState();
   const [pick, setPick] = useState<Record<string, number>>({});
@@ -104,7 +106,7 @@ export default function Stretches() {
   const thisWeek = ymd(monday(today)) === wk;
   const [pick, setPick] = useState<{ wk: string; d: number } | null>(null); // {wk, d}: the phone's day, only for the week it was picked in
   const day = pick && pick.wk === wk ? pick.d : thisWeek ? today.getDay() : 0;
-  const choose = (d: any) => setPick({ wk, d });
+  const choose = (d: number) => setPick({ wk, d });
   const primary = groupsOf(items, 'primary'); const secondary = groupsOf(items, 'secondary');
   const days = weekDaysDone(items, week);
   const counted = weekDaysCounted(week);

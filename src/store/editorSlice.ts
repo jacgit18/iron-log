@@ -1,12 +1,12 @@
 import { BUILTIN, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { progName, dayAt } from '../lib/logic.js';
-import type { Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
+import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
 import type { ExerciseInfo, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
 export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home'];
 const newId = (): string => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-export const blankItem = () => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
+export const blankItem = (): { ex: string; ph: PhaseChoice; w: number | null; bw: boolean; rx: string; note: string } => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
 
 // A new card goes after the last card in the same section; a new section goes before Home (Home goes last).
 export function insertSlot(target: ProgramSlot[], slot: ProgramSlot) {
@@ -144,7 +144,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const apply = (prog: Program) => {
       if (d.idx != null) prog.days[edDay - 1].slots.splice(d.idx, 1);
       const target = prog.days[d.day - 1].slots;
-      if (orig && d.day === edDay && orig.sec === slot.sec) target.splice(d.idx, 0, slot);
+      if (orig && d.day === edDay && orig.sec === slot.sec) target.splice(d.idx as number, 0, slot);
       else insertSlot(target, slot);
     };
     if (d.target) { const prog = structuredClone(get().programs[k]); apply(prog); get().saveProgram(k, prog); } // from the board

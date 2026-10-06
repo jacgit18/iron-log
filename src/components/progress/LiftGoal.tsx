@@ -1,3 +1,4 @@
+import type { LiftGoal as LiftGoalT, LogEntry } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -6,10 +7,10 @@ import { GOAL_KEYS, goalPhaseLabel, liftGoalsOf, liftGoalStatus } from '../../li
 import { fmtLb, signed } from '../../lib/body.js';
 import ArmedButton from '../ArmedButton.jsx';
 
-function GoalForm({ exId, from, goal, taken, defKey, onDone }: { exId: any; from?: any; goal?: any; taken: any; defKey?: any; onDone: any }) {
+function GoalForm({ exId, from, goal, taken, defKey, onDone }: { exId: string; from?: string; goal?: LiftGoalT; taken: string[]; defKey?: string; onDone: () => void }) {
   const { setLiftGoal } = useAppStore.getState();
   const free = GOAL_KEYS.filter(k => k === from || !taken.includes(k));
-  const [key, setKey] = useState(from || (free.includes(defKey) ? defKey : free[0]));
+  const [key, setKey] = useState(from || (free.includes(defKey as string) ? (defKey as string) : free[0]));
   const [w, setW] = useState(goal ? fmtLb(goal.w) : ''); const [by, setBy] = useState(goal && goal.by ? goal.by : '');
   return (
     <form className="goalform" noValidate onSubmit={e => { e.preventDefault(); if (setLiftGoal(exId, key, w, by, from)) onDone(); }}>
@@ -30,7 +31,7 @@ function GoalForm({ exId, from, goal, taken, defKey, onDone }: { exId: any; from
   );
 }
 
-function GoalView({ exId, k, goal, entries, today, onEdit }: { exId: any; k: any; goal: any; entries: any; today: any; onEdit: any }) {
+function GoalView({ exId, k, goal, entries, today, onEdit }: { exId: string; k: string; goal: LiftGoalT; entries: LogEntry[]; today: Date; onEdit: () => void }) {
   const { clearLiftGoal } = useAppStore.getState();
   const g = liftGoalStatus(goal, entries, today, k)!; // a goal on the list always has a weight
   const where = k === 'any' ? '' : ` in ${goalPhaseLabel(k).toLowerCase()}`;
@@ -61,7 +62,7 @@ function GoalView({ exId, k, goal, entries, today, onEdit }: { exId: any; k: any
 
 // The weight you want to lift on this exercise, per phase or in any phase: set it, see your best against it,
 // and the weekly gain needed to hit a date.
-export default function LiftGoal({ exId }: { exId: any }) {
+export default function LiftGoal({ exId }: { exId: string }) {
   const cfg = useAppStore(s => s.cfg);
   const L = useAppStore(s => s.logs[exId]);
   const today = useToday(s => s.today);

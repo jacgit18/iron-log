@@ -1,6 +1,7 @@
 import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
+import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN } from '../lib/water.js';
 
@@ -57,7 +58,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if (!isVideoUrl(url)) return VIDEO_ERR;
     const same = get().stretches.find(x => x.n.toLowerCase() === n.toLowerCase() && x.id !== d.id);
     if (same) return 'Another stretch already has that name.';
-    const tier = d.tier === 'primary' || d.tier === 'secondary' ? d.tier : '';
+    const tier = (d.tier === 'primary' || d.tier === 'secondary' ? d.tier : '') as StretchTier;
     const group = (d.group || '').trim().slice(0, 40) || DEFAULT_GROUP; const note = (d.note || '').trim().slice(0, 200);
     get().mutateStretches(x => {
       const item = { id: d.id || newStretchId(x.items, n), n, group, tier, ...(url ? { url } : {}), ...(note ? { note } : {}) };
@@ -127,7 +128,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const n = String(d.n || '').trim().replace(/\s+/g, ' ').slice(0, 60);
     if (!n) return 'Give the supplement a name.';
     if (get().supp.items.some(x => x.n.toLowerCase() === n.toLowerCase() && x.id !== d.id)) return 'Another supplement already has that name.';
-    const slot = SLOTS.some(([k]) => k === d.slot) ? d.slot : '';
+    const slot = (SLOTS.some(([k]) => k === d.slot) ? d.slot : '') as SupplementSlot;
     const dose = String(d.dose || '').trim().slice(0, 40); const note = String(d.note || '').trim().slice(0, 200);
     get().mutateSupp(s => {
       const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}) };

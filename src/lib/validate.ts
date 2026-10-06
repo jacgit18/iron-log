@@ -5,14 +5,20 @@
 import { PH_KEYS, hasValidDays } from './data.js';
 import type { BodyEntry, LibraryItem, LogEntry, LogSet, Program, ProgramDay, ProgramItem, ProgramSlot, SlotType } from '../types.ts';
 
-export const LIMITS: Record<string, Record<string, number>> = {
+export const LIMITS = {
   bodyLb: { max: 1500 },        // body weight and body-weight target, exclusive
   liftGoalLb: { max: 5000 },    // a lift goal, exclusive
   rest: { min: 0, max: 600 },   // rest timer, seconds
   pct: { min: 0, max: 110 },    // a phase's percent of 1RM
   oz: { max: 200 },             // one drink
   waterGoal: { min: 8, max: 500 },
-};
+  setLb: { max: 5000 },         // one set's weight, exclusive
+  reps: { max: 1000 },
+  hold: { max: 86400 },         // seconds
+  sets: { max: 200 },
+  text: { note: 500, id: 100, slot: 80 },
+  program: { slots: 40, items: 12, title: 60, sub: 100, label: 40, rx: 60, note: 200, name: 100 },
+} as const;
 
 const fin = (n: unknown): n is number => Number.isFinite(n);
 export const validBodyLb = (n: unknown) => fin(n) && n > 0 && n < LIMITS.bodyLb.max;
@@ -28,11 +34,6 @@ export const validGoal = (n: unknown) => fin(n) && n >= LIMITS.waterGoal.min && 
    normEntry / normBody take anything (a file, a stored doc, a database snapshot, a form) and return the clean shape,
    or null when it can't be used. A bad number is dropped to null rather than losing the whole session; only a bad
    date, which the app can't place on a week, rejects the entry. */
-LIMITS.setLb = { max: 5000 };    // one set's weight, exclusive
-LIMITS.reps = { max: 1000 };
-LIMITS.hold = { max: 86400 };    // seconds
-LIMITS.sets = { max: 200 };
-LIMITS.text = { note: 500, id: 100, slot: 80 };
 
 // Version of the stored document shapes (logs, body, library, experiments). Bump when a shape changes, so a migration knows what it is reading.
 export const SCHEMA_VERSION = 1;
@@ -117,7 +118,6 @@ export function setError(sets: LogSet[], iso?: boolean): string {
    warm?, sledAdded?, sledTop?}; a saved version wraps one as {id, name, from?, at, auto?, created?, prog}. Invalid items and
    slots are dropped; a slot with no id gets the one the app would derive from its position, before anything is dropped, so
    the ids of the slots after it (which check-offs and logs point at) don't shift. */
-LIMITS.program = { slots: 40, items: 12, title: 60, sub: 100, label: 40, rx: 60, note: 200, name: 100 };
 const ID_RE = /^[\w.~:@+-]{1,100}$/;
 const EX_RE = /^[\w.~:@+-]{1,200}$/;
 const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);

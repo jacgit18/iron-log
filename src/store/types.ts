@@ -3,13 +3,37 @@
    Sheet forms (the `d` a save action receives) are typed loosely as `Form`; the sheets in components/ own their shape. */
 import type { StoreApi } from 'zustand';
 import type {
-  BodyEntry, Cfg, DataFile, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
-  Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
+  BodyEntry, Cfg, DataFile, EquipmentKey, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
 
 export type Flag = (text: string) => void;
-export type Form = any; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+/* ---------- Sheet forms: what each sheet hands its save action ---------- */
+/** The exercise-typing field's result: an existing exercise id, or '__new' with the typed name in `nn`. */
+export interface ExerciseChoice { ex: string; nn: string }
+/** Video link and equipment typed for a new exercise (or a link for an existing one). */
+export interface ExerciseExtras { nu?: string; ne?: EquipmentKey | '' }
+export type PhaseChoice = PhaseKey | '' | null;
+/** The Experiment sheet and the board's add-to-day sheet (which has no id). */
+export interface ExperimentForm extends ExerciseChoice, ExerciseExtras { id?: string; ph: PhaseChoice; note?: string }
+/** The exercise details sheet. Fields left out stay as they were. `tags: null` means back to the default tags. */
+export interface ExerciseDetailsForm { name?: string; url?: string; eq?: EquipmentKey | ''; ph?: PhaseChoice; rm?: string | number | null; tags?: MuscleTags | null }
+export interface SlotFormItem extends ExerciseChoice, ExerciseExtras { ph: PhaseChoice; w: number | null; bw?: boolean; rx?: string; note?: string }
+/** The card (slot) editor. `target` aims it at a program and day when it was opened from the board. */
+export interface SlotForm {
+  id: string | null; sec: string; tier: string; type: SlotType; note: string; day: number; idx: number | null;
+  target?: { key: string; day: number } | null; items: SlotFormItem[];
+}
+export interface StretchForm { id?: string; n: string; url?: string; note?: string; group?: string; tier?: string }
+export interface StretchExpForm { id?: string; n: string; url?: string; note?: string }
+export interface SupplementForm { id?: string; n: string; slot?: string; dose?: string; note?: string }
+/** The log sheet's save: the entry plus the optional changes it can make along the way. */
+export interface LogForm {
+  entry: LogEntry; ph: PhaseKey | null; makeDefault: boolean; makeExDefault: boolean;
+  rm: number | null | undefined; done: boolean; eq?: EquipmentKey | ''; url?: string;
+}
 /** Anything a sheet or host gives us that has no shape of its own yet. */
 type Loose = any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -81,7 +105,7 @@ export interface EditorSlice {
   loadVersion(target: string, slot: ProgKey): void;
   deleteLibItem(id: string): void;
   createProgram(name: string, from: ProgKey): boolean;
-  saveSlot(d: Form): string | null;
+  saveSlot(d: SlotForm): string | null;
 }
 
 export interface SettingsSlice {
@@ -95,7 +119,7 @@ export interface SettingsSlice {
   setRxOverride(p: PhaseKey, raw: string): void;
   setRest(raw: string | number): false | void;
   setRm(exId: string, raw: string | number): false | void;
-  setCfgField(k: keyof Cfg, v: unknown): void;
+  setCfgField<K extends keyof Cfg>(k: K, v: Cfg[K]): void;
   setBackupRepo(raw: string): void;
   readImportFile(file: File | null | undefined): Promise<void>;
   pasteImport(text: string): void;
@@ -121,17 +145,17 @@ export interface WellnessSlice {
   setStretchDone(day: number, id: string, on: boolean): void;
   setStretchesDone(day: number, ids: string[], on: boolean): void;
   skipStretchDay(day: number, on: boolean): void;
-  saveStretch(d: Form): string | null;
+  saveStretch(d: StretchForm): string | null;
   deleteStretch(id: string): void;
   moveStretch(id: string, dir: number): void;
-  saveStretchExp(d: Form): string | null;
+  saveStretchExp(d: StretchExpForm): string | null;
   deleteStretchExp(id: string): void;
   addStretchToDay(expId: string, day: number): boolean;
   removeStretchExtra(id: string): void;
   addSupplement(slot: SupplementSlot, name: string, dose?: string): boolean;
   setSupplementSlot(id: string, slot: SupplementSlot): boolean;
   removeSupplement(id: string): boolean;
-  saveSupplement(d: Form): string | null;
+  saveSupplement(d: SupplementForm): string | null;
   deleteSupplement(id: string): void;
   moveSupplement(id: string, dir: number): void;
   setSupplementTaken(date: string, id: string, on: boolean): boolean;
@@ -232,12 +256,12 @@ export interface CoreSlice {
   moveCards(ids: string[], day: number): void;
 
   setExperiments(experiments: Experiment[]): void;
-  saveExperiment(d: Form): string | null;
+  saveExperiment(d: ExperimentForm): string | null;
   applyExerciseUrl(ex: string, raw: string | null | undefined): void;
-  createExercise(d: Form): string;
-  addExerciseToDay(col: number, d: Form): string | null;
-  saveExerciseDetails(exId: string, d: Form): string | null;
-  createLibraryExercise(d: Form): string | null;
+  createExercise(d: { nn: string } & ExerciseExtras): string;
+  addExerciseToDay(col: number, d: ExperimentForm): string | null;
+  saveExerciseDetails(exId: string, d: ExerciseDetailsForm): string | null;
+  createLibraryExercise(d: ExerciseDetailsForm): string | null;
   deleteExercise(exId: string): string | null;
   deleteExperiment(id: string): void;
   addToDay(entryId: string, col: number): boolean;
@@ -256,12 +280,12 @@ export interface CoreSlice {
   dismissMove(): void;
   gotoWeek(which: 'today' | 'prev' | 'next'): void;
 
-  addEntry(slotId: string, idx: number, entry: Form, opts?: { check?: boolean }): boolean;
+  addEntry(slotId: string, idx: number, entry: LogEntry, opts?: { check?: boolean }): boolean;
   quickLog(slotId: string, idx: number): void;
-  submitLog(slotId: string, idx: number, form: Form): boolean;
+  submitLog(slotId: string, idx: number, form: LogForm): boolean;
   setLiftGoal(exId: string, key: string, raw: string | number, by?: string, from?: string): boolean;
   clearLiftGoal(exId: string, key: string): void;
-  updateLog(exId: string, target: LogEntry, entry: Form): boolean;
+  updateLog(exId: string, target: LogEntry, entry: LogEntry): boolean;
   deleteLog(exId: string, target: LogEntry): boolean;
   retryUnsaved(): void;
   eraseData(parts: { logs?: boolean; weeks?: boolean; body?: boolean; programs?: boolean; settings?: boolean }): Promise<boolean>;

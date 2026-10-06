@@ -621,12 +621,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Every card of this exercise in the shown week, on any day (added cards included).
     const sameEx = (get().activeSlots()).flatMap(sl => sl.items.map((x, i) => x.ex === it.ex && `${sl.id}:${i}`).filter((k): k is string => !!k));
     const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
-    const cfgChange = eqChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : (rm > 0 && rm !== cfg.rm[it.ex]));
+    const cfgChange = eqChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : ((rm ?? 0) > 0 && rm !== cfg.rm[it.ex]));
     if (cfgChange) get().mutateCfg(c => {
       if (eqChange) setOverride(c, it.ex, { eq });
       if (makeExDefault && ph) { setExerciseDefault(c, it.ex, ph, get().programs, get().library); sameEx.forEach(k => { delete c.phDef[k]; }); }
       if (makeDefault && ph) c.phDef[key] = ph; // after the exercise default, so ticking both keeps this slot's
-      if (rm === null) delete c.rm[it.ex]; else if (rm > 0) c.rm[it.ex] = rm;
+      if (rm === null) delete c.rm[it.ex]; else if (rm != null && rm > 0) c.rm[it.ex] = rm;
     });
     get().mutateChecks(w => {
       if (ph && ph !== phaseOf(cfg, week, s, idx)) w.ph[key] = ph;
