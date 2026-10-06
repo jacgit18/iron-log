@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-05T21:43:14.812Z",
+ "exportedAt": "2026-10-06T20:03:48.669Z",
  "config": {
   "muscleMap": {},
   "ex": {
@@ -95,10 +95,10 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "1dsxvfk",
+   "hash": "1x46bwu",
    "last": {
-    "at": "2026-10-05T17:18:56.872Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/6d6d915c6bfa2e12c3d4d034bd1d6b84b4dd9190"
+    "at": "2026-10-05T21:44:09.148Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/289f6b650fb2b6e816ac898a7d72d8c9b8f06932"
    }
   },
   "progNames": {
@@ -149,6 +149,7 @@
        ]
       },
       {
+       "id": "A-d1s1",
        "sec": "Regular",
        "tier": "Primary",
        "items": [
@@ -157,10 +158,10 @@
          "ph": "hyp",
          "w": 45
         }
-       ],
-       "id": "A-d1s1"
+       ]
       },
       {
+       "id": "A-d1s2",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -169,10 +170,10 @@
          "ph": "hyp",
          "w": 33
         }
-       ],
-       "id": "A-d1s2"
+       ]
       },
       {
+       "id": "A-d1s3",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -181,10 +182,10 @@
          "ph": "strength",
          "w": 10
         }
-       ],
-       "id": "A-d1s3"
+       ]
       },
       {
+       "id": "A-d1s4",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -193,12 +194,12 @@
          "ph": "strength",
          "w": 180
         }
-       ],
-       "id": "A-d1s4"
+       ]
       },
       {
        "id": "A-d1s5",
        "sec": "Regular",
+       "tier": "Accessory",
        "items": [
         {
          "ex": "romanadd",
@@ -207,10 +208,10 @@
          "bw": true,
          "note": "On the back-extension bench"
         }
-       ],
-       "tier": "Accessory"
+       ]
       },
       {
+       "id": "A-d1s6",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -225,10 +226,10 @@
          "ph": "strength",
          "w": 50
         }
-       ],
-       "id": "A-d1s6"
+       ]
       },
       {
+       "id": "A-d1s7",
        "sec": "Supersets",
        "tier": "Accessory",
        "type": "superset",
@@ -245,10 +246,10 @@
          "w": 15,
          "rx": "3 × 15 s hold"
         }
-       ],
-       "id": "A-d1s7"
+       ]
       },
       {
+       "id": "A-d1s8",
        "sec": "Home",
        "items": [
         {
@@ -256,10 +257,10 @@
          "ph": "strength",
          "w": 200
         }
-       ],
-       "id": "A-d1s8"
+       ]
       },
       {
+       "id": "A-d1s9",
        "sec": "Home",
        "items": [
         {
@@ -267,8 +268,7 @@
          "ph": null,
          "w": 10
         }
-       ],
-       "id": "A-d1s9"
+       ]
       }
      ]
     },
@@ -289,6 +289,7 @@
        ]
       },
       {
+       "id": "A-d2s1",
        "sec": "Regular",
        "tier": "Primary",
        "items": [
@@ -298,13 +299,14 @@
          "w": 20,
          "rx": "3 × 4 each arm"
         }
-       ],
-       "id": "A-d2s1"
+       ]
       },
       {
+       "id": "A-d2s2",
        "sec": "Regular",
-       "type": "either",
        "tier": "Accessory",
+       "type": "either",
+       "note": "Whichever is free",
        "items": [
         {
          "ex": "reardelt",
@@ -317,11 +319,10 @@
          "ph": "strength",
          "w": 30
         }
-       ],
-       "note": "Whichever is free",
-       "id": "A-d2s2"
+       ]
       },
       {
+       "id": "A-d2s3",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -331,10 +332,10 @@
          "w": 50,
          "rx": "4 × 30 s"
         }
-       ],
-       "id": "A-d2s3"
+       ]
       },
       {
+       "id": "A-d2s4",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -343,10 +344,10 @@
          "ph": "strength",
          "w": 60
         }
-       ],
-       "id": "A-d2s4"
+       ]
       },
       {
+       "id": "A-d2s5",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -361,10 +362,10 @@
          "ph": "hyp",
          "w": 25
         }
-       ],
-       "id": "A-d2s5"
+       ]
       },
       {
+       "id": "A-d2s6",
        "sec": "Supersets",
        "tier": "Accessory",
        "type": "superset",
@@ -382,10 +383,10 @@
          "w": null,
          "bw": true
         }
-       ],
-       "id": "A-d2s6"
+       ]
       },
       {
+       "id": "A-d2s7",
        "sec": "Home",
        "items": [
         {
@@ -393,10 +394,10 @@
          "ph": "strength",
          "w": 200
         }
-       ],
-       "id": "A-d2s7"
+       ]
       },
       {
+       "id": "A-d2s8",
        "sec": "Home",
        "items": [
         {
@@ -405,8 +406,7 @@
          "w": 10,
          "rx": "2 × 6"
         }
-       ],
-       "id": "A-d2s8"
+       ]
       }
      ]
     },
@@ -427,6 +427,7 @@
        ]
       },
       {
+       "id": "A-d3s1",
        "sec": "Regular",
        "tier": "Primary",
        "items": [
@@ -436,10 +437,10 @@
          "w": 270,
          "note": "Feet low on the plate, narrow stance for quads"
         }
-       ],
-       "id": "A-d3s1"
+       ]
       },
       {
+       "id": "A-d3s2",
        "sec": "Regular",
        "tier": "Primary",
        "items": [
@@ -448,10 +449,10 @@
          "ph": "hyp",
          "w": 45
         }
-       ],
-       "id": "A-d3s2"
+       ]
       },
       {
+       "id": "A-d3s3",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -460,10 +461,10 @@
          "ph": "hyp",
          "w": 33
         }
-       ],
-       "id": "A-d3s3"
+       ]
       },
       {
+       "id": "A-d3s4",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -472,10 +473,10 @@
          "ph": "strength",
          "w": 10
         }
-       ],
-       "id": "A-d3s4"
+       ]
       },
       {
+       "id": "A-d3s5",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -485,13 +486,14 @@
          "w": 50,
          "rx": "4 × 30 s"
         }
-       ],
-       "id": "A-d3s5"
+       ]
       },
       {
+       "id": "A-d3s6",
        "sec": "Regular",
-       "type": "either",
        "tier": "Accessory",
+       "type": "either",
+       "note": "Whichever is free",
        "items": [
         {
          "ex": "reardelt",
@@ -504,11 +506,10 @@
          "ph": "strength",
          "w": 30
         }
-       ],
-       "note": "Whichever is free",
-       "id": "A-d3s6"
+       ]
       },
       {
+       "id": "A-d3s7",
        "sec": "Supersets",
        "tier": "Accessory",
        "type": "superset",
@@ -523,10 +524,10 @@
          "ph": "exp",
          "w": 30
         }
-       ],
-       "id": "A-d3s7"
+       ]
       },
       {
+       "id": "A-d3s8",
        "sec": "Home",
        "items": [
         {
@@ -534,8 +535,7 @@
          "ph": "strength",
          "w": 200
         }
-       ],
-       "id": "A-d3s8"
+       ]
       },
       {
        "id": "A-d3s9",
@@ -568,6 +568,7 @@
        ]
       },
       {
+       "id": "A-d4s1",
        "sec": "Regular",
        "tier": "Primary",
        "items": [
@@ -577,10 +578,10 @@
          "w": 20,
          "rx": "3 × 4 each arm"
         }
-       ],
-       "id": "A-d4s1"
+       ]
       },
       {
+       "id": "A-d4s2",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -589,10 +590,10 @@
          "ph": "strength",
          "w": 180
         }
-       ],
-       "id": "A-d4s2"
+       ]
       },
       {
+       "id": "A-d4s3",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -603,10 +604,10 @@
          "bw": true,
          "note": "On the back-extension bench"
         }
-       ],
-       "id": "A-d4s3"
+       ]
       },
       {
+       "id": "A-d4s4",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -621,10 +622,10 @@
          "ph": "strength",
          "w": 50
         }
-       ],
-       "id": "A-d4s4"
+       ]
       },
       {
+       "id": "A-d4s5",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -639,10 +640,10 @@
          "ph": "hyp",
          "w": 25
         }
-       ],
-       "id": "A-d4s5"
+       ]
       },
       {
+       "id": "A-d4s6",
        "sec": "Supersets",
        "tier": "Accessory",
        "type": "superset",
@@ -659,10 +660,10 @@
          "w": 15,
          "rx": "3 × 15 s hold"
         }
-       ],
-       "id": "A-d4s6"
+       ]
       },
       {
+       "id": "A-d4s7",
        "sec": "Home",
        "items": [
         {
@@ -670,10 +671,10 @@
          "ph": "strength",
          "w": 200
         }
-       ],
-       "id": "A-d4s7"
+       ]
       },
       {
+       "id": "A-d4s8",
        "sec": "Home",
        "items": [
         {
@@ -682,14 +683,12 @@
          "w": null,
          "bw": true
         }
-       ],
-       "id": "A-d4s8"
+       ]
       }
      ]
     },
     {
      "title": "Day 5",
-     "makeup": true,
      "slots": [
       {
        "id": "A-sled5",
@@ -705,6 +704,7 @@
        ]
       },
       {
+       "id": "A-d5s1",
        "sec": "Regular",
        "items": [
         {
@@ -712,10 +712,10 @@
          "ph": "strength",
          "w": 60
         }
-       ],
-       "id": "A-d5s1"
+       ]
       },
       {
+       "id": "A-d5s3",
        "sec": "Regular",
        "items": [
         {
@@ -724,13 +724,14 @@
          "w": 270,
          "note": "Feet low on the plate, narrow stance for quads"
         }
-       ],
-       "id": "A-d5s3"
+       ]
       },
       {
+       "id": "A-d5s4",
        "sec": "Regular",
-       "type": "either",
        "tier": "Accessory",
+       "type": "either",
+       "note": "Whichever is free",
        "items": [
         {
          "ex": "reardelt",
@@ -743,11 +744,10 @@
          "ph": "strength",
          "w": 30
         }
-       ],
-       "note": "Whichever is free",
-       "id": "A-d5s4"
+       ]
       },
       {
+       "id": "A-d5s5",
        "sec": "Plyometric",
        "items": [
         {
@@ -756,10 +756,10 @@
          "w": null,
          "bw": true
         }
-       ],
-       "id": "A-d5s5"
+       ]
       },
       {
+       "id": "A-d5s6",
        "sec": "Plyometric",
        "items": [
         {
@@ -768,10 +768,10 @@
          "w": null,
          "bw": true
         }
-       ],
-       "id": "A-d5s6"
+       ]
       },
       {
+       "id": "A-d5s7",
        "sec": "Plyometric",
        "items": [
         {
@@ -779,10 +779,10 @@
          "ph": "exp",
          "w": null
         }
-       ],
-       "id": "A-d5s7"
+       ]
       },
       {
+       "id": "A-d5s8",
        "sec": "Plyometric",
        "items": [
         {
@@ -791,10 +791,10 @@
          "w": null,
          "bw": true
         }
-       ],
-       "id": "A-d5s8"
+       ]
       },
       {
+       "id": "A-d5s9",
        "sec": "Home",
        "items": [
         {
@@ -803,10 +803,10 @@
          "w": 10,
          "rx": "2 × 6"
         }
-       ],
-       "id": "A-d5s9"
+       ]
       },
       {
+       "id": "A-d5s10",
        "sec": "Home",
        "items": [
         {
@@ -815,10 +815,10 @@
          "w": null,
          "bw": true
         }
-       ],
-       "id": "A-d5s10"
+       ]
       }
-     ]
+     ],
+     "makeup": true
     },
     {
      "title": "Day 6",
@@ -837,6 +837,7 @@
        ]
       },
       {
+       "id": "A-d6s1",
        "sec": "Plyometric",
        "items": [
         {
@@ -846,10 +847,10 @@
          "bw": true,
          "rx": "3 × 10"
         }
-       ],
-       "id": "A-d6s1"
+       ]
       },
       {
+       "id": "A-d6s2",
        "sec": "Plyometric",
        "items": [
         {
@@ -859,10 +860,10 @@
          "bw": true,
          "rx": "3 × 5, hold 3 s"
         }
-       ],
-       "id": "A-d6s2"
+       ]
       },
       {
+       "id": "A-d6s3",
        "sec": "Plyometric",
        "items": [
         {
@@ -873,10 +874,10 @@
          "rx": "3 × 5",
          "note": "Vertical drive, soft landings"
         }
-       ],
-       "id": "A-d6s3"
+       ]
       },
       {
+       "id": "A-d6s4",
        "sec": "Plyometric",
        "items": [
         {
@@ -887,10 +888,10 @@
          "rx": "4 × 5",
          "note": "Controlled landings"
         }
-       ],
-       "id": "A-d6s4"
+       ]
       },
       {
+       "id": "A-d6s5",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -905,10 +906,10 @@
          "ph": "strength",
          "w": 50
         }
-       ],
-       "id": "A-d6s5"
+       ]
       },
       {
+       "id": "A-d6s6",
        "sec": "Supersets",
        "tier": "Accessory",
        "type": "superset",
@@ -923,8 +924,7 @@
          "ph": "exp",
          "w": 30
         }
-       ],
-       "id": "A-d6s6"
+       ]
       },
       {
        "id": "A-d5s2",
@@ -948,7 +948,6 @@
    "sledTop": true
   },
   "B": {
-   "warm": "Sled push → pull",
    "days": [
     {
      "title": "Day 1",
@@ -967,6 +966,7 @@
        ]
       },
       {
+       "id": "B-d1s1",
        "sec": "Regular",
        "tier": "Primary",
        "items": [
@@ -975,10 +975,10 @@
          "ph": "hyp",
          "w": 45
         }
-       ],
-       "id": "B-d1s1"
+       ]
       },
       {
+       "id": "B-d1s2",
        "sec": "Regular",
        "tier": "Primary",
        "items": [
@@ -988,10 +988,10 @@
          "w": 270,
          "note": "Feet low on the plate, narrow stance for quads"
         }
-       ],
-       "id": "B-d1s2"
+       ]
       },
       {
+       "id": "B-d1s3",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -1000,10 +1000,10 @@
          "ph": "hyp",
          "w": 33
         }
-       ],
-       "id": "B-d1s3"
+       ]
       },
       {
+       "id": "B-d1s4",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -1012,10 +1012,10 @@
          "ph": "strength",
          "w": 10
         }
-       ],
-       "id": "B-d1s4"
+       ]
       },
       {
+       "id": "B-d1s5",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -1024,10 +1024,10 @@
          "ph": "strength",
          "w": 180
         }
-       ],
-       "id": "B-d1s5"
+       ]
       },
       {
+       "id": "B-d1s6",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -1036,10 +1036,10 @@
          "ph": "strength",
          "w": 160
         }
-       ],
-       "id": "B-d1s6"
+       ]
       },
       {
+       "id": "B-d1s7",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -1049,10 +1049,10 @@
          "w": null,
          "bw": true
         }
-       ],
-       "id": "B-d1s7"
+       ]
       },
       {
+       "id": "B-d1s8",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -1067,10 +1067,10 @@
          "ph": "strength",
          "w": 50
         }
-       ],
-       "id": "B-d1s8"
+       ]
       },
       {
+       "id": "B-d1s9",
        "sec": "Supersets",
        "tier": "Accessory",
        "type": "superset",
@@ -1087,10 +1087,10 @@
          "w": 15,
          "rx": "3 × 15 s hold"
         }
-       ],
-       "id": "B-d1s9"
+       ]
       },
       {
+       "id": "B-d1s10",
        "sec": "Home",
        "items": [
         {
@@ -1099,10 +1099,10 @@
          "w": 200,
          "note": "With a grip trainer"
         }
-       ],
-       "id": "B-d1s10"
+       ]
       },
       {
+       "id": "B-d1s11",
        "sec": "Home",
        "items": [
         {
@@ -1111,8 +1111,7 @@
          "w": 10,
          "note": "With a stick or barbell"
         }
-       ],
-       "id": "B-d1s11"
+       ]
       }
      ]
     },
@@ -1133,9 +1132,11 @@
        ]
       },
       {
+       "id": "B-d2s1",
        "sec": "Regular",
-       "type": "either",
        "tier": "Primary",
+       "type": "either",
+       "note": "Whichever is free",
        "items": [
         {
          "ex": "farmers",
@@ -1147,11 +1148,10 @@
          "ph": "strength",
          "w": 40
         }
-       ],
-       "note": "Whichever is free",
-       "id": "B-d2s1"
+       ]
       },
       {
+       "id": "B-d2s2",
        "sec": "Regular",
        "tier": "Primary",
        "items": [
@@ -1160,13 +1160,14 @@
          "ph": "strength",
          "w": 17
         }
-       ],
-       "id": "B-d2s2"
+       ]
       },
       {
+       "id": "B-d2s3",
        "sec": "Regular",
-       "type": "either",
        "tier": "Accessory",
+       "type": "either",
+       "note": "Whichever is free",
        "items": [
         {
          "ex": "reardelt",
@@ -1179,11 +1180,10 @@
          "ph": "strength",
          "w": 30
         }
-       ],
-       "note": "Whichever is free",
-       "id": "B-d2s3"
+       ]
       },
       {
+       "id": "B-d2s4",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -1192,10 +1192,10 @@
          "ph": "strength",
          "w": 60
         }
-       ],
-       "id": "B-d2s4"
+       ]
       },
       {
+       "id": "B-d2s5",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -1210,10 +1210,10 @@
          "ph": "hyp",
          "w": 25
         }
-       ],
-       "id": "B-d2s5"
+       ]
       },
       {
+       "id": "B-d2s6",
        "sec": "Supersets",
        "tier": "Accessory",
        "type": "superset",
@@ -1228,10 +1228,10 @@
          "ph": "strength",
          "w": 50
         }
-       ],
-       "id": "B-d2s6"
+       ]
       },
       {
+       "id": "B-d2s7",
        "sec": "Home",
        "items": [
         {
@@ -1240,10 +1240,10 @@
          "w": 200,
          "note": "With a grip trainer"
         }
-       ],
-       "id": "B-d2s7"
+       ]
       },
       {
+       "id": "B-d2s8",
        "sec": "Home",
        "items": [
         {
@@ -1252,8 +1252,7 @@
          "w": 10,
          "rx": "2 × 6"
         }
-       ],
-       "id": "B-d2s8"
+       ]
       }
      ]
     },
@@ -1274,6 +1273,7 @@
        ]
       },
       {
+       "id": "B-d3s1",
        "sec": "Regular",
        "tier": "Primary",
        "items": [
@@ -1283,10 +1283,10 @@
          "w": 270,
          "note": "Feet low on the plate, narrow stance for quads"
         }
-       ],
-       "id": "B-d3s1"
+       ]
       },
       {
+       "id": "B-d3s2",
        "sec": "Regular",
        "tier": "Primary",
        "items": [
@@ -1295,10 +1295,10 @@
          "ph": "hyp",
          "w": 45
         }
-       ],
-       "id": "B-d3s2"
+       ]
       },
       {
+       "id": "B-d3s3",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -1307,10 +1307,10 @@
          "ph": "hyp",
          "w": 33
         }
-       ],
-       "id": "B-d3s3"
+       ]
       },
       {
+       "id": "B-d3s4",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -1319,13 +1319,14 @@
          "ph": "strength",
          "w": 10
         }
-       ],
-       "id": "B-d3s4"
+       ]
       },
       {
+       "id": "B-d3s5",
        "sec": "Regular",
-       "type": "either",
        "tier": "Accessory",
+       "type": "either",
+       "note": "Whichever is free",
        "items": [
         {
          "ex": "reardelt",
@@ -1338,11 +1339,10 @@
          "ph": "strength",
          "w": 30
         }
-       ],
-       "note": "Whichever is free",
-       "id": "B-d3s5"
+       ]
       },
       {
+       "id": "B-d3s6",
        "sec": "Supersets",
        "tier": "Accessory",
        "type": "superset",
@@ -1358,10 +1358,10 @@
          "ph": "exp",
          "w": 30
         }
-       ],
-       "id": "B-d3s6"
+       ]
       },
       {
+       "id": "B-d3s7",
        "sec": "Home",
        "items": [
         {
@@ -1370,10 +1370,10 @@
          "w": 200,
          "note": "With a grip trainer"
         }
-       ],
-       "id": "B-d3s7"
+       ]
       },
       {
+       "id": "B-d3s8",
        "sec": "Home",
        "items": [
         {
@@ -1382,8 +1382,7 @@
          "w": null,
          "note": "With a resistance band"
         }
-       ],
-       "id": "B-d3s8"
+       ]
       }
      ]
     },
@@ -1404,9 +1403,11 @@
        ]
       },
       {
+       "id": "B-d4s1",
        "sec": "Regular",
-       "type": "either",
        "tier": "Primary",
+       "type": "either",
+       "note": "Whichever is free",
        "items": [
         {
          "ex": "farmers",
@@ -1418,11 +1419,10 @@
          "ph": "strength",
          "w": 40
         }
-       ],
-       "note": "Whichever is free",
-       "id": "B-d4s1"
+       ]
       },
       {
+       "id": "B-d4s2",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -1431,10 +1431,10 @@
          "ph": "strength",
          "w": 180
         }
-       ],
-       "id": "B-d4s2"
+       ]
       },
       {
+       "id": "B-d4s3",
        "sec": "Regular",
        "tier": "Accessory",
        "items": [
@@ -1443,10 +1443,10 @@
          "ph": "strength",
          "w": 160
         }
-       ],
-       "id": "B-d4s3"
+       ]
       },
       {
+       "id": "B-d4s4",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -1461,10 +1461,10 @@
          "ph": "strength",
          "w": 50
         }
-       ],
-       "id": "B-d4s4"
+       ]
       },
       {
+       "id": "B-d4s5",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -1479,10 +1479,10 @@
          "ph": "hyp",
          "w": 25
         }
-       ],
-       "id": "B-d4s5"
+       ]
       },
       {
+       "id": "B-d4s6",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -1497,10 +1497,10 @@
          "ph": "strength",
          "w": 50
         }
-       ],
-       "id": "B-d4s6"
+       ]
       },
       {
+       "id": "B-d4s7",
        "sec": "Supersets",
        "tier": "Accessory",
        "type": "superset",
@@ -1517,10 +1517,10 @@
          "w": 15,
          "rx": "3 × 15 s hold"
         }
-       ],
-       "id": "B-d4s7"
+       ]
       },
       {
+       "id": "B-d4s8",
        "sec": "Home",
        "items": [
         {
@@ -1529,10 +1529,10 @@
          "w": 200,
          "note": "With a grip trainer"
         }
-       ],
-       "id": "B-d4s8"
+       ]
       },
       {
+       "id": "B-d4s9",
        "sec": "Home",
        "items": [
         {
@@ -1541,14 +1541,12 @@
          "w": null,
          "note": "With a resistance band"
         }
-       ],
-       "id": "B-d4s9"
+       ]
       }
      ]
     },
     {
      "title": "Day 5",
-     "makeup": true,
      "slots": [
       {
        "id": "B-sled5",
@@ -1564,6 +1562,7 @@
        ]
       },
       {
+       "id": "B-d5s1",
        "sec": "Regular",
        "items": [
         {
@@ -1571,13 +1570,14 @@
          "ph": "strength",
          "w": 60
         }
-       ],
-       "id": "B-d5s1"
+       ]
       },
       {
+       "id": "B-d5s3",
        "sec": "Regular",
-       "type": "either",
        "tier": "Accessory",
+       "type": "either",
+       "note": "Whichever is free",
        "items": [
         {
          "ex": "reardelt",
@@ -1590,11 +1590,10 @@
          "ph": "strength",
          "w": 30
         }
-       ],
-       "note": "Whichever is free",
-       "id": "B-d5s3"
+       ]
       },
       {
+       "id": "B-d5s4",
        "sec": "Plyometric",
        "items": [
         {
@@ -1603,10 +1602,10 @@
          "w": null,
          "bw": true
         }
-       ],
-       "id": "B-d5s4"
+       ]
       },
       {
+       "id": "B-d5s5",
        "sec": "Plyometric",
        "items": [
         {
@@ -1615,10 +1614,10 @@
          "w": null,
          "bw": true
         }
-       ],
-       "id": "B-d5s5"
+       ]
       },
       {
+       "id": "B-d5s6",
        "sec": "Plyometric",
        "items": [
         {
@@ -1626,10 +1625,10 @@
          "ph": "exp",
          "w": null
         }
-       ],
-       "id": "B-d5s6"
+       ]
       },
       {
+       "id": "B-d5s7",
        "sec": "Plyometric",
        "items": [
         {
@@ -1638,10 +1637,10 @@
          "w": null,
          "bw": true
         }
-       ],
-       "id": "B-d5s7"
+       ]
       },
       {
+       "id": "B-d5s8",
        "sec": "Home",
        "items": [
         {
@@ -1650,8 +1649,7 @@
          "w": 10,
          "rx": "2 × 6"
         }
-       ],
-       "id": "B-d5s8"
+       ]
       },
       {
        "id": "B-d5s9",
@@ -1665,7 +1663,8 @@
         }
        ]
       }
-     ]
+     ],
+     "makeup": true
     },
     {
      "title": "Day 6",
@@ -1684,6 +1683,7 @@
        ]
       },
       {
+       "id": "B-d6s1",
        "sec": "Plyometric",
        "items": [
         {
@@ -1693,10 +1693,10 @@
          "bw": true,
          "rx": "3 × 10"
         }
-       ],
-       "id": "B-d6s1"
+       ]
       },
       {
+       "id": "B-d6s2",
        "sec": "Plyometric",
        "items": [
         {
@@ -1706,10 +1706,10 @@
          "bw": true,
          "rx": "3 × 5, hold 3 s"
         }
-       ],
-       "id": "B-d6s2"
+       ]
       },
       {
+       "id": "B-d6s3",
        "sec": "Plyometric",
        "items": [
         {
@@ -1720,10 +1720,10 @@
          "rx": "3 × 5",
          "note": "Vertical drive, soft landings"
         }
-       ],
-       "id": "B-d6s3"
+       ]
       },
       {
+       "id": "B-d6s4",
        "sec": "Plyometric",
        "items": [
         {
@@ -1734,10 +1734,10 @@
          "rx": "4 × 5",
          "note": "Controlled landings"
         }
-       ],
-       "id": "B-d6s4"
+       ]
       },
       {
+       "id": "B-d6s5",
        "sec": "Supersets",
        "tier": "Primary",
        "type": "superset",
@@ -1752,10 +1752,10 @@
          "ph": "strength",
          "w": 50
         }
-       ],
-       "id": "B-d6s5"
+       ]
       },
       {
+       "id": "B-d6s6",
        "sec": "Supersets",
        "tier": "Accessory",
        "type": "superset",
@@ -1771,8 +1771,7 @@
          "ph": "exp",
          "w": 30
         }
-       ],
-       "id": "B-d6s6"
+       ]
       },
       {
        "id": "B-d5s2",
@@ -1792,6 +1791,7 @@
      "slots": []
     }
    ],
+   "warm": "Sled push → pull",
    "sledAdded": true,
    "sledTop": true
   }
@@ -1844,8 +1844,6 @@
   ],
   "cablecrunch": [
    {
-    "slot": "A-d2s4",
-    "wk": "2026-09-27",
     "d": "2026-09-29",
     "ph": "strength",
     "w": 60,
@@ -1868,13 +1866,13 @@
       "w": 60,
       "r": 6
      }
-    ]
+    ],
+    "slot": "A-d2s4",
+    "wk": "2026-09-27"
    }
   ],
   "cablepunch": [
    {
-    "slot": "B-d6s6",
-    "wk": "2026-10-04",
     "d": "2026-10-04",
     "ph": "iso",
     "w": 30,
@@ -1897,7 +1895,9 @@
       "w": 30,
       "sec": 15
      }
-    ]
+    ],
+    "slot": "B-d6s6",
+    "wk": "2026-10-04"
    }
   ],
   "cablerow": [
@@ -2038,8 +2038,6 @@
   ],
   "clean-jerk-overhead-press": [
    {
-    "slot": "B-d5s2",
-    "wk": "2026-10-04",
     "d": "2026-10-04",
     "ph": "exp",
     "w": 20,
@@ -2058,7 +2056,9 @@
       "w": 20,
       "r": 10
      }
-    ]
+    ],
+    "slot": "B-d5s2",
+    "wk": "2026-10-04"
    }
   ],
   "db6": [
@@ -2296,8 +2296,6 @@
   ],
   "innerthigh": [
    {
-    "slot": "A-d1s4",
-    "wk": "2026-09-27",
     "d": "2026-09-27",
     "ph": "strength",
     "w": 180,
@@ -2320,7 +2318,9 @@
       "w": 180,
       "r": 6
      }
-    ]
+    ],
+    "slot": "A-d1s4",
+    "wk": "2026-09-27"
    },
    {
     "d": "2026-09-30",
@@ -2605,8 +2605,6 @@
   ],
   "reardelt": [
    {
-    "slot": "A-d3s6",
-    "wk": "2026-09-27",
     "d": "2026-09-27",
     "ph": "iso",
     "w": 50,
@@ -2629,7 +2627,9 @@
       "w": 50,
       "sec": 15
      }
-    ]
+    ],
+    "slot": "A-d3s6",
+    "wk": "2026-09-27"
    },
    {
     "d": "2026-09-28",
@@ -2729,8 +2729,6 @@
   ],
   "suitcase": [
    {
-    "slot": "A-d4s1",
-    "wk": "2026-09-27",
     "d": "2026-09-29",
     "ph": "strength",
     "w": 25,
@@ -2753,13 +2751,13 @@
       "w": 25,
       "r": 6
      }
-    ]
+    ],
+    "slot": "A-d4s1",
+    "wk": "2026-09-27"
    }
   ],
   "wristpd": [
    {
-    "slot": "A-d1s2",
-    "wk": "2026-09-27",
     "d": "2026-09-27",
     "ph": "hyp",
     "w": 33,
@@ -2782,7 +2780,9 @@
       "w": 33,
       "r": 15
      }
-    ]
+    ],
+    "slot": "A-d1s2",
+    "wk": "2026-09-27"
    },
    {
     "d": "2026-09-28",
@@ -2813,8 +2813,6 @@
     "auto": true
    },
    {
-    "slot": "B-d1s3",
-    "wk": "2026-10-04",
     "d": "2026-10-04",
     "ph": "hyp",
     "w": 33,
@@ -2829,13 +2827,13 @@
       "w": 33,
       "r": 15
      }
-    ]
+    ],
+    "slot": "B-d1s3",
+    "wk": "2026-10-04"
    }
   ],
   "zercher": [
    {
-    "slot": "A-d1s6",
-    "wk": "2026-09-27",
     "d": "2026-09-27",
     "ph": "strength",
     "w": 50,
@@ -2858,7 +2856,9 @@
       "w": 50,
       "r": 6
      }
-    ]
+    ],
+    "slot": "A-d1s6",
+    "wk": "2026-09-27"
    },
    {
     "d": "2026-09-30",
@@ -2960,8 +2960,6 @@
   ],
   "zottman": [
    {
-    "slot": "A-d1s7",
-    "wk": "2026-09-27",
     "d": "2026-09-29",
     "ph": "hyp",
     "w": 15,
@@ -2980,7 +2978,9 @@
       "w": 15,
       "r": 15
      }
-    ]
+    ],
+    "slot": "A-d1s7",
+    "wk": "2026-09-27"
    }
   ]
  },
@@ -3108,6 +3108,9 @@
    },
    "ph": {},
    "warm": {},
+   "rest": [
+    3
+   ],
    "order": [
     6,
     1,
@@ -3116,7 +3119,8 @@
     4,
     5,
     7
-   ]
+   ],
+   "restOn": "2026-10-06"
   }
  },
  "body": [
@@ -3296,8 +3300,12 @@
    "2026-10-05": [
     22,
     22
+   ],
+   "2026-10-06": [
+    22
    ]
   },
+  "boost": {},
   "items": [],
   "taken": {}
  }
