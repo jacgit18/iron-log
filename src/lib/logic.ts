@@ -512,7 +512,7 @@ const cleanMap = <T>(o: unknown, f: (v: any) => T | undefined): Record<string, T
   return out;
 };
 const flagOf = (v: unknown) => (v ? true : undefined);
-export const normWeek = (w: any): Week => {
+export const normWeek = (w?: any): Week => {
   const out: Week = { prog: w && (w.prog === 'A' || w.prog === 'B') ? w.prog : null, done: cleanMap(w && w.done, flagOf), skipped: cleanMap(w && w.skipped, flagOf), moved: cleanMap(w && w.moved, v => v), ph: cleanMap(w && w.ph, v => (PH_KEYS.includes(v) ? v : undefined)), warm: {} };
   Object.entries(cleanMap(w && w.warm, v => v)).forEach(([day, items]) => { const m = cleanMap(items, v => (typeof v === 'boolean' ? v : undefined)); if (Object.keys(m).length) out.warm[day] = m; });
   out.moved = Object.fromEntries(Object.entries(out.moved).map(([k, v]) => [k, Number(v)] as [string, number]).filter(([, v]) => Number.isInteger(v) && v >= 1 && v <= DAY_COUNT));
