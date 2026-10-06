@@ -1,4 +1,4 @@
-import type { PhaseKey } from '../../types.ts';
+import type { PhaseKey, ProgKey } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -35,7 +35,7 @@ function ModePanel() {
             {MON.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
           </select>
           <label htmlFor="m3f">on</label>
-          <select id="m3f" className="btn sm" value={cfg.m3First} onChange={e => st.setCfgField('m3First', e.target.value)}>
+          <select id="m3f" className="btn sm" value={cfg.m3First} onChange={e => st.setCfgField('m3First', e.target.value as ProgKey)}>
             {['A', 'B'].map(p => <option key={p}>{p}</option>)}
           </select>
         </div>
@@ -43,7 +43,7 @@ function ModePanel() {
       {cfg.mode === 2 && (
         <div className="inline">
           <label htmlFor="m2e">Even months run</label>
-          <select id="m2e" className="btn sm" value={cfg.m2Even} onChange={e => st.setCfgField('m2Even', e.target.value)}>
+          <select id="m2e" className="btn sm" value={cfg.m2Even} onChange={e => st.setCfgField('m2Even', e.target.value as ProgKey)}>
             {['A', 'B'].map(p => <option key={p}>{p}</option>)}
           </select>
         </div>

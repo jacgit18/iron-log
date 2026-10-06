@@ -23,7 +23,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
   setRxOverride(p, raw) { const v = raw.trim(); get().mutateCfg(c => { if (v && v !== PHASES[p].rx) c.rxOverride[p] = v; else delete c.rxOverride[p]; }); },
   setRest(raw) { const n = Number(raw); if (raw === '' || !validRest(n)) return false; get().mutateCfg(c => { c.rest = n; }); },
   setRm(exId, raw) { const n = Number(raw); if (raw !== '' && !validRm(n) && get().cfg.rm[exId] == null) return false; get().mutateCfg(c => { if (raw === '' || !validRm(n)) delete c.rm[exId]; else c.rm[exId] = n; }); }, // 0 or empty clears a saved 1RM; junk with nothing saved is rejected so the field reverts
-  setCfgField(k, v) { get().mutateCfg(c => { (c as any)[k] = v; }); }, // eslint-disable-line
+  setCfgField(k, v) { get().mutateCfg(c => { c[k] = v; }); },
   setBackupRepo(raw) {
     const v = raw.trim();
     if (/^[\w.-]+\/[\w.-]+$/.test(v)) { if (get().mutateCfg(c => { c.backup = { ...backupCfg(c), repo: v, hashes: {} }; })) set({ backupMsg: null }); }

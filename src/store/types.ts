@@ -95,7 +95,7 @@ export interface SettingsSlice {
   setRxOverride(p: PhaseKey, raw: string): void;
   setRest(raw: string | number): false | void;
   setRm(exId: string, raw: string | number): false | void;
-  setCfgField(k: keyof Cfg, v: unknown): void;
+  setCfgField<K extends keyof Cfg>(k: K, v: Cfg[K]): void;
   setBackupRepo(raw: string): void;
   readImportFile(file: File | null | undefined): Promise<void>;
   pasteImport(text: string): void;
