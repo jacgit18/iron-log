@@ -1,3 +1,4 @@
+import type { PhaseKey } from '../../types.ts';
 import { useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -82,7 +83,7 @@ function LiftList() {
   const today = useToday(s => s.today);
   const ids = Object.keys(logs).filter(id => logs[id].length);
   if (!ids.length) return <div className="empty">No sessions logged yet. Tap <b>Log</b> on any exercise card to record weight, sets and reps.</div>;
-  ids.sort((a, b) => lastLog(logs, b).d.localeCompare(lastLog(logs, a).d));
+  ids.sort((a, b) => lastLog(logs, b)!.d.localeCompare(lastLog(logs, a)!.d));
   return (
     <div className="plist">
       {ids.map(id => {
@@ -92,7 +93,7 @@ function LiftList() {
         const phName = last.ph ? PHASES[last.ph].label : 'No phase';
         const phs = [...new Set(L.map(e => e.ph || null))]; const multi = phs.length > 1;
         const goals = liftGoalsStatus(cfg, id, L, today);
-        const label = p => (p ? PHASES[p].label : 'No phase');
+        const label = (p: any) => (p ? PHASES[p as PhaseKey].label : 'No phase');
         const backoff = phs.filter(p => backoffOf(cfg, logs, { ex: id }, p));
         const stalled = phs.filter(p => !backoff.includes(p) && stallOf(cfg, logs, id, p)).map(label);
         return (

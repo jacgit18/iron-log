@@ -47,7 +47,7 @@ export function liftGoalStatus(goal: LiftGoal | null | undefined, entries: LogEn
 // Status of every goal on an exercise, optionally only those that a set in phase `ph` counts toward.
 export function liftGoalsStatus(cfg: Cfg, exId: string, entries: LogEntry[] | null | undefined, today: Date, ph?: string | null) {
   return liftGoalsOf(cfg, exId).filter(([k]) => ph === undefined || k === 'any' || k === (ph || null))
-    .map(([k, goal]) => liftGoalStatus(goal, entries, today, k));
+    .map(([k, goal]) => liftGoalStatus(goal, entries, today, k)!); // liftGoalsOf only lists goals with a weight, so none is null
 }
 
 // One line for cards and the log sheet: "Goal 225 lb (Strength) · 20 lb to go".

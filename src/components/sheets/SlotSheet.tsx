@@ -6,13 +6,13 @@ import { DAYS, progName } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 import ExerciseField from '../ExerciseField.jsx';
 
-function ItemFields({ it, k, type, cfg, onChange }) {
-  const up = patch => onChange(k, patch);
+function ItemFields({ it, k, type, cfg, onChange }: { it: any; k: any; type: any; cfg: any; onChange: any }) {
+  const up = (patch: any) => onChange(k, patch);
   const legend = type === 'superset' ? (k ? 'B' : 'A') : type === 'either' ? (k ? 'Or' : 'Option 1') : 'Exercise';
   return (
     <fieldset className="edit-item">
       <legend>{legend}</legend>
-      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} onEq={ne => up({ ne })} />
+      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={(nm: any) => up({ nm })} onUrl={(nu: any) => up({ nu })} onEq={(ne: any) => up({ ne })} />
       <div className="fields">
         <label className="field">Phase
           <select value={it.ph || ''} onChange={e => up({ ph: e.target.value || null })}>
@@ -32,22 +32,22 @@ function ItemFields({ it, k, type, cfg, onChange }) {
 }
 
 // `target` ({key, day}) comes from the board's + Add exercise; without it the sheet edits the Program tab's selection.
-export default function SlotSheet({ idx, col, target }) {
+export default function SlotSheet({ idx, col, target }: { idx: any; col: any; target: any }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const edDay = useAppStore(s => (target ? target.day : s.edDay));
-  const [d, setD] = useState(() => {
+  const [d, setD] = useState<any>(() => {
     const src = idx == null ? { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' } : structuredClone(st.edProgram().days[edDay - 1].slots[idx]);
     // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
     return { ...src, type: src.type || 'single', day: edDay, idx, target, note: src.note || '', tier: src.tier || '', items: src.items.map(it => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
   });
   const [err, setErr] = useState('');
 
-  const setType = type => setD(x => { const want = type === 'single' ? 1 : 2; const items = x.items.slice(0, want); while (items.length < want) items.push({ ...blankItem(), w: '' }); return { ...x, type, items }; });
-  const setItem = (k, patch) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
-  const submit = e => {
+  const setType = (type: any) => setD((x: any) => { const want = type === 'single' ? 1 : 2; const items = x.items.slice(0, want); while (items.length < want) items.push({ ...blankItem(), w: '' }); return { ...x, type, items }; });
+  const setItem = (k: any, patch: any) => setD((x: any) => ({ ...x, items: x.items.map((it: any, j: any) => (j === k ? { ...it, ...patch } : it)) }));
+  const submit = (e: any) => {
     e.preventDefault();
-    const clean = { ...d, note: d.note.trim(), items: d.items.map(it => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne || '' })) };
+    const clean = { ...d, note: d.note.trim(), items: d.items.map((it: any) => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne || '' })) };
     const msg = st.saveSlot(clean);
     if (msg) setErr(msg);
   };
@@ -62,25 +62,25 @@ export default function SlotSheet({ idx, col, target }) {
           </select>
         </label>
         <label className="field">Section
-          <select value={d.sec} onChange={e => setD(x => ({ ...x, sec: e.target.value }))}>
+          <select value={d.sec} onChange={e => setD((x: any) => ({ ...x, sec: e.target.value }))}>
             {[...new Set([...SECTIONS, d.sec])].map(x => <option key={x} value={x}>{x}</option>)}
           </select>
         </label>
         <label className="field">Tier
-          <select value={d.tier} onChange={e => setD(x => ({ ...x, tier: e.target.value }))}>
+          <select value={d.tier} onChange={e => setD((x: any) => ({ ...x, tier: e.target.value }))}>
             <option value="">None</option><option value="Primary">Primary</option><option value="Accessory">Accessory</option>
           </select>
         </label>
         {col == null ? (
           <label className="field">Day
-            <select value={d.day} onChange={e => setD(x => ({ ...x, day: Number(e.target.value) }))}>
+            <select value={d.day} onChange={e => setD((x: any) => ({ ...x, day: Number(e.target.value) }))}>
               {DAYS.map(x => <option key={x} value={x}>Day {x}</option>)}
             </select>
           </label>
         ) : <p className="note">{col === d.day ? `Goes on Day ${col} every week.` : `Goes on Day ${d.day} of the program every week (shown as Day ${col} this week).`}</p>}
       </div>
-      {d.items.map((it, k) => <ItemFields key={k} it={it} k={k} type={d.type} cfg={cfg} onChange={setItem} />)}
-      <label className="field">Card note<input value={d.note} placeholder="e.g. Whichever is free" onChange={e => setD(x => ({ ...x, note: e.target.value }))} /></label>
+      {d.items.map((it: any, k: any) => <ItemFields key={k} it={it} k={k} type={d.type} cfg={cfg} onChange={setItem} />)}
+      <label className="field">Card note<input value={d.note} placeholder="e.g. Whichever is free" onChange={e => setD((x: any) => ({ ...x, note: e.target.value }))} /></label>
       {err && <p className="note err" role="alert">{err}</p>}
       <div className="actions">
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>

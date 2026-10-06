@@ -1,3 +1,4 @@
+import type { LogEntry } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
@@ -10,9 +11,9 @@ import ArmedButton from '../ArmedButton.jsx';
 import LineChart from '../LineChart.jsx';
 import LiftGoal from '../progress/LiftGoal.jsx';
 
-const num = v => (v === '' ? null : Number(v));
+const num = (v: any) => (v === '' ? null : Number(v));
 
-function EditEntry({ exId, entry, onDone }) {
+function EditEntry({ exId, entry, onDone }: { exId: any; entry: any; onDone: any }) {
   const { updateLog } = useAppStore.getState();
   const [date, setDate] = useState(entry.d);
   const [ph, setPh] = useState(entry.ph || '');
@@ -20,8 +21,8 @@ function EditEntry({ exId, entry, onDone }) {
   const iso = isTimed(ph || null);
   const [rows, setRows] = useState(() => setsOfEntry(entry).map(x => ({ w: x.w ?? '', r: (x.sec ?? x.r) ?? '' })));
   const [err, setErr] = useState('');
-  const edit = (j, k, v) => setRows(rs => rs.map((r, n) => (n === j ? { ...r, [k]: v } : r)));
-  const save = e => {
+  const edit = (j: any, k: any, v: any) => setRows(rs => rs.map((r, n) => (n === j ? { ...r, [k]: v } : r)));
+  const save = (e: any) => {
     e.preventDefault();
     const sets = rows.map(r => ({ w: num(r.w), v: num(r.r) })).filter(x => x.w != null || x.v != null).map(x => (iso ? { w: x.w, sec: x.v } : { w: x.w, r: x.v }));
     if (!sets.length) { setErr('Enter at least one set.'); return; }
@@ -66,11 +67,11 @@ function EditEntry({ exId, entry, onDone }) {
   );
 }
 
-export default function DetailSheet({ exId }) {
+export default function DetailSheet({ exId }: { exId: any }) {
   const cfg = useAppStore(s => s.cfg);
   const L = useAppStore(s => s.logs[exId]) || [];
   const { deleteLog, closeModal } = useAppStore.getState();
-  const [editing, setEditing] = useState(null); // the entry as it was when Edit was tapped
+  const [editing, setEditing] = useState<LogEntry | null>(null); // the entry as it was when Edit was tapped
   const editOpen = editing && findEntry(L, editing) >= 0; // gone or changed meanwhile: the form closes
   const last = L[L.length - 1];
   const multi = new Set(L.map(e => e.ph || null)).size > 1;
@@ -95,7 +96,7 @@ export default function DetailSheet({ exId }) {
             <tr key={`${entryId(e)}-${i}`}>
               <td>{fmtShort(parseDate(e.d))}</td>
               <td>{e.ph ? PHASES[e.ph].label : '—'}</td>
-              <td className="num">{e.w != null && e.w !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
+              <td className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
               <td className="num">{volText(e)}</td>
               <td>{e.n || (e.auto ? AUTO_NOTE : '')}</td>
               <td style={{ whiteSpace: 'nowrap' }}>

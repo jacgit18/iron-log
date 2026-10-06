@@ -1,3 +1,4 @@
+import type { EquipmentKey, PhaseKey } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, EQUIPMENT, EQ_KEYS } from '../../lib/data.js';
@@ -43,7 +44,7 @@ export default function ExerciseLibrary() {
       </div>
       <div className="exrows">
         {shown.map(r => {
-          const meta = [r.eq ? EQUIPMENT[r.eq] : '', r.ph ? `Default: ${PHASES[r.ph].label}` : '', r.rm ? `1RM ${r.rm} lb` : ''].filter(Boolean);
+          const meta = [r.eq ? EQUIPMENT[r.eq as EquipmentKey] : '', r.ph ? `Default: ${PHASES[r.ph as PhaseKey].label}` : '', r.rm ? `1RM ${r.rm} lb` : ''].filter(Boolean);
           const muscles = r.mob ? 'Mobility' : [r.p.length && `Primary: ${muscleList(r.p)}`, r.s.length && `Secondary: ${muscleList(r.s)}`].filter(Boolean).join(' · ');
           const where = r.inPrograms.length ? `In ${r.inPrograms.map(k => progName(cfg, k)).join(', ')}` : 'Not in a program';
           return (

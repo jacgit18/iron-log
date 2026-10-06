@@ -3,13 +3,13 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { warmupOf } from '../../lib/data.js';
 
 // The day's warm-up: tick items off, and add or remove them (the list is shared by every day and program).
-export default function WarmUp({ d, warm }) {
+export default function WarmUp({ d, warm }: { d: any; warm: any }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(''); const [rx, setRx] = useState('');
   const items = warmupOf(cfg);
-  const add = e => { e.preventDefault(); if (st.addWarmup(name, rx)) { setName(''); setRx(''); } };
+  const add = (e: any) => { e.preventDefault(); if (st.addWarmup(name, rx)) { setName(''); setRx(''); } };
   return (
     <div className="warm">
       <div className="warmhead">

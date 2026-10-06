@@ -1,3 +1,4 @@
+import type { PhaseKey } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -22,7 +23,7 @@ function ModePanel() {
       <div className="modes">
         {modes.map(([m, t, dsc]) => (
           <label className="mode" key={m}>
-            <input type="radio" name="mode" id={`mode-${m}`} value={m} checked={cfg.mode === m} onChange={() => st.setMode(m)} />
+            <input type="radio" name="mode" id={`mode-${m}`} value={m} checked={cfg.mode === m} onChange={() => st.setMode(m as 1 | 2 | 3)} />
             <div><b>Mode {m} · {t}</b><span>{dsc}</span></div>
           </label>
         ))}
@@ -57,7 +58,7 @@ function ModePanel() {
 
 function AppearancePanel() {
   const [a, setA] = useState(getAppearance);
-  const upd = patch => setA(setAppearance(patch));
+  const upd = (patch: any) => setA(setAppearance(patch));
   return (
     <section className="panel">
       <h2>Appearance</h2>
@@ -123,8 +124,8 @@ function PhasePanel() {
               return (
                 <tr key={k}>
                   <td><span className="dot" data-p={k} /> {PHASES[k].label}</td>
-                  <td>{PHASES[k].pct === 0 ? '—' : <><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={v => st.setPct(k, v)} /> %</>}</td>
-                  <td><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={v => st.setRxOverride(k, v)} /></td>
+                  <td>{PHASES[k].pct === 0 ? '—' : <><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={(v: any) => st.setPct(k, v)} /> %</>}</td>
+                  <td><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={(v: any) => st.setRxOverride(k, v)} /></td>
                 </tr>
               );
             })}
@@ -188,7 +189,7 @@ function BackupPanel() {
           <button type="button" className="btn primary" disabled={busy} onClick={st.backupToGitHub}>{busy ? 'Backing up…' : 'Back up to GitHub'}</button>
         </div>
         <p className="note">
-          {l ? <>Last backup {fmtShort(new Date(l.at))} · {l.files} file{l.files > 1 ? 's' : ''} · <a href={l.url} target="_blank" rel="noopener noreferrer">view on GitHub</a></> : 'No backups yet.'}
+          {l ? <>Last backup {fmtShort(new Date(l.at))} · {l.files} file{(l.files ?? 0) > 1 ? 's' : ''} · <a href={l.url} target="_blank" rel="noopener noreferrer">view on GitHub</a></> : 'No backups yet.'}
           {' '}Uses your Composio GitHub connection. Only weeks that changed are sent again.
         </p>
       </>}
@@ -281,11 +282,11 @@ function GitHubBackup() {
 
 // One line per phase, e.g. "35 lb · Strength", so a lift trained in two phases shows which weight is which.
 // With a 1RM given, each phase line also shows what that phase's % of the 1RM works out to, to compare with the logged weight.
-function PhaseWeights({ list, rm, cfg }) {
-  return list.map(({ ph, w }) => {
-    const pct = ph && cfg ? (cfg.pct[ph] ?? PHASES[ph].pct) : 0;
+function PhaseWeights({ list, rm, cfg }: { list: any; rm?: any; cfg?: any }) {
+  return list.map(({ ph, w }: { ph: any; w: any }) => {
+    const pct = ph && cfg ? (cfg.pct[ph] ?? PHASES[ph as PhaseKey].pct) : 0;
     return (
-      <div key={`${ph}:${w}`} className="phw"><span className="dot" data-p={ph || undefined} /> {w} lb · {ph ? PHASES[ph].label : 'No phase'}{rm > 0 && pct > 0 ? ` · ${pct}% of 1RM is ${round(rm * pct / 100)} lb` : ''}</div>
+      <div key={`${ph}:${w}`} className="phw"><span className="dot" data-p={ph || undefined} /> {w} lb · {ph ? PHASES[ph as PhaseKey].label : 'No phase'}{rm > 0 && pct > 0 ? ` · ${pct}% of 1RM is ${round(rm * pct / 100)} lb` : ''}</div>
     );
   });
 }
@@ -309,7 +310,7 @@ function RmPanel() {
                 <tr key={id}>
                   <td>{exInfo(cfg, id).n}</td>
                   <td><PhaseWeights list={programWeights(cfg, all, id)} /></td>
-                  <td><CommitInput key={`${id}:${cfg.rm[id] ?? ''}`} type="number" id={`rm-${id}`} aria-label={`${exInfo(cfg, id).n} 1RM (lb)`} min="0" step="any" value={cfg.rm[id] ?? ''} placeholder="—" onCommit={v => st.setRm(id, v)} /></td>
+                  <td><CommitInput key={`${id}:${cfg.rm[id] ?? ''}`} type="number" id={`rm-${id}`} aria-label={`${exInfo(cfg, id).n} 1RM (lb)`} min="0" step="any" value={cfg.rm[id] ?? ''} placeholder="—" onCommit={(v: any) => st.setRm(id, v)} /></td>
                   <td>{best.length ? <PhaseWeights list={best} rm={cfg.rm[id]} cfg={cfg} /> : '—'}</td>
                 </tr>
               );

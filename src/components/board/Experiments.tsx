@@ -7,7 +7,7 @@ import { ymd, monday } from '../../lib/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 
 // The Experiment board: exercises to try, added to a day of the viewed week. `day` is the column shown on phones.
-export default function Experiments({ day, onDragStart, onDragEnd }) {
+export default function Experiments({ day, onDragStart, onDragEnd }: { day: any; onDragStart: any; onDragEnd: any }) {
   const cfg = useAppStore(s => s.cfg);
   const items = useAppStore(s => s.experiments);
   const logs = useAppStore(s => s.logs);
@@ -15,7 +15,7 @@ export default function Experiments({ day, onDragStart, onDragEnd }) {
   const weekStart = useAppStore(s => s.weekStart);
   const today = useToday(s => s.today);
   const st = useAppStore.getState();
-  const [pick, setPick] = useState({});
+  const [pick, setPick] = useState<Record<string, number>>({});
   const days = DAYS.filter(d => !rest.includes(d));
   const start = ymd(monday(today)) === ymd(weekStart) ? todayCol(today) : day;
   const def = days.includes(start) ? start : days[0];

@@ -1,3 +1,4 @@
+import type { LogEntry, PhaseKey } from '../../types.ts';
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -11,22 +12,22 @@ import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 import { setError } from '../../lib/validate.js';
 
 // Older entries in a timed phase may hold reps (Mobility was counted in reps before), so each side falls back to the other.
-const toRow = (x, iso) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x.r : x.r ?? x.sec) ?? '', tw: false, tr: false });
-const num = v => (v === '' ? null : Number(v));
+const toRow = (x: any, iso: any) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x.r : x.r ?? x.sec) ?? '', tw: false, tr: false });
+const num = (v: any) => (v === '' ? null : Number(v));
 
-export default function LogSheet({ slotId, idx }) {
+export default function LogSheet({ slotId, idx }: { slotId: any; idx: any }) {
   const cfg = useAppStore(s => s.cfg);
   const week = useAppStore(s => s.week);
   const logs = useAppStore(s => s.logs);
   const weekStart = useAppStore(s => s.weekStart);
   const today = useToday(s => s.today);
   const st = useAppStore.getState();
-  const s = st.slotById(slotId);
+  const s = st.slotById(slotId)!; // the sheet only opens for a card that exists
   const it = s.items[idx]; const ex = exInfo(cfg, it.ex);
   const ph0 = phaseOf(cfg, week, s, idx);
 
   const [ph, setPh] = useState(ph0 || '');
-  const [rm, setRm] = useState(cfg.rm[it.ex] ?? '');
+  const [rm, setRm] = useState<number | string>(cfg.rm[it.ex] ?? '');
   const [date, setDate] = useState(() => defaultLogDate(weekStart));
   const [rows, setRows] = useState(() => planRows(cfg, logs, it, ph0).map(x => toRow(x, isTimed(ph0))));
   const [note, setNote] = useState('');
@@ -36,33 +37,33 @@ export default function LogSheet({ slotId, idx }) {
   const [makeExDefault, setMakeExDefault] = useState(false);
   const [done, setDone] = useState(true);
   const [err, setErr] = useState('');
-  const firstRef = useRef(null);
+  const firstRef = useRef<HTMLInputElement>(null);
   useEffect(() => { firstRef.current?.focus(); }, []);
 
-  const phv = ph || null; const iso = isTimed(phv);
+  const phv = (ph || null) as PhaseKey | null; const iso = isTimed(phv);
   const t = targetOf(cfg, logs, it, phv);
   const rx = rxOf(cfg, it, phv);
   const last = lastLog(logs, it.ex, phv);
   const hist = (logs[it.ex] || []).slice(-6).reverse();
   const goals = liftGoalsStatus(cfg, it.ex, logs[it.ex], today, phv);
 
-  const changePhase = v => { setPh(v); const p = v || null; setRows(planRows(cfg, logs, it, p).map(x => toRow(x, isTimed(p)))); };
+  const changePhase = (v: any) => { setPh(v); const p = v || null; setRows(planRows(cfg, logs, it, p).map(x => toRow(x, isTimed(p)))); };
   // Editing a set fills the same field in later sets, until those are edited themselves.
-  const editCell = (i, k, v) => setRows(rs => rs.map((r, j) => {
+  const editCell = (i: any, k: any, v: any) => setRows(rs => rs.map((r, j) => {
     const touched = k === 'w' ? 'tw' : 'tr';
     if (j === i) return { ...r, [k]: v, [touched]: true };
     if (j > i && !r[touched]) return { ...r, [k]: v };
     return r;
   }));
 
-  const submit = e => {
+  const submit = (e: any) => {
     e.preventDefault();
     const sets = rows.map(r => ({ w: num(r.w), v: num(r.r) })).filter(x => x.w != null || x.v != null)
       .map(x => (iso ? { w: x.w, sec: x.v } : { w: x.w, r: x.v }));
     if (!sets.length) { setErr('Enter at least one set.'); return; }
     const bad = setError(sets, iso); if (bad) { setErr(bad); return; }
     if (!isVideoUrl(url)) { setErr(VIDEO_ERR); return; }
-    const entry = { d: date || ymd(today), ph: phv, ...summarizeSets(sets, iso), slot: slotId, wk: st.weekKey() };
+    const entry: LogEntry = { d: date || ymd(today), ph: phv, ...summarizeSets(sets, iso), slot: slotId, wk: st.weekKey() };
     if (note.trim()) entry.n = note.trim();
     const rmVal = rm === '' ? null : Number(rm);
     if (st.submitLog(slotId, idx, { entry, ph: phv, makeDefault, makeExDefault, rm: rmVal, done, eq, url })) st.closeModal();
@@ -147,7 +148,7 @@ export default function LogSheet({ slotId, idx }) {
                 <tr key={i}>
                   <td>{fmtShort(parseDate(e.d))}</td>
                   <td>{e.ph ? PHASES[e.ph].label : '—'}</td>
-                  <td className="num">{e.w != null && e.w !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
+                  <td className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
                   <td className="num">{volText(e)}</td>
                 </tr>
               ))}

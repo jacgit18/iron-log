@@ -5,12 +5,12 @@ import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
 // Add or edit a supplement in the library: name, dose, note, and when it is on the schedule.
-export default function SupplementSheet({ id }) {
+export default function SupplementSheet({ id }: { id: any }) {
   const s = useAppStore.getState();
   const cur = id ? s.supp.items.find(x => x.id === id) : null;
   const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : '', dose: cur ? cur.dose || '' : '', note: cur ? cur.note || '' : '', slot: cur ? cur.slot : 'morning' }));
   const [err, setErr] = useState('');
-  const up = patch => setD(x => ({ ...x, ...patch }));
+  const up = (patch: any) => setD(x => ({ ...x, ...patch }));
   return (
     <Sheet>
       <h2 className="cond">{cur ? 'Edit supplement' : 'New supplement'}</h2>

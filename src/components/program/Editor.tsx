@@ -1,3 +1,4 @@
+import type { ProgKey } from '../../types.ts';
 import { Fragment, useEffect, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -11,14 +12,14 @@ import ExerciseLibrary from './ExerciseLibrary.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import SupplementLibrary from './SupplementLibrary.jsx';
 
-const progStats = p => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
+const progStats = (p: any) => { const n = p.days.reduce((a: any, d: any) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
 
-function slotSummary(cfg, sl) {
-  const names = sl.items.map(i => exInfo(cfg, i.ex).n);
+function slotSummary(cfg: any, sl: any) {
+  const names = sl.items.map((i: any) => exInfo(cfg, i.ex).n);
   return sl.type === 'superset' ? names.join(' → ') : sl.type === 'either' ? names.join(' or ') : names[0];
 }
 
-function LibRow({ name, meta, inUse, onLoad, loadLabel, extra }) {
+function LibRow({ name, meta, inUse, onLoad, loadLabel, extra }: { name: any; meta: any; inUse: any; onLoad: any; loadLabel: any; extra?: any }) {
   return (
     <div className={`edrow${inUse ? ' inuse' : ''}`}>
       <div className="edmain"><b>{name}</b><span className="note">{meta}</span></div>
@@ -30,7 +31,7 @@ function LibRow({ name, meta, inUse, onLoad, loadLabel, extra }) {
   );
 }
 
-function Library({ k, custom }) {
+function Library({ k, custom }: { k: any; custom: any }) {
   const cfg = useAppStore(s => s.cfg); const library = useAppStore(s => s.library); const programs = useAppStore(s => s.programs);
   const st = useAppStore.getState();
   const [name, setName] = useState('');
@@ -47,11 +48,11 @@ function Library({ k, custom }) {
       </div>
       <p className="note">Load a version into {pn}. Whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
       <div className="edlist">
-        <LibRow name={`Original ${pn}`} meta={`Built in · ${progStats(BUILTIN[k])} · always kept`} inUse={!custom} loadLabel={loadLabel} onLoad={() => st.loadVersion('orig', k)} />
+        <LibRow name={`Original ${pn}`} meta={`Built in · ${progStats(BUILTIN[k as ProgKey])} · always kept`} inUse={!custom} loadLabel={loadLabel} onLoad={() => st.loadVersion('orig', k)} />
         {items.map(it => (
           <LibRow
             key={it.id} name={it.name} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k)}
-            meta={`${it.created ? 'Created from' : 'From'} ${progName(cfg, it.from)} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto ? ' · auto-saved' : ''}`}
+            meta={`${it.created ? 'Created from' : 'From'} ${progName(cfg, it.from as string)} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto ? ' · auto-saved' : ''}`}
             extra={<>
               <button type="button" className="btn sm" aria-label={`Edit ${it.name}`} onClick={() => { st.setEdProg('L:' + it.id); st.setEdDay(1); window.scrollTo({ top: 0 }); }}>Edit</button>
               <ArmedButton className="btn sm ghost" aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Delete?" onConfirm={() => st.deleteLibItem(it.id)} />
@@ -71,14 +72,14 @@ function Library({ k, custom }) {
   );
 }
 
-function LibItemPanel({ it }) {
+function LibItemPanel({ it }: { it: any }) {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
   return (
     <section className="panel edpanel lib" style={{ marginTop: 16 }}>
       <h2>Put it into the rotation</h2>
       <p className="note">Loading replaces what's in that slot. The program there now is saved to the library first if it isn't already, so nothing is lost. {it.name} stays in the library too.</p>
       <div className="actions" style={{ justifyContent: 'flex-start', flexWrap: 'wrap' }}>
-        {['A', 'B'].map(k => (
+        {(['A', 'B'] as const).map(k => (
           <ArmedButton key={k} className="btn primary" label={`Load into ${progName(cfg, k)}`} armedLabel={`Tap to load into ${progName(cfg, k)}`} onConfirm={() => st.loadVersion(it.id, k)} />
         ))}
         <ArmedButton className="btn ghost" label="Delete program" armedLabel="Delete?" onConfirm={() => st.deleteLibItem(it.id)} />
@@ -103,7 +104,7 @@ function ProgramEditor() {
   }, [k]);
 
   const lib = !!item; const day = prog.days[edDay - 1];
-  const custom = !lib && prog !== BUILTIN[k];
+  const custom = !lib && prog !== BUILTIN[k as ProgKey];
   const edName = lib ? item.name : progName(cfg, k);
 
   return (
@@ -126,7 +127,7 @@ function ProgramEditor() {
         </>
       ) : (
         <label className="field progname">Name of Program {k}
-          <CommitInput key={`${k}:${(cfg.progNames || {})[k] || ''}`} id="prog-name" maxLength={40} value={(cfg.progNames || {})[k] || ''} placeholder={`Program ${k}`} onCommit={v => st.renameProgram(k, v)} />
+          <CommitInput key={`${k}:${(cfg.progNames || {})[k] || ''}`} id="prog-name" maxLength={40} value={(cfg.progNames || {})[k] || ''} placeholder={`Program ${k}`} onCommit={(v: any) => st.renameProgram(k as ProgKey, v)} />
         </label>
       )}
       <section className="panel edpanel">

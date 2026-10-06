@@ -3,9 +3,9 @@ import { dataStats, libDate, importSel } from '../../lib/export.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const plural = (n: any, one: any, many: any) => `${n} ${n === 1 ? one : many}`;
 
-function ExcelImport({ draft, s, busy }) {
+function ExcelImport({ draft, s, busy }: { draft: any; s: any; busy: any }) {
   const st = useAppStore.getState();
   const d = draft.data; const x = d.excel.settings; const rms = Object.keys(d.config.rm).length;
   const hasSettings = x.mode || x.rest != null || x.pct;

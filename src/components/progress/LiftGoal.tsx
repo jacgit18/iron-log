@@ -6,7 +6,7 @@ import { GOAL_KEYS, goalPhaseLabel, liftGoalsOf, liftGoalStatus } from '../../li
 import { fmtLb, signed } from '../../lib/body.js';
 import ArmedButton from '../ArmedButton.jsx';
 
-function GoalForm({ exId, from, goal, taken, defKey, onDone }) {
+function GoalForm({ exId, from, goal, taken, defKey, onDone }: { exId: any; from?: any; goal?: any; taken: any; defKey?: any; onDone: any }) {
   const { setLiftGoal } = useAppStore.getState();
   const free = GOAL_KEYS.filter(k => k === from || !taken.includes(k));
   const [key, setKey] = useState(from || (free.includes(defKey) ? defKey : free[0]));
@@ -30,16 +30,16 @@ function GoalForm({ exId, from, goal, taken, defKey, onDone }) {
   );
 }
 
-function GoalView({ exId, k, goal, entries, today, onEdit }) {
+function GoalView({ exId, k, goal, entries, today, onEdit }: { exId: any; k: any; goal: any; entries: any; today: any; onEdit: any }) {
   const { clearLiftGoal } = useAppStore.getState();
-  const g = liftGoalStatus(goal, entries, today, k);
+  const g = liftGoalStatus(goal, entries, today, k)!; // a goal on the list always has a weight
   const where = k === 'any' ? '' : ` in ${goalPhaseLabel(k).toLowerCase()}`;
   const lines = [];
-  if (g.reached) lines.push(`Reached: ${fmtLb(g.best.w)} lb on ${fmtShort(parseDate(g.best.d))}.`);
+  if (g.reached) lines.push(`Reached: ${fmtLb(g.best!.w)} lb on ${fmtShort(parseDate(g.best!.d))}.`);
   else {
-    lines.push(g.best ? `Best${where}: ${fmtLb(g.best.w)} lb (${fmtShort(parseDate(g.best.d))}), ${fmtLb(g.left)} lb to go.` : `Log a set${where} to start tracking it.`);
-    if (g.need != null) lines.push(`To hit it by ${fmtShort(parseDate(g.by))}: ${signed(g.need, 1)} lb a week.`);
-    if (g.by && g.weeksLeft != null && g.weeksLeft <= 0) lines.push(`The date (${fmtShort(parseDate(g.by))}) has passed.`);
+    lines.push(g.best ? `Best${where}: ${fmtLb(g.best!.w)} lb (${fmtShort(parseDate(g.best!.d))}), ${fmtLb(g.left)} lb to go.` : `Log a set${where} to start tracking it.`);
+    if (g.need != null) lines.push(`To hit it by ${fmtShort(parseDate(g.by!))}: ${signed(g.need, 1)} lb a week.`);
+    if (g.by && g.weeksLeft != null && g.weeksLeft <= 0) lines.push(`The date (${fmtShort(parseDate(g.by!))}) has passed.`);
   }
   const name = `${goalPhaseLabel(k)} goal`;
   return (
@@ -61,11 +61,11 @@ function GoalView({ exId, k, goal, entries, today, onEdit }) {
 
 // The weight you want to lift on this exercise, per phase or in any phase: set it, see your best against it,
 // and the weekly gain needed to hit a date.
-export default function LiftGoal({ exId }) {
+export default function LiftGoal({ exId }: { exId: any }) {
   const cfg = useAppStore(s => s.cfg);
   const L = useAppStore(s => s.logs[exId]);
   const today = useToday(s => s.today);
-  const [editing, setEditing] = useState(null); // null, 'new' or the key of the goal being changed
+  const [editing, setEditing] = useState<string | null>(null); // null, 'new' or the key of the goal being changed
   const goals = liftGoalsOf(cfg, exId); const taken = goals.map(([k]) => k);
   const last = L && L.length ? L[L.length - 1] : null;
   const defKey = goals.length ? (last && last.ph) || 'any' : 'any';

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import type { PhaseKey } from '../../types.ts';
+import { useState, type CSSProperties } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
@@ -10,18 +11,18 @@ import { liftGoalStatus, goalPhaseLabel } from '../../lib/liftGoal.js';
 import LineChart from '../LineChart.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
-function Kpi({ label, value, sub }) {
+function Kpi({ label, value, sub }: { label: any; value: any; sub: any }) {
   return <div className="kpi"><span className="kl">{label}</span><span className="kv">{value}</span><span className="ks">{sub}</span></div>;
 }
 
-function KpiTiles({ keys, byWeek, changes }) {
+function KpiTiles({ keys, byWeek, changes }: { keys: any; byWeek: any; changes: any }) {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
   const week = useAppStore(s => s.week); const body = useAppStore(s => s.body);
   const r = weekSummary(cfg, programs, useAppStore.getState().weekKey(), week);
   const k4 = keys.slice(-4), p4 = keys.slice(-8, -4);
-  const s4 = k4.reduce((a, k) => a + (byWeek[k] ? byWeek[k].sets : 0), 0);
-  const prev = p4.length === 4 && p4.some(k => byWeek[k] && byWeek[k].sessions) ? p4.reduce((a, k) => a + byWeek[k].sets, 0) : null;
-  const up = changes.filter(c => c.pct > 0).length;
+  const s4 = k4.reduce((a: any, k: any) => a + (byWeek[k] ? byWeek[k].sets : 0), 0);
+  const prev = p4.length === 4 && p4.some((k: any) => byWeek[k] && byWeek[k].sessions) ? p4.reduce((a: any, k: any) => a + byWeek[k].sets, 0) : null;
+  const up = changes.filter((c: any) => c.pct > 0).length;
   const L = bwSorted(body); let bw = null;
   if (L.length) {
     const last = L[L.length - 1]; const cut = ymd(addDays(parseDate(last.wk), -28));
@@ -33,25 +34,25 @@ function KpiTiles({ keys, byWeek, changes }) {
       <Kpi label="This week" value={<>{r.ex}<small> of {r.total}</small></>} sub={`exercises done · ${r.full} of ${DAY_COUNT} days${r.skipped ? ` · ${r.skipped} skipped` : ''}`} />
       <Kpi label="Sets, last 4 weeks" value={fmtSets(s4)} sub={prev == null ? 'A comparison with the previous 4 weeks starts after 8 weeks of logs' : `${signed(s4 - prev)} vs the 4 weeks before`} />
       <Kpi label="Lifts going up" value={changes.length ? <>{up}<small> of {changes.length}</small></> : '—'} sub={changes.length ? 'heavier now than at the start of the last 8 weeks' : 'Log a lift with weight on two days to track it'} />
-      {bw && <Kpi label="Body weight" value={<>{fmtLb(bw.last.w)}<small> lb</small></>} sub={bw.diff == null ? `Logged ${fmtShort(parseDate(bw.last.d))}` : `${signed(bw.diff, 1)} lb since ${fmtShort(parseDate(bw.base.d))}`} />}
+      {bw && <Kpi label="Body weight" value={<>{fmtLb(bw.last.w)}<small> lb</small></>} sub={bw.diff == null ? `Logged ${fmtShort(parseDate(bw.last.d))}` : `${signed(bw.diff, 1)} lb since ${fmtShort(parseDate(bw.base!.d))}`} />}
     </div>
   );
 }
 
-function SetsChart({ keys, byWeek }) {
+function SetsChart({ keys, byWeek }: { keys: any; byWeek: any }) {
   const thisSun = keys[keys.length - 1];
-  const max = Math.max(...keys.map(k => byWeek[k].sets), 1); const step = niceStep(max); const top = Math.ceil(max / step) * step;
+  const max = Math.max(...keys.map((k: any) => byWeek[k].sets), 1); const step = niceStep(max); const top = Math.ceil(max / step) * step;
   const grid = []; for (let v = 0; v <= top; v += step) grid.push(v);
-  const total = keys.reduce((a, k) => a + byWeek[k].sets, 0);
+  const total = keys.reduce((a: any, k: any) => a + byWeek[k].sets, 0);
   return (
     <section className="panel tchart">
       <h2>Sets logged per week</h2>
       {!total ? <p className="note">Logged sets show up here, one bar per week.</p> : (
         <>
-          <div className="bars" style={{ '--n': keys.length }}>
+          <div className="bars" style={{ '--n': keys.length } as CSSProperties}>
             <div className="bgrid" aria-hidden="true">{grid.map(v => <span key={v} style={{ bottom: `${v / top * 100}%` }}><b>{v}</b></span>)}</div>
             <div className="bcols" role="list" aria-label="Sets logged per week">
-              {keys.map((k, i) => {
+              {keys.map((k: any, i: any) => {
                 const r = byWeek[k]; const cur = k === thisSun; const pct = r.sets / top * 100;
                 const tip = `Week of ${fmtShort(parseDate(k))}${cur ? ' (so far)' : ''}: ${fmtSets(r.sets)} set${r.sets === 1 ? '' : 's'} in ${r.sessions} session${r.sessions === 1 ? '' : 's'}`;
                 return (
@@ -74,13 +75,13 @@ function SetsChart({ keys, byWeek }) {
 }
 
 // The goal a row of the change chart is measured against: the goal for that phase, or else the any-phase goal.
-function rowGoal(cfg, logs, c, today) {
+function rowGoal(cfg: any, logs: any, c: any, today: any) {
   const G = (cfg.liftGoals || {})[c.id]; if (!G) return null;
   const k = c.ph && G[c.ph] ? c.ph : G.any ? 'any' : null;
   return k ? liftGoalStatus(G[k], logs[c.id], today, k) : null;
 }
 
-function ChangeChart({ changes }) {
+function ChangeChart({ changes }: { changes: any }) {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
   const today = useToday(s => s.today);
   if (!changes.length) return (
@@ -88,13 +89,13 @@ function ChangeChart({ changes }) {
       <p className="note">Once you log the same lift with weight on two different days, this shows how much heavier (or lighter) it is now, over the last 8 weeks.</p>
     </section>
   );
-  const downs = changes.filter(c => c.pct < 0).slice(-4);
-  const shown = [...changes.filter(c => c.pct >= 0).slice(0, 10 - downs.length), ...downs];
+  const downs = changes.filter((c: any) => c.pct < 0).slice(-4);
+  const shown = [...changes.filter((c: any) => c.pct >= 0).slice(0, 10 - downs.length), ...downs];
   // A goal is drawn as a tick at the % change it would be from the first weight. The scale stretches to fit goals,
   // up to twice the bars' own scale; a goal past that sits at the end, pointing on.
   const goals = shown.map(c => { const g = rowGoal(cfg, logs, c, today); return g ? { ...g, gp: (g.target - c.w0) / c.w0 * 100 } : null; });
   const barLim = Math.max(10, ...shown.map(c => Math.abs(c.pct)));
-  const lim = Math.max(barLim, ...goals.filter(Boolean).map(g => Math.min(Math.abs(g.gp), barLim * 2)));
+  const lim = Math.max(barLim, ...goals.filter((g): g is NonNullable<typeof g> => !!g).map(g => Math.min(Math.abs(g.gp), barLim * 2)));
   const mixed = shown.some(c => c.pct < 0) || goals.some(g => g && g.gp < 0); const zero = mixed ? 50 : 0, span = mixed ? 50 : 100;
   const more = changes.length - shown.length;
   return (
@@ -105,7 +106,7 @@ function ChangeChart({ changes }) {
           const w = Math.abs(c.pct) / lim * span; const dir = c.pct > 0 ? 'up' : c.pct < 0 ? 'down' : 'flat';
           const name = exInfo(cfg, c.id).n; const g = goals[i];
           const goalTip = g ? `. Goal ${fmtLb(g.target)} lb${g.key === 'any' ? '' : ` (${goalPhaseLabel(g.key)})`}: ${g.reached ? 'reached' : `${fmtLb(g.left)} lb to go`}` : '';
-          const tip = `${name} · ${c.ph ? PHASES[c.ph].label : 'No phase'}: ${c.w0} → ${c.w1} lb (${signed(c.pct, 0)}%) from ${fmtShort(parseDate(c.d0))} to ${fmtShort(parseDate(c.d1))}, ${c.n} sessions${goalTip}`;
+          const tip = `${name} · ${c.ph ? PHASES[c.ph as PhaseKey].label : 'No phase'}: ${c.w0} → ${c.w1} lb (${signed(c.pct, 0)}%) from ${fmtShort(parseDate(c.d0))} to ${fmtShort(parseDate(c.d1))}, ${c.n} sessions${goalTip}`;
           const past = g && Math.abs(g.gp) > lim; const gx = g ? zero + Math.max(-lim, Math.min(lim, g.gp)) / lim * span : 0;
           return (
             <div key={`${c.id}|${c.ph}`} role="listitem" className="chrow" data-tip={tip} tabIndex={0} aria-label={tip}>
@@ -156,8 +157,8 @@ function BodyGoal() {
     if (g.reached) lines.push('Goal reached.');
     else lines.push(`${fmtLb(Math.abs(g.left))} lb to ${g.dir === 'gain' ? 'gain' : 'lose'}, from ${fmtLb(g.start)} lb when you set it.`);
     if (g.pace != null) lines.push(`Recent pace: ${signed(g.pace, 1)} lb a week.`);
-    if (!g.reached && g.need != null) lines.push(`To hit it by ${fmtShort(parseDate(g.by))}: ${signed(g.need, 1)} lb a week.`);
-    if (!g.reached && g.by && g.weeksLeft != null && g.weeksLeft <= 0) lines.push(`The date (${fmtShort(parseDate(g.by))}) has passed.`);
+    if (!g.reached && g.need != null) lines.push(`To hit it by ${fmtShort(parseDate(g.by!))}: ${signed(g.need, 1)} lb a week.`);
+    if (!g.reached && g.by && g.weeksLeft != null && g.weeksLeft <= 0) lines.push(`The date (${fmtShort(parseDate(g.by!))}) has passed.`);
   } else lines.push('Log your weight on the Board to start tracking it.');
   return (
     <div className="bwgoal">
@@ -207,10 +208,10 @@ function BodyChart() {
   );
 }
 
-function MuscleHeat({ keys }) {
+function MuscleHeat({ keys }: { keys: any }) {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
   const K = keys.slice(-8); const data = muscleWeeks(cfg, logs, K); const thisSun = K[K.length - 1];
-  const any = M_KEYS.some(m => K.some(k => data[m][k] > 0));
+  const any = M_KEYS.some(m => K.some((k: any) => data[m][k] > 0));
   return (
     <section className="panel tchart heat-panel">
       <h2>Muscles trained per week</h2>
@@ -218,19 +219,19 @@ function MuscleHeat({ keys }) {
         <>
           <div className="sr"><table>
             <caption>Sets per muscle per week, from what you logged</caption>
-            <thead><tr><th scope="col">Muscle</th>{K.map(k => <th scope="col" key={k}>Week of {fmtShort(parseDate(k))}{k === thisSun ? ' (so far)' : ''}</th>)}</tr></thead>
+            <thead><tr><th scope="col">Muscle</th>{K.map((k: any) => <th scope="col" key={k}>Week of {fmtShort(parseDate(k))}{k === thisSun ? ' (so far)' : ''}</th>)}</tr></thead>
             <tbody>
-              {M_KEYS.map(m => <tr key={m}><th scope="row">{MUSCLES[m].n}</th>{K.map(k => <td key={k}>{data[m][k] ? fmtSets(data[m][k]) : '0'}</td>)}</tr>)}
+              {M_KEYS.map(m => <tr key={m}><th scope="row">{MUSCLES[m].n}</th>{K.map((k: any) => <td key={k}>{data[m][k] ? fmtSets(data[m][k]) : '0'}</td>)}</tr>)}
             </tbody>
           </table></div>
           <div className="heat" aria-hidden="true" style={{ gridTemplateColumns: `minmax(96px,160px) repeat(${K.length},minmax(0,1fr))` }}>
             <span />
-            {K.map((k, i) => <span key={k} className={`hx${(K.length - 1 - i) % 2 ? ' alt' : ''}`}>{k === thisSun ? 'Now' : mdLabel(k)}</span>)}
+            {K.map((k: any, i: any) => <span key={k} className={`hx${(K.length - 1 - i) % 2 ? ' alt' : ''}`}>{k === thisSun ? 'Now' : mdLabel(k)}</span>)}
             {M_KEYS.flatMap(m => {
-              const row = K.map(k => data[m][k]); const none = row.every(v => !v);
+              const row = K.map((k: any) => data[m][k]); const none = row.every((v: any) => !v);
               return [
                 <span key={m} className={`hn${none ? ' none' : ''}`}>{MUSCLES[m].n}</span>,
-                ...K.map((k, i) => {
+                ...K.map((k: any, i: any) => {
                   const v = row[i];
                   const tip = `${MUSCLES[m].n}, week of ${fmtShort(parseDate(k))}${k === thisSun ? ' (so far)' : ''}: ${v ? fmtSets(v) + ' set' + (v === 1 ? '' : 's') : 'not trained'}`;
                   return <i key={`${m}-${k}`} className={`hc l${level(v)}${k === thisSun ? ' cur' : ''}`} data-tip={tip}>{v ? fmtSets(v) : ''}</i>;

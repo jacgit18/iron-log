@@ -9,7 +9,7 @@ import ArmedButton from '../ArmedButton.jsx';
 // Everything about one exercise in one place: name (your own exercises), video link, equipment, the phase it starts
 // in on every card (a card's own saved or one-week phase still wins), 1RM and muscles. Without an exId it makes a
 // new exercise for the library. Opened from a card's Details button and from the Exercise library.
-export default function ExerciseSheet({ exId }) {
+export default function ExerciseSheet({ exId }: { exId: any }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const isNew = exId == null; const custom = isNew || !EX[exId];
@@ -21,9 +21,9 @@ export default function ExerciseSheet({ exId }) {
   const [tags, setTags] = useState(() => (isNew ? { mob: false, st: {} } : draftOfTags(cfg, exId)));
   const [tagsTouched, setTagsTouched] = useState(false);
   const [err, setErr] = useState('');
-  const up = patch => setD(x => ({ ...x, ...patch }));
+  const up = (patch: any) => setD(x => ({ ...x, ...patch }));
   const hasOwnTags = !isNew && !!(cfg.muscleMap && cfg.muscleMap[exId]) && !!MUSCLE_MAP[exId];
-  const submit = e => {
+  const submit = (e: any) => {
     e.preventDefault();
     const out = { ...d, ...(tagsTouched ? { tags: tagsOfDraft(tags) } : {}) };
     const msg = isNew ? st.createLibraryExercise(out) : st.saveExerciseDetails(exId, out);
@@ -56,7 +56,7 @@ export default function ExerciseSheet({ exId }) {
       <fieldset className="edit-item">
         <legend>Muscles</legend>
         <p className="note">Tap a muscle to cycle: not used → secondary → primary.</p>
-        <MuscleChips draft={tags} setDraft={f => { setTags(f); setTagsTouched(true); }} mobId="ex-mob" />
+        <MuscleChips draft={tags} setDraft={(f: any) => { setTags(f); setTagsTouched(true); }} mobId="ex-mob" />
         {hasOwnTags && <button type="button" className="btn sm ghost" onClick={useDefaultTags}>Use default muscles</button>}
       </fieldset>
       {err && <p className="note err" role="alert">{err}</p>}

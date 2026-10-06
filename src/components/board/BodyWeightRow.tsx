@@ -4,7 +4,7 @@ import { useToday } from '../../store/useToday.js';
 import { monday, ymd, parseDate, fmtShort } from '../../lib/dates.js';
 import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
 
-function GoalNote({ goal, body, today }) {
+function GoalNote({ goal, body, today }: { goal: any; body: any; today: any }) {
   const g = goalStatus(goal, body, today);
   if (!g || !g.last) return null;
   return <span className="note">Goal {fmtLb(g.target)} lb · {g.reached ? 'reached' : `${fmtLb(Math.abs(g.left))} lb to go`}</span>;

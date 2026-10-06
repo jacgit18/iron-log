@@ -5,11 +5,11 @@ import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../lib/dates.js
 import { SLOTS, scheduled, scheduleOf, slotTally } from '../../lib/supplements.js';
 import { HOT_OZ, TRAIN_OZ_PER_30, BOTTLES, CUP_OZ, OZ_PER_LB, fmtOz, cupsOf, sumOz, lastDays, goalFor } from '../../lib/water.js';
 
-function Slot({ slot, label, date, items, taken, editing }) {
+function Slot({ slot, label, date, items, taken, editing }: { slot: any; label: any; date: any; items: any; taken: any; editing: any }) {
   const s = useAppStore.getState();
   const [name, setName] = useState(''); const [dose, setDose] = useState('');
   const list = scheduleOf(items)[slot]; const t = slotTally(items, taken, date, slot);
-  const add = e => { e.preventDefault(); if (s.addSupplement(slot, name, dose)) { setName(''); setDose(''); } };
+  const add = (e: any) => { e.preventDefault(); if (s.addSupplement(slot, name, dose)) { setName(''); setDose(''); } };
   return (
     <div className={`card${t.full ? ' done' : ''}`} role="group" aria-labelledby={`supp-h-${slot}`}>
       <div className="warmhead">
@@ -33,11 +33,11 @@ function Slot({ slot, label, date, items, taken, editing }) {
           <button type="submit" className="btn sm" id={`suppadd-${slot}`} disabled={!name.trim()}>Add</button>
         </form>
       )}
-      {editing && items.some(i => !i.slot) && (
+      {editing && items.some((i: any) => !i.slot) && (
         <label className="field">Add from your library
           <select id={`supplib-${slot}`} value="" onChange={e => { if (e.target.value) s.setSupplementSlot(e.target.value, slot); }}>
             <option value="">Choose…</option>
-            {items.filter(i => !i.slot).map(i => <option key={i.id} value={i.id}>{i.n}{i.dose ? ` · ${i.dose}` : ''}</option>)}
+            {items.filter((i: any) => !i.slot).map((i: any) => <option key={i.id} value={i.id}>{i.n}{i.dose ? ` · ${i.dose}` : ''}</option>)}
           </select>
         </label>
       )}
@@ -45,7 +45,7 @@ function Slot({ slot, label, date, items, taken, editing }) {
   );
 }
 
-function Schedule({ date, supp }) {
+function Schedule({ date, supp }: { date: any; supp: any }) {
   const [editing, setEditing] = useState(false);
   const all = scheduled(supp.items); const done = all.filter(x => (supp.taken[date] || {})[x.id]).length;
   return (
@@ -61,7 +61,7 @@ function Schedule({ date, supp }) {
   );
 }
 
-function WaterGoal({ goal, mode }) {
+function WaterGoal({ goal, mode }: { goal: any; mode: any }) {
   const s = useAppStore.getState();
   const [editing, setEditing] = useState(false); const [v, setV] = useState('');
   const text = goal.source === 'weight' ? `Base goal: ${fmtOz(goal.baseOz)} oz, half your ${fmtOz(goal.lb)} lb body weight`
@@ -77,7 +77,7 @@ function WaterGoal({ goal, mode }) {
   );
 }
 
-function Boost({ date, boost, extra }) {
+function Boost({ date, boost, extra }: { date: any; boost: any; extra: any }) {
   const s = useAppStore.getState(); const [m, setM] = useState(''); const mins = boost && boost.mins ? String(boost.mins) : '';
   useEffect(() => { setM(mins); }, [date, mins]);
   return (
@@ -92,7 +92,7 @@ function Boost({ date, boost, extra }) {
   );
 }
 
-function Week({ water, goalOf, end, selected, onPick }) {
+function Week({ water, goalOf, end, selected, onPick }: { water: any; goalOf: any; end: any; selected: any; onPick: any }) {
   const days = lastDays(water, end, 7, ymd).map(x => ({ ...x, goal: goalOf(x.d) })); const max = Math.max(...days.map(x => Math.max(x.goal, x.oz)));
   return (
     <div className="mbars" role="list" aria-label="Last 7 days of water">
@@ -113,13 +113,13 @@ export default function Supplements() {
   const today = useToday(s => s.today);
   const s = useAppStore.getState();
   const todayKey = ymd(today);
-  const [sel, setSel] = useState(null); const date = sel || todayKey;
+  const [sel, setSel] = useState<string | null>(null); const date = sel || todayKey;
   const [custom, setCustom] = useState('');
   const list = supp.water[date] || []; const total = sumOz(list); const gi = goalFor(supp, body, date); const goal = gi.oz;
   const pct = Math.min(100, Math.round(total / goal * 100)); const left = Math.max(0, goal - total);
   const d = parseDate(date); const isToday = date === todayKey;
-  const step = n => { const k = ymd(addDays(d, n)); if (k <= todayKey) setSel(k === todayKey ? null : k); };
-  const add = oz => { s.addWater(date, oz); };
+  const step = (n: any) => { const k = ymd(addDays(d, n)); if (k <= todayKey) setSel(k === todayKey ? null : k); };
+  const add = (oz: any) => { s.addWater(date, oz); };
   return (
     <div>
       <div className="weekbar">
@@ -171,7 +171,7 @@ export default function Supplements() {
       </section>
       <section className="panel" style={{ marginTop: 16 }} aria-labelledby="water7-h">
         <h2 id="water7-h">Last 7 days</h2>
-        <Week water={supp.water} goalOf={k => goalFor(supp, body, k).oz} end={d} selected={date} onPick={k => setSel(k === todayKey ? null : k)} />
+        <Week water={supp.water} goalOf={(k: any) => goalFor(supp, body, k).oz} end={d} selected={date} onPick={(k: any) => setSel(k === todayKey ? null : k)} />
         <p className="note">Ounces per day. A full bar means you hit your goal.</p>
       </section>
     </div>

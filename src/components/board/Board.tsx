@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import type { MuscleKey, ProgKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
@@ -14,19 +15,19 @@ import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
 
 // Cards moved in from another day are grouped under their own heading.
-const secOf = (s, day) => (s.day === day ? s.sec : 'Moved here');
+const secOf = (s: any, day: any) => (s.day === day ? s.sec : 'Moved here');
 const MODES = [[1, 'Mode 1 · A only'], [2, 'Mode 2 · monthly'], [3, 'Mode 3 · 6 months']];
-const tipHidden = k => LS.get(k) === 1; // stored as the string "1", same as the vanilla app
+const tipHidden = (k: any) => LS.get(k) === 1; // stored as the string "1", same as the vanilla app
 
 // Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
-function SwapArrows({ d }) {
+function SwapArrows({ d }: { d: any }) {
   const rest = useAppStore(s => s.week.rest) || [];
-  const swap = dir => {
+  const swap = (dir: any) => {
     if (!useAppStore.getState().swapDays(d, dir)) return;
     const e = d + dir;
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => (document.getElementById(`swap-${e}-${dir}`) || document.getElementById(`swap-${e}-${-dir}`))?.focus());
   };
-  const label = n => (rest.includes(d) ? (rest.includes(n) ? `Day ${n} is also a rest day` : `Move rest day to Day ${n}`) : rest.includes(n) ? `Swap Day ${d} with the rest day` : `Swap Day ${d} with Day ${n}`);
+  const label = (n: any) => (rest.includes(d) ? (rest.includes(n) ? `Day ${n} is also a rest day` : `Move rest day to Day ${n}`) : rest.includes(n) ? `Swap Day ${d} with the rest day` : `Swap Day ${d} with Day ${n}`);
   return (
     <span className="swaps">
       {d > 1 && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}--1`} aria-label={label(d - 1)} onClick={() => swap(-1)}><span aria-hidden="true">←</span></button>}
@@ -68,16 +69,16 @@ export default function Board() {
 
   // Phones show one day; default to the first day that still has open work.
   let day = mDay;
-  if (day == null) { day = DAYS.find(d => !rest.includes(d)); for (const d of DAYS) { if (!rest.includes(d) && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
+  if (day == null) { day = DAYS.find(d => !rest.includes(d)) ?? null; for (const d of DAYS) { if (!rest.includes(d) && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
 
   // Ticking a rest day that would push workouts off the week asks first: skip them for the week, or cancel and move them yourself.
-  const tickRest = d => {
+  const tickRest = (d: any) => {
     const over = st.restOverflow(d);
     if (over.length && !window.confirm(`A rest day on Day ${d} pushes ${over.length === 1 ? 'a workout' : `${over.length} workouts`} off the week:\n\n${over.map(s => `• ${s.items.map(it => exInfo(cfg, it.ex).n).join(' + ')}`).join('\n')}\n\nOK skips ${over.length === 1 ? 'it' : 'them'} for this week. Cancel lets you move ${over.length === 1 ? 'it' : 'them'} first.`)) return;
     st.setRestDay(d, { skipOverflow: true });
   };
   const [, forceTips] = useState(0);
-  const hideTip = k => { LS.set(k, 1); forceTips(n => n + 1); };
+  const hideTip = (k: any) => { LS.set(k, 1); forceTips(n => n + 1); };
 
   // Yesterday's column (this week only, not on Sunday): cards with nothing checked, unless hidden for today.
   const yCol = todayCol(today) - 1; const todayKey = ymd(today);
@@ -87,46 +88,46 @@ export default function Board() {
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
   const filtering = !!filter.eq;
   const sorting = !!filter.muscle;
-  const rank = s => muscleRank(cfg, s, filter.muscle);
-  const shown = list => {
-    const l = filtering ? list.filter(s => matchesFilter(cfg, s, { eq: filter.eq })) : list;
-    return sorting ? l.map(s => [s, rank(s)]).sort((a, b) => a[1] - b[1]).map(([s]) => s) : l; // stable: program order within a rank
+  const rank = (s: any) => muscleRank(cfg, s, filter.muscle);
+  const shown = (list: any) => {
+    const l = filtering ? list.filter((s: any) => matchesFilter(cfg, s, { eq: filter.eq })) : list;
+    return sorting ? l.map((s: any) => [s, rank(s)]).sort((a: any, b: any) => a[1] - b[1]).map(([s]: any) => s) : l; // stable: program order within a rank
   };
-  const muscleName = filter.muscle ? MUSCLES[filter.muscle].n : '';
+  const muscleName = filter.muscle ? MUSCLES[filter.muscle as MuscleKey].n : '';
   const RANK_SEC = [`Primary: ${muscleName}`, `Secondary: ${muscleName}`, 'Other'];
-  const headOf = (s, day) => (sorting ? RANK_SEC[rank(s)] : secOf(s, day));
-  const [pick, setPick] = useState(null);
-  const moveTo = targets.includes(pick) ? pick : targets[0];
+  const headOf = (s: any, day: any) => (sorting ? RANK_SEC[rank(s)] : secOf(s, day));
+  const [pick, setPick] = useState<number | null>(null);
+  const moveTo = targets.includes(pick as number) ? pick : targets[0];
   const hideLeftovers = () => { LS.set('hideleftovers', todayKey); forceTips(n => n + 1); };
 
-  const moveRef = useRef(null);
+  const moveRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (moveRef.current) moveRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [moveNote]);
   // A suggested day order: bring it into view when it appears, and after Apply put focus on Put back.
-  const orderRef = useRef(null); const putBackRef = useRef(null);
+  const orderRef = useRef<HTMLDivElement>(null); const putBackRef = useRef<HTMLButtonElement>(null);
   useEffect(() => { if (orderRef.current && orderNote && !orderNote.applied) orderRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [orderNote]);
   const orderApplied = !!(showOrder && orderNote.applied);
   useEffect(() => { if (orderApplied && putBackRef.current) putBackRef.current.focus(); }, [orderApplied]);
   // The undo notice sits above the days, so bring it into view when it appears (you're usually scrolled down at a card).
-  const uncheckRef = useRef(null);
+  const uncheckRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (uncheckRef.current) uncheckRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [uncheckNote]);
 
   // Desktop drag and drop between day columns.
-  const [dragId, setDragId] = useState(null);
-  const [overDay, setOverDay] = useState(null);
-  const onDragStart = (e, id) => { setDragId(id); try { e.dataTransfer.setData('text/plain', id); e.dataTransfer.effectAllowed = 'move'; } catch { /* old browsers */ } };
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overDay, setOverDay] = useState<number | null>(null);
+  const onDragStart = (e: any, id: any) => { setDragId(id); try { e.dataTransfer.setData('text/plain', id); e.dataTransfer.effectAllowed = 'move'; } catch { /* old browsers */ } };
   const onDragEnd = () => { setDragId(null); setOverDay(null); };
 
   // Swipe between days on phones.
-  const swipe = useRef(null);
-  const onTouchStart = e => {
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: any) => {
     if (e.target.closest('select,input,button,a,.explist')) { swipe.current = null; return; }
     swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
-  const onTouchEnd = e => {
+  const onTouchEnd = (e: any) => {
     const s0 = swipe.current; swipe.current = null;
     if (!s0 || !window.matchMedia('(max-width:700px)').matches) return;
     const dx = e.changedTouches[0].clientX - s0.x, dy = e.changedTouches[0].clientY - s0.y;
-    if (Math.abs(dx) > 70 && Math.abs(dy) < 45) { const n = Math.min(DAYS.length, Math.max(1, day + (dx < 0 ? 1 : -1))); if (n !== day) st.setMDay(n); }
+    if (Math.abs(dx) > 70 && Math.abs(dy) < 45) { const n = Math.min(DAYS.length, Math.max(1, (day as number) + (dx < 0 ? 1 : -1))); if (n !== day) st.setMDay(n); }
   };
 
   const auto = programFor(cfg, weekStart);
@@ -140,7 +141,7 @@ export default function Board() {
           {ymd(monday(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
           <label className="seg modesel" htmlFor="board-mode">
             <span className="sr">Mode</span>
-            <select id="board-mode" aria-label="Program mode" value={cfg.mode} onChange={e => st.setMode(Number(e.target.value))}>
+            <select id="board-mode" aria-label="Program mode" value={cfg.mode} onChange={e => st.setMode(Number(e.target.value) as 1 | 2 | 3)}>
               {MODES.map(([m, t]) => <option key={m} value={m}>{t}</option>)}
             </select>
           </label>
@@ -148,7 +149,7 @@ export default function Board() {
             <>
               <div className="seg" role="group" aria-label="Program this week">
                 {['A', 'B'].map(k => (
-                  <button type="button" key={k} className={k === progKey ? 'on' : ''} aria-pressed={k === progKey} onClick={() => st.setWeekProg(k)}>{progName(cfg, k)}</button>
+                  <button type="button" key={k} className={k === progKey ? 'on' : ''} aria-pressed={k === progKey} onClick={() => st.setWeekProg(k as ProgKey)}>{progName(cfg, k)}</button>
                 ))}
               </div>
               <span className="saveflag">{progKey === auto ? 'Set by month' : `Switched · month default is ${progName(cfg, auto)}`}</span>
@@ -185,10 +186,10 @@ export default function Board() {
             {targets.length > 0 && (
               <span className="inline">
                 <label htmlFor="leftover-to">Move to</label>
-                <select id="leftover-to" value={moveTo} onChange={e => setPick(Number(e.target.value))}>
+                <select id="leftover-to" value={moveTo ?? ''} onChange={e => setPick(Number(e.target.value))}>
                   {targets.map(c => <option key={c} value={c}>Day {c}{c === yCol + 1 ? ' (today)' : ''}</option>)}
                 </select>
-                <button type="button" className="btn sm" onClick={() => st.moveCards(left.map(s => s.id), moveTo)}>Move</button>
+                <button type="button" className="btn sm" onClick={() => st.moveCards(left.map(s => s.id), moveTo as number)}>Move</button>
               </span>
             )}
             <button type="button" className="btn sm ghost" onClick={hideLeftovers}>Not now</button>
@@ -208,7 +209,7 @@ export default function Board() {
         <div className="notice movewarn" role="status" ref={moveRef}>
           <div><b>Heads-up:</b> {moveNote.lines.join(' ')}</div>
           <div className="actions">
-            {moveNote.alt && <button type="button" className="btn sm" onClick={() => st.moveSlot(moveNote.slot, moveNote.alt)}>Move to Day {moveNote.alt} instead</button>}
+            {moveNote.alt && <button type="button" className="btn sm" onClick={() => st.moveSlot(moveNote.slot!, moveNote.alt!)}>Move to Day {moveNote.alt} instead</button>}
             <button type="button" className="btn sm" onClick={st.undoMove}>Move back to Day {moveNote.fromShown}</button>
             <button type="button" className="btn sm ghost" onClick={st.dismissMove}>Keep it</button>
           </div>
@@ -244,8 +245,8 @@ export default function Board() {
       </div>
 
       <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
-        const n = { ArrowRight: day + 1, ArrowLeft: day - 1, Home: 1, End: DAYS.length }[e.key]; if (n == null) return;
-        e.preventDefault(); const d = ((n - 1 + DAYS.length) % DAYS.length) + 1; st.setMDay(d); document.getElementById(`daytab-${d}`).focus();
+        const n = { ArrowRight: (day as number) + 1, ArrowLeft: (day as number) - 1, Home: 1, End: DAYS.length }[e.key]; if (n == null) return;
+        e.preventDefault(); const d = ((n - 1 + DAYS.length) % DAYS.length) + 1; st.setMDay(d); document.getElementById(`daytab-${d}`)!.focus();
       }}>
         {DAYS.map(d => {
           const t = tally(cols[d], week); const isRest = rest.includes(d);
@@ -271,7 +272,7 @@ export default function Board() {
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
-                  {shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                  {shown(cols[d]).map((s: any) => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
                 </>
               ) : <p className="note">Your workouts moved one day later. Untick to put them back.</p>}
             </section>
@@ -283,8 +284,8 @@ export default function Board() {
           const warm = week.warm[pd] || {};
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const vis = shown(list);
-          const open = vis.filter(s => isOpen(s, week));
-          const finished = [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))];
+          const open = vis.filter((s: any) => isOpen(s, week));
+          const finished = [...vis.filter((s: any) => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter((s: any) => isSkipped(s, week))];
           const ft = tally(finished, week); // counts the cards under the header (the day's own count ignores the filter)
           return (
             <section
@@ -311,7 +312,7 @@ export default function Board() {
               </div>
               <WarmUp d={d} warm={warm} />
               {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
-              {open.map((s, i) => {
+              {open.map((s: any, i: any) => {
                 const sec = headOf(s, pd);
                 const newSec = i === 0 || sec !== headOf(open[i - 1], pd);
                 return (

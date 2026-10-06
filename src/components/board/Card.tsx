@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import type { PhaseKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, exInfo, videoLabel } from '../../lib/data.js';
@@ -8,7 +9,7 @@ import {
   restsOf,
 } from '../../lib/logic.js';
 
-export default function Card({ s, onDragStart, onDragEnd, dragging }) {
+export default function Card({ s, onDragStart, onDragEnd, dragging }: { s: any; onDragStart: any; onDragEnd: any; dragging: any }) {
   const cfg = useAppStore(st => st.cfg);
   const week = useAppStore(st => st.week);
   const logs = useAppStore(st => st.logs);
@@ -19,7 +20,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
   const label = s.type === 'superset' ? 'Superset' : s.type === 'either' ? 'Either / or' : '';
   const cur = colOf(week, week.moved[s.id] || s.day);
   const planned = colOf(week, s.day); // where the card's home workout sits this week
-  const names = s.items.map(i => exInfo(cfg, i.ex).n);
+  const names = s.items.map((i: any) => exInfo(cfg, i.ex).n);
   const cardName = s.type === 'superset' ? names.join(' → ') : s.type === 'either' ? names.join(' or ') : names[0];
 
   return (
@@ -42,7 +43,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
         </div>
       </div>
 
-      {s.items.map((it, idx) => {
+      {s.items.map((it: any, idx: any) => {
         const ex = exInfo(cfg, it.ex);
         const ph = phaseOf(cfg, week, s, idx);
         const t = targetOf(cfg, logs, it, ph); const last = lastLog(logs, it.ex, ph);
@@ -66,7 +67,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }) {
               </div>
               <div className="exline">
                 <select className="phase" id={`ph-${s.id}-${idx}`} data-p={ph || ''} aria-label={`Phase for ${ex.n}`} value={ph || ''}
-                  onChange={e => setPhase(s.id, idx, e.target.value)}>
+                  onChange={e => setPhase(s.id, idx, e.target.value as PhaseKey)}>
                   {!ph && <option value="">Set phase</option>}
                   {PH_KEYS.map(k => <option key={k} value={k}>{PHASES[k].label}</option>)}
                 </select>

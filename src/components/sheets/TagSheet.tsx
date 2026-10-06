@@ -5,7 +5,7 @@ import { MUSCLE_MAP, draftOfTags, tagsOfDraft } from '../../lib/muscles.js';
 import MuscleChips from '../muscles/MuscleChips.jsx';
 import Sheet from '../Sheet.jsx';
 
-export default function TagSheet({ exId }) {
+export default function TagSheet({ exId }: { exId: any }) {
   const cfg = useAppStore(s => s.cfg);
   const { saveTags, resetTags, closeModal } = useAppStore.getState();
   const [draft, setDraft] = useState(() => draftOfTags(cfg, exId));

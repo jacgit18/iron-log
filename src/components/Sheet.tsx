@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, type ElementType, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useAppStore } from '../store/useAppStore.js';
 import { input } from '../hooks/useFocusKeeper.js';
 
@@ -7,21 +7,23 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([t
 // Modal dialog sheet over a scrim. The page behind is inert while it's open, Tab stays inside, and
 // closing returns focus to the control that opened it. Clicking the scrim closes it only when the
 // press also started on the scrim, so a text selection dragged out of the sheet doesn't close it.
-export default function Sheet({ as: Tag = 'div', className = '', children, ...rest }) {
+type Props = { as?: ElementType; className?: string; children?: ReactNode; onSubmit?: (e: FormEvent<HTMLFormElement>) => void; noValidate?: boolean; [attr: string]: unknown };
+export default function Sheet({ as: Tag = 'div', className = '', children, ...rest }: Props) {
   const closeModal = useAppStore(s => s.closeModal);
   const downOnScrim = useRef(false);
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
   useLayoutEffect(() => {
     const opener = document.activeElement; const openerId = opener && opener.id;
     const bg = [...document.querySelectorAll('.wrap, .timer-region, .skip')];
-    bg.forEach(el => { el.inert = true; });
-    const h = ref.current.querySelector('h2');
-    if (h) { h.id = h.id || titleId; ref.current.setAttribute('aria-labelledby', h.id); }
+    bg.forEach(el => { (el as HTMLElement).inert = true; });
+    const el = ref.current!;
+    const h = el.querySelector('h2');
+    if (h) { h.id = h.id || titleId; el.setAttribute('aria-labelledby', h.id); }
     return () => {
-      bg.forEach(el => { el.inert = false; });
-      const back = opener && opener.isConnected ? opener : (openerId && document.getElementById(openerId));
+      bg.forEach(el => { (el as HTMLElement).inert = false; });
+      const back = (opener && opener.isConnected ? opener : (openerId && document.getElementById(openerId))) as HTMLElement | null | false | '';
       if (back) back.focus({ preventScroll: !input.keyboard });
     };
   }, [titleId]);
@@ -29,14 +31,15 @@ export default function Sheet({ as: Tag = 'div', className = '', children, ...re
   // Forms start on their first field (or the one they focus themselves). Other sheets start on the
   // dialog itself, so reading begins at the top and focus never lands on a destructive button.
   useEffect(() => {
-    if (ref.current.contains(document.activeElement)) return;
-    const first = Tag === 'form' && ref.current.querySelector(FOCUSABLE);
-    (first || ref.current).focus();
+    const el = ref.current!;
+    if (el.contains(document.activeElement)) return;
+    const first = Tag === 'form' && el.querySelector<HTMLElement>(FOCUSABLE);
+    (first || el).focus();
   }, [Tag]);
 
-  const trap = e => {
+  const trap = (e: KeyboardEvent) => {
     if (e.key !== 'Tab') return;
-    const f = [...ref.current.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null || el === document.activeElement);
+    const f = [...ref.current!.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(el => el.offsetParent !== null || el === document.activeElement);
     if (!f.length) return;
     const first = f[0], last = f[f.length - 1];
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
