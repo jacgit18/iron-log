@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import type { Cfg, EquipmentKey, SlotType } from '../../types.ts';
+import type { PhaseChoice } from '../../store/types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo, exerciseChoice } from '../../lib/data.js';
 import { SECTIONS, blankItem } from '../../store/editorSlice.js';
@@ -6,22 +8,26 @@ import { DAYS, progName } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 import ExerciseField from '../ExerciseField.jsx';
 
-function ItemFields({ it, k, type, cfg, onChange }: { it: any; k: any; type: any; cfg: any; onChange: any }) {
-  const up = (patch: any) => onChange(k, patch);
+// Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
+type ItemState = { ex: string; ph: PhaseChoice; w: string | number | null; bw: boolean; rx: string; note: string; nm: string; nu?: string; ne?: EquipmentKey | '' };
+type SlotState = { id: string | null; sec: string; tier: string; type: SlotType; note: string; day: number; idx: number | null; target?: { key: string; day: number } | null; items: ItemState[] };
+
+function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; type: SlotType; cfg: Cfg; onChange: (k: number, patch: Partial<ItemState>) => void }) {
+  const up = (patch: Partial<ItemState>) => onChange(k, patch);
   const legend = type === 'superset' ? (k ? 'B' : 'A') : type === 'either' ? (k ? 'Or' : 'Option 1') : 'Exercise';
   return (
     <fieldset className="edit-item">
       <legend>{legend}</legend>
-      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={(nm: any) => up({ nm })} onUrl={(nu: any) => up({ nu })} onEq={(ne: any) => up({ ne })} />
+      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} onEq={ne => up({ ne: ne as EquipmentKey | '' })} />
       <div className="fields">
         <label className="field">Phase
-          <select value={it.ph || ''} onChange={e => up({ ph: e.target.value || null })}>
+          <select value={it.ph || ''} onChange={e => up({ ph: (e.target.value || null) as PhaseChoice })}>
             <option value="">None</option>
             {PH_KEYS.map(p => <option key={p} value={p}>{PHASES[p].label}</option>)}
           </select>
         </label>
         <label className="field">Weight (lb)
-          <input type="number" inputMode="decimal" step="any" min="0" value={it.w} placeholder="—" onChange={e => up({ w: e.target.value })} />
+          <input type="number" inputMode="decimal" step="any" min="0" value={it.w ?? ''} placeholder="—" onChange={e => up({ w: e.target.value })} />
         </label>
         <label className="field">Sets × reps<input value={it.rx} placeholder="phase default" onChange={e => up({ rx: e.target.value })} /></label>
       </div>
@@ -36,15 +42,15 @@ export default function SlotSheet({ idx, col, target }: { idx: any; col: any; ta
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const edDay = useAppStore(s => (target ? target.day : s.edDay));
-  const [d, setD] = useState<any>(() => {
-    const src = idx == null ? { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' } : structuredClone(st.edProgram().days[edDay - 1].slots[idx]);
+  const [d, setD] = useState<SlotState>(() => {
+    const src: any = idx == null ? { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' } : structuredClone(st.edProgram().days[edDay - 1].slots[idx]); // a new card or a clone of the one being edited
     // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
-    return { ...src, type: src.type || 'single', day: edDay, idx, target, note: src.note || '', tier: src.tier || '', items: src.items.map(it => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
+    return { ...src, type: src.type || 'single', day: edDay, idx, target, note: src.note || '', tier: src.tier || '', items: src.items.map((it: any) => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
   });
   const [err, setErr] = useState('');
 
-  const setType = (type: any) => setD((x: any) => { const want = type === 'single' ? 1 : 2; const items = x.items.slice(0, want); while (items.length < want) items.push({ ...blankItem(), w: '' }); return { ...x, type, items }; });
-  const setItem = (k: any, patch: any) => setD((x: any) => ({ ...x, items: x.items.map((it: any, j: any) => (j === k ? { ...it, ...patch } : it)) }));
+  const setType = (type: SlotType) => setD(x => { const want = type === 'single' ? 1 : 2; const items = x.items.slice(0, want); while (items.length < want) items.push({ ...blankItem(), w: '', nm: '' }); return { ...x, type, items }; });
+  const setItem = (k: number, patch: Partial<ItemState>) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
   const submit = (e: any) => {
     e.preventDefault();
     const clean = { ...d, note: d.note.trim(), items: d.items.map((it: any) => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne || '' })) };
@@ -57,7 +63,7 @@ export default function SlotSheet({ idx, col, target }: { idx: any; col: any; ta
       <h2 className="cond">{d.idx == null ? 'Add exercise' : 'Edit exercise'} · {target ? progName(cfg, target.key) : st.edName()}</h2>
       <div className="fields">
         <label className="field">Type
-          <select value={d.type} onChange={e => setType(e.target.value)}>
+          <select value={d.type} onChange={e => setType(e.target.value as SlotType)}>
             <option value="single">Single</option><option value="superset">Superset (A → B)</option><option value="either">Either / or</option>
           </select>
         </label>

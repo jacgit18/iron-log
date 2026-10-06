@@ -1,4 +1,4 @@
-import type { LogEntry, PhaseKey } from '../../types.ts';
+import type { EquipmentKey, LogEntry, PhaseKey } from '../../types.ts';
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -31,7 +31,7 @@ export default function LogSheet({ slotId, idx }: { slotId: any; idx: any }) {
   const [date, setDate] = useState(() => defaultLogDate(weekStart));
   const [rows, setRows] = useState(() => planRows(cfg, logs, it, ph0).map(x => toRow(x, isTimed(ph0))));
   const [note, setNote] = useState('');
-  const [eq, setEq] = useState(ex.eq || '');
+  const [eq, setEq] = useState<EquipmentKey | ''>(ex.eq || '');
   const [url, setUrl] = useState(ex.url || '');
   const [makeDefault, setMakeDefault] = useState(false);
   const [makeExDefault, setMakeExDefault] = useState(false);
@@ -121,7 +121,7 @@ export default function LogSheet({ slotId, idx }: { slotId: any; idx: any }) {
         <span className="note">Saved for {ex.n} on every day and every week.</span>
       </label>
       <label className="field">Equipment
-        <select value={eq} onChange={e => setEq(e.target.value)}>
+        <select value={eq} onChange={e => setEq(e.target.value as EquipmentKey | '')}>
           <option value="">Not set</option>
           {EQ_KEYS.map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
         </select>

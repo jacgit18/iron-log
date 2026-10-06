@@ -1,3 +1,5 @@
+import type { EquipmentKey } from '../../types.ts';
+import type { PhaseChoice } from '../../store/types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, EX, exInfo } from '../../lib/data.js';
@@ -14,14 +16,14 @@ export default function ExerciseSheet({ exId }: { exId: any }) {
   const st = useAppStore.getState();
   const isNew = exId == null; const custom = isNew || !EX[exId];
   const info = isNew ? { n: '' } : exInfo(cfg, exId);
-  const [d, setD] = useState(() => ({
+  const [d, setD] = useState<{ name: string; url: string; eq: EquipmentKey | ''; ph: PhaseChoice; rm: string }>(() => ({
     name: info.n, url: info.url || '', eq: info.eq || '',
     ph: (!isNew && cfg.exPh && cfg.exPh[exId]) || '', rm: !isNew && cfg.rm[exId] != null ? String(cfg.rm[exId]) : '',
   }));
   const [tags, setTags] = useState(() => (isNew ? { mob: false, st: {} } : draftOfTags(cfg, exId)));
   const [tagsTouched, setTagsTouched] = useState(false);
   const [err, setErr] = useState('');
-  const up = (patch: any) => setD(x => ({ ...x, ...patch }));
+  const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   const hasOwnTags = !isNew && !!(cfg.muscleMap && cfg.muscleMap[exId]) && !!MUSCLE_MAP[exId];
   const submit = (e: any) => {
     e.preventDefault();
@@ -38,7 +40,7 @@ export default function ExerciseSheet({ exId }: { exId: any }) {
       <label className="field">Video link (optional)<input type="url" value={d.url} placeholder="https://" onChange={e => up({ url: e.target.value })} /></label>
       <div className="fields">
         <label className="field">Equipment
-          <select value={d.eq} onChange={e => up({ eq: e.target.value })}>
+          <select value={d.eq} onChange={e => up({ eq: e.target.value as EquipmentKey | '' })}>
             <option value="">Not set</option>
             {EQ_KEYS.map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
           </select>
@@ -48,7 +50,7 @@ export default function ExerciseSheet({ exId }: { exId: any }) {
         </label>
       </div>
         <label className="field">Default phase for every card with this exercise
-          <select value={d.ph} onChange={e => up({ ph: e.target.value })}>
+          <select value={d.ph ?? ''} onChange={e => up({ ph: e.target.value as PhaseChoice })}>
             <option value="">Use each card's own</option>
             {PH_KEYS.map(p => <option key={p} value={p}>{PHASES[p].label}</option>)}
           </select>

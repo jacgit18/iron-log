@@ -1,3 +1,5 @@
+import type { EquipmentKey } from '../../types.ts';
+import type { PhaseChoice } from '../../store/types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo, exerciseChoice, findExId } from '../../lib/data.js';
@@ -10,10 +12,10 @@ export default function ExperimentSheet({ id }: { id: any }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const cur = id ? st.experiments.find(x => x.id === id) : null;
-  const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, name: cur ? exInfo(cfg, cur.ex).n : '', nu: '', ne: '', ph: cur ? cur.ph : 'strength', note: cur ? cur.note : '' }));
+  const [d, setD] = useState<{ id?: string; name: string; nu: string; ne: EquipmentKey | ''; ph: PhaseChoice; note: string }>(() => ({ id: cur ? cur.id : undefined, name: cur ? exInfo(cfg, cur.ex).n : '', nu: '', ne: '', ph: cur ? cur.ph : 'strength', note: cur ? cur.note : '' }));
   const [err, setErr] = useState('');
   const exId = findExId(cfg, d.name); // goals belong to the exercise, so they can be set before it's ever logged
-  const up = (patch: any) => setD(x => ({ ...x, ...patch }));
+  const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   const submit = (e: any) => { e.preventDefault(); const msg = st.saveExperiment({ id: d.id, ...exerciseChoice(cfg, d.name), nu: d.nu.trim(), ne: d.ne, ph: d.ph, note: d.note.trim() }); if (msg) setErr(msg); };
   return (
     <Sheet>
@@ -21,7 +23,7 @@ export default function ExperimentSheet({ id }: { id: any }) {
       <form id="exp-form" noValidate onSubmit={submit}>
       <ExerciseField cfg={cfg} id="exp-ex" name={d.name} url={d.nu} eq={d.ne} onName={(name: any) => up({ name })} onUrl={(nu: any) => up({ nu })} onEq={(ne: any) => up({ ne })} />
       <label className="field">Phase
-        <select value={d.ph || ''} onChange={e => up({ ph: e.target.value || null })}>
+        <select value={d.ph || ''} onChange={e => up({ ph: (e.target.value || null) as PhaseChoice })}>
           <option value="">None</option>
           {PH_KEYS.map(p => <option key={p} value={p}>{PHASES[p].label}</option>)}
         </select>
