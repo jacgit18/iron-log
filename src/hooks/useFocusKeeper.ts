@@ -10,15 +10,15 @@ export const input = { keyboard: false };
 // are not, so the page doesn't jump under the mouse.
 export default function useFocusKeeper() {
   useEffect(() => {
-    let lastId = null;
+    let lastId: string | null = null;
     const onKey = () => { input.keyboard = true; };
     const onPointer = () => { input.keyboard = false; };
-    const onIn = e => { lastId = e.target.id || null; };
+    const onIn = (e: FocusEvent) => { lastId = (e.target as HTMLElement).id || null; };
     // Focus moving to another element is handled by focusin. Focus going nowhere is either a real blur
     // (click on empty page: the element is still there → forget it) or the element being removed (keep it).
-    const onOut = e => {
+    const onOut = (e: FocusEvent) => {
       if (e.relatedTarget) return;
-      const t = e.target;
+      const t = e.target as HTMLElement;
       setTimeout(() => { if (t.isConnected && lastId === t.id) lastId = null; }, 0);
     };
     // React may commit the re-render after this task, so try again over the next few frames.
@@ -29,7 +29,7 @@ export default function useFocusKeeper() {
       const a = document.activeElement;
       if (!lastId || (a && a !== document.body && a.isConnected)) return;
       const el = document.getElementById(lastId);
-      if (el && !el.disabled) el.focus({ preventScroll: !input.keyboard });
+      if (el && !(el as HTMLButtonElement).disabled) el.focus({ preventScroll: !input.keyboard });
     };
     document.addEventListener('keydown', onKey, true);
     document.addEventListener('pointerdown', onPointer, true);
