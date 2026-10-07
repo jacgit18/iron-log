@@ -3,7 +3,7 @@
    the offline queue stores a Command and replays it unchanged. Framework-free: client and server import it. */
 
 import type { LogEntry } from '../types.ts';
-import { LIMITS, normEntry } from './validate.js';
+import { LIMITS, normEntry, validDate } from './validate.js';
 
 /** What the offline queue stores and `POST /api/commands/<name>` receives. */
 export interface Command<N extends string, I> {
@@ -38,4 +38,24 @@ export type TickCardCommand = Command<'tick-card', TickCardInput>;
 export function validateTickCard(input: unknown): TickCardInput | null {
   const out = validateLogSession(input);
   return out && out.entry.auto === true && out.entry.slot && out.entry.wk ? out : null;
+}
+
+/** Unticking a card for a week. Without `exerciseId` it covers the whole card, including a check-off left under an
+ *  exercise the card no longer has. `removeLogged` also removes what the user logged by hand for the card that week
+ *  (the checkboxes do; skipping a card does not). Targets rows by card and week, so there is no baseVersion. */
+export interface UntickCardInput {
+  slot: string;
+  wk: string;
+  exerciseId?: string;
+  removeLogged?: boolean;
+}
+export type UntickCardCommand = Command<'untick-card', UntickCardInput>;
+
+export function validateUntickCard(input: unknown): UntickCardInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { slot, wk, exerciseId, removeLogged } = input as Record<string, unknown>;
+  if (typeof slot !== 'string' || !slot || slot.length > LIMITS.text.slot || !validDate(wk)) return null;
+  if (exerciseId !== undefined && (typeof exerciseId !== 'string' || !exerciseId || exerciseId.length > LIMITS.text.id)) return null;
+  if (removeLogged !== undefined && typeof removeLogged !== 'boolean') return null;
+  return { slot, wk, ...(exerciseId !== undefined ? { exerciseId } : {}), ...(removeLogged ? { removeLogged } : {}) };
 }

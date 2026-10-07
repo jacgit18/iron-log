@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateLogSession, validateTickCard } from './commands.js';
+import { validateLogSession, validateTickCard, validateUntickCard } from './commands.js';
 
 describe('validateLogSession', () => {
   it('accepts an exercise id with a valid entry and cleans the entry', () => {
@@ -25,5 +25,19 @@ describe('validateTickCard', () => {
     expect(validateTickCard({ exerciseId: 'squat', entry: { ...tick, auto: false } })).toBeNull();
     expect(validateTickCard({ exerciseId: 'squat', entry: { ...tick, slot: undefined } })).toBeNull();
     expect(validateTickCard({ exerciseId: 'squat', entry: { ...tick, wk: undefined } })).toBeNull();
+  });
+});
+
+describe('validateUntickCard', () => {
+  it('accepts a card and week, with optional exercise and removeLogged', () => {
+    expect(validateUntickCard({ slot: 's1', wk: '2026-10-04' })).toEqual({ slot: 's1', wk: '2026-10-04' });
+    expect(validateUntickCard({ slot: 's1', wk: '2026-10-04', exerciseId: 'squat', removeLogged: true, junk: 1 })).toEqual({ slot: 's1', wk: '2026-10-04', exerciseId: 'squat', removeLogged: true });
+  });
+  it('refuses a missing slot, a bad week, and wrong types', () => {
+    expect(validateUntickCard({ wk: '2026-10-04' })).toBeNull();
+    expect(validateUntickCard({ slot: 's1', wk: 'nope' })).toBeNull();
+    expect(validateUntickCard({ slot: 's1', wk: '2026-10-04', exerciseId: '' })).toBeNull();
+    expect(validateUntickCard({ slot: 's1', wk: '2026-10-04', removeLogged: 'yes' })).toBeNull();
+    expect(validateUntickCard(null)).toBeNull();
   });
 });
