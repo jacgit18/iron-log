@@ -15,5 +15,30 @@
   },
   "ignorePatterns": [
     "dist"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "server/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/components/**",
+                  "**/store/**",
+                  "**/hooks/**",
+                  "**/lib/**"
+                ],
+                "message": "server/ may import only from src/shared/ (ADR 015)."
+              }
+            ]
+          }
+        ]
+      }
+    }
   ]
 }
