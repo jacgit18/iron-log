@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-07T11:56:02.905Z",
+ "exportedAt": "2026-10-07T12:02:12.379Z",
  "config": {
   "muscleMap": {
    "seated-cable-crunch": {
@@ -109,10 +109,10 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "1sdqb2a",
+   "hash": "1b8mcee",
    "last": {
-    "at": "2026-10-05T10:56:57.524Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/f6b67ee93ead4d55569495213b1371f9ba297d63"
+    "at": "2026-10-07T11:56:05.483Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/7f416b7502f7dbd285c22349fe7ecf4ddb8473aa"
    }
   },
   "progNames": {
@@ -1861,35 +1861,6 @@
     ],
     "slot": "A-d2s4",
     "wk": "2026-09-27"
-   },
-   {
-    "d": "2026-10-07",
-    "ph": "strength",
-    "w": 44,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     }
-    ],
-    "slot": "B-d2s4",
-    "wk": "2026-10-04",
-    "id": "Lmuxzha4q27ljhi",
-    "updatedAt": "2026-10-07T10:47:36.842Z"
    }
   ],
   "cablepunch": [
@@ -2549,9 +2520,10 @@
     "updatedAt": "2026-10-07T10:21:26.607Z"
    }
   ],
-  "latpd": [
+  "latpdbi": [
    {
-    "d": "2026-09-28",
+    "id": "Lmuy21wuivrusov",
+    "d": "2026-09-27",
     "ph": "hyp",
     "w": 45,
     "s": 4,
@@ -2575,37 +2547,10 @@
      }
     ],
     "slot": "A-d1s1",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "auto": true,
+    "updatedAt": "2026-10-07T11:59:38.635Z"
    },
-   {
-    "d": "2026-09-29",
-    "ph": "hyp",
-    "w": 45,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 45,
-      "r": 15
-     },
-     {
-      "w": 45,
-      "r": 15
-     },
-     {
-      "w": 45,
-      "r": 15
-     },
-     {
-      "w": 45,
-      "r": 15
-     }
-    ],
-    "slot": "A-d3s2",
-    "wk": "2026-09-27"
-   }
-  ],
-  "latpdbi": [
    {
     "d": "2026-10-05",
     "ph": "hyp",
@@ -2854,6 +2799,37 @@
     ],
     "slot": "A-d2s2",
     "wk": "2026-09-27"
+   }
+  ],
+  "seated-cable-crunch": [
+   {
+    "d": "2026-10-07",
+    "ph": "strength",
+    "w": 44,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     }
+    ],
+    "slot": "B-xmuy1nsai5fs",
+    "wk": "2026-10-04",
+    "id": "Lmuy1yui81lvnc3",
+    "updatedAt": "2026-10-07T12:01:56.425Z"
    }
   ],
   "skater": [
@@ -3211,7 +3187,6 @@
   "2026-09-27": {
    "prog": null,
    "done": {
-    "A-d1s1": true,
     "A-d1s4": true,
     "A-d1s6": true,
     "A-d1s8": true,
@@ -3232,7 +3207,8 @@
     "A-d2s2": true,
     "A-d2s2#0": true,
     "A-d3s2": true,
-    "A-d1s2": true
+    "A-d1s2": true,
+    "A-d1s1": true
    },
    "skipped": {
     "A-d1s9": true,
@@ -3324,14 +3300,16 @@
     "B-d2s3": true,
     "B-d2s3#1": true,
     "B-d2s5": true,
-    "B-d2s7": true
+    "B-d2s7": true,
+    "B-xmuy1nsai5fs#0": true
    },
    "skipped": {
     "B-d6s5": true,
     "B-sled1": true,
     "B-d1s7": true,
     "B-sled2": true,
-    "B-d2s6": true
+    "B-d2s6": true,
+    "B-xmuy1nsai5fs": true
    },
    "moved": {
     "B-d5s2": 6,
