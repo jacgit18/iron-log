@@ -32,7 +32,7 @@ export interface LogEntries {
   client_id: string;
   client_updated_at: Timestamp | null;
   created_at: Generated<Timestamp>;
-  d: Timestamp;
+  d: string;
   deleted_at: Timestamp | null;
   exercise_id: string;
   hold_sec: Numeric | null;
@@ -48,7 +48,7 @@ export interface LogEntries {
   user_id: Int8;
   version: Generated<number>;
   weight_lb: Numeric | null;
-  wk: Timestamp | null;
+  wk: string | null;
 }
 
 export interface RefusedWrites {
