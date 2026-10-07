@@ -3,13 +3,13 @@
    settings, but not weekly check-offs, edited programs, saved versions or phase defaults. This turns
    what it does have into the same shape as a parsed JSON data file, so the normal merge can add it. */
 import { EX, PHASES, PH_KEYS } from './data.js';
-import { parseDate } from './dates.js';
+import { parseDate } from '../shared/dates.js';
 import { weekSlots, activeProgKey, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
 import { MUSCLES, MUSCLE_MAP } from './muscles.js';
 import { WEEK_RE, entryWeek } from './trends.js';
 import { loadXLSX, normalizeData } from './export.js';
 import type { BodyEntry, Cfg, DataFile, LogEntry, LogSet, Logs, MuscleKey, MuscleTags, Program, Week } from '../types.ts';
-import { validMode, validRest, validPct, validRm, validBodyLb, normEntries } from './validate.js';
+import { validMode, validRest, validPct, validRm, validBodyLb, normEntries } from '../shared/validate.js';
 
 type XLSX = typeof import('xlsx');
 // Workbook cells are whatever the file held: text, numbers, blanks.

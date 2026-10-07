@@ -6,7 +6,7 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, BUILTIN, exInfo } from '../../lib/data.js';
 import { progName, DAYS } from '../../lib/logic.js';
 import { sameProg, libDate } from '../../lib/export.js';
-import { MON } from '../../lib/dates.js';
+import { MON } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
 import ExerciseLibrary from './ExerciseLibrary.jsx';

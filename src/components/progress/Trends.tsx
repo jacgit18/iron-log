@@ -3,7 +3,7 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
-import { ymd, parseDate, addDays, fmtShort } from '../../lib/dates.js';
+import { ymd, parseDate, addDays, fmtShort } from '../../shared/dates.js';
 import { MUSCLES, M_KEYS, level, fmtSets } from '../../lib/muscles.js';
 import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, niceStep, mdLabel } from '../../lib/trends.js';
 import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';

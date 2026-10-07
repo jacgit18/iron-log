@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_STRETCHES, normStretches, normStretchWeek, groupsOf, dayTally, weekDaysDone, weekDaysCounted, withoutStretch, newStretchId } from './stretches.js';
 import { goalFor, boostOz, normSupplements, sumOz, cupsOf, validOz, lastDays } from './water.js';
-import { ymd } from './dates.js';
+import { ymd } from '../shared/dates.js';
 
 describe('stretch routine', () => {
   it('starts as the default routine and groups it by tier', () => {

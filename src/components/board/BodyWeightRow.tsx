@@ -2,7 +2,7 @@ import type { BodyEntry, BodyGoal } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { monday, ymd, parseDate, fmtShort } from '../../lib/dates.js';
+import { weekStartOf, ymd, parseDate, fmtShort } from '../../shared/dates.js';
 import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
 
 function GoalNote({ goal, body, today }: { goal: BodyGoal; body: BodyEntry[]; today: Date }) {
@@ -23,7 +23,7 @@ export default function BodyWeightRow() {
   const wk = ymd(weekStart);
   const cur = body.find(e => e.wk === wk);
   const prevList = bwSorted(body).filter(e => e.wk < wk); const prev = prevList[prevList.length - 1] || null;
-  const label = wk === ymd(monday(today)) ? 'Body weight this week' : `Body weight, week of ${fmtShort(weekStart)}`;
+  const label = wk === ymd(weekStartOf(today)) ? 'Body weight this week' : `Body weight, week of ${fmtShort(weekStart)}`;
 
   if (cur && !editing) {
     const diff = prev ? Number(cur.w) - Number(prev.w) : null;

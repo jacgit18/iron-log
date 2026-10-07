@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ymd, parseDate, monday, addDays, fmtShort, fmtDayDate } from './dates.js';
+import { ymd, parseDate, weekStartOf, addDays, fmtShort, fmtDayDate } from './dates.js';
 
 describe('dates', () => {
   it('formats and parses local calendar dates', () => {
@@ -9,9 +9,9 @@ describe('dates', () => {
   });
 
   it('starts the week on Sunday', () => {
-    expect(ymd(monday(parseDate('2026-09-27')))).toBe('2026-09-27'); // Sunday
-    expect(ymd(monday(parseDate('2026-10-03')))).toBe('2026-09-27'); // Saturday
-    expect(ymd(monday(new Date(2026, 8, 30, 23, 59)))).toBe('2026-09-27');
+    expect(ymd(weekStartOf(parseDate('2026-09-27')))).toBe('2026-09-27'); // Sunday
+    expect(ymd(weekStartOf(parseDate('2026-10-03')))).toBe('2026-09-27'); // Saturday
+    expect(ymd(weekStartOf(new Date(2026, 8, 30, 23, 59)))).toBe('2026-09-27');
   });
 
   it('adds whole days across month, year and daylight-saving changes', () => {
