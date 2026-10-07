@@ -59,3 +59,15 @@ export function validateUntickCard(input: unknown): UntickCardInput | null {
   if (removeLogged !== undefined && typeof removeLogged !== 'boolean') return null;
   return { slot, wk, ...(exerciseId !== undefined ? { exerciseId } : {}), ...(removeLogged ? { removeLogged } : {}) };
 }
+
+/** Delete one logged session or check-off by its id. baseVersion is the version the user saw (never null). */
+export interface DeleteEntryInput {
+  entryId: string;
+}
+export type DeleteEntryCommand = Command<'delete-entry', DeleteEntryInput>;
+
+export function validateDeleteEntry(input: unknown): DeleteEntryInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { entryId } = input as Record<string, unknown>;
+  return typeof entryId === 'string' && entryId && entryId.length <= LIMITS.text.id ? { entryId } : null;
+}

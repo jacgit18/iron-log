@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateLogSession, validateTickCard, validateUntickCard } from './commands.js';
+import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry } from './commands.js';
 
 describe('validateLogSession', () => {
   it('accepts an exercise id with a valid entry and cleans the entry', () => {
@@ -39,5 +39,18 @@ describe('validateUntickCard', () => {
     expect(validateUntickCard({ slot: 's1', wk: '2026-10-04', exerciseId: '' })).toBeNull();
     expect(validateUntickCard({ slot: 's1', wk: '2026-10-04', removeLogged: 'yes' })).toBeNull();
     expect(validateUntickCard(null)).toBeNull();
+  });
+});
+
+describe('validateDeleteEntry', () => {
+  it('accepts an entry id and drops other fields', () => {
+    expect(validateDeleteEntry({ entryId: 'L1', junk: 1 })).toEqual({ entryId: 'L1' });
+  });
+  it('refuses a missing, empty, oversized or non-string id, and non-objects', () => {
+    expect(validateDeleteEntry({})).toBeNull();
+    expect(validateDeleteEntry({ entryId: '' })).toBeNull();
+    expect(validateDeleteEntry({ entryId: 'x'.repeat(101) })).toBeNull();
+    expect(validateDeleteEntry({ entryId: 5 })).toBeNull();
+    expect(validateDeleteEntry(null)).toBeNull();
   });
 });
