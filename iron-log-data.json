@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-07T15:00:23.184Z",
+ "exportedAt": "2026-10-07T18:34:20.750Z",
  "config": {
   "muscleMap": {
    "seated-cable-crunch": {
@@ -55,6 +55,16 @@
    },
    "dead-bugs": {
     "n": "Dead Bugs"
+   },
+   "duck-sled-push": {
+    "n": "Duck Sled Push",
+    "url": "https://www.instagram.com/p/DeKUe-qvgF-/",
+    "eq": "other"
+   },
+   "squat-walks": {
+    "n": "Squat Walks",
+    "url": "https://www.instagram.com/p/DeKAHsWKK4W/",
+    "eq": "dumbbell"
    }
   },
   "mode": 2,
@@ -132,10 +142,10 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "18txhn8",
+   "hash": "1xynas1",
    "last": {
-    "at": "2026-10-07T13:07:53.744Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/a4a4415db914cc2a8bb4b5dbc734452a9362079d"
+    "at": "2026-10-07T15:00:26.031Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/77a20b494f212861ff53abcef165e51a9078683f"
    }
   },
   "progNames": {
@@ -188,14 +198,14 @@
       {
        "id": "A-d1s1",
        "sec": "Regular",
+       "tier": "Primary",
        "items": [
         {
          "ex": "latpdbi",
          "ph": "hyp",
          "w": 45
         }
-       ],
-       "tier": "Primary"
+       ]
       },
       {
        "id": "A-d1s3",
@@ -401,6 +411,8 @@
       {
        "id": "A-xmuy1vz1s5qy",
        "sec": "Supersets",
+       "tier": "Accessory",
+       "type": "superset",
        "items": [
         {
          "ex": "seated-cable-crunch",
@@ -412,9 +424,7 @@
          "ph": "strength",
          "w": null
         }
-       ],
-       "tier": "Accessory",
-       "type": "superset"
+       ]
       },
       {
        "id": "A-d2s7",
@@ -473,14 +483,14 @@
       {
        "id": "A-d3s2",
        "sec": "Regular",
+       "tier": "Primary",
        "items": [
         {
          "ex": "latpdbi",
          "ph": "hyp",
          "w": 45
         }
-       ],
-       "tier": "Primary"
+       ]
       },
       {
        "id": "A-d3s4",
@@ -804,6 +814,8 @@
       {
        "id": "A-xmuy1u0ehkgt",
        "sec": "Supersets",
+       "tier": "Accessory",
+       "type": "superset",
        "items": [
         {
          "ex": "seated-cable-crunch",
@@ -815,9 +827,7 @@
          "ph": "strength",
          "w": null
         }
-       ],
-       "tier": "Accessory",
-       "type": "superset"
+       ]
       },
       {
        "id": "A-d5s9",
@@ -1235,6 +1245,8 @@
       {
        "id": "B-xmuy1nsai5fs",
        "sec": "Supersets",
+       "tier": "Accessory",
+       "type": "superset",
        "items": [
         {
          "ex": "seated-cable-crunch",
@@ -1246,9 +1258,7 @@
          "ph": "hyp",
          "w": null
         }
-       ],
-       "tier": "Accessory",
-       "type": "superset"
+       ]
       },
       {
        "id": "B-d2s7",
@@ -1639,6 +1649,8 @@
       {
        "id": "B-xmuy1rdg3uct",
        "sec": "Supersets",
+       "tier": "Accessory",
+       "type": "superset",
        "items": [
         {
          "ex": "seated-cable-crunch",
@@ -1650,9 +1662,7 @@
          "ph": "strength",
          "w": null
         }
-       ],
-       "tier": "Accessory",
-       "type": "superset"
+       ]
       },
       {
        "id": "B-d5s8",
@@ -2545,7 +2555,6 @@
   ],
   "latpdbi": [
    {
-    "id": "Lmuy21wuivrusov",
     "d": "2026-09-27",
     "ph": "hyp",
     "w": 45,
@@ -2571,6 +2580,7 @@
     ],
     "slot": "A-d1s1",
     "wk": "2026-09-27",
+    "id": "Lmuy21wuivrusov",
     "auto": true,
     "updatedAt": "2026-10-07T11:59:38.635Z"
    },
@@ -3342,7 +3352,9 @@
     "B-d2s8": 1,
     "B-d3s2": 5
    },
-   "ph": {},
+   "ph": {
+    "X-muy8rvy9whc0:0": "exp"
+   },
    "warm": {},
    "rest": [
     3
@@ -3356,7 +3368,16 @@
     5,
     7
    ],
-   "restOn": "2026-10-06"
+   "restOn": "2026-10-06",
+   "extra": [
+    {
+     "id": "X-muy8rvy9whc0",
+     "day": 3,
+     "ex": "duck-sled-push",
+     "ph": "strength",
+     "note": ""
+    }
+   ]
   }
  },
  "body": [
@@ -3411,6 +3432,18 @@
   {
    "id": "Emuy6w0l72ybj",
    "ex": "dead-bugs",
+   "ph": "strength",
+   "note": ""
+  },
+  {
+   "id": "Emuy8r5c170x4",
+   "ex": "duck-sled-push",
+   "ph": "exp",
+   "note": ""
+  },
+  {
+   "id": "Emuy8tsxonx69",
+   "ex": "squat-walks",
    "ph": "strength",
    "note": ""
   }
