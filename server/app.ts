@@ -2,6 +2,7 @@ import express from 'express';
 import { sql, type Kysely } from 'kysely';
 import { devAuth, inUserTransaction } from './auth.ts';
 import { logSession } from './commands/logSession.ts';
+import { parseLimit, parseSince, syncPage } from './commands/sync.ts';
 import type { DB } from './db/types.ts';
 
 export interface AppDeps {
@@ -45,6 +46,17 @@ export function createApp({ db }: AppDeps = {}) {
     const clientVersion = req.get('x-client-version') ?? null;
     const result = await inUserTransaction(db!, userId, trx => logSession(trx, userId, req.body, clientVersion));
     res.status(result.status).json(result.body);
+  });
+
+  app.get('/api/sync', async (req, res) => {
+    const since = parseSince(req.query.since);
+    const limit = parseLimit(req.query.limit);
+    if (since === null || limit === null) {
+      res.status(400).json({ ok: false, error: 'since must be a whole number and limit between 1 and 500' });
+      return;
+    }
+    const userId = String(res.locals.userId);
+    res.json(await inUserTransaction(db!, userId, trx => syncPage(trx, userId, since, limit)));
   });
 
   return app;
