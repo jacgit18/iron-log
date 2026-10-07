@@ -17,7 +17,7 @@
     "db:stop": "docker compose stop db",
     "db:migrate": "dbmate up && npm run db:types",
     "db:rollback": "dbmate down && npm run db:types",
-    "db:types": "kysely-codegen --dialect postgres --exclude-pattern schema_migrations --out-file server/db/types.ts"
+    "db:types": "kysely-codegen --dialect postgres --date-parser string --exclude-pattern schema_migrations --out-file server/db/types.ts"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",
@@ -33,6 +33,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
+    "@testcontainers/postgresql": "^11.14.0",
     "@types/express": "^5.0.6",
     "@types/node": "^20.19.43",
     "@types/pg": "^8.23.1",
