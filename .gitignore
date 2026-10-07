@@ -32,3 +32,4 @@ playwright-report
 
 # Local environment
 .env
+.neon
