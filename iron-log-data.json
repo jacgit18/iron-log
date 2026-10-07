@@ -1,9 +1,16 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-07T11:39:25.266Z",
+ "exportedAt": "2026-10-07T11:56:02.905Z",
  "config": {
-  "muscleMap": {},
+  "muscleMap": {
+   "seated-cable-crunch": {
+    "p": [
+     "abs"
+    ],
+    "s": []
+   }
+  },
   "ex": {
    "deadlift": {
     "n": "Deadlift",
@@ -20,6 +27,11 @@
    "clean-jerk-overhead-press": {
     "n": "Clean Jerk & Overhead Press",
     "eq": "dumbbell"
+   },
+   "seated-cable-crunch": {
+    "n": "Seated Cable Crunch",
+    "url": "https://youtube.com/shorts/bIbm-p6Q4s8?is=aiC1fOhPbN5QMcgq",
+    "eq": "cable"
    }
   },
   "mode": 2,
@@ -64,7 +76,8 @@
    "bss": 65,
    "legcurl": 100,
    "cablepunch": 50,
-   "clean-jerk-overhead-press": 45
+   "clean-jerk-overhead-press": 45,
+   "seated-cable-crunch": 77
   },
   "phDef": {
    "A-d1s1:0": "hyp",
@@ -90,27 +103,21 @@
    "cablerow": "exp",
    "cablepunch": "iso",
    "depthcombo": "exp",
-   "zercher": "strength"
+   "zercher": "strength",
+   "seated-cable-crunch": "strength"
   },
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "33b887",
+   "hash": "1sdqb2a",
    "last": {
-    "at": "2026-10-06T20:03:53.123Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/5fc919acf3fbf1788fe4ae6911c92ce8c750c435"
+    "at": "2026-10-05T10:56:57.524Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/f6b67ee93ead4d55569495213b1371f9ba297d63"
    }
   },
   "progNames": {
    "A": "Program A - Unilateral",
    "B": "Program B - Bilateral"
-  },
-  "bwGoal": {
-   "w": 155,
-   "start": {
-    "w": 130,
-    "d": "2026-10-02"
-   }
   },
   "liftGoals": {
    "deadlift": {
@@ -126,6 +133,13 @@
      "w": 225,
      "start": 0
     }
+   }
+  },
+  "bwGoal": {
+   "w": 155,
+   "start": {
+    "w": 130,
+    "d": "2026-10-02"
    }
   }
  },
@@ -151,26 +165,14 @@
       {
        "id": "A-d1s1",
        "sec": "Regular",
-       "tier": "Primary",
        "items": [
         {
-         "ex": "latpd",
+         "ex": "latpdbi",
          "ph": "hyp",
          "w": 45
         }
-       ]
-      },
-      {
-       "id": "A-d1s2",
-       "sec": "Regular",
-       "tier": "Accessory",
-       "items": [
-        {
-         "ex": "wristpd",
-         "ph": "hyp",
-         "w": 33
-        }
-       ]
+       ],
+       "tier": "Primary"
       },
       {
        "id": "A-d1s3",
@@ -335,18 +337,6 @@
        ]
       },
       {
-       "id": "A-d2s4",
-       "sec": "Regular",
-       "tier": "Accessory",
-       "items": [
-        {
-         "ex": "cablecrunch",
-         "ph": "strength",
-         "w": 60
-        }
-       ]
-      },
-      {
        "id": "A-d2s5",
        "sec": "Supersets",
        "tier": "Primary",
@@ -384,6 +374,24 @@
          "bw": true
         }
        ]
+      },
+      {
+       "id": "A-xmuy1vz1s5qy",
+       "sec": "Supersets",
+       "items": [
+        {
+         "ex": "seated-cable-crunch",
+         "ph": "strength",
+         "w": null
+        },
+        {
+         "ex": "wristpd",
+         "ph": "strength",
+         "w": null
+        }
+       ],
+       "tier": "Accessory",
+       "type": "superset"
       },
       {
        "id": "A-d2s7",
@@ -442,26 +450,14 @@
       {
        "id": "A-d3s2",
        "sec": "Regular",
-       "tier": "Primary",
        "items": [
         {
-         "ex": "latpd",
+         "ex": "latpdbi",
          "ph": "hyp",
          "w": 45
         }
-       ]
-      },
-      {
-       "id": "A-d3s3",
-       "sec": "Regular",
-       "tier": "Accessory",
-       "items": [
-        {
-         "ex": "wristpd",
-         "ph": "hyp",
-         "w": 33
-        }
-       ]
+       ],
+       "tier": "Primary"
       },
       {
        "id": "A-d3s4",
@@ -704,17 +700,6 @@
        ]
       },
       {
-       "id": "A-d5s1",
-       "sec": "Regular",
-       "items": [
-        {
-         "ex": "cablecrunch",
-         "ph": "strength",
-         "w": 60
-        }
-       ]
-      },
-      {
        "id": "A-d5s3",
        "sec": "Regular",
        "items": [
@@ -792,6 +777,24 @@
          "bw": true
         }
        ]
+      },
+      {
+       "id": "A-xmuy1u0ehkgt",
+       "sec": "Supersets",
+       "items": [
+        {
+         "ex": "seated-cable-crunch",
+         "ph": "strength",
+         "w": null
+        },
+        {
+         "ex": "wristpd",
+         "ph": "strength",
+         "w": null
+        }
+       ],
+       "tier": "Accessory",
+       "type": "superset"
       },
       {
        "id": "A-d5s9",
@@ -991,18 +994,6 @@
        ]
       },
       {
-       "id": "B-d1s3",
-       "sec": "Regular",
-       "tier": "Accessory",
-       "items": [
-        {
-         "ex": "wristpd",
-         "ph": "hyp",
-         "w": 33
-        }
-       ]
-      },
-      {
        "id": "B-d1s4",
        "sec": "Regular",
        "tier": "Accessory",
@@ -1183,18 +1174,6 @@
        ]
       },
       {
-       "id": "B-d2s4",
-       "sec": "Regular",
-       "tier": "Accessory",
-       "items": [
-        {
-         "ex": "cablecrunch",
-         "ph": "strength",
-         "w": 60
-        }
-       ]
-      },
-      {
        "id": "B-d2s5",
        "sec": "Supersets",
        "tier": "Primary",
@@ -1229,6 +1208,24 @@
          "w": 50
         }
        ]
+      },
+      {
+       "id": "B-xmuy1nsai5fs",
+       "sec": "Supersets",
+       "items": [
+        {
+         "ex": "seated-cable-crunch",
+         "ph": "strength",
+         "w": null
+        },
+        {
+         "ex": "wristpd",
+         "ph": "hyp",
+         "w": null
+        }
+       ],
+       "tier": "Accessory",
+       "type": "superset"
       },
       {
        "id": "B-d2s7",
@@ -1294,18 +1291,6 @@
          "ex": "latpdbi",
          "ph": "hyp",
          "w": 45
-        }
-       ]
-      },
-      {
-       "id": "B-d3s3",
-       "sec": "Regular",
-       "tier": "Accessory",
-       "items": [
-        {
-         "ex": "wristpd",
-         "ph": "hyp",
-         "w": 33
         }
        ]
       },
@@ -1562,17 +1547,6 @@
        ]
       },
       {
-       "id": "B-d5s1",
-       "sec": "Regular",
-       "items": [
-        {
-         "ex": "cablecrunch",
-         "ph": "strength",
-         "w": 60
-        }
-       ]
-      },
-      {
        "id": "B-d5s3",
        "sec": "Regular",
        "tier": "Accessory",
@@ -1638,6 +1612,24 @@
          "bw": true
         }
        ]
+      },
+      {
+       "id": "B-xmuy1rdg3uct",
+       "sec": "Supersets",
+       "items": [
+        {
+         "ex": "seated-cable-crunch",
+         "ph": "strength",
+         "w": null
+        },
+        {
+         "ex": "wristpd",
+         "ph": "strength",
+         "w": null
+        }
+       ],
+       "tier": "Accessory",
+       "type": "superset"
       },
       {
        "id": "B-d5s8",
