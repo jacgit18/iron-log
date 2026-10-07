@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-07T18:34:20.750Z",
+ "exportedAt": "2026-10-07T19:47:25.438Z",
  "config": {
   "muscleMap": {
    "seated-cable-crunch": {
@@ -142,10 +142,10 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "1xynas1",
+   "hash": "uu3t2a",
    "last": {
-    "at": "2026-10-07T15:00:26.031Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/77a20b494f212861ff53abcef165e51a9078683f"
+    "at": "2026-10-07T18:34:23.734Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/09b7eac59b005bc09e3e5c95ce5e0dd327c9115f"
    }
   },
   "progNames": {
@@ -3278,7 +3278,9 @@
     "A-sled2": true,
     "A-sled3": true,
     "A-sled4": true,
-    "A-sled5": true
+    "A-sled5": true,
+    "A-xmuy1vz1s5qy": true,
+    "A-xmuy1u0ehkgt": true
    },
    "moved": {
     "A-d3s2": 2,
