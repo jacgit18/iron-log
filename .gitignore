@@ -29,3 +29,6 @@ playwright-report
 
 # Session handoff notes
 .claude/handoffs/
+
+# Local environment
+.env
