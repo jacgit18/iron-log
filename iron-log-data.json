@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-07T12:02:12.379Z",
+ "exportedAt": "2026-10-07T13:07:51.032Z",
  "config": {
   "muscleMap": {
    "seated-cable-crunch": {
@@ -32,6 +32,11 @@
     "n": "Seated Cable Crunch",
     "url": "https://youtube.com/shorts/bIbm-p6Q4s8?is=aiC1fOhPbN5QMcgq",
     "eq": "cable"
+   },
+   "tibialis-raise": {
+    "n": "Tibialis Raise",
+    "url": "https://youtu.be/OPEuhclsTUQ",
+    "eq": "bodyweight"
    }
   },
   "mode": 2,
@@ -109,10 +114,10 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "1b8mcee",
+   "hash": "4v1m8q",
    "last": {
-    "at": "2026-10-07T11:56:05.483Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/7f416b7502f7dbd285c22349fe7ecf4ddb8473aa"
+    "at": "2026-10-07T12:02:14.826Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/09a41cb84b110fe71b69d392576bb74ad6e95a38"
    }
   },
   "progNames": {
@@ -3353,6 +3358,12 @@
    "id": "Emutz0kdpoll0",
    "ex": "split-stance-cable-hip-rotation",
    "ph": "strength",
+   "note": ""
+  },
+  {
+   "id": "Emuy4gmmbono4",
+   "ex": "tibialis-raise",
+   "ph": "hyp",
    "note": ""
   }
  ],
