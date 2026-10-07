@@ -1,6 +1,7 @@
 import express from 'express';
 import { sql, type Kysely } from 'kysely';
 import { devAuth, inUserTransaction } from './auth.ts';
+import { logSession } from './commands/logSession.ts';
 import type { DB } from './db/types.ts';
 
 export interface AppDeps {
@@ -10,6 +11,7 @@ export interface AppDeps {
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
 export function createApp({ db }: AppDeps = {}) {
   const app = express();
+  app.use(express.json({ limit: '100kb' }));
   app.disable('x-powered-by');
 
   app.get('/api/health', (_req, res) => {
@@ -36,6 +38,13 @@ export function createApp({ db }: AppDeps = {}) {
     const userId = String(res.locals.userId);
     const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string }>`select current_setting('app.user_id') as id`.execute(trx)).rows[0]);
     res.json({ ok: true, userId: row?.id });
+  });
+
+  app.post('/api/commands/log-session', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => logSession(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
   });
 
   return app;
