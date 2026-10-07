@@ -25,7 +25,7 @@ import { MUSCLE_MAP } from '../lib/muscles.js';
 import { bestLift, liftGoalsOf, goalPhaseLabel, GOAL_KEYS } from '../lib/liftGoal.js';
 import { loadView, saveView } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
-import { validRm, validLiftGoalLb, validBodyLb, normEntry, normEntries, normBody, normProgram, normLibrary, nowStamp, SCHEMA_VERSION } from '../lib/validate.js';
+import { validRm, validLiftGoalLb, validBodyLb, normEntry, normEntries, normBody, normProgram, normLibrary, nowStamp, SCHEMA_VERSION } from '../shared/validate.js';
 import { commitFiles, readFile, validRepo } from '../lib/github.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host

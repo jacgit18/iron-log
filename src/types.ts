@@ -1,5 +1,5 @@
 /* Shapes of the data the app stores and exchanges. Everything in `normEntry` / `normBody` / `normProgram` / `normLibrary`
-   (lib/validate) returns one of these; anything outside them is cleaned away. Dates are 'YYYY-MM-DD' strings; `updatedAt` is an ISO date-time. */
+   (shared/validate) returns one of these; anything outside them is cleaned away. Dates are 'YYYY-MM-DD' strings; `updatedAt` is an ISO date-time. */
 
 export type PhaseKey = 'strength' | 'iso' | 'hyp' | 'exp' | 'mob';
 export type SlotType = 'single' | 'superset' | 'either';

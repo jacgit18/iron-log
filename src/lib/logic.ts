@@ -1,5 +1,5 @@
 import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
-import { nowStamp } from './validate.js';
+import { nowStamp } from '../shared/validate.js';
 import { monday, ymd, parseDate, addDays } from './dates.js';
 import type { Cfg, CardItem, ExtraCard, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week } from '../types.ts';
 

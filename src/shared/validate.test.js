@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { BUILTIN } from './data.js';
+import { BUILTIN } from '../lib/data.js';
 import { validStamp, SCHEMA_VERSION, normProgram, normLibrary, normEntry, normEntries, normBody, setError, validDate, validBodyLb, validLiftGoalLb, validRest, validPct, validRm, validMode, validOz, validGoal } from './validate.js';
-import { normalizeData, normConfig } from './export.js';
-import { normWeek } from './logic.js';
+import { normalizeData, normConfig } from '../lib/export.js';
+import { normWeek } from '../lib/logic.js';
 
 const junk = [NaN, Infinity, -Infinity, undefined, null, '5', {}, []];
 

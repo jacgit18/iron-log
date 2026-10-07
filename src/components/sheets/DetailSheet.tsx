@@ -4,7 +4,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../lib/dates.js';
 import { volText, AUTO_NOTE, isTimed, setsOfEntry, summarizeSets } from '../../lib/logic.js';
-import { setError } from '../../lib/validate.js';
+import { setError } from '../../shared/validate.js';
 import { entryId, findEntry } from '../../lib/export.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';

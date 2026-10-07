@@ -4,7 +4,7 @@ import type { Boost, Supplements } from '../types.ts';
    one can be taken back; cups are just ounces / 8. */
 
 import { normItems, normTaken } from './supplements.js';
-import { validOz, validGoal } from './validate.js';
+import { validOz, validGoal } from '../shared/validate.js';
 
 export const CUP_OZ = 8;
 export const DEFAULT_GOAL_OZ = 64; // 8 cups

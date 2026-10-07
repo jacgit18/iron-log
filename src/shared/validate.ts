@@ -2,7 +2,7 @@
    Pure predicates over numbers (already converted with Number()), so the store, the file importers and any future
    backend can share the same rules. Each one is false for NaN and Infinity. */
 
-import { PH_KEYS, hasValidDays } from './data.js';
+import { PH_KEYS, hasValidDays } from '../lib/data.js';
 import type { BodyEntry, LibraryItem, LogEntry, LogSet, Program, ProgramDay, ProgramItem, ProgramSlot, SlotType } from '../types.ts';
 
 export const LIMITS = {

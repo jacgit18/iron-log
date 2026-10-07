@@ -13,7 +13,7 @@ import { WEEK_RE, weekOfDate, entryWeek, weekSummary } from './trends.js';
 import { bwSorted } from './body.js';
 import { normStretches, normStretchWeek, stretchWeekEmpty } from './stretches.js';
 import { normSupplements } from './water.js';
-import { validMode, validRest, validPct, validRm, validBodyLb, validLiftGoalLb, normEntries, normBody, normProgram, normLibrary, validStamp } from './validate.js';
+import { validMode, validRest, validPct, validRm, validBodyLb, validLiftGoalLb, normEntries, normBody, normProgram, normLibrary, validStamp } from '../shared/validate.js';
 import { validRepo } from './github.js';
 
 // SheetJS is bundled (0.20.x, patched for reading untrusted files) and loaded only when needed.

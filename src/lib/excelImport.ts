@@ -9,7 +9,7 @@ import { MUSCLES, MUSCLE_MAP } from './muscles.js';
 import { WEEK_RE, entryWeek } from './trends.js';
 import { loadXLSX, normalizeData } from './export.js';
 import type { BodyEntry, Cfg, DataFile, LogEntry, LogSet, Logs, MuscleKey, MuscleTags, Program, Week } from '../types.ts';
-import { validMode, validRest, validPct, validRm, validBodyLb, normEntries } from './validate.js';
+import { validMode, validRest, validPct, validRm, validBodyLb, normEntries } from '../shared/validate.js';
 
 type XLSX = typeof import('xlsx');
 // Workbook cells are whatever the file held: text, numbers, blanks.
