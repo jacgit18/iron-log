@@ -2,7 +2,7 @@ import type { LiftGoal as LiftGoalT, LogEntry } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { parseDate, fmtShort } from '../../lib/dates.js';
+import { parseDate, fmtShort } from '../../shared/dates.js';
 import { GOAL_KEYS, goalPhaseLabel, liftGoalsOf, liftGoalStatus } from '../../lib/liftGoal.js';
 import { fmtLb, signed } from '../../lib/body.js';
 import ArmedButton from '../ArmedButton.jsx';

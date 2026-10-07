@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { parseDate } from './dates.js';
+import { parseDate } from '../shared/dates.js';
 import { BUILTIN, slotsFor } from './data.js';
 import {
   DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, backoffOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,

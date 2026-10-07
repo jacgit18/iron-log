@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
-import { MON, fmtShort } from '../../lib/dates.js';
+import { MON, fmtShort } from '../../shared/dates.js';
 import { programFor, progName, programWeights, bestByPhase, round } from '../../lib/logic.js';
 import { backupCfg, ghCfg } from '../../lib/export.js';
 import CommitInput from '../CommitInput.jsx';

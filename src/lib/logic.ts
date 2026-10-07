@@ -1,6 +1,6 @@
 import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
 import { nowStamp } from '../shared/validate.js';
-import { monday, ymd, parseDate, addDays } from './dates.js';
+import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
 import type { Cfg, CardItem, ExtraCard, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week } from '../types.ts';
 
 /* Functions that read a week accept a partial one (a stored week may lack keys, and `rest` was once a single number). */
@@ -50,7 +50,7 @@ export function stallOf(cfg: Cfg, logs: Logs, exId: string, ph: PhaseKey | null 
   if (ph === 'exp' || ph === 'mob') return null;
   const best: Record<string, LogEntry> = {};
   sessionsOf(logs, exId, ph).forEach(e => {
-    const wk = e.wk || ymd(monday(parseDate(e.d))); const b = best[wk];
+    const wk = e.wk || ymd(weekStartOf(parseDate(e.d))); const b = best[wk];
     if (!b || Number(e.w) > Number(b.w) || (Number(e.w) === Number(b.w) && workOf(e) > workOf(b))) best[wk] = e;
   });
   const L = Object.keys(best).sort().map(k => best[k]).slice(-3);
@@ -453,7 +453,7 @@ export function planRows(cfg: Cfg, logs: Logs, it: CardItem, ph: PhaseKey | null
    shows in Progress. Unchecking removes that entry, and logging real numbers for the slot that week
    replaces it. Returns only the exercises whose entries changed: {exId: entries}. */
 export const AUTO_NOTE = 'From check-off';
-const weekOfEntry = (e: LogEntry) => e.wk || ymd(monday(parseDate(e.d)));
+const weekOfEntry = (e: LogEntry) => e.wk || ymd(weekStartOf(parseDate(e.d)));
 // The day a board was worked: the earliest date among this week's log entries for the cards in it.
 export function dayDate(cards: Slot[], logs: Logs, wk: string): string | null {
   let first: string | null = null;

@@ -1,11 +1,11 @@
 import type { Cfg, LogEntry, Logs, Program, Week, WeightChange } from '../types.ts';
 import { BUILTIN, exInfo } from './data.js';
-import { monday, ymd, parseDate, addDays } from './dates.js';
+import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
 import { programFor, weekSlots, tally, currentLayout, DAYS } from './logic.js';
 import { M_KEYS, tagsOf } from './muscles.js';
 
 export const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/;
-export const weekOfDate = (d: string) => ymd(monday(parseDate(d)));
+export const weekOfDate = (d: string) => ymd(weekStartOf(parseDate(d)));
 export const entryWeek = (e: LogEntry) => e.wk || weekOfDate(e.d);
 export const mdLabel = (k: string) => { const d = parseDate(k); return `${d.getMonth() + 1}/${d.getDate()}`; };
 const setsOf = (e: LogEntry) => { const n = Number(e.s); return n > 0 ? n : 0; };
@@ -27,7 +27,7 @@ export function weekSummary(cfg: Cfg, programs: Record<string, Program>, key: st
 
 // Week keys for the charts: up to `max` weeks ending this week, starting no earlier than the first logged week (min `min` columns).
 export function trendWeeks(logs: Logs, max: number, min: number) {
-  const thisSun = ymd(monday(new Date()));
+  const thisSun = ymd(weekStartOf(new Date()));
   let first = thisSun; Object.values(logs).forEach(L => L.forEach(e => { const k = entryWeek(e); if (k < first) first = k; }));
   const keys: string[] = []; let d = parseDate(thisSun);
   while (keys.length < max && (ymd(d) >= first || keys.length < min)) { keys.unshift(ymd(d)); d = addDays(d, -7); }

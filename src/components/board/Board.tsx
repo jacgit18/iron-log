@@ -5,7 +5,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
-import { monday, ymd, addDays, fmtShort, fmtDayDate } from '../../lib/dates.js';
+import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
 import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
@@ -83,7 +83,7 @@ export default function Board() {
 
   // Yesterday's column (this week only, not on Sunday): cards with nothing checked, unless hidden for today.
   const yCol = todayCol(today) - 1; const todayKey = ymd(today);
-  const left = ymd(monday(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey ? leftovers(week, slots, yCol) : [];
+  const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
   const [filter, setFilter] = useState({ muscle: '', eq: '' });
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
@@ -139,7 +139,7 @@ export default function Board() {
           <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}>‹</button>
           <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
           <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}>›</button>
-          {ymd(monday(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
+          {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
           <label className="seg modesel" htmlFor="board-mode">
             <span className="sr">Mode</span>
             <select id="board-mode" aria-label="Program mode" value={cfg.mode} onChange={e => st.setMode(Number(e.target.value) as 1 | 2 | 3)}>

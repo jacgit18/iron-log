@@ -2,7 +2,7 @@ import type { Boost as BoostT, SupplementItem, SupplementSlot, Supplements, Take
 import { useState, useEffect, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../lib/dates.js';
+import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
 import { SLOTS, scheduled, scheduleOf, slotTally } from '../../lib/supplements.js';
 import { HOT_OZ, TRAIN_OZ_PER_30, BOTTLES, CUP_OZ, OZ_PER_LB, fmtOz, cupsOf, sumOz, lastDays, goalFor, boostOz } from '../../lib/water.js';
 

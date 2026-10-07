@@ -4,7 +4,7 @@ import type { PhaseKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, exInfo, videoLabel } from '../../lib/data.js';
-import { parseDate, fmtShort } from '../../lib/dates.js';
+import { parseDate, fmtShort } from '../../shared/dates.js';
 import {
   DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, backoffOf, describe, holdPlan,
   restsOf,

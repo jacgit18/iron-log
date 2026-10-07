@@ -2,7 +2,7 @@ import type { LogEntry, PhaseKey } from '../../types.ts';
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
-import { parseDate, fmtShort } from '../../lib/dates.js';
+import { parseDate, fmtShort } from '../../shared/dates.js';
 import { volText, AUTO_NOTE, isTimed, setsOfEntry, summarizeSets } from '../../lib/logic.js';
 import { setError } from '../../shared/validate.js';
 import { entryId, findEntry } from '../../lib/export.js';

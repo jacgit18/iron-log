@@ -1,5 +1,5 @@
 import { PHASES, PH_KEYS } from '../lib/data.js';
-import { parseDate, fmtShort } from '../lib/dates.js';
+import { parseDate, fmtShort } from '../shared/dates.js';
 
 // Weight-over-time line(s). HTML labels over a stretched SVG path so text stays readable at any width.
 // With byPhase, each training phase gets its own line (phase hue + marker shape + legend).

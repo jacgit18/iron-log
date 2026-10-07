@@ -3,7 +3,7 @@ import type { AppState } from '../../store/types.ts';
 import { useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { monday, ymd, addDays, fmtShort, parseDate, DAY_NAMES } from '../../lib/dates.js';
+import { weekStartOf, ymd, addDays, fmtShort, parseDate, DAY_NAMES } from '../../shared/dates.js';
 import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { motionOK } from '../../lib/motion.js';
@@ -47,7 +47,7 @@ function GroupCard({ d, name, items, tier }: { d: number; name: string; items: S
 }
 
 function Summary({ items, week, today, wk }: { items: Stretch[]; week: StretchWeek; today: Date; wk: string }) {
-  const thisWeek = ymd(monday(today)) === wk;
+  const thisWeek = ymd(weekStartOf(today)) === wk;
   const t = thisWeek ? dayTally(items, week, today.getDay()) : null;
   const days = weekDaysDone(items, week);
   return (
@@ -103,7 +103,7 @@ export default function Stretches() {
   const today = useToday(x => x.today);
   const s = useAppStore.getState();
   const wk = ymd(weekStart);
-  const thisWeek = ymd(monday(today)) === wk;
+  const thisWeek = ymd(weekStartOf(today)) === wk;
   const [pick, setPick] = useState<{ wk: string; d: number } | null>(null); // {wk, d}: the phone's day, only for the week it was picked in
   const day = pick && pick.wk === wk ? pick.d : thisWeek ? today.getDay() : 0;
   const choose = (d: number) => setPick({ wk, d });

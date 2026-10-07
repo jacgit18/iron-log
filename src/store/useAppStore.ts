@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { AppState, OrderNote, OrderState } from './types.ts';
 import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Week } from '../types.ts';
 import { BUILTIN, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
-import { monday, ymd, addDays } from '../lib/dates.js';
+import { weekStartOf, ymd, addDays } from '../shared/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
@@ -130,7 +130,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   ...settingsSlice(set, get, flag),
   ...wellnessSlice(set, get, flag),
   cfg: structuredClone(DEFAULT_CFG),
-  weekStart: monday(new Date()),
+  weekStart: weekStartOf(new Date()),
   week: normWeek(null),
   logs: {}, // exId -> [entries]
   unsaved: [], // doc paths whose last write was refused (storage full, permission): kept until a write succeeds
@@ -579,7 +579,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   gotoWeek(which) {
     const cur = get().weekStart;
-    set({ mDay: null, moveNote: null, orderNote: null, weekStart: which === 'today' ? monday(new Date()) : addDays(cur, which === 'prev' ? -7 : 7) });
+    set({ mDay: null, moveNote: null, orderNote: null, weekStart: which === 'today' ? weekStartOf(new Date()) : addDays(cur, which === 'prev' ? -7 : 7) });
     subscribeWeek();
   },
 
@@ -991,7 +991,7 @@ useAppStore.subscribe((s, prev) => {
 // were looking at the week that just ended; browsing elsewhere stays put.
 useToday.subscribe((s, prev) => {
   const st = useAppStore.getState();
-  if (ymd(st.weekStart) === ymd(monday(prev.today)) && ymd(monday(s.today)) !== ymd(st.weekStart)) { if (st.modal && (st.modal.type === 'log' || st.modal.type === 'dayadd')) st.closeModal(); st.gotoWeek('today'); } // those sheets point at last week's cards
+  if (ymd(st.weekStart) === ymd(weekStartOf(prev.today)) && ymd(weekStartOf(s.today)) !== ymd(st.weekStart)) { if (st.modal && (st.modal.type === 'log' || st.modal.type === 'dayadd')) st.closeModal(); st.gotoWeek('today'); } // those sheets point at last week's cards
 });
 
 // Resolves once init knows where data lives (this browser or the host database).

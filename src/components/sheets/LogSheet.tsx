@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
-import { ymd, parseDate, fmtShort } from '../../lib/dates.js';
+import { ymd, parseDate, fmtShort } from '../../shared/dates.js';
 import {
   phaseOf, isTimed, targetOf, rxOf, lastLog, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
 } from '../../lib/logic.js';

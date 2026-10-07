@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
-import { monday, ymd, parseDate, addDays, fmtShort } from '../../lib/dates.js';
+import { weekStartOf, ymd, parseDate, addDays, fmtShort } from '../../shared/dates.js';
 import { describe, lastLog, stallOf, backoffOf } from '../../lib/logic.js';
 import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
 import Trends from './Trends.jsx';
@@ -19,7 +19,7 @@ function History() {
   if (!weekHist && loading) return <section className="panel"><h2>Weekly history</h2><p>Loading…</p></section>;
 
   const weeks = { ...(weekHist || {}), [wk]: week }; // live view of the shown week
-  const thisSun = ymd(monday(today));
+  const thisSun = ymd(weekStartOf(today));
   const active = Object.keys(weeks).filter(k => WEEK_RE.test(k) && k <= thisSun && weekSummary(cfg, programs, k, weeks[k]).ex > 0).sort();
   const keys = [];
   if (active.length) { let d = parseDate(thisSun); const first = parseDate(active[0]); while (d >= first && keys.length < 12) { keys.push(ymd(d)); d = addDays(d, -7); } }

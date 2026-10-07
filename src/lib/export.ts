@@ -1,7 +1,7 @@
 /* ---------- CSV / Excel export, full data file, GitHub backup helpers ----------
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
 import { PHASES, PH_KEYS, BUILTIN, exInfo, withAllDays, DAY_COUNT } from './data.js';
-import { ymd, fmtShort } from './dates.js';
+import { ymd, fmtShort } from '../shared/dates.js';
 import type { BackupCfg, DayDraft, Cfg, DataFile, LogEntry, Logs, PhaseKey, Program, Snapshot, Week } from '../types.ts';
 import { DEFAULT_CFG, weekSlots, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
 
