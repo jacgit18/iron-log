@@ -30,3 +30,12 @@ export function validateLogSession(input: unknown): LogSessionInput | null {
   const clean = normEntry(entry);
   return clean ? { exerciseId, entry: clean } : null;
 }
+
+/** A check-off: the planned numbers for one card in one week, marked auto. Always a create (baseVersion null). */
+export type TickCardInput = LogSessionInput;
+export type TickCardCommand = Command<'tick-card', TickCardInput>;
+
+export function validateTickCard(input: unknown): TickCardInput | null {
+  const out = validateLogSession(input);
+  return out && out.entry.auto === true && out.entry.slot && out.entry.wk ? out : null;
+}

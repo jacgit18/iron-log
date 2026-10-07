@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateLogSession } from './commands.js';
+import { validateLogSession, validateTickCard } from './commands.js';
 
 describe('validateLogSession', () => {
   it('accepts an exercise id with a valid entry and cleans the entry', () => {
@@ -13,5 +13,17 @@ describe('validateLogSession', () => {
   it('refuses an entry with no valid date, and non-objects', () => {
     expect(validateLogSession({ exerciseId: 'squat', entry: { d: 'nope' } })).toBeNull();
     expect(validateLogSession(null)).toBeNull();
+  });
+});
+
+describe('validateTickCard', () => {
+  const tick = { d: '2026-10-07', w: 135, s: 3, r: 5, slot: 'A-d1s1', wk: '2026-10-04', auto: true };
+  it('accepts a check-off with a slot and a week', () => {
+    expect(validateTickCard({ exerciseId: 'squat', entry: tick })).toEqual({ exerciseId: 'squat', entry: tick });
+  });
+  it('refuses an entry that is not marked auto, or has no slot or week', () => {
+    expect(validateTickCard({ exerciseId: 'squat', entry: { ...tick, auto: false } })).toBeNull();
+    expect(validateTickCard({ exerciseId: 'squat', entry: { ...tick, slot: undefined } })).toBeNull();
+    expect(validateTickCard({ exerciseId: 'squat', entry: { ...tick, wk: undefined } })).toBeNull();
   });
 });
