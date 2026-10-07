@@ -1,0 +1,21 @@
+# Local Postgres for development. The API and the migrations read DATABASE_URL (see .env.example).
+# Host port 5433 so it never clashes with another Postgres on 5432.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ironlog
+      POSTGRES_PASSWORD: ironlog
+      POSTGRES_DB: ironlog
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - ironlog-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ironlog"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  ironlog-db:
