@@ -56,6 +56,24 @@ function columns({ exerciseId, entry }: LogSessionInput) {
   };
 }
 
+// Rule 2 (backend-data-rules.md section 3): a hand-logged session replaces the check-off for the same card and week. The
+// check-off becomes a tombstone in the same command, so it shares the new row's seq and the pull feed delivers both.
+async function replaceCheckOff(trx: Transaction<DB>, userId: string, input: LogSessionInput, seq: string): Promise<LogEntryRow[]> {
+  const { slot, wk } = input.entry;
+  if (!slot || !wk) return [];
+  return trx
+    .updateTable('log_entries')
+    .set({ deleted_at: sql`now()`, version: sql`version + 1`, seq, updated_at: sql`now()` })
+    .where('user_id', '=', userId)
+    .where('exercise_id', '=', input.exerciseId)
+    .where('slot', '=', slot)
+    .where('wk', '=', wk)
+    .where('auto', '=', true)
+    .where('deleted_at', 'is', null)
+    .returningAll()
+    .execute();
+}
+
 async function refuse(trx: Transaction<DB>, userId: string, env: { clientId?: string; input: unknown }, reason: string, clientVersion: string | null) {
   await trx
     .insertInto('refused_writes')
@@ -97,7 +115,8 @@ export async function logSession(trx: Transaction<DB>, userId: string, body: unk
     if (existing) return { status: 200, body: { rows: [existing], cursor: existing.seq } };
     const next = await seq();
     const row = await trx.insertInto('log_entries').values({ user_id: userId, client_id: env.clientId, seq: next, ...columns(input) }).returningAll().executeTakeFirstOrThrow();
-    return { status: 201, body: { rows: [row], cursor: next } };
+    const replaced = await replaceCheckOff(trx, userId, input, next);
+    return { status: 201, body: { rows: [row, ...replaced], cursor: next } };
   }
 
   const refusal = !existing ? 'not-found' : existing.deleted_at ? 'deleted' : existing.version !== env.baseVersion ? 'stale' : null;
@@ -112,5 +131,6 @@ export async function logSession(trx: Transaction<DB>, userId: string, body: unk
     .where('id', '=', existing!.id)
     .returningAll()
     .executeTakeFirstOrThrow();
-  return { status: 200, body: { rows: [row], cursor: next } };
+  const replaced = await replaceCheckOff(trx, userId, input, next);
+  return { status: 200, body: { rows: [row, ...replaced], cursor: next } };
 }
