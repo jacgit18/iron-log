@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "dev:server": "tsx watch server/index.ts",
+    "dev:server": "NODE_ENV=development tsx watch server/index.ts",
     "build": "vite build",
     "lint": "oxlint",
     "typecheck": "tsc && tsc -p server",
