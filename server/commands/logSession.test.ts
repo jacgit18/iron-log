@@ -160,3 +160,93 @@ describe('log-session edit', () => {
     expect(res.body.refused).toBe('not-found');
   });
 });
+
+// Rule 2: a hand-logged session replaces the check-off for the same card and week.
+describe('log-session replaces a check-off', () => {
+  const week = '2026-10-04';
+  const carded = { ...entry, slot: 's1', wk: week };
+
+  async function checkOff(clientId = 'tick1', over: Partial<{ exercise_id: string; slot: string; wk: string }> = {}) {
+    const me = (await (await fetch(`${base}/api/me`, { headers: { 'x-dev-user': 'owner' } })).json()) as { userId: string };
+    await db
+      .insertInto('log_entries')
+      .values({ user_id: me.userId, client_id: clientId, seq: '1', exercise_id: 'squat', d: '2026-10-05', slot: 's1', wk: week, auto: true, ...over })
+      .execute();
+  }
+  const live = (clientId: string) => db.selectFrom('log_entries').selectAll().where('client_id', '=', clientId).executeTakeFirstOrThrow();
+
+  it('tombstones the check-off in the same command and returns both rows', async () => {
+    await checkOff();
+    const res = await create('hand1', carded);
+    expect(res.status).toBe(201);
+    expect(res.body.rows.map((r: any) => r.client_id)).toEqual(['hand1', 'tick1']);
+    const tick = await live('tick1');
+    expect(tick.deleted_at).not.toBeNull();
+    expect(tick.version).toBe(2);
+    expect(tick.seq).toBe(res.body.rows[0].seq);
+    expect(await db.selectFrom('row_history').select('version').where('row_id', '=', tick.id).execute()).toEqual([{ version: 1 }]);
+  });
+
+  it('delivers the new session and the tombstone through sync', async () => {
+    await checkOff();
+    await create('hand1', carded);
+    const pulled = (await (await fetch(`${base}/api/sync?since=0`, { headers: { 'x-dev-user': 'owner' } })).json()) as any;
+    expect(pulled.rows.map((r: any) => [r.client_id, r.deleted_at !== null]).sort()).toEqual([['hand1', false], ['tick1', true]]);
+  });
+
+  it('a retry does not touch anything again', async () => {
+    await checkOff();
+    const first = await create('hand1', carded);
+    const retry = await create('hand1', carded);
+    expect(retry.status).toBe(200);
+    expect(retry.body.rows).toHaveLength(1);
+    expect((await live('tick1')).seq).toBe(first.body.rows[0].seq);
+  });
+
+  it.each([
+    ['another week', { wk: '2026-09-27' }],
+    ['another card slot', { slot: 's2' }],
+    ['another exercise', { exercise_id: 'bench' }],
+  ])('leaves the check-off for %s', async (_name, over) => {
+    await checkOff('tick1', over);
+    await create('hand1', carded);
+    expect((await live('tick1')).deleted_at).toBeNull();
+  });
+
+  it('leaves the check-off when the session has no slot or week', async () => {
+    await checkOff();
+    await create('hand1');
+    expect((await live('tick1')).deleted_at).toBeNull();
+  });
+
+  it('does not replace another hand-logged session', async () => {
+    await create('hand1', carded);
+    await create('hand2', carded);
+    expect((await live('hand1')).deleted_at).toBeNull();
+    expect((await live('hand2')).deleted_at).toBeNull();
+  });
+
+  it('replaces the check-off when an edit adds the slot and week', async () => {
+    await create('hand1');
+    await checkOff();
+    const res = await post({ clientId: 'hand1', baseVersion: 1, input: { exerciseId: 'squat', entry: carded } });
+    expect(res.status).toBe(200);
+    expect(res.body.rows.map((r: any) => r.client_id)).toEqual(['hand1', 'tick1']);
+    expect((await live('tick1')).deleted_at).not.toBeNull();
+  });
+
+  it('leaves an already-deleted check-off alone', async () => {
+    await checkOff();
+    await db.updateTable('log_entries').set({ deleted_at: new Date(), version: 2, seq: '7' }).execute();
+    const res = await create('hand1', carded);
+    expect(res.body.rows).toHaveLength(1);
+    expect((await live('tick1')).seq).toBe('7');
+  });
+
+  it('keeps at most one live check-off per card and week afterwards', async () => {
+    await checkOff();
+    await create('hand1', carded);
+    const live = await db.selectFrom('log_entries').select('id').where('auto', '=', true).where('deleted_at', 'is', null).execute();
+    expect(live).toHaveLength(0);
+  });
+});
