@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-06T20:03:48.669Z",
+ "exportedAt": "2026-10-07T11:39:25.266Z",
  "config": {
   "muscleMap": {},
   "ex": {
@@ -95,10 +95,10 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "1x46bwu",
+   "hash": "33b887",
    "last": {
-    "at": "2026-10-05T21:44:09.148Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/289f6b650fb2b6e816ac898a7d72d8c9b8f06932"
+    "at": "2026-10-06T20:03:53.123Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/5fc919acf3fbf1788fe4ae6911c92ce8c750c435"
    }
   },
   "progNames": {
@@ -1869,6 +1869,35 @@
     ],
     "slot": "A-d2s4",
     "wk": "2026-09-27"
+   },
+   {
+    "d": "2026-10-07",
+    "ph": "strength",
+    "w": 44,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     }
+    ],
+    "slot": "B-d2s4",
+    "wk": "2026-10-04",
+    "id": "Lmuxzha4q27ljhi",
+    "updatedAt": "2026-10-07T10:47:36.842Z"
    }
   ],
   "cablepunch": [
@@ -2034,6 +2063,27 @@
     "slot": "B-d1s8",
     "wk": "2026-10-04",
     "auto": true
+   },
+   {
+    "d": "2026-10-07",
+    "ph": "hyp",
+    "w": 25,
+    "s": 2,
+    "r": 12,
+    "sets": [
+     {
+      "w": 25,
+      "r": 15
+     },
+     {
+      "w": 25,
+      "r": 12
+     }
+    ],
+    "slot": "B-d2s5",
+    "wk": "2026-10-04",
+    "id": "Lmuxzx0qj2rubla",
+    "updatedAt": "2026-10-07T10:59:51.163Z"
    }
   ],
   "clean-jerk-overhead-press": [
@@ -2107,6 +2157,61 @@
     "wk": "2026-10-04"
    }
   ],
+  "facepull": [
+   {
+    "d": "2026-10-07",
+    "ph": "strength",
+    "w": 27,
+    "s": 2,
+    "r": 6,
+    "sets": [
+     {
+      "w": 27,
+      "r": 6
+     },
+     {
+      "w": 27,
+      "r": 6
+     }
+    ],
+    "slot": "B-d2s3",
+    "wk": "2026-10-04",
+    "id": "Lmuxzl6p6ft2utr",
+    "updatedAt": "2026-10-07T10:50:39.018Z"
+   }
+  ],
+  "farmers": [
+   {
+    "d": "2026-10-07",
+    "ph": "strength",
+    "w": 40,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 40,
+      "r": 6
+     },
+     {
+      "w": 40,
+      "r": 6
+     },
+     {
+      "w": 40,
+      "r": 6
+     },
+     {
+      "w": 40,
+      "r": 6
+     }
+    ],
+    "slot": "B-d2s1",
+    "wk": "2026-10-04",
+    "id": "Lmuxykv8wo0p7ko",
+    "auto": true,
+    "updatedAt": "2026-10-07T10:22:24.560Z"
+   }
+  ],
   "grip": [
    {
     "d": "2026-09-28",
@@ -2163,6 +2268,36 @@
     "slot": "B-d1s10",
     "wk": "2026-10-04",
     "auto": true
+   },
+   {
+    "d": "2026-10-07",
+    "ph": "strength",
+    "w": 200,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 200,
+      "r": 6
+     },
+     {
+      "w": 200,
+      "r": 6
+     },
+     {
+      "w": 200,
+      "r": 6
+     },
+     {
+      "w": 200,
+      "r": 6
+     }
+    ],
+    "slot": "B-d2s7",
+    "wk": "2026-10-04",
+    "id": "Lmuy0ek2dy3uvlb",
+    "auto": true,
+    "updatedAt": "2026-10-07T11:13:29.369Z"
    }
   ],
   "hack": [
@@ -2292,6 +2427,27 @@
     ],
     "slot": "A-d4s5",
     "wk": "2026-09-27"
+   },
+   {
+    "d": "2026-10-07",
+    "ph": "strength",
+    "w": 320,
+    "s": 2,
+    "r": 6,
+    "sets": [
+     {
+      "w": 320,
+      "r": 6
+     },
+     {
+      "w": 320,
+      "r": 6
+     }
+    ],
+    "slot": "B-d2s5",
+    "wk": "2026-10-04",
+    "id": "Lmuxzwna7kruuga",
+    "updatedAt": "2026-10-07T10:59:33.727Z"
    }
   ],
   "innerthigh": [
@@ -2373,6 +2529,32 @@
     ],
     "slot": "A-d1s7",
     "wk": "2026-09-27"
+   },
+   {
+    "d": "2026-10-07",
+    "ph": "iso",
+    "w": 15,
+    "s": 3,
+    "sec": 15,
+    "sets": [
+     {
+      "w": 15,
+      "sec": 15
+     },
+     {
+      "w": 15,
+      "sec": 15
+     },
+     {
+      "w": 15,
+      "sec": 15
+     }
+    ],
+    "slot": "B-d1s9",
+    "wk": "2026-10-04",
+    "id": "Lmuxyjmj31qeiu6",
+    "auto": true,
+    "updatedAt": "2026-10-07T10:21:26.607Z"
    }
   ],
   "latpd": [
@@ -2516,6 +2698,29 @@
     ],
     "slot": "A-d3s5",
     "wk": "2026-09-27"
+   }
+  ],
+  "ohtri": [
+   {
+    "d": "2026-10-07",
+    "ph": "strength",
+    "w": 17,
+    "s": 2,
+    "r": 6,
+    "sets": [
+     {
+      "w": 17,
+      "r": 6
+     },
+     {
+      "w": 17,
+      "r": 6
+     }
+    ],
+    "slot": "B-d2s2",
+    "wk": "2026-10-04",
+    "id": "Lmuxyxe13xvzkyb",
+    "updatedAt": "2026-10-07T10:32:08.775Z"
    }
   ],
   "outerthigh": [
@@ -2981,6 +3186,32 @@
     ],
     "slot": "A-d1s7",
     "wk": "2026-09-27"
+   },
+   {
+    "d": "2026-10-07",
+    "ph": "hyp",
+    "w": 15,
+    "s": 3,
+    "r": 15,
+    "sets": [
+     {
+      "w": 15,
+      "r": 15
+     },
+     {
+      "w": 15,
+      "r": 15
+     },
+     {
+      "w": 15,
+      "r": 15
+     }
+    ],
+    "slot": "B-d1s9",
+    "wk": "2026-10-04",
+    "id": "Lmuxyjl53v7iqsi",
+    "auto": true,
+    "updatedAt": "2026-10-07T10:21:24.808Z"
    }
   ]
  },
@@ -3092,19 +3323,31 @@
     "B-d1s2": true,
     "B-d1s6": true,
     "B-d1s10": true,
-    "B-d2s8": true
+    "B-d2s8": true,
+    "B-d1s9": true,
+    "B-d2s1": true,
+    "B-d2s1#0": true,
+    "B-d2s2": true,
+    "B-d2s4": true,
+    "B-d2s3": true,
+    "B-d2s3#1": true,
+    "B-d2s5": true,
+    "B-d2s7": true
    },
    "skipped": {
     "B-d6s5": true,
     "B-sled1": true,
-    "B-d1s7": true
+    "B-d1s7": true,
+    "B-sled2": true,
+    "B-d2s6": true
    },
    "moved": {
     "B-d5s2": 6,
     "B-d1s3": 6,
     "B-d1s9": 2,
-    "B-d1s5": 5,
-    "B-d2s8": 1
+    "B-d1s5": 3,
+    "B-d2s8": 1,
+    "B-d3s2": 5
    },
    "ph": {},
    "warm": {},
