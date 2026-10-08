@@ -3,7 +3,8 @@ import type { AddressInfo } from 'node:net';
 import type { Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { documentFor, parsePath, type PathKind } from '../../src/sync/documents.ts';
-import { createMirrorStore } from '../../src/sync/mirrorStore.ts';
+import { createMirrorStore, type MirrorStore } from '../../src/sync/mirrorStore.ts';
+import { planCommands } from '../../src/sync/plan.ts';
 import { pullAll } from '../../src/sync/pull.ts';
 import { createTransport } from '../../src/sync/transport.ts';
 import { createApp } from '../app.ts';
@@ -150,5 +151,80 @@ describe('pulling what the real API holds', () => {
     const store = createMirrorStore(memory());
     if (!stale.ok && stale.class === 'conflict') store.apply('log_entries', [stale.current!]);
     expect(store.rows().get('log_entries|L1')).toMatchObject({ version: 2, entry: { w: 140 } });
+  });
+});
+
+// What the planner sends is what the server accepts: run the planned commands for a changed document against the real
+// API, put each answer into the mirror, and check the mirror ends equal to the document and a fresh pull agrees.
+describe('the planner against the real API', () => {
+  const u = 'owner';
+  async function save(store: MirrorStore, path: string, doc: unknown) {
+    const cmds = planCommands(kind(path), doc, store.rows());
+    for (const c of cmds) {
+      const out = await transportFor(u).command(c.name, { clientId: c.clientId, baseVersion: c.baseVersion, input: c.input });
+      expect(out.ok, `${c.name} ${c.rowKey} v${c.baseVersion}: ${JSON.stringify(out)}`).toBe(true);
+      if (out.ok) store.apply(c.table, out.rows);
+    }
+    return cmds.map(c => `${c.name}:${c.rowKey}`);
+  }
+  const entries = (path: string, store: MirrorStore) => ((documentFor(kind(path), store.rows()) as { entries: { id: string }[] } | null)?.entries ?? []).map(e => e.id);
+  const e = (id: string, over: object = {}) => ({ id, d: '2026-10-05', ph: 'strength', w: 135, s: 3, r: 5, ...over });
+  const tickOf = (id: string, over: object = {}) => e(id, { auto: true, slot: 's1', wk: '2026-10-04', ...over });
+
+  it('log, delete, and Undo an entry', async () => {
+    const store = createMirrorStore(memory());
+    expect(await save(store, 'logs/squat', { entries: [e('L1'), e('L2')] })).toEqual(['log-session:L1', 'log-session:L2']);
+    expect(await save(store, 'logs/squat', { entries: [e('L2')] })).toEqual(['delete-entry:L1']);
+    expect(entries('logs/squat', store)).toEqual(['L2']);
+    expect(await save(store, 'logs/squat', { entries: [e('L1'), e('L2')] })).toEqual(['log-session:L1']); // Undo
+    expect(entries('logs/squat', store).sort()).toEqual(['L1', 'L2']);
+    expect(store.rows().get('log_entries|L1')).toMatchObject({ version: 3, deleted: false });
+    const fresh = createMirrorStore(memory());
+    await pullAll(transportFor(u), fresh);
+    expect(entries('logs/squat', fresh).sort()).toEqual(['L1', 'L2']);
+    expect(await save(store, 'logs/squat', { entries: [e('L1'), e('L2')] })).toEqual([]); // nothing left to send
+  });
+
+  it('tick, untick and Undo a check-off', async () => {
+    const store = createMirrorStore(memory());
+    expect(await save(store, 'logs/squat', { entries: [tickOf('T1')] })).toEqual(['tick-card:T1']);
+    expect(await save(store, 'logs/squat', { entries: [] })).toEqual(['delete-entry:T1']);
+    expect(await save(store, 'logs/squat', { entries: [tickOf('T1')] })).toEqual(['tick-card:T1']); // Undo
+    expect(entries('logs/squat', store)).toEqual(['T1']);
+    expect(store.rows().get('log_entries|T1')).toMatchObject({ version: 3, deleted: false });
+  });
+
+  it('a check-off redone with the same id (its content changed) is deleted and restored', async () => {
+    const store = createMirrorStore(memory());
+    await save(store, 'logs/squat', { entries: [tickOf('T1')] });
+    expect(await save(store, 'logs/squat', { entries: [tickOf('T1', { w: 150 })] })).toEqual(['delete-entry:T1', 'tick-card:T1']);
+    expect(store.rows().get('log_entries|T1')).toMatchObject({ version: 3, deleted: false, entry: { w: 150 } });
+  });
+
+  it('a hand-logged session replacing a check-off, and Undoing that', async () => {
+    const store = createMirrorStore(memory());
+    await save(store, 'logs/squat', { entries: [tickOf('T1')] });
+    expect(await save(store, 'logs/squat', { entries: [e('H1', { slot: 's1', wk: '2026-10-04', w: 140 })] })).toEqual(['delete-entry:T1', 'log-session:H1']);
+    expect(entries('logs/squat', store)).toEqual(['H1']);
+    // Undo: the session goes and the check-off returns
+    expect(await save(store, 'logs/squat', { entries: [tickOf('T1')] })).toEqual(['delete-entry:H1', 'tick-card:T1']);
+    expect(entries('logs/squat', store)).toEqual(['T1']);
+    const fresh = createMirrorStore(memory());
+    await pullAll(transportFor(u), fresh);
+    expect(entries('logs/squat', fresh)).toEqual(['T1']);
+  });
+
+  it('other tables: a deleted week and a deleted body weight come back with a plain create', async () => {
+    const store = createMirrorStore(memory());
+    const week = { prog: 'A', done: { 'A-d1s1:0': true }, skipped: {}, moved: {}, ph: {}, warm: {} };
+    await save(store, 'weeks/2026-10-04', week);
+    expect(await save(store, 'weeks/2026-10-04', week)).toEqual([]);
+    const cmds = planCommands(kind('weeks/2026-10-04'), week, store.rows());
+    expect(cmds).toEqual([]);
+    await send(u, 'delete-week', { weekStart: '2026-10-04' }, 1);
+    const fresh = createMirrorStore(memory());
+    await pullAll(transportFor(u), fresh);
+    expect(await save(fresh, 'weeks/2026-10-04', week)).toEqual(['save-week:2026-10-04']);
+    expect(fresh.rows().get('weeks|2026-10-04')).toMatchObject({ version: 3, deleted: false });
   });
 });
