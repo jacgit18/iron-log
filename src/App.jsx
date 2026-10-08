@@ -22,6 +22,7 @@ import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
 import ImportSheet from './components/sheets/ImportSheet.jsx';
 import HelpSheet from './components/sheets/HelpSheet.jsx';
 import UpdateBanner from './components/UpdateBanner.tsx';
+import SyncNotice from './components/SyncNotice.tsx';
 
 const TABS = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
@@ -52,6 +53,9 @@ export default function App() {
   const cfg = useAppStore(s => s.cfg);
   const saveFlag = useAppStore(s => s.saveFlag);
   const unsaved = useAppStore(s => s.unsaved);
+  // With syncing on, a refused write is kept in the sync screen's "Not sent" list (SyncNotice says so), so this notice about
+  // this device's own storage would be wrong: nothing is lost on reload.
+  const syncing = useAppStore(s => s.sync !== null);
   const storeMode = useAppStore(s => s.storeMode);
   const ready = useAppStore(s => s.isReady());
   const progKey = useAppStore(s => s.activeProgKey());
@@ -101,8 +105,9 @@ export default function App() {
           <p className="saveflag" role="status" aria-live="polite" aria-atomic="true">{!ready && !saveFlag ? 'Loading…' : saveFlag}</p>
         </header>
         <UpdateBanner />
+        <SyncNotice />
         {/* Stays until the writes go through: a passing message isn't enough when data would be gone on reload. */}
-        {unsaved.length > 0 && (
+        {unsaved.length > 0 && !syncing && (
           <div className="notice movewarn" role="alert">
             <div><b>Not saved:</b> {unsaved.length === 1 ? 'a change' : `${unsaved.length} changes`} couldn’t be saved on this device{storeMode === 'local' ? ' (storage is full)' : ''}, and would be lost on reload. Free some space or export a backup, then try again.</div>
             <div className="actions"><button type="button" className="btn sm" onClick={() => useAppStore.getState().retryUnsaved()}>Try again</button></div>

@@ -368,7 +368,7 @@ describe('when the server refuses', () => {
     await settle();
     server.fail.push({ ok: false, class: 'refused', status: 422, reason: 'invalid-input' });
     await expect(db.doc('logs/squat').set(logsDoc(entry('S1')))).rejects.toMatchObject({ code: 'invalid_argument' });
-    expect(db.status()).toMatchObject({ pendingPaths: [], quarantined: 1 });
+    expect(db.status()).toMatchObject({ pendingPaths: [], quarantined: 1, state: 'idle' }); // not left "syncing"
     const [q] = db.quarantined();
     expect(q).toMatchObject({ path: 'logs/squat', reason: 'The server would not take this (invalid-input).' });
     expect((q!.doc as { entries: { id: string }[] }).entries[0]!.id).toBe('S1');
@@ -397,6 +397,80 @@ describe('when the server refuses', () => {
     await db.doc('logs/squat').set(logsDoc(entry('S1'))).catch(() => undefined);
     await db.doc('logs/squat').set(logsDoc(entry('S2')));
     expect(server.rows.has('log_entries|S2')).toBe(true);
+  });
+});
+
+describe('trying a set-aside write again', () => {
+  const refuseOnce = (server: ReturnType<typeof fakeServer>) => server.fail.push({ ok: false, class: 'refused', status: 422, reason: 'invalid-input' });
+
+  it('sends it as it was written, and the entry leaves the list', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1'))).catch(() => undefined);
+    const [q] = db.quarantined();
+    expect(await db.retry(q!.id)).toBe('sent');
+    expect(db.quarantined()).toEqual([]);
+    expect(db.status()).toMatchObject({ quarantined: 0, quarantine: [], pendingPaths: [] });
+    expect(server.rows.has('log_entries|S1')).toBe(true);
+  });
+
+  it('if the server refuses it again, it comes back with the new reason', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1'))).catch(() => undefined);
+    server.fail.push({ ok: false, class: 'refused', status: 422, reason: 'still-invalid' });
+    expect(await db.retry(db.quarantined()[0]!.id)).toBe('refused');
+    expect(db.quarantined()).toHaveLength(1);
+    expect(db.quarantined()[0]!.reason).toBe('The server would not take this (still-invalid).');
+  });
+
+  it('keeps the write safe on the device even if the app closes straight after', async () => {
+    const { server, storage, gate, db } = setup();
+    db.start();
+    await settle();
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1'))).catch(() => undefined);
+    server.fail.push(down('network'));
+    const done = db.retry(db.quarantined()[0]!.id);
+    await settle();
+    expect(JSON.parse(storage.data.get(PENDING_KEY)!)['logs/squat']).toBeTruthy();
+    expect(JSON.parse(storage.data.get(QUARANTINE_KEY)!)).toEqual([]);
+    gate.releaseAll();
+    expect(await done).toBe('sent');
+  });
+
+  it('will not replace a newer unsent document with an old one', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1'))).catch(() => undefined);
+    server.fail.push(down('network'));
+    await db.doc('logs/squat').set(logsDoc(entry('S1'), entry('S2'))); // newer, unsent
+    expect(await db.retry(db.quarantined()[0]!.id)).toBe('busy');
+    expect(db.quarantined()).toHaveLength(1);
+  });
+
+  it('only the newest set-aside write for a path can be retried', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1'))).catch(() => undefined);
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S2'))).catch(() => undefined);
+    const [older, newer] = db.quarantined();
+    expect(await db.retry(older!.id)).toBe('busy');
+    expect(await db.retry(newer!.id)).toBe('sent');
+  });
+
+  it('an entry that is already gone says so', async () => {
+    const { db } = setup();
+    expect(await db.retry('nope')).toBe('gone');
   });
 });
 

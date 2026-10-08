@@ -50,3 +50,117 @@ test('with the flag on and the server answering, the app finishes loading and sh
   await page.locator('#chk-A-d1s1').check(); // writes go out as commands; the 404 is a server problem, so they wait and nothing breaks
   await expect(page.locator('#chk-A-d1s1')).toBeChecked();
 });
+
+// ---- The sync screen (D6): status, changes waiting, changes the server would not take ----
+
+const emptyPull = { rows: [], cursor: '0', more: false };
+const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+
+// The server answers pulls normally, so the app finishes loading; `commands` decides what it says to every write.
+async function openSynced(page, commands) {
+  await page.addInitScript(() => {
+    localStorage.setItem('ironlog:hidetip', '1');
+    localStorage.setItem('ironlog:hidelocal', '1');
+    localStorage.setItem('ironlog:flag:apiSync', 'true');
+  });
+  await page.route('**/api/sync*', json(200, emptyPull));
+  if (commands) await page.route('**/api/commands/**', commands);
+  await page.goto('/');
+  await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+}
+const openSettings = async page => { await page.click('#tab-settings'); await expect(page.getByRole('heading', { name: 'Sync', exact: true })).toBeVisible(); };
+
+test.describe('the Sync panel', () => {
+  test('is not there at all when the flag is off', async ({ page }) => {
+    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); });
+    await page.goto('/');
+    await page.click('#tab-settings');
+    await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sync', exact: true })).toHaveCount(0);
+  });
+
+  test('says Synced, and has the app version', async ({ page }) => {
+    await openSynced(page);
+    await openSettings(page);
+    await expect(page.locator('.syncstatus')).toContainText('Synced');
+    await expect(page.getByText(/^App version /)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sync now' })).toBeEnabled();
+  });
+
+  test('offline: a tick is kept, a notice says so, and Details leads to the panel', async ({ page, context }) => {
+    await openSynced(page, route => route.abort());
+    await context.setOffline(true);
+    await page.locator('#chk-A-d1s1').check();
+    await expect(page.locator('#chk-A-d1s1')).toBeChecked();
+    const notice = page.getByRole('status').filter({ hasText: 'waiting to sync' });
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText('safe on this device');
+    await notice.getByRole('button', { name: 'Details' }).click();
+    await expect(page.locator('.syncstatus')).toContainText('Offline');
+    await expect(page.locator('.syncstatus')).toContainText('saved on this device and will be sent when the connection returns');
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+
+  test.describe('changes the server would not take', () => {
+    const refuse = json(422, { refused: 'invalid-input', current: null });
+
+    test('are listed with the reason, and a notice says so', async ({ page }) => {
+      await openSynced(page, refuse);
+      await page.locator('#chk-A-d1s1').check();
+      const alert = page.getByRole('alert').filter({ hasText: 'Not sent' });
+      await expect(alert).toBeVisible();
+      await expect(alert).toContainText('set aside');
+      // the older notice about this device's own storage would be wrong here: nothing is lost on reload
+      await expect(page.getByText('couldn’t be saved on this device')).toHaveCount(0);
+      await alert.getByRole('button', { name: 'Details' }).click();
+      await expect(page.locator('.syncstatus')).not.toContainText('Syncing');
+      await expect(page.getByRole('heading', { name: /^Not sent \(\d+\)$/ })).toBeVisible();
+      await expect(page.locator('.notsent li').first()).toContainText('The server would not take this (invalid-input).');
+      const { violations } = await scan(page);
+      expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+    });
+
+    test('can be downloaded, with the whole document in the file', async ({ page }) => {
+      await openSynced(page, refuse);
+      await page.locator('#chk-A-d1s1').check();
+      await openSettings(page);
+      const first = page.locator('.notsent li').first();
+      await expect(first).toBeVisible();
+      const [download] = await Promise.all([page.waitForEvent('download'), first.getByRole('button', { name: /^Download/ }).click()]);
+      expect(download.suggestedFilename()).toMatch(/^iron-log-not-sent-\d{4}-\d{2}-\d{2}\.json$/);
+      const file = JSON.parse(await (await import('node:fs/promises')).readFile(await download.path(), 'utf8'));
+      expect(file).toMatchObject({ app: 'Iron Log', kind: 'changes the server would not take' });
+      expect(file.items).toHaveLength(1);
+      expect(file.items[0]).toMatchObject({ reason: 'The server would not take this (invalid-input).' });
+      expect(file.items[0].document).toBeTruthy();
+    });
+
+    test('are discarded only on a second press, and then the notice goes', async ({ page }) => {
+      await openSynced(page, refuse);
+      await page.locator('#chk-A-d1s1').check();
+      await openSettings(page);
+      const count = await page.locator('.notsent li').count();
+      expect(count).toBeGreaterThan(0);
+      for (let left = count; left > 0; left--) {
+        const item = page.locator('.notsent li').first();
+        await item.getByRole('button', { name: /^Discard/ }).click();
+        await expect(page.locator('.notsent li')).toHaveCount(left); // one press only arms it
+        await item.getByRole('button', { name: /Tap again to discard/ }).click();
+        await expect(page.locator('.notsent li')).toHaveCount(left - 1);
+      }
+      await expect(page.getByRole('heading', { name: /^Not sent/ })).toHaveCount(0);
+      await expect(page.getByRole('alert').filter({ hasText: 'Not sent' })).toHaveCount(0);
+    });
+
+    test('Try again sends it again, and says so when the server still will not take it', async ({ page }) => {
+      await openSynced(page, refuse);
+      await page.locator('#chk-A-d1s1').check();
+      await openSettings(page);
+      const before = await page.locator('.notsent li').count();
+      await page.locator('.notsent li').first().getByRole('button', { name: /^Try again/ }).click();
+      await expect(page.locator('.saveflag')).toContainText('would not take it this time either');
+      await expect(page.locator('.notsent li')).toHaveCount(before);
+    });
+  });
+});

@@ -38,6 +38,8 @@ export interface SyncStatus {
   pendingPaths: string[];
   /** Writes the server refused, kept for the user. */
   quarantined: number;
+  /** The same writes in full, for the screen that lists them. */
+  quarantine: readonly QuarantineEntry[];
   lastPullAt: number | null;
   lastSyncedAt: number | null;
   /** False when the browser has refused a write: some of the above is held in memory only. */
@@ -105,7 +107,7 @@ export function createApiDb(options: ApiDbOptions) {
     notices = [...notices, { id: ++noticeId, path, text, at: new Date(now()).toISOString() }].slice(-20);
   };
   const status = (): SyncStatus => ({
-    state, pausedBecause, pendingPaths: outbox.paths(), quarantined: outbox.quarantined().length, lastPullAt, lastSyncedAt,
+    state, pausedBecause, pendingPaths: outbox.paths(), quarantined: outbox.quarantined().length, quarantine: outbox.quarantined(), lastPullAt, lastSyncedAt,
     persisted: mirror.persisted() && outbox.persisted(), ready: mirror.hasPulled(), notices,
   });
   const announce = () => { const s = status(); statusListeners.forEach(cb => { try { cb(s); } catch { /* a listener must not stop sync */ } }); };
@@ -226,6 +228,7 @@ export function createApiDb(options: ApiDbOptions) {
 
   function refuse(path: string, sent: unknown, reason: string) {
     outbox.refuse(path, sent, reason);
+    setState('idle'); // this write is no longer being sent; whatever is next sets the state again
     announce();
     return { refused: reason };
   }
@@ -395,6 +398,19 @@ export function createApiDb(options: ApiDbOptions) {
     status,
     onStatus(cb: (s: SyncStatus) => void) { statusListeners.add(cb); return () => { statusListeners.delete(cb); }; },
     quarantined: (): readonly QuarantineEntry[] => outbox.quarantined(),
+    /** Sends a set-aside write again, as it was written. Refused for a path that has an unsent newer document, so an old
+     *  write can never replace a newer one. If the server refuses it again it comes back with the new reason. */
+    retry(id: string): Promise<'sent' | 'refused' | 'busy' | 'gone'> {
+      const all = outbox.quarantined();
+      const at = all.findIndex(e => e.id === id);
+      if (at < 0) return Promise.resolve('gone');
+      const entry = all[at]!;
+      if (outbox.has(entry.path) || all.slice(at + 1).some(e => e.path === entry.path)) return Promise.resolve('busy');
+      const sending = set(entry.path, entry.doc); // kept in the outbox before anything else happens
+      outbox.discard(id); // only now is the old entry safe to drop
+      announce();
+      return sending.then(() => 'sent' as const, () => 'refused' as const);
+    },
     /** The user has seen these. */
     clearNotices: () => { notices = []; announce(); },
     /** Only the user lets a refused write go. */
