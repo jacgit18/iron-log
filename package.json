@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "seed:test-user": "tsx server/scripts/seedTestUserCli.ts",
-    "build:server": "esbuild server/index.ts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist-server/index.js",
+    "build:server": "node scripts/build-server.mjs",
     "dev:server": "NODE_ENV=development tsx watch server/index.ts",
     "build": "vite build",
     "lint": "oxlint",
