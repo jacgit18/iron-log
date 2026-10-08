@@ -4,10 +4,12 @@
 # `gcloud run deploy --source` cannot pass the build argument the app needs for its version (the update gate, ADR 003), so this exists.
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ['build', '--build-arg', 'APP_VERSION=${_APP_VERSION}', '-t', '${_IMAGE}', '.']
+    args: ['build', '--build-arg', 'APP_VERSION=${_APP_VERSION}', '--build-arg', 'VITE_API_SYNC=${_API_SYNC}', '-t', '${_IMAGE}', '.']
 images: ['${_IMAGE}']
 substitutions:
   _IMAGE: ''
   _APP_VERSION: '0'
+  # The deployed app syncs through the API for everyone: an iPhone cannot set the browser flag by hand.
+  _API_SYNC: 'true'
 options:
   logging: CLOUD_LOGGING_ONLY
