@@ -20,3 +20,6 @@ tools
 neon.ts
 skills-lock.json
 backups
+
+# Written into the checkout by google-github-actions/auth in CI; must not make the tree dirty or reach the image
+gha-creds-*.json
