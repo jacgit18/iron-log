@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { extname, join, resolve } from 'node:path';
 import express from 'express';
 import { sql, type Kysely } from 'kysely';
 import { devAuth, inUserTransaction } from './auth.ts';
@@ -13,10 +15,25 @@ import type { DB } from './db/types.ts';
 
 export interface AppDeps {
   db?: Kysely<DB>;
+  /** The built PWA (dist/). When set, the app is served from the same origin as the API (ADR 010). */
+  staticDir?: string;
+}
+
+const NO_CACHE = 'no-cache';
+const IMMUTABLE = 'public, max-age=31536000, immutable';
+const ONE_HOUR = 'public, max-age=3600';
+
+// Vite names everything under /assets/ by content hash, so those files can be cached for good. The service worker, the
+// page, the manifest and the Workbox runtime must always be re-checked, or an update would never reach the phone.
+function cacheControl(file: string, root: string): string {
+  const name = file.slice(root.length + 1).replaceAll('\\', '/');
+  if (name.startsWith('assets/')) return IMMUTABLE;
+  if (/^(index\.html|sw\.js|registerSW\.js|manifest\.webmanifest|workbox-[\w-]+\.js)$/.test(name)) return NO_CACHE;
+  return ONE_HOUR;
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db }: AppDeps = {}) {
+export function createApp({ db, staticDir }: AppDeps = {}) {
   const app = express();
   app.use(express.json({ limit: '100kb' }));
   app.disable('x-powered-by');
@@ -190,6 +207,22 @@ export function createApp({ db }: AppDeps = {}) {
     const userId = String(res.locals.userId);
     res.json(await inUserTransaction(db!, userId, trx => syncPage(trx, userId, since, limit)));
   });
+
+  // Anything under /api that no route answered is a JSON 404, never the app's page.
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ ok: false, error: 'not found' });
+  });
+
+  if (staticDir && existsSync(join(staticDir, 'index.html'))) {
+    const root = resolve(staticDir);
+    app.use(express.static(root, { index: false, setHeaders: (res, file) => void res.setHeader('Cache-Control', cacheControl(file, root)) }));
+    // A page route (no file extension) gets the app, which draws it. A missing file (/assets/old.js) stays a 404, so a
+    // stale link never receives HTML where JavaScript was expected. /.well-known has no files, as on GitHub Pages.
+    app.use((req, res, next) => {
+      if ((req.method !== 'GET' && req.method !== 'HEAD') || extname(req.path) !== '' || req.path.startsWith('/.well-known/')) return next();
+      res.set('Cache-Control', NO_CACHE).sendFile(join(root, 'index.html'));
+    });
+  }
 
   return app;
 }
