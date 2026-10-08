@@ -39,7 +39,11 @@ if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 
   console.error(JSON.stringify({ msg: 'NOBODY CAN SIGN IN: sign-in is off and the development sign-in is not allowed here', reasons: setup.enabled ? [] : setup.reasons }));
 }
 
-const server = createApp({ db, staticDir, minClientVersion, auth, allowedOrigins: setup.enabled ? [setup.config.baseURL] : [] }).listen(port, () => {
+// Cloud Run puts one proxy in front of the container (it sets K_SERVICE). TRUST_PROXY overrides: a number of proxies, or false.
+const trustProxy = process.env.TRUST_PROXY !== undefined ? (process.env.TRUST_PROXY === 'false' ? false : Number(process.env.TRUST_PROXY)) : process.env.K_SERVICE ? 1 : undefined;
+if (typeof trustProxy === 'number' && !Number.isInteger(trustProxy)) throw new Error('TRUST_PROXY must be a whole number of proxies, or false');
+
+const server = createApp({ db, staticDir, minClientVersion, auth, allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], trustProxy }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 
