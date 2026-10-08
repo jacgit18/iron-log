@@ -6,6 +6,7 @@ import { sql, type Kysely } from 'kysely';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import { clientVersionGate } from './clientVersion.ts';
+import { originGuard } from './originGuard.ts';
 import { AUTH_CHECK_PAGE } from './dev/authCheckPage.ts';
 import { logSession } from './commands/logSession.ts';
 import { tickCard } from './commands/tickCard.ts';
@@ -25,6 +26,8 @@ export interface AppDeps {
   minClientVersion?: number | null;
   /** Better Auth (see auth/betterAuth.ts). When set, its routes are served under /api/auth. */
   auth?: Auth;
+  /** Origins, besides this server's own host, whose browsers may send state-changing requests (see originGuard.ts). */
+  allowedOrigins?: string[];
 }
 
 const NO_CACHE = 'no-cache';
@@ -41,8 +44,10 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, allowedOrigins }: AppDeps = {}) {
   const app = express();
+  // Before Better Auth and every body parser: a cross-origin write is refused without being read.
+  app.use('/api', originGuard(allowedOrigins));
   // Better Auth reads the request body itself, so its routes come before any body parser.
   if (auth) app.all('/api/auth/*splat', toNodeHandler(auth));
   app.use(express.json({ limit: '100kb' }));

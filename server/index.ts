@@ -39,7 +39,7 @@ if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 
   console.error(JSON.stringify({ msg: 'NOBODY CAN SIGN IN: sign-in is off and the development sign-in is not allowed here', reasons: setup.enabled ? [] : setup.reasons }));
 }
 
-const server = createApp({ db, staticDir, minClientVersion, auth }).listen(port, () => {
+const server = createApp({ db, staticDir, minClientVersion, auth, allowedOrigins: setup.enabled ? [setup.config.baseURL] : [] }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 
