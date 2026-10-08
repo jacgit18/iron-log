@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createApiDb, type ApiDbOptions } from './apiDb.js';
+import { OUTDATED_WAIT_MS, createApiDb, type ApiDbOptions } from './apiDb.js';
 import { MIRROR_KEY } from './mirrorStore.js';
 import { PENDING_KEY, QUARANTINE_KEY } from './outbox.js';
 import { down, fakeServer, gatedSleep, memoryStorage } from './testing.js';
@@ -311,6 +311,53 @@ describe('when the server cannot be reached', () => {
     next.doc('weeks/2026-10-04').onSnapshot(s => seen.push(s.data().done));
     await settle();
     expect(seen[0]).toEqual({ typed: true });
+  });
+});
+
+describe('an app the server says is too old', () => {
+  it('keeps the write, stops sending, and waits for an update instead of retrying every few seconds', async () => {
+    const { server, gate, db } = setup();
+    db.start();
+    await settle();
+    server.fail.push(down('outdated'));
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    expect(db.status()).toMatchObject({ state: 'paused', pausedBecause: 'outdated', pendingPaths: ['logs/squat'] });
+    expect(gate.waits).toEqual([OUTDATED_WAIT_MS]);
+    expect(server.sent).toHaveLength(1);
+    expect(server.rows.size).toBe(0);
+  });
+
+  it('sends what it kept once the app is updated and the user comes back', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    server.fail.push(down('outdated'));
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    await db.resume(); // the updated app starts, or the user returns to it
+    await settle();
+    expect(server.rows.size).toBe(1);
+    expect(db.status()).toMatchObject({ state: 'idle', pausedBecause: null, pendingPaths: [] });
+  });
+
+  it('a pull that gets 426 pauses the same way, and the timer leaves it alone', async () => {
+    vi.useFakeTimers();
+    try {
+      const { server, make } = setup();
+      const db = make({ pollMs: 1000, sleep: () => new Promise(() => undefined) });
+      server.fail.push({ ok: false, class: 'outdated', status: 426, retryAfterMs: null, message: 'too old' });
+      const pulls = vi.spyOn(server.transport, 'pull');
+      db.start();
+      await vi.advanceTimersByTimeAsync(10);
+      expect(db.status()).toMatchObject({ state: 'paused', pausedBecause: 'outdated' });
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(pulls).toHaveBeenCalledTimes(1); // the timer did not try again
+      await db.resume(); // but coming back to the app does
+      expect(pulls).toHaveBeenCalledTimes(2);
+      expect(db.status().pausedBecause).toBeNull();
+      db.stop();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

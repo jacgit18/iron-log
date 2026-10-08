@@ -76,6 +76,8 @@ type Listener = { cb: (snap: any) => void; err?: (e: unknown) => void };
 
 const POLL_MS = 60_000;
 const MAX_CONFLICTS = 3;
+// An app that is too old stays too old until it is updated, so retrying every minute only adds noise: wait this long.
+export const OUTDATED_WAIT_MS = 5 * 60_000;
 const MAX_PASSES = 6;
 
 const clone = <T>(v: T): T => (v === undefined ? v : structuredClone(v));
@@ -312,7 +314,8 @@ export function createApiDb(options: ApiDbOptions) {
         // The network, the server, the sign-in or the app version: wait, then plan again from the latest mirror.
         setState('paused', out.class);
         onPause();
-        await waitFor(backoffMs(attempt++, out.retryAfterMs, options.random));
+        const wait = backoffMs(attempt++, out.retryAfterMs, options.random);
+        await waitFor(out.class === 'outdated' ? Math.max(wait, OUTDATED_WAIT_MS) : wait);
         again = true;
         break;
       }
@@ -359,7 +362,8 @@ export function createApiDb(options: ApiDbOptions) {
   let unwake: (() => void) | null = null;
   const tick = () => {
     if (!started) return;
-    if (visible()) void syncNow();
+    // The timer does not poke an app the server has said is too old; coming back to the app or the network still tries.
+    if (visible() && !(state === 'paused' && pausedBecause === 'outdated')) void syncNow();
     timer = setTimeout(tick, pollMs);
   };
 
