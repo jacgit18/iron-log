@@ -1,3 +1,4 @@
+import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
@@ -335,6 +336,7 @@ export default function Settings() {
         <DevicePanel />
       </div>
       <div className="scol">
+        <SyncPanel />
         <DataPanel key={importCount} />
         <BackupPanel />
         <ErasePanel />

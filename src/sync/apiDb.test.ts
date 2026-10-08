@@ -368,7 +368,7 @@ describe('when the server refuses', () => {
     await settle();
     server.fail.push({ ok: false, class: 'refused', status: 422, reason: 'invalid-input' });
     await expect(db.doc('logs/squat').set(logsDoc(entry('S1')))).rejects.toMatchObject({ code: 'invalid_argument' });
-    expect(db.status()).toMatchObject({ pendingPaths: [], quarantined: 1 });
+    expect(db.status()).toMatchObject({ pendingPaths: [], quarantined: 1, state: 'idle' }); // not left "syncing"
     const [q] = db.quarantined();
     expect(q).toMatchObject({ path: 'logs/squat', reason: 'The server would not take this (invalid-input).' });
     expect((q!.doc as { entries: { id: string }[] }).entries[0]!.id).toBe('S1');

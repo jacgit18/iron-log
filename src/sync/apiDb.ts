@@ -228,6 +228,7 @@ export function createApiDb(options: ApiDbOptions) {
 
   function refuse(path: string, sent: unknown, reason: string) {
     outbox.refuse(path, sent, reason);
+    setState('idle'); // this write is no longer being sent; whatever is next sets the state again
     announce();
     return { refused: reason };
   }
