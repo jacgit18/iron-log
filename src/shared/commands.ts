@@ -2,8 +2,8 @@
    One module for what the phone sends and the API accepts. Each command has a name, an input type and a validator;
    the offline queue stores a Command and replays it unchanged. Framework-free: client and server import it. */
 
-import type { LogEntry } from '../types.ts';
-import { LIMITS, normEntry, validDate } from './validate.js';
+import type { BodyEntry, LogEntry } from '../types.ts';
+import { LIMITS, normBody, normEntry, validDate } from './validate.js';
 
 /** What the offline queue stores and `POST /api/commands/<name>` receives. */
 export interface Command<N extends string, I> {
@@ -70,4 +70,25 @@ export function validateDeleteEntry(input: unknown): DeleteEntryInput | null {
   if (!input || typeof input !== 'object') return null;
   const { entryId } = input as Record<string, unknown>;
   return typeof entryId === 'string' && entryId && entryId.length <= LIMITS.text.id ? { entryId } : null;
+}
+
+/** One body-weight entry for a week (the week is the key, there is no client id). */
+export type LogBodyWeightInput = Pick<BodyEntry, 'wk' | 'd' | 'w'>;
+export type LogBodyWeightCommand = Command<'log-body-weight', LogBodyWeightInput>;
+
+export function validateLogBodyWeight(input: unknown): LogBodyWeightInput | null {
+  const [clean] = normBody([input]);
+  return clean ? { wk: clean.wk, d: clean.d, w: clean.w } : null;
+}
+
+/** Delete the body-weight entry for a week. baseVersion is the version the user saw (never null). */
+export interface DeleteBodyWeightInput {
+  wk: string;
+}
+export type DeleteBodyWeightCommand = Command<'delete-body-weight', DeleteBodyWeightInput>;
+
+export function validateDeleteBodyWeight(input: unknown): DeleteBodyWeightInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { wk } = input as Record<string, unknown>;
+  return validDate(wk) ? { wk } : null;
 }

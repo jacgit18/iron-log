@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry } from './commands.js';
+import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight } from './commands.js';
 
 describe('validateLogSession', () => {
   it('accepts an exercise id with a valid entry and cleans the entry', () => {
@@ -52,5 +52,30 @@ describe('validateDeleteEntry', () => {
     expect(validateDeleteEntry({ entryId: 'x'.repeat(101) })).toBeNull();
     expect(validateDeleteEntry({ entryId: 5 })).toBeNull();
     expect(validateDeleteEntry(null)).toBeNull();
+  });
+});
+
+describe('validateLogBodyWeight', () => {
+  it('accepts a week, a day and a weight, and cleans the entry', () => {
+    expect(validateLogBodyWeight({ wk: '2026-10-04', d: '2026-10-07', w: '180.5', junk: 1, updatedAt: '2026-10-07T12:00:00Z' })).toEqual({ wk: '2026-10-04', d: '2026-10-07', w: 180.5 });
+  });
+  it('refuses a bad date, a missing or out-of-range weight, and non-objects', () => {
+    expect(validateLogBodyWeight({ wk: 'nope', d: '2026-10-07', w: 180 })).toBeNull();
+    expect(validateLogBodyWeight({ wk: '2026-10-04', d: 'nope', w: 180 })).toBeNull();
+    expect(validateLogBodyWeight({ wk: '2026-10-04', d: '2026-10-07' })).toBeNull();
+    expect(validateLogBodyWeight({ wk: '2026-10-04', d: '2026-10-07', w: 0 })).toBeNull();
+    expect(validateLogBodyWeight({ wk: '2026-10-04', d: '2026-10-07', w: 1500 })).toBeNull();
+    expect(validateLogBodyWeight(null)).toBeNull();
+  });
+});
+
+describe('validateDeleteBodyWeight', () => {
+  it('accepts a week and drops other fields', () => {
+    expect(validateDeleteBodyWeight({ wk: '2026-10-04', junk: 1 })).toEqual({ wk: '2026-10-04' });
+  });
+  it('refuses a missing or bad week, and non-objects', () => {
+    expect(validateDeleteBodyWeight({})).toBeNull();
+    expect(validateDeleteBodyWeight({ wk: '2026-13-40' })).toBeNull();
+    expect(validateDeleteBodyWeight(null)).toBeNull();
   });
 });
