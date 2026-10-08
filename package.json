@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "seed:test-user": "tsx server/scripts/seedTestUserCli.ts",
     "dev:server": "NODE_ENV=development tsx watch server/index.ts",
     "build": "vite build",
     "lint": "oxlint",
