@@ -34,8 +34,14 @@ function noWellKnownFallback() {
 }
 
 // BASE_PATH lets the same build run at a sub-path (e.g. /iron-log/ on GitHub Pages).
+// The build id the app sends with every API request (ADR 003, FM-03): the commit in CI, else "dev".
+const appVersion = (process.env.GITHUB_SHA || 'dev').slice(0, 7);
+
 export default defineConfig({
   base,
+  define: { __APP_VERSION__: JSON.stringify(appVersion) },
+  // The API runs on its own port in development; the app calls it on its own origin, as it will in production (ADR 010).
+  server: { proxy: { '/api': process.env.API_ORIGIN || 'http://localhost:3001' } },
   // Playwright's specs in e2e/ are run by `npm run e2e`, not Vitest.
   test: { exclude: ['**/node_modules/**', 'e2e/**'] },
   plugins: [
