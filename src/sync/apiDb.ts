@@ -241,6 +241,7 @@ export function createApiDb(options: ApiDbOptions) {
         setState('idle');
         if (!wasReady && mirror.hasPulled()) emitAll();
         else emitPaths(out.paths);
+        if (out.paths.length) announce(); // rows arrived: the status (holdsData) changed even though the state did not
         return;
       }
       // Whatever pages did arrive are in the mirror; the rest waits for the next try.

@@ -167,3 +167,37 @@ test('once something new is logged the upload is no longer possible, and the car
   await expect(page.getByRole('status').filter({ hasText: /Old data on this device|Upload this device/ })).toHaveCount(0);
   await a.close();
 });
+
+test('an export file from another copy of the app is uploaded into an empty account, and a blocked second try is explained', async ({ browser, user }) => {
+  const exportFile = {
+    app: 'iron-log', format: 1, exportedAt: '2026-10-07T15:20:41.590Z', config: { rest: 90, ghBackup: { repo: 'a/b', token: 'ghp_secret' } },
+    programs: {}, library: [], weeks: { '2026-09-13': { prog: 'A', done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } }, experiments: [], stretchWeeks: {},
+    // two exercises with identical old entries: the collision the real data once had
+    logs: { hack: [{ d: '2026-09-14', ph: 'strength', w: 200, s: 3, r: 8 }], dip: [{ d: '2026-09-14', ph: 'strength', w: 200, s: 3, r: 8 }] },
+    body: [{ wk: '2026-09-13', d: '2026-09-14', w: 181 }],
+  };
+  const a = await newPhone(browser, user);
+  const page = await a.open();
+  await page.click('#tab-settings');
+  const panel = page.getByRole('region', { name: 'Account' });
+  const choose = () => panel.locator('input[aria-label="Iron Log export file"]').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exportFile)) });
+  await choose();
+  await expect(panel).toContainText('2 logged sessions');
+  await expect(panel).toContainText('keep separate ids');
+  expect(await server.counts(user)).toEqual({ entries: 0, body: 0, weeks: 0 });
+  await panel.getByRole('button', { name: 'Upload to my account' }).click();
+  await expect.poll(() => server.counts(user)).toEqual({ entries: 2, body: 1, weeks: 1 }); // both colliding entries arrived
+
+  // The account now holds data, so the same section explains instead of offering a second upload.
+  await expect(panel).toContainText('already has data');
+  await expect(panel.getByRole('button', { name: 'Choose export file…' })).toHaveCount(0);
+
+  // A second phone sees the uploaded data.
+  const b = await newPhone(browser, user);
+  const second = await b.open();
+  await second.locator('#tab-progress').click();
+  await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
+  await expect(second.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(1);
+  await a.close();
+  await b.close();
+});

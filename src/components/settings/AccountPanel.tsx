@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AccountState } from '../../sync/account.js';
+import ExportUpload from './ExportUpload.js';
 import { useGoogleSignIn } from '../../sync/useGoogleSignIn.js';
 import { flag, getSyncApi } from '../../store/useAppStore.js';
 
@@ -50,6 +51,7 @@ export default function AccountPanel() {
               <button type="button" className="btn" disabled={busy} onClick={() => void signOut()}>Sign out</button>
             </div>
           )}
+          <ExportUpload />
         </>
       )}
     </section>

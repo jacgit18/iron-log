@@ -107,3 +107,14 @@ export function notSentFile(entries: readonly QuarantineEntry[], nameOf: (id: st
     items: entries.map(e => ({ what: pathLabel(e.path, nameOf), path: e.path, reason: e.reason, setAside: e.at, document: e.doc })),
   }, null, 1);
 }
+
+/** Why the one-time upload did not happen, in words. It is all or nothing, so every answer says nothing was uploaded. */
+export function importFailure(out: { class: string; reason?: string; at?: number | null; command?: string | null }): string {
+  switch (out.class) {
+    case 'refused': return `The server would not take row ${(out.at ?? 0) + 1}${out.command ? ` (${out.command})` : ''}: ${out.reason ?? 'refused'}. Nothing was uploaded.`;
+    case 'network': case 'server': case 'auth': case 'outdated': return 'Could not reach the server, or you are signed out. Nothing was uploaded; try again in a moment.';
+    case 'not-empty': return 'Your account already has data, so nothing was uploaded.';
+    case 'mismatch': return 'The server’s counts did not match what was sent, so please check your data before trying again.';
+    default: return 'Uploading is not available right now. Nothing was uploaded.';
+  }
+}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { importFailure } from '../sync/labels.js';
 import { describeLegacy, legacyDocs, planLegacy } from '../sync/legacy.js';
 import { localPaths, readLegacyMarker, writeLegacyMarker, type LegacyMarker } from '../sync/legacyMarker.js';
 import { LS } from '../lib/storage.js';
@@ -7,12 +8,6 @@ import { flag, getSyncApi, useAppStore } from '../store/useAppStore.js';
 // Phase E: this browser held data before accounts existed. While the account is empty and nothing new has been logged, it can be
 // uploaded once, all or nothing. After that it cannot (the server refuses a second upload), so the card says so plainly.
 // Nothing is ever deleted from this device by this card.
-const WHY: Record<string, string> = {
-  'not-empty': 'Your account already has data, so nothing was uploaded.',
-  mismatch: 'The server’s counts did not match what was sent, so please check your data before trying again.',
-  unavailable: 'Uploading is not available right now.',
-};
-
 export default function LegacyCard() {
   const sync = useAppStore(s => s.sync);
   const api = getSyncApi();
@@ -39,9 +34,7 @@ export default function LegacyCard() {
       flag(`Uploaded ${what}.`);
       return;
     }
-    if (out.class === 'refused') setProblem(`The server would not take row ${(out.at ?? 0) + 1}${out.command ? ` (${out.command})` : ''}: ${out.reason}. Nothing was uploaded.`);
-    else if (out.class === 'network' || out.class === 'server' || out.class === 'auth' || out.class === 'outdated') setProblem('Could not reach the server, or you are signed out. Nothing was uploaded; try again in a moment.');
-    else setProblem(WHY[out.class] ?? 'Nothing was uploaded.');
+    setProblem(importFailure(out));
   };
 
   if (sync.holdsData) {

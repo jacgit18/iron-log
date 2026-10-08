@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeLegacy, legacyDocs, planLegacy } from './legacy.js';
+import { dataFileDocs, describeLegacy, legacyDocs, planLegacy } from './legacy.js';
 
 const e = (over: object = {}) => ({ d: '2026-09-28', ph: 'strength', w: 100, s: 3, r: 8, ...over });
 const logs = (...entries: object[]) => ({ schema: 1, entries });
@@ -94,5 +94,37 @@ describe('describeLegacy', () => {
   it('says what is in it, singular and plural', () => {
     expect(describeLegacy({ entries: 34, checkOffs: 19, bodyWeights: 1, weeks: 2, stretchWeeks: 0, supplementDays: 0, programs: 2, library: 0, lists: 4, config: 1 })).toBe('34 logged sessions, 19 check-offs, 1 body weight, 2 weeks, 2 programs');
     expect(describeLegacy({ entries: 0, checkOffs: 0, bodyWeights: 0, weeks: 0, stretchWeeks: 0, supplementDays: 0, programs: 0, library: 0, lists: 2, config: 1 })).toBe('your settings and lists');
+  });
+});
+
+describe('dataFileDocs', () => {
+  const file = JSON.stringify({
+    app: 'iron-log', format: 1, exportedAt: '2026-10-07T15:20:41.590Z',
+    config: { mode: 2, ghBackup: { repo: 'a/b', token: 'ghp_secret' } },
+    programs: { A: program },
+    library: [],
+    logs: { dip: [e()], kneeraise: [e()], squat: [e({ id: 'mine', d: '2026-09-29' })] },
+    weeks: { '2026-09-27': { prog: 'A', done: { 'A-d1s1:0': true }, skipped: {}, moved: {}, ph: {}, warm: {} } },
+    body: [{ wk: '2026-09-27', d: '2026-09-28', w: 180.5 }],
+    experiments: [],
+    stretches: { items: [{ id: 'sc', n: 'Scarecrow', group: 'Bands', tier: 'primary' }], experiments: [] },
+    stretchWeeks: {},
+    supplements: { waterGoal: 80, waterMode: 'fixed', water: { '2026-09-28': [16] }, boost: {}, items: [], taken: {} },
+  });
+
+  it('plans an export file the same way as an old browser, with the colliding entries kept apart', async () => {
+    const { parseDataFile } = await import('../lib/export.js');
+    const plan = planLegacy(dataFileDocs(parseDataFile(file)));
+    expect(plan.summary).toMatchObject({ entries: 3, bodyWeights: 1, weeks: 1, programs: 1, supplementDays: 1, config: 1 });
+    expect(plan.renamed).toBe(1);
+    expect(plan.commands.every(c => c.baseVersion === null)).toBe(true);
+    expect(JSON.stringify(plan.commands)).not.toMatch(/ghp_secret|ghBackup/);
+    expect(new Set(plan.commands.filter(c => c.table === 'log_entries').map(c => c.clientId)).size).toBe(3);
+  });
+
+  it('an empty file plans nothing', async () => {
+    const { parseDataFile } = await import('../lib/export.js');
+    const empty = JSON.stringify({ app: 'iron-log', format: 1, config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: [] });
+    expect(planLegacy(dataFileDocs(parseDataFile(empty))).commands).toEqual([]);
   });
 });

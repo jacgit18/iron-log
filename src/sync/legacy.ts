@@ -1,5 +1,5 @@
 import { entryId } from '../lib/export.js';
-import type { LogEntry } from '../types.js';
+import type { DataFile, LogEntry } from '../types.js';
 import { desiredRows, parsePath } from './documents.js';
 import { createCommand } from './plan.js';
 import type { DesiredRow, Mirror, MirrorRow, PlannedCommand, SyncTable } from './types.js';
@@ -46,6 +46,23 @@ export function legacyDocs(keys: readonly string[], read: (path: string) => unkn
     const doc = read(path);
     if (doc && typeof doc === 'object') out.set(path, doc);
   }
+  return out;
+}
+
+/** The documents an export file holds, by the same paths the browser used, so a file and an old browser take one road to the server.
+ *  The file must already have been read with parseDataFile, which checks and cleans it. */
+export function dataFileDocs(d: DataFile): Map<string, unknown> {
+  const out = new Map<string, unknown>();
+  for (const [id, entries] of Object.entries(d.logs)) out.set(`logs/${id}`, { entries });
+  for (const [k, w] of Object.entries(d.weeks)) out.set(`weeks/${k}`, w);
+  for (const [k, w] of Object.entries(d.stretchWeeks)) out.set(`stretchweeks/${k}`, w);
+  for (const [k, p] of Object.entries(d.programs)) out.set(`programs/${k}`, p);
+  if (d.body.length) out.set('body/main', { entries: d.body });
+  if (d.library.length) out.set('library/main', { items: d.library });
+  if (d.experiments.length) out.set('experiments/main', { items: d.experiments });
+  if (d.stretches) out.set('stretches/main', { items: d.stretches.items, experiments: d.stretches.experiments });
+  if (d.supplements) out.set('supplements/main', d.supplements);
+  if (d.config && Object.keys(d.config).length) out.set('config/main', d.config);
   return out;
 }
 

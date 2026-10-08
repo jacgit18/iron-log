@@ -403,3 +403,68 @@ test.describe('old data on the device (the upload card)', () => {
     await expect(offer(page)).toHaveCount(0);
   });
 });
+
+// ---- Phase E, from a file: Settings → Account → Upload from an export file ----
+
+test.describe('uploading from an export file', () => {
+  const exportFile = {
+    app: 'iron-log', format: 1, exportedAt: '2026-10-07T15:20:41.590Z', config: { mode: 2, ghBackup: { repo: 'a/b', token: 'ghp_secret' } },
+    programs: {}, library: [], weeks: {}, experiments: [], stretchWeeks: {},
+    logs: { hack: [{ d: '2026-09-14', ph: 'strength', w: 200, s: 3, r: 8 }, { d: '2026-09-21', ph: 'strength', w: 210, s: 3, r: 8 }] },
+    body: [{ wk: '2026-09-13', d: '2026-09-14', w: 181 }],
+  };
+  const file = (obj = exportFile, name = 'iron-log-data-2026-10-07.json') => ({ name, mimeType: 'application/json', buffer: Buffer.from(typeof obj === 'string' ? obj : JSON.stringify(obj)) });
+  const open = async (page, importAnswer) => {
+    await page.route('**/api/commands/import-legacy', importAnswer);
+    await openSynced(page);
+    await page.click('#tab-settings');
+    await expect(page.getByRole('heading', { name: 'Upload from an export file' })).toBeVisible();
+  };
+  const panel = page => page.getByRole('region', { name: 'Account' });
+
+  test('shows what the file holds before anything is sent, then uploads it in one request', async ({ page }) => {
+    let body;
+    await open(page, route => { body = route.request().postDataJSON(); return json(201, { imported: { 'log-session': 2, 'log-body-weight': 1, 'save-config': 1 }, total: 4 })(route); });
+    await page.locator('input[aria-label="Iron Log export file"]').setInputFiles(file());
+    const summary = panel(page).getByRole('status').filter({ hasText: 'iron-log-data-2026-10-07.json' });
+    await expect(summary).toContainText('2 logged sessions, 1 body weight');
+    await expect(summary).toContainText('exported 2026-10-07');
+    expect(body).toBeUndefined(); // nothing goes until the user says so
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+    await summary.getByRole('button', { name: 'Upload to my account' }).click();
+    await expect(summary).toHaveCount(0);
+    expect(body.input.commands).toHaveLength(4);
+    expect(JSON.stringify(body)).not.toMatch(/ghp_secret|ghBackup/);
+  });
+
+  test('Cancel sends nothing', async ({ page }) => {
+    let sent = 0;
+    await open(page, route => { sent++; return json(201, { imported: {}, total: 0 })(route); });
+    await page.locator('input[aria-label="Iron Log export file"]').setInputFiles(file());
+    await panel(page).getByRole('button', { name: 'Cancel' }).click();
+    await expect(panel(page).getByRole('button', { name: 'Upload to my account' })).toHaveCount(0);
+    expect(sent).toBe(0);
+  });
+
+  test('a file that is not an Iron Log export, is empty, or is too new says so', async ({ page }) => {
+    await open(page, json(201, {}));
+    const input = page.locator('input[aria-label="Iron Log export file"]');
+    await input.setInputFiles(file('not json at all'));
+    await expect(panel(page).getByRole('alert')).toContainText('isn’t valid JSON');
+    await input.setInputFiles(file({ hello: 1 }));
+    await expect(panel(page).getByRole('alert')).toContainText('isn’t an Iron Log data file');
+    await input.setInputFiles(file({ ...exportFile, format: 99 }));
+    await expect(panel(page).getByRole('alert')).toContainText('newer version');
+    await input.setInputFiles(file({ app: 'iron-log', format: 1, config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: [] }));
+    await expect(panel(page).getByRole('alert')).toContainText('holds nothing to upload');
+  });
+
+  test('when the server refuses, says where and that nothing was uploaded, and keeps the file chosen', async ({ page }) => {
+    await open(page, json(422, { refused: 'invalid-input', at: 0, command: 'log-session' }));
+    await page.locator('input[aria-label="Iron Log export file"]').setInputFiles(file());
+    await panel(page).getByRole('button', { name: 'Upload to my account' }).click();
+    await expect(panel(page).getByRole('alert')).toContainText('The server would not take row 1 (log-session): invalid-input. Nothing was uploaded.');
+    await expect(panel(page).getByRole('button', { name: 'Upload to my account' })).toBeEnabled();
+  });
+});
