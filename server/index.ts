@@ -3,13 +3,22 @@ import { createApp } from './app.ts';
 import { authConfigFrom, createAuth } from './auth/betterAuth.ts';
 import { minVersionFrom } from './clientVersion.ts';
 import { createDb } from './db/connection.ts';
+import { checkDbRole } from './db/role.ts';
 
 // Local development reads .env; in production the platform sets the variables and there is no file.
 if (existsSync('.env')) process.loadEnvFile('.env');
 
 const port = Number(process.env.PORT) || 3001;
-const db = process.env.DATABASE_URL ? createDb(process.env.DATABASE_URL) : undefined;
+// The API connects as the restricted role (APP_DATABASE_URL, migration 009). DATABASE_URL is the owner that runs migrations and is only a
+// fallback for local development, where the database role is a superuser.
+const databaseUrl = process.env.APP_DATABASE_URL || process.env.DATABASE_URL;
+const db = databaseUrl ? createDb(databaseUrl) : undefined;
 if (!db) console.warn(JSON.stringify({ msg: 'DATABASE_URL is not set; /api/health/db will answer 503' }));
+// Row-level security protects nothing if the API connects as a superuser or as the table owner: say so, and refuse in production.
+if (db) {
+  const problem = await checkDbRole(db, process.env.NODE_ENV);
+  if (problem) console.warn(JSON.stringify({ msg: 'row-level security is not protecting this connection', problem }));
+}
 
 // The built PWA, served from the same origin as the API. Absent in development, where Vite serves it.
 const staticDir = process.env.STATIC_DIR ?? 'dist';
@@ -19,7 +28,7 @@ const minClientVersion = minVersionFrom(process.env.MIN_CLIENT_VERSION);
 
 // Sign-in (ADR 004). Off, with the reasons logged, unless everything it needs is set; the API then answers 401 to everyone
 // except where the development sign-in is allowed.
-const setup = authConfigFrom(process.env);
+const setup = authConfigFrom({ ...process.env, DATABASE_URL: databaseUrl });
 const auth = setup.enabled ? createAuth(setup.config) : undefined;
 console.log(JSON.stringify(setup.enabled
   ? { msg: 'sign-in is on', baseURL: setup.config.baseURL, testSignIn: setup.config.testSignIn === true }
