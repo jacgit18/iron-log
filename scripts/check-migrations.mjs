@@ -40,7 +40,9 @@ const tables = async () => {
     const { rows } = await client.query(
       `select table_name from information_schema.tables where table_schema = 'public' and table_name <> 'schema_migrations' order by 1`);
     const fns = await client.query(`select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public'`);
-    return { tables: rows.map(r => r.table_name), functions: fns.rows.map(r => r.proname) };
+    // Better Auth's schema is ours to create and drop too: a full rollback must remove it.
+    const schemas = await client.query(`select schema_name from information_schema.schemata where schema_name = 'auth'`);
+    return { tables: rows.map(r => r.table_name), functions: fns.rows.map(r => r.proname), schemas: schemas.rows.map(r => r.schema_name) };
   } finally {
     await client.end();
   }
@@ -62,14 +64,15 @@ try {
 
   // The types file is generated; it must match what the migrations produce, so a schema change cannot ship without it.
   const generated = join(tmp, 'types.ts');
-  run('kysely-codegen', ['--dialect', 'postgres', '--date-parser', 'string', '--exclude-pattern', 'schema_migrations', '--out-file', generated]);
+  run('kysely-codegen', ['--dialect', 'postgres', '--date-parser', 'string', // Not the migration bookkeeping table, and not Better Auth's tables (the `auth` schema belongs to Better Auth, not to our code).
+  '--exclude-pattern', '{*schema_migrations,auth.*}', '--out-file', generated]);
   const same = readFileSync(generated, 'utf8') === readFileSync(TYPES, 'utf8');
   step(`${TYPES} matches the migrations`, same, same ? '' : 'run npm run db:types with the local database and commit the result');
 
   for (let i = 0; i < count; i++) dbmate('down');
   const down = await tables();
-  step('rolling every migration back leaves an empty schema', down.tables.length === 0 && down.functions.length === 0,
-    `tables left: [${down.tables.join(', ')}], functions left: [${down.functions.join(', ')}]`);
+  step('rolling every migration back leaves an empty schema', down.tables.length === 0 && down.functions.length === 0 && down.schemas.length === 0,
+    `tables left: [${down.tables.join(', ')}], functions left: [${down.functions.join(', ')}], schemas left: [${down.schemas.join(', ')}]`);
 
   dbmate('up');
   const again = await tables();
