@@ -5,6 +5,8 @@ import { test, expect } from '@playwright/test';
 // there is no real API behind `vite preview`, so every /api request is intercepted.
 const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 
+const signedInAsDev = route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, userId: 'dev-user', account: { kind: 'dev', email: null, name: null } }) });
+
 async function open(page, answer) {
   await page.addInitScript(() => {
     localStorage.setItem('ironlog:hidetip', '1');
@@ -12,6 +14,7 @@ async function open(page, answer) {
     localStorage.setItem('ironlog:flag:apiSync', 'true');
   });
   await page.route('**/api/**', answer);
+  await page.route('**/api/me', signedInAsDev); // who is signed in is asked first; the rest is answered as scripted
   await page.goto('/');
 }
 
@@ -57,13 +60,14 @@ const emptyPull = { rows: [], cursor: '0', more: false };
 const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
 // The server answers pulls normally, so the app finishes loading; `commands` decides what it says to every write.
-async function openSynced(page, commands) {
+async function openSynced(page, commands, me = signedInAsDev) {
   await page.addInitScript(() => {
     localStorage.setItem('ironlog:hidetip', '1');
     localStorage.setItem('ironlog:hidelocal', '1');
     localStorage.setItem('ironlog:flag:apiSync', 'true');
   });
   await page.route('**/api/sync*', json(200, emptyPull));
+  await page.route('**/api/me', me);
   if (commands) await page.route('**/api/commands/**', commands);
   await page.goto('/');
   await expect(page.locator('#chk-A-d1s1')).toBeVisible();
@@ -171,9 +175,8 @@ test.describe('the Account panel', () => {
   const me = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
   const signedIn = { ok: true, userId: 'u1', account: { kind: 'session', email: 'ann@example.com', name: 'Ann' } };
   const settle = async (page, meAnswer, extra) => {
-    await page.route('**/api/me', meAnswer);
     if (extra) await extra(page);
-    await openSynced(page);
+    await openSynced(page, undefined, meAnswer);
     await page.click('#tab-settings');
     await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
   };
@@ -197,9 +200,10 @@ test.describe('the Account panel', () => {
 
   test('signed out: says so, that changes are kept, and offers Google sign-in', async ({ page }) => {
     await settle(page, me(401, { ok: false, error: 'sign-in required' }));
-    await expect(page.getByText('Not signed in.')).toBeVisible();
-    await expect(page.getByText('kept on this device')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+    const panel = page.getByRole('region', { name: 'Account' });
+    await expect(panel.getByText('Not signed in.')).toBeVisible();
+    await expect(panel.getByText('kept on this device')).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
     const { violations } = await scan(page);
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });
@@ -217,7 +221,7 @@ test.describe('the Account panel', () => {
       await p.route('**/api/auth/sign-in/social', route => { body = route.request().postDataJSON(); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ url: '/google-says-hello', redirect: true }) }); });
       await p.route('**/google-says-hello', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Google</h1>' }));
     });
-    await page.getByRole('button', { name: 'Sign in with Google' }).click();
+    await page.getByRole('region', { name: 'Account' }).getByRole('button', { name: 'Sign in with Google' }).click();
     await expect(page.getByRole('heading', { name: 'Google' })).toBeVisible();
     expect(body).toEqual({ provider: 'google', callbackURL: '/' });
   });
@@ -262,5 +266,79 @@ test.describe('signed out with syncing on (the server answers 401)', () => {
     await page.route('**/google-says-hello', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Google</h1>' }));
     await page.getByRole('status').filter({ hasText: 'Sign in to sync' }).getByRole('button', { name: 'Sign in with Google' }).click();
     await expect(page.getByRole('heading', { name: 'Google' })).toBeVisible();
+  });
+});
+
+test.describe('another account signs in on a device that holds the first one’s data (B2e)', () => {
+  const json2 = (body, status = 200) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+  const bob = { ok: true, userId: 'bob', account: { kind: 'session', email: 'bob@example.com', name: 'Bob' } };
+
+  // The device belongs to Ann and has one change she never sent. Bob is the one signed in now.
+  async function openAsBob(page) {
+    const seen = { sync: 0, commands: 0 };
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem('seeded')) return; // only once: a reload after the wipe must not put Ann's data back
+      sessionStorage.setItem('seeded', '1');
+      localStorage.setItem('ironlog:hidetip', '1');
+      localStorage.setItem('ironlog:hidelocal', '1');
+      localStorage.setItem('ironlog:flag:apiSync', 'true');
+      localStorage.setItem('ironlog:sync/owner', JSON.stringify({ userId: 'ann' }));
+      localStorage.setItem('ironlog:sync/pending', JSON.stringify({ 'logs/hack-squat': { schema: 1, entries: [{ id: 'ann-1', d: '2026-10-05', ph: 'strength', w: 135, s: 3, r: 5 }] } }));
+    });
+    await page.route('**/api/me', json2(bob));
+    await page.route('**/api/sync*', route => { seen.sync++; return json(200, emptyPull)(route); });
+    await page.route('**/api/commands/**', route => { seen.commands++; return json2({ rows: [], cursor: '1' })(route); });
+    await page.goto('/');
+    return seen;
+  }
+
+  test('asks what to do, sends nothing, and has no accessibility violations', async ({ page }) => {
+    const seen = await openAsBob(page);
+    const card = page.getByRole('alert').filter({ hasText: 'holds data from another account' });
+    await expect(card).toBeVisible();
+    await expect(card).toContainText('bob@example.com');
+    await expect(card).toContainText('Nothing has been sent or received');
+    await expect(card.getByRole('button', { name: /Download this device/ })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Wipe it and continue' })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+    expect(seen).toEqual({ sync: 0, commands: 0 });
+  });
+
+  test('Download keeps a copy of everything the device held, unsent change included', async ({ page }) => {
+    await openAsBob(page);
+    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Download this device/ }).click()]);
+    expect(download.suggestedFilename()).toMatch(/^iron-log-this-device-\d{4}-\d{2}-\d{2}\.json$/);
+    const file = JSON.parse(await (await import('node:fs/promises')).readFile(await download.path(), 'utf8'));
+    expect(file.kind).toBe('everything this device held');
+    expect(file.items.map(i => i.path)).toEqual(['logs/hack-squat']);
+    expect(file.items[0].document.entries[0].id).toBe('ann-1');
+  });
+
+  test('Wipe needs a second press, then the device is clean, Bob owns it and Ann’s change was never sent', async ({ page }) => {
+    const seen = await openAsBob(page);
+    const wipe = page.getByRole('button', { name: 'Wipe it and continue' });
+    await wipe.click();
+    await expect(page.getByRole('button', { name: 'Tap again to wipe this device' })).toBeVisible(); // one press only arms it
+    expect(JSON.parse(await page.evaluate(() => localStorage.getItem('ironlog:sync/owner')))).toEqual({ userId: 'ann' });
+    await page.getByRole('button', { name: 'Tap again to wipe this device' }).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'another account' })).toHaveCount(0); // reloaded, signed in as Bob, nothing blocking
+    await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: 'another account' })).toHaveCount(0);
+    const stored = await page.evaluate(() => ({ owner: localStorage.getItem('ironlog:sync/owner'), pending: localStorage.getItem('ironlog:sync/pending') }));
+    expect(JSON.parse(stored.owner)).toEqual({ userId: 'bob' });
+    expect(stored.pending === null || stored.pending === '{}').toBe(true);
+    expect(seen.commands).toBe(0);
+  });
+
+  test('Sign out leaves the data alone and asks for sign-in', async ({ page }) => {
+    await openAsBob(page);
+    let out = false;
+    await page.route('**/api/me', route => (out ? json2({ ok: false }, 401)(route) : json2(bob)(route)));
+    await page.route('**/api/auth/sign-out', route => { out = true; return json2({ success: true })(route); });
+    await page.getByRole('button', { name: 'Sign out' }).first().click();
+    await expect(page.getByRole('status').filter({ hasText: 'Sign in to sync' })).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('ironlog:sync/pending'))).toContain('ann-1');
   });
 });
