@@ -4,7 +4,7 @@ import type { DB } from '../db/types.ts';
 import { lockUser, nextSeq, parseEnvelope, refuse, type LogEntryRow } from './support.ts';
 
 // ADR 003 and 008: one command, one transaction. A create carries baseVersion null; an edit carries the version the
-// phone saw. A retry of a create returns the row it made. A stale edit, an edit of a deleted row or of a row that does
+// phone saw; a restore of a deleted entry carries the tombstone's version. A retry of a create returns the row it made. A stale edit, an edit of a deleted row or of a row that does
 // not exist is refused with 409 and the current row, and every refusal is written to refused_writes (FM-22).
 
 export type { LogEntryRow };
@@ -79,7 +79,11 @@ export async function logSession(trx: Transaction<DB>, userId: string, body: unk
     return { status: 201, body: { rows: [row, ...replaced], cursor: next } };
   }
 
-  const refusal = !existing ? 'not-found' : existing.deleted_at ? 'deleted' : existing.version !== env.baseVersion ? 'stale' : null;
+  // A deleted entry is brought back only by a write that names the tombstone's own version: the phone saw the deletion and
+  // chose to restore it (the board's Undo). An edit based on an earlier version is still refused with the tombstone (FM-05),
+  // and a create with no base version still just returns it, so a duplicate of an old create can never undo a delete.
+  const restoring = !!existing?.deleted_at && existing.version === env.baseVersion;
+  const refusal = !existing ? 'not-found' : restoring ? null : existing.deleted_at ? 'deleted' : existing.version !== env.baseVersion ? 'stale' : null;
   if (refusal) {
     await refuse(trx, userId, 'log-session', env, refusal, clientVersion);
     return { status: 409, body: { refused: refusal, current: existing } };
@@ -87,7 +91,7 @@ export async function logSession(trx: Transaction<DB>, userId: string, body: unk
   const next = await seq();
   const row = await trx
     .updateTable('log_entries')
-    .set({ ...columns(input), version: env.baseVersion + 1, seq: next, updated_at: sql`now()` })
+    .set({ ...columns(input), ...(restoring ? { deleted_at: null } : {}), version: env.baseVersion + 1, seq: next, updated_at: sql`now()` })
     .where('id', '=', existing!.id)
     .returningAll()
     .executeTakeFirstOrThrow();

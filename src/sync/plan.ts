@@ -71,13 +71,21 @@ export function planCommands(kind: PathKind, doc: unknown, mirror: Mirror): Plan
 
   for (const row of desired) {
     const have = mirror.get(idOf(row));
-    if (!have || have.deleted) { creates.push(save(row, null)); continue; }
+    if (!have) { creates.push(save(row, null)); continue; }
+    if (have.deleted) {
+      // A log entry that was deleted and comes back (the board's Undo) is restored by naming the tombstone's version: the
+      // server never revives one for a create with no version, so a late duplicate cannot undo a delete. The other
+      // tables revive on a plain create.
+      creates.push(save(row, row.table === 'log_entries' ? have.version : null));
+      continue;
+    }
     if (canonOf(have) === canonOf(row)) continue;
     // A check-off is not edited in place: the old one goes and a new one is made (the server refuses to edit one).
     if (isCheckOff(row) || isCheckOff(have)) {
       const gone = remove(have);
       if (gone) deletes.push(gone);
-      creates.push(save(row, null));
+      // Same id again after the delete above, which makes the tombstone one version higher: restore that.
+      creates.push(save(row, have.table === 'log_entries' ? have.version + 1 : null));
     } else edits.push(save(row, have.version));
   }
 

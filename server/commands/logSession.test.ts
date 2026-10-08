@@ -140,7 +140,7 @@ describe('log-session edit', () => {
 
   it('refuses an edit of a deleted row and returns the tombstone', async () => {
     await create();
-    await db.updateTable('log_entries').set({ deleted_at: new Date() }).execute();
+    await db.updateTable('log_entries').set({ deleted_at: new Date(), version: 2 }).execute();
     const res = await post({ clientId: 'c1', baseVersion: 1, input: { exerciseId: 'squat', entry } });
     expect(res.status).toBe(409);
     expect(res.body.refused).toBe('deleted');
@@ -248,5 +248,86 @@ describe('log-session replaces a check-off', () => {
     await create('hand1', carded);
     const live = await db.selectFrom('log_entries').select('id').where('auto', '=', true).where('deleted_at', 'is', null).execute();
     expect(live).toHaveLength(0);
+  });
+});
+
+// FM-05 and the board's Undo: a deleted entry comes back only when the write names the tombstone's own version.
+describe('log-session restores a deleted entry', () => {
+  const deleteEntry = async (entryId: string, baseVersion: number) => {
+    const res = await fetch(`${base}/api/commands/delete-entry`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-dev-user': 'owner' },
+      body: JSON.stringify({ clientId: 'd1', baseVersion, input: { entryId } }),
+    });
+    return (await res.json()) as any;
+  };
+  const row = () => db.selectFrom('log_entries').selectAll().where('client_id', '=', 'c1').executeTakeFirstOrThrow();
+
+  it('brings the entry back when the write carries the tombstone version, with the new values', async () => {
+    await create();
+    const gone = await deleteEntry('c1', 1);
+    expect(gone.rows[0].version).toBe(2);
+    const res = await post({ clientId: 'c1', baseVersion: 2, input: { exerciseId: 'squat', entry: { ...entry, w: 150 } } });
+    expect(res.status).toBe(200);
+    expect(res.body.rows[0]).toMatchObject({ client_id: 'c1', version: 3, deleted_at: null, weight_lb: '150.0000' });
+    expect(Number(res.body.cursor)).toBeGreaterThan(Number(gone.cursor));
+    expect(await db.selectFrom('log_entries').selectAll().execute()).toHaveLength(1);
+  });
+
+  it('keeps the earlier versions in row_history', async () => {
+    await create();
+    await deleteEntry('c1', 1);
+    await post({ clientId: 'c1', baseVersion: 2, input: { exerciseId: 'squat', entry } });
+    expect((await db.selectFrom('row_history').select('version').orderBy('version').execute()).map(r => r.version)).toEqual([1, 2]);
+  });
+
+  it('a create with no base version still only returns the tombstone, so a late duplicate cannot undo a delete', async () => {
+    await create();
+    await deleteEntry('c1', 1);
+    const dup = await create();
+    expect(dup.status).toBe(200);
+    expect(dup.body.rows[0]).toMatchObject({ version: 2 });
+    expect(dup.body.rows[0].deleted_at).not.toBeNull();
+    expect((await row()).deleted_at).not.toBeNull();
+  });
+
+  it('a restore that names an old version is refused', async () => {
+    await create();
+    await post({ clientId: 'c1', baseVersion: 1, input: { exerciseId: 'squat', entry: { ...entry, w: 140 } } });
+    await deleteEntry('c1', 2);
+    const res = await post({ clientId: 'c1', baseVersion: 2, input: { exerciseId: 'squat', entry } });
+    expect(res.status).toBe(409);
+    expect(res.body.refused).toBe('deleted');
+    expect(res.body.current).toMatchObject({ version: 3 });
+    expect((await row()).deleted_at).not.toBeNull();
+  });
+
+  it('a restore of an entry that is live again is a stale edit like any other', async () => {
+    await create();
+    await deleteEntry('c1', 1);
+    await post({ clientId: 'c1', baseVersion: 2, input: { exerciseId: 'squat', entry } });
+    const res = await post({ clientId: 'c1', baseVersion: 2, input: { exerciseId: 'squat', entry } });
+    expect(res.status).toBe(409);
+    expect(res.body.refused).toBe('stale');
+  });
+
+  it('a restored session replaces the check-off for its card and week, as a new one would', async () => {
+    const week = '2026-10-04';
+    const carded = { ...entry, slot: 's1', wk: week };
+    await create('c1', carded);
+    await deleteEntry('c1', 1);
+    await db.insertInto('log_entries').values({ user_id: (await db.selectFrom('users').select('id').executeTakeFirstOrThrow()).id, client_id: 'tick1', seq: '9', exercise_id: 'squat', d: '2026-10-05', slot: 's1', wk: week, auto: true }).execute();
+    const res = await post({ clientId: 'c1', baseVersion: 2, input: { exerciseId: 'squat', entry: carded } });
+    expect(res.body.rows.map((r: any) => r.client_id)).toEqual(['c1', 'tick1']);
+    expect((await db.selectFrom('log_entries').selectAll().where('client_id', '=', 'tick1').executeTakeFirstOrThrow()).deleted_at).not.toBeNull();
+  });
+
+  it('is delivered by the sync pull as the live entry again', async () => {
+    await create();
+    await deleteEntry('c1', 1);
+    const res = await post({ clientId: 'c1', baseVersion: 2, input: { exerciseId: 'squat', entry } });
+    const pulled = (await (await fetch(`${base}/api/sync?since=0`, { headers: { 'x-dev-user': 'owner' } })).json()) as any;
+    expect(pulled.rows.map((r: any) => [r.client_id, r.version, r.deleted_at])).toEqual([['c1', 3, null]]);
+    expect(pulled.cursor).toBe(res.body.cursor);
   });
 });

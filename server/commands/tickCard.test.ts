@@ -140,10 +140,11 @@ describe('tick-card refusals', () => {
     expect(logged[0]).toMatchObject({ command: 'tick-card', client_id: 't1', reason: 'invalid-input', client_version: 'test-1' });
   });
 
-  it('refuses a tick that carries a base version', async () => {
+  it('refuses a tick that carries a base version when there is no such check-off', async () => {
     const res = await send('commands/tick-card', { clientId: 't1', baseVersion: 1, input: { exerciseId: 'squat', entry: planned } });
-    expect(res.status).toBe(422);
-    expect(res.body.refused).toBe('invalid-input');
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({ refused: 'not-found', current: null });
+    expect(await db.selectFrom('log_entries').selectAll().execute()).toHaveLength(0);
   });
 
   it('refuses a malformed envelope', async () => {
@@ -156,5 +157,92 @@ describe('tick-card refusals', () => {
   it('needs a signed-in user', async () => {
     const res = await fetch(`${base}/api/commands/tick-card`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
     expect(res.status).toBe(401);
+  });
+});
+
+// The board's Undo after an untick: the phone names the tombstone's own version to bring the check-off back.
+describe('tick-card restores an unticked check-off', () => {
+  const refusedWrites = () => db.selectFrom('refused_writes').selectAll().execute();
+  const untick = () => send('commands/untick-card', { clientId: 'u1', baseVersion: null, input: { slot: 's1', wk: '2026-10-04' } });
+  const restore = (baseVersion: number, clientId = 't1', entry: object = planned) => send('commands/tick-card', { clientId, baseVersion, input: { exerciseId: 'squat', entry } });
+  const row = (clientId = 't1') => db.selectFrom('log_entries').selectAll().where('client_id', '=', clientId).executeTakeFirstOrThrow();
+
+  it('brings the same check-off back, with a higher version and seq', async () => {
+    await tick('t1');
+    const gone = await untick();
+    expect(gone.body.rows[0].version).toBe(2);
+    const res = await restore(2);
+    expect(res.status).toBe(200);
+    expect(res.body.rows[0]).toMatchObject({ client_id: 't1', version: 3, deleted_at: null, auto: true, slot: 's1', wk: '2026-10-04' });
+    expect(Number(res.body.cursor)).toBeGreaterThan(Number(gone.body.cursor));
+    expect(await live()).toHaveLength(1);
+  });
+
+  it('a tick with no base version still only returns the tombstone', async () => {
+    await tick('t1');
+    await untick();
+    const dup = await tick('t1');
+    expect(dup.status).toBe(200);
+    expect(dup.body.rows[0].deleted_at).not.toBeNull();
+    expect(await live()).toHaveLength(0);
+  });
+
+  it('a restore that names the wrong version is refused with the tombstone', async () => {
+    await tick('t1');
+    await untick();
+    const res = await restore(1);
+    expect(res.status).toBe(409);
+    expect(res.body.refused).toBe('deleted');
+    expect(res.body.current).toMatchObject({ version: 2 });
+    expect((await row()).deleted_at).not.toBeNull();
+  });
+
+  it('a restore of a check-off that is already back is a no-op that returns it', async () => {
+    await tick('t1');
+    await untick();
+    const first = await restore(2);
+    const again = await restore(2);
+    expect(again.status).toBe(200);
+    expect(again.body.rows[0].version).toBe(3);
+    expect(again.body.cursor).toBe(first.body.cursor);
+  });
+
+  it('a restore when the card has another check-off by then returns that one and changes nothing', async () => {
+    await tick('t1');
+    await untick();
+    await tick('t2');
+    const res = await restore(2);
+    expect(res.status).toBe(200);
+    expect(res.body.rows[0].client_id).toBe('t2');
+    expect((await row('t1')).deleted_at).not.toBeNull();
+    expect(await live()).toHaveLength(1);
+  });
+
+  it('a restore when a session was logged by hand for the card returns that session', async () => {
+    await tick('t1');
+    await untick();
+    await hand('hand1', { d: '2026-10-07', w: 140, s: 3, r: 5, slot: 's1', wk: '2026-10-04' });
+    const res = await restore(2);
+    expect(res.body.rows[0].client_id).toBe('hand1');
+    expect((await row('t1')).deleted_at).not.toBeNull();
+  });
+
+  it('is refused for another user, and recorded', async () => {
+    await tick('t1');
+    await untick();
+    const res = await send('commands/tick-card', { clientId: 't1', baseVersion: 2, input: { exerciseId: 'squat', entry: planned } }, 'tester');
+    expect(res.status).toBe(409);
+    expect(res.body.refused).toBe('not-found');
+    expect((await row()).deleted_at).not.toBeNull();
+    expect((await refusedWrites())[0]).toMatchObject({ command: 'tick-card', reason: 'not-found' });
+  });
+
+  it('is delivered by the sync pull as the live check-off', async () => {
+    await tick('t1');
+    await untick();
+    const res = await restore(2);
+    const pulled = (await (await fetch(`${base}/api/sync?since=0`, { headers: { 'x-dev-user': 'owner' } })).json()) as any;
+    expect(pulled.rows.map((r: any) => [r.client_id, r.version, r.deleted_at])).toEqual([['t1', 3, null]]);
+    expect(pulled.cursor).toBe(res.body.cursor);
   });
 });
