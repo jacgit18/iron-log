@@ -2,8 +2,10 @@
    One module for what the phone sends and the API accepts. Each command has a name, an input type and a validator;
    the offline queue stores a Command and replays it unchanged. Framework-free: client and server import it. */
 
-import type { BodyEntry, LogEntry } from '../types.ts';
+import type { BodyEntry, LogEntry, StretchWeek, Week } from '../types.ts';
 import { LIMITS, normBody, normEntry, validDate } from './validate.js';
+import { normStretchWeek } from './stretchWeek.js';
+import { normWeek } from './week.js';
 
 /** What the offline queue stores and `POST /api/commands/<name>` receives. */
 export interface Command<N extends string, I> {
@@ -91,4 +93,43 @@ export function validateDeleteBodyWeight(input: unknown): DeleteBodyWeightInput 
   if (!input || typeof input !== 'object') return null;
   const { wk } = input as Record<string, unknown>;
   return validDate(wk) ? { wk } : null;
+}
+
+/** Replace the whole document for one week. The week is the key (`weekStart` is its first day, ADR 011). baseVersion is
+ *  the version the user saw, or null when the phone has never seen a row for that week. */
+export interface SaveWeekInput {
+  weekStart: string;
+  week: Week;
+}
+export type SaveWeekCommand = Command<'save-week', SaveWeekInput>;
+
+export function validateSaveWeek(input: unknown): SaveWeekInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { weekStart, week } = input as Record<string, unknown>;
+  return validDate(weekStart) && week && typeof week === 'object' ? { weekStart, week: normWeek(week) } : null;
+}
+
+export interface SaveStretchWeekInput {
+  weekStart: string;
+  week: StretchWeek;
+}
+export type SaveStretchWeekCommand = Command<'save-stretch-week', SaveStretchWeekInput>;
+
+export function validateSaveStretchWeek(input: unknown): SaveStretchWeekInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { weekStart, week } = input as Record<string, unknown>;
+  return validDate(weekStart) && week && typeof week === 'object' ? { weekStart, week: normStretchWeek(week) } : null;
+}
+
+/** Delete the document for a week (erasing data). baseVersion is the version the user saw (never null). */
+export interface DeleteWeekInput {
+  weekStart: string;
+}
+export type DeleteWeekCommand = Command<'delete-week', DeleteWeekInput>;
+export type DeleteStretchWeekCommand = Command<'delete-stretch-week', DeleteWeekInput>;
+
+export function validateDeleteWeek(input: unknown): DeleteWeekInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { weekStart } = input as Record<string, unknown>;
+  return validDate(weekStart) ? { weekStart } : null;
 }

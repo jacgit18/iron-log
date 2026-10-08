@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight } from './commands.js';
+import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek } from './commands.js';
 
 describe('validateLogSession', () => {
   it('accepts an exercise id with a valid entry and cleans the entry', () => {
@@ -77,5 +77,42 @@ describe('validateDeleteBodyWeight', () => {
     expect(validateDeleteBodyWeight({})).toBeNull();
     expect(validateDeleteBodyWeight({ wk: '2026-13-40' })).toBeNull();
     expect(validateDeleteBodyWeight(null)).toBeNull();
+  });
+});
+
+describe('validateSaveWeek', () => {
+  it('accepts a week start and cleans the week', () => {
+    const out = validateSaveWeek({ weekStart: '2026-10-04', week: { prog: 'A', done: { 'A-d1s1:0': true, bad: 0 }, junk: 1 } });
+    expect(out.weekStart).toBe('2026-10-04');
+    expect(out.week).toMatchObject({ prog: 'A', done: { 'A-d1s1:0': true }, skipped: {}, moved: {}, ph: {}, warm: {} });
+    expect(out.week.junk).toBeUndefined();
+  });
+  it('refuses a bad week start, a missing week and non-objects', () => {
+    expect(validateSaveWeek({ weekStart: 'nope', week: {} })).toBeNull();
+    expect(validateSaveWeek({ weekStart: '2026-10-04' })).toBeNull();
+    expect(validateSaveWeek({ weekStart: '2026-10-04', week: 'x' })).toBeNull();
+    expect(validateSaveWeek(null)).toBeNull();
+  });
+});
+
+describe('validateSaveStretchWeek', () => {
+  it('accepts a week start and cleans the stretch week', () => {
+    const out = validateSaveStretchWeek({ weekStart: '2026-10-04', week: { done: { '0:scarecrow': true, 'x:bad': true }, skipped: { 2: true }, junk: 1 } });
+    expect(out).toEqual({ weekStart: '2026-10-04', week: { done: { '0:scarecrow': true }, skipped: { 2: true }, extra: [] } });
+  });
+  it('refuses a bad week start or a missing week', () => {
+    expect(validateSaveStretchWeek({ weekStart: '2026-13-01', week: {} })).toBeNull();
+    expect(validateSaveStretchWeek({ weekStart: '2026-10-04' })).toBeNull();
+  });
+});
+
+describe('validateDeleteWeek', () => {
+  it('accepts a week start and drops other fields', () => {
+    expect(validateDeleteWeek({ weekStart: '2026-10-04', junk: 1 })).toEqual({ weekStart: '2026-10-04' });
+  });
+  it('refuses a missing or bad week start', () => {
+    expect(validateDeleteWeek({})).toBeNull();
+    expect(validateDeleteWeek({ weekStart: 'nope' })).toBeNull();
+    expect(validateDeleteWeek(null)).toBeNull();
   });
 });
