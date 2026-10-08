@@ -4,6 +4,9 @@ import type { Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApiDb } from '../../src/sync/apiDb.ts';
 import { createTransport, type Transport } from '../../src/sync/transport.ts';
+
+// What these tests wrap: the two calls the sync queue makes.
+type Wire = Pick<Transport, 'command' | 'pull'>;
 import { createApp } from '../app.ts';
 import type { DB } from '../db/types.ts';
 import { eventually } from '../../src/sync/testing.ts';
@@ -38,7 +41,7 @@ const memory = () => {
 const realTransport = (user = 'owner') => createTransport({ clientVersion: 'test', baseUrl: base, headers: () => ({ 'x-dev-user': user }) });
 const quickSleep = (ms: number) => new Promise<void>(r => setTimeout(r, Math.min(ms, 5)));
 
-function phone(user = 'owner', storage = memory(), transport: Transport = realTransport(user)) {
+function phone(user = 'owner', storage = memory(), transport: Wire = realTransport(user)) {
   const api = createApiDb({ transport, storage, sleep: quickSleep, pollMs: 0, random: () => 0.5 });
   return { api, storage, get: async (path: string) => (await api.doc(path).get()).data() as any, set: (path: string, doc: unknown) => api.doc(path).set(doc) };
 }
@@ -50,7 +53,7 @@ const twoPhones = async () => {
   await Promise.all([a.api.syncNow(), b.api.syncNow()]);
   return { a, b };
 };
-const offline = (real: Transport, down: { on: boolean }): Transport => ({
+const offline = (real: Wire, down: { on: boolean }): Wire => ({
   command: async (name, env) => (down.on ? { ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'offline' } : real.command(name, env)),
   pull: async (since, limit) => (down.on ? { ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'offline' } : real.pull(since, limit)),
 });
@@ -245,7 +248,7 @@ describe('the rule that stops a loop', () => {
     await a.set('logs/squat', logs(entry('S1')));
     // another phone edits S1 again every time this one tries
     let n = 0;
-    const racing: Transport = {
+    const racing: Wire = {
       pull: real.pull,
       command: async (name, env) => {
         if (name === 'log-session' && env.baseVersion !== null) {

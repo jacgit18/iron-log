@@ -49,8 +49,8 @@ export default defineConfig({
   // The API runs on its own port in development; the app calls it on its own origin, as it will in production (ADR 010).
   // The proxy keeps the browser's Host header, as production's single origin does, so the API's Origin check (originGuard) sees a same-origin page.
   server: { proxy: { '/api': { target: process.env.API_ORIGIN || 'http://localhost:3001', changeOrigin: false } } },
-  // Playwright's specs in e2e/ and e2e-sync/ are run by `npm run e2e` and `npm run e2e:sync`, not Vitest.
-  test: { exclude: ['**/node_modules/**', 'e2e/**', 'e2e-sync/**'] },
+  // Playwright's specs in e2e/, e2e-sync/ and e2e-accounts/ are run by `npm run e2e` and `npm run e2e:sync`, not Vitest.
+  test: { exclude: ['**/node_modules/**', 'e2e/**', 'e2e-sync/**', 'e2e-accounts/**'] },
   plugins: [
     react(),
     preloadTitleFont(),

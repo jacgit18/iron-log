@@ -4,6 +4,9 @@ import type { Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApiDb } from '../../src/sync/apiDb.ts';
 import { createTransport, type Transport } from '../../src/sync/transport.ts';
+
+// What these tests wrap: the two calls the sync queue makes.
+type Wire = Pick<Transport, 'command' | 'pull'>;
 import { createApp } from '../app.ts';
 import type { DB } from '../db/types.ts';
 import { eventually } from '../../src/sync/testing.ts';
@@ -39,11 +42,11 @@ const realTransport = (user = 'owner') => createTransport({ clientVersion: 'test
 const quickSleep = (ms: number) => new Promise<void>(r => setTimeout(r, Math.min(ms, 5)));
 
 // A phone: an adapter on its own storage. `transport` can be swapped for one that fails, to go offline.
-function phone(user = 'owner', storage = memory(), transport: Transport = realTransport(user)) {
+function phone(user = 'owner', storage = memory(), transport: Wire = realTransport(user)) {
   const api = createApiDb({ transport, storage, sleep: quickSleep, pollMs: 0, random: () => 0.5 });
   return { api, storage, get: async (path: string) => (await api.doc(path).get()).data() as any, set: (path: string, doc: unknown) => api.doc(path).set(doc) };
 }
-const offline = (real: Transport, failures: { n: number }): Transport => ({
+const offline = (real: Wire, failures: { n: number }): Wire => ({
   command: async (name, env) => (failures.n-- > 0 ? { ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'offline' } : real.command(name, env)),
   pull: async (since, limit) => (failures.n-- > 0 ? { ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'offline' } : real.pull(since, limit)),
 });
@@ -145,7 +148,7 @@ describe('going offline and coming back', () => {
     const storage = memory();
     const real = realTransport();
     let calls = 0;
-    const dies: Transport = { pull: real.pull, command: async (name, env) => (++calls > 1 ? { ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'killed' } : real.command(name, env)) };
+    const dies: Wire = { pull: real.pull, command: async (name, env) => (++calls > 1 ? { ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'killed' } : real.command(name, env)) };
     const before = phone('owner', storage, dies);
     await before.set('logs/squat', logs(entry('S1'), entry('S2'), entry('S3')));
     before.api.stop(); // the browser is closed after the first command was accepted
@@ -160,7 +163,7 @@ describe('going offline and coming back', () => {
   it('a save whose answer was lost is not sent twice', async () => {
     const real = realTransport();
     let lost = true;
-    const flaky: Transport = {
+    const flaky: Wire = {
       pull: real.pull,
       command: async (name, env) => {
         const out = await real.command(name, env);

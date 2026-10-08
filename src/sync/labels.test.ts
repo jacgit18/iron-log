@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { SyncStatus } from './apiDb.js';
-import { deviceDataFile, describeSync, formatWhen, notSentFile, pathLabel, storageWarning, versionLabel } from './labels.js';
+import { deviceDataFile, describeSync, importFailure, formatWhen, notSentFile, pathLabel, storageWarning, versionLabel } from './labels.js';
 
 const status = (over: Partial<SyncStatus> = {}): SyncStatus => ({
-  state: 'idle', pausedBecause: null, pendingPaths: [], quarantined: 0, quarantine: [], lastPullAt: null, lastSyncedAt: null, persisted: true, ready: true, notices: [], ...over,
+  state: 'idle', pausedBecause: null, pendingPaths: [], quarantined: 0, quarantine: [], lastPullAt: null, lastSyncedAt: null, persisted: true, ready: true, holdsData: false, notices: [], ...over,
 });
 const clock = (ms: number) => `t${ms}`;
 
@@ -139,5 +139,13 @@ describe('deviceDataFile', () => {
     expect(file).toMatchObject({ app: 'Iron Log', kind: 'everything this device held', version: '1.2.3', savedAt: '2026-10-08T12:00:00.000Z' });
     expect(file.items).toEqual([{ what: expect.any(String), path: 'logs/squat', document: { entries: [{ id: 'e1' }] } }]);
     expect(file.notSent[0]).toMatchObject({ path: 'weeks/2026-10-04', reason: 'no', document: { prog: 'A' } });
+  });
+});
+
+describe('importFailure', () => {
+  it('always says nothing was uploaded, and where the server stopped', () => {
+    expect(importFailure({ class: 'refused', reason: 'invalid-input', at: 1, command: 'log-body-weight' })).toBe('The server would not take row 2 (log-body-weight): invalid-input. Nothing was uploaded.');
+    for (const c of ['network', 'server', 'auth', 'outdated', 'not-empty', 'unavailable']) expect(importFailure({ class: c })).toMatch(/nothing was uploaded/i);
+    expect(importFailure({ class: 'mismatch' })).toContain('counts did not match');
   });
 });

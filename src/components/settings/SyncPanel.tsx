@@ -1,4 +1,5 @@
 import { exInfo } from '../../lib/data.js';
+import { readLegacyMarker } from '../../sync/legacyMarker.js';
 import { describeSync, formatWhen, notSentFile, pathLabel, storageWarning, versionLabel } from '../../sync/labels.js';
 import type { QuarantineEntry } from '../../sync/outbox.js';
 import { flag, getSyncApi, useAppStore } from '../../store/useAppStore.js';
@@ -13,6 +14,7 @@ export default function SyncPanel() {
   const cfg = useAppStore(s => s.cfg);
   const api = getSyncApi();
   if (!sync || !api) return null;
+  const uploaded = readLegacyMarker();
 
   const nameOf = (id: string) => exInfo(cfg, id).n || id;
   const status = describeSync(sync);
@@ -73,6 +75,7 @@ export default function SyncPanel() {
         </div>
       )}
 
+      {uploaded?.state === 'uploaded' && <p className="note">Data from before accounts was uploaded on {formatWhen(uploaded.at)} ({uploaded.total} items). The old copy is still on this device.</p>}
       <p className="note">App version {versionLabel(__APP_VERSION__)}</p>
     </section>
   );

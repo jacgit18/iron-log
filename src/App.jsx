@@ -22,6 +22,7 @@ import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
 import ImportSheet from './components/sheets/ImportSheet.jsx';
 import HelpSheet from './components/sheets/HelpSheet.jsx';
 import UpdateBanner from './components/UpdateBanner.tsx';
+import LegacyCard from './components/LegacyCard.tsx';
 import OtherAccountCard from './components/OtherAccountCard.tsx';
 import SignInCard from './components/SignInCard.tsx';
 import SyncNotice from './components/SyncNotice.tsx';
@@ -111,6 +112,7 @@ export default function App() {
         <SyncNotice />
         <SignInCard />
         <OtherAccountCard />
+        <LegacyCard />
         {/* Stays until the writes go through: a passing message isn't enough when data would be gone on reload. */}
         {unsaved.length > 0 && !syncing && (
           <div className="notice movewarn" role="alert">

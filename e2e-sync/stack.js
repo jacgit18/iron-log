@@ -18,6 +18,13 @@ export const server = {
         where u.auth_user_id = $1 and l.deleted_at is null order by l.client_id`, [`dev:${user}`]);
     return rows;
   },
+  async counts(user) {
+    const { rows } = await pool.query(
+      `select (select count(*) from log_entries l where l.user_id = u.id)::int as entries, (select count(*) from body_entries b where b.user_id = u.id)::int as body,
+              (select count(*) from weeks w where w.user_id = u.id)::int as weeks
+         from users u where u.auth_user_id = $1`, [`dev:${user}`]);
+    return rows[0] ?? { entries: 0, body: 0, weeks: 0 };
+  },
   async week(user, weekStart) {
     const { rows } = await pool.query(
       `select w.data, w.version from weeks w join users u on u.id = w.user_id where u.auth_user_id = $1 and w.week_start = $2 and w.deleted_at is null`,
@@ -26,8 +33,9 @@ export const server = {
   },
 };
 
-/** A new phone for `user`: its own browser storage, sync on, signed in as that dev user. Call open() to load the app. */
-export async function newPhone(browser, user) {
+/** A new phone for `user`: its own browser storage, sync on, signed in as that dev user. Call open() to load the app.
+ *  `old` is documents the browser held before accounts, by path (logs/squat, ...): they are put in its storage first. */
+export async function newPhone(browser, user, old = {}) {
   const context = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'America/New_York', viewport: { width: 1440, height: 900 } });
   await context.addInitScript(u => {
     localStorage.setItem('ironlog:hidetip', '1');
@@ -35,6 +43,7 @@ export async function newPhone(browser, user) {
     localStorage.setItem('ironlog:flag:apiSync', 'true');
     localStorage.setItem('ironlog:flag:apiUser', JSON.stringify(u));
   }, user);
+  if (Object.keys(old).length) await context.addInitScript(docs => { for (const [path, doc] of Object.entries(docs)) localStorage.setItem(`ironlog:${path}`, JSON.stringify(doc)); }, old);
   const page = await context.newPage();
   await page.clock.install({ time: NOW });
   return {
