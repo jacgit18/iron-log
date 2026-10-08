@@ -76,6 +76,49 @@ jobs:
         env:
           DATABASE_URL: postgres://ironlog:ironlog@127.0.0.1:5432/ironlog?sslmode=disable
 
+  # The nightly backup and the restore check keep working: back up a migrated database that holds a few rows, restore the dump into
+  # a throwaway server, and compare every table's row count with the manifest. (Phase F.)
+  backup:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ironlog
+          POSTGRES_PASSWORD: ironlog
+          POSTGRES_DB: ironlog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ironlog"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://ironlog:ironlog@127.0.0.1:5432/ironlog?sslmode=disable
+      DBMATE_NO_DUMP_SCHEMA: 'true'
+      DBMATE_MIGRATIONS_DIR: db/migrations
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx dbmate up
+      - name: Put a few rows in
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "insert into users (auth_user_id) values ('ci-user')"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "insert into log_entries (user_id, client_id, seq, exercise_id, d, auto) select id, 'ci-' || g, g, 'squat', '2026-10-05', false from users, generate_series(1, 25) g"
+      - run: docker build -f backup/Dockerfile -t iron-log-backup .
+      - name: Back up to a folder
+        run: |
+          mkdir -p "$RUNNER_TEMP/backups"
+          docker run --rm --network host -u "$(id -u):$(id -g)" -v "$RUNNER_TEMP/backups:/out" \
+            -e BACKUP_OUT_DIR=/out -e BACKUP_DATABASE_URL="$DATABASE_URL" iron-log-backup
+      - name: Restore it and compare
+        run: scripts/restore-check.sh "$(ls "$RUNNER_TEMP"/backups/*.dump)"
+
   e2e-sync:
     runs-on: ubuntu-latest
     services:
