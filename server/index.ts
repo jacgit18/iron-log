@@ -9,7 +9,10 @@ const port = Number(process.env.PORT) || 3001;
 const db = process.env.DATABASE_URL ? createDb(process.env.DATABASE_URL) : undefined;
 if (!db) console.warn(JSON.stringify({ msg: 'DATABASE_URL is not set; /api/health/db will answer 503' }));
 
-const server = createApp({ db }).listen(port, () => {
+// The built PWA, served from the same origin as the API. Absent in development, where Vite serves it.
+const staticDir = process.env.STATIC_DIR ?? 'dist';
+
+const server = createApp({ db, staticDir }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 

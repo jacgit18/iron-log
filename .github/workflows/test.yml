@@ -2,7 +2,8 @@ name: Tests
 
 # Lints, runs the unit tests and the browser (Playwright) tests on every pull request, so problems show up
 # before merging instead of stopping the deploy afterwards. The database job checks the migrations on a throwaway
-# Postgres: they apply, roll back to an empty schema, apply again, and server/db/types.ts matches them.
+# Postgres: they apply, roll back to an empty schema, apply again, and server/db/types.ts matches them. The docker job
+# builds the production image and checks that it starts and serves the API and the app.
 on:
   pull_request:
   workflow_dispatch:
@@ -27,6 +28,25 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -t iron-log .
+      # No database here: the health check and the app need none.
+      - name: Start the image and check it answers
+        run: |
+          docker run -d --name app -p 8080:8080 iron-log
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/api/health && break; sleep 1; done
+          curl -fsS http://127.0.0.1:8080/api/health
+          curl -fsS -o /dev/null http://127.0.0.1:8080/
+          curl -fsS -o /dev/null http://127.0.0.1:8080/some/page
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/assets/missing-1.js)" = 404
+          docker exec app id -u | grep -vx 0
+      - name: Show the container log
+        if: always()
+        run: docker logs app
 
   database:
     runs-on: ubuntu-latest

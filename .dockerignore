@@ -1,0 +1,21 @@
+# Keep the build context small and keep secrets and local state out of the image.
+.git
+.github
+.claude
+node_modules
+dist
+dist-server
+test-results
+playwright-report
+coverage
+.env
+.env.*
+!.env.example
+spike
+docs
+e2e
+tools
+*.md
+!README.md
+neon.ts
+skills-lock.json
