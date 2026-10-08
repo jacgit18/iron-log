@@ -24,12 +24,13 @@
     "db:migrate": "dbmate up && npm run db:types",
     "db:rollback": "dbmate down && npm run db:types",
     "db:check": "node scripts/check-migrations.mjs",
-    "db:types": "kysely-codegen --dialect postgres --date-parser string --exclude-pattern schema_migrations --out-file server/db/types.ts"
+    "db:types": "kysely-codegen --dialect postgres --date-parser string --exclude-pattern '{*schema_migrations,auth.*}' --out-file server/db/types.ts"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",
     "@fontsource/barlow-condensed": "^5.3.0",
     "@neon/env": "^1.5.1",
+    "better-auth": "1.7.7",
     "express": "^5.2.1",
     "kysely": "^0.28.17",
     "pg": "^8.23.1",

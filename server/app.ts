@@ -1,8 +1,10 @@
 import { existsSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
+import { toNodeHandler } from 'better-auth/node';
 import express from 'express';
 import { sql, type Kysely } from 'kysely';
 import { devAuth, devAuthAllowed, inUserTransaction } from './auth.ts';
+import type { Auth } from './auth/betterAuth.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { logSession } from './commands/logSession.ts';
 import { tickCard } from './commands/tickCard.ts';
@@ -20,6 +22,8 @@ export interface AppDeps {
   staticDir?: string;
   /** The oldest app build allowed to sync (see clientVersion.ts); null or unset for no gate. */
   minClientVersion?: number | null;
+  /** Better Auth (see auth/betterAuth.ts). When set, its routes are served under /api/auth. */
+  auth?: Auth;
 }
 
 const NO_CACHE = 'no-cache';
@@ -36,8 +40,10 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth }: AppDeps = {}) {
   const app = express();
+  // Better Auth reads the request body itself, so its routes come before any body parser.
+  if (auth) app.all('/api/auth/*splat', toNodeHandler(auth));
   app.use(express.json({ limit: '100kb' }));
   app.disable('x-powered-by');
 
