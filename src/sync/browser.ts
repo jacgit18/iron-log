@@ -1,4 +1,5 @@
 import { LS } from '../lib/storage.js';
+import { createAccountClient } from './account.js';
 import { signIn } from './devUser.js';
 import { createApiDb } from './apiDb.js';
 import { createTransport } from './transport.js';
@@ -8,7 +9,9 @@ import { createTransport } from './transport.js';
    free of the DOM and can be tested without it. */
 
 export function createBrowserApiDb() {
+  const account = createAccountClient({ headers: signIn });
   return createApiDb({
+    identity: account.me,
     transport: createTransport({ clientVersion: __APP_VERSION__, headers: signIn }),
     storage: LS,
     visible: () => document.visibilityState !== 'hidden',

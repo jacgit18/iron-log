@@ -1,3 +1,4 @@
+import type { AccountState } from './account.js';
 import { backoffMs } from './backoff.js';
 import { documentFor, parsePath, pathsOf, type PathKind } from './documents.js';
 import { entryId } from '../lib/export.js';
@@ -29,7 +30,11 @@ import { mirrorId, type PlannedCommand } from './types.js';
    One request at a time: pulls and sends take turns, so every plan sees the latest mirror. */
 
 export type SyncState = 'starting' | 'idle' | 'syncing' | 'paused';
-export type PauseReason = Exclude<FailureClass, 'refused' | 'conflict'>;
+/** 'account': the device holds data of another account than the one now signed in; nothing is sent until the user chooses. */
+export type PauseReason = Exclude<FailureClass, 'refused' | 'conflict'> | 'account';
+
+/** Whose data this device holds, remembered as { userId } so a different account signing in is noticed. */
+export const OWNER_KEY = 'sync/owner';
 
 export interface SyncStatus {
   state: SyncState;
@@ -69,6 +74,9 @@ export interface ApiDbOptions {
   pollMs?: number;
   /** Is the app on screen? Pulls on the timer are skipped when it is not. */
   visible?: () => boolean;
+  /** Who is signed in right now. When given, nothing is pulled or sent until the signed-in account is known to be the one this
+   *  device's data belongs to (build spec B2e); without it (tests, or no accounts) the check is skipped. */
+  identity?: () => Promise<AccountState>;
   /** Calls back when the app returns to the foreground or the network comes back; returns how to stop listening. */
   onWake?: (wake: () => void) => () => void;
 }
@@ -82,6 +90,7 @@ const MAX_CONFLICTS = 3;
 export const OUTDATED_WAIT_MS = 5 * 60_000;
 const MAX_PASSES = 6;
 
+const isObjectLike = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const clone = <T>(v: T): T => (v === undefined ? v : structuredClone(v));
 const docSnap = (doc: unknown): Snap => ({ exists: doc != null, data: () => clone(doc) });
 const permanent = (message: string) => Object.assign(new Error(message), { code: 'invalid_argument' });
@@ -118,9 +127,33 @@ export function createApiDb(options: ApiDbOptions) {
     if (state === next && pausedBecause === because) return;
     state = next;
     pausedBecause = because;
+    if (next === 'paused' && (because === 'auth' || because === 'account')) verified = false; // ask again who is signed in
     if (next === 'paused') { const waiting = [...pauseWaiters]; pauseWaiters.clear(); waiting.forEach(w => w()); }
     announce();
   };
+
+  /* ---------- whose data this device holds ---------- */
+  // The first account that syncs here owns the device's data. A different account signing in must never see it or add to it:
+  // pulls would mix two users' rows under one cursor, and an unsent change of the first would reach the second.
+  let verified = false;
+  const readOwner = (): string | null => {
+    const saved = storage.get(OWNER_KEY);
+    return isObjectLike(saved) && typeof saved.userId === 'string' ? saved.userId : null;
+  };
+  const hasData = () => mirror.rows().size > 0 || outbox.paths().length > 0 || outbox.quarantined().length > 0;
+  const adopt = (userId: string) => { storage.set(OWNER_KEY, { userId }); verified = true; };
+  type Gate = { ok: true } | { ok: false; because: PauseReason };
+  async function gate(): Promise<Gate> {
+    if (!options.identity || verified) return { ok: true };
+    const who = await options.identity();
+    if (who.status === 'unreachable') return { ok: false, because: 'network' };
+    if (who.status === 'signed-out') return { ok: false, because: 'auth' };
+    const owner = readOwner();
+    if (owner === null || owner === who.userId) { adopt(who.userId); return { ok: true }; }
+    // Another account. With nothing here to protect, hand the device over; the old cursor belongs to the old account, so it goes.
+    if (!hasData()) { mirror.clear(); adopt(who.userId); return { ok: true }; }
+    return { ok: false, because: 'account' };
+  }
 
   /* ---------- one request at a time ---------- */
   let chain: Promise<unknown> = Promise.resolve();
@@ -196,6 +229,8 @@ export function createApiDb(options: ApiDbOptions) {
   /* ---------- pulling ---------- */
   function pull(): Promise<void> {
     return exclusive(async () => {
+      const allowed = await gate();
+      if (!allowed.ok) { setState('paused', allowed.because); return; }
       const wasReady = mirror.hasPulled();
       const out = await pullAll(transport, mirror);
       if (out.ok) {
@@ -245,6 +280,14 @@ export function createApiDb(options: ApiDbOptions) {
     let passes = 0; // passes in which every command was accepted
     let lastDone = ''; // the plan of the last such pass
     for (;;) {
+      const allowed = await gate();
+      if (!allowed.ok) {
+        setState('paused', allowed.because);
+        onPause();
+        // Another account waits for the user's choice, so it does not retry on a timer; the choice wakes it.
+        await waitFor(allowed.because === 'account' ? OUTDATED_WAIT_MS : backoffMs(attempt++, null, options.random));
+        continue;
+      }
       const sent = outbox.get(path);
       if (sent === undefined) return {}; // a newer call already took care of it
       const cmds = isDeleted(sent) ? planDelete(kind, mirror.rows(), kept) : planCommands(kind, sent, mirror.rows(), kept);
@@ -410,6 +453,28 @@ export function createApiDb(options: ApiDbOptions) {
       outbox.discard(id); // only now is the old entry safe to drop
       announce();
       return sending.then(() => 'sent' as const, () => 'refused' as const);
+    },
+    /** Every document this device holds, unsent changes included, for the file the user can keep before wiping the device. */
+    deviceData(): { path: string; doc: unknown }[] {
+      const paths = new Set<string>(outbox.paths());
+      for (const row of mirror.rows().values()) if (!row.deleted) pathsOf(row).forEach(p => paths.add(p));
+      return [...paths].sort().map(path => ({ path, doc: localDoc(path) })).filter(d => d.doc != null);
+    },
+    /** The user chose to let go of what this device holds and carry on as the account now signed in. Everything of the old
+     *  account is forgotten here (it stays on the server); the app must reload afterwards, since it still holds it in memory. */
+    async wipeForNewAccount(): Promise<'done' | 'unavailable'> {
+      // Not queued behind the sends: a send waiting for this very choice holds the queue. It sends nothing while blocked, so
+      // nothing is in flight, and waking it afterwards finds its document gone.
+      if (state !== 'paused' || pausedBecause !== 'account') return 'unavailable';
+      const who = options.identity ? await options.identity() : null;
+      if (who?.status !== 'signed-in') return 'unavailable';
+      mirror.clear();
+      outbox.clear();
+      notices = [];
+      adopt(who.userId);
+      wake();
+      announce();
+      return 'done';
     },
     /** The user has seen these. */
     clearNotices: () => { notices = []; announce(); },

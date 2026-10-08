@@ -88,6 +88,15 @@ export function createOutbox(storage: Storage, now: () => Date = () => new Date(
       return true;
     },
 
+    /** Forgets everything, unsent writes and set-aside ones included. Only for handing the device to another account, after the user chose to. */
+    clear() {
+      pending.clear();
+      quarantine = [];
+      persisted = true;
+      storage.remove(PENDING_KEY);
+      storage.remove(QUARANTINE_KEY);
+    },
+
     /** False when the browser has refused a write since the last good one: some of this is held in memory only. */
     persisted: () => persisted,
   };
