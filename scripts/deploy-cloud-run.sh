@@ -73,7 +73,11 @@ cmd_deploy() {
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/app:${tag}"
   url="$(service_url)"
   echo "Building $image (version $version) ..."
-  gc builds submit --config cloudbuild.yaml --substitutions "_IMAGE=${image},_APP_VERSION=${version}" .
+  # Build as the small build-only account (made by ci-deploy-setup.sh). CI names it in BUILD_SA, because the deployer cannot look
+  # accounts up; on your machine it is used when it exists, otherwise the build runs as the project's default account.
+  local build_as=() build_sa="${BUILD_SA:-iron-log-build@${PROJECT_ID}.iam.gserviceaccount.com}"
+  if [ -n "${BUILD_SA:-}" ] || gc iam service-accounts describe "$build_sa" >/dev/null 2>&1; then build_as=(--service-account "projects/${PROJECT_ID}/serviceAccounts/${build_sa}"); fi
+  gc builds submit --config cloudbuild.yaml --substitutions "_IMAGE=${image},_APP_VERSION=${version}" ${build_as[@]+"${build_as[@]}"} .
   echo "Deploying to $url ..."
   # Public access is set when the service is first made and left alone after: changing it needs a far broader permission, which the
   # CI deployer (ci-deploy-setup.sh) deliberately does not have.

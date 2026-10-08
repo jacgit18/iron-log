@@ -6,7 +6,11 @@
 # What it makes, and why it is safe:
 #   - a workload identity pool and provider that accept a token ONLY from this repository AND only from its main branch;
 #   - a service account, iron-log-deployer, that may build, deploy a new revision and move traffic, and act as the app's own runtime
-#     account. It cannot read the database, the secrets or the backups, change who may call the service, or touch anything else.
+#     account and the build account. It cannot read the database, the secrets or the backups, change who may call the service, or
+#     touch anything else;
+#   - a second account, iron-log-build, that the image build runs as: it can write build logs, push to the app's image repository and
+#     read the uploaded source, nothing more. (Without it a build runs as the project's default Compute account, which has the broad
+#     Editor role, and letting CI act as that would undo everything above.)
 # It prints the three repository variables to set (none is a secret). Safe to run again.
 set -euo pipefail
 
@@ -17,6 +21,10 @@ PROVIDER="github-provider"
 SA_NAME="iron-log-deployer"
 SA="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 RUNTIME_SA="iron-log-run@${PROJECT_ID}.iam.gserviceaccount.com"
+BUILD_SA_NAME="iron-log-build"
+BUILD_SA="${BUILD_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+REGION="${REGION:-us-central1}"
+REPO="${REPO:-iron-log}"
 
 gc() { gcloud --project "$PROJECT_ID" "$@"; }
 NUMBER="$(gc projects describe "$PROJECT_ID" --format='value(projectNumber)')"
@@ -45,6 +53,17 @@ done
 gc iam service-accounts add-iam-policy-binding "$RUNTIME_SA" --member "serviceAccount:$SA" --role roles/iam.serviceAccountUser >/dev/null
 # Uploading the source for a build: this bucket only.
 gc storage buckets add-iam-policy-binding "gs://${PROJECT_ID}_cloudbuild" --member "serviceAccount:$SA" --role roles/storage.admin >/dev/null
+# `gcloud builds submit` lists the project's buckets to check the upload bucket is the project's own. Names only; no object access.
+gc iam roles describe ironLogBucketLister >/dev/null 2>&1 \
+  || gc iam roles create ironLogBucketLister --title "Iron Log bucket lister" --permissions storage.buckets.list >/dev/null
+gc projects add-iam-policy-binding "$PROJECT_ID" --member "serviceAccount:$SA" --role "projects/${PROJECT_ID}/roles/ironLogBucketLister" --condition=None >/dev/null
+
+# The account the image build runs as, with only what a build needs.
+gc iam service-accounts describe "$BUILD_SA" >/dev/null 2>&1 || gc iam service-accounts create "$BUILD_SA_NAME" --display-name="Iron Log image build"
+gc projects add-iam-policy-binding "$PROJECT_ID" --member "serviceAccount:$BUILD_SA" --role roles/logging.logWriter --condition=None >/dev/null
+gc artifacts repositories add-iam-policy-binding "$REPO" --location "$REGION" --member "serviceAccount:$BUILD_SA" --role roles/artifactregistry.writer >/dev/null
+gc storage buckets add-iam-policy-binding "gs://${PROJECT_ID}_cloudbuild" --member "serviceAccount:$BUILD_SA" --role roles/storage.objectViewer >/dev/null
+gc iam service-accounts add-iam-policy-binding "$BUILD_SA" --member "serviceAccount:$SA" --role roles/iam.serviceAccountUser >/dev/null
 
 cat <<OUT
 
