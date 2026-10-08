@@ -3,7 +3,7 @@
 import { PHASES, PH_KEYS, BUILTIN, exInfo, withAllDays, DAY_COUNT } from './data.js';
 import { ymd, fmtShort } from '../shared/dates.js';
 import type { BackupCfg, DayDraft, Cfg, DataFile, LogEntry, Logs, PhaseKey, Program, Snapshot, Week } from '../types.ts';
-import { DEFAULT_CFG, weekSlots, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
+import { weekSlots, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
 
 type XLSX = typeof import('xlsx');
 type Row = (string | number | boolean | null | undefined)[];
@@ -13,8 +13,10 @@ import { WEEK_RE, weekOfDate, entryWeek, weekSummary } from './trends.js';
 import { bwSorted } from './body.js';
 import { normStretches, normStretchWeek, stretchWeekEmpty } from './stretches.js';
 import { normSupplements } from './water.js';
-import { validMode, validRest, validPct, validRm, validBodyLb, validLiftGoalLb, normEntries, normBody, normProgram, normLibrary, validStamp } from '../shared/validate.js';
-import { validRepo } from './github.js';
+import { normEntries, normBody, normProgram, normLibrary, validStamp } from '../shared/validate.js';
+import { normConfig } from '../shared/config.js';
+
+export { normConfig };
 
 // SheetJS is bundled (0.20.x, patched for reading untrusted files) and loaded only when needed.
 export const loadXLSX = () => import('xlsx').catch(() => { throw new Error('Excel library failed to load'); });
@@ -184,23 +186,6 @@ export function parseDataFile(text: string): DataFile {
   if (!(d.format >= 1)) throw new Error('Unknown file format.');
   if (d.format > DATA_FORMAT) throw new Error('This file is from a newer version of Iron Log. Update the app first.');
   return normalizeData(d);
-}
-// The config from a file: the keys the app reads as plain objects must be plain objects, or it would throw on every load.
-const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
-const CFG_OBJECTS = ['muscleMap', 'ex', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'liftGoals'];
-export function normConfig(c: any): Partial<Cfg> {
-  if (!c || typeof c !== 'object' || Array.isArray(c)) return {};
-  const out: any = { ...c };
-  CFG_OBJECTS.forEach(k => { if (k in out && (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k]))) delete out[k]; });
-  if ('mode' in out && !validMode(out.mode)) delete out.mode;
-  if ('rest' in out && !validRest(out.rest)) delete out.rest;
-  const own = (o: any, f: (k: string, v: any) => unknown) => { const r: Record<string, unknown> = {}; Object.entries(o).forEach(([k, v]) => { if (!UNSAFE.has(k)) { const x = f(k, v); if (x !== undefined) r[k] = x; } }); return r; };
-  if (out.pct) out.pct = { ...DEFAULT_CFG.pct, ...own(out.pct, (k, v) => (typeof v === 'number' && validPct(v) ? v : undefined)) };
-  if (out.rm) out.rm = own(out.rm, (k, v) => (typeof v === 'number' && validRm(v) ? v : undefined));
-  if (out.liftGoals) out.liftGoals = own(out.liftGoals, (k, byKey) => (byKey && typeof byKey === 'object' && !Array.isArray(byKey) ? own(byKey, (_k, g) => (g && typeof g === 'object' && typeof g.w === 'number' && validLiftGoalLb(g.w) ? g : undefined)) : undefined));
-  if ('bwGoal' in out && !(out.bwGoal && typeof out.bwGoal === 'object' && typeof out.bwGoal.w === 'number' && validBodyLb(out.bwGoal.w))) delete out.bwGoal;
-  if ('backup' in out && !(out.backup && typeof out.backup === 'object' && validRepo(out.backup.repo))) delete out.backup;
-  return out;
 }
 // Checks and cleans a data-file-shaped object. Used for both the JSON file and a full Excel workbook.
 export function normalizeData(d: any): DataFile {
