@@ -3,9 +3,10 @@ import { extname, join, resolve } from 'node:path';
 import { toNodeHandler } from 'better-auth/node';
 import express from 'express';
 import { sql, type Kysely } from 'kysely';
-import { devAuth, devAuthAllowed, inUserTransaction } from './auth.ts';
+import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import { clientVersionGate } from './clientVersion.ts';
+import { AUTH_CHECK_PAGE } from './dev/authCheckPage.ts';
 import { logSession } from './commands/logSession.ts';
 import { tickCard } from './commands/tickCard.ts';
 import { deleteBodyWeight, logBodyWeight } from './commands/bodyWeight.ts';
@@ -68,12 +69,15 @@ export function createApp({ db, staticDir, minClientVersion = null, auth }: AppD
   // An app older than the minimum is told so before anything else, signed in or not, so it stops sending and keeps its data.
   app.use(['/api/commands', '/api/sync'], clientVersionGate({ min: minClientVersion, allowDev: devAuthAllowed(process.env.NODE_ENV) }));
 
+  // A page for trying real sign-in by hand while developing (Google on a desktop, later the phone). Not served anywhere else.
+  if (auth && process.env.NODE_ENV === 'development') app.get('/dev/auth', (_req, res) => void res.type('html').send(AUTH_CHECK_PAGE));
+
   // Everything below this line needs a signed-in user.
-  app.use('/api', db ? devAuth(db) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
+  app.use('/api', db ? sessionAuth(db, auth) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
   app.get('/api/me', async (_req, res) => {
     const userId = String(res.locals.userId);
     const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string }>`select current_setting('app.user_id') as id`.execute(trx)).rows[0]);
-    res.json({ ok: true, userId: row?.id, minClientVersion });
+    res.json({ ok: true, userId: row?.id, minClientVersion, account: res.locals.account as Account });
   });
 
   app.post('/api/commands/log-session', async (req, res) => {

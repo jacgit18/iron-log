@@ -25,6 +25,11 @@ console.log(JSON.stringify(setup.enabled
   ? { msg: 'sign-in is on', baseURL: setup.config.baseURL, testSignIn: setup.config.testSignIn === true }
   : { msg: 'sign-in is off', reasons: setup.reasons }));
 
+// Outside development and test the development sign-in is refused, so without sign-in nobody can use the API at all. Say so loudly.
+if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+  console.error(JSON.stringify({ msg: 'NOBODY CAN SIGN IN: sign-in is off and the development sign-in is not allowed here', reasons: setup.enabled ? [] : setup.reasons }));
+}
+
 const server = createApp({ db, staticDir, minClientVersion, auth }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
