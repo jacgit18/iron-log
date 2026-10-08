@@ -1,6 +1,6 @@
 import { sql, type Transaction } from 'kysely';
 import type { DB } from '../db/types.ts';
-import type { BodyEntryRow, LogEntryRow, StretchWeekRow, WeekRow } from './support.ts';
+import type { BodyEntryRow, LogEntryRow, StretchWeekRow, SupplementDayRow, WeekRow } from './support.ts';
 
 // ADR 008: GET /api/sync?since=<seq>. The user's rows changed after the cursor, tombstones included, oldest change first.
 // Each row carries its table, so every synced table shares the one feed and one cursor.
@@ -11,8 +11,9 @@ export type SyncRow =
   | (LogEntryRow & { table: 'log_entries' })
   | (BodyEntryRow & { table: 'body_entries' })
   | (WeekRow & { table: 'weeks' })
-  | (StretchWeekRow & { table: 'stretch_weeks' });
-const TABLES = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks'] as const;
+  | (StretchWeekRow & { table: 'stretch_weeks' })
+  | (SupplementDayRow & { table: 'supplement_days' });
+const TABLES = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days'] as const;
 export interface SyncPage {
   rows: SyncRow[];
   /** Send this as `since` next time. Equal to `since` when nothing changed. */
