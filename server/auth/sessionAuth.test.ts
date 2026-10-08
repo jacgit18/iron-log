@@ -222,3 +222,48 @@ describe('the development sign-in page', () => {
     expect((await page('development', false)).status).toBe(404);
   });
 });
+
+describe('hardening (B2d)', () => {
+  it('refuses a cross-origin write even with a valid cookie, and writes nothing', async () => {
+    const cookie = await signUp('csrf@example.com');
+    const res = await logSession(cookie).then(() => post('/api/commands/log-session', { clientId: 'X1', baseVersion: null, input: { exerciseId: 'squat', entry: { d: '2026-10-05', w: 225 } } }, { cookie, origin: 'https://evil.example' }));
+    expect(res.status).toBe(403);
+    const rows = await db.selectFrom('log_entries').select('client_id').execute();
+    expect(rows.map(r => r.client_id)).not.toContain('X1');
+  });
+
+  it('limits starting a sign-in per client IP but not reading the session', async () => {
+    const limited = createApp({ db, auth, trustProxy: 1, authLimits: { signIn: { max: 2, windowMs: 60_000 }, other: { max: 100, windowMs: 60_000 } } }).listen(0);
+    await new Promise(done => limited.once('listening', done));
+    const url = `http://127.0.0.1:${(limited.address() as AddressInfo).port}`;
+    try {
+      const signIn = (ip: string) => fetch(`${url}/api/auth/sign-in/email`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify({ email: 'nobody@example.com', password: 'wrong password here' }) });
+      expect((await signIn('198.51.100.1')).status).not.toBe(429);
+      expect((await signIn('198.51.100.1')).status).not.toBe(429);
+      const third = await signIn('198.51.100.1');
+      expect(third.status).toBe(429);
+      expect(Number(third.headers.get('retry-after'))).toBeGreaterThan(0);
+      expect((await signIn('198.51.100.2')).status).not.toBe(429);
+      for (let i = 0; i < 5; i++) expect((await fetch(`${url}/api/auth/get-session`, { headers: { 'x-forwarded-for': '198.51.100.1' } })).status).toBe(200);
+    } finally {
+      await new Promise<void>(done => limited.close(() => done()));
+    }
+  });
+
+  it('marks the session cookie Secure when the API is served over https', async () => {
+    const secure = createAuth({ baseURL: 'https://iron.example', secret: SECRET, databaseUrl: url, google: GOOGLE, testSignIn: true }, 'test');
+    const s = createApp({ db, auth: secure, allowedOrigins: ['https://iron.example'] }).listen(0);
+    await new Promise(done => s.once('listening', done));
+    try {
+      const res = await fetch(`http://127.0.0.1:${(s.address() as AddressInfo).port}/api/auth/sign-up/email`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://iron.example' }, body: JSON.stringify({ email: 'secure@example.com', password: 'correct horse battery staple', name: 'S' }) });
+      expect(res.status).toBe(200);
+      const cookie = res.headers.getSetCookie().find(c => /session_token=/.test(c))!;
+      expect(cookie).toMatch(/;\s*Secure/i);
+      expect(cookie).toMatch(/HttpOnly/i);
+      expect(cookie).toMatch(/SameSite=Lax/i);
+    } finally {
+      await new Promise<void>(done => s.close(() => done()));
+      await secure.pool.end();
+    }
+  });
+});

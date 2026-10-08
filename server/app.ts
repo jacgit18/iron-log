@@ -6,6 +6,9 @@ import { sql, type Kysely } from 'kysely';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import { clientVersionGate } from './clientVersion.ts';
+import { originGuard } from './originGuard.ts';
+import { rateLimit, type Limit } from './rateLimit.ts';
+import { securityHeaders } from './securityHeaders.ts';
 import { AUTH_CHECK_PAGE } from './dev/authCheckPage.ts';
 import { logSession } from './commands/logSession.ts';
 import { tickCard } from './commands/tickCard.ts';
@@ -25,7 +28,15 @@ export interface AppDeps {
   minClientVersion?: number | null;
   /** Better Auth (see auth/betterAuth.ts). When set, its routes are served under /api/auth. */
   auth?: Auth;
+  /** Origins, besides this server's own host, whose browsers may send state-changing requests (see originGuard.ts). */
+  allowedOrigins?: string[];
+  /** Express's `trust proxy`: how many proxies sit in front (1 on Cloud Run), so the client IP and https come from X-Forwarded-*. Unset trusts none. */
+  trustProxy?: number | boolean;
+  /** Limits on /api/auth per client IP: starting a sign-in is the expensive, abusable call. Defaults below. */
+  authLimits?: { signIn: Limit; other: Limit };
 }
+
+const AUTH_LIMITS = { signIn: { max: 10, windowMs: 60_000 }, other: { max: 120, windowMs: 60_000 } };
 
 const NO_CACHE = 'no-cache';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -41,10 +52,19 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS }: AppDeps = {}) {
   const app = express();
+  if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
+  app.use(securityHeaders());
+  // Before Better Auth and every body parser: a cross-origin write is refused without being read.
+  app.use('/api', originGuard(allowedOrigins));
   // Better Auth reads the request body itself, so its routes come before any body parser.
-  if (auth) app.all('/api/auth/*splat', toNodeHandler(auth));
+  if (auth) {
+    // Starting a sign-in (and, in tests, an email sign-in) is limited hard; reading the session, which the app does often, is not.
+    app.use('/api/auth/sign-in', rateLimit(authLimits.signIn));
+    app.use('/api/auth', rateLimit(authLimits.other));
+    app.all('/api/auth/*splat', toNodeHandler(auth));
+  }
   app.use(express.json({ limit: '100kb' }));
   app.disable('x-powered-by');
 
