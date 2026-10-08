@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-07T19:47:25.438Z",
+ "exportedAt": "2026-10-08T07:19:33.211Z",
  "config": {
   "muscleMap": {
    "seated-cable-crunch": {
@@ -142,15 +142,22 @@
   "ghBackup": {
    "repo": "jacgit18/iron-log",
    "branch": "data",
-   "hash": "uu3t2a",
+   "hash": "134a2ax",
    "last": {
-    "at": "2026-10-07T18:34:23.734Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/09b7eac59b005bc09e3e5c95ce5e0dd327c9115f"
+    "at": "2026-10-07T11:39:27.985Z",
+    "url": "https://github.com/jacgit18/iron-log/commit/536c96588efc9e75f7607af5b02df3fa6e384403"
    }
   },
   "progNames": {
    "A": "Program A - Unilateral",
    "B": "Program B - Bilateral"
+  },
+  "bwGoal": {
+   "w": 155,
+   "start": {
+    "w": 130,
+    "d": "2026-10-02"
+   }
   },
   "liftGoals": {
    "deadlift": {
@@ -166,13 +173,6 @@
      "w": 225,
      "start": 0
     }
-   }
-  },
-  "bwGoal": {
-   "w": 155,
-   "start": {
-    "w": 130,
-    "d": "2026-10-02"
    }
   }
  },
