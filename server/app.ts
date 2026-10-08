@@ -5,6 +5,7 @@ import express from 'express';
 import { sql, type Kysely } from 'kysely';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
+import { clientErrors } from './clientErrors.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { originGuard } from './originGuard.ts';
 import { byUser, rateLimit, type Limit } from './rateLimit.ts';
@@ -49,6 +50,7 @@ const LIMITS = {
   commands: { max: 600, windowMs: 60_000 } as Limit,
   sync: { max: 120, windowMs: 60_000 } as Limit,
   importLegacy: { max: 10, windowMs: 60 * 60_000 } as Limit,
+  clientErrors: { max: 20, windowMs: 60_000 } as Limit,
 };
 
 const NO_CACHE = 'no-cache';
@@ -79,6 +81,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, allowe
     app.use('/api/auth', rateLimit(authLimits.other));
     app.all('/api/auth/*splat', toNodeHandler(auth));
   }
+  // The phone's error reports: anyone may send one (a signed-out phone has errors too), so they are small, rate-limited and scrubbed.
+  app.post('/api/client-errors', rateLimit(limits.clientErrors), express.json({ limit: '4kb' }), clientErrors());
   // The one-time upload of a phone's old data is far bigger than any other request (years of entries), so it alone gets a larger limit.
   app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }));
   app.use(express.json({ limit: '100kb' }));
