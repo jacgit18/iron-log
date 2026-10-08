@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { forgetSession } from '../../lib/gate.js';
+import { LS } from '../../lib/storage.js';
 import type { AccountState } from '../../sync/account.js';
 import ExportUpload from './ExportUpload.js';
 import LegalLinks from '../LegalLinks.js';
@@ -12,14 +14,12 @@ export default function AccountPanel() {
   const { client: account, busy, setBusy, start: signIn } = useGoogleSignIn();
   const [state, setState] = useState<AccountState | null>(null);
 
-  // Bumped to ask for the answer again (after signing out); the effect below is the only place that reads it.
-  const [checks, setChecks] = useState(0);
   useEffect(() => {
     if (!api) return;
     let current = true;
     void account.me().then(s => { if (current) setState(s); });
     return () => { current = false; };
-  }, [api, account, checks]);
+  }, [api, account]);
   if (!api) return null;
 
   const signOut = async () => {
@@ -27,8 +27,8 @@ export default function AccountPanel() {
     const done = await account.signOut();
     setBusy(false);
     if (!done) { flag('Could not sign out. Try again in a moment.'); return; }
-    setChecks(n => n + 1);
-    void api.resume();
+    forgetSession(LS);
+    window.location.reload(); // signing out on purpose: the next screen is the landing page, not the app
   };
 
   return (

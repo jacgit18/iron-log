@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { exInfo } from '../lib/data.js';
+import { forgetSession } from '../lib/gate.js';
+import { LS } from '../lib/storage.js';
 import { ymd } from '../shared/dates.js';
 import { deviceDataFile, versionLabel } from '../sync/labels.js';
 import { useGoogleSignIn } from '../sync/useGoogleSignIn.js';
@@ -42,7 +44,8 @@ export default function OtherAccountCard() {
     const done = await client.signOut();
     setBusy(false);
     if (!done) { flag('Could not sign out. Try again in a moment.'); return; }
-    void api.resume();
+    forgetSession(LS);
+    window.location.reload(); // signed out on purpose: the next screen is the landing page
   };
 
   return (

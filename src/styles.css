@@ -577,3 +577,20 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .exrow:last-child{border-bottom:0}
 .exmain{display:flex;flex-direction:column;gap:2px;min-width:0}
 .exmain a{font-size:13px;text-decoration:none}
+
+/* ---------- Landing page (src/components/Landing.tsx): what a visitor without an account sees ---------- */
+.landing{max-width:46rem;margin:0 auto;padding:20px 0 40px}
+.landing-head{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.landing-brand{font-family:"Barlow Condensed","Barlow Fallback",system-ui,sans-serif;font-weight:700;font-size:1.6rem;letter-spacing:.02em}
+.landing h1{font-family:"Barlow Condensed","Barlow Fallback",system-ui,sans-serif;font-weight:700;font-size:clamp(2rem,7vw,3rem);line-height:1.1;margin:0 0 12px}
+.landing h2{font-size:1.25rem;margin:32px 0 8px}
+.landing-lead{font-size:1.15rem;max-width:36rem;margin:0 0 20px}
+.landing-cta{margin:20px 0 8px}
+.landing-cta .btn{font-size:1.1rem;min-height:48px;padding:0 24px}
+.landing-fine{color:var(--muted);font-size:.9rem;max-width:36rem}
+.landing-shot{margin:28px 0 0}
+.landing-shot img{width:100%;height:auto;border:1px solid var(--line);border-radius:10px}
+.landing-list{padding-left:20px;max-width:38rem}
+.landing-list li{margin:8px 0}
+.landing-foot{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
+.landing-splash{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:8px;color:var(--muted)}
