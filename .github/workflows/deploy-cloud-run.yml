@@ -85,6 +85,8 @@ jobs:
           echo "No migration waiting."
 
       - name: Build and deploy
+        env:
+          BUILD_SA: iron-log-build@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
         run: scripts/deploy-cloud-run.sh deploy
 
       - name: Check the new revision, and roll back if it is not healthy
