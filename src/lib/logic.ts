@@ -1,7 +1,10 @@
 import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
 import { nowStamp } from '../shared/validate.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
-import type { Cfg, CardItem, ExtraCard, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week } from '../types.ts';
+import { isOrder, normWeek } from '../shared/week.js';
+import type { Cfg, CardItem, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week } from '../types.ts';
+
+export { isOrder, normWeek };
 
 /* Functions that read a week accept a partial one (a stored week may lack keys, and `rest` was once a single number). */
 type WeekIn = Partial<Omit<Week, 'rest'>> & { rest?: number | number[] };
@@ -216,7 +219,6 @@ export const restsOf = (w: WeekIn | null | undefined): number[] => (w && Array.i
 export const shownDay = (rest: number[] | undefined, d: number) => { let c = d; for (const r of rest || []) if (r <= c) c++; return c; }; // may pass DAY_COUNT: off the board
 export const programDay = (rest: number[] | undefined, d: number) => ((rest || []).includes(d) ? null : d - (rest || []).filter(r => r < d).length);
 // week.order[i] = the program day shown at workout position i + 1 (absent = normal order).
-export const isOrder = (o: unknown): o is number[] => Array.isArray(o) && o.length === DAY_COUNT && o.every(v => Number.isInteger(v) && v >= 1 && v <= DAY_COUNT) && new Set(o).size === DAY_COUNT;
 export const orderOf = (w: WeekIn | null | undefined): number[] => (w && isOrder(w.order) ? w.order : DAYS);
 export const posOf = (w: WeekIn | null | undefined, d: number) => { const i = orderOf(w).indexOf(d); return i >= 0 ? i + 1 : Math.min(Math.max(Math.round(d) || 1, 1), DAY_COUNT); }; // always 1..7, even for a stray value
 export const colOf = (w: WeekIn | null | undefined, d: number) => shownDay(restsOf(w), posOf(w, d)); // displayed column of a program day
@@ -237,7 +239,6 @@ export function currentLayout(week: WeekIn, slots: Slot[]): Cols {
 }
 
 /* ---------- Experiment cards (week.extra) ---------- */
-const isExtra = (x: any): x is ExtraCard => !!x && typeof x.id === 'string' && /^X-[\w-]{1,60}$/.test(x.id) && Number.isInteger(x.day) && x.day >= 1 && x.day <= DAY_COUNT && typeof x.ex === 'string' && x.ex !== '' && (x.ph == null || PH_KEYS.includes(x.ph)) && (x.note == null || typeof x.note === 'string') && (x.add == null || typeof x.add === 'boolean');
 // The Experiment list from a file or another device: valid entries, each id once.
 export function normExperiments(list: unknown) {
   const seen = new Set<string>();
@@ -501,25 +502,3 @@ export function autoLogs(cfg: Cfg, logs: Logs, slots: Slot[], before: WeekIn, af
 // Compared as dates, not instants, so the whole of that next day counts.
 export function defaultLogDate(weekStart: Date) { const today = ymd(new Date()); return (today >= ymd(weekStart) && today <= ymd(addDays(weekStart, 7))) ? today : ymd(weekStart); }
 
-// A plain object's entries as a new object, keeping the ones `f(value)` maps to something (not undefined). Keys must look
-// like the app's own (card keys such as "A-d1s1:0" or "ss#0", day and warm-up ids): short, no control characters, not a prototype key.
-// oxlint-disable-next-line no-control-regex
-const KEY_RE = /^[^\x00-\x1f]{1,100}$/;
-const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
-const cleanMap = <T>(o: unknown, f: (v: any) => T | undefined): Record<string, T> => {
-  const out: Record<string, T> = {};
-  if (o && typeof o === 'object' && !Array.isArray(o)) Object.entries(o as object).forEach(([k, v]) => { if (KEY_RE.test(k) && !UNSAFE.has(k)) { const x = f(v); if (x !== undefined) out[k] = x; } });
-  return out;
-};
-const flagOf = (v: unknown) => (v ? true : undefined);
-export const normWeek = (w?: any): Week => {
-  const out: Week = { prog: w && (w.prog === 'A' || w.prog === 'B') ? w.prog : null, done: cleanMap(w && w.done, flagOf), skipped: cleanMap(w && w.skipped, flagOf), moved: cleanMap(w && w.moved, v => v), ph: cleanMap(w && w.ph, v => (PH_KEYS.includes(v) ? v : undefined)), warm: {} };
-  Object.entries(cleanMap(w && w.warm, v => v)).forEach(([day, items]) => { const m = cleanMap(items, v => (typeof v === 'boolean' ? v : undefined)); if (Object.keys(m).length) out.warm[day] = m; });
-  out.moved = Object.fromEntries(Object.entries(out.moved).map(([k, v]) => [k, Number(v)] as [string, number]).filter(([, v]) => Number.isInteger(v) && v >= 1 && v <= DAY_COUNT));
-  const rest = [...new Set([].concat((w && w.rest) ?? []).map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= DAY_COUNT))].sort((a, b) => a - b);
-  if (rest.length) out.rest = rest;
-  if (isOrder(w && w.order) && w.order.some((v: number, i: number) => v !== i + 1)) out.order = [...w.order];
-  if (out.rest && typeof (w && w.restOn) === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.restOn)) out.restOn = w.restOn;
-  if (Array.isArray(w && w.extra)) { const seen = new Set(); const ex = w.extra.filter((x: unknown) => isExtra(x) && !seen.has(x.id) && seen.add(x.id)).map((x: ExtraCard) => ({ id: x.id, day: x.day, ex: x.ex, ph: x.ph ?? null, note: (x.note || '').slice(0, 200), ...(x.add ? { add: true } : {}) })); if (ex.length) out.extra = ex; }
-  return out;
-};

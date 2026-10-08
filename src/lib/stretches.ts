@@ -1,4 +1,7 @@
+import { STRETCH_DAYS, goodUrl, normStretchWeek, str } from '../shared/stretchWeek.js';
 import type { Stretch, StretchExperiment, StretchTier, StretchWeek } from '../types.ts';
+
+export { STRETCH_DAYS, normStretchWeek };
 
 /* ---------- Stretches: the routine, the library and the week's check-offs ----------
    items: [{id, n, url, note, group, tier}]. tier 'primary' is on the board every day, 'secondary' sits under
@@ -32,11 +35,8 @@ export const DEFAULT_STRETCHES: Stretch[] = [
 
 export const TIERS: [StretchTier, string][] = [['primary', 'Every day'], ['secondary', 'Once in a while'], ['', 'Library only']];
 export const tierLabel = (t: string) => (TIERS.find(([k]) => k === t) || TIERS[2])[1];
-export const STRETCH_DAYS = 7;
 export const DEFAULT_GROUP = 'Other';
 
-const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-const goodUrl = (u: string) => !u || /^https?:\/\//.test(u);
 
 // Whatever was saved, cleaned: bad rows dropped, ids unique. A doc that was never saved is the default routine.
 export function normStretches(d: any): { items: Stretch[]; experiments: StretchExperiment[] } {
@@ -53,18 +53,6 @@ export function normExperiments(list: unknown): StretchExperiment[] {
   const seen = new Set<string>();
   return (Array.isArray(list) ? list : []).filter((x: any) => x && typeof x === 'object' && str(x.id, 60) && str(x.n, 80) && !seen.has(x.id) && seen.add(x.id))
     .map((x: any) => ({ id: x.id, n: str(x.n, 80), ...(goodUrl(str(x.url, 500)) && str(x.url, 500) ? { url: str(x.url, 500) } : {}), ...(str(x.note, 200) ? { note: str(x.note, 200) } : {}) }));
-}
-export function normStretchWeek(w: any): StretchWeek {
-  const out: StretchWeek = { done: {}, skipped: {}, extra: [] };
-  if (!w || typeof w !== 'object') return out;
-  if (w.done && typeof w.done === 'object') Object.keys(w.done).forEach(k => { if (w.done[k] && /^[0-6]:.+/.test(k)) out.done[k] = true; });
-  if (w.skipped && typeof w.skipped === 'object') Object.keys(w.skipped).forEach(k => { if (w.skipped[k] && /^[0-6]$/.test(k)) out.skipped[k] = true; });
-  (Array.isArray(w.extra) ? w.extra : []).forEach((x: any) => {
-    if (x && typeof x === 'object' && str(x.id, 60) && str(x.n, 80) && Number.isInteger(x.day) && x.day >= 0 && x.day < STRETCH_DAYS && !out.extra.some(e => e.id === x.id)) {
-      out.extra.push({ id: x.id, day: x.day, n: str(x.n, 80), ...(goodUrl(str(x.url, 500)) && str(x.url, 500) ? { url: str(x.url, 500) } : {}), ...(str(x.note, 200) ? { note: str(x.note, 200) } : {}) });
-    }
-  });
-  return out;
 }
 export const stretchWeekEmpty = (w: StretchWeek) => !Object.keys(w.done).length && !Object.keys(w.skipped).length && !w.extra.length;
 

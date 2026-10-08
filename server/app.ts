@@ -5,6 +5,7 @@ import { logSession } from './commands/logSession.ts';
 import { tickCard } from './commands/tickCard.ts';
 import { deleteBodyWeight, logBodyWeight } from './commands/bodyWeight.ts';
 import { deleteEntry } from './commands/deleteEntry.ts';
+import { deleteStretchWeek, deleteWeek, saveStretchWeek, saveWeek } from './commands/weekDocs.ts';
 import { untickCard } from './commands/untickCard.ts';
 import { parseLimit, parseSince, syncPage } from './commands/sync.ts';
 import type { DB } from './db/types.ts';
@@ -84,6 +85,34 @@ export function createApp({ db }: AppDeps = {}) {
     const userId = String(res.locals.userId);
     const clientVersion = req.get('x-client-version') ?? null;
     const result = await inUserTransaction(db!, userId, trx => deleteBodyWeight(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/save-week', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => saveWeek(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/delete-week', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => deleteWeek(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/save-stretch-week', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => saveStretchWeek(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/delete-stretch-week', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => deleteStretchWeek(trx, userId, req.body, clientVersion));
     res.status(result.status).json(result.body);
   });
 
