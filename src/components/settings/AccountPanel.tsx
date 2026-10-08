@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { AccountState } from '../../sync/account.js';
 import ExportUpload from './ExportUpload.js';
+import LegalLinks from '../LegalLinks.js';
 import { useGoogleSignIn } from '../../sync/useGoogleSignIn.js';
 import { flag, getSyncApi } from '../../store/useAppStore.js';
 
@@ -41,6 +42,7 @@ export default function AccountPanel() {
           <div className="actions" style={{ justifyContent: 'flex-start' }}>
             <button type="button" className="btn" disabled={busy} onClick={() => void signIn()}>Sign in with Google</button>
           </div>
+          <p><LegalLinks /></p>
         </>
       )}
       {state?.status === 'signed-in' && (

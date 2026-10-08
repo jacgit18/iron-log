@@ -115,3 +115,36 @@ test('an uncaught error on the phone reaches the server\'s error log, and the se
   expect(res.request().postDataJSON()).toMatchObject({ kind: 'error', page: '/' });
   await context.close();
 });
+
+test('deleting the account removes the user, the data and every sign-in record, and signing in again starts empty', async ({ browser }) => {
+  const { context, page } = await phone(browser);
+  const email = emailFor('del');
+  await signUp(page, email, 'Del');
+  await page.goto('/');
+  await ready(page);
+  await page.locator('#chk-A-d1s1').check();
+  await expect.poll(() => rowsOf(email)).toBe(1);
+  const left = async () => (await pool.query(
+    `select (select count(*) from auth."user" where email = $1)::int as logins,
+            (select count(*) from users u join auth."user" a on a.id::text = u.auth_user_id where a.email = $1)::int as users`, [email])).rows[0];
+  expect(await left()).toEqual({ logins: 1, users: 1 });
+
+  await page.click('#tab-settings');
+  const panel = page.getByRole('region', { name: 'Delete my data' });
+  await panel.getByLabel(/Type DELETE/).fill('DELETE');
+  await panel.getByRole('button', { name: 'Delete my account permanently' }).click();
+  await expect.poll(left).toEqual({ logins: 0, users: 0 });
+  expect(await rowsOf(email)).toBe(0);
+
+  // The app reloads signed out: the old cookie opens nothing.
+  await expect(page.getByRole('status').filter({ hasText: 'Sign in to sync' })).toBeVisible({ timeout: 30_000 });
+
+  // The same Google account signing in again is a brand-new, empty account.
+  await signUp(page, email, 'Del again');
+  await page.goto('/');
+  await page.click('#tab-board'); // the app reopens on the tab it was on: Settings
+  await ready(page);
+  await expect(page.locator('#chk-A-d1s1')).not.toBeChecked();
+  expect(await rowsOf(email)).toBe(0);
+  await context.close();
+});

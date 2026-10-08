@@ -1,4 +1,5 @@
 import AccountPanel from './AccountPanel.js';
+import DeleteMyData from './DeleteMyData.js';
 import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
@@ -342,6 +343,7 @@ export default function Settings() {
         <DataPanel key={importCount} />
         <BackupPanel />
         <ErasePanel />
+        <DeleteMyData />
       </div>
       <RmPanel />
     </div>
