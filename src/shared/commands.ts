@@ -2,9 +2,10 @@
    One module for what the phone sends and the API accepts. Each command has a name, an input type and a validator;
    the offline queue stores a Command and replays it unchanged. Framework-free: client and server import it. */
 
-import type { BodyEntry, LogEntry, StretchWeek, Week } from '../types.ts';
+import type { BodyEntry, Boost, LogEntry, StretchWeek, Week } from '../types.ts';
 import { LIMITS, normBody, normEntry, validDate } from './validate.js';
 import { normStretchWeek } from './stretchWeek.js';
+import { normBoost, normTakenDay, normWaterDay } from './supplementDay.js';
 import { normWeek } from './week.js';
 
 /** What the offline queue stores and `POST /api/commands/<name>` receives. */
@@ -132,4 +133,32 @@ export function validateDeleteWeek(input: unknown): DeleteWeekInput | null {
   if (!input || typeof input !== 'object') return null;
   const { weekStart } = input as Record<string, unknown>;
   return validDate(weekStart) ? { weekStart } : null;
+}
+
+/** Replace the whole record for one day: the water drinks (ounces), the day's boost and the supplements ticked off.
+ *  The day is the key. baseVersion is the version the user saw, or null when the phone has never seen a row for that day. */
+export interface SaveSupplementDayInput {
+  day: string;
+  water: number[];
+  boost: Boost | null;
+  taken: Record<string, true>;
+}
+export type SaveSupplementDayCommand = Command<'save-supplement-day', SaveSupplementDayInput>;
+
+export function validateSaveSupplementDay(input: unknown): SaveSupplementDayInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { day, water, boost, taken } = input as Record<string, unknown>;
+  return validDate(day) ? { day, water: normWaterDay(water), boost: normBoost(boost), taken: normTakenDay(taken) } : null;
+}
+
+/** Delete the record for a day. baseVersion is the version the user saw (never null). */
+export interface DeleteSupplementDayInput {
+  day: string;
+}
+export type DeleteSupplementDayCommand = Command<'delete-supplement-day', DeleteSupplementDayInput>;
+
+export function validateDeleteSupplementDay(input: unknown): DeleteSupplementDayInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { day } = input as Record<string, unknown>;
+  return validDate(day) ? { day } : null;
 }

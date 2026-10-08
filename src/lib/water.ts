@@ -5,6 +5,7 @@ import type { Boost, Supplements } from '../types.ts';
 
 import { normItems, normTaken } from './supplements.js';
 import { validOz, validGoal } from '../shared/validate.js';
+import { MAX_TRAIN_MIN, normBoost, normWaterDay, r1 } from '../shared/supplementDay.js';
 
 export const CUP_OZ = 8;
 export const DEFAULT_GOAL_OZ = 64; // 8 cups
@@ -24,8 +25,7 @@ export const BOTTLES = [
 export const OZ_PER_LB = 0.5; // the usual rule of thumb: half your body weight in pounds, in ounces
 export const HOT_OZ = 16; // extra for a hot day
 export const TRAIN_OZ_PER_30 = 12; // extra per 30 minutes of training
-export const MAX_TRAIN_MIN = 600;
-const r1 = (n: number) => Math.round(n * 10) / 10;
+export { MAX_TRAIN_MIN };
 export const fmtOz = (n: number) => `${r1(n)}`;
 export const cupsOf = (oz: number) => r1(oz / CUP_OZ);
 export const sumOz = (list: number[] | undefined) => r1((list || []).reduce((a, n) => a + n, 0));
@@ -40,17 +40,15 @@ export function normSupplements(d: any): Supplements {
   if (d.water && typeof d.water === 'object') {
     Object.keys(d.water).forEach(k => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !Array.isArray(d.water[k])) return;
-      const l = d.water[k].map(Number).filter(validOz).map(r1);
+      const l = normWaterDay(d.water[k]);
       if (l.length) out.water[k] = l;
     });
   }
   if (d.boost && typeof d.boost === 'object') {
     Object.keys(d.boost).forEach(k => {
-      const b = d.boost[k]; if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !b || typeof b !== 'object') return;
-      const mins = Math.round(Number(b.mins)); const e: Boost = {};
-      if (b.hot === true) e.hot = true;
-      if (Number.isFinite(mins) && mins > 0 && mins <= MAX_TRAIN_MIN) e.mins = mins;
-      if (Object.keys(e).length) out.boost[k] = e;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
+      const e = normBoost(d.boost[k]);
+      if (e) out.boost[k] = e;
     });
   }
   return out;

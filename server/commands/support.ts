@@ -1,10 +1,11 @@
 import { sql, type Selectable, type Transaction } from 'kysely';
-import type { BodyEntries, DB, LogEntries, StretchWeeks, Weeks } from '../db/types.ts';
+import type { BodyEntries, DB, LogEntries, StretchWeeks, SupplementDays, Weeks } from '../db/types.ts';
 
 // Shared by the command handlers (ADR 008): the request envelope, the refused_writes record and the per-user cursor.
 
 export type LogEntryRow = Selectable<LogEntries>;
 export type BodyEntryRow = Selectable<BodyEntries>;
+export type SupplementDayRow = Selectable<SupplementDays>;
 export type WeekRow = Selectable<Weeks>;
 export type StretchWeekRow = Selectable<StretchWeeks>;
 

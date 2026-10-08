@@ -100,6 +100,21 @@ export interface StretchWeeks {
   week_start: string;
 }
 
+export interface SupplementDays {
+  boost: Json | null;
+  client_updated_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  day: string;
+  deleted_at: Timestamp | null;
+  id: Generated<Int8>;
+  seq: Int8;
+  taken: Generated<Json>;
+  updated_at: Generated<Timestamp>;
+  user_id: Int8;
+  version: Generated<number>;
+  water: Generated<Json>;
+}
+
 export interface Users {
   auth_user_id: string;
   change_seq: Generated<Int8>;
@@ -128,6 +143,7 @@ export interface DB {
   refused_writes: RefusedWrites;
   row_history: RowHistory;
   stretch_weeks: StretchWeeks;
+  supplement_days: SupplementDays;
   users: Users;
   weeks: Weeks;
 }

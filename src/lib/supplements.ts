@@ -1,4 +1,5 @@
 
+import { normTakenDay } from '../shared/supplementDay.js';
 import type { SupplementItem, SupplementSlot, Taken } from '../types.ts';
 
 /* ---------- Supplements: the library and the daily schedule ----------
@@ -29,8 +30,8 @@ export function normTaken(t: any): Taken {
   if (!t || typeof t !== 'object') return out;
   Object.keys(t).forEach(d => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !t[d] || typeof t[d] !== 'object') return;
-    const ids = Object.keys(t[d]).filter(id => t[d][id]);
-    if (ids.length) out[d] = Object.fromEntries(ids.map(id => [id, true]));
+    const day = normTakenDay(t[d]);
+    if (Object.keys(day).length) out[d] = day;
   });
   return out;
 }
