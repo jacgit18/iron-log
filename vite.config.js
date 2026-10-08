@@ -68,6 +68,9 @@ export default defineConfig({
         // Everything the app needs, including the Excel reader and fonts, is cached so it works offline.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: 'index.html',
+        // The API shares the origin (ADR 010). A page load of an /api path, such as the sign-in callback, must reach the
+        // server, not be answered with the app by the service worker.
+        navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
       },
     }),
