@@ -1,0 +1,9 @@
+# Builds the nightly backup job image (backup/Dockerfile) and pushes it to Artifact Registry. Used by scripts/backup-cloud-run.sh.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-f', 'backup/Dockerfile', '-t', '${_IMAGE}', '.']
+images: ['${_IMAGE}']
+substitutions:
+  _IMAGE: ''
+options:
+  logging: CLOUD_LOGGING_ONLY
