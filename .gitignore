@@ -26,6 +26,8 @@ dist-ssr
 # Playwright
 test-results
 playwright-report
+test-results-sync
+playwright-report-sync
 
 # Session handoff notes
 .claude/handoffs/

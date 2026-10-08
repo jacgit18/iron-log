@@ -48,8 +48,8 @@ export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(appVersion) },
   // The API runs on its own port in development; the app calls it on its own origin, as it will in production (ADR 010).
   server: { proxy: { '/api': process.env.API_ORIGIN || 'http://localhost:3001' } },
-  // Playwright's specs in e2e/ are run by `npm run e2e`, not Vitest.
-  test: { exclude: ['**/node_modules/**', 'e2e/**'] },
+  // Playwright's specs in e2e/ and e2e-sync/ are run by `npm run e2e` and `npm run e2e:sync`, not Vitest.
+  test: { exclude: ['**/node_modules/**', 'e2e/**', 'e2e-sync/**'] },
   plugins: [
     react(),
     preloadTitleFont(),
