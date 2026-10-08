@@ -96,6 +96,12 @@ describe('planCommands: log entries', () => {
     expect(a).toEqual(b);
   });
 
+  it('keeps a row it was told to keep: no delete is planned for it, the others still are', () => {
+    const m = mirrorOf([logRow(entry('A')), logRow(entry('B'))], { version: 3 });
+    const cmds = planCommands(kind('logs/squat'), { entries: [] }, m, new Set(['log_entries|A']));
+    expect(cmds.map(c => `${c.name}:${c.rowKey}`)).toEqual(['delete-entry:B']);
+  });
+
   it('only touches its own exercise', () => {
     const m = mirrorOf([logRow(entry('B1'), 'bench')]);
     expect(plan('logs/squat', { entries: [] }, m)).toEqual([]);
@@ -245,6 +251,11 @@ describe('planDelete', () => {
     expect(planDelete(kind('weeks/2026-10-04'), new Map())).toEqual([]);
     const gone = new Map([['weeks|2026-10-04', asRow({ table: 'weeks', key: '2026-10-04', week: normWeek(null) }, { deleted: true })]]);
     expect(planDelete(kind('weeks/2026-10-04'), gone)).toEqual([]);
+  });
+
+  it('removing a path skips the rows it was told to keep', () => {
+    const m = mirrorOf([{ table: 'weeks', key: '2026-10-04', week: normWeek(null) }], { version: 3 });
+    expect(planDelete(kind('weeks/2026-10-04'), m, new Set(['weeks|2026-10-04']))).toEqual([]);
   });
 
   it('removing the config document resets it but keeps the water settings (there is no delete-config)', () => {

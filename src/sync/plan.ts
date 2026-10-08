@@ -55,8 +55,10 @@ function remove(row: MirrorRow): PlannedCommand | null {
 const isCheckOff = (r: DesiredRow | MirrorRow) => r.table === 'log_entries' && !!r.entry.auto;
 const byKey = (a: PlannedCommand, b: PlannedCommand) => (a.rowKey < b.rowKey ? -1 : a.rowKey > b.rowKey ? 1 : 0);
 
-/** The commands that bring the server's rows for this path in line with `doc`. Empty when they already agree. */
-export function planCommands(kind: PathKind, doc: unknown, mirror: Mirror): PlannedCommand[] {
+/** The commands that bring the server's rows for this path in line with `doc`. Empty when they already agree.
+ *  `keep` names rows (by mirror id) whose deletion is to be skipped: the server changed them after this phone saw them,
+ *  and a delete must not win silently over a later edit (FM-05). */
+export function planCommands(kind: PathKind, doc: unknown, mirror: Mirror, keep: ReadonlySet<string> = new Set()): PlannedCommand[] {
   const desired = desiredRows(kind, doc, mirror);
   const wanted = new Set(desired.map(idOf));
   const deletes: PlannedCommand[] = [];
@@ -64,7 +66,7 @@ export function planCommands(kind: PathKind, doc: unknown, mirror: Mirror): Plan
   const creates: PlannedCommand[] = [];
 
   for (const have of scopeRows(kind, mirror)) {
-    if (have.deleted || wanted.has(idOf(have))) continue;
+    if (have.deleted || wanted.has(idOf(have)) || keep.has(idOf(have))) continue;
     const cmd = remove(have);
     if (cmd) deletes.push(cmd);
   }
@@ -93,8 +95,8 @@ export function planCommands(kind: PathKind, doc: unknown, mirror: Mirror): Plan
 }
 
 /** The commands for removing a whole path (the store's removeDoc). The config document is reset to its water settings instead. */
-export function planDelete(kind: PathKind, mirror: Mirror): PlannedCommand[] {
+export function planDelete(kind: PathKind, mirror: Mirror, keep: ReadonlySet<string> = new Set()): PlannedCommand[] {
   if (kind.kind === 'config') return planCommands(kind, {}, mirror);
-  const cmds = scopeRows(kind, mirror).filter(r => !r.deleted).map(remove).filter((c): c is PlannedCommand => !!c);
+  const cmds = scopeRows(kind, mirror).filter(r => !r.deleted && !keep.has(idOf(r))).map(remove).filter((c): c is PlannedCommand => !!c);
   return cmds.sort(byKey);
 }
