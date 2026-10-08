@@ -1,9 +1,10 @@
 import { sql, type Selectable, type Transaction } from 'kysely';
-import type { DB, LogEntries } from '../db/types.ts';
+import type { BodyEntries, DB, LogEntries } from '../db/types.ts';
 
 // Shared by the command handlers (ADR 008): the request envelope, the refused_writes record and the per-user cursor.
 
 export type LogEntryRow = Selectable<LogEntries>;
+export type BodyEntryRow = Selectable<BodyEntries>;
 
 export interface Envelope {
   clientId: string;

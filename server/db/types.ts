@@ -27,6 +27,20 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface BodyEntries {
+  client_updated_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  d: string;
+  deleted_at: Timestamp | null;
+  id: Generated<Int8>;
+  seq: Int8;
+  updated_at: Generated<Timestamp>;
+  user_id: Int8;
+  version: Generated<number>;
+  weight_lb: Numeric;
+  wk: string;
+}
+
 export interface LogEntries {
   auto: Generated<boolean>;
   client_id: string;
@@ -81,6 +95,7 @@ export interface Users {
 }
 
 export interface DB {
+  body_entries: BodyEntries;
   log_entries: LogEntries;
   refused_writes: RefusedWrites;
   row_history: RowHistory;
