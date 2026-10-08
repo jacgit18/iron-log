@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "seed:test-user": "tsx server/scripts/seedTestUserCli.ts",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist-server/index.js",
     "dev:server": "NODE_ENV=development tsx watch server/index.ts",
     "build": "vite build",
     "lint": "oxlint",
@@ -47,6 +48,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "dbmate": "^2.36.0",
+    "esbuild": "^0.28.2",
     "kysely-codegen": "^0.20.0",
     "oxlint": "^1.81.0",
     "pixelmatch": "^7.2.0",
