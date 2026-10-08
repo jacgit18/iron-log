@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BUILTIN } from '../lib/data.js';
-import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek, validateSaveSupplementDay, validateDeleteSupplementDay, validateSaveProgram, validateDeleteProgram, validateSaveConfig, validateSaveLibraryItem, validateDeleteLibraryItem } from './commands.js';
+import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek, validateSaveSupplementDay, validateDeleteSupplementDay, validateSaveProgram, validateDeleteProgram, validateSaveConfig, validateSaveLibraryItem, validateDeleteLibraryItem, validateSaveListItem, validateDeleteListItem } from './commands.js';
 
 describe('validateLogSession', () => {
   it('accepts an exercise id with a valid entry and cleans the entry', () => {
@@ -225,5 +225,43 @@ describe('validateDeleteLibraryItem', () => {
     expect(validateDeleteLibraryItem({ id: '' })).toBeNull();
     expect(validateDeleteLibraryItem({ id: 'x'.repeat(101) })).toBeNull();
     expect(validateDeleteLibraryItem(null)).toBeNull();
+  });
+});
+
+describe('validateSaveListItem', () => {
+  it('cleans a stretch', () => {
+    const out = validateSaveListItem({ list: 'stretch', position: 2, item: { id: 'scarecrow', n: ' Scarecrow ', tier: 'primary', url: 'https://youtu.be/x', junk: 1 } });
+    expect(out).toEqual({ list: 'stretch', position: 2, item: { id: 'scarecrow', n: 'Scarecrow', group: 'Other', tier: 'primary', url: 'https://youtu.be/x' } });
+  });
+  it('drops a stretch url that is not http(s)', () => {
+    expect(validateSaveListItem({ list: 'stretch', position: 0, item: { id: 's1', n: 'Reach', url: 'javascript:alert(1)' } }).item.url).toBeUndefined();
+  });
+  it('cleans a stretch experiment, an experiment and a supplement', () => {
+    expect(validateSaveListItem({ list: 'stretch_experiment', position: 0, item: { id: 'e1', n: 'Pigeon', note: 'try it', junk: 1 } }).item).toEqual({ id: 'e1', n: 'Pigeon', note: 'try it' });
+    expect(validateSaveListItem({ list: 'experiment', position: 1, item: { id: 'x1', ex: 'squat', ph: 'hyp', note: 'n' } }).item).toEqual({ id: 'x1', ex: 'squat', ph: 'hyp', note: 'n' });
+    expect(validateSaveListItem({ list: 'supplement_item', position: 0, item: { id: 'creatine', n: 'Creatine', slot: 'morning', dose: '5 g' } }).item).toEqual({ id: 'creatine', n: 'Creatine', slot: 'morning', dose: '5 g' });
+    expect(validateSaveListItem({ list: 'supplement_item', position: 0, item: { id: 'zinc', n: 'Zinc', slot: 'weekly' } }).item.slot).toBe('');
+  });
+  it('refuses another list, a bad position, a missing or unusable item, and an id over 100 characters', () => {
+    expect(validateSaveListItem({ list: 'other', position: 0, item: { id: 'a', n: 'A' } })).toBeNull();
+    expect(validateSaveListItem({ list: 'stretch', position: -1, item: { id: 'a', n: 'A' } })).toBeNull();
+    expect(validateSaveListItem({ list: 'stretch', position: 1.5, item: { id: 'a', n: 'A' } })).toBeNull();
+    expect(validateSaveListItem({ list: 'stretch', position: 10000, item: { id: 'a', n: 'A' } })).toBeNull();
+    expect(validateSaveListItem({ list: 'stretch', item: { id: 'a', n: 'A' } })).toBeNull();
+    expect(validateSaveListItem({ list: 'stretch', position: 0 })).toBeNull();
+    expect(validateSaveListItem({ list: 'stretch', position: 0, item: { id: 'a' } })).toBeNull();
+    expect(validateSaveListItem({ list: 'experiment', position: 0, item: { id: 'x'.repeat(101), ex: 'squat' } })).toBeNull();
+    expect(validateSaveListItem(null)).toBeNull();
+  });
+});
+
+describe('validateDeleteListItem', () => {
+  it('accepts a list and an id, and refuses anything else', () => {
+    expect(validateDeleteListItem({ list: 'experiment', id: 'x1', junk: 1 })).toEqual({ list: 'experiment', id: 'x1' });
+    expect(validateDeleteListItem({ list: 'nope', id: 'x1' })).toBeNull();
+    expect(validateDeleteListItem({ list: 'experiment' })).toBeNull();
+    expect(validateDeleteListItem({ list: 'experiment', id: '' })).toBeNull();
+    expect(validateDeleteListItem({ list: 'experiment', id: 'x'.repeat(101) })).toBeNull();
+    expect(validateDeleteListItem(null)).toBeNull();
   });
 });
