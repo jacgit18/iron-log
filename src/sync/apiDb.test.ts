@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { OUTDATED_WAIT_MS, createApiDb, type ApiDbOptions } from './apiDb.js';
+import type { AccountState } from './account.js';
+import { OUTDATED_WAIT_MS, OWNER_KEY, createApiDb, type ApiDbOptions } from './apiDb.js';
 import { MIRROR_KEY } from './mirrorStore.js';
 import { PENDING_KEY, QUARANTINE_KEY } from './outbox.js';
 import { down, fakeServer, gatedSleep, memoryStorage } from './testing.js';
@@ -653,5 +654,120 @@ describe('waking and polling', () => {
     await db.resume();
     expect(db.status()).toMatchObject({ state: 'idle', pausedBecause: null, ready: true });
     expect(states).toContain('paused:auth');
+  });
+});
+
+describe('whose data this device holds (B2e)', () => {
+  const as = (userId: string): AccountState => ({ status: 'signed-in', userId, kind: 'session', email: `${userId}@example.com`, name: null });
+  let who: AccountState = as('ann');
+  const identity = () => Promise.resolve(who);
+  const ownerOf = (storage: ReturnType<typeof memoryStorage>) => (storage.get(OWNER_KEY) as { userId: string } | null)?.userId ?? null;
+
+  it('the first account to sync owns the device, and the same account carries on', async () => {
+    who = as('ann');
+    const { storage, make, db } = setup({ identity });
+    db.start();
+    await settle();
+    expect(ownerOf(storage)).toBe('ann');
+    expect(db.status()).toMatchObject({ state: 'idle', pausedBecause: null });
+    const again = make({ identity });
+    again.start();
+    await settle();
+    expect(again.status()).toMatchObject({ state: 'idle', ready: true });
+  });
+
+  it('another account is held back: nothing is pulled or sent, and the first account\'s unsent change stays', async () => {
+    who = as('ann');
+    const { server, storage, make, db } = setup({ identity });
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logsDoc(entry('e1')));
+    await settle();
+    expect(server.sent).toHaveLength(1);
+    // Ann writes while offline: unsent on the device.
+    server.fail.push(down('network'));
+    void db.doc('logs/squat').set(logsDoc(entry('e1'), entry('e2')));
+    await settle();
+    expect(Object.keys((storage.get(PENDING_KEY) ?? {}) as object)).toEqual(['logs/squat']);
+    db.stop();
+
+    who = as('bob');
+    const sentBefore = server.sent.length;
+    const bobs = make({ identity });
+    bobs.start();
+    await settle(40);
+    expect(bobs.status()).toMatchObject({ state: 'paused', pausedBecause: 'account' });
+    expect(server.sent).toHaveLength(sentBefore); // Ann's change never reaches Bob
+    expect(ownerOf(storage)).toBe('ann');
+    expect(Object.keys((storage.get(PENDING_KEY) ?? {}) as object)).toEqual(['logs/squat']);
+  });
+
+  it('an empty device is simply handed to the new account, with a fresh pull', async () => {
+    who = as('ann');
+    const { server, storage, make, db } = setup({ identity });
+    db.start();
+    await settle();
+    db.stop();
+    expect(ownerOf(storage)).toBe('ann');
+    who = as('bob');
+    server.plant('weeks', '2026-10-04', { week_start: '2026-10-04', data: { prog: 'B' } });
+    const bobs = make({ identity });
+    bobs.start();
+    await settle();
+    expect(ownerOf(storage)).toBe('bob');
+    expect(bobs.status()).toMatchObject({ state: 'idle', ready: true });
+    expect((await bobs.doc('weeks/2026-10-04').get()).data()).toMatchObject({ prog: 'B' });
+  });
+
+  it('wiping forgets the first account\'s data and unsent changes, then carries on as the new one', async () => {
+    who = as('ann');
+    const { server, storage, make, db } = setup({ identity });
+    server.plant('weeks', '2026-10-04', { week_start: '2026-10-04', data: { prog: 'A' } });
+    db.start();
+    await settle();
+    server.fail.push(down('network'));
+    void db.doc('logs/squat').set(logsDoc(entry('e9')));
+    await settle();
+    db.stop();
+
+    who = as('bob');
+    const bobs = make({ identity });
+    bobs.start();
+    await settle(40);
+    expect(bobs.status().pausedBecause).toBe('account');
+    expect(bobs.deviceData().map(d => d.path)).toEqual(['logs/squat', 'weeks/2026-10-04']);
+
+    const sentBefore = server.sent.length;
+    expect(await bobs.wipeForNewAccount()).toBe('done');
+    for (const key of [MIRROR_KEY, PENDING_KEY, QUARANTINE_KEY]) expect(storage.data.has(key)).toBe(false);
+    expect(ownerOf(storage)).toBe('bob');
+    await bobs.syncNow();
+    await settle(40);
+    expect(server.sent).toHaveLength(sentBefore); // Ann's e9 never goes to Bob
+    expect(bobs.status()).toMatchObject({ state: 'idle', pausedBecause: null, pendingPaths: [] });
+  });
+
+  it('signed out or unreachable: waits for the right reason and sends nothing', async () => {
+    who = { status: 'signed-out' };
+    const { server, db } = setup({ identity });
+    db.start();
+    await settle();
+    expect(db.status()).toMatchObject({ state: 'paused', pausedBecause: 'auth' });
+    who = { status: 'unreachable' };
+    await db.syncNow();
+    expect(db.status()).toMatchObject({ state: 'paused', pausedBecause: 'network' });
+    expect(server.sent).toHaveLength(0);
+    who = as('ann');
+    await db.resume();
+    expect(db.status()).toMatchObject({ state: 'idle', pausedBecause: null });
+  });
+
+  it('wiping needs someone signed in', async () => {
+    who = as('ann');
+    const { db } = setup({ identity });
+    db.start();
+    await settle();
+    who = { status: 'signed-out' };
+    expect(await db.wipeForNewAccount()).toBe('unavailable');
   });
 });

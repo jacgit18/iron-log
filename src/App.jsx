@@ -22,6 +22,8 @@ import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
 import ImportSheet from './components/sheets/ImportSheet.jsx';
 import HelpSheet from './components/sheets/HelpSheet.jsx';
 import UpdateBanner from './components/UpdateBanner.tsx';
+import OtherAccountCard from './components/OtherAccountCard.tsx';
+import SignInCard from './components/SignInCard.tsx';
 import SyncNotice from './components/SyncNotice.tsx';
 
 const TABS = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
@@ -58,6 +60,7 @@ export default function App() {
   const syncing = useAppStore(s => s.sync !== null);
   const storeMode = useAppStore(s => s.storeMode);
   const ready = useAppStore(s => s.isReady());
+  const signedOut = useAppStore(s => s.sync?.state === 'paused' && s.sync.pausedBecause === 'auth');
   const progKey = useAppStore(s => s.activeProgKey());
   const { setTab, closeModal, openModal } = useAppStore.getState();
   useTooltips();
@@ -102,10 +105,12 @@ export default function App() {
             </div>
           </nav>
           {/* Its own line with a fixed height, so a message appearing or clearing never moves the page. */}
-          <p className="saveflag" role="status" aria-live="polite" aria-atomic="true">{!ready && !saveFlag ? 'Loading…' : saveFlag}</p>
+          <p className="saveflag" role="status" aria-live="polite" aria-atomic="true">{!ready && !saveFlag && !signedOut ? 'Loading…' : saveFlag}</p>
         </header>
         <UpdateBanner />
         <SyncNotice />
+        <SignInCard />
+        <OtherAccountCard />
         {/* Stays until the writes go through: a passing message isn't enough when data would be gone on reload. */}
         {unsaved.length > 0 && !syncing && (
           <div className="notice movewarn" role="alert">

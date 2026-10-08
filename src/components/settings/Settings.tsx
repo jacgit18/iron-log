@@ -1,3 +1,4 @@
+import AccountPanel from './AccountPanel.js';
 import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
@@ -336,6 +337,7 @@ export default function Settings() {
         <DevicePanel />
       </div>
       <div className="scol">
+        <AccountPanel />
         <SyncPanel />
         <DataPanel key={importCount} />
         <BackupPanel />

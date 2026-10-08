@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SyncStatus } from './apiDb.js';
-import { describeSync, formatWhen, notSentFile, pathLabel, storageWarning, versionLabel } from './labels.js';
+import { deviceDataFile, describeSync, formatWhen, notSentFile, pathLabel, storageWarning, versionLabel } from './labels.js';
 
 const status = (over: Partial<SyncStatus> = {}): SyncStatus => ({
   state: 'idle', pausedBecause: null, pendingPaths: [], quarantined: 0, quarantine: [], lastPullAt: null, lastSyncedAt: null, persisted: true, ready: true, notices: [], ...over,
@@ -8,6 +8,13 @@ const status = (over: Partial<SyncStatus> = {}): SyncStatus => ({
 const clock = (ms: number) => `t${ms}`;
 
 describe('describeSync', () => {
+  it('says another account holds this device, and that nothing is sent', () => {
+    const d = describeSync(status({ state: 'paused', pausedBecause: 'account', pendingPaths: ['logs/squat'] }), clock);
+    expect(d).toMatchObject({ headline: 'Another account', tone: 'bad' });
+    expect(d.detail).toContain('nothing has been sent or received');
+    expect(d.detail).toContain('A change is saved on this device');
+  });
+
   it('synced, with the time of the last sync when it is known', () => {
     expect(describeSync(status(), clock)).toEqual({ headline: 'Synced', detail: '', tone: 'ok', canSyncNow: true });
     expect(describeSync(status({ lastSyncedAt: 5 }), clock).detail).toBe('Last synced t5.');
@@ -60,7 +67,7 @@ describe('describeSync', () => {
   });
 
   it('every state has a headline in words, so nothing depends on colour', () => {
-    const states: Partial<SyncStatus>[] = [{}, { state: 'syncing' }, { ready: false }, { pendingPaths: ['a'] }, ...(['network', 'server', 'auth', 'outdated'] as const).map(p => ({ state: 'paused' as const, pausedBecause: p }))];
+    const states: Partial<SyncStatus>[] = [{}, { state: 'syncing' }, { ready: false }, { pendingPaths: ['a'] }, ...(['network', 'server', 'auth', 'outdated', 'account'] as const).map(p => ({ state: 'paused' as const, pausedBecause: p }))];
     for (const over of states) expect(describeSync(status(over), clock).headline.length).toBeGreaterThan(3);
   });
 });
@@ -119,5 +126,18 @@ describe('notSentFile', () => {
   });
   it('is valid JSON for nothing at all', () => {
     expect(JSON.parse(notSentFile([], id => id, 'dev')).items).toEqual([]);
+  });
+});
+
+describe('deviceDataFile', () => {
+  it('holds every document whole, and what was set aside, so nothing is trapped on the device', () => {
+    const file = JSON.parse(deviceDataFile(
+      [{ path: 'logs/squat', doc: { entries: [{ id: 'e1' }] } }],
+      [{ id: 'q1', path: 'weeks/2026-10-04', doc: { prog: 'A' }, reason: 'no', at: '2026-10-08T10:00:00.000Z' }],
+      id => id.toUpperCase(), '1.2.3', new Date('2026-10-08T12:00:00Z'),
+    ));
+    expect(file).toMatchObject({ app: 'Iron Log', kind: 'everything this device held', version: '1.2.3', savedAt: '2026-10-08T12:00:00.000Z' });
+    expect(file.items).toEqual([{ what: expect.any(String), path: 'logs/squat', document: { entries: [{ id: 'e1' }] } }]);
+    expect(file.notSent[0]).toMatchObject({ path: 'weeks/2026-10-04', reason: 'no', document: { prog: 'A' } });
   });
 });

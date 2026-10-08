@@ -38,6 +38,8 @@ export function describeSync(s: SyncStatus, clock: (ms: number) => string = form
         return { headline: 'Update needed', detail: `This version of Iron Log is too old to sync. ${waiting ? `${kept} and will be sent` : 'Your changes are kept on this device and will be sent'} once you update.`, tone: 'bad', canSyncNow: true };
       case 'auth':
         return { headline: 'Sign-in needed', detail: `${kept}${waiting ? ' and will be sent' : ''} once you are signed in.${last}`, tone: 'bad', canSyncNow: true };
+      case 'account':
+        return { headline: 'Another account', detail: `This device holds data from a different account, so nothing has been sent or received. ${waiting ? `${kept} and stays here until you choose below.` : 'Choose below what to do with it.'}`, tone: 'bad', canSyncNow: true };
       case 'network':
         return { headline: 'Offline', detail: `${kept}${waiting ? ' and will be sent when the connection returns' : ''}.${last}`, tone: 'wait', canSyncNow: true };
       default:
@@ -79,6 +81,19 @@ export function versionLabel(version: string): string {
   if (!/^\d{1,12}$/.test(version)) return 'development build';
   const d = new Date(Number(version) * 1000);
   return `${fmtShort(d)}, ${d.getFullYear()}, ${formatClock(d.getTime())} (${version})`;
+}
+
+/** Everything this device holds (what it has from the server and what it has not sent), so nothing is trapped on it before it is
+ *  wiped for another account. Each document is whole; `notSent` lists what the server had refused. */
+export function deviceDataFile(items: readonly { path: string; doc: unknown }[], notSent: readonly QuarantineEntry[], nameOf: (id: string) => string, version: string, now: Date = new Date()): string {
+  return JSON.stringify({
+    app: 'Iron Log',
+    kind: 'everything this device held',
+    version,
+    savedAt: now.toISOString(),
+    items: items.map(i => ({ what: pathLabel(i.path, nameOf), path: i.path, document: i.doc })),
+    notSent: notSent.map(e => ({ what: pathLabel(e.path, nameOf), path: e.path, reason: e.reason, setAside: e.at, document: e.doc })),
+  }, null, 1);
 }
 
 /** The file the user downloads for writes the server would not take: what each was, why, and the document itself, so
