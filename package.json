@@ -21,6 +21,7 @@
     "db:stop": "docker compose stop db",
     "db:migrate": "dbmate up && npm run db:types",
     "db:rollback": "dbmate down && npm run db:types",
+    "db:check": "node scripts/check-migrations.mjs",
     "db:types": "kysely-codegen --dialect postgres --date-parser string --exclude-pattern schema_migrations --out-file server/db/types.ts"
   },
   "dependencies": {
