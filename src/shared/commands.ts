@@ -2,11 +2,12 @@
    One module for what the phone sends and the API accepts. Each command has a name, an input type and a validator;
    the offline queue stores a Command and replays it unchanged. Framework-free: client and server import it. */
 
-import type { BodyEntry, Boost, LibraryItem, LogEntry, Program, ProgKey, StretchWeek, Week } from '../types.ts';
+import type { BodyEntry, Boost, Experiment, LibraryItem, LogEntry, Program, ProgKey, Stretch, StretchExperiment, StretchWeek, SupplementItem, Week } from '../types.ts';
 import { LIMITS, normBody, normEntry, normLibrary, normProgram, validDate } from './validate.js';
 import { normConfigDoc, type ConfigDoc } from './config.js';
 import { normStretchWeek } from './stretchWeek.js';
 import { withAllDays } from '../lib/data.js';
+import { normExperimentItem, normStretchExperimentItem, normStretchItem, normSupplementItem } from './listItems.js';
 import { normBoost, normTakenDay, normWaterDay } from './supplementDay.js';
 import { normWeek } from './week.js';
 
@@ -229,4 +230,49 @@ export function validateDeleteLibraryItem(input: unknown): DeleteLibraryItemInpu
   if (!input || typeof input !== 'object') return null;
   const { id } = input as Record<string, unknown>;
   return typeof id === 'string' && id && id.length <= LIMITS.text.id ? { id } : null;
+}
+
+/** The small lists that are one row per item, in the order they are shown. */
+export const LIST_NAMES = ['stretch', 'stretch_experiment', 'experiment', 'supplement_item'] as const;
+export type ListName = (typeof LIST_NAMES)[number];
+export type ListItem = Stretch | StretchExperiment | Experiment | SupplementItem;
+
+/** Save one item of a list, keyed by the list and the item's own id. `position` is where it sits in the list (0 is first);
+ *  moving an item is a save of each item whose position changed. baseVersion is the version the user saw, or null when
+ *  the phone has never seen a row for that id. */
+export interface SaveListItemInput {
+  list: ListName;
+  item: ListItem;
+  position: number;
+}
+export type SaveListItemCommand = Command<'save-list-item', SaveListItemInput>;
+
+const LIST_ITEM_CLEANERS: Record<ListName, (x: unknown) => ListItem | null> = {
+  stretch: normStretchItem,
+  stretch_experiment: normStretchExperimentItem,
+  experiment: normExperimentItem,
+  supplement_item: x => normSupplementItem(x),
+};
+const validList = (v: unknown): v is ListName => LIST_NAMES.includes(v as ListName);
+const validId = (v: unknown): v is string => typeof v === 'string' && v.length >= 1 && v.length <= LIMITS.text.id;
+
+export function validateSaveListItem(input: unknown): SaveListItemInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { list, item, position } = input as Record<string, unknown>;
+  if (!validList(list) || !Number.isInteger(position) || (position as number) < 0 || (position as number) > 9999) return null;
+  const clean = LIST_ITEM_CLEANERS[list](item);
+  return clean && validId(clean.id) ? { list, item: clean, position: position as number } : null;
+}
+
+/** Delete one item of a list by id. baseVersion is the version the user saw (never null). */
+export interface DeleteListItemInput {
+  list: ListName;
+  id: string;
+}
+export type DeleteListItemCommand = Command<'delete-list-item', DeleteListItemInput>;
+
+export function validateDeleteListItem(input: unknown): DeleteListItemInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { list, id } = input as Record<string, unknown>;
+  return validList(list) && validId(id) ? { list, id } : null;
 }

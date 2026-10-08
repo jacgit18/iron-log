@@ -68,6 +68,22 @@ export interface LibraryItems {
   version: Generated<number>;
 }
 
+export interface ListItems {
+  client_id: string;
+  client_updated_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  data: Json;
+  deleted_at: Timestamp | null;
+  id: Generated<Int8>;
+  list: string;
+  position: number;
+  schema_version: Generated<number>;
+  seq: Int8;
+  updated_at: Generated<Timestamp>;
+  user_id: Int8;
+  version: Generated<number>;
+}
+
 export interface LogEntries {
   auto: Generated<boolean>;
   client_id: string;
@@ -182,6 +198,7 @@ export interface DB {
   body_entries: BodyEntries;
   config: Config;
   library_items: LibraryItems;
+  list_items: ListItems;
   log_entries: LogEntries;
   programs: Programs;
   refused_writes: RefusedWrites;

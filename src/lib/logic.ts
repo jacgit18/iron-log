@@ -1,8 +1,9 @@
 import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
 import { nowStamp } from '../shared/validate.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
+import { normExperimentItem } from '../shared/listItems.js';
 import { isOrder, normWeek } from '../shared/week.js';
-import type { Cfg, CardItem, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week } from '../types.ts';
+import type { Cfg, CardItem, Experiment, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week } from '../types.ts';
 
 export { isOrder, normWeek };
 
@@ -241,9 +242,13 @@ export function currentLayout(week: WeekIn, slots: Slot[]): Cols {
 /* ---------- Experiment cards (week.extra) ---------- */
 // The Experiment list from a file or another device: valid entries, each id once.
 export function normExperiments(list: unknown) {
-  const seen = new Set<string>();
-  return (Array.isArray(list) ? list : []).filter(e => e && typeof e.id === 'string' && e.id !== '' && e.id.length <= 200 && typeof e.ex === 'string' && e.ex !== '' && (e.ph == null || PH_KEYS.includes(e.ph)) && (e.note == null || typeof e.note === 'string') && !seen.has(e.id) && seen.add(e.id))
-    .map(e => ({ id: e.id, ex: e.ex, ph: e.ph ?? null, note: (e.note || '').slice(0, 200) }));
+  const seen = new Set<string>(); const out: Experiment[] = [];
+  (Array.isArray(list) ? list : []).forEach(e => {
+    const item = normExperimentItem(e);
+    if (!item || seen.has(item.id)) return;
+    seen.add(item.id); out.push(item);
+  });
+  return out;
 }
 export const extraSlots = (w: WeekIn): Slot[] => (w.extra || []).map(x => ({ id: x.id, day: x.day, type: 'single', sec: x.add ? 'Added' : 'Experiment', experiment: true, ...(x.add ? { added: true } : {}), items: [{ ex: x.ex, ph: x.ph }], ...(x.note ? { note: x.note } : {}) }));
 // The week's cards: the program's, then the experiment cards added to this week.

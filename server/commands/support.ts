@@ -1,5 +1,5 @@
 import { sql, type Selectable, type Transaction } from 'kysely';
-import type { BodyEntries, Config, DB, LibraryItems, LogEntries, Programs, StretchWeeks, SupplementDays, Weeks } from '../db/types.ts';
+import type { BodyEntries, Config, DB, LibraryItems, ListItems, LogEntries, Programs, StretchWeeks, SupplementDays, Weeks } from '../db/types.ts';
 
 // Shared by the command handlers (ADR 008): the request envelope, the refused_writes record and the per-user cursor.
 
@@ -10,6 +10,7 @@ export type WeekRow = Selectable<Weeks>;
 export type ProgramRow = Selectable<Programs>;
 export type ConfigRow = Selectable<Config>;
 export type LibraryItemRow = Selectable<LibraryItems>;
+export type ListItemRow = Selectable<ListItems>;
 export type StretchWeekRow = Selectable<StretchWeeks>;
 
 export interface Envelope {

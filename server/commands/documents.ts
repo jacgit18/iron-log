@@ -2,16 +2,18 @@ import { isDeepStrictEqual } from 'node:util';
 import { sql, type Transaction } from 'kysely';
 import {
   validateDeleteLibraryItem,
+  validateDeleteListItem,
   validateDeleteProgram,
   validateDeleteWeek,
   validateSaveConfig,
   validateSaveLibraryItem,
+  validateSaveListItem,
   validateSaveProgram,
   validateSaveStretchWeek,
   validateSaveWeek,
 } from '../../src/shared/commands.ts';
 import type { DB } from '../db/types.ts';
-import { lockUser, nextSeq, parseEnvelope, refuse, type ConfigRow, type LibraryItemRow, type ProgramRow, type StretchWeekRow, type WeekRow } from './support.ts';
+import { lockUser, nextSeq, parseEnvelope, refuse, type ConfigRow, type LibraryItemRow, type ListItemRow, type ProgramRow, type StretchWeekRow, type WeekRow } from './support.ts';
 
 // ADR 003 and 008, backend-data-rules.md section 4. A document row (a week, a stretch week, a program, the config) is
 // read and written whole. It is keyed by one or more columns (the week start, the program key) or by the user alone (the config), so
@@ -22,13 +24,13 @@ import { lockUser, nextSeq, parseEnvelope, refuse, type ConfigRow, type LibraryI
 // - baseVersion names a row that is deleted: 409 with the tombstone (FM-05). baseVersion null on a deleted row revives it.
 // Every document table shares this code; only the table, the key, the command names and the cleaner differ.
 
-export type DocRow = WeekRow | StretchWeekRow | ProgramRow | ConfigRow | LibraryItemRow;
+export type DocRow = WeekRow | StretchWeekRow | ProgramRow | ConfigRow | LibraryItemRow | ListItemRow;
 
 export type DocResult =
   | { status: 200 | 201; body: { rows: DocRow[]; cursor: string } }
   | { status: 409 | 422; body: { refused: string; current: DocRow | null } };
 
-type Table = 'weeks' | 'stretch_weeks' | 'programs' | 'config' | 'library_items';
+type Table = 'weeks' | 'stretch_weeks' | 'programs' | 'config' | 'library_items' | 'list_items';
 
 interface Kind {
   table: Table;
@@ -36,8 +38,9 @@ interface Kind {
   keyColumns: readonly string[];
   save: string;
   remove: string | null;
-  // Null when the input is unusable; otherwise the row key (one value per key column) and the cleaned document.
-  clean: (input: unknown) => { keys: string[]; data: object } | null;
+  // Null when the input is unusable; otherwise the row key (one value per key column), the cleaned document and any
+  // other columns the save sets (they count as part of the document when deciding whether a save changes anything).
+  clean: (input: unknown) => { keys: string[]; data: object; extra?: Record<string, unknown> } | null;
   // The key named by a delete command, or null when the input is unusable.
   cleanKey: (input: unknown) => string[] | null;
 }
@@ -111,6 +114,21 @@ const LIBRARY_ITEMS: Kind = {
   },
 };
 
+const LIST_ITEMS: Kind = {
+  table: 'list_items',
+  keyColumns: ['list', 'client_id'],
+  save: 'save-list-item',
+  remove: 'delete-list-item',
+  clean: input => {
+    const out = validateSaveListItem(input);
+    return out && { keys: [out.list, out.item.id], data: out.item, extra: { position: out.position } };
+  },
+  cleanKey: input => {
+    const out = validateDeleteListItem(input);
+    return out && [out.list, out.id];
+  },
+};
+
 // The tables have the same columns apart from the key, so the query builder is typed once against 'weeks'.
 const rowFor = (trx: Transaction<DB>, kind: Kind, userId: string, keys: string[]) => {
   let q = trx.selectFrom(kind.table as 'weeks').selectAll().where('user_id', '=', userId);
@@ -135,8 +153,9 @@ async function save(kind: Kind, trx: Transaction<DB>, userId: string, body: unkn
   await lockUser(trx, userId);
   const existing = ((await rowFor(trx, kind, userId, input.keys)) as DocRow | undefined) ?? null;
   const data = JSON.stringify(input.data);
+  const extra = input.extra ?? {};
   const write = async (values: Record<string, unknown>) =>
-    (await trx.updateTable(kind.table as 'weeks').set(values).where('id', '=', existing!.id).returningAll().executeTakeFirstOrThrow()) as DocRow;
+    (await trx.updateTable(kind.table as 'weeks').set({ ...values, ...extra }).where('id', '=', existing!.id).returningAll().executeTakeFirstOrThrow()) as DocRow;
 
   if (!existing) {
     if (env.baseVersion !== null) {
@@ -145,7 +164,7 @@ async function save(kind: Kind, trx: Transaction<DB>, userId: string, body: unkn
     }
     const seq = await nextSeq(trx, userId);
     const keyed = Object.fromEntries(kind.keyColumns.map((column, i) => [column, input.keys[i]]));
-    const row = (await trx.insertInto(kind.table as 'weeks').values({ user_id: userId, seq, data, ...keyed } as never).returningAll().executeTakeFirstOrThrow()) as DocRow;
+    const row = (await trx.insertInto(kind.table as 'weeks').values({ user_id: userId, seq, data, ...keyed, ...extra } as never).returningAll().executeTakeFirstOrThrow()) as DocRow;
     return { status: 201, body: { rows: [row], cursor: seq } };
   }
 
@@ -158,7 +177,8 @@ async function save(kind: Kind, trx: Transaction<DB>, userId: string, body: unkn
     return { status: 200, body: { rows: [await write({ data, deleted_at: null, version: existing.version + 1, seq, updated_at: sql`now()` })], cursor: seq } };
   }
 
-  if (isDeepStrictEqual(existing.data, JSON.parse(data))) return { status: 200, body: { rows: [existing], cursor: existing.seq } };
+  const row = existing as Record<string, unknown>;
+  if (isDeepStrictEqual(existing.data, JSON.parse(data)) && Object.entries(extra).every(([column, value]) => row[column] === value)) return { status: 200, body: { rows: [existing], cursor: existing.seq } };
   if (existing.version !== env.baseVersion) {
     await refuse(trx, userId, kind.save, env, 'stale', clientVersion);
     return { status: 409, body: { refused: 'stale', current: existing } };
@@ -211,3 +231,5 @@ export const deleteProgram = removing(PROGRAMS);
 export const saveConfig = saving(CONFIG);
 export const saveLibraryItem = saving(LIBRARY_ITEMS);
 export const deleteLibraryItem = removing(LIBRARY_ITEMS);
+export const saveListItem = saving(LIST_ITEMS);
+export const deleteListItem = removing(LIST_ITEMS);
