@@ -102,3 +102,16 @@ test('a second account on the same device is held back: the first one\'s data is
   expect(await rowsOf(ann)).toBe(1); // and still safe under her own account
   await context.close();
 });
+
+test('an uncaught error on the phone reaches the server\'s error log, and the server accepts it without a sign-in', async ({ browser }) => {
+  const { context, page } = await phone(browser);
+  await page.goto('/');
+  await expect(page.getByRole('status').filter({ hasText: 'Sign in to sync' })).toBeVisible({ timeout: 30_000 });
+  const sent = page.waitForResponse(r => r.url().endsWith('/api/client-errors') && r.request().method() === 'POST');
+  // A real uncaught error (the test's fake clock holds timers back, so not a setTimeout).
+  await page.evaluate(() => { queueMicrotask(() => { throw new Error('weight 181 test failure'); }); });
+  const res = await sent;
+  expect(res.status()).toBe(204);
+  expect(res.request().postDataJSON()).toMatchObject({ kind: 'error', page: '/' });
+  await context.close();
+});
