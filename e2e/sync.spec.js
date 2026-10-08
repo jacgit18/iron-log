@@ -7,11 +7,12 @@ const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wc
 
 const signedInAsDev = route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, userId: 'dev-user', account: { kind: 'dev', email: null, name: null } }) });
 
+// The helpers below model a returning browser: it has seen a signed-in session (the marker is seeded once, so a sign-out can clear it).
 async function open(page, answer) {
   await page.addInitScript(() => {
     localStorage.setItem('ironlog:hidetip', '1');
     localStorage.setItem('ironlog:hidelocal', '1');
-    localStorage.setItem('ironlog:flag:apiSync', 'true');
+    localStorage.setItem('ironlog:flag:apiSync', 'true'); if (!sessionStorage.getItem('knownSeeded')) { sessionStorage.setItem('knownSeeded', '1'); localStorage.setItem('ironlog:session/known', 'true'); }
   });
   await page.route('**/api/**', answer);
   await page.route('**/api/me', signedInAsDev); // who is signed in is asked first; the rest is answered as scripted
@@ -64,7 +65,7 @@ async function openSynced(page, commands, me = signedInAsDev) {
   await page.addInitScript(() => {
     localStorage.setItem('ironlog:hidetip', '1');
     localStorage.setItem('ironlog:hidelocal', '1');
-    localStorage.setItem('ironlog:flag:apiSync', 'true');
+    localStorage.setItem('ironlog:flag:apiSync', 'true'); if (!sessionStorage.getItem('knownSeeded')) { sessionStorage.setItem('knownSeeded', '1'); localStorage.setItem('ironlog:session/known', 'true'); }
   });
   await page.route('**/api/sync*', json(200, emptyPull));
   await page.route('**/api/me', me);
@@ -226,14 +227,15 @@ test.describe('the Account panel', () => {
     expect(body).toEqual({ provider: 'google', callbackURL: '/' });
   });
 
-  test('Sign out calls the server, then shows signed out', async ({ page }) => {
+  test('Sign out calls the server, then the next screen is the landing page', async ({ page }) => {
     let out = false;
     await settle(page, route => (out ? me(401, {})(route) : me(200, signedIn)(route)), async p => {
       await p.route('**/api/auth/sign-out', route => { out = true; return route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }); });
     });
     await page.getByRole('button', { name: 'Sign out' }).click();
-    await expect(page.getByText('Not signed in.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible();
+    await expect(page.locator('#tab-board')).toHaveCount(0); // the app is not behind it
+    expect(await page.evaluate(() => localStorage.getItem('ironlog:session/known'))).toBeNull();
   });
 });
 
@@ -243,7 +245,7 @@ test.describe('signed out with syncing on (the server answers 401)', () => {
     await page.addInitScript(() => {
       localStorage.setItem('ironlog:hidetip', '1');
       localStorage.setItem('ironlog:hidelocal', '1');
-      localStorage.setItem('ironlog:flag:apiSync', 'true');
+      localStorage.setItem('ironlog:flag:apiSync', 'true'); if (!sessionStorage.getItem('knownSeeded')) { sessionStorage.setItem('knownSeeded', '1'); localStorage.setItem('ironlog:session/known', 'true'); }
     });
     await page.route('**/api/**', unauth);
     await page.goto('/');
@@ -281,7 +283,7 @@ test.describe('another account signs in on a device that holds the first one’s
       sessionStorage.setItem('seeded', '1');
       localStorage.setItem('ironlog:hidetip', '1');
       localStorage.setItem('ironlog:hidelocal', '1');
-      localStorage.setItem('ironlog:flag:apiSync', 'true');
+      localStorage.setItem('ironlog:flag:apiSync', 'true'); if (!sessionStorage.getItem('knownSeeded')) { sessionStorage.setItem('knownSeeded', '1'); localStorage.setItem('ironlog:session/known', 'true'); }
       localStorage.setItem('ironlog:sync/owner', JSON.stringify({ userId: 'ann' }));
       localStorage.setItem('ironlog:sync/pending', JSON.stringify({ 'logs/hack-squat': { schema: 1, entries: [{ id: 'ann-1', d: '2026-10-05', ph: 'strength', w: 135, s: 3, r: 5 }] } }));
     });
@@ -338,7 +340,7 @@ test.describe('another account signs in on a device that holds the first one’s
     await page.route('**/api/me', route => (out ? json2({ ok: false }, 401)(route) : json2(bob)(route)));
     await page.route('**/api/auth/sign-out', route => { out = true; return json2({ success: true })(route); });
     await page.getByRole('button', { name: 'Sign out' }).first().click();
-    await expect(page.getByRole('status').filter({ hasText: 'Sign in to sync' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible(); // landing page; the device's data is untouched
     expect(await page.evaluate(() => localStorage.getItem('ironlog:sync/pending'))).toContain('ann-1');
   });
 });
@@ -495,7 +497,7 @@ test.describe('Delete my data', () => {
   });
 
   test('is not shown when signed out', async ({ page }) => {
-    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); });
+    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); if (!sessionStorage.getItem('knownSeeded')) { sessionStorage.setItem('knownSeeded', '1'); localStorage.setItem('ironlog:session/known', 'true'); } });
     await page.route('**/api/**', route => route.fulfill({ status: 401, contentType: 'application/json', body: '{"ok":false}' }));
     await page.goto('/');
     await page.click('#tab-settings');
@@ -565,12 +567,114 @@ test.describe('the legal pages', () => {
   }
 
   test('the sign-in card links to both', async ({ page }) => {
-    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); });
+    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); if (!sessionStorage.getItem('knownSeeded')) { sessionStorage.setItem('knownSeeded', '1'); localStorage.setItem('ironlog:session/known', 'true'); } });
     await page.route('**/api/**', route => route.fulfill({ status: 401, contentType: 'application/json', body: '{"ok":false}' }));
     await page.goto('/');
     const card = page.getByRole('status').filter({ hasText: 'Sign in to sync' });
     await expect(card.getByRole('link', { name: 'Terms of Use' })).toHaveAttribute('href', '/terms.html');
     await expect(card.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy.html');
     await expect(card).toContainText('creates your account the first time');
+  });
+});
+
+
+// ---- The landing page: what a visitor this browser has never seen signed in gets, instead of the app ----
+
+test.describe('the landing page', () => {
+  const unauth = route => route.fulfill({ status: 401, contentType: 'application/json', body: '{"ok":false,"error":"sign-in required"}' });
+  const stranger = async (page, me = unauth, extra) => {
+    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); });
+    await page.route('**/api/**', unauth);
+    await page.route('**/api/me', me);
+    if (extra) await extra(page);
+    await page.goto('/');
+  };
+  const heading = page => page.getByRole('heading', { level: 1, name: /A weekly training board/ });
+
+  test('a stranger gets the landing page, with the app nowhere behind it, and no accessibility violations', async ({ page }) => {
+    await stranger(page);
+    await expect(heading(page)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+    await expect(page.getByText('creates your account the first time')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Terms of Use' })).toHaveAttribute('href', '/terms.html');
+    await expect(page.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy.html');
+    await expect(page.getByText('aged 16 and over')).toBeVisible();
+    await expect(page.locator('#tab-board, #tab-settings, #chk-A-d1s1')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /development user/i })).toHaveCount(0); // the dev-only skip button is not in a production build
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+
+  test('the app never starts behind it: no sync, no reads of anything, only the one who-is-this question', async ({ page }) => {
+    const asked = [];
+    await stranger(page, unauth, async p => { p.on('request', r => { if (r.url().includes('/api/')) asked.push(new URL(r.url()).pathname); }); });
+    await expect(heading(page)).toBeVisible();
+    await page.waitForTimeout(500);
+    expect(asked).toEqual(['/api/me']);
+  });
+
+  test('Sign in with Google asks the server for the address and goes there', async ({ page }) => {
+    let body;
+    await stranger(page, unauth, async p => {
+      await p.route('**/api/auth/sign-in/social', route => { body = route.request().postDataJSON(); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ url: '/google-says-hello' }) }); });
+      await p.route('**/google-says-hello', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Google</h1>' }));
+    });
+    await page.getByRole('button', { name: 'Sign in with Google' }).click();
+    await expect(page.getByRole('heading', { name: 'Google' })).toBeVisible();
+    expect(body).toEqual({ provider: 'google', callbackURL: '/' });
+  });
+
+  test('when sign-in cannot start, says so in place and lets the visitor try again', async ({ page }) => {
+    await stranger(page, unauth, async p => { await p.route('**/api/auth/sign-in/social', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })); });
+    await page.getByRole('button', { name: 'Sign in with Google' }).click();
+    await expect(page.getByRole('alert')).toContainText('Could not reach the server to sign in');
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+  });
+
+  test('a visitor who signs in goes to the app, and the browser remembers, so the next visit has no check at all', async ({ page }) => {
+    await stranger(page, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, userId: 'u1', account: { kind: 'session', email: 'a@b.co', name: 'A' } }) }), async p => {
+      await p.route('**/api/sync*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ rows: [], cursor: '0', more: false }) }));
+    });
+    await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+    await expect(heading(page)).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('ironlog:session/known'))).toBe('true');
+  });
+
+  test('offline, with nothing here yet: the landing page says to connect, instead of a blank app', async ({ page }) => {
+    await stranger(page, route => route.abort());
+    await expect(heading(page)).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'You are offline' })).toBeVisible();
+  });
+
+  test('offline, on a device that already holds an account\'s data: straight to the app, never a page in front of it', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true');
+      localStorage.setItem('ironlog:sync/owner', JSON.stringify({ userId: 'ann' }));
+    });
+    await page.route('**/api/**', route => route.abort());
+    await page.goto('/');
+    await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+    await expect(heading(page)).toHaveCount(0);
+  });
+
+  test('a known browser whose session has expired gets the app and its sign-in card, not the landing page', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); localStorage.setItem('ironlog:session/known', 'true');
+    });
+    await page.route('**/api/**', unauth);
+    await page.goto('/');
+    await expect(page.getByRole('status').filter({ hasText: 'Sign in to sync' })).toBeVisible();
+    await expect(page.locator('#tab-board')).toBeVisible();
+    await expect(heading(page)).toHaveCount(0);
+  });
+
+  test('with syncing off (GitHub Pages) the app is always there, with no landing page and no request to the server', async ({ page }) => {
+    const asked = [];
+    page.on('request', r => { if (r.url().includes('/api/')) asked.push(r.url()); });
+    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); });
+    await page.goto('/');
+    await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+    await expect(heading(page)).toHaveCount(0);
+    expect(asked).toEqual([]);
   });
 });

@@ -11,13 +11,15 @@ const PASSWORD = 'correct horse battery staple';
 let counter = 0;
 const emailFor = who => `${who}-${Date.now() % 1_000_000}-${counter++}@example.com`;
 
-async function phone(browser) {
+async function phone(browser, { returning = true } = {}) {
   const context = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'America/New_York', viewport: { width: 1440, height: 900 } });
-  await context.addInitScript(() => {
+  await context.addInitScript(returning => {
     localStorage.setItem('ironlog:hidetip', '1');
     localStorage.setItem('ironlog:hidelocal', '1');
     localStorage.setItem('ironlog:flag:apiSync', 'true');
-  });
+    // A returning browser has seen a signed-in session, so it goes straight to the app; a stranger gets the landing page. Seeded once, so a sign-out can clear it.
+    if (returning && !sessionStorage.getItem('knownSeeded')) { sessionStorage.setItem('knownSeeded', '1'); localStorage.setItem('ironlog:session/known', 'true'); }
+  }, returning);
   const page = await context.newPage();
   await page.clock.install({ time: NOW });
   const devHeaders = [];
@@ -36,20 +38,34 @@ const ready = async page => {
   await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
 };
 
-test('signed out: the production build sends no dev header, and a card asks for sign-in instead of Loading', async ({ browser }) => {
+test('a stranger gets the landing page: the production build sends no dev header, and the app is not behind it', async ({ browser }) => {
+  const { context, page, devHeaders } = await phone(browser, { returning: false });
+  const requests = [];
+  page.on('request', r => { if (r.url().includes('/api/')) requests.push(new URL(r.url()).pathname); });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+  await expect(page.locator('#tab-board, #tab-settings, #chk-A-d1s1')).toHaveCount(0);
+  const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  expect(devHeaders).toEqual([]);
+  expect(requests).toEqual(['/api/me']); // nothing syncs behind the page: only the one who-is-this question
+  await context.close();
+});
+
+test('a browser that has been signed in, whose session has expired, gets the app with a sign-in card, not the landing page', async ({ browser }) => {
   const { context, page, devHeaders } = await phone(browser);
   await page.goto('/');
   const card = page.getByRole('status').filter({ hasText: 'Sign in to sync' });
   await expect(card).toBeVisible({ timeout: 30_000 });
   await expect(card.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+  await expect(page.locator('#tab-board')).toBeVisible();
   await expect(page.locator('.saveflag')).not.toHaveText('Loading…');
-  const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
-  expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   expect(devHeaders).toEqual([]);
   await context.close();
 });
 
-test('signed in: the Account panel names the account, a tick reaches the server, and signing out brings the card back', async ({ browser }) => {
+test('signed in: the Account panel names the account, a tick reaches the server, and signing out ends at the landing page', async ({ browser }) => {
   const { context, page, devHeaders } = await phone(browser);
   const email = emailFor('ann');
   await signUp(page, email, 'Ann');
@@ -64,8 +80,9 @@ test('signed in: the Account panel names the account, a tick reaches the server,
   const panel = page.getByRole('region', { name: 'Account' });
   await expect(panel).toContainText(email);
   await panel.getByRole('button', { name: 'Sign out' }).click();
-  await expect(panel.getByText('Not signed in.')).toBeVisible();
-  await expect(page.getByRole('status').filter({ hasText: 'Sign in to sync' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#tab-board')).toHaveCount(0); // the app is hidden again until the next sign-in
+  expect(await page.evaluate(() => localStorage.getItem('ironlog:session/known'))).toBeNull();
   expect(devHeaders).toEqual([]);
   await context.close();
 });
@@ -136,8 +153,8 @@ test('deleting the account removes the user, the data and every sign-in record, 
   await expect.poll(left).toEqual({ logins: 0, users: 0 });
   expect(await rowsOf(email)).toBe(0);
 
-  // The app reloads signed out: the old cookie opens nothing.
-  await expect(page.getByRole('status').filter({ hasText: 'Sign in to sync' })).toBeVisible({ timeout: 30_000 });
+  // The app reloads at the landing page: the old cookie opens nothing, and nothing of the account is shown.
+  await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible({ timeout: 30_000 });
 
   // The same Google account signing in again is a brand-new, empty account.
   await signUp(page, email, 'Del again');

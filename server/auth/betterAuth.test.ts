@@ -154,13 +154,13 @@ describe('email and password is not available outside tests', () => {
     expect((await post(base, '/api/auth/sign-in/email', { email: 'a@example.com', password: 'x' })).status).toBeGreaterThanOrEqual(400);
   });
 
-  it('cannot be switched on when the environment is production, or empty', () => {
+  it('cannot be switched on when the environment is production, or empty', async () => {
     const config = { baseURL: BASE, secret: SECRET, databaseUrl: url, google: GOOGLE, testSignIn: true };
     expect(() => createAuth(config, 'production')).toThrow(/tests only/);
     expect(() => createAuth(config, '')).toThrow(/tests only/);
     for (const env of ['development', 'test']) {
       const a = createAuth(config, env);
-      void a.pool.end();
+      await a.pool.end();
     }
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { forgetSession } from '../../lib/gate.js';
 import { LS } from '../../lib/storage.js';
 import { parsePath } from '../../sync/documents.js';
 import { createAccountClient, type AccountState } from '../../sync/account.js';
@@ -25,6 +26,7 @@ const WHY: Record<string, string> = {
 function forgetDevice() {
   for (const path of localPaths()) if (parsePath(path)) LS.remove(path);
   LS.remove('sync/legacy');
+  forgetSession(LS); // the next screen is the landing page
   writeLegacyMarker({ state: 'dismissed', at: new Date().toISOString() }); // never offer to upload what was just erased
 }
 
