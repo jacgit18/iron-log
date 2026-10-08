@@ -41,6 +41,19 @@ export interface BodyEntries {
   wk: string;
 }
 
+export interface Config {
+  client_updated_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  data: Json;
+  deleted_at: Timestamp | null;
+  id: Generated<Int8>;
+  schema_version: Generated<number>;
+  seq: Int8;
+  updated_at: Generated<Timestamp>;
+  user_id: Int8;
+  version: Generated<number>;
+}
+
 export interface LogEntries {
   auto: Generated<boolean>;
   client_id: string;
@@ -63,6 +76,20 @@ export interface LogEntries {
   version: Generated<number>;
   weight_lb: Numeric | null;
   wk: string | null;
+}
+
+export interface Programs {
+  client_updated_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  data: Json;
+  deleted_at: Timestamp | null;
+  id: Generated<Int8>;
+  key: string;
+  schema_version: Generated<number>;
+  seq: Int8;
+  updated_at: Generated<Timestamp>;
+  user_id: Int8;
+  version: Generated<number>;
 }
 
 export interface RefusedWrites {
@@ -139,7 +166,9 @@ export interface Weeks {
 
 export interface DB {
   body_entries: BodyEntries;
+  config: Config;
   log_entries: LogEntries;
+  programs: Programs;
   refused_writes: RefusedWrites;
   row_history: RowHistory;
   stretch_weeks: StretchWeeks;
