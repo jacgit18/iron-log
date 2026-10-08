@@ -86,6 +86,20 @@ export interface RowHistory {
   version: number;
 }
 
+export interface StretchWeeks {
+  client_updated_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  data: Json;
+  deleted_at: Timestamp | null;
+  id: Generated<Int8>;
+  schema_version: Generated<number>;
+  seq: Int8;
+  updated_at: Generated<Timestamp>;
+  user_id: Int8;
+  version: Generated<number>;
+  week_start: string;
+}
+
 export interface Users {
   auth_user_id: string;
   change_seq: Generated<Int8>;
@@ -94,10 +108,26 @@ export interface Users {
   is_admin: Generated<boolean>;
 }
 
+export interface Weeks {
+  client_updated_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  data: Json;
+  deleted_at: Timestamp | null;
+  id: Generated<Int8>;
+  schema_version: Generated<number>;
+  seq: Int8;
+  updated_at: Generated<Timestamp>;
+  user_id: Int8;
+  version: Generated<number>;
+  week_start: string;
+}
+
 export interface DB {
   body_entries: BodyEntries;
   log_entries: LogEntries;
   refused_writes: RefusedWrites;
   row_history: RowHistory;
+  stretch_weeks: StretchWeeks;
   users: Users;
+  weeks: Weeks;
 }
