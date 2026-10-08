@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { createApp } from './app.ts';
+import { minVersionFrom } from './clientVersion.ts';
 import { createDb } from './db/connection.ts';
 
 // Local development reads .env; in production the platform sets the variables and there is no file.
@@ -12,7 +13,10 @@ if (!db) console.warn(JSON.stringify({ msg: 'DATABASE_URL is not set; /api/healt
 // The built PWA, served from the same origin as the API. Absent in development, where Vite serves it.
 const staticDir = process.env.STATIC_DIR ?? 'dist';
 
-const server = createApp({ db, staticDir }).listen(port, () => {
+// The oldest app build that may sync. Unset means no gate. A value that is not a number stops the server from starting.
+const minClientVersion = minVersionFrom(process.env.MIN_CLIENT_VERSION);
+
+const server = createApp({ db, staticDir, minClientVersion }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 

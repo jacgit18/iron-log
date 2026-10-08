@@ -2,7 +2,8 @@ import { existsSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import express from 'express';
 import { sql, type Kysely } from 'kysely';
-import { devAuth, inUserTransaction } from './auth.ts';
+import { devAuth, devAuthAllowed, inUserTransaction } from './auth.ts';
+import { clientVersionGate } from './clientVersion.ts';
 import { logSession } from './commands/logSession.ts';
 import { tickCard } from './commands/tickCard.ts';
 import { deleteBodyWeight, logBodyWeight } from './commands/bodyWeight.ts';
@@ -17,6 +18,8 @@ export interface AppDeps {
   db?: Kysely<DB>;
   /** The built PWA (dist/). When set, the app is served from the same origin as the API (ADR 010). */
   staticDir?: string;
+  /** The oldest app build allowed to sync (see clientVersion.ts); null or unset for no gate. */
+  minClientVersion?: number | null;
 }
 
 const NO_CACHE = 'no-cache';
@@ -33,7 +36,7 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null }: AppDeps = {}) {
   const app = express();
   app.use(express.json({ limit: '100kb' }));
   app.disable('x-powered-by');
@@ -56,12 +59,15 @@ export function createApp({ db, staticDir }: AppDeps = {}) {
     }
   });
 
+  // An app older than the minimum is told so before anything else, signed in or not, so it stops sending and keeps its data.
+  app.use(['/api/commands', '/api/sync'], clientVersionGate({ min: minClientVersion, allowDev: devAuthAllowed(process.env.NODE_ENV) }));
+
   // Everything below this line needs a signed-in user.
   app.use('/api', db ? devAuth(db) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
   app.get('/api/me', async (_req, res) => {
     const userId = String(res.locals.userId);
     const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string }>`select current_setting('app.user_id') as id`.execute(trx)).rows[0]);
-    res.json({ ok: true, userId: row?.id });
+    res.json({ ok: true, userId: row?.id, minClientVersion });
   });
 
   app.post('/api/commands/log-session', async (req, res) => {
