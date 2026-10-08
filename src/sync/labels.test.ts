@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SyncStatus } from './apiDb.js';
-import { describeSync, formatWhen, pathLabel, storageWarning, versionLabel } from './labels.js';
+import { describeSync, formatWhen, notSentFile, pathLabel, storageWarning, versionLabel } from './labels.js';
 
 const status = (over: Partial<SyncStatus> = {}): SyncStatus => ({
   state: 'idle', pausedBecause: null, pendingPaths: [], quarantined: 0, quarantine: [], lastPullAt: null, lastSyncedAt: null, persisted: true, ready: true, notices: [], ...over,
@@ -101,5 +101,23 @@ describe('formatWhen and versionLabel', () => {
     expect(versionLabel('1791432911')).toMatch(/^Oct \d{1,2}, 2026, \d{1,2}:\d{2} (AM|PM) \(1791432911\)$/);
     expect(versionLabel('dev')).toBe('development build');
     expect(versionLabel('')).toBe('development build');
+  });
+});
+
+describe('notSentFile', () => {
+  const entries = [
+    { id: 'a', path: 'logs/squat', doc: { entries: [{ id: 'S1', d: '2026-10-05', w: 135 }] }, reason: 'The server would not take this (invalid-input).', at: '2026-10-08T18:35:00.000Z' },
+    { id: 'b', path: 'weeks/2026-10-04', doc: { prog: 'A' }, reason: 'This was deleted on another device after you changed it.', at: '2026-10-08T18:40:00.000Z' },
+  ];
+  it('names each item, says why, and keeps the whole document', () => {
+    const file = JSON.parse(notSentFile(entries, id => (id === 'squat' ? 'Back squat' : id), '1791432911', new Date('2026-10-08T19:00:00.000Z')));
+    expect(file).toMatchObject({ app: 'Iron Log', version: '1791432911', savedAt: '2026-10-08T19:00:00.000Z' });
+    expect(file.items).toEqual([
+      { what: 'Back squat log', path: 'logs/squat', reason: 'The server would not take this (invalid-input).', setAside: '2026-10-08T18:35:00.000Z', document: entries[0]!.doc },
+      { what: 'Week of Oct 4', path: 'weeks/2026-10-04', reason: 'This was deleted on another device after you changed it.', setAside: '2026-10-08T18:40:00.000Z', document: { prog: 'A' } },
+    ]);
+  });
+  it('is valid JSON for nothing at all', () => {
+    expect(JSON.parse(notSentFile([], id => id, 'dev')).items).toEqual([]);
   });
 });

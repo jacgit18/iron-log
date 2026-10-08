@@ -1,5 +1,6 @@
 import { fmtShort, parseDate } from '../shared/dates.js';
 import type { SyncStatus } from './apiDb.js';
+import type { QuarantineEntry } from './outbox.js';
 
 /* ---------- Words for the sync screen ----------
    Plain-language text for what sync is doing, kept apart from the screen so it can be tested without a browser. A status is
@@ -78,4 +79,16 @@ export function versionLabel(version: string): string {
   if (!/^\d{1,12}$/.test(version)) return 'development build';
   const d = new Date(Number(version) * 1000);
   return `${fmtShort(d)}, ${d.getFullYear()}, ${formatClock(d.getTime())} (${version})`;
+}
+
+/** The file the user downloads for writes the server would not take: what each was, why, and the document itself, so
+ *  nothing is trapped on the device. */
+export function notSentFile(entries: readonly QuarantineEntry[], nameOf: (id: string) => string, version: string, now: Date = new Date()): string {
+  return JSON.stringify({
+    app: 'Iron Log',
+    kind: 'changes the server would not take',
+    version,
+    savedAt: now.toISOString(),
+    items: entries.map(e => ({ what: pathLabel(e.path, nameOf), path: e.path, reason: e.reason, setAside: e.at, document: e.doc })),
+  }, null, 1);
 }
