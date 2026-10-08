@@ -1,15 +1,17 @@
 import { isDeepStrictEqual } from 'node:util';
 import { sql, type Transaction } from 'kysely';
 import {
+  validateDeleteLibraryItem,
   validateDeleteProgram,
   validateDeleteWeek,
   validateSaveConfig,
+  validateSaveLibraryItem,
   validateSaveProgram,
   validateSaveStretchWeek,
   validateSaveWeek,
 } from '../../src/shared/commands.ts';
 import type { DB } from '../db/types.ts';
-import { lockUser, nextSeq, parseEnvelope, refuse, type ConfigRow, type ProgramRow, type StretchWeekRow, type WeekRow } from './support.ts';
+import { lockUser, nextSeq, parseEnvelope, refuse, type ConfigRow, type LibraryItemRow, type ProgramRow, type StretchWeekRow, type WeekRow } from './support.ts';
 
 // ADR 003 and 008, backend-data-rules.md section 4. A document row (a week, a stretch week, a program, the config) is
 // read and written whole. It is keyed by one or more columns (the week start, the program key) or by the user alone (the config), so
@@ -20,13 +22,13 @@ import { lockUser, nextSeq, parseEnvelope, refuse, type ConfigRow, type ProgramR
 // - baseVersion names a row that is deleted: 409 with the tombstone (FM-05). baseVersion null on a deleted row revives it.
 // Every document table shares this code; only the table, the key, the command names and the cleaner differ.
 
-export type DocRow = WeekRow | StretchWeekRow | ProgramRow | ConfigRow;
+export type DocRow = WeekRow | StretchWeekRow | ProgramRow | ConfigRow | LibraryItemRow;
 
 export type DocResult =
   | { status: 200 | 201; body: { rows: DocRow[]; cursor: string } }
   | { status: 409 | 422; body: { refused: string; current: DocRow | null } };
 
-type Table = 'weeks' | 'stretch_weeks' | 'programs' | 'config';
+type Table = 'weeks' | 'stretch_weeks' | 'programs' | 'config' | 'library_items';
 
 interface Kind {
   table: Table;
@@ -92,6 +94,21 @@ const CONFIG: Kind = {
     return out && { keys: [], data: out.config };
   },
   cleanKey: () => null,
+};
+
+const LIBRARY_ITEMS: Kind = {
+  table: 'library_items',
+  keyColumns: ['client_id'],
+  save: 'save-library-item',
+  remove: 'delete-library-item',
+  clean: input => {
+    const out = validateSaveLibraryItem(input);
+    return out && { keys: [out.item.id], data: out.item };
+  },
+  cleanKey: input => {
+    const out = validateDeleteLibraryItem(input);
+    return out && [out.id];
+  },
 };
 
 // The tables have the same columns apart from the key, so the query builder is typed once against 'weeks'.
@@ -192,3 +209,5 @@ export const deleteStretchWeek = removing(STRETCH_WEEKS);
 export const saveProgram = saving(PROGRAMS);
 export const deleteProgram = removing(PROGRAMS);
 export const saveConfig = saving(CONFIG);
+export const saveLibraryItem = saving(LIBRARY_ITEMS);
+export const deleteLibraryItem = removing(LIBRARY_ITEMS);
