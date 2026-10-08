@@ -1,4 +1,4 @@
-import type { CommandOutcome, Envelope, PullOutcome } from './transport.js';
+import type { AccountActionOutcome, CommandOutcome, Envelope, PullOutcome } from './transport.js';
 import type { CommandName, DesiredRow, Mirror, MirrorRow } from './types.js';
 import { idOfRow } from './rows.js';
 
@@ -100,12 +100,19 @@ export function fakeServer() {
     try { return fn(); } finally { busy--; }
   };
 
+  let epoch = '1';
+  const erase = () => { rows.clear(); epoch = String(Number(epoch) + 1); };
+
   return {
     rows,
     sent,
     fail,
     /** True if two requests were ever in flight at once. */
     get overlapped() { return overlapped; },
+    /** The account's data epoch, as the server reports it; erasing raises it. */
+    get epoch() { return epoch; },
+    /** Erases everything of the account, as the server's erase does: every row goes, and the epoch goes up. */
+    erase,
     /** Puts a row on the server as if another device wrote it. */
     plant(table: string, key: string, row: Stored) { const made = stamp(table, { id: String(rows.size + 1), version: 1, deleted_at: null, ...row }); rows.set(`${table}|${key}`, made); return made; },
     transport: {
@@ -118,8 +125,11 @@ export function fakeServer() {
         if (next) return next;
         const all = [...rows.values()].filter(r => BigInt(r.seq) > BigInt(since)).sort((a, b) => Number(BigInt(a.seq) - BigInt(b.seq)));
         const page = limit ? all.slice(0, limit) : all;
-        return { ok: true, rows: page as never, cursor: page.length ? page[page.length - 1]!.seq : since, more: page.length < all.length };
+        return { ok: true, rows: page as never, cursor: page.length ? page[page.length - 1]!.seq : since, more: page.length < all.length, epoch };
       }),
+      // The server's two account actions. `fail` queues outcomes for them too, one per request.
+      eraseData: (): Promise<AccountActionOutcome> => guard(() => { const next = fail.shift() as AccountActionOutcome | undefined; if (next) return next; erase(); return { ok: true }; }),
+      deleteAccount: (): Promise<AccountActionOutcome> => guard(() => { const next = fail.shift() as AccountActionOutcome | undefined; if (next) return next; erase(); return { ok: true }; }),
     },
   };
 }

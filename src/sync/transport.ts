@@ -25,7 +25,7 @@ export type CommandOutcome =
   | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated'; status: number; retryAfterMs: number | null; message: string };
 
 export type PullOutcome =
-  | { ok: true; rows: (ServerRow & { table: SyncTable })[]; cursor: string; more: boolean }
+  | { ok: true; rows: (ServerRow & { table: SyncTable })[]; cursor: string; more: boolean; /** The account's data epoch (it goes up when the data is erased); absent from an older server, which means 1. */ epoch?: string }
   | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated'; status: number; retryAfterMs: number | null; message: string };
 
 /** The answer to the one-time upload of old data: all of it was taken, or none of it. */
@@ -33,6 +33,12 @@ export type ImportOutcome =
   | { ok: true; imported: Record<string, number>; total: number }
   | { ok: false; class: 'not-empty' }
   | { ok: false; class: 'refused'; reason: string; at: number | null; command: string | null }
+  | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated'; status: number; retryAfterMs: number | null; message: string };
+
+/** The answer to erasing the account's data or deleting the account: done, or why not. */
+export type AccountActionOutcome =
+  | { ok: true }
+  | { ok: false; class: 'refused'; status: number; message: string }
   | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated'; status: number; retryAfterMs: number | null; message: string };
 
 export interface Envelope {
@@ -135,7 +141,7 @@ export function createTransport(options: TransportOptions) {
       // Reading is safe to repeat, so even a 400 waits instead of giving up.
       return pause('server', res.status, retryAfter, res.ok ? 'unexpected answer' : `server answered ${res.status}`);
     }
-    return { ok: true, rows: body.rows as (ServerRow & { table: SyncTable })[], cursor: body.cursor, more: body.more };
+    return { ok: true, rows: body.rows as (ServerRow & { table: SyncTable })[], cursor: body.cursor, more: body.more, ...(typeof body.epoch === 'string' && /^\d+$/.test(body.epoch) ? { epoch: body.epoch } : {}) };
   }
 
   // The one-time upload (Phase E). Never repeated on its own: a failure is reported, and the user decides.
@@ -159,7 +165,20 @@ export function createTransport(options: TransportOptions) {
     };
   }
 
-  return { command, pull, importLegacy };
+  // Erasing the account's data, or deleting the account (Phase F). Never retried on its own: the person asked once, and sees the answer.
+  async function accountAction(path: '/api/account/erase-data' | '/api/account/delete', word: 'ERASE' | 'DELETE'): Promise<AccountActionOutcome> {
+    const res = await send(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: word }) });
+    if (isPause(res)) return res;
+    const waiting = pauseFor(res.status, parseRetryAfter(res.headers.get('retry-after')));
+    if (waiting) return waiting;
+    if (res.ok) return { ok: true };
+    const answer = (await json(res)) as { error?: unknown } | undefined;
+    return { ok: false, class: 'refused', status: res.status, message: typeof answer?.error === 'string' ? answer.error : `status ${res.status}` };
+  }
+  const eraseData = () => accountAction('/api/account/erase-data', 'ERASE');
+  const deleteAccount = () => accountAction('/api/account/delete', 'DELETE');
+
+  return { command, pull, importLegacy, eraseData, deleteAccount };
 }
 
 export type Transport = ReturnType<typeof createTransport>;

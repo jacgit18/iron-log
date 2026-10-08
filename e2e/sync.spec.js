@@ -468,3 +468,109 @@ test.describe('uploading from an export file', () => {
     await expect(panel(page).getByRole('button', { name: 'Upload to my account' })).toBeEnabled();
   });
 });
+
+// ---- Phase F: delete my data, and the legal pages ----
+
+test.describe('Delete my data', () => {
+  const open = async (page, answers = {}) => {
+    const calls = [];
+    for (const [path, answer] of Object.entries(answers)) {
+      await page.route(`**${path}`, route => { calls.push({ path, body: route.request().postDataJSON() }); return answer(route); });
+    }
+    await openSynced(page);
+    await page.click('#tab-settings');
+    await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible();
+    return calls;
+  };
+  const ok = route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+  const panel = page => page.getByRole('region', { name: 'Delete my data' });
+
+  test('is there only when signed in, says what it does, and has no accessibility violations', async ({ page }) => {
+    await open(page);
+    await expect(panel(page)).toContainText('for good');
+    await expect(panel(page)).toContainText('within 30 days');
+    await expect(panel(page).getByRole('link', { name: 'Privacy policy' })).toHaveAttribute('href', '/privacy.html');
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+
+  test('is not shown when signed out', async ({ page }) => {
+    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); });
+    await page.route('**/api/**', route => route.fulfill({ status: 401, contentType: 'application/json', body: '{"ok":false}' }));
+    await page.goto('/');
+    await page.click('#tab-settings');
+    await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Delete my data' })).toHaveCount(0);
+  });
+
+  test('each button stays off until its exact word is typed', async ({ page }) => {
+    await open(page);
+    const erase = panel(page).getByRole('button', { name: 'Erase everything permanently' });
+    const del = panel(page).getByRole('button', { name: 'Delete my account permanently' });
+    await expect(erase).toBeDisabled();
+    await expect(del).toBeDisabled();
+    await panel(page).getByLabel(/Type ERASE/).fill('erase');
+    await expect(erase).toBeDisabled(); // not the exact word
+    await panel(page).getByLabel(/Type ERASE/).fill('ERASE');
+    await expect(erase).toBeEnabled();
+    await expect(del).toBeDisabled(); // the other word is its own
+  });
+
+  test('erase sends the word, forgets this device\'s own copy, and reloads', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem('seeded')) return;
+      sessionStorage.setItem('seeded', '1');
+      localStorage.setItem('ironlog:logs/hack', JSON.stringify({ schema: 1, entries: [{ d: '2026-09-14', w: 200, s: 3, r: 8 }] })); // from before accounts
+    });
+    const calls = await open(page, { '/api/account/erase-data': ok });
+    await panel(page).getByLabel(/Type ERASE/).fill('ERASE');
+    await panel(page).getByRole('button', { name: 'Erase everything permanently' }).click();
+    await expect.poll(() => calls.length).toBe(1);
+    expect(calls[0].body).toEqual({ confirm: 'ERASE' });
+    await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible(); // reloaded: the app reopens on the tab it was on
+    const left = await page.evaluate(() => ({ docs: localStorage.getItem('ironlog:logs/hack'), mirror: localStorage.getItem('ironlog:sync/mirror'), marker: localStorage.getItem('ironlog:sync/legacy') }));
+    expect(left.docs).toBeNull();
+    expect(left.marker).toContain('dismissed'); // the erased old data is never offered for upload again
+  });
+
+  test('delete account sends its own word', async ({ page }) => {
+    const calls = await open(page, { '/api/account/delete': ok });
+    await panel(page).getByLabel(/Type DELETE/).fill('DELETE');
+    await panel(page).getByRole('button', { name: 'Delete my account permanently' }).click();
+    await expect.poll(() => calls.length).toBe(1);
+    expect(calls[0].body).toEqual({ confirm: 'DELETE' });
+  });
+
+  test('when the server cannot do it, says nothing was erased and keeps the data here', async ({ page }) => {
+    await page.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('ironlog:logs/hack', JSON.stringify({ schema: 1, entries: [{ d: '2026-09-14', w: 200, s: 3, r: 8 }] })); } });
+    await open(page, { '/api/account/erase-data': route => route.abort() });
+    await panel(page).getByLabel(/Type ERASE/).fill('ERASE');
+    await panel(page).getByRole('button', { name: 'Erase everything permanently' }).click();
+    await expect(panel(page).getByRole('alert')).toContainText('Nothing was erased');
+    expect(await page.evaluate(() => localStorage.getItem('ironlog:logs/hack'))).toContain('"w":200');
+    await expect(panel(page).getByRole('button', { name: 'Erase everything permanently' })).toBeEnabled();
+  });
+});
+
+test.describe('the legal pages', () => {
+  for (const [file, heading] of [['privacy.html', 'Privacy Policy'], ['terms.html', 'Terms of Use']]) {
+    test(`${file} loads, names the operator and contact, and has no accessibility violations`, async ({ page }) => {
+      await page.goto(`/${file}`);
+      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+      await expect(page.getByText('Joshua Carpentier').first()).toBeVisible();
+      await expect(page.getByRole('link', { name: 'joshuaxcarpentier@gmail.com' }).first()).toHaveAttribute('href', 'mailto:joshuaxcarpentier@gmail.com');
+      const { violations } = await scan(page);
+      expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+    });
+  }
+
+  test('the sign-in card links to both', async ({ page }) => {
+    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); });
+    await page.route('**/api/**', route => route.fulfill({ status: 401, contentType: 'application/json', body: '{"ok":false}' }));
+    await page.goto('/');
+    const card = page.getByRole('status').filter({ hasText: 'Sign in to sync' });
+    await expect(card.getByRole('link', { name: 'Terms of Use' })).toHaveAttribute('href', '/terms.html');
+    await expect(card.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy.html');
+    await expect(card).toContainText('creates your account the first time');
+  });
+});

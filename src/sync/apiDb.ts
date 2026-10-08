@@ -7,7 +7,7 @@ import { tickedBeatsSkipped } from './merge.js';
 import { createOutbox, isDeleted, type QuarantineEntry } from './outbox.js';
 import { planCommands, planDelete } from './plan.js';
 import { pullAll } from './pull.js';
-import type { FailureClass, ImportOutcome, Transport } from './transport.js';
+import type { AccountActionOutcome, FailureClass, ImportOutcome, Transport } from './transport.js';
 import { mirrorId, type PlannedCommand } from './types.js';
 
 /* ---------- The database the store talks to, backed by the API ----------
@@ -65,7 +65,7 @@ export interface Notice {
 }
 
 export interface ApiDbOptions {
-  transport: Pick<Transport, 'command' | 'pull'> & Partial<Pick<Transport, 'importLegacy'>>;
+  transport: Pick<Transport, 'command' | 'pull'> & Partial<Pick<Transport, 'importLegacy' | 'eraseData' | 'deleteAccount'>>;
   /** The browser's storage (`LS` from lib/storage), or a stand-in in tests. */
   storage: Storage;
   /** Waits; injected so tests do not. */
@@ -138,6 +138,9 @@ export function createApiDb(options: ApiDbOptions) {
   // The first account that syncs here owns the device's data. A different account signing in must never see it or add to it:
   // pulls would mix two users' rows under one cursor, and an unsent change of the first would reach the second.
   let verified = false;
+  // Set while this device is erasing the account's data or deleting the account, and left set (the page reloads): nothing is pulled or sent
+  // meanwhile, or a send already on its way could put a row back on the server after it was erased.
+  let halted = false;
   const readOwner = (): string | null => {
     const saved = storage.get(OWNER_KEY);
     return isObjectLike(saved) && typeof saved.userId === 'string' ? saved.userId : null;
@@ -231,6 +234,7 @@ export function createApiDb(options: ApiDbOptions) {
   /* ---------- pulling ---------- */
   function pull(): Promise<void> {
     return exclusive(async () => {
+      if (halted) return;
       const allowed = await gate();
       if (!allowed.ok) { setState('paused', allowed.because); return; }
       const wasReady = mirror.hasPulled();
@@ -241,6 +245,7 @@ export function createApiDb(options: ApiDbOptions) {
         setState('idle');
         if (!wasReady && mirror.hasPulled()) emitAll();
         else emitPaths(out.paths);
+        if (out.reset) { emitAll(); announce(); } // the account's data was erased from another device: every document is different now
         if (out.paths.length) announce(); // rows arrived: the status (holdsData) changed even though the state did not
         return;
       }
@@ -283,6 +288,7 @@ export function createApiDb(options: ApiDbOptions) {
     let passes = 0; // passes in which every command was accepted
     let lastDone = ''; // the plan of the last such pass
     for (;;) {
+      if (halted) return {};
       const allowed = await gate();
       if (!allowed.ok) {
         setState('paused', allowed.because);
@@ -498,6 +504,26 @@ export function createApiDb(options: ApiDbOptions) {
         return same ? sent : { ok: false as const, class: 'mismatch' as const };
       });
       if (out.ok || out.class === 'mismatch') await syncNow(); // bring the uploaded rows in, like any other change from the server
+      return out;
+    },
+    /** The user chose to erase everything in their account (Phase F), or to delete the account: the server removes it for good, then this
+     *  device forgets its copy, unsent changes included. Not queued behind the sends (one may be waiting on a server that is down): sending
+     *  stops first, so nothing can put a row back. If the server does not do it, nothing local changes and sending carries on. The app
+     *  must reload afterwards, since it still holds the data in memory. */
+    async eraseEverything(what: 'data' | 'account'): Promise<AccountActionOutcome | { ok: false; class: 'unavailable' }> {
+      const act = what === 'data' ? transport.eraseData : transport.deleteAccount;
+      if (!act) return { ok: false, class: 'unavailable' };
+      halted = true;
+      wake(); // anything waiting to retry looks again, sees the halt and lets go
+      await chain; // a send already on its way finishes before the server erases, so it cannot land after
+      const out = await act();
+      if (!out.ok) { halted = false; wake(); return out; }
+      mirror.clear();
+      outbox.clear();
+      notices = [];
+      storage.remove(OWNER_KEY);
+      emitAll();
+      announce();
       return out;
     },
     /** The user has seen these. */

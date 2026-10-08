@@ -24,6 +24,8 @@ export interface SyncPage {
   cursor: string;
   /** True when more changes exist past this page: ask again with the new cursor. */
   more: boolean;
+  /** Goes up when the account's data was erased (migration 010). A phone that holds a different one throws its copy away and pulls again from the start. */
+  epoch: string;
 }
 
 export function parseSince(value: unknown): string | null {
@@ -53,5 +55,6 @@ export async function syncPage(trx: Transaction<DB>, userId: string, since: stri
   const rows = pulled.flat().sort((a, b) => Number(BigInt(a.seq) - BigInt(b.seq)) || a.table.localeCompare(b.table) || Number(BigInt(a.id) - BigInt(b.id)));
   const cursor = rows.length ? rows[rows.length - 1]!.seq : since;
   const more = edge ? (await sql<{ more: boolean }>`select exists (${sql.join(changedSince(cursor), sql` union all `)}) as more`.execute(trx)).rows[0]!.more : false;
-  return { rows, cursor, more };
+  const epoch = (await sql<{ epoch: string }>`select data_epoch::text as epoch from users where id = ${userId}`.execute(trx)).rows[0]?.epoch ?? '1';
+  return { rows, cursor, more, epoch };
 }

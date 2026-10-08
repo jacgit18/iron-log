@@ -11,6 +11,7 @@ import { originGuard } from './originGuard.ts';
 import { byUser, rateLimit, type Limit } from './rateLimit.ts';
 import { securityHeaders } from './securityHeaders.ts';
 import { AUTH_CHECK_PAGE } from './dev/authCheckPage.ts';
+import { deleteMyAccount, eraseMyData } from './commands/account.ts';
 import { importLegacy } from './commands/importLegacy.ts';
 import { logSession } from './commands/logSession.ts';
 import { tickCard } from './commands/tickCard.ts';
@@ -51,6 +52,8 @@ const LIMITS = {
   sync: { max: 120, windowMs: 60_000 } as Limit,
   importLegacy: { max: 10, windowMs: 60 * 60_000 } as Limit,
   clientErrors: { max: 20, windowMs: 60_000 } as Limit,
+  // Erasing data or deleting the account: a handful an hour is already far more than anyone means to do.
+  account: { max: 5, windowMs: 60 * 60_000 } as Limit,
 };
 
 const NO_CACHE = 'no-cache';
@@ -119,6 +122,14 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, allowe
   app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
   app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));
   app.use('/api/sync', rateLimit(limits.sync, undefined, byUser));
+  app.post('/api/account/erase-data', rateLimit(limits.account, undefined, byUser), async (req, res) => {
+    const result = await eraseMyData(db!, String(res.locals.userId), req.body);
+    res.status(result.status).json(result.body);
+  });
+  app.post('/api/account/delete', rateLimit(limits.account, undefined, byUser), async (req, res) => {
+    const result = await deleteMyAccount(db!, String(res.locals.userId), req.body);
+    res.status(result.status).json(result.body);
+  });
   app.get('/api/me', async (_req, res) => {
     const userId = String(res.locals.userId);
     const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string }>`select current_setting('app.user_id') as id`.execute(trx)).rows[0]);

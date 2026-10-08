@@ -201,3 +201,26 @@ test('an export file from another copy of the app is uploaded into an empty acco
   await a.close();
   await b.close();
 });
+
+test('erasing everything from one phone empties the database, and the other phone clears itself', async ({ browser, user }) => {
+  const a = await newPhone(browser, user);
+  const b = await newPhone(browser, user);
+  const first = await a.open();
+  await first.locator('#chk-A-d1s1').check();
+  await expect.poll(async () => (await server.counts(user)).entries).toBe(1);
+  const second = await b.open();
+  await expect(second.locator('#chk-A-d1s1')).toBeChecked(); // the other phone has it
+
+  await first.click('#tab-settings');
+  const panel = first.getByRole('region', { name: 'Delete my data' });
+  await panel.getByLabel(/Type ERASE/).fill('ERASE');
+  await panel.getByRole('button', { name: 'Erase everything permanently' }).click();
+  await expect.poll(() => server.counts(user)).toEqual({ entries: 0, body: 0, weeks: 0 });
+
+  // The other phone drops its copy at its next pull; a reload is one.
+  await second.reload();
+  await expect(second.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(second.locator('#chk-A-d1s1')).not.toBeChecked();
+  await a.close();
+  await b.close();
+});

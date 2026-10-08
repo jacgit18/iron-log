@@ -12,11 +12,12 @@ const PAGE_LIMIT = 500;
 const MAX_PAGES = 1000;
 
 export type PullResult =
-  | { ok: true; pages: number; rows: number; paths: string[] }
+  | { ok: true; pages: number; rows: number; paths: string[]; /** The account's data was reset on the server and this copy was thrown away. */ reset: boolean }
   | { ok: false; class: Exclude<FailureClass, 'refused' | 'conflict'>; message: string; retryAfterMs: number | null; pages: number; rows: number; paths: string[] };
 
 export async function pullAll(transport: Pick<Transport, 'pull'>, store: MirrorStore, limit = PAGE_LIMIT): Promise<PullResult> {
   const paths = new Set<string>();
+  let reset = false;
   let pages = 0;
   let rows = 0;
   const stop = (cls: 'network' | 'server' | 'auth' | 'outdated', message: string, retryAfterMs: number | null): PullResult =>
@@ -26,6 +27,8 @@ export async function pullAll(transport: Pick<Transport, 'pull'>, store: MirrorS
     const out: PullOutcome = await transport.pull(store.cursor(), limit);
     if (!out.ok) return stop(out.class, out.message, out.retryAfterMs);
 
+    // The account's data was erased since this copy was made: nothing in it is the user's any more. Drop it (the page below is the new account).
+    if ((out.epoch ?? '1') !== store.epoch()) { store.reset(out.epoch ?? '1'); reset = true; }
     const byTable: Partial<Record<SyncTable, ServerRow[]>> = {};
     for (const row of out.rows) {
       // A table this version of the app does not know: the server is newer. Stop without moving the cursor, so nothing is skipped.
@@ -41,7 +44,7 @@ export async function pullAll(transport: Pick<Transport, 'pull'>, store: MirrorS
     applied.paths.forEach(p => paths.add(p));
     pages++;
     rows += out.rows.length;
-    if (!out.more) return { ok: true, pages, rows, paths: [...paths] };
+    if (!out.more) return { ok: true, pages, rows, paths: [...paths], reset };
   }
   return stop('server', 'too many pages in one pull', null);
 }

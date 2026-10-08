@@ -34,7 +34,7 @@ describe('pullAll', () => {
   it('an empty answer is a successful pull that changed nothing', async () => {
     const store = createMirrorStore(memoryStorage());
     const out = await pullAll(scripted([page([], '0', false)]), store);
-    expect(out).toEqual({ ok: true, pages: 1, rows: 0, paths: [] });
+    expect(out).toEqual({ ok: true, pages: 1, rows: 0, paths: [], reset: false });
   });
 
   it('pulling the same rows again changes nothing', async () => {
@@ -99,5 +99,48 @@ describe('pullAll', () => {
       const store = createMirrorStore(memoryStorage());
       expect(await pullAll(scripted([page([], 'abc', false)]), store)).toMatchObject({ ok: false, class: 'server' });
     });
+  });
+});
+
+describe('pullAll and the account\'s data epoch', () => {
+  const epochPage = (rows: object[], cursor: string, epoch: string): PullOutcome => ({ ok: true, rows: rows as Page['rows'], cursor, more: false, epoch });
+
+  it('a different epoch throws the old copy away and keeps the cursor, so the page is the whole new account', async () => {
+    const storage = memoryStorage();
+    const store = createMirrorStore(storage);
+    await pullAll(scripted([epochPage([L('L1', '1'), L('L2', '2')], '2', '1')]), store);
+    expect(store.rows().size).toBe(2);
+    const t = scripted([epochPage([L('L9', '7')], '7', '2')]);
+    const out = await pullAll(t, store);
+    expect(out).toMatchObject({ ok: true, reset: true });
+    expect(t.asked).toEqual([{ since: '2', limit: 500 }]); // no re-pull from the start
+    expect([...store.rows().values()].map(r => r.key)).toEqual(['L9']);
+    expect(store.epoch()).toBe('2');
+    expect(store.cursor()).toBe('7');
+    expect(store.hasPulled()).toBe(true);
+  });
+
+  it('an erase with nothing written after it leaves an empty, ready mirror', async () => {
+    const store = createMirrorStore(memoryStorage());
+    await pullAll(scripted([epochPage([L('L1', '1')], '1', '1')]), store);
+    const out = await pullAll(scripted([epochPage([], '1', '2')]), store);
+    expect(out).toMatchObject({ ok: true, reset: true });
+    expect(store.rows().size).toBe(0);
+    expect(store.hasPulled()).toBe(true);
+  });
+
+  it('the same epoch, or an older server that sends none, resets nothing', async () => {
+    const store = createMirrorStore(memoryStorage());
+    await pullAll(scripted([epochPage([L('L1', '1')], '1', '1')]), store);
+    expect(await pullAll(scripted([epochPage([], '1', '1')]), store)).toMatchObject({ ok: true, reset: false });
+    expect(await pullAll(scripted([page([], '1', false)]), store)).toMatchObject({ ok: true, reset: false });
+    expect(store.rows().size).toBe(1);
+  });
+
+  it('the epoch is remembered across a reload', async () => {
+    const storage = memoryStorage();
+    const first = createMirrorStore(storage);
+    await pullAll(scripted([epochPage([L('L1', '1')], '1', '3')]), first);
+    expect(createMirrorStore(storage).epoch()).toBe('3');
   });
 });

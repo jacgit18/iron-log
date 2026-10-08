@@ -771,3 +771,96 @@ describe('whose data this device holds (B2e)', () => {
     expect(await db.wipeForNewAccount()).toBe('unavailable');
   });
 });
+
+describe('erasing the account (Phase F)', () => {
+  const logs2 = (...ids: string[]) => logsDoc(...ids.map(id => entry(id)));
+
+  it('the server erases, then this device forgets its copy, its unsent changes and who owns it', async () => {
+    const identity = () => Promise.resolve<AccountState>({ status: 'signed-in', userId: 'ann', kind: 'session', email: null, name: null });
+    const { server, storage, db } = setup({ identity });
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1'));
+    server.fail.push(down('network'));
+    void db.doc('logs/squat').set(logs2('e1', 'e2')); // unsent
+    await settle();
+    expect(storage.data.has(MIRROR_KEY) && storage.data.has(PENDING_KEY) && storage.data.has(OWNER_KEY)).toBe(true);
+
+    expect(await db.eraseEverything('data')).toEqual({ ok: true });
+    expect(server.rows.size).toBe(0);
+    for (const key of [MIRROR_KEY, PENDING_KEY, QUARANTINE_KEY, OWNER_KEY]) expect(storage.data.has(key)).toBe(false);
+    expect(db.status()).toMatchObject({ pendingPaths: [], holdsData: false });
+  });
+
+  it('nothing is sent or pulled after the erase, so no row can come back before the page reloads', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.eraseEverything('data');
+    const sentBefore = server.sent.length;
+    void db.doc('logs/squat').set(logs2('late'));
+    await db.syncNow();
+    await settle(30);
+    expect(server.sent.length).toBe(sentBefore);
+    expect(server.rows.size).toBe(0);
+  });
+
+  it('a refusal or an unreachable server changes nothing here, and sending carries on', async () => {
+    const { server, storage, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1'));
+    server.fail.push({ ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'offline' });
+    expect(await db.eraseEverything('data')).toMatchObject({ ok: false, class: 'network' });
+    expect(storage.data.has(MIRROR_KEY)).toBe(true);
+    expect(server.rows.size).toBe(1);
+    await db.doc('logs/squat').set(logs2('e1', 'e2')); // still sends
+    expect([...server.rows.keys()].filter(k => k.startsWith('log_entries'))).toHaveLength(2);
+  });
+
+  it('deleting the account does the same on this device', async () => {
+    const { server, storage, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1'));
+    expect(await db.eraseEverything('account')).toEqual({ ok: true });
+    expect(server.rows.size).toBe(0);
+    expect(storage.data.has(MIRROR_KEY)).toBe(false);
+  });
+
+  it('another device that pulls after an erase drops its old copy and shows the new, empty, account', async () => {
+    const { server, storage, make, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1', 'e2'));
+    const other = make(); // a second device of the same account, already holding both entries
+    other.start();
+    await settle();
+    expect((await other.doc('logs/squat').get()).data().entries).toHaveLength(2);
+    const seen: boolean[] = [];
+    other.doc('logs/squat').onSnapshot(s => seen.push(s.exists));
+    await settle();
+
+    server.erase(); // erased from the first device
+    await other.syncNow();
+    await settle();
+    expect((await other.doc('logs/squat').get()).exists).toBe(false);
+    expect(seen.at(-1)).toBe(false); // the screen was told
+    expect((storage.get(MIRROR_KEY) as { epoch: string }).epoch).toBe('2');
+  });
+
+  it('a copy saved before epochs existed counts as epoch 1, so an old phone keeps its data against an account that was never erased', async () => {
+    const { server, storage, make, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1'));
+    const saved = storage.get(MIRROR_KEY) as Record<string, unknown>;
+    delete saved.epoch;
+    storage.set(MIRROR_KEY, saved);
+    const later = make();
+    later.start();
+    await settle();
+    expect(server.epoch).toBe('1');
+    expect((await later.doc('logs/squat').get()).data().entries).toHaveLength(1);
+  });
+});
