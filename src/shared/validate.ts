@@ -186,3 +186,6 @@ export function normLibrary(list: unknown): LibraryItem[] {
   });
   return out;
 }
+
+// A GitHub repository as owner/name.
+export const validRepo = (r: unknown) => /^[\w.-]+\/[\w.-]+$/.test(String(r || ''));

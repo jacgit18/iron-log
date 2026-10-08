@@ -3,6 +3,8 @@
    pastes in once per device. Backups go to their own branch (default "data"), so they never start a
    deploy of the site. The first backup creates the branch with only the data files in it. */
 
+import { validRepo } from '../shared/validate.js';
+
 const API = 'https://api.github.com';
 
 export class GitHubError extends Error {
@@ -41,7 +43,7 @@ async function request(token: string | undefined, repo: string, method: string, 
   throw new GitHubError(explain(res.status, rateLimited, repo, !!token), res.status);
 }
 
-export const validRepo = (r: unknown) => /^[\w.-]+\/[\w.-]+$/.test(String(r || ''));
+export { validRepo };
 const heads = (branch: string) => `heads/${branch.split('/').map(encodeURIComponent).join('/')}`;
 
 // The Git Data API refuses to work on a repo with no commits at all. One file through the Contents API makes the first commit
