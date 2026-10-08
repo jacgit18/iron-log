@@ -59,18 +59,28 @@ describe('planCommands: log entries', () => {
     expect(cmds.map(c => `${c.name}:${c.rowKey}`)).toEqual(['delete-entry:T1', 'tick-card:T2']);
   });
 
-  it('a check-off whose own content changed is replaced, not edited in place', () => {
+  it('a check-off whose own content changed is replaced, not edited in place: delete, then restore at the version the delete leaves', () => {
     const m = mirrorOf([logRow(entry('T', { auto: true, slot: 'A-d1s1', wk: '2026-10-04' }) as never)], { version: 2 });
     const cmds = plan('logs/squat', { entries: [entry('T', { auto: true, slot: 'A-d1s1', wk: '2026-10-04', w: 150 })] }, m);
-    expect(cmds.map(c => `${c.name}:${c.baseVersion}`)).toEqual(['delete-entry:2', 'tick-card:null']);
+    expect(cmds.map(c => `${c.name}:${c.baseVersion}`)).toEqual(['delete-entry:2', 'tick-card:3']);
   });
 
-  it('puts back an entry that was deleted (Undo) as a create, not an edit', () => {
-    const m = mirrorOf([logRow(entry('L1'))]);
-    const deleted = new Map(m);
-    deleted.set('log_entries|L1', asRow(logRow(entry('L1')), { deleted: true, version: 2 }));
+  it('puts back an entry that was deleted (Undo) by naming the tombstone version', () => {
+    const deleted = new Map([['log_entries|L1', asRow(logRow(entry('L1')), { deleted: true, version: 2 })]]);
     const cmds = plan('logs/squat', { entries: [entry('L1')] }, deleted);
-    expect(cmds).toEqual([expect.objectContaining({ name: 'log-session', baseVersion: null, rowKey: 'L1' })]);
+    expect(cmds).toEqual([expect.objectContaining({ name: 'log-session', baseVersion: 2, rowKey: 'L1', clientId: 'L1' })]);
+  });
+
+  it('puts back an unticked check-off with tick-card and the tombstone version', () => {
+    const tick = entry('T', { auto: true, slot: 'A-d1s1', wk: '2026-10-04' });
+    const deleted = new Map([['log_entries|T', asRow(logRow(tick as never), { deleted: true, version: 4 })]]);
+    expect(plan('logs/squat', { entries: [tick] }, deleted)).toEqual([expect.objectContaining({ name: 'tick-card', baseVersion: 4, rowKey: 'T' })]);
+  });
+
+  it('a deleted row in any other table is brought back by a create with no version', () => {
+    const week = { prog: 'A', done: { 'A-d1s1:0': true }, skipped: {}, moved: {}, ph: {}, warm: {} };
+    const gone = new Map([['weeks|2026-10-04', asRow({ table: 'weeks', key: '2026-10-04', week: normWeek(week) }, { deleted: true, version: 3 })]]);
+    expect(plan('weeks/2026-10-04', week, gone)).toEqual([expect.objectContaining({ name: 'save-week', baseVersion: null })]);
   });
 
   it('does not delete an entry that is already deleted on the server', () => {
