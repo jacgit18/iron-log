@@ -1,7 +1,8 @@
-import { STRETCH_DAYS, goodUrl, normStretchWeek, str } from '../shared/stretchWeek.js';
+import { DEFAULT_GROUP, normStretchExperimentItem, normStretchItem } from '../shared/listItems.js';
+import { STRETCH_DAYS, normStretchWeek } from '../shared/stretchWeek.js';
 import type { Stretch, StretchExperiment, StretchTier, StretchWeek } from '../types.ts';
 
-export { STRETCH_DAYS, normStretchWeek };
+export { DEFAULT_GROUP, STRETCH_DAYS, normStretchWeek };
 
 /* ---------- Stretches: the routine, the library and the week's check-offs ----------
    items: [{id, n, url, note, group, tier}]. tier 'primary' is on the board every day, 'secondary' sits under
@@ -35,7 +36,6 @@ export const DEFAULT_STRETCHES: Stretch[] = [
 
 export const TIERS: [StretchTier, string][] = [['primary', 'Every day'], ['secondary', 'Once in a while'], ['', 'Library only']];
 export const tierLabel = (t: string) => (TIERS.find(([k]) => k === t) || TIERS[2])[1];
-export const DEFAULT_GROUP = 'Other';
 
 
 // Whatever was saved, cleaned: bad rows dropped, ids unique. A doc that was never saved is the default routine.
@@ -43,16 +43,20 @@ export function normStretches(d: any): { items: Stretch[]; experiments: StretchE
   if (!d || typeof d !== 'object' || !Array.isArray(d.items)) return { items: structuredClone(DEFAULT_STRETCHES), experiments: normExperiments(d && d.experiments) };
   const seen = new Set<string>(); const items: Stretch[] = [];
   d.items.forEach((x: any) => {
-    if (!x || typeof x !== 'object' || !str(x.id, 60) || !str(x.n, 80) || seen.has(x.id)) return;
-    seen.add(x.id);
-    items.push({ id: x.id, n: str(x.n, 80), group: str(x.group, 40) || DEFAULT_GROUP, tier: x.tier === 'primary' || x.tier === 'secondary' ? x.tier : '', ...(goodUrl(str(x.url, 500)) && str(x.url, 500) ? { url: str(x.url, 500) } : {}), ...(str(x.note, 200) ? { note: str(x.note, 200) } : {}) });
+    const item = normStretchItem(x);
+    if (!item || seen.has(item.id)) return;
+    seen.add(item.id); items.push(item);
   });
   return { items, experiments: normExperiments(d.experiments) };
 }
 export function normExperiments(list: unknown): StretchExperiment[] {
-  const seen = new Set<string>();
-  return (Array.isArray(list) ? list : []).filter((x: any) => x && typeof x === 'object' && str(x.id, 60) && str(x.n, 80) && !seen.has(x.id) && seen.add(x.id))
-    .map((x: any) => ({ id: x.id, n: str(x.n, 80), ...(goodUrl(str(x.url, 500)) && str(x.url, 500) ? { url: str(x.url, 500) } : {}), ...(str(x.note, 200) ? { note: str(x.note, 200) } : {}) }));
+  const seen = new Set<string>(); const out: StretchExperiment[] = [];
+  (Array.isArray(list) ? list : []).forEach(x => {
+    const item = normStretchExperimentItem(x);
+    if (!item || seen.has(item.id)) return;
+    seen.add(item.id); out.push(item);
+  });
+  return out;
 }
 export const stretchWeekEmpty = (w: StretchWeek) => !Object.keys(w.done).length && !Object.keys(w.skipped).length && !w.extra.length;
 
