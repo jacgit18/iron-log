@@ -50,7 +50,7 @@ describe('GET /api/sync', () => {
   });
 
   it('returns nothing and the same cursor for a new user', async () => {
-    expect((await pull()).body).toEqual({ rows: [], cursor: '0', more: false });
+    expect((await pull()).body).toEqual({ rows: [], cursor: '0', more: false, epoch: '1' });
   });
 
   it('returns a posted session, tagged with its table', async () => {

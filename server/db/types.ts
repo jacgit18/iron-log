@@ -176,6 +176,7 @@ export interface Users {
   auth_user_id: string;
   change_seq: Generated<Int8>;
   created_at: Generated<Timestamp>;
+  data_epoch: Generated<Int8>;
   id: Generated<Int8>;
   is_admin: Generated<boolean>;
 }
