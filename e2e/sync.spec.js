@@ -164,3 +164,71 @@ test.describe('the Sync panel', () => {
     });
   });
 });
+
+// ---- The Account panel (B2e): who is signed in, sign in, sign out ----
+
+test.describe('the Account panel', () => {
+  const me = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+  const signedIn = { ok: true, userId: 'u1', account: { kind: 'session', email: 'ann@example.com', name: 'Ann' } };
+  const settle = async (page, meAnswer, extra) => {
+    await page.route('**/api/me', meAnswer);
+    if (extra) await extra(page);
+    await openSynced(page);
+    await page.click('#tab-settings');
+    await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
+  };
+
+  test('is not there at all when the flag is off', async ({ page }) => {
+    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); });
+    await page.goto('/');
+    await page.click('#tab-settings');
+    await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Account', exact: true })).toHaveCount(0);
+  });
+
+  test('says who is signed in, offers Sign out, and has no accessibility violations', async ({ page }) => {
+    await settle(page, me(200, signedIn));
+    await expect(page.getByText('ann@example.com')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toHaveCount(0);
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+
+  test('signed out: says so, that changes are kept, and offers Google sign-in', async ({ page }) => {
+    await settle(page, me(401, { ok: false, error: 'sign-in required' }));
+    await expect(page.getByText('Not signed in.')).toBeVisible();
+    await expect(page.getByText('kept on this device')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+
+  test('a failed check never says signed out', async ({ page }) => {
+    await settle(page, me(503, { ok: false }));
+    await expect(page.getByText('Could not check who is signed in')).toBeVisible();
+    await expect(page.getByText('Not signed in.')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toHaveCount(0);
+  });
+
+  test('Sign in with Google asks the server for the address and goes there', async ({ page }) => {
+    let body;
+    await settle(page, me(401, {}), async p => {
+      await p.route('**/api/auth/sign-in/social', route => { body = route.request().postDataJSON(); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ url: '/google-says-hello', redirect: true }) }); });
+      await p.route('**/google-says-hello', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Google</h1>' }));
+    });
+    await page.getByRole('button', { name: 'Sign in with Google' }).click();
+    await expect(page.getByRole('heading', { name: 'Google' })).toBeVisible();
+    expect(body).toEqual({ provider: 'google', callbackURL: '/' });
+  });
+
+  test('Sign out calls the server, then shows signed out', async ({ page }) => {
+    let out = false;
+    await settle(page, route => (out ? me(401, {})(route) : me(200, signedIn)(route)), async p => {
+      await p.route('**/api/auth/sign-out', route => { out = true; return route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }); });
+    });
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await expect(page.getByText('Not signed in.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+  });
+});
