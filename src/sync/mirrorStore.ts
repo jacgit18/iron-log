@@ -54,6 +54,9 @@ export function createMirrorStore(storage: Storage) {
   let persisted = true;
   let dropped = 0;
   let pulled = false;
+  // The account's data epoch (it goes up when the data is erased, migration 010). A copy saved before epochs existed is epoch 1,
+  // which is what every account started with.
+  let epoch = '1';
 
   // Read what an earlier session saved. Anything unreadable means "start from nothing and pull again", never a crash.
   const saved = storage.get(MIRROR_KEY);
@@ -64,12 +67,13 @@ export function createMirrorStore(storage: Storage) {
     }
     cursor = dropped ? '0' : saved.cursor;
     pulled = !dropped && saved.pulled === true;
+    if (typeof saved.epoch === 'string' && /^\d+$/.test(saved.epoch)) epoch = saved.epoch;
   } else if (saved != null) {
     dropped = 1; // present but not ours: ignore it
   }
 
   const persist = () => {
-    persisted = storage.set(MIRROR_KEY, { v: FORMAT, cursor, pulled, rows: [...rows.values()] });
+    persisted = storage.set(MIRROR_KEY, { v: FORMAT, cursor, pulled, epoch, rows: [...rows.values()] });
   };
 
   function diff(before: Mirror, after: Mirror): Applied {
@@ -93,6 +97,18 @@ export function createMirrorStore(storage: Storage) {
     hasPulled: () => pulled,
     /** True when what was in storage could not be used, so a full pull is on its way. */
     recovered: () => dropped > 0,
+
+    /** Which reset of the account's data this copy belongs to. */
+    epoch: () => epoch,
+
+    /** The account's data was erased on the server: forget every row but keep the cursor. Everything of the new epoch has a higher seq
+     *  than anything of the old one, so the next page from this cursor is the whole new account. Not "ready" until that page arrives. */
+    reset(next: string) {
+      rows = new Map();
+      pulled = false;
+      epoch = next;
+      persist();
+    },
 
     /** Takes rows the server sent (a command's answer, a conflict's current row) without moving the pull cursor. */
     apply(table: SyncTable, serverRows: ServerRow[]): Applied {
