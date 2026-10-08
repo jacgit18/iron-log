@@ -29,7 +29,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
         {import.meta.env.DEV && (
           <p className="landing-dev">
             <button type="button" className="btn" onClick={() => { setDevUser('dev'); window.location.reload(); }}>Skip: continue as the development user</button>
-            <span className="note"> Development builds only. Needs the API running; the real sign-in is the button above.</span>
+            <span className="note"> Development builds only, and the way in without Google here. Needs the API running; the real sign-in is the button above.</span>
           </p>
         )}
         <p className="landing-fine"><LegalLinks /> Free during the beta. For people aged 16 and over.</p>

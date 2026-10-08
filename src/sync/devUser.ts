@@ -6,18 +6,19 @@ import { LS } from '../lib/storage.js';
 const USER_KEY = 'flag:apiUser';
 const NAME = /^[a-z0-9_-]{1,40}$/;
 
-/** The header a development build sends. `name` is what the browser remembers: a dev user's name, or "off" to send nothing (be a
- *  stranger, to try the landing page and the real Google sign-in). Anything else is the default dev user. Production sends nothing. */
+/** The header a development build sends. `name` is what the browser remembers: a dev user's name (the landing page's skip button
+ *  chooses "dev"), or nothing. With no name, or "off", nothing is sent: a development browser is a stranger by default, so it shows
+ *  the landing page and the real Google sign-in like a visitor to the live site would. Production never sends it. */
 export function devHeader(name: unknown, dev: boolean): Record<string, string> {
   if (!dev || name === 'off') return {};
-  return { 'x-dev-user': typeof name === 'string' && NAME.test(name) ? name : 'dev' };
+  return typeof name === 'string' && NAME.test(name) ? { 'x-dev-user': name } : {};
 }
 
-// A development build names a fixed dev user in a header, which the API accepts only
-// when it runs in development. A production build sends nothing, so the API answers 401 and the sync waits.
+// A development build can name a fake dev user in a header, which the API accepts only when it runs in development. A production
+// build sends nothing, so the API answers 401 and the sync waits.
 export const signIn = (): Record<string, string> => devHeader(LS.get(USER_KEY), import.meta.env.DEV);
 
-/** Development only: remember which fake user this browser is ("off" to be a stranger). Going off also forgets the session, because a
+/** Development only: remember which fake user this browser is ("off", or nothing at all, is a stranger). Going off also forgets the session, because a
  *  browser that has seen one skips the landing page. Anything that is not "off" or a plain lowercase name is ignored. */
 export function setDevUser(value: string) {
   if (value !== 'off' && !NAME.test(value)) return;
@@ -25,8 +26,8 @@ export function setDevUser(value: string) {
   if (value === 'off') forgetSession(LS);
 }
 
-/** Development only. Open the app once with ?devUser=off to be a stranger (the landing page, then real Google sign-in), or
- *  ?devUser=dev (or any name) to go back to a fake dev user. It is remembered, then taken out of the address. */
+/** Development only. Open the app once with ?devUser=dev (or any plain lowercase name) to be that fake user, or ?devUser=off to be a
+ *  stranger again (the default). It is remembered, then taken out of the address. */
 export function applyDevUserFromUrl() {
   if (!import.meta.env.DEV) return;
   const params = new URLSearchParams(location.search);
