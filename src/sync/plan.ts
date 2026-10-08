@@ -52,6 +52,9 @@ function remove(row: MirrorRow): PlannedCommand | null {
   }
 }
 
+/** The command that creates this row on a server that has none of it (the one-time upload of old data, legacy.ts). */
+export const createCommand = (row: DesiredRow): PlannedCommand => save(row, null);
+
 const isCheckOff = (r: DesiredRow | MirrorRow) => r.table === 'log_entries' && !!r.entry.auto;
 const byKey = (a: PlannedCommand, b: PlannedCommand) => (a.rowKey < b.rowKey ? -1 : a.rowKey > b.rowKey ? 1 : 0);
 
