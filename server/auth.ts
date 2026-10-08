@@ -26,15 +26,12 @@ export interface Account {
 
 const signInRequired = { ok: false, error: 'sign-in required' };
 
-// The no-op update makes RETURNING work on a conflict, so this is one round trip and safe under concurrent first requests.
+// ensure_user() (migration 009) finds or makes the row. It runs as the table owner, because under row-level security the
+// API's own role cannot insert into users or see a row that does not exist yet. One round trip, safe under concurrent first
+// requests (the no-op update inside lets RETURNING work on a conflict).
 async function ensureUser(db: Kysely<DB>, authUserId: string): Promise<string> {
-  const user = await db
-    .insertInto('users')
-    .values({ auth_user_id: authUserId })
-    .onConflict(oc => oc.column('auth_user_id').doUpdateSet({ auth_user_id: authUserId }))
-    .returning('id')
-    .executeTakeFirstOrThrow();
-  return user.id;
+  const { rows } = await sql<{ id: string }>`select ensure_user(${authUserId}) as id`.execute(db);
+  return rows[0]!.id;
 }
 
 export function sessionAuth(db: Kysely<DB>, auth?: Auth): RequestHandler {
