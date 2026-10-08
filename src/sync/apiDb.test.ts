@@ -402,6 +402,39 @@ describe('conflicts', () => {
   });
 });
 
+describe('notices about what another device changed first', () => {
+  it('a delete that is not applied leaves a notice, which the user can clear', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    server.rows.set('log_entries|S1', { ...server.rows.get('log_entries|S1')!, version: 2, weight_lb: '150.0000', seq: '99' });
+    await db.doc('logs/squat').set(logsDoc());
+    expect(server.rows.get('log_entries|S1')!.deleted_at).toBeNull(); // the other device's edit was kept
+    expect(db.status().notices).toHaveLength(1);
+    expect(db.status().notices[0]).toMatchObject({ path: 'logs/squat', text: 'Something you deleted was changed on another device first, so it was kept.' });
+    const seen: number[] = [];
+    db.onStatus(s => seen.push(s.notices.length));
+    db.clearNotices();
+    expect(db.status().notices).toEqual([]);
+    expect(seen.at(-1)).toBe(0);
+  });
+
+  it('the kept entry is shown again, because the app is told about the path', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    const shown: string[][] = [];
+    db.doc('logs/squat').onSnapshot(s => shown.push(((s.exists ? s.data() : { entries: [] }) as { entries: { id: string }[] }).entries.map(e => e.id)));
+    await settle();
+    server.rows.set('log_entries|S1', { ...server.rows.get('log_entries|S1')!, version: 2, seq: '99' });
+    await db.doc('logs/squat').set(logsDoc());
+    await settle();
+    expect(shown.at(-1)).toEqual(['S1']);
+  });
+});
+
 describe('one request at a time', () => {
   it('writes to different paths and pulls never overlap', async () => {
     const { server, db } = setup();
@@ -416,6 +449,33 @@ describe('one request at a time', () => {
     ]);
     expect(server.overlapped).toBe(false);
     expect(server.rows.size).toBe(5);
+  });
+});
+
+describe('syncNow', () => {
+  it('a call made while a pull is running gets a pull that starts after the call, so it sees what happened meanwhile', async () => {
+    const { server, db } = setup();
+    // The first pull computes its answer at once, then takes a while to get back to the phone.
+    const real = server.transport.pull;
+    let first = true;
+    server.transport.pull = async (since, limit) => {
+      const out = await real(since, limit);
+      if (first) { first = false; await new Promise(r => setTimeout(r, 40)); }
+      return out;
+    };
+    db.start();
+    await settle(15); // the first pull has its answer but has not delivered it
+    server.plant('weeks', '2026-10-04', { week_start: '2026-10-04', data: { prog: 'A' } });
+    await db.syncNow();
+    expect((await db.doc('weeks/2026-10-04').get()).exists).toBe(true);
+  });
+
+  it('many calls while one pull is running share one follow-up pull', async () => {
+    const { server, db } = setup();
+    const pulls = vi.spyOn(server.transport, 'pull');
+    db.start();
+    await Promise.all([db.syncNow(), db.syncNow(), db.syncNow(), db.syncNow()]);
+    expect(pulls).toHaveBeenCalledTimes(2); // the one running, and one after it for all four callers
   });
 });
 

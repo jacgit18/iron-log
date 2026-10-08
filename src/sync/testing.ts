@@ -92,9 +92,11 @@ export function fakeServer() {
     }
   }
 
+  // Answers on microtasks only, so a test that lets the event loop turn once has seen every request finish, however busy
+  // the machine is. Yielding once is enough to notice a second request starting before the first is done.
   const guard = async <T>(fn: () => T): Promise<T> => {
     if (busy++) overlapped = true;
-    await new Promise(r => setTimeout(r, 1));
+    await Promise.resolve();
     try { return fn(); } finally { busy--; }
   };
 
@@ -135,4 +137,16 @@ export function gatedSleep() {
     releaseAll() { open.splice(0).forEach(r => r()); },
     get waiting() { return open.length; },
   };
+}
+
+/* Runs `check` until it stops throwing, or rethrows its last error after `timeoutMs`. For waiting on work that happens in the
+   background (a flush, a pull over a real network) without guessing how long it takes. */
+export async function eventually<T>(check: () => T | Promise<T>, timeoutMs = 8000, everyMs = 10): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try { return await check(); } catch (e) {
+      if (Date.now() > deadline) throw e;
+      await new Promise(r => setTimeout(r, everyMs));
+    }
+  }
 }
