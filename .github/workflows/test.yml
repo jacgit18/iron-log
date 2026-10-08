@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - run: docker build -t iron-log .
+      - run: docker build --build-arg APP_VERSION=$(git log -1 --format=%ct) -t iron-log .
       # No database here: the health check and the app need none.
       - name: Start the image and check it answers
         run: |

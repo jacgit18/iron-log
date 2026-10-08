@@ -9,6 +9,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# The build's version is its commit time; the image has no git history, so it comes in as an argument:
+#   docker build --build-arg APP_VERSION=$(git log -1 --format=%ct) -t iron-log .
+ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
 # BASE_PATH is unset on purpose: the app is served from the root of its own origin.
 RUN npm run build && npm run build:server
 
