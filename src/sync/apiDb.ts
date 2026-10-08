@@ -7,7 +7,7 @@ import { tickedBeatsSkipped } from './merge.js';
 import { createOutbox, isDeleted, type QuarantineEntry } from './outbox.js';
 import { planCommands, planDelete } from './plan.js';
 import { pullAll } from './pull.js';
-import type { FailureClass, Transport } from './transport.js';
+import type { FailureClass, ImportOutcome, Transport } from './transport.js';
 import { mirrorId, type PlannedCommand } from './types.js';
 
 /* ---------- The database the store talks to, backed by the API ----------
@@ -63,7 +63,7 @@ export interface Notice {
 }
 
 export interface ApiDbOptions {
-  transport: Pick<Transport, 'command' | 'pull'>;
+  transport: Pick<Transport, 'command' | 'pull'> & Partial<Pick<Transport, 'importLegacy'>>;
   /** The browser's storage (`LS` from lib/storage), or a stand-in in tests. */
   storage: Storage;
   /** Waits; injected so tests do not. */
@@ -475,6 +475,27 @@ export function createApiDb(options: ApiDbOptions) {
       wake();
       announce();
       return 'done';
+    },
+    /** The one-time upload of what this browser held before accounts (Phase E, legacy.ts): all of `commands` or none. Only for an
+     *  account the server has nothing for and a device with nothing waiting, so it cannot meet a real edit. Afterwards the rows
+     *  are pulled like any others. A failure changes nothing, here or on the server. */
+    async importLegacy(commands: readonly PlannedCommand[]): Promise<ImportOutcome | { ok: false; class: 'unavailable' | 'mismatch' }> {
+      if (!transport.importLegacy) return { ok: false, class: 'unavailable' };
+      const out = await exclusive(async () => {
+        const allowed = await gate();
+        if (!allowed.ok) { setState('paused', allowed.because); if (allowed.because === 'account') return { ok: false as const, class: 'unavailable' as const };
+          return { ok: false as const, class: allowed.because, status: 0, retryAfterMs: null, message: 'not signed in, or the server could not be reached' }; }
+        // This device must hold nothing of its own: anything pulled or unsent means the account is not the empty one the upload needs.
+        if (hasData()) return { ok: false as const, class: 'not-empty' as const };
+        const sent = await transport.importLegacy!(commands);
+        if (!sent.ok) { if (sent.class === 'network' || sent.class === 'server' || sent.class === 'auth' || sent.class === 'outdated') setState('paused', sent.class); return sent; }
+        const want: Record<string, number> = {};
+        for (const c of commands) want[c.name] = (want[c.name] ?? 0) + 1;
+        const same = sent.total === commands.length && Object.keys(want).length === Object.keys(sent.imported).length && Object.entries(want).every(([k, n]) => sent.imported[k] === n);
+        return same ? sent : { ok: false as const, class: 'mismatch' as const };
+      });
+      if (out.ok || out.class === 'mismatch') await syncNow(); // bring the uploaded rows in, like any other change from the server
+      return out;
     },
     /** The user has seen these. */
     clearNotices: () => { notices = []; announce(); },

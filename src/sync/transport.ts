@@ -28,6 +28,13 @@ export type PullOutcome =
   | { ok: true; rows: (ServerRow & { table: SyncTable })[]; cursor: string; more: boolean }
   | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated'; status: number; retryAfterMs: number | null; message: string };
 
+/** The answer to the one-time upload of old data: all of it was taken, or none of it. */
+export type ImportOutcome =
+  | { ok: true; imported: Record<string, number>; total: number }
+  | { ok: false; class: 'not-empty' }
+  | { ok: false; class: 'refused'; reason: string; at: number | null; command: string | null }
+  | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated'; status: number; retryAfterMs: number | null; message: string };
+
 export interface Envelope {
   clientId: string;
   baseVersion: number | null;
@@ -131,7 +138,28 @@ export function createTransport(options: TransportOptions) {
     return { ok: true, rows: body.rows as (ServerRow & { table: SyncTable })[], cursor: body.cursor, more: body.more };
   }
 
-  return { command, pull };
+  // The one-time upload (Phase E). Never repeated on its own: a failure is reported, and the user decides.
+  async function importLegacy(commands: readonly { name: CommandName; clientId: string; input: unknown }[]): Promise<ImportOutcome> {
+    const body = { clientId: 'import-legacy', baseVersion: null, input: { commands: commands.map(({ name, clientId, input }) => ({ name, clientId, input })) } };
+    const res = await send('/api/commands/import-legacy', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    if (isPause(res)) return res;
+    const waiting = pauseFor(res.status, parseRetryAfter(res.headers.get('retry-after')));
+    if (waiting) return waiting;
+    const answer = (await json(res)) as Record<string, unknown> | undefined;
+    if (res.status === 201 && answer && typeof answer.total === 'number' && answer.imported && typeof answer.imported === 'object') {
+      return { ok: true, imported: answer.imported as Record<string, number>, total: answer.total };
+    }
+    if (res.status === 409 && answer?.refused === 'account-not-empty') return { ok: false, class: 'not-empty' };
+    if (res.ok) return pause('server', res.status, null, 'unexpected answer');
+    return {
+      ok: false, class: 'refused',
+      reason: typeof answer?.refused === 'string' ? answer.refused : `status ${res.status}`,
+      at: typeof answer?.at === 'number' ? answer.at : null,
+      command: typeof answer?.command === 'string' ? answer.command : null,
+    };
+  }
+
+  return { command, pull, importLegacy };
 }
 
 export type Transport = ReturnType<typeof createTransport>;
