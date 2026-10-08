@@ -46,11 +46,17 @@ try {
     await c.query(`drop role if exists ${APP_LOGIN}`);
     await c.query(`create role ${APP_LOGIN} login password '${APP_PASSWORD}' in role ironlog_app`);
   });
-  const run = spawnSync('npx', ['playwright', 'test', '--config', 'playwright.sync.config.js', ...process.argv.slice(2)], {
-    stdio: 'inherit',
-    env: { ...process.env, E2E_DATABASE_URL: scratch.href, E2E_APP_DATABASE_URL: appUrl.href },
-  });
-  code = run.status ?? 1;
+  // Two stacks: the dev build with the dev header (playwright.sync.config.js), and the production build with real sign-in
+  // (playwright.accounts.config.js). Both run even if the first fails, so one report shows everything.
+  let failed = false;
+  for (const config of ['playwright.sync.config.js', 'playwright.accounts.config.js']) {
+    const run = spawnSync('npx', ['playwright', 'test', '--config', config, ...process.argv.slice(2)], {
+      stdio: 'inherit',
+      env: { ...process.env, E2E_DATABASE_URL: scratch.href, E2E_APP_DATABASE_URL: appUrl.href },
+    });
+    if (run.status !== 0) failed = true;
+  }
+  code = failed ? 1 : 0;
 } catch (err) {
   console.error(err.stderr || err.message || err);
 } finally {

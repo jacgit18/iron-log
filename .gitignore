@@ -36,3 +36,5 @@ playwright-report-sync
 .env
 .neon
 dist-server
+test-results-accounts
+playwright-report-accounts
