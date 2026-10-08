@@ -1,0 +1,13 @@
+# Builds the production image (Dockerfile) in Google Cloud Build and pushes it to Artifact Registry.
+# Used by scripts/deploy-cloud-run.sh; run by hand with
+#   gcloud builds submit --config cloudbuild.yaml --substitutions _IMAGE=<region>-docker.pkg.dev/<project>/iron-log/app:<tag>,_APP_VERSION=$(git log -1 --format=%ct) .
+# `gcloud run deploy --source` cannot pass the build argument the app needs for its version (the update gate, ADR 003), so this exists.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '--build-arg', 'APP_VERSION=${_APP_VERSION}', '-t', '${_IMAGE}', '.']
+images: ['${_IMAGE}']
+substitutions:
+  _IMAGE: ''
+  _APP_VERSION: '0'
+options:
+  logging: CLOUD_LOGGING_ONLY
