@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek } from './commands.js';
+import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek, validateSaveSupplementDay, validateDeleteSupplementDay } from './commands.js';
 
 describe('validateLogSession', () => {
   it('accepts an exercise id with a valid entry and cleans the entry', () => {
@@ -114,5 +114,29 @@ describe('validateDeleteWeek', () => {
     expect(validateDeleteWeek({})).toBeNull();
     expect(validateDeleteWeek({ weekStart: 'nope' })).toBeNull();
     expect(validateDeleteWeek(null)).toBeNull();
+  });
+});
+
+describe('validateSaveSupplementDay', () => {
+  it('accepts a day and cleans the water, boost and taken', () => {
+    const out = validateSaveSupplementDay({ day: '2026-10-07', water: [16, '8.04', 0, 300, 'x'], boost: { hot: true, mins: 45.4, junk: 1 }, taken: { creatine: true, zinc: false }, junk: 1 });
+    expect(out).toEqual({ day: '2026-10-07', water: [16, 8], boost: { hot: true, mins: 45 }, taken: { creatine: true } });
+  });
+  it('fills in empty values for what is missing', () => {
+    expect(validateSaveSupplementDay({ day: '2026-10-07' })).toEqual({ day: '2026-10-07', water: [], boost: null, taken: {} });
+  });
+  it('refuses a bad day and non-objects', () => {
+    expect(validateSaveSupplementDay({ day: 'nope' })).toBeNull();
+    expect(validateSaveSupplementDay({})).toBeNull();
+    expect(validateSaveSupplementDay(null)).toBeNull();
+  });
+});
+
+describe('validateDeleteSupplementDay', () => {
+  it('accepts a day and refuses a missing or bad one', () => {
+    expect(validateDeleteSupplementDay({ day: '2026-10-07', junk: 1 })).toEqual({ day: '2026-10-07' });
+    expect(validateDeleteSupplementDay({})).toBeNull();
+    expect(validateDeleteSupplementDay({ day: '2026-02-30' })).toBeNull();
+    expect(validateDeleteSupplementDay(null)).toBeNull();
   });
 });
