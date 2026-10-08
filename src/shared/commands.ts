@@ -2,9 +2,11 @@
    One module for what the phone sends and the API accepts. Each command has a name, an input type and a validator;
    the offline queue stores a Command and replays it unchanged. Framework-free: client and server import it. */
 
-import type { BodyEntry, Boost, LogEntry, StretchWeek, Week } from '../types.ts';
-import { LIMITS, normBody, normEntry, validDate } from './validate.js';
+import type { BodyEntry, Boost, LogEntry, Program, ProgKey, StretchWeek, Week } from '../types.ts';
+import { LIMITS, normBody, normEntry, normProgram, validDate } from './validate.js';
+import { normConfigDoc, type ConfigDoc } from './config.js';
 import { normStretchWeek } from './stretchWeek.js';
+import { withAllDays } from '../lib/data.js';
 import { normBoost, normTakenDay, normWaterDay } from './supplementDay.js';
 import { normWeek } from './week.js';
 
@@ -161,4 +163,45 @@ export function validateDeleteSupplementDay(input: unknown): DeleteSupplementDay
   if (!input || typeof input !== 'object') return null;
   const { day } = input as Record<string, unknown>;
   return validDate(day) ? { day } : null;
+}
+
+/** Replace the whole body of program A or B. Saved versions are library items, not programs. */
+export interface SaveProgramInput {
+  key: ProgKey;
+  program: Omit<Program, 'key'>;
+}
+export type SaveProgramCommand = Command<'save-program', SaveProgramInput>;
+
+export function validateSaveProgram(input: unknown): SaveProgramInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { key, program } = input as Record<string, unknown>;
+  if (key !== 'A' && key !== 'B') return null;
+  const clean = normProgram(program, key);
+  if (!clean) return null;
+  const { key: _key, ...body } = withAllDays({ ...clean, key });
+  return { key, program: body };
+}
+
+/** Put program A or B back to the built-in one (the row is deleted). baseVersion is the version the user saw. */
+export interface DeleteProgramInput {
+  key: ProgKey;
+}
+export type DeleteProgramCommand = Command<'delete-program', DeleteProgramInput>;
+
+export function validateDeleteProgram(input: unknown): DeleteProgramInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { key } = input as Record<string, unknown>;
+  return key === 'A' || key === 'B' ? { key } : null;
+}
+
+/** Replace the whole settings document. There is one per user, so there is no key. */
+export interface SaveConfigInput {
+  config: ConfigDoc;
+}
+export type SaveConfigCommand = Command<'save-config', SaveConfigInput>;
+
+export function validateSaveConfig(input: unknown): SaveConfigInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const config = normConfigDoc((input as Record<string, unknown>).config);
+  return config ? { config } : null;
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek, validateSaveSupplementDay, validateDeleteSupplementDay } from './commands.js';
+import { BUILTIN } from '../lib/data.js';
+import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek, validateSaveSupplementDay, validateDeleteSupplementDay, validateSaveProgram, validateDeleteProgram, validateSaveConfig } from './commands.js';
 
 describe('validateLogSession', () => {
   it('accepts an exercise id with a valid entry and cleans the entry', () => {
@@ -138,5 +139,61 @@ describe('validateDeleteSupplementDay', () => {
     expect(validateDeleteSupplementDay({})).toBeNull();
     expect(validateDeleteSupplementDay({ day: '2026-02-30' })).toBeNull();
     expect(validateDeleteSupplementDay(null)).toBeNull();
+  });
+});
+
+describe('validateSaveProgram', () => {
+  it('accepts program A or B and returns the body without the key', () => {
+    const out = validateSaveProgram({ key: 'A', program: structuredClone(BUILTIN.A) });
+    expect(out.key).toBe('A');
+    expect(out.program.key).toBeUndefined();
+    expect(out.program.days).toHaveLength(7);
+  });
+  it('pads a six-day program to seven days', () => {
+    const six = structuredClone(BUILTIN.A);
+    six.days = six.days.slice(0, 6);
+    expect(validateSaveProgram({ key: 'B', program: six }).program.days).toHaveLength(7);
+  });
+  it('refuses another key, a missing program and a program with the wrong shape', () => {
+    expect(validateSaveProgram({ key: 'C', program: BUILTIN.A })).toBeNull();
+    expect(validateSaveProgram({ key: 'A' })).toBeNull();
+    expect(validateSaveProgram({ key: 'A', program: { days: 'x' } })).toBeNull();
+    expect(validateSaveProgram(null)).toBeNull();
+  });
+});
+
+describe('validateDeleteProgram', () => {
+  it('accepts A or B and refuses anything else', () => {
+    expect(validateDeleteProgram({ key: 'B', junk: 1 })).toEqual({ key: 'B' });
+    expect(validateDeleteProgram({ key: 'C' })).toBeNull();
+    expect(validateDeleteProgram({})).toBeNull();
+    expect(validateDeleteProgram(null)).toBeNull();
+  });
+});
+
+describe('validateSaveConfig', () => {
+  it('keeps the settings that belong on the server and cleans them', () => {
+    const out = validateSaveConfig({ config: { mode: 2, m2Even: 'B', pct: { hyp: 70, bad: 500 }, rm: { bench: 225, squat: -5 }, waterGoal: 72.04, waterMode: 'fixed', rest: 90 } });
+    expect(out.config).toMatchObject({ mode: 2, m2Even: 'B', rm: { bench: 225 }, waterGoal: 72, waterMode: 'fixed', rest: 90 });
+    expect(out.config.pct.hyp).toBe(70);
+    expect(out.config.pct.bad).toBeUndefined();
+  });
+  it('drops the GitHub backup settings, a token and unknown keys', () => {
+    const out = validateSaveConfig({ config: { mode: 1, backup: { repo: 'me/data', branch: 'main', hashes: {} }, ghBackup: { repo: 'me/x', token: 'secret' }, token: 'secret', junk: 1 } });
+    expect(out.config).toEqual({ mode: 1 });
+  });
+  it('drops values that are out of range or the wrong type', () => {
+    const out = validateSaveConfig({ config: { mode: 9, m3Start: 13, m3First: 'C', rest: 9999, waterGoal: 5, waterMode: 'x', warmup: 'nope' } });
+    expect(out.config).toEqual({});
+  });
+  it('cleans the warm-up list', () => {
+    const out = validateSaveConfig({ config: { warmup: [{ id: 'w1', n: ' Bike ', rx: '5 min' }, { id: 'w1', n: 'dup', rx: '' }, { id: 'w2', n: '', rx: '' }, 'x'] } });
+    expect(out.config.warmup).toEqual([{ id: 'w1', n: 'Bike', rx: '5 min' }]);
+  });
+  it('accepts an empty config and refuses a missing or non-object one', () => {
+    expect(validateSaveConfig({ config: {} })).toEqual({ config: {} });
+    expect(validateSaveConfig({})).toBeNull();
+    expect(validateSaveConfig({ config: [] })).toBeNull();
+    expect(validateSaveConfig(null)).toBeNull();
   });
 });
