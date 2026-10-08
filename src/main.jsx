@@ -10,11 +10,12 @@ import { initPwa } from './lib/pwa.js';
 import { LS } from './lib/storage.js';
 import { apiSyncEnabled, FLAG_KEY } from './sync/flag.ts';
 import { createAccountClient } from './sync/account.ts';
-import { signIn as devHeaders } from './sync/devUser.ts';
+import { applyDevUserFromUrl, signIn as devHeaders } from './sync/devUser.ts';
 import { useAppStore } from './store/useAppStore.js';
 
 applyAppearance();
 initPwa();
+applyDevUserFromUrl(); // development only: ?devUser=off to be a stranger
 
 const root = createRoot(document.getElementById('root'));
 const show = node => root.render(<StrictMode>{node}</StrictMode>);
