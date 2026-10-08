@@ -10,6 +10,7 @@ import { originGuard } from './originGuard.ts';
 import { rateLimit, type Limit } from './rateLimit.ts';
 import { securityHeaders } from './securityHeaders.ts';
 import { AUTH_CHECK_PAGE } from './dev/authCheckPage.ts';
+import { importLegacy } from './commands/importLegacy.ts';
 import { logSession } from './commands/logSession.ts';
 import { tickCard } from './commands/tickCard.ts';
 import { deleteBodyWeight, logBodyWeight } from './commands/bodyWeight.ts';
@@ -65,6 +66,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, allowe
     app.use('/api/auth', rateLimit(authLimits.other));
     app.all('/api/auth/*splat', toNodeHandler(auth));
   }
+  // The one-time upload of a phone's old data is far bigger than any other request (years of entries), so it alone gets a larger limit.
+  app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }));
   app.use(express.json({ limit: '100kb' }));
   app.disable('x-powered-by');
 
@@ -98,6 +101,12 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, allowe
     const userId = String(res.locals.userId);
     const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string }>`select current_setting('app.user_id') as id`.execute(trx)).rows[0]);
     res.json({ ok: true, userId: row?.id, minClientVersion, account: res.locals.account as Account });
+  });
+
+  app.post('/api/commands/import-legacy', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const result = await importLegacy(db!, userId, req.body, req.get('x-client-version') ?? null);
+    res.status(result.status).json(result.body);
   });
 
   app.post('/api/commands/log-session', async (req, res) => {
