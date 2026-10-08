@@ -9,7 +9,7 @@ const HOUR = 60 * 60 * 1000;
 export default function UpdateBanner() {
   const timing = useTimerStore(s => !!s.mode);
   const { needRefresh: [needRefresh, setNeedRefresh], offlineReady: [offlineReady, setOfflineReady], updateServiceWorker } = useRegisterSW({
-    onRegisteredSW(url, reg) {
+    onRegisteredSW(_url: string, reg: ServiceWorkerRegistration | undefined) {
       if (!reg) return;
       // Look for a new version every hour while the app is open and visible.
       setInterval(() => { if (document.visibilityState === 'visible' && navigator.onLine) reg.update().catch(() => {}); }, HOUR);
