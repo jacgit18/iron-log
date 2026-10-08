@@ -6,7 +6,7 @@ import { tickCard } from './commands/tickCard.ts';
 import { deleteBodyWeight, logBodyWeight } from './commands/bodyWeight.ts';
 import { deleteEntry } from './commands/deleteEntry.ts';
 import { deleteSupplementDay, saveSupplementDay } from './commands/supplementDays.ts';
-import { deleteStretchWeek, deleteWeek, saveStretchWeek, saveWeek } from './commands/weekDocs.ts';
+import { deleteStretchWeek, deleteWeek, saveStretchWeek, saveWeek } from './commands/documents.ts';
 import { untickCard } from './commands/untickCard.ts';
 import { parseLimit, parseSince, syncPage } from './commands/sync.ts';
 import type { DB } from './db/types.ts';
