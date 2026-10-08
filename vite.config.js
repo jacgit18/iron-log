@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -34,8 +35,13 @@ function noWellKnownFallback() {
 }
 
 // BASE_PATH lets the same build run at a sub-path (e.g. /iron-log/ on GitHub Pages).
-// The build id the app sends with every API request (ADR 003, FM-03): the commit in CI, else "dev".
-const appVersion = (process.env.GITHUB_SHA || 'dev').slice(0, 7);
+// The version the app sends with every API request (ADR 003, FM-03) is the unix time, in seconds, of the commit it was built
+// from, so the API can refuse builds older than MIN_CLIENT_VERSION. APP_VERSION sets it where there is no git history (the
+// Docker build passes it in); with neither it is "dev".
+const commitTime = () => {
+  try { return execSync('git log -1 --format=%ct', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { return ''; }
+};
+const appVersion = [process.env.APP_VERSION, commitTime()].find(v => v && /^\d{1,12}$/.test(v)) || 'dev';
 
 export default defineConfig({
   base,

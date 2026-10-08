@@ -138,6 +138,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   logs: {}, // exId -> [entries]
   unsaved: [], // doc paths whose last write was refused (storage full, permission): kept until a write succeeds
   refusals: 0, // writes refused so far this session
+  sync: null, // how syncing through the API is going; null when it is off
   tab: restored.tab || 'board',
   mDay: restored.mDay ?? null, // day shown on phones; null = pick the first day with open work
   library: [], // saved program versions
@@ -894,6 +895,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         const { createBrowserApiDb } = await import('../sync/browser.js');
         syncApi = createBrowserApiDb();
         db = syncApi;
+        syncApi.onStatus(sync => useAppStore.setState({ sync }));
+        useAppStore.setState({ sync: syncApi.status() });
         syncApi.start();
       } catch (err) { console.error('SYNC INIT FAILED', err); db = null; syncApi = null; } // the app still works from this browser's storage
     }

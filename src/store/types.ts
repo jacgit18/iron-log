@@ -2,6 +2,7 @@
    (editor, settings, wellness) read and write each other through get(), so they share one AppState.
    Sheet forms (the `d` a save action receives) are typed loosely as `Form`; the sheets in components/ own their shape. */
 import type { StoreApi } from 'zustand';
+import type { SyncStatus } from '../sync/apiDb.js';
 import type {
   BodyEntry, Cfg, DataFile, EquipmentKey, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
@@ -174,6 +175,7 @@ export interface CoreSlice {
   logs: Logs;
   unsaved: string[]; // doc paths whose last write was refused (storage full, permission): kept until a write succeeds
   refusals: number; // writes refused so far this session
+  sync: SyncStatus | null; // how syncing through the API is going; null when it is off (see src/sync)
   tab: string;
   mDay: number | null; // day shown on phones; null = pick the first day with open work
   library: LibraryItem[];

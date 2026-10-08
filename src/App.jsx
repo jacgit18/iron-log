@@ -21,7 +21,7 @@ import ExperimentSheet from './components/sheets/ExperimentSheet.jsx';
 import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
 import ImportSheet from './components/sheets/ImportSheet.jsx';
 import HelpSheet from './components/sheets/HelpSheet.jsx';
-import UpdateBanner from './components/UpdateBanner.jsx';
+import UpdateBanner from './components/UpdateBanner.tsx';
 
 const TABS = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
