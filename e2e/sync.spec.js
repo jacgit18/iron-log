@@ -600,6 +600,7 @@ test.describe('the landing page', () => {
     await expect(page.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy.html');
     await expect(page.getByText('aged 16 and over')).toBeVisible();
     await expect(page.locator('#tab-board, #tab-settings, #chk-A-d1s1')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /development user/i })).toHaveCount(0); // the dev-only skip button is not in a production build
     const { violations } = await scan(page);
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });

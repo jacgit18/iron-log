@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import boardLight from '../assets/landing/board.png';
 import boardDark from '../assets/landing/board-dark.png';
+import { setDevUser } from '../sync/devUser.js';
 import { useGoogleSignIn } from '../sync/useGoogleSignIn.js';
 import LegalLinks from './LegalLinks.js';
 
@@ -24,6 +25,13 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
           <button type="button" className="btn primary" disabled={busy} onClick={() => void start()}>{busy ? 'Opening Google…' : 'Sign in with Google'}</button>
         </div>
         {problem && <p className="notice" role="alert"><b>{problem}</b></p>}
+        {/* Development builds only (the production build does not contain this): skip the landing page as the fake dev user. */}
+        {import.meta.env.DEV && (
+          <p className="landing-dev">
+            <button type="button" className="btn" onClick={() => { setDevUser('dev'); window.location.reload(); }}>Skip: continue as the development user</button>
+            <span className="note"> Development builds only. Needs the API running; the real sign-in is the button above.</span>
+          </p>
+        )}
         <p className="landing-fine"><LegalLinks /> Free during the beta. For people aged 16 and over.</p>
       </section>
 

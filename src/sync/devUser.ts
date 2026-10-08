@@ -17,6 +17,14 @@ export function devHeader(name: unknown, dev: boolean): Record<string, string> {
 // when it runs in development. A production build sends nothing, so the API answers 401 and the sync waits.
 export const signIn = (): Record<string, string> => devHeader(LS.get(USER_KEY), import.meta.env.DEV);
 
+/** Development only: remember which fake user this browser is ("off" to be a stranger). Going off also forgets the session, because a
+ *  browser that has seen one skips the landing page. Anything that is not "off" or a plain lowercase name is ignored. */
+export function setDevUser(value: string) {
+  if (value !== 'off' && !NAME.test(value)) return;
+  LS.set(USER_KEY, value);
+  if (value === 'off') forgetSession(LS);
+}
+
 /** Development only. Open the app once with ?devUser=off to be a stranger (the landing page, then real Google sign-in), or
  *  ?devUser=dev (or any name) to go back to a fake dev user. It is remembered, then taken out of the address. */
 export function applyDevUserFromUrl() {
@@ -24,10 +32,7 @@ export function applyDevUserFromUrl() {
   const params = new URLSearchParams(location.search);
   const value = params.get('devUser');
   if (value === null) return;
-  if (value === 'off' || NAME.test(value)) {
-    LS.set(USER_KEY, value);
-    if (value === 'off') forgetSession(LS); // a browser that has seen a session would skip the landing page
-  }
+  setDevUser(value);
   params.delete('devUser');
   const rest = params.toString();
   history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : '') + location.hash);
