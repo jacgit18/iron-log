@@ -3,6 +3,7 @@ import { sql, type Kysely } from 'kysely';
 import { devAuth, inUserTransaction } from './auth.ts';
 import { logSession } from './commands/logSession.ts';
 import { tickCard } from './commands/tickCard.ts';
+import { deleteBodyWeight, logBodyWeight } from './commands/bodyWeight.ts';
 import { deleteEntry } from './commands/deleteEntry.ts';
 import { untickCard } from './commands/untickCard.ts';
 import { parseLimit, parseSince, syncPage } from './commands/sync.ts';
@@ -69,6 +70,20 @@ export function createApp({ db }: AppDeps = {}) {
     const userId = String(res.locals.userId);
     const clientVersion = req.get('x-client-version') ?? null;
     const result = await inUserTransaction(db!, userId, trx => deleteEntry(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/log-body-weight', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => logBodyWeight(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/delete-body-weight', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => deleteBodyWeight(trx, userId, req.body, clientVersion));
     res.status(result.status).json(result.body);
   });
 
