@@ -1,15 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
-import { createAccountClient, type AccountState } from '../../sync/account.js';
-import { signIn as devHeaders } from '../../sync/devUser.js';
+import { useEffect, useState } from 'react';
+import type { AccountState } from '../../sync/account.js';
+import { useGoogleSignIn } from '../../sync/useGoogleSignIn.js';
 import { flag, getSyncApi } from '../../store/useAppStore.js';
 
 // Who is signed in, and the way to sign in or out. Only shown when syncing through the API is switched on (feature-flags.md).
 // Every state is a sentence, not a colour. "Could not check" is never worded as "signed out": the person may well be signed in.
 export default function AccountPanel() {
   const api = getSyncApi();
-  const account = useMemo(() => createAccountClient({ headers: devHeaders }), []);
+  const { client: account, busy, setBusy, start: signIn } = useGoogleSignIn();
   const [state, setState] = useState<AccountState | null>(null);
-  const [busy, setBusy] = useState(false);
 
   // Bumped to ask for the answer again (after signing out); the effect below is the only place that reads it.
   const [checks, setChecks] = useState(0);
@@ -20,14 +19,6 @@ export default function AccountPanel() {
     return () => { current = false; };
   }, [api, account, checks]);
   if (!api) return null;
-
-  const signIn = async () => {
-    setBusy(true);
-    const out = await account.startGoogleSignIn();
-    if (out.ok) { window.location.assign(out.url); return; }
-    setBusy(false);
-    flag(out.reason === 'unreachable' ? 'Could not reach the server to sign in. Try again in a moment.' : 'Sign-in is not available right now.');
-  };
 
   const signOut = async () => {
     setBusy(true);

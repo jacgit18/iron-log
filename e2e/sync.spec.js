@@ -232,3 +232,35 @@ test.describe('the Account panel', () => {
     await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
   });
 });
+
+test.describe('signed out with syncing on (the server answers 401)', () => {
+  const unauth = route => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'sign-in required' }) });
+  const openSignedOut = async page => {
+    await page.addInitScript(() => {
+      localStorage.setItem('ironlog:hidetip', '1');
+      localStorage.setItem('ironlog:hidelocal', '1');
+      localStorage.setItem('ironlog:flag:apiSync', 'true');
+    });
+    await page.route('**/api/**', unauth);
+    await page.goto('/');
+  };
+
+  test('a card asks for sign-in instead of sitting on Loading', async ({ page }) => {
+    await openSignedOut(page);
+    const card = page.getByRole('status').filter({ hasText: 'Sign in to sync' });
+    await expect(card).toBeVisible();
+    await expect(card).toContainText('kept on this device');
+    await expect(card.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
+    await expect(page.locator('.saveflag')).not.toHaveText('Loading…');
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+
+  test('the card goes to Google sign-in', async ({ page }) => {
+    await openSignedOut(page);
+    await page.route('**/api/auth/sign-in/social', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ url: '/google-says-hello' }) }));
+    await page.route('**/google-says-hello', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Google</h1>' }));
+    await page.getByRole('status').filter({ hasText: 'Sign in to sync' }).getByRole('button', { name: 'Sign in with Google' }).click();
+    await expect(page.getByRole('heading', { name: 'Google' })).toBeVisible();
+  });
+});
