@@ -6,7 +6,7 @@ import { tickCard } from './commands/tickCard.ts';
 import { deleteBodyWeight, logBodyWeight } from './commands/bodyWeight.ts';
 import { deleteEntry } from './commands/deleteEntry.ts';
 import { deleteSupplementDay, saveSupplementDay } from './commands/supplementDays.ts';
-import { deleteProgram, deleteStretchWeek, deleteWeek, saveConfig, saveProgram, saveStretchWeek, saveWeek } from './commands/documents.ts';
+import { deleteLibraryItem, deleteProgram, deleteStretchWeek, deleteWeek, saveConfig, saveLibraryItem, saveProgram, saveStretchWeek, saveWeek } from './commands/documents.ts';
 import { untickCard } from './commands/untickCard.ts';
 import { parseLimit, parseSince, syncPage } from './commands/sync.ts';
 import type { DB } from './db/types.ts';
@@ -149,6 +149,20 @@ export function createApp({ db }: AppDeps = {}) {
     const userId = String(res.locals.userId);
     const clientVersion = req.get('x-client-version') ?? null;
     const result = await inUserTransaction(db!, userId, trx => saveConfig(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/save-library-item', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => saveLibraryItem(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/delete-library-item', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => deleteLibraryItem(trx, userId, req.body, clientVersion));
     res.status(result.status).json(result.body);
   });
 

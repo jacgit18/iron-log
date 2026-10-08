@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BUILTIN } from '../lib/data.js';
-import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek, validateSaveSupplementDay, validateDeleteSupplementDay, validateSaveProgram, validateDeleteProgram, validateSaveConfig } from './commands.js';
+import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek, validateSaveSupplementDay, validateDeleteSupplementDay, validateSaveProgram, validateDeleteProgram, validateSaveConfig, validateSaveLibraryItem, validateDeleteLibraryItem } from './commands.js';
 
 describe('validateLogSession', () => {
   it('accepts an exercise id with a valid entry and cleans the entry', () => {
@@ -195,5 +195,35 @@ describe('validateSaveConfig', () => {
     expect(validateSaveConfig({})).toBeNull();
     expect(validateSaveConfig({ config: [] })).toBeNull();
     expect(validateSaveConfig(null)).toBeNull();
+  });
+});
+
+describe('validateSaveLibraryItem', () => {
+  const item = { id: 'v1', name: 'My cut', from: 'A', at: '2026-10-07T12:00:00Z', prog: structuredClone(BUILTIN.A) };
+  it('accepts a saved version and cleans it, with the program padded to seven days', () => {
+    const out = validateSaveLibraryItem({ item: { ...item, junk: 1, auto: true } });
+    expect(out.item).toMatchObject({ id: 'v1', name: 'My cut', from: 'A', at: '2026-10-07T12:00:00Z', auto: true });
+    expect(out.item.junk).toBeUndefined();
+    expect(out.item.prog.days).toHaveLength(7);
+  });
+  it('gives a nameless version the default name', () => {
+    expect(validateSaveLibraryItem({ item: { ...item, name: '' } }).item.name).toBe('Saved version');
+  });
+  it('refuses a missing item, a bad id and a program with the wrong shape', () => {
+    expect(validateSaveLibraryItem({})).toBeNull();
+    expect(validateSaveLibraryItem({ item: { ...item, id: '' } })).toBeNull();
+    expect(validateSaveLibraryItem({ item: { ...item, id: 'a b' } })).toBeNull();
+    expect(validateSaveLibraryItem({ item: { ...item, prog: { days: 'x' } } })).toBeNull();
+    expect(validateSaveLibraryItem(null)).toBeNull();
+  });
+});
+
+describe('validateDeleteLibraryItem', () => {
+  it('accepts an id and refuses a missing, empty or oversized one', () => {
+    expect(validateDeleteLibraryItem({ id: 'v1', junk: 1 })).toEqual({ id: 'v1' });
+    expect(validateDeleteLibraryItem({})).toBeNull();
+    expect(validateDeleteLibraryItem({ id: '' })).toBeNull();
+    expect(validateDeleteLibraryItem({ id: 'x'.repeat(101) })).toBeNull();
+    expect(validateDeleteLibraryItem(null)).toBeNull();
   });
 });

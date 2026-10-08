@@ -2,8 +2,8 @@
    One module for what the phone sends and the API accepts. Each command has a name, an input type and a validator;
    the offline queue stores a Command and replays it unchanged. Framework-free: client and server import it. */
 
-import type { BodyEntry, Boost, LogEntry, Program, ProgKey, StretchWeek, Week } from '../types.ts';
-import { LIMITS, normBody, normEntry, normProgram, validDate } from './validate.js';
+import type { BodyEntry, Boost, LibraryItem, LogEntry, Program, ProgKey, StretchWeek, Week } from '../types.ts';
+import { LIMITS, normBody, normEntry, normLibrary, normProgram, validDate } from './validate.js';
 import { normConfigDoc, type ConfigDoc } from './config.js';
 import { normStretchWeek } from './stretchWeek.js';
 import { withAllDays } from '../lib/data.js';
@@ -204,4 +204,29 @@ export function validateSaveConfig(input: unknown): SaveConfigInput | null {
   if (!input || typeof input !== 'object') return null;
   const config = normConfigDoc((input as Record<string, unknown>).config);
   return config ? { config } : null;
+}
+
+/** Save one saved version of a program, keyed by the item's own id. baseVersion is the version the user saw, or null
+ *  when the phone has never seen a row for that id. */
+export interface SaveLibraryItemInput {
+  item: LibraryItem;
+}
+export type SaveLibraryItemCommand = Command<'save-library-item', SaveLibraryItemInput>;
+
+export function validateSaveLibraryItem(input: unknown): SaveLibraryItemInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const [clean] = normLibrary([(input as Record<string, unknown>).item]);
+  return clean ? { item: { ...clean, prog: withAllDays(clean.prog) } } : null;
+}
+
+/** Delete one saved version by id. baseVersion is the version the user saw (never null). */
+export interface DeleteLibraryItemInput {
+  id: string;
+}
+export type DeleteLibraryItemCommand = Command<'delete-library-item', DeleteLibraryItemInput>;
+
+export function validateDeleteLibraryItem(input: unknown): DeleteLibraryItemInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { id } = input as Record<string, unknown>;
+  return typeof id === 'string' && id && id.length <= LIMITS.text.id ? { id } : null;
 }
