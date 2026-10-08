@@ -7,7 +7,7 @@ import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './
 import type { Auth } from './auth/betterAuth.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { originGuard } from './originGuard.ts';
-import { rateLimit, type Limit } from './rateLimit.ts';
+import { byUser, rateLimit, type Limit } from './rateLimit.ts';
 import { securityHeaders } from './securityHeaders.ts';
 import { AUTH_CHECK_PAGE } from './dev/authCheckPage.ts';
 import { importLegacy } from './commands/importLegacy.ts';
@@ -35,9 +35,21 @@ export interface AppDeps {
   trustProxy?: number | boolean;
   /** Limits on /api/auth per client IP: starting a sign-in is the expensive, abusable call. Defaults below. */
   authLimits?: { signIn: Limit; other: Limit };
+  /** Limits on the rest of the API (see LIMITS). They are generous: a phone back online after two days sends a burst. */
+  limits?: Partial<typeof LIMITS>;
 }
 
 const AUTH_LIMITS = { signIn: { max: 10, windowMs: 60_000 }, other: { max: 120, windowMs: 60_000 } };
+
+// One signed-in phone sends a pull a minute and a few commands per change, and a burst when it comes back online. These stop a script
+// or a loop, not a person. A limited call gets 429 and Retry-After, which the phone treats as "wait and try again", never "drop it".
+// `api` is per client address and is checked before the session lookup, so anonymous calls cannot cost database round trips.
+const LIMITS = {
+  api: { max: 1200, windowMs: 60_000 } as Limit,
+  commands: { max: 600, windowMs: 60_000 } as Limit,
+  sync: { max: 120, windowMs: 60_000 } as Limit,
+  importLegacy: { max: 10, windowMs: 60 * 60_000 } as Limit,
+};
 
 const NO_CACHE = 'no-cache';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -53,7 +65,8 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides }: AppDeps = {}) {
+  const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
   app.use(securityHeaders());
@@ -95,8 +108,13 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, allowe
   // A page for trying real sign-in by hand while developing (Google on a desktop, later the phone). Not served anywhere else.
   if (auth && process.env.NODE_ENV === 'development') app.get('/dev/auth', (_req, res) => void res.type('html').send(AUTH_CHECK_PAGE));
 
-  // Everything below this line needs a signed-in user.
+  // Everything below this line needs a signed-in user. The per-address limit comes first, so an anonymous flood never reaches the database.
+  app.use('/api', rateLimit(limits.api));
   app.use('/api', db ? sessionAuth(db, auth) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
+  // Per signed-in user, after the lookup.
+  app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
+  app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));
+  app.use('/api/sync', rateLimit(limits.sync, undefined, byUser));
   app.get('/api/me', async (_req, res) => {
     const userId = String(res.locals.userId);
     const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string }>`select current_setting('app.user_id') as id`.execute(trx)).rows[0]);
