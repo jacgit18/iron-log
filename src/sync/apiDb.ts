@@ -1,11 +1,13 @@
 import { backoffMs } from './backoff.js';
 import { documentFor, parsePath, pathsOf, type PathKind } from './documents.js';
+import { entryId } from '../lib/export.js';
 import { createMirrorStore, type Storage } from './mirrorStore.js';
+import { tickedBeatsSkipped } from './merge.js';
 import { createOutbox, isDeleted, type QuarantineEntry } from './outbox.js';
 import { planCommands, planDelete } from './plan.js';
 import { pullAll } from './pull.js';
 import type { FailureClass, Transport } from './transport.js';
-import type { PlannedCommand } from './types.js';
+import { mirrorId, type PlannedCommand } from './types.js';
 
 /* ---------- The database the store talks to, backed by the API ----------
    The store reads and writes through a small Firestore-like handle: db.doc(path).set / delete / onSnapshot and
@@ -42,6 +44,15 @@ export interface SyncStatus {
   persisted: boolean;
   /** True once a pull has finished on this device, so the app can show the user's data. */
   ready: boolean;
+  /** Things that happened because another device changed something first, worth telling the user. Newest last. */
+  notices: Notice[];
+}
+
+export interface Notice {
+  id: number;
+  path: string;
+  text: string;
+  at: string;
 }
 
 export interface ApiDbOptions {
@@ -86,9 +97,14 @@ export function createApiDb(options: ApiDbOptions) {
   let lastPullAt: number | null = null;
   let lastSyncedAt: number | null = null;
   const statusListeners = new Set<(s: SyncStatus) => void>();
+  let notices: Notice[] = [];
+  let noticeId = 0;
+  const note = (path: string, text: string) => {
+    notices = [...notices, { id: ++noticeId, path, text, at: new Date(now()).toISOString() }].slice(-20);
+  };
   const status = (): SyncStatus => ({
     state, pausedBecause, pendingPaths: outbox.paths(), quarantined: outbox.quarantined().length, lastPullAt, lastSyncedAt,
-    persisted: mirror.persisted() && outbox.persisted(), ready: mirror.hasPulled(),
+    persisted: mirror.persisted() && outbox.persisted(), ready: mirror.hasPulled(), notices,
   });
   const announce = () => { const s = status(); statusListeners.forEach(cb => { try { cb(s); } catch { /* a listener must not stop sync */ } }); };
   // Calls waiting for the sync to pause. A write that is safe on this device does not need to wait for a server that
@@ -191,8 +207,17 @@ export function createApiDb(options: ApiDbOptions) {
       setState('paused', out.class);
     });
   }
+  // One pull at a time. A caller that asks while one is running may be waiting for something that happened after that pull
+  // began, so it gets one more pull after it (shared by everyone who asks meanwhile), never the running one's answer.
   let pulling: Promise<void> | null = null;
-  const syncNow = (): Promise<void> => (pulling ??= pull().finally(() => { pulling = null; }));
+  let followUp: Promise<void> | null = null;
+  const syncNow = (): Promise<void> => {
+    if (!pulling) {
+      pulling = pull().finally(() => { pulling = null; });
+      return pulling;
+    }
+    return (followUp ??= pulling.then(() => { followUp = null; return syncNow(); }));
+  };
 
   /* ---------- sending ---------- */
   const planKey = (cmds: PlannedCommand[]) => cmds.map(c => `${c.name}|${c.rowKey}|${c.baseVersion}`).join(';');
@@ -208,6 +233,8 @@ export function createApiDb(options: ApiDbOptions) {
   async function flushPath(path: string, onPause: () => void): Promise<{ refused?: string }> {
     const kind = parsePath(path) as PathKind;
     const touched = new Set<string>();
+    const adjusted = new Set<string>(); // paths whose document this changed to match the server, so the app must be told
+    const kept = new Set<string>(); // rows another device changed after this phone saw them, so a delete of them is skipped
     let attempt = 0; // consecutive waits, for the backoff
     let conflicts = 0;
     let passes = 0; // passes in which every command was accepted
@@ -215,13 +242,14 @@ export function createApiDb(options: ApiDbOptions) {
     for (;;) {
       const sent = outbox.get(path);
       if (sent === undefined) return {}; // a newer call already took care of it
-      const cmds = isDeleted(sent) ? planDelete(kind, mirror.rows()) : planCommands(kind, sent, mirror.rows());
+      const cmds = isDeleted(sent) ? planDelete(kind, mirror.rows(), kept) : planCommands(kind, sent, mirror.rows(), kept);
       if (!cmds.length) {
         outbox.done(path, sent);
         lastSyncedAt = now();
-        touched.delete(path);
+        adjusted.forEach(p => touched.add(p));
+        if (!adjusted.has(path)) touched.delete(path);
         setState('idle');
-        emitPaths(touched); // anything else the server changed on the way (the shared config row)
+        emitPaths(touched); // anything else the server changed on the way (the shared config row), and this path if it was adjusted
         return {};
       }
       // Every command of the last pass was accepted and the same ones are still needed: the server is answering but not
@@ -236,14 +264,48 @@ export function createApiDb(options: ApiDbOptions) {
         if (out.ok) {
           attempt = 0;
           mirror.apply(c.table, out.rows).paths.forEach(p => touched.add(p));
+          // A check-off that was not made because the card already has one (another phone ticked it, or a session was
+          // logged for it): the server's row is the one check-off, so it takes the place of this phone's own in the
+          // document. (Dropping this phone's tick without adding the server's would make the next plan delete it.)
+          if (c.name === 'tick-card' && out.rows.length === 1 && String(out.rows[0]!.client_id) !== c.clientId) {
+            const doc = outbox.get(path) as { entries?: unknown[] } | undefined;
+            const theirs = mirror.rows().get(mirrorId('log_entries', String(out.rows[0]!.client_id)));
+            if (doc && Array.isArray(doc.entries) && theirs && theirs.table === 'log_entries' && !theirs.deleted) {
+              const entries = doc.entries.filter(e => entryId(e as never) !== c.rowKey);
+              if (!entries.some(e => entryId(e as never) === theirs.key)) entries.push(theirs.entry);
+              outbox.put(path, { ...doc, entries });
+              adjusted.add(path);
+              note(path, 'This card was already checked off or logged on another device, so your tick was not added.');
+              again = true;
+              break;
+            }
+          }
           continue;
         }
         if (out.class === 'refused') return refuse(path, sent, `The server would not take this (${out.reason}).`);
         if (out.class === 'conflict') {
           if (out.reason === 'deleted') return refuse(path, sent, 'This was deleted on another device after you changed it.');
           if (out.reason !== 'stale') return refuse(path, sent, `The server does not have what this was based on (${out.reason}).`);
-          if (out.current) mirror.apply(c.table, [out.current]);
+          if (out.current) mirror.apply(c.table, [out.current]).paths.forEach(p => touched.add(p));
+          if (c.name.startsWith('delete-')) {
+            // A delete must not win silently over an edit made after the version it was based on (FM-05): keep the edit.
+            kept.add(mirrorId(c.table, c.rowKey));
+            adjusted.add(path);
+            note(path, 'Something you deleted was changed on another device first, so it was kept.');
+            again = true;
+            break;
+          }
           if (++conflicts > MAX_CONFLICTS) return refuse(path, sent, 'This kept changing on another device, so it was set aside.');
+          if (c.table === 'weeks') {
+            // The one merge rule for a week: a card ticked on the other device beats this device's skip.
+            const theirs = mirror.rows().get(mirrorId('weeks', c.rowKey));
+            const merged = theirs && theirs.table === 'weeks' ? tickedBeatsSkipped(sent, theirs.week) : sent;
+            if (merged !== sent) {
+              outbox.put(path, merged);
+              adjusted.add(path);
+              note(path, 'A card you skipped was ticked on another device, so it is shown as done.');
+            }
+          }
           again = true; // the mirror now holds the newer row: plan again
           break;
         }
@@ -329,6 +391,8 @@ export function createApiDb(options: ApiDbOptions) {
     status,
     onStatus(cb: (s: SyncStatus) => void) { statusListeners.add(cb); return () => { statusListeners.delete(cb); }; },
     quarantined: (): readonly QuarantineEntry[] => outbox.quarantined(),
+    /** The user has seen these. */
+    clearNotices: () => { notices = []; announce(); },
     /** Only the user lets a refused write go. */
     discard: (id: string) => { const ok = outbox.discard(id); if (ok) announce(); return ok; },
   };

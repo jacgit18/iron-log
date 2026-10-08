@@ -6,6 +6,7 @@ import { createApiDb } from '../../src/sync/apiDb.ts';
 import { createTransport, type Transport } from '../../src/sync/transport.ts';
 import { createApp } from '../app.ts';
 import type { DB } from '../db/types.ts';
+import { eventually } from '../../src/sync/testing.ts';
 import { startTestDatabase } from '../test/postgres.ts';
 
 // The sync adapter against the real API on a real Postgres: the spec's reconciliation invariant (section 5). After any
@@ -46,7 +47,6 @@ const offline = (real: Transport, failures: { n: number }): Transport => ({
   command: async (name, env) => (failures.n-- > 0 ? { ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'offline' } : real.command(name, env)),
   pull: async (since, limit) => (failures.n-- > 0 ? { ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'offline' } : real.pull(since, limit)),
 });
-const settle = (ms = 40) => new Promise(r => setTimeout(r, ms));
 
 const entry = (id: string, over: object = {}) => ({ id, d: '2026-10-05', ph: 'strength', w: 135, s: 3, r: 5, ...over });
 const tickOf = (id: string, slot = 's1', over: object = {}) => entry(id, { auto: true, slot, wk: '2026-10-04', ...over });
@@ -70,7 +70,7 @@ describe('one phone', () => {
 
     const b = phone();
     b.api.start();
-    await settle();
+    await b.api.syncNow();
     expect(ids(await b.get('logs/squat'))).toEqual(['S1', 'T1']);
     expect(await b.get('weeks/2026-10-04')).toMatchObject({ done: { 'A-d1s1:0': true } });
     expect((await b.get('body/main')).entries).toEqual([{ wk: '2026-10-04', d: '2026-10-07', w: 180.5 }]);
@@ -119,7 +119,7 @@ describe('going offline and coming back', () => {
     expect(await serverEntries()).toEqual([]);
     failures.n = 0; // the network is back
     await a.api.resume();
-    await settle(100);
+    await eventually(() => expect(a.api.status().pendingPaths).toEqual([]));
     expect((await serverEntries()).map(r => [r.client_id, r.weight_lb])).toEqual([['S2', '150.0000'], ['S3', '135.0000']]);
     expect(a.api.status()).toMatchObject({ state: 'idle', pendingPaths: [], quarantined: 0 });
   });
@@ -135,7 +135,7 @@ describe('going offline and coming back', () => {
     const after = phone('owner', storage);
     expect(ids(await after.get('logs/squat'))).toEqual([]); // not pulled yet, and the app is told nothing until it is
     after.api.start();
-    await settle(100);
+    await eventually(() => expect(after.api.status().pendingPaths).toEqual([]));
     expect((await serverEntries()).map(r => r.client_id)).toEqual(['S1', 'S2']);
     expect(await db.selectFrom('weeks').select('data').executeTakeFirstOrThrow()).toMatchObject({ data: { prog: 'B' } });
     expect(after.api.status().pendingPaths).toEqual([]);
@@ -152,7 +152,7 @@ describe('going offline and coming back', () => {
     expect((await serverEntries()).map(r => r.client_id)).toEqual(['S1']);
     const after = phone('owner', storage);
     after.api.start();
-    await settle(100);
+    await eventually(() => expect(after.api.status().pendingPaths).toEqual([]));
     expect((await serverEntries()).map(r => r.client_id)).toEqual(['S1', 'S2', 'S3']);
     expect(await db.selectFrom('log_entries').select('version').execute()).toEqual([{ version: 1 }, { version: 1 }, { version: 1 }]);
   });
@@ -171,7 +171,7 @@ describe('going offline and coming back', () => {
     const a = phone('owner', memory(), flaky);
     a.api.start();
     await a.set('logs/squat', logs(entry('S1')));
-    await settle(100);
+    await eventually(() => expect(a.api.status().pendingPaths).toEqual([]));
     expect(await db.selectFrom('log_entries').select(['client_id', 'version']).execute()).toEqual([{ client_id: 'S1', version: 1 }]);
     expect(a.api.status()).toMatchObject({ pendingPaths: [], quarantined: 0 });
   });
@@ -183,7 +183,7 @@ describe('two phones', () => {
     const b = phone();
     a.api.start();
     b.api.start();
-    await settle();
+    await Promise.all([a.api.syncNow(), b.api.syncNow()]);
     await a.set('logs/squat', logs(entry('S1')));
     await b.api.syncNow();
     expect(ids(await b.get('logs/squat'))).toEqual(['S1']);
@@ -198,7 +198,7 @@ describe('two phones', () => {
     const b = phone();
     a.api.start();
     b.api.start();
-    await settle();
+    await Promise.all([a.api.syncNow(), b.api.syncNow()]);
     await a.set('logs/squat', logs(entry('S1')));
     await b.api.syncNow();
     await a.set('logs/squat', logs(entry('S1', { w: 140 })));
@@ -216,7 +216,7 @@ describe('two phones', () => {
     const b = phone();
     a.api.start();
     b.api.start();
-    await settle();
+    await Promise.all([a.api.syncNow(), b.api.syncNow()]);
     await a.set('logs/squat', logs(entry('S1'), entry('S2')));
     await b.api.syncNow();
     await a.set('logs/squat', logs(entry('S2'))); // a deletes S1
@@ -246,7 +246,7 @@ describe('the reconciliation invariant', () => {
     const rand = rng(seed);
     const phones = [phone(), phone()];
     phones.forEach(p => p.api.start());
-    await settle();
+    await Promise.all(phones.map(p => p.api.syncNow()));
     const exercises = ['squat', 'bench'];
     const docs: { entries: any[] }[] = [{ entries: [] }, { entries: [] }];
     let n = 0;
