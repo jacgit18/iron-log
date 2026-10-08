@@ -1,7 +1,8 @@
 name: Tests
 
 # Lints, runs the unit tests and the browser (Playwright) tests on every pull request, so problems show up
-# before merging instead of stopping the deploy afterwards.
+# before merging instead of stopping the deploy afterwards. The database job checks the migrations on a throwaway
+# Postgres: they apply, roll back to an empty schema, apply again, and server/db/types.ts matches them.
 on:
   pull_request:
   workflow_dispatch:
@@ -26,6 +27,33 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ironlog
+          POSTGRES_PASSWORD: ironlog
+          POSTGRES_DB: ironlog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ironlog"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:check
+        env:
+          DATABASE_URL: postgres://ironlog:ironlog@127.0.0.1:5432/ironlog?sslmode=disable
 
   e2e:
     runs-on: ubuntu-latest
