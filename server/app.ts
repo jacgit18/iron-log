@@ -6,7 +6,7 @@ import { tickCard } from './commands/tickCard.ts';
 import { deleteBodyWeight, logBodyWeight } from './commands/bodyWeight.ts';
 import { deleteEntry } from './commands/deleteEntry.ts';
 import { deleteSupplementDay, saveSupplementDay } from './commands/supplementDays.ts';
-import { deleteStretchWeek, deleteWeek, saveStretchWeek, saveWeek } from './commands/documents.ts';
+import { deleteProgram, deleteStretchWeek, deleteWeek, saveConfig, saveProgram, saveStretchWeek, saveWeek } from './commands/documents.ts';
 import { untickCard } from './commands/untickCard.ts';
 import { parseLimit, parseSince, syncPage } from './commands/sync.ts';
 import type { DB } from './db/types.ts';
@@ -128,6 +128,27 @@ export function createApp({ db }: AppDeps = {}) {
     const userId = String(res.locals.userId);
     const clientVersion = req.get('x-client-version') ?? null;
     const result = await inUserTransaction(db!, userId, trx => deleteSupplementDay(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/save-program', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => saveProgram(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/delete-program', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => deleteProgram(trx, userId, req.body, clientVersion));
+    res.status(result.status).json(result.body);
+  });
+
+  app.post('/api/commands/save-config', async (req, res) => {
+    const userId = String(res.locals.userId);
+    const clientVersion = req.get('x-client-version') ?? null;
+    const result = await inUserTransaction(db!, userId, trx => saveConfig(trx, userId, req.body, clientVersion));
     res.status(result.status).json(result.body);
   });
 
