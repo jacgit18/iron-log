@@ -3,7 +3,8 @@ name: Tests
 # Lints, runs the unit tests and the browser (Playwright) tests on every pull request, so problems show up
 # before merging instead of stopping the deploy afterwards. The database job checks the migrations on a throwaway
 # Postgres: they apply, roll back to an empty schema, apply again, and server/db/types.ts matches them. The docker job
-# builds the production image and checks that it starts and serves the API and the app.
+# builds the production image and checks that it starts and serves the API and the app. The e2e-sync job runs the app with
+# syncing on against the real API and a real Postgres, nothing mocked.
 on:
   pull_request:
   workflow_dispatch:
@@ -74,6 +75,43 @@ jobs:
       - run: npm run db:check
         env:
           DATABASE_URL: postgres://ironlog:ironlog@127.0.0.1:5432/ironlog?sslmode=disable
+
+  e2e-sync:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ironlog
+          POSTGRES_PASSWORD: ironlog
+          POSTGRES_DB: ironlog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ironlog"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Makes and drops its own scratch database on this server.
+      - run: npm run e2e:sync
+        env:
+          DATABASE_URL: postgres://ironlog:ironlog@127.0.0.1:5432/ironlog?sslmode=disable
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-sync
+          path: |
+            playwright-report-sync
+            test-results-sync
+          retention-days: 7
 
   e2e:
     runs-on: ubuntu-latest
