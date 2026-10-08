@@ -121,11 +121,32 @@ describe('the mirror store', () => {
     expect(createMirrorStore(storage).rows().size).toBe(2);
   });
 
+  it('knows whether a pull has ever finished, and keeps that across a reload', () => {
+    const storage = memoryStorage();
+    const a = createMirrorStore(storage);
+    expect(a.hasPulled()).toBe(false);
+    a.apply('log_entries', [logServerRow('L1')]); // a command's answer is not a pull
+    expect(a.hasPulled()).toBe(false);
+    a.applyPage({}, '0'); // an empty account's first pull still counts
+    expect(a.hasPulled()).toBe(true);
+    expect(createMirrorStore(storage).hasPulled()).toBe(true);
+  });
+
+  it('a copy that had to be repaired has not pulled', () => {
+    const storage = memoryStorage();
+    createMirrorStore(storage).applyPage({ log_entries: [logServerRow('L1')] }, '7');
+    const saved = storage.get(MIRROR_KEY) as { rows: unknown[] };
+    saved.rows.push({ table: 'log_entries', key: 'broken' });
+    storage.set(MIRROR_KEY, saved);
+    expect(createMirrorStore(storage).hasPulled()).toBe(false);
+  });
+
   it('clear forgets everything, in memory and in storage', () => {
     const storage = memoryStorage();
     const s = createMirrorStore(storage);
     s.applyPage({ log_entries: [logServerRow('L1')] }, '4');
     s.clear();
+    expect(s.hasPulled()).toBe(false);
     expect(s.rows().size).toBe(0);
     expect(s.cursor()).toBe('0');
     expect(storage.data.has(MIRROR_KEY)).toBe(false);

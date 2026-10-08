@@ -53,6 +53,7 @@ export function createMirrorStore(storage: Storage) {
   let cursor = '0';
   let persisted = true;
   let dropped = 0;
+  let pulled = false;
 
   // Read what an earlier session saved. Anything unreadable means "start from nothing and pull again", never a crash.
   const saved = storage.get(MIRROR_KEY);
@@ -62,12 +63,13 @@ export function createMirrorStore(storage: Storage) {
       else dropped++;
     }
     cursor = dropped ? '0' : saved.cursor;
+    pulled = !dropped && saved.pulled === true;
   } else if (saved != null) {
     dropped = 1; // present but not ours: ignore it
   }
 
   const persist = () => {
-    persisted = storage.set(MIRROR_KEY, { v: FORMAT, cursor, rows: [...rows.values()] });
+    persisted = storage.set(MIRROR_KEY, { v: FORMAT, cursor, pulled, rows: [...rows.values()] });
   };
 
   function diff(before: Mirror, after: Mirror): Applied {
@@ -86,6 +88,9 @@ export function createMirrorStore(storage: Storage) {
     cursor: () => cursor,
     /** False when the browser refused the last write: the copy is only in memory and a reload would lose it. */
     persisted: () => persisted,
+    /** True once a pull has finished on this device. Until then the mirror may be missing rows the server has, so the app
+     *  must not show it as the user's data. */
+    hasPulled: () => pulled,
     /** True when what was in storage could not be used, so a full pull is on its way. */
     recovered: () => dropped > 0,
 
@@ -103,6 +108,7 @@ export function createMirrorStore(storage: Storage) {
       const before = rows;
       for (const table of TABLES) if (byTable[table]?.length) rows = applyRows(rows, table, byTable[table]!);
       cursor = nextCursor;
+      pulled = true;
       persist();
       return diff(before, rows);
     },
@@ -112,6 +118,7 @@ export function createMirrorStore(storage: Storage) {
       rows = new Map();
       cursor = '0';
       dropped = 0;
+      pulled = false;
       storage.remove(MIRROR_KEY);
       persisted = true;
     },

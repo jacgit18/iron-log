@@ -9,6 +9,8 @@ import {
   planFix, isFinished, autoEntry, newEntryId, normExperiments,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
+import { FLAG_KEY, apiSyncEnabled } from '../sync/flag.js';
+import type { ApiDb } from '../sync/apiDb.js';
 import { editorSlice } from './editorSlice.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
@@ -31,6 +33,7 @@ import { commitFiles, readFile, validRepo } from '../lib/github.js';
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
 // binding from the original app (window.claude.use('db')); without it everything uses localStorage.
 let db: any = null; // the host's database handle (Firestore-like), or null for local storage
+let syncApi: ApiDb | null = null; // set when the handle is the API-backed one (flag on)
 let unsubWeek: (() => void) | null = null;
 let flagT: ReturnType<typeof setTimeout> | null = null, flagHold: boolean | number = 0;
 let initStarted = false;
@@ -885,6 +888,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     (async () => { try { set({ dl: host ? await host.use('downloads') : blobSave }); } catch { set({ dl: null }); } })();
     (async () => { try { set({ mcp: host ? await host.use('mcp') : null }); } catch { set({ mcp: null }); } })();
     try { db = (window.claude && window.claude.use) ? await window.claude.use('db') : null; } catch { db = null; }
+    // With the flag on (and no host database), the same handle is backed by the API: see src/sync/apiDb.ts.
+    if (!db && apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC)) {
+      try {
+        const { createBrowserApiDb } = await import('../sync/browser.js');
+        syncApi = createBrowserApiDb();
+        db = syncApi;
+        syncApi.start();
+      } catch (err) { console.error('SYNC INIT FAILED', err); db = null; syncApi = null; } // the app still works from this browser's storage
+    }
     if (!db) {
       const cfgRaw = LS.get('config/main');
       const logs: Logs = {};
@@ -1036,3 +1048,6 @@ function subscribeWeek() {
     first = false;
   }, () => flag('Couldn’t load this week. Reload the page.'));
 }
+
+/** The sync handle (status, the quarantine) when syncing through the API is on, else null. */
+export const getSyncApi = () => syncApi;
