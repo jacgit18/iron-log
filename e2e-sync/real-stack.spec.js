@@ -109,3 +109,61 @@ test('a user sees only their own data', async ({ browser, user }) => {
   await mine.close();
   await other.close();
 });
+
+// ---- Phase E: the data a browser held before accounts ----
+
+const oldDocs = {
+  'logs/hack': { schema: 1, entries: [{ d: '2026-09-14', ph: 'strength', w: 200, s: 3, r: 8 }, { d: '2026-09-21', ph: 'strength', w: 210, s: 3, r: 8 }] },
+  'body/main': { entries: [{ wk: '2026-09-13', d: '2026-09-14', w: 181 }] },
+  'weeks/2026-09-13': { prog: 'A', done: {}, skipped: {}, moved: {}, ph: {}, warm: {} },
+};
+
+test('data from before accounts is uploaded once, all of it, and a second phone sees it', async ({ browser, user }) => {
+  const a = await newPhone(browser, user, oldDocs);
+  const page = await a.open();
+  const card = page.getByRole('status').filter({ hasText: 'Upload this device’s data?' });
+  await expect(card).toBeVisible();
+  await expect(card).toContainText('2 logged sessions');
+  await expect(card).toContainText('1 body weight');
+  expect(await server.counts(user)).toEqual({ entries: 0, body: 0, weeks: 0 }); // nothing goes until the user says so
+
+  await card.getByRole('button', { name: 'Upload' }).click();
+  await expect(card).toHaveCount(0);
+  expect(await server.counts(user)).toEqual({ entries: 2, body: 1, weeks: 1 });
+
+  // The phone shows what it uploaded, and the old copy is still on the device.
+  await page.locator('#tab-progress').click();
+  await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
+  await expect(page.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(2);
+  expect(await page.evaluate(() => localStorage.getItem('ironlog:logs/hack'))).toContain('"w":210');
+
+  // Reloading does not offer it again, and a second phone with nothing of its own sees the same.
+  await page.reload();
+  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.getByRole('status').filter({ hasText: 'Upload this device’s data?' })).toHaveCount(0);
+  const b = await newPhone(browser, user);
+  const second = await b.open();
+  await second.locator('#tab-progress').click();
+  await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
+  await expect(second.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(2);
+  expect(await server.counts(user)).toEqual({ entries: 2, body: 1, weeks: 1 });
+  await a.close();
+  await b.close();
+});
+
+test('once something new is logged the upload is no longer possible, and the card says so instead of failing', async ({ browser, user }) => {
+  const a = await newPhone(browser, user, oldDocs);
+  const page = await a.open();
+  await expect(page.getByRole('status').filter({ hasText: 'Upload this device’s data?' })).toBeVisible();
+  await page.locator('#chk-A-d1s1').check();
+  const info = page.getByRole('status').filter({ hasText: 'Old data on this device' });
+  await expect(info).toBeVisible();
+  await expect(info).toContainText('cannot be added automatically');
+  await expect.poll(async () => (await server.counts(user)).entries).toBe(1); // only the new tick; the old data was not mixed in
+  await info.getByRole('button', { name: 'Got it' }).click();
+  await expect(info).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.getByRole('status').filter({ hasText: /Old data on this device|Upload this device/ })).toHaveCount(0);
+  await a.close();
+});

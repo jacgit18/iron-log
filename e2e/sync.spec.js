@@ -342,3 +342,64 @@ test.describe('another account signs in on a device that holds the first one’s
     expect(await page.evaluate(() => localStorage.getItem('ironlog:sync/pending'))).toContain('ann-1');
   });
 });
+
+// ---- Phase E: the card that offers the one-time upload of data from before accounts ----
+
+test.describe('old data on the device (the upload card)', () => {
+  const seed = async page => page.addInitScript(() => {
+    localStorage.setItem('ironlog:logs/hack', JSON.stringify({ schema: 1, entries: [{ d: '2026-09-14', ph: 'strength', w: 200, s: 3, r: 8 }] }));
+    localStorage.setItem('ironlog:body/main', JSON.stringify({ entries: [{ wk: '2026-09-13', d: '2026-09-14', w: 181 }] }));
+  });
+  const offer = page => page.getByRole('status').filter({ hasText: 'Upload this device’s data?' });
+  const importTo = answer => async page => { await page.route('**/api/commands/import-legacy', answer); };
+
+  test('offers the upload with what it holds, has no accessibility violations, and sends nothing until asked', async ({ page }) => {
+    let sent = 0;
+    await seed(page);
+    await importTo(route => { sent++; return json(201, { imported: {}, total: 0 })(route); })(page);
+    await openSynced(page);
+    await expect(offer(page)).toBeVisible();
+    await expect(offer(page)).toContainText('1 logged session, 1 body weight');
+    await expect(offer(page)).toContainText('Nothing is deleted from this device');
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+    expect(sent).toBe(0);
+    await offer(page).getByRole('button', { name: 'Not now' }).click();
+    await expect(offer(page)).toHaveCount(0);
+    expect(sent).toBe(0);
+  });
+
+  test('sends every row in one request, with no base version and the old ids kept', async ({ page }) => {
+    let body;
+    await seed(page);
+    await importTo(route => { body = route.request().postDataJSON(); return json(201, { imported: { 'log-session': 1, 'log-body-weight': 1 }, total: 2 })(route); })(page);
+    await openSynced(page);
+    await offer(page).getByRole('button', { name: 'Upload' }).click();
+    await expect(offer(page)).toHaveCount(0);
+    expect(body.baseVersion).toBeNull();
+    expect(body.input.commands.map(c => c.name).sort()).toEqual(['log-body-weight', 'log-session']);
+    expect(JSON.stringify(body)).not.toMatch(/ghBackup|token/);
+  });
+
+  test('when the server refuses, says where and that nothing was uploaded, and keeps the offer', async ({ page }) => {
+    await seed(page);
+    await importTo(json(422, { refused: 'invalid-input', at: 1, command: 'log-body-weight' }))(page);
+    await openSynced(page);
+    await offer(page).getByRole('button', { name: 'Upload' }).click();
+    await expect(offer(page)).toContainText('The server would not take row 2 (log-body-weight): invalid-input. Nothing was uploaded.');
+    await expect(offer(page).getByRole('button', { name: 'Upload' })).toBeEnabled();
+  });
+
+  test('when the account already has data, says so instead of failing', async ({ page }) => {
+    await seed(page);
+    await importTo(json(409, { refused: 'account-not-empty' }))(page);
+    await openSynced(page);
+    await offer(page).getByRole('button', { name: 'Upload' }).click();
+    await expect(offer(page)).toContainText('Your account already has data, so nothing was uploaded.');
+  });
+
+  test('is not offered when the browser holds nothing from before', async ({ page }) => {
+    await openSynced(page);
+    await expect(offer(page)).toHaveCount(0);
+  });
+});

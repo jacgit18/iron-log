@@ -3,7 +3,7 @@ import type { SyncStatus } from './apiDb.js';
 import { deviceDataFile, describeSync, formatWhen, notSentFile, pathLabel, storageWarning, versionLabel } from './labels.js';
 
 const status = (over: Partial<SyncStatus> = {}): SyncStatus => ({
-  state: 'idle', pausedBecause: null, pendingPaths: [], quarantined: 0, quarantine: [], lastPullAt: null, lastSyncedAt: null, persisted: true, ready: true, notices: [], ...over,
+  state: 'idle', pausedBecause: null, pendingPaths: [], quarantined: 0, quarantine: [], lastPullAt: null, lastSyncedAt: null, persisted: true, ready: true, holdsData: false, notices: [], ...over,
 });
 const clock = (ms: number) => `t${ms}`;
 

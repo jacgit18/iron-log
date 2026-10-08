@@ -51,6 +51,8 @@ export interface SyncStatus {
   persisted: boolean;
   /** True once a pull has finished on this device, so the app can show the user's data. */
   ready: boolean;
+  /** True when this device holds any row of the account or any unsent change: the one-time upload of old data needs this to be false. */
+  holdsData: boolean;
   /** Things that happened because another device changed something first, worth telling the user. Newest last. */
   notices: Notice[];
 }
@@ -117,7 +119,7 @@ export function createApiDb(options: ApiDbOptions) {
   };
   const status = (): SyncStatus => ({
     state, pausedBecause, pendingPaths: outbox.paths(), quarantined: outbox.quarantined().length, quarantine: outbox.quarantined(), lastPullAt, lastSyncedAt,
-    persisted: mirror.persisted() && outbox.persisted(), ready: mirror.hasPulled(), notices,
+    persisted: mirror.persisted() && outbox.persisted(), ready: mirror.hasPulled(), holdsData: hasData(), notices,
   });
   const announce = () => { const s = status(); statusListeners.forEach(cb => { try { cb(s); } catch { /* a listener must not stop sync */ } }); };
   // Calls waiting for the sync to pause. A write that is safe on this device does not need to wait for a server that

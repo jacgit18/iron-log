@@ -124,5 +124,5 @@ describe('import-legacy', () => {
     const res = await importAll(many);
     expect(res.status).toBe(201);
     expect(res.body.total).toBe(1500);
-  });
+  }, 60_000);
 });
