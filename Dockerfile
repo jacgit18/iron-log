@@ -13,6 +13,10 @@ COPY . .
 #   docker build --build-arg APP_VERSION=$(git log -1 --format=%ct) -t iron-log .
 ARG APP_VERSION
 ENV APP_VERSION=$APP_VERSION
+# Syncing through the API is the point of this image, so the Cloud Build config turns the flag on for everyone (feature-flags.md);
+# without the argument the build has it off, as the GitHub Pages build does.
+ARG VITE_API_SYNC
+ENV VITE_API_SYNC=$VITE_API_SYNC
 # BASE_PATH is unset on purpose: the app is served from the root of its own origin.
 RUN npm run build && npm run build:server
 
