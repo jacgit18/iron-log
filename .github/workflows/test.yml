@@ -5,8 +5,11 @@ name: Tests
 # Postgres: they apply, roll back to an empty schema, apply again, and server/db/types.ts matches them. The docker job
 # builds the production image and checks that it starts and serves the API and the app. The e2e-sync job runs the app with
 # syncing on against the real API and a real Postgres, nothing mocked.
+# It also runs on main after a merge, so the deploy (deploy-cloud-run.yml) waits for tests that passed on exactly the commit it ships.
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:

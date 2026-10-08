@@ -75,9 +75,13 @@ cmd_deploy() {
   echo "Building $image (version $version) ..."
   gc builds submit --config cloudbuild.yaml --substitutions "_IMAGE=${image},_APP_VERSION=${version}" .
   echo "Deploying to $url ..."
+  # Public access is set when the service is first made and left alone after: changing it needs a far broader permission, which the
+  # CI deployer (ci-deploy-setup.sh) deliberately does not have.
+  local public=()
+  gc run services describe "$SERVICE" --region "$REGION" >/dev/null 2>&1 || public=(--allow-unauthenticated)
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
-    --allow-unauthenticated \
+    ${public[@]+"${public[@]}"} \
     --max-instances 1 --min-instances 0 --cpu 1 --memory 512Mi --concurrency 40 --timeout 120 \
     --set-env-vars "NODE_ENV=production,BASE_URL=${url}" \
     --set-secrets "APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest"
