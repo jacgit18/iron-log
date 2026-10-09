@@ -8,6 +8,7 @@ import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { motionOK } from '../../lib/motion.js';
 import ArmedButton from '../ArmedButton.jsx';
+import StretchFirstRun from './StretchFirstRun.jsx';
 
 const DAYS7 = Array.from({ length: STRETCH_DAYS }, (_, i) => i);
 
@@ -126,6 +127,7 @@ export default function Stretches() {
           <div className="bar"><i style={{ width: `${pct}%` }} /></div>
         </div>
       </div>
+      {items.length === 0 && <StretchFirstRun />}
       <Summary items={items} week={week} today={today} wk={wk} />
 
       <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {

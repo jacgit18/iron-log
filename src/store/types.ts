@@ -75,7 +75,7 @@ export interface ImportDraft {
 }
 
 export interface Ready {
-  cfg: boolean; logs: boolean; week: boolean; programs: boolean; lib: boolean; body: boolean; exp: boolean; str: boolean; strWeek: boolean; supp: boolean;
+  cfg: boolean; logs: boolean; week: boolean; programs: boolean; lib: boolean; body: boolean; exp: boolean; str: boolean; strHist: boolean; strWeek: boolean; supp: boolean;
 }
 
 export type ExportKind = 'csv' | 'xlsx-all' | 'xlsx-week' | 'data';
