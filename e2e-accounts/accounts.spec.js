@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import pg from 'pg';
+import { BUILTIN } from '../src/lib/data.ts';
 
 // Signing in and out for real: the production build, the real API, a real session cookie. See playwright.accounts.config.js.
 const pool = new pg.Pool({ connectionString: process.env.E2E_DATABASE_URL });
@@ -27,9 +28,19 @@ async function phone(browser, { returning = true } = {}) {
   return { context, page, devHeaders };
 }
 // Better Auth's test-only email path sets the same session cookie Google sign-in does.
-const signUp = async (page, email, name) => {
+// A new account with no program and no log entries starts on a blank board (ADR 016). Most tests here are about a returning user and need
+// the cards, so signing up also gives the account its two saved programs; `{ seed: false }` is a genuinely new account.
+const seedPrograms = async email => {
+  const { rows: [a] } = await pool.query('select id::text as id from auth."user" where email = $1', [email]);
+  const { rows: [u] } = await pool.query('insert into users (auth_user_id) values ($1) on conflict (auth_user_id) do update set auth_user_id = excluded.auth_user_id returning id', [a.id]);
+  let seq = 0;
+  for (const k of ['A', 'B']) { seq++; await pool.query('insert into programs (user_id, seq, key, data) values ($1, $2, $3, $4) on conflict (user_id, key) do nothing', [u.id, seq, k, JSON.stringify(BUILTIN[k])]); }
+  await pool.query('update users set change_seq = greatest(change_seq, $2) where id = $1', [u.id, seq]);
+};
+const signUp = async (page, email, name, { seed = true } = {}) => {
   const res = await page.request.post('/api/auth/sign-up/email', { data: { email, password: PASSWORD, name } });
   expect(res.status()).toBe(200);
+  if (seed) await seedPrograms(email);
 };
 const rowsOf = async email => (await pool.query(
   `select count(*)::int as n from log_entries l join users u on u.id = l.user_id join auth."user" a on a.id::text = u.auth_user_id where a.email = $1`, [email])).rows[0].n;
@@ -157,11 +168,11 @@ test('deleting the account removes the user, the data and every sign-in record, 
   await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible({ timeout: 30_000 });
 
   // The same Google account signing in again is a brand-new, empty account.
-  await signUp(page, email, 'Del again');
+  await signUp(page, email, 'Del again', { seed: false });
   await page.goto('/');
   await page.click('#tab-board'); // the app reopens on the tab it was on: Settings
-  await ready(page);
-  await expect(page.locator('#chk-A-d1s1')).not.toBeChecked();
+  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.locator('#chk-A-d1s1')).toHaveCount(0); // a new account: a blank board, none of the old cards
   expect(await rowsOf(email)).toBe(0);
   await context.close();
 });

@@ -250,6 +250,8 @@ PROGRAM_A.key = 'A'; PROGRAM_B.key = 'B';
 [PROGRAM_A, PROGRAM_B].forEach(p => Object.assign(p, withAllDays(p)));
 [PROGRAM_A, PROGRAM_B].forEach(p => p.days.forEach((d, di) => d.slots.forEach((sl, si) => { sl.id = sl.id || `${p.key}-d${di + 1}s${si + 1}`; })));
 export const BUILTIN = { A: PROGRAM_A, B: PROGRAM_B } as Record<'A' | 'B', Program>;
+// What a brand-new signed-in account starts with: seven empty days, nothing of the owner's plan (ADR 016). Fixed objects, so "is this still the starting program" can be answered by identity, like BUILTIN.
+export const BLANK = { A: withAllDays({ key: 'A', days: [] }), B: withAllDays({ key: 'B', days: [] }) } as Record<'A' | 'B', Program>;
 
 export function slotsFor(prog: Program): FlatSlot[] {
   const out: FlatSlot[] = [];

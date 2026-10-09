@@ -7,6 +7,12 @@ const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wc
 
 const signedInAsDev = route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, userId: 'dev-user', account: { kind: 'dev', email: null, name: null } }) });
 
+// What the server sends an account that already has data: one past session of Lat Pulldown. An account with no data at all starts on a blank
+// board (ADR 016), so tests that tick a card need this, as a real returning user has it.
+const accountRows = [{ table: 'log_entries', client_id: 'seed-1', exercise_id: 'latpd', d: '2026-01-05', wk: '2026-01-05', phase: 'hyp', weight_lb: '45', sets_count: '4', reps: '12', hold_sec: null, sets: null, note: null, slot: 'A-d1s1', auto: false, client_updated_at: '2026-01-05T10:00:00Z', version: 1, deleted_at: null, seq: '1' }];
+const accountPull = { rows: accountRows, cursor: '1', more: false };
+const emptyPull = { rows: [], cursor: '0', more: false }; // an account with nothing in it yet
+
 // The helpers below model a returning browser: it has seen a signed-in session (the marker is seeded once, so a sign-out can clear it).
 async function open(page, answer) {
   await page.addInitScript(() => {
@@ -46,7 +52,7 @@ test.describe('an app the server says is too old (426)', () => {
 test('with the flag on and the server answering, the app finishes loading and shows no notice', async ({ page }) => {
   await open(page, route => {
     const url = route.request().url();
-    if (url.includes('/api/sync')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ rows: [], cursor: '0', more: false }) });
+    if (url.includes('/api/sync')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(accountPull) });
     return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
   });
   await expect(page.locator('#chk-A-d1s1')).toBeVisible();
@@ -57,17 +63,16 @@ test('with the flag on and the server answering, the app finishes loading and sh
 
 // ---- The sync screen (D6): status, changes waiting, changes the server would not take ----
 
-const emptyPull = { rows: [], cursor: '0', more: false };
 const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
 // The server answers pulls normally, so the app finishes loading; `commands` decides what it says to every write.
-async function openSynced(page, commands, me = signedInAsDev) {
+async function openSynced(page, commands, me = signedInAsDev, pull = accountPull) {
   await page.addInitScript(() => {
     localStorage.setItem('ironlog:hidetip', '1');
     localStorage.setItem('ironlog:hidelocal', '1');
     localStorage.setItem('ironlog:flag:apiSync', 'true'); if (!sessionStorage.getItem('knownSeeded')) { sessionStorage.setItem('knownSeeded', '1'); localStorage.setItem('ironlog:session/known', 'true'); }
   });
-  await page.route('**/api/sync*', json(200, emptyPull));
+  await page.route('**/api/sync*', json(200, pull));
   await page.route('**/api/me', me);
   if (commands) await page.route('**/api/commands/**', commands);
   await page.goto('/');
@@ -359,7 +364,7 @@ test.describe('old data on the device (the upload card)', () => {
     let sent = 0;
     await seed(page);
     await importTo(route => { sent++; return json(201, { imported: {}, total: 0 })(route); })(page);
-    await openSynced(page);
+    await openSynced(page, undefined, signedInAsDev, emptyPull);
     await expect(offer(page)).toBeVisible();
     await expect(offer(page)).toContainText('1 logged session, 1 body weight');
     await expect(offer(page)).toContainText('Nothing is deleted from this device');
@@ -375,7 +380,7 @@ test.describe('old data on the device (the upload card)', () => {
     let body;
     await seed(page);
     await importTo(route => { body = route.request().postDataJSON(); return json(201, { imported: { 'log-session': 1, 'log-body-weight': 1 }, total: 2 })(route); })(page);
-    await openSynced(page);
+    await openSynced(page, undefined, signedInAsDev, emptyPull);
     await offer(page).getByRole('button', { name: 'Upload' }).click();
     await expect(offer(page)).toHaveCount(0);
     expect(body.baseVersion).toBeNull();
@@ -386,7 +391,7 @@ test.describe('old data on the device (the upload card)', () => {
   test('when the server refuses, says where and that nothing was uploaded, and keeps the offer', async ({ page }) => {
     await seed(page);
     await importTo(json(422, { refused: 'invalid-input', at: 1, command: 'log-body-weight' }))(page);
-    await openSynced(page);
+    await openSynced(page, undefined, signedInAsDev, emptyPull);
     await offer(page).getByRole('button', { name: 'Upload' }).click();
     await expect(offer(page)).toContainText('The server would not take row 2 (log-body-weight): invalid-input. Nothing was uploaded.');
     await expect(offer(page).getByRole('button', { name: 'Upload' })).toBeEnabled();
@@ -395,13 +400,13 @@ test.describe('old data on the device (the upload card)', () => {
   test('when the account already has data, says so instead of failing', async ({ page }) => {
     await seed(page);
     await importTo(json(409, { refused: 'account-not-empty' }))(page);
-    await openSynced(page);
+    await openSynced(page, undefined, signedInAsDev, emptyPull);
     await offer(page).getByRole('button', { name: 'Upload' }).click();
     await expect(offer(page)).toContainText('Your account already has data, so nothing was uploaded.');
   });
 
   test('is not offered when the browser holds nothing from before', async ({ page }) => {
-    await openSynced(page);
+    await openSynced(page, undefined, signedInAsDev, emptyPull);
     await expect(offer(page)).toHaveCount(0);
   });
 });
@@ -418,7 +423,7 @@ test.describe('uploading from an export file', () => {
   const file = (obj = exportFile, name = 'iron-log-data-2026-10-07.json') => ({ name, mimeType: 'application/json', buffer: Buffer.from(typeof obj === 'string' ? obj : JSON.stringify(obj)) });
   const open = async (page, importAnswer) => {
     await page.route('**/api/commands/import-legacy', importAnswer);
-    await openSynced(page);
+    await openSynced(page, undefined, signedInAsDev, emptyPull);
     await page.click('#tab-settings');
     await expect(page.getByRole('heading', { name: 'Upload from an export file' })).toBeVisible();
   };
@@ -479,7 +484,7 @@ test.describe('Delete my data', () => {
     for (const [path, answer] of Object.entries(answers)) {
       await page.route(`**${path}`, route => { calls.push({ path, body: route.request().postDataJSON() }); return answer(route); });
     }
-    await openSynced(page);
+    await openSynced(page, undefined, signedInAsDev, emptyPull);
     await page.click('#tab-settings');
     await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible();
     return calls;

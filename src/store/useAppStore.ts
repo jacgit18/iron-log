@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { AppState, OrderNote, OrderState } from './types.ts';
 import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Week } from '../types.ts';
-import { BUILTIN, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
+import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { weekStartOf, ymd, addDays } from '../shared/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
@@ -106,6 +106,26 @@ const queue = makeSaveQueue({ getDb: () => db, onFlag: (t: string) => flag(t), o
 // "Saved" / "Loading…" never replaces a message you haven't had the chance to act on yet.
 // A stored program comes back only if it has the right shape, cleaned; otherwise the built-in one.
 const loadProgram = (k: 'A' | 'B', data: unknown) => resolveProgram(k, normProgram(data, k));
+
+// A signed-in account with no saved program and no log entries starts with a blank board; one that has entries keeps the built-in
+// plan it has been using (ADR 016). Decided once both the programs and the logs have loaded, whichever comes last, and in both
+// directions, so a device that gets its logs late never leaves an existing account on a blank board. Only a program that is still
+// the built-in or the blank one is swapped; a saved or just-edited program is never touched.
+const programDocs = new Set<string>();
+// Returns the programs this state should show; the same object when nothing changes. Applied in the same update that marks the programs
+// and the logs ready, so the board never shows the built-in plan for an instant before it turns blank.
+function settledPrograms(st: { ready: { programs: boolean; logs: boolean }; logs: Logs; programs: AppState['programs'] }): AppState['programs'] {
+  if (!st.ready.programs || !st.ready.logs) return st.programs;
+  const hasEntries = Object.values(st.logs).some(l => l.length > 0);
+  let programs = st.programs;
+  (['A', 'B'] as const).forEach(k => {
+    if (programDocs.has(k) || queue.pending('programs/' + k)) return;
+    if (programs[k] !== BUILTIN[k] && programs[k] !== BLANK[k]) return;
+    const want = hasEntries ? BUILTIN[k] : BLANK[k];
+    if (programs[k] !== want) programs = { ...programs, [k]: want };
+  });
+  return programs;
+}
 export function flag(t: string) {
   const routine = t === 'Saved' || t === 'Loading…' || t === '';
   if (routine && flagHold) return;
@@ -931,7 +951,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     db.collection('programs').onSnapshot((s: any) => {
       const m: Record<string, any> = {}; s.docs.forEach((d: any) => { m[d.id] = d.data(); });
       const pick = (state: any, k: any) => (queue.pending('programs/' + k) ? state.programs[k] : loadProgram(k, m[k]));
-      set(state => ({ programs: { A: pick(state, 'A'), B: pick(state, 'B') }, ...markReady('programs')(state) }));
+      programDocs.clear(); Object.keys(m).forEach(k => programDocs.add(k));
+      set(state => {
+        const next = { programs: { A: pick(state, 'A'), B: pick(state, 'B') }, ...markReady('programs')(state) };
+        return { ...next, programs: settledPrograms({ ...state, ...next }) };
+      });
     }, () => flag('Couldn’t load your programs. Reload the page.'));
     db.doc('body/main').onSnapshot((s: any) => {
       if (queue.pending('body/main')) return;
@@ -968,7 +992,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           const v = queue.pending('logs/' + id) ? state.logs[id] : next[id];
           if (v) logs[id] = v;
         });
-        return { logs, ...markReady('logs')(state) };
+        const upd = { logs, ...markReady('logs')(state) };
+        return { ...upd, programs: settledPrograms({ ...state, ...upd }) };
       });
     }, () => flag('Couldn’t load your log. Reload the page.'));
     subscribeWeek();
