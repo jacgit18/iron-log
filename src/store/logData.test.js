@@ -217,6 +217,7 @@ const tick = () => new Promise(r => setTimeout(r, 0));
 describe('log data: db sync', () => {
   it('F11 a remote log change that arrives while a local write is pending is not lost or overwritten', async () => {
     const fdb = fakeDb();
+    fdb.docs.set('programs/A', structuredClone(BUILTIN.A)); fdb.docs.set('programs/B', structuredClone(BUILTIN.B)); // an account that already has its program (a blank new one has no card to tick)
     vi.resetModules();
     globalThis.claude = { use: async n => (n === 'db' ? fdb : null) };
     try {
@@ -304,5 +305,89 @@ describe('log data: db sync', () => {
     expect(st().body[0].updatedAt).toMatch(/^\d{4}-/);
     st().checkCard('A-d3s1', true);
     expect(Object.values(st().logs).flat()[0].updatedAt).toMatch(/^\d{4}-/);
+  });
+});
+
+// ADR 016: a brand-new signed-in account starts with a blank board; an account that already has data keeps the program it has been using.
+describe('log data: what a new account starts with (ADR 016)', () => {
+  const boot = async fdb => {
+    vi.resetModules();
+    globalThis.claude = { use: async n => (n === 'db' ? fdb : null) };
+    const { useAppStore: S2 } = await import('./useAppStore.js');
+    const data = await import('../lib/data.js');
+    await S2.getState().init(); await tick();
+    return { S2, s2: () => S2.getState(), ...data };
+  };
+  const cards = (s2, slotsFor, k) => slotsFor(s2().programs[k]).length;
+  const entry = { d: '2026-10-05', ph: 'hyp', w: 45, s: 4, r: 12, slot: 'A-d1s1', wk: '2026-10-05' };
+
+  it('P1 an account with no program and no log entries gets seven empty days, and none of the built-in cards', async () => {
+    try {
+      const { s2, BLANK, BUILTIN, slotsFor } = await boot(fakeDb());
+      expect(s2().isReady()).toBe(true);
+      expect(s2().programs.A).toBe(BLANK.A); expect(s2().programs.B).toBe(BLANK.B);
+      expect(s2().programs.A).not.toBe(BUILTIN.A);
+      expect(s2().programs.A.days).toHaveLength(7);
+      expect(cards(s2, slotsFor, 'A')).toBe(0); expect(cards(s2, slotsFor, 'B')).toBe(0);
+    } finally { delete globalThis.claude; }
+  });
+
+  it('P2 an account with log entries and no saved program keeps the built-in plan its entries point at', async () => {
+    const fdb = fakeDb(); fdb.docs.set('logs/latpd', { entries: [entry] });
+    try {
+      const { s2, BUILTIN, slotsFor } = await boot(fdb);
+      expect(s2().programs.A).toBe(BUILTIN.A); expect(s2().programs.B).toBe(BUILTIN.B);
+      expect(cards(s2, slotsFor, 'A')).toBeGreaterThan(0);
+    } finally { delete globalThis.claude; }
+  });
+
+  it('P3 logs that arrive after the programs bring the built-in plan back, so a late device never leaves an existing account blank', async () => {
+    const fdb = fakeDb();
+    try {
+      const { s2, BLANK, BUILTIN } = await boot(fdb);
+      expect(s2().programs.A).toBe(BLANK.A); // nothing here yet
+      fdb.remoteSet('logs/latpd', { entries: [entry] }); await tick(); // the account's entries arrive
+      expect(s2().programs.A).toBe(BUILTIN.A); expect(s2().programs.B).toBe(BUILTIN.B);
+    } finally { delete globalThis.claude; }
+  });
+
+  it('P4 a saved program is used as saved, with or without log entries', async () => {
+    const fdb = fakeDb(); const mine = structuredClone(BUILTIN.A); mine.days[0].title = 'Push';
+    fdb.docs.set('programs/A', mine);
+    try {
+      const { s2, BLANK, BUILTIN: B2 } = await boot(fdb);
+      expect(s2().programs.A.days[0].title).toBe('Push'); // A: saved
+      expect(s2().programs.B).toBe(BLANK.B); // B: none saved, no entries
+      fdb.remoteSet('logs/latpd', { entries: [entry] }); await tick();
+      expect(s2().programs.A.days[0].title).toBe('Push'); // still the saved one
+      expect(s2().programs.B).toBe(B2.B);
+    } finally { delete globalThis.claude; }
+  });
+
+  it('P5 a program a new account has just edited is never swapped back by a later settle', async () => {
+    const fdb = fakeDb();
+    try {
+      const { s2, BLANK } = await boot(fdb);
+      const mine = { ...structuredClone(BLANK.A), days: structuredClone(BLANK.A.days) }; mine.days[0].title = 'Mine';
+      s2().saveProgram('A', mine); await tick();
+      expect(s2().programs.A.days[0].title).toBe('Mine');
+      fdb.remoteSet('logs/latpd', { entries: [entry] }); await tick(); // a settle runs: the edited program is neither built-in nor blank
+      expect(s2().programs.A.days[0].title).toBe('Mine');
+    } finally { delete globalThis.claude; }
+  });
+
+  it('P6 the board is never ready with the built-in plan on its way to blank: the choice is made in the same update that marks it ready', async () => {
+    vi.resetModules();
+    globalThis.claude = { use: async n => (n === 'db' ? fakeDb() : null) };
+    try {
+      const { useAppStore: S2 } = await import('./useAppStore.js');
+      const { BLANK, BUILTIN } = await import('../lib/data.js');
+      const readyPrograms = [];
+      S2.subscribe(state => { if (state.isReady()) readyPrograms.push(state.programs.A); });
+      await S2.getState().init(); await tick();
+      expect(readyPrograms.length).toBeGreaterThan(0);
+      expect(readyPrograms.every(p => p === BLANK.A)).toBe(true);
+      expect(readyPrograms.includes(BUILTIN.A)).toBe(false);
+    } finally { delete globalThis.claude; }
   });
 });

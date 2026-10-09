@@ -4,6 +4,7 @@ import { expect, newPhone, server, test } from './stack.js';
 // API tests cannot: the actual screens, the actual store, and the browser's own storage and network events.
 
 test('a ticked card and an edited session reach the server, and a second phone sees them', async ({ browser, user }) => {
+  await server.seedPrograms(user);
   const a = await newPhone(browser, user);
   const page = await a.open();
 
@@ -50,6 +51,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
 });
 
 test('offline, a tick is kept and the app says so; back online it arrives and the notice goes', async ({ browser, user }) => {
+  await server.seedPrograms(user);
   const a = await newPhone(browser, user);
   const page = await a.open();
 
@@ -74,6 +76,7 @@ test('offline, a tick is kept and the app says so; back online it arrives and th
 });
 
 test('two phones tick the same card: the server keeps one check-off and both phones show the card done', async ({ browser, user }) => {
+  await server.seedPrograms(user);
   const a = await newPhone(browser, user);
   const b = await newPhone(browser, user);
   const pageA = await a.open();
@@ -97,6 +100,7 @@ test('two phones tick the same card: the server keeps one check-off and both pho
 });
 
 test('a user sees only their own data', async ({ browser, user }) => {
+  await server.seedPrograms(user); await server.seedPrograms(`${user}-other`);
   const mine = await newPhone(browser, user);
   const page = await mine.open();
   await page.locator('#chk-A-d1s1').check();
@@ -120,7 +124,7 @@ const oldDocs = {
 
 test('data from before accounts is uploaded once, all of it, and a second phone sees it', async ({ browser, user }) => {
   const a = await newPhone(browser, user, oldDocs);
-  const page = await a.open();
+  const page = await a.open({ blank: true });
   const card = page.getByRole('status').filter({ hasText: 'Upload this device’s data?' });
   await expect(card).toBeVisible();
   await expect(card).toContainText('2 logged sessions');
@@ -153,13 +157,16 @@ test('data from before accounts is uploaded once, all of it, and a second phone 
 
 test('once something new is logged the upload is no longer possible, and the card says so instead of failing', async ({ browser, user }) => {
   const a = await newPhone(browser, user, oldDocs);
-  const page = await a.open();
+  const page = await a.open({ blank: true });
   await expect(page.getByRole('status').filter({ hasText: 'Upload this device’s data?' })).toBeVisible();
-  await page.locator('#chk-A-d1s1').check();
+  // The account gets data from somewhere else (another phone) before this one uploads. A new account's board has no card to tick here.
+  await server.seedPrograms(user);
+  await page.reload();
+  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
   const info = page.getByRole('status').filter({ hasText: 'Old data on this device' });
   await expect(info).toBeVisible();
   await expect(info).toContainText('cannot be added automatically');
-  await expect.poll(async () => (await server.counts(user)).entries).toBe(1); // only the new tick; the old data was not mixed in
+  expect(await server.counts(user)).toEqual({ entries: 0, body: 0, weeks: 0 }); // the old data was not mixed in
   await info.getByRole('button', { name: 'Got it' }).click();
   await expect(info).toHaveCount(0);
   await page.reload();
@@ -177,7 +184,7 @@ test('an export file from another copy of the app is uploaded into an empty acco
     body: [{ wk: '2026-09-13', d: '2026-09-14', w: 181 }],
   };
   const a = await newPhone(browser, user);
-  const page = await a.open();
+  const page = await a.open({ blank: true });
   await page.click('#tab-settings');
   const panel = page.getByRole('region', { name: 'Account' });
   const choose = () => panel.locator('input[aria-label="Iron Log export file"]').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exportFile)) });
@@ -203,6 +210,7 @@ test('an export file from another copy of the app is uploaded into an empty acco
 });
 
 test('erasing everything from one phone empties the database, and the other phone clears itself', async ({ browser, user }) => {
+  await server.seedPrograms(user);
   const a = await newPhone(browser, user);
   const b = await newPhone(browser, user);
   const first = await a.open();
@@ -220,7 +228,7 @@ test('erasing everything from one phone empties the database, and the other phon
   // The other phone drops its copy at its next pull; a reload is one.
   await second.reload();
   await expect(second.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
-  await expect(second.locator('#chk-A-d1s1')).not.toBeChecked();
+  await expect(second.locator('#chk-A-d1s1')).toHaveCount(0); // the account is empty again, so its board is blank (ADR 016)
   await a.close();
   await b.close();
 });

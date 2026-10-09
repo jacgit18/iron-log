@@ -1,5 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 import pg from 'pg';
+import { BUILTIN } from '../src/lib/data.ts';
 
 // Helpers for the end-to-end sync tests: a signed-in "phone" (a browser context with the sync flag on and its own dev user),
 // and a direct look at what the database holds.
@@ -25,6 +26,19 @@ export const server = {
          from users u where u.auth_user_id = $1`, [`dev:${user}`]);
     return rows[0] ?? { entries: 0, body: 0, weeks: 0 };
   },
+  /** Gives a dev user the two programs a returning user has saved. An account with no program and no log entries starts on a blank board
+   *  (ADR 016), so tests that tick a card need this first. It makes the account non-empty, which turns the old-data upload off. */
+  async seedPrograms(user) {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      const { rows: [u] } = await c.query('insert into users (auth_user_id) values ($1) on conflict (auth_user_id) do update set auth_user_id = excluded.auth_user_id returning id', [`dev:${user}`]);
+      let seq = 0;
+      for (const k of ['A', 'B']) { seq++; await c.query('insert into programs (user_id, seq, key, data) values ($1, $2, $3, $4) on conflict (user_id, key) do nothing', [u.id, seq, k, JSON.stringify(BUILTIN[k])]); }
+      await c.query('update users set change_seq = greatest(change_seq, $2) where id = $1', [u.id, seq]);
+      await c.query('commit');
+    } catch (err) { await c.query('rollback'); throw err; } finally { c.release(); }
+  },
   async week(user, weekStart) {
     const { rows } = await pool.query(
       `select w.data, w.version from weeks w join users u on u.id = w.user_id where u.auth_user_id = $1 and w.week_start = $2 and w.deleted_at is null`,
@@ -48,9 +62,10 @@ export async function newPhone(browser, user, old = {}) {
   await page.clock.install({ time: NOW });
   return {
     context, page,
-    async open() {
+    /** `blank`: the account is new, so the board has no cards to wait for. */
+    async open({ blank = false } = {}) {
       await page.goto('/');
-      await expect(page.locator('#chk-A-d1s1')).toBeVisible({ timeout: 30_000 });
+      if (!blank) await expect(page.locator('#chk-A-d1s1')).toBeVisible({ timeout: 30_000 });
       // The store refuses writes until everything has loaded, which waits for the first pull: wait for that, not just the board.
       await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
       return page;
