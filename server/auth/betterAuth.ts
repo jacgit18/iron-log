@@ -28,6 +28,11 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
   }
   const origin = new URL(config.baseURL);
   const pool = new pg.Pool({ connectionString: config.databaseUrl });
+  // An idle pooled connection can be dropped at any time (a database restart, Neon scaling to zero). pg reports that as an 'error'
+  // event on the pool; with no listener Node would crash the whole process (see createDb, which does the same for the other pool).
+  pool.on('error', err => {
+    console.error(JSON.stringify({ msg: 'idle auth database connection dropped', error: err.message }));
+  });
   const auth = betterAuth({
     baseURL: config.baseURL,
     secret: config.secret,
