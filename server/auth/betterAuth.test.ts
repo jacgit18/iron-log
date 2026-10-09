@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { Kysely } from 'kysely';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.ts';
 import type { DB } from '../db/types.ts';
 import { startTestDatabase } from '../test/postgres.ts';
@@ -152,6 +152,15 @@ describe('email and password is not available outside tests', () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(await authRows('user')).toBe('0');
     expect((await post(base, '/api/auth/sign-in/email', { email: 'a@example.com', password: 'x' })).status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('a dropped idle database connection is logged, not thrown: the pool has an error handler', async () => {
+    const a = createAuth({ baseURL: BASE, secret: SECRET, databaseUrl: url, google: GOOGLE, testSignIn: true }, 'test');
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect(() => a.pool.emit('error', new Error('terminating connection due to administrator command'))).not.toThrow();
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('idle auth database connection dropped'));
+    } finally { log.mockRestore(); await a.pool.end(); }
   });
 
   it('cannot be switched on when the environment is production, or empty', async () => {
