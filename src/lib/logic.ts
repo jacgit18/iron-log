@@ -236,6 +236,9 @@ export const restBlocked = (week: WeekIn, slots: Slot[], n: number) => overflowS
 export function currentLayout(week: WeekIn, slots: Slot[]): Cols {
   const cols: Cols = Object.fromEntries(DAYS.map(d => [d, [] as Slot[]]));
   slots.forEach(s => { const c = colOfSlot(week, s); if (cols[c]) cols[c].push(s); });
+  // A card moved here from another day sits at the top of the column; the rest keep program order.
+  const isMoved = (s: Slot) => !!(week.moved && week.moved[s.id]);
+  DAYS.forEach(c => { cols[c] = [...cols[c].filter(isMoved), ...cols[c].filter(s => !isMoved(s))]; });
   return cols;
 }
 
