@@ -17,6 +17,7 @@ import type { AccountState } from '../sync/account.js';
    page hides the screen, it is not a lock on the browser's storage. */
 
 export const KNOWN_KEY = 'session/known';
+export const ADMIN_KEY = 'session/admin'; // written by features.ts: whether the signed-in account sees admin-only features
 const OWNER_KEY = 'sync/owner'; // written by the sync adapter once an account has synced here (apiDb.ts)
 
 export interface GateStorage {
@@ -43,4 +44,4 @@ export async function decideGate(me: () => Promise<AccountState>, storage: GateS
 }
 
 /** After signing out on purpose, or deleting the account: the next load starts at the landing page. */
-export const forgetSession = (storage: Pick<GateStorage, 'remove'>) => storage.remove(KNOWN_KEY);
+export const forgetSession = (storage: Pick<GateStorage, 'remove'>) => { storage.remove(KNOWN_KEY); storage.remove(ADMIN_KEY); };

@@ -3,6 +3,7 @@ import { extname, join, resolve } from 'node:path';
 import { toNodeHandler } from 'better-auth/node';
 import express from 'express';
 import { sql, type Kysely } from 'kysely';
+import type { Admins } from './admin.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import { clientErrors } from './clientErrors.ts';
@@ -31,6 +32,8 @@ export interface AppDeps {
   minClientVersion?: number | null;
   /** Better Auth (see auth/betterAuth.ts). When set, its routes are served under /api/auth. */
   auth?: Auth;
+  /** Who is an admin (see admin.ts); unset means nobody. */
+  admins?: Admins;
   /** Origins, besides this server's own host, whose browsers may send state-changing requests (see originGuard.ts). */
   allowedOrigins?: string[];
   /** Express's `trust proxy`: how many proxies sit in front (1 on Cloud Run), so the client IP and https come from X-Forwarded-*. Unset trusts none. */
@@ -70,7 +73,7 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
@@ -117,7 +120,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, allowe
 
   // Everything below this line needs a signed-in user. The per-address limit comes first, so an anonymous flood never reaches the database.
   app.use('/api', rateLimit(limits.api));
-  app.use('/api', db ? sessionAuth(db, auth) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
+  app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
   // Per signed-in user, after the lookup.
   app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
   app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));

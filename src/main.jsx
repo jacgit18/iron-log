@@ -4,6 +4,7 @@ import './fonts.js';
 import './styles.css';
 import App from './App.jsx';
 import Landing, { Splash } from './components/Landing.tsx';
+import { setAdmin } from './features.ts';
 import { applyAppearance } from './lib/appearance.js';
 import { decideGate, quickGate } from './lib/gate.ts';
 import { initPwa } from './lib/pwa.js';
@@ -21,7 +22,16 @@ const root = createRoot(document.getElementById('root'));
 const show = node => root.render(<StrictMode>{node}</StrictMode>);
 // Start loading before the first render. Saved in this browser, the data is read right away, so the
 // first frame already shows it instead of a "Loading…" frame that the page then jumps away from.
-const openApp = () => { useAppStore.getState().init(); show(<App />); };
+const openApp = () => { useAppStore.getState().init(); show(<App />); learnAdmin(); };
+
+// With syncing on, ask the API whether this account is an admin (src/features.ts). Offline or unreachable keeps what the browser last knew.
+function learnAdmin() {
+  if (!apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC)) return;
+  void createAccountClient({ headers: devHeaders }).me().then(s => {
+    if (s.status === 'signed-in') setAdmin(s.isAdmin);
+    else if (s.status === 'signed-out') setAdmin(false);
+  });
+}
 
 // With syncing on, a visitor this browser has never seen signed in gets the landing page instead of the app (src/lib/gate.ts). Everyone
 // else, and every build with syncing off, goes straight to the app exactly as before, with nothing to wait for.

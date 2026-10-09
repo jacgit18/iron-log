@@ -37,7 +37,7 @@ const memory = () => {
 };
 const phone = (user = 'owner') => {
   const transport = createTransport({ clientVersion: 'test-1', baseUrl: base, headers: () => ({ 'x-dev-user': user }) });
-  const identity = async (): Promise<AccountState> => ({ status: 'signed-in', userId: user, kind: 'dev', email: null, name: null });
+  const identity = async (): Promise<AccountState> => ({ status: 'signed-in', userId: user, kind: 'dev', email: null, name: null, isAdmin: false });
   const storage = memory();
   const api = createApiDb({ transport, storage, identity, pollMs: 0, sleep: () => Promise.resolve(), random: () => 0.5 });
   return { api, storage };

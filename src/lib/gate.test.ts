@@ -6,7 +6,7 @@ const store = (initial: Record<string, unknown> = {}) => {
   const data = new Map(Object.entries(initial));
   return { data, get: (k: string) => data.get(k) ?? null, set: (k: string, v: unknown) => void data.set(k, v), remove: (k: string) => void data.delete(k) };
 };
-const signedIn: AccountState = { status: 'signed-in', userId: 'u1', kind: 'session', email: 'a@b.co', name: null };
+const signedIn: AccountState = { status: 'signed-in', userId: 'u1', kind: 'session', email: 'a@b.co', name: null , isAdmin: false};
 
 describe('quickGate', () => {
   it('syncing off: always the app, even for a stranger', () => {

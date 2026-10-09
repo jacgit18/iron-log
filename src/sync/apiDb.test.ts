@@ -658,7 +658,7 @@ describe('waking and polling', () => {
 });
 
 describe('whose data this device holds (B2e)', () => {
-  const as = (userId: string): AccountState => ({ status: 'signed-in', userId, kind: 'session', email: `${userId}@example.com`, name: null });
+  const as = (userId: string): AccountState => ({ status: 'signed-in', userId, kind: 'session', email: `${userId}@example.com`, name: null, isAdmin: false });
   let who: AccountState = as('ann');
   const identity = () => Promise.resolve(who);
   const ownerOf = (storage: ReturnType<typeof memoryStorage>) => (storage.get(OWNER_KEY) as { userId: string } | null)?.userId ?? null;
@@ -776,7 +776,7 @@ describe('erasing the account (Phase F)', () => {
   const logs2 = (...ids: string[]) => logsDoc(...ids.map(id => entry(id)));
 
   it('the server erases, then this device forgets its copy, its unsent changes and who owns it', async () => {
-    const identity = () => Promise.resolve<AccountState>({ status: 'signed-in', userId: 'ann', kind: 'session', email: null, name: null });
+    const identity = () => Promise.resolve<AccountState>({ status: 'signed-in', userId: 'ann', kind: 'session', email: null, name: null , isAdmin: false});
     const { server, storage, db } = setup({ identity });
     db.start();
     await settle();
