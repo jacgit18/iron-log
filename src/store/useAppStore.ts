@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AppState, OrderNote, OrderState } from './types.ts';
-import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Week } from '../types.ts';
+import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Stretch, Week } from '../types.ts';
 import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { weekStartOf, ymd, addDays } from '../shared/dates.js';
 import {
@@ -126,6 +126,20 @@ function settledPrograms(st: { ready: { programs: boolean; logs: boolean }; logs
   });
   return programs;
 }
+// The stretch routine works the same way (ADR 016): a stretch list with no saved document is empty when the account has no log entries and no
+// stretch-week records, and the default routine (the owner's) when it has any. Decided in the same update that marks the data ready; a saved
+// or just-edited list is never replaced.
+const BLANK_STRETCHES: Stretch[] = [];
+let shownDefaultStretches: Stretch[] | null = null;
+let stretchDocExists = false;
+let hasStretchWeeks = false;
+function settledStretches(st: { ready: { str: boolean; strHist: boolean; logs: boolean }; logs: Logs; stretches: Stretch[] }): Stretch[] {
+  if (!st.ready.str || !st.ready.strHist || !st.ready.logs) return st.stretches;
+  if (stretchDocExists || queue.pending('stretches/main')) return st.stretches;
+  if (st.stretches !== shownDefaultStretches && st.stretches !== BLANK_STRETCHES) return st.stretches;
+  const isNew = !hasStretchWeeks && !Object.values(st.logs).some(l => l.length > 0);
+  return isNew ? BLANK_STRETCHES : (shownDefaultStretches ?? st.stretches);
+}
 export function flag(t: string) {
   const routine = t === 'Saved' || t === 'Loading…' || t === '';
   if (routine && flagHold) return;
@@ -167,7 +181,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   programs: { A: BUILTIN.A, B: BUILTIN.B },
   storeMode: 'loading',
   saveFlag: '',
-  ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false, str: false, strWeek: false, supp: false },
+  ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false, str: false, strHist: false, strWeek: false, supp: false },
   uncheckNote: null, // after an uncheck removed logged entries: {week, text, entries: {exId: [entry]}, done: {key: wasDone}}
   moveNote: null, // heads-up after a move puts the same exercise on the same or a neighboring day
   orderNote: null, // after a day is finished: {kind, week, doneCol, prev, next, lines, applied}; prev/next are {order, rest} for kind 'order', {slot, moved} for kind 'card'
@@ -242,7 +256,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     return { ...(get().weekHist || {}), [get().weekKey()]: get().week };
   },
 
-  isReady: () => { const r = get().ready; return r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strWeek && r.supp; },
+  isReady: () => { const r = get().ready; return r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strHist && r.strWeek && r.supp; },
   weekKey: () => ymd(get().weekStart),
   activeProgKey: () => activeProgKey(get().cfg, get().week, get().weekStart),
   activeProgram: () => { const s = get(); return s.programs[s.activeProgKey()] || s.programs.A; },
@@ -940,7 +954,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         supp: normSupplements(LS.get('supplements/main')),
         logs,
         programs: { A: loadProgram('A', LS.get('programs/A')), B: loadProgram('B', LS.get('programs/B')) },
-        ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true, exp: true, str: true, supp: true },
+        ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true, exp: true, str: true, strHist: true, supp: true },
       }));
       if (typeof window.addEventListener === 'function') window.addEventListener('storage', fromOtherTab);
       subscribeWeek();
@@ -972,7 +986,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     db.doc('stretches/main').onSnapshot((s: any) => {
       if (queue.pending('stretches/main')) return;
       const d = normStretches(s.exists ? s.data() : null);
-      set(state => ({ stretches: d.items, stretchExps: d.experiments, ...markReady('str')(state) }));
+      stretchDocExists = !!s.exists; if (!s.exists) shownDefaultStretches = d.items;
+      set(state => {
+        const upd = { stretches: d.items, stretchExps: d.experiments, ...markReady('str')(state) };
+        return { ...upd, stretches: settledStretches({ ...state, ...upd }) };
+      });
+    }, () => flag('Couldn’t load your stretches. Reload the page.'));
+    // Whether the account has any stretch weeks: with the list, it tells a new account from one that has been ticking stretches.
+    db.collection('stretchweeks').onSnapshot((s: any) => {
+      hasStretchWeeks = s.docs.length > 0;
+      set(state => {
+        const upd = markReady('strHist')(state);
+        return { ...upd, stretches: settledStretches({ ...state, ...upd }) };
+      });
     }, () => flag('Couldn’t load your stretches. Reload the page.'));
     db.doc('supplements/main').onSnapshot((s: any) => {
       if (queue.pending('supplements/main')) return;
@@ -993,7 +1019,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           if (v) logs[id] = v;
         });
         const upd = { logs, ...markReady('logs')(state) };
-        return { ...upd, programs: settledPrograms({ ...state, ...upd }) };
+        return { ...upd, programs: settledPrograms({ ...state, ...upd }), stretches: settledStretches({ ...state, ...upd }) };
       });
     }, () => flag('Couldn’t load your log. Reload the page.'));
     subscribeWeek();

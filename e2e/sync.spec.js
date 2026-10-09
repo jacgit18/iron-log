@@ -84,6 +84,27 @@ test.describe('the first-run prompt', () => {
   });
 });
 
+test.describe('the stretch routine of a new account (ADR 016)', () => {
+  test('is empty with a prompt, and the button opens the new-stretch sheet', async ({ page }) => {
+    await openSynced(page, undefined, signedInAsDev, emptyPull);
+    await page.locator('#board-stretches').click();
+    const prompt = page.getByRole('region', { name: 'Build your stretch routine' });
+    await expect(prompt).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Scarecrow')).toHaveCount(0); // none of the owner's default routine
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+    await prompt.getByRole('button', { name: 'Add your first stretch' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+  });
+
+  test('an account that has data keeps the default routine, with no prompt', async ({ page }) => {
+    await openSynced(page);
+    await page.locator('#board-stretches').click();
+    await expect(page.getByText('Scarecrow').first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('region', { name: 'Build your stretch routine' })).toHaveCount(0);
+  });
+});
+
 // ---- The sync screen (D6): status, changes waiting, changes the server would not take ----
 
 const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -99,7 +120,9 @@ async function openSynced(page, commands, me = signedInAsDev, pull = accountPull
   await page.route('**/api/me', me);
   if (commands) await page.route('**/api/commands/**', commands);
   await page.goto('/');
-  await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+  // An account with data has its cards; a new one has a blank board, so there is no card to wait for, only the end of loading.
+  if (pull.rows.length) await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+  else await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
 }
 const openSettings = async page => { await page.click('#tab-settings'); await expect(page.getByRole('heading', { name: 'Sync', exact: true })).toBeVisible(); };
 
@@ -507,7 +530,7 @@ test.describe('Delete my data', () => {
     for (const [path, answer] of Object.entries(answers)) {
       await page.route(`**${path}`, route => { calls.push({ path, body: route.request().postDataJSON() }); return answer(route); });
     }
-    await openSynced(page, undefined, signedInAsDev, emptyPull);
+    await openSynced(page);
     await page.click('#tab-settings');
     await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible();
     return calls;
