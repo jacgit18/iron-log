@@ -390,4 +390,72 @@ describe('log data: what a new account starts with (ADR 016)', () => {
       expect(readyPrograms.includes(BUILTIN.A)).toBe(false);
     } finally { delete globalThis.claude; }
   });
+
+  // The stretch routine follows the same rule (ADR 016): empty for an account with no log entries and no stretch weeks, the default routine otherwise.
+  const stretchWeek = { done: { '0:scarecrow': true }, skipped: {}, extra: [] };
+
+  it('S1 a new account has no stretches, none of the owner\'s routine', async () => {
+    try {
+      const { s2 } = await boot(fakeDb());
+      expect(s2().isReady()).toBe(true);
+      expect(s2().stretches).toEqual([]);
+    } finally { delete globalThis.claude; }
+  });
+
+  it('S2 an account with log entries and no saved list keeps the default routine', async () => {
+    const fdb = fakeDb(); fdb.docs.set('logs/latpd', { entries: [entry] });
+    try {
+      const { s2 } = await boot(fdb);
+      expect(s2().stretches.length).toBeGreaterThan(10); expect(s2().stretches[0].id).toBe('scarecrow');
+    } finally { delete globalThis.claude; }
+  });
+
+  it('S3 an account that has only ticked stretches (no workouts logged) keeps the default routine its ticks point at', async () => {
+    const fdb = fakeDb(); fdb.docs.set('stretchweeks/2026-09-20', stretchWeek);
+    try {
+      const { s2 } = await boot(fdb);
+      expect(s2().stretches[0].id).toBe('scarecrow');
+    } finally { delete globalThis.claude; }
+  });
+
+  it('S4 logs that arrive after the stretches bring the default routine back, and a saved list is used as saved', async () => {
+    const fdb = fakeDb();
+    try {
+      const { s2 } = await boot(fdb);
+      expect(s2().stretches).toEqual([]);
+      fdb.remoteSet('logs/latpd', { entries: [entry] }); await tick();
+      expect(s2().stretches[0].id).toBe('scarecrow');
+    } finally { delete globalThis.claude; }
+    const mine = fakeDb(); mine.docs.set('stretches/main', { items: [{ id: 'mine', n: 'Mine', group: 'Back', tier: 'primary' }], experiments: [] });
+    try {
+      const { s2 } = await boot(mine);
+      expect(s2().stretches.map(x => x.id)).toEqual(['mine']); // saved, with no entries
+      mine.remoteSet('logs/latpd', { entries: [entry] }); await tick();
+      expect(s2().stretches.map(x => x.id)).toEqual(['mine']);
+    } finally { delete globalThis.claude; }
+  });
+
+  it('S5 a stretch a new account has just added is never swapped back by a later settle', async () => {
+    const fdb = fakeDb();
+    try {
+      const { s2 } = await boot(fdb);
+      expect(s2().saveStretch({ n: 'Cat cow', tier: 'primary' })).toBeNull(); await tick();
+      expect(s2().stretches.map(x => x.n)).toEqual(['Cat cow']);
+      fdb.remoteSet('logs/latpd', { entries: [entry] }); await tick(); // a settle runs
+      expect(s2().stretches.map(x => x.n)).toEqual(['Cat cow']);
+    } finally { delete globalThis.claude; }
+  });
+
+  it('S6 the app is never ready with the default stretches on their way to empty', async () => {
+    vi.resetModules();
+    globalThis.claude = { use: async n => (n === 'db' ? fakeDb() : null) };
+    try {
+      const { useAppStore: S2 } = await import('./useAppStore.js');
+      const seen = [];
+      S2.subscribe(state => { if (state.isReady()) seen.push(state.stretches.length); });
+      await S2.getState().init(); await tick();
+      expect(seen.length).toBeGreaterThan(0);
+      expect(seen.every(n => n === 0)).toBe(true);
+    } finally { delete globalThis.claude; }
+  });
 });
