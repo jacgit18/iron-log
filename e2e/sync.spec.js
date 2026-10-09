@@ -105,12 +105,34 @@ test.describe('the stretch routine of a new account (ADR 016)', () => {
   });
 });
 
+test.describe('while the data is loading', () => {
+  // The server's first answer is held back, so the app is mid-load for a moment we control.
+  const slow = (pull, ms) => async route => { await new Promise(r => setTimeout(r, ms)); return json(200, pull)(route); };
+  for (const [what, pull] of [['a new account', emptyPull], ['an account with data', accountPull]]) {
+    test(`${what} sees none of the board until it has loaded (no one else's plan flashes up)`, async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); localStorage.setItem('ironlog:session/known', 'true');
+      });
+      await page.route('**/api/sync*', slow(pull, 2500));
+      await page.route('**/api/me', signedInAsDev);
+      await page.goto('/');
+      await expect(page.locator('.saveflag')).toHaveText('Loading…');
+      await page.waitForTimeout(800); // well inside the 2.5 s the server is held back
+      await expect(page.locator('#chk-A-d1s1')).toHaveCount(0);
+      await expect(page.locator('.col, .card')).toHaveCount(0);
+      await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+      if (pull.rows.length) await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+      else { await expect(page.getByRole('region', { name: 'Build your first workout' })).toBeVisible(); await expect(page.locator('#chk-A-d1s1')).toHaveCount(0); } // loaded: a blank board with its prompt, none of the built-in cards
+    });
+  }
+});
+
 // ---- The sync screen (D6): status, changes waiting, changes the server would not take ----
 
 const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
 // The server answers pulls normally, so the app finishes loading; `commands` decides what it says to every write.
-async function openSynced(page, commands, me = signedInAsDev, pull = accountPull) {
+async function openSynced(page, commands, me = signedInAsDev, pull = accountPull, { board = true } = {}) {
   await page.addInitScript(() => {
     localStorage.setItem('ironlog:hidetip', '1');
     localStorage.setItem('ironlog:hidelocal', '1');
@@ -121,7 +143,9 @@ async function openSynced(page, commands, me = signedInAsDev, pull = accountPull
   if (commands) await page.route('**/api/commands/**', commands);
   await page.goto('/');
   // An account with data has its cards; a new one has a blank board, so there is no card to wait for, only the end of loading.
-  if (pull.rows.length) await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+  // `board: false` is for a device that cannot load anything (signed out, offline): the data views stay empty, so only the app itself is waited for.
+  if (!board) await expect(page.locator('#tab-board')).toBeVisible();
+  else if (pull.rows.length) await expect(page.locator('#chk-A-d1s1')).toBeVisible();
   else await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
 }
 const openSettings = async page => { await page.click('#tab-settings'); await expect(page.getByRole('heading', { name: 'Sync', exact: true })).toBeVisible(); };
@@ -228,7 +252,7 @@ test.describe('the Account panel', () => {
   const signedIn = { ok: true, userId: 'u1', account: { kind: 'session', email: 'ann@example.com', name: 'Ann' } };
   const settle = async (page, meAnswer, extra) => {
     if (extra) await extra(page);
-    await openSynced(page, undefined, meAnswer);
+    await openSynced(page, undefined, meAnswer, accountPull, { board: false });
     await page.click('#tab-settings');
     await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
   };
@@ -377,7 +401,7 @@ test.describe('another account signs in on a device that holds the first one’s
     expect(JSON.parse(await page.evaluate(() => localStorage.getItem('ironlog:sync/owner')))).toEqual({ userId: 'ann' });
     await page.getByRole('button', { name: 'Tap again to wipe this device' }).click();
     await expect(page.getByRole('alert').filter({ hasText: 'another account' })).toHaveCount(0); // reloaded, signed in as Bob, nothing blocking
-    await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Build your first workout' })).toBeVisible(); // Bob is a new account: a blank board, none of Ann's cards
     await expect(page.getByRole('alert').filter({ hasText: 'another account' })).toHaveCount(0);
     const stored = await page.evaluate(() => ({ owner: localStorage.getItem('ironlog:sync/owner'), pending: localStorage.getItem('ironlog:sync/pending') }));
     expect(JSON.parse(stored.owner)).toEqual({ userId: 'bob' });
@@ -686,7 +710,7 @@ test.describe('the landing page', () => {
     await stranger(page, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, userId: 'u1', account: { kind: 'session', email: 'a@b.co', name: 'A' } }) }), async p => {
       await p.route('**/api/sync*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ rows: [], cursor: '0', more: false }) }));
     });
-    await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+    await expect(page.locator('#tab-board')).toBeVisible(); // the app, not a page in front of it (nothing is loaded in these, so no cards)
     await expect(heading(page)).toHaveCount(0);
     expect(await page.evaluate(() => localStorage.getItem('ironlog:session/known'))).toBe('true');
   });
@@ -704,7 +728,7 @@ test.describe('the landing page', () => {
     });
     await page.route('**/api/**', route => route.abort());
     await page.goto('/');
-    await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+    await expect(page.locator('#tab-board')).toBeVisible(); // the app, not a page in front of it (nothing is loaded in these, so no cards)
     await expect(heading(page)).toHaveCount(0);
   });
 
@@ -724,7 +748,7 @@ test.describe('the landing page', () => {
     page.on('request', r => { if (r.url().includes('/api/')) asked.push(r.url()); });
     await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); });
     await page.goto('/');
-    await expect(page.locator('#chk-A-d1s1')).toBeVisible();
+    await expect(page.locator('#tab-board')).toBeVisible(); // the app, not a page in front of it (nothing is loaded in these, so no cards)
     await expect(heading(page)).toHaveCount(0);
     expect(asked).toEqual([]);
   });
