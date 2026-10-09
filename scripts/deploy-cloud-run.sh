@@ -87,7 +87,7 @@ cmd_deploy() {
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
     ${public[@]+"${public[@]}"} \
     --max-instances 1 --min-instances 0 --cpu 1 --memory 512Mi --concurrency 40 --timeout 120 \
-    --set-env-vars "NODE_ENV=production,BASE_URL=${url}" \
+    --update-env-vars "NODE_ENV=production,BASE_URL=${url}" \
     --set-secrets "APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest"
   echo
   echo "Live at: $url"
