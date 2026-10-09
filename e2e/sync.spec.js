@@ -61,6 +61,29 @@ test('with the flag on and the server answering, the app finishes loading and sh
   await expect(page.locator('#chk-A-d1s1')).toBeChecked();
 });
 
+// ---- A new account's empty board (ADR 016) ----
+
+test.describe('the first-run prompt', () => {
+  test('a new account sees it on its blank board, with no warm-up of someone else\'s, and it opens the add-exercise sheet', async ({ page }) => {
+    await openSynced(page, undefined, signedInAsDev, emptyPull);
+    const prompt = page.getByRole('region', { name: 'Build your first workout' });
+    await expect(prompt).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#chk-A-d1s1')).toHaveCount(0);
+    await expect(page.getByText('Shadow box')).toHaveCount(0);
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+    await prompt.getByRole('button', { name: 'Add your first exercise' }).click();
+    await expect(page.getByRole('dialog').getByRole('heading', { name: /Add exercise/ })).toBeVisible();
+  });
+
+  test('an account that has data never sees it', async ({ page }) => {
+    await openSynced(page);
+    await expect(page.locator('#chk-A-d1s1')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('region', { name: 'Build your first workout' })).toHaveCount(0);
+    await expect(page.getByText('Shadow box').first()).toBeVisible();
+  });
+});
+
 // ---- The sync screen (D6): status, changes waiting, changes the server would not take ----
 
 const json = (status, body) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });

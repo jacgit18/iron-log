@@ -14,6 +14,7 @@ import Card from './Card.jsx';
 import WarmUp from './WarmUp.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
+import FirstRun from './FirstRun.jsx';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
@@ -226,6 +227,7 @@ export default function Board() {
           </div>
         </div>
       )}
+      {slots.length === 0 && <FirstRun />}
       <BodyWeightRow key={wk} />
       <div className="filterbar" role="group" aria-label="Sort and filter exercises">
         <label className="field">Sort by muscle
@@ -311,7 +313,7 @@ export default function Board() {
                 <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>
                 <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>
               </div>
-              <WarmUp d={d} warm={warm} />
+              {slots.length > 0 && <WarmUp d={d} warm={warm} />}
               {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
               {open.map((s, i) => {
                 const sec = headOf(s, pd);
