@@ -7,7 +7,13 @@ const down: typeof fetch = async () => { throw new TypeError('offline'); };
 describe('account client', () => {
   it('reads a signed-in account', async () => {
     const c = createAccountClient({ fetch: reply(200, { ok: true, userId: 'u1', account: { kind: 'session', email: 'a@b.co', name: 'Ann' } }) });
-    expect(await c.me()).toEqual({ status: 'signed-in', userId: 'u1', kind: 'session', email: 'a@b.co', name: 'Ann' });
+    expect(await c.me()).toEqual({ status: 'signed-in', userId: 'u1', kind: 'session', email: 'a@b.co', name: 'Ann', isAdmin: false });
+  });
+
+  it('reads isAdmin only when the API says exactly true', async () => {
+    const ask = (isAdmin: unknown) => createAccountClient({ fetch: reply(200, { ok: true, userId: 'u1', account: { kind: 'session', isAdmin } }) }).me();
+    expect(await ask(true)).toMatchObject({ isAdmin: true });
+    for (const v of [false, 'true', 1, undefined]) expect(await ask(v)).toMatchObject({ isAdmin: false });
   });
 
   it('treats a 401 as signed out', async () => {

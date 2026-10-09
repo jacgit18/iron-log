@@ -21,11 +21,23 @@ afterAll(async () => {
   await stop?.();
 });
 
-async function start(withDb = true) {
-  server = createApp({ db: withDb ? db : undefined }).listen(0);
+async function start(withDb = true, admins?: ReadonlySet<string>) {
+  server = createApp({ db: withDb ? db : undefined, admins }).listen(0);
   await new Promise(done => server!.once('listening', done));
   return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 }
+
+describe('admin flag on /api/me', () => {
+  const me = async (url: string, name: string) => ((await (await fetch(`${url}/api/me`, { headers: { 'x-dev-user': name } })).json()) as { account: { isAdmin: boolean } }).account.isAdmin;
+  it('is true only for a dev user named in the admin list', async () => {
+    const url = await start(true, new Set(['dev:owner']));
+    expect(await me(url, 'owner')).toBe(true);
+    expect(await me(url, 'guest')).toBe(false);
+  });
+  it('is false for everyone when no list is given', async () => {
+    expect(await me(await start(), 'owner')).toBe(false);
+  });
+});
 
 describe('dev auth stub', () => {
   it('answers 401 without the header', async () => {

@@ -1,6 +1,7 @@
 import { fromNodeHeaders } from 'better-auth/node';
 import type { RequestHandler } from 'express';
 import { sql, type Kysely, type Transaction } from 'kysely';
+import { isAdmin, type Admins } from './admin.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import type { DB } from './db/types.ts';
 
@@ -22,6 +23,8 @@ export interface Account {
   kind: 'session' | 'dev';
   email: string | null;
   name: string | null;
+  /** On the server's ADMIN_EMAILS list: sees admin-only features (admin.ts). */
+  isAdmin: boolean;
 }
 
 const signInRequired = { ok: false, error: 'sign-in required' };
@@ -34,13 +37,14 @@ async function ensureUser(db: Kysely<DB>, authUserId: string): Promise<string> {
   return rows[0]!.id;
 }
 
-export function sessionAuth(db: Kysely<DB>, auth?: Auth): RequestHandler {
+export function sessionAuth(db: Kysely<DB>, auth?: Auth, admins: Admins = new Set()): RequestHandler {
   return async (req, res, next) => {
     try {
       const session = auth ? await auth.api.getSession({ headers: fromNodeHeaders(req.headers) }) : null;
       if (session) {
         res.locals.userId = await ensureUser(db, session.user.id);
-        res.locals.account = { kind: 'session', email: session.user.email ?? null, name: session.user.name ?? null } satisfies Account;
+        const who = { kind: 'session', email: session.user.email ?? null, name: session.user.name ?? null } as const;
+        res.locals.account = { ...who, isAdmin: isAdmin(who, admins, session.user.emailVerified === true) } satisfies Account;
         next();
         return;
       }
@@ -51,7 +55,8 @@ export function sessionAuth(db: Kysely<DB>, auth?: Auth): RequestHandler {
         return;
       }
       res.locals.userId = await ensureUser(db, `dev:${name}`);
-      res.locals.account = { kind: 'dev', email: null, name: `dev:${name}` } satisfies Account;
+      const who = { kind: 'dev', email: null, name: `dev:${name}` } as const;
+      res.locals.account = { ...who, isAdmin: isAdmin(who, admins) } satisfies Account;
       next();
     } catch (err) {
       console.error(JSON.stringify({ msg: 'could not tell who is calling', error: err instanceof Error ? err.message : String(err) }));

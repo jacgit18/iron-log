@@ -5,7 +5,7 @@
 
 export type AccountState =
   | { status: 'signed-out' }
-  | { status: 'signed-in'; userId: string; kind: 'session' | 'dev'; email: string | null; name: string | null }
+  | { status: 'signed-in'; userId: string; kind: 'session' | 'dev'; email: string | null; name: string | null; isAdmin: boolean }
   | { status: 'unreachable' };
 
 export interface AccountOptions {
@@ -26,11 +26,11 @@ export function createAccountClient(options: AccountOptions = {}) {
       const res = await doFetch(`${baseUrl}/api/me`, { headers: { accept: 'application/json', ...(headers?.() ?? {}) }, credentials: 'same-origin' });
       if (res.status === 401) return { status: 'signed-out' };
       if (!res.ok) return { status: 'unreachable' };
-      const body = (await res.json().catch(() => undefined)) as { userId?: unknown; account?: { kind?: unknown; email?: unknown; name?: unknown } } | undefined;
+      const body = (await res.json().catch(() => undefined)) as { userId?: unknown; account?: { kind?: unknown; email?: unknown; name?: unknown; isAdmin?: unknown } } | undefined;
       const userId = asString(body?.userId);
       // An answer that is not what the API sends (a proxy page, a half-deployed API) says nothing about who is signed in.
       if (!userId) return { status: 'unreachable' };
-      return { status: 'signed-in', userId, kind: body?.account?.kind === 'dev' ? 'dev' : 'session', email: asString(body?.account?.email), name: asString(body?.account?.name) };
+      return { status: 'signed-in', userId, kind: body?.account?.kind === 'dev' ? 'dev' : 'session', email: asString(body?.account?.email), name: asString(body?.account?.name), isAdmin: body?.account?.isAdmin === true };
     } catch {
       return { status: 'unreachable' };
     }
