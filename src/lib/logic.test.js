@@ -286,6 +286,12 @@ describe('rest day layout', () => {
   it('lays the week out with no rest day', () => {
     expect(ids(currentLayout({ moved: {} }, slots))).toEqual({ 1: ['a'], 2: [], 3: ['b'], 4: [], 5: [], 6: ['c'], 7: [] });
   });
+  it('puts a card moved onto a day at the top of that day', () => {
+    // a is on day 1, b on day 3; moving a to day 3 puts it above b even though it comes first in program order
+    expect(ids(currentLayout({ moved: { a: 3 } }, slots))[3]).toEqual(['a', 'b']);
+    // moving c (day 6) to day 1 puts it above a
+    expect(ids(currentLayout({ moved: { c: 1 } }, slots))[1]).toEqual(['c', 'a']);
+  });
   it('inserts an empty rest column and shifts later workouts one day', () => {
     expect(ids(currentLayout({ moved: {}, rest: 3 }, slots))).toEqual({ 1: ['a'], 2: [], 3: [], 4: ['b'], 5: [], 6: [], 7: ['c'] });
   });
