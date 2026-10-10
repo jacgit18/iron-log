@@ -47,6 +47,7 @@ exit 0
     const deploy = recorded().find(l => l.includes('run deploy'))!;
     expect(deploy).toContain('--no-traffic');
     expect(deploy).toContain('--tag candidate');
+    expect(deploy).toMatch(/COMMIT_SHA=[0-9a-f]{7,}/);
     expect(recorded().some(l => l.includes('update-traffic'))).toBe(false);
   });
 
