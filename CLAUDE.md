@@ -4,7 +4,7 @@ React 19 + Vite PWA, TypeScript, zustand store, Vitest and Playwright.
 
 ## Read first
 
-In `DevHiveMind/iron-log/docs/`: `ROADMAP.md` (what to build, out of scope), `ARCHITECTURE.md` (where code lives), `DECISIONS.md` (ADR index; do not re-litigate), `CHANGELOG.md` (add an entry in each PR). `README.md` is in this repo. Before any UI change read the UX set in `docs/ux/`: `UX-DESIGN-BRIEF.md`, `USERFLOW.md`, `DESIGN-SYSTEM.md` (tokens live in `src/styles.css`), `COMPONENTS.md`, `SCREEN-SPECS.md`; update them in the same PR as a UI change.
+In `DevHiveMind/Projects/iron-log/docs/`: `ROADMAP.md` (what to build, out of scope), `ARCHITECTURE.md` (where code lives), `DECISIONS.md` (ADR index; do not re-litigate), `CHANGELOG.md` (add an entry in each PR). `README.md` is in this repo. Before any UI change read the UX set in `docs/ux/`: `UX-DESIGN-BRIEF.md`, `USERFLOW.md`, `DESIGN-SYSTEM.md` (tokens live in `src/styles.css`), `COMPONENTS.md`, `SCREEN-SPECS.md`; update them in the same PR as a UI change.
 
 ## Language
 
@@ -30,4 +30,4 @@ DATABASE_URL=postgres://ironlog:ironlog@127.0.0.1:5433/ironlog npm run e2e:sync 
 - Board reorder and log write paths (`planFix`, `mutateChecks`, `autoLogs`, `addEntry`) must keep the existing tests green: no exercise may be lost or duplicated.
 - Update `feature-map.md` (project docs) in the same PR as any feature or interaction change.
 - Update `CHANGELOG.md` in the same PR as any change, and `DECISIONS.md` (plus a new ADR) when a decision is made.
-- Project docs (backlog, ADRs, migration notes) live outside this repo in `DevHiveMind/iron-log/docs/`.
+- Project docs (backlog, ADRs, migration notes) live outside this repo in `DevHiveMind/Projects/iron-log/docs/`.
