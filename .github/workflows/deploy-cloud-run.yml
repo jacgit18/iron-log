@@ -64,13 +64,22 @@ jobs:
         run: |
           revision="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json \
             | python3 -c 'import json,sys; t=json.load(sys.stdin)["status"]["traffic"]; print(max(t, key=lambda x: x.get("percent", 0))["revisionName"])')"
-          image="$(gcloud run revisions describe "$revision" --project "$PROJECT_ID" --region "$REGION" --format='value(spec.containers[0].image)')"
+          # A revision keeps its image as a digest, so the commit is read from the COMMIT_SHA setting the deploy puts on it.
+          sha="$(gcloud run revisions describe "$revision" --project "$PROJECT_ID" --region "$REGION" --format=json \
+            | python3 -c 'import json,sys; e=json.load(sys.stdin)["spec"]["containers"][0].get("env", []); print(next((x.get("value", "") for x in e if x["name"] == "COMMIT_SHA"), ""))')"
+          # Revisions made before COMMIT_SHA existed: the service keeps the image tag (the commit) of its LATEST revision, which is
+          # the live one only when no newer revision has been made since.
+          if [ -z "$sha" ] && [ "$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.latestCreatedRevisionName)')" = "$revision" ]; then
+            image="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(spec.template.spec.containers[0].image)')"
+            sha="${image##*:}"
+          fi
+          # Anything that is not a commit id leaves it empty, and the migration check then stops and says it cannot tell.
+          case "$sha" in *[!0-9a-f]*) sha="";; esac
           {
-            echo "image=$image"
-            echo "sha=${image##*:}"
+            echo "sha=$sha"
             echo "revision=$revision"
           } >> "$GITHUB_OUTPUT"
-          echo "Live: $revision ($image)"
+          echo "Live: $revision (commit ${sha:-unknown})"
 
       - name: Stop if a migration is waiting
         if: ${{ !inputs.migrations_applied }}

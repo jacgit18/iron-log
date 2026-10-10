@@ -71,11 +71,12 @@ cmd_secrets() {
 
 CANDIDATE_TAG="${CANDIDATE_TAG:-candidate}"
 
-# Builds the image from the current commit; sets $image, $version and $url for the caller.
+# Builds the image from the current commit; sets $image, $version, $url and $commit for the caller.
 build_image() {
   local tag
   version="$(git log -1 --format=%ct)"
   tag="$(git rev-parse --short HEAD)"
+  commit="$tag"
   if [ -n "$(git status --porcelain)" ]; then echo "The working tree has uncommitted changes; the image is built from the files on disk, not the commit. Commit or stash first." >&2; exit 1; fi
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/app:${tag}"
   url="$(service_url)"
@@ -87,7 +88,7 @@ build_image() {
   gc builds submit --config cloudbuild.yaml --substitutions "_IMAGE=${image},_APP_VERSION=${version}" ${build_as[@]+"${build_as[@]}"} .
 }
 
-# Deploys $image; extra arguments (for example --no-traffic --tag candidate) go straight to `gcloud run deploy`.
+# Deploys $image (COMMIT_SHA records which commit it is; the CI deploy reads it back to see what is live); extra arguments (for example --no-traffic --tag candidate) go straight to `gcloud run deploy`.
 deploy_image() {
   # Public access is set when the service is first made and left alone after: changing it needs a far broader permission, which the
   # CI deployer (ci-deploy-setup.sh) deliberately does not have.
@@ -97,13 +98,13 @@ deploy_image() {
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
     ${public[@]+"${public[@]}"} \
     --max-instances 1 --min-instances 0 --cpu 1 --memory 512Mi --concurrency 40 --timeout 120 \
-    --update-env-vars "NODE_ENV=production,BASE_URL=${url}" \
+    --update-env-vars "NODE_ENV=production,BASE_URL=${url},COMMIT_SHA=${commit}" \
     --set-secrets "APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest" \
     "$@"
 }
 
 cmd_deploy() {
-  local image version url
+  local image version url commit
   build_image
   echo "Deploying to $url ..."
   deploy_image
@@ -121,7 +122,7 @@ candidate_url() {
 }
 
 cmd_candidate() {
-  local image version url cand
+  local image version url commit cand
   build_image
   echo "Deploying $image as '$CANDIDATE_TAG' with no traffic ..."
   deploy_image --no-traffic --tag "$CANDIDATE_TAG"
