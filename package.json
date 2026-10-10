@@ -17,6 +17,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "e2e": "playwright test",
+    "check": "node scripts/check.mjs",
     "e2e:sync": "node scripts/e2e-sync.mjs",
     "screenshots": "node tools/screenshots.mjs",
     "db:start": "docker compose up -d --wait db",

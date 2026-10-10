@@ -13,11 +13,19 @@ In `DevHiveMind/Projects/iron-log/docs/`: `ROADMAP.md` (what to build, out of sc
 - Type props, handlers and form state. Avoid `any`; use `unknown` and narrow it. The only accepted loose spots are code that cleans untrusted JSON (`validate`, `normConfig`, `excelImport`, ...) and the host's db/connector handles.
 - Still JavaScript on purpose: tests (`*.test.js`), `e2e/`, config files, `scripts/`, `tools/`, `fonts.js`, `App.jsx`, `main.jsx` and a few presentational components. Convert those only when you edit them.
 
-## Checks (run all before a PR)
+## Checks (run the ones that fit what you changed; CI runs all of them)
 
 ```
-npm run typecheck && npm test && npm run lint && npm run build
-npm run e2e        # before opening a PR
+npm run check            # picks the checks from the files changed against main
+npm run check -- --list  # show what it would run and why
+npm run check -- --all   # typecheck, test, lint, e2e
+```
+
+What it picks: docs only runs nothing; tests only run `test` + `lint`; styles run `e2e`; source runs `typecheck` + `test` + `lint` and `build` (or `e2e` for UI or store code, which builds the app itself); `src/sync/`, `server/` or the store add `e2e:sync` and `db:check` (both need `DATABASE_URL`); migrations run `db:check`; `package.json`, tsconfig or other config runs everything, and so does any file it does not know. If unsure, run `--all`. The board reorder and log write path tests never get skipped: they sit in `npm test`, which runs for any source change.
+
+```
+npm run typecheck && npm test && npm run lint && npm run build   # the individual checks
+npm run e2e
 DATABASE_URL=postgres://ironlog:ironlog@127.0.0.1:5433/ironlog npm run e2e:sync   # after touching src/sync/, server/ or the store's startup
 ```
 
