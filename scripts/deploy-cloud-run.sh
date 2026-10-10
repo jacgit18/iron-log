@@ -70,6 +70,7 @@ cmd_secrets() {
 }
 
 CANDIDATE_TAG="${CANDIDATE_TAG:-candidate}"
+# 0 lets the service scale to zero (free when idle, a cold start on the first request). MIN_INSTANCES=1 keeps one warm, for a small monthly cost.
 
 # Builds the image from the current commit; sets $image, $version, $url and $commit for the caller.
 build_image() {
@@ -97,7 +98,7 @@ deploy_image() {
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
     ${public[@]+"${public[@]}"} \
-    --max-instances 1 --min-instances 0 --cpu 1 --memory 512Mi --concurrency 40 --timeout 120 \
+    --max-instances 1 --min-instances "${MIN_INSTANCES:-0}" --cpu 1 --memory 512Mi --concurrency 40 --timeout 120 \
     --update-env-vars "NODE_ENV=production,BASE_URL=${url},COMMIT_SHA=${commit}" \
     --set-secrets "APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest" \
     "$@"
