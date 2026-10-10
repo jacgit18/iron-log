@@ -1,0 +1,45 @@
+name: Claude review
+
+# Reviews each pull request against the rules in CLAUDE.md and comments on it. Review only: it never pushes commits.
+# Needs the ANTHROPIC_API_KEY repository secret. Skipped for forks and bots (no secret there, and Dependabot/screenshots PRs are routine).
+# Tests, lint and typecheck stay in test.yml; this checks what they cannot: the project conventions.
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: ${{ !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
+            Read CLAUDE.md first, then check the diff (git diff origin/${{ github.base_ref }}...HEAD) against it:
+            - New code is TypeScript (.ts/.tsx), no new .js/.jsx, no `any` outside the accepted spots.
+            - Board reorder and log write paths (planFix, mutateChecks, autoLogs, addEntry) keep their tests; no exercise can be lost or duplicated.
+            - A new user-facing feature is admin-only first: FEATURES entry with a removal condition, useFeature wrapper, requireAdmin on new API routes.
+            - The PR description ticks exactly one Audience box.
+            - Behavior is not changed inside a refactor or conversion commit; one change per commit.
+            - Obvious bugs, missing tests for new logic, security problems (auth on routes, untrusted input).
+            The project docs (CHANGELOG, DECISIONS, feature-map) live outside this repo, so do not flag them as missing.
+            Post one summary comment, then inline comments only for concrete problems. Be brief; skip praise and style nitpicks the linter covers.
+          claude_args: |
+            --max-turns 15
+            --allowedTools "Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
