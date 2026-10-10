@@ -3,7 +3,7 @@ import { extname, join, resolve } from 'node:path';
 import { toNodeHandler } from 'better-auth/node';
 import compression from 'compression';
 import express from 'express';
-import { sql, type Kysely } from 'kysely';
+import { sql, type Kysely, type Transaction } from 'kysely';
 import type { Admins } from './admin.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
@@ -160,138 +160,51 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     res.status(result.status).json(result.body);
   });
 
-  app.post('/api/commands/log-session', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => logSession(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  // A command route: runs the command inside the signed-in user's transaction and sends its status and body. Every command has this shape.
+  const command = (path: string, run: (trx: Transaction<DB>, userId: string, body: unknown, clientVersion: string | null) => Promise<{ status: number; body: unknown }>) =>
+    app.post(path, async (req, res) => {
+      const userId = String(res.locals.userId);
+      const result = await inUserTransaction(db!, userId, trx => run(trx, userId, req.body, req.get('x-client-version') ?? null));
+      res.status(result.status).json(result.body);
+    });
 
-  app.post('/api/commands/tick-card', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => tickCard(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/log-session', logSession);
 
-  app.post('/api/commands/untick-card', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => untickCard(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/tick-card', tickCard);
 
-  app.post('/api/commands/delete-entry', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => deleteEntry(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/untick-card', untickCard);
 
-  app.post('/api/commands/log-body-weight', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => logBodyWeight(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/delete-entry', deleteEntry);
 
-  app.post('/api/commands/delete-body-weight', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => deleteBodyWeight(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/log-body-weight', logBodyWeight);
 
-  app.post('/api/commands/save-week', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => saveWeek(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/delete-body-weight', deleteBodyWeight);
 
-  app.post('/api/commands/delete-week', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => deleteWeek(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/save-week', saveWeek);
 
-  app.post('/api/commands/save-stretch-week', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => saveStretchWeek(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/delete-week', deleteWeek);
 
-  app.post('/api/commands/delete-stretch-week', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => deleteStretchWeek(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/save-stretch-week', saveStretchWeek);
 
-  app.post('/api/commands/save-supplement-day', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => saveSupplementDay(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/delete-stretch-week', deleteStretchWeek);
 
-  app.post('/api/commands/delete-supplement-day', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => deleteSupplementDay(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/save-supplement-day', saveSupplementDay);
 
-  app.post('/api/commands/save-program', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => saveProgram(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/delete-supplement-day', deleteSupplementDay);
 
-  app.post('/api/commands/delete-program', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => deleteProgram(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/save-program', saveProgram);
 
-  app.post('/api/commands/save-config', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => saveConfig(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/delete-program', deleteProgram);
 
-  app.post('/api/commands/save-library-item', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => saveLibraryItem(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/save-config', saveConfig);
 
-  app.post('/api/commands/delete-library-item', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => deleteLibraryItem(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/save-library-item', saveLibraryItem);
 
-  app.post('/api/commands/save-list-item', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => saveListItem(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/delete-library-item', deleteLibraryItem);
 
-  app.post('/api/commands/delete-list-item', async (req, res) => {
-    const userId = String(res.locals.userId);
-    const clientVersion = req.get('x-client-version') ?? null;
-    const result = await inUserTransaction(db!, userId, trx => deleteListItem(trx, userId, req.body, clientVersion));
-    res.status(result.status).json(result.body);
-  });
+  command('/api/commands/save-list-item', saveListItem);
+
+  command('/api/commands/delete-list-item', deleteListItem);
 
   app.get('/api/sync', async (req, res) => {
     const since = parseSince(req.query.since);
