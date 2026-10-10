@@ -21,6 +21,8 @@ npm run e2e        # before opening a PR
 DATABASE_URL=postgres://ironlog:ironlog@127.0.0.1:5433/ironlog npm run e2e:sync   # after touching src/sync/, server/ or the store's startup
 ```
 
+If `npm test` fails with `Test timed out in 5000ms` while the machine is busy (check `uptime`: a load far above the core count), rerun with `npx vitest run --maxWorkers=4`. The tests are CPU-heavy and the 5 s limit trips under contention. A failure on an idle machine is real.
+
 `e2e:sync` runs the app with syncing on against the real API and a scratch Postgres database it makes and drops (the local Docker one from
 `npm run db:start` is fine); it refuses a server that is not on this machine. Syncing is behind a flag (`feature-flags.md`) and off by default.
 
