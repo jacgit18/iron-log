@@ -413,12 +413,15 @@ export function createApiDb(options: ApiDbOptions) {
 
   /* ---------- starting and stopping ---------- */
   let started = false;
+  // The session cookie is shared by every tab of the browser, so another tab can sign in as someone else without this one
+  // seeing a 401. Ask who is signed in again whenever the app wakes or the timer fires, before anything is pulled or sent.
+  const recheckWho = () => { verified = false; };
   let timer: ReturnType<typeof setTimeout> | null = null;
   let unwake: (() => void) | null = null;
   const tick = () => {
     if (!started) return;
     // The timer does not poke an app the server has said is too old; coming back to the app or the network still tries.
-    if (visible() && !(state === 'paused' && pausedBecause === 'outdated')) void syncNow();
+    if (visible() && !(state === 'paused' && pausedBecause === 'outdated')) { recheckWho(); void syncNow(); }
     timer = setTimeout(tick, pollMs);
   };
 
@@ -429,7 +432,7 @@ export function createApiDb(options: ApiDbOptions) {
     outbox.paths().forEach(path => { void exclusive(() => flushPath(path, () => {})).catch(() => undefined); });
     void syncNow();
     if (pollMs > 0) timer = setTimeout(tick, pollMs);
-    unwake = options.onWake?.(() => { wake(); void syncNow(); }) ?? null;
+    unwake = options.onWake?.(() => { recheckWho(); wake(); void syncNow(); }) ?? null;
   }
   function stop() {
     started = false;
