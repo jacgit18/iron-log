@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import express from 'express';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import { rateLimit } from './rateLimit.ts';
 
 const servers: Server[] = [];
@@ -18,6 +18,16 @@ async function start(limit: Parameters<typeof rateLimit>[0], now?: () => number,
 afterAll(() => Promise.all(servers.map(s => new Promise<void>(done => s.close(() => done())))));
 
 describe('rateLimit', () => {
+  it('logs once when a caller first goes over, without the address', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const base = await start({ max: 1, windowMs: 60_000 });
+    for (let i = 0; i < 4; i++) await fetch(base);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(warn.mock.calls[0]![0]))).toMatchObject({ msg: 'rate limited', path: '/', who: 'ip', max: 1 });
+    expect(String(warn.mock.calls[0]![0])).not.toContain('127.0.0.1');
+    warn.mockRestore();
+  });
+
   it('answers 429 with Retry-After once the window is used up, and starts over after it', async () => {
     let t = 1_000_000;
     const base = await start({ max: 3, windowMs: 60_000 }, () => t);
