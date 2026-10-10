@@ -268,7 +268,6 @@ export interface CoreSlice {
   deleteExperiment(id: string): void;
   addToDay(entryId: string, col: number): boolean;
   removeExtra(slotId: string): void;
-  setWarm(day: number, wid: string, on: boolean): void;
   addWarmup(n: string, rx: string): boolean;
   removeWarmup(id: string): void;
   restOverflow(n: number): FlatSlot[];

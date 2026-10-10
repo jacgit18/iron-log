@@ -215,13 +215,6 @@ describe('rest day', () => {
     st().moveSlot('A-d1s1', 3);
     expect(st().week.moved['A-d1s1']).toBeUndefined();
   });
-  it('keeps a warm-up tick with its workout when the rest day is toggled', () => {
-    st().setRestDay(3);
-    st().setWarm(4, 'shadow', true); // displayed Day 4 is program Day 3
-    expect(st().week.warm[3]).toEqual({ shadow: true });
-    st().setRestDay(3);
-    expect(st().week.warm[3].shadow).toBe(true);
-  });
   it('checks off a displayed day', () => {
     st().setRestDay(3);
     st().checkDay(4, true); // displayed Day 4 holds program Day 3
@@ -305,13 +298,6 @@ describe('swap days', () => {
   it('a move with no clash has no suggestion', () => {
     st().moveSlot('A-d6s5', 7);
     expect(st().moveNote).toBeNull();
-  });
-  it('keeps a warm-up tick with its workout across a swap', () => {
-    st().swapDays(6, 1);
-    st().setWarm(7, 'shadow', true); // column 7 shows the Day 6 workout
-    expect(st().week.warm[6]).toEqual({ shadow: true });
-    st().swapDays(7, -1);
-    expect(st().week.warm[6].shadow).toBe(true);
   });
   it('keeps a check-off with its workout across a swap', () => {
     st().checkCard('A-d6s1', true);
