@@ -27,6 +27,7 @@ export default function UpdateBanner() {
   // Opening the app again is the best time to find an update: nothing is in progress yet.
   useEffect(() => {
     const onVisible = () => {
+      if (document.visibilityState === 'visible') lastInput.current = Date.now(); // returning counts as activity: restart the quiet time
       if (document.visibilityState !== 'visible' || !navigator.onLine || Date.now() - lastCheck.current < REFOCUS_MS) return;
       lastCheck.current = Date.now();
       registration.current?.update().catch(() => {});
