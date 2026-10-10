@@ -71,6 +71,8 @@ export function groupsOf(items: Stretch[], tier: StretchTier) {
   return out;
 }
 export const doneKey = (day: number, id: string) => `${day}:${id}`;
+// A warm-up tick lives in the stretch week's `done` under "<day>:warm:<id>"; stretch ids are slugs, so they never clash.
+export const warmKey = (id: string) => `warm:${id}`;
 export const isStretchDone = (week: StretchWeek, day: number, id: string) => !!week.done[doneKey(day, id)];
 export const isDaySkipped = (week: StretchWeek, day: number) => !!week.skipped[day];
 export const extrasOn = (week: StretchWeek, day: number) => week.extra.filter(x => x.day === day);

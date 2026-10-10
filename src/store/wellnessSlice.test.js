@@ -18,6 +18,15 @@ describe('stretches', () => {
     st().setStretchDone(2, 'scarecrow', false);
     expect(st().strWeek.done).toEqual({});
   });
+  it('ticks a warm-up item for one day without counting it toward the stretches', async () => {
+    const { warmKey, isStretchDone, dayTally } = await import('../lib/stretches.js');
+    st().setStretchDone(2, warmKey('shadow'), true);
+    expect(st().strWeek.done).toEqual({ '2:warm:shadow': true });
+    expect(isStretchDone(st().strWeek, 2, warmKey('shadow'))).toBe(true);
+    expect(isStretchDone(st().strWeek, 3, warmKey('shadow'))).toBe(false);
+    expect(dayTally(st().stretches, st().strWeek, 2).done).toBe(0);
+    st().setStretchDone(2, warmKey('shadow'), false);
+  });
   it('adds, edits and deletes a library stretch, and rejects a duplicate name or bad link', () => {
     expect(st().saveStretch({ n: 'Cossack Squat', group: 'Squatting', tier: 'primary', url: 'https://youtu.be/x' })).toBeNull();
     const item = st().stretches.find(i => i.n === 'Cossack Squat');

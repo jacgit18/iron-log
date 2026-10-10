@@ -11,7 +11,6 @@ import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
-import WarmUp from './WarmUp.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
 import FirstRun from './FirstRun.jsx';
@@ -284,7 +283,6 @@ export default function Board() {
           const list = cols[d];
           const date = dayDate(list, logs, wk);
           const t = tally(list, week);
-          const warm = week.warm[pd] || {};
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const vis = shown(list);
           const open = vis.filter(s => isOpen(s, week));
@@ -313,7 +311,6 @@ export default function Board() {
                 <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>
                 <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>
               </div>
-              {slots.length > 0 && <WarmUp d={d} warm={warm} />}
               {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
               {open.map((s, i) => {
                 const sec = headOf(s, pd);

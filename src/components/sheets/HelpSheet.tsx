@@ -24,7 +24,7 @@ const GLOSSARY = [
   ['Primary / Accessory', 'Main lifts of the day, and the smaller supporting exercises.'],
   ['Primary / secondary muscles', 'Muscles an exercise mainly works, and ones it works less. Secondary work counts as half a set on the Muscles tab.'],
   ['Mobility', 'Stretching or movement work. It isn’t counted toward any muscle.'],
-  ['Warm-up', 'Short exercises before each day’s session. Tap Edit to add your own or remove any; the list is the same on every day.'],
+  ['Warm-up', 'Short exercises at the top of each day on the Stretches tab. Tap Edit to add your own or remove any; the list is the same on every day.'],
   ['Make-up day', 'Day 5 is meant for anything you skipped earlier in the week. Use Move to put exercises there.'],
   ['Unchecked yesterday', 'When yesterday still has exercises with nothing checked, a notice at the top of the board offers to skip them all or move them all to a later day. Not now hides it until tomorrow.'],
   ['Skip', 'Leaves an exercise out of this week’s counts without deleting it.'],
