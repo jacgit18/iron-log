@@ -5,7 +5,11 @@
 #   setup     enable the APIs and create the image repository (once per project)
 #   secrets   put the four secrets in Secret Manager from your shell (once, and when one changes)
 #   url       print the address the service will have, for the Google console's redirect URI (needs no deploy)
-#   deploy    build the image from the current commit and deploy it
+#   deploy    build the image from the current commit and deploy it at once (100% of traffic; the manual and emergency way)
+#   candidate build the image and deploy it as a tagged revision that gets NO traffic; prints its own address (ADR 017)
+#   promote   send all traffic to the candidate revision
+#   discard   remove the candidate tag (after a failed check; the revision never had traffic)
+#   restore   send traffic to the latest revision again (after a rollback pinned it to an older one)
 #
 # It never touches a database: migrations are run by hand (docs: deploy-runbook.md). It sets max-instances=1 and min-instances=0,
 # so spend stays at the free tier, and it needs the budget alert from the runbook in place before the first deploy.
@@ -65,8 +69,11 @@ cmd_secrets() {
   echo "Done. Next: scripts/deploy-cloud-run.sh deploy"
 }
 
-cmd_deploy() {
-  local tag version image url
+CANDIDATE_TAG="${CANDIDATE_TAG:-candidate}"
+
+# Builds the image from the current commit; sets $image, $version and $url for the caller.
+build_image() {
+  local tag
   version="$(git log -1 --format=%ct)"
   tag="$(git rev-parse --short HEAD)"
   if [ -n "$(git status --porcelain)" ]; then echo "The working tree has uncommitted changes; the image is built from the files on disk, not the commit. Commit or stash first." >&2; exit 1; fi
@@ -78,7 +85,10 @@ cmd_deploy() {
   local build_as=() build_sa="${BUILD_SA:-iron-log-build@${PROJECT_ID}.iam.gserviceaccount.com}"
   if [ -n "${BUILD_SA:-}" ] || gc iam service-accounts describe "$build_sa" >/dev/null 2>&1; then build_as=(--service-account "projects/${PROJECT_ID}/serviceAccounts/${build_sa}"); fi
   gc builds submit --config cloudbuild.yaml --substitutions "_IMAGE=${image},_APP_VERSION=${version}" ${build_as[@]+"${build_as[@]}"} .
-  echo "Deploying to $url ..."
+}
+
+# Deploys $image; extra arguments (for example --no-traffic --tag candidate) go straight to `gcloud run deploy`.
+deploy_image() {
   # Public access is set when the service is first made and left alone after: changing it needs a far broader permission, which the
   # CI deployer (ci-deploy-setup.sh) deliberately does not have.
   local public=()
@@ -88,16 +98,61 @@ cmd_deploy() {
     ${public[@]+"${public[@]}"} \
     --max-instances 1 --min-instances 0 --cpu 1 --memory 512Mi --concurrency 40 --timeout 120 \
     --update-env-vars "NODE_ENV=production,BASE_URL=${url}" \
-    --set-secrets "APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest"
+    --set-secrets "APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest" \
+    "$@"
+}
+
+cmd_deploy() {
+  local image version url
+  build_image
+  echo "Deploying to $url ..."
+  deploy_image
+  # A rollback pins traffic to one older revision; without this a later deploy would be ready but get no traffic.
+  gc run services update-traffic "$SERVICE" --region "$REGION" --to-latest
   echo
   echo "Live at: $url"
   echo "Check:   curl -s $url/api/health   and   curl -s $url/api/health/db"
 }
+
+# The tagged address of the candidate revision, read from the service (Cloud Run builds it from the tag; the tag is not the whole host).
+candidate_url() {
+  gc run services describe "$SERVICE" --region "$REGION" --format=json \
+    | python3 -c 'import json,sys; t=sys.argv[1]; print(next((x["url"] for x in json.load(sys.stdin)["status"].get("traffic", []) if x.get("tag")==t and x.get("url")), ""))' "$CANDIDATE_TAG"
+}
+
+cmd_candidate() {
+  local image version url cand
+  build_image
+  echo "Deploying $image as '$CANDIDATE_TAG' with no traffic ..."
+  deploy_image --no-traffic --tag "$CANDIDATE_TAG"
+  cand="$(candidate_url)"
+  if [ -z "$cand" ]; then echo "Deployed, but the service shows no address for tag '$CANDIDATE_TAG'." >&2; exit 1; fi
+  echo
+  echo "Candidate (no traffic): $cand"
+  # Machine-readable line for the CI workflow.
+  echo "CANDIDATE_URL=$cand"
+}
+
+cmd_promote() {
+  gc run services describe "$SERVICE" --region "$REGION" >/dev/null
+  gc run services update-traffic "$SERVICE" --region "$REGION" --to-tags "${CANDIDATE_TAG}=100"
+  # The tag has done its job; its address would otherwise keep serving this revision.
+  gc run services update-traffic "$SERVICE" --region "$REGION" --remove-tags "$CANDIDATE_TAG"
+  echo "Promoted: all traffic is on the candidate revision."
+}
+
+cmd_discard() { gc run services update-traffic "$SERVICE" --region "$REGION" --remove-tags "$CANDIDATE_TAG"; }
+
+cmd_restore() { gc run services update-traffic "$SERVICE" --region "$REGION" --to-latest; }
 
 case "${1:-}" in
   setup) cmd_setup;;
   secrets) cmd_secrets;;
   url) service_url;;
   deploy) cmd_deploy;;
-  *) sed -n '2,12p' "$0"; exit 2;;
+  candidate) cmd_candidate;;
+  promote) cmd_promote;;
+  discard) cmd_discard;;
+  restore) cmd_restore;;
+  *) sed -n '2,17p' "$0"; exit 2;;
 esac

@@ -1,7 +1,9 @@
 name: Deploy to Cloud Run
 
 # After a merge to main, once the Tests workflow has passed on that exact commit, builds the image and deploys it to Cloud Run
-# (scripts/deploy-cloud-run.sh), checks the new revision answers, and rolls back to the previous one if it does not.
+# (scripts/deploy-cloud-run.sh) as a revision with no traffic, checks it on its own address, and only then sends it traffic. If the live
+# service fails its check afterwards it rolls back to the previous revision. The `production` environment's required reviewer
+# approves each run (ADR 017).
 #
 # No keys are stored in GitHub: it signs in to Google with Workload Identity Federation, which only accepts this repository on the main
 # branch (set up once by scripts/ci-deploy-setup.sh, which also prints the three repository variables this reads).
@@ -56,17 +58,19 @@ jobs:
           service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
       - uses: google-github-actions/setup-gcloud@v3
 
+      # The revision that has the traffic, not the latest one: a candidate that failed its check is the latest but never served anyone.
       - name: What is live now
         id: live
         run: |
-          image="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(spec.template.spec.containers[0].image)')"
-          revision="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.latestReadyRevisionName)')"
+          revision="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json \
+            | python3 -c 'import json,sys; t=json.load(sys.stdin)["status"]["traffic"]; print(max(t, key=lambda x: x.get("percent", 0))["revisionName"])')"
+          image="$(gcloud run revisions describe "$revision" --project "$PROJECT_ID" --region "$REGION" --format='value(spec.containers[0].image)')"
           {
             echo "image=$image"
             echo "sha=${image##*:}"
             echo "revision=$revision"
           } >> "$GITHUB_OUTPUT"
-          echo "Live: $image"
+          echo "Live: $revision ($image)"
 
       - name: Stop if a migration is waiting
         if: ${{ !inputs.migrations_applied }}
@@ -84,15 +88,30 @@ jobs:
           fi
           echo "No migration waiting."
 
-      - name: Build and deploy
+      # The new revision is deployed with no traffic and checked on its own tagged address first (ADR 017): a revision that fails
+      # never reaches a user, so there is nothing to roll back.
+      - name: Build and deploy the new revision with no traffic
+        id: candidate
         env:
           BUILD_SA: iron-log-build@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
-        run: scripts/deploy-cloud-run.sh deploy
+        run: |
+          scripts/deploy-cloud-run.sh candidate | tee "$RUNNER_TEMP/candidate.log"
+          echo "url=$(sed -n 's/^CANDIDATE_URL=//p' "$RUNNER_TEMP/candidate.log")" >> "$GITHUB_OUTPUT"
 
-      - name: Check the new revision, and roll back if it is not healthy
+      - name: Check the new revision before it gets any traffic
+        run: |
+          if scripts/ci-deploy.sh smoke "${{ steps.candidate.outputs.url }}"; then exit 0; fi
+          echo "::error title=The new revision failed its check::It never received traffic; production still runs ${{ steps.live.outputs.revision }}."
+          scripts/deploy-cloud-run.sh discard || true
+          exit 1
+
+      - name: Send traffic to the new revision
+        run: scripts/deploy-cloud-run.sh promote
+
+      - name: Check the live service, and roll back if it is not healthy
         run: |
           url="https://${SERVICE}-$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)').${REGION}.run.app"
           if scripts/ci-deploy.sh smoke "$url"; then exit 0; fi
-          echo "::error title=The new revision failed its check::Rolling back to ${{ steps.live.outputs.revision }}."
+          echo "::error title=The live service failed its check::Rolling back to ${{ steps.live.outputs.revision }}. Traffic stays on that revision until you run scripts/deploy-cloud-run.sh restore or deploy again."
           gcloud run services update-traffic "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --to-revisions "${{ steps.live.outputs.revision }}=100"
           exit 1
