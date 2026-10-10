@@ -9,8 +9,14 @@ describe('the policy and the system agree', () => {
   const text = policy.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
   it('backups are kept as many days as the policy says', () => {
-    const days = /RETENTION_DAYS="\$\{RETENTION_DAYS:-(\d+)\}"/.exec(read('scripts/backup-cloud-run.sh'))?.[1];
-    expect(days).toBe('30');
+    // A file is deleted after RETENTION_DAYS and stays recoverable for SOFT_DELETE_DAYS more (an operator's undo), so the two together are
+    // what the policy promises. Both are set explicitly in the script, so a Google default cannot change the promise.
+    const script = read('scripts/backup-cloud-run.sh');
+    const kept = Number(/RETENTION_DAYS="\$\{RETENTION_DAYS:-(\d+)\}"/.exec(script)?.[1]);
+    const undo = Number(/SOFT_DELETE_DAYS="\$\{SOFT_DELETE_DAYS:-(\d+)\}"/.exec(script)?.[1]);
+    expect(kept + undo).toBe(30);
+    expect(script).toMatch(/buckets create[^\n]*\\\n\s*--soft-delete-duration/); // a new bucket is made with it
+    expect(script).toMatch(/buckets update[^\n]*--soft-delete-duration/); // and an existing one is brought into line
     expect(text).toContain('within 30 days');
     expect(text).toMatch(/Nightly backups[^.]*30 days/);
   });

@@ -3,7 +3,7 @@
 # and no scheduled snapshots, so this is the copy that outlives a mistake you notice tomorrow.
 #
 # Usage:  PROJECT_ID=iron-log-jacgit18 scripts/backup-cloud-run.sh <command>
-#   setup    enable the APIs; make the private bucket (files deleted after 30 days), the service account and its limited rights
+#   setup    enable the APIs; make the private bucket (files deleted after 23 days, recoverable by an operator for 7 more), the service account and its limited rights
 #   secret   store the database URL the job reads (BACKUP_DATABASE_URL in your shell: the UNPOOLED owner URL of the production branch)
 #   deploy   build the job image, create or update the job, and schedule it every night (3:15 AM New York)
 #   run      run a backup now and wait for it
@@ -21,7 +21,11 @@ REPO="${REPO:-iron-log}"
 BUCKET="${BUCKET:-${PROJECT_ID}-iron-log-backups}"
 SA="iron-log-backup@${PROJECT_ID}.iam.gserviceaccount.com"
 SECRET="iron-log-backup-database-url"
-RETENTION_DAYS="${RETENTION_DAYS:-30}"
+# The privacy policy promises that erased data is gone from backups within 30 days. A file the bucket deletes stays recoverable for the
+# soft-delete period (an undo for a mistaken delete, readable by project owners only), so the two add up to the promise: 23 + 7 = 30.
+# server/legal.test.ts checks that. The soft-delete period is set explicitly, so Google changing its default cannot change the promise.
+RETENTION_DAYS="${RETENTION_DAYS:-23}"
+SOFT_DELETE_DAYS="${SOFT_DELETE_DAYS:-7}"
 
 gc() { gcloud --project "$PROJECT_ID" "$@"; }
 
@@ -31,15 +35,16 @@ cmd_setup() {
   gc iam service-accounts describe "$SA" >/dev/null 2>&1 || gc iam service-accounts create iron-log-backup --display-name "Iron Log nightly backup"
   if ! gc storage buckets describe "gs://$BUCKET" >/dev/null 2>&1; then
     # Private: uniform access, public access prevented. Files older than the retention are deleted by the bucket itself.
-    gc storage buckets create "gs://$BUCKET" --location "$REGION" --uniform-bucket-level-access --public-access-prevention
+    gc storage buckets create "gs://$BUCKET" --location "$REGION" --uniform-bucket-level-access --public-access-prevention \
+      --soft-delete-duration "${SOFT_DELETE_DAYS}d"
   fi
   local rules; rules="$(mktemp)"
   printf '{"rule":[{"action":{"type":"Delete"},"condition":{"age":%s}}]}' "$RETENTION_DAYS" > "$rules"
-  gc storage buckets update "gs://$BUCKET" --lifecycle-file "$rules" >/dev/null
+  gc storage buckets update "gs://$BUCKET" --lifecycle-file "$rules" --soft-delete-duration "${SOFT_DELETE_DAYS}d" >/dev/null
   rm -f "$rules"
   # The job may create files and nothing else: it cannot read, overwrite or delete a backup.
   gc storage buckets add-iam-policy-binding "gs://$BUCKET" --member "serviceAccount:$SA" --role roles/storage.objectCreator >/dev/null
-  echo "Set up: bucket gs://$BUCKET (kept $RETENTION_DAYS days), service account $SA. Next: scripts/backup-cloud-run.sh secret"
+  echo "Set up: bucket gs://$BUCKET (kept $RETENTION_DAYS days, then $SOFT_DELETE_DAYS more recoverable by an operator), service account $SA. Next: scripts/backup-cloud-run.sh secret"
 }
 
 cmd_secret() {
