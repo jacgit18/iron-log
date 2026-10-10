@@ -1,0 +1,161 @@
+import { LS } from '../lib/storage.js';
+import {
+  MAX_ITEMS, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, monthEmpty, monthKey, newGroceryId, normGrocery, normGroceryMonth, parseDollars,
+} from '../lib/grocery.js';
+import type { Grocery, GroceryMonth } from '../types.ts';
+import type { Flag, GrocerySlice, StoreGet, StoreSet } from './types.ts';
+
+// The grocery list is kept on this device only, in the browser's storage (like display options): its paths are not in the
+// sync's map (parsePath), so it never reaches the server and is not part of "Delete my data". It is in the data file and
+// the backups. `flag` is the save-status helper from the app store.
+const MAIN = 'grocery/main';
+
+export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GrocerySlice => {
+  const saveMain = (g: Grocery) => { if (!LS.set(MAIN, g)) flag('Storage full'); };
+  const saveMonth = (key: string, m: GroceryMonth) => {
+    if (monthEmpty(m)) { LS.remove('grocery/' + key); return; } // an untouched month is the fresh list: nothing to keep
+    if (!LS.set('grocery/' + key, m)) flag('Storage full');
+  };
+  const mutateCatalogue = (fn: (g: Grocery) => string | null): string | null => {
+    const g = structuredClone(get().grocery);
+    const err = fn(g);
+    if (err) return err;
+    set({ grocery: g }); saveMain(g); return null;
+  };
+  const mutateMonth = (key: string, fn: (m: GroceryMonth) => void) => {
+    if (!MONTH_RE.test(key)) return;
+    const m = structuredClone(get().groceryMonths[key] || emptyMonth());
+    fn(m);
+    const months = { ...get().groceryMonths };
+    if (monthEmpty(m)) delete months[key]; else months[key] = m;
+    set({ groceryMonths: months }); saveMonth(key, m);
+  };
+
+  return {
+    grocery: normGrocery(null),
+    groceryMonths: {},
+
+    loadGrocery() {
+      const months: Record<string, GroceryMonth> = {};
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k || !k.startsWith('ironlog:grocery/')) continue;
+          const key = k.slice('ironlog:grocery/'.length);
+          if (!MONTH_RE.test(key)) continue;
+          const m = normGroceryMonth(LS.get('grocery/' + key));
+          if (!monthEmpty(m)) months[key] = m;
+        }
+      } catch { /* storage unavailable: start with the fresh list */ }
+      set({ grocery: normGrocery(LS.get(MAIN)), groceryMonths: months });
+    },
+
+    // An import replaces the list; the old months are removed from storage so none are left behind.
+    setGrocery(g, months) {
+      const clean = normGrocery(g);
+      Object.keys(get().groceryMonths).forEach(k => LS.remove('grocery/' + k));
+      const next: Record<string, GroceryMonth> = {};
+      Object.entries(months || {}).forEach(([k, v]) => { if (MONTH_RE.test(k)) { const m = normGroceryMonth(v); if (!monthEmpty(m)) next[k] = m; } });
+      set({ grocery: clean, groceryMonths: next });
+      saveMain(clean); Object.entries(next).forEach(([k, m]) => saveMonth(k, m));
+    },
+
+    addGroceryItem(d) {
+      const n = d.n.trim().replace(/\s+/g, ' ').slice(0, 80);
+      if (!n) return 'Give the item a name.';
+      const qty = d.qty.trim() === '' ? 1 : cleanQty(d.qty);
+      if (qty == null || qty <= 0) return 'The count must be a number from 0.01 to 999.';
+      const priceText = d.price.trim();
+      const cents = priceText === '' ? null : parseDollars(priceText);
+      if (priceText !== '' && cents == null) return 'The price must be dollars, like 3.49.';
+      const store = d.store.trim().replace(/\s+/g, ' ').slice(0, 40);
+      return mutateCatalogue(g => {
+        if (g.items.length >= MAX_ITEMS) return `The list is full (${MAX_ITEMS} items).`;
+        if (g.items.some(i => i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
+        if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
+        g.items.push({ id: newGroceryId(g.items, n), n, store, qty, cents, once: d.once });
+        return null;
+      });
+    },
+
+    updateGroceryItem(id, patch) {
+      return mutateCatalogue(g => {
+        const it = g.items.find(i => i.id === id);
+        if (!it) return 'That item is gone.';
+        if (patch.n !== undefined) {
+          const n = patch.n.trim().replace(/\s+/g, ' ').slice(0, 80);
+          if (!n) return 'Give the item a name.';
+          it.n = n;
+        }
+        if (patch.store !== undefined) {
+          const store = patch.store.trim().replace(/\s+/g, ' ').slice(0, 40);
+          if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
+          it.store = store;
+        }
+        if (patch.qty !== undefined) { const q = cleanQty(patch.qty); if (q == null || q <= 0) return 'The count must be a number from 0.01 to 999.'; it.qty = q; }
+        if (patch.cents !== undefined) { if (patch.cents !== null && cleanCents(patch.cents) == null) return 'That price is not valid.'; it.cents = patch.cents; }
+        if (patch.once !== undefined) it.once = patch.once;
+        if (g.items.some(i => i !== it && i.n.toLowerCase() === it.n.toLowerCase() && i.store === it.store)) return 'That item is already in this store’s list.';
+        return null;
+      });
+    },
+
+    removeGroceryItem(id) { mutateCatalogue(g => { g.items = g.items.filter(i => i.id !== id); return null; }); },
+
+    addGroceryStore(name) {
+      const store = name.trim().replace(/\s+/g, ' ').slice(0, 40);
+      if (!store) return 'Give the store a name.';
+      return mutateCatalogue(g => {
+        if (g.stores.some(s => s.toLowerCase() === store.toLowerCase())) return 'You already have that store.';
+        if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`;
+        g.stores.push(store); return null;
+      });
+    },
+
+    removeGroceryStore(name) {
+      return mutateCatalogue(g => {
+        if (g.items.some(i => i.store === name)) return 'Move or remove this store’s items first.';
+        g.stores = g.stores.filter(s => s !== name); return null;
+      });
+    },
+
+    // Ticking records the count and price paid, so a later change to the catalogue does not rewrite that month.
+    setGroceryGot(month, id, on) {
+      const it = get().grocery.items.find(i => i.id === id);
+      if (!it) return;
+      mutateMonth(month, m => {
+        const l = { ...(m.lines[id] || {}) };
+        if (on) { l.got = true; l.qty = l.qty ?? it.qty; if (l.cents == null && it.cents != null) l.cents = it.cents; } else delete l.got;
+        if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
+      });
+    },
+
+    setGroceryQty(month, id, qty) {
+      const q = cleanQty(qty);
+      if (q == null || q <= 0 || !get().grocery.items.some(i => i.id === id)) return;
+      mutateMonth(month, m => { m.lines[id] = { ...(m.lines[id] || {}), qty: q }; });
+    },
+
+    // The price typed this month is remembered as the item's usual price, but only for the current month: fixing an old month must not change today's.
+    setGroceryCents(month, id, cents) {
+      if (cents !== null && cleanCents(cents) == null) return;
+      const it = get().grocery.items.find(i => i.id === id);
+      if (!it) return;
+      mutateMonth(month, m => {
+        const l = { ...(m.lines[id] || {}) };
+        if (cents === null) delete l.cents; else l.cents = cents;
+        if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
+      });
+      if (month === monthKey(new Date()) && cents !== null && it.cents !== cents) get().updateGroceryItem(id, { cents });
+    },
+
+    pullGrocery(month, id, on) {
+      const it = get().grocery.items.find(i => i.id === id);
+      if (!it || !it.once) return;
+      mutateMonth(month, m => {
+        m.pulled = m.pulled.filter(x => x !== id);
+        if (on) m.pulled.push(id); else delete m.lines[id];
+      });
+    },
+  };
+};

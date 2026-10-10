@@ -600,6 +600,8 @@ test.describe('Delete my data', () => {
       if (sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
       localStorage.setItem('ironlog:logs/hack', JSON.stringify({ schema: 1, entries: [{ d: '2026-09-14', w: 200, s: 3, r: 8 }] })); // from before accounts
+      localStorage.setItem('ironlog:grocery/main', JSON.stringify({ stores: [], items: [{ id: 'kale', n: 'Kale', store: '', qty: 1, cents: null, once: false }] })); // the device-only grocery list
+      localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines: { kale: { got: true } }, pulled: [] }));
     });
     const calls = await open(page, { '/api/account/erase-data': ok });
     await panel(page).getByLabel(/Type ERASE/).fill('ERASE');
@@ -609,6 +611,7 @@ test.describe('Delete my data', () => {
     await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible(); // reloaded: the app reopens on the tab it was on
     const left = await page.evaluate(() => ({ docs: localStorage.getItem('ironlog:logs/hack'), mirror: localStorage.getItem('ironlog:sync/mirror'), marker: localStorage.getItem('ironlog:sync/legacy') }));
     expect(left.docs).toBeNull();
+    expect(await page.evaluate(() => [localStorage.getItem('ironlog:grocery/main'), localStorage.getItem('ironlog:grocery/2026-09')])).toEqual([null, null]); // the grocery list goes with the rest
     expect(left.marker).toContain('dismissed'); // the erased old data is never offered for upload again
   });
 

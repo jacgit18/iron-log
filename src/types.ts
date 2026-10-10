@@ -191,6 +191,16 @@ export interface Supplements {
   taken: Taken;
 }
 
+/* ---------- Grocery list (device-only, admin-only for now) ---------- */
+/** A thing you buy. `store` is where ('' = anywhere), `qty` the usual count, `cents` the last unit price in cents, `once` marks an occasional item that is not on each month's list. */
+export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; once: boolean }
+/** The catalogue: store names in the order shown, and the items. A month's list is drawn from it. */
+export interface Grocery { stores: string[]; items: GroceryItem[] }
+/** One item in one month: ticked off, and the count and unit price (cents) paid when they differ from the catalogue or were recorded at the tick. */
+export interface GroceryLine { got?: true; qty?: number; cents?: number }
+/** One month's list (`grocery/YYYY-MM`): its lines by item id, and the occasional items pulled onto it. */
+export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[] }
+
 export type StretchTier = 'primary' | 'secondary' | '';
 export interface Stretch { id: string; n: string; group: string; tier: StretchTier; url?: string; note?: string }
 export interface StretchExperiment { id: string; n: string; url?: string; note?: string }

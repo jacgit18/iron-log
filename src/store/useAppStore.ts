@@ -14,6 +14,7 @@ import type { ApiDb } from '../sync/apiDb.js';
 import { editorSlice } from './editorSlice.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
+import { grocerySlice } from './grocerySlice.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { normSupplements } from '../lib/water.js';
 import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
@@ -166,6 +167,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   ...editorSlice(set, get, flag),
   ...settingsSlice(set, get, flag),
   ...wellnessSlice(set, get, flag),
+  ...grocerySlice(set, get, flag),
   cfg: structuredClone(DEFAULT_CFG),
   weekStart: weekStartOf(new Date()),
   week: normWeek(null),
@@ -915,6 +917,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   async init() {
     if (initStarted) return; // StrictMode runs mount effects twice in dev; subscribe once
     initStarted = true;
+    get().loadGrocery(); // device-only: read from this browser's storage whatever the data source turns out to be
     const host = window.claude && window.claude.use ? (window.claude as { use: (name: string) => Promise<any> }) : null;
     (async () => { try { set({ dl: host ? await host.use('downloads') : blobSave }); } catch { set({ dl: null }); } })();
     (async () => { try { set({ mcp: host ? await host.use('mcp') : null }); } catch { set({ mcp: null }); } })();
