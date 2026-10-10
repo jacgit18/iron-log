@@ -6,6 +6,7 @@ import { sql, type Kysely } from 'kysely';
 import type { Admins } from './admin.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
+import { bodyLimit } from './bodyLimit.ts';
 import { clientErrors } from './clientErrors.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { originGuard } from './originGuard.ts';
@@ -85,6 +86,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     // Starting a sign-in (and, in tests, an email sign-in) is limited hard; reading the session, which the app does often, is not.
     app.use('/api/auth/sign-in', rateLimit(authLimits.signIn));
     app.use('/api/auth', rateLimit(authLimits.other));
+    // Better Auth buffers a whole body before it checks it, so the size is judged first (bodyLimit.ts).
+    app.use('/api/auth', bodyLimit());
     app.all('/api/auth/*splat', toNodeHandler(auth));
   }
   // The phone's error reports: anyone may send one (a signed-out phone has errors too), so they are small, rate-limited and scrubbed.
