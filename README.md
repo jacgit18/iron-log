@@ -154,6 +154,10 @@ npm run e2e                     # builds the app and runs the browser tests
 
 `npm run lint` checks the code with oxlint. `npm test` runs the unit tests (`*.test.js` next to the code in `src/lib` and `src/store`). They cover the program rotation, done and skipped counts, check-offs, progression and stalls, the Progress numbers, muscle volume, the program editor, the timers, GitHub backup, and import and export. `src/test/fixtures/iron-log-data.v1.json` is a sample data file that pins down the backup format: if its test fails, the format changed, so bump the format number rather than editing the sample.
 
+## Project docs
+
+The project's docs (roadmap, architecture, decisions, changelog, UX docs, backlog, runbooks) are stored outside this repository in the DevHiveMind repository: [DevHiveMind/Projects](https://github.com/jacgit18/DevHiveMind/tree/main/Projects).
+
 ## Notes
 
 - Muscle tags are approximate, and "weekly sets" counts secondary work as half a set. Treat the muscle map as a rough guide to coverage, not an exact measure.
