@@ -31,6 +31,8 @@ export function rateLimit({ max, windowMs }: Limit, now: () => number = Date.now
       windows.set(who, w);
     }
     if (++w.count > max) {
+      // One line when a caller first goes over (not one per refused call), so a flood shows up in the logs without filling them.
+      if (w.count === max + 1) console.warn(JSON.stringify({ msg: 'rate limited', path: req.baseUrl + req.path, who: who.startsWith('user:') ? 'user' : 'ip', max, windowMs }));
       res.setHeader('Retry-After', String(Math.max(1, Math.ceil((w.start + windowMs - t) / 1000))));
       res.status(429).json({ ok: false, error: 'too many attempts, try again shortly' });
       return;
