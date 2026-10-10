@@ -33,11 +33,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Says why the deploy below was skipped, so a forgotten pause is visible in the run summary.
+  paused:
+    if: github.event_name == 'workflow_run' && vars.DEPLOY_PAUSED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "### Deploys are paused (DEPLOY_PAUSED=true)" >> "$GITHUB_STEP_SUMMARY"
+          echo "This merge was not deployed. To ship everything on main in one deploy: unpause with \`gh variable set DEPLOY_PAUSED --body false\`, then run \`gh workflow run deploy-cloud-run.yml --ref main\`." >> "$GITHUB_STEP_SUMMARY"
+
   deploy:
     # Only a successful Tests run for a push to main of this repository, or a person starting it by hand on main.
+    # A repository variable DEPLOY_PAUSED=true skips the automatic runs only; a person starting it by hand is never blocked.
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+      (github.event_name == 'workflow_run' && vars.DEPLOY_PAUSED != 'true' && github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     # Add required reviewers to this environment (Settings -> Environments -> production) to approve each deploy by hand.
