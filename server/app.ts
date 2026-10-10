@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { toNodeHandler } from 'better-auth/node';
+import compression from 'compression';
 import express from 'express';
 import { sql, type Kysely } from 'kysely';
 import type { Admins } from './admin.ts';
@@ -79,6 +80,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   const app = express();
   if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
   app.use(securityHeaders());
+  // gzip/brotli for the app's scripts and the sync pages: Cloud Run does not compress, and the first load is on a phone's connection.
+  app.use(compression());
   // Before Better Auth and every body parser: a cross-origin write is refused without being read.
   app.use('/api', originGuard(allowedOrigins));
   // Better Auth reads the request body itself, so its routes come before any body parser.

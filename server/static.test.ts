@@ -22,6 +22,7 @@ beforeAll(async () => {
   writeFileSync(join(dir, 'workbox-2fbc6a65.js'), '// workbox');
   writeFileSync(join(dir, 'manifest.webmanifest'), '{}');
   writeFileSync(join(dir, 'assets', 'index-AbC123.js'), 'console.log(1)');
+  writeFileSync(join(dir, 'assets', 'big-AbC123.js'), 'console.log("x");'.repeat(500));
   writeFileSync(join(dir, 'icons', 'icon-192.png'), 'png');
   server = createApp({ staticDir: dir }).listen(0);
   bare = createApp({}).listen(0);
@@ -36,6 +37,15 @@ afterAll(async () => {
 });
 
 const get = (path: string, init?: RequestInit) => fetch(base + path, init);
+
+describe('compression', () => {
+  it('compresses a large script for a client that accepts it, and leaves it plain for one that does not', async () => {
+    const packed = await get('/assets/big-AbC123.js', { headers: { 'accept-encoding': 'gzip' } });
+    expect(packed.headers.get('content-encoding')).toBe('gzip');
+    const plain = await get('/assets/big-AbC123.js', { headers: { 'accept-encoding': 'identity' } });
+    expect(plain.headers.get('content-encoding')).toBeNull();
+  });
+});
 
 describe('serving the PWA', () => {
   it('serves index.html at the root and re-checks it every time', async () => {
