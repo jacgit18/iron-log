@@ -702,6 +702,71 @@ describe('whose data this device holds (B2e)', () => {
     expect(Object.keys((storage.get(PENDING_KEY) ?? {}) as object)).toEqual(['logs/squat']);
   });
 
+  it('a tab that was signed in as Ann notices another tab switched the browser to Bob, when the app wakes', async () => {
+    who = as('ann');
+    const { server, storage, make } = setup();
+    let wakeUp = () => {};
+    const db = make({ identity, onWake: cb => { wakeUp = cb; return () => undefined; } });
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logsDoc(entry('e1')));
+    await settle();
+    expect(server.sent).toHaveLength(1);
+    // Another tab signs out and signs in as Bob: the cookie changes, but this tab sees no 401.
+    who = as('bob');
+    server.plant('weeks', '2026-10-04', { week_start: '2026-10-04', data: { prog: 'B', done: { 'bobsecret:0': true } } });
+    const sentBefore = server.sent.length;
+    wakeUp();
+    await settle(40);
+    expect(db.status()).toMatchObject({ state: 'paused', pausedBecause: 'account' });
+    expect((await db.doc('weeks/2026-10-04').get()).exists).toBe(false); // Bob's row never reaches Ann's copy
+    await db.doc('logs/squat').set(logsDoc(entry('e1'), entry('e2')));
+    await settle(40);
+    expect(server.sent).toHaveLength(sentBefore); // and Ann's new entry never reaches Bob
+    expect(ownerOf(storage)).toBe('ann');
+    expect(Object.keys((storage.get(PENDING_KEY) ?? {}) as object)).toEqual(['logs/squat']);
+  });
+
+  it('the timer notices it too, and a tab that is hidden does not ask', async () => {
+    vi.useFakeTimers();
+    try {
+      who = as('ann');
+      const { server, make } = setup();
+      let visible = true;
+      const db = make({ identity, pollMs: 1000, visible: () => visible, sleep: () => new Promise(() => undefined) });
+      server.plant('weeks', '2026-09-27', { week_start: '2026-09-27', data: { prog: 'A' } }); // Ann's own row, so this device holds her data
+      db.start();
+      await vi.advanceTimersByTimeAsync(10);
+      expect(db.status()).toMatchObject({ state: 'idle', holdsData: true });
+      who = as('bob');
+      server.plant('weeks', '2026-10-04', { week_start: '2026-10-04', data: { prog: 'B' } });
+      visible = false;
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(db.status()).toMatchObject({ state: 'idle' }); // hidden: nothing asked, nothing pulled
+      visible = true;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(db.status()).toMatchObject({ state: 'paused', pausedBecause: 'account' });
+      db.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('the same account carries on after a wake, and asks who is signed in once each time', async () => {
+    who = as('ann');
+    const { make } = setup();
+    let wakeUp = () => {};
+    const asked = vi.fn(identity);
+    const db = make({ identity: asked, onWake: cb => { wakeUp = cb; return () => undefined; } });
+    db.start();
+    await settle();
+    expect(asked).toHaveBeenCalledTimes(1);
+    wakeUp();
+    await settle();
+    expect(asked).toHaveBeenCalledTimes(2);
+    expect(db.status()).toMatchObject({ state: 'idle', pausedBecause: null });
+  });
+
   it('an empty device is simply handed to the new account, with a fresh pull', async () => {
     who = as('ann');
     const { server, storage, make, db } = setup({ identity });
