@@ -80,6 +80,8 @@ test.describe('the first-run prompt', () => {
     await openSynced(page);
     await expect(page.locator('#chk-A-d1s1')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('region', { name: 'Build your first workout' })).toHaveCount(0);
+    await expect(page.getByText('Shadow box')).toHaveCount(0); // the warm-up is on the Stretches tab now
+    await page.locator('#board-stretches').click();
     await expect(page.getByText('Shadow box').first()).toBeVisible();
   });
 });

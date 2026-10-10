@@ -528,10 +528,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (mn && (mn.slot === slotId || (mn.batch && slotId in mn.batch))) set({ moveNote: null });
     flag('Removed from this week');
   },
-  setWarm(day, wid, on) {
-    const pd = dayAt(get().week, day); if (pd == null) return;
-    get().mutateWeek(w => { w.warm[pd] = w.warm[pd] || {}; w.warm[pd][wid] = on; });
-  },
   addWarmup(n, rx) {
     const name = String(n || '').trim().slice(0, 60); if (!name) return false;
     return get().mutateCfg(c => { c.warmup = [...warmupOf(c), { id: `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, n: name, rx: String(rx || '').trim().slice(0, 40) }]; });

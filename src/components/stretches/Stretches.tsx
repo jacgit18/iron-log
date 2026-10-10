@@ -8,6 +8,7 @@ import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { motionOK } from '../../lib/motion.js';
 import ArmedButton from '../ArmedButton.jsx';
+import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
 
 const DAYS7 = Array.from({ length: STRETCH_DAYS }, (_, i) => i);
@@ -164,6 +165,7 @@ export default function Stretches() {
               <div className="addrow">
                 <button type="button" className="btn sm ghost" id={`sskip-${d}`} aria-pressed={!!t.skipped} aria-label={t.skipped ? `Undo skip for ${DAY_NAMES[d]}` : `Skip ${DAY_NAMES[d]}`} onClick={() => s.skipStretchDay(d, !t.skipped)}>{t.skipped ? 'Undo skip' : 'Skip day'}</button>
               </div>
+              {items.length > 0 && <WarmUp d={d} />}
               {t.skipped ? <p className="note">Skipped. It doesn’t count for or against this week.</p> : <>
               {!primary.length && !extras.length && <p className="note">No daily stretches yet. Add some in the Program tab.</p>}
               {primary.map(g => <GroupCard key={g.name} d={d} name={g.name} items={g.items} tier="primary" />)}
