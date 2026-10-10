@@ -3,14 +3,14 @@
 </p>
 
 <p align="center">
-  <a href="https://jacgit18.github.io/iron-log/"><b>Open the app</b></a> ·
+  <a href="https://iron-log-947510572244.us-central1.run.app"><b>Open the app</b></a> ·
   <a href="#features">Features</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#running-it">Running it</a>
 </p>
 
 <p align="center">
-  <a href="https://jacgit18.github.io/iron-log/"><img alt="Live on GitHub Pages" src="https://img.shields.io/badge/live-GitHub%20Pages-1F5E5B"></a>
+  <a href="https://iron-log-947510572244.us-central1.run.app"><img alt="Live on Google Cloud Run" src="https://img.shields.io/badge/live-Cloud%20Run-1F5E5B"></a>
   <img alt="React and Vite" src="https://img.shields.io/badge/stack-React%20%C2%B7%20Vite%20%C2%B7%20Zustand-1F5E5B">
   <img alt="Installable, works offline" src="https://img.shields.io/badge/PWA-installable%20%C2%B7%20offline-1F5E5B">
   <img alt="Built to WCAG 2.2 AAA" src="https://img.shields.io/badge/accessibility-WCAG%202.2%20AAA-1F5E5B">
@@ -81,13 +81,13 @@ It's a React app built with Vite. You can install it on your phone or computer l
 
 ## Running it
 
-- **Hosted:** open **[jacgit18.github.io/iron-log](https://jacgit18.github.io/iron-log/)**, then install it from Settings if you like.
+- **Hosted:** open **[the hosted app](https://iron-log-947510572244.us-central1.run.app)**, then install it from Settings if you like.
 - **Locally** (Node 20.19+ or 22.12+):
 
   ```bash
   npm ci
   npm run dev        # development server at http://localhost:5173
-  npm run build      # production build in dist/ (set BASE_PATH=/iron-log/ for a sub-path)
+  npm run build      # production build in dist/
   npm run preview    # serve the production build, with the service worker, to test offline and install
   npm test           # unit tests (Vitest)
   ```
@@ -130,7 +130,7 @@ tools/screenshots.mjs         generates docs/images/ with sample data
 tools/visual-diff.mjs         pixel-compares two screenshot folders for the PR comment
 e2e/                          Playwright browser and accessibility tests
 tools/banner.html             README banner template
-.github/workflows/            deploys to GitHub Pages; regenerates screenshots on feature branches
+.github/workflows/            regenerates screenshots on feature branches
 ```
 
 ## Customizing
@@ -141,7 +141,7 @@ The phase percentages (Strength 85%, Isometric 75%, Hypertrophy 65%, Explosive 4
 
 ## Development
 
-Changes are made on feature branches and merged into `main` through pull requests. Every pull request runs the **Tests** workflow (lint, unit tests, and the Playwright browser tests in `e2e/`, which include an accessibility scan). It also uploads the built app as an `app-preview` artifact you can download and open with `npx vite preview`. Every push to `main` runs the **Deploy to GitHub Pages** workflow, which lints, tests, builds for `/iron-log/` and publishes the result. (In the repository's Settings → Pages, the source must be **GitHub Actions**.)
+Changes are made on feature branches and merged into `main` through pull requests. Every pull request runs the **Tests** workflow (lint, unit tests, and the Playwright browser tests in `e2e/`, which include an accessibility scan). It also uploads the built app as an `app-preview` artifact you can download and open with `npx vite preview`. Every push to `main` runs the **Deploy to Cloud Run** workflow (see the deploy runbook).
 
 When a pull request's branch changes the app, the **README screenshots** workflow regenerates `docs/images/` and commits the new images to that branch, so they merge along with the change. If the branch has an open pull request, the workflow also comments before, after and pixel-diff images against `main` (`tools/visual-diff.mjs`), so there is no need to attach screenshots by hand. The comparison images are kept on the `pr-screenshots` branch. To run things locally:
 
