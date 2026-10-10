@@ -7,7 +7,7 @@ import { LS } from './lib/storage.js';
      'admin' - only an account on the server's ADMIN_EMAILS list sees it (the API tells the app, /api/me `isAdmin`)
      'all'   - everyone (the flag is done: delete the line and the check when you next touch the feature)
      'off'   - nobody, not even an admin
-   A feature missing from the list is on for everyone. Hiding in the browser is not security: a feature with an API route must also
+   A feature missing from the list is hidden from everyone (a forgotten line fails closed, not open). Hiding in the browser is not security: a feature with an API route must also
    use `requireAdmin` (server/admin.ts). Add a feature with a line here, then `useFeature('name')` in the component. */
 export const FEATURES = {
   // exampleFeature: 'admin',
@@ -20,7 +20,8 @@ export type FeatureName = keyof typeof FEATURES;
 export function featureOn(audience: Audience | undefined, isAdmin: boolean): boolean {
   if (audience === 'off') return false;
   if (audience === 'admin') return isAdmin;
-  return true;
+  if (audience === 'all') return true;
+  return false; // not in the registry: hidden
 }
 
 // What the browser last learned about this account. Kept in storage so an admin still sees the feature offline; the default (and any

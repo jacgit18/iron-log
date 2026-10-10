@@ -9,8 +9,11 @@ describe('featureOn', () => {
   it('off is off even for an admin', () => {
     expect(featureOn('off', true)).toBe(false);
   });
-  it('all, and a feature not in the registry, are on for everyone', () => {
+  it('all is on for everyone', () => {
     expect(featureOn('all', false)).toBe(true);
-    expect(featureOn(undefined, false)).toBe(true);
+  });
+  it('a feature not in the registry is hidden, even from an admin', () => {
+    expect(featureOn(undefined, false)).toBe(false);
+    expect(featureOn(undefined, true)).toBe(false);
   });
 });
