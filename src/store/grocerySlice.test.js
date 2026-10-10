@@ -125,10 +125,33 @@ describe('loading and replacing', () => {
     const mk = await thisMonth();
     st().addGroceryItem(form());
     st().setGroceryGot(mk, 'kale', true);
-    st().setGrocery({ stores: ['Costco'], items: [{ id: 'rice', n: 'Rice', store: 'Costco', qty: 1, cents: 100, once: false }] }, { '2026-01': { lines: { rice: { got: true } }, pulled: [] }, nope: { lines: {} } });
+    st().setGrocery({ stores: ['Costco'], items: [{ id: 'rice', n: 'Rice', store: 'Costco', qty: 1, cents: 100, once: false }], months: { '2026-01': { lines: { rice: { got: true } }, pulled: [] }, nope: { lines: {} } } });
     expect(st().grocery.items.map(i => i.id)).toEqual(['rice']);
     expect(Object.keys(st().groceryMonths)).toEqual(['2026-01']);
     expect(saved('grocery/' + mk)).toBeNull();
     expect(saved('grocery/2026-01').lines.rice.got).toBe(true);
+  });
+});
+
+describe('the data file', () => {
+  it('a backup holds the list and an import adds what is missing without touching what is here', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form());
+    st().setGroceryGot(mk, 'kale', true);
+    const { buildDataFile, normalizeData } = await import('../lib/export.js');
+    const file = normalizeData(JSON.parse(JSON.stringify(buildDataFile(st().snapshot(), {}))));
+    expect(file.grocery.items.map(i => i.id)).toEqual(['kale']);
+    expect(file.grocery.months[mk].lines.kale.got).toBe(true);
+    // here: the same item changed, plus another; the file adds only what is new
+    st().updateGroceryItem('kale', { qty: 7 });
+    st().addGroceryItem(form({ n: 'Rice', store: 'Costco', qty: '1', price: '' }));
+    st().setGroceryGot(mk, 'kale', false);
+    st().addGrocery(file.grocery);
+    expect(st().grocery.items.map(i => [i.id, i.qty])).toEqual([['kale', 7], ['rice', 1]]);
+    expect(st().groceryMonths[mk].lines.kale.got).toBeUndefined(); // the line here (unticked) stays; the file's tick does not override it
+  });
+  it('a file with no list leaves the data file without a grocery part', async () => {
+    const { buildDataFile } = await import('../lib/export.js');
+    expect('grocery' in buildDataFile(st().snapshot(), {})).toBe(false);
   });
 });

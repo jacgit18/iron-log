@@ -1,5 +1,5 @@
 import { str } from '../shared/stretchWeek.js';
-import type { Grocery, GroceryItem, GroceryLine, GroceryMonth } from '../types.ts';
+import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth } from '../types.ts';
 
 /* ---------- Grocery list ----------
    The catalogue (`grocery/main`) holds every item once: where you buy it, the usual count and the last unit price. A month
@@ -108,4 +108,30 @@ export function tally(items: GroceryItem[], m: GroceryMonth) {
     if (l.got) { got++; spent += t; }
   });
   return { count: items.length, got, planned, spent, unpriced };
+}
+
+/* ---------- The data file and backups ---------- */
+/** A data file's grocery part, cleaned; null when it holds nothing. */
+export function normGroceryData(d: unknown): GroceryData | null {
+  const raw = (d && typeof d === 'object' ? d : {}) as { months?: unknown };
+  const g = normGrocery(d); const months: Record<string, GroceryMonth> = {};
+  if (raw.months && typeof raw.months === 'object') {
+    Object.entries(raw.months as Record<string, unknown>).forEach(([k, v]) => { if (MONTH_RE.test(k)) { const m = normGroceryMonth(v); if (!monthEmpty(m)) months[k] = m; } });
+  }
+  return g.items.length || g.stores.length || Object.keys(months).length ? { ...g, months } : null;
+}
+
+/** "Add to my data": the file's items and months are added to what is here; where both have something, what is here stays. */
+export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMonth>, inc: GroceryData) {
+  const g = structuredClone(cur); const months = structuredClone(curMonths); let changed = false;
+  const ids = new Set(g.items.map(i => i.id)); const same = (a: GroceryItem) => g.items.some(i => i.n.toLowerCase() === a.n.toLowerCase() && i.store === a.store);
+  inc.items.forEach(i => { if (!ids.has(i.id) && !same(i) && g.items.length < MAX_ITEMS) { g.items.push(i); ids.add(i.id); changed = true; } });
+  inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); changed = true; } });
+  Object.entries(inc.months).forEach(([k, m]) => {
+    const have = months[k];
+    if (!have) { months[k] = m; changed = true; return; }
+    const lines = { ...m.lines, ...have.lines }; const pulled = [...new Set([...have.pulled, ...m.pulled])];
+    if (JSON.stringify(lines) !== JSON.stringify(have.lines) || pulled.length !== have.pulled.length) { months[k] = { lines, pulled }; changed = true; }
+  });
+  return { grocery: g, months, changed };
 }

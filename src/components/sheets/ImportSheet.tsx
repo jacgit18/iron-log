@@ -55,6 +55,7 @@ export default function ImportSheet() {
     ['program', 'Program', (s.programs.length ? `edited Program ${s.programs.join(' and ')}` : 'original programs') + (s.saved ? `, ${plural(s.saved, 'saved version', 'saved versions')}` : '') + ', custom exercises'],
     ...(d.stretches ? [['stretches', 'Stretches', `${plural(s.stretches, 'stretch', 'stretches')} in the library, ${plural(s.stretchWeeks, 'week', 'weeks')} of check-offs`]] : []),
     ...(d.supplements ? [['supplements', 'Supplements', `water logged on ${plural(s.waterDays, 'day', 'days')}, supplement library and check-offs`]] : []),
+    ...(d.grocery ? [['grocery', 'Groceries', `${plural(s.groceryItems, 'item', 'items')}, ${plural(s.groceryMonths, 'month', 'months')} of ticks and prices`]] : []),
     ['settings', 'Settings', 'program mode, rest time, phase percentages and 1RMs'],
   ];
   const when = d.exportedAt ? libDate(d.exportedAt) : 'an unknown date';

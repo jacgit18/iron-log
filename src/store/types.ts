@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, Cfg, DataFile, Grocery, GroceryMonth, EquipmentKey, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, EquipmentKey, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -135,7 +135,8 @@ export interface GrocerySlice {
   grocery: Grocery;
   groceryMonths: Record<string, GroceryMonth>; // "YYYY-MM" -> that month; a month with no entry is the fresh list
   loadGrocery(): void;
-  setGrocery(g: unknown, months: Record<string, unknown>): void; // replace everything from an import
+  setGrocery(data: GroceryData): void; // an import replaces everything
+  addGrocery(data: GroceryData): void; // an import adds what is missing
   addGroceryItem(d: GroceryForm): string | null;
   updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; once: boolean }>): string | null;
   removeGroceryItem(id: string): void;

@@ -213,7 +213,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().mutateCfg(c => { if (c.muscleMap) delete c.muscleMap[exId]; })) set({ modal: null });
   },
 
-  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp }; },
+  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, grocery: { ...s.grocery, months: s.groceryMonths } }; },
 
   // The snapshot plus every saved stretch week (the week on screen taken live), for the data file.
   async stretchWeeksAll() {

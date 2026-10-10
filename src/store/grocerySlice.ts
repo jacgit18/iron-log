@@ -1,6 +1,6 @@
 import { LS } from '../lib/storage.js';
 import {
-  MAX_ITEMS, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, monthEmpty, monthKey, newGroceryId, normGrocery, normGroceryMonth, parseDollars,
+  MAX_ITEMS, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, parseDollars,
 } from '../lib/grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 import type { Flag, GrocerySlice, StoreGet, StoreSet } from './types.ts';
@@ -11,10 +11,10 @@ import type { Flag, GrocerySlice, StoreGet, StoreSet } from './types.ts';
 const MAIN = 'grocery/main';
 
 export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GrocerySlice => {
-  const saveMain = (g: Grocery) => { if (!LS.set(MAIN, g)) flag('Storage full'); };
+  const saveMain = (g: Grocery) => { const ok = LS.set(MAIN, g); if (!ok) flag('Storage full'); return ok; };
   const saveMonth = (key: string, m: GroceryMonth) => {
-    if (monthEmpty(m)) { LS.remove('grocery/' + key); return; } // an untouched month is the fresh list: nothing to keep
-    if (!LS.set('grocery/' + key, m)) flag('Storage full');
+    if (monthEmpty(m)) { LS.remove('grocery/' + key); return true; } // an untouched month is the fresh list: nothing to keep
+    const ok = LS.set('grocery/' + key, m); if (!ok) flag('Storage full'); return ok;
   };
   const mutateCatalogue = (fn: (g: Grocery) => string | null): string | null => {
     const g = structuredClone(get().grocery);
@@ -50,14 +50,23 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
       set({ grocery: normGrocery(LS.get(MAIN)), groceryMonths: months });
     },
 
-    // An import replaces the list; the old months are removed from storage so none are left behind.
-    setGrocery(g, months) {
-      const clean = normGrocery(g);
-      Object.keys(get().groceryMonths).forEach(k => LS.remove('grocery/' + k));
-      const next: Record<string, GroceryMonth> = {};
-      Object.entries(months || {}).forEach(([k, v]) => { if (MONTH_RE.test(k)) { const m = normGroceryMonth(v); if (!monthEmpty(m)) next[k] = m; } });
-      set({ grocery: clean, groceryMonths: next });
-      saveMain(clean); Object.entries(next).forEach(([k, m]) => saveMonth(k, m));
+    // An import replaces the list. The file's data is written first; the old months go only if every write went through, so a full storage loses nothing.
+    setGrocery(data) {
+      const inc = normGroceryData(data) || { ...normGrocery(null), months: {} };
+      const { months, ...clean } = inc;
+      const old = Object.keys(get().groceryMonths);
+      set({ grocery: clean, groceryMonths: months });
+      const ok = [saveMain(clean), ...Object.entries(months).map(([k, m]) => saveMonth(k, m))].every(Boolean);
+      if (ok) old.forEach(k => { if (!months[k]) LS.remove('grocery/' + k); });
+    },
+
+    addGrocery(data) {
+      const inc = normGroceryData(data);
+      if (!inc) return;
+      const r = mergeGrocery(get().grocery, get().groceryMonths, inc);
+      if (!r.changed) return;
+      set({ grocery: r.grocery, groceryMonths: r.months });
+      saveMain(r.grocery); Object.entries(r.months).forEach(([k, m]) => saveMonth(k, m));
     },
 
     addGroceryItem(d) {

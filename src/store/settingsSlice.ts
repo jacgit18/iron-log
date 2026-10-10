@@ -101,6 +101,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           patch.strWeek = d.stretchWeeks[wk] ? structuredClone(d.stretchWeeks[wk]) : normStretchWeek(null); saves.push('saveStrWeek');
         }
         if (on.supplements && d.supplements) { patch.supp = structuredClone(d.supplements); saves.push('saveSupp'); }
+        const groceryIn = on.grocery && d.grocery ? structuredClone(d.grocery) : null;
         let newLogs: Logs | null = null;
         if (on.progress) {
           const nl: Logs = {}; newLogs = nl; ent(d.logs).forEach(([id, l]) => { nl[id] = structuredClone(l); });
@@ -111,6 +112,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
         set(patch);
         saves.forEach(f => get()[f]());
         progSaves.forEach(([k, body]) => get().saveProgram(k, body));
+        if (groceryIn) get().setGrocery(groceryIn);
         docs.forEach(([path, data]) => get().saveDoc(path, data));
         if (newLogs) Object.keys(newLogs).forEach(id => get().saveLog(id));
         // Old data goes only once the file's data is written: a write refused (storage full) keeps it, so nothing is lost.
@@ -168,6 +170,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           ent(d.supplements.taken).forEach(([k, t]) => { const m = { ...t, ...(taken[k] || {}) }; if (JSON.stringify(m) !== JSON.stringify(taken[k] || null)) { taken[k] = m; ch = true; } });
           if (ch) { set({ supp: { ...cur, water, boost, items, taken } }); get().saveSupp(); }
         }
+        if (on.grocery && d.grocery) get().addGrocery(d.grocery);
         const body = get().body; const addB = !on.board ? [] : d.body.filter((e: any) => !body.some(x => x.wk === e.wk));
         if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); }
         ent(on.progress ? d.logs : {}).forEach(([id, l]) => {

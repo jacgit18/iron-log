@@ -16,7 +16,7 @@ type XLSX = typeof import('xlsx');
 type Cell = any; // eslint-disable-line
 type Rows = Cell[][];
 /** What an Excel or CSV import hands the merge: a data file's parts (a plain report has no stretches, supplements or programs), plus what was read from the report itself. */
-export type ExcelImport = Pick<DataFile, 'config' | 'programs' | 'library' | 'logs' | 'weeks' | 'body'> & Partial<Pick<DataFile, 'exportedAt' | 'experiments' | 'stretches' | 'stretchWeeks' | 'supplements'>> & {
+export type ExcelImport = Pick<DataFile, 'config' | 'programs' | 'library' | 'logs' | 'weeks' | 'body'> & Partial<Pick<DataFile, 'exportedAt' | 'experiments' | 'stretches' | 'stretchWeeks' | 'supplements' | 'grocery'>> & {
   excel: { settings: { mode?: number; rest?: number; pct?: Record<string, number> }; skipped: number; newExercises: string[]; complete?: boolean; csv?: boolean };
 };
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

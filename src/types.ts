@@ -198,6 +198,8 @@ export interface GroceryItem { id: string; n: string; store: string; qty: number
 export interface Grocery { stores: string[]; items: GroceryItem[] }
 /** One item in one month: ticked off, and the count and unit price (cents) paid when they differ from the catalogue or were recorded at the tick. */
 export interface GroceryLine { got?: true; qty?: number; cents?: number }
+/** The catalogue plus every saved month: what the data file and the backups hold of the grocery list. */
+export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
 /** One month's list (`grocery/YYYY-MM`): its lines by item id, and the occasional items pulled onto it. */
 export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[] }
 
@@ -231,6 +233,7 @@ export interface Snapshot {
   stretchExps?: StretchExperiment[];
   stretchWeeks?: Record<string, StretchWeek>;
   supp?: Supplements;
+  grocery?: GroceryData;
 }
 
 /** A data file after `normalizeData` has checked and cleaned it. `config` holds only the keys the file had. */
@@ -246,4 +249,5 @@ export interface DataFile {
   stretches: { items: Stretch[]; experiments: StretchExperiment[] } | null;
   stretchWeeks: Record<string, StretchWeek>;
   supplements: Supplements | null;
+  grocery: GroceryData | null;
 }

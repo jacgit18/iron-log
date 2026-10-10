@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  byStore, centsText, emptyMonth, lineOf, lineTotal, money, monthKey, newGroceryId, normGrocery, normGroceryMonth, occasional, onList, parseDollars, shiftMonth, tally,
+  byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, occasional, onList, parseDollars, shiftMonth, tally,
 } from './grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -101,5 +101,31 @@ describe('ids', () => {
     expect(newGroceryId([], 'Baby Spinach!')).toBe('baby-spinach');
     expect(newGroceryId(g.items, 'Kale')).toBe('kale-2');
     expect(newGroceryId([], '???')).toBe('item');
+  });
+});
+
+describe('the data file part', () => {
+  it('is null when there is nothing, and cleans what there is', () => {
+    expect(normGroceryData(null)).toBeNull();
+    expect(normGroceryData({ items: [], months: { '2026-01': { lines: {}, pulled: [] } } })).toBeNull();
+    const d = normGroceryData({ items: [{ id: 'a', n: 'A' }], months: { '2026-01': { lines: { a: { got: true } } }, bad: { lines: { a: { got: true } } }, '2026-13': {} } });
+    expect(d?.items).toHaveLength(1);
+    expect(Object.keys(d?.months || {})).toEqual(['2026-01']);
+  });
+  it('merges by adding what is missing and keeping what is here', () => {
+    const inc = normGroceryData({
+      stores: ['Costco', 'Giant'],
+      items: [{ id: 'kale', n: 'Kale', store: 'Veg market', qty: 9 }, { id: 'oats', n: 'Oats', store: 'Giant', qty: 1 }, { id: 'kale2', n: 'KALE', store: 'Veg market', qty: 1 }],
+      months: { '2026-01': { lines: { kale: { got: true }, rice: { got: true, qty: 3 } }, pulled: ['saffron'] }, '2026-02': { lines: { rice: { got: true } }, pulled: [] } },
+    })!;
+    const here = { '2026-01': { lines: { rice: { qty: 5 } }, pulled: [] as string[] } };
+    const r = mergeGrocery(g, here, inc);
+    expect(r.changed).toBe(true);
+    expect(r.grocery.items.map(i => i.id)).toEqual(['kale', 'rice', 'salt', 'saffron', 'oats']); // kale stays as it is here; the same name in the same store is not added twice
+    expect(r.grocery.items[0].qty).toBe(2);
+    expect(r.grocery.stores).toEqual(['Veg market', 'Costco', 'Giant']);
+    expect(r.months['2026-01']).toEqual({ lines: { kale: { got: true }, rice: { qty: 5 } }, pulled: ['saffron'] }); // a line that is here stays whole; a line only the file has is added
+    expect(r.months['2026-02'].lines.rice.got).toBe(true);
+    expect(mergeGrocery(g, {}, { ...g, months: {} }).changed).toBe(false);
   });
 });
