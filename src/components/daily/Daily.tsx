@@ -6,14 +6,14 @@ import Medical from './Medical.jsx';
 import { useFeature } from '../../features.js';
 
 // The things you check off or log every day, under one tab. Add a section by adding a row here.
-const DAILY: [string, string, ComponentType][] = [['supplements', 'Supplements', Supplements], ['medical', 'Medical', Medical], ['grocery', 'Groceries', Grocery]];
+const DAILY: [string, string, ComponentType][] = [['grocery', 'Groceries', Grocery], ['supplements', 'Supplements', Supplements], ['medical', 'Medical', Medical]];
 
 export default function Daily() {
   const view = useAppStore(s => s.dailyView);
   const setDailyView = useAppStore(s => s.setDailyView);
   const grocery = useFeature('grocery');
   const sections = DAILY.filter(([k]) => k !== 'grocery' || grocery);
-  const View = (sections.find(([k]) => k === view) || sections[0])[2];
+  const View = (sections.find(([k]) => k === view) || sections.find(([k]) => k === 'supplements') || sections[0])[2]; // Supplements stays the one that opens first
   return (
     <>
       <div className="edtop">

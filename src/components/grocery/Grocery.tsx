@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { centsText, emptyMonth, lineOf, lineTotal, money, monthKey, monthLabel, occasional, onList, byStore, parseDollars, shiftMonth, tally } from '../../lib/grocery.js';
+import { centsText, emptyMonth, lineOf, lineTotal, money, monthKey, monthLabel, occasional, onList, byStore, parseDollars, shiftMonth, storeChoices, tally } from '../../lib/grocery.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth } from '../../types.ts';
 
 const EMPTY_FORM = { n: '', store: '', qty: '1', price: '', once: false };
@@ -22,6 +22,7 @@ function Row({ item, month, mk, editing, g }: { item: GroceryItem; month: Grocer
   const l = lineOf(item, month); const total = lineTotal(l.qty, l.cents);
   const [err, setErr] = useState<string | null>(null);
   const [name, setName] = useState(item.n);
+  const { mine, suggested } = storeChoices(g);
   return (
     <div className={`warmrow grow${l.got ? ' idone' : ''}`}>
       <label className="exname">
@@ -45,7 +46,8 @@ function Row({ item, month, mk, editing, g }: { item: GroceryItem; month: Grocer
         <span className="inline" style={{ flexWrap: 'wrap' }}>
           <select aria-label={`Store for ${item.n}`} value={item.store} onChange={e => setErr(s.updateGroceryItem(item.id, { store: e.target.value }))}>
             <option value="">Anywhere</option>
-            {g.stores.map(x => <option key={x} value={x}>{x}</option>)}
+            {mine.map(x => <option key={x} value={x}>{x}</option>)}
+            {suggested.length > 0 && <optgroup label="Suggested">{suggested.map(x => <option key={x} value={x}>{x}</option>)}</optgroup>}
           </select>
           <label className="gcheck"><input type="checkbox" className="chk" checked={item.once} onChange={e => s.updateGroceryItem(item.id, { once: e.target.checked })} /> Occasional</label>
           <button type="button" className="btn sm ghost" aria-label={`Remove ${item.n} from your list`} onClick={() => s.removeGroceryItem(item.id)}>Remove</button>
@@ -69,7 +71,7 @@ function AddItem({ g }: { g: GroceryT }) {
       <div className="warmadd">
         <input type="text" id="groc-name" aria-label="Item name" placeholder="Item" maxLength={80} value={f.n} onChange={e => setF({ ...f, n: e.target.value })} />
         <input type="text" id="groc-store" aria-label="Store" placeholder="Store (optional)" maxLength={40} list="groc-stores" value={f.store} onChange={e => setF({ ...f, store: e.target.value })} />
-        <datalist id="groc-stores">{g.stores.map(x => <option key={x} value={x} />)}</datalist>
+        <datalist id="groc-stores">{[...storeChoices(g).mine, ...storeChoices(g).suggested].map(x => <option key={x} value={x} />)}</datalist>
         <input type="text" id="groc-qty" inputMode="decimal" aria-label="Count" placeholder="Count" value={f.qty} onChange={e => setF({ ...f, qty: e.target.value })} />
         <input type="text" id="groc-price" inputMode="decimal" aria-label="Price each, dollars (optional)" placeholder="Price each" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} />
       </div>

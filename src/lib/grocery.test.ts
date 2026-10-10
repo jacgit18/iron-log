@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, occasional, onList, parseDollars, shiftMonth, tally,
+  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, occasional, onList, parseDollars, shiftMonth, tally,
 } from './grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -127,5 +127,14 @@ describe('the data file part', () => {
     expect(r.months['2026-01']).toEqual({ lines: { kale: { got: true }, rice: { qty: 5 } }, pulled: ['saffron'] }); // a line that is here stays whole; a line only the file has is added
     expect(r.months['2026-02'].lines.rice.got).toBe(true);
     expect(mergeGrocery(g, {}, { ...g, months: {} }).changed).toBe(false);
+  });
+});
+
+describe('store choices', () => {
+  it('lists your stores, then the suggested ones you have not used (any case)', () => {
+    const c = storeChoices({ stores: ['Costco', 'aldi'], items: [] });
+    expect(c.mine).toEqual(['Costco', 'aldi']);
+    expect(c.suggested).toEqual(["BJ's", 'C-Town', 'Whole Foods', 'Flatbush Co-Op']);
+    expect(storeChoices({ stores: [], items: [] }).suggested).toEqual(SUGGESTED_STORES);
   });
 });

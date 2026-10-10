@@ -68,3 +68,19 @@ test('the list has no accessibility violations, reading or editing', async ({ pa
   ({ violations } = await scan(page));
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
 });
+
+test('Groceries comes before Supplements, and the store lists offer the suggested stores', async ({ page }) => {
+  await asAdmin(page);
+  await page.click('#tab-daily');
+  const ids = await page.locator('[aria-label="Daily section"] button').evaluateAll(b => b.map(x => x.id));
+  expect(ids).toEqual(['daily-grocery', 'daily-supplements', 'daily-medical']);
+  await expect(page.locator('#daily-supplements')).toHaveAttribute('aria-pressed', 'true'); // Supplements still opens first
+  await page.click('#daily-grocery');
+  await page.click('#groc-edit');
+  await expect(page.locator('#groc-stores option')).toHaveCount(5);
+  await page.fill('#groc-name', 'Bananas'); await page.fill('#groc-store', 'Aldi'); await page.click('#groc-add');
+  await expect(page.locator('#groc-stores option')).toHaveCount(5); // Aldi is now one of yours, not listed twice
+  await page.getByLabel('Store for Bananas').selectOption("BJ's");
+  await page.click('#groc-edit');
+  await expect(page.getByRole('group', { name: "BJ's" })).toContainText('Bananas');
+});

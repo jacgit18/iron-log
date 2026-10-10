@@ -10,6 +10,8 @@ import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth } fro
 export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999;
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 export const ANYWHERE = 'Anywhere';
+/** Stores offered in the drop-downs before you have used them; picking one adds it to your stores. */
+export const SUGGESTED_STORES = ["BJ's", 'C-Town', 'Whole Foods', 'Flatbush Co-Op', 'Aldi'];
 
 export const emptyGrocery = (): Grocery => ({ stores: [], items: [] });
 export const emptyMonth = (): GroceryMonth => ({ lines: {}, pulled: [] });
@@ -134,4 +136,10 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     if (JSON.stringify(lines) !== JSON.stringify(have.lines) || pulled.length !== have.pulled.length) { months[k] = { lines, pulled }; changed = true; }
   });
   return { grocery: g, months, changed };
+}
+
+/** The store drop-down: your stores first, then the suggested ones you have not used yet. */
+export function storeChoices(g: Grocery) {
+  const have = new Set(g.stores.map(x => x.toLowerCase()));
+  return { mine: g.stores, suggested: SUGGESTED_STORES.filter(x => !have.has(x.toLowerCase())) };
 }
