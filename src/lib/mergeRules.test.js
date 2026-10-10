@@ -1,4 +1,4 @@
-// The merge rules in the backend spec (DevHiveMind/iron-log/docs/backend-data-rules.md, section 4), one test per claim.
+// The merge rules in the backend spec (DevHiveMind/Projects/iron-log/docs/backend-data-rules.md, section 4), one test per claim.
 import { describe, it, expect } from 'vitest';
 import { mergeEntries, mergeWeek, entryId, findEntry } from './export.js';
 import { normWeek } from './logic.js';
