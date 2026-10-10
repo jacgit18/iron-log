@@ -1,9 +1,10 @@
+import type { ComponentType } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import Supplements from '../supplements/Supplements.jsx';
 import Medical from './Medical.jsx';
 
 // The things you check off or log every day, under one tab. Add a section by adding a row here.
-const DAILY = [['supplements', 'Supplements', Supplements], ['medical', 'Medical', Medical]];
+const DAILY: [string, string, ComponentType][] = [['supplements', 'Supplements', Supplements], ['medical', 'Medical', Medical]];
 
 export default function Daily() {
   const view = useAppStore(s => s.dailyView);
