@@ -29,5 +29,6 @@ DATABASE_URL=postgres://ironlog:ironlog@127.0.0.1:5433/ironlog npm run e2e:sync 
 - One change per commit. Do not change behavior inside a refactor or conversion commit.
 - Board reorder and log write paths (`planFix`, `mutateChecks`, `autoLogs`, `addEntry`) must keep the existing tests green: no exercise may be lost or duplicated.
 - Update `feature-map.md` (project docs) in the same PR as any feature or interaction change.
+- **New user-facing feature = admin-only first.** Add `name: 'admin'` to `FEATURES` in `src/features.ts` (with its removal condition in a comment), wrap the UI in `useFeature('name')`, and put `requireAdmin` (`server/admin.ts`) on any new API route. A name not in the registry is hidden. Release by changing it to `'all'`; then delete the line and the check. Mention the feature's audience in the PR description and `feature-map.md`.
 - Update `CHANGELOG.md` in the same PR as any change, and `DECISIONS.md` (plus a new ADR) when a decision is made.
 - Project docs (backlog, ADRs, migration notes) live outside this repo in `DevHiveMind/Projects/iron-log/docs/`.
