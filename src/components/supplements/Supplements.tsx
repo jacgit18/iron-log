@@ -1,5 +1,5 @@
 import type { Boost as BoostT, SupplementItem, SupplementSlot, Supplements, Taken } from '../../types.ts';
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
@@ -79,8 +79,7 @@ function WaterGoal({ goal, mode }: { goal: ReturnType<typeof goalFor>; mode: Sup
 }
 
 function Boost({ date, boost, extra }: { date: string; boost: BoostT | undefined; extra: ReturnType<typeof boostOz> }) {
-  const s = useAppStore.getState(); const [m, setM] = useState(''); const mins = boost && boost.mins ? String(boost.mins) : '';
-  useEffect(() => { setM(mins); }, [date, mins]);
+  const s = useAppStore.getState(); const mins = boost && boost.mins ? String(boost.mins) : ''; const [m, setM] = useState(mins);
   return (
     <div>
       <div className="sect">Hot day or training</div>
@@ -167,7 +166,7 @@ export default function Supplements() {
             </ul>
           )}
         </div>
-        <Boost date={date} boost={supp.boost[date]} extra={gi.extra} />
+        <Boost key={`${date}:${supp.boost[date]?.mins ?? ''}`} date={date} boost={supp.boost[date]} extra={gi.extra} />
         <WaterGoal goal={gi} mode={supp.waterMode} />
       </section>
       <section className="panel" style={{ marginTop: 16 }} aria-labelledby="water7-h">

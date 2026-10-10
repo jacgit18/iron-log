@@ -32,6 +32,18 @@ test('ticking a stretch and logging water both stick', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: '16.9' }).first()).toBeVisible();
 });
 
+test('training minutes for the water goal are kept after leaving the box and shown again after a reload', async ({ page }) => {
+  await page.click('#tab-daily');
+  await page.click('#daily-supplements');
+  await page.fill('#water-train', '45');
+  await page.locator('#water-hot').focus();
+  await expect(page.locator('#water-train')).toHaveValue('45');
+  await page.reload();
+  await page.click('#tab-daily');
+  await page.click('#daily-supplements');
+  await expect(page.locator('#water-train')).toHaveValue('45');
+});
+
 test('supplement library has no accessibility violations', async ({ page }) => {
   await page.click('#tab-program');
   await page.getByRole('button', { name: 'Supplement library' }).click();
