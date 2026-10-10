@@ -57,9 +57,13 @@ const LIMITS = {
   sync: { max: 120, windowMs: 60_000 } as Limit,
   importLegacy: { max: 10, windowMs: 60 * 60_000 } as Limit,
   clientErrors: { max: 20, windowMs: 60_000 } as Limit,
+  // The database health check runs a query and is public, so it is limited per address and its answer is reused for a few seconds.
+  healthDb: { max: 30, windowMs: 60_000 } as Limit,
   // Erasing data or deleting the account: a handful an hour is already far more than anyone means to do.
   account: { max: 5, windowMs: 60 * 60_000 } as Limit,
 };
+
+const DB_HEALTH_TTL_MS = 5_000;
 
 const NO_CACHE = 'no-cache';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -104,18 +108,23 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     res.json({ ok: true });
   });
 
-  app.get('/api/health/db', async (_req, res) => {
+  let dbHealth: { at: number; ok: boolean } | undefined;
+  app.get('/api/health/db', rateLimit(limits.healthDb), async (_req, res) => {
     if (!db) {
       res.status(503).json({ ok: false, error: 'database not configured' });
       return;
     }
-    try {
-      await sql`select 1`.execute(db);
-      res.json({ ok: true });
-    } catch (err) {
-      console.error(JSON.stringify({ msg: 'database health check failed', error: err instanceof Error ? err.message : String(err) }));
-      res.status(503).json({ ok: false, error: 'database unreachable' });
+    if (!dbHealth || Date.now() - dbHealth.at >= DB_HEALTH_TTL_MS) {
+      try {
+        await sql`select 1`.execute(db);
+        dbHealth = { at: Date.now(), ok: true };
+      } catch (err) {
+        console.error(JSON.stringify({ msg: 'database health check failed', error: err instanceof Error ? err.message : String(err) }));
+        dbHealth = { at: Date.now(), ok: false };
+      }
     }
+    if (dbHealth.ok) res.json({ ok: true });
+    else res.status(503).json({ ok: false, error: 'database unreachable' });
   });
 
   // An app older than the minimum is told so before anything else, signed in or not, so it stops sending and keeps its data.
