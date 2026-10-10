@@ -56,7 +56,7 @@ export default defineConfig({
     preloadTitleFont(),
     noWellKnownFallback(),
     VitePWA({
-      // Updates wait for you: a banner offers to reload, so a new version never interrupts a workout.
+      // A new version is applied only when the app is idle (see UpdateBanner, ADR 018); otherwise a banner offers it, so an update never interrupts a workout.
       registerType: 'prompt',
       injectRegister: false,
       includeAssets: ['logo.svg', 'icons/apple-touch-icon.png'],
