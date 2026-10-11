@@ -28,6 +28,7 @@ import LegacyCard from './components/LegacyCard.js';
 import OtherAccountCard from './components/OtherAccountCard.js';
 import SignInCard from './components/SignInCard.js';
 import SyncNotice from './components/SyncNotice.js';
+import ErrorBoundary from './components/ErrorBoundary.js';
 
 const TABS: [string, string, ComponentType][] = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
@@ -125,7 +126,7 @@ export default function App() {
         )}
         <main>
           {/* None of the data views is drawn until the data has loaded: until then the store holds its starting state, which is the owner's built-in plan (ADR 016). Settings stays, since Sign in, Sign out and the sync controls must work when nothing can load. */}
-          <div id="view" role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>{ready || tab === 'settings' ? <View /> : null}</div>
+          <div id="view" role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>{ready || tab === 'settings' ? <ErrorBoundary key={tab} where="view"><View /></ErrorBoundary> : null}</div>
         </main>
       </div>
       <Modal />
