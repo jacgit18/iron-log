@@ -197,7 +197,16 @@ export function mapDsld(hits: DsldHit[]): Mapped {
     const form = str(state.langualCodeDescription);
     rows.push({ id: `c:dsld:${id}`, kind: 'supplement', name, brand: brand && brand.length <= 300 ? brand : null, data: form && form.length <= 100 ? { form } : {} });
   }
-  return { rows, unmapped: {}, skipped };
+  // DSLD keeps one label per version, size and UPC, so the same product shows many times (121,959 labels, 93,851 products on
+  // 2026-10-11). To a user they are one thing: keep one row per name, brand and form (any case), the lowest DSLD id, which stays the
+  // same from one import to the next while that label is on the market.
+  const keyOf = (r: CatalogRow) => `${r.name.toLowerCase()}\u0000${(r.brand ?? '').toLowerCase()}\u0000${r.data.form ?? ''}`;
+  const numId = (r: CatalogRow) => Number(r.id.slice('c:dsld:'.length));
+  const best = new Map<string, CatalogRow>();
+  for (const r of rows) { const k = keyOf(r); const cur = best.get(k); if (!cur || numId(r) < numId(cur)) best.set(k, r); }
+  const merged = rows.length - best.size;
+  if (merged) skipped.push(`${merged} more labels of a product already listed (same name, brand and form)`);
+  return { rows: rows.filter(r => best.get(keyOf(r)) === r), unmapped: {}, skipped };
 }
 
 export interface ImportOptions {

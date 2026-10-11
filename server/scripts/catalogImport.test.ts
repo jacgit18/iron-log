@@ -117,6 +117,15 @@ describe('fetchDsld', () => {
 });
 
 describe('mapDsld', () => {
+  it('keeps one row per product: the same name, brand and form (any case) under several labels becomes the lowest id', () => {
+    const hit = (id: string, fullName: string, brandName: string, form: string) => ({ _id: id, _source: { fullName, brandName, physicalState: { langualCodeDescription: form } } }) as DsldHit;
+    const { rows, skipped } = mapDsld([
+      hit('900', 'Creatine Monohydrate', 'NOW Sports', 'Powder'), hit('12', 'creatine monohydrate', 'NOW sports', 'Powder'),
+      hit('40', 'Creatine Monohydrate', 'NOW Sports', 'Capsule'), hit('7', 'Creatine Monohydrate', 'Other Brand', 'Powder'),
+    ]);
+    expect(rows.map(r => r.id)).toEqual(['c:dsld:12', 'c:dsld:40', 'c:dsld:7']);
+    expect(skipped).toEqual(['1 more labels of a product already listed (same name, brand and form)']);
+  });
   it('keeps id, name, brand and form only, and skips what it cannot use', () => {
     const hit = (id: unknown, src: Record<string, unknown>) => ({ _id: id, _source: src }) as DsldHit;
     const { rows, skipped } = mapDsld([
