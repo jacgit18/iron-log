@@ -16,7 +16,17 @@ test('a session edited and deleted in the exercise sheet changes just that sessi
   await expect(rows).toHaveCount(2); // edited in place, not added
   await expect(page.locator('table.hist')).toContainText('300 lb');
   const del = rows.first().getByRole('button', { name: /^Delete entry/ });
-  await del.click(); await rows.first().getByRole('button', { name: 'Delete?' }).click();
+  await del.click();
+  await expect(rows.first()).toHaveClass(/removing/); // the first tap marks the row
+  await rows.first().getByRole('button', { name: 'Delete?' }).click();
   await expect(rows).toHaveCount(1);
   await expect(page.locator('table.hist')).not.toContainText('300 lb'); // the edited one went, the other stayed
+  // The Removed notice takes focus on Undo, which puts the same session back once.
+  const note = page.locator('.removednote');
+  await expect(note).toContainText('Removed the');
+  await expect(note.getByRole('button', { name: 'Undo' })).toBeFocused();
+  await note.getByRole('button', { name: 'Undo' }).click();
+  await expect(note).toHaveCount(0);
+  await expect(rows).toHaveCount(2);
+  await expect(page.locator('table.hist')).toContainText('300 lb');
 });
