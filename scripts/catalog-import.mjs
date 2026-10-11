@@ -56,7 +56,8 @@ try {
     added: result.added.length, changed: result.changed.length, retired: result.retired.length, unchanged: result.unchanged,
     unmapped, skipped,
   }));
-  if (result.retired.length) console.log(JSON.stringify({ retired: result.retired }));
+  // The first 50 retired ids, so a supplement import that retires thousands stays readable.
+  if (result.retired.length) console.log(JSON.stringify({ retired: result.retired.slice(0, 50), ...(result.retired.length > 50 ? { andMore: result.retired.length - 50 } : {}) }));
 } catch (err) {
   console.error(JSON.stringify({ msg: 'catalog:import failed', error: err instanceof Error ? err.message : String(err) }));
   process.exitCode = 1;
