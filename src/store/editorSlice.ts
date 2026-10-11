@@ -127,7 +127,18 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     }
     // Syncing, the blank original is saved as the account's program: with no document an account with log entries would fall back to the built-in plan.
     if (target === 'orig' && orig === BUILTIN[slot]) { set(s => ({ programs: { ...s.programs, [slot]: BUILTIN[slot] } })); get().removeDoc('programs/' + slot); }
-    else get().saveProgram(slot, structuredClone(next));
+    else {
+      const loaded = structuredClone(next) as Program;
+      // The same library program can go into A and B (or a copy saved from one slot into the other). Cards with the same id in both would
+      // share ticks and phase defaults, so a version whose ids the other program already uses gets new ones.
+      const taken = new Set(slotsFor(get().programs[slot === 'A' ? 'B' : 'A']).map(s => s.id));
+      const cards = slotsFor({ ...loaded, key: slot });
+      if (src && cards.some(s => taken.has(s.id))) {
+        const phDef = reId(loaded, cards, 'L' + newId().slice(-6), get().cfg.phDef);
+        if (Object.keys(phDef).length) get().mutateCfg(c => { Object.assign(c.phDef, phDef); });
+      }
+      get().saveProgram(slot, loaded);
+    }
     set({ edProg: slot });
     flag(src ? `${src.name} is now in ${progName(get().cfg, slot)}` : 'Loaded');
   },

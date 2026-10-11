@@ -210,6 +210,27 @@ describe('names, saved versions and loading', () => {
     expect(sameProg(st().programs.A, edited)).toBe(true);
     expect(st().library).toHaveLength(1);
   });
+  it('the same library program in A and B gets its own card ids in the second slot, with its phase defaults', async () => {
+    const { slotsFor } = await import('../lib/data.js');
+    const first = BUILTIN.A.days[0].slots[1].id; // a card with a stored id
+    useAppStore.setState(s => ({ cfg: { ...s.cfg, phDef: { [`${first}:0`]: 'hyp' } } }));
+    st().saveCurrentAs('Shared');
+    const id = st().library[0].id;
+    st().loadVersion(id, 'B'); // B now holds A's cards
+    const a = slotsFor(st().programs.A).map(s => s.id); const b = slotsFor(st().programs.B).map(s => s.id);
+    expect(b).toHaveLength(a.length);
+    expect(b.filter(x => a.includes(x))).toEqual([]); // no card shared between A and B
+    expect(st().cfg.phDef[`${b[1]}:0`]).toBe('hyp'); // the phase default moved to the new id
+    expect(st().cfg.phDef[`${first}:0`]).toBe('hyp'); // and A's own is untouched
+  });
+  it('loading a version back into the slot it came from keeps its card ids, so the week\u2019s ticks stay with them', async () => {
+    const { slotsFor } = await import('../lib/data.js');
+    st().setEdDay(2); st().removeEdSlot(0); // A is now an edited copy (Day 1 unchanged)
+    const before = slotsFor(st().programs.A).map(s => s.id);
+    st().saveCurrentAs('Mine');
+    st().loadVersion(st().library[0].id, 'A');
+    expect(slotsFor(st().programs.A).map(s => s.id)).toEqual(before);
+  });
   it('makes no copy when the current program is the original or already saved', () => {
     st().loadVersion('orig', 'A');
     expect(st().library).toEqual([]);
