@@ -12,7 +12,7 @@ export default function ExperimentSheet({ id }: { id?: string | null }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const cur = id ? st.experiments.find(x => x.id === id) : null;
-  const [d, setD] = useState<{ id?: string; name: string; nu: string; ne: EquipmentKey | ''; ph: PhaseChoice; note: string }>(() => ({ id: cur ? cur.id : undefined, name: cur ? exInfo(cfg, cur.ex).n : '', nu: '', ne: '', ph: cur ? cur.ph : 'strength', note: cur ? cur.note : '' }));
+  const [d, setD] = useState<{ id?: string; name: string; nu: string; ne?: EquipmentKey | ''; ph: PhaseChoice; note: string }>(() => ({ id: cur ? cur.id : undefined, name: cur ? exInfo(cfg, cur.ex).n : '', nu: '', ph: cur ? cur.ph : 'strength', note: cur ? cur.note : '' }));
   const [err, setErr] = useState('');
   const exId = findExId(cfg, d.name); // goals belong to the exercise, so they can be set before it's ever logged
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));

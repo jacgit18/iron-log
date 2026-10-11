@@ -9,6 +9,7 @@ import { entryId, findEntry } from '../../lib/export.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import LineChart from '../LineChart.jsx';
+import RemovedNotice from '../RemovedNotice.jsx';
 import LiftGoal from '../progress/LiftGoal.jsx';
 
 const num = (v: string | number) => (v === '' ? null : Number(v));
@@ -72,6 +73,7 @@ export default function DetailSheet({ exId }: { exId: string }) {
   const L = useAppStore(s => s.logs[exId]) || [];
   const { deleteLog, closeModal } = useAppStore.getState();
   const [editing, setEditing] = useState<LogEntry | null>(null); // the entry as it was when Edit was tapped
+  const [arming, setArming] = useState<string | null>(null); // the row whose ✕ was pressed once
   const editOpen = editing && findEntry(L, editing) >= 0; // gone or changed meanwhile: the form closes
   const last = L[L.length - 1];
   const multi = new Set(L.map(e => e.ph || null)).size > 1;
@@ -89,19 +91,20 @@ export default function DetailSheet({ exId }: { exId: string }) {
       )}
       <LiftGoal exId={exId} />
       {editOpen && <EditEntry key={entryId(editing)} exId={exId} entry={editing} onDone={() => setEditing(null)} />}
+      <RemovedNotice scope={'log:' + exId} />
       <table className="hist">
         <thead><tr><th>Date</th><th>Phase</th><th className="num">Load</th><th className="num">Volume</th><th>Note</th><th><span className="sr">Edit or delete</span></th></tr></thead>
         <tbody>
           {L.map((e, i) => ({ e, i })).reverse().map(({ e, i }) => (
-            <tr key={`${entryId(e)}-${i}`}>
-              <td>{fmtShort(parseDate(e.d))}</td>
+            <tr key={`${entryId(e)}-${i}`} className={arming === `${entryId(e)}-${i}` ? 'removing' : undefined}>
+              <td className="rmname">{fmtShort(parseDate(e.d))}</td>
               <td>{e.ph ? PHASES[e.ph].label : '—'}</td>
               <td className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
               <td className="num">{volText(e)}</td>
               <td>{e.n || (e.auto ? AUTO_NOTE : '')}</td>
               <td style={{ whiteSpace: 'nowrap' }}>
                 <button type="button" className="btn sm ghost" aria-label={`Edit entry from ${fmtShort(parseDate(e.d))}`} onClick={() => setEditing(e)}>Edit</button>{' '}
-                <ArmedButton className="btn sm ghost" aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onConfirm={() => { setEditing(null); deleteLog(exId, e); }} />
+                <ArmedButton className={`btn sm ${arming === `${entryId(e)}-${i}` ? 'danger' : 'ghost'}`} aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onArmedChange={a => setArming(a ? `${entryId(e)}-${i}` : null)} onConfirm={() => { setArming(null); setEditing(null); deleteLog(exId, e); }} />
               </td>
             </tr>
           ))}

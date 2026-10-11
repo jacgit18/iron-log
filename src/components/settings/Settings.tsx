@@ -255,7 +255,8 @@ function GitHubBackup() {
       {token ? (
         <div className="actions" style={{ justifyContent: 'flex-start', alignItems: 'center' }}>
           <span className="note">A token is saved in this browser.</span>
-          <button type="button" className="btn sm ghost" onClick={st.forgetGhToken}>Remove token</button>
+          {/* Two taps, but no Undo: keeping a token you chose to remove, even in memory for a while, is not worth it (ADR 023). */}
+          <ArmedButton className="btn sm ghost" label="Remove token" armedLabel="Tap again to remove" onConfirm={st.forgetGhToken} />
         </div>
       ) : (
         <form className="field" onSubmit={e => { e.preventDefault(); saveToken(); }}>
@@ -301,7 +302,8 @@ function RmPanel() {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs); const programs = useAppStore(s => s.programs);
   const st = useAppStore.getState();
   const all = [...slotsFor(programs.A), ...slotsFor(programs.B)];
-  const weighted = allExIds(cfg).filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
+  // Program ids too: synced, a card can use an exercise that isn't in the account's library (ADR 024).
+  const weighted = [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
   return (
     <section className="panel wide">
       <h2>1-rep maxes</h2>

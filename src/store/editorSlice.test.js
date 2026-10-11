@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { clearStorage, saved } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, DEFAULT_CFG, sameProg;
+let useAppStore, BUILTIN, DEFAULT_CFG, sameProg, exInfo;
 const st = () => useAppStore.getState();
 const day1 = () => st().edProgram().days[0].slots;
 const ids = slots => slots.map(s => s.id);
@@ -9,7 +9,7 @@ const builtinA = () => ids(BUILTIN.A.days[0].slots);
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
-  ({ BUILTIN } = await import('../lib/data.js'));
+  ({ BUILTIN, exInfo } = await import('../lib/data.js'));
   ({ DEFAULT_CFG } = await import('../lib/logic.js'));
   ({ sameProg } = await import('../lib/export.js'));
   await st().init();
@@ -174,6 +174,21 @@ describe('the add/edit exercise sheet', () => {
     expect(st().cfg.ex['sled-drag']).toEqual({ n: 'Sled Drag', url: 'https://example.com/v' });
     expect(day1()[6].items[0]).toEqual({ ex: 'sled-drag', ph: 'exp', w: null, bw: true });
   });
+  it('equipment picked for an existing exercise replaces its saved one everywhere', () => {
+    const orig = day1()[2];
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15, ne: 'dumbbell' }] }));
+    expect(st().cfg.ex.platerot).toMatchObject({ eq: 'dumbbell' });
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15, ne: 'plate' }] }));
+    expect(st().cfg.ex.platerot).toBeUndefined(); // back to the built-in value: no override kept
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15, ne: '' }] }));
+    expect(exInfo(st().cfg, 'platerot').eq).toBe(''); // Not set picked: the built-in equipment is cleared
+  });
+  it('a save that never showed the equipment field leaves the saved equipment alone', () => {
+    const orig = day1()[2];
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15 }] }));
+    expect(st().cfg.ex.platerot).toBeUndefined();
+    expect(exInfo(st().cfg, 'platerot').eq).toBe('plate');
+  });
   it('says what’s missing instead of saving', () => {
     expect(st().saveSlot(newCard({ items: [{ ex: '' }] }))).toMatch(/Choose an exercise/);
     expect(st().saveSlot(newCard({ items: [{ ex: '__new', nn: 'X', nu: 'youtube.com/x' }] }))).toMatch(/https:\/\//);
@@ -182,11 +197,11 @@ describe('the add/edit exercise sheet', () => {
 });
 
 describe('names, saved versions and loading', () => {
-  it('renames a program, and the default name clears it', () => {
-    st().renameProgram('A', '  Upper/Lower ');
-    expect(st().cfg.progNames).toEqual({ A: 'Upper/Lower' });
-    st().renameProgram('A', 'Program A');
-    expect(st().cfg.progNames).toEqual({});
+  it('a program loaded from the library gives the slot its name', () => {
+    st().removeEdSlot(0); st().saveCurrentAs('Upper/Lower');
+    st().loadVersion(st().library[0].id, 'B');
+    expect(st().cfg.progNames).toEqual({ B: 'Upper/Lower' });
+    expect(st().edName()).toBe('Upper/Lower');
   });
   it('saves a copy of the current program', () => {
     st().removeEdSlot(0);
@@ -241,6 +256,15 @@ describe('names, saved versions and loading', () => {
 });
 
 describe('creating a program', () => {
+  it('starts an empty program with seven empty days, from nothing', () => {
+    expect(st().createProgram('Mine', 'empty')).toBe(true);
+    const it = st().library[0];
+    expect(it).toMatchObject({ name: 'Mine', created: true });
+    expect(it).not.toHaveProperty('from');
+    expect(it.prog.days).toHaveLength(7);
+    expect(it.prog.days.every(d => d.slots.length === 0)).toBe(true);
+    expect(st().edProg).toBe('L:' + it.id);
+  });
   it('copies A or B into the library with its own card ids and phase defaults', () => {
     useAppStore.setState(s => ({ cfg: { ...s.cfg, phDef: { 'A-sled1:0': 'strength' } } }));
     expect(st().createProgram('My plan', 'A')).toBe(true);
@@ -264,6 +288,19 @@ describe('creating a program', () => {
     st().deleteLibItem(st().library[0].id);
     expect(st().library).toEqual([]);
     expect(st().edKey()).toBe('A');
+  });
+  it('Undo puts a deleted program back where it was, saved, once', () => {
+    st().saveCurrentAs('One'); st().saveCurrentAs('Two'); st().saveCurrentAs('Three');
+    const before = st().library.map(x => x.id);
+    st().deleteLibItem(before[1]);
+    expect(st().library.some(x => x.id === before[1])).toBe(false);
+    expect(st().removed).toMatchObject({ scope: 'library' });
+    expect(saved('library/main').items).toHaveLength(2);
+    st().undoRemoved();
+    expect(st().library.map(x => x.id)).toEqual(before);
+    expect(saved('library/main').items.map(x => x.id)).toEqual(before);
+    st().undoRemoved(); // nothing left to undo
+    expect(st().library.map(x => x.id)).toEqual(before);
   });
 });
 

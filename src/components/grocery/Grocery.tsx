@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { centsText, emptyMonth, lineOf, lineTotal, money, monthKey, monthLabel, occasional, onList, byStore, parseDollars, shiftMonth, storeChoices, tally } from '../../lib/grocery.js';
+import ArmedButton from '../ArmedButton.jsx';
+import RemovedNotice from '../RemovedNotice.jsx';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth } from '../../types.ts';
 
 const EMPTY_FORM = { n: '', store: '', qty: '1', price: '', once: false };
@@ -22,9 +24,10 @@ function Row({ item, month, mk, editing, g }: { item: GroceryItem; month: Grocer
   const l = lineOf(item, month); const total = lineTotal(l.qty, l.cents);
   const [err, setErr] = useState<string | null>(null);
   const [name, setName] = useState(item.n);
+  const [arming, setArming] = useState(false); // Remove was pressed once
   const { mine, suggested } = storeChoices(g);
   return (
-    <div className={`warmrow grow${l.got ? ' idone' : ''}`}>
+    <div className={`warmrow grow${l.got ? ' idone' : ''}${arming ? ' removing' : ''}`}>
       <label className="exname">
         <input type="checkbox" className="chk" id={`groc-${item.id}`} checked={l.got} aria-label={editing ? `Got ${item.n}` : undefined} onChange={e => s.setGroceryGot(mk, item.id, e.target.checked)} />{' '}
         {editing ? null : <>{item.n}{item.once && <span className="rx"> · occasional</span>}</>}
@@ -50,7 +53,7 @@ function Row({ item, month, mk, editing, g }: { item: GroceryItem; month: Grocer
             {suggested.length > 0 && <optgroup label="Suggested">{suggested.map(x => <option key={x} value={x}>{x}</option>)}</optgroup>}
           </select>
           <label className="gcheck"><input type="checkbox" className="chk" checked={item.once} onChange={e => s.updateGroceryItem(item.id, { once: e.target.checked })} /> Occasional</label>
-          <button type="button" className="btn sm ghost" aria-label={`Remove ${item.n} from your list`} onClick={() => s.removeGroceryItem(item.id)}>Remove</button>
+          <ArmedButton className={`btn sm ${arming ? 'danger' : 'ghost'}`} aria-label={`Remove ${item.n} from your list`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setArming} onConfirm={() => s.removeGroceryItem(item.id)} />
         </span>
       )}
       {err && <p className="note" role="alert" style={{ flexBasis: '100%' }}>{err}</p>}
@@ -84,15 +87,17 @@ function AddItem({ g }: { g: GroceryT }) {
 
 function Stores({ g }: { g: GroceryT }) {
   const [name, setName] = useState(''); const [err, setErr] = useState<string | null>(null);
+  const [arming, setArming] = useState<string | null>(null); // the store whose Remove was pressed once
   const s = useAppStore.getState();
   return (
     <section className="card" aria-label="Stores">
       <h3 className="exh"><b>Stores</b></h3>
+      <RemovedNotice scope="grocerystores" />
       {!g.stores.length && <p className="note">No stores yet. Adding an item with a store creates it.</p>}
       {g.stores.map(x => (
-        <div key={x} className="warmrow">
-          <span>{x}</span>
-          <button type="button" className="btn sm ghost" aria-label={`Remove the store ${x}`} onClick={() => setErr(s.removeGroceryStore(x))}>Remove</button>
+        <div key={x} className={`warmrow${arming === x ? ' removing' : ''}`}>
+          <span className="rmname">{x}</span>
+          <ArmedButton className={`btn sm ${arming === x ? 'danger' : 'ghost'}`} aria-label={`Remove the store ${x}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? x : null)} onConfirm={() => { setArming(null); setErr(s.removeGroceryStore(x)); }} />
         </div>
       ))}
       <form className="warmadd" noValidate onSubmit={e => { e.preventDefault(); const m = s.addGroceryStore(name); setErr(m); if (!m) setName(''); }}>
@@ -109,6 +114,7 @@ export default function Grocery() {
   const months = useAppStore(s => s.groceryMonths);
   const today = useToday(s => s.today);
   const [back, setBack] = useState(0); const [editing, setEditing] = useState(false);
+  const [arming, setArming] = useState<string | null>(null); // the occasional item whose Remove was pressed once
   const s = useAppStore.getState();
   const nowKey = monthKey(today); const mk = shiftMonth(nowKey, -back);
   const month = months[mk] || emptyMonth();
@@ -129,6 +135,7 @@ export default function Grocery() {
       <p className="note" id="groc-summary" role="status">
         {t.count ? `Got ${t.got} of ${t.count} · Spent ${money(t.spent)} · Expected ${money(t.planned)}${t.unpriced ? ` · ${t.unpriced} without a price` : ''}` : 'Nothing on this month’s list.'}
       </p>
+      <RemovedNotice scope="grocery" />
       {!g.items.length && !editing && <p className="note">Your list is empty. Use Edit to add what you buy and where. Each month starts again with the same items, ticked off fresh.</p>}
       {groups.map((grp, gi) => {
         const gt = tally(grp.items, month);
@@ -147,10 +154,10 @@ export default function Grocery() {
           <h3 id="groc-later-h" className="exh"><b>Occasional</b></h3>
           <p className="note">Not on each month’s list. Add one when you need it.</p>
           {later.map(it => (
-            <div key={it.id} className="warmrow">
-              <span>{it.n}{it.store && <span className="rx"> · {it.store}</span>}</span>
+            <div key={it.id} className={`warmrow${arming === it.id ? ' removing' : ''}`}>
+              <span><span className="rmname">{it.n}</span>{it.store && <span className="rx"> · {it.store}</span>}</span>
               <span className="inline">
-                {editing && <button type="button" className="btn sm ghost" aria-label={`Remove ${it.n} from your list`} onClick={() => s.removeGroceryItem(it.id)}>Remove</button>}
+                {editing && <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Remove ${it.n} from your list`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); s.removeGroceryItem(it.id); }} />}
                 <button type="button" className="btn sm" aria-label={`Add ${it.n} to this month`} onClick={() => s.pullGrocery(mk, it.id, true)}>Add to this month</button>
               </span>
             </div>

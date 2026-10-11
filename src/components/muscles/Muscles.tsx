@@ -1,11 +1,17 @@
+import type { MuscleKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { exInfo } from '../../lib/data.js';
 import { progName } from '../../lib/logic.js';
 import { MUSCLES, M_KEYS, SIL, FRONT, BACK, level, fmtSets, muscleVolumeAll } from '../../lib/muscles.js';
+import RemovedNotice from '../RemovedNotice.jsx';
 
 const MIRROR = 'matrix(-1 0 0 1 200 0)';
 
-function Figure({ shapes, label, vol, sel, onPick }) {
+type Volume = ReturnType<typeof muscleVolumeAll>['vol'];
+type VolRow = Volume[MuscleKey]['ex'][number];
+type Grouped = VolRow & { at: Record<string, Set<number>> };
+
+function Figure({ shapes, label, vol, sel, onPick }: { shapes: [MuscleKey, string][]; label: string; vol: Volume; sel: MuscleKey | null; onPick: (m: MuscleKey) => void }) {
   return (
     <figure className="fig">
       <svg viewBox="30 0 140 420" role="group" aria-label={`${label} view`}>
@@ -27,14 +33,14 @@ function Figure({ shapes, label, vol, sel, onPick }) {
   );
 }
 
-function MuscleDetail({ m, v, keys, withSec }) {
+function MuscleDetail({ m, v, keys, withSec }: { m: MuscleKey; v: Volume[MuscleKey]; keys: string[]; withSec: boolean }) {
   const cfg = useAppStore(s => s.cfg);
   const { selectMuscle, openModal } = useAppStore.getState();
-  const grouped = {};
-  v.ex.forEach(e => { const k = e.ex + '|' + e.role; const g = (grouped[k] = grouped[k] || { ...e, at: {} }); (g.at[e.prog] = g.at[e.prog] || new Set()).add(e.day); });
-  const first = r => Math.min(...Object.values(r.at).flatMap(s => [...s]));
+  const grouped: Record<string, Grouped> = {};
+  v.ex.forEach(e => { const k = e.ex + '|' + e.role; const g = (grouped[k] = grouped[k] || { ...e, at: {} }); (g.at[e.prog!] = g.at[e.prog!] || new Set()).add(e.day); });
+  const first = (r: Grouped) => Math.min(...Object.values(r.at).flatMap(s => [...s]));
   const rows = Object.values(grouped).sort((a, b) => (a.role === b.role ? first(a) - first(b) : a.role === 'p' ? -1 : 1));
-  const where = r => keys.filter(k => r.at[k]).map(k => `${keys.length > 1 ? progName(cfg, k) + ': ' : ''}${[...r.at[k]].sort().map(d => 'D' + d).join(' ')}`).join(' · ');
+  const where = (r: Grouped) => keys.filter(k => r.at[k]).map(k => `${keys.length > 1 ? progName(cfg, k) + ': ' : ''}${[...r.at[k]].sort().map(d => 'D' + d).join(' ')}`).join(' · ');
   const progs = keys.map(k => progName(cfg, k)).join(' and ');
   return (
     <section className="panel">
@@ -63,7 +69,7 @@ function MuscleDetail({ m, v, keys, withSec }) {
   );
 }
 
-function Ranking({ vol, onPick }) {
+function Ranking({ vol, onPick }: { vol: Volume; onPick: (m: MuscleKey) => void }) {
   const ranked = M_KEYS.map(k => ({ k, s: vol[k].sets })).sort((a, b) => b.s - a.s);
   const top = Math.max(...ranked.map(x => x.s));
   const none = ranked.filter(r => !r.s);
@@ -101,6 +107,7 @@ export default function Muscles() {
   return (
     <>
       <p className="note">Every exercise in {keys.map(k => progName(cfg, k)).join(' and ')}. Sets are per week, averaged across the programs.</p>
+      <RemovedNotice scope="muscles" />
       <div className="bodywrap">
         <div className="figs">
           <Figure shapes={FRONT} label="Front" vol={vol} sel={sel} onPick={selectMuscle} />

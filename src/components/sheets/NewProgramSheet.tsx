@@ -8,7 +8,7 @@ export default function NewProgramSheet() {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const [name, setName] = useState('');
-  const [from, setFrom] = useState(() => st.activeProgKey());
+  const [from, setFrom] = useState<ProgKey | 'empty'>('empty');
   const [err, setErr] = useState('');
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -18,10 +18,11 @@ export default function NewProgramSheet() {
   return (
     <Sheet as="form" noValidate onSubmit={submit}>
       <h2 className="cond">Create a program</h2>
-      <p className="note">It starts as a copy you can change freely. It goes into your program library, not the rotation, until you load it into A or B.</p>
+      <p className="note">Start from an empty week and add your own exercises, or from a copy of A or B. It goes into your program library, not the rotation, until you load it into A or B.</p>
       <label className="field">Name<input maxLength={60} value={name} required aria-invalid={!!err} aria-describedby={err ? 'np-err' : undefined} placeholder="e.g. Winter strength block" onChange={e => setName(e.target.value)} /></label>
       <label className="field">Start from
-        <select value={from} onChange={e => setFrom(e.target.value as ProgKey)}>
+        <select value={from} onChange={e => setFrom(e.target.value as ProgKey | 'empty')}>
+          <option value="empty">An empty program</option>
           {['A', 'B'].map(k => <option key={k} value={k}>A copy of {progName(cfg, k)} (Program {k})</option>)}
         </select>
       </label>

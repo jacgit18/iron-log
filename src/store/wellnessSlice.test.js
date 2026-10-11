@@ -41,6 +41,17 @@ describe('stretches', () => {
     expect(st().strWeek.done).toEqual({});
     expect(saved('stretches/main').items.some(i => i.id === item.id)).toBe(false);
   });
+  it('Undo puts a deleted stretch back in its place with this week’s ticks', () => {
+    const before = st().stretches.map(i => i.id); const id = before[1];
+    st().setStretchDone(0, id, true); st().setStretchDone(3, id, true); st().setStretchDone(0, before[0], true);
+    const done = { ...st().strWeek.done };
+    st().deleteStretch(id);
+    expect(st().removed).toMatchObject({ scope: 'stretches' });
+    st().undoRemoved();
+    expect(st().stretches.map(i => i.id)).toEqual(before);
+    expect(st().strWeek.done).toEqual(done);
+    expect(saved('stretches/main').items.map(i => i.id)).toEqual(before);
+  });
   it('adds an experiment to a day and removes it again with its check-off', () => {
     expect(st().saveStretchExp({ n: 'Frog Stretch', note: 'try' })).toBeNull();
     const e = st().stretchExps[0];
@@ -51,6 +62,20 @@ describe('stretches', () => {
     expect(st().strWeek).toEqual({ done: {}, skipped: {}, extra: [] });
     st().deleteStretchExp(e.id);
     expect(st().stretchExps).toEqual([]);
+  });
+  it('Undo puts back a removed day stretch with its tick, and a deleted experiment', () => {
+    expect(st().saveStretchExp({ n: 'Frog Stretch', note: 'try' })).toBeNull();
+    const e = st().stretchExps[0];
+    st().addStretchToDay(e.id, 3); const x = st().strWeek.extra[0]; st().setStretchDone(3, x.id, true);
+    const week = structuredClone(st().strWeek);
+    st().removeStretchExtra(x.id);
+    expect(st().removed).toMatchObject({ scope: `sday:${st().weekKey()}:3`, text: 'Frog Stretch from Wednesday' });
+    st().undoRemoved();
+    expect(st().strWeek).toEqual(week);
+    st().deleteStretchExp(e.id);
+    st().undoRemoved();
+    expect(st().stretchExps).toEqual([e]);
+    expect(saved('stretches/main').experiments).toEqual([e]);
   });
   it('skips a whole day, keeping its ticks, and undoes the skip', () => {
     st().setStretchDone(1, 'scarecrow', true);
@@ -76,6 +101,21 @@ describe('water', () => {
     st().removeWater('2026-10-04', 0); st().removeWater('2026-10-04', 0);
     expect(st().supp.water).toEqual({});
   });
+  it('Undo puts a removed drink back in its place', () => {
+    st().addWater('2026-10-04', 16.9); st().addWater('2026-10-04', 8); st().addWater('2026-10-04', 12);
+    st().removeWater('2026-10-04', 1);
+    expect(st().removed).toMatchObject({ scope: 'water:2026-10-04', text: '8 oz of water' });
+    st().undoRemoved();
+    expect(st().supp.water['2026-10-04']).toEqual([16.9, 8, 12]);
+    expect(saved('supplements/main').water['2026-10-04']).toEqual([16.9, 8, 12]);
+  });
+  it('Undo does not double a drink that was added again meanwhile', () => {
+    st().addWater('2026-10-04', 8);
+    st().removeWater('2026-10-04', 0);
+    st().addWater('2026-10-04', 8); // added again by hand
+    st().undoRemoved();
+    expect(st().supp.water['2026-10-04']).toEqual([8]);
+  });
   it('a typed goal is fixed until you go back to your weight', () => {
     expect(st().supp.waterMode).toBe('weight');
     st().setWaterGoal(100); expect(st().supp).toMatchObject({ waterGoal: 100, waterMode: 'fixed' });
@@ -97,6 +137,9 @@ describe('supplement library', () => {
     expect(saved('supplements/main').taken).toEqual({ '2026-10-04': { [x.id]: true } });
     st().removeSupplement(x.id);
     expect(st().supp.items[0].slot).toBe('');
+    expect(st().removed).toMatchObject({ scope: 'suppslot:morning', text: 'Vitamin D from Morning' });
+    st().undoRemoved(); expect(st().supp.items[0].slot).toBe('morning');
+    st().removeSupplement(x.id);
     st().setSupplementSlot(x.id, 'night'); expect(st().supp.items[0].slot).toBe('night');
   });
   it('saves from the library sheet, rejects a duplicate name, and deleting clears the ticks', () => {
@@ -109,6 +152,17 @@ describe('supplement library', () => {
     st().setSupplementTaken('2026-10-05', x.id, true);
     st().deleteSupplement(x.id);
     expect(st().supp.items).toEqual([]); expect(st().supp.taken).toEqual({});
+  });
+  it('Undo puts a deleted supplement back in its place with every day it was ticked', () => {
+    st().addSupplement('morning', 'A'); st().addSupplement('morning', 'B'); st().addSupplement('night', 'C');
+    st().setSupplementTaken('2026-10-05', 'b', true); st().setSupplementTaken('2026-10-06', 'b', true); st().setSupplementTaken('2026-10-06', 'a', true);
+    const before = structuredClone(st().supp);
+    st().deleteSupplement('b');
+    expect(st().supp.taken['2026-10-05']).toBeUndefined();
+    expect(st().removed).toMatchObject({ scope: 'supplements', text: 'B' });
+    st().undoRemoved();
+    expect(st().supp.items).toEqual(before.items); expect(st().supp.taken).toEqual(before.taken);
+    expect(saved('supplements/main').taken).toEqual(before.taken);
   });
   it('moves within a section only', () => {
     st().addSupplement('morning', 'A'); st().addSupplement('night', 'B'); st().addSupplement('morning', 'C');

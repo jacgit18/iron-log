@@ -109,13 +109,13 @@ export interface EditorSlice {
   undoRemoveEdSlot(): void;
   dismissEdRemoved(): void;
   setDaySub(v: string): boolean;
-  renameProgram(k: ProgKey, raw: string): false | void;
   renameLibItem(raw: string): false | void;
   libSnapshot(name: string, prog: Program, from: string, auto: boolean): LibraryItem;
   saveCurrentAs(name: string): void;
   loadVersion(target: string, slot: ProgKey): void;
   deleteLibItem(id: string): void;
-  createProgram(name: string, from: ProgKey): boolean;
+  /** `from` 'empty' starts with seven empty days (ADR 021); 'A' or 'B' starts as a copy of that program. */
+  createProgram(name: string, from: ProgKey | 'empty'): boolean;
   saveSlot(d: SlotForm): string | null;
 }
 
@@ -139,6 +139,17 @@ export interface SettingsSlice {
 
 /** The Grocery section's add-item form: what was typed. `price` is dollars as text. */
 export interface GroceryForm { n: string; store: string; qty: string; price: string; once: boolean }
+
+/** What the last single-item delete took out: `text` is the notice ("Removed <text>."), `restore` puts it back. */
+export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void }
+
+export interface RemovedSlice {
+  removed: Removed | null;
+  noteRemoved(scope: string, text: string, restore: () => boolean | void): void;
+  undoRemoved(): void;
+  /** Drop the Undo; with a scope, only when it belongs to that list. */
+  dismissRemoved(scope?: string): void;
+}
 
 /** The grocery list (device-only): the catalogue and every saved month. Lives in the browser's storage, not in the sync. */
 export interface GrocerySlice {
@@ -302,6 +313,7 @@ export interface CoreSlice {
   setExperiments(experiments: Experiment[]): void;
   saveExperiment(d: ExperimentForm): string | null;
   applyExerciseUrl(ex: string, raw: string | null | undefined): void;
+  applyExerciseEq(ex: string, eq: EquipmentKey | '' | null | undefined): void;
   createExercise(d: { nn: string } & ExerciseExtras): string;
   addExerciseToDay(col: number, d: ExperimentForm): string | null;
   saveExerciseDetails(exId: string, d: ExerciseDetailsForm): string | null;
@@ -311,7 +323,8 @@ export interface CoreSlice {
   addToDay(entryId: string, col: number): boolean;
   removeExtra(slotId: string): void;
   addWarmup(n: string, rx: string): boolean;
-  removeWarmup(id: string): void;
+  /** `d` is the Stretches day it was removed from, where its Undo shows. */
+  removeWarmup(id: string, d?: number): void;
   restOverflow(n: number): FlatSlot[];
   setRestDay(n: number, opts?: { skipOverflow?: boolean }): boolean | undefined;
   swapDays(d: number, dir: number): boolean;
@@ -355,6 +368,6 @@ export interface CoreSlice {
   init(): Promise<void>;
 }
 
-export type AppState = CoreSlice & EditorSlice & SettingsSlice & WellnessSlice & GrocerySlice;
+export type AppState = CoreSlice & EditorSlice & SettingsSlice & WellnessSlice & GrocerySlice & RemovedSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];

@@ -77,6 +77,19 @@ describe('checking off on the board', () => {
   });
 });
 
+describe('muscle tags', () => {
+  it('Use default drops your own tags, and Undo brings them back', () => {
+    st().saveTags('hack', { p: ['chest'], s: [] });
+    const own = st().cfg.muscleMap.hack;
+    st().resetTags('hack');
+    expect(st().cfg.muscleMap.hack).toBeUndefined();
+    expect(st().removed).toMatchObject({ scope: 'muscles' });
+    st().undoRemoved();
+    expect(st().cfg.muscleMap.hack).toEqual(own);
+    expect(saved('config/main').muscleMap.hack).toEqual(own);
+  });
+});
+
 describe('warm-up list', () => {
   it('starts with Shadow box only, and items can be added and removed', () => {
     expect(warmupOf(st().cfg).map(x => x.id)).toEqual(['shadow']);
@@ -88,6 +101,15 @@ describe('warm-up list', () => {
     expect(warmupOf(st().cfg).map(x => x.n)).toEqual(['Band pull-aparts']);
     st().removeWarmup(b.id);
     expect(warmupOf(st().cfg)).toEqual([]); // an emptied list stays empty
+  });
+  it('Undo puts a removed item back in its place', () => {
+    st().addWarmup('Band pull-aparts', '2 × 15'); st().addWarmup('Jumping jacks', '');
+    const before = warmupOf(st().cfg);
+    st().removeWarmup(before[1].id, 2);
+    expect(st().removed).toMatchObject({ scope: 'warmup:2', text: 'Band pull-aparts from the warm-up' });
+    st().undoRemoved();
+    expect(warmupOf(st().cfg)).toEqual(before);
+    expect(saved('config/main').warmup).toEqual(before);
   });
 });
 
@@ -382,6 +404,9 @@ describe('experiment board', () => {
     st().deleteExperiment(e.id);
     expect(st().experiments).toEqual([]);
     expect(saved('experiments/main').items).toEqual([]);
+    st().undoRemoved();
+    expect(st().experiments).toEqual([{ id: e.id, ex: 'hack', ph: 'strength', note: '' }]);
+    expect(saved('experiments/main').items).toHaveLength(1);
   });
   it('creates a new exercise from a typed name, and asks for one when missing', () => {
     expect(st().saveExperiment({ ex: '__new', nn: 'Cable Lateral Raise', ph: null, note: '' })).toBeNull();
@@ -421,6 +446,33 @@ describe('experiment board', () => {
     expect(st().week.ph[`${id}:0`]).toBeUndefined();
     expect((st().logs.legext || []).some(x => x.slot === id)).toBe(false);
     expect(tally(st().activeSlots(), st().week).total).toBe(before);
+  });
+  it('Undo after Remove brings the card back ticked, with one check-off log, never two', () => {
+    const e = add('legext', 'hyp'); st().addToDay(e.id, 2); const id = st().week.extra[0].id;
+    st().checkCard(id, true); st().setPhase(id, 0, 'strength');
+    const week = structuredClone(st().week); const total = tally(st().activeSlots(), st().week).total;
+    const autos = () => (st().logs.legext || []).filter(x => x.slot === id && x.auto);
+    expect(autos()).toHaveLength(1);
+    st().removeExtra(id);
+    expect(st().removed).toMatchObject({ scope: 'board:' + st().weekKey(), text: 'Leg Extension ISO hold from this week' });
+    expect(autos()).toHaveLength(0);
+    st().undoRemoved();
+    expect(st().week.extra).toEqual(week.extra);
+    expect(st().week.done).toEqual(week.done); expect(st().week.ph).toEqual(week.ph);
+    expect(tally(st().activeSlots(), st().week).total).toBe(total);
+    expect(autos()).toHaveLength(1);
+    expect(saved('logs/legext').entries.filter(x => x.slot === id && x.auto)).toHaveLength(1);
+    expect(saved('weeks/' + st().weekKey()).extra).toHaveLength(1);
+    st().undoRemoved(); // nothing left to undo
+    expect(st().week.extra).toHaveLength(1); expect(autos()).toHaveLength(1);
+  });
+  it('Undo after Remove does nothing in another week', () => {
+    const e = add(); st().addToDay(e.id, 2); const id = st().week.extra[0].id;
+    st().removeExtra(id);
+    useAppStore.setState({ removed: { ...st().removed } }); // still showing
+    const restore = st().removed.restore;
+    st().gotoWeek('prev');
+    expect(restore()).toBe(false);
   });
   it('Remove keeps sets you logged by hand', () => {
     const e = add('legext', 'hyp'); st().addToDay(e.id, 2); const id = st().week.extra[0].id; const wk = st().weekKey();
@@ -642,6 +694,22 @@ describe('body weight goal', () => {
     expect(st().setBodyGoal('abc')).toBe(false);
     st().clearBodyGoal();
     expect(st().cfg.bwGoal).toBeUndefined();
+    st().undoRemoved();
+    expect(st().cfg.bwGoal).toEqual({ w: 180, start: { w: 195, d: '2026-09-27' }, by: '2026-12-01' });
+    expect(saved('config/main').bwGoal.w).toBe(180);
+  });
+  it('Undo after deleting a weigh-in puts it back, unless that week was weighed again', () => {
+    const e1 = { wk: '2026-09-20', d: '2026-09-21', w: 196 }; const e2 = { wk: '2026-09-27', d: '2026-09-27', w: 195 };
+    useAppStore.setState({ body: [e1, e2] });
+    st().deleteBodyWeight('2026-09-20');
+    expect(st().removed).toMatchObject({ scope: 'body' });
+    st().undoRemoved();
+    expect(st().body).toEqual([e1, e2]);
+    expect(saved('body/main').entries).toEqual([e1, e2]);
+    st().deleteBodyWeight('2026-09-20');
+    useAppStore.setState({ body: [{ ...e1, w: 199 }, e2] });
+    st().undoRemoved();
+    expect(st().body.map(x => x.w)).toEqual([199, 195]);
   });
   it('a goal set before any weigh-in starts from the first one', () => {
     st().setBodyGoal('180');
@@ -663,6 +731,10 @@ describe('lift weight goal', () => {
     expect(st().cfg.liftGoals.hack).toEqual({ any: { w: 350, start: 300 } });
     st().clearLiftGoal('hack', 'any');
     expect(st().cfg.liftGoals).toBeUndefined();
+    expect(st().removed).toMatchObject({ scope: 'liftgoal:hack', text: 'the any phase goal' });
+    st().undoRemoved();
+    expect(st().cfg.liftGoals).toEqual({ hack: { any: { w: 350, start: 300 } } });
+    expect(saved('config/main').liftGoals.hack.any.w).toBe(350);
   });
   it('moves a goal to another phase, but not onto one that has a goal', () => {
     useAppStore.setState({ logs: { hack: [{ d: '2026-09-20', ph: 'strength', w: 300, s: 4, r: 6 }] } });
@@ -776,6 +848,32 @@ describe('exercise library', () => {
     useAppStore.setState({ experiments: [] });
     expect(st().deleteExercise(id)).toBeNull();
     expect(st().cfg.ex[id]).toBeUndefined(); expect(st().cfg.rm[id]).toBeUndefined(); expect(st().cfg.muscleMap[id]).toBeUndefined();
+  });
+  it('synced (ADR 024): an exercise you own under a built-in id keeps every value, can be renamed and deleted', async () => {
+    const { listBuiltinExercises, exInfo } = await import('../lib/data.js');
+    listBuiltinExercises(false);
+    try {
+      useAppStore.setState({ cfg: { ...structuredClone(DEFAULT_CFG), ex: { hack: { n: 'Hack Squat', eq: 'machine' } } }, programs: { A: BUILTIN.A, B: BUILTIN.B } });
+      st().saveExerciseDetails('hack', { eq: 'machine', url: '' }); // the built-in's value is kept, not pruned, so the entry never empties out
+      expect(st().cfg.ex.hack).toEqual({ n: 'Hack Squat', eq: 'machine' });
+      st().saveExerciseDetails('hack', { eq: '' }); // clearing still hides the built-in value under it
+      expect(exInfo(st().cfg, 'hack').eq).toBe('');
+      expect(st().saveExerciseDetails('hack', { name: 'Hack Squat, heels up' })).toBeNull();
+      expect(st().cfg.ex.hack.n).toBe('Hack Squat, heels up');
+      expect(st().deleteExercise('hack')).toMatch(/still used in Program A/); // still on cards, not refused as built-in
+      useAppStore.setState({ programs: { A: { ...BUILTIN.A, days: [] }, B: { ...BUILTIN.B, days: [] } } });
+      expect(st().deleteExercise('hack')).toBeNull();
+      expect(st().cfg.ex.hack).toBeUndefined();
+    } finally { listBuiltinExercises(true); }
+  });
+  it('Undo brings a deleted exercise back with its 1RM and muscles, saved', () => {
+    st().createLibraryExercise({ name: 'Throwaway', rm: '10', tags: { p: ['chest'], s: [] } });
+    const id = Object.keys(st().cfg.ex)[0]; const before = structuredClone(st().cfg);
+    st().deleteExercise(id);
+    expect(st().removed).toMatchObject({ scope: 'exercises', text: 'Throwaway' });
+    st().undoRemoved();
+    expect(st().cfg.ex[id]).toEqual(before.ex[id]); expect(st().cfg.rm[id]).toBe(before.rm[id]); expect(st().cfg.muscleMap[id]).toEqual(before.muscleMap[id]);
+    expect(saved('config/main').ex[id]).toEqual(before.ex[id]);
   });
 });
 

@@ -2,7 +2,7 @@ import type { EquipmentKey } from '../../types.ts';
 import type { PhaseChoice } from '../../store/types.ts';
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, EX, exInfo } from '../../lib/data.js';
+import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isOwnExercise } from '../../lib/data.js';
 import { MUSCLE_MAP, draftOfTags, tagsOfDraft } from '../../lib/muscles.js';
 import MuscleChips from '../muscles/MuscleChips.jsx';
 import Sheet from '../Sheet.jsx';
@@ -14,7 +14,7 @@ import ArmedButton from '../ArmedButton.jsx';
 export default function ExerciseSheet({ exId }: { exId: string | null | undefined }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
-  const isNew = exId == null; const custom = isNew || !EX[exId];
+  const isNew = exId == null; const custom = isNew || isOwnExercise(exId);
   const info = isNew ? { n: '' } : exInfo(cfg, exId);
   const [d, setD] = useState<{ name: string; url: string; eq: EquipmentKey | ''; ph: PhaseChoice; rm: string }>(() => ({
     name: info.n, url: info.url || '', eq: info.eq || '',
@@ -63,7 +63,7 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
       </fieldset>
       {err && <p className="note err" role="alert">{err}</p>}
       <div className="actions">
-        {!isNew && custom && <ArmedButton className="btn ghost" label="Delete exercise" armedLabel="Confirm delete" style={{ marginRight: 'auto' }} onConfirm={remove} />}
+        {!isNew && custom && <ArmedButton className="btn ghost" label="Delete exercise" armedLabel="Tap again to delete" style={{ marginRight: 'auto' }} onConfirm={remove} />}
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
         <button type="submit" className="btn primary">Save</button>
       </div>
