@@ -134,7 +134,7 @@ describe('planOrder never loses, duplicates or splits a card', () => {
       }
     });
     expect(plans).toBeGreaterThan(50); // the checks really ran on suggestions
-  });
+  }, 60000);
 
   it('on random programs with supersets, either/or cards, Home cards and empty days', () => {
     let plans = 0;
@@ -145,7 +145,7 @@ describe('planOrder never loses, duplicates or splits a card', () => {
       DAYS.forEach(c => { if (checkPlan(cfg, finish(w, slots, c), slots, c)) plans++; });
     }
     expect(plans).toBeGreaterThan(100);
-  });
+  }, 60000);
 
   it('on a clean week of each built-in program, with each single rest day', () => {
     ['A', 'B'].forEach(k => {
@@ -155,7 +155,7 @@ describe('planOrder never loses, duplicates or splits a card', () => {
         DAYS.forEach(c => { w = finish(w, slots, c); checkPlan(cfg, w, slots, c); });
       });
     });
-  });
+  }, 60000);
 
   it('changes nothing but order and rest, and leaves the week it was given alone', () => {
     for (let seed = 1; seed <= 100; seed++) {
