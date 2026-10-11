@@ -26,7 +26,8 @@ export const phaseLabel = (p: string | null | undefined) => (p ? (PHASES[p as Ph
 const entryVolume = (e: LogEntry) => { if (e.sec) return ''; const v = setsOfEntry(e).reduce((a, x) => a + (Number(x.w) > 0 && Number(x.r) > 0 ? Number(x.w) * Number(x.r) : 0), 0); return v || ''; };
 const setDetail = (e: LogEntry) => (Array.isArray(e.sets) && e.sets.length ? e.sets.map(x => `${x.w != null ? x.w : 'BW'}×${setVal(x)}`).join(', ') : '');
 
-function csvCell(v: unknown) { const t = v == null ? '' : String(v); return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }
+// A text cell that starts with = + - @ tab or CR runs as a formula in Excel; a leading ' makes it text (also in front of a value that already starts with ' and then one of them, which the importer strips just once). Numbers are left alone, so a negative weight stays a number.
+function csvCell(v: unknown) { let t = v == null ? '' : String(v); if (typeof v === 'string' && /^'*[=+\-@\t\r]/.test(t)) t = "'" + t; return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }
 export function buildCsv(S: Snapshot) {
   const { cfg, logs } = S;
   const head = ['date', 'exercise', 'phase', 'weight_lb', 'sets', 'reps', 'hold_s', 'set_detail', 'primary_muscles', 'secondary_muscles', 'note', 'program_slot', 'week_of'];
