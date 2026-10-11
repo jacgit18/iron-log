@@ -171,6 +171,26 @@ describe('supplement library', () => {
     st().deleteSupplement(x.id);
     expect(st().supp.items).toEqual([]); expect(st().supp.taken).toEqual({});
   });
+  // Catalog supplements (ADR 029): name and brand from the catalog, Library only, your own dose; never a dose from the catalog.
+  it('adds a catalog supplement as Library only with its brand, keeps name, brand and id through edits, and allows the same name from another brand', () => {
+    const now = { id: 'c:dsld:3', name: 'Creatine', brand: 'NOW Foods', data: { form: 'Powder' } };
+    expect(st().addCatalogSupplement(now)).toBeNull();
+    const x = st().supp.items.find(i => i.catalogId === now.id);
+    expect(x).toEqual({ id: 'creatine', n: 'Creatine', slot: '', brand: 'NOW Foods', catalogId: now.id });
+    expect(saved('supplements/main').items.find(i => i.id === x.id)).toMatchObject({ brand: 'NOW Foods', catalogId: now.id });
+    expect(st().addCatalogSupplement(now)).toMatch(/Already in your supplements/);
+    expect(st().addCatalogSupplement({ ...now, id: 'c:dsld:9' })).toMatch(/already have Creatine from NOW Foods/);
+    expect(st().addCatalogSupplement({ ...now, id: 'c:dsld:4', brand: 'Optimum Nutrition' })).toBeNull(); // same name, other brand
+    expect(st().saveSupplement({ n: 'Creatine', dose: '5 g' })).toBeNull(); // your own plain one too
+    expect(st().saveSupplement({ id: x.id, n: 'Renamed', dose: '3 g', slot: 'morning', note: 'with water' })).toBeNull();
+    expect(st().supp.items.find(i => i.id === x.id)).toEqual({ id: 'creatine', n: 'Creatine', slot: 'morning', dose: '3 g', note: 'with water', brand: 'NOW Foods', catalogId: now.id });
+  });
+  it('cuts a long catalog name to 60 characters, and refuses an id that is not a catalog id', () => {
+    st().addCatalogSupplement({ id: 'c:dsld:7', name: 'A'.repeat(70), data: {} });
+    const x = st().supp.items.find(i => i.catalogId === 'c:dsld:7');
+    expect(x.n).toBe(`${'A'.repeat(59)}…`); expect(x).not.toHaveProperty('brand');
+    expect(st().addCatalogSupplement({ id: 'creatine', name: 'X', data: {} })).toMatch(/can’t be added/);
+  });
   it('Undo puts a deleted supplement back in its place with every day it was ticked', () => {
     st().addSupplement('morning', 'A'); st().addSupplement('morning', 'B'); st().addSupplement('night', 'C');
     st().setSupplementTaken('2026-10-05', 'b', true); st().setSupplementTaken('2026-10-06', 'b', true); st().setSupplementTaken('2026-10-06', 'a', true);

@@ -38,6 +38,21 @@ describe('stretch routine', () => {
   });
 });
 
+describe('supplement items from the catalog', () => {
+  it('keep a catalog id only in its shape, and a brand only with one', () => {
+    const s = normSupplements({ items: [
+      { id: 'a', n: 'Creatine', slot: 'morning', brand: 'NOW Foods', catalogId: 'c:dsld:3' },
+      { id: 'b', n: 'Fish Oil', slot: '', brand: 'Acme' },
+      { id: 'c', n: 'Zinc', slot: '', brand: 'Acme', catalogId: 'zinc' },
+    ] });
+    expect(s.items).toEqual([
+      { id: 'a', n: 'Creatine', slot: 'morning', brand: 'NOW Foods', catalogId: 'c:dsld:3' },
+      { id: 'b', n: 'Fish Oil', slot: '' },
+      { id: 'c', n: 'Zinc', slot: '' },
+    ]);
+  });
+});
+
 describe('water goal', () => {
   const body = [{ wk: '2026-09-27', d: '2026-09-30', w: 180 }, { wk: '2026-10-04', d: '2026-10-05', w: 176 }];
   it('is half the body weight logged on or before the day, and falls back when none', () => {

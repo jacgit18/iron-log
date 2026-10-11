@@ -13,9 +13,10 @@ const noteOf = (x: any, max = 200) => (str(x.note, max) ? { note: str(x.note, ma
 
 // A catalog id as catalog:import makes them (`c:<source>:<dataset id>`, at most 100 characters); anything else is dropped, so the stretch is Custom.
 const CATALOG_ID = /^c:[a-z]{2,20}:[A-Za-z0-9_-]{1,90}$/;
+const catalogIdOf = (x: any): string | null => (typeof x.catalogId === 'string' && x.catalogId.length <= 100 && CATALOG_ID.test(x.catalogId) ? x.catalogId : null);
 export function normStretchItem(x: any): Stretch | null {
   if (!x || typeof x !== 'object' || !str(x.id, 60) || !str(x.n, 80)) return null;
-  const catalogId = typeof x.catalogId === 'string' && x.catalogId.length <= 100 && CATALOG_ID.test(x.catalogId) ? x.catalogId : null;
+  const catalogId = catalogIdOf(x);
   return { id: x.id, n: str(x.n, 80), group: str(x.group, 40) || DEFAULT_GROUP, tier: x.tier === 'primary' || x.tier === 'secondary' ? x.tier : '', ...urlOf(x), ...noteOf(x), ...(catalogId ? { catalogId } : {}) };
 }
 
@@ -36,5 +37,7 @@ export const SUPPLEMENT_SLOTS: SupplementSlot[] = ['morning', 'noon', 'night'];
 // A supplement in the library or on the schedule. `slot` is morning, noon or night; anything else keeps it in the library only.
 export function normSupplementItem(x: any, slot: unknown = x && x.slot): SupplementItem | null {
   if (!x || typeof x !== 'object' || !str(x.id, 60) || !str(x.n, 60)) return null;
-  return { id: x.id, n: str(x.n, 60), slot: SUPPLEMENT_SLOTS.includes(slot as SupplementSlot) ? (slot as SupplementSlot) : '', ...(str(x.dose, 40) ? { dose: str(x.dose, 40) } : {}), ...noteOf(x) };
+  const catalogId = catalogIdOf(x);
+  return { id: x.id, n: str(x.n, 60), slot: SUPPLEMENT_SLOTS.includes(slot as SupplementSlot) ? (slot as SupplementSlot) : '', ...(str(x.dose, 40) ? { dose: str(x.dose, 40) } : {}), ...noteOf(x),
+    ...(catalogId && str(x.brand, 60) ? { brand: str(x.brand, 60) } : {}), ...(catalogId ? { catalogId } : {}) };
 }

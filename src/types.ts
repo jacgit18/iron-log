@@ -185,7 +185,8 @@ export interface LiftGoal { w: number; start?: number; by?: string }
 
 /* ---------- Supplements, water and stretches ---------- */
 export type SupplementSlot = 'morning' | 'noon' | 'night' | '';
-export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string }
+/** `catalogId` and `brand`: added from the catalog (ADR 029): a Library supplement, name and brand kept from the catalog. Without them it is Custom. */
+export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string }
 /** What was ticked off on each day: {"YYYY-MM-DD": {<id>: true}}. */
 export type Taken = Record<string, Record<string, true>>;
 export interface Boost { hot?: true; mins?: number }
