@@ -11,7 +11,7 @@ import { LS } from './lib/storage.js';
    use `requireAdmin` (server/admin.ts). Add a feature with a line here, then `useFeature('name')` in the component. */
 export const FEATURES = {
   grocery: 'admin', // Groceries under the Daily tab (ADR 019): set to 'all' when released, then delete this line and the useFeature check in components/daily/Daily.tsx
-  feedback: 'admin', // Send feedback panel in Settings: set to 'all' when released, then delete this line and the useFeature check in components/settings/FeedbackPanel.tsx
+
 } satisfies Record<string, Audience>;
 
 export type Audience = 'admin' | 'all' | 'off';
