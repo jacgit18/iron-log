@@ -2,7 +2,7 @@ import type { Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { DB } from '../db/types.ts';
 import { startTestDatabase } from '../test/postgres.ts';
-import { FEDB_EQUIPMENT, FEDB_MUSCLES, importCatalog, mapFedb, type CatalogRow } from './catalogImport.ts';
+import { FEDB_EQUIPMENT, FEDB_MUSCLES, fetchDsld, importCatalog, mapDsld, mapFedb, type CatalogRow, type DsldHit } from './catalogImport.ts';
 
 // A few rows shaped like free-exercise-db's exercises.json.
 const ex = (id: string, over: Record<string, unknown> = {}) => ({
@@ -73,6 +73,62 @@ describe('mapFedb', () => {
     expect(rows.map(r => r.id)).toEqual([`c:fedb:${long}`]);
     expect(rows[0]!.id.length).toBeLessThanOrEqual(100);
     expect(skipped).toEqual([`bad id: "${'b'.repeat(91)}"`]);
+  });
+});
+
+// A fake DSLD API: products with an entry year, a form and a type; it answers counts and pages like search-filter, capped at 10,000.
+function fakeDsld(products: { id: string; year: number; form: string; type: string }[], { drop = '' } = {}) {
+  const calls: string[] = [];
+  const fetchJson = async (url: string) => {
+    calls.push(url);
+    const q = new URL(url).searchParams;
+    const match = products.filter(p => (!q.get('date_start') || p.year === Number(q.get('date_start')))
+      && (!q.get('supplement_form') || p.form === q.get('supplement_form')) && (!q.get('product_type') || p.type === q.get('product_type')));
+    const from = Number(q.get('from') ?? 0); const size = Number(q.get('size') ?? 1000);
+    const page = from + size > 10_000 ? [] : match.slice(from, from + size).filter(p => p.id !== drop);
+    return { stats: { count: match.length }, hits: page.map(p => ({ _id: p.id, _source: { fullName: `Product ${p.id}`, brandName: 'Acme', physicalState: { langualCodeDescription: 'Capsule' } } })) };
+  };
+  return { fetchJson, calls };
+}
+const many = (n: number, year: number, form = 'e0159', type = 'a1305', start = 0) => Array.from({ length: n }, (_, i) => ({ id: String(start + i + 1), year, form, type }));
+
+describe('fetchDsld', () => {
+  it('reads every product, a year at a time, splitting a year that is too big by form', async () => {
+    const products = [...many(1500, 2011), ...many(6000, 2020, 'e0159', 'a1305', 10_000), ...many(5000, 2020, 'e0162', 'a1305', 20_000)];
+    const { fetchJson, calls } = fakeDsld(products);
+    const hits = await fetchDsld({ fetchJson, years: [2010, 2021] });
+    expect(hits).toHaveLength(12_500);
+    expect(new Set(hits.map(h => h._id)).size).toBe(12_500);
+    expect(calls.some(u => u.includes('date_start=2020') && u.includes('supplement_form=e0162'))).toBe(true);
+    expect(calls.every(u => u.includes('status=1'))).toBe(true); // on-market only
+  });
+
+  it('splits a form that is still too big by product type', async () => {
+    const products = [...many(6000, 2024, 'e0159', 'a1305'), ...many(4000, 2024, 'e0159', 'a1306', 6000)];
+    expect(await fetchDsld({ fetchJson: fakeDsld(products).fetchJson, years: [2024, 2024] })).toHaveLength(10_000);
+  });
+
+  it('refuses a download that comes back short, before anything could be written', async () => {
+    await expect(fetchDsld({ fetchJson: fakeDsld(many(50, 2015), { drop: '7' }).fetchJson, years: [2015, 2015] })).rejects.toThrow(/says 50 products but returned 49/);
+    // products outside the years read: the slices do not add up to the total
+    await expect(fetchDsld({ fetchJson: fakeDsld([...many(5, 2015), ...many(3, 1999, 'e0159', 'a1305', 100)]).fetchJson, years: [2000, 2016] })).rejects.toThrow(/8 on-market products, but the slices add up to 5/);
+    await expect(fetchDsld({ fetchJson: async () => ({}), years: [2015, 2015] })).rejects.toThrow(/no count/);
+  });
+});
+
+describe('mapDsld', () => {
+  it('keeps id, name, brand and form only, and skips what it cannot use', () => {
+    const hit = (id: unknown, src: Record<string, unknown>) => ({ _id: id, _source: src }) as DsldHit;
+    const { rows, skipped } = mapDsld([
+      hit('43261', { fullName: ' Creatine Alkaline ', brandName: 'BPI Sports', physicalState: { langualCodeDescription: 'Capsule' }, allIngredients: [{ name: 'Creatine' }], servingSizes: [] }),
+      hit('5', { fullName: 'No Brand' }),
+      hit('5', { fullName: 'Again' }), hit('x1', { fullName: 'Bad id' }), hit('6', { fullName: '' }),
+    ]);
+    expect(rows).toEqual([
+      { id: 'c:dsld:43261', kind: 'supplement', name: 'Creatine Alkaline', brand: 'BPI Sports', data: { form: 'Capsule' } },
+      { id: 'c:dsld:5', kind: 'supplement', name: 'No Brand', brand: null, data: {} },
+    ]);
+    expect(skipped).toEqual(['5: duplicate id', 'bad id: "x1"', '6: bad name']);
   });
 });
 

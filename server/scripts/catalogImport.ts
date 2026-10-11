@@ -103,6 +103,103 @@ export function mapFedb(input: unknown): Mapped {
   return { rows, unmapped, skipped };
 }
 
+// ---------- NIH Dietary Supplement Label Database (ADR 029) ----------
+// About 120,000 on-market products, read through the public API (no key). The API stops paging at 10,000 results, so the products are
+// read in slices: one entry year at a time, a big year split by supplement form, and a big form by product type. Before anything is
+// written, every slice must return exactly as many distinct products as it says it holds, and the slices must add up to the on-market
+// total: a short download would otherwise retire real rows.
+
+export const DSLD_API = 'https://api.ods.od.nih.gov/dsld/v9';
+export const DSLD_LICENSE = 'US government data (NIH ODS DSLD), terms not stated (checked 2026-10-11)';
+const DSLD_FORMS = ['e0164', 'e0159', 'e0161', 'e0155', 'e0176', 'e0165', 'e0174', 'e0162', 'e0172', 'e0177'];
+const DSLD_TYPES = ['a1305', 'a1306', 'a1326', 'a1310', 'a1302', 'a1299', 'a1316', 'a1315', 'a1317', 'a1309', 'a1325'];
+const DSLD_SLICE_MAX = 9000;
+const DSLD_PAGE = 1000;
+
+export interface DsldDeps {
+  /** GET a URL and parse its JSON (the CLI adds a timeout and retries). */
+  fetchJson(url: string): Promise<unknown>;
+  /** Pause between requests, to be gentle with a free public API. */
+  sleep?(ms: number): Promise<void>;
+  log?(msg: string): void;
+  years?: [number, number];
+}
+export interface DsldHit { _id: string; _source: Record<string, unknown> }
+
+const searchUrl = (params: Record<string, string | number>) =>
+  `${DSLD_API}/search-filter?${new URLSearchParams({ q: '*', status: '1', ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])) })}`;
+
+/** Every on-market DSLD product, or an error when the download is not complete. */
+export async function fetchDsld({ fetchJson, sleep = async () => {}, log = () => {}, years = [2000, new Date().getFullYear()] }: DsldDeps): Promise<DsldHit[]> {
+  const get = async (params: Record<string, string | number>) => { const r = await fetchJson(searchUrl(params)); await sleep(250); return r as { hits?: unknown[]; stats?: { count?: unknown } }; };
+  const count = async (params: Record<string, string | number>) => {
+    const n = (await get({ ...params, size: 0 })).stats?.count;
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) throw new Error(`DSLD: no count for ${JSON.stringify(params)}`);
+    return n;
+  };
+
+  const total = await count({});
+  const slices: { params: Record<string, string | number>; n: number }[] = [];
+  for (let y = years[0]; y <= years[1]; y++) {
+    const year = { date_start: y, date_end: y };
+    const n = await count(year);
+    if (!n) continue;
+    if (n <= DSLD_SLICE_MAX) { slices.push({ params: year, n }); continue; }
+    for (const form of DSLD_FORMS) {
+      const byForm = { ...year, supplement_form: form };
+      const m = await count(byForm);
+      if (!m) continue;
+      if (m <= DSLD_SLICE_MAX) { slices.push({ params: byForm, n: m }); continue; }
+      let sum = 0;
+      for (const type of DSLD_TYPES) {
+        const byType = { ...byForm, product_type: type };
+        const k = await count(byType);
+        if (k > DSLD_SLICE_MAX) throw new Error(`DSLD: ${JSON.stringify(byType)} still holds ${k} products; slice it further`);
+        if (k) { slices.push({ params: byType, n: k }); sum += k; }
+      }
+      if (sum !== m) throw new Error(`DSLD: ${y} ${form} holds ${m} products but its product types add up to ${sum}`);
+    }
+  }
+  const sliced = slices.reduce((a, s) => a + s.n, 0);
+  if (sliced !== total) throw new Error(`DSLD: ${total} on-market products, but the slices add up to ${sliced} (years ${years[0]}-${years[1]})`);
+  log(`DSLD: ${total} on-market products in ${slices.length} slices`);
+
+  const out = new Map<string, DsldHit>();
+  for (const [i, s] of slices.entries()) {
+    const ids = new Set<string>();
+    for (let from = 0; from < s.n; from += DSLD_PAGE) {
+      const hits = (await get({ ...s.params, sort_by: 'entryDate', sort_order: 'asc', size: DSLD_PAGE, from })).hits ?? [];
+      for (const h of hits as DsldHit[]) {
+        if (!h || typeof h._id !== 'string' || !h._source || typeof h._source !== 'object') continue;
+        ids.add(h._id); out.set(h._id, h);
+      }
+    }
+    if (ids.size !== s.n) throw new Error(`DSLD: slice ${JSON.stringify(s.params)} says ${s.n} products but returned ${ids.size} distinct ones`);
+    log(`DSLD: slice ${i + 1}/${slices.length} (${s.n})`);
+  }
+  if (out.size !== total) throw new Error(`DSLD: ${total} on-market products, but ${out.size} distinct ones were read`);
+  return [...out.values()];
+}
+
+/** Maps DSLD products to catalog rows: name, brand and form only (ADR 029: no ingredients, no amounts). */
+export function mapDsld(hits: DsldHit[]): Mapped {
+  const rows: CatalogRow[] = []; const skipped: string[] = []; const seen = new Set<string>();
+  for (const h of hits) {
+    const id = String(h?._id ?? '');
+    const src = (h?._source ?? {}) as Record<string, unknown>;
+    const name = str(src.fullName);
+    if (!/^[0-9]{1,20}$/.test(id)) { skipped.push(`bad id: ${JSON.stringify(h?._id)}`); continue; }
+    if (!name || name.length > 300) { skipped.push(`${id}: bad name`); continue; }
+    if (seen.has(id)) { skipped.push(`${id}: duplicate id`); continue; }
+    seen.add(id);
+    const brand = str(src.brandName);
+    const state = src.physicalState && typeof src.physicalState === 'object' ? (src.physicalState as Record<string, unknown>) : {};
+    const form = str(state.langualCodeDescription);
+    rows.push({ id: `c:dsld:${id}`, kind: 'supplement', name, brand: brand && brand.length <= 300 ? brand : null, data: form && form.length <= 100 ? { form } : {} });
+  }
+  return { rows, unmapped: {}, skipped };
+}
+
 export interface ImportOptions {
   source: string;
   license: string;
