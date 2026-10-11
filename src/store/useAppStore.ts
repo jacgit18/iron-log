@@ -4,7 +4,7 @@ import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Str
 import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { weekStartOf, ymd, addDays } from '../shared/dates.js';
 import {
-  DEFAULT_CFG, normWeek, progName, weekProgKey, weekProgram, ranFor, programFor, phaseOf, lastLog, describe,
+  DEFAULT_CFG, normWeek, progName, weekProgKey, weekProgram, ranFor, isFrozen, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
   planFix, isFinished, autoEntry, newEntryId, normExperiments,
 } from '../lib/logic.js';
@@ -281,6 +281,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // The shown week's program: what it ran once it is over (ADR 022), else today's.
   activeProgKey: () => weekProgKey(get().cfg, get().week, get().weekKey()),
   activeProgram: () => { const s = get(); return weekProgram(s.cfg, s.programs, s.week, s.weekKey()); },
+  shownFromRecord: () => isFrozen(get().week, get().weekKey(), new Date()),
   activeSlots: () => weekSlots(get().activeProgram(), get().week, get().weekKey()),
   slotById: id => get().activeSlots().find(x => x.id === id),
   // The log sheet needs both its card and the exercise at that position; a program replaced from elsewhere can remove either.

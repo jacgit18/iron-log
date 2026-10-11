@@ -29,7 +29,7 @@ export function activeProgKey(cfg: Cfg, week: WeekIn, weekStart: Date): ProgKey 
    Every save of a week writes down the program it used and that program's cards (week.ran). A week before this one that has
    that record is shown and counted from it; this week and later ones, and older weeks saved before the record existed, use
    today's programs and mode. So loading or editing a program, or changing the mode, never rewrites a week that is over. */
-const isFrozen = (w: WeekIn | null | undefined, key: string, now: Date): w is WeekIn & { ran: WeekRan } => !!(w && w.ran) && key < ymd(weekStartOf(now));
+export const isFrozen = (w: WeekIn | null | undefined, key: string, now: Date): w is WeekIn & { ran: WeekRan } => !!(w && w.ran) && key < ymd(weekStartOf(now));
 export const weekProgKey = (cfg: Cfg, w: WeekIn, key: string, now = new Date()): ProgKey => (isFrozen(w, key, now) ? w.ran.prog : activeProgKey(cfg, w, parseDate(key)));
 export const weekProgram = (cfg: Cfg, programs: Record<string, Program>, w: WeekIn, key: string, now = new Date()): Program =>
   isFrozen(w, key, now) ? w.ran.program : programs[weekProgKey(cfg, w, key, now)] || programs.A;

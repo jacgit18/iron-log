@@ -254,6 +254,8 @@ export interface CoreSlice {
   weekKey(): string;
   activeProgKey(): ProgKey;
   activeProgram(): Program;
+  /** Whether the board shows a finished week from its record of what it ran (ADR 022), not from today's program. */
+  shownFromRecord(): boolean;
   activeSlots(): FlatSlot[];
   slotById(id: string): FlatSlot | undefined;
   logTargetExists(slotId: string, idx: number): boolean;

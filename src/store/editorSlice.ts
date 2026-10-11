@@ -53,6 +53,8 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   openAddToProgram(col) {
     const pd = dayAt(get().week, col);
     if (pd == null) { flag('That is your rest day'); return; }
+    // A finished week shows what it ran, so a card added to today's program would not appear on it (ADR 022).
+    if (get().shownFromRecord()) { flag('This week is over: use + Only this week'); return; }
     const ak = get().activeProgKey();
     set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd } } });
   },
