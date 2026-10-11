@@ -8,7 +8,9 @@ type Props = { cfg: Cfg; id: string; name: string; url?: string; eq?: string; on
 export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onUrl, onEq }: Props) {
   const ids = allExIds(cfg);
   const names = [...new Set(ids.map(x => exInfo(cfg, x).n))].sort((a, b) => a.localeCompare(b));
-  const yours = new Set(ids.filter(x => !EX[x]).map(x => exInfo(cfg, x).n));
+  // A name a built-in also uses stays unmarked, so the built-in suggestion is never labelled Yours.
+  const builtin = new Set(ids.filter(x => EX[x]).map(x => exInfo(cfg, x).n));
+  const yours = new Set(ids.filter(x => !EX[x]).map(x => exInfo(cfg, x).n).filter(n => !builtin.has(n)));
   const known = name.trim() !== '' ? findExId(cfg, name) : null;
   const isNew = name.trim() !== '' && !known;
   // Picking an existing exercise shows its saved video link, so what you save is that exercise's link (edited or not).
