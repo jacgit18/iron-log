@@ -82,6 +82,16 @@ describe('editing a program', () => {
 });
 
 describe('the add/edit exercise sheet', () => {
+  it('offers Optional as a section, and a new Optional section goes first', async () => {
+    const { SECTIONS } = await import('./editorSlice.js');
+    expect(SECTIONS).toContain('Optional');
+    st().setEdDay(2); // drop the day's Optional cards first, so the section is new
+    const sec = () => st().edProgram().days[1].slots.map(s => s.sec);
+    while (sec().includes('Optional')) st().removeEdSlot(sec().indexOf('Optional'));
+    expect(st().saveSlot(newCard({ day: 2, sec: 'Optional' }))).toBeNull();
+    expect(sec()[0]).toBe('Optional');
+    expect(st().edProgram().days[1].slots[0].items[0].ex).toBe('arnold');
+  });
   it('adds a card after the last one in its section, and a new section before Home', () => {
     expect(st().saveSlot(newCard())).toBeNull();
     expect(day1()[6]).toMatchObject({ sec: 'Regular', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] });
