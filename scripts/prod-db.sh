@@ -19,7 +19,7 @@ DBMATE="${DBMATE:-npx dbmate}"                     # overridable for tests
 BACKUP="${BACKUP:-scripts/backup-cloud-run.sh}"
 CATALOG_IMPORT="${CATALOG_IMPORT:-npm run -s catalog:import --}"
 
-usage() { sed -n '4,10p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '5,11p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 owner_url() {
   local url="${PROD_DATABASE_URL:-}"

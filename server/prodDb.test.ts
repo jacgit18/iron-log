@@ -21,8 +21,9 @@ const stub = (name: string, body: string) => {
 const run = (args: string[], env: Record<string, string> = {}) =>
   new Promise<{ status: number; out: string; calls: string[] }>(done => {
     execFile('bash', [SCRIPT, ...args], {
+      // DATABASE_URL from the caller's shell (a local one for the db checks) must not leak in: the stubs log what each step was given.
       env: {
-        ...process.env, PROD_DATABASE_URL: URL,
+        ...process.env, DATABASE_URL: '', PROD_DATABASE_URL: URL,
         DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), ...env,
       },
       encoding: 'utf8',
@@ -101,7 +102,9 @@ describe('prod-db.sh', () => {
     }
     expect((await run(['catalog'])).status).toBe(2);
     expect((await run(['drop-everything'])).status).toBe(2);
-    expect((await run([])).status).toBe(2);
+    const help = await run([]);
+    expect(help.status).toBe(2);
+    for (const c of ['status', 'pending', 'migrate', 'catalog <source>']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
     expect(readFileSync(log, 'utf8')).toBe('');
   });
 });
