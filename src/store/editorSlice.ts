@@ -137,6 +137,8 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
       if (!it.ex || (it.ex === '__new' && !it.nn)) return 'Choose an exercise, or type a name for the new one.';
       if (!isVideoUrl(it.nu)) return VIDEO_ERR;
     }
+    const days = d.idx == null && d.days ? [...new Set(d.days)].filter(x => DAYS.includes(x)).sort((a, b) => a - b) : [d.day];
+    if (!days.length) return 'Pick at least one day.'; // checked before anything is written, so a refused save adds no exercise
     const newEx: Record<string, Partial<ExerciseInfo>> = {};
     const slugFor = (name: string) => newExId(get().cfg, name, newEx);
     const items = d.items.map((it: any) => {
@@ -147,8 +149,6 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     });
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, newEx); });
     const k = d.target ? d.target.key : get().edKey(); const edDay = d.target ? d.target.day : get().edDay;
-    const days = d.idx == null && d.days ? [...new Set(d.days)].filter(x => DAYS.includes(x)).sort((a, b) => a - b) : [d.day];
-    if (!days.length) return 'Pick at least one day.';
     const newSlotId = (n: number) => `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}${days.length > 1 ? n : ''}`;
     const slot: ProgramSlot = { id: d.id || newSlotId(0), sec: d.sec, items };
     if (d.tier) slot.tier = d.tier; if (d.type !== 'single') slot.type = d.type; if (d.note) slot.note = d.note;

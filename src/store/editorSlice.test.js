@@ -94,6 +94,10 @@ describe('the add/edit exercise sheet', () => {
   });
   it('asks for a day when none is ticked, and ignores the days list when editing a card', () => {
     expect(st().saveSlot(newCard({ days: [] }))).toBe('Pick at least one day.');
+    const cfgBefore = structuredClone(st().cfg); const progBefore = structuredClone(st().programs);
+    expect(st().saveSlot(newCard({ days: [], items: [{ ex: '__new', nn: 'Farmer Carry Test', nu: 'https://youtu.be/abc', ph: 'strength', w: null }] }))).toBe('Pick at least one day.');
+    expect(st().cfg).toEqual(cfgBefore);
+    expect(st().programs).toEqual(progBefore);
     const first = day1()[1];
     expect(st().saveSlot({ ...newCard({ days: [2, 3] }), id: first.id, idx: 1, sec: first.sec })).toBeNull();
     expect(day1()[1].id).toBe(first.id);
