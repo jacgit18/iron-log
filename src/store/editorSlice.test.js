@@ -36,6 +36,35 @@ describe('editing a program', () => {
     st().moveEdSlot(9, 1);
     expect(ids(day1())).toEqual(builtinA());
   });
+  it('drag and drop moves a card to any position, losing and duplicating nothing', () => {
+    const before = builtinA();
+    for (let from = 0; from < before.length; from++) {
+      for (let to = 0; to < before.length; to++) {
+        useAppStore.setState({ programs: { A: BUILTIN.A, B: BUILTIN.B } });
+        st().reorderEdSlot(from, to);
+        const want = [...before]; want.splice(to, 0, ...want.splice(from, 1));
+        expect(ids(day1())).toEqual(want);
+        expect([...ids(day1())].sort()).toEqual([...before].sort());
+      }
+    }
+    expect(builtinA()).toEqual(before);
+  });
+  it('drag and drop ignores a drop outside the day', () => {
+    st().reorderEdSlot(0, 99); st().reorderEdSlot(-1, 2); st().reorderEdSlot(3, -1);
+    expect(ids(day1())).toEqual(builtinA());
+  });
+  it('a card saved without an id keeps its position id when moved, by drag or by the arrows', () => {
+    const bare = { ...BUILTIN.A, days: BUILTIN.A.days.map((d, di) => (di ? d : { ...d, slots: d.slots.map(({ id: _id, ...sl }) => sl) })) };
+    for (const move of [() => st().reorderEdSlot(0, 2), () => st().moveEdSlot(0, 1)]) {
+      useAppStore.setState({ programs: { A: bare, B: BUILTIN.B } });
+      const first = day1()[0];
+      move();
+      const moved = day1().find(sl => sl.items[0].ex === first.items[0].ex && sl.sec === first.sec);
+      expect(moved.id).toBe('A-d1s1');
+      expect(new Set(ids(day1())).size).toBe(day1().length);
+      expect(day1().every(sl => sl.id)).toBe(true);
+    }
+  });
   it('removes a card and sets or clears a day’s subtitle', () => {
     st().removeEdSlot(0);
     expect(ids(day1())).toEqual(builtinA().slice(1));
