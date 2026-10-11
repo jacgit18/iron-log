@@ -1,12 +1,14 @@
 import { useEffect, useRef } from 'react';
 import type { Cfg, EquipmentKey } from '../types.ts';
-import { allExIds, exInfo, findExId, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
+import { EX, allExIds, exInfo, findExId, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
 
 // Type an exercise: suggestions come from the catalog (built-in and your own); a name that isn't there yet
 // is added to your catalog when the sheet is saved.
 type Props = { cfg: Cfg; id: string; name: string; url?: string; eq?: string; onName: (v: string) => void; onUrl?: (v: string) => void; onEq?: (v: string) => void };
 export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onUrl, onEq }: Props) {
-  const names = [...new Set(allExIds(cfg).map(x => exInfo(cfg, x).n))].sort((a, b) => a.localeCompare(b));
+  const ids = allExIds(cfg);
+  const names = [...new Set(ids.map(x => exInfo(cfg, x).n))].sort((a, b) => a.localeCompare(b));
+  const yours = new Set(ids.filter(x => !EX[x]).map(x => exInfo(cfg, x).n));
   const known = name.trim() !== '' ? findExId(cfg, name) : null;
   const isNew = name.trim() !== '' && !known;
   // Picking an existing exercise shows its saved video link, so what you save is that exercise's link (edited or not).
@@ -22,7 +24,7 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onU
       <label className="field">Exercise
         <input id={id} list={`${id}-list`} value={name} autoComplete="off" placeholder="Type to search or add, e.g. Cable Lateral Raise" onChange={e => onName(e.target.value)} />
       </label>
-      <datalist id={`${id}-list`}>{names.map(n => <option key={n} value={n} />)}</datalist>
+      <datalist id={`${id}-list`}>{names.map(n => <option key={n} value={n} label={yours.has(n) ? `${n} · Yours` : undefined} />)}</datalist>
       {onUrl && name.trim() !== '' && <label className="field">Video link (optional)<input type="url" value={url ?? ''} placeholder="https://" onChange={e => onUrl(e.target.value)} /></label>}
       {isNew && (
         <>
