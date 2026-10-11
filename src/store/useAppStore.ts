@@ -525,7 +525,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     return null;
   },
-  deleteExperiment(id) { if (get().blocked()) return; get().setExperiments(get().experiments.filter(x => x.id !== id)); flag('Deleted'); },
+  deleteExperiment(id) {
+    if (get().blocked()) return;
+    const L = get().experiments; const i = L.findIndex(x => x.id === id); if (i < 0) return;
+    const e = L[i];
+    get().setExperiments(L.filter(x => x.id !== id));
+    get().noteRemoved('experiments', exInfo(get().cfg, e.ex).n, () => {
+      if (get().blocked() || get().experiments.some(x => x.id === id)) return false;
+      const l = [...get().experiments]; l.splice(Math.min(i, l.length), 0, e); get().setExperiments(l); return true;
+    });
+  },
   addToDay(entryId, col) {
     const e = get().experiments.find(x => x.id === entryId); if (!e) return false;
     const pd = dayAt(get().week, col); if (pd == null) { flag('That is your rest day'); return false; }

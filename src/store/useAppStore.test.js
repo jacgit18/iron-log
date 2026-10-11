@@ -382,6 +382,9 @@ describe('experiment board', () => {
     st().deleteExperiment(e.id);
     expect(st().experiments).toEqual([]);
     expect(saved('experiments/main').items).toEqual([]);
+    st().undoRemoved();
+    expect(st().experiments).toEqual([{ id: e.id, ex: 'hack', ph: 'strength', note: '' }]);
+    expect(saved('experiments/main').items).toHaveLength(1);
   });
   it('creates a new exercise from a typed name, and asks for one when missing', () => {
     expect(st().saveExperiment({ ex: '__new', nn: 'Cable Lateral Raise', ph: null, note: '' })).toBeNull();
