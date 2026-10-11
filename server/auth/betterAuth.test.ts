@@ -238,13 +238,17 @@ describe('the signup cap (SIGNUP_CAP)', () => {
     expect(authConfigFrom({ ...env, SIGNUP_CAP: 'lots' })).toMatchObject({ enabled: false, reasons: ['SIGNUP_CAP must be a whole number'] });
   });
   it('refuses a new account once the cap is reached, lets an exempt email in, and never blocks sign-in for an existing one', async () => {
-    const { base } = await serve({ signupCap: 2, capExempt: new Set(['owner@example.com']) });
+    const { auth, base } = await serve({ signupCap: 2, capExempt: new Set(['owner@example.com']) });
     expect((await signUp(base, 'a@example.com')).status).toBe(200);
     expect((await signUp(base, 'b@example.com')).status).toBe(200);
     const full = await signUp(base, 'c@example.com');
     expect(full.status).toBe(403);
     expect(await authRows('user')).toBe('2');
-    expect((await signUp(base, 'OWNER@example.com')).status).toBe(200);
+    // An exempt address that is not verified (email sign-up leaves it unverified) gets no exemption, like isAdmin.
+    expect((await signUp(base, 'OWNER@example.com')).status).toBe(403);
+    expect(await authRows('user')).toBe('2');
+    const ctx = await auth.$context;
+    await expect(ctx.internalAdapter.createUser({ email: 'owner@example.com', name: 'Owner', emailVerified: true }, { method: 'oauth', oauth: { providerId: 'google' } })).resolves.toMatchObject({ email: 'owner@example.com' });
     expect(await authRows('user')).toBe('3');
     const again = await post(base, '/api/auth/sign-in/email', { email: 'a@example.com', password: 'correct horse battery staple' });
     expect(again.status).toBe(200);

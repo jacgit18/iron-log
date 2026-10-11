@@ -58,7 +58,9 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
         create: {
           before: async user => {
             const cap = config.signupCap;
-            if (cap === undefined || config.capExempt?.has(String(user.email ?? '').toLowerCase())) return;
+            // Like isAdmin: an address that is not verified proves nothing, so it does not get past the cap.
+            const exempt = user.emailVerified === true && config.capExempt?.has(String(user.email ?? '').toLowerCase());
+            if (cap === undefined || exempt) return;
             const { rows } = await pool.query<{ n: string }>('select count(*) as n from auth."user"');
             if (Number(rows[0]!.n) >= cap) {
               console.warn(JSON.stringify({ msg: 'sign-up refused: account cap reached', cap }));
