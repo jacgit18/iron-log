@@ -8,7 +8,7 @@ import Daily from './components/daily/Daily.tsx';
 import Progress from './components/progress/Progress.jsx';
 import Editor from './components/program/Editor.jsx';
 import Settings from './components/settings/Settings.jsx';
-import TimerBar from './components/TimerBar.jsx';
+import TimerBar from './components/TimerBar.js';
 import LogSheet from './components/sheets/LogSheet.jsx';
 import DetailSheet from './components/sheets/DetailSheet.jsx';
 import TagSheet from './components/sheets/TagSheet.jsx';
