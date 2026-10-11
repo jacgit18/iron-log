@@ -41,6 +41,24 @@ describe('stretches', () => {
     expect(st().strWeek.done).toEqual({});
     expect(saved('stretches/main').items.some(i => i.id === item.id)).toBe(false);
   });
+  // Catalog stretches (ADR 026, 027): a snapshot with its catalog id, Library only, grouped by its main muscle.
+  it('adds a catalog stretch as Library only under its main muscle, keeps its id and name through edits, and refuses a second add or a name in use', () => {
+    const calf = { id: 'c:fedb:Calf_Stretch', name: ' Calf  Stretch ', data: { muscles: { p: ['calves'], mob: true } } };
+    expect(st().addCatalogStretch(calf)).toBeNull();
+    const item = st().stretches.find(i => i.catalogId === calf.id);
+    expect(item).toEqual({ id: 'calf-stretch', n: 'Calf Stretch', group: 'Calves', tier: '', catalogId: calf.id });
+    expect(saved('stretches/main').items.find(i => i.id === item.id).catalogId).toBe(calf.id);
+    expect(st().addCatalogStretch(calf)).toMatch(/Already in your stretches/);
+    expect(st().addCatalogStretch({ ...calf, id: 'c:fedb:Other' })).toMatch(/already have a stretch called Calf Stretch/);
+    expect(st().addCatalogStretch({ ...calf, id: 'calf' })).toMatch(/can’t be added/);
+    // edited onto every day with a link: tier, group and link change, the name and catalog id stay
+    expect(st().saveStretch({ id: item.id, n: 'Renamed', group: 'Legs', tier: 'primary', url: 'https://youtu.be/c' })).toBeNull();
+    expect(st().stretches.find(i => i.id === item.id)).toEqual({ id: 'calf-stretch', n: 'Calf Stretch', group: 'Legs', tier: 'primary', url: 'https://youtu.be/c', catalogId: calf.id });
+  });
+  it('a catalog stretch with no primary muscle goes in Other', () => {
+    st().addCatalogStretch({ id: 'c:fedb:X', name: 'Mystery Stretch', data: {} });
+    expect(st().stretches.find(i => i.catalogId === 'c:fedb:X').group).toBe('Other');
+  });
   it('Undo puts a deleted stretch back in its place with this week’s ticks', () => {
     const before = st().stretches.map(i => i.id); const id = before[1];
     st().setStretchDone(0, id, true); st().setStretchDone(3, id, true); st().setStretchDone(0, before[0], true);

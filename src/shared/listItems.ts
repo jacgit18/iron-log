@@ -11,9 +11,12 @@ export const DEFAULT_GROUP = 'Other';
 const urlOf = (x: any) => (goodUrl(str(x.url, 500)) && str(x.url, 500) ? { url: str(x.url, 500) } : {});
 const noteOf = (x: any, max = 200) => (str(x.note, max) ? { note: str(x.note, max) } : {});
 
+// A catalog id as catalog:import makes them (`c:<source>:<dataset id>`, at most 100 characters); anything else is dropped, so the stretch is Custom.
+const CATALOG_ID = /^c:[a-z]{2,20}:[A-Za-z0-9_-]{1,90}$/;
 export function normStretchItem(x: any): Stretch | null {
   if (!x || typeof x !== 'object' || !str(x.id, 60) || !str(x.n, 80)) return null;
-  return { id: x.id, n: str(x.n, 80), group: str(x.group, 40) || DEFAULT_GROUP, tier: x.tier === 'primary' || x.tier === 'secondary' ? x.tier : '', ...urlOf(x), ...noteOf(x) };
+  const catalogId = typeof x.catalogId === 'string' && x.catalogId.length <= 100 && CATALOG_ID.test(x.catalogId) ? x.catalogId : null;
+  return { id: x.id, n: str(x.n, 80), group: str(x.group, 40) || DEFAULT_GROUP, tier: x.tier === 'primary' || x.tier === 'secondary' ? x.tier : '', ...urlOf(x), ...noteOf(x), ...(catalogId ? { catalogId } : {}) };
 }
 
 export function normStretchExperimentItem(x: any): StretchExperiment | null {

@@ -13,6 +13,10 @@ describe('stretch routine', () => {
   });
   it('an emptied library stays empty, and bad rows are dropped', () => {
     expect(normStretches({ items: [] }).items).toEqual([]);
+    // a catalog id is kept only in the shape catalog:import makes; anything else is dropped (the stretch is then Custom)
+    const ids = ['c:fedb:Calf_Stretch', 'c:FEDB:x', 'squat', 'c:fedb:', 'c:fedb:' + 'x'.repeat(91), 42];
+    const items = normStretches({ items: ids.map((catalogId, i) => ({ id: `s${i}`, n: `S${i}`, catalogId })) }).items;
+    expect(items.map(i => i.catalogId)).toEqual(['c:fedb:Calf_Stretch', undefined, undefined, undefined, undefined, undefined]);
     const d = normStretches({ items: [{ id: 'a', n: 'A', tier: 'primary', url: 'javascript:x' }, { id: 'a', n: 'dup' }, { n: 'no id' }, null] });
     expect(d.items).toEqual([{ id: 'a', n: 'A', group: 'Other', tier: 'primary' }]);
   });
