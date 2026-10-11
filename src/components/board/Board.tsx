@@ -164,7 +164,7 @@ export default function Board() {
         </div>
       </div>
 
-      {!programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
+      {!fromRecord && !programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
       {canBackup && anyLogs && !snoozeBackup && (sinceBackup == null || sinceBackup >= 7) && (
         <div className="notice tip">
           <span>{sinceBackup == null ? 'Your training data hasn’t been backed up to GitHub yet.' : `Last GitHub backup was ${sinceBackup} days ago.`}</span>
