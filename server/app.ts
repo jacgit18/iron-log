@@ -8,7 +8,7 @@ import type { Admins } from './admin.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import { bodyLimit } from './bodyLimit.ts';
-import { LISTED_KINDS, listCatalog } from './catalog.ts';
+import { LISTED_KINDS, listCatalog, parseSearch, searchCatalog } from './catalog.ts';
 import { clientErrors } from './clientErrors.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { originGuard } from './originGuard.ts';
@@ -220,6 +220,18 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
 
   // The catalog to browse and add from (ADR 025), for every signed-in account. The browser checks back every time, so rows from an
   // import show at once; the ETag Express adds turns an unchanged list into a small 304.
+  // Supplements are searched a page at a time (ADR 029). The same answer for the same words until the next import, so a short private
+  // cache is fine. Registered before /api/catalog so the path is not taken for a list.
+  app.get('/api/catalog/search', async (req, res) => {
+    const search = parseSearch(req.query);
+    if (!search) {
+      res.status(400).json({ ok: false, error: 'kind must be supplement, q 2 to 100 characters and at most 6 words, offset a whole number up to 600' });
+      return;
+    }
+    res.set('Cache-Control', 'private, max-age=300');
+    res.json({ ok: true, ...(await searchCatalog(db!, String(res.locals.userId), search)) });
+  });
+
   app.get('/api/catalog', async (req, res) => {
     const kind = LISTED_KINDS.find(k => k === req.query.kind);
     if (!kind) {

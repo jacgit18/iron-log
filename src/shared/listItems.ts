@@ -11,7 +11,7 @@ export const DEFAULT_GROUP = 'Other';
 const urlOf = (x: any) => (goodUrl(str(x.url, 500)) && str(x.url, 500) ? { url: str(x.url, 500) } : {});
 const noteOf = (x: any, max = 200) => (str(x.note, max) ? { note: str(x.note, max) } : {});
 
-// A catalog id as catalog:import makes them (`c:<source>:<dataset id>`, at most 100 characters); anything else is dropped, so the stretch is Custom.
+// A catalog id as catalog:import makes them (`c:<source>:<dataset id>`, at most 100 characters); anything else is dropped, so the stretch or supplement is Custom.
 // The store checks ids with the same function, so an id it accepts is never stripped later by the server or a sync pull.
 const CATALOG_ID = /^c:[a-z]{2,20}:[A-Za-z0-9_-]{1,90}$/;
 export const isCatalogId = (id: unknown): id is string => typeof id === 'string' && id.length <= 100 && CATALOG_ID.test(id);
@@ -38,5 +38,7 @@ export const SUPPLEMENT_SLOTS: SupplementSlot[] = ['morning', 'noon', 'night'];
 // A supplement in the library or on the schedule. `slot` is morning, noon or night; anything else keeps it in the library only.
 export function normSupplementItem(x: any, slot: unknown = x && x.slot): SupplementItem | null {
   if (!x || typeof x !== 'object' || !str(x.id, 60) || !str(x.n, 60)) return null;
-  return { id: x.id, n: str(x.n, 60), slot: SUPPLEMENT_SLOTS.includes(slot as SupplementSlot) ? (slot as SupplementSlot) : '', ...(str(x.dose, 40) ? { dose: str(x.dose, 40) } : {}), ...noteOf(x) };
+  const catalogId = isCatalogId(x.catalogId) ? x.catalogId : null;
+  return { id: x.id, n: str(x.n, 60), slot: SUPPLEMENT_SLOTS.includes(slot as SupplementSlot) ? (slot as SupplementSlot) : '', ...(str(x.dose, 40) ? { dose: str(x.dose, 40) } : {}), ...noteOf(x),
+    ...(catalogId && str(x.brand, 60) ? { brand: str(x.brand, 60) } : {}), ...(catalogId ? { catalogId } : {}) };
 }

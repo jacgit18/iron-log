@@ -64,3 +64,54 @@ describe('GET /api/catalog', () => {
     for (const q of ['', '?kind=supplement', '?kind=x', '?kind[]=exercise']) expect((await get(base, q)).status).toBe(400);
   });
 });
+
+describe('GET /api/catalog/search (supplements)', () => {
+  beforeEach(async () => {
+    const sup = (id: number, name: string, brand: string | null, extra: object = {}) => ({ id: `c:dsld:${id}`, kind: 'supplement', source: 'dsld', license: 'x', name, brand, data: JSON.stringify({ form: 'Powder' }), ...extra });
+    await db.insertInto('catalog_items').values([
+      sup(1, 'Creatine Monohydrate', 'Optimum Nutrition'),
+      sup(2, 'Micronized Creatine', 'NOW Foods'),
+      sup(3, 'Creatine', 'NOW Foods'),
+      sup(4, 'Fish Oil', 'NOW Foods'),
+      sup(5, '100% Whey', 'Acme'),
+      sup(6, 'Creatine Old', 'Gone', { retired_at: '2026-10-01T00:00:00Z' }),
+      ...Array.from({ length: 35 }, (_, i) => sup(100 + i, `Magnesium ${String(i).padStart(2, '0')}`, 'Bulk')),
+    ]).execute();
+  });
+  const search = async (query: string, user = 'guest') => {
+    const res = await fetch(`${await start()}/api/catalog/search${query}`, { headers: { 'x-dev-user': user } });
+    return { status: res.status, body: (await res.json()) as { items: { id: string; name: string; brand?: string; data: object }[]; more: boolean } };
+  };
+  const ids = (r: { body: { items: { id: string }[] } }) => r.body.items.map(i => i.id);
+
+  it('finds every word in the name or brand, names starting with the first word first, then shorter ones; retired rows left out', async () => {
+    const r = await search('?kind=supplement&q=creatine');
+    expect(r.status).toBe(200);
+    expect(ids(r)).toEqual(['c:dsld:3', 'c:dsld:1', 'c:dsld:2']);
+    expect(r.body.items[0]).toEqual({ id: 'c:dsld:3', name: 'Creatine', brand: 'NOW Foods', data: { form: 'Powder' } });
+    expect(ids(await search('?kind=supplement&q=now%20CREATINE'))).toEqual(['c:dsld:3', 'c:dsld:2']);
+    expect(ids(await search('?kind=supplement&q=now'))).toEqual(['c:dsld:3', 'c:dsld:4', 'c:dsld:2']);
+  });
+
+  it('pages 30 at a time and says when there is more', async () => {
+    const first = await search('?kind=supplement&q=magnesium');
+    expect(first.body.items).toHaveLength(30);
+    expect(first.body.more).toBe(true);
+    const second = await search('?kind=supplement&q=magnesium&offset=30');
+    expect(second.body.items.map(i => i.name)).toEqual(['Magnesium 30', 'Magnesium 31', 'Magnesium 32', 'Magnesium 33', 'Magnesium 34']);
+    expect(second.body.more).toBe(false);
+  });
+
+  it('takes % and _ literally', async () => {
+    expect(ids(await search('?kind=supplement&q=100%25'))).toEqual(['c:dsld:5']);
+    expect(ids(await search('?kind=supplement&q=%25%25'))).toEqual([]);
+    expect(ids(await search('?kind=supplement&q=__'))).toEqual([]);
+  });
+
+  it('refuses a search it does not answer, and needs a sign-in', async () => {
+    for (const q of ['?kind=supplement', '?kind=supplement&q=a', '?kind=exercise&q=squat', `?kind=supplement&q=${'x'.repeat(101)}`,
+      '?kind=supplement&q=a%20b%20c%20d%20e%20f%20g', '?kind=supplement&q=fish&offset=-1', '?kind=supplement&q=fish&offset=601', '?kind=supplement&q[]=fish'])
+      expect((await search(q)).status, q).toBe(400);
+    expect((await fetch(`${await start()}/api/catalog/search?kind=supplement&q=fish`)).status).toBe(401);
+  });
+});

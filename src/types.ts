@@ -185,7 +185,8 @@ export interface LiftGoal { w: number; start?: number; by?: string }
 
 /* ---------- Supplements, water and stretches ---------- */
 export type SupplementSlot = 'morning' | 'noon' | 'night' | '';
-export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string }
+/** `catalogId` and `brand`: added from the catalog (ADR 029): a Library supplement, name and brand kept from the catalog. Without them it is Custom. */
+export interface SupplementItem { id: string; n: string; slot: SupplementSlot; dose?: string; note?: string; brand?: string; catalogId?: string }
 /** What was ticked off on each day: {"YYYY-MM-DD": {<id>: true}}. */
 export type Taken = Record<string, Record<string, true>>;
 export interface Boost { hot?: true; mins?: number }
@@ -239,10 +240,12 @@ export interface CatalogData {
   /** The dataset's own category (free-exercise-db: strength, stretching, cardio, ...). */
   category?: string;
   instructions?: string[];
+  /** Supplements (DSLD): the product's form, e.g. Capsule, Powder. */
+  form?: string;
 }
 
-/** A catalog row as GET /api/catalog lists it (no instructions). */
-export interface CatalogItem { id: string; name: string; data: CatalogData }
+/** A catalog row as GET /api/catalog lists it (no instructions), or as the search returns it (supplements carry a brand). */
+export interface CatalogItem { id: string; name: string; brand?: string; data: CatalogData }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */

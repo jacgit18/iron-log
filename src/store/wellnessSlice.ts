@@ -8,6 +8,9 @@ import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
 
+// The same supplement: name and brand, any case (a catalog supplement has a brand; your own has none).
+const sameSupplement = (x: { n: string; brand?: string }, n: string, brand?: string) => x.n.toLowerCase() === n.toLowerCase() && (x.brand || '').toLowerCase() === (brand || '').toLowerCase();
+
 const uid = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -168,16 +171,32 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     get().noteRemoved('suppslot:' + slot, `${x0.n} from ${SLOTS.find(([k]) => k === slot)?.[1] || slot}`, () => get().supp.items.find(x => x.id === id)?.slot === '' && get().setSupplementSlot(id, slot));
     return true;
   },
-  // From the library sheet. Returns an error message, or null when saved.
+  // A catalog supplement joins the library as a snapshot (ADR 026, 029): name (cut to 60 characters) and brand, kept as Library only until
+  // you schedule it, with your own dose. Never a dose from the catalog.
+  addCatalogSupplement(c) {
+    if (get().blocked()) return null;
+    const full = c.name.trim().replace(/\s+/g, ' ');
+    const n = full.length > 60 ? `${full.slice(0, 59).trimEnd()}…` : full;
+    const brand = (c.brand || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+    if (!n || !isCatalogId(c.id)) return 'That catalog item can’t be added.';
+    const items = get().supp.items;
+    if (items.some(x => x.catalogId === c.id)) return 'Already in your supplements.';
+    if (items.some(x => sameSupplement(x, n, brand))) return `You already have ${brand ? `${n} from ${brand}` : n}.`;
+    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot: '', ...(brand ? { brand } : {}), catalogId: c.id }); })) return null;
+    flag(`Added ${n}`); return null;
+  },
+  // From the library sheet. Returns an error message, or null when saved. A catalog supplement keeps its name, brand and catalog id
+  // (ADR 026): the sheet shows no Name field for it. Two supplements may share a name when their brands differ.
   saveSupplement(d) {
     if (get().blocked()) return null;
-    const n = String(d.n || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+    const cur = d.id ? get().supp.items.find(x => x.id === d.id) : undefined;
+    const n = cur?.catalogId ? cur.n : String(d.n || '').trim().replace(/\s+/g, ' ').slice(0, 60);
     if (!n) return 'Give the supplement a name.';
-    if (get().supp.items.some(x => x.n.toLowerCase() === n.toLowerCase() && x.id !== d.id)) return 'Another supplement already has that name.';
+    if (get().supp.items.some(x => sameSupplement(x, n, cur?.brand) && x.id !== d.id)) return 'Another supplement already has that name.';
     const slot = (SLOTS.some(([k]) => k === d.slot) ? d.slot : '') as SupplementSlot;
     const dose = String(d.dose || '').trim().slice(0, 40); const note = String(d.note || '').trim().slice(0, 200);
     get().mutateSupp(s => {
-      const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}) };
+      const item = { id: d.id || newSupplementId(s.items, n), n, slot, ...(dose ? { dose } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { ...(cur.brand ? { brand: cur.brand } : {}), catalogId: cur.catalogId } : {}) };
       const i = s.items.findIndex(x => x.id === item.id);
       if (i >= 0) s.items[i] = item; else s.items.push(item);
     });
