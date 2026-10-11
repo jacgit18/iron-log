@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BUILTIN } from './data.js';
 import { DEFAULT_CFG } from './logic.js';
-import { libraryRows, filterRows, usageOf } from './exerciseLibrary.js';
+import { libraryRows, filterRows, usageOf, hasTwoSources } from './exerciseLibrary.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
 const state = (over = {}) => ({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], experiments: [], logs: {}, ...over });
@@ -25,14 +25,20 @@ describe('exercise library rows', () => {
     expect(filterRows(rows, { eq: 'none' }).some(r => r.id === 'x')).toBe(true);
     expect(filterRows(rows, {})).toHaveLength(rows.length);
   });
-  it('splits your own exercises from library ones; editing a built-in does not make it yours', () => {
+  it('splits your own exercises from library ones; editing a built-in does not make it Custom', () => {
     const rows = libraryRows(cfg({ ex: { x: { n: 'Mystery Move' }, hack: { n: 'Hack Squat', eq: 'machine', url: 'https://example.com' } } }), state());
-    expect(filterRows(rows, { src: 'yours' }).map(r => r.id)).toEqual(['x']);
+    expect(filterRows(rows, { src: 'custom' }).map(r => r.id)).toEqual(['x']);
     const lib = filterRows(rows, { src: 'library' });
     expect(lib.some(r => r.id === 'hack')).toBe(true);
     expect(lib.some(r => r.id === 'x')).toBe(false);
     expect(lib.length + 1).toBe(rows.length);
-    expect(filterRows(rows, { src: 'yours', q: 'hack' })).toEqual([]);
+    expect(filterRows(rows, { src: 'custom', q: 'hack' })).toEqual([]);
+  });
+  it('offers the Source filter only when the list holds both Custom and library exercises', () => {
+    expect(hasTwoSources(libraryRows(cfg({ ex: { x: { n: 'Mystery Move' } } }), state()))).toBe(true);
+    expect(hasTwoSources(libraryRows(cfg(), state()))).toBe(false); // built-ins only
+    expect(hasTwoSources([{ custom: true }, { custom: true }])).toBe(false); // synced: all your own
+    expect(hasTwoSources([])).toBe(false);
   });
   it('knows where an exercise is used', () => {
     const lib = [{ id: 'v', name: 'v', prog: { days: [{ title: 'D', slots: [{ id: 's', items: [{ ex: 'zzz' }] }] }, ...Array(5).fill({ title: 'D', slots: [] })] } }];

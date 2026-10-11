@@ -3,20 +3,20 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, EQUIPMENT, EQ_KEYS } from '../../lib/data.js';
 import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
-import { libraryRows, filterRows, muscleList } from '../../lib/exerciseLibrary.js';
+import { libraryRows, filterRows, muscleList, hasTwoSources } from '../../lib/exerciseLibrary.js';
 import { progName } from '../../lib/logic.js';
 import { videoLabel } from '../../lib/data.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 
-// Every exercise (built in and your own, marked Yours) with what is set on it, searchable, edited in one sheet.
+// Every exercise (from the library, and your own marked Custom) with what is set on it, searchable, edited in one sheet.
 export default function ExerciseLibrary() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs);
-  const synced = useAppStore(s => s.storeMode) === 'db'; // synced, every exercise listed is your own (ADR 024): no Source to filter by
   const { openModal } = useAppStore.getState();
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
-  const shown = filterRows(rows, f);
+  const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)
+  const shown = filterRows(rows, sources ? f : { ...f, src: '' });
   const filtering = !!(f.q || f.eq || f.muscle || f.src);
   return (
     <section className="panel edpanel exlib">
@@ -41,10 +41,10 @@ export default function ExerciseLibrary() {
             <option value="untagged">Not tagged yet</option>
           </select>
         </label>
-        {!synced && <label className="field">Source
+        {sources && <label className="field">Source
           <select value={f.src} onChange={e => setF(x => ({ ...x, src: e.target.value }))}>
             <option value="">All</option>
-            <option value="yours">Yours</option>
+            <option value="custom">Custom</option>
             <option value="library">Library</option>
           </select>
         </label>}
@@ -60,7 +60,7 @@ export default function ExerciseLibrary() {
           return (
             <div className="exrow" key={r.id}>
               <div className="exmain">
-                <b>{r.name}{r.custom && <span className="pill yours" title="You created this exercise">Yours</span>}</b>
+                <b>{r.name}{r.custom && <span className="pill custom" title="You created this exercise; it is not from the library">Custom</span>}</b>
                 <span className="note">{[...meta, where].join(' · ')}</span>
                 <span className="note">{muscles || 'No muscles tagged yet'}</span>
                 {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.name} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(r.url)}</a>}

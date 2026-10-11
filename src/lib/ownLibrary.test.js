@@ -16,13 +16,13 @@ describe('synced exercise library (ADR 024)', () => {
     expect(allExIds(cfg())).toEqual([]);
     expect(libraryRows(cfg(), state)).toEqual([]);
   });
-  it('lists only saved exercises, every one marked Yours, including ones saved under a built-in id', () => {
+  it('lists only saved exercises, every one marked Custom, including ones saved under a built-in id', () => {
     listBuiltinExercises(false);
     const c = cfg({ ex: { hack: { n: 'Hack Squat', eq: 'machine' }, 'my-lift': { n: 'My Lift' } } });
     const rows = libraryRows(c, state);
     expect(rows.map(r => r.id)).toEqual(['hack', 'my-lift']);
     expect(rows.every(r => r.custom)).toBe(true);
-    expect(filterRows(rows, { src: 'yours' })).toHaveLength(2);
+    expect(filterRows(rows, { src: 'custom' })).toHaveLength(2);
     expect(isOwnExercise('hack')).toBe(true);
   });
   it("a typed built-in name is new to the library, and takes the built-in's id so history under that id stays one exercise", () => {
@@ -46,7 +46,7 @@ describe('synced exercise library (ADR 024)', () => {
     listBuiltinExercises(false);
     expect(exInfo(cfg(), 'hack').n).toBe(EX.hack.n);
   });
-  it('local storage still lists the built-ins, not marked Yours', () => {
+  it('local storage still lists the built-ins, not marked Custom', () => {
     expect(allExIds(cfg())).toEqual(expect.arrayContaining(Object.keys(EX)));
     expect(newExId(cfg(), 'Hack Squat')).toBe('hack-squat');
     expect(isOwnExercise('hack')).toBe(false);
