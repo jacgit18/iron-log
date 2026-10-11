@@ -14,9 +14,11 @@ export default function SupplementSheet({ id }: { id?: string | null }) {
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   return (
     <Sheet>
-      <h2 className="cond">{cur ? 'Edit supplement' : 'New supplement'}</h2>
+      <h2 className="cond">{cur ? (cur.catalogId ? cur.n : 'Edit supplement') : 'New supplement'}</h2>
       <form id="supp-form" noValidate onSubmit={e => { e.preventDefault(); const m = s.saveSupplement(d); if (m) setErr(m); }}>
-        <label className="field">Name<input id="supp-name" maxLength={60} value={d.n} placeholder="e.g. Vitamin D3" onChange={e => up({ n: e.target.value })} /></label>
+        {cur?.catalogId
+          ? <p className="note">From the catalog{cur.brand ? ` (${cur.brand})` : ''}: its name stays; the dose, schedule and note are yours.</p>
+          : <label className="field">Name<input id="supp-name" maxLength={60} value={d.n} placeholder="e.g. Vitamin D3" onChange={e => up({ n: e.target.value })} /></label>}
         <label className="field">Dose (optional)<input maxLength={40} value={d.dose} placeholder="e.g. 2000 IU" onChange={e => up({ dose: e.target.value })} /></label>
         <label className="field">On the schedule
           <select value={d.slot} onChange={e => up({ slot: e.target.value as SupplementSlot })}>{SLOT_OPTIONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>

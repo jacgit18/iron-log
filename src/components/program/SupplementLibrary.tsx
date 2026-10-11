@@ -2,24 +2,42 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
+import { useFeature } from '../../features.js';
 
 // Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later.
+// Syncing, each is badged Library (added from the catalog, with its brand) or Custom, with a Source filter once both kinds are listed
+// (ADR 027, 029). Local mode has no catalog, so no badges.
 export default function SupplementLibrary() {
   const items = useAppStore(s => s.supp.items);
+  const syncing = useAppStore(s => s.sync !== null);
+  const catalog = useFeature('catalog') && syncing;
   const { openModal, moveSupplement } = useAppStore.getState();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(''); const [src, setSrc] = useState('');
   const needle = q.trim().toLowerCase();
-  const shown = items.filter(i => !needle || i.n.toLowerCase().includes(needle));
+  const sources = syncing && items.some(i => i.catalogId) && items.some(i => !i.catalogId);
+  const shown = items.filter(i => (!needle || i.n.toLowerCase().includes(needle) || (i.brand || '').toLowerCase().includes(needle))
+    && (!sources || !src || (i.catalogId ? 'library' : 'custom') === src));
+  const filtering = !!needle || (sources && !!src);
   return (
     <section className="panel edpanel exlib">
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <h2 id="suplib-h" tabIndex={-1}>Supplement library</h2>
-        <button type="button" className="btn primary" id="suplib-new" onClick={() => openModal({ type: 'supplement' })}>+ New supplement</button>
+        <div className="inline">
+          {catalog && <button type="button" className="btn" id="suplib-catalog" onClick={() => openModal({ type: 'catalog', kind: 'supplement' })}>Browse catalog</button>}
+          <button type="button" className="btn primary" id="suplib-new" onClick={() => openModal({ type: 'supplement' })}>+ New supplement</button>
+        </div>
       </div>
       <p className="note">Your supplements. Ones set to Morning, Noon or Night are on the Supplements tab every day; “Library only” ones are kept here to schedule later.</p>
       <div className="filterbar" role="search">
-        <label className="field">Search<input type="search" value={q} placeholder="Name" onChange={e => setQ(e.target.value)} /></label>
-        <span className="note" role="status">{needle ? `${shown.length} of ${items.length} supplements` : `${items.length} supplement${items.length === 1 ? '' : 's'}`}</span>
+        <label className="field">Search<input type="search" value={q} placeholder="Name or brand" onChange={e => setQ(e.target.value)} /></label>
+        {sources && <label className="field">Source
+          <select value={src} onChange={e => setSrc(e.target.value)}>
+            <option value="">All</option>
+            <option value="custom">Custom</option>
+            <option value="library">Library</option>
+          </select>
+        </label>}
+        <span className="note" role="status">{filtering ? `${shown.length} of ${items.length} supplements` : `${items.length} supplement${items.length === 1 ? '' : 's'}`}</span>
       </div>
       <RemovedNotice scope="supplements" />
       <div className="exrows">
@@ -32,11 +50,13 @@ export default function SupplementLibrary() {
               {rows.map(r => (
                 <div className="exrow" key={r.id}>
                   <div className="exmain">
-                    <b>{r.n}</b>
-                    <span className="note">{[r.dose, r.note].filter(Boolean).join(' · ') || 'No dose or note'}</span>
+                    <b>{r.n}{syncing && (r.catalogId
+                      ? <span className="pill custom" title="Added from the catalog; the dose and note are yours">Library</span>
+                      : <span className="pill custom" title="You created this supplement; it is not from the catalog">Custom</span>)}</b>
+                    <span className="note">{[r.brand, r.dose, r.note].filter(Boolean).join(' · ') || 'No dose or note'}</span>
                   </div>
                   <div className="actions" style={{ margin: 0 }}>
-                    {!needle && <>
+                    {!filtering && <>
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} up`} onClick={() => moveSupplement(r.id, -1)}><span aria-hidden="true">↑</span></button>
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} down`} onClick={() => moveSupplement(r.id, 1)}><span aria-hidden="true">↓</span></button>
                     </>}
@@ -47,7 +67,7 @@ export default function SupplementLibrary() {
             </div>
           );
         })}
-        {!shown.length && <p className="note">{items.length ? 'No supplement matches. Clear the search.' : 'No supplements yet. Add one with + New supplement.'}</p>}
+        {!shown.length && <p className="note">{items.length ? 'No supplement matches. Clear the search or the Source filter.' : 'No supplements yet. Add one with + New supplement.'}</p>}
       </div>
     </section>
   );
