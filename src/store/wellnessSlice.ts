@@ -3,6 +3,7 @@ import { DAY_NAMES } from '../shared/dates.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
 import { MUSCLES } from '../lib/muscles.js';
+import { isCatalogId } from '../shared/listItems.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
@@ -79,7 +80,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
   addCatalogStretch(c) {
     if (get().blocked()) return null;
     const n = c.name.trim().replace(/\s+/g, ' ').slice(0, 80);
-    if (!n || !c.id.startsWith('c:') || c.id.length > 100) return 'That catalog item can’t be added.';
+    if (!n || !isCatalogId(c.id)) return 'That catalog item can’t be added.';
     const items = get().stretches;
     if (items.some(x => x.catalogId === c.id)) return 'Already in your stretches.';
     if (items.some(x => x.n.toLowerCase() === n.toLowerCase())) return `You already have a stretch called ${n}.`;
@@ -177,7 +178,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const full = c.name.trim().replace(/\s+/g, ' ');
     const n = full.length > 60 ? `${full.slice(0, 59).trimEnd()}…` : full;
     const brand = (c.brand || '').trim().replace(/\s+/g, ' ').slice(0, 60);
-    if (!n || !c.id.startsWith('c:') || c.id.length > 100) return 'That catalog item can’t be added.';
+    if (!n || !isCatalogId(c.id)) return 'That catalog item can’t be added.';
     const items = get().supp.items;
     if (items.some(x => x.catalogId === c.id)) return 'Already in your supplements.';
     if (items.some(x => sameSupplement(x, n, brand))) return `You already have ${brand ? `${n} from ${brand}` : n}.`;
