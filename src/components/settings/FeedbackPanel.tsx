@@ -1,10 +1,8 @@
-import { useFeature } from '../../features.js';
 import { feedbackLink } from '../../lib/feedback.js';
 
 export default function FeedbackPanel() {
-  const on = useFeature('feedback');
   const href = feedbackLink();
-  if (!on || !href) return null;
+  if (!href) return null;
   return (
     <section className="panel">
       <h2>Send feedback</h2>
