@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.js';
 // The fixture's clock is Thu 24 Sep 2026, so this week starts Sun 20 Sep.
 test('the Program editor tags a card that starts in a later week, and the board leaves it out until then', async ({ page }) => {
   await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Add exercise', exact: true }).click();
+  await page.getByRole('button', { name: '+ Add exercise', exact: true }).click();
   await page.getByRole('dialog').getByRole('combobox', { name: /Exercise/ }).fill('Farmer Carry Test');
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
   const row = page.locator('.edpanel:not(.lib) .edrow', { hasText: 'Farmer Carry Test' });

@@ -47,3 +47,47 @@ test('the program editor with drag handles has no accessibility violations', asy
   const { violations } = await scan(page);
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
 });
+
+test('Remove marks the row first, a second tap removes it, and Undo puts it back in its place', async ({ page }) => {
+  await page.click('#tab-program');
+  const add = page.locator('.edpanel:not(.lib) .edadd').getByRole('button', { name: '+ Add exercise' });
+  const addBox = await add.boundingBox(); const firstBox = await rows(page).first().boundingBox();
+  expect(addBox.y).toBeLessThan(firstBox.y); // above the day's first exercise
+  const before = await names(page);
+  const rm = rows(page).nth(2).getByRole('button', { name: `Remove ${before[2]}` });
+  await rm.click();
+  await expect(rows(page).nth(2)).toHaveClass(/removing/);
+  await expect(rows(page).nth(2)).toContainText('Will be removed');
+  await expect(rm).toHaveText('Tap again to remove');
+  expect((await scan(page)).violations).toEqual([]);
+  await rm.click();
+  await expect.poll(() => names(page)).toEqual([...before.slice(0, 2), ...before.slice(3)]);
+  const note = page.locator('.removednote');
+  await expect(note).toContainText(`Removed ${before[2]}`);
+  await expect(note.getByRole('button', { name: 'Undo' })).toBeFocused();
+  await note.getByRole('button', { name: 'Undo' }).click();
+  await expect.poll(() => names(page)).toEqual(before);
+  await expect(note).toHaveCount(0);
+});
+
+test('moving away from an armed Remove leaves the exercise alone', async ({ page }) => {
+  await page.click('#tab-program');
+  const before = await names(page);
+  await rows(page).first().getByRole('button', { name: `Remove ${before[0]}` }).click();
+  await expect(page.locator('.edrow.removing')).toHaveCount(1);
+  await page.locator('#ed-title').click();
+  await expect(page.locator('.edrow.removing')).toHaveCount(0);
+  expect(await names(page)).toEqual(before);
+});
+
+test('the Removed notice belongs to that visit: leave the Program tab and it is gone, with focus left alone', async ({ page }) => {
+  await page.click('#tab-program');
+  const before = await names(page);
+  const rm = rows(page).first().getByRole('button', { name: `Remove ${before[0]}` });
+  await rm.click(); await rm.click();
+  await expect(page.locator('.removednote')).toBeVisible();
+  await page.click('#tab-board');
+  await page.click('#tab-program');
+  await expect(page.locator('.removednote')).toHaveCount(0);
+  await expect(page.locator('#tab-program')).toBeFocused();
+});

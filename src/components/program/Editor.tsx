@@ -1,6 +1,6 @@
 import type { Cfg, LibraryItem, Program, ProgramSlot } from '../../types.ts';
 import type { ProgKey } from '../../types.ts';
-import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, BUILTIN, exInfo } from '../../lib/data.js';
@@ -111,6 +111,17 @@ function ProgramEditor() {
   const { drag, rowRef, handleProps } = useDragReorder(day.slots.length, st.reorderEdSlot);
   const custom = !lib && !st.isOriginal(prog as Program, k as ProgKey);
   const edName = lib ? item.name : progName(cfg, k);
+  // The row whose Remove is armed (pressed once): it is shown marked for removal until the second press or a move away.
+  const [arming, setArming] = useState<number | null>(null);
+  const removed = useAppStore(s => s.edRemoved);
+  const showRemoved = removed && removed.key === k && removed.day === edDay ? removed : null;
+  // The pressed Remove button is gone with its row, so put focus on Undo: only right after a Remove, not when the tab opens again.
+  const undoRef = useRef<HTMLButtonElement>(null);
+  const justRemoved = useRef(false);
+  useEffect(() => { if (removed && justRemoved.current) { justRemoved.current = false; undoRef.current?.focus(); } }, [removed]);
+  // The Undo belongs to this visit to the editor: leaving the Program tab drops it.
+  useEffect(() => () => { useAppStore.getState().dismissEdRemoved(); }, []);
+  const addBtn = <button type="button" className="btn primary" onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: null }); }}>+ Add exercise</button>;
 
   return (
     <>
@@ -140,6 +151,16 @@ function ProgramEditor() {
         <label className="field">Day label
           <CommitInput key={`${k}:${edDay}:${day.sub || ''}`} id="ed-sub" value={day.sub || ''} placeholder="e.g. Lower body + reactive power" onCommit={st.setDaySub} />
         </label>
+        <div className="actions edadd" style={{ justifyContent: 'flex-start' }}>{addBtn}</div>
+        {showRemoved && (
+          <div className="notice movewarn removednote" role="status">
+            <div><b>Removed</b> {slotSummary(cfg, showRemoved.slot)} from {day.title}.</div>
+            <div className="actions">
+              <button type="button" className="btn sm" ref={undoRef} onClick={st.undoRemoveEdSlot}>Undo</button>
+              <button type="button" className="btn sm ghost" onClick={st.dismissEdRemoved}>Dismiss</button>
+            </div>
+          </div>
+        )}
         <div className="edlist">
           {!day.slots.length && <p className="note">No exercises on this day yet.</p>}
           {day.slots.map((sl, i) => {
@@ -151,12 +172,12 @@ function ProgramEditor() {
                 {newSec && <div className="sect">{sl.sec || ''}</div>}
                 <div
                   ref={rowRef(i)}
-                  className={`edrow${drag?.from === i ? ' dragging' : drag ? ' shifting' : ''}`}
+                  className={`edrow${drag?.from === i ? ' dragging' : drag ? ' shifting' : ''}${arming === i ? ' removing' : ''}`}
                   style={drag ? { transform: `translateY(${drag.from === i ? drag.dy : shiftOf(drag, i)}px)` } : undefined}
                 >
                   <span className="draghandle" aria-hidden="true" title="Drag to reorder" {...handleProps(i)}>⠿</span>
                   <div className="edmain">
-                    {tag && <span className="tag">{tag}</span>}
+                    {arming === i ? <span className="tag rmtag">Will be removed · tap Remove again</span> : tag && <span className="tag">{tag}</span>}
                     <b>{slotSummary(cfg, sl)}</b>
                     <span className="note">{sl.items.map(it => [it.ph ? PHASES[it.ph].label : 'No phase', it.w != null ? it.w + ' lb' : (it.bw ? 'bodyweight' : ''), it.rx || ''].filter(Boolean).join(' · ')).join('  |  ')}</span>
                   </div>
@@ -164,15 +185,12 @@ function ProgramEditor() {
                     <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}>↑</button>
                     <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}>↓</button>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
-                    <ArmedButton className="btn sm ghost" id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Remove?" onConfirm={() => st.removeEdSlot(i)} />
+                    <ArmedButton className={`btn sm ${arming === i ? 'danger' : 'ghost'}`} id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? i : null)} onConfirm={() => { setArming(null); justRemoved.current = true; st.removeEdSlot(i); }} />
                   </div>
                 </div>
               </Fragment>
             );
           })}
-        </div>
-        <div className="actions" style={{ justifyContent: 'flex-start' }}>
-          <button type="button" className="btn primary" onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: null }); }}>Add exercise</button>
         </div>
       </section>
       <p className="note" style={{ marginTop: 12 }}>

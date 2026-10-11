@@ -12,6 +12,17 @@ const newId = (): string => Date.now().toString(36) + Math.random().toString(36)
 const pinIds = (prog: Program, day: number) => {
   if (prog.key === 'A' || prog.key === 'B') prog.days[day - 1].slots.forEach((sl, si) => { sl.id ||= `${prog.key}-d${day}s${si + 1}`; });
 };
+// Give every card of `prog` a new id `<pre>-d<day>s<pos>`, so check-offs and phase defaults never mix with the program its cards came
+// from. `src` is that program's cards in the same order; their saved phase defaults are returned under the new ids.
+function reId(prog: Program, src: { id: string; items: unknown[] }[], pre: string, phDef: Record<string, PhaseKey | null>) {
+  const out: Record<string, PhaseKey | null> = {}; let k = 0;
+  prog.days.forEach((d, di) => d.slots.forEach((sl, si) => {
+    const old = src[k++]; const nid = `${pre}-d${di + 1}s${si + 1}`;
+    if (old) old.items.forEach((_, i) => { const v = phDef[`${old.id}:${i}`]; if (v) out[`${nid}:${i}`] = v; });
+    sl.id = nid;
+  }));
+  return out;
+}
 export const blankItem = (): { ex: string; ph: PhaseChoice; w: number | null; bw: boolean; rx: string; note: string } => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
 
 // A new card goes after the last card in the same section; a new section goes before Home (Home goes last).
@@ -45,8 +56,8 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const ak = get().activeProgKey();
     set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd } } });
   },
-  setEdProg: edProg => set({ edProg }),
-  setEdDay: edDay => set({ edDay }),
+  setEdProg: edProg => set({ edProg, edRemoved: null }),
+  setEdDay: edDay => set({ edDay, edRemoved: null }),
 
   saveEdited(prog) {
     const it = get().edItem();
@@ -63,7 +74,20 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   reorderEdSlot(from, to) {
     get().editProgram(prog => { const sl = prog.days[get().edDay - 1].slots; if (from === to || from < 0 || to < 0 || from >= sl.length || to >= sl.length) return; pinIds(prog, get().edDay); sl.splice(to, 0, ...sl.splice(from, 1)); });
   },
-  removeEdSlot(i) { get().editProgram(prog => { prog.days[get().edDay - 1].slots.splice(i, 1); }); },
+  edRemoved: null,
+  // Remove the open day's card at `i`, and keep it so the Removed notice's Undo can put it back in the same place. Ids are written down
+  // first, as for a reorder: the cards after it keep their own ticks and phase defaults, and the removed card comes back with its own id.
+  removeEdSlot(i) {
+    const key = get().edKey(); const day = get().edDay;
+    const gone: ProgramSlot[] = [];
+    if (get().editProgram(prog => { pinIds(prog, day); gone.push(...prog.days[day - 1].slots.splice(i, 1)); }) && gone[0]) set({ edRemoved: { key, day, idx: i, slot: gone[0] } });
+  },
+  undoRemoveEdSlot() {
+    const r = get().edRemoved;
+    if (!r || r.key !== get().edKey() || r.day !== get().edDay) { set({ edRemoved: null }); return; }
+    if (get().editProgram(prog => { const sl = prog.days[r.day - 1].slots; sl.splice(Math.min(r.idx, sl.length), 0, r.slot); })) { set({ edRemoved: null }); flag('Put back'); }
+  },
+  dismissEdRemoved() { set({ edRemoved: null }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
 
   renameProgram(k, raw) {
@@ -103,7 +127,18 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     }
     // Syncing, the blank original is saved as the account's program: with no document an account with log entries would fall back to the built-in plan.
     if (target === 'orig' && orig === BUILTIN[slot]) { set(s => ({ programs: { ...s.programs, [slot]: BUILTIN[slot] } })); get().removeDoc('programs/' + slot); }
-    else get().saveProgram(slot, structuredClone(next));
+    else {
+      const loaded = structuredClone(next) as Program;
+      // The same library program can go into A and B (or a copy saved from one slot into the other). Cards with the same id in both would
+      // share ticks and phase defaults, so a version whose ids the other program already uses gets new ones.
+      const taken = new Set(slotsFor(get().programs[slot === 'A' ? 'B' : 'A']).map(s => s.id));
+      const cards = slotsFor({ ...loaded, key: slot });
+      if (src && cards.some(s => taken.has(s.id))) {
+        const phDef = reId(loaded, cards, 'L' + newId().slice(-6), get().cfg.phDef);
+        if (Object.keys(phDef).length) get().mutateCfg(c => { Object.assign(c.phDef, phDef); });
+      }
+      get().saveProgram(slot, loaded);
+    }
     set({ edProg: slot });
     flag(src ? `${src.name} is now in ${progName(get().cfg, slot)}` : 'Loaded');
   },
@@ -119,12 +154,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const it = get().libSnapshot(name.trim(), srcProg, from, false); it.created = true;
     // The copy gets its own slot ids so check-offs and phase defaults never mix with the program it came from;
     // the source's saved phase defaults carry over to the new ids.
-    const pre = 'P' + it.id.slice(-5); const src = slotsFor(srcProg); const phDef: Record<string, PhaseKey | null> = {}; let k = 0;
-    it.prog.days.forEach((d, di) => d.slots.forEach((sl, si) => {
-      const old = src[k++]; const nid = `${pre}-d${di + 1}s${si + 1}`;
-      if (old) old.items.forEach((_, i) => { const v = get().cfg.phDef[`${old.id}:${i}`]; if (v) phDef[`${nid}:${i}`] = v; });
-      sl.id = nid;
-    }));
+    const phDef = reId(it.prog, slotsFor(srcProg), 'P' + it.id.slice(-5), get().cfg.phDef);
     if (Object.keys(phDef).length) get().mutateCfg(c => { Object.assign(c.phDef, phDef); });
     set({ library: get().library.map(x => (x.id === it.id ? it : x)), edProg: 'L:' + it.id, edDay: 1, modal: null });
     get().saveLibrary(); flag('Program created');

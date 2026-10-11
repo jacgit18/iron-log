@@ -605,9 +605,12 @@ test.describe('Delete my data', () => {
     });
     const calls = await open(page, { '/api/account/erase-data': ok });
     await panel(page).getByLabel(/Type ERASE/).fill('ERASE');
+    // The heading is on screen before the reload too, so wait for the reload itself, or the reads below can land mid-navigation.
+    const reloaded = page.waitForEvent('load');
     await panel(page).getByRole('button', { name: 'Erase everything permanently' }).click();
     await expect.poll(() => calls.length).toBe(1);
     expect(calls[0].body).toEqual({ confirm: 'ERASE' });
+    await reloaded;
     await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible(); // reloaded: the app reopens on the tab it was on
     const left = await page.evaluate(() => ({ docs: localStorage.getItem('ironlog:logs/hack'), mirror: localStorage.getItem('ironlog:sync/mirror'), marker: localStorage.getItem('ironlog:sync/legacy') }));
     expect(left.docs).toBeNull();

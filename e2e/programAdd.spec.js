@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 const dayNames = async (page, n) => { await page.getByRole('group', { name: 'Day to edit' }).getByRole('button', { name: `Day ${n}`, exact: true }).click(); return page.locator('.edpanel:not(.lib) .edrow .edmain b').allTextContents(); };
-const openAdd = async page => { await page.click('#tab-program'); await page.getByRole('button', { name: 'Add exercise', exact: true }).click(); };
+const openAdd = async page => { await page.click('#tab-program'); await page.getByRole('button', { name: '+ Add exercise', exact: true }).click(); };
 
 test('editing an exercise keeps the single Day drop-down', async ({ page }) => {
   await page.click('#tab-program');
