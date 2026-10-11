@@ -140,6 +140,17 @@ export interface SettingsSlice {
 /** The Grocery section's add-item form: what was typed. `price` is dollars as text. */
 export interface GroceryForm { n: string; store: string; qty: string; price: string; once: boolean }
 
+/** What the last single-item delete took out: `text` is the notice ("Removed <text>."), `restore` puts it back. */
+export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void }
+
+export interface RemovedSlice {
+  removed: Removed | null;
+  noteRemoved(scope: string, text: string, restore: () => boolean | void): void;
+  undoRemoved(): void;
+  /** Drop the Undo; with a scope, only when it belongs to that list. */
+  dismissRemoved(scope?: string): void;
+}
+
 /** The grocery list (device-only): the catalogue and every saved month. Lives in the browser's storage, not in the sync. */
 export interface GrocerySlice {
   grocery: Grocery;
@@ -350,6 +361,6 @@ export interface CoreSlice {
   init(): Promise<void>;
 }
 
-export type AppState = CoreSlice & EditorSlice & SettingsSlice & WellnessSlice & GrocerySlice;
+export type AppState = CoreSlice & EditorSlice & SettingsSlice & WellnessSlice & GrocerySlice & RemovedSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];

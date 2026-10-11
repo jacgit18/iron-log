@@ -15,6 +15,7 @@ import { editorSlice } from './editorSlice.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
 import { grocerySlice } from './grocerySlice.js';
+import { removedSlice } from './removedSlice.js';
 import { isAdminNow } from '../features.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { normSupplements } from '../lib/water.js';
@@ -163,6 +164,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   ...settingsSlice(set, get, flag),
   ...wellnessSlice(set, get, flag),
   ...grocerySlice(set, get, flag),
+  ...removedSlice(set, get, flag),
   cfg: structuredClone(DEFAULT_CFG),
   weekStart: weekStartOf(new Date()),
   week: normWeek(null),
