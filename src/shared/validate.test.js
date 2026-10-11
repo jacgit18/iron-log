@@ -69,6 +69,10 @@ describe('normEntry', () => {
     expect(normEntry({ d: '2026-10-05', auto: true }).auto).toBe(true);
     expect(normEntry({ d: '2026-10-05', n: 'x'.repeat(900) }).n).toHaveLength(500);
   });
+  it('normEntries sorts oldest first and keeps same-day order', () => {
+    const e = (d, w) => ({ d, w, s: 1, r: 1 });
+    expect(normEntries([e('2026-10-05', 1), e('2026-09-01', 2), e('2026-10-05', 3)]).map(x => x.w)).toEqual([2, 1, 3]);
+  });
   it('normEntries filters and tolerates a non-array', () => {
     expect(normEntries([good, null, { d: 'bad' }])).toEqual([good]);
     expect(normEntries(undefined)).toEqual([]);
