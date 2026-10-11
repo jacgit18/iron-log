@@ -21,9 +21,19 @@ describe('mapFedb', () => {
     expect(skipped).toEqual([]);
   });
 
-  it('makes a stretching row a stretch', () => {
-    expect(mapFedb([ex('Calf_Stretch', { category: 'stretching' })]).rows[0]!.kind).toBe('stretch');
-    expect(mapFedb([ex('Box_Jump', { category: 'plyometrics' })]).rows[0]!.kind).toBe('exercise');
+  it('makes a stretching row a stretch, tagged mob so it does not count toward muscle volume', () => {
+    const [stretch] = mapFedb([ex('Calf_Stretch', { category: 'stretching', primaryMuscles: ['calves'], secondaryMuscles: [] })]).rows;
+    expect(stretch!.kind).toBe('stretch');
+    expect(stretch!.data.muscles).toEqual({ p: ['calves'], mob: true });
+    const [jump] = mapFedb([ex('Box_Jump', { category: 'plyometrics' })]).rows;
+    expect(jump!.kind).toBe('exercise');
+    expect(jump!.data.muscles).not.toHaveProperty('mob');
+  });
+
+  it('does not match inherited names: constructor or toString is reported, not used', () => {
+    const { rows, unmapped } = mapFedb([ex('Odd', { equipment: 'constructor', primaryMuscles: ['toString'], secondaryMuscles: ['constructor'] })]);
+    expect(rows[0]!.data).toMatchObject({ eq: 'other', muscles: {} });
+    expect(unmapped).toEqual({ 'equipment:constructor': 1, 'muscle:toString': 1, 'muscle:constructor': 1 });
   });
 
   it('every dataset muscle and equipment value seen at the pinned commit has an entry (neck excepted)', () => {

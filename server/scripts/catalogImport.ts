@@ -61,9 +61,9 @@ export function mapFedb(input: unknown): Mapped {
   const muscles = (names: string[]): MuscleKey[] => {
     const out: MuscleKey[] = [];
     for (const name of names) {
-      const keys = FEDB_MUSCLES[name.toLowerCase()];
-      if (!keys) { note(`muscle:${name}`); continue; }
-      for (const k of keys) if (!out.includes(k)) out.push(k);
+      const key = name.toLowerCase();
+      if (!Object.hasOwn(FEDB_MUSCLES, key)) { note(`muscle:${name}`); continue; }
+      for (const k of FEDB_MUSCLES[key]!) if (!out.includes(k)) out.push(k);
     }
     return out;
   };
@@ -81,14 +81,17 @@ export function mapFedb(input: unknown): Mapped {
     const eqRaw = str(r.equipment)?.toLowerCase() ?? null;
     let eq: EquipmentKey | null = null;
     if (eqRaw) {
-      eq = FEDB_EQUIPMENT[eqRaw] ?? 'other';
-      if (!(eqRaw in FEDB_EQUIPMENT)) note(`equipment:${eqRaw}`);
+      // Own keys only: a value such as `constructor` must not pick up an inherited property.
+      if (Object.hasOwn(FEDB_EQUIPMENT, eqRaw)) eq = FEDB_EQUIPMENT[eqRaw]!;
+      else { eq = 'other'; note(`equipment:${eqRaw}`); }
     }
     const p = muscles(strings(r.primaryMuscles));
     const s = muscles(strings(r.secondaryMuscles)).filter(k => !p.includes(k));
     const tags: MuscleTags = {};
     if (p.length) tags.p = p;
     if (s.length) tags.s = s;
+    // A stretch is mobility work: it shows its muscles but does not count toward their volume, as everywhere else in the app.
+    if (category === 'stretching') tags.mob = true;
 
     const data: CatalogData = { eq, muscles: tags, force: str(r.force), mechanic: str(r.mechanic), instructions: strings(r.instructions) };
     const level = str(r.level);
