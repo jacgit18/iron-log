@@ -154,8 +154,9 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const slot: ProgramSlot = { id: d.id || newSlotId(0), sec: d.sec, items };
     if (d.tier) slot.tier = d.tier; if (d.type !== 'single') slot.type = d.type; if (d.note) slot.note = d.note;
     const orig = d.idx != null ? get().edProgram().days[edDay - 1].slots[d.idx] : null;
-    // A new card starts this week, or next week when its day is already finished on this week's board, so adding it
-    // never reopens a finished day, offers it as a leftover, or changes an earlier week. An edited card keeps its start.
+    // A new card starts this week, or next week when its day is already finished on this week's board, so adding a card
+    // never reopens a finished day, offers it as a leftover, or changes an earlier week. An edited card keeps its start,
+    // even when the edit moves it to another day: a later start would drop it from the earlier weeks it was already in.
     const startOf = (day: number) => {
       const now = weekStartOf(new Date()); const wk = ymd(now);
       if (get().weekKey() !== wk || k !== get().activeProgKey()) return wk; // the board shows another week, or another program
