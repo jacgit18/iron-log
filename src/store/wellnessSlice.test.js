@@ -101,6 +101,14 @@ describe('water', () => {
     st().removeWater('2026-10-04', 0); st().removeWater('2026-10-04', 0);
     expect(st().supp.water).toEqual({});
   });
+  it('Undo puts a removed drink back in its place', () => {
+    st().addWater('2026-10-04', 16.9); st().addWater('2026-10-04', 8); st().addWater('2026-10-04', 12);
+    st().removeWater('2026-10-04', 1);
+    expect(st().removed).toMatchObject({ scope: 'water:2026-10-04', text: '8 oz of water' });
+    st().undoRemoved();
+    expect(st().supp.water['2026-10-04']).toEqual([16.9, 8, 12]);
+    expect(saved('supplements/main').water['2026-10-04']).toEqual([16.9, 8, 12]);
+  });
   it('a typed goal is fixed until you go back to your weight', () => {
     expect(st().supp.waterMode).toBe('weight');
     st().setWaterGoal(100); expect(st().supp).toMatchObject({ waterGoal: 100, waterMode: 'fixed' });
@@ -122,6 +130,9 @@ describe('supplement library', () => {
     expect(saved('supplements/main').taken).toEqual({ '2026-10-04': { [x.id]: true } });
     st().removeSupplement(x.id);
     expect(st().supp.items[0].slot).toBe('');
+    expect(st().removed).toMatchObject({ scope: 'suppslot:morning', text: 'Vitamin D from Morning' });
+    st().undoRemoved(); expect(st().supp.items[0].slot).toBe('morning');
+    st().removeSupplement(x.id);
     st().setSupplementSlot(x.id, 'night'); expect(st().supp.items[0].slot).toBe('night');
   });
   it('saves from the library sheet, rejects a duplicate name, and deleting clears the ticks', () => {

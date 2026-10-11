@@ -4,7 +4,7 @@ import { DEFAULT_STRETCHES, DEFAULT_GROUP, doneKey, newStretchId, normStretchWee
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
-import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN } from '../lib/water.js';
+import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
 
 const uid = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -142,7 +142,14 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
   },
   // Takes it off the schedule (slot ''), or puts a library one into a section. It stays in the library either way.
   setSupplementSlot(id, slot) { return get().mutateSupp(s => { const x = s.items.find(i => i.id === id); if (x && (slot === '' || SLOTS.some(([k]) => k === slot))) x.slot = slot; }); },
-  removeSupplement(id) { return get().setSupplementSlot(id, ''); },
+  // Undo puts it back in that section, if it has not been scheduled somewhere since.
+  removeSupplement(id) {
+    const x0 = get().supp.items.find(x => x.id === id); if (!x0 || !x0.slot) return false;
+    const slot = x0.slot;
+    if (!get().setSupplementSlot(id, '')) return false;
+    get().noteRemoved('suppslot:' + slot, `${x0.n} from ${SLOTS.find(([k]) => k === slot)?.[1] || slot}`, () => get().supp.items.find(x => x.id === id)?.slot === '' && get().setSupplementSlot(id, slot));
+    return true;
+  },
   // From the library sheet. Returns an error message, or null when saved.
   saveSupplement(d) {
     if (get().blocked()) return null;
@@ -195,7 +202,10 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     return get().mutateSupp(s => { s.water[date] = [...(s.water[date] || []), r1(n)]; });
   },
   removeWater(date, i) {
-    return get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(i, 1); if (l.length) s.water[date] = l; else delete s.water[date]; });
+    const oz = (get().supp.water[date] || [])[i]; if (oz == null) return false;
+    if (!get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(i, 1); if (l.length) s.water[date] = l; else delete s.water[date]; })) return false;
+    get().noteRemoved('water:' + date, `${fmtOz(oz)} oz of water`, () => get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(Math.min(i, l.length), 0, oz); s.water[date] = l; }));
+    return true;
   },
   setWaterGoal(raw) {
     const n = Number(raw); if (!validGoal(n)) { flag('Enter a daily goal between 8 and 500 oz'); return false; }
