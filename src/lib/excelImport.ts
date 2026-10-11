@@ -238,7 +238,7 @@ export async function parseCsvExport(text: string, cfg: Cfg): Promise<ExcelImpor
   if (head[0] !== 'date' || head[1] !== 'exercise') throw new Error('That isn’t an Iron Log CSV export.');
   const at = (n: string) => head.indexOf(n);
   const sessions = [[], ...r.slice(1).map(c => {
-    const g = (n: string) => (at(n) >= 0 ? c[at(n)] ?? '' : '');
+    const g = (n: string) => (at(n) >= 0 ? (c[at(n)] ?? '').replace(/^'(?='*[=+\-@\t\r])/, '') : ''); // undo the formula guard added by buildCsv
     return [g('date'), g('week_of'), g('exercise'), g('phase'), g('weight_lb'), g('sets'), g('reps'), g('hold_s'), g('set_detail'), '', g('primary_muscles'), g('secondary_muscles'), g('note'), g('program_slot'), ''];
   })];
   const { logs, newEx, muscleMap, skipped } = readSessions(X, sessions, cfg);
