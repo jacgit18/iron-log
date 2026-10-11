@@ -113,6 +113,7 @@ export function checkRows(weeks: Record<string, Week>) {
   Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => {
     const w = normWeek(weeks[k]);
     if (w.prog) rows.push([k, 'prog', '', w.prog]);
+    if (w.ran) rows.push([k, 'ran', '', w.ran.prog]); // its cards are on the Programs sheet as program `ran:<week>`
     if (w.rest) rows.push([k, 'rest', '', w.rest.join(' ')]);
     if (w.restOn) rows.push([k, 'restOn', '', w.restOn]);
     if (w.order) rows.push([k, 'order', '', w.order.join(' ')]);
@@ -129,6 +130,8 @@ function addDataSheets(X: XLSX, wb: ReturnType<XLSX['utils']['book_new']>, S: Sn
   const prow: Row[] = [], info: Row[] = [['Program', 'Warm-up']];
   (['A', 'B'] as const).forEach(k => { if (programs[k] !== BUILTIN[k]) { prow.push(...programRows(cfg, k, programs[k])); info.push([k, programs[k].warm ?? '']); } });
   library.forEach(it => { prow.push(...programRows(cfg, it.id, it.prog)); info.push([it.id, it.prog.warm ?? '']); });
+  // What each week ran (ADR 022), as program `ran:<week>`; the Check-offs sheet names which program it was.
+  Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const r = normWeek(weeks[k]).ran; if (r) { prow.push(...programRows(cfg, `ran:${k}`, r.program)); info.push([`ran:${k}`, r.program.warm ?? '']); } });
   X.utils.book_append_sheet(wb, sheet(X, [PROG_HEAD, ...prow], [10, 5, 12, 26, 10, 7, 12, 11, 10, 9, 24, 14, 30, 11, 11, 10, 16, 24]), 'Programs');
   X.utils.book_append_sheet(wb, sheet(X, info, [12, 40]), 'Program info');
   X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Name', 'From', 'Saved at', 'Auto-saved', 'Created'], ...library.map(it => [it.id, it.name, it.from ?? '', it.at ?? '', it.auto ? 'Yes' : '', it.created ? 'Yes' : ''])], [14, 36, 7, 26, 11, 9]), 'Saved versions');

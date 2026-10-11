@@ -172,6 +172,7 @@ function readWeeks(X: XLSX, rows: Rows) {
     const w: any = weeks[wk] = weeks[wk] || normWeek();
     key = str(key);
     if (kind === 'prog') w.prog = str(v);
+    else if (kind === 'ran') w.ran = { prog: str(v) }; // its program is filled in from the Programs sheet by readDataSheets
     else if (kind === 'rest') w.rest = str(v).split(/[\s,]+/).filter(Boolean).map(Number).filter(n => n >= 1);
     else if (kind === 'restOn') { const t = dateText(X, v); if (WEEK_RE.test(t)) w.restOn = t; }
     else if (kind === 'order') w.order = str(v).split(/[\s,]+/).filter(Boolean).map(Number);
@@ -197,7 +198,10 @@ function readDataSheets(X: XLSX, rows: (name: string) => Rows | null) {
   const config: Record<string, unknown> = {};
   conf.slice(1).forEach(([k, v]) => { try { config[str(k)] = JSON.parse(str(v)); } catch { /* skip an unreadable setting */ } });
   const experiments = exps ? exps.slice(1).filter(r => r[0] !== '' && r[0] != null).map(([id, ex, , ph, note]) => ({ id: str(id), ex: str(ex), ph: str(ph) || null, note: str(note) })) : [];
-  return { config, programs, library, weeks: readWeeks(X, checks.slice(1)), experiments };
+  const weeks = readWeeks(X, checks.slice(1));
+  // What a week ran (ADR 022): program `ran:<week>`. Without its rows there's no record; normalizeData drops a malformed one.
+  Object.entries(weeks).forEach(([wk, w]) => { if (!w.ran) return; const r = owners[`ran:${wk}`]; if (r) w.ran.program = readProgram(r, warms[`ran:${wk}`]); else delete w.ran; });
+  return { config, programs, library, weeks, experiments };
 }
 
 // A workbook has no check-offs, but every session names the program slot it was logged from, so each

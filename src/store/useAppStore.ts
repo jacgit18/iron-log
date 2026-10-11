@@ -337,8 +337,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   // This week's record follows its program until the week is over (the board shows today's program all week), so a program edit, a
   // mode change or loading the week rewrites it; else a card added or removed after the last tick would flip back once the week ends.
   refreshRan() {
-    const s = get(); const key = s.weekKey();
-    if (!s.week.ran || key !== ymd(weekStartOf(new Date())) || !s.isReady()) return;
+    const s = get(); const key = s.weekKey(); const now = ymd(weekStartOf(new Date()));
+    if (!s.isReady()) return;
+    if (key !== now) { void refreshSavedRan(now); return; }
+    if (!s.week.ran) return;
     const ran = ranFor(weekProgram(s.cfg, s.programs, s.week, key), weekProgKey(s.cfg, s.week, key), s.week, key);
     if (JSON.stringify(ran) === JSON.stringify(s.week.ran)) return;
     set({ week: { ...s.week, ran } }); get().saveWeek();
@@ -1208,14 +1210,31 @@ function subscribeStretchWeek() {
   }, () => flag('Couldn’t load this week’s stretches. Reload the page.'));
 }
 
+// refreshRan for this week while the board shows another one: its saved record follows the program edit too, so it doesn't wait for
+// this week's next load or tick (it may get neither before the week is over). Reads the saved document, never the loaded history:
+// syncing, that copy isn't kept current, and the save writes the whole week, so it would drop ticks made on another device since.
+async function refreshSavedRan(key: string) {
+  const path = 'weeks/' + key; let raw: unknown;
+  if (!db) raw = LS.get(path);
+  else { try { const d = await db.doc(path).get(); raw = d.exists ? d.data() : null; } catch { return; /* the week's next load catches up */ } }
+  const s = useAppStore.getState();
+  if (s.weekKey() === key) { s.refreshRan(); return; } // back on this week meanwhile: the week on screen is the one to update
+  if (queue.pending(path)) return;
+  const w = normWeek(raw as Partial<Week> | null); if (!w.ran) return;
+  const ran = ranFor(weekProgram(s.cfg, s.programs, w, key), weekProgKey(s.cfg, w, key), w, key);
+  if (JSON.stringify(ran) === JSON.stringify(w.ran)) return;
+  const week = { ...w, ran }; queue.save(path, week);
+  if (s.weekHist) useAppStore.setState(st => ({ weekHist: { ...st.weekHist, [key]: week } }));
+}
+
 function subscribeWeek() {
   subscribeStretchWeek();
   if (unsubWeek) { unsubWeek(); unsubWeek = null; }
-  const key = useAppStore.getState().weekKey();
+  const key = useAppStore.getState().weekKey(); const thisWeek = ymd(weekStartOf(new Date()));
   if (!db) {
     const ready = useAppStore.getState().storeMode === 'local';
     useAppStore.setState(state => ({ week: normWeek(LS.get('weeks/' + key)), mDay: ready ? loadedMDay(state) : state.mDay, ready: { ...state.ready, week: ready } }));
-    useAppStore.getState().refreshRan();
+    if (key === thisWeek) useAppStore.getState().refreshRan(); // loading another week changes no program, so this week's record is fine
     return;
   }
   useAppStore.setState(state => ({ week: normWeek(null), ready: { ...state.ready, week: false } }));
@@ -1224,7 +1243,7 @@ function subscribeWeek() {
     if (key !== useAppStore.getState().weekKey() || queue.pending('weeks/' + key)) return;
     const week = normWeek(s.exists ? s.data() : null);
     useAppStore.setState(state => ({ week, mDay: first ? loadedMDay(state) : state.mDay, ready: { ...state.ready, week: true } }));
-    if (first) useAppStore.getState().refreshRan();
+    if (first && key === thisWeek) useAppStore.getState().refreshRan();
     first = false;
   }, () => flag('Couldn’t load this week. Reload the page.'));
 }

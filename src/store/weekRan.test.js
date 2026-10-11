@@ -99,6 +99,43 @@ describe('this week’s record follows its program until the week is over', () =
     st().saveProgram('A', prog);
     expect(JSON.stringify(saved('weeks/' + lastWeek()))).toBe(at);
   });
+
+  // The edit used to wait for this week's next load or tick, so a week never opened again before Sunday kept the old cards.
+  it('a program edit made while the board shows another week updates this week’s saved record', () => {
+    const now = ymd(weekStartOf(new Date())); const card = BUILTIN.A.days[0].slots[1];
+    st().checkCard(card.id, true); // this week, with its record
+    useAppStore.setState({ weekStart: addDays(weekStartOf(new Date()), -7), week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } });
+    const prog = structuredClone(st().programs.A);
+    prog.days[0].slots.push({ id: 'A-new', sec: 'Regular', items: [{ ex: 'hack', ph: null, w: 100 }] });
+    st().saveProgram('A', prog);
+    const w = saved('weeks/' + now);
+    expect(w.ran.program.days[0].slots.map(s => s.id)).toContain('A-new');
+    expect(w.done).toEqual({ [card.id]: true }); // the rest of the week is untouched
+    expect(saved('weeks/' + lastWeek())).toBeNull(); // the week on screen got no record from this
+  });
+
+  // Review fix: the loaded history is not kept current when syncing, so a copy of this week from it could drop another device's ticks.
+  it('reads this week’s saved document, not an older copy in the loaded history', () => {
+    const now = ymd(weekStartOf(new Date())); const card = BUILTIN.A.days[0].slots[1];
+    st().checkCard(card.id, true);
+    const older = { ...saved('weeks/' + now), done: {} }; // the history loaded before that tick
+    useAppStore.setState({ weekHist: { [now]: older }, weekStart: addDays(weekStartOf(new Date()), -7), week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } });
+    const prog = structuredClone(st().programs.A);
+    prog.days[0].slots.push({ id: 'A-new', sec: 'Regular', items: [{ ex: 'hack', ph: null, w: 100 }] });
+    st().saveProgram('A', prog);
+    const w = saved('weeks/' + now);
+    expect(w.ran.program.days[0].slots.map(s => s.id)).toContain('A-new');
+    expect(w.done).toEqual({ [card.id]: true });
+  });
+
+  it('this week without a record is left alone by an edit made from another week', () => {
+    const now = ymd(weekStartOf(new Date()));
+    mem['ironlog:weeks/' + now] = JSON.stringify({ prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} });
+    useAppStore.setState({ weekStart: addDays(weekStartOf(new Date()), -7), week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } });
+    const prog = structuredClone(st().programs.A); prog.days[0].slots = [];
+    st().saveProgram('A', prog);
+    expect(saved('weeks/' + now)).not.toHaveProperty('ran');
+  });
 });
 
 describe('choosing a past week’s program', () => {
