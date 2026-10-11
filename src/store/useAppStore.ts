@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { AppState, OrderNote, OrderState } from './types.ts';
 import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Stretch, Week } from '../types.ts';
-import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
+import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR, listBuiltinExercises, isOwnExercise } from '../lib/data.js';
 import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
@@ -64,10 +64,12 @@ const uid = (p: string) => p + Date.now().toString(36) + Math.random().toString(
 
 // What you set on an exercise (video link, equipment) applies everywhere it appears. cfg.ex keeps only
 // what differs from the built-in entry; clearing a built-in value stores '' (or false) so the merge hides it.
+// Your own exercise (synced, that includes one saved under a built-in id) keeps every value, so its cfg.ex entry never empties out.
 function setOverride(c: Cfg, exId: string, vals: Record<string, unknown>) {
+  const own = isOwnExercise(exId);
   const base: Record<string, any> = EX[exId] || {}; const o: Record<string, any> = { ...(c.ex[exId] || {}) };
-  Object.entries(vals).forEach(([k, v]) => { if (v && v !== base[k]) o[k] = v; else if (v) delete o[k]; else if (base[k]) o[k] = ''; else delete o[k]; });
-  if (!EX[exId] && !o.n) o.n = exId;
+  Object.entries(vals).forEach(([k, v]) => { if (v && (own || v !== base[k])) o[k] = v; else if (v) delete o[k]; else if (base[k]) o[k] = ''; else delete o[k]; });
+  if (own && !o.n) o.n = EX[exId]?.n || exId;
   if (Object.keys(o).length) c.ex[exId] = o; else delete c.ex[exId];
 }
 
@@ -482,7 +484,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().blocked()) return null;
     const url = d.url === undefined ? undefined : (d.url || '').trim();
     if (!isVideoUrl(url)) return VIDEO_ERR;
-    const custom = !EX[exId]; const name = d.name != null ? d.name.trim().replace(/\s+/g, ' ') : null;
+    const custom = isOwnExercise(exId); const name = d.name != null ? d.name.trim().replace(/\s+/g, ' ') : null;
     if (custom && name != null) {
       if (!name) return 'Give the exercise a name.';
       const other = findExId(get().cfg, name); if (other && other !== exId) return 'Another exercise already has that name.';
@@ -514,7 +516,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Only your own exercises, and only when nothing uses them, so no card or log ends up pointing at a missing name.
   deleteExercise(exId) {
     if (get().blocked()) return null;
-    if (EX[exId]) return 'Built-in exercises can’t be deleted.';
+    if (!isOwnExercise(exId)) return 'Built-in exercises can’t be deleted.';
     const u = usageOf(exId, get());
     const where = [u.programs.length && `in ${u.programs.map(k => progName(get().cfg, k)).join(' and ')}`, u.versions && 'in a saved version', u.experiments && 'on the Experiment board', u.logs && 'in your logs'].filter(Boolean);
     if (where.length) return `It is still used ${where.join(', ')}. Remove it there first.`;
@@ -1034,6 +1036,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       subscribeWeek();
       return;
     }
+    listBuiltinExercises(false); // synced: the library is the account's own exercises (ADR 024)
     set({ storeMode: 'db' });
     const markReady = (k: any) => (state: any) => ({ ready: { ...state.ready, [k]: true } });
     db.collection('programs').onSnapshot((s: any) => {

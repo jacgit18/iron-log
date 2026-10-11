@@ -2,7 +2,7 @@
    The workbook is a report, not a backup: it has every logged session, body weight and the main
    settings, but not weekly check-offs, edited programs, saved versions or phase defaults. This turns
    what it does have into the same shape as a parsed JSON data file, so the normal merge can add it. */
-import { EX, PHASES, PH_KEYS } from './data.js';
+import { EX, PHASES, PH_KEYS, builtinsAreListed } from './data.js';
 import { parseDate } from '../shared/dates.js';
 import { weekSlots, activeProgKey, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
 import { MUSCLES, MUSCLE_MAP } from './muscles.js';
@@ -64,9 +64,11 @@ function readSessions(X: XLSX, sessions: Rows, cfg: Cfg) {
   Object.entries(EX).forEach(([id, e]) => { byName[e.n] = id; });
   Object.entries(known).forEach(([id, e]) => { if (e && e.n && !byName[e.n]) byName[e.n] = id; });
   const newEx: Record<string, { n: string }> = {};
+  // Synced, a built-in the file uses becomes the account's own exercise, so it is in the library (ADR 024).
+  const adopt = (id: string) => { if (EX[id] && !known[id] && !newEx[id] && !builtinsAreListed()) newEx[id] = { n: EX[id].n }; return id; };
   const idFor = (name: string): string => {
-    if (byName[name]) return byName[name];
-    if (EX[name] || known[name]) return name; // exported with a missing name, the id was used instead
+    if (byName[name]) return adopt(byName[name]);
+    if (EX[name] || known[name]) return adopt(name); // exported with a missing name, the id was used instead
     const id = slugFor(name, { ...known, ...newEx }); newEx[id] = { n: name }; byName[name] = id; return id;
   };
 
@@ -75,7 +77,7 @@ function readSessions(X: XLSX, sessions: Rows, cfg: Cfg) {
     const [d0, wk0, name, phase, w, s, reps, hold, detail, , prim, sec, note, slot, exId] = r.map(v => (typeof v === 'string' ? v.trim() : v));
     const d = dateText(X, d0), wk = dateText(X, wk0);
     if (!DATE_RE.test(String(d)) || !name) { skipped++; continue; }
-    const id = exId ? String(exId) : idFor(String(name));
+    const id = exId ? adopt(String(exId)) : idFor(String(name));
     const e: LogEntry = { d: String(d), ph: phaseKey(phase), w: num(w), s: num(s) };
     if (num(hold) != null) e.sec = num(hold); else e.r = num(reps);
     const sets = parseSetDetail(detail); if (sets) e.sets = sets;

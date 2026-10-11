@@ -849,6 +849,23 @@ describe('exercise library', () => {
     expect(st().deleteExercise(id)).toBeNull();
     expect(st().cfg.ex[id]).toBeUndefined(); expect(st().cfg.rm[id]).toBeUndefined(); expect(st().cfg.muscleMap[id]).toBeUndefined();
   });
+  it('synced (ADR 024): an exercise you own under a built-in id keeps every value, can be renamed and deleted', async () => {
+    const { listBuiltinExercises, exInfo } = await import('../lib/data.js');
+    listBuiltinExercises(false);
+    try {
+      useAppStore.setState({ cfg: { ...structuredClone(DEFAULT_CFG), ex: { hack: { n: 'Hack Squat', eq: 'machine' } } }, programs: { A: BUILTIN.A, B: BUILTIN.B } });
+      st().saveExerciseDetails('hack', { eq: 'machine', url: '' }); // the built-in's value is kept, not pruned, so the entry never empties out
+      expect(st().cfg.ex.hack).toEqual({ n: 'Hack Squat', eq: 'machine' });
+      st().saveExerciseDetails('hack', { eq: '' }); // clearing still hides the built-in value under it
+      expect(exInfo(st().cfg, 'hack').eq).toBe('');
+      expect(st().saveExerciseDetails('hack', { name: 'Hack Squat, heels up' })).toBeNull();
+      expect(st().cfg.ex.hack.n).toBe('Hack Squat, heels up');
+      expect(st().deleteExercise('hack')).toMatch(/still used in Program A/); // still on cards, not refused as built-in
+      useAppStore.setState({ programs: { A: { ...BUILTIN.A, days: [] }, B: { ...BUILTIN.B, days: [] } } });
+      expect(st().deleteExercise('hack')).toBeNull();
+      expect(st().cfg.ex.hack).toBeUndefined();
+    } finally { listBuiltinExercises(true); }
+  });
   it('Undo brings a deleted exercise back with its 1RM and muscles, saved', () => {
     st().createLibraryExercise({ name: 'Throwaway', rm: '10', tags: { p: ['chest'], s: [] } });
     const id = Object.keys(st().cfg.ex)[0]; const before = structuredClone(st().cfg);
