@@ -174,6 +174,15 @@ describe('the add/edit exercise sheet', () => {
     expect(st().cfg.ex['sled-drag']).toEqual({ n: 'Sled Drag', url: 'https://example.com/v' });
     expect(day1()[6].items[0]).toEqual({ ex: 'sled-drag', ph: 'exp', w: null, bw: true });
   });
+  it('equipment picked for an existing exercise replaces its saved one everywhere', () => {
+    const orig = day1()[2];
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15, ne: 'dumbbell' }] }));
+    expect(st().cfg.ex.platerot).toMatchObject({ eq: 'dumbbell' });
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15, ne: 'plate' }] }));
+    expect(st().cfg.ex.platerot).toBeUndefined(); // back to the built-in value: no override kept
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15 }] }));
+    expect(st().cfg.ex.platerot).toBeUndefined(); // not offered: left alone
+  });
   it('says what’s missing instead of saving', () => {
     expect(st().saveSlot(newCard({ items: [{ ex: '' }] }))).toMatch(/Choose an exercise/);
     expect(st().saveSlot(newCard({ items: [{ ex: '__new', nn: 'X', nu: 'youtube.com/x' }] }))).toMatch(/https:\/\//);
