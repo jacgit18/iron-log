@@ -150,3 +150,17 @@ describe('creating a program', () => {
     expect(st().edKey()).toBe('A');
   });
 });
+
+describe('GitHub backup with no repository set (ADR 016 step 4: no personal default)', () => {
+  it('asks for a repository instead of sending anywhere', async () => {
+    const calls = []; const realFetch = globalThis.fetch; globalThis.fetch = async (...a) => { calls.push(a); throw new Error('no network in this test'); };
+    try {
+      useAppStore.setState({ ghToken: 'test-token' });
+      await st().backupDirect();
+      expect(st().backupMsg).toMatchObject({ kind: 'err', text: expect.stringMatching(/Set the backup repository/) });
+      await st().restoreFromGitHub();
+      expect(st().backupMsg).toMatchObject({ kind: 'err', text: expect.stringMatching(/Set the backup repository/) });
+      expect(calls).toHaveLength(0);
+    } finally { globalThis.fetch = realFetch; useAppStore.setState({ ghToken: '', backupMsg: null }); }
+  });
+});

@@ -246,6 +246,10 @@ export interface CoreSlice {
   slotById(id: string): FlatSlot | undefined;
   logTargetExists(slotId: string, idx: number): boolean;
   blocked(): boolean;
+  /** What "Original" means for A or B: the blank program when syncing (ADR 016 step 2, so the owner's plan is not offered to other accounts), the built-in plan otherwise. */
+  originalProgram(k: ProgKey): Program;
+  /** True when A or B is still the original, i.e. nothing of the person's own would be lost by replacing it. */
+  isOriginal(p: Program, k: ProgKey): boolean;
 
   setTab(tab: string): void;
   setMDay(d: number | null): void;
