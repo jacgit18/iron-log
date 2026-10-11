@@ -296,7 +296,6 @@ export interface CoreSlice {
   setExperiments(experiments: Experiment[]): void;
   saveExperiment(d: ExperimentForm): string | null;
   applyExerciseUrl(ex: string, raw: string | null | undefined): void;
-  applyExerciseEq(ex: string, eq: EquipmentKey | '' | null | undefined): void;
   createExercise(d: { nn: string } & ExerciseExtras): string;
   addExerciseToDay(col: number, d: ExperimentForm): string | null;
   saveExerciseDetails(exId: string, d: ExerciseDetailsForm): string | null;

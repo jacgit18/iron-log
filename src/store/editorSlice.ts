@@ -172,7 +172,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const items = d.items.map((it: any) => {
       let ex = it.ex;
       if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}) }; }
-      else { get().applyExerciseUrl(ex, it.nu); get().applyExerciseEq(ex, it.ne); }
+      else get().applyExerciseUrl(ex, it.nu);
       const o: ProgramItem = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
     });
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, newEx); });

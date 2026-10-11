@@ -429,7 +429,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
     if (!isVideoUrl(d.nu)) return VIDEO_ERR;
     const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
-    if (d.ex !== '__new') { get().applyExerciseUrl(ex, d.nu); get().applyExerciseEq(ex, d.ne); }
+    if (d.ex !== '__new') get().applyExerciseUrl(ex, d.nu);
     const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim().slice(0, 200) };
     const list = get().experiments;
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
@@ -441,12 +441,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const url = (raw || '').trim();
     if (url === (exInfo(get().cfg, ex).url || '')) return;
     get().mutateCfg(c => setOverride(c, ex, { url }));
-  },
-  // Equipment picked for an existing exercise replaces its saved one everywhere.
-  applyExerciseEq(ex, eq) {
-    if (eq == null) return; // not offered by this caller: leave the saved equipment alone
-    if (eq === (exInfo(get().cfg, ex).eq || '')) return;
-    get().mutateCfg(c => setOverride(c, ex, { eq }));
   },
   // A typed name that isn't in the catalog yet becomes a custom exercise (video link and equipment optional). Returns its id.
   createExercise(d) {
@@ -461,7 +455,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!isVideoUrl(d.nu)) return VIDEO_ERR;
     const pd = dayAt(get().week, col); if (pd == null) return 'That is your rest day.';
     const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
-    if (d.ex !== '__new') { get().applyExerciseUrl(ex, d.nu); get().applyExerciseEq(ex, d.ne); }
+    if (d.ex !== '__new') get().applyExerciseUrl(ex, d.nu);
     const note = (d.note || '').trim().slice(0, 200);
     const ph = d.ph || null; const exDef = (get().cfg.exPh || {})[ex]; const id = uid('X-');
     const ok = get().mutateWeek(w => {
