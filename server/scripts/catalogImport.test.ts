@@ -65,6 +65,15 @@ describe('mapFedb', () => {
     expect(skipped).toEqual(['A: duplicate id', 'bad id: "has space"', 'B: bad name', 'bad id: undefined']);
     expect(() => mapFedb({ exercises: [] })).toThrow(/array/);
   });
+
+  // Cards and log rows keep an id of at most 100 characters (src/shared/validate.ts); the longest id at the pinned commit is 58.
+  it('keeps a dataset id of up to 90 characters, so a c:fedb: id fits in 100, and skips a longer one', () => {
+    const long = 'a'.repeat(90);
+    const { rows, skipped } = mapFedb([ex(long), ex('b'.repeat(91))]);
+    expect(rows.map(r => r.id)).toEqual([`c:fedb:${long}`]);
+    expect(rows[0]!.id.length).toBeLessThanOrEqual(100);
+    expect(skipped).toEqual([`bad id: "${'b'.repeat(91)}"`]);
+  });
 });
 
 describe('importCatalog', () => {

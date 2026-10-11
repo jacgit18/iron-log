@@ -45,7 +45,8 @@ export const FEDB_EQUIPMENT: Record<string, EquipmentKey> = {
   cable: 'cable', barbell: 'barbell', bands: 'band', 'medicine ball': 'medball', 'exercise ball': 'other', 'e-z curl bar': 'ezbar',
 };
 
-const ID_PART = /^[A-Za-z0-9_-]{1,150}$/;
+// A catalog id is what cards and log rows store, and those allow 100 characters: `c:fedb:` plus at most 90.
+const ID_PART = /^[A-Za-z0-9_-]{1,90}$/;
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.map(str).filter((s): s is string => s !== null) : []);
 
