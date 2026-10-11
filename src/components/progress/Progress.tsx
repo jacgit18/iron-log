@@ -8,7 +8,7 @@ import { describe, lastLog, stallOf, backoffOf } from '../../lib/logic.js';
 import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
 import Trends from './Trends.jsx';
 import Muscles from '../muscles/Muscles.jsx';
-import LineChart from '../LineChart.jsx';
+import LineChart from '../LineChart.js';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 
 function History() {

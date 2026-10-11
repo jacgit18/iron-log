@@ -1,25 +1,25 @@
-import { StrictMode } from 'react';
+import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './fonts.js';
 import './styles.css';
-import App from './App.jsx';
-import Landing, { Splash } from './components/Landing.tsx';
-import { setAdmin } from './features.ts';
+import App from './App.js';
+import Landing, { Splash } from './components/Landing.js';
+import { setAdmin } from './features.js';
 import { applyAppearance } from './lib/appearance.js';
-import { decideGate, quickGate } from './lib/gate.ts';
+import { decideGate, quickGate } from './lib/gate.js';
 import { initPwa } from './lib/pwa.js';
 import { LS } from './lib/storage.js';
-import { apiSyncEnabled, FLAG_KEY } from './sync/flag.ts';
-import { createAccountClient } from './sync/account.ts';
-import { applyDevUserFromUrl, signIn as devHeaders } from './sync/devUser.ts';
+import { apiSyncEnabled, FLAG_KEY } from './sync/flag.js';
+import { createAccountClient } from './sync/account.js';
+import { applyDevUserFromUrl, signIn as devHeaders } from './sync/devUser.js';
 import { useAppStore } from './store/useAppStore.js';
 
 applyAppearance();
 initPwa();
 applyDevUserFromUrl(); // development only: ?devUser=off to be a stranger
 
-const root = createRoot(document.getElementById('root'));
-const show = node => root.render(<StrictMode>{node}</StrictMode>);
+const root = createRoot(document.getElementById('root')!);
+const show = (node: ReactNode) => root.render(<StrictMode>{node}</StrictMode>);
 // Start loading before the first render. Saved in this browser, the data is read right away, so the
 // first frame already shows it instead of a "Loading…" frame that the page then jumps away from.
 const openApp = () => { useAppStore.getState().init(); show(<App />); learnAdmin(); };

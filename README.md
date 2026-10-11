@@ -109,8 +109,8 @@ The Claude version can also back up to a private GitHub repo through the viewer'
 ```
 index.html                    page shell
 vite.config.js                build, PWA manifest and service worker settings
-src/main.jsx                  startup (fonts, appearance, PWA)
-src/App.jsx                   header, tabs, dialogs
+src/main.tsx                  startup (fonts, appearance, PWA)
+src/App.tsx                   header, tabs, dialogs
 src/styles.css                all styles (light and dark themes)
 src/lib/data.js               built-in programs, exercises, phases
 src/lib/logic.js              targets, stalls, progression, what counts as done

@@ -1,15 +1,20 @@
 import { PHASES, PH_KEYS } from '../lib/data.js';
 import { parseDate, fmtShort } from '../shared/dates.js';
+import type { LogEntry, PhaseKey } from '../types.ts';
+
+interface Point { x: number; y: number; d: string; ph: PhaseKey | '' }
+interface Series { k: string; pts: Point[] }
+interface Props { entries: Pick<LogEntry, 'd' | 'w' | 'ph'>[]; height?: number; label?: string; byPhase?: boolean }
 
 // Weight-over-time line(s). HTML labels over a stretched SVG path so text stays readable at any width.
 // With byPhase, each training phase gets its own line (phase hue + marker shape + legend).
-export default function LineChart({ entries, height = 180, label = 'Weight over time', byPhase = false }) {
-  const all = entries.filter(e => e.w != null && e.w !== '' && Number(e.w) > 0).map(e => ({ x: parseDate(e.d).getTime(), y: Number(e.w), d: e.d, ph: e.ph || '' }));
-  const groups = {}; all.forEach(p => { const k = byPhase ? p.ph : '_'; (groups[k] = groups[k] || []).push(p); });
+export default function LineChart({ entries, height = 180, label = 'Weight over time', byPhase = false }: Props) {
+  const all: Point[] = entries.filter(e => e.w != null && Number(e.w) > 0).map(e => ({ x: parseDate(e.d).getTime(), y: Number(e.w), d: e.d, ph: e.ph || '' }));
+  const groups: Record<string, Point[]> = {}; all.forEach(p => { const k = byPhase ? p.ph : '_'; (groups[k] = groups[k] || []).push(p); });
   const order = [...PH_KEYS, '', '_'];
   const series = Object.keys(groups).sort((a, b) => order.indexOf(a) - order.indexOf(b))
-    .map(k => { const byDay = {}; groups[k].forEach(p => { byDay[p.d] = p; }); return { k, pts: Object.keys(byDay).sort().map(d => byDay[d]) }; })
-    .filter(sr => sr.pts.length);
+    .map(k => { const byDay: Record<string, Point> = {}; groups[k].forEach(p => { byDay[p.d] = p; }); return { k, pts: Object.keys(byDay).sort().map(d => byDay[d]) }; })
+    .filter((sr: Series) => sr.pts.length);
   if (!series.some(sr => sr.pts.length >= 2)) return <p className="note">Log at least two sessions with a weight to see a trend.</p>;
 
   const multi = series.length > 1;
@@ -19,9 +24,9 @@ export default function LineChart({ entries, height = 180, label = 'Weight over 
   let y0 = Math.min(...ys), y1 = Math.max(...ys); const span = Math.max(y1 - y0, 5);
   const step = [1, 2.5, 5, 10, 20, 25, 50, 100, 200].find(s => span / s <= maxTicks - 1) || 250;
   y0 = Math.floor(y0 / step) * step; y1 = Math.ceil(y1 / step) * step; if (y1 === y0) y1 = y0 + step; if (y0 < 0) y0 = 0;
-  const px = x => (x - x0) / (x1 - x0) * 100, py = y => (1 - (y - y0) / (y1 - y0)) * 100;
-  const name = k => k === '_' ? '' : k ? PHASES[k].label : 'No phase';
-  const grid = []; for (let v = y0; v <= y1 + 1e-9; v += step) grid.push(v);
+  const px = (x: number) => (x - x0) / (x1 - x0) * 100, py = (y: number) => (1 - (y - y0) / (y1 - y0)) * 100;
+  const name = (k: string) => k === '_' ? '' : k ? PHASES[k as PhaseKey].label : 'No phase';
+  const grid: number[] = []; for (let v = y0; v <= y1 + 1e-9; v += step) grid.push(v);
   const aria = series.map(sr => `${multi ? name(sr.k) + ': ' : ''}${sr.pts.map(p => `${fmtShort(parseDate(p.d))} ${p.y} lb`).join(', ')}`).join('; ');
 
   return (
