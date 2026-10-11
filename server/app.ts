@@ -218,15 +218,15 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     res.json(await inUserTransaction(db!, userId, trx => syncPage(trx, userId, since, limit)));
   });
 
-  // The catalog to browse and add from (ADR 025). Admin-only until the `catalog` feature is released (src/features.ts). It changes only
-  // when the admin imports, so the browser may keep it an hour; the ETag Express adds makes a later check cheap.
+  // The catalog to browse and add from (ADR 025). Admin-only until the `catalog` feature is released (src/features.ts). The browser
+  // checks back every time, so rows from an import show at once; the ETag Express adds turns an unchanged list into a small 304.
   app.get('/api/catalog', requireAdmin, async (req, res) => {
     const kind = LISTED_KINDS.find(k => k === req.query.kind);
     if (!kind) {
       res.status(400).json({ ok: false, error: `kind must be one of ${LISTED_KINDS.join(', ')}` });
       return;
     }
-    res.set('Cache-Control', 'private, max-age=3600');
+    res.set('Cache-Control', 'private, no-cache');
     res.json({ ok: true, items: await listCatalog(db!, String(res.locals.userId), kind) });
   });
 

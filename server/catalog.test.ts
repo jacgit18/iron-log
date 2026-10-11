@@ -36,7 +36,7 @@ describe('GET /api/catalog', () => {
   it('lists the live rows of one kind in name order, without instructions', async () => {
     const res = await get(await start(), '?kind=exercise');
     expect(res.status).toBe(200);
-    expect(res.headers.get('cache-control')).toBe('private, max-age=3600');
+    expect(res.headers.get('cache-control')).toBe('private, no-cache');
     expect(await res.json()).toEqual({ ok: true, items: [
       { id: 'c:fedb:Bench', name: 'Bench Press', data: { eq: 'barbell' } },
       { id: 'c:fedb:Squat', name: 'squat', data: { eq: 'barbell' } },
