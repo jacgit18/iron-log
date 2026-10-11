@@ -5,7 +5,7 @@ import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
   BodyEntry, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, EquipmentKey, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
-  SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
+  ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
 
@@ -83,6 +83,8 @@ export type ExportKind = 'csv' | 'xlsx-all' | 'xlsx-week' | 'data';
 export interface Downloads { save(file: { filename: string; data: Loose }): Promise<unknown> }
 
 /* ---------- Slices ---------- */
+export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot }
+
 export interface EditorSlice {
   edProg: string | null; // 'A' | 'B' (in the rotation) or 'L:<id>' (a library program); null = the one on the board
   edDay: number;
@@ -99,7 +101,11 @@ export interface EditorSlice {
   moveEdSlot(i: number, dir: number): void;
   /** Drag and drop in the Program editor: move the open day's card at `from` so it sits at `to`. */
   reorderEdSlot(from: number, to: number): void;
+  /** The card the Program editor last removed, so its Undo notice can put it back where it was. */
+  edRemoved: EdRemoved | null;
   removeEdSlot(i: number): void;
+  undoRemoveEdSlot(): void;
+  dismissEdRemoved(): void;
   setDaySub(v: string): boolean;
   renameProgram(k: ProgKey, raw: string): false | void;
   renameLibItem(raw: string): false | void;

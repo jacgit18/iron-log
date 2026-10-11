@@ -44,8 +44,8 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const ak = get().activeProgKey();
     set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd } } });
   },
-  setEdProg: edProg => set({ edProg }),
-  setEdDay: edDay => set({ edDay }),
+  setEdProg: edProg => set({ edProg, edRemoved: null }),
+  setEdDay: edDay => set({ edDay, edRemoved: null }),
 
   saveEdited(prog) {
     const it = get().edItem();
@@ -62,7 +62,19 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   reorderEdSlot(from, to) {
     get().editProgram(prog => { const sl = prog.days[get().edDay - 1].slots; if (from === to || from < 0 || to < 0 || from >= sl.length || to >= sl.length) return; pinIds(prog, get().edDay); sl.splice(to, 0, ...sl.splice(from, 1)); });
   },
-  removeEdSlot(i) { get().editProgram(prog => { prog.days[get().edDay - 1].slots.splice(i, 1); }); },
+  edRemoved: null,
+  // Remove the open day's card at `i`, and keep it so the Removed notice's Undo can put it back in the same place.
+  removeEdSlot(i) {
+    const key = get().edKey(); const day = get().edDay;
+    const gone: ProgramSlot[] = [];
+    if (get().editProgram(prog => { gone.push(...prog.days[day - 1].slots.splice(i, 1)); }) && gone[0]) set({ edRemoved: { key, day, idx: i, slot: gone[0] } });
+  },
+  undoRemoveEdSlot() {
+    const r = get().edRemoved;
+    if (!r || r.key !== get().edKey() || r.day !== get().edDay) { set({ edRemoved: null }); return; }
+    if (get().editProgram(prog => { const sl = prog.days[r.day - 1].slots; sl.splice(Math.min(r.idx, sl.length), 0, r.slot); })) { set({ edRemoved: null }); flag('Put back'); }
+  },
+  dismissEdRemoved() { set({ edRemoved: null }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
 
   renameProgram(k, raw) {

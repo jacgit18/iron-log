@@ -73,6 +73,24 @@ describe('editing a program', () => {
     st().setDaySub(' ');
     expect(st().edProgram().days[0]).not.toHaveProperty('sub');
   });
+  it('puts a removed card back where it was, once', () => {
+    const before = structuredClone(day1());
+    st().removeEdSlot(2);
+    expect(st().edRemoved).toMatchObject({ day: 1, idx: 2, slot: before[2] });
+    st().undoRemoveEdSlot();
+    expect(day1()).toEqual(before);
+    expect(st().edRemoved).toBeNull();
+    st().undoRemoveEdSlot(); // a second Undo adds nothing
+    expect(day1()).toEqual(before);
+  });
+  it('drops the Undo when you switch day, so it never lands on another day', () => {
+    st().removeEdSlot(0);
+    st().setEdDay(2);
+    const d2 = structuredClone(st().edProgram().days[1].slots);
+    st().undoRemoveEdSlot();
+    expect(st().edProgram().days[1].slots).toEqual(d2);
+    expect(day1()).toHaveLength(BUILTIN.A.days[0].slots.length - 1);
+  });
   it('edits the day that is open', () => {
     st().setEdDay(3);
     st().removeEdSlot(0);
