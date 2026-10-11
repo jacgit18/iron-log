@@ -10,6 +10,8 @@ import {
 } from '../lib/logic.js';
 import { LS, makeSaveQueue } from '../lib/storage.js';
 import { FLAG_KEY, apiSyncEnabled } from '../sync/flag.js';
+import { mergeStretchWeek3, mergeWeek3 } from '../sync/merge.js';
+import { stable } from '../sync/canon.js';
 import type { ApiDb } from '../sync/apiDb.js';
 import { editorSlice } from './editorSlice.js';
 import { settingsSlice } from './settingsSlice.js';
@@ -106,7 +108,20 @@ const noteFor = (plan: any, week: Week, slots: FlatSlot[], wk: string, doneCol: 
   return { ...note, prev: { order: [...orderOf(week)], rest: restsOf(week) }, next: { order: plan.order, rest: plan.rest } };
 };
 const sameNote = (a: OrderNote, b: OrderNote) => sameState([a.kind, a.lines, a.next], [b.kind, b.lines, b.next]);
-const queue = makeSaveQueue({ getDb: () => db, onFlag: (t: string) => flag(t), onFailed: (paths: string[], refused: boolean) => useAppStore.setState(s => ({ unsaved: paths, refusals: s.refusals + (refused ? 1 : 0) })) });
+// A week save that synced merged in another device's changes (ADR 031): the board takes the merged week once nothing more of it is
+// waiting, and a save queued meanwhile (made from the week before the merge) gets the merge too, so it does not take them back out.
+const rebaseWeek = (path: string, sent: unknown, next: unknown, stored: unknown) =>
+  path.startsWith('weeks/') ? mergeWeek3(sent, next, stored).week : path.startsWith('stretchweeks/') ? mergeStretchWeek3(sent, next, stored).week : next;
+function takeStoredWeek(path: string, doc: unknown) {
+  const st = useAppStore.getState(); const wk = st.weekKey();
+  if (path === 'weeks/' + wk) { const week = normWeek(doc); if (stable(week) !== stable(normWeek(st.week))) useAppStore.setState({ week }); }
+  else if (path === 'stretchweeks/' + wk) { const strWeek = normStretchWeek(doc); if (stable(strWeek) !== stable(normStretchWeek(st.strWeek))) useAppStore.setState({ strWeek }); }
+}
+const queue = makeSaveQueue({
+  getDb: () => db, onFlag: (t: string) => flag(t),
+  onFailed: (paths: string[], refused: boolean) => useAppStore.setState(s => ({ unsaved: paths, refusals: s.refusals + (refused ? 1 : 0) })),
+  onStored: takeStoredWeek, rebase: rebaseWeek,
+});
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
 // "Saved" / "Loading…" never replaces a message you haven't had the chance to act on yet.

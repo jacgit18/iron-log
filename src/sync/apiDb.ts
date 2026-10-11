@@ -389,7 +389,9 @@ export function createApiDb(options: ApiDbOptions) {
     }
   }
 
-  function set(path: string, data: unknown): Promise<void> {
+  // Resolves with the document this device now holds for the path (a merge may have added another device's changes), or
+  // undefined when the write was only kept in the outbox because sending is paused.
+  function set(path: string, data: unknown): Promise<unknown> {
     if (!isSynced(path)) {
       const ok = isDeleted(data) ? (storage.remove(path), true) : storage.set(path, data);
       if (!ok) return Promise.reject(Object.assign(new Error('storage full'), { code: 'quota_exceeded' }));
@@ -399,14 +401,14 @@ export function createApiDb(options: ApiDbOptions) {
     const body = clone(data);
     outbox.put(path, body); // safe on this device before anyone is told "saved"
     announce();
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<unknown>((resolve, reject) => {
       let settled = false;
-      const accept = () => { if (!settled) { settled = true; pauseWaiters.delete(accept); resolve(); } };
+      const accept = (doc?: unknown) => { if (!settled) { settled = true; pauseWaiters.delete(accept); resolve(doc); } };
       const fail = (e: unknown) => { if (!settled) { settled = true; pauseWaiters.delete(accept); reject(e); } };
       // Already paused, or pausing while this waits its turn: it is safe in the outbox, so the app can carry on.
       if (state === 'paused') accept();
       else pauseWaiters.add(accept);
-      exclusive(() => flushPath(path, accept)).then(r => (r.refused ? fail(permanent(r.refused)) : accept()), fail);
+      exclusive(() => flushPath(path, accept)).then(r => (r.refused ? fail(permanent(r.refused)) : accept(isDeleted(body) ? undefined : clone(localDoc(path)))), fail);
     });
   }
 
