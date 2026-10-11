@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_CFG, ranFor, weekProgKey, weekProgram } from './logic.js';
 import { weekSummary } from './trends.js';
 import { normWeek } from '../shared/week.js';
+import { mergeWeek } from './export.js';
 
 // ADR 022: a week that is over is counted from its own record of what it ran, not from today's programs and mode.
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -66,5 +67,22 @@ describe('normWeek keeps a valid record and drops a bad one', () => {
     expect(normWeek({ ran: { prog: 'C', program: prog('A', ['a']) } })).not.toHaveProperty('ran');
     expect(normWeek({ ran: { prog: 'A', program: { days: 'no' } } })).not.toHaveProperty('ran');
     expect(normWeek({ ran: 'x' })).not.toHaveProperty('ran');
+  });
+});
+
+describe('merging a week keeps what it ran', () => {
+  const ran = (key, ids) => ({ prog: key, program: prog(key, ids) });
+
+  it('takes the other side’s record when this side has none', () => {
+    expect(mergeWeek({ done: { a: true } }, { done: { b: true }, ran: ran('B', ['a', 'b']) }).ran.prog).toBe('B');
+  });
+  it('keeps this side’s record, adding the other’s ticked cards when both ran the same program', () => {
+    const m = mergeWeek({ done: { a: true }, ran: ran('A', ['a']) }, { done: { 'b#0': true }, ran: ran('A', ['b', 'c']) });
+    expect(m.ran.program.days[0].slots.map(s => s.id)).toEqual(['a', 'b']); // c has nothing this week
+  });
+  it('keeps this side’s record alone when the other ran the other program', () => {
+    const m = mergeWeek({ done: { a: true }, ran: ran('A', ['a']) }, { done: { b: true }, ran: ran('B', ['b']) });
+    expect(m.ran).toMatchObject({ prog: 'A' });
+    expect(m.ran.program.days[0].slots.map(s => s.id)).toEqual(['a']);
   });
 });
