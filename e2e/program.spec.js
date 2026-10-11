@@ -2,7 +2,6 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
-const asAdmin = async page => { await page.evaluate(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); };
 const rows = page => page.locator('.edpanel:not(.lib) .edrow');
 const names = page => rows(page).locator('.edmain b').allTextContents();
 
@@ -18,14 +17,8 @@ async function drag(page, from, to, { release = true } = {}) {
   if (release) await page.mouse.up();
 }
 
-test('the drag handle is only shown to an admin', async ({ page }) => {
+test('you drag an exercise to a new place in the day, and it stays there after a reload', async ({ page }) => {
   await page.click('#tab-program');
-  await expect(rows(page).first()).toBeVisible();
-  await expect(page.locator('.draghandle')).toHaveCount(0);
-});
-
-test('an admin drags an exercise to a new place in the day, and it stays there after a reload', async ({ page }) => {
-  await asAdmin(page); await page.click('#tab-program');
   const before = await names(page);
   await drag(page, 0, 2);
   const want = [before[1], before[2], before[0], ...before.slice(3)];
@@ -38,7 +31,7 @@ test('an admin drags an exercise to a new place in the day, and it stays there a
 });
 
 test('Escape during a drag puts the exercise back', async ({ page }) => {
-  await asAdmin(page); await page.click('#tab-program');
+  await page.click('#tab-program');
   const before = await names(page);
   await drag(page, 0, 2, { release: false });
   await expect(rows(page).first()).toHaveClass(/dragging/);
@@ -49,7 +42,7 @@ test('Escape during a drag puts the exercise back', async ({ page }) => {
 });
 
 test('the program editor with drag handles has no accessibility violations', async ({ page }) => {
-  await asAdmin(page); await page.click('#tab-program');
+  await page.click('#tab-program');
   await expect(page.locator('.draghandle').first()).toBeVisible();
   const { violations } = await scan(page);
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);

@@ -13,7 +13,6 @@ import ExerciseLibrary from './ExerciseLibrary.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import SupplementLibrary from './SupplementLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
-import { useFeature } from '../../features.js';
 
 const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
 
@@ -108,7 +107,6 @@ function ProgramEditor() {
   }, [k]);
 
   const lib = !!item; const day = prog.days[edDay - 1];
-  const canDrag = useFeature('programDrag');
   const { drag, rowRef, handleProps } = useDragReorder(day.slots.length, st.reorderEdSlot);
   const custom = !lib && !st.isOriginal(prog as Program, k as ProgKey);
   const edName = lib ? item.name : progName(cfg, k);
@@ -154,7 +152,7 @@ function ProgramEditor() {
                   className={`edrow${drag?.from === i ? ' dragging' : drag ? ' shifting' : ''}`}
                   style={drag ? { transform: `translateY(${drag.from === i ? drag.dy : shiftOf(drag, i)}px)` } : undefined}
                 >
-                  {canDrag && <span className="draghandle" aria-hidden="true" title="Drag to reorder" {...handleProps(i)}>⠿</span>}
+                  <span className="draghandle" aria-hidden="true" title="Drag to reorder" {...handleProps(i)}>⠿</span>
                   <div className="edmain">
                     {tag && <span className="tag">{tag}</span>}
                     <b>{slotSummary(cfg, sl)}</b>
