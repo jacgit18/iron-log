@@ -279,6 +279,8 @@ export interface CoreSlice {
   removeDoc(path: string): void;
   mutateCfg(fn: (c: Cfg) => void): boolean;
   mutateWeek(fn: (w: Week) => void): boolean;
+  /** Rewrites this week's record of what it runs (ADR 022) from today's program, when the board shows this week and it has one. */
+  refreshRan(): void;
   mutateChecks(fn: (w: Week) => void, opts?: { removeLogged?: boolean; label?: string }): boolean;
 
   suggestOrder(slots: FlatSlot[], before: Week): void;

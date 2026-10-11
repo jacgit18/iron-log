@@ -66,3 +66,37 @@ describe('what a week ran, in the store', () => {
     expect(saved('weeks/' + key)).not.toHaveProperty('ran');
   });
 });
+
+describe('this week’s record follows its program until the week is over', () => {
+  const ids = () => saved('weeks/' + st().weekKey()).ran.program.days[0].slots.map(s => s.id);
+
+  it('a card added or removed after the last tick is in the record', () => {
+    const [a, b] = st().activeSlots().filter(s => s.day === 1 && s.sec !== 'Optional');
+    st().checkCard(a.id, true);
+    const prog = structuredClone(st().programs.A);
+    prog.days[0].slots = prog.days[0].slots.filter(s => s.id !== b.id);
+    prog.days[0].slots.push({ id: 'A-new', sec: 'Regular', items: [{ ex: 'hack', ph: null, w: 100 }] });
+    st().saveProgram('A', prog);
+    expect(ids()).toContain('A-new');
+    expect(ids()).not.toContain(b.id);
+    expect(ids()).toContain(a.id);
+  });
+
+  it('a mode change moves the record to the week’s new program', () => {
+    const even = (new Date().getMonth() + 1) % 2 === 0;
+    useAppStore.setState(s => ({ cfg: { ...s.cfg, m2Even: even ? 'B' : 'A' } })); // mode 2 gives this month B
+    st().checkCard(firstCard().id, true);
+    expect(saved('weeks/' + st().weekKey()).ran.prog).toBe('A');
+    st().setMode(2);
+    expect(saved('weeks/' + st().weekKey()).ran.prog).toBe('B');
+  });
+
+  it('a past week’s record is left alone by a program edit', () => {
+    useAppStore.setState({ weekStart: addDays(weekStartOf(new Date()), -7), week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } });
+    st().checkCard(firstCard().id, true);
+    const at = JSON.stringify(saved('weeks/' + lastWeek()));
+    const prog = structuredClone(st().programs.A); prog.days[0].slots = [];
+    st().saveProgram('A', prog);
+    expect(JSON.stringify(saved('weeks/' + lastWeek()))).toBe(at);
+  });
+});

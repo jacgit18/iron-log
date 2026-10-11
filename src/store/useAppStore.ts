@@ -313,6 +313,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const body = structuredClone(prog); delete body.key;
     set(state => ({ programs: { ...state.programs, [k]: { ...body, key: k as Program['key'] } } }));
     queue.save('programs/' + k, body);
+    get().refreshRan();
   },
   saveDoc: (path, data) => queue.save(path, data),
   removeDoc: path => queue.removeDoc(path),
@@ -327,6 +328,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Write down what the week runs (ADR 022), from the program it shows: so once it is over, later program changes leave it alone.
     week.ran = ranFor(weekProgram(get().cfg, get().programs, week, get().weekKey()), weekProgKey(get().cfg, week, get().weekKey()), week, get().weekKey());
     set({ week }); get().saveWeek(); return true;
+  },
+  // This week's record follows its program until the week is over (the board shows today's program all week), so a program edit, a
+  // mode change or loading the week rewrites it; else a card added or removed after the last tick would flip back once the week ends.
+  refreshRan() {
+    const s = get(); const key = s.weekKey();
+    if (!s.week.ran || key !== ymd(weekStartOf(new Date())) || !s.isReady()) return;
+    const ran = ranFor(weekProgram(s.cfg, s.programs, s.week, key), weekProgKey(s.cfg, s.week, key), s.week, key);
+    if (JSON.stringify(ran) === JSON.stringify(s.week.ran)) return;
+    set({ week: { ...s.week, ran } }); get().saveWeek();
   },
 
   // A change to check-offs from the board: exercises that became done log their planned numbers,
@@ -611,7 +621,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   // Choosing the program of a week that is over takes today's version of it: its old record is for the other one.
   setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { w.prog = k === auto ? null : k; delete w.ran; })) set({ orderNote: null }); },
-  setMode(mode) { get().mutateCfg(c => { c.mode = mode; }); },
+  setMode(mode) { if (get().mutateCfg(c => { c.mode = mode; })) get().refreshRan(); },
 
   moveSlot(slotId, day) {
     const s = get().slotById(slotId); if (!s) return;
@@ -1120,6 +1130,7 @@ function subscribeWeek() {
   if (!db) {
     const ready = useAppStore.getState().storeMode === 'local';
     useAppStore.setState(state => ({ week: normWeek(LS.get('weeks/' + key)), mDay: ready ? loadedMDay(state) : state.mDay, ready: { ...state.ready, week: ready } }));
+    useAppStore.getState().refreshRan();
     return;
   }
   useAppStore.setState(state => ({ week: normWeek(null), ready: { ...state.ready, week: false } }));
@@ -1128,6 +1139,7 @@ function subscribeWeek() {
     if (key !== useAppStore.getState().weekKey() || queue.pending('weeks/' + key)) return;
     const week = normWeek(s.exists ? s.data() : null);
     useAppStore.setState(state => ({ week, mDay: first ? loadedMDay(state) : state.mDay, ready: { ...state.ready, week: true } }));
+    if (first) useAppStore.getState().refreshRan();
     first = false;
   }, () => flag('Couldn’t load this week. Reload the page.'));
 }
