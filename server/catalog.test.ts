@@ -53,9 +53,9 @@ describe('GET /api/catalog', () => {
     expect(again.status).toBe(304);
   });
 
-  it('is for admins only while the feature is admin-only, and needs a sign-in', async () => {
+  it('is for every signed-in account (released 2026-10-11), and needs a sign-in', async () => {
     const base = await start();
-    expect((await get(base, '?kind=exercise', 'guest')).status).toBe(403);
+    expect((await get(base, '?kind=exercise', 'guest')).status).toBe(200);
     expect((await fetch(`${base}/api/catalog?kind=exercise`)).status).toBe(401);
   });
 

@@ -14,7 +14,9 @@ export default function ExerciseLibrary() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs);
   const { openModal } = useAppStore.getState();
-  const catalog = useFeature('catalog');
+  // The catalog is on the server (ADR 025): local mode, with no account, has none.
+  const syncing = useAppStore(s => s.sync !== null);
+  const catalog = useFeature('catalog') && syncing;
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
   const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)

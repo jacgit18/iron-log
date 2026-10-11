@@ -4,7 +4,7 @@ import { toNodeHandler } from 'better-auth/node';
 import compression from 'compression';
 import express from 'express';
 import { sql, type Kysely, type Transaction } from 'kysely';
-import { requireAdmin, type Admins } from './admin.ts';
+import type { Admins } from './admin.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import { bodyLimit } from './bodyLimit.ts';
@@ -218,9 +218,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     res.json(await inUserTransaction(db!, userId, trx => syncPage(trx, userId, since, limit)));
   });
 
-  // The catalog to browse and add from (ADR 025). Admin-only until the `catalog` feature is released (src/features.ts). The browser
-  // checks back every time, so rows from an import show at once; the ETag Express adds turns an unchanged list into a small 304.
-  app.get('/api/catalog', requireAdmin, async (req, res) => {
+  // The catalog to browse and add from (ADR 025), for every signed-in account. The browser checks back every time, so rows from an
+  // import show at once; the ETag Express adds turns an unchanged list into a small 304.
+  app.get('/api/catalog', async (req, res) => {
     const kind = LISTED_KINDS.find(k => k === req.query.kind);
     if (!kind) {
       res.status(400).json({ ok: false, error: `kind must be one of ${LISTED_KINDS.join(', ')}` });

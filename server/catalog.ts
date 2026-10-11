@@ -3,7 +3,7 @@ import type { CatalogData, CatalogKind } from '../src/types.ts';
 import { inUserTransaction } from './auth.ts';
 import type { DB } from './db/types.ts';
 
-// GET /api/catalog?kind=exercise|stretch (ADR 025): the whole list of one kind, live rows only, in name order, for browsing and adding.
+// GET /api/catalog?kind=exercise|stretch (ADR 025), for every signed-in account: the whole list of one kind, live rows only, in name order, for browsing and adding.
 // Read through the API role, so row-level security applies (signed-in accounts read). Not part of the sync: no seq, no tombstones; an
 // account that adds an item stores its own snapshot (ADR 026). Instructions are left out to keep the list small. Supplements are
 // searched and paged instead (ADR 029), so they are not served here.

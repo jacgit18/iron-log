@@ -11,7 +11,7 @@ const PAGE = 50;
 const nameKey = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
 
 // Browse the shared exercise catalog and add an exercise to your library (ADR 025, 026). It needs a connection; what you add is copied
-// into your own data, so the board and logs never need the catalog again. Admin-only until the `catalog` feature is released.
+// into your own data, so the board and logs never need the catalog again.
 export default function CatalogSheet() {
   const cfg = useAppStore(s => s.cfg);
   const { addCatalogExercise, closeModal } = useAppStore.getState();
