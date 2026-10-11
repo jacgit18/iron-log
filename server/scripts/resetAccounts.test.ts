@@ -70,13 +70,23 @@ describe('resetAccounts', () => {
     expect(await live('programs', other)).toEqual([]);
     expect(await live('library_items', other)).toEqual([]);
     expect((await live('list_items', other)).map(r => r.list).sort()).toEqual(['experiment', 'stretch_experiment', 'supplement_item']);
-    expect(await configOf(other)).toEqual({ mode: 2, rest: 90 });
+    expect(await configOf(other)).toEqual({ mode: 2, rest: 90, muscleMap: { squat: {} } }); // squat is in its history, so its tags stay; 'mine' is not
     expect(await live('log_entries', other)).toHaveLength(1);
     expect(await live('body_entries', other)).toHaveLength(1);
     // Soft deletes with a new version and seq, so phones pull them like any delete.
     const gone = await db.selectFrom('library_items').selectAll().where('user_id', '=', other).executeTakeFirstOrThrow();
     expect(gone).toMatchObject({ version: 2 });
     expect(Number(gone.seq)).toBeGreaterThan(9);
+  });
+
+  it('keeps the name of a custom exercise the account\u2019s history still uses, and only that', async () => {
+    await seed(ADMIN);
+    const other = await seed('dev:tester');
+    await db.updateTable('config').set({ data: JSON.stringify({ mode: 2, ex: { 'sled-drag': { n: 'Sled Drag', eq: 'sled' }, mine: { n: 'Mine' }, squat: { url: 'https://x.y' } }, muscleMap: { 'sled-drag': { p: ['quads'] }, mine: {} } }) as never }).where('user_id', '=', other).execute();
+    await db.insertInto('log_entries').values({ user_id: other, seq: 1, client_id: 'e2', exercise_id: 'sled-drag', d: '2026-10-08' }).execute();
+    await db.insertInto('weeks').values({ user_id: other, seq: 1, week_start: '2026-10-04', data: JSON.stringify({ extra: [{ id: 'X-1', day: 1, ex: 'squat' }] }) }).execute();
+    await run();
+    expect(await configOf(other)).toEqual({ mode: 2, ex: { 'sled-drag': { n: 'Sled Drag', eq: 'sled' }, squat: { url: 'https://x.y' } }, muscleMap: { 'sled-drag': { p: ['quads'] } } });
   });
 
   it('writes nothing on a dry run', async () => {

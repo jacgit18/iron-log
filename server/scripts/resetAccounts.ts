@@ -13,7 +13,8 @@ import { normStretchItem } from '../../src/shared/listItems.ts';
 //
 //   Everyone else: their programs A/B, the Program library (library_items), the stretch list (list 'stretch') and what they set
 //   on exercises in the Exercise library (config `ex` and `muscleMap`, plus `progNames` and `phDef`, which belong to the programs)
-//   are deleted. Deletes are the normal soft delete (deleted_at, version + 1, a new seq), so phones pull them like a delete made on
+//   are deleted. An exercise their history still points at (a log entry, an experiment or a week's extra card) keeps its `ex` and
+//   `muscleMap` entry: `ex` is the only place a custom exercise's name lives, so dropping it would show the slug in their history. Deletes are the normal soft delete (deleted_at, version + 1, a new seq), so phones pull them like a delete made on
 //   another phone. Log entries, weeks, body weights, stretch weeks, supplements, experiments and other settings stay.
 //
 // Without `apply` nothing is written; the result says what would be. The built-in plan and the default stretches are app code (src/lib),
@@ -93,12 +94,27 @@ async function softDelete(trx: Transaction<DB>, table: 'programs' | 'library_ite
   return rows.length;
 }
 
+// Exercise ids this account's kept data points at: its log entries, its experiments and the extra cards on its weeks.
+async function usedExercises(trx: Transaction<DB>, userId: string): Promise<Set<string>> {
+  const rows = (await sql<{ ex: string | null }>`
+    select exercise_id as ex from log_entries where user_id = ${userId} and deleted_at is null
+    union select data->>'ex' from list_items where user_id = ${userId} and list = 'experiment' and deleted_at is null
+    union select x->>'ex' from weeks w, jsonb_array_elements(case when jsonb_typeof(w.data->'extra') = 'array' then w.data->'extra' else '[]'::jsonb end) x
+      where w.user_id = ${userId} and w.deleted_at is null`.execute(trx)).rows;
+  return new Set(rows.map(r => r.ex).filter((x): x is string => !!x));
+}
+const pick = (o: unknown, keep: Set<string>) => (o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => keep.has(k))) : {});
+
 async function clearConfig(trx: Transaction<DB>, userId: string, apply: boolean) {
   const row = await trx.selectFrom('config').selectAll().where('user_id', '=', userId).where('deleted_at', 'is', null).executeTakeFirst();
   const data = (row?.data ?? {}) as Record<string, unknown>;
   if (!row || !CLEARED_CONFIG_KEYS.some(k => k in data)) return 0;
   if (apply) {
-    const next = Object.fromEntries(Object.entries(data).filter(([k]) => !(CLEARED_CONFIG_KEYS as readonly string[]).includes(k)));
+    const used = await usedExercises(trx, userId);
+    const next: Record<string, unknown> = Object.fromEntries(Object.entries(data).filter(([k]) => !(CLEARED_CONFIG_KEYS as readonly string[]).includes(k)));
+    const ex = pick(data.ex, used); const muscleMap = pick(data.muscleMap, used);
+    if (Object.keys(ex).length) next.ex = ex;
+    if (Object.keys(muscleMap).length) next.muscleMap = muscleMap;
     const seq = await nextSeq(trx, userId);
     await trx.updateTable('config').set({ data: next as never, version: row.version + 1, seq, updated_at: sql`now()` }).where('id', '=', row.id).execute();
   }
