@@ -63,11 +63,12 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     get().editProgram(prog => { const sl = prog.days[get().edDay - 1].slots; if (from === to || from < 0 || to < 0 || from >= sl.length || to >= sl.length) return; pinIds(prog, get().edDay); sl.splice(to, 0, ...sl.splice(from, 1)); });
   },
   edRemoved: null,
-  // Remove the open day's card at `i`, and keep it so the Removed notice's Undo can put it back in the same place.
+  // Remove the open day's card at `i`, and keep it so the Removed notice's Undo can put it back in the same place. Ids are written down
+  // first, as for a reorder: the cards after it keep their own ticks and phase defaults, and the removed card comes back with its own id.
   removeEdSlot(i) {
     const key = get().edKey(); const day = get().edDay;
     const gone: ProgramSlot[] = [];
-    if (get().editProgram(prog => { gone.push(...prog.days[day - 1].slots.splice(i, 1)); }) && gone[0]) set({ edRemoved: { key, day, idx: i, slot: gone[0] } });
+    if (get().editProgram(prog => { pinIds(prog, day); gone.push(...prog.days[day - 1].slots.splice(i, 1)); }) && gone[0]) set({ edRemoved: { key, day, idx: i, slot: gone[0] } });
   },
   undoRemoveEdSlot() {
     const r = get().edRemoved;

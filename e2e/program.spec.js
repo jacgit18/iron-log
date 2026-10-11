@@ -79,3 +79,15 @@ test('moving away from an armed Remove leaves the exercise alone', async ({ page
   await expect(page.locator('.edrow.removing')).toHaveCount(0);
   expect(await names(page)).toEqual(before);
 });
+
+test('the Removed notice belongs to that visit: leave the Program tab and it is gone, with focus left alone', async ({ page }) => {
+  await page.click('#tab-program');
+  const before = await names(page);
+  const rm = rows(page).first().getByRole('button', { name: `Remove ${before[0]}` });
+  await rm.click(); await rm.click();
+  await expect(page.locator('.removednote')).toBeVisible();
+  await page.click('#tab-board');
+  await page.click('#tab-program');
+  await expect(page.locator('.removednote')).toHaveCount(0);
+  await expect(page.locator('#tab-program')).toBeFocused();
+});

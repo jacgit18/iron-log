@@ -114,9 +114,12 @@ function ProgramEditor() {
   const [arming, setArming] = useState<number | null>(null);
   const removed = useAppStore(s => s.edRemoved);
   const showRemoved = removed && removed.key === k && removed.day === edDay ? removed : null;
-  // The pressed Remove button is gone with its row, so put focus on Undo.
+  // The pressed Remove button is gone with its row, so put focus on Undo: only right after a Remove, not when the tab opens again.
   const undoRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => { if (removed) undoRef.current?.focus(); }, [removed]);
+  const justRemoved = useRef(false);
+  useEffect(() => { if (removed && justRemoved.current) { justRemoved.current = false; undoRef.current?.focus(); } }, [removed]);
+  // The Undo belongs to this visit to the editor: leaving the Program tab drops it.
+  useEffect(() => () => { useAppStore.getState().dismissEdRemoved(); }, []);
   const addBtn = <button type="button" className="btn primary" onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: null }); }}>+ Add exercise</button>;
 
   return (
@@ -180,7 +183,7 @@ function ProgramEditor() {
                     <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}>↑</button>
                     <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}>↓</button>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
-                    <ArmedButton className={`btn sm ${arming === i ? 'danger' : 'ghost'}`} id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? i : null)} onConfirm={() => { setArming(null); st.removeEdSlot(i); }} />
+                    <ArmedButton className={`btn sm ${arming === i ? 'danger' : 'ghost'}`} id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? i : null)} onConfirm={() => { setArming(null); justRemoved.current = true; st.removeEdSlot(i); }} />
                   </div>
                 </div>
               </Fragment>

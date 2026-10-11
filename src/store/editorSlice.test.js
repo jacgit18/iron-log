@@ -83,6 +83,23 @@ describe('editing a program', () => {
     st().undoRemoveEdSlot(); // a second Undo adds nothing
     expect(day1()).toEqual(before);
   });
+  // Cards saved without an id (older saved programs) are named by their position, so these use a Day 1 with no ids.
+  const idless = () => { const p = structuredClone(BUILTIN.A); p.days[0].slots.forEach(sl => { delete sl.id; }); useAppStore.setState(x => ({ programs: { ...x.programs, A: p } })); };
+  it('remove, then a move, then Undo: every card keeps its own id, none shared', () => {
+    idless(); const before = day1().map((s, i) => s.id || `A-d1s${i + 1}`); // what each card is called now: its position
+    st().removeEdSlot(1);
+    st().moveEdSlot(0, 1);
+    st().undoRemoveEdSlot();
+    const after = day1().map(s => s.id);
+    expect(new Set(after).size).toBe(after.length);
+    expect(after.slice().sort()).toEqual(before.slice().sort());
+    expect(after[1]).toBe(before[1]); // the card came back where it was, with its own id
+  });
+  it('the cards after a removed one keep their ids, so their ticks and phase defaults stay with them', () => {
+    idless(); const before = day1().map((s, i) => s.id || `A-d1s${i + 1}`); // what each card is called now: its position
+    st().removeEdSlot(0);
+    expect(day1().map(s => s.id)).toEqual(before.slice(1));
+  });
   it('drops the Undo when you switch day, so it never lands on another day', () => {
     st().removeEdSlot(0);
     st().setEdDay(2);
