@@ -99,6 +99,8 @@ export interface EditorSlice {
   editProgram(fn: (prog: Program) => void): boolean;
   setLibrary(library: LibraryItem[]): void;
   moveEdSlot(i: number, dir: number): void;
+  /** Drag and drop in the Program editor: move the open day's card at `from` so it sits at `to`. */
+  reorderEdSlot(from: number, to: number): void;
   removeEdSlot(i: number): void;
   setDaySub(v: string): boolean;
   renameProgram(k: ProgKey, raw: string): false | void;

@@ -4,14 +4,19 @@ import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types
 import type { ExerciseInfo, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
-export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home'];
+export const SECTIONS = ['Optional', 'Regular', 'Supersets', 'Plyometric', 'Home']; // Optional and Home cards don't count toward finishing a day (countsForFinish)
 const newId = (): string => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+// A slot saved without an id takes one from its position when the board reads it (`slotsFor` in lib/data.ts), and phase
+// defaults and the week's ticks are keyed by that id. Write it down before a reorder, so they stay with the card that moved.
+const pinIds = (prog: Program, day: number) => {
+  if (prog.key === 'A' || prog.key === 'B') prog.days[day - 1].slots.forEach((sl, si) => { sl.id ||= `${prog.key}-d${day}s${si + 1}`; });
+};
 export const blankItem = (): { ex: string; ph: PhaseChoice; w: number | null; bw: boolean; rx: string; note: string } => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
 
 // A new card goes after the last card in the same section; a new section goes before Home (Home goes last).
 export function insertSlot(target: ProgramSlot[], slot: ProgramSlot) {
   let at = -1; target.forEach((x, j) => { if (x.sec === slot.sec) at = j; });
-  if (at < 0) at = slot.sec === 'Home' ? target.length - 1 : target.findIndex(x => x.sec === 'Home') - 1;
+  if (at < 0) at = slot.sec === 'Optional' ? -1 : slot.sec === 'Home' ? target.length - 1 : target.findIndex(x => x.sec === 'Home') - 1; // a new Optional section goes first, like the sled
   if (at < -1) at = target.length - 1;
   target.splice(at + 1, 0, slot);
 }
@@ -52,7 +57,10 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   setLibrary(library) { set({ library }); get().saveLibrary(); },
 
   moveEdSlot(i, dir) {
-    get().editProgram(prog => { const sl = prog.days[get().edDay - 1].slots; const j = i + dir; if (j < 0 || j >= sl.length) return; [sl[i], sl[j]] = [sl[j], sl[i]]; });
+    get().editProgram(prog => { const sl = prog.days[get().edDay - 1].slots; const j = i + dir; if (j < 0 || j >= sl.length) return; pinIds(prog, get().edDay); [sl[i], sl[j]] = [sl[j], sl[i]]; });
+  },
+  reorderEdSlot(from, to) {
+    get().editProgram(prog => { const sl = prog.days[get().edDay - 1].slots; if (from === to || from < 0 || to < 0 || from >= sl.length || to >= sl.length) return; pinIds(prog, get().edDay); sl.splice(to, 0, ...sl.splice(from, 1)); });
   },
   removeEdSlot(i) { get().editProgram(prog => { prog.days[get().edDay - 1].slots.splice(i, 1); }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
