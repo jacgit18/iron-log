@@ -82,6 +82,33 @@ describe('editing a program', () => {
 });
 
 describe('the add/edit exercise sheet', () => {
+  it('adds one card to each ticked day, each with its own id, and nothing else moves', () => {
+    const before = st().edProgram().days.map(d => ids(d.slots));
+    expect(st().saveSlot(newCard({ days: [5, 1, 3, 3] }))).toBeNull();
+    const after = st().edProgram().days;
+    const added = [1, 3, 5].map(n => after[n - 1].slots.filter(s => !before[n - 1].includes(s.id)));
+    added.forEach(a => { expect(a).toHaveLength(1); expect(a[0]).toMatchObject({ sec: 'Regular', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] }); });
+    expect(new Set(added.map(a => a[0].id)).size).toBe(3);
+    [2, 4, 6, 7].forEach(n => expect(ids(after[n - 1].slots)).toEqual(before[n - 1]));
+    [1, 3, 5].forEach(n => expect(ids(after[n - 1].slots).filter(id => before[n - 1].includes(id))).toEqual(before[n - 1]));
+  });
+  it('asks for a day when none is ticked, and ignores the days list when editing a card', () => {
+    expect(st().saveSlot(newCard({ days: [] }))).toBe('Pick at least one day.');
+    const first = day1()[1];
+    expect(st().saveSlot({ ...newCard({ days: [2, 3] }), id: first.id, idx: 1, sec: first.sec })).toBeNull();
+    expect(day1()[1].id).toBe(first.id);
+    expect(st().edProgram().days[1].slots.some(s => s.id === first.id)).toBe(false);
+  });
+  it('offers Optional as a section, and a new Optional section goes first', async () => {
+    const { SECTIONS } = await import('./editorSlice.js');
+    expect(SECTIONS).toContain('Optional');
+    st().setEdDay(2); // drop the day's Optional cards first, so the section is new
+    const sec = () => st().edProgram().days[1].slots.map(s => s.sec);
+    while (sec().includes('Optional')) st().removeEdSlot(sec().indexOf('Optional'));
+    expect(st().saveSlot(newCard({ day: 2, sec: 'Optional' }))).toBeNull();
+    expect(sec()[0]).toBe('Optional');
+    expect(st().edProgram().days[1].slots[0].items[0].ex).toBe('arnold');
+  });
   it('adds a card after the last one in its section, and a new section before Home', () => {
     expect(st().saveSlot(newCard())).toBeNull();
     expect(day1()[6]).toMatchObject({ sec: 'Regular', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] });
@@ -230,6 +257,13 @@ describe('a new card’s start week', () => {
     expect(tally(slots, st().week)).toEqual(before);
     expect(leftovers(st().week, slots, col).some(s => s.id === added().id)).toBe(false);
     expect(weekSlots(st().edProgram(), st().week, nextWeek()).some(s => s.id === added().id)).toBe(true);
+  });
+  it('adding to several days gives each copy its own start week', () => {
+    onBoard(2); finish(1);
+    expect(st().saveSlot(newCard({ days: [1, 2] }))).toBeNull();
+    const on = d => st().edProgram().days[d - 1].slots.find(s => s.items[0].ex === 'arnold');
+    expect(on(1).from).toBe(nextWeek());
+    expect(on(2).from).toBe(thisWeek());
   });
   it('an edited card keeps its start week', () => {
     onBoard(1); finish(1); st().saveSlot(newCard({ day: 1 }));

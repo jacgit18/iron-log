@@ -26,6 +26,8 @@ export interface SlotFormItem extends ExerciseChoice, ExerciseExtras { ph: Phase
 export interface SlotForm {
   id: string | null; sec: string; tier: string; type: SlotType; note: string; day: number; idx: number | null;
   target?: { key: string; day: number } | null; items: SlotFormItem[];
+  /** Adding only: put a copy of the new card on each of these days (each copy gets its own id). Overrides `day`. */
+  days?: number[];
 }
 export interface StretchForm { id?: string; n: string; url?: string; note?: string; group?: string; tier?: string }
 export interface StretchExpForm { id?: string; n: string; url?: string; note?: string }

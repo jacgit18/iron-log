@@ -1,11 +1,11 @@
 import { BUILTIN, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
-import { progName, dayAt, colOf, currentLayout, isFinished } from '../lib/logic.js';
+import { progName, dayAt, DAYS, colOf, currentLayout, isFinished } from '../lib/logic.js';
 import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
 import type { ExerciseInfo, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
-export const SECTIONS = ['Regular', 'Supersets', 'Plyometric', 'Home'];
+export const SECTIONS = ['Optional', 'Regular', 'Supersets', 'Plyometric', 'Home']; // Optional and Home cards don't count toward finishing a day (countsForFinish)
 const newId = (): string => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 // A slot saved without an id takes one from its position when the board reads it (`slotsFor` in lib/data.ts), and phase
 // defaults and the week's ticks are keyed by that id. Write it down before a reorder, so they stay with the card that moved.
@@ -17,7 +17,7 @@ export const blankItem = (): { ex: string; ph: PhaseChoice; w: number | null; bw
 // A new card goes after the last card in the same section; a new section goes before Home (Home goes last).
 export function insertSlot(target: ProgramSlot[], slot: ProgramSlot) {
   let at = -1; target.forEach((x, j) => { if (x.sec === slot.sec) at = j; });
-  if (at < 0) at = slot.sec === 'Home' ? target.length - 1 : target.findIndex(x => x.sec === 'Home') - 1;
+  if (at < 0) at = slot.sec === 'Optional' ? -1 : slot.sec === 'Home' ? target.length - 1 : target.findIndex(x => x.sec === 'Home') - 1; // a new Optional section goes first, like the sled
   if (at < -1) at = target.length - 1;
   target.splice(at + 1, 0, slot);
 }
@@ -148,7 +148,10 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     });
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, newEx); });
     const k = d.target ? d.target.key : get().edKey(); const edDay = d.target ? d.target.day : get().edDay;
-    const slot: ProgramSlot = { id: d.id || `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, sec: d.sec, items };
+    const days = d.idx == null && d.days ? [...new Set(d.days)].filter(x => DAYS.includes(x)).sort((a, b) => a - b) : [d.day];
+    if (!days.length) return 'Pick at least one day.';
+    const newSlotId = (n: number) => `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}${days.length > 1 ? n : ''}`;
+    const slot: ProgramSlot = { id: d.id || newSlotId(0), sec: d.sec, items };
     if (d.tier) slot.tier = d.tier; if (d.type !== 'single') slot.type = d.type; if (d.note) slot.note = d.note;
     const orig = d.idx != null ? get().edProgram().days[edDay - 1].slots[d.idx] : null;
     // A new card starts this week, or next week when its day is already finished on this week's board, so adding it
@@ -160,17 +163,18 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
       return done ? ymd(addDays(now, 7)) : wk;
     };
     if (orig) { if (orig.from) slot.from = orig.from; }
-    else slot.from = startOf(d.day);
+    else slot.from = startOf(days[0]);
     const apply = (prog: Program) => {
+      if (days.length > 1) { days.forEach((day, n) => insertSlot(prog.days[day - 1].slots, { ...structuredClone(slot), id: n ? newSlotId(n) : slot.id, from: startOf(day) })); return; }
       if (d.idx != null) prog.days[edDay - 1].slots.splice(d.idx, 1);
-      const target = prog.days[d.day - 1].slots;
-      if (orig && d.day === edDay && orig.sec === slot.sec) target.splice(d.idx as number, 0, slot);
+      const target = prog.days[days[0] - 1].slots;
+      if (orig && days[0] === edDay && orig.sec === slot.sec) target.splice(d.idx as number, 0, slot);
       else insertSlot(target, slot);
     };
     if (d.target) { const prog = structuredClone(get().programs[k]); apply(prog); get().saveProgram(k, prog); } // from the board
     else get().editProgram(apply);
     get().closeModal();
-    flag(d.day === edDay ? 'Saved' : `Saved to Day ${d.day}`);
+    flag(days.length > 1 ? `Saved to Days ${days.join(', ')}` : days[0] === edDay ? 'Saved' : `Saved to Day ${days[0]}`);
     return null;
   },
 });
