@@ -302,7 +302,8 @@ function RmPanel() {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs); const programs = useAppStore(s => s.programs);
   const st = useAppStore.getState();
   const all = [...slotsFor(programs.A), ...slotsFor(programs.B)];
-  const weighted = allExIds(cfg).filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
+  // Program ids too: synced, a card can use an exercise that isn't in the account's library (ADR 024).
+  const weighted = [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
   return (
     <section className="panel wide">
       <h2>1-rep maxes</h2>
