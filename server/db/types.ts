@@ -41,6 +41,19 @@ export interface BodyEntries {
   wk: string;
 }
 
+export interface CatalogItems {
+  brand: string | null;
+  data: Generated<Json>;
+  id: string;
+  imported_at: Generated<Timestamp>;
+  kind: string;
+  license: string;
+  name: string;
+  retired_at: Timestamp | null;
+  source: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Config {
   client_updated_at: Timestamp | null;
   created_at: Generated<Timestamp>;
@@ -198,6 +211,7 @@ export interface Weeks {
 
 export interface DB {
   body_entries: BodyEntries;
+  catalog_items: CatalogItems;
   config: Config;
   library_items: LibraryItems;
   list_items: ListItems;

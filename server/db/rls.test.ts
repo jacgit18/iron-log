@@ -173,6 +173,41 @@ describe('refusals', () => {
   });
 });
 
+// The catalog (ADR 025): no user_id, read by every signed-in account, written only by the owner (the importer).
+describe('catalog', () => {
+  beforeEach(async () => {
+    await owner.deleteFrom('catalog_items').execute();
+    await owner.insertInto('catalog_items').values([
+      { id: 'c:fedb:Barbell_Squat', kind: 'exercise', source: 'fedb', license: 'Unlicense', name: 'Barbell Squat', data: '{"equipment":"barbell"}' },
+      { id: 'c:dsld:1', kind: 'supplement', source: 'dsld', license: 'US government data', name: 'Creatine', brand: 'Acme', retired_at: '2026-10-01T00:00:00Z' },
+    ]).execute();
+  });
+
+  it('every signed-in account reads every row, retired ones too (search leaves those out, not the database)', async () => {
+    for (const id of [A, B]) expect(await asUser(id, trx => count(trx as never, 'catalog_items'))).toBe(2);
+  });
+
+  it('with nobody signed in, nothing is visible', async () => {
+    expect(await count(app, 'catalog_items')).toBe(0);
+  });
+
+  it('the API role cannot add, change or delete a row, even signed in', async () => {
+    expect(await refusal(asUser(A, trx => sql`insert into catalog_items (id, kind, source, license, name) values ('c:fedb:x', 'exercise', 'fedb', 'Unlicense', 'X')`.execute(trx)))).toMatch(/permission denied/);
+    expect(await refusal(asUser(A, trx => sql`update catalog_items set name = 'Hacked'`.execute(trx)))).toMatch(/permission denied/);
+    expect(await refusal(asUser(A, trx => sql`delete from catalog_items`.execute(trx)))).toMatch(/permission denied/);
+    expect((await owner.selectFrom('catalog_items').select('name').where('id', '=', 'c:fedb:Barbell_Squat').executeTakeFirstOrThrow()).name).toBe('Barbell Squat');
+  });
+
+  it('ids must be c:<source>:<dataset id>, and kind one of the three lists', async () => {
+    const add = (id: string, source: string, kind = 'exercise') => refusal(sql`insert into catalog_items (id, kind, source, license, name) values (${id}, ${kind}, ${source}, 'Unlicense', 'X')`.execute(owner));
+    expect(await add('squat', 'fedb')).toMatch(/check constraint/);
+    expect(await add('c:dsld:1x', 'fedb')).toMatch(/check constraint/);
+    expect(await add('c:fedb:', 'fedb')).toMatch(/check constraint/);
+    expect(await add('c:fedb:Lunge', 'fedb', 'cardio')).toMatch(/check constraint/);
+    expect(await add('c:fedb:Lunge', 'fedb')).toBe('');
+  });
+});
+
 // A table added in a later migration must be covered. This is what stops one being forgotten.
 describe('every table is covered (a forgotten table fails here)', () => {
   it('each table in public has row-level security on, and the API role has no delete, truncate or history access', async () => {
