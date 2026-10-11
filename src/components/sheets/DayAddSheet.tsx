@@ -10,7 +10,7 @@ import ExerciseField from '../ExerciseField.jsx';
 export default function DayAddSheet({ col }: { col: number }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
-  const [d, setD] = useState<{ name: string; nu: string; ne: EquipmentKey | ''; ph: PhaseChoice; note: string }>({ name: '', nu: '', ne: '', ph: 'strength', note: '' });
+  const [d, setD] = useState<{ name: string; nu: string; ne?: EquipmentKey | ''; ph: PhaseChoice; note: string }>({ name: '', nu: '', ph: 'strength', note: '' });
   const [err, setErr] = useState('');
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   const submit = (e: FormEvent) => { e.preventDefault(); const msg = st.addExerciseToDay(col, { ...exerciseChoice(cfg, d.name), nu: d.nu.trim(), ne: d.ne, ph: d.ph, note: d.note }); if (msg) setErr(msg); };

@@ -54,7 +54,7 @@ export default function SlotSheet({ idx, col, target }: { idx: number | null; co
   const setItem = (k: number, patch: Partial<ItemState>) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const clean = { ...d, days: manyDays ? d.days : undefined, note: d.note.trim(), items: d.items.map((it) => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: (it.ne || '') as EquipmentKey | '' })) };
+    const clean = { ...d, days: manyDays ? d.days : undefined, note: d.note.trim(), items: d.items.map((it) => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne })) };
     const msg = st.saveSlot(clean);
     if (msg) setErr(msg);
   };
