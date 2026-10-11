@@ -1,9 +1,9 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { BUILTIN, EX, allExIds, exInfo, findExId, exerciseChoice, newExId, listBuiltinExercises, isOwnExercise } from './data.js';
+import { BUILTIN, EX, allExIds, exInfo, findExId, exerciseChoice, newExId, listBuiltinExercises, isOwnExercise, isCatalogId } from './data.js';
 import { buildCsv } from './export.js';
 import { parseCsvExport } from './excelImport.js';
 import { DEFAULT_CFG } from './logic.js';
-import { libraryRows, filterRows } from './exerciseLibrary.js';
+import { libraryRows, filterRows, hasTwoSources } from './exerciseLibrary.js';
 
 // Synced, the library is the account's own exercises only (ADR 024); in local storage the built-ins stay listed.
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
@@ -24,6 +24,21 @@ describe('synced exercise library (ADR 024)', () => {
     expect(rows.every(r => r.custom)).toBe(true);
     expect(filterRows(rows, { src: 'custom' })).toHaveLength(2);
     expect(isOwnExercise('hack')).toBe(true);
+  });
+  it('a catalog item (c: id) is Library, synced or not; with your own beside it the Source filter has both kinds', () => {
+    const c = cfg({ ex: { 'c:fedb:Barbell_Squat': { n: 'Barbell Squat', eq: 'barbell' }, 'my-lift': { n: 'My Lift' } } });
+    for (const on of [false, true]) {
+      listBuiltinExercises(on);
+      expect(isCatalogId('c:fedb:Barbell_Squat')).toBe(true);
+      expect(isOwnExercise('c:fedb:Barbell_Squat')).toBe(false);
+      const rows = libraryRows(c, state).filter(r => ['c:fedb:Barbell_Squat', 'my-lift'].includes(r.id));
+      expect(rows.map(r => [r.id, r.custom])).toEqual([['c:fedb:Barbell_Squat', false], ['my-lift', true]]);
+    }
+    listBuiltinExercises(false);
+    expect(hasTwoSources(libraryRows(c, state))).toBe(true);
+    expect(filterRows(libraryRows(c, state), { src: 'library' }).map(r => r.id)).toEqual(['c:fedb:Barbell_Squat']);
+    expect(findExId(c, 'barbell squat')).toBe('c:fedb:Barbell_Squat'); // typing its name picks it, no Custom duplicate
+    expect(isCatalogId(newExId(c, 'c: fedb'))).toBe(false); // a custom id is a slug, never c:
   });
   it("a typed built-in name is new to the library, and takes the built-in's id so history under that id stays one exercise", () => {
     listBuiltinExercises(false);

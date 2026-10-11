@@ -240,6 +240,9 @@ export interface CatalogData {
   instructions?: string[];
 }
 
+/** A catalog row as GET /api/catalog lists it (no instructions). */
+export interface CatalogItem { id: string; name: string; data: CatalogData }
+
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */
 export interface Experiment { id: string; ex: string; ph: PhaseKey | null; note: string }

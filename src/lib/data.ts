@@ -284,8 +284,11 @@ let builtinsListed = true;
 export function listBuiltinExercises(on: boolean) { builtinsListed = on; }
 export const builtinsAreListed = () => builtinsListed;
 export const allExIds = (cfg: ProgramCfg) => [...new Set([...(builtinsListed ? Object.keys(EX) : []), ...Object.keys(cfg.ex || {})])];
-// Created by this account, not a built-in: synced, every exercise in the catalog is.
-export const isOwnExercise = (id: string) => !builtinsListed || !EX[id];
+// An item added from the shared catalog (ADR 026): its id is `c:<source>:<dataset id>`, which no custom id can be (newExId makes slugs).
+// cfg.ex holds its snapshot, so the board and logs work offline; it stays a Library item whatever the account changes on it.
+export const isCatalogId = (id: string) => id.startsWith('c:');
+// Created by this account, not a built-in or a catalog item: synced, every other exercise in the library is.
+export const isOwnExercise = (id: string) => !isCatalogId(id) && (!builtinsListed || !EX[id]);
 
 // A new custom exercise's id from its name, unique among the built-ins and cfg.ex (`taken` adds ids being created now).
 export function newExId(cfg: ProgramCfg, name: string, taken: Record<string, { n?: string }> = {}): string {

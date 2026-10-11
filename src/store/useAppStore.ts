@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { AppState, OrderNote, OrderState } from './types.ts';
 import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Stretch, Week } from '../types.ts';
-import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR, listBuiltinExercises, isOwnExercise } from '../lib/data.js';
+import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, EQUIPMENT, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR, listBuiltinExercises, isOwnExercise, isCatalogId } from '../lib/data.js';
 import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, weekProgKey, weekProgram, ranFor, isFrozen, programFor, phaseOf, lastLog, describe,
@@ -550,10 +550,29 @@ export const useAppStore = create<AppState>((set, get) => ({
     const id = get().createExercise({ nn });
     return get().saveExerciseDetails(id, { ...d, name: nn });
   },
-  // Only your own exercises, and only when nothing uses them, so no card or log ends up pointing at a missing name.
+  // A catalog exercise joins the library as a snapshot (ADR 026): its name, equipment and muscles are copied into this account's config
+  // under the catalog id, so the board and logs never need the catalog again. It stays a Library item.
+  addCatalogExercise(item) {
+    if (get().blocked()) return null;
+    const { id } = item; const name = item.name.trim().replace(/\s+/g, ' ');
+    if (!isCatalogId(id) || id.length > 100 || !name) return 'That catalog item can’t be added.';
+    const cfg = get().cfg;
+    if (cfg.ex[id]) return 'Already in your library.';
+    if (findExId(cfg, name)) return `You already have an exercise called ${name}.`;
+    const eq = item.data.eq && EQUIPMENT[item.data.eq] ? item.data.eq : undefined;
+    const t = item.data.muscles || {};
+    const tags = { ...(t.p?.length ? { p: t.p } : {}), ...(t.s?.length ? { s: t.s } : {}), ...(t.mob ? { mob: true as const } : {}) };
+    if (!get().mutateCfg(c => {
+      c.ex[id] = { n: name, ...(eq ? { eq } : {}) };
+      if (Object.keys(tags).length) c.muscleMap = { ...(c.muscleMap || {}), [id]: tags };
+    })) return null;
+    flag(`Added ${name}`); return null;
+  },
+  // Your own exercises and catalog ones, and only when nothing uses them, so no card or log ends up pointing at a missing name.
+  // Removing a catalog exercise takes it out of this library only; the catalog keeps it.
   deleteExercise(exId) {
     if (get().blocked()) return null;
-    if (!isOwnExercise(exId)) return 'Built-in exercises can’t be deleted.';
+    if (!isOwnExercise(exId) && !isCatalogId(exId)) return 'Built-in exercises can’t be deleted.';
     const u = usageOf(exId, get());
     const where = [u.programs.length && `in ${u.programs.map(k => progName(get().cfg, k)).join(' and ')}`, u.versions && 'in a saved version', u.experiments && 'on the Experiment board', u.logs && 'in your logs'].filter(Boolean);
     if (where.length) return `It is still used ${where.join(', ')}. Remove it there first.`;
