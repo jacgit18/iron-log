@@ -125,6 +125,26 @@ describe('workbook round trip', () => {
     expect(viaResave.weeks['2030-01-06'].restOn).toBe('2030-01-08');
   });
 
+  // ADR 022: a finished week keeps what it ran, so the workbook carries that record like the JSON file does.
+  const ranWeeks = () => {
+    const program = structuredClone(S.programs.B); program.days[0].title = 'Ran this'; program.days[0].slots = program.days[0].slots.slice(0, 1); program.warm = 'Bike 5 min';
+    return { ...raw.weeks, '2026-09-20': { ...raw.weeks['2026-09-20'], ran: { prog: 'B', program } } };
+  };
+  it('keeps what a week ran through the JSON file, the workbook and an Excel re-save', async () => {
+    const viaJson = parseDataFile(JSON.stringify(buildDataFile(S, ranWeeks())));
+    const wb = buildOverallWorkbook(X, S, ranWeeks());
+    const viaXlsx = await parseExcelExport(bytes(wb), DEFAULT_CFG);
+    const viaResave = await parseExcelExport(bytes(X.read(bytes(wb), { type: 'array' })), DEFAULT_CFG);
+    const ran = viaJson.weeks['2026-09-20'].ran;
+    expect(ran.prog).toBe('B');
+    expect(ran.program.days[0].title).toBe('Ran this');
+    // The sled migration flags aren't in the workbook (as for programs A and B); a record is shown as it is, never migrated.
+    const noFlags = r => { const p = { ...r.program }; delete p.sledAdded; delete p.sledTop; return prune({ ...r, program: p }); };
+    for (const d of [viaXlsx, viaResave]) expect(noFlags(d.weeks['2026-09-20'].ran)).toEqual(noFlags(ran));
+    expect(viaXlsx.weeks['2026-09-13']).not.toHaveProperty('ran');
+    expect(prune(viaXlsx.programs)).toEqual(prune(viaJson.programs));
+  });
+
   it('ignores a rest date that has no rest day', async () => {
     const weeks = { '2030-01-06': { done: { x: true }, restOn: '2030-01-08' } };
     expect(parseDataFile(JSON.stringify(buildDataFile(S, weeks))).weeks['2030-01-06']).not.toHaveProperty('restOn');
