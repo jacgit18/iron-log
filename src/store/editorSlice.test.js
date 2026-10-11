@@ -82,6 +82,27 @@ describe('editing a program', () => {
 });
 
 describe('the add/edit exercise sheet', () => {
+  it('adds one card to each ticked day, each with its own id, and nothing else moves', () => {
+    const before = st().edProgram().days.map(d => ids(d.slots));
+    expect(st().saveSlot(newCard({ days: [5, 1, 3, 3] }))).toBeNull();
+    const after = st().edProgram().days;
+    const added = [1, 3, 5].map(n => after[n - 1].slots.filter(s => !before[n - 1].includes(s.id)));
+    added.forEach(a => { expect(a).toHaveLength(1); expect(a[0]).toMatchObject({ sec: 'Regular', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] }); });
+    expect(new Set(added.map(a => a[0].id)).size).toBe(3);
+    [2, 4, 6, 7].forEach(n => expect(ids(after[n - 1].slots)).toEqual(before[n - 1]));
+    [1, 3, 5].forEach(n => expect(ids(after[n - 1].slots).filter(id => before[n - 1].includes(id))).toEqual(before[n - 1]));
+  });
+  it('asks for a day when none is ticked, and ignores the days list when editing a card', () => {
+    expect(st().saveSlot(newCard({ days: [] }))).toBe('Pick at least one day.');
+    const cfgBefore = structuredClone(st().cfg); const progBefore = structuredClone(st().programs);
+    expect(st().saveSlot(newCard({ days: [], items: [{ ex: '__new', nn: 'Farmer Carry Test', nu: 'https://youtu.be/abc', ph: 'strength', w: null }] }))).toBe('Pick at least one day.');
+    expect(st().cfg).toEqual(cfgBefore);
+    expect(st().programs).toEqual(progBefore);
+    const first = day1()[1];
+    expect(st().saveSlot({ ...newCard({ days: [2, 3] }), id: first.id, idx: 1, sec: first.sec })).toBeNull();
+    expect(day1()[1].id).toBe(first.id);
+    expect(st().edProgram().days[1].slots.some(s => s.id === first.id)).toBe(false);
+  });
   it('offers Optional as a section, and a new Optional section goes first', async () => {
     const { SECTIONS } = await import('./editorSlice.js');
     expect(SECTIONS).toContain('Optional');

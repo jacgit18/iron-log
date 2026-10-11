@@ -10,7 +10,7 @@ import ExerciseField from '../ExerciseField.jsx';
 
 // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
 type ItemState = { ex: string; ph: PhaseChoice; w: string | number | null; bw: boolean; rx: string; note: string; nm: string; nu?: string; ne?: EquipmentKey | '' };
-type SlotState = { id: string | null; sec: string; tier: string; type: SlotType; note: string; day: number; idx: number | null; target?: { key: string; day: number } | null; items: ItemState[] };
+type SlotState = { id: string | null; sec: string; tier: string; type: SlotType; note: string; day: number; days: number[]; idx: number | null; target?: { key: string; day: number } | null; items: ItemState[] };
 
 function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; type: SlotType; cfg: Cfg; onChange: (k: number, patch: Partial<ItemState>) => void }) {
   const up = (patch: Partial<ItemState>) => onChange(k, patch);
@@ -45,15 +45,16 @@ export default function SlotSheet({ idx, col, target }: { idx: number | null; co
   const [d, setD] = useState<SlotState>(() => {
     const src: any = idx == null ? { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' } : structuredClone(st.edProgram().days[edDay - 1].slots[idx]); // a new card or a clone of the one being edited
     // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
-    return { ...src, type: src.type || 'single', day: edDay, idx, target, note: src.note || '', tier: src.tier || '', items: src.items.map((it: any) => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
+    return { ...src, type: src.type || 'single', day: edDay, days: [edDay], idx, target, note: src.note || '', tier: src.tier || '', items: src.items.map((it: any) => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
   });
   const [err, setErr] = useState('');
+  const manyDays = idx == null && col == null; // adding from the Program tab: tick every day it goes on
 
   const setType = (type: SlotType) => setD(x => { const want = type === 'single' ? 1 : 2; const items = x.items.slice(0, want); while (items.length < want) items.push({ ...blankItem(), w: '', nm: '' }); return { ...x, type, items }; });
   const setItem = (k: number, patch: Partial<ItemState>) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const clean = { ...d, note: d.note.trim(), items: d.items.map((it) => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: (it.ne || '') as EquipmentKey | '' })) };
+    const clean = { ...d, days: manyDays ? d.days : undefined, note: d.note.trim(), items: d.items.map((it) => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: (it.ne || '') as EquipmentKey | '' })) };
     const msg = st.saveSlot(clean);
     if (msg) setErr(msg);
   };
@@ -77,7 +78,17 @@ export default function SlotSheet({ idx, col, target }: { idx: number | null; co
             <option value="">None</option><option value="Primary">Primary</option><option value="Accessory">Accessory</option>
           </select>
         </label>
-        {col == null ? (
+        {manyDays ? (
+          <fieldset className="plain daypick">
+            <legend>Days</legend>
+            <div className="daychecks">
+              {DAYS.map(x => (
+                <label key={x} className="inline"><input type="checkbox" id={`slot-day-${x}`} checked={d.days.includes(x)}
+                  onChange={e => setD(s => ({ ...s, days: e.target.checked ? [...s.days, x] : s.days.filter(y => y !== x) }))} /> Day {x}</label>
+              ))}
+            </div>
+          </fieldset>
+        ) : col == null ? (
           <label className="field">Day
             <select value={d.day} onChange={e => setD((x) => ({ ...x, day: Number(e.target.value) }))}>
               {DAYS.map(x => <option key={x} value={x}>Day {x}</option>)}
