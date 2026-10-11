@@ -225,6 +225,21 @@ export type MuscleKey = 'traps' | 'frontdelt' | 'sidedelt' | 'reardelt' | 'chest
 /** What an exercise trains: primary (p) and secondary (s) muscles, or `mob` for mobility work that is not counted. */
 export interface MuscleTags { p?: MuscleKey[]; s?: MuscleKey[]; mob?: true }
 
+/* ---------- Catalog (ADR 025, 026, 028) ---------- */
+export type CatalogKind = 'exercise' | 'stretch' | 'supplement';
+/** A catalog row's `data`: the fields the app shows, already mapped to the app's names by `catalog:import`. */
+export interface CatalogData {
+  /** null: the dataset gives none (shown blank, not Other). */
+  eq?: EquipmentKey | null;
+  muscles?: MuscleTags;
+  level?: string;
+  force?: string | null;
+  mechanic?: string | null;
+  /** The dataset's own category (free-exercise-db: strength, stretching, cardio, ...). */
+  category?: string;
+  instructions?: string[];
+}
+
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */
 export interface Experiment { id: string; ex: string; ph: PhaseKey | null; note: string }
