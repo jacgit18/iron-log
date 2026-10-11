@@ -3,8 +3,7 @@
    settings, but not weekly check-offs, edited programs, saved versions or phase defaults. This turns
    what it does have into the same shape as a parsed JSON data file, so the normal merge can add it. */
 import { EX, PHASES, PH_KEYS, builtinsAreListed } from './data.js';
-import { parseDate } from '../shared/dates.js';
-import { weekSlots, activeProgKey, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
+import { weekSlots, weekProgram, normWeek, setItemDone, AUTO_NOTE } from './logic.js';
 import { MUSCLES, MUSCLE_MAP } from './muscles.js';
 import { WEEK_RE, entryWeek } from './trends.js';
 import { loadXLSX, normalizeData } from './export.js';
@@ -210,7 +209,7 @@ export function checkOffsFromLogs(cfg: Cfg, programs: Record<string, Program>, l
     if (!e.slot) return;
     const k = entryWeek(e); if (!WEEK_RE.test(k)) return;
     const w = out[k] || (out[k] = normWeek({ prog: weeks[k] && weeks[k].prog }));
-    const prog = programs[activeProgKey(cfg, w, parseDate(k))] || programs.A;
+    const prog = weekProgram(cfg, programs, { ...(weeks[k] || {}), prog: w.prog }, k);
     const s = weekSlots(prog, weeks[k] || {}).find(x => x.id === e.slot);
     const i = s ? s.items.findIndex(it => it.ex === ex) : -1;
     if (i >= 0) setItemDone(w, s!, i, true);

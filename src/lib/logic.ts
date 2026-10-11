@@ -3,7 +3,7 @@ import { nowStamp } from '../shared/validate.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
 import { normExperimentItem } from '../shared/listItems.js';
 import { isOrder, normWeek } from '../shared/week.js';
-import type { Cfg, CardItem, Experiment, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week } from '../types.ts';
+import type { Cfg, CardItem, Experiment, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week, WeekRan } from '../types.ts';
 
 export { isOrder, normWeek };
 
@@ -24,6 +24,26 @@ export function programFor(cfg: Cfg, date: Date): ProgKey {
 }
 export const progName = (cfg: Cfg, k: string) => (cfg.progNames && cfg.progNames[k]) || `Program ${k}`;
 export function activeProgKey(cfg: Cfg, week: WeekIn, weekStart: Date): ProgKey { return (cfg.mode === 2 && (week.prog === 'A' || week.prog === 'B')) ? week.prog : programFor(cfg, weekStart); }
+
+/* ---------- What a week ran (ADR 022) ----------
+   Every save of a week writes down the program it used and that program's cards (week.ran). A week before this one that has
+   that record is shown and counted from it; this week and later ones, and older weeks saved before the record existed, use
+   today's programs and mode. So loading or editing a program, or changing the mode, never rewrites a week that is over. */
+export const isFrozen = (w: WeekIn | null | undefined, key: string, now: Date): w is WeekIn & { ran: WeekRan } => !!(w && w.ran) && key < ymd(weekStartOf(now));
+export const weekProgKey = (cfg: Cfg, w: WeekIn, key: string, now = new Date()): ProgKey => (isFrozen(w, key, now) ? w.ran.prog : activeProgKey(cfg, w, parseDate(key)));
+export const weekProgram = (cfg: Cfg, programs: Record<string, Program>, w: WeekIn, key: string, now = new Date()): Program =>
+  isFrozen(w, key, now) ? w.ran.program : programs[weekProgKey(cfg, w, key, now)] || programs.A;
+// Whether week `w` has a tick, skip or move on card `s` (a tick is stored under the card's id, or "<id>#<item>").
+export const touched = (s: { id: string }, w: WeekIn) => !!((w.skipped && w.skipped[s.id]) || (w.moved && w.moved[s.id]) || Object.keys(w.done || {}).some(k => k === s.id || k.startsWith(s.id + '#')));
+// The record for week `key` that runs `prog` (key `pk`): its cards that have started by then, each with its id written down. A card an
+// earlier record had that this week ticked, skipped or moved stays in it after it leaves the program, so the week still counts it.
+export function ranFor(prog: Program, pk: ProgKey, w: WeekIn, key: string): WeekRan {
+  const days = prog.days.map((d, di) => ({ ...d, slots: d.slots.map((s, si) => ({ ...s, id: s.id || `${pk}-d${di + 1}s${si + 1}` })).filter(s => !s.from || s.from <= key) }));
+  const ids = new Set(days.flatMap(d => d.slots.map(s => s.id)));
+  if (w.ran && w.ran.prog === pk) w.ran.program.days.forEach((d, di) => d.slots.forEach(s => { if (!ids.has(s.id) && touched(s, w) && days[di]) days[di].slots.push(s); }));
+  const program: Program = { ...structuredClone({ ...prog, days }), key: pk };
+  return { prog: pk, program };
+}
 
 /* ---------- Small helpers ---------- */
 // Phases whose sets are held for time (seconds) rather than counted in reps.

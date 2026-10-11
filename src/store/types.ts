@@ -258,11 +258,15 @@ export interface CoreSlice {
   stretchWeekKeys(): Promise<string[]>;
   fullSnapshot(): Promise<Snapshot>;
   loadHistory(): Promise<void>;
+  /** Gives each past week saved before ADR 022 its record of what it ran, from what it shows now (once). */
+  recordPastWeeks(): void;
   allWeeks(): Promise<Record<string, Week>>;
   isReady(): boolean;
   weekKey(): string;
   activeProgKey(): ProgKey;
   activeProgram(): Program;
+  /** Whether the board shows a finished week from its record of what it ran (ADR 022), not from today's program. */
+  shownFromRecord(): boolean;
   activeSlots(): FlatSlot[];
   slotById(id: string): FlatSlot | undefined;
   logTargetExists(slotId: string, idx: number): boolean;
@@ -288,6 +292,8 @@ export interface CoreSlice {
   removeDoc(path: string): void;
   mutateCfg(fn: (c: Cfg) => void): boolean;
   mutateWeek(fn: (w: Week) => void): boolean;
+  /** Rewrites this week's record of what it runs (ADR 022) from today's program, when the board shows this week and it has one. */
+  refreshRan(): void;
   mutateChecks(fn: (w: Week) => void, opts?: { removeLogged?: boolean; label?: string }): boolean;
 
   suggestOrder(slots: FlatSlot[], before: Week): void;

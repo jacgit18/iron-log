@@ -56,7 +56,8 @@ export default function Board() {
   const sinceBackup = daysSince(st.lastBackup());
 
   const progKey = st.activeProgKey();
-  const prog = programs[progKey] || programs.A;
+  const prog = st.activeProgram(); // a week that is over shows what it ran (ADR 022)
+  const fromRecord = st.shownFromRecord();
   const slots = weekSlots(prog, week, st.weekKey());
   const cols = currentLayout(week, slots);
   const rest = restsOf(week);
@@ -164,7 +165,7 @@ export default function Board() {
         </div>
       </div>
 
-      {!programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
+      {!fromRecord && !programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
       {canBackup && anyLogs && !snoozeBackup && (sinceBackup == null || sinceBackup >= 7) && (
         <div className="notice tip">
           <span>{sinceBackup == null ? 'Your training data hasn’t been backed up to GitHub yet.' : `Last GitHub backup was ${sinceBackup} days ago.`}</span>
@@ -310,7 +311,7 @@ export default function Board() {
               </div>
               <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /> Rest day</label>
               <div className="addrow">
-                <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>
+                {!fromRecord && <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>}
                 <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>
               </div>
               {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}

@@ -1,4 +1,5 @@
 import { PH_KEYS, DAY_COUNT } from '../lib/data.js';
+import { normProgram } from './validate.js';
 import type { ExtraCard, Week } from '../types.ts';
 
 /* ---------- Week shape: the week's check-offs, moves, phase picks and extra cards ----------
@@ -30,6 +31,8 @@ export const normWeek = (w?: any): Week => {
   if (rest.length) out.rest = rest;
   if (isOrder(w && w.order) && w.order.some((v: number, i: number) => v !== i + 1)) out.order = [...w.order];
   if (out.rest && typeof (w && w.restOn) === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.restOn)) out.restOn = w.restOn;
+  // What the week ran (ADR 022): kept only with a valid program key and a program of the right shape, cleaned like any program.
+  if (w && w.ran && (w.ran.prog === 'A' || w.ran.prog === 'B')) { const program = normProgram(w.ran.program, w.ran.prog); if (program) out.ran = { prog: w.ran.prog, program: { ...program, key: w.ran.prog } }; }
   if (Array.isArray(w && w.extra)) { const seen = new Set(); const ex = w.extra.filter((x: unknown) => isExtra(x) && !seen.has(x.id) && seen.add(x.id)).map((x: ExtraCard) => ({ id: x.id, day: x.day, ex: x.ex, ph: x.ph ?? null, note: (x.note || '').slice(0, 200), ...(x.add ? { add: true } : {}) })); if (ex.length) out.extra = ex; }
   return out;
 };

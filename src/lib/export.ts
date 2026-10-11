@@ -3,7 +3,7 @@
 import { PHASES, PH_KEYS, BUILTIN, exInfo, withAllDays, DAY_COUNT } from './data.js';
 import { ymd, fmtShort } from '../shared/dates.js';
 import type { BackupCfg, DayDraft, Cfg, DataFile, LogEntry, Logs, PhaseKey, Program, Snapshot, Week } from '../types.ts';
-import { weekSlots, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
+import { weekSlots, weekProgram, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, touched, AUTO_NOTE } from './logic.js';
 
 type XLSX = typeof import('xlsx');
 type Row = (string | number | boolean | null | undefined)[];
@@ -140,7 +140,7 @@ function addDataSheets(X: XLSX, wb: ReturnType<XLSX['utils']['book_new']>, S: Sn
 export function buildWeekWorkbook(X: XLSX, S: Snapshot, key: string, w: Week) {
   const { cfg, programs } = S; const wb = X.utils.book_new();
   const r = weekSummary(cfg, programs, key, w);
-  const slots = weekSlots(programs[r.pk] || programs.A, w, key);
+  const slots = weekSlots(weekProgram(cfg, programs, w, key), w, key);
   const n = sessionRows(S, e => entryWeek(e) === key);
   X.utils.book_append_sheet(wb, sheet(X, [
     ['Week of', key], ['Program', r.pk], ['Days complete', `${r.full} of ${DAY_COUNT}`], ['Exercises done', `${r.ex} of ${r.total}`], ['Skipped', r.skipped], ['Sessions logged', n.length - 1],
@@ -256,6 +256,13 @@ export function mergeWeek(a: unknown, b: unknown): Week {
   Object.keys(o.warm).forEach(d => { w.warm[d] = { ...o.warm[d], ...(w.warm[d] || {}) }; });
   const have = new Set((w.extra || []).map(x => x.id)); const more = (o.extra || []).filter(x => !have.has(x.id)); if (more.length) w.extra = [...(w.extra || []), ...more];
   w.done = { ...o.done, ...w.done }; w.skipped = { ...o.skipped, ...w.skipped }; Object.keys(w.done).forEach(id => delete w.skipped[id]);
+  // What the week ran (ADR 022): this device's record, else the other's. With the same program, a card only the other record has stays
+  // when the merged week ticked, skipped or moved it, so that check-off still counts.
+  if (!w.ran && o.ran) w.ran = o.ran;
+  else if (w.ran && o.ran && w.ran.prog === o.ran.prog) {
+    const have = new Set(w.ran.program.days.flatMap(d => d.slots.map(s => s.id)));
+    o.ran.program.days.forEach((d, di) => d.slots.forEach(s => { if (!have.has(s.id) && touched(s, w) && w.ran!.program.days[di]) w.ran!.program.days[di].slots.push(s); }));
+  }
   return w;
 }
 
@@ -269,7 +276,7 @@ export function weekFingerprint(S: Snapshot, key: string, w: Week) {
   const { cfg, logs, programs } = S;
   const L = Object.keys(logs).sort().map(id => [id, (logs[id] || []).filter(e => entryWeek(e) === key)]);
   const nw = normWeek(w);
-  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, nw.rest, nw.order, nw.restOn, nw.extra, L, programs[weekSummary(cfg, programs, key, w).pk]]));
+  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, nw.rest, nw.order, nw.restOn, nw.extra, L, weekProgram(cfg, programs, w, key)]));
 }
 export function backupError(e: { code?: string; message?: string } | null | undefined) {
   const c = e && e.code;

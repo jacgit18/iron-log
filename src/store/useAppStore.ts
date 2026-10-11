@@ -4,7 +4,7 @@ import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Str
 import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR, listBuiltinExercises, isOwnExercise } from '../lib/data.js';
 import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.js';
 import {
-  DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
+  DEFAULT_CFG, normWeek, progName, weekProgKey, weekProgram, ranFor, isFrozen, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
   planFix, isFinished, autoEntry, newEntryId, normExperiments,
 } from '../lib/logic.js';
@@ -41,6 +41,7 @@ let unsubWeek: (() => void) | null = null;
 let flagT: ReturnType<typeof setTimeout> | null = null, flagHold: boolean | number = 0;
 let initStarted = false;
 let histPromise: Promise<void> | null = null;
+let histFailed = false; // the last history load lost some weeks to an error
 
 // Outside the Claude host, downloads are a plain blob link.
 const blobSave = {
@@ -161,6 +162,8 @@ const restored = loadView(ymd(new Date()));
 let keepMDay = restored.mDay != null; // the first week load must not clear a restored phone day
 const loadedMDay = (state: AppState) => { const m = keepMDay ? state.mDay : null; keepMDay = false; return m; };
 
+const allReady = (r: AppState['ready']) => r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strHist && r.strWeek && r.supp;
+
 export const useAppStore = create<AppState>((set, get) => ({
   ...editorSlice(set, get, flag),
   ...settingsSlice(set, get, flag),
@@ -240,7 +243,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ historyLoading: true });
     histPromise = (async () => {
       await dataSourceKnown(); // reading before the data source is known would return local or empty weeks
-      const out: Record<string, any> = {};
+      const out: Record<string, any> = {}; histFailed = false;
       try {
         if (db) { const snap = await db.collection('weeks').get(); snap.docs.forEach((d: any) => { if (d.exists) out[d.id] = d.data(); }); }
         else {
@@ -249,10 +252,27 @@ export const useAppStore = create<AppState>((set, get) => ({
             if (k && k.startsWith('ironlog:weeks/')) { const v = LS.get(k.slice(8)); if (v) out[k.slice(14)] = v; }
           }
         }
-      } catch { /* show what loaded */ }
+      } catch { histFailed = true; /* show what loaded */ }
       set({ weekHist: out, historyLoading: false });
+      get().recordPastWeeks();
     })().finally(() => { histPromise = null; });
     return histPromise;
+  },
+  // Weeks saved before ADR 022 have no record of what they ran, so they would keep following today's programs and mode. Each one that
+  // is over and has a tick, skip or move gets its record from what it shows now, once, so it stops changing from here on.
+  recordPastWeeks() {
+    const { weekHist, cfg, programs } = get();
+    if (!weekHist || !get().isReady()) return;
+    const thisSun = ymd(weekStartOf(new Date())); const upd: Record<string, Week> = {};
+    Object.entries(weekHist).forEach(([k, raw]) => {
+      if (!WEEK_RE.test(k) || k >= thisSun || k === get().weekKey()) return;
+      const w = normWeek(raw);
+      if (w.ran || !(Object.keys(w.done).length || Object.keys(w.skipped).length || Object.keys(w.moved).length)) return;
+      upd[k] = { ...w, ran: ranFor(weekProgram(cfg, programs, w, k), weekProgKey(cfg, w, k), w, k) };
+    });
+    if (!Object.keys(upd).length) return;
+    Object.entries(upd).forEach(([k, w]) => queue.save('weeks/' + k, w));
+    set(s => ({ weekHist: { ...s.weekHist, ...upd } }));
   },
   // All saved weeks, with the week on screen taken live from state.
   async allWeeks() {
@@ -260,10 +280,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     return { ...(get().weekHist || {}), [get().weekKey()]: get().week };
   },
 
-  isReady: () => { const r = get().ready; return r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strHist && r.strWeek && r.supp; },
+  isReady: () => allReady(get().ready),
   weekKey: () => ymd(get().weekStart),
-  activeProgKey: () => activeProgKey(get().cfg, get().week, get().weekStart),
-  activeProgram: () => { const s = get(); return s.programs[s.activeProgKey()] || s.programs.A; },
+  // The shown week's program: what it ran once it is over (ADR 022), else today's.
+  activeProgKey: () => weekProgKey(get().cfg, get().week, get().weekKey()),
+  activeProgram: () => { const s = get(); return weekProgram(s.cfg, s.programs, s.week, s.weekKey()); },
+  shownFromRecord: () => isFrozen(get().week, get().weekKey(), new Date()),
   activeSlots: () => weekSlots(get().activeProgram(), get().week, get().weekKey()),
   slotById: id => get().activeSlots().find(x => x.id === id),
   // The log sheet needs both its card and the exercise at that position; a program replaced from elsewhere can remove either.
@@ -296,6 +318,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const body = structuredClone(prog); delete body.key;
     set(state => ({ programs: { ...state.programs, [k]: { ...body, key: k as Program['key'] } } }));
     queue.save('programs/' + k, body);
+    get().refreshRan();
   },
   saveDoc: (path, data) => queue.save(path, data),
   removeDoc: path => queue.removeDoc(path),
@@ -306,7 +329,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   mutateWeek(fn) {
     if (get().blocked()) return false;
-    const week = structuredClone(get().week); fn(week); set({ week }); get().saveWeek(); return true;
+    const week = structuredClone(get().week); fn(week);
+    // Write down what the week runs (ADR 022), from the program it shows: so once it is over, later program changes leave it alone.
+    week.ran = ranFor(weekProgram(get().cfg, get().programs, week, get().weekKey()), weekProgKey(get().cfg, week, get().weekKey()), week, get().weekKey());
+    set({ week }); get().saveWeek(); return true;
+  },
+  // This week's record follows its program until the week is over (the board shows today's program all week), so a program edit, a
+  // mode change or loading the week rewrites it; else a card added or removed after the last tick would flip back once the week ends.
+  refreshRan() {
+    const s = get(); const key = s.weekKey();
+    if (!s.week.ran || key !== ymd(weekStartOf(new Date())) || !s.isReady()) return;
+    const ran = ranFor(weekProgram(s.cfg, s.programs, s.week, key), weekProgKey(s.cfg, s.week, key), s.week, key);
+    if (JSON.stringify(ran) === JSON.stringify(s.week.ran)) return;
+    set({ week: { ...s.week, ran } }); get().saveWeek();
   },
 
   // A change to check-offs from the board: exercises that became done log their planned numbers,
@@ -635,8 +670,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const arr = [...L]; arr[k] = { ...autoEntry(get().cfg, others, s, idx, get().week, wk, L[k].d), id: L[k].id || newEntryId() };
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
   },
-  setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { w.prog = k === auto ? null : k; })) set({ orderNote: null }); },
-  setMode(mode) { get().mutateCfg(c => { c.mode = mode; }); },
+  // Choosing the program of a week that is over takes today's version of it: its old record is for the other one. Choosing the
+  // program it already shows changes nothing, so its record stays.
+  setWeekProg(k) { if (k === get().activeProgKey()) return; const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { w.prog = k === auto ? null : k; delete w.ran; })) set({ orderNote: null }); },
+  setMode(mode) { if (get().mutateCfg(c => { c.mode = mode; })) get().refreshRan(); },
 
   moveSlot(slotId, day) {
     const s = get().slotById(slotId); if (!s) return;
@@ -1003,7 +1040,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!db && apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC)) {
       try {
         const { createBrowserApiDb } = await import('../sync/browser.js');
-        syncApi = createBrowserApiDb({ onOwnerChange: () => get().clearGrocery() });
+        syncApi = createBrowserApiDb({ onOwnerChange: () => { get().clearGrocery(); LS.remove('ran-recorded/db'); } }); // a new account's old weeks need their record too
         db = syncApi;
         syncApi.onStatus(sync => useAppStore.setState({ sync }));
         useAppStore.setState({ sync: syncApi.status() });
@@ -1047,6 +1084,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const next = { programs: { A: pick(state, 'A'), B: pick(state, 'B') }, ...markReady('programs')(state) };
         return { ...next, programs: settledPrograms({ ...state, ...next }) };
       });
+      get().refreshRan(); // a program changed on another device: this week's record follows it
     }, () => flag('Couldn’t load your programs. Reload the page.'));
     db.doc('body/main').onSnapshot((s: any) => {
       if (queue.pending('body/main')) return;
@@ -1119,7 +1157,7 @@ export function fromOtherTab(e: { key?: string | null; newValue?: string | null 
   else if (path === 'body/main') set({ body: (v || {}).entries || [] });
   else if (path === 'library/main') set({ library: padLibrary(normLibrary((v || {}).items)) });
   else if (path === 'experiments/main') set({ experiments: normExperiments((v || {}).items) });
-  else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: loadProgram(k as 'A' | 'B', v) } })); }
+  else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: loadProgram(k as 'A' | 'B', v) } })); useAppStore.getState().refreshRan(); }
   else if (path === 'stretches/main') { const d = normStretches(v); set({ stretches: d.items, stretchExps: d.experiments }); }
   else if (path === 'supplements/main') set({ supp: normSupplements(v) });
   else if (path === 'stretchweeks/' + wk) set({ strWeek: normStretchWeek(v) });
@@ -1128,6 +1166,16 @@ export function fromOtherTab(e: { key?: string | null; newValue?: string | null 
 // Remember the tab and phone day across a refresh.
 useAppStore.subscribe((s, prev) => {
   if (s.tab !== prev.tab || s.mDay !== prev.mDay) saveView(ymd(useToday.getState().today), s);
+});
+// Once the data is in: this week's record catches up (the week may have loaded before the programs did), and past weeks saved before
+// ADR 022 get their record, once per device and data source, not only when Progress first loads the history: else a program loaded or
+// edited before that would rewrite them first. The flag is set only after a load that lost nothing.
+const RAN_FLAG = (s: AppState) => 'ran-recorded/' + s.storeMode;
+useAppStore.subscribe((s, prev) => {
+  if (s.ready === prev.ready || !allReady(s.ready) || allReady(prev.ready)) return;
+  s.refreshRan();
+  if (LS.get(RAN_FLAG(s))) return;
+  void s.loadHistory().then(() => { const st = useAppStore.getState(); if (st.weekHist && !histFailed) LS.set(RAN_FLAG(st), true); });
 });
 // An installed app left open past the end of the week moves on to the new week, but only if you
 // were looking at the week that just ended; browsing elsewhere stays put.
@@ -1167,6 +1215,7 @@ function subscribeWeek() {
   if (!db) {
     const ready = useAppStore.getState().storeMode === 'local';
     useAppStore.setState(state => ({ week: normWeek(LS.get('weeks/' + key)), mDay: ready ? loadedMDay(state) : state.mDay, ready: { ...state.ready, week: ready } }));
+    useAppStore.getState().refreshRan();
     return;
   }
   useAppStore.setState(state => ({ week: normWeek(null), ready: { ...state.ready, week: false } }));
@@ -1175,6 +1224,7 @@ function subscribeWeek() {
     if (key !== useAppStore.getState().weekKey() || queue.pending('weeks/' + key)) return;
     const week = normWeek(s.exists ? s.data() : null);
     useAppStore.setState(state => ({ week, mDay: first ? loadedMDay(state) : state.mDay, ready: { ...state.ready, week: true } }));
+    if (first) useAppStore.getState().refreshRan();
     first = false;
   }, () => flag('Couldn’t load this week. Reload the page.'));
 }
