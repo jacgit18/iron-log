@@ -143,6 +143,7 @@ function normSlot(s: unknown, id: string): ProgramSlot | null {
   const tier = text(s.tier, LIMITS.program.label); if (tier) out.tier = tier;
   if (SLOT_TYPES.includes(s.type)) out.type = s.type;
   const note = text(s.note, LIMITS.program.note); if (note) out.note = note;
+  if (validDate(s.from)) out.from = s.from;
   out.items = items;
   return out as ProgramSlot;
 }

@@ -117,6 +117,27 @@ describe('editing a program', () => {
 });
 
 describe('the add/edit exercise sheet', () => {
+  it('adds one card to each ticked day, each with its own id, and nothing else moves', () => {
+    const before = st().edProgram().days.map(d => ids(d.slots));
+    expect(st().saveSlot(newCard({ days: [5, 1, 3, 3] }))).toBeNull();
+    const after = st().edProgram().days;
+    const added = [1, 3, 5].map(n => after[n - 1].slots.filter(s => !before[n - 1].includes(s.id)));
+    added.forEach(a => { expect(a).toHaveLength(1); expect(a[0]).toMatchObject({ sec: 'Regular', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] }); });
+    expect(new Set(added.map(a => a[0].id)).size).toBe(3);
+    [2, 4, 6, 7].forEach(n => expect(ids(after[n - 1].slots)).toEqual(before[n - 1]));
+    [1, 3, 5].forEach(n => expect(ids(after[n - 1].slots).filter(id => before[n - 1].includes(id))).toEqual(before[n - 1]));
+  });
+  it('asks for a day when none is ticked, and ignores the days list when editing a card', () => {
+    expect(st().saveSlot(newCard({ days: [] }))).toBe('Pick at least one day.');
+    const cfgBefore = structuredClone(st().cfg); const progBefore = structuredClone(st().programs);
+    expect(st().saveSlot(newCard({ days: [], items: [{ ex: '__new', nn: 'Farmer Carry Test', nu: 'https://youtu.be/abc', ph: 'strength', w: null }] }))).toBe('Pick at least one day.');
+    expect(st().cfg).toEqual(cfgBefore);
+    expect(st().programs).toEqual(progBefore);
+    const first = day1()[1];
+    expect(st().saveSlot({ ...newCard({ days: [2, 3] }), id: first.id, idx: 1, sec: first.sec })).toBeNull();
+    expect(day1()[1].id).toBe(first.id);
+    expect(st().edProgram().days[1].slots.some(s => s.id === first.id)).toBe(false);
+  });
   it('offers Optional as a section, and a new Optional section goes first', async () => {
     const { SECTIONS } = await import('./editorSlice.js');
     expect(SECTIONS).toContain('Optional');
@@ -236,5 +257,71 @@ describe('GitHub backup with no repository set (ADR 016 step 4: no personal defa
       expect(st().backupMsg).toMatchObject({ kind: 'err', text: expect.stringMatching(/Set the backup repository/) });
       expect(calls).toHaveLength(0);
     } finally { globalThis.fetch = realFetch; useAppStore.setState({ ghToken: '', backupMsg: null }); }
+  });
+});
+
+describe('a new card’s start week', () => {
+  let weekSlots, tally, leftovers, colOf, countsForFinish, weekSummary, normProgram, ymd, weekStartOf, addDays;
+  beforeAll(async () => {
+    ({ weekSlots, tally, leftovers, colOf, countsForFinish } = await import('../lib/logic.js'));
+    ({ weekSummary } = await import('../lib/trends.js'));
+    ({ normProgram } = await import('../shared/validate.js'));
+    ({ ymd, weekStartOf, addDays } = await import('../shared/dates.js'));
+  });
+  const thisWeek = () => ymd(weekStartOf(new Date()));
+  const nextWeek = () => ymd(addDays(weekStartOf(new Date()), 7));
+  // The board's program, open in the editor on Day `d`, with this week on the board.
+  const onBoard = d => { useAppStore.setState({ weekStart: weekStartOf(new Date()), week: { ...st().week, done: {}, skipped: {}, moved: {}, rest: [] } }); st().setEdProg(st().activeProgKey()); st().setEdDay(d); return st().activeProgKey(); };
+  // Finish program day `d` this week: tick its first counting card, skip the rest.
+  const finish = d => {
+    const w = st().week; const col = st().activeSlots().filter(s => s.day === d && countsForFinish(s));
+    useAppStore.setState({ week: { ...w, done: { [col[0].id]: true }, skipped: Object.fromEntries(col.slice(1).map(s => [s.id, true])) } });
+    return colOf(st().week, d);
+  };
+  const added = () => st().edProgram().days[st().edDay - 1].slots.find(s => s.items[0].ex === 'arnold');
+
+  it('starts this week when its day is not finished, and counts on the board', () => {
+    onBoard(2);
+    expect(st().saveSlot(newCard({ day: 2 }))).toBeNull();
+    expect(added().from).toBe(thisWeek());
+    expect(st().activeSlots().some(s => s.id === added().id)).toBe(true);
+  });
+  it('starts next week when its day is already finished: the day stays finished and it is no leftover', () => {
+    onBoard(1); const col = finish(1);
+    const before = tally(st().activeSlots(), st().week);
+    expect(st().saveSlot(newCard({ day: 1 }))).toBeNull();
+    expect(added().from).toBe(nextWeek());
+    const slots = st().activeSlots();
+    expect(slots.some(s => s.id === added().id)).toBe(false);
+    expect(tally(slots, st().week)).toEqual(before);
+    expect(leftovers(st().week, slots, col).some(s => s.id === added().id)).toBe(false);
+    expect(weekSlots(st().edProgram(), st().week, nextWeek()).some(s => s.id === added().id)).toBe(true);
+  });
+  it('adding to several days gives each copy its own start week', () => {
+    onBoard(2); finish(1);
+    expect(st().saveSlot(newCard({ days: [1, 2] }))).toBeNull();
+    const on = d => st().edProgram().days[d - 1].slots.find(s => s.items[0].ex === 'arnold');
+    expect(on(1).from).toBe(nextWeek());
+    expect(on(2).from).toBe(thisWeek());
+  });
+  it('an edited card keeps its start week', () => {
+    onBoard(1); finish(1); st().saveSlot(newCard({ day: 1 }));
+    const i = st().edProgram().days[0].slots.indexOf(added());
+    expect(st().saveSlot({ ...newCard({ day: 1, items: [{ ex: 'arnold', ph: 'hyp', w: 35 }] }), id: added().id, idx: i })).toBeNull();
+    expect(added()).toMatchObject({ from: nextWeek(), items: [{ ph: 'hyp', w: 35 }] });
+  });
+  it('earlier weeks in Progress leave out a card added this week', () => {
+    const k = onBoard(3); const past = ymd(addDays(weekStartOf(new Date()), -14));
+    const w = { prog: k, done: {}, skipped: {}, moved: {} };
+    const before = weekSummary(st().cfg, st().programs, past, w).total;
+    st().saveSlot(newCard({ day: 3 }));
+    expect(weekSummary(st().cfg, st().programs, past, w).total).toBe(before);
+    expect(weekSummary(st().cfg, st().programs, thisWeek(), w).total).toBe(before + 1);
+  });
+  it('a start week survives cleaning, and a bad one is dropped', () => {
+    const p = structuredClone(BUILTIN.A); p.days[0].slots = [{ id: 'x1', from: '2026-10-11', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] }, { id: 'x2', from: 'soon', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] }];
+    const out = normProgram(p, 'A').days[0].slots;
+    expect(out[0].from).toBe('2026-10-11');
+    expect(out[1]).not.toHaveProperty('from');
   });
 });

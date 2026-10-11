@@ -18,7 +18,7 @@ export const WEEK_GOAL_DAYS = 6;
 export function weekSummary(cfg: Cfg, programs: Record<string, Program>, key: string, w: Week) {
   const start = parseDate(key);
   const pk = (cfg.mode === 2 && (w.prog === 'A' || w.prog === 'B')) ? w.prog : programFor(cfg, start);
-  const prog = programs[pk] || programs.A || BUILTIN.A; const slots = weekSlots(prog, w);
+  const prog = programs[pk] || programs.A || BUILTIN.A; const slots = weekSlots(prog, w, key);
   const cols = currentLayout({ ...w, moved: w.moved || {} }, slots);
   const days = DAYS.map(d => { const t = tally(cols[d], w); return t.full ? 2 : t.done > 0 ? 1 : 0; });
   const t = tally(slots, w);

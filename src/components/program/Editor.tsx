@@ -6,7 +6,7 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, BUILTIN, exInfo } from '../../lib/data.js';
 import { progName, DAYS } from '../../lib/logic.js';
 import { sameProg, libDate } from '../../lib/export.js';
-import { MON } from '../../shared/dates.js';
+import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
@@ -106,6 +106,7 @@ function ProgramEditor() {
     if (!a || a === document.body || !a.isConnected) document.getElementById('ed-title')?.focus();
   }, [k]);
 
+  const thisWeek = ymd(weekStartOf(useToday(s => s.today)));
   const lib = !!item; const day = prog.days[edDay - 1];
   const { drag, rowRef, handleProps } = useDragReorder(day.slots.length, st.reorderEdSlot);
   const custom = !lib && !st.isOriginal(prog as Program, k as ProgKey);
@@ -164,7 +165,8 @@ function ProgramEditor() {
           {!day.slots.length && <p className="note">No exercises on this day yet.</p>}
           {day.slots.map((sl, i) => {
             const newSec = i === 0 || sl.sec !== day.slots[i - 1].sec;
-            const tag = [sl.tier, sl.type === 'superset' ? 'Superset' : sl.type === 'either' ? 'Either / or' : ''].filter(Boolean).join(' · ');
+            const starts = sl.from && sl.from > thisWeek ? `Starts ${fmtShort(parseDate(sl.from))}` : ''; // added to a finished day: not on the board until then
+            const tag = [sl.tier, sl.type === 'superset' ? 'Superset' : sl.type === 'either' ? 'Either / or' : '', starts].filter(Boolean).join(' · ');
             return (
               <Fragment key={sl.id || i}>
                 {newSec && <div className="sect">{sl.sec || ''}</div>}
