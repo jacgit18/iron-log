@@ -83,8 +83,8 @@ export interface LibraryItem {
   prog: Program;
 }
 
-export type EquipmentKey = 'barbell' | 'shortbar' | 'ezbar' | 'dumbbell' | 'kettlebell' | 'cable' | 'machine' | 'bodyweight'
-  | 'band' | 'trx' | 'plate' | 'medball' | 'other';
+export type EquipmentKey = 'band' | 'barbell' | 'bench' | 'bodyweight' | 'cable' | 'dumbbell' | 'ezbar' | 'kettlebell' | 'machine'
+  | 'medball' | 'plate' | 'rope' | 'sandbag' | 'shortbar' | 'sled' | 'tire' | 'trapbar' | 'trx' | 'vest' | 'other';
 
 /** An exercise in the catalog: built-ins, layered with what the user set in `cfg.ex`. */
 export interface ExerciseInfo {
