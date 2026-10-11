@@ -2,12 +2,12 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { clearStorage, saved, mem } from '../test/browserStubs.js';
 
 // ADR 022 in the store: a tick writes down what the week runs, and a week that is over keeps showing and counting that.
-let useAppStore, BUILTIN, DEFAULT_CFG, weekSummary, ymd, weekStartOf, addDays;
+let useAppStore, fromOtherTab, BUILTIN, DEFAULT_CFG, weekSummary, ymd, weekStartOf, addDays;
 const st = () => useAppStore.getState();
 const tick = () => new Promise(r => setTimeout(r, 0));
 
 beforeAll(async () => {
-  ({ useAppStore } = await import('./useAppStore.js'));
+  ({ useAppStore, fromOtherTab } = await import('./useAppStore.js'));
   ({ BUILTIN } = await import('../lib/data.js'));
   ({ DEFAULT_CFG } = await import('../lib/logic.js'));
   ({ weekSummary } = await import('../lib/trends.js'));
@@ -148,9 +148,39 @@ describe('old past weeks get their record once the data is in', () => {
     useAppStore.setState({ ready });
     await st().loadHistory(); // waits for the load the store started
     expect(saved('weeks/' + key).ran.program.days[0].slots.some(s => s.id === card.id)).toBe(true);
-    expect(saved('ran-recorded')).toBe(true);
+    expect(saved('ran-recorded/local')).toBe(true); // per data source: signing in to sync later records the server's weeks too
     useAppStore.setState({ weekHist: null, ready: Object.fromEntries(Object.keys(ready).map(k => [k, false])) });
     useAppStore.setState({ ready });
     expect(st().historyLoading).toBe(false); // done on this device: not loaded again
+  });
+});
+
+describe('review fixes: the record catches up, and the backfill is not skipped by a bad load', () => {
+  const stale = () => { st().checkCard(firstCard().id, true); const w = structuredClone(st().week); w.ran.program.days[0].slots = w.ran.program.days[0].slots.slice(0, 1); useAppStore.setState({ week: w }); };
+  const cards = () => st().week.ran.program.days[0].slots.length;
+
+  it('this week’s record catches up once the data is in (the week can load before the programs)', () => {
+    stale(); expect(cards()).toBe(1);
+    const ready = st().ready;
+    useAppStore.setState({ ready: Object.fromEntries(Object.keys(ready).map(k => [k, false])) });
+    useAppStore.setState({ ready });
+    expect(cards()).toBe(BUILTIN.A.days[0].slots.length);
+  });
+
+  it('a program changed in another tab updates this week’s record', () => {
+    stale();
+    fromOtherTab({ key: 'ironlog:programs/A', newValue: JSON.stringify(BUILTIN.A) });
+    expect(cards()).toBe(BUILTIN.A.days[0].slots.length);
+  });
+
+  it('a history load that hit an error does not mark the backfill done', async () => {
+    const ready = st().ready; const key = localStorage.key;
+    localStorage.key = () => { throw new Error('blocked'); };
+    try {
+      useAppStore.setState({ weekHist: null, ready: Object.fromEntries(Object.keys(ready).map(k => [k, false])) });
+      useAppStore.setState({ ready });
+      await st().loadHistory();
+    } finally { localStorage.key = key; }
+    expect(saved('ran-recorded/local')).toBe(null);
   });
 });

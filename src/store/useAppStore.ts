@@ -41,6 +41,7 @@ let unsubWeek: (() => void) | null = null;
 let flagT: ReturnType<typeof setTimeout> | null = null, flagHold: boolean | number = 0;
 let initStarted = false;
 let histPromise: Promise<void> | null = null;
+let histFailed = false; // the last history load lost some weeks to an error
 
 // Outside the Claude host, downloads are a plain blob link.
 const blobSave = {
@@ -242,7 +243,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ historyLoading: true });
     histPromise = (async () => {
       await dataSourceKnown(); // reading before the data source is known would return local or empty weeks
-      const out: Record<string, any> = {};
+      const out: Record<string, any> = {}; histFailed = false;
       try {
         if (db) { const snap = await db.collection('weeks').get(); snap.docs.forEach((d: any) => { if (d.exists) out[d.id] = d.data(); }); }
         else {
@@ -251,7 +252,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             if (k && k.startsWith('ironlog:weeks/')) { const v = LS.get(k.slice(8)); if (v) out[k.slice(14)] = v; }
           }
         }
-      } catch { /* show what loaded */ }
+      } catch { histFailed = true; /* show what loaded */ }
       set({ weekHist: out, historyLoading: false });
       get().recordPastWeeks();
     })().finally(() => { histPromise = null; });
@@ -1039,7 +1040,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!db && apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC)) {
       try {
         const { createBrowserApiDb } = await import('../sync/browser.js');
-        syncApi = createBrowserApiDb({ onOwnerChange: () => get().clearGrocery() });
+        syncApi = createBrowserApiDb({ onOwnerChange: () => { get().clearGrocery(); LS.remove('ran-recorded/db'); } }); // a new account's old weeks need their record too
         db = syncApi;
         syncApi.onStatus(sync => useAppStore.setState({ sync }));
         useAppStore.setState({ sync: syncApi.status() });
@@ -1083,6 +1084,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const next = { programs: { A: pick(state, 'A'), B: pick(state, 'B') }, ...markReady('programs')(state) };
         return { ...next, programs: settledPrograms({ ...state, ...next }) };
       });
+      get().refreshRan(); // a program changed on another device: this week's record follows it
     }, () => flag('Couldn’t load your programs. Reload the page.'));
     db.doc('body/main').onSnapshot((s: any) => {
       if (queue.pending('body/main')) return;
@@ -1155,7 +1157,7 @@ export function fromOtherTab(e: { key?: string | null; newValue?: string | null 
   else if (path === 'body/main') set({ body: (v || {}).entries || [] });
   else if (path === 'library/main') set({ library: padLibrary(normLibrary((v || {}).items)) });
   else if (path === 'experiments/main') set({ experiments: normExperiments((v || {}).items) });
-  else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: loadProgram(k as 'A' | 'B', v) } })); }
+  else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: loadProgram(k as 'A' | 'B', v) } })); useAppStore.getState().refreshRan(); }
   else if (path === 'stretches/main') { const d = normStretches(v); set({ stretches: d.items, stretchExps: d.experiments }); }
   else if (path === 'supplements/main') set({ supp: normSupplements(v) });
   else if (path === 'stretchweeks/' + wk) set({ strWeek: normStretchWeek(v) });
@@ -1165,11 +1167,15 @@ export function fromOtherTab(e: { key?: string | null; newValue?: string | null 
 useAppStore.subscribe((s, prev) => {
   if (s.tab !== prev.tab || s.mDay !== prev.mDay) saveView(ymd(useToday.getState().today), s);
 });
-// Past weeks saved before ADR 022 get their record once per device as soon as the data is in, not only when Progress first loads
-// the history: else a program loaded or edited before that would rewrite them first.
+// Once the data is in: this week's record catches up (the week may have loaded before the programs did), and past weeks saved before
+// ADR 022 get their record, once per device and data source, not only when Progress first loads the history: else a program loaded or
+// edited before that would rewrite them first. The flag is set only after a load that lost nothing.
+const RAN_FLAG = (s: AppState) => 'ran-recorded/' + s.storeMode;
 useAppStore.subscribe((s, prev) => {
-  if (s.ready === prev.ready || !allReady(s.ready) || allReady(prev.ready) || LS.get('ran-recorded')) return;
-  void s.loadHistory().then(() => { if (useAppStore.getState().weekHist) LS.set('ran-recorded', true); });
+  if (s.ready === prev.ready || !allReady(s.ready) || allReady(prev.ready)) return;
+  s.refreshRan();
+  if (LS.get(RAN_FLAG(s))) return;
+  void s.loadHistory().then(() => { const st = useAppStore.getState(); if (st.weekHist && !histFailed) LS.set(RAN_FLAG(st), true); });
 });
 // An installed app left open past the end of the week moves on to the new week, but only if you
 // were looking at the week that just ended; browsing elsewhere stays put.
