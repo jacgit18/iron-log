@@ -39,7 +39,7 @@ const tables = async () => {
   try {
     const { rows } = await client.query(
       `select table_name from information_schema.tables where table_schema = 'public' and table_name <> 'schema_migrations' order by 1`);
-    const fns = await client.query(`select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public'`);
+    const fns = await client.query(`select proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' order by 1`);
     // Better Auth's schema is ours to create and drop too: a full rollback must remove it.
     const schemas = await client.query(`select schema_name from information_schema.schemata where schema_name = 'auth'`);
     return { tables: rows.map(r => r.table_name), functions: fns.rows.map(r => r.proname), schemas: schemas.rows.map(r => r.schema_name) };
