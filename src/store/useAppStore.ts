@@ -1211,14 +1211,12 @@ function subscribeStretchWeek() {
 }
 
 // refreshRan for this week while the board shows another one: its saved record follows the program edit too, so it doesn't wait for
-// this week's next load or tick (it may get neither before the week is over). Reads the loaded history, else the saved document.
+// this week's next load or tick (it may get neither before the week is over). Reads the saved document, never the loaded history:
+// syncing, that copy isn't kept current, and the save writes the whole week, so it would drop ticks made on another device since.
 async function refreshSavedRan(key: string) {
-  const path = 'weeks/' + key; const hist = useAppStore.getState().weekHist;
-  let raw: unknown = hist && key in hist ? hist[key] : undefined;
-  if (raw === undefined) {
-    if (!db) raw = LS.get(path);
-    else { try { const d = await db.doc(path).get(); raw = d.exists ? d.data() : null; } catch { return; /* the week's next load catches up */ } }
-  }
+  const path = 'weeks/' + key; let raw: unknown;
+  if (!db) raw = LS.get(path);
+  else { try { const d = await db.doc(path).get(); raw = d.exists ? d.data() : null; } catch { return; /* the week's next load catches up */ } }
   const s = useAppStore.getState();
   if (s.weekKey() === key) { s.refreshRan(); return; } // back on this week meanwhile: the week on screen is the one to update
   if (queue.pending(path)) return;
