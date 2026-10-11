@@ -21,7 +21,7 @@ import { normSupplements } from '../lib/water.js';
 import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
 import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
-  backupCfg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile, entryId, findEntry, normConfig,
+  backupCfg, sameProg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile, entryId, findEntry, normConfig,
 } from '../lib/export.js';
 import { bwSorted } from '../lib/body.js';
 import { usageOf } from '../lib/exerciseLibrary.js';
@@ -270,6 +270,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Every write is refused until all data has loaded, so a half-loaded week never overwrites the saved one.
   blocked() { if (get().isReady()) return false; flag('Still loading your data…'); return true; },
+  originalProgram: k => (db ? BLANK[k] : BUILTIN[k]),
+  // Syncing, a blank program saved by "Original" is a copy, so compare by content; the built-in plan an account with entries falls back to
+  // counts as its own (it is what its entries point at), so loading another version first keeps a copy of it in the library.
+  isOriginal: (p, k) => (db ? p === BLANK[k] || sameProg(p, BLANK[k]) : p === BUILTIN[k]),
 
   // Opening Progress reloads the saved weeks so the history is never stale.
   setTab: tab => set(tab === 'progress' ? { tab, weekHist: null } : { tab }),

@@ -391,6 +391,39 @@ describe('log data: what a new account starts with (ADR 016)', () => {
     } finally { delete globalThis.claude; }
   });
 
+  // ADR 016 step 2: syncing, "Original" is the blank program, so the owner's plan is never offered to another account.
+  it('P7 syncing, Original is blank, is saved as the account program, and stays blank after a reload with log entries', async () => {
+    const fdb = fakeDb(); const mine = structuredClone(BUILTIN.A); mine.days[0].title = 'Push';
+    fdb.docs.set('programs/A', mine); fdb.docs.set('logs/latpd', { entries: [entry] });
+    try {
+      const { s2, BLANK, BUILTIN: B2, slotsFor } = await boot(fdb);
+      expect(s2().originalProgram('A')).toBe(BLANK.A);
+      expect(s2().isOriginal(s2().programs.A, 'A')).toBe(false);
+      s2().loadVersion('orig', 'A'); await tick();
+      expect(cards(s2, slotsFor, 'A')).toBe(0);
+      expect(s2().programs.A).not.toBe(B2.A);
+      expect(s2().isOriginal(s2().programs.A, 'A')).toBe(true);
+      expect(fdb.docs.get('programs/A').days.every(d => d.slots.length === 0)).toBe(true); // saved, not removed
+      expect(s2().library.some(it => it.prog.days[0].title === 'Push')).toBe(true); // what A had is kept in the library
+      const again = await boot(fdb); // a reload: the account has entries, but its saved program is the blank one
+      expect(cards(again.s2, again.slotsFor, 'A')).toBe(0);
+    } finally { delete globalThis.claude; }
+  });
+
+  it('P8 syncing, an account showing the built-in plan (entries, nothing saved) keeps a copy of it when it loads Original', async () => {
+    const fdb = fakeDb(); fdb.docs.set('logs/latpd', { entries: [entry] });
+    try {
+      const { s2, BUILTIN: B2, slotsFor } = await boot(fdb);
+      expect(s2().programs.A).toBe(B2.A);
+      expect(s2().isOriginal(s2().programs.A, 'A')).toBe(false); // it is what this account's entries point at
+      const n = cards(s2, slotsFor, 'A');
+      s2().loadVersion('orig', 'A'); await tick();
+      expect(cards(s2, slotsFor, 'A')).toBe(0);
+      const kept = s2().library.find(it => it.auto);
+      expect(kept && slotsFor(kept.prog).length).toBe(n);
+    } finally { delete globalThis.claude; }
+  });
+
   // The stretch routine follows the same rule (ADR 016): empty for an account with no log entries and no stretch weeks, the default routine otherwise.
   const stretchWeek = { done: { '0:scarecrow': true }, skipped: {}, extra: [] };
 

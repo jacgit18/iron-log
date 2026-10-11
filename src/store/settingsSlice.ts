@@ -85,7 +85,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           const programs = { ...get().programs };
           (['A', 'B'] as const).forEach(k => {
             if (d.programs[k]) progSaves.push([k, structuredClone(d.programs[k])]);
-            else if (programs[k] !== BUILTIN[k]) { programs[k] = BUILTIN[k]; removes.push('programs/' + k); }
+            else if (!get().isOriginal(programs[k], k)) { const orig = get().originalProgram(k); if (orig === BUILTIN[k]) { programs[k] = orig; removes.push('programs/' + k); } else progSaves.push([k, structuredClone(orig)]); }
           });
           patch.programs = programs; patch.library = structuredClone(d.library); saves.push('saveLibrary');
         }
@@ -139,7 +139,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
         if (on.program) d.library.forEach((it: any) => { if (!have.has(it.id)) { lib.push(structuredClone(it)); have.add(it.id); } });
         (['A', 'B'] as const).forEach(k => {
           const p = on.program && d.programs[k]; if (!p) return; const cur = get().programs[k];
-          if (cur === BUILTIN[k]) get().saveProgram(k, structuredClone(p));
+          if (cur === BUILTIN[k] || get().isOriginal(cur, k)) get().saveProgram(k, structuredClone(p));
           else if (!sameProg(cur, p) && !lib.some(it => sameProg(it.prog, p))) {
             lib.push({ id: Date.now().toString(36) + k + Math.random().toString(36).slice(2, 6), name: `${progName(get().cfg, k)} from import · ${today}`, from: k, at: new Date().toISOString(), prog: progBody(p) as Program });
           }

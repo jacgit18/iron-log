@@ -41,6 +41,7 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
   const items = [...library].sort((a, b) => (b.at || '').localeCompare(a.at || ''));
   const saved = !custom || library.some(it => sameProg(it.prog, cur));
   const loadLabel = `Tap to load into ${pn}`;
+  const orig = st.originalProgram(k as ProgKey);
   return (
     <section className="panel edpanel lib" style={{ marginTop: 16 }}>
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -49,7 +50,7 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
       </div>
       <p className="note">Load a version into {pn}. Whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
       <div className="edlist">
-        <LibRow name={`Original ${pn}`} meta={`Built in · ${progStats(BUILTIN[k as ProgKey])} · always kept`} inUse={!custom} loadLabel={loadLabel} onLoad={() => st.loadVersion('orig', k as ProgKey)} />
+        <LibRow name={`Original ${pn}`} meta={`${orig === BUILTIN[k as ProgKey] ? 'Built in' : 'Blank'} · ${progStats(orig)} · always kept`} inUse={!custom} loadLabel={loadLabel} onLoad={() => st.loadVersion('orig', k as ProgKey)} />
         {items.map(it => (
           <LibRow
             key={it.id} name={it.name} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k as ProgKey)}
@@ -105,7 +106,7 @@ function ProgramEditor() {
   }, [k]);
 
   const lib = !!item; const day = prog.days[edDay - 1];
-  const custom = !lib && prog !== BUILTIN[k as ProgKey];
+  const custom = !lib && !st.isOriginal(prog as Program, k as ProgKey);
   const edName = lib ? item.name : progName(cfg, k);
 
   return (

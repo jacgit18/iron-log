@@ -85,14 +85,15 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   // Load a library version (or 'orig') into A or B. Whatever is there now is saved to the library first.
   loadVersion(target, slot) {
     if (get().blocked() || (slot !== 'A' && slot !== 'B')) return;
-    const cur = get().programs[slot]; const custom = cur !== BUILTIN[slot];
+    const cur = get().programs[slot]; const custom = !get().isOriginal(cur, slot); const orig = get().originalProgram(slot);
     const src = target === 'orig' ? null : get().library.find(it => it.id === target);
-    const next = target === 'orig' ? BUILTIN[slot] : (src || {}).prog;
+    const next = target === 'orig' ? orig : (src || {}).prog;
     if (!next) return;
     if (custom && !get().library.some(it => sameProg(it.prog, cur))) {
       get().libSnapshot(`${progName(get().cfg, slot)} before loading · ${libDate(new Date().toISOString())}`, cur, slot, true); get().saveLibrary();
     }
-    if (target === 'orig') { set(s => ({ programs: { ...s.programs, [slot]: BUILTIN[slot] } })); get().removeDoc('programs/' + slot); }
+    // Syncing, the blank original is saved as the account's program: with no document an account with log entries would fall back to the built-in plan.
+    if (target === 'orig' && orig === BUILTIN[slot]) { set(s => ({ programs: { ...s.programs, [slot]: BUILTIN[slot] } })); get().removeDoc('programs/' + slot); }
     else get().saveProgram(slot, structuredClone(next));
     set({ edProg: slot });
     flag(src ? `${src.name} is now in ${progName(get().cfg, slot)}` : 'Loaded');
