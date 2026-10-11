@@ -25,6 +25,15 @@ describe('exercise library rows', () => {
     expect(filterRows(rows, { eq: 'none' }).some(r => r.id === 'x')).toBe(true);
     expect(filterRows(rows, {})).toHaveLength(rows.length);
   });
+  it('splits your own exercises from library ones; editing a built-in does not make it yours', () => {
+    const rows = libraryRows(cfg({ ex: { x: { n: 'Mystery Move' }, hack: { n: 'Hack Squat', eq: 'machine', url: 'https://example.com' } } }), state());
+    expect(filterRows(rows, { src: 'yours' }).map(r => r.id)).toEqual(['x']);
+    const lib = filterRows(rows, { src: 'library' });
+    expect(lib.some(r => r.id === 'hack')).toBe(true);
+    expect(lib.some(r => r.id === 'x')).toBe(false);
+    expect(lib.length + 1).toBe(rows.length);
+    expect(filterRows(rows, { src: 'yours', q: 'hack' })).toEqual([]);
+  });
   it('knows where an exercise is used', () => {
     const lib = [{ id: 'v', name: 'v', prog: { days: [{ title: 'D', slots: [{ id: 's', items: [{ ex: 'zzz' }] }] }, ...Array(5).fill({ title: 'D', slots: [] })] } }];
     expect(usageOf('zzz', state({ library: lib, experiments: [{ id: 'e', ex: 'zzz' }], logs: { zzz: [{}, {}] } }))).toEqual({ programs: [], versions: 1, experiments: 1, logs: 2 });
