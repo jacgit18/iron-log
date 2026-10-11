@@ -59,6 +59,9 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   moveEdSlot(i, dir) {
     get().editProgram(prog => { const sl = prog.days[get().edDay - 1].slots; const j = i + dir; if (j < 0 || j >= sl.length) return; pinIds(prog, get().edDay); [sl[i], sl[j]] = [sl[j], sl[i]]; });
   },
+  reorderEdSlot(from, to) {
+    get().editProgram(prog => { const sl = prog.days[get().edDay - 1].slots; if (from === to || from < 0 || to < 0 || from >= sl.length || to >= sl.length) return; pinIds(prog, get().edDay); sl.splice(to, 0, ...sl.splice(from, 1)); });
+  },
   removeEdSlot(i) { get().editProgram(prog => { prog.days[get().edDay - 1].slots.splice(i, 1); }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
 
