@@ -165,7 +165,12 @@ export interface Week {
   order?: number[];
   restOn?: string;
   extra?: ExtraCard[];
+  /** What the week ran (ADR 022): the program it used and that program's cards, written down each time the week is saved. A week
+   *  before this one is shown and counted from this, so editing or loading a program, or changing the mode, never rewrites it. */
+  ran?: WeekRan;
 }
+
+export interface WeekRan { prog: ProgKey; program: Program }
 
 /** Logged sessions by exercise id, oldest first. */
 export type Logs = Record<string, LogEntry[]>;

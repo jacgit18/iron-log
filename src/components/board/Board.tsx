@@ -55,7 +55,7 @@ export default function Board() {
   const sinceBackup = daysSince(st.lastBackup());
 
   const progKey = st.activeProgKey();
-  const prog = programs[progKey] || programs.A;
+  const prog = st.activeProgram(); // a week that is over shows what it ran (ADR 022)
   const slots = weekSlots(prog, week, st.weekKey());
   const cols = currentLayout(week, slots);
   const rest = restsOf(week);

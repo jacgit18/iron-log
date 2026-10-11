@@ -1,7 +1,7 @@
 import type { Cfg, LogEntry, Logs, Program, Week, WeightChange } from '../types.ts';
 import { BUILTIN, exInfo } from './data.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
-import { programFor, weekSlots, tally, currentLayout, DAYS } from './logic.js';
+import { weekProgKey, weekProgram, weekSlots, tally, currentLayout, DAYS } from './logic.js';
 import { M_KEYS, tagsOf } from './muscles.js';
 
 export const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -14,11 +14,11 @@ export const niceStep = (max: number) => [1, 2, 5, 10, 20, 25, 50, 100, 200, 250
 // The weekly goal: this many full days of the week's seven.
 export const WEEK_GOAL_DAYS = 6;
 
-// Totals for any saved week, using the program that week ran.
+// Totals for any saved week, using the program that week ran: its own record once it is over (ADR 022), else today's programs.
 export function weekSummary(cfg: Cfg, programs: Record<string, Program>, key: string, w: Week) {
   const start = parseDate(key);
-  const pk = (cfg.mode === 2 && (w.prog === 'A' || w.prog === 'B')) ? w.prog : programFor(cfg, start);
-  const prog = programs[pk] || programs.A || BUILTIN.A; const slots = weekSlots(prog, w, key);
+  const pk = weekProgKey(cfg, w, key);
+  const prog = weekProgram(cfg, programs, w, key) || BUILTIN.A; const slots = weekSlots(prog, w, key);
   const cols = currentLayout({ ...w, moved: w.moved || {} }, slots);
   const days = DAYS.map(d => { const t = tally(cols[d], w); return t.full ? 2 : t.done > 0 ? 1 : 0; });
   const t = tally(slots, w);

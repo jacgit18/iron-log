@@ -1,0 +1,68 @@
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { clearStorage, saved, mem } from '../test/browserStubs.js';
+
+// ADR 022 in the store: a tick writes down what the week runs, and a week that is over keeps showing and counting that.
+let useAppStore, BUILTIN, DEFAULT_CFG, weekSummary, ymd, weekStartOf, addDays;
+const st = () => useAppStore.getState();
+const tick = () => new Promise(r => setTimeout(r, 0));
+
+beforeAll(async () => {
+  ({ useAppStore } = await import('./useAppStore.js'));
+  ({ BUILTIN } = await import('../lib/data.js'));
+  ({ DEFAULT_CFG } = await import('../lib/logic.js'));
+  ({ weekSummary } = await import('../lib/trends.js'));
+  ({ ymd, weekStartOf, addDays } = await import('../shared/dates.js'));
+  await st().init();
+});
+beforeEach(() => {
+  clearStorage();
+  useAppStore.setState({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], cfg: structuredClone(DEFAULT_CFG), weekStart: weekStartOf(new Date()), weekHist: null, edProg: null, edDay: 1, modal: null });
+});
+
+const lastWeek = () => ymd(addDays(weekStartOf(new Date()), -7));
+const firstCard = () => st().activeSlots().find(s => s.sec !== 'Optional');
+
+describe('what a week ran, in the store', () => {
+  it('a tick writes down the program and its cards with the week', () => {
+    st().checkCard(firstCard().id, true);
+    const w = saved('weeks/' + st().weekKey());
+    expect(w.ran.prog).toBe('A');
+    expect(w.ran.program.days[0].slots.map(s => s.id)).toEqual(BUILTIN.A.days[0].slots.map(s => s.id));
+  });
+
+  it('last week keeps its cards and its count after another program is loaded into A', async () => {
+    useAppStore.setState({ weekStart: addDays(weekStartOf(new Date()), -7), week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } });
+    const card = firstCard();
+    st().checkCard(card.id, true);
+    const key = lastWeek(); const w = saved('weeks/' + key);
+    const before = weekSummary(st().cfg, st().programs, key, w);
+    expect(before.ex).toBe(1);
+    // Another program goes into A (a copy of B, given its own ids): none of its cards is the one ticked last week.
+    expect(st().createProgram('Mine', 'B')).toBe(true);
+    st().loadVersion(st().library.find(it => it.name === 'Mine').id, 'A');
+    expect(st().programs.A.days.flatMap(d => d.slots).some(s => s.id === card.id)).toBe(false);
+    expect(weekSummary(st().cfg, st().programs, key, w)).toEqual(before);
+    expect(st().activeSlots().some(s => s.id === card.id)).toBe(true); // the board for last week still shows it
+    st().gotoWeek('today'); await tick();
+    expect(st().activeSlots().some(s => s.id === card.id)).toBe(false); // this week shows the new program
+  });
+
+  it('a past week saved before the record gets one when history loads, from what it shows, once', async () => {
+    const key = lastWeek(); const card = BUILTIN.A.days[0].slots[1];
+    mem['ironlog:weeks/' + key] = JSON.stringify({ prog: null, done: { [card.id]: true }, skipped: {}, moved: {}, ph: {}, warm: {} });
+    await st().loadHistory();
+    const w = saved('weeks/' + key);
+    expect(w.ran.prog).toBe('A');
+    expect(w.ran.program.days[0].slots.some(s => s.id === card.id)).toBe(true);
+    const at = JSON.stringify(w); useAppStore.setState({ weekHist: null });
+    await st().loadHistory();
+    expect(JSON.stringify(saved('weeks/' + key))).toBe(at); // not written again
+  });
+
+  it('an empty past week is left alone', async () => {
+    const key = lastWeek();
+    mem['ironlog:weeks/' + key] = JSON.stringify({ prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} });
+    await st().loadHistory();
+    expect(saved('weeks/' + key)).not.toHaveProperty('ran');
+  });
+});

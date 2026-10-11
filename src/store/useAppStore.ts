@@ -4,7 +4,7 @@ import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Str
 import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { weekStartOf, ymd, addDays } from '../shared/dates.js';
 import {
-  DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
+  DEFAULT_CFG, normWeek, progName, weekProgKey, weekProgram, ranFor, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
   planFix, isFinished, autoEntry, newEntryId, normExperiments,
 } from '../lib/logic.js';
@@ -250,8 +250,25 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       } catch { /* show what loaded */ }
       set({ weekHist: out, historyLoading: false });
+      get().recordPastWeeks();
     })().finally(() => { histPromise = null; });
     return histPromise;
+  },
+  // Weeks saved before ADR 022 have no record of what they ran, so they would keep following today's programs and mode. Each one that
+  // is over and has a tick, skip or move gets its record from what it shows now, once, so it stops changing from here on.
+  recordPastWeeks() {
+    const { weekHist, cfg, programs } = get();
+    if (!weekHist || !get().isReady()) return;
+    const thisSun = ymd(weekStartOf(new Date())); const upd: Record<string, Week> = {};
+    Object.entries(weekHist).forEach(([k, raw]) => {
+      if (!WEEK_RE.test(k) || k >= thisSun || k === get().weekKey()) return;
+      const w = normWeek(raw);
+      if (w.ran || !(Object.keys(w.done).length || Object.keys(w.skipped).length || Object.keys(w.moved).length)) return;
+      upd[k] = { ...w, ran: ranFor(weekProgram(cfg, programs, w, k), weekProgKey(cfg, w, k), w, k) };
+    });
+    if (!Object.keys(upd).length) return;
+    Object.entries(upd).forEach(([k, w]) => queue.save('weeks/' + k, w));
+    set(s => ({ weekHist: { ...s.weekHist, ...upd } }));
   },
   // All saved weeks, with the week on screen taken live from state.
   async allWeeks() {
@@ -261,8 +278,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   isReady: () => { const r = get().ready; return r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strHist && r.strWeek && r.supp; },
   weekKey: () => ymd(get().weekStart),
-  activeProgKey: () => activeProgKey(get().cfg, get().week, get().weekStart),
-  activeProgram: () => { const s = get(); return s.programs[s.activeProgKey()] || s.programs.A; },
+  // The shown week's program: what it ran once it is over (ADR 022), else today's.
+  activeProgKey: () => weekProgKey(get().cfg, get().week, get().weekKey()),
+  activeProgram: () => { const s = get(); return weekProgram(s.cfg, s.programs, s.week, s.weekKey()); },
   activeSlots: () => weekSlots(get().activeProgram(), get().week, get().weekKey()),
   slotById: id => get().activeSlots().find(x => x.id === id),
   // The log sheet needs both its card and the exercise at that position; a program replaced from elsewhere can remove either.
@@ -305,7 +323,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   mutateWeek(fn) {
     if (get().blocked()) return false;
-    const week = structuredClone(get().week); fn(week); set({ week }); get().saveWeek(); return true;
+    const week = structuredClone(get().week); fn(week);
+    // Write down what the week runs (ADR 022), from the program it shows: so once it is over, later program changes leave it alone.
+    week.ran = ranFor(weekProgram(get().cfg, get().programs, week, get().weekKey()), weekProgKey(get().cfg, week, get().weekKey()), week, get().weekKey());
+    set({ week }); get().saveWeek(); return true;
   },
 
   // A change to check-offs from the board: exercises that became done log their planned numbers,
@@ -588,7 +609,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const arr = [...L]; arr[k] = { ...autoEntry(get().cfg, others, s, idx, get().week, wk, L[k].d), id: L[k].id || newEntryId() };
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
   },
-  setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { w.prog = k === auto ? null : k; })) set({ orderNote: null }); },
+  // Choosing the program of a week that is over takes today's version of it: its old record is for the other one.
+  setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { w.prog = k === auto ? null : k; delete w.ran; })) set({ orderNote: null }); },
   setMode(mode) { get().mutateCfg(c => { c.mode = mode; }); },
 
   moveSlot(slotId, day) {

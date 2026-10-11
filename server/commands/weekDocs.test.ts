@@ -248,3 +248,26 @@ describe('weeks and stretch weeks together', () => {
     expect(seen).toEqual([`weeks:${WS}`, `stretch_weeks:${WS}`, 'weeks:2026-10-11']);
   });
 });
+
+// ADR 022: a week carries what it ran (its program and that program's cards); the server keeps a valid record and drops a bad one.
+describe('save-week with what the week ran', () => {
+  const empty = Array.from({ length: 6 }, (_, i) => ({ title: `Day ${i + 2}`, slots: [] }));
+  const program = { key: 'A', days: [{ title: 'Day 1', slots: [{ id: 'A-d1s1', sec: 'Regular', items: [{ ex: 'hack', ph: 'strength', w: 200 }] }] }, ...empty] };
+  const week = (ran: unknown) => ({ prog: null, done: { 'A-d1s1': true }, skipped: {}, moved: {}, ph: {}, warm: {}, ran });
+  const put = (w: object, weekStart = WS) => send('commands/save-week', { clientId: `r-${weekStart}`, baseVersion: null, input: { weekStart, week: w } });
+
+  it('stores the record, cleaned like any program', async () => {
+    const res = await put(week({ prog: 'A', program }));
+    expect(res.status).toBe(201);
+    expect(res.body.rows[0].data.ran.prog).toBe('A');
+    expect(res.body.rows[0].data.ran.program.days[0].slots[0]).toMatchObject({ id: 'A-d1s1', items: [{ ex: 'hack', w: 200 }] });
+  });
+
+  it('drops a record with a bad program key or shape, and keeps the week', async () => {
+    const res = await put(week({ prog: 'Z', program }), '2026-10-11');
+    expect((await put(week({ prog: 'A', program: { days: program.days.slice(0, 1) } }), '2026-10-18')).body.rows[0].data).not.toHaveProperty('ran'); // not a full week of days
+    expect(res.status).toBe(201);
+    expect(res.body.rows[0].data).not.toHaveProperty('ran');
+    expect(res.body.rows[0].data.done).toEqual({ 'A-d1s1': true });
+  });
+});

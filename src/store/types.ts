@@ -247,6 +247,8 @@ export interface CoreSlice {
   stretchWeekKeys(): Promise<string[]>;
   fullSnapshot(): Promise<Snapshot>;
   loadHistory(): Promise<void>;
+  /** Gives each past week saved before ADR 022 its record of what it ran, from what it shows now (once). */
+  recordPastWeeks(): void;
   allWeeks(): Promise<Record<string, Week>>;
   isReady(): boolean;
   weekKey(): string;
