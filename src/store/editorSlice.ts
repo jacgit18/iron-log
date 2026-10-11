@@ -12,6 +12,17 @@ const newId = (): string => Date.now().toString(36) + Math.random().toString(36)
 const pinIds = (prog: Program, day: number) => {
   if (prog.key === 'A' || prog.key === 'B') prog.days[day - 1].slots.forEach((sl, si) => { sl.id ||= `${prog.key}-d${day}s${si + 1}`; });
 };
+// Give every card of `prog` a new id `<pre>-d<day>s<pos>`, so check-offs and phase defaults never mix with the program its cards came
+// from. `src` is that program's cards in the same order; their saved phase defaults are returned under the new ids.
+function reId(prog: Program, src: { id: string; items: unknown[] }[], pre: string, phDef: Record<string, PhaseKey | null>) {
+  const out: Record<string, PhaseKey | null> = {}; let k = 0;
+  prog.days.forEach((d, di) => d.slots.forEach((sl, si) => {
+    const old = src[k++]; const nid = `${pre}-d${di + 1}s${si + 1}`;
+    if (old) old.items.forEach((_, i) => { const v = phDef[`${old.id}:${i}`]; if (v) out[`${nid}:${i}`] = v; });
+    sl.id = nid;
+  }));
+  return out;
+}
 export const blankItem = (): { ex: string; ph: PhaseChoice; w: number | null; bw: boolean; rx: string; note: string } => ({ ex: '', ph: 'strength', w: null, bw: false, rx: '', note: '' });
 
 // A new card goes after the last card in the same section; a new section goes before Home (Home goes last).
@@ -132,12 +143,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const it = get().libSnapshot(name.trim(), srcProg, from, false); it.created = true;
     // The copy gets its own slot ids so check-offs and phase defaults never mix with the program it came from;
     // the source's saved phase defaults carry over to the new ids.
-    const pre = 'P' + it.id.slice(-5); const src = slotsFor(srcProg); const phDef: Record<string, PhaseKey | null> = {}; let k = 0;
-    it.prog.days.forEach((d, di) => d.slots.forEach((sl, si) => {
-      const old = src[k++]; const nid = `${pre}-d${di + 1}s${si + 1}`;
-      if (old) old.items.forEach((_, i) => { const v = get().cfg.phDef[`${old.id}:${i}`]; if (v) phDef[`${nid}:${i}`] = v; });
-      sl.id = nid;
-    }));
+    const phDef = reId(it.prog, slotsFor(srcProg), 'P' + it.id.slice(-5), get().cfg.phDef);
     if (Object.keys(phDef).length) get().mutateCfg(c => { Object.assign(c.phDef, phDef); });
     set({ library: get().library.map(x => (x.id === it.id ? it : x)), edProg: 'L:' + it.id, edDay: 1, modal: null });
     get().saveLibrary(); flag('Program created');
