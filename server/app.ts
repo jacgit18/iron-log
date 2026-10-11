@@ -8,6 +8,7 @@ import type { Admins } from './admin.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import { bodyLimit } from './bodyLimit.ts';
+import { LISTED_KINDS, listCatalog } from './catalog.ts';
 import { clientErrors } from './clientErrors.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { originGuard } from './originGuard.ts';
@@ -215,6 +216,18 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     }
     const userId = String(res.locals.userId);
     res.json(await inUserTransaction(db!, userId, trx => syncPage(trx, userId, since, limit)));
+  });
+
+  // The catalog to browse and add from (ADR 025), for every signed-in account. The browser checks back every time, so rows from an
+  // import show at once; the ETag Express adds turns an unchanged list into a small 304.
+  app.get('/api/catalog', async (req, res) => {
+    const kind = LISTED_KINDS.find(k => k === req.query.kind);
+    if (!kind) {
+      res.status(400).json({ ok: false, error: `kind must be one of ${LISTED_KINDS.join(', ')}` });
+      return;
+    }
+    res.set('Cache-Control', 'private, no-cache');
+    res.json({ ok: true, items: await listCatalog(db!, String(res.locals.userId), kind) });
   });
 
   // Anything under /api that no route answered is a JSON 404, never the app's page.

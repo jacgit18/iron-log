@@ -12,6 +12,7 @@
     "reset:accounts": "tsx scripts/reset-accounts.mjs",
     "own:exercises": "tsx scripts/own-exercises.mjs",
     "catalog:import": "tsx scripts/catalog-import.mjs",
+    "prod:db": "scripts/prod-db.sh",
     "build:server": "node scripts/build-server.mjs",
     "dev:server": "NODE_ENV=development tsx watch server/index.ts",
     "build": "vite build",

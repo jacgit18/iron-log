@@ -5,7 +5,8 @@ import { PHASES, EQUIPMENT, EQ_KEYS } from '../../lib/data.js';
 import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
 import { libraryRows, filterRows, muscleList, hasTwoSources } from '../../lib/exerciseLibrary.js';
 import { progName } from '../../lib/logic.js';
-import { videoLabel } from '../../lib/data.js';
+import { videoLabel, isCatalogId } from '../../lib/data.js';
+import { useFeature } from '../../features.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 
 // Every exercise (from the library, and your own marked Custom) with what is set on it, searchable, edited in one sheet.
@@ -13,6 +14,9 @@ export default function ExerciseLibrary() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs);
   const { openModal } = useAppStore.getState();
+  // The catalog is on the server (ADR 025): local mode, with no account, has none.
+  const syncing = useAppStore(s => s.sync !== null);
+  const catalog = useFeature('catalog') && syncing;
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
   const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)
@@ -22,7 +26,10 @@ export default function ExerciseLibrary() {
     <section className="panel edpanel exlib">
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <h2 id="exlib-h" tabIndex={-1}>Exercise library</h2>
-        <button type="button" className="btn primary" onClick={() => openModal({ type: 'exercise', exId: null })}>+ New exercise</button>
+        <div className="inline">
+          {catalog && <button type="button" className="btn" id="exlib-catalog" onClick={() => openModal({ type: 'catalog' })}>Browse catalog</button>}
+          <button type="button" className="btn primary" onClick={() => openModal({ type: 'exercise', exId: null })}>+ New exercise</button>
+        </div>
       </div>
       <p className="note">Every exercise in one place. What you set on an exercise here applies to every card, day and week that uses it.</p>
       <div className="filterbar" role="search">
@@ -60,7 +67,7 @@ export default function ExerciseLibrary() {
           return (
             <div className="exrow" key={r.id}>
               <div className="exmain">
-                <b>{r.name}{r.custom && <span className="pill custom" title="You created this exercise; it is not from the library">Custom</span>}</b>
+                <b>{r.name}{r.custom && <span className="pill custom" title="You created this exercise; it is not from the library">Custom</span>}{isCatalogId(r.id) && <span className="pill custom" title="Added from the catalog; what you change on it stays yours">Library</span>}</b>
                 <span className="note">{[...meta, where].join(' · ')}</span>
                 <span className="note">{muscles || 'No muscles tagged yet'}</span>
                 {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.name} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(r.url)}</a>}

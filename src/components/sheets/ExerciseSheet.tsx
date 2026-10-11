@@ -2,7 +2,7 @@ import type { EquipmentKey } from '../../types.ts';
 import type { PhaseChoice } from '../../store/types.ts';
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isOwnExercise } from '../../lib/data.js';
+import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isOwnExercise, isCatalogId } from '../../lib/data.js';
 import { MUSCLE_MAP, draftOfTags, tagsOfDraft } from '../../lib/muscles.js';
 import MuscleChips from '../muscles/MuscleChips.jsx';
 import Sheet from '../Sheet.jsx';
@@ -64,6 +64,7 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
       {err && <p className="note err" role="alert">{err}</p>}
       <div className="actions">
         {!isNew && custom && <ArmedButton className="btn ghost" label="Delete exercise" armedLabel="Tap again to delete" style={{ marginRight: 'auto' }} onConfirm={remove} />}
+        {!isNew && isCatalogId(exId) && <ArmedButton className="btn ghost" label="Remove from library" armedLabel="Tap again to remove" style={{ marginRight: 'auto' }} onConfirm={remove} />}
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
         <button type="submit" className="btn primary">Save</button>
       </div>

@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, EquipmentKey, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, EquipmentKey, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -318,6 +318,8 @@ export interface CoreSlice {
   addExerciseToDay(col: number, d: ExperimentForm): string | null;
   saveExerciseDetails(exId: string, d: ExerciseDetailsForm): string | null;
   createLibraryExercise(d: ExerciseDetailsForm): string | null;
+  /** Adds a catalog exercise to the library as a snapshot under its catalog id (ADR 026). Returns an error message, or null. */
+  addCatalogExercise(item: CatalogItem): string | null;
   deleteExercise(exId: string): string | null;
   deleteExperiment(id: string): void;
   addToDay(entryId: string, col: number): boolean;

@@ -877,6 +877,49 @@ describe('exercise library', () => {
   });
 });
 
+// Catalog exercises (ADR 026): added as a snapshot under their c: id, a Library item, removable from the library like your own.
+describe('catalog exercises', () => {
+  const SQUAT = { id: 'c:fedb:Barbell_Squat', name: ' Barbell  Squat ', data: { eq: 'barbell', muscles: { p: ['quads'], s: ['glutes'] }, level: 'beginner' } };
+  it('adds a snapshot (name, equipment, muscles) to the library and saves it; refuses a second add or a name you already use', () => {
+    expect(st().addCatalogExercise(SQUAT)).toBeNull();
+    expect(st().cfg.ex[SQUAT.id]).toEqual({ n: 'Barbell Squat', eq: 'barbell' });
+    expect(st().cfg.muscleMap[SQUAT.id]).toEqual({ p: ['quads'], s: ['glutes'] });
+    expect(saved('config/main').ex[SQUAT.id]).toEqual({ n: 'Barbell Squat', eq: 'barbell' });
+    expect(st().addCatalogExercise(SQUAT)).toMatch(/Already in your library/);
+    expect(st().addCatalogExercise({ ...SQUAT, id: 'c:fedb:Other', name: 'barbell squat' })).toMatch(/already have an exercise called/);
+    expect(st().addCatalogExercise({ ...SQUAT, id: 'squat' })).toMatch(/can’t be added/);
+  });
+  it('a stretch-like item keeps mob; unknown equipment is left out', () => {
+    st().addCatalogExercise({ id: 'c:fedb:Calf', name: 'Calf Stretch', data: { eq: 'hoverboard', muscles: { p: ['calves'], mob: true } } });
+    expect(st().cfg.ex['c:fedb:Calf']).toEqual({ n: 'Calf Stretch' });
+    expect(st().cfg.muscleMap['c:fedb:Calf']).toEqual({ p: ['calves'], mob: true });
+  });
+  it('your changes stay yours and never rename it; it can be removed from the library and Undo brings it back', () => {
+    st().addCatalogExercise(SQUAT);
+    st().saveExerciseDetails(SQUAT.id, { name: 'Renamed', url: 'https://youtu.be/x', eq: 'trapbar' });
+    expect(st().cfg.ex[SQUAT.id]).toEqual({ n: 'Barbell Squat', eq: 'trapbar', url: 'https://youtu.be/x' });
+    expect(st().deleteExercise(SQUAT.id)).toBeNull();
+    expect(st().cfg.ex[SQUAT.id]).toBeUndefined(); expect(st().cfg.muscleMap[SQUAT.id]).toBeUndefined();
+    st().undoRemoved();
+    expect(st().cfg.ex[SQUAT.id]).toEqual({ n: 'Barbell Squat', eq: 'trapbar', url: 'https://youtu.be/x' });
+    expect(st().cfg.muscleMap[SQUAT.id]).toEqual({ p: ['quads'], s: ['glutes'] });
+  });
+  it('on a card, it checks off and logs under its c: id like any exercise, with no entry lost or doubled, and cannot be removed while used', () => {
+    st().addCatalogExercise(SQUAT);
+    const A = structuredClone(BUILTIN.A); A.days.flatMap(d => d.slots).find(x => x.id === 'A-d3s1').items[0].ex = SQUAT.id; // was Hack Squat
+    useAppStore.setState({ programs: { A, B: BUILTIN.B } });
+    st().checkCard('A-d3s1', true);
+    expect(st().logs[SQUAT.id]).toEqual([expect.objectContaining({ auto: true, slot: 'A-d3s1', wk: st().weekKey() })]);
+    const wk = st().weekKey();
+    st().addEntry('A-d3s1', 0, { d: wk, ph: 'hyp', w: 225, s: 3, r: 8, slot: 'A-d3s1', wk });
+    expect(st().logs[SQUAT.id]).toHaveLength(1); // the real numbers replace the planned entry
+    expect(st().logs[SQUAT.id][0]).toMatchObject({ w: 225, r: 8 });
+    expect(st().logs.hack ?? []).toEqual([]);
+    expect(saved(`logs/${SQUAT.id}`).entries).toHaveLength(1);
+    expect(st().deleteExercise(SQUAT.id)).toMatch(/still used in Program A/);
+  });
+});
+
 // Program A: Leg Extension is on Days 2 and 3, so finishing Day 2 suggests a new order for Days 3 to 6 (the empty Day 7 stays last).
 describe('a suggestion after a day is finished', () => {
   const day2 = () => currentLayout(st().week, st().activeSlots())[2];
