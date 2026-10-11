@@ -28,9 +28,11 @@ export function libraryRows(cfg: Cfg, state: Parameters<typeof usageOf>[1]) {
 }
 
 // q matches the name; muscle matches primary or secondary; eq is exact; 'none' matches exercises with nothing set.
-export function filterRows<R extends { name: string; eq: string; p: string[]; s: string[]; tagged: boolean }>(rows: R[], { q = '', eq = '', muscle = '' }: { q?: string; eq?: string; muscle?: string }) {
+// src 'yours' keeps the exercises this account created, 'library' the built-in ones.
+export function filterRows<R extends { name: string; eq: string; p: string[]; s: string[]; tagged: boolean; custom: boolean }>(rows: R[], { q = '', eq = '', muscle = '', src = '' }: { q?: string; eq?: string; muscle?: string; src?: string }) {
   const needle = q.trim().toLowerCase();
   return rows.filter(r => (!needle || r.name.toLowerCase().includes(needle))
+    && (!src || (src === 'yours' ? r.custom : !r.custom))
     && (!eq || (eq === 'none' ? !r.eq : r.eq === eq))
     && (!muscle || (muscle === 'untagged' ? !r.tagged : [...r.p, ...r.s].includes(muscle))));
 }

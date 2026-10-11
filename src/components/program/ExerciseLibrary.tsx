@@ -8,15 +8,15 @@ import { progName } from '../../lib/logic.js';
 import { videoLabel } from '../../lib/data.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 
-// Every exercise (built in and your own) with what is set on it, searchable, edited in one sheet.
+// Every exercise (built in and your own, marked Yours) with what is set on it, searchable, edited in one sheet.
 export default function ExerciseLibrary() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs);
   const { openModal } = useAppStore.getState();
-  const [f, setF] = useState({ q: '', eq: '', muscle: '' });
+  const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
   const shown = filterRows(rows, f);
-  const filtering = !!(f.q || f.eq || f.muscle);
+  const filtering = !!(f.q || f.eq || f.muscle || f.src);
   return (
     <section className="panel edpanel exlib">
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -40,7 +40,14 @@ export default function ExerciseLibrary() {
             <option value="untagged">Not tagged yet</option>
           </select>
         </label>
-        {filtering && <button type="button" className="btn sm ghost" onClick={() => setF({ q: '', eq: '', muscle: '' })}>Clear</button>}
+        <label className="field">Source
+          <select value={f.src} onChange={e => setF(x => ({ ...x, src: e.target.value }))}>
+            <option value="">All</option>
+            <option value="yours">Yours</option>
+            <option value="library">Library</option>
+          </select>
+        </label>
+        {filtering && <button type="button" className="btn sm ghost" onClick={() => setF({ q: '', eq: '', muscle: '', src: '' })}>Clear</button>}
         <span className="note" role="status">{filtering ? `${shown.length} of ${rows.length} exercises` : `${rows.length} exercises`}</span>
       </div>
       <RemovedNotice scope="exercises" />
@@ -52,7 +59,7 @@ export default function ExerciseLibrary() {
           return (
             <div className="exrow" key={r.id}>
               <div className="exmain">
-                <b>{r.name}</b>
+                <b>{r.name}{r.custom && <span className="pill yours" title="You created this exercise">Yours</span>}</b>
                 <span className="note">{[...meta, where].join(' · ')}</span>
                 <span className="note">{muscles || 'No muscles tagged yet'}</span>
                 {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.name} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(r.url)}</a>}
