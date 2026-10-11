@@ -28,7 +28,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
   setBackupRepo(raw) {
     const v = raw.trim();
     if (/^[\w.-]+\/[\w.-]+$/.test(v)) { if (get().mutateCfg(c => { c.backup = { ...backupCfg(c), repo: v, hashes: {} }; })) set({ backupMsg: null }); }
-    else set({ backupMsg: { kind: 'err', text: 'Use the form owner/repo, for example jacgit18/iron-log-data.' } });
+    else set({ backupMsg: { kind: 'err', text: 'Use the form owner/repo, for example your-name/iron-log-backup.' } });
   },
 
   async readImportFile(file) {
@@ -81,11 +81,20 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           if (v !== undefined) cfg[k] = v;
         });
         const patch: Partial<AppState> = { cfg }; const docs: [string, unknown][] = []; const removes: string[] = []; const saves: ('saveCfg' | 'saveLibrary' | 'saveBody' | 'saveExperiments' | 'saveWeek' | 'saveStretches' | 'saveStrWeek' | 'saveSupp')[] = ['saveCfg']; const progSaves: [string, Program][] = [];
+        // Program documents go before anything else is written: a save of another document makes the database send its programs
+        // again, and a document still there would put the old program back on the board.
+        const progRemoves: string[] = [];
         if (on.program) {
           const programs = { ...get().programs };
+          // A file has no program for A or B when it was the built-in plan (buildDataFile leaves that out), so that is what a missing one
+          // means. Syncing, ADR 016 rule 2 still applies after the restore: the built-in plan only for an account with log entries,
+          // otherwise the blank one. Either way there is no saved program, so the next load decides the same.
+          const logsAfter: Record<string, unknown> = on.progress ? d.logs || {} : get().logs;
+          const hasEntries = Object.values(logsAfter).some(l => Array.isArray(l) && l.length > 0);
           (['A', 'B'] as const).forEach(k => {
-            if (d.programs[k]) progSaves.push([k, structuredClone(d.programs[k])]);
-            else if (programs[k] !== BUILTIN[k]) { programs[k] = BUILTIN[k]; removes.push('programs/' + k); }
+            if (d.programs[k]) { progSaves.push([k, structuredClone(d.programs[k])]); return; }
+            const want = hasEntries ? BUILTIN[k] : get().originalProgram(k);
+            if (programs[k] !== want) { programs[k] = want; progRemoves.push('programs/' + k); }
           });
           patch.programs = programs; patch.library = structuredClone(d.library); saves.push('saveLibrary');
         }
@@ -111,6 +120,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
         }
         const refused = get().refusals;
         set(patch);
+        progRemoves.forEach(path => get().removeDoc(path));
         saves.forEach(f => get()[f]());
         progSaves.forEach(([k, body]) => get().saveProgram(k, body));
         if (groceryIn) get().setGrocery(groceryIn);
@@ -139,7 +149,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
         if (on.program) d.library.forEach((it: any) => { if (!have.has(it.id)) { lib.push(structuredClone(it)); have.add(it.id); } });
         (['A', 'B'] as const).forEach(k => {
           const p = on.program && d.programs[k]; if (!p) return; const cur = get().programs[k];
-          if (cur === BUILTIN[k]) get().saveProgram(k, structuredClone(p));
+          if (get().isOriginal(cur, k)) get().saveProgram(k, structuredClone(p));
           else if (!sameProg(cur, p) && !lib.some(it => sameProg(it.prog, p))) {
             lib.push({ id: Date.now().toString(36) + k + Math.random().toString(36).slice(2, 6), name: `${progName(get().cfg, k)} from import · ${today}`, from: k, at: new Date().toISOString(), prog: progBody(p) as Program });
           }

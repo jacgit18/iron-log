@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -34,7 +34,7 @@ jobs:
       - run: npm test
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - run: docker build --build-arg APP_VERSION=$(git log -1 --format=%ct) -t iron-log .
@@ -53,7 +53,7 @@ jobs:
         run: docker logs app
 
   database:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17
@@ -82,7 +82,7 @@ jobs:
   # The nightly backup and the restore check keep working: back up a migrated database that holds a few rows, restore the dump into
   # a throwaway server, and compare every table's row count with the manifest. (Phase F.)
   backup:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17
@@ -123,7 +123,7 @@ jobs:
         run: scripts/restore-check.sh "$(ls "$RUNNER_TEMP"/backups/*.dump)"
 
   e2e-sync:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17
@@ -160,7 +160,7 @@ jobs:
           retention-days: 7
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

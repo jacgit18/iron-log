@@ -262,7 +262,8 @@ export function mergeWeek(a: unknown, b: unknown): Week {
 /* ---------- GitHub backup (Claude-hosted version, via the viewer's Composio connector) ---------- */
 export const GH_SERVER = 'Composio For You';
 export const GH_TOOL = 'COMPOSIO_MULTI_EXECUTE_TOOL';
-export const backupCfg = (cfg: Cfg): BackupCfg => ({ repo: 'jacgit18/iron-log-data', branch: 'main', hashes: {}, ...(cfg.backup || {}) });
+// No default repo (ADR 016 step 4): each person names their own in Settings.
+export const backupCfg = (cfg: Cfg): BackupCfg => ({ repo: '', branch: 'main', hashes: {}, ...(cfg.backup || {}) });
 function hashStr(s: string) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
 export function weekFingerprint(S: Snapshot, key: string, w: Week) {
   const { cfg, logs, programs } = S;
@@ -284,7 +285,7 @@ export const daysSince = (last: { at: string } | null | undefined) => (last ? Ma
 export const daysSinceBackup = (cfg: Cfg) => daysSince(cfg.backup && cfg.backup.last);
 
 /* ---------- GitHub backup (standalone app: GitHub REST API with the viewer's token) ---------- */
-export const ghCfg = (cfg: Cfg) => ({ repo: 'jacgit18/iron-log', branch: 'data', ...(cfg.ghBackup || {}) });
+export const ghCfg = (cfg: Cfg) => ({ repo: '', branch: 'data', ...(cfg.ghBackup || {}) });
 // Same value for the same data, whenever it was exported and whatever the backup bookkeeping says.
 export function dataFingerprint(d: Partial<DataFile>) {
   const { backup: _b, ghBackup: _g, ...config } = { ...d.config }; // eslint-disable-line no-unused-vars
