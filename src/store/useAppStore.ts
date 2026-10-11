@@ -164,6 +164,8 @@ const restored = loadView(ymd(new Date()));
 let keepMDay = restored.mDay != null; // the first week load must not clear a restored phone day
 const loadedMDay = (state: AppState) => { const m = keepMDay ? state.mDay : null; keepMDay = false; return m; };
 
+const allReady = (r: AppState['ready']) => r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strHist && r.strWeek && r.supp;
+
 export const useAppStore = create<AppState>((set, get) => ({
   ...editorSlice(set, get, flag),
   ...settingsSlice(set, get, flag),
@@ -276,7 +278,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     return { ...(get().weekHist || {}), [get().weekKey()]: get().week };
   },
 
-  isReady: () => { const r = get().ready; return r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strHist && r.strWeek && r.supp; },
+  isReady: () => allReady(get().ready),
   weekKey: () => ymd(get().weekStart),
   // The shown week's program: what it ran once it is over (ADR 022), else today's.
   activeProgKey: () => weekProgKey(get().cfg, get().week, get().weekKey()),
@@ -1093,6 +1095,12 @@ export function fromOtherTab(e: { key?: string | null; newValue?: string | null 
 // Remember the tab and phone day across a refresh.
 useAppStore.subscribe((s, prev) => {
   if (s.tab !== prev.tab || s.mDay !== prev.mDay) saveView(ymd(useToday.getState().today), s);
+});
+// Past weeks saved before ADR 022 get their record once per device as soon as the data is in, not only when Progress first loads
+// the history: else a program loaded or edited before that would rewrite them first.
+useAppStore.subscribe((s, prev) => {
+  if (s.ready === prev.ready || !allReady(s.ready) || allReady(prev.ready) || LS.get('ran-recorded')) return;
+  void s.loadHistory().then(() => { if (useAppStore.getState().weekHist) LS.set('ran-recorded', true); });
 });
 // An installed app left open past the end of the week moves on to the new week, but only if you
 // were looking at the week that just ended; browsing elsewhere stays put.

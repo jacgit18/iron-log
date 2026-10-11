@@ -138,3 +138,19 @@ describe('the board’s + Add exercise on a finished week', () => {
     expect(st().modal).toMatchObject({ type: 'slot', target: { key: 'A', day: 1 } });
   });
 });
+
+describe('old past weeks get their record once the data is in', () => {
+  it('without opening Progress, and only once per device', async () => {
+    const key = lastWeek(); const card = BUILTIN.A.days[0].slots[1];
+    mem['ironlog:weeks/' + key] = JSON.stringify({ prog: null, done: { [card.id]: true }, skipped: {}, moved: {}, ph: {}, warm: {} });
+    const ready = st().ready;
+    useAppStore.setState({ ready: Object.fromEntries(Object.keys(ready).map(k => [k, false])) });
+    useAppStore.setState({ ready });
+    await st().loadHistory(); // waits for the load the store started
+    expect(saved('weeks/' + key).ran.program.days[0].slots.some(s => s.id === card.id)).toBe(true);
+    expect(saved('ran-recorded')).toBe(true);
+    useAppStore.setState({ weekHist: null, ready: Object.fromEntries(Object.keys(ready).map(k => [k, false])) });
+    useAppStore.setState({ ready });
+    expect(st().historyLoading).toBe(false); // done on this device: not loaded again
+  });
+});
