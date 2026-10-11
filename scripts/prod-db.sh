@@ -2,7 +2,7 @@
 # Production database chores, run by hand (docs: deploy-runbook.md, section 8). Nothing is written without --apply, and every write takes
 # a backup first. No prompts, so each command runs as one line.
 #
-# Usage:  scripts/prod-db.sh <command> [--apply]
+# Usage:  scripts/prod-db.sh <command> [--apply]     (or: npm run prod:db -- <command> [--apply])
 #   status                      which migrations production has applied ([X]) and which wait ([ ]). Read-only.
 #   pending                     prints the waiting migration files; exit 0 when none wait, 3 when some do. Run it before a deploy:
 #                               a migration must be applied BEFORE the code that needs it goes live.
