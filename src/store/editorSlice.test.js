@@ -36,6 +36,16 @@ describe('editing a program', () => {
     st().moveEdSlot(9, 1);
     expect(ids(day1())).toEqual(builtinA());
   });
+  it('a card saved without an id keeps its position id when moved with the arrows', () => {
+    const bare = { ...BUILTIN.A, days: BUILTIN.A.days.map((d, di) => (di ? d : { ...d, slots: d.slots.map(({ id: _id, ...sl }) => sl) })) };
+    useAppStore.setState({ programs: { A: bare, B: BUILTIN.B } });
+    const first = day1()[0];
+    st().moveEdSlot(0, 1);
+    const moved = day1().find(sl => sl.items[0].ex === first.items[0].ex && sl.sec === first.sec);
+    expect(moved.id).toBe('A-d1s1');
+    expect(new Set(ids(day1())).size).toBe(day1().length);
+    expect(day1().every(sl => sl.id)).toBe(true);
+  });
   it('removes a card and sets or clears a day’s subtitle', () => {
     st().removeEdSlot(0);
     expect(ids(day1())).toEqual(builtinA().slice(1));
