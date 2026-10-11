@@ -13,8 +13,8 @@ import { eventually } from '../../src/sync/testing.ts';
 import { startTestDatabase } from '../test/postgres.ts';
 
 // Two phones changing the same things (build spec phase D, increment D4; ADR 003, FM-04, FM-05, FM-06). The rules:
-// this device wins a stale edit; a card ticked elsewhere beats this device's skip; a delete never wins silently over a
-// later edit; an edit of something deleted elsewhere is set aside, not brought back; one check-off per card and week.
+// this device wins a stale edit, except a week, which is merged three-way (ADR 031); a card ticked elsewhere beats this device's
+// skip; a delete never wins silently over a later edit; an edit of something deleted elsewhere is set aside, not brought back; one check-off per card and week.
 let db: Kysely<DB>;
 let stop: () => Promise<void>;
 let server: Server;
@@ -193,7 +193,7 @@ describe('delete meets edit (FM-05)', () => {
 });
 
 describe('a pull never replaces what this phone has not sent (FM-04)', () => {
-  it('while offline, the phone keeps showing its own unsent week, and after reconnecting its change lands on top', async () => {
+  it('while offline, the phone keeps showing its own unsent week, and after reconnecting it is merged with the other phone\'s (ADR 031)', async () => {
     const down = { on: false };
     const a = phone();
     const b = phone('owner', memory(), offline(realTransport(), down));
@@ -211,10 +211,11 @@ describe('a pull never replaces what this phone has not sent (FM-04)', () => {
     down.on = false;
     await b.api.resume();
     await eventually(() => expect(b.api.status().pendingPaths).toEqual([]));
-    expect(await db.selectFrom('weeks').select('data').executeTakeFirstOrThrow()).toMatchObject({ data: { done: { mine: true } } });
+    expect((await db.selectFrom('weeks').select('data').executeTakeFirstOrThrow()).data).toMatchObject({ done: { mine: true, theirs: true } });
     expect(b.api.status()).toMatchObject({ pendingPaths: [], quarantined: 0 });
+    expect((await b.get('weeks/2026-10-04')).done).toEqual({ mine: true, theirs: true });
     await a.api.syncNow();
-    expect((await a.get('weeks/2026-10-04')).done).toEqual({ mine: true });
+    expect((await a.get('weeks/2026-10-04')).done).toEqual({ mine: true, theirs: true });
   });
 
   it('an entry only the other phone has is not lost to this phone\'s unsent changes to other entries', async () => {

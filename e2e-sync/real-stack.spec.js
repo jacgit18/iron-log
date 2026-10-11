@@ -99,6 +99,46 @@ test('two phones tick the same card: the server keeps one check-off and both pho
   await b.close();
 });
 
+// ADR 031: a stale week save is merged three-way, so a tick made on the other phone, which this phone has not pulled, survives.
+const pendingOf = page => page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:sync/pending') || '{}'));
+
+test('two phones tick different cards of one week before either pulls: the week keeps both ticks', async ({ browser, user }) => {
+  await server.seedPrograms(user);
+  const a = await newPhone(browser, user);
+  const b = await newPhone(browser, user);
+  const pageA = await a.open();
+  const pageB = await b.open(); // b has pulled before a ticks, so its week is the old one
+
+  await pageA.locator('#chk-A-d1s1').check();
+  await expect.poll(async () => (await server.week(user, '2026-09-20'))?.data.done ?? {}).toEqual({ 'A-d1s1': true });
+  await pageB.locator('#chk-A-d3s1').check();
+  await expect.poll(() => pendingOf(pageB), { timeout: 30_000 }).toEqual({});
+
+  expect((await server.week(user, '2026-09-20')).data.done).toEqual({ 'A-d1s1': true, 'A-d3s1': true });
+  await expect(pageB.locator('#chk-A-d1s1')).toBeChecked(); // shown at once, not at the next pull
+  await a.close();
+  await b.close();
+});
+
+test('a card unticked on one phone stays unticked when the other phone saves the week from before', async ({ browser, user }) => {
+  await server.seedPrograms(user);
+  const a = await newPhone(browser, user);
+  const pageA = await a.open();
+  await pageA.locator('#chk-A-d1s1').check();
+  await expect.poll(async () => (await server.week(user, '2026-09-20'))?.data.done ?? {}).toEqual({ 'A-d1s1': true });
+  const b = await newPhone(browser, user);
+  const pageB = await b.open(); // b sees A-d1s1 ticked
+
+  await pageA.locator('#chk-A-d1s1').uncheck();
+  await expect.poll(async () => (await server.week(user, '2026-09-20')).data.done).toEqual({});
+  await pageB.locator('#chk-A-d3s1').check();
+  await expect.poll(() => pendingOf(pageB), { timeout: 30_000 }).toEqual({});
+
+  expect((await server.week(user, '2026-09-20')).data.done).toEqual({ 'A-d3s1': true });
+  await a.close();
+  await b.close();
+});
+
 test('a user sees only their own data', async ({ browser, user }) => {
   await server.seedPrograms(user); await server.seedPrograms(`${user}-other`);
   const mine = await newPhone(browser, user);
