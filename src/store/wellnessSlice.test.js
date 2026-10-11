@@ -121,6 +121,17 @@ describe('supplement library', () => {
     st().deleteSupplement(x.id);
     expect(st().supp.items).toEqual([]); expect(st().supp.taken).toEqual({});
   });
+  it('Undo puts a deleted supplement back in its place with every day it was ticked', () => {
+    st().addSupplement('morning', 'A'); st().addSupplement('morning', 'B'); st().addSupplement('night', 'C');
+    st().setSupplementTaken('2026-10-05', 'b', true); st().setSupplementTaken('2026-10-06', 'b', true); st().setSupplementTaken('2026-10-06', 'a', true);
+    const before = structuredClone(st().supp);
+    st().deleteSupplement('b');
+    expect(st().supp.taken['2026-10-05']).toBeUndefined();
+    expect(st().removed).toMatchObject({ scope: 'supplements', text: 'B' });
+    st().undoRemoved();
+    expect(st().supp.items).toEqual(before.items); expect(st().supp.taken).toEqual(before.taken);
+    expect(saved('supplements/main').taken).toEqual(before.taken);
+  });
   it('moves within a section only', () => {
     st().addSupplement('morning', 'A'); st().addSupplement('night', 'B'); st().addSupplement('morning', 'C');
     st().moveSupplement('c', -1);

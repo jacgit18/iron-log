@@ -146,12 +146,20 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     });
     set({ modal: null }); flag('Supplement saved'); return null;
   },
+  // Undo puts it back where it was, with every day it was ticked.
   deleteSupplement(id) {
+    const i = get().supp.items.findIndex(x => x.id === id); if (i < 0) return;
+    const item = get().supp.items[i];
+    const days = Object.keys(get().supp.taken).filter(d => get().supp.taken[d][id]);
     if (!get().mutateSupp(s => {
       s.items = s.items.filter(x => x.id !== id);
       Object.keys(s.taken).forEach(d => { delete s.taken[d][id]; if (!Object.keys(s.taken[d]).length) delete s.taken[d]; });
     })) return;
-    set({ modal: null }); flag('Deleted');
+    set({ modal: null });
+    get().noteRemoved('supplements', item.n, () => !get().supp.items.some(x => x.id === id) && get().mutateSupp(s => {
+      s.items.splice(Math.min(i, s.items.length), 0, item);
+      days.forEach(d => { s.taken[d] = { ...(s.taken[d] || {}), [id]: true }; });
+    }));
   },
   // Move up or down among the ones in the same section (or the same library-only group).
   moveSupplement(id, dir) {
