@@ -77,6 +77,19 @@ describe('checking off on the board', () => {
   });
 });
 
+describe('muscle tags', () => {
+  it('Use default drops your own tags, and Undo brings them back', () => {
+    st().saveTags('hack', { p: ['chest'], s: [] });
+    const own = st().cfg.muscleMap.hack;
+    st().resetTags('hack');
+    expect(st().cfg.muscleMap.hack).toBeUndefined();
+    expect(st().removed).toMatchObject({ scope: 'muscles' });
+    st().undoRemoved();
+    expect(st().cfg.muscleMap.hack).toEqual(own);
+    expect(saved('config/main').muscleMap.hack).toEqual(own);
+  });
+});
+
 describe('warm-up list', () => {
   it('starts with Shadow box only, and items can be added and removed', () => {
     expect(warmupOf(st().cfg).map(x => x.id)).toEqual(['shadow']);

@@ -207,7 +207,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().mutateCfg(c => { c.muscleMap = c.muscleMap || {}; c.muscleMap[exId] = tags; })) { set({ modal: null }); flag('Muscles saved'); }
   },
   resetTags(exId) {
-    if (get().mutateCfg(c => { if (c.muscleMap) delete c.muscleMap[exId]; })) set({ modal: null });
+    const own = get().cfg.muscleMap?.[exId]; if (!own) return;
+    if (!get().mutateCfg(c => { if (c.muscleMap) delete c.muscleMap[exId]; })) return;
+    set({ modal: null });
+    get().noteRemoved('muscles', `your muscle tags for ${exInfo(get().cfg, exId).n}`, () => !get().cfg.muscleMap?.[exId] && get().mutateCfg(c => { c.muscleMap = { ...(c.muscleMap || {}), [exId]: own }; }));
   },
 
   snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, ...(isAdminNow() ? { grocery: { ...s.grocery, months: s.groceryMonths } } : {}) }; }, // the grocery list is an admin-only feature: no one else exports or backs it up

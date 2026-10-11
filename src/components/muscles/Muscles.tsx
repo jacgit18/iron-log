@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { exInfo } from '../../lib/data.js';
 import { progName } from '../../lib/logic.js';
 import { MUSCLES, M_KEYS, SIL, FRONT, BACK, level, fmtSets, muscleVolumeAll } from '../../lib/muscles.js';
+import RemovedNotice from '../RemovedNotice.jsx';
 
 const MIRROR = 'matrix(-1 0 0 1 200 0)';
 
@@ -106,6 +107,7 @@ export default function Muscles() {
   return (
     <>
       <p className="note">Every exercise in {keys.map(k => progName(cfg, k)).join(' and ')}. Sets are per week, averaged across the programs.</p>
+      <RemovedNotice scope="muscles" />
       <div className="bodywrap">
         <div className="figs">
           <Figure shapes={FRONT} label="Front" vol={vol} sel={sel} onPick={selectMuscle} />
