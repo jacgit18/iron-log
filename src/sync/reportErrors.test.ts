@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { installErrorReporting, type ReportTarget } from './reportErrors.js';
+import { installErrorReporting, reportCaught, type ReportTarget } from './reportErrors.js';
 
 function fakeWindow() {
   const handlers = new Map<string, (e: never) => void>();
@@ -43,5 +43,29 @@ describe('installErrorReporting', () => {
     expect(() => w.fire('error', { message: 'x' })).not.toThrow();
     stop();
     expect(w.handlers.size).toBe(0);
+  });
+
+  it('reports an error an ErrorBoundary caught on the same terms: once each, one limit with the window errors', () => {
+    const w = fakeWindow();
+    const sent: { kind: string; message: string }[] = [];
+    const stop = installErrorReporting({ version: '9', send: b => sent.push(b), target: w.target, max: 3 });
+    reportCaught(new Error('render'));
+    reportCaught(new Error('render')); // Try again hit the same error
+    w.fire('error', { message: 'window one' });
+    reportCaught('a string');
+    reportCaught(new Error('over the limit'));
+    expect(sent).toMatchObject([{ kind: 'error', message: 'render' }, { message: 'window one' }, { message: 'a string' }]);
+    stop();
+  });
+
+  it('a caught error is dropped while reporting is not installed, and a throwing send is forgotten', () => {
+    const w = fakeWindow();
+    const sent: unknown[] = [];
+    installErrorReporting({ version: '9', send: b => sent.push(b), target: w.target })();
+    reportCaught(new Error('after stop'));
+    expect(sent).toEqual([]);
+    const stop = installErrorReporting({ version: '9', send: () => { throw new Error('offline'); }, target: w.target });
+    expect(() => reportCaught(new Error('x'))).not.toThrow();
+    stop();
   });
 });

@@ -17,6 +17,10 @@ export interface ReportOptions {
   max?: number;
 }
 
+// The running reporter, so an error an ErrorBoundary caught (which never reaches the window's error event) goes through the same
+// one-of-each and per-load limit. Null when reporting is off: syncing off, or a development build.
+let current: ((kind: 'error' | 'unhandledrejection', message: string, stack: string) => void) | null = null;
+
 const text = (v: unknown) => (v instanceof Error ? v : { message: typeof v === 'string' ? v : 'non-error value', stack: '' });
 
 /** Starts listening; returns how to stop. */
@@ -36,12 +40,20 @@ export function installErrorReporting({ version, send, target = window as unknow
     const err = text(e.reason);
     report('unhandledrejection', err.message, err.stack ?? '');
   };
+  current = report;
   target.addEventListener('error', onError as (e: never) => void);
   target.addEventListener('unhandledrejection', onRejection as (e: never) => void);
   return () => {
+    if (current === report) current = null;
     target.removeEventListener('error', onError as (e: never) => void);
     target.removeEventListener('unhandledrejection', onRejection as (e: never) => void);
   };
+}
+
+/** Reports an error React caught in an ErrorBoundary (createRoot's onCaughtError). Does nothing while reporting is not installed. */
+export function reportCaught(error: unknown) {
+  const err = text(error);
+  current?.('error', err.message, err.stack ?? '');
 }
 
 /** The browser's way of sending one: same origin, fire and forget. */

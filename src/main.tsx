@@ -13,23 +13,19 @@ import { LS } from './lib/storage.js';
 import { apiSyncEnabled, FLAG_KEY } from './sync/flag.js';
 import { createAccountClient } from './sync/account.js';
 import { applyDevUserFromUrl, signIn as devHeaders } from './sync/devUser.js';
-import { sendReport } from './sync/reportErrors.js';
+import { reportCaught } from './sync/reportErrors.js';
 import { useAppStore } from './store/useAppStore.js';
 
 applyAppearance();
 initPwa();
 applyDevUserFromUrl(); // development only: ?devUser=off to be a stranger
 
-// An error an ErrorBoundary caught never reaches window's error event, so the reporting in sync/browser.ts would not see it: send it
-// from here, on the same terms (syncing on, not a development build, a few per page load).
-let caught = 0;
+// An error an ErrorBoundary caught never reaches window's error event, so it is handed to the reporter (sync/reportErrors.ts) here. It is
+// sent only while that reporter is installed (syncing on, not a development build), with the same once-each and per-load limit.
 const root = createRoot(document.getElementById('root')!, {
   onCaughtError(error) {
     console.error(error);
-    if (import.meta.env.DEV || caught >= 5 || !apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC)) return;
-    caught++;
-    const e = error instanceof Error ? error : new Error(String(error));
-    sendReport({ kind: 'error', message: e.message || 'unknown error', stack: e.stack ?? '', page: window.location.pathname, version: __APP_VERSION__ });
+    reportCaught(error);
   },
 });
 const show = (node: ReactNode) => root.render(<StrictMode>{node}</StrictMode>);

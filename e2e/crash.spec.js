@@ -2,15 +2,16 @@ import { test, expect } from './fixtures.js';
 
 // A render error shows a way out instead of a white screen (backlog #71). The error is forced by making Array.prototype.sort throw while
 // the Progress tab draws, then letting it work again.
-const breakSort = page => page.evaluate(() => {
+// Armed and clicked in one step, so nothing else (the Board, a timer) can draw while sort is broken before Progress does.
+const breakProgress = page => page.evaluate(() => {
   const sort = Array.prototype.sort;
-  window.__crash = true;
   Array.prototype.sort = function (...a) { if (window.__crash) throw new Error('test crash'); return sort.apply(this, a); };
+  window.__crash = true;
+  document.getElementById('tab-progress').click();
 });
 
 test('an error in one tab keeps the header and tabs, and Try again redraws it', async ({ page }) => {
-  await breakSort(page);
-  await page.locator('#tab-progress').click();
+  await breakProgress(page);
   const crash = page.locator('#view .crash');
   await expect(crash).toBeVisible();
   await expect(crash.getByRole('heading', { name: 'Something went wrong' })).toBeVisible();
@@ -27,8 +28,7 @@ test('an error in one tab keeps the header and tabs, and Try again redraws it', 
 });
 
 test('another tab works after one has failed', async ({ page }) => {
-  await breakSort(page);
-  await page.locator('#tab-progress').click();
+  await breakProgress(page);
   await expect(page.locator('#view .crash')).toBeVisible();
   await page.evaluate(() => { window.__crash = false; });
   await page.locator('#tab-settings').click();
