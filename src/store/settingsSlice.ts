@@ -28,7 +28,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
   setBackupRepo(raw) {
     const v = raw.trim();
     if (/^[\w.-]+\/[\w.-]+$/.test(v)) { if (get().mutateCfg(c => { c.backup = { ...backupCfg(c), repo: v, hashes: {} }; })) set({ backupMsg: null }); }
-    else set({ backupMsg: { kind: 'err', text: 'Use the form owner/repo, for example jacgit18/iron-log-data.' } });
+    else set({ backupMsg: { kind: 'err', text: 'Use the form owner/repo, for example your-name/iron-log-backup.' } });
   },
 
   async readImportFile(file) {

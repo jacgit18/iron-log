@@ -879,7 +879,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   setGhRepo(raw) {
     const v = String(raw || '').trim();
-    if (!validRepo(v)) { set({ backupMsg: { kind: 'err', text: 'Use the form owner/repo, for example jacgit18/iron-log.' } }); return false; }
+    if (!validRepo(v)) { set({ backupMsg: { kind: 'err', text: 'Use the form owner/repo, for example your-name/iron-log-backup.' } }); return false; }
     if (get().mutateCfg(c => { c.ghBackup = { ...ghCfg(c), repo: v, hash: null }; })) set({ backupMsg: null });
     return true;
   },
@@ -888,6 +888,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   async backupDirect() {
     if (get().backupBusy || get().blocked()) return;
     const token = get().ghToken; const g = ghCfg(get().cfg);
+    if (!validRepo(g.repo)) { set({ backupMsg: { kind: 'err', text: 'Set the backup repository (owner/repo) in Settings first.' } }); return; }
     if (!token) { set({ backupMsg: { kind: 'err', text: 'Paste a GitHub token in Settings first.' } }); return; }
     set({ backupBusy: true, backupMsg: { kind: 'info', text: 'Building the Excel and data files…' } });
     try {
@@ -910,6 +911,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   async restoreFromGitHub() {
     if (get().backupBusy || get().blocked()) return;
     const g = ghCfg(get().cfg);
+    if (!validRepo(g.repo)) { set({ backupMsg: { kind: 'err', text: 'Set the backup repository (owner/repo) in Settings first.' } }); return; }
     set({ backupBusy: true, backupMsg: { kind: 'info', text: `Reading the backup from ${g.repo}…` } });
     try {
       const text = await readFile({ token: get().ghToken, repo: g.repo, branch: g.branch, path: 'iron-log-data.json' });
