@@ -118,7 +118,17 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
       });
     },
 
-    removeGroceryItem(id) { mutateCatalogue(g => { g.items = g.items.filter(i => i.id !== id); return null; }); },
+    // Undo puts it back in its place (its ticks in each month were never removed), and its store if that went meanwhile.
+    removeGroceryItem(id) {
+      const i = get().grocery.items.findIndex(x => x.id === id); if (i < 0) return;
+      const it = get().grocery.items[i];
+      mutateCatalogue(g => { g.items = g.items.filter(x => x.id !== id); return null; });
+      get().noteRemoved('grocery', it.n, () => mutateCatalogue(g => {
+        if (g.items.some(x => x.id === id)) return 'back';
+        if (it.store && !g.stores.includes(it.store)) g.stores.push(it.store);
+        g.items.splice(Math.min(i, g.items.length), 0, it); return null;
+      }) === null);
+    },
 
     addGroceryStore(name) {
       const store = name.trim().replace(/\s+/g, ' ').slice(0, 40);
@@ -131,10 +141,19 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
     },
 
     removeGroceryStore(name) {
-      return mutateCatalogue(g => {
-        if (g.items.some(i => i.store === name)) return 'Move or remove this store’s items first.';
+      const i = get().grocery.stores.indexOf(name);
+      const err = mutateCatalogue(g => {
+        if (g.items.some(it => it.store === name)) return 'Move or remove this store’s items first.';
         g.stores = g.stores.filter(s => s !== name); return null;
       });
+      if (!err && i >= 0) {
+        get().noteRemoved('grocerystores', name, () => mutateCatalogue(g => {
+          if (g.stores.includes(name)) return 'back';
+          if (g.stores.length >= MAX_STORES) return 'full';
+          g.stores.splice(Math.min(i, g.stores.length), 0, name); return null;
+        }) === null);
+      }
+      return err;
     },
 
     // Ticking records the count and price paid, so a later change to the catalogue does not rewrite that month.

@@ -53,6 +53,25 @@ describe('the catalogue', () => {
     expect(st().addGroceryStore('Costco')).toBeNull();
     expect(st().addGroceryStore('costco')).toMatch(/already/);
   });
+  it('Undo puts a removed item back in its place, with its store if that went meanwhile', () => {
+    st().addGroceryItem(form()); st().addGroceryItem({ ...form(), n: 'Eggs', store: '' });
+    const before = st().grocery.items;
+    st().removeGroceryItem('kale');
+    expect(st().removed).toMatchObject({ scope: 'grocery', text: 'Kale' });
+    st().undoRemoved();
+    expect(st().grocery.items).toEqual(before);
+    st().removeGroceryItem('kale');
+    useAppStore.setState({ grocery: { ...st().grocery, stores: [] } });
+    st().undoRemoved();
+    expect(st().grocery.items).toEqual(before); expect(st().grocery.stores).toEqual(['Veg market']);
+  });
+  it('Undo puts a removed store back in its place', () => {
+    st().addGroceryStore('A'); st().addGroceryStore('B'); st().addGroceryStore('C');
+    st().removeGroceryStore('B');
+    expect(st().removed).toMatchObject({ scope: 'grocerystores', text: 'B' });
+    st().undoRemoved();
+    expect(st().grocery.stores).toEqual(['A', 'B', 'C']);
+  });
 });
 
 describe('a month', () => {

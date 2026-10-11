@@ -1,10 +1,11 @@
 import type { FlatSlot } from '../../types.ts';
-import { Fragment, type DragEvent } from 'react';
+import { Fragment, useState, type DragEvent } from 'react';
 import type { PhaseKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, exInfo, videoLabel } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
+import ArmedButton from '../ArmedButton.jsx';
 import {
   DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, backoffOf, describe, holdPlan,
   restsOf,
@@ -16,6 +17,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }: { s: FlatS
   const logs = useAppStore(st => st.logs);
   const { checkCard, checkItem, setPhase, quickLog, openModal, moveSlot, skipCard, removeExtra } = useAppStore.getState();
   const startHold = useTimerStore(st => st.startHold);
+  const [removing, setRemoving] = useState(false); // an experiment card's Remove was pressed once
 
   const done = isDone(s, week); const sk = isSkipped(s, week); const paired = isPaired(s);
   const label = s.type === 'superset' ? 'Superset' : s.type === 'either' ? 'Either / or' : '';
@@ -27,11 +29,12 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }: { s: FlatS
   return (
     <article
       aria-labelledby={`h-${s.id}-0`}
-      className={`card${done ? ' done' : ''}${sk ? ' skipped' : ''}${dragging ? ' dragging' : ''}`}
+      className={`card${done ? ' done' : ''}${sk ? ' skipped' : ''}${dragging ? ' dragging' : ''}${removing ? ' removing' : ''}`}
       draggable="true"
       onDragStart={e => onDragStart(e, s.id)}
       onDragEnd={onDragEnd}
     >
+      {removing && <span className="rmtag">Will be removed from this week · tap Remove again</span>}
       <div className="row1">
         {!paired && (
           <input type="checkbox" className="chk" id={`chk-${s.id}`} checked={done} aria-label={`Mark ${cardName} done`}
@@ -96,7 +99,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }: { s: FlatS
           {DAYS.map(d => <option key={d} value={d} disabled={restsOf(week).includes(d)}>Day {d}{restsOf(week).includes(d) ? ' (rest)' : d === planned ? ' (planned)' : ''}</option>)}
         </select>
         <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={sk ? `Undo skip for ${cardName}` : `Skip ${cardName} this week`} onClick={() => skipCard(s.id)}>{sk ? 'Undo skip' : 'Skip'}</button>
-        {s.experiment && <button type="button" className="btn sm ghost" id={`rm-${s.id}`} aria-label={`Remove ${cardName} from this week`} onClick={() => { removeExtra(s.id); if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => document.getElementById(`colh-${cur}`)?.focus()); }}>Remove</button>}
+        {s.experiment && <ArmedButton className={`btn sm ${removing ? 'danger' : 'ghost'}`} id={`rm-${s.id}`} aria-label={`Remove ${cardName} from this week`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setRemoving} onConfirm={() => removeExtra(s.id)} />}
       </div>
     </article>
   );

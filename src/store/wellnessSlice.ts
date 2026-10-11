@@ -1,9 +1,10 @@
 import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
+import { DAY_NAMES } from '../shared/dates.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
-import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN } from '../lib/water.js';
+import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
 
 const uid = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -68,10 +69,19 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     set({ modal: null }); flag('Stretch saved'); return null;
   },
   // Takes its check-offs out of the week on screen; other weeks keep theirs, which no longer match anything.
+  // Undo puts it back where it was, with its ticks in that week if it is still the one on screen.
   deleteStretch(id) {
+    const i = get().stretches.findIndex(y => y.id === id); if (i < 0) return;
+    const item = get().stretches[i]; const wk = get().weekKey();
+    const ticks = Object.keys(get().strWeek.done).filter(k => k.slice(2) === id);
     if (!get().mutateStretches(x => { x.items = x.items.filter(y => y.id !== id); })) return;
     get().mutateStrWeek(w => { w.done = withoutStretch(w, id).done; });
-    set({ modal: null }); flag('Deleted');
+    set({ modal: null });
+    get().noteRemoved('stretches', item.n, () => {
+      if (get().stretches.some(y => y.id === id) || !get().mutateStretches(x => { x.items.splice(Math.min(i, x.items.length), 0, item); })) return false;
+      if (ticks.length && get().weekKey() === wk) get().mutateStrWeek(w => { ticks.forEach(k => { w.done[k] = true; }); });
+      return true;
+    });
   },
   // Move a stretch up or down within its tier and group.
   moveStretch(id, dir) {
@@ -99,7 +109,12 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     });
     set({ modal: null }); flag('Saved'); return null;
   },
-  deleteStretchExp(id) { if (get().mutateStretches(x => { x.experiments = x.experiments.filter(y => y.id !== id); })) flag('Deleted'); },
+  deleteStretchExp(id) {
+    const i = get().stretchExps.findIndex(y => y.id === id); if (i < 0) return;
+    const e = get().stretchExps[i];
+    if (!get().mutateStretches(x => { x.experiments = x.experiments.filter(y => y.id !== id); })) return;
+    get().noteRemoved('stretchexps', e.n, () => !get().stretchExps.some(y => y.id === id) && get().mutateStretches(x => { x.experiments.splice(Math.min(i, x.experiments.length), 0, e); }));
+  },
   // Add an experiment to a day of the viewed week: a card for that day only.
   addStretchToDay(expId, day) {
     const e = get().stretchExps.find(x => x.id === expId); if (!e || !(day >= 0 && day < STRETCH_DAYS)) return false;
@@ -107,8 +122,14 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if (ok) flag(`Added ${e.n}`);
     return ok;
   },
+  // Undo puts it back with its tick, in the same week (the notice belongs to that week and day).
   removeStretchExtra(id) {
-    if (get().mutateStrWeek(w => { w.extra = w.extra.filter(x => x.id !== id); Object.keys(w.done).forEach(k => { if (k.slice(2) === id) delete w.done[k]; }); })) flag('Removed from this day');
+    const w0 = get().strWeek; const i = w0.extra.findIndex(x => x.id === id); if (i < 0) return;
+    const x0 = w0.extra[i]; const wk = get().weekKey(); const ticks = Object.keys(w0.done).filter(k => k.slice(2) === id);
+    if (!get().mutateStrWeek(w => { w.extra = w.extra.filter(x => x.id !== id); Object.keys(w.done).forEach(k => { if (k.slice(2) === id) delete w.done[k]; }); })) return;
+    get().noteRemoved(`sday:${wk}:${x0.day}`, `${x0.n} from ${DAY_NAMES[x0.day]}`, () => get().weekKey() === wk && !get().strWeek.extra.some(x => x.id === id) && get().mutateStrWeek(w => {
+      w.extra.splice(Math.min(i, w.extra.length), 0, x0); ticks.forEach(k => { w.done[k] = true; });
+    }));
   },
 
   /* Supplement library and schedule: Morning, Noon, Night. The same list every day; ticks are kept per date. */
@@ -121,7 +142,14 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
   },
   // Takes it off the schedule (slot ''), or puts a library one into a section. It stays in the library either way.
   setSupplementSlot(id, slot) { return get().mutateSupp(s => { const x = s.items.find(i => i.id === id); if (x && (slot === '' || SLOTS.some(([k]) => k === slot))) x.slot = slot; }); },
-  removeSupplement(id) { return get().setSupplementSlot(id, ''); },
+  // Undo puts it back in that section, if it has not been scheduled somewhere since.
+  removeSupplement(id) {
+    const x0 = get().supp.items.find(x => x.id === id); if (!x0 || !x0.slot) return false;
+    const slot = x0.slot;
+    if (!get().setSupplementSlot(id, '')) return false;
+    get().noteRemoved('suppslot:' + slot, `${x0.n} from ${SLOTS.find(([k]) => k === slot)?.[1] || slot}`, () => get().supp.items.find(x => x.id === id)?.slot === '' && get().setSupplementSlot(id, slot));
+    return true;
+  },
   // From the library sheet. Returns an error message, or null when saved.
   saveSupplement(d) {
     if (get().blocked()) return null;
@@ -137,12 +165,20 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     });
     set({ modal: null }); flag('Supplement saved'); return null;
   },
+  // Undo puts it back where it was, with every day it was ticked.
   deleteSupplement(id) {
+    const i = get().supp.items.findIndex(x => x.id === id); if (i < 0) return;
+    const item = get().supp.items[i];
+    const days = Object.keys(get().supp.taken).filter(d => get().supp.taken[d][id]);
     if (!get().mutateSupp(s => {
       s.items = s.items.filter(x => x.id !== id);
       Object.keys(s.taken).forEach(d => { delete s.taken[d][id]; if (!Object.keys(s.taken[d]).length) delete s.taken[d]; });
     })) return;
-    set({ modal: null }); flag('Deleted');
+    set({ modal: null });
+    get().noteRemoved('supplements', item.n, () => !get().supp.items.some(x => x.id === id) && get().mutateSupp(s => {
+      s.items.splice(Math.min(i, s.items.length), 0, item);
+      days.forEach(d => { s.taken[d] = { ...(s.taken[d] || {}), [id]: true }; });
+    }));
   },
   // Move up or down among the ones in the same section (or the same library-only group).
   moveSupplement(id, dir) {
@@ -166,7 +202,12 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     return get().mutateSupp(s => { s.water[date] = [...(s.water[date] || []), r1(n)]; });
   },
   removeWater(date, i) {
-    return get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(i, 1); if (l.length) s.water[date] = l; else delete s.water[date]; });
+    const oz = (get().supp.water[date] || [])[i]; if (oz == null) return false;
+    if (!get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(i, 1); if (l.length) s.water[date] = l; else delete s.water[date]; })) return false;
+    // Drinks have no ids: Undo only while the day's list is as the removal left it, so a drink added again by hand is not doubled.
+    const left = (get().supp.water[date] || []).join();
+    get().noteRemoved('water:' + date, `${fmtOz(oz)} oz of water`, () => (get().supp.water[date] || []).join() === left && get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(Math.min(i, l.length), 0, oz); s.water[date] = l; }));
+    return true;
   },
   setWaterGoal(raw) {
     const n = Number(raw); if (!validGoal(n)) { flag('Enter a daily goal between 8 and 500 oz'); return false; }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
 
 // Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later.
@@ -20,6 +21,7 @@ export default function SupplementLibrary() {
         <label className="field">Search<input type="search" value={q} placeholder="Name" onChange={e => setQ(e.target.value)} /></label>
         <span className="note" role="status">{needle ? `${shown.length} of ${items.length} supplements` : `${items.length} supplement${items.length === 1 ? '' : 's'}`}</span>
       </div>
+      <RemovedNotice scope="supplements" />
       <div className="exrows">
         {SLOT_OPTIONS.map(([slot]) => {
           const rows = shown.filter(i => i.slot === slot);

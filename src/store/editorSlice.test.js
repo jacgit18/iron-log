@@ -289,6 +289,19 @@ describe('creating a program', () => {
     expect(st().library).toEqual([]);
     expect(st().edKey()).toBe('A');
   });
+  it('Undo puts a deleted program back where it was, saved, once', () => {
+    st().saveCurrentAs('One'); st().saveCurrentAs('Two'); st().saveCurrentAs('Three');
+    const before = st().library.map(x => x.id);
+    st().deleteLibItem(before[1]);
+    expect(st().library.some(x => x.id === before[1])).toBe(false);
+    expect(st().removed).toMatchObject({ scope: 'library' });
+    expect(saved('library/main').items).toHaveLength(2);
+    st().undoRemoved();
+    expect(st().library.map(x => x.id)).toEqual(before);
+    expect(saved('library/main').items.map(x => x.id)).toEqual(before);
+    st().undoRemoved(); // nothing left to undo
+    expect(st().library.map(x => x.id)).toEqual(before);
+  });
 });
 
 describe('GitHub backup with no repository set (ADR 016 step 4: no personal default)', () => {

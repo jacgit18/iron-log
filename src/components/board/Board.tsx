@@ -13,6 +13,7 @@ import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
+import RemovedNotice from '../RemovedNotice.jsx';
 import FirstRun from './FirstRun.jsx';
 
 // Cards moved in from another day are grouped under their own heading.
@@ -206,6 +207,7 @@ export default function Board() {
           </div>
         </div>
       )}
+      <RemovedNotice scope={'board:' + wk} />
       {showMove && (
         <div className="notice movewarn" role="status" ref={moveRef}>
           <div><b>Heads-up:</b> {moveNote.lines.join(' ')}</div>

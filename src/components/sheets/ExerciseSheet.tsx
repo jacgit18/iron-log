@@ -63,7 +63,7 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
       </fieldset>
       {err && <p className="note err" role="alert">{err}</p>}
       <div className="actions">
-        {!isNew && custom && <ArmedButton className="btn ghost" label="Delete exercise" armedLabel="Confirm delete" style={{ marginRight: 'auto' }} onConfirm={remove} />}
+        {!isNew && custom && <ArmedButton className="btn ghost" label="Delete exercise" armedLabel="Tap again to delete" style={{ marginRight: 'auto' }} onConfirm={remove} />}
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
         <button type="submit" className="btn primary">Save</button>
       </div>

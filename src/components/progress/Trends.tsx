@@ -9,6 +9,7 @@ import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, niceSt
 import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
 import { liftGoalStatus, goalPhaseLabel } from '../../lib/liftGoal.js';
 import LineChart from '../LineChart.jsx';
+import RemovedNotice from '../RemovedNotice.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
 function Kpi({ label, value, sub }: { label: string; value: ReactNode; sub: ReactNode }) {
@@ -171,7 +172,7 @@ function BodyGoal() {
       {lines.map(t => <p className="note" key={t}>{t}</p>)}
       <div className="actions">
         <button type="button" className="btn sm" onClick={edit}>Change goal</button>
-        <ArmedButton className="btn sm ghost" label="Remove goal" armedLabel="Confirm remove" onConfirm={clearBodyGoal} />
+        <ArmedButton className="btn sm ghost" label="Remove goal" armedLabel="Tap again to remove" onConfirm={clearBodyGoal} />
       </div>
     </div>
   );
@@ -179,12 +180,15 @@ function BodyGoal() {
 
 function BodyChart() {
   const body = useAppStore(s => s.body); const deleteBodyWeight = useAppStore(s => s.deleteBodyWeight);
+  const [arming, setArming] = useState<string | null>(null); // the week whose ✕ was pressed once
   const L = bwSorted(body);
-  if (!L.length) return <section className="panel tchart"><h2>Body weight</h2><p className="note">Log your weight once a week from the top of the Board. It shows here as a trend.</p><BodyGoal /></section>;
+  // The Removed notice sits right after the heading in both layouts, so deleting the last weigh-in keeps it (and its Undo).
+  if (!L.length) return <section className="panel tchart"><h2>Body weight</h2><RemovedNotice scope="body" /><p className="note">Log your weight once a week from the top of the Board. It shows here as a trend.</p><BodyGoal /></section>;
   const rec = [...L].reverse().slice(0, 6);
   return (
     <section className="panel tchart">
       <h2>Body weight</h2>
+      <RemovedNotice scope="body" />
       {L.length > 1 ? <LineChart entries={L.map(e => ({ d: e.d, w: e.w }))} height={180} label="Body weight over time" /> : <p className="note">One more weekly weigh-in and the trend line starts.</p>}
       <BodyGoal />
       <table className="hist bwtab">
@@ -193,11 +197,11 @@ function BodyChart() {
           {rec.map((e, i) => {
             const p = rec[i + 1];
             return (
-              <tr key={e.wk}>
-                <td>{fmtShort(parseDate(e.d))}</td>
+              <tr key={e.wk} className={arming === e.wk ? 'removing' : undefined}>
+                <td className="rmname">{fmtShort(parseDate(e.d))}</td>
                 <td className="num">{fmtLb(e.w)} lb</td>
                 <td className="num">{p ? signed(e.w - p.w, 1) : '—'}</td>
-                <td className="num"><ArmedButton className="btn sm ghost" aria-label={`Delete ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onConfirm={() => deleteBodyWeight(e.wk)} /></td>
+                <td className="num"><ArmedButton className={`btn sm ${arming === e.wk ? 'danger' : 'ghost'}`} aria-label={`Delete ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onArmedChange={a => setArming(a ? e.wk : null)} onConfirm={() => { setArming(null); deleteBodyWeight(e.wk); }} /></td>
               </tr>
             );
           })}

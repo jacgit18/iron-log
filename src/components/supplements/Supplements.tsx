@@ -4,11 +4,14 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
 import { SLOTS, scheduled, scheduleOf, slotTally } from '../../lib/supplements.js';
+import ArmedButton from '../ArmedButton.jsx';
+import RemovedNotice from '../RemovedNotice.jsx';
 import { HOT_OZ, TRAIN_OZ_PER_30, BOTTLES, CUP_OZ, OZ_PER_LB, fmtOz, cupsOf, sumOz, lastDays, goalFor, boostOz } from '../../lib/water.js';
 
 function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSlot; label: string; date: string; items: SupplementItem[]; taken: Taken; editing: boolean }) {
   const s = useAppStore.getState();
   const [name, setName] = useState(''); const [dose, setDose] = useState('');
+  const [arming, setArming] = useState<string | null>(null); // the supplement whose Remove was pressed once
   const list = scheduleOf(items)[slot]; const t = slotTally(items, taken, date, slot);
   const add = (e: FormEvent) => { e.preventDefault(); if (s.addSupplement(slot, name, dose)) { setName(''); setDose(''); } };
   return (
@@ -17,14 +20,15 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
         <h3 id={`supp-h-${slot}`} className="exh"><b>{label}</b></h3>
         <span className="note">{t.total ? `${t.done}/${t.total}` : ''}</span>
       </div>
+      <RemovedNotice scope={'suppslot:' + slot} />
       {!list.length && <p className="note">{editing ? 'Nothing here yet. Add one below.' : 'Nothing scheduled.'}</p>}
       {list.map(x => (
-        <div key={x.id} className={`warmrow${(taken[date] || {})[x.id] ? ' idone' : ''}`}>
+        <div key={x.id} className={`warmrow${(taken[date] || {})[x.id] ? ' idone' : ''}${arming === x.id ? ' removing' : ''}`}>
           <label className="exname">
             <input type="checkbox" className="chk" id={`supp-${x.id}`} checked={!!(taken[date] || {})[x.id]} onChange={e => s.setSupplementTaken(date, x.id, e.target.checked)} />{' '}
-            {x.n}{x.dose && <span className="rx"> · {x.dose}</span>}
+            <span className="rmname">{x.n}</span>{x.dose && <span className="rx"> · {x.dose}</span>}
           </label>
-          {editing && <button type="button" className="btn sm ghost" aria-label={`Take ${x.n} off ${label}`} onClick={() => s.removeSupplement(x.id)}>Remove</button>}
+          {editing && <ArmedButton className={`btn sm ${arming === x.id ? 'danger' : 'ghost'}`} aria-label={`Take ${x.n} off ${label}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? x.id : null)} onConfirm={() => { setArming(null); s.removeSupplement(x.id); }} />}
         </div>
       ))}
       {editing && (
@@ -115,6 +119,7 @@ export default function Supplements() {
   const todayKey = ymd(today);
   const [sel, setSel] = useState<string | null>(null); const date = sel || todayKey;
   const [custom, setCustom] = useState('');
+  const [armingDrink, setArmingDrink] = useState<number | null>(null); // the drink whose Remove was pressed once
   const list = supp.water[date] || []; const total = sumOz(list); const gi = goalFor(supp, body, date); const goal = gi.oz;
   const pct = Math.min(100, Math.round(total / goal * 100)); const left = Math.max(0, goal - total);
   const d = parseDate(date); const isToday = date === todayKey;
@@ -155,12 +160,13 @@ export default function Supplements() {
         </div>
         <div>
           <div className="sect">{isToday ? 'Logged today' : 'Logged'}</div>
+          <RemovedNotice scope={'water:' + date} />
           {!list.length ? <p className="note">Nothing logged yet.</p> : (
             <ul className="exrows" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {list.map((oz, i) => (
-                <li className="exrow" key={i}>
-                  <span><b>{fmtOz(oz)} oz</b> <span className="note">{cupsOf(oz)} cups</span></span>
-                  <button type="button" className="btn sm ghost" aria-label={`Remove ${fmtOz(oz)} ounces, drink ${i + 1}`} onClick={() => s.removeWater(date, i)}>Remove</button>
+                <li className={`exrow${armingDrink === i ? ' removing' : ''}`} key={i}>
+                  <span><b className="rmname">{fmtOz(oz)} oz</b> <span className="note">{cupsOf(oz)} cups</span></span>
+                  <ArmedButton className={`btn sm ${armingDrink === i ? 'danger' : 'ghost'}`} aria-label={`Remove ${fmtOz(oz)} ounces, drink ${i + 1}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArmingDrink(a ? i : null)} onConfirm={() => { setArmingDrink(null); s.removeWater(date, i); }} />
                 </li>
               ))}
             </ul>

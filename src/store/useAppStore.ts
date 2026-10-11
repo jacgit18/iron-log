@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { AppState, OrderNote, OrderState } from './types.ts';
 import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Stretch, Week } from '../types.ts';
 import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
-import { weekStartOf, ymd, addDays } from '../shared/dates.js';
+import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
@@ -15,6 +15,7 @@ import { editorSlice } from './editorSlice.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
 import { grocerySlice } from './grocerySlice.js';
+import { removedSlice } from './removedSlice.js';
 import { isAdminNow } from '../features.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { normSupplements } from '../lib/water.js';
@@ -163,6 +164,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   ...settingsSlice(set, get, flag),
   ...wellnessSlice(set, get, flag),
   ...grocerySlice(set, get, flag),
+  ...removedSlice(set, get, flag),
   cfg: structuredClone(DEFAULT_CFG),
   weekStart: weekStartOf(new Date()),
   week: normWeek(null),
@@ -205,7 +207,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().mutateCfg(c => { c.muscleMap = c.muscleMap || {}; c.muscleMap[exId] = tags; })) { set({ modal: null }); flag('Muscles saved'); }
   },
   resetTags(exId) {
-    if (get().mutateCfg(c => { if (c.muscleMap) delete c.muscleMap[exId]; })) set({ modal: null });
+    const own = get().cfg.muscleMap?.[exId]; if (!own) return;
+    if (!get().mutateCfg(c => { if (c.muscleMap) delete c.muscleMap[exId]; })) return;
+    set({ modal: null });
+    get().noteRemoved('muscles', `your muscle tags for ${exInfo(get().cfg, exId).n}`, () => !get().cfg.muscleMap?.[exId] && get().mutateCfg(c => { c.muscleMap = { ...(c.muscleMap || {}), [exId]: own }; }));
   },
 
   snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, ...(isAdminNow() ? { grocery: { ...s.grocery, months: s.groceryMonths } } : {}) }; }, // the grocery list is an admin-only feature: no one else exports or backs it up
@@ -513,10 +518,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     const u = usageOf(exId, get());
     const where = [u.programs.length && `in ${u.programs.map(k => progName(get().cfg, k)).join(' and ')}`, u.versions && 'in a saved version', u.experiments && 'on the Experiment board', u.logs && 'in your logs'].filter(Boolean);
     if (where.length) return `It is still used ${where.join(', ')}. Remove it there first.`;
-    get().mutateCfg(c => { delete c.ex[exId]; delete c.rm[exId]; if (c.exPh) delete c.exPh[exId]; if (c.muscleMap) delete c.muscleMap[exId]; });
-    set({ modal: null }); flag('Exercise deleted'); return null;
+    const c0 = get().cfg; const kept = { ex: c0.ex[exId], rm: c0.rm[exId], ph: c0.exPh?.[exId], tags: c0.muscleMap?.[exId] };
+    if (!get().mutateCfg(c => { delete c.ex[exId]; delete c.rm[exId]; if (c.exPh) delete c.exPh[exId]; if (c.muscleMap) delete c.muscleMap[exId]; })) return null;
+    set({ modal: null });
+    get().noteRemoved('exercises', kept.ex?.n || exId, () => !get().cfg.ex[exId] && get().mutateCfg(c => {
+      c.ex[exId] = kept.ex; if (kept.rm !== undefined) c.rm[exId] = kept.rm;
+      if (kept.ph !== undefined) c.exPh = { ...(c.exPh || {}), [exId]: kept.ph };
+      if (kept.tags !== undefined) c.muscleMap = { ...(c.muscleMap || {}), [exId]: kept.tags };
+    }));
+    return null;
   },
-  deleteExperiment(id) { if (get().blocked()) return; get().setExperiments(get().experiments.filter(x => x.id !== id)); flag('Deleted'); },
+  deleteExperiment(id) {
+    if (get().blocked()) return;
+    const L = get().experiments; const i = L.findIndex(x => x.id === id); if (i < 0) return;
+    const e = L[i];
+    get().setExperiments(L.filter(x => x.id !== id));
+    get().noteRemoved('experiments', exInfo(get().cfg, e.ex).n, () => {
+      if (get().blocked() || get().experiments.some(x => x.id === id)) return false;
+      const l = [...get().experiments]; l.splice(Math.min(i, l.length), 0, e); get().setExperiments(l); return true;
+    });
+  },
   addToDay(entryId, col) {
     const e = get().experiments.find(x => x.id === entryId); if (!e) return false;
     const pd = dayAt(get().week, col); if (pd == null) { flag('That is your rest day'); return false; }
@@ -526,20 +547,44 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   removeExtra(slotId) {
     const s = get().slotById(slotId); if (!s || !s.experiment) return;
+    const w0 = get().week; const wk = get().weekKey(); const i = (w0.extra || []).findIndex(x => x.id === slotId);
     const ok = get().mutateChecks(w => {
       clearDone(w, s); delete w.skipped[slotId]; delete w.moved[slotId]; delete w.ph[`${slotId}:0`];
       w.extra = (w.extra || []).filter(x => x.id !== slotId); if (!w.extra.length) delete w.extra;
     });
-    if (!ok) return;
+    if (!ok || i < 0) return;
     const mn = get().moveNote;
     if (mn && (mn.slot === slotId || (mn.batch && slotId in mn.batch))) set({ moveNote: null });
-    flag('Removed from this week');
+    // Undo puts the card back with its skip, move and phase, then its ticks, both through the check path: the ticks go
+    // in once the card is on the board again, so a ticked card logs its check-off again (the one the removal took out),
+    // never twice. Only in the week it came from.
+    const x0 = w0.extra![i]; const w1 = get().week;
+    const lost = (k: 'done' | 'skipped' | 'moved' | 'ph') => Object.entries(w0[k] || {}).filter(([key]) => !(key in (w1[k] || {})));
+    const keep = { skipped: lost('skipped'), moved: lost('moved'), ph: lost('ph') }; const ticks = lost('done');
+    get().noteRemoved('board:' + wk, `${exInfo(get().cfg, x0.ex).n} from this week`, () => {
+      if (get().weekKey() !== wk || (get().week.extra || []).some(x => x.id === slotId)) return false;
+      if (!get().mutateChecks(w => {
+        const l = [...(w.extra || [])]; l.splice(Math.min(i, l.length), 0, x0); w.extra = l;
+        keep.skipped.forEach(([k]) => { w.skipped[k] = true; });
+        keep.moved.forEach(([k, v]) => { w.moved[k] = v; });
+        keep.ph.forEach(([k, v]) => { w.ph[k] = v; });
+      })) return false;
+      if (ticks.length) get().mutateChecks(w => { ticks.forEach(([k]) => { w.done[k] = true; }); });
+      return true;
+    });
   },
   addWarmup(n, rx) {
     const name = String(n || '').trim().slice(0, 60); if (!name) return false;
     return get().mutateCfg(c => { c.warmup = [...warmupOf(c), { id: `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, n: name, rx: String(rx || '').trim().slice(0, 40) }]; });
   },
-  removeWarmup(id) { get().mutateCfg(c => { c.warmup = warmupOf(c).filter(x => x.id !== id); }); },
+  removeWarmup(id, d) {
+    const L = warmupOf(get().cfg); const i = L.findIndex(x => x.id === id); if (i < 0) return;
+    const x0 = L[i];
+    if (!get().mutateCfg(c => { c.warmup = warmupOf(c).filter(x => x.id !== id); })) return;
+    get().noteRemoved(`warmup:${d ?? ''}`, `${x0.n} from the warm-up`, () => !warmupOf(get().cfg).some(x => x.id === id) && get().mutateCfg(c => {
+      const l = [...warmupOf(c)]; l.splice(Math.min(i, l.length), 0, x0); c.warmup = l;
+    }));
+  },
   // Cards a rest day on column n would push off the board and that are still in play (not skipped).
   restOverflow(n) { const w = get().week; return restsOf(w).includes(n) ? [] : overflowSlots(w, get().activeSlots(), n).filter(s => !isSkipped(s, w)); },
   // Tick or untick a rest day. A week can have several. Ticking one that would push workouts off the board is
@@ -699,11 +744,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     flag('Goal saved'); return true;
   },
   clearLiftGoal(exId, key) {
-    if (get().mutateCfg(c => {
+    const goal = get().cfg.liftGoals?.[exId]?.[key]; if (!goal) return;
+    if (!get().mutateCfg(c => {
       const G = c.liftGoals && c.liftGoals[exId]; if (!G) return;
       delete G[key]; if (!Object.keys(G).length) delete c.liftGoals![exId];
       if (!Object.keys(c.liftGoals!).length) delete c.liftGoals;
-    })) flag('Goal removed');
+    })) return;
+    // Undo only if no goal for that phase was set since.
+    get().noteRemoved('liftgoal:' + exId, `the ${goalPhaseLabel(key).toLowerCase()} goal`, () => !get().cfg.liftGoals?.[exId]?.[key] && get().mutateCfg(c => {
+      c.liftGoals = { ...(c.liftGoals || {}), [exId]: { ...((c.liftGoals || {})[exId] || {}), [key]: goal } };
+    }));
   },
   // Replace one logged session with edited numbers (kept sorted by date). It counts as logged by hand, not as a check-off.
   // `target` is the entry as it was shown: found by identity, not position, so a list that changed meanwhile
@@ -722,8 +772,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().blocked()) return false;
     const L = get().logs[exId] || []; const i = findEntry(L, target);
     if (i < 0) { flag('That session changed meanwhile. Open it again.'); return false; }
-    const arr = [...L]; arr.splice(i, 1);
-    set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId); return true;
+    const arr = [...L]; const [gone] = arr.splice(i, 1);
+    set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId);
+    // Undo puts the same entry (same id) back, unless it is there again, or a check-off has since logged that card and week.
+    get().noteRemoved('log:' + exId, `the ${fmtShort(parseDate(gone.d))} session`, () => {
+      const cur = get().logs[exId] || [];
+      if (get().blocked() || findEntry(cur, gone) >= 0 || (gone.auto && cur.some(e => e.slot === gone.slot && e.wk === gone.wk))) return false;
+      const back = [...cur]; back.splice(Math.min(i, back.length), 0, gone); back.sort((a, b) => a.d.localeCompare(b.d));
+      set(state => ({ logs: { ...state.logs, [exId]: back } })); get().saveLog(exId); return true;
+    });
+    return true;
   },
   // Try the writes that were refused again (after freeing space, or signing back in).
   retryUnsaved() { queue.retryFailed(); },
@@ -774,10 +832,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     const goal = { w: Math.round(n * 10) / 10, ...(last ? { start: { w: last.w, d: last.d } } : {}), ...(by ? { by } : {}) };
     get().mutateCfg(c => { c.bwGoal = goal; }); flag('Goal saved'); return true;
   },
-  clearBodyGoal() { if (get().mutateCfg(c => { delete c.bwGoal; })) flag('Goal removed'); },
+  clearBodyGoal() {
+    const g = get().cfg.bwGoal; if (!g || !get().mutateCfg(c => { delete c.bwGoal; })) return;
+    get().noteRemoved('body', `your ${g.w} lb goal`, () => !get().cfg.bwGoal && get().mutateCfg(c => { c.bwGoal = g; }));
+  },
   deleteBodyWeight(wk) {
     if (get().blocked()) return;
-    set(state => ({ body: state.body.filter(x => x.wk !== wk) })); get().saveBody(); flag('Deleted');
+    const gone = get().body.find(x => x.wk === wk); if (!gone) return;
+    set(state => ({ body: state.body.filter(x => x.wk !== wk) })); get().saveBody();
+    // Undo only if that week has not been weighed again since.
+    get().noteRemoved('body', `the ${fmtShort(parseDate(gone.d))} weigh-in`, () => {
+      if (get().blocked() || get().body.some(x => x.wk === wk)) return false;
+      set(state => ({ body: [...state.body, gone].sort((a, b) => a.wk.localeCompare(b.wk)) })); get().saveBody(); return true;
+    });
   },
 
   exporting: null, // which export is running: 'csv' | 'xlsx-all' | 'xlsx-week' | 'data'
