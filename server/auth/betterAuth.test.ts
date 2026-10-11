@@ -258,5 +258,6 @@ describe('the signup cap (SIGNUP_CAP)', () => {
     await sql`select ensure_user('plan-test')`.execute(db);
     expect((await sql<{ plan: string }>`select plan from users where auth_user_id = 'plan-test'`.execute(db)).rows[0]!.plan).toBe('beta');
     await expect(sql`update users set plan = 'vip' where auth_user_id = 'plan-test'`.execute(db)).rejects.toThrow();
+    for (const plan of ['free', 'paid', 'lifetime', 'founder', 'beta']) await sql`update users set plan = ${plan} where auth_user_id = 'plan-test'`.execute(db);
   });
 });
