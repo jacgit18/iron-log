@@ -791,10 +791,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     const goal = { w: Math.round(n * 10) / 10, ...(last ? { start: { w: last.w, d: last.d } } : {}), ...(by ? { by } : {}) };
     get().mutateCfg(c => { c.bwGoal = goal; }); flag('Goal saved'); return true;
   },
-  clearBodyGoal() { if (get().mutateCfg(c => { delete c.bwGoal; })) flag('Goal removed'); },
+  clearBodyGoal() {
+    const g = get().cfg.bwGoal; if (!g || !get().mutateCfg(c => { delete c.bwGoal; })) return;
+    get().noteRemoved('body', `your ${g.w} lb goal`, () => !get().cfg.bwGoal && get().mutateCfg(c => { c.bwGoal = g; }));
+  },
   deleteBodyWeight(wk) {
     if (get().blocked()) return;
-    set(state => ({ body: state.body.filter(x => x.wk !== wk) })); get().saveBody(); flag('Deleted');
+    const gone = get().body.find(x => x.wk === wk); if (!gone) return;
+    set(state => ({ body: state.body.filter(x => x.wk !== wk) })); get().saveBody();
+    // Undo only if that week has not been weighed again since.
+    get().noteRemoved('body', `the ${fmtShort(parseDate(gone.d))} weigh-in`, () => {
+      if (get().blocked() || get().body.some(x => x.wk === wk)) return false;
+      set(state => ({ body: [...state.body, gone].sort((a, b) => a.wk.localeCompare(b.wk)) })); get().saveBody(); return true;
+    });
   },
 
   exporting: null, // which export is running: 'csv' | 'xlsx-all' | 'xlsx-week' | 'data'

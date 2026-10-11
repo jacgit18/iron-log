@@ -642,6 +642,22 @@ describe('body weight goal', () => {
     expect(st().setBodyGoal('abc')).toBe(false);
     st().clearBodyGoal();
     expect(st().cfg.bwGoal).toBeUndefined();
+    st().undoRemoved();
+    expect(st().cfg.bwGoal).toEqual({ w: 180, start: { w: 195, d: '2026-09-27' }, by: '2026-12-01' });
+    expect(saved('config/main').bwGoal.w).toBe(180);
+  });
+  it('Undo after deleting a weigh-in puts it back, unless that week was weighed again', () => {
+    const e1 = { wk: '2026-09-20', d: '2026-09-21', w: 196 }; const e2 = { wk: '2026-09-27', d: '2026-09-27', w: 195 };
+    useAppStore.setState({ body: [e1, e2] });
+    st().deleteBodyWeight('2026-09-20');
+    expect(st().removed).toMatchObject({ scope: 'body' });
+    st().undoRemoved();
+    expect(st().body).toEqual([e1, e2]);
+    expect(saved('body/main').entries).toEqual([e1, e2]);
+    st().deleteBodyWeight('2026-09-20');
+    useAppStore.setState({ body: [{ ...e1, w: 199 }, e2] });
+    st().undoRemoved();
+    expect(st().body.map(x => x.w)).toEqual([199, 195]);
   });
   it('a goal set before any weigh-in starts from the first one', () => {
     st().setBodyGoal('180');
