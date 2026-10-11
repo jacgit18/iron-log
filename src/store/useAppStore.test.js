@@ -89,6 +89,15 @@ describe('warm-up list', () => {
     st().removeWarmup(b.id);
     expect(warmupOf(st().cfg)).toEqual([]); // an emptied list stays empty
   });
+  it('Undo puts a removed item back in its place', () => {
+    st().addWarmup('Band pull-aparts', '2 × 15'); st().addWarmup('Jumping jacks', '');
+    const before = warmupOf(st().cfg);
+    st().removeWarmup(before[1].id, 2);
+    expect(st().removed).toMatchObject({ scope: 'warmup:2', text: 'Band pull-aparts from the warm-up' });
+    st().undoRemoved();
+    expect(warmupOf(st().cfg)).toEqual(before);
+    expect(saved('config/main').warmup).toEqual(before);
+  });
 });
 
 describe('sled cards', () => {

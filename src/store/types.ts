@@ -317,7 +317,8 @@ export interface CoreSlice {
   addToDay(entryId: string, col: number): boolean;
   removeExtra(slotId: string): void;
   addWarmup(n: string, rx: string): boolean;
-  removeWarmup(id: string): void;
+  /** `d` is the Stretches day it was removed from, where its Undo shows. */
+  removeWarmup(id: string, d?: number): void;
   restOverflow(n: number): FlatSlot[];
   setRestDay(n: number, opts?: { skipOverflow?: boolean }): boolean | undefined;
   swapDays(d: number, dir: number): boolean;
