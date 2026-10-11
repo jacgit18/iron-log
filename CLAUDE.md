@@ -11,7 +11,7 @@ In `DevHiveMind/Projects/iron-log/docs/`: `ROADMAP.md` (what to build, out of sc
 - **Write all new code in TypeScript** (`.ts`/`.tsx`, `strict`). Do not add `.js` or `.jsx` files. Convert a legacy file when you touch it.
 - Shared data types are in `src/types.ts`; store state and actions (`AppState`) and sheet form types are in `src/store/types.ts`. Add to these instead of redefining a shape in a file.
 - Type props, handlers and form state. Avoid `any`; use `unknown` and narrow it. The only accepted loose spots are code that cleans untrusted JSON (`validate`, `normConfig`, `excelImport`, ...) and the host's db/connector handles.
-- Still JavaScript on purpose: tests (`*.test.js`), `e2e/`, config files, `scripts/`, `tools/`, `fonts.js`, `App.jsx`, `main.jsx` and a few presentational components. Convert those only when you edit them.
+- Still JavaScript on purpose: tests (`*.test.js`), `e2e/`, config files, `scripts/` and `tools/`. Convert those only when you edit them.
 
 ## Checks (run the ones that fit what you changed; CI runs all of them)
 

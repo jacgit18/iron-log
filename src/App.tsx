@@ -1,33 +1,33 @@
-import { useEffect } from 'react';
+import { useEffect, type ComponentType, type KeyboardEvent } from 'react';
 import { useAppStore } from './store/useAppStore.js';
 import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
-import BoardTab from './components/board/BoardTab.jsx';
-import Daily from './components/daily/Daily.tsx';
-import Progress from './components/progress/Progress.jsx';
-import Editor from './components/program/Editor.jsx';
-import Settings from './components/settings/Settings.jsx';
-import TimerBar from './components/TimerBar.jsx';
-import LogSheet from './components/sheets/LogSheet.jsx';
-import DetailSheet from './components/sheets/DetailSheet.jsx';
-import TagSheet from './components/sheets/TagSheet.jsx';
-import SlotSheet from './components/sheets/SlotSheet.jsx';
-import ExerciseSheet from './components/sheets/ExerciseSheet.jsx';
-import DayAddSheet from './components/sheets/DayAddSheet.jsx';
-import { StretchSheet, StretchExpSheet } from './components/sheets/StretchSheets.jsx';
-import SupplementSheet from './components/sheets/SupplementSheet.jsx';
-import ExperimentSheet from './components/sheets/ExperimentSheet.jsx';
-import NewProgramSheet from './components/sheets/NewProgramSheet.jsx';
-import ImportSheet from './components/sheets/ImportSheet.jsx';
-import HelpSheet from './components/sheets/HelpSheet.jsx';
-import UpdateBanner from './components/UpdateBanner.tsx';
-import LegacyCard from './components/LegacyCard.tsx';
-import OtherAccountCard from './components/OtherAccountCard.tsx';
-import SignInCard from './components/SignInCard.tsx';
-import SyncNotice from './components/SyncNotice.tsx';
+import BoardTab from './components/board/BoardTab.js';
+import Daily from './components/daily/Daily.js';
+import Progress from './components/progress/Progress.js';
+import Editor from './components/program/Editor.js';
+import Settings from './components/settings/Settings.js';
+import TimerBar from './components/TimerBar.js';
+import LogSheet from './components/sheets/LogSheet.js';
+import DetailSheet from './components/sheets/DetailSheet.js';
+import TagSheet from './components/sheets/TagSheet.js';
+import SlotSheet from './components/sheets/SlotSheet.js';
+import ExerciseSheet from './components/sheets/ExerciseSheet.js';
+import DayAddSheet from './components/sheets/DayAddSheet.js';
+import { StretchSheet, StretchExpSheet } from './components/sheets/StretchSheets.js';
+import SupplementSheet from './components/sheets/SupplementSheet.js';
+import ExperimentSheet from './components/sheets/ExperimentSheet.js';
+import NewProgramSheet from './components/sheets/NewProgramSheet.js';
+import ImportSheet from './components/sheets/ImportSheet.js';
+import HelpSheet from './components/sheets/HelpSheet.js';
+import UpdateBanner from './components/UpdateBanner.js';
+import LegacyCard from './components/LegacyCard.js';
+import OtherAccountCard from './components/OtherAccountCard.js';
+import SignInCard from './components/SignInCard.js';
+import SyncNotice from './components/SyncNotice.js';
 
-const TABS = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
+const TABS: [string, string, ComponentType][] = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
 function Modal() {
   const modal = useAppStore(s => s.modal);
@@ -67,25 +67,25 @@ export default function App() {
   useTooltips();
   useFocusKeeper();
 
-  const label = TABS.find(([k]) => k === tab)[1];
+  const label = TABS.find(([k]) => k === tab)![1];
   useEffect(() => { document.title = `${label} · Iron Log`; }, [label]);
 
   // Tabs pattern: arrows / Home / End move between tabs and select them.
-  const onTabKey = e => {
+  const onTabKey = (e: KeyboardEvent) => {
     const i = TABS.findIndex(([k]) => k === tab);
-    const n = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+    const n = ({ ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 } as Record<string, number>)[e.key];
     if (n == null) return;
     e.preventDefault();
     const k = TABS[(n + TABS.length) % TABS.length][0];
-    setTab(k); document.getElementById(`tab-${k}`).focus();
+    setTab(k); document.getElementById(`tab-${k}`)!.focus();
   };
   useEffect(() => {
-    const onKey = e => { if (e.key === 'Escape') closeModal(); };
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') closeModal(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [closeModal]);
 
-  const View = TABS.find(([k]) => k === tab)[2];
+  const View = TABS.find(([k]) => k === tab)![2];
   return (
     <>
       <a className="skip" href="#view">Skip to content</a>

@@ -8,7 +8,7 @@ import { setError } from '../../shared/validate.js';
 import { entryId, findEntry } from '../../lib/export.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
-import LineChart from '../LineChart.jsx';
+import LineChart from '../LineChart.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import LiftGoal from '../progress/LiftGoal.jsx';
 

@@ -28,7 +28,7 @@ const is = {
   css: f => /\.css$/.test(f),
   sync: f => f.startsWith('src/sync/') || f.startsWith('server/') || f.startsWith('src/store/') || f.startsWith('e2e-sync/') || f === 'playwright.sync.config.js',
   migration: f => f.startsWith('db/migrations/') || f === 'server/db/types.ts',
-  ui: f => f.startsWith('src/components/') || f.startsWith('src/hooks/') || f.startsWith('src/store/') || f === 'src/App.jsx' || f === 'src/main.jsx' || /\.(jsx|tsx)$/.test(f),
+  ui: f => f.startsWith('src/components/') || f.startsWith('src/hooks/') || f.startsWith('src/store/') || /\.(jsx|tsx)$/.test(f),
   src: f => f.startsWith('src/') || f.startsWith('server/') || f.startsWith('public/') || f === 'index.html',
   script: f => f.startsWith('scripts/') || f.startsWith('tools/') || f.startsWith('spike/'),
   tooling: f => /^(package(-lock)?\.json|tsconfig.*\.json|vite\.config\.js|playwright.*\.js|\.oxlintrc.*|Dockerfile|neon\.ts)$/.test(f),

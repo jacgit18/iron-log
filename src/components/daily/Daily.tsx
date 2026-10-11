@@ -2,7 +2,7 @@ import type { ComponentType } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import Supplements from '../supplements/Supplements.jsx';
 import Grocery from '../grocery/Grocery.js';
-import Medical from './Medical.jsx';
+import Medical from './Medical.js';
 import { useFeature } from '../../features.js';
 
 // The things you check off or log every day, under one tab. Add a section by adding a row here.
