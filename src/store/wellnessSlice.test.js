@@ -109,6 +109,13 @@ describe('water', () => {
     expect(st().supp.water['2026-10-04']).toEqual([16.9, 8, 12]);
     expect(saved('supplements/main').water['2026-10-04']).toEqual([16.9, 8, 12]);
   });
+  it('Undo does not double a drink that was added again meanwhile', () => {
+    st().addWater('2026-10-04', 8);
+    st().removeWater('2026-10-04', 0);
+    st().addWater('2026-10-04', 8); // added again by hand
+    st().undoRemoved();
+    expect(st().supp.water['2026-10-04']).toEqual([8]);
+  });
   it('a typed goal is fixed until you go back to your weight', () => {
     expect(st().supp.waterMode).toBe('weight');
     st().setWaterGoal(100); expect(st().supp).toMatchObject({ waterGoal: 100, waterMode: 'fixed' });

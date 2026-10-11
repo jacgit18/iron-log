@@ -204,7 +204,9 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
   removeWater(date, i) {
     const oz = (get().supp.water[date] || [])[i]; if (oz == null) return false;
     if (!get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(i, 1); if (l.length) s.water[date] = l; else delete s.water[date]; })) return false;
-    get().noteRemoved('water:' + date, `${fmtOz(oz)} oz of water`, () => get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(Math.min(i, l.length), 0, oz); s.water[date] = l; }));
+    // Drinks have no ids: Undo only while the day's list is as the removal left it, so a drink added again by hand is not doubled.
+    const left = (get().supp.water[date] || []).join();
+    get().noteRemoved('water:' + date, `${fmtOz(oz)} oz of water`, () => (get().supp.water[date] || []).join() === left && get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(Math.min(i, l.length), 0, oz); s.water[date] = l; }));
     return true;
   },
   setWaterGoal(raw) {
