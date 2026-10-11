@@ -140,9 +140,14 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   },
   deleteLibItem(id) {
     if (get().blocked()) return;
-    get().setLibrary(get().library.filter(it => it.id !== id));
+    const lib = get().library; const i = lib.findIndex(it => it.id === id); if (i < 0) return;
+    const it = lib[i];
+    get().setLibrary(lib.filter(x => x.id !== id));
     if (get().edProg === 'L:' + id) set({ edProg: null });
-    flag('Deleted');
+    get().noteRemoved('library', it.name, () => {
+      if (get().blocked() || get().library.some(x => x.id === id)) return false;
+      const l = [...get().library]; l.splice(Math.min(i, l.length), 0, it); get().setLibrary(l); return true;
+    });
   },
   createProgram(name, from) {
     if (get().blocked()) return false;

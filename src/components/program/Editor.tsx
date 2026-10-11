@@ -9,6 +9,7 @@ import { sameProg, libDate } from '../../lib/export.js';
 import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
+import RemovedNotice from '../RemovedNotice.jsx';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import SupplementLibrary from './SupplementLibrary.jsx';
@@ -21,10 +22,10 @@ function slotSummary(cfg: Cfg, sl: ProgramSlot) {
   return sl.type === 'superset' ? names.join(' → ') : sl.type === 'either' ? names.join(' or ') : names[0];
 }
 
-function LibRow({ name, meta, inUse, onLoad, loadLabel, extra }: { name: string; meta: string; inUse: boolean; onLoad: () => void; loadLabel: string; extra?: ReactNode }) {
+function LibRow({ name, meta, inUse, onLoad, loadLabel, extra, removing }: { name: string; meta: string; inUse: boolean; onLoad: () => void; loadLabel: string; extra?: ReactNode; removing?: boolean }) {
   return (
-    <div className={`edrow${inUse ? ' inuse' : ''}`}>
-      <div className="edmain"><b>{name}</b><span className="note">{meta}</span></div>
+    <div className={`edrow${inUse ? ' inuse' : ''}${removing ? ' removing' : ''}`}>
+      <div className="edmain">{removing && <span className="tag rmtag">Will be deleted · tap Delete again</span>}<b>{name}</b><span className="note">{meta}</span></div>
       <div className="edbtns">
         {inUse ? <span className="pill">In use</span> : <ArmedButton className="btn sm" aria-label={`Load ${name}`} label="Load" armedLabel={loadLabel} onConfirm={onLoad} />}
         {extra}
@@ -37,6 +38,7 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
   const cfg = useAppStore(s => s.cfg); const library = useAppStore(s => s.library); const programs = useAppStore(s => s.programs);
   const st = useAppStore.getState();
   const [name, setName] = useState('');
+  const [arming, setArming] = useState<string | null>(null); // the program whose Delete was pressed once
   const today = useToday(s => s.today);
   const cur = programs[k]; const pn = progName(cfg, k);
   const items = [...library].sort((a, b) => (b.at || '').localeCompare(a.at || ''));
@@ -49,14 +51,15 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
         <button type="button" className="btn" onClick={() => { if (!st.blocked()) st.openModal({ type: 'newprog' }); }}>Create a program</button>
       </div>
       <p className="note">Load a version into {pn}. Whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
+      <RemovedNotice scope="library" />
       <div className="edlist">
         {items.map(it => (
           <LibRow
-            key={it.id} name={it.name} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k as ProgKey)}
+            key={it.id} name={it.name} removing={arming === it.id} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k as ProgKey)}
             meta={`${it.created ? (it.from ? `Created from ${progName(cfg, it.from)}` : 'Created new') : `From ${progName(cfg, it.from as string)}`} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto ? ' · auto-saved' : ''}`}
             extra={<>
               <button type="button" className="btn sm" aria-label={`Edit ${it.name}`} onClick={() => { st.setEdProg('L:' + it.id); st.setEdDay(1); window.scrollTo({ top: 0 }); }}>Edit</button>
-              <ArmedButton className="btn sm ghost" aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Delete?" onConfirm={() => st.deleteLibItem(it.id)} />
+              <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Tap again to delete" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); st.deleteLibItem(it.id); }} />
             </>}
           />
         ))}
@@ -83,7 +86,7 @@ function LibItemPanel({ it }: { it: LibraryItem }) {
         {(['A', 'B'] as const).map(k => (
           <ArmedButton key={k} className="btn primary" label={`Load into ${progName(cfg, k)}`} armedLabel={`Tap to load into ${progName(cfg, k)}`} onConfirm={() => st.loadVersion(it.id, k)} />
         ))}
-        <ArmedButton className="btn ghost" label="Delete program" armedLabel="Delete?" onConfirm={() => st.deleteLibItem(it.id)} />
+        <ArmedButton className="btn ghost" label="Delete program" armedLabel="Tap again to delete" onConfirm={() => st.deleteLibItem(it.id)} />
       </div>
     </section>
   );
