@@ -56,7 +56,7 @@ export default function Board() {
 
   const progKey = st.activeProgKey();
   const prog = programs[progKey] || programs.A;
-  const slots = weekSlots(prog, week);
+  const slots = weekSlots(prog, week, st.weekKey());
   const cols = currentLayout(week, slots);
   const rest = restsOf(week);
   const { total, done, skipped: skippedN } = tally(slots, week);

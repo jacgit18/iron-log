@@ -255,7 +255,8 @@ export function normExperiments(list: unknown) {
 }
 export const extraSlots = (w: WeekIn): Slot[] => (w.extra || []).map(x => ({ id: x.id, day: x.day, type: 'single', sec: x.add ? 'Added' : 'Experiment', experiment: true, ...(x.add ? { added: true } : {}), items: [{ ex: x.ex, ph: x.ph }], ...(x.note ? { note: x.note } : {}) }));
 // The week's cards: the program's, then the experiment cards added to this week.
-export const weekSlots = (prog: Program, w: WeekIn) => [...slotsFor(prog), ...extraSlots(normWeek(w))];
+// The cards of week `key` (its Sunday, YYYY-MM-DD): a card whose `from` is later has not started yet. Without `key`, every card.
+export const weekSlots = (prog: Program, w: WeekIn, key?: string) => [...slotsFor(prog).filter(s => !key || !s.from || s.from <= key), ...extraSlots(normWeek(w))];
 
 // Same exercise already on the target day, the day before, or the day after (skipped cards don't count).
 // Back-to-back follows the planner's rule: Home and either/or cards never clash, and neither does an exercise on

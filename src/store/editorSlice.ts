@@ -1,5 +1,6 @@
 import { BUILTIN, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
-import { progName, dayAt } from '../lib/logic.js';
+import { progName, dayAt, colOf, currentLayout, isFinished } from '../lib/logic.js';
+import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
 import type { ExerciseInfo, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
@@ -142,6 +143,16 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const slot: ProgramSlot = { id: d.id || `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, sec: d.sec, items };
     if (d.tier) slot.tier = d.tier; if (d.type !== 'single') slot.type = d.type; if (d.note) slot.note = d.note;
     const orig = d.idx != null ? get().edProgram().days[edDay - 1].slots[d.idx] : null;
+    // A new card starts this week, or next week when its day is already finished on this week's board, so adding it
+    // never reopens a finished day, offers it as a leftover, or changes an earlier week. An edited card keeps its start.
+    const startOf = (day: number) => {
+      const now = weekStartOf(new Date()); const wk = ymd(now);
+      if (get().weekKey() !== wk || k !== get().activeProgKey()) return wk; // the board shows another week, or another program
+      const done = isFinished(currentLayout(get().week, get().activeSlots())[colOf(get().week, day)] || [], get().week);
+      return done ? ymd(addDays(now, 7)) : wk;
+    };
+    if (orig) { if (orig.from) slot.from = orig.from; }
+    else slot.from = startOf(d.day);
     const apply = (prog: Program) => {
       if (d.idx != null) prog.days[edDay - 1].slots.splice(d.idx, 1);
       const target = prog.days[d.day - 1].slots;
