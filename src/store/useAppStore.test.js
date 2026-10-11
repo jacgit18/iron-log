@@ -777,6 +777,15 @@ describe('exercise library', () => {
     expect(st().deleteExercise(id)).toBeNull();
     expect(st().cfg.ex[id]).toBeUndefined(); expect(st().cfg.rm[id]).toBeUndefined(); expect(st().cfg.muscleMap[id]).toBeUndefined();
   });
+  it('Undo brings a deleted exercise back with its 1RM and muscles, saved', () => {
+    st().createLibraryExercise({ name: 'Throwaway', rm: '10', tags: { p: ['chest'], s: [] } });
+    const id = Object.keys(st().cfg.ex)[0]; const before = structuredClone(st().cfg);
+    st().deleteExercise(id);
+    expect(st().removed).toMatchObject({ scope: 'exercises', text: 'Throwaway' });
+    st().undoRemoved();
+    expect(st().cfg.ex[id]).toEqual(before.ex[id]); expect(st().cfg.rm[id]).toBe(before.rm[id]); expect(st().cfg.muscleMap[id]).toEqual(before.muscleMap[id]);
+    expect(saved('config/main').ex[id]).toEqual(before.ex[id]);
+  });
 });
 
 // Program A: Leg Extension is on Days 2 and 3, so finishing Day 2 suggests a new order for Days 3 to 6 (the empty Day 7 stays last).

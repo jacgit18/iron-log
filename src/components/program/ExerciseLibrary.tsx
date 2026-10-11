@@ -6,6 +6,7 @@ import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
 import { libraryRows, filterRows, muscleList } from '../../lib/exerciseLibrary.js';
 import { progName } from '../../lib/logic.js';
 import { videoLabel } from '../../lib/data.js';
+import RemovedNotice from '../RemovedNotice.jsx';
 
 // Every exercise (built in and your own) with what is set on it, searchable, edited in one sheet.
 export default function ExerciseLibrary() {
@@ -42,6 +43,7 @@ export default function ExerciseLibrary() {
         {filtering && <button type="button" className="btn sm ghost" onClick={() => setF({ q: '', eq: '', muscle: '' })}>Clear</button>}
         <span className="note" role="status">{filtering ? `${shown.length} of ${rows.length} exercises` : `${rows.length} exercises`}</span>
       </div>
+      <RemovedNotice scope="exercises" />
       <div className="exrows">
         {shown.map(r => {
           const meta = [r.eq ? EQUIPMENT[r.eq as EquipmentKey] : '', r.ph ? `Default: ${PHASES[r.ph as PhaseKey].label}` : '', r.rm ? `1RM ${r.rm} lb` : ''].filter(Boolean);

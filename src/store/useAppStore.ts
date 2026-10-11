@@ -515,8 +515,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const u = usageOf(exId, get());
     const where = [u.programs.length && `in ${u.programs.map(k => progName(get().cfg, k)).join(' and ')}`, u.versions && 'in a saved version', u.experiments && 'on the Experiment board', u.logs && 'in your logs'].filter(Boolean);
     if (where.length) return `It is still used ${where.join(', ')}. Remove it there first.`;
-    get().mutateCfg(c => { delete c.ex[exId]; delete c.rm[exId]; if (c.exPh) delete c.exPh[exId]; if (c.muscleMap) delete c.muscleMap[exId]; });
-    set({ modal: null }); flag('Exercise deleted'); return null;
+    const c0 = get().cfg; const kept = { ex: c0.ex[exId], rm: c0.rm[exId], ph: c0.exPh?.[exId], tags: c0.muscleMap?.[exId] };
+    if (!get().mutateCfg(c => { delete c.ex[exId]; delete c.rm[exId]; if (c.exPh) delete c.exPh[exId]; if (c.muscleMap) delete c.muscleMap[exId]; })) return null;
+    set({ modal: null });
+    get().noteRemoved('exercises', kept.ex?.n || exId, () => !get().cfg.ex[exId] && get().mutateCfg(c => {
+      c.ex[exId] = kept.ex; if (kept.rm !== undefined) c.rm[exId] = kept.rm;
+      if (kept.ph !== undefined) c.exPh = { ...(c.exPh || {}), [exId]: kept.ph };
+      if (kept.tags !== undefined) c.muscleMap = { ...(c.muscleMap || {}), [exId]: kept.tags };
+    }));
+    return null;
   },
   deleteExperiment(id) { if (get().blocked()) return; get().setExperiments(get().experiments.filter(x => x.id !== id)); flag('Deleted'); },
   addToDay(entryId, col) {
