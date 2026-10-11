@@ -44,7 +44,7 @@ function Modal() {
     case 'stretchexp': return <StretchExpSheet key={modal.id || 'new'} id={modal.id} />;
     case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} />;
     case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;
-    case 'catalog': return <CatalogSheet />;
+    case 'catalog': return <CatalogSheet key={modal.kind || 'exercise'} kind={modal.kind === 'stretch' ? 'stretch' : 'exercise'} />;
     case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
     case 'newprog': return <NewProgramSheet />;
     case 'import': return <ImportSheet />;

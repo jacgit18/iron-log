@@ -190,6 +190,8 @@ export interface WellnessSlice {
   setStretchesDone(day: number, ids: string[], on: boolean): void;
   skipStretchDay(day: number, on: boolean): void;
   saveStretch(d: StretchForm): string | null;
+  /** Adds a catalog stretch as Library only, keeping its catalog id (ADR 026). Returns an error message, or null. */
+  addCatalogStretch(item: CatalogItem): string | null;
   deleteStretch(id: string): void;
   moveStretch(id: string, dir: number): void;
   saveStretchExp(d: StretchExpForm): string | null;

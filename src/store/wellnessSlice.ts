@@ -2,6 +2,8 @@ import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DAY_NAMES } from '../shared/dates.js';
 import { DEFAULT_STRETCHES, DEFAULT_GROUP, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
+import { MUSCLES } from '../lib/muscles.js';
+import { isCatalogId } from '../shared/listItems.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
@@ -55,6 +57,8 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if (get().blocked()) return null;
     const n = (d.n || '').trim().replace(/\s+/g, ' ').slice(0, 80);
     if (!n) return 'Give the stretch a name.';
+    // A catalog stretch keeps its catalog id and name whatever else changes (ADR 026): the sheet shows no Name field for it.
+    const cur = d.id ? get().stretches.find(x => x.id === d.id) : undefined;
     const url = (d.url || '').trim();
     if (!isVideoUrl(url)) return VIDEO_ERR;
     const same = get().stretches.find(x => x.n.toLowerCase() === n.toLowerCase() && x.id !== d.id);
@@ -62,11 +66,25 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const tier = (d.tier === 'primary' || d.tier === 'secondary' ? d.tier : '') as StretchTier;
     const group = (d.group || '').trim().slice(0, 40) || DEFAULT_GROUP; const note = (d.note || '').trim().slice(0, 200);
     get().mutateStretches(x => {
-      const item = { id: d.id || newStretchId(x.items, n), n, group, tier, ...(url ? { url } : {}), ...(note ? { note } : {}) };
+      const item = { id: d.id || newStretchId(x.items, n), n: cur?.catalogId ? cur.n : n, group, tier, ...(url ? { url } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { catalogId: cur.catalogId } : {}) };
       const i = x.items.findIndex(y => y.id === item.id);
       if (i >= 0) x.items[i] = item; else x.items.push(item);
     });
     set({ modal: null }); flag('Stretch saved'); return null;
+  },
+  // A catalog stretch joins the list as a snapshot (ADR 026): its name, grouped by its main muscle, kept in the library until you put it
+  // on a day (Library only). It keeps its catalog id, so it shows as Library.
+  addCatalogStretch(c) {
+    if (get().blocked()) return null;
+    const n = c.name.trim().replace(/\s+/g, ' ').slice(0, 80);
+    if (!n || !isCatalogId(c.id)) return 'That catalog item can’t be added.';
+    const items = get().stretches;
+    if (items.some(x => x.catalogId === c.id)) return 'Already in your stretches.';
+    if (items.some(x => x.n.toLowerCase() === n.toLowerCase())) return `You already have a stretch called ${n}.`;
+    const main = c.data.muscles?.p?.[0];
+    const group = main && MUSCLES[main] ? MUSCLES[main].n : DEFAULT_GROUP;
+    if (!get().mutateStretches(x => { x.items.push({ id: newStretchId(x.items, n), n, group, tier: '', catalogId: c.id }); })) return null;
+    flag(`Added ${n}`); return null;
   },
   // Takes its check-offs out of the week on screen; other weeks keep theirs, which no longer match anything.
   // Undo puts it back where it was, with its ticks in that week if it is still the one on screen.

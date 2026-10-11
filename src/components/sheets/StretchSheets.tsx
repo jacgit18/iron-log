@@ -16,9 +16,11 @@ export function StretchSheet({ id }: { id?: string | null }) {
   const groups = [...new Set(items.map(i => i.group))];
   return (
     <Sheet>
-      <h2 className="cond">{cur ? 'Edit stretch' : 'New stretch'}</h2>
+      <h2 className="cond">{cur ? (cur.catalogId ? cur.n : 'Edit stretch') : 'New stretch'}</h2>
       <form id="stretch-form" noValidate onSubmit={e => { e.preventDefault(); const m = s.saveStretch(d); if (m) setErr(m); }}>
-        <label className="field">Name<input id="stretch-name" maxLength={80} value={d.n} placeholder="e.g. 90/90 Hip Switch" onChange={e => up({ n: e.target.value })} /></label>
+        {cur?.catalogId
+          ? <p className="note">From the catalog: its name stays; everything else here is yours.</p>
+          : <label className="field">Name<input id="stretch-name" maxLength={80} value={d.n} placeholder="e.g. 90/90 Hip Switch" onChange={e => up({ n: e.target.value })} /></label>}
         <label className="field">Video link (optional)<input type="url" value={d.url} placeholder="https://" onChange={e => up({ url: e.target.value })} /></label>
         <label className="field">Group
           <input list="stretch-groups" maxLength={40} value={d.group} onChange={e => up({ group: e.target.value })} />
