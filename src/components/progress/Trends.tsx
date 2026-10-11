@@ -8,7 +8,7 @@ import { MUSCLES, M_KEYS, level, fmtSets } from '../../lib/muscles.js';
 import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, niceStep, mdLabel } from '../../lib/trends.js';
 import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
 import { liftGoalStatus, goalPhaseLabel } from '../../lib/liftGoal.js';
-import LineChart from '../LineChart.jsx';
+import LineChart from '../LineChart.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
