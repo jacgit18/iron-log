@@ -8,9 +8,9 @@ type Props = { cfg: Cfg; id: string; name: string; url?: string; eq?: string; on
 export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onUrl, onEq }: Props) {
   const ids = allExIds(cfg);
   const names = [...new Set(ids.map(x => exInfo(cfg, x).n))].sort((a, b) => a.localeCompare(b));
-  // A name a built-in also uses stays unmarked, so the built-in suggestion is never labelled Yours.
+  // A name a built-in also uses stays unmarked, so the built-in suggestion is never labelled Custom.
   const builtin = new Set(ids.filter(x => !isOwnExercise(x)).map(x => exInfo(cfg, x).n));
-  const yours = new Set(ids.filter(isOwnExercise).map(x => exInfo(cfg, x).n).filter(n => !builtin.has(n)));
+  const custom = new Set(ids.filter(isOwnExercise).map(x => exInfo(cfg, x).n).filter(n => !builtin.has(n)));
   const known = name.trim() !== '' ? findExId(cfg, name) : null;
   const isNew = name.trim() !== '' && !known;
   // Picking an existing exercise shows its saved video link and equipment, so what you save is that exercise's
@@ -33,7 +33,7 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onU
       <label className="field">Exercise
         <input id={id} list={`${id}-list`} value={name} autoComplete="off" placeholder="Type to search or add, e.g. Cable Lateral Raise" onChange={e => onName(e.target.value)} />
       </label>
-      <datalist id={`${id}-list`}>{names.map(n => <option key={n} value={n} label={yours.has(n) ? `${n} · Yours` : undefined} />)}</datalist>
+      <datalist id={`${id}-list`}>{names.map(n => <option key={n} value={n} label={custom.has(n) ? `${n} · Custom` : undefined} />)}</datalist>
       {onUrl && name.trim() !== '' && <label className="field">Video link (optional)<input type="url" value={url ?? ''} placeholder="https://" onChange={e => onUrl(e.target.value)} /></label>}
       {isNew && <p className="note">New exercise. It will be added to your exercise list.</p>}
       {onEq && name.trim() !== '' && (
