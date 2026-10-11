@@ -51,6 +51,8 @@ describe('stretches', () => {
     expect(st().addCatalogStretch(calf)).toMatch(/Already in your stretches/);
     expect(st().addCatalogStretch({ ...calf, id: 'c:fedb:Other' })).toMatch(/already have a stretch called Calf Stretch/);
     expect(st().addCatalogStretch({ ...calf, id: 'calf' })).toMatch(/can’t be added/);
+    // starts with c: but not the validator's shape: refused, so it can't be saved as Library and stripped to Custom later
+    expect(st().addCatalogStretch({ ...calf, id: 'c:FEDB:Calf Stretch' })).toMatch(/can’t be added/);
     // edited onto every day with a link: tier, group and link change, the name and catalog id stay
     expect(st().saveStretch({ id: item.id, n: 'Renamed', group: 'Legs', tier: 'primary', url: 'https://youtu.be/c' })).toBeNull();
     expect(st().stretches.find(i => i.id === item.id)).toEqual({ id: 'calf-stretch', n: 'Calf Stretch', group: 'Legs', tier: 'primary', url: 'https://youtu.be/c', catalogId: calf.id });
