@@ -179,6 +179,7 @@ export interface Users {
   data_epoch: Generated<Int8>;
   id: Generated<Int8>;
   is_admin: Generated<boolean>;
+  plan: Generated<string>;
 }
 
 export interface Weeks {

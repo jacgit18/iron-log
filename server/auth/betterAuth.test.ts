@@ -229,3 +229,34 @@ describe('authConfigFrom', () => {
     expect(authConfigFrom({ ...good, AUTH_TEST_SIGNIN: 'yes' })).toMatchObject({ enabled: true, config: { testSignIn: false } });
   });
 });
+
+describe('the signup cap (SIGNUP_CAP)', () => {
+  it('reads it from the environment: unset is no cap, a bad value turns sign-in off', () => {
+    const env = { BETTER_AUTH_SECRET: SECRET, GOOGLE_CLIENT_ID: 'a', GOOGLE_CLIENT_SECRET: 'b', BASE_URL: BASE, DATABASE_URL: url };
+    expect(authConfigFrom(env)).toMatchObject({ enabled: true, config: { signupCap: undefined } });
+    expect(authConfigFrom({ ...env, SIGNUP_CAP: ' 25 ' })).toMatchObject({ enabled: true, config: { signupCap: 25 } });
+    expect(authConfigFrom({ ...env, SIGNUP_CAP: 'lots' })).toMatchObject({ enabled: false, reasons: ['SIGNUP_CAP must be a whole number'] });
+  });
+  it('refuses a new account once the cap is reached, lets an exempt email in, and never blocks sign-in for an existing one', async () => {
+    const { auth, base } = await serve({ signupCap: 2, capExempt: new Set(['owner@example.com']) });
+    expect((await signUp(base, 'a@example.com')).status).toBe(200);
+    expect((await signUp(base, 'b@example.com')).status).toBe(200);
+    const full = await signUp(base, 'c@example.com');
+    expect(full.status).toBe(403);
+    expect(await authRows('user')).toBe('2');
+    // An exempt address that is not verified (email sign-up leaves it unverified) gets no exemption, like isAdmin.
+    expect((await signUp(base, 'OWNER@example.com')).status).toBe(403);
+    expect(await authRows('user')).toBe('2');
+    const ctx = await auth.$context;
+    await expect(ctx.internalAdapter.createUser({ email: 'owner@example.com', name: 'Owner', emailVerified: true }, { method: 'oauth', oauth: { providerId: 'google' } })).resolves.toMatchObject({ email: 'owner@example.com' });
+    expect(await authRows('user')).toBe('3');
+    const again = await post(base, '/api/auth/sign-in/email', { email: 'a@example.com', password: 'correct horse battery staple' });
+    expect(again.status).toBe(200);
+  });
+  it('gives every account the beta plan', async () => {
+    const { sql } = await import('kysely');
+    await sql`select ensure_user('plan-test')`.execute(db);
+    expect((await sql<{ plan: string }>`select plan from users where auth_user_id = 'plan-test'`.execute(db)).rows[0]!.plan).toBe('beta');
+    await expect(sql`update users set plan = 'vip' where auth_user_id = 'plan-test'`.execute(db)).rejects.toThrow();
+  });
+});

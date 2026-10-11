@@ -1,5 +1,7 @@
 import { betterAuth } from 'better-auth';
+import { APIError } from 'better-auth/api';
 import pg from 'pg';
+import { adminsFrom } from '../admin.ts';
 
 /* ---------- Sign-in: Better Auth inside our API (ADR 004) ----------
    Google only, no plugins. Sessions are server-side rows with a 30-day sliding lifetime, so a two-day offline gap never forces
@@ -16,6 +18,10 @@ export interface AuthConfig {
   google: { clientId: string; clientSecret: string };
   /** Email and password sign-in for automated tests only. Never in production: see createAuth. */
   testSignIn?: boolean;
+  /** The most accounts that may exist (SIGNUP_CAP). A new Google account past it is refused; unset means no cap. Existing accounts always sign in. */
+  signupCap?: number;
+  /** Emails (lower case) that may sign up past the cap, e.g. the admins. */
+  capExempt?: ReadonlySet<string>;
 }
 
 export const SESSION_DAYS = 30;
@@ -45,6 +51,25 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
       encryptOAuthTokens: true,
     },
     verification: { modelName: 'auth.verification' },
+    // The cap on accounts (SIGNUP_CAP). Runs only when an account is about to be made, so someone who already has one is never
+    // affected. The count and the insert are not one step, so two people signing up at the very same moment can overshoot by one.
+    databaseHooks: {
+      user: {
+        create: {
+          before: async user => {
+            const cap = config.signupCap;
+            // Like isAdmin: an address that is not verified proves nothing, so it does not get past the cap.
+            const exempt = user.emailVerified === true && config.capExempt?.has(String(user.email ?? '').toLowerCase());
+            if (cap === undefined || exempt) return;
+            const { rows } = await pool.query<{ n: string }>('select count(*) as n from auth."user"');
+            if (Number(rows[0]!.n) >= cap) {
+              console.warn(JSON.stringify({ msg: 'sign-up refused: account cap reached', cap }));
+              throw new APIError('FORBIDDEN', { message: 'signups_full' });
+            }
+          },
+        },
+      },
+    },
     socialProviders: { google: { clientId: config.google.clientId, clientSecret: config.google.clientSecret } },
     emailAndPassword: { enabled: config.testSignIn === true },
     // Only this origin may call the auth routes with a cookie.
@@ -83,9 +108,16 @@ export function authConfigFrom(env: NodeJS.ProcessEnv): AuthSetup {
       reasons.push('BASE_URL is not a valid URL');
     }
   }
+  // SIGNUP_CAP: the most accounts allowed; unset or empty means no cap. A bad value turns sign-in off rather than quietly opening it.
+  let signupCap: number | undefined;
+  const capText = env.SIGNUP_CAP?.trim();
+  if (capText) {
+    if (/^\d{1,6}$/.test(capText)) signupCap = Number(capText);
+    else reasons.push('SIGNUP_CAP must be a whole number');
+  }
   if (reasons.length) return { enabled: false, reasons };
   return {
     enabled: true,
-    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true' },
+    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS) },
   };
 }

@@ -7,6 +7,13 @@ import LegalLinks from './LegalLinks.js';
 
 // What someone sees before they have an account here (src/lib/gate.ts decides): what the app is, and the way in. It replaces the app
 // entirely; nothing of the app is mounted behind it. Plain words, no tracking, and a clear note that signing in creates the account.
+// Placeholders until the tiers are decided; they match users.plan (beta, free, paid).
+const PLANS = [
+  { name: 'Beta', price: 'Free during the beta', limits: 'TBD', features: 'TBD' },
+  { name: 'Free', price: 'TBD', limits: 'TBD', features: 'TBD' },
+  { name: 'Paid', price: 'TBD', limits: 'TBD', features: 'TBD' },
+];
+
 export default function Landing({ offline = false }: { offline?: boolean }) {
   const [problem, setProblem] = useState('');
   const { busy, start } = useGoogleSignIn(setProblem);
@@ -50,6 +57,23 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
           <li><b>Timers built in.</b> Rest between sets and countdowns for holds.</li>
           <li><b>Progress you can see.</b> Lift history, body weight and a muscle map of what you have trained.</li>
           <li><b>Yours to keep.</b> Export everything, or delete your data and your account, any time.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="landing-plans">
+        <h2 id="landing-plans">Plans</h2>
+        <p className="landing-fine">Nothing is decided yet beyond the beta, which is free. Everything marked TBD will be set before the beta ends.</p>
+        <ul className="landing-plans">
+          {PLANS.map(p => (
+            <li key={p.name} className="landing-plan">
+              <h3>{p.name}</h3>
+              <dl>
+                <dt>Price</dt><dd>{p.price}</dd>
+                <dt>Limits</dt><dd>{p.limits}</dd>
+                <dt>Features</dt><dd>{p.features}</dd>
+              </dl>
+            </li>
+          ))}
         </ul>
       </section>
 
