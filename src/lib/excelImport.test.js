@@ -148,6 +148,18 @@ describe('CSV import (fallback)', () => {
     expect(d.excel).toMatchObject({ csv: true, skipped: 0 });
     expect(entryKey(d.logs.hack[0])).toBe(entryKey(s.logs.hack[0]));
   });
+  it('guards formula-looking text on export and reads it back unchanged', async () => {
+    const s = S(); s.logs.hack[0].n = '=1+1';
+    const csv = buildCsv(s);
+    expect(csv).toContain("'=1+1");
+    const d = await parseCsvExport(csv, cfg());
+    expect(d.logs.hack[0].n).toBe('=1+1');
+  });
+  it('round-trips a note that already starts with an apostrophe before a formula character', async () => {
+    const s = S(); s.logs.hack[0].n = "'=x";
+    const d = await parseCsvExport(buildCsv(s), cfg());
+    expect(d.logs.hack[0].n).toBe("'=x");
+  });
   it('rejects other CSV files', async () => {
     await expect(parseCsvExport('a,b\n1,2', cfg())).rejects.toThrow('isn’t an Iron Log CSV export');
   });

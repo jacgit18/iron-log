@@ -89,7 +89,8 @@ export function normEntry(e: unknown): LogEntry | null {
   const at = stampOf(e); if (at) out.updatedAt = at;
   return out;
 }
-export const normEntries = (list: unknown): LogEntry[] => (Array.isArray(list) ? list : []).map(normEntry).filter((e): e is LogEntry => !!e);
+// Oldest first (stable, so same-day entries keep their order): bestLift reports the first date a weight was lifted.
+export const normEntries = (list: unknown): LogEntry[] => (Array.isArray(list) ? list : []).map(normEntry).filter((e): e is LogEntry => !!e).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
 
 // [{wk, d, w}], one per week, oldest data first as given.
 export function normBody(list: unknown): BodyEntry[] {
