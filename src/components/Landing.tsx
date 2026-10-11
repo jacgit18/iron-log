@@ -7,11 +7,12 @@ import LegalLinks from './LegalLinks.js';
 
 // What someone sees before they have an account here (src/lib/gate.ts decides): what the app is, and the way in. It replaces the app
 // entirely; nothing of the app is mounted behind it. Plain words, no tracking, and a clear note that signing in creates the account.
-// Placeholders until the tiers are decided; they match users.plan (beta, free, paid).
+// Placeholders until the tiers are decided; they match users.plan (beta, free, paid, lifetime). founder is the owner's and is not offered.
 const PLANS = [
   { name: 'Beta', price: 'Free during the beta', limits: 'TBD', features: 'TBD' },
   { name: 'Free', price: 'TBD', limits: 'TBD', features: 'TBD' },
   { name: 'Paid', price: 'TBD', limits: 'TBD', features: 'TBD' },
+  { name: 'Lifetime', price: 'TBD', limits: 'TBD', features: 'TBD' },
 ];
 
 export default function Landing({ offline = false }: { offline?: boolean }) {
