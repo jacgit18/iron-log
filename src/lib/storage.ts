@@ -10,9 +10,16 @@ export const LS = {
 // A write that was refused for good is kept in `failed` (path -> data) until a later write of that path succeeds,
 // so the app can say what isn't saved and try again. onFailed(paths, refused) is told whenever that list changes,
 // with refused = true when it's because a write was just refused.
+// A db whose set() resolves with the document it now holds (the sync adapter, which may merge in another device's changes,
+// ADR 031) tells onStored(path, doc) once the path has nothing more to send. A write queued meanwhile was made from the
+// document before that merge, so rebase(path, sent, next, stored) carries the merge into it first.
 type Db = { doc(path: string): { set(data: unknown): Promise<unknown>; delete(): Promise<unknown> } };
 type Queue = { busy: boolean; next: any }
-export function makeSaveQueue({ getDb, onFlag, onFailed = () => {} }: { getDb: () => Db | null; onFlag: (t: string) => void; onFailed?: (paths: string[], refused: boolean) => void }) {
+type QueueOptions = {
+  getDb: () => Db | null; onFlag: (t: string) => void; onFailed?: (paths: string[], refused: boolean) => void;
+  onStored?: (path: string, doc: unknown) => void; rebase?: (path: string, sent: unknown, next: unknown, stored: unknown) => unknown;
+};
+export function makeSaveQueue({ getDb, onFlag, onFailed = () => {}, onStored = () => {}, rebase = (_p, _s, next) => next }: QueueOptions) {
   const queues: Record<string, Queue> = {}; const failed: Record<string, any> = {};
   const fail = (path: string, data: unknown) => { failed[path] = data; onFailed(Object.keys(failed), true); };
   const ok = (path: string) => { if (path in failed) { delete failed[path]; onFailed(Object.keys(failed), false); } };
@@ -27,8 +34,12 @@ export function makeSaveQueue({ getDb, onFlag, onFailed = () => {} }: { getDb: (
       while (q.next) {
         const body = q.next; q.next = null;
         try {
-          if (body.__delete) await db.doc(path).delete(); else await db.doc(path).set(body);
+          const stored = body.__delete ? await db.doc(path).delete() : await db.doc(path).set(body);
           ok(path); onFlag('Saved');
+          if (stored !== undefined && !body.__delete) {
+            if (!q.next) onStored(path, stored);
+            else if (!q.next.__delete) q.next = rebase(path, body, q.next, stored);
+          }
         } catch (err) {
           const e = err as { code?: string } | null;
           onFlag(e && e.code === 'quota_exceeded' ? 'Storage full' : 'Not saved, retrying…');
