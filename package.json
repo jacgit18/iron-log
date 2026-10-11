@@ -36,6 +36,7 @@
     "express": "^5.2.1",
     "kysely": "^0.28.17",
     "pg": "^8.23.1",
+    "pg-connection-string": "^2.14.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",

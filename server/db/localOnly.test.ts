@@ -18,7 +18,16 @@ describe('remoteDatabaseProblem', () => {
     expect(remoteDatabaseProblem(NEON, 'development', 'true')).toBeNull();
     expect(remoteDatabaseProblem(undefined, 'development', undefined)).toBeNull();
   });
+  it('reads the host the way pg does: a ?host= parameter wins over the URL', () => {
+    expect(remoteDatabaseProblem('postgres://u:p@localhost/neondb?host=ep-x.c-6.us-east-2.aws.neon.tech', 'development', undefined, undefined)).toMatch(/ep-x\.c-6/);
+  });
+  it('treats a Unix socket as local, and falls back to PGHOST when the URL has no host', () => {
+    expect(remoteDatabaseProblem('postgres:///ironlog?host=/var/run/postgresql', 'development', undefined, undefined)).toBeNull();
+    expect(remoteDatabaseProblem('postgres:///ironlog', 'development', undefined, undefined)).toBeNull();
+    expect(remoteDatabaseProblem('postgres:///ironlog', 'development', undefined, 'ep-x.neon.tech')).toMatch(/ep-x\.neon\.tech/);
+    expect(remoteDatabaseProblem('postgres:///ironlog', 'development', undefined, '/tmp')).toBeNull();
+  });
   it('refuses a URL it cannot read', () => {
-    expect(remoteDatabaseProblem('not a url', 'development', undefined)).toMatch(/not a valid URL/);
+    for (const bad of ['not a url', 'ep-x.neon.tech', 'postgres://u:p@[bad/x']) expect(remoteDatabaseProblem(bad, 'development', undefined)).toMatch(/not a valid URL/);
   });
 });
