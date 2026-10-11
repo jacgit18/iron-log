@@ -36,7 +36,7 @@ export interface ResetResult {
   others: { accounts: number; programs: number; libraryItems: number; stretches: number; configs: number };
 }
 
-async function adminId(trx: Transaction<DB>, admin: string): Promise<string> {
+export async function adminId(trx: Transaction<DB>, admin: string): Promise<string> {
   const rows = (await sql<{ id: string; is_admin: boolean }>`
     select u.id::text as id, u.is_admin from users u left join auth."user" a on a.id = u.auth_user_id
     where u.auth_user_id = ${admin} or lower(a.email) = lower(${admin})`.execute(trx)).rows;
