@@ -1,10 +1,10 @@
 /* The app store's state and actions, in one place: the core store (useAppStore) and its three slices
-   (editor, settings, wellness) read and write each other through get(), so they share one AppState.
+   (editor, settings, wellness, grocery) read and write each other through get(), so they share one AppState.
    Sheet forms (the `d` a save action receives) are typed loosely as `Form`; the sheets in components/ own their shape. */
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, Cfg, DataFile, EquipmentKey, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, EquipmentKey, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -125,6 +125,28 @@ export interface SettingsSlice {
   readImportFile(file: File | null | undefined): Promise<void>;
   pasteImport(text: string): void;
   applyImport(mode: 'merge' | 'replace'): Promise<void>;
+}
+
+/** The Grocery section's add-item form: what was typed. `price` is dollars as text. */
+export interface GroceryForm { n: string; store: string; qty: string; price: string; once: boolean }
+
+/** The grocery list (device-only): the catalogue and every saved month. Lives in the browser's storage, not in the sync. */
+export interface GrocerySlice {
+  grocery: Grocery;
+  groceryMonths: Record<string, GroceryMonth>; // "YYYY-MM" -> that month; a month with no entry is the fresh list
+  loadGrocery(): void;
+  setGrocery(data: GroceryData): void; // an import replaces everything
+  addGrocery(data: GroceryData): void; // an import adds what is missing
+  clearGrocery(): void; // the device went to another account: forget the list, here and in storage
+  addGroceryItem(d: GroceryForm): string | null;
+  updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; once: boolean }>): string | null;
+  removeGroceryItem(id: string): void;
+  addGroceryStore(name: string): string | null;
+  removeGroceryStore(name: string): string | null;
+  setGroceryGot(month: string, id: string, on: boolean): void;
+  setGroceryQty(month: string, id: string, qty: number): void;
+  setGroceryCents(month: string, id: string, cents: number | null): void;
+  pullGrocery(month: string, id: string, on: boolean): void;
 }
 
 export interface WellnessSlice {
@@ -313,6 +335,6 @@ export interface CoreSlice {
   init(): Promise<void>;
 }
 
-export type AppState = CoreSlice & EditorSlice & SettingsSlice & WellnessSlice;
+export type AppState = CoreSlice & EditorSlice & SettingsSlice & WellnessSlice & GrocerySlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];

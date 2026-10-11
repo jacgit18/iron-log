@@ -4,7 +4,7 @@ import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
 import BoardTab from './components/board/BoardTab.jsx';
-import Daily from './components/daily/Daily.jsx';
+import Daily from './components/daily/Daily.tsx';
 import Progress from './components/progress/Progress.jsx';
 import Editor from './components/program/Editor.jsx';
 import Settings from './components/settings/Settings.jsx';

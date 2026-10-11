@@ -784,6 +784,45 @@ describe('whose data this device holds (B2e)', () => {
     expect((await bobs.doc('weeks/2026-10-04').get()).data()).toMatchObject({ prog: 'B' });
   });
 
+  it('tells the app when the device goes to another account, and not when the same account comes back', async () => {
+    who = as('ann');
+    const changed = vi.fn();
+    const { storage, make, db } = setup({ identity, onOwnerChange: changed });
+    db.start();
+    await settle();
+    expect(changed).not.toHaveBeenCalled(); // the first account taking the device is not a change of owner
+    db.stop();
+    const again = make({ identity, onOwnerChange: changed });
+    again.start();
+    await settle();
+    expect(changed).not.toHaveBeenCalled();
+    again.stop();
+    who = as('bob'); // an empty device is handed over
+    const bobs = make({ identity, onOwnerChange: changed });
+    bobs.start();
+    await settle();
+    expect(ownerOf(storage)).toBe('bob');
+    expect(changed).toHaveBeenCalledTimes(1);
+  });
+
+  it('tells the app when the user wipes the device for the new account', async () => {
+    who = as('ann');
+    const changed = vi.fn();
+    const { server, make, db } = setup({ identity });
+    server.plant('weeks', '2026-10-04', { week_start: '2026-10-04', data: { prog: 'A' } }); // Ann has data here, so the device is held back
+    db.start();
+    await settle();
+    db.stop();
+    who = as('bob');
+    const bobs = make({ identity, onOwnerChange: changed });
+    bobs.start();
+    await settle(40);
+    expect(bobs.status().pausedBecause).toBe('account');
+    expect(changed).not.toHaveBeenCalled(); // held back: nothing is forgotten until the user chooses
+    expect(await bobs.wipeForNewAccount()).toBe('done');
+    expect(changed).toHaveBeenCalledTimes(1);
+  });
+
   it('wiping forgets the first account\'s data and unsent changes, then carries on as the new one', async () => {
     who = as('ann');
     const { server, storage, make, db } = setup({ identity });

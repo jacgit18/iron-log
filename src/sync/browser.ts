@@ -9,7 +9,7 @@ import { createTransport } from './transport.js';
    Everything that needs the page (storage, visibility, the network events, the build id) is here, so apiDb.ts itself stays
    free of the DOM and can be tested without it. */
 
-export function createBrowserApiDb() {
+export function createBrowserApiDb(hooks: { onOwnerChange?: () => void } = {}) {
   // Errors on this phone reach the server's log (ADR 013). Not in development, where the console is right there.
   if (!import.meta.env.DEV) installErrorReporting({ version: __APP_VERSION__, send: sendReport });
   const account = createAccountClient({ headers: signIn });
@@ -17,6 +17,7 @@ export function createBrowserApiDb() {
     identity: account.me,
     transport: createTransport({ clientVersion: __APP_VERSION__, headers: signIn }),
     storage: LS,
+    onOwnerChange: hooks.onOwnerChange,
     visible: () => document.visibilityState !== 'hidden',
     onWake: wake => {
       const onVisible = () => { if (document.visibilityState === 'visible') wake(); };

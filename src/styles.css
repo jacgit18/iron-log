@@ -596,3 +596,13 @@ fieldset.plain legend{padding:0;margin-bottom:8px;font-weight:600}
 .landing-foot{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
 .landing-splash{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:8px;color:var(--muted)}
 .landing-dev{margin:12px 0 0;padding-top:12px;border-top:1px dashed var(--line)}
+
+/* Grocery list: count and price boxes sit on the row, the total after them */
+.grow{flex-wrap:wrap}
+.grow .exname{display:flex;align-items:center;gap:8px;flex:1 1 9em;min-width:0}
+.grow .exname .chk{margin-right:0}
+.gnums{gap:4px;flex-wrap:nowrap}
+.gnum{text-align:right;min-width:0}
+.gcheck{display:inline-flex;align-items:center;gap:6px}
+.gname{flex:1 1 140px;min-width:0}
+.gtotal{min-width:4.5em;text-align:right}

@@ -10,7 +10,8 @@ import { LS } from './lib/storage.js';
    A feature missing from the list is hidden from everyone (a forgotten line fails closed, not open). Hiding in the browser is not security: a feature with an API route must also
    use `requireAdmin` (server/admin.ts). Add a feature with a line here, then `useFeature('name')` in the component. */
 export const FEATURES = {
-  // exampleFeature: 'admin',
+  grocery: 'admin', // Groceries under the Daily tab (ADR 019): set to 'all' when released, then delete this line and the useFeature check in components/daily/Daily.tsx
+
 } satisfies Record<string, Audience>;
 
 export type Audience = 'admin' | 'all' | 'off';

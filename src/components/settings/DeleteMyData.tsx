@@ -22,9 +22,9 @@ const WHY: Record<string, string> = {
   unavailable: 'This is not available right now. Nothing was erased.',
 };
 
-// What this device holds of its own: the documents from before accounts, and the notes about them. Display options stay.
+// What this device holds of its own: the documents from before accounts, and the notes about them, and the grocery list (kept on this device only). Display options stay.
 function forgetDevice() {
-  for (const path of localPaths()) if (parsePath(path)) LS.remove(path);
+  for (const path of localPaths()) if (parsePath(path) || path.startsWith('grocery/')) LS.remove(path);
   LS.remove('sync/legacy');
   forgetSession(LS); // the next screen is the landing page
   writeLegacyMarker({ state: 'dismissed', at: new Date().toISOString() }); // never offer to upload what was just erased
