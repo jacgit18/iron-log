@@ -109,38 +109,32 @@ const queue = makeSaveQueue({ getDb: () => db, onFlag: (t: string) => flag(t), o
 // A stored program comes back only if it has the right shape, cleaned; otherwise the built-in one.
 const loadProgram = (k: 'A' | 'B', data: unknown) => resolveProgram(k, normProgram(data, k));
 
-// A signed-in account with no saved program and no log entries starts with a blank board; one that has entries keeps the built-in
-// plan it has been using (ADR 016). Decided once both the programs and the logs have loaded, whichever comes last, and in both
-// directions, so a device that gets its logs late never leaves an existing account on a blank board. Only a program that is still
-// the built-in or the blank one is swapped; a saved or just-edited program is never touched.
+// A signed-in account with no saved program has a blank board, log entries or not: everyone builds their own program (ADR 021,
+// replacing ADR 016's "keep the built-in plan once you have entries"). Decided once both the programs and the logs have loaded.
+// Only a program that is still the built-in or the blank one is swapped; a saved or just-edited program is never touched.
 const programDocs = new Set<string>();
 // Returns the programs this state should show; the same object when nothing changes. Applied in the same update that marks the programs
 // and the logs ready, so the board never shows the built-in plan for an instant before it turns blank.
 function settledPrograms(st: { ready: { programs: boolean; logs: boolean }; logs: Logs; programs: AppState['programs'] }): AppState['programs'] {
   if (!st.ready.programs || !st.ready.logs) return st.programs;
-  const hasEntries = Object.values(st.logs).some(l => l.length > 0);
   let programs = st.programs;
   (['A', 'B'] as const).forEach(k => {
     if (programDocs.has(k) || queue.pending('programs/' + k)) return;
     if (programs[k] !== BUILTIN[k] && programs[k] !== BLANK[k]) return;
-    const want = hasEntries ? BUILTIN[k] : BLANK[k];
-    if (programs[k] !== want) programs = { ...programs, [k]: want };
+    if (programs[k] !== BLANK[k]) programs = { ...programs, [k]: BLANK[k] };
   });
   return programs;
 }
-// The stretch routine works the same way (ADR 016): a stretch list with no saved document is empty when the account has no log entries and no
-// stretch-week records, and the default routine (the owner's) when it has any. Decided in the same update that marks the data ready; a saved
-// or just-edited list is never replaced.
+// The stretch routine works the same way (ADR 021): a stretch list with no saved document is empty, history or not. Decided in the same
+// update that marks the data ready; a saved or just-edited list is never replaced.
 const BLANK_STRETCHES: Stretch[] = [];
 let shownDefaultStretches: Stretch[] | null = null;
 let stretchDocExists = false;
-let hasStretchWeeks = false;
 function settledStretches(st: { ready: { str: boolean; strHist: boolean; logs: boolean }; logs: Logs; stretches: Stretch[] }): Stretch[] {
   if (!st.ready.str || !st.ready.strHist || !st.ready.logs) return st.stretches;
   if (stretchDocExists || queue.pending('stretches/main')) return st.stretches;
   if (st.stretches !== shownDefaultStretches && st.stretches !== BLANK_STRETCHES) return st.stretches;
-  const isNew = !hasStretchWeeks && !Object.values(st.logs).some(l => l.length > 0);
-  return isNew ? BLANK_STRETCHES : (shownDefaultStretches ?? st.stretches);
+  return BLANK_STRETCHES;
 }
 export function flag(t: string) {
   const routine = t === 'Saved' || t === 'Loading…' || t === '';
@@ -271,8 +265,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Every write is refused until all data has loaded, so a half-loaded week never overwrites the saved one.
   blocked() { if (get().isReady()) return false; flag('Still loading your data…'); return true; },
   originalProgram: k => (db ? BLANK[k] : BUILTIN[k]),
-  // Syncing, a blank program saved by "Original" is a copy, so compare by content; the built-in plan an account with entries falls back to
-  // counts as its own (it is what its entries point at), so loading another version first keeps a copy of it in the library.
+  // Syncing, a saved blank program is a copy, so compare by content; the built-in plan still on a board from before ADR 021 counts as the
+  // account's own, so loading another version first keeps a copy of it in the library.
   isOriginal: (p, k) => (db ? p === BLANK[k] || sameProg(p, BLANK[k]) : p === BUILTIN[k]),
 
   // Opening Progress reloads the saved weeks so the history is never stale.
@@ -435,7 +429,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
     if (!isVideoUrl(d.nu)) return VIDEO_ERR;
     const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
-    if (d.ex !== '__new') get().applyExerciseUrl(ex, d.nu);
+    if (d.ex !== '__new') { get().applyExerciseUrl(ex, d.nu); get().applyExerciseEq(ex, d.ne); }
     const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim().slice(0, 200) };
     const list = get().experiments;
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
@@ -447,6 +441,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     const url = (raw || '').trim();
     if (url === (exInfo(get().cfg, ex).url || '')) return;
     get().mutateCfg(c => setOverride(c, ex, { url }));
+  },
+  // Equipment picked for an existing exercise replaces its saved one everywhere.
+  applyExerciseEq(ex, eq) {
+    if (eq == null) return; // not offered by this caller: leave the saved equipment alone
+    if (eq === (exInfo(get().cfg, ex).eq || '')) return;
+    get().mutateCfg(c => setOverride(c, ex, { eq }));
   },
   // A typed name that isn't in the catalog yet becomes a custom exercise (video link and equipment optional). Returns its id.
   createExercise(d) {
@@ -461,7 +461,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!isVideoUrl(d.nu)) return VIDEO_ERR;
     const pd = dayAt(get().week, col); if (pd == null) return 'That is your rest day.';
     const ex = d.ex === '__new' ? get().createExercise(d) : d.ex;
-    if (d.ex !== '__new') get().applyExerciseUrl(ex, d.nu);
+    if (d.ex !== '__new') { get().applyExerciseUrl(ex, d.nu); get().applyExerciseEq(ex, d.ne); }
     const note = (d.note || '').trim().slice(0, 200);
     const ph = d.ph || null; const exDef = (get().cfg.exPh || {})[ex]; const id = uid('X-');
     const ok = get().mutateWeek(w => {
@@ -998,9 +998,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         return { ...upd, stretches: settledStretches({ ...state, ...upd }) };
       });
     }, () => flag('Couldn’t load your stretches. Reload the page.'));
-    // Whether the account has any stretch weeks: with the list, it tells a new account from one that has been ticking stretches.
-    db.collection('stretchweeks').onSnapshot((s: any) => {
-      hasStretchWeeks = s.docs.length > 0;
+    // The stretch weeks are part of the data the app waits for before anything is written (ready.strHist).
+    db.collection('stretchweeks').onSnapshot(() => {
       set(state => {
         const upd = markReady('strHist')(state);
         return { ...upd, stretches: settledStretches({ ...state, ...upd }) };
