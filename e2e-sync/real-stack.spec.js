@@ -146,7 +146,7 @@ test('data from before accounts is uploaded once, all of it, and a second phone 
   await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
   await expect(page.getByRole('status').filter({ hasText: 'Upload this device’s data?' })).toHaveCount(0);
   const b = await newPhone(browser, user);
-  const second = await b.open();
+  const second = await b.open({ blank: true }); // the upload has no program, so the board is blank (ADR 021); the history is there
   await second.locator('#tab-progress').click();
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(2);
@@ -201,7 +201,7 @@ test('an export file from another copy of the app is uploaded into an empty acco
 
   // A second phone sees the uploaded data.
   const b = await newPhone(browser, user);
-  const second = await b.open();
+  const second = await b.open({ blank: true }); // the upload has no program, so the board is blank (ADR 021); the history is there
   await second.locator('#tab-progress').click();
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(1);

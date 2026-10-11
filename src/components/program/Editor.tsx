@@ -3,7 +3,7 @@ import type { ProgKey } from '../../types.ts';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { PHASES, BUILTIN, exInfo } from '../../lib/data.js';
+import { PHASES, exInfo } from '../../lib/data.js';
 import { progName, DAYS } from '../../lib/logic.js';
 import { sameProg, libDate } from '../../lib/export.js';
 import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
@@ -42,7 +42,6 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
   const items = [...library].sort((a, b) => (b.at || '').localeCompare(a.at || ''));
   const saved = !custom || library.some(it => sameProg(it.prog, cur));
   const loadLabel = `Tap to load into ${pn}`;
-  const orig = st.originalProgram(k as ProgKey);
   return (
     <section className="panel edpanel lib" style={{ marginTop: 16 }}>
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -51,18 +50,17 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
       </div>
       <p className="note">Load a version into {pn}. Whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
       <div className="edlist">
-        <LibRow name={`Original ${pn}`} meta={`${orig === BUILTIN[k as ProgKey] ? 'Built in' : 'Blank'} · ${progStats(orig)} · always kept`} inUse={!custom} loadLabel={loadLabel} onLoad={() => st.loadVersion('orig', k as ProgKey)} />
         {items.map(it => (
           <LibRow
             key={it.id} name={it.name} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k as ProgKey)}
-            meta={`${it.created ? 'Created from' : 'From'} ${progName(cfg, it.from as string)} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto ? ' · auto-saved' : ''}`}
+            meta={`${it.created ? (it.from ? `Created from ${progName(cfg, it.from)}` : 'Created new') : `From ${progName(cfg, it.from as string)}`} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto ? ' · auto-saved' : ''}`}
             extra={<>
               <button type="button" className="btn sm" aria-label={`Edit ${it.name}`} onClick={() => { st.setEdProg('L:' + it.id); st.setEdDay(1); window.scrollTo({ top: 0 }); }}>Edit</button>
               <ArmedButton className="btn sm ghost" aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Delete?" onConfirm={() => st.deleteLibItem(it.id)} />
             </>}
           />
         ))}
-        {!items.length && <p className="note">No saved or created programs yet.</p>}
+        {!items.length && <p className="note">No programs yet. Create one to build your own.</p>}
       </div>
       <form className="libsave" noValidate onSubmit={e => { e.preventDefault(); st.saveCurrentAs(name); setName(''); }}>
         <label className="field" style={{ flex: 1 }}>Save {pn} as
@@ -141,11 +139,7 @@ function ProgramEditor() {
             <CommitInput key={`L${item.id}:${item.name}`} id="prog-name" maxLength={60} value={item.name} onCommit={st.renameLibItem} />
           </label>
         </>
-      ) : (
-        <label className="field progname">Name of Program {k}
-          <CommitInput key={`${k}:${(cfg.progNames || {})[k] || ''}`} id="prog-name" maxLength={40} value={(cfg.progNames || {})[k] || ''} placeholder={`Program ${k}`} onCommit={(v) => st.renameProgram(k as ProgKey, v)} />
-        </label>
-      )}
+      ) : null}
       <section className="panel edpanel">
         <div className="inline" style={{ flexWrap: 'wrap' }}><h2 id="ed-title" tabIndex={-1} style={{ marginRight: 'auto' }}>{edName} · {day.title}</h2></div>
         <label className="field">Day label

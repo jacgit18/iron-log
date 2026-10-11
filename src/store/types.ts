@@ -109,13 +109,13 @@ export interface EditorSlice {
   undoRemoveEdSlot(): void;
   dismissEdRemoved(): void;
   setDaySub(v: string): boolean;
-  renameProgram(k: ProgKey, raw: string): false | void;
   renameLibItem(raw: string): false | void;
   libSnapshot(name: string, prog: Program, from: string, auto: boolean): LibraryItem;
   saveCurrentAs(name: string): void;
   loadVersion(target: string, slot: ProgKey): void;
   deleteLibItem(id: string): void;
-  createProgram(name: string, from: ProgKey): boolean;
+  /** `from` 'empty' starts with seven empty days (ADR 021); 'A' or 'B' starts as a copy of that program. */
+  createProgram(name: string, from: ProgKey | 'empty'): boolean;
   saveSlot(d: SlotForm): string | null;
 }
 

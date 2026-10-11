@@ -1,4 +1,4 @@
-import { BUILTIN, PHASES } from '../lib/data.js';
+import { PHASES } from '../lib/data.js';
 import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
 import { parseDataFile, importSel, cfgSection, mergeEntries, mergeWeek, sameProg, progBody, libDate, backupCfg } from '../lib/export.js';
 import { WEEK_RE } from '../lib/trends.js';
@@ -87,13 +87,10 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
         if (on.program) {
           const programs = { ...get().programs };
           // A file has no program for A or B when it was the built-in plan (buildDataFile leaves that out), so that is what a missing one
-          // means. Syncing, ADR 016 rule 2 still applies after the restore: the built-in plan only for an account with log entries,
-          // otherwise the blank one. Either way there is no saved program, so the next load decides the same.
-          const logsAfter: Record<string, unknown> = on.progress ? d.logs || {} : get().logs;
-          const hasEntries = Object.values(logsAfter).some(l => Array.isArray(l) && l.length > 0);
+          // means. Syncing, that is the blank program (ADR 021), as the next load decides too; without syncing, the built-in plan.
           (['A', 'B'] as const).forEach(k => {
             if (d.programs[k]) { progSaves.push([k, structuredClone(d.programs[k])]); return; }
-            const want = hasEntries ? BUILTIN[k] : get().originalProgram(k);
+            const want = get().originalProgram(k);
             if (programs[k] !== want) { programs[k] = want; progRemoves.push('programs/' + k); }
           });
           patch.programs = programs; patch.library = structuredClone(d.library); saves.push('saveLibrary');

@@ -7,10 +7,17 @@ const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wc
 
 const signedInAsDev = route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, userId: 'dev-user', account: { kind: 'dev', email: null, name: null } }) });
 
-// What the server sends an account that already has data: one past session of Lat Pulldown. An account with no data at all starts on a blank
-// board (ADR 016), so tests that tick a card need this, as a real returning user has it.
-const accountRows = [{ table: 'log_entries', client_id: 'seed-1', exercise_id: 'latpd', d: '2026-01-05', wk: '2026-01-05', phase: 'hyp', weight_lb: '45', sets_count: '4', reps: '12', hold_sec: null, sets: null, note: null, slot: 'A-d1s1', auto: false, client_updated_at: '2026-01-05T10:00:00Z', version: 1, deleted_at: null, seq: '1' }];
-const accountPull = { rows: accountRows, cursor: '1', more: false };
+// What the server sends an account that already has data: its own saved Program A (one Lat Pulldown card), a saved stretch, and one past
+// session of Lat Pulldown. An account with nothing saved starts on a blank board with no stretches, log entries or not (ADR 016, ADR 021),
+// so tests that tick a card need this, as a real returning user has it.
+const ownProgram = { key: 'A', days: [{ title: 'Day 1', slots: [{ id: 'A-d1s1', sec: 'Regular', tier: 'Primary', items: [{ ex: 'latpd', ph: 'hyp', w: 45 }] }] }] };
+const rowBase = { client_updated_at: '2026-01-05T10:00:00Z', version: 1, deleted_at: null };
+const accountRows = [
+  { table: 'programs', key: 'A', data: ownProgram, ...rowBase, seq: '1' },
+  { table: 'list_items', list: 'stretch', client_id: 'scarecrow', position: 0, data: { id: 'scarecrow', n: 'Scarecrow', group: 'Bands', tier: 'primary' }, ...rowBase, seq: '2' },
+  { table: 'log_entries', client_id: 'seed-1', exercise_id: 'latpd', d: '2026-01-05', wk: '2026-01-05', phase: 'hyp', weight_lb: '45', sets_count: '4', reps: '12', hold_sec: null, sets: null, note: null, slot: 'A-d1s1', auto: false, ...rowBase, seq: '3' },
+];
+const accountPull = { rows: accountRows, cursor: '3', more: false };
 const emptyPull = { rows: [], cursor: '0', more: false }; // an account with nothing in it yet
 
 // The helpers below model a returning browser: it has seen a signed-in session (the marker is seeded once, so a sign-out can clear it).
@@ -99,7 +106,7 @@ test.describe('the stretch routine of a new account (ADR 016)', () => {
     await expect(page.getByRole('dialog')).toBeVisible();
   });
 
-  test('an account that has data keeps the default routine, with no prompt', async ({ page }) => {
+  test('an account that has saved stretches sees them, with no prompt', async ({ page }) => {
     await openSynced(page);
     await page.locator('#board-stretches').click();
     await expect(page.getByText('Scarecrow').first()).toBeVisible({ timeout: 30_000 });

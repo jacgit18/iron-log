@@ -1,4 +1,4 @@
-import { BUILTIN, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
+import { BUILTIN, BLANK, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { progName, dayAt, DAYS, colOf, currentLayout, isFinished } from '../lib/logic.js';
 import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
@@ -90,12 +90,6 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   dismissEdRemoved() { set({ edRemoved: null }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
 
-  renameProgram(k, raw) {
-    if (get().blocked()) return false;
-    const v = raw.trim().slice(0, 40);
-    get().mutateCfg(c => { c.progNames = { ...(c.progNames || {}) }; if (v && v !== `Program ${k}`) c.progNames[k] = v; else delete c.progNames[k]; });
-    flag('Renamed');
-  },
   renameLibItem(raw) {
     if (get().blocked()) return false;
     const it = get().edItem(); const v = raw.trim().slice(0, 60);
@@ -139,8 +133,10 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
       }
       get().saveProgram(slot, loaded);
     }
+    // A program loaded from the library brings its name: the slot is called what you named the program (ADR 021).
+    if (src) get().mutateCfg(c => { c.progNames = { ...(c.progNames || {}), [slot]: src.name }; });
     set({ edProg: slot });
-    flag(src ? `${src.name} is now in ${progName(get().cfg, slot)}` : 'Loaded');
+    flag(src ? `Loaded ${src.name} into Program ${slot}` : 'Loaded');
   },
   deleteLibItem(id) {
     if (get().blocked()) return;
@@ -150,8 +146,9 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   },
   createProgram(name, from) {
     if (get().blocked()) return false;
-    const srcProg = get().programs[from] || get().programs.A;
+    const srcProg = from === 'empty' ? BLANK.A : get().programs[from] || get().programs.A;
     const it = get().libSnapshot(name.trim(), srcProg, from, false); it.created = true;
+    if (from === 'empty') delete it.from;
     // The copy gets its own slot ids so check-offs and phase defaults never mix with the program it came from;
     // the source's saved phase defaults carry over to the new ids.
     const phDef = reId(it.prog, slotsFor(srcProg), 'P' + it.id.slice(-5), get().cfg.phDef);

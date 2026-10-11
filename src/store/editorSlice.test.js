@@ -182,11 +182,11 @@ describe('the add/edit exercise sheet', () => {
 });
 
 describe('names, saved versions and loading', () => {
-  it('renames a program, and the default name clears it', () => {
-    st().renameProgram('A', '  Upper/Lower ');
-    expect(st().cfg.progNames).toEqual({ A: 'Upper/Lower' });
-    st().renameProgram('A', 'Program A');
-    expect(st().cfg.progNames).toEqual({});
+  it('a program loaded from the library gives the slot its name', () => {
+    st().removeEdSlot(0); st().saveCurrentAs('Upper/Lower');
+    st().loadVersion(st().library[0].id, 'B');
+    expect(st().cfg.progNames).toEqual({ B: 'Upper/Lower' });
+    expect(st().edName()).toBe('Upper/Lower');
   });
   it('saves a copy of the current program', () => {
     st().removeEdSlot(0);
@@ -241,6 +241,15 @@ describe('names, saved versions and loading', () => {
 });
 
 describe('creating a program', () => {
+  it('starts an empty program with seven empty days, from nothing', () => {
+    expect(st().createProgram('Mine', 'empty')).toBe(true);
+    const it = st().library[0];
+    expect(it).toMatchObject({ name: 'Mine', created: true });
+    expect(it).not.toHaveProperty('from');
+    expect(it.prog.days).toHaveLength(7);
+    expect(it.prog.days.every(d => d.slots.length === 0)).toBe(true);
+    expect(st().edProg).toBe('L:' + it.id);
+  });
   it('copies A or B into the library with its own card ids and phase defaults', () => {
     useAppStore.setState(s => ({ cfg: { ...s.cfg, phDef: { 'A-sled1:0': 'strength' } } }));
     expect(st().createProgram('My plan', 'A')).toBe(true);
