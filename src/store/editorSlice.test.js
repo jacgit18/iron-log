@@ -73,6 +73,41 @@ describe('editing a program', () => {
     st().setDaySub(' ');
     expect(st().edProgram().days[0]).not.toHaveProperty('sub');
   });
+  it('puts a removed card back where it was, once', () => {
+    const before = structuredClone(day1());
+    st().removeEdSlot(2);
+    expect(st().edRemoved).toMatchObject({ day: 1, idx: 2, slot: before[2] });
+    st().undoRemoveEdSlot();
+    expect(day1()).toEqual(before);
+    expect(st().edRemoved).toBeNull();
+    st().undoRemoveEdSlot(); // a second Undo adds nothing
+    expect(day1()).toEqual(before);
+  });
+  // Cards saved without an id (older saved programs) are named by their position, so these use a Day 1 with no ids.
+  const idless = () => { const p = structuredClone(BUILTIN.A); p.days[0].slots.forEach(sl => { delete sl.id; }); useAppStore.setState(x => ({ programs: { ...x.programs, A: p } })); };
+  it('remove, then a move, then Undo: every card keeps its own id, none shared', () => {
+    idless(); const before = day1().map((s, i) => s.id || `A-d1s${i + 1}`); // what each card is called now: its position
+    st().removeEdSlot(1);
+    st().moveEdSlot(0, 1);
+    st().undoRemoveEdSlot();
+    const after = day1().map(s => s.id);
+    expect(new Set(after).size).toBe(after.length);
+    expect(after.slice().sort()).toEqual(before.slice().sort());
+    expect(after[1]).toBe(before[1]); // the card came back where it was, with its own id
+  });
+  it('the cards after a removed one keep their ids, so their ticks and phase defaults stay with them', () => {
+    idless(); const before = day1().map((s, i) => s.id || `A-d1s${i + 1}`); // what each card is called now: its position
+    st().removeEdSlot(0);
+    expect(day1().map(s => s.id)).toEqual(before.slice(1));
+  });
+  it('drops the Undo when you switch day, so it never lands on another day', () => {
+    st().removeEdSlot(0);
+    st().setEdDay(2);
+    const d2 = structuredClone(st().edProgram().days[1].slots);
+    st().undoRemoveEdSlot();
+    expect(st().edProgram().days[1].slots).toEqual(d2);
+    expect(day1()).toHaveLength(BUILTIN.A.days[0].slots.length - 1);
+  });
   it('edits the day that is open', () => {
     st().setEdDay(3);
     st().removeEdSlot(0);
@@ -183,6 +218,27 @@ describe('names, saved versions and loading', () => {
     st().loadVersion(st().library[0].id, 'A');
     expect(sameProg(st().programs.A, edited)).toBe(true);
     expect(st().library).toHaveLength(1);
+  });
+  it('the same library program in A and B gets its own card ids in the second slot, with its phase defaults', async () => {
+    const { slotsFor } = await import('../lib/data.js');
+    const first = BUILTIN.A.days[0].slots[1].id; // a card with a stored id
+    useAppStore.setState(s => ({ cfg: { ...s.cfg, phDef: { [`${first}:0`]: 'hyp' } } }));
+    st().saveCurrentAs('Shared');
+    const id = st().library[0].id;
+    st().loadVersion(id, 'B'); // B now holds A's cards
+    const a = slotsFor(st().programs.A).map(s => s.id); const b = slotsFor(st().programs.B).map(s => s.id);
+    expect(b).toHaveLength(a.length);
+    expect(b.filter(x => a.includes(x))).toEqual([]); // no card shared between A and B
+    expect(st().cfg.phDef[`${b[1]}:0`]).toBe('hyp'); // the phase default moved to the new id
+    expect(st().cfg.phDef[`${first}:0`]).toBe('hyp'); // and A's own is untouched
+  });
+  it('loading a version back into the slot it came from keeps its card ids, so the week\u2019s ticks stay with them', async () => {
+    const { slotsFor } = await import('../lib/data.js');
+    st().setEdDay(2); st().removeEdSlot(0); // A is now an edited copy (Day 1 unchanged)
+    const before = slotsFor(st().programs.A).map(s => s.id);
+    st().saveCurrentAs('Mine');
+    st().loadVersion(st().library[0].id, 'A');
+    expect(slotsFor(st().programs.A).map(s => s.id)).toEqual(before);
   });
   it('makes no copy when the current program is the original or already saved', () => {
     st().loadVersion('orig', 'A');

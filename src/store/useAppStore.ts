@@ -741,7 +741,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (parts.body) { set({ body: [] }); get().saveBody(); }
     if (parts.programs) {
       ['A', 'B'].forEach(k => get().removeDoc('programs/' + k));
-      set({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], experiments: [] }); get().saveLibrary(); get().saveExperiments();
+      // Back to the starting program: syncing that is the blank one, never the owner's plan (ADR 016).
+      set({ programs: { A: get().originalProgram('A'), B: get().originalProgram('B') }, library: [], experiments: [] }); get().saveLibrary(); get().saveExperiments();
     }
     if (parts.settings) {
       const { backup, ghBackup } = get().cfg; const cfg = structuredClone(DEFAULT_CFG);

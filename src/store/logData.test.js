@@ -391,6 +391,19 @@ describe('log data: what an account starts with (ADR 016, ADR 021)', () => {
     } finally { delete globalThis.claude; }
   });
 
+  it('P7b syncing, erasing the programs leaves the blank program, not the owner\'s plan, and nothing of it is saved', async () => {
+    const fdb = fakeDb(); const mine = structuredClone(BUILTIN.A); mine.days[0].title = 'Push'; fdb.docs.set('programs/A', mine);
+    try {
+      const { s2, BLANK, slotsFor } = await boot(fdb);
+      expect(s2().programs.A.days[0].title).toBe('Push');
+      await s2().eraseData({ programs: true }); await tick();
+      expect(s2().programs.A).toBe(BLANK.A); expect(s2().programs.B).toBe(BLANK.B);
+      expect(cards(s2, slotsFor, 'A')).toBe(0);
+      expect(fdb.docs.has('programs/A')).toBe(false);
+      expect(s2().isOriginal(s2().programs.A, 'A')).toBe(true); // so loading a version next makes no unwanted auto-copy
+    } finally { delete globalThis.claude; }
+  });
+
   // ADR 016 step 2: syncing, "Original" is the blank program, so the owner's plan is never offered to another account.
   it('P7 syncing, Original is blank, is saved as the account program, and stays blank after a reload with log entries', async () => {
     const fdb = fakeDb(); const mine = structuredClone(BUILTIN.A); mine.days[0].title = 'Push';
