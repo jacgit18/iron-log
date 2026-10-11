@@ -53,6 +53,23 @@ describe('editing a program', () => {
 });
 
 describe('the add/edit exercise sheet', () => {
+  it('adds one card to each ticked day, each with its own id, and nothing else moves', () => {
+    const before = st().edProgram().days.map(d => ids(d.slots));
+    expect(st().saveSlot(newCard({ days: [5, 1, 3, 3] }))).toBeNull();
+    const after = st().edProgram().days;
+    const added = [1, 3, 5].map(n => after[n - 1].slots.filter(s => !before[n - 1].includes(s.id)));
+    added.forEach(a => { expect(a).toHaveLength(1); expect(a[0]).toMatchObject({ sec: 'Regular', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] }); });
+    expect(new Set(added.map(a => a[0].id)).size).toBe(3);
+    [2, 4, 6, 7].forEach(n => expect(ids(after[n - 1].slots)).toEqual(before[n - 1]));
+    [1, 3, 5].forEach(n => expect(ids(after[n - 1].slots).filter(id => before[n - 1].includes(id))).toEqual(before[n - 1]));
+  });
+  it('asks for a day when none is ticked, and ignores the days list when editing a card', () => {
+    expect(st().saveSlot(newCard({ days: [] }))).toBe('Pick at least one day.');
+    const first = day1()[1];
+    expect(st().saveSlot({ ...newCard({ days: [2, 3] }), id: first.id, idx: 1, sec: first.sec })).toBeNull();
+    expect(day1()[1].id).toBe(first.id);
+    expect(st().edProgram().days[1].slots.some(s => s.id === first.id)).toBe(false);
+  });
   it('adds a card after the last one in its section, and a new section before Home', () => {
     expect(st().saveSlot(newCard())).toBeNull();
     expect(day1()[6]).toMatchObject({ sec: 'Regular', items: [{ ex: 'arnold', ph: 'strength', w: 30 }] });
