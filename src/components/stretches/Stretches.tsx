@@ -8,6 +8,7 @@ import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { motionOK } from '../../lib/motion.js';
 import ArmedButton from '../ArmedButton.jsx';
+import RemovedNotice from '../RemovedNotice.jsx';
 import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
 
@@ -17,14 +18,15 @@ function Link({ n, url }: { n: string; url?: string }) {
   return url ? <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(url)}: ${n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(url)}</a> : null;
 }
 
-function Row({ d, s, id, n, url, note, extra }: { d: number; s: AppState; id: string; n: string; url?: string; note?: string; extra?: ReactNode }) {
+function Row({ d, s, id, n, url, note, extra, removing }: { d: number; s: AppState; id: string; n: string; url?: string; note?: string; extra?: ReactNode; removing?: boolean }) {
   const week = useAppStore(x => x.strWeek);
   const done = isStretchDone(week, d, id);
   return (
-    <div className={`ex${done ? ' idone' : ''}`}>
+    <div className={`ex${done ? ' idone' : ''}${removing ? ' removing' : ''}`}>
+      {removing && <span className="rmtag">Will be removed · tap Remove again</span>}
       <div className="exname">
         <input type="checkbox" className="chk" id={`schk-${d}-${id}`} checked={done} aria-label={`Mark ${n} done`} onChange={e => s.setStretchDone(d, id, e.target.checked)} />
-        <span className="exh">{n}</span>
+        <span className="exh rmname">{n}</span>
         <Link n={n} url={url} />
         {extra}
       </div>
@@ -65,19 +67,22 @@ function Experiments({ day }: { day: number }) {
   const items = useAppStore(x => x.stretchExps);
   const s = useAppStore.getState();
   const [pick, setPick] = useState<Record<string, number>>({});
+  const [arming, setArming] = useState<string | null>(null); // the experiment whose Delete was pressed once
   return (
     <section className="experiments" aria-labelledby="sexp-h">
       <div className="exphead">
         <h2 id="sexp-h" className="cond" tabIndex={-1}>Experiments</h2>
         <button type="button" className="btn sm" id="sexp-add" onClick={() => s.openModal({ type: 'stretchexp' })}>+ Add stretch</button>
       </div>
+      <RemovedNotice scope="stretchexps" />
       {!items.length ? <p className="note">Keep stretches you want to try here, then add them to a day.</p> : (
         <ul className="explist">
           {items.map(e => {
             const to = pick[e.id] ?? day;
             return (
-              <li key={e.id} className="expcard">
-                <div><b>{e.n}</b></div>
+              <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`}>
+                {arming === e.id && <span className="rmtag">Will be deleted · tap Delete again</span>}
+                <div><b className="rmname">{e.n}</b></div>
                 {e.note && <div className="note">{e.note}</div>}
                 <Link n={e.n} url={e.url} />
                 <div className="actions">
@@ -87,7 +92,7 @@ function Experiments({ day }: { day: number }) {
                   </select>
                   <button type="button" className="btn sm" aria-label={`Add ${e.n} to ${DAY_NAMES[to]}`} onClick={() => s.addStretchToDay(e.id, to)}>Add</button>
                   <button type="button" className="btn sm ghost" aria-label={`Edit ${e.n}`} onClick={() => s.openModal({ type: 'stretchexp', id: e.id })}>Edit</button>
-                  <ArmedButton className="btn sm ghost" label="Delete" armedLabel="Confirm delete" aria-label={`Delete ${e.n}`} onConfirm={() => { s.deleteStretchExp(e.id); if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => document.getElementById('sexp-h')?.focus()); }} />
+                  <ArmedButton className={`btn sm ${arming === e.id ? 'danger' : 'ghost'}`} label="Delete" armedLabel="Tap again to delete" aria-label={`Delete ${e.n}`} onArmedChange={a => setArming(a ? e.id : null)} onConfirm={() => { setArming(null); s.deleteStretchExp(e.id); }} />
                 </div>
               </li>
             );
@@ -109,6 +114,7 @@ export default function Stretches() {
   const [pick, setPick] = useState<{ wk: string; d: number } | null>(null); // {wk, d}: the phone's day, only for the week it was picked in
   const day = pick && pick.wk === wk ? pick.d : thisWeek ? today.getDay() : 0;
   const choose = (d: number) => setPick({ wk, d });
+  const [arming, setArming] = useState<string | null>(null); // the added stretch whose Remove was pressed once
   const primary = groupsOf(items, 'primary'); const secondary = groupsOf(items, 'secondary');
   const days = weekDaysDone(items, week);
   const counted = weekDaysCounted(week);
@@ -165,6 +171,7 @@ export default function Stretches() {
               <div className="addrow">
                 <button type="button" className="btn sm ghost" id={`sskip-${d}`} aria-pressed={!!t.skipped} aria-label={t.skipped ? `Undo skip for ${DAY_NAMES[d]}` : `Skip ${DAY_NAMES[d]}`} onClick={() => s.skipStretchDay(d, !t.skipped)}>{t.skipped ? 'Undo skip' : 'Skip day'}</button>
               </div>
+              <RemovedNotice scope={`sday:${wk}:${d}`} />
               {items.length > 0 && <WarmUp d={d} />}
               {t.skipped ? <p className="note">Skipped. It doesn’t count for or against this week.</p> : <>
               {!primary.length && !extras.length && <p className="note">No daily stretches yet. Add some in the Program tab.</p>}
@@ -172,8 +179,8 @@ export default function Stretches() {
               {extras.length > 0 && (
                 <article className="card">
                   <span className="tag">Added for this day</span>
-                  {extras.map(x => <Row key={x.id} d={d} s={s} id={x.id} n={x.n} url={x.url} note={x.note}
-                    extra={<button type="button" className="btn sm ghost" aria-label={`Remove ${x.n} from ${DAY_NAMES[d]}`} onClick={() => s.removeStretchExtra(x.id)}>Remove</button>} />)}
+                  {extras.map(x => <Row key={x.id} d={d} s={s} id={x.id} n={x.n} url={x.url} note={x.note} removing={arming === x.id}
+                    extra={<ArmedButton className={`btn sm ${arming === x.id ? 'danger' : 'ghost'}`} aria-label={`Remove ${x.n} from ${DAY_NAMES[d]}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? x.id : null)} onConfirm={() => { setArming(null); s.removeStretchExtra(x.id); }} />} />)}
                 </article>
               )}
               {secondary.length > 0 && <div className="sect">Once in a while</div>}

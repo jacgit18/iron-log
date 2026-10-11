@@ -63,6 +63,20 @@ describe('stretches', () => {
     st().deleteStretchExp(e.id);
     expect(st().stretchExps).toEqual([]);
   });
+  it('Undo puts back a removed day stretch with its tick, and a deleted experiment', () => {
+    expect(st().saveStretchExp({ n: 'Frog Stretch', note: 'try' })).toBeNull();
+    const e = st().stretchExps[0];
+    st().addStretchToDay(e.id, 3); const x = st().strWeek.extra[0]; st().setStretchDone(3, x.id, true);
+    const week = structuredClone(st().strWeek);
+    st().removeStretchExtra(x.id);
+    expect(st().removed).toMatchObject({ scope: `sday:${st().weekKey()}:3`, text: 'Frog Stretch from Wednesday' });
+    st().undoRemoved();
+    expect(st().strWeek).toEqual(week);
+    st().deleteStretchExp(e.id);
+    st().undoRemoved();
+    expect(st().stretchExps).toEqual([e]);
+    expect(saved('stretches/main').experiments).toEqual([e]);
+  });
   it('skips a whole day, keeping its ticks, and undoes the skip', () => {
     st().setStretchDone(1, 'scarecrow', true);
     st().skipStretchDay(1, true);
