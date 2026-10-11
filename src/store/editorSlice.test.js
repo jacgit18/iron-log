@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { clearStorage, saved } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, DEFAULT_CFG, sameProg;
+let useAppStore, BUILTIN, DEFAULT_CFG, sameProg, exInfo;
 const st = () => useAppStore.getState();
 const day1 = () => st().edProgram().days[0].slots;
 const ids = slots => slots.map(s => s.id);
@@ -9,7 +9,7 @@ const builtinA = () => ids(BUILTIN.A.days[0].slots);
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
-  ({ BUILTIN } = await import('../lib/data.js'));
+  ({ BUILTIN, exInfo } = await import('../lib/data.js'));
   ({ DEFAULT_CFG } = await import('../lib/logic.js'));
   ({ sameProg } = await import('../lib/export.js'));
   await st().init();
@@ -173,6 +173,21 @@ describe('the add/edit exercise sheet', () => {
     st().saveSlot(newCard({ items: [{ ex: '__new', nn: 'Sled Drag', nu: 'https://example.com/v', ph: 'exp', w: null, bw: true }] }));
     expect(st().cfg.ex['sled-drag']).toEqual({ n: 'Sled Drag', url: 'https://example.com/v' });
     expect(day1()[6].items[0]).toEqual({ ex: 'sled-drag', ph: 'exp', w: null, bw: true });
+  });
+  it('equipment picked for an existing exercise replaces its saved one everywhere', () => {
+    const orig = day1()[2];
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15, ne: 'dumbbell' }] }));
+    expect(st().cfg.ex.platerot).toMatchObject({ eq: 'dumbbell' });
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15, ne: 'plate' }] }));
+    expect(st().cfg.ex.platerot).toBeUndefined(); // back to the built-in value: no override kept
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15, ne: '' }] }));
+    expect(exInfo(st().cfg, 'platerot').eq).toBe(''); // Not set picked: the built-in equipment is cleared
+  });
+  it('a save that never showed the equipment field leaves the saved equipment alone', () => {
+    const orig = day1()[2];
+    st().saveSlot(newCard({ id: orig.id, idx: 2, sec: orig.sec, items: [{ ex: 'platerot', ph: 'hyp', w: 15 }] }));
+    expect(st().cfg.ex.platerot).toBeUndefined();
+    expect(exInfo(st().cfg, 'platerot').eq).toBe('plate');
   });
   it('says what’s missing instead of saving', () => {
     expect(st().saveSlot(newCard({ items: [{ ex: '' }] }))).toMatch(/Choose an exercise/);

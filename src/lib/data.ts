@@ -48,9 +48,11 @@ export function withAllDays(prog: ProgramDraft): Program {
 }
 export const padLibrary = <T extends { prog?: unknown }>(items: T[]): T[] => items.map(it => (it && hasValidDays(it.prog) ? { ...it, prog: withAllDays(it.prog as ProgramDraft) } : it));
 
+// In alphabetical order of label, which is the order every equipment menu shows; Other stays last.
 export const EQUIPMENT: Record<EquipmentKey, string> = {
-  barbell: 'Barbell', shortbar: 'Short barbell', ezbar: 'EZ bar', dumbbell: 'Dumbbell', kettlebell: 'Kettlebell', cable: 'Cable', machine: 'Machine', bodyweight: 'Bodyweight',
-  band: 'Band', trx: 'TRX', plate: 'Plate', medball: 'Med ball', other: 'Other',
+  band: 'Band', barbell: 'Barbell', bench: 'Bench', bodyweight: 'Bodyweight', cable: 'Cable', dumbbell: 'Dumbbell', ezbar: 'EZ bar',
+  kettlebell: 'Kettlebell', machine: 'Machine', medball: 'Med ball', plate: 'Plate', rope: 'Rope', sandbag: 'Sand bag',
+  shortbar: 'Short barbell', sled: 'Sled', tire: 'Tire', trapbar: 'Trap bar', trx: 'TRX', vest: 'Vest', other: 'Other',
 };
 export const EQ_KEYS = Object.keys(EQUIPMENT) as EquipmentKey[];
 
@@ -99,8 +101,8 @@ export const EX: Record<string, ExerciseInfo> = {
   bss: { n: 'Bulgarian Split Squat', eq: 'dumbbell' },
   legcurl: { n: 'Prone Leg Curl', eq: 'machine' },
   cablepunch: { n: 'Cable Punch ISO hold', eq: 'cable' },
-  sledlat: { n: 'Sled push → lateral pull', eq: 'other' },
-  sled: { n: 'Sled push → pull', eq: 'other' },
+  sledlat: { n: 'Sled push → lateral pull', eq: 'sled' },
+  sled: { n: 'Sled push → pull', eq: 'sled' },
 };
 
 // item: {ex, ph, w (lb), bw, rx (custom when phase==ph), note}

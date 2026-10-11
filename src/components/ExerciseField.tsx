@@ -13,13 +13,20 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onU
   const yours = new Set(ids.filter(x => !EX[x]).map(x => exInfo(cfg, x).n).filter(n => !builtin.has(n)));
   const known = name.trim() !== '' ? findExId(cfg, name) : null;
   const isNew = name.trim() !== '' && !known;
-  // Picking an existing exercise shows its saved video link, so what you save is that exercise's link (edited or not).
-  // A link shown that way is cleared when the name stops matching; one typed for a new exercise is kept.
+  // Picking an existing exercise shows its saved video link and equipment, so what you save is that exercise's
+  // values (edited or not). Values shown that way are cleared when the name stops matching; ones typed for a new
+  // exercise are kept.
   const filled = useRef<string | null>(null);
+  const filledEq = useRef<string | null>(null);
   useEffect(() => {
-    if (!onUrl) return;
-    if (known) { const u = exInfo(cfg, known).url || ''; filled.current = u; onUrl(u); }
-    else if (filled.current != null && url === filled.current) { filled.current = null; onUrl(''); }
+    if (onUrl) {
+      if (known) { const u = exInfo(cfg, known).url || ''; filled.current = u; onUrl(u); }
+      else if (filled.current != null && url === filled.current) { filled.current = null; onUrl(''); }
+    }
+    if (onEq) {
+      if (known) { const e = exInfo(cfg, known).eq || ''; filledEq.current = e; onEq(e); }
+      else if (filledEq.current != null && eq === filledEq.current) { filledEq.current = null; onEq(''); }
+    }
   }, [known]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
@@ -28,18 +35,14 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onU
       </label>
       <datalist id={`${id}-list`}>{names.map(n => <option key={n} value={n} label={yours.has(n) ? `${n} · Yours` : undefined} />)}</datalist>
       {onUrl && name.trim() !== '' && <label className="field">Video link (optional)<input type="url" value={url ?? ''} placeholder="https://" onChange={e => onUrl(e.target.value)} /></label>}
-      {isNew && (
-        <>
-          <p className="note">New exercise. It will be added to your exercise list.</p>
-          {onEq && (
-            <label className="field">Equipment
-              <select value={eq} onChange={e => onEq(e.target.value)}>
-                <option value="">Not set</option>
-                {(EQ_KEYS as EquipmentKey[]).map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
-              </select>
-            </label>
-          )}
-        </>
+      {isNew && <p className="note">New exercise. It will be added to your exercise list.</p>}
+      {onEq && name.trim() !== '' && (
+        <label className="field">Equipment
+          <select value={eq} onChange={e => onEq(e.target.value)}>
+            <option value="">Not set</option>
+            {(EQ_KEYS as EquipmentKey[]).map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
+          </select>
+        </label>
       )}
     </>
   );
