@@ -15,8 +15,8 @@ export default function ExerciseLibrary() {
   const { openModal } = useAppStore.getState();
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
-  const shown = filterRows(rows, f);
   const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)
+  const shown = filterRows(rows, sources ? f : { ...f, src: '' });
   const filtering = !!(f.q || f.eq || f.muscle || f.src);
   return (
     <section className="panel edpanel exlib">
