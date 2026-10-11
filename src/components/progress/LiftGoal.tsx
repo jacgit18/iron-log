@@ -6,6 +6,7 @@ import { parseDate, fmtShort } from '../../shared/dates.js';
 import { GOAL_KEYS, goalPhaseLabel, liftGoalsOf, liftGoalStatus } from '../../lib/liftGoal.js';
 import { fmtLb, signed } from '../../lib/body.js';
 import ArmedButton from '../ArmedButton.jsx';
+import RemovedNotice from '../RemovedNotice.jsx';
 
 function GoalForm({ exId, from, goal, taken, defKey, onDone }: { exId: string; from?: string; goal?: LiftGoalT; taken: string[]; defKey?: string; onDone: () => void }) {
   const { setLiftGoal } = useAppStore.getState();
@@ -54,7 +55,7 @@ function GoalView({ exId, k, goal, entries, today, onEdit }: { exId: string; k: 
       {lines.map(t => <p className="note" key={t}>{t}</p>)}
       <div className="actions">
         <button type="button" className="btn sm" aria-label={`Change ${name}`} onClick={onEdit}>Change</button>
-        <ArmedButton className="btn sm ghost" aria-label={name} label="Remove" armedLabel="Confirm remove" onConfirm={() => clearLiftGoal(exId, k)} />
+        <ArmedButton className="btn sm ghost" aria-label={name} label="Remove" armedLabel="Tap again to remove" onConfirm={() => clearLiftGoal(exId, k)} />
       </div>
     </div>
   );
@@ -74,6 +75,7 @@ export default function LiftGoal({ exId }: { exId: string }) {
   return (
     <div className="bwgoal">
       <h3>Weight goals</h3>
+      <RemovedNotice scope={'liftgoal:' + exId} />
       {!goals.length && editing !== 'new' && <p className="note">The most weight you want to lift, in one phase or any. Your heaviest logged set counts toward it.</p>}
       {goals.map(([k, goal]) => (editing === k
         ? <GoalForm key={k} exId={exId} from={k} goal={goal} taken={taken} onDone={done} />

@@ -679,6 +679,10 @@ describe('lift weight goal', () => {
     expect(st().cfg.liftGoals.hack).toEqual({ any: { w: 350, start: 300 } });
     st().clearLiftGoal('hack', 'any');
     expect(st().cfg.liftGoals).toBeUndefined();
+    expect(st().removed).toMatchObject({ scope: 'liftgoal:hack', text: 'the any phase goal' });
+    st().undoRemoved();
+    expect(st().cfg.liftGoals).toEqual({ hack: { any: { w: 350, start: 300 } } });
+    expect(saved('config/main').liftGoals.hack.any.w).toBe(350);
   });
   it('moves a goal to another phase, but not onto one that has a goal', () => {
     useAppStore.setState({ logs: { hack: [{ d: '2026-09-20', ph: 'strength', w: 300, s: 4, r: 6 }] } });

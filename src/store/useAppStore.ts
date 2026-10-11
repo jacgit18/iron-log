@@ -708,11 +708,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     flag('Goal saved'); return true;
   },
   clearLiftGoal(exId, key) {
-    if (get().mutateCfg(c => {
+    const goal = get().cfg.liftGoals?.[exId]?.[key]; if (!goal) return;
+    if (!get().mutateCfg(c => {
       const G = c.liftGoals && c.liftGoals[exId]; if (!G) return;
       delete G[key]; if (!Object.keys(G).length) delete c.liftGoals![exId];
       if (!Object.keys(c.liftGoals!).length) delete c.liftGoals;
-    })) flag('Goal removed');
+    })) return;
+    // Undo only if no goal for that phase was set since.
+    get().noteRemoved('liftgoal:' + exId, `the ${goalPhaseLabel(key).toLowerCase()} goal`, () => !get().cfg.liftGoals?.[exId]?.[key] && get().mutateCfg(c => {
+      c.liftGoals = { ...(c.liftGoals || {}), [exId]: { ...((c.liftGoals || {})[exId] || {}), [key]: goal } };
+    }));
   },
   // Replace one logged session with edited numbers (kept sorted by date). It counts as logged by hand, not as a check-off.
   // `target` is the entry as it was shown: found by identity, not position, so a list that changed meanwhile
