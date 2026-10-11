@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-08T07:19:33.211Z",
+ "exportedAt": "2026-10-11T03:10:08.791Z",
  "config": {
   "muscleMap": {
    "seated-cable-crunch": {
@@ -12,59 +12,68 @@
    }
   },
   "ex": {
+   "zercher": {
+    "eq": "shortbar"
+   },
    "deadlift": {
     "n": "Deadlift",
     "eq": "barbell"
    },
-   "zercher": {
-    "eq": "shortbar"
+   "dead-bugs": {
+    "n": "Dead Bugs"
    },
-   "split-stance-cable-hip-rotation": {
-    "n": "Split Stance Cable Hip Rotation",
-    "url": "https://youtu.be/ixIEilUM2aY",
-    "eq": "cable"
-   },
-   "clean-jerk-overhead-press": {
-    "n": "Clean Jerk & Overhead Press",
-    "eq": "dumbbell"
-   },
-   "seated-cable-crunch": {
-    "n": "Seated Cable Crunch",
-    "url": "https://youtube.com/shorts/bIbm-p6Q4s8?is=aiC1fOhPbN5QMcgq",
-    "eq": "cable"
-   },
-   "tibialis-raise": {
-    "n": "Tibialis Raise",
-    "url": "https://youtu.be/OPEuhclsTUQ",
-    "eq": "bodyweight"
-   },
-   "dragon-flag": {
-    "n": "Dragon Flag",
-    "eq": "bodyweight"
-   },
-   "garhammer-raise": {
-    "n": "Garhammer Raise",
-    "url": "https://youtu.be/0ShG8aVIvms?t=836"
+   "sled-pull": {
+    "n": "Sled Pull",
+    "eq": "other"
    },
    "abb-roller": {
     "n": "Abb Roller",
     "eq": "other"
    },
-   "bench-reverse-crunch": {
-    "n": "Bench Reverse Crunch"
-   },
-   "dead-bugs": {
-    "n": "Dead Bugs"
-   },
-   "duck-sled-push": {
-    "n": "Duck Sled Push",
-    "url": "https://www.instagram.com/p/DeKUe-qvgF-/",
-    "eq": "other"
+   "dragon-flag": {
+    "n": "Dragon Flag",
+    "eq": "bodyweight"
    },
    "squat-walks": {
     "n": "Squat Walks",
-    "url": "https://www.instagram.com/p/DeKAHsWKK4W/",
+    "eq": "dumbbell",
+    "url": "https://www.instagram.com/p/DeKAHsWKK4W/"
+   },
+   "duck-sled-push": {
+    "n": "Duck Sled Push",
+    "eq": "other",
+    "url": "https://www.instagram.com/p/DeKUe-qvgF-/"
+   },
+   "tibialis-raise": {
+    "n": "Tibialis Raise",
+    "eq": "bodyweight",
+    "url": "https://youtu.be/OPEuhclsTUQ"
+   },
+   "garhammer-raise": {
+    "n": "Garhammer Raise",
+    "url": "https://youtu.be/0ShG8aVIvms?t=836"
+   },
+   "seated-cable-crunch": {
+    "n": "Seated Cable Crunch",
+    "eq": "cable",
+    "url": "https://youtube.com/shorts/bIbm-p6Q4s8?is=aiC1fOhPbN5QMcgq"
+   },
+   "bench-reverse-crunch": {
+    "n": "Bench Reverse Crunch"
+   },
+   "clean-jerk-overhead-press": {
+    "n": "Clean Jerk & Overhead Press",
     "eq": "dumbbell"
+   },
+   "split-stance-cable-hip-rotation": {
+    "n": "Split Stance Cable Hip Rotation",
+    "eq": "cable",
+    "url": "https://youtu.be/ixIEilUM2aY"
+   },
+   "statue-of-liberty-to-fly-to-chest-buster": {
+    "n": "Statue of Liberty to fly to chest busters",
+    "eq": "dumbbell",
+    "url": "https://www.instagram.com/reel/Dbu6F2ZKW-O/?exln=azRoYnNhb2VsOTRp"
    }
   },
   "mode": 2,
@@ -79,74 +88,65 @@
   },
   "rxOverride": {},
   "rm": {
+   "bss": 65,
+   "db6": 20,
+   "grip": 235,
+   "hack": 415,
+   "canoe": 13.33,
+   "kbleg": 21,
    "latpd": 70,
+   "ohtri": 30,
+   "arnold": 40,
+   "legext": 65,
+   "pallof": 40,
+   "dbclean": 45,
+   "dblunge": 65,
+   "farmers": 65,
+   "latpdbi": 90,
+   "legcurl": 100,
    "wristpd": 48,
-   "platerot": 30,
-   "innerthigh": 210,
-   "chestpress": 40,
    "zercher": 80,
    "zottman": 23,
-   "kbleg": 21,
-   "grip": 235,
-   "canoe": 13.33,
-   "suitcase": 30,
-   "reardelt": 65,
-   "facepull": 50,
-   "legext": 65,
-   "cablecrunch": 100,
-   "hipthrust": 375,
-   "db6": 20,
-   "hack": 415,
-   "pallof": 40,
    "cablerow": 70,
-   "arnold": 40,
-   "dbclean": 45,
-   "latpdbi": 90,
-   "outerthigh": 180,
-   "farmers": 65,
-   "dblunge": 65,
-   "ohtri": 30,
-   "bss": 65,
-   "legcurl": 100,
+   "facepull": 50,
+   "platerot": 30,
+   "reardelt": 65,
+   "suitcase": 30,
+   "hipthrust": 375,
    "cablepunch": 50,
-   "clean-jerk-overhead-press": 45,
-   "seated-cable-crunch": 77
+   "chestpress": 40,
+   "innerthigh": 210,
+   "outerthigh": 180,
+   "cablecrunch": 100,
+   "seated-cable-crunch": 77,
+   "clean-jerk-overhead-press": 45
   },
   "phDef": {
    "A-d1s1:0": "hyp",
-   "A-d1s7:1": "iso",
    "A-d1s3:0": "strength",
+   "A-d1s7:1": "iso",
    "B-d6s2:0": "exp",
    "B-d6s3:0": "exp",
-   "B-d6s6:1": "exp",
-   "B-d6s6:0": "iso",
    "B-d6s4:0": "exp",
-   "B-d6s5:1": "strength"
+   "B-d6s5:1": "strength",
+   "B-d6s6:0": "iso",
+   "B-d6s6:1": "exp"
   },
   "exPh": {
    "canoe": "iso",
-   "romanadd": "strength",
-   "deskbands": "iso",
-   "spinal": "mob",
-   "platerot": "strength",
-   "suitcase": "strength",
    "qlext": "strength",
    "skater": "exp",
-   "splitjump": "exp",
+   "spinal": "mob",
+   "zercher": "strength",
    "cablerow": "exp",
+   "platerot": "strength",
+   "romanadd": "strength",
+   "suitcase": "strength",
+   "deskbands": "iso",
+   "splitjump": "exp",
    "cablepunch": "iso",
    "depthcombo": "exp",
-   "zercher": "strength",
    "seated-cable-crunch": "strength"
-  },
-  "ghBackup": {
-   "repo": "jacgit18/iron-log",
-   "branch": "data",
-   "hash": "134a2ax",
-   "last": {
-    "at": "2026-10-07T11:39:27.985Z",
-    "url": "https://github.com/jacgit18/iron-log/commit/536c96588efc9e75f7607af5b02df3fa6e384403"
-   }
   },
   "progNames": {
    "A": "Program A - Unilateral",
@@ -155,8 +155,8 @@
   "bwGoal": {
    "w": 155,
    "start": {
-    "w": 130,
-    "d": "2026-10-02"
+    "d": "2026-10-02",
+    "w": 130
    }
   },
   "liftGoals": {
@@ -165,13 +165,23 @@
      "w": 185,
      "start": 0
     },
-    "strength": {
-     "w": 300,
-     "start": 0
-    },
     "hyp": {
      "w": 225,
      "start": 0
+    },
+    "strength": {
+     "w": 300,
+     "start": 0
+    }
+   },
+   "innerthigh": {
+    "exp": {
+     "w": 150,
+     "start": 0
+    },
+    "strength": {
+     "w": 200,
+     "start": 180
     }
    }
   }
@@ -192,18 +202,6 @@
          "ph": "exp",
          "w": null,
          "rx": "1 × 3"
-        }
-       ]
-      },
-      {
-       "id": "A-d1s1",
-       "sec": "Regular",
-       "tier": "Primary",
-       "items": [
-        {
-         "ex": "latpdbi",
-         "ph": "hyp",
-         "w": 45
         }
        ]
       },
@@ -280,6 +278,24 @@
          "ph": "iso",
          "w": 15,
          "rx": "3 × 15 s hold"
+        }
+       ]
+      },
+      {
+       "id": "A-d1s1",
+       "sec": "Supersets",
+       "tier": "Primary",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "latpdbi",
+         "ph": "hyp",
+         "w": 45
+        },
+        {
+         "ex": "wristpd",
+         "ph": "hyp",
+         "w": null
         }
        ]
       },
@@ -481,18 +497,6 @@
        ]
       },
       {
-       "id": "A-d3s2",
-       "sec": "Regular",
-       "tier": "Primary",
-       "items": [
-        {
-         "ex": "latpdbi",
-         "ph": "hyp",
-         "w": 45
-        }
-       ]
-      },
-      {
        "id": "A-d3s4",
        "sec": "Regular",
        "tier": "Accessory",
@@ -552,6 +556,24 @@
          "ex": "cablerow",
          "ph": "exp",
          "w": 30
+        }
+       ]
+      },
+      {
+       "id": "A-d3s2",
+       "sec": "Supersets",
+       "tier": "Primary",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "latpdbi",
+         "ph": "hyp",
+         "w": 45
+        },
+        {
+         "ex": "wristpd",
+         "ph": "hyp",
+         "w": null
         }
        ]
       },
@@ -1002,18 +1024,6 @@
        ]
       },
       {
-       "id": "B-d1s1",
-       "sec": "Regular",
-       "tier": "Primary",
-       "items": [
-        {
-         "ex": "latpdbi",
-         "ph": "hyp",
-         "w": 45
-        }
-       ]
-      },
-      {
        "id": "B-d1s2",
        "sec": "Regular",
        "tier": "Primary",
@@ -1110,6 +1120,44 @@
          "ph": "iso",
          "w": 15,
          "rx": "3 × 15 s hold"
+        }
+       ]
+      },
+      {
+       "id": "B-d1s1",
+       "sec": "Supersets",
+       "tier": "Primary",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "latpdbi",
+         "ph": "hyp",
+         "w": 45
+        },
+        {
+         "ex": "wristpd",
+         "ph": "hyp",
+         "w": null
+        }
+       ]
+      },
+      {
+       "id": "B-xmv2inqvwi0q",
+       "sec": "Supersets",
+       "tier": "Accessory",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "duck-sled-push",
+         "ph": "exp",
+         "w": null,
+         "rx": "1x3"
+        },
+        {
+         "ex": "sled-pull",
+         "ph": "exp",
+         "w": null,
+         "rx": "1x3"
         }
        ]
       },
@@ -1316,18 +1364,6 @@
        ]
       },
       {
-       "id": "B-d3s2",
-       "sec": "Regular",
-       "tier": "Primary",
-       "items": [
-        {
-         "ex": "latpdbi",
-         "ph": "hyp",
-         "w": 45
-        }
-       ]
-      },
-      {
        "id": "B-d3s4",
        "sec": "Regular",
        "tier": "Accessory",
@@ -1375,6 +1411,24 @@
          "ex": "cablerow",
          "ph": "exp",
          "w": 30
+        }
+       ]
+      },
+      {
+       "id": "B-d3s2",
+       "sec": "Supersets",
+       "tier": "Primary",
+       "type": "superset",
+       "items": [
+        {
+         "ex": "latpdbi",
+         "ph": "hyp",
+         "w": 45
+        },
+        {
+         "ex": "wristpd",
+         "ph": "hyp",
+         "w": null
         }
        ]
       },
@@ -1849,7 +1903,8 @@
      }
     ],
     "slot": "A-d4s4",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1e5lod5"
    },
    {
     "d": "2026-10-01",
@@ -1864,7 +1919,64 @@
      }
     ],
     "slot": "A-d6s5",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "ku7ccdw"
+   },
+   {
+    "d": "2026-10-08",
+    "ph": "strength",
+    "w": 35,
+    "s": 3,
+    "r": 6,
+    "sets": [
+     {
+      "w": 35,
+      "r": 6
+     },
+     {
+      "w": 35,
+      "r": 6
+     },
+     {
+      "w": 35,
+      "r": 6
+     }
+    ],
+    "slot": "B-d4s4",
+    "wk": "2026-10-04",
+    "id": "Lmuztsth8vu1wg4",
+    "updatedAt": "2026-10-08T17:44:44.355Z"
+   }
+  ],
+  "bss": [
+   {
+    "d": "2026-10-09",
+    "ph": "strength",
+    "w": 40,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 40,
+      "r": 6
+     },
+     {
+      "w": 40,
+      "r": 6
+     },
+     {
+      "w": 40,
+      "r": 6
+     },
+     {
+      "w": 40,
+      "r": 6
+     }
+    ],
+    "slot": "B-d4s6",
+    "wk": "2026-10-04",
+    "id": "Lmv15yw7wgl8nhf",
+    "updatedAt": "2026-10-09T16:12:34.844Z"
    }
   ],
   "cablecrunch": [
@@ -1893,7 +2005,8 @@
      }
     ],
     "slot": "A-d2s4",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1pz4jfb"
    }
   ],
   "cablepunch": [
@@ -1922,7 +2035,29 @@
      }
     ],
     "slot": "B-d6s6",
-    "wk": "2026-10-04"
+    "wk": "2026-10-04",
+    "id": "kwtth2q"
+   },
+   {
+    "d": "2026-10-10",
+    "ph": "iso",
+    "w": 30,
+    "s": 2,
+    "sec": 15,
+    "sets": [
+     {
+      "w": 30,
+      "sec": 15
+     },
+     {
+      "w": 30,
+      "sec": 15
+     }
+    ],
+    "slot": "B-d3s6",
+    "wk": "2026-10-04",
+    "id": "Lmv2b90bz5r1lwh",
+    "updatedAt": "2026-10-10T11:28:10.991Z"
    }
   ],
   "cablerow": [
@@ -1951,7 +2086,29 @@
      }
     ],
     "slot": "B-d6s6",
-    "wk": "2026-10-04"
+    "wk": "2026-10-04",
+    "id": "k1mw4rdb"
+   },
+   {
+    "d": "2026-10-10",
+    "ph": "exp",
+    "w": 30,
+    "s": 2,
+    "r": 10,
+    "sets": [
+     {
+      "w": 30,
+      "r": 10
+     },
+     {
+      "w": 30,
+      "r": 10
+     }
+    ],
+    "slot": "B-d3s6",
+    "wk": "2026-10-04",
+    "id": "Lmv2b98xugrmkdu",
+    "updatedAt": "2026-10-10T11:28:22.146Z"
    }
   ],
   "canoe": [
@@ -1981,6 +2138,7 @@
     ],
     "slot": "B-d1s11",
     "wk": "2026-10-04",
+    "id": "k80yhhn",
     "auto": true
    }
   ],
@@ -2011,6 +2169,7 @@
     ],
     "slot": "A-d1s6",
     "wk": "2026-09-27",
+    "id": "k1ky3rb0",
     "auto": true
    },
    {
@@ -2030,7 +2189,8 @@
      }
     ],
     "slot": "A-d4s5",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1mcdh1l"
    },
    {
     "d": "2026-10-05",
@@ -2058,6 +2218,7 @@
     ],
     "slot": "B-d1s8",
     "wk": "2026-10-04",
+    "id": "kpj4ynq",
     "auto": true
    },
    {
@@ -2080,6 +2241,27 @@
     "wk": "2026-10-04",
     "id": "Lmuxzx0qj2rubla",
     "updatedAt": "2026-10-07T10:59:51.163Z"
+   },
+   {
+    "d": "2026-10-10",
+    "ph": "hyp",
+    "w": 25,
+    "s": 2,
+    "r": 10,
+    "sets": [
+     {
+      "w": 25,
+      "r": 15
+     },
+     {
+      "w": 25,
+      "r": 10
+     }
+    ],
+    "slot": "B-d4s5",
+    "wk": "2026-10-04",
+    "id": "Lmv2esk5zlbvf65",
+    "updatedAt": "2026-10-10T13:07:22.007Z"
    }
   ],
   "clean-jerk-overhead-press": [
@@ -2104,7 +2286,8 @@
      }
     ],
     "slot": "B-d5s2",
-    "wk": "2026-10-04"
+    "wk": "2026-10-04",
+    "id": "k6s368s"
    }
   ],
   "db6": [
@@ -2125,14 +2308,14 @@
      }
     ],
     "slot": "B-d2s8",
-    "wk": "2026-10-04"
+    "wk": "2026-10-04",
+    "id": "k1ddbl57"
    }
   ],
   "depthcombo": [
    {
     "d": "2026-10-04",
     "ph": "exp",
-    "w": null,
     "s": 3,
     "r": 5,
     "sets": [
@@ -2150,7 +2333,27 @@
      }
     ],
     "slot": "B-d6s4",
-    "wk": "2026-10-04"
+    "wk": "2026-10-04",
+    "id": "knrc6ih"
+   }
+  ],
+  "duck-sled-push": [
+   {
+    "d": "2026-10-10",
+    "ph": "exp",
+    "w": 20,
+    "s": 1,
+    "r": 10,
+    "sets": [
+     {
+      "w": 20,
+      "r": 10
+     }
+    ],
+    "slot": "X-muy8rvy9whc0",
+    "wk": "2026-10-04",
+    "id": "Lmv2bgrg22ibmf9",
+    "updatedAt": "2026-10-10T11:34:12.722Z"
    }
   ],
   "facepull": [
@@ -2206,6 +2409,36 @@
     "id": "Lmuxykv8wo0p7ko",
     "auto": true,
     "updatedAt": "2026-10-07T10:22:24.560Z"
+   },
+   {
+    "d": "2026-10-09",
+    "ph": "strength",
+    "w": 40,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 40,
+      "r": 6
+     },
+     {
+      "w": 40,
+      "r": 6
+     },
+     {
+      "w": 40,
+      "r": 6
+     },
+     {
+      "w": 40,
+      "r": 6
+     }
+    ],
+    "slot": "B-d4s1",
+    "wk": "2026-10-04",
+    "id": "Lmv15r76l9bmty6",
+    "auto": true,
+    "updatedAt": "2026-10-09T16:06:35.806Z"
    }
   ],
   "grip": [
@@ -2235,6 +2468,7 @@
     ],
     "slot": "A-d1s8",
     "wk": "2026-09-27",
+    "id": "k190h752",
     "auto": true
    },
    {
@@ -2263,6 +2497,7 @@
     ],
     "slot": "B-d1s10",
     "wk": "2026-10-04",
+    "id": "k19h0naz",
     "auto": true
    },
    {
@@ -2322,7 +2557,8 @@
      }
     ],
     "slot": "A-d3s1",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "kt0pn4u"
    },
    {
     "d": "2026-10-01",
@@ -2345,7 +2581,8 @@
      }
     ],
     "slot": "A-d5s3",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1614q1j"
    },
    {
     "d": "2026-10-05",
@@ -2373,7 +2610,38 @@
     ],
     "slot": "B-d1s2",
     "wk": "2026-10-04",
+    "id": "k19ce849",
     "auto": true
+   },
+   {
+    "d": "2026-10-08",
+    "ph": "hyp",
+    "w": 270,
+    "s": 4,
+    "r": 15,
+    "sets": [
+     {
+      "w": 270,
+      "r": 15
+     },
+     {
+      "w": 270,
+      "r": 15
+     },
+     {
+      "w": 270,
+      "r": 15
+     },
+     {
+      "w": 270,
+      "r": 15
+     }
+    ],
+    "slot": "B-d3s1",
+    "wk": "2026-10-04",
+    "id": "Lmuzt7gqzomui3n",
+    "auto": true,
+    "updatedAt": "2026-10-08T17:27:33.516Z"
    }
   ],
   "hipthrust": [
@@ -2403,6 +2671,7 @@
     ],
     "slot": "A-d2s5",
     "wk": "2026-09-27",
+    "id": "krxgvxn",
     "auto": true
    },
    {
@@ -2422,7 +2691,8 @@
      }
     ],
     "slot": "A-d4s5",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1x7bbah"
    },
    {
     "d": "2026-10-07",
@@ -2472,7 +2742,8 @@
      }
     ],
     "slot": "A-d1s4",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k8xj5c5"
    },
    {
     "d": "2026-09-30",
@@ -2499,7 +2770,66 @@
      }
     ],
     "slot": "A-d4s2",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1kta680"
+   },
+   {
+    "d": "2026-10-08",
+    "ph": "strength",
+    "w": 180,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 180,
+      "r": 6
+     },
+     {
+      "w": 180,
+      "r": 6
+     },
+     {
+      "w": 180,
+      "r": 6
+     },
+     {
+      "w": 180,
+      "r": 6
+     }
+    ],
+    "slot": "B-d1s5",
+    "wk": "2026-10-04",
+    "id": "Lmuzty5ff2t3l4m",
+    "updatedAt": "2026-10-08T17:50:21.855Z"
+   },
+   {
+    "d": "2026-10-09",
+    "ph": "strength",
+    "w": 180,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 180,
+      "r": 6
+     },
+     {
+      "w": 180,
+      "r": 6
+     },
+     {
+      "w": 180,
+      "r": 6
+     },
+     {
+      "w": 180,
+      "r": 6
+     }
+    ],
+    "slot": "B-d4s2",
+    "wk": "2026-10-04",
+    "id": "Lmv16d7sr83bco2",
+    "updatedAt": "2026-10-09T16:23:43.035Z"
    }
   ],
   "kbleg": [
@@ -2524,7 +2854,8 @@
      }
     ],
     "slot": "A-d1s7",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1yc548x"
    },
    {
     "d": "2026-10-07",
@@ -2610,7 +2941,69 @@
     ],
     "slot": "B-d1s1",
     "wk": "2026-10-04",
+    "id": "k1pdsxn2",
     "auto": true
+   },
+   {
+    "d": "2026-10-08",
+    "ph": "hyp",
+    "w": 55,
+    "s": 4,
+    "r": 15,
+    "sets": [
+     {
+      "w": 55,
+      "r": 15
+     },
+     {
+      "w": 55,
+      "r": 15
+     },
+     {
+      "w": 55,
+      "r": 15
+     },
+     {
+      "w": 55,
+      "r": 15
+     }
+    ],
+    "slot": "B-d3s2",
+    "wk": "2026-10-04",
+    "id": "Lmuzsj64ys3erzw",
+    "updatedAt": "2026-10-08T19:00:07.287Z"
+   }
+  ],
+  "legcurl": [
+   {
+    "d": "2026-10-09",
+    "ph": "strength",
+    "w": 50,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 50,
+      "r": 6
+     },
+     {
+      "w": 50,
+      "r": 6
+     },
+     {
+      "w": 50,
+      "r": 6
+     },
+     {
+      "w": 50,
+      "r": 6
+     }
+    ],
+    "slot": "B-d4s6",
+    "wk": "2026-10-04",
+    "id": "Lmv160y51jqlx1q",
+    "auto": true,
+    "updatedAt": "2026-10-09T16:14:10.646Z"
    }
   ],
   "legext": [
@@ -2640,6 +3033,7 @@
     ],
     "slot": "A-d2s3",
     "wk": "2026-09-27",
+    "id": "k8xs718",
     "auto": true
    },
    {
@@ -2667,7 +3061,8 @@
      }
     ],
     "slot": "A-d3s5",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "ktz68nl"
    }
   ],
   "ohtri": [
@@ -2720,7 +3115,38 @@
     ],
     "slot": "B-d1s6",
     "wk": "2026-10-04",
+    "id": "kg0kzux",
     "auto": true
+   },
+   {
+    "d": "2026-10-08",
+    "ph": "strength",
+    "w": 160,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 160,
+      "r": 6
+     },
+     {
+      "w": 160,
+      "r": 6
+     },
+     {
+      "w": 160,
+      "r": 6
+     },
+     {
+      "w": 160,
+      "r": 6
+     }
+    ],
+    "slot": "B-d4s3",
+    "wk": "2026-10-04",
+    "id": "Lmuzu48twhgcwp1",
+    "auto": true,
+    "updatedAt": "2026-10-08T17:53:02.901Z"
    }
   ],
   "platerot": [
@@ -2750,6 +3176,7 @@
     ],
     "slot": "B-d1s4",
     "wk": "2026-10-04",
+    "id": "k4audq5",
     "auto": true
    }
   ],
@@ -2757,7 +3184,6 @@
    {
     "d": "2026-10-04",
     "ph": "exp",
-    "w": null,
     "s": 3,
     "r": 10,
     "sets": [
@@ -2775,7 +3201,8 @@
      }
     ],
     "slot": "B-d6s1",
-    "wk": "2026-10-04"
+    "wk": "2026-10-04",
+    "id": "k1gejopo"
    }
   ],
   "reardelt": [
@@ -2804,7 +3231,8 @@
      }
     ],
     "slot": "A-d3s6",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1iltfjv"
    },
    {
     "d": "2026-09-28",
@@ -2831,7 +3259,38 @@
      }
     ],
     "slot": "A-d2s2",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1dw5o0h"
+   },
+   {
+    "d": "2026-10-09",
+    "ph": "iso",
+    "w": 50,
+    "s": 4,
+    "sec": 15,
+    "sets": [
+     {
+      "w": 50,
+      "sec": 15
+     },
+     {
+      "w": 50,
+      "sec": 15
+     },
+     {
+      "w": 50,
+      "sec": 15
+     },
+     {
+      "w": 50,
+      "sec": 15
+     }
+    ],
+    "slot": "B-d5s3",
+    "wk": "2026-10-04",
+    "id": "Lmv16aqhkfjeflp",
+    "auto": true,
+    "updatedAt": "2026-10-09T16:21:47.289Z"
    }
   ],
   "seated-cable-crunch": [
@@ -2863,13 +3322,42 @@
     "wk": "2026-10-04",
     "id": "Lmuy1yui81lvnc3",
     "updatedAt": "2026-10-07T12:01:56.425Z"
+   },
+   {
+    "d": "2026-10-08",
+    "ph": "strength",
+    "w": 44,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     }
+    ],
+    "slot": "B-xmuy1rdg3uct",
+    "wk": "2026-10-04",
+    "id": "Lmuzt2me6tx0f22",
+    "auto": true,
+    "updatedAt": "2026-10-08T17:23:47.550Z"
    }
   ],
   "skater": [
    {
     "d": "2026-10-04",
     "ph": "exp",
-    "w": null,
     "s": 3,
     "r": 10,
     "sets": [
@@ -2887,14 +3375,14 @@
      }
     ],
     "slot": "B-d6s2",
-    "wk": "2026-10-04"
+    "wk": "2026-10-04",
+    "id": "k1498bun"
    }
   ],
   "sled": [
    {
     "d": "2026-10-04",
     "ph": "exp",
-    "w": null,
     "s": 1,
     "r": 3,
     "sets": [
@@ -2905,6 +3393,7 @@
     ],
     "slot": "B-sled6",
     "wk": "2026-10-04",
+    "id": "kpfj91p",
     "auto": true
    }
   ],
@@ -2912,7 +3401,6 @@
    {
     "d": "2026-10-04",
     "ph": "exp",
-    "w": null,
     "s": 3,
     "r": 10,
     "sets": [
@@ -2930,7 +3418,8 @@
      }
     ],
     "slot": "B-d6s3",
-    "wk": "2026-10-04"
+    "wk": "2026-10-04",
+    "id": "ktmqlni"
    }
   ],
   "suitcase": [
@@ -2959,7 +3448,8 @@
      }
     ],
     "slot": "A-d4s1",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "ks2mnit"
    }
   ],
   "wristpd": [
@@ -2988,7 +3478,8 @@
      }
     ],
     "slot": "A-d1s2",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "kwud8uk"
    },
    {
     "d": "2026-09-28",
@@ -3016,6 +3507,7 @@
     ],
     "slot": "A-d3s3",
     "wk": "2026-09-27",
+    "id": "kmxmmx7",
     "auto": true
    },
    {
@@ -3035,7 +3527,37 @@
      }
     ],
     "slot": "B-d1s3",
-    "wk": "2026-10-04"
+    "wk": "2026-10-04",
+    "id": "ksrmxsx"
+   },
+   {
+    "d": "2026-10-08",
+    "ph": "strength",
+    "w": 44,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     },
+     {
+      "w": 44,
+      "r": 6
+     }
+    ],
+    "slot": "B-xmuy1rdg3uct",
+    "wk": "2026-10-04",
+    "id": "Lmuzsw6mfoxrslw",
+    "updatedAt": "2026-10-08T17:18:47.175Z"
    }
   ],
   "zercher": [
@@ -3064,7 +3586,8 @@
      }
     ],
     "slot": "A-d1s6",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k172hhq3"
    },
    {
     "d": "2026-09-30",
@@ -3091,7 +3614,8 @@
      }
     ],
     "slot": "A-d4s4",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1v0mxfe"
    },
    {
     "d": "2026-10-01",
@@ -3106,7 +3630,8 @@
      }
     ],
     "slot": "A-d6s5",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "kdua4tw"
    },
    {
     "d": "2026-10-04",
@@ -3133,7 +3658,8 @@
      }
     ],
     "slot": "B-d6s5",
-    "wk": "2026-10-04"
+    "wk": "2026-10-04",
+    "id": "kqaaz4l"
    },
    {
     "d": "2026-10-05",
@@ -3161,7 +3687,33 @@
     ],
     "slot": "B-d1s8",
     "wk": "2026-10-04",
+    "id": "kt6e67p",
     "auto": true
+   },
+   {
+    "d": "2026-10-08",
+    "ph": "strength",
+    "w": 50,
+    "s": 3,
+    "r": 6,
+    "sets": [
+     {
+      "w": 50,
+      "r": 6
+     },
+     {
+      "w": 50,
+      "r": 6
+     },
+     {
+      "w": 50,
+      "r": 6
+     }
+    ],
+    "slot": "B-d4s4",
+    "wk": "2026-10-04",
+    "id": "Lmuztghkv6i7b4k",
+    "updatedAt": "2026-10-08T17:45:11.988Z"
    }
   ],
   "zottman": [
@@ -3186,7 +3738,8 @@
      }
     ],
     "slot": "A-d1s7",
-    "wk": "2026-09-27"
+    "wk": "2026-09-27",
+    "id": "k1qa4wr9"
    },
    {
     "d": "2026-10-07",
@@ -3220,48 +3773,46 @@
   "2026-09-27": {
    "prog": null,
    "done": {
+    "A-d1s1": true,
+    "A-d1s2": true,
     "A-d1s4": true,
     "A-d1s6": true,
-    "A-d1s8": true,
-    "A-d2s3": true,
-    "A-d2s5": true,
-    "A-d3s3": true,
-    "A-d3s6": true,
-    "A-d3s6#0": true,
-    "A-d2s4": true,
     "A-d1s7": true,
-    "A-d3s5": true,
+    "A-d1s8": true,
+    "A-d2s2": true,
+    "A-d2s3": true,
+    "A-d2s4": true,
+    "A-d2s5": true,
     "A-d3s1": true,
-    "A-d4s5": true,
+    "A-d3s2": true,
+    "A-d3s3": true,
+    "A-d3s5": true,
+    "A-d3s6": true,
     "A-d4s2": true,
     "A-d4s4": true,
-    "A-d6s5": true,
+    "A-d4s5": true,
     "A-d5s3": true,
-    "A-d2s2": true,
+    "A-d6s5": true,
     "A-d2s2#0": true,
-    "A-d3s2": true,
-    "A-d1s2": true,
-    "A-d1s1": true
+    "A-d3s6#0": true
    },
    "skipped": {
-    "A-d1s9": true,
+    "A-d1s3": true,
     "A-d1s5": true,
+    "A-d1s9": true,
+    "A-d2s1": true,
     "A-d2s6": true,
-    "A-d2s8": true,
     "A-d2s7": true,
-    "A-d3s7": true,
+    "A-d2s8": true,
     "A-d3s4": true,
-    "A-d3s9": true,
+    "A-d3s7": true,
     "A-d3s8": true,
+    "A-d3s9": true,
     "A-d4s1": true,
     "A-d4s3": true,
-    "A-d4s8": true,
-    "A-d4s7": true,
-    "A-d5s9": true,
-    "A-d5s10": true,
-    "A-d2s1": true,
     "A-d4s6": true,
-    "A-d1s3": true,
+    "A-d4s7": true,
+    "A-d4s8": true,
     "A-d5s1": true,
     "A-d5s2": true,
     "A-d5s4": true,
@@ -3269,36 +3820,38 @@
     "A-d5s6": true,
     "A-d5s7": true,
     "A-d5s8": true,
+    "A-d5s9": true,
     "A-d6s1": true,
     "A-d6s2": true,
     "A-d6s3": true,
     "A-d6s4": true,
     "A-d6s6": true,
+    "A-d5s10": true,
     "A-sled1": true,
     "A-sled2": true,
     "A-sled3": true,
     "A-sled4": true,
     "A-sled5": true,
-    "A-xmuy1vz1s5qy": true,
-    "A-xmuy1u0ehkgt": true
+    "A-xmuy1u0ehkgt": true,
+    "A-xmuy1vz1s5qy": true
    },
    "moved": {
+    "A-d1s7": 3,
+    "A-d2s1": 5,
+    "A-d2s4": 3,
+    "A-d3s1": 4,
     "A-d3s2": 2,
     "A-d3s3": 2,
-    "A-d2s4": 3,
-    "A-d1s7": 3,
     "A-d3s6": 1,
-    "A-d3s1": 4,
     "A-d4s6": 5,
-    "A-d2s1": 5,
-    "A-d6s5": 5,
-    "A-d5s8": 6,
-    "A-d5s7": 6,
-    "A-d5s6": 6,
-    "A-d5s5": 6,
-    "A-d5s4": 6,
+    "A-d5s1": 6,
     "A-d5s2": 6,
-    "A-d5s1": 6
+    "A-d5s4": 6,
+    "A-d5s5": 6,
+    "A-d5s6": 6,
+    "A-d5s7": 6,
+    "A-d5s8": 6,
+    "A-d6s5": 5
    },
    "ph": {},
    "warm": {},
@@ -3311,48 +3864,87 @@
   "2026-10-04": {
    "prog": null,
    "done": {
+    "B-d1s1": true,
+    "B-d1s2": true,
+    "B-d1s3": true,
+    "B-d1s4": true,
+    "B-d1s5": true,
+    "B-d1s6": true,
+    "B-d1s8": true,
+    "B-d1s9": true,
+    "B-d2s1": true,
+    "B-d2s2": true,
+    "B-d2s3": true,
+    "B-d2s4": true,
+    "B-d2s5": true,
+    "B-d2s7": true,
+    "B-d2s8": true,
+    "B-d3s1": true,
+    "B-d3s2": true,
+    "B-d3s6": true,
+    "B-d4s1": true,
+    "B-d4s2": true,
+    "B-d4s3": true,
+    "B-d4s4": true,
+    "B-d4s6": true,
+    "B-d5s2": true,
+    "B-d5s3": true,
     "B-d6s1": true,
     "B-d6s2": true,
     "B-d6s3": true,
-    "B-d6s6": true,
     "B-d6s4": true,
-    "B-d1s3": true,
-    "B-sled6": true,
-    "B-d5s2": true,
-    "B-d1s1": true,
-    "B-d1s4": true,
-    "B-d1s11": true,
-    "B-d1s8": true,
-    "B-d1s2": true,
-    "B-d1s6": true,
+    "B-d6s6": true,
     "B-d1s10": true,
-    "B-d2s8": true,
-    "B-d1s9": true,
-    "B-d2s1": true,
+    "B-d1s11": true,
+    "B-sled6": true,
     "B-d2s1#0": true,
-    "B-d2s2": true,
-    "B-d2s4": true,
-    "B-d2s3": true,
     "B-d2s3#1": true,
-    "B-d2s5": true,
-    "B-d2s7": true,
+    "B-d4s1#0": true,
+    "B-d4s5#1": true,
+    "B-d5s3#0": true,
+    "B-xmuy1rdg3uct": true,
+    "X-muy8rvy9whc0": true,
     "B-xmuy1nsai5fs#0": true
    },
    "skipped": {
+    "B-d1s7": true,
+    "B-d2s6": true,
+    "B-d3s4": true,
+    "B-d3s5": true,
+    "B-d3s7": true,
+    "B-d3s8": true,
+    "B-d4s5": true,
+    "B-d4s7": true,
+    "B-d4s8": true,
+    "B-d4s9": true,
+    "B-d5s4": true,
+    "B-d5s5": true,
+    "B-d5s6": true,
+    "B-d5s7": true,
+    "B-d5s8": true,
+    "B-d5s9": true,
     "B-d6s5": true,
     "B-sled1": true,
-    "B-d1s7": true,
     "B-sled2": true,
-    "B-d2s6": true,
-    "B-xmuy1nsai5fs": true
+    "B-sled3": true,
+    "B-sled4": true,
+    "B-sled5": true,
+    "B-xmuy1nsai5fs": true,
+    "B-xmv2inqvwi0q": true
    },
    "moved": {
-    "B-d5s2": 6,
     "B-d1s3": 6,
-    "B-d1s9": 2,
     "B-d1s5": 3,
+    "B-d1s9": 2,
     "B-d2s8": 1,
-    "B-d3s2": 5
+    "B-d3s6": 5,
+    "B-d4s3": 3,
+    "B-d4s4": 3,
+    "B-d4s5": 5,
+    "B-d5s2": 6,
+    "B-d5s3": 4,
+    "B-xmuy1rdg3uct": 3,
+    "X-muy8rvy9whc0": 5
    },
    "ph": {
     "X-muy8rvy9whc0:0": "exp"
@@ -3447,6 +4039,12 @@
    "id": "Emuy8tsxonx69",
    "ex": "squat-walks",
    "ph": "strength",
+   "note": ""
+  },
+  {
+   "id": "Emv1e5j3nfljb",
+   "ex": "statue-of-liberty-to-fly-to-chest-buster",
+   "ph": "hyp",
    "note": ""
   }
  ],
@@ -3583,15 +4181,21 @@
     "tier": ""
    }
   ],
-  "experiments": []
+  "experiments": [
+   {
+    "id": "SEmv2i89j30m9n",
+    "n": "Stretch Flow",
+    "url": "https://www.threads.com/@fitworkout.day/post/DOch5WlE7G5/media?xmt=AQF0a2-KH1ko1KEEsERzlcFmcyZLhFQfqmtJejlHzCPjpA"
+   }
+  ]
  },
  "stretchWeeks": {
   "2026-10-04": {
    "done": {
-    "0:spinal-twist": true,
-    "0:reverse-plank": true,
+    "0:duck-walk": true,
     "0:bjj-roll-up": true,
-    "0:duck-walk": true
+    "0:spinal-twist": true,
+    "0:reverse-plank": true
    },
    "skipped": {},
    "extra": []
@@ -3615,5 +4219,591 @@
   "boost": {},
   "items": [],
   "taken": {}
+ },
+ "grocery": {
+  "stores": [
+   "Downtown",
+   "C-Town",
+   "Family Bulk",
+   "Vegetable store",
+   "BJ's"
+  ],
+  "items": [
+   {
+    "id": "trader-joe-s-tuna",
+    "n": "Trader Joe's tuna",
+    "store": "Downtown",
+    "qty": 8,
+    "cents": 250,
+    "once": false
+   },
+   {
+    "id": "trader-joe-s-kefir",
+    "n": "Trader Joe's kefir",
+    "store": "Downtown",
+    "qty": 4,
+    "cents": 550,
+    "once": false
+   },
+   {
+    "id": "trader-joe-s-gnocchi-not-tomato-based",
+    "n": "Trader Joe's gnocchi (not tomato based)",
+    "store": "Downtown",
+    "qty": 4,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "whole-foods-cottage-cheese",
+    "n": "Whole Foods cottage cheese",
+    "store": "Downtown",
+    "qty": 4,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "healthy-juice",
+    "n": "Healthy juice",
+    "store": "Downtown",
+    "qty": 4,
+    "cents": 500,
+    "once": false
+   },
+   {
+    "id": "aldi-elevation-pure-simple",
+    "n": "Aldi Elevation Pure & Simple",
+    "store": "Downtown",
+    "qty": 4,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "peaches",
+    "n": "Peaches",
+    "store": "Downtown",
+    "qty": 4,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "beans",
+    "n": "Beans",
+    "store": "Downtown",
+    "qty": 3,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "trader-joe-s-trail-mix",
+    "n": "Trader Joe's trail mix",
+    "store": "Downtown",
+    "qty": 3,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "trader-joe-s-everything-bagel",
+    "n": "Trader Joe's Everything Bagel",
+    "store": "Downtown",
+    "qty": 3,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "pancetta-or-guanciale",
+    "n": "Pancetta or guanciale",
+    "store": "Downtown",
+    "qty": 2,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "whole-foods-bread",
+    "n": "Whole Foods bread",
+    "store": "Downtown",
+    "qty": 2,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "seltzer",
+    "n": "Seltzer",
+    "store": "Downtown",
+    "qty": 2,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "whole-foods-oatmeal",
+    "n": "Whole Foods oatmeal",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "whole-foods-kite-hill-cream-cheese",
+    "n": "Whole Foods Kite Hill cream cheese",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "spaghetti",
+    "n": "Spaghetti",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "pasta",
+    "n": "Pasta",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "pecorino-romano-cheese",
+    "n": "Pecorino Romano cheese",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "crushed-tomatoes",
+    "n": "Crushed tomatoes",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "peanut-butter",
+    "n": "Peanut butter",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "yogurt",
+    "n": "Yogurt",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "canned-beets",
+    "n": "Canned beets",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "turkey",
+    "n": "Turkey",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "cheese",
+    "n": "Cheese",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "arugula",
+    "n": "Arugula",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "whole-foods-one-degree-organic-foods-spr",
+    "n": "Whole Foods One Degree Organic Foods sprouted brown rice crisps",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "monk-fruit-sweetener-flatbush-co-op-mayb",
+    "n": "Monk fruit sweetener (Flatbush Co-Op, maybe Whole Foods)",
+    "store": "Downtown",
+    "qty": 1,
+    "cents": 1850,
+    "once": false
+   },
+   {
+    "id": "rice-pudding",
+    "n": "Rice pudding",
+    "store": "C-Town",
+    "qty": 2,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "beef-chuck-3-for-my-prep",
+    "n": "Beef chuck (3 for my prep)",
+    "store": "BJ's",
+    "qty": 4,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "chicken-2-for-my-prep",
+    "n": "Chicken (2 for my prep)",
+    "store": "BJ's",
+    "qty": 3,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "eggs",
+    "n": "Eggs",
+    "store": "BJ's",
+    "qty": 2,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "milk",
+    "n": "Milk",
+    "store": "BJ's",
+    "qty": 2,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "avocado-chips",
+    "n": "Avocado chips",
+    "store": "BJ's",
+    "qty": 2,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "my-frozen-fruit",
+    "n": "My frozen fruit",
+    "store": "BJ's",
+    "qty": 2,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "irish-butter",
+    "n": "Irish butter",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "cheese-block",
+    "n": "Cheese block",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "my-steak-if-more-steak-drop-one-beef-chu",
+    "n": "My steak (if more steak, drop one beef chuck or switch steaks)",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "my-ground-turkey",
+    "n": "My ground turkey",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "my-ground-beef-or-pork-maybe",
+    "n": "My ground beef or pork, maybe",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "my-beef-sticks",
+    "n": "My beef sticks",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "rice",
+    "n": "Rice",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "quinoa",
+    "n": "Quinoa",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "chia-seeds",
+    "n": "Chia seeds",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "granola",
+    "n": "Granola",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "sweet-potato",
+    "n": "Sweet potato",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "potato",
+    "n": "Potato",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "zip-lock-bags",
+    "n": "Zip lock bags",
+    "store": "BJ's",
+    "qty": 1,
+    "cents": null,
+    "once": true
+   },
+   {
+    "id": "apple-juice",
+    "n": "Apple juice",
+    "store": "Vegetable store",
+    "qty": 4,
+    "cents": 250,
+    "once": false
+   },
+   {
+    "id": "parsley",
+    "n": "Parsley",
+    "store": "Vegetable store",
+    "qty": 2,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "cilantro",
+    "n": "Cilantro",
+    "store": "Vegetable store",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "scallions",
+    "n": "Scallions",
+    "store": "Vegetable store",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "bell-pepper",
+    "n": "Bell pepper",
+    "store": "Vegetable store",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "thyme",
+    "n": "Thyme",
+    "store": "Vegetable store",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "garlic",
+    "n": "Garlic",
+    "store": "Vegetable store",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "onions",
+    "n": "Onions",
+    "store": "Vegetable store",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "lemon",
+    "n": "Lemon",
+    "store": "Vegetable store",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "plantain-for-2-days",
+    "n": "Plantain (for 2 days)",
+    "store": "Vegetable store",
+    "qty": 4,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "sweet-plantain-for-2-days",
+    "n": "Sweet plantain (for 2 days)",
+    "store": "Vegetable store",
+    "qty": 4,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "tomato-paste",
+    "n": "Tomato paste",
+    "store": "Vegetable store",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "carrots",
+    "n": "Carrots",
+    "store": "Vegetable store",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "tangerines",
+    "n": "Tangerines",
+    "store": "Vegetable store",
+    "qty": 1,
+    "cents": null,
+    "once": false
+   },
+   {
+    "id": "beef-bouillon-or-beef-stock-whole-foods-",
+    "n": "Beef bouillon or beef stock (Whole Foods, or from Aldi)",
+    "store": "",
+    "qty": 1,
+    "cents": null,
+    "once": true
+   },
+   {
+    "id": "cloves",
+    "n": "Cloves",
+    "store": "",
+    "qty": 1,
+    "cents": null,
+    "once": true
+   },
+   {
+    "id": "ancho-chili-powder",
+    "n": "Ancho chili powder",
+    "store": "",
+    "qty": 1,
+    "cents": null,
+    "once": true
+   },
+   {
+    "id": "black-pepper",
+    "n": "Black pepper",
+    "store": "",
+    "qty": 1,
+    "cents": null,
+    "once": true
+   },
+   {
+    "id": "garlic-powder",
+    "n": "Garlic powder",
+    "store": "",
+    "qty": 1,
+    "cents": null,
+    "once": true
+   },
+   {
+    "id": "cayenne-pepper",
+    "n": "Cayenne pepper",
+    "store": "",
+    "qty": 1,
+    "cents": null,
+    "once": true
+   },
+   {
+    "id": "vanilla-extract",
+    "n": "Vanilla extract",
+    "store": "",
+    "qty": 1,
+    "cents": null,
+    "once": true
+   },
+   {
+    "id": "flour",
+    "n": "Flour",
+    "store": "",
+    "qty": 1,
+    "cents": null,
+    "once": true
+   },
+   {
+    "id": "sriracha",
+    "n": "Sriracha",
+    "store": "",
+    "qty": 1,
+    "cents": null,
+    "once": true
+   }
+  ],
+  "months": {
+   "2026-10": {
+    "lines": {
+     "trader-joe-s-kefir": {
+      "cents": 550
+     },
+     "beef-chuck-3-for-my-prep": {
+      "qty": 4
+     }
+    },
+    "pulled": [
+     "zip-lock-bags"
+    ]
+   }
+  }
  }
 }
