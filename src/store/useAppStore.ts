@@ -544,14 +544,31 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   removeExtra(slotId) {
     const s = get().slotById(slotId); if (!s || !s.experiment) return;
+    const w0 = get().week; const wk = get().weekKey(); const i = (w0.extra || []).findIndex(x => x.id === slotId);
     const ok = get().mutateChecks(w => {
       clearDone(w, s); delete w.skipped[slotId]; delete w.moved[slotId]; delete w.ph[`${slotId}:0`];
       w.extra = (w.extra || []).filter(x => x.id !== slotId); if (!w.extra.length) delete w.extra;
     });
-    if (!ok) return;
+    if (!ok || i < 0) return;
     const mn = get().moveNote;
     if (mn && (mn.slot === slotId || (mn.batch && slotId in mn.batch))) set({ moveNote: null });
-    flag('Removed from this week');
+    // Undo puts the card back with its skip, move and phase, then its ticks, both through the check path: the ticks go
+    // in once the card is on the board again, so a ticked card logs its check-off again (the one the removal took out),
+    // never twice. Only in the week it came from.
+    const x0 = w0.extra![i]; const w1 = get().week;
+    const lost = (k: 'done' | 'skipped' | 'moved' | 'ph') => Object.entries(w0[k] || {}).filter(([key]) => !(key in (w1[k] || {})));
+    const keep = { skipped: lost('skipped'), moved: lost('moved'), ph: lost('ph') }; const ticks = lost('done');
+    get().noteRemoved('board:' + wk, `${exInfo(get().cfg, x0.ex).n} from this week`, () => {
+      if (get().weekKey() !== wk || (get().week.extra || []).some(x => x.id === slotId)) return false;
+      if (!get().mutateChecks(w => {
+        const l = [...(w.extra || [])]; l.splice(Math.min(i, l.length), 0, x0); w.extra = l;
+        keep.skipped.forEach(([k]) => { w.skipped[k] = true; });
+        keep.moved.forEach(([k, v]) => { w.moved[k] = v; });
+        keep.ph.forEach(([k, v]) => { w.ph[k] = v; });
+      })) return false;
+      if (ticks.length) get().mutateChecks(w => { ticks.forEach(([k]) => { w.done[k] = true; }); });
+      return true;
+    });
   },
   addWarmup(n, rx) {
     const name = String(n || '').trim().slice(0, 60); if (!name) return false;

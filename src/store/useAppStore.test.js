@@ -434,6 +434,33 @@ describe('experiment board', () => {
     expect((st().logs.legext || []).some(x => x.slot === id)).toBe(false);
     expect(tally(st().activeSlots(), st().week).total).toBe(before);
   });
+  it('Undo after Remove brings the card back ticked, with one check-off log, never two', () => {
+    const e = add('legext', 'hyp'); st().addToDay(e.id, 2); const id = st().week.extra[0].id;
+    st().checkCard(id, true); st().setPhase(id, 0, 'strength');
+    const week = structuredClone(st().week); const total = tally(st().activeSlots(), st().week).total;
+    const autos = () => (st().logs.legext || []).filter(x => x.slot === id && x.auto);
+    expect(autos()).toHaveLength(1);
+    st().removeExtra(id);
+    expect(st().removed).toMatchObject({ scope: 'board:' + st().weekKey(), text: 'Leg Extension ISO hold from this week' });
+    expect(autos()).toHaveLength(0);
+    st().undoRemoved();
+    expect(st().week.extra).toEqual(week.extra);
+    expect(st().week.done).toEqual(week.done); expect(st().week.ph).toEqual(week.ph);
+    expect(tally(st().activeSlots(), st().week).total).toBe(total);
+    expect(autos()).toHaveLength(1);
+    expect(saved('logs/legext').entries.filter(x => x.slot === id && x.auto)).toHaveLength(1);
+    expect(saved('weeks/' + st().weekKey()).extra).toHaveLength(1);
+    st().undoRemoved(); // nothing left to undo
+    expect(st().week.extra).toHaveLength(1); expect(autos()).toHaveLength(1);
+  });
+  it('Undo after Remove does nothing in another week', () => {
+    const e = add(); st().addToDay(e.id, 2); const id = st().week.extra[0].id;
+    st().removeExtra(id);
+    useAppStore.setState({ removed: { ...st().removed } }); // still showing
+    const restore = st().removed.restore;
+    st().gotoWeek('prev');
+    expect(restore()).toBe(false);
+  });
   it('Remove keeps sets you logged by hand', () => {
     const e = add('legext', 'hyp'); st().addToDay(e.id, 2); const id = st().week.extra[0].id; const wk = st().weekKey();
     st().submitLog(id, 0, { entry: { d: wk, ph: 'hyp', w: 50, s: 3, r: 12, slot: id, wk }, ph: 'hyp', done: true });
