@@ -68,10 +68,19 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     set({ modal: null }); flag('Stretch saved'); return null;
   },
   // Takes its check-offs out of the week on screen; other weeks keep theirs, which no longer match anything.
+  // Undo puts it back where it was, with its ticks in that week if it is still the one on screen.
   deleteStretch(id) {
+    const i = get().stretches.findIndex(y => y.id === id); if (i < 0) return;
+    const item = get().stretches[i]; const wk = get().weekKey();
+    const ticks = Object.keys(get().strWeek.done).filter(k => k.slice(2) === id);
     if (!get().mutateStretches(x => { x.items = x.items.filter(y => y.id !== id); })) return;
     get().mutateStrWeek(w => { w.done = withoutStretch(w, id).done; });
-    set({ modal: null }); flag('Deleted');
+    set({ modal: null });
+    get().noteRemoved('stretches', item.n, () => {
+      if (get().stretches.some(y => y.id === id) || !get().mutateStretches(x => { x.items.splice(Math.min(i, x.items.length), 0, item); })) return false;
+      if (ticks.length && get().weekKey() === wk) get().mutateStrWeek(w => { ticks.forEach(k => { w.done[k] = true; }); });
+      return true;
+    });
   },
   // Move a stretch up or down within its tier and group.
   moveStretch(id, dir) {

@@ -41,6 +41,17 @@ describe('stretches', () => {
     expect(st().strWeek.done).toEqual({});
     expect(saved('stretches/main').items.some(i => i.id === item.id)).toBe(false);
   });
+  it('Undo puts a deleted stretch back in its place with this week’s ticks', () => {
+    const before = st().stretches.map(i => i.id); const id = before[1];
+    st().setStretchDone(0, id, true); st().setStretchDone(3, id, true); st().setStretchDone(0, before[0], true);
+    const done = { ...st().strWeek.done };
+    st().deleteStretch(id);
+    expect(st().removed).toMatchObject({ scope: 'stretches' });
+    st().undoRemoved();
+    expect(st().stretches.map(i => i.id)).toEqual(before);
+    expect(st().strWeek.done).toEqual(done);
+    expect(saved('stretches/main').items.map(i => i.id)).toEqual(before);
+  });
   it('adds an experiment to a day and removes it again with its check-off', () => {
     expect(st().saveStretchExp({ n: 'Frog Stretch', note: 'try' })).toBeNull();
     const e = st().stretchExps[0];

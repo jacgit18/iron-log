@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { videoLabel } from '../../lib/data.js';
 import { TIERS, tierLabel } from '../../lib/stretches.js';
+import RemovedNotice from '../RemovedNotice.jsx';
 
 // Every stretch, by group, with when it shows on the Stretches tab. What is set here is the routine on every day.
 export default function StretchLibrary() {
@@ -21,6 +22,7 @@ export default function StretchLibrary() {
         <label className="field">Search<input type="search" value={q} placeholder="Name or group" onChange={e => setQ(e.target.value)} /></label>
         <span className="note" role="status">{needle ? `${shown.length} of ${items.length} stretches` : `${items.length} stretches`}</span>
       </div>
+      <RemovedNotice scope="stretches" />
       <div className="exrows">
         {TIERS.map(([tier]) => {
           const rows = shown.filter(i => i.tier === tier);
