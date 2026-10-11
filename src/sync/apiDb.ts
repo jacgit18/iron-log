@@ -79,6 +79,9 @@ export interface ApiDbOptions {
   /** Who is signed in right now. When given, nothing is pulled or sent until the signed-in account is known to be the one this
    *  device's data belongs to (build spec B2e); without it (tests, or no accounts) the check is skipped. */
   identity?: () => Promise<AccountState>;
+  /** Called when this device is handed to a different account (an empty device taken over, or the user chose to wipe it), so the app can
+   *  forget what it keeps outside the sync, such as the grocery list. Not called when the same account signs in again. */
+  onOwnerChange?: () => void;
   /** Calls back when the app returns to the foreground or the network comes back; returns how to stop listening. */
   onWake?: (wake: () => void) => () => void;
 }
@@ -156,7 +159,7 @@ export function createApiDb(options: ApiDbOptions) {
     const owner = readOwner();
     if (owner === null || owner === who.userId) { adopt(who.userId); return { ok: true }; }
     // Another account. With nothing here to protect, hand the device over; the old cursor belongs to the old account, so it goes.
-    if (!hasData()) { mirror.clear(); adopt(who.userId); return { ok: true }; }
+    if (!hasData()) { mirror.clear(); adopt(who.userId); options.onOwnerChange?.(); return { ok: true }; }
     return { ok: false, because: 'account' };
   }
 
@@ -484,6 +487,7 @@ export function createApiDb(options: ApiDbOptions) {
       outbox.clear();
       notices = [];
       adopt(who.userId);
+      options.onOwnerChange?.();
       wake();
       announce();
       return 'done';

@@ -137,6 +137,7 @@ export interface GrocerySlice {
   loadGrocery(): void;
   setGrocery(data: GroceryData): void; // an import replaces everything
   addGrocery(data: GroceryData): void; // an import adds what is missing
+  clearGrocery(): void; // the device went to another account: forget the list, here and in storage
   addGroceryItem(d: GroceryForm): string | null;
   updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; once: boolean }>): string | null;
   removeGroceryItem(id: string): void;

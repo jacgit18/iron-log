@@ -123,17 +123,31 @@ export function normGroceryData(d: unknown): GroceryData | null {
   return g.items.length || g.stores.length || Object.keys(months).length ? { ...g, months } : null;
 }
 
-/** "Add to my data": the file's items and months are added to what is here; where both have something, what is here stays. */
+/** "Add to my data": the file's items and months are added to what is here; where both have something, what is here stays.
+ *  Ids are made on each device, so one id can name different items in the file and here. An incoming item is matched to a local one by
+ *  name and store; otherwise it is added (under a new id if its own is taken), and its month lines and pulled ids follow that mapping.
+ *  A line for an item the file does not list, or one that could not be added, is dropped rather than attached to the wrong item. */
 export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMonth>, inc: GroceryData) {
   const g = structuredClone(cur); const months = structuredClone(curMonths); let changed = false;
-  const ids = new Set(g.items.map(i => i.id)); const same = (a: GroceryItem) => g.items.some(i => i.n.toLowerCase() === a.n.toLowerCase() && i.store === a.store);
-  inc.items.forEach(i => { if (!ids.has(i.id) && !same(i) && g.items.length < MAX_ITEMS) { g.items.push(i); ids.add(i.id); changed = true; } });
+  const map = new Map<string, string>(); // the file's item id -> the id here
+  inc.items.forEach(i => {
+    const same = g.items.find(x => x.n.toLowerCase() === i.n.toLowerCase() && x.store === i.store);
+    if (same) { map.set(i.id, same.id); return; }
+    if (g.items.length >= MAX_ITEMS) return;
+    const id = g.items.some(x => x.id === i.id) ? newGroceryId(g.items, i.n) : i.id;
+    g.items.push({ ...i, id }); map.set(i.id, id); changed = true;
+  });
   inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); changed = true; } });
-  Object.entries(inc.months).forEach(([k, m]) => {
+  Object.entries(inc.months).forEach(([k, fm]) => {
+    const lines: Record<string, GroceryLine> = {};
+    Object.entries(fm.lines).forEach(([id, l]) => { const to = map.get(id); if (to) lines[to] = l; });
+    const pulled = fm.pulled.map(id => map.get(id)).filter((x): x is string => !!x);
+    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)] };
+    if (monthEmpty(m)) return;
     const have = months[k];
     if (!have) { months[k] = m; changed = true; return; }
-    const lines = { ...m.lines, ...have.lines }; const pulled = [...new Set([...have.pulled, ...m.pulled])];
-    if (JSON.stringify(lines) !== JSON.stringify(have.lines) || pulled.length !== have.pulled.length) { months[k] = { lines, pulled }; changed = true; }
+    const mergedLines = { ...m.lines, ...have.lines }; const mergedPulled = [...new Set([...have.pulled, ...m.pulled])];
+    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length) { months[k] = { lines: mergedLines, pulled: mergedPulled }; changed = true; }
   });
   return { grocery: g, months, changed };
 }

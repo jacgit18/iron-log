@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { clearStorage, saved } from '../test/browserStubs.js';
+import { clearStorage, saved, mem } from '../test/browserStubs.js';
 
 let useAppStore; const st = () => useAppStore.getState();
 const form = (o = {}) => ({ n: 'Kale', store: 'Veg market', qty: '2', price: '2.50', once: false, ...o });
 beforeAll(async () => { ({ useAppStore } = await import('./useAppStore.js')); await st().init(); });
 beforeEach(async () => {
   clearStorage();
+  const { setAdmin } = await import('../features.js'); setAdmin(true);
   const { normGrocery } = await import('../lib/grocery.js');
   useAppStore.setState({ grocery: normGrocery(null), groceryMonths: {} });
 });
@@ -153,5 +154,29 @@ describe('the data file', () => {
   it('a file with no list leaves the data file without a grocery part', async () => {
     const { buildDataFile } = await import('../lib/export.js');
     expect('grocery' in buildDataFile(st().snapshot(), {})).toBe(false);
+  });
+});
+
+describe('who sees and keeps the list', () => {
+  it('forgets the list, here and in storage, when the device goes to another account', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form());
+    st().setGroceryGot(mk, 'kale', true);
+    expect(saved('grocery/main')).not.toBeNull();
+    st().clearGrocery();
+    expect(st().grocery.items).toEqual([]);
+    expect(st().groceryMonths).toEqual({});
+    expect(Object.keys(mem).filter(k => k.startsWith('ironlog:grocery/'))).toEqual([]);
+  });
+  it('a non-admin does not export, back up or import the list', async () => {
+    const { setAdmin } = await import('../features.js');
+    const { buildDataFile } = await import('../lib/export.js');
+    st().addGroceryItem(form());
+    setAdmin(false);
+    expect('grocery' in buildDataFile(st().snapshot(), {})).toBe(false);
+    useAppStore.setState({ importDraft: { name: 'x', kind: 'json', data: { exportedAt: '', config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: [], stretches: null, stretchWeeks: {}, supplements: null, grocery: { stores: [], items: [{ id: 'rice', n: 'Rice', store: '', qty: 1, cents: null, once: false }], months: {} } } } });
+    await st().applyImport('merge');
+    expect(st().grocery.items.map(i => i.id)).toEqual(['kale']); // the file's rice was not added
+    setAdmin(true);
   });
 });

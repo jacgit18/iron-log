@@ -2,6 +2,7 @@ import type { ImportDraft } from '../../store/types.ts';
 import type { ExcelImport as ExcelData } from '../../lib/excelImport.ts';
 type Stats = ReturnType<typeof dataStats>;
 import { useAppStore } from '../../store/useAppStore.js';
+import { useFeature } from '../../features.js';
 import { dataStats, libDate, importSel } from '../../lib/export.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
@@ -38,6 +39,7 @@ function ExcelImport({ draft, s, busy }: { draft: ImportDraft & { data: ExcelDat
 }
 
 export default function ImportSheet() {
+  const grocery = useFeature('grocery'); // only an admin is offered the grocery list in a file
   const draft = useAppStore(s => s.importDraft);
   const busy = useAppStore(s => s.importBusy);
   const dl = useAppStore(s => s.dl);
@@ -55,7 +57,7 @@ export default function ImportSheet() {
     ['program', 'Program', (s.programs.length ? `edited Program ${s.programs.join(' and ')}` : 'original programs') + (s.saved ? `, ${plural(s.saved, 'saved version', 'saved versions')}` : '') + ', custom exercises'],
     ...(d.stretches ? [['stretches', 'Stretches', `${plural(s.stretches, 'stretch', 'stretches')} in the library, ${plural(s.stretchWeeks, 'week', 'weeks')} of check-offs`]] : []),
     ...(d.supplements ? [['supplements', 'Supplements', `water logged on ${plural(s.waterDays, 'day', 'days')}, supplement library and check-offs`]] : []),
-    ...(d.grocery ? [['grocery', 'Groceries', `${plural(s.groceryItems, 'item', 'items')}, ${plural(s.groceryMonths, 'month', 'months')} of ticks and prices`]] : []),
+    ...(d.grocery && grocery ? [['grocery', 'Groceries', `${plural(s.groceryItems, 'item', 'items')}, ${plural(s.groceryMonths, 'month', 'months')} of ticks and prices`]] : []),
     ['settings', 'Settings', 'program mode, rest time, phase percentages and 1RMs'],
   ];
   const when = d.exportedAt ? libDate(d.exportedAt) : 'an unknown date';

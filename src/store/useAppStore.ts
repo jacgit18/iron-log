@@ -15,6 +15,7 @@ import { editorSlice } from './editorSlice.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
 import { grocerySlice } from './grocerySlice.js';
+import { isAdminNow } from '../features.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { normSupplements } from '../lib/water.js';
 import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
@@ -213,7 +214,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().mutateCfg(c => { if (c.muscleMap) delete c.muscleMap[exId]; })) set({ modal: null });
   },
 
-  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, grocery: { ...s.grocery, months: s.groceryMonths } }; },
+  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, ...(isAdminNow() ? { grocery: { ...s.grocery, months: s.groceryMonths } } : {}) }; }, // the grocery list is an admin-only feature: no one else exports or backs it up
 
   // The snapshot plus every saved stretch week (the week on screen taken live), for the data file.
   async stretchWeeksAll() {
@@ -926,7 +927,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!db && apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC)) {
       try {
         const { createBrowserApiDb } = await import('../sync/browser.js');
-        syncApi = createBrowserApiDb();
+        syncApi = createBrowserApiDb({ onOwnerChange: () => get().clearGrocery() });
         db = syncApi;
         syncApi.onStatus(sync => useAppStore.setState({ sync }));
         useAppStore.setState({ sync: syncApi.status() });

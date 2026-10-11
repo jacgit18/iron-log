@@ -116,7 +116,7 @@ describe('the data file part', () => {
     const inc = normGroceryData({
       stores: ['Costco', 'Giant'],
       items: [{ id: 'kale', n: 'Kale', store: 'Veg market', qty: 9 }, { id: 'oats', n: 'Oats', store: 'Giant', qty: 1 }, { id: 'kale2', n: 'KALE', store: 'Veg market', qty: 1 }],
-      months: { '2026-01': { lines: { kale: { got: true }, rice: { got: true, qty: 3 } }, pulled: ['saffron'] }, '2026-02': { lines: { rice: { got: true } }, pulled: [] } },
+      months: { '2026-01': { lines: { kale: { got: true }, rice: { got: true, qty: 3 } }, pulled: ['saffron'] }, '2026-02': { lines: { oats: { got: true } }, pulled: [] } },
     })!;
     const here = { '2026-01': { lines: { rice: { qty: 5 } }, pulled: [] as string[] } };
     const r = mergeGrocery(g, here, inc);
@@ -124,8 +124,9 @@ describe('the data file part', () => {
     expect(r.grocery.items.map(i => i.id)).toEqual(['kale', 'rice', 'salt', 'saffron', 'oats']); // kale stays as it is here; the same name in the same store is not added twice
     expect(r.grocery.items[0].qty).toBe(2);
     expect(r.grocery.stores).toEqual(['Veg market', 'Costco', 'Giant']);
-    expect(r.months['2026-01']).toEqual({ lines: { kale: { got: true }, rice: { qty: 5 } }, pulled: ['saffron'] }); // a line that is here stays whole; a line only the file has is added
-    expect(r.months['2026-02'].lines.rice.got).toBe(true);
+    // the file's rice line is for an item its own catalogue does not list, so it is dropped; the saffron pull has no saffron in the file either
+    expect(r.months['2026-01']).toEqual({ lines: { kale: { got: true }, rice: { qty: 5 } }, pulled: [] });
+    expect(r.months['2026-02'].lines.oats.got).toBe(true);
     expect(mergeGrocery(g, {}, { ...g, months: {} }).changed).toBe(false);
   });
 });
@@ -136,5 +137,29 @@ describe('store choices', () => {
     expect(c.mine).toEqual(['Costco', 'aldi']);
     expect(c.suggested).toEqual(["BJ's", 'C-Town', 'Whole Foods', 'Flatbush Co-Op']);
     expect(storeChoices({ stores: [], items: [] }).suggested).toEqual(SUGGESTED_STORES);
+  });
+});
+
+describe('merging when two devices made different ids', () => {
+  const item = (id: string, n: string, store = 'Costco') => ({ id, n, store, qty: 1, cents: null, once: false });
+  it('sends a file’s month lines to the matching item here, even under another id, and to a new id when its own is taken', () => {
+    // here: "milk" is Giant's milk; in the file "milk" is Costco's milk and "milk-2" is Giant's
+    const here = { stores: ['Giant'], items: [item('milk', 'Milk', 'Giant')] };
+    const inc = normGroceryData({
+      stores: ['Costco', 'Giant'],
+      items: [item('milk', 'Milk', 'Costco'), item('milk-2', 'Milk', 'Giant')],
+      months: { '2026-03': { lines: { milk: { got: true, cents: 400 }, 'milk-2': { got: true, cents: 500 } }, pulled: [] } },
+    })!;
+    const r = mergeGrocery(here, {}, inc);
+    expect(r.grocery.items.map(i => [i.id, i.store])).toEqual([['milk', 'Giant'], ['milk-2', 'Costco']]); // Costco's milk got a new id
+    expect(r.months['2026-03'].lines).toEqual({ 'milk-2': { got: true, cents: 400 }, milk: { got: true, cents: 500 } }); // each tick is on its own item
+  });
+  it('drops lines for items it could not add and for ids the file does not list', () => {
+    const full = { stores: [], items: Array.from({ length: 500 }, (_, i) => item(`i${i}`, `Item ${i}`, '')) };
+    const inc = normGroceryData({ items: [item('new', 'New thing', '')], months: { '2026-03': { lines: { new: { got: true }, ghost: { got: true } }, pulled: ['ghost'] } } })!;
+    const r = mergeGrocery(full, {}, inc);
+    expect(r.grocery.items).toHaveLength(500);
+    expect(r.months).toEqual({});
+    expect(r.changed).toBe(false);
   });
 });

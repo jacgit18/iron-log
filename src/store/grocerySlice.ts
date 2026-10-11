@@ -6,8 +6,9 @@ import type { Grocery, GroceryMonth } from '../types.ts';
 import type { Flag, GrocerySlice, StoreGet, StoreSet } from './types.ts';
 
 // The grocery list is kept on this device only, in the browser's storage (like display options): its paths are not in the
-// sync's map (parsePath), so it never reaches the server and is not part of "Delete my data". It is in the data file and
-// the backups. `flag` is the save-status helper from the app store.
+// sync's map (parsePath), so it never reaches the server. It belongs to the device's owner, like the synced data: it is cleared when the
+// device is handed to another account (apiDb onOwnerChange) and by "Delete my data" (DeleteMyData.tsx forgetDevice); a plain sign-out and
+// sign-in as the same account keeps it. It is in the data file and the backups. `flag` is the save-status helper from the app store.
 const MAIN = 'grocery/main';
 
 export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GrocerySlice => {
@@ -67,6 +68,14 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
       if (!r.changed) return;
       set({ grocery: r.grocery, groceryMonths: r.months });
       saveMain(r.grocery); Object.entries(r.months).forEach(([k, m]) => saveMonth(k, m));
+    },
+
+    clearGrocery() {
+      Object.keys(get().groceryMonths).forEach(k => LS.remove('grocery/' + k));
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith('ironlog:grocery/')) LS.remove(k.slice('ironlog:'.length)); }
+      } catch { /* storage unavailable */ }
+      set({ grocery: normGrocery(null), groceryMonths: {} });
     },
 
     addGroceryItem(d) {
