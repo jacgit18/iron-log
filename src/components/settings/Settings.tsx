@@ -1,5 +1,6 @@
 import AccountPanel from './AccountPanel.js';
 import DeleteMyData from './DeleteMyData.js';
+import FeedbackPanel from './FeedbackPanel.js';
 import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
@@ -336,6 +337,7 @@ export default function Settings() {
         <PhasePanel />
         <AppearancePanel />
         <DevicePanel />
+        <FeedbackPanel />
       </div>
       <div className="scol">
         <AccountPanel />
