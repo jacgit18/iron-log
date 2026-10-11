@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { AppState, OrderNote, OrderState } from './types.ts';
 import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Stretch, Week } from '../types.ts';
 import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
-import { weekStartOf, ymd, addDays } from '../shared/dates.js';
+import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, activeProgKey, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
@@ -731,8 +731,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().blocked()) return false;
     const L = get().logs[exId] || []; const i = findEntry(L, target);
     if (i < 0) { flag('That session changed meanwhile. Open it again.'); return false; }
-    const arr = [...L]; arr.splice(i, 1);
-    set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId); return true;
+    const arr = [...L]; const [gone] = arr.splice(i, 1);
+    set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId);
+    // Undo puts the same entry (same id) back, unless it is there again, or a check-off has since logged that card and week.
+    get().noteRemoved('log:' + exId, `the ${fmtShort(parseDate(gone.d))} session`, () => {
+      const cur = get().logs[exId] || [];
+      if (get().blocked() || findEntry(cur, gone) >= 0 || (gone.auto && cur.some(e => e.slot === gone.slot && e.wk === gone.wk))) return false;
+      const back = [...cur]; back.splice(Math.min(i, back.length), 0, gone); back.sort((a, b) => a.d.localeCompare(b.d));
+      set(state => ({ logs: { ...state.logs, [exId]: back } })); get().saveLog(exId); return true;
+    });
+    return true;
   },
   // Try the writes that were refused again (after freeing space, or signing back in).
   retryUnsaved() { queue.retryFailed(); },

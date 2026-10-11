@@ -140,6 +140,33 @@ describe('log data', () => {
     expect(st().logs.hack.map(e => e.w)).toEqual([240, 250]);
   });
 
+  it('Undo after deleting a session puts the same entry back in date order, once, and saved', () => {
+    const a = { id: 'e1', d: '2026-01-06', ph: 'hyp', w: 250, s: 4, r: 12 }; const b = { id: 'e2', d: '2026-01-13', ph: 'hyp', w: 260, s: 4, r: 12 }; const c = { id: 'e3', d: '2026-01-20', ph: 'hyp', w: 270, s: 4, r: 12 };
+    useAppStore.setState({ logs: { hack: [a, b, c] } });
+    st().deleteLog('hack', b);
+    expect(st().removed).toMatchObject({ scope: 'log:hack' });
+    st().undoRemoved();
+    expect(st().logs.hack.map(e => e.id)).toEqual(['e1', 'e2', 'e3']);
+    expect(saved('logs/hack').entries.map(e => e.id)).toEqual(['e1', 'e2', 'e3']);
+    st().undoRemoved();
+    expect(st().logs.hack).toHaveLength(3);
+  });
+
+  it('Undo does not duplicate a session that came back meanwhile (another device), nor a check-off for the same card and week', () => {
+    const b = { id: 'e2', d: '2026-01-13', ph: 'hyp', w: 260, s: 4, r: 12 };
+    useAppStore.setState({ logs: { hack: [b] } });
+    st().deleteLog('hack', b);
+    useAppStore.setState({ logs: { hack: [structuredClone(b)] } });
+    st().undoRemoved();
+    expect(st().logs.hack).toHaveLength(1);
+    const auto = { id: 'e4', d: '2026-01-13', ph: 'hyp', w: 260, s: 4, r: 12, auto: true, slot: 'A-d1s1', wk: '2026-01-11' };
+    useAppStore.setState({ logs: { hack: [auto] } });
+    st().deleteLog('hack', auto);
+    useAppStore.setState({ logs: { hack: [{ ...auto, id: 'e5' }] } }); // the card was checked off again
+    st().undoRemoved();
+    expect(st().logs.hack.map(e => e.id)).toEqual(['e5']);
+  });
+
   it('F12 a second tab (local mode) does not overwrite entries the first tab saved for the same exercise', () => {
     const wk = st().weekKey();
     const other = { d: wk, ph: 'hyp', w: 280, s: 4, r: 12, slot: 'A-d5s3', wk };
