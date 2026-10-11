@@ -255,7 +255,8 @@ function GitHubBackup() {
       {token ? (
         <div className="actions" style={{ justifyContent: 'flex-start', alignItems: 'center' }}>
           <span className="note">A token is saved in this browser.</span>
-          <button type="button" className="btn sm ghost" onClick={st.forgetGhToken}>Remove token</button>
+          {/* Two taps, but no Undo: keeping a token you chose to remove, even in memory for a while, is not worth it (ADR 023). */}
+          <ArmedButton className="btn sm ghost" label="Remove token" armedLabel="Tap again to remove" onConfirm={st.forgetGhToken} />
         </div>
       ) : (
         <form className="field" onSubmit={e => { e.preventDefault(); saveToken(); }}>
