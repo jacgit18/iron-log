@@ -619,8 +619,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const arr = [...L]; arr[k] = { ...autoEntry(get().cfg, others, s, idx, get().week, wk, L[k].d), id: L[k].id || newEntryId() };
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
   },
-  // Choosing the program of a week that is over takes today's version of it: its old record is for the other one.
-  setWeekProg(k) { const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { w.prog = k === auto ? null : k; delete w.ran; })) set({ orderNote: null }); },
+  // Choosing the program of a week that is over takes today's version of it: its old record is for the other one. Choosing the
+  // program it already shows changes nothing, so its record stays.
+  setWeekProg(k) { if (k === get().activeProgKey()) return; const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { w.prog = k === auto ? null : k; delete w.ran; })) set({ orderNote: null }); },
   setMode(mode) { if (get().mutateCfg(c => { c.mode = mode; })) get().refreshRan(); },
 
   moveSlot(slotId, day) {

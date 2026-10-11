@@ -100,3 +100,25 @@ describe('this week’s record follows its program until the week is over', () =
     expect(JSON.stringify(saved('weeks/' + lastWeek()))).toBe(at);
   });
 });
+
+describe('choosing a past week’s program', () => {
+  const past = () => {
+    const even = (addDays(weekStartOf(new Date()), -7).getMonth() + 1) % 2 === 0;
+    useAppStore.setState(s => ({ cfg: { ...s.cfg, mode: 2, m2Even: even ? 'A' : 'B' }, weekStart: addDays(weekStartOf(new Date()), -7), week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } }));
+    st().checkCard(firstCard().id, true);
+    const prog = structuredClone(st().programs.A); prog.days[0].slots = []; st().saveProgram('A', prog); // A changes after the week
+  };
+
+  it('the program it already shows keeps its record', () => {
+    past(); const at = JSON.stringify(saved('weeks/' + lastWeek()));
+    st().setWeekProg('A');
+    expect(JSON.stringify(saved('weeks/' + lastWeek()))).toBe(at);
+    expect(st().activeSlots().length).toBeGreaterThan(0);
+  });
+
+  it('the other program takes today’s version of it', () => {
+    past(); st().setWeekProg('B');
+    expect(saved('weeks/' + lastWeek()).ran.prog).toBe('B');
+    expect(st().activeProgKey()).toBe('B');
+  });
+});
