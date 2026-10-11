@@ -278,7 +278,13 @@ export function exInfo(cfg: ProgramCfg, id: string): ExerciseInfo {
   const o: ExerciseInfo = { ...(EX[id] || { n: id }), ...(cfg.ex && cfg.ex[id]) };
   return o;
 }
-export const allExIds = (cfg: ProgramCfg) => [...new Set([...Object.keys(EX), ...Object.keys(cfg.ex || {})])];
+// Synced, an account's catalog is only the exercises it saved in cfg.ex: everyone builds their own library (ADR 024), as with programs
+// (ADR 021). EX still names an id that old history points at. In local storage the built-ins stay listed, as the built-in plan does.
+let builtinsListed = true;
+export function listBuiltinExercises(on: boolean) { builtinsListed = on; }
+export const allExIds = (cfg: ProgramCfg) => [...new Set([...(builtinsListed ? Object.keys(EX) : []), ...Object.keys(cfg.ex || {})])];
+// Created by this account, not a built-in: synced, every exercise in the catalog is.
+export const isOwnExercise = (id: string) => !builtinsListed || !EX[id];
 
 // A new custom exercise's id from its name, unique among the built-ins and cfg.ex (`taken` adds ids being created now).
 export function newExId(cfg: ProgramCfg, name: string, taken: Record<string, { n?: string }> = {}): string {

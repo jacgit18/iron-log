@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Cfg, EquipmentKey } from '../types.ts';
-import { EX, allExIds, exInfo, findExId, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
+import { allExIds, exInfo, findExId, isOwnExercise, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
 
 // Type an exercise: suggestions come from the catalog (built-in and your own); a name that isn't there yet
 // is added to your catalog when the sheet is saved.
@@ -9,8 +9,8 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onU
   const ids = allExIds(cfg);
   const names = [...new Set(ids.map(x => exInfo(cfg, x).n))].sort((a, b) => a.localeCompare(b));
   // A name a built-in also uses stays unmarked, so the built-in suggestion is never labelled Yours.
-  const builtin = new Set(ids.filter(x => EX[x]).map(x => exInfo(cfg, x).n));
-  const yours = new Set(ids.filter(x => !EX[x]).map(x => exInfo(cfg, x).n).filter(n => !builtin.has(n)));
+  const builtin = new Set(ids.filter(x => !isOwnExercise(x)).map(x => exInfo(cfg, x).n));
+  const yours = new Set(ids.filter(isOwnExercise).map(x => exInfo(cfg, x).n).filter(n => !builtin.has(n)));
   const known = name.trim() !== '' ? findExId(cfg, name) : null;
   const isNew = name.trim() !== '' && !known;
   // Picking an existing exercise shows its saved video link and equipment, so what you save is that exercise's

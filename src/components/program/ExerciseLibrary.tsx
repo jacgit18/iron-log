@@ -12,6 +12,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 export default function ExerciseLibrary() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs);
+  const synced = useAppStore(s => s.storeMode) === 'db'; // synced, every exercise listed is your own (ADR 024): no Source to filter by
   const { openModal } = useAppStore.getState();
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
@@ -40,13 +41,13 @@ export default function ExerciseLibrary() {
             <option value="untagged">Not tagged yet</option>
           </select>
         </label>
-        <label className="field">Source
+        {!synced && <label className="field">Source
           <select value={f.src} onChange={e => setF(x => ({ ...x, src: e.target.value }))}>
             <option value="">All</option>
             <option value="yours">Yours</option>
             <option value="library">Library</option>
           </select>
-        </label>
+        </label>}
         {filtering && <button type="button" className="btn sm ghost" onClick={() => setF({ q: '', eq: '', muscle: '', src: '' })}>Clear</button>}
         <span className="note" role="status">{filtering ? `${shown.length} of ${rows.length} exercises` : `${rows.length} exercises`}</span>
       </div>

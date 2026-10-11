@@ -1,6 +1,6 @@
 import type { Cfg, LibraryItem, Logs, Program } from '../types.ts';
 /* ---------- Exercise library: every exercise and what is set on it ---------- */
-import { EX, allExIds, exInfo, slotsFor } from './data.js';
+import { allExIds, exInfo, isOwnExercise, slotsFor } from './data.js';
 import { tagsOf, MUSCLES } from './muscles.js';
 
 // Where an exercise is used: the rotation programs (by key), saved/created versions, experiments, and logged sessions.
@@ -19,7 +19,7 @@ export function libraryRows(cfg: Cfg, state: Parameters<typeof usageOf>[1]) {
   return allExIds(cfg).map(id => {
     const info = exInfo(cfg, id); const tg = tagsOf(cfg, id);
     return {
-      id, name: info.n, eq: info.eq || '', url: info.url || '', custom: !EX[id],
+      id, name: info.n, eq: info.eq || '', url: info.url || '', custom: isOwnExercise(id),
       ph: (cfg.exPh && cfg.exPh[id]) || null, rm: cfg.rm[id] ?? null,
       p: tg && !tg.mob ? tg.p || [] : [], s: tg && !tg.mob ? tg.s || [] : [], mob: !!(tg && tg.mob), tagged: !!tg,
       inPrograms: usageOf(id, state).programs,
