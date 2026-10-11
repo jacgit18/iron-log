@@ -6,7 +6,6 @@ import { PHASES, PH_KEYS, exInfo, exerciseChoice } from '../../lib/data.js';
 import { SECTIONS, blankItem } from '../../store/editorSlice.js';
 import { DAYS, progName } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
-import { useFeature } from '../../features.js';
 import ExerciseField from '../ExerciseField.jsx';
 
 // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
@@ -49,7 +48,7 @@ export default function SlotSheet({ idx, col, target }: { idx: number | null; co
     return { ...src, type: src.type || 'single', day: edDay, days: [edDay], idx, target, note: src.note || '', tier: src.tier || '', items: src.items.map((it: any) => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
   });
   const [err, setErr] = useState('');
-  const manyDays = useFeature('multiDayAdd') && idx == null && col == null; // adding from the Program tab: tick every day it goes on
+  const manyDays = idx == null && col == null; // adding from the Program tab: tick every day it goes on
 
   const setType = (type: SlotType) => setD(x => { const want = type === 'single' ? 1 : 2; const items = x.items.slice(0, want); while (items.length < want) items.push({ ...blankItem(), w: '', nm: '' }); return { ...x, type, items }; });
   const setItem = (k: number, patch: Partial<ItemState>) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
