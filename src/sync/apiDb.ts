@@ -3,7 +3,7 @@ import { backoffMs } from './backoff.js';
 import { documentFor, parsePath, pathsOf, type PathKind } from './documents.js';
 import { entryId } from '../lib/export.js';
 import { createMirrorStore, type Storage } from './mirrorStore.js';
-import { tickedBeatsSkipped } from './merge.js';
+import { mergeStretchWeek3, mergeWeek3 } from './merge.js';
 import { createOutbox, isDeleted, type QuarantineEntry } from './outbox.js';
 import { planCommands, planDelete } from './plan.js';
 import { pullAll } from './pull.js';
@@ -346,6 +346,9 @@ export function createApiDb(options: ApiDbOptions) {
         if (out.class === 'conflict') {
           if (out.reason === 'deleted') return refuse(path, sent, 'This was deleted on another device after you changed it.');
           if (out.reason !== 'stale') return refuse(path, sent, `The server does not have what this was based on (${out.reason}).`);
+          // The row this save was based on, read before the server's newer row replaces it: the base of a week's three-way merge.
+          const seen = mirror.rows().get(mirrorId(c.table, c.rowKey));
+          const base = seen && !seen.deleted && seen.version === c.baseVersion ? seen : undefined;
           if (out.current) mirror.apply(c.table, [out.current]).paths.forEach(p => touched.add(p));
           if (c.name.startsWith('delete-')) {
             // A delete must not win silently over an edit made after the version it was based on (FM-05): keep the edit.
@@ -356,14 +359,19 @@ export function createApiDb(options: ApiDbOptions) {
             break;
           }
           if (++conflicts > MAX_CONFLICTS) return refuse(path, sent, 'This kept changing on another device, so it was set aside.');
-          if (c.table === 'weeks') {
-            // The one merge rule for a week: a card ticked on the other device beats this device's skip.
-            const theirs = mirror.rows().get(mirrorId('weeks', c.rowKey));
-            const merged = theirs && theirs.table === 'weeks' ? tickedBeatsSkipped(sent, theirs.week) : sent;
-            if (merged !== sent) {
-              outbox.put(path, merged);
-              adjusted.add(path);
-              note(path, 'A card you skipped was ticked on another device, so it is shown as done.');
+          if (c.table === 'weeks' || c.table === 'stretch_weeks') {
+            // ADR 031: a week is merged three-way, so what the other device changed survives; a key both changed is this device's.
+            const theirs = mirror.rows().get(mirrorId(c.table, c.rowKey));
+            if (theirs && !theirs.deleted && (theirs.table === 'weeks' || theirs.table === 'stretch_weeks')) {
+              const baseWeek = base && (base.table === 'weeks' || base.table === 'stretch_weeks') ? base.week : null;
+              const m = c.table === 'weeks' ? mergeWeek3(baseWeek, sent, theirs.week) : mergeStretchWeek3(baseWeek, sent, theirs.week);
+              if (m.tookTheirs) {
+                outbox.put(path, m.week);
+                adjusted.add(path);
+                note(path, m.unskipped
+                  ? (c.table === 'weeks' ? 'A card you skipped was ticked on another device, so it is shown as done.' : 'A day you skipped had a stretch ticked on another device, so it is no longer skipped.')
+                  : 'Merged changes from another device.');
+              }
             }
           }
           again = true; // the mirror now holds the newer row: plan again

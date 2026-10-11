@@ -488,6 +488,33 @@ describe('conflicts', () => {
     expect(db.quarantined()).toEqual([]);
   });
 
+  // ADR 031: a stale week is merged three-way against the row this device's save was based on.
+  const wk = (done: object) => ({ prog: 'A', done, skipped: {}, moved: {}, ph: {}, warm: {} });
+  const otherDeviceSaves = (server: ReturnType<typeof setup>['server'], done: object) =>
+    server.rows.set('weeks|2026-10-04', { ...server.rows.get('weeks|2026-10-04')!, version: 2, data: wk(done), seq: '99' });
+
+  it('a stale week keeps the tick another device made, shows it at once, and says so', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('weeks/2026-10-04').set(wk({ a: true }));
+    otherDeviceSaves(server, { a: true, b: true });
+    await db.doc('weeks/2026-10-04').set(wk({ a: true, c: true }));
+    expect(server.rows.get('weeks|2026-10-04')).toMatchObject({ version: 3, data: { done: { a: true, b: true, c: true } } });
+    expect((await db.doc('weeks/2026-10-04').get()).data().done).toEqual({ a: true, b: true, c: true });
+    expect(db.status().notices.map(n => n.text)).toEqual(['Merged changes from another device.']);
+  });
+
+  it('a stale week keeps this device\'s untick', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('weeks/2026-10-04').set(wk({ a: true }));
+    otherDeviceSaves(server, { a: true, b: true });
+    await db.doc('weeks/2026-10-04').set(wk({}));
+    expect(server.rows.get('weeks|2026-10-04')!.data).toMatchObject({ done: { b: true } });
+  });
+
   it('an edit of something deleted on another device is set aside, not brought back', async () => {
     const { server, db } = setup();
     db.start();
