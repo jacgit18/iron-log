@@ -512,7 +512,7 @@ describe('conflicts', () => {
     await db.doc('weeks/2026-10-04').set(wk({ a: true }));
     otherDeviceSaves(server, { a: true, b: true });
     await db.doc('weeks/2026-10-04').set(wk({}));
-    expect(server.rows.get('weeks|2026-10-04')!.data).toMatchObject({ done: { b: true } });
+    expect(server.rows.get('weeks|2026-10-04')!.data.done).toEqual({ b: true });
   });
 
   it('an edit of something deleted on another device is set aside, not brought back', async () => {
