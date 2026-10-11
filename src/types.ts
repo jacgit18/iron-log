@@ -51,6 +51,9 @@ export interface ProgramSlot {
   tier?: string;
   type?: SlotType;
   note?: string;
+  /** The week (its Sunday, YYYY-MM-DD) this card starts in. Weeks before it leave the card out, so adding a card never
+   *  reopens a finished day or an earlier week. Absent: every week (built-in cards, and cards from before this field). */
+  from?: string;
   items: ProgramItem[];
 }
 

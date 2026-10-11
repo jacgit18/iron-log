@@ -263,7 +263,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   weekKey: () => ymd(get().weekStart),
   activeProgKey: () => activeProgKey(get().cfg, get().week, get().weekStart),
   activeProgram: () => { const s = get(); return s.programs[s.activeProgKey()] || s.programs.A; },
-  activeSlots: () => weekSlots(get().activeProgram(), get().week),
+  activeSlots: () => weekSlots(get().activeProgram(), get().week, get().weekKey()),
   slotById: id => get().activeSlots().find(x => x.id === id),
   // The log sheet needs both its card and the exercise at that position; a program replaced from elsewhere can remove either.
   logTargetExists: (slotId, idx) => { const s = get().slotById(slotId); return !!(s && s.items[idx]); },
