@@ -103,13 +103,13 @@ export interface EditorSlice {
   reorderEdSlot(from: number, to: number): void;
   removeEdSlot(i: number): void;
   setDaySub(v: string): boolean;
-  renameProgram(k: ProgKey, raw: string): false | void;
   renameLibItem(raw: string): false | void;
   libSnapshot(name: string, prog: Program, from: string, auto: boolean): LibraryItem;
   saveCurrentAs(name: string): void;
   loadVersion(target: string, slot: ProgKey): void;
   deleteLibItem(id: string): void;
-  createProgram(name: string, from: ProgKey): boolean;
+  /** `from` 'empty' starts with seven empty days (ADR 021); 'A' or 'B' starts as a copy of that program. */
+  createProgram(name: string, from: ProgKey | 'empty'): boolean;
   saveSlot(d: SlotForm): string | null;
 }
 
@@ -290,6 +290,7 @@ export interface CoreSlice {
   setExperiments(experiments: Experiment[]): void;
   saveExperiment(d: ExperimentForm): string | null;
   applyExerciseUrl(ex: string, raw: string | null | undefined): void;
+  applyExerciseEq(ex: string, eq: EquipmentKey | '' | null | undefined): void;
   createExercise(d: { nn: string } & ExerciseExtras): string;
   addExerciseToDay(col: number, d: ExperimentForm): string | null;
   saveExerciseDetails(exId: string, d: ExerciseDetailsForm): string | null;

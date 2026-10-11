@@ -1,4 +1,4 @@
-import { BUILTIN, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
+import { BUILTIN, BLANK, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { progName, dayAt, DAYS, colOf, currentLayout, isFinished } from '../lib/logic.js';
 import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
@@ -66,12 +66,6 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   removeEdSlot(i) { get().editProgram(prog => { prog.days[get().edDay - 1].slots.splice(i, 1); }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
 
-  renameProgram(k, raw) {
-    if (get().blocked()) return false;
-    const v = raw.trim().slice(0, 40);
-    get().mutateCfg(c => { c.progNames = { ...(c.progNames || {}) }; if (v && v !== `Program ${k}`) c.progNames[k] = v; else delete c.progNames[k]; });
-    flag('Renamed');
-  },
   renameLibItem(raw) {
     if (get().blocked()) return false;
     const it = get().edItem(); const v = raw.trim().slice(0, 60);
@@ -104,8 +98,10 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     // Syncing, the blank original is saved as the account's program: with no document an account with log entries would fall back to the built-in plan.
     if (target === 'orig' && orig === BUILTIN[slot]) { set(s => ({ programs: { ...s.programs, [slot]: BUILTIN[slot] } })); get().removeDoc('programs/' + slot); }
     else get().saveProgram(slot, structuredClone(next));
+    // A program loaded from the library brings its name: the slot is called what you named the program (ADR 021).
+    if (src) get().mutateCfg(c => { c.progNames = { ...(c.progNames || {}), [slot]: src.name }; });
     set({ edProg: slot });
-    flag(src ? `${src.name} is now in ${progName(get().cfg, slot)}` : 'Loaded');
+    flag(src ? `Loaded ${src.name} into Program ${slot}` : 'Loaded');
   },
   deleteLibItem(id) {
     if (get().blocked()) return;
@@ -115,8 +111,9 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   },
   createProgram(name, from) {
     if (get().blocked()) return false;
-    const srcProg = get().programs[from] || get().programs.A;
+    const srcProg = from === 'empty' ? BLANK.A : get().programs[from] || get().programs.A;
     const it = get().libSnapshot(name.trim(), srcProg, from, false); it.created = true;
+    if (from === 'empty') delete it.from;
     // The copy gets its own slot ids so check-offs and phase defaults never mix with the program it came from;
     // the source's saved phase defaults carry over to the new ids.
     const pre = 'P' + it.id.slice(-5); const src = slotsFor(srcProg); const phDef: Record<string, PhaseKey | null> = {}; let k = 0;
@@ -145,7 +142,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const items = d.items.map((it: any) => {
       let ex = it.ex;
       if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}) }; }
-      else get().applyExerciseUrl(ex, it.nu);
+      else { get().applyExerciseUrl(ex, it.nu); get().applyExerciseEq(ex, it.ne); }
       const o: ProgramItem = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
     });
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, newEx); });
