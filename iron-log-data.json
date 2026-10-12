@@ -1,9 +1,58 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-12T02:59:56.683Z",
+ "exportedAt": "2026-10-12T04:59:38.876Z",
  "config": {
   "muscleMap": {
+   "c:fedb:Face_Pull": {
+    "p": [
+     "frontdelt",
+     "sidedelt"
+    ],
+    "s": [
+     "upperback"
+    ]
+   },
+   "c:fedb:Sled_Push": {
+    "p": [
+     "quads"
+    ],
+    "s": [
+     "calves",
+     "chest",
+     "glutes",
+     "hamstrings",
+     "triceps"
+    ]
+   },
+   "c:fedb:Hack_Squat": {
+    "p": [
+     "quads"
+    ],
+    "s": [
+     "calves",
+     "glutes",
+     "hamstrings"
+    ]
+   },
+   "c:fedb:Farmers_Walk": {
+    "p": [
+     "forearms"
+    ],
+    "s": [
+     "abs",
+     "glutes",
+     "hamstrings",
+     "lowerback",
+     "quads",
+     "traps"
+    ]
+   },
+   "c:fedb:Hanging_Pike": {
+    "p": [
+     "abs"
+    ]
+   },
    "seated-cable-crunch": {
     "p": [
      "abs"
@@ -25,12 +74,142 @@
      "triceps"
     ]
    },
+   "c:fedb:Leg_Extensions": {
+    "p": [
+     "quads"
+    ]
+   },
+   "c:fedb:Thigh_Abductor": {
+    "p": [
+     "abductors"
+    ],
+    "s": [
+     "glutes"
+    ]
+   },
+   "c:fedb:Thigh_Adductor": {
+    "p": [
+     "adductors"
+    ],
+    "s": [
+     "glutes",
+     "hamstrings"
+    ]
+   },
+   "c:fedb:Clean_and_Press": {
+    "p": [
+     "frontdelt",
+     "sidedelt"
+    ],
+    "s": [
+     "abs",
+     "calves",
+     "glutes",
+     "hamstrings",
+     "lowerback",
+     "upperback",
+     "quads",
+     "traps",
+     "triceps"
+    ]
+   },
+   "c:fedb:Dumbbell_Lunges": {
+    "p": [
+     "quads"
+    ],
+    "s": [
+     "calves",
+     "glutes",
+     "hamstrings"
+    ]
+   },
+   "c:fedb:Kettlebell_Halo": {
+    "p": [
+     "frontdelt",
+     "sidedelt"
+    ],
+    "s": [
+     "traps",
+     "upperback",
+     "abs",
+     "triceps"
+    ]
+   },
+   "c:fedb:Lying_Leg_Curls": {
+    "p": [
+     "hamstrings"
+    ]
+   },
+   "c:fedb:Cable_Wrist_Curl": {
+    "p": [
+     "forearms"
+    ]
+   },
+   "c:fedb:Hanging_Leg_Raise": {
+    "p": [
+     "abs"
+    ]
+   },
+   "c:fedb:Sled_Drag_-_Harness": {
+    "p": [
+     "quads"
+    ],
+    "s": [
+     "calves",
+     "glutes",
+     "hamstrings"
+    ]
+   },
+   "c:fedb:Dumbbell_Bench_Press": {
+    "p": [
+     "chest"
+    ],
+    "s": [
+     "frontdelt",
+     "sidedelt",
+     "triceps"
+    ]
+   },
+   "c:fedb:Seated_Good_Mornings": {
+    "p": [
+     "lowerback"
+    ],
+    "s": [
+     "glutes"
+    ]
+   },
    "c:fedb:Arnold_Dumbbell_Press": {
     "p": [
      "frontdelt",
      "sidedelt"
     ],
     "s": [
+     "triceps"
+    ]
+   },
+   "c:fedb:Single-Leg_Leg_Extension": {
+    "p": [
+     "quads"
+    ]
+   },
+   "c:fedb:Close-Grip_Front_Lat_Pulldown": {
+    "p": [
+     "lats"
+    ],
+    "s": [
+     "biceps",
+     "upperback",
+     "frontdelt",
+     "sidedelt"
+    ]
+   },
+   "c:fedb:Cable_One_Arm_Tricep_Extension": {
+    "p": [
+     "triceps"
+    ]
+   },
+   "c:fedb:Cable_Rope_Overhead_Triceps_Extension": {
+    "p": [
      "triceps"
     ]
    }
@@ -53,7 +232,7 @@
     "eq": "other"
    },
    "hack": {
-    "n": "Hack Squat",
+    "n": "Hack Squats",
     "eq": "machine"
    },
    "pogo": {
@@ -175,7 +354,7 @@
     "eq": "barbell"
    },
    "facepull": {
-    "n": "Face Pull",
+    "n": "Face Pulls",
     "eq": "cable"
    },
    "platerot": {
@@ -272,6 +451,26 @@
     "n": "Garhammer Raise",
     "url": "https://youtu.be/0ShG8aVIvms?t=836"
    },
+   "c:fedb:Face_Pull": {
+    "n": "Face Pull",
+    "eq": "cable"
+   },
+   "c:fedb:Sled_Push": {
+    "n": "Sled Push",
+    "eq": "other"
+   },
+   "c:fedb:Hack_Squat": {
+    "n": "Hack Squat",
+    "eq": "machine"
+   },
+   "c:fedb:Farmers_Walk": {
+    "n": "Farmer's Walk",
+    "eq": "other"
+   },
+   "c:fedb:Hanging_Pike": {
+    "n": "Hanging Pike",
+    "eq": "bodyweight"
+   },
    "seated-cable-crunch": {
     "n": "Seated Cable Crunch",
     "eq": "cable",
@@ -284,23 +483,87 @@
     "n": "Clean and Jerk",
     "eq": "dumbbell"
    },
+   "c:fedb:Leg_Extensions": {
+    "n": "Leg Extensions",
+    "eq": "machine"
+   },
+   "c:fedb:Thigh_Abductor": {
+    "n": "Thigh Abductor",
+    "eq": "machine"
+   },
+   "c:fedb:Thigh_Adductor": {
+    "n": "Thigh Adductor",
+    "eq": "machine"
+   },
+   "c:fedb:Clean_and_Press": {
+    "n": "Clean and Press",
+    "eq": "barbell"
+   },
+   "c:fedb:Dumbbell_Lunges": {
+    "n": "Dumbbell Lunges",
+    "eq": "dumbbell"
+   },
+   "c:fedb:Kettlebell_Halo": {
+    "n": "Kettlebell Halo",
+    "eq": "kettlebell"
+   },
+   "c:fedb:Lying_Leg_Curls": {
+    "n": "Lying Leg Curls",
+    "eq": "machine"
+   },
+   "c:fedb:Cable_Wrist_Curl": {
+    "n": "Cable Wrist Curl",
+    "eq": "cable"
+   },
+   "c:fedb:Hanging_Leg_Raise": {
+    "n": "Hanging Leg Raise",
+    "eq": "bodyweight"
+   },
    "clean-jerk-overhead-press": {
     "n": "Clean Jerk & Overhead Press",
     "eq": "dumbbell"
    },
+   "c:fedb:Sled_Drag_-_Harness": {
+    "n": "Sled Drag - Harness",
+    "eq": "other"
+   },
+   "c:fedb:Dumbbell_Bench_Press": {
+    "n": "Dumbbell Bench Press",
+    "eq": "dumbbell"
+   },
+   "c:fedb:Seated_Good_Mornings": {
+    "n": "Seated Good Mornings",
+    "eq": "barbell"
+   },
    "c:fedb:Arnold_Dumbbell_Press": {
     "n": "Arnold Dumbbell Press",
     "eq": "dumbbell"
+   },
+   "c:fedb:Single-Leg_Leg_Extension": {
+    "n": "Single-Leg Leg Extension",
+    "eq": "machine"
    },
    "split-stance-cable-hip-rotation": {
     "n": "Split Stance Cable Hip Rotation",
     "eq": "cable",
     "url": "https://youtu.be/ixIEilUM2aY"
    },
+   "c:fedb:Close-Grip_Front_Lat_Pulldown": {
+    "n": "Close-Grip Front Lat Pulldown",
+    "eq": "cable"
+   },
+   "c:fedb:Cable_One_Arm_Tricep_Extension": {
+    "n": "Cable One Arm Tricep Extension",
+    "eq": "cable"
+   },
    "statue-of-liberty-to-fly-to-chest-buster": {
     "n": "Statue of Liberty to fly to chest busters",
     "eq": "dumbbell",
     "url": "https://www.instagram.com/reel/Dbu6F2ZKW-O/?exln=azRoYnNhb2VsOTRp"
+   },
+   "c:fedb:Cable_Rope_Overhead_Triceps_Extension": {
+    "n": "Cable Rope Overhead Triceps Extension",
+    "eq": "cable"
    }
   },
   "mode": 2,
@@ -728,9 +991,10 @@
        "tier": "Primary",
        "items": [
         {
-         "ex": "hack",
+         "ex": "c:fedb:Hack_Squat",
          "ph": "hyp",
          "w": 270,
+         "bw": true,
          "note": "Feet low on the plate, narrow stance for quads"
         }
        ]
@@ -998,9 +1262,10 @@
        "sec": "Regular",
        "items": [
         {
-         "ex": "hack",
+         "ex": "c:fedb:Hack_Squat",
          "ph": "hyp",
          "w": 270,
+         "bw": true,
          "note": "Feet low on the plate, narrow stance for quads"
         }
        ]
@@ -1275,7 +1540,7 @@
        "tier": "Primary",
        "items": [
         {
-         "ex": "hack",
+         "ex": "c:fedb:Hack_Squat",
          "ph": "hyp",
          "w": 270,
          "note": "Feet low on the plate, narrow stance for quads"
@@ -1598,7 +1863,7 @@
        "tier": "Primary",
        "items": [
         {
-         "ex": "hack",
+         "ex": "c:fedb:Hack_Squat",
          "ph": "hyp",
          "w": 270,
          "note": "Feet low on the plate, narrow stance for quads"
@@ -4455,149 +4720,6 @@
     "id": "Lmuy0ek2dy3uvlb",
     "auto": true,
     "updatedAt": "2026-10-07T11:13:29.369Z"
-   }
-  ],
-  "hack": [
-   {
-    "d": "2026-09-30",
-    "ph": "hyp",
-    "w": 270,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     }
-    ],
-    "slot": "A-d3s1",
-    "wk": "2026-09-27",
-    "id": "kt0pn4u"
-   },
-   {
-    "d": "2026-10-01",
-    "ph": "hyp",
-    "w": 270,
-    "s": 3,
-    "r": 15,
-    "sets": [
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     }
-    ],
-    "slot": "A-d5s3",
-    "wk": "2026-09-27",
-    "id": "k1614q1j"
-   },
-   {
-    "d": "2026-10-05",
-    "ph": "hyp",
-    "w": 270,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     }
-    ],
-    "slot": "B-d1s2",
-    "wk": "2026-10-04",
-    "id": "k19ce849",
-    "auto": true
-   },
-   {
-    "d": "2026-10-08",
-    "ph": "hyp",
-    "w": 270,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     }
-    ],
-    "slot": "B-d3s1",
-    "wk": "2026-10-04",
-    "id": "Lmuzt7gqzomui3n",
-    "auto": true,
-    "updatedAt": "2026-10-08T17:27:33.516Z"
-   },
-   {
-    "d": "2026-10-11",
-    "ph": "hyp",
-    "w": 270,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     },
-     {
-      "w": 270,
-      "r": 15
-     }
-    ],
-    "slot": "Pa2gom-d1s2",
-    "wk": "2026-10-04",
-    "id": "Lmv3ex46ws56feu",
-    "auto": true,
-    "updatedAt": "2026-10-11T05:58:40.760Z"
    }
   ],
   "hipthrust": [
@@ -7596,7 +7718,7 @@
          "tier": "Primary",
          "items": [
           {
-           "ex": "hack",
+           "ex": "c:fedb:Hack_Squat",
            "ph": "hyp",
            "w": 270,
            "note": "Feet low on the plate, narrow stance for quads"
@@ -7919,7 +8041,7 @@
          "tier": "Primary",
          "items": [
           {
-           "ex": "hack",
+           "ex": "c:fedb:Hack_Squat",
            "ph": "hyp",
            "w": 270,
            "note": "Feet low on the plate, narrow stance for quads"
