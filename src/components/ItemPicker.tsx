@@ -13,6 +13,8 @@ type Props = {
   onText: (v: string) => void;
   onPick: (c: PickerChoice) => void;
   mine: MineOption[];
+  /** More of yours: not listed, but their catalog duplicates are left out too (see pickerOptions). */
+  also?: MineOption[];
   kind: CatalogKind;
   /** The grey line under a catalog item: equipment, muscle group, brand. */
   catalogMeta?: (c: CatalogItem) => string;
@@ -25,13 +27,13 @@ type Props = {
 
 type Opt = { key: string; choice: PickerChoice; name: string; meta?: string; badge?: string };
 
-export default function ItemPicker({ id, label, value, onText, onPick, mine, kind, catalogMeta, createLabel, placeholder, maxLength, autoFocus }: Props) {
+export default function ItemPicker({ id, label, value, onText, onPick, mine, also, kind, catalogMeta, createLabel, placeholder, maxLength, autoFocus }: Props) {
   const [open, setOpen] = useState(false);
   // The highlighted option, by key, so results arriving from the server do not move the highlight to another item.
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const byBrand = kind === 'supplement';
   const { state: cat, retry } = useCatalogSearch(kind, value, open);
-  const o = pickerOptions(value, mine, cat.status === 'ready' ? cat.items : [], { byBrand, serverFiltered: byBrand });
+  const o = pickerOptions(value, mine, cat.status === 'ready' ? cat.items : [], { byBrand, serverFiltered: byBrand, also });
 
   const mineOpts: Opt[] = o.mine.shown.map(m => ({ key: `m-${m.id}`, choice: { kind: 'mine', id: m.id }, name: m.name, meta: m.meta, badge: m.badge }));
   const catOpts: Opt[] = o.catalog.shown.map(c => ({ key: `c-${c.id}`, choice: { kind: 'catalog', item: c }, name: c.name, meta: catalogMeta?.(c) }));
@@ -73,7 +75,7 @@ export default function ItemPicker({ id, label, value, onText, onPick, mine, kin
   const total = (g: { shown: unknown[]; hidden: number }) => g.shown.length + g.hidden;
   const catalogNote = !open || !typed ? null
     : cat.status === 'short' ? `Type at least ${MIN_LETTERS} letters to search the catalog.`
-    : cat.status === 'loading' ? 'Searching the catalog…'
+    : cat.status === 'loading' || (cat.status === 'ready' && cat.searching) ? 'Searching the catalog…'
     : cat.status === 'failed' ? (cat.reason === 'offline' ? 'The catalog needs a connection.' : cat.reason === 'refused' ? 'The catalog is not available to this account.' : 'The catalog could not be loaded.')
     : null;
   const status = !open ? '' : [
