@@ -728,6 +728,31 @@ test.describe('the landing page', () => {
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });
 
+  test.describe('with the service worker', () => {
+    test.use({ serviceWorkers: 'allow' });
+    // Someone who used the app here and signed out: the app registered the service worker (UpdateBanner), the landing page does not.
+    test('the screenshot is not in the install download, but once seen it still shows offline', async ({ page, context }) => {
+      await stranger(page);
+      await expect(heading(page)).toBeVisible();
+      await page.evaluate(async () => { await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready; });
+      await page.reload(); // now under the service worker, so the screenshot goes through its runtime cache
+      const shot = () => page.locator('.landing-shot img');
+      const drawn = () => shot().evaluate(i => i.complete && i.naturalWidth);
+      await shot().scrollIntoViewIfNeeded();
+      await expect.poll(drawn).toBe(2160);
+      expect(await page.evaluate(async () => (await caches.keys()).includes('landing-images'))).toBe(true);
+      const precached = await page.evaluate(async () => {
+        const names = (await caches.keys()).filter(n => n.includes('precache'));
+        return (await Promise.all(names.map(async n => (await (await caches.open(n)).keys()).map(r => r.url)))).flat();
+      });
+      expect(precached.some(u => /\.webp/.test(u))).toBe(false);
+      await context.setOffline(true);
+      await page.reload();
+      await shot().scrollIntoViewIfNeeded();
+      await expect.poll(drawn).toBe(2160);
+    });
+  });
+
   test('the app never starts behind it: no sync, no reads of anything, only the one who-is-this question', async ({ page }) => {
     const asked = [];
     await stranger(page, unauth, async p => { p.on('request', r => { if (r.url().includes('/api/')) asked.push(new URL(r.url()).pathname); }); });

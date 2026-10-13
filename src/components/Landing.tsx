@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import boardLight from '../assets/landing/board.png';
-import boardDark from '../assets/landing/board-dark.png';
+import boardLight from '../assets/landing/board.webp';
+import boardDark from '../assets/landing/board-dark.webp';
 import { setDevUser } from '../sync/devUser.js';
 import { useGoogleSignIn } from '../sync/useGoogleSignIn.js';
 import LegalLinks from './LegalLinks.js';
@@ -45,7 +45,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
       <section className="landing-shot" aria-label="A look at the board">
         <picture>
           <source srcSet={boardDark} media="(prefers-color-scheme: dark)" />
-          <img src={boardLight} alt="The weekly board: a column for each day with exercise cards, targets and check-offs" width="1100" loading="lazy" />
+          <img src={boardLight} alt="The weekly board: a column for each day with exercise cards, targets and check-offs" width="1100" height="688" loading="lazy" />
         </picture>
       </section>
 
