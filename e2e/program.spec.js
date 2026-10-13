@@ -95,3 +95,16 @@ test('the Removed notice belongs to that visit: leave the Program tab and it is 
   await expect(page.locator('.removednote')).toHaveCount(0);
   await expect(page.locator('#tab-program')).toBeFocused();
 });
+
+test('the drag handle is a full 44px touch target, and a drag buzzes on pick-up and drop', async ({ page }) => {
+  await page.click('#tab-program');
+  const h = await rows(page).first().locator('.draghandle').boundingBox();
+  expect(h.width).toBeGreaterThanOrEqual(44);
+  expect(h.height).toBeGreaterThanOrEqual(44);
+  await page.evaluate(() => { window.__buzz = []; navigator.vibrate = p => { window.__buzz.push(p); return true; }; });
+  await drag(page, 0, 2);
+  const buzz = await page.evaluate(() => window.__buzz);
+  expect(buzz[0]).toBe(12); // picked up
+  expect(buzz.at(-1)).toBe(10); // dropped
+  expect(buzz.length).toBeGreaterThanOrEqual(3); // and at least one tick between
+});
