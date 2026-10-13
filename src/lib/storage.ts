@@ -5,6 +5,10 @@ export const LS = {
   remove(k: string) { try { localStorage.removeItem('ironlog:' + k); } catch { /* ignore */ } },
 };
 
+// The GitHub backup feature is gone. Old versions kept a pasted token under this raw key; delete it so no secret is left behind.
+export const LEGACY_GH_TOKEN_KEY = 'ironlog-gh-token';
+export function removeLegacyGitHubToken() { try { localStorage.removeItem(LEGACY_GH_TOKEN_KEY); } catch { /* ignore */ } }
+
 // One write at a time per doc path; coalesces to the latest value if writes queue up while offline/slow.
 // `db` is an optional Firestore-like handle: db.doc(path).set(data) / .delete(). Falls back to localStorage.
 // A write that was refused for good is kept in `failed` (path -> data) until a later write of that path succeeds,

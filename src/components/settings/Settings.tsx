@@ -5,20 +5,19 @@ import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
-import { MON, fmtShort } from '../../shared/dates.js';
+import { MON } from '../../shared/dates.js';
 import { programFor, progName, programWeights, bestByPhase, round } from '../../lib/logic.js';
-import { backupCfg, ghCfg } from '../../lib/export.js';
 import CommitInput from '../CommitInput.jsx';
 import ArmedButton from '../ArmedButton.jsx';
+import { motionOK } from '../../lib/motion.js';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
-import { BackupMessage } from '../progress/Progress.jsx';
 import { IMPORT_ACCEPT } from '../../lib/importFile.js';
 import ShareExport from './ShareExport.js';
 
@@ -29,7 +28,7 @@ function ModePanel() {
   const modes = [[1, `${a} only`, `Run ${a} every week.`], [2, 'Alternate monthly', `${a} and ${b} take turns by month.`], [3, 'Swap every 6 months', 'Six months on one program, then six on the other.']];
   return (
     <section className="panel">
-      <h2>Program mode</h2>
+      <h3>Program mode</h3>
       <div className="modes">
         {modes.map(([m, t, dsc]) => (
           <label className="mode" key={m}>
@@ -60,7 +59,7 @@ function ModePanel() {
       )}
       <p>{yr} at a glance. Weeks run Sunday to Saturday; a week follows the month its Sunday falls in. In Mode 2 you can also switch a single week to A or B from the board.</p>
       <div className="months">
-        {MON.map((m, i) => { const p = programFor(cfg, new Date(yr, i, 1)); return <div key={m} className={`${p === 'B' ? 'b' : ''}${i === now.getMonth() ? ' now' : ''}`}>{m[0]}<br />{p}</div>; })}
+        {MON.map((m, i) => { const p = programFor(cfg, new Date(yr, i, 1)); return <div key={m} className={`${p === 'B' ? 'b' : ''}${i === now.getMonth() ? ' now' : ''}`}><span className="sr">{m}: Program {p}</span><span aria-hidden="true">{m[0]}<br />{p}</span></div>; })}
       </div>
     </section>
   );
@@ -71,7 +70,7 @@ function AppearancePanel() {
   const upd = (patch: Partial<Appearance>) => setA(setAppearance(patch));
   return (
     <section className="panel">
-      <h2>Appearance</h2>
+      <h3>Appearance</h3>
       <fieldset className="plain">
         <legend>Colours</legend>
         <div className="modes">
@@ -100,7 +99,7 @@ function RestAlertPanel() {
   };
   return (
     <section className="panel">
-      <h2>Rest timer alert</h2>
+      <h3>Rest timer alert</h3>
       <label className="inline"><input type="checkbox" checked={on} onChange={e => void toggle(e.target.checked)} /> Show a notification when a rest or hold ends while Iron Log is in the background</label>
       <p>It only shows while the phone still lets Iron Log run in the background. If the screen has been locked for a while the alert can be late, and the timer is right when you open the app again. Saved on this device only.</p>
       {note && <p role="status">{note}</p>}
@@ -113,12 +112,12 @@ function DevicePanel() {
   const storeMode = useAppStore(s => s.storeMode);
   return (
     <section className="panel">
-      <h2>App on this device</h2>
+      <h3>App on this device</h3>
       {installed ? <p>Iron Log is installed. It opens from your home screen and works without a connection.</p>
         : installEvent ? (
           <>
             <p>Install Iron Log to open it from your home screen like any other app. It works without a connection.</p>
-            <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn primary" onClick={install}>Install app</button></div>
+            <div className="actions"><button type="button" className="btn primary" onClick={install}>Install app</button></div>
           </>
         ) : isIOS() ? (
           <>
@@ -131,7 +130,7 @@ function DevicePanel() {
         : persisted === false ? (
           <>
             <p>Your log is stored in this browser. If the device runs low on space, the browser may clear it. Keep a copy with Export all data.</p>
-            <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn" onClick={keepData}>Keep my data on this device</button></div>
+            <div className="actions"><button type="button" className="btn" onClick={keepData}>Keep my data on this device</button></div>
           </>
         ) : null)}
     </section>
@@ -142,7 +141,7 @@ function PhasePanel() {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
   return (
     <section className="panel">
-      <h2>Phases</h2>
+      <h3>Phases</h3>
       <p>Each phase has default sets × reps. The target weight starts from the weight you last logged for that exercise in that phase, otherwise the program's weight. The % of 1RM is only for comparing with your 1RM below; it doesn't set targets.</p>
       <div className="tbl">
         <table>
@@ -174,59 +173,38 @@ function DataPanel() {
   const importError = useAppStore(s => s.importError);
   const [paste, setPaste] = useState('');
   return (
-    <section className="panel">
-      <h2>Export &amp; import</h2>
-      <p>One file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Use it to keep a copy, move to another device or app, or go back to an earlier state.</p>
-      <p>To import, use the <b>iron-log.xlsx</b> workbook or the <b>iron-log-data .json</b> file. Both bring back everything. A <b>.csv</b> export only brings back logged sessions. Workbooks exported by an older version of the app only bring back logged sessions, body weight and main settings.</p>
-      <div className="actions" style={{ justifyContent: 'flex-start' }}>
+    <section className="panel" aria-labelledby="data-h">
+      <h3 id="data-h">Export &amp; import</h3>
+      <p>Your one backup is a single <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep a copy, move to another device, or go back to an earlier state.</p>
+      <div className="actions">
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <ShareExport kind="data" label="Share data file" />
         <label className="btn filebtn">Import from file
-          <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : undefined} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
+          <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : 'imp-help'} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
       </div>
+      <p className="note" id="imp-help">Import takes the data file, or a workbook or .csv from an earlier version. An older workbook or a .csv only brings back logged sessions, body weight and main settings. You review before anything changes.</p>
       {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
       <details className="imppaste">
         <summary>Can't pick a file? Paste its contents instead</summary>
-        <textarea id="imp-text" rows={4} placeholder="Paste the contents of an iron-log-data file" value={paste} onChange={e => setPaste(e.target.value)} />
-        <div className="actions" style={{ justifyContent: 'flex-start' }}>
+        <textarea id="imp-text" rows={4} aria-label="Contents of an iron-log-data file" placeholder="Paste the contents of an iron-log-data file" value={paste} onChange={e => setPaste(e.target.value)} />
+        <div className="actions">
           <button type="button" className="btn sm" onClick={() => st.pasteImport(paste)}>Review import</button>
         </div>
       </details>
-    </section>
-  );
-}
-
-function BackupPanel() {
-  const cfg = useAppStore(s => s.cfg); const dl = useAppStore(s => s.dl); const mcp = useAppStore(s => s.mcp);
-  const busy = useAppStore(s => s.backupBusy); const exporting = useAppStore(s => s.exporting); const st = useAppStore.getState();
-  const b = backupCfg(cfg); const l = b.last;
-  return (
-    <section className="panel">
-      <h2>Excel &amp; backups</h2>
-      <p><b>iron-log.xlsx</b> has a summary per exercise, every session, weekly totals, your settings, and your programs and check-offs, so it can be imported back whole. Each week also gets its own workbook with the plan and what you logged{mcp && <>, saved in <b>weeks/</b> when you back up to GitHub</>}.</p>
-      <div className="actions" style={{ justifyContent: 'flex-start' }}>
-        {dl && <>
-          <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
-          <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
-        </>}
-        <ShareExport kind="xlsx-all" label="Share Excel" />
-        <ShareExport kind="xlsx-week" label="Share this week" />
-      </div>
-      {mcp && <>
-        <label className="field">Backup repo (owner/name)
-          <CommitInput key={`repo:${b.repo}`} id="bk-repo" value={b.repo} placeholder="owner/repo" onCommit={st.setBackupRepo} />
-        </label>
-        <div className="actions" style={{ justifyContent: 'flex-start' }}>
-          <button type="button" className="btn primary" disabled={busy} onClick={st.backupToGitHub}>{busy ? 'Backing up…' : 'Back up to GitHub'}</button>
+      {dl && (
+        <div className="subblock">
+          <h4>Spreadsheet report</h4>
+          <p>For reading and charting, not for backup. <b>iron-log.xlsx</b> has a summary per exercise, every session and weekly totals; each week also has its own workbook. The .csv lists logged sessions only.</p>
+          <div className="actions">
+            <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
+            <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
+            <button type="button" className="btn" disabled={!!exporting} onClick={st.exportCsv}>Download CSV</button>
+            <ShareExport kind="xlsx-all" label="Share Excel" />
+            <ShareExport kind="xlsx-week" label="Share this week" />
+          </div>
         </div>
-        <p className="note">
-          {l ? <>Last backup {fmtShort(new Date(l.at))} · {l.files} file{(l.files ?? 0) > 1 ? 's' : ''} · <a href={l.url} target="_blank" rel="noopener noreferrer">view on GitHub</a></> : 'No backups yet.'}
-          {' '}Uses your Composio GitHub connection. Only weeks that changed are sent again.
-        </p>
-      </>}
-      {mcp === null && window.claude && <p className="note">GitHub backup needs the Composio connector, which isn't available in this view.</p>}
-      {st.ghDirect ? <GitHubBackup /> : <BackupMessage />}
+      )}
     </section>
   );
 }
@@ -244,9 +222,9 @@ function ErasePanel() {
   const [sel, setSel] = useState(() => Object.fromEntries(ERASE.map(([k]) => [k, true])));
   const any = Object.values(sel).some(Boolean);
   return (
-    <section className="panel erase">
-      <h2>Erase data</h2>
-      <p>Deletes what you check below {storeMode === 'db' ? 'from your saved data' : 'from this browser'}, to start the tracker over. It can't be undone here, so export your data or back up to GitHub first.</p>
+    <section className="panel erase danger-panel" aria-labelledby="erase-h">
+      <h3 id="erase-h">Erase data</h3>
+      <p>Deletes what you check below {storeMode === 'db' ? 'from your saved data' : 'from this browser'}, to start the tracker over. It can't be undone here, so use Export all data first.</p>
       <fieldset>
         <legend className="sr">What to erase</legend>
         {ERASE.map(([k, label, hint]) => (
@@ -256,60 +234,12 @@ function ErasePanel() {
           </label>
         ))}
       </fieldset>
-      <p className="note">Kept: display options, your GitHub token and backup settings, and backups you've already made. If you back up after erasing, the backup saves the erased state, and earlier backups stay in the branch history.</p>
-      <div className="actions" style={{ justifyContent: 'flex-start' }}>
+      <p className="note">Kept: display options, and any file you exported earlier. An export made after erasing holds the erased state.</p>
+      <div className="actions">
         {dl && <button type="button" className="btn" disabled={!!exporting} onClick={st.downloadData}>Export all data first</button>}
         <ArmedButton className="btn danger" disabled={!any} label="Erase selected data" armedLabel="Tap again to erase" onConfirm={() => st.eraseData(sel)} />
       </div>
     </section>
-  );
-}
-
-// Standalone app: back up to a GitHub repo with a token the viewer pastes in once per device.
-function GitHubBackup() {
-  const cfg = useAppStore(s => s.cfg); const token = useAppStore(s => s.ghToken); const busy = useAppStore(s => s.backupBusy);
-  const st = useAppStore.getState(); const [draft, setDraft] = useState('');
-  const g = ghCfg(cfg); const l = g.last;
-  const saveToken = () => { if (st.setGhToken(draft)) setDraft(''); };
-  return (
-    <div className="ghbk">
-      <h3>Back up to GitHub</h3>
-      <p>Saves <b>iron-log.xlsx</b> and <b>iron-log-data.json</b> in one commit on the <b>{g.branch}</b> branch of <b>{g.repo}</b>, so every backup stays in that branch's history. If the repository is public, anyone can see these files. <b>Restore from GitHub</b> reads the data file back, for example on a new phone.</p>
-      <label className="field">Repository (owner/name)
-        <CommitInput key={`ghrepo:${g.repo}`} id="gh-repo" value={g.repo} placeholder="owner/repo" autoCapitalize="off" spellCheck={false} onCommit={st.setGhRepo} />
-      </label>
-      {token ? (
-        <div className="actions" style={{ justifyContent: 'flex-start', alignItems: 'center' }}>
-          <span className="note">A token is saved in this browser.</span>
-          {/* Two taps, but no Undo: keeping a token you chose to remove, even in memory for a while, is not worth it (ADR 023). */}
-          <ArmedButton className="btn sm ghost" label="Remove token" armedLabel="Tap again to remove" onConfirm={st.forgetGhToken} />
-        </div>
-      ) : (
-        <form className="field" onSubmit={e => { e.preventDefault(); saveToken(); }}>
-          <label htmlFor="gh-token">GitHub token (stays in this browser, never in a backup)</label>
-          <div className="actions" style={{ justifyContent: 'flex-start', marginTop: 4 }}>
-            <input id="gh-token" type="password" autoComplete="off" autoCapitalize="off" spellCheck={false} value={draft} onChange={e => setDraft(e.target.value)} placeholder="github_pat_…" />
-            <button type="submit" className="btn sm">Save token</button>
-          </div>
-        </form>
-      )}
-      <div className="actions" style={{ justifyContent: 'flex-start' }}>
-        <button type="button" className="btn primary" disabled={busy || !token} onClick={st.backupDirect}>{busy ? 'Working…' : 'Back up to GitHub'}</button>
-        <button type="button" className="btn" disabled={busy} onClick={st.restoreFromGitHub}>Restore from GitHub</button>
-      </div>
-      <BackupMessage />
-      <p className="note">{l ? <>Last backup from this device {fmtShort(new Date(l.at))}, {new Date(l.at).getFullYear()} · <a href={l.url} target="_blank" rel="noopener noreferrer">view on GitHub</a></> : 'No backups from this device yet.'}</p>
-      <details className="imppaste">
-        <summary>How to make a token</summary>
-        <ol>
-          <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub → Settings → Fine-grained tokens → Generate new token</a>.</li>
-          <li>Give it a name, like “Iron Log on my phone”, and an expiration date.</li>
-          <li>Under <b>Repository access</b>, choose <b>Only select repositories</b> and pick <b>{g.repo}</b>.</li>
-          <li>Under <b>Permissions → Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>. Nothing else is needed.</li>
-          <li>Generate the token, copy it, and paste it above. Do this once on each device you use.</li>
-        </ol>
-      </details>
-    </div>
   );
 }
 
@@ -332,7 +262,7 @@ function RmPanel() {
   const weighted = [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
   return (
     <section className="panel wide">
-      <h2>1-rep maxes</h2>
+      <h3>1-rep maxes</h3>
       <p>Keep a one-rep max (1RM, the most you can lift once) for reference. It shows next to your logged weights but doesn't set targets: those start from the weight you last logged.</p>
       <div className="tbl">
         <table>
@@ -356,28 +286,58 @@ function RmPanel() {
   );
 }
 
+// Where each group starts, for the jump row. The page is long on a phone; the row gets to a group in one tap.
+const GROUPS = [['training', 'Training'], ['data', 'Data'], ['app', 'App']] as const;
+const jump = (id: string) => {
+  const h = document.getElementById(`set-${id}-h`);
+  if (!h) return;
+  h.focus({ preventScroll: true }); // before the scroll: focusing mid-scroll cancels a smooth scroll
+  h.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'instant', block: 'start' });
+};
+
+function Group({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  return (
+    <section className="sgroup" aria-labelledby={`set-${id}-h`}>
+      <h2 id={`set-${id}-h`} tabIndex={-1}>{title}</h2>
+      <div className="sgrid">{children}</div>
+    </section>
+  );
+}
+
 export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
   const restAlert = useFeature('restNotify');
   return (
     <div className="settings">
-      <div className="scol">
-        <ModePanel />
-        <PhasePanel />
-        <AppearancePanel />
-        {restAlert && <RestAlertPanel />}
-        <DevicePanel />
-        <FeedbackPanel />
-      </div>
-      <div className="scol">
-        <AccountPanel />
-        <SyncPanel />
-        <DataPanel key={importCount} />
-        <BackupPanel />
-        <ErasePanel />
-        <DeleteMyData />
-      </div>
-      <RmPanel />
+      <nav className="sjump" aria-label="Jump to a settings group">
+        {GROUPS.map(([id, label]) => <button key={id} type="button" className="chip" onClick={() => jump(id)}>{label}</button>)}
+      </nav>
+      <Group id="training" title="Training">
+        <div className="scol"><ModePanel /></div>
+        <div className="scol"><PhasePanel /></div>
+        <RmPanel />
+      </Group>
+      <Group id="data" title="Data">
+        <div className="scol">
+          <AccountPanel />
+          <SyncPanel />
+        </div>
+        <div className="scol">
+          <DataPanel key={importCount} />
+          <ErasePanel />
+          <DeleteMyData />
+        </div>
+      </Group>
+      <Group id="app" title="App">
+        <div className="scol">
+          <AppearancePanel />
+          {restAlert && <RestAlertPanel />}
+        </div>
+        <div className="scol">
+          <DevicePanel />
+          <FeedbackPanel />
+        </div>
+      </Group>
     </div>
   );
 }

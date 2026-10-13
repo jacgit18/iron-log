@@ -29,19 +29,19 @@ export default function SyncPanel() {
 
   return (
     <section className="panel syncpanel" aria-labelledby="sync-h">
-      <h2 id="sync-h">Sync</h2>
+      <h3 id="sync-h">Sync</h3>
 
       <div className={status.tone === 'wait' || status.tone === 'bad' ? 'notice' : undefined}>
         <p className="syncstatus"><b>{status.headline}</b>{status.detail ? ` ${status.detail}` : ''}</p>
       </div>
       {warning && <p className="notice" role="alert">{warning}</p>}
-      <div className="actions" style={{ justifyContent: 'flex-start' }}>
+      <div className="actions">
         <button type="button" className="btn" disabled={!status.canSyncNow} onClick={() => void api.resume()}>Sync now</button>
       </div>
 
       {sync.quarantine.length > 0 && (
         <div>
-          <h3>Not sent ({sync.quarantine.length})</h3>
+          <h4>Not sent ({sync.quarantine.length})</h4>
           <p>The server would not take these, so they were set aside. They are kept here until you discard them.</p>
           <ul className="notsent">
             {sync.quarantine.map(e => (
@@ -49,7 +49,7 @@ export default function SyncPanel() {
                 <b>{pathLabel(e.path, nameOf)}</b>
                 <span className="note">{e.reason}</span>
                 <span className="note">Set aside {formatWhen(e.at)}</span>
-                <span className="actions" style={{ justifyContent: 'flex-start' }}>
+                <span className="actions">
                   <button type="button" className="btn sm" aria-label={`Try again: ${pathLabel(e.path, nameOf)}`} onClick={() => void retry(e.id)}>Try again</button>
                   {dl && <button type="button" className="btn sm" aria-label={`Download: ${pathLabel(e.path, nameOf)}`} onClick={() => void save(`iron-log-not-sent-${ymd(new Date())}.json`, [e])}>Download</button>}
                   <ArmedButton className="btn sm danger" label="Discard" armedLabel="Tap again to discard" aria-label={`Discard: ${pathLabel(e.path, nameOf)}`} onConfirm={() => api.discard(e.id)} />
@@ -58,7 +58,7 @@ export default function SyncPanel() {
             ))}
           </ul>
           {dl && sync.quarantine.length > 1 && (
-            <div className="actions" style={{ justifyContent: 'flex-start' }}>
+            <div className="actions">
               <button type="button" className="btn" onClick={() => void save(`iron-log-not-sent-${ymd(new Date())}.json`, sync.quarantine)}>Download all not-sent changes</button>
             </div>
           )}
@@ -67,11 +67,11 @@ export default function SyncPanel() {
 
       {sync.notices.length > 0 && (
         <div>
-          <h3>Notes ({sync.notices.length})</h3>
+          <h4>Notes ({sync.notices.length})</h4>
           <ul className="notsent">
             {sync.notices.map(n => <li key={n.id}>{n.text} <span className="note">{pathLabel(n.path, nameOf)}</span></li>)}
           </ul>
-          <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn sm" onClick={() => api.clearNotices()}>Clear</button></div>
+          <div className="actions"><button type="button" className="btn sm" onClick={() => api.clearNotices()}>Clear</button></div>
         </div>
       )}
 

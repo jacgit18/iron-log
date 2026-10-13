@@ -24,7 +24,7 @@ beforeEach(() => {
   clearStorage();
   useAppStore.setState({
     cfg: structuredClone(DEFAULT_CFG), logs: {}, week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} }, weekHist: {},
-    body: [], library: [], experiments: [], programs: { A: BUILTIN.A, B: BUILTIN.B }, modal: null, backupMsg: null,
+    body: [], library: [], experiments: [], programs: { A: BUILTIN.A, B: BUILTIN.B }, modal: null,
     importDraft: null, importBusy: false, importError: '', importCount: 0, saveFlag: '', uncheckNote: null, orderNote: null, moveNote: null,
   });
 });

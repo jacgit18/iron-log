@@ -33,13 +33,13 @@ export default function AccountPanel() {
 
   return (
     <section className="panel accountpanel" aria-labelledby="account-h">
-      <h2 id="account-h">Account</h2>
+      <h3 id="account-h">Account</h3>
       {state === null && <p className="note" role="status">Checking who is signed in…</p>}
       {state?.status === 'unreachable' && <p className="notice" role="status">Could not check who is signed in. Your changes are kept on this device.</p>}
       {state?.status === 'signed-out' && (
         <>
           <p><b>Not signed in.</b> Your changes are kept on this device and will be sent once you sign in.</p>
-          <div className="actions" style={{ justifyContent: 'flex-start' }}>
+          <div className="actions">
             <button type="button" className="btn" disabled={busy} onClick={() => void signIn()}>Sign in with Google</button>
           </div>
           <p><LegalLinks /></p>
@@ -49,7 +49,7 @@ export default function AccountPanel() {
         <>
           <p>{state.kind === 'dev' ? <><b>Signed in as the development user.</b> This build does not use a real account.</> : <>Signed in as <b>{state.email ?? state.name ?? 'your account'}</b>.</>}</p>
           {state.kind === 'session' && (
-            <div className="actions" style={{ justifyContent: 'flex-start' }}>
+            <div className="actions">
               <button type="button" className="btn" disabled={busy} onClick={() => void signOut()}>Sign out</button>
             </div>
           )}

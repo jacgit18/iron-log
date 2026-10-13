@@ -98,15 +98,18 @@ describe('setError', () => {
 
 describe('normConfig, deeper', () => {
   it('filters bad percent, 1RM and goal values and keeps the rest', () => {
-    const c = normConfig({ pct: { hyp: 70, str: 500, '__proto__': 5 }, rm: { bench: 225, squat: -5, row: 'x' }, bwGoal: { w: 99999 }, liftGoals: { bench: { any: { w: 315 }, hyp: { w: -1 } }, bad: 4 }, backup: { repo: 'not a repo' } });
+    const c = normConfig({ pct: { hyp: 70, str: 500, '__proto__': 5 }, rm: { bench: 225, squat: -5, row: 'x' }, bwGoal: { w: 99999 }, liftGoals: { bench: { any: { w: 315 }, hyp: { w: -1 } }, bad: 4 }, backup: { repo: 'me/data' }, ghBackup: { repo: 'me/x', token: 'ghp_secret' }, token: 'ghp_secret' });
     expect(c.pct.hyp).toBe(70); expect(c.pct.str).not.toBe(500);
     expect(c.rm).toEqual({ bench: 225 });
     expect('bwGoal' in c).toBe(false);
     expect(c.liftGoals).toEqual({ bench: { any: { w: 315 } } });
-    expect('backup' in c).toBe(false);
+    expect(c).not.toHaveProperty('backup');
+    expect(c).not.toHaveProperty('ghBackup');
+    expect(c).not.toHaveProperty('token');
   });
-  it('keeps a valid backup repo', () => {
-    expect(normConfig({ backup: { repo: 'me/data', branch: 'main' } }).backup.repo).toBe('me/data');
+  it('always drops the retired GitHub backup keys and any token', () => {
+    const c = normConfig({ mode: 2, backup: { repo: 'me/data', branch: 'main' }, ghBackup: { repo: 'me/x', token: 'ghp_secret' }, token: 'ghp_secret' });
+    expect(c).toEqual({ mode: 2 });
   });
 });
 

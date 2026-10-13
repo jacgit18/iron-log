@@ -4,10 +4,9 @@
    reading format 1, don't edit the fixture to match. */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { parseDataFile, buildDataFile, dataStats, mergeWeek, weekFingerprint, DATA_FORMAT } from './export.js';
+import { parseDataFile, buildDataFile, dataStats, mergeWeek, DATA_FORMAT } from './export.js';
 import { BUILTIN, withAllDays } from './data.js';
 import { progBody } from './export.js';
-import { DEFAULT_CFG } from './logic.js';
 
 const text = readFileSync(new URL('../test/fixtures/iron-log-data.v1.json', import.meta.url), 'utf8');
 const raw = JSON.parse(text);
@@ -35,7 +34,9 @@ describe('iron-log-data.json, format 1', () => {
       muscleMap: { 'sled-drag': { p: ['quads', 'glutes'], s: ['calves'] } },
       progNames: { A: 'Upper/Lower', B: 'Power' },
     });
-    expect(d.config.ghBackup.repo).toBe('someone/iron-log');
+    // The fixture is an old file that still carries GitHub backup settings; they are dropped on read.
+    expect(d.config).not.toHaveProperty('ghBackup');
+    expect(d.config).not.toHaveProperty('backup');
     expect(d.config).not.toHaveProperty('token');
   });
 
@@ -86,7 +87,8 @@ describe('iron-log-data.json, format 1', () => {
     const S = { cfg: d.config, logs: d.logs, programs: { A: { ...d.programs.A, key: 'A' }, B: BUILTIN.B }, library: d.library, body: d.body };
     const again = buildDataFile(S, d.weeks);
     // the fixture is an old 6-day backup, so what comes back has the empty Day 7 added; the old file has no experiments, so an empty list is added
-    const padded = { ...raw, experiments: [], programs: { A: progBody(withAllDays({ ...raw.programs.A, key: 'A' })) }, library: raw.library.map(it => ({ ...it, prog: withAllDays(it.prog) })) };
+    const { ghBackup: _gone, ...rawConfig } = raw.config; // the retired GitHub backup settings are not written back
+    const padded = { ...raw, config: rawConfig, experiments: [], programs: { A: progBody(withAllDays({ ...raw.programs.A, key: 'A' })) }, library: raw.library.map(it => ({ ...it, prog: withAllDays(it.prog) })) };
     expect({ ...again, exportedAt: raw.exportedAt }).toEqual(padded);
   });
 });
@@ -115,21 +117,9 @@ it('mergeWeek keeps this deviceâ€™s rest date and falls back to the other sideâ€
   expect(other).not.toHaveProperty('restOn');
 });
 
-it('weekFingerprint changes when the rest date does', () => {
-  const S = { cfg: structuredClone(DEFAULT_CFG), logs: {}, programs: { A: BUILTIN.A, B: BUILTIN.B } };
-  const a = weekFingerprint(S, '2030-01-06', { rest: 2, restOn: '2030-01-08' }), b = weekFingerprint(S, '2030-01-06', { rest: 2, restOn: '2030-01-09' });
-  expect(a).not.toBe(b);
-});
-
 it('mergeWeek unions experiment cards by id, this device first', () => {
   const a = { id: 'X-1', day: 2, ex: 'hack', ph: null, note: 'mine' }, b = { id: 'X-1', day: 3, ex: 'hack', ph: null, note: 'theirs' }, c = { id: 'X-2', day: 4, ex: 'legext', ph: null, note: '' };
   expect(mergeWeek({ extra: [a] }, { extra: [b, c] }).extra).toEqual([a, c]);
   expect(mergeWeek({}, { extra: [c] }).extra).toEqual([c]);
   expect(mergeWeek({}, {})).not.toHaveProperty('extra');
-});
-
-it('weekFingerprint changes when a week gains an experiment card', () => {
-  const S = { cfg: structuredClone(DEFAULT_CFG), logs: {}, programs: { A: BUILTIN.A, B: BUILTIN.B } };
-  const a = weekFingerprint(S, '2030-01-06', {}), b = weekFingerprint(S, '2030-01-06', { extra: [{ id: 'X-1', day: 2, ex: 'hack', ph: null, note: '' }] });
-  expect(a).not.toBe(b);
 });

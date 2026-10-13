@@ -149,7 +149,6 @@ describe('erase data', () => {
     st().checkCard('A-d3s1', true);
     st().saveBodyWeight(180);
     st().setRm('hack', '400');
-    st().setGhRepo('me/log');
     useAppStore.setState({ library: [{ id: 'x', name: 'v1', prog: BUILTIN.B }] }); st().saveLibrary();
     st().saveProgram('A', { ...BUILTIN.A, days: BUILTIN.A.days.slice() });
     mem['ironlog:weeks/2020-01-05'] = JSON.stringify({ done: { 'A-d1s1': true } });
@@ -165,14 +164,14 @@ describe('erase data', () => {
     expect(st().cfg.rm).toEqual({ hack: 400 });
   });
 
-  it('erases everything and keeps the GitHub backup settings', async () => {
+  it('erases everything, and does not bring back old GitHub backup settings', async () => {
     fill();
     await st().eraseData({ logs: true, weeks: true, body: true, programs: true, settings: true });
     const s = st();
     expect([s.logs, s.week.done, s.body, s.library]).toEqual([{}, {}, [], []]);
     expect(s.programs).toEqual({ A: BUILTIN.A, B: BUILTIN.B });
     expect(s.cfg.rm).toEqual({});
-    expect(s.cfg.ghBackup.repo).toBe('me/log');
+    expect(s.cfg).not.toHaveProperty('ghBackup');
     expect(Object.keys(mem).filter(k => /^ironlog:(logs|weeks|programs)\//.test(k))).toEqual([]);
     expect(saved('body/main').entries).toEqual([]);
     expect(s.saveFlag).toBe('Data erased');

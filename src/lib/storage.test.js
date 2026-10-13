@@ -1,5 +1,20 @@
-import { describe, it, expect, vi } from 'vitest';
-import { makeSaveQueue } from './storage.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { makeSaveQueue, removeLegacyGitHubToken, LEGACY_GH_TOKEN_KEY } from './storage.js';
+
+describe('removeLegacyGitHubToken', () => {
+  const stub = (mem, removeItem) => vi.stubGlobal('localStorage', { getItem: k => mem[k] ?? null, setItem: (k, v) => { mem[k] = v; }, removeItem: removeItem || (k => { delete mem[k]; }) });
+  afterEach(() => vi.unstubAllGlobals());
+  it('deletes the old GitHub token and leaves other keys', () => {
+    const mem = { [LEGACY_GH_TOKEN_KEY]: 'ghp_secret', 'ironlog:config/main': '{}' }; stub(mem);
+    removeLegacyGitHubToken();
+    expect(mem).toEqual({ 'ironlog:config/main': '{}' });
+    expect(LEGACY_GH_TOKEN_KEY).toBe('ironlog-gh-token');
+  });
+  it('does not throw when storage is blocked', () => {
+    stub({}, () => { throw new Error('blocked'); });
+    expect(() => removeLegacyGitHubToken()).not.toThrow();
+  });
+});
 
 describe('save queue', () => {
   it('a permanent error drops only the failed write; a newer one queued meanwhile is still saved', async () => {

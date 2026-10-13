@@ -63,7 +63,6 @@ export interface UncheckNote {
   entries: Logs; // what the uncheck removed, so Undo can put it back
   done: Record<string, boolean>; // key -> was it done before
 }
-export interface BackupMsg { kind: 'info' | 'ok' | 'err'; text: string; url?: string }
 
 /** An open sheet: its `type` plus whatever that sheet needs. */
 export interface Modal { type: string; [key: string]: Loose }
@@ -131,7 +130,6 @@ export interface SettingsSlice {
   setRest(raw: string | number): false | void;
   setRm(exId: string, raw: string | number): false | void;
   setCfgField<K extends keyof Cfg>(k: K, v: Cfg[K]): void;
-  setBackupRepo(raw: string): void;
   readImportFile(file: File | null | undefined): Promise<void>;
   pasteImport(text: string): void;
   applyImport(mode: 'merge' | 'replace'): Promise<void>;
@@ -240,12 +238,6 @@ export interface CoreSlice {
   weekHist: Record<string, Week> | null; // every saved week, loaded on demand for Progress and exports
   historyLoading: boolean;
   dl: Downloads | null | undefined; // undefined = not checked yet, null = unavailable
-  mcp: Loose; // the host's connector handle for GitHub backup (Claude-hosted only)
-  backupBusy: boolean;
-  backupMsg: BackupMsg | null;
-  snoozeBackup: boolean;
-  ghDirect: boolean; // back up with the viewer's own GitHub token
-  ghToken: string;
   exporting: ExportKind | null;
   progView: string;
   bodySel: MuscleKey | null;
@@ -366,16 +358,6 @@ export interface CoreSlice {
   shareAgain(): Promise<void>;
   saveInstead(built: { filename: string; data: Loose }): Promise<void>;
   downloadData(): Promise<void>;
-  snooze(): void;
-  backupToGitHub(): Promise<void>;
-  canBackup(): boolean;
-  backupNow(): Promise<void> | undefined;
-  lastBackup(): Loose;
-  setGhToken(raw: string): boolean;
-  forgetGhToken(): void;
-  setGhRepo(raw: string): boolean;
-  backupDirect(): Promise<void>;
-  restoreFromGitHub(): Promise<void>;
   init(): Promise<void>;
 }
 

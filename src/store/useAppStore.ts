@@ -8,7 +8,7 @@ import {
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
   planFix, isFinished, autoEntry, newEntryId, normExperiments,
 } from '../lib/logic.js';
-import { LS, makeSaveQueue } from '../lib/storage.js';
+import { LS, makeSaveQueue, removeLegacyGitHubToken } from '../lib/storage.js';
 import { FLAG_KEY, apiSyncEnabled } from '../sync/flag.js';
 import { mergeStretchWeek3, mergeWeek3 } from '../sync/merge.js';
 import { stable } from '../sync/canon.js';
@@ -21,10 +21,10 @@ import { removedSlice } from './removedSlice.js';
 import { isAdminNow } from '../features.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { normSupplements } from '../lib/water.js';
-import { WEEK_RE, entryWeek, weekSummary } from '../lib/trends.js';
+import { WEEK_RE } from '../lib/trends.js';
 import {
-  loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
-  backupCfg, sameProg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile, entryId, findEntry, normConfig,
+  loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile,
+  sameProg, entryId, findEntry, normConfig,
 } from '../lib/export.js';
 import { exportFile, mimeFor, shareFile } from '../lib/share.js';
 import { bwSorted } from '../lib/body.js';
@@ -34,7 +34,6 @@ import { bestLift, liftGoalsOf, goalPhaseLabel, GOAL_KEYS } from '../lib/liftGoa
 import { loadView, saveView, openFromUrl } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
 import { validRm, validLiftGoalLb, validBodyLb, normEntry, normEntries, normBody, normProgram, normLibrary, nowStamp, SCHEMA_VERSION } from '../shared/validate.js';
-import { commitFiles, readFile, validRepo } from '../lib/github.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
 // binding from the original app (window.claude.use('db')); without it everything uses localStorage.
@@ -57,14 +56,8 @@ const blobSave = {
   },
 };
 
-// The GitHub token for the standalone app. Kept in this browser only, outside the config, because the
-// config is written into the backup files.
 /** How long a built-but-unshared export (waiting for a second tap) is kept before it is thrown away as stale. */
 export const SHARE_READY_MS = 60_000;
-const TOKEN_KEY = 'ironlog-gh-token';
-const readToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
-// Standalone (e.g. GitHub Pages) rather than inside the Claude host, which backs up through its connector.
-const standalone = typeof window !== 'undefined' && !window.claude;
 
 const uid = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -226,12 +219,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   weekHist: null, // every saved week, loaded on demand for Progress and exports
   historyLoading: false,
   dl: undefined, // downloads handle: undefined = not checked yet, null = unavailable
-  mcp: undefined, // connector handle for GitHub backup (Claude-hosted only)
-  backupBusy: false,
-  backupMsg: null, // {kind:'info'|'ok'|'err', text, url?}
-  snoozeBackup: false,
-  ghDirect: standalone, // back up with the viewer's own GitHub token
-  ghToken: standalone ? readToken() : '',
 
   // Muscles tab view state; kept here so it survives switching tabs, like the original.
   progView: 'trends', // Progress tab: 'trends' or 'muscles'
@@ -883,8 +870,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Try the writes that were refused again (after freeing space, or signing back in).
   retryUnsaved() { queue.retryFailed(); },
 
-  // Erase parts of the data: {logs, weeks, body, programs, settings}. Display options, the GitHub token
-  // and the GitHub backup settings are kept; backups already made aren't touched.
+  // Erase parts of the data: {logs, weeks, body, programs, settings}. Display options are kept; files you exported aren't touched.
   async eraseData(parts) {
     if (get().blocked()) return false;
     if (parts.weeks) {
@@ -900,12 +886,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ programs: { A: get().originalProgram('A'), B: get().originalProgram('B') }, library: [], experiments: [] }); get().saveLibrary(); get().saveExperiments();
     }
     if (parts.settings) {
-      const { backup, ghBackup } = get().cfg; const cfg = structuredClone(DEFAULT_CFG);
-      if (backup) cfg.backup = backup;
-      if (ghBackup) cfg.ghBackup = { ...ghBackup, hash: null };
+      const cfg = structuredClone(DEFAULT_CFG);
       set({ cfg }); get().saveCfg();
     }
-    set({ modal: null, backupMsg: null });
+    set({ modal: null });
     flag('Data erased');
     return true;
   },
@@ -1013,125 +997,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     try { if (!dl) throw new Error('no downloads'); await dl.save(built); flag('Couldn’t open the share sheet, so the file was downloaded instead'); }
     catch { flag('Couldn’t share or download the file'); }
   },
-  snooze: () => set({ snoozeBackup: true }),
-
-  async backupToGitHub() {
-    const mcp = get().mcp; if (!mcp || get().backupBusy) return;
-    set({ backupBusy: true, backupMsg: { kind: 'info', text: 'Building Excel files…' } });
-    const b = backupCfg(get().cfg); b.hashes = { ...b.hashes };
-    const [owner, repo] = String(b.repo).split('/'); let sent = 0;
-    try {
-      if (!owner || !repo) throw new Error('Set the backup repo as owner/name in Settings.');
-      const X = await loadXLSX(); const weeks = await get().allWeeks(); const S = await get().fullSnapshot();
-      const b64 = (wb: any) => X.write(wb, { type: 'base64', bookType: 'xlsx', compression: true });
-      const upserts = [
-        { path: 'iron-log.xlsx', content: b64(buildOverallWorkbook(X, S, weeks)), encoding: 'base64' },
-        { path: 'iron-log-data.json', content: utf8b64(JSON.stringify(buildDataFile(S, weeks), null, 1)), encoding: 'base64' },
-      ];
-      const hashes = { ...b.hashes }; const changed = [];
-      Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => {
-        const w = weeks[k]; const r = weekSummary(S.cfg, S.programs, k, w);
-        const hasLogs = Object.values(S.logs).some(L => L.some(e => entryWeek(e) === k));
-        if (!r.ex && !hasLogs) return;
-        const fp = weekFingerprint(S, k, w); if (hashes[k] === fp) return;
-        upserts.push({ path: `weeks/${k}.xlsx`, content: b64(buildWeekWorkbook(X, S, k, w)), encoding: 'base64' }); hashes[k] = fp; changed.push(k);
-      });
-      // The connector accepts about 1 MB per call, so large first backups go in several commits.
-      const batches: any[][] = []; let cur: any[] = [], curSize = 0;
-      upserts.forEach(u => { if (cur.length && curSize + u.content.length > 700000) { batches.push(cur); cur = []; curSize = 0; } cur.push(u); curSize += u.content.length; });
-      if (cur.length) batches.push(cur);
-      if (batches.some(bt => bt.length === 1 && bt[0].content.length > 950000)) throw new Error('One of the workbooks is too large to send. Ask Claude to split the backup.');
-      const base = `Backup ${ymd(new Date())}: overall workbook + data file${changed.length ? ` + ${changed.length} week file${changed.length > 1 ? 's' : ''}` : ''}`;
-      let url = `https://github.com/${owner}/${repo}`;
-      for (let i = 0; i < batches.length; i++) {
-        set({ backupMsg: { kind: 'info', text: `Sending ${batches[i].length} file${batches[i].length > 1 ? 's' : ''} to ${owner}/${repo}${batches.length > 1 ? ` (part ${i + 1} of ${batches.length})` : ''}…` } });
-        const msg = batches.length > 1 ? `${base} (part ${i + 1} of ${batches.length})` : base;
-        const res = await mcp.callTool(GH_SERVER, GH_TOOL, { tools: [{ tool_slug: 'GITHUB_COMMIT_MULTIPLE_FILES', arguments: { owner, repo, branch: b.branch || 'main', message: msg, upserts: batches[i] } }], sync_response_to_workbench: false, thought: 'Back up Iron Log training data to the private data repo.', current_step: 'BACKUP' }, { cache: false });
-        const p = res && res.payload; const r0 = p && p.data && p.data.results && p.data.results[0];
-        if (!(r0 && r0.response && r0.response.successful)) {
-          const why = (r0 && (r0.error || (r0.response && r0.response.error))) || (p && p.error) || 'GitHub rejected the backup.';
-          throw new Error((typeof why === 'string' ? why.slice(0, 300) : 'GitHub rejected the backup.') + (sent ? ` (${sent} file${sent > 1 ? 's were' : ' was'} saved before this.)` : ''));
-        }
-        const d = r0.response.data || {}; url = d.commit_url || (d.commit && d.commit.html_url) || url;
-        sent += batches[i].length;
-        // Record progress so a retry skips weeks that already went through.
-        batches[i].forEach(u => { const m = u.path.match(/^weeks\/(.+)\.xlsx$/); if (m) b.hashes[m[1]] = hashes[m[1]]; });
-      }
-      get().mutateCfg(c => { c.backup = { ...b, hashes, last: { at: new Date().toISOString(), url, files: upserts.length } }; });
-      set({ backupMsg: { kind: 'ok', text: `Backed up ${upserts.length} file${upserts.length > 1 ? 's' : ''}.`, url } });
-    } catch (e) {
-      set({ backupMsg: { kind: 'err', text: backupError(e as any) } });
-      if (sent) get().mutateCfg(c => { c.backup = { ...b }; });
-    } finally { set({ backupBusy: false }); }
-  },
-
-  // Whichever GitHub backup this view has: the Claude connector, or a token pasted in on this device.
-  canBackup: () => !!(get().mcp || (get().ghDirect && get().ghToken)),
-  backupNow: () => (get().mcp ? get().backupToGitHub() : get().backupDirect()),
-  lastBackup: () => (get().mcp ? backupCfg(get().cfg).last : ghCfg(get().cfg).last) || null,
-
-  setGhToken(raw) {
-    const v = String(raw || '').trim();
-    if (!v) { set({ backupMsg: { kind: 'err', text: 'Paste the token first.' } }); return false; }
-    try { localStorage.setItem(TOKEN_KEY, v); } catch { /* storage unavailable: keep it for this visit */ }
-    set({ ghToken: v, backupMsg: { kind: 'ok', text: 'Token saved in this browser.' } });
-    return true;
-  },
-  forgetGhToken() {
-    try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
-    set({ ghToken: '', backupMsg: { kind: 'info', text: 'Token removed from this browser.' } });
-  },
-  setGhRepo(raw) {
-    const v = String(raw || '').trim();
-    if (!validRepo(v)) { set({ backupMsg: { kind: 'err', text: 'Use the form owner/repo, for example your-name/iron-log-backup.' } }); return false; }
-    if (get().mutateCfg(c => { c.ghBackup = { ...ghCfg(c), repo: v, hash: null }; })) set({ backupMsg: null });
-    return true;
-  },
-
-  // One commit with the Excel workbook and the full data file, on the backup branch.
-  async backupDirect() {
-    if (get().backupBusy || get().blocked()) return;
-    const token = get().ghToken; const g = ghCfg(get().cfg);
-    if (!validRepo(g.repo)) { set({ backupMsg: { kind: 'err', text: 'Set the backup repository (owner/repo) in Settings first.' } }); return; }
-    if (!token) { set({ backupMsg: { kind: 'err', text: 'Paste a GitHub token in Settings first.' } }); return; }
-    set({ backupBusy: true, backupMsg: { kind: 'info', text: 'Building the Excel and data files…' } });
-    try {
-      const X = await loadXLSX(); const weeks = await get().allWeeks(); const S = await get().fullSnapshot();
-      const data = buildDataFile(S, weeks); const fp = dataFingerprint(data);
-      if (g.last && fp === g.hash) { set({ backupMsg: { kind: 'ok', text: 'Nothing new since the last backup.', url: g.last.url } }); return; }
-      set({ backupMsg: { kind: 'info', text: `Sending to ${g.repo}…` } });
-      const files = [
-        { path: 'iron-log.xlsx', content: X.write(buildOverallWorkbook(X, S, weeks), { type: 'base64', bookType: 'xlsx', compression: true }) },
-        { path: 'iron-log-data.json', content: utf8b64(JSON.stringify(data, null, 1)) },
-      ];
-      const { url } = await commitFiles({ token, repo: g.repo, branch: g.branch, files, message: `Backup ${ymd(new Date())}` });
-      get().mutateCfg(c => { c.ghBackup = { ...ghCfg(c), hash: fp, last: { at: new Date().toISOString(), url } }; });
-      set({ backupMsg: { kind: 'ok', text: `Backed up to the ${g.branch} branch of ${g.repo}.`, url } });
-    } catch (e) {
-      set({ backupMsg: { kind: 'err', text: (e as Error | null)?.message || 'Backup failed.' } });
-    } finally { set({ backupBusy: false }); }
-  },
-  // Reads the latest data file from the backup branch and opens the usual import review.
-  async restoreFromGitHub() {
-    if (get().backupBusy || get().blocked()) return;
-    const g = ghCfg(get().cfg);
-    if (!validRepo(g.repo)) { set({ backupMsg: { kind: 'err', text: 'Set the backup repository (owner/repo) in Settings first.' } }); return; }
-    set({ backupBusy: true, backupMsg: { kind: 'info', text: `Reading the backup from ${g.repo}…` } });
-    try {
-      const text = await readFile({ token: get().ghToken, repo: g.repo, branch: g.branch, path: 'iron-log-data.json' });
-      set({ importDraft: { data: parseDataFile(text), name: `Backup from ${g.repo}`, kind: 'json' }, importError: '', modal: { type: 'import' }, backupMsg: null });
-    } catch (e) {
-      set({ backupMsg: { kind: 'err', text: (e as Error | null)?.message || 'Couldn’t read the backup.' } });
-    } finally { set({ backupBusy: false }); }
-  },
-
   async init() {
     if (initStarted) return; // StrictMode runs mount effects twice in dev; subscribe once
     initStarted = true;
+    removeLegacyGitHubToken(); // one-time cleanup of the retired GitHub backup token
     get().loadGrocery(); // device-only: read from this browser's storage whatever the data source turns out to be
     const host = window.claude && window.claude.use ? (window.claude as { use: (name: string) => Promise<any> }) : null;
     (async () => { try { set({ dl: host ? await host.use('downloads') : blobSave }); } catch { set({ dl: null }); } })();
-    (async () => { try { set({ mcp: host ? await host.use('mcp') : null }); } catch { set({ mcp: null }); } })();
     try { db = (window.claude && window.claude.use) ? await window.claude.use('db') : null; } catch { db = null; }
     // With the flag on (and no host database), the same handle is backed by the API: see src/sync/apiDb.ts.
     if (!db && apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC)) {

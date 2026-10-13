@@ -8,7 +8,6 @@ import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
 import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
-import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
@@ -48,13 +47,8 @@ export default function Board() {
   const storeMode = useAppStore(s => s.storeMode);
   const moveNote = useAppStore(s => s.moveNote);
   const mDay = useAppStore(s => s.mDay);
-  const canBackup = useAppStore(s => !!(s.mcp || (s.ghDirect && s.ghToken)));
-  const snoozeBackup = useAppStore(s => s.snoozeBackup);
-  const backupBusy = useAppStore(s => s.backupBusy);
-  const anyLogs = useAppStore(s => Object.values(s.logs).some(l => l && l.length));
   const today = useToday(s => s.today);
   const st = useAppStore.getState();
-  const sinceBackup = daysSince(st.lastBackup());
 
   const progKey = st.activeProgKey();
   const prog = st.activeProgram(); // a week that is over shows what it ran (ADR 022)
@@ -168,19 +162,10 @@ export default function Board() {
       </div>
 
       {!fromRecord && !programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
-      {canBackup && anyLogs && !snoozeBackup && (sinceBackup == null || sinceBackup >= 7) && (
-        <div className="notice tip">
-          <span>{sinceBackup == null ? 'Your training data hasn’t been backed up to GitHub yet.' : `Last GitHub backup was ${sinceBackup} days ago.`}</span>
-          <span>
-            <button type="button" className="btn sm" disabled={backupBusy} onClick={st.backupNow}>{backupBusy ? 'Backing up…' : 'Back up now'}</button>{' '}
-            <button type="button" className="btn sm ghost" onClick={st.snooze}>Later</button>
-          </span>
-        </div>
-      )}
       <InstallHint />
       {storeMode === 'local' && !tipHidden('hidelocal') && (
         <div className="notice tip">
-          <span>{window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Back it up to GitHub in Settings, or use Export on the Progress tab.'}</span>
+          <span>{window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export all data in Settings to keep a copy.'}</span>
           <button type="button" className="btn sm ghost" onClick={() => hideTip('hidelocal')}>Got it</button>
         </div>
       )}

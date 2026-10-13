@@ -10,7 +10,6 @@ import Trends from './Trends.jsx';
 import Muscles from '../muscles/Muscles.jsx';
 import LineChart from '../LineChart.js';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
-import ShareExport from '../settings/ShareExport.js';
 
 function History() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
@@ -50,32 +49,6 @@ function History() {
       </div>
       <p className="note" aria-hidden="true"><i className="cleg c2" /> complete <i className="cleg c1" /> partly done <i className="cleg c0" /> not started</p>
     </section>
-  );
-}
-
-export function BackupMessage() {
-  const msg = useAppStore(s => s.backupMsg);
-  if (!msg) return null;
-  return <p className={`bkmsg ${msg.kind}`}>{msg.text}{msg.url && <> <a href={msg.url} target="_blank" rel="noopener noreferrer">View commit</a></>}</p>;
-}
-
-function ExportBar() {
-  const dl = useAppStore(s => s.dl); const canBackup = useAppStore(s => !!(s.mcp || (s.ghDirect && s.ghToken)));
-  const busy = useAppStore(s => s.backupBusy); const exporting = useAppStore(s => s.exporting);
-  const hasLogs = useAppStore(s => Object.values(s.logs).some(l => l && l.length));
-  const { backupNow, downloadExcel, exportCsv } = useAppStore.getState();
-  if (!dl || !hasLogs) return null;
-  return (
-    <>
-      <div className="actions" style={{ justifyContent: 'flex-end', marginBottom: 12 }}>
-        {canBackup && <button type="button" className="btn primary" disabled={busy} onClick={backupNow}>{busy ? 'Backing up…' : 'Back up to GitHub'}</button>}
-        <button type="button" className="btn" disabled={!!exporting} onClick={() => downloadExcel('all')}>Download Excel</button>
-        <button type="button" className="btn" disabled={!!exporting} onClick={() => downloadExcel('week')}>This week (Excel)</button>
-        <button type="button" className="btn" disabled={!!exporting} onClick={exportCsv}>CSV</button>
-        <ShareExport kind="xlsx-all" label="Share Excel" />
-      </div>
-      <div style={{ textAlign: 'right' }}><BackupMessage /></div>
-    </>
   );
 }
 
@@ -127,7 +100,6 @@ function ProgressMain() {
     <>
       <Trends />
       <History />
-      <ExportBar />
       <LiftList />
     </>
   );
