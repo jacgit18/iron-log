@@ -193,13 +193,12 @@ test.describe('the Sync panel', () => {
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });
 
-  test.describe('the offline notice (admin only for now)', () => {
-    const adminMe = route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, userId: 'dev-user', account: { kind: 'dev', email: null, name: null, isAdmin: true } }) });
+  test.describe('the offline notice (everyone)', () => {
     const offlineNote = page => page.getByRole('status').filter({ hasText: 'Changes are saved on this phone' });
 
     test('shows while offline, then says it is syncing once back, and the kept write is sent after the connection returns', async ({ page, context }) => {
       let commandsSeen = 0;
-      await openSynced(page, route => { commandsSeen++; return route.abort(); }, adminMe);
+      await openSynced(page, route => { commandsSeen++; return route.abort(); });
       await expect(offlineNote(page)).toHaveCount(0);
       await context.setOffline(true);
       await expect(offlineNote(page)).toBeVisible();
@@ -216,11 +215,11 @@ test.describe('the Sync panel', () => {
       await expect(page.locator('#chk-A-d1s1')).toBeChecked();
     });
 
-    test('is not shown to someone who is not an admin', async ({ page, context }) => {
-      await openSynced(page, route => route.abort());
-      await context.setOffline(true);
-      await page.waitForTimeout(500);
+    test('is shown to someone who is not an admin too', async ({ page, context }) => {
+      await openSynced(page, route => route.abort()); // the default signed-in account is not an admin
       await expect(offlineNote(page)).toHaveCount(0);
+      await context.setOffline(true);
+      await expect(offlineNote(page)).toBeVisible();
     });
   });
 
