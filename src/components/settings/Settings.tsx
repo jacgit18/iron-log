@@ -5,7 +5,7 @@ import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
@@ -298,6 +298,28 @@ const jump = (id: string) => {
   h.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'instant', block: 'start' });
 };
 
+// The group being read: the last whose heading has scrolled up under the sticky jump row (the last one at the bottom of the page).
+function useCurrentGroup() {
+  const [cur, setCur] = useState<string>(GROUPS[0][0]);
+  useEffect(() => {
+    let frame = 0;
+    const look = () => {
+      frame = 0;
+      const bar = document.querySelector('.sjump')?.getBoundingClientRect().bottom ?? 0;
+      const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      let next: string = GROUPS[0][0];
+      for (const [id] of GROUPS) { const h = document.getElementById(`set-${id}-h`); if (h && h.getBoundingClientRect().top <= bar + 24) next = id; }
+      setCur(atEnd ? GROUPS[GROUPS.length - 1][0] : next);
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(look); };
+    look();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (frame) cancelAnimationFrame(frame); };
+  }, []);
+  return cur;
+}
+
 function Group({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section className="sgroup" aria-labelledby={`set-${id}-h`}>
@@ -310,10 +332,12 @@ function Group({ id, title, children }: { id: string; title: string; children: R
 export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
   const restAlert = useFeature('restNotify');
+  const cur = useCurrentGroup();
   return (
     <div className="settings">
+      {/* Sticky, so a group is one tap away anywhere on the long page; the group being read is marked. */}
       <nav className="sjump" aria-label="Jump to a settings group">
-        {GROUPS.map(([id, label]) => <button key={id} type="button" className="chip" onClick={() => jump(id)}>{label}</button>)}
+        {GROUPS.map(([id, label]) => <button key={id} type="button" className="chip" aria-current={cur === id ? 'true' : undefined} onClick={() => jump(id)}>{label}</button>)}
       </nav>
       <Group id="training" title="Training">
         <div className="scol"><ModePanel /></div>

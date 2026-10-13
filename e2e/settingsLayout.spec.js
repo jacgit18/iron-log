@@ -66,3 +66,20 @@ test('on a phone each phase is one block: the % stays beside its box and the col
   await expect(page.getByLabel('Strength % of 1RM')).toBeVisible();
   await expect(page.getByLabel('Strength sets × reps')).toBeVisible();
 });
+
+for (const [width, height] of [[375, 812], [1280, 800]]) test(`the jump row stays on screen, marks the group being read, and a jump lands below it (${width} px)`, async ({ page }) => {
+  await page.setViewportSize({ width, height });
+  await page.goto('/');
+  await openSettings(page);
+  const nav = page.getByRole('navigation', { name: 'Jump to a settings group' });
+  await expect(nav.getByRole('button', { name: 'Training' })).toHaveAttribute('aria-current', 'true');
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect(nav).toBeInViewport();
+  await expect(nav.getByRole('button', { name: 'Erase' })).toHaveAttribute('aria-current', 'true');
+  await nav.getByRole('button', { name: 'Data' }).click();
+  await expect(page.locator('#set-data-h')).toBeFocused();
+  await expect(nav.getByRole('button', { name: 'Data' })).toHaveAttribute('aria-current', 'true');
+  // Once the smooth scroll settles, the heading sits just below the sticky row, not under it.
+  await expect.poll(() => page.evaluate(() => document.getElementById('set-data-h').getBoundingClientRect().top - document.querySelector('.sjump').getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(-1);
+  await expect(page.locator('#set-data-h')).toBeInViewport();
+});

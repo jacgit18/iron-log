@@ -400,8 +400,10 @@ body.timing{padding-bottom:130px}
 /* Settings */
 .settings{display:flex;flex-direction:column;gap:24px}
 .settings .actions{justify-content:flex-start}
-.sjump{display:flex;flex-wrap:wrap;gap:8px}
+.sjump{display:flex;flex-wrap:wrap;gap:8px;position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);padding-block:6px 8px}
 .sjump .chip{cursor:pointer;font-weight:600;color:var(--ink)}
+.sjump .chip[aria-current="true"]{background:var(--m4);border-color:var(--m4);color:var(--accent-ink)}
+@media (min-width:701px){.sgroup>h2{scroll-margin-top:72px}}
 .sgroup{display:flex;flex-direction:column;gap:12px;scroll-margin-top:8px}
 .sgroup>h2{margin:0;padding-bottom:6px;border-bottom:2px solid var(--line);font-family:"Barlow Condensed","Barlow Fallback",system-ui,sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
 .sgroup>h2:focus-visible{outline-offset:4px}
