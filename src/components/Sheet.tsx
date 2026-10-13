@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, type ElementType, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useAppStore } from '../store/useAppStore.js';
 import { input } from '../hooks/useFocusKeeper.js';
+import { isTouchScreen, revealField } from '../lib/revealField.js';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
 
@@ -37,16 +38,17 @@ export default function Sheet({ as: Tag = 'div', className = '', children, ...re
     (first || el).focus();
   }, [Tag]);
 
-  // The on-screen keyboard covers the lower part of the sheet. When a field takes focus, wait for the keyboard to
-  // finish opening, then bring the field to the middle of the sheet so it and the Save button stay reachable.
+  // The on-screen keyboard covers the lower part of the sheet. On a touch screen, when a field takes focus, wait for
+  // the keyboard to finish opening, then bring the field into view if it is not (a mouse or keyboard user never
+  // has a keyboard in the way, so nothing moves for them).
   useEffect(() => {
     const el = ref.current!;
     let t = 0;
     const onFocusIn = (e: FocusEvent) => {
       const f = e.target as HTMLElement;
-      if (!f.matches?.('input:not([type=checkbox]):not([type=radio]), textarea, select')) return;
+      if (!isTouchScreen() || !f.matches?.('input:not([type=checkbox]):not([type=radio]), textarea, select')) return;
       window.clearTimeout(t);
-      t = window.setTimeout(() => f.isConnected && f.scrollIntoView({ block: 'center', behavior: 'auto' }), 300);
+      t = window.setTimeout(() => revealField(el, f), 300);
     };
     el.addEventListener('focusin', onFocusIn);
     return () => { window.clearTimeout(t); el.removeEventListener('focusin', onFocusIn); };
