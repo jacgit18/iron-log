@@ -107,3 +107,15 @@ test('the day-add sheet offers the catalog too and puts the pick on that day', a
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.card').filter({ hasText: 'Cable Fly' })).toHaveCount(1);
 });
+
+test('after the catalog fails to load, Try again asks again and shows it (the failure is not kept)', async ({ page }) => {
+  let calls = 0;
+  await openSynced(page, route => (++calls === 1 ? json(500, {})(route) : json(200, catalog)(route)));
+  await openAdd(page);
+  await field(page).fill('fly');
+  await expect(page.getByRole('dialog').locator('.picknote')).toHaveText('The catalog could not be loaded.Try again');
+  await page.getByRole('dialog').getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByRole('group', { name: 'Catalog' }).getByRole('option')).toHaveText([/Cable Fly/]);
+  await expect(field(page)).toBeFocused(); // Try again does not take focus from the field
+  expect(calls).toBe(2);
+});
