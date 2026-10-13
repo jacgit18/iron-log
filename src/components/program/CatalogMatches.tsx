@@ -14,22 +14,23 @@ type Props = {
   meta: (c: CatalogItem) => string;
   /** Adds one to the library; returns an error message, or null. */
   onAdd: (c: CatalogItem) => string | null;
-  /** The library's other filters, applied to catalog items too (exercises: equipment and muscle). */
-  keep?: (c: CatalogItem) => boolean;
+  /** The library's other filters, applied to catalog items too (exercises: equipment and muscle, keepCatalogItems). */
+  narrow?: (items: CatalogItem[]) => CatalogItem[];
   unit: string;
   source: string;
 };
 
 const MAX = 20;
 
-export default function CatalogMatches({ kind, q, mine, meta, onAdd, keep, unit, source }: Props) {
+export default function CatalogMatches({ kind, q, mine, meta, onAdd, narrow, unit, source }: Props) {
   const typed = q.trim() !== '';
   const { state, retry } = useCatalogSearch(kind, q, typed);
   const [errs, setErrs] = useState<Record<string, string>>({});
   if (state.status === 'off' || !typed) return null;
   const byBrand = kind === 'supplement';
-  const ready = state.status === 'ready' ? state.items.filter(c => !keep || keep(c)) : [];
-  const o = pickerOptions(q, mine, ready, { byBrand, serverFiltered: byBrand, max: MAX });
+  const ready = state.status === 'ready' ? (narrow ? narrow(state.items) : state.items) : [];
+  // An earlier search's answer, kept while the next runs, is filtered here so it never sits under unrelated words.
+  const o = pickerOptions(q, mine, ready, { byBrand, serverFiltered: byBrand && !(state.status === 'ready' && state.searching), max: MAX });
   const rows = o.catalog.shown;
   const note = state.status === 'short' ? `Type at least ${MIN_LETTERS} letters to search the catalog.`
     : state.status === 'loading' || (state.status === 'ready' && state.searching) ? 'Searching the catalog…'
