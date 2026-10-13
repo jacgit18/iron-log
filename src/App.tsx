@@ -25,6 +25,7 @@ import LegacyCard from './components/LegacyCard.js';
 import OtherAccountCard from './components/OtherAccountCard.js';
 import SignInCard from './components/SignInCard.js';
 import SyncNotice from './components/SyncNotice.js';
+import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import { lazyTab } from './lib/lazyTab.js';
 
@@ -120,6 +121,7 @@ export default function App() {
           <p className="saveflag" role="status" aria-live="polite" aria-atomic="true">{!ready && !saveFlag && !signedOut ? 'Loading…' : saveFlag}</p>
         </header>
         <UpdateBanner />
+        <OfflineNotice />
         <SyncNotice />
         <SignInCard />
         <OtherAccountCard />
