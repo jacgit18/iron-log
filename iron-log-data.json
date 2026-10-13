@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-13T00:12:39.298Z",
+ "exportedAt": "2026-10-13T01:40:02.953Z",
  "config": {
   "muscleMap": {
    "c:fedb:Face_Pull": {
@@ -92,6 +92,18 @@
      "abs"
     ],
     "s": []
+   },
+   "c:fedb:Lateral_Bound": {
+    "p": [
+     "adductors"
+    ],
+    "s": [
+     "abductors",
+     "calves",
+     "glutes",
+     "hamstrings",
+     "quads"
+    ]
    },
    "c:fedb:Clean_and_Jerk": {
     "p": [
@@ -568,6 +580,10 @@
    },
    "bench-reverse-crunch": {
     "n": "Bench Reverse Crunch"
+   },
+   "c:fedb:Lateral_Bound": {
+    "n": "Lateral Bound",
+    "eq": "bodyweight"
    },
    "c:fedb:Clean_and_Jerk": {
     "n": "Clean and Jerk",
@@ -4504,36 +4520,6 @@
     "updatedAt": "2026-10-12T11:59:56.533Z"
    }
   ],
-  "cablecrunch": [
-   {
-    "d": "2026-09-29",
-    "ph": "strength",
-    "w": 60,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 60,
-      "r": 6
-     },
-     {
-      "w": 60,
-      "r": 6
-     },
-     {
-      "w": 60,
-      "r": 6
-     },
-     {
-      "w": 60,
-      "r": 6
-     }
-    ],
-    "slot": "A-d2s4",
-    "wk": "2026-09-27",
-    "id": "k1pz4jfb"
-   }
-  ],
   "cablepunch": [
    {
     "d": "2026-10-04",
@@ -4759,91 +4745,6 @@
     "updatedAt": "2026-10-10T11:34:12.722Z"
    }
   ],
-  "facepull": [
-   {
-    "d": "2026-10-07",
-    "ph": "strength",
-    "w": 27,
-    "s": 2,
-    "r": 6,
-    "sets": [
-     {
-      "w": 27,
-      "r": 6
-     },
-     {
-      "w": 27,
-      "r": 6
-     }
-    ],
-    "slot": "B-d2s3",
-    "wk": "2026-10-04",
-    "id": "Lmuxzl6p6ft2utr",
-    "updatedAt": "2026-10-07T10:50:39.018Z"
-   }
-  ],
-  "farmers": [
-   {
-    "d": "2026-10-07",
-    "ph": "strength",
-    "w": 40,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 40,
-      "r": 6
-     },
-     {
-      "w": 40,
-      "r": 6
-     },
-     {
-      "w": 40,
-      "r": 6
-     },
-     {
-      "w": 40,
-      "r": 6
-     }
-    ],
-    "slot": "B-d2s1",
-    "wk": "2026-10-04",
-    "id": "Lmuxykv8wo0p7ko",
-    "auto": true,
-    "updatedAt": "2026-10-07T10:22:24.560Z"
-   },
-   {
-    "d": "2026-10-09",
-    "ph": "strength",
-    "w": 40,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 40,
-      "r": 6
-     },
-     {
-      "w": 40,
-      "r": 6
-     },
-     {
-      "w": 40,
-      "r": 6
-     },
-     {
-      "w": 40,
-      "r": 6
-     }
-    ],
-    "slot": "B-d4s1",
-    "wk": "2026-10-04",
-    "id": "Lmv15r76l9bmty6",
-    "auto": true,
-    "updatedAt": "2026-10-09T16:06:35.806Z"
-   }
-  ],
   "grip": [
    {
     "d": "2026-09-28",
@@ -5058,120 +4959,6 @@
     "updatedAt": "2026-10-07T10:21:26.607Z"
    }
   ],
-  "legcurl": [
-   {
-    "d": "2026-10-09",
-    "ph": "strength",
-    "w": 50,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 50,
-      "r": 6
-     },
-     {
-      "w": 50,
-      "r": 6
-     },
-     {
-      "w": 50,
-      "r": 6
-     },
-     {
-      "w": 50,
-      "r": 6
-     }
-    ],
-    "slot": "B-d4s6",
-    "wk": "2026-10-04",
-    "id": "Lmv160y51jqlx1q",
-    "auto": true,
-    "updatedAt": "2026-10-09T16:14:10.646Z"
-   }
-  ],
-  "legext": [
-   {
-    "d": "2026-09-28",
-    "ph": "iso",
-    "w": 50,
-    "s": 4,
-    "sec": 30,
-    "sets": [
-     {
-      "w": 50,
-      "sec": 30
-     },
-     {
-      "w": 50,
-      "sec": 30
-     },
-     {
-      "w": 50,
-      "sec": 30
-     },
-     {
-      "w": 50,
-      "sec": 30
-     }
-    ],
-    "slot": "A-d2s3",
-    "wk": "2026-09-27",
-    "id": "k8xs718",
-    "auto": true
-   },
-   {
-    "d": "2026-09-29",
-    "ph": "iso",
-    "w": 50,
-    "s": 4,
-    "sec": 30,
-    "sets": [
-     {
-      "w": 50,
-      "sec": 30
-     },
-     {
-      "w": 50,
-      "sec": 30
-     },
-     {
-      "w": 50,
-      "sec": 30
-     },
-     {
-      "w": 50,
-      "sec": 30
-     }
-    ],
-    "slot": "A-d3s5",
-    "wk": "2026-09-27",
-    "id": "ktz68nl"
-   }
-  ],
-  "ohtri": [
-   {
-    "d": "2026-10-07",
-    "ph": "strength",
-    "w": 17,
-    "s": 2,
-    "r": 6,
-    "sets": [
-     {
-      "w": 17,
-      "r": 6
-     },
-     {
-      "w": 17,
-      "r": 6
-     }
-    ],
-    "slot": "B-d2s2",
-    "wk": "2026-10-04",
-    "id": "Lmuxyxe13xvzkyb",
-    "updatedAt": "2026-10-07T10:32:08.775Z"
-   }
-  ],
   "platerot": [
    {
     "d": "2026-10-05",
@@ -5345,67 +5132,6 @@
     "updatedAt": "2026-10-12T12:04:35.748Z"
    }
   ],
-  "seated-cable-crunch": [
-   {
-    "d": "2026-10-07",
-    "ph": "strength",
-    "w": 44,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     }
-    ],
-    "slot": "B-xmuy1nsai5fs",
-    "wk": "2026-10-04",
-    "id": "Lmuy1yui81lvnc3",
-    "updatedAt": "2026-10-07T12:01:56.425Z"
-   },
-   {
-    "d": "2026-10-08",
-    "ph": "strength",
-    "w": 44,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     }
-    ],
-    "slot": "B-xmuy1rdg3uct",
-    "wk": "2026-10-04",
-    "id": "Lmuzt2me6tx0f22",
-    "auto": true,
-    "updatedAt": "2026-10-08T17:23:47.550Z"
-   }
-  ],
   "skater": [
    {
     "d": "2026-10-04",
@@ -5429,24 +5155,6 @@
     "slot": "B-d6s2",
     "wk": "2026-10-04",
     "id": "k1498bun"
-   }
-  ],
-  "sled": [
-   {
-    "d": "2026-10-04",
-    "ph": "exp",
-    "s": 1,
-    "r": 3,
-    "sets": [
-     {
-      "w": null,
-      "r": 3
-     }
-    ],
-    "slot": "B-sled6",
-    "wk": "2026-10-04",
-    "id": "kpfj91p",
-    "auto": true
    }
   ],
   "splitjump": [
@@ -5502,143 +5210,6 @@
     "slot": "A-d4s1",
     "wk": "2026-09-27",
     "id": "ks2mnit"
-   }
-  ],
-  "wristpd": [
-   {
-    "d": "2026-09-27",
-    "ph": "hyp",
-    "w": 33,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 33,
-      "r": 15
-     },
-     {
-      "w": 33,
-      "r": 15
-     },
-     {
-      "w": 33,
-      "r": 15
-     },
-     {
-      "w": 33,
-      "r": 15
-     }
-    ],
-    "slot": "A-d1s2",
-    "wk": "2026-09-27",
-    "id": "kwud8uk"
-   },
-   {
-    "d": "2026-09-28",
-    "ph": "hyp",
-    "w": 33,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 33,
-      "r": 15
-     },
-     {
-      "w": 33,
-      "r": 15
-     },
-     {
-      "w": 33,
-      "r": 15
-     },
-     {
-      "w": 33,
-      "r": 15
-     }
-    ],
-    "slot": "A-d3s3",
-    "wk": "2026-09-27",
-    "id": "kmxmmx7",
-    "auto": true
-   },
-   {
-    "d": "2026-10-04",
-    "ph": "hyp",
-    "w": 33,
-    "s": 2,
-    "r": 15,
-    "sets": [
-     {
-      "w": 33,
-      "r": 15
-     },
-     {
-      "w": 33,
-      "r": 15
-     }
-    ],
-    "slot": "B-d1s3",
-    "wk": "2026-10-04",
-    "id": "ksrmxsx"
-   },
-   {
-    "d": "2026-10-08",
-    "ph": "hyp",
-    "w": 44,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     },
-     {
-      "w": 44,
-      "r": 6
-     }
-    ],
-    "slot": "B-xmuy1rdg3uct",
-    "wk": "2026-10-04",
-    "id": "Lmuzsw6mfoxrslw",
-    "updatedAt": "2026-10-12T13:08:17.581Z"
-   },
-   {
-    "d": "2026-10-12",
-    "ph": "hyp",
-    "w": 44,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 44,
-      "r": 15
-     },
-     {
-      "w": 44,
-      "r": 15
-     },
-     {
-      "w": 44,
-      "r": 15
-     },
-     {
-      "w": 44,
-      "r": 15
-     }
-    ],
-    "slot": "Pa2gom-d1s9",
-    "wk": "2026-10-11",
-    "id": "Lmv57rvjoailyn6",
-    "updatedAt": "2026-10-12T12:14:11.316Z"
    }
   ],
   "zercher": [
@@ -5796,58 +5367,6 @@
     "id": "Lmuztghkv6i7b4k",
     "updatedAt": "2026-10-08T17:45:11.988Z"
    }
-  ],
-  "zottman": [
-   {
-    "d": "2026-09-29",
-    "ph": "hyp",
-    "w": 15,
-    "s": 3,
-    "r": 15,
-    "sets": [
-     {
-      "w": 15,
-      "r": 15
-     },
-     {
-      "w": 15,
-      "r": 15
-     },
-     {
-      "w": 15,
-      "r": 15
-     }
-    ],
-    "slot": "A-d1s7",
-    "wk": "2026-09-27",
-    "id": "k1qa4wr9"
-   },
-   {
-    "d": "2026-10-07",
-    "ph": "hyp",
-    "w": 15,
-    "s": 3,
-    "r": 15,
-    "sets": [
-     {
-      "w": 15,
-      "r": 15
-     },
-     {
-      "w": 15,
-      "r": 15
-     },
-     {
-      "w": 15,
-      "r": 15
-     }
-    ],
-    "slot": "B-d1s9",
-    "wk": "2026-10-04",
-    "id": "Lmuxyjl53v7iqsi",
-    "auto": true,
-    "updatedAt": "2026-10-07T10:21:24.808Z"
-   }
   ]
  },
  "weeks": {
@@ -5870,12 +5389,12 @@
     "A-d3s5": true,
     "A-d3s6": true,
     "A-d4s2": true,
-    "A-d4s4": true,
     "A-d4s5": true,
     "A-d5s3": true,
-    "A-d6s5": true,
     "A-d2s2#0": true,
-    "A-d3s6#0": true
+    "A-d3s6#0": true,
+    "A-d4s4#1": true,
+    "A-d6s5#1": true
    },
    "skipped": {
     "A-d1s3": true,
@@ -5914,7 +5433,9 @@
     "A-sled4": true,
     "A-sled5": true,
     "A-xmuy1u0ehkgt": true,
-    "A-xmuy1vz1s5qy": true
+    "A-xmuy1vz1s5qy": true,
+    "A-d4s4": true,
+    "A-d6s5": true
    },
    "moved": {
     "A-d1s7": 3,
@@ -6805,9 +6326,7 @@
     "B-d4s1#0": true,
     "B-d4s5#1": true,
     "B-d5s3#0": true,
-    "Pa2gom-d1s2": true,
     "B-xmuy1rdg3uct": true,
-    "X-muy8rvy9whc0": true,
     "B-xmuy1nsai5fs#0": true
    },
    "skipped": {
@@ -6833,8 +6352,6 @@
     "B-sled3": true,
     "B-sled4": true,
     "B-sled5": true,
-    "Pa2gom-d1s1": true,
-    "Pa2gom-d1s3": true,
     "Pa2gom-d6s1": true,
     "B-xmuy1nsai5fs": true,
     "B-xmv2inqvwi0q": true
@@ -6850,12 +6367,9 @@
     "B-d4s5": 5,
     "B-d5s2": 6,
     "B-d5s3": 4,
-    "B-xmuy1rdg3uct": 3,
-    "X-muy8rvy9whc0": 5
+    "B-xmuy1rdg3uct": 3
    },
-   "ph": {
-    "X-muy8rvy9whc0:0": "exp"
-   },
+   "ph": {},
    "warm": {},
    "rest": [
     3
@@ -7666,16 +7180,7 @@
      "sledAdded": true,
      "sledTop": true
     }
-   },
-   "extra": [
-    {
-     "id": "X-muy8rvy9whc0",
-     "day": 3,
-     "ex": "duck-sled-push",
-     "ph": "strength",
-     "note": ""
-    }
-   ]
+   }
   },
   "2026-10-11": {
    "prog": null,
@@ -8868,651 +8373,29 @@
    {
     "id": "vitamin-d3-k2",
     "n": "Vitamin D3 + K2",
-    "slot": "morning",
-    "brand": "SportsResearch",
-    "catalogId": "c:dsld:268234"
+    "slot": "morning"
    },
    {
     "id": "collagen-fit",
     "n": "Collagen Fit",
-    "slot": "",
-    "brand": "Thorne",
-    "catalogId": "c:dsld:328823"
+    "slot": ""
    },
    {
     "id": "ginseng-plus",
     "n": "Ginseng Plus",
-    "slot": "",
-    "brand": "Thorne",
-    "catalogId": "c:dsld:328831"
+    "slot": ""
    },
    {
     "id": "pharmagaba-250",
     "n": "PharmaGABA-250",
-    "slot": "",
-    "brand": "Thorne",
-    "catalogId": "c:dsld:284252"
+    "slot": ""
    },
    {
     "id": "basic-nutrients-2-day",
     "n": "Basic Nutrients 2/Day",
-    "slot": "",
-    "brand": "Thorne",
-    "catalogId": "c:dsld:323076"
+    "slot": ""
    }
   ],
   "taken": {}
- },
- "grocery": {
-  "stores": [
-   "Downtown",
-   "C-Town",
-   "Family Bulk",
-   "Vegetable store",
-   "BJ's",
-   "Trader Joe,s",
-   "Whole Foods",
-   "Aldi",
-   "Flatbush Co-Op"
-  ],
-  "items": [
-   {
-    "id": "trader-joe-s-tuna",
-    "n": "Trader Joe's tuna",
-    "store": "Trader Joe,s",
-    "qty": 8,
-    "cents": 250,
-    "once": false
-   },
-   {
-    "id": "trader-joe-s-kefir",
-    "n": "Trader Joe's kefir",
-    "store": "Trader Joe,s",
-    "qty": 4,
-    "cents": 550,
-    "once": false
-   },
-   {
-    "id": "trader-joe-s-gnocchi-not-tomato-based",
-    "n": "Trader Joe's gnocchi (not tomato based)",
-    "store": "Trader Joe,s",
-    "qty": 4,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "whole-foods-cottage-cheese",
-    "n": "Whole Foods cottage cheese",
-    "store": "Whole Foods",
-    "qty": 4,
-    "cents": 500,
-    "once": false
-   },
-   {
-    "id": "healthy-juice",
-    "n": "Healthy juice",
-    "store": "Whole Foods",
-    "qty": 4,
-    "cents": 500,
-    "once": false
-   },
-   {
-    "id": "aldi-elevation-pure-simple",
-    "n": "Aldi Elevation Pure & Simple",
-    "store": "Aldi",
-    "qty": 4,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "peaches",
-    "n": "Peaches",
-    "store": "Aldi",
-    "qty": 4,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "beans",
-    "n": "Beans",
-    "store": "",
-    "qty": 3,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "trader-joe-s-trail-mix",
-    "n": "Trader Joe's trail mix",
-    "store": "Trader Joe,s",
-    "qty": 3,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "trader-joe-s-everything-bagel",
-    "n": "Trader Joe's Everything Bagel",
-    "store": "Trader Joe,s",
-    "qty": 3,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "pancetta-or-guanciale",
-    "n": "Pancetta or guanciale",
-    "store": "Trader Joe,s",
-    "qty": 2,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "whole-foods-bread",
-    "n": "Whole Foods bread",
-    "store": "Whole Foods",
-    "qty": 2,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "seltzer",
-    "n": "Seltzer",
-    "store": "",
-    "qty": 2,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "whole-foods-oatmeal",
-    "n": "Whole Foods oatmeal",
-    "store": "Whole Foods",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "whole-foods-kite-hill-cream-cheese",
-    "n": "Whole Foods Kite Hill cream cheese",
-    "store": "Whole Foods",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "spaghetti",
-    "n": "Spaghetti",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "pasta",
-    "n": "Pasta",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "pecorino-romano-cheese",
-    "n": "Pecorino Romano cheese",
-    "store": "Trader Joe,s",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "crushed-tomatoes",
-    "n": "Crushed tomatoes",
-    "store": "Trader Joe,s",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "peanut-butter",
-    "n": "Peanut butter",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "yogurt",
-    "n": "Yogurt",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "turkey",
-    "n": "Turkey",
-    "store": "Aldi",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "cheese",
-    "n": "Cheese",
-    "store": "Aldi",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "arugula",
-    "n": "Arugula",
-    "store": "Aldi",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "whole-foods-one-degree-organic-foods-spr",
-    "n": "Whole Foods One Degree Organic Foods sprouted brown rice crisps",
-    "store": "Whole Foods",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "monk-fruit-sweetener-flatbush-co-op-mayb",
-    "n": "Monk fruit sweetener (Flatbush Co-Op, maybe Whole Foods)",
-    "store": "Flatbush Co-Op",
-    "qty": 1,
-    "cents": 1850,
-    "once": false
-   },
-   {
-    "id": "rice-pudding",
-    "n": "Rice pudding",
-    "store": "C-Town",
-    "qty": 2,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "beef-chuck-3-for-my-prep",
-    "n": "Beef chuck (3 for my prep)",
-    "store": "BJ's",
-    "qty": 4,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "chicken-2-for-my-prep",
-    "n": "Chicken (2 for my prep)",
-    "store": "BJ's",
-    "qty": 3,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "eggs",
-    "n": "Eggs",
-    "store": "BJ's",
-    "qty": 2,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "milk",
-    "n": "Milk",
-    "store": "BJ's",
-    "qty": 2,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "avocado-chips",
-    "n": "Avocado chips",
-    "store": "BJ's",
-    "qty": 2,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "my-frozen-fruit",
-    "n": "My frozen fruit",
-    "store": "BJ's",
-    "qty": 2,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "irish-butter",
-    "n": "Irish butter",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "cheese-block",
-    "n": "Cheese block",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "my-steak-if-more-steak-drop-one-beef-chu",
-    "n": "My steak (if more steak, drop one beef chuck or switch steaks)",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "my-ground-turkey",
-    "n": "My ground turkey",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "my-ground-beef-or-pork-maybe",
-    "n": "My ground beef or pork, maybe",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "my-beef-sticks",
-    "n": "My beef sticks",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "rice",
-    "n": "Rice",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "quinoa",
-    "n": "Quinoa",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "chia-seeds",
-    "n": "Chia seeds",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "granola",
-    "n": "Granola",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "sweet-potato",
-    "n": "Sweet potato",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "potato",
-    "n": "Potato",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "zip-lock-bags",
-    "n": "Zip lock bags",
-    "store": "BJ's",
-    "qty": 1,
-    "cents": null,
-    "once": true
-   },
-   {
-    "id": "apple-juice",
-    "n": "Apple juice",
-    "store": "Vegetable store",
-    "qty": 4,
-    "cents": 250,
-    "once": false
-   },
-   {
-    "id": "parsley",
-    "n": "Parsley",
-    "store": "Vegetable store",
-    "qty": 2,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "cilantro",
-    "n": "Cilantro",
-    "store": "Vegetable store",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "scallions",
-    "n": "Scallions",
-    "store": "Vegetable store",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "bell-pepper",
-    "n": "Bell pepper",
-    "store": "Vegetable store",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "thyme",
-    "n": "Thyme",
-    "store": "Vegetable store",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "garlic",
-    "n": "Garlic",
-    "store": "Vegetable store",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "onions",
-    "n": "Onions",
-    "store": "Vegetable store",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "lemon",
-    "n": "Lemon",
-    "store": "Vegetable store",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "plantain-for-2-days",
-    "n": "Plantain (for 2 days)",
-    "store": "Vegetable store",
-    "qty": 4,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "sweet-plantain-for-2-days",
-    "n": "Sweet plantain (for 2 days)",
-    "store": "Vegetable store",
-    "qty": 4,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "tomato-paste",
-    "n": "Tomato paste",
-    "store": "Vegetable store",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "carrots",
-    "n": "Carrots",
-    "store": "Vegetable store",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "tangerines",
-    "n": "Tangerines",
-    "store": "Vegetable store",
-    "qty": 1,
-    "cents": null,
-    "once": false
-   },
-   {
-    "id": "beef-bouillon-or-beef-stock-whole-foods-",
-    "n": "Beef bouillon or beef stock (Whole Foods, or from Aldi)",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": true
-   },
-   {
-    "id": "cloves",
-    "n": "Cloves",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": true
-   },
-   {
-    "id": "ancho-chili-powder",
-    "n": "Ancho chili powder",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": true
-   },
-   {
-    "id": "black-pepper",
-    "n": "Black pepper",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": true
-   },
-   {
-    "id": "garlic-powder",
-    "n": "Garlic powder",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": true
-   },
-   {
-    "id": "cayenne-pepper",
-    "n": "Cayenne pepper",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": true
-   },
-   {
-    "id": "vanilla-extract",
-    "n": "Vanilla extract",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": true
-   },
-   {
-    "id": "flour",
-    "n": "Flour",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": true
-   },
-   {
-    "id": "sriracha",
-    "n": "Sriracha",
-    "store": "",
-    "qty": 1,
-    "cents": null,
-    "once": true
-   }
-  ],
-  "months": {
-   "2026-10": {
-    "lines": {
-     "trader-joe-s-kefir": {
-      "cents": 550
-     },
-     "beef-chuck-3-for-my-prep": {
-      "qty": 4
-     },
-     "peaches": {
-      "got": true,
-      "qty": 4
-     },
-     "turkey": {
-      "got": true,
-      "qty": 2
-     },
-     "cheese": {
-      "got": true,
-      "qty": 2
-     },
-     "spaghetti": {
-      "got": true,
-      "qty": 1
-     },
-     "whole-foods-bread": {
-      "got": true,
-      "qty": 2
-     },
-     "whole-foods-cottage-cheese": {
-      "got": true,
-      "qty": 4,
-      "cents": 500
-     },
-     "healthy-juice": {
-      "got": true,
-      "qty": 2,
-      "cents": 500
-     }
-    },
-    "pulled": [
-     "zip-lock-bags"
-    ]
-   }
-  }
  }
 }
