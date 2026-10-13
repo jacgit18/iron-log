@@ -59,6 +59,8 @@ const blobSave = {
 
 // The GitHub token for the standalone app. Kept in this browser only, outside the config, because the
 // config is written into the backup files.
+/** How long a built-but-unshared export (waiting for a second tap) is kept before it is thrown away as stale. */
+export const SHARE_READY_MS = 60_000;
 const TOKEN_KEY = 'ironlog-gh-token';
 const readToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
 // Standalone (e.g. GitHub Pages) rather than inside the Claude host, which backs up through its connector.
@@ -974,8 +976,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     return get().runExport('data', async dl => { await dl.save(await get().buildExportFile('data')); });
   },
 
-  // Share sheet (admin-only for now, ADR-free UI feature). The file is built first (async), then shared; if the browser says the tap
-  // ran out while it was built (iOS Safari is strict), the built file is kept and a second tap shares it with no waiting.
+  // Share sheet (released to everyone, see features.ts). The file is built first (async), then shared; if the browser says the tap
+  // ran out while it was built (iOS Safari is strict), the built file is kept and a second tap shares it with no waiting. The kept
+  // file is a snapshot, so it is dropped after SHARE_READY_MS: a later tap builds a fresh one rather than sharing old data.
   shareReady: null,
   async shareExport(kind) {
     const dl = get().dl; if (!dl || get().exporting) return;
@@ -987,7 +990,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       const file = exportFile(built.filename, built.data);
       const res = await shareFile(file);
       if (res === 'shared') flag('Shared');
-      else if (res === 'blocked') set({ shareReady: { kind, file } });
+      else if (res === 'blocked') {
+        set({ shareReady: { kind, file } });
+        setTimeout(() => { if (get().shareReady?.file === file) set({ shareReady: null }); }, SHARE_READY_MS);
+      }
       else if (res === 'failed') await get().saveInstead(built);
       // 'cancelled': the person closed the share sheet, nothing to say
     } finally { set({ exporting: null }); }
