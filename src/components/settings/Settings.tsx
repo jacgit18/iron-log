@@ -341,8 +341,7 @@ export default function Settings() {
       </Group>
       {/* Last on the page, apart from the everyday data panels: these cannot be undone. */}
       <Group id="erase" title="Erase & delete">
-        <div className="scol"><ErasePanel /></div>
-        <div className="scol"><DeleteMyData /></div>
+        <div className="scol"><ErasePanel /><DeleteMyData /></div>
       </Group>
     </div>
   );
