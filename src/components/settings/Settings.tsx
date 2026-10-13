@@ -5,7 +5,7 @@ import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
@@ -14,6 +14,7 @@ import { MON } from '../../shared/dates.js';
 import { programFor, progName, programWeights, bestByPhase, round } from '../../lib/logic.js';
 import CommitInput from '../CommitInput.jsx';
 import ArmedButton from '../ArmedButton.jsx';
+import { motionOK } from '../../lib/motion.js';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
@@ -27,7 +28,7 @@ function ModePanel() {
   const modes = [[1, `${a} only`, `Run ${a} every week.`], [2, 'Alternate monthly', `${a} and ${b} take turns by month.`], [3, 'Swap every 6 months', 'Six months on one program, then six on the other.']];
   return (
     <section className="panel">
-      <h2>Program mode</h2>
+      <h3>Program mode</h3>
       <div className="modes">
         {modes.map(([m, t, dsc]) => (
           <label className="mode" key={m}>
@@ -58,7 +59,7 @@ function ModePanel() {
       )}
       <p>{yr} at a glance. Weeks run Sunday to Saturday; a week follows the month its Sunday falls in. In Mode 2 you can also switch a single week to A or B from the board.</p>
       <div className="months">
-        {MON.map((m, i) => { const p = programFor(cfg, new Date(yr, i, 1)); return <div key={m} className={`${p === 'B' ? 'b' : ''}${i === now.getMonth() ? ' now' : ''}`}>{m[0]}<br />{p}</div>; })}
+        {MON.map((m, i) => { const p = programFor(cfg, new Date(yr, i, 1)); return <div key={m} className={`${p === 'B' ? 'b' : ''}${i === now.getMonth() ? ' now' : ''}`}><span className="sr">{m}: Program {p}</span><span aria-hidden="true">{m[0]}<br />{p}</span></div>; })}
       </div>
     </section>
   );
@@ -69,7 +70,7 @@ function AppearancePanel() {
   const upd = (patch: Partial<Appearance>) => setA(setAppearance(patch));
   return (
     <section className="panel">
-      <h2>Appearance</h2>
+      <h3>Appearance</h3>
       <fieldset className="plain">
         <legend>Colours</legend>
         <div className="modes">
@@ -98,7 +99,7 @@ function RestAlertPanel() {
   };
   return (
     <section className="panel">
-      <h2>Rest timer alert</h2>
+      <h3>Rest timer alert</h3>
       <label className="inline"><input type="checkbox" checked={on} onChange={e => void toggle(e.target.checked)} /> Show a notification when a rest or hold ends while Iron Log is in the background</label>
       <p>It only shows while the phone still lets Iron Log run in the background. If the screen has been locked for a while the alert can be late, and the timer is right when you open the app again. Saved on this device only.</p>
       {note && <p role="status">{note}</p>}
@@ -111,12 +112,12 @@ function DevicePanel() {
   const storeMode = useAppStore(s => s.storeMode);
   return (
     <section className="panel">
-      <h2>App on this device</h2>
+      <h3>App on this device</h3>
       {installed ? <p>Iron Log is installed. It opens from your home screen and works without a connection.</p>
         : installEvent ? (
           <>
             <p>Install Iron Log to open it from your home screen like any other app. It works without a connection.</p>
-            <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn primary" onClick={install}>Install app</button></div>
+            <div className="actions"><button type="button" className="btn primary" onClick={install}>Install app</button></div>
           </>
         ) : isIOS() ? (
           <>
@@ -129,7 +130,7 @@ function DevicePanel() {
         : persisted === false ? (
           <>
             <p>Your log is stored in this browser. If the device runs low on space, the browser may clear it. Keep a copy with Export all data.</p>
-            <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn" onClick={keepData}>Keep my data on this device</button></div>
+            <div className="actions"><button type="button" className="btn" onClick={keepData}>Keep my data on this device</button></div>
           </>
         ) : null)}
     </section>
@@ -140,7 +141,7 @@ function PhasePanel() {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
   return (
     <section className="panel">
-      <h2>Phases</h2>
+      <h3>Phases</h3>
       <p>Each phase has default sets × reps. The target weight starts from the weight you last logged for that exercise in that phase, otherwise the program's weight. The % of 1RM is only for comparing with your 1RM below; it doesn't set targets.</p>
       <div className="tbl">
         <table>
@@ -173,9 +174,9 @@ function DataPanel() {
   const [paste, setPaste] = useState('');
   return (
     <section className="panel" aria-labelledby="data-h">
-      <h2 id="data-h">Export &amp; import</h2>
+      <h3 id="data-h">Export &amp; import</h3>
       <p>Your one backup is a single <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep a copy, move to another device, or go back to an earlier state.</p>
-      <div className="actions" style={{ justifyContent: 'flex-start' }}>
+      <div className="actions">
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <ShareExport kind="data" label="Share data file" />
         <label className="btn filebtn">Import from file
@@ -187,7 +188,7 @@ function DataPanel() {
       <details className="imppaste">
         <summary>Can't pick a file? Paste its contents instead</summary>
         <textarea id="imp-text" rows={4} aria-label="Contents of an iron-log-data file" placeholder="Paste the contents of an iron-log-data file" value={paste} onChange={e => setPaste(e.target.value)} />
-        <div className="actions" style={{ justifyContent: 'flex-start' }}>
+        <div className="actions">
           <button type="button" className="btn sm" onClick={() => st.pasteImport(paste)}>Review import</button>
         </div>
       </details>
@@ -195,7 +196,7 @@ function DataPanel() {
         <div className="subblock">
           <h4>Spreadsheet report</h4>
           <p>For reading and charting, not for backup. <b>iron-log.xlsx</b> has a summary per exercise, every session and weekly totals; each week also has its own workbook. The .csv lists logged sessions only.</p>
-          <div className="actions" style={{ justifyContent: 'flex-start' }}>
+          <div className="actions">
             <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
             <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
             <button type="button" className="btn" disabled={!!exporting} onClick={st.exportCsv}>Download CSV</button>
@@ -221,8 +222,8 @@ function ErasePanel() {
   const [sel, setSel] = useState(() => Object.fromEntries(ERASE.map(([k]) => [k, true])));
   const any = Object.values(sel).some(Boolean);
   return (
-    <section className="panel erase">
-      <h2>Erase data</h2>
+    <section className="panel erase danger-panel" aria-labelledby="erase-h">
+      <h3 id="erase-h">Erase data</h3>
       <p>Deletes what you check below {storeMode === 'db' ? 'from your saved data' : 'from this browser'}, to start the tracker over. It can't be undone here, so use Export all data first.</p>
       <fieldset>
         <legend className="sr">What to erase</legend>
@@ -234,7 +235,7 @@ function ErasePanel() {
         ))}
       </fieldset>
       <p className="note">Kept: display options, and any file you exported earlier. An export made after erasing holds the erased state.</p>
-      <div className="actions" style={{ justifyContent: 'flex-start' }}>
+      <div className="actions">
         {dl && <button type="button" className="btn" disabled={!!exporting} onClick={st.downloadData}>Export all data first</button>}
         <ArmedButton className="btn danger" disabled={!any} label="Erase selected data" armedLabel="Tap again to erase" onConfirm={() => st.eraseData(sel)} />
       </div>
@@ -261,7 +262,7 @@ function RmPanel() {
   const weighted = [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
   return (
     <section className="panel wide">
-      <h2>1-rep maxes</h2>
+      <h3>1-rep maxes</h3>
       <p>Keep a one-rep max (1RM, the most you can lift once) for reference. It shows next to your logged weights but doesn't set targets: those start from the weight you last logged.</p>
       <div className="tbl">
         <table>
@@ -285,27 +286,58 @@ function RmPanel() {
   );
 }
 
+// Where each group starts, for the jump row. The page is long on a phone; the row gets to a group in one tap.
+const GROUPS = [['training', 'Training'], ['data', 'Data'], ['app', 'App']] as const;
+const jump = (id: string) => {
+  const h = document.getElementById(`set-${id}-h`);
+  if (!h) return;
+  h.focus({ preventScroll: true }); // before the scroll: focusing mid-scroll cancels a smooth scroll
+  h.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'instant', block: 'start' });
+};
+
+function Group({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  return (
+    <section className="sgroup" aria-labelledby={`set-${id}-h`}>
+      <h2 id={`set-${id}-h`} tabIndex={-1}>{title}</h2>
+      <div className="sgrid">{children}</div>
+    </section>
+  );
+}
+
 export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
   const restAlert = useFeature('restNotify');
   return (
     <div className="settings">
-      <div className="scol">
-        <ModePanel />
-        <PhasePanel />
-        <AppearancePanel />
-        {restAlert && <RestAlertPanel />}
-        <DevicePanel />
-        <FeedbackPanel />
-      </div>
-      <div className="scol">
-        <AccountPanel />
-        <SyncPanel />
-        <DataPanel key={importCount} />
-        <ErasePanel />
-        <DeleteMyData />
-      </div>
-      <RmPanel />
+      <nav className="sjump" aria-label="Jump to a settings group">
+        {GROUPS.map(([id, label]) => <button key={id} type="button" className="chip" onClick={() => jump(id)}>{label}</button>)}
+      </nav>
+      <Group id="training" title="Training">
+        <div className="scol"><ModePanel /></div>
+        <div className="scol"><PhasePanel /></div>
+        <RmPanel />
+      </Group>
+      <Group id="data" title="Data">
+        <div className="scol">
+          <AccountPanel />
+          <SyncPanel />
+        </div>
+        <div className="scol">
+          <DataPanel key={importCount} />
+          <ErasePanel />
+          <DeleteMyData />
+        </div>
+      </Group>
+      <Group id="app" title="App">
+        <div className="scol">
+          <AppearancePanel />
+          {restAlert && <RestAlertPanel />}
+        </div>
+        <div className="scol">
+          <DevicePanel />
+          <FeedbackPanel />
+        </div>
+      </Group>
     </div>
   );
 }

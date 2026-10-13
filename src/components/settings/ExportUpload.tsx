@@ -49,14 +49,14 @@ export default function ExportUpload() {
 
   return (
     <div>
-      <h3>Upload from an export file</h3>
+      <h4>Upload from an export file</h4>
       {sync.holdsData
         ? <p className="note">Your account already has data, so a file cannot be uploaded this way. Use Export &amp; import to merge a file into it.</p>
         : (
           <>
             <p>Moving from another copy of Iron Log? Choose its export file (Settings → Export &amp; import → Download data there). It is added to your account once, all or nothing, and only while the account is empty. Do this before logging anything here.</p>
             <input ref={input} type="file" accept={JSON_ACCEPT} hidden aria-label="Iron Log export file" onChange={e => { void choose(e.target.files?.[0]); e.target.value = ''; }} />
-            <div className="actions" style={{ justifyContent: 'flex-start' }}>
+            <div className="actions">
               <button type="button" className="btn" disabled={busy} onClick={() => input.current?.click()}>Choose export file…</button>
             </div>
             {picked && (
@@ -64,7 +64,7 @@ export default function ExportUpload() {
                 <p><b>{picked.name}</b>{picked.exportedAt ? ` (exported ${picked.exportedAt.slice(0, 10)})` : ''} holds {describeLegacy(picked.plan.summary)}.
                   {picked.plan.renamed > 0 && ` ${picked.plan.renamed} entries that looked identical keep separate ids.`}
                   {picked.plan.skipped > 0 && ` ${picked.plan.skipped} check-offs are left out because a logged session already covers them.`}</p>
-                <div className="actions" style={{ justifyContent: 'flex-start' }}>
+                <div className="actions">
                   <button type="button" className="btn primary" disabled={busy} onClick={() => void upload()}>{busy ? 'Uploading…' : 'Upload to my account'}</button>
                   <button type="button" className="btn" disabled={busy} onClick={() => setPicked(null)}>Cancel</button>
                 </div>

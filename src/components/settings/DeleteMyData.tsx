@@ -63,12 +63,12 @@ export default function DeleteMyData() {
     const id = `dmd-${what}`;
     return (
       <div className="dmd-block">
-        <h3>{title}</h3>
+        <h4>{title}</h4>
         <p>{body}</p>
         <label className="field" htmlFor={id}>Type <b>{WORDS[what]}</b> to confirm
           <input id={id} type="text" autoComplete="off" autoCapitalize="characters" spellCheck={false} value={typed[what]} onChange={e => setTyped(t => ({ ...t, [what]: e.target.value }))} />
         </label>
-        <div className="actions" style={{ justifyContent: 'flex-start' }}>
+        <div className="actions">
           <button type="button" className="btn danger" disabled={busy !== null || typed[what].trim() !== WORDS[what]} onClick={() => void run(what)}>{busy === what ? 'Working…' : button}</button>
         </div>
       </div>
@@ -76,10 +76,10 @@ export default function DeleteMyData() {
   };
 
   return (
-    <section className="panel deletemydata" aria-labelledby="dmd-h">
-      <h2 id="dmd-h">Delete my data</h2>
+    <section className="panel deletemydata danger-panel" aria-labelledby="dmd-h">
+      <h3 id="dmd-h">Delete my data</h3>
       <p>These remove your data from the server for good, not just hide it. They cannot be undone. <b>Export first</b> if you want a copy: it is yours to keep.</p>
-      {dl && <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn" disabled={!!exporting} onClick={() => void useAppStore.getState().downloadData()}>Export all data first</button></div>}
+      {dl && <div className="actions"><button type="button" className="btn" disabled={!!exporting} onClick={() => void useAppStore.getState().downloadData()}>Export all data first</button></div>}
       {block('data', 'Erase everything in my account', 'Removes every workout, check-off, body weight, program and setting from the server, and from this device. You stay signed in with an empty account. Your other devices clear themselves the next time they sync.', 'Erase everything permanently')}
       {block('account', 'Delete my account', 'Does the above, and also deletes your account and its Google sign-in record. Signing in with the same Google account afterwards starts a new, empty account.', 'Delete my account permanently')}
       <p className="note">Copies in the server's nightly backups are deleted automatically within 30 days. Nothing else about you is kept. {' '}<a href="/privacy.html">Privacy policy</a></p>
