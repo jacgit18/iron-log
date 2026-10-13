@@ -59,3 +59,28 @@ test('finishing a day\'s workout suggests moving one card; Apply moves it and fo
   await expect(page.locator('#col-3 #chk-A-d3s5')).toHaveCount(1);
   await expect(putBack).toHaveCount(0);
 });
+
+test('in the log sheet, Enter moves weight to reps to the next set, and Enter in the last box saves', async ({ page }) => {
+  await page.locator('#log-A-d1s1-0').click();
+  const dialog = page.getByRole('dialog');
+  const w1 = dialog.getByLabel('Set 1 weight in lb'), r1 = dialog.getByLabel(/^Set 1 (reps|hold)/), w2 = dialog.getByLabel('Set 2 weight in lb');
+  await w1.fill('135');
+  await w1.press('Enter');
+  await expect(r1).toBeFocused();
+  await expect(dialog).toBeVisible(); // Enter did not save the sheet
+  await r1.fill('8');
+  await r1.press('Enter');
+  await expect(w2).toBeFocused();
+  // set 2 followed set 1's weight; its contents are selected on focus, so typing replaces them
+  await expect(w2).toHaveValue('135');
+  await page.keyboard.type('9');
+  await expect(w2).toHaveValue('9');
+  // the last box says Done and Enter there saves
+  const rows = await dialog.locator('.setrow').count();
+  const lastReps = dialog.getByLabel(new RegExp(`^Set ${rows} (reps|hold)`));
+  await expect(lastReps).toHaveAttribute('enterkeyhint', 'done');
+  await expect(w1).toHaveAttribute('enterkeyhint', 'next');
+  await lastReps.fill('8');
+  await lastReps.press('Enter');
+  await expect(dialog).toBeHidden();
+});
