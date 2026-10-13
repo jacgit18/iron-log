@@ -353,10 +353,6 @@ export interface CoreSlice {
   exportCsv(): Promise<void>;
   downloadExcel(which: 'all' | 'week'): Promise<void>;
   buildExportFile(kind: Exclude<ExportKind, 'csv'>): Promise<{ filename: string; data: Loose }>;
-  shareReady: { kind: ExportKind; file: File } | null; // a built export waiting for a second tap (the first tap's permission ran out)
-  shareExport(kind: Exclude<ExportKind, 'csv'>): Promise<void>;
-  shareAgain(): Promise<void>;
-  saveInstead(built: { filename: string; data: Loose }): Promise<void>;
   downloadData(): Promise<void>;
   init(): Promise<void>;
 }

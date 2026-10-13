@@ -47,7 +47,9 @@ export default function DeleteMyData() {
     void account.me().then(s => { if (current) setWho(s); });
     return () => { current = false; };
   }, [api, account]);
-  if (!api || !sync || who?.status !== 'signed-in') return null;
+  // Not while this device holds another account's data: the server would erase the signed-in account, and this device would then
+  // forget the other one's copy and unsent changes. The other-account card's choice comes first.
+  if (!api || !sync || who?.status !== 'signed-in' || (sync.state === 'paused' && sync.pausedBecause === 'account')) return null;
 
   const run = async (what: What) => {
     setBusy(what);

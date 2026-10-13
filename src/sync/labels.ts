@@ -39,7 +39,7 @@ export function describeSync(s: SyncStatus, clock: (ms: number) => string = form
       case 'auth':
         return { headline: 'Sign-in needed', detail: `${kept}${waiting ? ' and will be sent' : ''} once you are signed in.${last}`, tone: 'bad', canSyncNow: true };
       case 'account':
-        return { headline: 'Another account', detail: `This device holds data from a different account, so nothing has been sent or received. ${waiting ? `${kept} and stays here until you choose below.` : 'Choose below what to do with it.'}`, tone: 'bad', canSyncNow: true };
+        return { headline: 'Another account', detail: `This device holds data from a different account, so nothing has been sent or received. ${waiting ? `${kept} and stays here until you choose at the top of the page.` : 'Choose at the top of the page what to do with it.'}`, tone: 'bad', canSyncNow: true };
       case 'network':
         return { headline: 'Offline', detail: `${kept}${waiting ? ' and will be sent when the connection returns' : ''}.${last}`, tone: 'wait', canSyncNow: true };
       default:

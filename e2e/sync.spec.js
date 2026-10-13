@@ -411,6 +411,15 @@ test.describe('another account signs in on a device that holds the first one’s
     return seen;
   }
 
+  test('Settings hides Delete my data until the choice is made', async ({ page }) => {
+    // Erasing now would wipe Bob's account and forget Ann's unsent change on this device.
+    await openAsBob(page);
+    await expect(page.getByRole('alert').filter({ hasText: 'holds data from another account' })).toBeVisible();
+    await page.click('#tab-settings');
+    await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Delete my data' })).toHaveCount(0);
+  });
+
   test('asks what to do, sends nothing, and has no accessibility violations', async ({ page }) => {
     const seen = await openAsBob(page);
     const card = page.getByRole('alert').filter({ hasText: 'holds data from another account' });

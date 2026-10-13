@@ -1,13 +1,13 @@
 import { test, expect } from './fixtures.js';
 
-// Settings is three groups (Training, Data, App) with a jump row. The row moves focus to a group's heading, then scrolls to it.
+// Settings is four groups (Training, Data, App, then Erase & delete last) with a jump row. The row moves focus to a group's heading, then scrolls to it.
 // GitHub backup is gone (ADR 035): the data file is the one backup path.
 const openSettings = async page => { await page.click('#tab-settings'); await expect(page.getByRole('heading', { name: 'Export & import' })).toBeAttached(); };
 
-test('Settings has the three groups, one export and import panel, and no GitHub backup', async ({ page }) => {
+test('Settings has the four groups, one export and import panel, and no GitHub backup', async ({ page }) => {
   await page.goto('/');
   await openSettings(page);
-  for (const name of ['Training', 'Data', 'App']) await expect(page.getByRole('heading', { level: 2, name, exact: true })).toBeVisible();
+  for (const name of ['Training', 'Data', 'App', 'Erase & delete']) await expect(page.getByRole('heading', { level: 2, name, exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { level: 3, name: 'Export & import' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Export all data', exact: true })).toBeVisible();
   await expect(page.getByText('Import from file')).toBeVisible();
@@ -29,4 +29,24 @@ test('Settings does not scroll sideways on a narrow phone at a large text size',
   await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(wide).toBe(false);
+});
+
+test('Erase starts with nothing ticked, and its button says how many parts it erases', async ({ page }) => {
+  await page.goto('/');
+  await openSettings(page);
+  const erase = page.locator('section.erase');
+  for (const box of await erase.getByRole('checkbox').all()) await expect(box).not.toBeChecked();
+  await expect(erase.getByRole('button', { name: 'Tick what to erase' })).toBeDisabled();
+  await erase.getByRole('checkbox').nth(0).check();
+  await erase.getByRole('checkbox').nth(2).check();
+  await expect(erase.getByRole('button', { name: 'Erase 2 selected' })).toBeEnabled();
+});
+
+test('the 1RM table is folded until opened', async ({ page }) => {
+  await page.goto('/');
+  await openSettings(page);
+  const fold = page.locator('details.fold');
+  await expect(fold.locator('table')).toBeHidden();
+  await fold.locator('summary').click();
+  await expect(fold.locator('table')).toBeVisible();
 });

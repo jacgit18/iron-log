@@ -19,7 +19,6 @@ import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { IMPORT_ACCEPT } from '../../lib/importFile.js';
-import ShareExport from './ShareExport.js';
 
 function ModePanel() {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
@@ -125,14 +124,16 @@ function DevicePanel() {
             <ol className="helpsteps"><li>Tap the Share button.</li><li>Tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>.</li></ol>
           </>
         ) : <p>This page already works offline once loaded. To install it, use your browser's “Install app” or “Add to Home screen” menu item.</p>}
+      {/* Where the data lives, said plainly: synced, the account holds it and exporting is optional; local, this browser is the only copy. */}
+      {storeMode === 'db' && <p>Your data is saved to your account and syncs to your other devices. This device keeps a copy too, so the app works offline; changes made offline are sent when you're back online.</p>}
       {storeMode === 'local' && (persisted
-        ? <p>Your data is kept on this device and won't be cleared to free up space.</p>
+        ? <p>Your data is saved in this browser only (it isn't synced to an account), and the browser won't clear it to free up space.</p>
         : persisted === false ? (
           <>
-            <p>Your log is stored in this browser. If the device runs low on space, the browser may clear it. Keep a copy with Export all data.</p>
+            <p>Your data is saved in this browser only (it isn't synced to an account). If the device runs very low on space, the browser may clear it, so keep a copy with Export all data now and then, or keep it with the button below.</p>
             <div className="actions"><button type="button" className="btn" onClick={keepData}>Keep my data on this device</button></div>
           </>
-        ) : null)}
+        ) : <p>Your data is saved in this browser only (it isn't synced to an account).</p>)}
     </section>
   );
 }
@@ -170,15 +171,15 @@ function PhasePanel() {
 
 function DataPanel() {
   const dl = useAppStore(s => s.dl); const exporting = useAppStore(s => s.exporting); const st = useAppStore.getState();
+  const storeMode = useAppStore(s => s.storeMode);
   const importError = useAppStore(s => s.importError);
   const [paste, setPaste] = useState('');
   return (
     <section className="panel" aria-labelledby="data-h">
       <h3 id="data-h">Export &amp; import</h3>
-      <p>Your one backup is a single <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep a copy, move to another device, or go back to an earlier state.</p>
+      <p>{storeMode === 'db' ? 'Your data is already saved to your account; exporting is optional. ' : ''}<b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
       <div className="actions">
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
-        <ShareExport kind="data" label="Share data file" />
         <label className="btn filebtn">Import from file
           <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : 'imp-help'} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
@@ -200,8 +201,6 @@ function DataPanel() {
             <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
             <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
             <button type="button" className="btn" disabled={!!exporting} onClick={st.exportCsv}>Download CSV</button>
-            <ShareExport kind="xlsx-all" label="Share Excel" />
-            <ShareExport kind="xlsx-week" label="Share this week" />
           </div>
         </div>
       )}
@@ -213,14 +212,15 @@ const ERASE = [
   ['logs', 'Logged sessions', 'every weight, set and rep, including ones logged by check-offs'],
   ['weeks', 'Weekly check-offs', 'checked, skipped and moved cards, and phase changes, for every week'],
   ['body', 'Body weight', ''],
-  ['programs', 'Edited programs, saved versions and the Experiment list', 'the Board goes back to the original programs'],
+  ['programs', 'Edited programs, saved versions and the Experiment list', 'the Board goes back to the original programs'], // synced: a blank one (ADR 021)
   ['settings', 'Settings and 1RMs', 'program mode, rest time, phase percentages, 1RMs, phase defaults, custom exercises and muscle tags'],
 ];
 function ErasePanel() {
   const dl = useAppStore(s => s.dl); const exporting = useAppStore(s => s.exporting); const storeMode = useAppStore(s => s.storeMode);
   const st = useAppStore.getState();
-  const [sel, setSel] = useState(() => Object.fromEntries(ERASE.map(([k]) => [k, true])));
-  const any = Object.values(sel).some(Boolean);
+  // Nothing is ticked to start: two taps must never erase everything by default.
+  const [sel, setSel] = useState(() => Object.fromEntries(ERASE.map(([k]) => [k, false])));
+  const n = Object.values(sel).filter(Boolean).length;
   return (
     <section className="panel erase danger-panel" aria-labelledby="erase-h">
       <h3 id="erase-h">Erase data</h3>
@@ -230,14 +230,14 @@ function ErasePanel() {
         {ERASE.map(([k, label, hint]) => (
           <label className="inline" key={k}>
             <input type="checkbox" checked={sel[k]} onChange={e => setSel(v => ({ ...v, [k]: e.target.checked }))} />
-            <span><b>{label}</b>{hint && <span className="note">: {hint}</span>}</span>
+            <span><b>{label}</b>{hint && <span className="note">: {k === 'programs' && storeMode === 'db' ? 'the Board goes back to a blank program' : hint}</span>}</span>
           </label>
         ))}
       </fieldset>
       <p className="note">Kept: display options, and any file you exported earlier. An export made after erasing holds the erased state.</p>
       <div className="actions">
         {dl && <button type="button" className="btn" disabled={!!exporting} onClick={st.downloadData}>Export all data first</button>}
-        <ArmedButton className="btn danger" disabled={!any} label="Erase selected data" armedLabel="Tap again to erase" onConfirm={() => st.eraseData(sel)} />
+        <ArmedButton className="btn danger" disabled={!n} label={n ? `Erase ${n} selected` : 'Tick what to erase'} armedLabel={`Tap again to erase ${n}`} onConfirm={() => st.eraseData(sel)} />
       </div>
     </section>
   );
@@ -260,10 +260,14 @@ function RmPanel() {
   const all = [...slotsFor(programs.A), ...slotsFor(programs.B)];
   // Program ids too: synced, a card can use an exercise that isn't in the account's library (ADR 024).
   const weighted = [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
+  const withRm = weighted.filter(id => cfg.rm[id] != null).length;
   return (
     <section className="panel wide">
       <h3>1-rep maxes</h3>
       <p>Keep a one-rep max (1RM, the most you can lift once) for reference. It shows next to your logged weights but doesn't set targets: those start from the weight you last logged.</p>
+      {/* Folded: one row per weighted exercise is most of the page on a phone, and it is rarely edited. */}
+      <details className="fold">
+        <summary>{weighted.length ? `Show all ${weighted.length} exercises (${withRm ? `${withRm} with a 1RM` : 'none set yet'})` : 'No weighted exercises in your programs yet'}</summary>
       <div className="tbl">
         <table>
           <thead><tr><th>Exercise</th><th>Program weight</th><th>1RM (lb)</th><th>Best logged</th></tr></thead>
@@ -282,12 +286,13 @@ function RmPanel() {
           </tbody>
         </table>
       </div>
+      </details>
     </section>
   );
 }
 
 // Where each group starts, for the jump row. The page is long on a phone; the row gets to a group in one tap.
-const GROUPS = [['training', 'Training'], ['data', 'Data'], ['app', 'App']] as const;
+const GROUPS = [['training', 'Training'], ['data', 'Data'], ['app', 'App'], ['erase', 'Erase']] as const;
 const jump = (id: string) => {
   const h = document.getElementById(`set-${id}-h`);
   if (!h) return;
@@ -322,11 +327,7 @@ export default function Settings() {
           <AccountPanel />
           <SyncPanel />
         </div>
-        <div className="scol">
-          <DataPanel key={importCount} />
-          <ErasePanel />
-          <DeleteMyData />
-        </div>
+        <div className="scol"><DataPanel key={importCount} /></div>
       </Group>
       <Group id="app" title="App">
         <div className="scol">
@@ -337,6 +338,10 @@ export default function Settings() {
           <DevicePanel />
           <FeedbackPanel />
         </div>
+      </Group>
+      {/* Last on the page, apart from the everyday data panels: these cannot be undone. */}
+      <Group id="erase" title="Erase & delete">
+        <div className="scol"><ErasePanel /><DeleteMyData /></div>
       </Group>
     </div>
   );
