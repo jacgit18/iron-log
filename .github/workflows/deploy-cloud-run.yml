@@ -134,3 +134,41 @@ jobs:
           echo "::error title=The live service failed its check::Rolling back to ${{ steps.live.outputs.revision }}. Traffic stays on that revision until you run scripts/deploy-cloud-run.sh restore or deploy again."
           gcloud run services update-traffic "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --to-revisions "${{ steps.live.outputs.revision }}=100"
           exit 1
+
+  # Names the commit that just went live as the next pre-release (ADR 033, amending ADR 032). It runs only when every step above
+  # passed, so a deploy that was stopped, failed its check or rolled back gets no release. It needs no approval of its own: the
+  # `production` reviewer already approved the deploy.
+  release:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # create the tag and the Release
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0 # all tags
+      - name: Release the commit that went live
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha="$(git rev-parse HEAD)"
+          # The newest version tag, with a release (v1.0.0) sorting above its own pre-releases (v1.0.0-rc.2). Only a numbered stage tag
+          # (v1.0.0-alpha.2) can be continued: after a general-availability tag, or with no numbered tag yet, a person picks the next version.
+          last="$(git -c versionsort.suffix=- tag --list 'v*' --sort=-v:refname | head -n1)"
+          if ! echo "$last" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$'; then
+            echo "::notice title=Not releasing::The newest tag is '${last:-none}', which is not a numbered stage tag. Tag the next version by hand (ADR 032); deploys continue from it."
+            exit 0
+          fi
+          # A deploy of a commit that already has a version (a re-run), or one that is not ahead of the last tag, adds nothing.
+          if git tag --points-at "$sha" --list 'v*' | grep -q .; then
+            echo "Commit ${sha:0:7} already has a release; nothing to do."
+            exit 0
+          fi
+          if ! git merge-base --is-ancestor "$last" "$sha"; then
+            echo "::warning title=Not releasing::${sha:0:7} is not ahead of $last."
+            exit 0
+          fi
+          next="${last%.*}.$(( ${last##*.} + 1 ))"
+          gh release create "$next" --target "$sha" --title "$next" --generate-notes --notes-start-tag "$last"
+          echo "### Released $next (${sha:0:7}), after $last" >> "$GITHUB_STEP_SUMMARY"
