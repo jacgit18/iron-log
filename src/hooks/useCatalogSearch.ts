@@ -48,5 +48,8 @@ export function useCatalogSearch(kind: CatalogKind, q: string, active: boolean):
   const retry = () => setTries(t => t + 1);
   if (!syncing) return { state: { status: 'off' }, retry };
   if (server && words.length < MIN_LETTERS) return { state: { status: 'short' }, retry };
-  return { state: got?.key === key ? got.state : { status: 'loading' }, retry };
+  if (got?.key === key) return { state: got.state, retry };
+  // A server search on its way: keep showing the last answer, marked as searching, so the list does not empty on every key.
+  if (server && got?.state.status === 'ready') return { state: { ...got.state, searching: true }, retry };
+  return { state: { status: 'loading' }, retry };
 }
