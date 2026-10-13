@@ -10,6 +10,7 @@ import Trends from './Trends.jsx';
 import Muscles from '../muscles/Muscles.jsx';
 import LineChart from '../LineChart.js';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
+import ShareExport from '../settings/ShareExport.js';
 
 function History() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
@@ -71,6 +72,7 @@ function ExportBar() {
         <button type="button" className="btn" disabled={!!exporting} onClick={() => downloadExcel('all')}>Download Excel</button>
         <button type="button" className="btn" disabled={!!exporting} onClick={() => downloadExcel('week')}>This week (Excel)</button>
         <button type="button" className="btn" disabled={!!exporting} onClick={exportCsv}>CSV</button>
+        <ShareExport kind="xlsx-all" label="Share Excel" />
       </div>
       <div style={{ textAlign: 'right' }}><BackupMessage /></div>
     </>

@@ -7,6 +7,7 @@ import { validPct, validRest, validRm } from '../shared/validate.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import type { AppState, Flag, SettingsSlice, StoreGet, StoreSet } from './types.ts';
 import type { Logs, Program } from '../types.ts';
+import { importFileProblem, readFailure } from '../lib/importFile.js';
 import { parseExcelExport, parseCsvExport, entryKey, checkOffsFromLogs } from '../lib/excelImport.js';
 
 const ent = (o: any): [string, any][] => Object.entries(o); // eslint-disable-line
@@ -34,8 +35,12 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
   async readImportFile(file) {
     if (!file || get().blocked()) return;
     set({ importError: '' });
+    const tooBig = importFileProblem(file);
+    if (tooBig) { set({ importDraft: null, importError: tooBig }); flag(tooBig); return; }
     try {
-      const buf = await file.arrayBuffer(); const head = new Uint8Array(buf.slice(0, 4));
+      let buf: ArrayBuffer;
+      try { buf = await file.arrayBuffer(); } catch (err) { throw new Error(readFailure(err)); }
+      const head = new Uint8Array(buf.slice(0, 4));
       const zip = head[0] === 0x50 && head[1] === 0x4b; // .xlsx files are zip archives ("PK")
       if (zip || /\.xlsx$/i.test(file.name)) {
         const data = await parseExcelExport(buf, get().cfg);
