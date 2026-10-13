@@ -7,6 +7,7 @@ import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../shared/dates.js';
@@ -352,13 +353,14 @@ function RmPanel() {
 
 export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
+  const restAlert = useFeature('restNotify');
   return (
     <div className="settings">
       <div className="scol">
         <ModePanel />
         <PhasePanel />
         <AppearancePanel />
-        <RestAlertPanel />
+        {restAlert && <RestAlertPanel />}
         <DevicePanel />
         <FeedbackPanel />
       </div>
