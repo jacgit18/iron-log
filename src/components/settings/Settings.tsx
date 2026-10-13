@@ -124,14 +124,16 @@ function DevicePanel() {
             <ol className="helpsteps"><li>Tap the Share button.</li><li>Tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>.</li></ol>
           </>
         ) : <p>This page already works offline once loaded. To install it, use your browser's “Install app” or “Add to Home screen” menu item.</p>}
+      {/* Where the data lives, said plainly: synced, the account holds it and exporting is optional; local, this browser is the only copy. */}
+      {storeMode === 'db' && <p>Your data is saved to your account and syncs to your other devices. This device keeps a copy too, so the app works offline; changes made offline are sent when you're back online.</p>}
       {storeMode === 'local' && (persisted
-        ? <p>Your data is kept on this device and won't be cleared to free up space.</p>
+        ? <p>Your data is saved in this browser only (it isn't synced to an account), and the browser won't clear it to free up space.</p>
         : persisted === false ? (
           <>
-            <p>Your log is stored in this browser. If the device runs low on space, the browser may clear it. Keep a copy with Export all data.</p>
+            <p>Your data is saved in this browser only (it isn't synced to an account). If the device runs very low on space, the browser may clear it, so keep a copy with Export all data now and then, or keep it with the button below.</p>
             <div className="actions"><button type="button" className="btn" onClick={keepData}>Keep my data on this device</button></div>
           </>
-        ) : null)}
+        ) : <p>Your data is saved in this browser only (it isn't synced to an account).</p>)}
     </section>
   );
 }
@@ -169,12 +171,13 @@ function PhasePanel() {
 
 function DataPanel() {
   const dl = useAppStore(s => s.dl); const exporting = useAppStore(s => s.exporting); const st = useAppStore.getState();
+  const storeMode = useAppStore(s => s.storeMode);
   const importError = useAppStore(s => s.importError);
   const [paste, setPaste] = useState('');
   return (
     <section className="panel" aria-labelledby="data-h">
       <h3 id="data-h">Export &amp; import</h3>
-      <p>Your one backup is a single <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep a copy, move to another device, or go back to an earlier state.</p>
+      <p>{storeMode === 'db' ? 'Your data is already saved to your account; exporting is optional. ' : ''}<b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
       <div className="actions">
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <label className="btn filebtn">Import from file
