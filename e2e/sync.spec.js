@@ -333,6 +333,26 @@ test.describe('the Account panel', () => {
     await expect(page.getByRole('button', { name: 'Sign in with Google' })).toHaveCount(0);
   });
 
+  test('a failed check is made again when the connection comes back, and on Try again', async ({ page }) => {
+    let up = false;
+    await settle(page, route => (up ? me(200, signedIn)(route) : me(503, { ok: false })(route)));
+    await expect(page.getByText('Could not check who is signed in')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Delete my data' })).toHaveCount(0);
+    up = true;
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await expect(page.getByText('Could not check who is signed in')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible(); // it rechecks too
+  });
+
+  test('Try again checks who is signed in at once', async ({ page }) => {
+    let up = false;
+    await settle(page, route => (up ? me(200, signedIn)(route) : me(503, { ok: false })(route)));
+    await expect(page.getByText('Could not check who is signed in')).toBeVisible();
+    up = true;
+    await page.getByRole('region', { name: 'Account' }).getByRole('button', { name: 'Try again' }).click();
+    await expect(page.getByText('Could not check who is signed in')).toHaveCount(0);
+  });
+
   test('Sign in with Google asks the server for the address and goes there', async ({ page }) => {
     let body;
     await settle(page, me(401, {}), async p => {

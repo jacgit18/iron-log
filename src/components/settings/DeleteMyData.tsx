@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { forgetSession } from '../../lib/gate.js';
 import { LS } from '../../lib/storage.js';
 import { parsePath } from '../../sync/documents.js';
-import { createAccountClient, type AccountState } from '../../sync/account.js';
+import { createAccountClient } from '../../sync/account.js';
+import { useWho } from './useWho.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { localPaths, writeLegacyMarker } from '../../sync/legacyMarker.js';
 import { flag, getSyncApi, useAppStore } from '../../store/useAppStore.js';
@@ -36,17 +37,11 @@ export default function DeleteMyData() {
   const dl = useAppStore(s => s.dl);
   const exporting = useAppStore(s => s.exporting);
   const account = useMemo(() => createAccountClient({ headers: devHeaders }), []);
-  const [who, setWho] = useState<AccountState | null>(null);
+  const { who } = useWho(!!api, account);
   const [typed, setTyped] = useState<Record<What, string>>({ data: '', account: '' });
   const [busy, setBusy] = useState<What | null>(null);
   const [problem, setProblem] = useState('');
 
-  useEffect(() => {
-    if (!api) return;
-    let current = true;
-    void account.me().then(s => { if (current) setWho(s); });
-    return () => { current = false; };
-  }, [api, account]);
   // Not while this device holds another account's data: the server would erase the signed-in account, and this device would then
   // forget the other one's copy and unsent changes. The other-account card's choice comes first.
   if (!api || !sync || who?.status !== 'signed-in' || (sync.state === 'paused' && sync.pausedBecause === 'account')) return null;
