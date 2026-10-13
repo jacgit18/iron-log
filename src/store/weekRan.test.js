@@ -2,14 +2,14 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { clearStorage, saved, mem } from '../test/browserStubs.js';
 
 // ADR 022 in the store: a tick writes down what the week runs, and a week that is over keeps showing and counting that.
-let useAppStore, fromOtherTab, BUILTIN, DEFAULT_CFG, weekSummary, ymd, weekStartOf, addDays;
+let onlyElsewhere, useAppStore, fromOtherTab, BUILTIN, DEFAULT_CFG, weekSummary, ymd, weekStartOf, addDays;
 const st = () => useAppStore.getState();
 const tick = () => new Promise(r => setTimeout(r, 0));
 
 beforeAll(async () => {
   ({ useAppStore, fromOtherTab } = await import('./useAppStore.js'));
   ({ BUILTIN } = await import('../lib/data.js'));
-  ({ DEFAULT_CFG } = await import('../lib/logic.js'));
+  ({ DEFAULT_CFG, onlyElsewhere } = await import('../lib/logic.js'));
   ({ weekSummary } = await import('../lib/trends.js'));
   ({ ymd, weekStartOf, addDays } = await import('../shared/dates.js'));
   await st().init();
@@ -219,5 +219,44 @@ describe('review fixes: the record catches up, and the backfill is not skipped b
       await st().loadHistory();
     } finally { localStorage.key = key; }
     expect(saved('ran-recorded/local')).toBe(null);
+  });
+});
+
+describe('looking at the other program', () => {
+  beforeEach(() => { useAppStore.setState({ week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } }); });
+  it('keeps a rest day on the program it was ticked on, and brings it back', () => {
+    st().setMode(2);
+    st().setWeekProg('B'); st().setRestDay(3);
+    expect(st().week.rest).toEqual([3]);
+    st().setWeekProg('A');
+    expect(st().week.rest).toBeUndefined();
+    expect(st().week.restOn).toBeUndefined();
+    st().setRestDay(5);
+    st().setWeekProg('B');
+    expect(st().week.rest).toEqual([3]);
+    st().setWeekProg('A');
+    expect(st().week.rest).toEqual([5]);
+  });
+  it('knows when every check-off is on the other program', () => {
+    st().setMode(2);
+    st().checkCard(firstCard().id, true);
+    st().setWeekProg('B');
+    expect(onlyElsewhere(st().activeSlots(), st().week)).toBe(true);
+    st().setWeekProg('A');
+    expect(onlyElsewhere(st().activeSlots(), st().week)).toBe(false);
+  });
+});
+
+describe('rest days follow the program when the mode changes it', () => {
+  beforeEach(() => { useAppStore.setState({ week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } }); });
+  it('a schedule change that flips the shown program swaps the rest days too', () => {
+    st().setMode(2);
+    st().setRestDay(3);
+    const shown = st().activeProgKey();
+    st().mutateCfg(c => { c.m2Even = c.m2Even === 'A' ? 'B' : 'A'; });
+    expect(st().activeProgKey()).not.toBe(shown);
+    expect(st().week.rest).toBeUndefined();
+    st().mutateCfg(c => { c.m2Even = c.m2Even === 'A' ? 'B' : 'A'; });
+    expect(st().week.rest).toEqual([3]);
   });
 });

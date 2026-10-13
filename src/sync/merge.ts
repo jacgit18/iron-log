@@ -65,16 +65,17 @@ export function mergeWeek3(baseIn: unknown, oursIn: unknown, theirsIn: unknown):
     }
     const extra = mergeById(base.extra || [], ours.extra || [], theirs.extra || []);
     if (extra.length) week.extra = extra; else delete week.extra;
-    const order = pick(base.order, ours.order, theirs.order);
-    if (order) week.order = order; else delete week.order;
-    // Values that only make sense together come from the same side.
-    const rest = pick({ rest: base.rest, restOn: base.restOn }, { rest: ours.rest, restOn: ours.restOn }, { rest: theirs.rest, restOn: theirs.restOn });
-    delete week.rest; delete week.restOn;
-    if (rest.rest) week.rest = rest.rest;
-    if (rest.restOn) week.restOn = rest.restOn;
-    const ran = pick({ prog: base.prog, ran: base.ran }, { prog: ours.prog, ran: ours.ran }, { prog: theirs.prog, ran: theirs.ran });
-    week.prog = ran.prog; delete week.ran;
-    if (ran.ran) week.ran = ran.ran;
+    // The shown program, its record, and the rest days, day order and stash that go with it change together (switching programs
+    // parks one program's layout and restores the other's), so they all come from one side.
+    const layout = (x: Week) => ({ prog: x.prog, ran: x.ran, rest: x.rest, restOn: x.restOn, order: x.order, stash: x.stash });
+    const l = pick(layout(base), layout(ours), layout(theirs));
+    delete week.rest; delete week.restOn; delete week.order; delete week.stash; delete week.ran;
+    week.prog = l.prog;
+    if (l.rest) week.rest = l.rest;
+    if (l.restOn) week.restOn = l.restOn;
+    if (l.order) week.order = l.order;
+    if (l.stash) week.stash = l.stash;
+    if (l.ran) week.ran = l.ran;
     // A new tick beats a skip of the same card (a done key is the card id, or the id and "#n").
     for (const k of Object.keys(week.done)) {
       const card = k.split('#')[0]!;
