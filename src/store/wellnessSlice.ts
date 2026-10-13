@@ -1,8 +1,7 @@
 import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DAY_NAMES } from '../shared/dates.js';
-import { DEFAULT_STRETCHES, DEFAULT_GROUP, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
+import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
-import { MUSCLES } from '../lib/muscles.js';
 import { isCatalogId } from '../shared/listItems.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
@@ -84,8 +83,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const items = get().stretches;
     if (items.some(x => x.catalogId === c.id)) return 'Already in your stretches.';
     if (items.some(x => x.n.toLowerCase() === n.toLowerCase())) return `You already have a stretch called ${n}.`;
-    const main = c.data.muscles?.p?.[0];
-    const group = main && MUSCLES[main] ? MUSCLES[main].n : DEFAULT_GROUP;
+    const group = catalogStretchGroup(c);
     if (!get().mutateStretches(x => { x.items.push({ id: newStretchId(x.items, n), n, group, tier: '', catalogId: c.id }); })) return null;
     flag(`Added ${n}`); return null;
   },
