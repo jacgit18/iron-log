@@ -4,7 +4,17 @@ import { describeSync, formatWhen, notSentFile, pathLabel, storageWarning, versi
 import type { QuarantineEntry } from '../../sync/outbox.js';
 import { flag, getSyncApi, useAppStore } from '../../store/useAppStore.js';
 import { ymd } from '../../shared/dates.js';
+import { useState } from 'react';
 import ArmedButton from '../ArmedButton.js';
+
+// What screen readers hear: only a settled state, and only when it changes. "Syncing…" and "Loading…" pass every minute while the app
+// is open, so announcing them would talk over everything; Synced → Offline → Synced is what matters.
+function useSettledHeadline(status: { headline: string; tone: string } | null) {
+  const [said, setSaid] = useState('');
+  const settled = status && status.tone !== 'busy' ? status.headline : null;
+  if (settled && settled !== said) setSaid(settled); // React's "adjust state while rendering": no extra effect pass
+  return said;
+}
 
 // How syncing is going, and the changes the server would not take (build spec, Phase D6). Only shown when syncing through
 // the API is switched on (feature-flags.md). Nothing here is shown by colour alone: every state is a sentence.
@@ -13,6 +23,7 @@ export default function SyncPanel() {
   const dl = useAppStore(s => s.dl);
   const cfg = useAppStore(s => s.cfg);
   const api = getSyncApi();
+  const said = useSettledHeadline(sync ? describeSync(sync) : null);
   if (!sync || !api) return null;
   const uploaded = readLegacyMarker();
 
@@ -34,6 +45,7 @@ export default function SyncPanel() {
       <div className={status.tone === 'wait' || status.tone === 'bad' ? 'notice' : undefined}>
         <p className="syncstatus"><b>{status.headline}</b>{status.detail ? ` ${status.detail}` : ''}</p>
       </div>
+      <p className="sr" role="status">{said ? `Sync: ${said}` : ''}</p>
       {warning && <p className="notice" role="alert">{warning}</p>}
       <div className="actions">
         <button type="button" className="btn" disabled={!status.canSyncNow} onClick={() => void api.resume()}>Sync now</button>
