@@ -248,7 +248,18 @@ export function createApiDb(options: ApiDbOptions) {
         setState('idle');
         if (!wasReady && mirror.hasPulled()) emitAll();
         else emitPaths(out.paths);
-        if (out.reset) { emitAll(); announce(); } // the account's data was erased from another device: every document is different now
+        if (out.reset) {
+          // The account's data was erased from another device: every document is different now. Changes this device had not sent were
+          // made from the old data, so they go too ("your other devices clear themselves"); sent against the emptied mirror, every
+          // entry in them would come back as new.
+          const dropped = outbox.paths().length;
+          if (dropped) {
+            outbox.clear(); bases.clear();
+            note('', `Everything in this account was erased on another device, so ${dropped === 1 ? 'a change' : `${dropped} changes`} not yet sent from here ${dropped === 1 ? 'was' : 'were'} dropped.`);
+            lastSyncedAt = lastPullAt;
+          }
+          emitAll(); announce();
+        }
         if (out.paths.length) announce(); // rows arrived: the status (holdsData) changed even though the state did not
         return;
       }

@@ -1037,6 +1037,23 @@ describe('erasing the account (Phase F)', () => {
     expect(db.status().pendingPaths).toEqual([]);
   });
 
+  it('an erase on another device is not undone by a change this device had not sent yet', async () => {
+    // A change saved while the pull that brings the erase is on its way is sent after it. Planned against the emptied mirror, every
+    // entry in the document (made from the old data) became a create and the erased history came back. It is dropped instead, and said.
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1', 'e2'));
+    server.erase(); // erased on another device
+    const pulling = db.syncNow(); // this device learns of it
+    const saving = db.doc('logs/squat').set(logs2('e1', 'e2', 'e3')); // made from the old data, while the pull is on its way
+    await pulling; await saving;
+    await settle();
+    expect([...server.rows.keys()].filter(k => k.startsWith('log_entries'))).toEqual([]);
+    expect(db.status().pendingPaths).toEqual([]);
+    expect(db.status().notices.map(n => n.text)).toEqual(['Everything in this account was erased on another device, so a change not yet sent from here was dropped.']);
+  });
+
   it('deleting the account does the same on this device', async () => {
     const { server, storage, db } = setup();
     db.start();
