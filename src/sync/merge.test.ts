@@ -47,6 +47,19 @@ describe('mergeWeek3', () => {
     expect(m.unskipped).toBe(false);
   });
 
+  it('ticking half a superset and skipping the rest on this device keeps the skip and the tick', () => {
+    // Reported 2026-10-13: the skip was dropped as if the tick came from another device, so the card came back half done.
+    const m = mergeWeek3(week({}), week({ done: { 'x#0': true }, skipped: { x: true } }), week({ done: { y: true } }));
+    expect(m.week.done).toEqual({ 'x#0': true, y: true });
+    expect(m.week.skipped).toEqual({ x: true });
+    expect(m.unskipped).toBe(false);
+  });
+
+  it('a half ticked on the other device still beats this device\'s skip of the card', () => {
+    const m = mergeWeek3(week({}), week({ skipped: { x: true } }), week({ done: { 'x#1': true } }));
+    expect(m.week.skipped).toEqual({});
+  });
+
   it('warm-up checks merge per day and item', () => {
     const m = mergeWeek3(week({}), week({ warm: { 1: { a: true } } }), week({ warm: { 1: { b: true }, 2: { c: true } } }));
     expect(m.week.warm).toEqual({ 1: { a: true, b: true }, 2: { c: true } });

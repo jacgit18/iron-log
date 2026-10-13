@@ -272,7 +272,20 @@ export function createApiDb(options: ApiDbOptions) {
   /* ---------- sending ---------- */
   const planKey = (cmds: PlannedCommand[]) => cmds.map(c => `${c.name}|${c.rowKey}|${c.baseVersion}`).join(';');
 
+  // ADR 031 before sending, not only on a stale answer: an unsent week remembers the server row it was made from. A pull can land
+  // between the app's save and the send (opening the app pulls, and a tap waits behind it); planned against that newer row, the save
+  // went out as a plain edit of it and wiped what the other device ticked. undefined: not a week path. null: no row when it was made.
+  const bases = new Map<string, { version: number; week: unknown } | null>();
+  const weekRow = (path: string): { version: number; week: unknown } | null | undefined => {
+    const p = parsePath(path);
+    if (!p || (p.kind !== 'weeks' && p.kind !== 'stretchweeks')) return undefined;
+    const r = mirror.rows().get(mirrorId(p.kind === 'weeks' ? 'weeks' : 'stretch_weeks', p.weekStart));
+    return r && !r.deleted && (r.table === 'weeks' || r.table === 'stretch_weeks') ? { version: r.version, week: r.week } : null;
+  };
+  const rememberBase = (path: string) => { const b = weekRow(path); if (b !== undefined) bases.set(path, b); };
+
   function refuse(path: string, sent: unknown, reason: string) {
+    bases.delete(path);
     outbox.refuse(path, sent, reason);
     setState('idle'); // this write is no longer being sent; whatever is next sets the state again
     announce();
@@ -302,9 +315,24 @@ export function createApiDb(options: ApiDbOptions) {
       }
       const sent = outbox.get(path);
       if (sent === undefined) return {}; // a newer call already took care of it
+      if (!isDeleted(sent) && bases.has(path)) {
+        const base = bases.get(path)!; const cur = weekRow(path);
+        if (cur && cur.version !== base?.version) {
+          rememberBase(path);
+          const m = kind.kind === 'weeks' ? mergeWeek3(base ? base.week : null, sent, cur.week) : mergeStretchWeek3(base ? base.week : null, sent, cur.week);
+          if (m.tookTheirs) {
+            outbox.put(path, m.week);
+            adjusted.add(path);
+            note(path, 'Merged changes from another device.');
+            continue; // plan the merged week
+          }
+        }
+      }
       const cmds = isDeleted(sent) ? planDelete(kind, mirror.rows(), kept) : planCommands(kind, sent, mirror.rows(), kept);
       if (!cmds.length) {
         outbox.done(path, sent);
+        // A week saved meanwhile was made from this one, which the server now holds.
+        if (outbox.get(path) === undefined) bases.delete(path); else rememberBase(path);
         lastSyncedAt = now();
         adjusted.forEach(p => touched.add(p));
         if (!adjusted.has(path)) touched.delete(path);
@@ -373,6 +401,7 @@ export function createApiDb(options: ApiDbOptions) {
                   : 'Merged changes from another device.');
               }
             }
+            if (bases.has(path)) rememberBase(path); // what is in the outbox now holds the server's row
           }
           again = true; // the mirror now holds the newer row: plan again
           break;
@@ -399,6 +428,7 @@ export function createApiDb(options: ApiDbOptions) {
       return Promise.resolve();
     }
     const body = clone(data);
+    if (!bases.has(path) && outbox.get(path) === undefined) rememberBase(path); // an unsent week keeps the base of the first one
     outbox.put(path, body); // safe on this device before anyone is told "saved"
     announce();
     return new Promise<unknown>((resolve, reject) => {
@@ -495,6 +525,7 @@ export function createApiDb(options: ApiDbOptions) {
       if (who?.status !== 'signed-in') return 'unavailable';
       mirror.clear();
       outbox.clear();
+      bases.clear(); // a week saved before the reload must not merge against the old data
       notices = [];
       adopt(who.userId);
       options.onOwnerChange?.();
@@ -537,6 +568,7 @@ export function createApiDb(options: ApiDbOptions) {
       if (!out.ok) { halted = false; wake(); return out; }
       mirror.clear();
       outbox.clear();
+      bases.clear();
       notices = [];
       storage.remove(OWNER_KEY);
       emitAll();

@@ -40,8 +40,6 @@ function mergeById<X extends { id: string }>(base: X[], ours: X[], theirs: X[]):
   return order.filter(id => kept[id]).map(id => kept[id]!);
 }
 
-const added = (key: string, base: Record<string, unknown>, ours: Record<string, unknown>, theirs: Record<string, unknown>) =>
-  !base[key] && !!(ours[key] || theirs[key]);
 
 export function mergeWeek3(baseIn: unknown, oursIn: unknown, theirsIn: unknown): Merged<Week> {
   const ours = normWeek(oursIn); const theirs = normWeek(theirsIn);
@@ -76,10 +74,12 @@ export function mergeWeek3(baseIn: unknown, oursIn: unknown, theirsIn: unknown):
     if (l.order) week.order = l.order;
     if (l.stash) week.stash = l.stash;
     if (l.ran) week.ran = l.ran;
-    // A new tick beats a skip of the same card (a done key is the card id, or the id and "#n").
+    // A new tick beats a skip of the same card (a done key is the card id, or the id and "#n"), when the tick came from a side that
+    // did not skip it: one device ticking half a superset and skipping the rest keeps its skip (clearForSkip).
     for (const k of Object.keys(week.done)) {
       const card = k.split('#')[0]!;
-      if (!week.skipped[card] || !added(k, base.done, ours.done, theirs.done)) continue;
+      if (!week.skipped[card] || base.done[k]) continue;
+      if (!(ours.done[k] && !ours.skipped[card]) && !(theirs.done[k] && !theirs.skipped[card])) continue;
       delete week.skipped[card];
       if (ours.skipped[card]) unskipped = true;
     }
