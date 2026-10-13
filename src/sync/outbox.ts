@@ -93,7 +93,8 @@ export function createOutbox(storage: Storage, now: () => Date = () => new Date(
       return true;
     },
 
-    /** Forgets everything, unsent writes and set-aside ones included. Only for handing the device to another account, after the user chose to. */
+    /** Forgets everything, unsent writes and set-aside ones included. For handing the device to another account (the user chose to), for
+     *  this device's own erase, and when a pull shows the account was erased on another device: all of it was made from the old data. */
     clear() {
       pending.clear();
       quarantine = [];

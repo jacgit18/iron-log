@@ -1,5 +1,5 @@
-/* The shared catalog (ADR 025): GET /api/catalog?kind=..., read when the browse sheet opens. Not part of the sync: nothing is pulled in
-   the background and nothing is kept for offline, so with no connection the sheet says so. What the account adds is copied into its own
+/* The shared catalog (ADR 025): GET /api/catalog?kind=..., read by the item picker and the libraries' search (ADR 036). Not part of the sync: nothing is pulled in
+   the background and nothing is kept for offline, so with no connection the picker or library says so. What the account adds is copied into its own
    synced data (ADR 026). Untrusted JSON: each item is checked before the app uses it. */
 import type { CatalogData, CatalogItem, CatalogKind } from '../types.ts';
 import { EQUIPMENT } from '../lib/data.js';

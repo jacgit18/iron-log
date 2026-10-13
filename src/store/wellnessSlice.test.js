@@ -185,6 +185,19 @@ describe('supplement library', () => {
     st().deleteSupplement(x.id);
     expect(st().supp.items).toEqual([]); expect(st().supp.taken).toEqual({});
   });
+  it('from the Supplements tab: a catalog one goes straight into the section with the dose typed, and moving one of yours can set its dose (ADR 036)', () => {
+    const now = { id: 'c:dsld:9', name: 'Magnesium', brand: 'NOW Foods', data: {} };
+    expect(st().addCatalogSupplement(now, { slot: 'night', dose: ' 200 mg ' })).toBeNull();
+    expect(st().supp.items.find(i => i.catalogId === now.id)).toMatchObject({ n: 'Magnesium', brand: 'NOW Foods', slot: 'night', dose: '200 mg' });
+    expect(st().addCatalogSupplement({ ...now, id: 'c:dsld:10' }, { slot: 'night' })).toMatch(/already have Magnesium from NOW Foods/);
+    expect(st().addCatalogSupplement({ id: 'c:dsld:11', name: 'Zinc', data: {} }, { slot: 'nonsense' })).toBeNull();
+    expect(st().supp.items.find(i => i.catalogId === 'c:dsld:11').slot).toBe(''); // an unknown section: Library only
+    const zinc = st().supp.items.find(i => i.catalogId === 'c:dsld:11');
+    expect(st().setSupplementSlot(zinc.id, 'morning', '15 mg')).toBe(true);
+    expect(st().supp.items.find(i => i.id === zinc.id)).toMatchObject({ slot: 'morning', dose: '15 mg' });
+    st().setSupplementSlot(zinc.id, 'noon', '');
+    expect(st().supp.items.find(i => i.id === zinc.id)).toMatchObject({ slot: 'noon', dose: '15 mg' }); // no dose typed: kept
+  });
   // Catalog supplements (ADR 029): name and brand from the catalog, Library only, your own dose; never a dose from the catalog.
   it('adds a catalog supplement as Library only with its brand, keeps name, brand and id through edits, and allows the same name from another brand', () => {
     const now = { id: 'c:dsld:3', name: 'Creatine', brand: 'NOW Foods', data: { form: 'Powder' } };

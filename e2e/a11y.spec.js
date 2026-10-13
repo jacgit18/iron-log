@@ -45,15 +45,15 @@ test('training minutes for the water goal are kept after leaving the box and sho
 });
 
 test('supplement library has no accessibility violations', async ({ page }) => {
-  await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Supplement library' }).click();
+  await page.click('#tab-daily');
+  await page.click('#daily-supplements');
+  await page.click('#sched-edit'); // the library shows under the schedule while editing
   await page.click('#suplib-new');
   await page.fill('#supp-name', 'Vitamin D3');
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('Vitamin D3')).toBeVisible();
+  await expect(page.locator('.exlib .exrow b', { hasText: 'Vitamin D3' })).toBeVisible();
   const { violations } = await scan(page);
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
-  await page.click('#tab-daily');
-  await page.click('#daily-supplements');
-  await expect(page.getByLabel('Vitamin D3')).toBeVisible();
+  await page.click('#sched-edit'); // Done: the schedule alone, with it to tick
+  await expect(page.getByRole('checkbox', { name: 'Vitamin D3' })).toBeVisible();
 });

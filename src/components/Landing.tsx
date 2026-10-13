@@ -3,6 +3,7 @@ import boardLight from '../assets/landing/board.webp';
 import boardDark from '../assets/landing/board-dark.webp';
 import { setDevUser } from '../sync/devUser.js';
 import { useGoogleSignIn } from '../sync/useGoogleSignIn.js';
+import { takeAfterReload } from '../lib/afterReload.js';
 import LegalLinks from './LegalLinks.js';
 
 // What someone sees before they have an account here (src/lib/gate.ts decides): what the app is, and the way in. It replaces the app
@@ -16,6 +17,7 @@ const PLANS = [
 
 export default function Landing({ offline = false }: { offline?: boolean }) {
   const [problem, setProblem] = useState('');
+  const [done] = useState(takeAfterReload); // "Your account was deleted.": the reload after deleting lands here
   const { busy, start } = useGoogleSignIn(setProblem);
   return (
     <main className="landing" aria-labelledby="landing-h">
@@ -27,6 +29,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
       <section className="landing-hero">
         <h1 id="landing-h">A weekly training board that remembers your lifts.</h1>
         <p className="landing-lead">Plan the week on one board, log your sets in seconds, and watch the weights climb. It works offline, so it is there in the gym, and it syncs across your devices once you sign in.</p>
+        {done && <p className="notice" role="status"><b>{done}</b></p>}
         {offline && <p className="notice" role="status"><b>You are offline.</b> Connect to the internet to sign in for the first time.</p>}
         <div className="landing-cta">
           <button type="button" className="btn primary" disabled={busy} onClick={() => void start()}>{busy ? 'Opening Google…' : 'Sign in with Google'}</button>

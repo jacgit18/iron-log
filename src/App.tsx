@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ComponentType, type KeyboardEvent } from 'react';
-import { useAppStore } from './store/useAppStore.js';
+import { flag, useAppStore } from './store/useAppStore.js';
+import { takeAfterReload } from './lib/afterReload.js';
 import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
@@ -11,8 +12,6 @@ import DetailSheet from './components/sheets/DetailSheet.js';
 import TagSheet from './components/sheets/TagSheet.js';
 import SlotSheet from './components/sheets/SlotSheet.js';
 import ExerciseSheet from './components/sheets/ExerciseSheet.js';
-import CatalogSheet from './components/sheets/CatalogSheet.jsx';
-import SupplementCatalogSheet from './components/sheets/SupplementCatalogSheet.jsx';
 import DayAddSheet from './components/sheets/DayAddSheet.js';
 import { StretchSheet, StretchExpSheet } from './components/sheets/StretchSheets.js';
 import SupplementSheet from './components/sheets/SupplementSheet.js';
@@ -52,7 +51,6 @@ function Modal() {
     case 'stretchexp': return <StretchExpSheet key={modal.id || 'new'} id={modal.id} />;
     case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} />;
     case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;
-    case 'catalog': return modal.kind === 'supplement' ? <SupplementCatalogSheet /> : <CatalogSheet key={modal.kind || 'exercise'} kind={modal.kind === 'stretch' ? 'stretch' : 'exercise'} />;
     case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
     case 'newprog': return <NewProgramSheet />;
     case 'import': return <ImportSheet />;
@@ -91,6 +89,8 @@ export default function App() {
     const k = TABS[(n + TABS.length) % TABS.length][0];
     setTab(k); document.getElementById(`tab-${k}`)!.focus();
   };
+  // A note set just before a reload (Erase everything), said once now that the page is back.
+  useEffect(() => { const t = takeAfterReload(); if (t) flag(t); }, []);
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') closeModal(); };
     document.addEventListener('keydown', onKey);
