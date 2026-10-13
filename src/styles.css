@@ -101,6 +101,8 @@ header.top h1{font-size:1.875rem;margin:0;font-weight:700;text-transform:upperca
 .fold[open] summary{margin-bottom:8px}
 .more summary{cursor:pointer;color:var(--muted);font-size:.875rem;padding:12px 0;min-height:44px;box-sizing:border-box}
 .more p{margin:4px 0 8px}
+.dllabel{flex-basis:100%;font-weight:600;font-size:.875rem;color:var(--muted)}
+.settings .dl .btn{flex:1 1 auto;white-space:nowrap}
 .imppaste textarea{width:100%;margin-top:8px;font:inherit;font-size:.8125rem;border:1px solid var(--field-line);border-radius:8px;padding:8px;background:var(--bg);color:var(--ink)}
 .impact{flex-wrap:wrap}
 .impact .btn{flex:1 1 auto;white-space:nowrap}

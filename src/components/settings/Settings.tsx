@@ -10,7 +10,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
-import { MON } from '../../shared/dates.js';
+import { MON, fmtShort } from '../../shared/dates.js';
 import { programFor, progName, programWeights, bestByPhase, round } from '../../lib/logic.js';
 import CommitInput from '../CommitInput.jsx';
 import ArmedButton from '../ArmedButton.jsx';
@@ -179,6 +179,7 @@ function PhasePanel() {
 function DataPanel() {
   const dl = useAppStore(s => s.dl); const exporting = useAppStore(s => s.exporting); const st = useAppStore.getState();
   const storeMode = useAppStore(s => s.storeMode);
+  const weekStart = useAppStore(s => s.weekStart); const shownWeek = fmtShort(weekStart); // the week the Board shows, which may not be this one
   const importError = useAppStore(s => s.importError);
   const [paste, setPaste] = useState('');
   return (
@@ -209,10 +210,12 @@ function DataPanel() {
         <div className="subblock">
           <h4>Spreadsheet report</h4>
           <p>For reading and charting, not a backup.</p>
-          <div className="actions">
-            <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
-            <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
-            <button type="button" className="btn" disabled={!!exporting} onClick={st.exportCsv}>Download CSV</button>
+          {/* Short labels under one "Download" label, so each fits one line on a phone; the full action is the accessible name. */}
+          <div className="actions dl" role="group" aria-labelledby="dl-label">
+            <span id="dl-label" className="dllabel">Download</span>
+            <button type="button" className="btn" disabled={!!exporting} aria-label="Download Excel, every week" onClick={() => st.downloadExcel('all')}>Excel</button>
+            <button type="button" className="btn" disabled={!!exporting} aria-label={`Download the week of ${shownWeek} as Excel`} onClick={() => st.downloadExcel('week')}>Week of {shownWeek}</button>
+            <button type="button" className="btn" disabled={!!exporting} aria-label="Download CSV" onClick={st.exportCsv}>CSV</button>
           </div>
           <More about="the reports"><p><b>iron-log.xlsx</b> has a summary per exercise, every session and weekly totals; each week also has its own workbook. The .csv lists logged sessions only.</p></More>
         </div>

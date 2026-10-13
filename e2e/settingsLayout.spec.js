@@ -138,3 +138,17 @@ test('the erase warning and the import limit stay in view, not in a fold', async
   expect(warnTop).toBeLessThan(buttonTop); // read before the button, not after
   await expect(page.locator('#imp-help')).toContainText('only brings back logged sessions');
 });
+
+test('the report downloads fit one line on a phone, name the shown week, and keep the full action for screen readers', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await openSettings(page);
+  const group = page.getByRole('group', { name: 'Download' });
+  const buttons = [group.getByRole('button', { name: 'Download Excel, every week' }), group.getByRole('button', { name: 'Download the week of Sep 20 as Excel' }), group.getByRole('button', { name: 'Download CSV' })];
+  for (const b of buttons) await expect(b).toBeVisible();
+  await expect(buttons[1]).toHaveText('Week of Sep 20'); // the week the Board shows, not always this one
+  for (const b of buttons) {
+    const oneLine = await b.evaluate(el => { const lh = parseFloat(getComputedStyle(el).lineHeight) || 20; const r = document.createRange(); r.selectNodeContents(el); return r.getClientRects().length === 1 || r.getBoundingClientRect().height < lh * 1.5; });
+    expect(oneLine).toBe(true);
+  }
+});
