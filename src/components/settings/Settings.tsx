@@ -315,7 +315,14 @@ function useCurrentGroup() {
     look();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
-    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (frame) cancelAnimationFrame(frame); };
+    // The row's real height (it wraps under large text) is the page's scroll padding, so focus and jumps land below it.
+    const root = document.documentElement; const nav = document.querySelector('.sjump');
+    const ro = nav && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => root.style.setProperty('--sjump-h', `${Math.ceil(nav.getBoundingClientRect().height)}px`)) : null;
+    if (nav && ro) ro.observe(nav);
+    return () => {
+      window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (frame) cancelAnimationFrame(frame);
+      ro?.disconnect(); root.style.removeProperty('--sjump-h');
+    };
   }, []);
   return cur;
 }
