@@ -256,10 +256,14 @@ function RmPanel() {
   const all = [...slotsFor(programs.A), ...slotsFor(programs.B)];
   // Program ids too: synced, a card can use an exercise that isn't in the account's library (ADR 024).
   const weighted = [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
+  const withRm = weighted.filter(id => cfg.rm[id] != null).length;
   return (
     <section className="panel wide">
       <h3>1-rep maxes</h3>
       <p>Keep a one-rep max (1RM, the most you can lift once) for reference. It shows next to your logged weights but doesn't set targets: those start from the weight you last logged.</p>
+      {/* Folded: one row per weighted exercise is most of the page on a phone, and it is rarely edited. */}
+      <details className="fold">
+        <summary>{weighted.length ? `Show all ${weighted.length} exercises (${withRm ? `${withRm} with a 1RM` : 'none set yet'})` : 'No weighted exercises in your programs yet'}</summary>
       <div className="tbl">
         <table>
           <thead><tr><th>Exercise</th><th>Program weight</th><th>1RM (lb)</th><th>Best logged</th></tr></thead>
@@ -278,6 +282,7 @@ function RmPanel() {
           </tbody>
         </table>
       </div>
+      </details>
     </section>
   );
 }

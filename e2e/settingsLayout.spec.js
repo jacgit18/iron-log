@@ -30,3 +30,12 @@ test('Settings does not scroll sideways on a narrow phone at a large text size',
   const wide = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(wide).toBe(false);
 });
+
+test('the 1RM table is folded until opened', async ({ page }) => {
+  await page.goto('/');
+  await openSettings(page);
+  const fold = page.locator('details.fold');
+  await expect(fold.locator('table')).toBeHidden();
+  await fold.locator('summary').click();
+  await expect(fold.locator('table')).toBeVisible();
+});
