@@ -222,3 +222,13 @@ test('Supplements tab: a slow answer to an older search never replaces the newer
   await page.waitForTimeout(1500); // the "creatine" answer (both products) arrives now
   await expect(catalogOpts).toHaveText([/Creatine HCl/]);
 });
+
+test('Supplements tab: while a new search runs, the last answer is filtered by the new words (never shown under unrelated ones)', async ({ page }) => {
+  await openSupplements(page, search('zinc'));
+  await morningName(page).fill('creatine');
+  const catalogOpts = page.getByRole('group', { name: 'Catalog' }).getByRole('option');
+  await expect(catalogOpts).toHaveCount(2);
+  await morningName(page).fill('zinc'); // the zinc answer takes 1.5 s; the creatine products must not show meanwhile
+  await expect(page.getByText('Searching the catalog…')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Catalog' })).toHaveCount(0);
+});

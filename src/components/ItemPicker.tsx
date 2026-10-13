@@ -33,7 +33,7 @@ export default function ItemPicker({ id, label, value, onText, onPick, mine, als
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const byBrand = kind === 'supplement';
   const { state: cat, retry } = useCatalogSearch(kind, value, open);
-  const o = pickerOptions(value, mine, cat.status === 'ready' ? cat.items : [], { byBrand, serverFiltered: byBrand, also });
+  const o = pickerOptions(value, mine, cat.status === 'ready' ? cat.items : [], { byBrand, serverFiltered: byBrand && !(cat.status === 'ready' && cat.searching), also }); // an earlier search's answer, shown while the next runs, is filtered here so it never sits under unrelated words
 
   const mineOpts: Opt[] = o.mine.shown.map(m => ({ key: `m-${m.id}`, choice: { kind: 'mine', id: m.id }, name: m.name, meta: m.meta, badge: m.badge }));
   const catOpts: Opt[] = o.catalog.shown.map(c => ({ key: `c-${c.id}`, choice: { kind: 'catalog', item: c }, name: c.name, meta: catalogMeta?.(c) }));
