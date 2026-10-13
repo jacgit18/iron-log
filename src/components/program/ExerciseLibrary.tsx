@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, EQUIPMENT, EQ_KEYS } from '../../lib/data.js';
 import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
-import { libraryRows, filterRows, muscleList, hasTwoSources } from '../../lib/exerciseLibrary.js';
+import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems } from '../../lib/exerciseLibrary.js';
 import { progName } from '../../lib/logic.js';
 import { videoLabel, isCatalogId } from '../../lib/data.js';
 import RemovedNotice from '../RemovedNotice.jsx';
@@ -14,6 +14,7 @@ export default function ExerciseLibrary() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs);
   const { openModal } = useAppStore.getState();
+  const syncing = useAppStore(s => s.sync !== null); // the catalog section below is there only when syncing (ADR 025)
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
   const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)
@@ -72,14 +73,13 @@ export default function ExerciseLibrary() {
             </div>
           );
         })}
-        {!shown.length && <p className="note">No exercise matches. Clear the search, or add it with + New exercise.</p>}
+        {!shown.length && <p className="note">{syncing && f.q.trim() && f.src !== 'custom' ? 'None of yours match. Add one from the catalog below, or with + New exercise.' : 'No exercise matches. Clear the search, or add it with + New exercise.'}</p>}
       </div>
       {f.src !== 'custom' && (
         <CatalogMatches kind="exercise" q={f.q} unit="exercises" source="Exercises from free-exercise-db (public domain)."
           mine={rows.map(r => ({ id: r.id, name: r.name, ...(isCatalogId(r.id) ? { catalogId: r.id } : {}) }))}
           meta={c => [c.data.eq ? EQUIPMENT[c.data.eq as EquipmentKey] : '', c.data.muscles?.p?.length ? `Primary: ${muscleList(c.data.muscles.p)}` : ''].filter(Boolean).join(' · ')}
-          keep={c => (!f.eq || (f.eq === 'none' ? !c.data.eq : c.data.eq === f.eq))
-            && (!f.muscle || (f.muscle === 'untagged' ? !c.data.muscles?.p?.length && !c.data.muscles?.s?.length : [...(c.data.muscles?.p || []), ...(c.data.muscles?.s || [])].includes(f.muscle as never)))}
+          narrow={items => keepCatalogItems(items, f)}
           onAdd={c => useAppStore.getState().addCatalogExercise(c)} />
       )}
     </section>

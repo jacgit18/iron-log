@@ -1,4 +1,4 @@
-import type { Cfg, LibraryItem, Logs, Program } from '../types.ts';
+import type { CatalogItem, Cfg, LibraryItem, Logs, Program } from '../types.ts';
 /* ---------- Exercise library: every exercise and what is set on it ---------- */
 import { allExIds, exInfo, isOwnExercise, slotsFor } from './data.js';
 import { tagsOf, MUSCLES } from './muscles.js';
@@ -35,6 +35,16 @@ export function filterRows<R extends { name: string; eq: string; p: string[]; s:
     && (!src || (src === 'custom' ? r.custom : !r.custom))
     && (!eq || (eq === 'none' ? !r.eq : r.eq === eq))
     && (!muscle || (muscle === 'untagged' ? !r.tagged : [...r.p, ...r.s].includes(muscle))));
+}
+
+// The library's Equipment and Muscle filters applied to catalog items (ADR 036): each is judged as a library row would be, through
+// filterRows, so the two never drift apart. A catalog item counts as tagged when it has any muscles (or is mobility work).
+export function keepCatalogItems(items: CatalogItem[], f: { eq?: string; muscle?: string }) {
+  const rows = items.map(c => {
+    const m = c.data.muscles || {};
+    return { item: c, name: c.name, eq: c.data.eq || '', p: m.p || [], s: m.s || [], tagged: !!(m.p?.length || m.s?.length || m.mob), custom: false };
+  });
+  return filterRows(rows, { eq: f.eq, muscle: f.muscle }).map(r => r.item);
 }
 
 // The Source filter only means something when the list holds both kinds (ADR 027).

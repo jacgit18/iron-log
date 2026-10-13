@@ -264,3 +264,24 @@ test('the Supplement library is under Edit on Daily → Supplements, not on the 
   await page.click('#sched-edit');
   await expect(page.locator('#suplib-h')).toHaveCount(0);
 });
+
+test('Supplements tab: while a new search runs, the last answer is filtered by the new words (never shown under unrelated ones)', async ({ page }) => {
+  await openSupplements(page, search('zinc'));
+  await morningName(page).fill('creatine');
+  const catalogOpts = page.getByRole('group', { name: 'Catalog' }).getByRole('option');
+  await expect(catalogOpts).toHaveCount(2);
+  await morningName(page).fill('zinc'); // the zinc answer takes 1.5 s; the creatine products must not show meanwhile
+  await expect(page.getByText('Searching the catalog…')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Catalog' })).toHaveCount(0);
+});
+
+test('Stretch library: the search shows catalog matches, and the empty note points to them', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#tab-program');
+  await page.getByRole('button', { name: 'Stretch library', exact: true }).click();
+  await page.locator('.exlib').getByRole('searchbox').fill('calf');
+  await expect(page.getByText('None of yours match. Add one from the catalog below, or with + New stretch.')).toBeVisible();
+  const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
+  await fromCatalog.getByRole('button', { name: 'Add Calf Stretch from the catalog' }).click();
+  await expect(page.locator('.exlib .exrow').filter({ hasText: 'Calf Stretch' }).first()).toContainText('Library');
+});

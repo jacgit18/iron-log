@@ -66,7 +66,7 @@ export default function SupplementLibrary() {
             </div>
           );
         })}
-        {!shown.length && <p className="note">{items.length ? 'No supplement matches. Clear the search or the Source filter.' : 'No supplements yet. Add one with + New supplement.'}</p>}
+        {!shown.length && <p className="note">{syncing && needle && src !== 'custom' ? 'None of yours match. Add one from the catalog below, or with + New supplement.' : items.length ? 'No supplement matches. Clear the search or the Source filter.' : 'No supplements yet. Add one with + New supplement.'}</p>}
       </div>
       {src !== 'custom' && (
         <CatalogMatches kind="supplement" q={q} unit="products" source="Products from the NIH Dietary Supplement Label Database. Added as Library only, with no dose: edit one to schedule it."

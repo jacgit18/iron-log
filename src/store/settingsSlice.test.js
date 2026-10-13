@@ -68,10 +68,15 @@ describe('settings fields', () => {
   });
   it('refuses edits until data has loaded', () => {
     const ready = st().isReady; useAppStore.setState({ isReady: () => false });
-    st().setPct('hyp', '10');
+    // Each says so, so a field goes back and shows no "Saved" tick.
+    expect(st().setPct('hyp', '10')).toBe(false);
+    expect(st().setRxOverride('hyp', '5 × 5')).toBe(false);
+    expect(st().setRest('60')).toBe(false);
+    expect(st().setRm('hack', '300')).toBe(false);
     useAppStore.setState({ isReady: ready });
     expect(st().cfg.pct.hyp).toBe(DEFAULT_CFG.pct.hyp);
     expect(st().saveFlag).toMatch(/Still loading/);
+    expect(st().setPct('hyp', '70')).toBe(true); // once loaded, a save says it went through
   });
   it('toggles the import choices on a draft, and does nothing without one', () => {
     st().setImportUseSettings(false); st().setImportSection('board', false);

@@ -138,3 +138,38 @@ test('the erase warning and the import limit stay in view, not in a fold', async
   expect(warnTop).toBeLessThan(buttonTop); // read before the button, not after
   await expect(page.locator('#imp-help')).toContainText('only brings back logged sessions');
 });
+
+test('the report downloads fit one line on a phone, name the shown week, and keep the full action for screen readers', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await openSettings(page);
+  const group = page.getByRole('group', { name: 'Download' });
+  const buttons = [group.getByRole('button', { name: 'Download Excel, every week' }), group.getByRole('button', { name: 'Download the week of Sep 20 as Excel' }), group.getByRole('button', { name: 'Download CSV' })];
+  for (const b of buttons) await expect(b).toBeVisible();
+  await expect(buttons[1]).toHaveText('Week of Sep 20'); // the week the Board shows, not always this one
+  for (const b of buttons) {
+    const oneLine = await b.evaluate(el => { const lh = parseFloat(getComputedStyle(el).lineHeight) || 20; const r = document.createRange(); r.selectNodeContents(el); return r.getClientRects().length === 1 || r.getBoundingClientRect().height < lh * 1.5; });
+    expect(oneLine).toBe(true);
+  }
+});
+
+test('a field that saves when you leave it shows a short Saved tick; a refused value does not', async ({ page }) => {
+  await page.goto('/');
+  await openSettings(page);
+  const pct = page.locator('#pct-strength');
+  const label = page.locator('.phrow').filter({ has: pct }).locator('.phfield').first();
+  await pct.fill('86');
+  await pct.press('Enter'); // leaves the field: it saves
+  await expect(label.getByText('✓ Saved')).toBeVisible();
+  await expect(page.locator('#pct-strength')).toHaveValue('86');
+  await page.clock.runFor(3100);
+  await expect(label.getByText('✓ Saved')).toHaveCount(0);
+  await page.locator('#pct-strength').fill('500'); // over the limit: refused, the box goes back
+  await page.locator('#pct-strength').press('Enter');
+  await expect(page.locator('#pct-strength')).toHaveValue('86');
+  await expect(page.getByText('✓ Saved')).toHaveCount(0);
+  const rest = page.locator('#rest-s');
+  await rest.fill('120');
+  await rest.press('Enter');
+  await expect(page.locator('label[for="rest-s"]').getByText('✓ Saved')).toBeVisible();
+});
