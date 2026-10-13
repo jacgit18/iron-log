@@ -7,6 +7,7 @@ import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../shared/dates
 import { SLOTS, scheduled, scheduleOf, slotLabel, slotTally } from '../../lib/supplements.js';
 import { pickerKey } from '../../lib/picker.js';
 import ItemPicker from '../ItemPicker.jsx';
+import SupplementLibrary from './SupplementLibrary.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { HOT_OZ, TRAIN_OZ_PER_30, BOTTLES, CUP_OZ, OZ_PER_LB, fmtOz, cupsOf, sumOz, lastDays, goalFor, boostOz } from '../../lib/water.js';
@@ -77,8 +78,8 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
   );
 }
 
-function Schedule({ date, supp }: { date: string; supp: Supplements }) {
-  const [editing, setEditing] = useState(false);
+// `editing` lives in the tab, so Edit also shows the whole library under the schedule.
+function Schedule({ date, supp, editing, setEditing }: { date: string; supp: Supplements; editing: boolean; setEditing: (f: (v: boolean) => boolean) => void }) {
   const all = scheduled(supp.items); const done = all.filter(x => (supp.taken[date] || {})[x.id]).length;
   return (
     <section className="panel" aria-labelledby="sched-h">
@@ -87,7 +88,7 @@ function Schedule({ date, supp }: { date: string; supp: Supplements }) {
         <span className="inline"><span className="note" role="status">{all.length ? `${done} of ${all.length} taken` : ''}</span>
           <button type="button" className="btn sm ghost" id="sched-edit" aria-pressed={editing} onClick={() => setEditing(v => !v)}>{editing ? 'Done' : 'Edit'}</button></span>
       </div>
-      {!all.length && !editing && <p className="note">Nothing scheduled yet. Use Edit to add what you take in the morning, at noon and at night, or build your list in Program, Supplement library.</p>}
+      {!all.length && !editing && <p className="note">Nothing scheduled yet. Use Edit to add what you take in the morning, at noon and at night; Edit also shows your whole supplement list.</p>}
       {SLOTS.map(([k, l]) => <Slot key={k} slot={k} label={l} date={date} items={supp.items} taken={supp.taken} editing={editing} />)}
     </section>
   );
@@ -146,6 +147,7 @@ export default function Supplements() {
   const todayKey = ymd(today);
   const [sel, setSel] = useState<string | null>(null); const date = sel || todayKey;
   const [custom, setCustom] = useState('');
+  const [editing, setEditing] = useState(false);
   const [armingDrink, setArmingDrink] = useState<number | null>(null); // the drink whose Remove was pressed once
   const list = supp.water[date] || []; const total = sumOz(list); const gi = goalFor(supp, body, date); const goal = gi.oz;
   const pct = Math.min(100, Math.round(total / goal * 100)); const left = Math.max(0, goal - total);
@@ -162,7 +164,8 @@ export default function Supplements() {
           {!isToday && <button type="button" className="btn sm ghost" onClick={() => setSel(null)}>Today</button>}
         </div>
       </div>
-      <Schedule date={date} supp={supp} />
+      <Schedule date={date} supp={supp} editing={editing} setEditing={setEditing} />
+      {editing && <div style={{ marginTop: 16 }}><SupplementLibrary /></div>}
       <section className="panel" style={{ marginTop: 16 }} aria-labelledby="water-h">
         <h2 id="water-h">Water</h2>
         <div className="kpi" role="status">
