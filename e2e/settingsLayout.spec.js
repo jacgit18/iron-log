@@ -50,3 +50,19 @@ test('the 1RM table is folded until opened', async ({ page }) => {
   await fold.locator('summary').click();
   await expect(fold.locator('table')).toBeVisible();
 });
+
+test('on a phone each phase is one block: the % stays beside its box and the columns line up', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await openSettings(page);
+  const rows = await page.locator('.phrow').evaluateAll(rs => rs.map(r => {
+    const pct = r.querySelector('.pctin'); const box = pct.querySelector('input');
+    const sign = pct.lastChild; const range = document.createRange(); range.selectNodeContents(sign);
+    return { sameLine: !box || Math.abs(range.getBoundingClientRect().top - box.getBoundingClientRect().top) < box.getBoundingClientRect().height, rxLeft: Math.round(r.children[2].getBoundingClientRect().left) };
+  }));
+  expect(rows.length).toBeGreaterThan(3);
+  expect(rows.every(r => r.sameLine)).toBe(true);
+  expect(new Set(rows.map(r => r.rxLeft)).size).toBe(1);
+  await expect(page.getByLabel('Strength % of 1RM')).toBeVisible();
+  await expect(page.getByLabel('Strength sets × reps')).toBeVisible();
+});

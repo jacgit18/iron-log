@@ -144,22 +144,20 @@ function PhasePanel() {
     <section className="panel">
       <h3>Phases</h3>
       <p>Each phase has default sets × reps. The target weight starts from the weight you last logged for that exercise in that phase, otherwise the program's weight. The % of 1RM is only for comparing with your 1RM below; it doesn't set targets.</p>
-      <div className="tbl">
-        <table>
-          <thead><tr><th>Phase</th><th>% of 1RM</th><th>Sets × reps</th></tr></thead>
-          <tbody>
-            {PH_KEYS.map(k => {
-              const pct = cfg.pct[k] ?? PHASES[k].pct; const rx = cfg.rxOverride[k] || PHASES[k].rx;
-              return (
-                <tr key={k}>
-                  <td><span className="dot" data-p={k} /> {PHASES[k].label}</td>
-                  <td>{PHASES[k].pct === 0 ? '—' : <><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={(v) => st.setPct(k, v)} /> %</>}</td>
-                  <td><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={(v) => st.setRxOverride(k, v)} /></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* One row per phase, each field labelled in place: a table's three columns wrapped the % under its box on a phone. */}
+      <div className="phrows">
+        {PH_KEYS.map(k => {
+          const pct = cfg.pct[k] ?? PHASES[k].pct; const rx = cfg.rxOverride[k] || PHASES[k].rx;
+          return (
+            <div className="phrow" key={k}>
+              <span className="phname"><span className="dot" data-p={k} /> {PHASES[k].label}</span>
+              {PHASES[k].pct === 0
+                ? <div className="phfield"><span>% of 1RM</span><span className="pctin">—</span></div>
+                : <label className="phfield"><span>% of 1RM</span><span className="pctin"><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={(v) => st.setPct(k, v)} /> %</span></label>}
+              <label className="phfield"><span>Sets × reps</span><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={(v) => st.setRxOverride(k, v)} /></label>
+            </div>
+          );
+        })}
       </div>
       <label className="inline" htmlFor="rest-s">Rest between sets{' '}
         <CommitInput key={`rest:${cfg.rest ?? 90}`} type="number" id="rest-s" min="0" max="600" step="any" value={cfg.rest ?? 90} style={{ width: 80 }} onCommit={st.setRest} /> seconds
