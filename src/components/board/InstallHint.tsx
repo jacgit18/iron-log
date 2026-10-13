@@ -3,7 +3,7 @@ import { useFeature } from '../../features.js';
 import { usePwa, install, isIOS } from '../../lib/pwa.js';
 import { showInstallHint, installHintDismissed, dismissInstallHint } from '../../lib/installHint.js';
 
-// One-time board notice: install the app. Admin-only first (FEATURES.installHint). Dismissing it hides it for good on this device.
+// One-time board notice: install the app. Released to everyone (FEATURES.installHint: 'all'). Dismissing it hides it for good on this device.
 export default function InstallHint() {
   const on = useFeature('installHint');
   const { installEvent, installed } = usePwa();

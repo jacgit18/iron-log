@@ -1,6 +1,6 @@
 import { LS } from './storage.js';
 
-// One-time hint on the board that the app can be installed (admin-only first, see FEATURES.installHint). Shown on a phone that can
+// One-time hint on the board that the app can be installed (released to everyone, see FEATURES.installHint). Shown on a phone that can
 // install and has not, until it is dismissed once; the dismissal is kept on this device only.
 const KEY = 'hideinstall';
 export interface HintInputs { installed: boolean; canPrompt: boolean; ios: boolean; phone: boolean; dismissed: boolean }
