@@ -10,6 +10,7 @@ import {
 import Sheet from '../Sheet.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 import { setError } from '../../shared/validate.js';
+import { selectOnFocus, advanceOnEnter, cellHint } from '../../lib/setCells.js';
 
 // Older entries in a timed phase may hold reps (Mobility was counted in reps before), so each side falls back to the other.
 const toRow = (x: LogSet, iso: boolean) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x.r : x.r ?? x.sec) ?? '', tw: false, tr: false });
@@ -99,10 +100,10 @@ export default function LogSheet({ slotId, idx }: { slotId: string; idx: number 
             <div className="setrow" key={i}>
               <span className="setn">{i + 1}</span>
               <input ref={i === 0 ? firstRef : null} type="number" inputMode="decimal" step="any" min="0" value={r.w} placeholder="bodyweight"
-                aria-label={`Set ${i + 1} weight in lb`} onChange={e => editCell(i, 'w', e.target.value)} />
+                aria-label={`Set ${i + 1} weight in lb`} enterKeyHint={cellHint(false)} onFocus={selectOnFocus} onKeyDown={advanceOnEnter} onChange={e => editCell(i, 'w', e.target.value)} />
               <span className="setx">×</span>
               <input type="number" inputMode="numeric" step="any" min="0" value={r.r}
-                aria-label={`Set ${i + 1} ${iso ? 'hold in seconds' : 'reps'}`} onChange={e => editCell(i, 'r', e.target.value)} />
+                aria-label={`Set ${i + 1} ${iso ? 'hold in seconds' : 'reps'}`} enterKeyHint={cellHint(i === rows.length - 1)} onFocus={selectOnFocus} onKeyDown={advanceOnEnter} onChange={e => editCell(i, 'r', e.target.value)} />
             </div>
           ))}
         </div>
