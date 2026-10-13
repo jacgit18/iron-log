@@ -7,6 +7,7 @@ import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../shared/dates.js';
@@ -15,6 +16,7 @@ import { backupCfg, ghCfg } from '../../lib/export.js';
 import CommitInput from '../CommitInput.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
+import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { BackupMessage } from '../progress/Progress.jsx';
 
@@ -81,6 +83,25 @@ function AppearancePanel() {
       </fieldset>
       <label className="inline"><input type="checkbox" checked={a.roomy} onChange={e => upd({ roomy: e.target.checked })} /> Roomier text (more space between lines and paragraphs)</label>
       <p>Saved on this device only.</p>
+    </section>
+  );
+}
+
+function RestAlertPanel() {
+  const [on, setOn] = useState(restNotifyOn);
+  const [note, setNote] = useState('');
+  if (!notifySupported()) return null; // e.g. iPhone Safari outside an installed app
+  const toggle = async (want: boolean) => {
+    const r = await setRestNotify(want);
+    setOn(r === 'on');
+    setNote(r === 'denied' ? 'Notifications are blocked for Iron Log. Allow them in your browser or phone settings, then try again.' : '');
+  };
+  return (
+    <section className="panel">
+      <h2>Rest timer alert</h2>
+      <label className="inline"><input type="checkbox" checked={on} onChange={e => void toggle(e.target.checked)} /> Show a notification when a rest or hold ends while Iron Log is in the background</label>
+      <p>It only shows while the phone still lets Iron Log run in the background. If the screen has been locked for a while the alert can be late, and the timer is right when you open the app again. Saved on this device only.</p>
+      {note && <p role="status">{note}</p>}
     </section>
   );
 }
@@ -332,12 +353,14 @@ function RmPanel() {
 
 export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
+  const restAlert = useFeature('restNotify');
   return (
     <div className="settings">
       <div className="scol">
         <ModePanel />
         <PhasePanel />
         <AppearancePanel />
+        {restAlert && <RestAlertPanel />}
         <DevicePanel />
         <FeedbackPanel />
       </div>
