@@ -85,6 +85,7 @@ header.top h1{font-size:1.875rem;margin:0;font-weight:700;text-transform:upperca
 .notice.firstrun{padding:14px 16px}.notice.firstrun h3{margin:0 0 6px;font-size:1rem}.notice.firstrun p{margin:0 0 10px}.notice.firstrun .note{margin:10px 0 0}
 .notice.crash{padding:14px 16px}.notice.crash h2{margin:0 0 6px;font-size:1.125rem}.notice.crash p{margin:0 0 10px}.notice.crash .actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.notice.crash pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.8125rem;margin:6px 0 0}
 .notice.leftovers .inline{flex-wrap:wrap;gap:6px}
+.notice.offlinenote{padding:6px 12px;font-size:.8125rem;background:var(--sunk);color:var(--ink)}
 .notice.tip{display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--sunk);color:var(--ink)}
 .edtop{display:flex;flex-wrap:wrap;gap:8px;padding-block:8px 12px}
 .edtop .seg{margin-left:0;flex-wrap:wrap}
