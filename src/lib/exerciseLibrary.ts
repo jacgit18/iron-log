@@ -1,6 +1,6 @@
 import type { CatalogItem, Cfg, LibraryItem, Logs, Program, Week } from '../types.ts';
 /* ---------- Exercise library: every exercise and what is set on it ---------- */
-import { EX, allExIds, exInfo, isOwnExercise, slotsFor } from './data.js';
+import { EX, allExIds, exInfo, findExId, isOwnExercise, slotsFor } from './data.js';
 import { tagsOf, MUSCLES } from './muscles.js';
 
 // Where an exercise is used: the rotation programs (by key), saved/created versions, experiments, and logged sessions.
@@ -27,6 +27,12 @@ export function exIdsInUse({ programs, library, experiments, logs, week }: Param
   Object.keys(logs || {}).forEach(k => { if ((logs || {})[k]?.length) ids.add(k); });
   (week?.extra || []).forEach(x => { if (x.ex) ids.add(x.ex); });
   return [...ids].filter(id => !cfg || !!EX[id] || !!cfg.ex?.[id]);
+}
+
+// findExId, also looking among `inUse` (exIdsInUse): a built-in your program still uses is found by name though the library does not list it.
+export function findExIdIn(cfg: Cfg, name: string, inUse: string[]) {
+  const k = name.trim().replace(/\s+/g, ' ').toLowerCase();
+  return findExId(cfg, name) ?? (k ? inUse.find(id => exInfo(cfg, id).n.trim().replace(/\s+/g, ' ').toLowerCase() === k) ?? null : null);
 }
 
 // One row per exercise, alphabetical.

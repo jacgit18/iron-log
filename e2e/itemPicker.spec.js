@@ -298,6 +298,10 @@ test('a built-in your program uses counts as yours: the catalog never offers a s
   await field(page).fill('lat pulldown');
   await expect(page.getByRole('group', { name: 'Yours' }).getByRole('option')).toHaveText([/^Lat Pulldown, alternating single-arm/]);
   await expect(page.getByRole('group', { name: 'Catalog' })).toHaveCount(0);
+  // picked from Yours, the sheet treats it as the existing exercise: no "New exercise" note, its equipment filled in
+  await page.getByRole('option', { name: /^Lat Pulldown, alternating single-arm/ }).click();
+  await expect(page.getByRole('dialog').getByText('New exercise. It will be added to your exercise list.')).toHaveCount(0);
+  await expect(page.getByRole('dialog').getByRole('combobox', { name: 'Equipment' })).toHaveValue('cable');
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
   await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
   await page.locator('.exlib').getByRole('searchbox').fill('lat pulldown');
