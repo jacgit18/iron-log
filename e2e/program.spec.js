@@ -19,6 +19,7 @@ async function drag(page, from, to, { release = true } = {}) {
 
 test('you drag an exercise to a new place in the day, and it stays there after a reload', async ({ page }) => {
   await page.click('#tab-program');
+  await expect(rows(page).first()).toBeVisible(); // the tab is its own chunk, fetched on first open
   const before = await names(page);
   await drag(page, 0, 2);
   const want = [before[1], before[2], before[0], ...before.slice(3)];
@@ -32,6 +33,7 @@ test('you drag an exercise to a new place in the day, and it stays there after a
 
 test('Escape during a drag puts the exercise back', async ({ page }) => {
   await page.click('#tab-program');
+  await expect(rows(page).first()).toBeVisible(); // the tab is its own chunk, fetched on first open
   const before = await names(page);
   await drag(page, 0, 2, { release: false });
   await expect(rows(page).first()).toHaveClass(/dragging/);
@@ -72,6 +74,7 @@ test('Remove marks the row first, a second tap removes it, and Undo puts it back
 
 test('moving away from an armed Remove leaves the exercise alone', async ({ page }) => {
   await page.click('#tab-program');
+  await expect(rows(page).first()).toBeVisible(); // the tab is its own chunk, fetched on first open
   const before = await names(page);
   await rows(page).first().getByRole('button', { name: `Remove ${before[0]}` }).click();
   await expect(page.locator('.edrow.removing')).toHaveCount(1);
@@ -82,6 +85,7 @@ test('moving away from an armed Remove leaves the exercise alone', async ({ page
 
 test('the Removed notice belongs to that visit: leave the Program tab and it is gone, with focus left alone', async ({ page }) => {
   await page.click('#tab-program');
+  await expect(rows(page).first()).toBeVisible(); // the tab is its own chunk, fetched on first open
   const before = await names(page);
   const rm = rows(page).first().getByRole('button', { name: `Remove ${before[0]}` });
   await rm.click(); await rm.click();
@@ -90,4 +94,17 @@ test('the Removed notice belongs to that visit: leave the Program tab and it is 
   await page.click('#tab-program');
   await expect(page.locator('.removednote')).toHaveCount(0);
   await expect(page.locator('#tab-program')).toBeFocused();
+});
+
+test('the drag handle is a full 44px touch target, and a drag buzzes on pick-up and drop', async ({ page }) => {
+  await page.click('#tab-program');
+  const h = await rows(page).first().locator('.draghandle').boundingBox();
+  expect(h.width).toBeGreaterThanOrEqual(44);
+  expect(h.height).toBeGreaterThanOrEqual(44);
+  await page.evaluate(() => { window.__buzz = []; navigator.vibrate = p => { window.__buzz.push(p); return true; }; });
+  await drag(page, 0, 2);
+  const buzz = await page.evaluate(() => window.__buzz);
+  expect(buzz[0]).toBe(12); // picked up
+  expect(buzz.at(-1)).toBe(10); // dropped
+  expect(buzz.length).toBeGreaterThanOrEqual(3); // and at least one tick between
 });

@@ -72,6 +72,7 @@ test('the list has no accessibility violations, reading or editing', async ({ pa
 test('Groceries comes before Supplements, and the store lists offer the suggested stores', async ({ page }) => {
   await asAdmin(page);
   await page.click('#tab-daily');
+  await expect(page.locator('#daily-grocery')).toBeVisible(); // the tab is its own chunk, fetched on first open
   const ids = await page.locator('[aria-label="Daily section"] button').evaluateAll(b => b.map(x => x.id));
   expect(ids).toEqual(['daily-grocery', 'daily-supplements', 'daily-medical']);
   await expect(page.locator('#daily-supplements')).toHaveAttribute('aria-pressed', 'true'); // Supplements still opens first

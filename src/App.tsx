@@ -4,10 +4,6 @@ import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
 import BoardTab from './components/board/BoardTab.js';
-import Daily from './components/daily/Daily.js';
-import Progress from './components/progress/Progress.js';
-import Editor from './components/program/Editor.js';
-import Settings from './components/settings/Settings.js';
 import TimerBar from './components/TimerBar.js';
 import LogSheet from './components/sheets/LogSheet.js';
 import DetailSheet from './components/sheets/DetailSheet.js';
@@ -30,6 +26,14 @@ import SignInCard from './components/SignInCard.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
+import { lazyTab } from './lib/lazyTab.js';
+
+// The Board (the first screen) and the shell are in the main bundle; the other tabs are fetched when first opened. Every chunk is in the
+// service worker's precache, so they open offline too.
+const Daily = lazyTab(() => import('./components/daily/Daily.js'));
+const Progress = lazyTab(() => import('./components/progress/Progress.js'));
+const Editor = lazyTab(() => import('./components/program/Editor.js'));
+const Settings = lazyTab(() => import('./components/settings/Settings.js'));
 
 const TABS: [string, string, ComponentType][] = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
