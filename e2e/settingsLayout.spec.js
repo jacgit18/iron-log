@@ -127,3 +127,14 @@ test('with large text the chips wrap, and a jump still lands below the row', asy
   await settled(page);
   expect(await gapBelowRow(page, 'set-data-h')).toBeGreaterThanOrEqual(-1);
 });
+
+test('the erase warning and the import limit stay in view, not in a fold', async ({ page }) => {
+  await page.goto('/');
+  await openSettings(page);
+  const erase = page.locator('section.erase');
+  const warning = erase.getByText('An export made after erasing holds the erased state');
+  await expect(warning).toBeVisible();
+  const [warnTop, buttonTop] = await Promise.all([warning.evaluate(e => e.getBoundingClientRect().top), erase.locator('.actions').evaluate(e => e.getBoundingClientRect().top)]);
+  expect(warnTop).toBeLessThan(buttonTop); // read before the button, not after
+  await expect(page.locator('#imp-help')).toContainText('only brings back logged sessions');
+});

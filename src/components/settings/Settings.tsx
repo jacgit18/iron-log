@@ -184,14 +184,16 @@ function DataPanel() {
   return (
     <section className="panel" aria-labelledby="data-h">
       <h3 id="data-h">Export &amp; import</h3>
-      <p>{storeMode === 'db' ? 'Your data is already saved to your account; exporting a copy is optional.' : 'Your data is in this browser only; export a copy now and then.'}</p>
+      {/* Nothing while loading: a signed-in person must not read "this browser only" before the data source is known. */}
+      {storeMode === 'db' && <p>Your data is already saved to your account; exporting a copy is optional.</p>}
+      {storeMode === 'local' && <p>Your data is in this browser only; export a copy now and then.</p>}
       <div className="actions">
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <label className="btn filebtn">Import from file
           <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : 'imp-help'} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
       </div>
-      <p className="note" id="imp-help">Import takes the data file, or a workbook or .csv from an earlier version. You review before anything changes.</p>
+      <p className="note" id="imp-help">Import takes the data file, or a workbook or .csv from an earlier version (an older workbook or a .csv only brings back logged sessions, body weight and main settings). You review before anything changes.</p>
       {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
       <details className="imppaste">
         <summary>Can't pick a file? Paste its contents instead</summary>
@@ -202,7 +204,6 @@ function DataPanel() {
       </details>
       <More about="export and import">
         <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
-        <p>An older workbook or a .csv only brings back logged sessions, body weight and main settings.</p>
       </More>
       {dl && (
         <div className="subblock">
@@ -246,11 +247,12 @@ function ErasePanel() {
           </label>
         ))}
       </fieldset>
+      {/* In view before the button: someone who erases first and exports after would lose the data. */}
+      <p className="note">Kept: display options, and any file you exported earlier. An export made after erasing holds the erased state.</p>
       <div className="actions">
         {dl && <button type="button" className="btn" disabled={!!exporting} onClick={st.downloadData}>Export all data first</button>}
         <ArmedButton className="btn danger" disabled={!n} label={n ? `Erase ${n} selected` : 'Tick what to erase'} armedLabel={`Tap again to erase ${n}`} onConfirm={() => st.eraseData(sel)} />
       </div>
-      <More about="erasing"><p>Kept: display options, and any file you exported earlier. An export made after erasing holds the erased state.</p></More>
     </section>
   );
 }
