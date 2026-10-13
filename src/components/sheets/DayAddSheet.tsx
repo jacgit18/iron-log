@@ -1,8 +1,9 @@
-import type { EquipmentKey } from '../../types.ts';
+import type { CatalogItem, EquipmentKey } from '../../types.ts';
 import type { PhaseChoice } from '../../store/types.ts';
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, PH_KEYS, exerciseChoice, findExId } from '../../lib/data.js';
+import { PHASES, PH_KEYS, findExId } from '../../lib/data.js';
+import { pickedChoice } from '../../lib/catalogExercise.js';
 import Sheet from '../Sheet.jsx';
 import ExerciseField from '../ExerciseField.jsx';
 
@@ -10,15 +11,15 @@ import ExerciseField from '../ExerciseField.jsx';
 export default function DayAddSheet({ col }: { col: number }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
-  const [d, setD] = useState<{ name: string; nu: string; ne?: EquipmentKey | ''; ph: PhaseChoice; note: string }>({ name: '', nu: '', ph: 'strength', note: '' });
+  const [d, setD] = useState<{ name: string; nu: string; ne?: EquipmentKey | ''; ph: PhaseChoice; note: string; cat?: CatalogItem | null }>({ name: '', nu: '', ph: 'strength', note: '' });
   const [err, setErr] = useState('');
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
-  const submit = (e: FormEvent) => { e.preventDefault(); const msg = st.addExerciseToDay(col, { ...exerciseChoice(cfg, d.name), nu: d.nu.trim(), ne: d.ne, ph: d.ph, note: d.note }); if (msg) setErr(msg); };
+  const submit = (e: FormEvent) => { e.preventDefault(); const msg = st.addExerciseToDay(col, { ...pickedChoice(cfg, d.name, d.cat), nu: d.nu.trim(), ne: d.ne, ph: d.ph, note: d.note }); if (msg) setErr(msg); };
   return (
     <Sheet as="form" noValidate onSubmit={submit}>
       <h2 className="cond">Add to Day {col}, this week</h2>
       <p className="note">For this week only. Your program doesn't change.</p>
-      <ExerciseField cfg={cfg} id="day-ex" name={d.name} url={d.nu} eq={d.ne} onName={(name) => { const k = findExId(cfg, name); const def = k && cfg.exPh && cfg.exPh[k]; up({ name, ...(def ? { ph: def } : {}) }); }} onUrl={(nu) => up({ nu })} onEq={(ne) => up({ ne: ne as EquipmentKey | '' })} />
+      <ExerciseField cfg={cfg} id="day-ex" name={d.name} url={d.nu} eq={d.ne} onName={(name) => { const k = findExId(cfg, name); const def = k && cfg.exPh && cfg.exPh[k]; up({ name, ...(def ? { ph: def } : {}) }); }} onUrl={(nu) => up({ nu })} onEq={(ne) => up({ ne: ne as EquipmentKey | '' })} cat={d.cat} onCat={cat => up({ cat })} />
         <label className="field">Phase
           <select value={d.ph || ''} onChange={e => up({ ph: (e.target.value || null) as PhaseChoice })}>
             <option value="">None</option>

@@ -1,7 +1,7 @@
 /* A catalog exercise joining your library (ADR 026): its name and equipment as a snapshot, plus its muscle tags. Shared by the
    library's Add (addCatalogExercise) and by the add sheets, which add a picked catalog exercise when they save (ADR 036). */
 import type { CatalogItem, EquipmentKey, ExerciseInfo, MuscleTags, ProgramCfg } from '../types.ts';
-import { EQUIPMENT, findExId, isCatalogId } from './data.js';
+import { EQUIPMENT, exerciseChoice, findExId, isCatalogId } from './data.js';
 
 export const catalogName = (item: CatalogItem) => item.name.trim().replace(/\s+/g, ' ');
 
@@ -21,4 +21,10 @@ export function catalogSnapshot(item: CatalogItem, extras: { nu?: string; ne?: E
   const t = item.data.muscles || {};
   const tags: MuscleTags = { ...(t.p?.length ? { p: t.p } : {}), ...(t.s?.length ? { s: t.s } : {}), ...(t.mob ? { mob: true as const } : {}) };
   return { info: { n: catalogName(item), ...(eq ? { eq } : {}), ...(extras.nu ? { url: extras.nu } : {}) }, tags: Object.keys(tags).length ? tags : null };
+}
+
+/** What an add sheet saves for the exercise field: the held catalog exercise while the name still matches it, else the typed name. */
+export function pickedChoice(cfg: ProgramCfg, name: string, cat?: CatalogItem | null): { ex: string; nn: string; cat?: CatalogItem } {
+  const k = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+  return cat && k(cat.name) === k(name) ? { ex: cat.id, nn: '', cat } : exerciseChoice(cfg, name);
 }
