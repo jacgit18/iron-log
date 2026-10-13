@@ -1,6 +1,6 @@
 import { PHASES } from '../lib/data.js';
 import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
-import { parseDataFile, importSel, cfgSection, mergeEntries, mergeWeek, sameProg, progBody, libDate, backupCfg } from '../lib/export.js';
+import { parseDataFile, importSel, cfgSection, mergeEntries, mergeWeek, sameProg, progBody, libDate } from '../lib/export.js';
 import { WEEK_RE } from '../lib/trends.js';
 import { isAdminNow } from '../features.js';
 import { validPct, validRest, validRm } from '../shared/validate.js';
@@ -26,11 +26,6 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
   setRest(raw) { const n = Number(raw); if (raw === '' || !validRest(n)) return false; get().mutateCfg(c => { c.rest = n; }); },
   setRm(exId, raw) { const n = Number(raw); if (raw !== '' && !validRm(n) && get().cfg.rm[exId] == null) return false; get().mutateCfg(c => { if (raw === '' || !validRm(n)) delete c.rm[exId]; else c.rm[exId] = n; }); }, // 0 or empty clears a saved 1RM; junk with nothing saved is rejected so the field reverts
   setCfgField(k, v) { get().mutateCfg(c => { c[k] = v; }); },
-  setBackupRepo(raw) {
-    const v = raw.trim();
-    if (/^[\w.-]+\/[\w.-]+$/.test(v)) { if (get().mutateCfg(c => { c.backup = { ...backupCfg(c), repo: v, hashes: {} }; })) set({ backupMsg: null }); }
-    else set({ backupMsg: { kind: 'err', text: 'Use the form owner/repo, for example your-name/iron-log-backup.' } });
-  },
 
   async readImportFile(file) {
     if (!file || get().blocked()) return;
@@ -82,7 +77,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
         const cur: any = get().cfg; const incoming: any = { ...structuredClone(DEFAULT_CFG), ...structuredClone(d.config) };
         const cfg: any = {};
         new Set([...Object.keys(cur), ...Object.keys(incoming)]).forEach(k => {
-          const v = k === 'backup' ? (d.config.backup || cur.backup) : k === 'ghBackup' ? cur.ghBackup : on[cfgSection(k)] ? incoming[k] : cur[k];
+          const v = on[cfgSection(k)] ? incoming[k] : cur[k];
           if (v !== undefined) cfg[k] = v;
         });
         const patch: Partial<AppState> = { cfg }; const docs: [string, unknown][] = []; const removes: string[] = []; const saves: ('saveCfg' | 'saveLibrary' | 'saveBody' | 'saveExperiments' | 'saveWeek' | 'saveStretches' | 'saveStrWeek' | 'saveSupp')[] = ['saveCfg']; const progSaves: [string, Program][] = [];

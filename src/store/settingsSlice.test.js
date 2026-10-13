@@ -17,7 +17,7 @@ beforeEach(() => {
   clearStorage();
   useAppStore.setState({
     cfg: structuredClone(DEFAULT_CFG), logs: {}, week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} }, weekHist: {},
-    body: [], library: [], experiments: [], programs: { A: BUILTIN.A, B: BUILTIN.B }, modal: null, backupMsg: null,
+    body: [], library: [], experiments: [], programs: { A: BUILTIN.A, B: BUILTIN.B }, modal: null,
     importDraft: null, importBusy: false, importError: '', importCount: 0, saveFlag: '',
   });
 });
@@ -72,14 +72,6 @@ describe('settings fields', () => {
     useAppStore.setState({ isReady: ready });
     expect(st().cfg.pct.hyp).toBe(DEFAULT_CFG.pct.hyp);
     expect(st().saveFlag).toMatch(/Still loading/);
-  });
-  it('accepts an owner/repo backup target and rejects anything else', () => {
-    st().setBackupRepo(' me/my-data ');
-    expect(st().cfg.backup).toMatchObject({ repo: 'me/my-data', hashes: {} });
-    expect(st().backupMsg).toBeNull();
-    st().setBackupRepo('not a repo');
-    expect(st().backupMsg).toMatchObject({ kind: 'err' });
-    expect(st().cfg.backup.repo).toBe('me/my-data');
   });
   it('toggles the import choices on a draft, and does nothing without one', () => {
     st().setImportUseSettings(false); st().setImportSection('board', false);
@@ -333,13 +325,6 @@ describe('replacing with imported data', () => {
 
 // Second pass: the less common paths, one per branch the first tests left open.
 describe('edge cases while reading', () => {
-  it('keeps the backup target when the store refuses the edit', () => {
-    useAppStore.setState({ backupMsg: { kind: 'err', text: 'old' } });
-    const ready = st().isReady; useAppStore.setState({ isReady: () => false });
-    st().setBackupRepo('me/repo');
-    useAppStore.setState({ isReady: ready });
-    expect(st().backupMsg).toMatchObject({ text: 'old' });
-  });
   it('falls back to a generic message for an error without one', async () => {
     await st().readImportFile({ name: 'a.json', arrayBuffer: async () => { throw new Error(''); } });
     expect(st().importError).toBe('Couldn’t read that file');
@@ -365,12 +350,13 @@ describe('edge cases while reading', () => {
 });
 
 describe('edge cases when replacing', () => {
-  it('keeps the local GitHub backup settings, even when the file has none', async () => {
-    useAppStore.setState(s => ({ cfg: { ...s.cfg, ghBackup: { repo: 'me/mine', branch: 'data', hash: 'h' } } }));
-    const cfg = structuredClone(DEFAULT_CFG); delete cfg.ghBackup;
-    st().pasteImport(dataText({ cfg }));
+  it('strips GitHub backup settings from a file and from the config already here', async () => {
+    useAppStore.setState(s => ({ cfg: { ...s.cfg, ghBackup: { repo: 'me/mine', branch: 'data', token: 'ghp_secret' }, backup: { repo: 'me/old' } } }));
+    st().pasteImport(dataText({ cfg: { ...structuredClone(DEFAULT_CFG), ghBackup: { repo: 'you/x', token: 'ghp_other' }, backup: { repo: 'you/y', branch: 'main', hashes: {} } } }));
     await st().applyImport('replace');
-    expect(st().cfg.ghBackup.repo).toBe('me/mine');
+    expect(st().cfg).not.toHaveProperty('ghBackup');
+    expect(st().cfg).not.toHaveProperty('backup');
+    expect(JSON.stringify(saved('config/main'))).not.toMatch(/ghp_|ghBackup|backup/);
   });
   it('leaves everything as it was when the file cannot be applied', async () => {
     useAppStore.setState({ body: [{ wk: '2026-01-05', d: '2026-01-05', w: 200 }], logs: { hack: [entry('2026-09-21')] } });
@@ -395,17 +381,11 @@ describe('edge cases when replacing', () => {
   });
   const bare = over => ({ kind: 'json', name: 'x', data: { config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], stretchWeeks: {}, ...over } });
 
-  it('keeps the local backup target unless the file has its own, and ignores keys of a section left out', async () => {
-    st().setBackupRepo('me/mine');
+  it('ignores keys of a section left out', async () => {
     st().pasteImport(dataText({ cfg: { ...structuredClone(DEFAULT_CFG), zzz: 1 } }));
     st().setImportSection('settings', false);
     await st().applyImport('replace');
-    expect(st().cfg.backup.repo).toBe('me/mine');
     expect(st().cfg.zzz).toBeUndefined();
-
-    st().pasteImport(dataText({ cfg: { ...structuredClone(DEFAULT_CFG), backup: { repo: 'you/theirs', branch: 'main', hashes: {} } } }));
-    await st().applyImport('replace');
-    expect(st().cfg.backup.repo).toBe('you/theirs');
   });
   it('can leave out the program and the board', async () => {
     useAppStore.setState({ body: [{ wk: '2026-01-05', d: '2026-01-05', w: 200 }] });

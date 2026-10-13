@@ -1,8 +1,8 @@
-/* ---------- CSV / Excel export, full data file, GitHub backup helpers ----------
+/* ---------- CSV / Excel export, full data file ----------
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
 import { PHASES, PH_KEYS, BUILTIN, exInfo, withAllDays, DAY_COUNT } from './data.js';
 import { ymd, fmtShort } from '../shared/dates.js';
-import type { BackupCfg, DayDraft, Cfg, DataFile, LogEntry, Logs, PhaseKey, Program, Snapshot, Week } from '../types.ts';
+import type { DayDraft, Cfg, DataFile, LogEntry, Logs, PhaseKey, Program, Snapshot, Week } from '../types.ts';
 import { weekSlots, weekProgram, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, touched, AUTO_NOTE } from './logic.js';
 
 type XLSX = typeof import('xlsx');
@@ -269,36 +269,4 @@ export function mergeWeek(a: unknown, b: unknown): Week {
   return w;
 }
 
-/* ---------- GitHub backup (Claude-hosted version, via the viewer's Composio connector) ---------- */
-export const GH_SERVER = 'Composio For You';
-export const GH_TOOL = 'COMPOSIO_MULTI_EXECUTE_TOOL';
-// No default repo (ADR 016 step 4): each person names their own in Settings.
-export const backupCfg = (cfg: Cfg): BackupCfg => ({ repo: '', branch: 'main', hashes: {}, ...(cfg.backup || {}) });
-function hashStr(s: string) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
-export function weekFingerprint(S: Snapshot, key: string, w: Week) {
-  const { cfg, logs, programs } = S;
-  const L = Object.keys(logs).sort().map(id => [id, (logs[id] || []).filter(e => entryWeek(e) === key)]);
-  const nw = normWeek(w);
-  return hashStr(JSON.stringify([w.done, w.skipped, w.moved, w.ph, w.prog, nw.rest, nw.order, nw.restOn, nw.extra, L, weekProgram(cfg, programs, w, key)]));
-}
-export function backupError(e: { code?: string; message?: string } | null | undefined) {
-  const c = e && e.code;
-  if (c === 'server_not_connected' || c === 'selection_required') return 'Add or pick the Composio connector in claude.ai Settings → Connectors, then try again.';
-  if (c === 'needs_reauth') return 'Reconnect Composio in claude.ai Settings → Connectors, then try again.';
-  if (c === 'not_in_manifest') return 'GitHub access isn’t allowed for this page. Allow the connector when asked, or turn it back on in the page’s connector settings.';
-  if (c === 'blocked_by_policy' || c === 'approval_required') return 'Your organization’s settings block this connector here.';
-  if (c === 'server_unavailable' || c === 'upstream_error' || c === 'cancelled') return 'GitHub didn’t answer in time. The backup may still have gone through, so check the repo before trying again.';
-  if (c === 'not_granted' || c === 'capability_disabled' || c === 'capability_removed') return 'GitHub backup isn’t available in this view.';
-  return (e && e.message) ? e.message : 'Backup failed.';
-}
-export const daysSince = (last: { at: string } | null | undefined) => (last ? Math.floor((Date.now() - new Date(last.at).getTime()) / 864e5) : null);
-export const daysSinceBackup = (cfg: Cfg) => daysSince(cfg.backup && cfg.backup.last);
-
-/* ---------- GitHub backup (standalone app: GitHub REST API with the viewer's token) ---------- */
-export const ghCfg = (cfg: Cfg) => ({ repo: '', branch: 'data', ...(cfg.ghBackup || {}) });
-// Same value for the same data, whenever it was exported and whatever the backup bookkeeping says.
-export function dataFingerprint(d: Partial<DataFile>) {
-  const { backup: _b, ghBackup: _g, ...config } = { ...d.config }; // eslint-disable-line no-unused-vars
-  return hashStr(JSON.stringify({ ...d, exportedAt: null, config }));
-}
 export const todayStamp = () => ymd(new Date());

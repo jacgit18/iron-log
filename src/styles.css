@@ -403,7 +403,6 @@ body.timing{padding-bottom:130px}
 .rmtbl td:nth-child(3){width:110px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .panel h2{margin:0;font-size:1.375rem;font-weight:700;text-transform:uppercase}
-.ghbk{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}.ghbk h3{margin:0 0 4px;font-size:1.125rem}.ghbk input[type=password]{flex:1 1 220px;min-width:0}.ghbk ol{padding-left:20px}
 .panel p{margin:0;color:var(--muted);font-size:.875rem;max-width:60ch}
 .modes{display:flex;flex-direction:column;gap:8px}
 .mode{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}

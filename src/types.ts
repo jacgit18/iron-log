@@ -137,11 +137,7 @@ export interface Cfg extends ProgramCfg {
   bwGoal?: BodyGoal;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
   rest?: number; // rest timer, seconds
-  backup?: BackupCfg; // GitHub backup through the Claude host's connector
-  ghBackup?: Partial<BackupCfg>; // GitHub backup from the standalone app
 }
-
-export interface BackupCfg { repo: string; branch: string; hashes: Record<string, string>; hash?: string | null; last?: { at: string; url?: string; files?: number } }
 
 /** An Experiment (or added) card on one week. */
 export interface ExtraCard {
