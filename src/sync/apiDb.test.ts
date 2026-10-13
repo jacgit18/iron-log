@@ -537,6 +537,32 @@ describe('conflicts', () => {
     expect(server.rows.get('weeks|2026-10-04')!.data.done).toEqual({ b: true });
   });
 
+  it('a week saved while a pull brings in another device\'s ticks keeps those ticks', async () => {
+    // Opening the app pulls; a save made from the older week before that pull lands is sent after it. Planned against the
+    // newer row, it went out as a plain edit of that row and wiped the other device's ticks (a whole day, 2026-10-13).
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('weeks/2026-10-04').set(wk({ a: true }));
+    otherDeviceSaves(server, { a: true, b: true });
+    const pulling = db.syncNow();
+    const saving = db.doc('weeks/2026-10-04').set(wk({ a: true, c: true }));
+    await pulling; await saving;
+    expect(server.rows.get('weeks|2026-10-04')!.data.done).toEqual({ a: true, b: true, c: true });
+    expect((await db.doc('weeks/2026-10-04').get()).data().done).toEqual({ a: true, b: true, c: true });
+  });
+
+  it('a week saved after the pull landed is not merged again', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('weeks/2026-10-04').set(wk({ a: true }));
+    otherDeviceSaves(server, { a: true, b: true });
+    await db.syncNow();
+    await db.doc('weeks/2026-10-04').set(wk({ a: true })); // made from the pulled week: unticking b is this device's choice
+    expect(server.rows.get('weeks|2026-10-04')!.data.done).toEqual({ a: true });
+  });
+
   it('an edit of something deleted on another device is set aside, not brought back', async () => {
     const { server, db } = setup();
     db.start();
