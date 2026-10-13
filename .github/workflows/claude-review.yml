@@ -34,7 +34,7 @@ jobs:
             Read CLAUDE.md first, then check the diff (git diff origin/${{ github.base_ref }}...HEAD) against it:
             - New code is TypeScript (.ts/.tsx), no new .js/.jsx, no `any` outside the accepted spots.
             - Board reorder and log write paths (planFix, mutateChecks, autoLogs, addEntry) keep their tests; no exercise can be lost or duplicated.
-            - A new user-facing feature is admin-only first: FEATURES entry with a removal condition, useFeature wrapper, requireAdmin on new API routes.
+            - A new user-facing feature goes to everyone with no flag for now (owner's call until there is a user base; see CLAUDE.md), unless the PR says the owner asked for admin-only: then a FEATURES entry with a removal condition and a useFeature wrapper. Any admin-only API route needs requireAdmin.
             - The PR description ticks exactly one Audience box.
             - Behavior is not changed inside a refactor or conversion commit; one change per commit.
             - Obvious bugs, missing tests for new logic, security problems (auth on routes, untrusted input).
