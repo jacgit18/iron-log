@@ -1,5 +1,5 @@
 import { BUILTIN, BLANK, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
-import { catalogPickError, catalogSnapshot } from '../lib/catalogExercise.js';
+import { catalogName, catalogPickError, catalogSnapshot } from '../lib/catalogExercise.js';
 import { progName, dayAt, DAYS, colOf, currentLayout, isFinished } from '../lib/logic.js';
 import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
@@ -173,6 +173,16 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
       if (!it.ex || (it.ex === '__new' && !it.nn)) return 'Choose an exercise, or type a name for the new one.';
       if (!isVideoUrl(it.nu)) return VIDEO_ERR;
       if (it.cat) { const err = catalogPickError(get().cfg, it.cat); if (err) return err; }
+    }
+    // Two items of one card that would add different exercises under one name (a typed new one and a catalog pick, or two catalog
+    // items): refused, so the library keeps one exercise per name (findExId). The same pick twice is fine.
+    const adding = new Map<string, string>();
+    for (const it of d.items) {
+      const add = it.cat && !get().cfg.ex[it.cat.id] ? { name: catalogName(it.cat), who: it.cat.id } : it.ex === '__new' ? { name: it.nn, who: 'new' } : null;
+      if (!add) continue;
+      const k = add.name.trim().replace(/\s+/g, ' ').toLowerCase(); const had = adding.get(k);
+      if (had && had !== add.who) return `${add.name} is used twice in this card as different exercises. Pick the same one for both.`;
+      adding.set(k, add.who);
     }
     const days = d.idx == null && d.days ? [...new Set(d.days)].filter(x => DAYS.includes(x)).sort((a, b) => a - b) : [d.day];
     if (!days.length) return 'Pick at least one day.'; // checked before anything is written, so a refused save adds no exercise

@@ -148,6 +148,18 @@ describe('the add/edit exercise sheet', () => {
     expect(st().saveSlot(newCard({ days: [1], items: [{ ...item, ex: 'c:fedb:Hammer', cat: { id: 'c:fedb:Hammer', name: 'hammer row', data: {} } }] }))).toBe('You already have an exercise called hammer row.');
     expect(st().programs).toEqual(progBefore);
   });
+  it('refuses a card whose two items would add different exercises with one name, writing nothing', () => {
+    const fly = { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: {} };
+    const pick = { ex: fly.id, nn: '', cat: fly, ph: 'hyp', w: null };
+    const cfgBefore = structuredClone(st().cfg); const progBefore = structuredClone(st().programs);
+    const superset = items => newCard({ type: 'superset', days: [1], items });
+    expect(st().saveSlot(superset([{ ex: '__new', nn: 'cable fly', ph: 'hyp', w: null }, pick]))).toBe('Cable Fly is used twice in this card as different exercises. Pick the same one for both.');
+    expect(st().saveSlot(superset([pick, { ...pick, ex: 'c:other:Fly', cat: { id: 'c:other:Fly', name: 'Cable  Fly', data: {} } }]))).toMatch(/used twice/);
+    expect(st().cfg).toEqual(cfgBefore);
+    expect(st().programs).toEqual(progBefore);
+    expect(st().saveSlot(superset([pick, pick]))).toBeNull(); // the same pick on both: one exercise
+    expect(Object.values(st().cfg.ex).filter(x => x.n === 'Cable Fly')).toHaveLength(1);
+  });
   it('asks for a day when none is ticked, and ignores the days list when editing a card', () => {
     expect(st().saveSlot(newCard({ days: [] }))).toBe('Pick at least one day.');
     const cfgBefore = structuredClone(st().cfg); const progBefore = structuredClone(st().programs);
