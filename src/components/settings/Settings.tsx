@@ -215,8 +215,9 @@ const ERASE = [
 function ErasePanel() {
   const dl = useAppStore(s => s.dl); const exporting = useAppStore(s => s.exporting); const storeMode = useAppStore(s => s.storeMode);
   const st = useAppStore.getState();
-  const [sel, setSel] = useState(() => Object.fromEntries(ERASE.map(([k]) => [k, true])));
-  const any = Object.values(sel).some(Boolean);
+  // Nothing is ticked to start: two taps must never erase everything by default.
+  const [sel, setSel] = useState(() => Object.fromEntries(ERASE.map(([k]) => [k, false])));
+  const n = Object.values(sel).filter(Boolean).length;
   return (
     <section className="panel erase danger-panel" aria-labelledby="erase-h">
       <h3 id="erase-h">Erase data</h3>
@@ -233,7 +234,7 @@ function ErasePanel() {
       <p className="note">Kept: display options, and any file you exported earlier. An export made after erasing holds the erased state.</p>
       <div className="actions">
         {dl && <button type="button" className="btn" disabled={!!exporting} onClick={st.downloadData}>Export all data first</button>}
-        <ArmedButton className="btn danger" disabled={!any} label="Erase selected data" armedLabel="Tap again to erase" onConfirm={() => st.eraseData(sel)} />
+        <ArmedButton className="btn danger" disabled={!n} label={n ? `Erase ${n} selected` : 'Tick what to erase'} armedLabel={`Tap again to erase ${n}`} onConfirm={() => st.eraseData(sel)} />
       </div>
     </section>
   );
@@ -288,7 +289,7 @@ function RmPanel() {
 }
 
 // Where each group starts, for the jump row. The page is long on a phone; the row gets to a group in one tap.
-const GROUPS = [['training', 'Training'], ['data', 'Data'], ['app', 'App']] as const;
+const GROUPS = [['training', 'Training'], ['data', 'Data'], ['app', 'App'], ['erase', 'Erase']] as const;
 const jump = (id: string) => {
   const h = document.getElementById(`set-${id}-h`);
   if (!h) return;
@@ -323,11 +324,7 @@ export default function Settings() {
           <AccountPanel />
           <SyncPanel />
         </div>
-        <div className="scol">
-          <DataPanel key={importCount} />
-          <ErasePanel />
-          <DeleteMyData />
-        </div>
+        <div className="scol"><DataPanel key={importCount} /></div>
       </Group>
       <Group id="app" title="App">
         <div className="scol">
@@ -338,6 +335,11 @@ export default function Settings() {
           <DevicePanel />
           <FeedbackPanel />
         </div>
+      </Group>
+      {/* Last on the page, apart from the everyday data panels: these cannot be undone. */}
+      <Group id="erase" title="Erase & delete">
+        <div className="scol"><ErasePanel /></div>
+        <div className="scol"><DeleteMyData /></div>
       </Group>
     </div>
   );
