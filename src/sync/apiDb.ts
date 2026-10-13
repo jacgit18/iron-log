@@ -308,10 +308,12 @@ export function createApiDb(options: ApiDbOptions) {
     return w ? { seen, baseWeek: w.week } : { seen };
   };
   // Rows a Try again must leave as they are (changed on the server since the refusal, or not in the old copy), by path, for its send.
-  const retryKeep = new Map<string, Set<string>>();
+  // `doc` is the copy Try again put in the outbox: the rows apply only while that copy is what is being sent. A newer save to the
+  // same path (made while the retry waited) is this device's own latest word and is planned as usual.
+  const retryKeep = new Map<string, { doc: unknown; rows: Set<string> }>();
 
   function refuse(path: string, sent: unknown, reason: string) {
-    bases.delete(path);
+    bases.delete(path); retryKeep.delete(path);
     outbox.refuse(path, sent, reason, seenNow(path));
     setState('idle'); // this write is no longer being sent; whatever is next sets the state again
     announce();
@@ -324,8 +326,7 @@ export function createApiDb(options: ApiDbOptions) {
     const kind = parsePath(path) as PathKind;
     const touched = new Set<string>();
     const adjusted = new Set<string>(); // paths whose document this changed to match the server, so the app must be told
-    const kept = new Set<string>(retryKeep.get(path) ?? []); // rows another device changed after this phone saw them: left as they are
-    retryKeep.delete(path);
+    const kept = new Set<string>(); // rows another device changed after this phone saw them, so a delete of them is skipped
     let attempt = 0; // consecutive waits, for the backoff
     let conflicts = 0;
     let passes = 0; // passes in which every command was accepted
@@ -355,9 +356,13 @@ export function createApiDb(options: ApiDbOptions) {
           }
         }
       }
-      const cmds = isDeleted(sent) ? planDelete(kind, mirror.rows(), kept) : planCommands(kind, sent, mirror.rows(), kept);
+      const retried = retryKeep.get(path);
+      if (retried && retried.doc !== sent) retryKeep.delete(path); // replaced by a newer save: that one is sent as usual
+      const asIs = retried && retried.doc === sent ? retried.rows : undefined;
+      const cmds = isDeleted(sent) ? planDelete(kind, mirror.rows(), asIs ? new Set([...kept, ...asIs]) : kept) : planCommands(kind, sent, mirror.rows(), kept, asIs);
       if (!cmds.length) {
         outbox.done(path, sent);
+        if (retryKeep.get(path)?.doc === sent) retryKeep.delete(path); // that copy is on the server now
         // A week saved meanwhile was made from this one, which the server now holds.
         if (outbox.get(path) === undefined) bases.delete(path); else rememberBase(path);
         lastSyncedAt = now();
@@ -538,6 +543,7 @@ export function createApiDb(options: ApiDbOptions) {
       const kind = parsePath(entry.path);
       const seen = entry.seen && typeof entry.seen === 'object' ? entry.seen : null;
       let doc = entry.doc;
+      let retryRows = new Set<string>();
       if (kind && (kind.kind === 'weeks' || kind.kind === 'stretchweeks') && !isDeleted(doc)) {
         const cur = weekRow(entry.path);
         if (cur && (!seen || seen[mirrorId(kind.kind === 'weeks' ? 'weeks' : 'stretch_weeks', kind.weekStart)] !== cur.version)) {
@@ -556,10 +562,12 @@ export function createApiDb(options: ApiDbOptions) {
           if (changed) newer = true;
           if (changed || (!wanted.has(id) && !isDeleted(doc))) keep.add(id);
         }
-        if (keep.size) retryKeep.set(entry.path, keep);
         if (newer) note(entry.path, 'Sent what was set aside; what changed on another device since was kept.');
+        retryRows = keep;
       }
       const sending = set(entry.path, doc); // kept in the outbox before anything else happens
+      // Tied to the copy now in the outbox (set() stores a clone). The send plans after an await, so this is in place by then.
+      if (retryRows.size) retryKeep.set(entry.path, { doc: outbox.get(entry.path), rows: retryRows });
       outbox.discard(id); // only now is the old entry safe to drop
       announce();
       return sending.then(() => 'sent' as const, () => 'refused' as const);

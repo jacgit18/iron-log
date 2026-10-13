@@ -470,6 +470,29 @@ describe('trying a set-aside write again', () => {
     expect(server.rows.get('log_entries|S1')).toMatchObject({ weight_lb: '160.0000' });
   });
 
+  it('a newer save on this device while the retry waits is sent as usual, not held back by the retry', async () => {
+    // The retry leaves S2 (logged elsewhere after the refusal) as the server has it. That applies to the set-aside copy only:
+    // an edit of S2 made here while the retry waits for the network is this device's latest word and must reach the server.
+    const { server, gate, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1', { w: 140 }))).catch(() => undefined);
+    server.plant('log_entries', 'S2', squat('S2', 150));
+    await db.syncNow();
+    server.fail.push(down('network'));
+    const retrying = db.retry(db.quarantined()[0]!.id); // waits for the network
+    await settle();
+    const s2 = { id: 'S2', d: '2026-10-06', ph: 'strength', w: 170, s: 3, r: 5 };
+    void db.doc('logs/squat').set(logsDoc(entry('S1', { w: 140 }), s2)); // edits S2 here meanwhile
+    gate.releaseAll();
+    await retrying;
+    await settle(30);
+    expect(server.rows.get('log_entries|S2')).toMatchObject({ weight_lb: '170.0000' });
+    expect(db.status().pendingPaths).toEqual([]);
+  });
+
   it('a set-aside week is merged with the ticks another device made since', async () => {
     const { server, db } = setup();
     db.start();
