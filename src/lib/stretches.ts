@@ -1,8 +1,12 @@
 import { DEFAULT_GROUP, normStretchExperimentItem, normStretchItem } from '../shared/listItems.js';
 import { STRETCH_DAYS, normStretchWeek } from '../shared/stretchWeek.js';
-import type { Stretch, StretchExperiment, StretchTier, StretchWeek } from '../types.ts';
+import type { CatalogItem, Stretch, StretchExperiment, StretchTier, StretchWeek } from '../types.ts';
+import { MUSCLES } from './muscles.js';
 
 export { DEFAULT_GROUP, STRETCH_DAYS, normStretchWeek };
+
+/** The group a catalog stretch goes in: its main muscle's name, or the default group (ADR 026). */
+export const catalogStretchGroup = (c: CatalogItem) => { const main = c.data.muscles?.p?.[0]; return main && MUSCLES[main] ? MUSCLES[main].n : DEFAULT_GROUP; };
 
 /* ---------- Stretches: the routine, the library and the week's check-offs ----------
    items: [{id, n, url, note, group, tier}]. tier 'primary' is on the board every day, 'secondary' sits under
