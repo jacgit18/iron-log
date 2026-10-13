@@ -552,6 +552,30 @@ describe('conflicts', () => {
     expect((await db.doc('weeks/2026-10-04').get()).data().done).toEqual({ a: true, b: true, c: true });
   });
 
+  it('the same holds for a stretch week', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('stretchweeks/2026-10-04').set({ done: { '1:a': true }, skipped: {}, extra: [] });
+    const row = server.rows.get('stretch_weeks|2026-10-04')!;
+    server.rows.set('stretch_weeks|2026-10-04', { ...row, version: 2, data: { done: { '1:a': true, '1:b': true }, skipped: {}, extra: [] }, seq: '99' });
+    const pulling = db.syncNow();
+    const saving = db.doc('stretchweeks/2026-10-04').set({ done: { '1:a': true, '1:c': true }, skipped: {}, extra: [] });
+    await pulling; await saving;
+    expect(server.rows.get('stretch_weeks|2026-10-04')!.data.done).toEqual({ '1:a': true, '1:b': true, '1:c': true });
+  });
+
+  it('a week this device had no row for keeps what another device saved first', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    server.plant('weeks', '2026-10-04', { week_start: '2026-10-04', data: wk({ b: true }) });
+    const pulling = db.syncNow();
+    const saving = db.doc('weeks/2026-10-04').set(wk({ c: true }));
+    await pulling; await saving;
+    expect(server.rows.get('weeks|2026-10-04')!.data.done).toEqual({ b: true, c: true });
+  });
+
   it('a week saved after the pull landed is not merged again', async () => {
     const { server, db } = setup();
     db.start();

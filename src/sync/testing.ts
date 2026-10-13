@@ -86,6 +86,7 @@ export function fakeServer() {
       case 'log-session': case 'tick-card': return put('log_entries', env.clientId, entryRow(), env.baseVersion, { restoreOk: true });
       case 'delete-entry': return kill('log_entries', input.entryId, env.baseVersion ?? -1);
       case 'save-week': return put('weeks', input.weekStart, { week_start: input.weekStart, data: input.week }, env.baseVersion);
+      case 'save-stretch-week': return put('stretch_weeks', input.weekStart, { week_start: input.weekStart, data: input.week }, env.baseVersion);
       case 'delete-week': return kill('weeks', input.weekStart, env.baseVersion ?? -1);
       case 'save-config': return put('config', 'config', { data: input.config }, env.baseVersion);
       default: return { ok: false, class: 'refused', status: 422, reason: `fake server does not know ${name}` };

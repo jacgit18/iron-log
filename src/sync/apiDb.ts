@@ -525,6 +525,7 @@ export function createApiDb(options: ApiDbOptions) {
       if (who?.status !== 'signed-in') return 'unavailable';
       mirror.clear();
       outbox.clear();
+      bases.clear(); // a week saved before the reload must not merge against the old data
       notices = [];
       adopt(who.userId);
       options.onOwnerChange?.();
@@ -567,6 +568,7 @@ export function createApiDb(options: ApiDbOptions) {
       if (!out.ok) { halted = false; wake(); return out; }
       mirror.clear();
       outbox.clear();
+      bases.clear();
       notices = [];
       storage.remove(OWNER_KEY);
       emitAll();
