@@ -565,7 +565,12 @@ export function createApiDb(options: ApiDbOptions) {
       wake(); // anything waiting to retry looks again, sees the halt and lets go
       await chain; // a send already on its way finishes before the server erases, so it cannot land after
       const out = await act();
-      if (!out.ok) { halted = false; wake(); return out; }
+      if (!out.ok) {
+        // The halt made every waiting send let go, so start them again, as start() does; else they wait for a reload.
+        halted = false;
+        outbox.paths().forEach(path => { void exclusive(() => flushPath(path, () => {})).catch(() => undefined); });
+        return out;
+      }
       mirror.clear();
       outbox.clear();
       bases.clear();

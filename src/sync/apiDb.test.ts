@@ -1021,6 +1021,22 @@ describe('erasing the account (Phase F)', () => {
     expect([...server.rows.keys()].filter(k => k.startsWith('log_entries'))).toHaveLength(2);
   });
 
+  it('a write that was waiting to retry when the erase failed is still sent', async () => {
+    // The halt made the waiting send let go; a failed erase has to start it again, or it sits unsent until a reload.
+    const { server, gate, db } = setup();
+    db.start();
+    await settle();
+    server.fail.push(down('network'));
+    void db.doc('logs/squat').set(logs2('e1'));
+    await settle();
+    server.fail.push({ ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'offline' });
+    expect(await db.eraseEverything('data')).toMatchObject({ ok: false, class: 'network' });
+    gate.releaseAll();
+    await settle(30);
+    expect([...server.rows.keys()].filter(k => k.startsWith('log_entries'))).toHaveLength(1);
+    expect(db.status().pendingPaths).toEqual([]);
+  });
+
   it('deleting the account does the same on this device', async () => {
     const { server, storage, db } = setup();
     db.start();

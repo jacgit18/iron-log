@@ -97,6 +97,8 @@ header.top h1{font-size:1.875rem;margin:0;font-weight:700;text-transform:upperca
 .filebtn{cursor:pointer}
 .filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .imppaste summary{cursor:pointer;color:var(--muted);font-size:.875rem}
+.fold summary{cursor:pointer;font-weight:600;padding:12px 0;min-height:44px;box-sizing:border-box}
+.fold[open] summary{margin-bottom:8px}
 .imppaste textarea{width:100%;margin-top:8px;font:inherit;font-size:.8125rem;border:1px solid var(--field-line);border-radius:8px;padding:8px;background:var(--bg);color:var(--ink)}
 .impact{flex-wrap:wrap}
 .impact .btn{flex:1 1 auto;white-space:nowrap}
