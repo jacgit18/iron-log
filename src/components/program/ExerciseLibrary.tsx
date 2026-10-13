@@ -14,6 +14,7 @@ export default function ExerciseLibrary() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs);
   const { openModal } = useAppStore.getState();
+  const syncing = useAppStore(s => s.sync !== null); // the catalog section below is there only when syncing (ADR 025)
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
   const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)
@@ -72,7 +73,7 @@ export default function ExerciseLibrary() {
             </div>
           );
         })}
-        {!shown.length && <p className="note">No exercise matches. Clear the search, or add it with + New exercise.</p>}
+        {!shown.length && <p className="note">{syncing && f.q.trim() && f.src !== 'custom' ? 'None of yours match. Add one from the catalog below, or with + New exercise.' : 'No exercise matches. Clear the search, or add it with + New exercise.'}</p>}
       </div>
       {f.src !== 'custom' && (
         <CatalogMatches kind="exercise" q={f.q} unit="exercises" source="Exercises from free-exercise-db (public domain)."

@@ -68,7 +68,7 @@ export default function StretchLibrary() {
             </div>
           );
         })}
-        {!shown.length && <p className="note">{items.length ? 'No stretch matches. Clear the search or the Source filter.' : 'No stretches yet. Add one with + New stretch.'}</p>}
+        {!shown.length && <p className="note">{syncing && needle && src !== 'custom' ? 'None of yours match. Add one from the catalog below, or with + New stretch.' : items.length ? 'No stretch matches. Clear the search or the Source filter.' : 'No stretches yet. Add one with + New stretch.'}</p>}
       </div>
       {src !== 'custom' && (
         <CatalogMatches kind="stretch" q={q} unit="stretches" source="Stretches from free-exercise-db (public domain). Added as Library only; edit one to put it on a day."
