@@ -11,6 +11,7 @@ import ArmedButton from '../ArmedButton.jsx';
 import LineChart from '../LineChart.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import LiftGoal from '../progress/LiftGoal.jsx';
+import { selectOnFocus, advanceOnEnter, cellHint } from '../../lib/setCells.js';
 
 const num = (v: string | number) => (v === '' ? null : Number(v));
 
@@ -49,9 +50,9 @@ function EditEntry({ exId, entry, onDone }: { exId: string; entry: LogEntry; onD
       {rows.map((r, j) => (
         <div className="setrow" key={j}>
           <span className="setn">{j + 1}</span>
-          <input type="number" inputMode="decimal" step="any" min="0" value={r.w} placeholder="bodyweight" aria-label={`Set ${j + 1} weight in lb`} onChange={e => edit(j, 'w', e.target.value)} />
+          <input type="number" inputMode="decimal" step="any" min="0" value={r.w} placeholder="bodyweight" aria-label={`Set ${j + 1} weight in lb`} enterKeyHint={cellHint(false)} onFocus={selectOnFocus} onKeyDown={advanceOnEnter} onChange={e => edit(j, 'w', e.target.value)} />
           <span className="setx">×</span>
-          <input type="number" inputMode="numeric" step="any" min="0" value={r.r} aria-label={`Set ${j + 1} ${iso ? 'hold in seconds' : 'reps'}`} onChange={e => edit(j, 'r', e.target.value)} />
+          <input type="number" inputMode="numeric" step="any" min="0" value={r.r} aria-label={`Set ${j + 1} ${iso ? 'hold in seconds' : 'reps'}`} enterKeyHint={cellHint(j === rows.length - 1)} onFocus={selectOnFocus} onKeyDown={advanceOnEnter} onChange={e => edit(j, 'r', e.target.value)} />
         </div>
       ))}
       <div className="setbtns">
