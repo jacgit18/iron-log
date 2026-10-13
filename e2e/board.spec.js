@@ -97,3 +97,16 @@ test('in the log sheet, Enter moves weight to reps to the next set, and Enter in
   await lastReps.press('Enter');
   await expect(dialog).toBeHidden();
 });
+
+test('a home-screen shortcut opens its tab and drops the parameter', async ({ page }) => {
+  await page.goto('/?open=daily');
+  await expect(page.locator('#tab-daily')).toHaveAttribute('aria-selected', 'true');
+  expect(new URL(page.url()).search).toBe('');
+});
+
+test('the page has a theme-color per OS scheme, the manifest shortcuts and the iOS splash images', async ({ page }) => {
+  await expect(page.locator('meta[name="theme-color"]')).toHaveCount(2);
+  await expect(page.locator('link[rel="apple-touch-startup-image"]')).toHaveCount(5);
+  const manifest = await (await page.request.get('/manifest.webmanifest')).json();
+  expect(manifest.shortcuts.map(sc => sc.url)).toEqual(['./?open=board', './?open=daily']);
+});

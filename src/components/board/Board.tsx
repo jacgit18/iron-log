@@ -15,6 +15,7 @@ import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import FirstRun from './FirstRun.jsx';
+import InstallHint from './InstallHint.jsx';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
@@ -175,6 +176,7 @@ export default function Board() {
           </span>
         </div>
       )}
+      <InstallHint />
       {storeMode === 'local' && !tipHidden('hidelocal') && (
         <div className="notice tip">
           <span>{window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Back it up to GitHub in Settings, or use Export on the Progress tab.'}</span>
