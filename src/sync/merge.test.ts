@@ -110,6 +110,21 @@ describe('mergeWeek3', () => {
   });
 });
 
+describe('mergeWeek3 program layout', () => {
+  it('takes the shown program and its rest days from one side', () => {
+    const base = { prog: null, rest: [3] };
+    const switched = { prog: 'B', stash: { A: { rest: [3] } } };
+    const ticked = { prog: null, rest: [3, 5] };
+    const a = mergeWeek3(base, ticked, switched).week;
+    expect([a.prog, a.rest, a.stash]).toEqual([null, [3, 5], undefined]);
+    const b = mergeWeek3(base, switched, ticked).week;
+    expect([b.prog, b.rest, b.stash]).toEqual(['B', undefined, { A: { rest: [3] } }]);
+  });
+  it('keeps a stash through normWeek and drops a bad one', () => {
+    expect(normWeek({ stash: { A: { rest: [2, 9] }, B: { rest: 'x' }, C: { rest: [1] } } }).stash).toEqual({ A: { rest: [2] } });
+  });
+});
+
 describe('mergeStretchWeek3', () => {
   it('keeps ticks from both sides and lets an untick stick', () => {
     const base = sweek({ done: { '1:a': true } });

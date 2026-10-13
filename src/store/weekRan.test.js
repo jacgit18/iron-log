@@ -223,6 +223,7 @@ describe('review fixes: the record catches up, and the backfill is not skipped b
 });
 
 describe('looking at the other program', () => {
+  beforeEach(() => { useAppStore.setState({ week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } }); });
   it('keeps a rest day on the program it was ticked on, and brings it back', () => {
     st().setMode(2);
     st().setWeekProg('B'); st().setRestDay(3);
@@ -243,5 +244,19 @@ describe('looking at the other program', () => {
     expect(onlyElsewhere(st().activeSlots(), st().week)).toBe(true);
     st().setWeekProg('A');
     expect(onlyElsewhere(st().activeSlots(), st().week)).toBe(false);
+  });
+});
+
+describe('rest days follow the program when the mode changes it', () => {
+  beforeEach(() => { useAppStore.setState({ week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } }); });
+  it('a schedule change that flips the shown program swaps the rest days too', () => {
+    st().setMode(2);
+    st().setRestDay(3);
+    const shown = st().activeProgKey();
+    st().mutateCfg(c => { c.m2Even = c.m2Even === 'A' ? 'B' : 'A'; });
+    expect(st().activeProgKey()).not.toBe(shown);
+    expect(st().week.rest).toBeUndefined();
+    st().mutateCfg(c => { c.m2Even = c.m2Even === 'A' ? 'B' : 'A'; });
+    expect(st().week.rest).toEqual([3]);
   });
 });

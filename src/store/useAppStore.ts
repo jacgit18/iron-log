@@ -351,7 +351,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   mutateCfg(fn) {
     if (get().blocked()) return false;
-    const cfg = structuredClone(get().cfg); fn(cfg); set({ cfg }); get().saveCfg(); return true;
+    const shown = get().activeProgKey();
+    const cfg = structuredClone(get().cfg); fn(cfg); set({ cfg }); get().saveCfg();
+    // A mode or schedule change can swap the program this week shows without the pill: its rest days go with it.
+    const now = get().activeProgKey();
+    if (now !== shown) get().mutateWeek(w => swapLayout(w, shown, now));
+    return true;
   },
   mutateWeek(fn) {
     if (get().blocked()) return false;
