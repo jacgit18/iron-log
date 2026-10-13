@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AppState, OrderNote, OrderState } from './types.ts';
-import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, Program, Stretch, Week } from '../types.ts';
+import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, ProgKey, Program, Stretch, Week, WeekLayout } from '../types.ts';
 import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, EQUIPMENT, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR, listBuiltinExercises, isOwnExercise, isCatalogId } from '../lib/data.js';
 import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.js';
 import {
@@ -88,6 +88,17 @@ function setExerciseDefault(c: Cfg, exId: string, ph: PhaseKey | null | '', prog
 
 const sameTags = (a: Record<string, any>, b: Record<string, any>) => JSON.stringify([[...(a.p || [])].sort(), [...(a.s || [])].sort(), !!a.mob]) === JSON.stringify([[...(b.p || [])].sort(), [...(b.s || [])].sort(), !!b.mob]);
 
+// Rest days, day order and rest date belong to the program being shown: switching programs parks them under the one left and
+// brings back the ones parked for the one chosen, so a rest day ticked on one program never shows on the other.
+function swapLayout(w: Week, from: ProgKey, to: ProgKey) {
+  const stash = { ...(w.stash || {}) };
+  const leaving: WeekLayout = {}; if (w.rest) leaving.rest = w.rest; if (w.order) leaving.order = w.order; if (w.restOn) leaving.restOn = w.restOn;
+  if (Object.keys(leaving).length) stash[from] = leaving; else delete stash[from];
+  const back = stash[to]; delete stash[to];
+  delete w.rest; delete w.order; delete w.restOn;
+  if (back) Object.assign(w, back);
+  if (Object.keys(stash).length) w.stash = stash; else delete w.stash;
+}
 // Write a day order and rest days onto a week (the normal order is stored as no order). restOn stays with the rest days.
 const writeOrder = (w: Week, { order, rest }: { order: number[]; rest: number[] }) => {
   if (order.every((v, k) => v === k + 1)) delete w.order; else w.order = [...order];
@@ -708,7 +719,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   // Choosing the program of a week that is over takes today's version of it: its old record is for the other one. Choosing the
   // program it already shows changes nothing, so its record stays.
-  setWeekProg(k) { if (k === get().activeProgKey()) return; const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { w.prog = k === auto ? null : k; delete w.ran; })) set({ orderNote: null }); },
+  setWeekProg(k) { const from = get().activeProgKey(); if (k === from) return; const auto = programFor(get().cfg, get().weekStart); if (get().mutateWeek(w => { swapLayout(w, from, k); w.prog = k === auto ? null : k; delete w.ran; })) set({ orderNote: null }); },
   setMode(mode) { if (get().mutateCfg(c => { c.mode = mode; })) get().refreshRan(); },
 
   moveSlot(slotId, day) {

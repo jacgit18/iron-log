@@ -72,6 +72,8 @@ export function mergeWeek3(baseIn: unknown, oursIn: unknown, theirsIn: unknown):
     delete week.rest; delete week.restOn;
     if (rest.rest) week.rest = rest.rest;
     if (rest.restOn) week.restOn = rest.restOn;
+    const stash = pick(base.stash, ours.stash, theirs.stash);
+    if (stash) week.stash = stash; else delete week.stash;
     const ran = pick({ prog: base.prog, ran: base.ran }, { prog: ours.prog, ran: ours.ran }, { prog: theirs.prog, ran: theirs.ran });
     week.prog = ran.prog; delete week.ran;
     if (ran.ran) week.ran = ran.ran;

@@ -6,7 +6,7 @@ import { useToday } from '../../store/useToday.js';
 import { EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
-import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets } from '../../lib/logic.js';
+import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { daysSince } from '../../lib/export.js';
 import { motionOK } from '../../lib/motion.js';
@@ -85,7 +85,7 @@ export default function Board() {
 
   // Yesterday's column (this week only, not on Sunday): cards with nothing checked, unless hidden for today.
   const yCol = todayCol(today) - 1; const todayKey = ymd(today);
-  const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey ? leftovers(week, slots, yCol) : [];
+  const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey && !onlyElsewhere(slots, week) ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
   const [filter, setFilter] = useState({ muscle: '', eq: '' });
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
