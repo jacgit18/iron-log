@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { loadView, saveView } from './viewState.js';
+import { loadView, saveView, openFromUrl } from './viewState.js';
 
 const store = {};
 beforeEach(() => {
@@ -24,5 +24,14 @@ describe('view state', () => {
     vi.stubGlobal('sessionStorage', undefined);
     expect(loadView('x')).toEqual({});
     expect(() => saveView('x', { tab: 'board', mDay: null })).not.toThrow();
+  });
+});
+
+describe('openFromUrl', () => {
+  it('reads a shortcut tab and ignores anything else', () => {
+    expect(openFromUrl('?open=daily')).toBe('daily');
+    expect(openFromUrl('?open=board')).toBe('board');
+    expect(openFromUrl('?open=nope')).toBeUndefined();
+    expect(openFromUrl('')).toBeUndefined();
   });
 });

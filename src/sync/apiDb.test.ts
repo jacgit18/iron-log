@@ -280,6 +280,28 @@ describe('when the server cannot be reached', () => {
     expect(server.rows.get('weeks|2026-10-04')!.data).toMatchObject({ done: { a: true, b: true } });
   });
 
+  it('writes to several documents while offline are all kept and sent after the connection returns: in the order written, once each', async () => {
+    const { server, gate, db } = setup();
+    db.start();
+    await settle();
+    server.fail.push(down('network'), down('network'), down('network'));
+    const week = (done: object) => ({ prog: 'A', done, skipped: {}, moved: {}, ph: {}, warm: {} });
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    await db.doc('weeks/2026-10-04').set(week({ a: true }));
+    await db.doc('logs/bench').set(logsDoc(entry('B1', { w: 95 })));
+    await db.doc('logs/squat').set(logsDoc(entry('S1'), entry('S2'))); // squat edited again while offline
+    expect(db.status().pendingPaths.sort()).toEqual(['logs/bench', 'logs/squat', 'weeks/2026-10-04']);
+    await settle();
+    expect(server.rows.size).toBe(0); // nothing got through yet
+    for (let i = 0; i < 4; i++) { await settle(); gate.releaseAll(); } // three failed tries, then the network is back
+    await settle(30);
+    const names = server.sent.filter(c => !(c.name as string).startsWith('pull')).map(c => `${c.name}:${c.env.clientId}`);
+    const okSent = names.slice(3); // the first three requests were the failed ones
+    expect(okSent).toEqual(['log-session:S1', 'log-session:S2', 'save-week:save-week:new:2026-10-04', 'log-session:B1']);
+    expect([...server.rows.keys()].sort()).toEqual(['log_entries|B1', 'log_entries|S1', 'log_entries|S2', 'weeks|2026-10-04']);
+    expect(db.status()).toMatchObject({ state: 'idle', pendingPaths: [], quarantined: 0 });
+  });
+
   it('a reload during the wait loses nothing: the next session sends what the last one kept', async () => {
     const { server, storage, gate, make, db } = setup();
     db.start();

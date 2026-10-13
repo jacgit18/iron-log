@@ -47,4 +47,38 @@ describe('save queue', () => {
     expect(onStored).not.toHaveBeenCalled();
     expect(rebase).not.toHaveBeenCalled();
   });
+
+  // Offline with the sync adapter on, a write is kept by the adapter's outbox (apiDb.test.ts). This is the plain queue's own promise:
+  // a database that fails with a network error keeps the write, and it is sent when the network comes back, newest value only.
+  it('keeps writes while the database is unreachable and sends them, in order and once each, when it comes back', async () => {
+    vi.useFakeTimers();
+    let online = false; const writes = [];
+    const db = { doc: path => ({ set: async body => { if (!online) throw new TypeError('Failed to fetch'); writes.push([path, body]); } }) };
+    const flags = []; const q = makeSaveQueue({ getDb: () => db, onFlag: f => flags.push(f) });
+    q.save('weeks/a', { v: 1 }); q.save('logs/x', { v: 1 });
+    await vi.advanceTimersByTimeAsync(5000); // several failed tries while offline
+    expect(writes).toEqual([]);
+    expect(q.pending('weeks/a')).toBe(true); expect(q.pending('logs/x')).toBe(true);
+    q.save('weeks/a', { v: 2 }); // edited again while offline: only the latest is kept
+    online = true;
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(writes).toEqual([['weeks/a', { v: 2 }], ['logs/x', { v: 1 }]]);
+    expect(q.pending('weeks/a')).toBe(false); expect(q.pending('logs/x')).toBe(false);
+    expect(flags).toContain('Not saved, retrying…'); expect(flags.at(-1)).toBe('Saved');
+    vi.useRealTimers();
+  });
+
+  it('a network failure never drops a write however long it lasts', async () => {
+    vi.useFakeTimers();
+    let online = false; const writes = [];
+    const db = { doc: () => ({ set: async body => { if (!online) throw new TypeError('Failed to fetch'); writes.push(body); } }) };
+    const q = makeSaveQueue({ getDb: () => db, onFlag: () => {}, onFailed: () => { throw new Error('must not be marked failed'); } });
+    q.save('weeks/a', { v: 1 });
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(q.failedPaths()).toEqual([]);
+    online = true;
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(writes).toEqual([{ v: 1 }]);
+    vi.useRealTimers();
+  });
 });

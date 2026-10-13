@@ -18,3 +18,9 @@ export function loadView(day: string): { tab?: string; mDay?: number } {
 export function saveView(day: string, { tab, mDay }: { tab?: string; mDay?: number | null }) {
   try { sessionStorage.setItem(KEY, JSON.stringify({ tab, mDay, day })); } catch { /* private mode: just don't remember */ }
 }
+
+/** A manifest shortcut opens the app as `./?open=<tab>`; returns that tab when it is a real one. */
+export function openFromUrl(search: string): string | undefined {
+  const t = new URLSearchParams(search).get('open');
+  return t && TABS.includes(t) ? t : undefined;
+}
