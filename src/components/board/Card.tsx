@@ -28,7 +28,7 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }: { s: FlatS
   const names = s.items.map((i) => exInfo(cfg, i.ex).n);
   const cardName = s.type === 'superset' ? names.join(' → ') : s.type === 'either' ? names.join(' or ') : names[0];
 
-  // Swipe to tick off (admin-only `swipeDone`): same action as the checkbox, so same announcement; cards with their own per-exercise ticks (paired) do not swipe.
+  // Swipe to tick off (`swipeDone`, released to everyone): same action as the checkbox, so same announcement; cards with their own per-exercise ticks (paired) do not swipe.
   const swipeOn = useFeature('swipeDone') && !paired;
   const sw = useSwipeDone({ enabled: swipeOn, done, toggle: on => checkCard(s.id, on) });
 

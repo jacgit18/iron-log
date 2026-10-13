@@ -2,7 +2,7 @@ import { useRef, useState, type CSSProperties, type TouchEvent } from 'react';
 import { axisOf, followOffset, hintFor, startsOnControl, swipeCommits } from '../../lib/swipe.js';
 import { motionOK } from '../../lib/motion.js';
 
-/* Swipe a card sideways to tick it off or undo it (admin-only `swipeDone`). Touch events only, so a mouse (and the desktop HTML5 drag)
+/* Swipe a card sideways to tick it off or undo it (`swipeDone`, released to everyone). Touch events only, so a mouse (and the desktop HTML5 drag)
    is never touched. The card owns a swipe that starts on its body: it stops the touch from reaching the board's day-swipe. A swipe that
    starts anywhere else (day heading, gaps, a card without a card checkbox) still changes day. It calls `toggle`, the same store action
    the checkbox uses, so nothing about the check-off changes. */

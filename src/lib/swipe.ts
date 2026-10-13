@@ -1,4 +1,4 @@
-// Pure rules for swiping a board card sideways to tick it off (admin-only feature `swipeDone`). The hook in
+// Pure rules for swiping a board card sideways to tick it off (feature `swipeDone`, released to everyone). The hook in
 // components/board/useSwipeDone.ts feeds touch positions in; everything that decides lives here so it can be tested.
 
 /** A touch that starts on one of these is a tap or a text/select interaction, never a swipe. */
