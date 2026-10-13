@@ -1,8 +1,7 @@
 import { isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { DAY_NAMES } from '../shared/dates.js';
-import { DEFAULT_STRETCHES, DEFAULT_GROUP, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
+import { DEFAULT_STRETCHES, DEFAULT_GROUP, catalogStretchGroup, doneKey, newStretchId, normStretchWeek, normStretches, STRETCH_DAYS, withoutStretch } from '../lib/stretches.js';
 import { SLOTS, newSupplementId } from '../lib/supplements.js';
-import { MUSCLES } from '../lib/muscles.js';
 import { isCatalogId } from '../shared/listItems.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
@@ -58,10 +57,14 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
   /* The library. Returns an error message, or null when saved. */
   saveStretch(d) {
     if (get().blocked()) return null;
-    const n = (d.n || '').trim().replace(/\s+/g, ' ').slice(0, 80);
-    if (!n) return 'Give the stretch a name.';
     // A catalog stretch keeps its catalog id and name whatever else changes (ADR 026): the sheet shows no Name field for it.
     const cur = d.id ? get().stretches.find(x => x.id === d.id) : undefined;
+    // A new stretch picked from the catalog in the sheet (ADR 036): it joins the list with its catalog id and name, and the rest from the sheet.
+    const cat = !cur && d.cat ? d.cat : null;
+    if (cat && (!isCatalogId(cat.id) || cat.id.length > 100)) return 'That catalog item can’t be added.';
+    if (cat && get().stretches.some(x => x.catalogId === cat.id)) return 'Already in your stretches.';
+    const n = (cat ? cat.name : d.n || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+    if (!n) return 'Give the stretch a name.';
     const url = (d.url || '').trim();
     if (!isVideoUrl(url)) return VIDEO_ERR;
     const same = get().stretches.find(x => x.n.toLowerCase() === n.toLowerCase() && x.id !== d.id);
@@ -69,7 +72,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const tier = (d.tier === 'primary' || d.tier === 'secondary' ? d.tier : '') as StretchTier;
     const group = (d.group || '').trim().slice(0, 40) || DEFAULT_GROUP; const note = (d.note || '').trim().slice(0, 200);
     get().mutateStretches(x => {
-      const item = { id: d.id || newStretchId(x.items, n), n: cur?.catalogId ? cur.n : n, group, tier, ...(url ? { url } : {}), ...(note ? { note } : {}), ...(cur?.catalogId ? { catalogId: cur.catalogId } : {}) };
+      const item = { id: d.id || newStretchId(x.items, n), n: cur?.catalogId ? cur.n : n, group, tier, ...(url ? { url } : {}), ...(note ? { note } : {}), ...(cur?.catalogId || cat ? { catalogId: cur?.catalogId || cat!.id } : {}) };
       const i = x.items.findIndex(y => y.id === item.id);
       if (i >= 0) x.items[i] = item; else x.items.push(item);
     });
@@ -84,8 +87,7 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const items = get().stretches;
     if (items.some(x => x.catalogId === c.id)) return 'Already in your stretches.';
     if (items.some(x => x.n.toLowerCase() === n.toLowerCase())) return `You already have a stretch called ${n}.`;
-    const main = c.data.muscles?.p?.[0];
-    const group = main && MUSCLES[main] ? MUSCLES[main].n : DEFAULT_GROUP;
+    const group = catalogStretchGroup(c);
     if (!get().mutateStretches(x => { x.items.push({ id: newStretchId(x.items, n), n, group, tier: '', catalogId: c.id }); })) return null;
     flag(`Added ${n}`); return null;
   },
