@@ -191,6 +191,37 @@ test.describe('the Sync panel', () => {
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });
 
+  test.describe('the offline notice (admin only for now)', () => {
+    const adminMe = route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, userId: 'dev-user', account: { kind: 'dev', email: null, name: null, isAdmin: true } }) });
+    const offlineNote = page => page.getByRole('status').filter({ hasText: 'Changes are saved on this phone' });
+
+    test('shows while offline, then says it is syncing once back, and the kept write is sent after the connection returns', async ({ page, context }) => {
+      let commandsSeen = 0;
+      await openSynced(page, route => { commandsSeen++; return route.abort(); }, adminMe);
+      await expect(offlineNote(page)).toHaveCount(0);
+      await context.setOffline(true);
+      await expect(offlineNote(page)).toBeVisible();
+      await expect(offlineNote(page)).toContainText('will sync when you are back online');
+      await page.locator('#chk-A-d1s1').check();
+      await expect(page.locator('#chk-A-d1s1')).toBeChecked(); // nothing is blocked while offline
+      const { violations } = await scan(page);
+      expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+      const before = commandsSeen;
+      await context.setOffline(false); // the network is back; the server is still failing, so the write is still waiting
+      await expect(offlineNote(page)).toHaveCount(0);
+      await expect(page.getByRole('status').filter({ hasText: 'Back online' })).toBeVisible();
+      await expect.poll(() => commandsSeen, { timeout: 30_000 }).toBeGreaterThan(before); // the wake sends the kept write again
+      await expect(page.locator('#chk-A-d1s1')).toBeChecked();
+    });
+
+    test('is not shown to someone who is not an admin', async ({ page, context }) => {
+      await openSynced(page, route => route.abort());
+      await context.setOffline(true);
+      await page.waitForTimeout(500);
+      await expect(offlineNote(page)).toHaveCount(0);
+    });
+  });
+
   test.describe('changes the server would not take', () => {
     const refuse = json(422, { refused: 'invalid-input', current: null });
 
