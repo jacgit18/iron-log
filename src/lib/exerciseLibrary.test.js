@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BUILTIN } from './data.js';
 import { DEFAULT_CFG } from './logic.js';
-import { libraryRows, filterRows, usageOf, hasTwoSources } from './exerciseLibrary.js';
+import { libraryRows, filterRows, usageOf, hasTwoSources, keepCatalogItems } from './exerciseLibrary.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
 const state = (over = {}) => ({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], experiments: [], logs: {}, ...over });
@@ -45,4 +45,25 @@ describe('exercise library rows', () => {
     expect(usageOf('zzz', state({ library: lib, experiments: [{ id: 'e', ex: 'zzz' }], logs: { zzz: [{}, {}] } }))).toEqual({ programs: [], versions: 1, experiments: 1, logs: 2 });
     expect(usageOf('hack', state()).programs).toEqual(['A', 'B']);
   });
+});
+
+describe('keepCatalogItems (the library filters on catalog rows, ADR 036)', () => {
+  const items = [
+    { id: 'c:x:fly', name: 'Cable Fly', data: { eq: 'cable', muscles: { p: ['chest'], s: ['frontdelt'] } } },
+    { id: 'c:x:curl', name: 'Barbell Curl', data: { eq: 'barbell', muscles: { p: ['biceps'] } } },
+    { id: 'c:x:walk', name: 'Mystery Walk', data: {} },
+    { id: 'c:x:mob', name: 'Hip Circles', data: { muscles: { mob: true } } },
+  ];
+  const ids = f => keepCatalogItems(items, f).map(c => c.id);
+  it('keeps everything with no filter', () => expect(ids({})).toEqual(items.map(c => c.id)));
+  it('filters by equipment, and "none" keeps the ones with no equipment', () => {
+    expect(ids({ eq: 'cable' })).toEqual(['c:x:fly']);
+    expect(ids({ eq: 'none' })).toEqual(['c:x:walk', 'c:x:mob']);
+  });
+  it('filters by a primary or secondary muscle, and "untagged" keeps the ones with no muscles (mobility counts as tagged)', () => {
+    expect(ids({ muscle: 'frontdelt' })).toEqual(['c:x:fly']);
+    expect(ids({ muscle: 'biceps' })).toEqual(['c:x:curl']);
+    expect(ids({ muscle: 'untagged' })).toEqual(['c:x:walk']);
+  });
+  it('combines both, as the library does', () => expect(ids({ eq: 'barbell', muscle: 'chest' })).toEqual([]));
 });

@@ -48,7 +48,7 @@ export default function HelpSheet() {
           <li><b>Log.</b> Press Log on an exercise to record the weight and reps of each set. Same as last copies your previous session.</li>
           <li><b>Targets.</b> The weight shown on each exercise is a suggestion. It goes up when you complete all your sets two sessions in a row.</li>
           <li><b>Move or skip.</b> If equipment is busy, use Move to put an exercise on another day, or Skip to leave it out this week.</li>
-          <li>On the Board, <b>Stretches</b> is a stretch routine laid out like the Workout week: tick each stretch, add one to try from Experiments. It works the same in every mode and program. <b>Daily</b> holds <b>Supplements</b> (your Morning, Noon and Night list plus a water log) and <b>Medical</b>, which is coming. Edit the lists in Program.</li>
+          <li>On the Board, <b>Stretches</b> is a stretch routine laid out like the Workout week: tick each stretch, add one to try from Experiments. It works the same in every mode and program. <b>Daily</b> holds <b>Supplements</b> (your Morning, Noon and Night list plus a water log) and <b>Medical</b>, which is coming. Change your stretches in Program, and your supplements with Edit on Daily, Supplements.</li>
           <li><b>Progress</b> shows your trends, <b>Muscles</b>, one switch away on the Progress tab, shows which muscles your plan trains, <b>Program</b> lets you change the plan, and <b>Settings</b> holds your 1RMs, backups and display options.</li>
         </ol>
       </section>

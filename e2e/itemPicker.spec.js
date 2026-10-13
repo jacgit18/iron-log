@@ -223,6 +223,48 @@ test('Supplements tab: a slow answer to an older search never replaces the newer
   await expect(catalogOpts).toHaveText([/Creatine HCl/]);
 });
 
+// Step 5: the libraries' own search shows catalog matches with Add; there is no Browse catalog any more.
+test('Exercise library: the search shows catalog matches, Add moves one into your library, and Browse catalog is gone', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#tab-program');
+  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Browse catalog' })).toHaveCount(0);
+  await page.locator('.exlib').getByRole('searchbox').fill('cable');
+  const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
+  await expect(fromCatalog.locator('.exrow b')).toHaveText(['Cable Fly', 'Cable Lateral Raise (Kneeling)']);
+  await fromCatalog.getByRole('button', { name: 'Add Cable Fly from the catalog' }).click();
+  await expect(fromCatalog.locator('.exrow b')).toHaveText(['Cable Lateral Raise (Kneeling)']);
+  await expect(page.locator('.exlib > .exrows .exrow b').filter({ hasText: 'Cable Fly' })).toContainText('Library');
+  // the equipment filter applies to the catalog too
+  await page.locator('.exlib').getByRole('combobox', { name: 'Equipment' }).selectOption('barbell');
+  await expect(fromCatalog.getByText('No exercises in the catalog match that, or you have them all.')).toBeVisible();
+});
+
+test('Supplement library: the search asks the server and Add keeps it Library only', async ({ page }) => {
+  await page.route('**/api/catalog/search?*', search());
+  await openSynced(page);
+  await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.click('#sched-edit');
+  await page.locator('.exlib').getByRole('searchbox').fill('kaged');
+  const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
+  await fromCatalog.getByRole('button', { name: 'Add Creatine HCl by Kaged from the catalog' }).click();
+  const row = page.locator('.exlib > .exrows .exrow').filter({ hasText: 'Creatine HCl' });
+  await expect(row).toHaveCount(1);
+  await expect(row.locator('xpath=ancestor::div[1]').locator('.sect')).toHaveText('Library only');
+});
+
+test('the Supplement library is under Edit on Daily → Supplements, not on the Program tab', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#tab-program');
+  await expect(page.getByRole('group', { name: 'Program tab view' }).getByRole('button')).toHaveText(['Programs', 'Exercise library', 'Stretch library']);
+  await page.click('#tab-daily'); await page.click('#daily-supplements');
+  await expect(page.locator('#suplib-h')).toHaveCount(0);
+  await page.click('#sched-edit');
+  await expect(page.locator('#suplib-h')).toHaveText('Supplement library');
+  await expect(page.locator('.exlib .exrow').filter({ hasText: 'Fish Oil' })).toHaveCount(1); // a Library only one is listed
+  await page.click('#sched-edit');
+  await expect(page.locator('#suplib-h')).toHaveCount(0);
+});
+
 test('Supplements tab: while a new search runs, the last answer is filtered by the new words (never shown under unrelated ones)', async ({ page }) => {
   await openSupplements(page, search('zinc'));
   await morningName(page).fill('creatine');
@@ -231,4 +273,15 @@ test('Supplements tab: while a new search runs, the last answer is filtered by t
   await morningName(page).fill('zinc'); // the zinc answer takes 1.5 s; the creatine products must not show meanwhile
   await expect(page.getByText('Searching the catalog…')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Catalog' })).toHaveCount(0);
+});
+
+test('Stretch library: the search shows catalog matches, and the empty note points to them', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#tab-program');
+  await page.getByRole('button', { name: 'Stretch library', exact: true }).click();
+  await page.locator('.exlib').getByRole('searchbox').fill('calf');
+  await expect(page.getByText('None of yours match. Add one from the catalog below, or with + New stretch.')).toBeVisible();
+  const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
+  await fromCatalog.getByRole('button', { name: 'Add Calf Stretch from the catalog' }).click();
+  await expect(page.locator('.exlib .exrow').filter({ hasText: 'Calf Stretch' }).first()).toContainText('Library');
 });
