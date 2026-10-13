@@ -1,0 +1,137 @@
+name: Release stage
+
+# A button (Actions -> Release stage -> Run workflow) that moves the release stage on: alpha -> beta, beta -> rc, rc -> v1.0.0 (ADR 034,
+# amending ADR 032 and 033). It tags the commit that is LIVE on Cloud Run (the COMMIT_SHA of the revision that has the traffic), not
+# whatever main has moved to, and creates the GitHub Release for it. It never deploys. After that, deploy-cloud-run.yml numbers the
+# stage on its own (beta.2, beta.3, ...).
+#
+# Order is enforced: from alpha only beta, from beta only rc, from rc only ga. After a general-availability release the next version is a
+# judgment (patch, minor or major), so `version` is required then. To skip a stage, tag by hand (ADR 032). Tick "Dry run" to see the
+# tag it would create without creating it.
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Stage to move to (must be the next one in order)'
+        type: choice
+        options: [beta, rc, ga]
+        required: true
+      version:
+        description: 'Only after a general-availability release: the next version, e.g. 1.0.1 or 1.1.0 (no leading v)'
+        type: string
+        required: false
+      commit:
+        description: 'Only if the live commit cannot be read: a commit on main to release (full id)'
+        type: string
+        required: false
+      dry_run:
+        description: 'Dry run: say what would be tagged, create nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # create the tag and the Release
+  id-token: write # Workload Identity Federation, to read which commit is live
+
+# Shares the deploy workflow's release job lock, so two tags are never numbered at once.
+concurrency:
+  group: release-tags
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: us-central1
+      SERVICE: iron-log
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # all tags and history
+      - uses: google-github-actions/auth@v3
+        if: ${{ inputs.commit == '' }}
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+        if: ${{ inputs.commit == '' }}
+
+      - name: Which commit is live
+        id: live
+        env:
+          COMMIT_INPUT: ${{ inputs.commit }}
+        run: |
+          if [ -n "$COMMIT_INPUT" ]; then
+            sha="$COMMIT_INPUT"
+          else
+            revision="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json \
+              | python3 -c 'import json,sys; t=json.load(sys.stdin)["status"]["traffic"]; print(max(t, key=lambda x: x.get("percent", 0))["revisionName"])')"
+            sha="$(gcloud run revisions describe "$revision" --project "$PROJECT_ID" --region "$REGION" --format=json \
+              | python3 -c 'import json,sys; e=json.load(sys.stdin)["spec"]["containers"][0].get("env", []); print(next((x.get("value", "") for x in e if x["name"] == "COMMIT_SHA"), ""))')"
+            echo "Live revision: $revision"
+          fi
+          case "$sha" in ''|*[!0-9a-f]*) echo "::error title=Cannot tell which commit is live::Run again with the 'commit' input set to the full commit id."; exit 1;; esac
+          sha="$(git rev-parse --verify "$sha^{commit}")"
+          git fetch -q origin main
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error title=Not on main::${sha:0:7} is not on main; a release names a commit on main."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Releasing commit ${sha:0:7}"
+
+      - name: Work out the tag
+        id: tag
+        env:
+          TO: ${{ inputs.stage }}
+          VERSION: ${{ inputs.version }}
+          SHA: ${{ steps.live.outputs.sha }}
+        run: |
+          fail() { echo "::error title=Cannot move to $TO::$1"; exit 1; }
+          last="$(git -c versionsort.suffix=- tag --list 'v*' --sort=-v:refname | head -n1)"
+          [ -n "$last" ] || fail "There is no version tag yet."
+          if [ -n "$VERSION" ] && ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            fail "version '$VERSION' is not X.Y.Z (no leading v)."
+          fi
+
+          if echo "$last" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[0-9]+$'; then
+            base="${last#v}"; base="${base%%-*}"
+            stage="${last#*-}"; stage="${stage%%.*}"
+            [ -z "$VERSION" ] || [ "$VERSION" = "$base" ] || fail "'version' is only for after a general-availability release; the newest tag is $last."
+            case "$stage:$TO" in
+              alpha:beta) next="v$base-beta.1";;
+              beta:rc)    next="v$base-rc.1";;
+              rc:ga)      next="v$base";;
+              *) fail "The newest tag is $last (stage $stage). From $stage the next stage is $(case $stage in alpha) echo beta;; beta) echo rc;; rc) echo ga;; esac). To skip a stage, tag by hand (ADR 032).";;
+            esac
+          elif echo "$last" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            base="${last#v}"
+            [ -n "$VERSION" ] || fail "The newest tag is $last, a general-availability release. Set 'version' to the next one (1.0.1 fix, 1.1.0 feature, 2.0.0 breaking)."
+            printf '%s\n%s\n' "$base" "$VERSION" | sort -V -C && [ "$base" != "$VERSION" ] || fail "version $VERSION is not newer than $base."
+            if [ "$TO" = ga ]; then next="v$VERSION"; else next="v$VERSION-$TO.1"; fi
+          else
+            fail "The newest tag is $last, which is not a numbered stage tag (v1.0.0-alpha.1). Tag the next version by hand (ADR 032)."
+          fi
+
+          git rev-parse -q --verify "refs/tags/$next" > /dev/null && fail "$next already exists."
+          git merge-base --is-ancestor "$last" "$SHA" || fail "The live commit ${SHA:0:7} is not ahead of $last; deploy first, then run this again."
+          echo "last=$last" >> "$GITHUB_OUTPUT"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          echo "Newest tag $last -> $next on ${SHA:0:7}"
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.live.outputs.sha }}
+          LAST: ${{ steps.tag.outputs.last }}
+          NEXT: ${{ steps.tag.outputs.next }}
+          DRY: ${{ inputs.dry_run }}
+        run: |
+          if [ "$DRY" = true ]; then
+            echo "### Dry run: would release $NEXT (${SHA:0:7}), after $LAST" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh release create "$NEXT" --target "$SHA" --title "$NEXT" --generate-notes --notes-start-tag "$LAST"
+          echo "### Released $NEXT (${SHA:0:7}), after $LAST" >> "$GITHUB_STEP_SUMMARY"

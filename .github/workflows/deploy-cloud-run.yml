@@ -141,6 +141,10 @@ jobs:
   release:
     needs: deploy
     runs-on: ubuntu-24.04
+    # Shares a lock with release-stage.yml, so two tags are never numbered at once.
+    concurrency:
+      group: release-tags
+      cancel-in-progress: false
     permissions:
       contents: write # create the tag and the Release
     steps:
