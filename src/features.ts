@@ -14,6 +14,7 @@ export const FEATURES = {
   restNotify: 'all', // Rest timer alert panel in Settings (opt-in per device), released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/settings/Settings.tsx when next touched
   grocery: 'admin', // Groceries under the Daily tab (ADR 019): set to 'all' when released, then delete this line and the useFeature check in components/daily/Daily.tsx
   shareExport: 'all', // Share buttons next to the export buttons (Web Share API with the export file), shown only where the browser can share files, released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/settings/ShareExport.tsx when next touched
+  offlineNotice: 'all', // Slim "Offline" / "Back online, syncing" line under the header when syncing is on, released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/OfflineNotice.tsx when next touched
 } satisfies Record<string, Audience>;
 
 export type Audience = 'admin' | 'all' | 'off';
