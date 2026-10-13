@@ -127,6 +127,39 @@ describe('the add/edit exercise sheet', () => {
     [2, 4, 6, 7].forEach(n => expect(ids(after[n - 1].slots)).toEqual(before[n - 1]));
     [1, 3, 5].forEach(n => expect(ids(after[n - 1].slots).filter(id => before[n - 1].includes(id))).toEqual(before[n - 1]));
   });
+  it('adds a catalog exercise picked in the sheet to the library with the card, and nothing when the save is refused (ADR 036)', () => {
+    const fly = { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: { eq: 'cable', muscles: { p: ['chest'] } } };
+    const item = { ex: fly.id, nn: '', cat: fly, ne: 'cable', ph: 'hyp', w: null };
+    const cfgBefore = structuredClone(st().cfg);
+    expect(st().saveSlot(newCard({ days: [], items: [item] }))).toBe('Pick at least one day.');
+    expect(st().cfg).toEqual(cfgBefore);
+    const before = day1().length;
+    expect(st().saveSlot(newCard({ days: [1], items: [item] }))).toBeNull();
+    expect(st().cfg.ex[fly.id]).toEqual({ n: 'Cable Fly', eq: 'cable' });
+    expect(st().cfg.muscleMap[fly.id]).toEqual({ p: ['chest'] });
+    expect(day1()).toHaveLength(before + 1);
+    expect(day1().filter(s => s.items[0].ex === fly.id)).toHaveLength(1);
+    // Picked again once it is in the library: used as it is, not added twice.
+    expect(st().saveSlot(newCard({ days: [2], items: [item] }))).toBeNull();
+    expect(Object.keys(st().cfg.ex).filter(k => k === fly.id)).toHaveLength(1);
+    // A catalog name you already use is refused before anything is written.
+    st().mutateCfg(c => { c.ex.mine = { n: 'Hammer Row' }; });
+    const progBefore = structuredClone(st().programs);
+    expect(st().saveSlot(newCard({ days: [1], items: [{ ...item, ex: 'c:fedb:Hammer', cat: { id: 'c:fedb:Hammer', name: 'hammer row', data: {} } }] }))).toBe('You already have an exercise called hammer row.');
+    expect(st().programs).toEqual(progBefore);
+  });
+  it('refuses a card whose two items would add different exercises with one name, writing nothing', () => {
+    const fly = { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: {} };
+    const pick = { ex: fly.id, nn: '', cat: fly, ph: 'hyp', w: null };
+    const cfgBefore = structuredClone(st().cfg); const progBefore = structuredClone(st().programs);
+    const superset = items => newCard({ type: 'superset', days: [1], items });
+    expect(st().saveSlot(superset([{ ex: '__new', nn: 'cable fly', ph: 'hyp', w: null }, pick]))).toBe('Cable Fly is used twice in this card as different exercises. Pick the same one for both.');
+    expect(st().saveSlot(superset([pick, { ...pick, ex: 'c:other:Fly', cat: { id: 'c:other:Fly', name: 'Cable  Fly', data: {} } }]))).toMatch(/used twice/);
+    expect(st().cfg).toEqual(cfgBefore);
+    expect(st().programs).toEqual(progBefore);
+    expect(st().saveSlot(superset([pick, pick]))).toBeNull(); // the same pick on both: one exercise
+    expect(Object.values(st().cfg.ex).filter(x => x.n === 'Cable Fly')).toHaveLength(1);
+  });
   it('asks for a day when none is ticked, and ignores the days list when editing a card', () => {
     expect(st().saveSlot(newCard({ days: [] }))).toBe('Pick at least one day.');
     const cfgBefore = structuredClone(st().cfg); const progBefore = structuredClone(st().programs);
