@@ -91,6 +91,14 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
         // The iOS splash images are only fetched by iPhone Safari at install time, so they stay out of the offline cache.
         globIgnores: ['splash/**'],
+        // The landing page's screenshots (WebP) are left out of the install download, as only signed-out visitors see them.
+        // Cached the first time they load instead, so the landing page still shows them offline. Names are hashed, so
+        // a cached copy never goes stale; the limit drops old versions.
+        runtimeCaching: [{
+          urlPattern: ({ url, sameOrigin }) => sameOrigin && /\/assets\/[^/]+\.webp$/.test(url.pathname),
+          handler: 'CacheFirst',
+          options: { cacheName: 'landing-images', expiration: { maxEntries: 4 } },
+        }],
         cleanupOutdatedCaches: true,
       },
     }),
