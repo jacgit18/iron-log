@@ -6,6 +6,8 @@ import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, exInfo, videoLabel } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
+import { useFeature } from '../../features.js';
+import { useSwipeDone } from './useSwipeDone.js';
 import {
   DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, backoffOf, describe, holdPlan,
   restsOf,
@@ -26,10 +28,17 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }: { s: FlatS
   const names = s.items.map((i) => exInfo(cfg, i.ex).n);
   const cardName = s.type === 'superset' ? names.join(' → ') : s.type === 'either' ? names.join(' or ') : names[0];
 
+  // Swipe to tick off (admin-only `swipeDone`): same action as the checkbox, so same announcement; cards with their own per-exercise ticks (paired) do not swipe.
+  const swipeOn = useFeature('swipeDone') && !paired;
+  const sw = useSwipeDone({ enabled: swipeOn, done, toggle: on => checkCard(s.id, on) });
+
   return (
     <article
       aria-labelledby={`h-${s.id}-0`}
-      className={`card${done ? ' done' : ''}${sk ? ' skipped' : ''}${dragging ? ' dragging' : ''}${removing ? ' removing' : ''}`}
+      className={`card${done ? ' done' : ''}${sk ? ' skipped' : ''}${dragging ? ' dragging' : ''}${removing ? ' removing' : ''}${sw.className}`}
+      data-hint={sw.hint}
+      style={sw.style}
+      {...sw.props}
       draggable="true"
       onDragStart={e => onDragStart(e, s.id)}
       onDragEnd={onDragEnd}

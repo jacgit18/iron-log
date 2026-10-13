@@ -12,6 +12,7 @@ import { LS } from './lib/storage.js';
 export const FEATURES = {
   catalog: 'all', // Browse the shared catalog and add from it (ADR 025-030), released to everyone 2026-10-11 by the owner: delete this line and the useFeature check in components/program/ExerciseLibrary.tsx when next touched
   restNotify: 'all', // Rest timer alert panel in Settings (opt-in per device), released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/settings/Settings.tsx when next touched
+  swipeDone: 'admin', // Swipe a board card sideways to tick it off (phone, mobile list item 11): set to 'all' when released, then delete this line and the useFeature check in components/board/Card.tsx
   grocery: 'admin', // Groceries under the Daily tab (ADR 019): set to 'all' when released, then delete this line and the useFeature check in components/daily/Daily.tsx
 } satisfies Record<string, Audience>;
 
