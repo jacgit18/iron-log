@@ -107,4 +107,6 @@ test('a home-screen shortcut opens its tab and drops the parameter', async ({ pa
 test('the page has a theme-color per OS scheme, the manifest shortcuts and the iOS splash images', async ({ page }) => {
   await expect(page.locator('meta[name="theme-color"]')).toHaveCount(2);
   await expect(page.locator('link[rel="apple-touch-startup-image"]')).toHaveCount(5);
+  const manifest = await (await page.request.get('/manifest.webmanifest')).json();
+  expect(manifest.shortcuts.map(sc => sc.url)).toEqual(['./?open=board', './?open=daily']);
 });

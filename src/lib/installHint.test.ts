@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { showInstallHint, type HintInputs, installHintDismissed, dismissInstallHint } from './installHint.js';
 
 const base: HintInputs = { installed: false, canPrompt: true, ios: false, phone: true, dismissed: false };
@@ -18,8 +18,9 @@ describe('dismissal', () => {
   const store: Record<string, string> = {};
   beforeEach(() => {
     Object.keys(store).forEach(k => delete store[k]);
-    (globalThis as any).localStorage = { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; }, removeItem: (k: string) => { delete store[k]; } };
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; }, removeItem: (k: string) => { delete store[k]; } });
   });
+  afterEach(() => { vi.unstubAllGlobals(); });
   it('is remembered on this device', () => {
     expect(installHintDismissed()).toBe(false);
     dismissInstallHint();
