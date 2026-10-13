@@ -683,6 +683,7 @@ test.describe('Delete my data', () => {
     expect(calls[0].body).toEqual({ confirm: 'ERASE' });
     await reloaded;
     await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible(); // reloaded: the app reopens on the tab it was on
+    await expect(page.locator('.saveflag')).toHaveText('Everything in your account was erased.'); // said after the reload, not lost to it
     const left = await page.evaluate(() => ({ docs: localStorage.getItem('ironlog:logs/hack'), mirror: localStorage.getItem('ironlog:sync/mirror'), marker: localStorage.getItem('ironlog:sync/legacy') }));
     expect(left.docs).toBeNull();
     expect(await page.evaluate(() => [localStorage.getItem('ironlog:grocery/main'), localStorage.getItem('ironlog:grocery/2026-09')])).toEqual([null, null]); // the grocery list goes with the rest
@@ -692,9 +693,12 @@ test.describe('Delete my data', () => {
   test('delete account sends its own word', async ({ page }) => {
     const calls = await open(page, { '/api/account/delete': ok });
     await panel(page).getByLabel(/Type DELETE/).fill('DELETE');
+    const reloaded = page.waitForEvent('load');
     await panel(page).getByRole('button', { name: 'Delete my account permanently' }).click();
     await expect.poll(() => calls.length).toBe(1);
     expect(calls[0].body).toEqual({ confirm: 'DELETE' });
+    await reloaded;
+    await expect(page.getByText('Your account was deleted.')).toBeVisible(); // said after the reload, not lost to it
   });
 
   test('when the server cannot do it, says nothing was erased and keeps the data here', async ({ page }) => {

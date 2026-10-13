@@ -4,9 +4,10 @@ import { LS } from '../../lib/storage.js';
 import { parsePath } from '../../sync/documents.js';
 import { createAccountClient } from '../../sync/account.js';
 import { useWho } from './useWho.js';
+import { noteAfterReload } from '../../lib/afterReload.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { localPaths, writeLegacyMarker } from '../../sync/legacyMarker.js';
-import { flag, getSyncApi, useAppStore } from '../../store/useAppStore.js';
+import { getSyncApi, useAppStore } from '../../store/useAppStore.js';
 
 // Phase F: erase everything in the account for good, or delete the account. The server removes the rows (not a soft delete: no weight or
 // note is left to read), then this device forgets its own copy and reloads. Only with syncing on and someone signed in. Each needs the
@@ -52,7 +53,7 @@ export default function DeleteMyData() {
     const out = await api.eraseEverything(what);
     if (!out.ok) { setBusy(null); setProblem(WHY[out.class] ?? WHY.unavailable!); return; }
     forgetDevice();
-    flag(what === 'data' ? 'Everything in your account was erased' : 'Your account was deleted');
+    noteAfterReload(what === 'data' ? 'Everything in your account was erased.' : 'Your account was deleted.'); // shown after the reload
     window.location.reload(); // the app still holds the old data in memory; start clean
   };
 
