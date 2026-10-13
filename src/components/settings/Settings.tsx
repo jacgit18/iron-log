@@ -19,7 +19,6 @@ import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { IMPORT_ACCEPT } from '../../lib/importFile.js';
-import ShareExport from './ShareExport.js';
 
 function ModePanel() {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
@@ -178,7 +177,6 @@ function DataPanel() {
       <p>Your one backup is a single <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep a copy, move to another device, or go back to an earlier state.</p>
       <div className="actions">
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
-        <ShareExport kind="data" label="Share data file" />
         <label className="btn filebtn">Import from file
           <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : 'imp-help'} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
@@ -200,8 +198,6 @@ function DataPanel() {
             <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
             <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
             <button type="button" className="btn" disabled={!!exporting} onClick={st.exportCsv}>Download CSV</button>
-            <ShareExport kind="xlsx-all" label="Share Excel" />
-            <ShareExport kind="xlsx-week" label="Share this week" />
           </div>
         </div>
       )}

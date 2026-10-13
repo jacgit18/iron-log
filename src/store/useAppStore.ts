@@ -26,7 +26,7 @@ import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile,
   sameProg, entryId, findEntry, normConfig,
 } from '../lib/export.js';
-import { exportFile, mimeFor, shareFile } from '../lib/share.js';
+import { mimeFor } from '../lib/mime.js';
 import { bwSorted } from '../lib/body.js';
 import { usageOf } from '../lib/exerciseLibrary.js';
 import { MUSCLE_MAP } from '../lib/muscles.js';
@@ -56,8 +56,6 @@ const blobSave = {
   },
 };
 
-/** How long a built-but-unshared export (waiting for a second tap) is kept before it is thrown away as stale. */
-export const SHARE_READY_MS = 60_000;
 
 const uid = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -944,7 +942,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     } finally { set({ exporting: null }); }
   },
   exportCsv() { return get().runExport('csv', dl => dl.save({ filename: `iron-log-${ymd(new Date())}.csv`, data: buildCsv(get().snapshot()) })); },
-  // The file an export produces: the download and the Share button both use it, so they hand over the same bytes.
+  // The file an export produces, built the same way for every download.
   async buildExportFile(kind) {
     if (kind === 'data') {
       const d = buildDataFile(await get().fullSnapshot(), await get().allWeeks());
@@ -963,40 +961,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     return get().runExport('data', async dl => { await dl.save(await get().buildExportFile('data')); });
   },
 
-  // Share sheet (released to everyone, see features.ts). The file is built first (async), then shared; if the browser says the tap
-  // ran out while it was built (iOS Safari is strict), the built file is kept and a second tap shares it with no waiting. The kept
-  // file is a snapshot, so it is dropped after SHARE_READY_MS: a later tap builds a fresh one rather than sharing old data.
-  shareReady: null,
-  async shareExport(kind) {
-    const dl = get().dl; if (!dl || get().exporting) return;
-    set({ exporting: kind, shareReady: null });
-    try {
-      let built: { filename: string; data: BlobPart };
-      try { built = await get().buildExportFile(kind); }
-      catch (err) { flag((err as Error)?.message || 'Export isn’t available here'); return; }
-      const file = exportFile(built.filename, built.data);
-      const res = await shareFile(file);
-      if (res === 'shared') flag('Shared');
-      else if (res === 'blocked') {
-        set({ shareReady: { kind, file } });
-        setTimeout(() => { if (get().shareReady?.file === file) set({ shareReady: null }); }, SHARE_READY_MS);
-      }
-      else if (res === 'failed') await get().saveInstead(built);
-      // 'cancelled': the person closed the share sheet, nothing to say
-    } finally { set({ exporting: null }); }
-  },
-  async shareAgain() {
-    const ready = get().shareReady; if (!ready) return;
-    set({ shareReady: null });
-    const res = await shareFile(ready.file); // first call in the click: no await before it
-    if (res === 'shared') flag('Shared');
-    else if (res !== 'cancelled') await get().saveInstead({ filename: ready.file.name, data: await ready.file.arrayBuffer() });
-  },
-  async saveInstead(built) {
-    const dl = get().dl;
-    try { if (!dl) throw new Error('no downloads'); await dl.save(built); flag('Couldn’t open the share sheet, so the file was downloaded instead'); }
-    catch { flag('Couldn’t share or download the file'); }
-  },
   async init() {
     if (initStarted) return; // StrictMode runs mount effects twice in dev; subscribe once
     initStarted = true;
