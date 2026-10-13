@@ -178,6 +178,8 @@ test.describe('the Sync panel', () => {
 
   test('offline: a tick is kept, a notice says so, and Details leads to the panel', async ({ page, context }) => {
     await openSynced(page, route => route.abort());
+    // Settings is its own chunk; here the service worker is off, so fetch it before going offline (in the app it is precached).
+    await openSettings(page); await page.click('#tab-board');
     await context.setOffline(true);
     await page.locator('#chk-A-d1s1').check();
     await expect(page.locator('#chk-A-d1s1')).toBeChecked();
