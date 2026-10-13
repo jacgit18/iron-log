@@ -5,7 +5,7 @@ import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
-import { useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
@@ -19,6 +19,33 @@ import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { IMPORT_ACCEPT } from '../../lib/importFile.js';
+
+/* ---------- "Saved" ticks ----------
+   A field that saves when you leave it gets a short tick beside it, so a change is seen to land without scrolling up to the header.
+   Kept here, not in CommitInput: Settings remounts a field (its `key`) once its value saves. Visual only: the header's status line
+   already announces "Saved" to screen readers. */
+const SAVED_MS = 3000;
+const SavedCtx = createContext<{ saved: string | null; mark: (id: string) => void }>({ saved: null, mark: () => {} });
+function SavedTicks({ children }: { children: ReactNode }) {
+  const [saved, setSaved] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mark = useCallback((id: string) => {
+    setSaved(id);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setSaved(null), SAVED_MS);
+  }, []);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  return <SavedCtx.Provider value={{ saved, mark }}>{children}</SavedCtx.Provider>;
+}
+// Wraps a field's onCommit: a save that was not refused ticks that field.
+function useSaving() {
+  const { mark } = useContext(SavedCtx);
+  return (id: string, save: (v: string) => unknown) => (v: string) => { const r = save(v); if (r !== false) mark(id); return r; };
+}
+function Tick({ id }: { id: string }) {
+  const { saved } = useContext(SavedCtx);
+  return saved === id ? <span className="savedtick" aria-hidden="true">✓ Saved</span> : null;
+}
 
 // The panel pattern: heading, one line on what it is for, the controls, then the background in a fold named for the panel.
 function More({ about, children }: { about: string; children: ReactNode }) {
@@ -145,7 +172,7 @@ function DevicePanel() {
 }
 
 function PhasePanel() {
-  const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
+  const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState(); const saving = useSaving();
   return (
     <section className="panel">
       <h3>Phases</h3>
@@ -159,14 +186,14 @@ function PhasePanel() {
               <span className="phname"><span className="dot" data-p={k} /> {PHASES[k].label}</span>
               {PHASES[k].pct === 0
                 ? <div className="phfield"><span>% of 1RM</span><span className="pctin">—</span></div>
-                : <label className="phfield"><span>% of 1RM</span><span className="pctin"><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={(v) => st.setPct(k, v)} /> %</span></label>}
-              <label className="phfield"><span>Sets × reps</span><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={(v) => st.setRxOverride(k, v)} /></label>
+                : <label className="phfield"><span>% of 1RM <Tick id={`pct-${k}`} /></span><span className="pctin"><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={saving(`pct-${k}`, v => st.setPct(k, v))} /> %</span></label>}
+              <label className="phfield"><span>Sets × reps <Tick id={`rx-${k}`} /></span><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={saving(`rx-${k}`, v => st.setRxOverride(k, v))} /></label>
             </div>
           );
         })}
       </div>
       <label className="inline" htmlFor="rest-s">Rest between sets{' '}
-        <CommitInput key={`rest:${cfg.rest ?? 90}`} type="number" id="rest-s" min="0" max="600" step="any" value={cfg.rest ?? 90} style={{ width: 80 }} onCommit={st.setRest} /> seconds
+        <CommitInput key={`rest:${cfg.rest ?? 90}`} type="number" id="rest-s" min="0" max="600" step="any" value={cfg.rest ?? 90} style={{ width: 80 }} onCommit={saving('rest', st.setRest)} /> seconds <Tick id="rest" />
       </label>
       <More about="phases">
         <p>Each phase has default sets × reps. The target weight starts from the weight you last logged for that exercise in that phase, otherwise the program's weight. The % of 1RM is only for comparing with your 1RM below; it doesn't set targets.</p>
@@ -271,7 +298,7 @@ function PhaseWeights({ list, rm, cfg }: { list: { ph: PhaseKey | null; w: numbe
 function RmPanel() {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs); const programs = useAppStore(s => s.programs);
   const st = useAppStore.getState();
-  const all = [...slotsFor(programs.A), ...slotsFor(programs.B)];
+  const all = [...slotsFor(programs.A), ...slotsFor(programs.B)]; const saving = useSaving();
   // Program ids too: synced, a card can use an exercise that isn't in the account's library (ADR 024).
   const weighted = [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
   const withRm = weighted.filter(id => cfg.rm[id] != null).length;
@@ -292,7 +319,7 @@ function RmPanel() {
                 <tr key={id}>
                   <td>{exInfo(cfg, id).n}</td>
                   <td><PhaseWeights list={programWeights(cfg, all, id)} /></td>
-                  <td><CommitInput key={`${id}:${cfg.rm[id] ?? ''}`} type="number" id={`rm-${id}`} aria-label={`${exInfo(cfg, id).n} 1RM (lb)`} min="0" step="any" value={cfg.rm[id] ?? ''} placeholder="—" onCommit={(v) => st.setRm(id, v)} /></td>
+                  <td><CommitInput key={`${id}:${cfg.rm[id] ?? ''}`} type="number" id={`rm-${id}`} aria-label={`${exInfo(cfg, id).n} 1RM (lb)`} min="0" step="any" value={cfg.rm[id] ?? ''} placeholder="—" onCommit={saving(`rm-${id}`, v => st.setRm(id, v))} /> <Tick id={`rm-${id}`} /></td>
                   <td>{best.length ? <PhaseWeights list={best} rm={cfg.rm[id]} cfg={cfg} /> : '—'}</td>
                 </tr>
               );
@@ -358,7 +385,7 @@ export default function Settings() {
   const restAlert = useFeature('restNotify');
   const cur = useCurrentGroup();
   return (
-    <div className="settings">
+    <SavedTicks><div className="settings">
       {/* Sticky, so a group is one tap away anywhere on the long page; the group being read is marked. */}
       <nav className="sjump" aria-label="Jump to a settings group">
         {GROUPS.map(([id, label]) => <button key={id} type="button" className="chip" aria-current={cur === id ? 'true' : undefined} onClick={() => jump(id)}>{label}</button>)}
@@ -389,6 +416,6 @@ export default function Settings() {
       <Group id="erase" title="Erase & delete">
         <div className="scol"><ErasePanel /><DeleteMyData /></div>
       </Group>
-    </div>
+    </div></SavedTicks>
   );
 }

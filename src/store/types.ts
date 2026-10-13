@@ -127,10 +127,10 @@ export interface SettingsSlice {
   importCount: number;
   setImportUseSettings(v: boolean): void;
   setImportSection(k: string, v: boolean): void;
-  setPct(p: PhaseKey, raw: string | number): false | void;
-  setRxOverride(p: PhaseKey, raw: string): void;
-  setRest(raw: string | number): false | void;
-  setRm(exId: string, raw: string | number): false | void;
+  setPct(p: PhaseKey, raw: string | number): boolean; // false: refused (bad value, or still loading)
+  setRxOverride(p: PhaseKey, raw: string): boolean;
+  setRest(raw: string | number): boolean;
+  setRm(exId: string, raw: string | number): boolean;
   setCfgField<K extends keyof Cfg>(k: K, v: Cfg[K]): void;
   readImportFile(file: File | null | undefined): Promise<void>;
   pasteImport(text: string): void;
