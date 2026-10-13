@@ -57,6 +57,18 @@ describe('stretches', () => {
     expect(st().saveStretch({ id: item.id, n: 'Renamed', group: 'Legs', tier: 'primary', url: 'https://youtu.be/c' })).toBeNull();
     expect(st().stretches.find(i => i.id === item.id)).toEqual({ id: 'calf-stretch', n: 'Calf Stretch', group: 'Legs', tier: 'primary', url: 'https://youtu.be/c', catalogId: calf.id });
   });
+  it('saves a new stretch picked from the catalog in the sheet with its id and name, the tier and group chosen there (ADR 036)', () => {
+    const calf = { id: 'c:fedb:Calf_Stretch', name: 'Calf Stretch', data: { muscles: { p: ['calves'] } } };
+    expect(st().saveStretch({ n: 'whatever typed', cat: calf, group: 'Calves', tier: 'primary', note: 'wall' })).toBeNull();
+    const item = st().stretches.find(i => i.catalogId === calf.id);
+    expect(item).toMatchObject({ n: 'Calf Stretch', group: 'Calves', tier: 'primary', note: 'wall', catalogId: calf.id });
+    expect(st().saveStretch({ n: '', cat: calf, tier: '' })).toBe('Already in your stretches.');
+    expect(st().saveStretch({ n: '', cat: { ...calf, id: 'c:FEDB:bad id' } })).toMatch(/can’t be added/);
+    expect(st().saveStretch({ n: '', cat: { ...calf, id: 'c:fedb:Other' } })).toBe('Another stretch already has that name.');
+    // editing keeps it a catalog stretch; a cat sent with an edit is ignored
+    expect(st().saveStretch({ id: item.id, n: 'Calf Stretch', cat: { ...calf, id: 'c:fedb:Other', name: 'Other' }, group: 'Legs', tier: '' })).toBeNull();
+    expect(st().stretches.find(i => i.id === item.id)).toMatchObject({ n: 'Calf Stretch', catalogId: calf.id, group: 'Legs' });
+  });
   it('a catalog stretch with no primary muscle goes in Other', () => {
     st().addCatalogStretch({ id: 'c:fedb:X', name: 'Mystery Stretch', data: {} });
     expect(st().stretches.find(i => i.catalogId === 'c:fedb:X').group).toBe('Other');

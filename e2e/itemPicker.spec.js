@@ -7,14 +7,21 @@ const json = (status, body) => route => route.fulfill({ status, contentType: 'ap
 const signedInAsDev = json(200, { ok: true, userId: 'dev-user', account: { kind: 'dev', email: null, name: null } });
 const rowBase = { client_updated_at: '2026-01-05T10:00:00Z', version: 1, deleted_at: null };
 const ownProgram = { key: 'A', days: [{ title: 'Day 1', slots: [{ id: 'A-d1s1', sec: 'Regular', tier: 'Primary', items: [{ ex: 'latpd', ph: 'hyp', w: 45 }] }] }] };
-const pull = { rows: [{ table: 'programs', key: 'A', data: ownProgram, ...rowBase, seq: '1' }], cursor: '1', more: false };
+const pull = { rows: [
+  { table: 'programs', key: 'A', data: ownProgram, ...rowBase, seq: '1' },
+  { table: 'list_items', list: 'stretch', client_id: 'scarecrow', position: 0, data: { id: 'scarecrow', n: 'Scarecrow', group: 'Bands', tier: 'primary' }, ...rowBase, seq: '2' },
+], cursor: '2', more: false };
 const catalog = { ok: true, items: [
   { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: { eq: 'cable', muscles: { p: ['chest'] } } },
   { id: 'c:fedb:Cable_Lat_Raise', name: 'Cable Lateral Raise (Kneeling)', data: { eq: 'cable', muscles: { p: ['delts'] } } },
   { id: 'c:fedb:Hammer_Row', name: 'Hammer Row Test', data: { eq: 'dumbbell' } }, // the same name as one the test creates: then never offered
 ] };
 
-async function openSynced(page, catalogAnswer = json(200, catalog)) {
+const stretchCatalog = { ok: true, items: [{ id: 'c:fedb:Calf_Stretch', name: 'Calf Stretch', data: { muscles: { p: ['calves'], mob: true } } }] };
+// Each list's catalog, as GET /api/catalog?kind=... answers it.
+const byKind = route => json(200, new URL(route.request().url()).searchParams.get('kind') === 'stretch' ? stretchCatalog : catalog)(route);
+
+async function openSynced(page, catalogAnswer = byKind) {
   await page.addInitScript(() => {
     localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1');
     localStorage.setItem('ironlog:flag:apiSync', 'true'); localStorage.setItem('ironlog:session/known', 'true');
@@ -118,4 +125,47 @@ test('after the catalog fails to load, Try again asks again and shows it (the fa
   await expect(page.getByRole('group', { name: 'Catalog' }).getByRole('option')).toHaveText([/Cable Fly/]);
   await expect(field(page)).toBeFocused(); // Try again does not take focus from the field
   expect(calls).toBe(2);
+});
+
+test('a new stretch picked from the catalog is saved with its group and the routine chosen in the sheet', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#tab-program');
+  await page.getByRole('button', { name: 'Stretch library', exact: true }).click();
+  await page.click('#slib-new');
+  const name = page.getByRole('dialog').getByRole('combobox', { name: 'Name' });
+  await name.fill('calf');
+  await page.getByRole('group', { name: 'Catalog' }).getByRole('option', { name: /Calf Stretch/ }).click();
+  await expect(name).toHaveValue('Calf Stretch');
+  await expect(page.getByRole('dialog').getByText('From the catalog. It will be added to your stretches when you save.')).toBeVisible();
+  await expect(page.getByRole('dialog').getByRole('combobox', { name: 'Group' })).toHaveValue('Calves');
+  await expect(page.getByRole('dialog').getByRole('combobox', { name: 'On the board' })).toHaveValue('primary'); // Every day, not forced to Library only
+  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const row = page.locator('.exlib .exrow').filter({ hasText: 'Calf Stretch' });
+  await expect(row).toHaveCount(1);
+  await expect(row.locator('.pill')).toHaveText('Library');
+  await expect(row.locator('xpath=ancestor::div[1]').locator('.sect')).toHaveText('Every day');
+});
+
+test('typing a stretch you already have offers it, and picking it opens that stretch instead of a second one', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#tab-program');
+  await page.getByRole('button', { name: 'Stretch library', exact: true }).click();
+  await page.click('#slib-new');
+  await page.getByRole('dialog').getByRole('combobox', { name: 'Name' }).fill('scare');
+  await page.getByRole('group', { name: 'Yours' }).getByRole('option', { name: /Scarecrow/ }).click();
+  await expect(page.getByRole('dialog').getByRole('heading')).toHaveText('Edit stretch');
+  await expect(page.getByRole('dialog').getByRole('textbox', { name: 'Name' })).toHaveValue('Scarecrow');
+});
+
+test('a stretch to try can be found in the catalog from the Stretches tab', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#board-stretches');
+  await page.click('#sexp-add');
+  const name = page.getByRole('dialog').getByRole('combobox', { name: 'Name' });
+  await name.fill('calf');
+  await page.getByRole('option', { name: /Calf Stretch/ }).click();
+  await expect(name).toHaveValue('Calf Stretch');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.expcard').filter({ hasText: 'Calf Stretch' })).toHaveCount(1);
 });
