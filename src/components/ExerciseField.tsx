@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { CatalogItem, Cfg, EquipmentKey } from '../types.ts';
 import { allExIds, exInfo, findExId, isCatalogId, isOwnExercise, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
-import { muscleList } from '../lib/exerciseLibrary.js';
+import { exIdsInUse, muscleList } from '../lib/exerciseLibrary.js';
+import { useAppStore } from '../store/useAppStore.js';
 import { pickerKey, type MineOption } from '../lib/picker.js';
 import ItemPicker from './ItemPicker.jsx';
 
@@ -17,7 +18,12 @@ type Props = {
 const catalogMeta = (c: CatalogItem) => [c.data.eq ? EQUIPMENT[c.data.eq] : '', c.data.muscles?.p?.length ? muscleList(c.data.muscles.p) : ''].filter(Boolean).join(' · ');
 
 export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onUrl, onEq, cat = null, onCat }: Props) {
-  const ids = allExIds(cfg);
+  // Your library, plus exercises your programs, versions, experiments or logs still use that are not in it (a built-in an older
+  // program kept, ADR 024): listed as yours, so the catalog does not offer a second one under that name.
+  const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
+  const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs); const week = useAppStore(s => s.week);
+  const listed = allExIds(cfg);
+  const ids = [...new Set([...listed, ...exIdsInUse({ programs, library, experiments, logs, week }, cfg)])];
   // A name a built-in also uses stays unmarked, so the built-in is never labelled Custom.
   const builtin = new Set(ids.filter(x => !isOwnExercise(x) && !isCatalogId(x)).map(x => exInfo(cfg, x).n));
   const seen = new Set<string>();

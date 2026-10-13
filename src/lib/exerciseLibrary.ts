@@ -1,6 +1,6 @@
-import type { CatalogItem, Cfg, LibraryItem, Logs, Program } from '../types.ts';
+import type { CatalogItem, Cfg, LibraryItem, Logs, Program, Week } from '../types.ts';
 /* ---------- Exercise library: every exercise and what is set on it ---------- */
-import { allExIds, exInfo, isOwnExercise, slotsFor } from './data.js';
+import { EX, allExIds, exInfo, isOwnExercise, slotsFor } from './data.js';
 import { tagsOf, MUSCLES } from './muscles.js';
 
 // Where an exercise is used: the rotation programs (by key), saved/created versions, experiments, and logged sessions.
@@ -12,6 +12,21 @@ export function usageOf(exId: string, { programs, library, experiments, logs }: 
     experiments: (experiments || []).filter(e => e.ex === exId).length,
     logs: ((logs || {})[exId] || []).length,
   };
+}
+
+// Every exercise id something of yours points at: the rotation programs, saved/created versions, experiments, logged sessions and this
+// week's added cards. Syncing, the library lists only cfg.ex (ADR 024), but an older program can still use a built-in id never copied
+// into it (e.g. latpd); the add flows count these as yours, so the catalog never offers a second exercise under the same name (ADR 036).
+// With `cfg`, only ids that name a real exercise (a built-in or one in cfg.ex) are returned: old history can point at ids that no longer exist.
+export function exIdsInUse({ programs, library, experiments, logs, week }: Parameters<typeof usageOf>[1] & { week?: Pick<Week, 'extra'> | null }, cfg?: Cfg) {
+  const ids = new Set<string>();
+  const addProg = (prog: Program | null | undefined) => { if (prog) slotsFor(prog).forEach(sl => sl.items.forEach(i => { if (i.ex) ids.add(i.ex); })); };
+  Object.values(programs || {}).forEach(addProg);
+  (library || []).forEach(it => { try { addProg({ ...it.prog, key: 'N' }); } catch { /* a version that cannot be read uses nothing */ } });
+  (experiments || []).forEach(e => { if (e.ex) ids.add(e.ex); });
+  Object.keys(logs || {}).forEach(k => { if ((logs || {})[k]?.length) ids.add(k); });
+  (week?.extra || []).forEach(x => { if (x.ex) ids.add(x.ex); });
+  return [...ids].filter(id => !cfg || !!EX[id] || !!cfg.ex?.[id]);
 }
 
 // One row per exercise, alphabetical.

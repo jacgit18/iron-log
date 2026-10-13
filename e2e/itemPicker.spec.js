@@ -16,6 +16,8 @@ const catalog = { ok: true, items: [
   { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: { eq: 'cable', muscles: { p: ['chest'] } } },
   { id: 'c:fedb:Cable_Lat_Raise', name: 'Cable Lateral Raise (Kneeling)', data: { eq: 'cable', muscles: { p: ['delts'] } } },
   { id: 'c:fedb:Hammer_Row', name: 'Hammer Row Test', data: { eq: 'dumbbell' } }, // the same name as one the test creates: then never offered
+  // The exact name of the built-in latpd that Program A uses: synced, latpd is not in the library list (ADR 024), but it must still count as yours.
+  { id: 'c:fedb:Lat_Pulldown_Alt', name: 'Lat Pulldown, alternating single-arm', data: { eq: 'cable' } },
 ] };
 
 const stretchCatalog = { ok: true, items: [{ id: 'c:fedb:Calf_Stretch', name: 'Calf Stretch', data: { muscles: { p: ['calves'], mob: true } } }] };
@@ -50,8 +52,12 @@ test('a catalog exercise picked with the keyboard goes on the card and into the 
   await expect(list.getByRole('option', { name: /Create “cable”/ })).toBeVisible();
   const { violations } = await new AxeBuilder({ page }).include('[role=dialog]').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => v.id)).toEqual([]);
-  await field(page).press('ArrowDown');
+  // Arrow Down walks past your own matches (built-ins the account still uses count as yours) to the first catalog item.
+  const yours = await list.getByRole('group', { name: 'Yours' }).getByRole('option').count();
+  await field(page).press('ArrowDown', { delay: 0 });
   await expect(field(page)).toHaveAttribute('aria-activedescendant', /opt-0$/);
+  for (let i = 0; i < yours; i++) await field(page).press('ArrowDown');
+  await expect(field(page)).toHaveAttribute('aria-activedescendant', new RegExp(`opt-${yours}$`));
   await field(page).press('Enter');
   await expect(field(page)).toHaveValue('Cable Fly');
   await expect(page.getByRole('dialog').getByText('From the catalog. It will be added to your exercise library when you save.')).toBeVisible();
@@ -284,4 +290,16 @@ test('Stretch library: the search shows catalog matches, and the empty note poin
   const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
   await fromCatalog.getByRole('button', { name: 'Add Calf Stretch from the catalog' }).click();
   await expect(page.locator('.exlib .exrow').filter({ hasText: 'Calf Stretch' }).first()).toContainText('Library');
+});
+
+test('a built-in your program uses counts as yours: the catalog never offers a second one with its name', async ({ page }) => {
+  await openSynced(page);
+  await openAdd(page);
+  await field(page).fill('lat pulldown');
+  await expect(page.getByRole('group', { name: 'Yours' }).getByRole('option')).toHaveText([/^Lat Pulldown, alternating single-arm/]);
+  await expect(page.getByRole('group', { name: 'Catalog' })).toHaveCount(0);
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.locator('.exlib').getByRole('searchbox').fill('lat pulldown');
+  await expect(page.getByRole('region', { name: 'From the catalog' }).getByText('No exercises in the catalog match that, or you have them all.')).toBeVisible();
 });
