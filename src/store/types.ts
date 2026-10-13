@@ -12,8 +12,9 @@ import type { ExcelImport } from '../lib/excelImport.ts';
 export type Flag = (text: string) => void;
 
 /* ---------- Sheet forms: what each sheet hands its save action ---------- */
-/** The exercise-typing field's result: an existing exercise id, or '__new' with the typed name in `nn`. */
-export interface ExerciseChoice { ex: string; nn: string }
+/** The exercise-typing field's result: an existing exercise id, or '__new' with the typed name in `nn`. A catalog exercise picked in
+ *  the field comes as `ex` = its catalog id with the item in `cat`; the save adds it to the library first when it is not there yet (ADR 036). */
+export interface ExerciseChoice { ex: string; nn: string; cat?: CatalogItem }
 /** Video link and equipment typed for a new exercise (or a link for an existing one). */
 export interface ExerciseExtras { nu?: string; ne?: EquipmentKey | '' }
 export type PhaseChoice = PhaseKey | '' | null;

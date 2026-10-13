@@ -1,8 +1,9 @@
 import { BUILTIN, BLANK, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
+import { catalogPickError, catalogSnapshot } from '../lib/catalogExercise.js';
 import { progName, dayAt, DAYS, colOf, currentLayout, isFinished } from '../lib/logic.js';
 import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
-import type { ExerciseInfo, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
+import type { ExerciseInfo, MuscleTags, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 
 export const SECTIONS = ['Optional', 'Regular', 'Supersets', 'Plyometric', 'Home']; // Optional and Home cards don't count toward finishing a day (countsForFinish)
@@ -171,18 +172,20 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     for (const it of d.items) {
       if (!it.ex || (it.ex === '__new' && !it.nn)) return 'Choose an exercise, or type a name for the new one.';
       if (!isVideoUrl(it.nu)) return VIDEO_ERR;
+      if (it.cat) { const err = catalogPickError(get().cfg, it.cat); if (err) return err; }
     }
     const days = d.idx == null && d.days ? [...new Set(d.days)].filter(x => DAYS.includes(x)).sort((a, b) => a - b) : [d.day];
     if (!days.length) return 'Pick at least one day.'; // checked before anything is written, so a refused save adds no exercise
-    const newEx: Record<string, Partial<ExerciseInfo>> = {};
+    const newEx: Record<string, Partial<ExerciseInfo>> = {}; const newTags: Record<string, MuscleTags> = {};
     const slugFor = (name: string) => newExId(get().cfg, name, newEx);
     const items = d.items.map((it: any) => {
-      let ex = it.ex;
-      if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}) }; }
+      let ex = it.cat ? it.cat.id : it.ex;
+      if (it.cat && !get().cfg.ex[ex]) { const snap = catalogSnapshot(it.cat, it); newEx[ex] = snap.info; if (snap.tags) newTags[ex] = snap.tags; } // picked from the catalog: joins the library with the card
+      else if (ex === '__new') { ex = slugFor(it.nn); newEx[ex] = { n: it.nn, ...(it.nu ? { url: it.nu } : {}), ...(it.ne ? { eq: it.ne } : {}) }; }
       else { get().applyExerciseUrl(ex, it.nu); get().applyExerciseEq(ex, it.ne); }
       const o: ProgramItem = { ex, ph: it.ph || null, w: it.w }; if (it.bw) o.bw = true; if (it.rx) o.rx = it.rx; if (it.note) o.note = it.note; return o;
     });
-    if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, newEx); });
+    if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, newEx); if (Object.keys(newTags).length) c.muscleMap = { ...(c.muscleMap || {}), ...newTags }; });
     const k = d.target ? d.target.key : get().edKey(); const edDay = d.target ? d.target.day : get().edDay;
     const newSlotId = (n: number) => `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}${days.length > 1 ? n : ''}`;
     const slot: ProgramSlot = { id: d.id || newSlotId(0), sec: d.sec, items };

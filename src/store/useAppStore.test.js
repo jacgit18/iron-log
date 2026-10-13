@@ -529,6 +529,13 @@ describe('exercise details, default phase and adding to a day', () => {
     expect(extras[1].items[0].ph).toBe('hyp');
     expect(st().addExerciseToDay(2, { ex: '', nn: '' })).toMatch(/Choose/);
   });
+  it('adds a catalog exercise picked in the day sheet to the library and to that day (ADR 036)', () => {
+    const fly = { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: { eq: 'cable', muscles: { p: ['chest'] } } };
+    expect(st().addExerciseToDay(2, { ex: fly.id, nn: '', cat: fly, ph: 'hyp' })).toBeNull();
+    expect(st().cfg.ex[fly.id]).toEqual({ n: 'Cable Fly', eq: 'cable' });
+    expect(st().cfg.muscleMap[fly.id]).toEqual({ p: ['chest'] });
+    expect(st().activeSlots().filter(s => s.added && s.items[0].ex === fly.id)).toHaveLength(1);
+  });
 });
 
 describe('mobility phase', () => {
