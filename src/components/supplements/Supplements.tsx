@@ -1,19 +1,43 @@
 import type { Boost as BoostT, SupplementItem, SupplementSlot, Supplements, Taken } from '../../types.ts';
+import type { MineOption, PickerChoice } from '../../lib/picker.ts';
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
-import { SLOTS, scheduled, scheduleOf, slotTally } from '../../lib/supplements.js';
+import { SLOTS, scheduled, scheduleOf, slotLabel, slotTally } from '../../lib/supplements.js';
+import { pickerKey } from '../../lib/picker.js';
+import ItemPicker from '../ItemPicker.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { HOT_OZ, TRAIN_OZ_PER_30, BOTTLES, CUP_OZ, OZ_PER_LB, fmtOz, cupsOf, sumOz, lastDays, goalFor, boostOz } from '../../lib/water.js';
 
+// One of yours as the add picker lists it: where it is now and its dose; badged Library or Custom only when syncing (ADR 027).
+const mineOf = (i: SupplementItem, syncing: boolean): MineOption => ({
+  id: i.id, name: i.n, ...(i.brand ? { brand: i.brand } : {}), ...(i.catalogId ? { catalogId: i.catalogId } : {}),
+  meta: [i.brand, i.slot ? `In ${slotLabel(i.slot)}` : 'Library only', i.dose].filter(Boolean).join(' · '),
+  ...(syncing ? { badge: i.catalogId ? 'Library' : 'Custom' } : {}),
+});
+const pickedName = (c: PickerChoice | null, items: SupplementItem[]) =>
+  !c ? null : c.kind === 'mine' ? items.find(i => i.id === c.id)?.n ?? null : c.kind === 'catalog' ? c.item.name : c.name;
+
 function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSlot; label: string; date: string; items: SupplementItem[]; taken: Taken; editing: boolean }) {
   const s = useAppStore.getState();
+  const syncing = useAppStore(x => x.sync !== null);
   const [name, setName] = useState(''); const [dose, setDose] = useState('');
+  // What was picked in the name field (ADR 036), used by Add while the name still matches it.
+  const [pick, setPick] = useState<PickerChoice | null>(null);
+  const [err, setErr] = useState('');
   const [arming, setArming] = useState<string | null>(null); // the supplement whose Remove was pressed once
   const list = scheduleOf(items)[slot]; const t = slotTally(items, taken, date, slot);
-  const add = (e: FormEvent) => { e.preventDefault(); if (s.addSupplement(slot, name, dose)) { setName(''); setDose(''); } };
+  const held = pick && pickerKey(pickedName(pick, items)) === pickerKey(name) ? pick : null;
+  const done = () => { setName(''); setDose(''); setPick(null); setErr(''); };
+  // Add: one of yours moves into this section, a catalog product joins your library in it, anything else is a new supplement.
+  const add = (e: FormEvent) => {
+    e.preventDefault();
+    if (held?.kind === 'mine') { if (s.setSupplementSlot(held.id, slot, dose)) done(); return; }
+    if (held?.kind === 'catalog') { const m = s.addCatalogSupplement(held.item, { slot, dose }); if (m) setErr(m); else done(); return; }
+    if (s.addSupplement(slot, name, dose)) done();
+  };
   return (
     <div className={`card${t.full ? ' done' : ''}`} role="group" aria-labelledby={`supp-h-${slot}`}>
       <div className="warmhead">
@@ -32,19 +56,17 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
         </div>
       ))}
       {editing && (
-        <form className="warmadd" onSubmit={add}>
-          <input type="text" id={`suppname-${slot}`} aria-label={`Supplement name, ${label}`} placeholder="Supplement" maxLength={60} value={name} onChange={e => setName(e.target.value)} />
-          <input type="text" aria-label={`Dose, ${label} (optional)`} placeholder="Dose (optional)" maxLength={40} value={dose} onChange={e => setDose(e.target.value)} />
+        <form className="suppadd" onSubmit={add}>
+          <ItemPicker id={`suppname-${slot}`} label={`Add to ${label}`} kind="supplement" value={name} maxLength={60} placeholder="Name or brand, e.g. creatine now"
+            mine={items.filter(i => i.slot !== slot).map(i => mineOf(i, syncing))} also={list.map(i => mineOf(i, syncing))}
+            catalogMeta={c => [c.brand, c.data.form].filter(Boolean).join(' · ')} createLabel={n => `Add “${n}” as a new supplement`}
+            onText={v => { setName(v); setErr(''); }} onPick={setPick} />
+          <label className="field">Dose (optional)<input type="text" id={`suppdose-${slot}`} placeholder="e.g. 5 g" maxLength={40} value={dose} onChange={e => setDose(e.target.value)} /></label>
           <button type="submit" className="btn sm" id={`suppadd-${slot}`} disabled={!name.trim()}>Add</button>
+          {held?.kind === 'mine' && <p className="note">Moves it to {label}{dose.trim() ? ' with this dose' : ''}.</p>}
+          {held?.kind === 'catalog' && <p className="note">From the catalog. It joins your supplements in {label}.</p>}
+          {err && <p className="note err" role="alert">{err}</p>}
         </form>
-      )}
-      {editing && items.some((i) => !i.slot) && (
-        <label className="field">Add from your library
-          <select id={`supplib-${slot}`} value="" onChange={e => { if (e.target.value) s.setSupplementSlot(e.target.value, slot); }}>
-            <option value="">Choose…</option>
-            {items.filter((i) => !i.slot).map((i) => <option key={i.id} value={i.id}>{i.n}{i.dose ? ` · ${i.dose}` : ''}</option>)}
-          </select>
-        </label>
       )}
     </div>
   );
