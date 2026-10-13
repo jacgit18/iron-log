@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { offlineView } from './offline.js';
 
-const base = { syncOn: true, online: true, wasOffline: false, pending: 0 };
+const base = { syncOn: true, online: true, wasOffline: false, pending: 0, syncing: false };
 
 describe('offlineView', () => {
   it('says nothing while syncing is off, even offline: everything is local anyway', () => {
@@ -15,8 +15,12 @@ describe('offlineView', () => {
     expect(offlineView({ ...base, online: false })).toBe('offline');
     expect(offlineView({ ...base, online: false, pending: 2, wasOffline: true })).toBe('offline');
   });
-  it('after coming back it says syncing while changes are still waiting, then clears itself', () => {
-    expect(offlineView({ ...base, wasOffline: true, pending: 2 })).toBe('reconnecting');
+  it('after coming back it says syncing while changes are being sent, then clears itself', () => {
+    expect(offlineView({ ...base, wasOffline: true, pending: 2, syncing: true })).toBe('reconnecting');
+    expect(offlineView({ ...base, wasOffline: true, pending: 0, syncing: true })).toBe('hidden');
     expect(offlineView({ ...base, wasOffline: true, pending: 0 })).toBe('hidden');
+  });
+  it('does not claim to be syncing when the send is not running (the server keeps failing, or sync is paused)', () => {
+    expect(offlineView({ ...base, wasOffline: true, pending: 2, syncing: false })).toBe('hidden');
   });
 });

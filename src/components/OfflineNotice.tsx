@@ -7,7 +7,8 @@ const isOnline = () => typeof navigator === 'undefined' || navigator.onLine !== 
 
 // A slim, calm line under the header while the phone has no connection and syncing is on: what was done is kept on the phone and goes
 // up by itself. It sits in the page flow (not fixed), so it never covers the timer bar, tab bar or buttons, and never blocks a tap.
-// After the connection returns it says so while changes are still being sent, then goes away. Not shown with syncing off.
+// After the connection returns it says so while changes are actually being sent, then goes away (also if the server keeps failing: SyncNotice
+// then says changes are waiting). Not shown with syncing off.
 export default function OfflineNotice() {
   const on = useFeature('offlineNotice');
   const sync = useAppStore(s => s.sync);
@@ -23,7 +24,7 @@ export default function OfflineNotice() {
   const pending = sync ? sync.pendingPaths.length : 0;
   // Once everything is sent, forget the outage so the next return to the network starts clean.
   if (online && wasOffline && pending === 0) setWasOffline(false); // adjusted while rendering, React reruns at once
-  const view = on ? offlineView({ syncOn: !!sync, online, wasOffline, pending }) : 'hidden';
+  const view = on ? offlineView({ syncOn: !!sync, online, wasOffline, pending, syncing: sync?.state === 'syncing' }) : 'hidden';
   // The region stays mounted (empty) so a screen reader hears the text appear and change.
   return (
     <div className={view === 'hidden' ? undefined : 'notice offlinenote'} role="status" aria-live="polite">

@@ -196,7 +196,7 @@ test.describe('the Sync panel', () => {
   test.describe('the offline notice (everyone)', () => {
     const offlineNote = page => page.getByRole('status').filter({ hasText: 'Changes are saved on this phone' });
 
-    test('shows while offline, then says it is syncing once back, and the kept write is sent after the connection returns', async ({ page, context }) => {
+    test('shows while offline, goes away once back, and the kept write is sent again (even while the server keeps failing)', async ({ page, context }) => {
       let commandsSeen = 0;
       await openSynced(page, route => { commandsSeen++; return route.abort(); });
       await expect(offlineNote(page)).toHaveCount(0);
@@ -210,8 +210,9 @@ test.describe('the Sync panel', () => {
       const before = commandsSeen;
       await context.setOffline(false); // the network is back; the server is still failing, so the write is still waiting
       await expect(offlineNote(page)).toHaveCount(0);
-      await expect(page.getByRole('status').filter({ hasText: 'Back online' })).toBeVisible();
       await expect.poll(() => commandsSeen, { timeout: 30_000 }).toBeGreaterThan(before); // the wake sends the kept write again
+      // the send failed, so sync is paused again: the notice must not stay up claiming to sync (SyncNotice says the change is waiting)
+      await expect(page.getByRole('status').filter({ hasText: 'Back online' })).toHaveCount(0);
       await expect(page.locator('#chk-A-d1s1')).toBeChecked();
     });
 
