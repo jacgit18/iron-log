@@ -405,7 +405,8 @@ body.timing{padding-bottom:130px}
 .sjump{display:flex;flex-wrap:wrap;gap:8px;position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);padding-block:6px 8px}
 .sjump .chip{cursor:pointer;font-weight:600;color:var(--ink)}
 .sjump .chip[aria-current="true"]{background:var(--m4);border-color:var(--m4);color:var(--accent-ink)}
-@media (min-width:701px){.sgroup>h2{scroll-margin-top:72px}}
+/* Focus not obscured (2.4.12) under the sticky jump row, at every width: keep focus and jump targets below the row's real height (--sjump-h, set from a ResizeObserver, so two wrapped lines of chips count). */
+html:has(.sjump){scroll-padding-top:calc(var(--sjump-h,64px) + 8px + env(safe-area-inset-top,0px))}
 .sgroup{display:flex;flex-direction:column;gap:12px;scroll-margin-top:8px}
 .sgroup>h2{margin:0;padding-bottom:6px;border-bottom:2px solid var(--line);font-family:"Barlow Condensed","Barlow Fallback",system-ui,sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
 .sgroup>h2:focus-visible{outline-offset:4px}

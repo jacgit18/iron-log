@@ -98,3 +98,32 @@ test('each panel keeps its background in a closed fold named for it', async ({ p
   await phases.locator('summary').click();
   await expect(phases.getByText(/placeholders until you set your own/)).toBeVisible();
 });
+
+// Waits until a smooth scroll has stopped: the page position is the same two frames running.
+const settled = page => page.waitForFunction(() => new Promise(r => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => r(scrollY === y))); }));
+const gapBelowRow = (page, id) => page.evaluate(i => document.getElementById(i).getBoundingClientRect().top - document.querySelector('.sjump').getBoundingClientRect().bottom, id);
+
+test('focus moving back up the page is never hidden under the sticky row (desktop)', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await openSettings(page);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  // Firefox and Safari bring a focused field into view at the nearest edge (Chrome centres it): this is the case the row could cover.
+  await page.evaluate(() => document.getElementById('rx-strength').scrollIntoView({ block: 'nearest' }));
+  await settled(page);
+  expect(await gapBelowRow(page, 'rx-strength')).toBeGreaterThanOrEqual(0);
+});
+
+test('with large text the chips wrap, and a jump still lands below the row', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await openSettings(page);
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  const nav = page.getByRole('navigation', { name: 'Jump to a settings group' });
+  expect(await nav.evaluate(n => n.getBoundingClientRect().height)).toBeGreaterThan(100); // two lines of chips
+  await nav.getByRole('button', { name: 'Data' }).click();
+  await expect(page.locator('#set-data-h')).toBeFocused();
+  await expect(page.locator('#set-data-h')).toBeInViewport();
+  await settled(page);
+  expect(await gapBelowRow(page, 'set-data-h')).toBeGreaterThanOrEqual(-1);
+});
