@@ -12,7 +12,6 @@ import CommitInput from '../CommitInput.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
-import SupplementLibrary from './SupplementLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
 
 const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
@@ -198,7 +197,7 @@ function ProgramEditor() {
   );
 }
 
-// The Program tab: the programs, and the library of every exercise.
+// The Program tab: the programs, and the exercise and stretch libraries (supplements are on Daily → Supplements, under Edit).
 export default function Editor() {
   const [view, setView] = useState('program');
   return (
@@ -208,10 +207,9 @@ export default function Editor() {
           <button type="button" className={view === 'program' ? 'on' : ''} aria-pressed={view === 'program'} onClick={() => setView('program')}>Programs</button>
           <button type="button" className={view === 'exercises' ? 'on' : ''} aria-pressed={view === 'exercises'} onClick={() => setView('exercises')}>Exercise library</button>
           <button type="button" className={view === 'stretches' ? 'on' : ''} aria-pressed={view === 'stretches'} onClick={() => setView('stretches')}>Stretch library</button>
-          <button type="button" className={view === 'supplements' ? 'on' : ''} aria-pressed={view === 'supplements'} onClick={() => setView('supplements')}>Supplement library</button>
         </div>
       </div>
-      {view === 'program' ? <ProgramEditor /> : view === 'stretches' ? <StretchLibrary /> : view === 'supplements' ? <SupplementLibrary /> : <ExerciseLibrary />}
+      {view === 'program' ? <ProgramEditor /> : view === 'stretches' ? <StretchLibrary /> : <ExerciseLibrary />}
     </>
   );
 }

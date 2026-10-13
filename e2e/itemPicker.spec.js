@@ -243,12 +243,24 @@ test('Exercise library: the search shows catalog matches, Add moves one into you
 test('Supplement library: the search asks the server and Add keeps it Library only', async ({ page }) => {
   await page.route('**/api/catalog/search?*', search());
   await openSynced(page);
-  await page.click('#tab-program');
-  await page.getByRole('button', { name: 'Supplement library', exact: true }).click();
+  await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.click('#sched-edit');
   await page.locator('.exlib').getByRole('searchbox').fill('kaged');
   const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
   await fromCatalog.getByRole('button', { name: 'Add Creatine HCl by Kaged from the catalog' }).click();
   const row = page.locator('.exlib > .exrows .exrow').filter({ hasText: 'Creatine HCl' });
   await expect(row).toHaveCount(1);
   await expect(row.locator('xpath=ancestor::div[1]').locator('.sect')).toHaveText('Library only');
+});
+
+test('the Supplement library is under Edit on Daily → Supplements, not on the Program tab', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#tab-program');
+  await expect(page.getByRole('group', { name: 'Program tab view' }).getByRole('button')).toHaveText(['Programs', 'Exercise library', 'Stretch library']);
+  await page.click('#tab-daily'); await page.click('#daily-supplements');
+  await expect(page.locator('#suplib-h')).toHaveCount(0);
+  await page.click('#sched-edit');
+  await expect(page.locator('#suplib-h')).toHaveText('Supplement library');
+  await expect(page.locator('.exlib .exrow').filter({ hasText: 'Fish Oil' })).toHaveCount(1); // a Library only one is listed
+  await page.click('#sched-edit');
+  await expect(page.locator('#suplib-h')).toHaveCount(0);
 });

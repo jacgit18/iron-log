@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
-import CatalogMatches from './CatalogMatches.jsx';
+import CatalogMatches from '../program/CatalogMatches.jsx';
 
-// Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later.
+// Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later. Shown under the
+// schedule on Daily → Supplements while Edit is on (spec inline-catalog-picker step 6; it was a Program tab view before).
 // Syncing, each is badged Library (added from the catalog, with its brand) or Custom, with a Source filter once both kinds are listed
 // (ADR 027, 029). Local mode has no catalog, so no badges.
 export default function SupplementLibrary() {
@@ -25,7 +26,7 @@ export default function SupplementLibrary() {
           <button type="button" className="btn primary" id="suplib-new" onClick={() => openModal({ type: 'supplement' })}>+ New supplement</button>
         </div>
       </div>
-      <p className="note">Your supplements. Ones set to Morning, Noon or Night are on the Supplements tab every day; “Library only” ones are kept here to schedule later.</p>
+      <p className="note">Your supplements. Ones set to Morning, Noon or Night are on the schedule above every day; “Library only” ones are kept here to schedule later.</p>
       <div className="filterbar" role="search">
         <label className="field">Search<input type="search" value={q} placeholder="Name or brand" onChange={e => setQ(e.target.value)} /></label>
         {sources && <label className="field">Source
