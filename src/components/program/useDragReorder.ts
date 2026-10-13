@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { haptic } from '../../lib/haptics.js';
 
 /** Where a drag is now: the row picked up, the index it would land on, how far it has been dragged and the room it takes (px). */
 export type DragState = { from: number; to: number; dy: number; size: number };
 
 const EDGE = 80; // px from the top or bottom of the window where a drag starts scrolling the page (clears the phone tab bar)
-const STEP = 10; // px scrolled per frame there
+const SLOW = 150; // px per second at the inner edge of that zone
+const FAST = 900; // px per second at the window's edge
 const SLOP = 6; // px the pointer must move before the page scrolls, so grabbing a row near an edge does not scroll by itself
+
+/** Page scroll speed (px per second, negative is up) for a pointer at `y` in a window `height` tall: none in the middle, faster the nearer an edge. */
+export function edgeSpeed(y: number, height: number): number {
+  const speed = (depth: number) => SLOW + (FAST - SLOW) * Math.min(1, Math.max(0, depth));
+  if (y < EDGE) return -speed((EDGE - y) / EDGE);
+  if (y > height - EDGE) return speed((y - (height - EDGE)) / EDGE);
+  return 0;
+}
 
 /** How far row `i` slides to make room while row `from` is dragged to `to`. */
 export function shiftOf(d: DragState | null, i: number): number {
@@ -41,16 +51,20 @@ export function useDragReorder(count: number, onDrop: (from: number, to: number)
     const el = rows.current[from];
     const size = el ? el.offsetHeight + (parseFloat(getComputedStyle(el.parentElement ?? el).rowGap) || 0) : 0; // the row plus the list's gap
     const startY = e.clientY + window.scrollY;
-    let y = e.clientY; let to = from; let frame = 0; let moved = false;
+    let y = e.clientY; let to = from; let frame = 0; let moved = false; let lastTs = 0;
 
     const update = () => {
       const dy = y + window.scrollY - startY;
-      to = dropIndex(mids, from, mids[from] + dy);
+      const next = dropIndex(mids, from, mids[from] + dy);
+      if (next !== to) haptic(6); // a tick each time the row passes a neighbour
+      to = next;
       setDrag({ from, to, dy, size });
     };
-    const scroll = () => {
-      const dir = !moved ? 0 : y < EDGE ? -1 : y > window.innerHeight - EDGE ? 1 : 0;
-      if (dir) { window.scrollBy(0, dir * STEP); update(); }
+    // Scrolls by the time since the last frame, so the speed is the same on a 60 and a 120 Hz screen.
+    const scroll = (ts: number) => {
+      const dt = lastTs ? Math.min(ts - lastTs, 50) : 0; lastTs = ts;
+      const v = moved ? edgeSpeed(y, window.innerHeight) : 0;
+      if (v && dt) { window.scrollBy(0, v * dt / 1000); update(); }
       frame = requestAnimationFrame(scroll);
     };
     const move = (ev: PointerEvent) => { y = ev.clientY; if (Math.abs(y + window.scrollY - startY) > SLOP) moved = true; update(); };
@@ -62,7 +76,7 @@ export function useDragReorder(count: number, onDrop: (from: number, to: number)
       window.removeEventListener('keydown', key, true);
       stop.current = null;
       setDrag(null);
-      if (commit && to !== from) drop.current(from, to);
+      if (commit && to !== from) { haptic(10); drop.current(from, to); }
     };
     const up = () => end(true);
     const cancel = () => end(false);
@@ -75,6 +89,7 @@ export function useDragReorder(count: number, onDrop: (from: number, to: number)
     stop.current = () => end(false);
     frame = requestAnimationFrame(scroll);
     setDrag({ from, to, dy: 0, size });
+    haptic(12); // picked up
   };
 
   return {
@@ -82,6 +97,9 @@ export function useDragReorder(count: number, onDrop: (from: number, to: number)
     /** Ref for row `i`, so the hook can measure it. */
     rowRef: (i: number) => (el: HTMLElement | null) => { rows.current[i] = el; },
     /** Props for row `i`'s drag handle. */
-    handleProps: (i: number) => ({ onPointerDown: (e: ReactPointerEvent) => start(i, e) }),
+    handleProps: (i: number) => ({
+      onPointerDown: (e: ReactPointerEvent) => start(i, e),
+      onContextMenu: (e: { preventDefault(): void }) => e.preventDefault(), // a long press on Android would open a menu and cancel the drag
+    }),
   };
 }
