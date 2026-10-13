@@ -26,6 +26,7 @@ import {
   loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile, utf8b64,
   backupCfg, sameProg, backupError, weekFingerprint, GH_SERVER, GH_TOOL, ghCfg, dataFingerprint, parseDataFile, entryId, findEntry, normConfig,
 } from '../lib/export.js';
+import { exportFile, mimeFor, shareFile } from '../lib/share.js';
 import { bwSorted } from '../lib/body.js';
 import { usageOf } from '../lib/exerciseLibrary.js';
 import { MUSCLE_MAP } from '../lib/muscles.js';
@@ -48,7 +49,7 @@ let histFailed = false; // the last history load lost some weeks to an error
 // Outside the Claude host, downloads are a plain blob link.
 const blobSave = {
   save: async ({ filename, data }: { filename: string; data: BlobPart }) => {
-    const url = URL.createObjectURL(new Blob([data], { type: 'text/csv' }));
+    const url = URL.createObjectURL(new Blob([data], { type: mimeFor(filename) }));
     const a = document.createElement('a'); a.href = url; a.download = filename;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -954,19 +955,54 @@ export const useAppStore = create<AppState>((set, get) => ({
     } finally { set({ exporting: null }); }
   },
   exportCsv() { return get().runExport('csv', dl => dl.save({ filename: `iron-log-${ymd(new Date())}.csv`, data: buildCsv(get().snapshot()) })); },
+  // The file an export produces: the download and the Share button both use it, so they hand over the same bytes.
+  async buildExportFile(kind) {
+    if (kind === 'data') {
+      const d = buildDataFile(await get().fullSnapshot(), await get().allWeeks());
+      return { filename: `iron-log-data-${ymd(new Date())}.json`, data: JSON.stringify(d, null, 1) };
+    }
+    const which = kind === 'xlsx-week' ? 'week' : 'all';
+    const X = await loadXLSX(); const S = get().snapshot();
+    const wb = which === 'week' ? buildWeekWorkbook(X, S, get().weekKey(), get().week) : buildOverallWorkbook(X, S, await get().allWeeks());
+    const data = X.write(wb, { type: 'array', bookType: 'xlsx', compression: true });
+    return { filename: which === 'week' ? `iron-log-week-${get().weekKey()}.xlsx` : `iron-log-${ymd(new Date())}.xlsx`, data };
+  },
   downloadExcel(which) {
-    return get().runExport(`xlsx-${which}`, async dl => {
-      const X = await loadXLSX(); const S = get().snapshot();
-      const wb = which === 'week' ? buildWeekWorkbook(X, S, get().weekKey(), get().week) : buildOverallWorkbook(X, S, await get().allWeeks());
-      const data = X.write(wb, { type: 'array', bookType: 'xlsx', compression: true });
-      await dl.save({ filename: which === 'week' ? `iron-log-week-${get().weekKey()}.xlsx` : `iron-log-${ymd(new Date())}.xlsx`, data });
-    });
+    return get().runExport(`xlsx-${which}`, async dl => { await dl.save(await get().buildExportFile(`xlsx-${which}`)); });
   },
   downloadData() {
-    return get().runExport('data', async dl => {
-      const d = buildDataFile(await get().fullSnapshot(), await get().allWeeks());
-      await dl.save({ filename: `iron-log-data-${ymd(new Date())}.json`, data: JSON.stringify(d, null, 1) });
-    });
+    return get().runExport('data', async dl => { await dl.save(await get().buildExportFile('data')); });
+  },
+
+  // Share sheet (admin-only for now, ADR-free UI feature). The file is built first (async), then shared; if the browser says the tap
+  // ran out while it was built (iOS Safari is strict), the built file is kept and a second tap shares it with no waiting.
+  shareReady: null,
+  async shareExport(kind) {
+    const dl = get().dl; if (!dl || get().exporting) return;
+    set({ exporting: kind, shareReady: null });
+    try {
+      let built: { filename: string; data: BlobPart };
+      try { built = await get().buildExportFile(kind); }
+      catch (err) { flag((err as Error)?.message || 'Export isn’t available here'); return; }
+      const file = exportFile(built.filename, built.data);
+      const res = await shareFile(file);
+      if (res === 'shared') flag('Shared');
+      else if (res === 'blocked') set({ shareReady: { kind, file } });
+      else if (res === 'failed') await get().saveInstead(built);
+      // 'cancelled': the person closed the share sheet, nothing to say
+    } finally { set({ exporting: null }); }
+  },
+  async shareAgain() {
+    const ready = get().shareReady; if (!ready) return;
+    set({ shareReady: null });
+    const res = await shareFile(ready.file); // first call in the click: no await before it
+    if (res === 'shared') flag('Shared');
+    else if (res !== 'cancelled') await get().saveInstead({ filename: ready.file.name, data: await ready.file.arrayBuffer() });
+  },
+  async saveInstead(built) {
+    const dl = get().dl;
+    try { if (!dl) throw new Error('no downloads'); await dl.save(built); flag('Couldn’t open the share sheet, so the file was downloaded instead'); }
+    catch { flag('Couldn’t share or download the file'); }
   },
   snooze: () => set({ snoozeBackup: true }),
 

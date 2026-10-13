@@ -19,6 +19,8 @@ import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { BackupMessage } from '../progress/Progress.jsx';
+import { IMPORT_ACCEPT } from '../../lib/importFile.js';
+import ShareExport from './ShareExport.js';
 
 function ModePanel() {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
@@ -178,8 +180,9 @@ function DataPanel() {
       <p>To import, use the <b>iron-log.xlsx</b> workbook or the <b>iron-log-data .json</b> file. Both bring back everything. A <b>.csv</b> export only brings back logged sessions. Workbooks exported by an older version of the app only bring back logged sessions, body weight and main settings.</p>
       <div className="actions" style={{ justifyContent: 'flex-start' }}>
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
+        <ShareExport kind="data" label="Share data file" />
         <label className="btn filebtn">Import from file
-          <input type="file" id="imp-file" accept=".json,application/json,.csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden aria-describedby={importError ? 'imp-err' : undefined} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
+          <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : undefined} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
       </div>
       {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
@@ -207,6 +210,8 @@ function BackupPanel() {
           <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
           <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
         </>}
+        <ShareExport kind="xlsx-all" label="Share Excel" />
+        <ShareExport kind="xlsx-week" label="Share this week" />
       </div>
       {mcp && <>
         <label className="field">Backup repo (owner/name)

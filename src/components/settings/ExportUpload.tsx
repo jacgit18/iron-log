@@ -3,6 +3,7 @@ import { parseDataFile } from '../../lib/export.js';
 import { dataFileDocs, describeLegacy, planLegacy, type LegacyPlan } from '../../sync/legacy.js';
 import { writeLegacyMarker } from '../../sync/legacyMarker.js';
 import { importFailure } from '../../sync/labels.js';
+import { JSON_ACCEPT, importFileProblem, readFailure } from '../../lib/importFile.js';
 import { flag, getSyncApi, useAppStore } from '../../store/useAppStore.js';
 
 // Phase E, from a file: the same all-or-nothing upload as the card, but the data comes from an Iron Log export instead of this
@@ -20,8 +21,12 @@ export default function ExportUpload() {
     setProblem('');
     setPicked(null);
     if (!file) return;
+    const tooBig = importFileProblem(file);
+    if (tooBig) { setProblem(tooBig); return; }
     try {
-      const data = parseDataFile(await file.text());
+      let text: string;
+      try { text = await file.text(); } catch (err) { throw new Error(readFailure(err)); }
+      const data = parseDataFile(text);
       const plan = planLegacy(dataFileDocs(data));
       if (!plan.commands.length) { setProblem('That file holds nothing to upload.'); return; }
       setPicked({ name: file.name, exportedAt: data.exportedAt ?? null, plan });
@@ -50,7 +55,7 @@ export default function ExportUpload() {
         : (
           <>
             <p>Moving from another copy of Iron Log? Choose its export file (Settings → Export &amp; import → Download data there). It is added to your account once, all or nothing, and only while the account is empty. Do this before logging anything here.</p>
-            <input ref={input} type="file" accept=".json,application/json" hidden aria-label="Iron Log export file" onChange={e => { void choose(e.target.files?.[0]); e.target.value = ''; }} />
+            <input ref={input} type="file" accept={JSON_ACCEPT} hidden aria-label="Iron Log export file" onChange={e => { void choose(e.target.files?.[0]); e.target.value = ''; }} />
             <div className="actions" style={{ justifyContent: 'flex-start' }}>
               <button type="button" className="btn" disabled={busy} onClick={() => input.current?.click()}>Choose export file…</button>
             </div>
