@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import boardLight from '../assets/landing/board.png';
-import boardDark from '../assets/landing/board-dark.png';
+import boardLight from '../assets/landing/board.webp';
+import boardDark from '../assets/landing/board-dark.webp';
 import { setDevUser } from '../sync/devUser.js';
 import { useGoogleSignIn } from '../sync/useGoogleSignIn.js';
 import LegalLinks from './LegalLinks.js';
