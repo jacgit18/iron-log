@@ -252,10 +252,13 @@ export function createApiDb(options: ApiDbOptions) {
           // The account's data was erased from another device: every document is different now. Changes this device had not sent were
           // made from the old data, so they go too ("your other devices clear themselves"); sent against the emptied mirror, every
           // entry in them would come back as new.
-          const dropped = outbox.paths().length;
-          if (dropped) {
+          // Set-aside writes go too, on purpose: Try again would plan them against the emptied mirror and bring the erased entries back.
+          const unsent = outbox.paths().length; const setAside = outbox.quarantined().length;
+          if (unsent || setAside) {
             outbox.clear(); bases.clear();
-            note('', `Everything in this account was erased on another device, so ${dropped === 1 ? 'a change' : `${dropped} changes`} not yet sent from here ${dropped === 1 ? 'was' : 'were'} dropped.`);
+            const n = (k: number, one: string, many: string) => (k === 1 ? one : `${k} ${many}`);
+            const what = [unsent ? `${n(unsent, 'a change not yet sent', 'changes not yet sent')}` : '', setAside ? `${n(setAside, 'a change the server had set aside', 'changes the server had set aside')}` : ''].filter(Boolean).join(' and ');
+            note('', `Everything in this account was erased on another device, so ${what} from here ${unsent + setAside === 1 ? 'was' : 'were'} dropped.`);
             lastSyncedAt = lastPullAt;
           }
           emitAll(); announce();

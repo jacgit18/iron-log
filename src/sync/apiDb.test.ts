@@ -1054,6 +1054,21 @@ describe('erasing the account (Phase F)', () => {
     expect(db.status().notices.map(n => n.text)).toEqual(['Everything in this account was erased on another device, so a change not yet sent from here was dropped.']);
   });
 
+  it('a change the server had set aside is dropped too, and counted, so Try again cannot bring erased entries back', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1'));
+    server.fail.push({ ok: false, class: 'refused', status: 422, reason: 'invalid-input' });
+    await db.doc('logs/squat').set(logs2('e1', 'e2')).catch(() => undefined); // set aside
+    expect(db.quarantined()).toHaveLength(1);
+    server.erase(); // erased on another device
+    await db.syncNow();
+    expect(db.quarantined()).toEqual([]); // nothing pending, but the set-aside write goes too
+    expect(db.status().notices.map(n => n.text)).toEqual(['Everything in this account was erased on another device, so a change the server had set aside from here was dropped.']);
+    expect([...server.rows.keys()].filter(k => k.startsWith('log_entries'))).toEqual([]);
+  });
+
   it('deleting the account does the same on this device', async () => {
     const { server, storage, db } = setup();
     db.start();
