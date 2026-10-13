@@ -222,3 +222,33 @@ test('Supplements tab: a slow answer to an older search never replaces the newer
   await page.waitForTimeout(1500); // the "creatine" answer (both products) arrives now
   await expect(catalogOpts).toHaveText([/Creatine HCl/]);
 });
+
+// Step 5: the libraries' own search shows catalog matches with Add; there is no Browse catalog any more.
+test('Exercise library: the search shows catalog matches, Add moves one into your library, and Browse catalog is gone', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#tab-program');
+  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Browse catalog' })).toHaveCount(0);
+  await page.locator('.exlib').getByRole('searchbox').fill('cable');
+  const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
+  await expect(fromCatalog.locator('.exrow b')).toHaveText(['Cable Fly', 'Cable Lateral Raise (Kneeling)']);
+  await fromCatalog.getByRole('button', { name: 'Add Cable Fly from the catalog' }).click();
+  await expect(fromCatalog.locator('.exrow b')).toHaveText(['Cable Lateral Raise (Kneeling)']);
+  await expect(page.locator('.exlib > .exrows .exrow b').filter({ hasText: 'Cable Fly' })).toContainText('Library');
+  // the equipment filter applies to the catalog too
+  await page.locator('.exlib').getByRole('combobox', { name: 'Equipment' }).selectOption('barbell');
+  await expect(fromCatalog.getByText('No exercises in the catalog match that, or you have them all.')).toBeVisible();
+});
+
+test('Supplement library: the search asks the server and Add keeps it Library only', async ({ page }) => {
+  await page.route('**/api/catalog/search?*', search());
+  await openSynced(page);
+  await page.click('#tab-program');
+  await page.getByRole('button', { name: 'Supplement library', exact: true }).click();
+  await page.locator('.exlib').getByRole('searchbox').fill('kaged');
+  const fromCatalog = page.getByRole('region', { name: 'From the catalog' });
+  await fromCatalog.getByRole('button', { name: 'Add Creatine HCl by Kaged from the catalog' }).click();
+  const row = page.locator('.exlib > .exrows .exrow').filter({ hasText: 'Creatine HCl' });
+  await expect(row).toHaveCount(1);
+  await expect(row.locator('xpath=ancestor::div[1]').locator('.sect')).toHaveText('Library only');
+});

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
-import { useFeature } from '../../features.js';
+import CatalogMatches from './CatalogMatches.jsx';
 
 // Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later.
 // Syncing, each is badged Library (added from the catalog, with its brand) or Custom, with a Source filter once both kinds are listed
@@ -10,7 +10,6 @@ import { useFeature } from '../../features.js';
 export default function SupplementLibrary() {
   const items = useAppStore(s => s.supp.items);
   const syncing = useAppStore(s => s.sync !== null);
-  const catalog = useFeature('catalog') && syncing;
   const { openModal, moveSupplement } = useAppStore.getState();
   const [q, setQ] = useState(''); const [src, setSrc] = useState('');
   const needle = q.trim().toLowerCase();
@@ -23,7 +22,6 @@ export default function SupplementLibrary() {
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <h2 id="suplib-h" tabIndex={-1}>Supplement library</h2>
         <div className="inline">
-          {catalog && <button type="button" className="btn" id="suplib-catalog" onClick={() => openModal({ type: 'catalog', kind: 'supplement' })}>Browse catalog</button>}
           <button type="button" className="btn primary" id="suplib-new" onClick={() => openModal({ type: 'supplement' })}>+ New supplement</button>
         </div>
       </div>
@@ -69,6 +67,11 @@ export default function SupplementLibrary() {
         })}
         {!shown.length && <p className="note">{items.length ? 'No supplement matches. Clear the search or the Source filter.' : 'No supplements yet. Add one with + New supplement.'}</p>}
       </div>
+      {src !== 'custom' && (
+        <CatalogMatches kind="supplement" q={q} unit="products" source="Products from the NIH Dietary Supplement Label Database. Added as Library only, with no dose: edit one to schedule it."
+          mine={items.map(i => ({ id: i.id, name: i.n, ...(i.brand ? { brand: i.brand } : {}), ...(i.catalogId ? { catalogId: i.catalogId } : {}) }))}
+          meta={c => [c.brand, c.data.form].filter(Boolean).join(' · ') || 'No brand'} onAdd={c => useAppStore.getState().addCatalogSupplement(c)} />
+      )}
     </section>
   );
 }

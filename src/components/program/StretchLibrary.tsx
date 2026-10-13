@@ -3,7 +3,8 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { videoLabel } from '../../lib/data.js';
 import { TIERS, tierLabel } from '../../lib/stretches.js';
 import RemovedNotice from '../RemovedNotice.jsx';
-import { useFeature } from '../../features.js';
+import CatalogMatches from './CatalogMatches.jsx';
+import { catalogStretchGroup } from '../../lib/stretches.js';
 
 // Every stretch, by group, with when it shows on the Stretches tab. What is set here is the routine on every day.
 // Syncing, each stretch is badged Library (added from the catalog) or Custom (your own), with a Source filter once both kinds are listed
@@ -11,7 +12,6 @@ import { useFeature } from '../../features.js';
 export default function StretchLibrary() {
   const items = useAppStore(s => s.stretches);
   const syncing = useAppStore(s => s.sync !== null);
-  const catalog = useFeature('catalog') && syncing;
   const { openModal, moveStretch } = useAppStore.getState();
   const [q, setQ] = useState(''); const [src, setSrc] = useState('');
   const needle = q.trim().toLowerCase();
@@ -24,7 +24,6 @@ export default function StretchLibrary() {
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <h2 id="slib-h" tabIndex={-1}>Stretch library</h2>
         <div className="inline">
-          {catalog && <button type="button" className="btn" id="slib-catalog" onClick={() => openModal({ type: 'catalog', kind: 'stretch' })}>Browse catalog</button>}
           <button type="button" className="btn primary" id="slib-new" onClick={() => openModal({ type: 'stretch' })}>+ New stretch</button>
         </div>
       </div>
@@ -71,6 +70,11 @@ export default function StretchLibrary() {
         })}
         {!shown.length && <p className="note">{items.length ? 'No stretch matches. Clear the search or the Source filter.' : 'No stretches yet. Add one with + New stretch.'}</p>}
       </div>
+      {src !== 'custom' && (
+        <CatalogMatches kind="stretch" q={q} unit="stretches" source="Stretches from free-exercise-db (public domain). Added as Library only; edit one to put it on a day."
+          mine={items.map(i => ({ id: i.id, name: i.n, ...(i.catalogId ? { catalogId: i.catalogId } : {}) }))}
+          meta={catalogStretchGroup} onAdd={c => useAppStore.getState().addCatalogStretch(c)} />
+      )}
     </section>
   );
 }

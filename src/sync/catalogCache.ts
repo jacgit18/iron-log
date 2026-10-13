@@ -1,6 +1,6 @@
 /* The exercise and stretch catalogs for the item picker (ADR 036): each fetched once per app session, the first time a picker needs it,
    and searched on the device. Only a good answer is kept, so after offline or a server error the next picker asks again. Kept in memory
-   only: like the browse sheet, nothing is stored for offline (ADR 025). */
+   only: nothing is stored for offline (ADR 025). */
 import type { CatalogKind } from '../types.ts';
 import { fetchCatalog, type CatalogResult } from './catalog.js';
 

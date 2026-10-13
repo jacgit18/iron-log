@@ -6,17 +6,14 @@ import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
 import { libraryRows, filterRows, muscleList, hasTwoSources } from '../../lib/exerciseLibrary.js';
 import { progName } from '../../lib/logic.js';
 import { videoLabel, isCatalogId } from '../../lib/data.js';
-import { useFeature } from '../../features.js';
 import RemovedNotice from '../RemovedNotice.jsx';
+import CatalogMatches from './CatalogMatches.jsx';
 
 // Every exercise (from the library, and your own marked Custom) with what is set on it, searchable, edited in one sheet.
 export default function ExerciseLibrary() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs);
   const { openModal } = useAppStore.getState();
-  // The catalog is on the server (ADR 025): local mode, with no account, has none.
-  const syncing = useAppStore(s => s.sync !== null);
-  const catalog = useFeature('catalog') && syncing;
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
   const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)
@@ -27,7 +24,6 @@ export default function ExerciseLibrary() {
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <h2 id="exlib-h" tabIndex={-1}>Exercise library</h2>
         <div className="inline">
-          {catalog && <button type="button" className="btn" id="exlib-catalog" onClick={() => openModal({ type: 'catalog' })}>Browse catalog</button>}
           <button type="button" className="btn primary" onClick={() => openModal({ type: 'exercise', exId: null })}>+ New exercise</button>
         </div>
       </div>
@@ -78,6 +74,14 @@ export default function ExerciseLibrary() {
         })}
         {!shown.length && <p className="note">No exercise matches. Clear the search, or add it with + New exercise.</p>}
       </div>
+      {f.src !== 'custom' && (
+        <CatalogMatches kind="exercise" q={f.q} unit="exercises" source="Exercises from free-exercise-db (public domain)."
+          mine={rows.map(r => ({ id: r.id, name: r.name, ...(isCatalogId(r.id) ? { catalogId: r.id } : {}) }))}
+          meta={c => [c.data.eq ? EQUIPMENT[c.data.eq as EquipmentKey] : '', c.data.muscles?.p?.length ? `Primary: ${muscleList(c.data.muscles.p)}` : ''].filter(Boolean).join(' · ')}
+          keep={c => (!f.eq || (f.eq === 'none' ? !c.data.eq : c.data.eq === f.eq))
+            && (!f.muscle || (f.muscle === 'untagged' ? !c.data.muscles?.p?.length && !c.data.muscles?.s?.length : [...(c.data.muscles?.p || []), ...(c.data.muscles?.s || [])].includes(f.muscle as never)))}
+          onAdd={c => useAppStore.getState().addCatalogExercise(c)} />
+      )}
     </section>
   );
 }
