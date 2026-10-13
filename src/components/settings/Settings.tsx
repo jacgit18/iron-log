@@ -5,7 +5,7 @@ import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
@@ -19,6 +19,11 @@ import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { IMPORT_ACCEPT } from '../../lib/importFile.js';
+
+// The panel pattern: heading, one line on what it is for, the controls, then the background in a fold named for the panel.
+function More({ about, children }: { about: string; children: ReactNode }) {
+  return <details className="more"><summary>More about {about}</summary>{children}</details>;
+}
 
 function ModePanel() {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
@@ -100,8 +105,9 @@ function RestAlertPanel() {
     <section className="panel">
       <h3>Rest timer alert</h3>
       <label className="inline"><input type="checkbox" checked={on} onChange={e => void toggle(e.target.checked)} /> Show a notification when a rest or hold ends while Iron Log is in the background</label>
-      <p>It only shows while the phone still lets Iron Log run in the background. If the screen has been locked for a while the alert can be late, and the timer is right when you open the app again. Saved on this device only.</p>
+      <p>Saved on this device only.</p>
       {note && <p role="status">{note}</p>}
+      <More about="the alert"><p>It only shows while the phone still lets Iron Log run in the background. If the screen has been locked for a while the alert can be late, and the timer is right when you open the app again.</p></More>
     </section>
   );
 }
@@ -143,28 +149,29 @@ function PhasePanel() {
   return (
     <section className="panel">
       <h3>Phases</h3>
-      <p>Each phase has default sets × reps. The target weight starts from the weight you last logged for that exercise in that phase, otherwise the program's weight. The % of 1RM is only for comparing with your 1RM below; it doesn't set targets.</p>
-      <div className="tbl">
-        <table>
-          <thead><tr><th>Phase</th><th>% of 1RM</th><th>Sets × reps</th></tr></thead>
-          <tbody>
-            {PH_KEYS.map(k => {
-              const pct = cfg.pct[k] ?? PHASES[k].pct; const rx = cfg.rxOverride[k] || PHASES[k].rx;
-              return (
-                <tr key={k}>
-                  <td><span className="dot" data-p={k} /> {PHASES[k].label}</td>
-                  <td>{PHASES[k].pct === 0 ? '—' : <><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={(v) => st.setPct(k, v)} /> %</>}</td>
-                  <td><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={(v) => st.setRxOverride(k, v)} /></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <p>Default sets × reps for each phase, and the % of 1RM to compare with.</p>
+      {/* One row per phase, each field labelled in place: a table's three columns wrapped the % under its box on a phone. */}
+      <div className="phrows">
+        {PH_KEYS.map(k => {
+          const pct = cfg.pct[k] ?? PHASES[k].pct; const rx = cfg.rxOverride[k] || PHASES[k].rx;
+          return (
+            <div className="phrow" key={k}>
+              <span className="phname"><span className="dot" data-p={k} /> {PHASES[k].label}</span>
+              {PHASES[k].pct === 0
+                ? <div className="phfield"><span>% of 1RM</span><span className="pctin">—</span></div>
+                : <label className="phfield"><span>% of 1RM</span><span className="pctin"><CommitInput key={`${k}:${pct}`} type="number" id={`pct-${k}`} aria-label={`${PHASES[k].label} % of 1RM`} min="0" max="110" step="1" value={pct} onCommit={(v) => st.setPct(k, v)} /> %</span></label>}
+              <label className="phfield"><span>Sets × reps</span><CommitInput key={`${k}:${rx}`} className="wide" id={`rx-${k}`} aria-label={`${PHASES[k].label} sets × reps`} value={rx} onCommit={(v) => st.setRxOverride(k, v)} /></label>
+            </div>
+          );
+        })}
       </div>
       <label className="inline" htmlFor="rest-s">Rest between sets{' '}
         <CommitInput key={`rest:${cfg.rest ?? 90}`} type="number" id="rest-s" min="0" max="600" step="any" value={cfg.rest ?? 90} style={{ width: 80 }} onCommit={st.setRest} /> seconds
       </label>
-      <p>The percentages are placeholders until you set your own. Isometric holds are usually judged by time and effort more than by % of a lifting max.</p>
+      <More about="phases">
+        <p>Each phase has default sets × reps. The target weight starts from the weight you last logged for that exercise in that phase, otherwise the program's weight. The % of 1RM is only for comparing with your 1RM below; it doesn't set targets.</p>
+        <p>The percentages are placeholders until you set your own. Isometric holds are usually judged by time and effort more than by % of a lifting max.</p>
+      </More>
     </section>
   );
 }
@@ -177,14 +184,16 @@ function DataPanel() {
   return (
     <section className="panel" aria-labelledby="data-h">
       <h3 id="data-h">Export &amp; import</h3>
-      <p>{storeMode === 'db' ? 'Your data is already saved to your account; exporting is optional. ' : ''}<b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
+      {/* Nothing while loading: a signed-in person must not read "this browser only" before the data source is known. */}
+      {storeMode === 'db' && <p>Your data is already saved to your account; exporting a copy is optional.</p>}
+      {storeMode === 'local' && <p>Your data is in this browser only; export a copy now and then.</p>}
       <div className="actions">
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <label className="btn filebtn">Import from file
           <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : 'imp-help'} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
       </div>
-      <p className="note" id="imp-help">Import takes the data file, or a workbook or .csv from an earlier version. An older workbook or a .csv only brings back logged sessions, body weight and main settings. You review before anything changes.</p>
+      <p className="note" id="imp-help">Import takes the data file, or a workbook or .csv from an earlier version (an older workbook or a .csv only brings back logged sessions, body weight and main settings). You review before anything changes.</p>
       {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
       <details className="imppaste">
         <summary>Can't pick a file? Paste its contents instead</summary>
@@ -193,15 +202,19 @@ function DataPanel() {
           <button type="button" className="btn sm" onClick={() => st.pasteImport(paste)}>Review import</button>
         </div>
       </details>
+      <More about="export and import">
+        <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
+      </More>
       {dl && (
         <div className="subblock">
           <h4>Spreadsheet report</h4>
-          <p>For reading and charting, not for backup. <b>iron-log.xlsx</b> has a summary per exercise, every session and weekly totals; each week also has its own workbook. The .csv lists logged sessions only.</p>
+          <p>For reading and charting, not a backup.</p>
           <div className="actions">
             <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
             <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
             <button type="button" className="btn" disabled={!!exporting} onClick={st.exportCsv}>Download CSV</button>
           </div>
+          <More about="the reports"><p><b>iron-log.xlsx</b> has a summary per exercise, every session and weekly totals; each week also has its own workbook. The .csv lists logged sessions only.</p></More>
         </div>
       )}
     </section>
@@ -234,6 +247,7 @@ function ErasePanel() {
           </label>
         ))}
       </fieldset>
+      {/* In view before the button: someone who erases first and exports after would lose the data. */}
       <p className="note">Kept: display options, and any file you exported earlier. An export made after erasing holds the erased state.</p>
       <div className="actions">
         {dl && <button type="button" className="btn" disabled={!!exporting} onClick={st.downloadData}>Export all data first</button>}
@@ -264,7 +278,7 @@ function RmPanel() {
   return (
     <section className="panel wide">
       <h3>1-rep maxes</h3>
-      <p>Keep a one-rep max (1RM, the most you can lift once) for reference. It shows next to your logged weights but doesn't set targets: those start from the weight you last logged.</p>
+      <p>For reference only: a 1RM never sets your targets.</p>
       {/* Folded: one row per weighted exercise is most of the page on a phone, and it is rarely edited. */}
       <details className="fold">
         <summary>{weighted.length ? `Show all ${weighted.length} exercises (${withRm ? `${withRm} with a 1RM` : 'none set yet'})` : 'No weighted exercises in your programs yet'}</summary>
@@ -287,6 +301,7 @@ function RmPanel() {
         </table>
       </div>
       </details>
+      <More about="1-rep maxes"><p>A one-rep max (1RM) is the most you can lift once. It shows next to your logged weights; targets start from the weight you last logged.</p></More>
     </section>
   );
 }
@@ -300,6 +315,35 @@ const jump = (id: string) => {
   h.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'instant', block: 'start' });
 };
 
+// The group being read: the last whose heading has scrolled up under the sticky jump row (the last one at the bottom of the page).
+function useCurrentGroup() {
+  const [cur, setCur] = useState<string>(GROUPS[0][0]);
+  useEffect(() => {
+    let frame = 0;
+    const look = () => {
+      frame = 0;
+      const bar = document.querySelector('.sjump')?.getBoundingClientRect().bottom ?? 0;
+      const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      let next: string = GROUPS[0][0];
+      for (const [id] of GROUPS) { const h = document.getElementById(`set-${id}-h`); if (h && h.getBoundingClientRect().top <= bar + 24) next = id; }
+      setCur(atEnd ? GROUPS[GROUPS.length - 1][0] : next);
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(look); };
+    look();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    // The row's real height (it wraps under large text) is the page's scroll padding, so focus and jumps land below it.
+    const root = document.documentElement; const nav = document.querySelector('.sjump');
+    const ro = nav && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => root.style.setProperty('--sjump-h', `${Math.ceil(nav.getBoundingClientRect().height)}px`)) : null;
+    if (nav && ro) ro.observe(nav);
+    return () => {
+      window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (frame) cancelAnimationFrame(frame);
+      ro?.disconnect(); root.style.removeProperty('--sjump-h');
+    };
+  }, []);
+  return cur;
+}
+
 function Group({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section className="sgroup" aria-labelledby={`set-${id}-h`}>
@@ -312,10 +356,12 @@ function Group({ id, title, children }: { id: string; title: string; children: R
 export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
   const restAlert = useFeature('restNotify');
+  const cur = useCurrentGroup();
   return (
     <div className="settings">
+      {/* Sticky, so a group is one tap away anywhere on the long page; the group being read is marked. */}
       <nav className="sjump" aria-label="Jump to a settings group">
-        {GROUPS.map(([id, label]) => <button key={id} type="button" className="chip" onClick={() => jump(id)}>{label}</button>)}
+        {GROUPS.map(([id, label]) => <button key={id} type="button" className="chip" aria-current={cur === id ? 'true' : undefined} onClick={() => jump(id)}>{label}</button>)}
       </nav>
       <Group id="training" title="Training">
         <div className="scol"><ModePanel /></div>
