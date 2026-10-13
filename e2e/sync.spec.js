@@ -172,6 +172,7 @@ test.describe('the Sync panel', () => {
     await openSynced(page);
     await openSettings(page);
     await expect(page.locator('.syncstatus')).toContainText('Synced');
+    await expect(page.getByRole('status').filter({ hasText: /^Sync: Synced$/ })).toHaveCount(1); // what screen readers hear
     await expect(page.getByText(/^App version /)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sync now' })).toBeEnabled();
   });
@@ -189,6 +190,7 @@ test.describe('the Sync panel', () => {
     await notice.getByRole('button', { name: 'Details' }).click();
     await expect(page.locator('.syncstatus')).toContainText('Offline');
     await expect(page.locator('.syncstatus')).toContainText('saved on this device and will be sent when the connection returns');
+    await expect(page.getByRole('status').filter({ hasText: /^Sync: Offline$/ })).toHaveCount(1); // a settled change is announced
     const { violations } = await scan(page);
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });
