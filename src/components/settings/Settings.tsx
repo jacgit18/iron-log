@@ -172,43 +172,38 @@ function DataPanel() {
   const importError = useAppStore(s => s.importError);
   const [paste, setPaste] = useState('');
   return (
-    <section className="panel">
-      <h2>Export &amp; import</h2>
-      <p>One file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Use it to keep a copy, move to another device or app, or go back to an earlier state.</p>
-      <p>To import, use the <b>iron-log.xlsx</b> workbook or the <b>iron-log-data .json</b> file. Both bring back everything. A <b>.csv</b> export only brings back logged sessions. Workbooks exported by an older version of the app only bring back logged sessions, body weight and main settings.</p>
+    <section className="panel" aria-labelledby="data-h">
+      <h2 id="data-h">Export &amp; import</h2>
+      <p>Your one backup is a single <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep a copy, move to another device, or go back to an earlier state.</p>
       <div className="actions" style={{ justifyContent: 'flex-start' }}>
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <ShareExport kind="data" label="Share data file" />
         <label className="btn filebtn">Import from file
-          <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : undefined} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
+          <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : 'imp-help'} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
       </div>
+      <p className="note" id="imp-help">Import takes the data file, or a workbook or .csv from an earlier version. An older workbook or a .csv only brings back logged sessions, body weight and main settings. You review before anything changes.</p>
       {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
       <details className="imppaste">
         <summary>Can't pick a file? Paste its contents instead</summary>
-        <textarea id="imp-text" rows={4} placeholder="Paste the contents of an iron-log-data file" value={paste} onChange={e => setPaste(e.target.value)} />
+        <textarea id="imp-text" rows={4} aria-label="Contents of an iron-log-data file" placeholder="Paste the contents of an iron-log-data file" value={paste} onChange={e => setPaste(e.target.value)} />
         <div className="actions" style={{ justifyContent: 'flex-start' }}>
           <button type="button" className="btn sm" onClick={() => st.pasteImport(paste)}>Review import</button>
         </div>
       </details>
-    </section>
-  );
-}
-
-function BackupPanel() {
-  const dl = useAppStore(s => s.dl); const exporting = useAppStore(s => s.exporting); const st = useAppStore.getState();
-  return (
-    <section className="panel">
-      <h2>Excel</h2>
-      <p><b>iron-log.xlsx</b> has a summary per exercise, every session, weekly totals, your settings, and your programs and check-offs, so it can be imported back whole. Each week also gets its own workbook with the plan and what you logged.</p>
-      <div className="actions" style={{ justifyContent: 'flex-start' }}>
-        {dl && <>
-          <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
-          <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
-        </>}
-        <ShareExport kind="xlsx-all" label="Share Excel" />
-        <ShareExport kind="xlsx-week" label="Share this week" />
-      </div>
+      {dl && (
+        <div className="subblock">
+          <h4>Spreadsheet report</h4>
+          <p>For reading and charting, not for backup. <b>iron-log.xlsx</b> has a summary per exercise, every session and weekly totals; each week also has its own workbook. The .csv lists logged sessions only.</p>
+          <div className="actions" style={{ justifyContent: 'flex-start' }}>
+            <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
+            <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
+            <button type="button" className="btn" disabled={!!exporting} onClick={st.exportCsv}>Download CSV</button>
+            <ShareExport kind="xlsx-all" label="Share Excel" />
+            <ShareExport kind="xlsx-week" label="Share this week" />
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -307,7 +302,6 @@ export default function Settings() {
         <AccountPanel />
         <SyncPanel />
         <DataPanel key={importCount} />
-        <BackupPanel />
         <ErasePanel />
         <DeleteMyData />
       </div>

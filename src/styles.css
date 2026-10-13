@@ -400,6 +400,8 @@ body.timing{padding-bottom:130px}
 .settings .scol{display:flex;flex-direction:column;gap:16px;min-width:0}
 .settings .wide{grid-column:1/-1}
 @media (max-width:900px){.settings{grid-template-columns:minmax(0,1fr)}}
+.subblock{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.settings .panel h4{margin:0 0 4px;font-size:1.0625rem}
 .rmtbl td:nth-child(3){width:110px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .panel h2{margin:0;font-size:1.375rem;font-weight:700;text-transform:uppercase}
