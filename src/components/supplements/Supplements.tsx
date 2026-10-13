@@ -35,7 +35,12 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
   const add = (e: FormEvent) => {
     e.preventDefault();
     if (held?.kind === 'mine') { if (s.setSupplementSlot(held.id, slot, dose)) done(); return; }
-    if (held?.kind === 'catalog') { const m = s.addCatalogSupplement(held.item, { slot, dose }); if (m) setErr(m); else done(); return; }
+    if (held?.kind === 'catalog') {
+      const m = s.addCatalogSupplement(held.item, { slot, dose });
+      // null also means nothing was saved (still loading): keep what was typed unless it is really there now.
+      if (m) setErr(m); else if (useAppStore.getState().supp.items.some(i => i.catalogId === held.item.id)) done();
+      return;
+    }
     if (s.addSupplement(slot, name, dose)) done();
   };
   return (
