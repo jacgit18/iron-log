@@ -213,7 +213,7 @@ const ERASE = [
   ['logs', 'Logged sessions', 'every weight, set and rep, including ones logged by check-offs'],
   ['weeks', 'Weekly check-offs', 'checked, skipped and moved cards, and phase changes, for every week'],
   ['body', 'Body weight', ''],
-  ['programs', 'Edited programs, saved versions and the Experiment list', 'the Board goes back to the original programs'],
+  ['programs', 'Edited programs, saved versions and the Experiment list', 'the Board goes back to the original programs'], // synced: a blank one (ADR 021)
   ['settings', 'Settings and 1RMs', 'program mode, rest time, phase percentages, 1RMs, phase defaults, custom exercises and muscle tags'],
 ];
 function ErasePanel() {
@@ -230,7 +230,7 @@ function ErasePanel() {
         {ERASE.map(([k, label, hint]) => (
           <label className="inline" key={k}>
             <input type="checkbox" checked={sel[k]} onChange={e => setSel(v => ({ ...v, [k]: e.target.checked }))} />
-            <span><b>{label}</b>{hint && <span className="note">: {hint}</span>}</span>
+            <span><b>{label}</b>{hint && <span className="note">: {k === 'programs' && storeMode === 'db' ? 'the Board goes back to a blank program' : hint}</span>}</span>
           </label>
         ))}
       </fieldset>
