@@ -1,15 +1,16 @@
 import { useState, type FormEvent } from 'react';
-import type { Cfg, EquipmentKey, SlotType } from '../../types.ts';
+import type { CatalogItem, Cfg, EquipmentKey, SlotType } from '../../types.ts';
 import type { PhaseChoice } from '../../store/types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, PH_KEYS, exInfo, exerciseChoice } from '../../lib/data.js';
+import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
+import { pickedChoice } from '../../lib/catalogExercise.js';
 import { SECTIONS, blankItem } from '../../store/editorSlice.js';
 import { DAYS, progName } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 import ExerciseField from '../ExerciseField.jsx';
 
 // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
-type ItemState = { ex: string; ph: PhaseChoice; w: string | number | null; bw: boolean; rx: string; note: string; nm: string; nu?: string; ne?: EquipmentKey | '' };
+type ItemState = { ex: string; ph: PhaseChoice; w: string | number | null; bw: boolean; rx: string; note: string; nm: string; nu?: string; ne?: EquipmentKey | ''; cat?: CatalogItem | null };
 type SlotState = { id: string | null; sec: string; tier: string; type: SlotType; note: string; day: number; days: number[]; idx: number | null; target?: { key: string; day: number } | null; items: ItemState[] };
 
 function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; type: SlotType; cfg: Cfg; onChange: (k: number, patch: Partial<ItemState>) => void }) {
@@ -18,7 +19,7 @@ function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; 
   return (
     <fieldset className="edit-item">
       <legend>{legend}</legend>
-      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} onEq={ne => up({ ne: ne as EquipmentKey | '' })} />
+      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} onEq={ne => up({ ne: ne as EquipmentKey | '' })} cat={it.cat} onCat={cat => up({ cat })} />
       <div className="fields">
         <label className="field">Phase
           <select value={it.ph || ''} onChange={e => up({ ph: (e.target.value || null) as PhaseChoice })}>
@@ -54,7 +55,7 @@ export default function SlotSheet({ idx, col, target }: { idx: number | null; co
   const setItem = (k: number, patch: Partial<ItemState>) => setD(x => ({ ...x, items: x.items.map((it, j) => (j === k ? { ...it, ...patch } : it)) }));
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const clean = { ...d, days: manyDays ? d.days : undefined, note: d.note.trim(), items: d.items.map((it) => ({ ...it, ...exerciseChoice(cfg, it.nm), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne })) };
+    const clean = { ...d, days: manyDays ? d.days : undefined, note: d.note.trim(), items: d.items.map(({ cat, ...it }) => ({ ...it, ...pickedChoice(cfg, it.nm, cat), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne })) };
     const msg = st.saveSlot(clean);
     if (msg) setErr(msg);
   };
