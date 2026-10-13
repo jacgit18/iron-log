@@ -164,11 +164,15 @@ export interface Week {
   rest?: number[];
   order?: number[];
   restOn?: string;
+  /** The rest days, day order and rest date of the program this week is NOT showing, so ticking rest on one program leaves the other alone. */
+  stash?: Partial<Record<ProgKey, WeekLayout>>;
   extra?: ExtraCard[];
   /** What the week ran (ADR 022): the program it used and that program's cards, written down each time the week is saved. A week
    *  before this one is shown and counted from this, so editing or loading a program, or changing the mode, never rewrites it. */
   ran?: WeekRan;
 }
+
+export interface WeekLayout { rest?: number[]; order?: number[]; restOn?: string }
 
 export interface WeekRan { prog: ProgKey; program: Program }
 

@@ -35,6 +35,8 @@ export const weekProgram = (cfg: Cfg, programs: Record<string, Program>, w: Week
   isFrozen(w, key, now) ? w.ran.program : programs[weekProgKey(cfg, w, key, now)] || programs.A;
 // Whether week `w` has a tick, skip or move on card `s` (a tick is stored under the card's id, or "<id>#<item>").
 export const touched = (s: { id: string }, w: WeekIn) => !!((w.skipped && w.skipped[s.id]) || (w.moved && w.moved[s.id]) || Object.keys(w.done || {}).some(k => k === s.id || k.startsWith(s.id + '#')));
+// Whether this week's check-offs, skips and moves are all on other programs' cards: the viewed program was only looked at, so it owes no reminders.
+export const onlyElsewhere = (slots: { id: string }[], w: WeekIn) => !slots.some(s => touched(s, w)) && [w.done, w.skipped, w.moved].some(m => m && Object.keys(m).length > 0);
 // The record for week `key` that runs `prog` (key `pk`): its cards that have started by then, each with its id written down. A card an
 // earlier record had that this week ticked, skipped or moved stays in it after it leaves the program, so the week still counts it.
 export function ranFor(prog: Program, pk: ProgKey, w: WeekIn, key: string): WeekRan {
