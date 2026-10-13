@@ -164,7 +164,11 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     return get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}) }); });
   },
   // Takes it off the schedule (slot ''), or puts a library one into a section. It stays in the library either way.
-  setSupplementSlot(id, slot) { return get().mutateSupp(s => { const x = s.items.find(i => i.id === id); if (x && (slot === '' || SLOTS.some(([k]) => k === slot))) x.slot = slot; }); },
+  // `dose`, when typed (the Supplements tab's add form), replaces the saved one.
+  setSupplementSlot(id, slot, dose) {
+    const dz = String(dose || '').trim().slice(0, 40);
+    return get().mutateSupp(s => { const x = s.items.find(i => i.id === id); if (x && (slot === '' || SLOTS.some(([k]) => k === slot))) { x.slot = slot; if (dz) x.dose = dz; } });
+  },
   // Undo puts it back in that section, if it has not been scheduled somewhere since.
   removeSupplement(id) {
     const x0 = get().supp.items.find(x => x.id === id); if (!x0 || !x0.slot) return false;
@@ -174,8 +178,9 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     return true;
   },
   // A catalog supplement joins the library as a snapshot (ADR 026, 029): name (cut to 60 characters) and brand, kept as Library only until
-  // you schedule it, with your own dose. Never a dose from the catalog.
-  addCatalogSupplement(c) {
+  // you schedule it, with your own dose. Never a dose from the catalog. From the Supplements tab (ADR 036) it goes straight into that
+  // section (`slot`) with the dose typed there.
+  addCatalogSupplement(c, opts = {}) {
     if (get().blocked()) return null;
     const full = c.name.trim().replace(/\s+/g, ' ');
     const n = full.length > 60 ? `${full.slice(0, 59).trimEnd()}…` : full;
@@ -184,7 +189,8 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const items = get().supp.items;
     if (items.some(x => x.catalogId === c.id)) return 'Already in your supplements.';
     if (items.some(x => sameSupplement(x, n, brand))) return `You already have ${brand ? `${n} from ${brand}` : n}.`;
-    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot: '', ...(brand ? { brand } : {}), catalogId: c.id }); })) return null;
+    const slot = opts.slot && SLOTS.some(([k]) => k === opts.slot) ? opts.slot : ''; const dz = String(opts.dose || '').trim().slice(0, 40);
+    if (!get().mutateSupp(s => { s.items.push({ id: newSupplementId(s.items, n), n, slot, ...(dz ? { dose: dz } : {}), ...(brand ? { brand } : {}), catalogId: c.id }); })) return null;
     flag(`Added ${n}`); return null;
   },
   // From the library sheet. Returns an error message, or null when saved. A catalog supplement keeps its name, brand and catalog id
