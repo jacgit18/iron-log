@@ -1,7 +1,7 @@
 {
  "app": "iron-log",
  "format": 1,
- "exportedAt": "2026-10-12T04:59:38.876Z",
+ "exportedAt": "2026-10-13T00:12:39.298Z",
  "config": {
   "muscleMap": {
    "c:fedb:Face_Pull": {
@@ -35,6 +35,21 @@
      "hamstrings"
     ]
    },
+   "c:fedb:Dip_Machine": {
+    "p": [
+     "triceps"
+    ],
+    "s": [
+     "chest",
+     "frontdelt",
+     "sidedelt"
+    ]
+   },
+   "c:fedb:Cable_Crunch": {
+    "p": [
+     "abs"
+    ]
+   },
    "c:fedb:Farmers_Walk": {
     "p": [
      "forearms"
@@ -51,6 +66,25 @@
    "c:fedb:Hanging_Pike": {
     "p": [
      "abs"
+    ]
+   },
+   "c:fedb:Pallof_Press": {
+    "p": [
+     "abs"
+    ],
+    "s": [
+     "chest",
+     "frontdelt",
+     "sidedelt",
+     "triceps"
+    ]
+   },
+   "c:fedb:Zottman_Curl": {
+    "p": [
+     "biceps"
+    ],
+    "s": [
+     "forearms"
     ]
    },
    "seated-cable-crunch": {
@@ -150,6 +184,11 @@
      "abs"
     ]
    },
+   "c:fedb:Cable_Seated_Crunch": {
+    "p": [
+     "abs"
+    ]
+   },
    "c:fedb:Sled_Drag_-_Harness": {
     "p": [
      "quads"
@@ -158,6 +197,16 @@
      "calves",
      "glutes",
      "hamstrings"
+    ]
+   },
+   "c:fedb:Dips_-_Chest_Version": {
+    "p": [
+     "chest"
+    ],
+    "s": [
+     "frontdelt",
+     "sidedelt",
+     "triceps"
     ]
    },
    "c:fedb:Dumbbell_Bench_Press": {
@@ -185,6 +234,16 @@
     ],
     "s": [
      "triceps"
+    ]
+   },
+   "c:fedb:Dips_-_Triceps_Version": {
+    "p": [
+     "triceps"
+    ],
+    "s": [
+     "chest",
+     "frontdelt",
+     "sidedelt"
     ]
    },
    "c:fedb:Single-Leg_Leg_Extension": {
@@ -275,7 +334,7 @@
     "eq": "machine"
    },
    "pallof": {
-    "n": "Pallof Press",
+    "n": "Pallof Pressf h h",
     "eq": "cable"
    },
    "skater": {
@@ -305,7 +364,7 @@
     "eq": "dumbbell"
    },
    "latpdbi": {
-    "n": "Lat Pulldown",
+    "n": "Lat Pulldowns",
     "eq": "cable"
    },
    "latwall": {
@@ -341,7 +400,7 @@
     "url": "https://youtu.be/ahfSSi4MVJQ"
    },
    "zottman": {
-    "n": "Zottman Curl",
+    "n": "Zottman Curls",
     "eq": "dumbbell"
    },
    "cablerow": {
@@ -392,7 +451,7 @@
    },
    "sled-pull": {
     "n": "Sled Pull",
-    "eq": "other"
+    "eq": "sled"
    },
    "splitjump": {
     "n": "Split Squat Jumps",
@@ -437,9 +496,13 @@
     "eq": "dumbbell",
     "url": "https://www.instagram.com/p/DeKAHsWKK4W/"
    },
+   "leg-extension": {
+    "n": "Leg Extension",
+    "eq": "machine"
+   },
    "duck-sled-push": {
     "n": "Duck Sled Push",
-    "eq": "other",
+    "eq": "sled",
     "url": "https://www.instagram.com/p/DeKUe-qvgF-/"
    },
    "tibialis-raise": {
@@ -457,19 +520,46 @@
    },
    "c:fedb:Sled_Push": {
     "n": "Sled Push",
-    "eq": "other"
+    "eq": "sled"
+   },
+   "pallof-pressesed": {
+    "n": "Pallof Pressesed"
    },
    "c:fedb:Hack_Squat": {
     "n": "Hack Squat",
     "eq": "machine"
    },
+   "sled-lateral-pull": {
+    "n": "Sled Lateral pull",
+    "eq": "sled"
+   },
+   "c:fedb:Dip_Machine": {
+    "n": "Dip Machine",
+    "eq": "machine"
+   },
+   "c:fedb:Cable_Crunch": {
+    "n": "Cable Crunch",
+    "eq": "cable"
+   },
    "c:fedb:Farmers_Walk": {
     "n": "Farmer's Walk",
-    "eq": "other"
+    "eq": "dumbbell"
    },
    "c:fedb:Hanging_Pike": {
     "n": "Hanging Pike",
     "eq": "bodyweight"
+   },
+   "c:fedb:Pallof_Press": {
+    "n": "Pallof Press",
+    "eq": "cable"
+   },
+   "c:fedb:Zottman_Curl": {
+    "n": "Zottman Curl",
+    "eq": "dumbbell"
+   },
+   "hanging-knee-raises": {
+    "n": "Hanging Knee Raises",
+    "eq": "machine"
    },
    "seated-cable-crunch": {
     "n": "Seated Cable Crunch",
@@ -523,8 +613,16 @@
     "n": "Clean Jerk & Overhead Press",
     "eq": "dumbbell"
    },
+   "c:fedb:Cable_Seated_Crunch": {
+    "n": "Cable Seated Crunch",
+    "eq": "cable"
+   },
    "c:fedb:Sled_Drag_-_Harness": {
     "n": "Sled Drag - Harness",
+    "eq": "other"
+   },
+   "c:fedb:Dips_-_Chest_Version": {
+    "n": "Dips - Chest Version",
     "eq": "other"
    },
    "c:fedb:Dumbbell_Bench_Press": {
@@ -533,11 +631,15 @@
    },
    "c:fedb:Seated_Good_Mornings": {
     "n": "Seated Good Mornings",
-    "eq": "barbell"
+    "eq": "shortbar"
    },
    "c:fedb:Arnold_Dumbbell_Press": {
     "n": "Arnold Dumbbell Press",
     "eq": "dumbbell"
+   },
+   "c:fedb:Dips_-_Triceps_Version": {
+    "n": "Dips - Triceps Version",
+    "eq": "machine"
    },
    "c:fedb:Single-Leg_Leg_Extension": {
     "n": "Single-Leg Leg Extension",
@@ -670,16 +772,6 @@
      "w": 300,
      "start": 0
     }
-   },
-   "innerthigh": {
-    "exp": {
-     "w": 150,
-     "start": 0
-    },
-    "strength": {
-     "w": 200,
-     "start": 180
-    }
    }
   },
   "ghBackup": {
@@ -697,13 +789,21 @@
       {
        "id": "A-sled1",
        "sec": "Optional",
+       "tier": "Accessory",
+       "type": "superset",
        "note": "Optional",
        "items": [
         {
-         "ex": "sledlat",
+         "ex": "c:fedb:Sled_Push",
          "ph": "exp",
          "w": null,
          "rx": "1 × 3"
+        },
+        {
+         "ex": "sled-lateral-pull",
+         "ph": "exp",
+         "w": null,
+         "rx": "1x3"
         }
        ]
       },
@@ -723,9 +823,10 @@
        "id": "A-d1s4",
        "sec": "Regular",
        "tier": "Accessory",
+       "note": "Inner squeeze",
        "items": [
         {
-         "ex": "innerthigh",
+         "ex": "c:fedb:Thigh_Abductor",
          "ph": "strength",
          "w": 180
         }
@@ -752,7 +853,7 @@
        "type": "superset",
        "items": [
         {
-         "ex": "chestpress",
+         "ex": "c:fedb:Dumbbell_Bench_Press",
          "ph": "strength",
          "w": 35
         },
@@ -770,16 +871,15 @@
        "type": "superset",
        "items": [
         {
-         "ex": "zottman",
+         "ex": "c:fedb:Zottman_Curl",
          "ph": "hyp",
-         "w": 15,
-         "rx": "3 × 15"
+         "w": 15
         },
         {
          "ex": "kbleg",
          "ph": "iso",
          "w": 15,
-         "rx": "3 × 15 s hold"
+         "rx": "4 × 15 s hold"
         }
        ]
       },
@@ -790,12 +890,12 @@
        "type": "superset",
        "items": [
         {
-         "ex": "latpdbi",
+         "ex": "c:fedb:Close-Grip_Front_Lat_Pulldown",
          "ph": "hyp",
          "w": 45
         },
         {
-         "ex": "wristpd",
+         "ex": "c:fedb:Cable_Wrist_Curl",
          "ph": "hyp",
          "w": null
         }
@@ -818,7 +918,7 @@
        "items": [
         {
          "ex": "canoe",
-         "ph": null,
+         "ph": "mob",
          "w": 10
         }
        ]
@@ -831,13 +931,21 @@
       {
        "id": "A-sled2",
        "sec": "Optional",
+       "tier": "Accessory",
+       "type": "superset",
        "note": "Optional",
        "items": [
         {
-         "ex": "sledlat",
+         "ex": "c:fedb:Sled_Push",
          "ph": "exp",
          "w": null,
          "rx": "1 × 3"
+        },
+        {
+         "ex": "sled-lateral-pull",
+         "ph": "exp",
+         "w": null,
+         "rx": "1x3"
         }
        ]
       },
@@ -848,7 +956,7 @@
        "items": [
         {
          "ex": "suitcase",
-         "ph": null,
+         "ph": "strength",
          "w": 20,
          "rx": "3 × 4 each arm"
         }
@@ -868,7 +976,7 @@
          "rx": "4 × 15 s per arm"
         },
         {
-         "ex": "facepull",
+         "ex": "c:fedb:Face_Pull",
          "ph": "strength",
          "w": 30
         }
@@ -880,10 +988,10 @@
        "tier": "Accessory",
        "items": [
         {
-         "ex": "legext",
+         "ex": "c:fedb:Leg_Extensions",
          "ph": "iso",
          "w": 50,
-         "rx": "4 × 30 s"
+         "rx": "4 × 30 s hold"
         }
        ]
       },
@@ -899,7 +1007,7 @@
          "w": 320
         },
         {
-         "ex": "chestpress",
+         "ex": "c:fedb:Dumbbell_Bench_Press",
          "ph": "hyp",
          "w": 25
         }
@@ -912,14 +1020,14 @@
        "type": "superset",
        "items": [
         {
-         "ex": "dip",
+         "ex": "c:fedb:Dips_-_Triceps_Version",
          "ph": "strength",
          "w": null,
          "bw": true,
          "note": "Bodyweight, working toward +10 lb"
         },
         {
-         "ex": "kneeraise",
+         "ex": "hanging-knee-raises",
          "ph": "strength",
          "w": null,
          "bw": true
@@ -938,7 +1046,7 @@
          "w": null
         },
         {
-         "ex": "wristpd",
+         "ex": "c:fedb:Cable_Wrist_Curl",
          "ph": "strength",
          "w": null
         }
@@ -975,13 +1083,21 @@
       {
        "id": "A-sled3",
        "sec": "Optional",
+       "tier": "Accessory",
+       "type": "superset",
        "note": "Optional",
        "items": [
         {
-         "ex": "sledlat",
+         "ex": "c:fedb:Sled_Push",
          "ph": "exp",
          "w": null,
          "rx": "1 × 3"
+        },
+        {
+         "ex": "sled-lateral-pull",
+         "ph": "exp",
+         "w": null,
+         "rx": "1x3"
         }
        ]
       },
@@ -1017,10 +1133,10 @@
        "tier": "Accessory",
        "items": [
         {
-         "ex": "legext",
+         "ex": "c:fedb:Leg_Extensions",
          "ph": "iso",
          "w": 50,
-         "rx": "4 × 30 s"
+         "rx": "4 × 30 s hold"
         }
        ]
       },
@@ -1038,7 +1154,7 @@
          "rx": "4 × 15 s per arm"
         },
         {
-         "ex": "facepull",
+         "ex": "c:fedb:Face_Pull",
          "ph": "strength",
          "w": 30
         }
@@ -1051,7 +1167,7 @@
        "type": "superset",
        "items": [
         {
-         "ex": "pallof",
+         "ex": "c:fedb:Pallof_Press",
          "ph": "strength",
          "w": 30
         },
@@ -1069,12 +1185,12 @@
        "type": "superset",
        "items": [
         {
-         "ex": "latpdbi",
+         "ex": "c:fedb:Close-Grip_Front_Lat_Pulldown",
          "ph": "hyp",
          "w": 45
         },
         {
-         "ex": "wristpd",
+         "ex": "c:fedb:Cable_Wrist_Curl",
          "ph": "hyp",
          "w": null
         }
@@ -1099,7 +1215,7 @@
          "ex": "deskbands",
          "ph": "iso",
          "w": null,
-         "bw": true
+         "rx": "4 × 15 s hold"
         }
        ]
       }
@@ -1111,13 +1227,21 @@
       {
        "id": "A-sled4",
        "sec": "Optional",
+       "tier": "Accessory",
+       "type": "superset",
        "note": "Optional",
        "items": [
         {
-         "ex": "sledlat",
+         "ex": "c:fedb:Sled_Push",
          "ph": "exp",
          "w": null,
          "rx": "1 × 3"
+        },
+        {
+         "ex": "sled-lateral-pull",
+         "ph": "exp",
+         "w": null,
+         "rx": "1x3"
         }
        ]
       },
@@ -1138,9 +1262,10 @@
        "id": "A-d4s2",
        "sec": "Regular",
        "tier": "Accessory",
+       "note": "Inner squeeze",
        "items": [
         {
-         "ex": "innerthigh",
+         "ex": "c:fedb:Thigh_Abductor",
          "ph": "strength",
          "w": 180
         }
@@ -1190,7 +1315,7 @@
          "w": 320
         },
         {
-         "ex": "chestpress",
+         "ex": "c:fedb:Dumbbell_Bench_Press",
          "ph": "hyp",
          "w": 25
         }
@@ -1203,16 +1328,15 @@
        "type": "superset",
        "items": [
         {
-         "ex": "zottman",
+         "ex": "c:fedb:Zottman_Curl",
          "ph": "hyp",
-         "w": 15,
-         "rx": "3 × 15"
+         "w": 15
         },
         {
          "ex": "kbleg",
          "ph": "iso",
          "w": 15,
-         "rx": "3 × 15 s hold"
+         "rx": "4 × 15 s hold"
         }
        ]
       },
@@ -1230,12 +1354,13 @@
       {
        "id": "A-d4s8",
        "sec": "Home",
+       "tier": "Accessory",
        "items": [
         {
          "ex": "deskbands",
-         "ph": null,
+         "ph": "iso",
          "w": null,
-         "bw": true
+         "rx": "4 × 15 s hold"
         }
        ]
       }
@@ -1247,13 +1372,21 @@
       {
        "id": "A-sled5",
        "sec": "Optional",
+       "tier": "Accessory",
+       "type": "superset",
        "note": "Optional",
        "items": [
         {
-         "ex": "sledlat",
+         "ex": "c:fedb:Sled_Push",
          "ph": "exp",
          "w": null,
          "rx": "1 × 3"
+        },
+        {
+         "ex": "sled-lateral-pull",
+         "ph": "exp",
+         "w": null,
+         "rx": "1x3"
         }
        ]
       },
@@ -1284,7 +1417,7 @@
          "rx": "4 × 15 s per arm"
         },
         {
-         "ex": "facepull",
+         "ex": "c:fedb:Face_Pull",
          "ph": "strength",
          "w": 30
         }
@@ -1349,7 +1482,7 @@
          "w": null
         },
         {
-         "ex": "wristpd",
+         "ex": "c:fedb:Cable_Wrist_Curl",
          "ph": "strength",
          "w": null
         }
@@ -1373,7 +1506,7 @@
        "items": [
         {
          "ex": "spinal",
-         "ph": null,
+         "ph": "mob",
          "w": null,
          "bw": true
         }
@@ -1388,13 +1521,21 @@
       {
        "id": "A-sled6",
        "sec": "Optional",
+       "tier": "Accessory",
+       "type": "superset",
        "note": "Optional",
        "items": [
         {
-         "ex": "sledlat",
+         "ex": "c:fedb:Sled_Push",
          "ph": "exp",
          "w": null,
          "rx": "1 × 3"
+        },
+        {
+         "ex": "sled-lateral-pull",
+         "ph": "exp",
+         "w": null,
+         "rx": "1x3"
         }
        ]
       },
@@ -1477,7 +1618,7 @@
        "type": "superset",
        "items": [
         {
-         "ex": "pallof",
+         "ex": "c:fedb:Pallof_Press",
          "ph": "strength",
          "w": 30
         },
@@ -1563,9 +1704,10 @@
        "id": "Pa2gom-d1s4",
        "sec": "Regular",
        "tier": "Accessory",
+       "note": "Inner squeeze",
        "items": [
         {
-         "ex": "innerthigh",
+         "ex": "c:fedb:Thigh_Abductor",
          "ph": "strength",
          "w": 180
         }
@@ -1575,9 +1717,10 @@
        "id": "Pa2gom-d1s5",
        "sec": "Regular",
        "tier": "Accessory",
+       "note": "Outer Spread",
        "items": [
         {
-         "ex": "outerthigh",
+         "ex": "c:fedb:Thigh_Adductor",
          "ph": "strength",
          "w": 160
         }
@@ -1603,12 +1746,12 @@
        "type": "superset",
        "items": [
         {
-         "ex": "chestpress",
+         "ex": "c:fedb:Dumbbell_Bench_Press",
          "ph": "strength",
          "w": 35
         },
         {
-         "ex": "zercher",
+         "ex": "c:fedb:Seated_Good_Mornings",
          "ph": "strength",
          "w": 50
         }
@@ -1621,16 +1764,15 @@
        "type": "superset",
        "items": [
         {
-         "ex": "zottman",
+         "ex": "c:fedb:Zottman_Curl",
          "ph": "hyp",
-         "w": 15,
-         "rx": "3 × 15"
+         "w": 15
         },
         {
          "ex": "kbleg",
          "ph": "iso",
          "w": 15,
-         "rx": "3 × 15 s hold"
+         "rx": "4 × 15 s hold"
         }
        ]
       },
@@ -1641,12 +1783,12 @@
        "type": "superset",
        "items": [
         {
-         "ex": "latpdbi",
+         "ex": "c:fedb:Close-Grip_Front_Lat_Pulldown",
          "ph": "hyp",
          "w": 45
         },
         {
-         "ex": "wristpd",
+         "ex": "c:fedb:Cable_Wrist_Curl",
          "ph": "hyp",
          "w": null
         }
@@ -1670,7 +1812,7 @@
        "items": [
         {
          "ex": "canoe",
-         "ph": null,
+         "ph": "mob",
          "w": 10,
          "note": "With a stick or barbell"
         }
@@ -1710,7 +1852,7 @@
        "note": "Whichever is free",
        "items": [
         {
-         "ex": "farmers",
+         "ex": "c:fedb:Farmers_Walk",
          "ph": "strength",
          "w": 40
         },
@@ -1727,7 +1869,7 @@
        "tier": "Primary",
        "items": [
         {
-         "ex": "ohtri",
+         "ex": "c:fedb:Cable_Rope_Overhead_Triceps_Extension",
          "ph": "strength",
          "w": 17
         }
@@ -1747,7 +1889,7 @@
          "rx": "4 × 15 s per arm"
         },
         {
-         "ex": "facepull",
+         "ex": "c:fedb:Face_Pull",
          "ph": "strength",
          "w": 30
         }
@@ -1765,7 +1907,7 @@
          "w": 320
         },
         {
-         "ex": "chestpress",
+         "ex": "c:fedb:Dumbbell_Bench_Press",
          "ph": "hyp",
          "w": 25
         }
@@ -1783,7 +1925,7 @@
          "w": 40
         },
         {
-         "ex": "legcurl",
+         "ex": "c:fedb:Lying_Leg_Curls",
          "ph": "strength",
          "w": 50
         }
@@ -1796,12 +1938,12 @@
        "type": "superset",
        "items": [
         {
-         "ex": "seated-cable-crunch",
+         "ex": "c:fedb:Cable_Seated_Crunch",
          "ph": "strength",
          "w": null
         },
         {
-         "ex": "wristpd",
+         "ex": "c:fedb:Cable_Wrist_Curl",
          "ph": "hyp",
          "w": null
         }
@@ -1896,7 +2038,7 @@
          "rx": "4 × 15 s per arm"
         },
         {
-         "ex": "facepull",
+         "ex": "c:fedb:Face_Pull",
          "ph": "strength",
          "w": 30
         }
@@ -1929,12 +2071,12 @@
        "type": "superset",
        "items": [
         {
-         "ex": "latpdbi",
+         "ex": "c:fedb:Close-Grip_Front_Lat_Pulldown",
          "ph": "hyp",
          "w": 45
         },
         {
-         "ex": "wristpd",
+         "ex": "c:fedb:Cable_Wrist_Curl",
          "ph": "hyp",
          "w": null
         }
@@ -1958,8 +2100,9 @@
        "items": [
         {
          "ex": "deskbands",
-         "ph": null,
+         "ph": "iso",
          "w": null,
+         "rx": "4 × 15 s hold",
          "note": "With a resistance band"
         }
        ]
@@ -1998,7 +2141,7 @@
        "note": "Whichever is free",
        "items": [
         {
-         "ex": "farmers",
+         "ex": "c:fedb:Farmers_Walk",
          "ph": "strength",
          "w": 40
         },
@@ -2013,9 +2156,10 @@
        "id": "Pa2gom-d4s3",
        "sec": "Regular",
        "tier": "Accessory",
+       "note": "Inner squeeze",
        "items": [
         {
-         "ex": "innerthigh",
+         "ex": "c:fedb:Thigh_Abductor",
          "ph": "strength",
          "w": 180
         }
@@ -2025,9 +2169,10 @@
        "id": "Pa2gom-d4s4",
        "sec": "Regular",
        "tier": "Accessory",
+       "note": "Outer Spread",
        "items": [
         {
-         "ex": "outerthigh",
+         "ex": "c:fedb:Thigh_Adductor",
          "ph": "strength",
          "w": 160
         }
@@ -2063,7 +2208,7 @@
          "w": 320
         },
         {
-         "ex": "chestpress",
+         "ex": "c:fedb:Dumbbell_Bench_Press",
          "ph": "hyp",
          "w": 25
         }
@@ -2081,7 +2226,7 @@
          "w": 40
         },
         {
-         "ex": "legcurl",
+         "ex": "c:fedb:Lying_Leg_Curls",
          "ph": "strength",
          "w": 50
         }
@@ -2094,16 +2239,15 @@
        "type": "superset",
        "items": [
         {
-         "ex": "zottman",
+         "ex": "c:fedb:Zottman_Curl",
          "ph": "hyp",
-         "w": 15,
-         "rx": "3 × 15"
+         "w": 15
         },
         {
          "ex": "kbleg",
          "ph": "iso",
          "w": 15,
-         "rx": "3 × 15 s hold"
+         "rx": "4 × 15 s hold"
         }
        ]
       },
@@ -2125,8 +2269,9 @@
        "items": [
         {
          "ex": "deskbands",
-         "ph": null,
+         "ph": "iso",
          "w": null,
+         "rx": "4 × 15 s hold",
          "note": "With a resistance band"
         }
        ]
@@ -2171,7 +2316,7 @@
          "rx": "4 × 15 s per arm"
         },
         {
-         "ex": "facepull",
+         "ex": "c:fedb:Face_Pull",
          "ph": "strength",
          "w": 30
         }
@@ -2231,12 +2376,12 @@
        "type": "superset",
        "items": [
         {
-         "ex": "seated-cable-crunch",
+         "ex": "c:fedb:Cable_Seated_Crunch",
          "ph": "strength",
          "w": null
         },
         {
-         "ex": "wristpd",
+         "ex": "c:fedb:Cable_Wrist_Curl",
          "ph": "strength",
          "w": null
         }
@@ -4170,6 +4315,195 @@
     "updatedAt": "2026-10-09T16:12:34.844Z"
    }
   ],
+  "c:fedb:Close-Grip_Front_Lat_Pulldown": [
+   {
+    "d": "2026-10-12",
+    "ph": "hyp",
+    "w": 55,
+    "s": 4,
+    "r": 15,
+    "sets": [
+     {
+      "w": 55,
+      "r": 15
+     },
+     {
+      "w": 55,
+      "r": 15
+     },
+     {
+      "w": 55,
+      "r": 15
+     },
+     {
+      "w": 55,
+      "r": 15
+     }
+    ],
+    "slot": "Pa2gom-d1s9",
+    "wk": "2026-10-11",
+    "id": "Lmv57rgfszoc6j1",
+    "updatedAt": "2026-10-12T12:13:51.736Z"
+   }
+  ],
+  "c:fedb:Dumbbell_Bench_Press": [
+   {
+    "d": "2026-10-12",
+    "ph": "strength",
+    "w": 35,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 35,
+      "r": 6
+     },
+     {
+      "w": 35,
+      "r": 6
+     },
+     {
+      "w": 35,
+      "r": 6
+     },
+     {
+      "w": 35,
+      "r": 6
+     }
+    ],
+    "slot": "Pa2gom-d1s7",
+    "wk": "2026-10-11",
+    "id": "Lmv58i9s8c1pcy9",
+    "auto": true,
+    "updatedAt": "2026-10-12T12:34:42.824Z"
+   }
+  ],
+  "c:fedb:Hack_Squat": [
+   {
+    "d": "2026-10-12",
+    "ph": "hyp",
+    "w": 270,
+    "s": 4,
+    "r": 15,
+    "sets": [
+     {
+      "w": 270,
+      "r": 15
+     },
+     {
+      "w": 270,
+      "r": 15
+     },
+     {
+      "w": 270,
+      "r": 15
+     },
+     {
+      "w": 270,
+      "r": 15
+     }
+    ],
+    "slot": "Pa2gom-d1s2",
+    "wk": "2026-10-11",
+    "id": "Lmv57zpnkoobewb",
+    "auto": true,
+    "updatedAt": "2026-10-12T12:20:16.929Z"
+   }
+  ],
+  "c:fedb:Seated_Good_Mornings": [
+   {
+    "d": "2026-10-12",
+    "ph": "strength",
+    "w": 45,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 45,
+      "r": 6
+     },
+     {
+      "w": 45,
+      "r": 6
+     },
+     {
+      "w": 45,
+      "r": 6
+     },
+     {
+      "w": 45,
+      "r": 6
+     }
+    ],
+    "slot": "Pa2gom-d1s7",
+    "wk": "2026-10-11",
+    "id": "Lmv58i87f6fzg11",
+    "updatedAt": "2026-10-12T12:34:40.779Z"
+   }
+  ],
+  "c:fedb:Thigh_Abductor": [
+   {
+    "d": "2026-10-12",
+    "ph": "strength",
+    "w": 180,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 180,
+      "r": 6
+     },
+     {
+      "w": 180,
+      "r": 6
+     },
+     {
+      "w": 180,
+      "r": 6
+     },
+     {
+      "w": 180,
+      "r": 6
+     }
+    ],
+    "slot": "Pa2gom-d1s4",
+    "wk": "2026-10-11",
+    "id": "Lmv57h6g2mwscfe",
+    "auto": true,
+    "updatedAt": "2026-10-12T12:05:52.226Z"
+   }
+  ],
+  "c:fedb:Thigh_Adductor": [
+   {
+    "d": "2026-10-12",
+    "ph": "strength",
+    "w": 140,
+    "s": 4,
+    "r": 6,
+    "sets": [
+     {
+      "w": 130,
+      "r": 6
+     },
+     {
+      "w": 130,
+      "r": 6
+     },
+     {
+      "w": 140,
+      "r": 6
+     },
+     {
+      "w": 140,
+      "r": 6
+     }
+    ],
+    "slot": "Pa2gom-d1s5",
+    "wk": "2026-10-11",
+    "id": "Lmv573qy1l1gfm1",
+    "updatedAt": "2026-10-12T11:59:56.533Z"
+   }
+  ],
   "cablecrunch": [
    {
     "d": "2026-09-29",
@@ -4331,128 +4665,6 @@
     "wk": "2026-10-04",
     "id": "k80yhhn",
     "auto": true
-   }
-  ],
-  "chestpress": [
-   {
-    "d": "2026-09-28",
-    "ph": "strength",
-    "w": 35,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 35,
-      "r": 6
-     },
-     {
-      "w": 35,
-      "r": 6
-     },
-     {
-      "w": 35,
-      "r": 6
-     },
-     {
-      "w": 35,
-      "r": 6
-     }
-    ],
-    "slot": "A-d1s6",
-    "wk": "2026-09-27",
-    "id": "k1ky3rb0",
-    "auto": true
-   },
-   {
-    "d": "2026-09-30",
-    "ph": "hyp",
-    "w": 25,
-    "s": 2,
-    "r": 10,
-    "sets": [
-     {
-      "w": 25,
-      "r": 15
-     },
-     {
-      "w": 25,
-      "r": 10
-     }
-    ],
-    "slot": "A-d4s5",
-    "wk": "2026-09-27",
-    "id": "k1mcdh1l"
-   },
-   {
-    "d": "2026-10-05",
-    "ph": "strength",
-    "w": 35,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 35,
-      "r": 6
-     },
-     {
-      "w": 35,
-      "r": 6
-     },
-     {
-      "w": 35,
-      "r": 6
-     },
-     {
-      "w": 35,
-      "r": 6
-     }
-    ],
-    "slot": "B-d1s8",
-    "wk": "2026-10-04",
-    "id": "kpj4ynq",
-    "auto": true
-   },
-   {
-    "d": "2026-10-07",
-    "ph": "hyp",
-    "w": 25,
-    "s": 2,
-    "r": 12,
-    "sets": [
-     {
-      "w": 25,
-      "r": 15
-     },
-     {
-      "w": 25,
-      "r": 12
-     }
-    ],
-    "slot": "B-d2s5",
-    "wk": "2026-10-04",
-    "id": "Lmuxzx0qj2rubla",
-    "updatedAt": "2026-10-07T10:59:51.163Z"
-   },
-   {
-    "d": "2026-10-10",
-    "ph": "hyp",
-    "w": 25,
-    "s": 2,
-    "r": 10,
-    "sets": [
-     {
-      "w": 25,
-      "r": 15
-     },
-     {
-      "w": 25,
-      "r": 10
-     }
-    ],
-    "slot": "B-d4s5",
-    "wk": "2026-10-04",
-    "id": "Lmv2esk5zlbvf65",
-    "updatedAt": "2026-10-10T13:07:22.007Z"
    }
   ],
   "clean-jerk-overhead-press": [
@@ -4794,122 +5006,6 @@
     "updatedAt": "2026-10-07T10:59:33.727Z"
    }
   ],
-  "innerthigh": [
-   {
-    "d": "2026-09-27",
-    "ph": "strength",
-    "w": 180,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     }
-    ],
-    "slot": "A-d1s4",
-    "wk": "2026-09-27",
-    "id": "k8xj5c5"
-   },
-   {
-    "d": "2026-09-30",
-    "ph": "strength",
-    "w": 180,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     }
-    ],
-    "slot": "A-d4s2",
-    "wk": "2026-09-27",
-    "id": "k1kta680"
-   },
-   {
-    "d": "2026-10-08",
-    "ph": "strength",
-    "w": 180,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     }
-    ],
-    "slot": "B-d1s5",
-    "wk": "2026-10-04",
-    "id": "Lmuzty5ff2t3l4m",
-    "updatedAt": "2026-10-08T17:50:21.855Z"
-   },
-   {
-    "d": "2026-10-09",
-    "ph": "strength",
-    "w": 180,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     },
-     {
-      "w": 180,
-      "r": 6
-     }
-    ],
-    "slot": "B-d4s2",
-    "wk": "2026-10-04",
-    "id": "Lmv16d7sr83bco2",
-    "updatedAt": "2026-10-09T16:23:43.035Z"
-   }
-  ],
   "kbleg": [
    {
     "d": "2026-09-29",
@@ -4960,96 +5056,6 @@
     "id": "Lmuxyjmj31qeiu6",
     "auto": true,
     "updatedAt": "2026-10-07T10:21:26.607Z"
-   }
-  ],
-  "latpdbi": [
-   {
-    "d": "2026-09-27",
-    "ph": "hyp",
-    "w": 45,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 45,
-      "r": 15
-     },
-     {
-      "w": 45,
-      "r": 15
-     },
-     {
-      "w": 45,
-      "r": 15
-     },
-     {
-      "w": 45,
-      "r": 15
-     }
-    ],
-    "slot": "A-d1s1",
-    "wk": "2026-09-27",
-    "id": "Lmuy21wuivrusov",
-    "auto": true,
-    "updatedAt": "2026-10-07T11:59:38.635Z"
-   },
-   {
-    "d": "2026-10-05",
-    "ph": "hyp",
-    "w": 45,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 45,
-      "r": 15
-     },
-     {
-      "w": 45,
-      "r": 15
-     },
-     {
-      "w": 45,
-      "r": 15
-     },
-     {
-      "w": 45,
-      "r": 15
-     }
-    ],
-    "slot": "B-d1s1",
-    "wk": "2026-10-04",
-    "id": "k1pdsxn2",
-    "auto": true
-   },
-   {
-    "d": "2026-10-08",
-    "ph": "hyp",
-    "w": 55,
-    "s": 4,
-    "r": 15,
-    "sets": [
-     {
-      "w": 55,
-      "r": 15
-     },
-     {
-      "w": 55,
-      "r": 15
-     },
-     {
-      "w": 55,
-      "r": 15
-     },
-     {
-      "w": 55,
-      "r": 15
-     }
-    ],
-    "slot": "B-d3s2",
-    "wk": "2026-10-04",
-    "id": "Lmuzsj64ys3erzw",
-    "updatedAt": "2026-10-08T19:00:07.287Z"
    }
   ],
   "legcurl": [
@@ -5164,67 +5170,6 @@
     "wk": "2026-10-04",
     "id": "Lmuxyxe13xvzkyb",
     "updatedAt": "2026-10-07T10:32:08.775Z"
-   }
-  ],
-  "outerthigh": [
-   {
-    "d": "2026-10-05",
-    "ph": "strength",
-    "w": 160,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 160,
-      "r": 6
-     },
-     {
-      "w": 160,
-      "r": 6
-     },
-     {
-      "w": 160,
-      "r": 6
-     },
-     {
-      "w": 160,
-      "r": 6
-     }
-    ],
-    "slot": "B-d1s6",
-    "wk": "2026-10-04",
-    "id": "kg0kzux",
-    "auto": true
-   },
-   {
-    "d": "2026-10-08",
-    "ph": "strength",
-    "w": 160,
-    "s": 4,
-    "r": 6,
-    "sets": [
-     {
-      "w": 160,
-      "r": 6
-     },
-     {
-      "w": 160,
-      "r": 6
-     },
-     {
-      "w": 160,
-      "r": 6
-     },
-     {
-      "w": 160,
-      "r": 6
-     }
-    ],
-    "slot": "B-d4s3",
-    "wk": "2026-10-04",
-    "id": "Lmuzu48twhgcwp1",
-    "auto": true,
-    "updatedAt": "2026-10-08T17:53:02.901Z"
    }
   ],
   "platerot": [
@@ -5369,6 +5314,35 @@
     "id": "Lmv16aqhkfjeflp",
     "auto": true,
     "updatedAt": "2026-10-09T16:21:47.289Z"
+   },
+   {
+    "d": "2026-10-12",
+    "ph": "iso",
+    "w": 60,
+    "s": 4,
+    "sec": 15,
+    "sets": [
+     {
+      "w": 50,
+      "sec": 15
+     },
+     {
+      "w": 50,
+      "sec": 15
+     },
+     {
+      "w": 60,
+      "sec": 15
+     },
+     {
+      "w": 60,
+      "sec": 15
+     }
+    ],
+    "slot": "Pa2gom-d2s4",
+    "wk": "2026-10-11",
+    "id": "Lmv57bn3b64gdaj",
+    "updatedAt": "2026-10-12T12:04:35.748Z"
    }
   ],
   "seated-cable-crunch": [
@@ -5610,7 +5584,7 @@
    },
    {
     "d": "2026-10-08",
-    "ph": "strength",
+    "ph": "hyp",
     "w": 44,
     "s": 4,
     "r": 6,
@@ -5635,7 +5609,36 @@
     "slot": "B-xmuy1rdg3uct",
     "wk": "2026-10-04",
     "id": "Lmuzsw6mfoxrslw",
-    "updatedAt": "2026-10-08T17:18:47.175Z"
+    "updatedAt": "2026-10-12T13:08:17.581Z"
+   },
+   {
+    "d": "2026-10-12",
+    "ph": "hyp",
+    "w": 44,
+    "s": 4,
+    "r": 15,
+    "sets": [
+     {
+      "w": 44,
+      "r": 15
+     },
+     {
+      "w": 44,
+      "r": 15
+     },
+     {
+      "w": 44,
+      "r": 15
+     },
+     {
+      "w": 44,
+      "r": 15
+     }
+    ],
+    "slot": "Pa2gom-d1s9",
+    "wk": "2026-10-11",
+    "id": "Lmv57rvjoailyn6",
+    "updatedAt": "2026-10-12T12:14:11.316Z"
    }
   ],
   "zercher": [
@@ -7676,9 +7679,26 @@
   },
   "2026-10-11": {
    "prog": null,
-   "done": {},
-   "skipped": {},
-   "moved": {},
+   "done": {
+    "Pa2gom-d1s2": true,
+    "Pa2gom-d1s4": true,
+    "Pa2gom-d1s5": true,
+    "Pa2gom-d1s7": true,
+    "Pa2gom-d1s9": true,
+    "Pa2gom-d2s4": true,
+    "Pa2gom-d2s4#0": true
+   },
+   "skipped": {
+    "Pa2gom-d1s1": true,
+    "Pa2gom-d1s3": true,
+    "Pa2gom-d1s6": true,
+    "Pa2gom-d1s10": true,
+    "Pa2gom-d1s11": true
+   },
+   "moved": {
+    "Pa2gom-d1s8": 2,
+    "Pa2gom-d2s4": 1
+   },
    "ph": {},
    "warm": {},
    "rest": [
@@ -7741,9 +7761,10 @@
          "id": "Pa2gom-d1s4",
          "sec": "Regular",
          "tier": "Accessory",
+         "note": "Inner squeeze",
          "items": [
           {
-           "ex": "innerthigh",
+           "ex": "c:fedb:Thigh_Abductor",
            "ph": "strength",
            "w": 180
           }
@@ -7753,9 +7774,10 @@
          "id": "Pa2gom-d1s5",
          "sec": "Regular",
          "tier": "Accessory",
+         "note": "Outer Spread",
          "items": [
           {
-           "ex": "outerthigh",
+           "ex": "c:fedb:Thigh_Adductor",
            "ph": "strength",
            "w": 160
           }
@@ -7781,12 +7803,12 @@
          "type": "superset",
          "items": [
           {
-           "ex": "chestpress",
+           "ex": "c:fedb:Dumbbell_Bench_Press",
            "ph": "strength",
            "w": 35
           },
           {
-           "ex": "zercher",
+           "ex": "c:fedb:Seated_Good_Mornings",
            "ph": "strength",
            "w": 50
           }
@@ -7799,16 +7821,15 @@
          "type": "superset",
          "items": [
           {
-           "ex": "zottman",
+           "ex": "c:fedb:Zottman_Curl",
            "ph": "hyp",
-           "w": 15,
-           "rx": "3 × 15"
+           "w": 15
           },
           {
            "ex": "kbleg",
            "ph": "iso",
            "w": 15,
-           "rx": "3 × 15 s hold"
+           "rx": "4 × 15 s hold"
           }
          ]
         },
@@ -7819,12 +7840,12 @@
          "type": "superset",
          "items": [
           {
-           "ex": "latpdbi",
+           "ex": "c:fedb:Close-Grip_Front_Lat_Pulldown",
            "ph": "hyp",
            "w": 45
           },
           {
-           "ex": "wristpd",
+           "ex": "c:fedb:Cable_Wrist_Curl",
            "ph": "hyp",
            "w": null
           }
@@ -7848,7 +7869,7 @@
          "items": [
           {
            "ex": "canoe",
-           "ph": null,
+           "ph": "mob",
            "w": 10,
            "note": "With a stick or barbell"
           }
@@ -7888,7 +7909,7 @@
          "note": "Whichever is free",
          "items": [
           {
-           "ex": "farmers",
+           "ex": "c:fedb:Farmers_Walk",
            "ph": "strength",
            "w": 40
           },
@@ -7905,7 +7926,7 @@
          "tier": "Primary",
          "items": [
           {
-           "ex": "ohtri",
+           "ex": "c:fedb:Cable_Rope_Overhead_Triceps_Extension",
            "ph": "strength",
            "w": 17
           }
@@ -7925,7 +7946,7 @@
            "rx": "4 × 15 s per arm"
           },
           {
-           "ex": "facepull",
+           "ex": "c:fedb:Face_Pull",
            "ph": "strength",
            "w": 30
           }
@@ -7943,7 +7964,7 @@
            "w": 320
           },
           {
-           "ex": "chestpress",
+           "ex": "c:fedb:Dumbbell_Bench_Press",
            "ph": "hyp",
            "w": 25
           }
@@ -7961,7 +7982,7 @@
            "w": 40
           },
           {
-           "ex": "legcurl",
+           "ex": "c:fedb:Lying_Leg_Curls",
            "ph": "strength",
            "w": 50
           }
@@ -7974,12 +7995,12 @@
          "type": "superset",
          "items": [
           {
-           "ex": "seated-cable-crunch",
+           "ex": "c:fedb:Cable_Seated_Crunch",
            "ph": "strength",
            "w": null
           },
           {
-           "ex": "wristpd",
+           "ex": "c:fedb:Cable_Wrist_Curl",
            "ph": "hyp",
            "w": null
           }
@@ -8074,7 +8095,7 @@
            "rx": "4 × 15 s per arm"
           },
           {
-           "ex": "facepull",
+           "ex": "c:fedb:Face_Pull",
            "ph": "strength",
            "w": 30
           }
@@ -8107,12 +8128,12 @@
          "type": "superset",
          "items": [
           {
-           "ex": "latpdbi",
+           "ex": "c:fedb:Close-Grip_Front_Lat_Pulldown",
            "ph": "hyp",
            "w": 45
           },
           {
-           "ex": "wristpd",
+           "ex": "c:fedb:Cable_Wrist_Curl",
            "ph": "hyp",
            "w": null
           }
@@ -8136,8 +8157,9 @@
          "items": [
           {
            "ex": "deskbands",
-           "ph": null,
+           "ph": "iso",
            "w": null,
+           "rx": "4 × 15 s hold",
            "note": "With a resistance band"
           }
          ]
@@ -8176,7 +8198,7 @@
          "note": "Whichever is free",
          "items": [
           {
-           "ex": "farmers",
+           "ex": "c:fedb:Farmers_Walk",
            "ph": "strength",
            "w": 40
           },
@@ -8191,9 +8213,10 @@
          "id": "Pa2gom-d4s3",
          "sec": "Regular",
          "tier": "Accessory",
+         "note": "Inner squeeze",
          "items": [
           {
-           "ex": "innerthigh",
+           "ex": "c:fedb:Thigh_Abductor",
            "ph": "strength",
            "w": 180
           }
@@ -8203,9 +8226,10 @@
          "id": "Pa2gom-d4s4",
          "sec": "Regular",
          "tier": "Accessory",
+         "note": "Outer Spread",
          "items": [
           {
-           "ex": "outerthigh",
+           "ex": "c:fedb:Thigh_Adductor",
            "ph": "strength",
            "w": 160
           }
@@ -8241,7 +8265,7 @@
            "w": 320
           },
           {
-           "ex": "chestpress",
+           "ex": "c:fedb:Dumbbell_Bench_Press",
            "ph": "hyp",
            "w": 25
           }
@@ -8259,7 +8283,7 @@
            "w": 40
           },
           {
-           "ex": "legcurl",
+           "ex": "c:fedb:Lying_Leg_Curls",
            "ph": "strength",
            "w": 50
           }
@@ -8272,16 +8296,15 @@
          "type": "superset",
          "items": [
           {
-           "ex": "zottman",
+           "ex": "c:fedb:Zottman_Curl",
            "ph": "hyp",
-           "w": 15,
-           "rx": "3 × 15"
+           "w": 15
           },
           {
            "ex": "kbleg",
            "ph": "iso",
            "w": 15,
-           "rx": "3 × 15 s hold"
+           "rx": "4 × 15 s hold"
           }
          ]
         },
@@ -8303,8 +8326,9 @@
          "items": [
           {
            "ex": "deskbands",
-           "ph": null,
+           "ph": "iso",
            "w": null,
+           "rx": "4 × 15 s hold",
            "note": "With a resistance band"
           }
          ]
@@ -8349,7 +8373,7 @@
            "rx": "4 × 15 s per arm"
           },
           {
-           "ex": "facepull",
+           "ex": "c:fedb:Face_Pull",
            "ph": "strength",
            "w": 30
           }
@@ -8409,12 +8433,12 @@
          "type": "superset",
          "items": [
           {
-           "ex": "seated-cable-crunch",
+           "ex": "c:fedb:Cable_Seated_Crunch",
            "ph": "strength",
            "w": null
           },
           {
-           "ex": "wristpd",
+           "ex": "c:fedb:Cable_Wrist_Curl",
            "ph": "strength",
            "w": null
           }
@@ -8833,6 +8857,9 @@
     22
    ],
    "2026-10-06": [
+    22
+   ],
+   "2026-10-12": [
     22
    ]
   },
