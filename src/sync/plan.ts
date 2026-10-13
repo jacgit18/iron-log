@@ -59,8 +59,9 @@ const isCheckOff = (r: DesiredRow | MirrorRow) => r.table === 'log_entries' && !
 const byKey = (a: PlannedCommand, b: PlannedCommand) => (a.rowKey < b.rowKey ? -1 : a.rowKey > b.rowKey ? 1 : 0);
 
 /** The commands that bring the server's rows for this path in line with `doc`. Empty when they already agree.
- *  `keep` names rows (by mirror id) whose deletion is to be skipped: the server changed them after this phone saw them,
- *  and a delete must not win silently over a later edit (FM-05). */
+ *  `keep` names rows (by mirror id) the server changed after this phone saw them, which this plan leaves as they are: neither
+ *  deleted (a delete must not win silently over a later edit, FM-05) nor edited back to an older copy (Try again on a set-aside
+ *  change). */
 export function planCommands(kind: PathKind, doc: unknown, mirror: Mirror, keep: ReadonlySet<string> = new Set()): PlannedCommand[] {
   const desired = desiredRows(kind, doc, mirror);
   const wanted = new Set(desired.map(idOf));
@@ -85,6 +86,7 @@ export function planCommands(kind: PathKind, doc: unknown, mirror: Mirror, keep:
       continue;
     }
     if (canonOf(have) === canonOf(row)) continue;
+    if (keep.has(idOf(row))) continue; // changed on the server since: the newer row stays
     // A check-off is not edited in place: the old one goes and a new one is made (the server refuses to edit one).
     if (isCheckOff(row) || isCheckOff(have)) {
       const gone = remove(have);

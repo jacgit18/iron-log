@@ -1,6 +1,6 @@
 import type { AccountState } from './account.js';
 import { backoffMs } from './backoff.js';
-import { documentFor, parsePath, pathsOf, type PathKind } from './documents.js';
+import { desiredRows, documentFor, parsePath, pathsOf, scopeRows, type PathKind } from './documents.js';
 import { entryId } from '../lib/export.js';
 import { createMirrorStore, type Storage } from './mirrorStore.js';
 import { mergeStretchWeek3, mergeWeek3 } from './merge.js';
@@ -284,9 +284,21 @@ export function createApiDb(options: ApiDbOptions) {
   };
   const rememberBase = (path: string) => { const b = weekRow(path); if (b !== undefined) bases.set(path, b); };
 
+  // What the server held for a path when a change to it was set aside: Try again leaves alone whatever changed after (see retry).
+  const seenNow = (path: string) => {
+    const kind = parsePath(path);
+    if (!kind) return {};
+    const seen: Record<string, number> = {};
+    for (const r of scopeRows(kind, mirror.rows())) if (!r.deleted) seen[mirrorId(r.table, r.key)] = r.version;
+    const w = weekRow(path);
+    return w ? { seen, baseWeek: w.week } : { seen };
+  };
+  // Rows a Try again must leave as they are (changed on the server since the refusal, or not in the old copy), by path, for its send.
+  const retryKeep = new Map<string, Set<string>>();
+
   function refuse(path: string, sent: unknown, reason: string) {
     bases.delete(path);
-    outbox.refuse(path, sent, reason);
+    outbox.refuse(path, sent, reason, seenNow(path));
     setState('idle'); // this write is no longer being sent; whatever is next sets the state again
     announce();
     return { refused: reason };
@@ -298,7 +310,8 @@ export function createApiDb(options: ApiDbOptions) {
     const kind = parsePath(path) as PathKind;
     const touched = new Set<string>();
     const adjusted = new Set<string>(); // paths whose document this changed to match the server, so the app must be told
-    const kept = new Set<string>(); // rows another device changed after this phone saw them, so a delete of them is skipped
+    const kept = new Set<string>(retryKeep.get(path) ?? []); // rows another device changed after this phone saw them: left as they are
+    retryKeep.delete(path);
     let attempt = 0; // consecutive waits, for the backoff
     let conflicts = 0;
     let passes = 0; // passes in which every command was accepted
@@ -504,7 +517,35 @@ export function createApiDb(options: ApiDbOptions) {
       if (at < 0) return Promise.resolve('gone');
       const entry = all[at]!;
       if (outbox.has(entry.path) || all.slice(at + 1).some(e => e.path === entry.path)) return Promise.resolve('busy');
-      const sending = set(entry.path, entry.doc); // kept in the outbox before anything else happens
+      // Try again adds, it never takes away. The set-aside copy is old: sent as it is, it would delete whatever was added since and
+      // put back older versions of what was edited since. So a week is merged three-way with the row it was made from (ADR 031),
+      // and for anything else the rows that changed on the server since the refusal, or that the old copy lacks, are left alone.
+      // An entry from before versions were kept (no `seen`) only adds.
+      const kind = parsePath(entry.path);
+      const seen = entry.seen && typeof entry.seen === 'object' ? entry.seen : null;
+      let doc = entry.doc;
+      if (kind && (kind.kind === 'weeks' || kind.kind === 'stretchweeks') && !isDeleted(doc)) {
+        const cur = weekRow(entry.path);
+        if (cur && (!seen || seen[mirrorId(kind.kind === 'weeks' ? 'weeks' : 'stretch_weeks', kind.weekStart)] !== cur.version)) {
+          const m = kind.kind === 'weeks' ? mergeWeek3(entry.baseWeek ?? null, doc, cur.week) : mergeStretchWeek3(entry.baseWeek ?? null, doc, cur.week);
+          doc = m.week;
+          if (m.tookTheirs) note(entry.path, 'Sent what was set aside, merged with newer changes from another device.');
+        }
+      } else if (kind) {
+        const wanted = isDeleted(doc) ? new Set<string>() : new Set(desiredRows(kind, doc, mirror.rows()).map(r => mirrorId(r.table, r.key)));
+        const keep = new Set<string>();
+        let newer = false;
+        for (const r of scopeRows(kind, mirror.rows())) {
+          if (r.deleted) continue;
+          const id = mirrorId(r.table, r.key);
+          const changed = !seen || seen[id] !== r.version;
+          if (changed) newer = true;
+          if (changed || (!wanted.has(id) && !isDeleted(doc))) keep.add(id);
+        }
+        if (keep.size) retryKeep.set(entry.path, keep);
+        if (newer) note(entry.path, 'Sent what was set aside; what changed on another device since was kept.');
+      }
+      const sending = set(entry.path, doc); // kept in the outbox before anything else happens
       outbox.discard(id); // only now is the old entry safe to drop
       announce();
       return sending.then(() => 'sent' as const, () => 'refused' as const);

@@ -102,6 +102,12 @@ describe('planCommands: log entries', () => {
     expect(cmds.map(c => `${c.name}:${c.rowKey}`)).toEqual(['delete-entry:B']);
   });
 
+  it('does not edit a row it was told to keep back to an older copy; the others still are', () => {
+    const m = mirrorOf([logRow(entry('A')), logRow(entry('B'))], { version: 3 });
+    const cmds = planCommands(kind('logs/squat'), { entries: [entry('A', { w: 999 }), entry('B', { w: 999 })] }, m, new Set(['log_entries|A']));
+    expect(cmds.map(c => `${c.name}:${c.rowKey}`)).toEqual(['log-session:B']);
+  });
+
   it('only touches its own exercise', () => {
     const m = mirrorOf([logRow(entry('B1'), 'bench')]);
     expect(plan('logs/squat', { entries: [] }, m)).toEqual([]);
