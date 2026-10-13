@@ -289,6 +289,13 @@ body.timing{padding-bottom:130px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
 .card[draggable="true"]{cursor:grab}
 .card.dragging{opacity:.4}
+.card.swipable{touch-action:pan-y}
+.card.swiping{transition:none;user-select:none;-webkit-user-select:none}
+.card.swipable:not(.swiping){transition:transform .18s ease-out}
+.card.swiping[data-hint]{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,var(--surface)),var(--surface) 55%,color-mix(in srgb,var(--accent) 22%,var(--surface)));border-color:var(--accent);position:relative}
+.card.swiping[data-hint]::before,.card.swiping[data-hint]::after{content:attr(data-hint) / "";position:absolute;top:50%;transform:translateY(-50%);padding:3px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--accent);font-weight:700;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);pointer-events:none}
+.card.swiping[data-hint]::before{left:10px}
+.card.swiping[data-hint]::after{right:10px}
 .card.done{background:transparent;box-shadow:none}
 .card.skipped{background:transparent;box-shadow:none;border-style:dashed}
 .card.skipped .exname{text-decoration:line-through;text-decoration-style:dashed}
