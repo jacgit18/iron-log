@@ -59,3 +59,16 @@ test('finishing a day\'s workout suggests moving one card; Apply moves it and fo
   await expect(page.locator('#col-3 #chk-A-d3s5')).toHaveCount(1);
   await expect(putBack).toHaveCount(0);
 });
+
+test('pull down to refresh is left on when idle, and switched off while a timer runs or a sheet is open', async ({ page }) => {
+  const pull = () => page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY);
+  expect(await pull()).toBe('auto');
+  await page.getByRole('button', { name: 'Rest timer' }).click();
+  await expect.poll(pull).toBe('none');
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await expect.poll(pull).toBe('auto');
+  await page.locator('#log-A-d1s1-0').click();
+  await expect.poll(pull).toBe('none');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect.poll(pull).toBe('auto');
+});

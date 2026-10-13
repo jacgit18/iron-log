@@ -40,7 +40,10 @@ body{background:var(--bg);color:var(--ink);font-family:Barlow,"Barlow Fallback",
 h1,h2,h3,.cond{font-family:"Barlow Condensed","Barlow Condensed Fallback","Arial Narrow",system-ui,sans-serif;letter-spacing:.01em}
 a{color:var(--accent)}
 button,select,input{font:inherit;color:inherit}
-html{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+html{-webkit-tap-highlight-color:transparent}
+/* Pull down to refresh works while the app is idle. It is switched off while a rest or hold timer runs (body.timing) or a sheet
+   is open (Sheet makes .wrap inert), when an accidental reload would lose the set being logged. */
+html:has(body.timing),html:has(.wrap[inert]){overscroll-behavior-y:none}
 button,a,select,summary,label,input,textarea,[role=button],[role=tab]{touch-action:manipulation}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
