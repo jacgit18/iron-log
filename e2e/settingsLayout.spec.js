@@ -83,3 +83,18 @@ for (const [width, height] of [[375, 812], [1280, 800]]) test(`the jump row stay
   await expect.poll(() => page.evaluate(() => document.getElementById('set-data-h').getBoundingClientRect().top - document.querySelector('.sjump').getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(-1);
   await expect(page.locator('#set-data-h')).toBeInViewport();
 });
+
+test('each panel keeps its background in a closed fold named for it', async ({ page }) => {
+  await page.goto('/');
+  await openSettings(page);
+  const folds = page.locator('details.more');
+  const names = await folds.locator('summary').allTextContents();
+  expect(names.length).toBeGreaterThanOrEqual(5);
+  expect(names.every(n => n.startsWith('More about '))).toBe(true);
+  expect(new Set(names).size).toBe(names.length); // distinct, so a screen reader can tell them apart
+  for (const open of await folds.evaluateAll(ds => ds.map(d => d.open))) expect(open).toBe(false);
+  const phases = folds.filter({ has: page.locator('summary', { hasText: 'More about phases' }) });
+  await expect(phases.getByText(/placeholders until you set your own/)).toBeHidden();
+  await phases.locator('summary').click();
+  await expect(phases.getByText(/placeholders until you set your own/)).toBeVisible();
+});

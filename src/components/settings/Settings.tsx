@@ -20,6 +20,11 @@ import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNoti
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { IMPORT_ACCEPT } from '../../lib/importFile.js';
 
+// The panel pattern: heading, one line on what it is for, the controls, then the background in a fold named for the panel.
+function More({ about, children }: { about: string; children: ReactNode }) {
+  return <details className="more"><summary>More about {about}</summary>{children}</details>;
+}
+
 function ModePanel() {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
   const now = useToday(s => s.today); const yr = now.getFullYear();
@@ -100,8 +105,9 @@ function RestAlertPanel() {
     <section className="panel">
       <h3>Rest timer alert</h3>
       <label className="inline"><input type="checkbox" checked={on} onChange={e => void toggle(e.target.checked)} /> Show a notification when a rest or hold ends while Iron Log is in the background</label>
-      <p>It only shows while the phone still lets Iron Log run in the background. If the screen has been locked for a while the alert can be late, and the timer is right when you open the app again. Saved on this device only.</p>
+      <p>Saved on this device only.</p>
       {note && <p role="status">{note}</p>}
+      <More about="the alert"><p>It only shows while the phone still lets Iron Log run in the background. If the screen has been locked for a while the alert can be late, and the timer is right when you open the app again.</p></More>
     </section>
   );
 }
@@ -143,7 +149,7 @@ function PhasePanel() {
   return (
     <section className="panel">
       <h3>Phases</h3>
-      <p>Each phase has default sets × reps. The target weight starts from the weight you last logged for that exercise in that phase, otherwise the program's weight. The % of 1RM is only for comparing with your 1RM below; it doesn't set targets.</p>
+      <p>Default sets × reps for each phase, and the % of 1RM to compare with.</p>
       {/* One row per phase, each field labelled in place: a table's three columns wrapped the % under its box on a phone. */}
       <div className="phrows">
         {PH_KEYS.map(k => {
@@ -162,7 +168,10 @@ function PhasePanel() {
       <label className="inline" htmlFor="rest-s">Rest between sets{' '}
         <CommitInput key={`rest:${cfg.rest ?? 90}`} type="number" id="rest-s" min="0" max="600" step="any" value={cfg.rest ?? 90} style={{ width: 80 }} onCommit={st.setRest} /> seconds
       </label>
-      <p>The percentages are placeholders until you set your own. Isometric holds are usually judged by time and effort more than by % of a lifting max.</p>
+      <More about="phases">
+        <p>Each phase has default sets × reps. The target weight starts from the weight you last logged for that exercise in that phase, otherwise the program's weight. The % of 1RM is only for comparing with your 1RM below; it doesn't set targets.</p>
+        <p>The percentages are placeholders until you set your own. Isometric holds are usually judged by time and effort more than by % of a lifting max.</p>
+      </More>
     </section>
   );
 }
@@ -175,14 +184,14 @@ function DataPanel() {
   return (
     <section className="panel" aria-labelledby="data-h">
       <h3 id="data-h">Export &amp; import</h3>
-      <p>{storeMode === 'db' ? 'Your data is already saved to your account; exporting is optional. ' : ''}<b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
+      <p>{storeMode === 'db' ? 'Your data is already saved to your account; exporting a copy is optional.' : 'Your data is in this browser only; export a copy now and then.'}</p>
       <div className="actions">
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <label className="btn filebtn">Import from file
           <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : 'imp-help'} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
       </div>
-      <p className="note" id="imp-help">Import takes the data file, or a workbook or .csv from an earlier version. An older workbook or a .csv only brings back logged sessions, body weight and main settings. You review before anything changes.</p>
+      <p className="note" id="imp-help">Import takes the data file, or a workbook or .csv from an earlier version. You review before anything changes.</p>
       {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
       <details className="imppaste">
         <summary>Can't pick a file? Paste its contents instead</summary>
@@ -191,15 +200,20 @@ function DataPanel() {
           <button type="button" className="btn sm" onClick={() => st.pasteImport(paste)}>Review import</button>
         </div>
       </details>
+      <More about="export and import">
+        <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
+        <p>An older workbook or a .csv only brings back logged sessions, body weight and main settings.</p>
+      </More>
       {dl && (
         <div className="subblock">
           <h4>Spreadsheet report</h4>
-          <p>For reading and charting, not for backup. <b>iron-log.xlsx</b> has a summary per exercise, every session and weekly totals; each week also has its own workbook. The .csv lists logged sessions only.</p>
+          <p>For reading and charting, not a backup.</p>
           <div className="actions">
             <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('all')}>Download Excel</button>
             <button type="button" className="btn" disabled={!!exporting} onClick={() => st.downloadExcel('week')}>Download this week</button>
             <button type="button" className="btn" disabled={!!exporting} onClick={st.exportCsv}>Download CSV</button>
           </div>
+          <More about="the reports"><p><b>iron-log.xlsx</b> has a summary per exercise, every session and weekly totals; each week also has its own workbook. The .csv lists logged sessions only.</p></More>
         </div>
       )}
     </section>
@@ -232,11 +246,11 @@ function ErasePanel() {
           </label>
         ))}
       </fieldset>
-      <p className="note">Kept: display options, and any file you exported earlier. An export made after erasing holds the erased state.</p>
       <div className="actions">
         {dl && <button type="button" className="btn" disabled={!!exporting} onClick={st.downloadData}>Export all data first</button>}
         <ArmedButton className="btn danger" disabled={!n} label={n ? `Erase ${n} selected` : 'Tick what to erase'} armedLabel={`Tap again to erase ${n}`} onConfirm={() => st.eraseData(sel)} />
       </div>
+      <More about="erasing"><p>Kept: display options, and any file you exported earlier. An export made after erasing holds the erased state.</p></More>
     </section>
   );
 }
@@ -262,7 +276,7 @@ function RmPanel() {
   return (
     <section className="panel wide">
       <h3>1-rep maxes</h3>
-      <p>Keep a one-rep max (1RM, the most you can lift once) for reference. It shows next to your logged weights but doesn't set targets: those start from the weight you last logged.</p>
+      <p>For reference only: a 1RM never sets your targets.</p>
       {/* Folded: one row per weighted exercise is most of the page on a phone, and it is rarely edited. */}
       <details className="fold">
         <summary>{weighted.length ? `Show all ${weighted.length} exercises (${withRm ? `${withRm} with a 1RM` : 'none set yet'})` : 'No weighted exercises in your programs yet'}</summary>
@@ -285,6 +299,7 @@ function RmPanel() {
         </table>
       </div>
       </details>
+      <More about="1-rep maxes"><p>A one-rep max (1RM) is the most you can lift once. It shows next to your logged weights; targets start from the weight you last logged.</p></More>
     </section>
   );
 }
