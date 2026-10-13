@@ -13,7 +13,7 @@ export const FEATURES = {
   catalog: 'all', // Browse the shared catalog and add from it (ADR 025-030), released to everyone 2026-10-11 by the owner: delete this line and the useFeature check in components/program/ExerciseLibrary.tsx when next touched
   restNotify: 'all', // Rest timer alert panel in Settings (opt-in per device), released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/settings/Settings.tsx when next touched
   swipeDone: 'all', // Swipe a board card sideways to tick it off (phone, mobile list item 11), released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/board/Card.tsx when next touched
-  grocery: 'admin', // Groceries under the Daily tab (ADR 019): set to 'all' when released, then delete this line and the useFeature check in components/daily/Daily.tsx
+  grocery: 'all', // Groceries under the Daily tab (ADR 019), released to everyone 2026-10-13 by the owner with a note that the list is kept on this device only (not synced yet): delete this line, the useFeature checks in components/daily/Daily.tsx and components/sheets/ImportSheet.tsx and featureNow('grocery') in the store when next touched
   installHint: 'all', // One-time "install the app" notice on the board for phones that can install, released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/board/InstallHint.tsx when next touched
   offlineNotice: 'all', // Slim "Offline" / "Back online, syncing" line under the header when syncing is on, released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/OfflineNotice.tsx when next touched
 } satisfies Record<string, Audience>;
@@ -43,6 +43,8 @@ export function setAdmin(value: boolean) {
 }
 
 export const isAdminNow = () => admin;
+/** useFeature outside React (store code): whether the feature is on for whoever is signed in now. */
+export const featureNow = (name: FeatureName): boolean => featureOn((FEATURES as Record<string, Audience>)[name], admin);
 
 export function useFeature(name: FeatureName): boolean {
   const isAdmin = useSyncExternalStore(cb => (listeners.add(cb), () => void listeners.delete(cb)), () => admin);
