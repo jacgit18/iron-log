@@ -1,8 +1,9 @@
-import { useEffect, type ComponentType, type KeyboardEvent } from 'react';
+import { useEffect, useRef, type ComponentType, type KeyboardEvent } from 'react';
 import { useAppStore } from './store/useAppStore.js';
 import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
+import useTabbarHeight from './hooks/useTabbarHeight.js';
 import BoardTab from './components/board/BoardTab.js';
 import TimerBar from './components/TimerBar.js';
 import LogSheet from './components/sheets/LogSheet.js';
@@ -75,6 +76,8 @@ export default function App() {
   const { setTab, closeModal, openModal } = useAppStore.getState();
   useTooltips();
   useFocusKeeper();
+  const tabsRef = useRef<HTMLElement>(null);
+  useTabbarHeight(tabsRef);
 
   const label = TABS.find(([k]) => k === tab)![1];
   useEffect(() => { document.title = `${label} · Iron Log`; }, [label]);
@@ -106,7 +109,7 @@ export default function App() {
             <span className="pill">Mode {cfg.mode}</span>
           </div>
           <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
-          <nav className="tabs" aria-label="Sections">
+          <nav className="tabs" aria-label="Sections" ref={tabsRef}>
             <div role="tablist" aria-label="Sections" className="tablist" onKeyDown={onTabKey}>
               {TABS.map(([k, l]) => (
                 <button type="button" role="tab" key={k} id={`tab-${k}`} aria-selected={tab === k} aria-controls="view"
