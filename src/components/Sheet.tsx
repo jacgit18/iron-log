@@ -37,6 +37,21 @@ export default function Sheet({ as: Tag = 'div', className = '', children, ...re
     (first || el).focus();
   }, [Tag]);
 
+  // The on-screen keyboard covers the lower part of the sheet. When a field takes focus, wait for the keyboard to
+  // finish opening, then bring the field to the middle of the sheet so it and the Save button stay reachable.
+  useEffect(() => {
+    const el = ref.current!;
+    let t = 0;
+    const onFocusIn = (e: FocusEvent) => {
+      const f = e.target as HTMLElement;
+      if (!f.matches?.('input:not([type=checkbox]):not([type=radio]), textarea, select')) return;
+      window.clearTimeout(t);
+      t = window.setTimeout(() => f.isConnected && f.scrollIntoView({ block: 'center', behavior: 'auto' }), 300);
+    };
+    el.addEventListener('focusin', onFocusIn);
+    return () => { window.clearTimeout(t); el.removeEventListener('focusin', onFocusIn); };
+  }, []);
+
   const trap = (e: KeyboardEvent) => {
     if (e.key !== 'Tab') return;
     const f = [...ref.current!.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(el => el.offsetParent !== null || el === document.activeElement);
