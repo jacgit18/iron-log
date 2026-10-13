@@ -71,6 +71,11 @@ export default defineConfig({
         theme_color: '#1F5E5B',
         background_color: '#EEF0EC',
         categories: ['health', 'fitness', 'sports'],
+        // Long-press the home-screen icon (Android). Both open the app on a tab; the store reads ?open= (lib/viewState.ts).
+        shortcuts: [
+          { name: "Today's workout", short_name: 'Today', url: './?open=board', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Daily log', short_name: 'Daily', url: './?open=daily', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
+        ],
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -84,6 +89,8 @@ export default defineConfig({
         // The API shares the origin (ADR 010). A page load of an /api path, such as the sign-in callback, must reach the
         // server, not be answered with the app by the service worker.
         navigateFallbackDenylist: [/^\/api\//],
+        // The iOS splash images are only fetched by iPhone Safari at install time, so they stay out of the offline cache.
+        globIgnores: ['splash/**'],
         cleanupOutdatedCaches: true,
       },
     }),
