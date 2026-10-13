@@ -199,10 +199,10 @@ export interface WellnessSlice {
   addStretchToDay(expId: string, day: number): boolean;
   removeStretchExtra(id: string): void;
   addSupplement(slot: SupplementSlot, name: string, dose?: string): boolean;
-  setSupplementSlot(id: string, slot: SupplementSlot): boolean;
+  setSupplementSlot(id: string, slot: SupplementSlot, dose?: string): boolean;
   removeSupplement(id: string): boolean;
   /** Adds a catalog supplement as Library only with its brand and catalog id (ADR 029). Returns an error message, or null. */
-  addCatalogSupplement(item: CatalogItem): string | null;
+  addCatalogSupplement(item: CatalogItem, opts?: { slot?: SupplementSlot; dose?: string }): string | null;
   saveSupplement(d: SupplementForm): string | null;
   deleteSupplement(id: string): void;
   moveSupplement(id: string, dir: number): void;

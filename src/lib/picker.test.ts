@@ -52,6 +52,17 @@ describe('pickerOptions', () => {
   });
 });
 
+describe('pickerOptions also', () => {
+  it('counts `also` items as yours for duplicates and the create row, without listing them', () => {
+    const inSlot = [{ id: 's1', name: 'Creatine', brand: 'NOW', catalogId: 'c:dsld:1' }];
+    const found = [cat('c:dsld:1', 'Creatine', 'NOW'), cat('c:dsld:2', 'Creatine', 'Optimum')];
+    const o = pickerOptions('creatine', [], found, { byBrand: true, serverFiltered: true, also: inSlot });
+    expect(o.mine.shown).toEqual([]);
+    expect(o.catalog.shown.map(c => c.id)).toEqual(['c:dsld:2']);
+    expect(o.create).toBeNull(); // already in the slot under that name
+  });
+});
+
 describe('pickerKey', () => {
   it('trims, folds spaces and case, and copes with nothing', () => {
     expect(pickerKey('  Cable   Row ')).toBe('cable row');

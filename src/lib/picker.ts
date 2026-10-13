@@ -11,7 +11,8 @@ export type CatalogState =
   | { status: 'short' } // too few letters for a server search
   | { status: 'loading' }
   | { status: 'failed'; reason: 'offline' | 'refused' | 'unreachable' }
-  | { status: 'ready'; items: CatalogItem[]; more?: boolean };
+  /** `searching`: these answer an earlier search; a newer one is on its way (shown meanwhile so the list does not empty on each key). */
+  | { status: 'ready'; items: CatalogItem[]; more?: boolean; searching?: boolean };
 
 export type PickerChoice = { kind: 'mine'; id: string } | { kind: 'catalog'; item: CatalogItem } | { kind: 'create'; name: string };
 
@@ -32,15 +33,17 @@ const cap = <T>(list: T[], max: number): PickerGroup<T> => ({ shown: list.slice(
 /**
  * The picker's groups for `q`. `byBrand` (supplements): a catalog item is a duplicate only when name and brand both match, as the store
  * judges it (two products may share a name). `serverFiltered`: the catalog items already match `q` (the supplement search), so they are
- * not filtered again. With nothing typed, your items are listed and the catalog is not.
+ * not filtered again. `also`: more of your items, not listed but still counted as yours when leaving catalog duplicates out (the
+ * supplements already in the slot being added to). With nothing typed, your items are listed and the catalog is not.
  */
-export function pickerOptions(q: string, mine: MineOption[], catalog: CatalogItem[], opts: { max?: number; byBrand?: boolean; serverFiltered?: boolean } = {}): PickerOptions {
+export function pickerOptions(q: string, mine: MineOption[], catalog: CatalogItem[], opts: { max?: number; byBrand?: boolean; serverFiltered?: boolean; also?: MineOption[] } = {}): PickerOptions {
   const max = opts.max ?? 8; const byBrand = !!opts.byBrand;
   const k = pickerKey(q); const words = k ? k.split(' ') : [];
   const mineShown = rank(mine.filter(m => matches(words, m.name, byBrand ? m.brand : undefined)), k, m => m.name);
-  const have = new Set(mine.map(m => m.catalogId).filter(Boolean));
-  const fromCatalog = !k ? [] : catalog.filter(c => !have.has(c.id) && !mine.some(m => sameItem(m, c, byBrand))
+  const yours = [...mine, ...(opts.also || [])];
+  const have = new Set(yours.map(m => m.catalogId).filter(Boolean));
+  const fromCatalog = !k ? [] : catalog.filter(c => !have.has(c.id) && !yours.some(m => sameItem(m, c, byBrand))
     && (opts.serverFiltered || matches(words, c.name, byBrand ? c.brand : undefined)));
-  const exact = !!k && mine.some(m => pickerKey(m.name) === k);
+  const exact = !!k && yours.some(m => pickerKey(m.name) === k);
   return { mine: cap(mineShown, max), catalog: cap(rank(fromCatalog, k, c => c.name), max), create: k && !exact ? String(q).trim().replace(/\s+/g, ' ') : null };
 }

@@ -10,7 +10,8 @@ const ownProgram = { key: 'A', days: [{ title: 'Day 1', slots: [{ id: 'A-d1s1', 
 const pull = { rows: [
   { table: 'programs', key: 'A', data: ownProgram, ...rowBase, seq: '1' },
   { table: 'list_items', list: 'stretch', client_id: 'scarecrow', position: 0, data: { id: 'scarecrow', n: 'Scarecrow', group: 'Bands', tier: 'primary' }, ...rowBase, seq: '2' },
-], cursor: '2', more: false };
+  { table: 'list_items', list: 'supplement_item', client_id: 'fishoil', position: 0, data: { id: 'fishoil', n: 'Fish Oil', slot: '', dose: '1 g' }, ...rowBase, seq: '3' },
+], cursor: '3', more: false };
 const catalog = { ok: true, items: [
   { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: { eq: 'cable', muscles: { p: ['chest'] } } },
   { id: 'c:fedb:Cable_Lat_Raise', name: 'Cable Lateral Raise (Kneeling)', data: { eq: 'cable', muscles: { p: ['delts'] } } },
@@ -168,4 +169,66 @@ test('a stretch to try can be found in the catalog from the Stretches tab', asyn
   await expect(name).toHaveValue('Calf Stretch');
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('.expcard').filter({ hasText: 'Calf Stretch' })).toHaveCount(1);
+});
+
+// Supplements: the server searches (ADR 029). `products` answers GET /api/catalog/search by the words typed; `slowFor` holds one query back.
+const products = [
+  { id: 'c:dsld:1', name: 'Creatine Monohydrate', brand: 'NOW Foods', data: { form: 'Powder' } },
+  { id: 'c:dsld:2', name: 'Creatine HCl', brand: 'Kaged', data: { form: 'Capsule' } },
+];
+const search = (slowFor = '') => async route => {
+  const q = new URL(route.request().url()).searchParams.get('q').toLowerCase();
+  if (q === slowFor) await new Promise(r => setTimeout(r, 1500));
+  const items = products.filter(p => q.split(' ').every(w => `${p.name} ${p.brand}`.toLowerCase().includes(w)));
+  return json(200, { ok: true, items, more: false })(route);
+};
+const openSupplements = async (page, answer = search()) => {
+  await page.route('**/api/catalog/search?*', answer);
+  await openSynced(page);
+  await page.click('#tab-daily'); await page.click('#daily-supplements');
+  await page.click('#sched-edit');
+};
+const morningName = page => page.getByRole('combobox', { name: 'Add to Morning' });
+
+test('Supplements tab: a catalog product picked in a section joins your supplements there, with the dose typed', async ({ page }) => {
+  await openSupplements(page);
+  await morningName(page).fill('creatine now');
+  await page.getByRole('group', { name: 'Catalog' }).getByRole('option', { name: /Creatine Monohydrate/ }).click();
+  await expect(page.getByText('From the catalog. It joins your supplements in Morning.')).toBeVisible();
+  await page.fill('#suppdose-morning', '5 g');
+  await page.click('#suppadd-morning');
+  const morning = page.getByRole('group', { name: 'Morning' });
+  await expect(morning.locator('.warmrow')).toContainText(['Creatine Monohydrate · 5 g']);
+  await expect(morningName(page)).toHaveValue('');
+});
+
+test('Supplements tab: one of yours from the library is offered by name and moves into the section', async ({ page }) => {
+  await openSupplements(page);
+  await morningName(page).fill('fish');
+  await page.getByRole('group', { name: 'Yours' }).getByRole('option', { name: /Fish Oil/ }).click();
+  await expect(page.getByText('Moves it to Morning.')).toBeVisible();
+  await page.click('#suppadd-morning');
+  await expect(page.getByRole('group', { name: 'Morning' }).locator('.warmrow')).toContainText(['Fish Oil · 1 g']);
+  await expect(page.locator('#supplib-morning')).toHaveCount(0); // the old "Add from your library" menu is gone
+});
+
+test('Supplements tab: a slow answer to an older search never replaces the newer one', async ({ page }) => {
+  await openSupplements(page, search('creatine'));
+  await morningName(page).fill('creatine');
+  await page.waitForTimeout(500); // past the wait, so the slow search for "creatine" is sent
+  await morningName(page).fill('creatine kaged');
+  const catalogOpts = page.getByRole('group', { name: 'Catalog' }).getByRole('option');
+  await expect(catalogOpts).toHaveText([/Creatine HCl/]);
+  await page.waitForTimeout(1500); // the "creatine" answer (both products) arrives now
+  await expect(catalogOpts).toHaveText([/Creatine HCl/]);
+});
+
+test('Supplements tab: while a new search runs, the last answer is filtered by the new words (never shown under unrelated ones)', async ({ page }) => {
+  await openSupplements(page, search('zinc'));
+  await morningName(page).fill('creatine');
+  const catalogOpts = page.getByRole('group', { name: 'Catalog' }).getByRole('option');
+  await expect(catalogOpts).toHaveCount(2);
+  await morningName(page).fill('zinc'); // the zinc answer takes 1.5 s; the creatine products must not show meanwhile
+  await expect(page.getByText('Searching the catalog…')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Catalog' })).toHaveCount(0);
 });
