@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures.js';
 
-// The Share buttons are admin-only (features.ts) and appear only where the browser can share files. The browser here cannot, so each
+// The Share buttons are for everyone (features.ts) and appear only where the browser can share files. The browser here cannot, so each
 // test stubs navigator.share / canShare before the app starts, and records what was shared.
 const stub = (page, { share }) => page.addInitScript(({ mode }) => {
   window.__shared = [];
@@ -12,22 +12,21 @@ const stub = (page, { share }) => page.addInitScript(({ mode }) => {
     if (mode === 'gesture' && window.__shared.length === 1) throw new DOMException('no tap', 'NotAllowedError');
   };
 }, { mode: share });
-const asAdmin = async page => { await page.evaluate(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); };
 const openSettings = async page => { await page.click('#tab-settings'); await expect(page.getByRole('heading', { name: 'Export & import' })).toBeVisible(); };
 
-test('without file sharing support there is no Share button, even for an admin', async ({ page }) => {
-  await asAdmin(page); await openSettings(page);
+test('without file sharing support there is no Share button', async ({ page }) => {
+  await openSettings(page);
   await expect(page.getByRole('button', { name: 'Export all data', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Share/ })).toHaveCount(0);
 });
 
-test('a person who is not an admin does not see Share even where the browser can share files', async ({ page }) => {
+test('a default user sees Share where the browser can share files', async ({ page }) => {
   await stub(page, { share: 'ok' }); await page.reload(); await openSettings(page);
-  await expect(page.getByRole('button', { name: /^Share/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Share data file' })).toBeVisible();
 });
 
 test('Share sends the file the download would make, and says Shared', async ({ page }) => {
-  await stub(page, { share: 'ok' }); await asAdmin(page); await openSettings(page);
+  await stub(page, { share: 'ok' }); await page.reload(); await openSettings(page);
   await page.getByRole('button', { name: 'Share data file' }).click();
   await expect(page.getByText('Shared', { exact: true })).toBeVisible();
   const sent = await page.evaluate(() => window.__shared);
@@ -45,7 +44,7 @@ test('Share sends the file the download would make, and says Shared', async ({ p
 });
 
 test('closing the share sheet is not an error: nothing is shown and nothing is downloaded', async ({ page }) => {
-  await stub(page, { share: 'cancel' }); await asAdmin(page); await openSettings(page);
+  await stub(page, { share: 'cancel' }); await page.reload(); await openSettings(page);
   let downloaded = false; page.on('download', () => { downloaded = true; });
   await page.getByRole('button', { name: 'Share data file' }).click();
   await expect.poll(() => page.evaluate(() => window.__shared.length)).toBe(1);
@@ -55,7 +54,7 @@ test('closing the share sheet is not an error: nothing is shown and nothing is d
 });
 
 test('a share that fails falls back to the normal download with a short message', async ({ page }) => {
-  await stub(page, { share: 'fail' }); await asAdmin(page); await openSettings(page);
+  await stub(page, { share: 'fail' }); await page.reload(); await openSettings(page);
   const dl = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Share data file' }).click();
   expect((await dl).suggestedFilename()).toBe('iron-log-data-2026-09-24.json');
@@ -63,7 +62,7 @@ test('a share that fails falls back to the normal download with a short message'
 });
 
 test('when the tap ran out, a second tap shares the already built file', async ({ page }) => {
-  await stub(page, { share: 'gesture' }); await asAdmin(page); await openSettings(page);
+  await stub(page, { share: 'gesture' }); await page.reload(); await openSettings(page);
   await page.getByRole('button', { name: 'Share data file' }).click();
   const again = page.getByRole('button', { name: /^Share iron-log-data-2026-09-24\.json$/ });
   await again.click();

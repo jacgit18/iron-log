@@ -4,7 +4,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import type { ExportKind } from '../../store/types.ts';
 
 // "Share" beside an export button: sends the same file the download makes to the phone's share sheet (Files, Drive, Mail, AirDrop...).
-// Only where the browser can share files, and only for admins until released (features.ts).
+// Only where the browser can share files, (released to everyone, see features.ts).
 export default function ShareExport({ kind, label }: { kind: Exclude<ExportKind, 'csv'>; label: string }) {
   const on = useFeature('shareExport');
   const dl = useAppStore(s => s.dl); const exporting = useAppStore(s => s.exporting);

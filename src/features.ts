@@ -13,7 +13,7 @@ export const FEATURES = {
   catalog: 'all', // Browse the shared catalog and add from it (ADR 025-030), released to everyone 2026-10-11 by the owner: delete this line and the useFeature check in components/program/ExerciseLibrary.tsx when next touched
   restNotify: 'all', // Rest timer alert panel in Settings (opt-in per device), released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/settings/Settings.tsx when next touched
   grocery: 'admin', // Groceries under the Daily tab (ADR 019): set to 'all' when released, then delete this line and the useFeature check in components/daily/Daily.tsx
-  shareExport: 'admin', // Share buttons next to the export buttons (Web Share API with the export file), phones only: set to 'all' when released, then delete this line and the useFeature check in components/settings/ShareExport.tsx
+  shareExport: 'all', // Share buttons next to the export buttons (Web Share API with the export file), shown only where the browser can share files, released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/settings/ShareExport.tsx when next touched
 } satisfies Record<string, Audience>;
 
 export type Audience = 'admin' | 'all' | 'off';
