@@ -127,6 +127,8 @@ export default function Grocery() {
         <h2 id="groc-h">Groceries</h2>
         <button type="button" className="btn sm ghost" id="groc-edit" aria-pressed={editing} onClick={() => setEditing(v => !v)}>{editing ? 'Done' : 'Edit'}</button>
       </div>
+      {/* Released to everyone before it syncs (ADR 019 keeps it device-only for now): say so, so nobody expects it on another device. */}
+      <p className="notice" id="groc-local">Saved on this device only for now: the grocery list isn't stored in your account or synced to your other devices yet. <b>Export all data</b> in Settings keeps a copy.</p>
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }} role="group" aria-label="Month">
         <button type="button" className="btn sm" id="groc-prev" aria-label="Previous month" onClick={() => setBack(b => b + 1)}>‹</button>
         <b id="groc-month" role="status" aria-live="polite">{monthLabel(mk)}{back === 0 ? ' (this month)' : ''}</b>

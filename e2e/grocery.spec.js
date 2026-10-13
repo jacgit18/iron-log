@@ -3,7 +3,6 @@ import { test, expect } from './fixtures.js';
 
 const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 const open = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); };
-const asAdmin = async page => { await page.evaluate(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); };
 const add = async (page, n, store, qty, price, once = false) => {
   await page.fill('#groc-name', n); await page.fill('#groc-store', store); await page.fill('#groc-qty', qty); await page.fill('#groc-price', price);
   if (once) await page.check('#groc-once');
@@ -11,14 +10,15 @@ const add = async (page, n, store, qty, price, once = false) => {
   await expect(page.locator('#groc-name')).toHaveValue('');
 };
 
-test('Groceries is not on the Daily tab for anyone but an admin', async ({ page }) => {
-  await page.click('#tab-daily');
-  await expect(page.locator('#daily-supplements')).toBeVisible();
-  await expect(page.locator('#daily-grocery')).toHaveCount(0);
+test('Groceries is on the Daily tab for everyone, and says it is kept on this device only', async ({ page }) => {
+  await open(page); // not an admin
+  await expect(page.locator('#groc-h')).toBeVisible();
+  await expect(page.locator('#groc-local')).toContainText('Saved on this device only');
+  await expect(page.locator('#groc-local')).toContainText("isn't stored in your account or synced");
 });
 
-test('an admin builds a list across stores, ticks it off, sees the totals, and keeps it after a reload', async ({ page }) => {
-  await asAdmin(page); await open(page);
+test('anyone builds a list across stores, ticks it off, sees the totals, and keeps it after a reload', async ({ page }) => {
+  await open(page);
   await expect(page.locator('#groc-month')).toContainText('September 2026');
   await page.click('#groc-edit');
   await add(page, 'Kale', 'Veg market', '2', '2.50');
@@ -40,7 +40,7 @@ test('an admin builds a list across stores, ticks it off, sees the totals, and k
 });
 
 test('the next month starts fresh with the same items, and the price typed is remembered', async ({ page }) => {
-  await asAdmin(page); await open(page);
+  await open(page);
   await page.click('#groc-edit');
   await add(page, 'Kale', 'Veg market', '2', '2.50');
   await page.click('#groc-edit');
@@ -58,7 +58,7 @@ test('the next month starts fresh with the same items, and the price typed is re
 });
 
 test('the list has no accessibility violations, reading or editing', async ({ page }) => {
-  await asAdmin(page); await open(page);
+  await open(page);
   await page.click('#groc-edit');
   await add(page, 'Kale', 'Veg market', '2', '2.50');
   await add(page, 'Saffron', '', '1', '', true);
@@ -70,7 +70,6 @@ test('the list has no accessibility violations, reading or editing', async ({ pa
 });
 
 test('Groceries comes before Supplements, and the store lists offer the suggested stores', async ({ page }) => {
-  await asAdmin(page);
   await page.click('#tab-daily');
   await expect(page.locator('#daily-grocery')).toBeVisible(); // the tab is its own chunk, fetched on first open
   const ids = await page.locator('[aria-label="Daily section"] button').evaluateAll(b => b.map(x => x.id));

@@ -39,7 +39,7 @@ function ExcelImport({ draft, s, busy }: { draft: ImportDraft & { data: ExcelDat
 }
 
 export default function ImportSheet() {
-  const grocery = useFeature('grocery'); // only an admin is offered the grocery list in a file
+  const grocery = useFeature('grocery'); // the grocery list in a file is offered to whoever has the feature
   const draft = useAppStore(s => s.importDraft);
   const busy = useAppStore(s => s.importBusy);
   const dl = useAppStore(s => s.dl);
