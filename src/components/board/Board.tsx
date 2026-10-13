@@ -1,5 +1,5 @@
 import type { FlatSlot } from '../../types.ts';
-import { Fragment, useEffect, useRef, useState, type DragEvent, type TouchEvent } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type DragEvent, type TouchEvent } from 'react';
 import type { MuscleKey, ProgKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -118,8 +118,9 @@ export default function Board() {
   // Desktop drag and drop between day columns.
   const [dragId, setDragId] = useState<string | null>(null);
   const [overDay, setOverDay] = useState<number | null>(null);
-  const onDragStart = (e: DragEvent, id: string) => { setDragId(id); try { e.dataTransfer!.setData('text/plain', id); e.dataTransfer!.effectAllowed = 'move'; } catch { /* old browsers */ } };
-  const onDragEnd = () => { setDragId(null); setOverDay(null); };
+  // The same functions on every draw, so a memoized Card is not redrawn for them.
+  const onDragStart = useCallback((e: DragEvent, id: string) => { setDragId(id); try { e.dataTransfer!.setData('text/plain', id); e.dataTransfer!.effectAllowed = 'move'; } catch { /* old browsers */ } }, []);
+  const onDragEnd = useCallback(() => { setDragId(null); setOverDay(null); }, []);
 
   // Swipe between days on phones.
   const swipe = useRef<{ x: number; y: number } | null>(null);

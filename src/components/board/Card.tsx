@@ -1,7 +1,10 @@
 import type { FlatSlot } from '../../types.ts';
-import { Fragment, useState, type DragEvent } from 'react';
+import { Fragment, memo, useRef, useState, type DragEvent } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import type { PhaseKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
+import type { AppState } from '../../store/types.ts';
+import { cardWeek, cardLogs, type CardWeek } from '../../lib/cardView.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, exInfo, videoLabel } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
@@ -13,10 +16,24 @@ import {
   restsOf,
 } from '../../lib/logic.js';
 
-export default function Card({ s, onDragStart, onDragEnd, dragging }: { s: FlatSlot; onDragStart: (e: DragEvent, id: string) => void; onDragEnd: () => void; dragging: boolean }) {
+// The week saves as a fresh copy (mutateWeek clones it), so its slice is compared by value: the same object back while it reads the same.
+function useCardWeek(s: FlatSlot): CardWeek {
+  const last = useRef<{ key: string; week: CardWeek } | null>(null);
+  return useAppStore(st => {
+    const week = cardWeek(st.week, s); const key = JSON.stringify(week);
+    if (last.current?.key === key) return last.current.week;
+    last.current = { key, week };
+    return week;
+  });
+}
+
+type CardProps = { s: FlatSlot; onDragStart: (e: DragEvent, id: string) => void; onDragEnd: () => void; dragging: boolean };
+
+function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
   const cfg = useAppStore(st => st.cfg);
-  const week = useAppStore(st => st.week);
-  const logs = useAppStore(st => st.logs);
+  // Only this card's part of the week and logs (lib/cardView.ts), so a tick on another card does not redraw this one.
+  const week = useCardWeek(s);
+  const logs = useAppStore(useShallow((st: AppState) => cardLogs(st.logs, s)));
   const { checkCard, checkItem, setPhase, quickLog, openModal, moveSlot, skipCard, removeExtra } = useAppStore.getState();
   const startHold = useTimerStore(st => st.startHold);
   const [removing, setRemoving] = useState(false); // an experiment card's Remove was pressed once
@@ -113,3 +130,10 @@ export default function Card({ s, onDragStart, onDragEnd, dragging }: { s: FlatS
     </article>
   );
 }
+
+// The board builds its card objects afresh on every draw (slotsFor), so `s` is compared by value. With the store slices above,
+// a card is redrawn only when its own card, week keys, logs, the config or its drag state change.
+const sameProps = (a: CardProps, b: CardProps) =>
+  a.dragging === b.dragging && a.onDragStart === b.onDragStart && a.onDragEnd === b.onDragEnd && (a.s === b.s || JSON.stringify(a.s) === JSON.stringify(b.s));
+
+export default memo(Card, sameProps);
