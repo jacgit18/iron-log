@@ -939,7 +939,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const c = e && e.code;
       if (c === 'declined') { /* user closed the save prompt */ }
       else if (c === 'rate_limited') flag('A save prompt is already open');
-      else if (kind === 'csv') { flag('Export isn’t available here'); set({ dl: null }); }
+      // One failed export never hides the others: every kind saves through the same `dl`, and Export all data is the one backup.
       else flag(e && e.message && !c ? e.message : 'Export isn’t available here');
     } finally { set({ exporting: null }); }
   },

@@ -31,3 +31,12 @@ describe('a built export waiting for a second tap', () => {
     expect(useAppStore.getState().shareReady).toBe(second);
   });
 });
+
+describe('a failed export', () => {
+  it('a CSV that fails to save leaves every export available', async () => {
+    useAppStore.setState({ dl: { save: vi.fn(async () => { throw new Error('disk full'); }) } });
+    await useAppStore.getState().exportCsv();
+    expect(useAppStore.getState().dl).not.toBeNull();
+    expect(useAppStore.getState().exporting).toBeNull();
+  });
+});
