@@ -17,7 +17,9 @@ export function useWho(enabled: boolean, account: { me(): Promise<AccountState> 
   const unreachable = who?.status === 'unreachable';
   useEffect(() => {
     if (!unreachable) return;
-    const again = () => { if (document.visibilityState !== 'hidden') recheck(); };
+    // Coming back to the app fires focus and visibilitychange together: one look, not two.
+    let last = 0;
+    const again = () => { if (document.visibilityState === 'hidden' || Date.now() - last < 1000) return; last = Date.now(); recheck(); };
     window.addEventListener('online', again);
     window.addEventListener('focus', again);
     document.addEventListener('visibilitychange', again);
