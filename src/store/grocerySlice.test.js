@@ -187,15 +187,15 @@ describe('who sees and keeps the list', () => {
     expect(st().groceryMonths).toEqual({});
     expect(Object.keys(mem).filter(k => k.startsWith('ironlog:grocery/'))).toEqual([]);
   });
-  it('a non-admin does not export, back up or import the list', async () => {
+  it('released to everyone (2026-10-13): a non-admin exports, backs up and imports the list too', async () => {
     const { setAdmin } = await import('../features.js');
     const { buildDataFile } = await import('../lib/export.js');
     st().addGroceryItem(form());
     setAdmin(false);
-    expect('grocery' in buildDataFile(st().snapshot(), {})).toBe(false);
+    expect(buildDataFile(st().snapshot(), {}).grocery.items.map(i => i.id)).toEqual(['kale']);
     useAppStore.setState({ importDraft: { name: 'x', kind: 'json', data: { exportedAt: '', config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: [], stretches: null, stretchWeeks: {}, supplements: null, grocery: { stores: [], items: [{ id: 'rice', n: 'Rice', store: '', qty: 1, cents: null, once: false }], months: {} } } } });
     await st().applyImport('merge');
-    expect(st().grocery.items.map(i => i.id)).toEqual(['kale']); // the file's rice was not added
+    expect(st().grocery.items.map(i => i.id).sort()).toEqual(['kale', 'rice']); // the file's rice is added
     setAdmin(true);
   });
 });

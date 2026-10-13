@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ComponentType, type KeyboardEvent } from 'react';
-import { useAppStore } from './store/useAppStore.js';
+import { flag, useAppStore } from './store/useAppStore.js';
+import { takeAfterReload } from './lib/afterReload.js';
 import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
@@ -88,6 +89,8 @@ export default function App() {
     const k = TABS[(n + TABS.length) % TABS.length][0];
     setTab(k); document.getElementById(`tab-${k}`)!.focus();
   };
+  // A note set just before a reload (Erase everything), said once now that the page is back.
+  useEffect(() => { const t = takeAfterReload(); if (t) flag(t); }, []);
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') closeModal(); };
     document.addEventListener('keydown', onKey);

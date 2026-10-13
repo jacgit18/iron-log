@@ -172,6 +172,7 @@ test.describe('the Sync panel', () => {
     await openSynced(page);
     await openSettings(page);
     await expect(page.locator('.syncstatus')).toContainText('Synced');
+    await expect(page.getByRole('status').filter({ hasText: /^Sync: Synced$/ })).toHaveCount(1); // what screen readers hear
     await expect(page.getByText(/^App version /)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sync now' })).toBeEnabled();
   });
@@ -189,6 +190,7 @@ test.describe('the Sync panel', () => {
     await notice.getByRole('button', { name: 'Details' }).click();
     await expect(page.locator('.syncstatus')).toContainText('Offline');
     await expect(page.locator('.syncstatus')).toContainText('saved on this device and will be sent when the connection returns');
+    await expect(page.getByRole('status').filter({ hasText: /^Sync: Offline$/ })).toHaveCount(1); // a settled change is announced
     const { violations } = await scan(page);
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });
@@ -331,6 +333,26 @@ test.describe('the Account panel', () => {
     await expect(page.getByText('Could not check who is signed in')).toBeVisible();
     await expect(page.getByText('Not signed in.')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Sign in with Google' })).toHaveCount(0);
+  });
+
+  test('a failed check is made again when the connection comes back, and on Try again', async ({ page }) => {
+    let up = false;
+    await settle(page, route => (up ? me(200, signedIn)(route) : me(503, { ok: false })(route)));
+    await expect(page.getByText('Could not check who is signed in')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Delete my data' })).toHaveCount(0);
+    up = true;
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await expect(page.getByText('Could not check who is signed in')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible(); // it rechecks too
+  });
+
+  test('Try again checks who is signed in at once', async ({ page }) => {
+    let up = false;
+    await settle(page, route => (up ? me(200, signedIn)(route) : me(503, { ok: false })(route)));
+    await expect(page.getByText('Could not check who is signed in')).toBeVisible();
+    up = true;
+    await page.getByRole('region', { name: 'Account' }).getByRole('button', { name: 'Try again' }).click();
+    await expect(page.getByText('Could not check who is signed in')).toHaveCount(0);
   });
 
   test('Sign in with Google asks the server for the address and goes there', async ({ page }) => {
@@ -661,6 +683,7 @@ test.describe('Delete my data', () => {
     expect(calls[0].body).toEqual({ confirm: 'ERASE' });
     await reloaded;
     await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible(); // reloaded: the app reopens on the tab it was on
+    await expect(page.locator('.saveflag')).toHaveText('Everything in your account was erased.'); // said after the reload, not lost to it
     const left = await page.evaluate(() => ({ docs: localStorage.getItem('ironlog:logs/hack'), mirror: localStorage.getItem('ironlog:sync/mirror'), marker: localStorage.getItem('ironlog:sync/legacy') }));
     expect(left.docs).toBeNull();
     expect(await page.evaluate(() => [localStorage.getItem('ironlog:grocery/main'), localStorage.getItem('ironlog:grocery/2026-09')])).toEqual([null, null]); // the grocery list goes with the rest
@@ -670,9 +693,12 @@ test.describe('Delete my data', () => {
   test('delete account sends its own word', async ({ page }) => {
     const calls = await open(page, { '/api/account/delete': ok });
     await panel(page).getByLabel(/Type DELETE/).fill('DELETE');
+    const reloaded = page.waitForEvent('load');
     await panel(page).getByRole('button', { name: 'Delete my account permanently' }).click();
     await expect.poll(() => calls.length).toBe(1);
     expect(calls[0].body).toEqual({ confirm: 'DELETE' });
+    await reloaded;
+    await expect(page.getByText('Your account was deleted.')).toBeVisible(); // said after the reload, not lost to it
   });
 
   test('when the server cannot do it, says nothing was erased and keeps the data here', async ({ page }) => {

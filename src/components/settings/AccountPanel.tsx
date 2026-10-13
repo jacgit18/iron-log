@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
 import { forgetSession } from '../../lib/gate.js';
 import { LS } from '../../lib/storage.js';
-import type { AccountState } from '../../sync/account.js';
+import { useWho } from './useWho.js';
 import ExportUpload from './ExportUpload.js';
 import LegalLinks from '../LegalLinks.js';
 import { useGoogleSignIn } from '../../sync/useGoogleSignIn.js';
@@ -12,14 +11,7 @@ import { flag, getSyncApi } from '../../store/useAppStore.js';
 export default function AccountPanel() {
   const api = getSyncApi();
   const { client: account, busy, setBusy, start: signIn } = useGoogleSignIn();
-  const [state, setState] = useState<AccountState | null>(null);
-
-  useEffect(() => {
-    if (!api) return;
-    let current = true;
-    void account.me().then(s => { if (current) setState(s); });
-    return () => { current = false; };
-  }, [api, account]);
+  const { who: state, recheck } = useWho(!!api, account);
   if (!api) return null;
 
   const signOut = async () => {
@@ -35,7 +27,12 @@ export default function AccountPanel() {
     <section className="panel accountpanel" aria-labelledby="account-h">
       <h3 id="account-h">Account</h3>
       {state === null && <p className="note" role="status">Checking who is signed in…</p>}
-      {state?.status === 'unreachable' && <p className="notice" role="status">Could not check who is signed in. Your changes are kept on this device.</p>}
+      {state?.status === 'unreachable' && (
+        <>
+          <p className="notice" role="status">Could not check who is signed in. Your changes are kept on this device. It checks again when the connection comes back.</p>
+          <div className="actions"><button type="button" className="btn" onClick={recheck}>Try again</button></div>
+        </>
+      )}
       {state?.status === 'signed-out' && (
         <>
           <p><b>Not signed in.</b> Your changes are kept on this device and will be sent once you sign in.</p>
