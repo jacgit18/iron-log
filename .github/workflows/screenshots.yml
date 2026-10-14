@@ -63,12 +63,22 @@ jobs:
           PUB="$RUNNER_TEMP/pub"
           git clone --depth 1 --branch pr-screenshots "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" "$PUB" 2>/dev/null \
             || { git init -q "$PUB"; git -C "$PUB" checkout -q -b pr-screenshots; git -C "$PUB" remote add origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"; }
-          rm -rf "$PUB/pr-$PR"; mkdir -p "$PUB/pr-$PR"; cp "$OUT"/*.png "$PUB/pr-$PR/" 2>/dev/null || true
-          git -C "$PUB" add -A
-          if ! git -C "$PUB" diff --cached --quiet; then
-            git -C "$PUB" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Screenshots for PR $PR"
-            git -C "$PUB" push -q origin pr-screenshots
-          fi
+          # Other PRs publish to the same branch, so a push can be rejected when one lands first.
+          # Then start again from the branch as it is now and redo only this PR's folder; nothing to rebase or merge.
+          publish() {
+            rm -rf "$PUB/pr-$PR"; mkdir -p "$PUB/pr-$PR"; cp "$OUT"/*.png "$PUB/pr-$PR/" 2>/dev/null || true
+            git -C "$PUB" add -A
+            if git -C "$PUB" diff --cached --quiet; then return 0; fi
+            git -C "$PUB" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Screenshots for PR $PR" \
+              && git -C "$PUB" push -q origin pr-screenshots
+          }
+          for TRY in 1 2 3 4 5; do
+            if publish; then break; fi
+            if [ "$TRY" = 5 ]; then echo "Could not push to pr-screenshots after $TRY tries"; exit 1; fi
+            echo "pr-screenshots moved on (try $TRY); retrying"
+            sleep $((TRY * 3))
+            git -C "$PUB" fetch -q --depth 1 origin pr-screenshots && git -C "$PUB" reset -q --hard FETCH_HEAD
+          done
           # One comment per PR, updated in place.
           ID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --jq '[.[] | select(.body | contains("<!-- visual-diff -->"))][0].id // empty')
           if [ -n "$ID" ]; then gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$ID" -F body=@"$OUT/comment.md" >/dev/null
