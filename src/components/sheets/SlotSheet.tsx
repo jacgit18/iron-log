@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import type { CatalogItem, Cfg, EquipmentKey, SlotType } from '../../types.ts';
+import type { CatalogItem, Cfg, EquipmentId, SlotType } from '../../types.ts';
 import type { PhaseChoice } from '../../store/types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
@@ -10,7 +10,7 @@ import Sheet from '../Sheet.jsx';
 import ExerciseField from '../ExerciseField.jsx';
 
 // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
-type ItemState = { ex: string; ph: PhaseChoice; w: string | number | null; bw: boolean; rx: string; note: string; nm: string; nu?: string; ne?: EquipmentKey | ''; cat?: CatalogItem | null };
+type ItemState = { ex: string; ph: PhaseChoice; w: string | number | null; bw: boolean; rx: string; note: string; nm: string; nu?: string; ne?: EquipmentId | ''; cat?: CatalogItem | null };
 type SlotState = { id: string | null; sec: string; tier: string; type: SlotType; note: string; day: number; days: number[]; idx: number | null; target?: { key: string; day: number } | null; items: ItemState[] };
 
 function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; type: SlotType; cfg: Cfg; onChange: (k: number, patch: Partial<ItemState>) => void }) {
@@ -19,7 +19,7 @@ function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; 
   return (
     <fieldset className="edit-item">
       <legend>{legend}</legend>
-      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} onEq={ne => up({ ne: ne as EquipmentKey | '' })} cat={it.cat} onCat={cat => up({ cat })} />
+      <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} onEq={ne => up({ ne: ne as EquipmentId | '' })} cat={it.cat} onCat={cat => up({ cat })} />
       <div className="fields">
         <label className="field">Phase
           <select value={it.ph || ''} onChange={e => up({ ph: (e.target.value || null) as PhaseChoice })}>

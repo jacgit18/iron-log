@@ -32,6 +32,7 @@ import { mimeFor } from '../lib/mime.js';
 import { bwSorted } from '../lib/body.js';
 import { exIdsInUse, usageOf } from '../lib/exerciseLibrary.js';
 import { MUSCLE_MAP } from '../lib/muscles.js';
+import { eqNameError, newEqId } from '../lib/equipment.js';
 import { bestLift, liftGoalsOf, goalPhaseLabel, GOAL_KEYS } from '../lib/liftGoal.js';
 import { loadView, saveView, openFromUrl } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
@@ -527,6 +528,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().mutateCfg(c => setOverride(c, ex, { eq }));
   },
 
+  // A kind of equipment of your own for the Equipment menus. Returns its id, or null (and says why).
+  addEquipment(name) {
+    if (get().blocked()) return null;
+    const err = eqNameError(get().cfg, name); if (err) { flag(err); return null; }
+    const n = name.trim().replace(/\s+/g, ' '); const id = newEqId(get().cfg, n);
+    get().mutateCfg(c => { c.equipment = { ...(c.equipment || {}), [id]: n }; });
+    flag(`Added ${n}`); return id;
+  },
+  // Only while no exercise uses it.
+  removeEquipment(id) {
+    const name = get().cfg.equipment?.[id]; if (!name) return false;
+    const users = Object.keys(get().cfg.ex || {}).filter(x => get().cfg.ex![x].eq === id).map(x => exInfo(get().cfg, x).n);
+    if (users.length) { flag(`${name} is on ${users.slice(0, 3).join(', ')}${users.length > 3 ? ` and ${users.length - 3} more` : ''}. Change that first`); return false; }
+    return get().mutateCfg(c => { const E = { ...(c.equipment || {}) }; delete E[id]; if (Object.keys(E).length) c.equipment = E; else delete c.equipment; });
+  },
   // A typed name that isn't in the catalog yet becomes a custom exercise (video link and equipment optional). Returns its id.
   createExercise(d) {
     const ex = newExId(get().cfg, d.nn);

@@ -1,12 +1,13 @@
-import type { EquipmentKey, LogEntry, LogSet, PhaseKey } from '../../types.ts';
+import type { EquipmentId, LogEntry, LogSet, PhaseKey } from '../../types.ts';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
+import { PHASES, PH_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
 import { ymd, parseDate, fmtShort } from '../../shared/dates.js';
 import {
   phaseOf, isTimed, targetOf, rxOf, lastLog, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
 } from '../../lib/logic.js';
+import EquipmentField from '../EquipmentField.jsx';
 import Sheet from '../Sheet.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 import { setError } from '../../shared/validate.js';
@@ -32,7 +33,7 @@ export default function LogSheet({ slotId, idx }: { slotId: string; idx: number 
   const [date, setDate] = useState(() => defaultLogDate(weekStart));
   const [rows, setRows] = useState(() => planRows(cfg, logs, it, ph0).map(x => toRow(x, isTimed(ph0))));
   const [note, setNote] = useState('');
-  const [eq, setEq] = useState<EquipmentKey | ''>(ex.eq || '');
+  const [eq, setEq] = useState<EquipmentId | ''>(ex.eq || '');
   const [url, setUrl] = useState(ex.url || '');
   const [makeDefault, setMakeDefault] = useState(false);
   const [makeExDefault, setMakeExDefault] = useState(false);
@@ -121,13 +122,9 @@ export default function LogSheet({ slotId, idx }: { slotId: string; idx: number 
         <input type="url" value={url} placeholder="https://" onChange={e => setUrl(e.target.value)} />
         <span className="note">Saved for {ex.n} on every day and every week.</span>
       </label>
-      <label className="field">Equipment
-        <select value={eq} onChange={e => setEq(e.target.value as EquipmentKey | '')}>
-          <option value="">Not set</option>
-          {EQ_KEYS.map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
-        </select>
+      <EquipmentField cfg={cfg} value={eq} onChange={setEq}>
         <span className="note">Changing it updates {ex.n} everywhere.</span>
-      </label>
+      </EquipmentField>
       {!s.experiment && <label className="inline"><input type="checkbox" checked={makeDefault} onChange={e => setMakeDefault(e.target.checked)} /> Make this phase the default for this slot</label>}
       <label className="inline"><input type="checkbox" checked={makeExDefault} onChange={e => setMakeExDefault(e.target.checked)} /> Make this phase the default for {ex.n} everywhere</label>
       <label className="inline"><input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)} /> {isPaired(s) ? 'Check off this exercise' : 'Check off the card'}</label>

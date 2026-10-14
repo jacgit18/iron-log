@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
-import type { CatalogItem, Cfg, EquipmentKey } from '../types.ts';
-import { allExIds, exInfo, isCatalogId, isOwnExercise, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
+import type { CatalogItem, Cfg, EquipmentId } from '../types.ts';
+import { allExIds, exInfo, isCatalogId, isOwnExercise, EQUIPMENT } from '../lib/data.js';
 import { findExIdIn, muscleList } from '../lib/exerciseLibrary.js';
 import { useExIdsInUse } from '../hooks/useExIdsInUse.js';
 import { pickerKey, type MineOption } from '../lib/picker.js';
+import { eqName } from '../lib/equipment.js';
+import EquipmentField from './EquipmentField.jsx';
 import ItemPicker from './ItemPicker.jsx';
 
 // Type an exercise and pick it (ADR 036): your library first, then the catalog when syncing, then a new one. A name that isn't in your
@@ -31,7 +33,7 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onU
     if (!k || seen.has(k)) continue;
     seen.add(k);
     const badge = isCatalogId(x) ? 'Library' : isOwnExercise(x) && !builtin.has(info.n) ? 'Custom' : undefined;
-    mine.push({ id: x, name: info.n, ...(isCatalogId(x) ? { catalogId: x } : {}), ...(badge ? { badge } : {}), ...(info.eq ? { meta: EQUIPMENT[info.eq] } : {}) });
+    mine.push({ id: x, name: info.n, ...(isCatalogId(x) ? { catalogId: x } : {}), ...(badge ? { badge } : {}), ...(info.eq ? { meta: eqName(cfg, info.eq) } : {}) });
   }
   const held = cat && pickerKey(cat.name) === pickerKey(name) ? cat : null;
   const known = name.trim() !== '' && !held ? findExIdIn(cfg, name, inUse) : null; // finds an in-use built-in too, as listed above
@@ -62,12 +64,7 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onU
       {held && <p className="note">From the catalog. It will be added to your exercise library when you save.</p>}
       {isNew && <p className="note">New exercise. It will be added to your exercise list.</p>}
       {onEq && name.trim() !== '' && (
-        <label className="field">Equipment
-          <select value={eq} onChange={e => onEq(e.target.value)}>
-            <option value="">Not set</option>
-            {(EQ_KEYS as EquipmentKey[]).map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
-          </select>
-        </label>
+        <EquipmentField cfg={cfg} value={eq as EquipmentId | ''} onChange={onEq} />
       )}
     </>
   );

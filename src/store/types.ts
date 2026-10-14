@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, EquipmentKey, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -16,12 +16,12 @@ export type Flag = (text: string) => void;
  *  the field comes as `ex` = its catalog id with the item in `cat`; the save adds it to the library first when it is not there yet (ADR 036). */
 export interface ExerciseChoice { ex: string; nn: string; cat?: CatalogItem }
 /** Video link and equipment typed for a new exercise (or a link for an existing one). */
-export interface ExerciseExtras { nu?: string; ne?: EquipmentKey | '' }
+export interface ExerciseExtras { nu?: string; ne?: EquipmentId | '' }
 export type PhaseChoice = PhaseKey | '' | null;
 /** The Experiment sheet and the board's add-to-day sheet (which has no id). */
 export interface ExperimentForm extends ExerciseChoice, ExerciseExtras { id?: string; ph: PhaseChoice; note?: string }
 /** The exercise details sheet. Fields left out stay as they were. `tags: null` means back to the default tags. */
-export interface ExerciseDetailsForm { name?: string; url?: string; eq?: EquipmentKey | ''; ph?: PhaseChoice; rm?: string | number | null; tags?: MuscleTags | null }
+export interface ExerciseDetailsForm { name?: string; url?: string; eq?: EquipmentId | ''; ph?: PhaseChoice; rm?: string | number | null; tags?: MuscleTags | null }
 export interface SlotFormItem extends ExerciseChoice, ExerciseExtras { ph: PhaseChoice; w: number | null; bw?: boolean; rx?: string; note?: string }
 /** The card (slot) editor. `target` aims it at a program and day when it was opened from the board. */
 export interface SlotForm {
@@ -37,7 +37,7 @@ export interface SupplementForm { id?: string; n: string; slot?: string; dose?: 
 /** The log sheet's save: the entry plus the optional changes it can make along the way. */
 export interface LogForm {
   entry: LogEntry; ph: PhaseKey | null; makeDefault: boolean; makeExDefault: boolean;
-  rm: number | null | undefined; done: boolean; eq?: EquipmentKey | ''; url?: string;
+  rm: number | null | undefined; done: boolean; eq?: EquipmentId | ''; url?: string;
 }
 /** Anything a sheet or host gives us that has no shape of its own yet. */
 type Loose = any; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -314,7 +314,9 @@ export interface CoreSlice {
   setExperiments(experiments: Experiment[]): void;
   saveExperiment(d: ExperimentForm): string | null;
   applyExerciseUrl(ex: string, raw: string | null | undefined): void;
-  applyExerciseEq(ex: string, eq: EquipmentKey | '' | null | undefined): void;
+  applyExerciseEq(ex: string, eq: EquipmentId | '' | null | undefined): void;
+  addEquipment(name: string): EquipmentId | null;
+  removeEquipment(id: string): boolean;
   createExercise(d: { nn: string } & ExerciseExtras): string;
   addExerciseToDay(col: number, d: ExperimentForm): string | null;
   saveExerciseDetails(exId: string, d: ExerciseDetailsForm): string | null;

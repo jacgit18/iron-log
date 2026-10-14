@@ -1,13 +1,14 @@
-import type { EquipmentKey } from '../../types.ts';
+import type { EquipmentId } from '../../types.ts';
 import type { PhaseChoice } from '../../store/types.ts';
 import { useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isOwnExercise, isCatalogId } from '../../lib/data.js';
+import { PHASES, PH_KEYS, exInfo, isOwnExercise, isCatalogId } from '../../lib/data.js';
 import { MUSCLE_MAP, draftOf, draftOfTags, tagsOfDraft } from '../../lib/muscles.js';
 import { catalogSnapshot } from '../../lib/catalogExercise.js';
 import { loadCatalog } from '../../sync/catalogCache.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import MuscleChips from '../muscles/MuscleChips.jsx';
+import EquipmentField from '../EquipmentField.jsx';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
@@ -19,7 +20,7 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
   const st = useAppStore.getState();
   const isNew = exId == null; const custom = isNew || isOwnExercise(exId);
   const info = isNew ? { n: '' } : exInfo(cfg, exId);
-  const [d, setD] = useState<{ name: string; url: string; eq: EquipmentKey | ''; ph: PhaseChoice; rm: string }>(() => ({
+  const [d, setD] = useState<{ name: string; url: string; eq: EquipmentId | ''; ph: PhaseChoice; rm: string }>(() => ({
     name: info.n, url: info.url || '', eq: info.eq || '',
     ph: (!isNew && cfg.exPh && cfg.exPh[exId]) || '', rm: !isNew && cfg.rm[exId] != null ? String(cfg.rm[exId]) : '',
   }));
@@ -62,12 +63,7 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
       {custom && <label className="field">Name<input value={d.name} maxLength={80} placeholder="e.g. Cable Lateral Raise" onChange={e => up({ name: e.target.value })} /></label>}
       <label className="field">Video link (optional)<input type="url" value={d.url} placeholder="https://" onChange={e => up({ url: e.target.value })} /></label>
       <div className="fields">
-        <label className="field">Equipment
-          <select value={d.eq} onChange={e => up({ eq: e.target.value as EquipmentKey | '' })}>
-            <option value="">Not set</option>
-            {EQ_KEYS.map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
-          </select>
-        </label>
+        <EquipmentField cfg={cfg} value={d.eq} onChange={eq => up({ eq })} />
         <label className="field">1RM (lb)
           <input type="number" inputMode="decimal" step="any" min="0" value={d.rm} placeholder="not set" onChange={e => up({ rm: e.target.value })} />
         </label>

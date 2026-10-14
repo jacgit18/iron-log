@@ -760,6 +760,30 @@ describe('lift weight goal', () => {
   });
 });
 
+describe('custom equipment', () => {
+  it('adds equipment, picks a free id, and refuses a repeat', () => {
+    expect(st().addEquipment(' Landmine ')).toBe('x:landmine');
+    expect(st().cfg.equipment).toEqual({ 'x:landmine': 'Landmine' });
+    expect(saved('config/main').equipment).toEqual({ 'x:landmine': 'Landmine' });
+    expect(st().addEquipment('landmine')).toBeNull();
+    expect(st().addEquipment('Barbell')).toBeNull();
+    expect(st().addEquipment('')).toBeNull();
+    expect(st().cfg.equipment).toEqual({ 'x:landmine': 'Landmine' });
+  });
+  it('shows on an exercise, and is removable only once no exercise uses it', () => {
+    const id = st().addEquipment('Landmine');
+    st().applyExerciseEq('hack', id);
+    expect(st().cfg.ex.hack.eq).toBe('x:landmine');
+    expect(st().removeEquipment(id)).toBe(false);
+    expect(st().cfg.equipment).toEqual({ 'x:landmine': 'Landmine' });
+    expect(st().saveFlag).toMatch(/Landmine is on Hack Squat/);
+    st().applyExerciseEq('hack', 'barbell');
+    expect(st().removeEquipment(id)).toBe(true);
+    expect(st().cfg.equipment).toBeUndefined();
+    expect(st().removeEquipment('barbell')).toBe(false);
+  });
+});
+
 describe('exercise frequency goal', () => {
   it('saves times a week for an exercise, refuses 0 and 8, and removes with undo', () => {
     expect(st().setFreqGoal('hack', '3')).toBe(true);

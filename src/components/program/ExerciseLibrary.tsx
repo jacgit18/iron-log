@@ -1,7 +1,8 @@
-import type { EquipmentKey, PhaseKey } from '../../types.ts';
+import type { PhaseKey } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, EQUIPMENT, EQ_KEYS } from '../../lib/data.js';
+import { PHASES, EQUIPMENT } from '../../lib/data.js';
+import { eqName, eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
 import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems } from '../../lib/exerciseLibrary.js';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
@@ -9,6 +10,7 @@ import { progName } from '../../lib/logic.js';
 import { videoLabel, isCatalogId, exInfo } from '../../lib/data.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
+import YourEquipment from './YourEquipment.jsx';
 
 // Every exercise (from the library, and your own marked Custom) with what is set on it, searchable, edited in one sheet.
 export default function ExerciseLibrary() {
@@ -31,12 +33,13 @@ export default function ExerciseLibrary() {
         </div>
       </div>
       <p className="note">Every exercise in one place. What you set on an exercise here applies to every card, day and week that uses it.</p>
+      <YourEquipment />
       <div className="filterbar" role="search">
         <label className="field">Search<input type="search" value={f.q} placeholder="Name" onChange={e => setF(x => ({ ...x, q: e.target.value }))} /></label>
         <label className="field">Equipment
           <select value={f.eq} onChange={e => setF(x => ({ ...x, eq: e.target.value }))}>
             <option value="">All equipment</option>
-            {EQ_KEYS.map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
+            {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
             <option value="none">Not set</option>
           </select>
         </label>
@@ -60,7 +63,7 @@ export default function ExerciseLibrary() {
       <RemovedNotice scope="exercises" />
       <div className="exrows">
         {shown.map(r => {
-          const meta = [r.eq ? EQUIPMENT[r.eq as EquipmentKey] : '', r.ph ? `Default: ${PHASES[r.ph as PhaseKey].label}` : '', r.rm ? `1RM ${r.rm} lb` : ''].filter(Boolean);
+          const meta = [r.eq ? eqName(cfg, r.eq) : '', r.ph ? `Default: ${PHASES[r.ph as PhaseKey].label}` : '', r.rm ? `1RM ${r.rm} lb` : ''].filter(Boolean);
           const muscles = r.mob ? 'Mobility' : [r.p.length && `Primary: ${muscleList(r.p)}`, r.s.length && `Secondary: ${muscleList(r.s)}`].filter(Boolean).join(' · ');
           const where = r.inPrograms.length ? `In ${r.inPrograms.map(k => progName(cfg, k)).join(', ')}` : 'Not in a program';
           return (
@@ -81,7 +84,7 @@ export default function ExerciseLibrary() {
         <CatalogMatches kind="exercise" q={f.q} unit="exercises" source="Exercises from free-exercise-db (public domain)."
           mine={[...rows.map(r => ({ id: r.id, name: r.name, ...(isCatalogId(r.id) ? { catalogId: r.id } : {}) })),
             ...inUse.filter(id => !rows.some(r => r.id === id)).map(id => ({ id, name: exInfo(cfg, id).n }))]}
-          meta={c => [c.data.eq ? EQUIPMENT[c.data.eq as EquipmentKey] : '', c.data.muscles?.p?.length ? `Primary: ${muscleList(c.data.muscles.p)}` : ''].filter(Boolean).join(' · ')}
+          meta={c => [c.data.eq ? EQUIPMENT[c.data.eq] : '', c.data.muscles?.p?.length ? `Primary: ${muscleList(c.data.muscles.p)}` : ''].filter(Boolean).join(' · ')}
           narrow={items => keepCatalogItems(items, f)}
           onAdd={c => useAppStore.getState().addCatalogExercise(c)} />
       )}
