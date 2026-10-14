@@ -9,6 +9,7 @@ import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extra
 import { motionOK } from '../../lib/motion.js';
 import { useSwipeCard } from '../board/useSwipeCard.js';
 import ArmedButton from '../ArmedButton.jsx';
+import ExperimentCard from '../ExperimentCard.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
@@ -59,7 +60,6 @@ function Experiments({ day }: { day: number }) {
   const items = useAppStore(x => x.stretchExps);
   const s = useAppStore.getState();
   const [pick, setPick] = useState<Record<string, number>>({});
-  const [arming, setArming] = useState<string | null>(null); // the experiment whose Delete was pressed once
   return (
     <section className="experiments" aria-labelledby="sexp-h">
       <div className="exphead">
@@ -72,21 +72,10 @@ function Experiments({ day }: { day: number }) {
           {items.map(e => {
             const to = pick[e.id] ?? day;
             return (
-              <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`}>
-                {arming === e.id && <span className="rmtag">Will be deleted · tap Delete again</span>}
-                <div><b className="rmname">{e.n}</b></div>
-                {e.note && <div className="note">{e.note}</div>}
-                <Link n={e.n} url={e.url} />
-                <div className="actions">
-                  <label htmlFor={`sexp-to-${e.id}`}>Add to</label>
-                  <select id={`sexp-to-${e.id}`} aria-label={`Add to (${e.n})`} value={to} onChange={ev => setPick(p => ({ ...p, [e.id]: Number(ev.target.value) }))}>
-                    {DAYS7.map(d => <option key={d} value={d}>{DAY_NAMES[d]}</option>)}
-                  </select>
-                  <button type="button" className="btn sm" aria-label={`Add ${e.n} to ${DAY_NAMES[to]}`} onClick={() => s.addStretchToDay(e.id, to)}>Add</button>
-                  <button type="button" className="btn sm ghost" aria-label={`Edit ${e.n}`} onClick={() => s.openModal({ type: 'stretchexp', id: e.id })}>Edit</button>
-                  <ArmedButton className={`btn sm ${arming === e.id ? 'danger' : 'ghost'}`} label="Delete" armedLabel="Tap again to delete" aria-label={`Delete ${e.n}`} onArmedChange={a => setArming(a ? e.id : null)} onConfirm={() => { setArming(null); s.deleteStretchExp(e.id); }} />
-                </div>
-              </li>
+              <ExperimentCard key={e.id} id={e.id} prefix="sexp" name={e.n} note={e.note}
+                detail={<Link n={e.n} url={e.url} />}
+                days={DAYS7.map(d => ({ value: d, label: DAY_NAMES[d] }))} to={to} onTo={d => setPick(p => ({ ...p, [e.id]: d }))} onAdd={() => s.addStretchToDay(e.id, to)}
+                onEdit={() => s.openModal({ type: 'stretchexp', id: e.id })} onDelete={() => s.deleteStretchExp(e.id)} />
             );
           })}
         </ul>
