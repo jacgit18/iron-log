@@ -1,0 +1,73 @@
+/* Stretches tab, phone-first: one line per stretch (tick box, name, video link), a group header with its count, a warm-up that
+   does not take a panel's worth of height, and a day header whose Skip day button folds behind a ⋯ (like the Workout day header). */
+.strroot .strrow {
+  min-height: 44px;
+  justify-content: center;
+}
+.strroot .strrow .exname {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 4px;
+}
+.strroot .strrow .exname .chk {
+  margin-right: 0;
+  vertical-align: baseline;
+}
+.strroot .strrow .exname .exh {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.strroot .strrow .exname a {
+  margin-left: 0;
+  white-space: nowrap;
+}
+.strroot .strrow .note {
+  margin-left: 28px;
+}
+.strroot .strrow .rmtag {
+  margin-left: 28px;
+}
+.strroot .grphead {
+  align-items: center;
+}
+.strroot .grphead .count {
+  margin-left: auto;
+  font-size: .8125rem;
+  color: var(--muted);
+}
+.strroot .warm {
+  gap: 0;
+  padding: 2px 10px;
+}
+.strroot .warmhead {
+  min-height: 36px;
+}
+.strroot .warmhead .btn {
+  min-height: 44px;
+  margin-block: -4px;
+}
+.strroot .warmrow {
+  min-height: 44px;
+}
+.strroot .daymore {
+  display: none;
+}
+@media (max-width:700px) {
+  .strroot .daymore {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+  .strroot .col:not(.skipd, .more) .addrow {
+    display: none;
+  }
+  .strroot .colhead .count {
+    margin-right: 0;
+  }
+}
