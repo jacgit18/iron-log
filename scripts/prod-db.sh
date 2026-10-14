@@ -8,6 +8,9 @@
 #                               a migration must be applied BEFORE the code that needs it goes live.
 #   migrate [--apply]           lists what waits; with --apply: a backup, then dbmate up, then the status again.
 #   catalog <source> [--apply]  npm run catalog:import against production (source: fedb): a dry run, or with --apply a backup, then the write.
+#   reader [--apply]            with --apply: make (or re-key) the read-only role the CI deploy uses to see which migrations production
+#                               has, and store its URL in the GitHub secret MIGRATIONS_CHECK_URL (environment production), never shown.
+#                               It changes a login, not data, so it takes no backup.
 #
 # The owner URL is PROD_DATABASE_URL, or else DATABASE_URL_UNPOOLED from .env; it is never printed. Backups run
 # scripts/backup-cloud-run.sh run (PROJECT_ID defaults to iron-log-jacgit18). It refuses a database on this machine: that is not production.
@@ -18,8 +21,11 @@ export PROJECT_ID="${PROJECT_ID:-iron-log-jacgit18}"
 DBMATE="${DBMATE:-npx dbmate}"                     # overridable for tests
 BACKUP="${BACKUP:-scripts/backup-cloud-run.sh}"
 CATALOG_IMPORT="${CATALOG_IMPORT:-npm run -s catalog:import --}"
+DB_READER="${DB_READER:-node scripts/db-reader.mjs}"
+GH="${GH:-gh}"
+READER_SECRET=MIGRATIONS_CHECK_URL                  # read by the deploy workflow's migration check
 
-usage() { sed -n '5,11p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '5,13p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 owner_url() {
   local url="${PROD_DATABASE_URL:-}"
@@ -61,6 +67,18 @@ case "$cmd" in
     backup
     dbmate up
     dbmate status ;;
+  reader)
+    URL="$(owner_url)"; where
+    if ! $apply; then
+      echo "Dry run: --apply makes (or gives a new password to) the read-only role migrations_reader, which can read schema_migrations"
+      echo "and nothing else, and stores its URL as the GitHub secret $READER_SECRET (environment production) without showing it."
+      exit 0
+    fi
+    # From the script into the secret: the URL never reaches the screen or a file, and a failure sets nothing.
+    reader_url="$(DATABASE_URL="$URL" $DB_READER)"
+    [ -n "$reader_url" ] || { echo "No URL came back; the secret was not changed." >&2; exit 1; }
+    printf '%s' "$reader_url" | $GH secret set "$READER_SECRET" --env production
+    echo "Done: $READER_SECRET is set. The next deploy asks production itself which migrations wait." ;;
   catalog)
     source="${args[0]:-}"; [ -n "$source" ] || usage
     URL="$(owner_url)"
