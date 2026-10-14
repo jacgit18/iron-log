@@ -1,5 +1,6 @@
 import { BUILTIN, BLANK, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { catalogName, catalogPickError, catalogSnapshot } from '../lib/catalogExercise.js';
+import { exIdsInUse } from '../lib/exerciseLibrary.js';
 import { progName, dayAt, DAYS, colOf, currentLayout, isFinished } from '../lib/logic.js';
 import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
@@ -172,7 +173,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     for (const it of d.items) {
       if (!it.ex || (it.ex === '__new' && !it.nn)) return 'Choose an exercise, or type a name for the new one.';
       if (!isVideoUrl(it.nu)) return VIDEO_ERR;
-      if (it.cat) { const err = catalogPickError(get().cfg, it.cat); if (err) return err; }
+      if (it.cat) { const err = catalogPickError(get().cfg, it.cat, exIdsInUse(get(), get().cfg)); if (err) return err; }
     }
     // Two items of one card that would add different exercises under one name (a typed new one and a catalog pick, or two catalog
     // items): refused, so the library keeps one exercise per name (findExId). The same pick twice is fine.

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BUILTIN } from './data.js';
 import { DEFAULT_CFG } from './logic.js';
-import { libraryRows, filterRows, usageOf, hasTwoSources, keepCatalogItems } from './exerciseLibrary.js';
+import { libraryRows, filterRows, usageOf, hasTwoSources, keepCatalogItems, exIdsInUse, findExIdIn } from './exerciseLibrary.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
 const state = (over = {}) => ({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], experiments: [], logs: {}, ...over });
@@ -66,4 +66,33 @@ describe('keepCatalogItems (the library filters on catalog rows, ADR 036)', () =
     expect(ids({ muscle: 'untagged' })).toEqual(['c:x:walk']);
   });
   it('combines both, as the library does', () => expect(ids({ eq: 'barbell', muscle: 'chest' })).toEqual([]));
+});
+
+describe('exIdsInUse', () => {
+  const prog = ex => ({ key: 'A', days: [{ title: 'D1', slots: [{ id: 's1', sec: 'Regular', items: [{ ex, ph: 'hyp', w: null }] }] }] });
+  it('collects ids from programs, saved versions, experiments, logs with entries and this week\'s added cards', () => {
+    const ids = exIdsInUse({
+      programs: { A: prog('hack'), B: prog('latpd') }, library: [{ id: 'L1', prog: prog('arnold') }], experiments: [{ ex: 'facepull' }],
+      logs: { chestpress: [{ d: '2026-10-01' }], gone: [] }, week: { extra: [{ id: 'X', day: 2, ex: 'dip' }] },
+    });
+    expect(ids.sort()).toEqual(['arnold', 'chestpress', 'dip', 'facepull', 'hack', 'latpd']);
+  });
+  it('with cfg, keeps only ids that name a real exercise (built-in or your own)', () => {
+    const c = cfg({ ex: { mine: { n: 'Mine' } } });
+    expect(exIdsInUse({ programs: { A: prog('hack') }, logs: { mine: [{}], 'old-retired-id': [{}] } }, c).sort()).toEqual(['hack', 'mine']);
+  });
+});
+
+describe('findExIdIn', () => {
+  it('finds your own by name first, then a built-in in use the library does not list, and nothing for an unknown name', async () => {
+    const { listBuiltinExercises } = await import('./data.js');
+    listBuiltinExercises(false); // synced: built-ins are not listed
+    try {
+      const c = cfg({ ex: { mine: { n: 'My Row' } } });
+      expect(findExIdIn(c, ' my  row ', ['hack'])).toBe('mine');
+      expect(findExIdIn(c, 'hack squat', ['hack'])).toBe('hack');
+      expect(findExIdIn(c, 'Hack Squat', [])).toBeNull();
+      expect(findExIdIn(c, '', ['hack'])).toBeNull();
+    } finally { listBuiltinExercises(true); }
+  });
 });

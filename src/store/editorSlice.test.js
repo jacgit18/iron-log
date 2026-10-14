@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { clearStorage, saved } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, DEFAULT_CFG, sameProg, exInfo;
+let useAppStore, BUILTIN, DEFAULT_CFG, sameProg, exInfo, slotsFor;
 const st = () => useAppStore.getState();
 const day1 = () => st().edProgram().days[0].slots;
 const ids = slots => slots.map(s => s.id);
@@ -9,7 +9,7 @@ const builtinA = () => ids(BUILTIN.A.days[0].slots);
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
-  ({ BUILTIN, exInfo } = await import('../lib/data.js'));
+  ({ BUILTIN, exInfo, slotsFor } = await import('../lib/data.js'));
   ({ DEFAULT_CFG } = await import('../lib/logic.js'));
   ({ sameProg } = await import('../lib/export.js'));
   await st().init();
@@ -147,6 +147,19 @@ describe('the add/edit exercise sheet', () => {
     const progBefore = structuredClone(st().programs);
     expect(st().saveSlot(newCard({ days: [1], items: [{ ...item, ex: 'c:fedb:Hammer', cat: { id: 'c:fedb:Hammer', name: 'hammer row', data: {} } }] }))).toBe('You already have an exercise called hammer row.');
     expect(st().programs).toEqual(progBefore);
+  });
+  it('synced, refuses a catalog exercise whose name a built-in in your program has, though the library does not list it (ADR 024, 036)', async () => {
+    const { listBuiltinExercises } = await import('../lib/data.js');
+    expect(slotsFor(st().programs.A).some(sl => sl.items.some(i => i.ex === 'hack'))).toBe(true); // Program A uses Hack Squat
+    const hack = { id: 'c:fedb:Hack_Squat', name: 'Hack Squat', data: { eq: 'machine' } };
+    listBuiltinExercises(false);
+    try {
+      const cfgBefore = structuredClone(st().cfg); const progBefore = structuredClone(st().programs);
+      expect(st().saveSlot(newCard({ days: [2], items: [{ ex: hack.id, nn: '', cat: hack, ph: 'hyp', w: null }] }))).toBe('You already have an exercise called Hack Squat.');
+      expect(st().addCatalogExercise(hack)).toBe('You already have an exercise called Hack Squat.');
+      expect(st().cfg).toEqual(cfgBefore);
+      expect(st().programs).toEqual(progBefore);
+    } finally { listBuiltinExercises(true); }
   });
   it('refuses a card whose two items would add different exercises with one name, writing nothing', () => {
     const fly = { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: {} };
