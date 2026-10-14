@@ -70,8 +70,9 @@ const LIMITS = {
   account: { max: 5, windowMs: 60 * 60_000 } as Limit,
   // Push: a timer or a tick schedules or cancels, so a busy session sends a few a minute. A loop is what this stops.
   push: { max: 60, windowMs: 60_000 } as Limit,
-  // Cloud Tasks calling the fire route: per address (Google's), checked before the token. Generous; the token is what keeps others out.
-  pushFire: { max: 300, windowMs: 60_000 } as Limit,
+  // Cloud Tasks calling the fire route: per address (a few Google ones), checked before the token. A 429 would push an alert past its
+  // 90 s window and lose it, so this is far above any real traffic; the token is what keeps others out.
+  pushFire: { max: 1200, windowMs: 60_000 } as Limit,
 };
 
 const DB_HEALTH_TTL_MS = 5_000;
@@ -149,7 +150,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (auth && process.env.NODE_ENV === 'development') app.get('/dev/auth', (_req, res) => void res.type('html').send(AUTH_CHECK_PAGE));
 
   // Cloud Tasks calls this at the time a push is due: no person, no session, only a Google-signed token (push/fire.ts). Not an admin route.
-  if (db && push?.fire) app.use('/api/push', rateLimit(limits.pushFire), fireRoute({ db, now: push.now, ...push.fire }));
+  if (db && push?.fire) app.use('/api/push', fireRoute({ db, now: push.now, ...push.fire, limit: rateLimit(limits.pushFire) }));
 
   // Everything below this line needs a signed-in user. The per-address limit comes first, so an anonymous flood never reaches the database.
   app.use('/api', rateLimit(limits.api));

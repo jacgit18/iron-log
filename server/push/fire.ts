@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import { sql, type Kysely } from 'kysely';
 import type { DB } from '../db/types.ts';
 import { TTL_SECONDS, type PushSender } from './send.ts';
@@ -11,11 +11,13 @@ export interface FireDeps {
   verify: (token: string) => Promise<boolean>;
   send: PushSender;
   now?: () => number;
+  /** In front of the token check, on this route only (app.ts passes the per-address limit). */
+  limit?: RequestHandler;
 }
 
-export function fireRoute({ db, verify, send, now = Date.now }: FireDeps): Router {
+export function fireRoute({ db, verify, send, now = Date.now, limit = (_req, _res, next) => next() }: FireDeps): Router {
   const router = Router();
-  router.post('/fire', async (req, res) => {
+  router.post('/fire', limit, async (req, res) => {
     const token = /^Bearer (.+)$/.exec(req.get('authorization') ?? '')?.[1];
     if (!token || !(await verify(token).catch(() => false))) return void res.status(401).json({ ok: false, error: 'not allowed' });
     const job = parseFire(req.body);

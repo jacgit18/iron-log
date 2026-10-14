@@ -23,11 +23,11 @@ describe('tasksConfigFrom', () => {
 
 describe('cloudTasksScheduler', () => {
   it('creates one task: named for the job, at its time, a POST to the fire route signed for the invoker', async () => {
-    const calls: { url: string; body: any }[] = [];
+    const calls: { url: string; body: unknown }[] = [];
     await cloudTasksScheduler(config, async (url, body) => { calls.push({ url, body }); return { status: 200 }; }).schedule(job);
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe(`https://cloudtasks.googleapis.com/v2/${QUEUE}/tasks`);
-    const task = calls[0]!.body.task;
+    const task = (calls[0]!.body as { task: { name: string; scheduleTime: string; httpRequest: { body: string } & Record<string, unknown> } }).task;
     expect(task.name).toBe(`${QUEUE}/tasks/42-rest-k1-1800000090000`);
     expect(task.scheduleTime).toBe(new Date(job.at).toISOString());
     expect(task.httpRequest).toMatchObject({ httpMethod: 'POST', url: config.fireUrl, oidcToken: { serviceAccountEmail: config.invokerEmail, audience: config.fireUrl } });
