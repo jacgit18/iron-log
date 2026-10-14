@@ -12,7 +12,7 @@ permissions:
 jobs:
   audience:
     if: ${{ !endsWith(github.actor, '[bot]') }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Exactly one audience box is ticked
         env:
