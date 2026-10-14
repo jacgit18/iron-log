@@ -136,6 +136,41 @@ describe('writing', () => {
   });
 });
 
+// Push subscriptions (migration 017) are device plumbing, not synced data: no seq or history, and the API role may delete its own.
+describe('push_subscription', () => {
+  const sub = (user: string, endpoint = 'https://push.example/x') => sql`insert into push_subscription (user_id, endpoint, p256dh, auth) values (${user}, ${endpoint}, 'k', 'a')`;
+
+  it('a user sees only their own, and can add, change and delete them', async () => {
+    await asUser(A, trx => sub(A).execute(trx));
+    await asUser(B, trx => sub(B).execute(trx)); // the same endpoint under another account is its own row
+    expect(await asUser(A, trx => count(trx as never, 'push_subscription'))).toBe(1);
+    await asUser(A, trx => sql`update push_subscription set last_ok_at = now()`.execute(trx));
+    expect(await asUser(A, trx => sql`delete from push_subscription`.execute(trx)).then(r => Number(r.numAffectedRows))).toBe(1);
+    expect(await count(owner, 'push_subscription')).toBe(1);
+  });
+
+  it('a user cannot add one for someone else, or touch theirs', async () => {
+    await asUser(B, trx => sub(B).execute(trx));
+    expect(await refusal(asUser(A, trx => sub(B, 'https://push.example/sneaky').execute(trx)))).toMatch(/row-level security/);
+    expect(Number((await asUser(A, trx => sql`delete from push_subscription`.execute(trx))).numAffectedRows)).toBe(0);
+    expect(Number((await asUser(A, trx => sql`update push_subscription set auth = 'x'`.execute(trx))).numAffectedRows)).toBe(0);
+    expect(await count(owner, 'push_subscription')).toBe(1);
+  });
+
+  it('with no user set, nothing is visible or writable', async () => {
+    await asUser(A, trx => sub(A).execute(trx));
+    expect(await count(app, 'push_subscription')).toBe(0);
+    expect(await refusal(sub(A).execute(app))).toMatch(/row-level security/);
+  });
+
+  it('refuses an endpoint that is not https, is too long, or is a duplicate for the same user', async () => {
+    expect(await refusal(asUser(A, trx => sub(A, 'http://push.example/x').execute(trx)))).toMatch(/check constraint/);
+    expect(await refusal(asUser(A, trx => sub(A, `https://push.example/${'x'.repeat(2100)}`).execute(trx)))).toMatch(/check constraint/);
+    await asUser(A, trx => sub(A).execute(trx));
+    expect(await refusal(asUser(A, trx => sub(A).execute(trx)))).toMatch(/duplicate key/);
+  });
+});
+
 describe('users', () => {
   it('cannot be added, or promoted, or renamed, by the API role', async () => {
     expect(await refusal(app.insertInto('users').values({ auth_user_id: 'x' }).execute())).toMatch(/permission denied/);
@@ -223,7 +258,7 @@ describe('every table is covered (a forgotten table fails here)', () => {
         select has_table_privilege('ironlog_app', ${`public.${relname}`}, 'delete') as del,
                has_table_privilege('ironlog_app', ${`public.${relname}`}, 'truncate') as trunc,
                has_table_privilege('ironlog_app', ${`public.${relname}`}, 'select') as sel`.execute(owner)).rows[0]!;
-      expect(p.del, `${relname}: delete`).toBe(false);
+      expect(p.del, `${relname}: delete`).toBe(relname === 'push_subscription'); // the one table a user may delete from: turning push off
       expect(p.trunc, `${relname}: truncate`).toBe(false);
       if (relname === 'row_history' || relname === 'refused_writes') expect(p.sel, `${relname}: select`).toBe(false);
     }

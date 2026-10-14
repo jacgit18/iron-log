@@ -149,6 +149,16 @@ export interface Programs {
   version: Generated<number>;
 }
 
+export interface PushSubscription {
+  auth: string;
+  created_at: Generated<Timestamp>;
+  endpoint: string;
+  id: Generated<Int8>;
+  last_ok_at: Timestamp | null;
+  p256dh: string;
+  user_id: Int8;
+}
+
 export interface RefusedWrites {
   client_id: string | null;
   client_version: string | null;
@@ -232,6 +242,7 @@ export interface DB {
   list_items: ListItems;
   log_entries: LogEntries;
   programs: Programs;
+  push_subscription: PushSubscription;
   refused_writes: RefusedWrites;
   row_history: RowHistory;
   stretch_weeks: StretchWeeks;
