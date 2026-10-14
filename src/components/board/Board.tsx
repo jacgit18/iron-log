@@ -16,10 +16,11 @@ import Experiments from './Experiments.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import FirstRun from './FirstRun.jsx';
 import InstallHint from './InstallHint.jsx';
+import './BoardTop.css';
+import './DayHeader.css';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
-const MODES = [[1, 'Mode 1 · A only'], [2, 'Mode 2 · monthly'], [3, 'Mode 3 · 6 months']];
 const tipHidden = (k: string) => LS.get(k) === 1; // stored as the string "1", same as the vanilla app
 
 // Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
@@ -84,6 +85,8 @@ export default function Board() {
   const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey && !onlyElsewhere(slots, week) ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
   const [filter, setFilter] = useState({ muscle: '', eq: '' });
+  const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose Rest day box and swap arrows are showing
+  const [filterOpen, setFilterOpen] = useState(false); // phones only: the sort and equipment fields fold away
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
   const filtering = !!filter.eq;
   const sorting = !!filter.muscle;
@@ -132,19 +135,13 @@ export default function Board() {
 
   const auto = programFor(cfg, weekStart);
   return (
-    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="weekbar">
         <div className="weeknav">
           <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}>‹</button>
           <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
           <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}>›</button>
           {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
-          <label className="seg modesel" htmlFor="board-mode">
-            <span className="sr">Mode</span>
-            <select id="board-mode" aria-label="Program mode" value={cfg.mode} onChange={e => st.setMode(Number(e.target.value) as 1 | 2 | 3)}>
-              {MODES.map(([m, t]) => <option key={m} value={m}>{t}</option>)}
-            </select>
-          </label>
           {cfg.mode === 2 && (
             <>
               <div className="seg" role="group" aria-label="Program this week">
@@ -172,7 +169,10 @@ export default function Board() {
       )}
       {left.length > 0 && (
         <div className="notice leftovers" role="status">
-          <div>Day {yCol} has {left.length} unchecked exercise{left.length > 1 ? 's' : ''}.</div>
+          <div className="lohead">
+            <span>Day {yCol} has {left.length} unchecked exercise{left.length > 1 ? 's' : ''}.</span>
+            <button type="button" className="btn sm ghost" onClick={hideLeftovers}>Not now</button>
+          </div>
           <div className="actions">
             <button type="button" className="btn sm" onClick={() => st.skipCards(left.map(s => s.id))}>Skip all {left.length}</button>
             {targets.length > 0 && (
@@ -184,7 +184,6 @@ export default function Board() {
                 <button type="button" className="btn sm" onClick={() => st.moveCards(left.map(s => s.id), moveTo as number)}>Move</button>
               </span>
             )}
-            <button type="button" className="btn sm ghost" onClick={hideLeftovers}>Not now</button>
           </div>
         </div>
       )}
@@ -221,19 +220,24 @@ export default function Board() {
       {slots.length === 0 && <FirstRun />}
       <BodyWeightRow key={wk} />
       <div className="filterbar" role="group" aria-label="Sort and filter exercises">
-        <label className="field">Sort by muscle
-          <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
-            <option value="">Program order</option>
-            {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-          </select>
-        </label>
-        <label className="field">Equipment
-          <select value={filter.eq} onChange={e => setFilter(f => ({ ...f, eq: e.target.value }))}>
-            <option value="">All equipment</option>
-            {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
-        </label>
-        {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear</button>}
+        <button type="button" className="btn sm filtertoggle" aria-expanded={filterOpen} aria-controls="filter-fields" onClick={() => setFilterOpen(o => !o)}>
+          Sort &amp; filter{filtering || sorting ? ` · ${(filtering ? 1 : 0) + (sorting ? 1 : 0)} on` : ''}
+        </button>
+        <div className={`filterfields${filterOpen ? ' open' : ''}`} id="filter-fields">
+          <label className="field">Sort by muscle
+            <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
+              <option value="">Program order</option>
+              {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
+            </select>
+          </label>
+          <label className="field">Equipment
+            <select value={filter.eq} onChange={e => setFilter(f => ({ ...f, eq: e.target.value }))}>
+              <option value="">All equipment</option>
+              {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </label>
+          {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear</button>}
+        </div>
         {filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
         {sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
       </div>
@@ -283,7 +287,7 @@ export default function Board() {
           return (
             <section
               key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`}
-              className={`col${t.full ? ' complete' : ''}${d === day ? ' sel' : ''}${overDay === d ? ' over' : ''}`}
+              className={`col${t.full ? ' complete' : ''}${d === day ? ' sel' : ''}${overDay === d ? ' over' : ''}${dayMore === d ? ' more' : ''}`}
               onDragOver={e => { if (!dragId) return; e.preventDefault(); setOverDay(d); }}
               onDrop={e => { if (!dragId) return; e.preventDefault(); const id = dragId; onDragEnd(); if (id.startsWith('exp:')) st.addToDay(id.slice(4), d); else st.moveSlot(id, d); }}
             >
@@ -297,8 +301,10 @@ export default function Board() {
                 </div>
                 <span className="count">{t.done}/{t.total}</span>
                 <SwapArrows d={d} />
+                <button type="button" className="btn sm ghost daymore" id={`daymore-${d}`} aria-expanded={dayMore === d} aria-controls={`restrow-${d}`} aria-label={`More for Day ${d}: rest day and swap`}
+                  onClick={() => setDayMore(dayMore === d ? null : d)}><span aria-hidden="true">⋯</span></button>
               </div>
-              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /> Rest day</label>
+              <label className="restchk" id={`restrow-${d}`}><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /> Rest day</label>
               <div className="addrow">
                 {!fromRecord && <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>}
                 <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>
