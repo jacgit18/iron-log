@@ -150,7 +150,7 @@ function ProgramEditor() {
         <div className="actions edadd" style={{ justifyContent: 'flex-start' }}>{addBtn}</div>
         {showRemoved && (
           <div className="notice movewarn removednote" role="status">
-            <div><b>Removed</b> {slotSummary(cfg, showRemoved.slot)} from {day.title}.</div>
+            <div>{showRemoved.toExperiments ? <><b>Moved</b> {slotSummary(cfg, showRemoved.slot)} from {day.title} to Experiments.</> : <><b>Removed</b> {slotSummary(cfg, showRemoved.slot)} from {day.title}.</>}</div>
             <div className="actions">
               <button type="button" className="btn sm" ref={undoRef} onClick={st.undoRemoveEdSlot}>Undo</button>
               <button type="button" className="btn sm ghost" onClick={st.dismissEdRemoved}>Dismiss</button>
@@ -181,6 +181,7 @@ function ProgramEditor() {
                     <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}>↑</button>
                     <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}>↓</button>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
+                    <button type="button" className="btn sm" id={`exp-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} to Experiments`} onClick={() => { justRemoved.current = true; st.moveEdSlotToExperiments(i); }}>To Experiments</button>
                     <ArmedButton className={`btn sm ${arming === i ? 'danger' : 'ghost'}`} id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? i : null)} onConfirm={() => { setArming(null); justRemoved.current = true; st.removeEdSlot(i); }} />
                   </div>
                 </div>
