@@ -8,6 +8,7 @@ import type { PhaseKey, ProgKey } from '../../types.ts';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
+import { useFeature } from '../../features.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../shared/dates.js';
 import { programFor, progName, programWeights, bestByPhase, round } from '../../lib/logic.js';
@@ -15,6 +16,7 @@ import CommitInput from '../CommitInput.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import { motionOK } from '../../lib/motion.js';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
+import { disablePush, enablePush, pushKindWanted, pushOn, pushSupported, setPushKind } from '../../lib/pushClient.js';
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { IMPORT_ACCEPT } from '../../lib/importFile.js';
@@ -134,6 +136,46 @@ function RestAlertPanel() {
       <p>Saved on this device only.</p>
       {note && <p role="status">{note}</p>}
       <More about="the alert"><p>It only shows while the phone still lets Iron Log run in the background. If the screen has been locked for a while the alert can be late, and the timer is right when you open the app again.</p></More>
+    </section>
+  );
+}
+
+// Push alerts (ADR 044): the server sends them, so they reach a phone that has locked. Admin-only first.
+function PushPanel() {
+  const { installed } = usePwa();
+  const [on, setOn] = useState(pushOn);
+  const [rest, setRest] = useState(() => pushKindWanted('rest'));
+  const [nudge, setNudge] = useState(() => pushKindWanted('day-nudge'));
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (!useFeature('webPush')) return null;
+  // iPhone only allows push for an app on the Home Screen, and says nothing when it is missing, so say it here.
+  if (!pushSupported()) return <section className="panel"><h3>Alerts when Iron Log is closed</h3><p>{isIOS() && !installed ? 'On iPhone, add Iron Log to your Home Screen first (Share, then Add to Home Screen) and open it from there. Then this setting appears.' : 'This browser cannot receive push alerts.'}</p></section>;
+  const toggle = async (want: boolean) => {
+    setBusy(true); setNote('');
+    if (want) {
+      const r = await enablePush();
+      setOn(r === 'on');
+      setNote(r === 'denied' ? 'Notifications are blocked for Iron Log. Allow them in your browser or phone settings, then try again.'
+        : r === 'unavailable' ? 'Push is not available for your account on this server yet.'
+        : r === 'failed' ? 'Could not turn push on. Check your connection and try again.' : '');
+    } else { await disablePush(); setOn(false); }
+    setBusy(false);
+  };
+  return (
+    <section className="panel" aria-labelledby="pushalerts">
+      <h3 id="pushalerts">Alerts when Iron Log is closed</h3>
+      <label className="inline"><input type="checkbox" checked={on} disabled={busy} onChange={e => void toggle(e.target.checked)} /> Send alerts to this device, even when the screen is locked</label>
+      {on && (
+        <>
+          <label className="inline"><input type="checkbox" checked={rest} onChange={e => { setRest(e.target.checked); setPushKind('rest', e.target.checked); }} /> When a rest or hold ends</label>
+          <label className="inline"><input type="checkbox" checked={nudge} onChange={e => { setNudge(e.target.checked); setPushKind('day-nudge', e.target.checked); }} /> When a day is started but not finished, 30 minutes after your last tick</label>
+          <p>The day alert never comes between 9:30 pm and 6 am, and goes away when you finish the day.</p>
+        </>
+      )}
+      <p>Saved on this device only. Admin-only for now.</p>
+      {note && <p role="status">{note}</p>}
+      <More about="these alerts"><p>Alerts are sent by the Iron Log server, so they do not depend on the app running in the background. They contain only a short message. Turning this off, or signing out, removes this device from the server.</p></More>
     </section>
   );
 }
@@ -407,6 +449,7 @@ export default function Settings() {
         <div className="scol">
           <AppearancePanel />
           <RestAlertPanel />
+          <PushPanel />
         </div>
         <div className="scol">
           <DevicePanel />

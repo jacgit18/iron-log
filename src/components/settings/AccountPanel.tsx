@@ -1,4 +1,5 @@
 import { forgetSession } from '../../lib/gate.js';
+import { disablePush } from '../../lib/pushClient.js';
 import { LS } from '../../lib/storage.js';
 import { useWho } from './useWho.js';
 import ExportUpload from './ExportUpload.js';
@@ -17,6 +18,7 @@ export default function AccountPanel() {
 
   const signOut = async () => {
     setBusy(true);
+    await disablePush().catch(() => undefined); // while still signed in, so the server forgets this phone before the next person uses it
     const done = await account.signOut();
     setBusy(false);
     if (!done) { flag('Could not sign out. Try again in a moment.'); return; }
