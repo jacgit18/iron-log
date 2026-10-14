@@ -1,11 +1,14 @@
 import { isDeepStrictEqual } from 'node:util';
 import { sql, type Transaction } from 'kysely';
 import {
+  LIST_CAPS,
+  validateDeleteGroceryMonth,
   validateDeleteLibraryItem,
   validateDeleteListItem,
   validateDeleteProgram,
   validateDeleteWeek,
   validateSaveConfig,
+  validateSaveGroceryMonth,
   validateSaveLibraryItem,
   validateSaveListItem,
   validateSaveProgram,
@@ -13,7 +16,7 @@ import {
   validateSaveWeek,
 } from '../../src/shared/commands.ts';
 import type { DB } from '../db/types.ts';
-import { lockUser, nextSeq, parseEnvelope, refuse, type ConfigRow, type LibraryItemRow, type ListItemRow, type ProgramRow, type StretchWeekRow, type WeekRow } from './support.ts';
+import { lockUser, nextSeq, parseEnvelope, refuse, type ConfigRow, type GroceryMonthRow, type LibraryItemRow, type ListItemRow, type ProgramRow, type StretchWeekRow, type WeekRow } from './support.ts';
 
 // ADR 003 and 008, backend-data-rules.md section 4. A document row (a week, a stretch week, a program, the config) is
 // read and written whole. It is keyed by one or more columns (the week start, the program key) or by the user alone (the config), so
@@ -24,13 +27,13 @@ import { lockUser, nextSeq, parseEnvelope, refuse, type ConfigRow, type LibraryI
 // - baseVersion names a row that is deleted: 409 with the tombstone (FM-05). baseVersion null on a deleted row revives it.
 // Every document table shares this code; only the table, the key, the command names and the cleaner differ.
 
-export type DocRow = WeekRow | StretchWeekRow | ProgramRow | ConfigRow | LibraryItemRow | ListItemRow;
+export type DocRow = WeekRow | StretchWeekRow | ProgramRow | ConfigRow | LibraryItemRow | ListItemRow | GroceryMonthRow;
 
 export type DocResult =
   | { status: 200 | 201; body: { rows: DocRow[]; cursor: string } }
   | { status: 409 | 422; body: { refused: string; current: DocRow | null } };
 
-type Table = 'weeks' | 'stretch_weeks' | 'programs' | 'config' | 'library_items' | 'list_items';
+type Table = 'weeks' | 'stretch_weeks' | 'programs' | 'config' | 'library_items' | 'list_items' | 'grocery_months';
 
 interface Kind {
   table: Table;
@@ -43,6 +46,8 @@ interface Kind {
   clean: (input: unknown) => { keys: string[]; data: object; extra?: Record<string, unknown> } | null;
   // The key named by a delete command, or null when the input is unusable.
   cleanKey: (input: unknown) => string[] | null;
+  // The most live rows that may share this row's first key column (a list's items), when there is a limit: a new row past it is refused.
+  cap?: (keys: string[]) => number | undefined;
 }
 
 const WEEKS: Kind = {
@@ -127,7 +132,33 @@ const LIST_ITEMS: Kind = {
     const out = validateDeleteListItem(input);
     return out && [out.list, out.id];
   },
+  cap: keys => LIST_CAPS[keys[0] as keyof typeof LIST_CAPS],
 };
+
+const GROCERY_MONTHS: Kind = {
+  table: 'grocery_months',
+  keyColumns: ['month'],
+  save: 'save-grocery-month',
+  remove: 'delete-grocery-month',
+  clean: input => {
+    const out = validateSaveGroceryMonth(input);
+    return out && { keys: [out.month], data: out.record };
+  },
+  cleanKey: input => {
+    const out = validateDeleteGroceryMonth(input);
+    return out && [out.month];
+  },
+};
+
+// A new live row (a create, or a revived tombstone) must fit under the kind's cap. Counted after the user lock, so two saves cannot both fit.
+async function overCap(kind: Kind, trx: Transaction<DB>, userId: string, keys: string[]): Promise<boolean> {
+  const max = kind.cap?.(keys);
+  if (max === undefined) return false;
+  const column = kind.keyColumns[0]!;
+  const { n } = await trx.selectFrom(kind.table as 'weeks').select(eb => eb.fn.countAll<string>().as('n'))
+    .where('user_id', '=', userId).where(column as 'week_start', '=', keys[0]!).where('deleted_at', 'is', null).executeTakeFirstOrThrow();
+  return Number(n) >= max;
+}
 
 // The tables have the same columns apart from the key, so the query builder is typed once against 'weeks'.
 const rowFor = (trx: Transaction<DB>, kind: Kind, userId: string, keys: string[]) => {
@@ -156,6 +187,11 @@ async function save(kind: Kind, trx: Transaction<DB>, userId: string, body: unkn
   const extra = input.extra ?? {};
   const write = async (values: Record<string, unknown>) =>
     (await trx.updateTable(kind.table as 'weeks').set({ ...values, ...extra }).where('id', '=', existing!.id).returningAll().executeTakeFirstOrThrow()) as DocRow;
+
+  if ((!existing || existing.deleted_at) && (await overCap(kind, trx, userId, input.keys))) {
+    await refuse(trx, userId, kind.save, env, 'too-many', clientVersion);
+    return { status: 422, body: { refused: 'too-many', current: null } };
+  }
 
   if (!existing) {
     if (env.baseVersion !== null) {
@@ -233,3 +269,5 @@ export const saveLibraryItem = saving(LIBRARY_ITEMS);
 export const deleteLibraryItem = removing(LIBRARY_ITEMS);
 export const saveListItem = saving(LIST_ITEMS);
 export const deleteListItem = removing(LIST_ITEMS);
+export const saveGroceryMonth = saving(GROCERY_MONTHS);
+export const deleteGroceryMonth = removing(GROCERY_MONTHS);

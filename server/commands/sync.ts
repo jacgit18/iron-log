@@ -1,6 +1,6 @@
 import { sql, type Transaction } from 'kysely';
 import type { DB } from '../db/types.ts';
-import type { BodyEntryRow, ConfigRow, LibraryItemRow, ListItemRow, LogEntryRow, ProgramRow, StretchWeekRow, SupplementDayRow, WeekRow } from './support.ts';
+import type { BodyEntryRow, ConfigRow, GroceryMonthRow, LibraryItemRow, ListItemRow, LogEntryRow, ProgramRow, StretchWeekRow, SupplementDayRow, WeekRow } from './support.ts';
 
 // ADR 008: GET /api/sync?since=<seq>. The user's rows changed after the cursor, tombstones included, oldest change first.
 // Each row carries its table, so every synced table shares the one feed and one cursor.
@@ -16,8 +16,9 @@ export type SyncRow =
   | (ProgramRow & { table: 'programs' })
   | (ConfigRow & { table: 'config' })
   | (LibraryItemRow & { table: 'library_items' })
-  | (ListItemRow & { table: 'list_items' });
-const TABLES = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items'] as const;
+  | (ListItemRow & { table: 'list_items' })
+  | (GroceryMonthRow & { table: 'grocery_months' });
+const TABLES = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items', 'grocery_months'] as const;
 export interface SyncPage {
   rows: SyncRow[];
   /** Send this as `since` next time. Equal to `since` when nothing changed. */

@@ -46,23 +46,25 @@ const everything = () => [
   { name: 'save-config', clientId: 'c1', input: { config: { mode: 2, rest: 90 } } },
   { name: 'save-library-item', clientId: 'l1', input: { item: { id: 'v1', name: 'My cut', from: 'A', at: '2026-10-07T12:00:00Z', prog: program } } },
   { name: 'save-list-item', clientId: 'x1', input: { list: 'stretch', item: { id: 's1', n: 'One' }, position: 0 } },
+  { name: 'save-list-item', clientId: 'g1', input: { list: 'grocery_item', item: { id: 'kale', n: 'Kale', store: '', qty: 1, cents: null, every: true, out: false }, position: 0 } },
+  { name: 'save-grocery-month', clientId: 'm1', input: { month: '2026-10', record: { lines: { kale: { got: true } }, pulled: [] } } },
 ];
 const counts = async () => {
   const n = async (t: string) => Number((await sql<{ n: string }>`select count(*)::text as n from ${sql.table(t)}`.execute(db)).rows[0]!.n);
-  return { log: await n('log_entries'), body: await n('body_entries'), weeks: await n('weeks'), stretch: await n('stretch_weeks'), supp: await n('supplement_days'), programs: await n('programs'), config: await n('config'), library: await n('library_items'), lists: await n('list_items') };
+  return { log: await n('log_entries'), body: await n('body_entries'), weeks: await n('weeks'), stretch: await n('stretch_weeks'), supp: await n('supplement_days'), programs: await n('programs'), config: await n('config'), library: await n('library_items'), lists: await n('list_items'), grocery: await n('grocery_months') };
 };
 
 describe('import-legacy', () => {
   it('loads every kind of row for an empty account, in one go, keeping the legacy ids', async () => {
     const res = await importAll(everything());
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ total: 11, imported: { 'log-session': 2, 'tick-card': 1, 'log-body-weight': 1, 'save-week': 1, 'save-stretch-week': 1, 'save-supplement-day': 1, 'save-program': 1, 'save-config': 1, 'save-library-item': 1, 'save-list-item': 1 } });
-    expect(await counts()).toEqual({ log: 3, body: 1, weeks: 1, stretch: 1, supp: 1, programs: 1, config: 1, library: 1, lists: 1 });
+    expect(res.body).toEqual({ total: 13, imported: { 'log-session': 2, 'tick-card': 1, 'log-body-weight': 1, 'save-week': 1, 'save-stretch-week': 1, 'save-supplement-day': 1, 'save-program': 1, 'save-config': 1, 'save-library-item': 1, 'save-list-item': 2, 'save-grocery-month': 1 } });
+    expect(await counts()).toEqual({ log: 3, body: 1, weeks: 1, stretch: 1, supp: 1, programs: 1, config: 1, library: 1, lists: 2, grocery: 1 });
     const ids = (await db.selectFrom('log_entries').select('client_id').execute()).map(r => r.client_id).sort();
     expect(ids).toEqual(['e2', 'k1abc', 't1']);
     // and the pull feed delivers all of it to the phone
     const pulled = await (await fetch(`${base}/api/sync?since=0&limit=500`, { headers: { 'x-dev-user': 'owner', 'x-client-version': 'test-1' } })).json() as { rows: unknown[] };
-    expect(pulled.rows).toHaveLength(11);
+    expect(pulled.rows).toHaveLength(13);
   });
 
   it('is refused for an account that already has any row, and changes nothing', async () => {
@@ -89,7 +91,7 @@ describe('import-legacy', () => {
   it('two entries with the same id stop the import and roll everything back', async () => {
     const res = await importAll([session('same', 'dip'), { name: 'log-body-weight', clientId: 'b1', input: { wk: WS, d: '2026-10-07', w: 180.5 } }, session('same', 'kneeraise')]);
     expect(res).toMatchObject({ status: 422, body: { refused: 'duplicate-id', at: 2, command: 'log-session' } });
-    expect(await counts()).toEqual({ log: 0, body: 0, weeks: 0, stretch: 0, supp: 0, programs: 0, config: 0, library: 0, lists: 0 });
+    expect(await counts()).toEqual({ log: 0, body: 0, weeks: 0, stretch: 0, supp: 0, programs: 0, config: 0, library: 0, lists: 0, grocery: 0 });
     expect((await importAll([session('same', 'dip'), session('same-2', 'kneeraise')])).status).toBe(201); // the phone's fix, a suffix, works
   });
 

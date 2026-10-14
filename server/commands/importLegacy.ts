@@ -2,7 +2,7 @@ import { sql, type Kysely, type Transaction } from 'kysely';
 import { inUserTransaction } from '../auth.ts';
 import type { DB } from '../db/types.ts';
 import { logBodyWeight } from './bodyWeight.ts';
-import { saveConfig, saveLibraryItem, saveListItem, saveProgram, saveStretchWeek, saveWeek } from './documents.ts';
+import { saveConfig, saveGroceryMonth, saveLibraryItem, saveListItem, saveProgram, saveStretchWeek, saveWeek } from './documents.ts';
 import { logSession } from './logSession.ts';
 import { lockUser, parseEnvelope, refuse } from './support.ts';
 import { saveSupplementDay } from './supplementDays.ts';
@@ -30,6 +30,7 @@ const HANDLERS: Record<string, { run: Handler; table: string }> = {
   'save-config': { run: saveConfig, table: 'config' },
   'save-library-item': { run: saveLibraryItem, table: 'library_items' },
   'save-list-item': { run: saveListItem, table: 'list_items' },
+  'save-grocery-month': { run: saveGroceryMonth, table: 'grocery_months' },
 };
 const TABLES = [...new Set(Object.values(HANDLERS).map(h => h.table))];
 
