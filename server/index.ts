@@ -7,6 +7,7 @@ import { createDb } from './db/connection.ts';
 import { remoteDatabaseProblem } from './db/localOnly.ts';
 import { checkDbRole } from './db/role.ts';
 import { installProcessGuards } from './processGuards.ts';
+import { pushConfigFrom } from './push/config.ts';
 
 // Local development reads .env; in production the platform sets the variables and there is no file.
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -42,6 +43,10 @@ console.log(JSON.stringify(setup.enabled
   ? { msg: 'sign-in is on', baseURL: setup.config.baseURL, testSignIn: setup.config.testSignIn === true, emailCode: setup.config.sendCode !== undefined }
   : { msg: 'sign-in is off', reasons: setup.reasons }));
 
+// Web Push (ADR 044): on when the VAPID settings are all set and valid. The scheduler that sends later arrives in a later change.
+const pushSetup = pushConfigFrom(process.env);
+console.log(JSON.stringify(pushSetup.config ? { msg: 'push keys are set' } : { msg: 'push is off', reason: pushSetup.reason }));
+
 // Outside development and test the development sign-in is refused, so without sign-in nobody can use the API at all. Say so loudly.
 if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
   console.error(JSON.stringify({ msg: 'NOBODY CAN SIGN IN: sign-in is off and the development sign-in is not allowed here', reasons: setup.enabled ? [] : setup.reasons }));
@@ -51,7 +56,7 @@ if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 
 const trustProxy = process.env.TRUST_PROXY !== undefined ? (process.env.TRUST_PROXY === 'false' ? false : Number(process.env.TRUST_PROXY)) : process.env.K_SERVICE ? 1 : undefined;
 if (typeof trustProxy === 'number' && !Number.isInteger(trustProxy)) throw new Error('TRUST_PROXY must be a whole number of proxies, or false');
 
-const server = createApp({ db, staticDir, minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], trustProxy }).listen(port, () => {
+const server = createApp({ db, staticDir, minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], trustProxy, push: { publicKey: pushSetup.config?.publicKey } }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 
