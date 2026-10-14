@@ -65,6 +65,13 @@ export interface UncheckNote {
   entries: Logs; // what the uncheck removed, so Undo can put it back
   done: Record<string, boolean>; // key -> was it done before
 }
+/** After a card is skipped: its Undo un-skips it and puts back the ticks the skip cleared. */
+export interface SkipNote {
+  week: string;
+  slotId: string;
+  text: string;
+  done: string[]; // the done keys the skip cleared
+}
 
 /** An open sheet: its `type` plus whatever that sheet needs. */
 export interface Modal { type: string; [key: string]: Loose }
@@ -238,6 +245,7 @@ export interface CoreSlice {
   saveFlag: string;
   ready: Ready;
   uncheckNote: UncheckNote | null;
+  skipNote: SkipNote | null;
   moveNote: MoveNote | null;
   orderNote: OrderNote | null;
   orderSkip: string[]; // 'week:column' suggestions dismissed this session
@@ -306,6 +314,8 @@ export interface CoreSlice {
   dismissOrder(): void;
   undoUncheck(): void;
   dismissUncheck(): void;
+  undoSkip(): void;
+  dismissSkip(): void;
   checkCard(slotId: string, on: boolean): void;
   checkItem(slotId: string, idx: number, on: boolean): void;
   checkDay(day: number, on: boolean): void;

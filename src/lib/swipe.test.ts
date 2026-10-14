@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { axisOf, commitDistance, followOffset, hintFor, startsOnControl, swipeCommits, MAX_FOLLOW } from './swipe.js';
+import { HINT, axisOf, commitDistance, followOffset, startsOnControl, swipeAction, swipeCommits, MAX_FOLLOW } from './swipe.js';
 
 describe('axisOf', () => {
   it('decides nothing for a tap wobble', () => expect(axisOf(4, 5)).toBe('none'));
@@ -34,8 +34,22 @@ describe('followOffset', () => {
   });
 });
 
-describe('hintFor', () => {
-  it('says what a commit would do', () => { expect(hintFor(false)).toBe('Done'); expect(hintFor(true)).toBe('Undo'); });
+describe('swipeAction', () => {
+  it('right ticks an open card done, left skips it', () => {
+    expect(swipeAction(120, 'open', true)).toBe('done');
+    expect(swipeAction(-120, 'open', true)).toBe('skip');
+  });
+  it('puts a done or skipped card back whichever way, so a stray left swipe never skips (and clears) a finished card', () => {
+    for (const st of ['done', 'skipped'] as const) { expect(swipeAction(120, st, true)).toBe('open'); expect(swipeAction(-120, st, true)).toBe('open'); }
+  });
+  it('a card ticked per exercise skips left, does nothing right, and still goes back either way', () => {
+    expect(swipeAction(-120, 'open', false)).toBe('skip');
+    expect(swipeAction(120, 'open', false)).toBe(null);
+    expect(swipeAction(120, 'done', false)).toBe('open');
+    expect(swipeAction(-120, 'skipped', false)).toBe('open');
+  });
+  it('no travel does nothing', () => expect(swipeAction(0, 'open', true)).toBe(null));
+  it('names each action for the hint', () => expect(HINT).toEqual({ done: 'Done', skip: 'Skip', open: 'Undo' }));
 });
 
 describe('startsOnControl', () => {

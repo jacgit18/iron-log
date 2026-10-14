@@ -225,6 +225,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   saveFlag: '',
   ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false, str: false, strHist: false, strWeek: false, supp: false, groc: false, grocMonths: false },
   uncheckNote: null, // after an uncheck removed logged entries: {week, text, entries: {exId: [entry]}, done: {key: wasDone}}
+  skipNote: null, // after a card is skipped: {week, slotId, text, done: [keys the skip cleared]}
   moveNote: null, // heads-up after a move puts the same exercise on the same or a neighboring day
   orderNote: null, // after a day is finished: {kind, week, doneCol, prev, next, lines, applied}; prev/next are {order, rest} for kind 'order', {slot, moved} for kind 'card'
   orderSkip: [], // 'week:column' suggestions dismissed this session
@@ -477,14 +478,29 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().mutateChecks(w => currentLayout(w, slots)[day].forEach(s => { if (!isSkipped(s, w)) setCardDone(w, s, on); }), { removeLogged: true, label: `Day ${day}` });
   },
   skipCard(slotId) {
-    const s = get().slotById(slotId); let skipped = false;
+    const s = get().slotById(slotId); let skipped = false; let cleared: string[] = [];
     const ok = get().mutateChecks(w => {
       w.skipped = w.skipped || {};
       if (w.skipped[slotId]) delete w.skipped[slotId];
-      else { w.skipped[slotId] = true; skipped = true; if (s) clearForSkip(w, s); else delete w.done[slotId]; }
+      else {
+        w.skipped[slotId] = true; skipped = true; const had = Object.keys(w.done || {});
+        if (s) clearForSkip(w, s); else delete w.done[slotId];
+        cleared = had.filter(k => !(w.done || {})[k]);
+      }
     });
-    if (ok) flag(skipped ? 'Skipped for this week' : 'Skip undone');
+    if (!ok) return;
+    const label = s ? s.items.map(it => exInfo(get().cfg, it.ex).n).join(' → ') : '';
+    set({ skipNote: skipped ? { week: get().weekKey(), slotId, text: `Skipped${label ? ' ' + label : ''} for this week.`, done: cleared } : null });
+    flag(skipped ? 'Skipped for this week' : 'Skip undone');
   },
+  // Un-skip the last skipped card and put back the ticks the skip cleared (and with them their check-off entries).
+  undoSkip() {
+    const n = get().skipNote; if (!n || n.week !== get().weekKey() || get().blocked()) return;
+    set({ skipNote: null });
+    if (!(get().week.skipped || {})[n.slotId]) return; // already back
+    if (get().mutateChecks(w => { delete w.skipped[n.slotId]; w.done = w.done || {}; n.done.forEach(k => { w.done[k] = true; }); })) flag('Skip undone');
+  },
+  dismissSkip: () => set({ skipNote: null }),
   // Yesterday's leftovers: skip or move a batch of cards at once.
   skipCards(ids) {
     const ok = get().mutateChecks(w => ids.forEach(id => { const s = get().slotById(id); w.skipped[id] = true; if (s) clearForSkip(w, s); }));
@@ -918,7 +934,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (parts.weeks) {
       const all = await get().allWeeks();
       Object.keys(all).forEach(k => { if (WEEK_RE.test(k)) get().removeDoc('weeks/' + k); });
-      set({ week: normWeek(null), weekHist: null, moveNote: null, orderNote: null, uncheckNote: null, mDay: null });
+      set({ week: normWeek(null), weekHist: null, moveNote: null, orderNote: null, uncheckNote: null, skipNote: null, mDay: null });
     }
     if (parts.logs) { Object.keys(get().logs).forEach(id => get().removeDoc('logs/' + id)); set({ logs: {}, uncheckNote: null }); } // its Undo would bring them back
     if (parts.body) { set({ body: [] }); get().saveBody(); }

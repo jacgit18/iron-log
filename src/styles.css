@@ -1784,9 +1784,16 @@ body.timing {
   transition: transform .18s ease-out;
 }
 .card.swiping[data-hint] {
-  background: linear-gradient(90deg,color-mix(in srgb,var(--accent) 22%,var(--surface)),var(--surface) 55%,color-mix(in srgb,var(--accent) 22%,var(--surface)));
-  border-color: var(--accent);
+  --swipe-c: var(--accent);
+  background: linear-gradient(90deg,color-mix(in srgb,var(--swipe-c) 22%,var(--surface)),var(--surface) 55%);
+  border-color: var(--swipe-c);
   position: relative;
+}
+.card.swiping[data-act="skip"] {
+  --swipe-c: var(--muted);
+}
+.card.swiping[data-dir="left"] {
+  background: linear-gradient(270deg,color-mix(in srgb,var(--swipe-c) 22%,var(--surface)),var(--surface) 55%);
 }
 .card.swiping[data-hint]::before,.card.swiping[data-hint]::after {
   content: attr(data-hint) / "";
@@ -1796,12 +1803,12 @@ body.timing {
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--surface);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--swipe-c);
   font-weight: 700;
   font-size: .75rem;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--swipe-c);
   pointer-events: none;
 }
 .card.swiping[data-hint]::before {
@@ -1809,6 +1816,9 @@ body.timing {
 }
 .card.swiping[data-hint]::after {
   right: 10px;
+}
+.card.swiping[data-dir="right"]::after,.card.swiping[data-dir="left"]::before {
+  content: none;
 }
 .card.done {
   background: transparent;
