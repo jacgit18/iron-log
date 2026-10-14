@@ -196,10 +196,11 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
     },
 
     // "Take off the list": you don't need it after all. Its line goes too, so nothing of it is left on that month.
+    // Only the current month changes what is at home: taking it off an older month must not drop it from today's list.
     takeGroceryOff(month, id) {
       const it = get().grocery.items.find(i => i.id === id);
       if (!it || it.every) return;
-      if (it.out) get().setGroceryOut(id, false);
+      if (it.out && month === monthKey(new Date())) get().setGroceryOut(id, false);
       if (get().groceryMonths[month]) mutateMonth(month, m => { m.pulled = m.pulled.filter(x => x !== id); delete m.lines[id]; });
     },
   };

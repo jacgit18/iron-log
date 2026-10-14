@@ -162,6 +162,15 @@ describe('a month', () => {
     expect(st().groceryMonths[mk]).toBeUndefined(); // empty again: nothing kept
     expect(saved('grocery/' + mk)).toBeNull();
   });
+  it('taking an item off an older month leaves it out today', async () => {
+    const mk = await thisMonth(); const { shiftMonth } = await import('../lib/grocery.js'); const last = shiftMonth(mk, -1);
+    st().addGroceryItem(form({ n: 'Saffron', every: false }));
+    st().setGroceryOut('saffron', true);
+    st().setGroceryGot(last, 'saffron', true);
+    st().takeGroceryOff(last, 'saffron');
+    expect(st().groceryMonths[last]).toBeUndefined(); // last month's purchase is gone
+    expect(st().grocery.items[0].out).toBe(true); // still on this month's To get
+  });
   it('takes off an item an older version pulled onto a month', async () => {
     const mk = await thisMonth();
     st().addGroceryItem(form({ n: 'Saffron', every: false }));

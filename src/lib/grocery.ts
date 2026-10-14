@@ -94,9 +94,10 @@ export function lineOf(item: GroceryItem, m: GroceryMonth) {
 export const lineTotal = (qty: number, cents: number | null) => (cents == null ? 0 : Math.round(qty * cents));
 
 /** The items on this month's list, in catalogue order: the Every-month ones, anything ticked or pulled on (older data) that month,
- *  and, in the current month only, the When-out items that are out. A past month shows what was bought, not what is out today. */
+ *  and, in the current month only, the When-out items that are out. A past month shows what was bought, not what is out today;
+ *  an item keeps its row there once it has a line, so a mis-tapped untick can be ticked again. */
 export const onList = (g: Grocery, m: GroceryMonth, current: boolean) =>
-  g.items.filter(i => i.every || m.lines[i.id]?.got === true || m.pulled.includes(i.id) || (current && i.out));
+  g.items.filter(i => i.every || m.lines[i.id]?.got === true || m.pulled.includes(i.id) || (current ? i.out : !!m.lines[i.id]));
 
 /** A store's items for the To get list: the ones still to get first, the ticked ones after them, each in catalogue order. */
 export const gotLast = (items: GroceryItem[], m: GroceryMonth) => [...items.filter(i => !lineOf(i, m).got), ...items.filter(i => lineOf(i, m).got)];

@@ -57,7 +57,9 @@ describe('a fresh month', () => {
     const m: GroceryMonth = { lines: { saffron: { got: true } }, pulled: [] };
     expect(onList(g, m, false).map(i => i.id)).toContain('saffron');
     expect(onList(g, m, true).map(i => i.id)).toContain('saffron');
-    expect(onList(g, { lines: { saffron: { qty: 2 } }, pulled: [] }, false).map(i => i.id)).not.toContain('saffron'); // a count alone is not a purchase
+    // unticked in a past month (its count and price stay): the row stays so it can be ticked again; in the current month unticking marks it out instead
+    expect(onList(g, { lines: { saffron: { qty: 2 } }, pulled: [] }, false).map(i => i.id)).toContain('saffron');
+    expect(onList(g, { lines: { saffron: { qty: 2 } }, pulled: [] }, true).map(i => i.id)).not.toContain('saffron');
   });
   it('still shows an item an older version pulled onto a month', () => {
     const m: GroceryMonth = { lines: {}, pulled: ['saffron'] };
