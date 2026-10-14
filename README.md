@@ -107,7 +107,7 @@ index.html                    page shell
 vite.config.js                build, PWA manifest and service worker settings
 src/main.tsx                  startup (fonts, appearance, PWA)
 src/App.tsx                   header, tabs, dialogs
-src/styles.css                all styles (light and dark themes)
+src/styles.css                shared styles and themes, one property per line (npm run format:css)
 src/lib/data.js               built-in programs, exercises, phases
 src/lib/logic.js              targets, stalls, progression, what counts as done
 src/lib/muscles.js            muscle map shapes and exercise→muscle tags

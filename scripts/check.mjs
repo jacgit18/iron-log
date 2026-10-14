@@ -60,6 +60,7 @@ if (args.includes('--all')) {
       want('typecheck', `${f} changes the schema`);
     } else if (is.css(f)) {
       want('e2e', `${f} is styling (e2e builds the app first)`);
+      want('lint', `${f} is styling (lint checks its format)`);
     } else if (is.src(f) || /\.(mjs|js|ts)$/.test(f)) {
       ['typecheck', 'test', 'lint'].forEach(c => want(c, `${f} is source`));
       if (is.ui(f)) want('e2e', `${f} is UI or store code`);
