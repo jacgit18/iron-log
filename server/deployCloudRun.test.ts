@@ -15,12 +15,17 @@ describe('deploy-cloud-run.sh traffic commands', () => {
 echo "$*" >> "${'$'}CALLS_FILE"
 case "$*" in
   *"projects describe"*) echo 123456;;
+  # The Web Push setup is made once: SETUP_EXISTS=1 is a second run, where the queue and the invoker account are already there.
+  *"tasks queues describe"*|*"service-accounts describe"*) [ "$SETUP_EXISTS" = 1 ] && exit 0; exit 1;;
   # What the account may do is set by the test: SECRETS_READABLE=1 is your machine (it can see a secret exists), unset is the CI deployer.
+  # PUSH_SECRET=1: the Web Push keys are already stored (they are separate from SECRETS_READABLE so the Resend cases above stay about Resend).
+  *"secrets describe iron-log-vapid"*) [ "$PUSH_SECRET" = 1 ] && exit 0; exit 1;;
   *"secrets describe"*) [ "$SECRETS_READABLE" = 1 ] && exit 0; exit 1;;
-  # LIVE_RESEND=1: the live service already maps RESEND_API_KEY from a secret.
+  # LIVE_RESEND=1 / LIVE_PUSH=1: the live service already maps RESEND_API_KEY / VAPID_PRIVATE_KEY from a secret.
   *"run services describe"*"--format=json"*)
     env='[]'
     [ "$LIVE_RESEND" = 1 ] && env='[{"name":"RESEND_API_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-resend-api-key","key":"latest"}}}]'
+    [ "$LIVE_PUSH" = 1 ] && env='[{"name":"VAPID_PRIVATE_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-vapid-private-key","key":"latest"}}}]'
     echo '{"spec":{"template":{"spec":{"containers":[{"env":'"$env"'}]}}},"status":{"traffic":[{"revisionName":"iron-log-00001-aaa","percent":100},{"tag":"candidate","url":"https://candidate---iron-log-x.run.app","revisionName":"iron-log-00002-bbb"}]}}';;
 esac
 exit 0
@@ -128,6 +133,101 @@ exit 0
       expect(out.status).toBe(0);
       expect(recorded().some(l => l.includes('iron-log-resend-api-key'))).toBe(false);
       expect(out.stdout).toContain('not touched');
+    });
+  });
+
+  // Web Push (ADR 044): the same shape as the Resend key, with three secrets, the queue settings as plain variables and a one-off setup command.
+  describe('Web Push', () => {
+    const FOUR = ['APP_DATABASE_URL=iron-log-app-database-url:latest', 'BETTER_AUTH_SECRET=iron-log-auth-secret:latest', 'GOOGLE_CLIENT_ID=iron-log-google-client-id:latest', 'GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest'];
+    const VAPID = ['VAPID_PUBLIC_KEY=iron-log-vapid-public-key:latest', 'VAPID_PRIVATE_KEY=iron-log-vapid-private-key:latest', 'VAPID_SUBJECT=iron-log-vapid-subject:latest'];
+    const secretsOf = (cmd: string) => /--set-secrets (\S+)/.exec(recorded().find(l => l.includes(cmd))!)![1]!.split(',');
+    const envOf = (cmd: string) => /--update-env-vars (\S+)/.exec(recorded().find(l => l.includes(cmd))!)![1]!;
+    const base = { APP_DATABASE_URL: 'postgres://ironlog_app:pw@db.example.com/x', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'gs' };
+
+    it('passes the keys and the queue settings when the secret exists (your machine)', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['deploy'], { PUSH_SECRET: '1' });
+      expect(out.status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual([...FOUR, ...VAPID]);
+      expect(envOf('run deploy')).toContain('PUSH_QUEUE=projects/p/locations/us-central1/queues/iron-log-push');
+      expect(envOf('run deploy')).toContain('PUSH_INVOKER_EMAIL=iron-log-push-invoker@p.iam.gserviceaccount.com');
+      expect(out.stdout).toContain('VAPID keys');
+    });
+
+    it('is kept by a deploy that cannot read secrets (CI) when the live service already has it', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { LIVE_PUSH: '1' })).status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual([...FOUR, ...VAPID]);
+    });
+
+    it('is left out, with no queue settings and nothing removed, when there are no keys', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['deploy']);
+      expect(secretsOf('run deploy')).toEqual(FOUR);
+      expect(envOf('run deploy')).not.toContain('PUSH_');
+      expect(recorded().find(l => l.includes('run deploy'))).not.toContain('--remove-env-vars');
+      expect(out.stdout).toContain('push stays off');
+    });
+
+    it('PUSH_OFF=1 leaves the keys out and removes the queue settings, even when everything else says on', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { PUSH_SECRET: '1', LIVE_PUSH: '1', PUSH_OFF: '1' });
+      expect(out.status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual(FOUR);
+      expect(recorded().find(l => l.includes('run deploy'))).toContain('--remove-env-vars PUSH_QUEUE,PUSH_INVOKER_EMAIL');
+    });
+
+    it('does not touch the Resend key either way', async () => {
+      writeFileSync(calls, '');
+      await run(['deploy'], { PUSH_SECRET: '1', RESEND_OFF: '1' });
+      expect(secretsOf('run deploy')).toEqual([...FOUR, ...VAPID]);
+    });
+
+    it('the secrets command makes the pair once, stores it with the contact, lets the runtime account read all three, and never shows the private key', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['secrets'], { ...base, VAPID_SUBJECT: 'mailto:me@example.com' });
+      expect(out.status).toBe(0);
+      const lines = recorded();
+      for (const name of ['iron-log-vapid-public-key', 'iron-log-vapid-private-key', 'iron-log-vapid-subject']) {
+        expect(lines.some(l => l.includes(`secrets create ${name}`)), name).toBe(true);
+        expect(lines.some(l => l.includes(`secrets versions add ${name}`)), name).toBe(true);
+        expect(lines.some(l => l.includes(`add-iam-policy-binding ${name}`) && l.includes('iron-log-run@p.iam.gserviceaccount.com')), name).toBe(true);
+      }
+      const generated = JSON.parse(execFileSync('node', [resolve('scripts/vapid-keys.mjs')], { encoding: 'utf8' })) as { publicKey: string; privateKey: string };
+      expect(generated.publicKey).toHaveLength(87);
+      expect(generated.privateKey).toHaveLength(43);
+      expect(lines.join('\n') + out.stdout + out.stderr).not.toMatch(/[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/); // no private key (or any 43-character key) on a command line or in the output
+    });
+
+    it('keeps an existing pair (a new one would orphan every subscribed device) but still updates the contact', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['secrets'], { ...base, VAPID_SUBJECT: 'mailto:me@example.com', PUSH_SECRET: '1' });
+      expect(out.status).toBe(0);
+      expect(recorded().some(l => l.includes('secrets create iron-log-vapid-private-key'))).toBe(false);
+      expect(out.stdout).toContain('iron-log-vapid-private-key: kept');
+    });
+
+    it('refuses a contact that is not a mailto: or https: address, and leaves the keys alone without one', async () => {
+      writeFileSync(calls, '');
+      const bad = await run(['secrets'], { ...base, VAPID_SUBJECT: 'me@example.com' });
+      expect(bad.status).not.toBe(0);
+      expect(bad.stderr).toContain('mailto:');
+      writeFileSync(calls, '');
+      const none = await run(['secrets'], { ...base, VAPID_SUBJECT: '' });
+      expect(none.status).toBe(0);
+      expect(recorded().some(l => l.includes('vapid'))).toBe(false);
+      expect(none.stdout).toContain('Web Push keys: not touched');
+    });
+
+    it('push-setup makes the queue (one attempt), the invoker account and the two permissions, and a second run makes nothing twice', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['push-setup'])).status).toBe(0);
+      const lines = recorded();
+      expect(lines.some(l => l.includes('services enable cloudtasks.googleapis.com'))).toBe(true);
+      expect(lines.find(l => l.includes('tasks queues create'))).toMatch(/iron-log-push --location us-central1 --max-attempts=1/);
+      expect(lines.some(l => l.includes('service-accounts create iron-log-push-invoker'))).toBe(true);
+      expect(lines.some(l => l.includes('tasks queues add-iam-policy-binding iron-log-push') && l.includes('serviceAccount:iron-log-run@p.iam.gserviceaccount.com') && l.includes('roles/cloudtasks.enqueuer'))).toBe(true);
+      expect(lines.some(l => l.includes('service-accounts add-iam-policy-binding iron-log-push-invoker@p.iam.gserviceaccount.com') && l.includes('roles/iam.serviceAccountUser'))).toBe(true);
     });
   });
 
