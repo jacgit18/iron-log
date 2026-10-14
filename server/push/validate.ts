@@ -31,7 +31,8 @@ export function parseUnsubscribe(body: unknown): { endpoint: string } | null {
 }
 
 const isKind = (v: unknown): v is PushKind => PUSH_KINDS.includes(v as PushKind);
-const keyOf = (v: unknown) => str(v, 40);
+// The key becomes part of a task name, which allows letters, digits, hyphen and underscore only.
+const keyOf = (v: unknown) => (typeof v === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(v) ? v : null);
 
 export function parseSchedule(body: unknown, now: number): { endpoint: string; kind: PushKind; key: string; at: number; text: string } | null {
   const b = obj(body);
@@ -52,4 +53,14 @@ export function parseCancel(body: unknown): { endpoint: string; kind: PushKind; 
   if (b.key === undefined) return { endpoint, kind: b.kind };
   const key = keyOf(b.key);
   return key ? { endpoint, kind: b.kind, key } : null;
+}
+
+/** What a Cloud Tasks task carries to /api/push/fire (see cloudTasks.ts). */
+export function parseFire(body: unknown): { subscriptionId: string; kind: PushKind; key: string; at: number; text: string } | null {
+  const b = obj(body);
+  const subscriptionId = typeof b?.subscriptionId === 'string' && /^[0-9]{1,18}$/.test(b.subscriptionId) ? b.subscriptionId : null;
+  const key = keyOf(b?.key);
+  const text = str(b?.body, MAX_BODY);
+  if (!subscriptionId || !key || !text || !isKind(b?.kind) || typeof b?.at !== 'number' || !Number.isSafeInteger(b.at)) return null;
+  return { subscriptionId, kind: b.kind, key, at: b.at, text };
 }

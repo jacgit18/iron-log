@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pushConfigFrom } from './config.ts';
-import { MAX_AHEAD_MS, parseCancel, parseEndpoint, parseSchedule, parseSubscription, parseUnsubscribe } from './validate.ts';
+import { MAX_AHEAD_MS, parseCancel, parseEndpoint, parseFire, parseSchedule, parseSubscription, parseUnsubscribe } from './validate.ts';
 
 const NOW = 1_800_000_000_000;
 const endpoint = 'https://fcm.googleapis.com/fcm/send/abc';
@@ -42,7 +42,7 @@ describe('parseSchedule', () => {
     expect(parseSchedule({ ...good, at: NOW - 4_000 }, NOW)).not.toBeNull();
   });
   it('refuses an unknown kind, a missing key, an empty, long or control-character body', () => {
-    for (const bad of [{ kind: 'marketing' }, { kind: undefined }, { key: '' }, { key: 'k'.repeat(41) }, { body: '' }, { body: 'x'.repeat(141) }, { body: 'a\nb' }, { endpoint: 'http://x' }]) {
+    for (const bad of [{ kind: 'marketing' }, { kind: undefined }, { key: '' }, { key: 'k'.repeat(41) }, { key: 'a b' }, { key: 'a/b' }, { body: '' }, { body: 'x'.repeat(141) }, { body: 'a\nb' }, { endpoint: 'http://x' }]) {
       expect(parseSchedule({ ...good, ...bad }, NOW), JSON.stringify(bad)).toBeNull();
     }
   });
@@ -74,5 +74,15 @@ describe('pushConfigFrom', () => {
     expect(pushConfigFrom({ VAPID_PUBLIC_KEY: pub }).reason).toMatch(/PRIVATE/);
     expect(pushConfigFrom({ VAPID_PUBLIC_KEY: 'short', VAPID_PRIVATE_KEY: priv, VAPID_SUBJECT: 'mailto:a@b.c' }).reason).toMatch(/PUBLIC/);
     expect(pushConfigFrom({ VAPID_PUBLIC_KEY: pub, VAPID_PRIVATE_KEY: priv, VAPID_SUBJECT: 'me@example.com' }).reason).toMatch(/SUBJECT/);
+  });
+});
+
+describe('parseFire', () => {
+  const fire = { subscriptionId: '42', kind: 'rest', key: 'k1', at: NOW, body: 'Rest over.' };
+  it('reads what a task carries', () => {
+    expect(parseFire(fire)).toEqual({ subscriptionId: '42', kind: 'rest', key: 'k1', at: NOW, text: 'Rest over.' });
+  });
+  it.each([{ subscriptionId: '4 2' }, { subscriptionId: 42 }, { subscriptionId: '' }, { kind: 'x' }, { key: '' }, { at: 1.5 }, { at: '1' }, { body: '' }])('refuses %j', bad => {
+    expect(parseFire({ ...fire, ...bad })).toBeNull();
   });
 });
