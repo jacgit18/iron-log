@@ -102,6 +102,14 @@ exit 0
       expect(out.stdout).toContain('stays off');
     });
 
+    it('RESEND_OFF=1 leaves it out even when the secret exists and the live service has it, so the feature can be switched off', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { SECRETS_READABLE: '1', LIVE_RESEND: '1', RESEND_OFF: '1' });
+      expect(out.status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual(FOUR);
+      expect(out.stdout).toContain('RESEND_OFF=1');
+    });
+
     it('the secrets command stores it and lets the runtime account read it, and the value is never a gcloud argument', async () => {
       writeFileSync(calls, '');
       const env = { APP_DATABASE_URL: 'postgres://ironlog_app:pw@db.example.com/x', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'gs' };
