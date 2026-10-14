@@ -20,9 +20,10 @@ export function weekSummary(cfg: Cfg, programs: Record<string, Program>, key: st
   const pk = weekProgKey(cfg, w, key);
   const prog = weekProgram(cfg, programs, w, key) || BUILTIN.A; const slots = weekSlots(prog, w, key);
   const cols = currentLayout({ ...w, moved: w.moved || {} }, slots);
-  const days = DAYS.map(d => { const t = tally(cols[d], w); return t.full ? 2 : t.done > 0 ? 1 : 0; });
+  const tallies = DAYS.map(d => tally(cols[d], w));
+  const days = tallies.map(t => (t.full ? 2 : t.done > 0 ? 1 : 0));
   const t = tally(slots, w);
-  return { key, start, pk, days, full: days.filter(x => x === 2).length, ex: t.done, total: t.total, skipped: t.skipped };
+  return { key, start, pk, days, dayDone: tallies.map(t => t.done), full: days.filter(x => x === 2).length, ex: t.done, total: t.total, skipped: t.skipped };
 }
 
 // Week keys for the charts: up to `max` weeks ending this week, starting no earlier than the first logged week (min `min` columns).

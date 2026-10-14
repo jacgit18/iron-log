@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { exInfo } from '../../lib/data.js';
 import { weekStartOf, ymd } from '../../shared/dates.js';
+import { currentLayout, DAYS } from '../../lib/logic.js';
 import { freqGoalStatus } from '../../lib/freqGoal.js';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
@@ -13,15 +14,20 @@ const TIMES = [1, 2, 3, 4, 5, 6, 7];
 // How many times a week you want to do each exercise, and how this week is going. A session is a day you logged or ticked it.
 export default function FreqGoals() {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
-  useAppStore(s => s.week); useAppStore(s => s.programs); // the exercise list follows the shown week's program
+  const week = useAppStore(s => s.week); useAppStore(s => s.programs); // the exercise list follows the shown week's program
   const today = useToday(s => s.today);
   const { setFreqGoal, clearFreqGoal, activeSlots } = useAppStore.getState();
   const [ex, setEx] = useState(''); const [n, setN] = useState('3');
   const wk = ymd(weekStartOf(today));
-  const rows = freqGoalStatus(cfg, logs, wk);
-  const ids = [...new Set([...activeSlots().flatMap(s => s.items.map(it => it.ex)), ...Object.keys(logs).filter(id => logs[id].length)])]
+  // A check-off is dated the day you tapped it: when the board shows this week, count it on the day its card is on.
+  const slots = activeSlots(); const shown = useAppStore.getState().weekKey() === wk;
+  const cols = new Map<string, number>();
+  if (shown) { const layout = currentLayout(week, slots); DAYS.forEach(c => layout[c].forEach(s => cols.set(s.id, c))); }
+  const rows = freqGoalStatus(cfg, logs, wk, shown ? id => cols.get(id) ?? null : undefined);
+  const ids = [...new Set([...slots.flatMap(s => s.items.map(it => it.ex)), ...Object.keys(logs).filter(id => logs[id].length)])]
     .filter(id => cfg.freqGoals?.[id] == null)
     .map(id => ({ id, name: exInfo(cfg, id).n })).sort((a, b) => a.name.localeCompare(b.name));
+  const pick = ids.some(x => x.id === ex) ? ex : ids[0]?.id ?? ''; // a pick that left the list (synced goal, other week) falls back to the first
   return (
     <section className="panel freqgoals" aria-labelledby="freq-h">
       <h2 id="freq-h">Exercise frequency</h2>
@@ -43,10 +49,10 @@ export default function FreqGoals() {
         </ul>
       )}
       {ids.length > 0 && (
-        <form className="goalform" noValidate onSubmit={e => { e.preventDefault(); if (setFreqGoal(ex || ids[0].id, n)) setEx(''); }}>
+        <form className="goalform" noValidate onSubmit={e => { e.preventDefault(); if (setFreqGoal(pick, n)) setEx(''); }}>
           <div className="fields">
             <label className="field">Exercise
-              <select aria-label="Exercise" value={ex || ids[0].id} onChange={e => setEx(e.target.value)}>
+              <select aria-label="Exercise" value={pick} onChange={e => setEx(e.target.value)}>
                 {ids.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
               </select>
             </label>
