@@ -527,6 +527,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
     if (!isVideoUrl(d.nu)) return VIDEO_ERR;
     if (d.cat) { const err = catalogPickError(get().cfg, d.cat, exIdsInUse(get(), get().cfg)); if (err) return err; }
+    const target = d.cat ? d.cat.id : d.ex; // '__new' is a name no exercise has yet, so it cannot be on the list
+    if (target !== '__new' && get().experiments.some(x => x.ex === target && x.id !== d.id)) return `${exInfo(get().cfg, target).n} is already on the Experiment list.`;
     let ex: string;
     if (d.cat && !get().cfg.ex[d.cat.id]) { // picked from the catalog: joins the library with the entry (ADR 036)
       const id = d.cat.id; const { info, tags } = catalogSnapshot(d.cat, d); ex = id;

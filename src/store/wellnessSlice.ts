@@ -125,6 +125,9 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const url = (d.url || '').trim();
     if (!isVideoUrl(url)) return VIDEO_ERR;
     const note = (d.note || '').trim().slice(0, 200);
+    const same = (y: { n: string }) => y.n.toLowerCase() === n.toLowerCase();
+    if (get().stretchExps.some(y => same(y) && y.id !== d.id)) return 'That stretch is already on the Experiment list.';
+    if (get().stretches.some(same)) return 'You already have that stretch. Add it to a day from the list.';
     get().mutateStretches(x => {
       const item = { id: d.id || uid('SE'), n, ...(url ? { url } : {}), ...(note ? { note } : {}) };
       const i = x.experiments.findIndex(y => y.id === item.id);

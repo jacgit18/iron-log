@@ -456,6 +456,13 @@ describe('experiment board', () => {
     expect(st().saveExperiment({ ex: '__new', nn: '' })).toMatch(/Choose an exercise/);
     expect(st().saveExperiment({ ex: '' })).toMatch(/Choose an exercise/);
   });
+  it('refuses an exercise that is already on the list, but lets an entry be edited', () => {
+    const e = add('hack', 'hyp');
+    expect(st().saveExperiment({ ex: 'hack', nn: '', ph: 'strength', note: '' })).toMatch(/already on the Experiment list/);
+    expect(st().saveExperiment({ ex: '__new', nn: 'Hack Squat', ph: null, note: '' })).toBeNull(); // a different name is a new exercise
+    expect(st().saveExperiment({ id: e.id, ex: 'hack', ph: 'strength', note: 'x' })).toBeNull();
+    expect(st().experiments.filter(x => x.ex === 'hack')).toHaveLength(1);
+  });
   it('adds a catalog exercise picked in the experiment sheet to the library under its catalog id (ADR 036)', () => {
     const fly = { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: { eq: 'cable', muscles: { p: ['chest'] } } };
     expect(st().saveExperiment({ ex: fly.id, nn: '', cat: fly, ph: 'hyp', note: '' })).toBeNull();
@@ -640,8 +647,9 @@ describe('video link on an existing exercise', () => {
     const { exInfo } = await import('../lib/data.js');
     expect(st().saveExperiment({ ex: 'hack', ph: 'hyp', nu: 'https://example.com/hack' })).toBeNull();
     expect(exInfo(st().cfg, 'hack').url).toBe('https://example.com/hack');
-    expect(st().saveExperiment({ ex: 'hack', ph: 'hyp', nu: 'nope' })).toMatch(/https/);
-    st().saveExperiment({ ex: 'hack', ph: 'hyp', nu: '' }); // clearing removes it
+    const id = st().experiments.at(-1).id; // saving it again is an edit of that entry, not a second one
+    expect(st().saveExperiment({ id, ex: 'hack', ph: 'hyp', nu: 'nope' })).toMatch(/https/);
+    st().saveExperiment({ id, ex: 'hack', ph: 'hyp', nu: '' }); // clearing removes it
     expect(exInfo(st().cfg, 'hack').url).toBeFalsy();
   });
   it('keeps a link that is already there when it is not changed', async () => {
