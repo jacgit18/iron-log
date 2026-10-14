@@ -439,6 +439,75 @@ describe('trying a set-aside write again', () => {
     expect(server.rows.has('log_entries|S1')).toBe(true);
   });
 
+  // Try again adds, it never takes away: the set-aside copy is old, so what changed on the server since is left as it is.
+  const squat = (id: string, w: number) => ({ client_id: id, exercise_id: 'squat', d: '2026-10-06', phase: 'strength', weight_lb: `${w}.0000`, sets_count: 3, reps: '5.00', auto: false });
+  it('a session logged on another device after the refusal is kept, and the set-aside edit still goes through', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1', { w: 140 }))).catch(() => undefined);
+    server.plant('log_entries', 'S2', squat('S2', 150)); // logged on the other device meanwhile
+    await db.syncNow();
+    expect(await db.retry(db.quarantined()[0]!.id)).toBe('sent');
+    expect(server.rows.get('log_entries|S2')).toMatchObject({ deleted_at: null }); // not deleted for missing from the old copy
+    expect(server.rows.get('log_entries|S1')).toMatchObject({ weight_lb: '140.0000' }); // unchanged since, so the edit lands
+    expect(db.status().notices.map(n => n.text)).toContain('Sent what was set aside; what changed on another device since was kept.');
+  });
+
+  it('an entry edited on another device since is not put back to the set-aside copy', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1', { w: 140 }))).catch(() => undefined);
+    const row = server.rows.get('log_entries|S1')!;
+    server.rows.set('log_entries|S1', { ...row, version: row.version + 1, weight_lb: '160.0000', seq: '99' }); // edited elsewhere
+    await db.syncNow();
+    expect(await db.retry(db.quarantined()[0]!.id)).toBe('sent');
+    expect(server.rows.get('log_entries|S1')).toMatchObject({ weight_lb: '160.0000' });
+  });
+
+  it('a newer save on this device while the retry waits is sent as usual, not held back by the retry', async () => {
+    // The retry leaves S2 (logged elsewhere after the refusal) as the server has it. That applies to the set-aside copy only:
+    // an edit of S2 made here while the retry waits for the network is this device's latest word and must reach the server.
+    const { server, gate, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1', { w: 140 }))).catch(() => undefined);
+    server.plant('log_entries', 'S2', squat('S2', 150));
+    await db.syncNow();
+    server.fail.push(down('network'));
+    const retrying = db.retry(db.quarantined()[0]!.id); // waits for the network
+    await settle();
+    const s2 = { id: 'S2', d: '2026-10-06', ph: 'strength', w: 170, s: 3, r: 5 };
+    void db.doc('logs/squat').set(logsDoc(entry('S1', { w: 140 }), s2)); // edits S2 here meanwhile
+    gate.releaseAll();
+    await retrying;
+    await settle(30);
+    expect(server.rows.get('log_entries|S2')).toMatchObject({ weight_lb: '170.0000' });
+    expect(db.status().pendingPaths).toEqual([]);
+  });
+
+  it('a set-aside week is merged with the ticks another device made since', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    const wk = (done: object) => ({ prog: 'A', done, skipped: {}, moved: {}, ph: {}, warm: {} });
+    await db.doc('weeks/2026-10-04').set(wk({ a: true }));
+    refuseOnce(server);
+    await db.doc('weeks/2026-10-04').set(wk({ a: true, c: true })).catch(() => undefined);
+    const row = server.rows.get('weeks|2026-10-04')!;
+    server.rows.set('weeks|2026-10-04', { ...row, version: row.version + 1, data: wk({ a: true, b: true }), seq: '99' });
+    await db.syncNow();
+    expect(await db.retry(db.quarantined()[0]!.id)).toBe('sent');
+    expect(server.rows.get('weeks|2026-10-04')!.data.done).toEqual({ a: true, b: true, c: true });
+  });
+
   it('if the server refuses it again, it comes back with the new reason', async () => {
     const { server, db } = setup();
     db.start();

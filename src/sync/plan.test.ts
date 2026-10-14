@@ -102,6 +102,18 @@ describe('planCommands: log entries', () => {
     expect(cmds.map(c => `${c.name}:${c.rowKey}`)).toEqual(['delete-entry:B']);
   });
 
+  it('leaves a row it was told to leave as is: not edited back to an older copy, not deleted; the others still are', () => {
+    const m = mirrorOf([logRow(entry('A')), logRow(entry('B')), logRow(entry('C'))], { version: 3 });
+    const cmds = planCommands(kind('logs/squat'), { entries: [entry('A', { w: 999 }), entry('B', { w: 999 })] }, m, new Set(), new Set(['log_entries|A', 'log_entries|C']));
+    expect(cmds.map(c => `${c.name}:${c.rowKey}`)).toEqual(['log-session:B']);
+  });
+
+  it('a row kept only from deletion (FM-05) is still edited when the document changes it', () => {
+    const m = mirrorOf([logRow(entry('A'))], { version: 3 });
+    const cmds = planCommands(kind('logs/squat'), { entries: [entry('A', { w: 999 })] }, m, new Set(['log_entries|A']));
+    expect(cmds.map(c => `${c.name}:${c.rowKey}`)).toEqual(['log-session:A']);
+  });
+
   it('only touches its own exercise', () => {
     const m = mirrorOf([logRow(entry('B1'), 'bench')]);
     expect(plan('logs/squat', { entries: [] }, m)).toEqual([]);
