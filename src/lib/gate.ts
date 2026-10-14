@@ -35,8 +35,11 @@ export function quickGate(syncOn: boolean, storage: Pick<GateStorage, 'get'>): '
 }
 
 /** Asks who is signed in, once, for a visitor the browser does not know. */
-export async function decideGate(me: () => Promise<AccountState>, storage: GateStorage): Promise<Decision> {
-  const who = await me();
+export async function decideGate(me: () => Promise<AccountState>, storage: GateStorage, onFailure?: (err: unknown) => void): Promise<Decision> {
+  // A check that throws instead of answering is treated like "could not tell": the same offline rule below, so a returning user is
+  // never locked out of the data on their device, and the Splash cannot hang.
+  let who: AccountState = { status: 'unreachable' };
+  try { who = await me(); } catch (err) { onFailure?.(err); }
   if (who.status === 'signed-in') { storage.set(KNOWN_KEY, true); return 'app'; }
   if (who.status === 'signed-out') return 'landing';
   const holdsAnAccount = !!storage.get(OWNER_KEY);
