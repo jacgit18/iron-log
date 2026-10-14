@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, occasional, onList, parseDollars, shiftMonth, tally,
+  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, onList, parseDollars, shiftMonth, tally,
 } from './grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
 const g: Grocery = {
   stores: ['Veg market', 'Costco'],
   items: [
-    { id: 'kale', n: 'Kale', store: 'Veg market', qty: 2, cents: 250, once: false },
-    { id: 'rice', n: 'Rice', store: 'Costco', qty: 1, cents: 1899, once: false },
-    { id: 'salt', n: 'Salt', store: '', qty: 1, cents: null, once: false },
-    { id: 'saffron', n: 'Saffron', store: 'Costco', qty: 1, cents: 1200, once: true },
+    { id: 'kale', n: 'Kale', store: 'Veg market', qty: 2, cents: 250, every: true, out: false },
+    { id: 'rice', n: 'Rice', store: 'Costco', qty: 1, cents: 1899, every: true, out: false },
+    { id: 'salt', n: 'Salt', store: '', qty: 1, cents: null, every: true, out: false },
+    { id: 'saffron', n: 'Saffron', store: 'Costco', qty: 1, cents: 1200, every: false, out: false },
   ],
 };
 
@@ -43,32 +43,44 @@ describe('money', () => {
 });
 
 describe('a fresh month', () => {
-  it('is every regular item, nothing ticked, with the catalogue count and price', () => {
+  it('is every Every-month item, nothing ticked, with the catalogue count and price', () => {
     const m = emptyMonth();
-    expect(onList(g, m).map(i => i.id)).toEqual(['kale', 'rice', 'salt']);
-    expect(occasional(g, m).map(i => i.id)).toEqual(['saffron']);
+    expect(onList(g, m, true).map(i => i.id)).toEqual(['kale', 'rice', 'salt']);
     expect(lineOf(g.items[0], m)).toEqual({ got: false, qty: 2, cents: 250 });
   });
-  it('shows an occasional item once it is pulled on, and that month only', () => {
+  it('shows a When-out item in the current month while it is out, and not in a past month', () => {
+    const out = { ...g, items: g.items.map(i => (i.id === 'saffron' ? { ...i, out: true } : i)) };
+    expect(onList(out, emptyMonth(), true).map(i => i.id)).toEqual(['kale', 'rice', 'salt', 'saffron']);
+    expect(onList(out, emptyMonth(), false).map(i => i.id)).toEqual(['kale', 'rice', 'salt']);
+  });
+  it('keeps a When-out item on a month where it was bought, out or not', () => {
+    const m: GroceryMonth = { lines: { saffron: { got: true } }, pulled: [] };
+    expect(onList(g, m, false).map(i => i.id)).toContain('saffron');
+    expect(onList(g, m, true).map(i => i.id)).toContain('saffron');
+    expect(onList(g, { lines: { saffron: { qty: 2 } }, pulled: [] }, false).map(i => i.id)).not.toContain('saffron'); // a count alone is not a purchase
+  });
+  it('still shows an item an older version pulled onto a month', () => {
     const m: GroceryMonth = { lines: {}, pulled: ['saffron'] };
-    expect(onList(g, m).map(i => i.id)).toEqual(['kale', 'rice', 'salt', 'saffron']);
-    expect(occasional(g, m)).toEqual([]);
-    expect(onList(g, emptyMonth()).map(i => i.id)).not.toContain('saffron');
+    expect(onList(g, m, false).map(i => i.id)).toEqual(['kale', 'rice', 'salt', 'saffron']);
   });
   it('uses the month’s own count and price over the catalogue’s', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] };
     expect(lineOf(g.items[0], m)).toEqual({ got: true, qty: 4, cents: 300 });
   });
+  it('puts ticked items after the ones still to get, keeping catalogue order in each part', () => {
+    const m: GroceryMonth = { lines: { kale: { got: true }, salt: { got: true } }, pulled: [] };
+    expect(gotLast(g.items, m).map(i => i.id)).toEqual(['rice', 'saffron', 'kale', 'salt']);
+  });
 });
 
 describe('groups and totals', () => {
   it('groups by store in the stores’ order, no-store last, leaving empty stores out', () => {
-    expect(byStore(g, onList(g, emptyMonth())).map(x => [x.label, x.items.map(i => i.id)])).toEqual([['Veg market', ['kale']], ['Costco', ['rice']], ['Anywhere', ['salt']]]);
+    expect(byStore(g, onList(g, emptyMonth(), true)).map(x => [x.label, x.items.map(i => i.id)])).toEqual([['Veg market', ['kale']], ['Costco', ['rice']], ['Anywhere', ['salt']]]);
     expect(byStore({ ...g, stores: ['Veg market', 'Costco', 'Empty'] }, [g.items[0]]).map(x => x.label)).toEqual(['Veg market']);
   });
   it('splits expected from spent and counts the unpriced', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] };
-    expect(tally(onList(g, m), m)).toEqual({ count: 3, got: 1, planned: 1200 + 1899, spent: 1200, unpriced: 1 });
+    expect(tally(onList(g, m, true), m)).toEqual({ count: 3, got: 1, planned: 1200 + 1899, spent: 1200, unpriced: 1 });
     expect(tally([], emptyMonth())).toEqual({ count: 0, got: 0, planned: 0, spent: 0, unpriced: 0 });
   });
 });
@@ -81,10 +93,21 @@ describe('cleaning saved or imported data', () => {
         { id: '__proto__', n: 'bad' }, { id: 'z', n: 'Z', store: 'A', qty: -2, cents: -5, once: true }],
     });
     expect(c.items).toEqual([
-      { id: 'x', n: 'Egg', store: 'B', qty: 3, cents: null, once: false },
-      { id: 'z', n: 'Z', store: 'A', qty: 1, cents: null, once: true },
+      { id: 'x', n: 'Egg', store: 'B', qty: 3, cents: null, every: true, out: false },
+      { id: 'z', n: 'Z', store: 'A', qty: 1, cents: null, every: false, out: false },
     ]);
     expect(c.stores).toEqual(['A', 'B']);
+  });
+  it('reads Every month and When out, and turns an older occasional item into a When-out item that is not out', () => {
+    const c = normGrocery({ items: [
+      { id: 'a', n: 'A' }, // older regular item
+      { id: 'b', n: 'B', once: true }, // older occasional item
+      { id: 'c', n: 'C', every: false, out: true },
+      { id: 'd', n: 'D', every: false, out: 'yes' },
+      { id: 'e', n: 'E', every: true, out: true }, // an Every-month item is never out
+      { id: 'f', n: 'F', every: false, once: false },
+    ] });
+    expect(c.items.map(i => [i.id, i.every, i.out])).toEqual([['a', true, false], ['b', false, false], ['c', false, true], ['d', false, false], ['e', true, false], ['f', false, false]]);
   });
   it('treats anything that is not a document as an empty list', () => {
     for (const bad of [null, undefined, 5, 'x', [], { items: 'no' }]) expect(normGrocery(bad)).toEqual({ stores: [], items: [] });
@@ -141,7 +164,7 @@ describe('store choices', () => {
 });
 
 describe('merging when two devices made different ids', () => {
-  const item = (id: string, n: string, store = 'Costco') => ({ id, n, store, qty: 1, cents: null, once: false });
+  const item = (id: string, n: string, store = 'Costco') => ({ id, n, store, qty: 1, cents: null, every: true, out: false });
   it('sends a file’s month lines to the matching item here, even under another id, and to a new id when its own is taken', () => {
     // here: "milk" is Giant's milk; in the file "milk" is Costco's milk and "milk-2" is Giant's
     const here = { stores: ['Giant'], items: [item('milk', 'Milk', 'Giant')] };

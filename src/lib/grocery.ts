@@ -3,9 +3,10 @@ import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth } fro
 
 /* ---------- Grocery list ----------
    The catalogue (`grocery/main`) holds every item once: where you buy it, the usual count and the last unit price. A month
-   (`grocery/YYYY-MM`) holds only what happened that month: ticks, counts and prices that differ, and which occasional items
-   were pulled on. A month with no saved document is the catalogue's regular items, nothing ticked, so each month starts
-   fresh with the same items and nothing is copied or reset. Prices are whole cents, so totals never drift. */
+   (`grocery/YYYY-MM`) holds only what happened that month: ticks, counts and prices that differ. Each item is "Every month" (always
+   on the list) or "When out" (on the current month's list only while it is out: unchecked on the At home list, ADR 038). A month
+   with no saved document is the Every-month items plus whatever is out, nothing ticked, so each month starts fresh and nothing is
+   copied or reset. Prices are whole cents, so totals never drift. */
 
 export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999;
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -55,7 +56,9 @@ export function normGrocery(d: unknown): Grocery {
     const id = str(o.id, 60), n = str(o.n, 80);
     if (!id || !n || id === '__proto__' || seen.has(id) || items.length >= MAX_ITEMS) return;
     seen.add(id);
-    items.push({ id, n, store: str(o.store, 40), qty: cleanQty(o.qty) ?? 1, cents: cleanCents(o.cents), once: o.once === true });
+    // Older data has `once` (an occasional item) instead: it becomes a When-out item that is not out, which is how it behaved.
+    const every = o.every === true || (o.every === undefined && o.once !== true);
+    items.push({ id, n, store: str(o.store, 40), qty: cleanQty(o.qty) ?? 1, cents: cleanCents(o.cents), every, out: !every && o.out === true });
   });
   const stores: string[] = [];
   const addStore = (s: string) => { if (s && !stores.includes(s) && stores.length < MAX_STORES) stores.push(s); };
@@ -90,9 +93,13 @@ export function lineOf(item: GroceryItem, m: GroceryMonth) {
 }
 export const lineTotal = (qty: number, cents: number | null) => (cents == null ? 0 : Math.round(qty * cents));
 
-/** The items on this month's list, in catalogue order: the regular ones plus the occasional ones pulled on. */
-export const onList = (g: Grocery, m: GroceryMonth) => g.items.filter(i => !i.once || m.pulled.includes(i.id));
-export const occasional = (g: Grocery, m: GroceryMonth) => g.items.filter(i => i.once && !m.pulled.includes(i.id));
+/** The items on this month's list, in catalogue order: the Every-month ones, anything ticked or pulled on (older data) that month,
+ *  and, in the current month only, the When-out items that are out. A past month shows what was bought, not what is out today. */
+export const onList = (g: Grocery, m: GroceryMonth, current: boolean) =>
+  g.items.filter(i => i.every || m.lines[i.id]?.got === true || m.pulled.includes(i.id) || (current && i.out));
+
+/** A store's items for the To get list: the ones still to get first, the ticked ones after them, each in catalogue order. */
+export const gotLast = (items: GroceryItem[], m: GroceryMonth) => [...items.filter(i => !lineOf(i, m).got), ...items.filter(i => lineOf(i, m).got)];
 
 /** The list split by store, in the order of `stores`; items with no store come last. Empty stores are left out. */
 export function byStore(g: Grocery, items: GroceryItem[]): { store: string; label: string; items: GroceryItem[] }[] {
