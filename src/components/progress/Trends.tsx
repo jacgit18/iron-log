@@ -40,34 +40,42 @@ function KpiTiles({ keys, byWeek, changes }: { keys: string[]; byWeek: Record<st
   );
 }
 
-function SetsChart({ keys, byWeek }: { keys: string[]; byWeek: Record<string, { sets: number; sessions: number }> }) {
+// One bar per week, the newest striped ("so far"). `fmt` labels the axis and the current bar; `tip` names a whole bar.
+function WeekBars({ keys, values, label, fmt, tip }: { keys: string[]; values: Record<string, number>; label: string; fmt: (v: number) => string; tip: (k: string, cur: boolean) => string }) {
   const thisSun = keys[keys.length - 1];
-  const max = Math.max(...keys.map((k) => byWeek[k].sets), 1); const step = niceStep(max); const top = Math.ceil(max / step) * step;
+  const max = Math.max(...keys.map((k) => values[k]), 1); const step = niceStep(max); const top = Math.ceil(max / step) * step;
   const grid = []; for (let v = 0; v <= top; v += step) grid.push(v);
+  return (
+    <div className="bars" style={{ '--n': keys.length } as CSSProperties}>
+      <div className="bgrid" aria-hidden="true">{grid.map(v => <span key={v} style={{ bottom: `${v / top * 100}%` }}><b>{fmt(v)}</b></span>)}</div>
+      <div className="bcols" role="list" aria-label={label}>
+        {keys.map((k, i) => {
+          const v = values[k]; const cur = k === thisSun; const pct = v / top * 100; const t = tip(k, cur);
+          return (
+            <div key={k} role="listitem" className={`bcol${cur ? ' cur' : ''}`} data-tip={t} tabIndex={0} aria-label={t}>
+              <div className="bplot" aria-hidden="true">
+                {v > 0 && <i style={{ height: `${pct}%` }} />}
+                {cur && v > 0 && <em style={{ bottom: `${pct}%` }}>{fmt(v)}</em>}
+              </div>
+              <span aria-hidden="true" className={`bx${(keys.length - 1 - i) % 2 ? ' alt' : ''}`}>{cur ? 'Now' : mdLabel(k)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SetsChart({ keys, byWeek }: { keys: string[]; byWeek: Record<string, { sets: number; sessions: number }> }) {
   const total = keys.reduce((a, k) => a + byWeek[k].sets, 0);
+  const sets: Record<string, number> = {}; keys.forEach(k => { sets[k] = byWeek[k].sets; });
+  const tip = (k: string, cur: boolean) => { const r = byWeek[k]; return `Week of ${fmtShort(parseDate(k))}${cur ? ' (so far)' : ''}: ${fmtSets(r.sets)} set${r.sets === 1 ? '' : 's'} in ${r.sessions} session${r.sessions === 1 ? '' : 's'}`; };
   return (
     <section className="panel tchart">
       <h2>Sets logged per week</h2>
       {!total ? <p className="note">Logged sets show up here, one bar per week.</p> : (
         <>
-          <div className="bars" style={{ '--n': keys.length } as CSSProperties}>
-            <div className="bgrid" aria-hidden="true">{grid.map(v => <span key={v} style={{ bottom: `${v / top * 100}%` }}><b>{v}</b></span>)}</div>
-            <div className="bcols" role="list" aria-label="Sets logged per week">
-              {keys.map((k, i) => {
-                const r = byWeek[k]; const cur = k === thisSun; const pct = r.sets / top * 100;
-                const tip = `Week of ${fmtShort(parseDate(k))}${cur ? ' (so far)' : ''}: ${fmtSets(r.sets)} set${r.sets === 1 ? '' : 's'} in ${r.sessions} session${r.sessions === 1 ? '' : 's'}`;
-                return (
-                  <div key={k} role="listitem" className={`bcol${cur ? ' cur' : ''}`} data-tip={tip} tabIndex={0} aria-label={tip}>
-                    <div className="bplot" aria-hidden="true">
-                      {r.sets > 0 && <i style={{ height: `${pct}%` }} />}
-                      {cur && r.sets > 0 && <em style={{ bottom: `${pct}%` }}>{fmtSets(r.sets)}</em>}
-                    </div>
-                    <span aria-hidden="true" className={`bx${(keys.length - 1 - i) % 2 ? ' alt' : ''}`}>{cur ? 'Now' : mdLabel(k)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <WeekBars keys={keys} values={sets} label="Sets logged per week" fmt={fmtSets} tip={tip} />
           <p className="note">Every set you log, all exercises together. The striped bar is this week so far.</p>
         </>
       )}
