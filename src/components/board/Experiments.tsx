@@ -4,7 +4,9 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, exInfo } from '../../lib/data.js';
 import { DAYS, lastLog, describe, todayCol } from '../../lib/logic.js';
 import { ymd, weekStartOf } from '../../shared/dates.js';
+import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import ArmedButton from '../ArmedButton.jsx';
+import ExperimentSearch from '../ExperimentSearch.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 
 // The Experiment board: exercises to try, added to a day of the viewed week. `day` is the column shown on phones.
@@ -17,7 +19,9 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
   const today = useToday(s => s.today);
   const st = useAppStore.getState();
   const [pick, setPick] = useState<Record<string, number>>({});
+  const [q, setQ] = useState('');
   const [arming, setArming] = useState<string | null>(null); // the experiment whose Delete was pressed once
+  const shown = hasFilter(items.length) ? items.filter(e => matchesQuery(q, exInfo(cfg, e.ex).n, e.note)) : items; // the search shows only on a long list
   const days = DAYS.filter(d => !rest.includes(d));
   const start = ymd(weekStartOf(today)) === ymd(weekStart) ? todayCol(today) : day;
   const def = days.includes(start) ? start : days[0];
@@ -28,9 +32,10 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
         <button type="button" className="btn sm" onClick={() => st.openModal({ type: 'experiment' })}>+ Add exercise</button>
       </div>
       <RemovedNotice scope="experiments" />
-      {!items.length ? <p className="note">Keep exercises you want to try here, then add them to a day.</p> : (
+      {hasFilter(items.length) && <ExperimentSearch id="exp-q" q={q} onQ={setQ} shown={shown.length} total={items.length} what="exercises" />}
+      {!items.length ? <p className="note">Keep exercises you want to try here, then add them to a day.</p> : !shown.length ? <p className="note">No exercise matches. Clear the search.</p> : (
         <ul className="explist">
-          {items.map(e => {
+          {shown.map(e => {
             const n = exInfo(cfg, e.ex).n; const last = lastLog(logs, e.ex); const to = days.includes(pick[e.id]) ? pick[e.id] : def;
             return (
               <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`} draggable="true" onDragStart={ev => onDragStart(ev, 'exp:' + e.id)} onDragEnd={onDragEnd}>

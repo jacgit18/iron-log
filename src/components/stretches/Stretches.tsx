@@ -6,9 +6,11 @@ import { useToday } from '../../store/useToday.js';
 import { weekStartOf, ymd, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
 import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
+import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import { motionOK } from '../../lib/motion.js';
 import { useSwipeCard } from '../board/useSwipeCard.js';
 import ArmedButton from '../ArmedButton.jsx';
+import ExperimentSearch from '../ExperimentSearch.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
@@ -59,7 +61,9 @@ function Experiments({ day }: { day: number }) {
   const items = useAppStore(x => x.stretchExps);
   const s = useAppStore.getState();
   const [pick, setPick] = useState<Record<string, number>>({});
+  const [q, setQ] = useState('');
   const [arming, setArming] = useState<string | null>(null); // the experiment whose Delete was pressed once
+  const shown = hasFilter(items.length) ? items.filter(e => matchesQuery(q, e.n, e.note)) : items; // the search shows only on a long list
   return (
     <section className="experiments" aria-labelledby="sexp-h">
       <div className="exphead">
@@ -67,9 +71,10 @@ function Experiments({ day }: { day: number }) {
         <button type="button" className="btn sm" id="sexp-add" onClick={() => s.openModal({ type: 'stretchexp' })}>+ Add stretch</button>
       </div>
       <RemovedNotice scope="stretchexps" />
-      {!items.length ? <p className="note">Keep stretches you want to try here, then add them to a day.</p> : (
+      {hasFilter(items.length) && <ExperimentSearch id="sexp-q" q={q} onQ={setQ} shown={shown.length} total={items.length} what="stretches" />}
+      {!items.length ? <p className="note">Keep stretches you want to try here, then add them to a day.</p> : !shown.length ? <p className="note">No stretch matches. Clear the search.</p> : (
         <ul className="explist">
-          {items.map(e => {
+          {shown.map(e => {
             const to = pick[e.id] ?? day;
             return (
               <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`}>
