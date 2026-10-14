@@ -215,8 +215,15 @@ export function createApiDb(options: ApiDbOptions) {
   const deliver = (l: Listener, snap: unknown) => {
     try { l.cb(snap); } catch (e) { console.error(JSON.stringify({ msg: 'a snapshot listener threw', error: e instanceof Error ? e.message : String(e) })); }
   };
+  // A document snapshot for the app. When it is an unsent week that sync merged, the app has now seen the merge: its next save is
+  // made from this copy, so that save needs no merging onto it (see `handed`), or an untick of the other device's tick would come back.
+  function shownSnap(path: string) {
+    const unsent = outbox.get(path);
+    if (unsent !== undefined && handed.has(path)) handed.set(path, unsent);
+    return docSnap(localDoc(path));
+  }
   function emitPath(path: string) {
-    docListeners.get(path)?.forEach(l => deliver(l, docSnap(localDoc(path))));
+    if (docListeners.get(path)?.size) { const snap = shownSnap(path); docListeners.get(path)!.forEach(l => deliver(l, snap)); }
     const slash = path.indexOf('/');
     if (slash > 0) {
       const name = path.slice(0, slash);
@@ -269,7 +276,7 @@ export function createApiDb(options: ApiDbOptions) {
               const own = kind ? ownChanges(kind, doc, before) : null;
               if (own != null) kept.push([path, own]);
             }
-            outbox.clear(); bases.clear(); retryKeep.clear();
+            outbox.clear(); bases.clear(); handed.clear(); retryKeep.clear();
             // Set aside with no versions seen: Try again only adds, leaving whatever the account holds by then as it is.
             for (const [path, own] of kept) outbox.refuse(path, own, 'Made on this device before the account was erased on another device. Send it again to add it to the account, or discard it.', { seen: {} });
             const n = (k: number, one: string, many: string) => (k === 1 ? one : `${k} ${many}`);
@@ -314,6 +321,13 @@ export function createApiDb(options: ApiDbOptions) {
     return r && !r.deleted && (r.table === 'weeks' || r.table === 'stretch_weeks') ? { version: r.version, week: r.week } : null;
   };
   const rememberBase = (path: string) => { const b = weekRow(path); if (b !== undefined) bases.set(path, b); };
+  // The unsent week the app last handed over, by path. When a merge replaces it in the outbox the base moves to the server's row, but
+  // the app only gets the merged week once the send finishes; if the send pauses (set() returns early), the next tap is made from the
+  // week before the merge. Written over the merged copy against the moved base, it went out as a plain edit and wiped the other
+  // device's ticks (production, 2026-10-12..14). So that save is merged onto the copy in the outbox first.
+  const handed = new Map<string, unknown>();
+  const mergeWeekDoc = (path: string, base: unknown, mine: unknown, theirs: unknown) =>
+    (parsePath(path)?.kind === 'weeks' ? mergeWeek3(base, mine, theirs) : mergeStretchWeek3(base, mine, theirs));
 
   // What the server held for a path when a change to it was set aside: Try again leaves alone whatever changed after (see retry).
   const seenNow = (path: string) => {
@@ -330,7 +344,7 @@ export function createApiDb(options: ApiDbOptions) {
   const retryKeep = new Map<string, { doc: unknown; rows: Set<string> }>();
 
   function refuse(path: string, sent: unknown, reason: string) {
-    bases.delete(path); retryKeep.delete(path);
+    bases.delete(path); handed.delete(path); retryKeep.delete(path);
     outbox.refuse(path, sent, reason, seenNow(path));
     setState('idle'); // this write is no longer being sent; whatever is next sets the state again
     announce();
@@ -381,7 +395,7 @@ export function createApiDb(options: ApiDbOptions) {
         outbox.done(path, sent);
         if (retryKeep.get(path)?.doc === sent) retryKeep.delete(path); // that copy is on the server now
         // A week saved meanwhile was made from this one, which the server now holds.
-        if (outbox.get(path) === undefined) bases.delete(path); else rememberBase(path);
+        if (outbox.get(path) === undefined) { bases.delete(path); handed.delete(path); } else rememberBase(path);
         lastSyncedAt = now();
         adjusted.forEach(p => touched.add(p));
         if (!adjusted.has(path)) touched.delete(path);
@@ -438,10 +452,12 @@ export function createApiDb(options: ApiDbOptions) {
           if (++conflicts > MAX_CONFLICTS) return refuse(path, sent, 'This kept changing on another device, so it was set aside.');
           if (c.table === 'weeks' || c.table === 'stretch_weeks') {
             // ADR 031: a week is merged three-way, so what the other device changed survives; a key both changed is this device's.
+            // The latest unsent copy, not the one that went out: a tap saved while the request was on its way was made from that one too.
+            const mine = outbox.get(path);
             const theirs = mirror.rows().get(mirrorId(c.table, c.rowKey));
-            if (theirs && !theirs.deleted && (theirs.table === 'weeks' || theirs.table === 'stretch_weeks')) {
+            if (mine !== undefined && !isDeleted(mine) && theirs && !theirs.deleted && (theirs.table === 'weeks' || theirs.table === 'stretch_weeks')) {
               const baseWeek = base && (base.table === 'weeks' || base.table === 'stretch_weeks') ? base.week : null;
-              const m = c.table === 'weeks' ? mergeWeek3(baseWeek, sent, theirs.week) : mergeStretchWeek3(baseWeek, sent, theirs.week);
+              const m = c.table === 'weeks' ? mergeWeek3(baseWeek, mine, theirs.week) : mergeStretchWeek3(baseWeek, mine, theirs.week);
               if (m.tookTheirs) {
                 outbox.put(path, m.week);
                 adjusted.add(path);
@@ -476,8 +492,11 @@ export function createApiDb(options: ApiDbOptions) {
       emitPath(path);
       return Promise.resolve();
     }
-    const body = clone(data);
-    if (!bases.has(path) && outbox.get(path) === undefined) rememberBase(path); // an unsent week keeps the base of the first one
+    let body = clone(data);
+    const unsent = outbox.get(path); const given = handed.get(path);
+    if (unsent !== undefined && given !== undefined && unsent !== given && !isDeleted(unsent) && !isDeleted(body)) body = mergeWeekDoc(path, given, body, unsent).week;
+    if (!bases.has(path) && unsent === undefined) rememberBase(path); // an unsent week keeps the base of the first one
+    if (bases.has(path)) handed.set(path, body);
     outbox.put(path, body); // safe on this device before anyone is told "saved"
     announce();
     return new Promise<unknown>((resolve, reject) => {
@@ -495,7 +514,7 @@ export function createApiDb(options: ApiDbOptions) {
     set: (data: unknown) => set(path, data),
     delete: () => set(path, { __delete: true }),
     get: async () => docSnap(readyFor(path) ? localDoc(path) : null),
-    onSnapshot: (cb: (s: Snap) => void, err?: (e: unknown) => void) => subscribe(docListeners, path, { cb, err }, readyFor(path), () => docSnap(localDoc(path))),
+    onSnapshot: (cb: (s: Snap) => void, err?: (e: unknown) => void) => subscribe(docListeners, path, { cb, err }, readyFor(path), () => shownSnap(path)),
   });
   const collectionRef = (name: string) => ({
     get: async () => collectionSnap(name),
@@ -607,7 +626,7 @@ export function createApiDb(options: ApiDbOptions) {
       if (who?.status !== 'signed-in') return 'unavailable';
       mirror.clear();
       outbox.clear();
-      bases.clear(); retryKeep.clear(); // a week saved before the reload must not merge against the old data
+      bases.clear(); handed.clear(); retryKeep.clear(); // a week saved before the reload must not merge against the old data
       notices = [];
       adopt(who.userId);
       options.onOwnerChange?.();
@@ -655,7 +674,7 @@ export function createApiDb(options: ApiDbOptions) {
       }
       mirror.clear();
       outbox.clear();
-      bases.clear(); retryKeep.clear();
+      bases.clear(); handed.clear(); retryKeep.clear();
       notices = [];
       storage.remove(OWNER_KEY);
       emitAll();
