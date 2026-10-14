@@ -703,6 +703,24 @@ describe('conflicts', () => {
     expect((await db.doc('weeks/2026-10-04').get()).data().done).toEqual({ a: true, b: true });
   });
 
+  it('a save made while a stale week is on its way is not overwritten by that week\'s merge', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('weeks/2026-10-04').set(wk({ a: true }));
+    otherDeviceSaves(server, { a: true, b: true });
+    // the next tap is saved while the first save's request is on its way (and answered stale)
+    let second: Promise<unknown> | undefined;
+    const send = server.transport.command;
+    server.transport.command = (name, env) => {
+      second ??= db.doc('weeks/2026-10-04').set({ ...wk({ a: true }), moved: { x: 2, y: 3 } });
+      return send(name, env);
+    };
+    await db.doc('weeks/2026-10-04').set({ ...wk({ a: true }), moved: { x: 2 } });
+    await second; await settle();
+    expect(server.rows.get('weeks|2026-10-04')!.data).toMatchObject({ done: { a: true, b: true }, moved: { x: 2, y: 3 } });
+  });
+
   it('a week saved after the pull landed is not merged again', async () => {
     const { server, db } = setup();
     db.start();

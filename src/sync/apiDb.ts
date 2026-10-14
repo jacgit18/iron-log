@@ -445,10 +445,12 @@ export function createApiDb(options: ApiDbOptions) {
           if (++conflicts > MAX_CONFLICTS) return refuse(path, sent, 'This kept changing on another device, so it was set aside.');
           if (c.table === 'weeks' || c.table === 'stretch_weeks') {
             // ADR 031: a week is merged three-way, so what the other device changed survives; a key both changed is this device's.
+            // The latest unsent copy, not the one that went out: a tap saved while the request was on its way was made from that one too.
+            const mine = outbox.get(path);
             const theirs = mirror.rows().get(mirrorId(c.table, c.rowKey));
-            if (theirs && !theirs.deleted && (theirs.table === 'weeks' || theirs.table === 'stretch_weeks')) {
+            if (mine !== undefined && !isDeleted(mine) && theirs && !theirs.deleted && (theirs.table === 'weeks' || theirs.table === 'stretch_weeks')) {
               const baseWeek = base && (base.table === 'weeks' || base.table === 'stretch_weeks') ? base.week : null;
-              const m = c.table === 'weeks' ? mergeWeek3(baseWeek, sent, theirs.week) : mergeStretchWeek3(baseWeek, sent, theirs.week);
+              const m = c.table === 'weeks' ? mergeWeek3(baseWeek, mine, theirs.week) : mergeStretchWeek3(baseWeek, mine, theirs.week);
               if (m.tookTheirs) {
                 outbox.put(path, m.week);
                 adjusted.add(path);
