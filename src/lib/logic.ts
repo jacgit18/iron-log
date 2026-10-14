@@ -306,10 +306,13 @@ export function moveClashes(cfg: Cfg, week: WeekIn, slots: Slot[], s: Slot, day:
   return [...new Set(out)];
 }
 
-// Nearest column to `day` where the card wouldn't clash, skipping the rest day and `from`; a tie goes to the later day.
+// Nearest column to `day` where the card wouldn't clash, skipping the rest day, `from` and any day with something
+// already checked off; a tie goes to the later day.
 export function altDay(cfg: Cfg, week: WeekIn, slots: Slot[], s: Slot, day: number, from: number): number | null {
+  const cols = currentLayout(week, slots);
   for (let k = 1; k < DAY_COUNT; k++) for (const c of [day + k, day - k]) {
     if (c < 1 || c > DAY_COUNT || c === from || dayAt(week, c) == null) continue;
+    if (cols[c].some(o => o.id !== s.id && o.items.some((_, i) => isItemDone(o, i, week)))) continue;
     if (!moveClashes(cfg, week, slots, s, c).length) return c;
   }
   return null;
