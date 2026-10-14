@@ -104,7 +104,8 @@ export interface EditorSlice {
   edItem(): LibraryItem | null;
   edProgram(): Program;
   edName(): string;
-  openAddToProgram(col: number): void;
+  /** `fromExp`: an Experiment entry the sheet starts from; it leaves the list once the card is saved. */
+  openAddToProgram(col: number, fromExp?: string): void;
   setEdProg(edProg: string | null): void;
   setEdDay(edDay: number): void;
   saveEdited(prog: Program): void;
@@ -209,6 +210,8 @@ export interface WellnessSlice {
   saveStretchExp(d: StretchExpForm): string | null;
   deleteStretchExp(id: string): void;
   addStretchToDay(expId: string, day: number): boolean;
+  /** Moves a stretch experiment into your stretches (library only, in the default group); Undo reverses it. */
+  promoteStretchExp(id: string): boolean;
   removeStretchExtra(id: string): void;
   addSupplement(slot: SupplementSlot, name: string, dose?: string): boolean;
   setSupplementSlot(id: string, slot: SupplementSlot, dose?: string): boolean;

@@ -464,6 +464,13 @@ describe('experiment board', () => {
     expect(st().saveExperiment({ id: e.id, ex: 'hack', ph: 'strength', note: 'x' })).toBeNull();
     expect(st().experiments.filter(x => x.ex === 'hack')).toHaveLength(1);
   });
+  it('opens the add-to-program sheet from an entry, carrying the entry along', () => {
+    const e = add('hack', 'hyp', 'try light');
+    st().openAddToProgram(2, e.id);
+    expect(st().modal).toMatchObject({ type: 'slot', idx: null, col: 2, fromExp: e.id });
+    st().openAddToProgram(2);
+    expect(st().modal.fromExp).toBeUndefined();
+  });
   it('adds a catalog exercise picked in the experiment sheet to the library under its catalog id (ADR 036)', () => {
     const fly = { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: { eq: 'cable', muscles: { p: ['chest'] } } };
     expect(st().saveExperiment({ ex: fly.id, nn: '', cat: fly, ph: 'hyp', note: '' })).toBeNull();

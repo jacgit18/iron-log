@@ -53,13 +53,13 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
 
   // The board's + Add to program: the add sheet, aimed at the program on the board and the program day shown in
   // column `col`. The target travels with the sheet, so the Program tab's own selection is untouched.
-  openAddToProgram(col) {
+  openAddToProgram(col, fromExp) {
     const pd = dayAt(get().week, col);
     if (pd == null) { flag('That is your rest day'); return; }
     // A finished week shows what it ran, so a card added to today's program would not appear on it (ADR 022).
     if (get().shownFromRecord()) { flag('This week is over: use + This week only'); return; }
     const ak = get().activeProgKey();
-    set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd } } });
+    set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd }, ...(fromExp ? { fromExp } : {}) } });
   },
   setEdProg: edProg => set({ edProg, edRemoved: null }),
   setEdDay: edDay => set({ edDay, edRemoved: null }),
