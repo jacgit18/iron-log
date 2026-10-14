@@ -1,0 +1,44 @@
+/* The notices that answer something you just did (the undo after an uncheck, the heads-up after a move, the suggested day
+   order, Removed ... with Undo). In the page flow they sat above the days, out of sight when you are scrolled down at a card,
+   and they pushed the cards down when they appeared. On a phone they float above the bottom bar and the rest timer instead.
+   Wider screens keep them in the flow. */
+.toasts {
+  display: contents;
+}
+
+@media (max-width:700px) {
+  .boardroot .toasts {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: fixed;
+    left: var(--gl, 16px);
+    right: var(--gr, 16px);
+    bottom: calc(var(--tabbar) + 72px + env(safe-area-inset-bottom, 0px));
+    z-index: 13;
+    max-height: 45vh;
+    overflow-y: auto;
+    pointer-events: none;
+  }
+  body.timing .boardroot .toasts {
+    bottom: calc(var(--tabbar) + 132px + env(safe-area-inset-bottom, 0px));
+  }
+  .boardroot .toasts > .notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    margin: 0;
+    pointer-events: auto;
+    box-shadow: 0 4px 14px rgba(0,0,0,.28);
+    border: 1px solid var(--line);
+  }
+}
+
+@media (max-width:700px) and (max-height:500px) and (orientation:landscape) {
+  .boardroot .toasts {
+    left: calc(var(--rail) + 12px);
+    max-height: 40vh;
+  }
+}

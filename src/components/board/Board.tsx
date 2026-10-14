@@ -17,6 +17,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import FirstRun from './FirstRun.jsx';
 import InstallHint from './InstallHint.jsx';
 import './BoardTop.css';
+import './Toasts.css';
 import './DayHeader.css';
 
 // Cards moved in from another day are grouped under their own heading.
@@ -194,36 +195,38 @@ export default function Board() {
           </div>
         </div>
       )}
-      {showUncheck && (
-        <div className="notice" role="status" ref={uncheckRef}>
-          <div>{uncheckNote.text}</div>
-          <div className="actions">
-            <button type="button" className="btn sm" onClick={st.undoUncheck}>Undo</button>
-            <button type="button" className="btn sm ghost" onClick={st.dismissUncheck}>Dismiss</button>
+      <div className="toasts">
+        {showUncheck && (
+          <div className="notice" role="status" ref={uncheckRef}>
+            <div>{uncheckNote.text}</div>
+            <div className="actions">
+              <button type="button" className="btn sm" onClick={st.undoUncheck}>Undo</button>
+              <button type="button" className="btn sm ghost" onClick={st.dismissUncheck}>Dismiss</button>
+            </div>
           </div>
-        </div>
-      )}
-      <RemovedNotice scope={'board:' + wk} />
-      {showMove && (
-        <div className="notice movewarn" role="status" ref={moveRef}>
-          <div><b>Heads-up:</b> {moveNote.lines.join(' ')}</div>
-          <div className="actions">
-            {moveNote.alt && <button type="button" className="btn sm" onClick={() => st.moveSlot(moveNote.slot!, moveNote.alt!)}>Move to Day {moveNote.alt} instead</button>}
-            <button type="button" className="btn sm" onClick={st.undoMove}>Move back to Day {moveNote.fromShown}</button>
-            <button type="button" className="btn sm ghost" onClick={st.dismissMove}>Keep it</button>
+        )}
+        <RemovedNotice scope={'board:' + wk} />
+        {showMove && (
+          <div className="notice movewarn" role="status" ref={moveRef}>
+            <div><b>Heads-up:</b> {moveNote.lines.join(' ')}</div>
+            <div className="actions">
+              {moveNote.alt && <button type="button" className="btn sm" onClick={() => st.moveSlot(moveNote.slot!, moveNote.alt!)}>Move to Day {moveNote.alt} instead</button>}
+              <button type="button" className="btn sm" onClick={st.undoMove}>Move back to Day {moveNote.fromShown}</button>
+              <button type="button" className="btn sm ghost" onClick={st.dismissMove}>Keep it</button>
+            </div>
           </div>
-        </div>
-      )}
-      {showOrder && (
-        <div className="notice movewarn" role="status" ref={orderRef}>
-          {orderNote.applied ? <div>{orderNote.kind === 'card' ? 'Moved for this week.' : 'Order changed for this week.'}</div> : <div><b>Back-to-back:</b> {orderNote.lines.join(' ')}</div>}
-          <div className="actions">
-            {!orderNote.applied && <button type="button" className="btn sm" onClick={st.applyOrder}>Apply</button>}
-            {orderNote.applied && st.canUndoOrder() && <button type="button" className="btn sm" ref={putBackRef} onClick={st.undoOrder}>Put back</button>}
-            <button type="button" className="btn sm ghost" onClick={st.dismissOrder}>{orderNote.applied ? 'Done' : 'Dismiss'}</button>
+        )}
+        {showOrder && (
+          <div className="notice movewarn" role="status" ref={orderRef}>
+            {orderNote.applied ? <div>{orderNote.kind === 'card' ? 'Moved for this week.' : 'Order changed for this week.'}</div> : <div><b>Back-to-back:</b> {orderNote.lines.join(' ')}</div>}
+            <div className="actions">
+              {!orderNote.applied && <button type="button" className="btn sm" onClick={st.applyOrder}>Apply</button>}
+              {orderNote.applied && st.canUndoOrder() && <button type="button" className="btn sm" ref={putBackRef} onClick={st.undoOrder}>Put back</button>}
+              <button type="button" className="btn sm ghost" onClick={st.dismissOrder}>{orderNote.applied ? 'Done' : 'Dismiss'}</button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
       {slots.length === 0 && <FirstRun />}
       <BodyWeightRow key={wk} />
       <div className="filterbar" role="group" aria-label="Sort and filter exercises">
