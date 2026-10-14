@@ -93,6 +93,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Better Auth reads the request body itself, so its routes come before any body parser.
   if (auth) {
     // Starting a sign-in (and, in tests, an email sign-in) is limited hard; reading the session, which the app does often, is not.
+    // What the sign-in screen may offer someone who is not signed in. Public on purpose; it names no address and no secret.
+    app.get('/api/auth-options', rateLimit(authLimits.other), (_req, res) => { res.json({ ok: true, emailCode: auth.emailCode.open }); });
     app.use('/api/auth/sign-in', rateLimit(authLimits.signIn));
     // Asking for an emailed code costs an email, so it is limited as hard as signing in.
     app.use('/api/auth/email-otp', rateLimit(authLimits.signIn));

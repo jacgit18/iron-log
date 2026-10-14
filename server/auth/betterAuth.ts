@@ -135,7 +135,10 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
     // The session cookie is Secure whenever the API is served over https (always, outside local development).
     advanced: { useSecureCookies: origin.protocol === 'https:' },
   });
-  return Object.assign(auth, { pool });
+  // What the sign-in screen may offer a signed-out visitor (GET /api/auth-options). The server enforces owner-only on its own (the hook
+  // above); this only lets the app hide a form that would not send a code. `open` is true once EMAIL_CODE_OPEN=true.
+  const emailCode = { on: config.sendCode !== undefined, open: config.sendCode !== undefined && config.emailCodeAdminsOnly !== true };
+  return Object.assign(auth, { pool, emailCode });
 }
 
 export type Auth = ReturnType<typeof createAuth>;

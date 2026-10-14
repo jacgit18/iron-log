@@ -197,6 +197,23 @@ describe('owner-only while EMAIL_CODE_OPEN is not set', () => {
   });
 });
 
+describe('GET /api/auth-options (what the sign-in screen may offer)', () => {
+  const options = async (over: Partial<AuthConfig>) => {
+    const { base } = await serve(over);
+    const res = await fetch(`${base}/api/auth-options`);
+    return { status: res.status, body: await res.json() };
+  };
+  it('says the code is closed while it is owner-only, open once released, and closed with no sender', async () => {
+    expect(await options({ emailCodeAdminsOnly: true })).toEqual({ status: 200, body: { ok: true, emailCode: false } });
+    expect(await options({ emailCodeAdminsOnly: false })).toEqual({ status: 200, body: { ok: true, emailCode: true } });
+    expect(await options({ sendCode: undefined })).toEqual({ status: 200, body: { ok: true, emailCode: false } });
+  });
+  it('is public, names no address or secret, and needs no sign-in', async () => {
+    const out = JSON.stringify((await options({ emailCodeAdminsOnly: false })).body);
+    expect(out).not.toMatch(/re_|@|secret|key/i);
+  });
+});
+
 describe('resendSender', () => {
   const ok = () => new Response('{"id":"x"}', { status: 200 });
   it('posts to Resend with the key, the sender, the address and the code, and nothing else of ours', async () => {
