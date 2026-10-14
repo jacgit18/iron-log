@@ -78,7 +78,8 @@ async function open({ width, height, dpr = 2, dark = false, mobile = false }) {
   await page.waitForTimeout(300);
   return { ctx, page };
 }
-const shot = (page, name, opts = {}) => page.screenshot({ path: join(OUT, name), ...opts });
+// animations:'disabled' ends CSS transitions first; the fake clock doesn't drive them, so the timer bar was caught mid-slide and differed every run.
+const shot = (page, name, opts = {}) => page.screenshot({ path: join(OUT, name), animations: 'disabled', ...opts });
 
 await mkdir(OUT, { recursive: true });
 

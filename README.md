@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/banner.png" alt="Iron Log: a weekly training board for A/B program rotation, phase-based targets and a muscle map" width="100%">
+  <img src="https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/banner.png" alt="Iron Log: a weekly training board for A/B program rotation, phase-based targets and a muscle map" width="100%">
 </p>
 
 <p align="center">
@@ -25,22 +25,22 @@ It's a React app built with Vite. You can install it on your phone or computer l
 
 <sub>Screenshots use sample data.</sub>
 
-![Weekly board with seven days (six training days and a rest day), check-offs and phase-tagged exercise cards](docs/images/board.png)
+![Weekly board with seven days (six training days and a rest day), check-offs and phase-tagged exercise cards](https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/board.png)
 
 | Phone: one day at a time | Logging a set | Isometric hold timer |
 | :---: | :---: | :---: |
-| <img src="docs/images/mobile-board.png" alt="Phone view of the board" width="260"> | <img src="docs/images/mobile-log.png" alt="Log sheet with a suggested heavier target" width="260"> | <img src="docs/images/mobile-timer.png" alt="Hold timer counting down" width="260"> |
+| <img src="https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/mobile-board.png" alt="Phone view of the board" width="260"> | <img src="https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/mobile-log.png" alt="Log sheet with a suggested heavier target" width="260"> | <img src="https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/mobile-timer.png" alt="Hold timer counting down" width="260"> |
 
 | Muscle map | Progress |
 | :---: | :---: |
-| <img src="docs/images/muscles.png" alt="Front and back body map shaded by weekly sets" width="420"> | <img src="docs/images/progress.png" alt="Weekly history and per-exercise charts" width="420"> |
+| <img src="https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/muscles.png" alt="Front and back body map shaded by weekly sets" width="420"> | <img src="https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/progress.png" alt="Weekly history and per-exercise charts" width="420"> |
 
 <details>
 <summary>More: dark mode, muscle detail, program editor</summary>
 
-![Board in dark mode](docs/images/board-dark.png)
-![Muscle detail listing the exercises that train the hamstrings](docs/images/muscles-detail.png)
-![Program editor](docs/images/editor.png)
+![Board in dark mode](https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/board-dark.png)
+![Muscle detail listing the exercises that train the hamstrings](https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/muscles-detail.png)
+![Program editor](https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/editor.png)
 
 </details>
 
@@ -121,7 +121,7 @@ src/components/               Board, Progress, Muscles, Program, Settings, dialo
 src/hooks/                    focus keeping and tooltips
 public/                       logo and app icons
 scripts/make-icons.mjs        renders public/icons/ from the logo
-tools/screenshots.mjs         generates docs/images/ with sample data
+tools/screenshots.mjs         generates the README images (docs/images/, not committed) with sample data
 tools/visual-diff.mjs         pixel-compares two screenshot folders for the PR comment
 e2e/                          Playwright browser and accessibility tests
 tools/banner.html             README banner template
@@ -138,7 +138,7 @@ The phase percentages (Strength 85%, Isometric 75%, Hypertrophy 65%, Explosive 4
 
 Changes are made on feature branches and merged into `main` through pull requests. Every pull request runs the **Tests** workflow (lint, unit tests, and the Playwright browser tests in `e2e/`, which include an accessibility scan). It also uploads the built app as an `app-preview` artifact you can download and open with `npx vite preview`. Every push to `main` runs the **Deploy to Cloud Run** workflow (see the deploy runbook).
 
-When a pull request's branch changes the app, the **README screenshots** workflow regenerates `docs/images/` and commits the new images to that branch, so they merge along with the change. If the branch has an open pull request, the workflow also comments before, after and pixel-diff images against `main` (`tools/visual-diff.mjs`), so there is no need to attach screenshots by hand. The comparison images are kept on the `pr-screenshots` branch. To run things locally:
+When a pull request changes the app, the **README screenshots** workflow regenerates the images and comments before, after and pixel-diff images against the current ones (`tools/visual-diff.mjs`), so there is no need to attach screenshots by hand. The comparison images are kept on the `pr-screenshots` branch. Nothing is committed to the pull request's branch. After the merge, the workflow publishes the new images to the `readme-images` branch, which this README links to. Keeping PNGs out of `main` means two pull requests can't conflict over the same image. To run things locally:
 
 ```bash
 npm ci

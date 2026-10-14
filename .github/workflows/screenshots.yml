@@ -1,17 +1,26 @@
 name: README screenshots
 
-# Regenerates docs/images/ on feature branches whenever the app or the
-# screenshot tooling changes, and commits the result back to that branch.
-# The data branch only holds the app's GitHub backups, so it's left alone.
-# If the branch has an open pull request, it also comments before/after/diff images against main,
-# so nobody has to take screenshots by hand. The comparison images live on the pr-screenshots branch.
+# Regenerates the README images with sample data whenever the app or the screenshot tooling changes.
+# On a pull request it only comments before/after/diff images against the published set, so nobody has
+# to take screenshots by hand; the comparison images live on the pr-screenshots branch.
+# After a merge to main it publishes the new set to the readme-images branch, which the README links to.
+# The images are never committed to main or to a feature branch: two branches each committing their own
+# copy of a PNG made the second merge conflict, since git cannot merge binary files.
 on:
   workflow_dispatch:
-  # A PR opened after the first push still gets its screenshot comment.
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'index.html'
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'tools/**'
+      - '.github/workflows/screenshots.yml'
   push:
-    branches-ignore: [main, data]
+    branches: [main]
     paths:
       - 'index.html'
       - 'src/**'
@@ -47,18 +56,17 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run screenshots
-      - name: Compare with main and comment on the pull request
+      - name: Compare with the published images and comment on the pull request
+        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
-          PR=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
-          if [ -z "$PR" ]; then echo "No open pull request for $BRANCH"; exit 0; fi
-          mkdir -p "$RUNNER_TEMP/base/docs"
-          git archive origin/main docs/images | tar -x -C "$RUNNER_TEMP/base"
+          mkdir -p "$RUNNER_TEMP/base"
+          if git fetch -q --depth 1 origin readme-images; then git archive FETCH_HEAD | tar -x -C "$RUNNER_TEMP/base"; fi
           OUT="$RUNNER_TEMP/pr-$PR"
           PREFIX="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/pr-screenshots/pr-$PR/"
-          node tools/visual-diff.mjs "$RUNNER_TEMP/base/docs/images" docs/images "$OUT" "$PREFIX"
+          node tools/visual-diff.mjs "$RUNNER_TEMP/base" docs/images "$OUT" "$PREFIX"
           # Publish the comparison images (replacing any from an earlier push of this PR).
           PUB="$RUNNER_TEMP/pub"
           git clone --depth 1 --branch pr-screenshots "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" "$PUB" 2>/dev/null \
@@ -83,17 +91,17 @@ jobs:
           ID=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --jq '[.[] | select(.body | contains("<!-- visual-diff -->"))][0].id // empty')
           if [ -n "$ID" ]; then gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$ID" -F body=@"$OUT/comment.md" >/dev/null
           else gh pr comment "$PR" --body-file "$OUT/comment.md"; fi
-      # The push run commits the images; the pull_request run only comments, so the two never conflict.
-      - name: Commit updated images
-        if: github.event_name != 'pull_request'
+      # Only main publishes, one run at a time (concurrency above), so nothing else pushes to readme-images.
+      - name: Publish to the readme-images branch
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if ! git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then echo "$BRANCH was already deleted"; exit 0; fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/images
-          if git diff --cached --quiet; then echo "Images unchanged"; exit 0; fi
-          git commit -m "Update README screenshots"
-          git pull --rebase origin "$BRANCH"
-          git push origin HEAD:"$BRANCH"
+          PUB="$RUNNER_TEMP/readme-images"
+          git clone -q --depth 1 --branch readme-images "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" "$PUB" 2>/dev/null \
+            || { git init -q "$PUB"; git -C "$PUB" checkout -q -b readme-images; git -C "$PUB" remote add origin "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git"; }
+          rm -f "$PUB"/*.png; cp docs/images/*.png "$PUB/"
+          git -C "$PUB" add -A
+          if git -C "$PUB" diff --cached --quiet; then echo "Images unchanged"; exit 0; fi
+          git -C "$PUB" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "README screenshots for $GITHUB_SHA"
+          git -C "$PUB" push -q origin readme-images
