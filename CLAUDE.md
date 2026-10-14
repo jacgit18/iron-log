@@ -21,7 +21,7 @@ npm run check -- --list  # show what it would run and why
 npm run check -- --all   # typecheck, test, lint, e2e
 ```
 
-What it picks: docs only runs nothing; tests only run `test` + `lint`; styles run `e2e`; source runs `typecheck` + `test` + `lint` and `build` (or `e2e` for UI or store code, which builds the app itself); `src/sync/`, `server/` or the store add `e2e:sync` and `db:check` (both need `DATABASE_URL`); migrations run `db:check`; `package.json`, tsconfig or other config runs everything, and so does any file it does not know. If unsure, run `--all`. The board reorder and log write path tests never get skipped: they sit in `npm test`, which runs for any source change.
+What it picks: docs only runs nothing; tests only run `test` + `lint`; styles run `e2e` + `lint` (lint checks the CSS format); source runs `typecheck` + `test` + `lint` and `build` (or `e2e` for UI or store code, which builds the app itself); `src/sync/`, `server/` or the store add `e2e:sync` and `db:check` (both need `DATABASE_URL`); migrations run `db:check`; `package.json`, tsconfig or other config runs everything, and so does any file it does not know. If unsure, run `--all`. The board reorder and log write path tests never get skipped: they sit in `npm test`, which runs for any source change.
 
 ```
 npm run typecheck && npm test && npm run lint && npm run build   # the individual checks
