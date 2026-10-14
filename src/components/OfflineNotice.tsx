@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useFeature } from '../features.js';
 import { offlineView } from '../lib/offline.js';
 import { useAppStore } from '../store/useAppStore.js';
 
@@ -10,7 +9,6 @@ const isOnline = () => typeof navigator === 'undefined' || navigator.onLine !== 
 // After the connection returns it says so while changes are actually being sent, then goes away (also if the server keeps failing: SyncNotice
 // then says changes are waiting). Not shown with syncing off.
 export default function OfflineNotice() {
-  const on = useFeature('offlineNotice');
   const sync = useAppStore(s => s.sync);
   const [online, setOnline] = useState(isOnline);
   const [wasOffline, setWasOffline] = useState(false);
@@ -24,7 +22,7 @@ export default function OfflineNotice() {
   const pending = sync ? sync.pendingPaths.length : 0;
   // Once everything is sent, forget the outage so the next return to the network starts clean.
   if (online && wasOffline && pending === 0) setWasOffline(false); // adjusted while rendering, React reruns at once
-  const view = on ? offlineView({ syncOn: !!sync, online, wasOffline, pending, syncing: sync?.state === 'syncing' }) : 'hidden';
+  const view = offlineView({ syncOn: !!sync, online, wasOffline, pending, syncing: sync?.state === 'syncing' });
   // The region stays mounted (empty) so a screen reader hears the text appear and change.
   return (
     <div className={view === 'hidden' ? undefined : 'notice offlinenote'} role="status" aria-live="polite">
