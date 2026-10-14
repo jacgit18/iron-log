@@ -8,9 +8,10 @@ export const SWIPE_IGNORE = 'select,input,textarea,button,a,label,summary,[conte
 export const SLOP = 10;
 /** A swipe commits at 25% of the card's width, but never needs more than this many px. */
 export const COMMIT_PX = 90;
-/** The card follows the finger by this fraction of the distance, up to MAX_FOLLOW px. */
-export const FOLLOW = 0.45;
-export const MAX_FOLLOW = 64;
+/** The card follows the finger by this fraction of the distance, up to MAX_FOLLOW px. It slides far enough to uncover the gutter the
+    Done / Skip label sits in (styles.css `.card.swiping`), so the label never lands on the card's own text. */
+export const FOLLOW = 0.8;
+export const MAX_FOLLOW = 72;
 
 export type Axis = 'none' | 'x' | 'y';
 
@@ -40,12 +41,13 @@ export type SwipeAction = 'done' | 'skip' | 'open';
 
 /** What a swipe this way does to a card in this state. Right ticks it done, left skips it for the week. On a done or skipped card
     either way puts it back to open: skipping clears a card's ticks, so a stray left swipe must never skip a finished card.
-    `canDone` is false for a card ticked per exercise (superset, either/or): it can be skipped, not ticked whole. null: nothing. */
-export function swipeAction(dx: number, state: CardState, canDone: boolean): SwipeAction | null {
+    `canDone` is false for a card ticked per exercise (superset, either/or): it can be skipped, not ticked whole. `canSkip` is false for a
+    card that has no skip of its own (a stretch group: skipping is per day). null: nothing. */
+export function swipeAction(dx: number, state: CardState, canDone: boolean, canSkip = true): SwipeAction | null {
   if (!dx) return null;
   if (state !== 'open') return 'open';
   if (dx > 0) return canDone ? 'done' : null;
-  return 'skip';
+  return canSkip ? 'skip' : null;
 }
 
 /** The word shown behind the card for what a commit would do. */

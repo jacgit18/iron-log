@@ -7,6 +7,7 @@ import { weekStartOf, ymd, addDays, fmtShort, DAY_NAMES } from '../../shared/dat
 import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { motionOK } from '../../lib/motion.js';
+import { useSwipeCard } from '../board/useSwipeCard.js';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import WarmUp from './WarmUp.jsx';
@@ -40,8 +41,10 @@ function GroupCard({ d, name, items, tier }: { d: number; name: string; items: S
   const s = useAppStore.getState();
   const week = useAppStore(x => x.strWeek);
   const ids = items.map((i) => i.id); const all = ids.every((id) => isStretchDone(week, d, id));
+  // Swipe right ticks the whole group, either way puts a done group back: the group checkbox's own action. No skip: that is per day.
+  const sw = useSwipeCard({ state: all ? 'done' : 'open', canDone: true, canSkip: false, act: a => s.setStretchesDone(d, ids, a === 'done') });
   return (
-    <article className={`card${all ? ' done' : ''}`} aria-label={`${name}, ${tier}`}>
+    <article className={`card${all ? ' done' : ''}${sw.className}`} aria-label={`${name}, ${tier}`} {...sw.data} style={sw.style} {...sw.props}>
       <div className="row1 grphead">
         <input type="checkbox" className="chk" id={`sgrp-${d}-${tier}-${name}`} checked={all} aria-label={`Mark all of ${name} done`} onChange={e => s.setStretchesDone(d, ids, e.target.checked)} />
         <span className="tag">{name}</span>
@@ -157,11 +160,11 @@ export default function Stretches() {
                   <div className="sub daydate">{String(date.getMonth() + 1).padStart(2, '0')}/{String(date.getDate()).padStart(2, '0')}</div>
                 </div>
                 <span className="count">{t.skipped ? 'Skipped' : `${t.done}/${t.total}`}</span>
-                <button type="button" className="btn sm ghost daymore" id={`sdaymore-${d}`} aria-expanded={dayMore === d} aria-controls={`sskiprow-${d}`} aria-label={`More for ${DAY_NAMES[d]}: skip day`}
+                <button type="button" className="btn sm ghost daymore" id={`sdaymore-${d}`} aria-expanded={dayMore === d || !!t.skipped} aria-controls={`sskiprow-${d}`} aria-label={`More for ${DAY_NAMES[d]}: skip day`}
                   onClick={() => setDayMore(dayMore === d ? null : d)}><span aria-hidden="true">⋯</span></button>
               </div>
               <div className="addrow" id={`sskiprow-${d}`}>
-                <button type="button" className="btn sm ghost" id={`sskip-${d}`} aria-pressed={!!t.skipped} aria-label={t.skipped ? `Undo skip for ${DAY_NAMES[d]}` : `Skip ${DAY_NAMES[d]}`} onClick={() => s.skipStretchDay(d, !t.skipped)}>{t.skipped ? 'Undo skip' : 'Skip day'}</button>
+                <button type="button" className="btn sm ghost" id={`sskip-${d}`} aria-pressed={!!t.skipped} aria-label={t.skipped ? `Undo skip for ${DAY_NAMES[d]}` : `Skip ${DAY_NAMES[d]}`} onClick={() => { s.skipStretchDay(d, !t.skipped); if (t.skipped && dayMore !== d) requestAnimationFrame(() => document.getElementById(`sdaymore-${d}`)?.focus()); }}>{t.skipped ? 'Undo skip' : 'Skip day'}</button>
               </div>
               <RemovedNotice scope={`sday:${wk}:${d}`} />
               {items.length > 0 && <WarmUp d={d} />}

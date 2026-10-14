@@ -29,7 +29,7 @@ describe('followOffset', () => {
   it('is 0 until horizontal, damped, and clamped', () => {
     expect(followOffset(3, 3)).toBe(0);
     expect(followOffset(10, 60)).toBe(0);
-    expect(followOffset(100, 0)).toBeCloseTo(45);
+    expect(followOffset(50, 0)).toBeCloseTo(40);
     expect(followOffset(-1000, 0)).toBe(-MAX_FOLLOW);
   });
 });
@@ -47,6 +47,11 @@ describe('swipeAction', () => {
     expect(swipeAction(120, 'open', false)).toBe(null);
     expect(swipeAction(120, 'done', false)).toBe('open');
     expect(swipeAction(-120, 'skipped', false)).toBe('open');
+  });
+  it('a card with no skip of its own (a stretch group) ticks right, does nothing left, and goes back either way', () => {
+    expect(swipeAction(120, 'open', true, false)).toBe('done');
+    expect(swipeAction(-120, 'open', true, false)).toBe(null);
+    expect(swipeAction(-120, 'done', true, false)).toBe('open');
   });
   it('no travel does nothing', () => expect(swipeAction(0, 'open', true)).toBe(null));
   it('names each action for the hint', () => expect(HINT).toEqual({ done: 'Done', skip: 'Skip', open: 'Undo' }));

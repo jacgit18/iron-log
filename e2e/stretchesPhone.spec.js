@@ -35,8 +35,9 @@ test('Skip day is behind the day header ⋯ on a phone, and a skipped day keeps 
   await page.locator('.col.sel .daymore').click(); // fold it: a skipped day still shows Undo skip
   await expect(skip).toHaveText('Undo skip');
   await expect(skip).toBeVisible();
-  await skip.click();
+  await skip.click(); // Undo skip while folded: the button goes, so focus moves to ⋯ rather than falling to the page
   await expect(skip).toBeHidden();
+  await expect(page.locator('.col.sel .daymore')).toBeFocused();
 });
 
 test('the phone Stretches tab has no accessibility violations', async ({ page }) => {
