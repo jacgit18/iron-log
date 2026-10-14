@@ -23,6 +23,11 @@ export interface QuarantineEntry {
   reason: string;
   /** When it was set aside, as an ISO time. */
   at: string;
+  /** The server's version of each row of the path when it was set aside (mirror id → version), so Try again can tell what changed
+   *  since and leave it alone. Absent on entries from before this was kept: Try again then only adds. */
+  seen?: Record<string, number>;
+  /** A week's row as the server had it then: the base of Try again's three-way merge (ADR 031). */
+  baseWeek?: unknown;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -66,8 +71,8 @@ export function createOutbox(storage: Storage, now: () => Date = () => new Date(
     },
 
     /** The server refused this document: move it to the quarantine so it is kept but not retried. */
-    refuse(path: string, doc: unknown, reason: string): QuarantineEntry {
-      const entry: QuarantineEntry = { id: `${now().getTime().toString(36)}-${(counter++).toString(36)}`, path, doc, reason, at: now().toISOString() };
+    refuse(path: string, doc: unknown, reason: string, base: Pick<QuarantineEntry, 'seen' | 'baseWeek'> = {}): QuarantineEntry {
+      const entry: QuarantineEntry = { id: `${now().getTime().toString(36)}-${(counter++).toString(36)}`, path, doc, reason, at: now().toISOString(), ...base };
       quarantine = [...quarantine, entry];
       if (pending.get(path) === doc) pending.delete(path);
       persisted = true;
