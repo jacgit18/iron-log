@@ -9,7 +9,7 @@ export default function BoardTab() {
   const setBoardView = useAppStore(s => s.setBoardView);
   return (
     <>
-      <div className="edtop">
+      <div className="edtop boardtabtop">
         <div className="seg" role="group" aria-label="Board section">
           <button type="button" id="board-workout" className={view === 'workout' ? 'on' : ''} aria-pressed={view === 'workout'} onClick={() => setBoardView('workout')}>Workout</button>
           <button type="button" id="board-stretches" className={view === 'stretches' ? 'on' : ''} aria-pressed={view === 'stretches'} onClick={() => setBoardView('stretches')}>Stretches</button>

@@ -134,7 +134,7 @@ export default function Board() {
 
   const auto = programFor(cfg, weekStart);
   return (
-    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="weekbar">
         <div className="weeknav">
           <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}>‹</button>

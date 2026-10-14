@@ -23,33 +23,33 @@
 }
 
 @media (max-width:700px) {
-  .notice.tip .btn {
+  .boardroot .notice.tip .btn {
     white-space: nowrap;
   }
   .lohead {
     flex: 1 1 100%;
   }
-  .notice.leftovers {
+  .boardroot .notice.leftovers {
     padding-block: 4px 8px;
   }
-  .notice.leftovers .actions {
+  .boardroot .notice.leftovers .actions {
     flex: 1 1 100%;
   }
   .bwsub {
     display: none;
   }
-  form.bwrow {
+  .boardroot form.bwrow {
     flex-wrap: nowrap;
   }
-  form.bwrow .bwl {
+  .boardroot form.bwrow .bwl {
     flex: 1 1 auto;
     min-width: 0;
   }
-  .bwrow {
+  .boardroot .bwrow {
     margin-bottom: 8px;
     padding-block: 4px;
   }
-  .filterbar {
+  .boardroot .filterbar {
     margin-block: 0 4px;
   }
   .filtertoggle {
@@ -72,10 +72,10 @@
     grid-column: 1/-1;
     justify-self: start;
   }
-  .edtop {
+  .edtop.boardtabtop {
     padding-block: 4px 8px;
   }
-  .weeknav .seg.modesel {
+  .boardroot .weeknav .seg.modesel {
     margin-left: 0;
     padding: 0;
     background: transparent;
