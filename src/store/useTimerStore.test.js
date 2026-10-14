@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import '../test/browserStubs.js';
 
+vi.mock('../lib/pushClient.js', () => ({ schedulePush: vi.fn(), cancelPush: vi.fn(), pushCovers: vi.fn(() => false) }));
 vi.mock('../lib/restNotify.js', () => ({ restNotifyOn: vi.fn(() => false), showRestNotice: vi.fn(), clearRestNotice: vi.fn() }));
 
-let useTimerStore, useAppStore, mmss, restNotifyOn, showRestNotice;
+let useTimerStore, useAppStore, mmss, restNotifyOn, showRestNotice, schedulePush, cancelPush, pushCovers;
 const t = () => useTimerStore.getState();
 const secs = n => vi.advanceTimersByTime(n * 1000);
 const setRest = rest => useAppStore.setState(s => ({ cfg: { ...s.cfg, rest } }));
@@ -12,6 +13,7 @@ beforeAll(async () => {
   ({ useTimerStore, mmss } = await import('./useTimerStore.js'));
   ({ useAppStore } = await import('./useAppStore.js'));
   ({ restNotifyOn, showRestNotice } = await import('../lib/restNotify.js'));
+  ({ schedulePush, cancelPush, pushCovers } = await import('../lib/pushClient.js'));
 });
 beforeEach(() => { vi.useFakeTimers(); setRest(undefined); });
 const saved = {};
@@ -162,5 +164,66 @@ describe('rest over notification', () => {
     restNotifyOn.mockReturnValue(true); page('hidden');
     t().startRest(); secs(10); t().togglePause(); secs(500);
     expect(showRestNotice).not.toHaveBeenCalled();
+  });
+});
+
+// Web Push (ADR 044): the server sends the end of a phase if the phone has locked; the page takes its own ask back when it is in front.
+describe('push for a phase end', () => {
+  const page = state => put('document', { visibilityState: state });
+  it('asks for a push at the end of a rest, keyed by the end time, with the notice text', () => {
+    t().startRest();
+    expect(schedulePush).toHaveBeenCalledTimes(1);
+    expect(schedulePush).toHaveBeenCalledWith('rest', String(t().end), t().end, 'Rest over. Time for your next set.');
+  });
+  it('asks again for each hold and rest, and says which hold is next', () => {
+    setRest(10);
+    t().startHold('Plank', 2, 30);
+    expect(schedulePush).toHaveBeenLastCalledWith('rest', String(t().end), t().end, 'Hold 1/2 done.');
+    secs(30);
+    expect(schedulePush).toHaveBeenLastCalledWith('rest', String(t().end), t().end, 'Rest over. Hold 2/2 is next.');
+  });
+  it('pausing takes the ask back, resuming and adjusting ask again for the new end', () => {
+    t().startRest(); secs(10);
+    t().togglePause();
+    expect(cancelPush).toHaveBeenCalledWith('rest');
+    vi.clearAllMocks();
+    t().togglePause();
+    expect(schedulePush).toHaveBeenCalledWith('rest', String(t().end), t().end, 'Rest over. Time for your next set.');
+    vi.clearAllMocks();
+    t().nudge(15);
+    expect(schedulePush).toHaveBeenCalledWith('rest', String(t().end), t().end, expect.any(String));
+  });
+  it('a rest that runs out on its own, and the end of a chain of holds, leave the push alone', () => {
+    page('hidden'); setRest(10);
+    t().startHold('Plank', 2, 30);
+    secs(30 + 10 + 30);
+    expect(t().mode).toBeNull();
+    expect(cancelPush).not.toHaveBeenCalled();
+  });
+  it('stopping takes the ask back', () => {
+    t().startRest(); vi.clearAllMocks();
+    t().stop();
+    expect(cancelPush).toHaveBeenCalledWith('rest');
+  });
+  it('with the page in front at the end, the ask for that end is taken back before it fires', () => {
+    page('visible');
+    t().startRest(); const end = t().end;
+    secs(90);
+    expect(cancelPush).toHaveBeenCalledWith('rest', String(end));
+  });
+  it('with the page away, the push is left alone, and the local notice is skipped only when the server took the push', () => {
+    restNotifyOn.mockReturnValue(true); page('hidden');
+    t().startRest(); secs(90);
+    expect(cancelPush).not.toHaveBeenCalled(); // not even a keyless cancel: it could beat the push to the server
+    expect(t().mode).toBeNull(); // the timer did end
+    expect(showRestNotice).toHaveBeenCalledTimes(1); // the push was not accepted: the local notice is the fallback
+    vi.clearAllMocks(); restNotifyOn.mockReturnValue(true); pushCovers.mockReturnValue(true);
+    t().startRest(); secs(90);
+    expect(showRestNotice).not.toHaveBeenCalled();
+    pushCovers.mockReturnValue(false);
+  });
+  it('does not ask for a phase that already ended while the page was away', () => {
+    t().start('rest', 60, 'Rest', Date.now() - 120_000);
+    expect(schedulePush).not.toHaveBeenCalled();
   });
 });
