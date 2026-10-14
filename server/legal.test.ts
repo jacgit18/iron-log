@@ -42,6 +42,28 @@ describe('the policy and the system agree', () => {
     expect(text).toContain('do not sell');
   });
 
+  it('push alerts: the policy names what is kept and for how long, as the system does', () => {
+    // The 3 hours a queued alert can wait is the most the server accepts (MAX_AHEAD_MS), and the policy says so.
+    expect(/export const MAX_AHEAD_MS = (\d+) \* 60 \* 60_000/.exec(read('server/push/validate.ts'))?.[1]).toBe('3');
+    expect(text).toContain('at most 3 hours ahead');
+    expect(text).toMatch(/Push alerts \(only if you turn them on/);
+    expect(text).toContain('Cloud Tasks');
+    expect(text).toMatch(/notification service of your browser or phone maker/);
+    expect(text).toMatch(/Push alerts: your device’s address and keys/);
+    // An alert carries the device entry, a time and a short text, never workout data: the fire route's payload has exactly these fields.
+    expect(read('server/push/cloudTasks.ts')).toMatch(/payload = \{ subscriptionId: job\.subscriptionId, kind: job\.kind, key: job\.key, at: job\.at, body: job\.body \}/);
+  });
+
+  it('push alerts: the deletion triggers the policy lists are the ones in the database', () => {
+    // "turn off" is the unsubscribe route; "erase" is erase_my_data(); "delete your account" is the foreign key's cascade.
+    expect(read('server/push/routes.ts')).toMatch(/router\.post\('\/unsubscribe'[\s\S]*deleteFrom\('push_subscription'\)/);
+    expect(read('db/migrations/20261014000003_push_subscription.sql')).toMatch(/delete from push_subscription where user_id = uid/);
+    expect(read('db/migrations/20261014000003_push_subscription.sql')).toMatch(/user_id\s+bigint not null references users \(id\) on delete cascade/);
+    // "sign out": the Sign out button takes this phone off the server first, while still signed in (PR 6).
+    expect(read('src/components/settings/AccountPanel.tsx')).toMatch(/await disablePush\(\)[^\n]*\n\s*const done = await account\.signOut\(\)/);
+    expect(text).toMatch(/Push alerts: your device’s address and keys[^.]*turn the alerts off[^.]*erase your data or delete your account/);
+  });
+
   it('the pages link to each other and carry a date and version', () => {
     expect(policy).toContain('href="terms.html"');
     expect(read('public/terms.html')).toContain('href="privacy.html"');
