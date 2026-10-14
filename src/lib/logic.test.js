@@ -406,6 +406,11 @@ describe('altDay: the nearest day a moved card would not clash', () => {
     const slots = [mk('a', 4), mk('x', 7)];
     expect(altDay(c, normWeek({ moved: { x: 4 }, rest: 6 }), slots, slots[1], 4, 7)).toBe(2);
   });
+  it('skips a day that has something checked off', () => {
+    const slots = [mk('a', 4), other('d', 6), mk('x', 7)];
+    const w = normWeek({ moved: { x: 4 }, done: { d: true } });
+    expect(altDay(c, w, slots, slots[2], 4, 7)).toBe(2); // Day 6 would win the tie, but it is already ticked
+  });
   it('ignores other exercises and skipped cards', () => {
     const slots = [mk('a', 1), other('b', 3), mk('s', 3), mk('x', 7)];
     const w = normWeek({ moved: { x: 2 }, skipped: { s: true } });
