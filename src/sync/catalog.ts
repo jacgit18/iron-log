@@ -3,13 +3,13 @@
    synced data (ADR 026). Untrusted JSON: each item is checked before the app uses it. */
 import type { CatalogData, CatalogItem, CatalogKind } from '../types.ts';
 import { EQUIPMENT } from '../lib/data.js';
-import { M_KEYS } from '../lib/muscles.js';
+import { normMuscleKeys } from '../lib/muscles.js';
 
 export type CatalogResult = { ok: true; items: CatalogItem[] } | { ok: false; reason: 'offline' | 'refused' | 'unreachable' };
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const text = (v: unknown, max: number) => (typeof v === 'string' && v.trim() && v.length <= max ? v.trim() : null);
-const muscleKeys = (v: unknown) => (Array.isArray(v) ? v.filter((k): k is (typeof M_KEYS)[number] => typeof k === 'string' && (M_KEYS as string[]).includes(k)) : []);
+const muscleKeys = normMuscleKeys; // valid keys only; an old "abs" becomes upper and lower abs
 
 /** One listed item, or null when it is not what the API sends. */
 export function cleanCatalogItem(raw: unknown): CatalogItem | null {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_CFG, normWeek } from './logic.js';
-import { muscleVolume, muscleNames, tagsOf, level, fmtSets, matchesFilter, muscleRank, muscleVolumeAll, draftOf, tagsOfDraft } from './muscles.js';
+import { muscleVolume, muscleNames, tagsOf, level, fmtSets, matchesFilter, muscleRank, muscleVolumeAll, draftOf, tagsOfDraft, normMuscleKeys, normTags, MUSCLE_MAP, M_KEYS, FRONT, BACK } from './muscles.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
 // Day 1: Hack Squat, Hypertrophy (4 × 15)   Day 2: Farmers Carry or DB Lunge, Strength (4 × 6)
@@ -23,7 +23,7 @@ describe('muscleVolume: planned weekly sets per muscle', () => {
   it('adds secondary muscles at half a set when asked', () => {
     const { vol } = muscleVolume(cfg(), normWeek(null), prog, false, true);
     // glutes: Hack 4 × ½ secondary + Lunge 2 primary; adductors: Hack 2 + Lunge 2 × ½
-    expect(sets(vol, 'quads', 'glutes', 'adductors', 'hamstrings', 'abs')).toEqual([6, 4, 3, 1, 1]);
+    expect(sets(vol, 'quads', 'glutes', 'adductors', 'hamstrings', 'deepcore')).toEqual([6, 4, 3, 1, 1]); // Farmers Carry: deep core was abs before the split
   });
   it('leaves out mobility work and lists exercises with no tags', () => {
     const { vol, untagged } = muscleVolume(cfg(), normWeek(null), prog, false, true);
@@ -123,5 +123,22 @@ describe('draftOf', () => {
     expect(draftOf(tags)).toEqual({ mob: true, st: { chest: 'p', triceps: 's' } });
     expect(tagsOfDraft(draftOf(tags))).toEqual(tags);
     expect(draftOf(null)).toEqual({ mob: false, st: {} });
+  });
+});
+
+describe('the abs split and the new muscles (2026-10-13)', () => {
+  it('reads an old "abs" tag as upper and lower abs in the same role, drops unknown keys, and keeps a muscle primary when both', () => {
+    expect(normMuscleKeys(['abs', 'obliques', 'wings', 'upperabs', 7])).toEqual(['upperabs', 'lowerabs', 'obliques']);
+    expect(normTags({ p: ['abs'], s: ['upperabs', 'neck'] })).toEqual({ p: ['upperabs', 'lowerabs'], s: ['neck'] });
+    expect(normTags({ mob: true })).toEqual({ mob: true });
+    const c = { ...cfg(), muscleMap: { 'my-lift': { p: ['abs'], s: ['hipflexors'] } } };
+    expect(tagsOf(c, 'my-lift')).toEqual({ p: ['upperabs', 'lowerabs'], s: ['hipflexors'] });
+  });
+  it('has no default tag left on "abs", and every muscle on a figure is a real key', () => {
+    const all = Object.values(MUSCLE_MAP).flatMap(t => [...(t.p || []), ...(t.s || [])]);
+    expect(all.filter(k => !M_KEYS.includes(k))).toEqual([]);
+    expect([...FRONT, ...BACK].map(([k]) => k).filter(k => !M_KEYS.includes(k))).toEqual([]);
+    expect(M_KEYS).toEqual(expect.arrayContaining(['upperabs', 'lowerabs', 'deepcore', 'serratus', 'rotatorcuff', 'neck']));
+    expect(M_KEYS).not.toContain('abs');
   });
 });

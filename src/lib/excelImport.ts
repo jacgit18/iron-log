@@ -23,7 +23,9 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const UNSAFE_KEY = new Set(['__proto__', 'constructor', 'prototype']);
 const num = (v: unknown): number | null => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
 const phaseKey = (label: unknown) => PH_KEYS.find(k => PHASES[k].label === label) || null;
-const muscleKey = (name: string) => (Object.keys(MUSCLES) as MuscleKey[]).find(k => MUSCLES[k].n === name);
+// A muscle's name as the workbook shows it; "Abs" from a workbook made before the split counts as upper and lower abs.
+const muscleKeysOf = (name: string): MuscleKey[] => (name === 'Abs' ? ['upperabs', 'lowerabs'] : (Object.keys(MUSCLES) as MuscleKey[]).filter(k => MUSCLES[k].n === name));
+const namesToKeys = (list: string) => [...new Set(list.split(', ').flatMap(muscleKeysOf))];
 // Dates are exported as "YYYY-MM-DD" text, but Excel and Google Sheets turn them into real dates
 // when the file is opened and saved again; those come back as serial numbers.
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -93,7 +95,7 @@ function readSessions(X: XLSX, sessions: Rows, cfg: Cfg) {
   // Muscle tags, only where they differ from the built-in ones (e.g. new exercises or ones you re-tagged).
   const muscleMap: Record<string, MuscleTags> = {};
   Object.entries(tags).forEach(([id, t]) => {
-    const tg: MuscleTags = t.prim === 'Mobility' ? { mob: true } : { p: t.prim.split(', ').map(muscleKey).filter((m): m is MuscleKey => !!m), s: t.sec.split(', ').map(muscleKey).filter((m): m is MuscleKey => !!m) };
+    const tg: MuscleTags = t.prim === 'Mobility' ? { mob: true } : { p: namesToKeys(t.prim), s: namesToKeys(t.sec).filter(m => !namesToKeys(t.prim).includes(m)) };
     if (!tg.mob && !tg.p!.length && !tg.s!.length) return;
     const def = MUSCLE_MAP[id];
     const same = def && JSON.stringify({ mob: !!def.mob, p: def.p || [], s: def.s || [] }) === JSON.stringify({ mob: !!tg.mob, p: tg.p || [], s: tg.s || [] });
