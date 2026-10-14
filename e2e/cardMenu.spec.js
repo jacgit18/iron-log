@@ -38,3 +38,35 @@ test('Move to sends the card to another day', async ({ page }) => {
   await expect(page.locator(`#col-2 #more-${key}`)).toHaveCount(1);
   await expect(page.locator(`#col-1 #more-${key}`)).toHaveCount(0);
 });
+
+test('after Skip focus lands on Undo skip, and after Undo skip on ⋯', async ({ page }) => {
+  const card = first(page);
+  const key = (await card.getByRole('button', { name: /^More actions:/ }).getAttribute('id')).replace('more-', '');
+  await card.getByRole('button', { name: /^More actions:/ }).click();
+  await page.locator(`#skip-${key}`).click();
+  await expect(page.locator(`#skip-${key}`)).toBeFocused();
+  await page.locator(`#skip-${key}`).click();
+  await expect(page.locator(`#more-${key}`)).toBeFocused();
+});
+
+test('on an experiment card Remove needs a second tap, keeps its panel open meanwhile, and ⋯ folds it again', async ({ page }) => {
+  await page.click('#addweek-1');
+  await page.getByRole('dialog').getByRole('combobox', { name: 'Exercise' }).fill('Wrist Roller Test');
+  await page.keyboard.press('Tab');
+  await page.getByRole('dialog').getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const card = page.locator('#col-1 article.card').filter({ hasText: 'Wrist Roller Test' }).first();
+  const more = card.getByRole('button', { name: /^More actions:/ });
+  await more.click();
+  const remove = card.getByRole('button', { name: /^Remove / });
+  await remove.click();
+  await expect(card.getByRole('button', { name: /^Tap again to remove/ })).toBeVisible();
+  // ⋯ while Remove is armed folds the panel and disarms it (on a phone the tap does not blur the button first)
+  await more.dispatchEvent('click');
+  await expect(card.getByRole('combobox', { name: /^Move to/ })).toHaveCount(0);
+  await more.click();
+  await expect(card.getByRole('button', { name: /^Remove / })).toBeVisible();
+  await card.getByRole('button', { name: /^Remove / }).click();
+  await card.getByRole('button', { name: /^Tap again to remove/ }).click();
+  await expect(page.locator('#col-1 article.card').filter({ hasText: 'Wrist Roller Test' })).toHaveCount(0);
+});

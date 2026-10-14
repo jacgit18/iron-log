@@ -41,6 +41,10 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
   const [more, setMore] = useState(false); // the card's less-used actions (Move to, Skip, Remove) are folded behind the ⋯ button
   const moreBtn = useRef<HTMLButtonElement>(null);
   const foldOnEscape = (e: KeyboardEvent) => { if (e.key === 'Escape' && (more || removing)) { e.stopPropagation(); setMore(false); setRemoving(false); moreBtn.current?.focus(); } };
+  // Skip and Undo skip swap which button is on the card, so the one that had focus goes away: hand focus to the new one.
+  const focusById = (id: string) => { if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => document.getElementById(id)?.focus()); };
+  const focusMore = () => focusById(`more-${s.id}`);
+  const focusSkipped = () => focusById(`skip-${s.id}`);
   const moreOpen = more || removing; // armed Remove keeps its panel open so the second tap has somewhere to land
 
   const done = isDone(s, week); const sk = isSkipped(s, week); const paired = isPaired(s);
@@ -76,9 +80,9 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
           {week.moved[s.id] && <span className="moved">From Day {planned}</span>}
           {sk && <span className="skiptag">Skipped this week</span>}
         </div>
-        {sk && <button type="button" className="btn sm ghost" id={`skip-${s.id}`} aria-label={`Undo skip for ${cardName}`} onClick={() => skipCard(s.id)}>Undo skip</button>}
+        {sk && <button type="button" className="btn sm ghost" id={`skip-${s.id}`} aria-label={`Undo skip for ${cardName}`} onClick={() => { skipCard(s.id); focusMore(); }}>Undo skip</button>}
         <button type="button" className="btn sm ghost morebtn" ref={moreBtn} id={`more-${s.id}`} aria-expanded={moreOpen} aria-controls={`morepanel-${s.id}`}
-          actions: ${cardName}`} onClick={() => { if (moreOpen) { setMore(false); setRemoving(false); } else setMore(true); }} onKeyDown={foldOnEscape}><span aria-hidden="true">⋯</span></button>
+          aria-label={`More actions: ${cardName}`} onClick={() => { if (moreOpen) { setMore(false); setRemoving(false); } else setMore(true); }} onKeyDown={foldOnEscape}><span aria-hidden="true">⋯</span></button>
       </div>
       {moreOpen && (
         <div className="cardfoot cardmore" id={`morepanel-${s.id}`} role="group" aria-label={`More actions: ${cardName}`}
@@ -87,7 +91,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
           <select id={`mv-${s.id}`} aria-label={`Move to (${cardName})`} value={cur} onChange={e => moveSlot(s.id, Number(e.target.value))}>
             {DAYS.map(d => <option key={d} value={d} disabled={restsOf(week).includes(d)}>Day {d}{restsOf(week).includes(d) ? ' (rest)' : d === planned ? ' (planned)' : ''}</option>)}
           </select>
-          {!sk && <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={`Skip ${cardName} this week`} onClick={() => { skipCard(s.id); setMore(false); }}>Skip</button>}
+          {!sk && <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={`Skip ${cardName} this week`} onClick={() => { skipCard(s.id); setMore(false); focusSkipped(); }}>Skip</button>}
           {s.experiment && <ArmedButton className={`btn sm ${removing ? 'danger' : 'ghost'}`} id={`rm-${s.id}`} aria-label={`Remove ${cardName} from this week`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setRemoving} onConfirm={() => removeExtra(s.id)} />}
         </div>
       )}
