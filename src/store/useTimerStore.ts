@@ -85,7 +85,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   },
   startRest() { set({ sets: 0 }); get().start('rest', restSecs() || 90, 'Rest'); },
   startHold(exName, sets, hold) { set({ sets, set: 1, hold, exName }); get().start('hold', hold, `Hold · ${exName}`); },
-  stop() { if (iv) clearInterval(iv); iv = null; disarm(); set({ mode: null }); wake(false); cancelPush('rest'); },
+  stop() { teardown(); cancelPush('rest'); }, // a person's Stop: the push for this phase is no longer wanted
   togglePause() {
     const s = get();
     if (s.paused != null) set({ end: Date.now() + s.paused * 1000, paused: null });
@@ -118,6 +118,13 @@ function pushPhase() {
   if (t.mode && t.paused == null && t.end > Date.now() + 1000) schedulePush('rest', String(t.end), t.end, endNote(t));
 }
 
+// Ends the timer without touching the push. A phase that ran out on its own must leave its push alone: with the page away that push is
+// the alert, due at this very moment, and a cancel sent now could beat it to the server and leave the phone with nothing.
+function teardown() {
+  if (iv) clearInterval(iv); iv = null; disarm();
+  useTimerStore.setState({ mode: null }); wake(false);
+}
+
 function tick() {
   const t = useTimerStore.getState();
   if (!t.mode) return; // the interval and the end timeout can both land on the same moment
@@ -138,10 +145,10 @@ function tick() {
         if (rs > 0) { t.start('holdrest', rs, `Rest · then hold ${t.set + 1}/${t.sets}`, t.end); return; }
         useTimerStore.setState({ set: t.set + 1 }); t.start('hold', t.hold, `Hold · ${t.exName}`, t.end); return;
       }
-      t.stop(); flag(`${t.exName}: all ${t.sets} holds done`); return;
+      teardown(); flag(`${t.exName}: all ${t.sets} holds done`); return;
     }
     if (t.mode === 'holdrest') { useTimerStore.setState({ set: t.set + 1 }); t.start('hold', t.hold, `Hold · ${t.exName}`, t.end); return; }
-    t.stop(); return;
+    teardown(); return;
   }
   useTimerStore.setState({ now: Date.now() });
 }

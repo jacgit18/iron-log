@@ -193,6 +193,13 @@ describe('push for a phase end', () => {
     t().nudge(15);
     expect(schedulePush).toHaveBeenCalledWith('rest', String(t().end), t().end, expect.any(String));
   });
+  it('a rest that runs out on its own, and the end of a chain of holds, leave the push alone', () => {
+    page('hidden'); setRest(10);
+    t().startHold('Plank', 2, 30);
+    secs(30 + 10 + 30);
+    expect(t().mode).toBeNull();
+    expect(cancelPush).not.toHaveBeenCalled();
+  });
   it('stopping takes the ask back', () => {
     t().startRest(); vi.clearAllMocks();
     t().stop();
@@ -206,8 +213,9 @@ describe('push for a phase end', () => {
   });
   it('with the page away, the push is left alone, and the local notice is skipped only when the server took the push', () => {
     restNotifyOn.mockReturnValue(true); page('hidden');
-    t().startRest(); const end = t().end; secs(90);
-    expect(cancelPush).not.toHaveBeenCalledWith('rest', String(end));
+    t().startRest(); secs(90);
+    expect(cancelPush).not.toHaveBeenCalled(); // not even a keyless cancel: it could beat the push to the server
+    expect(t().mode).toBeNull(); // the timer did end
     expect(showRestNotice).toHaveBeenCalledTimes(1); // the push was not accepted: the local notice is the fallback
     vi.clearAllMocks(); restNotifyOn.mockReturnValue(true); pushCovers.mockReturnValue(true);
     t().startRest(); secs(90);

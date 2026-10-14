@@ -18,7 +18,8 @@ export const pushOn = (): boolean => pushSupported() && LS.get(ON) === true && N
 export const pushKindOn = (kind: PushKind): boolean => featureNow('webPush') && pushOn() && pushKindWanted(kind);
 /** The box for a kind, apart from the master switch: ticked unless it was unticked. */
 export const pushKindWanted = (kind: PushKind): boolean => LS.get(KIND_KEY[kind]) !== false;
-export const setPushKind = (kind: PushKind, on: boolean) => { LS.set(KIND_KEY[kind], on); };
+/** Ticks or unticks a kind's box. Unticking also takes back an ask already with the server, which would otherwise still arrive. */
+export const setPushKind = (kind: PushKind, on: boolean) => { LS.set(KIND_KEY[kind], on); if (!on) cancelPush(kind); };
 
 const headers = () => ({ 'content-type': 'application/json', 'x-client-version': __APP_VERSION__, ...signIn() });
 async function api(method: 'GET' | 'POST', path: string, body?: unknown): Promise<Response | null> {
@@ -104,7 +105,8 @@ export function schedulePush(kind: PushKind, key: string, at: number, body: stri
 
 /** Takes the ask back. With a key, only that ask (so a late cancel of an old timer cannot undo a newer one). */
 export function cancelPush(kind: PushKind, key?: string): void {
-  if (!pushKindOn(kind) || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+  // Not gated on the kind's box: unticking the box has to be able to take back what was already asked for.
+  if (!featureNow('webPush') || !pushOn() || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
   if (key) covered.delete(coverKey(kind, key));
   chain = chain.then(async () => {
     if (key) covered.delete(coverKey(kind, key)); // again: the schedule ahead of this in the line may have just added it

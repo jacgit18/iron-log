@@ -117,13 +117,25 @@ describe('schedulePush and cancelPush', () => {
     expect(calls).toEqual([]);
     await enablePush(); calls = [];
     setPushKind('rest', false);
-    schedulePush('rest', 'k', Date.now() + 5000, 'x'); cancelPush('rest'); await settle();
-    expect(calls).toEqual([]);
+    schedulePush('rest', 'k', Date.now() + 5000, 'x'); await settle(); await settle();
+    expect(calls.map(c => c.path)).toEqual(['/cancel']); // unticking took back what was asked; the new schedule is refused
     expect(pushKindOn('rest')).toBe(false);
+    calls = [];
     setPushKind('rest', true);
     put('navigator', { onLine: false, serviceWorker: { ready: Promise.resolve({ pushManager: { getSubscription: async () => sub } }) } });
     schedulePush('rest', 'k', Date.now() + 5000, 'x'); await settle();
     expect(calls).toEqual([]);
+  });
+  it('a cancel still goes out after the kind\'s box is unticked, and unticking the box sends one', async () => {
+    setup(); await enablePush(); calls = [];
+    setPushKind('day-nudge', false); await settle(); await settle();
+    expect(calls).toEqual([{ path: '/cancel', method: 'POST', body: { endpoint: 'https://push.example/e1', kind: 'day-nudge' } }]);
+    calls = [];
+    cancelPush('day-nudge'); await settle(); await settle();
+    expect(calls.map(c => c.path)).toEqual(['/cancel']);
+    expect(pushKindOn('day-nudge')).toBe(false); // while a schedule of that kind is still refused
+    schedulePush('day-nudge', 'n', Date.now() + 5000, 'x'); await settle();
+    expect(calls).toHaveLength(1);
   });
   it('post the device endpoint, kind, key, time and body, and remember what the server took', async () => {
     setup(); await enablePush(); calls = [];
