@@ -1106,9 +1106,9 @@ describe('erasing the account (Phase F)', () => {
     expect(db.status().pendingPaths).toEqual([]);
   });
 
-  it('an erase on another device is not undone by a change this device had not sent yet', async () => {
-    // A change saved while the pull that brings the erase is on its way is sent after it. Planned against the emptied mirror, every
-    // entry in the document (made from the old data) became a create and the erased history came back. It is dropped instead, and said.
+  it('an erase on another device is not undone by a change this device had not sent yet; what it added itself is set aside', async () => {
+    // A change saved while the pull that brings the erase is on its way was made from the old data: sent whole it would bring the
+    // erased history back. Only what this device added itself (e3) is kept, set aside to send again or discard; e1 and e2 stay erased.
     const { server, db } = setup();
     db.start();
     await settle();
@@ -1120,21 +1120,38 @@ describe('erasing the account (Phase F)', () => {
     await settle();
     expect([...server.rows.keys()].filter(k => k.startsWith('log_entries'))).toEqual([]);
     expect(db.status().pendingPaths).toEqual([]);
-    expect(db.status().notices.map(n => n.text)).toEqual(['Everything in this account was erased on another device, so a change not yet sent from here was dropped.']);
+    const q = db.quarantined();
+    expect(q.map(e => [e.path, (e.doc as { entries: { id: string }[] }).entries.map(x => x.id)])).toEqual([['logs/squat', ['e3']]]);
+    expect(db.status().notices.map(n => n.text)).toEqual(['Everything in this account was erased on another device. What this device changed itself (one item) is kept under Not sent, to send again or discard; the rest was dropped.']);
   });
 
-  it('a change the server had set aside is dropped too, and counted, so Try again cannot bring erased entries back', async () => {
+  it('a set-aside change is cut down to what this device added, so Try again cannot bring erased entries back', async () => {
     const { server, db } = setup();
     db.start();
     await settle();
     await db.doc('logs/squat').set(logs2('e1'));
     server.fail.push({ ok: false, class: 'refused', status: 422, reason: 'invalid-input' });
-    await db.doc('logs/squat').set(logs2('e1', 'e2')).catch(() => undefined); // set aside
-    expect(db.quarantined()).toHaveLength(1);
+    await db.doc('logs/squat').set(logs2('e1', 'e2')).catch(() => undefined); // set aside, nothing pending
     server.erase(); // erased on another device
     await db.syncNow();
-    expect(db.quarantined()).toEqual([]); // nothing pending, but the set-aside write goes too
-    expect(db.status().notices.map(n => n.text)).toEqual(['Everything in this account was erased on another device, so a change the server had set aside from here was dropped.']);
+    const [q] = db.quarantined();
+    expect((q!.doc as { entries: { id: string }[] }).entries.map(x => x.id)).toEqual(['e2']); // e1 was the erased data
+    expect(await db.retry(q!.id)).toBe('sent');
+    expect([...server.rows.keys()].filter(k => k.startsWith('log_entries'))).toEqual(['log_entries|e2']);
+  });
+
+  it('a change of only old data is dropped, and said so', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1', 'e2'));
+    server.erase();
+    const pulling = db.syncNow();
+    const saving = db.doc('logs/squat').set(logs2('e1')); // removed e2 here: nothing of its own to keep
+    await pulling; await saving;
+    await settle();
+    expect(db.quarantined()).toEqual([]);
+    expect(db.status().notices.map(n => n.text)).toEqual(['Everything in this account was erased on another device, so a change from here was dropped.']);
     expect([...server.rows.keys()].filter(k => k.startsWith('log_entries'))).toEqual([]);
   });
 

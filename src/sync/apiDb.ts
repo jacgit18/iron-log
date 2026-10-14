@@ -6,6 +6,7 @@ import { createMirrorStore, type Storage } from './mirrorStore.js';
 import { mergeStretchWeek3, mergeWeek3 } from './merge.js';
 import { createOutbox, isDeleted, type QuarantineEntry } from './outbox.js';
 import { planCommands, planDelete } from './plan.js';
+import { ownChanges } from './ownChanges.js';
 import { pullAll } from './pull.js';
 import type { AccountActionOutcome, FailureClass, ImportOutcome, Transport } from './transport.js';
 import { mirrorId, type PlannedCommand } from './types.js';
@@ -241,6 +242,9 @@ export function createApiDb(options: ApiDbOptions) {
       const allowed = await gate();
       if (!allowed.ok) { setState('paused', allowed.because); return; }
       const wasReady = mirror.hasPulled();
+      // This device's copy of the server rows before the pull, when it holds writes of its own: if the pull shows an erase from another
+      // device it empties the copy, and what this device changed itself is told apart from what it only carried by comparing with this.
+      const before = outbox.paths().length || outbox.quarantined().length ? new Map(mirror.rows()) : null;
       const out = await pullAll(transport, mirror);
       if (out.ok) {
         lastPullAt = now();
@@ -249,16 +253,27 @@ export function createApiDb(options: ApiDbOptions) {
         if (!wasReady && mirror.hasPulled()) emitAll();
         else emitPaths(out.paths);
         if (out.reset) {
-          // The account's data was erased from another device: every document is different now. Changes this device had not sent were
-          // made from the old data, so they go too ("your other devices clear themselves"); sent against the emptied mirror, every
-          // entry in them would come back as new.
-          // Set-aside writes go too, on purpose: Try again would plan them against the emptied mirror and bring the erased entries back.
-          const unsent = outbox.paths().length; const setAside = outbox.quarantined().length;
-          if (unsent || setAside) {
+          // The account's data was erased from another device: every document is different now. This device's unsent and set-aside
+          // writes were made from the old data: sent whole (against the emptied mirror, or by Try again) they would bring the erased
+          // history back, as a log document holds every session of an exercise. So they go, except what this device added or changed
+          // itself (sessions logged offline meanwhile), which is set aside on its own for the user to send again or discard.
+          const held = new Map<string, unknown>();
+          for (const q of outbox.quarantined()) held.set(q.path, q.doc); // older first, so a newer one for the same path wins
+          for (const path of outbox.paths()) held.set(path, outbox.get(path));
+          if (held.size) {
+            const kept: [string, unknown][] = [];
+            for (const [path, doc] of held) {
+              const kind = parsePath(path);
+              const own = kind && before ? ownChanges(kind, doc, before) : null;
+              if (own != null) kept.push([path, own]);
+            }
             outbox.clear(); bases.clear(); retryKeep.clear();
+            // Set aside with no versions seen: Try again only adds, leaving whatever the account holds by then as it is.
+            for (const [path, own] of kept) outbox.refuse(path, own, 'Made on this device before the account was erased on another device. Send it again to add it to the account, or discard it.', { seen: {} });
             const n = (k: number, one: string, many: string) => (k === 1 ? one : `${k} ${many}`);
-            const what = [unsent ? `${n(unsent, 'a change not yet sent', 'changes not yet sent')}` : '', setAside ? `${n(setAside, 'a change the server had set aside', 'changes the server had set aside')}` : ''].filter(Boolean).join(' and ');
-            note('', `Everything in this account was erased on another device, so ${what} from here ${unsent + setAside === 1 ? 'was' : 'were'} dropped.`);
+            note('', kept.length
+              ? `Everything in this account was erased on another device. What this device changed itself (${n(kept.length, 'one item', 'items')}) is kept under Not sent, to send again or discard; the rest was dropped.`
+              : `Everything in this account was erased on another device, so ${n(held.size, 'a change', 'changes')} from here ${held.size === 1 ? 'was' : 'were'} dropped.`);
             lastSyncedAt = lastPullAt;
           }
           emitAll(); announce();
