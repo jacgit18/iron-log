@@ -11,6 +11,8 @@ export interface PushMessage {
 // The rest tag is the one the in-page "rest over" notice uses (lib/restNotify.ts), so a push and a local notice for the same timer replace each other.
 export const TAGS: Record<PushKind, string> = { rest: 'rest-timer', 'day-nudge': 'day-nudge' };
 const FALLBACK = 'Open Iron Log.';
+// Its own tag: a message this worker cannot read (a kind a newer server added) must not replace, or close, a real rest or nudge notice.
+const FALLBACK_TAG = 'iron-log';
 const CLOSE_AFTER_MS = 3000;
 
 /** The JSON the server sends (server/push/send.ts); anything else is null. */
@@ -48,7 +50,7 @@ export interface PushScope {
  */
 export async function onPush(scope: PushScope, text: string | null | undefined, sleep: (ms: number) => Promise<void> = ms => new Promise(r => setTimeout(r, ms))): Promise<void> {
   const message = parsePushMessage(text);
-  const tag = message ? TAGS[message.kind] : TAGS.rest;
+  const tag = message ? TAGS[message.kind] : FALLBACK_TAG;
   const visible = (await scope.clients.matchAll({ type: 'window', includeUncontrolled: true })).some(c => c.visibilityState === 'visible');
   await scope.registration.showNotification('Iron Log', {
     body: message?.body ?? FALLBACK,

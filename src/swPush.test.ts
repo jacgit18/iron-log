@@ -57,7 +57,7 @@ describe('onPush', () => {
     const { scope, shown } = scopeWith();
     await onPush(scope, 'garbage', async () => {});
     expect(shown).toHaveLength(1);
-    expect(shown[0]!.options).toMatchObject({ body: 'Open Iron Log.' });
+    expect(shown[0]!.options).toMatchObject({ body: 'Open Iron Log.', tag: 'iron-log' }); // not a kind's tag, so it never replaces a real notice
     await onPush(scope, null, async () => {});
     expect(shown).toHaveLength(2);
   });
