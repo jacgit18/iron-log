@@ -1,5 +1,5 @@
 import type { FlatSlot } from '../../types.ts';
-import { Fragment, memo, useRef, useState, type DragEvent } from 'react';
+import { Fragment, memo, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { PhaseKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -11,6 +11,7 @@ import { eqName } from '../../lib/equipment.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import { useSwipeDone } from './useSwipeDone.js';
+import './Card.css';
 import {
   DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, backoffOf, describe, holdPlan,
   restsOf,
@@ -37,6 +38,10 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
   const { checkCard, checkItem, setPhase, quickLog, openModal, moveSlot, skipCard, removeExtra } = useAppStore.getState();
   const startHold = useTimerStore(st => st.startHold);
   const [removing, setRemoving] = useState(false); // an experiment card's Remove was pressed once
+  const [more, setMore] = useState(false); // the card's less-used actions (Move to, Skip, Remove) are folded behind the ⋯ button
+  const moreBtn = useRef<HTMLButtonElement>(null);
+  const foldOnEscape = (e: KeyboardEvent) => { if (e.key === 'Escape' && (more || removing)) { e.stopPropagation(); setMore(false); setRemoving(false); moreBtn.current?.focus(); } };
+  const moreOpen = more || removing; // armed Remove keeps its panel open so the second tap has somewhere to land
 
   const done = isDone(s, week); const sk = isSkipped(s, week); const paired = isPaired(s);
   const label = s.type === 'superset' ? 'Superset' : s.type === 'either' ? 'Either / or' : '';
@@ -71,7 +76,21 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
           {week.moved[s.id] && <span className="moved">From Day {planned}</span>}
           {sk && <span className="skiptag">Skipped this week</span>}
         </div>
+        {sk && <button type="button" className="btn sm ghost" id={`skip-${s.id}`} aria-label={`Undo skip for ${cardName}`} onClick={() => skipCard(s.id)}>Undo skip</button>}
+        <button type="button" className="btn sm ghost morebtn" ref={moreBtn} id={`more-${s.id}`} aria-expanded={moreOpen} aria-controls={`morepanel-${s.id}`}
+          aria-label={`More actions: ${cardName}`} onClick={() => setMore(!moreOpen)} onKeyDown={foldOnEscape}><span aria-hidden="true">⋯</span></button>
       </div>
+      {moreOpen && (
+        <div className="cardfoot cardmore" id={`morepanel-${s.id}`} role="group" aria-label={`More actions: ${cardName}`}
+          onKeyDown={foldOnEscape}>
+          <label htmlFor={`mv-${s.id}`}>Move to</label>
+          <select id={`mv-${s.id}`} aria-label={`Move to (${cardName})`} value={cur} onChange={e => moveSlot(s.id, Number(e.target.value))}>
+            {DAYS.map(d => <option key={d} value={d} disabled={restsOf(week).includes(d)}>Day {d}{restsOf(week).includes(d) ? ' (rest)' : d === planned ? ' (planned)' : ''}</option>)}
+          </select>
+          {!sk && <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={`Skip ${cardName} this week`} onClick={() => { skipCard(s.id); setMore(false); }}>Skip</button>}
+          {s.experiment && <ArmedButton className={`btn sm ${removing ? 'danger' : 'ghost'}`} id={`rm-${s.id}`} aria-label={`Remove ${cardName} from this week`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setRemoving} onConfirm={() => removeExtra(s.id)} />}
+        </div>
+      )}
 
       {s.items.map((it, idx) => {
         const ex = exInfo(cfg, it.ex);
@@ -119,14 +138,6 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
       })}
 
       {s.note && <div className="note">{s.note}</div>}
-      <div className="cardfoot">
-        <label htmlFor={`mv-${s.id}`}>Move to</label>
-        <select id={`mv-${s.id}`} aria-label={`Move to (${cardName})`} value={cur} onChange={e => moveSlot(s.id, Number(e.target.value))}>
-          {DAYS.map(d => <option key={d} value={d} disabled={restsOf(week).includes(d)}>Day {d}{restsOf(week).includes(d) ? ' (rest)' : d === planned ? ' (planned)' : ''}</option>)}
-        </select>
-        <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={sk ? `Undo skip for ${cardName}` : `Skip ${cardName} this week`} onClick={() => skipCard(s.id)}>{sk ? 'Undo skip' : 'Skip'}</button>
-        {s.experiment && <ArmedButton className={`btn sm ${removing ? 'danger' : 'ghost'}`} id={`rm-${s.id}`} aria-label={`Remove ${cardName} from this week`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setRemoving} onConfirm={() => removeExtra(s.id)} />}
-      </div>
     </article>
   );
 }
