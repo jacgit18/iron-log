@@ -75,7 +75,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       <p className="note" id="groc-summary" role="status">
         {t.count ? `Got ${t.got} of ${t.count} · Spent ${money(t.spent)} · Expected ${money(t.planned)}${t.unpriced ? ` · ${t.unpriced} without a price` : ''}` : 'Nothing on this month’s list.'}
       </p>
-      {!t.count && back === 0 && <p className="note">Uncheck what you’re out of on <b>At home</b> and it shows up here.</p>}
+      {!t.count && back === 0 && <p className="note">Untick an item on <b>At home</b> when you run out and it shows up here.</p>}
       {byStore(g, list).map((grp, gi) => {
         const gt = tally(grp.items, month);
         return (
@@ -188,7 +188,7 @@ function AtHome({ g }: { g: GroceryT }) {
   return (
     <>
       <div className="ghomehead">
-        <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'Uncheck what you’re out of: it goes on this month’s To get list.'}</p>
+        <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'A tick means you have it. Untick an item when you run out and it goes on this month’s To get list. Every-month items are always on it.'}</p>
         <button type="button" className="btn sm ghost" id="groc-edit" aria-pressed={editing} onClick={() => setEditing(v => !v)}>{editing ? 'Done' : 'Edit'}</button>
       </div>
       <RemovedNotice scope="grocery" />
