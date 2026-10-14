@@ -15,7 +15,13 @@ describe('deploy-cloud-run.sh traffic commands', () => {
 echo "$*" >> "${'$'}CALLS_FILE"
 case "$*" in
   *"projects describe"*) echo 123456;;
-  *"run services describe"*"--format=json"*) echo '{"status":{"traffic":[{"revisionName":"iron-log-00001-aaa","percent":100},{"tag":"candidate","url":"https://candidate---iron-log-x.run.app","revisionName":"iron-log-00002-bbb"}]}}';;
+  # What the account may do is set by the test: SECRETS_READABLE=1 is your machine (it can see a secret exists), unset is the CI deployer.
+  *"secrets describe"*) [ "$SECRETS_READABLE" = 1 ] && exit 0; exit 1;;
+  # LIVE_RESEND=1: the live service already maps RESEND_API_KEY from a secret.
+  *"run services describe"*"--format=json"*)
+    env='[]'
+    [ "$LIVE_RESEND" = 1 ] && env='[{"name":"RESEND_API_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-resend-api-key","key":"latest"}}}]'
+    echo '{"spec":{"template":{"spec":{"containers":[{"env":'"$env"'}]}}},"status":{"traffic":[{"revisionName":"iron-log-00001-aaa","percent":100},{"tag":"candidate","url":"https://candidate---iron-log-x.run.app","revisionName":"iron-log-00002-bbb"}]}}';;
 esac
 exit 0
 `;
@@ -66,6 +72,55 @@ exit 0
     expect(lines.find(l => l.includes('run deploy'))).not.toContain('--no-traffic');
     expect(lines[lines.length - 1]).toContain('update-traffic');
     expect(lines[lines.length - 1]).toContain('--to-latest');
+  });
+
+  // --set-secrets replaces the service's whole secret list, so RESEND_API_KEY has to be in it on every deploy that should keep the email code.
+  describe('the Resend key for the emailed sign-in code (ADR 042)', () => {
+    const FOUR = ['APP_DATABASE_URL=iron-log-app-database-url:latest', 'BETTER_AUTH_SECRET=iron-log-auth-secret:latest', 'GOOGLE_CLIENT_ID=iron-log-google-client-id:latest', 'GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest'];
+    const RESEND = 'RESEND_API_KEY=iron-log-resend-api-key:latest';
+    const secretsOf = (cmd: string) => /--set-secrets (\S+)/.exec(recorded().find(l => l.includes(cmd))!)![1]!.split(',');
+
+    it('is passed, with the other four, when the secret exists in Secret Manager (your machine)', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['deploy'], { SECRETS_READABLE: '1' })).status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual([...FOUR, RESEND]);
+    });
+
+    it('is kept by a deploy that cannot read secrets (CI) when the live service already has it', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { LIVE_RESEND: '1' });
+      expect(out.status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual([...FOUR, RESEND]);
+      expect(out.stdout).toContain('RESEND_API_KEY is passed');
+    });
+
+    it('is left out, and the feature stays off, when the secret does not exist and the service does not have it', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['deploy']);
+      expect(out.status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual(FOUR);
+      expect(out.stdout).toContain('stays off');
+    });
+
+    it('the secrets command stores it and lets the runtime account read it, and the value is never a gcloud argument', async () => {
+      writeFileSync(calls, '');
+      const env = { APP_DATABASE_URL: 'postgres://ironlog_app:pw@db.example.com/x', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'gs' };
+      const out = await run(['secrets'], { ...env, RESEND_API_KEY: 're_secretvalue123' });
+      expect(out.status).toBe(0);
+      const lines = recorded();
+      expect(lines.some(l => l.includes('secrets create iron-log-resend-api-key'))).toBe(true);
+      expect(lines.some(l => l.includes('secrets versions add iron-log-resend-api-key'))).toBe(true);
+      expect(lines.some(l => l.includes('add-iam-policy-binding iron-log-resend-api-key') && l.includes('iron-log-run@p.iam.gserviceaccount.com'))).toBe(true);
+      expect(lines.join('\n') + out.stdout + out.stderr).not.toContain('re_secretvalue123');
+    });
+
+    it('the secrets command leaves it alone, and says so, when RESEND_API_KEY is not exported', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['secrets'], { APP_DATABASE_URL: 'postgres://ironlog_app:pw@db.example.com/x', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'gs', RESEND_API_KEY: '' });
+      expect(out.status).toBe(0);
+      expect(recorded().some(l => l.includes('iron-log-resend-api-key'))).toBe(false);
+      expect(out.stdout).toContain('not touched');
+    });
   });
 
   it('discard and restore make the single call each is named for', async () => {
