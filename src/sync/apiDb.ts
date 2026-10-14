@@ -215,8 +215,15 @@ export function createApiDb(options: ApiDbOptions) {
   const deliver = (l: Listener, snap: unknown) => {
     try { l.cb(snap); } catch (e) { console.error(JSON.stringify({ msg: 'a snapshot listener threw', error: e instanceof Error ? e.message : String(e) })); }
   };
+  // A document snapshot for the app. When it is an unsent week that sync merged, the app has now seen the merge: its next save is
+  // made from this copy, so that save needs no merging onto it (see `handed`), or an untick of the other device's tick would come back.
+  function shownSnap(path: string) {
+    const unsent = outbox.get(path);
+    if (unsent !== undefined && handed.has(path)) handed.set(path, unsent);
+    return docSnap(localDoc(path));
+  }
   function emitPath(path: string) {
-    docListeners.get(path)?.forEach(l => deliver(l, docSnap(localDoc(path))));
+    if (docListeners.get(path)?.size) { const snap = shownSnap(path); docListeners.get(path)!.forEach(l => deliver(l, snap)); }
     const slash = path.indexOf('/');
     if (slash > 0) {
       const name = path.slice(0, slash);
@@ -507,7 +514,7 @@ export function createApiDb(options: ApiDbOptions) {
     set: (data: unknown) => set(path, data),
     delete: () => set(path, { __delete: true }),
     get: async () => docSnap(readyFor(path) ? localDoc(path) : null),
-    onSnapshot: (cb: (s: Snap) => void, err?: (e: unknown) => void) => subscribe(docListeners, path, { cb, err }, readyFor(path), () => docSnap(localDoc(path))),
+    onSnapshot: (cb: (s: Snap) => void, err?: (e: unknown) => void) => subscribe(docListeners, path, { cb, err }, readyFor(path), () => shownSnap(path)),
   });
   const collectionRef = (name: string) => ({
     get: async () => collectionSnap(name),

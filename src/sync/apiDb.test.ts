@@ -703,6 +703,26 @@ describe('conflicts', () => {
     expect((await db.doc('weeks/2026-10-04').get()).data().done).toEqual({ a: true, b: true });
   });
 
+  it('a save made from the merged week the app was shown keeps its untick of the other device\'s tick', async () => {
+    // The board can be given the merged copy before it is sent (a listener that subscribes meanwhile gets it at once): a save made
+    // from that copy is the app's choice, so unticking b there must not bring b back.
+    const { server, gate, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('weeks/2026-10-04').set(wk({ a: true }));
+    otherDeviceSaves(server, { a: true, b: true });
+    server.fail.push(undefined as never, down('server'));
+    await db.doc('weeks/2026-10-04').set({ ...wk({ a: true }), moved: { x: 2 } }); // merged with b, then paused
+    let shown: { done: object } | undefined;
+    db.doc('weeks/2026-10-04').onSnapshot(s => { shown = s.data(); });
+    await settle();
+    expect(shown!.done).toEqual({ a: true, b: true });
+    const saving = db.doc('weeks/2026-10-04').set({ ...wk({ a: true }), moved: { x: 2 } }); // b unticked on the week it was shown
+    gate.releaseAll();
+    await saving; await settle();
+    expect(server.rows.get('weeks|2026-10-04')!.data.done).toEqual({ a: true });
+  });
+
   it('a save made while a stale week is on its way is not overwritten by that week\'s merge', async () => {
     const { server, db } = setup();
     db.start();
