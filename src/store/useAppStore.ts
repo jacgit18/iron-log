@@ -1141,8 +1141,8 @@ export function adoptDeviceGrocery(): 'added' | 'nothing' | 'waiting' {
   if (syncApi && (!st.sync || !st.sync.ready || (!st.sync.holdsData && !readLegacyMarker()))) return 'waiting';
   const mine = deviceGrocery();
   if (!mine) { markGroceryAdopted('nothing'); return 'nothing'; }
+  markGroceryAdopted('added'); // first: the store update below runs this subscription again
   st.addGrocery(mine);
-  markGroceryAdopted('added');
   return 'added';
 }
 useAppStore.subscribe((s, prev) => {
