@@ -204,7 +204,7 @@ test('Supplements tab: a catalog product picked in a section joins your suppleme
   await page.fill('#suppdose-morning', '5 g');
   await page.click('#suppadd-morning');
   const morning = page.getByRole('group', { name: 'Morning' });
-  await expect(morning.locator('.warmrow')).toContainText(['Creatine Monohydrate · 5 g']);
+  await expect(morning.locator('.srow')).toContainText(['Creatine Monohydrate5 g']);
   await expect(morningName(page)).toHaveValue('');
 });
 
@@ -214,7 +214,7 @@ test('Supplements tab: one of yours from the library is offered by name and move
   await page.getByRole('group', { name: 'Yours' }).getByRole('option', { name: /Fish Oil/ }).click();
   await expect(page.getByText('Moves it to Morning.')).toBeVisible();
   await page.click('#suppadd-morning');
-  await expect(page.getByRole('group', { name: 'Morning' }).locator('.warmrow')).toContainText(['Fish Oil · 1 g']);
+  await expect(page.getByRole('group', { name: 'Morning' }).locator('.srow')).toContainText(['Fish Oil1 g']);
   await expect(page.locator('#supplib-morning')).toHaveCount(0); // the old "Add from your library" menu is gone
 });
 

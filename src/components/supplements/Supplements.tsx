@@ -46,7 +46,7 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
     if (s.addSupplement(slot, name, dose)) done();
   };
   return (
-    <section className={`sslot${t.full ? ' done' : ''}`} aria-labelledby={`supp-h-${slot}`}>
+    <section className={`sslot${t.full ? ' done' : ''}`} role="group" aria-labelledby={`supp-h-${slot}`}>
       <div className="sslothead">
         <h3 id={`supp-h-${slot}`}>{label}</h3>
         <span className="note">{t.total ? `${t.done}/${t.total}` : ''}</span>
