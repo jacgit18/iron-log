@@ -2,7 +2,6 @@ import { LS } from '../lib/storage.js';
 import { createAccountClient } from './account.js';
 import { signIn } from './devUser.js';
 import { createApiDb } from './apiDb.js';
-import { installErrorReporting, sendReport } from './reportErrors.js';
 import { createTransport } from './transport.js';
 
 /* ---------- The sync adapter, set up for the browser ----------
@@ -10,8 +9,6 @@ import { createTransport } from './transport.js';
    free of the DOM and can be tested without it. */
 
 export function createBrowserApiDb(hooks: { onOwnerChange?: () => void } = {}) {
-  // Errors on this phone reach the server's log (ADR 013). Not in development, where the console is right there.
-  if (!import.meta.env.DEV) installErrorReporting({ version: __APP_VERSION__, send: sendReport });
   const account = createAccountClient({ headers: signIn });
   return createApiDb({
     identity: account.me,

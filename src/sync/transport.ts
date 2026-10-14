@@ -1,3 +1,4 @@
+import { reportSync } from './reportErrors.js';
 import type { CommandName, ServerRow, SyncTable } from './types.js';
 
 /* ---------- Talking to the API ----------
@@ -74,7 +75,10 @@ export function parseRetryAfter(value: string | null, now = Date.now()): number 
 }
 
 type Pause = Extract<CommandOutcome, { class: 'network' | 'server' | 'auth' | 'outdated' }>;
-const pause = (cls: Pause['class'], status: number, retryAfterMs: number | null, message: string): Pause => ({ ok: false, class: cls, status, retryAfterMs, message });
+const pause = (cls: Pause['class'], status: number, retryAfterMs: number | null, message: string): Pause => {
+  if (message === 'unexpected answer') reportSync(`unexpected answer (status ${status})`); // the server replied, but not in a shape the app knows
+  return { ok: false, class: cls, status, retryAfterMs, message };
+};
 
 // A status the queue should wait on rather than act on.
 function pauseFor(status: number, retryAfterMs: number | null): Pause | null {

@@ -9,6 +9,7 @@ import { planCommands, planDelete } from './plan.js';
 import { canonOf } from './canon.js';
 import { ownChanges } from './ownChanges.js';
 import { pullAll } from './pull.js';
+import { reportSync } from './reportErrors.js';
 import type { AccountActionOutcome, FailureClass, ImportOutcome, Transport } from './transport.js';
 import { mirrorId, type PlannedCommand } from './types.js';
 
@@ -347,6 +348,7 @@ export function createApiDb(options: ApiDbOptions) {
   function refuse(path: string, sent: unknown, reason: string) {
     bases.delete(path); handed.delete(path); retryKeep.delete(path);
     outbox.refuse(path, sent, reason, seenNow(path));
+    reportSync(`write refused: ${reason}`); // the reason only, never the document
     setState('idle'); // this write is no longer being sent; whatever is next sets the state again
     announce();
     return { refused: reason };

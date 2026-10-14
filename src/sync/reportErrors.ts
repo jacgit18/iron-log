@@ -1,7 +1,10 @@
 /* ---------- Telling the server about errors on this phone (ADR 013) ----------
    An uncaught error or a rejected promise is sent to POST /api/client-errors, which scrubs it and logs it, so a failure that only
-   happens on a phone is not found by luck. Only when syncing is on (this file is loaded with the sync adapter). A few reports per page
+   happens on a phone is not found by luck. Installed by main.tsx in every build except development, syncing on or not (ADR 013 note,
+   2026-10-14), and sync anomalies (a refused write, an unexpected server answer) come through reportSync. A few reports per page
    load, the same one never twice, and a failed send is forgotten: reporting must never become the next error. */
+
+export type ReportKind = 'error' | 'unhandledrejection' | 'sync';
 
 export interface ReportTarget {
   addEventListener(type: 'error' | 'unhandledrejection', listener: (e: never) => void): void;
@@ -11,22 +14,22 @@ export interface ReportTarget {
 
 export interface ReportOptions {
   version: string;
-  send: (body: { kind: 'error' | 'unhandledrejection'; message: string; stack: string; page: string; version: string }) => void;
+  send: (body: { kind: ReportKind; message: string; stack: string; page: string; version: string }) => void;
   target?: ReportTarget;
   /** Most reports per page load. */
   max?: number;
 }
 
 // The running reporter, so an error an ErrorBoundary caught (which never reaches the window's error event) goes through the same
-// one-of-each and per-load limit. Null when reporting is off: syncing off, or a development build.
-let current: ((kind: 'error' | 'unhandledrejection', message: string, stack: string) => void) | null = null;
+// one-of-each and per-load limit. Null when reporting is off: a development build, or before main.tsx has installed it.
+let current: ((kind: ReportKind, message: string, stack: string) => void) | null = null;
 
 const text = (v: unknown) => (v instanceof Error ? v : { message: typeof v === 'string' ? v : 'non-error value', stack: '' });
 
 /** Starts listening; returns how to stop. */
-export function installErrorReporting({ version, send, target = window as unknown as ReportTarget, max = 5 }: ReportOptions): () => void {
+export function installErrorReporting({ version, send, target = globalThis as unknown as ReportTarget, max = 5 }: ReportOptions): () => void {
   const seen = new Set<string>();
-  const report = (kind: 'error' | 'unhandledrejection', message: string, stack: string) => {
+  const report = (kind: ReportKind, message: string, stack: string) => {
     const key = `${kind}|${message}`;
     if (seen.size >= max || seen.has(key)) return;
     seen.add(key);
@@ -54,6 +57,11 @@ export function installErrorReporting({ version, send, target = window as unknow
 export function reportCaught(error: unknown) {
   const err = text(error);
   current?.('error', err.message, err.stack ?? '');
+}
+
+/** Reports a sync problem that did not throw (a write the server refused, an answer the app did not expect). Message only: never the document. */
+export function reportSync(message: string) {
+  current?.('sync', message, '');
 }
 
 /** The browser's way of sending one: same origin, fire and forget. */
