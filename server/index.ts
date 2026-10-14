@@ -6,6 +6,7 @@ import { minVersionFrom } from './clientVersion.ts';
 import { createDb } from './db/connection.ts';
 import { remoteDatabaseProblem } from './db/localOnly.ts';
 import { checkDbRole } from './db/role.ts';
+import { installProcessGuards } from './processGuards.ts';
 
 // Local development reads .env; in production the platform sets the variables and there is no file.
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -54,7 +55,5 @@ const server = createApp({ db, staticDir, minClientVersion, auth, admins: admins
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 
-// Cloud Run sends SIGTERM before stopping an instance: stop accepting requests, then close the pool.
-process.on('SIGTERM', () => {
-  server.close(() => { void db?.destroy(); void auth?.pool.end(); });
-});
+// An escaped error or Cloud Run's SIGTERM: stop accepting requests, close the pools, exit (with a hard stop if that hangs).
+installProcessGuards(server, { close: async () => { await Promise.all([db?.destroy(), auth?.pool.end()]); } });

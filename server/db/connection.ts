@@ -1,5 +1,6 @@
 import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
+import { POOL_OPTIONS } from './poolOptions.ts';
 import type { DB } from './types.ts';
 
 const DATE_OID = 1082;
@@ -10,6 +11,7 @@ const DATE_OID = 1082;
 export function createDb(connectionString: string): Kysely<DB> {
   const pool = new pg.Pool({
     connectionString,
+    ...POOL_OPTIONS,
     types: {
       getTypeParser: ((oid: number, format?: 'text' | 'binary') =>
         oid === DATE_OID ? (value: string) => value : pg.types.getTypeParser(oid as never, format as never)) as typeof pg.types.getTypeParser,

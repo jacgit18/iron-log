@@ -11,6 +11,7 @@ import { bodyLimit } from './bodyLimit.ts';
 import { LISTED_KINDS, listCatalog, parseSearch, searchCatalog } from './catalog.ts';
 import { clientErrors } from './clientErrors.ts';
 import { clientVersionGate } from './clientVersion.ts';
+import { errorHandler } from './errorHandler.ts';
 import { originGuard } from './originGuard.ts';
 import { byUser, rateLimit, type Limit } from './rateLimit.ts';
 import { securityHeaders } from './securityHeaders.ts';
@@ -261,6 +262,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
       res.set('Cache-Control', NO_CACHE).sendFile(join(root, 'index.html'));
     });
   }
+
+  // Last, so it catches what every route above threw (Express 5 passes a rejected async handler here too).
+  app.use(errorHandler());
 
   return app;
 }
