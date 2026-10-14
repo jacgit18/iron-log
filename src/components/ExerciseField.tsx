@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { CatalogItem, Cfg, EquipmentKey } from '../types.ts';
-import { allExIds, exInfo, findExId, isCatalogId, isOwnExercise, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
-import { muscleList } from '../lib/exerciseLibrary.js';
+import { allExIds, exInfo, isCatalogId, isOwnExercise, EQUIPMENT, EQ_KEYS } from '../lib/data.js';
+import { findExIdIn, muscleList } from '../lib/exerciseLibrary.js';
+import { useExIdsInUse } from '../hooks/useExIdsInUse.js';
 import { pickerKey, type MineOption } from '../lib/picker.js';
 import ItemPicker from './ItemPicker.jsx';
 
@@ -17,7 +18,10 @@ type Props = {
 const catalogMeta = (c: CatalogItem) => [c.data.eq ? EQUIPMENT[c.data.eq] : '', c.data.muscles?.p?.length ? muscleList(c.data.muscles.p) : ''].filter(Boolean).join(' · ');
 
 export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onUrl, onEq, cat = null, onCat }: Props) {
-  const ids = allExIds(cfg);
+  // Your library, plus exercises your programs, versions, experiments or logs still use that are not in it (a built-in an older
+  // program kept, ADR 024): listed as yours, so the catalog does not offer a second one under that name.
+  const inUse = useExIdsInUse(cfg);
+  const ids = [...new Set([...allExIds(cfg), ...inUse])];
   // A name a built-in also uses stays unmarked, so the built-in is never labelled Custom.
   const builtin = new Set(ids.filter(x => !isOwnExercise(x) && !isCatalogId(x)).map(x => exInfo(cfg, x).n));
   const seen = new Set<string>();
@@ -30,7 +34,7 @@ export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onU
     mine.push({ id: x, name: info.n, ...(isCatalogId(x) ? { catalogId: x } : {}), ...(badge ? { badge } : {}), ...(info.eq ? { meta: EQUIPMENT[info.eq] } : {}) });
   }
   const held = cat && pickerKey(cat.name) === pickerKey(name) ? cat : null;
-  const known = name.trim() !== '' && !held ? findExId(cfg, name) : null;
+  const known = name.trim() !== '' && !held ? findExIdIn(cfg, name, inUse) : null; // finds an in-use built-in too, as listed above
   const isNew = name.trim() !== '' && !known && !held;
   // Picking an existing exercise shows its saved video link and equipment, so what you save is that exercise's values (edited or
   // not); a catalog pick shows the catalog's equipment. Values shown that way are cleared when the name stops matching; ones typed

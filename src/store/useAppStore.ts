@@ -29,7 +29,7 @@ import {
 } from '../lib/export.js';
 import { mimeFor } from '../lib/mime.js';
 import { bwSorted } from '../lib/body.js';
-import { usageOf } from '../lib/exerciseLibrary.js';
+import { exIdsInUse, usageOf } from '../lib/exerciseLibrary.js';
 import { MUSCLE_MAP } from '../lib/muscles.js';
 import { bestLift, liftGoalsOf, goalPhaseLabel, GOAL_KEYS } from '../lib/liftGoal.js';
 import { loadView, saveView, openFromUrl } from '../lib/viewState.js';
@@ -527,7 +527,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!d.ex || (d.ex === '__new' && !d.nn)) return 'Choose an exercise, or type a name for the new one.';
     if (!isVideoUrl(d.nu)) return VIDEO_ERR;
     const pd = dayAt(get().week, col); if (pd == null) return 'That is your rest day.';
-    if (d.cat) { const err = catalogPickError(get().cfg, d.cat); if (err) return err; }
+    if (d.cat) { const err = catalogPickError(get().cfg, d.cat, exIdsInUse(get(), get().cfg)); if (err) return err; }
     let ex: string;
     if (d.cat && !get().cfg.ex[d.cat.id]) { // picked from the catalog: joins the library with the card (ADR 036)
       const id = d.cat.id; const { info, tags } = catalogSnapshot(d.cat, d); ex = id;
@@ -583,7 +583,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   addCatalogExercise(item) {
     if (get().blocked()) return null;
     const { id } = item; const cfg = get().cfg;
-    const err = catalogPickError(cfg, item); if (err) return err;
+    const err = catalogPickError(cfg, item, exIdsInUse(get(), get().cfg)); if (err) return err;
     if (cfg.ex[id]) return 'Already in your library.';
     const { info, tags } = catalogSnapshot(item);
     if (!get().mutateCfg(c => {

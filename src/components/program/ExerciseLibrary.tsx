@@ -4,8 +4,9 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, EQUIPMENT, EQ_KEYS } from '../../lib/data.js';
 import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
 import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems } from '../../lib/exerciseLibrary.js';
+import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import { progName } from '../../lib/logic.js';
-import { videoLabel, isCatalogId } from '../../lib/data.js';
+import { videoLabel, isCatalogId, exInfo } from '../../lib/data.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 
@@ -15,6 +16,7 @@ export default function ExerciseLibrary() {
   const experiments = useAppStore(s => s.experiments); const logs = useAppStore(s => s.logs);
   const { openModal } = useAppStore.getState();
   const syncing = useAppStore(s => s.sync !== null); // the catalog section below is there only when syncing (ADR 025)
+  const inUse = useExIdsInUse(cfg);
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
   const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)
@@ -77,7 +79,8 @@ export default function ExerciseLibrary() {
       </div>
       {f.src !== 'custom' && (
         <CatalogMatches kind="exercise" q={f.q} unit="exercises" source="Exercises from free-exercise-db (public domain)."
-          mine={rows.map(r => ({ id: r.id, name: r.name, ...(isCatalogId(r.id) ? { catalogId: r.id } : {}) }))}
+          mine={[...rows.map(r => ({ id: r.id, name: r.name, ...(isCatalogId(r.id) ? { catalogId: r.id } : {}) })),
+            ...inUse.filter(id => !rows.some(r => r.id === id)).map(id => ({ id, name: exInfo(cfg, id).n }))]}
           meta={c => [c.data.eq ? EQUIPMENT[c.data.eq as EquipmentKey] : '', c.data.muscles?.p?.length ? `Primary: ${muscleList(c.data.muscles.p)}` : ''].filter(Boolean).join(' · ')}
           narrow={items => keepCatalogItems(items, f)}
           onAdd={c => useAppStore.getState().addCatalogExercise(c)} />
