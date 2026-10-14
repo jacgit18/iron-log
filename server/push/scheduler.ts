@@ -1,4 +1,4 @@
-// What the push routes need from the thing that sends later. The real one (Cloud Tasks, PR 4) and the test fake both fit this.
+// What the push routes need from the thing that sends later. The real one (Cloud Tasks) and the test fake both fit this.
 export const PUSH_KINDS = ['rest', 'day-nudge'] as const;
 export type PushKind = (typeof PUSH_KINDS)[number];
 
@@ -13,9 +13,11 @@ export interface PushJob {
   body: string;
 }
 
+/**
+ * Makes `POST /api/push/fire` run with the job at `job.at`. It never takes a job back: whether a send is still wanted is the
+ * subscription's `pending` marker (migration 019), which the routes set and clear and the fire route checks, so a cancelled or
+ * replaced task fires and sends nothing.
+ */
 export interface PushScheduler {
-  /** Replaces any pending job of the same subscription and kind. */
   schedule(job: PushJob): Promise<void>;
-  /** Removes the pending job of that subscription and kind, when `key` matches it (or no key is given). */
-  cancel(job: { subscriptionId: string; kind: PushKind; key?: string }): Promise<void>;
 }
