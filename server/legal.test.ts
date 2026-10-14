@@ -42,6 +42,18 @@ describe('the policy and the system agree', () => {
     expect(text).toContain('do not sell');
   });
 
+  it('push alerts: the policy names what is kept and for how long, as the system does', () => {
+    // The 3 hours a queued alert can wait is the most the server accepts (MAX_AHEAD_MS), and the policy says so.
+    expect(/export const MAX_AHEAD_MS = (\d+) \* 60 \* 60_000/.exec(read('server/push/validate.ts'))?.[1]).toBe('3');
+    expect(text).toContain('at most 3 hours ahead');
+    expect(text).toMatch(/Push alerts \(only if you turn them on/);
+    expect(text).toContain('Cloud Tasks');
+    expect(text).toMatch(/notification service of your browser or phone maker/);
+    expect(text).toMatch(/Push alerts: your device’s address and keys/);
+    // An alert carries the device entry, a time and a short text, never workout data: the fire route's payload has exactly these fields.
+    expect(read('server/push/cloudTasks.ts')).toMatch(/payload = \{ subscriptionId: job\.subscriptionId, kind: job\.kind, key: job\.key, at: job\.at, body: job\.body \}/);
+  });
+
   it('the pages link to each other and carry a date and version', () => {
     expect(policy).toContain('href="terms.html"');
     expect(read('public/terms.html')).toContain('href="privacy.html"');
