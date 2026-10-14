@@ -52,8 +52,6 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
       encryptOAuthTokens: true,
     },
     verification: { modelName: 'auth.verification' },
-    // The cap on accounts (SIGNUP_CAP). Runs only when an account is about to be made, so someone who already has one is never
-    // affected. The count and the insert are not one step, so two people signing up at the very same moment can overshoot by one.
     databaseHooks: {
       // Better Auth records the IP address and browser string a session was made from. The app never reads them and an IP address is
       // personal data, so they are blanked before the row is written. (Not `advanced.ipAddress.disableIpTracking`: that also switches
@@ -63,6 +61,8 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
           before: async session => ({ data: { ...session, ipAddress: null, userAgent: null } }),
         },
       },
+      // The cap on accounts (SIGNUP_CAP). Runs only when an account is about to be made, so someone who already has one is never
+      // affected. The count and the insert are not one step, so two people signing up at the very same moment can overshoot by one.
       user: {
         create: {
           before: async user => {
