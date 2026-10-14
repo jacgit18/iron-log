@@ -1,6 +1,7 @@
 import { BUILTIN, BLANK, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { catalogName, catalogPickError, catalogSnapshot } from '../lib/catalogExercise.js';
 import { exIdsInUse } from '../lib/exerciseLibrary.js';
+import { buildStarter, starterById } from '../lib/starterPrograms.js';
 import { progName, dayAt, DAYS, colOf, currentLayout, isFinished } from '../lib/logic.js';
 import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
@@ -166,6 +167,21 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
       if (get().blocked() || get().library.some(x => x.id === id)) return false;
       const l = [...get().library]; l.splice(Math.min(i, l.length), 0, it); get().setLibrary(l); return true;
     });
+  },
+  applyStarter(starterId, perWeek) {
+    if (get().blocked()) return 'Wait a moment and try again.';
+    const starter = starterById(starterId); const key = get().activeProgKey();
+    // Only onto an empty board: a starter never replaces cards someone has built.
+    if (!starter || slotsFor(get().programs[key]).length) return 'Starter programs are for an empty board.';
+    // The starter's cards start this week, so another week's board (an earlier one, or a finished one shown from its record) would not show them.
+    const thisWeek = ymd(weekStartOf(new Date()));
+    if (get().weekKey() !== thisWeek || get().shownFromRecord()) return 'Go to this week to use a starter program.';
+    const built = buildStarter(starter, perWeek, get().cfg, key, thisWeek);
+    if (!built) return 'That many days a week is not offered for this program.';
+    if (Object.keys(built.newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, built.newEx); c.muscleMap = { ...(c.muscleMap || {}), ...built.newTags }; });
+    get().saveProgram(key, built.program);
+    flag(`${starter.name} added, ${perWeek} days a week`);
+    return null;
   },
   createProgram(name, from) {
     if (get().blocked()) return false;

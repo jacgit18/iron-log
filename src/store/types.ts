@@ -102,6 +102,8 @@ export interface EditorSlice {
   setEdDay(edDay: number): void;
   saveEdited(prog: Program): void;
   editProgram(fn: (prog: Program) => void): boolean;
+  /** Fills the empty active program from a starter (lib/starterPrograms.ts). Returns why it could not, or null. */
+  applyStarter(starterId: string, perWeek: number): string | null;
   setLibrary(library: LibraryItem[]): void;
   moveEdSlot(i: number, dir: number): void;
   /** Drag and drop in the Program editor: move the open day's card at `from` so it sits at `to`. */

@@ -68,6 +68,16 @@ describe('with no session', () => {
   });
 });
 
+describe('what a session row records', () => {
+  it('keeps no IP address and no browser string, even when the request carries them', async () => {
+    const res = await post('/api/auth/sign-up/email', { email: 'priv@example.com', password: 'correct horse battery staple', name: 'Priv' }, { 'user-agent': 'SecretBrowser/9.9', 'x-forwarded-for': '203.0.113.7' });
+    expect(res.status).toBe(200);
+    const { rows } = await sql<{ ipAddress: string | null; userAgent: string | null }>`select "ipAddress", "userAgent" from auth."session"`.execute(db);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) expect(r).toEqual({ ipAddress: null, userAgent: null });
+  });
+});
+
 describe('with a session', () => {
   it('/api/me says who it is, and our own user row is made on the first request and reused after', async () => {
     const cookie = await signUp('a@example.com', 'Ada');
