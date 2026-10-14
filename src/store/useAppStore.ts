@@ -489,7 +489,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     });
     if (!ok) return;
-    const label = s ? s.items.map(it => exInfo(get().cfg, it.ex).n).join(' → ') : '';
+    const label = s ? s.items.map(it => exInfo(get().cfg, it.ex).n).join(s.type === 'either' ? ' or ' : ' → ') : '';
     set({ skipNote: skipped ? { week: get().weekKey(), slotId, text: `Skipped${label ? ' ' + label : ''} for this week.`, done: cleared } : null });
     flag(skipped ? 'Skipped for this week' : 'Skip undone');
   },
