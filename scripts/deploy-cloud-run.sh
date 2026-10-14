@@ -254,5 +254,5 @@ case "${1:-}" in
   promote) cmd_promote;;
   discard) cmd_discard;;
   restore) cmd_restore;;
-  *) sed -n '2,22p' "$0"; exit 2;;
+  *) sed -n '2,20p' "$0"; exit 2;;
 esac
