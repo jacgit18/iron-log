@@ -21,6 +21,8 @@ export interface AuthConfig {
   google: { clientId: string; clientSecret: string };
   /** How a sign-in code is delivered (otpEmail.ts). Unset: email-code sign-in is off. */
   sendCode?: SendCode;
+  /** True: only the addresses in `capExempt` (the admins) may use the emailed code, on the server, whatever the app shows. authConfigFrom turns it on unless EMAIL_CODE_OPEN=true. */
+  emailCodeAdminsOnly?: boolean;
   /** Email and password sign-in for automated tests only. Never in production: see createAuth. */
   testSignIn?: boolean;
   /** The most accounts that may exist (SIGNUP_CAP). A new Google account past it is refused; unset means no cap. Existing accounts always sign in. */
@@ -93,9 +95,15 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
     // who knew the address could then keep them out. Here a skipped request is answered as usual and touches nothing.
     hooks: {
       before: createAuthMiddleware(async ctx => {
-        if (ctx.path !== '/email-otp/send-verification-otp') return;
         const body = ctx.body as { email?: unknown; type?: unknown } | undefined;
-        if (body?.type !== 'sign-in' || typeof body.email !== 'string' || allowCode(body.email)) return;
+        const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+        // While the feature is owner-only, anyone else is turned away here, before a code is made, so calling the routes directly
+        // creates no account and sends no mail. The answer is the usual one, so it does not reveal who is an admin.
+        const notYet = config.emailCodeAdminsOnly === true && !config.capExempt?.has(email);
+        if (ctx.path === '/sign-in/email-otp' && notYet) throw new APIError('BAD_REQUEST', { message: 'INVALID_OTP' });
+        if (ctx.path !== '/email-otp/send-verification-otp' || body?.type !== 'sign-in' || !email) return;
+        if (notYet) return ctx.json({ success: true });
+        if (allowCode(email)) return;
         console.warn(JSON.stringify({ msg: 'sign-in code skipped: too many for one address' }));
         return ctx.json({ success: true });
       }),
@@ -171,6 +179,6 @@ export function authConfigFrom(env: NodeJS.ProcessEnv): AuthSetup {
   if (reasons.length) return { enabled: false, reasons };
   return {
     enabled: true,
-    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS) },
+    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, emailCodeAdminsOnly: env.EMAIL_CODE_OPEN !== 'true', signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS) },
   };
 }

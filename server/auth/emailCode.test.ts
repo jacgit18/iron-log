@@ -174,6 +174,29 @@ describe('signing in with an emailed code', () => {
   });
 });
 
+describe('owner-only while EMAIL_CODE_OPEN is not set', () => {
+  const admins = new Set(['owner@example.com']);
+  it('sends nothing, stores nothing and creates no account for anyone else, and answers as usual', async () => {
+    const { base, sent } = await serve({ emailCodeAdminsOnly: true, capExempt: admins });
+    expect((await ask(base, 'stranger@example.com')).status).toBe(200);
+    expect(sent).toHaveLength(0);
+    expect(Number((await sql<{ n: string }>`select count(*) as n from auth."verification"`.execute(db)).rows[0]!.n)).toBe(0);
+    expect((await enter(base, 'stranger@example.com', '123456')).status).toBe(400);
+    expect(await count('user')).toBe(0);
+  });
+  it('lets an admin address through, whatever its letter case', async () => {
+    const { base, sent } = await serve({ emailCodeAdminsOnly: true, capExempt: admins });
+    await ask(base, 'Owner@Example.com');
+    expect(sent).toHaveLength(1);
+    expect((await enter(base, 'Owner@Example.com', sent[0]!.otp)).status).toBe(200);
+  });
+  it('is the default from the environment, and EMAIL_CODE_OPEN=true releases it to everyone', () => {
+    const env = { BETTER_AUTH_SECRET: 'x'.repeat(40), GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 's', BASE_URL: 'http://localhost:3002', DATABASE_URL: 'postgres://u@h/d', RESEND_API_KEY: 're_x' };
+    expect(authConfigFrom(env)).toMatchObject({ config: { emailCodeAdminsOnly: true } });
+    expect(authConfigFrom({ ...env, EMAIL_CODE_OPEN: 'true' })).toMatchObject({ config: { emailCodeAdminsOnly: false } });
+  });
+});
+
 describe('resendSender', () => {
   const ok = () => new Response('{"id":"x"}', { status: 200 });
   it('posts to Resend with the key, the sender, the address and the code, and nothing else of ours', async () => {
