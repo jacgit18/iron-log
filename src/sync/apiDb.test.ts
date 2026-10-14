@@ -682,6 +682,65 @@ describe('conflicts', () => {
     expect(server.rows.get('weeks|2026-10-04')!.data.done).toEqual({ b: true, c: true });
   });
 
+  it('a second save made from the week before a merge, while the merged week waits to be sent, keeps the merged ticks', async () => {
+    // Production 2026-10-12..14, four times: a phone holding an old week saved, a pull brought another device's ticks, the save was merged
+    // in the outbox and its base moved to the pulled row, then the server was slow (the save paused, so the app was never handed the
+    // merge). The next tap, made from the old week, replaced the merged copy and went out against the new base: no merge, ticks gone.
+    const { server, gate, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('weeks/2026-10-04').set(wk({ a: true }));
+    otherDeviceSaves(server, { a: true, b: true });
+    // the first send answers as usual (stale: merged, base moved on), the resend of the merged week finds the server down
+    server.fail.push(undefined as never, down('server'));
+    const first = db.doc('weeks/2026-10-04').set({ ...wk({ a: true }), moved: { x: 2 } });
+    await settle();
+    expect(await first).toBeUndefined(); // paused: the app carries on with its own week
+    const second = db.doc('weeks/2026-10-04').set({ ...wk({ a: true }), moved: { x: 2, y: 3 } }); // the next tap, from the same old week
+    gate.releaseAll();
+    await second; await settle();
+    expect(server.rows.get('weeks|2026-10-04')!.data).toMatchObject({ done: { a: true, b: true }, moved: { x: 2, y: 3 } });
+    expect((await db.doc('weeks/2026-10-04').get()).data().done).toEqual({ a: true, b: true });
+  });
+
+  it('a save made from the merged week the app was shown keeps its untick of the other device\'s tick', async () => {
+    // The board can be given the merged copy before it is sent (a listener that subscribes meanwhile gets it at once): a save made
+    // from that copy is the app's choice, so unticking b there must not bring b back.
+    const { server, gate, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('weeks/2026-10-04').set(wk({ a: true }));
+    otherDeviceSaves(server, { a: true, b: true });
+    server.fail.push(undefined as never, down('server'));
+    await db.doc('weeks/2026-10-04').set({ ...wk({ a: true }), moved: { x: 2 } }); // merged with b, then paused
+    let shown: { done: object } | undefined;
+    db.doc('weeks/2026-10-04').onSnapshot(s => { shown = s.data(); });
+    await settle();
+    expect(shown!.done).toEqual({ a: true, b: true });
+    const saving = db.doc('weeks/2026-10-04').set({ ...wk({ a: true }), moved: { x: 2 } }); // b unticked on the week it was shown
+    gate.releaseAll();
+    await saving; await settle();
+    expect(server.rows.get('weeks|2026-10-04')!.data.done).toEqual({ a: true });
+  });
+
+  it('a save made while a stale week is on its way is not overwritten by that week\'s merge', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('weeks/2026-10-04').set(wk({ a: true }));
+    otherDeviceSaves(server, { a: true, b: true });
+    // the next tap is saved while the first save's request is on its way (and answered stale)
+    let second: Promise<unknown> | undefined;
+    const send = server.transport.command;
+    server.transport.command = (name, env) => {
+      second ??= db.doc('weeks/2026-10-04').set({ ...wk({ a: true }), moved: { x: 2, y: 3 } });
+      return send(name, env);
+    };
+    await db.doc('weeks/2026-10-04').set({ ...wk({ a: true }), moved: { x: 2 } });
+    await second; await settle();
+    expect(server.rows.get('weeks|2026-10-04')!.data).toMatchObject({ done: { a: true, b: true }, moved: { x: 2, y: 3 } });
+  });
+
   it('a week saved after the pull landed is not merged again', async () => {
     const { server, db } = setup();
     db.start();
