@@ -2,7 +2,7 @@ import { useState, type DragEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, exInfo } from '../../lib/data.js';
-import { DAYS, lastLog, describe, todayCol } from '../../lib/logic.js';
+import { DAYS, colOf, lastLog, describe, todayCol } from '../../lib/logic.js';
 import { ymd, weekStartOf } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
@@ -12,7 +12,8 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
   const cfg = useAppStore(s => s.cfg);
   const items = useAppStore(s => s.experiments);
   const logs = useAppStore(s => s.logs);
-  const rest = useAppStore(s => s.week.rest) || [];
+  const week = useAppStore(s => s.week);
+  const rest = week.rest || [];
   const weekStart = useAppStore(s => s.weekStart);
   const today = useToday(s => s.today);
   const st = useAppStore.getState();
@@ -31,12 +32,15 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
       {!items.length ? <p className="note">Keep exercises you want to try here, then add them to a day.</p> : (
         <ul className="explist">
           {items.map(e => {
-            const n = exInfo(cfg, e.ex).n; const last = lastLog(logs, e.ex); const to = days.includes(pick[e.id]) ? pick[e.id] : def;
+            const n = exInfo(cfg, e.ex).n; const last = lastLog(logs, e.ex);
+            const on = [...new Set((week.extra || []).filter(x => x.ex === e.ex).map(x => colOf(week, x.day)))].sort((a, b) => a - b); // the days of this week it is already on
+            const to = days.includes(pick[e.id]) ? pick[e.id] : def;
             return (
               <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`} draggable="true" onDragStart={ev => onDragStart(ev, 'exp:' + e.id)} onDragEnd={onDragEnd}>
                 {arming === e.id && <span className="rmtag">Will be deleted · tap Delete again</span>}
                 <div><b className="rmname">{n}</b>{e.ph && <> <span className="tag">{PHASES[e.ph].label}</span></>}</div>
                 {e.note && <div className="note">{e.note}</div>}
+                {on.length > 0 && <div className="note onday">On {on.map(d => `Day ${d}`).join(', ')} this week</div>}
                 {last && <div className="lastlog">Last: {describe(last)}</div>}
                 <div className="actions">
                   <label htmlFor={`exp-to-${e.id}`}>Add to</label>
