@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { APIError } from 'better-auth/api';
 import pg from 'pg';
 import { adminsFrom } from '../admin.ts';
+import { POOL_OPTIONS } from '../db/poolOptions.ts';
 
 /* ---------- Sign-in: Better Auth inside our API (ADR 004) ----------
    Google only, no plugins. Sessions are server-side rows with a 30-day sliding lifetime, so a two-day offline gap never forces
@@ -33,7 +34,7 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
     throw new Error('testSignIn (email and password sign-in) is for tests only and cannot be enabled when NODE_ENV is not development or test');
   }
   const origin = new URL(config.baseURL);
-  const pool = new pg.Pool({ connectionString: config.databaseUrl });
+  const pool = new pg.Pool({ connectionString: config.databaseUrl, ...POOL_OPTIONS, max: 5 });
   // An idle pooled connection can be dropped at any time (a database restart, Neon scaling to zero). pg reports that as an 'error'
   // event on the pool; with no listener Node would crash the whole process (see createDb, which does the same for the other pool).
   pool.on('error', err => {
