@@ -4,7 +4,7 @@ import { toNodeHandler } from 'better-auth/node';
 import compression from 'compression';
 import express from 'express';
 import { sql, type Kysely, type Transaction } from 'kysely';
-import type { Admins } from './admin.ts';
+import { requireAdmin, type Admins } from './admin.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import { bodyLimit } from './bodyLimit.ts';
@@ -13,6 +13,8 @@ import { clientErrors } from './clientErrors.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { errorHandler } from './errorHandler.ts';
 import { originGuard } from './originGuard.ts';
+import { pushRoutes } from './push/routes.ts';
+import type { PushScheduler } from './push/scheduler.ts';
 import { byUser, rateLimit, type Limit } from './rateLimit.ts';
 import { securityHeaders } from './securityHeaders.ts';
 import { AUTH_CHECK_PAGE } from './dev/authCheckPage.ts';
@@ -44,6 +46,8 @@ export interface AppDeps {
   trustProxy?: number | boolean;
   /** Limits on /api/auth per client IP: starting a sign-in is the expensive, abusable call. Defaults below. */
   authLimits?: { signIn: Limit; other: Limit };
+  /** Web Push (ADR 044): the public VAPID key the browser subscribes with, and what schedules a later send. Without a key the routes answer 503. */
+  push?: { publicKey?: string; scheduler?: PushScheduler; now?: () => number };
   /** Limits on the rest of the API (see LIMITS). They are generous: a phone back online after two days sends a burst. */
   limits?: Partial<typeof LIMITS>;
 }
@@ -63,6 +67,8 @@ const LIMITS = {
   healthDb: { max: 30, windowMs: 60_000 } as Limit,
   // Erasing data or deleting the account: a handful an hour is already far more than anyone means to do.
   account: { max: 5, windowMs: 60 * 60_000 } as Limit,
+  // Push: a timer or a tick schedules or cancels, so a busy session sends a few a minute. A loop is what this stops.
+  push: { max: 60, windowMs: 60_000 } as Limit,
 };
 
 const DB_HEALTH_TTL_MS = 5_000;
@@ -81,7 +87,7 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
@@ -146,6 +152,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
   app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));
   app.use('/api/sync', rateLimit(limits.sync, undefined, byUser));
+  // Web Push (ADR 044). Admin-only first: it is the first usage-based cost, so every route is behind requireAdmin until it is released.
+  if (db) app.use('/api/push', requireAdmin, rateLimit(limits.push, undefined, byUser), pushRoutes({ db, ...push }));
   app.post('/api/account/erase-data', rateLimit(limits.account, undefined, byUser), async (req, res) => {
     const result = await eraseMyData(db!, String(res.locals.userId), req.body);
     res.status(result.status).json(result.body);
