@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useAppStore, flag } from './useAppStore.js';
+import { cancelPush, pushCovers, schedulePush } from '../lib/pushClient.js';
 import { restNotifyOn, showRestNotice, clearRestNotice } from '../lib/restNotify.js';
 
 // Kept apart from the app store so the 250 ms tick only re-renders the timer bar.
@@ -78,18 +79,19 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
   start(mode, secs, label, from = Date.now()) {
     set({ mode, dur: secs, end: from + secs * 1000, paused: null, label });
-    beeped = {}; if (iv) clearInterval(iv); iv = setInterval(tick, 250); wake(true); arm();
+    beeped = {}; if (iv) clearInterval(iv); iv = setInterval(tick, 250); wake(true); arm(); pushPhase();
     try { actx = actx || new (audioCtor())(); actx.resume?.(); } catch { /* audio unavailable */ }
     tick();
   },
   startRest() { set({ sets: 0 }); get().start('rest', restSecs() || 90, 'Rest'); },
   startHold(exName, sets, hold) { set({ sets, set: 1, hold, exName }); get().start('hold', hold, `Hold · ${exName}`); },
-  stop() { if (iv) clearInterval(iv); iv = null; disarm(); set({ mode: null }); wake(false); },
+  stop() { if (iv) clearInterval(iv); iv = null; disarm(); set({ mode: null }); wake(false); cancelPush('rest'); },
   togglePause() {
     const s = get();
     if (s.paused != null) set({ end: Date.now() + s.paused * 1000, paused: null });
     else set({ paused: s.remaining() });
     arm();
+    if (get().paused != null) cancelPush('rest'); else pushPhase();
   },
   nudge(d) {
     const s = get();
@@ -97,6 +99,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
     else set({ end: Math.max(Date.now() + 1000, s.end + d * 1000) });
     set({ dur: Math.max(get().dur, get().remaining()) });
     arm();
+    pushPhase();
   },
 }));
 
@@ -108,6 +111,13 @@ function endNote(t: TimerState): string {
   return t.sets ? `${t.exName}: all ${t.sets} holds done.` : 'Hold done.';
 }
 
+// Web Push (ADR 044): the server sends the end of this phase if the phone has locked and the page cannot. The key is the end time, so a
+// phase that is paused, nudged or replaced asks again under a new key and a late cancel of an old one cannot hit it.
+function pushPhase() {
+  const t = useTimerStore.getState();
+  if (t.mode && t.paused == null && t.end > Date.now() + 1000) schedulePush('rest', String(t.end), t.end, endNote(t));
+}
+
 function tick() {
   const t = useTimerStore.getState();
   if (!t.mode) return; // the interval and the end timeout can both land on the same moment
@@ -117,7 +127,10 @@ function tick() {
     // Seconds past the end (remaining() stops at 0, so read the clock). A phase that ended while the page was hidden is
     // announced by the notification, not by a beep and a buzz that arrive late when the person comes back.
     if ((Date.now() - t.end) / 1000 <= 2) { beep(990, 300); buzz([200, 80, 200]); }
-    if (hidden() && restNotifyOn()) showRestNotice(endNote(t));
+    // With the app in front the page already beeped, so the phase's push is taken back before it fires; with it away, the push (if the server
+    // took it) is the notice, and the local one would be a second.
+    if (!hidden()) cancelPush('rest', String(t.end));
+    if (hidden() && restNotifyOn() && !pushCovers('rest', String(t.end))) showRestNotice(endNote(t));
     // The next phase starts when this one ended, not now, so a catch-up after a long absence lands in the right place.
     if (t.mode === 'hold' && t.sets) {
       if (t.set < t.sets) {

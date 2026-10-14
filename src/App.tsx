@@ -27,6 +27,7 @@ import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import { lazyTab } from './lib/lazyTab.js';
+import { renewPush } from './lib/pushClient.js';
 
 // The Board (the first screen) and the shell are in the main bundle; the other tabs are fetched when first opened. Every chunk is in the
 // service worker's precache, so they open offline too.
@@ -91,6 +92,7 @@ export default function App() {
   };
   // A note set just before a reload (Erase everything), said once now that the page is back.
   useEffect(() => { const t = takeAfterReload(); if (t) flag(t); }, []);
+  useEffect(() => { void renewPush(); }, []); // a browser can drop a push subscription; this puts it back (admin-only, and only if this device turned push on)
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') closeModal(); };
     document.addEventListener('keydown', onKey);

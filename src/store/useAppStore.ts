@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { AppState, OrderNote, OrderState } from './types.ts';
 import type { Cfg, FlatSlot, GroceryMonth, LibraryItem, LogEntry, Logs, PhaseKey, ProgKey, Program, Stretch, Week, WeekLayout } from '../types.ts';
 import { catalogPickError, catalogSnapshot } from '../lib/catalogExercise.js';
+import { trackNudge } from '../lib/dayNudge.js';
 import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR, listBuiltinExercises, isOwnExercise, isCatalogId } from '../lib/data.js';
 import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.js';
 import {
@@ -407,6 +408,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     new Set([...Object.keys(before.done || {}), ...Object.keys(after)]).forEach(k => { if (!!(before.done || {})[k] !== !!after[k]) done[k] = !!(before.done || {})[k]; });
     const unticked = Object.values(done).some(Boolean);
     get().suggestOrder(slots, before);
+    if (get().weekKey() === ymd(weekStartOf(new Date()))) trackNudge(before, get().week, slots); // only this week's days are worth a nudge
     if (removeLogged && unticked) {
       const text = `Unchecked${label ? ' ' + label : ''}${gone ? ` · removed ${gone} logged ${gone === 1 ? 'entry' : 'entries'}` : ''}.`;
       set({ uncheckNote: { week: get().weekKey(), text, entries, done } });
