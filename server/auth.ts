@@ -3,6 +3,7 @@ import type { RequestHandler } from 'express';
 import { sql, type Kysely, type Transaction } from 'kysely';
 import { isAdmin, type Admins } from './admin.ts';
 import type { Auth } from './auth/betterAuth.ts';
+import { TRANSACTION_LIMITS } from './db/poolOptions.ts';
 import type { DB } from './db/types.ts';
 
 // Who is calling (ADR 004). Everything after this reads one value, res.locals.userId, our own users.id.
@@ -72,7 +73,7 @@ export const devAuth = (db: Kysely<DB>): RequestHandler => sessionAuth(db);
 // is_local = true is SET LOCAL, so it ends with the transaction and cannot leak to the next user of a pooled connection.
 export function inUserTransaction<T>(db: Kysely<DB>, userId: string, fn: (trx: Transaction<DB>) => Promise<T>): Promise<T> {
   return db.transaction().execute(async trx => {
-    await sql`select set_config('app.user_id', ${userId}, true)`.execute(trx);
+    await sql`select set_config('app.user_id', ${userId}, true), set_config('statement_timeout', ${TRANSACTION_LIMITS.statement_timeout}, true), set_config('idle_in_transaction_session_timeout', ${TRANSACTION_LIMITS.idle_in_transaction_session_timeout}, true)`.execute(trx);
     return fn(trx);
   });
 }

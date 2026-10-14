@@ -60,6 +60,13 @@ describe('the error handler', () => {
     }
   });
 
+  it('keeps a 4xx the error already carries, and does not log it as an ERROR', async () => {
+    const res = await fetch(`${await throwing(Object.assign(new Error('Unsupported charset'), { status: 415 }))}/boom`);
+    expect(res.status).toBe(415);
+    expect(await res.json()).toMatchObject({ ok: false, error: 'the request could not be understood' });
+    expect(JSON.parse(String((console.error as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0])).severity).toBe('WARNING');
+  });
+
   it('does not take a plain Error for database trouble', () => {
     expect(isDatabaseTrouble(new Error('boom'))).toBe(false);
     expect(isDatabaseTrouble('nope')).toBe(false);
@@ -88,7 +95,7 @@ describe('the app', () => {
   it('answers a malformed body on /api/commands with a JSON error, not a stack page', async () => {
     const base = await listen(createApp());
     const res = await post(base, '/api/commands/tick-card', '{not json');
-    expect([400, 401, 503]).toContain(res.status);
+    expect(res.status).toBe(400);
     expect(res.headers.get('content-type')).toMatch(/json/);
   });
 });

@@ -6,8 +6,11 @@ export const POOL_OPTIONS = {
   // Waiting for a free connection, or for Neon to wake from scale-to-zero, longer than this is an error the phone can retry.
   connectionTimeoutMillis: 10_000,
   idleTimeoutMillis: 30_000,
-  // A query that runs this long is stuck; the server cancels it and the request gets a 503.
-  statement_timeout: 15_000,
-  // A transaction left open by a crashed request would hold its row locks; the server ends it.
-  idle_in_transaction_session_timeout: 15_000,
+  // Client-side backstop for a query that never answers. The server-side limits (statement_timeout, idle_in_transaction_session_timeout)
+  // are NOT set here: node-postgres would send them as startup parameters, which Neon's pooled (PgBouncer) endpoint, the one production
+  // uses, refuses or ignores. They are applied per transaction instead (TRANSACTION_LIMITS, used by inUserTransaction).
+  query_timeout: 20_000,
 } as const;
+
+/** Server-side limits, set with SET LOCAL at the start of each transaction so they work through a transaction pooler. */
+export const TRANSACTION_LIMITS = { statement_timeout: '15s', idle_in_transaction_session_timeout: '15s' } as const;

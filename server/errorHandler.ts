@@ -40,7 +40,10 @@ export function errorHandler(): ErrorRequestHandler {
     const tooBig = failure.type === 'entity.too.large';
     const badBody = failure.type?.startsWith('entity.') === true || failure.type === 'encoding.unsupported' || failure.type === 'request.aborted';
     const trouble = !badBody && isDatabaseTrouble(err);
-    const status = tooBig ? 413 : badBody ? 400 : trouble ? 503 : 500;
+    // A 4xx Express or body-parser already chose (a bad percent-escape in a path, an unsupported charset) is the client's mistake, not ours.
+    const given = failure.status ?? failure.statusCode;
+    const clientError = given !== undefined && given >= 400 && given < 500 ? given : null;
+    const status = tooBig ? 413 : badBody ? 400 : clientError ?? (trouble ? 503 : 500);
     console.error(JSON.stringify({
       severity: status >= 500 ? 'ERROR' : 'WARNING',
       msg: 'request failed',
@@ -56,7 +59,7 @@ export function errorHandler(): ErrorRequestHandler {
     if (status === 503) res.set('Retry-After', String(RETRY_AFTER_SECONDS));
     res.status(status).json({
       ok: false,
-      error: tooBig ? 'request body too large' : badBody ? 'request body could not be read' : trouble ? 'the database is busy, try again shortly' : 'something went wrong on the server',
+      error: tooBig ? 'request body too large' : badBody ? 'request body could not be read' : clientError ? 'the request could not be understood' : trouble ? 'the database is busy, try again shortly' : 'something went wrong on the server',
       requestId,
     });
   };
