@@ -103,6 +103,7 @@ describe('normConfig, deeper', () => {
     expect(c.rm).toEqual({ bench: 225 });
     expect('bwGoal' in c).toBe(false);
     expect(c.liftGoals).toEqual({ bench: { any: { w: 315 } } });
+    expect(normConfig({ equipment: { 'x:landmine': ' Landmine ', 'x:': 'no', bad: 'Nope', 'x:long': 'y'.repeat(31), 'x:n': 4, '__proto__': 'x' } }).equipment).toEqual({ 'x:landmine': 'Landmine' });
     expect(c).not.toHaveProperty('backup');
     expect(c).not.toHaveProperty('ghBackup');
     expect(c).not.toHaveProperty('token');

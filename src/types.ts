@@ -86,11 +86,14 @@ export interface LibraryItem {
 export type EquipmentKey = 'band' | 'barbell' | 'bench' | 'bodyweight' | 'cable' | 'dumbbell' | 'ezbar' | 'kettlebell' | 'machine'
   | 'medball' | 'plate' | 'rope' | 'sandbag' | 'shortbar' | 'sled' | 'tire' | 'trapbar' | 'trx' | 'vest' | 'other';
 
+/** Built-in equipment, or one the user added: `x:` and a short slug, named in `cfg.equipment`. */
+export type EquipmentId = EquipmentKey | `x:${string}`;
+
 /** An exercise in the catalog: built-ins, layered with what the user set in `cfg.ex`. */
 export interface ExerciseInfo {
   n: string;
   url?: string;
-  eq?: EquipmentKey;
+  eq?: EquipmentId;
 }
 
 export interface WarmupItem {
@@ -136,6 +139,8 @@ export interface Cfg extends ProgramCfg {
   progNames?: Record<string, string>; // program key ('A', 'B') -> your name for it
   bwGoal?: BodyGoal;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
+  /** Equipment the user added: id (`x:` and a slug) to its name. */
+  equipment?: Record<string, string>;
   rest?: number; // rest timer, seconds
 }
 

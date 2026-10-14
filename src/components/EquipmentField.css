@@ -1,0 +1,10 @@
+.eqadd {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+.eqadd .field {
+  flex: 1 1 160px;
+}
