@@ -160,7 +160,7 @@ describe('choosing a past week’s program', () => {
   });
 });
 
-describe('the board’s + Add exercise on a finished week', () => {
+describe('the board’s + Add to program on a finished week', () => {
   it('opens no sheet and changes no program, since the week shows what it ran', () => {
     useAppStore.setState({ weekStart: addDays(weekStartOf(new Date()), -7), week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} } });
     st().checkCard(firstCard().id, true);
