@@ -1,25 +1,11 @@
-/* Experiments lists (Workout and Stretches share .experiments and .expcard), phone: cards snap into place, every button is a 44px
-   target (the day select already was), and Delete sits apart from Edit so a stray tap misses it. The strip already shows the next
-   card past the edge (cards are 240 to 280px wide); e2e/experimentsPhone.spec.js keeps that true. */
+/* Experiments lists (Workout and Stretches share .experiments and .expcard), phone: cards snap into place as the strip scrolls.
+   Already true without a rule here, and kept true by e2e/experimentsPhone.spec.js: the next card shows past the screen edge (cards
+   are 240 to 280px wide), every button is 44px tall (`.actions .btn` in styles.css), and Delete sits on its own row, not beside Edit. */
 @media (max-width: 700px) {
   .explist {
     scroll-snap-type: x proximity;
-    scroll-padding-inline: 0;
   }
   .expcard {
     scroll-snap-align: start;
-  }
-  .expcard .actions {
-    gap: 8px;
-  }
-  .expcard .actions .btn,
-  .expcard .actions select {
-    min-height: 44px;
-  }
-  .expcard .actions select {
-    flex: 1 1 96px;
-  }
-  .expcard .actions > :last-child {
-    margin-left: auto;
   }
 }
