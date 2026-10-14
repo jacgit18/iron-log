@@ -456,6 +456,13 @@ describe('experiment board', () => {
     expect(st().saveExperiment({ ex: '__new', nn: '' })).toMatch(/Choose an exercise/);
     expect(st().saveExperiment({ ex: '' })).toMatch(/Choose an exercise/);
   });
+  it('adds a catalog exercise picked in the experiment sheet to the library under its catalog id (ADR 036)', () => {
+    const fly = { id: 'c:fedb:Cable_Fly', name: 'Cable Fly', data: { eq: 'cable', muscles: { p: ['chest'] } } };
+    expect(st().saveExperiment({ ex: fly.id, nn: '', cat: fly, ph: 'hyp', note: '' })).toBeNull();
+    expect(st().experiments.at(-1)).toMatchObject({ ex: fly.id, ph: 'hyp' });
+    expect(st().cfg.ex[fly.id]).toEqual({ n: 'Cable Fly', eq: 'cable' });
+    expect(st().cfg.muscleMap[fly.id]).toEqual({ p: ['chest'] });
+  });
   it('adds an entry to a day of this week as a card that follows swaps, and keeps the entry', () => {
     const e = add();
     st().swapDays(6, 1); // column 7 shows the Day 6 workout
