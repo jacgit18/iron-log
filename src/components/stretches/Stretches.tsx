@@ -7,6 +7,7 @@ import { weekStartOf, ymd, addDays, fmtShort, parseDate, DAY_NAMES } from '../..
 import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { motionOK } from '../../lib/motion.js';
+import { useSwipeCard } from '../board/useSwipeCard.js';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import WarmUp from './WarmUp.jsx';
@@ -39,8 +40,10 @@ function GroupCard({ d, name, items, tier }: { d: number; name: string; items: S
   const s = useAppStore.getState();
   const week = useAppStore(x => x.strWeek);
   const ids = items.map((i) => i.id); const all = ids.every((id) => isStretchDone(week, d, id));
+  // Swipe right ticks the whole group, either way puts a done group back: the group checkbox's own action. No skip: that is per day.
+  const sw = useSwipeCard({ state: all ? 'done' : 'open', canDone: true, canSkip: false, act: a => s.setStretchesDone(d, ids, a === 'done') });
   return (
-    <article className={`card${all ? ' done' : ''}`} aria-label={`${name}, ${tier}`}>
+    <article className={`card${all ? ' done' : ''}${sw.className}`} aria-label={`${name}, ${tier}`} {...sw.data} style={sw.style} {...sw.props}>
       <div className="row1">
         <input type="checkbox" className="chk" id={`sgrp-${d}-${tier}-${name}`} checked={all} aria-label={`Mark all of ${name} done`} onChange={e => s.setStretchesDone(d, ids, e.target.checked)} />
         <span className="tag" style={{ alignSelf: 'center' }}>{name}</span>

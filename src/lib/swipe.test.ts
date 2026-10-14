@@ -48,6 +48,11 @@ describe('swipeAction', () => {
     expect(swipeAction(120, 'done', false)).toBe('open');
     expect(swipeAction(-120, 'skipped', false)).toBe('open');
   });
+  it('a card with no skip of its own (a stretch group) ticks right, does nothing left, and goes back either way', () => {
+    expect(swipeAction(120, 'open', true, false)).toBe('done');
+    expect(swipeAction(-120, 'open', true, false)).toBe(null);
+    expect(swipeAction(-120, 'done', true, false)).toBe('open');
+  });
   it('no travel does nothing', () => expect(swipeAction(0, 'open', true)).toBe(null));
   it('names each action for the hint', () => expect(HINT).toEqual({ done: 'Done', skip: 'Skip', open: 'Undo' }));
 });
