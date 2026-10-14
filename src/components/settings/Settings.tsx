@@ -7,7 +7,6 @@ import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../shared/dates.js';
@@ -385,7 +384,6 @@ function Group({ id, title, children }: { id: string; title: string; children: R
 
 export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
-  const restAlert = useFeature('restNotify');
   const cur = useCurrentGroup();
   return (
     <SavedTicks><div className="settings">
@@ -408,7 +406,7 @@ export default function Settings() {
       <Group id="app" title="App">
         <div className="scol">
           <AppearancePanel />
-          {restAlert && <RestAlertPanel />}
+          <RestAlertPanel />
         </div>
         <div className="scol">
           <DevicePanel />
