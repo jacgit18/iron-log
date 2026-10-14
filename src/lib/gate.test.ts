@@ -22,6 +22,14 @@ describe('quickGate', () => {
 });
 
 describe('decideGate', () => {
+  it('a check that throws is reported and handled like offline: the app if the device holds an account, else the landing page', async () => {
+    const seen: unknown[] = [];
+    const boom = async (): Promise<AccountState> => { throw new Error('boom'); };
+    expect(await decideGate(boom, store({ 'sync/owner': 'u1' }), e => seen.push(e))).toBe('app');
+    expect(await decideGate(boom, store(), e => seen.push(e))).toBe('landing-offline');
+    expect(seen).toHaveLength(2);
+  });
+
   it('signed in: the app, and the browser remembers', async () => {
     const s = store();
     expect(await decideGate(async () => signedIn, s)).toBe('app');

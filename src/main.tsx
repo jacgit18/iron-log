@@ -46,8 +46,6 @@ if (quickGate(apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC), L
   openApp();
 } else {
   show(<Splash />);
-  decideGate(createAccountClient({ headers: devHeaders }).me, LS)
-    .then(d => (d === 'app' ? openApp() : show(<Landing offline={d === 'landing-offline'} />)))
-    // If asking who this is fails outright, the Splash would hang for good: show the landing page with its offline note instead.
-    .catch(err => { reportCaught(err); show(<Landing offline />); });
+  decideGate(createAccountClient({ headers: devHeaders }).me, LS, reportCaught)
+    .then(d => (d === 'app' ? openApp() : show(<Landing offline={d === 'landing-offline'} />)));
 }
