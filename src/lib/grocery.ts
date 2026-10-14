@@ -1,3 +1,4 @@
+import { MAX_ITEMS, MAX_STORES, MONTH_RE, monthEmpty, normGroceryItem, normGroceryMonth } from '../shared/grocery.js';
 import { str } from '../shared/stretchWeek.js';
 import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth } from '../types.ts';
 
@@ -6,16 +7,14 @@ import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth } fro
    (`grocery/YYYY-MM`) holds only what happened that month: ticks, counts and prices that differ. Each item is "Every month" (always
    on the list) or "When out" (on the current month's list only while it is out: unchecked on the At home list, ADR 038). A month
    with no saved document is the Every-month items plus whatever is out, nothing ticked, so each month starts fresh and nothing is
-   copied or reset. Prices are whole cents, so totals never drift. */
+   copied or reset. Prices are whole cents, so totals never drift. The cleaning rules live in shared/grocery.ts, which the API uses too. */
 
-export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999;
-export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+export { MAX_CENTS, MAX_ITEMS, MAX_QTY, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
 export const ANYWHERE = 'Anywhere';
 /** Stores offered in the drop-downs before you have used them; picking one adds it to your stores. */
 export const SUGGESTED_STORES = ["BJ's", 'C-Town', 'Whole Foods', 'Flatbush Co-Op', 'Aldi'];
 
 export const emptyGrocery = (): Grocery => ({ stores: [], items: [] });
-export const emptyMonth = (): GroceryMonth => ({ lines: {}, pulled: [] });
 
 /* ---------- Months ---------- */
 export const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -26,12 +25,6 @@ export function shiftMonth(key: string, by: number): string {
 export const monthLabel = (key: string) => new Date(Number(key.slice(0, 4)), Number(key.slice(5)) - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
 /* ---------- Cleaning saved or imported documents ---------- */
-export const cleanQty = (v: unknown): number | null => {
-  const n = typeof v === 'string' ? Number(v) : v;
-  return typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= MAX_QTY ? Math.round(n * 100) / 100 : null;
-};
-export const cleanCents = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= MAX_CENTS ? v : null);
-
 /** Dollars typed in a box ("3.49", "$3.5") to cents, or null when it is not a price. */
 export function parseDollars(text: string): number | null {
   const t = text.trim().replace(/^\$/, '');
@@ -52,13 +45,10 @@ export function normGrocery(d: unknown): Grocery {
   const raw = (d && typeof d === 'object' ? d : {}) as { stores?: unknown; items?: unknown };
   const seen = new Set<string>(); const items: GroceryItem[] = [];
   (Array.isArray(raw.items) ? raw.items : []).forEach((x: unknown) => {
-    const o = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>;
-    const id = str(o.id, 60), n = str(o.n, 80);
-    if (!id || !n || id === '__proto__' || seen.has(id) || items.length >= MAX_ITEMS) return;
-    seen.add(id);
-    // Older data has `once` (an occasional item) instead: it becomes a When-out item that is not out, which is how it behaved.
-    const every = o.every === true || (o.every === undefined && o.once !== true);
-    items.push({ id, n, store: str(o.store, 40), qty: cleanQty(o.qty) ?? 1, cents: cleanCents(o.cents), every, out: !every && o.out === true });
+    const item = normGroceryItem(x);
+    if (!item || seen.has(item.id) || items.length >= MAX_ITEMS) return;
+    seen.add(item.id);
+    items.push(item);
   });
   const stores: string[] = [];
   const addStore = (s: string) => { if (s && !stores.includes(s) && stores.length < MAX_STORES) stores.push(s); };
@@ -66,24 +56,6 @@ export function normGrocery(d: unknown): Grocery {
   items.forEach(i => addStore(i.store));
   return { stores, items: items.map(i => (i.store && !stores.includes(i.store) ? { ...i, store: '' } : i)) };
 }
-
-export function normGroceryMonth(d: unknown): GroceryMonth {
-  const raw = (d && typeof d === 'object' ? d : {}) as { lines?: unknown; pulled?: unknown };
-  const lines: Record<string, GroceryLine> = {};
-  if (raw.lines && typeof raw.lines === 'object') {
-    Object.entries(raw.lines as Record<string, unknown>).slice(0, MAX_ITEMS).forEach(([id, v]) => {
-      if (id === '__proto__' || id.length > 60 || !v || typeof v !== 'object') return;
-      const o = v as Record<string, unknown>; const line: GroceryLine = {};
-      if (o.got === true) line.got = true;
-      const qty = cleanQty(o.qty); if (qty != null) line.qty = qty;
-      const cents = cleanCents(o.cents); if (cents != null) line.cents = cents;
-      if (Object.keys(line).length) lines[id] = line;
-    });
-  }
-  const pulled = [...new Set((Array.isArray(raw.pulled) ? raw.pulled : []).filter((x: unknown): x is string => typeof x === 'string' && x.length > 0 && x.length <= 60))].slice(0, MAX_ITEMS);
-  return { lines, pulled };
-}
-export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length;
 
 /* ---------- Reading a month ---------- */
 /** An item as this month sees it: its count and unit price (the month's, else the catalogue's), and whether it is ticked. */

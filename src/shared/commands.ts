@@ -2,9 +2,10 @@
    One module for what the phone sends and the API accepts. Each command has a name, an input type and a validator;
    the offline queue stores a Command and replays it unchanged. Framework-free: client and server import it. */
 
-import type { BodyEntry, Boost, Experiment, LibraryItem, LogEntry, Program, ProgKey, Stretch, StretchExperiment, StretchWeek, SupplementItem, Week } from '../types.ts';
+import type { BodyEntry, Boost, Experiment, GroceryItem, GroceryMonth, GroceryStore, LibraryItem, LogEntry, Program, ProgKey, Stretch, StretchExperiment, StretchWeek, SupplementItem, Week } from '../types.ts';
 import { LIMITS, normBody, normEntry, normLibrary, normProgram, validDate } from './validate.js';
 import { normConfigDoc, type ConfigDoc } from './config.js';
+import { MONTH_RE, normGroceryItem, normGroceryMonth, normGroceryStore, validGroceryItem, validGroceryStore } from './grocery.js';
 import { normStretchWeek } from './stretchWeek.js';
 import { withAllDays } from '../lib/data.js';
 import { normExperimentItem, normStretchExperimentItem, normStretchItem, normSupplementItem } from './listItems.js';
@@ -233,9 +234,12 @@ export function validateDeleteLibraryItem(input: unknown): DeleteLibraryItemInpu
 }
 
 /** The small lists that are one row per item, in the order they are shown. */
-export const LIST_NAMES = ['stretch', 'stretch_experiment', 'experiment', 'supplement_item'] as const;
+export const LIST_NAMES = ['stretch', 'stretch_experiment', 'experiment', 'supplement_item', 'grocery_item', 'grocery_store'] as const;
 export type ListName = (typeof LIST_NAMES)[number];
-export type ListItem = Stretch | StretchExperiment | Experiment | SupplementItem;
+export type ListItem = Stretch | StretchExperiment | Experiment | SupplementItem | GroceryItem | GroceryStore;
+
+/** The most live items a list may hold, where there is a limit (the grocery list's, ADR 039). The API refuses a new item past it. */
+export const LIST_CAPS: Partial<Record<ListName, number>> = { grocery_item: 500, grocery_store: 30 };
 
 /** Save one item of a list, keyed by the list and the item's own id. `position` is where it sits in the list (0 is first);
  *  moving an item is a save of each item whose position changed. baseVersion is the version the user saw, or null when
@@ -252,6 +256,9 @@ const LIST_ITEM_CLEANERS: Record<ListName, (x: unknown) => ListItem | null> = {
   stretch_experiment: normStretchExperimentItem,
   experiment: normExperimentItem,
   supplement_item: x => normSupplementItem(x),
+  // The grocery list is checked, not cleaned: a name too long or a count out of range is refused, as the app never sends one.
+  grocery_item: x => (validGroceryItem(x) ? normGroceryItem(x) : null),
+  grocery_store: x => (validGroceryStore(x) ? normGroceryStore(x) : null),
 };
 const validList = (v: unknown): v is ListName => LIST_NAMES.includes(v as ListName);
 const validId = (v: unknown): v is string => typeof v === 'string' && v.length >= 1 && v.length <= LIMITS.text.id;
@@ -275,4 +282,32 @@ export function validateDeleteListItem(input: unknown): DeleteListItemInput | nu
   if (!input || typeof input !== 'object') return null;
   const { list, id } = input as Record<string, unknown>;
   return validList(list) && validId(id) ? { list, id } : null;
+}
+
+/** Replace the whole document for one month of the grocery list (`grocery/YYYY-MM`): its lines by item id and the old pulled ids. The
+ *  month is the key. baseVersion is the version the user saw, or null when the phone has never seen a row for that month. */
+export interface SaveGroceryMonthInput {
+  month: string;
+  record: GroceryMonth;
+}
+export type SaveGroceryMonthCommand = Command<'save-grocery-month', SaveGroceryMonthInput>;
+
+export const validMonth = (v: unknown): v is string => typeof v === 'string' && MONTH_RE.test(v);
+
+export function validateSaveGroceryMonth(input: unknown): SaveGroceryMonthInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { month, record } = input as Record<string, unknown>;
+  return validMonth(month) && record && typeof record === 'object' && !Array.isArray(record) ? { month, record: normGroceryMonth(record) } : null;
+}
+
+/** Delete the document for a month (nothing is left on it). baseVersion is the version the user saw (never null). */
+export interface DeleteGroceryMonthInput {
+  month: string;
+}
+export type DeleteGroceryMonthCommand = Command<'delete-grocery-month', DeleteGroceryMonthInput>;
+
+export function validateDeleteGroceryMonth(input: unknown): DeleteGroceryMonthInput | null {
+  if (!input || typeof input !== 'object') return null;
+  const { month } = input as Record<string, unknown>;
+  return validMonth(month) ? { month } : null;
 }
