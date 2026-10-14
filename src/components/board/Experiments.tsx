@@ -5,6 +5,7 @@ import { PHASES, exInfo } from '../../lib/data.js';
 import { DAYS, lastLog, describe, todayCol } from '../../lib/logic.js';
 import { ymd, weekStartOf } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
+import './Experiments.css';
 import RemovedNotice from '../RemovedNotice.jsx';
 
 // The Experiment board: exercises to try, added to a day of the viewed week. `day` is the column shown on phones.
