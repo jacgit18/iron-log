@@ -309,8 +309,8 @@ export default function Board() {
               </div>
               <label className="restchk" id={`restrow-${d}`}><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /> Rest day</label>
               <div className="addrow">
-                {!fromRecord && <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>}
-                <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>
+                {!fromRecord && <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add to program, Day ${d}: stays every week`} onClick={() => st.openAddToProgram(d)}>+ Add to program</button>}
+                <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`This week only: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ This week only</button>
               </div>
               {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
               {open.map((s, i) => {

@@ -5,7 +5,7 @@ import { flag, useAppStore } from '../../store/useAppStore.js';
 import './FirstRun.css';
 
 // Shown when the board has no exercises at all: a brand-new account (ADR 016) or one that removed every card. It offers a starter
-// program (ADR 041) or the same "+ Add exercise" flow each day column has, so there is still only one way to add a single card.
+// program (ADR 041) or the same "+ Add to program" flow each day column has, so there is still only one way to add a single card.
 function StarterRow({ starter }: { starter: Starter }) {
   const [days, setDays] = useState(starter.perWeek[0]!);
   const choices = [...starter.perWeek].sort((a, b) => a - b);
@@ -54,7 +54,7 @@ export default function FirstRun() {
       <div className="actions">
         <button type="button" className="btn primary" id="firstrun-add" onClick={() => st.openAddToProgram(1)}>Build my own: add your first exercise</button>
       </div>
-      <p className="note">Each day below has its own &ldquo;+ Add exercise&rdquo; button, and the Program tab edits the whole week.</p>
+      <p className="note">Each day below has its own &ldquo;+ Add to program&rdquo; button, and the Program tab edits the whole week.</p>
     </section>
   );
 }

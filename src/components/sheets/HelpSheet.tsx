@@ -7,7 +7,7 @@ const GLOSSARY = [
   ['Bodyweight', 'No added weight: the exercise uses your own body.'],
   ['Sets × reps', 'How much to do, for example 4 × 6 means 4 sets of 6 repetitions. For holds, 4 × 30 s means 4 holds of 30 seconds.'],
   ['Experiments', 'A list under the board of exercises you want to try. Add one to a day of this week and it shows as a normal card for that week only; Remove takes it off again. The list itself stays for later weeks.'],
-  ['Add exercise', 'Each day has a + Add exercise button. It opens the add sheet where you pick Primary or Accessory, the section, and single, superset or either/or, and it joins that day of the program every week. + Only this week adds a one-week card instead (Remove takes it off again).'],
+  ['Add exercise', 'Each day has a + Add to program button. It opens the add sheet where you pick Primary or Accessory, the section, and single, superset or either/or, and it joins that day of the program every week. + This week only adds a one-week card instead (Remove takes it off again).'],
   ['Details', 'Each exercise card has a Details button for its name (your own exercises), video link, equipment, 1RM, muscles and a default phase that applies to every card with that exercise.'],
   ['Exercise library', 'On the Program tab, Exercise library lists every exercise with what is set on it. Search, filter by equipment or muscle, edit one exercise in one place, or add a new one. Changes apply everywhere it is used.'],
   ['Sort and filter', 'Above the days, Sort by muscle lists the cards that train that muscle first in each day (primary, then secondary, then the rest). Equipment hides cards that use something else. The day counts stay the same.'],
