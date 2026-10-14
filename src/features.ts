@@ -5,17 +5,12 @@ import { LS } from './lib/storage.js';
 /* ---------- Feature registry (release flags by audience, see feature-flags.md) ----------
    One line per feature that is not for everyone yet:
      'admin' - only an account on the server's ADMIN_EMAILS list sees it (the API tells the app, /api/me `isAdmin`)
-     'all'   - everyone (the flag is done: delete the line and the check when you next touch the feature)
+     'all'   - everyone (the flag is done: delete the line and its check in the same PR, not later; lines left behind are where
+               parallel PRs conflict)
      'off'   - nobody, not even an admin
    A feature missing from the list is hidden from everyone (a forgotten line fails closed, not open). Hiding in the browser is not security: a feature with an API route must also
-   use `requireAdmin` (server/admin.ts). Add a feature with a line here, then `useFeature('name')` in the component. */
-export const FEATURES = {
-  restNotify: 'all', // Rest timer alert panel in Settings (opt-in per device), released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/settings/Settings.tsx when next touched
-  swipeDone: 'all', // Swipe a board card sideways to tick it off (phone, mobile list item 11), released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/board/Card.tsx when next touched
-  grocery: 'all', // Groceries under the Daily tab (ADR 019), released to everyone 2026-10-13 by the owner with a note that the list is kept on this device only (not synced yet): delete this line, the useFeature checks in components/daily/Daily.tsx and components/sheets/ImportSheet.tsx and featureNow('grocery') in the store when next touched
-  installHint: 'all', // One-time "install the app" notice on the board for phones that can install, released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/board/InstallHint.tsx when next touched
-  offlineNotice: 'all', // Slim "Offline" / "Back online, syncing" line under the header when syncing is on, released to everyone 2026-10-13 by the owner: delete this line and the useFeature check in components/OfflineNotice.tsx when next touched
-} satisfies Record<string, Audience>;
+   use `requireAdmin` (server/admin.ts). Add a feature with a line here, in alphabetical order, then `useFeature('name')` in the component. */
+export const FEATURES = {} satisfies Record<string, Audience>;
 
 export type Audience = 'admin' | 'all' | 'off';
 export type FeatureName = keyof typeof FEATURES;
