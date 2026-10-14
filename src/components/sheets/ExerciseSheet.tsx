@@ -3,7 +3,10 @@ import type { PhaseChoice } from '../../store/types.ts';
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isOwnExercise, isCatalogId } from '../../lib/data.js';
-import { MUSCLE_MAP, draftOfTags, tagsOfDraft } from '../../lib/muscles.js';
+import { MUSCLE_MAP, draftOf, draftOfTags, tagsOfDraft } from '../../lib/muscles.js';
+import { catalogSnapshot } from '../../lib/catalogExercise.js';
+import { loadCatalog } from '../../sync/catalogCache.js';
+import { signIn as devHeaders } from '../../sync/devUser.js';
 import MuscleChips from '../muscles/MuscleChips.jsx';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
@@ -25,6 +28,11 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
   const [err, setErr] = useState('');
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   const hasOwnTags = !isNew && !!(cfg.muscleMap && cfg.muscleMap[exId]) && !!MUSCLE_MAP[exId];
+  // A catalog exercise has no built-in default (MUSCLE_MAP), so Use default muscles stays hidden for it; syncing, its catalog tags can be
+  // fetched again instead and put back in the chips, to keep with Save (ADR 026: the snapshot is yours, the catalog is read-only).
+  const syncing = useAppStore(s => s.sync !== null);
+  const fromCatalog = !isNew && isCatalogId(exId) && syncing;
+  const [catNote, setCatNote] = useState('');
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const out = { ...d, ...(tagsTouched ? { tags: tagsOfDraft(tags) } : {}) };
@@ -32,6 +40,15 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
     if (msg) setErr(msg);
   };
   const useDefaultTags = () => { const msg = st.saveExerciseDetails(exId!, { ...d, tags: null }); if (msg) setErr(msg); };
+  const restoreCatalogTags = async () => {
+    setCatNote('Looking it up in the catalog…');
+    const r = await loadCatalog('exercise', devHeaders);
+    if (!r.ok) { setCatNote(r.reason === 'offline' ? 'The catalog needs a connection.' : r.reason === 'refused' ? 'The catalog is not available to this account.' : 'The catalog could not be loaded.'); return; }
+    const item = r.items.find(c => c.id === exId);
+    if (!item) { setCatNote('This exercise is no longer in the catalog.'); return; }
+    setTags(draftOf(catalogSnapshot(item).tags)); setTagsTouched(true);
+    setCatNote('Catalog muscles filled in. Save to keep them.');
+  };
   const remove = () => { const msg = st.deleteExercise(exId!); if (msg) setErr(msg); };
   return (
     <Sheet as="form" noValidate onSubmit={submit}>
@@ -60,6 +77,8 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
         <p className="note">Tap a muscle to cycle: not used → secondary → primary.</p>
         <MuscleChips draft={tags} setDraft={f => { setTags(f); setTagsTouched(true); }} mobId="ex-mob" />
         {hasOwnTags && <button type="button" className="btn sm ghost" onClick={useDefaultTags}>Use default muscles</button>}
+        {fromCatalog && <button type="button" className="btn sm ghost" id="ex-cat-tags" onClick={() => void restoreCatalogTags()}>Use catalog muscles</button>}
+        {catNote && <p className="note" role="status">{catNote}</p>}
       </fieldset>
       {err && <p className="note err" role="alert">{err}</p>}
       <div className="actions">

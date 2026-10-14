@@ -128,11 +128,13 @@ export function muscleNames(cfg: Cfg, id: string, role: 'p' | 's') {
 }
 
 // The muscle tags an exercise has, as editable state: { mob, st: { muscle: 'p' | 's' } }.
-export const draftOfTags = (cfg: Cfg, exId: string) => {
-  const tg: MuscleTags = tagsOf(cfg, exId) || {}; const st: Partial<Record<MuscleKey, 'p' | 's'>> = {};
+/** The muscle chips' draft for a set of tags (none: nothing picked). */
+export const draftOf = (tags: MuscleTags | null | undefined) => {
+  const tg: MuscleTags = tags || {}; const st: Partial<Record<MuscleKey, 'p' | 's'>> = {};
   (tg.p || []).forEach(m => { st[m] = 'p'; }); (tg.s || []).forEach(m => { st[m] = 's'; });
   return { mob: !!tg.mob, st };
 };
+export const draftOfTags = (cfg: Cfg, exId: string) => draftOf(tagsOf(cfg, exId));
 export const tagsOfDraft = (draft: { mob?: boolean; st: Partial<Record<MuscleKey, 'p' | 's'>> }) => {
   const o: MuscleTags = { p: M_KEYS.filter(m => draft.st[m] === 'p'), s: M_KEYS.filter(m => draft.st[m] === 's') };
   if (draft.mob) o.mob = true;

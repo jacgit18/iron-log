@@ -307,3 +307,26 @@ test('a built-in your program uses counts as yours: the catalog never offers a s
   await page.locator('.exlib').getByRole('searchbox').fill('lat pulldown');
   await expect(page.getByRole('region', { name: 'From the catalog' }).getByText('No exercises in the catalog match that, or you have them all.')).toBeVisible();
 });
+
+test('a catalog exercise whose muscles you changed can get the catalog muscles back', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#tab-program');
+  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.locator('.exlib').getByRole('searchbox').fill('cable fly');
+  await page.getByRole('region', { name: 'From the catalog' }).getByRole('button', { name: 'Add Cable Fly from the catalog' }).click();
+  const row = page.locator('.exlib > .exrows .exrow').filter({ hasText: 'Cable Fly' });
+  await expect(row).toContainText('Primary: Chest');
+  // change the muscles: tap Chest (primary → off) and save
+  await page.getByRole('button', { name: 'Edit Cable Fly' }).click();
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Use default muscles' })).toHaveCount(0); // no built-in default for a catalog id
+  await page.getByRole('dialog').getByRole('button', { name: 'Chest · primary' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await expect(row).not.toContainText('Primary: Chest');
+  // and back: fetched from the catalog into the chips, kept with Save
+  await page.getByRole('button', { name: 'Edit Cable Fly' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Use catalog muscles' }).click();
+  await expect(page.getByRole('dialog').getByText('Catalog muscles filled in. Save to keep them.')).toBeVisible();
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Chest · primary' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await expect(row).toContainText('Primary: Chest');
+});

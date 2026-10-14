@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_CFG, normWeek } from './logic.js';
-import { muscleVolume, muscleNames, tagsOf, level, fmtSets, matchesFilter, muscleRank, muscleVolumeAll } from './muscles.js';
+import { muscleVolume, muscleNames, tagsOf, level, fmtSets, matchesFilter, muscleRank, muscleVolumeAll, draftOf, tagsOfDraft } from './muscles.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
 // Day 1: Hack Squat, Hypertrophy (4 × 15)   Day 2: Farmers Carry or DB Lunge, Strength (4 × 6)
@@ -114,5 +114,14 @@ describe('muscles across every program', () => {
     expect(keys).toEqual(['A', 'B']);
     expect(vol.quads.sets).toBe(4); // (4 + 4) / 2
     expect(vol.quads.ex.map(e => [e.ex, e.prog, e.day])).toEqual([['hack', 'A', 1], ['legext', 'B', 2]]);
+  });
+});
+
+describe('draftOf', () => {
+  it('turns tags into the chips draft and back, and nothing into an empty draft', () => {
+    const tags = { p: ['chest'], s: ['triceps'], mob: true };
+    expect(draftOf(tags)).toEqual({ mob: true, st: { chest: 'p', triceps: 's' } });
+    expect(tagsOfDraft(draftOf(tags))).toEqual(tags);
+    expect(draftOf(null)).toEqual({ mob: false, st: {} });
   });
 });
