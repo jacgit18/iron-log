@@ -37,6 +37,9 @@ If `npm test` fails with `Test timed out in 5000ms` while the machine is busy (c
 ## Conventions
 
 - **Styles:** `src/styles.css` has one property per line (`npm run format:css` formats it, `npm run lint` checks it), so two branches editing different properties don't conflict. Put a new component's styles in its own file next to it (`Foo.css`, imported by `Foo.tsx`), not in `styles.css`, so parallel PRs don't add rules at the same spot. That file loads after `styles.css`, so use the component's own class names there; change shared classes in `styles.css`.
+- **Imports:** put a new import line next to the imports from the same folder, not at the end of the block, and add a needed name to an existing `{ … }` in alphabetical order. Two branches that each add a line at the end of the same block conflict.
+- **One open PR per area:** before starting a branch, check the open PRs (`gh pr list`, then `gh pr diff <n> --name-only`). If one already changes the same store slice (`src/store/*Slice.ts` and its test, plus the `AppState` part of `store/types.ts`) or the same component, wait for it to merge and branch off main afterwards. Don't build both at once.
+- **E2E tests:** a new feature gets its own spec file (`e2e/<feature>.spec.js`, like `swipe.spec.js` or `progressVolume.spec.js`). When a test does belong in an existing spec, put it inside the `describe` it belongs to, not at the end of the file. Tests appended at the end of the same file conflict.
 - One change per commit. Do not change behavior inside a refactor or conversion commit.
 - Board reorder and log write paths (`planFix`, `mutateChecks`, `autoLogs`, `addEntry`) must keep the existing tests green: no exercise may be lost or duplicated.
 - Update `feature-map.md` (project docs) in the same PR as any feature or interaction change.
