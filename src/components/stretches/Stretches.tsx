@@ -72,12 +72,13 @@ function Experiments({ day }: { day: number }) {
         <ul className="explist">
           {items.map(e => {
             const to = pick[e.id] ?? day;
+            const on = [...new Set(added.filter(x => x.n === e.n).map(x => x.day))].sort((a, b) => a - b); // the days of this week it is already on
             return (
               <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`}>
                 {arming === e.id && <span className="rmtag">Will be deleted · tap Delete again</span>}
                 <div><b className="rmname">{e.n}</b></div>
                 {e.note && <div className="note">{e.note}</div>}
-                {(() => { const on = [...new Set(added.filter(x => x.n === e.n).map(x => x.day))].sort((a, b) => a - b); return on.length > 0 && <div className="note onday">On {on.map(d => DAY_NAMES[d]).join(', ')} this week</div>; })()}
+                {on.length > 0 && <div className="note onday">On {on.map(d => DAY_NAMES[d]).join(', ')} this week</div>}
                 <Link n={e.n} url={e.url} />
                 <div className="actions">
                   <label htmlFor={`sexp-to-${e.id}`}>Add to</label>

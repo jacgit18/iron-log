@@ -33,7 +33,7 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
         <ul className="explist">
           {items.map(e => {
             const n = exInfo(cfg, e.ex).n; const last = lastLog(logs, e.ex);
-            const on = [...new Set((week.extra || []).filter(x => x.ex === e.ex).map(x => colOf(week, x.day)))].sort((a, b) => a - b); // the days of this week it is already on
+            const on = [...new Set((week.extra || []).filter(x => x.ex === e.ex).map(x => colOf(week, week.moved?.[x.id] || x.day)))].sort((a, b) => a - b); // the days of this week it is already on, where a dragged card now sits
             const to = days.includes(pick[e.id]) ? pick[e.id] : def;
             return (
               <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`} draggable="true" onDragStart={ev => onDragStart(ev, 'exp:' + e.id)} onDragEnd={onDragEnd}>
