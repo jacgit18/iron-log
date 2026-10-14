@@ -29,7 +29,7 @@ describe('followOffset', () => {
   it('is 0 until horizontal, damped, and clamped', () => {
     expect(followOffset(3, 3)).toBe(0);
     expect(followOffset(10, 60)).toBe(0);
-    expect(followOffset(100, 0)).toBeCloseTo(45);
+    expect(followOffset(50, 0)).toBeCloseTo(40);
     expect(followOffset(-1000, 0)).toBe(-MAX_FOLLOW);
   });
 });

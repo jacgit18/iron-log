@@ -8,9 +8,10 @@ export const SWIPE_IGNORE = 'select,input,textarea,button,a,label,summary,[conte
 export const SLOP = 10;
 /** A swipe commits at 25% of the card's width, but never needs more than this many px. */
 export const COMMIT_PX = 90;
-/** The card follows the finger by this fraction of the distance, up to MAX_FOLLOW px. */
-export const FOLLOW = 0.45;
-export const MAX_FOLLOW = 64;
+/** The card follows the finger by this fraction of the distance, up to MAX_FOLLOW px. It slides far enough to uncover the gutter the
+    Done / Skip label sits in (styles.css `.card.swiping`), so the label never lands on the card's own text. */
+export const FOLLOW = 0.8;
+export const MAX_FOLLOW = 72;
 
 export type Axis = 'none' | 'x' | 'y';
 

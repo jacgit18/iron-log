@@ -1800,22 +1800,22 @@ body.timing {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  padding: 3px 10px;
+  padding: 4px 9px;
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--swipe-c);
   border: 1px solid var(--swipe-c);
   font-weight: 700;
   font-size: .75rem;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: var(--swipe-c);
+  color: var(--bg);
   pointer-events: none;
 }
 .card.swiping[data-hint]::before {
-  left: 10px;
+  left: -76px;
 }
 .card.swiping[data-hint]::after {
-  right: 10px;
+  right: -76px;
 }
 .card.swiping[data-dir="right"]::after,.card.swiping[data-dir="left"]::before {
   content: none;
