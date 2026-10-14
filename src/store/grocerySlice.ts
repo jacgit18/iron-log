@@ -199,7 +199,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
     takeGroceryOff(month, id) {
       const it = get().grocery.items.find(i => i.id === id);
       if (!it || it.every) return;
-      if (it.out) get().setGroceryOut(id, false);
+      if (it.out && month === monthKey(new Date())) get().setGroceryOut(id, false);
       if (get().groceryMonths[month]) mutateMonth(month, m => { m.pulled = m.pulled.filter(x => x !== id); delete m.lines[id]; });
     },
   };
