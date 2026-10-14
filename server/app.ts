@@ -94,6 +94,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (auth) {
     // Starting a sign-in (and, in tests, an email sign-in) is limited hard; reading the session, which the app does often, is not.
     app.use('/api/auth/sign-in', rateLimit(authLimits.signIn));
+    // Asking for an emailed code costs an email, so it is limited as hard as signing in.
+    app.use('/api/auth/email-otp', rateLimit(authLimits.signIn));
     app.use('/api/auth', rateLimit(authLimits.other));
     // Better Auth buffers a whole body before it checks it, so the size is judged first (bodyLimit.ts).
     app.use('/api/auth', bodyLimit());

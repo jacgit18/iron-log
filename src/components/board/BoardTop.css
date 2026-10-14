@@ -75,7 +75,7 @@
   .edtop.boardtabtop {
     padding-block: 4px 8px;
   }
-  .boardroot .weeknav .seg.modesel {
+  .edtop.boardtabtop .seg.modesel {
     margin-left: 0;
     padding: 0;
     background: transparent;

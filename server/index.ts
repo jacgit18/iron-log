@@ -39,7 +39,7 @@ const minClientVersion = minVersionFrom(process.env.MIN_CLIENT_VERSION);
 const setup = authConfigFrom({ ...process.env, DATABASE_URL: databaseUrl });
 const auth = setup.enabled ? createAuth(setup.config) : undefined;
 console.log(JSON.stringify(setup.enabled
-  ? { msg: 'sign-in is on', baseURL: setup.config.baseURL, testSignIn: setup.config.testSignIn === true }
+  ? { msg: 'sign-in is on', baseURL: setup.config.baseURL, testSignIn: setup.config.testSignIn === true, emailCode: setup.config.sendCode !== undefined }
   : { msg: 'sign-in is off', reasons: setup.reasons }));
 
 // Outside development and test the development sign-in is refused, so without sign-in nobody can use the API at all. Say so loudly.
