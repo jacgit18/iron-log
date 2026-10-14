@@ -10,7 +10,7 @@ import { PHASES, PH_KEYS, exInfo, videoLabel } from '../../lib/data.js';
 import { eqName } from '../../lib/equipment.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
-import { useSwipeDone } from './useSwipeDone.js';
+import { useSwipeCard } from './useSwipeCard.js';
 import './Card.css';
 import {
   DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, backoffOf, describe, holdPlan,
@@ -54,15 +54,18 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
   const names = s.items.map((i) => exInfo(cfg, i.ex).n);
   const cardName = s.type === 'superset' ? names.join(' → ') : s.type === 'either' ? names.join(' or ') : names[0];
 
-  // Swipe to tick off: same action as the checkbox, so same announcement; cards with their own per-exercise ticks (paired) do not swipe.
-  const swipeOn = !paired;
-  const sw = useSwipeDone({ enabled: swipeOn, done, toggle: on => checkCard(s.id, on) });
+  // Swipe right to tick off, left to skip, either way to put a done or skipped card back: the checkbox's and Skip button's own actions,
+  // so the same announcements and notices. Cards ticked per exercise (paired) only swipe to skip or back.
+  const sw = useSwipeCard({
+    state: sk ? 'skipped' : done ? 'done' : 'open', canDone: !paired,
+    act: a => (a === 'done' ? checkCard(s.id, true) : a === 'skip' || sk ? skipCard(s.id) : checkCard(s.id, false)),
+  });
 
   return (
     <article
       aria-labelledby={`h-${s.id}-0`}
       className={`card${done ? ' done' : ''}${sk ? ' skipped' : ''}${dragging ? ' dragging' : ''}${removing ? ' removing' : ''}${sw.className}`}
-      data-hint={sw.hint}
+      {...sw.data}
       style={sw.style}
       {...sw.props}
       draggable="true"

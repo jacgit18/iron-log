@@ -67,6 +67,8 @@ export default function Board() {
   const showOrder = orderNote && orderNote.week === wk;
   const uncheckNote = useAppStore(s => s.uncheckNote);
   const showUncheck = uncheckNote && uncheckNote.week === wk;
+  const skipNote = useAppStore(s => s.skipNote);
+  const showSkip = skipNote && skipNote.week === wk && !!(week.skipped || {})[skipNote.slotId]; // gone once the card is back
 
   // Phones show one day; default to the first day that still has open work.
   let day = mDay;
@@ -195,6 +197,15 @@ export default function Board() {
             <div className="actions">
               <button type="button" className="btn sm" onClick={st.undoUncheck}>Undo</button>
               <button type="button" className="btn sm ghost" onClick={st.dismissUncheck}>Dismiss</button>
+            </div>
+          </div>
+        )}
+        {showSkip && (
+          <div className="notice" role="status">
+            <div>{skipNote.text}</div>
+            <div className="actions">
+              <button type="button" className="btn sm" onClick={st.undoSkip}>Undo</button>
+              <button type="button" className="btn sm ghost" onClick={st.dismissSkip}>Dismiss</button>
             </div>
           </div>
         )}

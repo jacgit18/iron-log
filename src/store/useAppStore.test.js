@@ -65,6 +65,48 @@ describe('checking off on the board', () => {
     expect(st().week.done['A-d1s6#0']).toBe(true);
   });
 
+  it('skipping leaves a notice whose Undo un-skips the card and puts back the ticks and entry the skip cleared', () => {
+    useAppStore.setState({ skipNote: null });
+    st().skipCard('A-d3s1');
+    expect(st().skipNote).toMatchObject({ slotId: 'A-d3s1', week: st().weekKey(), done: [] });
+    expect(st().skipNote.text).toMatch(/^Skipped .+ for this week\.$/);
+    st().undoSkip();
+    expect(st().week.skipped['A-d3s1']).toBeUndefined();
+    expect(st().skipNote).toBe(null);
+    // A done card (the ⋯ Skip button can skip one): the skip clears its tick and planned entry, Undo brings both back.
+    st().checkCard('A-d3s1', true);
+    st().skipCard('A-d3s1');
+    expect(st().week.done['A-d3s1']).toBeUndefined();
+    expect(st().logs.hack).toEqual([]);
+    st().undoSkip();
+    expect(st().week.skipped['A-d3s1']).toBeUndefined();
+    expect(st().week.done['A-d3s1']).toBe(true);
+    expect(st().logs.hack).toHaveLength(1);
+  });
+
+  it('un-skipping the card another way drops the skip notice, and a late Undo changes nothing', () => {
+    useAppStore.setState({ skipNote: null });
+    st().skipCard('A-d3s1');
+    const note = st().skipNote;
+    st().skipCard('A-d3s1'); // the card's own Undo skip
+    expect(st().skipNote).toBe(null);
+    useAppStore.setState({ skipNote: note }); // a stale notice
+    st().checkCard('A-d3s1', true);
+    st().undoSkip();
+    expect(st().week.skipped['A-d3s1']).toBeUndefined();
+    expect(st().week.done['A-d3s1']).toBe(true);
+  });
+
+  it('un-skipping another card keeps this card\'s notice, and a batch skip drops it', () => {
+    useAppStore.setState({ skipNote: null });
+    st().skipCard('A-d3s1');
+    st().skipCard('A-d1s1'); // the newest skip owns the notice
+    st().skipCard('A-d3s1'); // un-skip the older card
+    expect(st().skipNote).toMatchObject({ slotId: 'A-d1s1' }); // un-skipping another card leaves it alone
+    st().skipCards(['A-d1s2']);
+    expect(st().skipNote).toBe(null);
+  });
+
   it('checking a whole day logs every card on it, and skipping a card removes its entry', () => {
     st().checkDay(3, true);
     const day3 = st().activeSlots().filter(s => s.day === 3);
