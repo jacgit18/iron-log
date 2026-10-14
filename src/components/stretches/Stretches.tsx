@@ -1,9 +1,9 @@
-import type { Stretch, StretchTier, StretchWeek } from '../../types.ts';
+import type { Stretch, StretchTier } from '../../types.ts';
 import type { AppState } from '../../store/types.ts';
 import { useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { weekStartOf, ymd, addDays, fmtShort, parseDate, DAY_NAMES } from '../../shared/dates.js';
+import { weekStartOf, ymd, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
 import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { motionOK } from '../../lib/motion.js';
@@ -11,6 +11,7 @@ import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
+import './Stretches.css';
 
 const DAYS7 = Array.from({ length: STRETCH_DAYS }, (_, i) => i);
 
@@ -22,7 +23,7 @@ function Row({ d, s, id, n, url, note, extra, removing }: { d: number; s: AppSta
   const week = useAppStore(x => x.strWeek);
   const done = isStretchDone(week, d, id);
   return (
-    <div className={`ex${done ? ' idone' : ''}${removing ? ' removing' : ''}`}>
+    <div className={`ex strrow${done ? ' idone' : ''}${removing ? ' removing' : ''}`}>
       {removing && <span className="rmtag">Will be removed · tap Remove again</span>}
       <div className="exname">
         <input type="checkbox" className="chk" id={`schk-${d}-${id}`} checked={done} aria-label={`Mark ${n} done`} onChange={e => s.setStretchDone(d, id, e.target.checked)} />
@@ -41,25 +42,13 @@ function GroupCard({ d, name, items, tier }: { d: number; name: string; items: S
   const ids = items.map((i) => i.id); const all = ids.every((id) => isStretchDone(week, d, id));
   return (
     <article className={`card${all ? ' done' : ''}`} aria-label={`${name}, ${tier}`}>
-      <div className="row1">
+      <div className="row1 grphead">
         <input type="checkbox" className="chk" id={`sgrp-${d}-${tier}-${name}`} checked={all} aria-label={`Mark all of ${name} done`} onChange={e => s.setStretchesDone(d, ids, e.target.checked)} />
-        <span className="tag" style={{ alignSelf: 'center' }}>{name}</span>
+        <span className="tag">{name}</span>
+        <span className="count" aria-hidden="true">{ids.filter((id) => isStretchDone(week, d, id)).length}/{ids.length}</span>
       </div>
       {items.map((i) => <Row key={i.id} d={d} s={s} id={i.id} n={i.n} url={i.url} note={i.note} />)}
     </article>
-  );
-}
-
-function Summary({ items, week, today, wk }: { items: Stretch[]; week: StretchWeek; today: Date; wk: string }) {
-  const thisWeek = ymd(weekStartOf(today)) === wk;
-  const t = thisWeek ? dayTally(items, week, today.getDay()) : null;
-  const days = weekDaysDone(items, week);
-  return (
-    <div className="bwrow" role="status">
-      <span className="bwl">{thisWeek ? 'Stretching this week' : 'Stretching, week of ' + fmtShort(parseDate(wk))}</span>
-      <b>{days} of {weekDaysCounted(week)} days complete</b>
-      {t && t.total > 0 && <span className="note">Today {t.done} of {t.total}</span>}
-    </div>
   );
 }
 
@@ -118,10 +107,12 @@ export default function Stretches() {
   const primary = groupsOf(items, 'primary'); const secondary = groupsOf(items, 'secondary');
   const days = weekDaysDone(items, week);
   const counted = weekDaysCounted(week);
+  const todayTally = thisWeek ? dayTally(items, week, today.getDay()) : null;
+  const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose Skip day button is showing
   const pct = counted ? Math.round(days / counted * 100) : 0;
 
   return (
-    <div>
+    <div className="strroot">
       <div className="weekbar">
         <div className="weeknav">
           <button type="button" className="btn sm" aria-label="Previous week" onClick={() => s.gotoWeek('prev')}>‹</button>
@@ -130,12 +121,11 @@ export default function Stretches() {
           {!thisWeek && <button type="button" className="btn sm ghost" onClick={() => s.gotoWeek('today')}>This week</button>}
         </div>
         <div className="progress">
-          <span>{days} of {counted} days done{counted < STRETCH_DAYS ? ` · ${STRETCH_DAYS - counted} skipped` : ''}</span>
+          <span role="status">{days} of {counted} days done{counted < STRETCH_DAYS ? ` · ${STRETCH_DAYS - counted} skipped` : ''}{todayTally && todayTally.total > 0 ? ` · Today ${todayTally.done} of ${todayTally.total}` : ''}</span>
           <div className="bar"><i style={{ width: `${pct}%` }} /></div>
         </div>
       </div>
       {items.length === 0 && <StretchFirstRun />}
-      <Summary items={items} week={week} today={today} wk={wk} />
 
       <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
         const n = { ArrowRight: day + 1, ArrowLeft: day - 1, Home: 0, End: STRETCH_DAYS - 1 }[e.key]; if (n == null) return;
@@ -159,7 +149,7 @@ export default function Stretches() {
           const extras = extrasOn(week, d);
           const allIds = [...items.filter(i => i.tier === 'primary').map(i => i.id), ...extras.map(x => x.id)];
           return (
-            <section key={d} id={`scol-${d}`} aria-labelledby={`scolh-${d}`} className={`col${t.full || t.skipped ? ' complete' : ''}${d === day ? ' sel' : ''}`}>
+            <section key={d} id={`scol-${d}`} aria-labelledby={`scolh-${d}`} className={`col${t.full || t.skipped ? ' complete' : ''}${t.skipped ? ' skipd' : ''}${d === day ? ' sel' : ''}${dayMore === d ? ' more' : ''}`}>
               <div className="colhead">
                 <input type="checkbox" className="chk" id={`sday-${d}`} checked={t.full} disabled={!allIds.length || t.skipped} aria-label={`Mark all of ${DAY_NAMES[d]} done`} onChange={e => s.setStretchesDone(d, allIds, e.target.checked)} />
                 <div>
@@ -167,8 +157,10 @@ export default function Stretches() {
                   <div className="sub daydate">{String(date.getMonth() + 1).padStart(2, '0')}/{String(date.getDate()).padStart(2, '0')}</div>
                 </div>
                 <span className="count">{t.skipped ? 'Skipped' : `${t.done}/${t.total}`}</span>
+                <button type="button" className="btn sm ghost daymore" id={`sdaymore-${d}`} aria-expanded={dayMore === d} aria-controls={`sskiprow-${d}`} aria-label={`More for ${DAY_NAMES[d]}: skip day`}
+                  onClick={() => setDayMore(dayMore === d ? null : d)}><span aria-hidden="true">⋯</span></button>
               </div>
-              <div className="addrow">
+              <div className="addrow" id={`sskiprow-${d}`}>
                 <button type="button" className="btn sm ghost" id={`sskip-${d}`} aria-pressed={!!t.skipped} aria-label={t.skipped ? `Undo skip for ${DAY_NAMES[d]}` : `Skip ${DAY_NAMES[d]}`} onClick={() => s.skipStretchDay(d, !t.skipped)}>{t.skipped ? 'Undo skip' : 'Skip day'}</button>
               </div>
               <RemovedNotice scope={`sday:${wk}:${d}`} />
