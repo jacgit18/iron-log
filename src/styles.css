@@ -173,6 +173,15 @@ body.timing{padding-bottom:130px}
 .bx{height:22px;line-height:22px;text-align:center;font-size:.6875rem;color:var(--muted);white-space:nowrap}
 .bcol.cur .bx{color:var(--ink);font-weight:600}
 .chg{display:flex;flex-direction:column;gap:2px}
+/* Weekly volume: the muscle picker; Personal bests: one tappable row per best (name, value, then date and the best it beat) */
+.volpick select{max-width:100%}
+.bests{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.bestrow{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:0;width:100%;min-height:44px;border:0;border-bottom:1px solid var(--line);background:transparent;padding:6px 2px;text-align:left;color:var(--ink);font-size:.875rem;border-radius:0}
+.bests li:last-child .bestrow{border-bottom:0}
+.bestrow:hover{background:var(--sunk)}
+.bname{min-width:0;overflow-wrap:anywhere}
+.bval{text-align:right;white-space:nowrap}
+.bwas{grid-column:1 / -1;color:var(--muted);font-size:.8125rem}
 .chrow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(80px,1fr) 92px;gap:10px;align-items:center;padding:5px 6px;border-radius:8px;outline:none}
 .chrow:hover,.chrow.tipon,.chrow:focus-visible{background:var(--sunk)}
 .chn{font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
@@ -206,7 +215,7 @@ body.timing{padding-bottom:130px}
 @media (max-width:700px){
   .kpis{grid-template-columns:1fr 1fr}
   .kpis .kpi:first-child:nth-last-child(odd){grid-column:1 / -1}
-  .tgrid{grid-template-columns:1fr}
+  .tgrid{grid-template-columns:minmax(0,1fr)}
   .bx.alt,.heat .hx.alt{visibility:hidden}
   .chrow{grid-template-columns:minmax(0,1fr) 104px;grid-template-areas:"n v" "b b";row-gap:4px}
   .chn{grid-area:n} .chv{grid-area:v} .chbar{grid-area:b}

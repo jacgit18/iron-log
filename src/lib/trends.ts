@@ -1,7 +1,7 @@
-import type { Cfg, LogEntry, Logs, Program, Week, WeightChange } from '../types.ts';
+import type { Cfg, LogEntry, LogSet, Logs, PersonalBest, Program, Week, WeightChange } from '../types.ts';
 import { BUILTIN, exInfo } from './data.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
-import { weekProgKey, weekProgram, weekSlots, tally, currentLayout, DAYS } from './logic.js';
+import { weekProgKey, weekProgram, weekSlots, tally, currentLayout, DAYS, isUniform } from './logic.js';
 import { M_KEYS, tagsOf } from './muscles.js';
 
 export const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -9,7 +9,7 @@ export const weekOfDate = (d: string) => ymd(weekStartOf(parseDate(d)));
 export const entryWeek = (e: LogEntry) => e.wk || weekOfDate(e.d);
 export const mdLabel = (k: string) => { const d = parseDate(k); return `${d.getMonth() + 1}/${d.getDate()}`; };
 const setsOf = (e: LogEntry) => { const n = Number(e.s); return n > 0 ? n : 0; };
-export const niceStep = (max: number) => [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find(s => max / s <= 4) || 1000;
+export const niceStep = (max: number) => [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000, 200000, 250000, 500000].find(s => max / s <= 4) || 1000000;
 
 // The weekly goal: this many full days of the week's seven.
 export const WEEK_GOAL_DAYS = 6;
@@ -62,4 +62,56 @@ export function weightChanges(cfg: Cfg, logs: Logs, sinceKey: string) {
     });
   });
   return rows.sort((x, y) => y.pct - x.pct || exInfo(cfg, x.id).n.localeCompare(exInfo(cfg, y.id).n));
+}
+
+/* ---------- Volume (sets × reps × weight) and personal bests ---------- */
+const pos = (v: unknown) => { const n = Number(v); return n > 0 ? n : 0; };
+// The sets of a session as weight and reps. A uniform session is its summary (s sets of r at w); otherwise each set.
+// Timed sets have no reps, so they add no volume and are never a best.
+function setsWR(e: LogEntry): { w: number; r: number }[] {
+  if (isUniform(e)) { const n = setsOf(e); const w = pos(e.w), r = e.sec ? 0 : pos(e.r); return Array.from({ length: n }, () => ({ w, r })); }
+  return (e.sets as LogSet[]).map(x => ({ w: pos(x.w), r: x.sec ? 0 : pos(x.r) }));
+}
+/** Pounds moved in one session: weight × reps over its sets. Bodyweight and timed sets count 0. Check-offs count (the sets were done). */
+export const entryVolume = (e: LogEntry) => setsWR(e).reduce((a, x) => a + x.w * x.r, 0);
+
+/** Volume per week for `keys`: all exercises (`total`) and per muscle, primary in full and secondary at half, as the sets charts do. */
+export function volumeByWeek(cfg: Cfg, logs: Logs, keys: string[]) {
+  const total: Record<string, number> = {}; const muscle: Record<string, Record<string, number>> = {};
+  keys.forEach(k => { total[k] = 0; }); M_KEYS.forEach(m => { muscle[m] = {}; keys.forEach(k => { muscle[m][k] = 0; }); });
+  Object.entries(logs).forEach(([id, L]) => {
+    const tg = tagsOf(cfg, id);
+    L.forEach(e => {
+      const k = entryWeek(e); if (!(k in total)) return; const v = entryVolume(e); if (!v) return;
+      total[k] += v;
+      if (!tg || tg.mob) return;
+      (tg.p || []).forEach((m: string) => { if (muscle[m]) muscle[m][k] += v; }); (tg.s || []).forEach((m: string) => { if (muscle[m]) muscle[m][k] += v / 2; });
+    });
+  });
+  return { total, muscle };
+}
+
+// A session's top set: the heaviest weight, then the most reps at it. Null when no set has both.
+function topSet(e: LogEntry) {
+  let best: { w: number; r: number } | null = null;
+  setsWR(e).forEach(x => { if (x.w > 0 && x.r > 0 && (!best || x.w > best.w || (x.w === best.w && x.r > best.r))) best = x; });
+  return best as { w: number; r: number } | null;
+}
+/** Days on or after `sinceDate` whose top set beat the exercise's best from earlier days, newest first; at most one per
+ *  exercise a day (two logs on one day count as their best set). Check-offs are left out: they copy the plan, not what was
+ *  lifted. A first day is not a best (there is nothing to beat). */
+export function personalBests(logs: Logs, sinceDate: string): PersonalBest[] {
+  const out: PersonalBest[] = [];
+  const beats = (t: { w: number; r: number }, b: { w: number; r: number }) => t.w > b.w || (t.w === b.w && t.r > b.r);
+  Object.entries(logs).forEach(([id, L]) => {
+    const byDay: Record<string, { w: number; r: number }> = {};
+    L.forEach(e => { if (e.auto) return; const t = topSet(e); if (t && (!byDay[e.d] || beats(t, byDay[e.d]))) byDay[e.d] = t; });
+    let best: { w: number; r: number; d: string } | null = null;
+    Object.keys(byDay).sort().forEach(d => {
+      const t = byDay[d];
+      if (best && beats(t, best) && d >= sinceDate) out.push({ id, d, w: t.w, r: t.r, prev: best });
+      if (!best || beats(t, best)) best = { ...t, d };
+    });
+  });
+  return out.sort((a, b) => b.d.localeCompare(a.d) || a.id.localeCompare(b.id));
 }
