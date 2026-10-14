@@ -489,8 +489,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     });
     if (!ok) return;
-    const label = s ? s.items.map(it => exInfo(get().cfg, it.ex).n).join(' → ') : '';
-    set({ skipNote: skipped ? { week: get().weekKey(), slotId, text: `Skipped${label ? ' ' + label : ''} for this week.`, done: cleared } : null });
+    const label = s ? s.items.map(it => exInfo(get().cfg, it.ex).n).join(s.type === 'either' ? ' or ' : ' → ') : '';
+    const keep = get().skipNote; // un-skipping a different card leaves this card's notice alone
+    set({ skipNote: skipped ? { week: get().weekKey(), slotId, text: `Skipped${label ? ' ' + label : ''} for this week.`, done: cleared } : keep && keep.slotId !== slotId ? keep : null });
     flag(skipped ? 'Skipped for this week' : 'Skip undone');
   },
   // Un-skip the last skipped card and put back the ticks the skip cleared (and with them their check-off entries).
@@ -504,7 +505,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Yesterday's leftovers: skip or move a batch of cards at once.
   skipCards(ids) {
     const ok = get().mutateChecks(w => ids.forEach(id => { const s = get().slotById(id); w.skipped[id] = true; if (s) clearForSkip(w, s); }));
-    if (ok) flag(`Skipped ${ids.length} for this week`);
+    if (ok) { set({ skipNote: null }); flag(`Skipped ${ids.length} for this week`); } // a batch skip replaces any single-card notice (its saved ticks would be stale)
   },
   moveCards(ids, day) {
     const week0 = get().week; const pd = dayAt(week0, day);

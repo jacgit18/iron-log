@@ -97,6 +97,16 @@ describe('checking off on the board', () => {
     expect(st().week.done['A-d3s1']).toBe(true);
   });
 
+  it('un-skipping another card keeps this card\'s notice, and a batch skip drops it', () => {
+    useAppStore.setState({ skipNote: null });
+    st().skipCard('A-d3s1');
+    st().skipCard('A-d1s1'); // the newest skip owns the notice
+    st().skipCard('A-d3s1'); // un-skip the older card
+    expect(st().skipNote).toMatchObject({ slotId: 'A-d1s1' }); // un-skipping another card leaves it alone
+    st().skipCards(['A-d1s2']);
+    expect(st().skipNote).toBe(null);
+  });
+
   it('checking a whole day logs every card on it, and skipping a card removes its entry', () => {
     st().checkDay(3, true);
     const day3 = st().activeSlots().filter(s => s.day === 3);
