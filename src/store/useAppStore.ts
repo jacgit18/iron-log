@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AppState, OrderNote, OrderState } from './types.ts';
-import type { Cfg, FlatSlot, LibraryItem, LogEntry, Logs, PhaseKey, ProgKey, Program, Stretch, Week, WeekLayout } from '../types.ts';
+import type { Cfg, FlatSlot, GroceryMonth, LibraryItem, LogEntry, Logs, PhaseKey, ProgKey, Program, Stretch, Week, WeekLayout } from '../types.ts';
 import { catalogPickError, catalogSnapshot } from '../lib/catalogExercise.js';
 import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exInfo, newExId, findExId, isVideoUrl, VIDEO_ERR, listBuiltinExercises, isOwnExercise, isCatalogId } from '../lib/data.js';
 import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.js';
@@ -11,14 +11,16 @@ import {
 } from '../lib/logic.js';
 import { LS, makeSaveQueue, removeLegacyGitHubToken } from '../lib/storage.js';
 import { FLAG_KEY, apiSyncEnabled } from '../sync/flag.js';
-import { mergeStretchWeek3, mergeWeek3 } from '../sync/merge.js';
+import { groceryAdopted, markGroceryAdopted, readLegacyMarker } from '../sync/legacyMarker.js';
+import { mergeGroceryMonth3, mergeStretchWeek3, mergeWeek3 } from '../sync/merge.js';
 import { stable } from '../sync/canon.js';
 import type { ApiDb } from '../sync/apiDb.js';
 import { editorSlice } from './editorSlice.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
-import { grocerySlice } from './grocerySlice.js';
+import { deviceGrocery, grocerySlice } from './grocerySlice.js';
 import { removedSlice } from './removedSlice.js';
+import { MONTH_RE, monthEmpty, normGrocery, normGroceryMonth } from '../lib/grocery.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { normSupplements } from '../lib/water.js';
 import { WEEK_RE } from '../lib/trends.js';
@@ -115,13 +117,24 @@ const noteFor = (plan: any, week: Week, slots: FlatSlot[], wk: string, doneCol: 
 const sameNote = (a: OrderNote, b: OrderNote) => sameState([a.kind, a.lines, a.next], [b.kind, b.lines, b.next]);
 // A week save that synced merged in another device's changes (ADR 031): the board takes the merged week once nothing more of it is
 // waiting, and a save queued meanwhile (made from the week before the merge) gets the merge too, so it does not take them back out.
+// A grocery month is merged the same way (ADR 039), and the catalogue the server now holds (another device's items) is taken too.
+const groceryMonthOf = (path: string) => (path.startsWith('grocery/') && MONTH_RE.test(path.slice(8)) ? path.slice(8) : null);
 const rebaseWeek = (path: string, sent: unknown, next: unknown, stored: unknown) =>
-  path.startsWith('weeks/') ? mergeWeek3(sent, next, stored).week : path.startsWith('stretchweeks/') ? mergeStretchWeek3(sent, next, stored).week : next;
+  path.startsWith('weeks/') ? mergeWeek3(sent, next, stored).week : path.startsWith('stretchweeks/') ? mergeStretchWeek3(sent, next, stored).week
+    : groceryMonthOf(path) ? mergeGroceryMonth3(sent, next, stored).week : next;
 function takeStoredWeek(path: string, doc: unknown) {
-  const st = useAppStore.getState(); const wk = st.weekKey();
+  const st = useAppStore.getState(); const wk = st.weekKey(); const month = groceryMonthOf(path);
   if (path === 'weeks/' + wk) { const week = normWeek(doc); if (stable(week) !== stable(normWeek(st.week))) useAppStore.setState({ week }); }
   else if (path === 'stretchweeks/' + wk) { const strWeek = normStretchWeek(doc); if (stable(strWeek) !== stable(normStretchWeek(st.strWeek))) useAppStore.setState({ strWeek }); }
+  else if (path === 'grocery/main') { const grocery = normGrocery(doc); if (stable(grocery) !== stable(st.grocery)) useAppStore.setState({ grocery }); }
+  else if (month) { const m = normGroceryMonth(doc); if (stable(m) !== stable(st.groceryMonths[month] ?? null)) useAppStore.setState(s => ({ groceryMonths: withMonth(s.groceryMonths, month, m) })); }
 }
+// The months with one replaced; an empty month is the fresh list, so it is left out.
+const withMonth = (months: Record<string, GroceryMonth>, key: string, m: GroceryMonth | null) => {
+  const next = { ...months };
+  if (m && !monthEmpty(m)) next[key] = m; else delete next[key];
+  return next;
+};
 const queue = makeSaveQueue({
   getDb: () => db, onFlag: (t: string) => flag(t),
   onFailed: (paths: string[], refused: boolean) => useAppStore.setState(s => ({ unsaved: paths, refusals: s.refusals + (refused ? 1 : 0) })),
@@ -185,13 +198,13 @@ if (shortcutTab) try { history.replaceState(null, '', location.pathname + locati
 let keepMDay = restored.mDay != null; // the first week load must not clear a restored phone day
 const loadedMDay = (state: AppState) => { const m = keepMDay ? state.mDay : null; keepMDay = false; return m; };
 
-const allReady = (r: AppState['ready']) => r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strHist && r.strWeek && r.supp;
+const allReady = (r: AppState['ready']) => r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strHist && r.strWeek && r.supp && r.groc && r.grocMonths;
 
 export const useAppStore = create<AppState>((set, get) => ({
   ...editorSlice(set, get, flag),
   ...settingsSlice(set, get, flag),
   ...wellnessSlice(set, get, flag),
-  ...grocerySlice(set, get, flag),
+  ...grocerySlice(set, get),
   ...removedSlice(set, get, flag),
   cfg: structuredClone(DEFAULT_CFG),
   weekStart: weekStartOf(new Date()),
@@ -208,7 +221,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   programs: { A: BUILTIN.A, B: BUILTIN.B },
   storeMode: 'loading',
   saveFlag: '',
-  ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false, str: false, strHist: false, strWeek: false, supp: false },
+  ready: { cfg: false, logs: false, week: false, programs: false, lib: false, body: false, exp: false, str: false, strHist: false, strWeek: false, supp: false, groc: false, grocMonths: false },
   uncheckNote: null, // after an uncheck removed logged entries: {week, text, entries: {exId: [entry]}, done: {key: wasDone}}
   moveNote: null, // heads-up after a move puts the same exercise on the same or a neighboring day
   orderNote: null, // after a day is finished: {kind, week, doneCol, prev, next, lines, applied}; prev/next are {order, rest} for kind 'order', {slot, moved} for kind 'card'
@@ -966,7 +979,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (initStarted) return; // StrictMode runs mount effects twice in dev; subscribe once
     initStarted = true;
     removeLegacyGitHubToken(); // one-time cleanup of the retired GitHub backup token
-    get().loadGrocery(); // device-only: read from this browser's storage whatever the data source turns out to be
     const host = window.claude && window.claude.use ? (window.claude as { use: (name: string) => Promise<any> }) : null;
     (async () => { try { set({ dl: host ? await host.use('downloads') : blobSave }); } catch { set({ dl: null }); } })();
     try { db = (window.claude && window.claude.use) ? await window.claude.use('db') : null; } catch { db = null; }
@@ -974,7 +986,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!db && apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC)) {
       try {
         const { createBrowserApiDb } = await import('../sync/browser.js');
-        syncApi = createBrowserApiDb({ onOwnerChange: () => { get().clearGrocery(); LS.remove('ran-recorded/db'); } }); // a new account's old weeks need their record too
+        // A new account's old weeks need their record too. The grocery list follows the account like everything else (ADR 039): the
+        // new account's comes with the pull, and the list this browser held from before syncing was the old owner's, so it is never
+        // added to the new account.
+        syncApi = createBrowserApiDb({ onOwnerChange: () => { markGroceryAdopted('other-account'); LS.remove('ran-recorded/db'); } });
         db = syncApi;
         syncApi.onStatus(sync => useAppStore.setState({ sync }));
         useAppStore.setState({ sync: syncApi.status() });
@@ -1003,6 +1018,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         programs: { A: loadProgram('A', LS.get('programs/A')), B: loadProgram('B', LS.get('programs/B')) },
         ready: { ...state.ready, cfg: true, logs: true, programs: true, lib: true, body: true, exp: true, str: true, strHist: true, supp: true },
       }));
+      get().loadGrocery();
       if (typeof window.addEventListener === 'function') window.addEventListener('storage', fromOtherTab);
       subscribeWeek();
       return;
@@ -1052,6 +1068,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (queue.pending('supplements/main')) return;
       set(state => ({ supp: normSupplements(s.exists ? s.data() : null), ...markReady('supp')(state) }));
     }, () => flag('Couldn’t load supplements. Reload the page.'));
+    // The grocery list (ADR 039): the catalogue, and every month in one collection. A month this device is still writing keeps what it holds.
+    db.doc('grocery/main').onSnapshot((s: any) => {
+      if (queue.pending('grocery/main')) return;
+      set(state => ({ grocery: normGrocery(s.exists ? s.data() : null), ...markReady('groc')(state) }));
+    }, () => flag('Couldn’t load your grocery list. Reload the page.'));
+    db.collection('grocery').onSnapshot((s: any) => {
+      const next: Record<string, GroceryMonth> = {};
+      s.docs.forEach((d: any) => { if (MONTH_RE.test(d.id)) next[d.id] = normGroceryMonth(d.data()); });
+      set(state => {
+        let months: Record<string, GroceryMonth> = {};
+        new Set([...Object.keys(next), ...Object.keys(state.groceryMonths)]).forEach(k => {
+          months = withMonth(months, k, queue.pending('grocery/' + k) ? state.groceryMonths[k] ?? null : next[k] ?? null);
+        });
+        return { groceryMonths: months, ...markReady('grocMonths')(state) };
+      });
+    }, () => flag('Couldn’t load your grocery list. Reload the page.'));
     db.doc('config/main').onSnapshot((s: any) => {
       if (queue.pending('config/main')) return;
       set(state => ({ cfg: s.exists ? { ...structuredClone(DEFAULT_CFG), ...normConfig(structuredClone(s.data())) } : state.cfg, ...markReady('cfg')(state) }));
@@ -1095,7 +1127,27 @@ export function fromOtherTab(e: { key?: string | null; newValue?: string | null 
   else if (path === 'stretches/main') { const d = normStretches(v); set({ stretches: d.items, stretchExps: d.experiments }); }
   else if (path === 'supplements/main') set({ supp: normSupplements(v) });
   else if (path === 'stretchweeks/' + wk) set({ strWeek: normStretchWeek(v) });
+  else if (path === 'grocery/main') set({ grocery: normGrocery(v) });
+  else if (groceryMonthOf(path)) { const k = groceryMonthOf(path)!; set(s => ({ groceryMonths: withMonth(s.groceryMonths, k, v ? normGroceryMonth(v) : null) })); }
 }
+
+// ADR 039: the grocery list used to stay on the device (ADR 019). With a database, the list this browser still holds reaches the account
+// once, added to whatever the account has (matched by name and store, so nothing is doubled; the account's own lines win). An account
+// with no data takes it with the one-time upload of everything else (LegacyCard), so this waits until that upload was made or turned
+// down, or cannot happen (the account has data). Never for a device handed to another account (onOwnerChange marks it done).
+export function adoptDeviceGrocery(): 'added' | 'nothing' | 'waiting' {
+  const st = useAppStore.getState();
+  if (!db || st.storeMode !== 'db' || !st.isReady() || groceryAdopted()) return 'waiting';
+  if (syncApi && (!st.sync || !st.sync.ready || (!st.sync.holdsData && !readLegacyMarker()))) return 'waiting';
+  const mine = deviceGrocery();
+  if (!mine) { markGroceryAdopted('nothing'); return 'nothing'; }
+  st.addGrocery(mine);
+  markGroceryAdopted('added');
+  return 'added';
+}
+useAppStore.subscribe((s, prev) => {
+  if (s.storeMode === 'db' && (s.ready !== prev.ready || s.sync !== prev.sync) && !groceryAdopted()) adoptDeviceGrocery();
+});
 
 // Remember the tab and phone day across a refresh.
 useAppStore.subscribe((s, prev) => {

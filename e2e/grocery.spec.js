@@ -17,11 +17,12 @@ const add = async (page, n, store, qty, price, every = false) => {
 const editing = async page => { await page.click('#groc-view-home'); await page.click('#groc-edit'); };
 const done = async page => { await page.click('#groc-edit'); };
 
-test('Groceries is on the Daily tab for everyone, opens on At home while empty, and says it is kept on this device only', async ({ page }) => {
+test('Groceries is on the Daily tab for everyone, opens on At home while empty, and has no device-only notice', async ({ page }) => {
   await open(page); // not an admin
   await expect(page.locator('#groc-h')).toBeVisible();
   await expect(page.locator('#groc-view-home')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#groc-local')).toContainText('On this device only, not synced yet');
+  // With syncing off everything is kept in this browser, the list like the rest, so it needs no notice of its own (ADR 039).
+  await expect(page.getByText('On this device only')).toHaveCount(0);
 });
 
 test('unchecking an item at home puts it on To get; ticking it bought checks it at home again', async ({ page }) => {

@@ -18,6 +18,13 @@ export function readLegacyMarker(): LegacyMarker | null {
 }
 export const writeLegacyMarker = (m: LegacyMarker) => LS.set(KEY, m);
 
+/* The grocery list was kept on the device only until it synced (ADR 019, ADR 039). With syncing on, the list this browser held is added
+   to the account once, automatically, when the one-time upload above cannot carry it (the account already has data, or that upload was
+   made or turned down). This remembers that it was done, so a list later emptied on another device is not filled again from here. */
+const GROCERY_KEY = 'sync/grocery-adopted';
+export const groceryAdopted = () => !!LS.get(GROCERY_KEY);
+export const markGroceryAdopted = (why: 'added' | 'nothing' | 'other-account') => LS.set(GROCERY_KEY, { at: new Date().toISOString(), why });
+
 /** The paths of every document this browser holds under its own keys (see LS in lib/storage). */
 export function localPaths(): string[] {
   const out: string[] = [];

@@ -219,8 +219,6 @@ export default function Grocery() {
           <button type="button" id="groc-view-home" className={view === 'home' ? 'on' : ''} aria-pressed={view === 'home'} onClick={() => setView('home')}>At home</button>
         </div>
       </div>
-      {/* Device-only until it syncs (ADR 019, 038): say so, so nobody expects it on another device. */}
-      <p className="notice" id="groc-local">On this device only, not synced yet. <b>Export all data</b> in Settings keeps a copy.</p>
       {view === 'get' ? <ToGet g={g} months={months} nowKey={monthKey(today)} /> : <AtHome g={g} />}
     </section>
   );
