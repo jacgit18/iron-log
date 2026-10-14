@@ -252,7 +252,7 @@ body.timing{padding-bottom:130px}
 .mrow:last-child{border-bottom:0}
 .mname small{color:var(--muted)}
 .mdays{color:var(--muted);font-size:.8125rem;white-space:nowrap}
-.mname{grid-column:2;min-width:0;overflow-wrap:anywhere}
+.mdetail .mname{grid-column:2;min-width:0;overflow-wrap:anywhere}
 /* Phone: the days go on a second line under the name, so a row never runs wider than the screen */
 @media (max-width:600px){.mrow{grid-template-columns:auto minmax(0,1fr) auto;row-gap:2px}.mrow .mdays{grid-column:2;grid-row:2;white-space:normal}}
 .role{font-size:.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:999px}
