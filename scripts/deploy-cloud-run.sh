@@ -5,8 +5,11 @@
 #   setup     enable the APIs and create the image repository (once per project)
 #   secrets   put the four secrets in Secret Manager from your shell (once, and when one changes); with RESEND_API_KEY exported it also
 #             stores the email-code key (optional: without it the email sign-in code stays off, ADR 042)
+#             With VAPID_SUBJECT exported (mailto:you@example.com) it also stores the Web Push keys, making the pair once; see push-setup (ADR 044)
+#   push-setup  make the Cloud Tasks queue, the invoker account and the permissions for Web Push (once; needs the cloudtasks API)
 #   url       print the address the service will have, for the Google console's redirect URI (needs no deploy)
-#   (RESEND_OFF=1 on candidate or deploy turns the email sign-in code off: the key is left out and the service stops mapping it)
+#   (RESEND_OFF=1 on candidate or deploy turns the email sign-in code off: the key is left out and the service stops mapping it;
+#    PUSH_OFF=1 does the same for Web Push: the keys and the queue settings are removed from the service)
 #   deploy    build the image from the current commit and deploy it at once (100% of traffic; the manual and emergency way)
 #   candidate build the image and deploy it as a tagged revision that gets NO traffic; prints its own address (ADR 017)
 #   promote   send all traffic to the candidate revision
@@ -43,16 +46,18 @@ put_secret() { # name, value (from stdin). Adds a version only when the value ch
 # The optional Resend key for the emailed sign-in code (ADR 042). Without it the app has no email option at all.
 RESEND_SECRET="iron-log-resend-api-key"
 
-# Whether this deploy passes RESEND_API_KEY to the service. `--set-secrets` REPLACES the service's whole secret list, so a key left
+# Whether this deploy passes an optional secret to the service. `--set-secrets` REPLACES the service's whole secret list, so a key left
 # out here is removed by the deploy, and one added by hand in the console is wiped by the next. Two ways to know it is wanted:
 #   - the secret exists in Secret Manager: true on your machine, which may read secrets (`secrets` stores it);
 #   - the live service already maps it: the CI deployer cannot read secrets (ci-deploy-setup.sh) but can read the service, so a
 #     CI deploy keeps what the last deploy from your machine set up. A first deploy, with no service yet, answers no.
-resend_secret_wanted() {
-  # The way to turn the email code off: RESEND_OFF=1 leaves the key out, and --set-secrets then removes the mapping from the service.
-  # Deleting the secret alone is not enough (the live-service rule below would keep naming it, and Cloud Run rejects a missing secret).
-  if [ "${RESEND_OFF:-}" = 1 ]; then return 1; fi
-  if secret_exists "$RESEND_SECRET"; then return 0; fi
+# Args: the secret's name, the environment variable it is mapped to, and the OFF switch (for example RESEND_OFF): set to 1 it is the
+# way to turn the feature off. Deleting the secret alone is not enough (the live-service rule would keep naming it, and Cloud Run
+# rejects a missing secret).
+secret_wanted() {
+  local secret="$1" envname="$2" off="$3"
+  if [ "${!off:-}" = 1 ]; then return 1; fi
+  if secret_exists "$secret"; then return 0; fi
   gc run services describe "$SERVICE" --region "$REGION" --format=json 2>/dev/null | python3 -c '
 import json, sys
 try:
@@ -61,9 +66,19 @@ except Exception:
     sys.exit(1)
 containers = svc.get("spec", {}).get("template", {}).get("spec", {}).get("containers") or [{}]
 env = containers[0].get("env") or []
-sys.exit(0 if any(e.get("name") == "RESEND_API_KEY" and e.get("valueFrom", {}).get("secretKeyRef") for e in env) else 1)
-'
+sys.exit(0 if any(e.get("name") == sys.argv[1] and e.get("valueFrom", {}).get("secretKeyRef") for e in env) else 1)
+' "$envname"
 }
+resend_secret_wanted() { secret_wanted "$RESEND_SECRET" RESEND_API_KEY RESEND_OFF; }
+
+# Web Push (ADR 044): three secrets (the VAPID pair and the contact address; the public key and the address are not secret, but a CI
+# deploy can only pass what it can name, not read) and a Cloud Tasks queue with an account that signs each task.
+VAPID_PUBLIC_SECRET="iron-log-vapid-public-key"
+VAPID_PRIVATE_SECRET="iron-log-vapid-private-key"
+VAPID_SUBJECT_SECRET="iron-log-vapid-subject"
+PUSH_QUEUE_NAME="${PUSH_QUEUE_NAME:-iron-log-push}"
+PUSH_INVOKER_SA="${PUSH_INVOKER_SA:-iron-log-push-invoker}"
+push_secret_wanted() { secret_wanted "$VAPID_PRIVATE_SECRET" VAPID_PRIVATE_KEY PUSH_OFF; }
 
 cmd_setup() {
   gc services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com
@@ -73,6 +88,22 @@ cmd_setup() {
   gc iam service-accounts describe "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" >/dev/null 2>&1 \
     || gc iam service-accounts create "$RUNTIME_SA" --display-name "Iron Log runtime"
   echo "Set up. Next: scripts/deploy-cloud-run.sh secrets"
+}
+
+# Web Push's Google side (ADR 044), once: the Cloud Tasks queue (one attempt only, a late "rest over" is worse than none), the account whose
+# token signs each task, and what the service's runtime account may do with them. Safe to run again.
+cmd_push_setup() {
+  local runtime="${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" invoker="${PUSH_INVOKER_SA}@${PROJECT_ID}.iam.gserviceaccount.com"
+  gc services enable cloudtasks.googleapis.com
+  gc tasks queues describe "$PUSH_QUEUE_NAME" --location "$REGION" >/dev/null 2>&1 \
+    || gc tasks queues create "$PUSH_QUEUE_NAME" --location "$REGION" --max-attempts=1 --max-dispatches-per-second=5
+  gc iam service-accounts describe "$invoker" >/dev/null 2>&1 \
+    || gc iam service-accounts create "$PUSH_INVOKER_SA" --display-name "Iron Log push invoker"
+  # The runtime account puts tasks on the queue, and may name the invoker as the one that signs them. The invoker needs no role: the
+  # fire route checks the token itself, and the service is public.
+  gc tasks queues add-iam-policy-binding "$PUSH_QUEUE_NAME" --location "$REGION" --member "serviceAccount:$runtime" --role roles/cloudtasks.enqueuer >/dev/null
+  gc iam service-accounts add-iam-policy-binding "$invoker" --member "serviceAccount:$runtime" --role roles/iam.serviceAccountUser >/dev/null
+  echo "Queue $PUSH_QUEUE_NAME and account $invoker are ready. Next: VAPID_SUBJECT=mailto:you@example.com scripts/deploy-cloud-run.sh secrets, then deploy."
 }
 
 cmd_secrets() {
@@ -97,6 +128,22 @@ cmd_secrets() {
     secret_names+=("$RESEND_SECRET")
   else
     echo "  $RESEND_SECRET: not touched (export RESEND_API_KEY to store it)"
+  fi
+  # Optional: the Web Push keys. VAPID_SUBJECT (a mailto: address the push services can reach) says to store them. The key pair is made once
+  # here and never shown; an existing pair is kept (a new one would orphan every device that already subscribed).
+  if [ -n "${VAPID_SUBJECT:-}" ]; then
+    case "$VAPID_SUBJECT" in mailto:?*@?*|https://?*) ;; *) echo "VAPID_SUBJECT must be a mailto: or https: address." >&2; exit 1;; esac
+    if ! secret_exists "$VAPID_PRIVATE_SECRET"; then
+      local keys; keys="$(node "$(dirname "$0")/vapid-keys.mjs")"
+      printf '%s' "$keys" | python3 -c 'import json,sys; sys.stdout.write(json.load(sys.stdin)["publicKey"])' | put_secret "$VAPID_PUBLIC_SECRET"
+      printf '%s' "$keys" | python3 -c 'import json,sys; sys.stdout.write(json.load(sys.stdin)["privateKey"])' | put_secret "$VAPID_PRIVATE_SECRET"
+    else
+      echo "  $VAPID_PRIVATE_SECRET: kept"
+    fi
+    printf '%s' "$VAPID_SUBJECT" | put_secret "$VAPID_SUBJECT_SECRET"
+    secret_names+=("$VAPID_PUBLIC_SECRET" "$VAPID_PRIVATE_SECRET" "$VAPID_SUBJECT_SECRET")
+  else
+    echo "  Web Push keys: not touched (export VAPID_SUBJECT=mailto:you@example.com to store them)"
   fi
   for s in "${secret_names[@]}"; do
     gc secrets add-iam-policy-binding "$s" --member "serviceAccount:${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" --role roles/secretmanager.secretAccessor >/dev/null
@@ -132,11 +179,24 @@ deploy_image() {
   gc run services describe "$SERVICE" --region "$REGION" >/dev/null 2>&1 || public=(--allow-unauthenticated)
   local secrets="APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest"
   if resend_secret_wanted; then secrets+=",RESEND_API_KEY=${RESEND_SECRET}:latest"; echo "Email sign-in code: RESEND_API_KEY is passed to the service."; else echo "Email sign-in code: no RESEND_API_KEY, so the feature stays off${RESEND_OFF:+ (RESEND_OFF=1: any mapping is removed)}."; fi
+  # Web Push (ADR 044): the keys as secrets, and where the queue and its signing account are (they are named by project, region and the
+  # defaults above, so a CI deploy can pass them without looking anything up). PUSH_OFF=1 removes all of it.
+  local push_env=() push_remove=()
+  if push_secret_wanted; then
+    secrets+=",VAPID_PUBLIC_KEY=${VAPID_PUBLIC_SECRET}:latest,VAPID_PRIVATE_KEY=${VAPID_PRIVATE_SECRET}:latest,VAPID_SUBJECT=${VAPID_SUBJECT_SECRET}:latest"
+    push_env=(PUSH_QUEUE="projects/${PROJECT_ID}/locations/${REGION}/queues/${PUSH_QUEUE_NAME}" PUSH_INVOKER_EMAIL="${PUSH_INVOKER_SA}@${PROJECT_ID}.iam.gserviceaccount.com")
+    echo "Web Push: the VAPID keys and the queue settings are passed to the service."
+  else
+    if [ "${PUSH_OFF:-}" = 1 ]; then push_remove=(--remove-env-vars PUSH_QUEUE,PUSH_INVOKER_EMAIL); fi
+    echo "Web Push: no VAPID keys, so push stays off${PUSH_OFF:+ (PUSH_OFF=1: any settings are removed)}."
+  fi
+  local env_vars="NODE_ENV=production,BASE_URL=${url},COMMIT_SHA=${commit}"
+  for kv in ${push_env[@]+"${push_env[@]}"}; do env_vars+=",${kv}"; done
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
     ${public[@]+"${public[@]}"} \
     --max-instances 1 --min-instances "${MIN_INSTANCES:-0}" --cpu 1 --memory 512Mi --concurrency 40 --timeout 120 \
-    --update-env-vars "NODE_ENV=production,BASE_URL=${url},COMMIT_SHA=${commit}" \
+    --update-env-vars "$env_vars" ${push_remove[@]+"${push_remove[@]}"} \
     --set-secrets "$secrets" \
     "$@"
 }
@@ -187,11 +247,12 @@ cmd_restore() { gc run services update-traffic "$SERVICE" --region "$REGION" --t
 case "${1:-}" in
   setup) cmd_setup;;
   secrets) cmd_secrets;;
+  push-setup) cmd_push_setup;;
   url) service_url;;
   deploy) cmd_deploy;;
   candidate) cmd_candidate;;
   promote) cmd_promote;;
   discard) cmd_discard;;
   restore) cmd_restore;;
-  *) sed -n '2,17p' "$0"; exit 2;;
+  *) sed -n '2,22p' "$0"; exit 2;;
 esac
