@@ -97,16 +97,20 @@ function topSet(e: LogEntry) {
   setsWR(e).forEach(x => { if (x.w > 0 && x.r > 0 && (!best || x.w > best.w || (x.w === best.w && x.r > best.r))) best = x; });
   return best as { w: number; r: number } | null;
 }
-/** Sessions on or after `sinceDate` that beat the exercise's earlier best top set, newest first. Check-offs are left out:
- *  they copy the plan, not what was lifted. A first session is not a best (there is nothing to beat). */
+/** Days on or after `sinceDate` whose top set beat the exercise's best from earlier days, newest first; at most one per
+ *  exercise a day (two logs on one day count as their best set). Check-offs are left out: they copy the plan, not what was
+ *  lifted. A first day is not a best (there is nothing to beat). */
 export function personalBests(logs: Logs, sinceDate: string): PersonalBest[] {
   const out: PersonalBest[] = [];
+  const beats = (t: { w: number; r: number }, b: { w: number; r: number }) => t.w > b.w || (t.w === b.w && t.r > b.r);
   Object.entries(logs).forEach(([id, L]) => {
+    const byDay: Record<string, { w: number; r: number }> = {};
+    L.forEach(e => { if (e.auto) return; const t = topSet(e); if (t && (!byDay[e.d] || beats(t, byDay[e.d]))) byDay[e.d] = t; });
     let best: { w: number; r: number; d: string } | null = null;
-    [...L].filter(e => !e.auto).sort((a, b) => a.d.localeCompare(b.d)).forEach(e => {
-      const t = topSet(e); if (!t) return;
-      if (best && (t.w > best.w || (t.w === best.w && t.r > best.r))) { if (e.d >= sinceDate) out.push({ id, d: e.d, w: t.w, r: t.r, prev: best }); }
-      if (!best || t.w > best.w || (t.w === best.w && t.r > best.r)) best = { ...t, d: e.d };
+    Object.keys(byDay).sort().forEach(d => {
+      const t = byDay[d];
+      if (best && beats(t, best) && d >= sinceDate) out.push({ id, d, w: t.w, r: t.r, prev: best });
+      if (!best || beats(t, best)) best = { ...t, d };
     });
   });
   return out.sort((a, b) => b.d.localeCompare(a.d) || a.id.localeCompare(b.id));

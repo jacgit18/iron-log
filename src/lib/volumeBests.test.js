@@ -56,4 +56,12 @@ describe('personalBests', () => {
   it('a first session and bodyweight or timed work are never bests', () => {
     expect(personalBests({ x: [{ d: '2026-10-01', w: 100, s: 3, r: 5 }], y: [{ d: '2026-10-01', s: 3, r: 10 }, { d: '2026-10-08', s: 3, r: 12 }], z: [{ d: '2026-10-01', w: 20, s: 3, sec: 30 }, { d: '2026-10-08', w: 25, s: 3, sec: 30 }] }, '2026-01-01')).toEqual([]);
   });
+  it('two logs of one exercise on one day are one best, the better set, against the best before that day', () => {
+    const logs = { x: [
+      { d: '2026-10-01', w: 100, s: 3, r: 8 },
+      { d: '2026-10-08', w: 105, s: 3, r: 5 },
+      { d: '2026-10-08', w: 110, s: 3, r: 5 },
+    ] };
+    expect(personalBests(logs, '2026-01-01')).toEqual([{ id: 'x', d: '2026-10-08', w: 110, r: 5, prev: { w: 100, r: 8, d: '2026-10-01' } }]);
+  });
 });
