@@ -1,11 +1,11 @@
-import type { Cfg, Logs, PhaseKey, WeightChange as Change } from '../../types.ts';
+import type { Cfg, Logs, MuscleKey, PhaseKey, WeightChange as Change } from '../../types.ts';
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { ymd, parseDate, addDays, fmtShort } from '../../shared/dates.js';
 import { MUSCLES, M_KEYS, level, fmtSets } from '../../lib/muscles.js';
-import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, niceStep, mdLabel } from '../../lib/trends.js';
+import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, niceStep, mdLabel, volumeByWeek, personalBests } from '../../lib/trends.js';
 import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
 import { liftGoalStatus, goalPhaseLabel } from '../../lib/liftGoal.js';
 import LineChart from '../LineChart.js';
@@ -40,35 +40,101 @@ function KpiTiles({ keys, byWeek, changes }: { keys: string[]; byWeek: Record<st
   );
 }
 
-function SetsChart({ keys, byWeek }: { keys: string[]; byWeek: Record<string, { sets: number; sessions: number }> }) {
+// One bar per week, the newest striped ("so far"). `fmt` labels the axis and the current bar; `tip` names a whole bar.
+function WeekBars({ keys, values, label, fmt, tip }: { keys: string[]; values: Record<string, number>; label: string; fmt: (v: number) => string; tip: (k: string, cur: boolean) => string }) {
   const thisSun = keys[keys.length - 1];
-  const max = Math.max(...keys.map((k) => byWeek[k].sets), 1); const step = niceStep(max); const top = Math.ceil(max / step) * step;
+  const max = Math.max(...keys.map((k) => values[k]), 1); const step = niceStep(max); const top = Math.ceil(max / step) * step;
   const grid = []; for (let v = 0; v <= top; v += step) grid.push(v);
+  return (
+    <div className="bars" style={{ '--n': keys.length } as CSSProperties}>
+      <div className="bgrid" aria-hidden="true">{grid.map(v => <span key={v} style={{ bottom: `${v / top * 100}%` }}><b>{fmt(v)}</b></span>)}</div>
+      <div className="bcols" role="list" aria-label={label}>
+        {keys.map((k, i) => {
+          const v = values[k]; const cur = k === thisSun; const pct = v / top * 100; const t = tip(k, cur);
+          return (
+            <div key={k} role="listitem" className={`bcol${cur ? ' cur' : ''}`} data-tip={t} tabIndex={0} aria-label={t}>
+              <div className="bplot" aria-hidden="true">
+                {v > 0 && <i style={{ height: `${pct}%` }} />}
+                {cur && v > 0 && <em style={{ bottom: `${pct}%` }}>{fmt(v)}</em>}
+              </div>
+              <span aria-hidden="true" className={`bx${(keys.length - 1 - i) % 2 ? ' alt' : ''}`}>{cur ? 'Now' : mdLabel(k)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SetsChart({ keys, byWeek }: { keys: string[]; byWeek: Record<string, { sets: number; sessions: number }> }) {
   const total = keys.reduce((a, k) => a + byWeek[k].sets, 0);
+  const sets: Record<string, number> = {}; keys.forEach(k => { sets[k] = byWeek[k].sets; });
+  const tip = (k: string, cur: boolean) => { const r = byWeek[k]; return `Week of ${fmtShort(parseDate(k))}${cur ? ' (so far)' : ''}: ${fmtSets(r.sets)} set${r.sets === 1 ? '' : 's'} in ${r.sessions} session${r.sessions === 1 ? '' : 's'}`; };
   return (
     <section className="panel tchart">
       <h2>Sets logged per week</h2>
       {!total ? <p className="note">Logged sets show up here, one bar per week.</p> : (
         <>
-          <div className="bars" style={{ '--n': keys.length } as CSSProperties}>
-            <div className="bgrid" aria-hidden="true">{grid.map(v => <span key={v} style={{ bottom: `${v / top * 100}%` }}><b>{v}</b></span>)}</div>
-            <div className="bcols" role="list" aria-label="Sets logged per week">
-              {keys.map((k, i) => {
-                const r = byWeek[k]; const cur = k === thisSun; const pct = r.sets / top * 100;
-                const tip = `Week of ${fmtShort(parseDate(k))}${cur ? ' (so far)' : ''}: ${fmtSets(r.sets)} set${r.sets === 1 ? '' : 's'} in ${r.sessions} session${r.sessions === 1 ? '' : 's'}`;
-                return (
-                  <div key={k} role="listitem" className={`bcol${cur ? ' cur' : ''}`} data-tip={tip} tabIndex={0} aria-label={tip}>
-                    <div className="bplot" aria-hidden="true">
-                      {r.sets > 0 && <i style={{ height: `${pct}%` }} />}
-                      {cur && r.sets > 0 && <em style={{ bottom: `${pct}%` }}>{fmtSets(r.sets)}</em>}
-                    </div>
-                    <span aria-hidden="true" className={`bx${(keys.length - 1 - i) % 2 ? ' alt' : ''}`}>{cur ? 'Now' : mdLabel(k)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <WeekBars keys={keys} values={sets} label="Sets logged per week" fmt={fmtSets} tip={tip} />
           <p className="note">Every set you log, all exercises together. The striped bar is this week so far.</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+// Pounds for the volume chart: 950, 12.5k, 120k.
+const fmtVol = (v: number) => (v < 1000 ? String(Math.round(v)) : `${+(v / 1000).toFixed(v < 100000 ? 1 : 0)}k`);
+
+function VolumeChart({ keys }: { keys: string[] }) {
+  const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
+  const [m, setM] = useState('');
+  const { total, muscle } = volumeByWeek(cfg, logs, keys);
+  const trained = M_KEYS.filter(k => keys.some(w => muscle[k][w] > 0));
+  const pick = m && trained.includes(m as MuscleKey) ? m as MuscleKey : '';
+  const values = pick ? muscle[pick] : total;
+  const what = pick ? MUSCLES[pick].n : 'All exercises';
+  const tip = (k: string, cur: boolean) => `${what}, week of ${fmtShort(parseDate(k))}${cur ? ' (so far)' : ''}: ${Math.round(values[k]).toLocaleString()} lb`;
+  return (
+    <section className="panel tchart">
+      <h2>Weekly volume</h2>
+      {!keys.some(k => total[k] > 0) ? <p className="note">Log sets with a weight and reps, and the pounds you moved each week (sets × reps × weight) show here.</p> : (
+        <>
+          <div className="volpick">
+            <select className="btn" aria-label="Show volume for" value={pick} onChange={e => setM(e.target.value)}>
+              <option value="">All exercises</option>
+              {trained.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
+            </select>
+          </div>
+          <WeekBars keys={keys} values={values} label={`Weekly volume, ${what.toLowerCase()}, in pounds`} fmt={fmtVol} tip={tip} />
+          <p className="note">Sets × reps × weight, in lb. Bodyweight and timed sets add nothing; ticked-off exercises count with their planned weight.{pick ? ' Secondary work counts half.' : ''}</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+function Bests({ since }: { since: string }) {
+  const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
+  const openModal = useAppStore(s => s.openModal);
+  const all = personalBests(logs, since); const shown = all.slice(0, 8);
+  return (
+    <section className="panel tchart">
+      <h2>Personal bests</h2>
+      {!shown.length ? <p className="note">When you log a lift heavier than before, or more reps at your best weight, it shows here.</p> : (
+        <>
+          <ul className="bests">
+            {shown.map(b => (
+              <li key={`${b.id}|${b.d}`}>
+                <button type="button" className="bestrow" onClick={() => openModal({ type: 'detail', exId: b.id })}>
+                  <span className="bname">{exInfo(cfg, b.id).n}</span>
+                  <b className="bval">{fmtLb(b.w)} lb × {b.r}</b>
+                  <span className="bwas">{fmtShort(parseDate(b.d))} · was {fmtLb(b.prev.w)} × {b.prev.r}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="note">Your best set in the last 8 weeks{all.length > shown.length ? ` (latest ${shown.length} of ${all.length})` : ''}: heavier, or more reps at the same weight. Ticked-off exercises don't count; log the weight you lifted.</p>
         </>
       )}
     </section>
@@ -263,7 +329,9 @@ export default function Trends() {
       <KpiTiles keys={keys} byWeek={byWeek} changes={changes} />
       <div className="tgrid">
         <SetsChart keys={keys} byWeek={byWeek} />
+        <VolumeChart keys={keys} />
         <ChangeChart changes={changes} />
+        <Bests since={keys[Math.max(0, keys.length - 8)]} />
         <BodyChart />
       </div>
       <MuscleHeat keys={keys} />

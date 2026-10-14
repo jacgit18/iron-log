@@ -129,7 +129,7 @@ describe('weightChanges: first vs latest weight per lift and phase', () => {
 
 describe('chart helpers', () => {
   it('picks a round axis step and short date labels', () => {
-    expect([3, 12, 40, 90, 900, 5000].map(niceStep)).toEqual([1, 5, 10, 25, 250, 1000]);
+    expect([3, 12, 40, 90, 900, 5000, 17000, 120000].map(niceStep)).toEqual([1, 5, 10, 25, 250, 2000, 5000, 50000]);
     expect(mdLabel('2026-09-07')).toBe('9/7');
   });
 });
