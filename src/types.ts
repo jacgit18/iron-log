@@ -177,6 +177,8 @@ export type Logs = Record<string, LogEntry[]>;
 
 /** First vs latest working weight of one exercise and phase over a window (see lib/trends weightChanges). */
 export interface WeightChange { id: string; ph: string | null; w0: number; w1: number; d0: string; d1: string; n: number; pct: number }
+/** A session that beat an exercise's best top set: heavier, or more reps at the same weight. `prev` is the best it beat. */
+export interface PersonalBest { id: string; d: string; w: number; r: number; prev: { w: number; r: number; d: string } }
 
 /** Body-weight goal: the target, where you were when you set it, and an optional ISO date. */
 export interface BodyGoal { w: number; start?: { w: number; d?: string }; by?: string }
