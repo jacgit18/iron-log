@@ -1,0 +1,260 @@
+/* Groceries (ADR 038): To get and At home views. Flat store sections, no cards inside the panel, so a phone keeps its width.
+   Every tap target is at least 44px tall. */
+.groc .gtop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.groc .gtop .seg {
+  margin-left: 0;
+}
+.groc .gtop .seg button {
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: .875rem;
+}
+.groc .notice {
+  font-size: .8125rem;
+  padding: 6px 10px;
+}
+.gmonth {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.gmonth .btn {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.gmonth b {
+  text-align: center;
+}
+.gstore {
+  display: flex;
+  flex-direction: column;
+}
+.gstorehead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+}
+.gstorehead h3 {
+  margin: 0;
+  font-size: .8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+.gstore.done .gstorehead h3 {
+  color: var(--accent);
+}
+.glist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.glist>li {
+  border-bottom: 1px solid var(--line);
+}
+.glist>li:last-child {
+  border-bottom: 0;
+}
+
+/* A To get row: the label (tick + name) fills the row; the count and price button sits at the end. */
+.ggetline,.ghome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.gtick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  cursor: pointer;
+}
+.gtickname {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.gget.got .gtickname {
+  color: var(--done);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  font-weight: 500;
+}
+.gqty {
+  flex: none;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.gpill {
+  display: block;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: .8125rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.gqty[aria-expanded="true"] .gpill {
+  border-color: var(--accent);
+}
+.gget.got .gqty {
+  color: var(--muted);
+}
+.gmore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  padding: 4px 0 10px 32px;
+}
+.gfield {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: .75rem;
+  color: var(--muted);
+}
+.gnum {
+  min-height: 44px;
+  text-align: right;
+  min-width: 0;
+}
+.gcount {
+  width: 4.5em;
+}
+.gprice {
+  width: 6em;
+}
+.gtotal {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: .875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.gtake {
+  min-height: 44px;
+  margin-left: auto;
+}
+
+/* At home */
+.ghomehead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ghomehead .note {
+  margin: 0;
+}
+.ghomehead .btn {
+  min-height: 44px;
+  flex: none;
+}
+.ghome>.gtickname {
+  padding-left: 32px;
+}
+.gchip {
+  flex: none;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: .75rem;
+  font-weight: 600;
+  background: var(--sunk);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.gchip.out {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+
+/* Edit mode */
+.gedit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 8px 0;
+}
+.gedit .gname {
+  flex: 1 1 100%;
+  min-width: 0;
+  min-height: 44px;
+}
+.gedit select {
+  flex: 1 1 8em;
+  min-width: 0;
+  min-height: 44px;
+}
+.gedit .btn {
+  min-height: 44px;
+}
+.gerr {
+  flex-basis: 100%;
+  margin: 0;
+}
+.gcheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.gform {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.gform h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.gform .warmadd input {
+  min-height: 44px;
+}
+.gform .btn {
+  min-height: 44px;
+}
+.gstoreline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+}
+
+/* A phone: the panel gives its width to the list. */
+@media (max-width:480px) {
+  .groc.panel {
+    padding: 12px;
+  }
+  .gmore {
+    padding-left: 0;
+  }
+}

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { clearStorage, saved, mem } from '../test/browserStubs.js';
 
 let useAppStore; const st = () => useAppStore.getState();
-const form = (o = {}) => ({ n: 'Kale', store: 'Veg market', qty: '2', price: '2.50', once: false, ...o });
+const form = (o = {}) => ({ n: 'Kale', store: 'Veg market', qty: '2', price: '2.50', every: true, ...o });
 beforeAll(async () => { ({ useAppStore } = await import('./useAppStore.js')); await st().init(); });
 beforeEach(async () => {
   clearStorage();
@@ -15,7 +15,7 @@ const thisMonth = async () => (await import('../lib/grocery.js')).monthKey(new D
 describe('the catalogue', () => {
   it('adds an item with its store, count and price, and saves it on the device', () => {
     expect(st().addGroceryItem(form())).toBeNull();
-    expect(st().grocery.items).toEqual([{ id: 'kale', n: 'Kale', store: 'Veg market', qty: 2, cents: 250, once: false }]);
+    expect(st().grocery.items).toEqual([{ id: 'kale', n: 'Kale', store: 'Veg market', qty: 2, cents: 250, every: true, out: false }]);
     expect(st().grocery.stores).toEqual(['Veg market']);
     expect(saved('grocery/main').items[0].cents).toBe(250);
   });
@@ -116,18 +116,67 @@ describe('a month', () => {
     st().setGroceryGot(await thisMonth(), 'ghost', true);
     expect(st().groceryMonths).toEqual({});
   });
-  it('pulls an occasional item onto one month and takes it off again', async () => {
-    const mk = await thisMonth();
-    st().addGroceryItem(form({ n: 'Saffron', once: true }));
+  it('unchecking Have puts a When-out item on this month’s list; an Every-month item is never out', async () => {
+    st().addGroceryItem(form({ n: 'Saffron', every: false }));
     st().addGroceryItem(form({ n: 'Rice' }));
-    st().pullGrocery(mk, 'rice', true); // not occasional: no effect
-    expect(st().groceryMonths).toEqual({});
-    st().pullGrocery(mk, 'saffron', true);
-    expect(st().groceryMonths[mk].pulled).toEqual(['saffron']);
+    expect(st().grocery.items.map(i => [i.id, i.every, i.out])).toEqual([['saffron', false, false], ['rice', true, false]]);
+    st().setGroceryOut('saffron', true);
+    st().setGroceryOut('rice', true); // no effect
+    expect(st().grocery.items.map(i => i.out)).toEqual([true, false]);
+    expect(saved('grocery/main').items[0].out).toBe(true);
+    expect(st().groceryMonths).toEqual({}); // nothing stored for the month: being out is the catalogue's
+    st().updateGroceryItem('saffron', { every: true });
+    expect(st().grocery.items[0]).toMatchObject({ every: true, out: false }); // made Every month: no longer out
+  });
+  it('closes the loop: buying a When-out item this month means you have it again, and unticking puts it back to out', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form({ n: 'Saffron', every: false }));
+    st().setGroceryOut('saffron', true);
     st().setGroceryGot(mk, 'saffron', true);
-    st().pullGrocery(mk, 'saffron', false);
+    expect(st().grocery.items[0].out).toBe(false);
+    expect(st().groceryMonths[mk].lines.saffron.got).toBe(true);
+    st().setGroceryGot(mk, 'saffron', false);
+    expect(st().grocery.items[0].out).toBe(true);
+  });
+  it('leaves what is at home alone when ticking in another month, or ticking an Every-month item', async () => {
+    const mk = await thisMonth(); const { shiftMonth } = await import('../lib/grocery.js');
+    st().addGroceryItem(form({ n: 'Saffron', every: false }));
+    st().addGroceryItem(form({ n: 'Rice' }));
+    st().setGroceryOut('saffron', true);
+    st().setGroceryGot(shiftMonth(mk, -1), 'saffron', true);
+    expect(st().grocery.items[0].out).toBe(true);
+    st().setGroceryGot(mk, 'rice', true);
+    st().setGroceryGot(mk, 'rice', false);
+    expect(st().grocery.items[1]).toMatchObject({ every: true, out: false });
+  });
+  it('takes a When-out item off the list: not out, and nothing of it left on that month', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form({ n: 'Saffron', every: false }));
+    st().addGroceryItem(form({ n: 'Rice' }));
+    st().setGroceryOut('saffron', true);
+    st().setGroceryQty(mk, 'saffron', 3);
+    st().takeGroceryOff(mk, 'rice'); // Every month: no effect
+    expect(st().grocery.items[1].out).toBe(false);
+    st().takeGroceryOff(mk, 'saffron');
+    expect(st().grocery.items[0].out).toBe(false);
     expect(st().groceryMonths[mk]).toBeUndefined(); // empty again: nothing kept
     expect(saved('grocery/' + mk)).toBeNull();
+  });
+  it('taking an item off an older month leaves it out today', async () => {
+    const mk = await thisMonth(); const { shiftMonth } = await import('../lib/grocery.js'); const last = shiftMonth(mk, -1);
+    st().addGroceryItem(form({ n: 'Saffron', every: false }));
+    st().setGroceryOut('saffron', true);
+    st().setGroceryGot(last, 'saffron', true);
+    st().takeGroceryOff(last, 'saffron');
+    expect(st().groceryMonths[last]).toBeUndefined(); // last month's purchase is gone
+    expect(st().grocery.items[0].out).toBe(true); // still on this month's To get
+  });
+  it('takes off an item an older version pulled onto a month', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form({ n: 'Saffron', every: false }));
+    useAppStore.setState({ groceryMonths: { [mk]: { lines: {}, pulled: ['saffron'] } } });
+    st().takeGroceryOff(mk, 'saffron');
+    expect(st().groceryMonths[mk]).toBeUndefined();
   });
 });
 
@@ -145,7 +194,7 @@ describe('loading and replacing', () => {
     const mk = await thisMonth();
     st().addGroceryItem(form());
     st().setGroceryGot(mk, 'kale', true);
-    st().setGrocery({ stores: ['Costco'], items: [{ id: 'rice', n: 'Rice', store: 'Costco', qty: 1, cents: 100, once: false }], months: { '2026-01': { lines: { rice: { got: true } }, pulled: [] }, nope: { lines: {} } } });
+    st().setGrocery({ stores: ['Costco'], items: [{ id: 'rice', n: 'Rice', store: 'Costco', qty: 1, cents: 100, every: true, out: false }], months: { '2026-01': { lines: { rice: { got: true } }, pulled: [] }, nope: { lines: {} } } });
     expect(st().grocery.items.map(i => i.id)).toEqual(['rice']);
     expect(Object.keys(st().groceryMonths)).toEqual(['2026-01']);
     expect(saved('grocery/' + mk)).toBeNull();
@@ -193,7 +242,7 @@ describe('who sees and keeps the list', () => {
     st().addGroceryItem(form());
     setAdmin(false);
     expect(buildDataFile(st().snapshot(), {}).grocery.items.map(i => i.id)).toEqual(['kale']);
-    useAppStore.setState({ importDraft: { name: 'x', kind: 'json', data: { exportedAt: '', config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: [], stretches: null, stretchWeeks: {}, supplements: null, grocery: { stores: [], items: [{ id: 'rice', n: 'Rice', store: '', qty: 1, cents: null, once: false }], months: {} } } } });
+    useAppStore.setState({ importDraft: { name: 'x', kind: 'json', data: { exportedAt: '', config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: [], stretches: null, stretchWeeks: {}, supplements: null, grocery: { stores: [], items: [{ id: 'rice', n: 'Rice', store: '', qty: 1, cents: null, every: true, out: false }], months: {} } } } });
     await st().applyImport('merge');
     expect(st().grocery.items.map(i => i.id).sort()).toEqual(['kale', 'rice']); // the file's rice is added
     setAdmin(true);

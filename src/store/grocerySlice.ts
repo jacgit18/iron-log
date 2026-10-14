@@ -91,7 +91,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
         if (g.items.length >= MAX_ITEMS) return `The list is full (${MAX_ITEMS} items).`;
         if (g.items.some(i => i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
         if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
-        g.items.push({ id: newGroceryId(g.items, n), n, store, qty, cents, once: d.once });
+        g.items.push({ id: newGroceryId(g.items, n), n, store, qty, cents, every: d.every, out: false });
         return null;
       });
     },
@@ -112,7 +112,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
         }
         if (patch.qty !== undefined) { const q = cleanQty(patch.qty); if (q == null || q <= 0) return 'The count must be a number from 0.01 to 999.'; it.qty = q; }
         if (patch.cents !== undefined) { if (patch.cents !== null && cleanCents(patch.cents) == null) return 'That price is not valid.'; it.cents = patch.cents; }
-        if (patch.once !== undefined) it.once = patch.once;
+        if (patch.every !== undefined) { it.every = patch.every; if (it.every) it.out = false; }
         if (g.items.some(i => i !== it && i.n.toLowerCase() === it.n.toLowerCase() && i.store === it.store)) return 'That item is already in this store’s list.';
         return null;
       });
@@ -156,15 +156,24 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
       return err;
     },
 
-    // Ticking records the count and price paid, so a later change to the catalogue does not rewrite that month.
+    setGroceryOut(id, out) {
+      const it = get().grocery.items.find(i => i.id === id);
+      if (!it || it.every || it.out === out) return;
+      mutateCatalogue(g => { const x = g.items.find(i => i.id === id); if (x) x.out = out; return null; });
+    },
+
+    // Ticking records the count and price paid, so a later change to the catalogue does not rewrite that month. In the current month
+    // it also closes the loop on a When-out item: bought means you have it again, and unticking puts it back to out. An older month
+    // is history and leaves what is at home alone.
     setGroceryGot(month, id, on) {
       const it = get().grocery.items.find(i => i.id === id);
-      if (!it) return;
+      if (!it || !MONTH_RE.test(month)) return;
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
         if (on) { l.got = true; l.qty = l.qty ?? it.qty; if (l.cents == null && it.cents != null) l.cents = it.cents; } else delete l.got;
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
+      if (month === monthKey(new Date()) && !it.every) get().setGroceryOut(id, !on);
     },
 
     setGroceryQty(month, id, qty) {
@@ -186,13 +195,13 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
       if (month === monthKey(new Date()) && cents !== null && it.cents !== cents) get().updateGroceryItem(id, { cents });
     },
 
-    pullGrocery(month, id, on) {
+    // "Take off the list": you don't need it after all. Its line goes too, so nothing of it is left on that month.
+    // Only the current month changes what is at home: taking it off an older month must not drop it from today's list.
+    takeGroceryOff(month, id) {
       const it = get().grocery.items.find(i => i.id === id);
-      if (!it || !it.once) return;
-      mutateMonth(month, m => {
-        m.pulled = m.pulled.filter(x => x !== id);
-        if (on) m.pulled.push(id); else delete m.lines[id];
-      });
+      if (!it || it.every) return;
+      if (it.out && month === monthKey(new Date())) get().setGroceryOut(id, false);
+      if (get().groceryMonths[month]) mutateMonth(month, m => { m.pulled = m.pulled.filter(x => x !== id); delete m.lines[id]; });
     },
   };
 };

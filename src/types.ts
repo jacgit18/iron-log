@@ -202,16 +202,17 @@ export interface Supplements {
   taken: Taken;
 }
 
-/* ---------- Grocery list (device-only, admin-only for now) ---------- */
-/** A thing you buy. `store` is where ('' = anywhere), `qty` the usual count, `cents` the last unit price in cents, `once` marks an occasional item that is not on each month's list. */
-export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; once: boolean }
+/* ---------- Grocery list (device-only for now) ---------- */
+/** A thing you buy. `store` is where ('' = anywhere), `qty` the usual count, `cents` the last unit price in cents. `every`: on each month's list
+ *  ("Every month"); otherwise it is a "When out" item, on this month's list only while `out` is set (unchecked on the At home list). */
+export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean }
 /** The catalogue: store names in the order shown, and the items. A month's list is drawn from it. */
 export interface Grocery { stores: string[]; items: GroceryItem[] }
 /** One item in one month: ticked off, and the count and unit price (cents) paid when they differ from the catalogue or were recorded at the tick. */
 export interface GroceryLine { got?: true; qty?: number; cents?: number }
 /** The catalogue plus every saved month: what the data file and the backups hold of the grocery list. */
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
-/** One month's list (`grocery/YYYY-MM`): its lines by item id, and the occasional items pulled onto it. */
+/** One month's list (`grocery/YYYY-MM`): its lines by item id, and `pulled`: items put on that month's list by older versions (read, no longer written). */
 export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[] }
 
 export type StretchTier = 'primary' | 'secondary' | '';

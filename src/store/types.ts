@@ -137,8 +137,8 @@ export interface SettingsSlice {
   applyImport(mode: 'merge' | 'replace'): Promise<void>;
 }
 
-/** The Grocery section's add-item form: what was typed. `price` is dollars as text. */
-export interface GroceryForm { n: string; store: string; qty: string; price: string; once: boolean }
+/** The Grocery section's add-item form: what was typed. `price` is dollars as text; `every` makes it an Every-month item (else When out). */
+export interface GroceryForm { n: string; store: string; qty: string; price: string; every: boolean }
 
 /** What the last single-item delete took out: `text` is the notice ("Removed <text>."), `restore` puts it back. */
 export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void }
@@ -160,14 +160,15 @@ export interface GrocerySlice {
   addGrocery(data: GroceryData): void; // an import adds what is missing
   clearGrocery(): void; // the device went to another account: forget the list, here and in storage
   addGroceryItem(d: GroceryForm): string | null;
-  updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; once: boolean }>): string | null;
+  updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean }>): string | null;
   removeGroceryItem(id: string): void;
   addGroceryStore(name: string): string | null;
   removeGroceryStore(name: string): string | null;
-  setGroceryGot(month: string, id: string, on: boolean): void;
+  setGroceryOut(id: string, out: boolean): void; // the At home list: unchecking "Have" puts a When-out item on this month's list
+  setGroceryGot(month: string, id: string, on: boolean): void; // in the current month a When-out item bought is back to "have"
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
-  pullGrocery(month: string, id: string, on: boolean): void;
+  takeGroceryOff(month: string, id: string): void; // a When-out item: not out any more, and off that month's list
 }
 
 export interface WellnessSlice {
