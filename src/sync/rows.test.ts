@@ -57,6 +57,13 @@ describe('fromServerRow', () => {
     expect(fromServerRow('list_items', row({ list: 'supplement_item', client_id: 'creatine', position: 0, data: { id: 'creatine', n: 'Creatine', slot: 'morning', dose: '5 g' } })))
       .toMatchObject({ key: 'supplement_item/creatine', item: { id: 'creatine', slot: 'morning', dose: '5 g' } });
   });
+
+  it('grocery items, stores and months (ADR 039)', () => {
+    const kale = { id: 'kale', n: 'Kale', store: 'Aldi', qty: 2, cents: 250, every: false, out: true };
+    expect(fromServerRow('list_items', row({ list: 'grocery_item', client_id: 'kale', position: 4, data: kale }))).toEqual({ table: 'list_items', key: 'grocery_item/kale', list: 'grocery_item', position: 4, item: kale, version: 1, deleted: false, seq: '12' });
+    expect(fromServerRow('list_items', row({ list: 'grocery_store', client_id: 'Aldi', position: 0, data: { id: 'Aldi', n: 'Aldi' } }))).toMatchObject({ key: 'grocery_store/Aldi', item: { id: 'Aldi', n: 'Aldi' } });
+    expect(fromServerRow('grocery_months', row({ month: '2026-10', data: { lines: { kale: { got: true, junk: 1 } }, pulled: [] } }))).toEqual({ table: 'grocery_months', key: '2026-10', record: { lines: { kale: { got: true } }, pulled: [] }, version: 1, deleted: false, seq: '12' });
+  });
 });
 
 describe('applyRows', () => {

@@ -63,10 +63,14 @@ describe('pulling what the real API holds', () => {
     await send(u, 'save-list-item', { list: 'stretch_experiment', item: { id: 'se1', n: 'Pigeon' }, position: 0 });
     await send(u, 'save-list-item', { list: 'experiment', item: { id: 'x1', ex: 'squat', ph: 'hyp', note: 'try' }, position: 0 });
     await send(u, 'save-list-item', { list: 'supplement_item', item: { id: 'creatine', n: 'Creatine', slot: 'morning', dose: '5 g' }, position: 0 });
+    const kale = { id: 'kale', n: 'Kale', store: 'Aldi', qty: 1.5, cents: 299, every: false, out: true };
+    await send(u, 'save-list-item', { list: 'grocery_item', item: kale, position: 0 });
+    await send(u, 'save-list-item', { list: 'grocery_store', item: { id: 'Aldi', n: 'Aldi' }, position: 0 });
+    await send(u, 'save-grocery-month', { month: '2026-10', record: { lines: { kale: { got: true, qty: 2, cents: 299 } }, pulled: [] } });
 
     const store = createMirrorStore(memory());
     const out = await pullAll(transportFor(u), store);
-    expect(out).toMatchObject({ ok: true, pages: 1, rows: 13 });
+    expect(out).toMatchObject({ ok: true, pages: 1, rows: 16 });
     const m = store.rows();
     const doc = (p: string) => documentFor(kind(p), m) as any;
 
@@ -85,6 +89,8 @@ describe('pulling what the real API holds', () => {
       waterGoal: 80, waterMode: 'fixed', water: { '2026-10-07': [16, 8] }, boost: { '2026-10-07': { hot: true, mins: 45 } },
       items: [{ id: 'creatine', n: 'Creatine', slot: 'morning', dose: '5 g' }], taken: { '2026-10-07': { creatine: true } },
     });
+    expect(doc('grocery/main')).toEqual({ stores: ['Aldi'], items: [kale] });
+    expect(doc('grocery/2026-10')).toEqual({ lines: { kale: { got: true, qty: 2, cents: 299 } }, pulled: [] });
   });
 
   it('a second pull brings only what changed, tombstones included', async () => {

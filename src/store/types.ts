@@ -79,6 +79,7 @@ export interface ImportDraft {
 
 export interface Ready {
   cfg: boolean; logs: boolean; week: boolean; programs: boolean; lib: boolean; body: boolean; exp: boolean; str: boolean; strHist: boolean; strWeek: boolean; supp: boolean;
+  groc: boolean; grocMonths: boolean; // the grocery list's catalogue and its months (ADR 039)
 }
 
 export type ExportKind = 'csv' | 'xlsx-all' | 'xlsx-week' | 'data';
@@ -151,14 +152,13 @@ export interface RemovedSlice {
   dismissRemoved(scope?: string): void;
 }
 
-/** The grocery list (device-only): the catalogue and every saved month. Lives in the browser's storage, not in the sync. */
+/** The grocery list (ADR 039): the catalogue and every saved month, saved like every other document (synced when syncing is on). */
 export interface GrocerySlice {
   grocery: Grocery;
   groceryMonths: Record<string, GroceryMonth>; // "YYYY-MM" -> that month; a month with no entry is the fresh list
-  loadGrocery(): void;
+  loadGrocery(): void; // syncing off: read the list from this browser's storage
   setGrocery(data: GroceryData): void; // an import replaces everything
-  addGrocery(data: GroceryData): void; // an import adds what is missing
-  clearGrocery(): void; // the device went to another account: forget the list, here and in storage
+  addGrocery(data: GroceryData): void; // an import, or this device's old list reaching the account, adds what is missing
   addGroceryItem(d: GroceryForm): string | null;
   updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean }>): string | null;
   removeGroceryItem(id: string): void;

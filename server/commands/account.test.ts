@@ -49,7 +49,7 @@ async function signUp(email: string) {
 }
 const me = async (headers: Record<string, string>) => (await fetch(`${base}/api/me`, { headers })).status;
 
-const DATA = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items', 'row_history', 'refused_writes'] as const;
+const DATA = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items', 'grocery_months', 'row_history', 'refused_writes'] as const;
 const rowsOf = async (table: string, userId: string) => Number((await sql<{ n: string }>`select count(*) as n from ${sql.table(table)} where user_id = ${userId}`.execute(owner)).rows[0]!.n);
 const allRows = async (userId: string): Promise<Record<string, number>> => Object.fromEntries(await Promise.all(DATA.map(async t => [t, await rowsOf(t, userId)])));
 const userId = async (authUserId: string) => (await owner.selectFrom('users').select('id').where('auth_user_id', '=', authUserId).executeTakeFirst())?.id;
@@ -66,6 +66,7 @@ async function fill(authUserId: string): Promise<string> {
   await owner.insertInto('config').values({ user_id: id, seq: '1', data: '{}' }).execute();
   await owner.insertInto('library_items').values({ user_id: id, client_id: `v-${authUserId}`, seq: '1', data: '{}' }).execute();
   await owner.insertInto('list_items').values({ user_id: id, list: 'stretch', client_id: `s-${authUserId}`, position: 0, seq: '1', data: '{}' }).execute();
+  await owner.insertInto('grocery_months').values({ user_id: id, seq: '1', month: '2026-10', data: '{}' }).execute();
   await owner.insertInto('refused_writes').values({ user_id: id, command: 'x', reason: 'y' }).execute();
   await sql`update log_entries set weight_lb = 100, version = version + 1 where user_id = ${id}`.execute(owner); // the history trigger copies the old row
   return id;

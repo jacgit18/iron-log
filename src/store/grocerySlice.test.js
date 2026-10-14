@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { clearStorage, saved, mem } from '../test/browserStubs.js';
 
 let useAppStore; const st = () => useAppStore.getState();
@@ -226,15 +226,41 @@ describe('the data file', () => {
 });
 
 describe('who sees and keeps the list', () => {
-  it('forgets the list, here and in storage, when the device goes to another account', async () => {
+  it('with syncing off, the list is this browser\'s storage: saved there and read back at startup', async () => {
     const mk = await thisMonth();
     st().addGroceryItem(form());
     st().setGroceryGot(mk, 'kale', true);
-    expect(saved('grocery/main')).not.toBeNull();
-    st().clearGrocery();
+    expect(saved('grocery/main').items.map(i => i.id)).toEqual(['kale']);
+    expect(saved(`grocery/${mk}`).lines.kale.got).toBe(true);
+    useAppStore.setState({ grocery: { stores: [], items: [] }, groceryMonths: {} });
+    st().loadGrocery();
+    expect(st().grocery.items.map(i => i.id)).toEqual(['kale']);
+    expect(st().groceryMonths[mk].lines.kale.got).toBe(true);
+  });
+  it('a month emptied again is removed from storage, not kept as an empty document', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form({ every: false }));
+    st().setGroceryGot(mk, 'kale', true);
+    expect(saved(`grocery/${mk}`)).not.toBeNull();
+    st().takeGroceryOff(mk, 'kale');
+    expect(saved(`grocery/${mk}`)).toBeNull();
+  });
+  it('refuses to change the list until it has loaded, so an empty list never overwrites the saved one', () => {
+    const ready = st().ready;
+    useAppStore.setState({ ready: { ...ready, groc: false } });
+    expect(st().addGroceryItem(form())).toMatch(/loading/i);
     expect(st().grocery.items).toEqual([]);
-    expect(st().groceryMonths).toEqual({});
-    expect(Object.keys(mem).filter(k => k.startsWith('ironlog:grocery/'))).toEqual([]);
+    expect(saved('grocery/main')).toBeNull();
+    useAppStore.setState({ ready });
+  });
+  it('another tab\'s change to the list or a month is taken', async () => {
+    const { fromOtherTab } = await import('./useAppStore.js');
+    fromOtherTab({ key: 'ironlog:grocery/main', newValue: JSON.stringify({ stores: [], items: [{ id: 'rice', n: 'Rice', store: '', qty: 1, cents: null, every: true, out: false }] }) });
+    expect(st().grocery.items.map(i => i.id)).toEqual(['rice']);
+    fromOtherTab({ key: 'ironlog:grocery/2026-09', newValue: JSON.stringify({ lines: { rice: { got: true } }, pulled: [] }) });
+    expect(st().groceryMonths['2026-09'].lines.rice.got).toBe(true);
+    fromOtherTab({ key: 'ironlog:grocery/2026-09', newValue: null });
+    expect(st().groceryMonths['2026-09']).toBeUndefined();
   });
   it('released to everyone (2026-10-13): a non-admin exports, backs up and imports the list too', async () => {
     const { setAdmin } = await import('../features.js');
@@ -246,5 +272,101 @@ describe('who sees and keeps the list', () => {
     await st().applyImport('merge');
     expect(st().grocery.items.map(i => i.id).sort()).toEqual(['kale', 'rice']); // the file's rice is added
     setAdmin(true);
+  });
+});
+
+// ADR 039: with a database (the host's, or the API's through the sync) the list is the account's.
+function fakeDb() {
+  const docs = new Map(); const listeners = [];
+  const colOf = p => p.split('/')[0];
+  const snap = l => (l.kind === 'col'
+    ? { docs: [...docs].filter(([p]) => colOf(p) === l.name).map(([p, v]) => ({ id: p.slice(l.name.length + 1), exists: true, data: () => structuredClone(v) })) }
+    : { exists: docs.has(l.name), data: () => structuredClone(docs.get(l.name)) });
+  const notify = path => listeners.forEach(l => { if (l.kind === 'col' ? l.name === colOf(path) : l.name === path) l.cb(snap(l)); });
+  const listen = (kind, name) => cb => { const l = { kind, name, cb }; listeners.push(l); cb(snap(l)); return () => {}; };
+  const write = (path, fn) => { fn(); notify(path); return Promise.resolve(); };
+  return {
+    docs,
+    collection: name => ({ onSnapshot: listen('col', name), get: async () => snap({ kind: 'col', name }) }),
+    doc: path => ({ onSnapshot: listen('doc', path), get: async () => snap({ kind: 'doc', name: path }), set: data => write(path, () => docs.set(path, structuredClone(data))), delete: () => write(path, () => docs.delete(path)) }),
+    remoteSet(path, data) { if (data == null) docs.delete(path); else docs.set(path, structuredClone(data)); notify(path); },
+  };
+}
+const tick = () => new Promise(r => setTimeout(r, 0));
+const item = (id, n, over = {}) => ({ id, n, store: '', qty: 1, cents: null, every: true, out: false, ...over });
+
+describe('the list in the account (ADR 039)', () => {
+  // A fresh store on a database; `device` is the list this browser held before the list synced.
+  async function boot(fdb, device = {}) {
+    vi.resetModules();
+    clearStorage();
+    for (const [path, doc] of Object.entries(device)) mem['ironlog:' + path] = JSON.stringify(doc);
+    globalThis.claude = { use: async n => (n === 'db' ? fdb : null) };
+    const mod = await import('./useAppStore.js');
+    await mod.useAppStore.getState().init(); await tick();
+    return mod;
+  }
+  const done = () => { delete globalThis.claude; };
+
+  it('loads from the database, writes there and not to this browser\'s storage, and takes another device\'s change', async () => {
+    const fdb = fakeDb();
+    fdb.docs.set('grocery/main', { stores: [], items: [item('kale', 'Kale')] });
+    fdb.docs.set('grocery/2026-09', { lines: { kale: { got: true } }, pulled: [] });
+    try {
+      const { useAppStore: S } = await boot(fdb);
+      const s = () => S.getState();
+      expect(s().isReady()).toBe(true);
+      expect(s().grocery.items.map(i => i.id)).toEqual(['kale']);
+      expect(s().groceryMonths['2026-09'].lines.kale.got).toBe(true);
+      expect(s().addGroceryItem(form({ n: 'Rice', store: '' }))).toBeNull();
+      await tick();
+      expect(fdb.docs.get('grocery/main').items.map(i => i.id)).toEqual(['kale', 'rice']);
+      expect(mem['ironlog:grocery/main']).toBeUndefined();
+      fdb.remoteSet('grocery/2026-09', { lines: { kale: { got: true }, rice: { got: true } }, pulled: [] }); // ticked on another device
+      expect(s().groceryMonths['2026-09'].lines.rice.got).toBe(true);
+      fdb.remoteSet('grocery/2026-09', null);
+      expect(s().groceryMonths['2026-09']).toBeUndefined();
+    } finally { done(); }
+  });
+
+  it('the list this browser held before syncing reaches the account once, added to what is there, nothing doubled', async () => {
+    const fdb = fakeDb();
+    fdb.docs.set('grocery/main', { stores: ['Aldi'], items: [item('kale', 'Kale', { store: 'Aldi' })] }); // the account has a list already
+    fdb.docs.set('grocery/2026-09', { lines: { kale: { got: true } }, pulled: [] });
+    const device = {
+      'grocery/main': { stores: ['Aldi'], items: [item('kale', 'Kale', { store: 'Aldi', qty: 5 }), item('salt', 'Salt', { once: true, every: undefined })] },
+      'grocery/2026-09': { lines: { kale: { got: true, cents: 1 }, salt: { got: true } }, pulled: [] },
+      'grocery/2026-08': { lines: { salt: { got: true } }, pulled: [] },
+    };
+    try {
+      const { useAppStore: S } = await boot(fdb, device);
+      await tick();
+      expect(fdb.docs.get('grocery/main').items.map(i => [i.id, i.qty])).toEqual([['kale', 1], ['salt', 1]]); // the account's kale stays; salt is added
+      expect(fdb.docs.get('grocery/2026-09').lines).toEqual({ kale: { got: true }, salt: { got: true } }); // the account's line wins
+      expect(fdb.docs.get('grocery/2026-08').lines).toEqual({ salt: { got: true } });
+      expect(saved('sync/grocery-adopted')).toMatchObject({ why: 'added' });
+      expect(saved('grocery/main')).not.toBeNull(); // the device's copy is kept, as with the other old documents
+      expect(S.getState().grocery.items).toHaveLength(2);
+      // the account's list is then emptied on another device; reopening does not fill it again from here
+      fdb.remoteSet('grocery/main', { stores: [], items: [] });
+      vi.resetModules();
+      const again = await import('./useAppStore.js');
+      await again.useAppStore.getState().init(); await tick();
+      expect(fdb.docs.get('grocery/main').items).toEqual([]);
+    } finally { done(); }
+  });
+
+  it('a device handed to another account never adds its old list to it', async () => {
+    const fdb = fakeDb();
+    try {
+      mem['ironlog:sync/grocery-adopted'] = JSON.stringify({ why: 'other-account' });
+      vi.resetModules();
+      globalThis.claude = { use: async n => (n === 'db' ? fdb : null) };
+      mem['ironlog:grocery/main'] = JSON.stringify({ stores: [], items: [item('kale', 'Kale')] });
+      const { useAppStore: S } = await import('./useAppStore.js');
+      await S.getState().init(); await tick();
+      expect(fdb.docs.has('grocery/main')).toBe(false);
+      expect(S.getState().grocery.items).toEqual([]);
+    } finally { done(); }
   });
 });

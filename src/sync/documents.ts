@@ -1,4 +1,5 @@
 import { normConfigDoc, type ConfigDoc } from '../shared/config.js';
+import { MONTH_RE, monthEmpty, normGroceryItem, normGroceryMonth, normGroceryStore } from '../shared/grocery.js';
 import { normExperimentItem, normStretchExperimentItem, normStretchItem, normSupplementItem } from '../shared/listItems.js';
 import { validateSaveProgram, type ListName } from '../shared/commands.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
@@ -6,9 +7,11 @@ import { normBoost, normTakenDay, normWaterDay, r1 } from '../shared/supplementD
 import { SCHEMA_VERSION, normBody, normEntries, normLibrary, validDate, validGoal } from '../shared/validate.js';
 import { normWeek } from '../shared/week.js';
 import { padLibrary } from '../lib/data.js';
+import { normGrocery } from '../lib/grocery.js';
 import { DEFAULT_GOAL_OZ } from '../lib/water.js';
 import { entryId } from '../lib/export.js';
 import type { LibraryItem, LogEntry, Supplements } from '../types.ts';
+import type { MergedTable } from './merge.js';
 import { mirrorId, type DesiredRow, type Mirror, type MirrorRow } from './types.js';
 
 /* ---------- Documents and rows ----------
@@ -29,7 +32,9 @@ export type PathKind =
   | { kind: 'stretches' }
   | { kind: 'supplements' }
   | { kind: 'config' }
-  | { kind: 'programs'; key: 'A' | 'B' };
+  | { kind: 'programs'; key: 'A' | 'B' }
+  | { kind: 'grocery' }
+  | { kind: 'grocerymonths'; month: string };
 
 /** The path kind for a store path, or null for a path that is not synced. */
 export function parsePath(path: string): PathKind | null {
@@ -40,6 +45,8 @@ export function parsePath(path: string): PathKind | null {
     case 'weeks': return validDate(rest) ? { kind: 'weeks', weekStart: rest } : null;
     case 'stretchweeks': return validDate(rest) ? { kind: 'stretchweeks', weekStart: rest } : null;
     case 'programs': return rest === 'A' || rest === 'B' ? { kind: 'programs', key: rest } : null;
+    // The grocery list (ADR 039): the catalogue is grocery/main, each month grocery/YYYY-MM.
+    case 'grocery': return rest === 'main' ? { kind: 'grocery' } : MONTH_RE.test(rest) ? { kind: 'grocerymonths', month: rest } : null;
     case 'body': case 'library': case 'experiments': case 'stretches': case 'supplements': case 'config':
       return rest === 'main' ? ({ kind: head } as PathKind) : null;
     default: return null;
@@ -57,9 +64,25 @@ export function pathsOf(row: MirrorRow): string[] {
     case 'programs': return [`programs/${row.key}`];
     case 'config': return ['config/main', 'supplements/main']; // the water goal and mode live in the config row
     case 'library_items': return ['library/main'];
-    case 'list_items': return [row.list === 'experiment' ? 'experiments/main' : row.list === 'supplement_item' ? 'supplements/main' : 'stretches/main'];
+    case 'list_items': return [LIST_PATH[row.list]];
+    case 'grocery_months': return [`grocery/${row.key}`];
   }
 }
+
+const LIST_PATH: Record<ListName, string> = {
+  stretch: 'stretches/main', stretch_experiment: 'stretches/main', experiment: 'experiments/main', supplement_item: 'supplements/main',
+  grocery_item: 'grocery/main', grocery_store: 'grocery/main',
+};
+/** For a path whose document is merged three-way rather than replaced (a week, a stretch week, a grocery month): its row's table and
+ *  key. Null for every other path. */
+export function mergedRowOf(kind: PathKind | null): { table: MergedTable; key: string } | null {
+  if (kind?.kind === 'weeks') return { table: 'weeks', key: kind.weekStart };
+  if (kind?.kind === 'stretchweeks') return { table: 'stretch_weeks', key: kind.weekStart };
+  if (kind?.kind === 'grocerymonths') return { table: 'grocery_months', key: kind.month };
+  return null;
+}
+/** The document a merged row holds, or undefined for a row of another table. */
+export const mergedDoc = (r: MirrorRow): unknown => (r.table === 'weeks' || r.table === 'stretch_weeks' ? r.week : r.table === 'grocery_months' ? r.record : undefined);
 
 const WATER_KEYS = ['waterGoal', 'waterMode'] as const;
 const rows = (mirror: Mirror) => [...mirror.values()];
@@ -78,6 +101,8 @@ export function scopeRows(kind: PathKind, mirror: Mirror): MirrorRow[] {
     case 'stretches': return all.filter(r => r.table === 'list_items' && (r.list === 'stretch' || r.list === 'stretch_experiment'));
     case 'supplements': return all.filter(r => r.table === 'supplement_days' || (r.table === 'list_items' && r.list === 'supplement_item'));
     case 'programs': return all.filter(r => r.table === 'programs' && r.key === kind.key);
+    case 'grocery': return all.filter(r => r.table === 'list_items' && (r.list === 'grocery_item' || r.list === 'grocery_store'));
+    case 'grocerymonths': return all.filter(r => r.table === 'grocery_months' && r.key === kind.month);
     case 'config': return [];
   }
 }
@@ -103,6 +128,12 @@ export function documentFor(kind: PathKind, mirror: Mirror): unknown {
     case 'weeks': { const r = live[0]; return r && r.table === 'weeks' ? r.week : null; }
     case 'stretchweeks': { const r = live[0]; return r && r.table === 'stretch_weeks' ? r.week : null; }
     case 'programs': { const r = live[0]; return r && r.table === 'programs' ? r.program : null; }
+    case 'grocerymonths': { const r = live[0]; return r && r.table === 'grocery_months' ? r.record : null; }
+    case 'grocery': {
+      if (!scope.length) return null;
+      const stores = listOf(live, 'grocery_store') as { n: string }[];
+      return normGrocery({ stores: stores.map(s => s.n), items: listOf(live, 'grocery_item') });
+    }
     case 'body': {
       if (!scope.length) return null;
       const entries = live.filter((r): r is Extract<MirrorRow, { table: 'body_entries' }> => r.table === 'body_entries').sort(byKey);
@@ -184,6 +215,16 @@ export function desiredRows(kind: PathKind, doc: unknown, mirror: Mirror): Desir
     case 'experiments': return listRows('experiment', d.items, normExperimentItem);
     case 'stretches': return [...listRows('stretch', d.items, normStretchItem), ...listRows('stretch_experiment', d.experiments, normStretchExperimentItem)];
     case 'supplements': return supplementRows(d, mirror);
+    case 'grocery': {
+      // Cleaned as the app reads it first, so a store an item names is a row too, and the caps hold.
+      const g = normGrocery(doc);
+      return [...listRows('grocery_store', g.stores.map(n => ({ id: n, n })), normGroceryStore), ...listRows('grocery_item', g.items, normGroceryItem)];
+    }
+    case 'grocerymonths': {
+      // An empty month is the fresh list: no row (the store removes the document, and an empty one saved anyway is not kept).
+      const record = normGroceryMonth(doc);
+      return monthEmpty(record) ? [] : [{ table: 'grocery_months', key: kind.month, record }];
+    }
     case 'config': {
       const cfg = normConfigDoc(doc) ?? {};
       const row = configRow(mirror);

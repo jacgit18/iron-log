@@ -22,7 +22,7 @@ import { tickCard } from './commands/tickCard.ts';
 import { deleteBodyWeight, logBodyWeight } from './commands/bodyWeight.ts';
 import { deleteEntry } from './commands/deleteEntry.ts';
 import { deleteSupplementDay, saveSupplementDay } from './commands/supplementDays.ts';
-import { deleteLibraryItem, deleteListItem, deleteProgram, deleteStretchWeek, deleteWeek, saveConfig, saveLibraryItem, saveListItem, saveProgram, saveStretchWeek, saveWeek } from './commands/documents.ts';
+import { deleteGroceryMonth, deleteLibraryItem, deleteListItem, deleteProgram, deleteStretchWeek, deleteWeek, saveConfig, saveGroceryMonth, saveLibraryItem, saveListItem, saveProgram, saveStretchWeek, saveWeek } from './commands/documents.ts';
 import { untickCard } from './commands/untickCard.ts';
 import { parseLimit, parseSince, syncPage } from './commands/sync.ts';
 import type { DB } from './db/types.ts';
@@ -206,6 +206,10 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   command('/api/commands/save-list-item', saveListItem);
 
   command('/api/commands/delete-list-item', deleteListItem);
+
+  command('/api/commands/save-grocery-month', saveGroceryMonth);
+
+  command('/api/commands/delete-grocery-month', deleteGroceryMonth);
 
   app.get('/api/sync', async (req, res) => {
     const since = parseSince(req.query.since);

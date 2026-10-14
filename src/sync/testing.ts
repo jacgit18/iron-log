@@ -89,6 +89,10 @@ export function fakeServer() {
       case 'save-stretch-week': return put('stretch_weeks', input.weekStart, { week_start: input.weekStart, data: input.week }, env.baseVersion);
       case 'delete-week': return kill('weeks', input.weekStart, env.baseVersion ?? -1);
       case 'save-config': return put('config', 'config', { data: input.config }, env.baseVersion);
+      case 'save-grocery-month': return put('grocery_months', input.month, { month: input.month, data: input.record }, env.baseVersion);
+      case 'delete-grocery-month': return kill('grocery_months', input.month, env.baseVersion ?? -1);
+      case 'save-list-item': return put('list_items', `${input.list}/${input.item.id}`, { list: input.list, client_id: input.item.id, position: input.position, data: input.item }, env.baseVersion);
+      case 'delete-list-item': return kill('list_items', `${input.list}/${input.id}`, env.baseVersion ?? -1);
       default: return { ok: false, class: 'refused', status: 422, reason: `fake server does not know ${name}` };
     }
   }

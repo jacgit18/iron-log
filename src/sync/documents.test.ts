@@ -20,11 +20,13 @@ describe('parsePath', () => {
     ['stretches/main', { kind: 'stretches' }],
     ['supplements/main', { kind: 'supplements' }],
     ['config/main', { kind: 'config' }],
+    ['grocery/main', { kind: 'grocery' }],
+    ['grocery/2026-10', { kind: 'grocerymonths', month: '2026-10' }],
   ])('%s', (path, expected) => {
     expect(parsePath(path)).toEqual(expected);
   });
 
-  it.each(['', 'logs', 'logs/', 'weeks/nope', 'weeks/2026-13-40', 'programs/C', 'body/other', 'view/main', 'logs/a/b', `logs/${'x'.repeat(101)}`])('is not a synced path: %j', path => {
+  it.each(['', 'logs', 'logs/', 'weeks/nope', 'weeks/2026-13-40', 'programs/C', 'body/other', 'view/main', 'logs/a/b', `logs/${'x'.repeat(101)}`, 'grocery/2026-13', 'grocery/2026-10-01', 'grocery/other', 'grocery/2026-10/x'])('is not a synced path: %j', path => {
     expect(parsePath(path)).toBeNull();
   });
 });
@@ -159,5 +161,56 @@ describe('scope and affected paths', () => {
     expect(r({ table: 'list_items', key: 'supplement_item/x', list: 'supplement_item', position: 0, item: { id: 'x', n: 'X', slot: '' } })).toEqual(['supplements/main']);
     expect(r({ table: 'supplement_days', key: '2026-10-07', day: '2026-10-07', record: { water: [], boost: null, taken: {} } })).toEqual(['supplements/main']);
     expect(r({ table: 'stretch_weeks', key: '2026-10-04', week: { done: {}, skipped: {}, extra: [] } })).toEqual(['stretchweeks/2026-10-04']);
+  });
+});
+
+// ADR 039: the grocery list. The catalogue is grocery_item and grocery_store list rows; a month is one grocery_months row.
+describe('the grocery list', () => {
+  const g = {
+    stores: ['Veg market', 'Costco'],
+    items: [
+      { id: 'kale', n: 'Kale', store: 'Veg market', qty: 2, cents: 250, every: true, out: false },
+      { id: 'saffron', n: 'Saffron', store: 'Costco', qty: 1, cents: null, every: false, out: true },
+      { id: 'salt', n: 'Salt', store: '', qty: 1, cents: null, every: false, out: false },
+    ],
+  };
+  const month = { lines: { kale: { got: true, qty: 2, cents: 250 } }, pulled: ['salt'] };
+
+  it('the catalogue is one row per store and per item, in order, and comes back as it went', () => {
+    const rows = desiredRows(kind('grocery/main'), g, new Map());
+    expect(rows.map(r => [r.key, r.table === 'list_items' && r.position])).toEqual([
+      ['grocery_store/Veg market', 0], ['grocery_store/Costco', 1], ['grocery_item/kale', 0], ['grocery_item/saffron', 1], ['grocery_item/salt', 2],
+    ]);
+    expect(rows[0]).toMatchObject({ list: 'grocery_store', item: { id: 'Veg market', n: 'Veg market' } });
+    expect(documentFor(kind('grocery/main'), mirrorOf(rows))).toEqual(g);
+  });
+
+  it('cleans the catalogue as the app reads it: a store an item names becomes a row, an old `once` item is When out', () => {
+    const rows = desiredRows(kind('grocery/main'), { stores: [], items: [{ id: 'rice', n: 'Rice', store: 'Aldi', qty: 1, cents: null, once: true }] }, new Map());
+    expect(rows.map(r => r.key)).toEqual(['grocery_store/Aldi', 'grocery_item/rice']);
+    expect(rows[1]).toMatchObject({ item: { every: false, out: false } });
+  });
+
+  it('a catalogue with no rows has no document; one whose rows were all deleted is the empty list', () => {
+    expect(documentFor(kind('grocery/main'), new Map())).toBeNull();
+    const gone = new Map([...mirrorOf(desiredRows(kind('grocery/main'), g, new Map()))].map(([id, r]) => [id, { ...r, deleted: true }]));
+    expect(documentFor(kind('grocery/main'), gone)).toEqual({ stores: [], items: [] });
+  });
+
+  it('a month is one row keyed by the month; an empty month is no row', () => {
+    const rows = desiredRows(kind('grocery/2026-10'), month, new Map());
+    expect(rows).toEqual([{ table: 'grocery_months', key: '2026-10', record: month }]);
+    expect(documentFor(kind('grocery/2026-10'), mirrorOf(rows))).toEqual(month);
+    expect(documentFor(kind('grocery/2026-11'), mirrorOf(rows))).toBeNull();
+    expect(desiredRows(kind('grocery/2026-10'), { lines: {}, pulled: [] }, new Map())).toEqual([]);
+  });
+
+  it('scopes and paths: the catalogue owns only its two lists, a month only its row', () => {
+    const m = mirrorOf([...desiredRows(kind('grocery/main'), g, new Map()), ...desiredRows(kind('grocery/2026-10'), month, new Map()), ...desiredRows(kind('supplements/main'), { items: [{ id: 'zinc', n: 'Zinc' }] }, new Map())]);
+    expect(scopeRows(kind('grocery/main'), m)).toHaveLength(5);
+    expect(scopeRows(kind('grocery/2026-10'), m).map(r => r.key)).toEqual(['2026-10']);
+    expect(scopeRows(kind('supplements/main'), m).map(r => r.key)).toEqual(['supplement_item/zinc']);
+    const paths = [...m.values()].flatMap(pathsOf);
+    expect([...new Set(paths)].sort()).toEqual(['grocery/2026-10', 'grocery/main', 'supplements/main']);
   });
 });

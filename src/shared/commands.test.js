@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BUILTIN } from '../lib/data.js';
-import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek, validateSaveSupplementDay, validateDeleteSupplementDay, validateSaveProgram, validateDeleteProgram, validateSaveConfig, validateSaveLibraryItem, validateDeleteLibraryItem, validateSaveListItem, validateDeleteListItem } from './commands.js';
+import { validateLogSession, validateTickCard, validateUntickCard, validateDeleteEntry, validateLogBodyWeight, validateDeleteBodyWeight, validateSaveWeek, validateSaveStretchWeek, validateDeleteWeek, validateSaveSupplementDay, validateDeleteSupplementDay, validateSaveProgram, validateDeleteProgram, validateSaveConfig, validateSaveLibraryItem, validateDeleteLibraryItem, validateSaveListItem, validateDeleteListItem, validateSaveGroceryMonth, validateDeleteGroceryMonth, LIST_CAPS } from './commands.js';
 
 describe('validateLogSession', () => {
   it('accepts an exercise id with a valid entry and cleans the entry', () => {
@@ -253,6 +253,30 @@ describe('validateSaveListItem', () => {
     expect(validateSaveListItem({ list: 'experiment', position: 0, item: { id: 'x'.repeat(101), ex: 'squat' } })).toBeNull();
     expect(validateSaveListItem(null)).toBeNull();
   });
+  const kale = { id: 'kale', n: 'Kale', store: 'Veg market', qty: 2, cents: 250, every: false, out: true };
+  it('takes a grocery item exactly as the app writes it', () => {
+    expect(validateSaveListItem({ list: 'grocery_item', position: 3, item: kale })).toEqual({ list: 'grocery_item', position: 3, item: kale });
+    expect(validateSaveListItem({ list: 'grocery_item', position: 0, item: { ...kale, store: '', cents: null, qty: 0.25, every: true, out: false } }).item).toEqual({ ...kale, store: '', cents: null, qty: 0.25, every: true, out: false });
+    expect(validateSaveListItem({ list: 'grocery_item', position: 0, item: { ...kale, junk: 1 } }).item).toEqual(kale); // unknown keys are dropped
+  });
+  it('refuses a grocery item the app would never send, rather than cleaning it into another', () => {
+    const bad = [
+      { ...kale, n: 'x'.repeat(81) }, { ...kale, n: '' }, { ...kale, n: ' Kale' }, { ...kale, id: 'x'.repeat(61) }, { ...kale, id: '__proto__' },
+      { ...kale, store: 'x'.repeat(41) }, { ...kale, qty: 0 }, { ...kale, qty: 1000 }, { ...kale, qty: 1.234 }, { ...kale, qty: '2' },
+      { ...kale, cents: -1 }, { ...kale, cents: 1.5 }, { ...kale, cents: 100_000_000 }, { ...kale, cents: undefined },
+      { ...kale, every: 'yes' }, { ...kale, out: undefined }, { ...kale, every: true, out: true }, { ...kale, once: true, every: undefined },
+    ];
+    for (const item of bad) expect(validateSaveListItem({ list: 'grocery_item', position: 0, item })).toBeNull();
+  });
+  it('takes a store whose id is its name, and nothing else', () => {
+    expect(validateSaveListItem({ list: 'grocery_store', position: 1, item: { id: 'Aldi', n: 'Aldi' } })).toEqual({ list: 'grocery_store', position: 1, item: { id: 'Aldi', n: 'Aldi' } });
+    for (const item of [{ id: 'Aldi', n: 'Lidl' }, { n: 'Aldi' }, { id: 'x'.repeat(41), n: 'x'.repeat(41) }, { id: '', n: '' }, { id: ' Aldi', n: ' Aldi' }]) {
+      expect(validateSaveListItem({ list: 'grocery_store', position: 0, item })).toBeNull();
+    }
+  });
+  it('caps the grocery lists at the app\'s own limits', () => {
+    expect(LIST_CAPS).toEqual({ grocery_item: 500, grocery_store: 30 });
+  });
 });
 
 describe('validateDeleteListItem', () => {
@@ -263,5 +287,33 @@ describe('validateDeleteListItem', () => {
     expect(validateDeleteListItem({ list: 'experiment', id: '' })).toBeNull();
     expect(validateDeleteListItem({ list: 'experiment', id: 'x'.repeat(101) })).toBeNull();
     expect(validateDeleteListItem(null)).toBeNull();
+  });
+});
+
+describe('validateSaveGroceryMonth', () => {
+  it('cleans a month like the app does', () => {
+    const out = validateSaveGroceryMonth({ month: '2026-10', record: { lines: { kale: { got: true, qty: 2, cents: 250, junk: 1 }, rice: { got: false }, __proto__: { got: true } }, pulled: ['salt', 'salt', ''] } });
+    expect(out).toEqual({ month: '2026-10', record: { lines: { kale: { got: true, qty: 2, cents: 250 } }, pulled: ['salt'] } });
+  });
+  it('keeps at most 500 lines and pulled ids', () => {
+    const lines = Object.fromEntries(Array.from({ length: 600 }, (_, i) => [`i${i}`, { got: true }]));
+    const out = validateSaveGroceryMonth({ month: '2026-10', record: { lines, pulled: Array.from({ length: 600 }, (_, i) => `i${i}`) } });
+    expect(Object.keys(out.record.lines)).toHaveLength(500);
+    expect(out.record.pulled).toHaveLength(500);
+  });
+  it('refuses a month that is not YYYY-MM, or a record that is not an object', () => {
+    for (const month of ['2026-13', '2026-1', '2026-10-01', 202610, null]) expect(validateSaveGroceryMonth({ month, record: {} })).toBeNull();
+    expect(validateSaveGroceryMonth({ month: '2026-10', record: [] })).toBeNull();
+    expect(validateSaveGroceryMonth({ month: '2026-10' })).toBeNull();
+    expect(validateSaveGroceryMonth(null)).toBeNull();
+  });
+});
+
+describe('validateDeleteGroceryMonth', () => {
+  it('accepts a month and refuses anything else', () => {
+    expect(validateDeleteGroceryMonth({ month: '2026-10', junk: 1 })).toEqual({ month: '2026-10' });
+    expect(validateDeleteGroceryMonth({ month: '2026-00' })).toBeNull();
+    expect(validateDeleteGroceryMonth({})).toBeNull();
+    expect(validateDeleteGroceryMonth(null)).toBeNull();
   });
 });

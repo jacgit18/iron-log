@@ -47,3 +47,15 @@ describe('ownChanges', () => {
     expect(ownChanges(kind('weeks/2026-10-11'), wk({ a: true, b: true }), before)).toBeNull();
   });
 });
+
+describe('ownChanges: a grocery month (ADR 039)', () => {
+  it('keeps only the lines and fields this device changed', () => {
+    const before = mirrorOf('grocery/2026-10', { lines: { kale: { got: true }, rice: { got: true, cents: 100 } }, pulled: [] });
+    const own = ownChanges(kind('grocery/2026-10'), { lines: { kale: { got: true }, rice: { got: true, cents: 150 }, salt: { got: true } }, pulled: [] }, before);
+    expect(own).toEqual({ lines: { rice: { cents: 150 }, salt: { got: true } }, pulled: [] });
+  });
+  it('is null when the month is as it was', () => {
+    const doc = { lines: { kale: { got: true } }, pulled: [] };
+    expect(ownChanges(kind('grocery/2026-10'), doc, mirrorOf('grocery/2026-10', doc))).toBeNull();
+  });
+});

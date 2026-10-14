@@ -93,6 +93,8 @@ describe('pathLabel', () => {
     ['stretches/main', 'Stretch list'],
     ['supplements/main', 'Supplements and water'],
     ['config/main', 'Settings'],
+    ['grocery/main', 'Grocery list'],
+    ['grocery/2026-10', 'Groceries, October 2026'],
     ['something/else', 'something/else'],
   ])('%s is called %s', (path, label) => {
     expect(pathLabel(path, nameOf)).toBe(label);

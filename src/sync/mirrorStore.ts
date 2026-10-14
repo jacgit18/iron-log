@@ -20,7 +20,7 @@ export interface Storage {
   remove(key: string): void;
 }
 
-const TABLES: readonly SyncTable[] = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items'];
+const TABLES: readonly SyncTable[] = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items', 'grocery_months'];
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 // A row read back from storage. The shape is checked just enough that code reading it cannot crash on a damaged entry;
@@ -37,6 +37,7 @@ function isMirrorRow(v: unknown): v is MirrorRow {
     case 'config': return isObject(v.config);
     case 'library_items': return isObject(v.item) && typeof v.item.id === 'string';
     case 'list_items': return typeof v.list === 'string' && Number.isInteger(v.position) && isObject(v.item);
+    case 'grocery_months': return isObject(v.record) && isObject(v.record.lines) && Array.isArray(v.record.pulled);
     default: return false;
   }
 }

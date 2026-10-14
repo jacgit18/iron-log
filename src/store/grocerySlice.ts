@@ -1,30 +1,48 @@
 import { LS } from '../lib/storage.js';
 import {
-  MAX_ITEMS, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, parseDollars,
+  MAX_ITEMS, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, normGrocery, normGroceryData, parseDollars,
 } from '../lib/grocery.js';
-import type { Grocery, GroceryMonth } from '../types.ts';
-import type { Flag, GrocerySlice, StoreGet, StoreSet } from './types.ts';
+import type { Grocery, GroceryData, GroceryMonth } from '../types.ts';
+import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
 
-// The grocery list is kept on this device only, in the browser's storage (like display options): its paths are not in the
-// sync's map (parsePath), so it never reaches the server. It belongs to the device's owner, like the synced data: it is cleared when the
-// device is handed to another account (apiDb onOwnerChange) and by "Delete my data" (DeleteMyData.tsx forgetDevice); a plain sign-out and
-// sign-in as the same account keeps it. It is in the data file and the backups. `flag` is the save-status helper from the app store.
+// The grocery list is the account's, like the rest of the data (ADR 039, replacing ADR 019's device-only list): it is saved through the
+// same path as every other document (saveDoc / removeDoc), so with syncing on it goes to the server (grocery/main as list rows,
+// grocery/YYYY-MM as one row per month) and with syncing off it stays in this browser's storage, as everything does then.
+// It is in the data file and the backups.
 const MAIN = 'grocery/main';
+const monthPath = (key: string) => 'grocery/' + key;
 
-export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GrocerySlice => {
-  const saveMain = (g: Grocery) => { const ok = LS.set(MAIN, g); if (!ok) flag('Storage full'); return ok; };
+/** The grocery list this browser holds in its own storage: the whole list with syncing off, and the copy from before the list synced
+ *  (ADR 019) with it on. Null when there is none. */
+export function deviceGrocery(): GroceryData | null {
+  const months: Record<string, GroceryMonth> = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith('ironlog:grocery/')) continue;
+      const key = k.slice('ironlog:grocery/'.length);
+      if (MONTH_RE.test(key)) months[key] = LS.get(monthPath(key));
+    }
+  } catch { /* storage unavailable: nothing here */ }
+  return normGroceryData({ ...(LS.get(MAIN) || {}), months });
+}
+
+// `flag` (the save-status helper) is not needed here: the save queue says when storage is full or a write was refused.
+export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
+  const saveMain = (g: Grocery) => get().saveDoc(MAIN, g);
   const saveMonth = (key: string, m: GroceryMonth) => {
-    if (monthEmpty(m)) { LS.remove('grocery/' + key); return true; } // an untouched month is the fresh list: nothing to keep
-    const ok = LS.set('grocery/' + key, m); if (!ok) flag('Storage full'); return ok;
+    if (monthEmpty(m)) get().removeDoc(monthPath(key)); // an untouched month is the fresh list: nothing to keep
+    else get().saveDoc(monthPath(key), m);
   };
   const mutateCatalogue = (fn: (g: Grocery) => string | null): string | null => {
+    if (get().blocked()) return 'Still loading your data…';
     const g = structuredClone(get().grocery);
     const err = fn(g);
     if (err) return err;
     set({ grocery: g }); saveMain(g); return null;
   };
   const mutateMonth = (key: string, fn: (m: GroceryMonth) => void) => {
-    if (!MONTH_RE.test(key)) return;
+    if (!MONTH_RE.test(key) || get().blocked()) return;
     const m = structuredClone(get().groceryMonths[key] || emptyMonth());
     fn(m);
     const months = { ...get().groceryMonths };
@@ -36,19 +54,11 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
     grocery: normGrocery(null),
     groceryMonths: {},
 
+    // Syncing off: the list is this browser's storage, read at startup.
     loadGrocery() {
-      const months: Record<string, GroceryMonth> = {};
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (!k || !k.startsWith('ironlog:grocery/')) continue;
-          const key = k.slice('ironlog:grocery/'.length);
-          if (!MONTH_RE.test(key)) continue;
-          const m = normGroceryMonth(LS.get('grocery/' + key));
-          if (!monthEmpty(m)) months[key] = m;
-        }
-      } catch { /* storage unavailable: start with the fresh list */ }
-      set({ grocery: normGrocery(LS.get(MAIN)), groceryMonths: months });
+      const d = deviceGrocery();
+      const { months = {}, ...g } = d ?? { ...normGrocery(null), months: {} };
+      set(state => ({ grocery: g, groceryMonths: months, ready: { ...state.ready, groc: true, grocMonths: true } }));
     },
 
     // An import replaces the list. The file's data is written first; the old months go only if every write went through, so a full storage loses nothing.
@@ -57,25 +67,22 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
       const { months, ...clean } = inc;
       const old = Object.keys(get().groceryMonths);
       set({ grocery: clean, groceryMonths: months });
-      const ok = [saveMain(clean), ...Object.entries(months).map(([k, m]) => saveMonth(k, m))].every(Boolean);
-      if (ok) old.forEach(k => { if (!months[k]) LS.remove('grocery/' + k); });
+      saveMain(clean); Object.entries(months).forEach(([k, m]) => saveMonth(k, m));
+      const failed = new Set(get().unsaved);
+      if (![MAIN, ...Object.keys(months).map(monthPath)].some(p => failed.has(p))) old.forEach(k => { if (!months[k]) get().removeDoc(monthPath(k)); });
     },
 
+    // "Add to my data", and the one-time upload of this device's list into the account (useAppStore adoptDeviceGrocery): what is
+    // here stays, and only what is missing is added, matched by name and store, so nothing is lost or doubled.
     addGrocery(data) {
       const inc = normGroceryData(data);
-      if (!inc) return;
+      if (!inc || get().blocked()) return;
       const r = mergeGrocery(get().grocery, get().groceryMonths, inc);
       if (!r.changed) return;
+      const before = get().grocery; const beforeMonths = get().groceryMonths;
       set({ grocery: r.grocery, groceryMonths: r.months });
-      saveMain(r.grocery); Object.entries(r.months).forEach(([k, m]) => saveMonth(k, m));
-    },
-
-    clearGrocery() {
-      Object.keys(get().groceryMonths).forEach(k => LS.remove('grocery/' + k));
-      try {
-        for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith('ironlog:grocery/')) LS.remove(k.slice('ironlog:'.length)); }
-      } catch { /* storage unavailable */ }
-      set({ grocery: normGrocery(null), groceryMonths: {} });
+      if (JSON.stringify(r.grocery) !== JSON.stringify(before)) saveMain(r.grocery);
+      Object.entries(r.months).forEach(([k, m]) => { if (JSON.stringify(m) !== JSON.stringify(beforeMonths[k])) saveMonth(k, m); });
     },
 
     addGroceryItem(d) {
@@ -122,7 +129,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet, flag: Flag): GroceryS
     removeGroceryItem(id) {
       const i = get().grocery.items.findIndex(x => x.id === id); if (i < 0) return;
       const it = get().grocery.items[i];
-      mutateCatalogue(g => { g.items = g.items.filter(x => x.id !== id); return null; });
+      if (mutateCatalogue(g => { g.items = g.items.filter(x => x.id !== id); return null; }) !== null) return;
       get().noteRemoved('grocery', it.n, () => mutateCatalogue(g => {
         if (g.items.some(x => x.id === id)) return 'back';
         if (it.store && !g.stores.includes(it.store)) g.stores.push(it.store);

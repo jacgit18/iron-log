@@ -181,7 +181,7 @@ function wellnessOut(S: Snapshot) {
   const SW: Record<string, ReturnType<typeof normStretchWeek>> = {}; Object.keys(S.stretchWeeks || {}).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normStretchWeek(S.stretchWeeks![k]); if (!stretchWeekEmpty(w)) SW[k] = w; });
   return { stretches: { items: structuredClone(S.stretches), experiments: structuredClone(S.stretchExps || []) }, stretchWeeks: SW, supplements: normSupplements(S.supp) };
 }
-// The grocery list, left out when there is none (it is an admin-only feature), so other files read the same.
+// The grocery list, left out when there is none, so files without one read the same.
 function groceryOut(S: Snapshot) {
   const g = S.grocery && normGroceryData(S.grocery);
   return g ? { grocery: g } : {};

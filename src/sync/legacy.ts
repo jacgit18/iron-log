@@ -27,6 +27,8 @@ export interface LegacySummary {
   library: number;
   lists: number;
   config: number;
+  groceryItems: number;
+  groceryMonths: number;
 }
 
 export interface LegacyPlan {
@@ -63,6 +65,11 @@ export function dataFileDocs(d: DataFile): Map<string, unknown> {
   if (d.stretches) out.set('stretches/main', { items: d.stretches.items, experiments: d.stretches.experiments });
   if (d.supplements) out.set('supplements/main', d.supplements);
   if (d.config && Object.keys(d.config).length) out.set('config/main', d.config);
+  if (d.grocery) {
+    const { months, ...catalogue } = d.grocery;
+    if (catalogue.items.length || catalogue.stores.length) out.set('grocery/main', catalogue);
+    for (const [k, m] of Object.entries(months)) out.set(`grocery/${k}`, m);
+  }
   return out;
 }
 
@@ -135,6 +142,8 @@ export function planLegacy(docs: ReadonlyMap<string, unknown>): LegacyPlan {
     library: count('library_items'),
     lists: count('list_items'),
     config: count('config'),
+    groceryItems: count('list_items', r => r.table === 'list_items' && r.list === 'grocery_item'),
+    groceryMonths: count('grocery_months'),
   };
   return { commands: final.map(createCommand), summary, renamed, skipped };
 }
@@ -145,5 +154,6 @@ export function describeLegacy(s: LegacySummary): string {
   return [
     n(s.entries, 'logged session'), n(s.checkOffs, 'check-off'), n(s.bodyWeights, 'body weight'), n(s.weeks, 'week'),
     n(s.programs, 'program'), n(s.library, 'saved program version'), n(s.supplementDays, 'supplement day'),
+    n(s.groceryItems, 'grocery item'), n(s.groceryMonths, 'month of groceries', 'months of groceries'),
   ].filter(Boolean).join(', ') || 'your settings and lists';
 }

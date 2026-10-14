@@ -45,5 +45,6 @@ export function canonOf(row: MirrorRow | DesiredRow): string {
     case 'config': return stable(row.config);
     case 'library_items': return stable(row.item);
     case 'list_items': return stable({ position: row.position, item: row.item });
+    case 'grocery_months': return stable(row.record);
   }
 }

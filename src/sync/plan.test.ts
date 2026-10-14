@@ -285,3 +285,30 @@ describe('clientIds', () => {
     expect(a[0]!.clientId.length).toBeLessThanOrEqual(100);
   });
 });
+
+describe('planCommands: the grocery list (ADR 039)', () => {
+  const kale = { id: 'kale', n: 'Kale', store: '', qty: 1, cents: null, every: false, out: false };
+  it('the catalogue: a list item save per new store and item, and only the changed item after a tick', () => {
+    const doc = { stores: ['Aldi'], items: [kale, { ...kale, id: 'rice', n: 'Rice', store: 'Aldi' }] };
+    const first = plan('grocery/main', doc);
+    expect(first.map(c => [c.name, c.rowKey])).toEqual([['save-list-item', 'grocery_item/kale'], ['save-list-item', 'grocery_item/rice'], ['save-list-item', 'grocery_store/Aldi']]);
+    expect(first[2]!.input).toEqual({ list: 'grocery_store', item: { id: 'Aldi', n: 'Aldi' }, position: 0 });
+    const m = mirrorOf(first.map(c => { const i = c.input as { list: 'grocery_item'; item: never; position: number }; return { table: 'list_items', key: c.rowKey, list: i.list, item: i.item, position: i.position }; }));
+    expect(plan('grocery/main', doc, m)).toEqual([]);
+    const out = plan('grocery/main', { ...doc, items: [{ ...kale, out: true }, doc.items[1]] }, m);
+    expect(out).toEqual([expect.objectContaining({ name: 'save-list-item', rowKey: 'grocery_item/kale', baseVersion: 1 })]);
+    expect(names(plan('grocery/main', { ...doc, items: [doc.items[1]] }, m))).toEqual(['delete-list-item', 'save-list-item']); // removed, and rice moves up
+    expect(plan('grocery/main', { ...doc, items: [doc.items[1]] }, m)[0]!.input).toEqual({ list: 'grocery_item', id: 'kale' });
+  });
+
+  it('a month: create, no-op, edit, and a delete when it is emptied or removed', () => {
+    const month = { lines: { kale: { got: true as const } }, pulled: [] };
+    const [create] = plan('grocery/2026-10', month);
+    expect(create).toMatchObject({ name: 'save-grocery-month', baseVersion: null, input: { month: '2026-10', record: month } });
+    const m = mirrorOf([{ table: 'grocery_months', key: '2026-10', record: month }], { version: 2 });
+    expect(plan('grocery/2026-10', month, m)).toEqual([]);
+    expect(plan('grocery/2026-10', { lines: { kale: { got: true }, rice: { got: true } }, pulled: [] }, m)).toEqual([expect.objectContaining({ name: 'save-grocery-month', baseVersion: 2 })]);
+    expect(plan('grocery/2026-10', { lines: {}, pulled: [] }, m)).toEqual([expect.objectContaining({ name: 'delete-grocery-month', baseVersion: 2, input: { month: '2026-10' } })]);
+    expect(planDelete(kind('grocery/2026-10'), m)).toEqual([expect.objectContaining({ name: 'delete-grocery-month', baseVersion: 2 })]);
+  });
+});

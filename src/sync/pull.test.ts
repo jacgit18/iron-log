@@ -31,6 +31,17 @@ describe('pullAll', () => {
     expect(store.rows().size).toBe(3);
   });
 
+  it('takes grocery months and grocery list items, and names the grocery documents they change (ADR 039)', async () => {
+    const store = createMirrorStore(memoryStorage());
+    const t = scripted([page([
+      { table: 'grocery_months', ...(serverRow({ month: '2026-10', data: { lines: { kale: { got: true } }, pulled: [] } }, { seq: '1' }) as object) },
+      { table: 'list_items', ...(serverRow({ list: 'grocery_store', client_id: 'Aldi', position: 0, data: { id: 'Aldi', n: 'Aldi' } }, { seq: '2' }) as object) },
+    ], '2', false)]);
+    const out = await pullAll(t, store);
+    expect(out.ok && out.paths.sort()).toEqual(['grocery/2026-10', 'grocery/main']);
+    expect(store.rows().size).toBe(2);
+  });
+
   it('an empty answer is a successful pull that changed nothing', async () => {
     const store = createMirrorStore(memoryStorage());
     const out = await pullAll(scripted([page([], '0', false)]), store);

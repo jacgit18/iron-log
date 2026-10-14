@@ -39,6 +39,19 @@ export const server = {
       await c.query('commit');
     } catch (err) { await c.query('rollback'); throw err; } finally { c.release(); }
   },
+  /** The grocery list the account holds (ADR 039): live item and store ids in order, and each live month's document. */
+  async grocery(user) {
+    const { rows: lists } = await pool.query(
+      `select li.list, li.client_id from list_items li join users u on u.id = li.user_id
+        where u.auth_user_id = $1 and li.deleted_at is null and li.list in ('grocery_item', 'grocery_store') order by li.list, li.position`, [`dev:${user}`]);
+    const { rows: months } = await pool.query(
+      `select g.month, g.data from grocery_months g join users u on u.id = g.user_id where u.auth_user_id = $1 and g.deleted_at is null order by g.month`, [`dev:${user}`]);
+    return {
+      items: lists.filter(r => r.list === 'grocery_item').map(r => r.client_id),
+      stores: lists.filter(r => r.list === 'grocery_store').map(r => r.client_id),
+      months: Object.fromEntries(months.map(r => [r.month, r.data])),
+    };
+  },
   async week(user, weekStart) {
     const { rows } = await pool.query(
       `select w.data, w.version from weeks w join users u on u.id = w.user_id where u.auth_user_id = $1 and w.week_start = $2 and w.deleted_at is null`,

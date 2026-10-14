@@ -20,7 +20,7 @@ let appUrl: string;
 let A: string;
 let B: string;
 
-const DATA_TABLES = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items'] as const;
+const DATA_TABLES = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items', 'grocery_months'] as const;
 
 beforeAll(async () => {
   ({ db: owner, stop, appUrl } = await startTestDatabase());
@@ -47,6 +47,7 @@ beforeEach(async () => {
     await owner.insertInto('config').values({ user_id: id, seq: '1', data: '{}' }).execute();
     await owner.insertInto('library_items').values({ user_id: id, client_id: `v-${name}`, seq: '1', data: '{}' }).execute();
     await owner.insertInto('list_items').values({ user_id: id, list: 'stretch', client_id: `s-${name}`, position: 0, seq: '1', data: '{}' }).execute();
+    await owner.insertInto('grocery_months').values({ user_id: id, seq: '1', month: '2026-10', data: '{}' }).execute();
     await owner.insertInto('refused_writes').values({ user_id: id, command: 'x', reason: 'y' }).execute();
   }
   [A, B] = ids as [string, string];
@@ -101,6 +102,7 @@ describe('writing', () => {
       config: sql`insert into config (user_id, seq, data) values (${B}, 2, '{}')`,
       library_items: sql`insert into library_items (user_id, client_id, seq, data) values (${B}, 'sneaky', 2, '{}')`,
       list_items: sql`insert into list_items (user_id, list, client_id, position, seq, data) values (${B}, 'stretch', 'sneaky', 1, 2, '{}')`,
+      grocery_months: sql`insert into grocery_months (user_id, seq, month, data) values (${B}, 2, '2026-11', '{}')`,
     };
     expect(await refusal(asUser(A, trx => insert[table]!.execute(trx)))).toMatch(/row-level security|violates|duplicate key/);
     expect(await count(owner, table)).toBe(2);

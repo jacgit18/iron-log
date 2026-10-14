@@ -104,6 +104,17 @@ describe('GET /api/sync', () => {
     expect(body.more).toBe(true);
   });
 
+  it('returns grocery list items and grocery months in the same feed (ADR 039)', async () => {
+    const send = (name: string, clientId: string, input: object) =>
+      fetch(`${base}/api/commands/${name}`, { method: 'POST', headers: { ...headers('owner'), 'content-type': 'application/json' }, body: JSON.stringify({ clientId, baseVersion: null, input }) });
+    await send('save-list-item', 'g1', { list: 'grocery_item', item: { id: 'kale', n: 'Kale', store: 'Aldi', qty: 1, cents: 199, every: false, out: true }, position: 0 });
+    await send('save-list-item', 'g2', { list: 'grocery_store', item: { id: 'Aldi', n: 'Aldi' }, position: 0 });
+    await send('save-grocery-month', 'g3', { month: '2026-10', record: { lines: { kale: { got: true } }, pulled: [] } });
+    const { body } = await pull();
+    expect(body.rows.map((r: any) => [r.table, r.list ?? r.month])).toEqual([['list_items', 'grocery_item'], ['list_items', 'grocery_store'], ['grocery_months', '2026-10']]);
+    expect(body.rows[2].data).toEqual({ lines: { kale: { got: true } }, pulled: [] });
+  });
+
   it("never returns another user's rows", async () => {
     await post('mine', null, entry('2026-10-05'));
     await post('theirs', null, entry('2026-10-05'), 'tester');

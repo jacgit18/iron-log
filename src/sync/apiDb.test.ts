@@ -671,6 +671,48 @@ describe('conflicts', () => {
     expect(server.rows.get('stretch_weeks|2026-10-04')!.data.done).toEqual({ '1:a': true, '1:b': true, '1:c': true });
   });
 
+  // ADR 039: a grocery month is merged the same way, line by line.
+  const month = (lines: object) => ({ lines, pulled: [] });
+  it('a stale grocery month keeps the item another device ticked, and this device\'s tick', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('grocery/2026-10').set(month({ kale: { got: true } }));
+    const row = server.rows.get('grocery_months|2026-10')!;
+    server.rows.set('grocery_months|2026-10', { ...row, version: 2, data: month({ kale: { got: true }, rice: { got: true } }), seq: '99' });
+    await db.doc('grocery/2026-10').set(month({ kale: { got: true }, salt: { got: true, cents: 99 } }));
+    expect(server.rows.get('grocery_months|2026-10')).toMatchObject({ version: 3, data: month({ kale: { got: true }, rice: { got: true }, salt: { got: true, cents: 99 } }) });
+    expect((await db.doc('grocery/2026-10').get()).data().lines).toEqual({ kale: { got: true }, rice: { got: true }, salt: { got: true, cents: 99 } });
+    expect(db.status().notices.map(n => n.text)).toEqual(['Merged changes from another device.']);
+  });
+
+  it('a grocery month saved while a pull brings in another device\'s tick keeps it, and an untick here sticks', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('grocery/2026-10').set(month({ kale: { got: true } }));
+    const row = server.rows.get('grocery_months|2026-10')!;
+    server.rows.set('grocery_months|2026-10', { ...row, version: 2, data: month({ kale: { got: true }, rice: { got: true } }), seq: '99' });
+    const pulling = db.syncNow();
+    const saving = db.doc('grocery/2026-10').set(month({}));
+    await pulling; await saving;
+    expect(server.rows.get('grocery_months|2026-10')!.data).toEqual(month({ rice: { got: true } }));
+  });
+
+  it('the grocery catalogue is one row per item: two devices adding different items keep both', async () => {
+    const { server, db } = setup();
+    db.start();
+    await settle();
+    const kale = { id: 'kale', n: 'Kale', store: '', qty: 1, cents: null, every: true, out: false };
+    await db.doc('grocery/main').set({ stores: [], items: [kale] });
+    server.plant('list_items', 'grocery_item/rice', { list: 'grocery_item', client_id: 'rice', position: 1, data: { ...kale, id: 'rice', n: 'Rice' } });
+    await db.syncNow();
+    expect((await db.doc('grocery/main').get()).data().items.map((i: { id: string }) => i.id)).toEqual(['kale', 'rice']);
+    await db.doc('grocery/main').set({ stores: [], items: [{ ...kale, out: false, every: false }, { ...kale, id: 'rice', n: 'Rice' }] });
+    expect(server.rows.get('list_items|grocery_item/kale')).toMatchObject({ version: 2, data: { every: false } });
+    expect(server.rows.get('list_items|grocery_item/rice')).toMatchObject({ version: 1 });
+  });
+
   it('a week this device had no row for keeps what another device saved first', async () => {
     const { server, db } = setup();
     db.start();
