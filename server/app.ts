@@ -13,6 +13,7 @@ import { clientErrors } from './clientErrors.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { errorHandler } from './errorHandler.ts';
 import { originGuard } from './originGuard.ts';
+import { fireRoute, type FireDeps } from './push/fire.ts';
 import { pushRoutes } from './push/routes.ts';
 import type { PushScheduler } from './push/scheduler.ts';
 import { byUser, rateLimit, type Limit } from './rateLimit.ts';
@@ -47,7 +48,7 @@ export interface AppDeps {
   /** Limits on /api/auth per client IP: starting a sign-in is the expensive, abusable call. Defaults below. */
   authLimits?: { signIn: Limit; other: Limit };
   /** Web Push (ADR 044): the public VAPID key the browser subscribes with, and what schedules a later send. Without a key the routes answer 503. */
-  push?: { publicKey?: string; scheduler?: PushScheduler; now?: () => number };
+  push?: { publicKey?: string; scheduler?: PushScheduler; now?: () => number; fire?: Pick<FireDeps, 'verify' | 'send'> };
   /** Limits on the rest of the API (see LIMITS). They are generous: a phone back online after two days sends a burst. */
   limits?: Partial<typeof LIMITS>;
 }
@@ -69,6 +70,9 @@ const LIMITS = {
   account: { max: 5, windowMs: 60 * 60_000 } as Limit,
   // Push: a timer or a tick schedules or cancels, so a busy session sends a few a minute. A loop is what this stops.
   push: { max: 60, windowMs: 60_000 } as Limit,
+  // Cloud Tasks calling the fire route: per address (a few Google ones), checked before the token. A 429 would push an alert past its
+  // 90 s window and lose it, so this is far above any real traffic; the token is what keeps others out.
+  pushFire: { max: 1200, windowMs: 60_000 } as Limit,
 };
 
 const DB_HEALTH_TTL_MS = 5_000;
@@ -145,6 +149,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // A page for trying real sign-in by hand while developing (Google on a desktop, later the phone). Not served anywhere else.
   if (auth && process.env.NODE_ENV === 'development') app.get('/dev/auth', (_req, res) => void res.type('html').send(AUTH_CHECK_PAGE));
 
+  // Cloud Tasks calls this at the time a push is due: no person, no session, only a Google-signed token (push/fire.ts). Not an admin route.
+  if (db && push?.fire) app.use('/api/push', fireRoute({ db, now: push.now, ...push.fire, limit: rateLimit(limits.pushFire) }));
+
   // Everything below this line needs a signed-in user. The per-address limit comes first, so an anonymous flood never reaches the database.
   app.use('/api', rateLimit(limits.api));
   app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
@@ -153,7 +160,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));
   app.use('/api/sync', rateLimit(limits.sync, undefined, byUser));
   // Web Push (ADR 044). Admin-only first: it is the first usage-based cost, so every route is behind requireAdmin until it is released.
-  if (db) app.use('/api/push', requireAdmin, rateLimit(limits.push, undefined, byUser), pushRoutes({ db, ...push }));
+  if (db) app.use('/api/push', requireAdmin, rateLimit(limits.push, undefined, byUser), pushRoutes({ db, publicKey: push?.publicKey, scheduler: push?.scheduler, now: push?.now }));
   app.post('/api/account/erase-data', rateLimit(limits.account, undefined, byUser), async (req, res) => {
     const result = await eraseMyData(db!, String(res.locals.userId), req.body);
     res.status(result.status).json(result.body);

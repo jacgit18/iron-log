@@ -7,7 +7,9 @@ import { createDb } from './db/connection.ts';
 import { remoteDatabaseProblem } from './db/localOnly.ts';
 import { checkDbRole } from './db/role.ts';
 import { installProcessGuards } from './processGuards.ts';
+import { cloudTasksScheduler, oidcVerifier, tasksConfigFrom } from './push/cloudTasks.ts';
 import { pushConfigFrom } from './push/config.ts';
+import { webPushSender } from './push/send.ts';
 
 // Local development reads .env; in production the platform sets the variables and there is no file.
 if (existsSync('.env')) process.loadEnvFile('.env');
@@ -43,9 +45,14 @@ console.log(JSON.stringify(setup.enabled
   ? { msg: 'sign-in is on', baseURL: setup.config.baseURL, testSignIn: setup.config.testSignIn === true, emailCode: setup.config.sendCode !== undefined }
   : { msg: 'sign-in is off', reasons: setup.reasons }));
 
-// Web Push (ADR 044): on when the VAPID settings are all set and valid. The scheduler that sends later arrives in a later change.
+// Web Push (ADR 044): the keys are set and valid, and Cloud Tasks (a queue, an invoker account, BASE_URL) is set too. Each part says why it is off.
 const pushSetup = pushConfigFrom(process.env);
+const tasksSetup = tasksConfigFrom(process.env);
 console.log(JSON.stringify(pushSetup.config ? { msg: 'push keys are set' } : { msg: 'push is off', reason: pushSetup.reason }));
+console.log(JSON.stringify(tasksSetup.config ? { msg: 'push scheduling is on', queue: tasksSetup.config.queue } : { msg: 'push scheduling is off', reason: tasksSetup.reason }));
+const push = pushSetup.config && tasksSetup.config
+  ? { publicKey: pushSetup.config.publicKey, scheduler: cloudTasksScheduler(tasksSetup.config), fire: { verify: oidcVerifier(tasksSetup.config), send: webPushSender(pushSetup.config) } }
+  : { publicKey: pushSetup.config?.publicKey };
 
 // Outside development and test the development sign-in is refused, so without sign-in nobody can use the API at all. Say so loudly.
 if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
@@ -56,7 +63,7 @@ if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 
 const trustProxy = process.env.TRUST_PROXY !== undefined ? (process.env.TRUST_PROXY === 'false' ? false : Number(process.env.TRUST_PROXY)) : process.env.K_SERVICE ? 1 : undefined;
 if (typeof trustProxy === 'number' && !Number.isInteger(trustProxy)) throw new Error('TRUST_PROXY must be a whole number of proxies, or false');
 
-const server = createApp({ db, staticDir, minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], trustProxy, push: { publicKey: pushSetup.config?.publicKey } }).listen(port, () => {
+const server = createApp({ db, staticDir, minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], trustProxy, push }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 

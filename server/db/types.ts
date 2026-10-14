@@ -156,6 +156,7 @@ export interface PushSubscription {
   id: Generated<Int8>;
   last_ok_at: Timestamp | null;
   p256dh: string;
+  pending: Generated<Json>;
   user_id: Int8;
 }
 

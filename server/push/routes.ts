@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { sql, type Kysely, type Transaction } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import { inUserTransaction } from '../auth.ts';
 import type { DB } from '../db/types.ts';
-import { PUSH_KINDS, type PushScheduler } from './scheduler.ts';
+import type { PushScheduler } from './scheduler.ts';
 import { MAX_SUBSCRIPTIONS, parseCancel, parseSchedule, parseSubscription, parseUnsubscribe } from './validate.ts';
 
-// The device side of Web Push (ADR 044): register a browser, remove it, and ask for a push later or take the ask back. Mounted at
+// The device side of Web Push (ADR 044): register a browser, remove it, and ask for a push later or take the ask back (the fire route is fire.ts). Mounted at
 // /api/push behind sign-in, requireAdmin and a per-user limit. An endpoint is a credential, so it is never returned and never logged.
 export interface PushDeps {
   db: Kysely<DB>;
@@ -15,8 +15,6 @@ export interface PushDeps {
 }
 
 const bad = (error: string) => ({ status: 422, body: { ok: false, error } });
-const subscriptionId = async (trx: Transaction<DB>, endpoint: string) =>
-  (await trx.selectFrom('push_subscription').select('id').where('endpoint', '=', endpoint).executeTakeFirst())?.id;
 
 export function pushRoutes({ db, publicKey, scheduler, now = Date.now }: PushDeps): Router {
   const router = Router();
@@ -47,29 +45,39 @@ export function pushRoutes({ db, publicKey, scheduler, now = Date.now }: PushDep
   router.post('/unsubscribe', async (req, res) => {
     const u = parseUnsubscribe(req.body);
     if (!u) { const r = bad('send { endpoint (https) }'); return void res.status(r.status).json(r.body); }
-    // Delete inside the transaction, cancel after it: the scheduler is a network call and must not hold a pooled connection open.
-    const id = await inUserTransaction(db, mine(res.locals.userId), async trx =>
-      (await trx.deleteFrom('push_subscription').where('endpoint', '=', u.endpoint).returning('id').executeTakeFirst())?.id);
-    if (id && scheduler) for (const kind of PUSH_KINDS) await scheduler.cancel({ subscriptionId: String(id), kind }).catch(() => undefined);
+    // The row going is enough: a task already queued for it finds nothing to claim (migration 019).
+    await inUserTransaction(db, mine(res.locals.userId), trx => trx.deleteFrom('push_subscription').where('endpoint', '=', u.endpoint).execute());
     res.json({ ok: true });
   });
 
   router.post('/schedule', async (req, res) => {
     if (!scheduler) return void res.status(503).json({ ok: false, error: 'push scheduling is not set up on this server' });
     const job = parseSchedule(req.body, now());
-    if (!job) { const r = bad('send { endpoint, kind: rest|day-nudge, key, at (ms, within 3 hours), body (up to 140 characters) }'); return void res.status(r.status).json(r.body); }
-    const id = await inUserTransaction(db, mine(res.locals.userId), trx => subscriptionId(trx, job.endpoint));
+    if (!job) { const r = bad('send { endpoint, kind: rest|day-nudge, key (letters, digits, - or _), at (ms, within 3 hours), body (up to 140 characters) }'); return void res.status(r.status).json(r.body); }
+    // The marker is what says this send is still wanted; a newer schedule of the same kind replaces it, so the older task sends nothing.
+    const id = await inUserTransaction(db, mine(res.locals.userId), async trx =>
+      (await trx.updateTable('push_subscription')
+        .set({ pending: sql`jsonb_set(pending, ${[job.kind]}::text[], ${JSON.stringify({ key: job.key, at: job.at })}::jsonb)` })
+        .where('endpoint', '=', job.endpoint).returning('id').executeTakeFirst())?.id);
     if (!id) return void res.status(404).json({ ok: false, error: 'this device is not subscribed' });
-    await scheduler.schedule({ subscriptionId: String(id), kind: job.kind, key: job.key, at: job.at, body: job.text });
+    try {
+      await scheduler.schedule({ subscriptionId: String(id), kind: job.kind, key: job.key, at: job.at, body: job.text });
+    } catch (err) {
+      console.error(JSON.stringify({ msg: 'push schedule failed', error: err instanceof Error ? err.message : String(err) }));
+      return void res.status(502).json({ ok: false, error: 'could not schedule the push' });
+    }
     res.json({ ok: true });
   });
 
   router.post('/cancel', async (req, res) => {
-    if (!scheduler) return void res.status(503).json({ ok: false, error: 'push scheduling is not set up on this server' });
     const c = parseCancel(req.body);
     if (!c) { const r = bad('send { endpoint, kind: rest|day-nudge, key? }'); return void res.status(r.status).json(r.body); }
-    const id = await inUserTransaction(db, mine(res.locals.userId), trx => subscriptionId(trx, c.endpoint));
-    if (id) await scheduler.cancel({ subscriptionId: String(id), kind: c.kind, ...(c.key ? { key: c.key } : {}) });
+    // With a key, only that schedule is cancelled, so a late cancel from an old timer cannot undo a newer one.
+    await inUserTransaction(db, mine(res.locals.userId), trx => {
+      let q = trx.updateTable('push_subscription').set({ pending: sql`pending - ${c.kind}::text` }).where('endpoint', '=', c.endpoint);
+      if (c.key) q = q.where(sql`pending -> ${c.kind}::text ->> 'key'`, '=', c.key);
+      return q.execute();
+    });
     res.json({ ok: true }); // cancelling something that is not there is not an error
   });
 
