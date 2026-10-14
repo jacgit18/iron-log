@@ -11,6 +11,7 @@ import {
 } from '../lib/logic.js';
 import { LS, makeSaveQueue, removeLegacyGitHubToken } from '../lib/storage.js';
 import { FLAG_KEY, apiSyncEnabled } from '../sync/flag.js';
+import { reportCaught } from '../sync/reportErrors.js';
 import { groceryAdopted, markGroceryAdopted, readLegacyMarker } from '../sync/legacyMarker.js';
 import { mergeGroceryMonth3, mergeStretchWeek3, mergeWeek3 } from '../sync/merge.js';
 import { stable } from '../sync/canon.js';
@@ -1023,7 +1024,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         syncApi.onStatus(sync => useAppStore.setState({ sync }));
         useAppStore.setState({ sync: syncApi.status() });
         syncApi.start();
-      } catch (err) { console.error('SYNC INIT FAILED', err); db = null; syncApi = null; } // the app still works from this browser's storage
+      } catch (err) { console.error('SYNC INIT FAILED', err); reportCaught(err); db = null; syncApi = null; } // the app still works from this browser's storage
     }
     if (!db) {
       const cfgRaw = LS.get('config/main');

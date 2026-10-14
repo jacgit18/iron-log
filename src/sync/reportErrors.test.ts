@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { installErrorReporting, reportCaught, type ReportTarget } from './reportErrors.js';
+import { installErrorReporting, reportCaught, reportSync, type ReportTarget } from './reportErrors.js';
 
 function fakeWindow() {
   const handlers = new Map<string, (e: never) => void>();
@@ -67,5 +67,21 @@ describe('installErrorReporting', () => {
     const stop = installErrorReporting({ version: '9', send: () => { throw new Error('offline'); }, target: w.target });
     expect(() => reportCaught(new Error('x'))).not.toThrow();
     stop();
+  });
+});
+
+describe('reportSync', () => {
+  it('sends a sync problem as kind "sync" with the message only, on the same once-each limit', () => {
+    const w = fakeWindow();
+    const sent: { kind: string; message: string; stack: string }[] = [];
+    const stop = installErrorReporting({ version: '9', send: b => sent.push(b), target: w.target });
+    reportSync('unexpected answer (status 200)');
+    reportSync('unexpected answer (status 200)');
+    expect(sent).toEqual([expect.objectContaining({ kind: 'sync', message: 'unexpected answer (status 200)', stack: '' })]);
+    stop();
+  });
+
+  it('does nothing while reporting is not installed', () => {
+    expect(() => reportSync('nobody listens')).not.toThrow();
   });
 });
