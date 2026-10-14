@@ -1,6 +1,6 @@
 import type { EquipmentKey } from '../../types.ts';
 import type { PhaseChoice } from '../../store/types.ts';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, EQ_KEYS, exInfo, isOwnExercise, isCatalogId } from '../../lib/data.js';
 import { MUSCLE_MAP, draftOf, draftOfTags, tagsOfDraft } from '../../lib/muscles.js';
@@ -33,6 +33,8 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
   const syncing = useAppStore(s => s.sync !== null);
   const fromCatalog = !isNew && isCatalogId(exId) && syncing;
   const [catNote, setCatNote] = useState('');
+  const [catBusy, setCatBusy] = useState(false);
+  const chipEdits = useRef(0); // counts chip taps, so a catalog answer arriving after one never overwrites it
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const out = { ...d, ...(tagsTouched ? { tags: tagsOfDraft(tags) } : {}) };
@@ -41,13 +43,17 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
   };
   const useDefaultTags = () => { const msg = st.saveExerciseDetails(exId!, { ...d, tags: null }); if (msg) setErr(msg); };
   const restoreCatalogTags = async () => {
-    setCatNote('Looking it up in the catalog…');
+    setCatNote('Looking it up in the catalog…'); setCatBusy(true);
+    const edits = chipEdits.current;
     const r = await loadCatalog('exercise', devHeaders);
+    setCatBusy(false);
+    if (chipEdits.current !== edits) { setCatNote('Your changes to the muscles were kept. Tap Use catalog muscles again to replace them.'); return; }
     if (!r.ok) { setCatNote(r.reason === 'offline' ? 'The catalog needs a connection.' : r.reason === 'refused' ? 'The catalog is not available to this account.' : 'The catalog could not be loaded.'); return; }
     const item = r.items.find(c => c.id === exId);
     if (!item) { setCatNote('This exercise is no longer in the catalog.'); return; }
-    setTags(draftOf(catalogSnapshot(item).tags)); setTagsTouched(true);
-    setCatNote('Catalog muscles filled in. Save to keep them.');
+    const { tags: fromCat } = catalogSnapshot(item);
+    setTags(draftOf(fromCat)); setTagsTouched(true);
+    setCatNote(fromCat ? 'Catalog muscles filled in. Save to keep them.' : 'The catalog lists no muscles for this exercise, so none are picked. Save to keep that.');
   };
   const remove = () => { const msg = st.deleteExercise(exId!); if (msg) setErr(msg); };
   return (
@@ -75,9 +81,9 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
       <fieldset className="edit-item">
         <legend>Muscles</legend>
         <p className="note">Tap a muscle to cycle: not used → secondary → primary.</p>
-        <MuscleChips draft={tags} setDraft={f => { setTags(f); setTagsTouched(true); }} mobId="ex-mob" />
+        <MuscleChips draft={tags} setDraft={f => { setTags(f); setTagsTouched(true); chipEdits.current++; setCatNote(''); }} mobId="ex-mob" />
         {hasOwnTags && <button type="button" className="btn sm ghost" onClick={useDefaultTags}>Use default muscles</button>}
-        {fromCatalog && <button type="button" className="btn sm ghost" id="ex-cat-tags" onClick={() => void restoreCatalogTags()}>Use catalog muscles</button>}
+        {fromCatalog && <button type="button" className="btn sm ghost" id="ex-cat-tags" disabled={catBusy} onClick={() => void restoreCatalogTags()}>Use catalog muscles</button>}
         {catNote && <p className="note" role="status">{catNote}</p>}
       </fieldset>
       {err && <p className="note err" role="alert">{err}</p>}

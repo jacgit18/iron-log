@@ -330,3 +330,17 @@ test('a catalog exercise whose muscles you changed can get the catalog muscles b
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
   await expect(row).toContainText('Primary: Chest');
 });
+
+test('Use catalog muscles says so when the catalog lists none, and a chip tap clears its note', async ({ page }) => {
+  await openSynced(page);
+  await page.click('#tab-program');
+  await page.getByRole('button', { name: 'Exercise library', exact: true }).click();
+  await page.locator('.exlib').getByRole('searchbox').fill('hammer row');
+  await page.getByRole('region', { name: 'From the catalog' }).getByRole('button', { name: 'Add Hammer Row Test from the catalog' }).click();
+  await page.getByRole('button', { name: 'Edit Hammer Row Test' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Use catalog muscles' }).click();
+  await expect(dialog.getByText('The catalog lists no muscles for this exercise, so none are picked. Save to keep that.')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Lats', exact: true }).click();
+  await expect(dialog.getByText('The catalog lists no muscles for this exercise')).toHaveCount(0);
+});
