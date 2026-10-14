@@ -173,8 +173,10 @@ test('a stretch to try can be found in the catalog from the Stretches tab', asyn
   await name.fill('calf');
   await page.getByRole('option', { name: /Calf Stretch/ }).click();
   await expect(name).toHaveValue('Calf Stretch');
+  await expect(page.getByRole('dialog')).toContainText('Group: Calves'); // the catalog's group comes along
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('.expcard').filter({ hasText: 'Calf Stretch' })).toHaveCount(1);
+  await expect(page.locator('.expcard').filter({ hasText: 'Calf Stretch' }).locator('.tag')).toHaveText('Calves');
 });
 
 // Supplements: the server searches (ADR 029). `products` answers GET /api/catalog/search by the words typed; `slowFor` holds one query back.

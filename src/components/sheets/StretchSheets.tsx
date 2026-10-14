@@ -68,7 +68,7 @@ export function StretchExpSheet({ id }: { id?: string | null }) {
   const exps = useAppStore(x => x.stretchExps);
   const items = useAppStore(x => x.stretches);
   const cur = id ? exps.find(x => x.id === id) : null;
-  const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : '', url: cur ? cur.url || '' : '', note: cur ? cur.note || '' : '' }));
+  const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : '', url: cur ? cur.url || '' : '', note: cur ? cur.note || '' : '', group: cur ? cur.group || '' : '' }));
   const [err, setErr] = useState('');
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   return (
@@ -79,8 +79,12 @@ export function StretchExpSheet({ id }: { id?: string | null }) {
           ? <label className="field">Name<input id="sexp-name" maxLength={80} value={d.n} placeholder="e.g. Cossack Squat" onChange={e => up({ n: e.target.value })} /></label>
           : <ItemPicker id="sexp-name" label="Name" kind="stretch" value={d.n} maxLength={80} placeholder="Type to search or add, e.g. Cossack Squat"
               mine={exps.map(x => ({ id: x.id, name: x.n, ...(x.note ? { meta: x.note } : {}) }))} also={items.map(i => ({ id: i.id, name: i.n }))} catalogMeta={c => catalogStretchGroup(c)}
-              createLabel={n => `Try “${n}”`} onText={n => up({ n })}
-              onPick={c => { if (c.kind === 'mine') s.openModal({ type: 'stretchexp', id: c.id }); }} />}
+              createLabel={n => `Try “${n}”`} onText={n => up({ n, group: '' })}
+              onPick={c => {
+                if (c.kind === 'mine') s.openModal({ type: 'stretchexp', id: c.id });
+                else up({ group: c.kind === 'catalog' ? catalogStretchGroup(c.item) : '' }); // a catalog stretch brings its group; a typed name has none
+              }} />}
+        {d.group && <p className="note">Group: {d.group}. It files the stretch there if you add it to your stretches.</p>}
         <label className="field">Video link (optional)<input type="url" value={d.url} placeholder="https://" onChange={e => up({ url: e.target.value })} /></label>
         <label className="field">Note (optional)<input maxLength={200} value={d.note} placeholder="e.g. Saw it on YouTube" onChange={e => up({ note: e.target.value })} /></label>
         {err && <p className="note err" role="alert">{err}</p>}
