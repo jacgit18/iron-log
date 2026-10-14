@@ -103,6 +103,8 @@ describe('normConfig, deeper', () => {
     expect(c.rm).toEqual({ bench: 225 });
     expect('bwGoal' in c).toBe(false);
     expect(c.liftGoals).toEqual({ bench: { any: { w: 315 } } });
+    expect(normConfig({ freqGoals: { bench: 3, row: 0, sq: 8, dl: 2.5, x: '3', '__proto__': 2 } }).freqGoals).toEqual({ bench: 3 });
+    expect(normConfig({ freqGoals: [3] }).freqGoals).toBeUndefined();
     expect(c).not.toHaveProperty('backup');
     expect(c).not.toHaveProperty('ghBackup');
     expect(c).not.toHaveProperty('token');

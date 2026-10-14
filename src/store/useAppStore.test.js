@@ -760,6 +760,23 @@ describe('lift weight goal', () => {
   });
 });
 
+describe('exercise frequency goal', () => {
+  it('saves times a week for an exercise, refuses 0 and 8, and removes with undo', () => {
+    expect(st().setFreqGoal('hack', '3')).toBe(true);
+    expect(st().cfg.freqGoals).toEqual({ hack: 3 });
+    expect(st().setFreqGoal('hack', '0')).toBe(false);
+    expect(st().setFreqGoal('hack', 8)).toBe(false);
+    expect(st().setFreqGoal('hack', '2.5')).toBe(false);
+    expect(st().cfg.freqGoals).toEqual({ hack: 3 });
+    expect(saved('config/main').freqGoals).toEqual({ hack: 3 });
+    st().clearFreqGoal('hack');
+    expect(st().cfg.freqGoals).toBeUndefined();
+    expect(st().removed).toMatchObject({ scope: 'freqgoal' });
+    st().undoRemoved();
+    expect(st().cfg.freqGoals).toEqual({ hack: 3 });
+  });
+});
+
 describe('undoing an uncheck', () => {
   const logIt = () => { const wk = st().weekKey(); st().submitLog('A-d3s1', 0, { entry: { d: wk, ph: 'hyp', w: 275, s: 4, r: 12, slot: 'A-d3s1', wk }, ph: 'hyp', done: true }); };
   it('puts back the entries and the tick', () => {
