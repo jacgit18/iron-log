@@ -3,8 +3,10 @@
 #
 # Usage:  PROJECT_ID=iron-log scripts/deploy-cloud-run.sh <command>
 #   setup     enable the APIs and create the image repository (once per project)
-#   secrets   put the four secrets in Secret Manager from your shell (once, and when one changes)
+#   secrets   put the four secrets in Secret Manager from your shell (once, and when one changes); with RESEND_API_KEY exported it also
+#             stores the email-code key (optional: without it the email sign-in code stays off, ADR 042)
 #   url       print the address the service will have, for the Google console's redirect URI (needs no deploy)
+#   (RESEND_OFF=1 on candidate or deploy turns the email sign-in code off: the key is left out and the service stops mapping it)
 #   deploy    build the image from the current commit and deploy it at once (100% of traffic; the manual and emergency way)
 #   candidate build the image and deploy it as a tagged revision that gets NO traffic; prints its own address (ADR 017)
 #   promote   send all traffic to the candidate revision
@@ -38,6 +40,31 @@ put_secret() { # name, value (from stdin). Adds a version only when the value ch
   fi
 }
 
+# The optional Resend key for the emailed sign-in code (ADR 042). Without it the app has no email option at all.
+RESEND_SECRET="iron-log-resend-api-key"
+
+# Whether this deploy passes RESEND_API_KEY to the service. `--set-secrets` REPLACES the service's whole secret list, so a key left
+# out here is removed by the deploy, and one added by hand in the console is wiped by the next. Two ways to know it is wanted:
+#   - the secret exists in Secret Manager: true on your machine, which may read secrets (`secrets` stores it);
+#   - the live service already maps it: the CI deployer cannot read secrets (ci-deploy-setup.sh) but can read the service, so a
+#     CI deploy keeps what the last deploy from your machine set up. A first deploy, with no service yet, answers no.
+resend_secret_wanted() {
+  # The way to turn the email code off: RESEND_OFF=1 leaves the key out, and --set-secrets then removes the mapping from the service.
+  # Deleting the secret alone is not enough (the live-service rule below would keep naming it, and Cloud Run rejects a missing secret).
+  if [ "${RESEND_OFF:-}" = 1 ]; then return 1; fi
+  if secret_exists "$RESEND_SECRET"; then return 0; fi
+  gc run services describe "$SERVICE" --region "$REGION" --format=json 2>/dev/null | python3 -c '
+import json, sys
+try:
+    svc = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+containers = svc.get("spec", {}).get("template", {}).get("spec", {}).get("containers") or [{}]
+env = containers[0].get("env") or []
+sys.exit(0 if any(e.get("name") == "RESEND_API_KEY" and e.get("valueFrom", {}).get("secretKeyRef") for e in env) else 1)
+'
+}
+
 cmd_setup() {
   gc services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com
   gc artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2>&1 \
@@ -63,7 +90,15 @@ cmd_secrets() {
   printf '%s' "$GOOGLE_CLIENT_SECRET" | put_secret iron-log-google-client-secret
   # A fresh signing secret for production, made here and never shown. An existing one is kept: changing it signs everyone out.
   if ! secret_exists iron-log-auth-secret; then openssl rand -base64 48 | tr -d '\n' | put_secret iron-log-auth-secret; else echo "  iron-log-auth-secret: kept"; fi
-  for s in iron-log-app-database-url iron-log-google-client-id iron-log-google-client-secret iron-log-auth-secret; do
+  # Optional: the Resend key for the emailed sign-in code. Not exporting it leaves the feature off (or as it already is).
+  local secret_names=(iron-log-app-database-url iron-log-google-client-id iron-log-google-client-secret iron-log-auth-secret)
+  if [ -n "${RESEND_API_KEY:-}" ]; then
+    printf '%s' "$RESEND_API_KEY" | put_secret "$RESEND_SECRET"
+    secret_names+=("$RESEND_SECRET")
+  else
+    echo "  $RESEND_SECRET: not touched (export RESEND_API_KEY to store it)"
+  fi
+  for s in "${secret_names[@]}"; do
     gc secrets add-iam-policy-binding "$s" --member "serviceAccount:${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" --role roles/secretmanager.secretAccessor >/dev/null
   done
   echo "Done. Next: scripts/deploy-cloud-run.sh deploy"
@@ -95,12 +130,14 @@ deploy_image() {
   # CI deployer (ci-deploy-setup.sh) deliberately does not have.
   local public=()
   gc run services describe "$SERVICE" --region "$REGION" >/dev/null 2>&1 || public=(--allow-unauthenticated)
+  local secrets="APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest"
+  if resend_secret_wanted; then secrets+=",RESEND_API_KEY=${RESEND_SECRET}:latest"; echo "Email sign-in code: RESEND_API_KEY is passed to the service."; else echo "Email sign-in code: no RESEND_API_KEY, so the feature stays off${RESEND_OFF:+ (RESEND_OFF=1: any mapping is removed)}."; fi
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
     ${public[@]+"${public[@]}"} \
     --max-instances 1 --min-instances "${MIN_INSTANCES:-0}" --cpu 1 --memory 512Mi --concurrency 40 --timeout 120 \
     --update-env-vars "NODE_ENV=production,BASE_URL=${url},COMMIT_SHA=${commit}" \
-    --set-secrets "APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest" \
+    --set-secrets "$secrets" \
     "$@"
 }
 
