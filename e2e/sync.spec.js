@@ -788,12 +788,13 @@ test.describe('the landing page', () => {
     });
   });
 
-  test('the app never starts behind it: no sync, no reads of anything, only the one who-is-this question', async ({ page }) => {
+  test('the app never starts behind it: no sync, no reads of anything, only the who-is-this question and what sign-in may offer', async ({ page }) => {
     const asked = [];
     await stranger(page, unauth, async p => { p.on('request', r => { if (r.url().includes('/api/')) asked.push(new URL(r.url()).pathname); }); });
     await expect(heading(page)).toBeVisible();
     await page.waitForTimeout(500);
-    expect(asked).toEqual(['/api/me']);
+    // /api/auth-options (ADR 042) says whether the email code is open; it reads nothing of an account and needs no sign-in.
+    expect(asked).toEqual(['/api/me', '/api/auth-options']);
   });
 
   test('Sign in with Google asks the server for the address and goes there', async ({ page }) => {

@@ -60,7 +60,7 @@ test('a stranger gets the landing page: the production build sends no dev header
   const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   expect(devHeaders).toEqual([]);
-  expect(requests).toEqual(['/api/me']); // nothing syncs behind the page: only the one who-is-this question
+  expect(requests).toEqual(['/api/me', '/api/auth-options']); // nothing syncs behind the page: the who-is-this question, and what sign-in may offer (ADR 042)
   await context.close();
 });
 

@@ -1,0 +1,23 @@
+.emailsignin {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 22rem;
+  margin: 12px 0 0;
+}
+.emailsignin-open {
+  margin-top: 8px;
+}
+.emailsignin .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+}
+.emailsignin .btn {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  min-height: 44px;
+  padding: 0 16px;
+  white-space: nowrap;
+}

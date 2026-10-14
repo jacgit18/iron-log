@@ -2,6 +2,7 @@ import { forgetSession } from '../../lib/gate.js';
 import { LS } from '../../lib/storage.js';
 import { useWho } from './useWho.js';
 import ExportUpload from './ExportUpload.js';
+import EmailCodeSignIn from '../EmailCodeSignIn.js';
 import LegalLinks from '../LegalLinks.js';
 import { useGoogleSignIn } from '../../sync/useGoogleSignIn.js';
 import { flag, getSyncApi } from '../../store/useAppStore.js';
@@ -39,6 +40,7 @@ export default function AccountPanel() {
           <div className="actions">
             <button type="button" className="btn" disabled={busy} onClick={() => void signIn()}>Sign in with Google</button>
           </div>
+          <EmailCodeSignIn client={account} />
           <p><LegalLinks /></p>
         </>
       )}
