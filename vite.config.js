@@ -82,24 +82,16 @@ export default defineConfig({
           { src: 'icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
+      // Our own worker (src/sw.ts) instead of a generated one, to receive Web Push (ADR 044). It keeps everything the generated one did:
+      // the precache, the offline page fallback (with /api left to the server), the landing-image cache and the update handshake.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectManifest: {
         // Everything the app needs, including the Excel reader and fonts, is cached so it works offline.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        navigateFallback: 'index.html',
-        // The API shares the origin (ADR 010). A page load of an /api path, such as the sign-in callback, must reach the
-        // server, not be answered with the app by the service worker.
-        navigateFallbackDenylist: [/^\/api\//],
         // The iOS splash images are only fetched by iPhone Safari at install time, so they stay out of the offline cache.
         globIgnores: ['splash/**'],
-        // The landing page's screenshots (WebP) are left out of the install download, as only signed-out visitors see them.
-        // Cached the first time they load instead, so the landing page still shows them offline. Names are hashed, so
-        // a cached copy never goes stale; the limit drops old versions.
-        runtimeCaching: [{
-          urlPattern: ({ url, sameOrigin }) => sameOrigin && /\/assets\/[^/]+\.webp$/.test(url.pathname),
-          handler: 'CacheFirst',
-          options: { cacheName: 'landing-images', expiration: { maxEntries: 4 } },
-        }],
-        cleanupOutdatedCaches: true,
       },
     }),
   ],
