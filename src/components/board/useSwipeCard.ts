@@ -6,7 +6,7 @@ import { motionOK } from '../../lib/motion.js';
    (rules in lib/swipe.ts). Touch events only, so a mouse (and the desktop HTML5 drag) is never touched. The card owns a swipe that
    starts on its body: it stops the touch from reaching the board's day-swipe. A swipe that starts anywhere else (day heading, gaps)
    still changes day. `act` calls the same store actions as the checkbox and the Skip button, so nothing about them changes. */
-export function useSwipeCard({ state, canDone, act }: { state: CardState; canDone: boolean; act: (a: SwipeAction) => void }) {
+export function useSwipeCard({ state, canDone, canSkip = true, act }: { state: CardState; canDone: boolean; canSkip?: boolean; act: (a: SwipeAction) => void }) {
   const g = useRef<{ x: number; y: number; w: number; lock: 'x' | 'y' | null } | null>(null);
   const [drag, setDrag] = useState<{ off: number; action: SwipeAction | null; dir: 'left' | 'right' } | null>(null);
 
@@ -24,7 +24,7 @@ export function useSwipeCard({ state, canDone, act }: { state: CardState; canDon
       if (!s.lock) { const a = axisOf(dx, dy); if (a !== 'none') s.lock = a; }
       if (s.lock === 'y') { end(); return; } // the page is scrolling: let go
       if (s.lock === 'x') {
-        const action = swipeAction(dx, state, canDone); // a way that does nothing (right on a superset) does not move the card
+        const action = swipeAction(dx, state, canDone, canSkip); // a way that does nothing (right on a superset) does not move the card
         setDrag({ off: action && motionOK() ? followOffset(dx, dy) : 0, action, dir: dx < 0 ? 'left' : 'right' });
       }
     },
@@ -32,7 +32,7 @@ export function useSwipeCard({ state, canDone, act }: { state: CardState; canDon
       const s = g.current; if (!s) return;
       e.stopPropagation();
       const t = e.changedTouches[0]; const dx = t.clientX - s.x;
-      const action = s.lock !== 'y' && swipeCommits(dx, t.clientY - s.y, s.w) ? swipeAction(dx, state, canDone) : null;
+      const action = s.lock !== 'y' && swipeCommits(dx, t.clientY - s.y, s.w) ? swipeAction(dx, state, canDone, canSkip) : null;
       end();
       if (action) act(action);
     },
