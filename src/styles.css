@@ -3598,41 +3598,6 @@ fieldset.plain legend {
   border-top: 1px dashed var(--line);
 }
 
-/* Grocery list: count and price boxes sit on the row, the total after them */
-.grow {
-  flex-wrap: wrap;
-}
-.grow .exname {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1 1 9em;
-  min-width: 0;
-}
-.grow .exname .chk {
-  margin-right: 0;
-}
-.gnums {
-  gap: 4px;
-  flex-wrap: nowrap;
-}
-.gnum {
-  text-align: right;
-  min-width: 0;
-}
-.gcheck {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.gname {
-  flex: 1 1 140px;
-  min-width: 0;
-}
-.gtotal {
-  min-width: 4.5em;
-  text-align: right;
-}
 /* On touch screens every field is at least 16px: iOS Safari zooms the page when a smaller field takes focus,
    and the zoom doesn't undo itself. !important because several field rules (.modesel select, .inline input)
    are more specific than the base rule and would otherwise keep their 13-15px. */
