@@ -9,7 +9,6 @@ import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, EQUIPMENT, exInfo, videoLabel } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
-import { useFeature } from '../../features.js';
 import { useSwipeDone } from './useSwipeDone.js';
 import {
   DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, phaseOf, targetOf, lastLog, rxOf, stallOf, backoffOf, describe, holdPlan,
@@ -45,8 +44,8 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
   const names = s.items.map((i) => exInfo(cfg, i.ex).n);
   const cardName = s.type === 'superset' ? names.join(' → ') : s.type === 'either' ? names.join(' or ') : names[0];
 
-  // Swipe to tick off (`swipeDone`, released to everyone): same action as the checkbox, so same announcement; cards with their own per-exercise ticks (paired) do not swipe.
-  const swipeOn = useFeature('swipeDone') && !paired;
+  // Swipe to tick off: same action as the checkbox, so same announcement; cards with their own per-exercise ticks (paired) do not swipe.
+  const swipeOn = !paired;
   const sw = useSwipeDone({ enabled: swipeOn, done, toggle: on => checkCard(s.id, on) });
 
   return (

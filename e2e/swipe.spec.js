@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// Swipe a card sideways to tick it off (`swipeDone`, released to everyone). Synthetic touch events: a real finger is the real test.
+// Swipe a card sideways to tick it off. Synthetic touch events: a real finger is the real test.
 const phone = async page => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
