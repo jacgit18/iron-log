@@ -24,14 +24,15 @@ export interface CatalogRow {
 
 export interface Mapped {
   rows: CatalogRow[];
-  /** Dataset values with no match in the app, and how many rows had each: `equipment:foo`, `muscle:neck`. */
+  /** Dataset values with no match in the app, and how many rows had each: `equipment:foo`, `muscle:wings`. */
   unmapped: Record<string, number>;
   /** Dataset rows left out, with why. */
   skipped: string[];
 }
 
 // The dataset's 17 muscle names → the app's muscle keys. `shoulders` does not say which head, so it counts for front and side delts
-// (presses and raises, most of the dataset's shoulder rows). `neck` has no key in the app: reported, left out.
+// (presses and raises, most of the dataset's shoulder rows). `abdominals` counts for upper and lower abs, and `neck` maps to neck (both since
+// 2026-10-13, ADR 037); a name not listed here is reported and left out.
 export const FEDB_MUSCLES: Record<string, MuscleKey[]> = {
   abdominals: ['upperabs', 'lowerabs'], neck: ['neck'], abductors: ['abductors'], adductors: ['adductors'], biceps: ['biceps'], calves: ['calves'], chest: ['chest'],
   forearms: ['forearms'], glutes: ['glutes'], hamstrings: ['hamstrings'], lats: ['lats'], 'lower back': ['lowerback'],
