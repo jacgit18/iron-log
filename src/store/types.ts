@@ -29,6 +29,8 @@ export interface SlotForm {
   target?: { key: string; day: number } | null; items: SlotFormItem[];
   /** Adding only: put a copy of the new card on each of these days (each copy gets its own id). Overrides `day`. */
   days?: number[];
+  /** Adding from an Experiment entry (To program): the entry leaves the list once the card is saved, and one Undo takes the card out again and puts the entry back. */
+  fromExp?: string;
 }
 /** `cat`: a new stretch picked from the catalog in the sheet; it is saved with that catalog id and name (ADR 036). */
 export interface StretchForm { id?: string; n: string; url?: string; note?: string; group?: string; tier?: string; cat?: CatalogItem | null }

@@ -57,9 +57,8 @@ export default function SlotSheet({ idx, col, target, fromExp }: { idx: number |
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const clean = { ...d, days: manyDays ? d.days : undefined, note: d.note.trim(), items: d.items.map(({ cat, ...it }) => ({ ...it, ...pickedChoice(cfg, it.nm, cat), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne })) };
-    const msg = st.saveSlot(clean);
+    const msg = st.saveSlot({ ...clean, ...(fromExp ? { fromExp } : {}) });
     if (msg) setErr(msg);
-    else if (fromExp) st.deleteExperiment(fromExp); // on the program now, so it leaves the list (Undo puts it back)
   };
 
   return (

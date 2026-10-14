@@ -650,6 +650,33 @@ describe('the board add button', () => {
   });
 });
 
+describe('promoting an Experiment entry to the program', () => {
+  const form = (target, fromExp) => ({ id: null, sec: 'Regular', tier: 'Accessory', type: 'single', day: target.day, idx: null, note: '', target, ...(fromExp ? { fromExp } : {}), items: [{ ex: 'facepull', ph: 'hyp', w: null, rx: '', note: '' }] });
+  beforeEach(() => useAppStore.setState({ experiments: [{ id: 'E1', ex: 'facepull', ph: 'hyp', note: '' }, { id: 'E2', ex: 'hack', ph: null, note: '' }] }));
+  it('takes the entry off the list when the card is saved, and one Undo removes the card and puts the entry back in place', () => {
+    st().openAddToProgram(2, 'E1');
+    const target = st().modal.target; const before = structuredClone(st().programs.A);
+    expect(st().saveSlot(form(target, 'E1'))).toBeNull();
+    expect(st().programs.A.days[1].slots).toHaveLength(before.days[1].slots.length + 1);
+    expect(st().experiments.map(e => e.id)).toEqual(['E2']);
+    expect(saved('experiments/main').items.map(e => e.id)).toEqual(['E2']);
+    st().undoRemoved();
+    expect(st().programs.A).toEqual(before);
+    expect(st().experiments.map(e => e.id)).toEqual(['E1', 'E2']);
+    expect(saved('experiments/main').items.map(e => e.id)).toEqual(['E1', 'E2']);
+    st().undoRemoved(); // a second Undo changes nothing
+    expect(st().programs.A).toEqual(before);
+  });
+  it('leaves the list alone when the save is refused or the card is not from an entry', () => {
+    st().openAddToProgram(2, 'E1');
+    const target = st().modal.target;
+    expect(st().saveSlot({ ...form(target, 'E1'), items: [{ ex: '', nn: '', ph: 'hyp', w: null }] })).toMatch(/Choose an exercise/);
+    expect(st().experiments).toHaveLength(2);
+    expect(st().saveSlot(form(target))).toBeNull();
+    expect(st().experiments).toHaveLength(2);
+  });
+});
+
 describe('video link on an existing exercise', () => {
   it('the experiment sheet save updates the link everywhere', async () => {
     const { exInfo } = await import('../lib/data.js');
