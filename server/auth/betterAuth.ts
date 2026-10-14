@@ -1,11 +1,13 @@
 import { betterAuth } from 'better-auth';
 import { APIError } from 'better-auth/api';
+import { emailOTP } from 'better-auth/plugins/email-otp';
 import pg from 'pg';
 import { adminsFrom } from '../admin.ts';
 import { POOL_OPTIONS } from '../db/poolOptions.ts';
+import { CODE_MINUTES, perAddressLimit, RESEND_TEST_FROM, resendSender, type SendCode } from './otpEmail.ts';
 
 /* ---------- Sign-in: Better Auth inside our API (ADR 004) ----------
-   Google only, no plugins. Sessions are server-side rows with a 30-day sliding lifetime, so a two-day offline gap never forces
+   Google, plus an emailed one-time code (emailOTP, ADR 042) when RESEND_API_KEY is set. Sessions are server-side rows with a 30-day sliding lifetime, so a two-day offline gap never forces
    a re-login (FM-16). The version is pinned exactly (1.7.7): advisory GHSA-965c-763c-88jm (OAuth state usable as a magic link)
    affects 1.4.0-beta.18 to 1.7.6 and needs the Magic Link plugin, which is not used; 1.7.7 is the fix. Turn on dependency alerts.
    Its tables are in the `auth` schema (migration 008) and are reached by schema-qualified name, never by search_path. */
@@ -17,6 +19,8 @@ export interface AuthConfig {
   secret: string;
   databaseUrl: string;
   google: { clientId: string; clientSecret: string };
+  /** How a sign-in code is delivered (otpEmail.ts). Unset: email-code sign-in is off. */
+  sendCode?: SendCode;
   /** Email and password sign-in for automated tests only. Never in production: see createAuth. */
   testSignIn?: boolean;
   /** The most accounts that may exist (SIGNUP_CAP). A new Google account past it is refused; unset means no cap. Existing accounts always sign in. */
@@ -26,6 +30,8 @@ export interface AuthConfig {
 }
 
 export const SESSION_DAYS = 30;
+/** Codes sent to one address (per server instance, otpEmail.ts). */
+export const OTP_PER_ADDRESS = { max: 3, windowMs: 10 * 60_000 };
 const DAY = 60 * 60 * 24;
 
 export function createAuth(config: AuthConfig, env: string | undefined = process.env.NODE_ENV) {
@@ -40,6 +46,7 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
   pool.on('error', err => {
     console.error(JSON.stringify({ msg: 'idle auth database connection dropped', error: err.message }));
   });
+  const allowCode = perAddressLimit(OTP_PER_ADDRESS.max, OTP_PER_ADDRESS.windowMs);
   const auth = betterAuth({
     baseURL: config.baseURL,
     secret: config.secret,
@@ -81,6 +88,32 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
     },
     socialProviders: { google: { clientId: config.google.clientId, clientSecret: config.google.clientSecret } },
     emailAndPassword: { enabled: config.testSignIn === true },
+    plugins: config.sendCode
+      ? [
+          emailOTP({
+            otpLength: 6,
+            expiresIn: CODE_MINUTES * 60,
+            allowedAttempts: 3,
+            // Only a hash is kept, so a read of the verification table does not reveal a live code.
+            storeOTP: 'hashed',
+            // Only a sign-in code is ever sent: the password-reset, email-change and verify-email uses are not offered.
+            sendVerificationOTP: async ({ email, otp, type }) => {
+              if (type !== 'sign-in') return;
+              if (!allowCode(email)) {
+                console.warn(JSON.stringify({ msg: 'sign-in code skipped: too many for one address' }));
+                return;
+              }
+              // Awaited on purpose: Cloud Run may pause the instance once the response is sent, which would drop a background send.
+              // Better Auth swallows what this throws (the caller sees "sent" either way, which also stops address probing), so log it here.
+              // The message never holds the address or the code.
+              await config.sendCode!(email, otp).catch((err: unknown) => {
+                console.error(JSON.stringify({ msg: 'sign-in code not sent', error: err instanceof Error ? err.message : String(err) }));
+                throw err;
+              });
+            },
+          }),
+        ]
+      : [],
     // Only this origin may call the auth routes with a cookie.
     trustedOrigins: [origin.origin],
     // The session cookie is Secure whenever the API is served over https (always, outside local development).
@@ -124,9 +157,12 @@ export function authConfigFrom(env: NodeJS.ProcessEnv): AuthSetup {
     if (/^\d{1,6}$/.test(capText)) signupCap = Number(capText);
     else reasons.push('SIGNUP_CAP must be a whole number');
   }
+  // RESEND_API_KEY turns email-code sign-in on; EMAIL_FROM is the sender (default: Resend's test address, which only reaches the account owner).
+  const resendKey = env.RESEND_API_KEY?.trim();
+  const sendCode = resendKey ? resendSender({ apiKey: resendKey, from: env.EMAIL_FROM?.trim() || RESEND_TEST_FROM }) : undefined;
   if (reasons.length) return { enabled: false, reasons };
   return {
     enabled: true,
-    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS) },
+    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS) },
   };
 }
