@@ -459,7 +459,8 @@ describe('experiment board', () => {
   it('refuses an exercise that is already on the list, but lets an entry be edited', () => {
     const e = add('hack', 'hyp');
     expect(st().saveExperiment({ ex: 'hack', nn: '', ph: 'strength', note: '' })).toMatch(/already on the Experiment list/);
-    expect(st().saveExperiment({ ex: '__new', nn: 'Hack Squat', ph: null, note: '' })).toBeNull(); // a different name is a new exercise
+    expect(st().saveExperiment({ ex: '__new', nn: 'Hack Squat', ph: null, note: '' })).toMatch(/already on the Experiment list/); // a typed name an exercise has is that exercise
+    expect(st().saveExperiment({ ex: '__new', nn: 'Cable Lateral Raise', ph: null, note: '' })).toBeNull(); // a name no exercise has is a new one
     expect(st().saveExperiment({ id: e.id, ex: 'hack', ph: 'strength', note: 'x' })).toBeNull();
     expect(st().experiments.filter(x => x.ex === 'hack')).toHaveLength(1);
   });
