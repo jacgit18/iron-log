@@ -84,7 +84,7 @@ export function StretchExpSheet({ id }: { id?: string | null }) {
                 if (c.kind === 'mine') s.openModal({ type: 'stretchexp', id: c.id });
                 else up({ group: c.kind === 'catalog' ? catalogStretchGroup(c.item) : '' }); // a catalog stretch brings its group; a typed name has none
               }} />}
-        {d.group && <p className="note">Group: {d.group}. It files the stretch there if you add it to your stretches.</p>}
+        {d.group && <p className="note">Group: {d.group}</p>}
         <label className="field">Video link (optional)<input type="url" value={d.url} placeholder="https://" onChange={e => up({ url: e.target.value })} /></label>
         <label className="field">Note (optional)<input maxLength={200} value={d.note} placeholder="e.g. Saw it on YouTube" onChange={e => up({ note: e.target.value })} /></label>
         {err && <p className="note err" role="alert">{err}</p>}
