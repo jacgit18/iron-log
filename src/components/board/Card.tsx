@@ -78,7 +78,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
         </div>
         {sk && <button type="button" className="btn sm ghost" id={`skip-${s.id}`} aria-label={`Undo skip for ${cardName}`} onClick={() => skipCard(s.id)}>Undo skip</button>}
         <button type="button" className="btn sm ghost morebtn" ref={moreBtn} id={`more-${s.id}`} aria-expanded={moreOpen} aria-controls={`morepanel-${s.id}`}
-          aria-label={`More actions: ${cardName}`} onClick={() => setMore(!moreOpen)} onKeyDown={foldOnEscape}><span aria-hidden="true">⋯</span></button>
+          actions: ${cardName}`} onClick={() => { if (moreOpen) { setMore(false); setRemoving(false); } else setMore(true); }} onKeyDown={foldOnEscape}><span aria-hidden="true">⋯</span></button>
       </div>
       {moreOpen && (
         <div className="cardfoot cardmore" id={`morepanel-${s.id}`} role="group" aria-label={`More actions: ${cardName}`}
