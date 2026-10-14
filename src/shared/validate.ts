@@ -23,6 +23,7 @@ export const LIMITS = {
 const fin = (n: unknown): n is number => Number.isFinite(n);
 export const validBodyLb = (n: unknown) => fin(n) && n > 0 && n < LIMITS.bodyLb.max;
 export const validLiftGoalLb = (n: unknown) => fin(n) && n > 0 && n < LIMITS.liftGoalLb.max;
+export const validFreq = (n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 7; // sessions of one exercise in a week
 export const validRest = (n: unknown) => fin(n) && n >= LIMITS.rest.min && n <= LIMITS.rest.max;
 export const validPct = (n: unknown) => fin(n) && n >= LIMITS.pct.min && n <= LIMITS.pct.max;
 export const validRm = (n: unknown) => fin(n) && n > 0;

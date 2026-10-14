@@ -136,6 +136,8 @@ export interface Cfg extends ProgramCfg {
   progNames?: Record<string, string>; // program key ('A', 'B') -> your name for it
   bwGoal?: BodyGoal;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
+  /** Sessions a week you want to do an exercise, by exercise id (1 to 7). */
+  freqGoals?: Record<string, number>;
   rest?: number; // rest timer, seconds
 }
 

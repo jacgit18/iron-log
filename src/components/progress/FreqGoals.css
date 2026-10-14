@@ -1,0 +1,26 @@
+.freqgoals .freqlist {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+.freqgoals .freqlist li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 8px 0;
+}
+.freqgoals .freqname {
+  font-weight: 600;
+}
+.freqgoals .freqnum {
+  font-size: 0.9em;
+  text-align: right;
+}
+.freqgoals .freqlist li .goalbar {
+  grid-column: 1;
+}
+.freqgoals .freqlist li .btn {
+  grid-column: 2;
+  grid-row: 2;
+}
