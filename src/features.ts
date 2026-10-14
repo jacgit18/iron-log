@@ -5,12 +5,12 @@ import { LS } from './lib/storage.js';
 /* ---------- Feature registry (release flags by audience, see feature-flags.md) ----------
    One line per feature that is not for everyone yet:
      'admin' - only an account on the server's ADMIN_EMAILS list sees it (the API tells the app, /api/me `isAdmin`)
-     'all'   - everyone (the flag is done: delete the line and the check when you next touch the feature)
+     'all'   - everyone (the flag is done: delete the line and its check in the same PR, not later; lines left behind are where
+               parallel PRs conflict)
      'off'   - nobody, not even an admin
    A feature missing from the list is hidden from everyone (a forgotten line fails closed, not open). Hiding in the browser is not security: a feature with an API route must also
-   use `requireAdmin` (server/admin.ts). Add a feature with a line here, then `useFeature('name')` in the component. */
-export const FEATURES = {
-} satisfies Record<string, Audience>;
+   use `requireAdmin` (server/admin.ts). Add a feature with a line here, in alphabetical order, then `useFeature('name')` in the component. */
+export const FEATURES = {} satisfies Record<string, Audience>;
 
 export type Audience = 'admin' | 'all' | 'off';
 export type FeatureName = keyof typeof FEATURES;
