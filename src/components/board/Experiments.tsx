@@ -20,6 +20,7 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
   const st = useAppStore.getState();
   const [pick, setPick] = useState<Record<string, number>>({});
   const [q, setQ] = useState('');
+  if (q && !hasFilter(items.length)) setQ(''); // the search hides on a short list: forget its text, so it does not come back filled in
   const [arming, setArming] = useState<string | null>(null); // the experiment whose Delete was pressed once
   const shown = hasFilter(items.length) ? items.filter(e => matchesQuery(q, exInfo(cfg, e.ex).n, e.note)) : items; // the search shows only on a long list
   const days = DAYS.filter(d => !rest.includes(d));
