@@ -55,8 +55,11 @@ describe('erasing everything from one phone', () => {
     await a.api.syncNow();
     await a.api.doc('logs/squat').set({ schema: 1, entries: [entry('e1'), entry('e2')] });
     await a.api.doc('body/main').set({ entries: [{ wk: '2026-10-04', d: '2026-10-07', w: 180.5 }] });
+    await a.api.doc('grocery/main').set({ stores: [], items: [{ id: 'kale', n: 'Kale', store: '', qty: 1, cents: null, every: true, out: false }] });
+    await a.api.doc('grocery/2026-10').set({ lines: { kale: { got: true } }, pulled: [] });
     await b.api.syncNow();
     expect((await b.api.doc('logs/squat').get()).data().entries).toHaveLength(2);
+    expect((await b.api.doc('grocery/main').get()).data().items).toHaveLength(1);
     expect(await rowCount()).toBe(2);
 
     expect(await a.api.eraseEverything('data')).toEqual({ ok: true });
@@ -64,9 +67,14 @@ describe('erasing everything from one phone', () => {
     const history = await owner.selectFrom('row_history').select('row_id').execute();
     expect(history).toEqual([]);
 
+    expect(await owner.selectFrom('grocery_months').select('id').execute()).toEqual([]); // the grocery list goes too (ADR 039)
+    expect(await owner.selectFrom('list_items').select('id').execute()).toEqual([]);
+
     await b.api.syncNow();
     expect((await b.api.doc('logs/squat').get()).exists).toBe(false);
     expect((await b.api.doc('body/main').get()).exists).toBe(false);
+    expect((await b.api.doc('grocery/main').get()).exists).toBe(false);
+    expect((await b.api.doc('grocery/2026-10').get()).exists).toBe(false);
     expect(b.api.status()).toMatchObject({ holdsData: false, ready: true });
   });
 

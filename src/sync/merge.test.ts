@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { normWeek } from '../shared/week.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
 import { BUILTIN } from '../lib/data.js';
-import { mergeStretchWeek3, mergeWeek3 } from './merge.js';
+import { merge3, mergeGroceryMonth3, mergeStretchWeek3, mergeWeek3 } from './merge.js';
 
 // ADR 031: one test per row of the rules table, plus the fallback without a base.
 const week = (over: object) => normWeek({ prog: 'A', ...over });
@@ -167,5 +167,41 @@ describe('mergeStretchWeek3', () => {
   it('without a base, a union', () => {
     const m = mergeStretchWeek3(null, sweek({ done: { '1:a': true } }), sweek({ done: { '2:b': true }, skipped: { 4: true } }));
     expect(m.week).toEqual(sweek({ done: { '1:a': true, '2:b': true }, skipped: { 4: true } }));
+  });
+});
+
+// ADR 039: a month of the grocery list, line by line.
+describe('mergeGroceryMonth3', () => {
+  const month = (lines: object, pulled: string[] = []) => ({ lines, pulled });
+  it('keeps an item ticked on each device', () => {
+    const m = mergeGroceryMonth3(month({}), month({ kale: { got: true } }), month({ rice: { got: true } }));
+    expect(m.week).toEqual(month({ kale: { got: true }, rice: { got: true } }));
+    expect(m.tookTheirs).toBe(true);
+    expect(m.unskipped).toBe(false);
+  });
+  it('one device ticks, the other fixes the price of the same item: both are kept', () => {
+    const m = mergeGroceryMonth3(month({ kale: { qty: 2 } }), month({ kale: { qty: 2, got: true } }), month({ kale: { qty: 2, cents: 300 } }));
+    expect(m.week.lines).toEqual({ kale: { qty: 2, got: true, cents: 300 } });
+  });
+  it('an untick on either side sticks; a field both changed is this device\'s', () => {
+    expect(mergeGroceryMonth3(month({ kale: { got: true } }), month({ kale: { got: true } }), month({})).week).toEqual(month({}));
+    expect(mergeGroceryMonth3(month({ kale: { got: true } }), month({}), month({ kale: { got: true }, rice: { got: true } })).week).toEqual(month({ rice: { got: true } }));
+    expect(mergeGroceryMonth3(month({ kale: { cents: 100 } }), month({ kale: { cents: 200 } }), month({ kale: { cents: 300 } })).week).toEqual(month({ kale: { cents: 200 } }));
+  });
+  it('takes nothing when the other side changed nothing', () => {
+    const m = mergeGroceryMonth3(month({ kale: { got: true } }), month({ kale: { got: true }, rice: { got: true } }), month({ kale: { got: true } }));
+    expect(m).toEqual({ week: month({ kale: { got: true }, rice: { got: true } }), tookTheirs: false, unskipped: false });
+  });
+  it('old pulled ids merge one by one', () => {
+    expect(mergeGroceryMonth3(month({}, ['a']), month({}, ['a', 'b']), month({}, [])).week.pulled).toEqual(['b']);
+  });
+  it('without a base: every line of both, this device\'s fields over the other\'s', () => {
+    expect(mergeGroceryMonth3(null, month({ kale: { got: true, cents: 1 } }, ['x']), month({ kale: { cents: 2, qty: 3 }, rice: { got: true } }, ['y'])).week)
+      .toEqual(month({ kale: { got: true, cents: 1, qty: 3 }, rice: { got: true } }, ['x', 'y']));
+  });
+  it('merge3 picks the merge by table', () => {
+    expect(merge3('grocery_months', month({}), month({ a: { got: true } }), month({ b: { got: true } })).week).toEqual(month({ a: { got: true }, b: { got: true } }));
+    expect(merge3('weeks', week({}), week({ done: { x: true } }), week({ done: { y: true } })).week).toEqual(mergeWeek3(week({}), week({ done: { x: true } }), week({ done: { y: true } })).week);
+    expect(merge3('stretch_weeks', sweek({}), sweek({ done: { '0:a': true } }), sweek({})).week).toEqual(sweek({ done: { '0:a': true } }));
   });
 });

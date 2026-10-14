@@ -1,14 +1,16 @@
+import { normGroceryMonth } from '../shared/grocery.js';
 import { normWeek } from '../shared/week.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
 import { mergeWeek } from '../lib/export.js';
 import { stable } from './canon.js';
-import type { StretchWeek, Week } from '../types.ts';
+import type { GroceryLine, GroceryMonth, StretchWeek, Week } from '../types.ts';
 
 /* ---------- Merge rules for a stale week save (ADR 031) ----------
    A week or stretch week refused as stale is merged three-way: base (the row this device's save was based on), ours (what it is
    sending) and theirs (the server's current row). For each key, a change made on one side only is kept; when both sides changed it
    to different values this device wins (ADR 003). A tick that is new on either side beats a skip. Without a base the week falls back
-   to the two-way import merge (`mergeWeek`). Every other row type is still "this device wins". */
+   to the two-way import merge (`mergeWeek`). A month of the grocery list is merged the same way, line by line (ADR 039). Every other
+   row type is still "this device wins". */
 
 export interface Merged<T> {
   week: T;
@@ -106,3 +108,26 @@ export function mergeStretchWeek3(baseIn: unknown, oursIn: unknown, theirsIn: un
   week = normStretchWeek(week);
   return { week, tookTheirs: !same(week, ours), unskipped };
 }
+
+/** A month of the grocery list (ADR 039): each item's line field by field (its tick, count and price), and the old pulled ids one by one,
+ *  so two devices ticking different items, or one ticking and one fixing the price, keep both. Where both changed the same field this
+ *  device wins. Without a base: every line of both, this device's fields over the other's. */
+export function mergeGroceryMonth3(baseIn: unknown, oursIn: unknown, theirsIn: unknown): Merged<GroceryMonth> {
+  const ours = normGroceryMonth(oursIn); const theirs = normGroceryMonth(theirsIn);
+  const base = baseIn == null ? null : normGroceryMonth(baseIn);
+  const flags = (ids: string[]) => Object.fromEntries(ids.map(id => [id, true as const]));
+  const fields = (l: GroceryLine | undefined): Record<string, unknown> => ({ ...l });
+  const lines: Record<string, GroceryLine> = {};
+  for (const id of new Set([...Object.keys(ours.lines), ...Object.keys(theirs.lines), ...Object.keys(base?.lines ?? {})])) {
+    const l = base ? mergeMap(fields(base.lines[id]), fields(ours.lines[id]), fields(theirs.lines[id])) : { ...theirs.lines[id], ...ours.lines[id] };
+    if (Object.keys(l).length) lines[id] = l as GroceryLine;
+  }
+  const pulled = base ? Object.keys(mergeMap(flags(base.pulled), flags(ours.pulled), flags(theirs.pulled))) : [...new Set([...ours.pulled, ...theirs.pulled])];
+  const month = normGroceryMonth({ lines, pulled });
+  return { week: month, tookTheirs: !same(month, ours), unskipped: false };
+}
+
+/** The tables whose rows are merged three-way rather than replaced, and how. */
+export type MergedTable = 'weeks' | 'stretch_weeks' | 'grocery_months';
+export const merge3 = (table: MergedTable, base: unknown, ours: unknown, theirs: unknown): Merged<unknown> =>
+  table === 'weeks' ? mergeWeek3(base, ours, theirs) : table === 'stretch_weeks' ? mergeStretchWeek3(base, ours, theirs) : mergeGroceryMonth3(base, ours, theirs);

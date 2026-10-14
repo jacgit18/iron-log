@@ -1,4 +1,6 @@
+import type { ListName } from '../shared/commands.js';
 import { normConfigDoc } from '../shared/config.js';
+import { normGroceryItem, normGroceryMonth, normGroceryStore } from '../shared/grocery.js';
 import { normExperimentItem, normStretchExperimentItem, normStretchItem, normSupplementItem } from '../shared/listItems.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
 import { normBoost, normTakenDay, normWaterDay } from '../shared/supplementDay.js';
@@ -45,10 +47,11 @@ export function fromServerRow(table: SyncTable, row: ServerRow): MirrorRow {
     case 'config': return { ...base, table, key: 'config', config: normConfigDoc(row.data) ?? {} };
     case 'library_items': { const item = normLibrary([row.data])[0]; return { ...base, table, key: String(row.client_id), item: item ?? (row.data as never) }; }
     case 'list_items': {
-      const list = row.list as 'stretch' | 'stretch_experiment' | 'experiment' | 'supplement_item';
-      const clean = { stretch: normStretchItem, stretch_experiment: normStretchExperimentItem, experiment: normExperimentItem, supplement_item: (x: unknown) => normSupplementItem(x) }[list](row.data);
+      const list = row.list as ListName;
+      const clean = { stretch: normStretchItem, stretch_experiment: normStretchExperimentItem, experiment: normExperimentItem, supplement_item: (x: unknown) => normSupplementItem(x), grocery_item: normGroceryItem, grocery_store: normGroceryStore }[list](row.data);
       return { ...base, table, key: `${list}/${row.client_id}`, list, position: Number(row.position), item: clean ?? (row.data as never) };
     }
+    case 'grocery_months': return { ...base, table, key: String(row.month), record: normGroceryMonth(row.data) };
   }
 }
 

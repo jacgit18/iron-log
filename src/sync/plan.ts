@@ -33,6 +33,7 @@ function save(row: DesiredRow, baseVersion: number | null): PlannedCommand {
     case 'config': return make('save-config', row, baseVersion, { config: row.config });
     case 'library_items': return make('save-library-item', row, baseVersion, { item: row.item });
     case 'list_items': return make('save-list-item', row, baseVersion, { list: row.list, item: row.item, position: row.position });
+    case 'grocery_months': return make('save-grocery-month', row, baseVersion, { month: row.key, record: row.record });
   }
 }
 
@@ -48,6 +49,7 @@ function remove(row: MirrorRow): PlannedCommand | null {
     case 'programs': return id('delete-program', { key: row.key });
     case 'library_items': return id('delete-library-item', { id: row.key });
     case 'list_items': return id('delete-list-item', { list: row.list, id: row.key.slice(row.list.length + 1) });
+    case 'grocery_months': return id('delete-grocery-month', { month: row.key });
     case 'config': return null;
   }
 }

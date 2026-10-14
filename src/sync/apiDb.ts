@@ -1,9 +1,9 @@
 import type { AccountState } from './account.js';
 import { backoffMs } from './backoff.js';
-import { desiredRows, documentFor, parsePath, pathsOf, scopeRows, type PathKind } from './documents.js';
+import { desiredRows, documentFor, mergedDoc, mergedRowOf, parsePath, pathsOf, scopeRows, type PathKind } from './documents.js';
 import { entryId } from '../lib/export.js';
 import { createMirrorStore, type Storage } from './mirrorStore.js';
-import { mergeStretchWeek3, mergeWeek3 } from './merge.js';
+import { merge3, type MergedTable } from './merge.js';
 import { createOutbox, isDeleted, type QuarantineEntry } from './outbox.js';
 import { planCommands, planDelete } from './plan.js';
 import { canonOf } from './canon.js';
@@ -314,11 +314,13 @@ export function createApiDb(options: ApiDbOptions) {
   // between the app's save and the send (opening the app pulls, and a tap waits behind it); planned against that newer row, the save
   // went out as a plain edit of it and wiped what the other device ticked. undefined: not a week path. null: no row when it was made.
   const bases = new Map<string, { version: number; week: unknown } | null>();
+  // A grocery month is merged the same way (ADR 039); "week" below means any of these documents.
   const weekRow = (path: string): { version: number; week: unknown } | null | undefined => {
-    const p = parsePath(path);
-    if (!p || (p.kind !== 'weeks' && p.kind !== 'stretchweeks')) return undefined;
-    const r = mirror.rows().get(mirrorId(p.kind === 'weeks' ? 'weeks' : 'stretch_weeks', p.weekStart));
-    return r && !r.deleted && (r.table === 'weeks' || r.table === 'stretch_weeks') ? { version: r.version, week: r.week } : null;
+    const m = mergedRowOf(parsePath(path));
+    if (!m) return undefined;
+    const r = mirror.rows().get(mirrorId(m.table, m.key));
+    const doc = r && !r.deleted ? mergedDoc(r) : undefined;
+    return r && doc !== undefined ? { version: r.version, week: doc } : null;
   };
   const rememberBase = (path: string) => { const b = weekRow(path); if (b !== undefined) bases.set(path, b); };
   // The unsent week the app last handed over, by path. When a merge replaces it in the outbox the base moves to the server's row, but
@@ -326,8 +328,7 @@ export function createApiDb(options: ApiDbOptions) {
   // week before the merge. Written over the merged copy against the moved base, it went out as a plain edit and wiped the other
   // device's ticks (production, 2026-10-12..14). So that save is merged onto the copy in the outbox first.
   const handed = new Map<string, unknown>();
-  const mergeWeekDoc = (path: string, base: unknown, mine: unknown, theirs: unknown) =>
-    (parsePath(path)?.kind === 'weeks' ? mergeWeek3(base, mine, theirs) : mergeStretchWeek3(base, mine, theirs));
+  const mergeWeekDoc = (path: string, base: unknown, mine: unknown, theirs: unknown) => merge3(mergedRowOf(parsePath(path))!.table, base, mine, theirs);
 
   // What the server held for a path when a change to it was set aside: Try again leaves alone whatever changed after (see retry).
   const seenNow = (path: string) => {
@@ -378,7 +379,7 @@ export function createApiDb(options: ApiDbOptions) {
         const base = bases.get(path)!; const cur = weekRow(path);
         if (cur && cur.version !== base?.version) {
           rememberBase(path);
-          const m = kind.kind === 'weeks' ? mergeWeek3(base ? base.week : null, sent, cur.week) : mergeStretchWeek3(base ? base.week : null, sent, cur.week);
+          const m = mergeWeekDoc(path, base ? base.week : null, sent, cur.week);
           if (m.tookTheirs) {
             outbox.put(path, m.week);
             adjusted.add(path);
@@ -450,14 +451,16 @@ export function createApiDb(options: ApiDbOptions) {
             break;
           }
           if (++conflicts > MAX_CONFLICTS) return refuse(path, sent, 'This kept changing on another device, so it was set aside.');
-          if (c.table === 'weeks' || c.table === 'stretch_weeks') {
+          if (c.table === 'weeks' || c.table === 'stretch_weeks' || c.table === 'grocery_months') {
             // ADR 031: a week is merged three-way, so what the other device changed survives; a key both changed is this device's.
+            // A grocery month too, line by line (ADR 039).
             // The latest unsent copy, not the one that went out: a tap saved while the request was on its way was made from that one too.
             const mine = outbox.get(path);
             const theirs = mirror.rows().get(mirrorId(c.table, c.rowKey));
-            if (mine !== undefined && !isDeleted(mine) && theirs && !theirs.deleted && (theirs.table === 'weeks' || theirs.table === 'stretch_weeks')) {
-              const baseWeek = base && (base.table === 'weeks' || base.table === 'stretch_weeks') ? base.week : null;
-              const m = c.table === 'weeks' ? mergeWeek3(baseWeek, mine, theirs.week) : mergeStretchWeek3(baseWeek, mine, theirs.week);
+            const theirsDoc = theirs && !theirs.deleted ? mergedDoc(theirs) : undefined;
+            if (mine !== undefined && !isDeleted(mine) && theirsDoc !== undefined) {
+              const baseWeek = base ? (mergedDoc(base) ?? null) : null;
+              const m = merge3(c.table as MergedTable, baseWeek, mine, theirsDoc);
               if (m.tookTheirs) {
                 outbox.put(path, m.week);
                 adjusted.add(path);
@@ -580,10 +583,11 @@ export function createApiDb(options: ApiDbOptions) {
       const seen = entry.seen && typeof entry.seen === 'object' ? entry.seen : null;
       let doc = entry.doc;
       let retryRows = new Set<string>();
-      if (kind && (kind.kind === 'weeks' || kind.kind === 'stretchweeks') && !isDeleted(doc)) {
+      const merged = mergedRowOf(kind);
+      if (kind && merged && !isDeleted(doc)) {
         const cur = weekRow(entry.path);
-        if (cur && (!seen || seen[mirrorId(kind.kind === 'weeks' ? 'weeks' : 'stretch_weeks', kind.weekStart)] !== cur.version)) {
-          const m = kind.kind === 'weeks' ? mergeWeek3(entry.baseWeek ?? null, doc, cur.week) : mergeStretchWeek3(entry.baseWeek ?? null, doc, cur.week);
+        if (cur && (!seen || seen[mirrorId(merged.table, merged.key)] !== cur.version)) {
+          const m = merge3(merged.table, entry.baseWeek ?? null, doc, cur.week);
           doc = m.week;
           if (m.tookTheirs) note(entry.path, 'Sent what was set aside, merged with newer changes from another device.');
         }

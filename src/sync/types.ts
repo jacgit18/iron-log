@@ -1,12 +1,12 @@
 import type { ConfigDoc } from '../shared/config.js';
 import type { ListItem, ListName } from '../shared/commands.js';
-import type { BodyEntry, Boost, LibraryItem, LogEntry, ProgKey, Program, StretchWeek, Week } from '../types.ts';
+import type { BodyEntry, Boost, GroceryMonth, LibraryItem, LogEntry, ProgKey, Program, StretchWeek, Week } from '../types.ts';
 
 /* ---------- Sync: the phone's copy of the server's rows ----------
    The app stores whole documents ("logs/squat", "weeks/2026-10-04", ...). The server stores rows. These types are the
    rows as the phone holds them (the mirror), in the app's own shapes. Phase D, increment D1: pure, no network. */
 
-export type SyncTable = 'log_entries' | 'body_entries' | 'weeks' | 'stretch_weeks' | 'supplement_days' | 'programs' | 'config' | 'library_items' | 'list_items';
+export type SyncTable = 'log_entries' | 'body_entries' | 'weeks' | 'stretch_weeks' | 'supplement_days' | 'programs' | 'config' | 'library_items' | 'list_items' | 'grocery_months';
 
 /** A row as the API sends it, in GET /api/sync and in command responses (snake_case, numbers as strings). */
 export interface ServerRow {
@@ -41,7 +41,8 @@ export type MirrorRow =
   | (Base & { table: 'programs'; progKey: ProgKey; program: Omit<Program, 'key'> })
   | (Base & { table: 'config'; config: ConfigDoc })
   | (Base & { table: 'library_items'; item: LibraryItem })
-  | (Base & { table: 'list_items'; list: ListName; position: number; item: ListItem });
+  | (Base & { table: 'list_items'; list: ListName; position: number; item: ListItem })
+  | (Base & { table: 'grocery_months'; record: GroceryMonth });
 
 /** The phone's copy of the server's rows, keyed by `${table}|${key}`. Tombstones are kept. */
 export type Mirror = ReadonlyMap<string, MirrorRow>;
@@ -58,7 +59,8 @@ export type CommandName =
   | 'save-supplement-day' | 'delete-supplement-day'
   | 'save-program' | 'delete-program' | 'save-config'
   | 'save-library-item' | 'delete-library-item'
-  | 'save-list-item' | 'delete-list-item';
+  | 'save-list-item' | 'delete-list-item'
+  | 'save-grocery-month' | 'delete-grocery-month';
 
 /** One request to POST /api/commands/<name>, the envelope's pieces plus the row it concerns. */
 export interface PlannedCommand {

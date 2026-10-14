@@ -57,6 +57,8 @@ export const storageWarning = (s: SyncStatus) =>
   s.persisted ? '' : 'This device is out of space, so some changes are held in memory only and would be lost if you reload. Download your data or free some space.';
 
 const weekOf = (key: string) => fmtShort(parseDate(key));
+// "2026-10" -> "October 2026".
+const monthName = (key: string) => new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
 /** What a document path is called to the user. `nameOf` turns an exercise id into its name. */
 export function pathLabel(path: string, nameOf: (id: string) => string = id => id): string {
@@ -72,6 +74,7 @@ export function pathLabel(path: string, nameOf: (id: string) => string = id => i
     case 'stretches': return 'Stretch list';
     case 'supplements': return 'Supplements and water';
     case 'config': return 'Settings';
+    case 'grocery': return rest === 'main' ? 'Grocery list' : `Groceries, ${monthName(rest)}`;
     default: return path;
   }
 }

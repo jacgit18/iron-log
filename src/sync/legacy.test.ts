@@ -8,9 +8,9 @@ const ids = (docs: Map<string, unknown>) => planLegacy(docs).commands.filter(c =
 
 describe('legacyDocs', () => {
   it('takes only the documents the sync knows, from the browser\'s keys', () => {
-    const store: Record<string, unknown> = { 'logs/squat': logs(e()), 'weeks/2026-10-04': { prog: 'A' }, appearance: { theme: 'dark' }, hidetip: 1, 'sync/mirror': { v: 1 }, 'logs/empty': null };
+    const store: Record<string, unknown> = { 'logs/squat': logs(e()), 'weeks/2026-10-04': { prog: 'A' }, appearance: { theme: 'dark' }, hidetip: 1, 'sync/mirror': { v: 1 }, 'logs/empty': null, 'grocery/main': { stores: [], items: [] }, 'grocery/2026-10': { lines: {} }, 'grocery/old': {} };
     const docs = legacyDocs(Object.keys(store), p => store[p]);
-    expect([...docs.keys()]).toEqual(['logs/squat', 'weeks/2026-10-04']);
+    expect([...docs.keys()]).toEqual(['grocery/2026-10', 'grocery/main', 'logs/squat', 'weeks/2026-10-04']); // the grocery list too (ADR 039)
   });
 });
 
@@ -92,8 +92,9 @@ describe('planLegacy', () => {
 
 describe('describeLegacy', () => {
   it('says what is in it, singular and plural', () => {
-    expect(describeLegacy({ entries: 34, checkOffs: 19, bodyWeights: 1, weeks: 2, stretchWeeks: 0, supplementDays: 0, programs: 2, library: 0, lists: 4, config: 1 })).toBe('34 logged sessions, 19 check-offs, 1 body weight, 2 weeks, 2 programs');
-    expect(describeLegacy({ entries: 0, checkOffs: 0, bodyWeights: 0, weeks: 0, stretchWeeks: 0, supplementDays: 0, programs: 0, library: 0, lists: 2, config: 1 })).toBe('your settings and lists');
+    expect(describeLegacy({ entries: 34, checkOffs: 19, bodyWeights: 1, weeks: 2, stretchWeeks: 0, supplementDays: 0, programs: 2, library: 0, lists: 4, config: 1, groceryItems: 0, groceryMonths: 0 })).toBe('34 logged sessions, 19 check-offs, 1 body weight, 2 weeks, 2 programs');
+    expect(describeLegacy({ entries: 0, checkOffs: 0, bodyWeights: 0, weeks: 0, stretchWeeks: 0, supplementDays: 0, programs: 0, library: 0, lists: 2, config: 1, groceryItems: 0, groceryMonths: 0 })).toBe('your settings and lists');
+    expect(describeLegacy({ entries: 0, checkOffs: 0, bodyWeights: 0, weeks: 0, stretchWeeks: 0, supplementDays: 0, programs: 0, library: 0, lists: 3, config: 0, groceryItems: 3, groceryMonths: 1 })).toBe('3 grocery items, 1 month of groceries');
   });
 });
 
@@ -126,5 +127,26 @@ describe('dataFileDocs', () => {
     const { parseDataFile } = await import('../lib/export.js');
     const empty = JSON.stringify({ app: 'iron-log', format: 1, config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: [] });
     expect(planLegacy(dataFileDocs(parseDataFile(empty))).commands).toEqual([]);
+  });
+});
+
+// ADR 039: the device's grocery list uploads on the same road as everything else.
+describe('the grocery list in the one-time upload', () => {
+  const grocery = { stores: ['Aldi'], items: [{ id: 'kale', n: 'Kale', store: 'Aldi', qty: 2, cents: 250, every: false, out: true }, { id: 'salt', n: 'Salt', store: '', qty: 1, cents: null, once: true }] };
+  it('turns the catalogue and each month into creates, and counts them', () => {
+    const plan = planLegacy(new Map<string, unknown>([['grocery/main', grocery], ['grocery/2026-10', { lines: { kale: { got: true } }, pulled: [] }], ['grocery/2026-09', { lines: {}, pulled: [] }]]));
+    expect(plan.commands.map(c => [c.name, c.rowKey])).toEqual([
+      ['save-grocery-month', '2026-10'], ['save-list-item', 'grocery_store/Aldi'], ['save-list-item', 'grocery_item/kale'], ['save-list-item', 'grocery_item/salt'],
+    ]); // the empty month is the fresh list: nothing to upload
+    expect(plan.commands.every(c => c.baseVersion === null)).toBe(true);
+    expect(plan.summary).toMatchObject({ lists: 3, groceryItems: 2, groceryMonths: 1 });
+    expect(describeLegacy(plan.summary)).toBe('2 grocery items, 1 month of groceries');
+  });
+  it('an export file carries it too', async () => {
+    const { parseDataFile } = await import('../lib/export.js');
+    const file = JSON.stringify({ app: 'iron-log', format: 1, config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: [], grocery: { ...grocery, months: { '2026-10': { lines: { kale: { got: true } }, pulled: [] } } } });
+    const docs = dataFileDocs(parseDataFile(file));
+    expect([...docs.keys()]).toEqual(['grocery/main', 'grocery/2026-10']);
+    expect(planLegacy(docs).summary).toMatchObject({ groceryItems: 2, groceryMonths: 1 });
   });
 });

@@ -83,6 +83,28 @@ describe('one phone', () => {
     for (const p of [a, b]) expect(p.api.status()).toMatchObject({ pendingPaths: [], quarantined: 0 });
   });
 
+  it('the grocery list: the catalogue and a month reach the server and a second phone, and a tick on each phone is kept (ADR 039)', async () => {
+    const kale = { id: 'kale', n: 'Kale', store: 'Aldi', qty: 2, cents: 250, every: false, out: true };
+    const a = phone();
+    a.api.start();
+    await a.set('grocery/main', { stores: ['Aldi'], items: [kale, { ...kale, id: 'rice', n: 'Rice', out: false, every: true }] });
+    await a.set('grocery/2026-10', { lines: { kale: { got: true } }, pulled: [] });
+    const stored = await db.selectFrom('list_items').select(['list', 'client_id', 'position']).where('deleted_at', 'is', null).orderBy('list').orderBy('position').execute();
+    expect(stored).toEqual([{ list: 'grocery_item', client_id: 'kale', position: 0 }, { list: 'grocery_item', client_id: 'rice', position: 1 }, { list: 'grocery_store', client_id: 'Aldi', position: 0 }]);
+
+    const b = phone();
+    b.api.start();
+    await b.api.syncNow();
+    expect((await b.get('grocery/main')).items.map((i: { id: string }) => i.id)).toEqual(['kale', 'rice']);
+    // each phone ticks a different item before seeing the other's tick
+    await a.set('grocery/2026-10', { lines: { kale: { got: true }, rice: { got: true } }, pulled: [] });
+    await b.set('grocery/2026-10', { lines: { kale: { got: true, cents: 300 } }, pulled: [] });
+    const month = await db.selectFrom('grocery_months').select('data').where('month', '=', '2026-10').executeTakeFirstOrThrow();
+    expect(month.data).toEqual({ lines: { kale: { got: true, cents: 300 }, rice: { got: true } }, pulled: [] });
+    await a.api.syncNow();
+    expect((await a.get('grocery/2026-10')).lines).toEqual({ kale: { got: true, cents: 300 }, rice: { got: true } });
+  });
+
   it('saving the same documents again sends nothing and changes no version', async () => {
     const a = phone();
     a.api.start();

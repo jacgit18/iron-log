@@ -109,6 +109,22 @@ describe('the mirror store', () => {
     });
   });
 
+  it('keeps grocery months and grocery list items across a reload, and drops a damaged month (ADR 039)', () => {
+    const storage = memoryStorage();
+    const a = createMirrorStore(storage);
+    a.applyPage({
+      grocery_months: [serverRow({ month: '2026-10', data: { lines: { kale: { got: true } }, pulled: [] } }, { seq: '2' })],
+      list_items: [serverRow({ list: 'grocery_item', client_id: 'kale', position: 0, data: { id: 'kale', n: 'Kale', store: '', qty: 1, cents: null, every: true, out: false } }, { seq: '3' })],
+    }, '3');
+    expect([...createMirrorStore(storage).rows().keys()].sort()).toEqual(['grocery_months|2026-10', 'list_items|grocery_item/kale']);
+    const saved = storage.get(MIRROR_KEY) as { rows: unknown[] };
+    saved.rows.push({ table: 'grocery_months', key: '2026-11', version: 1, deleted: false, seq: '4', record: { lines: 'x' } });
+    storage.set(MIRROR_KEY, saved);
+    const b = createMirrorStore(storage);
+    expect(b.rows().has('grocery_months|2026-11')).toBe(false);
+    expect(b.recovered()).toBe(true);
+  });
+
   it('says so when the browser refuses the write, and keeps working in memory', () => {
     const storage = memoryStorage(true);
     const s = createMirrorStore(storage);

@@ -1,8 +1,9 @@
+import { emptyMonth } from '../shared/grocery.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
 import { normWeek } from '../shared/week.js';
 import { canonOf, stable } from './canon.js';
 import { desiredRows, documentFor, type PathKind } from './documents.js';
-import { mergeStretchWeek3, mergeWeek3 } from './merge.js';
+import { mergeGroceryMonth3, mergeStretchWeek3, mergeWeek3 } from './merge.js';
 import { isDeleted } from './outbox.js';
 import { mirrorId, type Mirror, type MirrorRow } from './types.js';
 
@@ -14,6 +15,12 @@ import { mirrorId, type Mirror, type MirrorRow } from './types.js';
    A row the device removed is not kept: there is nothing left to remove. */
 export function ownChanges(kind: PathKind, doc: unknown, before: Mirror): unknown | null {
   if (doc == null || isDeleted(doc)) return null;
+  if (kind.kind === 'grocerymonths') {
+    // Line by line, as a week is key by key: the fields this device changed, and none it left as they were.
+    const prev = documentFor(kind, before) ?? emptyMonth();
+    const own = mergeGroceryMonth3(prev, doc, emptyMonth()).week;
+    return stable(own) === stable(emptyMonth()) ? null : own;
+  }
   if (kind.kind === 'weeks' || kind.kind === 'stretchweeks') {
     // Key by key: a three-way merge against an empty week keeps the keys this device changed and drops the ones it left as they were.
     const empty = kind.kind === 'weeks' ? normWeek(null) : normStretchWeek(null);

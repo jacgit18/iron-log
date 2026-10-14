@@ -7,7 +7,7 @@ import type { ServerRow, SyncTable } from './types.js';
    applied and saved together with its cursor, so a pull that stops halfway (offline, a deploy) resumes where it
    stopped. Pulling is safe to repeat: rows are applied by version, so the same page twice changes nothing. */
 
-const KNOWN: readonly SyncTable[] = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items'];
+const KNOWN: readonly SyncTable[] = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items', 'grocery_months'];
 const PAGE_LIMIT = 500;
 const MAX_PAGES = 1000;
 
