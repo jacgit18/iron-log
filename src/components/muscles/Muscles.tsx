@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { MuscleKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { exInfo } from '../../lib/data.js';
@@ -43,7 +44,7 @@ function MuscleDetail({ m, v, keys, withSec }: { m: MuscleKey; v: Volume[MuscleK
   const where = (r: Grouped) => keys.filter(k => r.at[k]).map(k => `${keys.length > 1 ? progName(cfg, k) + ': ' : ''}${[...r.at[k]].sort().map(d => 'D' + d).join(' ')}`).join(' · ');
   const progs = keys.map(k => progName(cfg, k)).join(' and ');
   return (
-    <section className="panel">
+    <section className="panel mdetail">
       <div className="inline" style={{ justifyContent: 'space-between' }}>
         <h2>{MUSCLES[m].n}</h2>
         <button type="button" className="btn sm ghost" onClick={() => selectMuscle(null)}>Close</button>
@@ -103,6 +104,25 @@ export default function Muscles() {
   const sel = useAppStore(s => s.bodySel); const withSec = useAppStore(s => s.bodySec);
   const { selectMuscle, setBodySec, openModal } = useAppStore.getState();
   const { vol, untagged, keys } = muscleVolumeAll(cfg, programs, withSec);
+  // On a phone the detail sits under the figures; a tap on the body brings it into view (the list is right there already).
+  const side = useRef<HTMLDivElement>(null);
+  const reveal = useRef(false);
+  const revealDetail = () => {
+    const panel = side.current?.querySelector<HTMLElement>('.mdetail');
+    if (!panel || !window.matchMedia('(max-width:900px)').matches) return;
+    const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    panel.scrollIntoView({ block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+  };
+  const pickOnBody = (m: MuscleKey) => {
+    if (m === sel) { revealDetail(); return; }
+    reveal.current = true;
+    selectMuscle(m);
+  };
+  useEffect(() => {
+    if (!reveal.current) return;
+    reveal.current = false;
+    revealDetail();
+  }, [sel]);
 
   return (
     <>
@@ -110,10 +130,10 @@ export default function Muscles() {
       <RemovedNotice scope="muscles" />
       <div className="bodywrap">
         <div className="figs">
-          <Figure shapes={FRONT} label="Front" vol={vol} sel={sel} onPick={selectMuscle} />
-          <Figure shapes={BACK} label="Back" vol={vol} sel={sel} onPick={selectMuscle} />
+          <Figure shapes={FRONT} label="Front" vol={vol} sel={sel} onPick={pickOnBody} />
+          <Figure shapes={BACK} label="Back" vol={vol} sel={sel} onPick={pickOnBody} />
         </div>
-        <div className="bodyside">
+        <div className="bodyside" ref={side}>
           <div className="legend">
             <span><i className="sw l0" />Not trained</span><span><i className="sw l1" />1–4 sets</span><span><i className="sw l2" />5–9</span>
             <span><i className="sw l3" />10–20</span><span><i className="sw l4" />Over 20</span><span className="note">per week</span>

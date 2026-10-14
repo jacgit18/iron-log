@@ -231,10 +231,12 @@ body.timing{padding-bottom:130px}
 .wknum{color:var(--muted);white-space:nowrap}
 .wknum b{color:var(--ink)}
 .bodywrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start}
-@media (max-width:900px){.bodywrap{grid-template-columns:1fr}}
+@media (max-width:900px){.bodywrap{grid-template-columns:minmax(0,1fr)}}
 .figs{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
 .fig{margin:0;display:flex;flex-direction:column;align-items:center;gap:4px}
-.fig svg{width:100%;max-width:260px;height:auto}
+.fig svg{width:100%;max-width:260px;height:auto;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+/* Phone: both figures fit in about half the screen, so a tapped muscle's detail is a short scroll away */
+@media (max-width:900px){.fig svg{max-height:min(50svh,380px)}}
 .fig figcaption{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .sil{fill:var(--sunk)}
 .mu{stroke:var(--surface);stroke-width:1;cursor:pointer;transition:fill .15s}
@@ -242,6 +244,7 @@ body.timing{padding-bottom:130px}
 .mu:hover{filter:brightness(1.08)}
 .mu.sel{stroke:var(--ink);stroke-width:1.6}
 .bodyside{display:flex;flex-direction:column;gap:12px}
+.mdetail{scroll-margin:12px 0 calc(72px + env(safe-area-inset-bottom, 0px))} /* clear of the phone's bottom tab bar */
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.8125rem;color:var(--muted)}
 .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
 .sw.l0{background:var(--m0)} .sw.l1{background:var(--m1)} .sw.l2{background:var(--m2)} .sw.l3{background:var(--m3)} .sw.l4{background:var(--m4)}
@@ -258,6 +261,9 @@ body.timing{padding-bottom:130px}
 .mrow:last-child{border-bottom:0}
 .mname small{color:var(--muted)}
 .mdays{color:var(--muted);font-size:.8125rem;white-space:nowrap}
+.mdetail .mname{grid-column:2;min-width:0;overflow-wrap:anywhere}
+/* Phone: the days go on a second line under the name, so a row never runs wider than the screen */
+@media (max-width:600px){.mrow{grid-template-columns:auto minmax(0,1fr) auto;row-gap:2px}.mrow .mdays{grid-column:2;grid-row:2;white-space:normal}}
 .role{font-size:.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:999px}
 .role.p{background:var(--m4);color:var(--accent-ink)} .role.s{background:var(--m1);color:var(--ink)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
