@@ -38,7 +38,7 @@ function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; 
   );
 }
 
-// `target` ({key, day}) comes from the board's + Add exercise; without it the sheet edits the Program tab's selection.
+// `target` ({key, day}) comes from the board's + Add to program; without it the sheet edits the Program tab's selection.
 export default function SlotSheet({ idx, col, target }: { idx: number | null; col?: number; target?: { key: string; day: number } | null }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();

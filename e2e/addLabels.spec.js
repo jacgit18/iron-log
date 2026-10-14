@@ -10,7 +10,7 @@ test('a board day offers + Add to program and + This week only', async ({ page }
 test('+ Add to program opens the program add sheet and + This week only the one-week sheet', async ({ page }) => {
   await page.click('#add-1');
   await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByRole('dialog').getByRole('heading', { name: /^Add exercise|Day 1/ })).toBeVisible();
+  await expect(page.getByRole('dialog').getByRole('heading', { name: /^Add exercise · / })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.click('#addweek-1');

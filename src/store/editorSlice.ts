@@ -51,7 +51,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   edProgram() { const it = get().edItem(); return it ? { ...it.prog, key: 'N' } : get().programs[get().edKey()]; },
   edName() { const it = get().edItem(); return it ? it.name : progName(get().cfg, get().edKey()); },
 
-  // The board's + Add exercise: the add sheet, aimed at the program on the board and the program day shown in
+  // The board's + Add to program: the add sheet, aimed at the program on the board and the program day shown in
   // column `col`. The target travels with the sheet, so the Program tab's own selection is untouched.
   openAddToProgram(col) {
     const pd = dayAt(get().week, col);
