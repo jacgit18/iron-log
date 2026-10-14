@@ -45,4 +45,14 @@ describe('applyStarter', () => {
     expect(st().applyStarter('fullbody', 3)).not.toBeNull();
     expect(slotsFor(st().programs.A)).toHaveLength(n);
   });
+
+  it('refuses when the shown week is not this one, and writes nothing', () => {
+    useAppStore.setState({ week: { ...st().week } });
+    const real = st().weekKey;
+    useAppStore.setState({ weekKey: () => '2020-01-05' });
+    expect(st().applyStarter('ppl', 3)).toMatch(/this week/);
+    useAppStore.setState({ weekKey: real });
+    expect(slotsFor(st().programs.A)).toHaveLength(0);
+    expect(Object.keys(st().cfg.ex)).toHaveLength(0);
+  });
 });

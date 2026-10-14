@@ -57,9 +57,11 @@ describe('starter programs', () => {
     const b = buildStarter(starterById('fivebyfive')!, 3, cfg({ mysquat: { n: 'squat' } }), 'A', '2026-10-11')!;
     expect(b.newEx.mysquat).toBeUndefined();
     expect(slotsFor(b.program).some(c => c.items[0]!.ex === 'mysquat')).toBe(true);
-    // the same exercise on several days is one id, not one per day
-    const squatIds = new Set(slotsFor(b.program).filter(c => c.sec?.startsWith('Workout') && c.items[0]!.ex === 'mysquat'));
-    expect(squatIds.size).toBeGreaterThan(1);
+    // every Squat card, on every day, uses that one id: none made a second squat
+    const squatCards = slotsFor(b.program).filter(c => c.sec?.startsWith('Workout'));
+    expect(squatCards.length).toBeGreaterThan(1);
+    const squatIds = slotsFor(b.program).flatMap(c => c.items.map(it => it.ex)).filter(id => id === 'mysquat' || b.newEx[id]?.n === 'Squat');
+    expect(new Set(squatIds)).toEqual(new Set(['mysquat']));
   });
 
   it('one exercise used on several days has one library entry', () => {

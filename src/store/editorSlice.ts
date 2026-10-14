@@ -173,7 +173,10 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const starter = starterById(starterId); const key = get().activeProgKey();
     // Only onto an empty board: a starter never replaces cards someone has built.
     if (!starter || slotsFor(get().programs[key]).length) return 'Starter programs are for an empty board.';
-    const built = buildStarter(starter, perWeek, get().cfg, key, ymd(weekStartOf(new Date())));
+    // The starter's cards start this week, so another week's board (an earlier one, or a finished one shown from its record) would not show them.
+    const thisWeek = ymd(weekStartOf(new Date()));
+    if (get().weekKey() !== thisWeek || get().shownFromRecord()) return 'Go to this week to use a starter program.';
+    const built = buildStarter(starter, perWeek, get().cfg, key, thisWeek);
     if (!built) return 'That many days a week is not offered for this program.';
     if (Object.keys(built.newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, built.newEx); c.muscleMap = { ...(c.muscleMap || {}), ...built.newTags }; });
     get().saveProgram(key, built.program);

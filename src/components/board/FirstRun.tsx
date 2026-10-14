@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { weekStartOf, ymd } from '../../shared/dates.js';
 import { STARTERS, type Starter } from '../../lib/starterPrograms.js';
 import { flag, useAppStore } from '../../store/useAppStore.js';
 import './FirstRun.css';
@@ -35,13 +36,21 @@ function StarterRow({ starter }: { starter: Starter }) {
 
 export default function FirstRun() {
   const st = useAppStore.getState();
+  // Starters add cards that start this week, so they are offered only on this week's open board; elsewhere only Build my own.
+  const canStart = useAppStore(s => s.weekKey() === ymd(weekStartOf(new Date())) && !s.shownFromRecord());
   return (
     <section className="notice firstrun" aria-labelledby="firstrun-h">
       <h3 id="firstrun-h">Build your first workout</h3>
-      <p>Your board is empty. Pick a starter and change anything later, or build your own from scratch. Starters have sets and reps but no weights: you type the weight at your first session.</p>
-      <ul className="starters" aria-label="Starter programs">
-        {STARTERS.map(s => <StarterRow key={s.id} starter={s} />)}
-      </ul>
+      {canStart ? (
+        <>
+          <p>Your board is empty. Pick a starter and change anything later, or build your own from scratch. Starters have sets and reps but no weights: you type the weight at your first session.</p>
+          <ul className="starters" aria-label="Starter programs">
+            {STARTERS.map(s => <StarterRow key={s.id} starter={s} />)}
+          </ul>
+        </>
+      ) : (
+        <p>Your board is empty. Add the exercises you train, and the day you train each one. Starter programs are offered on this week&rsquo;s board.</p>
+      )}
       <div className="actions">
         <button type="button" className="btn primary" id="firstrun-add" onClick={() => st.openAddToProgram(1)}>Build my own: add your first exercise</button>
       </div>
