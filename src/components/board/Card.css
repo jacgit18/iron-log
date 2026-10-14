@@ -1,0 +1,19 @@
+/* The card's less-used actions sit behind a ⋯ button in the top-right corner (a 44px target that overlaps the card's
+   padding, so the top row stays as tall as the checkbox), so a closed card is one footer row shorter. */
+.card .row1:has(.morebtn) {
+  position: relative;
+  padding-right: 36px;
+}
+.card .row1 .morebtn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 44px;
+  height: 44px;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.cardmore {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
