@@ -4,6 +4,7 @@ import boardDark from '../assets/landing/board-dark.webp';
 import { setDevUser } from '../sync/devUser.js';
 import { useGoogleSignIn } from '../sync/useGoogleSignIn.js';
 import { takeAfterReload } from '../lib/afterReload.js';
+import EmailCodeSignIn from './EmailCodeSignIn.js';
 import LegalLinks from './LegalLinks.js';
 
 // What someone sees before they have an account here (src/lib/gate.ts decides): what the app is, and the way in. It replaces the app
@@ -18,7 +19,7 @@ const PLANS = [
 export default function Landing({ offline = false }: { offline?: boolean }) {
   const [problem, setProblem] = useState('');
   const [done] = useState(takeAfterReload); // "Your account was deleted.": the reload after deleting lands here
-  const { busy, start } = useGoogleSignIn(setProblem);
+  const { client, busy, start } = useGoogleSignIn(setProblem);
   return (
     <main className="landing" aria-labelledby="landing-h">
       <header className="landing-head">
@@ -33,6 +34,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
         {offline && <p className="notice" role="status"><b>You are offline.</b> Connect to the internet to sign in for the first time.</p>}
         <div className="landing-cta">
           <button type="button" className="btn primary" disabled={busy} onClick={() => void start()}>{busy ? 'Opening Google…' : 'Sign in with Google'}</button>
+          <EmailCodeSignIn client={client} />
         </div>
         {problem && <p className="notice" role="alert"><b>{problem}</b></p>}
         {/* Development builds only (the production build does not contain this): skip the landing page as the fake dev user. */}

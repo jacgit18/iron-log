@@ -1,5 +1,5 @@
 /* ---------- Who is signed in (B2e) ----------
-   The three things the account screen needs from the API: who am I, sign in with Google, sign out. Like the transport it never
+   The things the account screen needs from the API: who am I, sign in with Google or an emailed code, sign out. Like the transport it never
    throws for a network problem: "can't tell" is an answer of its own, and must never read as "signed out". Browser calls are
    same-origin, so the API's Origin check passes and the session cookie travels without any extra setup. */
 
@@ -7,6 +7,9 @@ export type AccountState =
   | { status: 'signed-out' }
   | { status: 'signed-in'; userId: string; kind: 'session' | 'dev'; email: string | null; name: string | null; isAdmin: boolean }
   | { status: 'unreachable' };
+
+/** `refused` is a code that is wrong, used or expired, or an address that is not one; `slow-down` is the rate limit. */
+export type EmailCodeOutcome = 'ok' | 'refused' | 'slow-down' | 'unreachable';
 
 export interface AccountOptions {
   baseUrl?: string;
@@ -54,6 +57,42 @@ export function createAccountClient(options: AccountOptions = {}) {
     }
   }
 
+  /** Whether the emailed code is on for everyone. A server that cannot say (down, old, no sign-in) counts as no. */
+  async function emailCodeOpen(): Promise<boolean> {
+    try {
+      const res = await doFetch(`${baseUrl}/api/auth-options`, { headers: { accept: 'application/json' }, credentials: 'same-origin' });
+      if (!res.ok) return false;
+      return ((await res.json().catch(() => undefined)) as { emailCode?: unknown } | undefined)?.emailCode === true;
+    } catch {
+      return false;
+    }
+  }
+
+  const post = (path: string, body: unknown) =>
+    doFetch(`${baseUrl}${path}`, { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) });
+
+  /** Asks for a code to be emailed. The server answers the same whether or not a mail went out, so `ok` means "asked", not "delivered". */
+  async function sendEmailCode(email: string): Promise<EmailCodeOutcome> {
+    try {
+      const res = await post('/api/auth/email-otp/send-verification-otp', { email, type: 'sign-in' });
+      if (res.ok) return 'ok';
+      return res.status === 429 ? 'slow-down' : res.status >= 500 ? 'unreachable' : 'refused';
+    } catch {
+      return 'unreachable';
+    }
+  }
+
+  /** Checks the code. On success the session cookie is set and the caller reloads into the app. */
+  async function signInWithEmailCode(email: string, otp: string): Promise<EmailCodeOutcome> {
+    try {
+      const res = await post('/api/auth/sign-in/email-otp', { email, otp });
+      if (res.ok) return 'ok';
+      return res.status === 429 ? 'slow-down' : res.status >= 500 ? 'unreachable' : 'refused';
+    } catch {
+      return 'unreachable';
+    }
+  }
+
   async function signOut(): Promise<boolean> {
     try {
       const res = await doFetch(`${baseUrl}/api/auth/sign-out`, { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' }, credentials: 'same-origin', body: '{}' });
@@ -63,7 +102,7 @@ export function createAccountClient(options: AccountOptions = {}) {
     }
   }
 
-  return { me, startGoogleSignIn, signOut };
+  return { me, startGoogleSignIn, emailCodeOpen, sendEmailCode, signInWithEmailCode, signOut };
 }
 
 export type AccountClient = ReturnType<typeof createAccountClient>;
