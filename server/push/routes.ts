@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { sql, type Kysely, type Transaction } from 'kysely';
 import { inUserTransaction } from '../auth.ts';
 import type { DB } from '../db/types.ts';
-import type { PushScheduler } from './scheduler.ts';
+import { PUSH_KINDS, type PushScheduler } from './scheduler.ts';
 import { MAX_SUBSCRIPTIONS, parseCancel, parseSchedule, parseSubscription, parseUnsubscribe } from './validate.ts';
 
 // The device side of Web Push (ADR 044): register a browser, remove it, and ask for a push later or take the ask back. Mounted at
@@ -33,6 +33,7 @@ export function pushRoutes({ db, publicKey, scheduler, now = Date.now }: PushDep
     if (!sub) { const r = bad('send { endpoint (https), keys: { p256dh, auth } }'); return void res.status(r.status).json(r.body); }
     const result = await inUserTransaction(db, mine(res.locals.userId), async trx => {
       // Another account's row for this browser goes first (shared phone), then this account's row is added or its keys renewed.
+      // If the cap below then refuses, the other account's row is still gone: the browser is this account's now, so that is intended.
       await sql`select claim_push_endpoint(${sub.endpoint})`.execute(trx);
       const count = Number((await sql<{ n: string }>`select count(*) as n from push_subscription where endpoint <> ${sub.endpoint}`.execute(trx)).rows[0]!.n);
       if (count >= MAX_SUBSCRIPTIONS) return { status: 422, body: { ok: false, error: `at most ${MAX_SUBSCRIPTIONS} devices; turn push off on one first` } };
@@ -46,11 +47,10 @@ export function pushRoutes({ db, publicKey, scheduler, now = Date.now }: PushDep
   router.post('/unsubscribe', async (req, res) => {
     const u = parseUnsubscribe(req.body);
     if (!u) { const r = bad('send { endpoint (https) }'); return void res.status(r.status).json(r.body); }
-    await inUserTransaction(db, mine(res.locals.userId), async trx => {
-      const id = await subscriptionId(trx, u.endpoint);
-      if (id && scheduler) for (const kind of ['rest', 'day-nudge'] as const) await scheduler.cancel({ subscriptionId: id, kind }).catch(() => undefined);
-      await trx.deleteFrom('push_subscription').where('endpoint', '=', u.endpoint).execute();
-    });
+    // Delete inside the transaction, cancel after it: the scheduler is a network call and must not hold a pooled connection open.
+    const id = await inUserTransaction(db, mine(res.locals.userId), async trx =>
+      (await trx.deleteFrom('push_subscription').where('endpoint', '=', u.endpoint).returning('id').executeTakeFirst())?.id);
+    if (id && scheduler) for (const kind of PUSH_KINDS) await scheduler.cancel({ subscriptionId: String(id), kind }).catch(() => undefined);
     res.json({ ok: true });
   });
 
