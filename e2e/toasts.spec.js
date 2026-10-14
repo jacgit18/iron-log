@@ -21,8 +21,12 @@ test('on a phone the undo notice floats in view over the cards, above the bottom
   const bar = await page.locator('.tabs').boundingBox();
   expect(n.y).toBeGreaterThan(0);
   expect(n.y + n.height).toBeLessThanOrEqual(bar.y);
+  // room is kept under the toast for cards scrolled or focused into view, and given back when it goes
+  const pad = () => page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).scrollPaddingBottom));
+  const withToast = await pad();
   await notice.getByRole('button', { name: 'Undo' }).click();
   await expect(notice).toHaveCount(0);
+  expect(withToast - (await pad())).toBeGreaterThanOrEqual(140);
 });
 
 test('on a wide screen the undo notice stays in the page flow', async ({ page }) => {

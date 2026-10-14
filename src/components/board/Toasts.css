@@ -36,6 +36,16 @@
   }
 }
 
+@media (max-width:700px) {
+  /* A card scrolled or focused into view while a toast is up must not land under it (about 150px for the tallest usual one). */
+  html:has(.boardroot .toasts > .notice) {
+    scroll-padding-bottom: calc(var(--tabbar) + 82px + 150px + env(safe-area-inset-bottom, 0px));
+  }
+  html:has(body.timing .boardroot .toasts > .notice) {
+    scroll-padding-bottom: calc(var(--tabbar) + 172px + 150px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (max-width:700px) and (max-height:500px) and (orientation:landscape) {
   .boardroot .toasts {
     left: calc(var(--rail) + 12px);
