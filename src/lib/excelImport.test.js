@@ -148,6 +148,14 @@ describe('CSV import (fallback)', () => {
     expect(d.excel).toMatchObject({ csv: true, skipped: 0 });
     expect(entryKey(d.logs.hack[0])).toBe(entryKey(s.logs.hack[0]));
   });
+  it('reads "Abs" from a file made before the abs split as upper and lower abs (2026-10-13)', async () => {
+    const s = S();
+    const csv = buildCsv(s).split('\n').map((line, i) => (i && line.includes('Hack Squat') ? line.replace('Quads', 'Abs') : line)).join('\n');
+    expect(csv).toContain('Abs');
+    const d = await parseCsvExport(csv, cfg());
+    expect(d.config.muscleMap.hack.p).toEqual(expect.arrayContaining(['upperabs', 'lowerabs']));
+    expect(d.config.muscleMap.hack.p).not.toContain('abs');
+  });
   it('guards formula-looking text on export and reads it back unchanged', async () => {
     const s = S(); s.logs.hack[0].n = '=1+1';
     const csv = buildCsv(s);

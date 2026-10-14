@@ -36,9 +36,9 @@ describe('mapFedb', () => {
     expect(unmapped).toEqual({ 'equipment:constructor': 1, 'muscle:toString': 1, 'muscle:constructor': 1 });
   });
 
-  it('every dataset muscle and equipment value seen at the pinned commit has an entry (neck excepted)', () => {
+  it('every dataset muscle and equipment value seen at the pinned commit has an entry (neck too, since 2026-10-13)', () => {
     expect(Object.keys(FEDB_MUSCLES).sort()).toEqual(['abdominals', 'abductors', 'adductors', 'biceps', 'calves', 'chest', 'forearms', 'glutes', 'hamstrings',
-      'lats', 'lower back', 'middle back', 'quadriceps', 'shoulders', 'traps', 'triceps']);
+      'lats', 'lower back', 'middle back', 'neck', 'quadriceps', 'shoulders', 'traps', 'triceps']);
     expect(Object.keys(FEDB_EQUIPMENT).sort()).toEqual(['bands', 'barbell', 'body only', 'cable', 'dumbbell', 'e-z curl bar', 'exercise ball', 'foam roll',
       'kettlebells', 'machine', 'medicine ball', 'other']);
   });
@@ -49,10 +49,16 @@ describe('mapFedb', () => {
   });
 
   it('reports values it cannot map instead of guessing: unknown equipment becomes Other, an unknown muscle is left out', () => {
-    const { rows, unmapped } = mapFedb([ex('Neck_Curl', { equipment: 'hover board', primaryMuscles: ['neck'], secondaryMuscles: [] }), ex('Shrug', { primaryMuscles: ['neck', 'traps'] })]);
+    const { rows, unmapped } = mapFedb([ex('Wing_Flap', { equipment: 'hover board', primaryMuscles: ['wings'], secondaryMuscles: [] }), ex('Shrug', { primaryMuscles: ['wings', 'traps'] })]);
     expect(rows[0]!.data).toMatchObject({ eq: 'other', muscles: {} });
     expect(rows[1]!.data.muscles).toEqual({ p: ['traps'], s: ['glutes'] });
-    expect(unmapped).toEqual({ 'equipment:hover board': 1, 'muscle:neck': 2 });
+    expect(unmapped).toEqual({ 'equipment:hover board': 1, 'muscle:wings': 2 });
+  });
+
+  it('abdominals count for upper and lower abs, and neck maps to neck (2026-10-13)', () => {
+    const { rows, unmapped } = mapFedb([ex('Crunch', { primaryMuscles: ['abdominals'], secondaryMuscles: ['neck'] })]);
+    expect(rows[0]!.data.muscles).toEqual({ p: ['upperabs', 'lowerabs'], s: ['neck'] });
+    expect(unmapped).toEqual({});
   });
 
   it('keeps no equipment, force or mechanic as null (shown blank), not Other', () => {

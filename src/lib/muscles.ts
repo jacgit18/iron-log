@@ -4,49 +4,71 @@ import { normWeek, phaseOf, defaultPhase, rxOf, colOf, weekSlots } from './logic
 import type { Cfg, FlatSlot as Slot, MuscleKey, MuscleTags, Program, Week } from '../types.ts';
 
 export const MUSCLES: Record<MuscleKey, { n: string }> = {
-  traps: { n: 'Traps' }, frontdelt: { n: 'Front delts' }, sidedelt: { n: 'Side delts' }, reardelt: { n: 'Rear delts' },
-  chest: { n: 'Chest' }, biceps: { n: 'Biceps' }, triceps: { n: 'Triceps' }, forearms: { n: 'Forearms & grip' },
-  abs: { n: 'Abs' }, obliques: { n: 'Obliques' }, lats: { n: 'Lats' }, upperback: { n: 'Upper back' }, lowerback: { n: 'Lower back' },
+  neck: { n: 'Neck' }, traps: { n: 'Traps' }, frontdelt: { n: 'Front delts' }, sidedelt: { n: 'Side delts' }, reardelt: { n: 'Rear delts' },
+  rotatorcuff: { n: 'Rotator cuff' }, chest: { n: 'Chest' }, serratus: { n: 'Serratus' }, biceps: { n: 'Biceps' }, triceps: { n: 'Triceps' },
+  forearms: { n: 'Forearms & grip' }, upperabs: { n: 'Upper abs' }, lowerabs: { n: 'Lower abs' }, obliques: { n: 'Obliques' },
+  deepcore: { n: 'Deep core' }, lats: { n: 'Lats' }, upperback: { n: 'Upper back' }, lowerback: { n: 'Lower back' },
   glutes: { n: 'Glutes' }, abductors: { n: 'Outer hip (abductors)' }, adductors: { n: 'Inner thigh (adductors)' }, hipflexors: { n: 'Hip flexors' },
   quads: { n: 'Quads' }, hamstrings: { n: 'Hamstrings' }, calves: { n: 'Calves' }, shins: { n: 'Shins' },
 };
 export const M_KEYS = Object.keys(MUSCLES) as MuscleKey[];
+// Keys from before 2026-10-13 that are no longer muscles, and what each stands for now: "abs" was split into upper and lower abs, so
+// an old tag counts as both, in the same role. Applied wherever tags are read (tagsOf, the catalog, the workbook import).
+const OLD_KEYS: Record<string, MuscleKey[]> = { abs: ['upperabs', 'lowerabs'] };
+/** The valid muscle keys in `v` (old ones translated, unknown ones dropped, each once). */
+export const normMuscleKeys = (v: unknown): MuscleKey[] => {
+  const out: MuscleKey[] = [];
+  for (const k of Array.isArray(v) ? v : []) {
+    if (typeof k !== 'string') continue;
+    for (const m of OLD_KEYS[k] || ((M_KEYS as string[]).includes(k) ? [k as MuscleKey] : [])) if (!out.includes(m)) out.push(m);
+  }
+  return out;
+};
+/** Tags with old keys translated; a muscle that ends up both primary and secondary stays primary. */
+export const normTags = (t: MuscleTags): MuscleTags => {
+  if (t.mob) return t.p || t.s ? { ...t } : { mob: true };
+  const p = normMuscleKeys(t.p); const s = normMuscleKeys(t.s).filter(m => !p.includes(m));
+  return { ...(t.p ? { p } : {}), ...(t.s ? { s } : {}) };
+};
 // Default tags: p = primary, s = secondary. mob = mobility/stretch, not counted.
 export const MUSCLE_MAP: Record<string, MuscleTags> = {
   latpd: { p: ['lats'], s: ['biceps', 'upperback', 'reardelt'] }, latpdbi: { p: ['lats'], s: ['biceps', 'upperback', 'reardelt'] },
-  wristpd: { p: ['forearms'] }, platerot: { p: ['obliques'], s: ['abs'] },
+  wristpd: { p: ['forearms'] }, platerot: { p: ['obliques'], s: ['deepcore'] },
   innerthigh: { p: ['adductors'] }, outerthigh: { p: ['abductors'], s: ['glutes'] }, romanadd: { p: ['adductors'], s: ['obliques'] },
   qlext: { p: ['lowerback', 'obliques'] }, chestpress: { p: ['chest'], s: ['frontdelt', 'triceps'] },
   zercher: { p: ['lowerback'], s: ['glutes', 'hamstrings', 'upperback'] }, zottman: { p: ['biceps', 'forearms'] },
-  kbleg: { p: ['abs', 'hipflexors'] }, grip: { p: ['forearms'] }, canoe: { mob: true },
-  suitcase: { p: ['forearms', 'obliques'], s: ['traps'] }, reardelt: { p: ['reardelt'], s: ['upperback'] }, facepull: { p: ['reardelt'], s: ['upperback', 'traps'] },
-  legext: { p: ['quads'] }, cablecrunch: { p: ['abs'] }, hipthrust: { p: ['glutes'], s: ['hamstrings'] },
-  dip: { p: ['triceps', 'chest'], s: ['frontdelt'] }, kneeraise: { p: ['abs', 'hipflexors'], s: ['forearms'] },
+  kbleg: { p: ['lowerabs', 'hipflexors'] }, grip: { p: ['forearms'] }, canoe: { mob: true },
+  suitcase: { p: ['forearms', 'obliques'], s: ['traps'] }, reardelt: { p: ['reardelt'], s: ['upperback'] }, facepull: { p: ['reardelt'], s: ['upperback', 'traps', 'rotatorcuff'] },
+  legext: { p: ['quads'] }, cablecrunch: { p: ['upperabs'], s: ['lowerabs'] }, hipthrust: { p: ['glutes'], s: ['hamstrings'] },
+  dip: { p: ['triceps', 'chest'], s: ['frontdelt'] }, kneeraise: { p: ['lowerabs', 'hipflexors'], s: ['forearms'] },
   db6: { p: ['frontdelt', 'sidedelt'] }, hack: { p: ['quads'], s: ['glutes', 'adductors'] },
-  pallof: { p: ['obliques', 'abs'] }, cablerow: { p: ['lats', 'upperback'], s: ['reardelt', 'biceps'] },
+  pallof: { p: ['obliques', 'deepcore'] }, cablerow: { p: ['lats', 'upperback'], s: ['reardelt', 'biceps'] },
   deskbands: { mob: true }, arnold: { p: ['frontdelt', 'sidedelt'], s: ['triceps'] },
   dbclean: { p: ['quads', 'glutes', 'frontdelt'], s: ['traps', 'triceps', 'hamstrings'] },
-  trxpike: { p: ['frontdelt', 'triceps'], s: ['abs'] }, trxrow: { p: ['upperback', 'reardelt'], s: ['lats', 'biceps'] },
-  medball: { p: ['obliques'], s: ['glutes', 'abs'] }, latwall: { p: ['glutes', 'quads'], s: ['abductors', 'calves'] },
+  trxpike: { p: ['frontdelt', 'triceps'], s: ['lowerabs', 'serratus'] }, trxrow: { p: ['upperback', 'reardelt'], s: ['lats', 'biceps'] },
+  medball: { p: ['obliques'], s: ['glutes', 'deepcore'] }, latwall: { p: ['glutes', 'quads'], s: ['abductors', 'calves'] },
   spinal: { mob: true }, pogo: { p: ['calves'], s: ['shins'] },
   skater: { p: ['glutes', 'abductors', 'quads'], s: ['adductors', 'calves'] }, splitjump: { p: ['quads', 'glutes'], s: ['calves', 'hamstrings'] },
   depthcombo: { p: ['quads', 'glutes', 'calves'], s: ['hamstrings'] },
-  farmers: { p: ['forearms', 'traps'], s: ['obliques', 'abs'] }, dblunge: { p: ['quads', 'glutes'], s: ['adductors', 'hamstrings'] },
+  farmers: { p: ['forearms', 'traps'], s: ['obliques', 'deepcore'] }, dblunge: { p: ['quads', 'glutes'], s: ['adductors', 'hamstrings'] },
   ohtri: { p: ['triceps'] }, bss: { p: ['quads', 'glutes'], s: ['adductors', 'hamstrings'] }, legcurl: { p: ['hamstrings'], s: ['calves'] },
-  cablepunch: { p: ['obliques', 'abs'], s: ['chest', 'frontdelt'] },
+  cablepunch: { p: ['obliques', 'deepcore'], s: ['serratus', 'chest', 'frontdelt'] },
   sledlat: { p: ['quads', 'glutes'], s: ['lats', 'obliques', 'calves'] }, sled: { p: ['quads', 'glutes'], s: ['lats', 'upperback', 'calves'] },
 };
 // Left-half shapes (x < 100); mirrored for the right side.
 export const SIL = 'M100 44 L92 44 L92 56 Q72 58 62 62 Q50 66 48 84 L50 132 L44 170 L44 212 Q47 226 54 228 Q60 226 60 212 L64 150 L68 112 L72 150 L72 200 L68 214 Q64 270 72 322 Q68 360 74 404 L70 414 L97 414 L96 372 Q98 340 96 322 Q100 280 99 250 L100 244 Z';
 export const FRONT: [MuscleKey, string][] = [
+  ['neck', 'M93 45 L99 45 L99 55 L94 56 Q92 50 93 45 Z'],
   ['traps', 'M78 60 Q86 54 92 52 L92 58 Q86 60 80 63 Z'],
   ['sidedelt', 'M64 61 Q51 63 49 78 Q50 84 54 85 Q56 71 67 65 Z'],
   ['frontdelt', 'M69 64 Q58 70 57 85 Q62 92 70 90 Q74 77 77 66 Z'],
   ['chest', 'M77 66 Q96 61 99 65 L99 100 Q88 106 75 100 Q70 84 77 66 Z'],
+  ['serratus', 'M70 90 Q74 93 75 101 L76 112 Q71 107 69 97 Z'],
   ['biceps', 'M55 91 Q51 111 55 132 Q62 136 66 130 Q68 110 67 94 Z'],
   ['forearms', 'M51 140 Q45 170 48 206 L58 208 Q64 176 64 140 Z'],
   ['obliques', 'M76 104 Q84 106 87 110 Q84 150 88 190 L78 192 Q72 150 76 104 Z'],
-  ['abs', 'M89 106 L99 106 L99 190 L91 190 Q87 150 89 106 Z'],
+  ['upperabs', 'M89 106 L99 106 L99 147 L88 147 Q88 126 89 106 Z'],
+  ['lowerabs', 'M88 150 L99 150 L99 190 L91 190 Q88 170 88 150 Z'],
   ['hipflexors', 'M80 197 L95 201 L91 221 L82 212 Z'],
   ['quads', 'M70 216 Q66 262 74 316 Q84 322 92 316 Q95 292 93 266 Q86 244 83 216 Z'],
   ['adductors', 'M92 223 Q98 227 98 234 L96 282 Q88 272 87 242 Z'],
@@ -57,6 +79,7 @@ export const BACK: [MuscleKey, string][] = [
   ['reardelt', 'M66 62 Q52 66 50 82 Q56 88 66 86 Q70 74 72 66 Z'],
   ['lats', 'M70 78 Q66 102 76 132 Q86 150 97 158 L98 124 Q84 112 78 96 Z'],
   ['upperback', 'M79 72 Q92 82 99 100 L99 120 Q88 114 80 100 Z'],
+  ['rotatorcuff', 'M70 68 Q76 72 79 79 L78 92 Q72 89 69 80 Z'],
   ['triceps', 'M54 89 Q50 110 54 134 Q62 138 66 132 Q68 110 65 91 Z'],
   ['forearms', 'M51 140 Q45 170 48 206 L58 208 Q64 176 64 140 Z'],
   ['lowerback', 'M88 142 L99 152 L99 196 L88 196 Q84 170 88 142 Z'],
@@ -66,7 +89,8 @@ export const BACK: [MuscleKey, string][] = [
   ['calves', 'M76 334 Q70 358 78 382 L90 382 Q96 358 90 334 Z'],
 ];
 
-export const tagsOf = (cfg: Cfg, id: string): MuscleTags | null => (cfg.muscleMap && cfg.muscleMap[id]) || MUSCLE_MAP[id] || null;
+// Your own tags (old keys translated, normTags) or the built-in default. Deep core has no place on the figure: it lies under the abs.
+export const tagsOf = (cfg: Cfg, id: string): MuscleTags | null => { const own = cfg.muscleMap && cfg.muscleMap[id]; return own ? normTags(own) : MUSCLE_MAP[id] || null; };
 // Board filter: a card matches when any of its exercises trains the muscle (primary or secondary) and uses the equipment.
 export function matchesFilter(cfg: Cfg, s: Slot, { muscle = '', eq = '' }: { muscle?: string; eq?: string }) {
   return s.items.some(it => {
@@ -128,11 +152,13 @@ export function muscleNames(cfg: Cfg, id: string, role: 'p' | 's') {
 }
 
 // The muscle tags an exercise has, as editable state: { mob, st: { muscle: 'p' | 's' } }.
-export const draftOfTags = (cfg: Cfg, exId: string) => {
-  const tg: MuscleTags = tagsOf(cfg, exId) || {}; const st: Partial<Record<MuscleKey, 'p' | 's'>> = {};
+/** The muscle chips' draft for a set of tags (none: nothing picked). */
+export const draftOf = (tags: MuscleTags | null | undefined) => {
+  const tg: MuscleTags = tags || {}; const st: Partial<Record<MuscleKey, 'p' | 's'>> = {};
   (tg.p || []).forEach(m => { st[m] = 'p'; }); (tg.s || []).forEach(m => { st[m] = 's'; });
   return { mob: !!tg.mob, st };
 };
+export const draftOfTags = (cfg: Cfg, exId: string) => draftOf(tagsOf(cfg, exId));
 export const tagsOfDraft = (draft: { mob?: boolean; st: Partial<Record<MuscleKey, 'p' | 's'>> }) => {
   const o: MuscleTags = { p: M_KEYS.filter(m => draft.st[m] === 'p'), s: M_KEYS.filter(m => draft.st[m] === 's') };
   if (draft.mob) o.mob = true;

@@ -6,6 +6,7 @@ import { createMirrorStore, type Storage } from './mirrorStore.js';
 import { mergeStretchWeek3, mergeWeek3 } from './merge.js';
 import { createOutbox, isDeleted, type QuarantineEntry } from './outbox.js';
 import { planCommands, planDelete } from './plan.js';
+import { canonOf } from './canon.js';
 import { ownChanges } from './ownChanges.js';
 import { pullAll } from './pull.js';
 import type { AccountActionOutcome, FailureClass, ImportOutcome, Transport } from './transport.js';
@@ -568,17 +569,19 @@ export function createApiDb(options: ApiDbOptions) {
           if (m.tookTheirs) note(entry.path, 'Sent what was set aside, merged with newer changes from another device.');
         }
       } else if (kind) {
-        const wanted = isDeleted(doc) ? new Set<string>() : new Set(desiredRows(kind, doc, mirror.rows()).map(r => mirrorId(r.table, r.key)));
+        const desired = isDeleted(doc) ? [] : desiredRows(kind, doc, mirror.rows());
+        const wantedRow = new Map(desired.map(r => [mirrorId(r.table, r.key), r]));
         const keep = new Set<string>();
-        let newer = false;
+        let newer = false; // only said when it is known: a version that moved since the refusal, or (no `seen`) a row the copy does not match
         for (const r of scopeRows(kind, mirror.rows())) {
           if (r.deleted) continue;
           const id = mirrorId(r.table, r.key);
-          const changed = !seen || seen[id] !== r.version;
+          const want = wantedRow.get(id);
+          const changed = seen ? seen[id] !== r.version : !want || canonOf(want) !== canonOf(r);
           if (changed) newer = true;
-          if (changed || (!wanted.has(id) && !isDeleted(doc))) keep.add(id);
+          if (changed || (!want && !isDeleted(doc))) keep.add(id);
         }
-        if (newer) note(entry.path, 'Sent what was set aside; what changed on another device since was kept.');
+        if (newer) note(entry.path, seen ? 'Sent what was set aside; what changed on another device since was kept.' : 'Sent what was set aside; what the server had that differed from it was kept.');
         retryRows = keep;
       }
       const sending = set(entry.path, doc); // kept in the outbox before anything else happens

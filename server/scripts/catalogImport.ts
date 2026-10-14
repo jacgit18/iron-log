@@ -33,7 +33,7 @@ export interface Mapped {
 // The dataset's 17 muscle names → the app's muscle keys. `shoulders` does not say which head, so it counts for front and side delts
 // (presses and raises, most of the dataset's shoulder rows). `neck` has no key in the app: reported, left out.
 export const FEDB_MUSCLES: Record<string, MuscleKey[]> = {
-  abdominals: ['abs'], abductors: ['abductors'], adductors: ['adductors'], biceps: ['biceps'], calves: ['calves'], chest: ['chest'],
+  abdominals: ['upperabs', 'lowerabs'], neck: ['neck'], abductors: ['abductors'], adductors: ['adductors'], biceps: ['biceps'], calves: ['calves'], chest: ['chest'],
   forearms: ['forearms'], glutes: ['glutes'], hamstrings: ['hamstrings'], lats: ['lats'], 'lower back': ['lowerback'],
   'middle back': ['upperback'], quadriceps: ['quads'], shoulders: ['frontdelt', 'sidedelt'], traps: ['traps'], triceps: ['triceps'],
 };

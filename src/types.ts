@@ -221,8 +221,8 @@ export interface StretchExtra extends StretchExperiment { day: number }
 export interface StretchWeek { done: Record<string, true>; skipped: Record<string, true>; extra: StretchExtra[] }
 
 /* ---------- Muscles ---------- */
-export type MuscleKey = 'traps' | 'frontdelt' | 'sidedelt' | 'reardelt' | 'chest' | 'biceps' | 'triceps' | 'forearms'
-  | 'abs' | 'obliques' | 'lats' | 'upperback' | 'lowerback' | 'glutes' | 'abductors' | 'adductors' | 'hipflexors'
+export type MuscleKey = 'neck' | 'traps' | 'frontdelt' | 'sidedelt' | 'reardelt' | 'rotatorcuff' | 'chest' | 'serratus' | 'biceps' | 'triceps' | 'forearms'
+  | 'upperabs' | 'lowerabs' | 'obliques' | 'deepcore' | 'lats' | 'upperback' | 'lowerback' | 'glutes' | 'abductors' | 'adductors' | 'hipflexors'
   | 'quads' | 'hamstrings' | 'calves' | 'shins';
 /** What an exercise trains: primary (p) and secondary (s) muscles, or `mob` for mobility work that is not counted. */
 export interface MuscleTags { p?: MuscleKey[]; s?: MuscleKey[]; mob?: true }
