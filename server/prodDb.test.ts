@@ -94,6 +94,29 @@ describe('prod-db.sh', () => {
     expect((await run(['catalog', 'fedb', '--apply'])).calls).toEqual(['backup run url=', `catalog --source fedb --apply url=${URL}`]);
   });
 
+  it('reader is a dry run without --apply: it makes no login and sets no secret', async () => {
+    const r = await run(['reader'], { DB_READER: stub('reader', 'echo -n "postgresql://migrations_reader:r3ader@ep-prod.neon.tech/neondb"'), GH: stub('gh', '') });
+    expect(r.status).toBe(0);
+    expect(r.out).toContain('Dry run');
+    expect(r.calls).toEqual([]);
+  });
+  it('reader --apply passes the owner URL to the maker and its URL to the secret, showing neither', async () => {
+    const r = await run(['reader', '--apply'], {
+      DB_READER: stub('reader', 'echo -n "postgresql://migrations_reader:r3ader@ep-prod.neon.tech/neondb"'),
+      GH: stub('gh', `cat >> "${dir}/secret"`),
+    });
+    expect(r.status).toBe(0);
+    expect(r.calls).toEqual([`reader  url=${URL}`, 'gh secret set MIGRATIONS_CHECK_URL --env production url=']);
+    expect(readFileSync(join(dir, 'secret'), 'utf8')).toBe('postgresql://migrations_reader:r3ader@ep-prod.neon.tech/neondb');
+    expect(r.out).not.toContain('r3ader');
+    expect(r.out).not.toContain('s3cret');
+    rmSync(join(dir, 'secret'));
+  });
+  it('reader --apply sets no secret when the login could not be made', async () => {
+    const r = await run(['reader', '--apply'], { DB_READER: stub('reader', 'exit 1'), GH: stub('gh', '') });
+    expect(r.status).not.toBe(0);
+    expect(r.calls.filter(c => c.startsWith('gh'))).toEqual([]);
+  });
   it('refuses a local database, a missing URL, or an unknown command, before doing anything', async () => {
     for (const local of ['postgres://u:p@127.0.0.1:5433/ironlog', 'postgres://u:p@localhost/ironlog']) {
       const r = await run(['migrate', '--apply'], { PROD_DATABASE_URL: local });
