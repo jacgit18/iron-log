@@ -119,6 +119,13 @@ describe('signing in with an emailed code', () => {
     expect(sent).toHaveLength(3);
   });
 
+  it('a skipped request does not replace the code already sent: the third code still signs in after a fourth and fifth request', async () => {
+    const { base, sent } = await serve();
+    for (let i = 0; i < 5; i++) await ask(base, 'victim@example.com');
+    expect(sent).toHaveLength(3);
+    expect((await enter(base, 'victim@example.com', sent[2]!.otp)).status).toBe(200);
+  });
+
   it('only ever sends sign-in codes: a password-reset request sends nothing', async () => {
     const { base, sent } = await serve();
     await post(base, '/api/auth/email-otp/request-password-reset', { email: 'lifter@example.com' });

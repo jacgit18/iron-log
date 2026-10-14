@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth';
-import { APIError } from 'better-auth/api';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { emailOTP } from 'better-auth/plugins/email-otp';
 import pg from 'pg';
 import { adminsFrom } from '../admin.ts';
@@ -88,6 +88,18 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
     },
     socialProviders: { google: { clientId: config.google.clientId, clientSecret: config.google.clientSecret } },
     emailAndPassword: { enabled: config.testSignIn === true },
+    // The per-address limit runs BEFORE the plugin makes a code. The plugin stores each new code over the address's previous one, so
+    // a request skipped after that point would wipe out the code the person was already sent and mail nothing in its place; anyone
+    // who knew the address could then keep them out. Here a skipped request is answered as usual and touches nothing.
+    hooks: {
+      before: createAuthMiddleware(async ctx => {
+        if (ctx.path !== '/email-otp/send-verification-otp') return;
+        const body = ctx.body as { email?: unknown; type?: unknown } | undefined;
+        if (body?.type !== 'sign-in' || typeof body.email !== 'string' || allowCode(body.email)) return;
+        console.warn(JSON.stringify({ msg: 'sign-in code skipped: too many for one address' }));
+        return ctx.json({ success: true });
+      }),
+    },
     plugins: config.sendCode
       ? [
           emailOTP({
@@ -99,10 +111,6 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
             // Only a sign-in code is ever sent: the password-reset, email-change and verify-email uses are not offered.
             sendVerificationOTP: async ({ email, otp, type }) => {
               if (type !== 'sign-in') return;
-              if (!allowCode(email)) {
-                console.warn(JSON.stringify({ msg: 'sign-in code skipped: too many for one address' }));
-                return;
-              }
               // Awaited on purpose: Cloud Run may pause the instance once the response is sent, which would drop a background send.
               // Better Auth swallows what this throws (the caller sees "sent" either way, which also stops address probing), so log it here.
               // The message never holds the address or the code.
