@@ -203,12 +203,17 @@
   min-height: 44px;
 }
 .gedit select {
-  flex: 1 1 8em;
+  flex: 1 1 6.5em;
   min-width: 0;
   min-height: 44px;
 }
 .gedit .btn {
   min-height: 44px;
+  margin-left: auto;
+}
+.gedit .gcheck {
+  font-size: .875rem;
+  white-space: nowrap;
 }
 .gerr {
   flex-basis: 100%;

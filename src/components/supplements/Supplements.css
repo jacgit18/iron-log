@@ -1,0 +1,185 @@
+/* Supplements and Water on a phone: the same flat pattern as Groceries (Grocery.css). Sections sit in one panel with hairline
+   dividers, not cards inside a card; a row is a 44px tap target; the panel gives its width to the list. */
+.sstop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sstopend {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.sstopend .btn {
+  min-height: 44px;
+}
+
+/* One time of day: small uppercase head with the count, then its rows. */
+.sslot {
+  display: flex;
+  flex-direction: column;
+}
+.sslothead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+}
+.sslothead h3 {
+  margin: 0;
+  font-size: .8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+.sslot.done .sslothead h3 {
+  color: var(--accent);
+}
+.sslot>.note {
+  margin: 8px 0 0;
+}
+.slist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.slist>li {
+  border-bottom: 1px solid var(--line);
+}
+.slist>li:last-child {
+  border-bottom: 0;
+}
+
+/* A supplement: the label (tick + name + dose) fills the row, so the whole row ticks it. */
+.srow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.stick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  cursor: pointer;
+}
+.sname {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.sname .rmname {
+  font-weight: 600;
+}
+.sdose {
+  display: block;
+  font-size: .8125rem;
+  color: var(--muted);
+}
+.srow.taken .rmname {
+  color: var(--done);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  font-weight: 500;
+}
+.srow>.btn {
+  flex: none;
+  min-height: 44px;
+  margin-left: auto;
+}
+.sslot .suppadd {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+.sslot .suppadd .btn,.sslot .suppadd .field input {
+  min-height: 44px;
+}
+
+/* Water */
+.wkpi {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+.suppanel .sect {
+  padding: 6px 0 4px;
+}
+.wchips {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+.wchips .chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  min-height: 52px;
+  border-radius: 10px;
+  text-align: left;
+}
+.wchips .chip .note {
+  font-size: .75rem;
+  line-height: 1.25;
+}
+.wcustom {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.wcustom .field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.wcustom .btn,.wgoal .btn,.wgoalform .btn {
+  min-height: 44px;
+}
+.wlogged {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wboost {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 16px;
+}
+.whot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.wgoal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.wgoalform {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* A phone: the panel gives its width to the list. */
+@media (max-width:480px) {
+  .suppanel.panel {
+    padding: 12px;
+  }
+}
