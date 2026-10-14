@@ -1,4 +1,4 @@
-import type { EquipmentKey } from '../../types.ts';
+import type { EquipmentId } from '../../types.ts';
 import type { PhaseChoice } from '../../store/types.ts';
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -12,7 +12,7 @@ export default function ExperimentSheet({ id }: { id?: string | null }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const cur = id ? st.experiments.find(x => x.id === id) : null;
-  const [d, setD] = useState<{ id?: string; name: string; nu: string; ne?: EquipmentKey | ''; ph: PhaseChoice; note: string }>(() => ({ id: cur ? cur.id : undefined, name: cur ? exInfo(cfg, cur.ex).n : '', nu: '', ph: cur ? cur.ph : 'strength', note: cur ? cur.note : '' }));
+  const [d, setD] = useState<{ id?: string; name: string; nu: string; ne?: EquipmentId | ''; ph: PhaseChoice; note: string }>(() => ({ id: cur ? cur.id : undefined, name: cur ? exInfo(cfg, cur.ex).n : '', nu: '', ph: cur ? cur.ph : 'strength', note: cur ? cur.note : '' }));
   const [err, setErr] = useState('');
   const exId = findExId(cfg, d.name); // goals belong to the exercise, so they can be set before it's ever logged
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
@@ -21,7 +21,7 @@ export default function ExperimentSheet({ id }: { id?: string | null }) {
     <Sheet>
       <h2 className="cond">{cur ? 'Edit experiment' : 'Add an exercise to try'}</h2>
       <form id="exp-form" noValidate onSubmit={submit}>
-      <ExerciseField cfg={cfg} id="exp-ex" name={d.name} url={d.nu} eq={d.ne} onName={(name) => up({ name })} onUrl={(nu) => up({ nu })} onEq={(ne) => up({ ne: ne as EquipmentKey | '' })} />
+      <ExerciseField cfg={cfg} id="exp-ex" name={d.name} url={d.nu} eq={d.ne} onName={(name) => up({ name })} onUrl={(nu) => up({ nu })} onEq={(ne) => up({ ne: ne as EquipmentId | '' })} />
       <label className="field">Phase
         <select value={d.ph || ''} onChange={e => up({ ph: (e.target.value || null) as PhaseChoice })}>
           <option value="">None</option>

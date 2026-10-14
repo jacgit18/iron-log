@@ -6,7 +6,8 @@ import { useAppStore } from '../../store/useAppStore.js';
 import type { AppState } from '../../store/types.ts';
 import { cardWeek, cardLogs, type CardWeek } from '../../lib/cardView.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
-import { PHASES, PH_KEYS, EQUIPMENT, exInfo, videoLabel } from '../../lib/data.js';
+import { PHASES, PH_KEYS, exInfo, videoLabel } from '../../lib/data.js';
+import { eqName } from '../../lib/equipment.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import { useSwipeDone } from './useSwipeDone.js';
@@ -83,8 +84,8 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
         return (
           <Fragment key={idx}>
             {idx > 0 && s.type === 'either' && <div className="or">or</div>}
-            <div className={`ex${idone ? ' idone' : ''}${ex.eq && EQUIPMENT[ex.eq] ? ' haseq' : ''}`}>
-              {ex.eq && EQUIPMENT[ex.eq] && <span className="tag exeq">{EQUIPMENT[ex.eq]}</span>}
+            <div className={`ex${idone ? ' idone' : ''}${ex.eq && eqName(cfg, ex.eq) ? ' haseq' : ''}`}>
+              {ex.eq && eqName(cfg, ex.eq) && <span className="tag exeq">{eqName(cfg, ex.eq)}</span>}
               <div className="exname">
                 {paired && (
                   <input type="checkbox" className="chk" id={`chk-${s.id}-${idx}`} checked={idone} aria-label={`Mark ${ex.n} done`}

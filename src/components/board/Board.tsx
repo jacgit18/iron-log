@@ -3,7 +3,8 @@ import { Fragment, useCallback, useEffect, useRef, useState, type DragEvent, typ
 import type { MuscleKey, ProgKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { EQUIPMENT, EQ_KEYS, exInfo } from '../../lib/data.js';
+import { exInfo } from '../../lib/data.js';
+import { eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
 import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
@@ -229,7 +230,7 @@ export default function Board() {
         <label className="field">Equipment
           <select value={filter.eq} onChange={e => setFilter(f => ({ ...f, eq: e.target.value }))}>
             <option value="">All equipment</option>
-            {EQ_KEYS.map(k => <option key={k} value={k}>{EQUIPMENT[k]}</option>)}
+            {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         </label>
         {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear</button>}
