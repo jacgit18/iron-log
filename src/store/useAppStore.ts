@@ -532,16 +532,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     const chosen = d.ex === '__new' ? findExId(get().cfg, d.nn) ?? '__new' : d.ex; // a typed name an exercise already has is that exercise
     const target = d.cat ? d.cat.id : chosen;
     if (target !== '__new' && get().experiments.some(x => x.ex === target && x.id !== d.id)) return `${exInfo(get().cfg, target).n} is already on the Experiment list.`;
-    let ex: string;
-    if (d.cat && !get().cfg.ex[d.cat.id]) { // picked from the catalog: joins the library with the entry (ADR 036)
-      const id = d.cat.id; const { info, tags } = catalogSnapshot(d.cat, d); ex = id;
-      get().mutateCfg(c => { c.ex[id] = info; if (tags) c.muscleMap = { ...(c.muscleMap || {}), [id]: tags }; });
-    } else if (chosen === '__new') ex = get().createExercise(d);
-    else { ex = d.cat ? d.cat.id : chosen; get().applyExerciseUrl(ex, d.nu); get().applyExerciseEq(ex, d.ne); }
+    const ex = get().resolveExerciseChoice(d, chosen);
     const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim().slice(0, 200) };
     const list = get().experiments;
     get().setExperiments(d.id ? list.map(x => (x.id === d.id ? item : x)) : [...list, item]);
     set({ modal: null }); flag('Saved'); return null;
+  },
+  // The exercise id a sheet's choice stands for, adding it to the library first when it is new: a catalog pick joins with its snapshot
+  // (ADR 036), a typed name becomes a new exercise, an existing one gets the link and equipment typed for it. `chosen`: `d.ex`, or the
+  // existing exercise a typed name already belongs to. The caller has already checked the choice.
+  resolveExerciseChoice(d, chosen) {
+    if (d.cat && !get().cfg.ex[d.cat.id]) {
+      const id = d.cat.id; const { info, tags } = catalogSnapshot(d.cat, d);
+      get().mutateCfg(c => { c.ex[id] = info; if (tags) c.muscleMap = { ...(c.muscleMap || {}), [id]: tags }; });
+      return id;
+    }
+    if (chosen === '__new') return get().createExercise(d);
+    const ex = d.cat ? d.cat.id : chosen; get().applyExerciseUrl(ex, d.nu); get().applyExerciseEq(ex, d.ne);
+    return ex;
   },
   // A link typed for an existing exercise replaces its saved one everywhere.
   applyExerciseUrl(ex, raw) {
@@ -584,12 +592,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!isVideoUrl(d.nu)) return VIDEO_ERR;
     const pd = dayAt(get().week, col); if (pd == null) return 'That is your rest day.';
     if (d.cat) { const err = catalogPickError(get().cfg, d.cat, exIdsInUse(get(), get().cfg)); if (err) return err; }
-    let ex: string;
-    if (d.cat && !get().cfg.ex[d.cat.id]) { // picked from the catalog: joins the library with the card (ADR 036)
-      const id = d.cat.id; const { info, tags } = catalogSnapshot(d.cat, d); ex = id;
-      get().mutateCfg(c => { c.ex[id] = info; if (tags) c.muscleMap = { ...(c.muscleMap || {}), [id]: tags }; });
-    } else if (d.ex === '__new') ex = get().createExercise(d);
-    else { ex = d.cat ? d.cat.id : d.ex; get().applyExerciseUrl(ex, d.nu); get().applyExerciseEq(ex, d.ne); }
+    const ex = get().resolveExerciseChoice(d, d.ex);
     const note = (d.note || '').trim().slice(0, 200);
     const ph = d.ph || null; const exDef = (get().cfg.exPh || {})[ex]; const id = uid('X-');
     const ok = get().mutateWeek(w => {
