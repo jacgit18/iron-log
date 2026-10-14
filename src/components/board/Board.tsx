@@ -17,6 +17,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import FirstRun from './FirstRun.jsx';
 import InstallHint from './InstallHint.jsx';
 import './BoardTop.css';
+import './DayHeader.css';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
@@ -84,6 +85,7 @@ export default function Board() {
   const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey && !onlyElsewhere(slots, week) ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
   const [filter, setFilter] = useState({ muscle: '', eq: '' });
+  const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose Rest day box and swap arrows are showing
   const [filterOpen, setFilterOpen] = useState(false); // phones only: the sort and equipment fields fold away
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
   const filtering = !!filter.eq;
@@ -285,7 +287,7 @@ export default function Board() {
           return (
             <section
               key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`}
-              className={`col${t.full ? ' complete' : ''}${d === day ? ' sel' : ''}${overDay === d ? ' over' : ''}`}
+              className={`col${t.full ? ' complete' : ''}${d === day ? ' sel' : ''}${overDay === d ? ' over' : ''}${dayMore === d ? ' more' : ''}`}
               onDragOver={e => { if (!dragId) return; e.preventDefault(); setOverDay(d); }}
               onDrop={e => { if (!dragId) return; e.preventDefault(); const id = dragId; onDragEnd(); if (id.startsWith('exp:')) st.addToDay(id.slice(4), d); else st.moveSlot(id, d); }}
             >
@@ -299,8 +301,10 @@ export default function Board() {
                 </div>
                 <span className="count">{t.done}/{t.total}</span>
                 <SwapArrows d={d} />
+                <button type="button" className="btn sm ghost daymore" id={`daymore-${d}`} aria-expanded={dayMore === d} aria-controls={`restrow-${d}`} aria-label={`More for Day ${d}: rest day and swap`}
+                  onClick={() => setDayMore(dayMore === d ? null : d)}><span aria-hidden="true">⋯</span></button>
               </div>
-              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /> Rest day</label>
+              <label className="restchk" id={`restrow-${d}`}><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /> Rest day</label>
               <div className="addrow">
                 {!fromRecord && <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add exercise to Day ${d}`} onClick={() => st.openAddToProgram(d)}>+ Add exercise</button>}
                 <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`Only this week: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ Only this week</button>
