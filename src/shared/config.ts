@@ -1,6 +1,6 @@
 import { DEFAULT_CFG } from '../lib/logic.js';
 import type { Cfg, WarmupItem } from '../types.ts';
-import { LIMITS, validBodyLb, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm } from './validate.js';
+import { LIMITS, validBodyLb, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm } from './validate.js';
 
 /* ---------- Config shape ----------
    normConfig takes anything (a stored doc, a file, a database snapshot) and returns the keys that can be used.
@@ -8,7 +8,7 @@ import { LIMITS, validBodyLb, validGoal, validLiftGoalLb, validMode, validPct, v
 
 // The config from a file: the keys the app reads as plain objects must be plain objects, or it would throw on every load.
 const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
-const CFG_OBJECTS = ['muscleMap', 'ex', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'liftGoals', 'equipment'];
+const CFG_OBJECTS = ['muscleMap', 'ex', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'liftGoals', 'equipment', 'freqGoals'];
 export function normConfig(c: any): Partial<Cfg> {
   if (!c || typeof c !== 'object' || Array.isArray(c)) return {};
   const out: any = { ...c };
@@ -20,6 +20,7 @@ export function normConfig(c: any): Partial<Cfg> {
   if (out.rm) out.rm = own(out.rm, (k, v) => (typeof v === 'number' && validRm(v) ? v : undefined));
   if (out.liftGoals) out.liftGoals = own(out.liftGoals, (k, byKey) => (byKey && typeof byKey === 'object' && !Array.isArray(byKey) ? own(byKey, (_k, g) => (g && typeof g === 'object' && typeof g.w === 'number' && validLiftGoalLb(g.w) ? g : undefined)) : undefined));
   if (out.equipment) out.equipment = own(out.equipment, (k, v) => (/^x:[a-z0-9-]{1,40}$/.test(k) && typeof v === 'string' && v.trim() && v.length <= 30 ? v.trim() : undefined));
+  if (out.freqGoals) out.freqGoals = own(out.freqGoals, (_k, n) => (validFreq(n) ? n : undefined));
   if ('bwGoal' in out && !(out.bwGoal && typeof out.bwGoal === 'object' && typeof out.bwGoal.w === 'number' && validBodyLb(out.bwGoal.w))) delete out.bwGoal;
   // The GitHub backup feature is gone: never keep its settings or a token, wherever the config came from.
   ['backup', 'ghBackup', 'token', 'ghToken'].forEach(k => { delete out[k]; });
@@ -35,7 +36,7 @@ export interface ConfigDoc extends Partial<Cfg> {
   waterMode?: 'weight' | 'fixed';
 }
 
-const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'liftGoals', 'equipment', 'rest', 'warmup'] as const;
+const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup'] as const;
 const progKey = (v: unknown) => v === 'A' || v === 'B';
 const MAX_WARMUP = 50;
 

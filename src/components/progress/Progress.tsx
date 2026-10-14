@@ -6,6 +6,8 @@ import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { weekStartOf, ymd, parseDate, addDays, fmtShort } from '../../shared/dates.js';
 import { describe, lastLog, stallOf, backoffOf } from '../../lib/logic.js';
 import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
+import { avgPerTrainingDay } from '../../lib/freqGoal.js';
+import FreqGoals from './FreqGoals.jsx';
 import Trends from './Trends.jsx';
 import Muscles from '../muscles/Muscles.jsx';
 import LineChart from '../LineChart.js';
@@ -27,13 +29,14 @@ function History() {
   const rows = keys.map(k => weekSummary(cfg, programs, k, weeks[k] || { done: {}, moved: {} }));
   const past = rows.filter(r => r.key !== thisSun);
   const met = past.filter(r => r.full >= WEEK_GOAL_DAYS).length;
+  const perDay = avgPerTrainingDay(past);
   const mean = past.length ? (past.reduce((a, r) => a + r.full, 0) / past.length).toFixed(1) : null;
 
   return (
     <section className="panel hist-panel">
       <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <h2>Weekly history</h2>
-        {mean && <span className="note">Goal {WEEK_GOAL_DAYS} days a week · met in {met} of {past.length} past week{past.length > 1 ? 's' : ''} · average {mean} days</span>}
+        {mean && <span className="note">Goal {WEEK_GOAL_DAYS} days a week · met in {met} of {past.length} past week{past.length > 1 ? 's' : ''} · average {mean} days{perDay != null && <> · {perDay.toFixed(1)} exercises per training day</>}</span>}
       </div>
       <div className="weeks">
         {rows.map(r => (
@@ -100,6 +103,7 @@ function ProgressMain() {
     <>
       <Trends />
       <History />
+      <FreqGoals />
       <LiftList />
     </>
   );

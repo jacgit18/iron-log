@@ -344,6 +344,8 @@ export interface CoreSlice {
   submitLog(slotId: string, idx: number, form: LogForm): boolean;
   setLiftGoal(exId: string, key: string, raw: string | number, by?: string, from?: string): boolean;
   clearLiftGoal(exId: string, key: string): void;
+  setFreqGoal(exId: string, raw: string | number): boolean;
+  clearFreqGoal(exId: string): void;
   updateLog(exId: string, target: LogEntry, entry: LogEntry): boolean;
   deleteLog(exId: string, target: LogEntry): boolean;
   retryUnsaved(): void;

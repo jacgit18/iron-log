@@ -36,7 +36,7 @@ import { eqNameError, newEqId } from '../lib/equipment.js';
 import { bestLift, liftGoalsOf, goalPhaseLabel, GOAL_KEYS } from '../lib/liftGoal.js';
 import { loadView, saveView, openFromUrl } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
-import { validRm, validLiftGoalLb, validBodyLb, normEntry, normEntries, normBody, normProgram, normLibrary, nowStamp, SCHEMA_VERSION } from '../shared/validate.js';
+import { validRm, validFreq, validLiftGoalLb, validBodyLb, normEntry, normEntries, normBody, normProgram, normLibrary, nowStamp, SCHEMA_VERSION } from '../shared/validate.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
 // binding from the original app (window.claude.use('db')); without it everything uses localStorage.
@@ -866,6 +866,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().noteRemoved('liftgoal:' + exId, `the ${goalPhaseLabel(key).toLowerCase()} goal`, () => !get().cfg.liftGoals?.[exId]?.[key] && get().mutateCfg(c => {
       c.liftGoals = { ...(c.liftGoals || {}), [exId]: { ...((c.liftGoals || {})[exId] || {}), [key]: goal } };
     }));
+  },
+  // How many times a week you want to do an exercise (1 to 7).
+  setFreqGoal(exId, raw) {
+    if (get().blocked()) return false;
+    const n = Number(raw); if (!validFreq(n)) { flag('Pick 1 to 7 times a week'); return false; }
+    if (!exId) { flag('Pick an exercise'); return false; }
+    get().mutateCfg(c => { c.freqGoals = { ...(c.freqGoals || {}), [exId]: n }; });
+    flag('Goal saved'); return true;
+  },
+  clearFreqGoal(exId) {
+    const n = get().cfg.freqGoals?.[exId]; if (n == null) return;
+    if (!get().mutateCfg(c => { const G = { ...(c.freqGoals || {}) }; delete G[exId]; if (Object.keys(G).length) c.freqGoals = G; else delete c.freqGoals; })) return;
+    get().noteRemoved('freqgoal', `the ${exInfo(get().cfg, exId).n} frequency goal`, () => get().cfg.freqGoals?.[exId] == null && get().mutateCfg(c => { c.freqGoals = { ...(c.freqGoals || {}), [exId]: n }; }));
   },
   // Replace one logged session with edited numbers (kept sorted by date). It counts as logged by hand, not as a check-off.
   // `target` is the entry as it was shown: found by identity, not position, so a list that changed meanwhile
