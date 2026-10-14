@@ -242,9 +242,10 @@ export function createApiDb(options: ApiDbOptions) {
       const allowed = await gate();
       if (!allowed.ok) { setState('paused', allowed.because); return; }
       const wasReady = mirror.hasPulled();
-      // This device's copy of the server rows before the pull, when it holds writes of its own: if the pull shows an erase from another
-      // device it empties the copy, and what this device changed itself is told apart from what it only carried by comparing with this.
-      const before = outbox.paths().length || outbox.quarantined().length ? new Map(mirror.rows()) : null;
+      // This device's copy of the server rows before the pull: if the pull shows an erase from another device it empties the copy, and
+      // what this device changed itself is told apart from what it only carried by comparing with this. Taken every time (one Map copy
+      // per pull): a save can land while the pull is on its way, after any "is there anything to compare" check here.
+      const before = new Map(mirror.rows());
       const out = await pullAll(transport, mirror);
       if (out.ok) {
         lastPullAt = now();
@@ -264,7 +265,7 @@ export function createApiDb(options: ApiDbOptions) {
             const kept: [string, unknown][] = [];
             for (const [path, doc] of held) {
               const kind = parsePath(path);
-              const own = kind && before ? ownChanges(kind, doc, before) : null;
+              const own = kind ? ownChanges(kind, doc, before) : null;
               if (own != null) kept.push([path, own]);
             }
             outbox.clear(); bases.clear(); retryKeep.clear();

@@ -19,7 +19,14 @@ export function ownChanges(kind: PathKind, doc: unknown, before: Mirror): unknow
     const empty = kind.kind === 'weeks' ? normWeek(null) : normStretchWeek(null);
     const prev = documentFor(kind, before) ?? empty;
     const own = kind.kind === 'weeks' ? mergeWeek3(prev, doc, empty).week : mergeStretchWeek3(prev, doc, empty).week;
-    return stable(own) === stable(empty) ? null : own;
+    if (stable(own) === stable(empty)) return null;
+    if (kind.kind !== 'weeks') return own;
+    // The ticks kept were made against this device's program and layout (ADR 022): they go with them, or they may not map to cards.
+    // Copied as this device's document holds them (the store keeps it normalized; the send cleans it again).
+    const w = doc as Record<string, unknown>;
+    const kept = { ...own } as Record<string, unknown>;
+    for (const k of ['prog', 'ran', 'rest', 'restOn', 'order', 'stash']) { if (w[k] !== undefined) kept[k] = w[k]; else delete kept[k]; }
+    return kept;
   }
   const mine = desiredRows(kind, doc, before).filter(r => {
     const had = before.get(mirrorId(r.table, r.key));

@@ -30,6 +30,16 @@ describe('ownChanges', () => {
     expect(own.entries.map(e => e.id)).toEqual(['b1']);
   });
 
+  it('the week keys kept go with the program and layout they were ticked against', () => {
+    const ran = { prog: 'B', program: { days: [] } };
+    const before = mirrorOf('weeks/2026-10-11', wk({ a: true }, { prog: 'B', ran, order: [2, 1] }));
+    const own = ownChanges(kind('weeks/2026-10-11'), wk({ a: true, c: true }, { prog: 'B', ran, order: [2, 1] }), before) as { done: object; prog: string; ran: unknown; order: unknown };
+    expect(own.done).toEqual({ c: true });
+    expect(own.prog).toBe('B'); // not the empty week's null
+    expect(own.ran).toEqual(ran);
+    expect(own.order).toEqual([2, 1]);
+  });
+
   it('keeps only the week keys this device changed', () => {
     const before = mirrorOf('weeks/2026-10-11', wk({ a: true, b: true }));
     const own = ownChanges(kind('weeks/2026-10-11'), wk({ a: true, b: true, c: true }), before) as { done: object };

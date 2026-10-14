@@ -1125,6 +1125,24 @@ describe('erasing the account (Phase F)', () => {
     expect(db.status().notices.map(n => n.text)).toEqual(['Everything in this account was erased on another device. What this device changed itself (one item) is kept under Not sent, to send again or discard; the rest was dropped.']);
   });
 
+  it('a save that lands while the erase-revealing pull is on the wire is still cut down, not dropped whole', async () => {
+    // Nothing is waiting when the pull starts; the save arrives during its round trip. The copy to compare with must exist anyway.
+    const server = fakeServer(); const storage = memoryStorage(); const gate = gatedSleep();
+    let during: (() => void) | null = null;
+    const transport = { ...server.transport, pull: (cursor: string, limit?: number) => { const f = during; during = null; f?.(); return server.transport.pull(cursor, limit); } } as typeof server.transport;
+    const db = createApiDb({ transport, storage, sleep: gate.sleep, pollMs: 0, random: () => 0.5 });
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1', 'e2'));
+    server.erase();
+    let saving: Promise<unknown> = Promise.resolve();
+    during = () => { saving = db.doc('logs/squat').set(logs2('e1', 'e2', 'e3')); };
+    await db.syncNow();
+    await saving; await settle();
+    expect(db.quarantined().map(e => [e.path, (e.doc as { entries: { id: string }[] }).entries.map(x => x.id)])).toEqual([['logs/squat', ['e3']]]);
+    expect([...server.rows.keys()].filter(k => k.startsWith('log_entries'))).toEqual([]);
+  });
+
   it('a set-aside change is cut down to what this device added, so Try again cannot bring erased entries back', async () => {
     const { server, db } = setup();
     db.start();
