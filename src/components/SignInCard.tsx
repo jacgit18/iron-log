@@ -9,10 +9,15 @@ export default function SignInCard() {
   const signedOut = useAppStore(s => s.sync?.state === 'paused' && s.sync.pausedBecause === 'auth');
   const { client, busy, start } = useGoogleSignIn();
   if (!signedOut) return null;
+  // The email form sits beside the card, not inside it: the card is a live region (role=status), and a form with inputs and its own
+  // messages inside one would be read out again at every step.
   return (
-    <div className="notice movewarn" role="status">
-      <div><b>Sign in to sync.</b> Your changes are kept on this device and will be sent once you sign in. <LegalLinks /></div>
-      <div className="actions"><button type="button" className="btn sm" disabled={busy} onClick={() => void start()}>Sign in with Google</button><EmailCodeSignIn client={client} /></div>
-    </div>
+    <>
+      <div className="notice movewarn" role="status">
+        <div><b>Sign in to sync.</b> Your changes are kept on this device and will be sent once you sign in. <LegalLinks /></div>
+        <div className="actions"><button type="button" className="btn sm" disabled={busy} onClick={() => void start()}>Sign in with Google</button></div>
+      </div>
+      <EmailCodeSignIn client={client} />
+    </>
   );
 }

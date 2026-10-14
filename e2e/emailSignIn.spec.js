@@ -91,4 +91,20 @@ test.describe('sign in with an emailed code', () => {
     await page.getByRole('button', { name: 'Use a different email' }).click();
     await expect(page.getByLabel('Email')).toBeVisible();
   });
+
+  test('on the "Sign in to sync" card the form sits outside its live region, and the page has no accessibility violations', async ({ page }) => {
+    await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); localStorage.setItem('ironlog:session/known', 'true'); });
+    await page.route('**/api/**', json(401, { ok: false, error: 'sign-in required' }));
+    await page.route('**/api/auth-options', json(200, { ok: true, emailCode: true }));
+    await page.goto('/');
+    const card = page.getByRole('status').filter({ hasText: 'Sign in to sync' });
+    await expect(card).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Sign in with email' })).toHaveCount(0); // a form inside a live region is read out again at every step
+    await page.getByRole('button', { name: 'Sign in with email' }).click();
+    await expect(page.getByLabel('Email')).toBeVisible();
+    await expect(card.getByLabel('Email')).toHaveCount(0);
+    const { violations } = await scan(page);
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
 });
