@@ -36,11 +36,11 @@ const img = f => `<img src="${urlPrefix}${f}" width="320">`;
 const lines = ['<!-- visual-diff -->', '### Screenshot changes', ''];
 if (!rows.length) lines.push('No visual changes against `main`.');
 else {
-  lines.push(`${rows.length} image${rows.length > 1 ? 's' : ''} differ from \`main\`. Unexpected? Check the diff column.`, '');
+  lines.push(`${rows.length} image${rows.length > 1 ? 's' : ''} differ from the published README images (\`readme-images\` branch). Unexpected? Check the diff column.`, '');
   for (const r of rows) {
     lines.push(`<details open><summary><b>${r.name}</b> · ${r.kind}${r.note ? ` · ${r.note}` : ''}</summary>`, '');
     if (r.kind === 'new') lines.push('| After |', '|---|', `| ${img(`after-${r.name}`)} |`);
-    else if (r.kind === 'removed') lines.push('Removed from `docs/images`.');
+    else if (r.kind === 'removed') lines.push('No longer generated; it will drop out of the published set.');
     else if (r.kind === 'resized') lines.push('| Before | After |', '|---|---|', `| ${img(`before-${r.name}`)} | ${img(`after-${r.name}`)} |`);
     else lines.push('| Before | After | Diff |', '|---|---|---|', `| ${img(`before-${r.name}`)} | ${img(`after-${r.name}`)} | ${img(`diff-${r.name}`)} |`);
     lines.push('', '</details>', '');
