@@ -21,7 +21,6 @@ import './DayHeader.css';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
-const MODES = [[1, 'Mode 1 · A only'], [2, 'Mode 2 · monthly'], [3, 'Mode 3 · 6 months']];
 const tipHidden = (k: string) => LS.get(k) === 1; // stored as the string "1", same as the vanilla app
 
 // Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
@@ -143,12 +142,6 @@ export default function Board() {
           <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
           <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}>›</button>
           {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
-          <label className="seg modesel" htmlFor="board-mode">
-            <span className="sr">Mode</span>
-            <select id="board-mode" aria-label="Program mode" value={cfg.mode} onChange={e => st.setMode(Number(e.target.value) as 1 | 2 | 3)}>
-              {MODES.map(([m, t]) => <option key={m} value={m}>{t}</option>)}
-            </select>
-          </label>
           {cfg.mode === 2 && (
             <>
               <div className="seg" role="group" aria-label="Program this week">
