@@ -16,6 +16,7 @@ import Experiments from './Experiments.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import FirstRun from './FirstRun.jsx';
 import InstallHint from './InstallHint.jsx';
+import './BoardTop.css';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
@@ -84,6 +85,7 @@ export default function Board() {
   const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey && !onlyElsewhere(slots, week) ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
   const [filter, setFilter] = useState({ muscle: '', eq: '' });
+  const [filterOpen, setFilterOpen] = useState(false); // phones only: the sort and equipment fields fold away
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
   const filtering = !!filter.eq;
   const sorting = !!filter.muscle;
@@ -132,7 +134,7 @@ export default function Board() {
 
   const auto = programFor(cfg, weekStart);
   return (
-    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="weekbar">
         <div className="weeknav">
           <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}>‹</button>
@@ -172,7 +174,10 @@ export default function Board() {
       )}
       {left.length > 0 && (
         <div className="notice leftovers" role="status">
-          <div>Day {yCol} has {left.length} unchecked exercise{left.length > 1 ? 's' : ''}.</div>
+          <div className="lohead">
+            <span>Day {yCol} has {left.length} unchecked exercise{left.length > 1 ? 's' : ''}.</span>
+            <button type="button" className="btn sm ghost" onClick={hideLeftovers}>Not now</button>
+          </div>
           <div className="actions">
             <button type="button" className="btn sm" onClick={() => st.skipCards(left.map(s => s.id))}>Skip all {left.length}</button>
             {targets.length > 0 && (
@@ -184,7 +189,6 @@ export default function Board() {
                 <button type="button" className="btn sm" onClick={() => st.moveCards(left.map(s => s.id), moveTo as number)}>Move</button>
               </span>
             )}
-            <button type="button" className="btn sm ghost" onClick={hideLeftovers}>Not now</button>
           </div>
         </div>
       )}
@@ -221,19 +225,24 @@ export default function Board() {
       {slots.length === 0 && <FirstRun />}
       <BodyWeightRow key={wk} />
       <div className="filterbar" role="group" aria-label="Sort and filter exercises">
-        <label className="field">Sort by muscle
-          <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
-            <option value="">Program order</option>
-            {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-          </select>
-        </label>
-        <label className="field">Equipment
-          <select value={filter.eq} onChange={e => setFilter(f => ({ ...f, eq: e.target.value }))}>
-            <option value="">All equipment</option>
-            {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
-        </label>
-        {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear</button>}
+        <button type="button" className="btn sm filtertoggle" aria-expanded={filterOpen} aria-controls="filter-fields" onClick={() => setFilterOpen(o => !o)}>
+          Sort &amp; filter{filtering || sorting ? ` · ${(filtering ? 1 : 0) + (sorting ? 1 : 0)} on` : ''}
+        </button>
+        <div className={`filterfields${filterOpen ? ' open' : ''}`} id="filter-fields">
+          <label className="field">Sort by muscle
+            <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
+              <option value="">Program order</option>
+              {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
+            </select>
+          </label>
+          <label className="field">Equipment
+            <select value={filter.eq} onChange={e => setFilter(f => ({ ...f, eq: e.target.value }))}>
+              <option value="">All equipment</option>
+              {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </label>
+          {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear</button>}
+        </div>
         {filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
         {sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
       </div>

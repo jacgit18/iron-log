@@ -1,0 +1,83 @@
+/* The stack above the day cards. Desktop keeps the old layout; phones (<= 700px) fold it up so the first card
+   is not a screen away. */
+.lohead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.filtertoggle {
+  display: none;
+}
+.filterfields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+.filterfields .field {
+  min-width: 160px;
+}
+.bwsub {
+  white-space: nowrap;
+}
+
+@media (max-width:700px) {
+  .boardroot .notice.tip .btn {
+    white-space: nowrap;
+  }
+  .lohead {
+    flex: 1 1 100%;
+  }
+  .boardroot .notice.leftovers {
+    padding-block: 4px 8px;
+  }
+  .boardroot .notice.leftovers .actions {
+    flex: 1 1 100%;
+  }
+  .bwsub {
+    display: none;
+  }
+  .boardroot form.bwrow {
+    flex-wrap: nowrap;
+  }
+  .boardroot form.bwrow .bwl {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .boardroot .bwrow {
+    margin-bottom: 8px;
+    padding-block: 4px;
+  }
+  .boardroot .filterbar {
+    margin-block: 0 4px;
+  }
+  .filtertoggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .filterfields {
+    display: none;
+  }
+  .filterfields.open {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+  .filterfields .field {
+    min-width: 0;
+  }
+  .filterfields .btn {
+    grid-column: 1/-1;
+    justify-self: start;
+  }
+  .edtop.boardtabtop {
+    padding-block: 4px 8px;
+  }
+  .boardroot .weeknav .seg.modesel {
+    margin-left: 0;
+    padding: 0;
+    background: transparent;
+  }
+}
