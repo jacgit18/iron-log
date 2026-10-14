@@ -95,6 +95,24 @@ describe('stretches', () => {
     st().deleteStretchExp(e.id);
     expect(st().stretchExps).toEqual([]);
   });
+  it('refuses a stretch experiment that is already on the list or already in your stretches', () => {
+    expect(st().saveStretchExp({ n: 'Frog Stretch' })).toBeNull();
+    expect(st().saveStretchExp({ n: ' frog  stretch ' })).toMatch(/already on the Experiment list/);
+    const own = st().stretches[0].n;
+    expect(st().saveStretchExp({ n: own.toUpperCase() })).toMatch(/already have that stretch/);
+    expect(st().stretchExps).toHaveLength(1);
+    const e = st().stretchExps[0]; // editing it keeps its own name
+    expect(st().saveStretchExp({ id: e.id, n: 'Frog Stretch', note: 'x' })).toBeNull();
+    expect(st().stretchExps).toHaveLength(1);
+  });
+  it('still edits an experiment whose name became one of your stretches later', () => {
+    expect(st().saveStretchExp({ n: 'Frog Stretch' })).toBeNull();
+    const e = st().stretchExps[0];
+    st().mutateStretches(x => { x.items.push({ id: 'frog', n: 'Frog Stretch', group: 'Standing', tier: 'primary' }); });
+    expect(st().saveStretchExp({ id: e.id, n: 'Frog Stretch', note: 'new note' })).toBeNull();
+    expect(st().stretchExps[0].note).toBe('new note');
+    expect(st().saveStretchExp({ id: e.id, n: st().stretches[0].n })).toMatch(/already have that stretch/); // renaming onto one is still refused
+  });
   it('Undo puts back a removed day stretch with its tick, and a deleted experiment', () => {
     expect(st().saveStretchExp({ n: 'Frog Stretch', note: 'try' })).toBeNull();
     const e = st().stretchExps[0];
