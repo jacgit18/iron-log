@@ -12,7 +12,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-start;
 }
 .emailsignin .btn {
+  flex: 0 0 auto;
+  font-size: 1rem;
   min-height: 44px;
+  padding: 0 16px;
+  white-space: nowrap;
 }
