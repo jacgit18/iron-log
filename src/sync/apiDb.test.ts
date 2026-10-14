@@ -456,6 +456,43 @@ describe('trying a set-aside write again', () => {
     expect(db.status().notices.map(n => n.text)).toContain('Sent what was set aside; what changed on another device since was kept.');
   });
 
+  // An entry set aside before versions were kept has no `seen`: the note then speaks only of rows the server has that differ from the copy.
+  const dropSeen = (storage: ReturnType<typeof setup>['storage']) => {
+    const q = storage.get('sync/quarantine') as { seen?: unknown }[];
+    storage.set('sync/quarantine', q.map(({ seen: _seen, ...e }) => e));
+  };
+  it('an old set-aside entry (no versions kept) whose rows the server still matches says nothing about other devices', async () => {
+    const { server, storage, make } = setup();
+    const db = make(); db.start();
+    await settle();
+    await db.doc('logs/squat').set(logsDoc(entry('S1'))); // on the server, and the set-aside copy below has it unchanged
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1'), entry('S3'))).catch(() => undefined);
+    db.stop?.();
+    dropSeen(storage);
+    const again = make(); again.start();
+    await settle();
+    expect(await again.retry(again.quarantined()[0]!.id)).toBe('sent');
+    expect(server.rows.has('log_entries|S3')).toBe(true);
+    // before: every row of an old entry counted as changed elsewhere, so this note showed although nothing had changed
+    expect(again.status().notices.map(n => n.text).filter(t => t.startsWith('Sent what was set aside'))).toEqual([]);
+  });
+  it('an old set-aside entry with a row on the server it does not have says that row was kept, not that another device changed it', async () => {
+    const { server, storage, make } = setup();
+    const db = make(); db.start();
+    await settle();
+    refuseOnce(server);
+    await db.doc('logs/squat').set(logsDoc(entry('S1'))).catch(() => undefined);
+    db.stop?.();
+    dropSeen(storage);
+    server.plant('log_entries', 'S2', squat('S2', 150));
+    const again = make(); again.start();
+    await settle();
+    expect(await again.retry(again.quarantined()[0]!.id)).toBe('sent');
+    expect(server.rows.get('log_entries|S2')).toMatchObject({ deleted_at: null });
+    expect(again.status().notices.map(n => n.text)).toContain('Sent what was set aside; what the server had that differed from it was kept.');
+  });
+
   it('an entry edited on another device since is not put back to the set-aside copy', async () => {
     const { server, db } = setup();
     db.start();
