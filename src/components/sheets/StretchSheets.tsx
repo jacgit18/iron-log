@@ -66,6 +66,7 @@ export function StretchSheet({ id }: { id?: string | null }) {
 export function StretchExpSheet({ id }: { id?: string | null }) {
   const s = useAppStore.getState();
   const exps = useAppStore(x => x.stretchExps);
+  const items = useAppStore(x => x.stretches);
   const cur = id ? exps.find(x => x.id === id) : null;
   const [d, setD] = useState(() => ({ id: cur ? cur.id : undefined, n: cur ? cur.n : '', url: cur ? cur.url || '' : '', note: cur ? cur.note || '' : '' }));
   const [err, setErr] = useState('');
@@ -77,7 +78,7 @@ export function StretchExpSheet({ id }: { id?: string | null }) {
         {cur
           ? <label className="field">Name<input id="sexp-name" maxLength={80} value={d.n} placeholder="e.g. Cossack Squat" onChange={e => up({ n: e.target.value })} /></label>
           : <ItemPicker id="sexp-name" label="Name" kind="stretch" value={d.n} maxLength={80} placeholder="Type to search or add, e.g. Cossack Squat"
-              mine={exps.map(x => ({ id: x.id, name: x.n, ...(x.note ? { meta: x.note } : {}) }))} catalogMeta={c => catalogStretchGroup(c)}
+              mine={exps.map(x => ({ id: x.id, name: x.n, ...(x.note ? { meta: x.note } : {}) }))} also={items.map(i => ({ id: i.id, name: i.n }))} catalogMeta={c => catalogStretchGroup(c)}
               createLabel={n => `Try “${n}”`} onText={n => up({ n })}
               onPick={c => { if (c.kind === 'mine') s.openModal({ type: 'stretchexp', id: c.id }); }} />}
         <label className="field">Video link (optional)<input type="url" value={d.url} placeholder="https://" onChange={e => up({ url: e.target.value })} /></label>
