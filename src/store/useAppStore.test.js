@@ -15,6 +15,10 @@ beforeEach(() => {
   useAppStore.setState({ logs: {}, week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} }, body: [], library: [], experiments: [], modal: null, edProg: null, edDay: 1, cfg: structuredClone(DEFAULT_CFG), programs: { A: BUILTIN.A, B: BUILTIN.B }, weekHist: null });
 });
 
+// Injury prevention is off unless the account turned it on (new accounts start with it off); the move heads-up and the
+// Back-to-back suggestion need it on.
+const preventionOn = () => useAppStore.setState(s => ({ cfg: { ...s.cfg, injuryPrevention: true } }));
+
 // Program A runs in mode 1; A-d3s1 is Hack Squat (Hypertrophy, 270 lb, 4 × 15).
 describe('checking off on the board', () => {
   it('logs the planned numbers, and unchecking removes them', () => {
@@ -222,6 +226,7 @@ describe('erase data', () => {
 
 // Program A: A-d1s1 is on Day 1, A-d3s1 (Hack Squat) on Day 3; Day 7 is empty.
 describe('rest day', () => {
+  beforeEach(preventionOn);
   const ids = d => currentLayout(st().week, st().activeSlots())[d].map(s => s.id);
 
   it('shifts later workouts one day, saves the week, and clears on a second tick', () => {
@@ -286,6 +291,7 @@ describe('rest day', () => {
 });
 
 describe('swap days', () => {
+  beforeEach(preventionOn);
   const ids = d => currentLayout(st().week, st().activeSlots())[d].map(s => s.id);
 
   it('swaps two columns for this week, saves the order, and follows the workout on a phone', () => {
@@ -358,11 +364,18 @@ describe('swap days', () => {
     st().moveSlot('A-d6s5', st().moveNote.alt);
     expect(st().moveNote).toBeNull();
   });
+  it('a new account has injury prevention off: a clashing move shows no heads-up', () => {
+    useAppStore.setState({ cfg: structuredClone(DEFAULT_CFG) });
+    expect(DEFAULT_CFG.injuryPrevention).toBeUndefined();
+    st().moveSlot('A-d6s5', 5);
+    expect(st().week.moved['A-d6s5']).toBe(5);
+    expect(st().moveNote).toBeNull();
+  });
   it('with injury prevention off, a clashing move shows no heads-up, and turning it off drops one showing', () => {
     st().moveSlot('A-d6s5', 5);
     expect(st().moveNote).not.toBeNull();
     st().setInjuryPrevention(false);
-    expect(st().cfg.injuryPrevention).toBe(false);
+    expect('injuryPrevention' in st().cfg).toBe(false); // off is the default, so nothing is kept
     expect(st().moveNote).toBeNull();
     st().moveSlot('A-d6s5', 6);
     st().moveSlot('A-d6s5', 5);
@@ -370,7 +383,7 @@ describe('swap days', () => {
     expect(st().moveNote).toBeNull();
     expect(st().saveFlag).not.toMatch(/heads-up/);
     st().setInjuryPrevention(true);
-    expect(st().cfg.injuryPrevention).toBeUndefined();
+    expect(st().cfg.injuryPrevention).toBe(true); // on is saved, since off is the default
     st().moveSlot('A-d6s5', 6);
     st().moveSlot('A-d6s5', 5);
     expect(st().moveNote).not.toBeNull();
@@ -421,6 +434,7 @@ describe('day dates', () => {
 });
 
 describe('bulk skip and move (yesterday’s leftovers)', () => {
+  beforeEach(preventionOn);
   it('skips every card it is given', () => {
     st().skipCards(['A-d1s1', 'A-d1s2']);
     expect(st().week.skipped).toMatchObject({ 'A-d1s1': true, 'A-d1s2': true });
@@ -1081,7 +1095,7 @@ describe('a suggestion after a day is finished', () => {
   const day2 = () => currentLayout(st().week, st().activeSlots())[2];
   // The cards that make a day count as finished: not the Optional sled, not Home cards.
   const workout = () => day2().filter(s => s.sec !== 'Optional' && s.sec !== 'Home');
-  beforeEach(() => useAppStore.setState({ orderNote: null, orderSkip: [] }));
+  beforeEach(() => { useAppStore.setState({ orderNote: null, orderSkip: [] }); preventionOn(); });
 
   // Program A: Leg Extension (A-d3s5) is on Days 2 and 3.
   it('with injury prevention off, finishing Day 2 suggests nothing, and turning it off drops a pending suggestion', () => {
@@ -1248,7 +1262,7 @@ describe('a suggestion after a day is finished', () => {
 // Through the store: Apply changes only the order and rest days, or one card's week.moved, and Put back restores
 // the week exactly. Every rest day, finishing each early day, on both programs.
 describe('applying a suggestion keeps every card and can be put back exactly', () => {
-  beforeEach(() => useAppStore.setState({ orderNote: null, orderSkip: [] }));
+  beforeEach(() => { useAppStore.setState({ orderNote: null, orderSkip: [] }); preventionOn(); });
   const where = () => { const m = {}; Object.entries(currentLayout(st().week, st().activeSlots())).forEach(([c, l]) => l.forEach(s => { (m[s.id] = m[s.id] || []).push(Number(c)); })); return m; };
 
   ['A', 'B'].forEach(prog => [null, 2, 3, 4, 5, 6, 7].forEach(rest => [1, 2, 3, 4].forEach(day => {
