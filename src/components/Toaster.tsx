@@ -26,7 +26,8 @@ export default function Toaster({ info }: { info: string }) {
   );
 }
 
-// In priority order, most important first: the stack shows two (Toaster.css) and the rest wait behind them.
+// In priority order: the stack shows two (Toaster.css) and the rest wait behind them. Removed leads (it has the focus), then the
+// ones that ask for an answer, then the ones that only report.
 function BoardNotices() {
   const st = useAppStore.getState();
   const weekStart = useAppStore(s => s.weekStart);
@@ -48,6 +49,9 @@ function BoardNotices() {
   const turnOff = { label: 'Turn off', title: 'injury prevention', ghost: true, onClick: () => { st.setInjuryPrevention(false); flag('Injury prevention is off. Turn it back on in Settings.'); } };
   return (
     <div className="toastlist">
+      {/* First, so it is always one of the two that show: the delete button that had focus went with its row, and focus goes to this Undo
+          (ADR 023), which a queued (hidden) notice could not take. */}
+      <RemovedNotice scope={'board:' + wk} expires />
       {showMove && (
         <Notice kind="warning" actions={[
           !!moveNote.alt && { label: `Move to Day ${moveNote.alt} instead`, onClick: () => st.moveSlot(moveNote.slot!, moveNote.alt!) },
@@ -72,7 +76,6 @@ function BoardNotices() {
       {showSkip && (
         <Notice kind="undo" expire={{ ms: UNDO_MS, onExpire: st.dismissSkip, key: skipNote }} actions={[{ label: 'Undo', onClick: st.undoSkip }, { label: 'Dismiss', onClick: st.dismissSkip, ghost: true }]}>{skipNote.text}</Notice>
       )}
-      <RemovedNotice scope={'board:' + wk} expires />
     </div>
   );
 }
