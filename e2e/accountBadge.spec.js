@@ -12,6 +12,7 @@ async function open(page, who) {
     localStorage.setItem('ironlog:session/known', 'true');
   });
   await page.route('**/api/**', json({ ok: false }, 401));
+  await page.route('**/api/sync*', json({ rows: [], cursor: '0', more: false })); // a signed-in server answers pulls, or sync pauses for auth and the badge hides
   await page.route('**/api/me', who);
   await page.goto('/');
 }
