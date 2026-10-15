@@ -8,7 +8,9 @@
 #   deploy   build the job image, create or update the job, and schedule it every night (3:15 AM New York)
 #   run      run a backup now and wait for it
 #   list     show the backups in the bucket
-#   fetch    download the newest dump and manifest into ./backups/ (git-ignored), ready for scripts/restore-check.sh
+#   fetch    download the newest dump and manifest into ./backups/ (git-ignored) and prove it restores (scripts/restore-check.sh). A dump holds
+#            every user's data in plain text, so on a successful check both files are deleted from this machine; KEEP_LOCAL=1 keeps them
+#            (files are made readable by you only). The bucket copy is the backup; this one is for checking.
 #
 # Cost: all inside the free tiers at this size (a dump is well under 1 MB): Cloud Storage's 5 GB in a US region, three scheduler jobs,
 # a few seconds of Cloud Run job time a night. The budget alert from the deploy runbook covers it.
@@ -87,10 +89,23 @@ cmd_fetch() {
   local newest; newest="$(gc storage ls "gs://$BUCKET/ironlog-*.dump" | sort | tail -1)"
   [ -n "$newest" ] || { echo "No backups in gs://$BUCKET yet." >&2; exit 1; }
   gc storage cp "$newest" "${newest%.dump}.manifest" backups/
-  echo "Downloaded to backups/. Check it restores: scripts/restore-check.sh backups/$(basename "$newest")"
+  local dump="backups/$(basename "$newest")"
+  chmod 600 "$dump" "${dump%.dump}.manifest"
+  if [ "${KEEP_LOCAL:-}" = 1 ]; then
+    echo "Downloaded to backups/ (KEEP_LOCAL=1: kept, in plain text). Check it restores: scripts/restore-check.sh $dump"
+    return
+  fi
+  # The dump has every user's email, name, weight and logs unencrypted; it only needs to exist long enough to prove it restores.
+  if "$(dirname "$0")/restore-check.sh" "$dump"; then
+    rm -f "$dump" "${dump%.dump}.manifest"
+    echo "Restore check passed; the local copy was deleted. The backup is still in gs://$BUCKET (KEEP_LOCAL=1 keeps a local copy)."
+  else
+    echo "Restore check FAILED; the files are left in backups/ for you to look at. Delete them when done." >&2
+    exit 1
+  fi
 }
 
 case "${1:-}" in
   setup) cmd_setup;; secret) cmd_secret;; deploy) cmd_deploy;; run) cmd_run;; list) cmd_list;; fetch) cmd_fetch;;
-  *) sed -n '2,13p' "$0"; exit 2;;
+  *) sed -n '2,16p' "$0"; exit 2;;
 esac

@@ -166,7 +166,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     res.status(result.status).json(result.body);
   });
   app.post('/api/account/delete', rateLimit(limits.account, undefined, byUser), async (req, res) => {
-    const result = await deleteMyAccount(db!, String(res.locals.userId), req.body);
+    const email = (res.locals.account as Account).email;
+    const purge = auth && email ? async () => void (await (await auth.$context).internalAdapter.deleteVerificationByIdentifier(`sign-in-otp-${email.toLowerCase()}`)) : undefined;
+    const result = await deleteMyAccount(db!, String(res.locals.userId), req.body, purge);
     res.status(result.status).json(result.body);
   });
   app.get('/api/me', async (_req, res) => {
