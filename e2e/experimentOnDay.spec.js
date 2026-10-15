@@ -8,10 +8,10 @@ test('a workout experiment shows the days it was added to this week', async ({ p
   const card = page.locator('.explist .expcard');
   await expect(card.locator('.onday')).toHaveCount(0);
   await card.locator('select').selectOption('1');
-  await card.getByRole('button', { name: /^Add .* to Day 1$/ }).click();
+  await card.getByRole('button', { name: /^This week only: add .* to Day 1$/ }).click();
   await expect(card.locator('.onday')).toHaveText('On Day 1 this week');
   await card.locator('select').selectOption('2');
-  await card.getByRole('button', { name: /^Add .* to Day 2$/ }).click();
+  await card.getByRole('button', { name: /^This week only: add .* to Day 2$/ }).click();
   await expect(card.locator('.onday')).toHaveText('On Day 1, Day 2 this week');
 });
 
@@ -22,7 +22,7 @@ test('a workout experiment card moved to another day shows the day it is on now'
   const entry = page.locator('.explist .expcard');
   const name = (await entry.locator('.rmname').innerText()).trim();
   await entry.locator('select').selectOption('1');
-  await entry.getByRole('button', { name: /^Add .* to Day 1$/ }).click();
+  await entry.getByRole('button', { name: /^This week only: add .* to Day 1$/ }).click();
   await expect(entry.locator('.onday')).toHaveText('On Day 1 this week');
   const card = page.locator('#col-1 article.card').filter({ hasText: name }).first();
   const key = (await card.getByRole('button', { name: /^More actions:/ }).getAttribute('id')).replace('more-', '');
