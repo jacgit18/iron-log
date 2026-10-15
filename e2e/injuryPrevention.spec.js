@@ -43,3 +43,16 @@ test('the Board has its own Injury prevention switch, and it agrees with Setting
   await page.locator('#tab-board').click();
   await expect(onBoard).not.toBeChecked();
 });
+
+test('on a phone the Board switch sits beside Sort & filter, outside the sort and filter group, and still toggles', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const sw = page.locator('.boardroot').getByRole('switch', { name: /Injury prevention/ });
+  const toggleBtn = page.getByRole('button', { name: /Sort & filter/ });
+  const a = await toggleBtn.boundingBox();
+  const b = await sw.locator('xpath=..').boundingBox();
+  expect(Math.abs(a.y + a.height / 2 - (b.y + b.height / 2))).toBeLessThan(6);
+  expect(b.x).toBeGreaterThan(a.x + a.width);
+  await expect(page.getByRole('group', { name: 'Sort and filter exercises' }).getByRole('switch')).toHaveCount(0);
+  await sw.check();
+  await expect(sw).toBeChecked();
+});
