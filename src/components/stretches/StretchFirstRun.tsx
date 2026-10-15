@@ -1,7 +1,7 @@
 import { useAppStore } from '../../store/useAppStore.js';
 
 // Shown when the stretch list is empty: a brand-new account (ADR 016) or one that deleted every stretch. The button opens the same
-// new-stretch sheet as "+ New stretch" in the Program tab.
+// new-stretch sheet as "+ New stretch" in Program, Stretch library.
 export default function StretchFirstRun() {
   const openModal = useAppStore.getState().openModal;
   return (
@@ -11,7 +11,7 @@ export default function StretchFirstRun() {
       <div className="actions">
         <button type="button" className="btn primary" id="sfirstrun-add" onClick={() => openModal({ type: 'stretch' })}>Add your first stretch</button>
       </div>
-      <p className="note">You can manage the whole list later in the Program tab.</p>
+      <p className="note">You can manage the whole list later in Program, Stretch library. To try a stretch you saw online, add it under Experiments, below, with a link to the video.</p>
     </section>
   );
 }
