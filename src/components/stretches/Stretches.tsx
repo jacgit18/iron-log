@@ -6,13 +6,16 @@ import { useToday } from '../../store/useToday.js';
 import { weekStartOf, ymd, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
 import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
+import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import { motionOK } from '../../lib/motion.js';
 import { useSwipeCard } from '../board/useSwipeCard.js';
 import ArmedButton from '../ArmedButton.jsx';
+import ExperimentSearch from '../ExperimentSearch.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
 import './Stretches.css';
+import '../board/Experiments.css';
 
 const DAYS7 = Array.from({ length: STRETCH_DAYS }, (_, i) => i);
 
@@ -57,9 +60,13 @@ function GroupCard({ d, name, items, tier }: { d: number; name: string; items: S
 
 function Experiments({ day }: { day: number }) {
   const items = useAppStore(x => x.stretchExps);
+  const added = useAppStore(x => x.strWeek.extra);
   const s = useAppStore.getState();
   const [pick, setPick] = useState<Record<string, number>>({});
+  const [q, setQ] = useState('');
+  if (q && !hasFilter(items.length)) setQ(''); // the search hides on a short list: forget its text, so it does not come back filled in
   const [arming, setArming] = useState<string | null>(null); // the experiment whose Delete was pressed once
+  const shown = hasFilter(items.length) ? items.filter(e => matchesQuery(q, e.n, e.note)) : items; // the search shows only on a long list
   return (
     <section className="experiments" aria-labelledby="sexp-h">
       <div className="exphead">
@@ -67,15 +74,18 @@ function Experiments({ day }: { day: number }) {
         <button type="button" className="btn sm" id="sexp-add" onClick={() => s.openModal({ type: 'stretchexp' })}>+ Add stretch</button>
       </div>
       <RemovedNotice scope="stretchexps" />
-      {!items.length ? <p className="note">Keep stretches you want to try here, then add them to a day.</p> : (
+      {hasFilter(items.length) && <ExperimentSearch id="sexp-q" q={q} onQ={setQ} shown={shown.length} total={items.length} what="stretches" />}
+      {!items.length ? <p className="note">Keep stretches you want to try here, then add them to a day.</p> : !shown.length ? <p className="note">No stretch matches. Clear the search.</p> : (
         <ul className="explist">
-          {items.map(e => {
+          {shown.map(e => {
             const to = pick[e.id] ?? day;
+            const on = [...new Set(added.filter(x => x.n === e.n).map(x => x.day))].sort((a, b) => a - b); // the days of this week it is already on
             return (
               <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`}>
                 {arming === e.id && <span className="rmtag">Will be deleted · tap Delete again</span>}
                 <div><b className="rmname">{e.n}</b>{e.group && <> <span className="tag">{e.group}</span></>}</div>
                 {e.note && <div className="note">{e.note}</div>}
+                {on.length > 0 && <div className="note onday">On {on.map(d => DAY_NAMES[d]).join(', ')} this week</div>}
                 <Link n={e.n} url={e.url} />
                 <div className="actions">
                   <label htmlFor={`sexp-to-${e.id}`}>Add to</label>
