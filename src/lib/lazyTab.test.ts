@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ChunkLoadError, isChunkFetchError } from './lazyTab.js';
+import { ChunkLoadError, isChunkFetchError, mapChunkError } from './lazyTab.js';
 
 describe('isChunkFetchError', () => {
   it('recognises a failed dynamic import in Chrome, Firefox and Safari', () => {
@@ -16,5 +16,19 @@ describe('isChunkFetchError', () => {
   it('keeps the original error as the cause', () => {
     const e = new TypeError('Failed to fetch dynamically imported module');
     expect(new ChunkLoadError('x', { cause: e }).cause).toBe(e);
+  });
+});
+
+describe('mapChunkError', () => {
+  it('turns a failed download into a ChunkLoadError, so the boundary offers Reload', async () => {
+    const e = new TypeError('Failed to fetch dynamically imported module: https://x/assets/Modal-abc.js');
+    const err = await mapChunkError(() => Promise.reject(e))().catch((x: unknown) => x);
+    expect(err).toBeInstanceOf(ChunkLoadError);
+    expect((err as ChunkLoadError).cause).toBe(e);
+  });
+  it('lets any other error through unchanged and passes a loaded module on', async () => {
+    const bug = new Error('x is not defined');
+    await expect(mapChunkError(() => Promise.reject(bug))()).rejects.toBe(bug);
+    await expect(mapChunkError(() => Promise.resolve({ default: 1 }))()).resolves.toEqual({ default: 1 });
   });
 });

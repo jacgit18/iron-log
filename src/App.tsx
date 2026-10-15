@@ -17,7 +17,7 @@ import SignInCard from './components/SignInCard.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
-import { lazyTab } from './lib/lazyTab.js';
+import { lazyTab, mapChunkError } from './lib/lazyTab.js';
 import { renewPush } from './lib/pushClient.js';
 
 // The Board (the first screen) and the shell are in the main bundle; the other tabs are fetched when first opened. Every chunk is in the
@@ -29,12 +29,16 @@ const Settings = lazyTab(() => import('./components/settings/Settings.js'));
 // The sheets (log, detail, slot, import, ...) are only drawn once one is opened, so they load as one chunk after the first screen is up
 // rather than before it. They are fetched shortly after, so the first one opens without waiting; offline they come from the precache.
 const loadModal = () => import('./components/sheets/Modal.js');
-const LazyModal = lazy(loadModal);
+const LazyModal = lazy(mapChunkError(loadModal));
 function Modal() {
   const open = useAppStore(s => s.modal !== null);
-  // Fetched once the first screen is settled, so the first sheet opens without waiting. A failed fetch (offline, no precache yet) is ignored
-  // here; opening a sheet tries again, and a failure then lands in the boundary instead of taking the whole app down.
-  useEffect(() => { const t = setTimeout(() => { loadModal().catch(() => {}); }, 1500); return () => clearTimeout(t); }, []);
+  // Fetched once the first screen is settled, so the first sheet opens without waiting. Not while offline: the browser remembers a failed
+  // import() for the life of the page (see lazyTab.ts), so a prefetch that failed would fail every later open. If a download does fail, the
+  // boundary offers Reload (a ChunkLoadError), which also picks up the service worker's copy.
+  useEffect(() => {
+    const t = setTimeout(() => { if (navigator.onLine !== false) loadModal().catch(() => {}); }, 1500);
+    return () => clearTimeout(t);
+  }, []);
   return open ? <ErrorBoundary where="view"><Suspense fallback={null}><LazyModal /></Suspense></ErrorBoundary> : null;
 }
 
