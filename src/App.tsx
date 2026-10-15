@@ -7,6 +7,7 @@ import useFocusKeeper from './hooks/useFocusKeeper.js';
 import useTabbarHeight from './hooks/useTabbarHeight.js';
 import BoardTab from './components/board/BoardTab.js';
 import TimerBar from './components/TimerBar.js';
+import Toaster from './components/Toaster.js';
 import LogSheet from './components/sheets/LogSheet.js';
 import DetailSheet from './components/sheets/DetailSheet.js';
 import TagSheet from './components/sheets/TagSheet.js';
@@ -119,8 +120,6 @@ export default function App() {
               ))}
             </div>
           </nav>
-          {/* Its own line with a fixed height, so a message appearing or clearing never moves the page. */}
-          <p className="saveflag" role="status" aria-live="polite" aria-atomic="true">{!ready && !saveFlag && !signedOut ? 'Loading…' : saveFlag}</p>
         </header>
         <UpdateBanner />
         <OfflineNotice />
@@ -140,6 +139,7 @@ export default function App() {
           <div id="view" role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>{ready || tab === 'settings' ? <ErrorBoundary key={tab} where="view"><View /></ErrorBoundary> : null}</div>
         </main>
       </div>
+      <Toaster info={!ready && !saveFlag && !signedOut ? 'Loading…' : saveFlag} />
       <Modal />
       <aside className="timer-region" aria-label="Timer"><TimerBar /></aside>
     </>

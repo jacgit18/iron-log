@@ -495,7 +495,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const label = s ? s.items.map(it => exInfo(get().cfg, it.ex).n).join(s.type === 'either' ? ' or ' : ' → ') : '';
     const keep = get().skipNote; // un-skipping a different card leaves this card's notice alone
     set({ skipNote: skipped ? { week: get().weekKey(), slotId, text: `Skipped${label ? ' ' + label : ''} for this week.`, done: cleared } : keep && keep.slotId !== slotId ? keep : null });
-    flag(skipped ? 'Skipped for this week' : 'Skip undone');
+    if (!skipped) flag('Skip undone'); // skipping shows its own notice with Undo, so no second line saying the same
   },
   // Un-skip the last skipped card and put back the ticks the skip cleared (and with them their check-off entries).
   undoSkip() {
@@ -522,7 +522,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const fromShown = colOf(week0, week0.moved[cards[0].id] || cards[0].day);
     const warn = lines.length > 0 && injuryPreventionOn(cfg);
     set({ moveNote: warn ? { batch, fromShown, to: day, week: get().weekKey(), lines } : null });
-    flag(`Moved ${cards.length} to Day ${day}${warn ? ' · heads-up' : ''}`);
+    if (!warn) flag(`Moved ${cards.length} to Day ${day}`); // a heads-up is its own notice
   },
   // Experiment board: a list of exercises to try, added to a day of the viewed week as a card for that week.
   setExperiments(experiments) { set({ experiments }); get().saveExperiments(); },
@@ -795,7 +795,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const fromShown = colOf(week0, from);
     const warn = clashes.length > 0 && injuryPreventionOn(cfg);
     set({ moveNote: warn ? { slot: slotId, from, fromShown, to: day, week: get().weekKey(), lines: clashes, alt: altDay(cfg, week, slots, s, day, fromShown) } : null });
-    flag(warn ? `Moved to Day ${day} · heads-up` : `Moved to Day ${day}`);
+    if (!warn) flag(`Moved to Day ${day}`); // a heads-up is its own notice
   },
   undoMove() {
     const n = get().moveNote; if (!n || n.week !== get().weekKey()) return;
