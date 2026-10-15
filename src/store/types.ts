@@ -29,6 +29,8 @@ export interface SlotForm {
   target?: { key: string; day: number } | null; items: SlotFormItem[];
   /** Adding only: put a copy of the new card on each of these days (each copy gets its own id). Overrides `day`. */
   days?: number[];
+  /** Adding from an Experiment entry (To program): the entry leaves the list once the card is saved, and one Undo takes the card out again and puts the entry back. */
+  fromExp?: string;
 }
 /** `cat`: a new stretch picked from the catalog in the sheet; it is saved with that catalog id and name (ADR 036). */
 export interface StretchForm { id?: string; n: string; url?: string; note?: string; group?: string; tier?: string; cat?: CatalogItem | null }
@@ -104,7 +106,8 @@ export interface EditorSlice {
   edItem(): LibraryItem | null;
   edProgram(): Program;
   edName(): string;
-  openAddToProgram(col: number): void;
+  /** `fromExp`: an Experiment entry the sheet starts from; it leaves the list once the card is saved. */
+  openAddToProgram(col: number, fromExp?: string): void;
   setEdProg(edProg: string | null): void;
   setEdDay(edDay: number): void;
   saveEdited(prog: Program): void;
@@ -209,6 +212,8 @@ export interface WellnessSlice {
   saveStretchExp(d: StretchExpForm): string | null;
   deleteStretchExp(id: string): void;
   addStretchToDay(expId: string, day: number): boolean;
+  /** Moves a stretch experiment into your stretches (library only, in the default group); Undo reverses it. */
+  promoteStretchExp(id: string): boolean;
   removeStretchExtra(id: string): void;
   addSupplement(slot: SupplementSlot, name: string, dose?: string): boolean;
   setSupplementSlot(id: string, slot: SupplementSlot, dose?: string): boolean;
