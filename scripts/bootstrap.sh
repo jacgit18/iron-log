@@ -28,7 +28,9 @@ npx playwright install chromium && ok "playwright chromium" || todo "playwright 
 
 echo "Local database"
 if command -v docker >/dev/null; then
-  npm run db:start >/dev/null 2>&1 && ok "postgres on 127.0.0.1:5433" || todo "database did not start: docker compose up -d --force-recreate --wait db"
+  if (exec 3<>/dev/tcp/127.0.0.1/5433) 2>/dev/null; then ok "postgres already answering on 127.0.0.1:5433"
+  elif npm run db:start >/dev/null 2>&1; then ok "postgres on 127.0.0.1:5433"
+  else todo "database did not start: docker compose up -d --force-recreate --wait db"; fi
 fi
 
 echo "Sign-ins and files this script cannot create"
