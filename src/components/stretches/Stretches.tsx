@@ -59,6 +59,7 @@ function GroupCard({ d, name, items, tier }: { d: number; name: string; items: S
 
 function Experiments({ day }: { day: number }) {
   const items = useAppStore(x => x.stretchExps);
+  const added = useAppStore(x => x.strWeek.extra);
   const s = useAppStore.getState();
   const [pick, setPick] = useState<Record<string, number>>({});
   const [q, setQ] = useState('');
@@ -77,11 +78,13 @@ function Experiments({ day }: { day: number }) {
         <ul className="explist">
           {shown.map(e => {
             const to = pick[e.id] ?? day;
+            const on = [...new Set(added.filter(x => x.n === e.n).map(x => x.day))].sort((a, b) => a - b); // the days of this week it is already on
             return (
               <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`}>
                 {arming === e.id && <span className="rmtag">Will be deleted · tap Delete again</span>}
                 <div><b className="rmname">{e.n}</b></div>
                 {e.note && <div className="note">{e.note}</div>}
+                {on.length > 0 && <div className="note onday">On {on.map(d => DAY_NAMES[d]).join(', ')} this week</div>}
                 <Link n={e.n} url={e.url} />
                 <div className="actions">
                   <label htmlFor={`sexp-to-${e.id}`}>Add to</label>
@@ -89,6 +92,7 @@ function Experiments({ day }: { day: number }) {
                     {DAYS7.map(d => <option key={d} value={d}>{DAY_NAMES[d]}</option>)}
                   </select>
                   <button type="button" className="btn sm" aria-label={`Add ${e.n} to ${DAY_NAMES[to]}`} onClick={() => s.addStretchToDay(e.id, to)}>Add</button>
+                  <button type="button" className="btn sm ghost" aria-label={`Add ${e.n} to your stretches`} onClick={() => s.promoteStretchExp(e.id)}>To my stretches</button>
                   <button type="button" className="btn sm ghost" aria-label={`Edit ${e.n}`} onClick={() => s.openModal({ type: 'stretchexp', id: e.id })}>Edit</button>
                   <ArmedButton className={`btn sm ${arming === e.id ? 'danger' : 'ghost'}`} label="Delete" armedLabel="Tap again to delete" aria-label={`Delete ${e.n}`} onArmedChange={a => setArming(a ? e.id : null)} onConfirm={() => { setArming(null); s.deleteStretchExp(e.id); }} />
                 </div>
