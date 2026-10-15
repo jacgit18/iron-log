@@ -8,6 +8,8 @@
 #                               a migration must be applied BEFORE the code that needs it goes live.
 #   migrate [--apply]           lists what waits; with --apply: a backup, then dbmate up, then the status again.
 #   catalog <source> [--apply]  npm run catalog:import against production (source: fedb): a dry run, or with --apply a backup, then the write.
+#   injury-default [--apply]    one-off (ADR 045): npm run keep:injury-prevention against production: a dry run, or with --apply a backup, then
+#                               the write (existing accounts keep Injury prevention on). Run right before deploying that change.
 #   reader [--apply]            with --apply: make (or re-key) the read-only role the CI deploy uses to see which migrations production
 #                               has, and store its URL in the GitHub secret MIGRATIONS_CHECK_URL (environment production), never shown.
 #                               It changes a login, not data, so it takes no backup.
@@ -21,11 +23,12 @@ export PROJECT_ID="${PROJECT_ID:-iron-log-jacgit18}"
 DBMATE="${DBMATE:-npx dbmate}"                     # overridable for tests
 BACKUP="${BACKUP:-scripts/backup-cloud-run.sh}"
 CATALOG_IMPORT="${CATALOG_IMPORT:-npm run -s catalog:import --}"
+KEEP_INJURY="${KEEP_INJURY:-npm run -s keep:injury-prevention --}"
 DB_READER="${DB_READER:-node scripts/db-reader.mjs}"
 GH="${GH:-gh}"
 READER_SECRET=MIGRATIONS_CHECK_URL                  # read by the deploy workflow's migration check
 
-usage() { sed -n '5,13p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '5,15p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 owner_url() {
   local url="${PROD_DATABASE_URL:-}"
@@ -84,5 +87,9 @@ case "$cmd" in
     URL="$(owner_url)"
     if $apply; then backup; DATABASE_URL="$URL" $CATALOG_IMPORT --source "$source" --apply
     else DATABASE_URL="$URL" $CATALOG_IMPORT --source "$source"; fi ;;
+  injury-default)
+    URL="$(owner_url)"
+    if $apply; then backup; DATABASE_URL="$URL" $KEEP_INJURY --apply
+    else DATABASE_URL="$URL" $KEEP_INJURY; fi ;;
   *) usage ;;
 esac
