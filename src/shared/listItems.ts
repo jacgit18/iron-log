@@ -23,7 +23,7 @@ export function normStretchItem(x: any): Stretch | null {
 
 export function normStretchExperimentItem(x: any): StretchExperiment | null {
   if (!x || typeof x !== 'object' || !str(x.id, 60) || !str(x.n, 80)) return null;
-  return { id: x.id, n: str(x.n, 80), ...urlOf(x), ...noteOf(x) };
+  return { id: x.id, n: str(x.n, 80), ...urlOf(x), ...noteOf(x), ...(str(x.group, 40) ? { group: str(x.group, 40) } : {}) };
 }
 
 // An exercise to try: an Experiment list entry.

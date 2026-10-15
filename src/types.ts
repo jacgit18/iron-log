@@ -227,7 +227,8 @@ export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: stri
 export type StretchTier = 'primary' | 'secondary' | '';
 /** `catalogId`: added from the catalog (ADR 026, 027): a Library stretch, its name kept from the catalog. Without it the stretch is Custom. */
 export interface Stretch { id: string; n: string; group: string; tier: StretchTier; url?: string; note?: string; catalogId?: string }
-export interface StretchExperiment { id: string; n: string; url?: string; note?: string }
+/** `group`: the group a catalog stretch belongs to (its main muscle), kept so promoting the experiment files it there. */
+export interface StretchExperiment { id: string; n: string; url?: string; note?: string; group?: string }
 export interface StretchExtra extends StretchExperiment { day: number }
 /** One week of stretch check-offs; keys of `done` are "<day 0-6>:<id>". */
 export interface StretchWeek { done: Record<string, true>; skipped: Record<string, true>; extra: StretchExtra[] }
