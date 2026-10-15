@@ -1,8 +1,47 @@
 /* ---------- Storage (db with local fallback) ---------- */
+// A saved value that no longer parses still reads as nothing, but its text is first kept under DAMAGED_PREFIX + key (the first damaged
+// copy wins) and onDamaged listeners are told, so the next save cannot write over it unseen (EH-07). The prefix is outside 'ironlog:', so
+// code that lists the app's own keys never picks a copy up.
+export const DAMAGED_PREFIX = 'ironlog-damaged:';
+type DamagedListener = (k: string) => void;
+const damagedListeners = new Set<DamagedListener>();
+const untold: string[] = []; // found before anyone listened (a module that reads at load); the first listener hears them
+function keepRaw(k: string, raw: string) {
+  try { if (localStorage.getItem(DAMAGED_PREFIX + k) === null) localStorage.setItem(DAMAGED_PREFIX + k, raw); } catch { /* storage full or blocked: still told */ }
+  if (damagedListeners.size) damagedListeners.forEach(fn => fn(k)); else untold.push(k);
+}
+/** Hears the key of each damaged value found. Returns the way to stop. */
+export function onDamaged(fn: DamagedListener): () => void {
+  damagedListeners.add(fn);
+  untold.splice(0).forEach(k => fn(k));
+  return () => { damagedListeners.delete(fn); };
+}
+// The stored text, or null when there is none or storage is blocked.
+const rawOf = (k: string): string | null => { try { return localStorage.getItem('ironlog:' + k); } catch { return null; } };
+const parses = (raw: string) => { try { JSON.parse(raw); return true; } catch { return false; } };
+
 export const LS = {
-  get(k: string): any { try { return JSON.parse(localStorage.getItem('ironlog:' + k) ?? 'null'); } catch { return null; } },
-  set(k: string, v: unknown): boolean { try { localStorage.setItem('ironlog:' + k, JSON.stringify(v)); return true; } catch { return false; } }, // false: the browser refused the write (storage full or blocked)
+  get(k: string): any {
+    const raw = rawOf(k);
+    if (raw === null) return null;
+    try { return JSON.parse(raw); } catch { keepRaw(k, raw); return null; }
+  },
+  set(k: string, v: unknown): boolean { // false: the browser refused the write (storage full or blocked)
+    const raw = rawOf(k);
+    if (raw !== null && !parses(raw)) keepRaw(k, raw);
+    try { localStorage.setItem('ironlog:' + k, JSON.stringify(v)); return true; } catch { return false; }
+  },
   remove(k: string) { try { localStorage.removeItem('ironlog:' + k); } catch { /* ignore */ } },
+  /** Keeps a value that parsed but is not the shape its reader needs, before the reader writes over it. */
+  keepDamaged(k: string, v: unknown) { keepRaw(k, JSON.stringify(v)); },
+  /** Removes every kept damaged copy (erasing this device's data). */
+  forgetDamaged() {
+    try {
+      const keys: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) { const key = localStorage.key(i); if (key?.startsWith(DAMAGED_PREFIX)) keys.push(key); }
+      keys.forEach(key => localStorage.removeItem(key));
+    } catch { /* ignore */ }
+  },
 };
 
 // The GitHub backup feature is gone. Old versions kept a pasted token under this raw key; delete it so no secret is left behind.
