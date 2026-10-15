@@ -9,6 +9,10 @@
 - [ ] **Admin only**: `'admin'` in `FEATURES` (`src/features.ts`), UI behind `useFeature`, `requireAdmin` on any new API route
 - [ ] **Everyone**: released on purpose (`'all'`, or the flag removed)
 
+## Changelog
+
+<!-- One or two sentences for CHANGELOG.md in the project docs (the "PR changelog" check needs real text here; write "n/a: <why>" for a change that needs none). `node scripts/pr-body.mjs --changelog "..."` fills it. -->
+
 ## Checks
 
 - [ ] `npm run typecheck && npm test && npm run lint && npm run build`
