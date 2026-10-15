@@ -144,6 +144,8 @@ export interface Cfg extends ProgramCfg {
   /** Sessions a week you want to do an exercise, by exercise id (1 to 7). */
   freqGoals?: Record<string, number>;
   rest?: number; // rest timer, seconds
+  /** Off (false) turns off the heads-up when a move puts the same muscles on back-to-back days and the day-order suggestions. On when unset. */
+  injuryPrevention?: boolean;
 }
 
 /** An Experiment (or added) card on one week. */

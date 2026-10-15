@@ -13,6 +13,8 @@ type Slot = FlatSlot;
 type Cols = Record<number, Slot[]>;
 
 /* ---------- Config defaults ---------- */
+/** Whether the move heads-ups and day-order suggestions are on (the default). */
+export const injuryPreventionOn = (cfg: { injuryPrevention?: boolean }) => cfg.injuryPrevention !== false;
 export const DEFAULT_CFG: Cfg = { muscleMap: {}, ex: {}, mode: 1, m3Start: 1, m3First: 'A', m2Even: 'A', pct: { strength: 85, iso: 75, hyp: 65, exp: 45 }, rxOverride: {}, rm: {}, phDef: {}, exPh: {} };
 
 /* ---------- Program rotation ---------- */

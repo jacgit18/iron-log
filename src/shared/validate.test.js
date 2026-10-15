@@ -97,6 +97,10 @@ describe('setError', () => {
 });
 
 describe('normConfig, deeper', () => {
+  it('keeps injuryPrevention only as a boolean', () => {
+    expect(normConfig({ injuryPrevention: false }).injuryPrevention).toBe(false);
+    expect('injuryPrevention' in normConfig({ injuryPrevention: 'no' })).toBe(false);
+  });
   it('filters bad percent, 1RM and goal values and keeps the rest', () => {
     const c = normConfig({ pct: { hyp: 70, str: 500, '__proto__': 5 }, rm: { bench: 225, squat: -5, row: 'x' }, bwGoal: { w: 99999 }, liftGoals: { bench: { any: { w: 315 }, hyp: { w: -1 } }, bad: 4 }, backup: { repo: 'me/data' }, ghBackup: { repo: 'me/x', token: 'ghp_secret' }, token: 'ghp_secret' });
     expect(c.pct.hyp).toBe(70); expect(c.pct.str).not.toBe(500);
