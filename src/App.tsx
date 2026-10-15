@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentType, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, type ComponentType, type KeyboardEvent } from 'react';
 import { flag, useAppStore } from './store/useAppStore.js';
 import { takeAfterReload } from './lib/afterReload.js';
 import { progName } from './lib/logic.js';
@@ -8,18 +8,6 @@ import useTabbarHeight from './hooks/useTabbarHeight.js';
 import BoardTab from './components/board/BoardTab.js';
 import TimerBar from './components/TimerBar.js';
 import Toaster from './components/Toaster.js';
-import LogSheet from './components/sheets/LogSheet.js';
-import DetailSheet from './components/sheets/DetailSheet.js';
-import TagSheet from './components/sheets/TagSheet.js';
-import SlotSheet from './components/sheets/SlotSheet.js';
-import ExerciseSheet from './components/sheets/ExerciseSheet.js';
-import DayAddSheet from './components/sheets/DayAddSheet.js';
-import { StretchSheet, StretchExpSheet } from './components/sheets/StretchSheets.js';
-import SupplementSheet from './components/sheets/SupplementSheet.js';
-import ExperimentSheet from './components/sheets/ExperimentSheet.js';
-import NewProgramSheet from './components/sheets/NewProgramSheet.js';
-import ImportSheet from './components/sheets/ImportSheet.js';
-import HelpSheet from './components/sheets/HelpSheet.js';
 import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
 import UpdateBanner from './components/UpdateBanner.js';
@@ -29,7 +17,7 @@ import SignInCard from './components/SignInCard.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
-import { lazyTab } from './lib/lazyTab.js';
+import { lazyTab, mapChunkError } from './lib/lazyTab.js';
 import { renewPush } from './lib/pushClient.js';
 
 // The Board (the first screen) and the shell are in the main bundle; the other tabs are fetched when first opened. Every chunk is in the
@@ -38,30 +26,23 @@ const Daily = lazyTab(() => import('./components/daily/Daily.js'));
 const Progress = lazyTab(() => import('./components/progress/Progress.js'));
 const Editor = lazyTab(() => import('./components/program/Editor.js'));
 const Settings = lazyTab(() => import('./components/settings/Settings.js'));
+// The sheets (log, detail, slot, import, ...) are only drawn once one is opened, so they load as one chunk after the first screen is up
+// rather than before it. They are fetched shortly after, so the first one opens without waiting; offline they come from the precache.
+const loadModal = () => import('./components/sheets/Modal.js');
+const LazyModal = lazy(mapChunkError(loadModal));
+function Modal() {
+  const open = useAppStore(s => s.modal !== null);
+  // Fetched once the first screen is settled, so the first sheet opens without waiting. Not while offline: the browser remembers a failed
+  // import() for the life of the page (see lazyTab.ts), so a prefetch that failed would fail every later open. If a download does fail, the
+  // boundary offers Reload (a ChunkLoadError), which also picks up the service worker's copy.
+  useEffect(() => {
+    const t = setTimeout(() => { if (navigator.onLine !== false) loadModal().catch(() => {}); }, 1500);
+    return () => clearTimeout(t);
+  }, []);
+  return open ? <ErrorBoundary where="view"><Suspense fallback={null}><LazyModal /></Suspense></ErrorBoundary> : null;
+}
 
 const TABS: [string, string, ComponentType][] = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
-
-function Modal() {
-  const modal = useAppStore(s => s.modal);
-  const slotExists = useAppStore(s => (s.modal && s.modal.type === 'log' ? s.logTargetExists(s.modal.slotId, s.modal.idx) : true));
-  if (!modal || !slotExists) return null;
-  switch (modal.type) {
-    case 'log': return <LogSheet key={`${modal.slotId}:${modal.idx}`} slotId={modal.slotId} idx={modal.idx} />;
-    case 'detail': return <DetailSheet exId={modal.exId} />;
-    case 'tags': return <TagSheet key={modal.exId} exId={modal.exId} />;
-    case 'slot': return <SlotSheet key={`slot-${modal.idx}`} idx={modal.idx} col={modal.col} target={modal.target} fromExp={modal.fromExp} />;
-    case 'experiment': return <ExperimentSheet key={modal.id || 'new'} id={modal.id} />;
-    case 'stretch': return <StretchSheet key={modal.id || 'new'} id={modal.id} />;
-    case 'stretchexp': return <StretchExpSheet key={modal.id || 'new'} id={modal.id} />;
-    case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} />;
-    case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;
-    case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
-    case 'newprog': return <NewProgramSheet />;
-    case 'import': return <ImportSheet />;
-    case 'help': return <HelpSheet />;
-    default: return null;
-  }
-}
 
 export default function App() {
   const tab = useAppStore(s => s.tab);

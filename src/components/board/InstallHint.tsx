@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { usePwa, install, isIOS } from '../../lib/pwa.js';
 import { showInstallHint, installHintDismissed, dismissInstallHint } from '../../lib/installHint.js';
+import './InstallHint.css';
 
 // One-time notice, on any tab, once the person is in: install the app. Dismissing it hides it for good on this device.
 export default function InstallHint() {
