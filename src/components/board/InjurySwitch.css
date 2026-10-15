@@ -4,6 +4,8 @@
   gap: 10px;
   min-height: 44px;
   cursor: pointer;
+  /* The right end of the Sort & filter row. It follows the fields in the page, so the Tab order matches what is drawn. */
+  margin-left: auto;
 }
 .injsw-input {
   position: absolute;
