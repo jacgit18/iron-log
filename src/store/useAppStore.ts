@@ -520,8 +520,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { cfg, week } = get(); const slots = get().activeSlots();
     const lines = [...new Set(cards.flatMap(s => moveClashes(cfg, week, slots, s, day)))];
     const fromShown = colOf(week0, week0.moved[cards[0].id] || cards[0].day);
-    set({ moveNote: lines.length && injuryPreventionOn(cfg) ? { batch, fromShown, to: day, week: get().weekKey(), lines } : null });
-    flag(`Moved ${cards.length} to Day ${day}${lines.length ? ' · heads-up' : ''}`);
+    const warn = lines.length > 0 && injuryPreventionOn(cfg);
+    set({ moveNote: warn ? { batch, fromShown, to: day, week: get().weekKey(), lines } : null });
+    flag(`Moved ${cards.length} to Day ${day}${warn ? ' · heads-up' : ''}`);
   },
   // Experiment board: a list of exercises to try, added to a day of the viewed week as a card for that week.
   setExperiments(experiments) { set({ experiments }); get().saveExperiments(); },
@@ -792,8 +793,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { cfg, week } = get();
     const slots = get().activeSlots(); const clashes = moveClashes(cfg, week, slots, s, day);
     const fromShown = colOf(week0, from);
-    set({ moveNote: clashes.length && injuryPreventionOn(cfg) ? { slot: slotId, from, fromShown, to: day, week: get().weekKey(), lines: clashes, alt: altDay(cfg, week, slots, s, day, fromShown) } : null });
-    flag(clashes.length ? `Moved to Day ${day} · heads-up` : `Moved to Day ${day}`);
+    const warn = clashes.length > 0 && injuryPreventionOn(cfg);
+    set({ moveNote: warn ? { slot: slotId, from, fromShown, to: day, week: get().weekKey(), lines: clashes, alt: altDay(cfg, week, slots, s, day, fromShown) } : null });
+    flag(warn ? `Moved to Day ${day} · heads-up` : `Moved to Day ${day}`);
   },
   undoMove() {
     const n = get().moveNote; if (!n || n.week !== get().weekKey()) return;

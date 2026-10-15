@@ -368,6 +368,7 @@ describe('swap days', () => {
     st().moveSlot('A-d6s5', 5);
     expect(st().week.moved['A-d6s5']).toBe(5); // the move itself still happens
     expect(st().moveNote).toBeNull();
+    expect(st().saveFlag).not.toMatch(/heads-up/);
     st().setInjuryPrevention(true);
     expect(st().cfg.injuryPrevention).toBeUndefined();
     st().moveSlot('A-d6s5', 6);

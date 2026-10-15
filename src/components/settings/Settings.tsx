@@ -218,7 +218,7 @@ function InjuryPanel() {
     <section className="panel">
       <h3>Injury prevention</h3>
       <p>Warns when a move puts the same muscles on back-to-back days, and suggests a better day order after you finish a day.</p>
-      <label className="inline"><input type="checkbox" role="switch" checked={on} onChange={e => st.setInjuryPrevention(e.target.checked)} /> {on ? 'On' : 'Off'}</label>
+      <label className="inline"><input type="checkbox" role="switch" aria-label="Injury prevention" checked={on} onChange={e => st.setInjuryPrevention(e.target.checked)} /> {on ? 'On' : 'Off'}</label>
       <More about="injury prevention">
         <p>When this is off, moving a card or a day never shows the Heads-up, and finishing a day never shows the Back-to-back suggestion. Undo for ticks, skips and removals still works, and so does moving cards yourself.</p>
       </More>
