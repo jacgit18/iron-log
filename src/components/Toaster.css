@@ -72,3 +72,39 @@ body.timing .toasts {
 .toastinfo:empty {
   margin-block-end: -8px;
 }
+
+/* The Board's notices, most important first. Two show; the rest wait behind them (still there, with their clock stopped) and a
+   "+n more" line says so. A notice that goes, by Dismiss, Undo or its clock, lets the next one up. */
+.toastlist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  counter-reset: more;
+}
+.toastlist:empty {
+  display: none;
+}
+.toastlist > .notice:nth-child(n+3) {
+  visibility: hidden;
+  height: 0;
+  min-height: 0;
+  margin: -8px 0 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  box-shadow: none;
+  counter-increment: more;
+}
+.toastlist::after {
+  content: "+" counter(more) " more";
+  align-self: flex-start;
+  font-size: .75rem;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--sunk);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.toastlist:not(:has(> .notice:nth-child(3)))::after {
+  display: none;
+}
