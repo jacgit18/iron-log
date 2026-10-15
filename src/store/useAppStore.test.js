@@ -69,6 +69,15 @@ describe('checking off on the board', () => {
     expect(st().week.done['A-d1s6#0']).toBe(true);
   });
 
+  it('ticking the second half of a superset completes the card and is not an uncheck', () => {
+    useAppStore.setState({ uncheckNote: null });
+    st().checkItem('A-d2s6', 0, true);
+    st().checkItem('A-d2s6', 1, true);
+    expect(st().week.done['A-d2s6']).toBe(true);
+    expect(st().uncheckNote).toBeNull();
+    st().checkItem('A-d2s6', 1, false); // really unticking one half does leave the notice
+    expect(st().uncheckNote).not.toBeNull();
+  });
   it('skipping says nothing in the status line (its notice has the Undo); un-skipping does', () => {
     useAppStore.setState({ skipNote: null, saveFlag: '' });
     st().skipCard('A-d3s1');
