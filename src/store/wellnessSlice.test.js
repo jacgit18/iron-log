@@ -113,6 +113,19 @@ describe('stretches', () => {
     expect(st().stretchExps[0].note).toBe('new note');
     expect(st().saveStretchExp({ id: e.id, n: st().stretches[0].n })).toMatch(/already have that stretch/); // renaming onto one is still refused
   });
+  it('moves a stretch experiment into your stretches as library only, and Undo puts it back', () => {
+    expect(st().saveStretchExp({ n: 'Frog Stretch', url: 'https://example.com/frog', note: 'slow' })).toBeNull();
+    const e = st().stretchExps[0]; const before = st().stretches.length;
+    expect(st().promoteStretchExp(e.id)).toBe(true);
+    expect(st().stretchExps).toEqual([]);
+    expect(st().stretches).toHaveLength(before + 1);
+    expect(st().stretches.at(-1)).toMatchObject({ n: 'Frog Stretch', tier: '', url: 'https://example.com/frog', note: 'slow' });
+    expect(saved('stretches/main').items).toHaveLength(before + 1);
+    st().undoRemoved();
+    expect(st().stretchExps).toEqual([e]);
+    expect(st().stretches).toHaveLength(before);
+    expect(st().promoteStretchExp('nope')).toBe(false);
+  });
   it('Undo puts back a removed day stretch with its tick, and a deleted experiment', () => {
     expect(st().saveStretchExp({ n: 'Frog Stretch', note: 'try' })).toBeNull();
     const e = st().stretchExps[0];
