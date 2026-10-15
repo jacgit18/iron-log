@@ -15,7 +15,7 @@ const addItem = async (page, n, store, every) => {
 };
 const reload = async page => {
   await page.reload();
-  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
 };
 const item = (id, n, over = {}) => ({ id, n, store: '', qty: 1, cents: null, every: true, out: false, ...over });
 

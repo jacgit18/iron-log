@@ -33,7 +33,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
 
   // The same phone, reloaded: it shows what the server holds.
   await page.reload(); // the app reopens on the tab it was on
-  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await page.locator('#tab-progress').click();
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(page.locator('table.hist tbody tr')).toHaveCount(1);
@@ -67,7 +67,7 @@ test('offline, a tick is kept and the app says so; back online it arrives and th
   await page.reload().catch(() => {});
   await a.context.setOffline(false);
   await page.goto('/');
-  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await expect(page.locator('#chk-A-d1s1')).toBeChecked({ timeout: 30_000 });
 
   await expect.poll(async () => (await server.entries(user)).filter(e => e.auto).length, { timeout: 30_000 }).toBe(1);
@@ -183,7 +183,7 @@ test('data from before accounts is uploaded once, all of it, and a second phone 
 
   // Reloading does not offer it again, and a second phone with nothing of its own sees the same.
   await page.reload();
-  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await expect(page.getByRole('status').filter({ hasText: 'Upload this device’s data?' })).toHaveCount(0);
   const b = await newPhone(browser, user);
   const second = await b.open({ blank: true }); // the upload has no program, so the board is blank (ADR 021); the history is there
@@ -202,7 +202,7 @@ test('once something new is logged the upload is no longer possible, and the car
   // The account gets data from somewhere else (another phone) before this one uploads. A new account's board has no card to tick here.
   await server.seedPrograms(user);
   await page.reload();
-  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   const info = page.getByRole('status').filter({ hasText: 'Old data on this device' });
   await expect(info).toBeVisible();
   await expect(info).toContainText('cannot be added automatically');
@@ -210,7 +210,7 @@ test('once something new is logged the upload is no longer possible, and the car
   await info.getByRole('button', { name: 'Got it' }).click();
   await expect(info).toHaveCount(0);
   await page.reload();
-  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await expect(page.getByRole('status').filter({ hasText: /Old data on this device|Upload this device/ })).toHaveCount(0);
   await a.close();
 });
@@ -267,7 +267,7 @@ test('erasing everything from one phone empties the database, and the other phon
 
   // The other phone drops its copy at its next pull; a reload is one.
   await second.reload();
-  await expect(second.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(second.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await expect(second.locator('#chk-A-d1s1')).toHaveCount(0); // the account is empty again, so its board is blank (ADR 016)
   await a.close();
   await b.close();

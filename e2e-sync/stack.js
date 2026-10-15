@@ -80,7 +80,7 @@ export async function newPhone(browser, user, old = {}) {
       await page.goto('/');
       if (!blank) await expect(page.locator('#chk-A-d1s1')).toBeVisible({ timeout: 30_000 });
       // The store refuses writes until everything has loaded, which waits for the first pull: wait for that, not just the board.
-      await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+      await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
       return page;
     },
     close: () => context.close(),
