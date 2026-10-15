@@ -2710,11 +2710,20 @@ html:has(.sjump) {
     padding-bottom: calc(var(--tabbar) + 72px + env(safe-area-inset-bottom, 0px));
   }
   header.top {
+    display: grid;
+    grid-template-columns: auto minmax(0,1fr) auto;
+    align-items: center;
     padding-block: 12px 6px;
-    gap: 8px 12px;
+    gap: 4px 8px;
   }
   header.top h1 {
     font-size: 1.5rem;
+  }
+  .btn.helpbtn {
+    padding-inline: 8px;
+  }
+  header.top .pill {
+    padding-inline: 8px;
   }
   .tabs {
     position: fixed;
@@ -3623,6 +3632,16 @@ fieldset.plain legend {
 @media (pointer:coarse) {
   input:not([type=checkbox]):not([type=radio]),select,textarea {
     font-size: max(1rem,16px) !important;
+  }
+}
+
+/* Narrow phones (360px and below): one step smaller title and a tighter row, so Help and the signed-in badge stay on the first line. */
+@media (max-width:380px) {
+  header.top {
+    column-gap: 6px;
+  }
+  header.top h1 {
+    font-size: 1.25rem;
   }
 }
 

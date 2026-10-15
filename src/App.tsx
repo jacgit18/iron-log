@@ -20,6 +20,7 @@ import ExperimentSheet from './components/sheets/ExperimentSheet.js';
 import NewProgramSheet from './components/sheets/NewProgramSheet.js';
 import ImportSheet from './components/sheets/ImportSheet.js';
 import HelpSheet from './components/sheets/HelpSheet.js';
+import AccountBadge from './components/AccountBadge.js';
 import UpdateBanner from './components/UpdateBanner.js';
 import LegacyCard from './components/LegacyCard.js';
 import OtherAccountCard from './components/OtherAccountCard.js';
@@ -120,6 +121,7 @@ export default function App() {
               ))}
             </div>
           </nav>
+          <AccountBadge />
         </header>
         <UpdateBanner />
         <OfflineNotice />
