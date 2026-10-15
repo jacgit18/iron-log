@@ -47,3 +47,13 @@ describe('the Lighthouse line', () => {
     expect(touchesUi(['server/app.ts', 'src/lib/logic.ts', 'scripts/check.mjs'])).toBe(false);
   });
 });
+
+describe('the Changelog section', () => {
+  it('is filled from --what, or from --changelog when given, and keeps the hint comment', () => {
+    expect(buildBody(template, 'na', 'Does the thing.')).toMatch(/## Changelog\n\n<!--[\s\S]*?-->\nDoes the thing\.\n/);
+    expect(buildBody(template, 'na', 'Long what.', false, 'Short entry.')).toMatch(/## Changelog[\s\S]*?-->\nShort entry\.\n/);
+  });
+  it('stays empty when nothing is given, so the check can fail it', () => {
+    expect(buildBody(template, 'na')).not.toMatch(/## Changelog[\s\S]*?-->\n\S/);
+  });
+});
