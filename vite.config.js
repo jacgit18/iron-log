@@ -57,7 +57,7 @@ function checkReferencedAssets() {
       if (!existsSync(dir)) return;
       const have = new Set(readdirSync(dir));
       const missing = new Set();
-      const scan = file => { for (const [, name] of readFileSync(file, 'utf8').matchAll(/assets\/([\w.-]+\.(?:js|css))/g)) if (!have.has(name)) missing.add(name); };
+      const scan = file => { for (const [, name] of readFileSync(file, 'utf8').matchAll(/assets\/([\w.-]+\.(?:js|css))\b/g)) if (!have.has(name)) missing.add(name); };
       for (const f of have) if (/\.(js|css)$/.test(f)) scan(join(dir, f));
       if (existsSync(join(outDir, 'index.html'))) scan(join(outDir, 'index.html'));
       if (missing.size) throw new Error(`The build refers to files that are not in it: ${[...missing].join(', ')}`);
@@ -74,7 +74,8 @@ function noWellKnownFallback() {
   const dist = join(process.cwd(), 'dist');
   const notFound = (req, res, next) => { if (req.url.startsWith('/.well-known/')) { res.statusCode = 404; res.end(); } else next(); };
   const missingAsset = (req, res, next) => {
-    const path = decodeURIComponent(req.url.split('?')[0]);
+    let path;
+    try { path = decodeURIComponent(req.url.split('?')[0]); } catch { res.statusCode = 404; res.end(); return; } // a malformed escape is not a file
     const at = path.indexOf('/assets/');
     if (at >= 0 && !path.includes('..') && !existsSync(join(dist, path.slice(at)))) { res.statusCode = 404; res.end(); } else next();
   };
