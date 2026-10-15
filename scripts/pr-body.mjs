@@ -32,7 +32,7 @@ export function buildBody(template, audience, what = '', ui = false) {
   const out = template.split('\n').map(line => {
     if (/^## /.test(line)) inAudience = /^## Audience/.test(line);
     if (inAudience && /^- \[ \]/.test(line)) return line.includes(LABELS[audience]) ? line.replace('- [ ]', '- [x]') : line;
-    if (!ui && /^- \[ \].*Lighthouse run/.test(line)) return line.replace('- [ ]', '- [x]'); // not a UI change: n/a, as the line says
+    if (!ui && /^- \[ \].*lighthouse\.mjs/i.test(line)) return line.replace('- [ ]', '- [x]'); // not a UI change: n/a, as the line says
     return line;
   }).join('\n');
   const body = what ? out.replace(/^## What and why\n\n/m, () => `## What and why\n\n${what.trim()}\n`) : out;

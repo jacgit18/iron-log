@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { buildBody, inferAudience, touchesUi } from './pr-body.mjs';
 
 const template = readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8');
-const ticked = body => body.split('\n').filter(l => /^- \[x\]/i.test(l));
-const withLighthouse = template.replace('- [ ] `feature-map.md`', '- [ ] UI change: Lighthouse run, before and after in the description (n/a otherwise)\n- [ ] `feature-map.md`');
+// The ticked boxes under Audience (the part the CI check counts).
+const ticked = body => (body.match(/## Audience[\s\S]*?(?=\n## |$)/) || [''])[0].split('\n').filter(l => /^- \[x\]/i.test(l));
 
 describe('inferAudience', () => {
   it('is n/a when nothing a user can see changed', () => {
@@ -37,8 +37,8 @@ describe('buildBody', () => {
 
 describe('the Lighthouse line', () => {
   it('is ticked for a change that touches no UI and left for the author on a UI change', () => {
-    expect(buildBody(withLighthouse, 'na', '', false)).toMatch(/- \[x\] UI change: Lighthouse run/);
-    expect(buildBody(withLighthouse, 'everyone', '', true)).toMatch(/- \[ \] UI change: Lighthouse run/);
+    expect(buildBody(template, 'na', '', false)).toMatch(/- \[x\].*lighthouse\.mjs/);
+    expect(buildBody(template, 'everyone', '', true)).toMatch(/- \[ \].*lighthouse\.mjs/);
   });
   it('knows what touches the UI', () => {
     expect(touchesUi(['src/components/board/Card.tsx'])).toBe(true);
