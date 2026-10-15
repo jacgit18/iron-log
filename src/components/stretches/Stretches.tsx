@@ -83,7 +83,7 @@ function Experiments({ day }: { day: number }) {
             return (
               <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`}>
                 {arming === e.id && <span className="rmtag">Will be deleted · tap Delete again</span>}
-                <div><b className="rmname">{e.n}</b></div>
+                <div><b className="rmname">{e.n}</b>{e.group && <> <span className="tag">{e.group}</span></>}</div>
                 {e.note && <div className="note">{e.note}</div>}
                 {on.length > 0 && <div className="note onday">On {on.map(d => DAY_NAMES[d]).join(', ')} this week</div>}
                 <Link n={e.n} url={e.url} />

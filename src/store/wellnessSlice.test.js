@@ -113,6 +113,17 @@ describe('stretches', () => {
     expect(st().stretchExps[0].note).toBe('new note');
     expect(st().saveStretchExp({ id: e.id, n: st().stretches[0].n })).toMatch(/already have that stretch/); // renaming onto one is still refused
   });
+  it('keeps the group a catalog stretch came with on the experiment, and drops a blank one', async () => {
+    const { normStretchExperimentItem } = await import('../shared/listItems.js');
+    expect(st().saveStretchExp({ n: 'Calf Stretch', group: ' Calves ' })).toBeNull();
+    expect(st().stretchExps[0]).toMatchObject({ n: 'Calf Stretch', group: 'Calves' });
+    expect(saved('stretches/main').experiments[0].group).toBe('Calves');
+    const e = st().stretchExps[0];
+    expect(st().saveStretchExp({ id: e.id, n: 'Calf Stretch', group: '' })).toBeNull();
+    expect('group' in st().stretchExps[0]).toBe(false);
+    expect(normStretchExperimentItem({ id: 'a', n: 'X', group: 'g'.repeat(60) }).group).toHaveLength(40);
+    expect(normStretchExperimentItem({ id: 'a', n: 'X', group: 5 })).toEqual({ id: 'a', n: 'X' });
+  });
   it('moves a stretch experiment into your stretches as library only, and Undo puts it back', () => {
     expect(st().saveStretchExp({ n: 'Frog Stretch', url: 'https://example.com/frog', note: 'slow' })).toBeNull();
     const e = st().stretchExps[0]; const before = st().stretches.length;
@@ -125,6 +136,15 @@ describe('stretches', () => {
     expect(st().stretchExps).toEqual([e]);
     expect(st().stretches).toHaveLength(before);
     expect(st().promoteStretchExp('nope')).toBe(false);
+  });
+  it('files a promoted stretch experiment under the group it came with, else the default', () => {
+    expect(st().saveStretchExp({ n: 'Calf Stretch', group: 'Calves' })).toBeNull();
+    expect(st().saveStretchExp({ n: 'Frog Stretch' })).toBeNull();
+    const [calf, frog] = st().stretchExps;
+    expect(st().promoteStretchExp(calf.id)).toBe(true);
+    expect(st().stretches.at(-1)).toMatchObject({ n: 'Calf Stretch', group: 'Calves', tier: '' });
+    expect(st().promoteStretchExp(frog.id)).toBe(true);
+    expect(st().stretches.at(-1)).toMatchObject({ n: 'Frog Stretch', group: 'Other' });
   });
   it('Undo puts back a removed day stretch with its tick, and a deleted experiment', () => {
     expect(st().saveStretchExp({ n: 'Frog Stretch', note: 'try' })).toBeNull();
