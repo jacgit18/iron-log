@@ -8,6 +8,8 @@
 #             With VAPID_SUBJECT exported (mailto:you@example.com) it also stores the Web Push keys, making the pair once; see push-setup (ADR 044)
 #   push-setup  make the Cloud Tasks queue, the invoker account and the permissions for Web Push (once; needs the cloudtasks API)
 #   url       print the address the service will have, for the Google console's redirect URI (needs no deploy)
+#             The key that seals names and emails in the database (PII_ENCRYPTION_KEY, ADR 046) is made here once and never replaced: a
+#             new one could not read what the old one sealed. Back it up (see deploy-runbook.md) before the first deploy that uses it.
 #   (RESEND_OFF=1 on candidate or deploy turns the email sign-in code off: the key is left out and the service stops mapping it;
 #    PUSH_OFF=1 does the same for Web Push: the keys and the queue settings are removed from the service)
 #   deploy    build the image from the current commit and deploy it at once (100% of traffic; the manual and emergency way)
@@ -71,6 +73,11 @@ sys.exit(0 if any(e.get("name") == sys.argv[1] and e.get("valueFrom", {}).get("s
 }
 resend_secret_wanted() { secret_wanted "$RESEND_SECRET" RESEND_API_KEY RESEND_OFF; }
 
+# The key that seals names and emails in the database (ADR 046). No OFF switch: rows already sealed need it, and the app would write
+# new ones in the clear without it.
+PII_SECRET="iron-log-pii-key"
+pii_secret_wanted() { secret_wanted "$PII_SECRET" PII_ENCRYPTION_KEY PII_NEVER_OFF; }
+
 # Web Push (ADR 044): three secrets (the VAPID pair and the contact address; the public key and the address are not secret, but a CI
 # deploy can only pass what it can name, not read) and a Cloud Tasks queue with an account that signs each task.
 VAPID_PUBLIC_SECRET="iron-log-vapid-public-key"
@@ -121,8 +128,11 @@ cmd_secrets() {
   printf '%s' "$GOOGLE_CLIENT_SECRET" | put_secret iron-log-google-client-secret
   # A fresh signing secret for production, made here and never shown. An existing one is kept: changing it signs everyone out.
   if ! secret_exists iron-log-auth-secret; then openssl rand -base64 48 | tr -d '\n' | put_secret iron-log-auth-secret; else echo "  iron-log-auth-secret: kept"; fi
+  # The key that seals names and emails in the database (ADR 046): 32 random bytes, made once and NEVER replaced. Putting in a new
+  # one would leave every sealed name and email unreadable. It is not shown; back it up as the runbook says.
+  if ! secret_exists "$PII_SECRET"; then openssl rand -base64 32 | tr -d '\n' | put_secret "$PII_SECRET"; else echo "  $PII_SECRET: kept"; fi
   # Optional: the Resend key for the emailed sign-in code. Not exporting it leaves the feature off (or as it already is).
-  local secret_names=(iron-log-app-database-url iron-log-google-client-id iron-log-google-client-secret iron-log-auth-secret)
+  local secret_names=(iron-log-app-database-url iron-log-google-client-id iron-log-google-client-secret iron-log-auth-secret "$PII_SECRET")
   if [ -n "${RESEND_API_KEY:-}" ]; then
     printf '%s' "$RESEND_API_KEY" | put_secret "$RESEND_SECRET"
     secret_names+=("$RESEND_SECRET")
@@ -179,6 +189,7 @@ deploy_image() {
   gc run services describe "$SERVICE" --region "$REGION" >/dev/null 2>&1 || public=(--allow-unauthenticated)
   local secrets="APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest"
   if resend_secret_wanted; then secrets+=",RESEND_API_KEY=${RESEND_SECRET}:latest"; echo "Email sign-in code: RESEND_API_KEY is passed to the service."; else echo "Email sign-in code: no RESEND_API_KEY, so the feature stays off${RESEND_OFF:+ (RESEND_OFF=1: any mapping is removed)}."; fi
+  if pii_secret_wanted; then secrets+=",PII_ENCRYPTION_KEY=${PII_SECRET}:latest"; echo "Database encryption: PII_ENCRYPTION_KEY is passed to the service."; else echo "Database encryption: no key yet, so names and emails are stored as before."; fi
   # Web Push (ADR 044): the keys as secrets, and where the queue and its signing account are (they are named by project, region and the
   # defaults above, so a CI deploy can pass them without looking anything up). PUSH_OFF=1 removes all of it.
   local push_env=() push_remove=()
