@@ -21,7 +21,7 @@ function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; 
       <legend>{legend}</legend>
       <ExerciseField cfg={cfg} id={`slot-ex-${k}`} name={it.nm} url={it.nu || ''} eq={it.ne || ''} onName={nm => up({ nm })} onUrl={nu => up({ nu })} onEq={ne => up({ ne: ne as EquipmentId | '' })} cat={it.cat} onCat={cat => up({ cat })} />
       <div className="fields">
-        <label className="field">Phase
+        <label className="field">Program phase for this card, every week
           <select value={it.ph || ''} onChange={e => up({ ph: (e.target.value || null) as PhaseChoice })}>
             <option value="">None</option>
             {PH_KEYS.map(p => <option key={p} value={p}>{PHASES[p].label}</option>)}

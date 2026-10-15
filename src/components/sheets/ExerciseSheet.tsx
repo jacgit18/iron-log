@@ -68,7 +68,7 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
           <input type="number" inputMode="decimal" step="any" min="0" value={d.rm} placeholder="not set" onChange={e => up({ rm: e.target.value })} />
         </label>
       </div>
-        <label className="field">Default phase for every card with this exercise
+        <label className="field">Phase for this exercise on every card (replaces saved card phases)
           <select value={d.ph ?? ''} onChange={e => up({ ph: e.target.value as PhaseChoice })}>
             <option value="">Use each card's own</option>
             {PH_KEYS.map(p => <option key={p} value={p}>{PHASES[p].label}</option>)}
