@@ -47,6 +47,6 @@ test('a stretch experiment shows the days it was added to this week', async ({ p
   const card = page.locator('.explist .expcard');
   await expect(card.locator('.onday')).toHaveCount(0);
   await card.locator('select').selectOption('3');
-  await card.getByRole('button', { name: /^Add Frog Stretch to/ }).click();
+  await card.getByRole('button', { name: 'Add Frog Stretch to Wednesday' }).click();
   await expect(card.locator('.onday')).toHaveText('On Wednesday this week');
 });
