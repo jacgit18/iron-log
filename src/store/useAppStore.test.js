@@ -65,6 +65,14 @@ describe('checking off on the board', () => {
     expect(st().week.done['A-d1s6#0']).toBe(true);
   });
 
+  it('skipping says nothing in the status line (its notice has the Undo); un-skipping does', () => {
+    useAppStore.setState({ skipNote: null, saveFlag: '' });
+    st().skipCard('A-d3s1');
+    expect(st().skipNote).not.toBeNull();
+    expect(st().saveFlag).toBe('');
+    st().skipCard('A-d3s1'); // skipped again by the same toggle: un-skip
+    expect(st().saveFlag).toBe('Skip undone');
+  });
   it('skipping leaves a notice whose Undo un-skips the card and puts back the ticks and entry the skip cleared', () => {
     useAppStore.setState({ skipNote: null });
     st().skipCard('A-d3s1');
@@ -357,6 +365,15 @@ describe('swap days', () => {
     expect(st().moveNote.alt).toBe(7); // Day 6 is where it came from; Day 7 is empty
     st().moveSlot('A-d6s5', st().moveNote.alt);
     expect(st().moveNote).toBeNull();
+  });
+  it('a clashing move leaves the heads-up to its notice and a clean move says where it went in the status line', () => {
+    useAppStore.setState({ saveFlag: '' });
+    st().moveSlot('A-d6s5', 5); // clashes with Day 4
+    expect(st().moveNote).not.toBeNull();
+    expect(st().saveFlag).toBe('');
+    st().moveSlot('A-d6s5', 7); // no clash
+    expect(st().moveNote).toBeNull();
+    expect(st().saveFlag).toBe('Moved to Day 7');
   });
   it('with injury prevention off, a clashing move shows no heads-up, and turning it off drops one showing', () => {
     st().moveSlot('A-d6s5', 5);
