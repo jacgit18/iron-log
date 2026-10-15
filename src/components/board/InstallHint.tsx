@@ -7,7 +7,9 @@ import { showInstallHint, installHintDismissed, dismissInstallHint } from '../..
 export default function InstallHint() {
   const { installEvent, installed } = usePwa();
   const [dismissed, setDismissed] = useState(installHintDismissed);
-  const signedOut = useAppStore(st => st.sync?.state === 'paused' && st.sync.pausedBecause === 'auth');
+  // With sync on, wait until the data has loaded and nobody needs to sign in or pick an account: until then the cards for those are
+  // what the person should see (the iPhone path has no browser event to wait for, so it would show at once).
+  const signedOut = useAppStore(st => st.sync !== null && (!st.isReady() || (st.sync.state === 'paused' && (st.sync.pausedBecause === 'auth' || st.sync.pausedBecause === 'account'))));
   if (!showInstallHint({ installed, canPrompt: !!installEvent, ios: isIOS(), signedOut, dismissed })) return null;
   const hide = () => { dismissInstallHint(); setDismissed(true); };
   return (
