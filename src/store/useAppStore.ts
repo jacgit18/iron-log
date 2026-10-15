@@ -144,12 +144,6 @@ const queue = makeSaveQueue({
   onStored: takeStoredWeek, rebase: rebaseWeek,
   onError: (err: unknown) => { console.error(err); reportCaught(err); },
 });
-// Saved data that could not be read: LS kept a copy before anything could write over it. Say so (it stays until a tap) and report the
-// key, never the data.
-onDamaged(k => {
-  flag('Could not read some saved data. A copy was kept');
-  reportCaught(new Error(`Damaged saved data: ${k}`));
-});
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
 // "Saved" / "Loading…" never replaces a message you haven't had the chance to act on yet.
@@ -1181,6 +1175,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     subscribeWeek();
   },
 }));
+
+// Saved data that could not be read: LS kept a copy before anything could write over it. Say so (it stays until a tap) and report the
+// key, never the data. Subscribed only now that the store exists: a key found damaged while the modules loaded (the admin flag) is told
+// at once, and flag() needs the store.
+onDamaged(k => {
+  flag('Could not read some saved data. A copy was kept');
+  reportCaught(new Error(`Damaged saved data: ${k}`));
+});
 
 // Saved on this device: another tab (or the installed app next to a browser tab) wrote this data. Take its copy, so
 // this tab's next save of it doesn't put back what it held before.
