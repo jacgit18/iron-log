@@ -20,6 +20,7 @@ import ExperimentSheet from './components/sheets/ExperimentSheet.js';
 import NewProgramSheet from './components/sheets/NewProgramSheet.js';
 import ImportSheet from './components/sheets/ImportSheet.js';
 import HelpSheet from './components/sheets/HelpSheet.js';
+import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
 import UpdateBanner from './components/UpdateBanner.js';
 import LegacyCard from './components/LegacyCard.js';
@@ -128,6 +129,7 @@ export default function App() {
         <SyncNotice />
         <SignInCard />
         <OtherAccountCard />
+        <InstallHint />
         <LegacyCard />
         {/* Stays until the writes go through: a passing message isn't enough when data would be gone on reload. */}
         {unsaved.length > 0 && !syncing && (

@@ -1,13 +1,14 @@
 import { useState } from 'react';
+import { useAppStore } from '../../store/useAppStore.js';
 import { usePwa, install, isIOS } from '../../lib/pwa.js';
 import { showInstallHint, installHintDismissed, dismissInstallHint } from '../../lib/installHint.js';
 
-// One-time board notice: install the app. Dismissing it hides it for good on this device.
+// One-time notice, on any tab, once the person is in: install the app. Dismissing it hides it for good on this device.
 export default function InstallHint() {
   const { installEvent, installed } = usePwa();
   const [dismissed, setDismissed] = useState(installHintDismissed);
-  const phone = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-  if (!showInstallHint({ installed, canPrompt: !!installEvent, ios: isIOS(), phone, dismissed })) return null;
+  const signedOut = useAppStore(st => st.sync?.state === 'paused' && st.sync.pausedBecause === 'auth');
+  if (!showInstallHint({ installed, canPrompt: !!installEvent, ios: isIOS(), signedOut, dismissed })) return null;
   const hide = () => { dismissInstallHint(); setDismissed(true); };
   return (
     <div className="notice tip" id="install-hint">

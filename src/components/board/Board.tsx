@@ -15,7 +15,6 @@ import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
 import FirstRun from './FirstRun.jsx';
 import InjurySwitch from './InjurySwitch.jsx';
-import InstallHint from './InstallHint.jsx';
 import './BoardTop.css';
 import './DayHeader.css';
 
@@ -143,7 +142,6 @@ export default function Board() {
       </div>
 
       {!fromRecord && !programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
-      <InstallHint />
       {storeMode === 'local' && !tipHidden('hidelocal') && (
         <div className="notice tip">
           <span>{window.claude ? 'Saving on this device only. Open the published page on claude.ai to keep your log everywhere.' : 'Your data is saved in this browser only. Use Export all data in Settings to keep a copy.'}</span>
