@@ -27,6 +27,15 @@ export function inferAudience(files, diff = '') {
 /** True when the change can move a Lighthouse score: UI code, styles, fonts, images, the page shell or the build config. */
 export const touchesUi = files => files.some(f => /^src\/(components|hooks|assets)\//.test(f) || /\.(css|tsx|svg|png|webp|woff2?)$/.test(f) || f === 'index.html' || /^vite\.config\./.test(f) || f.startsWith('public/'));
 
+/** A changelog entry from a long description: whole sentences up to 600 characters, never cut mid-word. */
+export function shorten(text, max = 600) {
+  const t = text.trim().replace(/\s+/g, ' ');
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  return end > 0 ? cut.slice(0, end + 1) : cut.slice(0, cut.lastIndexOf(' ')) + '…';
+}
+
 /** The template with exactly one Audience box ticked and the What section filled in. A change that touches no UI (`ui` false) also gets the Lighthouse line under Checks ticked, since the line reads n/a then; for a UI change it stays open for the author to tick after running `scripts/lighthouse.mjs`, because that run is theirs to do. */
 export function buildBody(template, audience, what = '', ui = false, changelog = '') {
   let inAudience = false;
@@ -36,7 +45,7 @@ export function buildBody(template, audience, what = '', ui = false, changelog =
     if (!ui && /^- \[ \].*lighthouse\.mjs/i.test(line)) return line.replace('- [ ]', '- [x]'); // not a UI change: n/a, as the line says
     return line;
   }).join('\n');
-  const entry = (changelog || what).trim().replace(/\s+/g, ' ').slice(0, 600);
+  const entry = changelog ? changelog.trim().replace(/\s+/g, ' ') : shorten(what);
   const withLog = entry ? out.replace(/^(## Changelog\n\n)((?:<!--[\s\S]*?-->\n)?)/m, (_, h, c) => `${h}${c}${entry}\n`) : out;
   const body = what ? withLog.replace(/^## What and why\n\n/m, () => `## What and why\n\n${what.trim()}\n`) : withLog;
   const audienceSection = body.split('\n').reduce((acc, line) => { if (/^## /.test(line)) acc.on = /^## Audience/.test(line); if (acc.on) acc.lines.push(line); return acc; }, { on: false, lines: [] }).lines;
@@ -55,6 +64,7 @@ function main(argv) {
   const found = given ? { audience: given, reason: 'given with --audience' } : inferAudience(files, diff);
   console.error(`Audience: ${found.audience} (${found.reason}). ${files.length} file(s) against ${base}.`);
   const template = readFileSync(fileURLToPath(new URL('../.github/pull_request_template.md', import.meta.url)), 'utf8');
+  if (!arg('--changelog') && arg('--what')) console.error('No --changelog given: the Changelog section is the --what text (cut at a sentence end past 600 characters). Pass --changelog "..." to say it shorter.');
   process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files), arg('--changelog')));
 }
 

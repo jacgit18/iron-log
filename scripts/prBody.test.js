@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildBody, inferAudience, touchesUi } from './pr-body.mjs';
+import { buildBody, inferAudience, shorten, touchesUi } from './pr-body.mjs';
 
 const template = readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8');
 // The ticked boxes under Audience (the part the CI check counts).
@@ -55,5 +55,17 @@ describe('the Changelog section', () => {
   });
   it('stays empty when nothing is given, so the check can fail it', () => {
     expect(buildBody(template, 'na')).not.toMatch(/## Changelog[\s\S]*?-->\n\S/);
+  });
+});
+
+describe('shorten', () => {
+  it('keeps a short text and cuts a long one at a sentence end, never mid-word', () => {
+    expect(shorten('One. Two.')).toBe('One. Two.');
+    const long = 'First sentence here. ' + 'word '.repeat(200);
+    expect(shorten(long)).toBe('First sentence here.');
+    const noStop = 'word '.repeat(200);
+    const cut = shorten(noStop);
+    expect(cut.endsWith('word…')).toBe(true);
+    expect(cut.length).toBeLessThanOrEqual(601);
   });
 });
