@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const LABELS = { na: 'n/a:', admin: '**Admin only**', everyone: '**Everyone**' };
-const NOT_USER_FACING = [/^docs\//, /^e2e[\w-]*\//, /^scripts\//, /^tools\//, /^\.github\//, /^\.claude\//, /^spike\//, /^db\//, /^backups?\//, /\.test\.[jt]sx?$/, /\.md$/, /^package(-lock)?\.json$/, /^tsconfig[\w.]*\.json$/, /^vite\.config\./, /^playwright[\w.]*\.config\./, /^Dockerfile$/, /^cloudbuild[\w-]*\.yaml$/, /^docker-compose\.yml$/];
+const NOT_USER_FACING = [/^docs\//, /^\.githooks\//, /^e2e[\w-]*\//, /^scripts\//, /^tools\//, /^\.github\//, /^\.claude\//, /^spike\//, /^db\//, /^backups?\//, /\.test\.[jt]sx?$/, /\.md$/, /^package(-lock)?\.json$/, /^tsconfig[\w.]*\.json$/, /^vite\.config\./, /^playwright[\w.]*\.config\./, /^Dockerfile$/, /^cloudbuild[\w-]*\.yaml$/, /^docker-compose\.yml$/];
 
 /** Which audience a change has, from its file names and its diff text. Returns { audience, reason }. */
 export function inferAudience(files, diff = '') {

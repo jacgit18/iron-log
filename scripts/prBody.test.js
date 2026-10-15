@@ -8,7 +8,7 @@ const withLighthouse = template.replace('- [ ] `feature-map.md`', '- [ ] UI chan
 
 describe('inferAudience', () => {
   it('is n/a when nothing a user can see changed', () => {
-    expect(inferAudience(['README.md', 'e2e/board.spec.js', 'scripts/check.mjs', '.github/workflows/test.yml', 'src/lib/logic.test.js']).audience).toBe('na');
+    expect(inferAudience(['README.md', 'e2e/board.spec.js', 'scripts/check.mjs', '.github/workflows/test.yml', '.githooks/pre-push', 'src/lib/logic.test.js']).audience).toBe('na');
   });
   it('is admin when an admin-only entry is added or the admin guard changes', () => {
     expect(inferAudience(['src/features.ts', 'src/App.tsx'], "+  webPush: 'admin', // Push alerts").audience).toBe('admin');
