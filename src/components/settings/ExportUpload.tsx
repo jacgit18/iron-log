@@ -49,7 +49,7 @@ export default function ExportUpload() {
 
   return (
     <div>
-      <h4>Upload from an export file</h4>
+      <h4>Upload a file to an empty account</h4>
       {sync.holdsData
         ? <p className="note">Your account already has data, so a file cannot be uploaded this way. Use Export &amp; import to merge a file into it.</p>
         : (

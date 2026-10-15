@@ -568,7 +568,7 @@ test.describe('uploading from an export file', () => {
     await page.route('**/api/commands/import-legacy', importAnswer);
     await openSynced(page, undefined, signedInAsDev, emptyPull);
     await page.click('#tab-settings');
-    await expect(page.getByRole('heading', { name: 'Upload from an export file' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Upload a file to an empty account' })).toBeVisible();
   };
   const panel = page => page.getByRole('region', { name: 'Account' });
 

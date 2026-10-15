@@ -262,7 +262,7 @@ function DataPanel() {
           <input type="file" id="imp-file" accept={IMPORT_ACCEPT} hidden aria-describedby={importError ? 'imp-err' : 'imp-help'} onChange={e => { st.readImportFile(e.target.files && e.target.files[0]); e.target.value = ''; }} />
         </label>
       </div>
-      <p className="note" id="imp-help">Import takes the data file, or a workbook or .csv from an earlier version (an older workbook or a .csv only brings back logged sessions, body weight and main settings). You review before anything changes.</p>
+      <p className="note" id="imp-help">Import can add to your data or replace it, and you choose after the review. It takes the data file, or a workbook or .csv from an earlier version (an older workbook or a .csv only brings back logged sessions, body weight and main settings). You review before anything changes.</p>
       {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
       <details className="imppaste">
         <summary>Can't pick a file? Paste its contents instead</summary>
