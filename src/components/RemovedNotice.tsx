@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '../store/useAppStore.js';
+import Notice from './Notice.jsx';
 
 // The "Removed X" notice with Undo, for the list named `scope` (ADR 023). The pressed delete button is gone with its
 // row (or its sheet), so focus goes to Undo the first time a removal shows, even when the list only appears because
@@ -14,12 +15,8 @@ export default function RemovedNotice({ scope }: { scope: string }) {
   if (!r) return null;
   const st = useAppStore.getState();
   return (
-    <div className="notice movewarn removednote" role="status">
-      <div><b>Removed</b> {r.text}.</div>
-      <div className="actions">
-        <button type="button" className="btn sm" ref={undoRef} onClick={st.undoRemoved}>Undo</button>
-        <button type="button" className="btn sm ghost" onClick={() => st.dismissRemoved()}>Dismiss</button>
-      </div>
-    </div>
+    <Notice className="movewarn removednote" actions={[{ label: 'Undo', onClick: st.undoRemoved, btnRef: undoRef }, { label: 'Dismiss', onClick: () => st.dismissRemoved(), ghost: true }]}>
+      <b>Removed</b> {r.text}.
+    </Notice>
   );
 }
