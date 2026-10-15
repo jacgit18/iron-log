@@ -21,6 +21,7 @@ export function normConfig(c: any): Partial<Cfg> {
   if (out.liftGoals) out.liftGoals = own(out.liftGoals, (k, byKey) => (byKey && typeof byKey === 'object' && !Array.isArray(byKey) ? own(byKey, (_k, g) => (g && typeof g === 'object' && typeof g.w === 'number' && validLiftGoalLb(g.w) ? g : undefined)) : undefined));
   if (out.equipment) out.equipment = own(out.equipment, (k, v) => (/^x:[a-z0-9-]{1,40}$/.test(k) && typeof v === 'string' && v.trim() && v.length <= 30 ? v.trim() : undefined));
   if (out.freqGoals) out.freqGoals = own(out.freqGoals, (_k, n) => (validFreq(n) ? n : undefined));
+  if ('injuryPrevention' in out && typeof out.injuryPrevention !== 'boolean') delete out.injuryPrevention;
   if ('bwGoal' in out && !(out.bwGoal && typeof out.bwGoal === 'object' && typeof out.bwGoal.w === 'number' && validBodyLb(out.bwGoal.w))) delete out.bwGoal;
   // The GitHub backup feature is gone: never keep its settings or a token, wherever the config came from.
   ['backup', 'ghBackup', 'token', 'ghToken'].forEach(k => { delete out[k]; });
@@ -36,7 +37,7 @@ export interface ConfigDoc extends Partial<Cfg> {
   waterMode?: 'weight' | 'fixed';
 }
 
-const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup'] as const;
+const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention'] as const;
 const progKey = (v: unknown) => v === 'A' || v === 'B';
 const MAX_WARMUP = 50;
 
