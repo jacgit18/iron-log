@@ -13,6 +13,7 @@ import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
+import Notice from '../Notice.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import FirstRun from './FirstRun.jsx';
 import InstallHint from './InstallHint.jsx';
@@ -192,43 +193,25 @@ export default function Board() {
       )}
       <div className="toasts">
         {showUncheck && (
-          <div className="notice" role="status" ref={uncheckRef}>
-            <div>{uncheckNote.text}</div>
-            <div className="actions">
-              <button type="button" className="btn sm" onClick={st.undoUncheck}>Undo</button>
-              <button type="button" className="btn sm ghost" onClick={st.dismissUncheck}>Dismiss</button>
-            </div>
-          </div>
+          <Notice innerRef={uncheckRef} actions={[{ label: 'Undo', onClick: st.undoUncheck }, { label: 'Dismiss', onClick: st.dismissUncheck, ghost: true }]}>{uncheckNote.text}</Notice>
         )}
         {showSkip && (
-          <div className="notice" role="status">
-            <div>{skipNote.text}</div>
-            <div className="actions">
-              <button type="button" className="btn sm" onClick={st.undoSkip}>Undo</button>
-              <button type="button" className="btn sm ghost" onClick={st.dismissSkip}>Dismiss</button>
-            </div>
-          </div>
+          <Notice actions={[{ label: 'Undo', onClick: st.undoSkip }, { label: 'Dismiss', onClick: st.dismissSkip, ghost: true }]}>{skipNote.text}</Notice>
         )}
         <RemovedNotice scope={'board:' + wk} />
         {showMove && (
-          <div className="notice movewarn" role="status" ref={moveRef}>
-            <div><b>Heads-up:</b> {moveNote.lines.join(' ')}</div>
-            <div className="actions">
-              {moveNote.alt && <button type="button" className="btn sm" onClick={() => st.moveSlot(moveNote.slot!, moveNote.alt!)}>Move to Day {moveNote.alt} instead</button>}
-              <button type="button" className="btn sm" onClick={st.undoMove}>Move back to Day {moveNote.fromShown}</button>
-              <button type="button" className="btn sm ghost" onClick={st.dismissMove}>Keep it</button>
-            </div>
-          </div>
+          <Notice className="movewarn" innerRef={moveRef} actions={[
+            !!moveNote.alt && { label: `Move to Day ${moveNote.alt} instead`, onClick: () => st.moveSlot(moveNote.slot!, moveNote.alt!) },
+            { label: `Move back to Day ${moveNote.fromShown}`, onClick: st.undoMove },
+            { label: 'Keep it', onClick: st.dismissMove, ghost: true },
+          ]}><b>Heads-up:</b> {moveNote.lines.join(' ')}</Notice>
         )}
         {showOrder && (
-          <div className="notice movewarn" role="status" ref={orderRef}>
-            {orderNote.applied ? <div>{orderNote.kind === 'card' ? 'Moved for this week.' : 'Order changed for this week.'}</div> : <div><b>Back-to-back:</b> {orderNote.lines.join(' ')}</div>}
-            <div className="actions">
-              {!orderNote.applied && <button type="button" className="btn sm" onClick={st.applyOrder}>Apply</button>}
-              {orderNote.applied && st.canUndoOrder() && <button type="button" className="btn sm" ref={putBackRef} onClick={st.undoOrder}>Put back</button>}
-              <button type="button" className="btn sm ghost" onClick={st.dismissOrder}>{orderNote.applied ? 'Done' : 'Dismiss'}</button>
-            </div>
-          </div>
+          <Notice className="movewarn" innerRef={orderRef} actions={[
+            !orderNote.applied && { label: 'Apply', onClick: st.applyOrder },
+            orderNote.applied && st.canUndoOrder() && { label: 'Put back', onClick: st.undoOrder, btnRef: putBackRef },
+            { label: orderNote.applied ? 'Done' : 'Dismiss', onClick: st.dismissOrder, ghost: true },
+          ]}>{orderNote.applied ? (orderNote.kind === 'card' ? 'Moved for this week.' : 'Order changed for this week.') : <><b>Back-to-back:</b> {orderNote.lines.join(' ')}</>}</Notice>
         )}
       </div>
       {slots.length === 0 && <FirstRun />}
