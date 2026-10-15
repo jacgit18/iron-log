@@ -46,7 +46,7 @@ function Modal() {
     case 'log': return <LogSheet key={`${modal.slotId}:${modal.idx}`} slotId={modal.slotId} idx={modal.idx} />;
     case 'detail': return <DetailSheet exId={modal.exId} />;
     case 'tags': return <TagSheet key={modal.exId} exId={modal.exId} />;
-    case 'slot': return <SlotSheet key={`slot-${modal.idx}`} idx={modal.idx} col={modal.col} target={modal.target} />;
+    case 'slot': return <SlotSheet key={`slot-${modal.idx}`} idx={modal.idx} col={modal.col} target={modal.target} fromExp={modal.fromExp} />;
     case 'experiment': return <ExperimentSheet key={modal.id || 'new'} id={modal.id} />;
     case 'stretch': return <StretchSheet key={modal.id || 'new'} id={modal.id} />;
     case 'stretchexp': return <StretchExpSheet key={modal.id || 'new'} id={modal.id} />;
