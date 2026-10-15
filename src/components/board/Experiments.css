@@ -1,0 +1,11 @@
+/* Experiments lists (Workout and Stretches share .experiments and .expcard), phone: cards snap into place as the strip scrolls.
+   Already true without a rule here, and kept true by e2e/experimentsPhone.spec.js: the next card shows past the screen edge (cards
+   are 240 to 280px wide), and every button is 44px tall (`.actions .btn` in styles.css). Where the buttons wrap depends on the font. */
+@media (max-width: 700px) {
+  .explist {
+    scroll-snap-type: x proximity;
+  }
+  .expcard {
+    scroll-snap-align: start;
+  }
+}

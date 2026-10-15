@@ -8,6 +8,7 @@ import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import ArmedButton from '../ArmedButton.jsx';
 import ExperimentSearch from '../ExperimentSearch.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
+import './Experiments.css';
 
 // The Experiment board: exercises to try, added to a day of the viewed week. `day` is the column shown on phones.
 export default function Experiments({ day, onDragStart, onDragEnd }: { day: number; onDragStart: (e: DragEvent, id: string) => void; onDragEnd: () => void }) {
