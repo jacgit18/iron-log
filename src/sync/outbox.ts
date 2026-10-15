@@ -38,12 +38,15 @@ export function createOutbox(storage: Storage, now: () => Date = () => new Date(
   let persisted = true;
   let counter = 0;
 
+  // A saved list in the wrong shape is kept aside before the next save writes over it: it may hold writes the server never got (EH-40).
   const savedPending = storage.get(PENDING_KEY);
   if (isObject(savedPending)) for (const [path, doc] of Object.entries(savedPending)) pending.set(path, doc);
+  else if (savedPending !== null) storage.keepDamaged?.(PENDING_KEY, savedPending);
   const savedQuarantine = storage.get(QUARANTINE_KEY);
   if (Array.isArray(savedQuarantine)) {
     quarantine = savedQuarantine.filter((e): e is QuarantineEntry => isObject(e) && typeof e.id === 'string' && typeof e.path === 'string' && typeof e.reason === 'string' && typeof e.at === 'string' && 'doc' in e);
-  }
+    if (quarantine.length < savedQuarantine.length) storage.keepDamaged?.(QUARANTINE_KEY, savedQuarantine);
+  } else if (savedQuarantine !== null) storage.keepDamaged?.(QUARANTINE_KEY, savedQuarantine);
 
   const savePending = () => { persisted = storage.set(PENDING_KEY, Object.fromEntries(pending)) && persisted; };
   const saveQuarantine = () => { persisted = storage.set(QUARANTINE_KEY, quarantine) && persisted; };

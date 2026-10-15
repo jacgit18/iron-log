@@ -1,5 +1,86 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { makeSaveQueue, removeLegacyGitHubToken, LEGACY_GH_TOKEN_KEY } from './storage.js';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { DAMAGED_PREFIX, LS, makeSaveQueue, onDamaged, removeLegacyGitHubToken, LEGACY_GH_TOKEN_KEY } from './storage.js';
+
+// EH-07: a saved value that no longer parses used to read as "nothing saved", and the next save wrote over it.
+describe('LS: damaged saved data', () => {
+  const stub = (mem, over = {}) => vi.stubGlobal('localStorage', {
+    getItem: k => mem[k] ?? null, setItem: (k, v) => { mem[k] = v; }, removeItem: k => { delete mem[k]; },
+    get length() { return Object.keys(mem).length; }, key: i => Object.keys(mem)[i] ?? null, ...over,
+  });
+  let told; let stop;
+  beforeEach(() => { told = []; stop = onDamaged(k => told.push(k)); });
+  afterEach(() => { stop(); vi.unstubAllGlobals(); });
+
+  it('reads as nothing, but keeps the damaged text under its own key and says so', () => {
+    const mem = { 'ironlog:logs/squat': '{"entries":[{"d":"2026-10' }; stub(mem);
+    expect(LS.get('logs/squat')).toBe(null);
+    expect(mem[DAMAGED_PREFIX + 'logs/squat']).toBe('{"entries":[{"d":"2026-10');
+    expect(told).toEqual(['logs/squat']);
+  });
+
+  it('the kept copy is outside the app\'s own keys, so nothing that lists them picks it up', () => {
+    expect(DAMAGED_PREFIX.startsWith('ironlog:')).toBe(false);
+  });
+
+  it('tells each damaged key once, however often it is read or saved over', () => {
+    const mem = { 'ironlog:appearance': '{', 'ironlog:other': '[' }; stub(mem, { setItem: (k, v) => { if (k.startsWith('ironlog:')) throw new Error('full'); mem[k] = v; } });
+    LS.get('appearance'); LS.get('appearance'); LS.set('appearance', {}); LS.get('appearance');
+    LS.get('other');
+    expect(told).toEqual(['appearance', 'other']);
+  });
+
+  it('a save over a damaged value keeps the damaged text first', () => {
+    const mem = { 'ironlog:config/main': 'not json' }; stub(mem);
+    expect(LS.set('config/main', { a: 1 })).toBe(true);
+    expect(mem['ironlog:config/main']).toBe('{"a":1}');
+    expect(mem[DAMAGED_PREFIX + 'config/main']).toBe('not json');
+    expect(told).toEqual(['config/main']);
+  });
+
+  it('keeps the first damaged copy: a later one does not replace it', () => {
+    const mem = { 'ironlog:x': 'first', [DAMAGED_PREFIX + 'x']: 'older' }; stub(mem);
+    LS.get('x');
+    expect(mem[DAMAGED_PREFIX + 'x']).toBe('older');
+    expect(told).toEqual(['x']);
+  });
+
+  it('a missing value or a good one is not damaged', () => {
+    const mem = { 'ironlog:a': '{"v":1}', 'ironlog:n': 'null' }; stub(mem);
+    expect(LS.get('missing')).toBe(null);
+    expect(LS.get('a')).toEqual({ v: 1 });
+    expect(LS.get('n')).toBe(null);
+    LS.set('a', { v: 2 }); LS.set('missing', 1);
+    expect(told).toEqual([]);
+    expect(Object.keys(mem).some(k => k.startsWith(DAMAGED_PREFIX))).toBe(false);
+  });
+
+  it('blocked storage reads as nothing and is not called damaged', () => {
+    stub({}, { getItem: () => { throw new Error('blocked'); } });
+    expect(LS.get('a')).toBe(null);
+    expect(told).toEqual([]);
+  });
+
+  it('keepDamaged keeps a value that parsed but has the wrong shape', () => {
+    const mem = {}; stub(mem);
+    LS.keepDamaged('sync/pending', [1, 2]);
+    expect(mem[DAMAGED_PREFIX + 'sync/pending']).toBe('[1,2]');
+    expect(told).toEqual(['sync/pending']);
+  });
+
+  it('forgetDamaged removes every kept copy and nothing else', () => {
+    const mem = { [DAMAGED_PREFIX + 'a']: 'x', [DAMAGED_PREFIX + 'b']: 'y', 'ironlog:a': '1' }; stub(mem);
+    LS.forgetDamaged();
+    expect(mem).toEqual({ 'ironlog:a': '1' });
+  });
+
+  it('a value found damaged before anyone listens is told to the first listener', () => {
+    stop();
+    const mem = { 'ironlog:early': '{' }; stub(mem);
+    LS.get('early');
+    const late = []; stop = onDamaged(k => late.push(k));
+    expect(late).toEqual(['early']);
+  });
+});
 
 describe('removeLegacyGitHubToken', () => {
   const stub = (mem, removeItem) => vi.stubGlobal('localStorage', { getItem: k => mem[k] ?? null, setItem: (k, v) => { mem[k] = v; }, removeItem: removeItem || (k => { delete mem[k]; }) });
@@ -94,6 +175,39 @@ describe('save queue', () => {
     online = true;
     await vi.advanceTimersByTimeAsync(2000);
     expect(writes).toEqual([{ v: 1 }]);
+    vi.useRealTimers();
+  });
+
+  // EH-11: the code after a successful write used to sit inside the same try, so its throw read as "not saved" and the write went again.
+  it('a throw after the write went through is reported once, and the write is not sent again', async () => {
+    vi.useFakeTimers();
+    const writes = []; const errors = []; const flags = [];
+    const db = { doc: () => ({ set: async body => { writes.push(body); return { ...body, merged: true }; } }) };
+    const q = makeSaveQueue({ getDb: () => db, onFlag: f => flags.push(f), onError: e => errors.push(e.message), onStored: () => { throw new Error('bad merge'); } });
+    q.save('weeks/x', { v: 1 });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(writes).toEqual([{ v: 1 }]);
+    expect(errors).toEqual(['bad merge']);
+    expect(flags).toEqual(['Saved']);
+    expect(q.pending('weeks/x')).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('a throw while handling a failed write does not stop that path from saving again', async () => {
+    vi.useFakeTimers();
+    let online = false; const writes = []; const errors = [];
+    const db = { doc: () => ({ set: async body => { if (!online) throw new TypeError('Failed to fetch'); writes.push(body); } }) };
+    const onFlag = f => { if (f === 'Not saved, retrying…') throw new Error('status line broke'); };
+    const q = makeSaveQueue({ getDb: () => db, onFlag, onError: e => errors.push(e.message) });
+    q.save('weeks/x', { v: 1 });
+    await vi.advanceTimersByTimeAsync(100);
+    online = true;
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(writes).toEqual([{ v: 1 }]);
+    expect(errors[0]).toBe('status line broke');
+    q.save('weeks/x', { v: 2 });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(writes).toEqual([{ v: 1 }, { v: 2 }]);
     vi.useRealTimers();
   });
 });

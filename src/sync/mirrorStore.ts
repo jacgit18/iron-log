@@ -18,6 +18,8 @@ export interface Storage {
   /** False when the browser refused the write (storage full or blocked). */
   set(key: string, value: unknown): boolean;
   remove(key: string): void;
+  /** Keeps a value that read back in the wrong shape before it is written over (LS keeps it aside and says so). */
+  keepDamaged?(key: string, value: unknown): void;
 }
 
 const TABLES: readonly SyncTable[] = ['log_entries', 'body_entries', 'weeks', 'stretch_weeks', 'supplement_days', 'programs', 'config', 'library_items', 'list_items', 'grocery_months'];

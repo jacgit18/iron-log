@@ -49,10 +49,22 @@ describe('pending documents', () => {
     expect(a.persisted()).toBe(true);
   });
 
-  it('ignores a pending entry that is not an object', () => {
+  // EH-40: unsent writes used to vanish here without a word, and the next put wrote over them.
+  it('a pending entry that is not an object is kept aside before anything writes over it', () => {
     const storage = memoryStorage();
     storage.data.set(PENDING_KEY, JSON.stringify([1, 2]));
-    expect(createOutbox(storage, at).paths()).toEqual([]);
+    const a = createOutbox(storage, at);
+    expect(a.paths()).toEqual([]);
+    expect(storage.damaged.get(PENDING_KEY)).toEqual([1, 2]);
+    a.put('logs/squat', { entries: [1] });
+    expect(storage.damaged.get(PENDING_KEY)).toEqual([1, 2]);
+  });
+
+  it('a good or missing pending entry is not kept aside', () => {
+    const storage = memoryStorage();
+    createOutbox(storage, at).put('logs/squat', { entries: [1] });
+    createOutbox(storage, at);
+    expect(storage.damaged.size).toBe(0);
   });
 });
 
@@ -96,5 +108,20 @@ describe('the quarantine', () => {
     const storage = memoryStorage();
     storage.data.set(QUARANTINE_KEY, JSON.stringify([{ id: 'a', path: 'logs/x', doc: {}, reason: 'r', at: 't' }, { id: 1 }, null, 'x']));
     expect(createOutbox(storage, at).quarantined().map(e => e.id)).toEqual(['a']);
+  });
+
+  it('keeps the whole list aside when it drops a damaged entry, since a refused write is never thrown away', () => {
+    const storage = memoryStorage();
+    const saved = [{ id: 'a', path: 'logs/x', doc: {}, reason: 'r', at: 't' }, { id: 1 }];
+    storage.data.set(QUARANTINE_KEY, JSON.stringify(saved));
+    createOutbox(storage, at);
+    expect(storage.damaged.get(QUARANTINE_KEY)).toEqual(saved);
+  });
+
+  it('a list that is not a list at all is kept aside too', () => {
+    const storage = memoryStorage();
+    storage.data.set(QUARANTINE_KEY, JSON.stringify({ a: 1 }));
+    expect(createOutbox(storage, at).quarantined()).toEqual([]);
+    expect(storage.damaged.get(QUARANTINE_KEY)).toEqual({ a: 1 });
   });
 });

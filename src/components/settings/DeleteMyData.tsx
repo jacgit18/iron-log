@@ -29,6 +29,7 @@ const WHY: Record<string, string> = {
 function forgetDevice() {
   for (const path of localPaths()) if (parsePath(path)) LS.remove(path);
   LS.remove('sync/legacy');
+  LS.forgetDamaged(); // copies of saved data that could not be read are this data too
   forgetSession(LS); // the next screen is the landing page
   writeLegacyMarker({ state: 'dismissed', at: new Date().toISOString() }); // never offer to upload what was just erased
 }
