@@ -111,9 +111,13 @@ exit 0
       expect(secretsOf('run deploy').some(x => x.startsWith('PII_ENCRYPTION_KEY'))).toBe(false);
     });
 
-    it('is made by `secrets` the first time, kept (no new version) after, and its value is never shown', async () => {
+    it('is made by `secrets` only with PII_KEY_CREATE=1, kept (no new version) after, and its value is never shown', async () => {
       writeFileSync(calls, '');
-      const first = await run(['secrets'], baseEnv);
+      const none = await run(['secrets'], baseEnv);
+      expect(none.stdout).toContain('not created');
+      expect(recorded().some(l => l.includes('iron-log-pii-key') && !l.includes('secrets describe'))).toBe(false);
+      writeFileSync(calls, '');
+      const first = await run(['secrets'], { ...baseEnv, PII_KEY_CREATE: '1' });
       expect(first.status).toBe(0);
       expect(recorded().some(l => l.includes('secrets create iron-log-pii-key'))).toBe(true);
       expect(recorded().some(l => l.includes('secrets versions add iron-log-pii-key'))).toBe(true);

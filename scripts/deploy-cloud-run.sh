@@ -8,7 +8,7 @@
 #             With VAPID_SUBJECT exported (mailto:you@example.com) it also stores the Web Push keys, making the pair once; see push-setup (ADR 044)
 #   push-setup  make the Cloud Tasks queue, the invoker account and the permissions for Web Push (once; needs the cloudtasks API)
 #   url       print the address the service will have, for the Google console's redirect URI (needs no deploy)
-#             The key that seals names and emails in the database (PII_ENCRYPTION_KEY, ADR 046) is made here once and never replaced: a
+#             The key that seals names and emails in the database (PII_ENCRYPTION_KEY, ADR 046) is made here once (only with PII_KEY_CREATE=1) and never replaced: a
 #             new one could not read what the old one sealed. Back it up (see deploy-runbook.md) before the first deploy that uses it.
 #   (RESEND_OFF=1 on candidate or deploy turns the email sign-in code off: the key is left out and the service stops mapping it;
 #    PUSH_OFF=1 does the same for Web Push: the keys and the queue settings are removed from the service)
@@ -128,11 +128,15 @@ cmd_secrets() {
   printf '%s' "$GOOGLE_CLIENT_SECRET" | put_secret iron-log-google-client-secret
   # A fresh signing secret for production, made here and never shown. An existing one is kept: changing it signs everyone out.
   if ! secret_exists iron-log-auth-secret; then openssl rand -base64 48 | tr -d '\n' | put_secret iron-log-auth-secret; else echo "  iron-log-auth-secret: kept"; fi
-  # The key that seals names and emails in the database (ADR 046): 32 random bytes, made once and NEVER replaced. Putting in a new
-  # one would leave every sealed name and email unreadable. It is not shown; back it up as the runbook says.
-  if ! secret_exists "$PII_SECRET"; then openssl rand -base64 32 | tr -d '\n' | put_secret "$PII_SECRET"; else echo "  $PII_SECRET: kept"; fi
+  # The key that seals names and emails in the database (ADR 046): 32 random bytes, NEVER replaced (a new one would leave every sealed name
+  # and email unreadable). Made only when asked (PII_KEY_CREATE=1), because the next deploy, CI included, turns encryption on as soon as
+  # the secret exists; do that on purpose, after the runbook's backup step (section 20), not as a side effect of changing another secret.
+  local pii_names=()
+  if secret_exists "$PII_SECRET"; then echo "  $PII_SECRET: kept"; pii_names=("$PII_SECRET")
+  elif [ "${PII_KEY_CREATE:-}" = 1 ]; then openssl rand -base64 32 | tr -d '\n' | put_secret "$PII_SECRET"; pii_names=("$PII_SECRET")
+  else echo "  $PII_SECRET: not created (export PII_KEY_CREATE=1 to make it; see runbook section 20)"; fi
   # Optional: the Resend key for the emailed sign-in code. Not exporting it leaves the feature off (or as it already is).
-  local secret_names=(iron-log-app-database-url iron-log-google-client-id iron-log-google-client-secret iron-log-auth-secret "$PII_SECRET")
+  local secret_names=(iron-log-app-database-url iron-log-google-client-id iron-log-google-client-secret iron-log-auth-secret ${pii_names[@]+"${pii_names[@]}"})
   if [ -n "${RESEND_API_KEY:-}" ]; then
     printf '%s' "$RESEND_API_KEY" | put_secret "$RESEND_SECRET"
     secret_names+=("$RESEND_SECRET")
