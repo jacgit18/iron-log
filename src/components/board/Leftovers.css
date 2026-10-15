@@ -1,0 +1,8 @@
+/* The day picker in the leftovers notice takes the page colours: left to the browser, dark mode drew it 3.5:1 (needs 4.5:1). */
+.notice.leftovers select {
+  border: 1px solid var(--field-line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 2px 4px;
+}

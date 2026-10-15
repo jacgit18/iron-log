@@ -130,9 +130,9 @@ function Boost({ date, boost, extra }: { date: string; boost: BoostT | undefined
 function Week({ water, goalOf, end, selected, onPick }: { water: Record<string, number[]>; goalOf: (d: string) => number; end: Date; selected: string; onPick: (d: string) => void }) {
   const days = lastDays(water, end, 7, ymd).map(x => ({ ...x, goal: goalOf(x.d) })); const max = Math.max(...days.map(x => Math.max(x.goal, x.oz)));
   return (
-    <div className="mbars" role="list" aria-label="Last 7 days of water">
+    <div className="mbars" role="group" aria-label="Last 7 days of water">
       {days.map(x => (
-        <button type="button" role="listitem" key={x.d} className="mbar" aria-current={x.d === selected ? 'date' : undefined} aria-label={`${DAY_NAMES[x.date.getDay()]} ${fmtShort(x.date)}: ${fmtOz(x.oz)} oz${x.oz >= x.goal ? ', goal met' : ''}`} onClick={() => onPick(x.d)}>
+        <button type="button" key={x.d} className="mbar" aria-current={x.d === selected ? 'date' : undefined} aria-label={`${DAY_NAMES[x.date.getDay()]} ${fmtShort(x.date)}: ${fmtOz(x.oz)} oz${x.oz >= x.goal ? ', goal met' : ''}`} onClick={() => onPick(x.d)}>
           <span>{DAY_NAMES[x.date.getDay()].slice(0, 3)} {x.date.getDate()}</span>
           <span className="track"><i className="l3" style={{ width: `${x.oz / max * 100}%`, background: x.oz >= x.goal ? 'var(--accent)' : undefined }} /></span>
           <b>{fmtOz(x.oz)}</b>
@@ -181,7 +181,7 @@ export default function Supplements() {
           <div className="sect">Add a drink</div>
           <div className="chips wchips" role="group" aria-label="Add water by container size">
             {BOTTLES.map(b => (
-              <button type="button" key={b.oz} className="chip" id={`water-${b.oz}`} aria-label={`Add ${fmtOz(b.oz)} ounces, ${b.label}`} onClick={() => add(b.oz)}>
+              <button type="button" key={b.oz} className="chip" id={`water-${b.oz}`} onClick={() => add(b.oz)}>
                 <b>+{fmtOz(b.oz)} oz</b> <span className="note">{b.label}{b.oz % CUP_OZ === 0 ? ` · ${b.oz / CUP_OZ} cup${b.oz === CUP_OZ ? '' : 's'}` : ''}</span>
               </button>
             ))}
