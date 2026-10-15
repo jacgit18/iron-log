@@ -149,6 +149,16 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     if (ok) flag(`Added ${e.n}`);
     return ok;
   },
+  promoteStretchExp(id) {
+    const i = get().stretchExps.findIndex(y => y.id === id); if (i < 0 || get().blocked()) return false;
+    const e = get().stretchExps[i];
+    if (get().stretches.some(x => x.n.toLowerCase() === e.n.toLowerCase())) { flag('You already have that stretch'); return false; }
+    let sid = '';
+    if (!get().mutateStretches(x => { sid = newStretchId(x.items, e.n); x.items.push({ id: sid, n: e.n, group: DEFAULT_GROUP, tier: '', ...(e.url ? { url: e.url } : {}), ...(e.note ? { note: e.note } : {}) }); x.experiments = x.experiments.filter(y => y.id !== id); })) return false;
+    flag(`${e.n} added to your stretches`);
+    get().noteRemoved('stretchexps', `${e.n} from Experiments`, () => !get().stretchExps.some(y => y.id === id) && get().mutateStretches(x => { x.items = x.items.filter(y => y.id !== sid); x.experiments.splice(Math.min(i, x.experiments.length), 0, e); }));
+    return true;
+  },
   // Undo puts it back with its tick, in the same week (the notice belongs to that week and day).
   removeStretchExtra(id) {
     const w0 = get().strWeek; const i = w0.extra.findIndex(x => x.id === id); if (i < 0) return;

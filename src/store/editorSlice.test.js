@@ -100,6 +100,23 @@ describe('editing a program', () => {
       expect(st().experiments.map(e => e.ex)).toEqual(card.items.map(it => it.ex));
       expect(new Set(st().experiments.map(e => e.id)).size).toBe(card.items.length);
     });
+    it('does not add an exercise that is already on the list, but the card still leaves the program', () => {
+      const before = structuredClone(day1()); const card = before[1]; const ex = card.items[0].ex;
+      useAppStore.setState({ experiments: [{ id: 'keep', ex, ph: null, note: '' }] });
+      st().moveEdSlotToExperiments(1);
+      expect(ids(day1())).not.toContain(card.id);
+      expect(st().experiments).toEqual([{ id: 'keep', ex, ph: null, note: '' }]);
+      expect(st().edRemoved).toMatchObject({ slot: card, toExperiments: [] });
+      st().undoRemoveEdSlot();
+      expect(day1()).toEqual(before);
+      expect(st().experiments).toHaveLength(1);
+    });
+    it('adds a superset exercise that appears twice on the card only once', () => {
+      const i = day1().findIndex(sl => sl.type === 'superset');
+      useAppStore.setState(x => { const p = structuredClone(x.programs.A); p.days[0].slots[i].items[1].ex = p.days[0].slots[i].items[0].ex; return { programs: { ...x.programs, A: p } }; });
+      st().moveEdSlotToExperiments(i);
+      expect(st().experiments).toHaveLength(1);
+    });
     it('Undo puts the card back where it was and takes the experiments out, once', () => {
       useAppStore.setState({ experiments: [{ id: 'keep', ex: 'hack', ph: null, note: '' }] });
       const before = structuredClone(day1());

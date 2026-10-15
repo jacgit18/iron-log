@@ -48,6 +48,7 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
                     {days.map(d => <option key={d} value={d}>Day {d}</option>)}
                   </select>
                   <button type="button" className="btn sm" aria-label={`Add ${n} to Day ${to}`} onClick={() => st.addToDay(e.id, to)}>Add</button>
+                  <button type="button" className="btn sm ghost" aria-label={`Add ${n} to the program, Day ${to}`} onClick={() => st.openAddToProgram(to, e.id)}>To program</button>
                   <button type="button" className="btn sm ghost" aria-label={`Edit ${n}`} onClick={() => st.openModal({ type: 'experiment', id: e.id })}>Edit</button>
                   <ArmedButton className={`btn sm ${arming === e.id ? 'danger' : 'ghost'}`} label="Delete" armedLabel="Tap again to delete" aria-label={`Delete ${n}`} onArmedChange={a => setArming(a ? e.id : null)} onConfirm={() => { setArming(null); st.deleteExperiment(e.id); }} />
                 </div>
