@@ -24,7 +24,7 @@ const run = (args: string[], env: Record<string, string> = {}) =>
       // DATABASE_URL from the caller's shell (a local one for the db checks) must not leak in: the stubs log what each step was given.
       env: {
         ...process.env, DATABASE_URL: '', PROD_DATABASE_URL: URL,
-        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), KEEP_INJURY: join(dir, 'keep-injury'), ...env,
+        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), KEEP_INJURY: join(dir, 'keep-injury'), ENCRYPT_USERS: join(dir, 'encrypt-users'), PII_KEY_CMD: join(dir, 'pii-key'), ...env,
       },
       encoding: 'utf8',
     }, (err, stdout, stderr) => {
@@ -48,6 +48,8 @@ beforeEach(() => {
   stub('backup', '');
   stub('catalog', '');
   stub('keep-injury', '');
+  stub('encrypt-users', 'echo "key=${PII_ENCRYPTION_KEY:+set}" >> "' + log + '"');
+  stub('pii-key', 'echo -n "a2V5LXZhbHVlLXRoYXQtbXVzdC1ub3QtYmUtc2hvd24="');
   dbmateWith([]);
 });
 
@@ -95,6 +97,22 @@ describe('prod-db.sh', () => {
     expect((await run(['injury-default', '--apply'])).calls).toEqual(['backup run url=', `keep-injury --apply url=${URL}`]);
   });
 
+  it('encrypt-users is a dry run by default; --apply backs up first; the key reaches the command but is never shown', async () => {
+    const dry = await run(['encrypt-users']);
+    expect(dry.calls).toEqual(['pii-key  url=', `encrypt-users  url=${URL}`, 'key=set']);
+    expect(dry.out).not.toContain('a2V5LXZhbHVl');
+    writeFileSync(log, '');
+    const applied = await run(['encrypt-users', '--apply']);
+    expect(applied.calls).toEqual(['pii-key  url=', 'backup run url=', `encrypt-users --apply url=${URL}`, 'key=set']);
+    expect(applied.out).not.toContain('a2V5LXZhbHVl');
+  });
+
+  it('encrypt-users stops, changing nothing, when Secret Manager gives no key', async () => {
+    const r = await run(['encrypt-users', '--apply'], { PII_KEY_CMD: stub('no-key', 'true') });
+    expect(r.status).toBe(1);
+    expect(r.calls.some(c => c.startsWith('backup') || c.startsWith('encrypt-users'))).toBe(false);
+  });
+
   it('catalog is a dry run by default; --apply backs up first and passes --apply on', async () => {
     expect((await run(['catalog', 'fedb'])).calls).toEqual([`catalog --source fedb url=${URL}`]);
     writeFileSync(log, '');
@@ -134,7 +152,7 @@ describe('prod-db.sh', () => {
     expect((await run(['drop-everything'])).status).toBe(2);
     const help = await run([]);
     expect(help.status).toBe(2);
-    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
+    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default', 'encrypt-users']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
     expect(readFileSync(log, 'utf8')).toBe('');
   });
 });

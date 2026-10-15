@@ -23,11 +23,14 @@ case "$*" in
   # What the account may do is set by the test: SECRETS_READABLE=1 is your machine (it can see a secret exists), unset is the CI deployer.
   # PUSH_SECRET=1: the Web Push keys are already stored (they are separate from SECRETS_READABLE so the Resend cases above stay about Resend).
   *"secrets describe iron-log-vapid"*) [ "$PUSH_SECRET" = 1 ] && exit 0; exit 1;;
+  # HAS_PII_KEY=1: the database encryption key is already stored (separate again, so the Resend and Push cases stay about themselves).
+  *"secrets describe iron-log-pii"*) [ "$HAS_PII_KEY" = 1 ] && exit 0; exit 1;;
   *"secrets describe"*) [ "$SECRETS_READABLE" = 1 ] && exit 0; exit 1;;
   # LIVE_RESEND=1 / LIVE_PUSH=1: the live service already maps RESEND_API_KEY / VAPID_PRIVATE_KEY from a secret.
   *"run services describe"*"--format=json"*)
     env='[]'
     [ "$LIVE_RESEND" = 1 ] && env='[{"name":"RESEND_API_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-resend-api-key","key":"latest"}}}]'
+    [ "$LIVE_PII" = 1 ] && env='[{"name":"PII_ENCRYPTION_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-pii-key","key":"latest"}}}]'
     [ "$LIVE_PUSH" = 1 ] && env='[{"name":"VAPID_PRIVATE_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-vapid-private-key","key":"latest"}}}]'
     echo '{"spec":{"template":{"spec":{"containers":[{"env":'"$env"'}]}}},"status":{"traffic":[{"revisionName":"iron-log-00001-aaa","percent":100},{"tag":"candidate","url":"https://candidate---iron-log-x.run.app","revisionName":"iron-log-00002-bbb"}]}}';;
 esac
@@ -80,6 +83,51 @@ exit 0
     expect(lines.find(l => l.includes('run deploy'))).not.toContain('--no-traffic');
     expect(lines[lines.length - 1]).toContain('update-traffic');
     expect(lines[lines.length - 1]).toContain('--to-latest');
+  });
+
+  // The key that seals names and emails (ADR 046) is made once by `secrets`, is never replaced, and must ride along on every deploy once it exists.
+  describe('the database encryption key (ADR 046)', () => {
+    const secretsOf = (cmd: string) => /--set-secrets (\S+)/.exec(recorded().find(l => l.includes(cmd))!)![1]!.split(',');
+    const PII = 'PII_ENCRYPTION_KEY=iron-log-pii-key:latest';
+    const baseEnv = { APP_DATABASE_URL: 'postgres://ironlog_app:pw@db.example.com/x', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'gs' };
+
+    it('is passed when the secret exists (your machine)', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['deploy'], { HAS_PII_KEY: "1" });
+      expect(out.status).toBe(0);
+      expect(secretsOf('run deploy')).toContain(PII);
+      expect(out.stdout).toContain('PII_ENCRYPTION_KEY is passed');
+    });
+
+    it('is kept by a deploy that cannot read secrets (CI) when the live service already has it', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { LIVE_PII: '1' })).status).toBe(0);
+      expect(secretsOf('run deploy')).toContain(PII);
+    });
+
+    it('is left out before the key exists', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['deploy'])).status).toBe(0);
+      expect(secretsOf('run deploy').some(x => x.startsWith('PII_ENCRYPTION_KEY'))).toBe(false);
+    });
+
+    it('is made by `secrets` only with PII_KEY_CREATE=1, kept (no new version) after, and its value is never shown', async () => {
+      writeFileSync(calls, '');
+      const none = await run(['secrets'], baseEnv);
+      expect(none.stdout).toContain('not created');
+      expect(recorded().some(l => l.includes('iron-log-pii-key') && !l.includes('secrets describe'))).toBe(false);
+      writeFileSync(calls, '');
+      const first = await run(['secrets'], { ...baseEnv, PII_KEY_CREATE: '1' });
+      expect(first.status).toBe(0);
+      expect(recorded().some(l => l.includes('secrets create iron-log-pii-key'))).toBe(true);
+      expect(recorded().some(l => l.includes('secrets versions add iron-log-pii-key'))).toBe(true);
+      expect(recorded().some(l => l.includes('add-iam-policy-binding iron-log-pii-key') && l.includes('iron-log-run@p.iam.gserviceaccount.com'))).toBe(true);
+      writeFileSync(calls, '');
+      const again = await run(['secrets'], { ...baseEnv, HAS_PII_KEY: "1" });
+      expect(again.status).toBe(0);
+      expect(recorded().some(l => l.includes('iron-log-pii-key') && (l.includes('secrets create') || l.includes('versions add')))).toBe(false);
+      expect(again.stdout).toContain('iron-log-pii-key: kept');
+    });
   });
 
   // --set-secrets replaces the service's whole secret list, so RESEND_API_KEY has to be in it on every deploy that should keep the email code.
