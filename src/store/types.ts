@@ -96,8 +96,7 @@ export type ExportKind = 'csv' | 'xlsx-all' | 'xlsx-week' | 'data';
 export interface Downloads { save(file: { filename: string; data: Loose }): Promise<unknown> }
 
 /* ---------- Slices ---------- */
-/** `toExperiments`: ids of the experiments a Move to Experiments added, which Undo takes out again. */
-export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot; toExperiments?: string[] }
+export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot }
 
 export interface EditorSlice {
   edProg: string | null; // 'A' | 'B' (in the rotation) or 'L:<id>' (a library program); null = the one on the board
@@ -121,7 +120,6 @@ export interface EditorSlice {
   /** The card the Program editor last removed, so its Undo notice can put it back where it was. */
   edRemoved: EdRemoved | null;
   removeEdSlot(i: number): void;
-  moveEdSlotToExperiments(i: number): void;
   undoRemoveEdSlot(): void;
   dismissEdRemoved(): void;
   setDaySub(v: string): boolean;

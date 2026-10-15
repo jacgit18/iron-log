@@ -83,65 +83,6 @@ describe('editing a program', () => {
     st().undoRemoveEdSlot(); // a second Undo adds nothing
     expect(day1()).toEqual(before);
   });
-  describe('Move to Experiments', () => {
-    beforeEach(() => { useAppStore.setState({ experiments: [] }); });
-    it('takes the card out of the program and lists its exercise, with phase and note', () => {
-      const before = structuredClone(day1()); const card = before[1];
-      st().moveEdSlotToExperiments(1);
-      expect(day1()).toHaveLength(before.length - 1);
-      expect(ids(day1())).not.toContain(card.id);
-      expect(st().experiments).toEqual([{ id: expect.stringMatching(/^E/), ex: card.items[0].ex, ph: card.items[0].ph ?? null, note: card.items[0].note || '' }]);
-      expect(saved('experiments/main').items).toHaveLength(1);
-      expect(st().edRemoved).toMatchObject({ day: 1, idx: 1, slot: card, toExperiments: [st().experiments[0].id] });
-    });
-    it('adds every exercise of a superset, in order', () => {
-      const i = day1().findIndex(sl => sl.type === 'superset'); const card = structuredClone(day1()[i]);
-      st().moveEdSlotToExperiments(i);
-      expect(st().experiments.map(e => e.ex)).toEqual(card.items.map(it => it.ex));
-      expect(new Set(st().experiments.map(e => e.id)).size).toBe(card.items.length);
-    });
-    it('does not add an exercise that is already on the list, but the card still leaves the program', () => {
-      const before = structuredClone(day1()); const card = before[1]; const ex = card.items[0].ex;
-      useAppStore.setState({ experiments: [{ id: 'keep', ex, ph: null, note: '' }] });
-      st().moveEdSlotToExperiments(1);
-      expect(ids(day1())).not.toContain(card.id);
-      expect(st().experiments).toEqual([{ id: 'keep', ex, ph: null, note: '' }]);
-      expect(st().edRemoved).toMatchObject({ slot: card, toExperiments: [] });
-      st().undoRemoveEdSlot();
-      expect(day1()).toEqual(before);
-      expect(st().experiments).toHaveLength(1);
-    });
-    it('adds a superset exercise that appears twice on the card only once', () => {
-      const i = day1().findIndex(sl => sl.type === 'superset');
-      useAppStore.setState(x => { const p = structuredClone(x.programs.A); p.days[0].slots[i].items[1].ex = p.days[0].slots[i].items[0].ex; return { programs: { ...x.programs, A: p } }; });
-      st().moveEdSlotToExperiments(i);
-      expect(st().experiments).toHaveLength(1);
-    });
-    it('Undo puts the card back where it was and takes the experiments out, once', () => {
-      useAppStore.setState({ experiments: [{ id: 'keep', ex: 'hack', ph: null, note: '' }] });
-      const before = structuredClone(day1());
-      st().moveEdSlotToExperiments(2);
-      st().undoRemoveEdSlot();
-      expect(day1()).toEqual(before);
-      expect(st().experiments).toEqual([{ id: 'keep', ex: 'hack', ph: null, note: '' }]);
-      expect(saved('experiments/main').items).toHaveLength(1);
-      st().undoRemoveEdSlot(); // a second Undo changes nothing
-      expect(day1()).toEqual(before);
-      expect(st().experiments).toHaveLength(1);
-    });
-    it('Undo still works after the experiment was deleted meanwhile', () => {
-      const before = structuredClone(day1());
-      st().moveEdSlotToExperiments(0);
-      useAppStore.setState({ experiments: [] });
-      st().undoRemoveEdSlot();
-      expect(day1()).toEqual(before);
-      expect(st().experiments).toEqual([]);
-    });
-    it('a plain Remove adds nothing to Experiments', () => {
-      st().removeEdSlot(0);
-      expect(st().experiments).toEqual([]);
-    });
-  });
   // Cards saved without an id (older saved programs) are named by their position, so these use a Day 1 with no ids.
   const idless = () => { const p = structuredClone(BUILTIN.A); p.days[0].slots.forEach(sl => { delete sl.id; }); useAppStore.setState(x => ({ programs: { ...x.programs, A: p } })); };
   it('remove, then a move, then Undo: every card keeps its own id, none shared', () => {

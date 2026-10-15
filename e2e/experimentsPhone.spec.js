@@ -1,16 +1,12 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, seedExperiments } from './fixtures.js';
 
 // Experiments on a phone: the strip snaps, the next card still peeks past the edge (so it reads as scrollable), every button is a
 // 44px target, and the page does not scroll sideways. (Where the buttons wrap depends on the font, so that is not asserted.)
 test('the Experiments strip snaps and peeks, its buttons are 44px and the page stays in view', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
-  await page.click('#tab-program');
-  const rows = page.locator('.edrow');
-  await expect(rows.first()).toBeVisible();
-  await rows.first().getByRole('button', { name: /to Experiments$/ }).click();
-  await rows.first().getByRole('button', { name: /to Experiments$/ }).click();
-  await page.click('#tab-board');
+  await seedExperiments(page, ['hack', 'facepull']);
+  await page.goto('/');
   const cards = page.locator('.explist .expcard');
   await expect(cards).toHaveCount(2);
   await cards.first().scrollIntoViewIfNeeded();

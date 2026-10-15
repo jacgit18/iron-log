@@ -87,25 +87,10 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const gone: ProgramSlot[] = [];
     if (get().editProgram(prog => { pinIds(prog, day); gone.push(...prog.days[day - 1].slots.splice(i, 1)); }) && gone[0]) set({ edRemoved: { key, day, idx: i, slot: gone[0] } });
   },
-  // Takes the card out of the program, as Remove does, and adds each of its exercises to the Experiments list (phase and note kept).
-  // Undo puts the card back and takes those experiments out again. The program is saved first, so a refused save changes nothing.
-  moveEdSlotToExperiments(i) {
-    const key = get().edKey(); const day = get().edDay;
-    const gone: ProgramSlot[] = [];
-    if (!get().editProgram(prog => { pinIds(prog, day); gone.push(...prog.days[day - 1].slots.splice(i, 1)); }) || !gone[0]) return;
-    // An exercise already on the list (or twice on this card) is not added again; the card still leaves the program.
-    const have = new Set(get().experiments.map(e => e.ex)); const fresh = gone[0].items.filter(it => it.ex && !have.has(it.ex) && have.add(it.ex));
-    const added = fresh.map(it => ({ id: 'E' + newId(), ex: it.ex, ph: it.ph ?? null, note: (it.note || '').slice(0, 200) }));
-    const skipped = gone[0].items.filter(it => it.ex).length - added.length;
-    if (added.length) get().setExperiments([...get().experiments, ...added]);
-    set({ edRemoved: { key, day, idx: i, slot: gone[0], toExperiments: added.map(e => e.id) } });
-    flag(skipped ? `Moved to Experiments · ${skipped} already there` : 'Moved to Experiments');
-  },
   undoRemoveEdSlot() {
     const r = get().edRemoved;
     if (!r || r.key !== get().edKey() || r.day !== get().edDay) { set({ edRemoved: null }); return; }
     if (get().editProgram(prog => { const sl = prog.days[r.day - 1].slots; sl.splice(Math.min(r.idx, sl.length), 0, r.slot); })) {
-      if (r.toExperiments?.length && get().experiments.some(e => r.toExperiments!.includes(e.id))) get().setExperiments(get().experiments.filter(e => !r.toExperiments!.includes(e.id)));
       set({ edRemoved: null }); flag('Put back');
     }
   },
