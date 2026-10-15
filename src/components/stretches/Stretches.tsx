@@ -83,6 +83,7 @@ function Experiments({ day }: { day: number }) {
                     {DAYS7.map(d => <option key={d} value={d}>{DAY_NAMES[d]}</option>)}
                   </select>
                   <button type="button" className="btn sm" aria-label={`Add ${e.n} to ${DAY_NAMES[to]}`} onClick={() => s.addStretchToDay(e.id, to)}>Add</button>
+                  <button type="button" className="btn sm ghost" aria-label={`Add ${e.n} to your stretches`} onClick={() => s.promoteStretchExp(e.id)}>To my stretches</button>
                   <button type="button" className="btn sm ghost" aria-label={`Edit ${e.n}`} onClick={() => s.openModal({ type: 'stretchexp', id: e.id })}>Edit</button>
                   <ArmedButton className={`btn sm ${arming === e.id ? 'danger' : 'ghost'}`} label="Delete" armedLabel="Tap again to delete" aria-label={`Delete ${e.n}`} onArmedChange={a => setArming(a ? e.id : null)} onConfirm={() => { setArming(null); s.deleteStretchExp(e.id); }} />
                 </div>

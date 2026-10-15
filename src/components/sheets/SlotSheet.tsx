@@ -39,12 +39,13 @@ function ItemFields({ it, k, type, cfg, onChange }: { it: ItemState; k: number; 
 }
 
 // `target` ({key, day}) comes from the board's + Add to program; without it the sheet edits the Program tab's selection.
-export default function SlotSheet({ idx, col, target }: { idx: number | null; col?: number; target?: { key: string; day: number } | null }) {
+export default function SlotSheet({ idx, col, target, fromExp }: { idx: number | null; col?: number; target?: { key: string; day: number } | null; fromExp?: string }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
   const edDay = useAppStore(s => (target ? target.day : s.edDay));
   const [d, setD] = useState<SlotState>(() => {
-    const src: any = idx == null ? { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [blankItem()], note: '' } : structuredClone(st.edProgram().days[edDay - 1].slots[idx]); // a new card or a clone of the one being edited
+    const exp = idx == null && fromExp ? st.experiments.find(x => x.id === fromExp) : null; // promoted from the Experiment list: its exercise, phase and note start the card
+    const src: any = idx == null ? { id: null, sec: 'Regular', tier: 'Accessory', type: 'single', items: [exp ? { ...blankItem(), ex: exp.ex, ph: exp.ph, note: exp.note } : blankItem()], note: '' } : structuredClone(st.edProgram().days[edDay - 1].slots[idx]); // a new card or a clone of the one being edited
     // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
     return { ...src, type: src.type || 'single', day: edDay, days: [edDay], idx, target, note: src.note || '', tier: src.tier || '', items: src.items.map((it: any) => ({ ...blankItem(), ...it, nm: it.ex ? exInfo(cfg, it.ex).n : '', w: it.w ?? '', rx: it.rx || '', note: it.note || '' })) };
   });
@@ -56,7 +57,7 @@ export default function SlotSheet({ idx, col, target }: { idx: number | null; co
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const clean = { ...d, days: manyDays ? d.days : undefined, note: d.note.trim(), items: d.items.map(({ cat, ...it }) => ({ ...it, ...pickedChoice(cfg, it.nm, cat), w: it.w === '' || it.w == null ? null : Number(it.w), rx: it.rx.trim(), note: it.note.trim(), nu: (it.nu || '').trim(), ne: it.ne })) };
-    const msg = st.saveSlot(clean);
+    const msg = st.saveSlot({ ...clean, ...(fromExp ? { fromExp } : {}) });
     if (msg) setErr(msg);
   };
 
