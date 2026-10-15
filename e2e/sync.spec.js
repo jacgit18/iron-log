@@ -125,11 +125,11 @@ test.describe('while the data is loading', () => {
       await page.route('**/api/sync*', slow(pull, 2500));
       await page.route('**/api/me', signedInAsDev);
       await page.goto('/');
-      await expect(page.locator('.saveflag')).toHaveText('Loading…');
+      await expect(page.locator('#live-status')).toContainText('Loading…');
       await page.waitForTimeout(800); // well inside the 2.5 s the server is held back
       await expect(page.locator('#chk-A-d1s1')).toHaveCount(0);
       await expect(page.locator('.col, .card')).toHaveCount(0);
-      await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+      await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
       if (pull.rows.length) await expect(page.locator('#chk-A-d1s1')).toBeVisible();
       else { await expect(page.getByRole('region', { name: 'Build your first workout' })).toBeVisible(); await expect(page.locator('#chk-A-d1s1')).toHaveCount(0); } // loaded: a blank board with its prompt, none of the built-in cards
     });
@@ -155,7 +155,7 @@ async function openSynced(page, commands, me = signedInAsDev, pull = accountPull
   // `board: false` is for a device that cannot load anything (signed out, offline): the data views stay empty, so only the app itself is waited for.
   if (!board) await expect(page.locator('#tab-board')).toBeVisible();
   else if (pull.rows.length) await expect(page.locator('#chk-A-d1s1')).toBeVisible();
-  else await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  else await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
 }
 const openSettings = async page => { await page.click('#tab-settings'); await expect(page.getByRole('heading', { name: 'Sync', exact: true })).toBeVisible(); };
 
@@ -283,7 +283,7 @@ test.describe('the Sync panel', () => {
       await openSettings(page);
       const before = await page.locator('.notsent li').count();
       await page.locator('.notsent li').first().getByRole('button', { name: /^Try again/ }).click();
-      await expect(page.locator('.saveflag')).toContainText('would not take it this time either');
+      await expect(page.locator('#live-status')).toContainText('would not take it this time either');
       await expect(page.locator('.notsent li')).toHaveCount(before);
     });
   });
@@ -396,7 +396,7 @@ test.describe('signed out with syncing on (the server answers 401)', () => {
     await expect(card).toBeVisible();
     await expect(card).toContainText('kept on this device');
     await expect(card.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
-    await expect(page.locator('.saveflag')).not.toHaveText('Loading…');
+    await expect(page.locator('#live-status')).not.toContainText('Loading…');
     const { violations } = await scan(page);
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });
@@ -683,7 +683,7 @@ test.describe('Delete my data', () => {
     expect(calls[0].body).toEqual({ confirm: 'ERASE' });
     await reloaded;
     await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible(); // reloaded: the app reopens on the tab it was on
-    await expect(page.locator('.saveflag')).toHaveText('Everything in your account was erased.'); // said after the reload, not lost to it
+    await expect(page.locator('#live-status')).toContainText('Everything in your account was erased.'); // said after the reload, not lost to it
     const left = await page.evaluate(() => ({ docs: localStorage.getItem('ironlog:logs/hack'), mirror: localStorage.getItem('ironlog:sync/mirror'), marker: localStorage.getItem('ironlog:sync/legacy') }));
     expect(left.docs).toBeNull();
     expect(await page.evaluate(() => [localStorage.getItem('ironlog:grocery/main'), localStorage.getItem('ironlog:grocery/2026-09')])).toEqual([null, null]); // the old grocery list goes with the rest of the old documents

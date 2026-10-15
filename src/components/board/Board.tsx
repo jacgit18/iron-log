@@ -1,5 +1,5 @@
 import type { FlatSlot } from '../../types.ts';
-import { Fragment, useCallback, useEffect, useRef, useState, type DragEvent, type TouchEvent } from 'react';
+import { Fragment, useCallback, useRef, useState, type DragEvent, type TouchEvent } from 'react';
 import type { MuscleKey, ProgKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -13,12 +13,9 @@ import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
-import Notice from '../Notice.jsx';
-import RemovedNotice from '../RemovedNotice.jsx';
 import FirstRun from './FirstRun.jsx';
 import InstallHint from './InstallHint.jsx';
 import './BoardTop.css';
-import './Toasts.css';
 import './DayHeader.css';
 
 // Cards moved in from another day are grouped under their own heading.
@@ -49,7 +46,6 @@ export default function Board() {
   const logs = useAppStore(s => s.logs);
   const programs = useAppStore(s => s.programs);
   const storeMode = useAppStore(s => s.storeMode);
-  const moveNote = useAppStore(s => s.moveNote);
   const mDay = useAppStore(s => s.mDay);
   const today = useToday(s => s.today);
   const st = useAppStore.getState();
@@ -63,13 +59,6 @@ export default function Board() {
   const { total, done, skipped: skippedN } = tally(slots, week);
   const pct = total ? Math.round(done / total * 100) : 0;
   const wk = ymd(weekStart);
-  const showMove = moveNote && moveNote.week === wk;
-  const orderNote = useAppStore(s => s.orderNote);
-  const showOrder = orderNote && orderNote.week === wk;
-  const uncheckNote = useAppStore(s => s.uncheckNote);
-  const showUncheck = uncheckNote && uncheckNote.week === wk;
-  const skipNote = useAppStore(s => s.skipNote);
-  const showSkip = skipNote && skipNote.week === wk && !!(week.skipped || {})[skipNote.slotId]; // gone once the card is back
 
   // Phones show one day; default to the first day that still has open work.
   let day = mDay;
@@ -105,17 +94,6 @@ export default function Board() {
   const [pick, setPick] = useState<number | null>(null);
   const moveTo = targets.includes(pick as number) ? pick : targets[0];
   const hideLeftovers = () => { LS.set('hideleftovers', todayKey); forceTips(n => n + 1); };
-
-  const moveRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (moveRef.current) moveRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [moveNote]);
-  // A suggested day order: bring it into view when it appears, and after Apply put focus on Put back.
-  const orderRef = useRef<HTMLDivElement>(null); const putBackRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => { if (orderRef.current && orderNote && !orderNote.applied) orderRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [orderNote]);
-  const orderApplied = !!(showOrder && orderNote.applied);
-  useEffect(() => { if (orderApplied && putBackRef.current) putBackRef.current.focus(); }, [orderApplied]);
-  // The undo notice sits above the days, so bring it into view when it appears (you're usually scrolled down at a card).
-  const uncheckRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (uncheckRef.current) uncheckRef.current.scrollIntoView({ block: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); }, [uncheckNote]);
 
   // Desktop drag and drop between day columns.
   const [dragId, setDragId] = useState<string | null>(null);
@@ -191,29 +169,6 @@ export default function Board() {
           </div>
         </div>
       )}
-      <div className="toasts">
-        {showUncheck && (
-          <Notice kind="undo" innerRef={uncheckRef} actions={[{ label: 'Undo', onClick: st.undoUncheck }, { label: 'Dismiss', onClick: st.dismissUncheck, ghost: true }]}>{uncheckNote.text}</Notice>
-        )}
-        {showSkip && (
-          <Notice kind="undo" actions={[{ label: 'Undo', onClick: st.undoSkip }, { label: 'Dismiss', onClick: st.dismissSkip, ghost: true }]}>{skipNote.text}</Notice>
-        )}
-        <RemovedNotice scope={'board:' + wk} />
-        {showMove && (
-          <Notice kind="warning" innerRef={moveRef} actions={[
-            !!moveNote.alt && { label: `Move to Day ${moveNote.alt} instead`, onClick: () => st.moveSlot(moveNote.slot!, moveNote.alt!) },
-            { label: 'Undo', title: `move back to Day ${moveNote.fromShown}`, onClick: st.undoMove },
-            { label: 'Dismiss', onClick: st.dismissMove, ghost: true },
-          ]}><b>Heads-up:</b> {moveNote.lines.join(' ')}</Notice>
-        )}
-        {showOrder && (
-          <Notice kind={orderNote.applied ? 'undo' : 'suggestion'} innerRef={orderRef} actions={[
-            !orderNote.applied && { label: 'Apply', onClick: st.applyOrder },
-            orderNote.applied && st.canUndoOrder() && { label: 'Undo', onClick: st.undoOrder, btnRef: putBackRef },
-            { label: 'Dismiss', onClick: st.dismissOrder, ghost: true },
-          ]}>{orderNote.applied ? (orderNote.kind === 'card' ? 'Moved for this week.' : 'Order changed for this week.') : <><b>Back-to-back:</b> {orderNote.lines.join(' ')}</>}</Notice>
-        )}
-      </div>
       {slots.length === 0 && <FirstRun />}
       <BodyWeightRow key={wk} />
       <div className="filterbar" role="group" aria-label="Sort and filter exercises">

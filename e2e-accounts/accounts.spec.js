@@ -46,7 +46,7 @@ const rowsOf = async email => (await pool.query(
   `select count(*)::int as n from log_entries l join users u on u.id = l.user_id join auth."user" a on a.id::text = u.auth_user_id where a.email = $1`, [email])).rows[0].n;
 const ready = async page => {
   await expect(page.locator('#chk-A-d1s1')).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
 };
 
 test('a stranger gets the landing page: the production build sends no dev header, and the app is not behind it', async ({ browser }) => {
@@ -71,7 +71,7 @@ test('a browser that has been signed in, whose session has expired, gets the app
   await expect(card).toBeVisible({ timeout: 30_000 });
   await expect(card.getByRole('button', { name: 'Sign in with Google' })).toBeEnabled();
   await expect(page.locator('#tab-board')).toBeVisible();
-  await expect(page.locator('.saveflag')).not.toHaveText('Loading…');
+  await expect(page.locator('#live-status')).not.toContainText('Loading…');
   expect(devHeaders).toEqual([]);
   await context.close();
 });
@@ -171,7 +171,7 @@ test('deleting the account removes the user, the data and every sign-in record, 
   await signUp(page, email, 'Del again', { seed: false });
   await page.goto('/');
   await page.click('#tab-board'); // the app reopens on the tab it was on: Settings
-  await expect(page.locator('.saveflag')).not.toHaveText('Loading…', { timeout: 30_000 });
+  await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await expect(page.locator('#chk-A-d1s1')).toHaveCount(0); // a new account: a blank board, none of the old cards
   expect(await rowsOf(email)).toBe(0);
   await context.close();

@@ -19,19 +19,22 @@ export interface NoticeAction {
   btnRef?: Ref<HTMLButtonElement>;
 }
 
-export default function Notice({ kind, className, innerRef, actions, children }: {
+export default function Notice({ kind, className, innerRef, silent, actions, children }: {
   kind: NoticeKind;
   className?: string; // extra class on .notice (e.g. removednote)
   innerRef?: Ref<HTMLDivElement>;
+  silent?: boolean; // no role=status: something else announces it (the Toaster's live region)
   actions: (NoticeAction | false | null | undefined)[]; // a false entry is skipped, so a button can be conditional
   children: ReactNode;
 }) {
   return (
-    <div className={className ? `notice ${className}` : 'notice'} data-kind={kind} role="status" ref={innerRef}>
-      <div className="nbody"><span className="nicon" aria-hidden="true">{ICON[kind]}</span><div>{children}</div></div>
-      <div className="actions">
-        {actions.map(a => a && <button type="button" key={a.label} className={a.ghost ? 'btn sm ghost' : 'btn sm'} ref={a.btnRef} aria-label={a.title ? `${a.label}: ${a.title}` : undefined} onClick={a.onClick}>{a.label}</button>)}
-      </div>
+    <div className={className ? `notice ${className}` : 'notice'} data-kind={kind} role={silent ? undefined : 'status'} ref={innerRef}>
+      <div className="nbody"><span className="nicon" aria-hidden="true">{ICON[kind]}</span><div className="ntext">{children}</div></div>
+      {actions.some(Boolean) && (
+        <div className="actions">
+          {actions.map(a => a && <button type="button" key={a.label} className={a.ghost ? 'btn sm ghost' : 'btn sm'} ref={a.btnRef} aria-label={a.title ? `${a.label}: ${a.title}` : undefined} onClick={a.onClick}>{a.label}</button>)}
+        </div>
+      )}
     </div>
   );
 }

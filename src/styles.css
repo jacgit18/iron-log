@@ -698,6 +698,17 @@ fieldset.edit-item legend {
 body.timing {
   padding-bottom: 130px;
 }
+/* On a wide screen the Toaster sits in the bottom left corner (Toaster.css), so the end of the page always keeps room to scroll
+   the first columns clear of it: the same 190px (320px with the timer bar up) whether or not a notice shows, so the page never
+   grows or shrinks under a tap. */
+@media (min-width:701px) {
+  body {
+    padding-bottom: 190px;
+  }
+  body.timing {
+    padding-bottom: 320px;
+  }
+}
 .fab {
   position: fixed;
   right: var(--gr);
