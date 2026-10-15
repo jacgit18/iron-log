@@ -23,7 +23,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
   setPct(p, raw) { const n = Number(raw); if (raw === '' || !validPct(n)) return false; return get().mutateCfg(c => { c.pct[p] = n; }); },
   setRxOverride(p, raw) { const v = raw.trim(); return get().mutateCfg(c => { if (v && v !== PHASES[p].rx) c.rxOverride[p] = v; else delete c.rxOverride[p]; }); },
   setRest(raw) { const n = Number(raw); if (raw === '' || !validRest(n)) return false; return get().mutateCfg(c => { c.rest = n; }); },
-  setInjuryPrevention(on) { if (get().mutateCfg(c => { if (on) delete c.injuryPrevention; else c.injuryPrevention = false; }) && !on) set(s => ({ moveNote: null, orderNote: s.orderNote?.applied ? s.orderNote : null })); }, // off drops the heads-up and any suggestion not yet applied; an applied one keeps its Put back
+  setInjuryPrevention(on) { if (get().mutateCfg(c => { if (on) c.injuryPrevention = true; else delete c.injuryPrevention; }) && !on) set(s => ({ moveNote: null, orderNote: s.orderNote?.applied ? s.orderNote : null })); }, // off drops the heads-up and any suggestion not yet applied; an applied one keeps its Put back
   setRm(exId, raw) { const n = Number(raw); if (raw !== '' && !validRm(n) && get().cfg.rm[exId] == null) return false; return get().mutateCfg(c => { if (raw === '' || !validRm(n)) delete c.rm[exId]; else c.rm[exId] = n; }); }, // 0 or empty clears a saved 1RM; junk with nothing saved is rejected so the field reverts
   setCfgField(k, v) { get().mutateCfg(c => { c[k] = v; }); },
 

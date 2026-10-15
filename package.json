@@ -10,6 +10,7 @@
     "dev": "vite",
     "seed:test-user": "tsx server/scripts/seedTestUserCli.ts",
     "reset:accounts": "tsx scripts/reset-accounts.mjs",
+    "keep:injury-prevention": "tsx scripts/keep-injury-prevention.mjs",
     "own:exercises": "tsx scripts/own-exercises.mjs",
     "catalog:import": "tsx scripts/catalog-import.mjs",
     "prod:db": "scripts/prod-db.sh",
