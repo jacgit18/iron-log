@@ -108,14 +108,18 @@ vite.config.js                build, PWA manifest and service worker settings
 src/main.tsx                  startup (fonts, appearance, PWA)
 src/App.tsx                   header, tabs, dialogs
 src/styles.css                shared styles and themes, one property per line (npm run format:css)
-src/lib/data.js               built-in programs, exercises, phases
-src/lib/logic.js              targets, stalls, progression, what counts as done
-src/lib/muscles.js            muscle map shapes and exercise→muscle tags
-src/lib/trends.js             Progress tab calculations
-src/lib/export.js             CSV/Excel export, data file
-src/lib/excelImport.js        importing an Excel workbook
-src/lib/storage.js            localStorage / Claude database save queue
-src/lib/pwa.js                install and persistent-storage helpers
+src/lib/data.ts               built-in programs, exercises, phases
+src/lib/logic.ts              targets, stalls, progression, what counts as done
+src/lib/muscles.ts            muscle map shapes and exercise→muscle tags
+src/lib/trends.ts             Progress tab calculations
+src/lib/export.ts             CSV/Excel export, data file
+src/lib/excelImport.ts        importing an Excel workbook
+src/lib/storage.ts            localStorage / Claude database save queue
+src/sync/                     syncing with the server: outbox, mirror, account (on in the hosted build)
+src/shared/                   data rules shared by the app and the server
+server/                       the API (Express, Better Auth, Postgres)
+db/migrations/                database migrations (dbmate)
+src/lib/pwa.ts                install and persistent-storage helpers
 src/store/                    app state (Zustand): main store, editor, settings, timer
 src/components/               Board, Progress, Muscles, Program, Settings, dialogs, charts
 src/hooks/                    focus keeping and tooltips
@@ -130,7 +134,7 @@ tools/banner.html             README banner template
 
 ## Customizing
 
-The two built-in programs are the `PROGRAM_A` and `PROGRAM_B` objects in `src/lib/data.js`. The default muscle tags are in `MUSCLE_MAP` in `src/lib/muscles.js`. You can also change both from inside the app (the Program tab, and Edit on the Muscles tab), and those changes are saved on top of the built-in defaults.
+The two built-in programs are the `PROGRAM_A` and `PROGRAM_B` objects in `src/lib/data.ts`. The default muscle tags are in `MUSCLE_MAP` in `src/lib/muscles.ts`. You can also change both from inside the app (the Program tab, and Edit on the Muscles tab), and those changes are saved on top of the built-in defaults.
 
 The phase percentages (Strength 85%, Isometric 75%, Hypertrophy 65%, Explosive 45%) are placeholders. Change them in Settings.
 
