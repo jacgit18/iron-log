@@ -406,7 +406,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
     const done: Record<string, boolean> = {}; const after = get().week.done || {};
     new Set([...Object.keys(before.done || {}), ...Object.keys(after)]).forEach(k => { if (!!(before.done || {})[k] !== !!after[k]) done[k] = !!(before.done || {})[k]; });
-    const unticked = Object.values(done).some(Boolean);
+    // A superset's per-exercise ticks fold into the card's own tick when its last half is ticked: that is not an uncheck.
+    const stillDone = (k: string) => !!after[k] || (k.includes('#') && !!after[k.split('#')[0]]);
+    const unticked = Object.entries(done).some(([k, was]) => was && !stillDone(k));
     get().suggestOrder(slots, before);
     if (get().weekKey() === ymd(weekStartOf(new Date()))) trackNudge(before, get().week, slots); // only this week's days are worth a nudge
     if (removeLogged && unticked) {
