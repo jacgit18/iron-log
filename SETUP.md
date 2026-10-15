@@ -23,18 +23,16 @@ Daily use:
 
 ## 2. What is not in the repo
 
-| Thing | Where it lives | On a new computer |
-|---|---|---|
-| Your Claude global rules | `~/.claude/CLAUDE.md` | Copy it (it holds the PR-description and Lighthouse rules for every project). |
-| Skills and rules | the `EndToEnd-App-with-AI-Using-skills` repo, linked from `~/.claude/skills/` | Clone it anywhere, then re-create the links from `~/.claude/skills/<name>` to its folders. The links hold absolute paths. |
-| Project docs (ADRs, ROADMAP, CHANGELOG, UX docs) | the DevHiveMind vault (own git remote) | Clone it, and point the "Project docs root" in `~/.claude/CLAUDE.md` at it. |
-| Claude's memory for this project | `~/.claude/projects/<path>/memory/` | Copy the folder, or let it rebuild from the repo and vault docs. |
-| Secrets | `.env`, `gcloud` and `gh` sign-ins, MCP connector sign-ins | Create or sign in again. Never copy them through chat or git. |
-| Required checks | GitHub repository settings | Already set on the repo; nothing to do per computer. |
+| Thing | On a new computer |
+|---|---|
+| The owner's Claude global rules (`~/.claude/CLAUDE.md`) | Copy that file by hand; it holds the PR-description and Lighthouse rules for every project. |
+| Reusable skills and rules (the owner's separate skills repository, linked from `~/.claude/skills/`) | Clone that repository anywhere and re-create the links; they hold absolute paths. |
+| Project docs (ADRs, roadmap, changelog, UX docs; the owner's separate docs vault) | Clone the vault and point the "Project docs root" in the global rules at it. |
+| Claude's memory for this project (`~/.claude/projects/<path>/memory/`) | Copy the folder, or let it rebuild from the repo and the docs. |
+| Secrets: `.env`, `gcloud` and `gh` sign-ins, connector sign-ins | Create or sign in again. Never copy them through chat or git. |
 
 ## 3. A work computer
 
-- Check company policy before installing Claude Code, Docker or signing in to a personal GitHub account.
-- Keep personal and work separate: do not copy the personal vault, memory folder, `.env` or personal connector sign-ins (mail, drive, finance) to a work machine.
-- Copy only the generic rules into that machine's `~/.claude/CLAUDE.md`.
-- For a work repo, reuse the kits instead of the personal paths: `commit-and-push/pr-kit/` (PR template, checks and `pr-body.mjs`; its README says what to adapt) and `web-vitals-audit/lighthouse.mjs` (set the floors to that project's current scores first).
+- Check company policy before installing Claude Code or Docker, or signing in to a personal GitHub account.
+- Keep personal and work separate: do not copy the personal docs vault, memory folder, `.env` or personal connector sign-ins to a work machine. Copy only the generic rules into that machine's `~/.claude/CLAUDE.md`.
+- For a work repo, reuse the two kits from the owner's skills repository instead of the personal paths: `.claude/skills/commit-and-push/pr-kit/` (PR template, checks and `pr-body.mjs`; its README says what to adapt) and `.claude/skills/web-vitals-audit/lighthouse.mjs` (set its floors to that project's current scores first).
