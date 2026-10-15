@@ -1,0 +1,58 @@
+/* The signed-in badge at the right end of the header (AccountBadge.tsx). The button is the 44px touch target; the avatar inside is smaller. */
+.acctbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: .875rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.acctbadge:hover .acctavatar {
+  filter: brightness(1.12);
+}
+.acctavatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: .9375rem;
+  line-height: 1;
+}
+.acctdot {
+  position: absolute;
+  inset-inline-end: -2px;
+  inset-block-end: -2px;
+  inline-size: 11px;
+  block-size: 11px;
+  border-radius: 50%;
+  background: var(--exp);
+  border: 2px solid var(--bg);
+  box-sizing: border-box;
+}
+.acctname {
+  max-inline-size: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* On a phone the header is full already: the initial and the dot say it, and the name is in the label and on Settings. */
+@media (max-width:700px) {
+  .acctbadge {
+    grid-column: 4;
+  }
+  .acctname {
+    display: none;
+  }
+}
