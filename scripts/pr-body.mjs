@@ -19,7 +19,7 @@ const NOT_USER_FACING = [/^docs\//, /^e2e[\w-]*\//, /^scripts\//, /^tools\//, /^
 /** Which audience a change has, from its file names and its diff text. Returns { audience, reason }. */
 export function inferAudience(files, diff = '') {
   if (files.length > 0 && files.every(f => NOT_USER_FACING.some(re => re.test(f)))) return { audience: 'na', reason: 'only docs, tests, scripts, CI or config files changed' };
-  if (/^\+.*name:\s*'admin'/m.test(diff) || files.includes('server/admin.ts')) return { audience: 'admin', reason: "an admin-only entry in src/features.ts, or server/admin.ts, changed" };
+  if (/^\+\s*\w+:\s*'admin'/m.test(diff) || files.includes('server/admin.ts')) return { audience: 'admin', reason: "an admin-only entry in src/features.ts, or server/admin.ts, changed" };
   return { audience: 'everyone', reason: 'user-visible files changed and no admin-only entry was added (standing rule: ship to everyone for now)' };
 }
 
