@@ -1,0 +1,39 @@
+/* The four kinds of notice (Notice.tsx): what happened and can be undone, a suggestion to act on, a warning, plain information.
+   One layout for all (text, then the buttons); the kind sets the colour and the icon, and the icon is never the only cue. */
+.notice[data-kind] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.notice[data-kind] .nbody {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1 1 14rem;
+}
+.notice[data-kind] .actions {
+  margin: 0;
+  gap: 6px;
+  align-items: center;
+}
+.nicon {
+  flex: none;
+  font-weight: 700;
+  line-height: 1;
+}
+.notice[data-kind="undo"],.notice[data-kind="info"] {
+  background: var(--sunk);
+  color: var(--ink);
+}
+.notice[data-kind="suggestion"] {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-inline-start: 4px solid var(--accent);
+}
+.notice[data-kind="warning"] {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
