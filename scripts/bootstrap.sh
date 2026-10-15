@@ -18,17 +18,23 @@ command -v gh >/dev/null && ok "gh (GitHub CLI)" || todo "install the GitHub CLI
 command -v docker >/dev/null && ok "docker" || todo "install Docker (only for the local database and e2e:sync / db:check)"
 
 echo "Dependencies"
-npm ci && ok "npm ci" || todo "npm ci failed"
+DEPS=0
+npm ci && { ok "npm ci"; DEPS=1; } || todo "npm ci failed; the hooks and browser steps are skipped until it passes"
 
 echo "Git hooks"
-node scripts/install-hooks.mjs && ok "pre-push runs npm run check (SKIP_CHECK=1 git push to skip once)" || todo "install-hooks failed"
+if [ "$DEPS" -eq 1 ]; then
+  node scripts/install-hooks.mjs && ok "pre-push runs npm run check (SKIP_CHECK=1 git push to skip once)" || todo "install-hooks failed"
+else todo "skipped (dependencies are not installed)"; fi
 
 echo "Browser for e2e and Lighthouse"
-npx playwright install chromium && ok "playwright chromium" || todo "playwright install failed (on Linux you may need: npx playwright install-deps chromium)"
+# The project's own Playwright (node_modules), never whatever npx would fetch: its browser build has to match the pinned version.
+if [ "$DEPS" -eq 1 ] && [ -x node_modules/.bin/playwright ]; then
+  node_modules/.bin/playwright install chromium && ok "playwright chromium" || todo "playwright install failed (on Linux you may need: node_modules/.bin/playwright install-deps chromium)"
+else todo "skipped (dependencies are not installed)"; fi
 
 echo "Local database"
 if command -v docker >/dev/null; then
-  if (exec 3<>/dev/tcp/127.0.0.1/5433) 2>/dev/null; then ok "postgres already answering on 127.0.0.1:5433"
+  if (exec 3<>/dev/tcp/127.0.0.1/5433) 2>/dev/null; then ok "something is answering on 127.0.0.1:5433 (taken to be the local database)"
   elif npm run db:start >/dev/null 2>&1; then ok "postgres on 127.0.0.1:5433"
   else todo "database did not start: docker compose up -d --force-recreate --wait db"; fi
 fi
