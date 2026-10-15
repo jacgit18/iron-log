@@ -330,6 +330,8 @@ export interface CoreSlice {
 
   setExperiments(experiments: Experiment[]): void;
   saveExperiment(d: ExperimentForm): string | null;
+  /** The exercise id a sheet's choice stands for, adding it to the library first when it is new. */
+  resolveExerciseChoice(d: ExerciseChoice & ExerciseExtras, chosen: string): string;
   applyExerciseUrl(ex: string, raw: string | null | undefined): void;
   applyExerciseEq(ex: string, eq: EquipmentId | '' | null | undefined): void;
   addEquipment(name: string): EquipmentId | null;

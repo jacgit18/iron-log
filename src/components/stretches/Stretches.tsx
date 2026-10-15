@@ -10,6 +10,7 @@ import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import { motionOK } from '../../lib/motion.js';
 import { useSwipeCard } from '../board/useSwipeCard.js';
 import ArmedButton from '../ArmedButton.jsx';
+import ExperimentCard from '../ExperimentCard.jsx';
 import ExperimentSearch from '../ExperimentSearch.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import WarmUp from './WarmUp.jsx';
@@ -65,7 +66,6 @@ function Experiments({ day }: { day: number }) {
   const [pick, setPick] = useState<Record<string, number>>({});
   const [q, setQ] = useState('');
   if (q && !hasFilter(items.length)) setQ(''); // the search hides on a short list: forget its text, so it does not come back filled in
-  const [arming, setArming] = useState<string | null>(null); // the experiment whose Delete was pressed once
   const shown = hasFilter(items.length) ? items.filter(e => matchesQuery(q, e.n, e.note)) : items; // the search shows only on a long list
   return (
     <section className="experiments" aria-labelledby="sexp-h">
@@ -81,23 +81,11 @@ function Experiments({ day }: { day: number }) {
             const to = pick[e.id] ?? day;
             const on = [...new Set(added.filter(x => x.n === e.n).map(x => x.day))].sort((a, b) => a - b); // the days of this week it is already on
             return (
-              <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`}>
-                {arming === e.id && <span className="rmtag">Will be deleted · tap Delete again</span>}
-                <div><b className="rmname">{e.n}</b>{e.group && <> <span className="tag">{e.group}</span></>}</div>
-                {e.note && <div className="note">{e.note}</div>}
-                {on.length > 0 && <div className="note onday">On {on.map(d => DAY_NAMES[d]).join(', ')} this week</div>}
-                <Link n={e.n} url={e.url} />
-                <div className="actions">
-                  <label htmlFor={`sexp-to-${e.id}`}>Add to</label>
-                  <select id={`sexp-to-${e.id}`} aria-label={`Add to (${e.n})`} value={to} onChange={ev => setPick(p => ({ ...p, [e.id]: Number(ev.target.value) }))}>
-                    {DAYS7.map(d => <option key={d} value={d}>{DAY_NAMES[d]}</option>)}
-                  </select>
-                  <button type="button" className="btn sm" aria-label={`Add ${e.n} to ${DAY_NAMES[to]}`} onClick={() => s.addStretchToDay(e.id, to)}>Add</button>
-                  <button type="button" className="btn sm ghost" aria-label={`Add ${e.n} to your stretches`} onClick={() => s.promoteStretchExp(e.id)}>To my stretches</button>
-                  <button type="button" className="btn sm ghost" aria-label={`Edit ${e.n}`} onClick={() => s.openModal({ type: 'stretchexp', id: e.id })}>Edit</button>
-                  <ArmedButton className={`btn sm ${arming === e.id ? 'danger' : 'ghost'}`} label="Delete" armedLabel="Tap again to delete" aria-label={`Delete ${e.n}`} onArmedChange={a => setArming(a ? e.id : null)} onConfirm={() => { setArming(null); s.deleteStretchExp(e.id); }} />
-                </div>
-              </li>
+              <ExperimentCard key={e.id} id={e.id} prefix="sexp" name={e.n} tag={e.group} note={e.note}
+                detail={<>{on.length > 0 && <div className="note onday">On {on.map(d => DAY_NAMES[d]).join(', ')} this week</div>}<Link n={e.n} url={e.url} /></>}
+                days={DAYS7.map(d => ({ value: d, label: DAY_NAMES[d] }))} to={to} onTo={d => setPick(p => ({ ...p, [e.id]: d }))} onAdd={() => s.addStretchToDay(e.id, to)}
+                extra={<button type="button" className="btn sm ghost" aria-label={`Add ${e.n} to your stretches`} onClick={() => s.promoteStretchExp(e.id)}>To my stretches</button>}
+                onEdit={() => s.openModal({ type: 'stretchexp', id: e.id })} onDelete={() => s.deleteStretchExp(e.id)} />
             );
           })}
         </ul>

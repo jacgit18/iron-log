@@ -5,7 +5,7 @@ import { PHASES, exInfo } from '../../lib/data.js';
 import { DAYS, colOf, lastLog, describe, todayCol } from '../../lib/logic.js';
 import { ymd, weekStartOf } from '../../shared/dates.js';
 import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
-import ArmedButton from '../ArmedButton.jsx';
+import ExperimentCard from '../ExperimentCard.jsx';
 import ExperimentSearch from '../ExperimentSearch.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import './Experiments.css';
@@ -23,7 +23,6 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
   const [pick, setPick] = useState<Record<string, number>>({});
   const [q, setQ] = useState('');
   if (q && !hasFilter(items.length)) setQ(''); // the search hides on a short list: forget its text, so it does not come back filled in
-  const [arming, setArming] = useState<string | null>(null); // the experiment whose Delete was pressed once
   const shown = hasFilter(items.length) ? items.filter(e => matchesQuery(q, exInfo(cfg, e.ex).n, e.note)) : items; // the search shows only on a long list
   const days = DAYS.filter(d => !rest.includes(d));
   const start = ymd(weekStartOf(today)) === ymd(weekStart) ? todayCol(today) : day;
@@ -43,23 +42,12 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
             const on = [...new Set((week.extra || []).filter(x => x.ex === e.ex).map(x => colOf(week, week.moved?.[x.id] || x.day)))].sort((a, b) => a - b); // the days of this week it is already on, where a dragged card now sits
             const to = days.includes(pick[e.id]) ? pick[e.id] : def;
             return (
-              <li key={e.id} className={`expcard${arming === e.id ? ' removing' : ''}`} draggable="true" onDragStart={ev => onDragStart(ev, 'exp:' + e.id)} onDragEnd={onDragEnd}>
-                {arming === e.id && <span className="rmtag">Will be deleted · tap Delete again</span>}
-                <div><b className="rmname">{n}</b>{e.ph && <> <span className="tag">{PHASES[e.ph].label}</span></>}</div>
-                {e.note && <div className="note">{e.note}</div>}
-                {on.length > 0 && <div className="note onday">On {on.map(d => `Day ${d}`).join(', ')} this week</div>}
-                {last && <div className="lastlog">Last: {describe(last)}</div>}
-                <div className="actions">
-                  <label htmlFor={`exp-to-${e.id}`}>Add to</label>
-                  <select id={`exp-to-${e.id}`} aria-label={`Add to (${n})`} value={to} onChange={ev => setPick(p => ({ ...p, [e.id]: Number(ev.target.value) }))}>
-                    {days.map(d => <option key={d} value={d}>Day {d}</option>)}
-                  </select>
-                  <button type="button" className="btn sm" aria-label={`Add ${n} to Day ${to}`} onClick={() => st.addToDay(e.id, to)}>Add</button>
-                  <button type="button" className="btn sm ghost" aria-label={`Add ${n} to the program, Day ${to}`} onClick={() => st.openAddToProgram(to, e.id)}>To program</button>
-                  <button type="button" className="btn sm ghost" aria-label={`Edit ${n}`} onClick={() => st.openModal({ type: 'experiment', id: e.id })}>Edit</button>
-                  <ArmedButton className={`btn sm ${arming === e.id ? 'danger' : 'ghost'}`} label="Delete" armedLabel="Tap again to delete" aria-label={`Delete ${n}`} onArmedChange={a => setArming(a ? e.id : null)} onConfirm={() => { setArming(null); st.deleteExperiment(e.id); }} />
-                </div>
-              </li>
+              <ExperimentCard key={e.id} id={e.id} prefix="exp" name={n} tag={e.ph ? PHASES[e.ph].label : undefined} note={e.note}
+                detail={<>{on.length > 0 && <div className="note onday">On {on.map(d => `Day ${d}`).join(', ')} this week</div>}{last && <div className="lastlog">Last: {describe(last)}</div>}</>}
+                days={days.map(d => ({ value: d, label: `Day ${d}` }))} to={to} onTo={d => setPick(p => ({ ...p, [e.id]: d }))} onAdd={() => st.addToDay(e.id, to)}
+                extra={<button type="button" className="btn sm ghost" aria-label={`Add ${n} to the program, Day ${to}`} onClick={() => st.openAddToProgram(to, e.id)}>To program</button>}
+                onEdit={() => st.openModal({ type: 'experiment', id: e.id })} onDelete={() => st.deleteExperiment(e.id)}
+                drag={{ onStart: ev => onDragStart(ev, 'exp:' + e.id), onEnd: onDragEnd }} />
             );
           })}
         </ul>
