@@ -122,7 +122,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
                 <button type="button" className="btn sm ghost" id={`det-${s.id}-${idx}`} aria-label={`Details: ${ex.n}`} onClick={() => openModal({ type: 'exercise', exId: it.ex })}>Details</button>
               </div>
               <div className="exline">
-                <select className="phase" id={`ph-${s.id}-${idx}`} data-p={ph || ''} aria-label={`Phase for ${ex.n}`} value={ph || ''}
+                <select className="phase" id={`ph-${s.id}-${idx}`} data-p={ph || ''} aria-label={`Phase for ${ex.n}, this week only`} value={ph || ''}
                   onChange={e => setPhase(s.id, idx, e.target.value as PhaseKey)}>
                   {!ph && <option value="">Set phase</option>}
                   {PH_KEYS.map(k => <option key={k} value={k}>{PHASES[k].label}</option>)}

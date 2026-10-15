@@ -16,6 +16,8 @@ type Props = {
   /** The day the select shows. */
   to: number;
   onTo: (day: number) => void;
+  /** Text of the add button (default Add). */
+  addLabel?: string;
   onAdd: () => void;
   /** Buttons between Add and Edit (To program, To my stretches). */
   extra?: ReactNode;
@@ -25,7 +27,7 @@ type Props = {
   drag?: { onStart: (e: DragEvent) => void; onEnd: () => void };
 };
 
-export default function ExperimentCard({ id, prefix, name, tag, note, detail, days, to, onTo, onAdd, extra, onEdit, onDelete, drag }: Props) {
+export default function ExperimentCard({ id, prefix, name, tag, note, detail, days, to, onTo, addLabel = 'Add', onAdd, extra, onEdit, onDelete, drag }: Props) {
   const [armed, setArmed] = useState(false); // Delete was pressed once
   const label = days.find(d => d.value === to)?.label ?? '';
   return (
@@ -39,7 +41,7 @@ export default function ExperimentCard({ id, prefix, name, tag, note, detail, da
         <select id={`${prefix}-to-${id}`} aria-label={`Add to (${name})`} value={to} onChange={ev => onTo(Number(ev.target.value))}>
           {days.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
         </select>
-        <button type="button" className="btn sm" aria-label={`Add ${name} to ${label}`} onClick={onAdd}>Add</button>
+        <button type="button" className="btn sm" aria-label={addLabel === 'Add' ? `Add ${name} to ${label}` : `${addLabel}: add ${name} to ${label}`} onClick={onAdd}>{addLabel}</button>
         {extra}
         <button type="button" className="btn sm ghost" aria-label={`Edit ${name}`} onClick={onEdit}>Edit</button>
         <ArmedButton className={`btn sm ${armed ? 'danger' : 'ghost'}`} label="Delete" armedLabel="Tap again to delete" aria-label={`Delete ${name}`} onArmedChange={setArmed} onConfirm={() => { setArmed(false); onDelete(); }} />
