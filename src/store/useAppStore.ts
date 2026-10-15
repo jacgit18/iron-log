@@ -45,7 +45,7 @@ import { validRm, validFreq, validLiftGoalLb, validBodyLb, normEntry, normEntrie
 let db: any = null; // the host's database handle (Firestore-like), or null for local storage
 let syncApi: ApiDb | null = null; // set when the handle is the API-backed one (flag on)
 let unsubWeek: (() => void) | null = null;
-let flagT: ReturnType<typeof setTimeout> | null = null, flagHold: boolean | number = 0;
+let flagT: ReturnType<typeof setTimeout> | null = null, flagX: ReturnType<typeof setTimeout> | null = null, flagHold: boolean | number = 0;
 let initStarted = false;
 let histPromise: Promise<void> | null = null;
 let histFailed = false; // the last history load lost some weeks to an error
@@ -182,7 +182,11 @@ export function flag(t: string) {
   flagHold = !routine && !/^Not saved|^Could/.test(t);
   useAppStore.setState({ saveFlag: t });
   if (flagT) clearTimeout(flagT);
+  if (flagX) clearTimeout(flagX);
   if (!t) return;
+  // A message goes by itself after a few seconds (longer for a longer one), so it never sits over the page waiting for a tap.
+  // A failure ("Not saved", "Could not ...") stays until the next tap: it says something is wrong.
+  if (!/^Not saved|^Could/.test(t)) flagX = setTimeout(() => { flagHold = false; useAppStore.setState(s => (s.saveFlag === t ? { saveFlag: '' } : {})); }, Math.max(6000, 3000 + t.length * 60));
   // Arm after this event finishes, so the tap that caused the message doesn't clear it.
   flagT = setTimeout(() => {
     const clear = () => {
