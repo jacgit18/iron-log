@@ -10,7 +10,7 @@ import {
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
   planFix, isFinished, injuryPreventionOn, autoEntry, newEntryId, normExperiments,
 } from '../lib/logic.js';
-import { LS, makeSaveQueue, removeLegacyGitHubToken } from '../lib/storage.js';
+import { LS, makeSaveQueue, onDamaged, removeLegacyGitHubToken } from '../lib/storage.js';
 import { FLAG_KEY, apiSyncEnabled } from '../sync/flag.js';
 import { reportCaught } from '../sync/reportErrors.js';
 import { groceryAdopted, markGroceryAdopted, readLegacyMarker } from '../sync/legacyMarker.js';
@@ -142,6 +142,7 @@ const queue = makeSaveQueue({
   getDb: () => db, onFlag: (t: string) => flag(t),
   onFailed: (paths: string[], refused: boolean) => useAppStore.setState(s => ({ unsaved: paths, refusals: s.refusals + (refused ? 1 : 0) })),
   onStored: takeStoredWeek, rebase: rebaseWeek,
+  onError: (err: unknown) => { console.error(err); reportCaught(err); },
 });
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
@@ -1174,6 +1175,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     subscribeWeek();
   },
 }));
+
+// Saved data that could not be read: LS kept a copy before anything could write over it. Say so (it stays until a tap) and report the
+// key, never the data. Subscribed only now that the store exists: a key found damaged while the modules loaded (the admin flag) is told
+// at once, and flag() needs the store.
+onDamaged(k => {
+  flag('Could not read some saved data. A copy was kept');
+  reportCaught(new Error(`Damaged saved data: ${k}`));
+});
 
 // Saved on this device: another tab (or the installed app next to a browser tab) wrote this data. Take its copy, so
 // this tab's next save of it doesn't put back what it held before.

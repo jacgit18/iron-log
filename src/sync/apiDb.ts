@@ -502,15 +502,17 @@ export function createApiDb(options: ApiDbOptions) {
     if (unsent !== undefined && given !== undefined && unsent !== given && !isDeleted(unsent) && !isDeleted(body)) body = mergeWeekDoc(path, given, body, unsent).week;
     if (!bases.has(path) && unsent === undefined) rememberBase(path); // an unsent week keeps the base of the first one
     if (bases.has(path)) handed.set(path, body);
-    outbox.put(path, body); // safe on this device before anyone is told "saved"
+    const kept = outbox.put(path, body); // safe on this device before anyone is told "saved"
     announce();
     return new Promise<unknown>((resolve, reject) => {
       let settled = false;
-      const accept = (doc?: unknown) => { if (!settled) { settled = true; pauseWaiters.delete(accept); resolve(doc); } };
-      const fail = (e: unknown) => { if (!settled) { settled = true; pauseWaiters.delete(accept); reject(e); } };
-      // Already paused, or pausing while this waits its turn: it is safe in the outbox, so the app can carry on.
-      if (state === 'paused') accept();
-      else pauseWaiters.add(accept);
+      const accept = (doc?: unknown) => { if (!settled) { settled = true; pauseWaiters.delete(onPause); resolve(doc); } };
+      const fail = (e: unknown) => { if (!settled) { settled = true; pauseWaiters.delete(onPause); reject(e); } };
+      // Already paused, or pausing while this waits its turn: it is safe in the outbox, so the app can carry on. Unless the browser
+      // refused to keep it: then it is in memory only, so the app hears "storage full", not "saved" (EH-08). It is still sent once it can be.
+      const onPause = () => (kept ? accept() : fail(Object.assign(new Error('storage full'), { code: 'quota_exceeded' })));
+      if (state === 'paused') onPause();
+      else pauseWaiters.add(onPause);
       exclusive(() => flushPath(path, accept)).then(r => (r.refused ? fail(permanent(r.refused)) : accept(isDeleted(body) ? undefined : clone(localDoc(path)))), fail);
     });
   }

@@ -226,6 +226,37 @@ describe('when the server cannot be reached', () => {
     expect(db.status()).toMatchObject({ state: 'idle', pausedBecause: null, pendingPaths: [] });
   });
 
+  // EH-08: with the browser refusing writes, an offline write lived in memory only but the app was told it was saved.
+  it('offline with the browser refusing writes, set() fails as storage full instead of saying saved', async () => {
+    const { server, storage, db } = setup();
+    db.start();
+    await settle();
+    storage.refuse = true;
+    server.fail.push(down('network'));
+    await expect(db.doc('logs/squat').set(logsDoc(entry('S1')))).rejects.toMatchObject({ code: 'quota_exceeded' });
+    expect(db.status()).toMatchObject({ persisted: false, pendingPaths: ['logs/squat'] }); // still held, and still sent when the network is back
+  });
+
+  it('already paused with the browser refusing writes, set() fails as storage full', async () => {
+    const { server, storage, db } = setup();
+    db.start();
+    await settle();
+    server.fail.push(down('network'));
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    expect(db.status()).toMatchObject({ state: 'paused' });
+    storage.refuse = true;
+    await expect(db.doc('logs/bench').set(logsDoc(entry('B1')))).rejects.toMatchObject({ code: 'quota_exceeded' });
+  });
+
+  it('online with the browser refusing writes, set() resolves once the server has it', async () => {
+    const { server, storage, db } = setup();
+    db.start();
+    await settle();
+    storage.refuse = true;
+    await expect(db.doc('logs/squat').set(logsDoc(entry('S1')))).resolves.toBeDefined();
+    expect(server.rows.size).toBe(1);
+  });
+
   it('waits longer each time, and a Retry-After from the server wins', async () => {
     const { server, gate, db } = setup();
     db.start();

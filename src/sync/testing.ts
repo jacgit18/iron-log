@@ -15,12 +15,15 @@ export const withRow = (mirror: Mirror, row: MirrorRow): Map<string, MirrorRow> 
 /* A storage object that behaves like the browser's: values survive being written and read back as JSON. */
 export function memoryStorage(refuseWrites = false) {
   const data = new Map<string, string>();
+  const damaged = new Map<string, unknown>();
   return {
     data,
+    damaged,
     refuse: refuseWrites,
     get(key: string): unknown { const v = data.get(key); return v === undefined ? null : JSON.parse(v); },
     set(key: string, value: unknown): boolean { if (this.refuse) return false; data.set(key, JSON.stringify(value)); return true; },
     remove(key: string) { data.delete(key); },
+    keepDamaged(key: string, value: unknown) { if (!damaged.has(key)) damaged.set(key, value); },
   };
 }
 
