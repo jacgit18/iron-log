@@ -13,6 +13,9 @@ describe('deploy-cloud-run.sh traffic commands', () => {
   let calls: string;
   const gcloudStub = `#!/usr/bin/env bash
 echo "$*" >> "${'$'}CALLS_FILE"
+# Read a piped secret value the way the real gcloud does. Exiting without reading lets the script's printf hit a closed pipe now and then,
+# and set -o pipefail turns that SIGPIPE into exit 141.
+case "$*" in *"--data-file=-"*) cat >/dev/null;; esac
 case "$*" in
   *"projects describe"*) echo 123456;;
   # The Web Push setup is made once: SETUP_EXISTS=1 is a second run, where the queue and the invoker account are already there.
