@@ -52,16 +52,12 @@ body.timing .toasts {
 }
 
 @media (min-width:701px) {
-  /* The corner sits over the bottom of the first columns, so the end of the page always keeps room to scroll them clear of it.
-     It is there whether or not a notice shows: a page that grew and shrank with each notice would slide the content under a tap. */
+  /* The page keeps 190px at its end (styles.css), so a taller stack would cover cards that cannot be scrolled clear: cap it there. */
+  .toasts {
+    max-height: min(45vh, 174px);
+  }
   html:has(.toasts .notice) {
     scroll-padding-bottom: 190px;
-  }
-  body {
-    padding-bottom: 190px;
-  }
-  body.timing {
-    padding-bottom: 320px;
   }
 }
 
