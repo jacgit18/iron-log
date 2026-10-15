@@ -1,4 +1,4 @@
-import { BUILTIN, BLANK, slotsFor, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
+import { BUILTIN, BLANK, slotsFor, exInfo, newExId, isVideoUrl, VIDEO_ERR } from '../lib/data.js';
 import { catalogName, catalogPickError, catalogSnapshot } from '../lib/catalogExercise.js';
 import { exIdsInUse } from '../lib/exerciseLibrary.js';
 import { buildStarter, starterById } from '../lib/starterPrograms.js';
@@ -53,13 +53,13 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
 
   // The board's + Add to program: the add sheet, aimed at the program on the board and the program day shown in
   // column `col`. The target travels with the sheet, so the Program tab's own selection is untouched.
-  openAddToProgram(col) {
+  openAddToProgram(col, fromExp) {
     const pd = dayAt(get().week, col);
     if (pd == null) { flag('That is your rest day'); return; }
     // A finished week shows what it ran, so a card added to today's program would not appear on it (ADR 022).
     if (get().shownFromRecord()) { flag('This week is over: use + This week only'); return; }
     const ak = get().activeProgKey();
-    set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd } } });
+    set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd }, ...(fromExp ? { fromExp } : {}) } });
   },
   setEdProg: edProg => set({ edProg, edRemoved: null }),
   setEdDay: edDay => set({ edDay, edRemoved: null }),
@@ -232,7 +232,8 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     if (Object.keys(newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, newEx); if (Object.keys(newTags).length) c.muscleMap = { ...(c.muscleMap || {}), ...newTags }; });
     const k = d.target ? d.target.key : get().edKey(); const edDay = d.target ? d.target.day : get().edDay;
     const newSlotId = (n: number) => `${k.startsWith('L:') ? 'N' : k}-x${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}${days.length > 1 ? n : ''}`;
-    const slot: ProgramSlot = { id: d.id || newSlotId(0), sec: d.sec, items };
+    const ids = days.map((_, n) => (n ? newSlotId(n) : d.id || newSlotId(0))); // each day's card, known now so a promotion's Undo can find them
+    const slot: ProgramSlot = { id: ids[0]!, sec: d.sec, items };
     if (d.tier) slot.tier = d.tier; if (d.type !== 'single') slot.type = d.type; if (d.note) slot.note = d.note;
     const orig = d.idx != null ? get().edProgram().days[edDay - 1].slots[d.idx] : null;
     // A new card starts this week, or next week when its day is already finished on this week's board, so adding a card
@@ -247,7 +248,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     if (orig) { if (orig.from) slot.from = orig.from; }
     else slot.from = startOf(days[0]);
     const apply = (prog: Program) => {
-      if (days.length > 1) { days.forEach((day, n) => insertSlot(prog.days[day - 1].slots, { ...structuredClone(slot), id: n ? newSlotId(n) : slot.id, from: startOf(day) })); return; }
+      if (days.length > 1) { days.forEach((day, n) => insertSlot(prog.days[day - 1].slots, { ...structuredClone(slot), id: ids[n]!, from: startOf(day) })); return; }
       if (d.idx != null) prog.days[edDay - 1].slots.splice(d.idx, 1);
       const target = prog.days[days[0] - 1].slots;
       if (orig && days[0] === edDay && orig.sec === slot.sec) target.splice(d.idx as number, 0, slot);
@@ -256,6 +257,17 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     if (d.target) { const prog = structuredClone(get().programs[k]); apply(prog); get().saveProgram(k, prog); } // from the board
     else get().editProgram(apply);
     get().closeModal();
+    const exp = d.fromExp && d.idx == null && d.target ? get().experiments.find(x => x.id === d.fromExp) : null;
+    if (exp) { // promoted from the Experiment list: it is on the program now, so it leaves the list; one Undo reverses both
+      const at = get().experiments.indexOf(exp); const gone = new Set(ids);
+      get().setExperiments(get().experiments.filter(x => x.id !== exp.id));
+      get().noteRemoved('experiments', `${exInfo(get().cfg, exp.ex).n} from Experiments (now on the program)`, () => {
+        if (get().blocked() || get().experiments.some(x => x.id === exp.id)) return false;
+        const prog = structuredClone(get().programs[k]); prog.days.forEach(dd => { dd.slots = dd.slots.filter(sl => !gone.has(sl.id)); });
+        get().saveProgram(k, prog);
+        const l = [...get().experiments]; l.splice(Math.min(at, l.length), 0, exp); get().setExperiments(l); return true;
+      });
+    }
     flag(days.length > 1 ? `Saved to Days ${days.join(', ')}` : days[0] === edDay ? 'Saved' : `Saved to Day ${days[0]}`);
     return null;
   },
