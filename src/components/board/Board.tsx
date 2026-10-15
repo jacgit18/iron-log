@@ -172,11 +172,11 @@ export default function Board() {
       )}
       {slots.length === 0 && <FirstRun />}
       <BodyWeightRow key={wk} />
-      <InjurySwitch />
       <div className="filterbar" role="group" aria-label="Sort and filter exercises">
         <button type="button" className="btn sm filtertoggle" aria-expanded={filterOpen} aria-controls="filter-fields" onClick={() => setFilterOpen(o => !o)}>
           Sort &amp; filter{filtering || sorting ? ` · ${(filtering ? 1 : 0) + (sorting ? 1 : 0)} on` : ''}
         </button>
+        <InjurySwitch />
         <div className={`filterfields${filterOpen ? ' open' : ''}`} id="filter-fields">
           <label className="field">Sort by muscle
             <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
