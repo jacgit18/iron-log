@@ -13,7 +13,8 @@ export default function AccountBadge() {
   const syncing = useAppStore(s => s.sync !== null);
   const client = useMemo(() => createAccountClient({ headers: devHeaders }), []);
   const { who } = useWho(syncing, client);
-  if (!syncing || who?.status !== 'signed-in') return null;
+  const authPaused = useAppStore(s => s.sync?.state === 'paused' && s.sync.pausedBecause === 'auth');
+  if (!syncing || authPaused || who?.status !== 'signed-in') return null;
   const name = who.kind === 'dev' ? 'Development user' : who.name ?? who.email ?? 'your account';
   const initial = (name.match(/[\p{L}\p{N}]/u)?.[0] ?? '?').toUpperCase();
   return (
