@@ -50,7 +50,7 @@ export default defineConfig({
   // The proxy keeps the browser's Host header, as production's single origin does, so the API's Origin check (originGuard) sees a same-origin page.
   server: { proxy: { '/api': { target: process.env.API_ORIGIN || 'http://localhost:3001', changeOrigin: false } } },
   // Playwright's specs in e2e/, e2e-sync/ and e2e-accounts/ are run by `npm run e2e` and `npm run e2e:sync`, not Vitest.
-  test: { exclude: ['**/node_modules/**', 'e2e/**', 'e2e-sync/**', 'e2e-accounts/**'] },
+  test: { exclude: ['**/node_modules/**', 'e2e/**', 'e2e-sync/**', 'e2e-accounts/**', '.claude/**'] }, // .claude/worktrees holds agents' copies of the repo
   plugins: [
     react(),
     preloadTitleFont(),

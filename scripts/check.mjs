@@ -1,5 +1,5 @@
 // Runs the checks that fit what changed, so a docs edit does not wait for Playwright and a sync change does not skip it.
-// Usage: npm run check            run the checks for the files changed against main (committed, staged and unstaged)
+// Usage: npm run check            run the checks for the files changed against origin/main (committed, staged and unstaged)
 //        npm run check -- --list  show which checks it would run and why, without running them
 //        npm run check -- --files=a,b  pretend only those files changed (with --list, to see what a change would run)
 //        npm run check -- --all   run every check that does not need a database (typecheck, test, lint, e2e)
@@ -10,12 +10,15 @@ import { execFileSync, spawnSync } from 'node:child_process';
 const args = process.argv.slice(2);
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8' }).split('\n').filter(Boolean);
 
-const base = (() => {
-  try {
-    return execFileSync('git', ['merge-base', 'HEAD', 'main'], { encoding: 'utf8' }).trim();
-  } catch {
-    return 'HEAD';
+// Against origin/main, not the local main: a local main nobody pulls falls behind, and every file merged since then counts as changed.
+// Falls back to main when there is no origin, and to HEAD when there is neither.
+const [base, baseRef] = (() => {
+  for (const ref of ['origin/main', 'main']) {
+    try {
+      return [execFileSync('git', ['merge-base', 'HEAD', ref], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(), ref];
+    } catch { /* try the next */ }
   }
+  return ['HEAD', 'HEAD'];
 })();
 // --files a,b pretends exactly those files changed (to see what a kind of change would run).
 const given = args.find(a => a.startsWith('--files='));
@@ -41,7 +44,7 @@ const ALL = ['typecheck', 'test', 'lint', 'e2e'];
 if (args.includes('--all')) {
   ALL.forEach(c => want(c, '--all'));
 } else if (!files.length) {
-  console.log('Nothing changed against main: no checks to run.');
+  console.log(`Nothing changed against ${baseRef}: no checks to run.`);
   process.exit(0);
 } else {
   for (const f of files) {
@@ -85,7 +88,7 @@ if (!plan.length) {
   console.log(`${files.length} changed file(s), none need a check (docs and repo metadata only).`);
   process.exit(0);
 }
-console.log(`Changed against ${base === 'HEAD' ? 'HEAD' : 'main'}: ${files.length} file(s). Checks: ${plan.join(', ')}`);
+console.log(`Changed against ${baseRef}: ${files.length} file(s). Checks: ${plan.join(', ')}`);
 for (const c of plan) console.log(`  ${c.padEnd(9)} ${checks.get(c)}`);
 if (args.includes('--list')) process.exit(0);
 

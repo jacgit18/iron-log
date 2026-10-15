@@ -4,7 +4,7 @@ React 19 + Vite PWA, TypeScript, zustand store, Vitest and Playwright.
 
 ## Read first
 
-In `DevHiveMind/Projects/iron-log/docs/`: `ROADMAP.md` (what to build, out of scope), `ARCHITECTURE.md` (where code lives), `DECISIONS.md` (ADR index; do not re-litigate), `CHANGELOG.md` (add an entry in each PR). `README.md` is in this repo. Before any UI change read the UX set in `docs/ux/`: `UX-DESIGN-BRIEF.md`, `USERFLOW.md`, `DESIGN-SYSTEM.md` (tokens live in `src/styles.css`), `COMPONENTS.md`, `SCREEN-SPECS.md`; update them in the same PR as a UI change.
+In `DevHiveMind/Projects/iron-log/` (the folder itself; there is no `docs/` subfolder): `ROADMAP.md` (what to build, out of scope), `ARCHITECTURE.md` (where code lives), `DECISIONS.md` (ADR index; do not re-litigate), `CHANGELOG.md` (add an entry in each PR). `README.md` is in this repo. Before any UI change read the UX set in `ux/` there: `UX-DESIGN-BRIEF.md`, `USERFLOW.md`, `DESIGN-SYSTEM.md` (tokens live in `src/styles.css`), `COMPONENTS.md`, `SCREEN-SPECS.md`; update them in the same PR as a UI change.
 
 ## Language
 
@@ -16,7 +16,7 @@ In `DevHiveMind/Projects/iron-log/docs/`: `ROADMAP.md` (what to build, out of sc
 ## Checks (run the ones that fit what you changed; CI runs all of them)
 
 ```
-npm run check            # picks the checks from the files changed against main
+npm run check            # picks the checks from the files changed against origin/main
 npm run check -- --list  # show what it would run and why
 npm run check -- --all   # typecheck, test, lint, e2e
 ```
@@ -46,4 +46,4 @@ If `npm test` fails with `Test timed out in 5000ms` while the machine is busy (c
 - **New user-facing feature = everyone, for now.** Until the app has a user base (owner's call, 2026-10-13), a new feature ships to everyone with no feature flag: tick **Everyone** in the PR and say so in `feature-map.md` and `CHANGELOG.md`. Go admin-only only when the owner asks for it on that feature, or once this rule is changed back.
 - **Admin-only, when asked for.** Add `name: 'admin'` to `FEATURES` in `src/features.ts` (with its removal condition in a comment), wrap the UI in `useFeature('name')`, and put `requireAdmin` (`server/admin.ts`) on any new API route. A name not in the registry is hidden. Release it by deleting the line and its `useFeature` check in the same PR (an `'all'` line left for later is where parallel PRs conflict). Keep the lines in alphabetical order. Mention the feature's audience in the PR description and `feature-map.md`. Admin-only API routes still need `requireAdmin` whatever the rule above says.
 - Update `CHANGELOG.md` in the same PR as any change, and `DECISIONS.md` (plus a new ADR) when a decision is made.
-- Project docs (backlog, ADRs, migration notes) live outside this repo in `DevHiveMind/Projects/iron-log/docs/`.
+- Project docs (backlog, ADRs, migration notes) live outside this repo in `DevHiveMind/Projects/iron-log/`.
