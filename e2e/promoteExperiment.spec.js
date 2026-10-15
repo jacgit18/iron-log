@@ -1,13 +1,10 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, seedExperiments } from './fixtures.js';
 
 // Experiments: To program opens the add-to-program sheet from the entry, and saving it takes the entry off the list; Undo puts it back.
 test('To program on a workout experiment adds it to the program and takes it off the list', async ({ page }) => {
   await page.goto('/');
-  await page.click('#tab-program');
-  const rows = page.locator('.edrow');
-  await expect(rows.first()).toBeVisible();
-  await rows.first().getByRole('button', { name: /to Experiments$/ }).click();
-  await page.click('#tab-board');
+  await seedExperiments(page, ['hack']);
+  await page.goto('/');
   const card = page.locator('.explist .expcard');
   await expect(card).toHaveCount(1);
   const name = (await card.locator('.rmname').innerText()).trim();

@@ -1,13 +1,10 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, seedExperiments } from './fixtures.js';
 
 // Both Experiments lists use one card: Delete needs a second tap (the card is marked while armed), and Undo brings it back.
 test('a workout experiment card arms Delete, deletes on the second tap and Undo brings it back', async ({ page }) => {
   await page.goto('/');
-  await page.click('#tab-program');
-  const rows = page.locator('.edrow');
-  await expect(rows.first()).toBeVisible();
-  await rows.first().getByRole('button', { name: /to Experiments$/ }).click();
-  await page.click('#tab-board');
+  await seedExperiments(page, ['hack']);
+  await page.goto('/');
   const card = page.locator('.explist .expcard');
   await expect(card).toHaveCount(1);
   await card.getByRole('button', { name: /delete/i }).click();

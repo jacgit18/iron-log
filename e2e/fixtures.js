@@ -12,4 +12,8 @@ export const test = base.extend({
     await provide(page);
   },
 });
+// Entries on the workout Experiments list, in place before the next page load (the Program tab no longer has a button that makes them).
+export const seedExperiments = (page, exercises = ['hack']) => page.addInitScript(items => {
+  localStorage.setItem('ironlog:experiments/main', JSON.stringify({ schema: 1, items }));
+}, exercises.map((ex, i) => ({ id: 'E' + i, ex, ph: 'hyp', note: '' })));
 export { expect };
