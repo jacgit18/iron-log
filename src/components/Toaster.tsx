@@ -46,7 +46,7 @@ function BoardNotices() {
   const applied = !!(showOrder && orderNote.applied);
   useEffect(() => { if (applied && undoRef.current) undoRef.current.focus(); }, [applied]);
   // The heads-up and the suggestion come from the injury prevention switch, so they carry the way to turn it off.
-  const turnOff = { label: 'Turn off', title: 'injury prevention', ghost: true, onClick: () => { st.setInjuryPrevention(false); flag('Injury prevention is off. Turn it back on in Settings.'); } };
+  const turnOff = { label: 'Turn off', title: 'injury prevention', ghost: true, onClick: () => { st.setInjuryPrevention(false); flag('Injury prevention is off. Turn it back on from the Board or in Settings.'); } };
   return (
     <div className="toastlist">
       {/* First, so it is always one of the two that show: the delete button that had focus went with its row, and focus goes to this Undo
