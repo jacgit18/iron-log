@@ -3,6 +3,8 @@
 
 ## Audience (user-facing changes)
 
+<!-- Tick exactly one. `node scripts/pr-body.mjs --what "..."` writes this whole description with the right box ticked. -->
+
 - [ ] n/a: no user-facing change
 - [ ] **Admin only**: `'admin'` in `FEATURES` (`src/features.ts`), UI behind `useFeature`, `requireAdmin` on any new API route
 - [ ] **Everyone**: released on purpose (`'all'`, or the flag removed)
