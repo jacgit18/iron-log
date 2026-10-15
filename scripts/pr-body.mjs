@@ -31,7 +31,7 @@ export function buildBody(template, audience, what = '') {
     if (inAudience && /^- \[ \]/.test(line)) return line.includes(LABELS[audience]) ? line.replace('- [ ]', '- [x]') : line;
     return line;
   }).join('\n');
-  const body = what ? out.replace(/^## What and why\n\n/m, `## What and why\n\n${what.trim()}\n`) : out;
+  const body = what ? out.replace(/^## What and why\n\n/m, () => `## What and why\n\n${what.trim()}\n`) : out;
   if ((body.match(/^- \[x\]/gim) || []).length !== 1) throw new Error('The template has no Audience box matching ' + audience);
   return body;
 }
