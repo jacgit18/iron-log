@@ -1,6 +1,7 @@
 import { sql, type Kysely, type Transaction } from 'kysely';
 import type { DB } from '../db/types.ts';
 import { lockUser, nextSeq } from '../commands/support.ts';
+import { createPiiCrypto, parsePiiKey } from '../auth/piiCrypto.ts';
 import { normStretchItem } from '../../src/shared/listItems.ts';
 
 // One-off reset (2026-10-11, ADR 021): every account starts with no program and empty libraries, and builds its own. Run by hand,
@@ -37,9 +38,12 @@ export interface ResetResult {
 }
 
 export async function adminId(trx: Transaction<DB>, admin: string): Promise<string> {
+  // With PII_ENCRYPTION_KEY set, emails in auth."user" are sealed (ADR 046); the sealed form of an address is always the same.
+  const key = parsePiiKey(process.env.PII_ENCRYPTION_KEY);
+  const sealed = 'key' in key ? createPiiCrypto(key.key).sealStable(admin.trim().toLowerCase()) : null;
   const rows = (await sql<{ id: string; is_admin: boolean }>`
     select u.id::text as id, u.is_admin from users u left join auth."user" a on a.id = u.auth_user_id
-    where u.auth_user_id = ${admin} or lower(a.email) = lower(${admin})`.execute(trx)).rows;
+    where u.auth_user_id = ${admin} or lower(a.email) = lower(${admin}) or a.email = ${sealed}`.execute(trx)).rows;
   if (rows.length !== 1) throw new Error(rows.length ? `"${admin}" matches more than one account` : `no account for "${admin}"`);
   // A typo here would keep the wrong account and clear the admin's, so the account kept must be marked admin in the database.
   if (!rows[0]!.is_admin) throw new Error(`"${admin}" is not marked is_admin, so nothing was changed`);

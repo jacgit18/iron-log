@@ -1,9 +1,13 @@
-import { betterAuth } from 'better-auth';
+import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { emailOTP } from 'better-auth/plugins/email-otp';
+import { kyselyAdapter } from '@better-auth/kysely-adapter';
+import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
 import { adminsFrom } from '../admin.ts';
 import { POOL_OPTIONS } from '../db/poolOptions.ts';
+import { encryptedAdapter } from './encryptedAdapter.ts';
+import { createPiiCrypto, parsePiiKey } from './piiCrypto.ts';
 import { CODE_MINUTES, perAddressLimit, RESEND_TEST_FROM, resendSender, type SendCode } from './otpEmail.ts';
 
 /* ---------- Sign-in: Better Auth inside our API (ADR 004) ----------
@@ -29,6 +33,10 @@ export interface AuthConfig {
   signupCap?: number;
   /** Emails (lower case) that may sign up past the cap, e.g. the admins. */
   capExempt?: ReadonlySet<string>;
+  /** PII_ENCRYPTION_KEY, 32 bytes. Set: names and emails are sealed in the database (ADR 046). Unset: stored as before. */
+  piiKey?: Buffer;
+  /** False once scripts/encrypt-users.mjs has sealed every row (PII_PLAINTEXT_DONE=true): lookups then stop matching plaintext emails. */
+  piiMatchPlaintext?: boolean;
 }
 
 export const SESSION_DAYS = 30;
@@ -48,11 +56,15 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
   pool.on('error', err => {
     console.error(JSON.stringify({ msg: 'idle auth database connection dropped', error: err.message }));
   });
+  const pii = config.piiKey ? createPiiCrypto(config.piiKey) : undefined;
   const allowCode = perAddressLimit(OTP_PER_ADDRESS.max, OTP_PER_ADDRESS.windowMs);
   const auth = betterAuth({
     baseURL: config.baseURL,
     secret: config.secret,
-    database: pool,
+    database: pii
+      ? (options: BetterAuthOptions) =>
+          encryptedAdapter(kyselyAdapter(new Kysely({ dialect: new PostgresDialect({ pool }) }), { type: 'postgres' })(options), pii, { matchPlaintext: config.piiMatchPlaintext !== false })
+      : pool,
     user: { modelName: 'auth.user' },
     session: { modelName: 'auth.session', expiresIn: SESSION_DAYS * DAY, updateAge: DAY },
     account: {
@@ -158,6 +170,14 @@ export function authConfigFrom(env: NodeJS.ProcessEnv): AuthSetup {
   const clientSecret = need('GOOGLE_CLIENT_SECRET');
   const baseURL = need('BASE_URL');
   const databaseUrl = need('DATABASE_URL');
+  // PII_ENCRYPTION_KEY is optional so the code can ship before the secret exists; once it is set, a bad value turns sign-in off
+  // rather than quietly storing names and emails in the clear.
+  let piiKey: Buffer | undefined;
+  if (env.PII_ENCRYPTION_KEY?.trim()) {
+    const parsed = parsePiiKey(env.PII_ENCRYPTION_KEY);
+    if ('error' in parsed) reasons.push(parsed.error);
+    else piiKey = parsed.key;
+  }
   if (secret && secret.length < 32) reasons.push('BETTER_AUTH_SECRET is shorter than 32 characters');
   if (baseURL) {
     try {
@@ -182,6 +202,6 @@ export function authConfigFrom(env: NodeJS.ProcessEnv): AuthSetup {
   if (reasons.length) return { enabled: false, reasons };
   return {
     enabled: true,
-    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, emailCodeAdminsOnly: env.EMAIL_CODE_OPEN !== 'true', signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS) },
+    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, emailCodeAdminsOnly: env.EMAIL_CODE_OPEN !== 'true', signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS), piiKey, piiMatchPlaintext: env.PII_PLAINTEXT_DONE !== 'true' },
   };
 }
