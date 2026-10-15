@@ -24,7 +24,8 @@ function preloadTitleFont() {
 
 // Inline the entry stylesheet (about 14 KB gzipped) into index.html. A linked stylesheet blocks the first paint and costs a second round trip
 // (Lighthouse mobile: render-blocking, about 0.3 s on Slow 4G); inlined, the first paint needs only the page and the script. The
-// service worker precaches index.html, so repeat and offline visits lose nothing. Tabs loaded later keep their own small CSS files.
+// service worker precaches index.html, so repeat and offline visits lose nothing. The file itself stays in the build: the tabs loaded later
+// list it as a dependency and would fail with "Unable to preload CSS" (and their screen would not open) if it were gone.
 function inlineEntryCss() {
   return {
     name: 'inline-entry-css',
@@ -34,7 +35,6 @@ function inlineEntryCss() {
       handler: (html, ctx) => html.replace(/<link rel="stylesheet"[^>]*href="[^"]*\/(assets\/index-[\w-]+\.css)"[^>]*>/, (tag, file) => {
         const asset = ctx.bundle?.[file];
         if (!asset || asset.type !== 'asset') return tag;
-        delete ctx.bundle[file];
         return `<style>${String(asset.source).replace(/<\/style/gi, '<\\/style')}</style>`;
       }),
     },
