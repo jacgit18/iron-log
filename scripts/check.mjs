@@ -4,8 +4,9 @@
 //        npm run check -- --files=a,b  pretend only those files changed (with --list, to see what a change would run)
 //        npm run check -- --all   run every check that does not need a database (typecheck, test, lint, e2e)
 // CI (.github/workflows/test.yml) always runs everything; this is the local shortcut. A file it does not recognise runs everything.
-// Needs DATABASE_URL (a local Postgres) only for the db:check and e2e:sync steps, which it skips with a warning when it is not set.
+// The db:check and e2e:sync steps need the local Postgres: it is started (npm run db:start) and used when DATABASE_URL is not set; if it cannot be reached the step is not run and the script exits 1.
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createConnection } from 'node:net';
 
 const args = process.argv.slice(2);
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8' }).split('\n').filter(Boolean);
@@ -93,6 +94,23 @@ for (const c of plan) console.log(`  ${c.padEnd(9)} ${checks.get(c)}`);
 if (args.includes('--list')) process.exit(0);
 
 const needsDb = new Set(['db:check', 'e2e:sync']);
+// The sync and migration checks need the local Postgres. Rather than skip them (CI runs them, so a skip is how a sync bug reached a PR),
+// start it with `npm run db:start` and use its default address, unless DATABASE_URL is already set.
+const LOCAL_DB = 'postgres://ironlog:ironlog@127.0.0.1:5433/ironlog';
+const reachable = () => new Promise(resolve => {
+  const c = createConnection({ host: '127.0.0.1', port: 5433 }, () => { c.destroy(); resolve(true); });
+  c.on('error', () => resolve(false));
+  c.setTimeout(1500, () => { c.destroy(); resolve(false); });
+});
+if (plan.some(c => needsDb.has(c)) && !process.env.DATABASE_URL) {
+  if (!(await reachable())) spawnSync('npm', ['run', 'db:start'], { stdio: 'inherit' });
+  if (await reachable()) {
+    process.env.DATABASE_URL = LOCAL_DB;
+    console.log(`Using the local database (${LOCAL_DB.replace(/\/\/.*@/, '//…@')}).`);
+  } else {
+    console.warn('The local database is not reachable on port 5433. If the container exists without the port, run: docker compose up -d --force-recreate --wait db');
+  }
+}
 const skipped = [];
 for (const c of plan) {
   if (needsDb.has(c) && !process.env.DATABASE_URL) {
@@ -107,7 +125,7 @@ for (const c of plan) {
   }
 }
 if (skipped.length) {
-  console.warn(`\nNot run (set DATABASE_URL=postgres://ironlog:ironlog@127.0.0.1:5433/ironlog, after npm run db:start): ${skipped.join(', ')}`);
+  console.warn(`\nNot run, and CI will run them (set DATABASE_URL, or fix the local database with npm run db:start): ${skipped.join(', ')}`);
   process.exit(1);
 }
 console.log('\nAll chosen checks passed. CI still runs everything.');

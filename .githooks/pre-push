@@ -1,0 +1,9 @@
+#!/bin/sh
+# Runs the checks that fit what this branch changed against origin/main (scripts/check.mjs) before a push, so CI does not find the failure first.
+# Docs-only changes run nothing. Skip once with SKIP_CHECK=1 git push, or git push --no-verify.
+[ -n "$SKIP_CHECK" ] && exit 0
+# A push that only deletes a branch has nothing to check.
+while read -r _ local_sha _ _; do
+  [ "$local_sha" = "0000000000000000000000000000000000000000" ] && exit 0
+done
+exec npm run check

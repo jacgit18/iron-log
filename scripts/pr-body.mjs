@@ -23,16 +23,21 @@ export function inferAudience(files, diff = '') {
   return { audience: 'everyone', reason: 'user-visible files changed and no admin-only entry was added (standing rule: ship to everyone for now)' };
 }
 
-/** The template with exactly one Audience box ticked and the What section filled in. */
-export function buildBody(template, audience, what = '') {
+/** True when the change can move a Lighthouse score: UI code, styles, fonts, images, the page shell or the build config. */
+export const touchesUi = files => files.some(f => /^src\/(components|hooks|assets)\//.test(f) || /\.(css|tsx|svg|png|webp|woff2?)$/.test(f) || f === 'index.html' || /^vite\.config\./.test(f) || f.startsWith('public/'));
+
+/** The template with exactly one Audience box ticked and the What section filled in. A change that touches no UI (`ui` false) also gets the Lighthouse line under Checks ticked, since the line reads n/a then; for a UI change it stays open for the author to tick after running `scripts/lighthouse.mjs`, because that run is theirs to do. */
+export function buildBody(template, audience, what = '', ui = false) {
   let inAudience = false;
   const out = template.split('\n').map(line => {
     if (/^## /.test(line)) inAudience = /^## Audience/.test(line);
     if (inAudience && /^- \[ \]/.test(line)) return line.includes(LABELS[audience]) ? line.replace('- [ ]', '- [x]') : line;
+    if (!ui && /^- \[ \].*Lighthouse run/.test(line)) return line.replace('- [ ]', '- [x]'); // not a UI change: n/a, as the line says
     return line;
   }).join('\n');
   const body = what ? out.replace(/^## What and why\n\n/m, () => `## What and why\n\n${what.trim()}\n`) : out;
-  if ((body.match(/^- \[x\]/gim) || []).length !== 1) throw new Error('The template has no Audience box matching ' + audience);
+  const audienceSection = body.split('\n').reduce((acc, line) => { if (/^## /.test(line)) acc.on = /^## Audience/.test(line); if (acc.on) acc.lines.push(line); return acc; }, { on: false, lines: [] }).lines;
+  if (audienceSection.filter(l => /^- \[x\]/i.test(l)).length !== 1) throw new Error('The template has no Audience box matching ' + audience);
   return body;
 }
 
@@ -47,7 +52,7 @@ function main(argv) {
   const found = given ? { audience: given, reason: 'given with --audience' } : inferAudience(files, diff);
   console.error(`Audience: ${found.audience} (${found.reason}). ${files.length} file(s) against ${base}.`);
   const template = readFileSync(fileURLToPath(new URL('../.github/pull_request_template.md', import.meta.url)), 'utf8');
-  process.stdout.write(buildBody(template, found.audience, arg('--what')));
+  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files)));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main(process.argv.slice(2));

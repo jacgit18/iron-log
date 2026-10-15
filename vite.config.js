@@ -1,4 +1,6 @@
 import { execSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -41,15 +43,45 @@ function inlineEntryCss() {
   };
 }
 
+// Fails the build when a script, stylesheet or the page refers to a built file (assets/<name>.js or .css) that is not in the output.
+// A lazy chunk lists the stylesheets it needs; when the entry stylesheet was left out of the build, the sign-in code failed at run time with
+// "Unable to preload CSS" and no check that runs without the API noticed. Now that is a build error, with the names.
+function checkReferencedAssets() {
+  let outDir = 'dist';
+  return {
+    name: 'check-referenced-assets',
+    apply: 'build',
+    configResolved: config => { outDir = join(config.root, config.build.outDir); },
+    closeBundle() {
+      const dir = join(outDir, 'assets');
+      if (!existsSync(dir)) return;
+      const have = new Set(readdirSync(dir));
+      const missing = new Set();
+      const scan = file => { for (const [, name] of readFileSync(file, 'utf8').matchAll(/assets\/([\w.-]+\.(?:js|css))/g)) if (!have.has(name)) missing.add(name); };
+      for (const f of have) if (/\.(js|css)$/.test(f)) scan(join(dir, f));
+      if (existsSync(join(outDir, 'index.html'))) scan(join(outDir, 'index.html'));
+      if (missing.size) throw new Error(`The build refers to files that are not in it: ${[...missing].join(', ')}`);
+    },
+  };
+}
+
 // The dev and preview servers answer any unknown path with the app's index.html, so a request for
 // /.well-known/ai-catalog.json (Lighthouse's agentic audit) got HTML and failed as malformed. There's no such
-// file, so say so with a 404, the same as GitHub Pages does.
+// file, so say so with a 404, the same as GitHub Pages does. The same goes for a built file under /assets/ that is not in dist: the
+// production server answers 404 there, but the preview server answered 200 with the page, which hid a missing stylesheet from every
+// local test (the e2e fixture now fails a test on any /assets/ 404).
 function noWellKnownFallback() {
+  const dist = join(process.cwd(), 'dist');
   const notFound = (req, res, next) => { if (req.url.startsWith('/.well-known/')) { res.statusCode = 404; res.end(); } else next(); };
+  const missingAsset = (req, res, next) => {
+    const path = decodeURIComponent(req.url.split('?')[0]);
+    const at = path.indexOf('/assets/');
+    if (at >= 0 && !path.includes('..') && !existsSync(join(dist, path.slice(at)))) { res.statusCode = 404; res.end(); } else next();
+  };
   return {
     name: 'no-well-known-fallback',
     configureServer: server => { server.middlewares.use(notFound); },
-    configurePreviewServer: server => { server.middlewares.use(notFound); },
+    configurePreviewServer: server => { server.middlewares.use(notFound); server.middlewares.use(missingAsset); },
   };
 }
 
@@ -75,6 +107,7 @@ export default defineConfig({
     preloadTitleFont(),
     inlineEntryCss(),
     noWellKnownFallback(),
+    checkReferencedAssets(),
     VitePWA({
       // A new version is applied only when the app is idle (see UpdateBanner, ADR 018); otherwise a banner offers it, so an update never interrupts a workout.
       registerType: 'prompt',

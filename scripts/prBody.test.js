@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildBody, inferAudience } from './pr-body.mjs';
+import { buildBody, inferAudience, touchesUi } from './pr-body.mjs';
 
 const template = readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8');
 const ticked = body => body.split('\n').filter(l => /^- \[x\]/i.test(l));
+const withLighthouse = template.replace('- [ ] `feature-map.md`', '- [ ] UI change: Lighthouse run, before and after in the description (n/a otherwise)\n- [ ] `feature-map.md`');
 
 describe('inferAudience', () => {
   it('is n/a when nothing a user can see changed', () => {
@@ -31,5 +32,18 @@ describe('buildBody', () => {
   });
   it('puts the description under What and why', () => {
     expect(buildBody(template, 'everyone', 'Fixes the thing.')).toMatch(/## What and why\n\nFixes the thing\.\n/);
+  });
+});
+
+describe('the Lighthouse line', () => {
+  it('is ticked for a change that touches no UI and left for the author on a UI change', () => {
+    expect(buildBody(withLighthouse, 'na', '', false)).toMatch(/- \[x\] UI change: Lighthouse run/);
+    expect(buildBody(withLighthouse, 'everyone', '', true)).toMatch(/- \[ \] UI change: Lighthouse run/);
+  });
+  it('knows what touches the UI', () => {
+    expect(touchesUi(['src/components/board/Card.tsx'])).toBe(true);
+    expect(touchesUi(['src/styles.css'])).toBe(true);
+    expect(touchesUi(['vite.config.js'])).toBe(true);
+    expect(touchesUi(['server/app.ts', 'src/lib/logic.ts', 'scripts/check.mjs'])).toBe(false);
   });
 });
