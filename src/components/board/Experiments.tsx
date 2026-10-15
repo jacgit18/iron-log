@@ -4,7 +4,9 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, exInfo } from '../../lib/data.js';
 import { DAYS, colOf, lastLog, describe, todayCol } from '../../lib/logic.js';
 import { ymd, weekStartOf } from '../../shared/dates.js';
+import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import ExperimentCard from '../ExperimentCard.jsx';
+import ExperimentSearch from '../ExperimentSearch.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import './Experiments.css';
 
@@ -19,6 +21,9 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
   const today = useToday(s => s.today);
   const st = useAppStore.getState();
   const [pick, setPick] = useState<Record<string, number>>({});
+  const [q, setQ] = useState('');
+  if (q && !hasFilter(items.length)) setQ(''); // the search hides on a short list: forget its text, so it does not come back filled in
+  const shown = hasFilter(items.length) ? items.filter(e => matchesQuery(q, exInfo(cfg, e.ex).n, e.note)) : items; // the search shows only on a long list
   const days = DAYS.filter(d => !rest.includes(d));
   const start = ymd(weekStartOf(today)) === ymd(weekStart) ? todayCol(today) : day;
   const def = days.includes(start) ? start : days[0];
@@ -29,9 +34,10 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
         <button type="button" className="btn sm" onClick={() => st.openModal({ type: 'experiment' })}>+ Add exercise</button>
       </div>
       <RemovedNotice scope="experiments" />
-      {!items.length ? <p className="note">Keep exercises you want to try here, then add them to a day.</p> : (
+      {hasFilter(items.length) && <ExperimentSearch id="exp-q" q={q} onQ={setQ} shown={shown.length} total={items.length} what="exercises" />}
+      {!items.length ? <p className="note">Keep exercises you want to try here, then add them to a day.</p> : !shown.length ? <p className="note">No exercise matches. Clear the search.</p> : (
         <ul className="explist">
-          {items.map(e => {
+          {shown.map(e => {
             const n = exInfo(cfg, e.ex).n; const last = lastLog(logs, e.ex);
             const on = [...new Set((week.extra || []).filter(x => x.ex === e.ex).map(x => colOf(week, week.moved?.[x.id] || x.day)))].sort((a, b) => a - b); // the days of this week it is already on, where a dragged card now sits
             const to = days.includes(pick[e.id]) ? pick[e.id] : def;
