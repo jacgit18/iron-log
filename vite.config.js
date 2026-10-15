@@ -22,6 +22,25 @@ function preloadTitleFont() {
   };
 }
 
+// Inline the entry stylesheet (about 14 KB gzipped) into index.html. A linked stylesheet blocks the first paint and costs a second round trip
+// (Lighthouse mobile: render-blocking, about 0.3 s on Slow 4G); inlined, the first paint needs only the page and the script. The
+// service worker precaches index.html, so repeat and offline visits lose nothing. The file itself stays in the build: the tabs loaded later
+// list it as a dependency and would fail with "Unable to preload CSS" (and their screen would not open) if it were gone.
+function inlineEntryCss() {
+  return {
+    name: 'inline-entry-css',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler: (html, ctx) => html.replace(/<link rel="stylesheet"[^>]*href="[^"]*\/(assets\/index-[\w-]+\.css)"[^>]*>/, (tag, file) => {
+        const asset = ctx.bundle?.[file];
+        if (!asset || asset.type !== 'asset') return tag;
+        return `<style>${String(asset.source).replace(/<\/style/gi, '<\\/style')}</style>`;
+      }),
+    },
+  };
+}
+
 // The dev and preview servers answer any unknown path with the app's index.html, so a request for
 // /.well-known/ai-catalog.json (Lighthouse's agentic audit) got HTML and failed as malformed. There's no such
 // file, so say so with a 404, the same as GitHub Pages does.
@@ -54,6 +73,7 @@ export default defineConfig({
   plugins: [
     react(),
     preloadTitleFont(),
+    inlineEntryCss(),
     noWellKnownFallback(),
     VitePWA({
       // A new version is applied only when the app is idle (see UpdateBanner, ADR 018); otherwise a banner offers it, so an update never interrupts a workout.

@@ -17,6 +17,7 @@ import FirstRun from './FirstRun.jsx';
 import InjurySwitch from './InjurySwitch.jsx';
 import './BoardTop.css';
 import './DayHeader.css';
+import './Leftovers.css';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
