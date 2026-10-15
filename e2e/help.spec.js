@@ -16,7 +16,7 @@ test('Help starts with getting started and points at Experiments for an exercise
   // Every glossary word once (they are the React keys too).
   const terms = await help.locator('.glossary dt').allTextContents();
   expect(new Set(terms).size).toBe(terms.length);
-  for (const t of ['Experiments', 'Video link', 'Starter programs', '⋯ (card menu)', 'Swipe (phone)', 'Injury prevention']) expect(terms).toContain(t);
+  for (const t of ['Experiments', 'Video link', 'Starter programs', '⋯ (card menu)', 'Swipe (phone)', 'Injury prevention', 'Storage full / Not saved', 'Could not read saved data']) expect(terms).toContain(t);
 
   await help.getByRole('button', { name: 'Close' }).click();
   await expect(help).toHaveCount(0);
