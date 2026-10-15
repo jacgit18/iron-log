@@ -58,6 +58,7 @@ function GroupCard({ d, name, items, tier }: { d: number; name: string; items: S
 
 function Experiments({ day }: { day: number }) {
   const items = useAppStore(x => x.stretchExps);
+  const added = useAppStore(x => x.strWeek.extra);
   const s = useAppStore.getState();
   const [pick, setPick] = useState<Record<string, number>>({});
   return (
@@ -71,9 +72,10 @@ function Experiments({ day }: { day: number }) {
         <ul className="explist">
           {items.map(e => {
             const to = pick[e.id] ?? day;
+            const on = [...new Set(added.filter(x => x.n === e.n).map(x => x.day))].sort((a, b) => a - b); // the days of this week it is already on
             return (
               <ExperimentCard key={e.id} id={e.id} prefix="sexp" name={e.n} note={e.note}
-                detail={<Link n={e.n} url={e.url} />}
+                detail={<>{on.length > 0 && <div className="note onday">On {on.map(d => DAY_NAMES[d]).join(', ')} this week</div>}<Link n={e.n} url={e.url} /></>}
                 days={DAYS7.map(d => ({ value: d, label: DAY_NAMES[d] }))} to={to} onTo={d => setPick(p => ({ ...p, [e.id]: d }))} onAdd={() => s.addStretchToDay(e.id, to)}
                 extra={<button type="button" className="btn sm ghost" aria-label={`Add ${e.n} to your stretches`} onClick={() => s.promoteStretchExp(e.id)}>To my stretches</button>}
                 onEdit={() => s.openModal({ type: 'stretchexp', id: e.id })} onDelete={() => s.deleteStretchExp(e.id)} />
