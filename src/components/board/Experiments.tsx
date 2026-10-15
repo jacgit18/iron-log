@@ -6,6 +6,7 @@ import { DAYS, colOf, lastLog, describe, todayCol } from '../../lib/logic.js';
 import { ymd, weekStartOf } from '../../shared/dates.js';
 import ExperimentCard from '../ExperimentCard.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
+import './Experiments.css';
 
 // The Experiment board: exercises to try, added to a day of the viewed week. `day` is the column shown on phones.
 export default function Experiments({ day, onDragStart, onDragEnd }: { day: number; onDragStart: (e: DragEvent, id: string) => void; onDragEnd: () => void }) {

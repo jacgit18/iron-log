@@ -14,6 +14,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
 import './Stretches.css';
+import '../board/Experiments.css';
 
 const DAYS7 = Array.from({ length: STRETCH_DAYS }, (_, i) => i);
 
