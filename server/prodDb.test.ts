@@ -24,7 +24,7 @@ const run = (args: string[], env: Record<string, string> = {}) =>
       // DATABASE_URL from the caller's shell (a local one for the db checks) must not leak in: the stubs log what each step was given.
       env: {
         ...process.env, DATABASE_URL: '', PROD_DATABASE_URL: URL,
-        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), ...env,
+        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), KEEP_INJURY: join(dir, 'keep-injury'), ...env,
       },
       encoding: 'utf8',
     }, (err, stdout, stderr) => {
@@ -47,6 +47,7 @@ beforeEach(() => {
   writeFileSync(log, '');
   stub('backup', '');
   stub('catalog', '');
+  stub('keep-injury', '');
   dbmateWith([]);
 });
 
@@ -88,6 +89,12 @@ describe('prod-db.sh', () => {
     expect(r.calls).toEqual([`dbmate status url=${URL}`]);
   });
 
+  it('injury-default is a dry run by default; --apply backs up first and passes --apply on', async () => {
+    expect((await run(['injury-default'])).calls).toEqual([`keep-injury  url=${URL}`]);
+    writeFileSync(log, '');
+    expect((await run(['injury-default', '--apply'])).calls).toEqual(['backup run url=', `keep-injury --apply url=${URL}`]);
+  });
+
   it('catalog is a dry run by default; --apply backs up first and passes --apply on', async () => {
     expect((await run(['catalog', 'fedb'])).calls).toEqual([`catalog --source fedb url=${URL}`]);
     writeFileSync(log, '');
@@ -127,7 +134,7 @@ describe('prod-db.sh', () => {
     expect((await run(['drop-everything'])).status).toBe(2);
     const help = await run([]);
     expect(help.status).toBe(2);
-    for (const c of ['status', 'pending', 'migrate', 'catalog <source>']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
+    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
     expect(readFileSync(log, 'utf8')).toBe('');
   });
 });
