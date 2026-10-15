@@ -21,8 +21,14 @@ export async function eraseMyData(db: Kysely<DB>, userId: string, body: unknown)
   return { status: 200, body: { ok: true } };
 }
 
-export async function deleteMyAccount(db: Kysely<DB>, userId: string, body: unknown): Promise<AccountResult> {
+/** Removes the person's emailed sign-in code, which Better Auth keeps under `sign-in-otp-<email>`. */
+export type PurgeCodes = () => Promise<void>;
+
+export async function deleteMyAccount(db: Kysely<DB>, userId: string, body: unknown, purgeCodes?: PurgeCodes): Promise<AccountResult> {
   if (!asked(body, DELETE_WORD)) return { status: 422, body: { ok: false, error: `send {"confirm":"${DELETE_WORD}"} to delete the account` } };
+  // The SQL function cannot do this: it looks for the plain address, but the record is stored under `sign-in-otp-<email>` (and, with
+  // ADR 046, sealed), so it is removed here through Better Auth, which knows both. Before the account goes, while the address is known.
+  await purgeCodes?.();
   await inUserTransaction(db, userId, trx => sql`select delete_my_account()`.execute(trx));
   console.log(JSON.stringify({ msg: 'account deleted' }));
   return { status: 200, body: { ok: true } };
