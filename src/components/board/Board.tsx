@@ -172,26 +172,28 @@ export default function Board() {
       )}
       {slots.length === 0 && <FirstRun />}
       <BodyWeightRow key={wk} />
-      <InjurySwitch />
-      <div className="filterbar" role="group" aria-label="Sort and filter exercises">
-        <button type="button" className="btn sm filtertoggle" aria-expanded={filterOpen} aria-controls="filter-fields" onClick={() => setFilterOpen(o => !o)}>
-          Sort &amp; filter{filtering || sorting ? ` · ${(filtering ? 1 : 0) + (sorting ? 1 : 0)} on` : ''}
-        </button>
-        <div className={`filterfields${filterOpen ? ' open' : ''}`} id="filter-fields">
-          <label className="field">Sort by muscle
-            <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
-              <option value="">Program order</option>
-              {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-            </select>
-          </label>
-          <label className="field">Equipment
-            <select value={filter.eq} onChange={e => setFilter(f => ({ ...f, eq: e.target.value }))}>
-              <option value="">All equipment</option>
-              {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
-          </label>
-          {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear</button>}
+      <div className="filterbar">
+        <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
+          <button type="button" className="btn sm filtertoggle" aria-expanded={filterOpen} aria-controls="filter-fields" onClick={() => setFilterOpen(o => !o)}>
+            Sort &amp; filter{filtering || sorting ? ` · ${(filtering ? 1 : 0) + (sorting ? 1 : 0)} on` : ''}
+          </button>
+          <div className={`filterfields${filterOpen ? ' open' : ''}`} id="filter-fields">
+            <label className="field">Sort by muscle
+              <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
+                <option value="">Program order</option>
+                {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
+              </select>
+            </label>
+            <label className="field">Equipment
+              <select value={filter.eq} onChange={e => setFilter(f => ({ ...f, eq: e.target.value }))}>
+                <option value="">All equipment</option>
+                {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            </label>
+            {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear</button>}
+          </div>
         </div>
+        <InjurySwitch />
         {filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
         {sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
       </div>
