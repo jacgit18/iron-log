@@ -193,24 +193,24 @@ export default function Board() {
       )}
       <div className="toasts">
         {showUncheck && (
-          <Notice innerRef={uncheckRef} actions={[{ label: 'Undo', onClick: st.undoUncheck }, { label: 'Dismiss', onClick: st.dismissUncheck, ghost: true }]}>{uncheckNote.text}</Notice>
+          <Notice kind="undo" innerRef={uncheckRef} actions={[{ label: 'Undo', onClick: st.undoUncheck }, { label: 'Dismiss', onClick: st.dismissUncheck, ghost: true }]}>{uncheckNote.text}</Notice>
         )}
         {showSkip && (
-          <Notice actions={[{ label: 'Undo', onClick: st.undoSkip }, { label: 'Dismiss', onClick: st.dismissSkip, ghost: true }]}>{skipNote.text}</Notice>
+          <Notice kind="undo" actions={[{ label: 'Undo', onClick: st.undoSkip }, { label: 'Dismiss', onClick: st.dismissSkip, ghost: true }]}>{skipNote.text}</Notice>
         )}
         <RemovedNotice scope={'board:' + wk} />
         {showMove && (
-          <Notice className="movewarn" innerRef={moveRef} actions={[
+          <Notice kind="warning" innerRef={moveRef} actions={[
             !!moveNote.alt && { label: `Move to Day ${moveNote.alt} instead`, onClick: () => st.moveSlot(moveNote.slot!, moveNote.alt!) },
-            { label: `Move back to Day ${moveNote.fromShown}`, onClick: st.undoMove },
-            { label: 'Keep it', onClick: st.dismissMove, ghost: true },
+            { label: 'Undo', title: `move back to Day ${moveNote.fromShown}`, onClick: st.undoMove },
+            { label: 'Dismiss', onClick: st.dismissMove, ghost: true },
           ]}><b>Heads-up:</b> {moveNote.lines.join(' ')}</Notice>
         )}
         {showOrder && (
-          <Notice className="movewarn" innerRef={orderRef} actions={[
+          <Notice kind={orderNote.applied ? 'undo' : 'suggestion'} innerRef={orderRef} actions={[
             !orderNote.applied && { label: 'Apply', onClick: st.applyOrder },
-            orderNote.applied && st.canUndoOrder() && { label: 'Put back', onClick: st.undoOrder, btnRef: putBackRef },
-            { label: orderNote.applied ? 'Done' : 'Dismiss', onClick: st.dismissOrder, ghost: true },
+            orderNote.applied && st.canUndoOrder() && { label: 'Undo', onClick: st.undoOrder, btnRef: putBackRef },
+            { label: 'Dismiss', onClick: st.dismissOrder, ghost: true },
           ]}>{orderNote.applied ? (orderNote.kind === 'card' ? 'Moved for this week.' : 'Order changed for this week.') : <><b>Back-to-back:</b> {orderNote.lines.join(' ')}</>}</Notice>
         )}
       </div>

@@ -15,7 +15,7 @@ export default function RemovedNotice({ scope }: { scope: string }) {
   if (!r) return null;
   const st = useAppStore.getState();
   return (
-    <Notice className="movewarn removednote" actions={[{ label: 'Undo', onClick: st.undoRemoved, btnRef: undoRef }, { label: 'Dismiss', onClick: () => st.dismissRemoved(), ghost: true }]}>
+    <Notice kind="undo" className="removednote" actions={[{ label: 'Undo', onClick: st.undoRemoved, btnRef: undoRef }, { label: 'Dismiss', onClick: () => st.dismissRemoved(), ghost: true }]}>
       <b>Removed</b> {r.text}.
     </Notice>
   );
