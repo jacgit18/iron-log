@@ -32,3 +32,14 @@ test('off by default: finishing a day suggests nothing; turning it on brings sug
   await tick(page);
   await expect(note).toHaveCount(0);
 });
+
+test('the Board has its own Injury prevention switch, and it agrees with Settings', async ({ page }) => {
+  const onBoard = page.locator('.boardroot').getByRole('switch', { name: /Injury prevention/ });
+  await expect(onBoard).not.toBeChecked();
+  await onBoard.check();
+  await page.locator('#tab-settings').click();
+  await expect(toggle(page)).toBeChecked();
+  await toggle(page).uncheck();
+  await page.locator('#tab-board').click();
+  await expect(onBoard).not.toBeChecked();
+});
