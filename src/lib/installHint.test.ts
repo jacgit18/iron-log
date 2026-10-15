@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { showInstallHint, type HintInputs, installHintDismissed, dismissInstallHint } from './installHint.js';
 
-const base: HintInputs = { installed: false, canPrompt: true, ios: false, phone: true, dismissed: false };
+const base: HintInputs = { installed: false, canPrompt: true, ios: false, signedOut: false, dismissed: false };
 
 describe('showInstallHint', () => {
-  it('shows on a phone that can install', () => expect(showInstallHint(base)).toBe(true));
+  it('shows on a device that can install', () => expect(showInstallHint(base)).toBe(true));
   it('shows on an iPhone, which installs from the Share menu', () => expect(showInstallHint({ ...base, canPrompt: false, ios: true })).toBe(true));
   it.each([
     ['already installed', { installed: true }],
     ['dismissed before', { dismissed: true }],
-    ['not a phone', { phone: false }],
+    ['sign-in is still pending', { signedOut: true }],
     ['the browser cannot install', { canPrompt: false }],
   ] as [string, Partial<HintInputs>][])('is hidden when %s', (_, over) => expect(showInstallHint({ ...base, ...over })).toBe(false));
 });
