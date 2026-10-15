@@ -37,7 +37,8 @@ if (!base) {
   // A port nobody is using, so a server left over from an earlier run can never be audited in place of this build (--strictPort: if it is taken
   // in the meantime, vite exits and we stop).
   const port = await new Promise(r => { const t = createServer(); t.listen(0, '127.0.0.1', () => { const { port: p } = t.address(); t.close(() => r(p)); }); });
-  server = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort', '--host', '127.0.0.1'], { stdio: ['ignore', 'ignore', 'inherit'], shell });
+  // Vite is run with node directly, not through npx or a shell: killing a wrapper would leave the real server running.
+  server = spawn(process.execPath, [join('node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', String(port), '--strictPort', '--host', '127.0.0.1'], { stdio: ['ignore', 'ignore', 'inherit'] });
   base = `http://127.0.0.1:${port}/`;
   const up = async () => { try { return (await fetch(base)).ok; } catch { return false; } };
   const deadline = Date.now() + 30_000;
