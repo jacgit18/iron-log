@@ -10,8 +10,9 @@ describe('inferAudience', () => {
     expect(inferAudience(['README.md', 'e2e/board.spec.js', 'scripts/check.mjs', '.github/workflows/test.yml', 'src/lib/logic.test.js']).audience).toBe('na');
   });
   it('is admin when an admin-only entry is added or the admin guard changes', () => {
-    expect(inferAudience(['src/features.ts', 'src/App.tsx'], "+  { name: 'admin', x: 1 }").audience).toBe('admin');
+    expect(inferAudience(['src/features.ts', 'src/App.tsx'], "+  webPush: 'admin', // Push alerts").audience).toBe('admin');
     expect(inferAudience(['server/admin.ts']).audience).toBe('admin');
+    expect(inferAudience(['src/features.ts'], "+  webPush: 'all',").audience).toBe('everyone'); // releasing a feature is not adding an admin one
   });
   it('is everyone for any other source change, and never n/a for an empty diff', () => {
     expect(inferAudience(['src/App.tsx', 'CHANGELOG.md']).audience).toBe('everyone');
@@ -24,6 +25,9 @@ describe('buildBody', () => {
     const t = ticked(buildBody(template, audience));
     expect(t).toHaveLength(1);
     expect(t[0]).toContain(text);
+  });
+  it('keeps a $ in the description as typed', () => {
+    expect(buildBody(template, 'na', 'Costs $& and $1 less.')).toContain('Costs $& and $1 less.');
   });
   it('puts the description under What and why', () => {
     expect(buildBody(template, 'everyone', 'Fixes the thing.')).toMatch(/## What and why\n\nFixes the thing\.\n/);

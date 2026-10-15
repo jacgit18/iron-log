@@ -7,7 +7,7 @@
 //
 // The audience is worked out from the diff against origin/main (the reason goes to stderr), and --audience na|admin|everyone overrides it:
 //   na        every changed file is a doc, test, script, tool, CI or config file: nothing a user can see
-//   admin     the diff adds an admin-only entry to src/features.ts, or touches server/admin.ts
+//   admin     the diff adds an admin-only line (key: 'admin') to src/features.ts, or touches server/admin.ts
 //   everyone  anything else under src/, server/ or public/ (the standing rule: new features ship to everyone for now, see CLAUDE.md)
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
