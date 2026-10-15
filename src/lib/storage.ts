@@ -6,7 +6,12 @@ export const DAMAGED_PREFIX = 'ironlog-damaged:';
 type DamagedListener = (k: string) => void;
 const damagedListeners = new Set<DamagedListener>();
 const untold: string[] = []; // found before anyone listened (a module that reads at load); the first listener hears them
+const told = new Set<string>(); // each key is told once a session, however often it is read
+const clean = new Set<string>(); // read or written fine this session: a save need not check it again
 function keepRaw(k: string, raw: string) {
+  clean.delete(k);
+  if (told.has(k)) return; // its copy was kept (or tried) the first time
+  told.add(k);
   try { if (localStorage.getItem(DAMAGED_PREFIX + k) === null) localStorage.setItem(DAMAGED_PREFIX + k, raw); } catch { /* storage full or blocked: still told */ }
   if (damagedListeners.size) damagedListeners.forEach(fn => fn(k)); else untold.push(k);
 }
@@ -24,12 +29,11 @@ export const LS = {
   get(k: string): any {
     const raw = rawOf(k);
     if (raw === null) return null;
-    try { return JSON.parse(raw); } catch { keepRaw(k, raw); return null; }
+    try { const v = JSON.parse(raw); clean.add(k); return v; } catch { keepRaw(k, raw); return null; }
   },
   set(k: string, v: unknown): boolean { // false: the browser refused the write (storage full or blocked)
-    const raw = rawOf(k);
-    if (raw !== null && !parses(raw)) keepRaw(k, raw);
-    try { localStorage.setItem('ironlog:' + k, JSON.stringify(v)); return true; } catch { return false; }
+    if (!clean.has(k)) { const raw = rawOf(k); if (raw !== null && !parses(raw)) keepRaw(k, raw); }
+    try { localStorage.setItem('ironlog:' + k, JSON.stringify(v)); clean.add(k); return true; } catch { return false; }
   },
   remove(k: string) { try { localStorage.removeItem('ironlog:' + k); } catch { /* ignore */ } },
   /** Keeps a value that parsed but is not the shape its reader needs, before the reader writes over it. */

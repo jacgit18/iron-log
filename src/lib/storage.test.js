@@ -22,6 +22,13 @@ describe('LS: damaged saved data', () => {
     expect(DAMAGED_PREFIX.startsWith('ironlog:')).toBe(false);
   });
 
+  it('tells each damaged key once, however often it is read or saved over', () => {
+    const mem = { 'ironlog:appearance': '{', 'ironlog:other': '[' }; stub(mem, { setItem: (k, v) => { if (k.startsWith('ironlog:')) throw new Error('full'); mem[k] = v; } });
+    LS.get('appearance'); LS.get('appearance'); LS.set('appearance', {}); LS.get('appearance');
+    LS.get('other');
+    expect(told).toEqual(['appearance', 'other']);
+  });
+
   it('a save over a damaged value keeps the damaged text first', () => {
     const mem = { 'ironlog:config/main': 'not json' }; stub(mem);
     expect(LS.set('config/main', { a: 1 })).toBe(true);
