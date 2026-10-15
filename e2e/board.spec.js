@@ -41,7 +41,7 @@ test('accepting skips the pushed-off workouts and both rest days stay ticked', a
   await expect(restBox(page, 3)).toBeChecked();
 });
 
-test('finishing a day\'s workout suggests moving one card; Apply moves it and focuses Put back, which restores it', async ({ page }) => {
+test('finishing a day\'s workout suggests moving one card; Apply moves it and focuses Undo, which restores it', async ({ page }) => {
   // Program A: Leg Extension is on Days 2 and 3. Tick Day 2's workout cards one by one, leaving the sled and Home
   // cards unticked; the suggestion moves Day 3's Leg Extension (A-d3s5) to Day 4.
   for (const id of ['A-d2s1', 'A-d2s2-0', 'A-d2s3', 'A-d2s4', 'A-d2s5-0', 'A-d2s5-1', 'A-d2s6-0', 'A-d2s6-1']) await page.locator(`#chk-${id}`).check();
@@ -53,7 +53,7 @@ test('finishing a day\'s workout suggests moving one card; Apply moves it and fo
   await note.getByRole('button', { name: 'Apply' }).click();
   await expect(page.locator('#col-4 #chk-A-d3s5')).toHaveCount(1); // just that card moved
   await expect(page.locator('#col-3 #chk-A-d3s1')).toHaveCount(1); // the rest of Day 3 stayed
-  const putBack = page.getByRole('button', { name: 'Put back' });
+  const putBack = page.getByRole('status').filter({ hasText: 'Moved for this week' }).getByRole('button', { name: 'Undo' });
   await expect(putBack).toBeFocused();
   await putBack.click();
   await expect(page.locator('#col-3 #chk-A-d3s5')).toHaveCount(1);
