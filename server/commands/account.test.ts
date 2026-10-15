@@ -148,6 +148,17 @@ describe('delete account', () => {
     expect(Number(left.rows[0]!.accounts)).toBe(1); // only Bob's sign-in record is left
   });
 
+  it('also removes the emailed sign-in code stored for the address, and no one else\'s', async () => {
+    const ann = await signUp('ann@example.com');
+    await signUp('bob@example.com');
+    for (const who of ['ann@example.com', 'bob@example.com']) {
+      await sql`insert into auth.verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt") values (${`v-${who}`}, ${`sign-in-otp-${who}`}, 'x', now() + interval '5 minutes', now(), now())`.execute(owner);
+    }
+    expect((await post('/api/account/delete', { confirm: 'DELETE' }, ann)).status).toBe(200);
+    const left = (await sql<{ identifier: string }>`select identifier from auth.verification`.execute(owner)).rows.map(r => r.identifier);
+    expect(left).toEqual(['sign-in-otp-bob@example.com']);
+  });
+
   it('refuses anything but the exact word, and deletes nothing', async () => {
     const ann = await signUp('ann@example.com');
     for (const body of [{}, { confirm: 'delete' }, { confirm: 'ERASE' }]) expect((await post('/api/account/delete', body, ann)).status).toBe(422);
