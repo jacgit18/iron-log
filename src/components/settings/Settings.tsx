@@ -212,6 +212,20 @@ function DevicePanel() {
   );
 }
 
+function InjuryPanel() {
+  const on = useAppStore(s => s.cfg.injuryPrevention !== false); const st = useAppStore.getState();
+  return (
+    <section className="panel">
+      <h3>Injury prevention</h3>
+      <p>Warns when a move puts the same muscles on back-to-back days, and suggests a better day order after you finish a day.</p>
+      <label className="inline"><input type="checkbox" role="switch" checked={on} onChange={e => st.setInjuryPrevention(e.target.checked)} /> {on ? 'On' : 'Off'}</label>
+      <More about="injury prevention">
+        <p>When this is off, moving a card or a day never shows the Heads-up, and finishing a day never shows the Back-to-back suggestion. Undo for ticks, skips and removals still works, and so does moving cards yourself.</p>
+      </More>
+    </section>
+  );
+}
+
 function PhasePanel() {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState(); const saving = useSaving();
   return (
@@ -436,6 +450,7 @@ export default function Settings() {
       <Group id="training" title="Training">
         <div className="scol"><ModePanel /></div>
         <div className="scol"><PhasePanel /></div>
+        <div className="scol"><InjuryPanel /></div>
         <RmPanel />
       </Group>
       <Group id="data" title="Data">

@@ -8,7 +8,7 @@ import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.
 import {
   DEFAULT_CFG, normWeek, progName, weekProgKey, weekProgram, ranFor, isFrozen, programFor, phaseOf, lastLog, describe,
   setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
-  planFix, isFinished, autoEntry, newEntryId, normExperiments,
+  planFix, isFinished, injuryPreventionOn, autoEntry, newEntryId, normExperiments,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue, removeLegacyGitHubToken } from '../lib/storage.js';
 import { FLAG_KEY, apiSyncEnabled } from '../sync/flag.js';
@@ -419,6 +419,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // rest day, one card, or the day order. A change that un-finishes that column drops one not yet applied.
   suggestOrder(slots, before) {
     const { cfg, week } = get(); const wk = get().weekKey();
+    if (!injuryPreventionOn(cfg)) return;
     const a = currentLayout(week, slots), b = currentLayout(before, slots);
     // One not yet applied follows the board: redone for its day (a tick may have started a day it would move), or
     // dropped once that day isn't finished or nothing helps any more.
@@ -519,7 +520,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { cfg, week } = get(); const slots = get().activeSlots();
     const lines = [...new Set(cards.flatMap(s => moveClashes(cfg, week, slots, s, day)))];
     const fromShown = colOf(week0, week0.moved[cards[0].id] || cards[0].day);
-    set({ moveNote: lines.length ? { batch, fromShown, to: day, week: get().weekKey(), lines } : null });
+    set({ moveNote: lines.length && injuryPreventionOn(cfg) ? { batch, fromShown, to: day, week: get().weekKey(), lines } : null });
     flag(`Moved ${cards.length} to Day ${day}${lines.length ? ' · heads-up' : ''}`);
   },
   // Experiment board: a list of exercises to try, added to a day of the viewed week as a card for that week.
@@ -791,7 +792,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { cfg, week } = get();
     const slots = get().activeSlots(); const clashes = moveClashes(cfg, week, slots, s, day);
     const fromShown = colOf(week0, from);
-    set({ moveNote: clashes.length ? { slot: slotId, from, fromShown, to: day, week: get().weekKey(), lines: clashes, alt: altDay(cfg, week, slots, s, day, fromShown) } : null });
+    set({ moveNote: clashes.length && injuryPreventionOn(cfg) ? { slot: slotId, from, fromShown, to: day, week: get().weekKey(), lines: clashes, alt: altDay(cfg, week, slots, s, day, fromShown) } : null });
     flag(clashes.length ? `Moved to Day ${day} · heads-up` : `Moved to Day ${day}`);
   },
   undoMove() {

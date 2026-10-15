@@ -358,6 +358,22 @@ describe('swap days', () => {
     st().moveSlot('A-d6s5', st().moveNote.alt);
     expect(st().moveNote).toBeNull();
   });
+  it('with injury prevention off, a clashing move shows no heads-up, and turning it off drops one showing', () => {
+    st().moveSlot('A-d6s5', 5);
+    expect(st().moveNote).not.toBeNull();
+    st().setInjuryPrevention(false);
+    expect(st().cfg.injuryPrevention).toBe(false);
+    expect(st().moveNote).toBeNull();
+    st().moveSlot('A-d6s5', 6);
+    st().moveSlot('A-d6s5', 5);
+    expect(st().week.moved['A-d6s5']).toBe(5); // the move itself still happens
+    expect(st().moveNote).toBeNull();
+    st().setInjuryPrevention(true);
+    expect(st().cfg.injuryPrevention).toBeUndefined();
+    st().moveSlot('A-d6s5', 6);
+    st().moveSlot('A-d6s5', 5);
+    expect(st().moveNote).not.toBeNull();
+  });
   it('a move with no clash has no suggestion', () => {
     st().moveSlot('A-d6s5', 7);
     expect(st().moveNote).toBeNull();
@@ -1067,6 +1083,16 @@ describe('a suggestion after a day is finished', () => {
   beforeEach(() => useAppStore.setState({ orderNote: null, orderSkip: [] }));
 
   // Program A: Leg Extension (A-d3s5) is on Days 2 and 3.
+  it('with injury prevention off, finishing Day 2 suggests nothing, and turning it off drops a pending suggestion', () => {
+    st().checkDay(2, true);
+    expect(st().orderNote).not.toBeNull();
+    st().setInjuryPrevention(false);
+    expect(st().orderNote).toBeNull();
+    st().checkDay(2, false);
+    st().checkDay(2, true);
+    expect(st().orderNote).toBeNull();
+    expect(st().week.done).not.toEqual({}); // the ticks themselves still save
+  });
   it('finishing Day 2 suggests moving one card; Apply moves it and Put back restores it', () => {
     st().checkDay(2, true);
     const n = st().orderNote;
