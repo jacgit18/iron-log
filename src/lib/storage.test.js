@@ -170,4 +170,37 @@ describe('save queue', () => {
     expect(writes).toEqual([{ v: 1 }]);
     vi.useRealTimers();
   });
+
+  // EH-11: the code after a successful write used to sit inside the same try, so its throw read as "not saved" and the write went again.
+  it('a throw after the write went through is reported once, and the write is not sent again', async () => {
+    vi.useFakeTimers();
+    const writes = []; const errors = []; const flags = [];
+    const db = { doc: () => ({ set: async body => { writes.push(body); return { ...body, merged: true }; } }) };
+    const q = makeSaveQueue({ getDb: () => db, onFlag: f => flags.push(f), onError: e => errors.push(e.message), onStored: () => { throw new Error('bad merge'); } });
+    q.save('weeks/x', { v: 1 });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(writes).toEqual([{ v: 1 }]);
+    expect(errors).toEqual(['bad merge']);
+    expect(flags).toEqual(['Saved']);
+    expect(q.pending('weeks/x')).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('a throw while handling a failed write does not stop that path from saving again', async () => {
+    vi.useFakeTimers();
+    let online = false; const writes = []; const errors = [];
+    const db = { doc: () => ({ set: async body => { if (!online) throw new TypeError('Failed to fetch'); writes.push(body); } }) };
+    const onFlag = f => { if (f === 'Not saved, retrying…') throw new Error('status line broke'); };
+    const q = makeSaveQueue({ getDb: () => db, onFlag, onError: e => errors.push(e.message) });
+    q.save('weeks/x', { v: 1 });
+    await vi.advanceTimersByTimeAsync(100);
+    online = true;
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(writes).toEqual([{ v: 1 }]);
+    expect(errors[0]).toBe('status line broke');
+    q.save('weeks/x', { v: 2 });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(writes).toEqual([{ v: 1 }, { v: 2 }]);
+    vi.useRealTimers();
+  });
 });

@@ -58,14 +58,19 @@ export function removeLegacyGitHubToken() { try { localStorage.removeItem(LEGACY
 // document before that merge, so rebase(path, sent, next, stored) carries the merge into it first.
 type Db = { doc(path: string): { set(data: unknown): Promise<unknown>; delete(): Promise<unknown> } };
 type Queue = { busy: boolean; next: any }
+// A throw from one of these callbacks goes to onError (default: thrown again outside the queue, where the error reporter sees it) and
+// never changes what happened to the write: one that went through is not sent again, and the path keeps saving (EH-11).
 type QueueOptions = {
   getDb: () => Db | null; onFlag: (t: string) => void; onFailed?: (paths: string[], refused: boolean) => void;
   onStored?: (path: string, doc: unknown) => void; rebase?: (path: string, sent: unknown, next: unknown, stored: unknown) => unknown;
+  onError?: (err: unknown) => void;
 };
-export function makeSaveQueue({ getDb, onFlag, onFailed = () => {}, onStored = () => {}, rebase = (_p, _s, next) => next }: QueueOptions) {
+export function makeSaveQueue({ getDb, onFlag: flag, onFailed = () => {}, onStored = () => {}, rebase = (_p, _s, next) => next, onError = err => { setTimeout(() => { throw err; }); } }: QueueOptions) {
   const queues: Record<string, Queue> = {}; const failed: Record<string, any> = {};
-  const fail = (path: string, data: unknown) => { failed[path] = data; onFailed(Object.keys(failed), true); };
-  const ok = (path: string) => { if (path in failed) { delete failed[path]; onFailed(Object.keys(failed), false); } };
+  const guard = (fn: () => void) => { try { fn(); } catch (err) { onError(err); } };
+  const onFlag = (t: string) => guard(() => flag(t));
+  const fail = (path: string, data: unknown) => { failed[path] = data; guard(() => onFailed(Object.keys(failed), true)); };
+  const ok = (path: string) => { if (path in failed) { delete failed[path]; guard(() => onFailed(Object.keys(failed), false)); } };
   function save(path: string, data: unknown): void {
     const db = getDb();
     const q = queues[path] || (queues[path] = { busy: false, next: null });
@@ -74,25 +79,28 @@ export function makeSaveQueue({ getDb, onFlag, onFailed = () => {}, onStored = (
     if (q.busy) return;
     const run = async () => {
       q.busy = true;
-      while (q.next) {
-        const body = q.next; q.next = null;
-        try {
-          const stored = body.__delete ? await db.doc(path).delete() : await db.doc(path).set(body);
+      try {
+        while (q.next) {
+          const body = q.next; q.next = null;
+          let stored: unknown;
+          try {
+            stored = body.__delete ? await db.doc(path).delete() : await db.doc(path).set(body);
+          } catch (err) {
+            const e = err as { code?: string } | null;
+            onFlag(e && e.code === 'quota_exceeded' ? 'Storage full' : 'Not saved, retrying…');
+            await new Promise(r => setTimeout(r, 1500));
+            // A permanent error drops this write only; a newer one queued meanwhile still gets its try.
+            if (e && (e.code === 'invalid_argument' || e.code === 'revoked' || e.code === 'not_granted')) { fail(path, body); onFlag('Could not save'); }
+            else if (!q.next) q.next = body;
+            continue;
+          }
           ok(path); onFlag('Saved');
-          if (stored !== undefined && !body.__delete) {
+          if (stored !== undefined && !body.__delete) guard(() => {
             if (!q.next) onStored(path, stored);
             else if (!q.next.__delete) q.next = rebase(path, body, q.next, stored);
-          }
-        } catch (err) {
-          const e = err as { code?: string } | null;
-          onFlag(e && e.code === 'quota_exceeded' ? 'Storage full' : 'Not saved, retrying…');
-          await new Promise(r => setTimeout(r, 1500));
-          // A permanent error drops this write only; a newer one queued meanwhile still gets its try.
-          if (e && (e.code === 'invalid_argument' || e.code === 'revoked' || e.code === 'not_granted')) { fail(path, body); onFlag('Could not save'); }
-          else if (!q.next) q.next = body;
+          });
         }
-      }
-      q.busy = false;
+      } finally { q.busy = false; }
     };
     run();
   }
