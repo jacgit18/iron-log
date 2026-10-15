@@ -93,10 +93,13 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const key = get().edKey(); const day = get().edDay;
     const gone: ProgramSlot[] = [];
     if (!get().editProgram(prog => { pinIds(prog, day); gone.push(...prog.days[day - 1].slots.splice(i, 1)); }) || !gone[0]) return;
-    const added = gone[0].items.filter(it => it.ex).map(it => ({ id: 'E' + newId(), ex: it.ex, ph: it.ph ?? null, note: (it.note || '').slice(0, 200) }));
-    get().setExperiments([...get().experiments, ...added]);
+    // An exercise already on the list (or twice on this card) is not added again; the card still leaves the program.
+    const have = new Set(get().experiments.map(e => e.ex)); const fresh = gone[0].items.filter(it => it.ex && !have.has(it.ex) && have.add(it.ex));
+    const added = fresh.map(it => ({ id: 'E' + newId(), ex: it.ex, ph: it.ph ?? null, note: (it.note || '').slice(0, 200) }));
+    const skipped = gone[0].items.filter(it => it.ex).length - added.length;
+    if (added.length) get().setExperiments([...get().experiments, ...added]);
     set({ edRemoved: { key, day, idx: i, slot: gone[0], toExperiments: added.map(e => e.id) } });
-    flag('Moved to Experiments');
+    flag(skipped ? `Moved to Experiments · ${skipped} already there` : 'Moved to Experiments');
   },
   undoRemoveEdSlot() {
     const r = get().edRemoved;
