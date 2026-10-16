@@ -11,6 +11,7 @@ import { liftGoalStatus, goalPhaseLabel } from '../../lib/liftGoal.js';
 import LineChart from '../LineChart.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ArmedButton from '../ArmedButton.jsx';
+import './Trends.css';
 
 function Kpi({ label, value, sub }: { label: string; value: ReactNode; sub: ReactNode }) {
   return <div className="kpi"><span className="kl">{label}</span><span className="kv">{value}</span><span className="ks">{sub}</span></div>;

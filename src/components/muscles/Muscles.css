@@ -1,0 +1,137 @@
+.bodywrap {
+  display: grid;
+  grid-template-columns: minmax(0,1.1fr) minmax(0,1fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width:900px) {
+  .bodywrap {
+    grid-template-columns: minmax(0,1fr);
+  }
+}
+.figs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+.fig {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.fig svg {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Phone: both figures fit in about half the screen, so a tapped muscle's detail is a short scroll away */
+@media (max-width:900px) {
+  .fig svg {
+    max-height: min(50svh,380px);
+  }
+}
+.fig figcaption {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+.sil {
+  fill: var(--sunk);
+}
+.mu {
+  stroke: var(--surface);
+  stroke-width: 1;
+  cursor: pointer;
+  transition: fill .15s;
+}
+.mu.l0 {
+  fill: var(--m0);
+}
+.mu.l1 {
+  fill: var(--m1);
+}
+.mu.l2 {
+  fill: var(--m2);
+}
+.mu.l3 {
+  fill: var(--m3);
+}
+.mu.l4 {
+  fill: var(--m4);
+}
+.mu:hover {
+  filter: brightness(1.08);
+}
+.mu.sel {
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+.bodyside {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mdetail {
+  scroll-margin: 12px 0 calc(72px + env(safe-area-inset-bottom, 0px));
+}
+.linkbtn {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  font-size: .875rem;
+}
+.mlist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mrow {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: .875rem;
+}
+.mrow:last-child {
+  border-bottom: 0;
+}
+.mname small {
+  color: var(--muted);
+}
+.mdays {
+  color: var(--muted);
+  font-size: .8125rem;
+  white-space: nowrap;
+}
+.mdetail .mname {
+  grid-column: 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* Phone: the days go on a second line under the name, so a row never runs wider than the screen */
+@media (max-width:600px) {
+  .mrow {
+    grid-template-columns: auto minmax(0,1fr) auto;
+    row-gap: 2px;
+  }
+  .mrow .mdays {
+    grid-column: 2;
+    grid-row: 2;
+    white-space: normal;
+  }
+}

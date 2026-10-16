@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { weekStartOf, ymd, parseDate, fmtShort } from '../../shared/dates.js';
 import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
+import './BodyWeightRow.css';
 
 function GoalNote({ goal, body, today }: { goal: BodyGoal; body: BodyEntry[]; today: Date }) {
   const g = goalStatus(goal, body, today);
