@@ -7,7 +7,7 @@ import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exI
 import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, weekProgKey, weekProgram, ranFor, isFrozen, programFor, phaseOf, lastLog, describe,
-  setCardDone, setItemDone, setItemSkipped, itemKey2, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
+  setCardDone, setItemDone, setItemSkipped, isPaired, itemKey2, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
   planFix, isFinished, injuryPreventionOn, autoEntry, newEntryId, normExperiments,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue, onDamaged, removeLegacyGitHubToken } from '../lib/storage.js';
@@ -508,7 +508,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!skipped) flag('Skip undone'); // skipping shows its own notice with Undo, so no second line saying the same
   },
   skipItem(slotId, idx) {
-    const s = get().slotById(slotId); if (!s || s.type !== 'superset') return;
+    const s = get().slotById(slotId); if (!s || !isPaired(s)) return;
     const key = itemKey2(s, idx); let skipped = false;
     const ok = get().mutateChecks(w => { skipped = !(w.skipped || {})[key]; setItemSkipped(w, s, idx, skipped); }, { removeLogged: true, label: exInfo(get().cfg, s.items[idx].ex).n });
     if (!ok) return;

@@ -184,10 +184,10 @@ export function describe(e: LogEntry | null | undefined): string {
 }
 
 /* ---------- What counts: the one rule every count in the app uses ---------- */
-// A card is skipped when its own key is, or (superset) when every exercise in it has been skipped on its own.
-export const isSkipped = (s: { id: string; type?: Slot['type']; items?: unknown[] }, w: WeekIn) => !!(w.skipped && (w.skipped[s.id] || (s.type === 'superset' && !!s.items?.length && s.items.every((_, i) => w.skipped?.[itemKey2(s, i)]))));
-// One exercise of a superset skipped for the week: skipped[`${id}#${i}`]. Either/or options are alternatives, so those skip only as a card.
-export const isItemSkipped = (s: { id: string; type: Slot['type'] }, i: number, w: WeekIn) => s.type === 'superset' && !!(w.skipped && w.skipped[itemKey2(s, i)]);
+// A card is skipped when its own key is, or (superset, either/or) when every exercise in it has been skipped on its own.
+export const isSkipped = (s: { id: string; type?: Slot['type']; items?: unknown[] }, w: WeekIn) => !!(w.skipped && (w.skipped[s.id] || ((s.type === 'superset' || s.type === 'either') && !!s.items?.length && s.items.every((_, i) => w.skipped?.[itemKey2(s, i)]))));
+// One exercise of a superset, or one option of an either/or, skipped for the week: skipped[`${id}#${i}`]. An either/or is skipped when every option is.
+export const isItemSkipped = (s: { id: string; type: Slot['type'] }, i: number, w: WeekIn) => (s.type === 'superset' || s.type === 'either') && !!(w.skipped && w.skipped[itemKey2(s, i)]);
 // Done state lives in week.done: done[id] = the whole card is done; done[`${id}#${i}`] = one exercise
 // in a paired card (a superset half, or the either/or option that was picked).
 export const itemKey2 = (s: { id: string }, i: number) => `${s.id}#${i}`;
@@ -225,18 +225,20 @@ export function setItemDone(week: Week, s: Card, idx: number, on: boolean): void
     const cur = s.items.map((_, i) => isItemDone(s, i, week)); cur[idx] = on; clearDone(week, s);
     const live = cur.filter((_, i) => !isItemSkipped(s, i, week));
     if (live.length === cur.length && cur.every(Boolean)) week.done[s.id] = true; else cur.forEach((v, i) => { if (v) week.done[itemKey2(s, i)] = true; });
-  } else { clearDone(week, s); if (on) { week.done[s.id] = true; week.done[itemKey2(s, idx)] = true; } }
+  } else { if (on && week.skipped) delete week.skipped[itemKey2(s, idx)]; clearDone(week, s); if (on) { week.done[s.id] = true; week.done[itemKey2(s, idx)] = true; } }
   if (on && week.skipped) delete week.skipped[s.id];
 }
-// Skip (or bring back) one exercise of a superset for the week; its tick goes with it. A superset that was ticked whole keeps the
-// other exercises ticked one by one. Skipping every exercise skips the card (isSkipped).
+// Skip (or bring back) one exercise of a superset, or one option of an either/or, for the week; its tick goes with it. A superset that was
+// ticked whole keeps the other exercises ticked one by one. Skipping every exercise or option skips the card (isSkipped).
 export function setItemSkipped(week: Week, s: Card, idx: number, on: boolean): void {
-  if (s.type !== 'superset') return;
+  if (!isPaired(s)) return;
   week.skipped = week.skipped || {};
   const key = itemKey2(s, idx);
   if (!on) { delete week.skipped[key]; return; }
-  const cur = s.items.map((_, i) => isItemDone(s, i, week)); cur[idx] = false; clearDone(week, s);
-  cur.forEach((v, i) => { if (v) week.done[itemKey2(s, i)] = true; });
+  if (s.type === 'superset') {
+    const cur = s.items.map((_, i) => isItemDone(s, i, week)); cur[idx] = false; clearDone(week, s);
+    cur.forEach((v, i) => { if (v) week.done[itemKey2(s, i)] = true; });
+  } else if (isItemDone(s, idx, week)) clearDone(week, s); // the picked option is skipped: nothing is picked now
   week.skipped[key] = true;
 }
 // Totals for any list of cards. Skipped cards are left out of total and done.

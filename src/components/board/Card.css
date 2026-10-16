@@ -110,3 +110,9 @@
   top: -5px;
   right: -5px;
 }
+.card.group .iskiprow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

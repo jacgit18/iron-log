@@ -34,10 +34,29 @@ describe('one exercise of a superset skipped on its own', () => {
     setItemSkipped(w, ss, 0, false);
     expect(isSkipped(ss, w)).toBe(false);
   });
-  it('is a touch on the card, and either/or options cannot be skipped one by one', () => {
+  it('is a touch on the card', () => {
     const w = week(); setItemSkipped(w, ss, 0, true);
     expect(touched(ss, w)).toBe(true);
+  });
+});
+
+describe('one option of an either/or skipped on its own', () => {
+  it('leaves the card open so the other option can still be ticked', () => {
+    const w = week(); setItemSkipped(w, either, 0, true);
+    expect(isItemSkipped(either, 0, w)).toBe(true); expect(isSkipped(either, w)).toBe(false);
+    expect(unitsOf(either, w)).toBe(1); expect(isDone(either, w)).toBe(false);
+    setItemDone(w, either, 1, true);
+    expect(isDone(either, w)).toBe(true); expect(isItemDone(either, 1, w)).toBe(true); expect(isItemDone(either, 0, w)).toBe(false);
+  });
+  it('skips the card once every option is skipped, and ticking an option brings it back', () => {
+    const w = week(); setItemSkipped(w, either, 0, true); setItemSkipped(w, either, 1, true);
+    expect(isSkipped(either, w)).toBe(true);
+    setItemDone(w, either, 0, true);
+    expect(isSkipped(either, w)).toBe(false); expect(isItemSkipped(either, 0, w)).toBe(false); expect(isDone(either, w)).toBe(true);
+  });
+  it('skipping the picked option puts the pick back', () => {
+    const w = week(); setItemDone(w, either, 0, true);
     setItemSkipped(w, either, 0, true);
-    expect(w.skipped[itemKey2(either, 0)]).toBeUndefined();
+    expect(isDone(either, w)).toBe(false);
   });
 });
