@@ -26,7 +26,7 @@ test('on a phone the header shows the arrows and the Rest box, with no ⋯ or co
   expect(o.head - o.restRight).toBeLessThan(12); // the Rest box is at the end of the row
 });
 
-test('stamping a date on a day moves neither the Rest box nor the arrows', async ({ page }) => {
+test('stamping a date on a day moves neither the Rest box nor the arrows, and lifts the title above the date', async ({ page }) => {
   await phone(page);
   const col = page.locator('.col.sel');
   const head = () => col.locator('.colhead').evaluate(h => {
@@ -38,7 +38,12 @@ test('stamping a date on a day moves neither the Rest box nor the arrows', async
   const before = await head();
   await col.locator('article.card input.cardchk').first().check(); // the first logged set stamps the day's date
   await expect(col.locator('.dd-text')).toBeVisible();
-  expect(await head()).toEqual(before);
+  const after = await head();
+  expect(after.arrows).toEqual(before.arrows);
+  expect(after.rest).toEqual(before.rest);
+  // The title was level with the tick box while the date room was empty (2rem, so half of it is 1rem = 16px); stamping lifts it to the top, same left, width and height.
+  expect([after.head[0], after.head[2], after.head[3]]).toEqual([before.head[0], before.head[2], before.head[3]]);
+  expect(before.head[1] - after.head[1]).toBeCloseTo(16, 0);
 });
 
 test('the Rest box makes a rest day from the header, and a rest day keeps it ticked', async ({ page }) => {

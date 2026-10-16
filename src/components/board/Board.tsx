@@ -27,11 +27,12 @@ const tipHidden = (k: string) => LS.get(k) === 1; // stored as the string "1", s
 const swapFrom = (swapFlash: number[] | null, d: number) => swapFlash?.includes(d) ? <div className="swapfrom">↔ from Day {swapFlash[0] === d ? swapFlash[1] : swapFlash[0]}</div> : null;
 
 // The date line under a day's title, "Sunday" over "09/27". The room for the longest one ("Wednesday" over "00/00") is always held (the hidden pad), so
-// stamping a date changes no width or height in the header: the Rest box and the swap arrows stay where they were.
+// stamping a date changes no width or height in the header: the Rest box and the swap arrows stay where they were. Until a date is stamped
+// (`nodate`) the title drops into that room so it lines up with the day's tick box (DayHeader.css); stamping lifts it above the date.
 function DayDate({ date }: { date?: string | null }) {
   const [name, md] = date ? fmtDayDate(date).split(' ') : [];
   return (
-    <div className="sub daydate">
+    <div className={`sub daydate${date ? '' : ' nodate'}`}>
       <span className="dd-pad" aria-hidden="true"><span>Wednesday</span><span>00/00</span></span>
       {date && <span className="dd-text"><span>{name}</span><span>{md}</span></span>}
     </div>

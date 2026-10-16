@@ -120,5 +120,13 @@
 .boardroot .colhead .daydate .dd-pad > span,
 .boardroot .colhead .daydate .dd-text > span {
   display: block;
+  line-height: 1rem;
+}
+
+/* The two date lines are 1rem each, so the room they hold is exactly 2rem. Before a date is stamped that room is empty and the title would sit above
+   the middle of the day's tick box; drop it by half of it (a transform, so nothing else moves) and it is level with the box. Stamping a date lifts the
+   title back to the top, above the date. Rest columns have their own "Rest day" line under the title, so they are left alone. */
+.boardroot .col:not(.rest) .colhead > div:has(> .daydate.nodate) > h3 {
+  transform: translateY(1rem);
 }
 }
