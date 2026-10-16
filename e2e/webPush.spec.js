@@ -40,7 +40,6 @@ async function setup(page, { admin = true, on = true, now = NOW } = {}) {
   return calls;
 }
 const scheduled = calls => calls.filter(c => c.path === '/schedule' || c.path === '/cancel');
-const day1Boxes = page => page.locator('.col.sel article.card input.chk.cardchk');
 // A ticked card sinks to the end of its day, so a locator for "the first card" moves on after each tick: pin the card by its checkbox id.
 const firstOpen = async page => page.locator(`#${await page.locator('.col.sel article.card:not(.done) input.chk.cardchk').first().getAttribute('id')}`);
 
@@ -70,7 +69,7 @@ test('is not offered to an account that is not an admin', async ({ page }) => {
 
 test('ticking a card on a day with more to do asks for a nudge 30 minutes on; finishing the day takes it back', async ({ page }) => {
   const calls = await setup(page);
-  const n = await day1Boxes(page).count();
+  const n = await page.locator('.col.sel article.card:not(.done):not(.skipped)').count(); // every open card counts, Home and Optional ones too
   expect(n).toBeGreaterThan(2);
   await (await firstOpen(page)).check();
   await expect.poll(() => scheduled(calls).length).toBe(1);

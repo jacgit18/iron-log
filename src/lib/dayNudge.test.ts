@@ -26,9 +26,10 @@ describe('nudgeAction', () => {
   it('a card that is skipped does not count as left', () => {
     expect(nudgeAction(week(), week(['a'], ['b']), day1)).toEqual({ do: 'schedule', left: 1 });
   });
-  it('home and optional cards do not keep a day open', () => {
+  it('home and optional cards keep a day open: the day is finished only when its own box would be ticked', () => {
     const slots = [slot('a', 1), slot('h', 1, { sec: 'Home' }), slot('o', 1, { sec: 'Optional' })];
-    expect(nudgeAction(week(), week(['a']), slots)).toEqual({ do: 'cancel' }); // the workout is done
+    expect(nudgeAction(week(), week(['a']), slots)).toEqual({ do: 'schedule', left: 2 }); // the workout is done, the sled and home cards are not
+    expect(nudgeAction(week(['a', 'h']), week(['a', 'h', 'o']), slots)).toEqual({ do: 'cancel' });
   });
   it('a superset counts each exercise: one half ticked is a day started', () => {
     const slots = [slot('s', 1, { type: 'superset', items: [{ ex: 'x' }, { ex: 'y' }] } as Partial<FlatSlot>), slot('b', 1)];
@@ -50,13 +51,14 @@ describe('nudgeAction', () => {
 });
 
 describe('inQuietHours', () => {
-  it('is quiet after 9:30 pm and before 6 am, by the device clock', () => {
+  it('is quiet after 9:30 pm and before 4 am, by the device clock', () => {
     expect(inQuietHours(at(21, 30))).toBe(false);
     expect(inQuietHours(at(21, 31))).toBe(true);
     expect(inQuietHours(at(23, 59))).toBe(true);
     expect(inQuietHours(at(0, 10))).toBe(true);
-    expect(inQuietHours(at(5, 59))).toBe(true);
-    expect(inQuietHours(at(6, 0))).toBe(false);
+    expect(inQuietHours(at(3, 59))).toBe(true);
+    expect(inQuietHours(at(4, 0))).toBe(false);
+    expect(inQuietHours(at(5, 45))).toBe(false); // a 5:15 am tick: the nudge at 5:45 is allowed
     expect(inQuietHours(at(12, 0))).toBe(false);
   });
 });
