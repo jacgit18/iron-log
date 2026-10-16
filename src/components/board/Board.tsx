@@ -26,6 +26,18 @@ const tipHidden = (k: string) => LS.get(k) === 1; // stored as the string "1", s
 // "↔ from Day N" tab on the top edge of a day that just swapped; it floats, so no card moves when it comes or goes.
 const swapFrom = (swapFlash: number[] | null, d: number) => swapFlash?.includes(d) ? <div className="swapfrom">↔ from Day {swapFlash[0] === d ? swapFlash[1] : swapFlash[0]}</div> : null;
 
+// The date line under a day's title, "Sunday" over "09/27". The room for the longest one ("Wednesday" over "00/00") is always held (the hidden pad), so
+// stamping a date changes no width or height in the header: the Rest box and the swap arrows stay where they were.
+function DayDate({ date }: { date?: string | null }) {
+  const [name, md] = date ? fmtDayDate(date).split(' ') : [];
+  return (
+    <div className="sub daydate">
+      <span className="dd-pad" aria-hidden="true"><span>Wednesday</span><span>00/00</span></span>
+      {date && <span className="dd-text"><span>{name}</span><span>{md}</span></span>}
+    </div>
+  );
+}
+
 // Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
 function SwapArrows({ d }: { d: number }) {
   const rest = useAppStore(s => s.week.rest) || [];
@@ -217,7 +229,7 @@ export default function Board() {
           if (pd == null) return (
             <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`}>
               {swapFrom(swapFlash, d)}
-              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div>{week.restOn && <div className="sub daydate">{fmtDayDate(week.restOn)}</div>}</div><SwapArrows d={d} /><label className="restchk"><span className="cond" aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /></label></div>
+              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div><DayDate date={week.restOn} /></div><SwapArrows d={d} /><label className="restchk"><span className="cond" aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /></label></div>
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
@@ -248,7 +260,7 @@ export default function Board() {
                   onChange={e => st.checkDay(d, e.target.checked)} />
                 <div>
                   <h3 id={`colh-${d}`} tabIndex={-1}>{dayTitle(dayDef, d)}</h3>
-                  {date && <div className="sub daydate">{fmtDayDate(date)}</div>}
+                  <DayDate date={date} />
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                   <div className="sub daycount">{t.done}/{t.total} done</div>
                 </div>
