@@ -106,6 +106,31 @@ export interface BodySlice {
   deleteBodyWeight(wk: string): void;
 }
 
+/** The experiment list and the exercise library: exercises, equipment and warm-ups, and putting them on a day. */
+export interface LibrarySlice {
+  setExperiments(experiments: Experiment[]): void;
+  saveExperiment(d: ExperimentForm): string | null;
+  /** The exercise id a sheet's choice stands for, adding it to the library first when it is new. */
+  resolveExerciseChoice(d: ExerciseChoice & ExerciseExtras, chosen: string): string;
+  applyExerciseUrl(ex: string, raw: string | null | undefined): void;
+  applyExerciseEq(ex: string, eq: EquipmentId | '' | null | undefined): void;
+  addEquipment(name: string): EquipmentId | null;
+  removeEquipment(id: string): boolean;
+  createExercise(d: { nn: string } & ExerciseExtras): string;
+  addExerciseToDay(col: number, d: ExperimentForm): string | null;
+  saveExerciseDetails(exId: string, d: ExerciseDetailsForm): string | null;
+  createLibraryExercise(d: ExerciseDetailsForm): string | null;
+  /** Adds a catalog exercise to the library as a snapshot under its catalog id (ADR 026). Returns an error message, or null. */
+  addCatalogExercise(item: CatalogItem): string | null;
+  deleteExercise(exId: string): string | null;
+  deleteExperiment(id: string): void;
+  addToDay(entryId: string, col: number): boolean;
+  removeExtra(slotId: string): void;
+  addWarmup(n: string, rx: string): boolean;
+  /** `d` is the Stretches day it was removed from, where its Undo shows. */
+  removeWarmup(id: string, d?: number): void;
+}
+
 /** The downloads: CSV, Excel and the full data file. */
 export interface ExportSlice {
   exporting: ExportKind | null; // which export is running
@@ -352,27 +377,6 @@ export interface CoreSlice {
   skipCards(ids: string[]): void;
   moveCards(ids: string[], day: number): void;
 
-  setExperiments(experiments: Experiment[]): void;
-  saveExperiment(d: ExperimentForm): string | null;
-  /** The exercise id a sheet's choice stands for, adding it to the library first when it is new. */
-  resolveExerciseChoice(d: ExerciseChoice & ExerciseExtras, chosen: string): string;
-  applyExerciseUrl(ex: string, raw: string | null | undefined): void;
-  applyExerciseEq(ex: string, eq: EquipmentId | '' | null | undefined): void;
-  addEquipment(name: string): EquipmentId | null;
-  removeEquipment(id: string): boolean;
-  createExercise(d: { nn: string } & ExerciseExtras): string;
-  addExerciseToDay(col: number, d: ExperimentForm): string | null;
-  saveExerciseDetails(exId: string, d: ExerciseDetailsForm): string | null;
-  createLibraryExercise(d: ExerciseDetailsForm): string | null;
-  /** Adds a catalog exercise to the library as a snapshot under its catalog id (ADR 026). Returns an error message, or null. */
-  addCatalogExercise(item: CatalogItem): string | null;
-  deleteExercise(exId: string): string | null;
-  deleteExperiment(id: string): void;
-  addToDay(entryId: string, col: number): boolean;
-  removeExtra(slotId: string): void;
-  addWarmup(n: string, rx: string): boolean;
-  /** `d` is the Stretches day it was removed from, where its Undo shows. */
-  removeWarmup(id: string, d?: number): void;
   restOverflow(n: number): FlatSlot[];
   setRestDay(n: number, opts?: { skipOverflow?: boolean }): boolean | undefined;
   swapDays(d: number, dir: number): boolean;
@@ -411,6 +415,6 @@ export interface BackupSlice {
   forgetBackups(): Promise<void>;
 }
 
-export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & RemovedSlice;
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & RemovedSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];
