@@ -1,6 +1,8 @@
 import AccountPanel from './AccountPanel.js';
 import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
+import AutoBackups from './AutoBackups.js';
+import { BACKUP_DAYS } from '../../lib/autoBackup.js';
 import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
@@ -285,6 +287,7 @@ function DataPanel() {
           <button type="button" className="btn sm" onClick={() => st.pasteImport(paste)}>Review import</button>
         </div>
       </details>
+      <AutoBackups />
       <More about="export and import">
         <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
       </More>
@@ -322,7 +325,7 @@ function ErasePanel() {
   return (
     <section className="panel erase danger-panel" aria-labelledby="erase-h">
       <h3 id="erase-h">Erase data</h3>
-      <p>Deletes what you check below {storeMode === 'db' ? 'from your saved data' : 'from this browser'}, to start the tracker over. It can't be undone here, so use Export all data first.</p>
+      <p>Deletes what you check below {storeMode === 'db' ? 'from your saved data' : 'from this browser'}, to start the tracker over. It can't be undone here, so use Export all data first. The automatic backups keep a copy for up to {BACKUP_DAYS} days.</p>
       <fieldset>
         <legend className="sr">What to erase</legend>
         {ERASE.map(([k, label, hint]) => (
