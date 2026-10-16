@@ -76,6 +76,8 @@ const LIMITS = {
 };
 
 const DB_HEALTH_TTL_MS = 5_000;
+/** The path Express matches for `app.use('/api/commands/import-legacy')`: a prefix on a segment boundary, any letter case. */
+const IMPORT_LEGACY_PATH = /^\/api\/commands\/import-legacy(\/|$)/i;
 
 const NO_CACHE = 'no-cache';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -115,9 +117,11 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   }
   // The phone's error reports: anyone may send one (a signed-out phone has errors too), so they are small, rate-limited and scrubbed.
   app.post('/api/client-errors', rateLimit(limits.clientErrors), express.json({ limit: '4kb' }), clientErrors());
-  // The one-time upload of a phone's old data is far bigger than any other request (years of entries), so it alone gets a larger limit.
-  app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }));
-  app.use(express.json({ limit: '100kb' }));
+  // The one-time upload of a phone's old data is far bigger than any other request (years of entries), so it alone gets a larger limit,
+  // but only once the caller is signed in and counted (below, after sessionAuth and its per-user limit). Before that it gets no parser
+  // at all: an anonymous caller must not be able to make the one small instance buffer and parse 4 MB per request (audit run-2).
+  const smallJson = express.json({ limit: '100kb' });
+  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) ? next() : smallJson(req, res, next)));
   app.disable('x-powered-by');
 
   app.get('/api/health', (_req, res) => {
@@ -157,6 +161,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
   // Per signed-in user, after the lookup.
   app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
+  app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }));
   app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));
   app.use('/api/sync', rateLimit(limits.sync, undefined, byUser));
   // Web Push (ADR 044). Admin-only first: it is the first usage-based cost, so every route is behind requireAdmin until it is released.
