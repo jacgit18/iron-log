@@ -71,6 +71,7 @@ export interface UncheckNote {
 export interface SkipNote {
   week: string;
   slotId: string;
+  key?: string; // the week.skipped key that was set; the card's id unless one superset exercise was skipped
   text: string;
   done: string[]; // the done keys the skip cleared
 }
@@ -328,6 +329,8 @@ export interface CoreSlice {
   checkItem(slotId: string, idx: number, on: boolean): void;
   checkDay(day: number, on: boolean): void;
   skipCard(slotId: string): void;
+  /** Skip (or bring back) one exercise of a superset for the week; the Undo notice puts it back. */
+  skipItem(slotId: string, idx: number): void;
   skipCards(ids: string[]): void;
   moveCards(ids: string[], day: number): void;
 

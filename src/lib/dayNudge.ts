@@ -18,7 +18,7 @@ export function inQuietHours(at: number): boolean {
 
 export type NudgeAction = { do: 'schedule'; left: number } | { do: 'cancel' } | null;
 
-const openCards = (cards: FlatSlot[], week: Week) => cards.filter(s => countsForFinish(s) && !isSkipped(s, week) && doneUnitsOf(s, week) < unitsOf(s)).length;
+const openCards = (cards: FlatSlot[], week: Week) => cards.filter(s => countsForFinish(s) && !isSkipped(s, week) && doneUnitsOf(s, week) < unitsOf(s, week)).length;
 
 /** What a change to the check-offs means for the nudge, or null when it means nothing. */
 export function nudgeAction(before: Week, after: Week, slots: FlatSlot[]): NudgeAction {
