@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { mem, clearStorage, saved } from '../test/browserStubs.js';
 
 let useAppStore, BUILTIN, warmupOf, withAllDays, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf, orderOf;
@@ -323,6 +323,38 @@ describe('swap days', () => {
     st().swapDays(6, 1); st().swapDays(7, -1);
     expect(st().week.order).toBeUndefined();
     expect(ids(6)).toContain('A-d6s1');
+  });
+  describe('the flash that outlines the two days it changed', () => {
+    beforeEach(() => { vi.useFakeTimers(); useAppStore.setState({ swapFlash: null }); }); // earlier swaps in this file left theirs set
+    afterEach(() => { vi.useRealTimers(); });
+    it('names the two days, then clears itself', () => {
+      expect(st().swapFlash).toBeNull();
+      st().swapDays(6, 1);
+      expect(st().swapFlash).toEqual([6, 7]);
+      vi.advanceTimersByTime(1799);
+      expect(st().swapFlash).toEqual([6, 7]);
+      vi.advanceTimersByTime(2);
+      expect(st().swapFlash).toBeNull();
+    });
+    it('is not set when nothing was swapped', () => {
+      expect(st().swapDays(1, -1)).toBe(false);
+      expect(st().swapFlash).toBeNull();
+    });
+    it('a second swap restarts the clock and names its own days', () => {
+      st().swapDays(2, 1);
+      vi.advanceTimersByTime(1500);
+      st().swapDays(4, 1);
+      expect(st().swapFlash).toEqual([4, 5]);
+      vi.advanceTimersByTime(1500); // 3 s since the first, 1.5 s since the second
+      expect(st().swapFlash).toEqual([4, 5]);
+      vi.advanceTimersByTime(400);
+      expect(st().swapFlash).toBeNull();
+    });
+    it('is dropped when the week changes, so the same columns of another week do not flash', () => {
+      st().swapDays(2, 1);
+      st().gotoWeek('next');
+      expect(st().swapFlash).toBeNull();
+    });
   });
   it('does nothing past the ends', () => {
     expect(st().swapDays(1, -1)).toBe(false);

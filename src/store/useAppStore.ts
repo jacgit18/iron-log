@@ -47,6 +47,8 @@ let syncApi: ApiDb | null = null; // set when the handle is the API-backed one (
 let unsubWeek: (() => void) | null = null;
 let flagT: ReturnType<typeof setTimeout> | null = null, flagX: ReturnType<typeof setTimeout> | null = null, flagHold: boolean | number = 0;
 let initStarted = false;
+let swapFlashTimer: ReturnType<typeof setTimeout> | null = null;
+const SWAP_FLASH_MS = 1800; // how long the two swapped days stay outlined
 let histPromise: Promise<void> | null = null;
 let histFailed = false; // the last history load lost some weeks to an error
 
@@ -233,6 +235,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   uncheckNote: null, // after an uncheck removed logged entries: {week, text, entries: {exId: [entry]}, done: {key: wasDone}}
   skipNote: null, // after a card is skipped: {week, slotId, text, done: [keys the skip cleared]}
   moveNote: null, // heads-up after a move puts the same exercise on the same or a neighboring day
+  swapFlash: null,
   orderNote: null, // after a day is finished: {kind, week, doneCol, prev, next, lines, applied}; prev/next are {order, rest} for kind 'order', {slot, moved} for kind 'card'
   orderSkip: [], // 'week:column' suggestions dismissed this session
   modal: null, // {type:'log', slotId, idx} | {type:'detail', exId}
@@ -769,7 +772,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     });
     if (!ok) return false;
-    set({ moveNote: null, orderNote: null, mDay: e });
+    set({ moveNote: null, orderNote: null, mDay: e, swapFlash: [d, e] });
+    if (swapFlashTimer) clearTimeout(swapFlashTimer);
+    swapFlashTimer = setTimeout(() => set({ swapFlash: null }), SWAP_FLASH_MS);
     flag(restInvolved ? `Rest day moved to Day ${dRest ? e : d}` : `Day ${d} swapped with Day ${e}`);
     return true;
   },
@@ -818,7 +823,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   gotoWeek(which) {
     const cur = get().weekStart;
-    set({ mDay: null, moveNote: null, orderNote: null, weekStart: which === 'today' ? weekStartOf(new Date()) : addDays(cur, which === 'prev' ? -7 : 7) });
+    set({ mDay: null, moveNote: null, orderNote: null, swapFlash: null, weekStart: which === 'today' ? weekStartOf(new Date()) : addDays(cur, which === 'prev' ? -7 : 7) });
     subscribeWeek();
   },
 

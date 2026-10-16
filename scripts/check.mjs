@@ -118,7 +118,7 @@ for (const c of plan) {
     continue;
   }
   console.log(`\n> npm run ${c}`);
-  const r = spawnSync('npm', ['run', c], { stdio: 'inherit' });
+  const r = spawnSync('npm', ['run', c], { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
   if (r.status !== 0) {
     console.error(`\nFailed: ${c}`);
     process.exit(r.status ?? 1);

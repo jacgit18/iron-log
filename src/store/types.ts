@@ -251,6 +251,8 @@ export interface CoreSlice {
   uncheckNote: UncheckNote | null;
   skipNote: SkipNote | null;
   moveNote: MoveNote | null;
+  /** The two days a swap just changed, for about a second and a half: the Board outlines them so the change is easy to see. Never saved. */
+  swapFlash: number[] | null;
   orderNote: OrderNote | null;
   orderSkip: string[]; // 'week:column' suggestions dismissed this session
   modal: Modal | null;

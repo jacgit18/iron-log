@@ -30,7 +30,10 @@ function SwapArrows({ d }: { d: number }) {
   const swap = (dir: number) => {
     if (!useAppStore.getState().swapDays(d, dir)) return;
     const e = d + dir;
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => (document.getElementById(`swap-${e}-${dir}`) || document.getElementById(`swap-${e}-${-dir}`))?.focus());
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => {
+      (document.getElementById(`swap-${e}-${dir}`) || document.getElementById(`swap-${e}-${-dir}`))?.focus();
+      document.getElementById(`col-${e}`)?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: motionOK() ? 'smooth' : 'instant' }); // the day it moved to, in sight
+    });
   };
   const label = (n: number) => (rest.includes(d) ? (rest.includes(n) ? `Day ${n} is also a rest day` : `Move rest day to Day ${n}`) : rest.includes(n) ? `Swap Day ${d} with the rest day` : `Swap Day ${d} with Day ${n}`);
   return (
@@ -49,6 +52,7 @@ export default function Board() {
   const programs = useAppStore(s => s.programs);
   const storeMode = useAppStore(s => s.storeMode);
   const mDay = useAppStore(s => s.mDay);
+  const swapFlash = useAppStore(s => s.swapFlash);
   const today = useToday(s => s.today);
   const st = useAppStore.getState();
 
@@ -200,7 +204,7 @@ export default function Board() {
           return (
             <button type="button" role="tab" key={d} id={`daytab-${d}`} aria-selected={d === day} aria-controls={`col-${d}`} tabIndex={d === day ? 0 : -1}
               // The name starts with the visible text ("D1 0/11") so voice control users can say what they see (WCAG 2.5.3).
-              className={isRest || t.full ? 'full' : ''} aria-label={`D${d} ${short}: Day ${d}, ${isRest ? 'rest day' : t.full ? 'all done' : `${t.done} of ${t.total} done`}`}
+              className={`${isRest || t.full ? 'full' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`.trim()} aria-label={`D${d} ${short}: Day ${d}, ${isRest ? 'rest day' : t.full ? 'all done' : `${t.done} of ${t.total} done`}`}
               onClick={() => { st.setMDay(d); window.scrollTo({ top: 0, behavior: motionOK() ? 'auto' : 'instant' }); }}>
               <b aria-hidden="true">D{d}</b>{' '}<span aria-hidden="true">{short}</span>
             </button>
@@ -212,7 +216,7 @@ export default function Board() {
         {DAYS.map(d => {
           const pd = dayAt(week, d); // the program day shown here; null for the rest day
           if (pd == null) return (
-            <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}`}>
+            <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`}>
               <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div>{week.restOn && <div className="sub daydate">{fmtDayDate(week.restOn)}</div>}</div><SwapArrows d={d} /></div>
               <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /> Rest day</label>
               {cols[d].length > 0 ? (
@@ -235,7 +239,7 @@ export default function Board() {
           return (
             <section
               key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`}
-              className={`col${t.full ? ' complete' : ''}${d === day ? ' sel' : ''}${overDay === d ? ' over' : ''}${dayMore === d ? ' more' : ''}`}
+              className={`col${t.full ? ' complete' : ''}${d === day ? ' sel' : ''}${overDay === d ? ' over' : ''}${dayMore === d ? ' more' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`}
               onDragOver={e => { if (!dragId) return; e.preventDefault(); setOverDay(d); }}
               onDrop={e => { if (!dragId) return; e.preventDefault(); const id = dragId; onDragEnd(); if (id.startsWith('exp:')) st.addToDay(id.slice(4), d); else st.moveSlot(id, d); }}
             >
