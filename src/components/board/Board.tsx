@@ -245,11 +245,12 @@ export default function Board() {
                 <div>
                   <h3 id={`colh-${d}`} tabIndex={-1}>{dayTitle(dayDef, d)}</h3>
                   {date && <div className="sub daydate">{fmtDayDate(date)}</div>}
+                  {swapFlash?.includes(d) && <div className="sub swapfrom">↔ from Day {swapFlash[0] === d ? swapFlash[1] : swapFlash[0]}</div>}
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                 </div>
-                <span className="count">{t.done}/{t.total}</span>
                 <SwapArrows d={d} />
-                <button type="button" className="btn sm ghost daymore" id={`daymore-${d}`} aria-expanded={dayMore === d} aria-controls={`restrow-${d}`} aria-label={`More for Day ${d}: rest day and swap`}
+                <span className="count">{t.done}/{t.total}</span>
+                <button type="button" className="btn sm ghost daymore" id={`daymore-${d}`} aria-expanded={dayMore === d} aria-controls={`restrow-${d}`} aria-label={`More for Day ${d}: rest day`}
                   onClick={() => setDayMore(dayMore === d ? null : d)}><span aria-hidden="true">⋯</span></button>
               </div>
               <label className="restchk" id={`restrow-${d}`}><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /> Rest day</label>

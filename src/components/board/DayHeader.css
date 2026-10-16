@@ -1,5 +1,5 @@
-/* A day's header. Desktop shows the swap arrows and the Rest day box all the time. On a phone they fold behind a ⋯ button
-   (a rest day's own column keeps them shown, since unticking Rest day is its main action), so the first card is a row nearer. */
+/* A day's header. The swap arrows are always shown. On a phone the Rest day box folds behind a ⋯ button
+   (a rest day's own column keeps it shown, since unticking Rest day is its main action), so the first card is a row nearer. */
 .daymore {
   display: none;
 }
@@ -15,15 +15,8 @@
     font-size: 1.25rem;
     line-height: 1;
   }
-  .boardroot .col:not(.rest, .more) .swaps,
   .boardroot .col:not(.rest, .more) .restchk {
     display: none;
-  }
-  .boardroot .col:not(.rest) .colhead .count + .swaps {
-    margin-left: 0;
-  }
-  .boardroot .col:not(.rest) .colhead .count {
-    margin-right: 8px;
   }
 }
 
@@ -54,4 +47,10 @@
   100% {
     background-color: transparent;
   }
+}
+
+/* "↔ from Day N" under the title of each swapped day, for the same two seconds as the outline. */
+.boardroot .colhead .swapfrom {
+  color: var(--accent);
+  font-weight: 700;
 }

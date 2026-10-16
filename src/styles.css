@@ -1639,7 +1639,7 @@ body.timing {
   font-weight: 600;
 }
 .colhead .count {
-  margin-left: auto;
+  margin-left: 4px;
   font-size: .8125rem;
   color: var(--muted);
   white-space: nowrap;
@@ -1659,9 +1659,6 @@ body.timing {
 }
 .colhead .swaps {
   margin-left: auto;
-}
-.colhead .count + .swaps {
-  margin-left: 8px;
 }
 .btn.swapbtn {
   min-width: 44px;
