@@ -250,6 +250,7 @@ export default function Board() {
                   <h3 id={`colh-${d}`} tabIndex={-1}>{dayTitle(dayDef, d)}</h3>
                   {date && <div className="sub daydate">{fmtDayDate(date)}</div>}
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
+                  <div className="sub daycount">{t.done}/{t.total} done</div>
                 </div>
                 <SwapArrows d={d} />
                 <label className="restchk"><span className="cond" aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /></label>
