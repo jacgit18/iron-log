@@ -87,7 +87,7 @@ test('signed in: the Account panel names the account, a tick reaches the server,
   await page.locator('#chk-A-d1s1').check();
   await expect.poll(() => rowsOf(email), { message: 'the check-off reaches the database under her own account' }).toBe(1);
 
-  await page.click('#tab-settings');
+  await page.locator('#tab-settings, #account-badge').first().click();
   const panel = page.getByRole('region', { name: 'Account' });
   await expect(panel).toContainText(email);
   await panel.getByRole('button', { name: 'Sign out' }).click();
@@ -157,7 +157,7 @@ test('deleting the account removes the user, the data and every sign-in record, 
             (select count(*) from users u join auth."user" a on a.id::text = u.auth_user_id where a.email = $1)::int as users`, [email])).rows[0];
   expect(await left()).toEqual({ logins: 1, users: 1 });
 
-  await page.click('#tab-settings');
+  await page.locator('#tab-settings, #account-badge').first().click();
   const panel = page.getByRole('region', { name: 'Delete my data' });
   await panel.getByLabel(/Type DELETE/).fill('DELETE');
   await panel.getByRole('button', { name: 'Delete my account permanently' }).click();

@@ -29,7 +29,7 @@ test('a chunk that fails to load shows the error fallback, and Reload loads it',
   await expect(crash).toBeVisible();
   await expect(crash).toContainText('could not be downloaded');
   await expect(page.locator('#tab-board')).toBeVisible();
-  await page.locator('#tab-settings').click(); // the other tabs still work
+  await page.locator('#tab-settings, #account-badge').first().click(); // the other tabs still work
   await expect(page.locator('#view')).toContainText('Export all data');
   await page.locator('#tab-progress').click();
   await expect(crash).toBeVisible();

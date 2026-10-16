@@ -1,13 +1,13 @@
 import type { FlatSlot } from '../../types.ts';
 import { Fragment, useCallback, useRef, useState, type DragEvent, type TouchEvent } from 'react';
-import type { MuscleKey, ProgKey } from '../../types.ts';
+import type { MuscleKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { exInfo } from '../../lib/data.js';
 import { eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
-import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
+import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
 import { useMediaQuery } from '../../hooks/useMediaQuery.js';
@@ -120,7 +120,6 @@ export default function Board() {
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45) { const n = Math.min(DAYS.length, Math.max(1, (day as number) + (dx < 0 ? 1 : -1))); if (n !== day) st.setMDay(n); }
   };
 
-  const auto = programFor(cfg, weekStart);
   return (
     <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="weekbar">
@@ -129,16 +128,6 @@ export default function Board() {
           <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
           <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}>›</button>
           {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
-          {cfg.mode === 2 && (
-            <>
-              <div className="seg" role="group" aria-label="Program this week">
-                {['A', 'B'].map(k => (
-                  <button type="button" key={k} className={k === progKey ? 'on' : ''} aria-pressed={k === progKey} onClick={() => st.setWeekProg(k as ProgKey)}>{progName(cfg, k)}</button>
-                ))}
-              </div>
-              <span className="saveflag">{progKey === auto ? 'Set by month' : `Switched · month default is ${progName(cfg, auto)}`}</span>
-            </>
-          )}
         </div>
         <div className="progress">
           <span>{done} of {total} done{skippedN ? ` · ${skippedN} skipped` : ''}</span>
