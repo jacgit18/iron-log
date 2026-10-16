@@ -21,7 +21,13 @@ test('the mode menu is on the Workout view only, and Mode 2 adds the A / B switc
   await expect(page.locator('.weeknav').getByRole('group', { name: 'Program this week' })).toHaveCount(0); // no longer beside the week
   await expect(page.locator('#progswitch-note')).toHaveText('Set by month'); // said to a screen reader with the switch
   expect((await page.locator('#progswitch-note').boundingBox()).width).toBeLessThanOrEqual(1); // and not drawn beside it
+  await expect(sw.locator('button').first()).toHaveText('A'); // a small slider that says A or B
+  await expect(sw.locator('button').nth(1)).toHaveText('B');
+  const pill = await sw.boundingBox();
+  expect(pill.height).toBeLessThanOrEqual(34);
+  expect((await sw.locator('button').first().boundingBox()).height).toBeGreaterThanOrEqual(44); // the touch target stays 44px
   await sw.locator('button[aria-pressed="false"]').click(); // the other program than the month's
+  await expect(sw).toHaveAttribute('data-pos', /^[ab]$/);
   await expect(page.locator('#progswitch-note')).toContainText('Switched');
   await page.click('#tab-daily');
   await expect(page.getByRole('group', { name: 'Program this week' })).toHaveCount(0); // it acts on the Board's week, so it is only there

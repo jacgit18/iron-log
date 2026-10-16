@@ -16,9 +16,12 @@ export default function ProgramSwitch() {
   const note = progKey === auto ? 'Set by month' : `Switched · month default is ${progName(cfg, auto)}`;
   return (
     <div className="progswitch">
-      <div className="seg" role="group" aria-label="Program this week" aria-describedby="progswitch-note">
+      {/* A small two-position slider: A on the left, B on the right, the accent-coloured knob under the one in use. Two buttons, so it works by tap, click, Tab and Enter or Space. */}
+      <div className="progslider" role="group" aria-label="Program this week" aria-describedby="progswitch-note" data-pos={progKey === 'B' ? 'b' : 'a'}>
         {['A', 'B'].map(k => (
-          <button type="button" key={k} className={k === progKey ? 'on' : ''} aria-pressed={k === progKey} onClick={() => useAppStore.getState().setWeekProg(k as ProgKey)}>{progName(cfg, k)}</button>
+          <button type="button" key={k} className={k === progKey ? 'on' : ''} aria-pressed={k === progKey} aria-label={progName(cfg, k)} onClick={() => useAppStore.getState().setWeekProg(k as ProgKey)}>
+            <span aria-hidden="true">{k}</span>
+          </button>
         ))}
       </div>
       <span className="sr" id="progswitch-note">{note}</span>
