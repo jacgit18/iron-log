@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .bodywrap {
   display: grid;
   grid-template-columns: minmax(0,1.1fr) minmax(0,1fr);
@@ -134,4 +136,5 @@
     grid-row: 2;
     white-space: normal;
   }
+}
 }

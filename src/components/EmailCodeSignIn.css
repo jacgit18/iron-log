@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .emailsignin {
   display: flex;
   flex-direction: column;
@@ -20,4 +22,5 @@
   min-height: 44px;
   padding: 0 16px;
   white-space: nowrap;
+}
 }

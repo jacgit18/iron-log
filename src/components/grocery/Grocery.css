@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 /* Groceries (ADR 038): To get and At home views. Flat store sections, no cards inside the panel, so a phone keeps its width.
    Every tap target is at least 44px tall. */
 .groc .gtop {
@@ -258,4 +260,5 @@
   .gmore {
     padding-left: 0;
   }
+}
 }

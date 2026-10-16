@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .lchart {
   position: relative;
   padding: 6px 12px 20px 38px;
@@ -242,4 +244,5 @@
   border-radius: 2px;
   width: 6px;
   height: 12px;
+}
 }

@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .skiptag {
   font-size: .6875rem;
   font-weight: 700;
@@ -151,4 +153,5 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
 }

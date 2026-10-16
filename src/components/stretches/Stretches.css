@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 /* Stretches tab, phone-first: one line per stretch (tick box, name, video link), a group header with its count, a warm-up that
    does not take a panel's worth of height, and a day header whose Skip day button folds behind a ⋯ (like the Workout day header). */
 .strroot .strrow {
@@ -70,4 +72,5 @@
   .strroot .colhead .count {
     margin-right: 0;
   }
+}
 }

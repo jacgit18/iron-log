@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .bwtab {
   margin-top: 8px;
 }
@@ -380,4 +382,5 @@
 .chv .chgoal {
   display: block;
   line-height: 1.2;
+}
 }

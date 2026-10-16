@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .freqgoals .freqlist {
   list-style: none;
   margin: 0 0 10px;
@@ -23,4 +25,5 @@
 .freqgoals .freqlist li .btn {
   grid-column: 2;
   grid-row: 2;
+}
 }

@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .eqadd {
   align-items: end;
   display: flex;
@@ -7,4 +9,5 @@
 }
 .eqadd .field {
   flex: 1 1 160px;
+}
 }

@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .sethead {
   font-size: .75rem;
   color: var(--muted);
@@ -20,4 +22,5 @@
 }
 .setbtns .note {
   font-size: .75rem;
+}
 }

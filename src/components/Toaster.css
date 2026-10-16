@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 /* The Toaster (Toaster.tsx): the notices that answer something you just did (the undo after an uncheck, the heads-up after a
    move, the suggested day order, Removed ... with Undo, the status line). They float so they show wherever you are scrolled and
    never push the page: on a phone above the bottom bar and the rest timer, on a wider screen in the bottom left corner (the
@@ -107,4 +109,5 @@ body.timing .toasts {
 }
 .toastlist:not(:has(> .notice:nth-child(3)))::after {
   display: none;
+}
 }

@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 /* The A / B program slider in the header (ProgramSwitch.tsx): a small pill with the knob under the program in use. The pill is 32px tall; each
    button reaches 44px, so the touch target stays the size the rest of the app holds to. */
 .progswitch {
@@ -43,4 +45,5 @@
 }
 .progslider button.on {
   color: var(--accent-ink);
+}
 }
