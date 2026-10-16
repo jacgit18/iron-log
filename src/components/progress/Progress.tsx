@@ -12,6 +12,7 @@ import Trends from './Trends.jsx';
 import Muscles from '../muscles/Muscles.jsx';
 import LineChart from '../LineChart.js';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
+import './Progress.css';
 
 function History() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);

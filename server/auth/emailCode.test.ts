@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { sql, type Kysely } from 'kysely';
@@ -99,6 +99,9 @@ describe('signing in with an emailed code', () => {
     const rows = (await sql<{ value: string }>`select value from auth."verification"`.execute(db)).rows;
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.some(r => r.value.includes(sent[0]!.otp))).toBe(false);
+    // Not a plain SHA-256 either: six digits would be found by trying all million.
+    const plain = createHash('sha256').update(sent[0]!.otp).digest('base64url');
+    expect(rows.some(r => r.value.includes(plain))).toBe(false);
   });
 
   it('the same address signing in twice is one account', async () => {

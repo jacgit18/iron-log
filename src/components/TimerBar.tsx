@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useTimerStore, mmss } from '../store/useTimerStore.js';
 import { useAppStore } from '../store/useAppStore.js';
+import './TimerBar.css';
 
 export default function TimerBar() {
   const t = useTimerStore();

@@ -1,0 +1,245 @@
+.lchart {
+  position: relative;
+  padding: 6px 12px 20px 38px;
+  margin-top: 4px;
+  flex: none;
+}
+.lgrid {
+  position: absolute;
+  left: 38px;
+  right: 12px;
+  top: 6px;
+  bottom: 20px;
+  pointer-events: none;
+}
+.lgrid span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--line);
+}
+.lgrid b {
+  position: absolute;
+  right: calc(100% + 6px);
+  top: -8px;
+  font-size: .6875rem;
+  font-weight: 400;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.lplot {
+  position: relative;
+  height: 100%;
+}
+.lplot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.lplot .ln {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+.lplot .ar {
+  fill: var(--accent);
+  opacity: .12;
+}
+.ldot {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  border-radius: 50%;
+  cursor: default;
+}
+.ldot::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.ldot.end::after {
+  background: var(--accent);
+  left: 7px;
+  top: 7px;
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.ldot:hover,.ldot.tipon {
+  background: color-mix(in srgb,var(--accent) 15%,transparent);
+}
+.lx {
+  position: absolute;
+  left: 38px;
+  right: 12px;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: .6875rem;
+  color: var(--muted);
+}
+/* Multi-phase lines: phase-hued series (validated set) + a marker shape per phase as a second cue */
+.lplot .ln.s-strength {
+  stroke: var(--s-str);
+}
+.lplot .ln.s-iso {
+  stroke: var(--s-iso);
+}
+.lplot .ln.s-hyp {
+  stroke: var(--s-hyp);
+}
+.lplot .ln.s-exp {
+  stroke: var(--s-exp);
+}
+.lplot .ln.s-none {
+  stroke: var(--muted);
+}
+.ldot.s-strength::after {
+  box-shadow: 0 0 0 2px var(--s-str);
+}
+.ldot.s-iso::after {
+  box-shadow: 0 0 0 2px var(--s-iso);
+  border-radius: 1px;
+}
+.ldot.s-hyp::after {
+  box-shadow: 0 0 0 2px var(--s-hyp);
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+.ldot.s-exp::after {
+  box-shadow: 0 0 0 2px var(--s-exp);
+  border-radius: 2px;
+  width: 12px;
+  height: 6px;
+  left: 6px;
+  top: 9px;
+}
+.ldot.s-none::after {
+  box-shadow: 0 0 0 2px var(--muted);
+}
+.ldot.end.s-strength::after {
+  background: var(--s-str);
+}
+.ldot.end.s-iso::after {
+  background: var(--s-iso);
+}
+.ldot.end.s-hyp::after {
+  background: var(--s-hyp);
+}
+.ldot.end.s-exp::after {
+  background: var(--s-exp);
+  width: 12px;
+  height: 6px;
+  left: 6px;
+  top: 9px;
+}
+.ldot.end.s-none::after {
+  background: var(--muted);
+}
+.lleg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: .75rem;
+  color: var(--muted);
+  margin-top: 4px;
+  flex: none;
+}
+.lleg span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lleg b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.lsw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.lsw.s-strength {
+  background: var(--s-str);
+}
+.lsw.s-iso {
+  background: var(--s-iso);
+  border-radius: 2px;
+}
+.lsw.s-hyp {
+  background: var(--s-hyp);
+  border-radius: 1px;
+  transform: rotate(45deg) scale(.85);
+}
+.lsw.s-exp {
+  background: var(--s-exp);
+  border-radius: 2px;
+  width: 12px;
+  height: 6px;
+}
+.lsw.s-none {
+  background: var(--muted);
+}
+.chart .ln {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.chart .ar {
+  fill: var(--accent);
+  opacity: .12;
+}
+/* Chart points: 44px hit area around the same small marker */
+.ldot {
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+}
+.ldot::after {
+  left: 18px;
+  top: 18px;
+}
+.ldot.end::after {
+  left: 17px;
+  top: 17px;
+}
+.ldot.s-exp::after,.ldot.end.s-exp::after {
+  left: 16px;
+  top: 19px;
+}
+.lplot .ln.s-mob {
+  stroke: var(--s-mob);
+}
+.ldot.s-mob::after {
+  box-shadow: 0 0 0 2px var(--s-mob);
+  border-radius: 3px;
+  width: 6px;
+  height: 12px;
+  left: 19px;
+  top: 16px;
+}
+.ldot.end.s-mob::after {
+  background: var(--s-mob);
+  width: 6px;
+  height: 12px;
+  left: 19px;
+  top: 16px;
+}
+.lsw.s-mob {
+  background: var(--s-mob);
+  border-radius: 2px;
+  width: 6px;
+  height: 12px;
+}
