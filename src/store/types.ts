@@ -8,6 +8,7 @@ import type {
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
+import type { BackupInfo } from '../lib/autoBackup.ts';
 
 export type Flag = (text: string) => void;
 
@@ -97,6 +98,24 @@ export type ExportKind = 'csv' | 'xlsx-all' | 'xlsx-week' | 'data';
 export interface Downloads { save(file: { filename: string; data: Loose }): Promise<unknown> }
 
 /* ---------- Slices ---------- */
+/** Body weight: one weigh-in per week, and the goal kept in the config. */
+export interface BodySlice {
+  saveBodyWeight(v: string | number): boolean;
+  setBodyGoal(raw: string | number, by?: string): boolean;
+  clearBodyGoal(): void;
+  deleteBodyWeight(wk: string): void;
+}
+
+/** The downloads: CSV, Excel and the full data file. */
+export interface ExportSlice {
+  exporting: ExportKind | null; // which export is running
+  runExport(kind: ExportKind, fn: (dl: Downloads) => Promise<unknown>): Promise<void>;
+  exportCsv(): Promise<void>;
+  downloadExcel(which: 'all' | 'week'): Promise<void>;
+  buildExportFile(kind: Exclude<ExportKind, 'csv'>): Promise<{ filename: string; data: Loose }>;
+  downloadData(): Promise<void>;
+}
+
 export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot }
 
 export interface EditorSlice {
@@ -262,7 +281,6 @@ export interface CoreSlice {
   weekHist: Record<string, Week> | null; // every saved week, loaded on demand for Progress and exports
   historyLoading: boolean;
   dl: Downloads | null | undefined; // undefined = not checked yet, null = unavailable
-  exporting: ExportKind | null;
   progView: string;
   bodySel: MuscleKey | null;
   bodySec: boolean;
@@ -378,19 +396,21 @@ export interface CoreSlice {
   retryUnsaved(): void;
   eraseData(parts: { logs?: boolean; weeks?: boolean; body?: boolean; programs?: boolean; settings?: boolean }): Promise<boolean>;
 
-  saveBodyWeight(v: string | number): boolean;
-  setBodyGoal(raw: string | number, by?: string): boolean;
-  clearBodyGoal(): void;
-  deleteBodyWeight(wk: string): void;
-
-  runExport(kind: ExportKind, fn: (dl: Downloads) => Promise<unknown>): Promise<void>;
-  exportCsv(): Promise<void>;
-  downloadExcel(which: 'all' | 'week'): Promise<void>;
-  buildExportFile(kind: Exclude<ExportKind, 'csv'>): Promise<{ filename: string; data: Loose }>;
-  downloadData(): Promise<void>;
   init(): Promise<void>;
 }
 
-export type AppState = CoreSlice & EditorSlice & SettingsSlice & WellnessSlice & GrocerySlice & RemovedSlice;
+/** The automatic backup: one copy a day for the last 7 days, in this browser (lib/autoBackup.ts). */
+export interface BackupSlice {
+  backups: BackupInfo[] | null;
+  refreshBackups(): Promise<void>;
+  backupNow(): Promise<void>;
+  /** Opens a copy in the import review. */
+  restoreBackup(date: string): Promise<void>;
+  downloadBackup(date: string): Promise<void>;
+  /** Deletes every copy (Erase everything, Delete my account). */
+  forgetBackups(): Promise<void>;
+}
+
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & RemovedSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];

@@ -35,7 +35,7 @@ export default function OtherAccountCard() {
   const wipe = async () => {
     setBusy(true);
     const out = await api.wipeForNewAccount();
-    if (out === 'done') { window.location.reload(); return; } // the app still holds the old data in memory; start clean
+    if (out === 'done') { await useAppStore.getState().forgetBackups(); window.location.reload(); return; } // the app still holds the old data in memory; start clean
     setBusy(false);
     flag('Could not check who is signed in. Nothing was wiped.');
   };
@@ -45,6 +45,7 @@ export default function OtherAccountCard() {
     setBusy(false);
     if (!done) { flag('Could not sign out. Try again in a moment.'); return; }
     forgetSession(LS);
+    await useAppStore.getState().forgetBackups(); // the next person to sign in on this device must not be offered this account's copies
     window.location.reload(); // signed out on purpose: the next screen is the landing page
   };
 

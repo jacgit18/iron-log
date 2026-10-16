@@ -6,7 +6,7 @@ import ExportUpload from './ExportUpload.js';
 import EmailCodeSignIn from '../EmailCodeSignIn.js';
 import LegalLinks from '../LegalLinks.js';
 import { useGoogleSignIn } from '../../sync/useGoogleSignIn.js';
-import { flag, getSyncApi } from '../../store/useAppStore.js';
+import { flag, getSyncApi, useAppStore } from '../../store/useAppStore.js';
 
 // Who is signed in, and the way to sign in or out. Only shown when syncing through the API is switched on (feature-flags.md).
 // Every state is a sentence, not a colour. "Could not check" is never worded as "signed out": the person may well be signed in.
@@ -23,6 +23,7 @@ export default function AccountPanel() {
     setBusy(false);
     if (!done) { flag('Could not sign out. Try again in a moment.'); return; }
     forgetSession(LS);
+    await useAppStore.getState().forgetBackups(); // the next person to sign in on this device must not be offered this account's copies
     window.location.reload(); // signing out on purpose: the next screen is the landing page, not the app
   };
 
