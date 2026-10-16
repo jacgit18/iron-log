@@ -5,19 +5,21 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+// A git hook (the pre-push check) exports GIT_DIR and friends; without this the throwaway repos below would commit into the real one.
+const ENV = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
 
 // The two checks the CI deploy makes (scripts/ci-deploy.sh): is a database migration waiting, and did the new revision come up healthy.
 const SCRIPT = resolve('scripts/ci-deploy.sh');
 // Asynchronous on purpose: the smoke tests call a server in this same process, which a blocking spawn would freeze.
 const run = (args: string[], opts: { cwd?: string; env?: Record<string, string> } = {}) =>
   new Promise<{ status: number; stdout: string; stderr: string }>(done => {
-    execFile('bash', [SCRIPT, ...args], { cwd: opts.cwd, env: { ...process.env, ...opts.env }, encoding: 'utf8' }, (err, stdout, stderr) =>
+    execFile('bash', [SCRIPT, ...args], { cwd: opts.cwd, env: { ...ENV, ...opts.env }, encoding: 'utf8' }, (err, stdout, stderr) =>
       done({ status: err ? Number((err as { code?: number }).code ?? 1) : 0, stdout, stderr }));
   });
 
 describe('pending-migrations', () => {
   let dir: string;
-  const git = (...args: string[]) => execFileSync('git', args, { cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' } }).trim();
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: dir, encoding: 'utf8', env: { ...ENV, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' } }).trim();
   const commit = (files: Record<string, string>, message: string) => {
     for (const [name, text] of Object.entries(files)) { mkdirSync(join(dir, name, '..'), { recursive: true }); writeFileSync(join(dir, name), text); }
     git('add', '-A');
