@@ -17,7 +17,9 @@ export default defineConfig({
   webServer: {
     command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',
     url: 'http://127.0.0.1:4173',
-    reuseExistingServer: !process.env.CI,
+    // A server left on this port by an earlier run would be tested instead of the code just built, so `npm run check` (and the pre-push hook) set
+    // FRESH_SERVER=1 and a leftover server makes the run fail instead of passing on old code.
+    reuseExistingServer: !process.env.CI && !process.env.FRESH_SERVER,
     timeout: 120_000,
   },
 });
