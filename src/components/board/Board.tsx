@@ -26,7 +26,6 @@ const tipHidden = (k: string) => LS.get(k) === 1; // stored as the string "1", s
 // "↔ from Day N" tab on the top edge of a day that just swapped; it floats, so no card moves when it comes or goes.
 const swapFrom = (swapFlash: number[] | null, d: number) => swapFlash?.includes(d) ? <div className="swapfrom">↔ from Day {swapFlash[0] === d ? swapFlash[1] : swapFlash[0]}</div> : null;
 
-// Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
 // The date line under a day's title, "Sunday" over "09/27". The room for the longest one ("Wednesday" over "00/00") is always held (the hidden pad), so
 // stamping a date changes no width or height in the header: the Rest box and the swap arrows stay where they were.
 function DayDate({ date }: { date?: string | null }) {
@@ -39,6 +38,7 @@ function DayDate({ date }: { date?: string | null }) {
   );
 }
 
+// Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
 function SwapArrows({ d }: { d: number }) {
   const rest = useAppStore(s => s.week.rest) || [];
   const swap = (dir: number) => {
