@@ -1,19 +1,19 @@
 import { test, expect } from './fixtures.js';
 
-// On a phone a day's Rest day box and swap arrows fold behind a ⋯ button; on a wide screen they are always shown.
+// On a phone a day's Rest day box folds behind a ⋯ button (the swap arrows stay shown); on a wide screen it is always shown.
 const phone = async page => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
   await expect(page.locator('.col.sel article.card').first()).toBeVisible();
 };
 
-test('on a phone the Rest day box and swap arrows open from ⋯ on the day header', async ({ page }) => {
+test('on a phone the Rest day box opens from ⋯ on the day header, and the swap arrows are always shown', async ({ page }) => {
   await phone(page);
   const col = page.locator('.col.sel');
   const more = col.getByRole('button', { name: /^More for Day \d/ });
   await expect(more).toHaveAttribute('aria-expanded', 'false');
   await expect(col.locator('.restchk')).toBeHidden();
-  await expect(col.locator('.swapbtn').first()).toBeHidden();
+  await expect(col.locator('.swapbtn').first()).toBeVisible();
   await more.click();
   await expect(more).toHaveAttribute('aria-expanded', 'true');
   await expect(col.locator('.restchk')).toBeVisible();

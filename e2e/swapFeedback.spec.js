@@ -10,6 +10,8 @@ test('swapping two days outlines both for a moment, on a wide screen', async ({ 
   await expect(page.locator('#col-2')).toHaveClass(/swapped/);
   await expect(page.locator('#col-3')).toHaveClass(/swapped/);
   await expect(page.locator('.col.swapped')).toHaveCount(2); // exactly the two that changed
+  await expect(page.locator('#col-2 .swapfrom')).toHaveText('↔ from Day 3');
+  await expect(page.locator('#col-3 .swapfrom')).toHaveText('↔ from Day 2');
   await expect(page.locator('#live-status')).toContainText('Day 2 swapped with Day 3');
   await expect(page.locator('.col.swapped')).toHaveCount(0, { timeout: 5000 }); // and then it is gone
 });
@@ -18,7 +20,7 @@ test('on a phone the day it moved to is shown, with both day tabs outlined', asy
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
   await page.locator('#daytab-2').click();
-  await page.locator('#daymore-2').click();
+  await expect(page.locator('#swap-2-1')).toBeVisible(); // the arrows are not folded behind the ⋯ button
   await page.locator('#swap-2-1').click();
   await expect(page.locator('#daytab-3')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#daytab-2')).toHaveClass(/swapped/);
@@ -36,4 +38,25 @@ test('with reduced motion the outline still shows and the pulse does not run', a
   await expect(col).toHaveClass(/swapped/);
   expect(await col.evaluate(e => getComputedStyle(e).outlineStyle)).toBe('solid');
   expect(await col.evaluate(e => getComputedStyle(e).animationName)).toBe('none');
+});
+
+test('a swap that moves a rest day names where it came from on both days', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.reload();
+  await page.locator('#rest-3').click();
+  await page.locator('#swap-2-1').click(); // the rest day (Day 3) moves to Day 2
+  await expect(page.locator('#col-2 .swapfrom')).toHaveText('↔ from Day 3');
+  await expect(page.locator('#col-3 .swapfrom')).toHaveText('↔ from Day 2');
+  await expect(page.locator('.swapfrom')).toHaveCount(0, { timeout: 5000 });
+});
+
+test('the "from Day N" tab floats: no card moves when it appears', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.reload();
+  // the card's place inside its day (the page may scroll to the moved day, so compare against the column's own top)
+  const offset = () => page.locator('#col-3').evaluate(c => c.querySelector('.card').getBoundingClientRect().top - c.getBoundingClientRect().top);
+  const before = await offset();
+  await page.locator('#swap-2-1').click();
+  await expect(page.locator('#col-3 .swapfrom')).toBeVisible();
+  expect(await offset()).toBe(before);
 });

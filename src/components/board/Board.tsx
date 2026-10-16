@@ -23,6 +23,9 @@ import './Leftovers.css';
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
 const tipHidden = (k: string) => LS.get(k) === 1; // stored as the string "1", same as the vanilla app
 
+// "↔ from Day N" tab on the top edge of a day that just swapped; it floats, so no card moves when it comes or goes.
+const swapFrom = (swapFlash: number[] | null, d: number) => swapFlash?.includes(d) ? <div className="swapfrom">↔ from Day {swapFlash[0] === d ? swapFlash[1] : swapFlash[0]}</div> : null;
+
 // Left/right arrows that swap a column with its neighbor. Focus follows the workout to its new column.
 function SwapArrows({ d }: { d: number }) {
   const rest = useAppStore(s => s.week.rest) || [];
@@ -213,6 +216,7 @@ export default function Board() {
           const pd = dayAt(week, d); // the program day shown here; null for the rest day
           if (pd == null) return (
             <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`}>
+              {swapFrom(swapFlash, d)}
               <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div>{week.restOn && <div className="sub daydate">{fmtDayDate(week.restOn)}</div>}</div><SwapArrows d={d} /></div>
               <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /> Rest day</label>
               {cols[d].length > 0 ? (
@@ -239,6 +243,7 @@ export default function Board() {
               onDragOver={e => { if (!dragId) return; e.preventDefault(); setOverDay(d); }}
               onDrop={e => { if (!dragId) return; e.preventDefault(); const id = dragId; onDragEnd(); if (id.startsWith('exp:')) st.addToDay(id.slice(4), d); else st.moveSlot(id, d); }}
             >
+              {swapFrom(swapFlash, d)}
               <div className="colhead">
                 <input type="checkbox" className="chk" id={`day-${d}`} checked={t.full} aria-label={`Mark all of Day ${d} done`}
                   onChange={e => st.checkDay(d, e.target.checked)} />
@@ -247,9 +252,9 @@ export default function Board() {
                   {date && <div className="sub daydate">{fmtDayDate(date)}</div>}
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                 </div>
-                <span className="count">{t.done}/{t.total}</span>
                 <SwapArrows d={d} />
-                <button type="button" className="btn sm ghost daymore" id={`daymore-${d}`} aria-expanded={dayMore === d} aria-controls={`restrow-${d}`} aria-label={`More for Day ${d}: rest day and swap`}
+                <span className="count">{t.done}/{t.total}</span>
+                <button type="button" className="btn sm ghost daymore" id={`daymore-${d}`} aria-expanded={dayMore === d} aria-controls={`restrow-${d}`} aria-label={`More for Day ${d}: rest day`}
                   onClick={() => setDayMore(dayMore === d ? null : d)}><span aria-hidden="true">⋯</span></button>
               </div>
               <label className="restchk" id={`restrow-${d}`}><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /> Rest day</label>
