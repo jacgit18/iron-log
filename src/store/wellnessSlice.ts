@@ -183,10 +183,36 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     const dz = String(dose || '').trim().slice(0, 40);
     return get().mutateSupp(s => { const x = s.items.find(i => i.id === id); if (x && (slot === '' || SLOTS.some(([k]) => k === slot))) { x.slot = slot; if (dz) x.dose = dz; } });
   },
+  // Another instance of the same supplement (taken twice a day): its own id, section, dose and ticks; the name, brand, catalog id and note
+  // are copied. It sits right after the one it copies.
+  addSupplementInstance(id, slot, dose) {
+    if (get().blocked() || !SLOTS.some(([k]) => k === slot) || !get().supp.items.some(x => x.id === id)) return false;
+    const dz = String(dose || '').trim().slice(0, 40);
+    return get().mutateSupp(s => {
+      const i = s.items.findIndex(x => x.id === id);
+      const { dose: d0, ...rest } = s.items[i];
+      const nd = dz || d0;
+      s.items.splice(i + 1, 0, { ...rest, id: newSupplementId(s.items, rest.n), slot, ...(nd ? { dose: nd } : {}) });
+    });
+  },
   // Undo puts it back in that section, if it has not been scheduled somewhere since.
   removeSupplement(id) {
     const x0 = get().supp.items.find(x => x.id === id); if (!x0 || !x0.slot) return false;
     const slot = x0.slot;
+    // An extra instance (the same supplement is scheduled elsewhere) is deleted, not kept as a second library entry; Undo puts it back with its ticks.
+    const i = get().supp.items.findIndex(x => x.id === id);
+    if (get().supp.items.some(x => x.id !== id && sameSupplement(x, x0.n, x0.brand))) {
+      const days = Object.keys(get().supp.taken).filter(d => get().supp.taken[d][id]);
+      if (!get().mutateSupp(s => {
+        s.items = s.items.filter(x => x.id !== id);
+        Object.keys(s.taken).forEach(d => { delete s.taken[d][id]; if (!Object.keys(s.taken[d]).length) delete s.taken[d]; });
+      })) return false;
+      get().noteRemoved('suppslot:' + slot, `${x0.n} from ${SLOTS.find(([k]) => k === slot)?.[1] || slot}`, () => !get().supp.items.some(x => x.id === id) && get().mutateSupp(s => {
+        s.items.splice(Math.min(i, s.items.length), 0, x0);
+        days.forEach(d => { s.taken[d] = { ...(s.taken[d] || {}), [id]: true }; });
+      }));
+      return true;
+    }
     if (!get().setSupplementSlot(id, '')) return false;
     get().noteRemoved('suppslot:' + slot, `${x0.n} from ${SLOTS.find(([k]) => k === slot)?.[1] || slot}`, () => get().supp.items.find(x => x.id === id)?.slot === '' && get().setSupplementSlot(id, slot));
     return true;
@@ -208,13 +234,15 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
     flag(`Added ${n}`); return null;
   },
   // From the library sheet. Returns an error message, or null when saved. A catalog supplement keeps its name, brand and catalog id
-  // (ADR 026): the sheet shows no Name field for it. Two supplements may share a name when their brands differ.
+  // (ADR 026): the sheet shows no Name field for it. Two supplements may share a name and brand only as instances of the same one
+  // (addSupplementInstance), each with its own section and dose (taken twice a day).
   saveSupplement(d) {
     if (get().blocked()) return null;
     const cur = d.id ? get().supp.items.find(x => x.id === d.id) : undefined;
     const n = cur?.catalogId ? cur.n : String(d.n || '').trim().replace(/\s+/g, ' ').slice(0, 60);
     if (!n) return 'Give the supplement a name.';
-    if (get().supp.items.some(x => sameSupplement(x, n, cur?.brand) && x.id !== d.id)) return 'Another supplement already has that name.';
+    // A new supplement, or a rename, may not copy another's name; saving an instance as it is (its dose, section or note) is fine.
+    if ((!cur || !sameSupplement(cur, n, cur.brand)) && get().supp.items.some(x => sameSupplement(x, n, cur?.brand) && x.id !== d.id)) return 'You already have that supplement. To take it more than once a day, add it to another section on the Supplements tab.';
     const slot = (SLOTS.some(([k]) => k === d.slot) ? d.slot : '') as SupplementSlot;
     const dose = String(d.dose || '').trim().slice(0, 40); const note = String(d.note || '').trim().slice(0, 200);
     get().mutateSupp(s => {

@@ -32,11 +32,13 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
   const [arming, setArming] = useState<string | null>(null); // the supplement whose Remove was pressed once
   const list = scheduleOf(items)[slot]; const t = slotTally(items, taken, date, slot);
   const held = pick && pickerKey(pickedName(pick, items)) === pickerKey(name) ? pick : null;
+  const heldItem = held?.kind === 'mine' ? items.find(i => i.id === held.id) : undefined;
   const done = () => { setName(''); setDose(''); setPick(null); setErr(''); };
   // Add: one of yours moves into this section, a catalog product joins your library in it, anything else is a new supplement.
   const add = (e: FormEvent) => {
     e.preventDefault();
-    if (held?.kind === 'mine') { if (s.setSupplementSlot(held.id, slot, dose)) done(); return; }
+    // One of yours that is already scheduled stays where it is and gets another instance here (taken twice a day); a library-only one moves in.
+    if (held?.kind === 'mine') { if (heldItem?.slot ? s.addSupplementInstance(held.id, slot, dose) : s.setSupplementSlot(held.id, slot, dose)) done(); return; }
     if (held?.kind === 'catalog') {
       const m = s.addCatalogSupplement(held.item, { slot, dose });
       // null also means nothing was saved (still loading): keep what was typed unless it is really there now.
@@ -72,7 +74,9 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
             onText={v => { setName(v); setErr(''); }} onPick={setPick} />
           <label className="field">Dose (optional)<input type="text" id={`suppdose-${slot}`} placeholder="e.g. 5 g" maxLength={40} value={dose} onChange={e => setDose(e.target.value)} /></label>
           <button type="submit" className="btn sm" id={`suppadd-${slot}`} disabled={!name.trim()}>Add</button>
-          {held?.kind === 'mine' && <p className="note">Moves it to {label}{dose.trim() ? ' with this dose' : ''}.</p>}
+          {held?.kind === 'mine' && <p className="note">{heldItem?.slot
+            ? `Adds another ${heldItem.n} to ${label}, so you can take it more than once a day${dose.trim() ? ', with this dose' : ''}.`
+            : `Moves it to ${label}${dose.trim() ? ' with this dose' : ''}.`}</p>}
           {held?.kind === 'catalog' && <p className="note">From the catalog. It joins your supplements in {label}.</p>}
           {err && <p className="note err" role="alert">{err}</p>}
         </form>

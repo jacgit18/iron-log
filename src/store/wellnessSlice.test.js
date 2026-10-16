@@ -225,6 +225,28 @@ describe('supplement library', () => {
     st().removeSupplement(x.id);
     st().setSupplementSlot(x.id, 'night'); expect(st().supp.items[0].slot).toBe('night');
   });
+  it('takes the same supplement twice a day: another instance with its own section, dose and ticks, kept apart on edit, removed on its own', () => {
+    expect(st().addSupplement('morning', 'Creatine', '5 g')).toBe(true);
+    const am = st().supp.items[0];
+    expect(st().addSupplementInstance(am.id, 'night')).toBe(true);
+    expect(st().addSupplementInstance(am.id, 'lunch')).toBe(false); expect(st().addSupplementInstance('nope', 'night')).toBe(false);
+    const pm = st().supp.items[1];
+    expect(pm).toMatchObject({ id: 'creatine-2', n: 'Creatine', slot: 'night', dose: '5 g' }); // the dose is copied
+    expect(st().addSupplementInstance(am.id, 'noon', ' 3 g ')).toBe(true);
+    expect(st().supp.items.map(i => [i.id, i.slot, i.dose])).toEqual([['creatine', 'morning', '5 g'], ['creatine-3', 'noon', '3 g'], ['creatine-2', 'night', '5 g']]);
+    st().setSupplementTaken('2026-10-04', am.id, true);
+    expect(st().supp.taken['2026-10-04']).toEqual({ creatine: true }); // the night one is not ticked by the morning tick
+    expect(st().saveSupplement({ id: pm.id, n: 'Creatine', dose: '6 g', slot: 'night' })).toBeNull(); // editing an instance as it is
+    expect(st().supp.items.find(i => i.id === pm.id).dose).toBe('6 g');
+    expect(st().saveSupplement({ n: 'creatine' })).toMatch(/already have that supplement/); // a new one may not copy the name
+    st().setSupplementTaken('2026-10-04', pm.id, true);
+    st().removeSupplement(pm.id); // an extra instance is deleted, not kept as a second library entry
+    expect(st().supp.items.map(i => i.id)).toEqual(['creatine', 'creatine-3']);
+    expect(st().supp.taken['2026-10-04']).toEqual({ creatine: true });
+    st().undoRemoved();
+    expect(st().supp.items.map(i => i.id)).toEqual(['creatine', 'creatine-3', 'creatine-2']);
+    expect(st().supp.taken['2026-10-04']).toEqual({ creatine: true, 'creatine-2': true });
+  });
   it('saves from the library sheet, rejects a duplicate name, and deleting clears the ticks', () => {
     expect(st().saveSupplement({ n: 'Creatine', dose: '5 g', slot: '' })).toBeNull();
     expect(st().saveSupplement({ n: 'creatine' })).toMatch(/already/);

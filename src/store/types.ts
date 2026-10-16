@@ -216,6 +216,8 @@ export interface WellnessSlice {
   removeStretchExtra(id: string): void;
   addSupplement(slot: SupplementSlot, name: string, dose?: string): boolean;
   setSupplementSlot(id: string, slot: SupplementSlot, dose?: string): boolean;
+  /** Adds another instance of one of yours (same name, brand and catalog id; its own id, section and ticks) to a section, e.g. a second dose later in the day. `dose` replaces the copied one when typed. */
+  addSupplementInstance(id: string, slot: SupplementSlot, dose?: string): boolean;
   removeSupplement(id: string): boolean;
   /** Adds a catalog supplement as Library only with its brand and catalog id (ADR 029). Returns an error message, or null. */
   addCatalogSupplement(item: CatalogItem, opts?: { slot?: SupplementSlot; dose?: string }): string | null;
