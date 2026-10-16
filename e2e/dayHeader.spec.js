@@ -19,7 +19,7 @@ test('on a phone the header shows the arrows and the Rest box, with no ⋯ or co
   await expect(col.locator('.swapbtn').first()).toBeVisible();
   await expect(col.locator('.restchk')).toBeVisible();
   await expect(col.getByRole('button', { name: /^More for Day/ })).toHaveCount(0);
-  await expect(col.locator('.colhead .count')).toHaveCount(0);
+  await expect(col.locator('.colhead .daycount')).toBeHidden(); // the day tabs show it on a phone
   const o = await places(col);
   expect(o.day).toBeLessThan(o.arrows);
   expect(o.arrows).toBeLessThan(o.rest);
@@ -47,4 +47,8 @@ test('on a wide screen the Rest box stays at the right end, and Day 1 keeps its 
   expect(o.head - o.restRight).toBeLessThan(12); // narrow columns drop Rest to a second row; it stays at the right end
   const inRightSlot = await col.evaluate(c => c.querySelector('#swap-1-1').getBoundingClientRect().left > c.querySelector('.swaps').getBoundingClientRect().left + 10);
   expect(inRightSlot).toBe(true);
+});
+
+test('on a wide screen the day keeps its done / total count under the title', async ({ page }) => {
+  await expect(page.locator('#col-1 .colhead .daycount')).toHaveText(/^\d+\/\d+ done$/);
 });
