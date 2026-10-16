@@ -7,7 +7,7 @@ import type { FlatSlot, Week } from '../types.js';
 // no workout data); the push itself is lib/pushClient.ts.
 export const NUDGE_DELAY_MS = 30 * 60_000;
 const QUIET_AFTER = 21 * 60 + 30; // minutes since midnight: nothing after 9:30 pm (owner, 2026-10-14)
-const QUIET_BEFORE = 6 * 60;      // ...or before 6 am, so a late session does not buzz in the middle of the night
+const QUIET_BEFORE = 4 * 60;      // ...or before 4 am, so a tick after midnight does not buzz in the night; the owner trains at about 5 am, so a nudge from 4 am on is wanted (it was 6 am, which blocked a 5:15 tick)
 
 /** Whether a push at `at` would land in the quiet hours, by this device's clock. */
 export function inQuietHours(at: number): boolean {

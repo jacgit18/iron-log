@@ -51,13 +51,14 @@ describe('nudgeAction', () => {
 });
 
 describe('inQuietHours', () => {
-  it('is quiet after 9:30 pm and before 6 am, by the device clock', () => {
+  it('is quiet after 9:30 pm and before 4 am, by the device clock', () => {
     expect(inQuietHours(at(21, 30))).toBe(false);
     expect(inQuietHours(at(21, 31))).toBe(true);
     expect(inQuietHours(at(23, 59))).toBe(true);
     expect(inQuietHours(at(0, 10))).toBe(true);
-    expect(inQuietHours(at(5, 59))).toBe(true);
-    expect(inQuietHours(at(6, 0))).toBe(false);
+    expect(inQuietHours(at(3, 59))).toBe(true);
+    expect(inQuietHours(at(4, 0))).toBe(false);
+    expect(inQuietHours(at(5, 45))).toBe(false); // a 5:15 am tick: the nudge at 5:45 is allowed
     expect(inQuietHours(at(12, 0))).toBe(false);
   });
 });

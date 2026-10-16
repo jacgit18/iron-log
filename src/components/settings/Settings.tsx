@@ -173,7 +173,7 @@ function PushPanel() {
         <>
           <label className="inline"><input type="checkbox" checked={rest} onChange={e => { setRest(e.target.checked); setPushKind('rest', e.target.checked); }} /> When a rest or hold ends</label>
           <label className="inline"><input type="checkbox" checked={nudge} onChange={e => { setNudge(e.target.checked); setPushKind('day-nudge', e.target.checked); }} /> When a day is started but not finished, 30 minutes after your last tick</label>
-          <p>The day alert never comes between 9:30 pm and 6 am, and goes away when you finish the day.</p>
+          <p>The day alert never comes between 9:30 pm and 4 am, and goes away when you finish the day.</p>
         </>
       )}
       <p>Saved on this device only. Admin-only for now.</p>
