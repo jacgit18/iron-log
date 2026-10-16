@@ -26,3 +26,25 @@
     margin-right: 8px;
   }
 }
+
+/* A swap just happened (Board.tsx, `swapFlash` in the store): the two days that changed are outlined for about two seconds, and pulse once
+   where motion is allowed, so the change is easy to see. The outline stays under reduced motion (the pulse does not); it is the accent
+   colour, not colour alone: the toast also says which days swapped. */
+.boardroot .col.swapped {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  animation: swappulse 1.2s ease-out;
+}
+.boardroot .daytabs button.swapped {
+  outline: 3px solid var(--accent);
+  outline-offset: -2px;
+  animation: swappulse 1.2s ease-out;
+}
+@keyframes swappulse {
+  0% {
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
