@@ -12,6 +12,7 @@ import LineChart from '../LineChart.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import LiftGoal from '../progress/LiftGoal.jsx';
 import { selectOnFocus, advanceOnEnter, cellHint } from '../../lib/setCells.js';
+import './SetRows.css';
 
 const num = (v: string | number) => (v === '' ? null : Number(v));
 

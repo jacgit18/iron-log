@@ -1,3 +1,39 @@
+.skiptag {
+  font-size: .6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--iso);
+}
+.skipbtn {
+  margin-left: auto;
+}
+.exline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: .8125rem;
+}
+.logbtn {
+  margin-left: auto;
+}
+@media (max-width:700px) {
+  .logbtn {
+    min-width: 64px;
+  }
+}
+.ex.haseq .exname {
+  padding-right: 84px;
+}
+.exeq {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.ex + .ex .exeq {
+  top: 8px;
+}
 /* The card's less-used actions sit behind a ⋯ button in the top-right corner (a 44px target that overlaps the card's
    padding, so the top row stays as tall as the checkbox), so a closed card is one footer row shorter. */
 .card .row1:has(.morebtn) {

@@ -2,6 +2,7 @@ import { useEffect, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import type { CatalogItem, CatalogKind } from '../types.ts';
 import { pickerOptions, type MineOption, type PickerChoice } from '../lib/picker.js';
 import { useCatalogSearch, MIN_LETTERS } from '../hooks/useCatalogSearch.js';
+import './ItemPicker.css';
 
 /* Type a name and pick from your own items, the catalog, or a new one (ADR 036, spec inline-catalog-picker). An ARIA 1.2 combobox; the
    list sits in the page flow under the input, so a sheet never clips it. The input stays a plain controlled field: typing a name and
