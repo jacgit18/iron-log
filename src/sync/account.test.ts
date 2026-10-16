@@ -64,6 +64,13 @@ describe('account client', () => {
     expect(calls).toBe(2); // not a cache: a check made after the last one finished is a fresh request
   });
 
+  it('does not share between checks that send different headers', async () => {
+    let calls = 0;
+    const f: typeof fetch = (async () => { calls++; return new Response(null, { status: 401 }); }) as typeof fetch;
+    await Promise.all([createAccountClient({ fetch: f, headers: () => ({ 'x-dev-user': 'a' }) }).me(), createAccountClient({ fetch: f, headers: () => ({ 'x-dev-user': 'b' }) }).me(), createAccountClient({ fetch: f, headers: () => ({ 'x-dev-user': 'a' }) }).me()]);
+    expect(calls).toBe(2); // a and b are two questions; the second a shares the first
+  });
+
   it('does not share between different fetch functions or addresses', async () => {
     let calls = 0;
     const mk = (): typeof fetch => (async () => { calls++; return new Response(null, { status: 401 }); }) as typeof fetch;

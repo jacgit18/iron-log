@@ -20,7 +20,7 @@ export interface AccountOptions {
 
 // Who-am-I checks that are in the air right now, by address. At startup the sign-in gate, the admin check, the sync adapter, the account badge
 // and the Account panel each ask within the same second (5 requests on a phone); while one is waiting they share its answer. Only requests
-// that overlap are shared (same fetch function, same address), so no answer is ever reused after it arrives.
+// that overlap are shared (same fetch function, same address, same headers), so no answer is ever reused after it arrives.
 const inFlight = new WeakMap<typeof fetch, Map<string, Promise<AccountState>>>();
 const pageFetch: typeof fetch = (...args) => fetch(...args);
 
@@ -48,10 +48,12 @@ export function createAccountClient(options: AccountOptions = {}) {
   function me(): Promise<AccountState> {
     const mine = inFlight.get(doFetch) ?? new Map<string, Promise<AccountState>>();
     inFlight.set(doFetch, mine);
-    let pending = mine.get(baseUrl);
+    // The headers are part of the key: a check that names another (development) user is another question, never answered by this one.
+    const key = `${baseUrl}\n${JSON.stringify(headers?.() ?? {})}`;
+    let pending = mine.get(key);
     if (!pending) {
-      pending = fetchMe().finally(() => { mine.delete(baseUrl); });
-      mine.set(baseUrl, pending);
+      pending = fetchMe().finally(() => { mine.delete(key); });
+      mine.set(key, pending);
     }
     return pending;
   }
