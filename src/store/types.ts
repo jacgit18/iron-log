@@ -167,6 +167,19 @@ export interface BoardSlice {
   moveCards(ids: string[], day: number): void;
 }
 
+/** Writing and editing log entries, and the lift and frequency goals. */
+export interface LogSlice {
+  addEntry(slotId: string, idx: number, entry: LogEntry, opts?: { check?: boolean }): boolean;
+  quickLog(slotId: string, idx: number): void;
+  submitLog(slotId: string, idx: number, form: LogForm): boolean;
+  setLiftGoal(exId: string, key: string, raw: string | number, by?: string, from?: string): boolean;
+  clearLiftGoal(exId: string, key: string): void;
+  setFreqGoal(exId: string, raw: string | number): boolean;
+  clearFreqGoal(exId: string): void;
+  updateLog(exId: string, target: LogEntry, entry: LogEntry): boolean;
+  deleteLog(exId: string, target: LogEntry): boolean;
+}
+
 /** The downloads: CSV, Excel and the full data file. */
 export interface ExportSlice {
   exporting: ExportKind | null; // which export is running
@@ -398,15 +411,7 @@ export interface CoreSlice {
 
   gotoWeek(which: 'today' | 'prev' | 'next'): void;
 
-  addEntry(slotId: string, idx: number, entry: LogEntry, opts?: { check?: boolean }): boolean;
-  quickLog(slotId: string, idx: number): void;
-  submitLog(slotId: string, idx: number, form: LogForm): boolean;
-  setLiftGoal(exId: string, key: string, raw: string | number, by?: string, from?: string): boolean;
-  clearLiftGoal(exId: string, key: string): void;
-  setFreqGoal(exId: string, raw: string | number): boolean;
-  clearFreqGoal(exId: string): void;
-  updateLog(exId: string, target: LogEntry, entry: LogEntry): boolean;
-  deleteLog(exId: string, target: LogEntry): boolean;
+
   retryUnsaved(): void;
   eraseData(parts: { logs?: boolean; weeks?: boolean; body?: boolean; programs?: boolean; settings?: boolean }): Promise<boolean>;
 
@@ -425,6 +430,6 @@ export interface BackupSlice {
   forgetBackups(): Promise<void>;
 }
 
-export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & RemovedSlice;
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];
