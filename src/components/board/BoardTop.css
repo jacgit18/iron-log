@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 /* The stack above the day cards. Desktop keeps the old layout; phones (<= 700px) fold it up so the first card
    is not a screen away. */
 .lohead {
@@ -84,4 +86,5 @@
     padding: 0;
     background: transparent;
   }
+}
 }

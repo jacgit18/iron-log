@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .filebtn {
   cursor: pointer;
 }
@@ -221,4 +223,5 @@ html:has(.sjump) {
 }
 .imppaste summary {
   padding: 12px 0;
+}
 }

@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .fab {
   position: fixed;
   right: var(--gr);
@@ -119,4 +121,5 @@
   .fab {
     padding: 10px 16px;
   }
+}
 }

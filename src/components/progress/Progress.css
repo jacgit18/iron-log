@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 /* Body weight goal */
 .bwgoal {
   margin-top: 12px;
@@ -127,4 +129,5 @@
 }
 .goalmet {
   font-weight: 600;
+}
 }

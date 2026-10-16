@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .progname {
   max-width: 360px;
   margin-bottom: 12px;
@@ -78,4 +80,5 @@
 }
 .edadd {
   margin: 4px 0 12px;
+}
 }

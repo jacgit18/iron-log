@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 /* The signed-in badge at the right end of the header (AccountBadge.tsx). The button is the 44px touch target; the avatar inside is smaller. */
 .acctbadge {
   display: inline-flex;
@@ -55,4 +57,5 @@
   .acctname {
     display: none;
   }
+}
 }

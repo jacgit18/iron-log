@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 /* The four kinds of notice (Notice.tsx): what happened and can be undone, a suggestion to act on, a warning, plain information.
    One layout for all (text, then the buttons); the kind sets the colour and the icon, and the icon is never the only cue. */
 .notice[data-kind] {
@@ -36,4 +38,5 @@
 .notice[data-kind="warning"] {
   background: var(--warn-bg);
   color: var(--warn-ink);
+}
 }

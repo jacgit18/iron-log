@@ -1,3 +1,5 @@
+@layer base, components;
+@layer components {
 .injsw {
   display: inline-flex;
   align-items: center;
@@ -55,4 +57,5 @@
   .injsw-track,.injsw-track i {
     transition: none;
   }
+}
 }

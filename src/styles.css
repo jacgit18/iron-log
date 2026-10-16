@@ -1,3 +1,5 @@
+@layer base, components;
+@layer base {
 /* Stand-ins shown until Barlow loads: Arial (or the same-size Liberation Sans, Arimo, Roboto or Helvetica)
    scaled to Barlow's widths, measured per weight on the app's own text. Text then wraps the same before and
    after the web font arrives, so the page doesn't jump when it swaps in (layout shift). */
@@ -2143,4 +2145,5 @@ fieldset.plain legend {
     border-radius: 14px;
     padding-bottom: 18px;
   }
+}
 }
