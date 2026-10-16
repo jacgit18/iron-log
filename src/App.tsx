@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, type ComponentType, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent } from 'react';
 import { flag, useAppStore } from './store/useAppStore.js';
 import { takeAfterReload } from './lib/afterReload.js';
 import { progName } from './lib/logic.js';
@@ -30,6 +30,16 @@ const Settings = lazyTab(() => import('./components/settings/Settings.js'));
 // rather than before it. They are fetched shortly after, so the first one opens without waiting; offline they come from the precache.
 const loadModal = () => import('./components/sheets/Modal.js');
 const LazyModal = lazy(mapChunkError(loadModal));
+// The service worker is registered a few seconds after the app opens. Registering starts the install, which downloads every file of the
+// build (about 1.5 MB, the Excel reader included) in parallel with the first screen; on a phone that shares the connection and the CPU
+// with the page being drawn. Updates are looked for after that, which changes nothing the person sees.
+const SW_DELAY_MS = 4000;
+function LateUpdateBanner() {
+  const [on, setOn] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setOn(true), SW_DELAY_MS); return () => clearTimeout(t); }, []);
+  return on ? <UpdateBanner /> : null;
+}
+
 function Modal() {
   const open = useAppStore(s => s.modal !== null);
   // Fetched once the first screen is settled, so the first sheet opens without waiting. Not while offline: the browser remembers a failed
@@ -105,7 +115,7 @@ export default function App() {
           </nav>
           <AccountBadge />
         </header>
-        <UpdateBanner />
+        <LateUpdateBanner />
         <OfflineNotice />
         <SyncNotice />
         <SignInCard />
