@@ -45,6 +45,34 @@ export const SESSION_DAYS = 30;
 export const OTP_PER_ADDRESS = { max: 3, windowMs: 10 * 60_000 };
 const DAY = 60 * 60 * 24;
 
+/**
+ * Better Auth routes this app never calls, answered 404 before their handlers run. The app uses sign-in/social, the callback,
+ * email-otp/send-verification-otp, sign-in/email-otp, sign-out and get-session (src/sync/account.ts); everything else the library
+ * mounts is attack surface with no use. Most of all /email-otp/check-verification-otp, which counts a code's attempts with a plain
+ * read then write (not the atomic consume the sign-in route uses), so parallel guesses beat the 3-attempt limit and a right guess is
+ * not consumed. The email/password routes stay while testSignIn is on (the automated tests sign up through them).
+ */
+export function unusedAuthPaths(testSignIn: boolean): string[] {
+  const paths = [
+    '/email-otp/check-verification-otp',
+    '/email-otp/verify-email',
+    '/email-otp/reset-password',
+    '/email-otp/request-password-reset',
+    '/forget-password/email-otp',
+    '/email-otp/request-email-change',
+    '/email-otp/change-email',
+    '/request-password-reset',
+    '/reset-password',
+    '/send-verification-email',
+    '/verify-email',
+    // Google's own tokens are never used by the app; the sign-in session is all it needs.
+    '/get-access-token',
+    '/refresh-token',
+    '/account-info',
+  ];
+  return testSignIn ? paths : [...paths, '/sign-up/email'];
+}
+
 export function createAuth(config: AuthConfig, env: string | undefined = process.env.NODE_ENV) {
   // Email and password registration is open to anyone who can reach the API, so it must not exist in production.
   if (config.testSignIn && env !== 'development' && env !== 'test') {
@@ -146,6 +174,7 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
       : [],
     // Only this origin may call the auth routes with a cookie.
     trustedOrigins: [origin.origin],
+    disabledPaths: unusedAuthPaths(config.testSignIn === true),
     // The session cookie is Secure whenever the API is served over https (always, outside local development).
     advanced: { useSecureCookies: origin.protocol === 'https:' },
   });
