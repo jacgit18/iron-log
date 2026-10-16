@@ -823,7 +823,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   gotoWeek(which) {
     const cur = get().weekStart;
-    set({ mDay: null, moveNote: null, orderNote: null, weekStart: which === 'today' ? weekStartOf(new Date()) : addDays(cur, which === 'prev' ? -7 : 7) });
+    set({ mDay: null, moveNote: null, orderNote: null, swapFlash: null, weekStart: which === 'today' ? weekStartOf(new Date()) : addDays(cur, which === 'prev' ? -7 : 7) });
     subscribeWeek();
   },
 
