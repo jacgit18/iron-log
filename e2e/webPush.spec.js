@@ -83,7 +83,7 @@ test('ticking a card on a day with more to do asks for a nudge 30 minutes on; fi
   await (await firstOpen(page)).check(); // a second tick moves it on, with one less left
   await expect.poll(() => scheduled(calls).filter(c => c.path === '/schedule').length).toBe(2);
   expect(scheduled(calls).at(-1).body.body).toBe(`Day not finished: ${n - 2} ${n - 2 === 1 ? 'exercise' : 'exercises'} left.`);
-  await page.locator('.col.sel .colhead input.chk').check(); // the day's own box finishes the whole day
+  await page.locator('.col.sel .colhead input[id^="day-"]').check(); // the day's own box finishes the whole day
   await expect.poll(() => scheduled(calls).at(-1)?.path).toBe('/cancel');
   expect(scheduled(calls).at(-1).body).toEqual({ endpoint: 'https://push.example/phone-1', kind: 'day-nudge' });
   expect(scheduled(calls).filter(c => c.path === '/schedule')).toHaveLength(2);

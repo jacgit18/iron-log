@@ -1,23 +1,19 @@
-/* A day's header. The swap arrows are always shown. On a phone the Rest day box folds behind a ⋯ button
-   (a rest day's own column keeps it shown, since unticking Rest day is its main action), so the first card is a row nearer. */
-.daymore {
-  display: none;
+/* A day's header, left to right: the tick box for the day, its title, the swap arrows centered in the space between, and the Rest box
+   at the far right (the label sits inside, the box at the end: the mirror of the day's own tick box). No count here: the day tabs
+   above already show done / total. */
+.boardroot .colhead {
+  align-items: center;
 }
-
-@media (max-width:700px) {
-  .boardroot .daymore {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0;
-    font-size: 1.25rem;
-    line-height: 1;
-  }
-  .boardroot .col:not(.rest, .more) .restchk {
-    display: none;
-  }
+.boardroot .colhead .swaps {
+  margin: 0 auto;
+}
+.boardroot .swapgap {
+  width: 44px;
+  flex: none;
+}
+.boardroot .colhead .restchk {
+  flex: none;
+  margin-left: 0;
 }
 
 /* A swap just happened (Board.tsx, `swapFlash` in the store): the two days that changed get a thin, soft accent outline that fades away, and on a

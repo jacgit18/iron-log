@@ -85,3 +85,11 @@
     background: transparent;
   }
 }
+
+/* On a phone the week selector sits in the middle of its row, with the progress line under it. */
+@media (max-width:700px) {
+  .boardroot .weekbar .weeknav {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
