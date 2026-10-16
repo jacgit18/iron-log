@@ -12,9 +12,6 @@
   align-items: center;
   gap: 2px;
 }
-.boardroot .colhead .daycount {
-  display: none;
-}
 .boardroot .swapgap {
   width: 36px;
   flex: none;
@@ -127,8 +124,9 @@
 
 /* The two date lines are 1rem each, so the room they hold is exactly 2rem. Before a date is stamped that room is empty and the title would sit above
    the middle of the day's tick box; drop it by half of it (a transform, so nothing else moves) and it is level with the box. Stamping a date lifts the
-   title back to the top, above the date. Rest columns have their own "Rest day" line under the title, so they are left alone. */
-.boardroot .col:not(.rest) .colhead > div:has(> .daydate.nodate) > h3 {
+   title back to the top, above the date. Rest columns have their own "Rest day" line under the title, and a day with a subtitle (set in the program editor) has one under the date room, so
+   both are left alone: the title only drops when the room under it is the last thing in the column. */
+.boardroot .col:not(.rest) .colhead > div:has(> .daydate.nodate):not(:has(> .daydate + .sub)) > h3 {
   transform: translateY(1rem);
 }
 }

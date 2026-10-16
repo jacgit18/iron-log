@@ -29,3 +29,11 @@ test('before a date is stamped the day title is level with the day box; stamping
   expect(after.title).toBeLessThan(after.box - 8); // above the box now, with the date under it
   expect(Math.abs(after.headHeight - before.headHeight)).toBeLessThan(0.5); // the header did not grow or shrink
 });
+
+test('a day with a subtitle under its date room keeps its title where it was (the title only drops when the room is the last thing)', async ({ page }) => {
+  await phone(page);
+  const h3 = page.locator('.col.sel .colhead h3');
+  await expect(h3).not.toHaveCSS('transform', 'none'); // no subtitle: it drops
+  await page.locator('.col.sel .colhead .daydate').evaluate(el => { const sub = document.createElement('div'); sub.className = 'sub'; sub.textContent = 'Push'; el.after(sub); }); // what dayDef.sub renders
+  await expect(h3).toHaveCSS('transform', 'none');
+});
