@@ -27,24 +27,31 @@
   }
 }
 
-/* A swap just happened (Board.tsx, `swapFlash` in the store): the two days that changed are outlined for about two seconds, and pulse once
-   where motion is allowed, so the change is easy to see. The outline stays under reduced motion (the pulse does not); it is the accent
-   colour, not colour alone: the toast also says which days swapped. */
+/* A swap just happened (Board.tsx, `swapFlash` in the store): the two days that changed get a thin, soft accent outline that fades away, and on a
+   phone the two day tabs a faint tint, so the change is noticeable without shouting. Under reduced motion there is no fade: the outline just
+   stays for the same moment, then goes. The status line also names the days, so colour is not the only cue. */
 .boardroot .col.swapped {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
-  animation: swappulse 1.2s ease-out;
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+  animation: swapfade 1.8s ease-out forwards;
 }
 .boardroot .daytabs button.swapped {
-  outline: 3px solid var(--accent);
-  outline-offset: -2px;
-  animation: swappulse 1.2s ease-out;
+  background-color: color-mix(in srgb, var(--accent) 16%, transparent);
+  animation: swaptint 1.8s ease-out forwards;
 }
-@keyframes swappulse {
-  0% {
-    box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+@keyframes swapfade {
+  0%, 35% {
+    outline-color: color-mix(in srgb, var(--accent) 45%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 0 transparent;
+    outline-color: transparent;
+  }
+}
+@keyframes swaptint {
+  0%, 35% {
+    background-color: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  100% {
+    background-color: transparent;
   }
 }
