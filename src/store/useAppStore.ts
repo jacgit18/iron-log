@@ -20,6 +20,8 @@ import type { ApiDb } from '../sync/apiDb.js';
 import { bodySlice } from './bodySlice.js';
 import { editorSlice } from './editorSlice.js';
 import { exportSlice } from './exportSlice.js';
+import { backupSlice } from './backupSlice.js';
+import { startAutoBackup } from './autoBackupRunner.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
 import { deviceGrocery, grocerySlice } from './grocerySlice.js';
@@ -213,6 +215,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   ...editorSlice(set, get, flag),
   ...exportSlice(set, get, flag),
   ...settingsSlice(set, get, flag),
+  ...backupSlice(set, get, flag),
   ...wellnessSlice(set, get, flag),
   ...grocerySlice(set, get),
   ...removedSlice(set, get, flag),
@@ -996,6 +999,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   async init() {
     if (initStarted) return; // StrictMode runs mount effects twice in dev; subscribe once
     initStarted = true;
+    startAutoBackup(useAppStore); // one copy of the data a day, the last 7, in this browser
     removeLegacyGitHubToken(); // one-time cleanup of the retired GitHub backup token
     const host = window.claude && window.claude.use ? (window.claude as { use: (name: string) => Promise<any> }) : null;
     (async () => { try { set({ dl: host ? await host.use('downloads') : blobSave }); } catch { set({ dl: null }); } })();

@@ -8,6 +8,7 @@ import type {
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
+import type { BackupInfo } from '../lib/autoBackup.ts';
 
 export type Flag = (text: string) => void;
 
@@ -398,6 +399,18 @@ export interface CoreSlice {
   init(): Promise<void>;
 }
 
-export type AppState = BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & RemovedSlice;
+/** The automatic backup: one copy a day for the last 7 days, in this browser (lib/autoBackup.ts). */
+export interface BackupSlice {
+  backups: BackupInfo[] | null;
+  refreshBackups(): Promise<void>;
+  backupNow(): Promise<void>;
+  /** Opens a copy in the import review. */
+  restoreBackup(date: string): Promise<void>;
+  downloadBackup(date: string): Promise<void>;
+  /** Deletes every copy (Erase everything, Delete my account). */
+  forgetBackups(): Promise<void>;
+}
+
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & RemovedSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];
