@@ -49,8 +49,20 @@
   }
 }
 
-/* "↔ from Day N" under the title of each swapped day, for the same two seconds as the outline. */
-.boardroot .colhead .swapfrom {
-  color: var(--accent);
+/* "↔ from Day N" on the top edge of each swapped day, for the same moment as the outline. It floats over the border (position: absolute),
+   so no card moves when it appears or when it goes. */
+.boardroot .col.swapped {
+  position: relative;
+}
+.boardroot .col .swapfrom {
+  position: absolute;
+  top: -10px;
+  right: 12px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: .75rem;
   font-weight: 700;
+  pointer-events: none;
 }
