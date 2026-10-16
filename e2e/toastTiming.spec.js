@@ -40,7 +40,7 @@ test('only two of the Board notices show; the rest wait and a +n more line says 
 });
 
 test('the heads-up and the suggestion can turn injury prevention off from the notice', async ({ page }) => {
-  await page.locator('#tab-settings').click();
+  await page.locator('#tab-settings, #account-badge').first().click();
   await page.getByRole('switch', { name: 'Injury prevention' }).check();
   await page.locator('#tab-board').click();
   for (const id of ['A-d2s1', 'A-d2s2-0', 'A-d2s3', 'A-d2s4', 'A-d2s5-0', 'A-d2s5-1', 'A-d2s6-0', 'A-d2s6-1']) await page.locator(`#chk-${id}`).check();
@@ -49,6 +49,6 @@ test('the heads-up and the suggestion can turn injury prevention off from the no
   await note.getByRole('button', { name: 'Turn off' }).click();
   await expect(note).toHaveCount(0);
   await expect(info(page)).toContainText('Injury prevention is off');
-  await page.locator('#tab-settings').click();
+  await page.locator('#tab-settings, #account-badge').first().click();
   await expect(page.getByRole('switch', { name: 'Injury prevention' })).not.toBeChecked();
 });

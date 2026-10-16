@@ -18,7 +18,7 @@ test.describe('install prompt', () => {
     });
     const hint = page.locator('#install-hint');
     await expect(hint).toBeVisible();
-    await page.locator('#tab-settings').click();
+    await page.locator('#tab-settings, #account-badge').first().click();
     await expect(hint).toBeVisible();
     await hint.getByRole('button', { name: 'Install' }).click();
     expect(await page.evaluate(() => (window).__prompted)).toBe(true);

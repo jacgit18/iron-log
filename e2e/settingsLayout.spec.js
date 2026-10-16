@@ -2,7 +2,7 @@ import { test, expect } from './fixtures.js';
 
 // Settings is four groups (Training, Data, App, then Erase & delete last) with a jump row. The row moves focus to a group's heading, then scrolls to it.
 // GitHub backup is gone (ADR 035): the data file is the one backup path.
-const openSettings = async page => { await page.click('#tab-settings'); await expect(page.getByRole('heading', { name: 'Export & import' })).toBeAttached(); };
+const openSettings = async page => { await page.locator('#tab-settings, #account-badge').first().click(); await expect(page.getByRole('heading', { name: 'Export & import' })).toBeAttached(); };
 
 test('Settings has the four groups, one export and import panel, and no GitHub backup', async ({ page }) => {
   await page.goto('/');
