@@ -62,14 +62,16 @@ export default function App() {
   useTabbarHeight(tabsRef);
 
   // With the account badge showing, the badge is the way to Settings, so the Settings tab is not drawn (it is when nobody is signed in).
-  const badgeName = useBadgeName();
-  const tabs = badgeName === null ? TABS : TABS.filter(([k]) => k !== 'settings');
+  const { name: badgeName, pending: badgePending } = useBadgeName();
+  const tabs = badgeName === null && !badgePending ? TABS : TABS.filter(([k]) => k !== 'settings');
+  const tabDrawn = tabs.some(([k]) => k === tab); // false on Settings reached through the badge
   const label = TABS.find(([k]) => k === tab)![1];
   useEffect(() => { document.title = `${label} · Iron Log`; }, [label]);
 
   // Tabs pattern: arrows / Home / End move between tabs and select them.
   const onTabKey = (e: KeyboardEvent) => {
-    const i = tabs.findIndex(([k]) => k === tab);
+    const focused = tabs.findIndex(([k]) => `tab-${k}` === document.activeElement?.id); // from the tab that has focus; Settings through the badge has no tab of its own
+    const i = focused >= 0 ? focused : tabs.findIndex(([k]) => k === tab);
     const n = ({ ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 } as Record<string, number>)[e.key];
     if (n == null) return;
     e.preventDefault();
@@ -98,7 +100,7 @@ export default function App() {
             <div role="tablist" aria-label="Sections" className="tablist" onKeyDown={onTabKey}>
               {tabs.map(([k, l]) => (
                 <button type="button" role="tab" key={k} id={`tab-${k}`} aria-selected={tab === k} aria-controls="view"
-                  tabIndex={tab === k ? 0 : -1} onClick={() => setTab(k)}>{l}</button>
+                  tabIndex={tab === k || (!tabDrawn && k === tabs[0][0]) ? 0 : -1} onClick={() => setTab(k)}>{l}</button>
               ))}
             </div>
           </nav>
@@ -120,7 +122,7 @@ export default function App() {
         )}
         <main>
           {/* None of the data views is drawn until the data has loaded: until then the store holds its starting state, which is the owner's built-in plan (ADR 016). Settings stays, since Sign in, Sign out and the sync controls must work when nothing can load. */}
-          <div id="view" role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>{ready || tab === 'settings' ? <ErrorBoundary key={tab} where="view"><View /></ErrorBoundary> : null}</div>
+          <div id="view" role="tabpanel" {...(tabDrawn ? { 'aria-labelledby': `tab-${tab}` } : { 'aria-label': label })} tabIndex={-1}>{ready || tab === 'settings' ? <ErrorBoundary key={tab} where="view"><View /></ErrorBoundary> : null}</div>
         </main>
       </div>
       <Toaster info={!ready && !saveFlag && !signedOut ? 'Loading…' : saveFlag} />
