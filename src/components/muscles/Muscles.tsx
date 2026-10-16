@@ -5,6 +5,7 @@ import { exInfo } from '../../lib/data.js';
 import { progName } from '../../lib/logic.js';
 import { MUSCLES, M_KEYS, SIL, FRONT, BACK, level, fmtSets, muscleVolumeAll } from '../../lib/muscles.js';
 import RemovedNotice from '../RemovedNotice.jsx';
+import './Muscles.css';
 
 const MIRROR = 'matrix(-1 0 0 1 200 0)';
 
