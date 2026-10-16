@@ -64,11 +64,20 @@ test('on a wide screen the Rest box stays at the right end, and Day 1 keeps its 
   await expect(col.locator('#swap-1--1')).toHaveCount(0);
   await expect(col.locator('#swap-1-1')).toBeVisible();
   const o = await places(col);
-  expect(o.head - o.restRight).toBeLessThan(12); // narrow columns drop Rest to a second row; it stays at the right end
+  expect(o.head - o.restRight).toBeLessThan(12); // at the right end of the first row
   const inRightSlot = await col.evaluate(c => c.querySelector('#swap-1-1').getBoundingClientRect().left > c.querySelector('.swaps').getBoundingClientRect().left + 10);
   expect(inRightSlot).toBe(true);
 });
 
-test('on a wide screen the day keeps its done / total count under the title', async ({ page }) => {
-  await expect(page.locator('#col-1 .colhead .daycount')).toHaveText(/^\d+\/\d+ done$/);
+test('on a wide screen there is no done / total count in the header either, and the two boxes are level', async ({ page }) => {
+  await expect(page.locator('#col-1 .colhead .daycount')).toBeHidden();
+  const level = await page.locator('#col-1').evaluate(c => {
+    const mid = sel => { const r = c.querySelector(`.colhead ${sel}`).getBoundingClientRect(); return r.top + r.height / 2; };
+    const swaps = c.querySelector('.colhead .swaps').getBoundingClientRect();
+    const box = c.querySelector('.colhead .chk').getBoundingClientRect();
+    return { dayBox: mid('.chk'), restBox: mid('.restchk .chk'), title: mid('h3'), swapsBelow: swaps.top >= box.bottom - 1 };
+  });
+  expect(Math.abs(level.dayBox - level.restBox)).toBeLessThan(2);
+  expect(Math.abs(level.title - level.dayBox)).toBeLessThan(2); // no date stamped yet: the title is level with the boxes too
+  expect(level.swapsBelow).toBe(true); // the arrows have their own row under them
 });

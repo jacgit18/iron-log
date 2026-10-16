@@ -1,8 +1,8 @@
 @layer base, components;
 @layer components {
 /* A day's header, left to right: the tick box for the day, its title, the swap arrows centered in the space between, and the Rest box
-   at the far right (the label sits inside, the box at the end: the mirror of the day's own tick box). No count on a phone: the day tabs
-   above show done / total there. Wide screens have no day tabs, so the count stays as a line under the title. */
+   at the far right (the label sits inside, the box at the end: the mirror of the day's own tick box). No done / total count in the header on
+   any width (owner, 2026-10-16): the day tabs show it on a phone, and the day's own tick box and cards show it on a wide screen. */
 .boardroot .colhead {
   align-items: center;
   flex-wrap: wrap;
@@ -14,11 +14,6 @@
 }
 .boardroot .colhead .daycount {
   display: none;
-}
-@media (min-width:701px) {
-  .boardroot .colhead .daycount {
-    display: block;
-  }
 }
 .boardroot .swapgap {
   width: 36px;
@@ -53,10 +48,17 @@
   color: var(--ink);
 }
 
-/* Wide screens have seven narrow columns, so the Rest box drops to a second row there: keep it at the right end of that row. */
+/* Wide screens have seven narrow columns: the Rest box stays at the right end of the first row, level with the day's box, and the arrows go below. */
 @media (min-width:701px) {
   .boardroot .colhead .restchk {
     margin-left: auto;
+  }
+  /* The two boxes (the day's and Rest) are on one level, at the two ends of the first row; the swap arrows take a row of their own under them, centered. */
+  .boardroot .colhead .swaps {
+    order: 3;
+    flex: 1 0 100%;
+    justify-content: center;
+    margin: 0;
   }
 }
 
