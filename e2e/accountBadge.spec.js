@@ -23,13 +23,28 @@ test.describe('signed-in badge', () => {
     const badge = page.getByRole('button', { name: /Signed in as Jo Lifter/ });
     await expect(badge).toBeVisible();
     await expect(badge).toContainText('Jo Lifter'); // desktop: the name is beside the initial
+    await expect(page.locator('#tab-settings')).toHaveCount(0); // the badge is the way to Settings, so the tab is not drawn
     await badge.click();
-    await expect(page.locator('#tab-settings')).toHaveAttribute('aria-selected', 'true');
+    await expect(badge).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
+    await expect(page.locator('#tab-board')).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('the other four tabs still work from the keyboard without the Settings tab', async ({ page }) => {
+    await open(page, json(me));
+    await expect(page.locator('#account-badge')).toBeVisible();
+    await page.locator('#tab-progress').click();
+    await page.locator('#tab-progress').focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#tab-program')).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('ArrowRight'); // wraps to the first tab, not to a hidden one
+    await expect(page.locator('#tab-board')).toHaveAttribute('aria-selected', 'true');
   });
 
   test('is not there when signed out or when the server cannot be reached', async ({ page }) => {
     await open(page, json({ ok: false }, 401));
     await expect(page.locator('#tab-board')).toBeVisible();
+    await expect(page.locator('#tab-settings')).toBeVisible(); // nobody to show a badge for, so Settings keeps its tab
     await expect(page.locator('#account-badge')).toHaveCount(0);
   });
 
