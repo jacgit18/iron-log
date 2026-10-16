@@ -1,6 +1,7 @@
 import { PHASES, PH_KEYS } from '../lib/data.js';
 import { parseDate, fmtShort } from '../shared/dates.js';
 import type { LogEntry, PhaseKey } from '../types.ts';
+import './LineChart.css';
 
 interface Point { x: number; y: number; d: string; ph: PhaseKey | '' }
 interface Series { k: string; pts: Point[] }
