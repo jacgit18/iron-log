@@ -1,4 +1,4 @@
-import { sql, type Kysely } from 'kysely';
+import { sql, type Kysely, type RawBuilder } from 'kysely';
 import type { CatalogData, CatalogKind } from '../src/types.ts';
 import { inUserTransaction } from './auth.ts';
 import type { DB } from './db/types.ts';
@@ -26,9 +26,11 @@ export async function listCatalog(db: Kysely<DB>, userId: string, kind: CatalogK
 }
 
 // GET /api/catalog/search?kind=supplement&q=<words>&offset=<n> (ADR 029): about 120,000 supplements are too many to send whole, so the
-// server looks them up. Every word must appear in the name or brand (any case); names starting with the first word come first, then
-// shorter names. One page of SEARCH_PAGE at a time, `more` when there is another. The trigram index (migration
-// 20261011000002) covers the same expression, so this stays fast.
+// server looks them up. Name and brand are searched as one text with apostrophes dropped and other punctuation turned into spaces, on
+// both sides ("natures way" finds Nature's Way, "b-12" finds B 12), and every word typed must appear in it, in any order. Best first:
+// names starting with the whole phrase, then results where every word starts a word (so "vit" ranks Vitamin above Motivation), then names
+// starting with the first word, then shorter names. One page of SEARCH_PAGE at a time, `more` when there is another. The trigram index
+// (migration 20261016000001) covers the same expression, so this stays fast.
 
 export const SEARCHED_KINDS: readonly CatalogKind[] = ['supplement'];
 export const SEARCH_PAGE = 30;
@@ -37,27 +39,41 @@ const MAX_OFFSET = 600;
 export interface CatalogSearch { kind: CatalogKind; words: string[]; offset: number }
 export interface CatalogSearchResult { items: (CatalogListItem & { brand?: string })[]; more: boolean }
 
+/** The words of a text as the search compares them: lower case, apostrophes dropped, other punctuation as spaces. */
+export const searchWords = (text: string) => text.toLowerCase().replace(/['’]/g, '').split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+
 /** The search a query asks for, or null when it is not one we answer. */
 export function parseSearch(query: Record<string, unknown>): CatalogSearch | null {
   const kind = SEARCHED_KINDS.find(k => k === query.kind);
   if (!kind || typeof query.q !== 'string') return null;
-  const words = query.q.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = searchWords(query.q);
   if (query.q.trim().length < 2 || query.q.length > 100 || words.length > 6) return null;
   const raw = query.offset ?? '0';
   if (typeof raw !== 'string' || !/^\d{1,4}$/.test(raw) || Number(raw) > MAX_OFFSET) return null;
   return { kind, words, offset: Number(raw) };
 }
 
-// A typed word, matched literally: % and _ are LIKE wildcards, and a backslash escapes them.
+// A typed word, matched literally: % and _ are LIKE wildcards, and a backslash escapes them (words are letters and digits only, so
+// this is a guard).
 const escapeLike = (w: string) => w.replace(/[\\%_]/g, c => `\\${c}`);
 
+// The same text the index is built on (keep in step with migration 20261016000001).
+const normalized = (expr: RawBuilder<string>) =>
+  sql<string>`lower(regexp_replace(regexp_replace(${expr}, ${sql.lit("['’]")}, '', 'g'), ${sql.lit('[^[:alnum:]]+')}, ' ', 'g'))`;
+
 export async function searchCatalog(db: Kysely<DB>, userId: string, { kind, words, offset }: CatalogSearch): Promise<CatalogSearchResult> {
-  const text = sql<string>`lower(name || ' ' || coalesce(brand, ''))`;
+  if (!words.length) return { items: [], more: false };
+  const text = normalized(sql`name || ' ' || coalesce(brand, '')`);
+  const nameText = normalized(sql`name`);
+  const phrase = escapeLike(words.join(' '));
+  const wordStarts = sql.join(words.map(w => sql`(' ' || ${text}) like ${`% ${escapeLike(w)}%`}`), sql` and `);
   const rows = await inUserTransaction(db, userId, trx => {
     let q = trx.selectFrom('catalog_items').select(['id', 'name', 'brand', 'data'])
       .where('kind', '=', kind).where('retired_at', 'is', null);
     for (const w of words) q = q.where(text, 'like', `%${escapeLike(w)}%`);
-    return q.orderBy(sql`lower(name) like ${`${escapeLike(words[0]!)}%`}`, 'desc')
+    return q.orderBy(sql`${nameText} like ${`${phrase}%`}`, 'desc')
+      .orderBy(sql`(${wordStarts})`, 'desc')
+      .orderBy(sql`${nameText} like ${`${escapeLike(words[0]!)}%`}`, 'desc')
       .orderBy(sql`char_length(name)`).orderBy(sql`lower(name)`).orderBy('id')
       .limit(SEARCH_PAGE + 1).offset(offset).execute();
   });

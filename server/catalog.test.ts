@@ -75,6 +75,10 @@ describe('GET /api/catalog/search (supplements)', () => {
       sup(4, 'Fish Oil', 'NOW Foods'),
       sup(5, '100% Whey', 'Acme'),
       sup(6, 'Creatine Old', 'Gone', { retired_at: '2026-10-01T00:00:00Z' }),
+      sup(7, 'Fish Oil Omega-3', "Nature's Way"),
+      sup(8, 'Vitamin D3', 'Nature Made'),
+      sup(9, 'Revitalize Blend', 'Acme'),
+      sup(10, 'Vitamin B-12', 'Acme'),
       ...Array.from({ length: 35 }, (_, i) => sup(100 + i, `Magnesium ${String(i).padStart(2, '0')}`, 'Bulk')),
     ]).execute();
   });
@@ -93,6 +97,20 @@ describe('GET /api/catalog/search (supplements)', () => {
     expect(ids(await search('?kind=supplement&q=now'))).toEqual(['c:dsld:3', 'c:dsld:4', 'c:dsld:2']);
   });
 
+  it('finds the same product with the brand first or last, ignoring apostrophes and punctuation', async () => {
+    expect(ids(await search('?kind=supplement&q=natures%20way%20fish'))).toEqual(['c:dsld:7']);
+    expect(ids(await search('?kind=supplement&q=fish%20oil%20nature%27s%20way'))).toEqual(['c:dsld:7']);
+    expect(ids(await search('?kind=supplement&q=omega3'))).toEqual([]); // "Omega-3" is two words: omega, 3
+    expect(ids(await search('?kind=supplement&q=omega-3'))).toEqual(['c:dsld:7']);
+    expect(ids(await search('?kind=supplement&q=b12'))).toEqual([]);
+    expect(ids(await search('?kind=supplement&q=b%2012%20vitamin'))).toEqual(['c:dsld:10']);
+  });
+
+  it('ranks a word that starts a word above one found in the middle of another', async () => {
+    expect(ids(await search('?kind=supplement&q=vit'))).toEqual(['c:dsld:8', 'c:dsld:10', 'c:dsld:9']); // Revitalize has "vit" only mid-word
+    expect(ids(await search('?kind=supplement&q=nature'))).toEqual(['c:dsld:8', 'c:dsld:7']); // Nature Made starts the phrase; shorter name first
+  });
+
   it('pages 30 at a time and says when there is more', async () => {
     const first = await search('?kind=supplement&q=magnesium');
     expect(first.body.items).toHaveLength(30);
@@ -102,7 +120,7 @@ describe('GET /api/catalog/search (supplements)', () => {
     expect(second.body.more).toBe(false);
   });
 
-  it('takes % and _ literally', async () => {
+  it('takes % and _ as punctuation, never as wildcards', async () => {
     expect(ids(await search('?kind=supplement&q=100%25'))).toEqual(['c:dsld:5']);
     expect(ids(await search('?kind=supplement&q=%25%25'))).toEqual([]);
     expect(ids(await search('?kind=supplement&q=__'))).toEqual([]);

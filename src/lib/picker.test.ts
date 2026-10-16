@@ -69,3 +69,11 @@ describe('pickerKey', () => {
     expect(pickerKey(undefined)).toBe('');
   });
 });
+
+describe('pickerOptions punctuation', () => {
+  it('finds yours ignoring apostrophes and punctuation, brand first or last', () => {
+    const mine = [{ id: 'a', name: 'Fish Oil Omega-3', brand: "Nature's Way" }];
+    for (const q of ['natures way fish', 'fish nature\'s', 'omega 3', 'omega-3 natures'])
+      expect(pickerOptions(q, mine, [], { byBrand: true }).mine.shown.map(m => m.id), q).toEqual(['a']);
+  });
+});
