@@ -44,7 +44,7 @@ test('accepting skips the pushed-off workouts and both rest days stay ticked', a
 test('finishing a day\'s workout suggests moving one card; Apply moves it and focuses Undo, which restores it', async ({ page }) => {
   // Program A: Leg Extension is on Days 2 and 3. Tick Day 2's workout cards one by one, leaving the sled and Home
   // cards unticked; the suggestion moves Day 3's Leg Extension (A-d3s5) to Day 4.
-  await page.locator('#tab-settings').click(); // suggestions need Injury prevention, which is off by default
+  await page.locator('#tab-settings, #account-badge').first().click(); // suggestions need Injury prevention, which is off by default
   await page.getByRole('switch', { name: 'Injury prevention' }).check();
   await page.locator('#tab-board').click();
   for (const id of ['A-d2s1', 'A-d2s2-0', 'A-d2s3', 'A-d2s4', 'A-d2s5-0', 'A-d2s5-1', 'A-d2s6-0', 'A-d2s6-1']) await page.locator(`#chk-${id}`).check();

@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -71,9 +71,8 @@ function checkReferencedAssets() {
 // production server answers 404 there, but the preview server answered 200 with the page, which hid a missing stylesheet from every
 // local test (the e2e fixture now fails a test on any /assets/ 404).
 function noWellKnownFallback() {
-  const dist = join(process.cwd(), 'dist');
   const notFound = (req, res, next) => { if (req.url.startsWith('/.well-known/')) { res.statusCode = 404; res.end(); } else next(); };
-  const missingAsset = (req, res, next) => {
+  const missingAsset = dist => (req, res, next) => {
     let path;
     try { path = decodeURIComponent(req.url.split('?')[0]); } catch { res.statusCode = 404; res.end(); return; } // a malformed escape is not a file
     const at = path.indexOf('/assets/');
@@ -82,7 +81,7 @@ function noWellKnownFallback() {
   return {
     name: 'no-well-known-fallback',
     configureServer: server => { server.middlewares.use(notFound); },
-    configurePreviewServer: server => { server.middlewares.use(notFound); server.middlewares.use(missingAsset); },
+    configurePreviewServer: server => { server.middlewares.use(notFound); server.middlewares.use(missingAsset(resolve(server.config.root, server.config.build.outDir))); }, // the build folder this server serves, which --outDir can change
   };
 }
 

@@ -1,15 +1,16 @@
 import type { FlatSlot } from '../../types.ts';
 import { Fragment, useCallback, useRef, useState, type DragEvent, type TouchEvent } from 'react';
-import type { MuscleKey, ProgKey } from '../../types.ts';
+import type { MuscleKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { exInfo } from '../../lib/data.js';
 import { eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
-import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, programFor, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
+import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
+import { useMediaQuery } from '../../hooks/useMediaQuery.js';
 import Card from './Card.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
@@ -83,6 +84,9 @@ export default function Board() {
   const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey && !onlyElsewhere(slots, week) ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
   const [filter, setFilter] = useState({ muscle: '', eq: '' });
+  // On a phone only the day on screen has its cards drawn: the other six sections keep their heading (the day tabs point at them) but are
+  // hidden anyway, and drawing 50 cards nobody sees costs the first paint most of its layout time. They fill in when their day is picked.
+  const phone = useMediaQuery('(max-width:700px)');
   const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose Rest day box and swap arrows are showing
   const [filterOpen, setFilterOpen] = useState(false); // phones only: the sort and equipment fields fold away
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
@@ -120,7 +124,6 @@ export default function Board() {
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45) { const n = Math.min(DAYS.length, Math.max(1, (day as number) + (dx < 0 ? 1 : -1))); if (n !== day) st.setMDay(n); }
   };
 
-  const auto = programFor(cfg, weekStart);
   return (
     <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="weekbar">
@@ -129,16 +132,6 @@ export default function Board() {
           <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
           <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}>›</button>
           {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
-          {cfg.mode === 2 && (
-            <>
-              <div className="seg" role="group" aria-label="Program this week">
-                {['A', 'B'].map(k => (
-                  <button type="button" key={k} className={k === progKey ? 'on' : ''} aria-pressed={k === progKey} onClick={() => st.setWeekProg(k as ProgKey)}>{progName(cfg, k)}</button>
-                ))}
-              </div>
-              <span className="saveflag">{progKey === auto ? 'Set by month' : `Switched · month default is ${progName(cfg, auto)}`}</span>
-            </>
-          )}
         </div>
         <div className="progress">
           <span>{done} of {total} done{skippedN ? ` · ${skippedN} skipped` : ''}</span>
@@ -229,7 +222,7 @@ export default function Board() {
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
-                  {shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                  {(!phone || d === day) && shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
                 </>
               ) : <p className="note">Your workouts moved one day later. Untick to put them back.</p>}
             </section>
@@ -269,7 +262,7 @@ export default function Board() {
                 <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`This week only: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ This week only</button>
               </div>
               {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
-              {open.map((s, i) => {
+              {(!phone || d === day) && open.map((s, i) => {
                 const sec = headOf(s, pd);
                 const newSec = i === 0 || sec !== headOf(open[i - 1], pd);
                 return (
@@ -279,7 +272,7 @@ export default function Board() {
                   </Fragment>
                 );
               })}
-              {finished.length > 0 && (
+              {finished.length > 0 && (!phone || d === day) && (
                 <>
                   <div className="sect donesect">{[ft.done ? `${ft.done} done` : '', ft.skipped ? `${ft.skipped} skipped` : ''].filter(Boolean).join(' · ')}</div>
                   {finished.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}

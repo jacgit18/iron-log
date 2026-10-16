@@ -31,7 +31,7 @@ test('another tab works after one has failed', async ({ page }) => {
   await breakProgress(page);
   await expect(page.locator('#view .crash')).toBeVisible();
   await page.evaluate(() => { window.__crash = false; });
-  await page.locator('#tab-settings').click();
+  await page.locator('#tab-settings, #account-badge').first().click();
   await expect(page.locator('#view .crash')).toHaveCount(0);
   await expect(page.locator('#view')).toContainText('Export all data');
 });

@@ -11,7 +11,8 @@ for (const [width, pct] of [[390, 150], [390, 200], [320, 150], [320, 200]]) {
     await page.setViewportSize({ width, height: 700 });
     await setRoot(page, pct);
     for (const t of TABS) {
-      await page.click(`#tab-${t}`);
+      await page.locator(`#tab-${t}, #account-badge`).first().click();
+      await expect(page.locator('#view .view-loading')).toHaveCount(0); // a tab that loads on first use is measured once it is there, not 150 ms after the click
       await page.waitForTimeout(150);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${t}: sideways overflow`).toBeLessThanOrEqual(0);
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));

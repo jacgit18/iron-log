@@ -7,14 +7,14 @@ const tick = async page => { for (const id of DAY2) await page.locator(`#chk-${i
 const untick = async page => { for (const id of DAY2) await page.locator(`#chk-${id}`).uncheck(); };
 const toggle = page => page.getByRole('switch', { name: 'Injury prevention' });
 const setSwitch = async (page, on) => {
-  await page.locator('#tab-settings').click();
+  await page.locator('#tab-settings, #account-badge').first().click();
   await (on ? toggle(page).check() : toggle(page).uncheck());
   await page.locator('#tab-board').click();
 };
 
 test('off by default: finishing a day suggests nothing; turning it on brings suggestions, and off drops one showing', async ({ page }) => {
   const note = page.getByRole('status').filter({ hasText: 'Back-to-back' });
-  await page.locator('#tab-settings').click();
+  await page.locator('#tab-settings, #account-badge').first().click();
   await expect(toggle(page)).not.toBeChecked(); // off by default
   await page.locator('#tab-board').click();
   await tick(page);
@@ -37,7 +37,7 @@ test('the Board has its own Injury prevention switch, and it agrees with Setting
   const onBoard = page.locator('.boardroot').getByRole('switch', { name: /Injury prevention/ });
   await expect(onBoard).not.toBeChecked();
   await onBoard.check();
-  await page.locator('#tab-settings').click();
+  await page.locator('#tab-settings, #account-badge').first().click();
   await expect(toggle(page)).toBeChecked();
   await toggle(page).uncheck();
   await page.locator('#tab-board').click();
