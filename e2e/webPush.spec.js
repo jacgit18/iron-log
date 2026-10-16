@@ -46,7 +46,7 @@ const firstOpen = async page => page.locator(`#${await page.locator('.col.sel ar
 
 test('Settings offers push to an admin, and turning it on subscribes this device', async ({ page }) => {
   const calls = await setup(page, { on: false });
-  await page.click('#tab-settings');
+  await page.locator('#tab-settings, #account-badge').first().click();
   const panel = page.getByRole('region', { name: 'Alerts when Iron Log is closed' });
   await expect(panel).toBeVisible();
   await expect(panel.getByRole('checkbox', { name: /Send alerts to this device/ })).not.toBeChecked();
@@ -62,7 +62,7 @@ test('Settings offers push to an admin, and turning it on subscribes this device
 
 test('is not offered to an account that is not an admin', async ({ page }) => {
   const calls = await setup(page, { admin: false, on: false });
-  await page.click('#tab-settings');
+  await page.locator('#tab-settings, #account-badge').first().click();
   await expect(page.getByRole('heading', { name: 'Rest timer alert' })).toBeAttached();
   await expect(page.getByRole('heading', { name: 'Alerts when Iron Log is closed' })).toHaveCount(0);
   expect(calls).toEqual([]);
@@ -105,7 +105,7 @@ test('with push off on this device, ticking asks for nothing', async ({ page }) 
 
 test('the push panel has no accessibility violations, off and on', async ({ page }) => {
   await setup(page, { on: true });
-  await page.click('#tab-settings');
+  await page.locator('#tab-settings, #account-badge').first().click();
   const panel = page.getByRole('region', { name: 'Alerts when Iron Log is closed' });
   await expect(panel.getByRole('checkbox', { name: /started but not finished/ })).toBeVisible();
   const scan = () => new AxeBuilder({ page }).include('#pushalerts').include('section[aria-labelledby="pushalerts"]').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();

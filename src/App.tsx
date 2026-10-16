@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent } from 'react';
 import { flag, useAppStore } from './store/useAppStore.js';
 import { takeAfterReload } from './lib/afterReload.js';
-import { progName } from './lib/logic.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
 import useTabbarHeight from './hooks/useTabbarHeight.js';
@@ -10,6 +9,8 @@ import TimerBar from './components/TimerBar.js';
 import Toaster from './components/Toaster.js';
 import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
+import useBadgeName from './hooks/useBadgeName.js';
+import ProgramSwitch from './components/board/ProgramSwitch.js';
 import UpdateBanner from './components/UpdateBanner.js';
 import LegacyCard from './components/LegacyCard.js';
 import OtherAccountCard from './components/OtherAccountCard.js';
@@ -56,7 +57,6 @@ const TABS: [string, string, ComponentType][] = [['board', 'Board', BoardTab], [
 
 export default function App() {
   const tab = useAppStore(s => s.tab);
-  const cfg = useAppStore(s => s.cfg);
   const saveFlag = useAppStore(s => s.saveFlag);
   const unsaved = useAppStore(s => s.unsaved);
   // With syncing on, a refused write is kept in the sync screen's "Not sent" list (SyncNotice says so), so this notice about
@@ -65,23 +65,27 @@ export default function App() {
   const storeMode = useAppStore(s => s.storeMode);
   const ready = useAppStore(s => s.isReady());
   const signedOut = useAppStore(s => s.sync?.state === 'paused' && s.sync.pausedBecause === 'auth');
-  const progKey = useAppStore(s => s.activeProgKey());
   const { setTab, closeModal, openModal } = useAppStore.getState();
   useTooltips();
   useFocusKeeper();
   const tabsRef = useRef<HTMLElement>(null);
   useTabbarHeight(tabsRef);
 
+  // With the account badge showing, the badge is the way to Settings, so the Settings tab is not drawn (it is when nobody is signed in).
+  const { name: badgeName, pending: badgePending } = useBadgeName();
+  const tabs = badgeName === null && !badgePending ? TABS : TABS.filter(([k]) => k !== 'settings');
+  const tabDrawn = tabs.some(([k]) => k === tab); // false on Settings reached through the badge
   const label = TABS.find(([k]) => k === tab)![1];
   useEffect(() => { document.title = `${label} · Iron Log`; }, [label]);
 
   // Tabs pattern: arrows / Home / End move between tabs and select them.
   const onTabKey = (e: KeyboardEvent) => {
-    const i = TABS.findIndex(([k]) => k === tab);
-    const n = ({ ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 } as Record<string, number>)[e.key];
+    const focused = tabs.findIndex(([k]) => `tab-${k}` === document.activeElement?.id); // from the tab that has focus; Settings through the badge has no tab of its own
+    const i = focused >= 0 ? focused : tabs.findIndex(([k]) => k === tab);
+    const n = ({ ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 } as Record<string, number>)[e.key];
     if (n == null) return;
     e.preventDefault();
-    const k = TABS[(n + TABS.length) % TABS.length][0];
+    const k = tabs[(n + tabs.length) % tabs.length][0];
     setTab(k); document.getElementById(`tab-${k}`)!.focus();
   };
   // A note set just before a reload (Erase everything), said once now that the page is back.
@@ -100,20 +104,17 @@ export default function App() {
       <div className="wrap">
         <header className="top">
           <h1>Iron Log</h1>
-          <div className="meta">
-            <span className="pill prog">{progName(cfg, progKey)}</span>
-            <span className="pill">Mode {cfg.mode}</span>
-          </div>
+          <ProgramSwitch />
           <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
           <nav className="tabs" aria-label="Sections" ref={tabsRef}>
             <div role="tablist" aria-label="Sections" className="tablist" onKeyDown={onTabKey}>
-              {TABS.map(([k, l]) => (
+              {tabs.map(([k, l]) => (
                 <button type="button" role="tab" key={k} id={`tab-${k}`} aria-selected={tab === k} aria-controls="view"
-                  tabIndex={tab === k ? 0 : -1} onClick={() => setTab(k)}>{l}</button>
+                  tabIndex={tab === k || (!tabDrawn && k === tabs[0][0]) ? 0 : -1} onClick={() => setTab(k)}>{l}</button>
               ))}
             </div>
           </nav>
-          <AccountBadge />
+          <AccountBadge name={badgeName} />
         </header>
         <LateUpdateBanner />
         <OfflineNotice />
@@ -131,7 +132,7 @@ export default function App() {
         )}
         <main>
           {/* None of the data views is drawn until the data has loaded: until then the store holds its starting state, which is the owner's built-in plan (ADR 016). Settings stays, since Sign in, Sign out and the sync controls must work when nothing can load. */}
-          <div id="view" role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>{ready || tab === 'settings' ? <ErrorBoundary key={tab} where="view"><View /></ErrorBoundary> : null}</div>
+          <div id="view" role="tabpanel" {...(tabDrawn ? { 'aria-labelledby': `tab-${tab}` } : { 'aria-label': label })} tabIndex={-1}>{ready || tab === 'settings' ? <ErrorBoundary key={tab} where="view"><View /></ErrorBoundary> : null}</div>
         </main>
       </div>
       <Toaster info={!ready && !saveFlag && !signedOut ? 'Loading…' : saveFlag} />
