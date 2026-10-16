@@ -7,6 +7,7 @@ import pg from 'pg';
 import { adminsFrom } from '../admin.ts';
 import { POOL_OPTIONS } from '../db/poolOptions.ts';
 import { encryptedAdapter } from './encryptedAdapter.ts';
+import { otpHasher } from './otpHash.ts';
 import { createPiiCrypto, parsePiiKey } from './piiCrypto.ts';
 import { CODE_MINUTES, perAddressLimit, RESEND_TEST_FROM, resendSender, type SendCode } from './otpEmail.ts';
 
@@ -126,8 +127,9 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
             otpLength: 6,
             expiresIn: CODE_MINUTES * 60,
             allowedAttempts: 3,
-            // Only a hash is kept, so a read of the verification table does not reveal a live code.
-            storeOTP: 'hashed',
+            // Only a keyed hash is kept (otpHash.ts): a plain hash of six digits is undone in a moment, so without the secret a
+            // read of the verification table does not reveal a live code.
+            storeOTP: { hash: otpHasher(config.secret) },
             // Only a sign-in code is ever sent: the password-reset, email-change and verify-email uses are not offered.
             sendVerificationOTP: async ({ email, otp, type }) => {
               if (type !== 'sign-in') return;
