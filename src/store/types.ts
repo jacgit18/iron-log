@@ -144,6 +144,29 @@ export interface ProgramSlice {
   dismissMove(): void;
 }
 
+/** Ticking, skipping and moving cards on the board, and the order suggestions that follow. Write path of the checks: the board reorder tests cover it. */
+export interface BoardSlice {
+  mutateChecks(fn: (w: Week) => void, opts?: { removeLogged?: boolean; label?: string }): boolean;
+
+  suggestOrder(slots: FlatSlot[], before: Week): void;
+  canUndoOrder(): boolean;
+  applyOrder(): boolean;
+  undoOrder(): boolean;
+  dismissOrder(): void;
+  undoUncheck(): void;
+  dismissUncheck(): void;
+  undoSkip(): void;
+  dismissSkip(): void;
+  checkCard(slotId: string, on: boolean): void;
+  checkItem(slotId: string, idx: number, on: boolean): void;
+  checkDay(day: number, on: boolean): void;
+  skipCard(slotId: string): void;
+  /** Skip (or bring back) one exercise of a superset for the week; the Undo notice puts it back. */
+  skipItem(slotId: string, idx: number): void;
+  skipCards(ids: string[]): void;
+  moveCards(ids: string[], day: number): void;
+}
+
 /** The downloads: CSV, Excel and the full data file. */
 export interface ExportSlice {
   exporting: ExportKind | null; // which export is running
@@ -370,25 +393,7 @@ export interface CoreSlice {
   mutateWeek(fn: (w: Week) => void): boolean;
   /** Rewrites this week's record of what it runs (ADR 022) from today's program, when the board shows this week and it has one. */
   refreshRan(): void;
-  mutateChecks(fn: (w: Week) => void, opts?: { removeLogged?: boolean; label?: string }): boolean;
 
-  suggestOrder(slots: FlatSlot[], before: Week): void;
-  canUndoOrder(): boolean;
-  applyOrder(): boolean;
-  undoOrder(): boolean;
-  dismissOrder(): void;
-  undoUncheck(): void;
-  dismissUncheck(): void;
-  undoSkip(): void;
-  dismissSkip(): void;
-  checkCard(slotId: string, on: boolean): void;
-  checkItem(slotId: string, idx: number, on: boolean): void;
-  checkDay(day: number, on: boolean): void;
-  skipCard(slotId: string): void;
-  /** Skip (or bring back) one exercise of a superset for the week; the Undo notice puts it back. */
-  skipItem(slotId: string, idx: number): void;
-  skipCards(ids: string[]): void;
-  moveCards(ids: string[], day: number): void;
 
 
   gotoWeek(which: 'today' | 'prev' | 'next'): void;
@@ -420,6 +425,6 @@ export interface BackupSlice {
   forgetBackups(): Promise<void>;
 }
 
-export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & RemovedSlice;
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & RemovedSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];
