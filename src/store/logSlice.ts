@@ -137,5 +137,4 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     });
     return true;
   },
-  // Try the writes that were refused again (after freeing space, or signing back in).
 });
