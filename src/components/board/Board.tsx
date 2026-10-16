@@ -216,7 +216,7 @@ export default function Board() {
           if (pd == null) return (
             <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`}>
               {swapFrom(swapFlash, d)}
-              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div>{week.restOn && <div className="sub daydate">{fmtDayDate(week.restOn)}</div>}</div><SwapArrows d={d} /><label className="restchk"><span aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /></label></div>
+              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div>{week.restOn && <div className="sub daydate">{fmtDayDate(week.restOn)}</div>}</div><SwapArrows d={d} /><label className="restchk"><span className="cond" aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /></label></div>
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
@@ -251,7 +251,7 @@ export default function Board() {
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                 </div>
                 <SwapArrows d={d} />
-                <label className="restchk"><span aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /></label>
+                <label className="restchk"><span className="cond" aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /></label>
               </div>
               <div className="addrow">
                 {!fromRecord && <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add to program, Day ${d}: stays every week`} onClick={() => st.openAddToProgram(d)}>+ Add to program</button>}

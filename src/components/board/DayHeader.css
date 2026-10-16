@@ -14,6 +14,11 @@
 .boardroot .colhead .restchk {
   flex: none;
   margin-left: 0;
+  font-size: 1.3125rem;
+  font-weight: 700;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: var(--ink);
 }
 
 /* A swap just happened (Board.tsx, `swapFlash` in the store): the two days that changed get a thin, soft accent outline that fades away, and on a
