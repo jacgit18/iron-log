@@ -69,6 +69,29 @@ describe('checking off on the board', () => {
     expect(st().week.done['A-d1s6#0']).toBe(true);
   });
 
+  it('skipping one superset exercise on its own leaves the card open, and the notice Undo brings back its tick', () => {
+    useAppStore.setState({ skipNote: null });
+    st().checkItem('A-d1s6', 0, true);
+    st().skipItem('A-d1s6', 0);
+    expect(st().week.skipped['A-d1s6#0']).toBe(true);
+    expect(st().week.skipped['A-d1s6']).toBeUndefined();
+    expect(st().week.done['A-d1s6#0']).toBeUndefined();
+    expect(st().skipNote).toMatchObject({ slotId: 'A-d1s6', key: 'A-d1s6#0' });
+    st().undoSkip();
+    expect(st().week.skipped['A-d1s6#0']).toBeUndefined();
+    expect(st().week.done['A-d1s6#0']).toBe(true); // the tick the skip cleared is back
+  });
+  it('the card\'s Undo skip after Skip both leaves an exercise skipped on its own as it was', () => {
+    st().skipItem('A-d1s6', 1);
+    st().skipCard('A-d1s6'); // skip both
+    expect(st().week.skipped['A-d1s6']).toBe(true);
+    st().undoSkip();
+    expect(st().week.skipped['A-d1s6']).toBeUndefined();
+    expect(st().week.skipped['A-d1s6#1']).toBe(true); // still skipped, as before Skip both
+    st().skipItem('A-d1s6', 0); // now every exercise is skipped on its own: the card is skipped
+    st().skipCard('A-d1s6'); // its Undo skip button brings all of them back
+    expect(Object.keys(st().week.skipped)).toEqual([]);
+  });
   it('ticking the second half of a superset completes the card and is not an uncheck', () => {
     useAppStore.setState({ uncheckNote: null });
     st().checkItem('A-d2s6', 0, true);

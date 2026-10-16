@@ -30,11 +30,14 @@ function useCardWeek(s: FlatSlot): CardWeek {
 }
 
 // One exercise of a paired (superset, either/or) card, drawn as its own card inside the group border. Swipe it right to tick or untick
-// that exercise, left to skip the whole group (a skip is per card, not per exercise). Other cards pass swipe=null and get a plain box.
-function ItemBox({ swipe, className, labelledBy, children }: { swipe: { state: CardState; act: (a: SwipeAction) => void } | null; className: string; labelledBy: string; children: ReactNode }) {
-  const sw = useSwipeCard({ state: swipe?.state ?? 'open', canDone: true, act: swipe?.act ?? (() => {}) });
-  if (!swipe) return <div className={className}>{children}</div>;
+// that exercise, left to skip it (the card is skipped once every one is). Single cards use a plain box: no swipe hook is mounted for them.
+type ItemSwipe = { state: CardState; act: (a: SwipeAction) => void };
+function SwipeBox({ swipe, className, labelledBy, children }: { swipe: ItemSwipe; className: string; labelledBy: string; children: ReactNode }) {
+  const sw = useSwipeCard({ state: swipe.state, canDone: true, act: swipe.act });
   return <div role="group" aria-labelledby={labelledBy} className={`${className} excard${sw.className}`} {...sw.data} style={sw.style} {...sw.props}>{children}</div>;
+}
+function ItemBox({ swipe, className, labelledBy, children }: { swipe: ItemSwipe | null; className: string; labelledBy: string; children: ReactNode }) {
+  return swipe ? <SwipeBox swipe={swipe} className={className} labelledBy={labelledBy}>{children}</SwipeBox> : <div className={className}>{children}</div>;
 }
 
 type CardProps = { s: FlatSlot; onDragStart: (e: DragEvent, id: string) => void; onDragEnd: () => void; dragging: boolean };

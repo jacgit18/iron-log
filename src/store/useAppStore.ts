@@ -494,7 +494,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const s = get().slotById(slotId); let skipped = false; let cleared: string[] = [];
     const ok = get().mutateChecks(w => {
       w.skipped = w.skipped || {};
-      if (s && isSkipped(s, w)) { delete w.skipped[slotId]; s.items.forEach((_, i) => delete w.skipped[itemKey2(s, i)]); } // back, with any exercise skipped on its own
+      if (s && isSkipped(s, w)) { delete w.skipped[slotId]; if (isSkipped(s, w)) s.items.forEach((_, i) => delete w.skipped[itemKey2(s, i)]); } // back; if every exercise was skipped on its own, those go too
       else {
         w.skipped[slotId] = true; skipped = true; const had = Object.keys(w.done || {});
         if (s) clearForSkip(w, s); else delete w.done[slotId];
@@ -510,11 +510,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   skipItem(slotId, idx) {
     const s = get().slotById(slotId); if (!s || !isPaired(s)) return;
     const key = itemKey2(s, idx); let skipped = false;
-    const ok = get().mutateChecks(w => { skipped = !(w.skipped || {})[key]; setItemSkipped(w, s, idx, skipped); }, { removeLogged: true, label: exInfo(get().cfg, s.items[idx].ex).n });
+    let cleared: string[] = [];
+    const ok = get().mutateChecks(w => { skipped = !(w.skipped || {})[key]; const had = Object.keys(w.done || {}); setItemSkipped(w, s, idx, skipped); cleared = had.filter(k => !(w.done || {})[k]); }, { removeLogged: true, label: exInfo(get().cfg, s.items[idx].ex).n });
     if (!ok) return;
     const name = exInfo(get().cfg, s.items[idx].ex).n;
     const keep = get().skipNote;
-    set({ skipNote: skipped ? { week: get().weekKey(), slotId, key, text: `Skipped ${name} for this week.`, done: [] } : keep && keep.key !== key ? keep : null });
+    set({ skipNote: skipped ? { week: get().weekKey(), slotId, key, text: `Skipped ${name} for this week.`, done: cleared } : keep && keep.key !== key ? keep : null });
     if (!skipped) flag('Skip undone');
   },
   // Un-skip the last skipped card and put back the ticks the skip cleared (and with them their check-off entries).
@@ -713,7 +714,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const s = get().slotById(slotId); if (!s || !s.experiment) return;
     const w0 = get().week; const wk = get().weekKey(); const i = (w0.extra || []).findIndex(x => x.id === slotId);
     const ok = get().mutateChecks(w => {
-      clearDone(w, s); delete w.skipped[slotId]; delete w.moved[slotId]; delete w.ph[`${slotId}:0`];
+      clearDone(w, s); delete w.skipped[slotId]; Object.keys(w.skipped).forEach(k => { if (k.startsWith(slotId + '#')) delete w.skipped[k]; }); delete w.moved[slotId]; delete w.ph[`${slotId}:0`];
       w.extra = (w.extra || []).filter(x => x.id !== slotId); if (!w.extra.length) delete w.extra;
     });
     if (!ok || i < 0) return;
