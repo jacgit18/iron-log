@@ -104,3 +104,18 @@
   font-weight: 700;
   pointer-events: none;
 }
+
+/* The date line holds the room of the longest date ("Wednesday" over "00/00") whether or not a date is stamped; the date sits on top of that room. */
+.boardroot .colhead .daydate {
+  display: grid;
+}
+.boardroot .colhead .daydate > * {
+  grid-area: 1 / 1;
+}
+.boardroot .colhead .daydate .dd-pad {
+  visibility: hidden;
+}
+.boardroot .colhead .daydate .dd-pad > span,
+.boardroot .colhead .daydate .dd-text > span {
+  display: block;
+}

@@ -3,6 +3,8 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+// A git hook (the pre-push check) exports GIT_DIR and friends; without this the throwaway repos below would commit into the real one.
+const ENV = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
 
 // scripts/deploy-cloud-run.sh with a stand-in `gcloud` that records what it was asked to do, so the traffic handling (ADR 017) is checked
 // without touching Google: a candidate gets no traffic, promote moves it, and a plain deploy undoes any rollback pin.
@@ -38,7 +40,7 @@ exit 0
 `;
   const run = (args: string[], env: Record<string, string> = {}) =>
     new Promise<{ status: number; stdout: string; stderr: string }>(done => {
-      execFile('bash', [SCRIPT, ...args], { cwd: dir, encoding: 'utf8', env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, PROJECT_ID: 'p', CALLS_FILE: calls, BUILD_SA: 'b@p.iam.gserviceaccount.com', ...env } }, (err, stdout, stderr) =>
+      execFile('bash', [SCRIPT, ...args], { cwd: dir, encoding: 'utf8', env: { ...ENV, PATH: `${dir}:${process.env.PATH}`, PROJECT_ID: 'p', CALLS_FILE: calls, BUILD_SA: 'b@p.iam.gserviceaccount.com', ...env } }, (err, stdout, stderr) =>
         done({ status: err ? Number((err as { code?: number }).code ?? 1) : 0, stdout, stderr }));
     });
   const recorded = () => readFileSync(calls, 'utf8').trim().split('\n');
@@ -49,7 +51,7 @@ exit 0
     writeFileSync(join(dir, 'gcloud'), gcloudStub);
     chmodSync(join(dir, 'gcloud'), 0o755);
     writeFileSync(join(dir, '.gitignore'), 'gcloud\ncalls.log\n');
-    const git = (...a: string[]) => execFileSync('git', a, { cwd: dir, env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' } });
+    const git = (...a: string[]) => execFileSync('git', a, { cwd: dir, env: { ...ENV, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' } });
     git('init', '-q', '-b', 'main');
     git('add', '-A');
     git('commit', '-q', '-m', 'x');
