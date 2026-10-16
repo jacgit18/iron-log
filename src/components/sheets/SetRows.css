@@ -1,0 +1,23 @@
+.sethead {
+  font-size: .75rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.setn {
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+}
+.setx {
+  color: var(--muted);
+  text-align: center;
+}
+.setbtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.setbtns .note {
+  font-size: .75rem;
+}

@@ -1,0 +1,11 @@
+.fields .daypick {
+  grid-column: 1/-1;
+}
+.daychecks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.daychecks label {
+  white-space: nowrap;
+}
