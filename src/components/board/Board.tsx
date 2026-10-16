@@ -10,7 +10,6 @@ import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/da
 import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
-import { useMediaQuery } from '../../hooks/useMediaQuery.js';
 import Card from './Card.jsx';
 import BodyWeightRow from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
@@ -84,9 +83,6 @@ export default function Board() {
   const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey && !onlyElsewhere(slots, week) ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
   const [filter, setFilter] = useState({ muscle: '', eq: '' });
-  // On a phone only the day on screen has its cards drawn: the other six sections keep their heading (the day tabs point at them) but are
-  // hidden anyway, and drawing 50 cards nobody sees costs the first paint most of its layout time. They fill in when their day is picked.
-  const phone = useMediaQuery('(max-width:700px)');
   const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose Rest day box and swap arrows are showing
   const [filterOpen, setFilterOpen] = useState(false); // phones only: the sort and equipment fields fold away
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
@@ -222,7 +218,7 @@ export default function Board() {
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
-                  {(!phone || d === day) && shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                  {shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
                 </>
               ) : <p className="note">Your workouts moved one day later. Untick to put them back.</p>}
             </section>
@@ -262,7 +258,7 @@ export default function Board() {
                 <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`This week only: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ This week only</button>
               </div>
               {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
-              {(!phone || d === day) && open.map((s, i) => {
+              {open.map((s, i) => {
                 const sec = headOf(s, pd);
                 const newSec = i === 0 || sec !== headOf(open[i - 1], pd);
                 return (
@@ -272,7 +268,7 @@ export default function Board() {
                   </Fragment>
                 );
               })}
-              {finished.length > 0 && (!phone || d === day) && (
+              {finished.length > 0 && (
                 <>
                   <div className="sect donesect">{[ft.done ? `${ft.done} done` : '', ft.skipped ? `${ft.skipped} skipped` : ''].filter(Boolean).join(' · ')}</div>
                   {finished.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
