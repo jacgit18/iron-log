@@ -1,0 +1,31 @@
+.picklist {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  max-height: min(320px,50vh);
+  overflow-y: auto;
+  padding: 2px 6px 6px;
+  box-shadow: var(--shadow);
+}
+.pickopt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px;
+  min-height: 44px;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.pickopt[aria-selected="true"] {
+  background: var(--sunk);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.pickopt.create .pickname {
+  color: var(--accent);
+  font-weight: 600;
+}
+.pickname {
+  font-weight: 600;
+}

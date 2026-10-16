@@ -1,3 +1,33 @@
+/* Body weight goal */
+.bwgoal {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.bwgoal h3 {
+  margin: 0 0 6px;
+  font-size: .9375rem;
+}
+.goalbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.goalbar .bar {
+  flex: 1;
+  max-width: 260px;
+}
+.goalitem {
+  margin: 8px 0 10px;
+}
+.goalitem h4 {
+  margin: 0 0 4px;
+  font-size: .875rem;
+}
+.goalform {
+  margin: 8px 0;
+}
 .hist-panel {
   margin-bottom: 16px;
 }

@@ -8,6 +8,7 @@ import { SECTIONS, blankItem } from '../../store/editorSlice.js';
 import { DAYS, progName } from '../../lib/logic.js';
 import Sheet from '../Sheet.jsx';
 import ExerciseField from '../ExerciseField.jsx';
+import './SlotSheet.css';
 
 // Weight stays a string while editing so "12." can be typed; saveSlot gets a number.
 type ItemState = { ex: string; ph: PhaseChoice; w: string | number | null; bw: boolean; rx: string; note: string; nm: string; nu?: string; ne?: EquipmentId | ''; cat?: CatalogItem | null };

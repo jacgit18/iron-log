@@ -988,24 +988,6 @@ body.timing {
   flex: 1 1 120px;
   min-width: 0;
 }
-/* Supplements tab add row (ADR 036): the picker takes the full width, then dose and Add; its notes wrap under them. */
-.suppadd {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 8px;
-  align-items: flex-end;
-}
-.suppadd .picker {
-  flex: 1 1 100%;
-}
-.suppadd>.field {
-  flex: 1 1 140px;
-  min-width: 0;
-}
-.suppadd>.note {
-  flex: 1 1 100%;
-  margin: 0;
-}
 .warm .chk {
   width: 18px;
   height: 18px;
@@ -1090,16 +1072,6 @@ body.timing {
   text-decoration: line-through;
   text-decoration-style: dashed;
 }
-.skiptag {
-  font-size: .6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--iso);
-}
-.skipbtn {
-  margin-left: auto;
-}
 .card.done .exname,.card .ex.idone .exname {
   color: var(--done);
   text-decoration: line-through;
@@ -1152,13 +1124,6 @@ body.timing {
   text-decoration: none;
   font-size: .75rem;
   margin-left: 4px;
-}
-.exline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  font-size: .8125rem;
 }
 .rx {
   color: var(--muted);
@@ -1229,9 +1194,6 @@ body.timing {
 }
 .dot[data-p="exp"] {
   background: var(--exp);
-}
-.logbtn {
-  margin-left: auto;
 }
 .cardfoot {
   display: flex;
@@ -1317,20 +1279,6 @@ body.timing {
   gap: 8px;
   align-items: center;
 }
-.sethead {
-  font-size: .75rem;
-  color: var(--muted);
-  font-weight: 600;
-}
-.setn {
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-}
-.setx {
-  color: var(--muted);
-  text-align: center;
-}
 .setrow input {
   border: 1px solid var(--field-line);
   background: var(--bg);
@@ -1339,15 +1287,6 @@ body.timing {
   font-size: 1rem;
   color: var(--ink);
   width: 100%;
-}
-.setbtns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.setbtns .note {
-  font-size: .75rem;
 }
 .field {
   display: flex;
@@ -1673,9 +1612,6 @@ body.timing {
     min-height: 36px;
     padding: 6px 14px;
   }
-  .logbtn {
-    min-width: 64px;
-  }
   select,input,textarea,.phase,.cardfoot select,.tbl input,.phrow input {
     font-size: max(1rem,16px);
   }
@@ -1890,17 +1826,6 @@ fieldset.plain legend {
   margin-bottom: 8px;
   font-weight: 600;
 }
-.fields .daypick {
-  grid-column: 1/-1;
-}
-.daychecks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-}
-.daychecks label {
-  white-space: nowrap;
-}
 .help h3 {
   margin: 0 0 8px;
   font-size: 1.125rem;
@@ -2045,17 +1970,6 @@ fieldset.plain legend {
 .ex {
   position: relative;
 }
-.ex.haseq .exname {
-  padding-right: 84px;
-}
-.exeq {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-.ex + .ex .exeq {
-  top: 8px;
-}
 
 /* Mobility phase */
 :root {
@@ -2090,37 +2004,6 @@ fieldset.plain legend {
   margin: 2px 0 6px;
 }
 
-/* Body weight goal */
-.bwgoal {
-  margin-top: 12px;
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
-}
-.bwgoal h3 {
-  margin: 0 0 6px;
-  font-size: .9375rem;
-}
-.goalbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0;
-}
-.goalbar .bar {
-  flex: 1;
-  max-width: 260px;
-}
-.goalitem {
-  margin: 8px 0 10px;
-}
-.goalitem h4 {
-  margin: 0 0 4px;
-  font-size: .875rem;
-}
-.goalform {
-  margin: 8px 0;
-}
-
 /* Exercise library */
 .exrows {
   display: flex;
@@ -2149,37 +2032,6 @@ fieldset.plain legend {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-}
-.picklist {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  max-height: min(320px,50vh);
-  overflow-y: auto;
-  padding: 2px 6px 6px;
-  box-shadow: var(--shadow);
-}
-.pickopt {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 8px;
-  min-height: 44px;
-  justify-content: center;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.pickopt[aria-selected="true"] {
-  background: var(--sunk);
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-.pickopt.create .pickname {
-  color: var(--accent);
-  font-weight: 600;
-}
-.pickname {
-  font-weight: 600;
 }
 .picknote {
   display: flex;
