@@ -1,0 +1,224 @@
+.filebtn {
+  cursor: pointer;
+}
+.filebtn:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.imppaste summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: .875rem;
+}
+.dllabel {
+  flex-basis: 100%;
+  font-weight: 600;
+  font-size: .875rem;
+  color: var(--muted);
+}
+.savedtick {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: .75rem;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.imppaste textarea {
+  width: 100%;
+  margin-top: 8px;
+  font: inherit;
+  font-size: .8125rem;
+  border: 1px solid var(--field-line);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.bkmsg {
+  font-size: .875rem;
+  margin: 0;
+}
+.bkmsg.ok {
+  color: var(--exp);
+}
+.bkmsg.err {
+  color: var(--str);
+}
+.bkmsg.info {
+  color: var(--muted);
+}
+.phw {
+  white-space: nowrap;
+}
+.phw+.phw {
+  margin-top: 4px;
+}
+.sjump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  position: sticky;
+  top: env(safe-area-inset-top,0px);
+  z-index: 10;
+  background: var(--bg);
+  padding-block: 6px 8px;
+}
+.sjump .chip {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink);
+}
+.sjump .chip[aria-current="true"] {
+  background: var(--m4);
+  border-color: var(--m4);
+  color: var(--accent-ink);
+}
+/* Focus not obscured (2.4.12) under the sticky jump row, at every width: keep focus and jump targets below the row's real height (--sjump-h, set from a ResizeObserver, so two wrapped lines of chips count). */
+html:has(.sjump) {
+  scroll-padding-top: calc(var(--sjump-h,64px) + 8px + env(safe-area-inset-top,0px));
+}
+.sgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-margin-top: 8px;
+}
+.sgroup>h2 {
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--line);
+  font-family: "Barlow Condensed","Barlow Fallback",system-ui,sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.sgroup>h2:focus-visible {
+  outline-offset: 4px;
+}
+.sgrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  align-items: start;
+}
+.settings .scol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+@media (max-width:900px) {
+  .sgrid {
+    grid-template-columns: minmax(0,1fr);
+  }
+}
+.subblock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.modes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tbl {
+  overflow-x: auto;
+}
+.tbl table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: .875rem;
+}
+.tbl td,.tbl th {
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+.tbl th {
+  font-size: .6875rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+.tbl input {
+  width: 84px;
+  border: 1px solid var(--field-line);
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 5px 6px;
+  font-size: .875rem;
+  color: var(--ink);
+}
+.tbl input.wide {
+  width: 130px;
+}
+.phrows {
+  margin: 4px 0 12px;
+}
+.phrow {
+  display: grid;
+  grid-template-columns: minmax(110px,1fr) 7.5rem 130px;
+  gap: 6px 12px;
+  align-items: end;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.phname {
+  align-self: center;
+  font-size: .875rem;
+}
+.phfield {
+  display: grid;
+  gap: 2px;
+  font-size: .6875rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+.pctin {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  font-size: .875rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.phrow input {
+  width: 84px;
+  border: 1px solid var(--field-line);
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 5px 6px;
+  font-size: .875rem;
+  color: var(--ink);
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.phrow input.wide {
+  width: 130px;
+}
+@media (max-width:600px) {
+  .phrow {
+    grid-template-columns: repeat(auto-fit,minmax(7.5rem,1fr));
+  }
+  .phname {
+    grid-column: 1/-1;
+  }
+  .phrow input.wide {
+    width: 100%;
+  }
+}
+.tbl td:first-child {
+  min-width: 110px;
+}
+.imppaste summary {
+  padding: 12px 0;
+}

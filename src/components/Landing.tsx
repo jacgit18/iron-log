@@ -4,6 +4,7 @@ import boardDark from '../assets/landing/board-dark.webp';
 import { setDevUser } from '../sync/devUser.js';
 import { useGoogleSignIn } from '../sync/useGoogleSignIn.js';
 import { takeAfterReload } from '../lib/afterReload.js';
+import './Landing.css'; // before EmailCodeSignIn, whose .emailsignin .btn rules must still win over .landing-cta .btn
 import EmailCodeSignIn from './EmailCodeSignIn.js';
 import LegalLinks from './LegalLinks.js';
 

@@ -1,0 +1,100 @@
+.hist-panel {
+  margin-bottom: 16px;
+}
+.wkrow {
+  display: grid;
+  grid-template-columns: 96px 30px minmax(0,260px) auto;
+  gap: 10px;
+  align-items: center;
+  font-size: .875rem;
+}
+.wkdate small {
+  color: var(--muted);
+  font-size: .6875rem;
+  display: block;
+}
+.cells {
+  display: grid;
+  grid-template-columns: repeat(7,minmax(0,1fr));
+  gap: 3px;
+}
+.cells i,.cleg {
+  display: block;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--sunk);
+}
+.cleg {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  vertical-align: -1px;
+  margin-left: 6px;
+}
+.cells i.c1,.cleg.c1 {
+  background: color-mix(in srgb, var(--accent) 35%, var(--sunk));
+}
+.cells i.c2,.cleg.c2 {
+  background: var(--accent);
+}
+.wknum {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.wknum b {
+  color: var(--ink);
+}
+/* Progress */
+.plist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+  gap: 12px;
+}
+.pcard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.pcard h3 {
+  margin: 0;
+  font-size: 1.1875rem;
+  font-weight: 600;
+}
+.pstats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: .8125rem;
+  color: var(--muted);
+}
+.pstats span {
+  white-space: nowrap;
+}
+.pstats b {
+  color: var(--ink);
+  font-size: 1rem;
+}
+@media (max-width:700px) {
+  .wkrow {
+    grid-template-columns: 84px 30px 1fr;
+  }
+  .wknum {
+    grid-column: 1/-1;
+    margin-top: -4px;
+  }
+}
+.cells i.c1,.cleg.c1 {
+  background: linear-gradient(90deg,var(--accent) 50%,var(--sunk) 50%);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.cells i.c0,.cleg.c0 {
+  box-shadow: inset 0 0 0 1px var(--field-line);
+}
+.goalmet {
+  font-weight: 600;
+}
