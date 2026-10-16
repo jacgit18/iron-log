@@ -60,6 +60,16 @@ describe('routes Better Auth mounts but the app never calls', () => {
     for (const e of targets) expect((await send(base, e)).status, e.path).toBe(404);
   });
 
+  it('the non-atomic attempt counter route stays unreachable through trailing-slash, repeated-slash, dot-segment and query forms', async () => {
+    const { base } = await serve();
+    const route = '/email-otp/check-verification-otp';
+    const forms = [`/api/auth${route}`, `/api/auth${route}/`, `/api/auth${route}//`, `/api/auth/${route}`, `/api/auth${route.replace('otp/check', 'otp//check')}`, `/api/auth/email-otp/./check-verification-otp`, `/api/auth/x/../email-otp/check-verification-otp`, `/api/auth${route}?x=1`, `/API/AUTH${route}`, `/api/auth/email-otp/check%2Dverification-otp`];
+    for (const path of forms) {
+      const res = await fetch(`${base}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'lifter@example.com', otp: '123456' }) });
+      expect(res.status, path).toBe(404); // a form that reached the handler would answer 400 or 200
+    }
+  });
+
   it('the routes the app uses are untouched', async () => {
     const disabled = new Set(unusedAuthPaths(false));
     for (const used of ['/sign-in/social', '/sign-in/email-otp', '/email-otp/send-verification-otp', '/sign-out', '/get-session']) expect(disabled.has(used), used).toBe(false);
