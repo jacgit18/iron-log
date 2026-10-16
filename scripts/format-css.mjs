@@ -52,17 +52,28 @@ export function format(css, from) {
 }
 
 const bad = [];
+const unwrapped = [];
+
+// The file's top level is exactly `@layer base, components;` and one `@layer <want> { ... }` block: a rule outside the block
+// would be unlayered and outrank both layers.
+function wrapperProblem(css, want, from) {
+  const top = postcss.parse(css, { from }).nodes.filter(n => n.type !== 'comment');
+  const [order, block] = top;
+  const ok = top.length === 2 && order.type === 'atrule' && order.name === 'layer' && !order.nodes && order.params.replace(/\s+/g, '') === 'base,components'
+    && block.type === 'atrule' && block.name === 'layer' && !!block.nodes && block.params === want;
+  return ok ? '' : `needs \`@layer base, components;\` then one \`@layer ${want} { ... }\` holding every rule`;
+}
 for (const file of await cssFiles(join(ROOT, 'src'))) {
   const src = await readFile(file, 'utf8');
   const out = format(src, file);
   // Every stylesheet is one layer: styles.css is `base`, every component file is `components` (see CLAUDE.md, Styles).
   const want = file.endsWith('/src/styles.css') ? 'base' : 'components';
-  if (!src.startsWith(`@layer base, components;\n@layer ${want} {\n`)) bad.push(`${relative(ROOT, file)} (needs the @layer ${want} wrapper)`);
+  const problem = wrapperProblem(src, want, file);
+  if (problem) unwrapped.push(`${relative(ROOT, file)}: ${problem}`);
   if (out === src) continue;
   if (check) bad.push(relative(ROOT, file));
   else await writeFile(file, out);
 }
-if (bad.length) {
-  console.error(`Not formatted (run node scripts/format-css.mjs): ${bad.join(', ')}`);
-  process.exit(1);
-}
+if (unwrapped.length) console.error(`Not in a cascade layer (add the wrapper by hand, the formatter does not):\n  ${unwrapped.join('\n  ')}`);
+if (bad.length) console.error(`Not formatted (run node scripts/format-css.mjs): ${bad.join(', ')}`);
+if (bad.length || unwrapped.length) process.exit(1);
