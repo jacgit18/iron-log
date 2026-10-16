@@ -1,5 +1,6 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import { programFor, progName } from '../../lib/logic.js';
+import { programLabel } from '../../lib/programLabel.js';
 import type { ProgKey } from '../../types.ts';
 import './ProgramSwitch.css';
 
@@ -19,7 +20,7 @@ export default function ProgramSwitch() {
       {/* A small two-position slider: A on the left, B on the right, the accent-coloured knob under the one in use. Two buttons, so it works by tap, click, Tab and Enter or Space. */}
       <div className="progslider" role="group" aria-label="Program this week" aria-describedby="progswitch-note" data-pos={progKey === 'B' ? 'b' : 'a'}>
         {['A', 'B'].map(k => (
-          <button type="button" key={k} className={k === progKey ? 'on' : ''} aria-pressed={k === progKey} ${progName(cfg, k)}`} k)} onClick={() => useAppStore.getState().setWeekProg(k as ProgKey)}>
+          <button type="button" key={k} className={k === progKey ? 'on' : ''} aria-pressed={k === progKey} aria-label={programLabel(cfg, k)} title={progName(cfg, k)} onClick={() => useAppStore.getState().setWeekProg(k as ProgKey)}>
             <span aria-hidden="true">{k}</span>
           </button>
         ))}

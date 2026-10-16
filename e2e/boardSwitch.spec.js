@@ -37,3 +37,18 @@ test('the mode menu is on the Workout view only, and Mode 2 adds the A / B switc
   await page.click('#board-workout');
   await expect(mode).toHaveValue('2');
 });
+
+test('a renamed program keeps its letter in the slider button name, and its full name on hover', async ({ page }) => {
+  await page.locator('#board-mode').selectOption('2'); // saved to this browser
+  await page.evaluate(() => {
+    const cfg = JSON.parse(localStorage.getItem('ironlog:config/main') || '{}');
+    cfg.progNames = { A: 'Upper', B: 'Lower' };
+    localStorage.setItem('ironlog:config/main', JSON.stringify(cfg));
+  });
+  await page.reload();
+  const sw = page.locator('header.top').getByRole('group', { name: 'Program this week' });
+  await expect(sw.locator('button').first()).toHaveAttribute('aria-label', 'A: Upper');
+  await expect(sw.locator('button').nth(1)).toHaveAttribute('aria-label', 'B: Lower');
+  await expect(sw.locator('button').first()).toHaveAttribute('title', 'Upper');
+  await expect(sw.locator('button').first()).toHaveText('A'); // what is drawn is the letter; the name above starts with it
+});
