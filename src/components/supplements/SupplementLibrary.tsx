@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
 import CatalogMatches from '../program/CatalogMatches.jsx';
+import { plainText } from '../../lib/picker.js';
 
 // Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later. Shown under the
 // schedule on Daily → Supplements while Edit is on (spec inline-catalog-picker step 6; it was a Program tab view before).
@@ -13,9 +14,9 @@ export default function SupplementLibrary() {
   const syncing = useAppStore(s => s.sync !== null);
   const { openModal, moveSupplement } = useAppStore.getState();
   const [q, setQ] = useState(''); const [src, setSrc] = useState('');
-  const needle = q.trim().toLowerCase();
+  const needle = q.trim().toLowerCase(); const words = plainText(q).split(' ').filter(Boolean);
   const sources = syncing && items.some(i => i.catalogId) && items.some(i => !i.catalogId);
-  const shown = items.filter(i => (!needle || i.n.toLowerCase().includes(needle) || (i.brand || '').toLowerCase().includes(needle))
+  const shown = items.filter(i => (!words.length || words.every(w => plainText(`${i.n} ${i.brand || ''}`).includes(w)))
     && (!sources || !src || (i.catalogId ? 'library' : 'custom') === src));
   const filtering = !!needle || (sources && !!src);
   return (
