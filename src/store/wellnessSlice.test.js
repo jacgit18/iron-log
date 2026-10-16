@@ -247,6 +247,17 @@ describe('supplement library', () => {
     expect(st().supp.items.map(i => i.id)).toEqual(['creatine', 'creatine-3', 'creatine-2']);
     expect(st().supp.taken['2026-10-04']).toEqual({ creatine: true, 'creatine-2': true });
   });
+  it('instances of a catalog supplement share its catalog id: a catalog re-add is still refused, and removing the last scheduled one keeps it in the library', () => {
+    const now = { id: 'c:dsld:3', name: 'Creatine', brand: 'NOW Foods', data: {} };
+    expect(st().addCatalogSupplement(now, { slot: 'morning' })).toBeNull();
+    const am = st().supp.items[0];
+    expect(st().addSupplementInstance(am.id, 'night')).toBe(true);
+    expect(st().supp.items.map(i => i.catalogId)).toEqual([now.id, now.id]);
+    expect(st().addCatalogSupplement(now)).toMatch(/Already in your supplements/);
+    st().saveSupplement({ id: st().supp.items[1].id, n: 'Creatine', slot: '' }); // the second one is library-only
+    st().removeSupplement(am.id);
+    expect(st().supp.items.map(i => i.slot)).toEqual(['', '']); // unscheduled, not deleted
+  });
   it('saves from the library sheet, rejects a duplicate name, and deleting clears the ticks', () => {
     expect(st().saveSupplement({ n: 'Creatine', dose: '5 g', slot: '' })).toBeNull();
     expect(st().saveSupplement({ n: 'creatine' })).toMatch(/already/);

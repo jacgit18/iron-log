@@ -199,9 +199,9 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
   removeSupplement(id) {
     const x0 = get().supp.items.find(x => x.id === id); if (!x0 || !x0.slot) return false;
     const slot = x0.slot;
-    // An extra instance (the same supplement is scheduled elsewhere) is deleted, not kept as a second library entry; Undo puts it back with its ticks.
+    // An extra instance (the same supplement is also scheduled elsewhere) is deleted, not kept as a second library entry; Undo puts it back with its ticks.
     const i = get().supp.items.findIndex(x => x.id === id);
-    if (get().supp.items.some(x => x.id !== id && sameSupplement(x, x0.n, x0.brand))) {
+    if (get().supp.items.some(x => x.id !== id && x.slot && sameSupplement(x, x0.n, x0.brand))) {
       const days = Object.keys(get().supp.taken).filter(d => get().supp.taken[d][id]);
       if (!get().mutateSupp(s => {
         s.items = s.items.filter(x => x.id !== id);

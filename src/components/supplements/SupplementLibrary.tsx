@@ -47,7 +47,10 @@ export default function SupplementLibrary() {
           return (
             <div key={slot || 'lib'}>
               <div className="sect">{slotLabel(slot)}</div>
-              {rows.map(r => (
+              {rows.map(r => {
+                // Instances of one supplement share a name: say which section a button acts on.
+                const where = items.filter(i => i.n === r.n && (i.brand || '') === (r.brand || '')).length > 1 ? ` in ${slotLabel(r.slot)}` : '';
+                return (
                 <div className="exrow" key={r.id}>
                   <div className="exmain">
                     <b>{r.n}{syncing && (r.catalogId
@@ -57,13 +60,14 @@ export default function SupplementLibrary() {
                   </div>
                   <div className="actions" style={{ margin: 0 }}>
                     {!filtering && <>
-                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} up`} onClick={() => moveSupplement(r.id, -1)}><span aria-hidden="true">↑</span></button>
-                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} down`} onClick={() => moveSupplement(r.id, 1)}><span aria-hidden="true">↓</span></button>
+                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} up`} onClick={() => moveSupplement(r.id, -1)}><span aria-hidden="true">↑</span></button>
+                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} down`} onClick={() => moveSupplement(r.id, 1)}><span aria-hidden="true">↓</span></button>
                     </>}
-                    <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${r.n}`} onClick={() => openModal({ type: 'supplement', id: r.id })}>Edit</button>
+                    <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${r.n}${where}`} onClick={() => openModal({ type: 'supplement', id: r.id })}>Edit</button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           );
         })}
