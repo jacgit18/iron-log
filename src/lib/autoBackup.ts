@@ -1,7 +1,8 @@
-/* ---------- Automatic backup: one copy of your data a day, the last 7 days, kept in this browser ----------
+/* ---------- Automatic backup: one copy of your data a day, for the last 7 days, kept in this browser ----------
    Each copy is the same file Export all data makes, so Restore feeds it to the normal import review. Kept in IndexedDB (a data file can
    be too big for localStorage). Nothing here throws: a browser that blocks IndexedDB (a private window) simply has no backups. */
 import { dataStats } from './export.js';
+import { addDays, parseDate, ymd } from '../shared/dates.js';
 import type { DataFile } from '../types.ts';
 
 export const BACKUP_DAYS = 7;
@@ -19,8 +20,8 @@ export function backupScore(d: Partial<DataFile>): number {
 }
 /** Today's copy is only replaced by one that holds at least half as much, so a wipe or a failed load cannot overwrite a good copy the same day. */
 export const shouldWrite = (before: number | null, after: number) => before == null || before < SHRINK_FLOOR || after >= before * SHRINK_RATIO;
-/** The dates beyond the newest `keep`. */
-export const expiredDates = (dates: string[], keep = BACKUP_DAYS) => [...dates].sort().reverse().slice(keep);
+/** The dates older than the last `days` calendar days, today included. */
+export const expiredDates = (dates: string[], today: string, days = BACKUP_DAYS) => { const cutoff = ymd(addDays(parseDate(today), -(days - 1))); return dates.filter(d => d < cutoff); };
 
 const open = (): Promise<IDBDatabase | null> => new Promise(resolve => {
   if (typeof indexedDB === 'undefined') { resolve(null); return; }
@@ -51,7 +52,7 @@ export async function listBackups(): Promise<BackupInfo[]> {
 export const getBackup = (date: string) => tx<BackupRecord | undefined>('readonly', s => s.get(date) as IDBRequest<BackupRecord | undefined>, undefined);
 export async function clearBackups(): Promise<void> { await tx('readwrite', s => s.clear(), undefined); }
 
-/** Saves today's copy (replacing today's earlier one) and drops anything older than 7 days. 'kept': today's earlier, fuller copy was left alone. */
+/** Saves today's copy (replacing today's earlier one) and drops anything older than the last 7 days. 'kept': today's earlier, fuller copy was left alone. */
 export async function saveDailyBackup(file: Partial<DataFile>, text: string, date: string): Promise<'saved' | 'kept' | 'unavailable'> {
   const score = backupScore(file);
   const today = await getBackup(date);
@@ -66,7 +67,10 @@ export async function saveDailyBackup(file: Partial<DataFile>, text: string, dat
   });
   db.close();
   if (!stored) return 'unavailable';
-  const old = expiredDates((await listBackups()).map(b => b.date));
-  for (const d of old) await tx('readwrite', s => s.delete(d), undefined);
+  await pruneBackups(date);
   return 'saved';
+}
+/** Deletes the copies older than 7 calendar days. */
+export async function pruneBackups(today: string): Promise<void> {
+  for (const d of expiredDates((await listBackups()).map(b => b.date), today)) await tx('readwrite', s => s.delete(d), undefined);
 }

@@ -1,16 +1,20 @@
 import { buildDataFile, parseDataFile } from '../lib/export.js';
-import { clearBackups, getBackup, listBackups, saveDailyBackup } from '../lib/autoBackup.js';
+import { clearBackups, getBackup, listBackups, pruneBackups, saveDailyBackup } from '../lib/autoBackup.js';
 import { ymd } from '../shared/dates.js';
 import type { BackupSlice, Flag, StoreGet, StoreSet } from './types.ts';
 
-// The automatic backup (one copy a day, the last 7, in this browser). When it runs is in autoBackupRunner.ts.
+// The automatic backup (one copy a day for the last 7 days, in this browser). When it runs is in autoBackupRunner.ts.
+// Once the copies are deleted (Sign out, Erase everything, Delete my account, a new-account wipe) nothing is written again until the page is
+// reloaded, which each of those does next: a copy pending or running at that moment must not bring the old data back.
+let stopped = false;
 export const backupSlice = (set: StoreSet, get: StoreGet, flag: Flag): BackupSlice => ({
   backups: null, // null until read
-  async refreshBackups() { set({ backups: await listBackups() }); },
+  async refreshBackups() { await pruneBackups(ymd(new Date())); set({ backups: stopped ? [] : await listBackups() }); },
   async backupNow() {
-    if (!get().isReady()) return; // never copy a half-loaded app
+    if (stopped || !get().isReady()) return; // never copy a half-loaded app
     try {
       const file = buildDataFile(await get().fullSnapshot(), await get().allWeeks());
+      if (stopped) return; // deleted while the file was being built
       await saveDailyBackup(file, JSON.stringify(file), ymd(new Date()));
     } catch { /* a backup that fails is tried again at the next change */ }
     await get().refreshBackups();
@@ -29,5 +33,5 @@ export const backupSlice = (set: StoreSet, get: StoreGet, flag: Flag): BackupSli
     try { await dl.save({ filename: `iron-log-data-${date}-auto.json`, data: rec.text }); flag('Exported'); }
     catch (e) { if ((e as { code?: string } | null)?.code !== 'declined') flag('Download isn’t available here'); }
   },
-  async forgetBackups() { await clearBackups(); set({ backups: [] }); },
+  async forgetBackups() { stopped = true; await clearBackups(); set({ backups: [] }); },
 });

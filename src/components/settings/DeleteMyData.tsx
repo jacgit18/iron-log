@@ -26,10 +26,10 @@ const WHY: Record<string, string> = {
 
 // What this device holds of its own: the documents from before accounts (the grocery list from before it synced among them, ADR 039),
 // and the notes about them. Display options stay.
-function forgetDevice() {
+async function forgetDevice() {
   for (const path of localPaths()) if (parsePath(path)) LS.remove(path);
   LS.remove('sync/legacy');
-  void useAppStore.getState().forgetBackups(); // the automatic backups are this data too
+  await useAppStore.getState().forgetBackups(); // the automatic backups are this data too; cleared before the page reloads
   LS.forgetDamaged(); // copies of saved data that could not be read are this data too
   forgetSession(LS); // the next screen is the landing page
   writeLegacyMarker({ state: 'dismissed', at: new Date().toISOString() }); // never offer to upload what was just erased
@@ -55,7 +55,7 @@ export default function DeleteMyData() {
     setProblem('');
     const out = await api.eraseEverything(what);
     if (!out.ok) { setBusy(null); setProblem(WHY[out.class] ?? WHY.unavailable!); return; }
-    forgetDevice();
+    await forgetDevice();
     noteAfterReload(what === 'data' ? 'Everything in your account was erased.' : 'Your account was deleted.'); // shown after the reload
     window.location.reload(); // the app still holds the old data in memory; start clean
   };
