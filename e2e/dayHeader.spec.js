@@ -19,14 +19,14 @@ test('on a phone the header shows the arrows and the Rest box, with no ⋯ or co
   await expect(col.locator('.swapbtn').first()).toBeVisible();
   await expect(col.locator('.restchk')).toBeVisible();
   await expect(col.getByRole('button', { name: /^More for Day/ })).toHaveCount(0);
-  await expect(col.locator('.colhead .daycount')).toBeHidden(); // the day tabs show it on a phone
+  await expect(col.locator('.colhead .daycount')).toHaveCount(0); // the day tabs show it on a phone
   const o = await places(col);
   expect(o.day).toBeLessThan(o.arrows);
   expect(o.arrows).toBeLessThan(o.rest);
   expect(o.head - o.restRight).toBeLessThan(12); // the Rest box is at the end of the row
 });
 
-test('stamping a date on a day moves neither the Rest box nor the arrows', async ({ page }) => {
+test('stamping a date on a day moves neither the Rest box nor the arrows, and lifts the title above the date', async ({ page }) => {
   await phone(page);
   const col = page.locator('.col.sel');
   const head = () => col.locator('.colhead').evaluate(h => {
@@ -38,7 +38,12 @@ test('stamping a date on a day moves neither the Rest box nor the arrows', async
   const before = await head();
   await col.locator('article.card input.cardchk').first().check(); // the first logged set stamps the day's date
   await expect(col.locator('.dd-text')).toBeVisible();
-  expect(await head()).toEqual(before);
+  const after = await head();
+  expect(after.arrows).toEqual(before.arrows);
+  expect(after.rest).toEqual(before.rest);
+  // The title was level with the tick box while the date room was empty (2rem, so half of it is 1rem = 16px); stamping lifts it to the top, same left, width and height.
+  expect([after.head[0], after.head[2], after.head[3]]).toEqual([before.head[0], before.head[2], before.head[3]]);
+  expect(before.head[1] - after.head[1]).toBeCloseTo(16, 0);
 });
 
 test('the Rest box makes a rest day from the header, and a rest day keeps it ticked', async ({ page }) => {
@@ -59,11 +64,20 @@ test('on a wide screen the Rest box stays at the right end, and Day 1 keeps its 
   await expect(col.locator('#swap-1--1')).toHaveCount(0);
   await expect(col.locator('#swap-1-1')).toBeVisible();
   const o = await places(col);
-  expect(o.head - o.restRight).toBeLessThan(12); // narrow columns drop Rest to a second row; it stays at the right end
+  expect(o.head - o.restRight).toBeLessThan(12); // at the right end of the first row
   const inRightSlot = await col.evaluate(c => c.querySelector('#swap-1-1').getBoundingClientRect().left > c.querySelector('.swaps').getBoundingClientRect().left + 10);
   expect(inRightSlot).toBe(true);
 });
 
-test('on a wide screen the day keeps its done / total count under the title', async ({ page }) => {
-  await expect(page.locator('#col-1 .colhead .daycount')).toHaveText(/^\d+\/\d+ done$/);
+test('on a wide screen there is no done / total count in the header either, and the two boxes are level', async ({ page }) => {
+  await expect(page.locator('#col-1 .colhead .daycount')).toHaveCount(0);
+  const level = await page.locator('#col-1').evaluate(c => {
+    const mid = sel => { const r = c.querySelector(`.colhead ${sel}`).getBoundingClientRect(); return r.top + r.height / 2; };
+    const swaps = c.querySelector('.colhead .swaps').getBoundingClientRect();
+    const box = c.querySelector('.colhead .chk').getBoundingClientRect();
+    return { dayBox: mid('.chk'), restBox: mid('.restchk .chk'), title: mid('h3'), swapsBelow: swaps.top >= box.bottom - 1 };
+  });
+  expect(Math.abs(level.dayBox - level.restBox)).toBeLessThan(2);
+  expect(Math.abs(level.title - level.dayBox)).toBeLessThan(2); // no date stamped yet: the title is level with the boxes too
+  expect(level.swapsBelow).toBe(true); // the arrows have their own row under them
 });
