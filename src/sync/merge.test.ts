@@ -22,6 +22,14 @@ describe('mergeWeek3', () => {
     expect(mergeWeek3(base, week({ done: { a: true, b: true, c: true } }), week({ done: { b: true } })).week.done).toEqual({ b: true, c: true }); // unticked there
   });
 
+  it('a tick new on the other side beats this device\'s skip of the same superset exercise (skipped["id#i"]), and a tick from the skipping side does not', () => {
+    const base = week({});
+    const m = mergeWeek3(base, week({ skipped: { 'ss#1': true } }), week({ done: { 'ss#1': true } }));
+    expect(m.week.skipped).toEqual({}); expect(m.week.done).toEqual({ 'ss#1': true }); expect(m.unskipped).toBe(true);
+    const keep = mergeWeek3(base, week({ done: { 'ss#0': true }, skipped: { 'ss#1': true } }), week({ done: { 'ss#0': true } }));
+    expect(keep.week.skipped).toEqual({ 'ss#1': true });
+  });
+
   it('skips and unskips on either side survive', () => {
     const base = week({ skipped: { a: true } });
     expect(mergeWeek3(base, week({ skipped: { a: true, b: true } }), week({})).week.skipped).toEqual({ b: true });

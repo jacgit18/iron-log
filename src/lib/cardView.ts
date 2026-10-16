@@ -22,7 +22,7 @@ export function cardWeek(week: Week, s: CardLike): CardWeek {
   const idx = s.items.map((_, i) => i);
   return {
     done: pick(week.done, [s.id, ...idx.map(i => itemKey2(s, i))]),
-    skipped: pick(week.skipped, [s.id]),
+    skipped: pick(week.skipped, [s.id, ...idx.map(i => itemKey2(s, i))]),
     moved: pick(week.moved, [s.id]),
     ph: pick(week.ph, idx.map(i => itemKey(s, i))),
     rest: week.rest,

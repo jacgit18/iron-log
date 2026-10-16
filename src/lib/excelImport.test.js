@@ -47,6 +47,13 @@ describe('Excel import', () => {
     expect(d.excel).toMatchObject({ settings: { mode: 2, rest: 60 }, skipped: 0, newExercises: [] });
   });
 
+  it('keeps an exercise skipped on its own (skipped["id#i"]) through an export and an import', async () => {
+    const weeks = { '2026-09-20': { done: { 'A-d1s1#0': true }, skipped: { 'A-d1s1#1': true, 'A-d2s3': true }, moved: {}, ph: {}, warm: {} } };
+    const d = await parseExcelExport(toBytes(buildOverallWorkbook(X, S(), weeks)), cfg());
+    expect(d.weeks['2026-09-20'].skipped).toEqual({ 'A-d1s1#1': true, 'A-d2s3': true });
+    expect(d.weeks['2026-09-20'].done).toEqual({ 'A-d1s1#0': true });
+  });
+
   it('still imports after the file was re-saved in Excel or Sheets (regression: every row was skipped)', async () => {
     const bytes = toBytes(buildOverallWorkbook(X, S(), {}));
     const plain = await parseExcelExport(bytes, cfg());

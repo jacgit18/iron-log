@@ -85,6 +85,14 @@ export function mergeWeek3(baseIn: unknown, oursIn: unknown, theirsIn: unknown):
       delete week.skipped[card];
       if (ours.skipped[card]) unskipped = true;
     }
+    // The same for one exercise skipped on its own (skipped["id#i"]): the other device's tick of it wins over this skip, and a tick from the
+    // side that skipped it does not.
+    for (const k of Object.keys(week.done)) {
+      if (!k.includes('#') || !week.skipped[k] || base.done[k]) continue;
+      if (!(ours.done[k] && !ours.skipped[k]) && !(theirs.done[k] && !theirs.skipped[k])) continue;
+      delete week.skipped[k];
+      if (ours.skipped[k]) unskipped = true;
+    }
     week = normWeek(week);
   }
   return { week, tookTheirs: !same(week, ours), unskipped };

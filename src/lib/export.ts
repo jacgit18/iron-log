@@ -3,7 +3,7 @@
 import { PHASES, PH_KEYS, BUILTIN, exInfo, withAllDays, DAY_COUNT } from './data.js';
 import { ymd, fmtShort } from '../shared/dates.js';
 import type { DayDraft, Cfg, DataFile, LogEntry, Logs, PhaseKey, Program, Snapshot, Week } from '../types.ts';
-import { weekSlots, weekProgram, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, normWeek, colOf, progName, touched, AUTO_NOTE } from './logic.js';
+import { weekSlots, weekProgram, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, isItemSkipped, isSkipped, normWeek, colOf, progName, touched, AUTO_NOTE } from './logic.js';
 
 type XLSX = typeof import('xlsx');
 type Row = (string | number | boolean | null | undefined)[];
@@ -153,7 +153,7 @@ export function buildWeekWorkbook(X: XLSX, S: Snapshot, key: string, w: Week) {
   slots.forEach(s => s.items.forEach((it, idx) => {
     const ph = (w.ph && w.ph[`${s.id}:${idx}`]) ?? defaultPhase(cfg, s, idx);
     const moved = w.moved && w.moved[s.id];
-    plan.push([colOf(nw, s.day), colOf(nw, moved || s.day), s.sec || '', s.tier || '', s.type === 'single' ? '' : s.type, exInfo(cfg, it.ex).n, phaseLabel(ph), rxOf(cfg, it, ph), it.w ?? (it.bw ? 'BW' : ''), (w.skipped && w.skipped[s.id]) ? 'Skipped' : isItemDone(s, idx, nw) ? 'Yes' : 'No']);
+    plan.push([colOf(nw, s.day), colOf(nw, moved || s.day), s.sec || '', s.tier || '', s.type === 'single' ? '' : s.type, exInfo(cfg, it.ex).n, phaseLabel(ph), rxOf(cfg, it, ph), it.w ?? (it.bw ? 'BW' : ''), isSkipped(s, nw) || isItemSkipped(s, idx, nw) ? 'Skipped' : isItemDone(s, idx, nw) ? 'Yes' : 'No']);
   }));
   X.utils.book_append_sheet(wb, sheet(X, plan, [11, 11, 11, 10, 9, 34, 13, 16, 18, 6]), 'Plan');
   X.utils.book_append_sheet(wb, sheet(X, n, SESSION_COLS), 'Logged');

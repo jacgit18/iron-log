@@ -7,7 +7,7 @@ import { BUILTIN, BLANK, warmupOf, resolveProgram, padLibrary, slotsFor, EX, exI
 import { weekStartOf, ymd, addDays, fmtShort, parseDate } from '../shared/dates.js';
 import {
   DEFAULT_CFG, normWeek, progName, weekProgKey, weekProgram, ranFor, isFrozen, programFor, phaseOf, lastLog, describe,
-  setCardDone, setItemDone, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
+  setCardDone, setItemDone, setItemSkipped, isPaired, itemKey2, clearDone, clearForSkip, isSkipped, currentLayout, dayAt, colOf, orderOf, DAYS, overflowSlots, restsOf, moveClashes, altDay, defaultLogDate, autoLogs, weekSlots,
   planFix, isFinished, injuryPreventionOn, autoEntry, newEntryId, normExperiments,
 } from '../lib/logic.js';
 import { LS, makeSaveQueue, onDamaged, removeLegacyGitHubToken } from '../lib/storage.js';
@@ -494,7 +494,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const s = get().slotById(slotId); let skipped = false; let cleared: string[] = [];
     const ok = get().mutateChecks(w => {
       w.skipped = w.skipped || {};
-      if (w.skipped[slotId]) delete w.skipped[slotId];
+      if (s && isSkipped(s, w)) { delete w.skipped[slotId]; if (isSkipped(s, w)) s.items.forEach((_, i) => delete w.skipped[itemKey2(s, i)]); } // back; if every exercise was skipped on its own, those go too
       else {
         w.skipped[slotId] = true; skipped = true; const had = Object.keys(w.done || {});
         if (s) clearForSkip(w, s); else delete w.done[slotId];
@@ -507,12 +507,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ skipNote: skipped ? { week: get().weekKey(), slotId, text: `Skipped${label ? ' ' + label : ''} for this week.`, done: cleared } : keep && keep.slotId !== slotId ? keep : null });
     if (!skipped) flag('Skip undone'); // skipping shows its own notice with Undo, so no second line saying the same
   },
+  skipItem(slotId, idx) {
+    const s = get().slotById(slotId); if (!s || !isPaired(s)) return;
+    const key = itemKey2(s, idx); let skipped = false;
+    let cleared: string[] = [];
+    const ok = get().mutateChecks(w => { skipped = !(w.skipped || {})[key]; const had = Object.keys(w.done || {}); setItemSkipped(w, s, idx, skipped); cleared = had.filter(k => !(w.done || {})[k]); }, { removeLogged: true, label: exInfo(get().cfg, s.items[idx].ex).n });
+    if (!ok) return;
+    const name = exInfo(get().cfg, s.items[idx].ex).n;
+    const keep = get().skipNote;
+    set({ skipNote: skipped ? { week: get().weekKey(), slotId, key, text: `Skipped ${name} for this week.`, done: cleared } : keep && keep.key !== key ? keep : null });
+    if (!skipped) flag('Skip undone');
+  },
   // Un-skip the last skipped card and put back the ticks the skip cleared (and with them their check-off entries).
   undoSkip() {
     const n = get().skipNote; if (!n || n.week !== get().weekKey() || get().blocked()) return;
     set({ skipNote: null });
-    if (!(get().week.skipped || {})[n.slotId]) return; // already back
-    if (get().mutateChecks(w => { delete w.skipped[n.slotId]; w.done = w.done || {}; n.done.forEach(k => { w.done[k] = true; }); })) flag('Skip undone');
+    const key = n.key ?? n.slotId;
+    if (!(get().week.skipped || {})[key]) return; // already back
+    if (get().mutateChecks(w => { delete w.skipped[key]; w.done = w.done || {}; n.done.forEach(k => { w.done[k] = true; }); })) flag('Skip undone');
   },
   dismissSkip: () => set({ skipNote: null }),
   // Yesterday's leftovers: skip or move a batch of cards at once.
@@ -702,7 +714,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const s = get().slotById(slotId); if (!s || !s.experiment) return;
     const w0 = get().week; const wk = get().weekKey(); const i = (w0.extra || []).findIndex(x => x.id === slotId);
     const ok = get().mutateChecks(w => {
-      clearDone(w, s); delete w.skipped[slotId]; delete w.moved[slotId]; delete w.ph[`${slotId}:0`];
+      clearDone(w, s); delete w.skipped[slotId]; Object.keys(w.skipped).forEach(k => { if (k.startsWith(slotId + '#')) delete w.skipped[k]; }); delete w.moved[slotId]; delete w.ph[`${slotId}:0`];
       w.extra = (w.extra || []).filter(x => x.id !== slotId); if (!w.extra.length) delete w.extra;
     });
     if (!ok || i < 0) return;

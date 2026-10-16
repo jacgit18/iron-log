@@ -36,7 +36,7 @@ export const weekProgKey = (cfg: Cfg, w: WeekIn, key: string, now = new Date()):
 export const weekProgram = (cfg: Cfg, programs: Record<string, Program>, w: WeekIn, key: string, now = new Date()): Program =>
   isFrozen(w, key, now) ? w.ran.program : programs[weekProgKey(cfg, w, key, now)] || programs.A;
 // Whether week `w` has a tick, skip or move on card `s` (a tick is stored under the card's id, or "<id>#<item>").
-export const touched = (s: { id: string }, w: WeekIn) => !!((w.skipped && w.skipped[s.id]) || (w.moved && w.moved[s.id]) || Object.keys(w.done || {}).some(k => k === s.id || k.startsWith(s.id + '#')));
+export const touched = (s: { id: string }, w: WeekIn) => !!((w.skipped && Object.keys(w.skipped).some(k => k === s.id || k.startsWith(s.id + '#'))) || (w.moved && w.moved[s.id]) || Object.keys(w.done || {}).some(k => k === s.id || k.startsWith(s.id + '#')));
 // Whether this week's check-offs, skips and moves are all on other programs' cards: the viewed program was only looked at, so it owes no reminders.
 export const onlyElsewhere = (slots: { id: string }[], w: WeekIn) => !slots.some(s => touched(s, w)) && [w.done, w.skipped, w.moved].some(m => m && Object.keys(m).length > 0);
 // The record for week `key` that runs `prog` (key `pk`): its cards that have started by then, each with its id written down. A card an
@@ -184,7 +184,10 @@ export function describe(e: LogEntry | null | undefined): string {
 }
 
 /* ---------- What counts: the one rule every count in the app uses ---------- */
-export const isSkipped = (s: { id: string }, w: WeekIn) => !!(w.skipped && w.skipped[s.id]);
+// A card is skipped when its own key is, or (superset, either/or) when every exercise in it has been skipped on its own.
+export const isSkipped = (s: { id: string; type?: Slot['type']; items?: unknown[] }, w: WeekIn) => !!(w.skipped && (w.skipped[s.id] || ((s.type === 'superset' || s.type === 'either') && !!s.items?.length && s.items.every((_, i) => w.skipped?.[itemKey2(s, i)]))));
+// One exercise of a superset, or one option of an either/or, skipped for the week: skipped[`${id}#${i}`]. An either/or is skipped when every option is.
+export const isItemSkipped = (s: { id: string; type: Slot['type'] }, i: number, w: WeekIn) => (s.type === 'superset' || s.type === 'either') && !!(w.skipped && w.skipped[itemKey2(s, i)]);
 // Done state lives in week.done: done[id] = the whole card is done; done[`${id}#${i}`] = one exercise
 // in a paired card (a superset half, or the either/or option that was picked).
 export const itemKey2 = (s: { id: string }, i: number) => `${s.id}#${i}`;
@@ -192,6 +195,7 @@ export const isPaired = (s: { type: Slot['type'] }) => s.type === 'superset' || 
 type Card = { id: string; type: Slot['type']; items: unknown[] };
 export function isItemDone(s: Card, i: number, w: WeekIn): boolean {
   const d = w.done || {};
+  if (isItemSkipped(s, i, w)) return false;
   if (!isPaired(s)) return !!d[s.id];
   if (d[itemKey2(s, i)]) return true;
   if (!d[s.id]) return false;
@@ -200,14 +204,14 @@ export function isItemDone(s: Card, i: number, w: WeekIn): boolean {
 }
 export function isDone(s: Card, w: WeekIn): boolean {
   const d = w.done || {}; if (d[s.id]) return true;
-  if (s.type === 'superset') return s.items.every((_, i) => d[itemKey2(s, i)]);
+  if (s.type === 'superset') { const live = s.items.map((_, i) => i).filter(i => !isItemSkipped(s, i, w)); return live.length > 0 && live.every(i => d[itemKey2(s, i)]); }
   if (s.type === 'either') return s.items.some((_, i) => d[itemKey2(s, i)]);
   return false;
 }
 export const isOpen = (s: Card, w: WeekIn) => !isDone(s, w) && !isSkipped(s, w); // still to do this week
 // How many units a card adds to a total, and how many of those are done:
 // a superset counts each exercise, an either/or counts once, a single card counts once.
-export const unitsOf = (s: Card) => s.type === 'superset' ? s.items.length : 1;
+export const unitsOf = (s: Card, w?: WeekIn) => s.type === 'superset' ? s.items.length - (w ? s.items.filter((_, i) => isItemSkipped(s, i, w)).length : 0) : 1;
 export const doneUnitsOf = (s: Card, w: WeekIn) => s.type === 'superset' ? s.items.filter((_, i) => isItemDone(s, i, w)).length : (isDone(s, w) ? 1 : 0);
 
 export function clearDone(week: WeekIn, s: Card) { if (!week.done) return; const done = week.done; delete done[s.id]; s.items.forEach((_, i) => delete done[itemKey2(s, i)]); }
@@ -217,15 +221,30 @@ export function setCardDone(week: Week, s: Card, on: boolean) { clearDone(week, 
 export function setItemDone(week: Week, s: Card, idx: number, on: boolean): void {
   if (!isPaired(s)) return setCardDone(week, s, on);
   if (s.type === 'superset') {
+    if (on && week.skipped) delete week.skipped[itemKey2(s, idx)]; // ticking a skipped exercise brings it back
     const cur = s.items.map((_, i) => isItemDone(s, i, week)); cur[idx] = on; clearDone(week, s);
-    if (cur.every(Boolean)) week.done[s.id] = true; else cur.forEach((v, i) => { if (v) week.done[itemKey2(s, i)] = true; });
-  } else { clearDone(week, s); if (on) { week.done[s.id] = true; week.done[itemKey2(s, idx)] = true; } }
+    const live = cur.filter((_, i) => !isItemSkipped(s, i, week));
+    if (live.length === cur.length && cur.every(Boolean)) week.done[s.id] = true; else cur.forEach((v, i) => { if (v) week.done[itemKey2(s, i)] = true; });
+  } else { if (on && week.skipped) delete week.skipped[itemKey2(s, idx)]; clearDone(week, s); if (on) { week.done[s.id] = true; week.done[itemKey2(s, idx)] = true; } }
   if (on && week.skipped) delete week.skipped[s.id];
+}
+// Skip (or bring back) one exercise of a superset, or one option of an either/or, for the week; its tick goes with it. A superset that was
+// ticked whole keeps the other exercises ticked one by one. Skipping every exercise or option skips the card (isSkipped).
+export function setItemSkipped(week: Week, s: Card, idx: number, on: boolean): void {
+  if (!isPaired(s)) return;
+  week.skipped = week.skipped || {};
+  const key = itemKey2(s, idx);
+  if (!on) { delete week.skipped[key]; return; }
+  if (s.type === 'superset') {
+    const cur = s.items.map((_, i) => isItemDone(s, i, week)); cur[idx] = false; clearDone(week, s);
+    cur.forEach((v, i) => { if (v) week.done[itemKey2(s, i)] = true; });
+  } else if (isItemDone(s, idx, week)) clearDone(week, s); // the picked option is skipped: nothing is picked now
+  week.skipped[key] = true;
 }
 // Totals for any list of cards. Skipped cards are left out of total and done.
 export function tally(slots: Card[], w: WeekIn) {
   let total = 0, done = 0, skipped = 0;
-  slots.forEach(s => { if (isSkipped(s, w)) { skipped++; if (s.type === 'superset') { const n = doneUnitsOf(s, w); total += n; done += n; } return; } total += unitsOf(s); done += doneUnitsOf(s, w); });
+  slots.forEach(s => { if (isSkipped(s, w)) { skipped++; if (s.type === 'superset') { const n = doneUnitsOf(s, w); total += n; done += n; } return; } total += unitsOf(s, w); done += doneUnitsOf(s, w); });
   return { total, done, skipped, full: total > 0 && done === total };
 }
 // A day is finished when its workout is: every card but Home and Optional ones (the sled) ticked or skipped, and at
@@ -233,7 +252,7 @@ export function tally(slots: Card[], w: WeekIn) {
 export const countsForFinish = (s: { sec?: string }) => s.sec !== 'Home' && s.sec !== 'Optional';
 export function isFinished(slots: (Card & { sec?: string })[], w: WeekIn) {
   const xs = slots.filter(countsForFinish);
-  return xs.length > 0 && xs.every(s => isSkipped(s, w) || doneUnitsOf(s, w) === unitsOf(s)) && xs.some(s => doneUnitsOf(s, w) > 0);
+  return xs.length > 0 && xs.every(s => isSkipped(s, w) || doneUnitsOf(s, w) === unitsOf(s, w)) && xs.some(s => doneUnitsOf(s, w) > 0);
 }
 /* ---------- Days and the rest day ----------
    week.rest = [N, ...] lists the rest days (displayed columns, ascending). Workouts fill the other columns in

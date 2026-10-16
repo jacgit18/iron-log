@@ -40,7 +40,7 @@ function BoardNotices() {
   const showMove = moveNote && moveNote.week === wk;
   const showOrder = orderNote && orderNote.week === wk;
   const showUncheck = uncheckNote && uncheckNote.week === wk;
-  const showSkip = skipNote && skipNote.week === wk && !!(week.skipped || {})[skipNote.slotId]; // gone once the card is back
+  const showSkip = skipNote && skipNote.week === wk && !!(week.skipped || {})[skipNote.key ?? skipNote.slotId]; // gone once the card is back
   // After Apply the pressed button is gone, so focus goes to Undo.
   const undoRef = useRef<HTMLButtonElement>(null);
   const applied = !!(showOrder && orderNote.applied);

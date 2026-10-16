@@ -63,18 +63,50 @@ test('a long swipe left skips a card for the week, and the notice\'s Undo brings
   await expect(note).toHaveCount(0);
 });
 
-test('a superset card swipes left to skip, and a swipe right does nothing to it or to the day', async ({ page }) => {
+test('each exercise of a superset swipes on its own: right ticks it, left skips it, either way puts it back', async ({ page }) => {
   await phone(page);
-  const SS = '.col.sel article.card:not(:has(input.chk.cardchk))';
-  for (const tab of await page.locator('.daytabs [role="tab"]').all()) { if (await page.locator(SS).count()) break; await tab.click(); }
-  const sel = await pin(page, SS);
+  const SS = '.col.sel article.card:not(:has(input.chk.cardchk)):has(.ex + .ex)';
+  for (const tab of await page.locator('.daytabs [role="tab"]').all()) { if (await page.locator(`${SS}:not(:has(.or))`).count()) break; await tab.click(); }
+  const sel = await pin(page, `${SS}:not(:has(.or))`);
+  const card = page.locator(sel), one = card.locator('.excard').nth(0), two = card.locator('.excard').nth(1);
+  const [i1, i2] = await card.locator('input.chk').evaluateAll(els => els.map(e => e.id));
+  const first = `${sel} .excard:has(#${i1})`, second = `${sel} .excard:has(#${i2})`;
   const before = await day(page).getAttribute('id');
-  await swipe(page, sel, 140, 0, { from: '.exh' });
-  await expect(page.locator(sel)).not.toHaveClass(/done|skipped/);
+  await swipe(page, first, 140, 0, { from: '.exh' });
+  await expect(one.locator('input.chk')).toBeChecked();
+  await expect(two.locator('input.chk')).not.toBeChecked();
+  await expect(card).not.toHaveClass(/skipped/);
+  await swipe(page, first, -140, 0, { from: '.exh' }); // a ticked exercise: either way puts it back
+  await expect(one.locator('input.chk')).not.toBeChecked();
+  await swipe(page, second, -140, 0, { from: '.exh' });
+  await expect(two).toHaveClass(/iskipped/);
+  await expect(one).not.toHaveClass(/iskipped/);
+  await expect(card).not.toHaveClass(/skipped/);
+  await expect(card.getByRole('button', { name: /Undo skip for/ })).toHaveCount(1);
+  await expect(two.getByRole('button', { name: /^Log / })).toHaveCount(0); // a skipped exercise has nothing to log
+  await expect(one.getByRole('button', { name: /^Log / })).toHaveCount(1);
+  await swipe(page, second, 140, 0, { from: '.exh' }); // a skipped exercise comes back
+  await expect(two).not.toHaveClass(/iskipped/);
+  await swipe(page, first, -140, 0, { from: '.exh' });
+  await swipe(page, second, -140, 0, { from: '.exh' }); // both skipped: the card is skipped
+  await expect(card).toHaveClass(/skipped/);
   await expect(day(page)).toHaveAttribute('id', before);
-  await swipe(page, sel, -140, 0, { from: '.exh' });
-  await expect(page.locator(sel)).toHaveClass(/skipped/);
-  await expect(day(page)).toHaveAttribute('id', before);
+});
+
+test('an either/or option skips on its own, the card stays put until the other is skipped too, and ticking the other finishes it', async ({ page }) => {
+  await phone(page);
+  const EI = '.col.sel article.card:has(.or)';
+  for (const tab of await page.locator('.daytabs [role="tab"]').all()) { if (await page.locator(EI).count()) break; await tab.click(); }
+  const sel = await pin(page, EI);
+  const card = page.locator(sel);
+  const [i1, i2] = await card.locator('input.chk').evaluateAll(els => els.map(e => e.id));
+  const first = `${sel} .excard:has(#${i1})`, second = `${sel} .excard:has(#${i2})`;
+  await swipe(page, first, -140, 0, { from: '.exh' });
+  await expect(card.locator('.excard').nth(0)).toHaveClass(/iskipped/);
+  await expect(card).not.toHaveClass(/skipped/); // not moved down yet: the other option may still be done
+  await swipe(page, second, 140, 0, { from: '.exh' });
+  await expect(card.locator('input.chk').nth(1)).toBeChecked();
+  await expect(card).not.toHaveClass(/skipped/);
 });
 
 test('a short swipe, a vertical swipe and a swipe that starts on a control do nothing to the card', async ({ page }) => {
