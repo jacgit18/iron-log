@@ -17,7 +17,9 @@ import { groceryAdopted, markGroceryAdopted, readLegacyMarker } from '../sync/le
 import { mergeGroceryMonth3, mergeStretchWeek3, mergeWeek3 } from '../sync/merge.js';
 import { stable } from '../sync/canon.js';
 import type { ApiDb } from '../sync/apiDb.js';
+import { bodySlice } from './bodySlice.js';
 import { editorSlice } from './editorSlice.js';
+import { exportSlice } from './exportSlice.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
 import { deviceGrocery, grocerySlice } from './grocerySlice.js';
@@ -26,19 +28,15 @@ import { MONTH_RE, monthEmpty, normGrocery, normGroceryMonth } from '../lib/groc
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { normSupplements } from '../lib/water.js';
 import { WEEK_RE } from '../lib/trends.js';
-import {
-  loadXLSX, buildCsv, buildOverallWorkbook, buildWeekWorkbook, buildDataFile,
-  sameProg, entryId, findEntry, normConfig,
-} from '../lib/export.js';
+import { sameProg, entryId, findEntry, normConfig } from '../lib/export.js';
 import { mimeFor } from '../lib/mime.js';
-import { bwSorted } from '../lib/body.js';
 import { exIdsInUse, usageOf } from '../lib/exerciseLibrary.js';
 import { MUSCLE_MAP } from '../lib/muscles.js';
 import { eqNameError, newEqId } from '../lib/equipment.js';
 import { bestLift, liftGoalsOf, goalPhaseLabel, GOAL_KEYS } from '../lib/liftGoal.js';
 import { loadView, saveView, openFromUrl } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
-import { validRm, validFreq, validLiftGoalLb, validBodyLb, normEntry, normEntries, normBody, normProgram, normLibrary, nowStamp, SCHEMA_VERSION } from '../shared/validate.js';
+import { validRm, validFreq, validLiftGoalLb, normEntry, normEntries, normBody, normProgram, normLibrary, nowStamp, SCHEMA_VERSION } from '../shared/validate.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
 // binding from the original app (window.claude.use('db')); without it everything uses localStorage.
@@ -211,7 +209,9 @@ const loadedMDay = (state: AppState) => { const m = keepMDay ? state.mDay : null
 const allReady = (r: AppState['ready']) => r.cfg && r.logs && r.week && r.programs && r.lib && r.body && r.exp && r.str && r.strHist && r.strWeek && r.supp && r.groc && r.grocMonths;
 
 export const useAppStore = create<AppState>((set, get) => ({
+  ...bodySlice(set, get, flag),
   ...editorSlice(set, get, flag),
+  ...exportSlice(set, get, flag),
   ...settingsSlice(set, get, flag),
   ...wellnessSlice(set, get, flag),
   ...grocerySlice(set, get),
@@ -991,75 +991,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ modal: null });
     flag('Data erased');
     return true;
-  },
-
-  saveBodyWeight(v) {
-    if (get().blocked()) return false;
-    const n = Number(v); if (!validBodyLb(n)) { flag('Enter your weight in lb'); return false; }
-    const wk = get().weekKey(); const today = ymd(new Date());
-    const d = (today >= wk && today <= ymd(addDays(get().weekStart, 6))) ? today : wk;
-    set(state => ({ body: [...state.body.filter(e => e.wk !== wk), { wk, d, w: Math.round(n * 10) / 10, updatedAt: nowStamp() }].sort((a, b) => a.wk.localeCompare(b.wk)) }));
-    get().saveBody();
-    const g = get().cfg.bwGoal; if (g && !g.start) get().mutateCfg(c => { c.bwGoal = { ...g, start: { w: Math.round(n * 10) / 10, d } }; }); // first weigh-in after setting a goal
-    flag('Body weight saved'); return true;
-  },
-  // Target body weight, optionally by a date. Where you are now is kept as the starting point for progress.
-  setBodyGoal(raw, by) {
-    if (get().blocked()) return false;
-    const n = Number(raw); if (!validBodyLb(n)) { flag('Enter a target weight in lb'); return false; }
-    if (by && !/^\d{4}-\d{2}-\d{2}$/.test(by)) { flag('Enter the goal date as a date'); return false; }
-    const L = bwSorted(get().body); const last = L[L.length - 1];
-    const goal = { w: Math.round(n * 10) / 10, ...(last ? { start: { w: last.w, d: last.d } } : {}), ...(by ? { by } : {}) };
-    get().mutateCfg(c => { c.bwGoal = goal; }); flag('Goal saved'); return true;
-  },
-  clearBodyGoal() {
-    const g = get().cfg.bwGoal; if (!g || !get().mutateCfg(c => { delete c.bwGoal; })) return;
-    get().noteRemoved('body', `your ${g.w} lb goal`, () => !get().cfg.bwGoal && get().mutateCfg(c => { c.bwGoal = g; }));
-  },
-  deleteBodyWeight(wk) {
-    if (get().blocked()) return;
-    const gone = get().body.find(x => x.wk === wk); if (!gone) return;
-    set(state => ({ body: state.body.filter(x => x.wk !== wk) })); get().saveBody();
-    // Undo only if that week has not been weighed again since.
-    get().noteRemoved('body', `the ${fmtShort(parseDate(gone.d))} weigh-in`, () => {
-      if (get().blocked() || get().body.some(x => x.wk === wk)) return false;
-      set(state => ({ body: [...state.body, gone].sort((a, b) => a.wk.localeCompare(b.wk)) })); get().saveBody(); return true;
-    });
-  },
-
-  exporting: null, // which export is running: 'csv' | 'xlsx-all' | 'xlsx-week' | 'data'
-
-  async runExport(kind, fn) {
-    const dl = get().dl; if (!dl || get().exporting) return;
-    set({ exporting: kind });
-    try { await fn(dl); flag('Exported'); }
-    catch (err) {
-      const e = err as { code?: string; message?: string } | null;
-      const c = e && e.code;
-      if (c === 'declined') { /* user closed the save prompt */ }
-      else if (c === 'rate_limited') flag('A save prompt is already open');
-      // One failed export never hides the others: every kind saves through the same `dl`, and Export all data is the one backup.
-      else flag(e && e.message && !c ? e.message : 'Export isn’t available here');
-    } finally { set({ exporting: null }); }
-  },
-  exportCsv() { return get().runExport('csv', dl => dl.save({ filename: `iron-log-${ymd(new Date())}.csv`, data: buildCsv(get().snapshot()) })); },
-  // The file an export produces, built the same way for every download.
-  async buildExportFile(kind) {
-    if (kind === 'data') {
-      const d = buildDataFile(await get().fullSnapshot(), await get().allWeeks());
-      return { filename: `iron-log-data-${ymd(new Date())}.json`, data: JSON.stringify(d, null, 1) };
-    }
-    const which = kind === 'xlsx-week' ? 'week' : 'all';
-    const X = await loadXLSX(); const S = get().snapshot();
-    const wb = which === 'week' ? buildWeekWorkbook(X, S, get().weekKey(), get().week) : buildOverallWorkbook(X, S, await get().allWeeks());
-    const data = X.write(wb, { type: 'array', bookType: 'xlsx', compression: true });
-    return { filename: which === 'week' ? `iron-log-week-${get().weekKey()}.xlsx` : `iron-log-${ymd(new Date())}.xlsx`, data };
-  },
-  downloadExcel(which) {
-    return get().runExport(`xlsx-${which}`, async dl => { await dl.save(await get().buildExportFile(`xlsx-${which}`)); });
-  },
-  downloadData() {
-    return get().runExport('data', async dl => { await dl.save(await get().buildExportFile('data')); });
   },
 
   async init() {
