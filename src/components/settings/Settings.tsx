@@ -20,6 +20,7 @@ import { disablePush, enablePush, pushKindWanted, pushOn, pushSupported, setPush
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { IMPORT_ACCEPT } from '../../lib/importFile.js';
+import './Settings.css';
 
 /* ---------- "Saved" ticks ----------
    A field that saves when you leave it gets a short tick beside it, so a change is seen to land without scrolling up to the header.
