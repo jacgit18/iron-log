@@ -51,4 +51,32 @@ describe('account client', () => {
     expect(await createAccountClient({ fetch: reply(200, { success: true }) }).signOut()).toBe(true);
     expect(await createAccountClient({ fetch: down }).signOut()).toBe(false);
   });
+
+  it('shares one request among checks that overlap, and asks again once the answer is in', async () => {
+    let calls = 0;
+    const counting: typeof fetch = (async () => { calls++; await Promise.resolve(); return new Response(JSON.stringify({ userId: 'u1', account: { kind: 'session' } }), { status: 200 }); }) as typeof fetch;
+    const a = createAccountClient({ fetch: counting });
+    const b = createAccountClient({ fetch: counting });
+    const answers = await Promise.all([a.me(), b.me(), a.me(), b.me(), a.me()]);
+    expect(calls).toBe(1);
+    expect(new Set(answers.map(x => JSON.stringify(x))).size).toBe(1);
+    await a.me();
+    expect(calls).toBe(2); // not a cache: a check made after the last one finished is a fresh request
+  });
+
+  it('does not share between checks that send different headers', async () => {
+    let calls = 0;
+    const f: typeof fetch = (async () => { calls++; return new Response(null, { status: 401 }); }) as typeof fetch;
+    await Promise.all([createAccountClient({ fetch: f, headers: () => ({ 'x-dev-user': 'a' }) }).me(), createAccountClient({ fetch: f, headers: () => ({ 'x-dev-user': 'b' }) }).me(), createAccountClient({ fetch: f, headers: () => ({ 'x-dev-user': 'a' }) }).me()]);
+    expect(calls).toBe(2); // a and b are two questions; the second a shares the first
+  });
+
+  it('does not share between different fetch functions or addresses', async () => {
+    let calls = 0;
+    const mk = (): typeof fetch => (async () => { calls++; return new Response(null, { status: 401 }); }) as typeof fetch;
+    await Promise.all([createAccountClient({ fetch: mk() }).me(), createAccountClient({ fetch: mk() }).me()]);
+    const f = mk();
+    await Promise.all([createAccountClient({ fetch: f, baseUrl: 'https://a' }).me(), createAccountClient({ fetch: f, baseUrl: 'https://b' }).me()]);
+    expect(calls).toBe(4);
+  });
 });
