@@ -131,6 +131,19 @@ export interface LibrarySlice {
   removeWarmup(id: string, d?: number): void;
 }
 
+/** Rest days, day swaps, phases and the week's program, and moving a card to another day. */
+export interface ProgramSlice {
+  restOverflow(n: number): FlatSlot[];
+  setRestDay(n: number, opts?: { skipOverflow?: boolean }): boolean | undefined;
+  swapDays(d: number, dir: number): boolean;
+  setPhase(slotId: string, idx: number, ph: PhaseKey): void;
+  setWeekProg(k: ProgKey): void;
+  setMode(mode: Cfg['mode']): void;
+  moveSlot(slotId: string, day: number): void;
+  undoMove(): void;
+  dismissMove(): void;
+}
+
 /** The downloads: CSV, Excel and the full data file. */
 export interface ExportSlice {
   exporting: ExportKind | null; // which export is running
@@ -377,15 +390,7 @@ export interface CoreSlice {
   skipCards(ids: string[]): void;
   moveCards(ids: string[], day: number): void;
 
-  restOverflow(n: number): FlatSlot[];
-  setRestDay(n: number, opts?: { skipOverflow?: boolean }): boolean | undefined;
-  swapDays(d: number, dir: number): boolean;
-  setPhase(slotId: string, idx: number, ph: PhaseKey): void;
-  setWeekProg(k: ProgKey): void;
-  setMode(mode: Cfg['mode']): void;
-  moveSlot(slotId: string, day: number): void;
-  undoMove(): void;
-  dismissMove(): void;
+
   gotoWeek(which: 'today' | 'prev' | 'next'): void;
 
   addEntry(slotId: string, idx: number, entry: LogEntry, opts?: { check?: boolean }): boolean;
@@ -415,6 +420,6 @@ export interface BackupSlice {
   forgetBackups(): Promise<void>;
 }
 
-export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & RemovedSlice;
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & RemovedSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];
