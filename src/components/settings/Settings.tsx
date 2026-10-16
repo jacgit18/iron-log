@@ -2,6 +2,7 @@ import AccountPanel from './AccountPanel.js';
 import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
 import AutoBackups from './AutoBackups.js';
+import { BACKUP_DAYS } from '../../lib/autoBackup.js';
 import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
@@ -324,7 +325,7 @@ function ErasePanel() {
   return (
     <section className="panel erase danger-panel" aria-labelledby="erase-h">
       <h3 id="erase-h">Erase data</h3>
-      <p>Deletes what you check below {storeMode === 'db' ? 'from your saved data' : 'from this browser'}, to start the tracker over. It can't be undone here, so use Export all data first.</p>
+      <p>Deletes what you check below {storeMode === 'db' ? 'from your saved data' : 'from this browser'}, to start the tracker over. It can't be undone here, so use Export all data first. The automatic backups keep a copy for up to {BACKUP_DAYS} days.</p>
       <fieldset>
         <legend className="sr">What to erase</legend>
         {ERASE.map(([k, label, hint]) => (

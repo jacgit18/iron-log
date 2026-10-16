@@ -45,6 +45,7 @@ export default function OtherAccountCard() {
     setBusy(false);
     if (!done) { flag('Could not sign out. Try again in a moment.'); return; }
     forgetSession(LS);
+    await useAppStore.getState().forgetBackups(); // the next person to sign in on this device must not be offered this account's copies
     window.location.reload(); // signed out on purpose: the next screen is the landing page
   };
 
