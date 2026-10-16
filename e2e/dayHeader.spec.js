@@ -38,13 +38,13 @@ test('the Rest box makes a rest day from the header, and a rest day keeps it tic
   await expect(page.locator('.col.rest')).toHaveCount(0);
 });
 
-test('on a wide screen the header has the same order, and Day 1 keeps its one arrow in the right-hand slot', async ({ page }) => {
+test('on a wide screen the Rest box stays at the right end, and Day 1 keeps its one arrow in the right-hand slot', async ({ page }) => {
   const col = page.locator('#col-1');
   await expect(col.locator('.restchk')).toBeVisible();
   await expect(col.locator('#swap-1--1')).toHaveCount(0);
   await expect(col.locator('#swap-1-1')).toBeVisible();
   const o = await places(col);
-  expect(o.arrows).toBeLessThan(o.rest);
+  expect(o.head - o.restRight).toBeLessThan(12); // narrow columns drop Rest to a second row; it stays at the right end
   const inRightSlot = await col.evaluate(c => c.querySelector('#swap-1-1').getBoundingClientRect().left > c.querySelector('.swaps').getBoundingClientRect().left + 10);
   expect(inRightSlot).toBe(true);
 });

@@ -3,6 +3,7 @@
    above already show done / total. */
 .boardroot .colhead {
   align-items: center;
+  flex-wrap: wrap;
 }
 .boardroot .colhead .swaps {
   margin: 0 auto;
@@ -19,6 +20,13 @@
   line-height: 1.05;
   text-transform: uppercase;
   color: var(--ink);
+}
+
+/* Wide screens have seven narrow columns, so the Rest box drops to a second row there: keep it at the right end of that row. */
+@media (min-width:701px) {
+  .boardroot .colhead .restchk {
+    margin-left: auto;
+  }
 }
 
 /* A swap just happened (Board.tsx, `swapFlash` in the store): the two days that changed get a thin, soft accent outline that fades away, and on a

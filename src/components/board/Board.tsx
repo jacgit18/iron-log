@@ -253,10 +253,6 @@ export default function Board() {
                 <SwapArrows d={d} />
                 <label className="restchk"><span className="cond" aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /></label>
               </div>
-              <div className="addrow">
-                {!fromRecord && <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add to program, Day ${d}: stays every week`} onClick={() => st.openAddToProgram(d)}>+ Add to program</button>}
-                <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`This week only: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ This week only</button>
-              </div>
               {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
               {open.map((s, i) => {
                 const sec = headOf(s, pd);
