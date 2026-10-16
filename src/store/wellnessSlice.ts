@@ -186,7 +186,9 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
   // Another instance of the same supplement (taken twice a day): its own id, section, dose and ticks; the name, brand, catalog id and note
   // are copied. It sits right after the one it copies.
   addSupplementInstance(id, slot, dose) {
-    if (get().blocked() || !SLOTS.some(([k]) => k === slot) || !get().supp.items.some(x => x.id === id)) return false;
+    const src = get().supp.items.find(x => x.id === id);
+    if (get().blocked() || !SLOTS.some(([k]) => k === slot) || !src) return false;
+    if (get().supp.items.some(x => x.slot === slot && sameSupplement(x, src.n, src.brand))) return false; // already in that section
     const dz = String(dose || '').trim().slice(0, 40);
     return get().mutateSupp(s => {
       const i = s.items.findIndex(x => x.id === id);

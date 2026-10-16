@@ -19,6 +19,8 @@ const mineOf = (i: SupplementItem, syncing: boolean): MineOption => ({
   meta: [i.brand, i.slot ? `In ${slotLabel(i.slot)}` : 'Library only', i.dose].filter(Boolean).join(' · '),
   ...(syncing ? { badge: i.catalogId ? 'Library' : 'Custom' } : {}),
 });
+// The same supplement: name and brand, any case (instances of one supplement share both).
+const sameName = (a: SupplementItem, b: SupplementItem) => a.n.toLowerCase() === b.n.toLowerCase() && (a.brand || '').toLowerCase() === (b.brand || '').toLowerCase();
 const pickedName = (c: PickerChoice | null, items: SupplementItem[]) =>
   !c ? null : c.kind === 'mine' ? items.find(i => i.id === c.id)?.n ?? null : c.kind === 'catalog' ? c.item.name : c.name;
 
@@ -69,7 +71,7 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
       {editing && (
         <form className="suppadd" onSubmit={add}>
           <ItemPicker id={`suppname-${slot}`} label={`Add to ${label}`} kind="supplement" value={name} maxLength={60} placeholder="Name or brand, e.g. creatine now"
-            mine={items.filter(i => i.slot !== slot).map(i => mineOf(i, syncing))} also={list.map(i => mineOf(i, syncing))}
+            mine={items.filter((i, k) => i.slot !== slot && !list.some(l => sameName(l, i)) && items.findIndex(j => j.slot !== slot && sameName(j, i)) === k).map(i => mineOf(i, syncing))} also={list.map(i => mineOf(i, syncing))}
             catalogMeta={c => [c.brand, c.data.form].filter(Boolean).join(' · ')} createLabel={n => `Add “${n}” as a new supplement`}
             onText={v => { setName(v); setErr(''); }} onPick={setPick} />
           <label className="field">Dose (optional)<input type="text" id={`suppdose-${slot}`} placeholder="e.g. 5 g" maxLength={40} value={dose} onChange={e => setDose(e.target.value)} /></label>

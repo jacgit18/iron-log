@@ -229,6 +229,8 @@ describe('supplement library', () => {
     expect(st().addSupplement('morning', 'Creatine', '5 g')).toBe(true);
     const am = st().supp.items[0];
     expect(st().addSupplementInstance(am.id, 'night')).toBe(true);
+    expect(st().addSupplementInstance(am.id, 'night')).toBe(false); expect(st().addSupplementInstance(am.id, 'morning')).toBe(false); // already in that section
+    expect(st().supp.items).toHaveLength(2);
     expect(st().addSupplementInstance(am.id, 'lunch')).toBe(false); expect(st().addSupplementInstance('nope', 'night')).toBe(false);
     const pm = st().supp.items[1];
     expect(pm).toMatchObject({ id: 'creatine-2', n: 'Creatine', slot: 'night', dose: '5 g' }); // the dose is copied
