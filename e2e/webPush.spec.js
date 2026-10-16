@@ -40,9 +40,9 @@ async function setup(page, { admin = true, on = true, now = NOW } = {}) {
   return calls;
 }
 const scheduled = calls => calls.filter(c => c.path === '/schedule' || c.path === '/cancel');
-const day1Boxes = page => page.locator('.col.sel article.card > .row1 > input.chk');
+const day1Boxes = page => page.locator('.col.sel article.card input.chk.cardchk');
 // A ticked card sinks to the end of its day, so a locator for "the first card" moves on after each tick: pin the card by its checkbox id.
-const firstOpen = async page => page.locator(`#${await page.locator('.col.sel article.card:not(.done) > .row1 > input.chk').first().getAttribute('id')}`);
+const firstOpen = async page => page.locator(`#${await page.locator('.col.sel article.card:not(.done) input.chk.cardchk').first().getAttribute('id')}`);
 
 test('Settings offers push to an admin, and turning it on subscribes this device', async ({ page }) => {
   const calls = await setup(page, { on: false });

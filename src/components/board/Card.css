@@ -3,6 +3,7 @@
 .card .row1:has(.morebtn) {
   position: relative;
   padding-right: 36px;
+  min-height: 16px;
 }
 .card .row1 .morebtn {
   position: absolute;
@@ -16,4 +17,13 @@
 .cardmore {
   border-top: 1px solid var(--line);
   padding-top: 8px;
+}
+/* The checkbox sits on the same line as the exercise name, on single and multi-exercise cards alike; a long name wraps beside it, not under it. */
+.card .exname {
+  display: flex;
+  align-items: flex-start;
+}
+.card .exname .exlabel {
+  flex: 1;
+  min-width: 0;
 }
