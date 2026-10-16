@@ -498,18 +498,8 @@ header.top h1 {
 .edpanel {
   max-width: 760px;
 }
-.progname {
-  max-width: 360px;
-  margin-bottom: 12px;
-}
-.libnote {
-  margin-bottom: 12px;
-}
 .lib .actions .btn {
   flex: 1 1 150px;
-}
-.lib .edrow.inuse {
-  border-color: var(--accent);
 }
 .fold summary {
   cursor: pointer;
@@ -549,74 +539,6 @@ header.top h1 {
   display: grid;
   gap: 4px;
 }
-.libsave {
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-}
-.edlist {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.edrow {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px 10px;
-  background: var(--bg);
-}
-.edmain {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1 1 220px;
-}
-.edbtns {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-.draghandle {
-  flex: 0 0 auto;
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  padding: 0 6px;
-  margin: -8px 0 -8px -10px;
-  -webkit-touch-callout: none;
-  font-size: 1.25rem;
-  line-height: 1;
-  color: var(--muted);
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-.draghandle:hover {
-  color: var(--ink);
-}
-.edrow.dragging {
-  position: relative;
-  z-index: 2;
-  cursor: grabbing;
-  box-shadow: 0 6px 18px rgb(0 0 0 / .25);
-  border-color: var(--accent);
-}
-.edrow.dragging .draghandle {
-  cursor: grabbing;
-}
-.edrow.shifting {
-  transition: transform .15s ease;
-}
 .removing {
   border-color: var(--str);
   background: var(--str-bg);
@@ -632,9 +554,6 @@ header.top h1 {
   letter-spacing: .06em;
   font-weight: 600;
   color: var(--str);
-}
-.edadd {
-  margin: 4px 0 12px;
 }
 .btn:disabled {
   opacity: .35;
