@@ -18,19 +18,13 @@ export interface AccountOptions {
   fetch?: typeof fetch;
 }
 
-// Who-am-I checks that are in the air right now, by address. At startup the sign-in gate, the admin check, the sync adapter, the account badge
-// and the Account panel each ask within the same second (5 requests on a phone); while one is waiting they share its answer. Only requests
-// that overlap are shared (same fetch function, same address, same headers), so no answer is ever reused after it arrives.
-const inFlight = new WeakMap<typeof fetch, Map<string, Promise<AccountState>>>();
-const pageFetch: typeof fetch = (...args) => fetch(...args);
-
 const asString = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
 
 export function createAccountClient(options: AccountOptions = {}) {
   const { baseUrl = '', headers } = options;
-  const doFetch = options.fetch ?? pageFetch;
+  const doFetch = options.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
 
-  async function fetchMe(): Promise<AccountState> {
+  async function me(): Promise<AccountState> {
     try {
       const res = await doFetch(`${baseUrl}/api/me`, { headers: { accept: 'application/json', ...(headers?.() ?? {}) }, credentials: 'same-origin' });
       if (res.status === 401) return { status: 'signed-out' };
@@ -43,19 +37,6 @@ export function createAccountClient(options: AccountOptions = {}) {
     } catch {
       return { status: 'unreachable' };
     }
-  }
-
-  function me(): Promise<AccountState> {
-    const mine = inFlight.get(doFetch) ?? new Map<string, Promise<AccountState>>();
-    inFlight.set(doFetch, mine);
-    // The headers are part of the key: a check that names another (development) user is another question, never answered by this one.
-    const key = `${baseUrl}\n${JSON.stringify(headers?.() ?? {})}`;
-    let pending = mine.get(key);
-    if (!pending) {
-      pending = fetchMe().finally(() => { mine.delete(key); });
-      mine.set(key, pending);
-    }
-    return pending;
   }
 
   /** Asks Better Auth for the Google sign-in address. The caller sends the browser there; it comes back to the app root. */
