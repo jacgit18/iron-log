@@ -26,6 +26,21 @@ test('on a phone the header shows the arrows and the Rest box, with no ⋯ or co
   expect(o.head - o.restRight).toBeLessThan(12); // the Rest box is at the end of the row
 });
 
+test('stamping a date on a day moves neither the Rest box nor the arrows', async ({ page }) => {
+  await phone(page);
+  const col = page.locator('.col.sel');
+  const head = () => col.locator('.colhead').evaluate(h => {
+    const o = h.getBoundingClientRect(); // measured from the header, so a scroll does not count
+    const at = sel => { const r = h.querySelector(sel).getBoundingClientRect(); return [r.left - o.left, r.top - o.top, r.width, r.height]; };
+    return { arrows: at('.swaps'), rest: at('.restchk'), head: at('h3') };
+  });
+  await expect(col.locator('.dd-text')).toHaveCount(0);
+  const before = await head();
+  await col.locator('article.card input.cardchk').first().check(); // the first logged set stamps the day's date
+  await expect(col.locator('.dd-text')).toBeVisible();
+  expect(await head()).toEqual(before);
+});
+
 test('the Rest box makes a rest day from the header, and a rest day keeps it ticked', async ({ page }) => {
   await phone(page);
   await page.locator('#rest-1').check();
