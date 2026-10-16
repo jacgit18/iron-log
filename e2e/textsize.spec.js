@@ -54,6 +54,7 @@ test('with reduced motion on, transitions, animations and smooth scrolling are o
     const cs = id => getComputedStyle(document.getElementById(id));
     return { shift: cs('p1').transitionDuration, fill: cs('p2').transitionDuration, anim: cs('p3').animationName, scroll: getComputedStyle(document.documentElement).scrollBehavior };
   });
+  await page.click('#tab-program'); // the editor's row styles load with the Program tab
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   const on = await probe();
   expect(on.shift).toBe('0.15s');
