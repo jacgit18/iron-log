@@ -591,78 +591,6 @@ body.timing {
     padding-bottom: 320px;
   }
 }
-.fab {
-  position: fixed;
-  right: var(--gr);
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  z-index: 14;
-  border: 0;
-  border-radius: 999px;
-  padding: 12px 18px;
-  font-weight: 700;
-  background: var(--accent);
-  color: var(--accent-ink);
-  box-shadow: 0 4px 14px rgba(0,0,0,.18);
-}
-.timerbar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 16;
-  background: var(--surface);
-  border-top: 1px solid var(--line);
-  padding: 0 var(--gr) calc(10px + env(safe-area-inset-bottom, 0px)) var(--gl);
-  box-shadow: 0 -4px 14px rgba(0,0,0,.08);
-}
-.tb-bar {
-  height: 4px;
-  background: var(--sunk);
-  margin: 0 calc(-1 * var(--gr)) 8px calc(-1 * var(--gl));
-}
-.tb-bar i {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: var(--accent);
-  transition: width .25s linear;
-}
-.timerbar[data-mode="hold"] .tb-bar i {
-  background: var(--iso);
-}
-.tb-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  max-width: 1500px;
-  margin: 0 auto;
-}
-.tb-main {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-.tb-label {
-  font-weight: 600;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.tb-time {
-  font-family: "Barlow Condensed","Barlow Condensed Fallback",sans-serif;
-  font-size: 2.5rem;
-  font-weight: 700;
-  line-height: 1;
-  order: -1;
-}
-.tb-btns {
-  display: flex;
-  gap: 6px;
-}
 .stall {
   align-self: flex-start;
   display: inline-block;
@@ -1764,22 +1692,6 @@ body.timing {
   body.timing {
     padding-bottom: calc(var(--tabbar) + 132px + env(safe-area-inset-bottom, 0px));
   }
-  .fab {
-    bottom: calc(var(--tabbar) + 14px + env(safe-area-inset-bottom, 0px));
-  }
-  .timerbar {
-    bottom: calc(var(--tabbar) + env(safe-area-inset-bottom, 0px));
-    padding-bottom: 10px;
-  }
-  .tb-main {
-    flex-basis: 100%;
-  }
-  .tb-btns {
-    width: 100%;
-  }
-  .tb-btns .btn {
-    flex: 1;
-  }
   .sheet {
     max-height: 88vh;
     max-height: 88dvh;
@@ -2316,13 +2228,6 @@ fieldset.plain legend {
     font-size: 1.25rem;
   }
 }
-
-/* ---- Short landscape phones (667x375, 568x320, ...) ----
-   Layout rule: width <= 700px is the phone layout (one day at a time, fixed tab bar). When that layout is also
-   short and landscape (height <= 500px) the bottom tab bar, the rest-timer bar and the sticky day tabs would take
-   over half the screen, so the tab bar becomes a left rail (full height, nothing stacked at the bottom), the day
-   tabs and header shrink, and sheets use the full height. 700px-tall-or-more screens (portrait phones, tablets,
-   a foldable's inner screen at 717x512) never match. */
 @media (max-width:700px) and (max-height:500px) and (orientation:landscape) {
   :root {
     --tabbar: 0px;
@@ -2374,30 +2279,6 @@ fieldset.plain legend {
   }
   html {
     scroll-padding-top: calc(56px + env(safe-area-inset-top,0px));
-  }
-  .timerbar {
-    left: var(--rail);
-    --gl: 16px;
-    padding-bottom: 6px;
-  }
-  .tb-bar {
-    margin-bottom: 4px;
-  }
-  .tb-time {
-    font-size: 1.875rem;
-  }
-  .tb-main {
-    flex-basis: auto;
-  }
-  .tb-btns {
-    width: auto;
-  }
-  .tb-btns .btn {
-    flex: none;
-    min-height: 44px;
-  }
-  .fab {
-    padding: 10px 16px;
   }
   .scrim {
     align-items: center;
