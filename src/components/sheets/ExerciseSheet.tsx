@@ -14,7 +14,7 @@ import ArmedButton from '../ArmedButton.jsx';
 
 // Everything about one exercise in one place: name (your own exercises), video link, equipment, the phase it starts
 // in on every card (a card's own saved or one-week phase still wins), 1RM and muscles. Without an exId it makes a
-// new exercise for the library. Opened from a card's Details button and from the Exercise library.
+// new exercise for the library. Opened from the Exercise library (Program tab).
 export default function ExerciseSheet({ exId }: { exId: string | null | undefined }) {
   const cfg = useAppStore(s => s.cfg);
   const st = useAppStore.getState();
