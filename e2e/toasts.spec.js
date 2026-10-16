@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.js';
 // The notices that answer an action (undo after an uncheck, move heads-up, order, Removed ..., the status line) float: above the
 // bottom bar on a phone, in the bottom left corner on a wider screen, so they show where you are scrolled and never push the page.
 const untick = async page => {
-  const box = page.locator('.col.sel article.card > .row1 > input.chk').first();
+  const box = page.locator('.col.sel article.card input.chk.cardchk').first();
   await box.check();
   await page.evaluate(() => window.scrollTo(0, 700));
   await box.uncheck();
@@ -32,7 +32,7 @@ test('on a phone the undo notice floats in view over the cards, above the bottom
 });
 
 test('on a wide screen the undo notice floats in the bottom left corner and does not move the page', async ({ page }) => {
-  const box = page.locator('.col.sel article.card > .row1 > input.chk').first();
+  const box = page.locator('.col.sel article.card input.chk.cardchk').first();
   await box.check();
   const top = () => page.evaluate(() => document.querySelector('.board').getBoundingClientRect().top + window.scrollY);
   const before = await top();

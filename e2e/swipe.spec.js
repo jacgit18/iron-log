@@ -22,10 +22,10 @@ const swipe = (page, selector, dx, dy, { from = '', fx = 0.5, fy = 0.5 } = {}) =
   el.dispatchEvent(mk('touchend', x0 + dx, y0 + dy));
 }, { selector, dx, dy, from, fx, fy });
 
-const CARD = '.col.sel article.card:has(> .row1 > input.chk)'; // a card with its own checkbox (not a superset)
+const CARD = '.col.sel article.card:has(input.chk.cardchk)'; // a card with its own checkbox (not a superset)
 // A ticked or skipped card sinks to the end of its day, so pin the card under test by its ⋯ button id.
 const pin = async (page, cards) => { const id = await page.locator(cards).first().locator('> .row1 > .morebtn').getAttribute('id'); return `.col.sel article.card:has(> .row1 > #${id})`; };
-const pick = async page => { const sel = await pin(page, CARD); return { sel, box: page.locator(`${sel} > .row1 > input.chk`) }; };
+const pick = async page => { const sel = await pin(page, CARD); return { sel, box: page.locator(`${sel} input.chk.cardchk`) }; };
 const day = page => page.locator('.daytabs [aria-selected="true"]');
 
 test('a long swipe right ticks a card off, and a swipe either way puts it back, like the checkbox', async ({ page }) => {
@@ -65,7 +65,7 @@ test('a long swipe left skips a card for the week, and the notice\'s Undo brings
 
 test('a superset card swipes left to skip, and a swipe right does nothing to it or to the day', async ({ page }) => {
   await phone(page);
-  const SS = '.col.sel article.card:not(:has(> .row1 > input.chk))';
+  const SS = '.col.sel article.card:not(:has(input.chk.cardchk))';
   for (const tab of await page.locator('.daytabs [role="tab"]').all()) { if (await page.locator(SS).count()) break; await tab.click(); }
   const sel = await pin(page, SS);
   const before = await day(page).getAttribute('id');

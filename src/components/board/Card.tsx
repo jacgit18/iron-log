@@ -74,10 +74,6 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
     >
       {removing && <span className="rmtag">Will be removed from this week · tap Remove again</span>}
       <div className="row1">
-        {!paired && (
-          <input type="checkbox" className="chk" id={`chk-${s.id}`} checked={done} aria-label={`Mark ${cardName} done`}
-            onChange={e => checkCard(s.id, e.target.checked)} />
-        )}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {(label || s.tier || s.experiment) && <span className="tag">{[s.experiment && (s.added ? 'Added' : 'Experiment'), s.tier, label].filter(Boolean).join(' · ')}</span>}
           {week.moved[s.id] && <span className="moved">From Day {planned}</span>}
@@ -113,13 +109,17 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
             <div className={`ex${idone ? ' idone' : ''}${ex.eq && eqName(cfg, ex.eq) ? ' haseq' : ''}`}>
               {ex.eq && eqName(cfg, ex.eq) && <span className="tag exeq">{eqName(cfg, ex.eq)}</span>}
               <div className="exname">
-                {paired && (
+                {paired ? (
                   <input type="checkbox" className="chk" id={`chk-${s.id}-${idx}`} checked={idone} aria-label={`Mark ${ex.n} done`}
                     onChange={e => checkItem(s.id, idx, e.target.checked)} />
+                ) : idx === 0 && (
+                  <input type="checkbox" className="chk cardchk" id={`chk-${s.id}`} checked={done} aria-label={`Mark ${cardName} done`}
+                    onChange={e => checkCard(s.id, e.target.checked)} />
                 )}
-                <h4 className="exh" id={`h-${s.id}-${idx}`}>{s.type === 'superset' ? (idx === 0 ? 'A · ' : 'B · ') : ''}{ex.n}</h4>
-                {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(ex.url)}: ${ex.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(ex.url)}</a>}
-                <button type="button" className="btn sm ghost" id={`det-${s.id}-${idx}`} aria-label={`Details: ${ex.n}`} onClick={() => openModal({ type: 'exercise', exId: it.ex })}>Details</button>
+                <div className="exlabel">
+                  <h4 className="exh" id={`h-${s.id}-${idx}`}>{s.type === 'superset' ? (idx === 0 ? 'A · ' : 'B · ') : ''}{ex.n}</h4>
+                  {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(ex.url)}: ${ex.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(ex.url)}</a>}
+                </div>
               </div>
               <div className="exline">
                 <select className="phase" id={`ph-${s.id}-${idx}`} data-p={ph || ''} aria-label={`Phase for ${ex.n}, this week only`} value={ph || ''}

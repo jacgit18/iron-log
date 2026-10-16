@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.js';
 
 // How long notices stay, how many show, and the way out of the injury prevention ones. The fixture's clock is fake: runFor moves it.
-const first = page => page.locator('.col.sel article.card > .row1 > input.chk').first();
+const first = page => page.locator('.col.sel article.card input.chk.cardchk').first();
 const untick = async page => { const box = first(page); await box.check(); await box.uncheck(); };
 const undoNote = page => page.locator('.toasts .notice[data-kind="undo"]');
 const info = page => page.locator('.toasts .notice[data-kind="info"]');
