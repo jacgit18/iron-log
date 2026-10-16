@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
 import CatalogMatches from '../program/CatalogMatches.jsx';
+import { plainText } from '../../lib/picker.js';
 
 // Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later. Shown under the
 // schedule on Daily → Supplements while Edit is on (spec inline-catalog-picker step 6; it was a Program tab view before).
@@ -13,9 +14,9 @@ export default function SupplementLibrary() {
   const syncing = useAppStore(s => s.sync !== null);
   const { openModal, moveSupplement } = useAppStore.getState();
   const [q, setQ] = useState(''); const [src, setSrc] = useState('');
-  const needle = q.trim().toLowerCase();
+  const needle = q.trim().toLowerCase(); const words = plainText(q).split(' ').filter(Boolean);
   const sources = syncing && items.some(i => i.catalogId) && items.some(i => !i.catalogId);
-  const shown = items.filter(i => (!needle || i.n.toLowerCase().includes(needle) || (i.brand || '').toLowerCase().includes(needle))
+  const shown = items.filter(i => (!words.length || words.every(w => plainText(`${i.n} ${i.brand || ''}`).includes(w)))
     && (!sources || !src || (i.catalogId ? 'library' : 'custom') === src));
   const filtering = !!needle || (sources && !!src);
   return (
@@ -46,7 +47,10 @@ export default function SupplementLibrary() {
           return (
             <div key={slot || 'lib'}>
               <div className="sect">{slotLabel(slot)}</div>
-              {rows.map(r => (
+              {rows.map(r => {
+                // Instances of one supplement share a name: say which section a button acts on.
+                const where = items.filter(i => i.n === r.n && (i.brand || '') === (r.brand || '')).length > 1 ? ` in ${slotLabel(r.slot)}` : '';
+                return (
                 <div className="exrow" key={r.id}>
                   <div className="exmain">
                     <b>{r.n}{syncing && (r.catalogId
@@ -56,13 +60,14 @@ export default function SupplementLibrary() {
                   </div>
                   <div className="actions" style={{ margin: 0 }}>
                     {!filtering && <>
-                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} up`} onClick={() => moveSupplement(r.id, -1)}><span aria-hidden="true">↑</span></button>
-                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} down`} onClick={() => moveSupplement(r.id, 1)}><span aria-hidden="true">↓</span></button>
+                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} up`} onClick={() => moveSupplement(r.id, -1)}><span aria-hidden="true">↑</span></button>
+                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} down`} onClick={() => moveSupplement(r.id, 1)}><span aria-hidden="true">↓</span></button>
                     </>}
-                    <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${r.n}`} onClick={() => openModal({ type: 'supplement', id: r.id })}>Edit</button>
+                    <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${r.n}${where}`} onClick={() => openModal({ type: 'supplement', id: r.id })}>Edit</button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           );
         })}

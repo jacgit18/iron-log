@@ -24,7 +24,9 @@ const sameItem = (a: { name: string; brand?: string }, b: { name: string; brand?
   pickerKey(a.name) === pickerKey(b.name) && (!byBrand || pickerKey(a.brand) === pickerKey(b.brand));
 
 // Every word typed is somewhere in the name (or brand); a name that starts with what is typed comes first, then A to Z.
-const matches = (words: string[], ...fields: (string | undefined)[]) => { const hay = pickerKey(fields.filter(Boolean).join(' ')); return words.every(w => hay.includes(w)); };
+// Apostrophes are dropped and other punctuation is a space on both sides, as the server's supplement search does ("natures" finds Nature's).
+export const plainText = (s: unknown) => pickerKey(s).replace(/['’]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+const matches = (words: string[], ...fields: (string | undefined)[]) => { const hay = plainText(fields.filter(Boolean).join(' ')); return words.every(w => hay.includes(w)); };
 const rank = <T>(list: T[], q: string, name: (x: T) => string) =>
   [...list].sort((a, b) => Number(!pickerKey(name(a)).startsWith(q)) - Number(!pickerKey(name(b)).startsWith(q)) || name(a).localeCompare(name(b)));
 
@@ -38,7 +40,7 @@ const cap = <T>(list: T[], max: number): PickerGroup<T> => ({ shown: list.slice(
  */
 export function pickerOptions(q: string, mine: MineOption[], catalog: CatalogItem[], opts: { max?: number; byBrand?: boolean; serverFiltered?: boolean; also?: MineOption[] } = {}): PickerOptions {
   const max = opts.max ?? 8; const byBrand = !!opts.byBrand;
-  const k = pickerKey(q); const words = k ? k.split(' ') : [];
+  const k = pickerKey(q); const words = plainText(q).split(' ').filter(Boolean);
   const mineShown = rank(mine.filter(m => matches(words, m.name, byBrand ? m.brand : undefined)), k, m => m.name);
   const yours = [...mine, ...(opts.also || [])];
   const have = new Set(yours.map(m => m.catalogId).filter(Boolean));

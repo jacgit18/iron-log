@@ -19,6 +19,8 @@ const mineOf = (i: SupplementItem, syncing: boolean): MineOption => ({
   meta: [i.brand, i.slot ? `In ${slotLabel(i.slot)}` : 'Library only', i.dose].filter(Boolean).join(' · '),
   ...(syncing ? { badge: i.catalogId ? 'Library' : 'Custom' } : {}),
 });
+// The same supplement: name and brand, any case (instances of one supplement share both).
+const sameName = (a: SupplementItem, b: SupplementItem) => a.n.toLowerCase() === b.n.toLowerCase() && (a.brand || '').toLowerCase() === (b.brand || '').toLowerCase();
 const pickedName = (c: PickerChoice | null, items: SupplementItem[]) =>
   !c ? null : c.kind === 'mine' ? items.find(i => i.id === c.id)?.n ?? null : c.kind === 'catalog' ? c.item.name : c.name;
 
@@ -32,11 +34,13 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
   const [arming, setArming] = useState<string | null>(null); // the supplement whose Remove was pressed once
   const list = scheduleOf(items)[slot]; const t = slotTally(items, taken, date, slot);
   const held = pick && pickerKey(pickedName(pick, items)) === pickerKey(name) ? pick : null;
+  const heldItem = held?.kind === 'mine' ? items.find(i => i.id === held.id) : undefined;
   const done = () => { setName(''); setDose(''); setPick(null); setErr(''); };
   // Add: one of yours moves into this section, a catalog product joins your library in it, anything else is a new supplement.
   const add = (e: FormEvent) => {
     e.preventDefault();
-    if (held?.kind === 'mine') { if (s.setSupplementSlot(held.id, slot, dose)) done(); return; }
+    // One of yours that is already scheduled stays where it is and gets another instance here (taken twice a day); a library-only one moves in.
+    if (held?.kind === 'mine') { if (heldItem?.slot ? s.addSupplementInstance(held.id, slot, dose) : s.setSupplementSlot(held.id, slot, dose)) done(); return; }
     if (held?.kind === 'catalog') {
       const m = s.addCatalogSupplement(held.item, { slot, dose });
       // null also means nothing was saved (still loading): keep what was typed unless it is really there now.
@@ -67,12 +71,14 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
       {editing && (
         <form className="suppadd" onSubmit={add}>
           <ItemPicker id={`suppname-${slot}`} label={`Add to ${label}`} kind="supplement" value={name} maxLength={60} placeholder="Name or brand, e.g. creatine now"
-            mine={items.filter(i => i.slot !== slot).map(i => mineOf(i, syncing))} also={list.map(i => mineOf(i, syncing))}
+            mine={items.filter((i, k) => i.slot !== slot && !list.some(l => sameName(l, i)) && items.findIndex(j => j.slot !== slot && sameName(j, i)) === k).map(i => mineOf(i, syncing))} also={list.map(i => mineOf(i, syncing))}
             catalogMeta={c => [c.brand, c.data.form].filter(Boolean).join(' · ')} createLabel={n => `Add “${n}” as a new supplement`}
             onText={v => { setName(v); setErr(''); }} onPick={setPick} />
           <label className="field">Dose (optional)<input type="text" id={`suppdose-${slot}`} placeholder="e.g. 5 g" maxLength={40} value={dose} onChange={e => setDose(e.target.value)} /></label>
           <button type="submit" className="btn sm" id={`suppadd-${slot}`} disabled={!name.trim()}>Add</button>
-          {held?.kind === 'mine' && <p className="note">Moves it to {label}{dose.trim() ? ' with this dose' : ''}.</p>}
+          {held?.kind === 'mine' && <p className="note">{heldItem?.slot
+            ? `Adds another ${heldItem.n} to ${label}, so you can take it more than once a day${dose.trim() ? ', with this dose' : ''}.`
+            : `Moves it to ${label}${dose.trim() ? ' with this dose' : ''}.`}</p>}
           {held?.kind === 'catalog' && <p className="note">From the catalog. It joins your supplements in {label}.</p>}
           {err && <p className="note err" role="alert">{err}</p>}
         </form>
