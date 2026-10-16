@@ -112,7 +112,8 @@ test('offline catalog: the picker says so, and a new exercise can still be creat
   await expect(page.locator('.edpanel:not(.lib) .edrow .edmain b')).toContainText(['Sled Push Test']);
 });
 
-test('the day-add sheet offers the catalog too and puts the pick on that day', async ({ page }) => {
+// The day-add sheet has no button on the board any more (owner's request, 2026-10-16); its code stays until it is removed or given a new home.
+test.skip('the day-add sheet offers the catalog too and puts the pick on that day', async ({ page }) => {
   await openSynced(page);
   await page.click('#addweek-1');
   await field(page).fill('fly');

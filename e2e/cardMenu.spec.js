@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, seedExperiments } from './fixtures.js';
 
 // A card's Move to, Skip and Remove sit behind a ⋯ button in its top-right corner.
 const first = page => page.locator('#col-1 article.card').first();
@@ -50,12 +50,13 @@ test('after Skip focus lands on Undo skip, and after Undo skip on ⋯', async ({
 });
 
 test('on an experiment card Remove needs a second tap, keeps its panel open meanwhile, and ⋯ folds it again', async ({ page }) => {
-  await page.click('#addweek-1');
-  await page.getByRole('dialog').getByRole('combobox', { name: 'Exercise' }).fill('Wrist Roller Test');
-  await page.keyboard.press('Tab');
-  await page.getByRole('dialog').getByRole('button', { name: 'Add' }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  const card = page.locator('#col-1 article.card').filter({ hasText: 'Wrist Roller Test' }).first();
+  await seedExperiments(page, ['hack']);
+  await page.goto('/');
+  const entry = page.locator('.explist .expcard');
+  const name = (await entry.locator('.rmname').innerText()).trim();
+  await entry.locator('select').selectOption('1');
+  await entry.getByRole('button', { name: /^This week only: add .* to Day 1$/ }).click();
+  const card = page.locator('#col-1 article.card').filter({ hasText: name }).first();
   const more = card.getByRole('button', { name: /^More actions:/ });
   await more.click();
   const remove = card.getByRole('button', { name: /^Remove / });
@@ -68,5 +69,5 @@ test('on an experiment card Remove needs a second tap, keeps its panel open mean
   await expect(card.getByRole('button', { name: /^Remove / })).toBeVisible();
   await card.getByRole('button', { name: /^Remove / }).click();
   await card.getByRole('button', { name: /^Tap again to remove/ }).click();
-  await expect(page.locator('#col-1 article.card').filter({ hasText: 'Wrist Roller Test' })).toHaveCount(0);
+  await expect(page.locator('#col-1 article.card').filter({ hasText: name })).toHaveCount(0);
 });

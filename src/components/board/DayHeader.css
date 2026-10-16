@@ -1,22 +1,54 @@
-/* A day's header. The swap arrows are always shown. On a phone the Rest day box folds behind a ⋯ button
-   (a rest day's own column keeps it shown, since unticking Rest day is its main action), so the first card is a row nearer. */
-.daymore {
-  display: none;
+/* A day's header, left to right: the tick box for the day, its title, the swap arrows centered in the space between, and the Rest box
+   at the far right (the label sits inside, the box at the end: the mirror of the day's own tick box). No count here: the day tabs
+   above already show done / total. */
+.boardroot .colhead {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.boardroot .colhead .swaps {
+  margin: 0 auto;
+}
+.boardroot .swapgap {
+  width: 36px;
+  flex: none;
+}
+.boardroot .colhead .swaps {
+  align-items: center;
+  gap: 2px;
+}
+.boardroot .colhead .swapbtn {
+  min-width: 36px;
+  font-size: 1.75rem;
+}
+.boardroot .swaplabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: .6875rem;
+  line-height: 1.1;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.boardroot .swapicon {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+.boardroot .colhead .restchk {
+  flex: none;
+  margin-left: 0;
+  font-size: 1.3125rem;
+  font-weight: 700;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: var(--ink);
 }
 
-@media (max-width:700px) {
-  .boardroot .daymore {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0;
-    font-size: 1.25rem;
-    line-height: 1;
-  }
-  .boardroot .col:not(.rest, .more) .restchk {
-    display: none;
+/* Wide screens have seven narrow columns, so the Rest box drops to a second row there: keep it at the right end of that row. */
+@media (min-width:701px) {
+  .boardroot .colhead .restchk {
+    margin-left: auto;
   }
 }
 

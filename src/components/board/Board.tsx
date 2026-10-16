@@ -40,8 +40,9 @@ function SwapArrows({ d }: { d: number }) {
   const label = (n: number) => (rest.includes(d) ? (rest.includes(n) ? `Day ${n} is also a rest day` : `Move rest day to Day ${n}`) : rest.includes(n) ? `Swap Day ${d} with the rest day` : `Swap Day ${d} with Day ${n}`);
   return (
     <span className="swaps">
-      {d > 1 && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}--1`} aria-label={label(d - 1)} onClick={() => swap(-1)}><span aria-hidden="true">←</span></button>}
-      {d < DAYS.length && <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}-1`} aria-label={label(d + 1)} onClick={() => swap(1)}><span aria-hidden="true">→</span></button>}
+      {d > 1 ? <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}--1`} aria-label={label(d - 1)} onClick={() => swap(-1)}><span aria-hidden="true">‹</span></button> : <span className="swapgap" aria-hidden="true" />}
+      <span className="swaplabel" aria-hidden="true"><span className="swapicon">⇄</span>Swap day</span>
+      {d < DAYS.length ? <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}-1`} aria-label={label(d + 1)} onClick={() => swap(1)}><span aria-hidden="true">›</span></button> : <span className="swapgap" aria-hidden="true" />}
     </span>
   );
 }
@@ -86,7 +87,6 @@ export default function Board() {
   const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey && !onlyElsewhere(slots, week) ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
   const [filter, setFilter] = useState({ muscle: '', eq: '' });
-  const [dayMore, setDayMore] = useState<number | null>(null); // phones: the day whose Rest day box and swap arrows are showing
   const [filterOpen, setFilterOpen] = useState(false); // phones only: the sort and equipment fields fold away
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
   const filtering = !!filter.eq;
@@ -217,8 +217,7 @@ export default function Board() {
           if (pd == null) return (
             <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`}>
               {swapFrom(swapFlash, d)}
-              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div>{week.restOn && <div className="sub daydate">{fmtDayDate(week.restOn)}</div>}</div><SwapArrows d={d} /></div>
-              <label className="restchk"><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /> Rest day</label>
+              <div className="colhead"><div><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div>{week.restOn && <div className="sub daydate">{fmtDayDate(week.restOn)}</div>}</div><SwapArrows d={d} /><label className="restchk"><span className="cond" aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /></label></div>
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
@@ -239,7 +238,7 @@ export default function Board() {
           return (
             <section
               key={d} id={`col-${d}`} aria-labelledby={`colh-${d}`}
-              className={`col${t.full ? ' complete' : ''}${d === day ? ' sel' : ''}${overDay === d ? ' over' : ''}${dayMore === d ? ' more' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`}
+              className={`col${t.full ? ' complete' : ''}${d === day ? ' sel' : ''}${overDay === d ? ' over' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`}
               onDragOver={e => { if (!dragId) return; e.preventDefault(); setOverDay(d); }}
               onDrop={e => { if (!dragId) return; e.preventDefault(); const id = dragId; onDragEnd(); if (id.startsWith('exp:')) st.addToDay(id.slice(4), d); else st.moveSlot(id, d); }}
             >
@@ -253,14 +252,7 @@ export default function Board() {
                   {dayDef.sub && <div className="sub">{dayDef.sub}</div>}
                 </div>
                 <SwapArrows d={d} />
-                <span className="count">{t.done}/{t.total}</span>
-                <button type="button" className="btn sm ghost daymore" id={`daymore-${d}`} aria-expanded={dayMore === d} aria-controls={`restrow-${d}`} aria-label={`More for Day ${d}: rest day`}
-                  onClick={() => setDayMore(dayMore === d ? null : d)}><span aria-hidden="true">⋯</span></button>
-              </div>
-              <label className="restchk" id={`restrow-${d}`}><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /> Rest day</label>
-              <div className="addrow">
-                {!fromRecord && <button type="button" className="btn sm" id={`add-${d}`} aria-label={`Add to program, Day ${d}: stays every week`} onClick={() => st.openAddToProgram(d)}>+ Add to program</button>}
-                <button type="button" className="btn sm ghost" id={`addweek-${d}`} aria-label={`This week only: add an exercise to Day ${d}`} onClick={() => st.openModal({ type: 'dayadd', col: d })}>+ This week only</button>
+                <label className="restchk"><span className="cond" aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked={false} onChange={() => tickRest(d)} /></label>
               </div>
               {filtering && vis.length === 0 && <p className="note">Nothing here matches the filter.</p>}
               {open.map((s, i) => {
