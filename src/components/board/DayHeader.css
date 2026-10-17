@@ -12,12 +12,27 @@
   align-items: center;
   gap: var(--sp-2);
 }
+.boardroot .colhead .daytitle {
+  /* The title gives way before the Rest box does. Its flex basis is its longest word, so a long title or a stamped date never decides where the
+     row breaks (a wrapping row breaks on the basis, not on the shrunk size): Rest stays level with the day's box. It still grows to its full text
+     and no further, so what is left over goes to the centered arrows. A very large text size is where the row may still wrap, as before. */
+  flex: 1 1 min-content;
+  max-width: max-content;
+  overflow-wrap: break-word;
+}
+/* A phone: tighter gaps, so the box, the title with its date, the arrows and Rest fit one row at 360px and up (the arrows' 44px targets took 16px). */
+@media (max-width:700px) {
+  .boardroot .colhead {
+    gap: var(--sp-4);
+  }
+}
 .boardroot .swapgap {
   width: 44px;
   flex: none;
 }
 .boardroot .colhead .swapbtn {
   min-width: 44px;
+  padding-inline: var(--sp-8);
   font-size: var(--fs-5xl);
 }
 .boardroot .swaplabel {
@@ -34,6 +49,13 @@
 .boardroot .swapicon {
   font-size: var(--fs-xl);
   line-height: 1;
+}
+/* The smallest phones (360px): the words under the swap icon go, the icon stays between the arrows (their names are in their aria-labels). */
+@media (max-width:380px) {
+  .boardroot .swaplabel {
+    /* token-ok: hides the words; the icon sets its own size */
+    font-size: 0;
+  }
 }
 .boardroot .colhead .restchk {
   flex: none;
