@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, onList, parseDollars, shiftMonth, tally,
+  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, onList, parseDollars, shiftMonth, spendByMonth, tally,
 } from './grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -186,5 +186,30 @@ describe('merging when two devices made different ids', () => {
     expect(r.grocery.items).toHaveLength(500);
     expect(r.months).toEqual({});
     expect(r.changed).toBe(false);
+  });
+});
+
+describe('spending by month', () => {
+  const months: Record<string, GroceryMonth> = {
+    '2026-08': { lines: { kale: { got: true }, rice: { got: true, qty: 2, cents: 1000 }, salt: { got: true } }, pulled: [] },
+    '2026-09': { lines: { kale: { qty: 3 } }, pulled: [] }, // counted but not ticked: not bought
+    '2026-10': { lines: { gone: { got: true, qty: 2, cents: 300 }, kale: { got: true, cents: 400 } }, pulled: [] },
+  };
+  it('adds up only ticked lines, oldest month first, with the month\'s own price before the catalogue\'s', () => {
+    const r = spendByMonth(g, months, '2026-10', 4);
+    expect(r.map(x => x.key)).toEqual(['2026-07', '2026-08', '2026-09', '2026-10']);
+    expect(r[0]).toEqual({ key: '2026-07', spent: 0, bought: 0 });
+    expect(r[1]).toEqual({ key: '2026-08', spent: 2 * 250 + 2 * 1000, bought: 3 }); // kale at the catalogue price, rice at its own, salt unpriced
+    expect(r[2]).toEqual({ key: '2026-09', spent: 0, bought: 0 });
+    expect(r[3]).toEqual({ key: '2026-10', spent: 600 + 2 * 400, bought: 2 }); // a removed item still counts at its own price
+  });
+});
+
+describe('item notes', () => {
+  it('keeps a trimmed note and leaves the key out when there is none', () => {
+    const c = normGrocery({ items: [{ id: 'a', n: 'A', note: '  the green ones ' }, { id: 'b', n: 'B', note: '  ' }, { id: 'c', n: 'C' }] });
+    expect(c.items[0].note).toBe('the green ones');
+    expect('note' in c.items[1]).toBe(false);
+    expect('note' in c.items[2]).toBe(false);
   });
 });

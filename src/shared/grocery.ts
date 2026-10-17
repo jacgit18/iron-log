@@ -7,7 +7,7 @@ import { str } from './stretchWeek.js';
    say whether a value is already clean, for the API to refuse what the app would never send (ADR 039). */
 
 export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999;
-export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40;
+export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40, MAX_NOTE = 120;
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 export const emptyMonth = (): GroceryMonth => ({ lines: {}, pulled: [] });
@@ -29,7 +29,8 @@ export function normGroceryItem(x: unknown): GroceryItem | null {
   if (!id || !n || id === '__proto__') return null;
   const every = o.every === true || (o.every === undefined && o.once !== true);
   const qty = cleanQty(o.qty);
-  return { id, n, store: str(o.store, MAX_STORE), qty: qty && qty > 0 ? qty : 1, cents: cleanCents(o.cents), every, out: !every && o.out === true };
+  const note = str(o.note, MAX_NOTE);
+  return { id, n, store: str(o.store, MAX_STORE), qty: qty && qty > 0 ? qty : 1, cents: cleanCents(o.cents), every, out: !every && o.out === true, ...(note ? { note } : {}) };
 }
 
 /** One store, as a row of its own: the name is its id. */
@@ -48,6 +49,7 @@ export function validGroceryItem(x: unknown): x is GroceryItem {
   if (!o || !exact(o.id, MAX_ID) || o.id === '__proto__' || !exact(o.n, MAX_NAME) || !exact(o.store, MAX_STORE, true)) return false;
   if (typeof o.qty !== 'number' || cleanQty(o.qty) !== o.qty || o.qty <= 0) return false;
   if (o.cents !== null && cleanCents(o.cents) === null) return false;
+  if (o.note !== undefined && !exact(o.note, MAX_NOTE)) return false;
   if (typeof o.every !== 'boolean' || typeof o.out !== 'boolean' || (o.every && o.out)) return false;
   return true;
 }
