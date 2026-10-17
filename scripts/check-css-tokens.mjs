@@ -31,7 +31,7 @@ const rules = {
 };
 const hint = { 'font-size': 'a --fs-* token', 'border-radius': 'a --r-* token', 'z-index': 'a --z-* token' };
 
-const SPACING = /^(padding|margin)(-[a-z]+)?$/;
+const SPACING = /^(padding|margin)(-[a-z]+){0,2}$/;
 const problems = [];
 for (const file of await cssFiles(join(ROOT, 'src'))) {
   const root = postcss.parse(await readFile(file, 'utf8'), { from: file });
