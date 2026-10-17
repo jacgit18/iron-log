@@ -3,7 +3,7 @@ import './Icon.css';
 // Small inline icons that draw the same on every phone (a text glyph such as ‹ or ⋯ comes from whichever font the system picks).
 // They are 1em square, take the text colour and are hidden from assistive tech: the control that holds one needs its own text or
 // aria-label. Stroke icons share one style; `dots` and `play` are filled. Add a path here, not an image file.
-const STROKE: Record<string, string> = {
+const STROKE = {
   'arrow-down': 'M12 5v14M6 13l6 6 6-6',
   'arrow-up': 'M12 19V5M6 11l6-6 6 6',
   'chevron-left': 'M15 5l-7 7 7 7',
@@ -13,19 +13,20 @@ const STROKE: Record<string, string> = {
   swap: 'M5 8h13M14 4l4 4-4 4M19 16H6M10 12l-4 4 4 4',
   undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3',
   warning: 'M12 4l9 16H3zM12 10v4M12 17v.01',
-};
-const FILLED: Record<string, string> = {
+} as const satisfies Record<string, string>;
+const FILLED = {
   dots: 'M5 10.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM12 10.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM19 10.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z',
   play: 'M8 5v14l11-7z',
-};
+} as const satisfies Record<string, string>;
 export type IconName = keyof typeof STROKE | keyof typeof FILLED;
+const isFilled = (name: IconName): name is keyof typeof FILLED => name in FILLED;
 
 export default function Icon({ name }: { name: IconName }) {
-  const filled = name in FILLED;
+  const filled = isFilled(name);
   return (
     <svg className="icon" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" focusable="false"
       fill={filled ? 'currentColor' : 'none'} stroke={filled ? 'none' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d={filled ? FILLED[name] : STROKE[name]} />
+      <path d={isFilled(name) ? FILLED[name] : STROKE[name]} />
     </svg>
   );
 }

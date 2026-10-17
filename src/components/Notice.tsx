@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
-import './Notice.css';
 import Icon, { type IconName } from './Icon.jsx';
+import './Notice.css';
 
 /* One notice with its buttons: the text, then the actions in a row.
    Four kinds, each with one meaning:

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
 import CatalogMatches from '../program/CatalogMatches.jsx';
 import { plainText } from '../../lib/picker.js';
-import Icon from '../Icon.jsx';
 
 // Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later. Shown under the
 // schedule on Daily → Supplements while Edit is on (spec inline-catalog-picker step 6; it was a Program tab view before).

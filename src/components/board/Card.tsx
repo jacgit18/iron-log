@@ -10,10 +10,10 @@ import { PHASES, PH_KEYS, exInfo, videoLabel } from '../../lib/data.js';
 import { eqName } from '../../lib/equipment.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
+import Icon from '../Icon.jsx';
 import { useSwipeCard } from './useSwipeCard.js';
 import type { CardState, SwipeAction } from '../../lib/swipe.js';
 import './Card.css';
-import Icon from '../Icon.jsx';
 import {
   DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, isItemSkipped, phaseOf, targetOf, lastLog, rxOf, stallOf, backoffOf, describe, holdPlan,
   restsOf,

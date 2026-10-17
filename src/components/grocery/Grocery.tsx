@@ -3,11 +3,11 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { byStore, centsText, emptyMonth, gotLast, lineOf, lineTotal, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally } from '../../lib/grocery.js';
 import ArmedButton from '../ArmedButton.jsx';
+import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth } from '../../types.ts';
 import type { GroceryForm } from '../../store/types.ts';
 import './Grocery.css';
-import Icon from '../Icon.jsx';
 
 // Two views (ADR 038): To get is this month's shopping list; At home is every item you buy, checked while you have it. Unchecking a
 // When-out item there puts it on To get; ticking it bought on To get checks it again. Every-month items are always on To get.

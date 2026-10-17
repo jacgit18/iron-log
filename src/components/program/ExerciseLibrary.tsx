@@ -8,10 +8,10 @@ import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems } 
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import { progName } from '../../lib/logic.js';
 import { videoLabel, isCatalogId, exInfo } from '../../lib/data.js';
+import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import YourEquipment from './YourEquipment.jsx';
-import Icon from '../Icon.jsx';
 
 // Every exercise (from the library, and your own marked Custom) with what is set on it, searchable, edited in one sheet.
 export default function ExerciseLibrary() {

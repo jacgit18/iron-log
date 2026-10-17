@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { videoLabel } from '../../lib/data.js';
 import { TIERS, tierLabel } from '../../lib/stretches.js';
+import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import { catalogStretchGroup } from '../../lib/stretches.js';
-import Icon from '../Icon.jsx';
 
 // Every stretch, by group, with when it shows on the Stretches tab. What is set here is the routine on every day.
 // Syncing, each stretch is badged Library (added from the catalog) or Custom (your own), with a Source filter once both kinds are listed

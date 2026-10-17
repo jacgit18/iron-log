@@ -12,12 +12,12 @@ import { useSwipeCard } from '../board/useSwipeCard.js';
 import ArmedButton from '../ArmedButton.jsx';
 import ExperimentCard from '../ExperimentCard.jsx';
 import ExperimentSearch from '../ExperimentSearch.jsx';
+import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
 import './Stretches.css';
 import '../board/Experiments.css';
-import Icon from '../Icon.jsx';
 
 const DAYS7 = Array.from({ length: STRETCH_DAYS }, (_, i) => i);
 

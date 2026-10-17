@@ -6,13 +6,13 @@ import { useToday } from '../../store/useToday.js';
 import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
 import { SLOTS, scheduled, scheduleOf, slotLabel, slotTally } from '../../lib/supplements.js';
 import { pickerKey } from '../../lib/picker.js';
+import Icon from '../Icon.jsx';
 import ItemPicker from '../ItemPicker.jsx';
 import SupplementLibrary from './SupplementLibrary.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import './Supplements.css';
 import { HOT_OZ, TRAIN_OZ_PER_30, BOTTLES, CUP_OZ, OZ_PER_LB, fmtOz, cupsOf, sumOz, lastDays, goalFor, boostOz } from '../../lib/water.js';
-import Icon from '../Icon.jsx';
 
 // One of yours as the add picker lists it: where it is now and its dose; badged Library or Custom only when syncing (ADR 027).
 const mineOf = (i: SupplementItem, syncing: boolean): MineOption => ({
