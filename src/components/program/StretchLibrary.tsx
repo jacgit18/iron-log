@@ -21,7 +21,7 @@ export default function StretchLibrary() {
   const filtering = !!needle || (sources && !!src);
   return (
     <section className="panel edpanel exlib">
-      <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+      <div className="inline spread">
         <h2 id="slib-h" tabIndex={-1}>Stretch library</h2>
         <div className="inline">
           <button type="button" className="btn primary" id="slib-new" onClick={() => openModal({ type: 'stretch' })}>+ New stretch</button>
@@ -56,7 +56,7 @@ export default function StretchLibrary() {
                     <span className="note">{r.group}{r.note ? ` · ${r.note}` : ''}</span>
                     {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(r.url)}</a>}
                   </div>
-                  <div className="actions" style={{ margin: 0 }}>
+                  <div className="actions flush">
                     {!filtering && <>
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} up`} onClick={() => moveStretch(r.id, -1)}><span aria-hidden="true">↑</span></button>
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} down`} onClick={() => moveStretch(r.id, 1)}><span aria-hidden="true">↓</span></button>

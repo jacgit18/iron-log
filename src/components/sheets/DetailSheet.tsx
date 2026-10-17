@@ -81,7 +81,7 @@ export default function DetailSheet({ exId }: { exId: string }) {
   const multi = new Set(L.map(e => e.ph || null)).size > 1;
 
   return (
-    <Sheet style={{ maxWidth: 640 }}>
+    <Sheet className="maxw-640">
       <h2 className="cond">{exInfo(cfg, exId).n}</h2>
       {last && (
         <>
@@ -104,7 +104,7 @@ export default function DetailSheet({ exId }: { exId: string }) {
               <td className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
               <td className="num">{volText(e)}</td>
               <td>{e.n || (e.auto ? AUTO_NOTE : '')}</td>
-              <td style={{ whiteSpace: 'nowrap' }}>
+              <td className="nowrap">
                 <button type="button" className="btn sm ghost" aria-label={`Edit entry from ${fmtShort(parseDate(e.d))}`} onClick={() => setEditing(e)}>Edit</button>{' '}
                 <ArmedButton className={`btn sm ${arming === `${entryId(e)}-${i}` ? 'danger' : 'ghost'}`} aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onArmedChange={a => setArming(a ? `${entryId(e)}-${i}` : null)} onConfirm={() => { setArming(null); setEditing(null); deleteLog(exId, e); }} />
               </td>

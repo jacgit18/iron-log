@@ -21,7 +21,7 @@ export default function SupplementLibrary() {
   const filtering = !!needle || (sources && !!src);
   return (
     <section className="panel edpanel exlib">
-      <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+      <div className="inline spread">
         <h2 id="suplib-h" tabIndex={-1}>Supplement library</h2>
         <div className="inline">
           <button type="button" className="btn primary" id="suplib-new" onClick={() => openModal({ type: 'supplement' })}>+ New supplement</button>
@@ -58,7 +58,7 @@ export default function SupplementLibrary() {
                       : <span className="pill custom" title="You created this supplement; it is not from the catalog">Custom</span>)}</b>
                     <span className="note">{[r.brand, r.dose, r.note].filter(Boolean).join(' · ') || 'No dose or note'}</span>
                   </div>
-                  <div className="actions" style={{ margin: 0 }}>
+                  <div className="actions flush">
                     {!filtering && <>
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} up`} onClick={() => moveSupplement(r.id, -1)}><span aria-hidden="true">↑</span></button>
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} down`} onClick={() => moveSupplement(r.id, 1)}><span aria-hidden="true">↓</span></button>

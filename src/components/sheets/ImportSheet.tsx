@@ -72,7 +72,7 @@ export default function ImportSheet() {
       <p className="note"><b>Add to my data</b> keeps everything here and adds what's missing: new sessions, weeks, body weights, saved versions and Experiment entries. If both have an edited program, yours stays and the file's is added to Saved versions.</p>
       <p className="note"><b>Replace my data</b> makes the ticked tabs match the file exactly. Anything on those tabs here that isn't in the file is deleted{cur.entries ? `, including ${plural(cur.entries, 'logged session', 'logged sessions')}` : ''}. {dl ? 'Export your current data first if you might want it back.' : ''}</p>
       {busy && <p className="note">Importing…</p>}
-      {dl && <div className="actions" style={{ justifyContent: 'flex-start' }}><button type="button" className="btn sm ghost" onClick={st.downloadData}>Export current data first</button></div>}
+      {dl && <div className="actions start"><button type="button" className="btn sm ghost" onClick={st.downloadData}>Export current data first</button></div>}
       <div className="actions impact">
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
         <ArmedButton className="btn" disabled={busy || none} label="Replace my data" armedLabel="Tap again to replace" onConfirm={() => st.applyImport('replace')} />

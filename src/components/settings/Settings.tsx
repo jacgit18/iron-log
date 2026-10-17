@@ -73,7 +73,7 @@ function ModePanel() {
         ))}
       </div>
       {cfg.mode === 3 && (
-        <div className="inline" style={{ flexWrap: 'wrap' }}>
+        <div className="inline flexwrap">
           <label htmlFor="m3s">First block starts in</label>
           <select id="m3s" className="btn sm" value={cfg.m3Start} onChange={e => st.setCfgField('m3Start', Number(e.target.value))}>
             {MON.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
@@ -251,7 +251,7 @@ function PhasePanel() {
         })}
       </div>
       <label className="inline" htmlFor="rest-s">Rest between sets{' '}
-        <CommitInput key={`rest:${cfg.rest ?? 90}`} type="number" id="rest-s" min="0" max="600" step="any" value={cfg.rest ?? 90} style={{ width: 80 }} onCommit={saving('rest', st.setRest)} /> seconds <Tick id="rest" />
+        <CommitInput key={`rest:${cfg.rest ?? 90}`} type="number" id="rest-s" min="0" max="600" step="any" value={cfg.rest ?? 90} className="w-80" onCommit={saving('rest', st.setRest)} /> seconds <Tick id="rest" />
       </label>
       <More about="phases">
         <p>Each phase has default sets × reps. The target weight starts from the weight you last logged for that exercise in that phase, otherwise the program's weight. The % of 1RM is only for comparing with your 1RM below; it doesn't set targets.</p>

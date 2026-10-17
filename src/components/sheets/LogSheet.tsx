@@ -78,8 +78,8 @@ export default function LogSheet({ slotId, idx }: { slotId: string; idx: number 
       <div className="target">
         <span>Target<br /><b>{t.w != null ? `${t.w} lb` : (t.src || '—')}</b></span>
         <span>Prescription<br /><b>{rx || '—'}</b></span>
-        {t.w != null && <span className="note" style={{ alignSelf: 'end' }}>{t.src}</span>}
-        {goals.map(g => <span key={g.key} className="note" style={{ alignSelf: 'end' }}>{liftGoalNote(g)}</span>)}
+        {t.w != null && <span className="note self-end">{t.src}</span>}
+        {goals.map(g => <span key={g.key} className="note self-end">{liftGoalNote(g)}</span>)}
       </div>
       <div className="fields">
         <label className="field">Phase
@@ -131,7 +131,7 @@ export default function LogSheet({ slotId, idx }: { slotId: string; idx: number 
       <label className="inline"><input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)} /> {isPaired(s) ? 'Check off this exercise' : 'Check off the card'}</label>
       <div className="actions">
         {last && (
-          <button type="button" className="btn filllast" style={{ marginRight: 'auto' }}
+          <button type="button" className="btn filllast mr-auto"
             onClick={() => setRows(setsOfEntry(last).map(x => toRow(x, iso)))}>Fill last: {describe(last)}</button>
         )}
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
@@ -139,7 +139,7 @@ export default function LogSheet({ slotId, idx }: { slotId: string; idx: number 
       </div>
       {hist.length > 0 && (
         <div>
-          <div className="sect" style={{ padding: '0 0 4px' }}>Recent</div>
+          <div className="sect sect-tight">Recent</div>
           <table className="hist">
             <thead><tr><th>Date</th><th>Phase</th><th className="num">Load</th><th className="num">Sets</th></tr></thead>
             <tbody>

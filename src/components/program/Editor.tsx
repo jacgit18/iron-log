@@ -45,8 +45,8 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
   const saved = !custom || library.some(it => sameProg(it.prog, cur));
   const loadLabel = `Tap to load into ${pn}`;
   return (
-    <section className="panel edpanel lib" style={{ marginTop: 16 }}>
-      <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+    <section className="panel edpanel lib mt-16">
+      <div className="inline spread">
         <h2>Program library</h2>
         <button type="button" className="btn" onClick={() => { if (!st.blocked()) st.openModal({ type: 'newprog' }); }}>Create a program</button>
       </div>
@@ -66,7 +66,7 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
         {!items.length && <p className="note">No programs yet. Create one to build your own.</p>}
       </div>
       <form className="libsave" noValidate onSubmit={e => { e.preventDefault(); st.saveCurrentAs(name); setName(''); }}>
-        <label className="field" style={{ flex: 1 }}>Save {pn} as
+        <label className="field grow">Save {pn} as
           <input id="lib-name" maxLength={60} value={name} onChange={e => setName(e.target.value)} placeholder={`e.g. ${pn} · ${MON[today.getMonth()]} ${today.getFullYear()}`} />
         </label>
         <button type="submit" className="btn primary">Save a copy</button>
@@ -79,10 +79,10 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
 function LibItemPanel({ it }: { it: LibraryItem }) {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
   return (
-    <section className="panel edpanel lib" style={{ marginTop: 16 }}>
+    <section className="panel edpanel lib mt-16">
       <h2>Put it into the rotation</h2>
       <p className="note">Loading replaces what's in that slot. The program there now is saved to the library first if it isn't already, so nothing is lost. {it.name} stays in the library too.</p>
-      <div className="actions" style={{ justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+      <div className="actions start flexwrap">
         {(['A', 'B'] as const).map(k => (
           <ArmedButton key={k} className="btn primary" label={`Load into ${progName(cfg, k)}`} armedLabel={`Tap to load into ${progName(cfg, k)}`} onConfirm={() => st.loadVersion(it.id, k)} />
         ))}
@@ -144,11 +144,11 @@ function ProgramEditor() {
         </>
       ) : null}
       <section className="panel edpanel">
-        <div className="inline" style={{ flexWrap: 'wrap' }}><h2 id="ed-title" tabIndex={-1} style={{ marginRight: 'auto' }}>{edName} · {day.title}</h2></div>
+        <div className="inline flexwrap"><h2 id="ed-title" tabIndex={-1} className="mr-auto">{edName} · {day.title}</h2></div>
         <label className="field">Day label
           <CommitInput key={`${k}:${edDay}:${day.sub || ''}`} id="ed-sub" value={day.sub || ''} placeholder="e.g. Lower body + reactive power" onCommit={st.setDaySub} />
         </label>
-        <div className="actions edadd" style={{ justifyContent: 'flex-start' }}>{addBtn}</div>
+        <div className="actions edadd start">{addBtn}</div>
         {showRemoved && (
           <div className="notice movewarn removednote" role="status">
             <div><b>Removed</b> {slotSummary(cfg, showRemoved.slot)} from {day.title}.</div>
@@ -190,7 +190,7 @@ function ProgramEditor() {
           })}
         </div>
       </section>
-      <p className="note" style={{ marginTop: 12 }}>
+      <p className="note mt-12">
         {lib ? 'Changes are saved to this library program only. Nothing on the board changes until you load it into A or B.' : `Changes apply to every week that uses ${progName(cfg, k)}. Your logged sets stay as they are.`}
       </p>
       {lib ? <LibItemPanel it={item} /> : <Library k={k} custom={custom} />}

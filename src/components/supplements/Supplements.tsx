@@ -174,8 +174,8 @@ export default function Supplements() {
         </div>
       </div>
       <Schedule date={date} supp={supp} editing={editing} setEditing={setEditing} />
-      {editing && <div style={{ marginTop: 16 }}><SupplementLibrary /></div>}
-      <section className="panel suppanel" style={{ marginTop: 16 }} aria-labelledby="water-h">
+      {editing && <div className="mt-16"><SupplementLibrary /></div>}
+      <section className="panel suppanel mt-16" aria-labelledby="water-h">
         <h2 id="water-h">Water</h2>
         <div className="kpi wkpi" role="status">
           <span className="kl">{isToday ? 'Today' : 'That day'}</span>
@@ -214,7 +214,7 @@ export default function Supplements() {
         <Boost key={`${date}:${supp.boost[date]?.mins ?? ''}`} date={date} boost={supp.boost[date]} extra={gi.extra} />
         <WaterGoal goal={gi} mode={supp.waterMode} />
       </section>
-      <section className="panel suppanel" style={{ marginTop: 16 }} aria-labelledby="water7-h">
+      <section className="panel suppanel mt-16" aria-labelledby="water7-h">
         <h2 id="water7-h">Last 7 days</h2>
         <Week water={supp.water} goalOf={(k) => goalFor(supp, body, k).oz} end={d} selected={date} onPick={(k) => setSel(k === todayKey ? null : k)} />
         <p className="note">Ounces per day. A full bar means you hit your goal.</p>
