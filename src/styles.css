@@ -361,8 +361,10 @@ header.top h1 {
   font-weight: 600;
   font-size: var(--fs-md);
 }
-.btn:hover {
-  border-color: var(--muted);
+@media (hover:hover) {
+  .btn:hover {
+    border-color: var(--muted);
+  }
 }
 .btn.primary {
   background: var(--accent);
@@ -780,8 +782,10 @@ body.timing {
   font-size: var(--fs-md);
   border-radius: var(--r-sm);
 }
-.mbar:hover {
-  background: var(--sunk);
+@media (hover:hover) {
+  .mbar:hover {
+    background: var(--sunk);
+  }
 }
 .mbar b {
   text-align: right;
@@ -1259,7 +1263,7 @@ body.timing {
   z-index: var(--z-sheet);
   padding: 16px var(--gr) 16px var(--gl);
 }
-@media (min-width:700px) {
+@media (min-width:701px) {
   .scrim {
     align-items: center;
   }

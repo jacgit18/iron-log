@@ -35,7 +35,7 @@ function History() {
 
   return (
     <section className="panel hist-panel">
-      <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+      <div className="inline spread">
         <h2>Weekly history</h2>
         {mean && <span className="note">Goal {WEEK_GOAL_DAYS} days a week · met in {met} of {past.length} past week{past.length > 1 ? 's' : ''} · average {mean} days{perDay != null && <> · {perDay.toFixed(1)} exercises per training day</>}</span>}
       </div>

@@ -72,8 +72,10 @@
 .mu.l4 {
   fill: var(--m4);
 }
-.mu:hover {
-  filter: brightness(1.08);
+@media (hover:hover) {
+  .mu:hover {
+    filter: brightness(1.08);
+  }
 }
 .mu.sel {
   stroke: var(--ink);

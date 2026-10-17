@@ -62,8 +62,10 @@
   user-select: none;
   -webkit-user-select: none;
 }
-.draghandle:hover {
-  color: var(--ink);
+@media (hover:hover) {
+  .draghandle:hover {
+    color: var(--ink);
+  }
 }
 .edrow.dragging {
   position: relative;

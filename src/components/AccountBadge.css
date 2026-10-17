@@ -16,8 +16,10 @@
   border-radius: var(--r-pill);
   cursor: pointer;
 }
-.acctbadge:hover .acctavatar {
-  filter: brightness(1.12);
+@media (hover:hover) {
+  .acctbadge:hover .acctavatar {
+    filter: brightness(1.12);
+  }
 }
 .acctavatar {
   position: relative;

@@ -2,6 +2,7 @@ import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './fonts.js';
 import './styles.css';
+import './utilities.css';
 import App from './App.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import Landing, { Splash } from './components/Landing.js';

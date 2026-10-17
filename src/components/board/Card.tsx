@@ -86,7 +86,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
     >
       {removing && <span className="rmtag">Will be removed from this week · tap Remove again</span>}
       <div className="row1">
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div className="cardmain">
           {(label || s.tier || s.experiment) && <span className="tag">{[s.experiment && (s.added ? 'Added' : 'Experiment'), s.tier, label].filter(Boolean).join(' · ')}</span>}
           {week.moved[s.id] && <span className="moved">From Day {planned}</span>}
           {sk && <span className="skiptag">Skipped this week</span>}

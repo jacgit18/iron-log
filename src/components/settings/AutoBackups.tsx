@@ -26,7 +26,7 @@ export default function AutoBackups() {
                 <b>{label(b.date)}</b>
                 <span className="note">{b.entries} logged set{b.entries === 1 ? '' : 's'} · saved {new Date(b.savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
               </div>
-              <div className="actions" style={{ margin: 0 }}>
+              <div className="actions flush">
                 {dl && <button type="button" className="btn sm ghost" aria-label={`Download the backup from ${fmtShort(parseDate(b.date))}`} onClick={() => void st.downloadBackup(b.date)}>Download</button>}
                 <button type="button" className="btn sm" aria-label={`Restore the backup from ${fmtShort(parseDate(b.date))}`} onClick={() => void st.restoreBackup(b.date)}>Restore</button>
               </div>

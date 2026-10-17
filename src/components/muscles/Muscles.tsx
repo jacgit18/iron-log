@@ -46,7 +46,7 @@ function MuscleDetail({ m, v, keys, withSec }: { m: MuscleKey; v: Volume[MuscleK
   const progs = keys.map(k => progName(cfg, k)).join(' and ');
   return (
     <section className="panel mdetail">
-      <div className="inline" style={{ justifyContent: 'space-between' }}>
+      <div className="inline between">
         <h2>{MUSCLES[m].n}</h2>
         <button type="button" className="btn sm ghost" onClick={() => selectMuscle(null)}>Close</button>
       </div>

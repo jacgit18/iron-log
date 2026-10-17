@@ -26,7 +26,7 @@ export default function ExerciseLibrary() {
   const filtering = !!(f.q || f.eq || f.muscle || f.src);
   return (
     <section className="panel edpanel exlib">
-      <div className="inline" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+      <div className="inline spread">
         <h2 id="exlib-h" tabIndex={-1}>Exercise library</h2>
         <div className="inline">
           <button type="button" className="btn primary" onClick={() => openModal({ type: 'exercise', exId: null })}>+ New exercise</button>
