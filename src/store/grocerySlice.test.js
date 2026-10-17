@@ -19,6 +19,17 @@ describe('the catalogue', () => {
     expect(st().grocery.stores).toEqual(['Veg market']);
     expect(saved('grocery/main').items[0].cents).toBe(250);
   });
+  it('keeps a note on add, sets and clears it on update, and leaves the key out when there is none', () => {
+    expect(st().addGroceryItem(form({ note: '  the green   ones ' }))).toBeNull();
+    expect(st().grocery.items[0].note).toBe('the green ones');
+    expect(saved('grocery/main').items[0].note).toBe('the green ones');
+    expect(st().updateGroceryItem('kale', { note: 'ask at the deli' })).toBeNull();
+    expect(st().grocery.items[0].note).toBe('ask at the deli');
+    expect(st().updateGroceryItem('kale', { note: '   ' })).toBeNull();
+    expect('note' in st().grocery.items[0]).toBe(false); // cleared: the key is gone, not an empty string
+    expect(st().addGroceryItem(form({ n: 'Rice', store: 'Costco' }))).toBeNull();
+    expect('note' in st().grocery.items[1]).toBe(false);
+  });
   it('refuses a blank name, a bad count, a bad price and a repeat in the same store, and changes nothing', () => {
     expect(st().addGroceryItem(form({ n: '  ' }))).toMatch(/name/);
     expect(st().addGroceryItem(form({ qty: '0' }))).toMatch(/count/);
