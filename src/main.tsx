@@ -6,7 +6,7 @@ import './utilities.css';
 import App from './App.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import Landing, { Splash } from './components/Landing.js';
-import { setAdmin } from './features.js';
+import { setAdmin, setPaid } from './features.js';
 import { applyAppearance } from './lib/appearance.js';
 import { decideGate, quickGate } from './lib/gate.js';
 import { initPwa } from './lib/pwa.js';
@@ -36,8 +36,8 @@ const openApp = () => { useAppStore.getState().init(); show(<ErrorBoundary where
 function learnAdmin() {
   if (!apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC)) return;
   void createAccountClient({ headers: devHeaders }).me().then(s => {
-    if (s.status === 'signed-in') setAdmin(s.isAdmin);
-    else if (s.status === 'signed-out') setAdmin(false);
+    if (s.status === 'signed-in') { setAdmin(s.isAdmin); setPaid(s.isPaid); }
+    else if (s.status === 'signed-out') { setAdmin(false); setPaid(false); }
   }).catch(reportCaught); // a failed check keeps what the browser last knew
 }
 
