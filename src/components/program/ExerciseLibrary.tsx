@@ -8,6 +8,7 @@ import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems } 
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import { progName } from '../../lib/logic.js';
 import { videoLabel, isCatalogId, exInfo } from '../../lib/data.js';
+import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import YourEquipment from './YourEquipment.jsx';
@@ -72,7 +73,7 @@ export default function ExerciseLibrary() {
                 <b>{r.name}{r.custom && <span className="pill custom" title="You created this exercise; it is not from the library">Custom</span>}{isCatalogId(r.id) && <span className="pill custom" title="Added from the catalog; what you change on it stays yours">Library</span>}</b>
                 <span className="note">{[...meta, where].join(' · ')}</span>
                 <span className="note">{muscles || 'No muscles tagged yet'}</span>
-                {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.name} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(r.url)}</a>}
+                {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.name} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(r.url)}</a>}
               </div>
               <button type="button" className="btn sm" id={`exlib-${r.id}`} aria-label={`Edit ${r.name}`} onClick={() => openModal({ type: 'exercise', exId: r.id })}>Edit</button>
             </div>

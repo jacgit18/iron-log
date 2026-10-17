@@ -1,0 +1,12 @@
+@layer base, components;
+@layer components {
+.icon {
+  flex: none;
+  vertical-align: -.125em;
+}
+/* An icon alone in a small button is the whole label: draw it a little larger than a letter. */
+.btn.sm:not(.swapbtn) > .icon {
+  width: 1.35em;
+  height: 1.35em;
+}
+}

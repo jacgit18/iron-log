@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
+import Icon, { type IconName } from './Icon.jsx';
 import './Notice.css';
 
 /* One notice with its buttons: the text, then the actions in a row.
@@ -10,7 +11,7 @@ import './Notice.css';
    Buttons: the main action is a short verb, a revert is always "Undo", and closing is always "Dismiss" (quiet, last).
    A notice that only reports something (undo, info) can `expire`; one that asks for an answer (suggestion, warning) never does. */
 export type NoticeKind = 'undo' | 'suggestion' | 'warning' | 'info';
-const ICON: Record<NoticeKind, string> = { undo: '↶', suggestion: '✦', warning: '⚠', info: 'ℹ' };
+const ICON: Record<NoticeKind, IconName> = { undo: 'undo', suggestion: 'spark', warning: 'warning', info: 'info' };
 
 export interface NoticeAction {
   label: string;
@@ -51,7 +52,7 @@ export default function Notice({ kind, className, silent, expire, actions, child
     <div className={className ? `notice ${className}` : 'notice'} data-kind={kind} role={silent ? undefined : 'status'} ref={own}
       onPointerEnter={() => setHeld(true)} onPointerLeave={() => setHeld(false)}
       onFocusCapture={() => setHeld(true)} onBlurCapture={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHeld(false); }}>
-      <div className="nbody"><span className="nicon" aria-hidden="true">{ICON[kind]}</span><div className="ntext">{children}</div></div>
+      <div className="nbody"><span className="nicon" aria-hidden="true"><Icon name={ICON[kind]} /></span><div className="ntext">{children}</div></div>
       {actions.some(Boolean) && (
         <div className="actions">
           {actions.map(a => a && <button type="button" key={a.label} className={a.ghost ? 'btn sm ghost' : 'btn sm'} ref={a.btnRef} aria-label={a.title ? `${a.label}: ${a.title}` : undefined} onClick={a.onClick}>{a.label}</button>)}

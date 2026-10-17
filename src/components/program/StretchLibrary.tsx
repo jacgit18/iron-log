@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { videoLabel } from '../../lib/data.js';
 import { TIERS, tierLabel } from '../../lib/stretches.js';
+import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import { catalogStretchGroup } from '../../lib/stretches.js';
@@ -54,12 +55,12 @@ export default function StretchLibrary() {
                       ? <span className="pill custom" title="Added from the catalog; what you change on it stays yours">Library</span>
                       : <span className="pill custom" title="You created this stretch; it is not from the catalog">Custom</span>)}</b>
                     <span className="note">{r.group}{r.note ? ` · ${r.note}` : ''}</span>
-                    {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(r.url)}</a>}
+                    {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(r.url)}</a>}
                   </div>
                   <div className="actions flush">
                     {!filtering && <>
-                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} up`} onClick={() => moveStretch(r.id, -1)}><span aria-hidden="true">↑</span></button>
-                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} down`} onClick={() => moveStretch(r.id, 1)}><span aria-hidden="true">↓</span></button>
+                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} up`} onClick={() => moveStretch(r.id, -1)}><Icon name="arrow-up" /></button>
+                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} down`} onClick={() => moveStretch(r.id, 1)}><Icon name="arrow-down" /></button>
                     </>}
                     <button type="button" className="btn sm" id={`slib-${r.id}`} aria-label={`Edit ${r.n}`} onClick={() => openModal({ type: 'stretch', id: r.id })}>Edit</button>
                   </div>

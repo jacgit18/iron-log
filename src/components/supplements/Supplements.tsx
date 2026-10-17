@@ -6,6 +6,7 @@ import { useToday } from '../../store/useToday.js';
 import { ymd, parseDate, addDays, fmtShort, DAY_NAMES } from '../../shared/dates.js';
 import { SLOTS, scheduled, scheduleOf, slotLabel, slotTally } from '../../lib/supplements.js';
 import { pickerKey } from '../../lib/picker.js';
+import Icon from '../Icon.jsx';
 import ItemPicker from '../ItemPicker.jsx';
 import SupplementLibrary from './SupplementLibrary.jsx';
 import ArmedButton from '../ArmedButton.jsx';
@@ -167,9 +168,9 @@ export default function Supplements() {
     <div>
       <div className="weekbar">
         <div className="weeknav">
-          <button type="button" className="btn sm" aria-label="Previous day" onClick={() => step(-1)}>‹</button>
+          <button type="button" className="btn sm" aria-label="Previous day" onClick={() => step(-1)}><Icon name="chevron-left" /></button>
           <h2 className="cond">{isToday ? 'Today' : DAY_NAMES[d.getDay()]} · {fmtShort(d)}</h2>
-          <button type="button" className="btn sm" aria-label="Next day" disabled={isToday} onClick={() => step(1)}>›</button>
+          <button type="button" className="btn sm" aria-label="Next day" disabled={isToday} onClick={() => step(1)}><Icon name="chevron-right" /></button>
           {!isToday && <button type="button" className="btn sm ghost" onClick={() => setSel(null)}>Today</button>}
         </div>
       </div>

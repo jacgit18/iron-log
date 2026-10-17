@@ -10,6 +10,7 @@ import { PHASES, PH_KEYS, exInfo, videoLabel } from '../../lib/data.js';
 import { eqName } from '../../lib/equipment.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
+import Icon from '../Icon.jsx';
 import { useSwipeCard } from './useSwipeCard.js';
 import type { CardState, SwipeAction } from '../../lib/swipe.js';
 import './Card.css';
@@ -93,7 +94,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
         </div>
         {sk && <button type="button" className="btn sm ghost" id={`skip-${s.id}`} aria-label={`Undo skip for ${cardName}`} onClick={() => { skipCard(s.id); focusMore(); }}>Undo skip</button>}
         <button type="button" className="btn sm ghost morebtn" ref={moreBtn} id={`more-${s.id}`} aria-expanded={moreOpen} aria-controls={`morepanel-${s.id}`}
-          aria-label={`More actions: ${cardName}`} onClick={() => { if (moreOpen) { setMore(false); setRemoving(false); } else setMore(true); }} onKeyDown={foldOnEscape}><span aria-hidden="true">⋯</span></button>
+          aria-label={`More actions: ${cardName}`} onClick={() => { if (moreOpen) { setMore(false); setRemoving(false); } else setMore(true); }} onKeyDown={foldOnEscape}><Icon name="dots" /></button>
       </div>
       {moreOpen && (
         <div className="cardfoot cardmore" id={`morepanel-${s.id}`} role="group" aria-label={`More actions: ${cardName}`}
@@ -140,7 +141,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
                 )}
                 <div className="exlabel">
                   <h4 className="exh" id={`h-${s.id}-${idx}`}>{ex.n}</h4>
-                  {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(ex.url)}: ${ex.n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(ex.url)}</a>}
+                  {ex.url && <a href={ex.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(ex.url)}: ${ex.n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(ex.url)}</a>}
                 </div>
               </div>
               {isk && <div className="iskiprow"><span className="skiptag">Skipped this week</span><button type="button" className="btn sm ghost" id={`undoskip-${s.id}-${idx}`} aria-label={`Undo skip for ${ex.n}`} onClick={() => skipItem(s.id, idx)}>Undo skip</button></div>}
