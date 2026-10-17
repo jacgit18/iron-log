@@ -40,5 +40,5 @@ jobs:
             The project docs (CHANGELOG, DECISIONS, feature-map) live outside this repo, so do not flag them as missing.
             Post one summary comment, then inline comments only for concrete problems. Be brief; skip praise and style nitpicks the linter covers.
           claude_args: |
-            --max-turns 15
+            --max-turns 30
             --allowedTools "Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
