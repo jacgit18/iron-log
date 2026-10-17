@@ -3,13 +3,13 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { clearStorage } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, DEFAULT_CFG, summarizeSets;
+let useAppStore, BUILTIN, DEFAULT_CFG, summarizeSets, normSupplements;
 const st = () => useAppStore.getState();
 const tick = () => new Promise(r => setTimeout(r, 0));
 
 const blank = () => ({
   cfg: structuredClone(DEFAULT_CFG), logs: {}, week: { prog: null, done: {}, skipped: {}, moved: {}, ph: {}, warm: {} }, weekHist: {},
-  body: [], library: [], experiments: [], stretches: [], stretchExps: [], grocery: { stores: [], items: [] }, groceryMonths: {}, programs: { A: BUILTIN.A, B: BUILTIN.B }, modal: null,
+  body: [], library: [], experiments: [], stretches: [], stretchExps: [], supp: normSupplements(null), grocery: { stores: [], items: [] }, groceryMonths: {}, programs: { A: BUILTIN.A, B: BUILTIN.B }, modal: null,
   importDraft: null, importBusy: false, importError: '', importCount: 0, saveFlag: '', uncheckNote: null, orderNote: null, moveNote: null,
 });
 
@@ -17,6 +17,7 @@ beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
   ({ BUILTIN } = await import('../lib/data.js'));
   ({ DEFAULT_CFG, summarizeSets } = await import('../lib/logic.js'));
+  ({ normSupplements } = await import('../lib/water.js'));
   await st().init();
 });
 beforeEach(() => { clearStorage(); useAppStore.setState(blank()); });
@@ -62,7 +63,10 @@ describe('backup round trip', () => {
     expect(first.grocery.months['2026-09'].lines.kale.got).toBe(true);
 
     useAppStore.setState(blank()); clearStorage();
-    expect((await exportData()).body).toEqual([]); // the wipe worked
+    const wiped = await exportData(); // the wipe worked: nothing of what was filled is left
+    expect(wiped.body).toEqual([]);
+    expect(wiped.supplements.water).toEqual({});
+    expect(wiped.experiments).toEqual([]);
 
     st().pasteImport(JSON.stringify(first));
     await st().applyImport('replace'); await tick();

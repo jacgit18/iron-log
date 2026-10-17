@@ -55,14 +55,17 @@ test('Replace makes the ticked tabs match the file', async ({ page }) => {
 
 test('Add to my data closes the review and does not lose or duplicate what is here', async ({ page }) => {
   await page.locator('#chk-A-d1s1').check(); // a ticked card, so there is a week to keep
+  await page.locator('#bw-in').fill('181.5'); // and a body weight, so a duplicate would show
+  await page.getByRole('button', { name: 'Save', exact: true }).first().click();
   const file = await exportedWithRest120(page);
   const before = await exportFile(page);
   expect(Object.keys(before.data.weeks).length).toBeGreaterThan(0);
+  expect(before.data.body).toHaveLength(1);
   await importText(page, file.text);
   await page.getByRole('dialog', { name: 'Import data' }).getByRole('button', { name: 'Add to my data' }).click();
   await expect(page.getByRole('dialog', { name: 'Import data' })).toHaveCount(0);
   const after = await exportFile(page);
-  expect(Object.keys(after.data.weeks)).toEqual(Object.keys(before.data.weeks));
+  expect(after.data.weeks).toEqual(before.data.weeks);
   expect(after.data.logs).toEqual(before.data.logs);
   expect(after.data.body).toEqual(before.data.body);
 });
