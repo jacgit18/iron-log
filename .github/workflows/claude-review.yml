@@ -1,11 +1,13 @@
 name: Claude review
 
 # Reviews each pull request against the rules in CLAUDE.md and comments on it. Review only: it never pushes commits.
+# Runs when a PR is opened or marked ready, and again on each push to it (synchronize), when it reviews only the commits that push added.
+# The rules come from CLAUDE.md at review time, so they are not copied into the prompt below and cannot drift from it.
 # Needs the ANTHROPIC_API_KEY repository secret. Skipped for forks and bots (no secret there, and Dependabot/screenshots PRs are routine).
 # Tests, lint and typecheck stay in test.yml; this checks what they cannot: the project conventions.
 on:
   pull_request:
-    types: [opened, ready_for_review]
+    types: [opened, ready_for_review, synchronize]
 
 permissions:
   contents: read
@@ -31,13 +33,10 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
             Review pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
-            Read CLAUDE.md first, then check the diff (git diff origin/${{ github.base_ref }}...HEAD) against it:
-            - New code is TypeScript (.ts/.tsx), no new .js/.jsx, no `any` outside the accepted spots.
-            - Board reorder and log write paths (planFix, mutateChecks, autoLogs, addEntry) keep their tests; no exercise can be lost or duplicated.
-            - A new user-facing feature goes to everyone with no flag for now (owner's call until there is a user base; see CLAUDE.md), unless the PR says the owner asked for admin-only: then a FEATURES entry with a removal condition and a useFeature wrapper. Any admin-only API route needs requireAdmin.
-            - The PR description ticks exactly one Audience box.
-            - Behavior is not changed inside a refactor or conversion commit; one change per commit.
-            - Obvious bugs, missing tests for new logic, security problems (auth on routes, untrusted input).
+            Event: ${{ github.event.action }}. Base branch: origin/${{ github.base_ref }}. Head before this push: ${{ github.event.before }}. Head now: ${{ github.event.after }}.
+            If the event is synchronize, this is a re-review of a new push: review only git diff <head before>...<head now> (if that commit is unreachable after a force-push, use the whole PR diff instead). Do not repeat earlier findings: read the existing review comments (gh pr view --comments), say which are fixed, and report only what is still open or newly introduced. For any other event, review the whole diff (git diff origin/<base branch>...HEAD).
+            Read CLAUDE.md first and check the diff against every rule in it that applies to the changed files (language, conventions, board reorder and log write paths, audience and feature flags, commit scope, Lighthouse, styles, imports, tests). The PR description must tick exactly one Audience box.
+            Also look for obvious bugs, missing tests for new logic, and security problems (auth on routes, untrusted input).
             The project docs (CHANGELOG, DECISIONS, feature-map) live outside this repo, so do not flag them as missing.
             Post one summary comment, then inline comments only for concrete problems. Be brief; skip praise and style nitpicks the linter covers.
           claude_args: |
