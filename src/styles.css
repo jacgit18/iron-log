@@ -1627,6 +1627,9 @@ body.timing {
     width: 12px;
     height: 7px;
   }
+  .warm label {
+    min-height: 34px;
+  }
   .card {
     padding: 12px;
   }
@@ -1635,6 +1638,9 @@ body.timing {
   }
   .phase {
     padding: 4px 12px;
+  }
+  .cardfoot select {
+    padding: 4px 6px;
   }
   .fields label:has(#f-d) {
     grid-column: span 2;
