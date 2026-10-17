@@ -6,6 +6,15 @@ describe('featureOn', () => {
     expect(featureOn('admin', true)).toBe(true);
     expect(featureOn('admin', false)).toBe(false);
   });
+  it('paid features show for a paid subscriber and for an admin, and nobody else', () => {
+    expect(featureOn('paid', false, true)).toBe(true);
+    expect(featureOn('paid', true, false)).toBe(true);
+    expect(featureOn('paid', false, false)).toBe(false);
+    expect(featureOn('paid', false)).toBe(false);
+  });
+  it('being paid does not open an admin-only feature', () => {
+    expect(featureOn('admin', false, true)).toBe(false);
+  });
   it('off is off even for an admin', () => {
     expect(featureOn('off', true)).toBe(false);
   });
