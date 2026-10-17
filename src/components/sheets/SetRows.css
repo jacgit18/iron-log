@@ -1,7 +1,7 @@
 @layer base, components;
 @layer components {
 .sethead {
-  font-size: .75rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
   font-weight: 600;
 }
@@ -21,6 +21,6 @@
   align-items: center;
 }
 .setbtns .note {
-  font-size: .75rem;
+  font-size: var(--fs-xs);
 }
 }

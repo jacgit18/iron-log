@@ -18,7 +18,7 @@
     "build:server": "node scripts/build-server.mjs",
     "dev:server": "NODE_ENV=development tsx watch server/index.ts",
     "build": "vite build",
-    "lint": "oxlint && node scripts/format-css.mjs --check",
+    "lint": "oxlint && node scripts/format-css.mjs --check && node scripts/check-css-tokens.mjs",
     "format:css": "node scripts/format-css.mjs",
     "typecheck": "tsc && tsc -p tsconfig.sw.json && tsc -p server",
     "preview": "vite preview",

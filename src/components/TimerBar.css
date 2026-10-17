@@ -4,9 +4,9 @@
   position: fixed;
   right: var(--gr);
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  z-index: 14;
+  z-index: var(--z-timer);
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 12px 18px;
   font-weight: 700;
   background: var(--accent);
@@ -18,7 +18,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 16;
+  z-index: var(--z-timer-top);
   background: var(--surface);
   border-top: 1px solid var(--line);
   padding: 0 var(--gr) calc(10px + env(safe-area-inset-bottom, 0px)) var(--gl);
@@ -106,7 +106,7 @@
     margin-bottom: 4px;
   }
   .tb-time {
-    font-size: 1.875rem;
+    font-size: var(--fs-6xl);
   }
   .tb-main {
     flex-basis: auto;

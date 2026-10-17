@@ -15,7 +15,7 @@
   gap: 8px 12px;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
 }
 .starter-text {
   display: grid;
@@ -24,7 +24,7 @@
   min-width: 0;
 }
 .starter-text span {
-  font-size: 0.875rem;
+  font-size: var(--fs-md);
   color: var(--muted);
 }
 .starter-controls {
@@ -36,7 +36,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.875rem;
+  font-size: var(--fs-md);
 }
 .starter-controls .btn {
   min-height: 44px;

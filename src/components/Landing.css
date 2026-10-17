@@ -15,7 +15,7 @@
 .landing-brand {
   font-family: "Barlow Condensed","Barlow Fallback",system-ui,sans-serif;
   font-weight: 700;
-  font-size: 1.6rem;
+  font-size: var(--fs-4xl);
   letter-spacing: .02em;
 }
 .landing h1 {
@@ -26,11 +26,11 @@
   margin: 0 0 12px;
 }
 .landing h2 {
-  font-size: 1.25rem;
+  font-size: var(--fs-2xl);
   margin: 32px 0 8px;
 }
 .landing-lead {
-  font-size: 1.15rem;
+  font-size: var(--fs-xl);
   max-width: 36rem;
   margin: 0 0 20px;
 }
@@ -38,13 +38,13 @@
   margin: 20px 0 8px;
 }
 .landing-cta .btn {
-  font-size: 1.1rem;
+  font-size: var(--fs-xl);
   min-height: 48px;
   padding: 0 24px;
 }
 .landing-fine {
   color: var(--muted);
-  font-size: .9rem;
+  font-size: var(--fs-md);
   max-width: 36rem;
 }
 .landing-shot {
@@ -54,7 +54,7 @@
   width: 100%;
   height: auto;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
 }
 .landing-list {
   padding-left: 20px;
@@ -73,19 +73,19 @@
 }
 .landing-plan {
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   padding: 12px 14px;
 }
 .landing-plan h3 {
   margin: 0 0 8px;
-  font-size: 1.1rem;
+  font-size: var(--fs-xl);
 }
 .landing-plan dl {
   margin: 0;
 }
 .landing-plan dt {
   color: var(--muted);
-  font-size: .85rem;
+  font-size: var(--fs-md);
   margin-top: 6px;
 }
 .landing-plan dd {
@@ -96,7 +96,7 @@
   padding-top: 16px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: .9rem;
+  font-size: var(--fs-md);
 }
 .landing-splash {
   display: flex;
