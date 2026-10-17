@@ -12,6 +12,7 @@ import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import './Supplements.css';
 import { HOT_OZ, TRAIN_OZ_PER_30, BOTTLES, CUP_OZ, OZ_PER_LB, fmtOz, cupsOf, sumOz, lastDays, goalFor, boostOz } from '../../lib/water.js';
+import Icon from '../Icon.jsx';
 
 // One of yours as the add picker lists it: where it is now and its dose; badged Library or Custom only when syncing (ADR 027).
 const mineOf = (i: SupplementItem, syncing: boolean): MineOption => ({
@@ -167,9 +168,9 @@ export default function Supplements() {
     <div>
       <div className="weekbar">
         <div className="weeknav">
-          <button type="button" className="btn sm" aria-label="Previous day" onClick={() => step(-1)}>‹</button>
+          <button type="button" className="btn sm" aria-label="Previous day" onClick={() => step(-1)}><Icon name="chevron-left" /></button>
           <h2 className="cond">{isToday ? 'Today' : DAY_NAMES[d.getDay()]} · {fmtShort(d)}</h2>
-          <button type="button" className="btn sm" aria-label="Next day" disabled={isToday} onClick={() => step(1)}>›</button>
+          <button type="button" className="btn sm" aria-label="Next day" disabled={isToday} onClick={() => step(1)}><Icon name="chevron-right" /></button>
           {!isToday && <button type="button" className="btn sm ghost" onClick={() => setSel(null)}>Today</button>}
         </div>
       </div>

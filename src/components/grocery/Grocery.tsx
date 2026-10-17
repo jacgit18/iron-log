@@ -7,6 +7,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth } from '../../types.ts';
 import type { GroceryForm } from '../../store/types.ts';
 import './Grocery.css';
+import Icon from '../Icon.jsx';
 
 // Two views (ADR 038): To get is this month's shopping list; At home is every item you buy, checked while you have it. Unchecking a
 // When-out item there puts it on To get; ticking it bought on To get checks it again. Every-month items are always on To get.
@@ -68,9 +69,9 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   return (
     <>
       <div className="gmonth" role="group" aria-label="Month">
-        <button type="button" className="btn sm" id="groc-prev" aria-label="Previous month" onClick={() => setBack(b => b + 1)}>‹</button>
+        <button type="button" className="btn sm" id="groc-prev" aria-label="Previous month" onClick={() => setBack(b => b + 1)}><Icon name="chevron-left" /></button>
         <b id="groc-month" role="status" aria-live="polite">{monthLabel(mk)}{back === 0 ? ' (this month)' : ''}</b>
-        <button type="button" className="btn sm" id="groc-next" aria-label="Next month" disabled={back === 0} onClick={() => setBack(b => Math.max(0, b - 1))}>›</button>
+        <button type="button" className="btn sm" id="groc-next" aria-label="Next month" disabled={back === 0} onClick={() => setBack(b => Math.max(0, b - 1))}><Icon name="chevron-right" /></button>
       </div>
       <p className="note" id="groc-summary" role="status">
         {t.count ? `Got ${t.got} of ${t.count} · Spent ${money(t.spent)} · Expected ${money(t.planned)}${t.unpriced ? ` · ${t.unpriced} without a price` : ''}` : 'Nothing on this month’s list.'}

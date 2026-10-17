@@ -18,6 +18,7 @@ import InjurySwitch from './InjurySwitch.jsx';
 import './BoardTop.css';
 import './DayHeader.css';
 import './Leftovers.css';
+import Icon from '../Icon.jsx';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
@@ -53,9 +54,9 @@ function SwapArrows({ d }: { d: number }) {
   const label = (n: number) => (rest.includes(d) ? (rest.includes(n) ? `Day ${n} is also a rest day` : `Move rest day to Day ${n}`) : rest.includes(n) ? `Swap Day ${d} with the rest day` : `Swap Day ${d} with Day ${n}`);
   return (
     <span className="swaps">
-      {d > 1 ? <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}--1`} aria-label={label(d - 1)} onClick={() => swap(-1)}><span aria-hidden="true">‹</span></button> : <span className="swapgap" aria-hidden="true" />}
-      <span className="swaplabel" aria-hidden="true"><span className="swapicon">⇄</span>Swap day</span>
-      {d < DAYS.length ? <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}-1`} aria-label={label(d + 1)} onClick={() => swap(1)}><span aria-hidden="true">›</span></button> : <span className="swapgap" aria-hidden="true" />}
+      {d > 1 ? <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}--1`} aria-label={label(d - 1)} onClick={() => swap(-1)}><Icon name="chevron-left" /></button> : <span className="swapgap" aria-hidden="true" />}
+      <span className="swaplabel" aria-hidden="true"><span className="swapicon"><Icon name="swap" /></span>Swap day</span>
+      {d < DAYS.length ? <button type="button" className="btn sm ghost swapbtn" id={`swap-${d}-1`} aria-label={label(d + 1)} onClick={() => swap(1)}><Icon name="chevron-right" /></button> : <span className="swapgap" aria-hidden="true" />}
     </span>
   );
 }
@@ -140,9 +141,9 @@ export default function Board() {
     <div className="boardroot" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="weekbar">
         <div className="weeknav">
-          <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}>‹</button>
+          <button type="button" className="btn sm" aria-label="Previous week" onClick={() => st.gotoWeek('prev')}><Icon name="chevron-left" /></button>
           <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
-          <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}>›</button>
+          <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}><Icon name="chevron-right" /></button>
           {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
         </div>
         <div className="progress">

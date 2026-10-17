@@ -17,11 +17,12 @@ import WarmUp from './WarmUp.jsx';
 import StretchFirstRun from './StretchFirstRun.jsx';
 import './Stretches.css';
 import '../board/Experiments.css';
+import Icon from '../Icon.jsx';
 
 const DAYS7 = Array.from({ length: STRETCH_DAYS }, (_, i) => i);
 
 function Link({ n, url }: { n: string; url?: string }) {
-  return url ? <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(url)}: ${n} (opens in a new tab)`}><span aria-hidden="true">▶ </span>{videoLabel(url)}</a> : null;
+  return url ? <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(url)}: ${n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(url)}</a> : null;
 }
 
 function Row({ d, s, id, n, url, note, extra, removing }: { d: number; s: AppState; id: string; n: string; url?: string; note?: string; extra?: ReactNode; removing?: boolean }) {
@@ -117,9 +118,9 @@ export default function Stretches() {
     <div className="strroot">
       <div className="weekbar">
         <div className="weeknav">
-          <button type="button" className="btn sm" aria-label="Previous week" onClick={() => s.gotoWeek('prev')}>‹</button>
+          <button type="button" className="btn sm" aria-label="Previous week" onClick={() => s.gotoWeek('prev')}><Icon name="chevron-left" /></button>
           <h2 className="cond">{fmtShort(weekStart)} – {fmtShort(addDays(weekStart, 6))}</h2>
-          <button type="button" className="btn sm" aria-label="Next week" onClick={() => s.gotoWeek('next')}>›</button>
+          <button type="button" className="btn sm" aria-label="Next week" onClick={() => s.gotoWeek('next')}><Icon name="chevron-right" /></button>
           {!thisWeek && <button type="button" className="btn sm ghost" onClick={() => s.gotoWeek('today')}>This week</button>}
         </div>
         <div className="progress">
@@ -160,7 +161,7 @@ export default function Stretches() {
                 </div>
                 <span className="count">{t.skipped ? 'Skipped' : `${t.done}/${t.total}`}</span>
                 <button type="button" className="btn sm ghost daymore" id={`sdaymore-${d}`} aria-expanded={dayMore === d || !!t.skipped} aria-controls={`sskiprow-${d}`} aria-label={`More for ${DAY_NAMES[d]}: skip day`}
-                  onClick={() => setDayMore(dayMore === d ? null : d)}><span aria-hidden="true">⋯</span></button>
+                  onClick={() => setDayMore(dayMore === d ? null : d)}><Icon name="dots" /></button>
               </div>
               <div className="addrow" id={`sskiprow-${d}`}>
                 <button type="button" className="btn sm ghost" id={`sskip-${d}`} aria-pressed={!!t.skipped} aria-label={t.skipped ? `Undo skip for ${DAY_NAMES[d]}` : `Skip ${DAY_NAMES[d]}`} onClick={() => { s.skipStretchDay(d, !t.skipped); if (t.skipped && dayMore !== d) requestAnimationFrame(() => document.getElementById(`sdaymore-${d}`)?.focus()); }}>{t.skipped ? 'Undo skip' : 'Skip day'}</button>

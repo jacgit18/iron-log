@@ -4,6 +4,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import { SLOT_OPTIONS, slotLabel } from '../../lib/supplements.js';
 import CatalogMatches from '../program/CatalogMatches.jsx';
 import { plainText } from '../../lib/picker.js';
+import Icon from '../Icon.jsx';
 
 // Every supplement you keep, with when it is on the Supplements tab. Library-only ones are kept to schedule later. Shown under the
 // schedule on Daily → Supplements while Edit is on (spec inline-catalog-picker step 6; it was a Program tab view before).
@@ -60,8 +61,8 @@ export default function SupplementLibrary() {
                   </div>
                   <div className="actions flush">
                     {!filtering && <>
-                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} up`} onClick={() => moveSupplement(r.id, -1)}><span aria-hidden="true">↑</span></button>
-                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} down`} onClick={() => moveSupplement(r.id, 1)}><span aria-hidden="true">↓</span></button>
+                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} up`} onClick={() => moveSupplement(r.id, -1)}><Icon name="arrow-up" /></button>
+                      <button type="button" className="btn sm ghost" aria-label={`Move ${r.n}${where} down`} onClick={() => moveSupplement(r.id, 1)}><Icon name="arrow-down" /></button>
                     </>}
                     <button type="button" className="btn sm" id={`suplib-${r.id}`} aria-label={`Edit ${r.n}${where}`} onClick={() => openModal({ type: 'supplement', id: r.id })}>Edit</button>
                   </div>

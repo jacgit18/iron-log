@@ -14,6 +14,7 @@ import ExerciseLibrary from './ExerciseLibrary.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
 import './Editor.css';
+import Icon from '../Icon.jsx';
 
 const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
 
@@ -179,8 +180,8 @@ function ProgramEditor() {
                     <span className="note">{sl.items.map(it => [it.ph ? PHASES[it.ph].label : 'No phase', it.w != null ? it.w + ' lb' : (it.bw ? 'bodyweight' : ''), it.rx || ''].filter(Boolean).join(' · ')).join('  |  ')}</span>
                   </div>
                   <div className="edbtns">
-                    <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}>↑</button>
-                    <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}>↓</button>
+                    <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}><Icon name="arrow-up" /></button>
+                    <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}><Icon name="arrow-down" /></button>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
                     <ArmedButton className={`btn sm ${arming === i ? 'danger' : 'ghost'}`} id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? i : null)} onConfirm={() => { setArming(null); justRemoved.current = true; st.removeEdSlot(i); }} />
                   </div>
