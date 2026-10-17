@@ -35,7 +35,7 @@
 }
 .strroot .grphead .count {
   margin-left: auto;
-  font-size: .8125rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 .strroot .warm {
@@ -63,7 +63,7 @@
     min-width: 44px;
     min-height: 44px;
     padding: 0;
-    font-size: 1.25rem;
+    font-size: var(--fs-2xl);
     line-height: 1;
   }
   .strroot .col:not(.skipd, .more) .addrow {

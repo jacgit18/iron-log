@@ -51,7 +51,7 @@
 }
 .sslothead h3 {
   margin: 0;
-  font-size: .8125rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -102,7 +102,7 @@
 }
 .sdose {
   display: block;
-  font-size: .8125rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 .srow.taken .rmname {
@@ -147,11 +147,11 @@
   justify-content: center;
   gap: 0;
   min-height: 52px;
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   text-align: left;
 }
 .wchips .chip .note {
-  font-size: .75rem;
+  font-size: var(--fs-xs);
   line-height: 1.25;
 }
 .wcustom {

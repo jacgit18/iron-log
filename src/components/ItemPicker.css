@@ -2,7 +2,7 @@
 @layer components {
 .picklist {
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   background: var(--surface);
   max-height: min(320px,50vh);
   overflow-y: auto;
@@ -16,7 +16,7 @@
   padding: 8px;
   min-height: 44px;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   cursor: pointer;
 }
 .pickopt[aria-selected="true"] {

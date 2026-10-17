@@ -8,7 +8,7 @@
 }
 .bwgoal h3 {
   margin: 0 0 6px;
-  font-size: .9375rem;
+  font-size: var(--fs-base);
 }
 .goalbar {
   display: flex;
@@ -25,7 +25,7 @@
 }
 .goalitem h4 {
   margin: 0 0 4px;
-  font-size: .875rem;
+  font-size: var(--fs-md);
 }
 .goalform {
   margin: 8px 0;
@@ -38,11 +38,11 @@
   grid-template-columns: 96px 30px minmax(0,260px) auto;
   gap: 10px;
   align-items: center;
-  font-size: .875rem;
+  font-size: var(--fs-md);
 }
 .wkdate small {
   color: var(--muted);
-  font-size: .6875rem;
+  font-size: var(--fs-2xs);
   display: block;
 }
 .cells {
@@ -85,7 +85,7 @@
 .pcard {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -94,14 +94,14 @@
 }
 .pcard h3 {
   margin: 0;
-  font-size: 1.1875rem;
+  font-size: var(--fs-xl);
   font-weight: 600;
 }
 .pstats {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
-  font-size: .8125rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 .pstats span {
@@ -109,7 +109,7 @@
 }
 .pstats b {
   color: var(--ink);
-  font-size: 1rem;
+  font-size: var(--fs-lg);
 }
 @media (max-width:700px) {
   .wkrow {

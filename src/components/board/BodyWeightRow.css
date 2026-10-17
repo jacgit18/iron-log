@@ -8,32 +8,32 @@
   gap: 8px 12px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-xl);
   padding: 8px 12px;
   margin: 0 0 12px;
 }
 .bwrow .bwl {
-  font-size: .8125rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--muted);
 }
 .bwrow b {
-  font-size: 1rem;
+  font-size: var(--fs-lg);
 }
 .bwrow .bwin {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   color: var(--muted);
-  font-size: .875rem;
+  font-size: var(--fs-md);
 }
 .bwrow input {
   width: 96px;
   border: 1px solid var(--field-line);
   background: var(--bg);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 6px 8px;
-  font-size: 1rem;
+  font-size: var(--fs-lg);
   color: var(--ink);
 }
 .bwrow .btn:last-child {

@@ -14,7 +14,7 @@
   display: inline-flex;
   block-size: 32px;
   border: 1px solid var(--field-line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--sunk);
 }
 .progslider::before {
@@ -23,7 +23,7 @@
   inset-block: 2px;
   inset-inline-start: 2px;
   inline-size: calc(50% - 2px);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--accent);
   transition: transform .18s ease;
 }
@@ -41,7 +41,7 @@
   background: transparent;
   color: var(--muted);
   font-weight: 700;
-  font-size: .875rem;
+  font-size: var(--fs-md);
 }
 .progslider button.on {
   color: var(--accent-ink);

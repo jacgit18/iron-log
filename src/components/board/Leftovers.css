@@ -5,7 +5,7 @@
   border: 1px solid var(--field-line);
   background: var(--surface);
   color: var(--ink);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 2px 4px;
   min-height: 44px;
 }

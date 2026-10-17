@@ -4,7 +4,7 @@
    pushing the page down: in the flow, its arrival moved the whole board (layout shift 0.12 on Lighthouse mobile). */
 #install-hint {
   position: fixed;
-  z-index: 12;
+  z-index: var(--z-hint);
   left: 12px;
   right: 12px;
   bottom: calc(var(--tabbar, 0px) + 72px + env(safe-area-inset-bottom, 0px));

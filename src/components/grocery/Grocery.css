@@ -15,7 +15,7 @@
 .groc .gtop .seg button {
   min-height: 44px;
   padding: 0 14px;
-  font-size: .875rem;
+  font-size: var(--fs-md);
 }
 .gmonth {
   display: flex;
@@ -26,7 +26,7 @@
 .gmonth .btn {
   min-width: 44px;
   min-height: 44px;
-  font-size: 1.25rem;
+  font-size: var(--fs-2xl);
   line-height: 1;
 }
 .gmonth b {
@@ -46,7 +46,7 @@
 }
 .gstorehead h3 {
   margin: 0;
-  font-size: .8125rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -109,9 +109,9 @@
   display: block;
   padding: 4px 10px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--bg);
-  font-size: .8125rem;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -132,7 +132,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: .75rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
 .gnum {
@@ -150,7 +150,7 @@
   min-height: 44px;
   display: flex;
   align-items: center;
-  font-size: .875rem;
+  font-size: var(--fs-md);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -178,9 +178,9 @@
 }
 .gchip {
   flex: none;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 2px 10px;
-  font-size: .75rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   background: var(--sunk);
   color: var(--muted);
@@ -214,7 +214,7 @@
   margin-left: auto;
 }
 .gedit .gcheck {
-  font-size: .875rem;
+  font-size: var(--fs-md);
   white-space: nowrap;
 }
 .gerr {
@@ -236,7 +236,7 @@
 }
 .gform h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--fs-lg);
 }
 .gform .warmadd input {
   min-height: 44px;
