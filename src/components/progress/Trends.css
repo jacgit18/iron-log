@@ -153,8 +153,10 @@
 .bests li:last-child .bestrow {
   border-bottom: 0;
 }
-.bestrow:hover {
-  background: var(--sunk);
+@media (hover:hover) {
+  .bestrow:hover {
+    background: var(--sunk);
+  }
 }
 .bname {
   min-width: 0;
