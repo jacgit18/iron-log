@@ -246,7 +246,7 @@ export interface SettingsSlice {
 }
 
 /** The Grocery section's add-item form: what was typed. `price` is dollars as text; `every` makes it an Every-month item (else When out). */
-export interface GroceryForm { n: string; store: string; qty: string; price: string; every: boolean }
+export interface GroceryForm { n: string; store: string; qty: string; price: string; every: boolean; note?: string }
 
 /** What the last single-item delete took out: `text` is the notice ("Removed <text>."), `restore` puts it back. */
 export interface Removed { id: number; scope: string; text: string; restore: () => boolean | void }
@@ -267,7 +267,7 @@ export interface GrocerySlice {
   setGrocery(data: GroceryData): void; // an import replaces everything
   addGrocery(data: GroceryData): void; // an import, or this device's old list reaching the account, adds what is missing
   addGroceryItem(d: GroceryForm): string | null;
-  updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean }>): string | null;
+  updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean; note: string }>): string | null;
   removeGroceryItem(id: string): void;
   addGroceryStore(name: string): string | null;
   removeGroceryStore(name: string): string | null;

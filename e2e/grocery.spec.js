@@ -9,6 +9,7 @@ const noViolations = async page => {
 const open = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); };
 // Adds an item from At home's Edit mode (left open). `every`: an Every-month item, else When out (the default).
 const add = async (page, n, store, qty, price, every = false) => {
+  if (!(await page.locator('#groc-store').count())) await page.click('#groc-more'); // store, count and price sit under More
   await page.fill('#groc-name', n); await page.fill('#groc-store', store); await page.fill('#groc-qty', qty); await page.fill('#groc-price', price);
   await page.setChecked('#groc-every', every);
   await page.click('#groc-add');
@@ -154,6 +155,7 @@ test('Groceries comes before Supplements, and the store lists offer the suggeste
   await expect(page.locator('#daily-supplements')).toHaveAttribute('aria-pressed', 'true'); // Supplements still opens first
   await page.click('#daily-grocery');
   await page.click('#groc-edit'); // an empty list opens on At home
+  await page.click('#groc-more'); // the store box is under More
   await expect(page.locator('#groc-stores option')).toHaveCount(5);
   await page.fill('#groc-name', 'Bananas'); await page.fill('#groc-store', 'Aldi'); await page.click('#groc-add');
   await expect(page.locator('#groc-stores option')).toHaveCount(5); // Aldi is now one of yours, not listed twice

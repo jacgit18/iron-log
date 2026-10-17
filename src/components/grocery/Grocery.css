@@ -199,8 +199,11 @@
   gap: var(--sp-6) var(--sp-8);
   padding: var(--sp-8) 0;
 }
+.gedit .gedithave {
+  flex: none;
+}
 .gedit .gname {
-  flex: 1 1 100%;
+  flex: 1 1 10em;
   min-width: 0;
   min-height: 44px;
 }
@@ -216,6 +219,10 @@
 .gedit .gcheck {
   font-size: var(--fs-md);
   white-space: nowrap;
+}
+.gedit .gnoteinput {
+  flex: 1 1 100%;
+  min-height: 44px;
 }
 .gerr {
   flex-basis: 100%;
@@ -250,6 +257,66 @@
   justify-content: space-between;
   gap: var(--sp-8);
   min-height: 44px;
+}
+
+/* A note under an item's name. */
+.gnote {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* The floating add form and Done while editing At home. It sits above the page like the timer bar, and the list gets room beneath it. */
+.gathome.editing {
+  padding-bottom: calc(var(--gdock-top, 150px) + var(--sp-16));
+}
+.gdock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar, 0px) + env(safe-area-inset-bottom, 0px) + var(--lift, 0px));
+  z-index: var(--z-timer);
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -4px 14px rgba(0,0,0,.08);
+  padding: var(--sp-8) var(--gr) var(--sp-8) var(--gl);
+}
+.gdock form {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.gdockrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.gdockrow input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+}
+.gdockrow .btn {
+  flex: none;
+  min-height: 44px;
+}
+.gdockrow .gdone {
+  font-weight: 700;
+}
+.gdockmore {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.gdockmore input {
+  min-height: 44px;
+}
+
+/* The undo notice rides above the dock, which would otherwise cover it (Toaster.css puts it at the bottom edge). */
+html:has(.gdock) body .toasts {
+  bottom: calc(var(--tabbar, 0px) + env(safe-area-inset-bottom, 0px) + var(--gdock-top, 0px) + var(--sp-8));
 }
 
 /* A phone: the panel gives its width to the list. */

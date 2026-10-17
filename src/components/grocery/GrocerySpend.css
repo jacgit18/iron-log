@@ -1,0 +1,92 @@
+@layer base, components;
+@layer components {
+/* Groceries: spending by month. Bars are plain boxes whose height is a percentage of the tallest month. */
+.gspendhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.gspendhead .note {
+  margin: 0;
+  flex: 1 1 14em;
+}
+.gspendhead .seg button {
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: var(--fs-md);
+}
+.gspend {
+  height: 210px;
+  padding: 20px 0 20px;
+}
+.gplot {
+  position: relative;
+  height: 100%;
+  border-bottom: 1px solid var(--line);
+}
+.gbars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  display: flex;
+  gap: var(--sp-4);
+}
+.gbars li {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+}
+.gbars i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--h);
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+}
+.gbars li.cur i {
+  background: repeating-linear-gradient(45deg, var(--accent) 0 4px, transparent 4px 7px);
+  border: 1px solid var(--accent);
+  border-bottom: 0;
+}
+.gval,.gmo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.gval {
+  bottom: calc(var(--h) + 2px);
+}
+.gmo {
+  top: calc(100% + 3px);
+}
+.gavg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--avg);
+  border-top: 1px dashed var(--muted);
+  pointer-events: none;
+}
+.gavg b {
+  position: absolute;
+  left: 0;
+  top: -16px;
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface);
+  padding: 0 var(--sp-4);
+}
+}
