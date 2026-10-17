@@ -5,6 +5,7 @@ import compression from 'compression';
 import express from 'express';
 import { sql, type Kysely, type Transaction } from 'kysely';
 import { requireAdmin, type Admins } from './admin.ts';
+import { isPaid } from './plan.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import { bodyLimit } from './bodyLimit.ts';
@@ -178,8 +179,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   });
   app.get('/api/me', async (_req, res) => {
     const userId = String(res.locals.userId);
-    const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string }>`select current_setting('app.user_id') as id`.execute(trx)).rows[0]);
-    res.json({ ok: true, userId: row?.id, minClientVersion, account: res.locals.account as Account });
+    const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string; plan: string | null }>`select current_setting('app.user_id') as id, (select plan from users where id = current_setting('app.user_id')::bigint) as plan`.execute(trx)).rows[0]);
+    const account = res.locals.account as Account;
+    res.json({ ok: true, userId: row?.id, minClientVersion, account: { ...account, plan: row?.plan ?? 'free', isPaid: isPaid(row?.plan, account.isAdmin) } });
   });
 
   app.post('/api/commands/import-legacy', async (req, res) => {
