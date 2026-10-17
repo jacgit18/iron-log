@@ -91,6 +91,12 @@ if (!plan.length) {
 }
 console.log(`Changed against ${baseRef}: ${files.length} file(s). Checks: ${plan.join(', ')}`);
 for (const c of plan) console.log(`  ${c.padEnd(9)} ${checks.get(c)}`);
+// Not a check that can fail: CLAUDE.md asks for these on UI work, and a reminder at push time is cheaper than a PR comment.
+const uiFiles = files.filter(f => !is.docs(f) && !is.unitTest(f) && !is.e2eSpec(f) && (is.css(f) || /\.tsx$/.test(f)));
+if (uiFiles.length) {
+  console.log(`  Reminder: ${uiFiles.length} UI or style file(s) changed (${uiFiles[0]}${uiFiles.length > 1 ? ', ...' : ''}).`);
+  console.log('    Run `node scripts/lighthouse.mjs --check` and put before and after in the PR; update the ux/ docs and feature-map.md.');
+}
 if (args.includes('--list')) process.exit(0);
 
 const needsDb = new Set(['db:check', 'e2e:sync']);
