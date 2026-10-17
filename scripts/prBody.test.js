@@ -10,6 +10,12 @@ describe('inferAudience', () => {
   it('is n/a when nothing a user can see changed', () => {
     expect(inferAudience(['README.md', 'e2e/board.spec.js', 'scripts/check.mjs', '.github/workflows/test.yml', '.githooks/pre-push', 'src/lib/logic.test.js']).audience).toBe('na');
   });
+  it('is paid when a paid-subscriber entry is added, and a paid entry wins over an admin one', () => {
+    expect(inferAudience(['src/features.ts', 'src/App.tsx'], "+  coach: 'paid', // Coaching notes").audience).toBe('paid');
+    expect(inferAudience(['src/features.ts'], "+  a: 'admin',\n+  b: 'paid',").audience).toBe('paid');
+    expect(inferAudience(['src/features.ts'], "+  coach: 'all',").audience).toBe('everyone'); // releasing it is not adding one
+    expect(inferAudience(['server/plan.ts', 'src/features.ts'], '').audience).toBe('everyone'); // the flag's own plumbing is not a paid feature
+  });
   it('is admin when an admin-only entry is added or the admin guard changes', () => {
     expect(inferAudience(['src/features.ts', 'src/App.tsx'], "+  webPush: 'admin', // Push alerts").audience).toBe('admin');
     expect(inferAudience(['server/admin.ts']).audience).toBe('admin');
@@ -22,7 +28,7 @@ describe('inferAudience', () => {
 });
 
 describe('buildBody', () => {
-  it.each([['na', 'n/a:'], ['admin', 'Admin only'], ['everyone', 'Everyone']])('ticks exactly the %s box', (audience, text) => {
+  it.each([['na', 'n/a:'], ['admin', 'Admin only'], ['paid', 'Paid subscribers'], ['everyone', 'Everyone']])('ticks exactly the %s box', (audience, text) => {
     const t = ticked(buildBody(template, audience));
     expect(t).toHaveLength(1);
     expect(t[0]).toContain(text);

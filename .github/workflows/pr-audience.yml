@@ -25,7 +25,7 @@ jobs:
           section="$(printf '%s\n' "$BODY" | sed -n '/^## Audience/,/^## /p')"
           ticked="$(printf '%s\n' "$section" | grep -ciE '^\s*- \[x\]' || true)"
           if [ "$ticked" -ne 1 ]; then
-            echo "::error title=Audience not chosen::Tick exactly one box under \"Audience\" in the PR description (n/a, admin only, or everyone). Found $ticked. node scripts/pr-body.mjs picks it from the diff."
+            echo "::error title=Audience not chosen::Tick exactly one box under \"Audience\" in the PR description (n/a, admin only, paid subscribers, or everyone). Found $ticked. node scripts/pr-body.mjs picks it from the diff."
             exit 1
           fi
           echo "Audience chosen."

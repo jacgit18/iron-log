@@ -6,22 +6,24 @@
 //   (the Changelog section is filled from --what, or from --changelog "..." when it should say less)
 //   gh pr create --title "..." --body-file /tmp/body.md
 //
-// The audience is worked out from the diff against origin/main (the reason goes to stderr), and --audience na|admin|everyone overrides it:
+// The audience is worked out from the diff against origin/main (the reason goes to stderr), and --audience na|admin|paid|everyone overrides it:
 //   na        every changed file is a doc, test, script, tool, CI or config file: nothing a user can see
 //   admin     the diff adds an admin-only line (key: 'admin') to src/features.ts, or touches server/admin.ts
+//   paid      the diff adds a paid-subscriber line (key: 'paid') to src/features.ts
 //   everyone  anything else under src/, server/ or public/ (the standing rule: new features ship to everyone for now, see CLAUDE.md)
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const LABELS = { na: 'n/a:', admin: '**Admin only**', everyone: '**Everyone**' };
+const LABELS = { na: 'n/a:', admin: '**Admin only**', paid: '**Paid subscribers**', everyone: '**Everyone**' };
 const NOT_USER_FACING = [/^docs\//, /^\.githooks\//, /^e2e[\w-]*\//, /^scripts\//, /^tools\//, /^\.github\//, /^\.claude\//, /^spike\//, /^db\//, /^backups?\//, /\.test\.[jt]sx?$/, /\.md$/, /^package(-lock)?\.json$/, /^tsconfig[\w.]*\.json$/, /^vite\.config\./, /^playwright[\w.]*\.config\./, /^Dockerfile$/, /^cloudbuild[\w-]*\.yaml$/, /^docker-compose\.yml$/];
 
 /** Which audience a change has, from its file names and its diff text. Returns { audience, reason }. */
 export function inferAudience(files, diff = '') {
   if (files.length > 0 && files.every(f => NOT_USER_FACING.some(re => re.test(f)))) return { audience: 'na', reason: 'only docs, tests, scripts, CI or config files changed' };
+  if (/^\+\s*\w+:\s*'paid'/m.test(diff)) return { audience: 'paid', reason: "a paid-subscriber entry was added to src/features.ts" };
   if (/^\+\s*\w+:\s*'admin'/m.test(diff) || files.includes('server/admin.ts')) return { audience: 'admin', reason: "an admin-only entry in src/features.ts, or server/admin.ts, changed" };
-  return { audience: 'everyone', reason: 'user-visible files changed and no admin-only entry was added (standing rule: ship to everyone for now)' };
+  return { audience: 'everyone', reason: 'user-visible files changed and no admin-only or paid entry was added (standing rule: ship to everyone for now)' };
 }
 
 /** True when the change can move a Lighthouse score: UI code, styles, fonts, images, the page shell or the build config. */
@@ -60,7 +62,7 @@ function main(argv) {
   const files = git('diff', '--name-only', `${base}...HEAD`).split('\n').filter(Boolean);
   const diff = git('diff', '-U0', `${base}...HEAD`, '--', 'src/features.ts');
   const given = arg('--audience');
-  if (given && !LABELS[given]) { console.error('--audience must be na, admin or everyone'); process.exit(2); }
+  if (given && !LABELS[given]) { console.error('--audience must be na, admin, paid or everyone'); process.exit(2); }
   const found = given ? { audience: given, reason: 'given with --audience' } : inferAudience(files, diff);
   console.error(`Audience: ${found.audience} (${found.reason}). ${files.length} file(s) against ${base}.`);
   const template = readFileSync(fileURLToPath(new URL('../.github/pull_request_template.md', import.meta.url)), 'utf8');

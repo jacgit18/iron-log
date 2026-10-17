@@ -7,6 +7,7 @@
 
 - [ ] n/a: no user-facing change
 - [ ] **Admin only**: `'admin'` in `FEATURES` (`src/features.ts`), UI behind `useFeature`, `requireAdmin` on any new API route
+- [ ] **Paid subscribers**: `'paid'` in `FEATURES` (`src/features.ts`), UI behind `useFeature`, `requirePaid` (`server/plan.ts`) on any new API route
 - [ ] **Everyone**: released on purpose (`'all'`, or the flag removed)
 
 ## Changelog
