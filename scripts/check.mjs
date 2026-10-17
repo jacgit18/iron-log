@@ -91,6 +91,16 @@ if (!plan.length) {
 }
 console.log(`Changed against ${baseRef}: ${files.length} file(s). Checks: ${plan.join(', ')}`);
 for (const c of plan) console.log(`  ${c.padEnd(9)} ${checks.get(c)}`);
+// Not a check that can fail: CLAUDE.md asks for these on UI work, and a reminder at push time is cheaper than a PR comment.
+// Printed again after the checks pass, because e2e output can push it off the screen.
+const uiFiles = files.filter(f => !is.docs(f) && !is.unitTest(f) && !is.e2eSpec(f)
+  && (is.css(f) || /\.tsx$/.test(f) || f === 'index.html' || f.startsWith('public/') || f === 'src/fonts.ts' || f.startsWith('src/assets/') || f.startsWith('src/components/') || f.startsWith('src/hooks/')));
+const reminder = () => {
+  if (!uiFiles.length) return;
+  console.log(`  Reminder: ${uiFiles.length} UI or style file(s) changed (${uiFiles[0]}${uiFiles.length > 1 ? ', ...' : ''}).`);
+  console.log('    Run `node scripts/lighthouse.mjs --check` and put before and after in the PR; update the ux/ docs and feature-map.md.');
+};
+reminder();
 if (args.includes('--list')) process.exit(0);
 
 const needsDb = new Set(['db:check', 'e2e:sync']);
@@ -129,3 +139,4 @@ if (skipped.length) {
   process.exit(1);
 }
 console.log('\nAll chosen checks passed. CI still runs everything.');
+reminder();
