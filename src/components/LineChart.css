@@ -2,8 +2,8 @@
 @layer components {
 .lchart {
   position: relative;
-  padding: 6px 12px 20px 38px;
-  margin-top: 4px;
+  padding: var(--sp-6) var(--sp-12) 20px 38px;
+  margin-top: var(--sp-4);
   flex: none;
 }
 .lgrid {
@@ -152,16 +152,16 @@
 .lleg {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 14px;
+  gap: var(--sp-4) 14px;
   font-size: var(--fs-xs);
   color: var(--muted);
-  margin-top: 4px;
+  margin-top: var(--sp-4);
   flex: none;
 }
 .lleg span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
 }
 .lleg b {
   color: var(--ink);

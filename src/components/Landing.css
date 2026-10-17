@@ -9,7 +9,7 @@
 .landing-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   margin-bottom: 28px;
 }
 .landing-brand {
@@ -23,11 +23,11 @@
   font-weight: 700;
   font-size: clamp(2rem,7vw,3rem);
   line-height: 1.1;
-  margin: 0 0 12px;
+  margin: 0 0 var(--sp-12);
 }
 .landing h2 {
   font-size: var(--fs-2xl);
-  margin: 32px 0 8px;
+  margin: 32px 0 var(--sp-8);
 }
 .landing-lead {
   font-size: var(--fs-xl);
@@ -35,7 +35,7 @@
   margin: 0 0 20px;
 }
 .landing-cta {
-  margin: 20px 0 8px;
+  margin: 20px 0 var(--sp-8);
 }
 .landing-cta .btn {
   font-size: var(--fs-xl);
@@ -61,23 +61,23 @@
   max-width: 38rem;
 }
 .landing-list li {
-  margin: 8px 0;
+  margin: var(--sp-8) 0;
 }
 .landing-plans {
   list-style: none;
   padding: 0;
-  margin: 12px 0 0;
+  margin: var(--sp-12) 0 0;
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(13rem,1fr));
-  gap: 12px;
+  gap: var(--sp-12);
 }
 .landing-plan {
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  padding: 12px 14px;
+  padding: var(--sp-12) 14px;
 }
 .landing-plan h3 {
-  margin: 0 0 8px;
+  margin: 0 0 var(--sp-8);
   font-size: var(--fs-xl);
 }
 .landing-plan dl {
@@ -86,14 +86,14 @@
 .landing-plan dt {
   color: var(--muted);
   font-size: var(--fs-md);
-  margin-top: 6px;
+  margin-top: var(--sp-6);
 }
 .landing-plan dd {
   margin: 0;
 }
 .landing-foot {
   margin-top: 36px;
-  padding-top: 16px;
+  padding-top: var(--sp-16);
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: var(--fs-md);
@@ -104,12 +104,12 @@
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  gap: 8px;
+  gap: var(--sp-8);
   color: var(--muted);
 }
 .landing-dev {
-  margin: 12px 0 0;
-  padding-top: 12px;
+  margin: var(--sp-12) 0 0;
+  padding-top: var(--sp-12);
   border-top: 1px dashed var(--line);
 }
 }

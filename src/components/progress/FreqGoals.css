@@ -2,15 +2,15 @@
 @layer components {
 .freqgoals .freqlist {
   list-style: none;
-  margin: 0 0 10px;
+  margin: 0 0 var(--sp-10);
   padding: 0;
 }
 .freqgoals .freqlist li {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 4px 10px;
+  gap: var(--sp-4) var(--sp-10);
   align-items: center;
-  padding: 8px 0;
+  padding: var(--sp-8) 0;
 }
 .freqgoals .freqname {
   font-weight: 600;

@@ -13,7 +13,7 @@
 .exline {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--sp-6);
   align-items: center;
   font-size: var(--fs-sm);
 }
@@ -54,7 +54,7 @@
 }
 .cardmore {
   border-top: 1px solid var(--line);
-  padding-top: 8px;
+  padding-top: var(--sp-8);
 }
 /* The checkbox sits on the same line as the exercise name, on single and multi-exercise cards alike; a long name wraps beside it, not under it. */
 .card .exname {
@@ -70,14 +70,14 @@
 .card.group {
   background: var(--sunk);
   border: 2px solid var(--field-line);
-  padding: 8px;
-  gap: 8px;
+  padding: var(--sp-8);
+  gap: var(--sp-8);
 }
 .card.group .excard {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  padding: 10px;
+  padding: var(--sp-10);
   touch-action: pan-y;
 }
 .card.group .excard.idone {
@@ -109,7 +109,7 @@
   top: 50%;
   z-index: 1;
   transform: translateY(-50%);
-  padding: 4px 9px;
+  padding: var(--sp-4) 9px;
   border-radius: var(--r-pill);
   background: var(--swipe-c);
   border: 1px solid var(--swipe-c);
@@ -152,12 +152,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .cardmain {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-2);
 }
 }

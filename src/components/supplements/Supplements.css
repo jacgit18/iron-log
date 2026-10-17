@@ -4,7 +4,7 @@
 .suppadd {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 8px;
+  gap: var(--sp-6) var(--sp-8);
   align-items: flex-end;
 }
 .suppadd .picker {
@@ -25,12 +25,12 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .sstopend {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .sstopend .btn {
   min-height: 44px;
@@ -45,9 +45,9 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-8);
   border-bottom: 1px solid var(--line);
-  padding-bottom: 4px;
+  padding-bottom: var(--sp-4);
 }
 .sslothead h3 {
   margin: 0;
@@ -61,7 +61,7 @@
   color: var(--accent);
 }
 .sslot>.note {
-  margin: 8px 0 0;
+  margin: var(--sp-8) 0 0;
 }
 .slist {
   list-style: none;
@@ -79,13 +79,13 @@
 .srow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   min-height: 44px;
 }
 .stick {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   flex: 1 1 auto;
   min-width: 0;
   min-height: 44px;
@@ -118,8 +118,8 @@
 }
 .sslot .suppadd {
   border-top: 1px solid var(--line);
-  padding-top: 12px;
-  margin-top: 4px;
+  padding-top: var(--sp-12);
+  margin-top: var(--sp-4);
 }
 .sslot .suppadd .btn,.sslot .suppadd .field input {
   min-height: 44px;
@@ -133,12 +133,12 @@
   padding: 0;
 }
 .suppanel .sect {
-  padding: 6px 0 4px;
+  padding: var(--sp-6) 0 var(--sp-4);
 }
 .wchips {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .wchips .chip {
   display: flex;
@@ -157,8 +157,8 @@
 .wcustom {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--sp-8);
+  margin-top: var(--sp-8);
 }
 .wcustom .field {
   flex: 1 1 auto;
@@ -176,31 +176,31 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 8px 16px;
+  gap: var(--sp-8) var(--sp-16);
 }
 .whot {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   min-height: 44px;
 }
 .wgoal {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
+  gap: var(--sp-4) var(--sp-8);
 }
 .wgoalform {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 
 /* A phone: the panel gives its width to the list. */
 @media (max-width:480px) {
   .suppanel.panel {
-    padding: 12px;
+    padding: var(--sp-12);
   }
 }
 }

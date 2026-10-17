@@ -7,17 +7,17 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 12px;
+  gap: var(--sp-8) var(--sp-12);
 }
 .notice[data-kind] .nbody {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--sp-8);
   flex: 1 1 14rem;
 }
 .notice[data-kind] .actions {
   margin: 0;
-  gap: 6px;
+  gap: var(--sp-6);
   align-items: center;
 }
 .nicon {

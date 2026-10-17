@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 /* The labelled group wraps the toggle and the fields only; the switch beside them is not a sort or filter control. */
 .filtergroup {
@@ -19,7 +19,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 8px 12px;
+  gap: var(--sp-8) var(--sp-12);
 }
 .filterfields .field {
   min-width: 160px;
@@ -36,7 +36,7 @@
     flex: 1 1 100%;
   }
   .boardroot .notice.leftovers {
-    padding-block: 4px 8px;
+    padding-block: var(--sp-4) var(--sp-8);
   }
   .boardroot .notice.leftovers .actions {
     flex: 1 1 100%;
@@ -52,11 +52,11 @@
     min-width: 0;
   }
   .boardroot .bwrow {
-    margin-bottom: 8px;
-    padding-block: 4px;
+    margin-bottom: var(--sp-8);
+    padding-block: var(--sp-4);
   }
   .boardroot .filterbar {
-    margin-block: 0 4px;
+    margin-block: 0 var(--sp-4);
   }
   .filtertoggle {
     display: inline-flex;
@@ -79,7 +79,7 @@
     justify-self: start;
   }
   .edtop.boardtabtop {
-    padding-block: 4px 8px;
+    padding-block: var(--sp-4) var(--sp-8);
   }
   .edtop.boardtabtop .seg.modesel {
     margin-left: 0;
