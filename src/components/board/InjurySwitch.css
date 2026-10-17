@@ -3,7 +3,7 @@
 .injsw {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
   min-height: 44px;
   cursor: pointer;
   /* The right end of the Sort & filter row. It follows the fields in the page, so the Tab order matches what is drawn. */

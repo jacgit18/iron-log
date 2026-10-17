@@ -2,41 +2,41 @@
 @layer components {
 /* Body weight goal */
 .bwgoal {
-  margin-top: 12px;
+  margin-top: var(--sp-12);
   border-top: 1px solid var(--line);
-  padding-top: 10px;
+  padding-top: var(--sp-10);
 }
 .bwgoal h3 {
-  margin: 0 0 6px;
+  margin: 0 0 var(--sp-6);
   font-size: var(--fs-base);
 }
 .goalbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 4px 0;
+  gap: var(--sp-8);
+  margin: var(--sp-4) 0;
 }
 .goalbar .bar {
   flex: 1;
   max-width: 260px;
 }
 .goalitem {
-  margin: 8px 0 10px;
+  margin: var(--sp-8) 0 var(--sp-10);
 }
 .goalitem h4 {
-  margin: 0 0 4px;
+  margin: 0 0 var(--sp-4);
   font-size: var(--fs-md);
 }
 .goalform {
-  margin: 8px 0;
+  margin: var(--sp-8) 0;
 }
 .hist-panel {
-  margin-bottom: 16px;
+  margin-bottom: var(--sp-16);
 }
 .wkrow {
   display: grid;
   grid-template-columns: 96px 30px minmax(0,260px) auto;
-  gap: 10px;
+  gap: var(--sp-10);
   align-items: center;
   font-size: var(--fs-md);
 }
@@ -61,7 +61,7 @@
   width: 12px;
   height: 12px;
   vertical-align: -1px;
-  margin-left: 6px;
+  margin-left: var(--sp-6);
 }
 .cells i.c1,.cleg.c1 {
   background: color-mix(in srgb, var(--accent) 35%, var(--sunk));
@@ -80,16 +80,16 @@
 .plist {
   display: grid;
   grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
-  gap: 12px;
+  gap: var(--sp-12);
 }
 .pcard {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-xl);
-  padding: 12px;
+  padding: var(--sp-12);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-6);
   text-align: left;
 }
 .pcard h3 {
@@ -100,7 +100,7 @@
 .pstats {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: var(--sp-4) var(--sp-16);
   font-size: var(--fs-sm);
   color: var(--muted);
 }

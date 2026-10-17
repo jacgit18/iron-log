@@ -10,7 +10,7 @@
 .boardroot .colhead .swaps {
   margin: 0 auto;
   align-items: center;
-  gap: 2px;
+  gap: var(--sp-2);
 }
 .boardroot .swapgap {
   width: 44px;
@@ -97,7 +97,7 @@
   position: absolute;
   top: -10px;
   right: 12px;
-  padding: 1px 8px;
+  padding: 1px var(--sp-8);
   border-radius: var(--r-pill);
   background: var(--accent);
   color: var(--accent-ink);

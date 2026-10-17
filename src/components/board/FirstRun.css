@@ -2,24 +2,24 @@
 @layer components {
 .starters {
   list-style: none;
-  margin: 0 0 12px;
+  margin: 0 0 var(--sp-12);
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .starter {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 12px;
-  padding: 10px 12px;
+  gap: var(--sp-8) var(--sp-12);
+  padding: var(--sp-10) var(--sp-12);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
 }
 .starter-text {
   display: grid;
-  gap: 2px;
+  gap: var(--sp-2);
   flex: 1 1 14rem;
   min-width: 0;
 }
@@ -30,12 +30,12 @@
 .starter-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-10);
 }
 .starter-controls label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-6);
   font-size: var(--fs-md);
 }
 .starter-controls .btn {

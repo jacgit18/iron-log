@@ -4,10 +4,10 @@
 .acctbadge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-8);
   min-height: 44px;
   min-width: 44px;
-  padding: 0 4px;
+  padding: 0 var(--sp-4);
   border: 0;
   background: transparent;
   color: var(--ink);

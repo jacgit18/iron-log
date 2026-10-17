@@ -6,7 +6,7 @@
 .daychecks {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
+  gap: var(--sp-6) 14px;
 }
 .daychecks label {
   white-space: nowrap;

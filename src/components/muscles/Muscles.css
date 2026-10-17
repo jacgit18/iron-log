@@ -14,18 +14,18 @@
 .figs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--sp-8);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-xl);
-  padding: 12px;
+  padding: var(--sp-12);
 }
 .fig {
   margin: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-4);
 }
 .fig svg {
   width: 100%;
@@ -84,7 +84,7 @@
 .bodyside {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-12);
 }
 .mdetail {
   scroll-margin: 12px 0 calc(72px + env(safe-area-inset-bottom, 0px));
@@ -100,14 +100,14 @@
 .mlist {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-4);
 }
 .mrow {
   display: grid;
   grid-template-columns: auto 1fr auto auto;
-  gap: 10px;
+  gap: var(--sp-10);
   align-items: center;
-  padding: 6px 0;
+  padding: var(--sp-6) 0;
   border-bottom: 1px solid var(--line);
   font-size: var(--fs-md);
 }
@@ -131,7 +131,7 @@
 @media (max-width:600px) {
   .mrow {
     grid-template-columns: auto minmax(0,1fr) auto;
-    row-gap: 2px;
+    row-gap: var(--sp-2);
   }
   .mrow .mdays {
     grid-column: 2;

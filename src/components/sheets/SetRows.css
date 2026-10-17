@@ -17,7 +17,7 @@
 .setbtns {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--sp-8);
   align-items: center;
 }
 .setbtns .note {

@@ -4,7 +4,7 @@
   align-items: end;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--sp-8);
   grid-column: 1 / -1;
 }
 .eqadd .field {

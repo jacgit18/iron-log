@@ -28,12 +28,12 @@
 }
 .imppaste textarea {
   width: 100%;
-  margin-top: 8px;
+  margin-top: var(--sp-8);
   font: inherit;
   font-size: var(--fs-sm);
   border: 1px solid var(--field-line);
   border-radius: var(--r-md);
-  padding: 8px;
+  padding: var(--sp-8);
   background: var(--bg);
   color: var(--ink);
 }
@@ -54,17 +54,17 @@
   white-space: nowrap;
 }
 .phw+.phw {
-  margin-top: 4px;
+  margin-top: var(--sp-4);
 }
 .sjump {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--sp-8);
   position: sticky;
   top: env(safe-area-inset-top,0px);
   z-index: var(--z-sticky);
   background: var(--bg);
-  padding-block: 6px 8px;
+  padding-block: var(--sp-6) var(--sp-8);
 }
 .sjump .chip {
   cursor: pointer;
@@ -83,12 +83,12 @@ html:has(.sjump) {
 .sgroup {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-12);
   scroll-margin-top: 8px;
 }
 .sgroup>h2 {
   margin: 0;
-  padding-bottom: 6px;
+  padding-bottom: var(--sp-6);
   border-bottom: 2px solid var(--line);
   font-family: "Barlow Condensed","Barlow Fallback",system-ui,sans-serif;
   font-size: var(--fs-5xl);
@@ -101,14 +101,14 @@ html:has(.sjump) {
 }
 .sgrid {
   display: grid;
-  gap: 16px;
+  gap: var(--sp-16);
   grid-template-columns: repeat(2,minmax(0,1fr));
   align-items: start;
 }
 .settings .scol {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--sp-16);
   min-width: 0;
 }
 @media (max-width:900px) {
@@ -119,14 +119,14 @@ html:has(.sjump) {
 .subblock {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-8);
   border-top: 1px solid var(--line);
-  padding-top: 12px;
+  padding-top: var(--sp-12);
 }
 .modes {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-8);
 }
 .tbl {
   overflow-x: auto;
@@ -137,7 +137,7 @@ html:has(.sjump) {
   font-size: var(--fs-md);
 }
 .tbl td,.tbl th {
-  padding: 6px;
+  padding: var(--sp-6);
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: middle;
@@ -153,7 +153,7 @@ html:has(.sjump) {
   border: 1px solid var(--field-line);
   background: var(--bg);
   border-radius: var(--r-sm);
-  padding: 5px 6px;
+  padding: 5px var(--sp-6);
   font-size: var(--fs-md);
   color: var(--ink);
 }
@@ -161,14 +161,14 @@ html:has(.sjump) {
   width: 130px;
 }
 .phrows {
-  margin: 4px 0 12px;
+  margin: var(--sp-4) 0 var(--sp-12);
 }
 .phrow {
   display: grid;
   grid-template-columns: minmax(110px,1fr) 7.5rem 130px;
-  gap: 6px 12px;
+  gap: var(--sp-6) var(--sp-12);
   align-items: end;
-  padding: 8px 0;
+  padding: var(--sp-8) 0;
   border-bottom: 1px solid var(--line);
 }
 .phname {
@@ -177,7 +177,7 @@ html:has(.sjump) {
 }
 .phfield {
   display: grid;
-  gap: 2px;
+  gap: var(--sp-2);
   font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -186,7 +186,7 @@ html:has(.sjump) {
 .pctin {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-4);
   min-height: 44px;
   font-size: var(--fs-md);
   text-transform: none;
@@ -198,7 +198,7 @@ html:has(.sjump) {
   border: 1px solid var(--field-line);
   background: var(--bg);
   border-radius: var(--r-sm);
-  padding: 5px 6px;
+  padding: 5px var(--sp-6);
   font-size: var(--fs-md);
   color: var(--ink);
   min-height: 44px;
@@ -222,6 +222,6 @@ html:has(.sjump) {
   min-width: 110px;
 }
 .imppaste summary {
-  padding: 12px 0;
+  padding: var(--sp-12) 0;
 }
 }

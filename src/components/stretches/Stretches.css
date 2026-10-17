@@ -10,7 +10,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  column-gap: 4px;
+  column-gap: var(--sp-4);
 }
 .strroot .strrow .exname .chk {
   margin-right: 0;
@@ -40,7 +40,7 @@
 }
 .strroot .warm {
   gap: 0;
-  padding: 2px 10px;
+  padding: var(--sp-2) var(--sp-10);
 }
 .strroot .warmhead {
   min-height: 36px;
