@@ -13,11 +13,11 @@
   gap: 2px;
 }
 .boardroot .swapgap {
-  width: 36px;
+  width: 44px;
   flex: none;
 }
 .boardroot .colhead .swapbtn {
-  min-width: 36px;
+  min-width: 44px;
   font-size: 1.75rem;
 }
 .boardroot .swaplabel {
