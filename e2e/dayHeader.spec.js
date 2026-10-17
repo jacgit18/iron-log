@@ -16,7 +16,7 @@ const places = col => col.evaluate(c => {
 // A long title (a day with a name set in the program editor) or a stamped date must not push the Rest box onto a second level:
 // the day's box and the Rest box stay on one level at every width, and on a phone the arrows stay with them.
 for (const [name, w, h] of [['phone 360', 360, 780], ['phone 390', 390, 844], ['wide 1024', 1024, 768], ['wide 1440', 1440, 900]]) {
-  test(`${name}: a long title and a stamped date keep the day's box and the Rest box on one level`, async ({ page }) => {
+  test(`${name}: a long title, a stamped date and both together keep the day's box and the Rest box on one level`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });
     await page.reload();
     const col = page.locator(w <= 700 ? '.col.sel' : '.col').first();
@@ -26,9 +26,13 @@ for (const [name, w, h] of [['phone 360', 360, 780], ['phone 390', 390, 844], ['
     const long = await tops();
     expect(Math.abs(long.rest - long.day), 'Rest is level with the day box (long title)').toBeLessThan(12);
     if (w <= 700) expect(Math.abs(long.arrows - long.day), 'the arrows are on the same level on a phone (long title)').toBeLessThan(12);
-    await col.locator('.colhead h3').evaluate(h3 => { h3.textContent = 'Wednesday'; });
     await col.locator('article.card input.cardchk').first().check(); // the first logged set stamps the day's date
     await expect(col.locator('.dd-text')).toBeVisible();
+    await expect(col.locator('.colhead h3')).toHaveText('Lower body + reactive power'); // still the long title: the tightest case, both together
+    const both = await tops();
+    expect(Math.abs(both.rest - both.day), 'Rest is level with the day box (long title and stamped date)').toBeLessThan(12);
+    if (w <= 700) expect(Math.abs(both.arrows - both.day), 'the arrows are on the same level on a phone (long title and stamped date)').toBeLessThan(12);
+    await col.locator('.colhead h3').evaluate(h3 => { h3.textContent = 'Wednesday'; });
     const stamped = await tops();
     expect(Math.abs(stamped.rest - stamped.day), 'Rest is level with the day box (stamped date)').toBeLessThan(12);
     if (w <= 700) expect(Math.abs(stamped.arrows - stamped.day), 'the arrows are on the same level on a phone (stamped date)').toBeLessThan(12);
