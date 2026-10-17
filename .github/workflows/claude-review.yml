@@ -1,13 +1,13 @@
 name: Claude review
 
 # Reviews each pull request against the rules in CLAUDE.md and comments on it. Review only: it never pushes commits.
-# Runs when a PR is opened or marked ready, and again on each push to it (synchronize), when it reviews only the commits that push added.
+# Runs once when a PR is opened or marked ready (about 0.20 USD each). It is not set to re-run on every push, to keep the API bill down; to re-review after a push, close and reopen the PR or add 'synchronize' to the types below.
 # The rules come from CLAUDE.md at review time, so they are not copied into the prompt below and cannot drift from it.
 # Needs the ANTHROPIC_API_KEY repository secret. Skipped for forks and bots (no secret there, and Dependabot/screenshots PRs are routine).
 # Tests, lint and typecheck stay in test.yml; this checks what they cannot: the project conventions.
 on:
   pull_request:
-    types: [opened, ready_for_review, synchronize]
+    types: [opened, ready_for_review]
 
 permissions:
   contents: read
