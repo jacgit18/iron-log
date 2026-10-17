@@ -48,3 +48,19 @@ test('Spending shows a bar for a month you bought in, with the average as text',
   await expect(page.locator('#groc-spend-summary')).toContainText('Average $10.00 a month over 1 month');
   await expect(page.locator('.gbars li.cur')).toHaveAttribute('aria-label', /\$10\.00 on 1 item/);
 });
+
+test('with a rest timer running the dock sits above the timer bar, and the end of the list is not under it', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.getByRole('button', { name: 'Rest timer' }).click();
+  await expect(page.locator('.timerbar')).toBeVisible();
+  await open(page);
+  await page.click('#groc-edit');
+  const dock = page.locator('.gdock');
+  await expect(dock).toBeVisible();
+  const d = await dock.boundingBox(); const t = await page.locator('.timerbar').boundingBox();
+  expect(d.y + d.height).toBeLessThanOrEqual(t.y + 1); // not covered by the bar
+  await page.fill('#groc-name', 'Tea');
+  await expect(page.locator('#groc-add')).toBeEnabled();
+  await page.click('#groc-add'); // reachable: the click would be intercepted if the timer bar covered it
+  await expect(page.locator('#groc-name')).toHaveValue('');
+});

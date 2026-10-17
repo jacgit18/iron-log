@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, byStore, centsText, emptyMonth, gotLast, lineOf, lineTotal, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally } from '../../lib/grocery.js';
@@ -6,6 +6,7 @@ import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import GrocerySpend from './GrocerySpend.js';
+import useDockHeight from './useDockHeight.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth } from '../../types.ts';
 import type { GroceryForm } from '../../store/types.ts';
 import './Grocery.css';
@@ -148,8 +149,10 @@ function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
     setErr(m); if (!m) setF({ ...EMPTY_FORM, store: f.store, every: f.every });
   };
   const { mine, suggested } = storeChoices(g);
+  const dockRef = useRef<HTMLDivElement>(null);
+  useDockHeight(dockRef);
   return (
-    <div className="gdock" role="region" aria-label="Add an item">
+    <div className="gdock" ref={dockRef} role="region" aria-label="Add an item">
       <form onSubmit={submit} noValidate aria-label="Add an item">
         {more && (
           <div className="warmadd gdockmore" id="groc-dock-more">

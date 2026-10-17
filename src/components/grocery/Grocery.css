@@ -269,13 +269,13 @@
 
 /* The floating add form and Done while editing At home. It sits above the page like the timer bar, and the list gets room beneath it. */
 .gathome.editing {
-  padding-bottom: 150px;
+  padding-bottom: calc(var(--gdock-top, 150px) + var(--sp-16));
 }
 .gdock {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--tabbar, 0px) + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--tabbar, 0px) + env(safe-area-inset-bottom, 0px) + var(--lift, 0px));
   z-index: var(--z-timer);
   background: var(--surface);
   border-top: 1px solid var(--line);
@@ -312,6 +312,11 @@
 }
 .gdockmore input {
   min-height: 44px;
+}
+
+/* The undo notice rides above the dock, which would otherwise cover it (Toaster.css puts it at the bottom edge). */
+html:has(.gdock) body .toasts {
+  bottom: calc(var(--tabbar, 0px) + env(safe-area-inset-bottom, 0px) + var(--gdock-top, 0px) + var(--sp-8));
 }
 
 /* A phone: the panel gives its width to the list. */
