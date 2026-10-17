@@ -7,6 +7,7 @@ const openGroceries = async page => { await page.click('#tab-daily'); await page
 const addItem = async (page, n, store, every) => {
   await page.click('#groc-view-home');
   await page.click('#groc-edit');
+  if (!(await page.locator('#groc-store').count())) await page.click('#groc-more'); // store, count and price sit under More
   await page.fill('#groc-name', n); await page.fill('#groc-store', store); await page.fill('#groc-qty', '1'); await page.fill('#groc-price', '');
   await page.setChecked('#groc-every', every);
   await page.click('#groc-add');

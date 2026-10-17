@@ -213,8 +213,9 @@ export interface Supplements {
 
 /* ---------- Grocery list (synced to the account, ADR 039) ---------- */
 /** A thing you buy. `store` is where ('' = anywhere), `qty` the usual count, `cents` the last unit price in cents. `every`: on each month's list
- *  ("Every month"); otherwise it is a "When out" item, on this month's list only while `out` is set (unchecked on the At home list). */
-export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean }
+ *  ("Every month"); otherwise it is a "When out" item, on this month's list only while `out` is set (unchecked on the At home list).
+ *  `note` is an optional short comment ("the green ones"), left out when empty. */
+export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string }
 /** The catalogue: store names in the order shown, and the items. A month's list is drawn from it. */
 export interface Grocery { stores: string[]; items: GroceryItem[] }
 /** A store as the server keeps it: one row per store, the name is its id. */

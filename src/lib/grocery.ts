@@ -9,7 +9,7 @@ import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth } fro
    with no saved document is the Every-month items plus whatever is out, nothing ticked, so each month starts fresh and nothing is
    copied or reset. Prices are whole cents, so totals never drift. The cleaning rules live in shared/grocery.ts, which the API uses too. */
 
-export { MAX_CENTS, MAX_ITEMS, MAX_QTY, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
+export { MAX_CENTS, MAX_ITEMS, MAX_NOTE, MAX_QTY, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
 export const ANYWHERE = 'Anywhere';
 /** Stores offered in the drop-downs before you have used them; picking one adds it to your stores. */
 export const SUGGESTED_STORES = ["BJ's", 'C-Town', 'Whole Foods', 'Flatbush Co-Op', 'Aldi'];
@@ -90,6 +90,21 @@ export function tally(items: GroceryItem[], m: GroceryMonth) {
     if (l.got) { got++; spent += t; }
   });
   return { count: items.length, got, planned, spent, unpriced };
+}
+
+/** What was bought each month: the ticked lines' count × price, for the `count` months ending at `endKey` (oldest first). A line keeps the
+ *  price it was ticked at; one with no price of its own uses the item's, and a line for a removed item uses only its own. */
+export function spendByMonth(g: Grocery, months: Record<string, GroceryMonth>, endKey: string, count: number) {
+  return Array.from({ length: count }, (_, i) => {
+    const key = shiftMonth(endKey, i - count + 1); const m = months[key];
+    let spent = 0, bought = 0;
+    Object.entries(m?.lines ?? {}).forEach(([id, l]) => {
+      if (!l.got) return;
+      const it = g.items.find(x => x.id === id);
+      bought++; spent += lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? it?.cents ?? null);
+    });
+    return { key, spent, bought };
+  });
 }
 
 /* ---------- The data file and backups ---------- */

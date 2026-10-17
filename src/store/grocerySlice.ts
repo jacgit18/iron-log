@@ -1,6 +1,6 @@
 import { LS } from '../lib/storage.js';
 import {
-  MAX_ITEMS, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, normGrocery, normGroceryData, parseDollars,
+  MAX_ITEMS, MAX_NOTE, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, normGrocery, normGroceryData, parseDollars,
 } from '../lib/grocery.js';
 import type { Grocery, GroceryData, GroceryMonth } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
@@ -94,11 +94,12 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const cents = priceText === '' ? null : parseDollars(priceText);
       if (priceText !== '' && cents == null) return 'The price must be dollars, like 3.49.';
       const store = d.store.trim().replace(/\s+/g, ' ').slice(0, 40);
+      const note = (d.note ?? '').trim().replace(/\s+/g, ' ').slice(0, MAX_NOTE);
       return mutateCatalogue(g => {
         if (g.items.length >= MAX_ITEMS) return `The list is full (${MAX_ITEMS} items).`;
         if (g.items.some(i => i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
         if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
-        g.items.push({ id: newGroceryId(g.items, n), n, store, qty, cents, every: d.every, out: false });
+        g.items.push({ id: newGroceryId(g.items, n), n, store, qty, cents, every: d.every, out: false, ...(note ? { note } : {}) });
         return null;
       });
     },
@@ -119,6 +120,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         }
         if (patch.qty !== undefined) { const q = cleanQty(patch.qty); if (q == null || q <= 0) return 'The count must be a number from 0.01 to 999.'; it.qty = q; }
         if (patch.cents !== undefined) { if (patch.cents !== null && cleanCents(patch.cents) == null) return 'That price is not valid.'; it.cents = patch.cents; }
+        if (patch.note !== undefined) { const note = patch.note.trim().replace(/\s+/g, ' ').slice(0, MAX_NOTE); if (note) it.note = note; else delete it.note; }
         if (patch.every !== undefined) { it.every = patch.every; if (it.every) it.out = false; }
         if (g.items.some(i => i !== it && i.n.toLowerCase() === it.n.toLowerCase() && i.store === it.store)) return 'That item is already in this store’s list.';
         return null;
