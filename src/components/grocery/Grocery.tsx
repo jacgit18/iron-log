@@ -1,20 +1,20 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { MAX_NOTE, byStore, centsText, emptyMonth, gotLast, lineOf, lineTotal, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally } from '../../lib/grocery.js';
+import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, lineOf, lineTotal, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import GrocerySpend from './GrocerySpend.js';
 import useDockHeight from './useDockHeight.js';
-import type { Grocery as GroceryT, GroceryItem, GroceryMonth } from '../../types.ts';
+import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from '../../types.ts';
 import type { GroceryForm } from '../../store/types.ts';
 import './Grocery.css';
 
 // Two views (ADR 038): To get is this month's shopping list; At home is every item you buy, checked while you have it. Unchecking a
 // When-out item there puts it on To get; ticking it bought on To get checks it again. Every-month items are always on To get.
 type View = 'get' | 'home' | 'spend';
-const EMPTY_FORM: GroceryForm = { n: '', store: '', qty: '1', price: '', every: false, note: '' };
+const EMPTY_FORM: GroceryForm = { n: '', store: '', qty: '1', price: '', every: false, note: '', unit: '' };
 const AHEAD = 12; // how many months past this one you can plan
 
 // A count or price box that keeps what is typed and saves when you leave it (or press Enter), so a half-typed "3." is not rewritten under you.
@@ -32,7 +32,7 @@ function NumBox({ label, value, onCommit, className }: { label: string; value: s
 // One line of the shopping list: the whole row ticks it, and the trailing "2 × $3.49" opens the count and price for this month.
 function GetRow({ item, month, mk, future }: { item: GroceryItem; month: GroceryMonth; mk: string; future: boolean }) {
   const s = useAppStore.getState();
-  const l = lineOf(item, month); const total = lineTotal(l.qty, l.cents);
+  const l = lineOf(item, month); const total = lineTotal(l.qty, l.cents); const w = unitWords(item.unit);
   const [open, setOpen] = useState(false);
   const moreId = `groc-more-${item.id}`;
   return (
@@ -42,18 +42,18 @@ function GetRow({ item, month, mk, future }: { item: GroceryItem; month: Grocery
           <input type="checkbox" className="chk" id={`groc-${item.id}`} checked={l.got} disabled={future} onChange={e => s.setGroceryGot(mk, item.id, e.target.checked)} />
           <span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span>
         </label>
-        <button type="button" className="gqty" aria-expanded={open} aria-controls={moreId} aria-label={`Count and price of ${item.n}`} onClick={() => setOpen(v => !v)}>
-          <span className="gpill">{l.qty} × {l.cents == null ? 'no price' : money(l.cents)}</span>
+        <button type="button" className="gqty" aria-expanded={open} aria-controls={moreId} aria-label={`${w.count} and price of ${item.n}`} onClick={() => setOpen(v => !v)}>
+          <span className="gpill">{w.qty(l.qty)} × {l.cents == null ? 'no price' : `${money(l.cents)}${w.per}`}</span>
         </button>
       </div>
       {open && (
         <div className="gmore" id={moreId}>
-          <label className="gfield">Count
-            <NumBox label={`Count of ${item.n}`} className="gcount" value={String(l.qty)}
+          <label className="gfield">{w.count}
+            <NumBox label={`${w.count} of ${item.n}`} className="gcount" value={String(l.qty)}
               onCommit={t => { const n = Number(t); if (!t.trim() || !Number.isFinite(n) || n <= 0 || n > 999) return false; s.setGroceryQty(mk, item.id, n); return true; }} />
           </label>
-          <label className="gfield">Price each
-            <NumBox label={`Price each of ${item.n}, dollars`} className="gprice" value={centsText(l.cents)}
+          <label className="gfield">{w.price}
+            <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={centsText(l.cents)}
               onCommit={t => { if (!t.trim()) { s.setGroceryCents(mk, item.id, null); return true; } const c = parseDollars(t); if (c == null) return false; s.setGroceryCents(mk, item.id, c); return true; }} />
           </label>
           <span className="gtotal" aria-label={`Total for ${item.n}`}>{l.cents == null ? '' : money(total)}</span>
@@ -125,12 +125,18 @@ function EditRow({ item, g }: { item: GroceryItem; g: GroceryT }) {
       {!item.every && <input type="checkbox" className="chk gedithave" aria-label={`Have ${item.n}`} checked={!item.out} onChange={e => s.setGroceryOut(item.id, !e.target.checked)} />}
       <input type="text" className="gname" aria-label={`Name of ${item.n}`} maxLength={80} value={name} onChange={e => setName(e.target.value)}
         onBlur={() => { if (name.trim() && name.trim() !== item.n) setErr(s.updateGroceryItem(item.id, { n: name })); else setName(item.n); }} />
-      <input type="text" className="gnoteinput" aria-label={`Note for ${item.n}`} placeholder="Note (optional)" maxLength={MAX_NOTE} key={item.note ?? ''} defaultValue={item.note ?? ''}
-        onBlur={e => { if (e.target.value.trim() !== (item.note ?? '')) setErr(s.updateGroceryItem(item.id, { note: e.target.value })); }} />
-      <select aria-label={`Store for ${item.n}`} value={item.store} onChange={e => setErr(s.updateGroceryItem(item.id, { store: e.target.value }))}>
-        <option value="">Anywhere</option>
-        {mine.map(x => <option key={x} value={x}>{x}</option>)}
-        {suggested.length > 0 && <optgroup label="Suggested">{suggested.map(x => <option key={x} value={x}>{x}</option>)}</optgroup>}
+      <div className="gedrow">
+        <input type="text" className="gnoteinput" aria-label={`Note for ${item.n}`} placeholder="Note (optional)" maxLength={MAX_NOTE} key={item.note ?? ''} defaultValue={item.note ?? ''}
+          onBlur={e => { if (e.target.value.trim() !== (item.note ?? '')) setErr(s.updateGroceryItem(item.id, { note: e.target.value })); }} />
+        <select aria-label={`Store for ${item.n}`} value={item.store} onChange={e => setErr(s.updateGroceryItem(item.id, { store: e.target.value }))}>
+          <option value="">Anywhere</option>
+          {mine.map(x => <option key={x} value={x}>{x}</option>)}
+          {suggested.length > 0 && <optgroup label="Suggested">{suggested.map(x => <option key={x} value={x}>{x}</option>)}</optgroup>}
+        </select>
+      </div>
+      <select className="gunit" aria-label={`Sold by, for ${item.n}`} value={item.unit ?? ''} onChange={e => setErr(s.updateGroceryItem(item.id, { unit: e.target.value as GroceryUnit | '' }))}>
+        <option value="">Each</option>
+        {UNITS.map(u => <option key={u} value={u}>by the {u}</option>)}
       </select>
       <label className="gcheck"><input type="checkbox" className="chk" aria-label={`${item.n} every month`} checked={item.every} onChange={e => setErr(s.updateGroceryItem(item.id, { every: e.target.checked }))} /> Every month</label>
       <ArmedButton className={`btn sm ${arming ? 'danger' : 'ghost'}`} aria-label={`Remove ${item.n} from your list`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setArming} onConfirm={() => s.removeGroceryItem(item.id)} />
@@ -150,18 +156,23 @@ function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
   };
   const { mine, suggested } = storeChoices(g);
   const dockRef = useRef<HTMLDivElement>(null);
+  const w = unitWords(f.unit || undefined);
   useDockHeight(dockRef);
   return (
     <div className="gdock" ref={dockRef} role="region" aria-label="Add an item">
       <form onSubmit={submit} noValidate aria-label="Add an item">
         {more && (
-          <div className="warmadd gdockmore" id="groc-dock-more">
-            <input type="text" id="groc-store" aria-label="Store" placeholder="Store (optional)" maxLength={40} list="groc-stores" value={f.store} onChange={e => setF({ ...f, store: e.target.value })} />
+          <div className="gdockmore" id="groc-dock-more">
+            <input type="text" id="groc-store" className="gd-store" aria-label="Store" placeholder="Store (optional)" maxLength={40} list="groc-stores" value={f.store} onChange={e => setF({ ...f, store: e.target.value })} />
             <datalist id="groc-stores">{[...mine, ...suggested].map(x => <option key={x} value={x} />)}</datalist>
-            <input type="text" id="groc-qty" inputMode="decimal" aria-label="Count" placeholder="Count" value={f.qty} onChange={e => setF({ ...f, qty: e.target.value })} />
-            <input type="text" id="groc-price" inputMode="decimal" aria-label="Price each, dollars (optional)" placeholder="Price each" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} />
-            <input type="text" id="groc-note" aria-label="Note (optional)" placeholder="Note (optional)" maxLength={MAX_NOTE} value={f.note} onChange={e => setF({ ...f, note: e.target.value })} />
-            <label className="gcheck"><input type="checkbox" className="chk" id="groc-every" checked={f.every} onChange={e => setF({ ...f, every: e.target.checked })} /> Every month (else only when you’re out)</label>
+            <input type="text" id="groc-note" className="gd-note" aria-label="Note (optional)" placeholder="Note (optional)" maxLength={MAX_NOTE} value={f.note} onChange={e => setF({ ...f, note: e.target.value })} />
+            <input type="text" id="groc-qty" className="gd-qty" inputMode="decimal" aria-label={w.count} placeholder={w.count} value={f.qty} onChange={e => setF({ ...f, qty: e.target.value })} />
+            <input type="text" id="groc-price" className="gd-price" inputMode="decimal" aria-label={`${w.price}, dollars (optional)`} placeholder={w.price} value={f.price} onChange={e => setF({ ...f, price: e.target.value })} />
+            <select id="groc-unit" className="gd-unit" aria-label="Sold by" value={f.unit ?? ''} onChange={e => setF({ ...f, unit: e.target.value as GroceryUnit | '' })}>
+              <option value="">Each</option>
+              {UNITS.map(u => <option key={u} value={u}>by the {u}</option>)}
+            </select>
+            <label className="gcheck gd-every"><input type="checkbox" className="chk" id="groc-every" checked={f.every} onChange={e => setF({ ...f, every: e.target.checked })} /> Every month (else only when you’re out)</label>
           </div>
         )}
         {err && <p className="note gerr" role="alert">{err}</p>}

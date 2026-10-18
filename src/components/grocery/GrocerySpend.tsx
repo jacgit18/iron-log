@@ -36,7 +36,7 @@ export default function GrocerySpend({ nowKey }: { nowKey: string }) {
         <>
           <div className="gspend" style={{ ['--avg' as string]: `${(avg / max) * 100}%` }}>
             <div className="gplot">
-              <span className="gavg" aria-hidden="true"><b>avg {whole(avg)}</b></span>
+              <span className="gavg" aria-hidden="true" />
               <ul className="gbars">
                 {rows.map(r => (
                   <li key={r.key} className={r.key === nowKey ? 'cur' : ''} style={{ ['--h' as string]: `${(r.spent / max) * 100}%` }}
@@ -49,6 +49,7 @@ export default function GrocerySpend({ nowKey }: { nowKey: string }) {
               </ul>
             </div>
           </div>
+          <p className="gkey" aria-hidden="true"><i className="kbar" /> Bought <i className="kavg" /> Average {whole(avg)} <i className="kcur" /> This month so far</p>
           <p className="note">Total {money(total)} over {count} months{top ? ` · Most in ${monthLabel(top.key)} (${money(top.spent)})` : ''}. The current month is still filling in.</p>
         </>
       )}

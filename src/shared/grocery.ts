@@ -1,4 +1,4 @@
-import type { GroceryItem, GroceryLine, GroceryMonth, GroceryStore } from '../types.ts';
+import type { GroceryItem, GroceryLine, GroceryMonth, GroceryStore, GroceryUnit } from '../types.ts';
 import { str } from './stretchWeek.js';
 
 /* ---------- Grocery list shapes: one item, one store, one month ----------
@@ -9,6 +9,9 @@ import { str } from './stretchWeek.js';
 export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999;
 export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40, MAX_NOTE = 120;
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export const UNITS: readonly GroceryUnit[] = ['kg', 'lb', 'oz'];
+const cleanUnit = (v: unknown): GroceryUnit | null => UNITS.find(u => u === v) ?? null;
 
 export const emptyMonth = (): GroceryMonth => ({ lines: {}, pulled: [] });
 
@@ -29,8 +32,8 @@ export function normGroceryItem(x: unknown): GroceryItem | null {
   if (!id || !n || id === '__proto__') return null;
   const every = o.every === true || (o.every === undefined && o.once !== true);
   const qty = cleanQty(o.qty);
-  const note = str(o.note, MAX_NOTE);
-  return { id, n, store: str(o.store, MAX_STORE), qty: qty && qty > 0 ? qty : 1, cents: cleanCents(o.cents), every, out: !every && o.out === true, ...(note ? { note } : {}) };
+  const note = str(o.note, MAX_NOTE); const unit = cleanUnit(o.unit);
+  return { id, n, store: str(o.store, MAX_STORE), qty: qty && qty > 0 ? qty : 1, cents: cleanCents(o.cents), every, out: !every && o.out === true, ...(note ? { note } : {}), ...(unit ? { unit } : {}) };
 }
 
 /** One store, as a row of its own: the name is its id. */
@@ -50,6 +53,7 @@ export function validGroceryItem(x: unknown): x is GroceryItem {
   if (typeof o.qty !== 'number' || cleanQty(o.qty) !== o.qty || o.qty <= 0) return false;
   if (o.cents !== null && cleanCents(o.cents) === null) return false;
   if (o.note !== undefined && !exact(o.note, MAX_NOTE)) return false;
+  if (o.unit !== undefined && cleanUnit(o.unit) === null) return false;
   if (typeof o.every !== 'boolean' || typeof o.out !== 'boolean' || (o.every && o.out)) return false;
   return true;
 }
