@@ -40,7 +40,7 @@ export function scrubReport(body: unknown): ScrubbedReport | null {
     kind: kind as Kind,
     message: masked,
     stack: frames,
-    page: typeof page === 'string' ? path(page) : '',
+    page: typeof page === 'string' ? mask(path(page), 120) : '',
     version: typeof version === 'string' ? version.replace(/[^\w.-]/g, '').slice(0, 20) : '',
   };
 }

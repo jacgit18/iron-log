@@ -15,6 +15,11 @@ describe('scrubReport', () => {
     expect(r.version).toBe('1791448234');
   });
 
+  it('masks digits, emails and long tokens in the page too', () => {
+    const r = scrubReport({ ...ok, page: 'https://app.example/log/2026-10-07/jane@example.com/abcdefghijklmnopqrstuvwxyz0123456789?x=1' })!;
+    expect(r.page).toBe('/log/####-##-##/[email]/[secret]');
+  });
+
   it('keeps only stack frames, with addresses cleaned and the message line dropped', () => {
     const r = scrubReport({ ...ok, stack: 'TypeError: weight 181 is bad\n    at foo (https://app.example/assets/index-abc.js?v=1:10:20)\n    at https://app.example/assets/index-abc.js:3:4\nsome free text with 181 in it' })!;
     expect(r.stack).toEqual(['foo /assets/index-abc.js:10:20', '/assets/index-abc.js:3:4']);
