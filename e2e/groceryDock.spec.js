@@ -64,3 +64,17 @@ test('with a rest timer running the dock sits above the timer bar, and the end o
   await page.click('#groc-add'); // reachable: the click would be intercepted if the timer bar covered it
   await expect(page.locator('#groc-name')).toHaveValue('');
 });
+
+test('an existing item takes, changes and loses a note from its edit row', async ({ page }) => {
+  await open(page);
+  await page.click('#groc-edit');
+  await page.fill('#groc-name', 'Eggs'); await page.click('#groc-add');
+  const note = page.getByLabel('Note for Eggs');
+  await note.fill('pasture raised'); await note.blur();
+  await page.click('#groc-done');
+  await expect(page.locator('.ghome')).toContainText('pasture raised');
+  await page.click('#groc-edit');
+  await note.fill(''); await note.blur();
+  await page.click('#groc-done');
+  await expect(page.locator('.ghome')).not.toContainText('pasture raised');
+});
