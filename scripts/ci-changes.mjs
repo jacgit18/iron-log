@@ -16,7 +16,7 @@ const docs = f => /\.md$/.test(f) || f.startsWith('docs/') || f === 'LICENSE' ||
 const needs = {
   e2e: f => dep.test(f) || /^(src|public|e2e|e2e-accounts)\//.test(f) || /^(index\.html|playwright(\.accounts)?\.config\.js)$/.test(f),
   e2e_sync: f => dep.test(f) || /^(src\/sync|src\/store|server|e2e-sync|db)\//.test(f) || /^(playwright\.sync\.config\.js|scripts\/e2e-sync\.mjs)$/.test(f),
-  database: f => dep.test(f) || /^(db|server\/db)\//.test(f) || /^(docker-compose\.yml|scripts\/check-migrations\.mjs)$/.test(f),
+  e2e_sync: f => dep.test(f) || /^(src\/sync|src\/store|src\/shared|server|e2e-sync|db)\//.test(f) || /^(playwright\.sync\.config\.js|scripts\/e2e-sync\.mjs)$/.test(f),
   backup: f => dep.test(f) || /^(backup|db)\//.test(f) || /^scripts\/(restore-check\.sh|backup-cloud-run\.sh)$/.test(f),
   docker: f => dep.test(f) || /^(src|server|public|backup)\//.test(f) || /^(Dockerfile|\.dockerignore|index\.html|scripts\/build-server\.mjs)$/.test(f),
 };
