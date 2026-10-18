@@ -40,3 +40,17 @@ test('a price list that is not prices is refused and nothing changes', async ({ 
   await expect(prices).toHaveAttribute('aria-invalid', 'true');
   await expect(page.getByRole('button', { name: 'Count and price of Beef' })).toHaveText('1 × no price');
 });
+
+test('the single price box is empty while each one has its own price, so the catalogue price is not mistaken for it', async ({ page }) => {
+  await open(page);
+  await page.click('#groc-edit');
+  await page.fill('#groc-name', 'Beef'); await page.click('#groc-more'); await page.fill('#groc-price', '9'); await page.click('#groc-add');
+  await page.click('#groc-done');
+  await page.click('#groc-view-get');
+  await page.getByRole('button', { name: 'Count and price of Beef' }).click();
+  await expect(page.getByLabel('Price each of Beef, dollars')).toHaveValue('9.00');
+  const prices = page.getByLabel('Price of each Beef, dollars, separated by commas');
+  await prices.fill('8.99, 10.49'); await prices.blur();
+  await expect(page.getByLabel('Price each of Beef, dollars')).toHaveValue('');
+  await expect(page.getByLabel('Total for Beef')).toHaveText('$19.48');
+});

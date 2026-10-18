@@ -52,7 +52,7 @@ function GetRow({ item, month, mk, future, onGot, open, onOpen }: { item: Grocer
               onCommit={t => { const n = Number(t); if (!t.trim() || !Number.isFinite(n) || n <= 0 || n > 999) return false; s.setGroceryQty(mk, item.id, n); return true; }} />
           </label>
           <label className="gfield">{w.price}
-            <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={centsText(l.cents)}
+            <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={l.prices ? '' : centsText(l.cents)}
               onCommit={t => { if (!t.trim()) { s.setGroceryCents(mk, item.id, null); return true; } const c = parseDollars(t); if (c == null) return false; s.setGroceryCents(mk, item.id, c); return true; }} />
           </label>
           {!item.unit && (

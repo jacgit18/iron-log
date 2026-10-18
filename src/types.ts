@@ -223,8 +223,8 @@ export interface GroceryItem { id: string; n: string; store: string; qty: number
 export interface Grocery { stores: string[]; items: GroceryItem[] }
 /** A store as the server keeps it: one row per store, the name is its id. */
 export interface GroceryStore { id: string; n: string }
-/** One item in one month: ticked off (`got`, bought), or `have`: you have it, so it is not on that month's list (ADR 054); and the count and unit price (cents) paid when they differ from the catalogue or were recorded at the tick. */
-/** `prices`: the price of each one bought this month, in cents, when they cost different amounts (beef, 3 packs: 8.99, 10.49, 9.25). The count is then how many there are and the line total is their sum; `qty` and `cents` are not used. */
+/** One item in one month: ticked off (`got`, bought), or `have`: you have it, so it is not on that month's list (ADR 054); and the count and unit price (cents) paid when they differ from the catalogue or were recorded at the tick.
+ *  `prices`: the price of each one bought this month, in cents, when they cost different amounts (beef, 3 packs: 8.99, 10.49, 9.25). The count is then how many there are and the line total is their sum; `qty` and `cents` are not used. */
 export interface GroceryLine { got?: true; have?: true; qty?: number; cents?: number; prices?: number[] }
 /** The catalogue plus every saved month: what the data file and the backups hold of the grocery list. */
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
