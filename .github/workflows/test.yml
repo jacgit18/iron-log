@@ -6,6 +6,8 @@ name: Tests
 # builds the production image and checks that it starts and serves the API and the app. The e2e-sync job runs the app with
 # syncing on against the real API and a real Postgres, nothing mocked.
 # It also runs on main after a merge, so the deploy (deploy-cloud-run.yml) waits for tests that passed on exactly the commit it ships.
+# A pull request runs only the jobs its changed files need (scripts/ci-changes.mjs decides; a docs-only PR runs none, a file it
+# does not recognise runs all). A push to main and a manual run always run every job: that is the full gate before a deploy.
 on:
   pull_request:
   push:
@@ -20,10 +22,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  changes:
     runs-on: ubuntu-26.04
+    outputs:
+      unit: ${{ steps.pick.outputs.unit }}
+      e2e: ${{ steps.pick.outputs.e2e }}
+      e2e_sync: ${{ steps.pick.outputs.e2e_sync }}
+      database: ${{ steps.pick.outputs.database }}
+      backup: ${{ steps.pick.outputs.backup }}
+      docker: ${{ steps.pick.outputs.docker }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: pick
+        run: node scripts/ci-changes.mjs
+
+  test:
+    needs: changes
+    if: needs.changes.outputs.unit == 'true'
+    runs-on: ubuntu-26.04
+    steps:
+      # Full history: scripts/unit-tests.mjs needs the merge-base with the PR's base branch.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -31,9 +54,15 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # A pull request runs the unit tests related to its changed files (scripts/unit-tests.mjs; every test when a tooling or dependency file changed). Main and manual runs run all of them.
+      - run: node scripts/unit-tests.mjs --base=origin/${{ github.base_ref }}
+        if: github.event_name == 'pull_request'
       - run: npm test
+        if: github.event_name != 'pull_request'
 
   docker:
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
@@ -53,6 +82,8 @@ jobs:
         run: docker logs app
 
   database:
+    needs: changes
+    if: needs.changes.outputs.database == 'true'
     runs-on: ubuntu-26.04
     services:
       postgres:
@@ -82,6 +113,8 @@ jobs:
   # The nightly backup and the restore check keep working: back up a migrated database that holds a few rows, restore the dump into
   # a throwaway server, and compare every table's row count with the manifest. (Phase F.)
   backup:
+    needs: changes
+    if: needs.changes.outputs.backup == 'true'
     runs-on: ubuntu-26.04
     services:
       postgres:
@@ -123,6 +156,8 @@ jobs:
         run: scripts/restore-check.sh "$(ls "$RUNNER_TEMP"/backups/*.dump)"
 
   e2e-sync:
+    needs: changes
+    if: needs.changes.outputs.e2e_sync == 'true'
     runs-on: ubuntu-26.04
     services:
       postgres:
@@ -159,8 +194,15 @@ jobs:
             test-results-sync
           retention-days: 7
 
-  e2e:
+  # Four shards run side by side, so the browser tests finish in about a quarter of the time. Each shard installs and builds on its own runner.
+  e2e-shards:
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -169,19 +211,32 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run e2e
+      - run: npx playwright test --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             playwright-report
             test-results
           retention-days: 7
-      # The built app, so a reviewer can download it and click through the change (npx vite preview).
+      # The built app, so a reviewer can download it and click through the change (npx vite preview). One shard is enough.
       - run: npm run build
+        if: matrix.shard == 1
       - uses: actions/upload-artifact@v7
+        if: matrix.shard == 1
         with:
           name: app-preview
           path: dist
           retention-days: 7
+
+  # The "Protect main" ruleset requires a check named `e2e`; the shards are named `e2e (1)` to `e2e (4)`, so this one job stands for them.
+  # It passes when the shards passed or were skipped (a PR that needs no browser tests) and fails when any shard failed or was cancelled.
+  e2e:
+    needs: e2e-shards
+    if: always()
+    runs-on: ubuntu-26.04
+    steps:
+      - run: |
+          echo "e2e shards: ${{ needs.e2e-shards.result }}"
+          test "${{ needs.e2e-shards.result }}" = success || test "${{ needs.e2e-shards.result }}" = skipped

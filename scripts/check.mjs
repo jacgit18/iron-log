@@ -3,7 +3,7 @@
 //        npm run check -- --list  show which checks it would run and why, without running them
 //        npm run check -- --files=a,b  pretend only those files changed (with --list, to see what a change would run)
 //        npm run check -- --all   run every check that does not need a database (typecheck, test, lint, e2e)
-// CI (.github/workflows/test.yml) always runs everything; this is the local shortcut. A file it does not recognise runs everything.
+// CI (.github/workflows/test.yml) runs everything on main and the jobs scripts/ci-changes.mjs picks on a pull request; this is the local shortcut. A file it does not recognise runs everything.
 // The db:check and e2e:sync steps need the local Postgres: it is started (npm run db:start) and used when DATABASE_URL is not set; if it cannot be reached the step is not run and the script exits 1.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createConnection } from 'node:net';
@@ -26,11 +26,11 @@ const given = args.find(a => a.startsWith('--files='));
 const files = given ? given.slice(8).split(',') : [...new Set([...git('diff', '--name-only', base), ...git('ls-files', '--others', '--exclude-standard')])];
 
 const is = {
-  docs: f => /\.md$/.test(f) || f.startsWith('docs/') || f.startsWith('.github/') || f === 'LICENSE',
+  docs: f => f !== '.github/pull_request_template.md' && (/\.md$/.test(f) || f.startsWith('docs/') || f.startsWith('.github/') || f === 'LICENSE'),
   unitTest: f => /\.test\.(js|ts|tsx|jsx)$/.test(f) || f.startsWith('src/test/'),
   e2eSpec: f => f.startsWith('e2e/') || f.startsWith('e2e-accounts/'),
   css: f => /\.css$/.test(f),
-  sync: f => f.startsWith('src/sync/') || f.startsWith('server/') || f.startsWith('src/store/') || f.startsWith('e2e-sync/') || f === 'playwright.sync.config.js',
+  sync: f => f.startsWith('src/sync/') || f.startsWith('src/shared/') || f.startsWith('server/') || f.startsWith('src/store/') || f.startsWith('e2e-sync/') || f === 'playwright.sync.config.js',
   migration: f => f.startsWith('db/migrations/') || f === 'server/db/types.ts',
   ui: f => f.startsWith('src/components/') || f.startsWith('src/hooks/') || f.startsWith('src/store/') || /\.(jsx|tsx)$/.test(f),
   src: f => f.startsWith('src/') || f.startsWith('server/') || f.startsWith('public/') || f === 'index.html',
@@ -41,6 +41,8 @@ const is = {
 const checks = new Map(); // name -> why
 const want = (name, why) => checks.has(name) || checks.set(name, why);
 const ALL = ['typecheck', 'test', 'lint', 'e2e'];
+// The unit step runs only the tests related to the changed files (scripts/unit-tests.mjs) unless everything is asked for: --all, a tooling or dependency file, or a file this script does not know.
+let fullTests = args.includes('--all');
 
 if (args.includes('--all')) {
   ALL.forEach(c => want(c, '--all'));
@@ -50,8 +52,7 @@ if (args.includes('--all')) {
 } else {
   for (const f of files) {
     if (is.docs(f)) continue;
-    if (is.tooling(f)) ALL.forEach(c => want(c, `${f} is tooling or a dependency file`));
-    else if (is.script(f)) want('lint', `${f} is a helper script`);
+    if (is.tooling(f)) { fullTests = true; ALL.forEach(c => want(c, `${f} is tooling or a dependency file`)); }
     else if (is.unitTest(f)) {
       want('test', `${f} is a unit test`);
       want('lint', `${f} is a unit test`);
@@ -59,6 +60,9 @@ if (args.includes('--all')) {
     } else if (is.e2eSpec(f)) {
       want('lint', `${f} is a browser test`);
       want('e2e', `${f} is a browser test`);
+    } else if (is.script(f) || f === '.github/pull_request_template.md') {
+      want('lint', `${f} is a helper script`);
+      want('test', `${f} is a helper script (only the tests that import it run)`);
     } else if (is.migration(f)) {
       want('db:check', `${f} changes the schema`);
       want('typecheck', `${f} changes the schema`);
@@ -75,6 +79,7 @@ if (args.includes('--all')) {
         want('db:check', `${f} is on the sync or server path`);
       }
     } else {
+      fullTests = true;
       ALL.forEach(c => want(c, `${f} is not a file this script knows, so everything runs`));
     }
   }
@@ -127,8 +132,9 @@ for (const c of plan) {
     skipped.push(c);
     continue;
   }
-  console.log(`\n> npm run ${c}`);
-  const r = spawnSync('npm', ['run', c], { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
+  const related = c === 'test' && !fullTests;
+  console.log(related ? '\n> node scripts/unit-tests.mjs (the tests related to what changed)' : `\n> npm run ${c}`);
+  const r = spawnSync(...(related ? ['node', ['scripts/unit-tests.mjs', `--base=${baseRef}`]] : ['npm', ['run', c]]), { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
   if (r.status !== 0) {
     console.error(`\nFailed: ${c}`);
     process.exit(r.status ?? 1);
