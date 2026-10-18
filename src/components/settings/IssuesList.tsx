@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listIssues, updateIssue } from '../../lib/issuesClient.js';
 import { timeAgo } from '../../lib/timeAgo.js';
+import { ISSUE_STATUSES } from '../../shared/issues.js';
 import type { Issue, IssueCounts, IssueStatus } from '../../types.ts';
 
-const STATUSES: IssueStatus[] = ['open', 'investigating', 'fixed', 'ignored'];
 const SAY: Record<'failed' | 'forbidden' | 'offline', string> = {
   failed: 'Could not load the issues. Try again.',
   forbidden: 'Not allowed. An admin needs both the admin list entry on the server and is_admin set in the database.',
@@ -33,7 +33,7 @@ export default function IssuesList() {
     <div className="issues-body">
       <div className="seg" role="group" aria-label="Show issues with status">
         <button type="button" className={filter === null ? 'on' : ''} aria-pressed={filter === null} onClick={() => setFilter(null)}>All</button>
-        {STATUSES.map(s => (
+        {ISSUE_STATUSES.map(s => (
           <button key={s} type="button" className={filter === s ? 'on' : ''} aria-pressed={filter === s} onClick={() => setFilter(s)}>
             {s[0]!.toUpperCase() + s.slice(1)}{counts ? ` ${counts[s]}` : ''}
           </button>
@@ -89,7 +89,7 @@ function IssueRow({ issue, open, onToggle, onSaved }: { issue: Issue; open: bool
           <div className="issuefield">
             <label htmlFor={`is-${issue.fingerprint}`}>Status</label>
             <select id={`is-${issue.fingerprint}`} className="btn sm" value={status} onChange={e => setStatus(e.target.value as IssueStatus)}>
-              {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              {ISSUE_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div className="issuefield">

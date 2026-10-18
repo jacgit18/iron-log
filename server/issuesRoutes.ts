@@ -2,12 +2,11 @@ import { Router } from 'express';
 import { sql, type Kysely } from 'kysely';
 import { inUserTransaction } from './auth.ts';
 import type { DB } from './db/types.ts';
+import { ISSUE_STATUSES as STATUSES, type IssueStatus } from '../src/shared/issues.ts';
 
 // The admin Issues screen's API (ADR 013 amendment, step 3), mounted at /api/issues behind sign-in, requireAdmin and a per-user limit.
-// Everything goes through list_issues / issue_counts / set_issue_status, which check users.is_admin again in the database; a refusal
+// Everything goes through list_issues / set_issue_status, which check users.is_admin again in the database; a refusal
 // from there (SQLSTATE 42501) is answered 403, the same as a refusal here.
-export const STATUSES = ['fixed', 'ignored', 'investigating', 'open'] as const;
-export type IssueStatus = (typeof STATUSES)[number];
 
 interface IssueRow {
   fingerprint: string;
@@ -61,12 +60,11 @@ export function issuesRoutes({ db }: { db: Kysely<DB> }): Router {
     const q = parseListQuery(req.query);
     if (!q) return void res.status(422).json({ ok: false, error: 'status is open, investigating, fixed or ignored; limit is 1 to 200' });
     try {
-      const { issues, counts } = await asAdmin(res.locals.userId, async trx => ({
-        issues: (await sql<IssueRow>`select * from list_issues(${q.status}, ${q.limit})`.execute(trx)).rows,
-        counts: (await sql<{ status: string; n: string }>`select * from issue_counts()`.execute(trx)).rows,
-      }));
+      const overview = await asAdmin(res.locals.userId, async trx =>
+        (await sql<{ overview: { counts: Record<string, string | number>; issues: IssueRow[] } }>`select list_issues(${q.status}, ${q.limit}) as overview`.execute(trx)).rows[0]!.overview);
+      const { issues, counts } = overview;
       const byStatus = Object.fromEntries(STATUSES.map(s => [s, 0])) as Record<IssueStatus, number>;
-      for (const c of counts) if (isStatus(c.status)) byStatus[c.status] = Number(c.n);
+      for (const [status, n] of Object.entries(counts)) if (isStatus(status)) byStatus[status] = Number(n);
       res.json({ ok: true, counts: byStatus, issues: issues.map(toIssue) });
     } catch (err) {
       if (notAllowed(err)) return void res.status(403).json({ ok: false, error: 'not available' });

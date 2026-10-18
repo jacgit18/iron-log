@@ -303,7 +303,8 @@ export interface DataFile {
 }
 
 /* ---------- Production issues (admin screen; the server's /api/issues, ADR 013 amendment) ---------- */
-export type IssueStatus = 'fixed' | 'ignored' | 'investigating' | 'open';
+import type { IssueStatus } from './shared/issues.ts';
+export type { IssueStatus };
 export type IssueCounts = Record<IssueStatus, number>;
 /** One fingerprint of a scrubbed error report. Times are ISO strings. */
 export interface Issue {

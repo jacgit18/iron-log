@@ -70,10 +70,9 @@ describe('the two locks', () => {
 
   it('the functions refuse on their own: a signed-in non-admin, and a connection with no user', async () => {
     const id = (await owner.insertInto('users').values({ auth_user_id: 'plain' }).returning('id').executeTakeFirstOrThrow()).id;
-    await expect(inUserTransaction(app, id, trx => sql`select * from list_issues()`.execute(trx))).rejects.toMatchObject({ code: '42501' });
-    await expect(inUserTransaction(app, id, trx => sql`select issue_counts()`.execute(trx))).rejects.toMatchObject({ code: '42501' });
+    await expect(inUserTransaction(app, id, trx => sql`select list_issues()`.execute(trx))).rejects.toMatchObject({ code: '42501' });
     await expect(inUserTransaction(app, id, trx => sql`select set_issue_status(${FP(2)}, 'fixed', null)`.execute(trx))).rejects.toMatchObject({ code: '42501' });
-    await expect(sql`select * from list_issues()`.execute(app)).rejects.toMatchObject({ code: '42501' });
+    await expect(sql`select list_issues()`.execute(app)).rejects.toMatchObject({ code: '42501' });
   });
 });
 
@@ -86,6 +85,16 @@ describe('the per-user limit', () => {
     const limited = await call('boss', 'GET', '');
     expect(limited.status).toBe(429);
     expect(limited.headers.get('retry-after')).toBeTruthy();
+  });
+});
+
+describe('without a database', () => {
+  it('answers 503 and never reaches the issues routes', async () => {
+    server = createApp({ admins: new Set(['dev:boss']) }).listen(0);
+    await new Promise(done => server!.once('listening', done));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const res = await fetch(`${base}/api/issues`, { headers: { 'x-dev-user': 'boss' } });
+    expect(res.status).toBe(503);
   });
 });
 
