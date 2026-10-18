@@ -69,6 +69,11 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const mk = shiftMonth(nowKey, off);
   const month = months[mk] || emptyMonth();
   const list = onList(g, month, off === 0); const t = tally(list, month);
+  // This month, what you have bought leaves the list (it is on At home as "have"); it stays one tap away under "Bought this month" so a
+  // mis-tap can be undone. An older or later month keeps every row, as a record of what was bought or what is planned.
+  const current = off === 0;
+  const todo = current ? list.filter(i => !lineOf(i, month).got) : list;
+  const bought = current ? list.filter(i => lineOf(i, month).got) : [];
   return (
     <>
       <div className="gmonth" role="group" aria-label="Month">
@@ -80,18 +85,30 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
         {t.count ? `Got ${t.got} of ${t.count} · Spent ${money(t.spent)} · Expected ${money(t.planned)}${t.unpriced ? ` · ${t.unpriced} without a price` : ''}` : off > 0 ? 'Only your Every-month items are planned so far. Ticking opens when the month starts.' : 'Nothing on this month’s list.'}
       </p>
       {!t.count && off === 0 && <p className="note">Untick an item on <b>At home</b> when you run out and it shows up here.</p>}
-      {byStore(g, list).map((grp, gi) => {
+      {current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought.</p>}
+      {byStore(g, todo).map((grp, gi) => {
         const gt = tally(grp.items, month);
         return (
-          <section key={grp.store || '_'} className={`gstore${gt.got === gt.count ? ' done' : ''}`} aria-labelledby={`groc-h-${gi}`}>
+          <section key={grp.store || '_'} className={`gstore${!current && gt.got === gt.count ? ' done' : ''}`} aria-labelledby={`groc-h-${gi}`}>
             <div className="gstorehead">
               <h3 id={`groc-h-${gi}`}>{grp.label}</h3>
-              <span className="note">{gt.got}/{gt.count}{gt.planned ? ` · ${money(gt.planned)}` : ''}</span>
+              <span className="note">{current ? `${gt.count} to get` : `${gt.got}/${gt.count}`}{gt.planned ? ` · ${money(gt.planned)}` : ''}</span>
             </div>
             <ul className="glist">{gotLast(grp.items, month).map(it => <GetRow key={it.id} item={it} month={month} mk={mk} future={off > 0} />)}</ul>
           </section>
         );
       })}
+      {bought.length > 0 && (
+        <details className="gbought" id="groc-bought">
+          <summary>Bought this month ({bought.length})</summary>
+          {byStore(g, bought).map(grp => (
+            <section key={grp.store || '_'} className="gstore" aria-label={`Bought from ${grp.label}`}>
+              <div className="gstorehead"><h3>{grp.label}</h3></div>
+              <ul className="glist">{grp.items.map(it => <GetRow key={it.id} item={it} month={month} mk={mk} future={false} />)}</ul>
+            </section>
+          ))}
+        </details>
+      )}
     </>
   );
 }
