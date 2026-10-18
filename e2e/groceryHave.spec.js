@@ -54,9 +54,9 @@ test('ticking a row on To get keeps keyboard focus in the list: the next row, th
   await page.click('#groc-view-get');
   await page.locator('#groc-kale').focus();
   await page.keyboard.press('Space');
-  await expect(page.locator('#groc-salt')).toBeFocused(); // the next row
+  await expect(page.locator('#groc-rice')).toBeFocused(); // the next row (new items go on top: Salt, Kale, Rice)
   await page.keyboard.press('Space');
-  await expect(page.locator('#groc-rice')).toBeFocused(); // nothing after it: the one before
+  await expect(page.locator('#groc-salt')).toBeFocused(); // nothing after it: the one before
   await page.keyboard.press('Space');
   await expect(page.locator('#groc-bought-sum')).toBeFocused(); // nothing left to get
   await page.keyboard.press('Enter'); // open the fold, then untick: focus follows the row back into the list

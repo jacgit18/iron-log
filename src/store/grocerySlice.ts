@@ -34,6 +34,8 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     if (monthEmpty(m)) get().removeDoc(monthPath(key)); // an untouched month is the fresh list: nothing to keep
     else get().saveDoc(monthPath(key), m);
   };
+  // A store typed in another case ("aldi") is the store you already have ("Aldi"), as addGroceryStore treats it.
+  const sameStore = (g: Grocery, store: string) => g.stores.find(x => x.toLowerCase() === store.toLowerCase()) ?? store;
   const mutateCatalogue = (fn: (g: Grocery) => string | null): string | null => {
     if (get().blocked()) return 'Still loading your data…';
     const g = structuredClone(get().grocery);
@@ -93,14 +95,15 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const priceText = d.price.trim();
       const cents = priceText === '' ? null : parseDollars(priceText);
       if (priceText !== '' && cents == null) return 'The price must be dollars, like 3.49.';
-      const store = d.store.trim().replace(/\s+/g, ' ').slice(0, 40);
+      const typedStore = d.store.trim().replace(/\s+/g, ' ').slice(0, 40);
       const note = (d.note ?? '').trim().replace(/\s+/g, ' ').slice(0, MAX_NOTE);
       const unit = UNITS.find(u => u === d.unit);
       return mutateCatalogue(g => {
+        const store = sameStore(g, typedStore);
         if (g.items.length >= MAX_ITEMS) return `The list is full (${MAX_ITEMS} items).`;
         if (g.items.some(i => i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
         if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
-        g.items.push({ id: newGroceryId(g.items, n), n, store, qty, cents, every: true, out: false, ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
+        g.items.unshift({ id: newGroceryId(g.items, n), n, store, qty, cents, every: true, out: false, ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
         return null;
       });
     },
@@ -115,7 +118,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
           it.n = n;
         }
         if (patch.store !== undefined) {
-          const store = patch.store.trim().replace(/\s+/g, ' ').slice(0, 40);
+          const store = sameStore(g, patch.store.trim().replace(/\s+/g, ' ').slice(0, 40));
           if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
           it.store = store;
         }
@@ -212,7 +215,8 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (cents === null) delete l.cents; else l.cents = cents;
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
-      if (month === monthKey(new Date()) && cents !== null && it.cents !== cents) get().updateGroceryItem(id, { cents });
+      // Clearing the price this month clears the usual price too; otherwise the item falls back to it and still shows a price.
+      if (month === monthKey(new Date()) && it.cents !== cents) get().updateGroceryItem(id, { cents });
     },
 
     // "Take off the list": you don't need it this month. It is marked as had, so it is off that month's list, and its other lines stay.
