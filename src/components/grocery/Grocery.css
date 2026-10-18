@@ -322,15 +322,15 @@
   border: 2px solid var(--dock-field-line);
   background: var(--dock-field);
 }
-.gdock #groc-add,.gdock .gdone {
+.gdockadd,.gdockrow .gdone {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-ink);
 }
-.gdock #groc-add:disabled {
+.gdockadd:disabled {
   opacity: .6;
 }
-.gdock #groc-more {
+.gdockmorebtn {
   background: var(--dock-field);
   border-color: var(--dock-field-line);
   color: var(--ink);

@@ -209,8 +209,8 @@ function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
         {err && <p className="note gerr" role="alert">{err}</p>}
         <div className="gdockrow">
           <input type="text" id="groc-name" aria-label="Item name" placeholder="Add an item" maxLength={80} value={f.n} onChange={e => setF({ ...f, n: e.target.value })} />
-          <button type="submit" className="btn sm" id="groc-add" disabled={!f.n.trim()}>Add</button>
-          <button type="button" className="btn sm ghost" id="groc-more" aria-expanded={more} aria-controls="groc-dock-more" onClick={() => setMore(v => !v)}>{more ? 'Less' : 'More'}</button>
+          <button type="submit" className="btn sm gdockadd" id="groc-add" disabled={!f.n.trim()}>Add</button>
+          <button type="button" className="btn sm ghost gdockmorebtn" id="groc-more" aria-expanded={more} aria-controls="groc-dock-more" onClick={() => setMore(v => !v)}>{more ? 'Less' : 'More'}</button>
           <button type="button" className="btn sm gdone" id="groc-done" onClick={onDone}>Done</button>
         </div>
       </form>
