@@ -55,12 +55,33 @@ describe('record_issue', () => {
     }
   });
 
-  it('refuses new fingerprints once the table holds 5000, but keeps counting the ones it has', async () => {
-    await sql`insert into issues (fingerprint, kind, message) select lpad(to_hex(g), 12, '0'), 'error', 'm' from generate_series(1, 5000) g`.execute(owner);
+  it('refuses new fingerprints once the table holds 5000 rows that cannot be dropped, but keeps counting the ones it has', async () => {
+    await fill(5000);
     expect(await record('ffffffffffff')).toBe('full');
     expect(await owner.selectFrom('issues').select(sql<string>`count(*)`.as('n')).executeTakeFirstOrThrow()).toEqual({ n: '5000' });
     expect(await record(lpad(1))).toBe('repeat');
-    expect((await row(lpad(1))).occurrences).toBe('2');
+    expect((await row(lpad(1))).occurrences).toBe('3'); // it was filled in with 2
+  });
+
+  it('at the cap, makes room by dropping the oldest report that was seen once, is still open and has no note', async () => {
+    await fill(5000, 1);
+    await owner.updateTable('issues').set({ last_seen: sql`now() - interval '1 day'` }).where('fingerprint', '=', lpad(7)).execute();
+    await owner.updateTable('issues').set({ note: 'looking' }).where('fingerprint', '=', lpad(7)).execute();
+    await owner.updateTable('issues').set({ last_seen: sql`now() - interval '2 days'` }).where('fingerprint', '=', lpad(9)).execute();
+    expect(await record('ffffffffffff')).toBe('new');
+    const kept = (await owner.selectFrom('issues').select('fingerprint').execute()).map(r => r.fingerprint);
+    expect(kept).toHaveLength(5000);
+    expect(kept).not.toContain(lpad(9)); // the oldest untouched one went
+    expect(kept).toContain(lpad(7)); // older than the rest of the table, but it has a note, so it stays
+    expect(kept).toContain('ffffffffffff');
+  });
+
+  it('never goes past 5000 when many new fingerprints arrive at once, even with the cap taken by rows that cannot be dropped plus newcomers', async () => {
+    await fill(4990);
+    const results = await Promise.all(Array.from({ length: 30 }, (_, i) => record(`a${i.toString(16).padStart(11, '0')}`)));
+    // Past the cap each newcomer displaces the oldest seen-once row (an earlier newcomer), so all are stored; the table never grows past 5000.
+    expect(results.every(r => r === 'new')).toBe(true);
+    expect(await owner.selectFrom('issues').select(sql<string>`count(*)`.as('n')).executeTakeFirstOrThrow()).toEqual({ n: '5000' });
   });
 
   it('rejects a malformed fingerprint or kind', async () => {
@@ -75,6 +96,8 @@ describe('record_issue', () => {
   });
 });
 
+// Rows nobody can drop to make room: each was seen twice.
+const fill = (n: number, occurrences = 2) => sql`insert into issues (fingerprint, kind, message, occurrences) select lpad(to_hex(g), 12, '0'), 'error', 'm', ${occurrences} from generate_series(1, ${n}) g`.execute(owner);
 const lpad = (n: number) => n.toString(16).padStart(12, '0');
 const stored = () => owner.selectFrom('issues').selectAll().orderBy('first_seen').execute();
 
@@ -91,8 +114,20 @@ describe('issueRecorder', () => {
     await vi.waitFor(async () => expect((await row()).occurrences).toBe('2'));
   });
 
+  it('keeps the newest 500 fingerprints in its memory, oldest sent first', async () => {
+    let t = 1_000_000;
+    const recordIssue = issueRecorder(app, () => t);
+    const send = (n: number) => recordIssue({ fingerprint: lpad(n), kind: 'server', message: 'm', topFrame: '', page: '', version: '' });
+    for (let n = 1; n <= 501; n++) send(n); // 501 distinct: the first one is forgotten, the rest are remembered
+    await vi.waitFor(async () => expect(await stored()).toHaveLength(501));
+    send(2); // remembered and inside the window: not sent again
+    send(1); // forgotten: sent again, so it is counted twice
+    await vi.waitFor(async () => expect((await row(lpad(1))).occurrences).toBe('2'));
+    expect((await row(lpad(2))).occurrences).toBe('1');
+  });
+
   it('logs a loud issues-full line when a new problem is refused because the table is full', async () => {
-    await sql`insert into issues (fingerprint, kind, message) select lpad(to_hex(g), 12, '0'), 'error', 'm' from generate_series(1, 5000) g`.execute(owner);
+    await fill(5000);
     issueRecorder(app)({ fingerprint: 'ffffffffffff', kind: 'error', message: 'm', topFrame: '', page: '', version: '' });
     await vi.waitFor(() => expect(vi.mocked(console.error).mock.calls.map(c => JSON.parse(c[0] as string))).toContainEqual({ severity: 'ERROR', msg: 'issues-full', fingerprint: 'ffffffffffff', kind: 'error' }));
   });

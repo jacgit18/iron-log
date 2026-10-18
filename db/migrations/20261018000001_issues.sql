@@ -24,17 +24,26 @@ create index issues_last_seen on issues (last_seen desc);
 alter table issues enable row level security;
 
 -- Counts one report. Returns 'new' for a fingerprint not seen before, 'repeat' for one that was, and 'full' when a new fingerprint was
--- refused because the table is at its cap (the caller logs that, so a full table is noticed). A fixed issue that
+-- refused because the table is at its cap and nothing in it can be dropped (the caller logs that, so a full table is noticed). A fixed issue that
 -- comes back is opened again, so a regression is not hidden. The 5000-row cap stops anyone sending endless different messages
--- (the endpoint takes reports without a sign-in) from filling the table.
+-- (the endpoint takes reports without a sign-in) from growing the table; at the cap the oldest untouched, seen-once report makes room.
 create function record_issue(p_fingerprint text, p_kind text, p_message text, p_top_frame text, p_page text, p_version text)
   returns text
   language plpgsql security definer set search_path = public as $$
 declare
   was_inserted boolean;
 begin
-  if not exists (select 1 from issues where fingerprint = p_fingerprint) and (select count(*) from issues) >= 5000 then
-    return 'full';
+  if not exists (select 1 from issues where fingerprint = p_fingerprint) then
+    -- One new fingerprint at a time from here, so several callers cannot all pass the count below and overshoot the cap.
+    perform pg_advisory_xact_lock(hashtext('record_issue'));
+    if (select count(*) from issues) >= 5000 then
+      -- Make room by dropping the oldest report nobody has acted on (seen once, still open, no note), so junk sent without a sign-in
+      -- cannot keep real new problems out for good. If every row has been seen again or touched, say so.
+      delete from issues where fingerprint = (select fingerprint from issues where occurrences = 1 and status = 'open' and note = '' order by last_seen limit 1);
+      if not found then
+        return 'full';
+      end if;
+    end if;
   end if;
   insert into issues as i (fingerprint, kind, message, top_frame, page, first_version, last_version)
     values (p_fingerprint, p_kind, p_message, p_top_frame, p_page, p_version, p_version)

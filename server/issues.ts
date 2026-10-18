@@ -29,6 +29,8 @@ export function issueRecorder(db: Kysely<DB>, now: () => number = Date.now): Rec
     const t = now();
     const last = lastSent.get(issue.fingerprint);
     if (last !== undefined && t - last < THROTTLE_MS) return;
+    // Oldest sent first: drop the entry (so a re-set moves it to the back) and make room only for a fingerprint not already remembered.
+    lastSent.delete(issue.fingerprint);
     if (lastSent.size >= MAX_REMEMBERED) lastSent.delete(lastSent.keys().next().value!);
     lastSent.set(issue.fingerprint, t);
     sql<{ record_issue: 'full' | 'new' | 'repeat' }>`select record_issue(${issue.fingerprint}, ${issue.kind}, ${issue.message}, ${issue.topFrame}, ${issue.page}, ${issue.version})`
