@@ -26,7 +26,7 @@ const given = args.find(a => a.startsWith('--files='));
 const files = given ? given.slice(8).split(',') : [...new Set([...git('diff', '--name-only', base), ...git('ls-files', '--others', '--exclude-standard')])];
 
 const is = {
-  docs: f => /\.md$/.test(f) || f.startsWith('docs/') || f.startsWith('.github/') || f === 'LICENSE',
+  docs: f => f !== '.github/pull_request_template.md' && (/\.md$/.test(f) || f.startsWith('docs/') || f.startsWith('.github/') || f === 'LICENSE'),
   unitTest: f => /\.test\.(js|ts|tsx|jsx)$/.test(f) || f.startsWith('src/test/'),
   e2eSpec: f => f.startsWith('e2e/') || f.startsWith('e2e-accounts/'),
   css: f => /\.css$/.test(f),
@@ -60,7 +60,7 @@ if (args.includes('--all')) {
     } else if (is.e2eSpec(f)) {
       want('lint', `${f} is a browser test`);
       want('e2e', `${f} is a browser test`);
-    } else if (is.script(f)) {
+    } else if (is.script(f) || f === '.github/pull_request_template.md') {
       want('lint', `${f} is a helper script`);
       want('test', `${f} is a helper script (only the tests that import it run)`);
     } else if (is.migration(f)) {
