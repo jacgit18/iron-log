@@ -50,12 +50,22 @@
   font-size: var(--fs-xl);
   line-height: 1;
 }
-/* The smallest phones (360px): the words keep their place under the icon but take no width. The label is only as wide as the icon, and the words,
-   centered on it, hang over the arrows' empty padding, so the row fits as it did when the words were hidden. */
+/* The smallest phones (380px and under): the words keep their place under the icon but take no width. The label is only as wide as the icon, and the
+   words, centered on it, hang over the arrows' empty padding, so the row fits as it did when the words were hidden. The label is decoration, so taps
+   pass through it to the left arrow it overlaps. */
 @media (max-width:380px) {
   .boardroot .swaplabel {
     width: var(--fs-xl);
     min-width: 0;
+    pointer-events: none;
+  }
+}
+/* With a larger text size the words grow but the room beside the icon does not (at 125% on a 360px phone they run over the chevrons), so there the
+   words go again: 20em is 320px at the normal size, 400px at 125%. */
+@media (max-width:380px) and (max-width:20em) {
+  .boardroot .swaplabel {
+    /* token-ok: hides the words; the icon sets its own size */
+    font-size: 0;
   }
 }
 .boardroot .colhead .restchk {
