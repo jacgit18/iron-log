@@ -2,7 +2,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.ts';
-import { scrubReport } from './clientErrors.ts';
+import { fingerprintOf, scrubReport } from './clientErrors.ts';
 
 describe('scrubReport', () => {
   const ok = { kind: 'error', message: 'Cannot read properties of undefined', stack: '', page: 'https://app.example/progress?week=2026-10-04#x', version: '1791448234' };
@@ -18,6 +18,16 @@ describe('scrubReport', () => {
     const r = scrubReport({ ...ok, stack: 'TypeError: weight 181 is bad\n    at foo (https://app.example/assets/index-abc.js?v=1:10:20)\n    at https://app.example/assets/index-abc.js:3:4\nsome free text with 181 in it' })!;
     expect(r.stack).toEqual(['foo /assets/index-abc.js:10:20', '/assets/index-abc.js:3:4']);
     expect(JSON.stringify(r)).not.toContain('181');
+  });
+
+  it('gives the same fingerprint across numbers, positions and builds, and a different one for a different problem', () => {
+    const at = (file: string, pos: string) => `TypeError: x\n    at foo (https://app.example/assets/${file}:${pos})`;
+    const a = scrubReport({ ...ok, message: 'Bad weight 181 lb', stack: at('index-AbC123xY.js', '10:20') })!;
+    const b = scrubReport({ ...ok, message: 'Bad weight 99 lb', stack: at('index-Zz98765q.js', '4:7'), version: '2' })!;
+    expect(a.fingerprint).toBe(b.fingerprint);
+    expect(scrubReport({ ...ok, message: 'Bad weight 181 lb', stack: at('other-AbC123xY.js', '10:20') })!.fingerprint).not.toBe(a.fingerprint);
+    expect(scrubReport({ ...ok, kind: 'sync', message: 'Bad weight 181 lb', stack: at('index-AbC123xY.js', '10:20') })!.fingerprint).not.toBe(a.fingerprint);
+    expect(fingerprintOf('error', 'm', [])).toMatch(/^[0-9a-f]{12}$/);
   });
 
   it('refuses what is not a report', () => {
@@ -47,7 +57,7 @@ describe('POST /api/client-errors', () => {
   it('logs one scrubbed line as an error, answers 204 without a sign-in, then limits the caller', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect((await post({ kind: 'error', message: 'weight 181 broke', page: '/progress', version: '1' })).status).toBe(204);
-    expect(JSON.parse(log.mock.calls[0]![0] as string)).toEqual({ severity: 'ERROR', msg: 'client-error', kind: 'error', message: 'weight ### broke', stack: [], page: '/progress', version: '1' });
+    expect(JSON.parse(log.mock.calls[0]![0] as string)).toEqual({ severity: 'ERROR', msg: 'client-error', fingerprint: expect.stringMatching(/^[0-9a-f]{12}$/), kind: 'error', message: 'weight ### broke', stack: [], page: '/progress', version: '1' });
     expect((await post({ nope: 1 })).status).toBe(422);
     expect((await post({ kind: 'error', message: 'again' })).status).toBe(204);
     const limited = await post({ kind: 'error', message: 'too many' });
