@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { RequestHandler } from 'express';
+import type { RecordIssue } from './issues.ts';
 
 // ADR 013: the phone reports the errors it meets (an uncaught error, a sync problem) so a failure that only happens on a phone is
 // not found by luck. Anyone may send one, so the body is small (4 kb, set where this is mounted), rate-limited per address, and
@@ -22,7 +23,7 @@ export interface ScrubbedReport {
   version: string;
 }
 
-const mask = (text: string, max: number) =>
+export const mask = (text: string, max: number) =>
   text
     .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[email]')
     .replace(/\b(eyJ[\w-]{10,}|ghp_\w+|gho_\w+|github_pat_\w+|sk-\w{10,}|[A-Za-z0-9_-]{32,})\b/g, '[secret]')
@@ -34,7 +35,7 @@ const path = (url: string) => {
 };
 
 // A stack frame with its address cleaned (no origin, query or fragment, positions kept); anything that is not a frame is dropped.
-const frame = (raw: string) => {
+export const frame = (raw: string) => {
   const line = raw.slice(0, 400);
   const at = /(https?:\/\/[^\s)]+)/.exec(line) ?? /([\w./-]+\.(?:js|mjs|ts|tsx|jsx)(?::\d+){0,2})\s*\)?\s*$/.exec(line);
   if (!at) return null;
@@ -70,7 +71,7 @@ export function scrubReport(body: unknown): ScrubbedReport | null {
   };
 }
 
-export function clientErrors(): RequestHandler {
+export function clientErrors(record?: RecordIssue): RequestHandler {
   return (req, res) => {
     const report = scrubReport(req.body);
     if (!report) {
@@ -79,6 +80,7 @@ export function clientErrors(): RequestHandler {
     }
     // `severity` is what Cloud Logging reads to file this as an error.
     console.error(JSON.stringify({ severity: 'ERROR', msg: 'client-error', ...report }));
+    record?.({ fingerprint: report.fingerprint, kind: report.kind, message: report.message, topFrame: report.stack[0] ?? '', page: report.page, version: report.version });
     res.status(204).end();
   };
 }

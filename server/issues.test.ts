@@ -1,0 +1,149 @@
+import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { sql, type Kysely } from 'kysely';
+import express from 'express';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createApp } from './app.ts';
+import { createDb } from './db/connection.ts';
+import type { DB } from './db/types.ts';
+import { errorHandler, serverIssue } from './errorHandler.ts';
+import { issueRecorder } from './issues.ts';
+import { startTestDatabase } from './test/postgres.ts';
+
+// The issue store (migration 20261018000001): reports are counted by fingerprint through record_issue(), the app role reaches the table
+// only through that function, and the two ways in (a phone's report, a server failure) land in it.
+let owner: Kysely<DB>;
+let app: Kysely<DB>;
+let stop: () => Promise<void>;
+
+beforeAll(async () => {
+  let appUrl: string;
+  ({ db: owner, stop, appUrl } = await startTestDatabase());
+  app = createDb(appUrl);
+}, 120_000);
+afterAll(async () => {
+  await app.destroy();
+  await stop?.();
+});
+beforeEach(async () => {
+  await owner.deleteFrom('issues').execute();
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+});
+
+const FP = 'abcdef012345';
+const record = (fingerprint = FP, version = '1', kind = 'error') =>
+  sql<{ record_issue: boolean }>`select record_issue(${fingerprint}, ${kind}, 'Bad weight ###', 'foo /assets/index.js:1:2', '/progress', ${version})`.execute(app).then(r => r.rows[0]!.record_issue);
+const row = (fingerprint = FP) => owner.selectFrom('issues').selectAll().where('fingerprint', '=', fingerprint).executeTakeFirstOrThrow();
+
+describe('record_issue', () => {
+  it('says true for a new fingerprint and false for a repeat, and counts the repeats', async () => {
+    expect(await record(FP, '10')).toBe(true);
+    expect(await record(FP, '11')).toBe(false);
+    expect(await record(FP, '12')).toBe(false);
+    const r = await row();
+    expect(r).toMatchObject({ occurrences: '3', first_version: '10', last_version: '12', status: 'open', kind: 'error', page: '/progress' });
+  });
+
+  it('opens a fixed issue again when it comes back, and leaves ignored and investigating alone', async () => {
+    for (const [status, after] of [['fixed', 'open'], ['ignored', 'ignored'], ['investigating', 'investigating']] as const) {
+      await owner.deleteFrom('issues').execute();
+      await record();
+      await owner.updateTable('issues').set({ status }).execute();
+      await record();
+      expect((await row()).status).toBe(after);
+    }
+  });
+
+  it('refuses new fingerprints once the table holds 5000, but keeps counting the ones it has', async () => {
+    await sql`insert into issues (fingerprint, kind, message) select lpad(to_hex(g), 12, '0'), 'error', 'm' from generate_series(1, 5000) g`.execute(owner);
+    expect(await record('ffffffffffff')).toBe(false);
+    expect(await owner.selectFrom('issues').select(sql<string>`count(*)`.as('n')).executeTakeFirstOrThrow()).toEqual({ n: '5000' });
+    await record(lpad(1));
+    expect((await row(lpad(1))).occurrences).toBe('2');
+  });
+
+  it('rejects a malformed fingerprint or kind', async () => {
+    await expect(record('NOT-A-HASH')).rejects.toThrow();
+    await expect(record(FP, '1', 'nonsense')).rejects.toThrow();
+  });
+
+  it('is the only way in for the app role: it cannot read or write the table itself', async () => {
+    for (const statement of [sql`select * from issues`, sql`insert into issues (fingerprint, kind, message) values (${FP}, 'error', 'm')`, sql`update issues set status = 'fixed'`, sql`delete from issues`]) {
+      await expect(statement.execute(app)).rejects.toThrow(/permission denied/);
+    }
+  });
+});
+
+const lpad = (n: number) => n.toString(16).padStart(12, '0');
+const stored = () => owner.selectFrom('issues').selectAll().orderBy('first_seen').execute();
+
+describe('issueRecorder', () => {
+  it('sends the same fingerprint at most once in the throttle window', async () => {
+    let t = 1_000_000;
+    const recordIssue = issueRecorder(app, () => t);
+    const input = { fingerprint: FP, kind: 'server' as const, message: 'm', topFrame: '', page: '/x', version: '' };
+    recordIssue(input);
+    recordIssue(input);
+    await vi.waitFor(async () => expect(await stored()).toHaveLength(1));
+    t += 6_000;
+    recordIssue(input);
+    await vi.waitFor(async () => expect((await row()).occurrences).toBe('2'));
+  });
+
+  it('logs one new-issue line the first time, and swallows a failure', async () => {
+    const log = vi.mocked(console.error);
+    const recordIssue = issueRecorder(app);
+    recordIssue({ fingerprint: FP, kind: 'error', message: 'm', topFrame: '', page: '', version: '1' });
+    await vi.waitFor(() => expect(log.mock.calls.map(c => JSON.parse(c[0] as string))).toContainEqual({ severity: 'WARNING', msg: 'new-issue', fingerprint: FP, kind: 'error' }));
+    // A bad fingerprint makes the database refuse: logged, never thrown.
+    expect(() => recordIssue({ fingerprint: 'bad', kind: 'error', message: 'm', topFrame: '', page: '', version: '' })).not.toThrow();
+    await vi.waitFor(() => expect(log.mock.calls.some(c => String(c[0]).includes('issue not recorded'))).toBe(true));
+  });
+});
+
+describe('the two ways in', () => {
+  let server: Server;
+  const listen = async (a: express.Express) => {
+    server = a.listen(0);
+    await new Promise(done => server.once('listening', done));
+    return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  };
+  const close = () => new Promise<void>(done => server.close(() => done()));
+
+  it('a phone report through /api/client-errors is stored with its fingerprint', async () => {
+    const base = await listen(createApp({ db: app }));
+    const res = await fetch(`${base}/api/client-errors`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'sync', message: 'refused 181 lb', page: '/progress', version: '77' }) });
+    expect(res.status).toBe(204);
+    await vi.waitFor(async () => expect(await stored()).toHaveLength(1));
+    expect((await stored())[0]).toMatchObject({ kind: 'sync', message: 'refused ### lb', page: '/progress', last_version: '77', occurrences: '1' });
+    await close();
+  });
+
+  it('a 500 is stored, a 404 and a 400 are not', async () => {
+    const a = express();
+    a.get('/boom', () => { throw new Error('duplicate key value violates "exercise bench press 185"'); });
+    a.get('/bad', () => { throw Object.assign(new Error('bad'), { status: 400 }); });
+    a.use(errorHandler(issueRecorder(app)));
+    const base = await listen(a);
+    expect((await fetch(`${base}/boom`)).status).toBe(500);
+    expect((await fetch(`${base}/bad`)).status).toBe(400);
+    await vi.waitFor(async () => expect(await stored()).toHaveLength(1));
+    const [r] = await stored();
+    expect(r).toMatchObject({ kind: 'server', page: '/boom', message: 'duplicate key value violates "…"' });
+    await close();
+  });
+});
+
+describe('serverIssue', () => {
+  it('keeps no quoted value, digit, email or token from the message', () => {
+    const r = serverIssue(new Error(`invalid input for "bench press" 185 lb by jane@example.com token ghp_abcdefghijklmnop 'note text'`), '/api/x');
+    expect(r.message).toBe('invalid input for "…" ### lb by [email] token [secret] \'…\'');
+    expect(r.fingerprint).toMatch(/^[0-9a-f]{12}$/);
+  });
+
+  it('gives one fingerprint to the same failure with different values', () => {
+    const a = serverIssue(new Error('row 12 for "squat" failed'), '/api/x');
+    const b = serverIssue(new Error('row 3456 for "deadlift" failed'), '/api/y');
+    expect(a.fingerprint).toBe(b.fingerprint);
+  });
+});
