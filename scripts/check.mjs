@@ -3,7 +3,7 @@
 //        npm run check -- --list  show which checks it would run and why, without running them
 //        npm run check -- --files=a,b  pretend only those files changed (with --list, to see what a change would run)
 //        npm run check -- --all   run every check that does not need a database (typecheck, test, lint, e2e)
-// CI (.github/workflows/test.yml) always runs everything; this is the local shortcut. A file it does not recognise runs everything.
+// CI (.github/workflows/test.yml) runs everything on main and the jobs scripts/ci-changes.mjs picks on a pull request; this is the local shortcut. A file it does not recognise runs everything.
 // The db:check and e2e:sync steps need the local Postgres: it is started (npm run db:start) and used when DATABASE_URL is not set; if it cannot be reached the step is not run and the script exits 1.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createConnection } from 'node:net';
@@ -30,7 +30,7 @@ const is = {
   unitTest: f => /\.test\.(js|ts|tsx|jsx)$/.test(f) || f.startsWith('src/test/'),
   e2eSpec: f => f.startsWith('e2e/') || f.startsWith('e2e-accounts/'),
   css: f => /\.css$/.test(f),
-  sync: f => f.startsWith('src/sync/') || f.startsWith('server/') || f.startsWith('src/store/') || f.startsWith('e2e-sync/') || f === 'playwright.sync.config.js',
+  sync: f => f.startsWith('src/sync/') || f.startsWith('src/shared/') || f.startsWith('server/') || f.startsWith('src/store/') || f.startsWith('e2e-sync/') || f === 'playwright.sync.config.js',
   migration: f => f.startsWith('db/migrations/') || f === 'server/db/types.ts',
   ui: f => f.startsWith('src/components/') || f.startsWith('src/hooks/') || f.startsWith('src/store/') || /\.(jsx|tsx)$/.test(f),
   src: f => f.startsWith('src/') || f.startsWith('server/') || f.startsWith('public/') || f === 'index.html',
