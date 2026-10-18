@@ -217,3 +217,20 @@ describe('item notes', () => {
     expect('note' in c.items[2]).toBe(false);
   });
 });
+
+describe('a line with a price for each one', () => {
+  it('is cleaned, totals the sum and counts how many there are', async () => {
+    const { normGroceryMonth, lineCost, lineOf, parsePrices, pricesText, spendByMonth } = await import('./grocery.js');
+    const m = normGroceryMonth({ lines: { a: { prices: [899, 1049.5, 925] }, b: { prices: [899, 925], qty: 9, cents: 1, got: true }, c: { prices: [] }, d: { prices: 'x' }, e: { prices: Array(51).fill(1) } }, pulled: [] });
+    expect(m.lines.a).toBeUndefined(); // a price that is not whole cents voids the list
+    expect(m.lines.b).toEqual({ got: true, qty: 9, cents: 1, prices: [899, 925] });
+    expect(Object.keys(m.lines)).toEqual(['b']);
+    const item = { id: 'b', n: 'Beef', store: '', qty: 1, cents: null, every: true, out: false };
+    const l = lineOf(item, m);
+    expect(l.qty).toBe(2); expect(lineCost(l)).toBe(1824);
+    expect(spendByMonth({ stores: [], items: [item] }, { '2026-10': m }, '2026-10', 1)[0]).toMatchObject({ spent: 1824, bought: 1 });
+    expect(parsePrices('8.99, 10.49  $9.25;3')).toEqual([899, 1049, 925, 300]);
+    expect(parsePrices('')).toBeNull(); expect(parsePrices('8.99, x')).toBeNull(); expect(parsePrices('1.234')).toBeNull();
+    expect(pricesText([899, 1049])).toBe('8.99, 10.49'); expect(pricesText(undefined)).toBe('');
+  });
+});

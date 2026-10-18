@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, haveOf, lineOf, lineTotal, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
+import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, haveOf, lineCost, lineOf, money, monthKey, monthLabel, onList, parseDollars, parsePrices, pricesText, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
@@ -18,12 +18,12 @@ const EMPTY_FORM: GroceryForm = { n: '', store: '', qty: '1', price: '', every: 
 const AHEAD = 12; // how many months past this one you can plan
 
 // A count or price box that keeps what is typed and saves when you leave it (or press Enter), so a half-typed "3." is not rewritten under you.
-function NumBox({ label, value, onCommit, className }: { label: string; value: string; onCommit: (text: string) => boolean; className: string }) {
+function NumBox({ label, value, onCommit, className, kind = 'decimal' }: { label: string; value: string; onCommit: (text: string) => boolean; className: string; kind?: 'decimal' | 'text' }) {
   const [text, setText] = useState(value); const [seen, setSeen] = useState(value); const [bad, setBad] = useState(false);
   if (value !== seen) { setSeen(value); setText(value); setBad(false); } // the saved value changed from elsewhere
   const commit = () => { if (text === value) return setBad(false); setBad(!onCommit(text)); };
   return (
-    <input type="text" inputMode="decimal" className={`gnum ${className}`} aria-label={label} aria-invalid={bad || undefined} value={text}
+    <input type="text" inputMode={kind === 'text' ? 'text' : 'decimal'} className={`gnum ${className}`} aria-label={label} aria-invalid={bad || undefined} value={text}
       onChange={e => setText(e.target.value)} onBlur={commit} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }} />
   );
 }
@@ -32,7 +32,7 @@ function NumBox({ label, value, onCommit, className }: { label: string; value: s
 // One line of the shopping list: the whole row ticks it, and the trailing "2 × $3.49" opens the count and price for this month.
 function GetRow({ item, month, mk, future, onGot, open, onOpen }: { item: GroceryItem; month: GroceryMonth; mk: string; future: boolean; onGot: (on: boolean) => void; open: boolean; onOpen: (on: boolean) => void }) {
   const s = useAppStore.getState();
-  const l = lineOf(item, month); const total = lineTotal(l.qty, l.cents); const w = unitWords(item.unit);
+  const l = lineOf(item, month); const total = lineCost(l); const w = unitWords(item.unit);
   const moreId = `groc-more-${item.id}`;
   return (
     <li className={`gget${l.got ? ' got' : ''}`}>
@@ -42,7 +42,7 @@ function GetRow({ item, month, mk, future, onGot, open, onOpen }: { item: Grocer
           <span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span>
         </label>
         <button type="button" className="gqty" aria-expanded={open} aria-controls={moreId} aria-label={`${w.count} and price of ${item.n}`} onClick={() => onOpen(!open)}>
-          <span className="gpill">{w.qty(l.qty)} × {l.cents == null ? 'no price' : `${money(l.cents)}${w.per}`}</span>
+          <span className="gpill">{l.prices ? `${l.prices.length} × avg ${money(Math.round(total / l.prices.length))}` : `${w.qty(l.qty)} × ${l.cents == null ? 'no price' : `${money(l.cents)}${w.per}`}`}</span>
         </button>
       </div>
       {open && (
@@ -52,10 +52,16 @@ function GetRow({ item, month, mk, future, onGot, open, onOpen }: { item: Grocer
               onCommit={t => { const n = Number(t); if (!t.trim() || !Number.isFinite(n) || n <= 0 || n > 999) return false; s.setGroceryQty(mk, item.id, n); return true; }} />
           </label>
           <label className="gfield">{w.price}
-            <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={centsText(l.cents)}
+            <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={l.prices ? '' : centsText(l.cents)}
               onCommit={t => { if (!t.trim()) { s.setGroceryCents(mk, item.id, null); return true; } const c = parseDollars(t); if (c == null) return false; s.setGroceryCents(mk, item.id, c); return true; }} />
           </label>
-          <span className="gtotal" aria-label={`Total for ${item.n}`}>{l.cents == null ? '' : money(total)}</span>
+          {!item.unit && (
+            <label className="gfield gprices">Price of each, if they differ
+              <NumBox label={`Price of each ${item.n}, dollars, separated by commas`} className="gpricelist" kind="text" value={pricesText(l.prices)}
+                onCommit={t => { if (!t.trim()) { s.setGroceryPrices(mk, item.id, null); return true; } const p = parsePrices(t); if (!p) return false; s.setGroceryPrices(mk, item.id, p); return true; }} />
+            </label>
+          )}
+          <span className="gtotal" aria-label={`Total for ${item.n}`}>{l.cents == null && !l.prices ? '' : money(total)}</span>
           {!future && <button type="button" className="btn sm ghost gtake" aria-label={`Take ${item.n} off the list`} onClick={() => s.takeGroceryOff(mk, item.id)}>Take off the list</button>}
         </div>
       )}
