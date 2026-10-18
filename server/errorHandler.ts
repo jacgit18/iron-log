@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { ErrorRequestHandler } from 'express';
+import { fingerprintOf, frame, mask } from './scrub.ts';
+import type { RecordIssue } from './issues.ts';
 
 // The last stop for an error no route handled (EH-01). Express's default handler answers HTML with the stack trace; the phone's
 // sync code expects the `{ ok:false, error }` shape and treats a 5xx as "try again later", so every failure leaves here as JSON.
@@ -31,10 +33,27 @@ export function isDatabaseTrouble(err: unknown): boolean {
   return /timeout exceeded when trying to connect|Connection terminated|connection timeout|Client has encountered a connection error/i.test(message);
 }
 
-export function errorHandler(): ErrorRequestHandler {
+// A server failure as the issue store keeps it. Quoted text is cut out first: a database error can quote the value that was refused
+// (an exercise name, a note), and the store holds only what could never be personal.
+export function serverIssue(err: unknown, path: string) {
+  const text = err instanceof Error ? err.message : String(err);
+  const message = mask(text.replace(/(["`]).*?\1|(?<!\w)'[^']*'(?!\w)/g, m => `${m[0]}…${m[0]}`), 300) || 'unknown error';
+  const stack = (err instanceof Error ? (err.stack ?? '').split('\n') : []).slice(1, 8).map(frame).filter((f): f is string => !!f).slice(0, 6);
+  return { fingerprint: fingerprintOf('server', message, stack), kind: 'server' as const, message, topFrame: stack[0] ?? '', page: mask(path, 120), version: '' };
+}
+
+// Recording is best effort and sits inside the error path: whatever goes wrong here must not replace the answer the phone is waiting for.
+function note(record: RecordIssue | undefined, err: unknown, path: string) {
+  try { record?.(serverIssue(err, path)); } catch { /* never an error of its own */ }
+}
+
+export function errorHandler(record?: RecordIssue): ErrorRequestHandler {
   return (err, req, res, next) => {
     // Too late to change the answer; let Express close the connection.
-    if (res.headersSent) return next(err);
+    if (res.headersSent) {
+      note(record, err, req.path);
+      return next(err);
+    }
     const failure = asFailure(err);
     const requestId = randomUUID();
     const tooBig = failure.type === 'entity.too.large';
@@ -56,6 +75,7 @@ export function errorHandler(): ErrorRequestHandler {
       error: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack?.split('\n').slice(1, 6).map(l => l.trim()) : undefined,
     }));
+    if (status >= 500) note(record, err, req.path);
     if (status === 503) res.set('Retry-After', String(RETRY_AFTER_SECONDS));
     res.status(status).json({
       ok: false,

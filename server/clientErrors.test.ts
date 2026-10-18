@@ -2,7 +2,8 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.ts';
-import { fingerprintOf, scrubReport } from './clientErrors.ts';
+import { scrubReport } from './clientErrors.ts';
+import { fingerprintOf } from './scrub.ts';
 
 describe('scrubReport', () => {
   const ok = { kind: 'error', message: 'Cannot read properties of undefined', stack: '', page: 'https://app.example/progress?week=2026-10-04#x', version: '1791448234' };
@@ -12,6 +13,11 @@ describe('scrubReport', () => {
     expect(r.message).toBe('Bad weight ###.# lb for [email] on ####-##-## token [secret]');
     expect(r.page).toBe('/progress');
     expect(r.version).toBe('1791448234');
+  });
+
+  it('masks digits, emails and long tokens in the page too', () => {
+    const r = scrubReport({ ...ok, page: 'https://app.example/log/2026-10-07/jane@example.com/abcdefghijklmnopqrstuvwxyz0123456789?x=1' })!;
+    expect(r.page).toBe('/log/####-##-##/[email]/[secret]');
   });
 
   it('keeps only stack frames, with addresses cleaned and the message line dropped', () => {

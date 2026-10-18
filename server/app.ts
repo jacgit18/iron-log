@@ -13,6 +13,7 @@ import { LISTED_KINDS, listCatalog, parseSearch, searchCatalog } from './catalog
 import { clientErrors } from './clientErrors.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { errorHandler } from './errorHandler.ts';
+import { issueRecorder } from './issues.ts';
 import { originGuard } from './originGuard.ts';
 import { fireRoute, type FireDeps } from './push/fire.ts';
 import { pushRoutes } from './push/routes.ts';
@@ -97,6 +98,7 @@ function cacheControl(file: string, root: string): string {
 export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
+  const recordIssue = db ? issueRecorder(db) : undefined;
   if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
   app.use(securityHeaders());
   // gzip/brotli for the app's scripts and the sync pages: Cloud Run does not compress, and the first load is on a phone's connection.
@@ -117,7 +119,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     app.all('/api/auth/*splat', toNodeHandler(auth));
   }
   // The phone's error reports: anyone may send one (a signed-out phone has errors too), so they are small, rate-limited and scrubbed.
-  app.post('/api/client-errors', rateLimit(limits.clientErrors), express.json({ limit: '4kb' }), clientErrors());
+  app.post('/api/client-errors', rateLimit(limits.clientErrors), express.json({ limit: '4kb' }), clientErrors(recordIssue));
   // The one-time upload of a phone's old data is far bigger than any other request (years of entries), so it alone gets a larger limit,
   // but only once the caller is signed in and counted (below, after sessionAuth and its per-user limit). Before that it gets no parser
   // at all: an anonymous caller must not be able to make the one small instance buffer and parse 4 MB per request (audit run-2).
@@ -292,7 +294,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   }
 
   // Last, so it catches what every route above threw (Express 5 passes a rejected async handler here too).
-  app.use(errorHandler());
+  app.use(errorHandler(recordIssue));
 
   return app;
 }

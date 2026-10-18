@@ -81,6 +81,21 @@ export interface GroceryMonths {
   version: Generated<number>;
 }
 
+export interface Issues {
+  fingerprint: string;
+  first_seen: Generated<Timestamp>;
+  first_version: Generated<string>;
+  kind: string;
+  last_seen: Generated<Timestamp>;
+  last_version: Generated<string>;
+  message: string;
+  note: Generated<string>;
+  occurrences: Generated<Int8>;
+  page: Generated<string>;
+  status: Generated<string>;
+  top_frame: Generated<string>;
+}
+
 export interface LibraryItems {
   client_id: string;
   client_updated_at: Timestamp | null;
@@ -239,6 +254,7 @@ export interface DB {
   catalog_items: CatalogItems;
   config: Config;
   grocery_months: GroceryMonths;
+  issues: Issues;
   library_items: LibraryItems;
   list_items: ListItems;
   log_entries: LogEntries;
