@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Email alerts for the two things that would otherwise go wrong silently (ADR 013, Phase F): the nightly backup, and the server.
+# Email alerts for what would otherwise go wrong silently (ADR 013, Phase F): the nightly backup, the server, and the errors phones and the server report to the issue store.
 #
 # Usage:  PROJECT_ID=iron-log-jacgit18 ALERT_EMAIL=you@example.com scripts/alerts-cloud-run.sh <command>
 #   setup    enable Cloud Monitoring, make the email channel, and create the six alert policies that do not exist yet
@@ -12,7 +12,7 @@
 #   2. the backup could not even be started   (Cloud Scheduler logged an error for its job)
 #   3. the server answered errors in a burst  (5 or more 5xx responses within 5 minutes)
 #   4. a phone reported an error              (any client-error log line; at most one email an hour; the fingerprint in it names the problem)
-#   5. a new production issue                 (the `new-issue` log line: a fingerprint seen for the first time, phone or server; at most one email an hour)
+#   5. a new production issue                 (the `new-issue` log line: a fingerprint seen for the first time, phone or server; at most one email an hour; a phone error seen for the first time also sends alert 4, since each has its own limit)
 #   6. the issue table is full                (the `issues-full` log line: a new problem could not be stored; at most one email an hour)
 # Alerting and email are free at this size. Not covered, on purpose: "no backup for a day" (Cloud Monitoring cannot watch a gap that
 # long reliably); `scripts/backup-cloud-run.sh list` shows a new pair of files every day, so look now and then.
@@ -130,7 +130,7 @@ cmd_setup() {
     }],
     \"notificationChannels\": [\"$ch\"],
     \"alertStrategy\": {\"notificationRateLimit\": {\"period\": \"3600s\"}, \"autoClose\": \"86400s\"},
-    \"documentation\": {\"mimeType\": \"text/markdown\", \"content\": \"A new problem could not be stored because the issues table holds 5000 rows and none can be dropped (every row was seen more than once or has a status or note). New problems are being lost. Open Settings, Production issues, mark old ones fixed or ignored, or add the pruning job from the backlog. Log: \`gcloud logging read 'resource.labels.service_name=$SERVICE AND jsonPayload.msg=issues-full' --project $PROJECT_ID --limit 20 --format json\`. At most one email an hour.\"}
+    \"documentation\": {\"mimeType\": \"text/markdown\", \"content\": \"A new problem could not be stored because the issues table holds 5000 rows and none can be dropped (every row was seen more than once or has a status or note). New problems are being lost. Marking issues fixed or ignored does NOT make room (only open, seen-once issues with no note are dropped to make room). Delete old rows as the database owner, not the app role, for example \`delete from issues where status in ('fixed','ignored')\`, or add the pruning job from the backlog. Settings, Production issues, shows what is in the table. Log: \`gcloud logging read 'resource.labels.service_name=$SERVICE AND jsonPayload.msg=issues-full' --project $PROJECT_ID --limit 20 --format json\`. At most one email an hour.\"}
   }"
   echo "Done. Check that the address is verified: scripts/alerts-cloud-run.sh list"
 }
