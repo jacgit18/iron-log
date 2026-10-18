@@ -72,3 +72,12 @@ test('At home shows what was bought, To get explains the fold, and Edit mode is 
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
   }
 });
+
+test('a price typed but not added is saved when the box loses focus', async ({ page }) => {
+  await open(page);
+  await addBeef(page);
+  await page.getByLabel('Add a price for Beef, dollars').fill('8.99');
+  await page.getByLabel('Count of Beef').focus(); // leave the box without pressing Add
+  await expect(page.getByRole('button', { name: 'Remove $8.99 from Beef' })).toBeVisible();
+  await expect(page.getByLabel('Total for Beef')).toHaveText('$8.99');
+});
