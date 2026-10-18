@@ -78,6 +78,10 @@
   --accent-ink: #FFFFFF;
   --done: #454C48;
   --field-line: #808E7E;
+  --dock: #D6E8E5;
+  --dock-field: #FFFFFF;
+  --dock-line: #1B5250;
+  --dock-shadow: 0 -6px 18px rgba(27,82,80,.22);
   --str: #882B1E;
   --str-bg: #F7E3DF;
   --hyp: #244B8B;
@@ -153,6 +157,10 @@
     --muted: #B8BFBB;
     --line: #303734;
     --field-line: #5F6C66;
+    --dock: #26403D;
+    --dock-field: #121614;
+    --dock-line: #78BFBA;
+    --dock-shadow: 0 -6px 18px rgba(0,0,0,.55);
     --accent: #78BFBA;
     --accent-ink: #0D1413;
     --done: #B8BFBB;
@@ -193,6 +201,10 @@
   --muted: #B8BFBB;
   --line: #303734;
   --field-line: #5F6C66;
+  --dock: #26403D;
+  --dock-field: #121614;
+  --dock-line: #78BFBA;
+  --dock-shadow: 0 -6px 18px rgba(0,0,0,.55);
   --accent: #78BFBA;
   --accent-ink: #0D1413;
   --done: #B8BFBB;

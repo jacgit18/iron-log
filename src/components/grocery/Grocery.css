@@ -306,10 +306,34 @@
   right: 0;
   bottom: calc(var(--tabbar, 0px) + env(safe-area-inset-bottom, 0px) + var(--lift, 0px));
   z-index: var(--z-timer);
-  background: var(--surface);
-  border-top: 1px solid var(--line);
-  box-shadow: 0 -4px 14px rgba(0,0,0,.08);
-  padding: var(--sp-8) var(--gr) var(--sp-8) var(--gl);
+  background: var(--dock);
+  border-top: 3px solid var(--dock-line);
+  box-shadow: var(--dock-shadow);
+  padding: var(--sp-6) var(--gr) var(--sp-8) var(--gl);
+}
+.gdocklab {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.gdock input:not(.chk),.gdock select {
+  border: 2px solid var(--field-line);
+  background: var(--dock-field);
+}
+.gdock #groc-add,.gdock .gdone {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.gdock #groc-add:disabled {
+  opacity: .6;
+}
+.gdock #groc-more {
+  background: var(--dock-field);
+  border-color: var(--field-line);
+  color: var(--ink);
 }
 .gdock form {
   max-width: 720px;

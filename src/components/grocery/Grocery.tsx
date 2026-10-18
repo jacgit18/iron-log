@@ -192,6 +192,7 @@ function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
   return (
     <div className="gdock" ref={dockRef} role="region" aria-label="Add an item">
       <form onSubmit={submit} noValidate aria-label="Add an item">
+        <span className="gdocklab" aria-hidden="true">New item</span>
         {more && (
           <div className="gdockmore" id="groc-dock-more">
             <input type="text" id="groc-store" className="gd-store" aria-label="Store" placeholder="Store (optional)" maxLength={40} list="groc-stores" value={f.store} onChange={e => setF({ ...f, store: e.target.value })} />
