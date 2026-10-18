@@ -14,6 +14,7 @@ import { clientErrors } from './clientErrors.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { errorHandler } from './errorHandler.ts';
 import { issueRecorder } from './issues.ts';
+import { issuesRoutes } from './issuesRoutes.ts';
 import { originGuard } from './originGuard.ts';
 import { fireRoute, type FireDeps } from './push/fire.ts';
 import { pushRoutes } from './push/routes.ts';
@@ -72,6 +73,8 @@ const LIMITS = {
   account: { max: 5, windowMs: 60 * 60_000 } as Limit,
   // Push: a timer or a tick schedules or cancels, so a busy session sends a few a minute. A loop is what this stops.
   push: { max: 60, windowMs: 60_000 } as Limit,
+  // The admin Issues screen: a person reading a list and changing a status, a few calls a minute at most.
+  issues: { max: 60, windowMs: 60_000 } as Limit,
   // Cloud Tasks calling the fire route: per address (a few Google ones), checked before the token. A 429 would push an alert past its
   // 90 s window and lose it, so this is far above any real traffic; the token is what keeps others out.
   pushFire: { max: 1200, windowMs: 60_000 } as Limit,
@@ -168,6 +171,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));
   app.use('/api/sync', rateLimit(limits.sync, undefined, byUser));
   // Web Push (ADR 044). Admin-only first: it is the first usage-based cost, so every route is behind requireAdmin until it is released.
+  // The admin Issues screen (ADR 013 amendment): admin-only, and the database checks users.is_admin again.
+  if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   if (db) app.use('/api/push', requireAdmin, rateLimit(limits.push, undefined, byUser), pushRoutes({ db, publicKey: push?.publicKey, scheduler: push?.scheduler, now: push?.now }));
   app.post('/api/account/erase-data', rateLimit(limits.account, undefined, byUser), async (req, res) => {
     const result = await eraseMyData(db!, String(res.locals.userId), req.body);

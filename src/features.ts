@@ -13,6 +13,7 @@ import { LS } from './lib/storage.js';
    A feature missing from the list is hidden from everyone (a forgotten line fails closed, not open). Hiding in the browser is not security: a feature with an API route must also
    use `requireAdmin` (server/admin.ts), or `requirePaid` (server/plan.ts) for a 'paid' feature. Add a feature with a line here, in alphabetical order, then `useFeature('name')` in the component. */
 export const FEATURES = {
+  adminIssues: 'admin', // Production issues in Settings (ADR 013 amendment): an internal tool, so it stays admin-only for good; remove it only together with /api/issues and the Issues panel
   webPush: 'admin', // Push alerts for a locked phone (ADR 044): release by deleting this line, the useFeature check in Settings.tsx and requireAdmin on /api/push in server/app.ts, once a week of use shows the Cloud Tasks bill
 } satisfies Record<string, Audience>;
 

@@ -1,0 +1,66 @@
+@layer base, components;
+@layer components {
+.issues-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+  margin-top: var(--sp-12);
+}
+.issuelist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.issuelist li {
+  border-top: 1px solid var(--line);
+}
+.issuehead {
+  background: none;
+  border: 0;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  font: inherit;
+  gap: var(--sp-2);
+  min-height: 44px;
+  padding: var(--sp-10) 0;
+  text-align: left;
+  touch-action: manipulation;
+  width: 100%;
+}
+.issuemsg {
+  overflow-wrap: anywhere;
+}
+.issuedetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-10);
+  padding-bottom: var(--sp-12);
+}
+.issuefacts {
+  display: grid;
+  font-size: var(--fs-sm);
+  gap: var(--sp-4) var(--sp-12);
+  grid-template-columns: max-content 1fr;
+  margin: 0;
+}
+.issuefacts dt {
+  color: var(--muted);
+}
+.issuefacts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.issuefield {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-sm);
+  gap: var(--sp-4);
+}
+.issuefield textarea {
+  font: inherit;
+  min-height: 44px;
+  width: 100%;
+}
+}
