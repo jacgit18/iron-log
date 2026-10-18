@@ -30,7 +30,7 @@ const is = {
   unitTest: f => /\.test\.(js|ts|tsx|jsx)$/.test(f) || f.startsWith('src/test/'),
   e2eSpec: f => f.startsWith('e2e/') || f.startsWith('e2e-accounts/'),
   css: f => /\.css$/.test(f),
-  sync: f => f.startsWith('src/sync/') || f.startsWith('server/') || f.startsWith('src/store/') || f.startsWith('e2e-sync/') || f === 'playwright.sync.config.js',
+  sync: f => f.startsWith('src/sync/') || f.startsWith('src/shared/') || f.startsWith('server/') || f.startsWith('src/store/') || f.startsWith('e2e-sync/') || f === 'playwright.sync.config.js',
   migration: f => f.startsWith('db/migrations/') || f === 'server/db/types.ts',
   ui: f => f.startsWith('src/components/') || f.startsWith('src/hooks/') || f.startsWith('src/store/') || /\.(jsx|tsx)$/.test(f),
   src: f => f.startsWith('src/') || f.startsWith('server/') || f.startsWith('public/') || f === 'index.html',
