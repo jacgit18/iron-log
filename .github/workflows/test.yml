@@ -51,7 +51,11 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # A pull request runs the unit tests related to its changed files (scripts/unit-tests.mjs; every test when a tooling or dependency file changed). Main and manual runs run all of them.
+      - run: node scripts/unit-tests.mjs --base=origin/${{ github.base_ref }}
+        if: github.event_name == 'pull_request'
       - run: npm test
+        if: github.event_name != 'pull_request'
 
   docker:
     needs: changes
@@ -187,10 +191,15 @@ jobs:
             test-results-sync
           retention-days: 7
 
+  # Four shards run side by side, so the browser tests finish in about a quarter of the time. Each shard installs and builds on its own runner.
   e2e:
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -199,18 +208,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run e2e
+      - run: npx playwright test --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             playwright-report
             test-results
           retention-days: 7
-      # The built app, so a reviewer can download it and click through the change (npx vite preview).
+      # The built app, so a reviewer can download it and click through the change (npx vite preview). One shard is enough.
       - run: npm run build
+        if: matrix.shard == 1
       - uses: actions/upload-artifact@v7
+        if: matrix.shard == 1
         with:
           name: app-preview
           path: dist

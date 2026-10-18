@@ -41,6 +41,8 @@ const is = {
 const checks = new Map(); // name -> why
 const want = (name, why) => checks.has(name) || checks.set(name, why);
 const ALL = ['typecheck', 'test', 'lint', 'e2e'];
+// The unit step runs only the tests related to the changed files (scripts/unit-tests.mjs) unless everything is asked for: --all, a tooling or dependency file, or a file this script does not know.
+let fullTests = args.includes('--all');
 
 if (args.includes('--all')) {
   ALL.forEach(c => want(c, '--all'));
@@ -50,8 +52,7 @@ if (args.includes('--all')) {
 } else {
   for (const f of files) {
     if (is.docs(f)) continue;
-    if (is.tooling(f)) ALL.forEach(c => want(c, `${f} is tooling or a dependency file`));
-    else if (is.script(f)) want('lint', `${f} is a helper script`);
+    if (is.tooling(f)) { fullTests = true; ALL.forEach(c => want(c, `${f} is tooling or a dependency file`)); }
     else if (is.unitTest(f)) {
       want('test', `${f} is a unit test`);
       want('lint', `${f} is a unit test`);
@@ -59,6 +60,9 @@ if (args.includes('--all')) {
     } else if (is.e2eSpec(f)) {
       want('lint', `${f} is a browser test`);
       want('e2e', `${f} is a browser test`);
+    } else if (is.script(f)) {
+      want('lint', `${f} is a helper script`);
+      want('test', `${f} is a helper script (only the tests that import it run)`);
     } else if (is.migration(f)) {
       want('db:check', `${f} changes the schema`);
       want('typecheck', `${f} changes the schema`);
@@ -75,6 +79,7 @@ if (args.includes('--all')) {
         want('db:check', `${f} is on the sync or server path`);
       }
     } else {
+      fullTests = true;
       ALL.forEach(c => want(c, `${f} is not a file this script knows, so everything runs`));
     }
   }
@@ -127,8 +132,9 @@ for (const c of plan) {
     skipped.push(c);
     continue;
   }
-  console.log(`\n> npm run ${c}`);
-  const r = spawnSync('npm', ['run', c], { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
+  const related = c === 'test' && !fullTests;
+  console.log(related ? '\n> node scripts/unit-tests.mjs (the tests related to what changed)' : `\n> npm run ${c}`);
+  const r = spawnSync(...(related ? ['node', ['scripts/unit-tests.mjs', `--base=${baseRef}`]] : ['npm', ['run', c]]), { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
   if (r.status !== 0) {
     console.error(`\nFailed: ${c}`);
     process.exit(r.status ?? 1);
