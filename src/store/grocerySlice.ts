@@ -100,7 +100,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (g.items.length >= MAX_ITEMS) return `The list is full (${MAX_ITEMS} items).`;
         if (g.items.some(i => i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
         if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
-        g.items.push({ id: newGroceryId(g.items, n), n, store, qty, cents, every: d.every, out: false, ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
+        g.items.push({ id: newGroceryId(g.items, n), n, store, qty, cents, every: true, out: false, ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
         return null;
       });
     },
@@ -173,18 +173,27 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       mutateCatalogue(g => { const x = g.items.find(i => i.id === id); if (x) x.out = out; return null; });
     },
 
-    // Ticking records the count and price paid, so a later change to the catalogue does not rewrite that month. In the current month
-    // it also closes the loop on a When-out item: bought means you have it again, and unticking puts it back to out. An older month
-    // is history and leaves what is at home alone.
+    // Ticking records the count and price paid, so a later change to the catalogue does not rewrite that month. Bought means you have it,
+    // so a "have" tick is dropped; unticking puts it back on the list. Each month keeps its own ticks (ADR 054).
     setGroceryGot(month, id, on) {
       const it = get().grocery.items.find(i => i.id === id);
       if (!it || !MONTH_RE.test(month)) return;
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
-        if (on) { l.got = true; l.qty = l.qty ?? it.qty; if (l.cents == null && it.cents != null) l.cents = it.cents; } else delete l.got;
+        if (on) { delete l.have; l.got = true; l.qty = l.qty ?? it.qty; if (l.cents == null && it.cents != null) l.cents = it.cents; } else delete l.got;
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
-      if (month === monthKey(new Date()) && !it.every) get().setGroceryOut(id, !on);
+    },
+
+    // The At home tick: you have it this month, so it is off that month's list. Unticking brings it back, and undoes a purchase too (the
+    // same tick shows on both lists). A bought item is already had: ticking changes nothing.
+    setGroceryHave(month, id, on) {
+      if (!get().grocery.items.some(i => i.id === id) || !MONTH_RE.test(month)) return;
+      mutateMonth(month, m => {
+        const l = { ...(m.lines[id] || {}) };
+        if (on) { if (!l.got) l.have = true; } else { delete l.have; delete l.got; }
+        if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
+      });
     },
 
     setGroceryQty(month, id, qty) {
@@ -206,13 +215,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       if (month === monthKey(new Date()) && cents !== null && it.cents !== cents) get().updateGroceryItem(id, { cents });
     },
 
-    // "Take off the list": you don't need it after all. Its line goes too, so nothing of it is left on that month.
-    // Only the current month changes what is at home: taking it off an older month must not drop it from today's list.
-    takeGroceryOff(month, id) {
-      const it = get().grocery.items.find(i => i.id === id);
-      if (!it || it.every) return;
-      if (it.out && month === monthKey(new Date())) get().setGroceryOut(id, false);
-      if (get().groceryMonths[month]) mutateMonth(month, m => { m.pulled = m.pulled.filter(x => x !== id); delete m.lines[id]; });
-    },
+    // "Take off the list": you don't need it this month. It is marked as had, so it is off that month's list, and its other lines stay.
+    takeGroceryOff(month, id) { get().setGroceryHave(month, id, true); },
   };
 };

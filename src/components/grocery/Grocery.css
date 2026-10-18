@@ -275,6 +275,19 @@
   min-height: 44px;
 }
 
+/* This month's bought items, folded away under the list; one tap opens them to untick a mis-tap. */
+.gbought {
+  border-top: 1px solid var(--line);
+  padding-top: var(--sp-4);
+}
+.gbought summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* A note under an item's name. */
 .gnote {
   display: block;

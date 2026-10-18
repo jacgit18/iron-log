@@ -5,9 +5,10 @@ import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, Groc
 /* ---------- Grocery list ----------
    The catalogue (`grocery/main`) holds every item once: where you buy it, the usual count and the last unit price. A month
    (`grocery/YYYY-MM`) holds only what happened that month: ticks, counts and prices that differ. Each item is "Every month" (always
-   on the list) or "When out" (on the current month's list only while it is out: unchecked on the At home list, ADR 038). A month
-   with no saved document is the Every-month items plus whatever is out, nothing ticked, so each month starts fresh and nothing is
-   copied or reset. Prices are whole cents, so totals never drift. The cleaning rules live in shared/grocery.ts, which the API uses too. */
+   on the list) or "When out"; since ADR 054 the two behave the same: every item is on each month's list until you have it. A month
+   (`grocery/YYYY-MM`) holds what happened that month: `have` (ticked on At home, so off the list), `got` (bought), counts and prices.
+   A month with no saved document has nothing ticked, so each month starts fresh with every item on it and nothing is copied or reset.
+   Prices are whole cents, so totals never drift. The cleaning rules live in shared/grocery.ts, which the API uses too. */
 
 export { MAX_CENTS, MAX_ITEMS, MAX_NOTE, MAX_QTY, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
 export const ANYWHERE = 'Anywhere';
@@ -61,7 +62,7 @@ export function normGrocery(d: unknown): Grocery {
 /** An item as this month sees it: its count and unit price (the month's, else the catalogue's), and whether it is ticked. */
 export function lineOf(item: GroceryItem, m: GroceryMonth) {
   const l = m.lines[item.id] || {};
-  return { got: l.got === true, qty: l.qty ?? item.qty, cents: l.cents ?? item.cents };
+  return { got: l.got === true, have: l.have === true, qty: l.qty ?? item.qty, cents: l.cents ?? item.cents };
 }
 /** The words around a count and a price: by weight (lb, kg, oz) the count is a weight and the price is per unit; otherwise each. */
 export const unitWords = (unit?: GroceryUnit) => ({
@@ -72,11 +73,18 @@ export const unitWords = (unit?: GroceryUnit) => ({
 });
 export const lineTotal = (qty: number, cents: number | null) => (cents == null ? 0 : Math.round(qty * cents));
 
-/** The items on this month's list, in catalogue order: the Every-month ones, anything ticked or pulled on (older data) that month,
- *  and, in the current month only, the When-out items that are out. A past month shows what was bought, not what is out today;
- *  an item keeps its row there once it has a line, so a mis-tapped untick can be ticked again. */
-export const onList = (g: Grocery, m: GroceryMonth, current: boolean) =>
-  g.items.filter(i => i.every || m.lines[i.id]?.got === true || m.pulled.includes(i.id) || (current ? i.out : !!m.lines[i.id]));
+/** Whether you have an item this month: ticked "have" on At home, or bought (ticked on To get). It starts every month unticked (ADR 054). */
+export const haveOf = (item: GroceryItem, m: GroceryMonth) => { const l = lineOf(item, m); return l.have || l.got; };
+
+/** The items on a month's list, in catalogue order. This month and later ones (`live`): everything you do not have yet, so each month starts
+ *  with every item on it and a tick on At home takes one off. A past month shows what was bought then (a ticked item, or one with its own
+ *  count or price), not what is out today. */
+export const onList = (g: Grocery, m: GroceryMonth, live: boolean) =>
+  g.items.filter(i => {
+    const l = m.lines[i.id];
+    if (live) return !l?.have;
+    return l?.got === true || l?.qty !== undefined || l?.cents !== undefined || m.pulled.includes(i.id);
+  });
 
 /** A store's items for the To get list: the ones still to get first, the ticked ones after them, each in catalogue order. */
 export const gotLast = (items: GroceryItem[], m: GroceryMonth) => [...items.filter(i => !lineOf(i, m).got), ...items.filter(i => lineOf(i, m).got)];
