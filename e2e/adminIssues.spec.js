@@ -11,6 +11,8 @@ const COUNTS = { fixed: 0, ignored: 0, investigating: 1, open: 1 };
 
 async function setup(page, { admin = true, status = 200 } = {}) {
   const calls = [];
+  const now = ISSUES.map(i => ({ ...i })); // what the server holds now; a test can change it between two reads
+  Object.defineProperty(calls, 'now', { value: now }); // not enumerable, so `expect(calls).toEqual([])` still means no calls
   await page.addInitScript(({ admin }) => {
     localStorage.setItem('ironlog:hidetip', '1');
     localStorage.setItem('ironlog:hidelocal', '1');
@@ -24,7 +26,7 @@ async function setup(page, { admin = true, status = 200 } = {}) {
     if (status !== 200) return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ ok: false }) });
     if (req.method() === 'PATCH') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
     const wanted = url.searchParams.get('status');
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, counts: COUNTS, issues: ISSUES.filter(i => !wanted || i.status === wanted) }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, counts: COUNTS, issues: now.filter(i => !wanted || i.status === wanted) }) });
   });
   await page.goto('/');
   await page.waitForLoadState('networkidle').catch(() => {});
@@ -77,6 +79,21 @@ test('editing only the note sends only the note, and Save with nothing changed s
   await panel.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => calls.filter(c => c.method === 'PATCH').length).toBe(1);
   expect(calls.find(c => c.method === 'PATCH').body).toEqual({ note: 'only the note' });
+});
+
+test('a status someone else changed is not put back: after the list reloads the row shows the new value and Save sends only what was edited', async ({ page }) => {
+  const calls = await setup(page);
+  const panel = page.getByRole('region', { name: 'Production issues' });
+  await panel.getByRole('button', { name: 'Show issues' }).click();
+  await panel.getByRole('button', { name: /duplicate key value/ }).click();
+  await expect(panel.getByLabel('Status', { exact: true })).toHaveValue('open');
+  calls.now[0].status = 'fixed'; // another admin fixed it
+  await panel.getByRole('button', { name: /^All/ }).click(); // the list is read again
+  await expect(panel.getByLabel('Status', { exact: true })).toHaveValue('fixed');
+  await panel.getByLabel('Note', { exact: true }).fill('checked after the fix');
+  await panel.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => calls.filter(c => c.method === 'PATCH').length).toBe(1);
+  expect(calls.find(c => c.method === 'PATCH').body).toEqual({ note: 'checked after the fix' });
 });
 
 test('passes the accessibility scan with the list open and an issue expanded', async ({ page }) => {

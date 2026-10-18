@@ -45,7 +45,7 @@ export default function IssuesList() {
         <ul className="issuelist">
           {issues.map(i => (
             <li key={i.fingerprint}>
-              <IssueRow issue={i} open={openFp === i.fingerprint} onToggle={() => setOpenFp(openFp === i.fingerprint ? null : i.fingerprint)} onSaved={() => load(filter)} />
+              <IssueRow key={`${i.status}\u0000${i.note}`} issue={i} open={openFp === i.fingerprint} onToggle={() => setOpenFp(openFp === i.fingerprint ? null : i.fingerprint)} onSaved={() => load(filter)} />
             </li>
           ))}
         </ul>
@@ -61,7 +61,8 @@ function IssueRow({ issue, open, onToggle, onSaved }: { issue: Issue; open: bool
   const [problem, setProblem] = useState('');
   const save = async () => {
     setSaving(true); setProblem('');
-    // Only what was edited is sent, so a field someone else changed in the meantime is not put back.
+    // Only what was edited is sent. The row is remounted (its key holds the server's status and note) whenever the server's values change,
+    // so the draft below never lags behind them and a field someone else changed is not put back.
     const patch: { status?: IssueStatus; note?: string } = {};
     if (status !== issue.status) patch.status = status;
     if (note !== issue.note) patch.note = note;

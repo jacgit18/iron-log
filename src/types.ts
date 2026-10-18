@@ -1,6 +1,7 @@
 /* Shapes of the data the app stores and exchanges. Everything in `normEntry` / `normBody` / `normProgram` / `normLibrary`
    (shared/validate) returns one of these; anything outside them is cleaned away. Dates are 'YYYY-MM-DD' strings; `updatedAt` is an ISO date-time. */
 
+import type { IssueStatus } from './shared/issues.ts';
 export type PhaseKey = 'strength' | 'iso' | 'hyp' | 'exp' | 'mob';
 export type SlotType = 'single' | 'superset' | 'either';
 
@@ -303,7 +304,6 @@ export interface DataFile {
 }
 
 /* ---------- Production issues (admin screen; the server's /api/issues, ADR 013 amendment) ---------- */
-import type { IssueStatus } from './shared/issues.ts';
 export type { IssueStatus };
 export type IssueCounts = Record<IssueStatus, number>;
 /** One fingerprint of a scrubbed error report. Times are ISO strings. */
