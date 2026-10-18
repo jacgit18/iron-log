@@ -319,7 +319,7 @@
   color: var(--ink);
 }
 .gdock input:not(.chk),.gdock select {
-  border: 2px solid var(--field-line);
+  border: 2px solid var(--dock-field-line);
   background: var(--dock-field);
 }
 .gdock #groc-add,.gdock .gdone {
@@ -332,7 +332,7 @@
 }
 .gdock #groc-more {
   background: var(--dock-field);
-  border-color: var(--field-line);
+  border-color: var(--dock-field-line);
   color: var(--ink);
 }
 .gdock form {

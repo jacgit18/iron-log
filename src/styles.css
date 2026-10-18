@@ -80,6 +80,7 @@
   --field-line: #808E7E;
   --dock: #D6E8E5;
   --dock-field: #FFFFFF;
+  --dock-field-line: #5E6F63;
   --dock-line: #1B5250;
   --dock-shadow: 0 -6px 18px rgba(27,82,80,.22);
   --str: #882B1E;
@@ -159,6 +160,7 @@
     --field-line: #5F6C66;
     --dock: #26403D;
     --dock-field: #121614;
+    --dock-field-line: #8FA8A3;
     --dock-line: #78BFBA;
     --dock-shadow: 0 -6px 18px rgba(0,0,0,.55);
     --accent: #78BFBA;
@@ -203,6 +205,7 @@
   --field-line: #5F6C66;
   --dock: #26403D;
   --dock-field: #121614;
+  --dock-field-line: #8FA8A3;
   --dock-line: #78BFBA;
   --dock-shadow: 0 -6px 18px rgba(0,0,0,.55);
   --accent: #78BFBA;
