@@ -82,7 +82,6 @@ export function parsePrices(text: string): number[] | null {
   const out = parts.map(parseDollars);
   return out.every((c): c is number => c != null) ? out : null;
 }
-export const pricesText = (p: number[] | undefined) => (p ? p.map(centsText).join(', ') : '');
 
 /** Whether you have an item this month: ticked "have" on At home, or bought (ticked on To get). It starts every month unticked (ADR 054). */
 export const haveOf = (item: GroceryItem, m: GroceryMonth) => { const l = lineOf(item, m); return l.have || l.got; };

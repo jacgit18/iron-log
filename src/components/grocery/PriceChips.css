@@ -1,0 +1,50 @@
+@layer base, components;
+@layer components {
+/* The price of each one bought: removable chips and a box that adds one. Every tap target is at least 44px tall. */
+.gchips {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.gchipslab {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.gchiplist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.gchipbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-pill);
+  background: var(--sunk);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.gchipadd {
+  display: flex;
+  gap: var(--sp-6);
+}
+.gchipin {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+}
+.gchipadd .btn {
+  flex: none;
+  min-height: 44px;
+}
+}

@@ -146,13 +146,6 @@
 .gprice {
   width: 6em;
 }
-.gprices {
-  flex: 1 1 12em;
-}
-.gpricelist {
-  width: 100%;
-  text-align: left;
-}
 .gtotal {
   min-height: 44px;
   display: flex;
@@ -230,6 +223,7 @@
 .gedrow {
   display: flex;
   flex: 1 1 100%;
+  min-width: 0;
   gap: var(--sp-6);
 }
 .gedrow .gnoteinput {
@@ -305,7 +299,24 @@
 
 /* The floating add form and Done while editing At home. It sits above the page like the timer bar, and the list gets room beneath it. */
 .gathome.editing {
-  padding-bottom: calc(var(--gdock-top, 150px) + var(--sp-16));
+  padding: var(--sp-8) var(--sp-8) calc(var(--gdock-top, 150px) + var(--sp-16));
+  border-left: 3px solid var(--dock-line);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--dock) 40%, transparent);
+}
+.gathome.editing .gedit select,.gathome.editing .gedit input:not(.chk) {
+  background: var(--dock-field);
+  color: var(--ink);
+}
+.geditbadge {
+  flex: none;
+  padding: var(--sp-2) var(--sp-10);
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: var(--fs-xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
 }
 .gdock {
   position: fixed;
