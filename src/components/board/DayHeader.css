@@ -50,11 +50,12 @@
   font-size: var(--fs-xl);
   line-height: 1;
 }
-/* The smallest phones (360px): the words under the swap icon go, the icon stays between the arrows (their names are in their aria-labels). */
+/* The smallest phones (360px): the words keep their place under the icon but take no width. The label is only as wide as the icon, and the words,
+   centered on it, hang over the arrows' empty padding, so the row fits as it did when the words were hidden. */
 @media (max-width:380px) {
   .boardroot .swaplabel {
-    /* token-ok: hides the words; the icon sets its own size */
-    font-size: 0;
+    width: var(--fs-xl);
+    min-width: 0;
   }
 }
 .boardroot .colhead .restchk {
