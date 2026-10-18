@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ErrorRequestHandler } from 'express';
-import { fingerprintOf, frame, mask } from './clientErrors.ts';
+import { fingerprintOf, frame, mask } from './scrub.ts';
 import type { RecordIssue } from './issues.ts';
 
 // The last stop for an error no route handled (EH-01). Express's default handler answers HTML with the stack trace; the phone's

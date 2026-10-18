@@ -2,7 +2,8 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.ts';
-import { fingerprintOf, scrubReport } from './clientErrors.ts';
+import { scrubReport } from './clientErrors.ts';
+import { fingerprintOf } from './scrub.ts';
 
 describe('scrubReport', () => {
   const ok = { kind: 'error', message: 'Cannot read properties of undefined', stack: '', page: 'https://app.example/progress?week=2026-10-04#x', version: '1791448234' };
