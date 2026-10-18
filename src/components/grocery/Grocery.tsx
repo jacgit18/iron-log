@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, haveOf, lineOf, lineTotal, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
@@ -30,7 +30,7 @@ function NumBox({ label, value, onCommit, className }: { label: string; value: s
 
 /* ---------- To get ---------- */
 // One line of the shopping list: the whole row ticks it, and the trailing "2 × $3.49" opens the count and price for this month.
-function GetRow({ item, month, mk, future }: { item: GroceryItem; month: GroceryMonth; mk: string; future: boolean }) {
+function GetRow({ item, month, mk, future, onGot }: { item: GroceryItem; month: GroceryMonth; mk: string; future: boolean; onGot: (on: boolean) => void }) {
   const s = useAppStore.getState();
   const l = lineOf(item, month); const total = lineTotal(l.qty, l.cents); const w = unitWords(item.unit);
   const [open, setOpen] = useState(false);
@@ -39,7 +39,7 @@ function GetRow({ item, month, mk, future }: { item: GroceryItem; month: Grocery
     <li className={`gget${l.got ? ' got' : ''}`}>
       <div className="ggetline">
         <label className="gtick">
-          <input type="checkbox" className="chk" id={`groc-${item.id}`} checked={l.got} disabled={future} onChange={e => s.setGroceryGot(mk, item.id, e.target.checked)} />
+          <input type="checkbox" className="chk" id={`groc-${item.id}`} checked={l.got} disabled={future} onChange={e => onGot(e.target.checked)} />
           <span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span>
         </label>
         <button type="button" className="gqty" aria-expanded={open} aria-controls={moreId} aria-label={`${w.count} and price of ${item.n}`} onClick={() => setOpen(v => !v)}>
@@ -74,6 +74,18 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const current = off === 0;
   const todo = current ? list.filter(i => !lineOf(i, month).got) : list;
   const bought = current ? list.filter(i => lineOf(i, month).got) : [];
+  // A ticked row moves to another part of the page, which would drop keyboard focus to the top. Put it on the next row to get (or the
+  // one before), else on the "Bought this month" line; a row unticked from the fold lands back in the list, so focus follows it there.
+  const focusAfter = useRef<string | null>(null);
+  useEffect(() => { if (focusAfter.current) { document.getElementById(focusAfter.current)?.focus(); focusAfter.current = null; } });
+  const tick = (id: string, on: boolean) => {
+    if (current) {
+      const order = byStore(g, todo).flatMap(grp => gotLast(grp.items, month)).map(i => i.id);
+      const at = order.indexOf(id); const next = order[at + 1] ?? order[at - 1];
+      focusAfter.current = !on ? `groc-${id}` : next ? `groc-${next}` : 'groc-bought-sum';
+    }
+    useAppStore.getState().setGroceryGot(mk, id, on);
+  };
   return (
     <>
       <div className="gmonth" role="group" aria-label="Month">
@@ -94,17 +106,17 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
               <h3 id={`groc-h-${gi}`}>{grp.label}</h3>
               <span className="note">{current ? `${gt.count} to get` : `${gt.got}/${gt.count}`}{gt.planned ? ` · ${money(gt.planned)}` : ''}</span>
             </div>
-            <ul className="glist">{gotLast(grp.items, month).map(it => <GetRow key={it.id} item={it} month={month} mk={mk} future={off > 0} />)}</ul>
+            <ul className="glist">{gotLast(grp.items, month).map(it => <GetRow key={it.id} item={it} month={month} mk={mk} future={off > 0} onGot={on => tick(it.id, on)} />)}</ul>
           </section>
         );
       })}
       {bought.length > 0 && (
         <details className="gbought" id="groc-bought">
-          <summary>Bought this month ({bought.length})</summary>
+          <summary id="groc-bought-sum">Bought this month ({bought.length})</summary>
           {byStore(g, bought).map(grp => (
             <section key={grp.store || '_'} className="gstore" aria-label={`Bought from ${grp.label}`}>
               <div className="gstorehead"><h3>{grp.label}</h3></div>
-              <ul className="glist">{grp.items.map(it => <GetRow key={it.id} item={it} month={month} mk={mk} future={false} />)}</ul>
+              <ul className="glist">{grp.items.map(it => <GetRow key={it.id} item={it} month={month} mk={mk} future={false} onGot={on => tick(it.id, on)} />)}</ul>
             </section>
           ))}
         </details>

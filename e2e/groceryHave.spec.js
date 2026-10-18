@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
 const open = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); };
@@ -43,4 +44,35 @@ test('the Have ticks clear when the month changes: every item is back on the new
   await page.click('#groc-view-home');
   await expect(page.getByLabel('Have Rice')).not.toBeChecked();
   await expect(page.getByLabel('Have Kale')).not.toBeChecked();
+});
+
+test('ticking a row on To get keeps keyboard focus in the list: the next row, the one before, then the Bought line', async ({ page }) => {
+  await open(page);
+  await page.click('#groc-edit');
+  await add(page, 'Rice'); await add(page, 'Kale'); await add(page, 'Salt');
+  await page.click('#groc-done');
+  await page.click('#groc-view-get');
+  await page.locator('#groc-kale').focus();
+  await page.keyboard.press('Space');
+  await expect(page.locator('#groc-salt')).toBeFocused(); // the next row
+  await page.keyboard.press('Space');
+  await expect(page.locator('#groc-rice')).toBeFocused(); // nothing after it: the one before
+  await page.keyboard.press('Space');
+  await expect(page.locator('#groc-bought-sum')).toBeFocused(); // nothing left to get
+  await page.keyboard.press('Enter'); // open the fold, then untick: focus follows the row back into the list
+  await page.locator('#groc-kale').focus();
+  await page.keyboard.press('Space');
+  await expect(page.locator('#groc-kale')).toBeFocused();
+});
+
+test('the Bought this month fold has no accessibility violations, open, in the light and dark themes', async ({ page }) => {
+  await setup(page);
+  await page.click('#groc-view-get');
+  await page.locator('#groc-kale').check();
+  await page.click('#groc-bought summary');
+  for (const colorScheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme });
+    const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
+  }
 });
