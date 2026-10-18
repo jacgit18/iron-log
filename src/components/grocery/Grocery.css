@@ -115,6 +115,33 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.gpill.noprice {
+  border-color: transparent;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+.gwarn {
+  display: inline-block;
+  white-space: nowrap;
+  padding: 0 var(--sp-6);
+  border-radius: var(--r-sm);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-weight: 600;
+}
+/* How much of this month's list is bought: a thin bar above the summary line (the line says the same in words, so the bar is decoration). */
+.gprog {
+  height: var(--sp-8);
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--sunk);
+}
+.gprog>span {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}
 .gqty[aria-expanded="true"] .gpill {
   border-color: var(--accent);
 }
