@@ -6,7 +6,7 @@ import { str } from './stretchWeek.js';
    The cleaners take anything and return the clean value (or null when it can't be used); the `valid*` checks are stricter and
    say whether a value is already clean, for the API to refuse what the app would never send (ADR 039). */
 
-export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999;
+export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999, MAX_PRICES = 50;
 export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40, MAX_NOTE = 120;
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -20,6 +20,13 @@ export const cleanQty = (v: unknown): number | null => {
   return typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= MAX_QTY ? Math.round(n * 100) / 100 : null;
 };
 export const cleanCents = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= MAX_CENTS ? v : null);
+
+/** A list of prices in whole cents (1 to MAX_PRICES of them), or null when it is not one. */
+export const cleanPrices = (v: unknown): number[] | null => {
+  if (!Array.isArray(v) || !v.length || v.length > MAX_PRICES) return null;
+  const out = v.map(cleanCents);
+  return out.every((c): c is number => c != null) ? out : null;
+};
 
 const asObject = (x: unknown) => (x && typeof x === 'object' && !Array.isArray(x) ? (x as Record<string, unknown>) : null);
 
@@ -77,6 +84,7 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
       if (o.have === true && !line.got) line.have = true;
       const qty = cleanQty(o.qty); if (qty != null) line.qty = qty;
       const cents = cleanCents(o.cents); if (cents != null) line.cents = cents;
+      const prices = cleanPrices(o.prices); if (prices) line.prices = prices;
       if (Object.keys(line).length) lines[id] = line;
     });
   }
