@@ -7,6 +7,7 @@
 // Main and manual CI runs call npm test directly; this is for pull requests and the pre-push check (scripts/check.mjs).
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 export const PROTECTED = ['src/lib/planOrder.test.js', 'src/lib/logic.test.js', 'src/store/useAppStore.test.js'];
 const tooling = f => /^(package(-lock)?\.json|tsconfig.*\.json|vite\.config\.js|\.oxlintrc.*|src\/test\/.*)$/.test(f);
@@ -26,7 +27,7 @@ export function plan(files) {
   return { full: false, related: [...new Set([...related, ...PROTECTED])] };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
   const dash = args.indexOf('--');
   const extra = dash < 0 ? [] : args.slice(dash + 1);

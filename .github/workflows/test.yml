@@ -195,7 +195,7 @@ jobs:
           retention-days: 7
 
   # Four shards run side by side, so the browser tests finish in about a quarter of the time. Each shard installs and builds on its own runner.
-  e2e:
+  e2e-shards:
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-26.04
@@ -229,3 +229,14 @@ jobs:
           name: app-preview
           path: dist
           retention-days: 7
+
+  # The "Protect main" ruleset requires a check named `e2e`; the shards are named `e2e (1)` to `e2e (4)`, so this one job stands for them.
+  # It passes when the shards passed or were skipped (a PR that needs no browser tests) and fails when any shard failed or was cancelled.
+  e2e:
+    needs: e2e-shards
+    if: always()
+    runs-on: ubuntu-26.04
+    steps:
+      - run: |
+          echo "e2e shards: ${{ needs.e2e-shards.result }}"
+          test "${{ needs.e2e-shards.result }}" = success || test "${{ needs.e2e-shards.result }}" = skipped
