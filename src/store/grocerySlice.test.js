@@ -64,6 +64,30 @@ describe('the catalogue', () => {
     expect(st().addGroceryStore('Costco')).toBeNull();
     expect(st().addGroceryStore('costco')).toMatch(/already/);
   });
+  it('puts a new item at the top of its store’s section', () => {
+    st().addGroceryItem(form({ n: 'Eggs', store: 'Aldi' })); st().addGroceryItem(form({ n: 'Rice', store: 'Costco' })); st().addGroceryItem(form({ n: 'Oats', store: 'Aldi' }));
+    expect(st().grocery.items.filter(i => i.store === 'Aldi').map(i => i.n)).toEqual(['Oats', 'Eggs']);
+    expect(st().grocery.items.filter(i => i.store === 'Costco').map(i => i.n)).toEqual(['Rice']);
+  });
+  it('treats a store typed in another case as the store you have, on add and on move', () => {
+    st().addGroceryItem(form({ n: 'Eggs', store: 'Aldi' }));
+    expect(st().addGroceryItem(form({ n: 'Eggs', store: 'aldi' }))).toMatch(/already/); // not a second Eggs in a second "aldi"
+    expect(st().addGroceryItem(form({ n: 'Rice', store: ' ALDI ' }))).toBeNull();
+    expect(st().grocery.stores).toEqual(['Aldi']);
+    expect(st().grocery.items.map(i => i.store)).toEqual(['Aldi', 'Aldi']);
+    st().addGroceryItem(form({ n: 'Oats', store: '' }));
+    expect(st().updateGroceryItem('oats', { store: 'aldi' })).toBeNull();
+    expect(st().grocery.items.find(i => i.id === 'oats').store).toBe('Aldi');
+    expect(st().grocery.stores).toEqual(['Aldi']);
+  });
+  it('clearing this month’s price clears the usual price too, so no price shows', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form());
+    st().setGroceryCents(mk, 'kale', null);
+    expect(st().grocery.items[0].cents).toBeNull();
+    const { lineOf, emptyMonth } = await import('../lib/grocery.js');
+    expect(lineOf(st().grocery.items[0], st().groceryMonths[mk] || emptyMonth()).cents).toBeNull();
+  });
   it('Undo puts a removed item back in its place, with its store if that went meanwhile', () => {
     st().addGroceryItem(form()); st().addGroceryItem({ ...form(), n: 'Eggs', store: '' });
     const before = st().grocery.items;
@@ -216,7 +240,7 @@ describe('the data file', () => {
     st().addGroceryItem(form({ n: 'Rice', store: 'Costco', qty: '1', price: '' }));
     st().setGroceryGot(mk, 'kale', false);
     st().addGrocery(file.grocery);
-    expect(st().grocery.items.map(i => [i.id, i.qty])).toEqual([['kale', 7], ['rice', 1]]);
+    expect(st().grocery.items.map(i => [i.id, i.qty])).toEqual([['rice', 1], ['kale', 7]]);
     expect(st().groceryMonths[mk].lines.kale.got).toBeUndefined(); // the line here (unticked) stays; the file's tick does not override it
   });
   it('a file with no list leaves the data file without a grocery part', async () => {
@@ -320,7 +344,7 @@ describe('the list in the account (ADR 039)', () => {
       expect(s().groceryMonths['2026-09'].lines.kale.got).toBe(true);
       expect(s().addGroceryItem(form({ n: 'Rice', store: '' }))).toBeNull();
       await tick();
-      expect(fdb.docs.get('grocery/main').items.map(i => i.id)).toEqual(['kale', 'rice']);
+      expect(fdb.docs.get('grocery/main').items.map(i => i.id)).toEqual(['rice', 'kale']); // the new item goes on top
       expect(mem['ironlog:grocery/main']).toBeUndefined();
       fdb.remoteSet('grocery/2026-09', { lines: { kale: { got: true }, rice: { got: true } }, pulled: [] }); // ticked on another device
       expect(s().groceryMonths['2026-09'].lines.rice.got).toBe(true);

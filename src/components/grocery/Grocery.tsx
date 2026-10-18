@@ -192,6 +192,7 @@ function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
   return (
     <div className="gdock" ref={dockRef} role="region" aria-label="Add an item">
       <form onSubmit={submit} noValidate aria-label="Add an item">
+        <span className="gdocklab" aria-hidden="true">New item</span>
         {more && (
           <div className="gdockmore" id="groc-dock-more">
             <input type="text" id="groc-store" className="gd-store" aria-label="Store" placeholder="Store (optional)" maxLength={40} list="groc-stores" value={f.store} onChange={e => setF({ ...f, store: e.target.value })} />
@@ -208,8 +209,8 @@ function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
         {err && <p className="note gerr" role="alert">{err}</p>}
         <div className="gdockrow">
           <input type="text" id="groc-name" aria-label="Item name" placeholder="Add an item" maxLength={80} value={f.n} onChange={e => setF({ ...f, n: e.target.value })} />
-          <button type="submit" className="btn sm" id="groc-add" disabled={!f.n.trim()}>Add</button>
-          <button type="button" className="btn sm ghost" id="groc-more" aria-expanded={more} aria-controls="groc-dock-more" onClick={() => setMore(v => !v)}>{more ? 'Less' : 'More'}</button>
+          <button type="submit" className="btn sm gdockadd" id="groc-add" disabled={!f.n.trim()}>Add</button>
+          <button type="button" className="btn sm ghost gdockmorebtn" id="groc-more" aria-expanded={more} aria-controls="groc-dock-more" onClick={() => setMore(v => !v)}>{more ? 'Less' : 'More'}</button>
           <button type="button" className="btn sm gdone" id="groc-done" onClick={onDone}>Done</button>
         </div>
       </form>
