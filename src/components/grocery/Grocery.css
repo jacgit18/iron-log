@@ -220,8 +220,24 @@
   font-size: var(--fs-md);
   white-space: nowrap;
 }
-.gedit .gnoteinput {
+.gedrow {
+  display: flex;
   flex: 1 1 100%;
+  gap: var(--sp-6);
+}
+.gedrow .gnoteinput {
+  flex: 1 1 50%;
+  min-width: 0;
+  min-height: 44px;
+}
+.gedrow select {
+  flex: 1 1 50%;
+  min-width: 0;
+  min-height: 44px;
+}
+.gedit .gunit {
+  flex: 1 1 6.5em;
+  min-width: 0;
   min-height: 44px;
 }
 .gerr {
@@ -307,11 +323,28 @@
   font-weight: 700;
 }
 .gdockmore {
-  max-height: 40vh;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--sp-6);
+  max-height: 30vh;
   overflow-y: auto;
 }
-.gdockmore input {
+.gdockmore input:not(.chk),.gdockmore select {
+  min-width: 0;
   min-height: 44px;
+}
+.gdockmore .gd-store,.gdockmore .gd-note {
+  grid-column: span 3;
+}
+.gdockmore .gd-qty,.gdockmore .gd-price,.gdockmore .gd-unit {
+  grid-column: span 2;
+}
+.gdockmore .gd-every {
+  grid-column: 1 / -1;
+  min-height: 36px;
+}
+.gdockmore .chk {
+  flex: none;
 }
 
 /* The undo notice rides above the dock, which would otherwise cover it (Toaster.css puts it at the bottom edge). */

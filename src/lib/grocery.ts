@@ -1,6 +1,6 @@
 import { MAX_ITEMS, MAX_STORES, MONTH_RE, monthEmpty, normGroceryItem, normGroceryMonth } from '../shared/grocery.js';
 import { str } from '../shared/stretchWeek.js';
-import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth } from '../types.ts';
+import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryUnit } from '../types.ts';
 
 /* ---------- Grocery list ----------
    The catalogue (`grocery/main`) holds every item once: where you buy it, the usual count and the last unit price. A month
@@ -9,7 +9,7 @@ import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth } fro
    with no saved document is the Every-month items plus whatever is out, nothing ticked, so each month starts fresh and nothing is
    copied or reset. Prices are whole cents, so totals never drift. The cleaning rules live in shared/grocery.ts, which the API uses too. */
 
-export { MAX_CENTS, MAX_ITEMS, MAX_NOTE, MAX_QTY, MAX_STORES, MONTH_RE, cleanCents, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
+export { MAX_CENTS, MAX_ITEMS, MAX_NOTE, MAX_QTY, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
 export const ANYWHERE = 'Anywhere';
 /** Stores offered in the drop-downs before you have used them; picking one adds it to your stores. */
 export const SUGGESTED_STORES = ["BJ's", 'C-Town', 'Whole Foods', 'Flatbush Co-Op', 'Aldi'];
@@ -63,6 +63,13 @@ export function lineOf(item: GroceryItem, m: GroceryMonth) {
   const l = m.lines[item.id] || {};
   return { got: l.got === true, qty: l.qty ?? item.qty, cents: l.cents ?? item.cents };
 }
+/** The words around a count and a price: by weight (lb, kg, oz) the count is a weight and the price is per unit; otherwise each. */
+export const unitWords = (unit?: GroceryUnit) => ({
+  count: unit ? `Weight (${unit})` : 'Count',
+  price: unit ? `Price per ${unit}` : 'Price each',
+  per: unit ? `/${unit}` : '',
+  qty: (q: number) => (unit ? `${q} ${unit}` : String(q)),
+});
 export const lineTotal = (qty: number, cents: number | null) => (cents == null ? 0 : Math.round(qty * cents));
 
 /** The items on this month's list, in catalogue order: the Every-month ones, anything ticked or pulled on (older data) that month,
