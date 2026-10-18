@@ -54,7 +54,7 @@ export function clientErrors(record?: RecordIssue): RequestHandler {
     }
     // `severity` is what Cloud Logging reads to file this as an error.
     console.error(JSON.stringify({ severity: 'ERROR', msg: 'client-error', ...report }));
-    record?.({ fingerprint: report.fingerprint, kind: report.kind, message: report.message, topFrame: report.stack[0] ?? '', page: mask(report.page, 120), version: report.version });
+    record?.({ fingerprint: report.fingerprint, kind: report.kind, message: report.message, topFrame: report.stack[0] ?? '', page: report.page, version: report.version });
     res.status(204).end();
   };
 }
