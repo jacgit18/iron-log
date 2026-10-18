@@ -31,6 +31,9 @@ beforeEach(async () => {
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
+// The recorder writes in the background; under load 500 writes can take well over vitest's 1 s default wait.
+const eventually = (check: () => unknown) => vi.waitFor(check, { timeout: 30_000, interval: 50 });
+
 const FP = 'abcdef012345';
 const record = (fingerprint = FP, version = '1', kind = 'error') =>
   sql<{ record_issue: string }>`select record_issue(${fingerprint}, ${kind}, 'Bad weight ###', 'foo /assets/index.js:1:2', '/progress', ${version})`.execute(app).then(r => r.rows[0]!.record_issue);
@@ -108,10 +111,10 @@ describe('issueRecorder', () => {
     const input = { fingerprint: FP, kind: 'server' as const, message: 'm', topFrame: '', page: '/x', version: '' };
     recordIssue(input);
     recordIssue(input);
-    await vi.waitFor(async () => expect(await stored()).toHaveLength(1));
+    await eventually(async () => expect(await stored()).toHaveLength(1));
     t += 6_000;
     recordIssue(input);
-    await vi.waitFor(async () => expect((await row()).occurrences).toBe('2'));
+    await eventually(async () => expect((await row()).occurrences).toBe('2'));
   });
 
   it('keeps the newest 500 fingerprints in its memory, oldest sent first', async () => {
@@ -119,27 +122,27 @@ describe('issueRecorder', () => {
     const recordIssue = issueRecorder(app, () => t);
     const send = (n: number) => recordIssue({ fingerprint: lpad(n), kind: 'server', message: 'm', topFrame: '', page: '', version: '' });
     for (let n = 1; n <= 501; n++) send(n); // 501 distinct: the first one is forgotten, the rest are remembered
-    await vi.waitFor(async () => expect(await stored()).toHaveLength(501));
+    await eventually(async () => expect(await stored()).toHaveLength(501));
     send(2); // remembered and inside the window: not sent again
     send(1); // forgotten: sent again, so it is counted twice
-    await vi.waitFor(async () => expect((await row(lpad(1))).occurrences).toBe('2'));
+    await eventually(async () => expect((await row(lpad(1))).occurrences).toBe('2'));
     expect((await row(lpad(2))).occurrences).toBe('1');
   });
 
   it('logs a loud issues-full line when a new problem is refused because the table is full', async () => {
     await fill(5000);
     issueRecorder(app)({ fingerprint: 'ffffffffffff', kind: 'error', message: 'm', topFrame: '', page: '', version: '' });
-    await vi.waitFor(() => expect(vi.mocked(console.error).mock.calls.map(c => JSON.parse(c[0] as string))).toContainEqual({ severity: 'ERROR', msg: 'issues-full', fingerprint: 'ffffffffffff', kind: 'error' }));
+    await eventually(() => expect(vi.mocked(console.error).mock.calls.map(c => JSON.parse(c[0] as string))).toContainEqual({ severity: 'ERROR', msg: 'issues-full', fingerprint: 'ffffffffffff', kind: 'error' }));
   });
 
   it('logs one new-issue line the first time, and swallows a failure', async () => {
     const log = vi.mocked(console.error);
     const recordIssue = issueRecorder(app);
     recordIssue({ fingerprint: FP, kind: 'error', message: 'm', topFrame: '', page: '', version: '1' });
-    await vi.waitFor(() => expect(log.mock.calls.map(c => JSON.parse(c[0] as string))).toContainEqual({ severity: 'WARNING', msg: 'new-issue', fingerprint: FP, kind: 'error' }));
+    await eventually(() => expect(log.mock.calls.map(c => JSON.parse(c[0] as string))).toContainEqual({ severity: 'WARNING', msg: 'new-issue', fingerprint: FP, kind: 'error' }));
     // A bad fingerprint makes the database refuse: logged, never thrown.
     expect(() => recordIssue({ fingerprint: 'bad', kind: 'error', message: 'm', topFrame: '', page: '', version: '' })).not.toThrow();
-    await vi.waitFor(() => expect(log.mock.calls.some(c => String(c[0]).includes('issue not recorded'))).toBe(true));
+    await eventually(() => expect(log.mock.calls.some(c => String(c[0]).includes('issue not recorded'))).toBe(true));
   });
 });
 
@@ -156,7 +159,7 @@ describe('the two ways in', () => {
     const base = await listen(createApp({ db: app }));
     const res = await fetch(`${base}/api/client-errors`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'sync', message: 'refused 181 lb', page: '/progress', version: '77' }) });
     expect(res.status).toBe(204);
-    await vi.waitFor(async () => expect(await stored()).toHaveLength(1));
+    await eventually(async () => expect(await stored()).toHaveLength(1));
     expect((await stored())[0]).toMatchObject({ kind: 'sync', message: 'refused ### lb', page: '/progress', last_version: '77', occurrences: '1' });
     await close();
   });
@@ -184,7 +187,7 @@ describe('the two ways in', () => {
     const base = await listen(a);
     expect((await fetch(`${base}/boom`)).status).toBe(500);
     expect((await fetch(`${base}/bad`)).status).toBe(400);
-    await vi.waitFor(async () => expect(await stored()).toHaveLength(1));
+    await eventually(async () => expect(await stored()).toHaveLength(1));
     const [r] = await stored();
     expect(r).toMatchObject({ kind: 'server', page: '/boom', message: 'duplicate key value violates "…"' });
     await close();
