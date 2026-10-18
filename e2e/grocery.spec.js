@@ -7,11 +7,10 @@ const noViolations = async page => {
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
 };
 const open = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); };
-// Adds an item from At home's Edit mode (left open). `every`: an Every-month item, else When out (the default).
-const add = async (page, n, store, qty, price, every = false) => {
+// Adds an item from At home's Edit mode (left open).
+const add = async (page, n, store, qty, price) => {
   if (!(await page.locator('#groc-store').count())) await page.click('#groc-more'); // store, count and price sit under More
   await page.fill('#groc-name', n); await page.fill('#groc-store', store); await page.fill('#groc-qty', qty); await page.fill('#groc-price', price);
-  await page.setChecked('#groc-every', every);
   await page.click('#groc-add');
   await expect(page.locator('#groc-name')).toHaveValue('');
 };
@@ -26,19 +25,23 @@ test('Groceries is on the Daily tab for everyone, opens on At home while empty, 
   await expect(page.getByText('On this device only')).toHaveCount(0);
 });
 
-test('unchecking an item at home puts it on To get; ticking it bought checks it at home again', async ({ page }) => {
+test('ticking Have at home takes an item off this month’s To get; buying it checks it at home; each month starts with nothing ticked', async ({ page }) => {
   await open(page);
   await editing(page);
   await add(page, 'Kale', 'Veg market', '2', '2.50');
-  await add(page, 'Rice', 'Costco', '1', '18.99', true);
+  await add(page, 'Rice', 'Costco', '1', '18.99');
   await done(page);
   await expect(page.getByRole('group', { name: 'Grocery view' })).toBeVisible();
-  await expect(page.getByLabel('Have Kale')).toBeChecked();
-  await expect(page.getByRole('region', { name: 'Costco' })).toContainText('Every month'); // Rice: a chip, and a tick that is on once it is bought this month
+  await expect(page.getByLabel('Have Kale')).not.toBeChecked(); // a new item is on the list until you have it
   await expect(page.getByLabel('Have Rice')).not.toBeChecked();
   await page.click('#groc-view-get');
   await expect(page.locator('#groc-month')).toContainText('September 2026');
-  await expect(page.locator('#groc-summary')).toHaveText('Got 0 of 1 · Spent $0.00 · Expected $18.99'); // only the Every-month item
+  await expect(page.locator('#groc-summary')).toHaveText('Got 0 of 2 · Spent $0.00 · Expected $23.99');
+  await page.click('#groc-view-home');
+  await page.getByLabel('Have Kale').check(); // you have it: off this month's list
+  await page.click('#groc-view-get');
+  await expect(page.locator('#groc-summary')).toHaveText('Got 0 of 1 · Spent $0.00 · Expected $18.99');
+  await expect(page.locator('#groc-kale')).toHaveCount(0);
   await page.click('#groc-view-home');
   await page.getByLabel('Have Kale').uncheck();
   await page.click('#groc-view-get');
@@ -50,25 +53,23 @@ test('unchecking an item at home puts it on To get; ticking it bought checks it 
   await expect(page.locator('#groc-kale')).toBeChecked();
   await expect(page.locator('#groc-summary')).toHaveText('Got 1 of 2 · Spent $5.00 · Expected $23.99');
   await page.click('#groc-view-home');
-  await expect(page.getByLabel('Have Kale')).toBeChecked(); // bought: you have it again
+  await expect(page.getByLabel('Have Kale')).toBeChecked(); // bought: you have it
   await page.click('#groc-view-get');
   await expect(page.locator('#groc-bought')).toContainText('Bought this month (1)'); // and it is kept there, one tap from undo
   await page.click('#groc-bought summary');
   await page.locator('#groc-kale').uncheck();
   await page.click('#groc-view-home');
-  await expect(page.getByLabel('Have Kale')).not.toBeChecked(); // unticked: out again
+  await expect(page.getByLabel('Have Kale')).not.toBeChecked(); // unticked: back on the list
   await page.reload(); await open(page);
   await expect(page.locator('#groc-view-get')).toHaveAttribute('aria-pressed', 'true'); // a list with items opens on To get
   await expect(page.locator('#groc-summary')).toContainText('Got 0 of 2');
 });
-
-test('the count and price open from the row, and a When-out item can be taken off the list', async ({ page }) => {
+test('the count and price open from the row, and an item can be taken off this month’s list', async ({ page }) => {
   await open(page);
   await editing(page);
   await add(page, 'Kale', 'Veg market', '2', '2.50');
-  await add(page, 'Rice', 'Costco', '1', '18.99', true);
+  await add(page, 'Rice', 'Costco', '1', '18.99');
   await done(page);
-  await page.getByLabel('Have Kale').uncheck();
   await page.click('#groc-view-get');
   await expect(page.getByLabel('Count of Kale')).toHaveCount(0); // closed until asked for
   const kale = page.getByRole('button', { name: 'Count and price of Kale' });
@@ -78,8 +79,6 @@ test('the count and price open from the row, and a When-out item can be taken of
   await page.getByLabel('Count of Kale').fill('4'); await page.getByLabel('Count of Kale').blur();
   await expect(kale).toHaveText('4 × $2.50');
   await expect(page.locator('#groc-summary')).toHaveText('Got 0 of 2 · Spent $0.00 · Expected $28.99');
-  await page.getByRole('button', { name: 'Count and price of Rice' }).click();
-  await expect(page.getByRole('button', { name: 'Take Rice off the list' })).toHaveCount(0); // Every month stays on
   await page.getByRole('button', { name: 'Take Kale off the list' }).click();
   await expect(page.locator('#groc-summary')).toHaveText('Got 0 of 1 · Spent $0.00 · Expected $18.99');
   await page.click('#groc-view-home');
@@ -129,15 +128,15 @@ test('the next month starts fresh with the Every-month items and what is still o
   await expect(page.locator('#groc-saffron')).toHaveCount(0); // a past month shows what was bought, not what is out today
 });
 
-test('older lists still read: an occasional item becomes When out and not out', async ({ page }) => {
+test('older lists still read: an Every-month and an occasional item are both on the list until you have them', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('ironlog:grocery/main', JSON.stringify({ stores: [], items: [
     { id: 'rice', n: 'Rice', store: '', qty: 1, cents: null, once: false },
     { id: 'saffron', n: 'Saffron', store: '', qty: 1, cents: null, once: true },
   ] })));
   await page.reload(); await open(page);
-  await expect(page.locator('#groc-summary')).toContainText('Got 0 of 1');
+  await expect(page.locator('#groc-summary')).toContainText('Got 0 of 2');
   await page.click('#groc-view-home');
-  await expect(page.getByLabel('Have Saffron')).toBeChecked();
+  await expect(page.getByLabel('Have Saffron')).not.toBeChecked();
   await expect(page.getByLabel('Have Rice')).not.toBeChecked();
 });
 

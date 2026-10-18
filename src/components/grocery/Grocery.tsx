@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, lineOf, lineTotal, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
+import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, haveOf, lineOf, lineTotal, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
@@ -11,8 +11,8 @@ import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from
 import type { GroceryForm } from '../../store/types.ts';
 import './Grocery.css';
 
-// Two views (ADR 038): To get is this month's shopping list; At home is every item you buy, checked while you have it. Unchecking a
-// When-out item there puts it on To get; ticking it bought on To get checks it again. Every-month items are always on To get.
+// Three views (ADR 038, changed by ADR 054): To get is this month's shopping list; At home is every item you buy, ticked while you have it
+// this month, which takes it off To get (a bought item counts as had); Spending charts what was bought. Every month starts with nothing ticked.
 type View = 'get' | 'home' | 'spend';
 const EMPTY_FORM: GroceryForm = { n: '', store: '', qty: '1', price: '', every: false, note: '', unit: '' };
 const AHEAD = 12; // how many months past this one you can plan
@@ -57,7 +57,7 @@ function GetRow({ item, month, mk, future }: { item: GroceryItem; month: Grocery
               onCommit={t => { if (!t.trim()) { s.setGroceryCents(mk, item.id, null); return true; } const c = parseDollars(t); if (c == null) return false; s.setGroceryCents(mk, item.id, c); return true; }} />
           </label>
           <span className="gtotal" aria-label={`Total for ${item.n}`}>{l.cents == null ? '' : money(total)}</span>
-          {!item.every && <button type="button" className="btn sm ghost gtake" aria-label={`Take ${item.n} off the list`} onClick={() => s.takeGroceryOff(mk, item.id)}>Take off the list</button>}
+          {!future && <button type="button" className="btn sm ghost gtake" aria-label={`Take ${item.n} off the list`} onClick={() => s.takeGroceryOff(mk, item.id)}>Take off the list</button>}
         </div>
       )}
     </li>
@@ -68,7 +68,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const [off, setOff] = useState(0); // months from this one: below 0 is history, above 0 is planning ahead
   const mk = shiftMonth(nowKey, off);
   const month = months[mk] || emptyMonth();
-  const list = onList(g, month, off === 0); const t = tally(list, month);
+  const list = onList(g, month, off >= 0); const t = tally(list, month);
   // This month, what you have bought leaves the list (it is on At home as "have"); it stays one tap away under "Bought this month" so a
   // mis-tap can be undone. An older or later month keeps every row, as a record of what was bought or what is planned.
   const current = off === 0;
@@ -82,9 +82,9 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
         <button type="button" className="btn sm" id="groc-next" aria-label="Next month" disabled={off >= AHEAD} onClick={() => setOff(o => Math.min(AHEAD, o + 1))}><Icon name="chevron-right" /></button>
       </div>
       <p className="note" id="groc-summary" role="status">
-        {t.count ? `Got ${t.got} of ${t.count} · Spent ${money(t.spent)} · Expected ${money(t.planned)}${t.unpriced ? ` · ${t.unpriced} without a price` : ''}` : off > 0 ? 'Only your Every-month items are planned so far. Ticking opens when the month starts.' : 'Nothing on this month’s list.'}
+        {t.count ? `Got ${t.got} of ${t.count} · Spent ${money(t.spent)} · Expected ${money(t.planned)}${t.unpriced ? ` · ${t.unpriced} without a price` : ''}` : off > 0 ? 'Nothing planned yet. Items you add on At home show up here.' : 'Nothing on this month’s list.'}
       </p>
-      {!t.count && off === 0 && <p className="note">Untick an item on <b>At home</b> when you run out and it shows up here.</p>}
+      {!t.count && off === 0 && <p className="note">Add what you buy on <b>At home</b>. Tick an item there when you have it and it comes off this month’s list.</p>}
       {current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought.</p>}
       {byStore(g, todo).map((grp, gi) => {
         const gt = tally(grp.items, month);
@@ -122,7 +122,6 @@ function HomeRow({ item, have, onHave }: { item: GroceryItem; have: boolean; onH
       <label className="gtick">
         <input type="checkbox" className="chk" id={`groc-have-${item.id}`} aria-label={`Have ${item.n}`} checked={have} onChange={e => onHave(e.target.checked)} />
         <span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span>
-        {item.every ? <span className="gchip">Every month</span> : item.out && <span className="gchip out">On the list</span>}
       </label>
     </li>
   );
@@ -152,7 +151,6 @@ function EditRow({ item, g, have, onHave }: { item: GroceryItem; g: GroceryT; ha
         <option value="">Each</option>
         {UNITS.map(u => <option key={u} value={u}>by the {u}</option>)}
       </select>
-      <label className="gcheck"><input type="checkbox" className="chk" aria-label={`${item.n} every month`} checked={item.every} onChange={e => setErr(s.updateGroceryItem(item.id, { every: e.target.checked }))} /> Every month</label>
       <ArmedButton className={`btn sm ${arming ? 'danger' : 'ghost'}`} aria-label={`Remove ${item.n} from your list`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setArming} onConfirm={() => s.removeGroceryItem(item.id)} />
       {err && <p className="note gerr" role="alert">{err}</p>}
     </li>
@@ -160,13 +158,13 @@ function EditRow({ item, g, have, onHave }: { item: GroceryItem; g: GroceryT; ha
 }
 
 // While editing, the add form floats at the bottom of the screen with Done beside it, so adding an item or finishing never means
-// scrolling the whole list. Name and Add are always there; store, count, price, note and Every month open under "More".
+// scrolling the whole list. Name and Add are always there; store, count, price, unit and note open under "More".
 function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
   const [f, setF] = useState(EMPTY_FORM); const [err, setErr] = useState<string | null>(null); const [more, setMore] = useState(false);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const m = useAppStore.getState().addGroceryItem(f);
-    setErr(m); if (!m) setF({ ...EMPTY_FORM, store: f.store, every: f.every });
+    setErr(m); if (!m) setF({ ...EMPTY_FORM, store: f.store });
   };
   const { mine, suggested } = storeChoices(g);
   const dockRef = useRef<HTMLDivElement>(null);
@@ -186,7 +184,6 @@ function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
               <option value="">Each</option>
               {UNITS.map(u => <option key={u} value={u}>by the {u}</option>)}
             </select>
-            <label className="gcheck gd-every"><input type="checkbox" className="chk" id="groc-every" checked={f.every} onChange={e => setF({ ...f, every: e.target.checked })} /> Every month (else only when you’re out)</label>
           </div>
         )}
         {err && <p className="note gerr" role="alert">{err}</p>}
@@ -230,12 +227,12 @@ function Stores({ g }: { g: GroceryT }) {
 function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
   const [editing, setEditing] = useState(false);
   const month = months[nowKey] || emptyMonth();
-  const haveOf = (it: GroceryItem) => (it.every ? lineOf(it, month).got : !it.out);
-  const setHave = (it: GroceryItem, on: boolean) => { const s = useAppStore.getState(); if (it.every) s.setGroceryGot(nowKey, it.id, on); else s.setGroceryOut(it.id, !on); };
+  const hasIt = (it: GroceryItem) => haveOf(it, month);
+  const setHave = (it: GroceryItem, on: boolean) => useAppStore.getState().setGroceryHave(nowKey, it.id, on);
   return (
     <div className={editing ? 'gathome editing' : 'gathome'}>
       <div className="ghomehead">
-        <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'A tick means you have it. Untick an item when you run out and it goes on this month’s To get list. Every-month items are always on it.'}</p>
+        <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'A tick means you have it this month, so it is off To get. Ticks clear on the 1st and everything is back on the list.'}</p>
         <button type="button" className="btn sm ghost" id="groc-edit" aria-pressed={editing} onClick={() => setEditing(v => !v)}>{editing ? 'Done' : 'Edit'}</button>
       </div>
       <RemovedNotice scope="grocery" />
@@ -243,7 +240,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
       {byStore(g, g.items).map((grp, gi) => (
         <section key={grp.store || '_'} className="gstore" aria-labelledby={`groc-home-h-${gi}`}>
           <div className="gstorehead"><h3 id={`groc-home-h-${gi}`}>{grp.label}</h3></div>
-          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} have={haveOf(it)} onHave={on => setHave(it, on)} /> : <HomeRow key={it.id} item={it} have={haveOf(it)} onHave={on => setHave(it, on)} />))}</ul>
+          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} have={hasIt(it)} onHave={on => setHave(it, on)} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} onHave={on => setHave(it, on)} />))}</ul>
         </section>
       ))}
       {editing && <Stores g={g} />}

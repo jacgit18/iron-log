@@ -11,20 +11,20 @@ test('editing At home: the add form and Done float, an item takes a note, and th
   await page.fill('#groc-name', 'Oat milk'); await page.fill('#groc-note', 'the barista one');
   await page.click('#groc-add');
   await expect(page.locator('#groc-name')).toHaveValue('');
-  // still editing: the new When-out item has its own "have it" tick, and it moves the item onto To get
-  await expect(page.getByLabel('Have Oat milk')).toBeChecked();
-  await page.getByLabel('Have Oat milk').uncheck();
+  // still editing: the new item has its own "have it" tick, off until you have it
+  await expect(page.getByLabel('Have Oat milk')).not.toBeChecked();
+  await page.getByLabel('Have Oat milk').check();
   await page.click('#groc-done');
   await expect(dock).toHaveCount(0);
   await expect(page.locator('.ghome')).toContainText('the barista one');
-  await expect(page.locator('.ghome')).toContainText('On the list');
+  await expect(page.getByLabel('Have Oat milk')).toBeChecked();
 });
 
 test('To get can go past this month to plan, and ticking is closed there', async ({ page }) => {
   await open(page);
   await page.click('#groc-edit');
   await page.click('#groc-more');
-  await page.fill('#groc-name', 'Rice'); await page.setChecked('#groc-every', true); await page.click('#groc-add');
+  await page.fill('#groc-name', 'Rice'); await page.click('#groc-add');
   await page.click('#groc-done');
   await page.click('#groc-view-get');
   await expect(page.locator('#groc-next')).toBeEnabled();
@@ -40,7 +40,7 @@ test('Spending shows a bar for a month you bought in, with the average as text',
   await open(page);
   await page.click('#groc-edit');
   await page.click('#groc-more');
-  await page.fill('#groc-name', 'Rice'); await page.fill('#groc-price', '10'); await page.setChecked('#groc-every', true); await page.click('#groc-add');
+  await page.fill('#groc-name', 'Rice'); await page.fill('#groc-price', '10'); await page.click('#groc-add');
   await page.click('#groc-done');
   await page.click('#groc-view-get');
   await page.locator('#groc-rice').check();

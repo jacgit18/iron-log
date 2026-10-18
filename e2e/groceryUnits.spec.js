@@ -10,7 +10,7 @@ test('an item sold by the lb reads as a weight and a price per lb, and the total
   await expect(page.locator('#groc-qty')).toHaveAttribute('placeholder', 'Weight (lb)');
   await expect(page.locator('#groc-price')).toHaveAttribute('placeholder', 'Price per lb');
   await page.fill('#groc-name', 'Chicken'); await page.fill('#groc-qty', '2.4'); await page.fill('#groc-price', '6.25');
-  await page.setChecked('#groc-every', true);
+ 
   await page.click('#groc-add');
   await page.click('#groc-done');
   await page.click('#groc-view-get');
@@ -22,7 +22,7 @@ test('an item sold by the lb reads as a weight and a price per lb, and the total
   await expect(page.getByLabel('Total for Chicken')).toHaveText('$18.75');
 });
 
-test('on a phone the open More panel stays short and its checkbox is a normal checkbox', async ({ page }) => {
+test('on a phone the open More panel stays short', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await open(page);
   await page.click('#groc-edit');
@@ -31,6 +31,4 @@ test('on a phone the open More panel stays short and its checkbox is a normal ch
   expect(more.height).toBeLessThanOrEqual(812 * 0.3 + 1);
   const dock = await page.locator('.gdock').boundingBox();
   expect(dock.height).toBeLessThanOrEqual(812 * 0.45);
-  const chk = await page.locator('#groc-every').boundingBox();
-  expect(Math.abs(chk.width - chk.height)).toBeLessThanOrEqual(1); // square: it used to stretch into an oval
 });

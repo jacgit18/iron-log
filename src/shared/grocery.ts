@@ -74,6 +74,7 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
       if (id === '__proto__' || !id || id.length > MAX_ID || !o) return;
       const line: GroceryLine = {};
       if (o.got === true) line.got = true;
+      if (o.have === true && !line.got) line.have = true;
       const qty = cleanQty(o.qty); if (qty != null) line.qty = qty;
       const cents = cleanCents(o.cents); if (cents != null) line.cents = cents;
       if (Object.keys(line).length) lines[id] = line;

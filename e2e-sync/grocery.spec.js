@@ -4,12 +4,11 @@ import { expect, newPhone, server, test } from './stack.js';
 const MONTH = '2026-09';
 const openGroceries = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); await expect(page.locator('#groc-h')).toBeVisible(); };
 // Adds an item from At home's Edit mode, then leaves Edit mode.
-const addItem = async (page, n, store, every) => {
+const addItem = async (page, n, store) => {
   await page.click('#groc-view-home');
   await page.click('#groc-edit');
   if (!(await page.locator('#groc-store').count())) await page.click('#groc-more'); // store, count and price sit under More
   await page.fill('#groc-name', n); await page.fill('#groc-store', store); await page.fill('#groc-qty', '1'); await page.fill('#groc-price', '');
-  await page.setChecked('#groc-every', every);
   await page.click('#groc-add');
   await expect(page.locator('#groc-name')).toHaveValue('');
   await page.click('#groc-edit');

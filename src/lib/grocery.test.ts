@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, onList, parseDollars, shiftMonth, spendByMonth, tally,
+  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, haveOf, onList, parseDollars, shiftMonth, spendByMonth, tally,
 } from './grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -43,31 +43,35 @@ describe('money', () => {
 });
 
 describe('a fresh month', () => {
-  it('is every Every-month item, nothing ticked, with the catalogue count and price', () => {
+  it('is every item, nothing ticked, with the catalogue count and price', () => {
     const m = emptyMonth();
-    expect(onList(g, m, true).map(i => i.id)).toEqual(['kale', 'rice', 'salt']);
-    expect(lineOf(g.items[0], m)).toEqual({ got: false, qty: 2, cents: 250 });
+    expect(onList(g, m, true).map(i => i.id)).toEqual(['kale', 'rice', 'salt', 'saffron']);
+    expect(lineOf(g.items[0], m)).toEqual({ got: false, have: false, qty: 2, cents: 250 });
   });
-  it('shows a When-out item in the current month while it is out, and not in a past month', () => {
-    const out = { ...g, items: g.items.map(i => (i.id === 'saffron' ? { ...i, out: true } : i)) };
-    expect(onList(out, emptyMonth(), true).map(i => i.id)).toEqual(['kale', 'rice', 'salt', 'saffron']);
-    expect(onList(out, emptyMonth(), false).map(i => i.id)).toEqual(['kale', 'rice', 'salt']);
+  it('takes an item off this month’s list once you have it, and a purchase counts as having it', () => {
+    const m: GroceryMonth = { lines: { kale: { have: true }, rice: { got: true } }, pulled: [] };
+    expect(onList(g, m, true).map(i => i.id)).toEqual(['rice', 'salt', 'saffron']); // kale is had; rice is bought and listed as bought
+    expect(haveOf(g.items[0], m)).toBe(true);
+    expect(haveOf(g.items[1], m)).toBe(true);
+    expect(haveOf(g.items[2], m)).toBe(false);
   });
-  it('keeps a When-out item on a month where it was bought, out or not', () => {
-    const m: GroceryMonth = { lines: { saffron: { got: true } }, pulled: [] };
-    expect(onList(g, m, false).map(i => i.id)).toContain('saffron');
-    expect(onList(g, m, true).map(i => i.id)).toContain('saffron');
-    // unticked in a past month (its count and price stay): the row stays so it can be ticked again; in the current month unticking marks it out instead
-    expect(onList(g, { lines: { saffron: { qty: 2 } }, pulled: [] }, false).map(i => i.id)).toContain('saffron');
-    expect(onList(g, { lines: { saffron: { qty: 2 } }, pulled: [] }, true).map(i => i.id)).not.toContain('saffron');
+  it('starts the next month with every item back on the list: a tick belongs to its month', () => {
+    const last: GroceryMonth = { lines: { kale: { have: true }, salt: { have: true } }, pulled: [] };
+    expect(onList(g, last, true).map(i => i.id)).toEqual(['rice', 'saffron']);
+    expect(onList(g, emptyMonth(), true).map(i => i.id)).toEqual(['kale', 'rice', 'salt', 'saffron']);
   });
-  it('still shows an item an older version pulled onto a month', () => {
+  it('shows a past month as what was bought then: a ticked item, or one with its own count or price', () => {
+    const m: GroceryMonth = { lines: { saffron: { got: true }, kale: { qty: 2 }, rice: { have: true } }, pulled: [] };
+    expect(onList(g, m, false).map(i => i.id)).toEqual(['kale', 'saffron']); // a "have" tick alone is not a purchase
+    expect(onList(g, emptyMonth(), false)).toEqual([]);
+  });
+  it('still shows an item an older version pulled onto a past month', () => {
     const m: GroceryMonth = { lines: {}, pulled: ['saffron'] };
-    expect(onList(g, m, false).map(i => i.id)).toEqual(['kale', 'rice', 'salt', 'saffron']);
+    expect(onList(g, m, false).map(i => i.id)).toEqual(['saffron']);
   });
   it('uses the month’s own count and price over the catalogue’s', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] };
-    expect(lineOf(g.items[0], m)).toEqual({ got: true, qty: 4, cents: 300 });
+    expect(lineOf(g.items[0], m)).toEqual({ got: true, have: false, qty: 4, cents: 300 });
   });
   it('puts ticked items after the ones still to get, keeping catalogue order in each part', () => {
     const m: GroceryMonth = { lines: { kale: { got: true }, salt: { got: true } }, pulled: [] };
@@ -77,12 +81,12 @@ describe('a fresh month', () => {
 
 describe('groups and totals', () => {
   it('groups by store in the stores’ order, no-store last, leaving empty stores out', () => {
-    expect(byStore(g, onList(g, emptyMonth(), true)).map(x => [x.label, x.items.map(i => i.id)])).toEqual([['Veg market', ['kale']], ['Costco', ['rice']], ['Anywhere', ['salt']]]);
+    expect(byStore(g, onList(g, emptyMonth(), true)).map(x => [x.label, x.items.map(i => i.id)])).toEqual([['Veg market', ['kale']], ['Costco', ['rice', 'saffron']], ['Anywhere', ['salt']]]);
     expect(byStore({ ...g, stores: ['Veg market', 'Costco', 'Empty'] }, [g.items[0]]).map(x => x.label)).toEqual(['Veg market']);
   });
   it('splits expected from spent and counts the unpriced', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] };
-    expect(tally(onList(g, m, true), m)).toEqual({ count: 3, got: 1, planned: 1200 + 1899, spent: 1200, unpriced: 1 });
+    expect(tally(onList(g, m, true), m)).toEqual({ count: 4, got: 1, planned: 1200 + 1899 + 1200, spent: 1200, unpriced: 1 });
     expect(tally([], emptyMonth())).toEqual({ count: 0, got: 0, planned: 0, spent: 0, unpriced: 0 });
   });
 });
