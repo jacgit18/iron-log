@@ -38,8 +38,8 @@ beforeEach(async () => {
   ]).execute();
 });
 
-async function start(admins: string[]) {
-  server = createApp({ db: app, admins: new Set(admins) }).listen(0);
+async function start(admins: string[], limits?: Parameters<typeof createApp>[0] extends infer D ? (D extends { limits?: infer L } ? L : never) : never) {
+  server = createApp({ db: app, admins: new Set(admins), limits }).listen(0);
   await new Promise(done => server!.once('listening', done));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   // A dev user is created on first sight; marking it is_admin in the database is done here, as the owner.
@@ -74,6 +74,18 @@ describe('the two locks', () => {
     await expect(inUserTransaction(app, id, trx => sql`select issue_counts()`.execute(trx))).rejects.toMatchObject({ code: '42501' });
     await expect(inUserTransaction(app, id, trx => sql`select set_issue_status(${FP(2)}, 'fixed', null)`.execute(trx))).rejects.toMatchObject({ code: '42501' });
     await expect(sql`select * from list_issues()`.execute(app)).rejects.toMatchObject({ code: '42501' });
+  });
+});
+
+describe('the per-user limit', () => {
+  it('answers 429 with Retry-After once an admin has made more calls than the limit in a window', async () => {
+    const { call, makeAdmin } = await start(['dev:boss'], { issues: { max: 2, windowMs: 60_000 } });
+    await makeAdmin('boss');
+    expect((await call('boss', 'GET', '')).status).toBe(200);
+    expect((await call('boss', 'GET', '')).status).toBe(200);
+    const limited = await call('boss', 'GET', '');
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get('retry-after')).toBeTruthy();
   });
 });
 

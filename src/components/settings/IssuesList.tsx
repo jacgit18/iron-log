@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { listIssues, updateIssue } from '../../lib/issuesClient.js';
 import { timeAgo } from '../../lib/timeAgo.js';
 import type { Issue, IssueCounts, IssueStatus } from '../../types.ts';
@@ -6,7 +6,7 @@ import type { Issue, IssueCounts, IssueStatus } from '../../types.ts';
 const STATUSES: IssueStatus[] = ['open', 'investigating', 'fixed', 'ignored'];
 const SAY: Record<'failed' | 'forbidden' | 'offline', string> = {
   failed: 'Could not load the issues. Try again.',
-  forbidden: 'This account is not allowed to see issues.',
+  forbidden: 'Not allowed. An admin needs both the admin list entry on the server and is_admin set in the database.',
   offline: 'You are offline. Issues need a connection.',
 };
 
@@ -18,8 +18,12 @@ export default function IssuesList() {
   const [problem, setProblem] = useState('');
   const [openFp, setOpenFp] = useState<string | null>(null);
 
+  // Only the newest request may set the list: a slow answer for a filter that is no longer chosen is dropped.
+  const latest = useRef(0);
   const load = useCallback(async (status: IssueStatus | null) => {
+    const id = ++latest.current;
     const r = await listIssues(status);
+    if (id !== latest.current) return;
     if (!r.ok) { setProblem(SAY[r.reason]); return; }
     setProblem(''); setIssues(r.issues); setCounts(r.counts);
   }, []);
@@ -57,7 +61,12 @@ function IssueRow({ issue, open, onToggle, onSaved }: { issue: Issue; open: bool
   const [problem, setProblem] = useState('');
   const save = async () => {
     setSaving(true); setProblem('');
-    const r = await updateIssue(issue.fingerprint, { status, note });
+    // Only what was edited is sent, so a field someone else changed in the meantime is not put back.
+    const patch: { status?: IssueStatus; note?: string } = {};
+    if (status !== issue.status) patch.status = status;
+    if (note !== issue.note) patch.note = note;
+    if (!patch.status && patch.note === undefined) { setSaving(false); return; }
+    const r = await updateIssue(issue.fingerprint, patch);
     setSaving(false);
     if (!r.ok) { setProblem(SAY[r.reason]); return; }
     await onSaved();

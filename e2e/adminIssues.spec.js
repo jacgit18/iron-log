@@ -65,6 +65,20 @@ test('opening an issue shows its facts; changing the status and note sends one P
   await expect.poll(() => calls.filter(c => c.method === 'GET').length).toBe(2); // the list is read again after a save
 });
 
+test('editing only the note sends only the note, and Save with nothing changed sends nothing', async ({ page }) => {
+  const calls = await setup(page);
+  const panel = page.getByRole('region', { name: 'Production issues' });
+  await panel.getByRole('button', { name: 'Show issues' }).click();
+  await panel.getByRole('button', { name: /duplicate key value/ }).click();
+  await panel.getByRole('button', { name: 'Save' }).click();
+  await page.waitForTimeout(300);
+  expect(calls.filter(c => c.method === 'PATCH')).toEqual([]);
+  await panel.getByLabel('Note', { exact: true }).fill('only the note');
+  await panel.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => calls.filter(c => c.method === 'PATCH').length).toBe(1);
+  expect(calls.find(c => c.method === 'PATCH').body).toEqual({ note: 'only the note' });
+});
+
 test('passes the accessibility scan with the list open and an issue expanded', async ({ page }) => {
   await setup(page);
   const panel = page.getByRole('region', { name: 'Production issues' });
@@ -79,7 +93,7 @@ test('says so when the server refuses, and when the account is not an admin it s
   const calls = await setup(page, { status: 403 });
   const panel = page.getByRole('region', { name: 'Production issues' });
   await panel.getByRole('button', { name: 'Show issues' }).click();
-  await expect(panel.getByText('This account is not allowed to see issues.')).toBeVisible();
+  await expect(panel.getByText(/Not allowed\. An admin needs both/)).toBeVisible();
   expect(calls).toHaveLength(1);
 });
 
