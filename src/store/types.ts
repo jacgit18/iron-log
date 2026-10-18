@@ -276,6 +276,7 @@ export interface GrocerySlice {
   setGroceryHave(month: string, id: string, on: boolean): void; // the At home tick: had this month, so off that month's list (ADR 054)
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
+  setGroceryPrices(month: string, id: string, prices: number[] | null): void;
   takeGroceryOff(month: string, id: string): void; // not needed this month: marked as had, so off that month's list
 }
 

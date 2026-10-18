@@ -1,4 +1,4 @@
-import { MAX_ITEMS, MAX_STORES, MONTH_RE, monthEmpty, normGroceryItem, normGroceryMonth } from '../shared/grocery.js';
+import { MAX_ITEMS, MAX_PRICES, MAX_STORES, MONTH_RE, monthEmpty, normGroceryItem, normGroceryMonth } from '../shared/grocery.js';
 import { str } from '../shared/stretchWeek.js';
 import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryUnit } from '../types.ts';
 
@@ -10,7 +10,7 @@ import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, Groc
    A month with no saved document has nothing ticked, so each month starts fresh with every item on it and nothing is copied or reset.
    Prices are whole cents, so totals never drift. The cleaning rules live in shared/grocery.ts, which the API uses too. */
 
-export { MAX_CENTS, MAX_ITEMS, MAX_NOTE, MAX_QTY, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
+export { MAX_CENTS, MAX_ITEMS, MAX_NOTE, MAX_PRICES, MAX_QTY, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
 export const ANYWHERE = 'Anywhere';
 /** Stores offered in the drop-downs before you have used them; picking one adds it to your stores. */
 export const SUGGESTED_STORES = ["BJ's", 'C-Town', 'Whole Foods', 'Flatbush Co-Op', 'Aldi'];
@@ -62,7 +62,8 @@ export function normGrocery(d: unknown): Grocery {
 /** An item as this month sees it: its count and unit price (the month's, else the catalogue's), and whether it is ticked. */
 export function lineOf(item: GroceryItem, m: GroceryMonth) {
   const l = m.lines[item.id] || {};
-  return { got: l.got === true, have: l.have === true, qty: l.qty ?? item.qty, cents: l.cents ?? item.cents };
+  const prices = l.prices?.length ? l.prices : undefined; // priced one by one: the count is how many, the total their sum
+  return { got: l.got === true, have: l.have === true, qty: prices ? prices.length : l.qty ?? item.qty, cents: l.cents ?? item.cents, prices };
 }
 /** The words around a count and a price: by weight (lb, kg, oz) the count is a weight and the price is per unit; otherwise each. */
 export const unitWords = (unit?: GroceryUnit) => ({
@@ -72,6 +73,16 @@ export const unitWords = (unit?: GroceryUnit) => ({
   qty: (q: number) => (unit ? `${q} ${unit}` : String(q)),
 });
 export const lineTotal = (qty: number, cents: number | null) => (cents == null ? 0 : Math.round(qty * cents));
+/** What a line costs: the sum of its own prices when it has them, else its count times its price. */
+export const lineCost = (l: { qty: number; cents: number | null; prices?: number[] }) => (l.prices ? l.prices.reduce((a, c) => a + c, 0) : lineTotal(l.qty, l.cents));
+/** Prices typed in one box ("8.99, 10.49 9.25") to cents; null when any of them is not a price or there are none or too many. */
+export function parsePrices(text: string): number[] | null {
+  const parts = text.split(/[\s,;]+/).filter(Boolean);
+  if (!parts.length || parts.length > MAX_PRICES) return null;
+  const out = parts.map(parseDollars);
+  return out.every((c): c is number => c != null) ? out : null;
+}
+export const pricesText = (p: number[] | undefined) => (p ? p.map(centsText).join(', ') : '');
 
 /** Whether you have an item this month: ticked "have" on At home, or bought (ticked on To get). It starts every month unticked (ADR 054). */
 export const haveOf = (item: GroceryItem, m: GroceryMonth) => { const l = lineOf(item, m); return l.have || l.got; };
@@ -100,8 +111,8 @@ export function byStore(g: Grocery, items: GroceryItem[]): { store: string; labe
 export function tally(items: GroceryItem[], m: GroceryMonth) {
   let got = 0, planned = 0, spent = 0, unpriced = 0;
   items.forEach(i => {
-    const l = lineOf(i, m); const t = lineTotal(l.qty, l.cents);
-    planned += t; if (l.cents == null) unpriced++;
+    const l = lineOf(i, m); const t = lineCost(l);
+    planned += t; if (l.cents == null && !l.prices) unpriced++;
     if (l.got) { got++; spent += t; }
   });
   return { count: items.length, got, planned, spent, unpriced };
@@ -116,7 +127,7 @@ export function spendByMonth(g: Grocery, months: Record<string, GroceryMonth>, e
     Object.entries(m?.lines ?? {}).forEach(([id, l]) => {
       if (!l.got) return;
       const it = g.items.find(x => x.id === id);
-      bought++; spent += lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? it?.cents ?? null);
+      bought++; spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? it?.cents ?? null);
     });
     return { key, spent, bought };
   });

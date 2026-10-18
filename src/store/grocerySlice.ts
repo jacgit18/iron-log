@@ -1,8 +1,8 @@
 import { LS } from '../lib/storage.js';
 import {
-  MAX_ITEMS, MAX_NOTE, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, normGrocery, normGroceryData, parseDollars,
+  MAX_ITEMS, MAX_NOTE, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, normGrocery, normGroceryData, parseDollars,
 } from '../lib/grocery.js';
-import type { Grocery, GroceryData, GroceryMonth } from '../types.ts';
+import type { Grocery, GroceryData, GroceryLine, GroceryMonth } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
 
 // The grocery list is the account's, like the rest of the data (ADR 039, replacing ADR 019's device-only list): it is saved through the
@@ -183,7 +183,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       if (!it || !MONTH_RE.test(month)) return;
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
-        if (on) { delete l.have; l.got = true; l.qty = l.qty ?? it.qty; if (l.cents == null && it.cents != null) l.cents = it.cents; } else delete l.got;
+        if (on) { delete l.have; l.got = true; if (!l.prices) { l.qty = l.qty ?? it.qty; if (l.cents == null && it.cents != null) l.cents = it.cents; } } else delete l.got;
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
     },
@@ -202,7 +202,19 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     setGroceryQty(month, id, qty) {
       const q = cleanQty(qty);
       if (q == null || q <= 0 || !get().grocery.items.some(i => i.id === id)) return;
-      mutateMonth(month, m => { m.lines[id] = { ...(m.lines[id] || {}), qty: q }; });
+      mutateMonth(month, m => { const { prices: _p, ...l } = m.lines[id] || {}; m.lines[id] = { ...l, qty: q }; }); // a typed count goes back to one price for all
+    },
+
+    // The price of each one bought this month, when they differ (beef: 8.99, 10.49, 9.25). The count follows how many there are. Null (or
+    // an empty list) goes back to a count and one price. The usual price of the item is left alone: it belongs to the single-price way.
+    setGroceryPrices(month, id, prices) {
+      const list = prices === null ? null : cleanPrices(prices);
+      if ((prices !== null && !list) || !get().grocery.items.some(i => i.id === id)) return;
+      mutateMonth(month, m => {
+        const { prices: _p, qty: _q, cents: _c, ...l } = m.lines[id] || {};
+        const next: GroceryLine = list ? { ...l, prices: list } : l;
+        if (Object.keys(next).length) m.lines[id] = next; else delete m.lines[id];
+      });
     },
 
     // The price typed this month is remembered as the item's usual price, but only for the current month: fixing an old month must not change today's.
@@ -212,6 +224,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       if (!it) return;
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
+        delete l.prices; // one price for all
         if (cents === null) delete l.cents; else l.cents = cents;
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });

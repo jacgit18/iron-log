@@ -146,6 +146,13 @@
 .gprice {
   width: 6em;
 }
+.gprices {
+  flex: 1 1 12em;
+}
+.gpricelist {
+  width: 100%;
+  text-align: left;
+}
 .gtotal {
   min-height: 44px;
   display: flex;

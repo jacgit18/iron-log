@@ -64,6 +64,25 @@ describe('the catalogue', () => {
     expect(st().addGroceryStore('Costco')).toBeNull();
     expect(st().addGroceryStore('costco')).toMatch(/already/);
   });
+  it('keeps a price for each one bought, totals their sum, and a typed count or price goes back to one price', async () => {
+    const mk = await thisMonth(); const { lineOf, lineCost, tally } = await import('../lib/grocery.js');
+    st().addGroceryItem(form({ n: 'Beef', store: '', qty: '1', price: '' }));
+    st().setGroceryPrices(mk, 'beef', [899, 1049, 925]);
+    expect(st().groceryMonths[mk].lines.beef).toEqual({ prices: [899, 1049, 925] });
+    const l = lineOf(st().grocery.items[0], st().groceryMonths[mk]);
+    expect(l.qty).toBe(3); expect(lineCost(l)).toBe(2873);
+    expect(tally(st().grocery.items, st().groceryMonths[mk])).toMatchObject({ planned: 2873, unpriced: 0 });
+    st().setGroceryGot(mk, 'beef', true); // a tick keeps the prices and adds no count of its own
+    expect(st().groceryMonths[mk].lines.beef).toEqual({ got: true, prices: [899, 1049, 925] });
+    st().setGroceryPrices(mk, 'beef', [1, -5]); st().setGroceryPrices(mk, 'beef', []); // not prices: ignored
+    expect(st().groceryMonths[mk].lines.beef.prices).toEqual([899, 1049, 925]);
+    st().setGroceryQty(mk, 'beef', 2);
+    expect(st().groceryMonths[mk].lines.beef).toEqual({ got: true, qty: 2 });
+    st().setGroceryPrices(mk, 'beef', [500]); st().setGroceryCents(mk, 'beef', 700);
+    expect(st().groceryMonths[mk].lines.beef.prices).toBeUndefined();
+    st().setGroceryPrices(mk, 'beef', [500]); st().setGroceryPrices(mk, 'beef', null);
+    expect(st().groceryMonths[mk].lines.beef).toEqual({ got: true });
+  });
   it('puts a new item at the top of its store’s section', () => {
     st().addGroceryItem(form({ n: 'Eggs', store: 'Aldi' })); st().addGroceryItem(form({ n: 'Rice', store: 'Costco' })); st().addGroceryItem(form({ n: 'Oats', store: 'Aldi' }));
     expect(st().grocery.items.filter(i => i.store === 'Aldi').map(i => i.n)).toEqual(['Oats', 'Eggs']);
