@@ -55,7 +55,9 @@
 @media (max-width:380px) {
   .boardroot .swaplabel {
     width: var(--fs-xl);
+    width: var(--fs-xl);
     min-width: 0;
+    pointer-events: none;
   }
 }
 .boardroot .colhead .restchk {
