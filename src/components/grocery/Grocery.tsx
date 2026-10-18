@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, haveOf, lineCost, lineOf, money, monthKey, monthLabel, onList, parseDollars, parsePrices, pricesText, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
+import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, haveOf, lineCost, lineOf, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import GrocerySpend from './GrocerySpend.js';
+import PriceChips from './PriceChips.js';
 import useDockHeight from './useDockHeight.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from '../../types.ts';
 import type { GroceryForm } from '../../store/types.ts';
@@ -18,12 +19,12 @@ const EMPTY_FORM: GroceryForm = { n: '', store: '', qty: '1', price: '', every: 
 const AHEAD = 12; // how many months past this one you can plan
 
 // A count or price box that keeps what is typed and saves when you leave it (or press Enter), so a half-typed "3." is not rewritten under you.
-function NumBox({ label, value, onCommit, className, kind = 'decimal' }: { label: string; value: string; onCommit: (text: string) => boolean; className: string; kind?: 'decimal' | 'text' }) {
+function NumBox({ label, value, onCommit, className }: { label: string; value: string; onCommit: (text: string) => boolean; className: string }) {
   const [text, setText] = useState(value); const [seen, setSeen] = useState(value); const [bad, setBad] = useState(false);
   if (value !== seen) { setSeen(value); setText(value); setBad(false); } // the saved value changed from elsewhere
   const commit = () => { if (text === value) return setBad(false); setBad(!onCommit(text)); };
   return (
-    <input type="text" inputMode={kind === 'text' ? 'text' : 'decimal'} className={`gnum ${className}`} aria-label={label} aria-invalid={bad || undefined} value={text}
+    <input type="text" inputMode="decimal" className={`gnum ${className}`} aria-label={label} aria-invalid={bad || undefined} value={text}
       onChange={e => setText(e.target.value)} onBlur={commit} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }} />
   );
 }
@@ -55,12 +56,7 @@ function GetRow({ item, month, mk, future, onGot, open, onOpen }: { item: Grocer
             <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={l.prices ? '' : centsText(l.cents)}
               onCommit={t => { if (!t.trim()) { s.setGroceryCents(mk, item.id, null); return true; } const c = parseDollars(t); if (c == null) return false; s.setGroceryCents(mk, item.id, c); return true; }} />
           </label>
-          {!item.unit && (
-            <label className="gfield gprices">Price of each, if they differ
-              <NumBox label={`Price of each ${item.n}, dollars, separated by commas`} className="gpricelist" kind="text" value={pricesText(l.prices)}
-                onCommit={t => { if (!t.trim()) { s.setGroceryPrices(mk, item.id, null); return true; } const p = parsePrices(t); if (!p) return false; s.setGroceryPrices(mk, item.id, p); return true; }} />
-            </label>
-          )}
+          {!item.unit && <PriceChips name={item.n} prices={l.prices} onChange={p => s.setGroceryPrices(mk, item.id, p)} />}
           <span className="gtotal" aria-label={`Total for ${item.n}`}>{l.cents == null && !l.prices ? '' : money(total)}</span>
           {!future && <button type="button" className="btn sm ghost gtake" aria-label={`Take ${item.n} off the list`} onClick={() => s.takeGroceryOff(mk, item.id)}>Take off the list</button>}
         </div>
@@ -126,6 +122,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       {bought.length > 0 && (
         <details className="gbought" id="groc-bought" open={boughtOpen} onToggle={e => setBoughtOpen(e.currentTarget.open)}>
           <summary id="groc-bought-sum">Bought this month ({bought.length})</summary>
+          <p className="note">You have these at home, so they are ticked <b>Have</b> on At home. Untick one to put it back on the list.</p>
           {byStore(g, bought).map(grp => (
             <section key={grp.store || '_'} className="gstore" aria-label={`Bought from ${grp.label}`}>
               <div className="gstorehead"><h3>{grp.label}</h3></div>
@@ -141,13 +138,14 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
 /* ---------- At home ---------- */
 // "Have" is one tick shared with To get: a When-out item has it unless it is out (ticking it bought on To get clears "out"), and an
 // Every-month item has it once it is ticked bought this month. So a tick on either list shows on the other.
-function HomeRow({ item, have, onHave }: { item: GroceryItem; have: boolean; onHave: (on: boolean) => void }) {
+function HomeRow({ item, have, bought, onHave }: { item: GroceryItem; have: boolean; bought: boolean; onHave: (on: boolean) => void }) {
   return (
     <li className="ghome">
       <label className="gtick">
         <input type="checkbox" className="chk" id={`groc-have-${item.id}`} aria-label={`Have ${item.n}`} checked={have} onChange={e => onHave(e.target.checked)} />
         <span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span>
       </label>
+      {bought && <span className="gchip">Bought</span>}
     </li>
   );
 }
@@ -258,6 +256,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
   return (
     <div className={editing ? 'gathome editing' : 'gathome'}>
       <div className="ghomehead">
+        {editing && <b className="geditbadge">Editing</b>}
         <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'A tick means you have it this month, so it is off To get. Ticks clear on the 1st and everything is back on the list.'}</p>
         <button type="button" className="btn sm ghost" id="groc-edit" aria-pressed={editing} onClick={() => setEditing(v => !v)}>{editing ? 'Done' : 'Edit'}</button>
       </div>
@@ -266,7 +265,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
       {byStore(g, g.items).map((grp, gi) => (
         <section key={grp.store || '_'} className="gstore" aria-labelledby={`groc-home-h-${gi}`}>
           <div className="gstorehead"><h3 id={`groc-home-h-${gi}`}>{grp.label}</h3></div>
-          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} have={hasIt(it)} onHave={on => setHave(it, on)} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} onHave={on => setHave(it, on)} />))}</ul>
+          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} have={hasIt(it)} onHave={on => setHave(it, on)} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} bought={lineOf(it, month).got} onHave={on => setHave(it, on)} />))}</ul>
         </section>
       ))}
       {editing && <Stores g={g} />}
