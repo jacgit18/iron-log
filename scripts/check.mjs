@@ -3,7 +3,7 @@
 //        npm run check -- --list  show which checks it would run and why, without running them
 //        npm run check -- --files=a,b  pretend only those files changed (with --list, to see what a change would run)
 //        npm run check -- --all   run every check that does not need a database (typecheck, test, lint, e2e)
-// CI (.github/workflows/test.yml) always runs everything; this is the local shortcut. A file it does not recognise runs everything.
+// CI (.github/workflows/test.yml) runs everything on main and the jobs scripts/ci-changes.mjs picks on a pull request; this is the local shortcut. A file it does not recognise runs everything.
 // The db:check and e2e:sync steps need the local Postgres: it is started (npm run db:start) and used when DATABASE_URL is not set; if it cannot be reached the step is not run and the script exits 1.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createConnection } from 'node:net';
