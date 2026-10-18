@@ -301,3 +301,22 @@ export interface DataFile {
   supplements: Supplements | null;
   grocery: GroceryData | null;
 }
+
+/* ---------- Production issues (admin screen; the server's /api/issues, ADR 013 amendment) ---------- */
+export type IssueStatus = 'fixed' | 'ignored' | 'investigating' | 'open';
+export type IssueCounts = Record<IssueStatus, number>;
+/** One fingerprint of a scrubbed error report. Times are ISO strings. */
+export interface Issue {
+  fingerprint: string;
+  kind: 'error' | 'server' | 'sync' | 'unhandledrejection';
+  message: string;
+  topFrame: string;
+  page: string;
+  firstSeen: string;
+  lastSeen: string;
+  occurrences: number;
+  firstVersion: string;
+  lastVersion: string;
+  status: IssueStatus;
+  note: string;
+}

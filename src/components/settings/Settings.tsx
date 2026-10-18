@@ -1,6 +1,7 @@
 import AccountPanel from './AccountPanel.js';
 import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
+import IssuesPanel from './IssuesPanel.js';
 import AutoBackups from './AutoBackups.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
 import SyncPanel from './SyncPanel.js';
@@ -473,6 +474,7 @@ export default function Settings() {
         <div className="scol">
           <DevicePanel />
           <FeedbackPanel />
+          <IssuesPanel />
         </div>
       </Group>
       {/* Last on the page, apart from the everyday data panels: these cannot be undone. */}
