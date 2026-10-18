@@ -29,13 +29,16 @@ export function issueRecorder(db: Kysely<DB>, now: () => number = Date.now): Rec
     const t = now();
     const last = lastSent.get(issue.fingerprint);
     if (last !== undefined && t - last < THROTTLE_MS) return;
-    if (lastSent.size >= MAX_REMEMBERED) lastSent.clear();
+    if (lastSent.size >= MAX_REMEMBERED) lastSent.delete(lastSent.keys().next().value!);
     lastSent.set(issue.fingerprint, t);
-    sql<{ record_issue: boolean }>`select record_issue(${issue.fingerprint}, ${issue.kind}, ${issue.message}, ${issue.topFrame}, ${issue.page}, ${issue.version})`
+    sql<{ record_issue: 'full' | 'new' | 'repeat' }>`select record_issue(${issue.fingerprint}, ${issue.kind}, ${issue.message}, ${issue.topFrame}, ${issue.page}, ${issue.version})`
       .execute(db)
       .then(result => {
         // One line when a problem is seen for the first time: the hook for a "new issue" alert.
-        if (result.rows[0]?.record_issue) console.error(JSON.stringify({ severity: 'WARNING', msg: 'new-issue', fingerprint: issue.fingerprint, kind: issue.kind }));
+        const outcome = result.rows[0]?.record_issue;
+        if (outcome === 'new') console.error(JSON.stringify({ severity: 'WARNING', msg: 'new-issue', fingerprint: issue.fingerprint, kind: issue.kind }));
+        // The table is at its cap, so this new problem was not stored: say so, or a full table looks like a quiet system.
+        if (outcome === 'full') console.error(JSON.stringify({ severity: 'ERROR', msg: 'issues-full', fingerprint: issue.fingerprint, kind: issue.kind }));
       })
       .catch(err => console.error(JSON.stringify({ severity: 'WARNING', msg: 'issue not recorded', error: err instanceof Error ? err.message : String(err) })));
   };

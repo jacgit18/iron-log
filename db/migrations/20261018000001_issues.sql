@@ -23,17 +23,18 @@ create index issues_last_seen on issues (last_seen desc);
 
 alter table issues enable row level security;
 
--- Counts one report. Returns true when the fingerprint is new, false for a repeat (or when the table is full). A fixed issue that
+-- Counts one report. Returns 'new' for a fingerprint not seen before, 'repeat' for one that was, and 'full' when a new fingerprint was
+-- refused because the table is at its cap (the caller logs that, so a full table is noticed). A fixed issue that
 -- comes back is opened again, so a regression is not hidden. The 5000-row cap stops anyone sending endless different messages
 -- (the endpoint takes reports without a sign-in) from filling the table.
 create function record_issue(p_fingerprint text, p_kind text, p_message text, p_top_frame text, p_page text, p_version text)
-  returns boolean
+  returns text
   language plpgsql security definer set search_path = public as $$
 declare
-  is_new boolean;
+  was_inserted boolean;
 begin
   if not exists (select 1 from issues where fingerprint = p_fingerprint) and (select count(*) from issues) >= 5000 then
-    return false;
+    return 'full';
   end if;
   insert into issues as i (fingerprint, kind, message, top_frame, page, first_version, last_version)
     values (p_fingerprint, p_kind, p_message, p_top_frame, p_page, p_version, p_version)
@@ -43,8 +44,8 @@ begin
       page = excluded.page,
       last_version = excluded.last_version,
       status = case when i.status = 'fixed' then 'open' else i.status end
-    returning (xmax = 0) into is_new;
-  return is_new;
+    returning (xmax = 0) into was_inserted;
+  return case when was_inserted then 'new' else 'repeat' end;
 end
 $$;
 

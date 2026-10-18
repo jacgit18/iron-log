@@ -27,19 +27,20 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await owner.deleteFrom('issues').execute();
+  vi.restoreAllMocks();
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
 const FP = 'abcdef012345';
 const record = (fingerprint = FP, version = '1', kind = 'error') =>
-  sql<{ record_issue: boolean }>`select record_issue(${fingerprint}, ${kind}, 'Bad weight ###', 'foo /assets/index.js:1:2', '/progress', ${version})`.execute(app).then(r => r.rows[0]!.record_issue);
+  sql<{ record_issue: string }>`select record_issue(${fingerprint}, ${kind}, 'Bad weight ###', 'foo /assets/index.js:1:2', '/progress', ${version})`.execute(app).then(r => r.rows[0]!.record_issue);
 const row = (fingerprint = FP) => owner.selectFrom('issues').selectAll().where('fingerprint', '=', fingerprint).executeTakeFirstOrThrow();
 
 describe('record_issue', () => {
-  it('says true for a new fingerprint and false for a repeat, and counts the repeats', async () => {
-    expect(await record(FP, '10')).toBe(true);
-    expect(await record(FP, '11')).toBe(false);
-    expect(await record(FP, '12')).toBe(false);
+  it('says new for a new fingerprint and repeat for a repeat, and counts the repeats', async () => {
+    expect(await record(FP, '10')).toBe('new');
+    expect(await record(FP, '11')).toBe('repeat');
+    expect(await record(FP, '12')).toBe('repeat');
     const r = await row();
     expect(r).toMatchObject({ occurrences: '3', first_version: '10', last_version: '12', status: 'open', kind: 'error', page: '/progress' });
   });
@@ -56,9 +57,9 @@ describe('record_issue', () => {
 
   it('refuses new fingerprints once the table holds 5000, but keeps counting the ones it has', async () => {
     await sql`insert into issues (fingerprint, kind, message) select lpad(to_hex(g), 12, '0'), 'error', 'm' from generate_series(1, 5000) g`.execute(owner);
-    expect(await record('ffffffffffff')).toBe(false);
+    expect(await record('ffffffffffff')).toBe('full');
     expect(await owner.selectFrom('issues').select(sql<string>`count(*)`.as('n')).executeTakeFirstOrThrow()).toEqual({ n: '5000' });
-    await record(lpad(1));
+    expect(await record(lpad(1))).toBe('repeat');
     expect((await row(lpad(1))).occurrences).toBe('2');
   });
 
@@ -90,6 +91,12 @@ describe('issueRecorder', () => {
     await vi.waitFor(async () => expect((await row()).occurrences).toBe('2'));
   });
 
+  it('logs a loud issues-full line when a new problem is refused because the table is full', async () => {
+    await sql`insert into issues (fingerprint, kind, message) select lpad(to_hex(g), 12, '0'), 'error', 'm' from generate_series(1, 5000) g`.execute(owner);
+    issueRecorder(app)({ fingerprint: 'ffffffffffff', kind: 'error', message: 'm', topFrame: '', page: '', version: '' });
+    await vi.waitFor(() => expect(vi.mocked(console.error).mock.calls.map(c => JSON.parse(c[0] as string))).toContainEqual({ severity: 'ERROR', msg: 'issues-full', fingerprint: 'ffffffffffff', kind: 'error' }));
+  });
+
   it('logs one new-issue line the first time, and swallows a failure', async () => {
     const log = vi.mocked(console.error);
     const recordIssue = issueRecorder(app);
@@ -119,6 +126,21 @@ describe('the two ways in', () => {
     await close();
   });
 
+  it('a recorder that throws does not change the answer, and a failure after the response started is still recorded', async () => {
+    const seen: string[] = [];
+    const a = express();
+    a.get('/boom', () => { throw new Error('boom'); });
+    a.get('/late', (_req, res) => { res.write('partial'); throw new Error('late failure'); });
+    a.use(errorHandler(i => { seen.push(i.message); if (i.message === 'boom') throw new Error('recorder broke'); }));
+    const base = await listen(a);
+    const res = await fetch(`${base}/boom`);
+    expect(res.status).toBe(500);
+    expect((await res.json()) as { ok: boolean }).toMatchObject({ ok: false });
+    await fetch(`${base}/late`).then(r => r.text()).catch(() => '');
+    expect(seen).toEqual(['boom', 'late failure']);
+    await close();
+  });
+
   it('a 500 is stored, a 404 and a 400 are not', async () => {
     const a = express();
     a.get('/boom', () => { throw new Error('duplicate key value violates "exercise bench press 185"'); });
@@ -135,6 +157,12 @@ describe('the two ways in', () => {
 });
 
 describe('serverIssue', () => {
+  it('leaves apostrophes in plain words alone, masks the path, and cuts only real quotes', () => {
+    const r = serverIssue(new Error("user's row can't be saved because it isn't valid (reading 'weight')"), '/api/catalog/c:fedb:12345');
+    expect(r.message).toBe("user's row can't be saved because it isn't valid (reading '…')");
+    expect(r.page).toBe('/api/catalog/c:fedb:#####');
+  });
+
   it('keeps no quoted value, digit, email or token from the message', () => {
     const r = serverIssue(new Error(`invalid input for "bench press" 185 lb by jane@example.com token ghp_abcdefghijklmnop 'note text'`), '/api/x');
     expect(r.message).toBe('invalid input for "…" ### lb by [email] token [secret] \'…\'');
