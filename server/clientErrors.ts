@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { RequestHandler } from 'express';
 
 // ADR 013: the phone reports the errors it meets (an uncaught error, a sync problem) so a failure that only happens on a phone is
@@ -12,6 +13,8 @@ export const KINDS = ['error', 'unhandledrejection', 'sync'] as const;
 type Kind = (typeof KINDS)[number];
 
 export interface ScrubbedReport {
+  /** The same problem gets the same fingerprint on every phone and across deploys, so repeats can be counted and a new one noticed. */
+  fingerprint: string;
   kind: Kind;
   message: string;
   stack: string[];
@@ -42,6 +45,13 @@ const frame = (raw: string) => {
   return `${name ? `${name} ` : ''}${file}${pos}`.slice(0, 160);
 };
 
+// Kind, message (already masked, a run of digits counts as one) and the file of the top stack frame with its build hash and positions removed: the position and the
+// minified function name change with every build, the file name and the message do not. Not a secret, only a short label: 12 hex digits.
+export function fingerprintOf(kind: string, message: string, stack: string[]): string {
+  const top = stack[0]?.replace(/:\d+(?::\d+)?$/, '').split(' ').pop()?.replace(/-[\w-]{8}(?=\.\w+$)/, '') ?? '';
+  return createHash('sha256').update(`${kind}|${message.replace(/#+/g, '#')}|${top}`).digest('hex').slice(0, 12);
+}
+
 /** The report with everything that could be personal removed, or null when it is not a report at all. */
 export function scrubReport(body: unknown): ScrubbedReport | null {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null;
@@ -49,9 +59,11 @@ export function scrubReport(body: unknown): ScrubbedReport | null {
   if (typeof kind !== 'string' || !(KINDS as readonly string[]).includes(kind)) return null;
   if (typeof message !== 'string' || !message.trim()) return null;
   const frames = typeof stack === 'string' ? stack.split('\n').slice(0, 30).map(frame).filter((f): f is string => !!f).slice(0, 12) : [];
+  const masked = mask(message, 300);
   return {
+    fingerprint: fingerprintOf(kind, masked, frames),
     kind: kind as Kind,
-    message: mask(message, 300),
+    message: masked,
     stack: frames,
     page: typeof page === 'string' ? path(page) : '',
     version: typeof version === 'string' ? version.replace(/[^\w.-]/g, '').slice(0, 20) : '',

@@ -2,7 +2,7 @@
 # Email alerts for the two things that would otherwise go wrong silently (ADR 013, Phase F): the nightly backup, and the server.
 #
 # Usage:  PROJECT_ID=iron-log-jacgit18 ALERT_EMAIL=you@example.com scripts/alerts-cloud-run.sh <command>
-#   setup    enable Cloud Monitoring, make the email channel, and create the three alert policies that do not exist yet
+#   setup    enable Cloud Monitoring, make the email channel, and create the four alert policies that do not exist yet
 #   list     show the channel (and whether its address is verified) and the policies
 #   verify   email a code to the channel's address:  scripts/alerts-cloud-run.sh verify            (sends it)
 #                                                    scripts/alerts-cloud-run.sh verify <code>      (confirms it)
@@ -11,6 +11,7 @@
 #   1. a nightly backup run failed            (the job's own failed-execution count)
 #   2. the backup could not even be started   (Cloud Scheduler logged an error for its job)
 #   3. the server answered errors in a burst  (5 or more 5xx responses within 5 minutes)
+#   4. a phone reported an error              (any client-error log line; at most one email an hour; the fingerprint in it names the problem)
 # Alerting and email are free at this size. Not covered, on purpose: "no backup for a day" (Cloud Monitoring cannot watch a gap that
 # long reliably); `scripts/backup-cloud-run.sh list` shows a new pair of files every day, so look now and then.
 set -euo pipefail
@@ -94,6 +95,17 @@ cmd_setup() {
     \"notificationChannels\": [\"$ch\"],
     \"alertStrategy\": {\"autoClose\": \"3600s\"},
     \"documentation\": {\"mimeType\": \"text/markdown\", \"content\": \"Iron Log answered several server errors within five minutes. Look at the log: \`gcloud run services logs read $SERVICE --project $PROJECT_ID --region $REGION --limit 50\`. If a deploy caused it, roll back: \`gcloud run services update-traffic $SERVICE --project $PROJECT_ID --region $REGION --to-revisions <previous>=100\`.\"}
+  }"
+  create_policy "Iron Log: a phone reported an error" "{
+    \"displayName\": \"Iron Log: a phone reported an error\",
+    \"combiner\": \"OR\",
+    \"conditions\": [{
+      \"displayName\": \"a client-error line was logged\",
+      \"conditionMatchedLog\": {\"filter\": \"resource.type=\\\"cloud_run_revision\\\" AND resource.labels.service_name=\\\"$SERVICE\\\" AND jsonPayload.msg=\\\"client-error\\\"\"}
+    }],
+    \"notificationChannels\": [\"$ch\"],
+    \"alertStrategy\": {\"notificationRateLimit\": {\"period\": \"3600s\"}, \"autoClose\": \"86400s\"},
+    \"documentation\": {\"mimeType\": \"text/markdown\", \"content\": \"A phone reported an error (an uncaught error, a rejected promise or a sync problem). The fingerprint names the problem and is the same on every phone: \`gcloud logging read 'resource.labels.service_name=$SERVICE AND jsonPayload.msg=client-error' --project $PROJECT_ID --limit 20 --format json\`. At most one email an hour.\"}
   }"
   echo "Done. Check that the address is verified: scripts/alerts-cloud-run.sh list"
 }
