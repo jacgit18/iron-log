@@ -258,12 +258,15 @@ describe('validateSaveListItem', () => {
     expect(validateSaveListItem({ list: 'grocery_item', position: 3, item: kale })).toEqual({ list: 'grocery_item', position: 3, item: kale });
     expect(validateSaveListItem({ list: 'grocery_item', position: 0, item: { ...kale, store: '', cents: null, qty: 0.25, every: true, out: false } }).item).toEqual({ ...kale, store: '', cents: null, qty: 0.25, every: true, out: false });
     expect(validateSaveListItem({ list: 'grocery_item', position: 0, item: { ...kale, junk: 1 } }).item).toEqual(kale); // unknown keys are dropped
+    expect(validateSaveListItem({ list: 'grocery_item', position: 0, item: { ...kale, note: 'the green ones' } }).item).toEqual({ ...kale, note: 'the green ones' });
+    expect(validateSaveListItem({ list: 'grocery_item', position: 0, item: { ...kale, note: 'x'.repeat(120) } }).item.note).toHaveLength(120);
   });
   it('refuses a grocery item the app would never send, rather than cleaning it into another', () => {
     const bad = [
       { ...kale, n: 'x'.repeat(81) }, { ...kale, n: '' }, { ...kale, n: ' Kale' }, { ...kale, id: 'x'.repeat(61) }, { ...kale, id: '__proto__' },
       { ...kale, store: 'x'.repeat(41) }, { ...kale, qty: 0 }, { ...kale, qty: 1000 }, { ...kale, qty: 1.234 }, { ...kale, qty: '2' },
       { ...kale, cents: -1 }, { ...kale, cents: 1.5 }, { ...kale, cents: 100_000_000 }, { ...kale, cents: undefined },
+      { ...kale, note: 'x'.repeat(121) }, { ...kale, note: 5 }, { ...kale, note: ' padded ' }, { ...kale, note: '' },
       { ...kale, every: 'yes' }, { ...kale, out: undefined }, { ...kale, every: true, out: true }, { ...kale, once: true, every: undefined },
     ];
     for (const item of bad) expect(validateSaveListItem({ list: 'grocery_item', position: 0, item })).toBeNull();
