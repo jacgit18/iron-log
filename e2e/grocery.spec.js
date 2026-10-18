@@ -34,8 +34,8 @@ test('unchecking an item at home puts it on To get; ticking it bought checks it 
   await done(page);
   await expect(page.getByRole('group', { name: 'Grocery view' })).toBeVisible();
   await expect(page.getByLabel('Have Kale')).toBeChecked();
-  await expect(page.getByRole('region', { name: 'Costco' })).toContainText('Every month'); // Rice: a chip, no checkbox
-  await expect(page.getByLabel('Have Rice')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Costco' })).toContainText('Every month'); // Rice: a chip, and a tick that is on once it is bought this month
+  await expect(page.getByLabel('Have Rice')).not.toBeChecked();
   await page.click('#groc-view-get');
   await expect(page.locator('#groc-month')).toContainText('September 2026');
   await expect(page.locator('#groc-summary')).toHaveText('Got 0 of 1 · Spent $0.00 · Expected $18.99'); // only the Every-month item
@@ -129,7 +129,7 @@ test('older lists still read: an occasional item becomes When out and not out', 
   await expect(page.locator('#groc-summary')).toContainText('Got 0 of 1');
   await page.click('#groc-view-home');
   await expect(page.getByLabel('Have Saffron')).toBeChecked();
-  await expect(page.getByLabel('Have Rice')).toHaveCount(0);
+  await expect(page.getByLabel('Have Rice')).not.toBeChecked();
 });
 
 test('both views have no accessibility violations, reading or editing', async ({ page }) => {

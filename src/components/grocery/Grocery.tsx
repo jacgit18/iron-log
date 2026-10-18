@@ -97,24 +97,21 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
 }
 
 /* ---------- At home ---------- */
-function HomeRow({ item }: { item: GroceryItem }) {
-  const s = useAppStore.getState();
+// "Have" is one tick shared with To get: a When-out item has it unless it is out (ticking it bought on To get clears "out"), and an
+// Every-month item has it once it is ticked bought this month. So a tick on either list shows on the other.
+function HomeRow({ item, have, onHave }: { item: GroceryItem; have: boolean; onHave: (on: boolean) => void }) {
   return (
     <li className="ghome">
-      {item.every
-        ? <><span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span><span className="gchip">Every month</span></>
-        : (
-          <label className="gtick">
-            <input type="checkbox" className="chk" id={`groc-have-${item.id}`} aria-label={`Have ${item.n}`} checked={!item.out} onChange={e => s.setGroceryOut(item.id, !e.target.checked)} />
-            <span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span>
-            {item.out && <span className="gchip out">On the list</span>}
-          </label>
-        )}
+      <label className="gtick">
+        <input type="checkbox" className="chk" id={`groc-have-${item.id}`} aria-label={`Have ${item.n}`} checked={have} onChange={e => onHave(e.target.checked)} />
+        <span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span>
+        {item.every ? <span className="gchip">Every month</span> : item.out && <span className="gchip out">On the list</span>}
+      </label>
     </li>
   );
 }
 
-function EditRow({ item, g }: { item: GroceryItem; g: GroceryT }) {
+function EditRow({ item, g, have, onHave }: { item: GroceryItem; g: GroceryT; have: boolean; onHave: (on: boolean) => void }) {
   const s = useAppStore.getState();
   const [err, setErr] = useState<string | null>(null);
   const [name, setName] = useState(item.n);
@@ -122,7 +119,7 @@ function EditRow({ item, g }: { item: GroceryItem; g: GroceryT }) {
   const { mine, suggested } = storeChoices(g);
   return (
     <li className={`gedit${arming ? ' removing' : ''}`}>
-      {!item.every && <input type="checkbox" className="chk gedithave" aria-label={`Have ${item.n}`} checked={!item.out} onChange={e => s.setGroceryOut(item.id, !e.target.checked)} />}
+      <input type="checkbox" className="chk gedithave" aria-label={`Have ${item.n}`} checked={have} onChange={e => onHave(e.target.checked)} />
       <input type="text" className="gname" aria-label={`Name of ${item.n}`} maxLength={80} value={name} onChange={e => setName(e.target.value)}
         onBlur={() => { if (name.trim() && name.trim() !== item.n) setErr(s.updateGroceryItem(item.id, { n: name })); else setName(item.n); }} />
       <div className="gedrow">
@@ -213,8 +210,11 @@ function Stores({ g }: { g: GroceryT }) {
   );
 }
 
-function AtHome({ g }: { g: GroceryT }) {
+function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
   const [editing, setEditing] = useState(false);
+  const month = months[nowKey] || emptyMonth();
+  const haveOf = (it: GroceryItem) => (it.every ? lineOf(it, month).got : !it.out);
+  const setHave = (it: GroceryItem, on: boolean) => { const s = useAppStore.getState(); if (it.every) s.setGroceryGot(nowKey, it.id, on); else s.setGroceryOut(it.id, !on); };
   return (
     <div className={editing ? 'gathome editing' : 'gathome'}>
       <div className="ghomehead">
@@ -226,7 +226,7 @@ function AtHome({ g }: { g: GroceryT }) {
       {byStore(g, g.items).map((grp, gi) => (
         <section key={grp.store || '_'} className="gstore" aria-labelledby={`groc-home-h-${gi}`}>
           <div className="gstorehead"><h3 id={`groc-home-h-${gi}`}>{grp.label}</h3></div>
-          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} /> : <HomeRow key={it.id} item={it} />))}</ul>
+          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} have={haveOf(it)} onHave={on => setHave(it, on)} /> : <HomeRow key={it.id} item={it} have={haveOf(it)} onHave={on => setHave(it, on)} />))}</ul>
         </section>
       ))}
       {editing && <Stores g={g} />}
@@ -250,7 +250,7 @@ export default function Grocery() {
           <button type="button" id="groc-view-spend" className={view === 'spend' ? 'on' : ''} aria-pressed={view === 'spend'} onClick={() => setView('spend')}>Spending</button>
         </div>
       </div>
-      {view === 'get' ? <ToGet g={g} months={months} nowKey={monthKey(today)} /> : view === 'home' ? <AtHome g={g} /> : <GrocerySpend nowKey={monthKey(today)} />}
+      {view === 'get' ? <ToGet g={g} months={months} nowKey={monthKey(today)} /> : view === 'home' ? <AtHome g={g} months={months} nowKey={monthKey(today)} /> : <GrocerySpend nowKey={monthKey(today)} />}
     </section>
   );
 }
