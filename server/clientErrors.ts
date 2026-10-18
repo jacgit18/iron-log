@@ -48,7 +48,7 @@ const frame = (raw: string) => {
 // Kind, message (already masked, a run of digits counts as one) and the file of the top stack frame with its build hash and positions removed: the position and the
 // minified function name change with every build, the file name and the message do not. Not a secret, only a short label: 12 hex digits.
 export function fingerprintOf(kind: string, message: string, stack: string[]): string {
-  const top = stack[0]?.replace(/:\d+(?::\d+)?$/, '').split(' ').pop()?.replace(/-[\w]{6,}(?=\.\w+$)/, '') ?? '';
+  const top = stack[0]?.replace(/:\d+(?::\d+)?$/, '').split(' ').pop()?.replace(/-[\w-]{8}(?=\.\w+$)/, '') ?? '';
   return createHash('sha256').update(`${kind}|${message.replace(/#+/g, '#')}|${top}`).digest('hex').slice(0, 12);
 }
 
