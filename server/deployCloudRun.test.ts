@@ -284,6 +284,81 @@ exit 0
     });
   });
 
+  // ENVIRONMENT=staging (ADRs 055 to 058): the same script deploys iron-log-staging with its own account and secrets, reuses production's
+  // database key, and can never turn on email or push, because staging holds a copy of production's data.
+  describe('ENVIRONMENT=staging', () => {
+    const secretsOf = (cmd: string) => /--set-secrets (\S+)/.exec(recorded().find(l => l.includes(cmd))!)![1]!.split(',');
+    const stagingDb = { APP_DATABASE_URL: 'postgres://ironlog_staging:pw@db.example.com/x', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'gs' };
+
+    it('deploys the staging service as its own runtime account with iron-log-staging-* secrets', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { ENVIRONMENT: 'staging' });
+      expect(out.status).toBe(0);
+      const deploy = recorded().find(l => l.includes('run deploy'))!;
+      expect(deploy).toContain('run deploy iron-log-staging ');
+      expect(deploy).toContain('--service-account iron-log-staging-run@p.iam.gserviceaccount.com');
+      expect(deploy).toContain('--no-traffic');
+      const secrets = secretsOf('run deploy');
+      expect(secrets).toContain('APP_DATABASE_URL=iron-log-staging-app-database-url:latest');
+      expect(secrets).toContain('BETTER_AUTH_SECRET=iron-log-staging-auth-secret:latest');
+      expect(secrets).toContain('GOOGLE_CLIENT_ID=iron-log-staging-google-client-id:latest');
+      expect(secrets).toContain('GOOGLE_CLIENT_SECRET=iron-log-staging-google-client-secret:latest');
+      expect(deploy).toContain('BASE_URL=https://iron-log-staging-123456.us-central1.run.app');
+    });
+
+    it("always passes production's database key, even from a deploy that cannot see the secret exists (ADR 057)", async () => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { ENVIRONMENT: 'staging' })).status).toBe(0);
+      expect(secretsOf('run deploy')).toContain('PII_ENCRYPTION_KEY=iron-log-pii-key:latest');
+    });
+
+    it('never passes the Resend or Web Push keys, even when they exist and the live service has them (ADR 056)', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { ENVIRONMENT: 'staging', SECRETS_READABLE: '1', PUSH_SECRET: '1', LIVE_RESEND: '1', LIVE_PUSH: '1' });
+      expect(out.status).toBe(0);
+      const secrets = secretsOf('run deploy');
+      expect(secrets.some(x => x.startsWith('RESEND_API_KEY'))).toBe(false);
+      expect(secrets.some(x => x.startsWith('VAPID_'))).toBe(false);
+      expect(recorded().find(l => l.includes('run deploy'))).toContain('--remove-env-vars PUSH_QUEUE,PUSH_INVOKER_EMAIL');
+    });
+
+    it('refuses a service name that is not a staging one, so staging settings cannot land on production', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { ENVIRONMENT: 'staging', SERVICE: 'iron-log' });
+      expect(out.status).toBe(2);
+      expect(recorded().some(l => l.includes('run deploy'))).toBe(false);
+    });
+
+    it('refuses an unknown environment', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { ENVIRONMENT: 'qa' })).status).toBe(2);
+    });
+
+    it('`secrets` takes the staging login only, stores iron-log-staging-* names, makes no key of its own, and lets the staging account read production\'s', async () => {
+      writeFileSync(calls, '');
+      const wrongRole = await run(['secrets'], { ENVIRONMENT: 'staging', ...stagingDb, APP_DATABASE_URL: 'postgres://ironlog_app:pw@db.example.com/x', HAS_PII_KEY: '1' });
+      expect(wrongRole.status).toBe(1);
+      expect(recorded().some(l => l.includes('versions add'))).toBe(false);
+      writeFileSync(calls, '');
+      const out = await run(['secrets'], { ENVIRONMENT: 'staging', ...stagingDb, HAS_PII_KEY: '1', RESEND_API_KEY: 'r', VAPID_SUBJECT: 'mailto:a@b.co' });
+      expect(out.status).toBe(0);
+      const lines = recorded();
+      expect(lines.some(l => l.includes('secrets create iron-log-staging-app-database-url'))).toBe(true);
+      expect(lines.some(l => l.includes('secrets create iron-log-staging-auth-secret'))).toBe(true);
+      expect(lines.some(l => l.includes('secrets create iron-log-pii-key') || l.includes('versions add iron-log-pii-key'))).toBe(false);
+      expect(lines.some(l => l.includes('iron-log-resend') || l.includes('iron-log-vapid'))).toBe(false);
+      expect(lines.some(l => l.includes('add-iam-policy-binding iron-log-pii-key') && l.includes('iron-log-staging-run@p.iam.gserviceaccount.com'))).toBe(true);
+      expect(lines.some(l => l.includes('iron-log-staging-') && l.includes('iron-log-run@p.iam.gserviceaccount.com'))).toBe(false);
+    });
+
+    it('`secrets` stops when production has no database key yet', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['secrets'], { ENVIRONMENT: 'staging', ...stagingDb });
+      expect(out.status).toBe(1);
+      expect(out.stderr).toContain('iron-log-pii-key');
+    });
+  });
+
   it('discard and restore make the single call each is named for', async () => {
     writeFileSync(calls, '');
     await run(['discard']);
