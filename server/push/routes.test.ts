@@ -49,17 +49,15 @@ const sub = (n: number) => ({ endpoint: endpointOf(n), keys: { p256dh: `k${n}`, 
 const rows = () => owner.selectFrom('push_subscription').innerJoin('users', 'users.id', 'push_subscription.user_id').select(['push_subscription.endpoint', 'push_subscription.p256dh', 'users.auth_user_id']).orderBy('push_subscription.id').execute();
 
 describe('who may use it', () => {
-  it('refuses a signed-in account that is not an admin, on every route, and writes nothing', async () => {
-    for (const [path, body] of [['/subscribe', sub(1)], ['/unsubscribe', { endpoint: endpointOf(1) }], ['/schedule', {}], ['/cancel', {}]] as const) {
-      expect((await post(path, body, 'bob')).status, path).toBe(403);
-    }
-    expect((await fetch(`${base}/api/push/key`, { headers: dev('bob') })).status).toBe(403);
-    expect(await rows()).toEqual([]);
+  it('lets any signed-in account in, not only an admin (released to everyone 2026-10-19)', async () => {
+    expect((await fetch(`${base}/api/push/key`, { headers: dev('bob') })).status).toBe(200);
+    expect((await post('/subscribe', sub(1), 'bob')).status).toBe(200);
+    expect(await rows()).toEqual([{ endpoint: endpointOf(1), p256dh: 'k1', auth_user_id: 'dev:bob' }]);
   });
   it('refuses someone who is not signed in', async () => {
     expect((await fetch(`${base}/api/push/key`)).status).toBe(401);
   });
-  it('gives an admin the public key', async () => {
+  it('gives a signed-in account the public key', async () => {
     const res = await fetch(`${base}/api/push/key`, { headers: dev('ann') });
     expect(await res.json()).toEqual({ ok: true, publicKey: 'PUBLICKEY' });
   });

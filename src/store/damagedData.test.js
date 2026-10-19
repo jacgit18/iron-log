@@ -14,6 +14,7 @@ describe('damaged saved data at load', () => {
     });
     vi.stubGlobal('document', { addEventListener: () => {}, removeEventListener: () => {} }); // flag() arms a tap listener on a timer
     vi.resetModules();
+    await import('../features.js'); // reads the admin flag at import; the store used to pull it in through lib/pushClient
     const { useAppStore } = await import('./useAppStore.js');
     expect(useAppStore.getState().saveFlag).toBe('Could not read some saved data. A copy was kept');
     expect(mem['ironlog-damaged:' + ADMIN_KEY]).toBe('{tru');

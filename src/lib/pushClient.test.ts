@@ -3,8 +3,6 @@ import '../test/browserStubs.js';
 import { mem } from '../test/browserStubs.js';
 
 // vi.mock is hoisted above the imports, so the flag it returns is a plain holder the tests change.
-const feature = vi.hoisted(() => ({ on: true }));
-vi.mock('../features.js', () => ({ featureNow: () => feature.on }));
 import { cancelPush, disablePush, enablePush, pushCovers, pushKindOn, pushOn, renewPush, schedulePush, setPushKind } from './pushClient.js';
 
 const saved: Record<string, PropertyDescriptor | undefined> = {};
@@ -36,7 +34,7 @@ function setup(permission: 'default' | 'granted' | 'denied' = 'granted', ask: 'g
 }
 const settle = () => new Promise(r => setTimeout(r, 0));
 
-beforeEach(() => { for (const k of Object.keys(mem)) delete (mem as Record<string, unknown>)[k]; calls = []; answers = { '/key': { status: 200, json: { ok: true, publicKey: KEY } } }; sub = null; feature.on = true; (globalThis as Record<string, unknown>).__APP_VERSION__ = 'test'; });
+beforeEach(() => { for (const k of Object.keys(mem)) delete (mem as Record<string, unknown>)[k]; calls = []; answers = { '/key': { status: 200, json: { ok: true, publicKey: KEY } } }; sub = null; (globalThis as Record<string, unknown>).__APP_VERSION__ = 'test'; });
 afterEach(() => { restore(); vi.clearAllMocks(); });
 
 describe('enablePush', () => {
@@ -101,11 +99,8 @@ describe('renewPush', () => {
     await renewPush();
     expect(calls.map(c => c.path)).toEqual(['/key', '/subscribe']);
   });
-  it('does nothing when push is off or the feature is not for this account', async () => {
+  it('does nothing when push is off', async () => {
     setup(); await renewPush();
-    expect(calls).toEqual([]);
-    await enablePush(); calls = []; feature.on = false;
-    await renewPush();
     expect(calls).toEqual([]);
   });
 });

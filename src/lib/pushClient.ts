@@ -1,9 +1,8 @@
-import { featureNow } from '../features.js';
 import { signIn } from '../sync/devUser.js';
 import { LS } from './storage.js';
 
 // The phone's side of Web Push (ADR 044): subscribe this browser, and ask the server to push a timer end or a "day not finished" nudge
-// later, so it reaches a phone that has locked. Admin-only first (features.ts `webPush`). Device-local opt-in, like lib/restNotify.ts;
+// later, so it reaches a phone that has locked. Released to everyone signed in (was admin-only). Device-local opt-in, like lib/restNotify.ts;
 // every failure is quiet, because the page's own beep and the local notice are the fallback.
 export type PushKind = 'rest' | 'day-nudge';
 
@@ -14,8 +13,8 @@ export const pushSupported = (): boolean =>
   typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
 /** This device turned push on and the browser still allows it. */
 export const pushOn = (): boolean => pushSupported() && LS.get(ON) === true && Notification.permission === 'granted';
-/** A kind is wanted unless its box was unticked; the master switch and the feature flag come first. */
-export const pushKindOn = (kind: PushKind): boolean => featureNow('webPush') && pushOn() && pushKindWanted(kind);
+/** A kind is wanted unless its box was unticked; the master switch comes first. */
+export const pushKindOn = (kind: PushKind): boolean => pushOn() && pushKindWanted(kind);
 /** The box for a kind, apart from the master switch: ticked unless it was unticked. */
 export const pushKindWanted = (kind: PushKind): boolean => LS.get(KIND_KEY[kind]) !== false;
 /** Ticks or unticks a kind's box. Unticking also takes back an ask already with the server, which would otherwise still arrive. */
@@ -40,7 +39,7 @@ async function currentSubscription(): Promise<PushSubscription | null> {
 async function subscribeBrowser(): Promise<PushSubscription | 'unavailable'> {
   const res = await api('GET', '/key');
   const body = res?.ok ? ((await res.json().catch(() => null)) as { publicKey?: unknown } | null) : null;
-  if (typeof body?.publicKey !== 'string') return 'unavailable'; // not an admin, signed out, or the server has no keys
+  if (typeof body?.publicKey !== 'string') return 'unavailable'; // signed out, or the server has no keys
   const reg = await navigator.serviceWorker.ready;
   return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(body.publicKey) });
 }
@@ -75,7 +74,7 @@ export async function disablePush(): Promise<void> {
 
 /** On app start: a browser can drop or rotate a subscription, so make sure there is one and the server has its current keys. */
 export async function renewPush(): Promise<void> {
-  if (!featureNow('webPush') || !pushOn()) return;
+  if (!pushOn()) return;
   try {
     const sub = (await currentSubscription()) ?? await subscribeBrowser();
     if (sub !== 'unavailable') await registered(sub);
@@ -106,7 +105,7 @@ export function schedulePush(kind: PushKind, key: string, at: number, body: stri
 /** Takes the ask back. With a key, only that ask (so a late cancel of an old timer cannot undo a newer one). */
 export function cancelPush(kind: PushKind, key?: string): void {
   // Not gated on the kind's box: unticking the box has to be able to take back what was already asked for.
-  if (!featureNow('webPush') || !pushOn() || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+  if (!pushOn() || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
   if (key) covered.delete(coverKey(kind, key));
   chain = chain.then(async () => {
     if (key) covered.delete(coverKey(kind, key)); // again: the schedule ahead of this in the line may have just added it
