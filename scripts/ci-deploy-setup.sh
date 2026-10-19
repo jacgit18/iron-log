@@ -51,6 +51,15 @@ for role in roles/run.developer roles/cloudbuild.builds.editor roles/serviceusag
 done
 # Deploying a revision that runs as the app's own account means acting as it.
 gc iam service-accounts add-iam-policy-binding "$RUNTIME_SA" --member "serviceAccount:$SA" --role roles/iam.serviceAccountUser >/dev/null
+# Staging runs as its own account (made by `ENVIRONMENT=staging scripts/deploy-cloud-run.sh setup`, ADR 058): the deployer may act as it
+# too. Run this script again after that setup; until the account exists this step is skipped.
+STAGING_RUNTIME_SA="iron-log-staging-run@${PROJECT_ID}.iam.gserviceaccount.com"
+if gc iam service-accounts describe "$STAGING_RUNTIME_SA" >/dev/null 2>&1; then
+  gc iam service-accounts add-iam-policy-binding "$STAGING_RUNTIME_SA" --member "serviceAccount:$SA" --role roles/iam.serviceAccountUser >/dev/null
+  echo "The deployer may act as the staging runtime account."
+else
+  echo "Staging runtime account not found yet: after \`ENVIRONMENT=staging scripts/deploy-cloud-run.sh setup\`, run this script again."
+fi
 # Uploading the source for a build: this bucket only.
 gc storage buckets add-iam-policy-binding "gs://${PROJECT_ID}_cloudbuild" --member "serviceAccount:$SA" --role roles/storage.admin >/dev/null
 # `gcloud builds submit` lists the project's buckets to check the upload bucket is the project's own. Names only; no object access.
@@ -72,6 +81,10 @@ Done. In GitHub (Settings -> Secrets and variables -> Actions -> Variables) add 
   gh variable set GCP_PROJECT_ID --repo ${GITHUB_REPO} --body '${PROJECT_ID}'
   gh variable set GCP_WORKLOAD_IDENTITY_PROVIDER --repo ${GITHUB_REPO} --body 'projects/${NUMBER}/locations/global/workloadIdentityPools/${POOL}/providers/${PROVIDER}'
   gh variable set GCP_DEPLOYER_SERVICE_ACCOUNT --repo ${GITHUB_REPO} --body '${SA}'
+
+Staging (ADR 058) also needs a GitHub environment named staging with one secret, STAGING_DATABASE_URL: the owner (unpooled) URL of the
+staging Neon branch, after scripts/staging-db.mjs clear --apply has marked it. The first deploy of the staging service is made by hand
+(ENVIRONMENT=staging scripts/deploy-cloud-run.sh deploy): making it public needs a permission the CI deployer deliberately lacks.
 
 Then the next merge to main deploys itself once its tests pass. Optional: Settings -> Environments -> production -> Required reviewers
 to approve each deploy by hand.
