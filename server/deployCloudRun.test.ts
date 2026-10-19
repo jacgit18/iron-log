@@ -28,7 +28,8 @@ case "$*" in
   # IMAGE_ERROR=1: the registry could not be asked (for example permission denied), unlike an image that is simply not there.
   *"artifacts docker images describe"*) [ "$IMAGE_EXISTS" = 1 ] && exit 0; [ "$IMAGE_ERROR" = 1 ] && { echo "ERROR: PERMISSION_DENIED: no access" >&2; exit 1; }; echo "ERROR: NOT_FOUND: Requested entity was not found." >&2; exit 1;;
   # PROD_CLIENT_ID: the Google client id production has stored.
-  *"versions access latest --secret iron-log-google-client-id"*) echo "$PROD_CLIENT_ID";;
+  # PROD_CLIENT_UNREADABLE=1: the secret exists but this account cannot read its value.
+  *"versions access latest --secret iron-log-google-client-id"*) [ "$PROD_CLIENT_UNREADABLE" = 1 ] && exit 1; echo "$PROD_CLIENT_ID";;
   *"secrets describe iron-log-vapid"*) [ "$PUSH_SECRET" = 1 ] && exit 0; exit 1;;
   # HAS_PII_KEY=1: the database encryption key is already stored (separate again, so the Resend and Push cases stay about themselves).
   *"secrets describe iron-log-pii"*) [ "$HAS_PII_KEY" = 1 ] && exit 0; exit 1;;
@@ -396,6 +397,14 @@ exit 0
       expect(lines.some(l => l.includes('iron-log-resend') || l.includes('iron-log-vapid'))).toBe(false);
       expect(lines.some(l => l.includes('add-iam-policy-binding iron-log-pii-key') && l.includes('iron-log-staging-run@p.iam.gserviceaccount.com'))).toBe(true);
       expect(lines.some(l => l.includes('iron-log-staging-') && l.includes('iron-log-run@p.iam.gserviceaccount.com'))).toBe(false);
+    });
+
+    it('`secrets` refuses staging when production\'s Google client id exists but cannot be read (fails closed)', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['secrets'], { IRON_LOG_ENV: 'staging', ...stagingDb, HAS_PII_KEY: '1', SECRETS_READABLE: '1', PROD_CLIENT_UNREADABLE: '1' });
+      expect(out.status).toBe(1);
+      expect(out.stderr).toContain('Cannot read iron-log-google-client-id');
+      expect(recorded().some(l => l.includes('versions add'))).toBe(false);
     });
 
     it('`secrets` stops when production has no database key yet', async () => {

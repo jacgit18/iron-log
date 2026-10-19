@@ -144,9 +144,12 @@ cmd_secrets() {
     postgres://${DB_ROLE}:*|postgresql://${DB_ROLE}:*) ;;
     *) echo "APP_DATABASE_URL must log in as ${DB_ROLE}, the restricted role for ${IRON_LOG_ENV}. The owner would bypass row-level security." >&2; exit 1;;
   esac
-  if [ "$IRON_LOG_ENV" = staging ] && secret_exists iron-log-google-client-id \
-     && [ "$(gc secrets versions access latest --secret iron-log-google-client-id 2>/dev/null || true)" = "$GOOGLE_CLIENT_ID" ]; then
-    echo "GOOGLE_CLIENT_ID is production's. Staging needs its own OAuth client (ADR 057)." >&2; exit 1
+  # Fails closed: if production's client id exists but cannot be read, staging is not told it is fine.
+  if [ "$IRON_LOG_ENV" = staging ] && secret_exists iron-log-google-client-id; then
+    local prod_client_id
+    prod_client_id="$(gc secrets versions access latest --secret iron-log-google-client-id)" \
+      || { echo "Cannot read iron-log-google-client-id to check that staging uses its own OAuth client (ADR 057)." >&2; exit 1; }
+    if [ "$prod_client_id" = "$GOOGLE_CLIENT_ID" ]; then echo "GOOGLE_CLIENT_ID is production's. Staging needs its own OAuth client (ADR 057)." >&2; exit 1; fi
   fi
   echo "Storing secrets in project $PROJECT_ID:"
   printf '%s' "$APP_DATABASE_URL" | put_secret "${SECRET_PREFIX}-app-database-url"
