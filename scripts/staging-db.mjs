@@ -10,9 +10,12 @@
 //                               the cleaning after a copy (or a reset from the parent). Without --apply: prints what it would clear and
 //                               changes nothing. With --apply, in one transaction: deletes the sessions, one-time codes and push
 //                               subscriptions, blanks the stored Google tokens (the account rows stay), and sets the staging mark.
-//                               --host must be the host in the URL: typed on purpose, so a URL copied from the wrong place is caught.
+//                               --host must be the host in the URL (typed on purpose, to catch a mistyped one). It also refuses when that host is
+//                               production's: PROD_DATABASE_URL, or else DATABASE_URL_UNPOOLED from .env, as scripts/prod-db.sh reads it. With
+//                               neither set it refuses too, because it could not tell. `check` needs neither.
 //
 // The URL is never printed. Run `clear` by hand each time staging is made or reset from production (the mark is lost on a reset).
+import { existsSync, readFileSync } from 'node:fs';
 import pg from 'pg';
 
 const MARKER = 'iron-log staging';
@@ -49,9 +52,30 @@ async function check(client) {
   return 1;
 }
 
-async function clear(client, url, host, apply) {
+// Neon's pooled address is the same compute as the direct one with "-pooler" in the first label.
+const sameHost = h => h.replace(/-pooler(?=\.)/, '');
+
+// Production's owner URL, from the same two places scripts/prod-db.sh reads; null when neither is there.
+function productionUrl() {
+  if (process.env.PROD_DATABASE_URL) return process.env.PROD_DATABASE_URL;
+  if (!existsSync('.env')) return null;
+  const line = readFileSync('.env', 'utf8').split('\n').find(l => l.startsWith('DATABASE_URL_UNPOOLED='));
+  return line ? line.slice(line.indexOf('=') + 1).replace(/^["']|["']$/g, '') : null;
+}
+
+// Run before any connection is made, so a refused URL is never even contacted.
+function guardClear(url, host) {
   const actual = new URL(url).hostname;
   if (actual !== host) fail(`--host ${host} does not match the host in STAGING_DATABASE_URL (${actual}). Nothing was changed.`);
+  // The typed host only catches a typo; this is what stops the production URL being used here, which would sign everyone out and mark
+  // production as staging.
+  const prod = productionUrl();
+  if (!prod) fail('Cannot tell which database is production: set PROD_DATABASE_URL (or DATABASE_URL_UNPOOLED in .env) so this can refuse it. Nothing was changed.');
+  if (sameHost(new URL(prod).hostname) === sameHost(actual)) fail(`${actual} is production's database. Nothing was changed.`);
+}
+
+async function clear(client, url, apply) {
+  const actual = new URL(url).hostname;
   console.log(`database host: ${actual}`);
   for (const step of STEPS) console.log(`${apply ? 'clearing' : 'would clear'}: ${(await client.query(step.count)).rows[0].n} ${step.what}`);
   if (!apply) { console.log('Dry run. Add --apply to clear these and mark the database as staging.'); return 0; }
@@ -75,10 +99,11 @@ if (cmd !== 'check' && cmd !== 'clear') fail('Usage: staging-db.mjs check | clea
 const hostIndex = args.indexOf('--host');
 const host = hostIndex >= 0 ? args[hostIndex + 1] : undefined;
 if (cmd === 'clear' && !host) fail('clear needs --host <the host in STAGING_DATABASE_URL>.');
+if (cmd === 'clear') guardClear(url, host);
 const client = await connect(url);
 let code = 2;
 try {
-  code = cmd === 'check' ? await check(client) : await clear(client, url, host, args.includes('--apply'));
+  code = cmd === 'check' ? await check(client) : await clear(client, url, args.includes('--apply'));
 } finally {
   await client.end().catch(() => {});
 }

@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { sql, type Kysely } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -7,11 +8,14 @@ import { startTestDatabase } from './test/postgres.ts';
 
 // scripts/staging-db.mjs against a real Postgres with the real migrations (ADRs 055 and 056): the cleaning after staging is copied from
 // production, and the mark the staging deploy checks before it migrates anything.
-const run = (url: string, ...args: string[]) =>
+// PROD_DATABASE_URL names some other database: `clear` must know which one is production to refuse it. `env` overrides it per test.
+const OTHER_PRODUCTION = 'postgres://owner:pw@ep-prod-1.example.com/neondb';
+const runWith = (env: Record<string, string>, cwd?: string) => (url: string, ...args: string[]) =>
   new Promise<{ status: number; stdout: string; stderr: string }>(done => {
-    execFile('node', [resolve('scripts/staging-db.mjs'), ...args], { env: { ...process.env, STAGING_DATABASE_URL: url }, encoding: 'utf8' }, (err, stdout, stderr) =>
+    execFile('node', [resolve('scripts/staging-db.mjs'), ...args], { cwd, env: { ...process.env, PROD_DATABASE_URL: OTHER_PRODUCTION, STAGING_DATABASE_URL: url, ...env }, encoding: 'utf8' }, (err, stdout, stderr) =>
       done({ status: err ? Number((err as { code?: number }).code ?? 1) : 0, stdout, stderr }));
   });
+const run = runWith({});
 
 let db: Kysely<DB>;
 let url: string;
@@ -68,6 +72,24 @@ describe('staging-db.mjs', () => {
     expect(account).toEqual([{ accessToken: null, refreshToken: null, idToken: null, password: null }]);
     expect(await count('auth."user"')).toBe(1);
     expect((await run(url, 'check')).status).toBe(0);
+  });
+
+  it('clear refuses production\'s own address (also its pooled form), and refuses when it cannot tell which one is production', async () => {
+    const host = new URL(url).hostname;
+    const asProd = (h: string) => `postgres://owner:pw@${h}/neondb`;
+    const same = await runWith({ PROD_DATABASE_URL: asProd(host) })(url, 'clear', '--host', host, '--apply');
+    expect(same.status).toBe(2);
+    expect(same.stderr).toContain("production's database");
+    const pooled = new URL(url);
+    pooled.hostname = 'ep-cool-123-pooler.us-east-2.aws.neon.tech';
+    const viaPooler = await runWith({ PROD_DATABASE_URL: asProd('ep-cool-123.us-east-2.aws.neon.tech') })(pooled.href, 'clear', '--host', pooled.hostname);
+    expect(viaPooler.status).toBe(2);
+    expect(viaPooler.stderr).toContain("production's database");
+    // An empty folder: no .env there to name production either (a developer's own checkout has one).
+    const unknown = await runWith({ PROD_DATABASE_URL: '' }, tmpdir())(url, 'clear', '--host', host, '--apply');
+    expect(unknown.status).toBe(2);
+    expect(unknown.stderr).toContain('Cannot tell which database is production');
+    expect(await count('auth."session"')).toBe(0);
   });
 
   it('never prints the connection string', async () => {
