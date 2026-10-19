@@ -24,6 +24,8 @@ case "$*" in
   *"tasks queues describe"*|*"service-accounts describe"*) [ "$SETUP_EXISTS" = 1 ] && exit 0; exit 1;;
   # What the account may do is set by the test: SECRETS_READABLE=1 is your machine (it can see a secret exists), unset is the CI deployer.
   # PUSH_SECRET=1: the Web Push keys are already stored (they are separate from SECRETS_READABLE so the Resend cases above stay about Resend).
+  # IMAGE_EXISTS=1: an image for this commit is already in the registry (staging built it).
+  *"artifacts docker images describe"*) [ "$IMAGE_EXISTS" = 1 ] && exit 0; exit 1;;
   *"secrets describe iron-log-vapid"*) [ "$PUSH_SECRET" = 1 ] && exit 0; exit 1;;
   # HAS_PII_KEY=1: the database encryption key is already stored (separate again, so the Resend and Push cases stay about themselves).
   *"secrets describe iron-log-pii"*) [ "$HAS_PII_KEY" = 1 ] && exit 0; exit 1;;
@@ -68,6 +70,21 @@ exit 0
     expect(deploy).toContain('--tag candidate');
     expect(deploy).toMatch(/COMMIT_SHA=[0-9a-f]{7,}/);
     expect(recorded().some(l => l.includes('update-traffic'))).toBe(false);
+  });
+
+  it('builds the image, unless one for this commit already exists (staging built it): then it reuses it, and FORCE_BUILD builds again (ADR 058)', async () => {
+    writeFileSync(calls, '');
+    expect((await run(['candidate'])).status).toBe(0);
+    expect(recorded().some(l => l.includes('builds submit'))).toBe(true);
+    writeFileSync(calls, '');
+    const reused = await run(['candidate'], { IMAGE_EXISTS: '1' });
+    expect(reused.status).toBe(0);
+    expect(reused.stdout).toContain('reusing it');
+    expect(recorded().some(l => l.includes('builds submit'))).toBe(false);
+    expect(recorded().some(l => l.includes('run deploy'))).toBe(true);
+    writeFileSync(calls, '');
+    expect((await run(['candidate'], { IMAGE_EXISTS: '1', FORCE_BUILD: '1' })).status).toBe(0);
+    expect(recorded().some(l => l.includes('builds submit'))).toBe(true);
   });
 
   it('promote moves all traffic to the tag, then removes the tag', async () => {

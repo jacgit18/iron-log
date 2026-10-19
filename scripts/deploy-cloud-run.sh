@@ -205,6 +205,12 @@ build_image() {
   if [ -n "$(git status --porcelain)" ]; then echo "The working tree has uncommitted changes; the image is built from the files on disk, not the commit. Commit or stash first." >&2; exit 1; fi
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/app:${tag}"
   url="$(service_url)"
+  # The same commit is one image for both environments (it holds no environment-specific value, ADR 058): when staging has already built it,
+  # production deploys that exact image. FORCE_BUILD=1 builds it again.
+  if [ "${FORCE_BUILD:-}" != 1 ] && gc artifacts docker images describe "$image" >/dev/null 2>&1; then
+    echo "Image $image already exists (built for this commit); reusing it."
+    return 0
+  fi
   echo "Building $image (version $version) ..."
   # Build as the small build-only account (made by ci-deploy-setup.sh). CI names it in BUILD_SA, because the deployer cannot look
   # accounts up; on your machine it is used when it exists, otherwise the build runs as the project's default account.
