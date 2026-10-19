@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import type { Server } from 'node:http';
+import { request, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { Kysely } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -18,6 +18,16 @@ const SECRET = randomBytes(32).toString('base64');
 const GOOGLE = { clientId: 'test-client.apps.googleusercontent.com', clientSecret: 'test-client-secret' };
 const BASE = 'http://localhost:3999';
 const running: { close: () => Promise<void> }[] = [];
+
+// fetch resolves `/./` and `/x/../` on the client, so a dot-segment form would never reach the server; node:http sends the path as written.
+function rawPostStatus(base: string, path: string, body: unknown): Promise<number> {
+  const { hostname, port } = new URL(base);
+  return new Promise((resolve, reject) => {
+    const req = request({ hostname, port, path, method: 'POST', headers: { 'content-type': 'application/json' } }, res => { res.resume(); resolve(res.statusCode ?? 0); });
+    req.on('error', reject);
+    req.end(JSON.stringify(body));
+  });
+}
 
 async function serve(over: Partial<AuthConfig> = {}) {
   const auth = createAuth({ baseURL: BASE, secret: SECRET, databaseUrl: url, google: GOOGLE, sendCode: async () => undefined, ...over }, 'test');
@@ -58,6 +68,15 @@ describe('routes Better Auth mounts but the app never calls', () => {
     expect(targets.length).toBe(disabled.size);
     expect(disabled.has('/email-otp/check-verification-otp')).toBe(true);
     for (const e of targets) expect((await send(base, e)).status, e.path).toBe(404);
+  });
+
+  it('the non-atomic attempt counter route stays unreachable through trailing-slash, repeated-slash, dot-segment and query forms', async () => {
+    const { base } = await serve();
+    const route = '/email-otp/check-verification-otp';
+    const forms = [`/api/auth${route}`, `/api/auth${route}/`, `/api/auth${route}//`, `/api/auth/${route}`, `/api/auth${route.replace('otp/check', 'otp//check')}`, `/api/auth/email-otp/./check-verification-otp`, `/api/auth/x/../email-otp/check-verification-otp`, `/api/auth${route}?x=1`, `/API/AUTH${route}`, `/api/auth/email-otp/check%2Dverification-otp`];
+    for (const path of forms) {
+      expect(await rawPostStatus(base, path, { email: 'lifter@example.com', otp: '123456' }), path).toBe(404); // a form that reached the handler would answer 400 or 200
+    }
   });
 
   it('the routes the app uses are untouched', async () => {
