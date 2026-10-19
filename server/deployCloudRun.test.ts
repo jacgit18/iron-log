@@ -25,7 +25,10 @@ case "$*" in
   # What the account may do is set by the test: SECRETS_READABLE=1 is your machine (it can see a secret exists), unset is the CI deployer.
   # PUSH_SECRET=1: the Web Push keys are already stored (they are separate from SECRETS_READABLE so the Resend cases above stay about Resend).
   # IMAGE_EXISTS=1: an image for this commit is already in the registry (staging built it).
-  *"artifacts docker images describe"*) [ "$IMAGE_EXISTS" = 1 ] && exit 0; exit 1;;
+  # IMAGE_ERROR=1: the registry could not be asked (for example permission denied), unlike an image that is simply not there.
+  *"artifacts docker images describe"*) [ "$IMAGE_EXISTS" = 1 ] && exit 0; [ "$IMAGE_ERROR" = 1 ] && { echo "ERROR: PERMISSION_DENIED: no access" >&2; exit 1; }; echo "ERROR: NOT_FOUND: Requested entity was not found." >&2; exit 1;;
+  # PROD_CLIENT_ID: the Google client id production has stored.
+  *"versions access latest --secret iron-log-google-client-id"*) echo "$PROD_CLIENT_ID";;
   *"secrets describe iron-log-vapid"*) [ "$PUSH_SECRET" = 1 ] && exit 0; exit 1;;
   # HAS_PII_KEY=1: the database encryption key is already stored (separate again, so the Resend and Push cases stay about themselves).
   *"secrets describe iron-log-pii"*) [ "$HAS_PII_KEY" = 1 ] && exit 0; exit 1;;
@@ -85,6 +88,17 @@ exit 0
     writeFileSync(calls, '');
     expect((await run(['candidate'], { IMAGE_EXISTS: '1', FORCE_BUILD: '1' })).status).toBe(0);
     expect(recorded().some(l => l.includes('builds submit'))).toBe(true);
+  });
+
+  it('says so when it could not ask the registry whether the image exists, instead of silently building a different one', async () => {
+    writeFileSync(calls, '');
+    const out = await run(['candidate'], { IMAGE_ERROR: '1' });
+    expect(out.status).toBe(0);
+    expect(out.stderr).toContain('Could not check whether');
+    expect(out.stderr).toContain('PERMISSION_DENIED');
+    expect(recorded().some(l => l.includes('builds submit'))).toBe(true);
+    writeFileSync(calls, '');
+    expect((await run(['candidate'])).stderr).not.toContain('Could not check');
   });
 
   it('promote moves all traffic to the tag, then removes the tag', async () => {
@@ -301,15 +315,15 @@ exit 0
     });
   });
 
-  // ENVIRONMENT=staging (ADRs 055 to 058): the same script deploys iron-log-staging with its own account and secrets, reuses production's
+  // IRON_LOG_ENV=staging (ADRs 055 to 058): the same script deploys iron-log-staging with its own account and secrets, reuses production's
   // database key, and can never turn on email or push, because staging holds a copy of production's data.
-  describe('ENVIRONMENT=staging', () => {
+  describe('IRON_LOG_ENV=staging', () => {
     const secretsOf = (cmd: string) => /--set-secrets (\S+)/.exec(recorded().find(l => l.includes(cmd))!)![1]!.split(',');
     const stagingDb = { APP_DATABASE_URL: 'postgres://ironlog_staging:pw@db.example.com/x', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'gs' };
 
     it('deploys the staging service as its own runtime account with iron-log-staging-* secrets', async () => {
       writeFileSync(calls, '');
-      const out = await run(['candidate'], { ENVIRONMENT: 'staging' });
+      const out = await run(['candidate'], { IRON_LOG_ENV: 'staging' });
       expect(out.status).toBe(0);
       const deploy = recorded().find(l => l.includes('run deploy'))!;
       expect(deploy).toContain('run deploy iron-log-staging ');
@@ -325,13 +339,13 @@ exit 0
 
     it("always passes production's database key, even from a deploy that cannot see the secret exists (ADR 057)", async () => {
       writeFileSync(calls, '');
-      expect((await run(['candidate'], { ENVIRONMENT: 'staging' })).status).toBe(0);
+      expect((await run(['candidate'], { IRON_LOG_ENV: 'staging' })).status).toBe(0);
       expect(secretsOf('run deploy')).toContain('PII_ENCRYPTION_KEY=iron-log-pii-key:latest');
     });
 
     it('never passes the Resend or Web Push keys, even when they exist and the live service has them (ADR 056)', async () => {
       writeFileSync(calls, '');
-      const out = await run(['candidate'], { ENVIRONMENT: 'staging', SECRETS_READABLE: '1', PUSH_SECRET: '1', LIVE_RESEND: '1', LIVE_PUSH: '1' });
+      const out = await run(['candidate'], { IRON_LOG_ENV: 'staging', SECRETS_READABLE: '1', PUSH_SECRET: '1', LIVE_RESEND: '1', LIVE_PUSH: '1' });
       expect(out.status).toBe(0);
       const secrets = secretsOf('run deploy');
       expect(secrets.some(x => x.startsWith('RESEND_API_KEY'))).toBe(false);
@@ -341,23 +355,39 @@ exit 0
 
     it('refuses a service name that is not a staging one, so staging settings cannot land on production', async () => {
       writeFileSync(calls, '');
-      const out = await run(['candidate'], { ENVIRONMENT: 'staging', SERVICE: 'iron-log' });
+      const out = await run(['candidate'], { IRON_LOG_ENV: 'staging', SERVICE: 'iron-log' });
       expect(out.status).toBe(2);
       expect(recorded().some(l => l.includes('run deploy'))).toBe(false);
     });
 
     it('refuses an unknown environment', async () => {
       writeFileSync(calls, '');
-      expect((await run(['candidate'], { ENVIRONMENT: 'qa' })).status).toBe(2);
+      expect((await run(['candidate'], { IRON_LOG_ENV: 'qa' })).status).toBe(2);
+    });
+
+    it('production settings cannot be sent to a staging service either', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { SERVICE: 'iron-log-staging' });
+      expect(out.status).toBe(2);
+      expect(out.stderr).toContain('IRON_LOG_ENV=staging');
+      expect(recorded().some(l => l.includes('run deploy'))).toBe(false);
+    });
+
+    it('`secrets` refuses production\'s Google client for staging (ADR 057)', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['secrets'], { IRON_LOG_ENV: 'staging', ...stagingDb, HAS_PII_KEY: '1', SECRETS_READABLE: '1', PROD_CLIENT_ID: 'id' });
+      expect(out.status).toBe(1);
+      expect(out.stderr).toContain("production's");
+      expect(recorded().some(l => l.includes('versions add'))).toBe(false);
     });
 
     it('`secrets` takes the staging login only, stores iron-log-staging-* names, makes no key of its own, and lets the staging account read production\'s', async () => {
       writeFileSync(calls, '');
-      const wrongRole = await run(['secrets'], { ENVIRONMENT: 'staging', ...stagingDb, APP_DATABASE_URL: 'postgres://ironlog_app:pw@db.example.com/x', HAS_PII_KEY: '1' });
+      const wrongRole = await run(['secrets'], { IRON_LOG_ENV: 'staging', ...stagingDb, APP_DATABASE_URL: 'postgres://ironlog_app:pw@db.example.com/x', HAS_PII_KEY: '1' });
       expect(wrongRole.status).toBe(1);
       expect(recorded().some(l => l.includes('versions add'))).toBe(false);
       writeFileSync(calls, '');
-      const out = await run(['secrets'], { ENVIRONMENT: 'staging', ...stagingDb, HAS_PII_KEY: '1', RESEND_API_KEY: 'r', VAPID_SUBJECT: 'mailto:a@b.co' });
+      const out = await run(['secrets'], { IRON_LOG_ENV: 'staging', ...stagingDb, HAS_PII_KEY: '1', RESEND_API_KEY: 'r', VAPID_SUBJECT: 'mailto:a@b.co' });
       expect(out.status).toBe(0);
       const lines = recorded();
       expect(lines.some(l => l.includes('secrets create iron-log-staging-app-database-url'))).toBe(true);
@@ -370,7 +400,7 @@ exit 0
 
     it('`secrets` stops when production has no database key yet', async () => {
       writeFileSync(calls, '');
-      const out = await run(['secrets'], { ENVIRONMENT: 'staging', ...stagingDb });
+      const out = await run(['secrets'], { IRON_LOG_ENV: 'staging', ...stagingDb });
       expect(out.status).toBe(1);
       expect(out.stderr).toContain('iron-log-pii-key');
     });

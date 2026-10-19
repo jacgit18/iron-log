@@ -64,7 +64,7 @@ jobs:
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: us-central1
-      ENVIRONMENT: staging
+      IRON_LOG_ENV: staging
       SERVICE: iron-log-staging
     steps:
       - uses: actions/checkout@v7
@@ -97,6 +97,16 @@ jobs:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: npx dbmate --no-dump-schema --migrations-dir db/migrations up
 
+      # The revision that has the traffic now, so a bad deploy can be put back. The first staging deploy is made by hand (runbook section 21),
+      # so the service exists by the time this runs.
+      - name: What is live on staging now
+        id: live
+        run: |
+          revision="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json \
+            | python3 -c 'import json,sys; t=json.load(sys.stdin)["status"]["traffic"]; print(max(t, key=lambda x: x.get("percent", 0))["revisionName"])')"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "Live on staging: $revision"
+
       - name: Build and deploy the staging revision with no traffic
         id: candidate
         env:
@@ -118,7 +128,11 @@ jobs:
       - name: Check the live staging service
         run: |
           url="https://${SERVICE}-$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)').${REGION}.run.app"
-          scripts/ci-deploy.sh smoke "$url"
+          if ! scripts/ci-deploy.sh smoke "$url"; then
+            echo "::error title=The live staging service failed its check::Putting staging back on ${{ steps.live.outputs.revision }}. Production will not deploy."
+            gcloud run services update-traffic "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --to-revisions "${{ steps.live.outputs.revision }}=100"
+            exit 1
+          fi
           {
             echo "### Staging passed"
             echo "Commit \`$(git rev-parse --short HEAD)\`: migrations applied to the staging database, the new revision passed its check with no traffic, and the live staging service passed its check at $url."

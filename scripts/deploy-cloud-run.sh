@@ -18,10 +18,10 @@
 #   discard   remove the candidate tag (after a failed check; the revision never had traffic)
 #   restore   send traffic to the latest revision again (after a rollback pinned it to an older one)
 #
-# ENVIRONMENT=staging (ADRs 055 to 058) runs every command above against the staging service instead: service iron-log-staging, runtime
+# IRON_LOG_ENV=staging (ADRs 055 to 058) runs every command above against the staging service instead: service iron-log-staging, runtime
 # account iron-log-staging-run, secrets named iron-log-staging-*. It reuses production's database encryption key (ADR 057) and always
 # leaves the email sign-in code and Web Push off, so a copy of production's data can never email or push a real person. The default is
-# ENVIRONMENT=production, which behaves as before. SERVICE and RUNTIME_SA can still be overridden.
+# IRON_LOG_ENV=production, which behaves as before. SERVICE and RUNTIME_SA can still be overridden.
 #
 # It never touches a database: migrations are run by hand (docs: deploy-runbook.md). It sets max-instances=1 and min-instances=0,
 # so spend stays at the free tier, and it needs the budget alert from the runbook in place before the first deploy.
@@ -30,18 +30,20 @@ set -euo pipefail
 PROJECT_ID="${PROJECT_ID:?Set PROJECT_ID, for example PROJECT_ID=iron-log}"
 REGION="${REGION:-us-central1}"   # a Cloud Run free-tier region
 REPO="${REPO:-iron-log}"
-ENVIRONMENT="${ENVIRONMENT:-production}"
-case "$ENVIRONMENT" in
+IRON_LOG_ENV="${IRON_LOG_ENV:-production}"
+case "$IRON_LOG_ENV" in
   production)
     SECRET_PREFIX="iron-log"; DB_ROLE="ironlog_app"
-    SERVICE="${SERVICE:-iron-log}"; RUNTIME_SA="${RUNTIME_SA:-iron-log-run}";;
+    SERVICE="${SERVICE:-iron-log}"; RUNTIME_SA="${RUNTIME_SA:-iron-log-run}"
+    # Production secrets on the staging service would point it at the production database.
+    case "$SERVICE" in iron-log-staging*) echo "A staging service ('$SERVICE') needs IRON_LOG_ENV=staging; production secrets must not go to it." >&2; exit 2;; esac;;
   staging)
     SECRET_PREFIX="iron-log-staging"; DB_ROLE="ironlog_staging"
     SERVICE="${SERVICE:-iron-log-staging}"; RUNTIME_SA="${RUNTIME_SA:-iron-log-staging-run}"
     # Staging holds a copy of production's data (ADR 056): no real email and no real push, whatever secrets exist in the project.
     RESEND_OFF=1; PUSH_OFF=1
-    case "$SERVICE" in iron-log-staging*) ;; *) echo "ENVIRONMENT=staging must deploy a service named iron-log-staging*, not '$SERVICE'." >&2; exit 2;; esac;;
-  *) echo "ENVIRONMENT must be production or staging, not '$ENVIRONMENT'." >&2; exit 2;;
+    case "$SERVICE" in iron-log-staging*) ;; *) echo "IRON_LOG_ENV=staging must deploy a service named iron-log-staging*, not '$SERVICE'." >&2; exit 2;; esac;;
+  *) echo "IRON_LOG_ENV must be production or staging, not '$IRON_LOG_ENV'." >&2; exit 2;;
 esac
 
 gc() { gcloud --project "$PROJECT_ID" "$@"; }
@@ -94,7 +96,7 @@ resend_secret_wanted() { secret_wanted "$RESEND_SECRET" RESEND_API_KEY RESEND_OF
 PII_SECRET="iron-log-pii-key"
 pii_secret_wanted() {
   # Staging always passes production's key (ADR 057): its copied rows are sealed with it, and the CI deployer cannot see that the secret exists.
-  if [ "$ENVIRONMENT" = staging ]; then return 0; fi
+  if [ "$IRON_LOG_ENV" = staging ]; then return 0; fi
   secret_wanted "$PII_SECRET" PII_ENCRYPTION_KEY PII_NEVER_OFF
 }
 
@@ -134,14 +136,18 @@ cmd_push_setup() {
 }
 
 cmd_secrets() {
-  : "${APP_DATABASE_URL:?Export APP_DATABASE_URL: the POOLED Neon URL of the ${ENVIRONMENT} branch as ${DB_ROLE} (not the owner)}"
+  : "${APP_DATABASE_URL:?Export APP_DATABASE_URL: the POOLED Neon URL of the ${IRON_LOG_ENV} branch as ${DB_ROLE} (not the owner)}"
   : "${GOOGLE_CLIENT_ID:?Export GOOGLE_CLIENT_ID}"
   : "${GOOGLE_CLIENT_SECRET:?Export GOOGLE_CLIENT_SECRET}"
   case "$APP_DATABASE_URL" in
-    *127.0.0.1*|*localhost*) echo "APP_DATABASE_URL points at this machine. Use the Neon ${ENVIRONMENT} URL." >&2; exit 1;;
+    *127.0.0.1*|*localhost*) echo "APP_DATABASE_URL points at this machine. Use the Neon ${IRON_LOG_ENV} URL." >&2; exit 1;;
     postgres://${DB_ROLE}:*|postgresql://${DB_ROLE}:*) ;;
-    *) echo "APP_DATABASE_URL must log in as ${DB_ROLE}, the restricted role for ${ENVIRONMENT}. The owner would bypass row-level security." >&2; exit 1;;
+    *) echo "APP_DATABASE_URL must log in as ${DB_ROLE}, the restricted role for ${IRON_LOG_ENV}. The owner would bypass row-level security." >&2; exit 1;;
   esac
+  if [ "$IRON_LOG_ENV" = staging ] && secret_exists iron-log-google-client-id \
+     && [ "$(gc secrets versions access latest --secret iron-log-google-client-id 2>/dev/null || true)" = "$GOOGLE_CLIENT_ID" ]; then
+    echo "GOOGLE_CLIENT_ID is production's. Staging needs its own OAuth client (ADR 057)." >&2; exit 1
+  fi
   echo "Storing secrets in project $PROJECT_ID:"
   printf '%s' "$APP_DATABASE_URL" | put_secret "${SECRET_PREFIX}-app-database-url"
   printf '%s' "$GOOGLE_CLIENT_ID" | put_secret "${SECRET_PREFIX}-google-client-id"
@@ -152,7 +158,7 @@ cmd_secrets() {
   # and email unreadable). Made only when asked (PII_KEY_CREATE=1), because the next deploy, CI included, turns encryption on as soon as
   # the secret exists; do that on purpose, after the runbook's backup step (section 20), not as a side effect of changing another secret.
   local pii_names=()
-  if [ "$ENVIRONMENT" = staging ]; then
+  if [ "$IRON_LOG_ENV" = staging ]; then
     # Staging reads production's key (ADR 057); it makes none. Its runtime account is granted read on it below.
     if ! secret_exists "$PII_SECRET"; then echo "$PII_SECRET does not exist yet: make it for production first (PII_KEY_CREATE=1, runbook section 20)." >&2; exit 1; fi
     echo "  $PII_SECRET: production's key, shared with staging (ADR 057)"; pii_names=("$PII_SECRET")
@@ -161,7 +167,7 @@ cmd_secrets() {
   else echo "  $PII_SECRET: not created (export PII_KEY_CREATE=1 to make it; see runbook section 20)"; fi
   # Optional: the Resend key for the emailed sign-in code. Not exporting it leaves the feature off (or as it already is).
   local secret_names=("${SECRET_PREFIX}-app-database-url" "${SECRET_PREFIX}-google-client-id" "${SECRET_PREFIX}-google-client-secret" "${SECRET_PREFIX}-auth-secret" ${pii_names[@]+"${pii_names[@]}"})
-  if [ "$ENVIRONMENT" = staging ]; then
+  if [ "$IRON_LOG_ENV" = staging ]; then
     echo "  Resend and Web Push keys: never stored for staging (it sends no email and no push, ADR 056)"
   elif [ -n "${RESEND_API_KEY:-}" ]; then
     printf '%s' "$RESEND_API_KEY" | put_secret "$RESEND_SECRET"
@@ -171,7 +177,7 @@ cmd_secrets() {
   fi
   # Optional: the Web Push keys. VAPID_SUBJECT (a mailto: address the push services can reach) says to store them. The key pair is made once
   # here and never shown; an existing pair is kept (a new one would orphan every device that already subscribed).
-  if [ "$ENVIRONMENT" = staging ]; then
+  if [ "$IRON_LOG_ENV" = staging ]; then
     :
   elif [ -n "${VAPID_SUBJECT:-}" ]; then
     case "$VAPID_SUBJECT" in mailto:?*@?*|https://?*) ;; *) echo "VAPID_SUBJECT must be a mailto: or https: address." >&2; exit 1;; esac
@@ -207,9 +213,15 @@ build_image() {
   url="$(service_url)"
   # The same commit is one image for both environments (it holds no environment-specific value, ADR 058): when staging has already built it,
   # production deploys that exact image. FORCE_BUILD=1 builds it again.
-  if [ "${FORCE_BUILD:-}" != 1 ] && gc artifacts docker images describe "$image" >/dev/null 2>&1; then
-    echo "Image $image already exists (built for this commit); reusing it."
-    return 0
+  if [ "${FORCE_BUILD:-}" != 1 ]; then
+    local probe
+    if probe="$(gc artifacts docker images describe "$image" 2>&1)"; then
+      echo "Image $image already exists (built for this commit); reusing it."
+      return 0
+    fi
+    # Not built yet is the normal case; any other error (permission, network) means the check could not be made, so say so: the build
+    # that follows may not be the image staging tested.
+    case "$probe" in *NOT_FOUND*|*[Nn]ot\ [Ff]ound*) ;; *) echo "Could not check whether $image exists (${probe%%$'\n'*}); building it." >&2;; esac
   fi
   echo "Building $image (version $version) ..."
   # Build as the small build-only account (made by ci-deploy-setup.sh). CI names it in BUILD_SA, because the deployer cannot look
