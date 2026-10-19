@@ -9,7 +9,10 @@
 //   clear --host <host> [--apply]
 //                               the cleaning after a copy (or a reset from the parent). Without --apply: prints what it would clear and
 //                               changes nothing. With --apply, in one transaction: deletes the sessions, one-time codes and push
-//                               subscriptions, blanks the stored Google tokens (the account rows stay), and sets the staging mark.
+//                               subscriptions, blanks the stored Google tokens (the account rows stay), makes the app's login ironlog_staging a
+//                               member of ironlog_app (every grant and row-level-security policy names ironlog_app, so the staging login has the
+//                               same access and later migrations reach it too), and sets the staging mark. With STAGING_APP_PASSWORD set it also
+//                               gives ironlog_staging that password (the one in the staging APP_DATABASE_URL); the password is never printed.
 //                               --host must be the host in the URL (typed on purpose, to catch a mistyped one). It also refuses when that host is
 //                               production's: PROD_DATABASE_URL, or else DATABASE_URL_UNPOOLED from .env, as scripts/prod-db.sh reads it. With
 //                               neither set it refuses too, because it could not tell. `check` needs neither.
@@ -45,6 +48,20 @@ const STEPS = [
   },
 ];
 
+const APP_ROLE = 'ironlog_staging';
+
+// The staging login: created on this branch only (a role belongs to one Neon branch, so production never sees it), a member of ironlog_app.
+// A reset from production loses it with the rest, which is why `clear` makes it.
+async function applyAppRole(client) {
+  await client.query(`do $$ begin if not exists (select 1 from pg_roles where rolname = '${APP_ROLE}') then create role ${APP_ROLE} login; end if; end $$`);
+  await client.query(`grant ironlog_app to ${APP_ROLE}`);
+  const password = process.env.STAGING_APP_PASSWORD;
+  if (password) {
+    const { rows } = await client.query(`select format('alter role ${APP_ROLE} login password %L', $1::text) as q`, [password]);
+    await client.query(rows[0].q);
+  }
+}
+
 async function check(client) {
   const mark = await readMark(client);
   if (mark === MARKER) { console.log('This database is marked as staging.'); return 0; }
@@ -78,10 +95,12 @@ async function clear(client, url, apply) {
   const actual = new URL(url).hostname;
   console.log(`database host: ${actual}`);
   for (const step of STEPS) console.log(`${apply ? 'clearing' : 'would clear'}: ${(await client.query(step.count)).rows[0].n} ${step.what}`);
+  console.log(`${apply ? 'setting up' : 'would set up'}: login ${APP_ROLE} as a member of ironlog_app${process.env.STAGING_APP_PASSWORD ? ', with the password from STAGING_APP_PASSWORD' : ' (no password: set STAGING_APP_PASSWORD to give it one)'}`);
   if (!apply) { console.log('Dry run. Add --apply to clear these and mark the database as staging.'); return 0; }
   try {
     await client.query('begin');
     for (const step of STEPS) await client.query(step.change);
+    await applyAppRole(client);
     await client.query("do $$ begin execute format('comment on database %I is %L', current_database(), 'iron-log staging'); end $$");
     await client.query('commit');
   } catch (e) {

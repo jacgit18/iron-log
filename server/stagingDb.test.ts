@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { sql, type Kysely } from 'kysely';
+import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { DB } from './db/types.ts';
 import { startTestDatabase } from './test/postgres.ts';
@@ -72,6 +73,31 @@ describe('staging-db.mjs', () => {
     expect(account).toEqual([{ accessToken: null, refreshToken: null, idToken: null, password: null }]);
     expect(await count('auth."user"')).toBe(1);
     expect((await run(url, 'check')).status).toBe(0);
+  });
+
+  it('--apply makes the staging login a member of ironlog_app with the given password, so it has the app\'s access and nothing more', async () => {
+    const host = new URL(url).hostname;
+    const dry = await run(url, 'clear', '--host', host);
+    expect(dry.stdout).toContain('would set up: login ironlog_staging');
+    const out = await runWith({ STAGING_APP_PASSWORD: "p'w d" })(url, 'clear', '--host', host, '--apply');
+    expect(out.status).toBe(0);
+    expect(out.stdout + out.stderr).not.toContain("p'w d");
+    const login = new URL(url);
+    login.username = 'ironlog_staging';
+    login.password = encodeURIComponent("p'w d");
+    const client = new pg.Client({ connectionString: login.href });
+    await client.connect();
+    try {
+      // The app role's grants arrive through membership; row-level security still applies (no app.user_id, so no rows).
+      expect((await client.query('select count(*)::int as n from auth."user"')).rows[0].n).toBe(1);
+      expect((await client.query('select count(*)::int as n from push_subscription')).rows[0].n).toBe(0);
+      await expect(client.query('delete from auth."user"')).resolves.toBeDefined();
+      await expect(client.query('create table nope (x int)')).rejects.toThrow();
+    } finally {
+      await client.end();
+    }
+    // Run again: nothing to make, nothing breaks.
+    expect((await runWith({ STAGING_APP_PASSWORD: "p'w d" })(url, 'clear', '--host', host, '--apply')).status).toBe(0);
   });
 
   it('clear refuses production\'s own address (also its pooled form), and refuses when it cannot tell which one is production', async () => {
