@@ -18,15 +18,33 @@
 #   discard   remove the candidate tag (after a failed check; the revision never had traffic)
 #   restore   send traffic to the latest revision again (after a rollback pinned it to an older one)
 #
+# IRON_LOG_ENV=staging (ADRs 055 to 058) runs every command above against the staging service instead: service iron-log-staging, runtime
+# account iron-log-staging-run, secrets named iron-log-staging-*. It reuses production's database encryption key (ADR 057) and always
+# leaves the email sign-in code and Web Push off, so a copy of production's data can never email or push a real person. The default is
+# IRON_LOG_ENV=production, which behaves as before. SERVICE and RUNTIME_SA can still be overridden.
+#
 # It never touches a database: migrations are run by hand (docs: deploy-runbook.md). It sets max-instances=1 and min-instances=0,
 # so spend stays at the free tier, and it needs the budget alert from the runbook in place before the first deploy.
 set -euo pipefail
 
 PROJECT_ID="${PROJECT_ID:?Set PROJECT_ID, for example PROJECT_ID=iron-log}"
 REGION="${REGION:-us-central1}"   # a Cloud Run free-tier region
-SERVICE="${SERVICE:-iron-log}"
 REPO="${REPO:-iron-log}"
-RUNTIME_SA="${RUNTIME_SA:-iron-log-run}"
+IRON_LOG_ENV="${IRON_LOG_ENV:-production}"
+case "$IRON_LOG_ENV" in
+  production)
+    SECRET_PREFIX="iron-log"; DB_ROLE="ironlog_app"
+    SERVICE="${SERVICE:-iron-log}"; RUNTIME_SA="${RUNTIME_SA:-iron-log-run}"
+    # Production secrets on the staging service would point it at the production database.
+    case "$SERVICE" in iron-log-staging*) echo "A staging service ('$SERVICE') needs IRON_LOG_ENV=staging; production secrets must not go to it." >&2; exit 2;; esac;;
+  staging)
+    SECRET_PREFIX="iron-log-staging"; DB_ROLE="ironlog_staging"
+    SERVICE="${SERVICE:-iron-log-staging}"; RUNTIME_SA="${RUNTIME_SA:-iron-log-staging-run}"
+    # Staging holds a copy of production's data (ADR 056): no real email and no real push, whatever secrets exist in the project.
+    RESEND_OFF=1; PUSH_OFF=1
+    case "$SERVICE" in iron-log-staging*) ;; *) echo "IRON_LOG_ENV=staging must deploy a service named iron-log-staging*, not '$SERVICE'." >&2; exit 2;; esac;;
+  *) echo "IRON_LOG_ENV must be production or staging, not '$IRON_LOG_ENV'." >&2; exit 2;;
+esac
 
 gc() { gcloud --project "$PROJECT_ID" "$@"; }
 project_number() { gc projects describe "$PROJECT_ID" --format='value(projectNumber)'; }
@@ -76,7 +94,11 @@ resend_secret_wanted() { secret_wanted "$RESEND_SECRET" RESEND_API_KEY RESEND_OF
 # The key that seals names and emails in the database (ADR 046). No OFF switch: rows already sealed need it, and the app would write
 # new ones in the clear without it.
 PII_SECRET="iron-log-pii-key"
-pii_secret_wanted() { secret_wanted "$PII_SECRET" PII_ENCRYPTION_KEY PII_NEVER_OFF; }
+pii_secret_wanted() {
+  # Staging always passes production's key (ADR 057): its copied rows are sealed with it, and the CI deployer cannot see that the secret exists.
+  if [ "$IRON_LOG_ENV" = staging ]; then return 0; fi
+  secret_wanted "$PII_SECRET" PII_ENCRYPTION_KEY PII_NEVER_OFF
+}
 
 # Web Push (ADR 044): three secrets (the VAPID pair and the contact address; the public key and the address are not secret, but a CI
 # deploy can only pass what it can name, not read) and a Cloud Tasks queue with an account that signs each task.
@@ -114,30 +136,43 @@ cmd_push_setup() {
 }
 
 cmd_secrets() {
-  : "${APP_DATABASE_URL:?Export APP_DATABASE_URL: the POOLED Neon URL of the production branch as ironlog_app (not the owner)}"
+  : "${APP_DATABASE_URL:?Export APP_DATABASE_URL: the POOLED Neon URL of the ${IRON_LOG_ENV} branch as ${DB_ROLE} (not the owner)}"
   : "${GOOGLE_CLIENT_ID:?Export GOOGLE_CLIENT_ID}"
   : "${GOOGLE_CLIENT_SECRET:?Export GOOGLE_CLIENT_SECRET}"
   case "$APP_DATABASE_URL" in
-    *127.0.0.1*|*localhost*) echo "APP_DATABASE_URL points at this machine. Use the Neon production URL." >&2; exit 1;;
-    postgres://ironlog_app:*|postgresql://ironlog_app:*) ;;
-    *) echo "APP_DATABASE_URL must log in as ironlog_app, the restricted role. The owner would bypass row-level security." >&2; exit 1;;
+    *127.0.0.1*|*localhost*) echo "APP_DATABASE_URL points at this machine. Use the Neon ${IRON_LOG_ENV} URL." >&2; exit 1;;
+    postgres://${DB_ROLE}:*|postgresql://${DB_ROLE}:*) ;;
+    *) echo "APP_DATABASE_URL must log in as ${DB_ROLE}, the restricted role for ${IRON_LOG_ENV}. The owner would bypass row-level security." >&2; exit 1;;
   esac
+  # Fails closed: if production's client id exists but cannot be read, staging is not told it is fine.
+  if [ "$IRON_LOG_ENV" = staging ] && secret_exists iron-log-google-client-id; then
+    local prod_client_id
+    prod_client_id="$(gc secrets versions access latest --secret iron-log-google-client-id)" \
+      || { echo "Cannot read iron-log-google-client-id to check that staging uses its own OAuth client (ADR 057)." >&2; exit 1; }
+    if [ "$prod_client_id" = "$GOOGLE_CLIENT_ID" ]; then echo "GOOGLE_CLIENT_ID is production's. Staging needs its own OAuth client (ADR 057)." >&2; exit 1; fi
+  fi
   echo "Storing secrets in project $PROJECT_ID:"
-  printf '%s' "$APP_DATABASE_URL" | put_secret iron-log-app-database-url
-  printf '%s' "$GOOGLE_CLIENT_ID" | put_secret iron-log-google-client-id
-  printf '%s' "$GOOGLE_CLIENT_SECRET" | put_secret iron-log-google-client-secret
-  # A fresh signing secret for production, made here and never shown. An existing one is kept: changing it signs everyone out.
-  if ! secret_exists iron-log-auth-secret; then openssl rand -base64 48 | tr -d '\n' | put_secret iron-log-auth-secret; else echo "  iron-log-auth-secret: kept"; fi
+  printf '%s' "$APP_DATABASE_URL" | put_secret "${SECRET_PREFIX}-app-database-url"
+  printf '%s' "$GOOGLE_CLIENT_ID" | put_secret "${SECRET_PREFIX}-google-client-id"
+  printf '%s' "$GOOGLE_CLIENT_SECRET" | put_secret "${SECRET_PREFIX}-google-client-secret"
+  # A fresh signing secret, made here and never shown. An existing one is kept: changing it signs everyone out.
+  if ! secret_exists "${SECRET_PREFIX}-auth-secret"; then openssl rand -base64 48 | tr -d '\n' | put_secret "${SECRET_PREFIX}-auth-secret"; else echo "  ${SECRET_PREFIX}-auth-secret: kept"; fi
   # The key that seals names and emails in the database (ADR 046): 32 random bytes, NEVER replaced (a new one would leave every sealed name
   # and email unreadable). Made only when asked (PII_KEY_CREATE=1), because the next deploy, CI included, turns encryption on as soon as
   # the secret exists; do that on purpose, after the runbook's backup step (section 20), not as a side effect of changing another secret.
   local pii_names=()
-  if secret_exists "$PII_SECRET"; then echo "  $PII_SECRET: kept"; pii_names=("$PII_SECRET")
+  if [ "$IRON_LOG_ENV" = staging ]; then
+    # Staging reads production's key (ADR 057); it makes none. Its runtime account is granted read on it below.
+    if ! secret_exists "$PII_SECRET"; then echo "$PII_SECRET does not exist yet: make it for production first (PII_KEY_CREATE=1, runbook section 20)." >&2; exit 1; fi
+    echo "  $PII_SECRET: production's key, shared with staging (ADR 057)"; pii_names=("$PII_SECRET")
+  elif secret_exists "$PII_SECRET"; then echo "  $PII_SECRET: kept"; pii_names=("$PII_SECRET")
   elif [ "${PII_KEY_CREATE:-}" = 1 ]; then openssl rand -base64 32 | tr -d '\n' | put_secret "$PII_SECRET"; pii_names=("$PII_SECRET")
   else echo "  $PII_SECRET: not created (export PII_KEY_CREATE=1 to make it; see runbook section 20)"; fi
   # Optional: the Resend key for the emailed sign-in code. Not exporting it leaves the feature off (or as it already is).
-  local secret_names=(iron-log-app-database-url iron-log-google-client-id iron-log-google-client-secret iron-log-auth-secret ${pii_names[@]+"${pii_names[@]}"})
-  if [ -n "${RESEND_API_KEY:-}" ]; then
+  local secret_names=("${SECRET_PREFIX}-app-database-url" "${SECRET_PREFIX}-google-client-id" "${SECRET_PREFIX}-google-client-secret" "${SECRET_PREFIX}-auth-secret" ${pii_names[@]+"${pii_names[@]}"})
+  if [ "$IRON_LOG_ENV" = staging ]; then
+    echo "  Resend and Web Push keys: never stored for staging (it sends no email and no push, ADR 056)"
+  elif [ -n "${RESEND_API_KEY:-}" ]; then
     printf '%s' "$RESEND_API_KEY" | put_secret "$RESEND_SECRET"
     secret_names+=("$RESEND_SECRET")
   else
@@ -145,7 +180,9 @@ cmd_secrets() {
   fi
   # Optional: the Web Push keys. VAPID_SUBJECT (a mailto: address the push services can reach) says to store them. The key pair is made once
   # here and never shown; an existing pair is kept (a new one would orphan every device that already subscribed).
-  if [ -n "${VAPID_SUBJECT:-}" ]; then
+  if [ "$IRON_LOG_ENV" = staging ]; then
+    :
+  elif [ -n "${VAPID_SUBJECT:-}" ]; then
     case "$VAPID_SUBJECT" in mailto:?*@?*|https://?*) ;; *) echo "VAPID_SUBJECT must be a mailto: or https: address." >&2; exit 1;; esac
     if ! secret_exists "$VAPID_PRIVATE_SECRET"; then
       local keys; keys="$(node "$(dirname "$0")/vapid-keys.mjs")"
@@ -177,6 +214,18 @@ build_image() {
   if [ -n "$(git status --porcelain)" ]; then echo "The working tree has uncommitted changes; the image is built from the files on disk, not the commit. Commit or stash first." >&2; exit 1; fi
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/app:${tag}"
   url="$(service_url)"
+  # The same commit is one image for both environments (it holds no environment-specific value, ADR 058): when staging has already built it,
+  # production deploys that exact image. FORCE_BUILD=1 builds it again.
+  if [ "${FORCE_BUILD:-}" != 1 ]; then
+    local probe
+    if probe="$(gc artifacts docker images describe "$image" 2>&1)"; then
+      echo "Image $image already exists (built for this commit); reusing it."
+      return 0
+    fi
+    # Not built yet is the normal case; any other error (permission, network) means the check could not be made, so say so: the build
+    # that follows may not be the image staging tested.
+    case "$probe" in *NOT_FOUND*|*[Nn]ot\ [Ff]ound*) ;; *) echo "Could not check whether $image exists (${probe%%$'\n'*}); building it." >&2;; esac
+  fi
   echo "Building $image (version $version) ..."
   # Build as the small build-only account (made by ci-deploy-setup.sh). CI names it in BUILD_SA, because the deployer cannot look
   # accounts up; on your machine it is used when it exists, otherwise the build runs as the project's default account.
@@ -191,7 +240,7 @@ deploy_image() {
   # CI deployer (ci-deploy-setup.sh) deliberately does not have.
   local public=()
   gc run services describe "$SERVICE" --region "$REGION" >/dev/null 2>&1 || public=(--allow-unauthenticated)
-  local secrets="APP_DATABASE_URL=iron-log-app-database-url:latest,BETTER_AUTH_SECRET=iron-log-auth-secret:latest,GOOGLE_CLIENT_ID=iron-log-google-client-id:latest,GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest"
+  local secrets="APP_DATABASE_URL=${SECRET_PREFIX}-app-database-url:latest,BETTER_AUTH_SECRET=${SECRET_PREFIX}-auth-secret:latest,GOOGLE_CLIENT_ID=${SECRET_PREFIX}-google-client-id:latest,GOOGLE_CLIENT_SECRET=${SECRET_PREFIX}-google-client-secret:latest"
   if resend_secret_wanted; then secrets+=",RESEND_API_KEY=${RESEND_SECRET}:latest"; echo "Email sign-in code: RESEND_API_KEY is passed to the service."; else echo "Email sign-in code: no RESEND_API_KEY, so the feature stays off${RESEND_OFF:+ (RESEND_OFF=1: any mapping is removed)}."; fi
   if pii_secret_wanted; then secrets+=",PII_ENCRYPTION_KEY=${PII_SECRET}:latest"; echo "Database encryption: PII_ENCRYPTION_KEY is passed to the service."; else echo "Database encryption: no key yet, so names and emails are stored as before."; fi
   # Web Push (ADR 044): the keys as secrets, and where the queue and its signing account are (they are named by project, region and the
