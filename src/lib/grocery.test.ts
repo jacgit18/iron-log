@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, haveOf, onList, parseDollars, shiftMonth, spendByMonth, tally,
+  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, groupTag, haveOf, onList, parseDollars, shiftMonth, spendByMonth, tally,
 } from './grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -83,6 +83,18 @@ describe('groups and totals', () => {
   it('groups by store in the stores’ order, no-store last, leaving empty stores out', () => {
     expect(byStore(g, onList(g, emptyMonth(), true)).map(x => [x.label, x.items.map(i => i.id)])).toEqual([['Veg market', ['kale']], ['Costco', ['rice', 'saffron']], ['Anywhere', ['salt']]]);
     expect(byStore({ ...g, stores: ['Veg market', 'Costco', 'Empty'] }, [g.items[0]]).map(x => x.label)).toEqual(['Veg market']);
+  });
+  it('puts a store shared with other people first, keeps the rest in order, and skips a group with nobody else in it', () => {
+    const items = onList(g, emptyMonth(), true);
+    const home = { id: 'g1', n: 'Home', people: [{ id: 'p1', n: 'Sam' }, { id: 'p2', n: 'Lee' }], stores: ['Costco'] };
+    const out = byStore({ ...g, groups: [home] }, items, true);
+    expect(out.map(x => x.label)).toEqual(['Costco', 'Veg market', 'Anywhere']);
+    expect(out[0]!.group && groupTag(out[0]!.group)).toBe('Home +2');
+    expect(out[1]!.group).toBeUndefined();
+    expect(byStore({ ...g, groups: [{ ...home, people: [] }] }, items, true).map(x => x.label)).toEqual(['Veg market', 'Costco', 'Anywhere']);
+    const off = byStore({ ...g, groups: [home] }, items); // sharing off: the groups in the data change nothing
+    expect(off.map(x => x.label)).toEqual(['Veg market', 'Costco', 'Anywhere']);
+    expect(off.every(x => !x.group)).toBe(true);
   });
   it('splits expected from spent and counts the unpriced', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] };
