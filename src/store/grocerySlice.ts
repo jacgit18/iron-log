@@ -3,7 +3,8 @@ import {
   MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, parseDollars, storeFor,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
-import type { Grocery, GroceryData, GroceryLine, GroceryMonth } from '../types.ts';
+import { groupOfStore } from '../lib/grocerySettle.js';
+import type { Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
 
 // The grocery list is the account's, like the rest of the data (ADR 039, replacing ADR 019's device-only list): it is saved through the
@@ -51,6 +52,20 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     const months = { ...get().groceryMonths };
     if (monthEmpty(m)) delete months[key]; else months[key] = m;
     set({ groceryMonths: months }); saveMonth(key, m);
+  };
+
+  // Before an item's usual split changes to `next`, an earlier month's bought line that has no split of its own gets the one it was counted
+  // with (the old usual, else the store's group), so changing the usual only moves things on from this month and never rewrites what was paid.
+  const pinPastShares = (id: string, next: GroceryShare | null) => {
+    const g = get().grocery; const item = g.items.find(i => i.id === id);
+    if (!item || JSON.stringify(item.share ?? null) === JSON.stringify(next)) return;
+    const now = monthKey(new Date());
+    Object.entries(get().groceryMonths).forEach(([key, m]) => {
+      const raw = m.lines[id];
+      if (key >= now || !raw?.got || raw.share) return;
+      const pin: GroceryShare = item.share ?? { with: (groupOfStore(g, storeFor(g, item, m))?.people ?? []).map(p => p.id) };
+      mutateMonth(key, mm => { mm.lines[id] = { ...mm.lines[id], share: pin }; });
+    });
   };
 
   return {
@@ -349,11 +364,19 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     setGroceryItemShare(id, share) {
       const clean = share === null ? null : cleanShare(share);
       if (share !== null && !clean) return;
+      if (!get().grocery.items.some(i => i.id === id)) return;
+      pinPastShares(id, clean); // an earlier month keeps the split it was bought with
       mutateCatalogue(g => { const it = g.items.find(i => i.id === id); if (!it) return 'That item is gone.'; if (clean) it.share = clean; else delete it.share; return null; });
     },
+    // This month's split for the item. From this month on (not when fixing an older month) it is also the item's usual split, so next month starts
+    // from it; changing it again moves the usual on. Months already bought keep what they had (pinPastShares), and a month that was set by hand keeps its own.
     setGroceryLineShare(month, id, share) {
       const clean = share === null ? null : cleanShare(share);
       if ((share !== null && !clean) || !get().grocery.items.some(i => i.id === id)) return;
+      if (month >= monthKey(new Date())) {
+        pinPastShares(id, clean);
+        mutateCatalogue(g => { const it = g.items.find(i => i.id === id); if (!it) return 'That item is gone.'; if (clean) it.share = clean; else delete it.share; return null; });
+      }
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
         if (clean) l.share = clean; else delete l.share;

@@ -39,7 +39,7 @@ function NumBox({ label, value, onCommit, className }: { label: string; value: s
 
 /* ---------- To get ---------- */
 // One line of the shopping list: the whole row ticks it, and the trailing "2 × $3.49" opens the count and price for this month.
-function GetRow({ g, item, month, mk, future, onGot, open, onOpen, onMove }: { g: GroceryT; item: GroceryItem; month: GroceryMonth; mk: string; future: boolean; onGot: (on: boolean) => void; open: boolean; onOpen: (on: boolean) => void; onMove: (id: string) => void }) {
+function GetRow({ g, item, month, mk, future, carries, onGot, open, onOpen, onMove }: { g: GroceryT; item: GroceryItem; month: GroceryMonth; mk: string; future: boolean; carries: boolean; onGot: (on: boolean) => void; open: boolean; onOpen: (on: boolean) => void; onMove: (id: string) => void }) {
   const s = useAppStore.getState();
   const l = lineOf(item, month); const total = lineCost(l); const w = unitWords(item.unit);
   const moreId = `groc-more-${item.id}`;
@@ -89,7 +89,7 @@ function GetRow({ g, item, month, mk, future, onGot, open, onOpen, onMove }: { g
           )}
           {moveErr && <p className="note gerr" role="alert">{moveErr}</p>}
           {!item.unit && <PriceChips name={item.n} prices={l.prices} onChange={p => s.setGroceryPrices(mk, item.id, p)} />}
-          {split && !l.prices && <SharePicker name={item.n} people={people} parties={partiesFor(g, item, raw)} own={!!raw?.share} onChange={sh => s.setGroceryLineShare(mk, item.id, sh)} />}
+          {split && !l.prices && <SharePicker name={item.n} people={people} parties={partiesFor(g, item, raw)} own={!!raw?.share} hint={carries ? 'Saved as the usual for next month too.' : undefined} onChange={sh => s.setGroceryLineShare(mk, item.id, sh)} />}
           {split && l.prices?.map((c, i) => (
             <div key={i} className="gpackshare"><span>Pack {i + 1}, {money(c)}</span>
               <SharePicker name={`${item.n} pack ${i + 1}`} people={people} parties={partiesFor(g, item, raw, i)} own={!!raw?.packShares?.[i]} onChange={sh => s.setGroceryPackShare(mk, item.id, i, sh)} />
@@ -176,7 +176,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
             </div>
             {split && grp.group && <StoreMoney g={g} month={month} store={grp.store} />}
             {taxRow(grp.store)}
-            <ul className="glist">{gotLast(grp.items, month).map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={off > 0} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; }} />)}</ul>
+            <ul className="glist">{gotLast(grp.items, month).map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={off > 0} carries={off >= 0} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; }} />)}</ul>
           </section>
         );
       })}
@@ -189,7 +189,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
               <div className="gstorehead"><h3>{grp.label}{split && grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3></div>
               {split && grp.group && !todoStores.has(grp.store) && <StoreMoney g={g} month={month} store={grp.store} />}
               {!todoStores.has(grp.store) && taxRow(grp.store)}
-              <ul className="glist">{grp.items.map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={false} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; }} />)}</ul>
+              <ul className="glist">{grp.items.map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={false} carries={off >= 0} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; }} />)}</ul>
             </section>
           ))}
         </details>
