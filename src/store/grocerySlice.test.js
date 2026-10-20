@@ -244,6 +244,39 @@ describe('a month', () => {
     expect(st().groceryMonths[mk].lines.rice).toEqual({ qty: 3 }); // the count it had stays, the mark goes
     expect(st().groceryMonths[mk].lines.oats.got).toBe(true); // bought since: left as it is
   });
+  it('Move to sets where an item was bought for that month only, and its usual store is no choice at all', async () => {
+    const mk = await thisMonth(); const { shiftMonth } = await import('../lib/grocery.js');
+    st().addGroceryItem(form()); st().addGroceryItem(form({ n: 'Rice', store: 'Costco', price: '1.00' }));
+    expect(st().setGroceryLineStore(mk, 'kale', 'Costco')).toBeNull();
+    expect(st().groceryMonths[mk].lines.kale).toEqual({ store: 'Costco' });
+    expect(saved('grocery/' + mk).lines.kale.store).toBe('Costco');
+    expect(st().grocery.items.find(i => i.id === 'kale').store).toBe('Veg market'); // the catalogue is untouched
+    expect(st().groceryMonths[shiftMonth(mk, 1)]).toBeUndefined(); // next month it is back where it was
+    expect(st().setGroceryLineStore(mk, 'kale', '')).toBeNull(); // Anywhere is a choice
+    expect(st().groceryMonths[mk].lines.kale).toEqual({ store: '' });
+    expect(st().setGroceryLineStore(mk, 'kale', 'Veg market')).toBeNull(); // its usual store: the choice goes
+    expect(st().groceryMonths[mk]).toBeUndefined();
+    expect(st().setGroceryLineStore(mk, 'kale', 'Nowhere')).toBe('That store is gone.');
+    expect(st().setGroceryLineStore(mk, 'ghost', 'Costco')).toBe('That item is gone.');
+    expect(st().setGroceryLineStore('2026-13', 'kale', 'Costco')).toBe('That item is gone.');
+  });
+  it('Make it the usual store moves the item for good and drops the month\'s choice, keeping the count', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form()); st().addGroceryItem(form({ n: 'Rice', store: 'Costco', price: '1.00' }));
+    st().setGroceryQty(mk, 'kale', 3); st().setGroceryLineStore(mk, 'kale', 'Costco');
+    expect(st().makeGroceryStoreUsual(mk, 'kale')).toBeNull();
+    expect(st().grocery.items.find(i => i.id === 'kale').store).toBe('Costco');
+    expect(st().groceryMonths[mk].lines.kale).toEqual({ qty: 3 }); // no store choice left
+    expect(st().makeGroceryStoreUsual(mk, 'kale')).toBeNull(); // already usual: nothing to do
+  });
+  it('Make it the usual store is refused when that store already has an item of the same name, and the month keeps its choice', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form()); st().addGroceryItem(form({ store: 'Costco' })); // a Kale in each store
+    st().setGroceryLineStore(mk, 'kale', 'Costco');
+    expect(st().makeGroceryStoreUsual(mk, 'kale')).toBe('That item is already in this store’s list.');
+    expect(st().grocery.items.find(i => i.id === 'kale').store).toBe('Veg market');
+    expect(st().groceryMonths[mk].lines.kale.store).toBe('Costco');
+  });
   it('take off the list marks the item as had that month and keeps its count, in any month', async () => {
     const mk = await thisMonth(); const { shiftMonth } = await import('../lib/grocery.js'); const last = shiftMonth(mk, -1);
     st().addGroceryItem(form());

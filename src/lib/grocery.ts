@@ -134,6 +134,16 @@ export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { st
   return out.filter(x => x.items.length);
 }
 
+/** The store an item is bought at in a month: that month's own choice (Move to on To get) while that store still exists or is Anywhere, else the
+ *  item's usual store. */
+export function storeFor(g: Grocery, item: GroceryItem, m: GroceryMonth): string {
+  const s = m.lines[item.id]?.store;
+  return s !== undefined && (s === '' || g.stores.includes(s)) ? s : item.store;
+}
+/** The items as they sit in a month: each under the store it is bought at that month, so grouping, bills, tax and sharing all follow it. */
+export const inMonth = (g: Grocery, items: GroceryItem[], m: GroceryMonth): GroceryItem[] =>
+  items.map(i => { const store = storeFor(g, i, m); return store === i.store ? i : { ...i, store }; });
+
 /** The words after a shared store's name: its group and how many others are in it ("Home +2"). */
 export const groupTag = (group: GroceryGroup) => `${group.n} +${group.people.length}`;
 
@@ -161,7 +171,7 @@ export function spendByMonth(g: Grocery, months: Record<string, GroceryMonth>, e
     Object.entries(m?.lines ?? {}).forEach(([id, l]) => {
       if (!l.got) return;
       const it = g.items.find(x => x.id === id);
-      bought++; boughtAt.add(it?.store ?? ''); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? it?.cents ?? null);
+      bought++; boughtAt.add(it ? storeFor(g, it, m!) : ''); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? it?.cents ?? null);
     });
     boughtAt.forEach(store => { spent += m?.tax?.[store] ?? 0; }); // each store's tax from the receipt
     return { key, spent, bought };

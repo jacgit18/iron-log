@@ -1,4 +1,4 @@
-import { lineCost, lineOf, shiftMonth } from './grocery.js';
+import { lineCost, lineOf, shiftMonth, storeFor } from './grocery.js';
 import { ME, partiesOf, settle, type Purchase, type Settlement } from './grocerySplit.js';
 import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson } from '../types.ts';
 
@@ -43,8 +43,9 @@ export function purchasesOf(g: Grocery, m: GroceryMonth): MonthPurchase[] {
   const out: MonthPurchase[] = [];
   Object.entries(m.lines).forEach(([id, raw]) => {
     if (!raw.got) return;
-    const it = g.items.find(x => x.id === id);
-    const store = it?.store ?? '';
+    const found = g.items.find(x => x.id === id);
+    const store = found ? storeFor(g, found, m) : ''; // where it was bought this month
+    const it = found && store !== found.store ? { ...found, store } : found; // the store's group is the default split for it
     if (!it) { // removed from the catalogue: only its own price and count remain
       const cents = raw.prices?.length ? raw.prices.reduce((a, c) => a + c, 0) : Math.round((raw.qty ?? 1) * (raw.cents ?? 0));
       out.push({ store, itemId: id, cents, parties: [ME] });

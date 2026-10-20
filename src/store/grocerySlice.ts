@@ -1,6 +1,6 @@
 import { LS } from '../lib/storage.js';
 import {
-  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, parseDollars,
+  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, parseDollars, storeFor,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
 import type { Grocery, GroceryData, GroceryLine, GroceryMonth } from '../types.ts';
@@ -241,6 +241,27 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
 
     // "Take off the list": you don't need it this month. It is marked as had, so it is off that month's list, and its other lines stay.
     takeGroceryOff(month, id) { get().setGroceryHave(month, id, true); },
+    // Move to: where an item was bought this month, when it is not its usual store (a month's choice, so next month it is back where it was).
+    setGroceryLineStore(month, id, store) {
+      const it = get().grocery.items.find(i => i.id === id);
+      if (!it || !MONTH_RE.test(month)) return 'That item is gone.';
+      if (store !== null && store !== '' && !get().grocery.stores.includes(store)) return 'That store is gone.';
+      mutateMonth(month, m => {
+        const l = { ...(m.lines[id] || {}) };
+        if (store === null || store === it.store) delete l.store; else l.store = store; // its usual store is no choice at all
+        if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
+      });
+      return null;
+    },
+    makeGroceryStoreUsual(month, id) {
+      const it = get().grocery.items.find(i => i.id === id);
+      if (!it || !MONTH_RE.test(month)) return 'That item is gone.';
+      const store = storeFor(get().grocery, it, get().groceryMonths[month] || emptyMonth());
+      if (store === it.store) return null;
+      const err = get().updateGroceryItem(id, { store }); // the same rules as moving it on At home (a name already in that store is refused)
+      if (err) return err;
+      return get().setGroceryLineStore(month, id, null);
+    },
     // Skip everything still to get this month: each unticked item is marked as had (off the list until the 1st), as Take off the list does for one.
     // Undo takes that mark off again (a count or price typed since stays), except on one you bought since. Returns how many were skipped.
     takeGroceryAllOff(month) {

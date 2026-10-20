@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, groupTag, haveOf, onList, parseDollars, shiftMonth, spendByMonth, tally,
+  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, groupTag, haveOf, inMonth, storeFor, onList, parseDollars, shiftMonth, spendByMonth, tally,
 } from './grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -112,6 +112,23 @@ describe('groups and totals', () => {
     const [base] = spendByMonth(g, { '2026-09': { ...m, tax: undefined } }, '2026-09', 1);
     expect(row!.spent).toBe(base!.spent + 107 + 160);
     expect(row!.bought).toBe(base!.bought);
+  });
+  it('an item sits under the store it was bought at that month, and its usual store when there is no choice or the choice is gone', () => {
+    const kale = g.items.find(i => i.id === 'kale')!; // usual store: Veg market
+    const month = (store?: string): GroceryMonth => ({ lines: store === undefined ? {} : { kale: { store } }, pulled: [] });
+    expect(storeFor(g, kale, month())).toBe('Veg market');
+    expect(storeFor(g, kale, month('Costco'))).toBe('Costco');
+    expect(storeFor(g, kale, month(''))).toBe(''); // Anywhere is a choice too
+    expect(storeFor(g, kale, month('Gone store'))).toBe('Veg market'); // a store that was removed: back to the usual one
+    const moved = inMonth(g, g.items, month('Costco'));
+    expect(moved.find(i => i.id === 'kale')!.store).toBe('Costco');
+    expect(moved.filter(i => i.id !== 'kale')).toEqual(g.items.filter(i => i.id !== 'kale')); // the others are the very same items
+    expect(byStore(g, moved).map(x => [x.label, x.items.map(i => i.id)])).toEqual([['Costco', ['kale', 'rice', 'saffron']], ['Anywhere', ['salt']]]); // Veg market is left with nothing, so it is left out
+  });
+  it('the monthly spend puts a moved item\'s tax with the store it was bought at', () => {
+    const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300, store: 'Costco' } }, pulled: [], tax: { 'Veg market': 100, Costco: 70 } };
+    const [row] = spendByMonth(g, { '2026-09': m }, '2026-09', 1);
+    expect(row!.spent).toBe(1200 + 70); // Costco's tax, not Veg market's: kale was bought at Costco
   });
   it('splits expected from spent and counts the unpriced', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] };

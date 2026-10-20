@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
-import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, groupTag, haveOf, lineCost, lineOf, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
+import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
@@ -38,10 +38,12 @@ function NumBox({ label, value, onCommit, className }: { label: string; value: s
 
 /* ---------- To get ---------- */
 // One line of the shopping list: the whole row ticks it, and the trailing "2 × $3.49" opens the count and price for this month.
-function GetRow({ g, item, month, mk, future, onGot, open, onOpen }: { g: GroceryT; item: GroceryItem; month: GroceryMonth; mk: string; future: boolean; onGot: (on: boolean) => void; open: boolean; onOpen: (on: boolean) => void }) {
+function GetRow({ g, item, month, mk, future, onGot, open, onOpen, onMove }: { g: GroceryT; item: GroceryItem; month: GroceryMonth; mk: string; future: boolean; onGot: (on: boolean) => void; open: boolean; onOpen: (on: boolean) => void; onMove: (id: string) => void }) {
   const s = useAppStore.getState();
   const l = lineOf(item, month); const total = lineCost(l); const w = unitWords(item.unit);
   const moreId = `groc-more-${item.id}`;
+  const usual = g.items.find(x => x.id === item.id)?.store ?? item.store; // `item` is already under the store it is bought at this month
+  const [moveErr, setMoveErr] = useState<string | null>(null);
   const split = useFeature('grocerySplit') && hasSharing(g); const raw = month.lines[item.id]; const people = allPeople(g);
   // Said on the closed row only when this item is split differently from its store's usual group, so most rows stay as quiet as without sharing.
   const customSplit = raw?.packShares?.some(Boolean) ? 'Packs split' : raw?.share || item.share ? shareText(partiesFor(g, item, raw)) : '';
@@ -67,6 +69,19 @@ function GetRow({ g, item, month, mk, future, onGot, open, onOpen }: { g: Grocer
             <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={l.prices ? '' : centsText(l.cents)}
               onCommit={t => { if (!t.trim()) { s.setGroceryCents(mk, item.id, null); return true; } const c = parseDollars(t); if (c == null) return false; s.setGroceryCents(mk, item.id, c); return true; }} />
           </label>
+          {g.stores.length > 0 && (
+            <label className="gfield">Move to
+              <select id={`groc-store-${item.id}`} aria-label={`Store for ${item.n} this month`} value={item.store}
+                onChange={e => { onMove(item.id); setMoveErr(s.setGroceryLineStore(mk, item.id, e.target.value)); }}>
+                <option value="">Anywhere</option>
+                {g.stores.map(x => <option key={x} value={x}>{x}</option>)}
+              </select>
+            </label>
+          )}
+          {item.store !== usual && (
+            <button type="button" className="btn sm ghost gusual" aria-label={`Make ${item.store || 'Anywhere'} the usual store for ${item.n}`} onClick={() => setMoveErr(s.makeGroceryStoreUsual(mk, item.id))}>Make {item.store || 'Anywhere'} its usual store</button>
+          )}
+          {moveErr && <p className="note gerr" role="alert">{moveErr}</p>}
           {!item.unit && <PriceChips name={item.n} prices={l.prices} onChange={p => s.setGroceryPrices(mk, item.id, p)} />}
           {split && !l.prices && <SharePicker name={item.n} people={people} parties={partiesFor(g, item, raw)} own={!!raw?.share} onChange={sh => s.setGroceryLineShare(mk, item.id, sh)} />}
           {split && l.prices?.map((c, i) => (
@@ -87,7 +102,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const [off, setOff] = useState(0); // months from this one: below 0 is history, above 0 is planning ahead
   const mk = shiftMonth(nowKey, off);
   const month = months[mk] || emptyMonth();
-  const list = onList(g, month, off >= 0); const t = tally(list, month);
+  const list = inMonth(g, onList(g, month, off >= 0), month); const t = tally(list, month); // each item sits under the store it is bought at this month (Move to)
   // This month, what you have bought leaves the list (it is on At home as "have"); it stays one tap away under "Bought this month" so a
   // mis-tap can be undone. An older or later month keeps every row, as a record of what was bought or what is planned.
   const current = off === 0;
@@ -153,7 +168,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
             </div>
             {split && grp.group && <StoreMoney g={g} month={month} store={grp.store} />}
             {taxRow(grp.store)}
-            <ul className="glist">{gotLast(grp.items, month).map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={off > 0} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} />)}</ul>
+            <ul className="glist">{gotLast(grp.items, month).map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={off > 0} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; }} />)}</ul>
           </section>
         );
       })}
@@ -166,7 +181,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
               <div className="gstorehead"><h3>{grp.label}{split && grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3></div>
               {split && grp.group && !todoStores.has(grp.store) && <StoreMoney g={g} month={month} store={grp.store} />}
               {!todoStores.has(grp.store) && taxRow(grp.store)}
-              <ul className="glist">{grp.items.map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={false} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} />)}</ul>
+              <ul className="glist">{grp.items.map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={false} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; }} />)}</ul>
             </section>
           ))}
         </details>

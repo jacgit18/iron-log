@@ -155,3 +155,16 @@ describe('a month\'s tax travels with the month and merges store by store', () =
     expect(mergeGroceryMonth3(null, month({ "BJ's": 300 }), month({ "BJ's": 222, Aldi: 35 })).week.tax).toEqual({ "BJ's": 300, Aldi: 35 });
   });
 });
+
+describe('a line\'s store this month merges field by field with the rest of the line', () => {
+  const m = (line: object): GroceryMonth => ({ lines: { rice: line }, pulled: [] });
+  it('two devices, one moving the item to another store and one fixing its count, keep both', () => {
+    const merged = mergeGroceryMonth3(m({ got: true }), m({ got: true, store: "BJ's" }), m({ got: true, qty: 2 }));
+    expect(merged.week.lines.rice).toEqual({ got: true, store: "BJ's", qty: 2 });
+  });
+  it('a store choice cleared on one device stays cleared, and the choice round-trips through the month record', () => {
+    expect(mergeGroceryMonth3(m({ got: true, store: "BJ's" }), m({ got: true }), m({ got: true, store: "BJ's" })).week.lines.rice).toEqual({ got: true });
+    const rows = desiredRows(kind('grocery/2026-09'), m({ got: true, store: '' }), new Map());
+    expect(documentFor(kind('grocery/2026-09'), mirrorOf(rows))).toEqual(m({ got: true, store: '' })); // Anywhere survives
+  });
+});
