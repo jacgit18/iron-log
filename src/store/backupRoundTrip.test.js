@@ -33,8 +33,8 @@ async function fillEverything() {
     experiments: [{ id: 'E1', ex: 'hack', ph: 'hyp', note: 'try a slower tempo' }],
     stretches: [{ id: 's1', n: 'Doorway stretch', group: 'chest', tier: 'primary', note: 'hold 30 s' }],
     stretchExps: [{ id: 'x1', n: 'Couch stretch' }],
-    grocery: { stores: ['Veg market'], items: [{ id: 'kale', n: 'Kale', store: 'Veg market', qty: 2, cents: 250, every: true, out: false }] },
-    groceryMonths: { '2026-09': { lines: { kale: { got: true, qty: 3, cents: 260 } }, pulled: [] } },
+    grocery: { stores: ['Veg market'], items: [{ id: 'kale', n: 'Kale', store: 'Veg market', qty: 2, cents: 250, every: true, out: false, share: { with: ['p1'] } }], groups: [{ id: 'g1', n: 'Home', people: [{ id: 'p1', n: 'Sam', covered: true }], stores: ['Veg market'] }] },
+    groceryMonths: { '2026-09': { lines: { kale: { got: true, qty: 3, cents: 260, share: { with: ['p1'], notMine: true } } }, pulled: [], payer: { 'Veg market': 'p1' } } },
     supp: { waterGoal: 100, waterMode: 'fixed', water: { [wk]: [8, 16] }, boost: { [wk]: { hot: true, mins: 45 } }, items: [], taken: {} },
   });
   st().submitLog('A-d1s1', 0, { entry: { d: wk, ph: 'hyp', ...summarizeSets([{ w: 45, r: 12 }, { w: 50, r: 10 }], false), slot: 'A-d1s1', wk, n: 'felt good' }, ph: 'hyp', done: true });
@@ -61,6 +61,9 @@ describe('backup round trip', () => {
     expect(Object.keys(first.weeks).length).toBeGreaterThan(0);
     expect(first.grocery.items).toHaveLength(1);
     expect(first.grocery.months['2026-09'].lines.kale.got).toBe(true);
+    expect(first.grocery.groups[0].people[0]).toEqual({ id: 'p1', n: 'Sam', covered: true }); // sharing groups, shares and who paid are in the file
+    expect(first.grocery.items[0].share).toEqual({ with: ['p1'] });
+    expect(first.grocery.months['2026-09'].payer).toEqual({ 'Veg market': 'p1' });
 
     useAppStore.setState(blank()); clearStorage();
     const wiped = await exportData(); // the wipe worked: nothing of what was filled is left

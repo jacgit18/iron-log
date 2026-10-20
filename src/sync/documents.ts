@@ -1,5 +1,5 @@
 import { normConfigDoc, type ConfigDoc } from '../shared/config.js';
-import { MONTH_RE, monthEmpty, normGroceryItem, normGroceryMonth, normGroceryStore } from '../shared/grocery.js';
+import { MONTH_RE, monthEmpty, normGroceryGroup, normGroceryItem, normGroceryMonth, normGroceryStore } from '../shared/grocery.js';
 import { normExperimentItem, normStretchExperimentItem, normStretchItem, normSupplementItem } from '../shared/listItems.js';
 import { validateSaveProgram, type ListName } from '../shared/commands.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
@@ -71,7 +71,7 @@ export function pathsOf(row: MirrorRow): string[] {
 
 const LIST_PATH: Record<ListName, string> = {
   stretch: 'stretches/main', stretch_experiment: 'stretches/main', experiment: 'experiments/main', supplement_item: 'supplements/main',
-  grocery_item: 'grocery/main', grocery_store: 'grocery/main',
+  grocery_group: 'grocery/main', grocery_item: 'grocery/main', grocery_store: 'grocery/main',
 };
 /** For a path whose document is merged three-way rather than replaced (a week, a stretch week, a grocery month): its row's table and
  *  key. Null for every other path. */
@@ -101,7 +101,7 @@ export function scopeRows(kind: PathKind, mirror: Mirror): MirrorRow[] {
     case 'stretches': return all.filter(r => r.table === 'list_items' && (r.list === 'stretch' || r.list === 'stretch_experiment'));
     case 'supplements': return all.filter(r => r.table === 'supplement_days' || (r.table === 'list_items' && r.list === 'supplement_item'));
     case 'programs': return all.filter(r => r.table === 'programs' && r.key === kind.key);
-    case 'grocery': return all.filter(r => r.table === 'list_items' && (r.list === 'grocery_item' || r.list === 'grocery_store'));
+    case 'grocery': return all.filter(r => r.table === 'list_items' && (r.list === 'grocery_group' || r.list === 'grocery_item' || r.list === 'grocery_store'));
     case 'grocerymonths': return all.filter(r => r.table === 'grocery_months' && r.key === kind.month);
     case 'config': return [];
   }
@@ -132,7 +132,7 @@ export function documentFor(kind: PathKind, mirror: Mirror): unknown {
     case 'grocery': {
       if (!scope.length) return null;
       const stores = listOf(live, 'grocery_store') as { n: string }[];
-      return normGrocery({ stores: stores.map(s => s.n), items: listOf(live, 'grocery_item') });
+      return normGrocery({ stores: stores.map(s => s.n), items: listOf(live, 'grocery_item'), groups: listOf(live, 'grocery_group') });
     }
     case 'body': {
       if (!scope.length) return null;
@@ -218,7 +218,7 @@ export function desiredRows(kind: PathKind, doc: unknown, mirror: Mirror): Desir
     case 'grocery': {
       // Cleaned as the app reads it first, so a store an item names is a row too, and the caps hold.
       const g = normGrocery(doc);
-      return [...listRows('grocery_store', g.stores.map(n => ({ id: n, n })), normGroceryStore), ...listRows('grocery_item', g.items, normGroceryItem)];
+      return [...listRows('grocery_store', g.stores.map(n => ({ id: n, n })), normGroceryStore), ...listRows('grocery_item', g.items, normGroceryItem), ...listRows('grocery_group', g.groups ?? [], normGroceryGroup)];
     }
     case 'grocerymonths': {
       // An empty month is the fresh list: no row (the store removes the document, and an empty one saved anyway is not kept).

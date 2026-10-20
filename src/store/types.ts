@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -278,6 +278,18 @@ export interface GrocerySlice {
   setGroceryCents(month: string, id: string, cents: number | null): void;
   setGroceryPrices(month: string, id: string, prices: number[] | null): void;
   takeGroceryOff(month: string, id: string): void; // not needed this month: marked as had, so off that month's list
+  // Sharing what you buy with other people (groups, shares, who paid). Nothing here changes a price or a total: it only says who shares it.
+  addGroceryGroup(name: string, people: string[]): string | null;
+  renameGroceryGroup(id: string, name: string): string | null;
+  removeGroceryGroup(id: string): void;
+  addGroceryPerson(groupId: string, name: string): string | null;
+  updateGroceryPerson(groupId: string, personId: string, patch: Partial<{ n: string; covered: boolean }>): string | null;
+  removeGroceryPerson(groupId: string, personId: string): void;
+  setGroceryStoreGroup(store: string, groupId: string | null): void; // a store defaults to one group at most
+  setGroceryItemShare(id: string, share: GroceryShare | null): void; // the item's usual share; null goes back to the store's group
+  setGroceryLineShare(month: string, id: string, share: GroceryShare | null): void; // this month's share for the item; null goes back to the item's
+  setGroceryPackShare(month: string, id: string, index: number, share: GroceryShare | null): void; // one pack of an item priced pack by pack
+  setGroceryPayer(month: string, store: string, personId: string | null): void; // who paid for that store this month; null is you
 }
 
 export interface WellnessSlice {
