@@ -54,15 +54,15 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     set({ groceryMonths: months }); saveMonth(key, m);
   };
 
-  // Before an item's usual split changes to `next`, an earlier month's bought line that has no split of its own gets the one it was counted
+  // Before an item's usual split changes to `next`, a month earlier than `before` (the month being edited, so a bought line this month is
+  // pinned when next month's split is set) whose bought line that has no split of its own gets the one it was counted
   // with (the old usual, else the store's group), so changing the usual only moves things on from this month and never rewrites what was paid.
-  const pinPastShares = (id: string, next: GroceryShare | null) => {
+  const pinPastShares = (id: string, next: GroceryShare | null, before: string) => {
     const g = get().grocery; const item = g.items.find(i => i.id === id);
     if (!item || JSON.stringify(item.share ?? null) === JSON.stringify(next)) return;
-    const now = monthKey(new Date());
     Object.entries(get().groceryMonths).forEach(([key, m]) => {
       const raw = m.lines[id];
-      if (key >= now || !raw?.got || raw.share) return;
+      if (key >= before || !raw?.got || raw.share) return;
       const pin: GroceryShare = item.share ?? { with: (groupOfStore(g, storeFor(g, item, m))?.people ?? []).map(p => p.id) };
       mutateMonth(key, mm => { mm.lines[id] = { ...mm.lines[id], share: pin }; });
     });
@@ -365,7 +365,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const clean = share === null ? null : cleanShare(share);
       if (share !== null && !clean) return;
       if (!get().grocery.items.some(i => i.id === id)) return;
-      pinPastShares(id, clean); // an earlier month keeps the split it was bought with
+      pinPastShares(id, clean, monthKey(new Date())); // an earlier month keeps the split it was bought with
       mutateCatalogue(g => { const it = g.items.find(i => i.id === id); if (!it) return 'That item is gone.'; if (clean) it.share = clean; else delete it.share; return null; });
     },
     // This month's split for the item. From this month on (not when fixing an older month) it is also the item's usual split, so next month starts
@@ -374,7 +374,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const clean = share === null ? null : cleanShare(share);
       if ((share !== null && !clean) || !get().grocery.items.some(i => i.id === id)) return;
       if (month >= monthKey(new Date())) {
-        pinPastShares(id, clean);
+        pinPastShares(id, clean, month);
         mutateCatalogue(g => { const it = g.items.find(i => i.id === id); if (!it) return 'That item is gone.'; if (clean) it.share = clean; else delete it.share; return null; });
       }
       mutateMonth(month, m => {

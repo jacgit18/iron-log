@@ -176,6 +176,14 @@ describe('a month\'s share carries on to the next months', () => {
     expect(st().groceryMonths[last].lines.chicken.share).toEqual({ with: ['dad'] });
     expect(st().grocery.items[0].share).toEqual({ with: ['mom'] });
   });
+  it('pins this month\'s bought line when the share is set from next month', async () => {
+    st().addGroceryItem(form()); const mk = await month(); const next = await shiftKey(1);
+    st().setGroceryItemShare('chicken', { with: ['sis'] });
+    useAppStore.setState({ groceryMonths: { [mk]: { ...emptyMonth(), lines: { chicken: { got: true } } } } });
+    st().setGroceryLineShare(next, 'chicken', { with: ['mom'] });
+    expect(st().groceryMonths[mk].lines.chicken.share).toEqual({ with: ['sis'] }); // bought this month with the old usual
+    expect(st().grocery.items[0].share).toEqual({ with: ['mom'] });
+  });
   it('pins a month that used the store\'s group when the item\'s usual first appears', async () => {
     st().addGroceryItem(form()); st().addGroceryGroup('Home', ['Sister']); const sis = group().people[0].id; st().setGroceryStoreGroup("BJ's", group().id);
     const mk = await month(); const last = await shiftKey(-1);
