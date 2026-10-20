@@ -11,7 +11,10 @@
 //                               auth schemas except schema_migrations and the exercise catalog (catalog_items) and restarts their counters,
 //                               makes the app's login ironlog_qa a member of ironlog_app (as ADR 055 does for staging), and sets the QA mark.
 //                               With QA_APP_PASSWORD set it also gives ironlog_qa that password (the one in the QA APP_DATABASE_URL); the
-//                               password is never printed. The schema stays as the branch has it; the QA workflow applies migrations.
+//                               password is never printed. A branch copies its parent's roles with their passwords, so the owner role here
+//                               has production's owner password: with QA_OWNER_PASSWORD set, `reset` also gives the role it is connected as
+//                               (the owner) that new password, and the QA_DATABASE_URL secret should be built with it (the old one stops
+//                               working). The schema stays as the branch has it; the QA workflow applies migrations.
 //                               --host must be the host in the URL (typed on purpose). It also refuses production's host (PROD_DATABASE_URL, or
 //                               else DATABASE_URL_UNPOOLED from .env; with neither it refuses, because it could not tell) and a database
 //                               already marked as staging.
@@ -46,11 +49,16 @@ async function reset(client, url, apply) {
   for (const t of tables) console.log(`${apply ? 'emptying' : 'would empty'}: ${t} (${(await client.query(`select count(*)::int as n from ${t}`)).rows[0].n} rows)`);
   console.log(`keeping: ${KEEP.join(', ')}`);
   console.log(`${apply ? 'setting up' : 'would set up'}: login ${APP_ROLE} as a member of ironlog_app${process.env.QA_APP_PASSWORD ? ', with the password from QA_APP_PASSWORD' : ' (no password: set QA_APP_PASSWORD to give it one)'}`);
+  console.log(`${apply ? 'rotating' : 'would rotate'}: the owner role's password${process.env.QA_OWNER_PASSWORD ? ', to the one in QA_OWNER_PASSWORD' : ' (not asked: set QA_OWNER_PASSWORD, otherwise the owner password is still production\'s)'}`);
   if (!apply) { console.log('Dry run. Add --apply to empty these and mark the database as QA.'); return 0; }
   try {
     await client.query('begin');
     if (tables.length) await client.query(`truncate table ${tables.join(', ')} restart identity cascade`);
     await applyAppRole(client, APP_ROLE, 'QA_APP_PASSWORD');
+    if (process.env.QA_OWNER_PASSWORD) {
+      const { rows } = await client.query("select format('alter role %I password %L', current_user, $1::text) as q", [process.env.QA_OWNER_PASSWORD]);
+      await client.query(rows[0].q);
+    }
     await setMark(client, MARKER);
     await client.query('commit');
   } catch (e) {

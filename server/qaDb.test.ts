@@ -115,6 +115,32 @@ describe('qa-db.mjs', () => {
     expect((await runWith({ QA_APP_PASSWORD: "p'w d" })(url, 'reset', '--host', host, '--apply')).status).toBe(0);
   });
 
+  it('QA_OWNER_PASSWORD gives the owner role a new password, never printed, and the old one stops working', async () => {
+    // A throwaway owner (the test database's own login must keep working for the other tests).
+    await sql`drop role if exists qa_owner`.execute(db);
+    await sql`create role qa_owner superuser login password 'old-owner-pw'`.execute(db);
+    try {
+      const asOwner = new URL(url);
+      asOwner.username = 'qa_owner';
+      asOwner.password = 'old-owner-pw';
+      const out = await runWith({ QA_OWNER_PASSWORD: 'new-owner-pw' })(asOwner.href, 'reset', '--host', host, '--apply');
+      expect(out.status).toBe(0);
+      expect(out.stdout).toContain('rotating: the owner role');
+      expect(out.stdout + out.stderr).not.toContain('new-owner-pw');
+      const connectWith = async (password: string) => {
+        const c = new pg.Client({ connectionString: Object.assign(new URL(asOwner.href), { password }).href });
+        await c.connect();
+        await c.end();
+      };
+      await expect(connectWith('new-owner-pw')).resolves.toBeUndefined();
+      await expect(connectWith('old-owner-pw')).rejects.toThrow();
+      // Without it, the dry run says the password is still production's.
+      expect((await run(url, 'reset', '--host', host)).stdout).toContain("still production's");
+    } finally {
+      await sql`drop role if exists qa_owner`.execute(db);
+    }
+  });
+
   it('cannot tell without a URL', async () => {
     expect((await run('', 'check')).status).toBe(2);
   });
