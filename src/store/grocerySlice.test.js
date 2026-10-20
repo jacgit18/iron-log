@@ -205,6 +205,45 @@ describe('a month', () => {
     st().setGroceryHave(await thisMonth(), 'ghost', true);
     expect(st().groceryMonths).toEqual({});
   });
+  it('skip all marks every unticked item still to get as had, keeps counts and bought lines, and returns how many', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form()); st().addGroceryItem(form({ n: 'Rice', store: 'Costco', price: '1.00' })); st().addGroceryItem(form({ n: 'Salt', store: '', price: '' })); st().addGroceryItem(form({ n: 'Oats', store: '', price: '' }));
+    st().setGroceryQty(mk, 'rice', 3); // an existing line keeps its count
+    st().setGroceryGot(mk, 'oats', true); // bought: left alone
+    st().takeGroceryOff(mk, 'salt'); // already had: not counted again
+    expect(st().takeGroceryAllOff(mk)).toBe(2); // kale and rice
+    expect(st().groceryMonths[mk].lines.kale).toEqual({ have: true });
+    expect(st().groceryMonths[mk].lines.rice).toEqual({ qty: 3, have: true });
+    expect(st().groceryMonths[mk].lines.oats.got).toBe(true);
+    expect(st().groceryMonths[mk].lines.oats.have).toBeUndefined();
+    expect(saved('grocery/' + mk).lines.kale.have).toBe(true);
+    expect(st().takeGroceryAllOff(mk)).toBe(0); // nothing left to skip
+  });
+  it('skip all does nothing for a bad month or when sync is loading', async () => {
+    st().addGroceryItem(form());
+    expect(st().takeGroceryAllOff('2026-13')).toBe(0);
+    const real = st().blocked; useAppStore.setState({ blocked: () => true });
+    expect(st().takeGroceryAllOff(await thisMonth())).toBe(0);
+    useAppStore.setState({ blocked: real });
+    expect(st().groceryMonths).toEqual({});
+  });
+  it('undoing skip all takes the had mark off, leaving a count typed since and anything bought since, and says so only when it worked', async () => {
+    const mk = await thisMonth();
+    st().addGroceryItem(form()); st().addGroceryItem(form({ n: 'Rice', store: 'Costco', price: '1.00' })); st().addGroceryItem(form({ n: 'Oats', store: '', price: '' }));
+    st().setGroceryQty(mk, 'rice', 3);
+    st().takeGroceryAllOff(mk);
+    expect(st().removed).toMatchObject({ scope: 'groceryoff', text: '3 items from this month’s list' });
+    st().setGroceryQty(mk, 'oats', 4); // typed after skipping (on At home)
+    st().setGroceryHave(mk, 'oats', false); st().setGroceryGot(mk, 'oats', true); // then bought
+    const real = st().blocked; useAppStore.setState({ blocked: () => true });
+    expect(st().removed.restore()).toBe(false); // sync is loading: nothing put back
+    expect(st().groceryMonths[mk].lines.kale).toEqual({ have: true });
+    useAppStore.setState({ blocked: real });
+    expect(st().removed.restore()).toBe(true);
+    expect(st().groceryMonths[mk].lines.kale).toBeUndefined(); // a line that was only the mark is gone
+    expect(st().groceryMonths[mk].lines.rice).toEqual({ qty: 3 }); // the count it had stays, the mark goes
+    expect(st().groceryMonths[mk].lines.oats.got).toBe(true); // bought since: left as it is
+  });
   it('take off the list marks the item as had that month and keeps its count, in any month', async () => {
     const mk = await thisMonth(); const { shiftMonth } = await import('../lib/grocery.js'); const last = shiftMonth(mk, -1);
     st().addGroceryItem(form());

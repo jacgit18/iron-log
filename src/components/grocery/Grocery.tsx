@@ -107,6 +107,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   // panel must stay open so a price can still be typed after the tick (which also opens the fold).
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const [boughtOpen, setBoughtOpen] = useState(false);
+  const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
   const setPanel = (id: string, on: boolean) => setOpenIds(prev => { const n = new Set(prev); if (on) n.add(id); else n.delete(id); return n; });
   useEffect(() => { if (!bought.length && boughtOpen) setBoughtOpen(false); }, [bought.length, boughtOpen]); // an emptied fold starts folded next time
   const focusAfter = useRef<string | null>(null);
@@ -134,6 +135,13 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       </p>
       {split && <MonthMoney g={g} month={month} />}
       {!t.count && off === 0 && <p className="note">Add what you buy on <b>At home</b>. Tick an item there when you have it and it comes off this month’s list.</p>}
+      {current && todo.length > 0 && (
+        <div className="gskiprow">
+          <ArmedButton className={`btn sm ${armingSkip ? 'danger' : 'ghost'}`} id="groc-skipall" aria-label={`Skip all ${todo.length} items still to get this month`} label="Skip all" armedLabel={`Tap again to skip ${todo.length}`}
+            onArmedChange={setArmingSkip} onConfirm={() => { setArmingSkip(false); useAppStore.getState().takeGroceryAllOff(mk); }} />
+        </div>
+      )}
+      <RemovedNotice scope="groceryoff" />
       {current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought.</p>}
       {byStore(g, todo, split).map((grp, gi) => {
         const gt = tally(grp.items, month);
