@@ -53,13 +53,26 @@ export interface SettleRow {
   kind: 'covered' | 'owesPayer' | 'owesYou' | 'youOwe';
   cents: number;
 }
-export interface Settlement { bill: number; yourShare: number; owedToYou: number; youOwe: number; rows: SettleRow[] }
+export interface Settlement { bill: number; /** the sales tax inside `bill` */ tax: number; yourShare: number; owedToYou: number; youOwe: number; rows: SettleRow[] }
+
+/** Share `tax` cents out in proportion to each person's total of the subtotal. Each other person gets the rounded share (never more than is
+ *  left); you take the remainder, or the last person does when you are not in it, so the tax adds up exactly. */
+export function addTax(totals: Record<string, number>, tax: number): Record<string, number> {
+  const ids = Object.keys(totals); const sub = ids.reduce((a, id) => a + (totals[id] ?? 0), 0);
+  if (tax <= 0 || sub <= 0) return { ...totals };
+  const absorber = ids.includes(ME) ? ME : ids[ids.length - 1]!;
+  const out = { ...totals }; let left = tax;
+  ids.forEach(id => { if (id === absorber) return; const give = Math.min(Math.round((tax * (totals[id] ?? 0)) / sub), left); out[id] = (out[id] ?? 0) + give; left -= give; });
+  out[absorber] = (out[absorber] ?? 0) + left;
+  return out;
+}
 
 /** Who pays whom for a set of purchases. `payer` is who put the bill on their card: `ME` (the others owe you) or a person (you owe them your
- *  share). `covered` is the set of people whose share is already paid, so nothing is asked of them. */
-export function settle(purchases: readonly Purchase[], payer: string, covered: ReadonlySet<string>): Settlement {
-  const totals = totalsOf(purchases);
-  const bill = purchases.reduce((a, p) => a + p.cents, 0);
+ *  share). `covered` is the set of people whose share is already paid, so nothing is asked of them. `tax` (cents, worked out on the whole
+ *  subtotal) is on the bill and shared in proportion to what each person's items came to. */
+export function settle(purchases: readonly Purchase[], payer: string, covered: ReadonlySet<string>, tax = 0): Settlement {
+  const totals = addTax(totalsOf(purchases), tax);
+  const subtotal = purchases.reduce((a, p) => a + p.cents, 0); const bill = subtotal + tax;
   const yourShare = totals[ME] ?? 0;
   const rows: SettleRow[] = [];
   let owedToYou = 0, youOwe = 0;
@@ -71,5 +84,5 @@ export function settle(purchases: readonly Purchase[], payer: string, covered: R
     } else rows.push({ id, kind: 'owesPayer', cents });
   });
   if (payer !== ME && yourShare > 0) { rows.unshift({ id: payer, kind: 'youOwe', cents: yourShare }); youOwe = yourShare; }
-  return { bill, yourShare, owedToYou, youOwe, rows };
+  return { bill, tax, yourShare, owedToYou, youOwe, rows };
 }

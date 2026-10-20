@@ -339,5 +339,13 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (Object.keys(payer).length) m.payer = payer; else delete m.payer;
       });
     },
+    setGroceryTax(month, store, cents) {
+      if (cents !== null && (cleanCents(cents) == null || cents <= 0)) return;
+      mutateMonth(month, m => {
+        const tax = { ...(m.tax ?? {}) };
+        if (cents) tax[store] = cents; else delete tax[store];
+        if (Object.keys(tax).length) m.tax = tax; else delete m.tax;
+      });
+    },
   };
 };

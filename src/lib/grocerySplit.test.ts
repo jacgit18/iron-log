@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ME, partiesOf, settle, splitCents, totalsOf } from './grocerySplit.js';
+import { ME, addTax, partiesOf, settle, splitCents, totalsOf } from './grocerySplit.js';
 import type { GroceryGroup } from '../types.ts';
 
 const sum = (o: Record<string, number>) => Object.values(o).reduce((a, c) => a + c, 0);
@@ -78,11 +78,36 @@ describe('settle', () => {
   });
   it('a purchase that is all yours settles nothing', () => {
     const s = settle([{ cents: 1500, parties: [ME] }], ME, new Set());
-    expect(s).toEqual({ bill: 1500, yourShare: 1500, owedToYou: 0, youOwe: 0, rows: [] });
+    expect(s).toEqual({ bill: 1500, tax: 0, yourShare: 1500, owedToYou: 0, youOwe: 0, rows: [] });
   });
   it('a purchase that is not yours is all owed to you', () => {
     const s = settle([{ cents: 899, parties: ['sis', 'mom'] }], ME, new Set());
     expect(s.yourShare).toBe(0); expect(s.owedToYou).toBe(899);
   });
   it('totalsOf matches the sum of the splits', () => expect(sum(totalsOf(buys))).toBe(9370));
+});
+
+describe('tax on a bill', () => {
+  it('shares the tax in proportion to each person\'s subtotal and adds up exactly, you taking the odd cents', () => {
+    const out = addTax({ [ME]: 3000, sis: 3000, mom: 3000 }, 799);
+    expect(out).toEqual({ [ME]: 3267, sis: 3266, mom: 3266 });
+    expect(sum(out)).toBe(9799);
+    expect(addTax({ [ME]: 1000, sis: 3000 }, 0)).toEqual({ [ME]: 1000, sis: 3000 }); // no tax: unchanged
+    const unequal = addTax({ [ME]: 1000, sis: 3000 }, 401); // 401 x 1/4 and 3/4
+    expect(unequal.sis).toBe(3000 + Math.round((401 * 3000) / 4000)); // 301 of the 401
+    expect(sum(unequal)).toBe(4401);
+  });
+  it('when you are not in it the last person takes the odd cents', () => {
+    const out = addTax({ sis: 1000, mom: 1000 }, 101);
+    expect(sum(out)).toBe(2101);
+    expect(out.sis).toBe(1051);
+    expect(out.mom).toBe(1050);
+  });
+  it('the settle-up bill carries the tax, and every share still adds up to it', () => {
+    const s = settle([{ cents: 9000, parties: [ME, 'sis', 'mom'] }], ME, new Set(['mom']), 799);
+    expect(s).toMatchObject({ bill: 9799, tax: 799, yourShare: 3267, owedToYou: 3266 });
+    expect(s.rows).toEqual([{ id: 'sis', kind: 'owesYou', cents: 3266 }, { id: 'mom', kind: 'covered', cents: 3266 }]);
+    expect(s.yourShare + s.owedToYou + 3266).toBe(s.bill);
+    expect(settle([{ cents: 9000, parties: [ME] }], ME, new Set(), 799)).toMatchObject({ bill: 9799, yourShare: 9799 }); // all yours: all of it is your spending
+  });
 });

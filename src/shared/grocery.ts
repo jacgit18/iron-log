@@ -144,6 +144,11 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
   Object.entries(asObject(raw.payer) ?? {}).slice(0, MAX_STORES).forEach(([store, id]) => {
     if (store !== '__proto__' && store.length <= MAX_STORE && typeof id === 'string' && id.length > 0 && id.length <= MAX_ID && id !== 'me') payer[store] = id;
   });
-  return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}) };
+  const tax: Record<string, number> = {}; // sales tax in cents, as typed from the receipt, for each store this month; no entry = none
+  Object.entries(asObject(raw.tax) ?? {}).slice(0, MAX_STORES).forEach(([store, c]) => {
+    const cents = cleanCents(c);
+    if (store !== '__proto__' && store.length <= MAX_STORE && cents) tax[store] = cents;
+  });
+  return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}), ...(Object.keys(tax).length ? { tax } : {}) };
 }
-export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length && !Object.keys(m.payer ?? {}).length;
+export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length && !Object.keys(m.payer ?? {}).length && !Object.keys(m.tax ?? {}).length;

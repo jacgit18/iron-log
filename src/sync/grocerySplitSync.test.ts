@@ -137,3 +137,21 @@ describe('a list that uses no sharing is unchanged', () => {
     expect(merged.lines.rice).toEqual({ got: true, qty: 3, cents: 300 });
   });
 });
+
+describe('a month\'s tax travels with the month and merges store by store', () => {
+  const month = (tax: Record<string, number>): GroceryMonth => ({ lines: { rice: { got: true } }, pulled: [], tax });
+  it('is part of the month record and reads back with it', () => {
+    const rows = desiredRows(kind('grocery/2026-09'), month({ "BJ's": 222 }), new Map());
+    expect(documentFor(kind('grocery/2026-09'), mirrorOf(rows))).toEqual(month({ "BJ's": 222 }));
+  });
+  it('two devices that each typed a different store\'s tax both keep it', () => {
+    const base = month({ Aldi: 35 });
+    const ours = month({ Aldi: 35, "BJ's": 222 });
+    const theirs = month({ Aldi: 35, Costco: 160 });
+    expect(mergeGroceryMonth3(base, ours, theirs).week.tax).toEqual({ Aldi: 35, "BJ's": 222, Costco: 160 });
+  });
+  it('a tax one device cleared stays cleared, and without a base this device wins a store both set', () => {
+    expect(mergeGroceryMonth3(month({ "BJ's": 222 }), { lines: { rice: { got: true } }, pulled: [] }, month({ "BJ's": 222 })).week.tax).toBeUndefined();
+    expect(mergeGroceryMonth3(null, month({ "BJ's": 300 }), month({ "BJ's": 222, Aldi: 35 })).week.tax).toEqual({ "BJ's": 300, Aldi: 35 });
+  });
+});

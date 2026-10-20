@@ -38,6 +38,7 @@ export default function SplitSummary({ g, month, mk }: { g: Grocery; month: Groc
           </div>
           <ul className="gsplitrows">
             <li><span>Bill</span><span>{money(st.bill)}</span></li>
+            {st.tax > 0 && <li><span>Includes tax</span><span>{money(st.tax)}</span></li>}
             <li><span>Your share</span><span>{money(st.yourShare)}</span></li>
             {st.rows.map(r => (
               <li key={r.id + r.kind} className={r.kind === 'owesYou' || r.kind === 'youOwe' ? 'act' : undefined}>

@@ -141,6 +141,25 @@ describe('what is owed to you', () => {
   });
 });
 
+describe('tax at a store', () => {
+  it('is the receipt\'s amount: on that store\'s bill once, and every share still adds up to the bill', () => {
+    const base = storeSettlement(g, bought, "BJ's");
+    const taxed = storeSettlement(g, { ...bought, tax: { "BJ's": 480 } }, "BJ's");
+    expect(taxed.tax).toBe(480);
+    expect(taxed.bill).toBe(base.bill + 480);
+    const covered = taxed.rows.filter(r => r.kind === 'covered').reduce((a, r) => a + r.cents, 0);
+    expect(taxed.yourShare + taxed.owedToYou + covered).toBe(taxed.bill); // you paid: you, those who owe you, and the one already paid
+    expect(storeSettlement(g, { ...bought, tax: { "BJ's": 480 } }, 'Aldi').tax).toBe(0); // another store: none
+  });
+  it('is in what you paid and your share for the month, and a tax with nothing bought there counts for nothing', () => {
+    const plain = monthShare(g, bought);
+    const taxed = monthShare(g, { ...bought, tax: { "BJ's": 480, Aldi: 35 } });
+    expect(taxed.paid).toBe(plain.paid + 515);
+    expect(taxed.yours).toBeGreaterThan(plain.yours);
+    expect(monthShare(g, { ...bought, tax: { Costco: 999 } })).toEqual(plain);
+  });
+});
+
 describe('what changes hands', () => {
   it('splits what others owe you from what you owe them by who paid each store', () => {
     const mine = monthOwes(g, bought);
