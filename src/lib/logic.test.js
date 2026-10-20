@@ -689,6 +689,25 @@ describe('planOrder: a new day order after a day is finished', () => {
 describe('moving cards follows the planner\'s clash rule', () => {
   const sl = (id, day, ex, more = {}) => ({ id, day, type: 'single', items: [{ ex }], ...more });
   const c = cfg({ ex: { sq: { n: 'Squat' }, b: { n: 'Bench' }, r: { n: 'Row' }, sled: { n: 'Sled' }, grip: { n: 'Grip' } } });
+  it('an exercise trained on 3 or more days with under 4 sets a session gives no back-to-back warning, but 4 sets or 2 days still do', () => {
+    const w = normWeek(null);
+    const at = (id, day, sets) => ({ id, day, type: 'single', items: [{ ex: 'grip', ph: 'hyp', rx: `${sets} × 12` }] });
+    const x = sl('x', 6, 'b'); // a workout day without the exercise, so it is not simply "on every workout day"
+    const run = (cards, week = w) => moveClashes(c, week, [...cards, x], cards[0], 2);
+    const light = [at('a', 1, 3), at('b', 3, 3), at('c', 5, 3)];
+    expect(run(light)).toEqual([]); // 3 days, 3 sets: light and frequent
+    expect(run([at('a', 1, 3), at('b', 3, 4), at('c', 5, 3)]).length).toBeGreaterThan(0); // one of the cards has 4 sets
+    expect(run([at('a', 1, 3), at('b', 3, 3)]).length).toBeGreaterThan(0); // only 2 days
+    expect(run(light, normWeek({ skipped: { c: true } })).length).toBeGreaterThan(0); // a skipped card does not count toward 3
+    expect(run([...light, at('d', 2, 3)]).length).toBeGreaterThan(0); // the same day is a clash for any exercise
+  });
+  it('the order suggestion leaves out a light, frequent exercise too, but not the same one at 4 sets', () => {
+    const w = normWeek(null);
+    const at = (id, day, sets) => ({ id, day, type: 'single', items: [{ ex: 'grip', ph: 'hyp', rx: `${sets} × 12` }] });
+    const x = sl('x', 5, 'b');
+    expect(planOrder(c, w, [at('a', 1, 3), at('b', 2, 3), at('c', 3, 3), x], 1)).toBeNull(); // 3 days in a row, 3 sets: nothing to fix
+    expect(planOrder(c, w, [at('a', 1, 4), at('b', 2, 4), at('c', 3, 4), x], 1)).not.toBeNull(); // same days at 4 sets: still suggested
+  });
   it('Home and either/or cards give no back-to-back warning, either moving or sitting next door', () => {
     const w = normWeek(null);
     const home = sl('h', 1, 'grip', { sec: 'Home' }); const home3 = sl('h3', 3, 'grip', { sec: 'Home' });
