@@ -6,28 +6,52 @@
 //   (the Changelog section is filled from --what, or from --changelog "..." when it should say less)
 //   gh pr create --title "..." --body-file /tmp/body.md
 //
-// The audience is worked out from the diff against origin/main (the reason goes to stderr), and --audience na|admin|paid|everyone overrides it:
+// The audience is worked out from the diff against origin/main (the reason goes to stderr), and --audience <key> overrides it:
 //   na        every changed file is a doc, test, script, tool, CI or config file: nothing a user can see
-//   admin     the diff adds an admin-only line (key: 'admin') to src/features.ts, or touches server/admin.ts
-//   paid      the diff adds a paid-subscriber line (key: 'paid') to src/features.ts
-//   everyone  anything else under src/, server/ or public/ (the standing rule: new features ship to everyone for now, see CLAUDE.md)
+//   <rules>   each rule in .github/pr-kit.json "audiences", in order (a changed file, or a line added to a file's diff)
+//   everyone  anything else
+// This script is the same in every project; what differs lives in .github/pr-kit.json (all keys optional, see DEFAULTS below) and in the
+// template's Audience and Checks lines. Every audience's label must appear in exactly one Audience box of the template.
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const LABELS = { na: 'n/a:', admin: '**Admin only**', paid: '**Paid subscribers**', everyone: '**Everyone**' };
-const NOT_USER_FACING = [/^docs\//, /^\.githooks\//, /^e2e[\w-]*\//, /^scripts\//, /^tools\//, /^\.github\//, /^\.claude\//, /^spike\//, /^db\//, /^backups?\//, /\.test\.[jt]sx?$/, /\.md$/, /^package(-lock)?\.json$/, /^tsconfig[\w.]*\.json$/, /^vite\.config\./, /^playwright[\w.]*\.config\./, /^Dockerfile$/, /^cloudbuild[\w-]*\.yaml$/, /^docker-compose\.yml$/];
+// A key set in .github/pr-kit.json replaces that key's default entirely (it does not add to it), so a project that sets `notUserFacing` or `ui` lists every pattern.
+const DEFAULTS = {
+  // Paths that can never change what a user sees (regex source strings).
+  notUserFacing: ['^docs?/', '^tests?/', '^e2e[\\w-]*/', '^scripts/', '^tools/', '^\\.github/', '^\\.githooks/', '^\\.husky/', '^\\.claude/', '\\.(test|spec)\\.[jt]sx?$', '\\.md$', '^package(-lock)?\\.json$', '^tsconfig[\\w.]*\\.json$', '^Dockerfile$', '^docker-compose\\.ya?ml$'],
+  // Extra audiences, checked in order after n/a: { key, label, files?: [paths], diffFile?, diffPattern? (regex source, multiline), reason }.
+  audiences: [],
+  // Paths that can move a Lighthouse score or look of the page (regex source strings).
+  ui: ['\\.(css|tsx|jsx|vue|svelte|svg|png|webp|woff2?)$', '^index\\.html$', '^public/'],
+  // A Checks line (regex source, case-insensitive) that is ticked for a change that touches no UI, because it reads n/a then. Empty: none.
+  autoTickWhenNoUi: '',
+  // Reason shown for the fallback audience.
+  everyoneReason: 'user-visible files changed and no other audience rule matched',
+};
+const BUILT_IN_LABELS = { na: 'n/a:', everyone: '**Everyone**' };
 
-/** Which audience a change has, from its file names and its diff text. Returns { audience, reason }. */
-export function inferAudience(files, diff = '') {
-  if (files.length > 0 && files.every(f => NOT_USER_FACING.some(re => re.test(f)))) return { audience: 'na', reason: 'only docs, tests, scripts, CI or config files changed' };
-  if (/^\+\s*\w+:\s*'paid'/m.test(diff)) return { audience: 'paid', reason: "a paid-subscriber entry was added to src/features.ts" };
-  if (/^\+\s*\w+:\s*'admin'/m.test(diff) || files.includes('server/admin.ts')) return { audience: 'admin', reason: "an admin-only entry in src/features.ts, or server/admin.ts, changed" };
-  return { audience: 'everyone', reason: 'user-visible files changed and no admin-only or paid entry was added (standing rule: ship to everyone for now)' };
+/** The project's settings: DEFAULTS with whatever .github/pr-kit.json sets. */
+export function loadConfig(path = fileURLToPath(new URL('../.github/pr-kit.json', import.meta.url))) {
+  return { ...DEFAULTS, ...(existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : {}) };
+}
+
+const any = (patterns, f, flags = '') => patterns.some(p => new RegExp(p, flags).test(f));
+export const labelsOf = config => ({ ...BUILT_IN_LABELS, ...Object.fromEntries(config.audiences.map(a => [a.key, a.label])) });
+
+/** Which audience a change has, from its file names and its diffs (`diffs` maps a file name to its added/removed lines). Returns { audience, reason }. */
+export function inferAudience(files, diffs = {}, config = loadConfig()) {
+  if (files.length > 0 && files.every(f => any(config.notUserFacing, f))) return { audience: 'na', reason: 'only docs, tests, scripts, CI or config files changed' };
+  for (const a of config.audiences) {
+    const byFile = (a.files || []).some(f => files.includes(f));
+    const byDiff = a.diffFile && a.diffPattern && new RegExp(a.diffPattern, 'm').test(diffs[a.diffFile] || '');
+    if (byFile || byDiff) return { audience: a.key, reason: a.reason };
+  }
+  return { audience: 'everyone', reason: config.everyoneReason };
 }
 
 /** True when the change can move a Lighthouse score: UI code, styles, fonts, images, the page shell or the build config. */
-export const touchesUi = files => files.some(f => /^src\/(components|hooks|assets)\//.test(f) || /\.(css|tsx|svg|png|webp|woff2?)$/.test(f) || f === 'index.html' || /^vite\.config\./.test(f) || f.startsWith('public/'));
+export const touchesUi = (files, config = loadConfig()) => files.some(f => any(config.ui, f));
 
 /** A changelog entry from a long description: whole sentences up to 600 characters, never cut mid-word. */
 export function shorten(text, max = 600) {
@@ -38,13 +62,15 @@ export function shorten(text, max = 600) {
   return end > 0 ? cut.slice(0, end + 1) : cut.slice(0, cut.lastIndexOf(' ')) + '…';
 }
 
-/** The template with exactly one Audience box ticked and the What section filled in. A change that touches no UI (`ui` false) also gets the Lighthouse line under Checks ticked, since the line reads n/a then; for a UI change it stays open for the author to tick after running `scripts/lighthouse.mjs`, because that run is theirs to do. */
-export function buildBody(template, audience, what = '', ui = false, changelog = '') {
+/** The template with exactly one Audience box ticked and the What section filled in. A change that touches no UI (`ui` false) also gets the config's `autoTickWhenNoUi` Checks line ticked (the Lighthouse line in iron-log, which reads n/a then); for a UI change it stays open for the author to tick after running the check, because that run is theirs to do. */
+export function buildBody(template, audience, what = '', ui = false, changelog = '', config = loadConfig()) {
+  const labels = labelsOf(config);
+  const auto = config.autoTickWhenNoUi ? new RegExp(config.autoTickWhenNoUi, 'i') : null;
   let inAudience = false;
   const out = template.split('\n').map(line => {
     if (/^## /.test(line)) inAudience = /^## Audience/.test(line);
-    if (inAudience && /^- \[ \]/.test(line)) return line.includes(LABELS[audience]) ? line.replace('- [ ]', '- [x]') : line;
-    if (!ui && /^- \[ \].*lighthouse\.mjs/i.test(line)) return line.replace('- [ ]', '- [x]'); // not a UI change: n/a, as the line says
+    if (inAudience && /^- \[ \]/.test(line)) return line.includes(labels[audience]) ? line.replace('- [ ]', '- [x]') : line;
+    if (!ui && auto && /^- \[ \]/.test(line) && auto.test(line)) return line.replace('- [ ]', '- [x]'); // not a UI change: n/a, as the line says
     return line;
   }).join('\n');
   const entry = changelog ? changelog.trim().replace(/\s+/g, ' ') : shorten(what);
@@ -58,16 +84,18 @@ export function buildBody(template, audience, what = '', ui = false, changelog =
 function main(argv) {
   const arg = name => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : undefined; };
   const git = (...a) => execFileSync('git', a, { encoding: 'utf8' });
+  const config = loadConfig();
+  const labels = labelsOf(config);
   const base = ['origin/main', 'main'].find(b => { try { git('rev-parse', '--verify', b); return true; } catch { return false; } }) || 'HEAD';
   const files = git('diff', '--name-only', `${base}...HEAD`).split('\n').filter(Boolean);
-  const diff = git('diff', '-U0', `${base}...HEAD`, '--', 'src/features.ts');
+  const diffs = Object.fromEntries([...new Set(config.audiences.map(a => a.diffFile).filter(Boolean))].map(f => [f, git('diff', '-U0', `${base}...HEAD`, '--', f)]));
   const given = arg('--audience');
-  if (given && !LABELS[given]) { console.error('--audience must be na, admin, paid or everyone'); process.exit(2); }
-  const found = given ? { audience: given, reason: 'given with --audience' } : inferAudience(files, diff);
+  if (given && !labels[given]) { console.error(`--audience must be one of: ${Object.keys(labels).join(', ')}`); process.exit(2); }
+  const found = given ? { audience: given, reason: 'given with --audience' } : inferAudience(files, diffs, config);
   console.error(`Audience: ${found.audience} (${found.reason}). ${files.length} file(s) against ${base}.`);
   const template = readFileSync(fileURLToPath(new URL('../.github/pull_request_template.md', import.meta.url)), 'utf8');
   if (!arg('--changelog') && arg('--what')) console.error('No --changelog given: the Changelog section is the --what text (cut at a sentence end past 600 characters). Pass --changelog "..." to say it shorter.');
-  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files), arg('--changelog')));
+  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files, config), arg('--changelog'), config));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main(process.argv.slice(2));
