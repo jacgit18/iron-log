@@ -6,7 +6,7 @@ import type { PushScheduler } from './scheduler.ts';
 import { MAX_SUBSCRIPTIONS, parseCancel, parseSchedule, parseSubscription, parseUnsubscribe } from './validate.ts';
 
 // The device side of Web Push (ADR 044): register a browser, remove it, and ask for a push later or take the ask back (the fire route is fire.ts). Mounted at
-// /api/push behind sign-in, requireAdmin and a per-user limit. An endpoint is a credential, so it is never returned and never logged.
+// /api/push behind sign-in and a per-user limit (open to every signed-in account since 2026-10-19; it was admin-only). An endpoint is a credential, so it is never returned and never logged.
 export interface PushDeps {
   db: Kysely<DB>;
   publicKey?: string;
