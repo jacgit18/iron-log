@@ -306,7 +306,8 @@ export const weekSlots = (prog: Program, w: WeekIn, key?: string) => [...slotsFo
 // every other workout day (the sled). The same exercise twice on one day always warns.
 export function moveClashes(cfg: Cfg, week: WeekIn, slots: Slot[], s: Slot, day: number): string[] {
   const cols = currentLayout(week, slots); const out: string[] = [];
-  const daily = dailyOf(currentLayout(week, slots.filter(o => o.id !== s.id)), week);
+  // "Every day" is judged without the moved card (it is leaving its day); "light and frequent" with it, since it is one of the 3 days.
+  const daily = new Set([...dailyOf(currentLayout(week, slots.filter(o => o.id !== s.id)), week), ...lightOf(cfg, cols, week)]);
   ([[day, 'the same day'], [day + 1, 'the day after'], [day - 1, 'the day before']] as [number, string][]).forEach(([d, rel]) => {
     const near = d !== day;
     if (!cols[d] || (near && !countsForClash(s))) return;
@@ -345,9 +346,25 @@ export function altDay(cfg: Cfg, week: WeekIn, slots: Slot[], s: Slot, day: numb
    planOrder only suggests; the store writes week.order and week.rest on Apply. */
 export const countsForClash = (s: Slot) => s.sec !== 'Home' && s.type !== 'either';
 const exOfCol = (list: Slot[], w: WeekIn, skip: Set<string>) => new Set(list.filter(s => !isSkipped(s, w) && countsForClash(s)).flatMap(s => s.items.map(it => it.ex)).filter(ex => !skip.has(ex)));
-const dailyOf = (cols: Cols, w: WeekIn): Set<string> => {
+// An exercise trained on 3 or more days of the week with fewer than 4 sets a session is light and frequent, so it is left out of clashes too:
+// back-to-back days are what it is. Needs `cfg` for the prescription; a card with no "N ×" in it is never counted as light.
+const lightOf = (cfg: Cfg | undefined, cols: Cols, w: WeekIn): Set<string> => {
+  const days = new Map<string, Set<number>>(); const heavy = new Set<string>();
+  if (!cfg) return new Set();
+  DAYS.forEach(d => (cols[d] || []).forEach(s => {
+    if (isSkipped(s, w) || !countsForClash(s)) return;
+    s.items.forEach((it, j) => {
+      const m = rxOf(cfg, it, phaseOf(cfg, w, s, j)).match(/(\d+)\s*×/);
+      if (!m || Number(m[1]) >= 4) heavy.add(it.ex);
+      days.set(it.ex, (days.get(it.ex) ?? new Set<number>()).add(d));
+    });
+  }));
+  return new Set([...days].filter(([ex, ds]) => ds.size >= 3 && !heavy.has(ex)).map(([ex]) => ex));
+};
+const dailyOf = (cols: Cols, w: WeekIn, cfg?: Cfg): Set<string> => {
   const days = DAYS.map(d => exOfCol(cols[d], w, new Set())).filter(x => x.size);
-  return days.length < 2 ? new Set() : new Set([...days[0]].filter(ex => days.every(x => x.has(ex))));
+  const every = days.length < 2 ? new Set<string>() : new Set([...days[0]].filter(ex => days.every(x => x.has(ex))));
+  return new Set([...every, ...lightOf(cfg, cols, w)]);
 };
 const pairClash = (cols: Cols, w: WeekIn, skip: Set<string>, a: number, b: number) => { const x = exOfCol(cols[b] || [], w, skip); return [...exOfCol(cols[a] || [], w, skip)].filter(ex => x.has(ex)); };
 const countFrom = (cols: Cols, w: WeekIn, skip: Set<string>, from: number) => DAYS.filter(c => c >= from && c < DAY_COUNT).reduce((n, c) => n + pairClash(cols, w, skip, c, c + 1).length, 0);
@@ -385,7 +402,7 @@ const outcomeOf = (before: number, after: number) => (after ? `leaves ${after} b
 // Returns null unless it has fewer repeats than now; otherwise { order, rest, before, after, lines }.
 type OrderPlan = { order: number[]; rest: number[]; before: number; after: number; lines: string[]; restOnly: boolean };
 function searchOrder(cfg: Cfg, week: WeekIn, slots: Slot[], doneCol: number): OrderPlan | null {
-  const cols = currentLayout(week, slots); const skip = dailyOf(cols, week);
+  const cols = currentLayout(week, slots); const skip = dailyOf(cols, week, cfg);
   const rest = restsOf(week); const order = orderOf(week);
   const before = countFrom(cols, week, skip, doneCol);
   if (!before) return null;
@@ -444,7 +461,7 @@ export function planOrder(cfg: Cfg, week: WeekIn, slots: Slot[], doneCol: number
 // Ties go to the target nearest the card, then the later day, then the first card on the board.
 // Returns null unless it has fewer repeats than now; otherwise { slot, from, to, pd, before, after, lines }.
 export function planCard(cfg: Cfg, week: WeekIn, slots: Slot[], doneCol: number) {
-  const cols = currentLayout(week, slots); const skip = dailyOf(cols, week);
+  const cols = currentLayout(week, slots); const skip = dailyOf(cols, week, cfg);
   const before = countFrom(cols, week, skip, doneCol);
   if (!before) return null;
   const open = movableCols(week, cols, doneCol).filter(c => dayAt(week, c) != null);
@@ -458,7 +475,7 @@ export function planCard(cfg: Cfg, week: WeekIn, slots: Slot[], doneCol: number)
       if (to === from) return;
       const there = exs(cols[to]); if (s.items.some(it => there.has(it.ex))) return;
       const next = { ...cols, [from]: cols[from].filter(o => o !== s), [to]: [...cols[to], s] };
-      if (!sameSet(dailyOf(next, week), skip)) return;
+      if (!sameSet(dailyOf(next, week, cfg), skip)) return;
       const key = [countFrom(next, week, skip, doneCol), Math.abs(to - from), -to];
       if (!best || lexLess(key, best.key)) best = { key, s, from, to };
     });
