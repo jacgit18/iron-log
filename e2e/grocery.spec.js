@@ -47,10 +47,11 @@ test('ticking Have at home takes an item off this month’s To get; buying it ch
   await page.click('#groc-view-get');
   await expect(page.locator('#groc-summary')).toHaveText('Got 0 of 2 · Spent $0.00 · Expected $23.99');
   await expect(page.getByRole('region', { name: 'Veg market' })).toContainText('Kale');
-  await page.getByText('Kale', { exact: true }).click(); // the whole row ticks it
-  await expect(page.locator('#groc-kale')).toBeHidden(); // bought: it leaves this month's list...
-  await page.click('#groc-bought summary'); // ...and waits under "Bought this month"
-  await expect(page.locator('#groc-kale')).toBeChecked();
+  await page.getByText('Kale', { exact: true }).click(); // the name does not tick it (a stray tap cannot): it opens the count and price panel
+  await expect(page.locator('#groc-kale')).not.toBeChecked();
+  await expect(page.getByLabel('Count of Kale')).toBeVisible();
+  await page.locator('#groc-kale').check(); // only the checkbox ticks
+  await expect(page.locator('#groc-kale')).toBeChecked(); // bought: it moved under "Bought this month", open because its panel was open
   await expect(page.locator('#groc-summary')).toHaveText('Got 1 of 2 · Spent $5.00 · Expected $23.99');
   await page.click('#groc-view-home');
   await expect(page.getByLabel('Have Kale')).toBeChecked(); // bought: you have it
