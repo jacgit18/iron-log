@@ -1,5 +1,4 @@
 import { lineCost, lineOf, shiftMonth } from './grocery.js';
-import { taxCents } from './groceryTax.js';
 import { ME, partiesOf, settle, type Purchase, type Settlement } from './grocerySplit.js';
 import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson } from '../types.ts';
 
@@ -71,7 +70,7 @@ export function storesBought(g: Grocery, purchases: readonly MonthPurchase[]): s
 export function storeSettlement(g: Grocery, m: GroceryMonth, store: string, purchases: readonly MonthPurchase[] = purchasesOf(g, m)): Settlement {
   const covered = new Set((g.groups ?? []).flatMap(x => x.people.filter(p => p.covered).map(p => p.id)));
   const mine = purchases.filter(p => p.store === store);
-  return settle(mine, payerOf(g, m, store), covered, taxCents(mine.reduce((a, p) => a + p.cents, 0), g.taxes?.[store]));
+  return settle(mine, payerOf(g, m, store), covered, mine.length ? m.tax?.[store] ?? 0 : 0); // the receipt's tax, typed in; only for a store with something bought
 }
 
 /** What you paid this month (the bills of the stores where you are the payer; a store someone else paid is not yours to have paid) and your share

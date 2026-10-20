@@ -138,23 +138,20 @@ describe('a list that uses no sharing is unchanged', () => {
   });
 });
 
-describe('a store\'s tax syncs on the store row', () => {
-  const taxed: Grocery = { ...g, taxes: { "BJ's": 8875 } };
-  it('is part of the store row, and the catalogue reads back with it; a store without one reads back without', () => {
-    const rows = desiredRows(kind('grocery/main'), taxed, new Map());
-    const bjs = rows.find(r => r.table === 'list_items' && r.key === "grocery_store/BJ's");
-    expect(bjs).toMatchObject({ item: { id: "BJ's", n: "BJ's", tax: 8875 } });
-    expect(rows.find(r => r.table === 'list_items' && r.key === 'grocery_store/Aldi')).toMatchObject({ item: { id: 'Aldi', n: 'Aldi' } });
-    expect(documentFor(kind('grocery/main'), mirrorOf(rows))).toEqual(taxed);
+describe('a month\'s tax travels with the month and merges store by store', () => {
+  const month = (tax: Record<string, number>): GroceryMonth => ({ lines: { rice: { got: true } }, pulled: [], tax });
+  it('is part of the month record and reads back with it', () => {
+    const rows = desiredRows(kind('grocery/2026-09'), month({ "BJ's": 222 }), new Map());
+    expect(documentFor(kind('grocery/2026-09'), mirrorOf(rows))).toEqual(month({ "BJ's": 222 }));
   });
-  it('an older store row with no tax reads back as no tax at all', () => {
-    const rows = desiredRows(kind('grocery/main'), g, new Map());
-    expect((documentFor(kind('grocery/main'), mirrorOf(rows)) as Grocery).taxes).toBeUndefined();
+  it('two devices that each typed a different store\'s tax both keep it', () => {
+    const base = month({ Aldi: 35 });
+    const ours = month({ Aldi: 35, "BJ's": 222 });
+    const theirs = month({ Aldi: 35, Costco: 160 });
+    expect(mergeGroceryMonth3(base, ours, theirs).week.tax).toEqual({ Aldi: 35, "BJ's": 222, Costco: 160 });
   });
-  it('the API accepts a store row with a good rate and refuses a bad one', () => {
-    expect(validateSaveListItem({ list: 'grocery_store', item: { id: "BJ's", n: "BJ's", tax: 8875 }, position: 0 })).toMatchObject({ list: 'grocery_store' });
-    expect(validateSaveListItem({ list: 'grocery_store', item: { id: "BJ's", n: "BJ's" }, position: 0 })).toMatchObject({ list: 'grocery_store' });
-    expect(validateSaveListItem({ list: 'grocery_store', item: { id: "BJ's", n: "BJ's", tax: 0 }, position: 0 })).toBeNull();
-    expect(validateSaveListItem({ list: 'grocery_store', item: { id: "BJ's", n: "BJ's", tax: 31000 }, position: 0 })).toBeNull();
+  it('a tax one device cleared stays cleared, and without a base this device wins a store both set', () => {
+    expect(mergeGroceryMonth3(month({ "BJ's": 222 }), { lines: { rice: { got: true } }, pulled: [] }, month({ "BJ's": 222 })).week.tax).toBeUndefined();
+    expect(mergeGroceryMonth3(null, month({ "BJ's": 300 }), month({ "BJ's": 222, Aldi: 35 })).week.tax).toEqual({ "BJ's": 300, Aldi: 35 });
   });
 });

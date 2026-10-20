@@ -96,13 +96,19 @@ describe('groups and totals', () => {
     expect(off.map(x => x.label)).toEqual(['Veg market', 'Costco', 'Anywhere']);
     expect(off.every(x => !x.group)).toBe(true);
   });
-  it('adds a store\'s tax to expected and spent, on that store\'s own subtotal', () => {
-    const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] }; // kale 12.00 ticked; rice 18.99 and saffron 12.00 not
-    const plain = tally(onList(g, m, true), m);
-    const taxed = tally(onList(g, m, true), m, { 'Veg market': 8875 });
-    expect(taxed.spent).toBe(plain.spent + 107); // 1200 x 8.875% = 106.5
-    expect(taxed.planned).toBe(plain.planned + 107); // only the one store's items carry tax
-    expect(tally(onList(g, m, true), m, {})).toEqual(plain);
+  it('adds the typed tax of a store to spent only, and only for a store that has something ticked', () => {
+    const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [], tax: { 'Veg market': 107, Costco: 500 } }; // kale 12.00 ticked at Veg market; nothing ticked at Costco
+    const t = tally(onList(g, m, true), m);
+    const plain = tally(onList(g, { ...m, tax: undefined }, true), { ...m, tax: undefined });
+    expect(t.spent).toBe(plain.spent + 107); // Costco has nothing ticked: its tax is not counted
+    expect(t.planned).toBe(plain.planned); // expected is the prices before tax
+  });
+  it('the monthly spend includes each store\'s typed tax', () => {
+    const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 }, rice: { got: true } }, pulled: [], tax: { 'Veg market': 107, Costco: 160 } };
+    const [row] = spendByMonth(g, { '2026-09': m }, '2026-09', 1);
+    const [base] = spendByMonth(g, { '2026-09': { ...m, tax: undefined } }, '2026-09', 1);
+    expect(row!.spent).toBe(base!.spent + 107 + 160);
+    expect(row!.bought).toBe(base!.bought);
   });
   it('splits expected from spent and counts the unpriced', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] };

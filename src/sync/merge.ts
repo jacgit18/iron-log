@@ -143,7 +143,8 @@ export function mergeGroceryMonth3(baseIn: unknown, oursIn: unknown, theirsIn: u
   const pulled = base ? Object.keys(mergeMap(flags(base.pulled), flags(ours.pulled), flags(theirs.pulled))) : [...new Set([...ours.pulled, ...theirs.pulled])];
   // Who paid for each store, store by store like the lines.
   const payer = base ? mergeMap(base.payer ?? {}, ours.payer ?? {}, theirs.payer ?? {}) : { ...theirs.payer, ...ours.payer };
-  const month = normGroceryMonth({ lines, pulled, payer });
+  const tax = base ? mergeMap(base.tax ?? {}, ours.tax ?? {}, theirs.tax ?? {}) : { ...theirs.tax, ...ours.tax }; // each store's tax, store by store too
+  const month = normGroceryMonth({ lines, pulled, payer, tax });
   return { week: month, tookTheirs: !same(month, ours), unskipped: false };
 }
 

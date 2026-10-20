@@ -1,81 +1,80 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// A store's sales tax (a Tax checkbox and a percent in At home > Edit > Stores): it is added to what is bought at that store so the totals match
-// the receipt. The fixed date is in September 2026, so the month below is 2026-09.
+// A store's tax for the month, typed in dollars from the receipt (a Tax checkbox and an amount under the store's name on To get). It is added to what
+// you spent there, and the percent it comes to on the ticked items is shown beside it. The fixed date is in September 2026 (month 2026-09).
 const CAT = { stores: ["BJ's", 'Aldi'], items: [
   { id: 'tp', n: 'Toilet paper', store: "BJ's", qty: 1, cents: 2499, every: true, out: false },
+  { id: 'soap', n: 'Soap', store: "BJ's", qty: 1, cents: 400, every: true, out: false },
   { id: 'rice', n: 'Rice', store: 'Aldi', qty: 1, cents: 500, every: true, out: false },
 ] };
-const MONTH = { lines: { tp: { got: true }, rice: { got: true } }, pulled: [] };
+const MONTH = { lines: { tp: { got: true }, rice: { got: true } }, pulled: [] }; // soap still to get, so BJ's has a to-get section
 
-const seed = async (page, cat = CAT) => {
-  await page.evaluate(({ cat, MONTH }) => {
+const seed = async (page, { cat = CAT, month = MONTH, admin = false } = {}) => {
+  await page.evaluate(({ cat, month, admin }) => {
+    if (admin) localStorage.setItem('ironlog:session/admin', 'true');
     localStorage.setItem('ironlog:grocery/main', JSON.stringify(cat));
-    localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(MONTH));
-  }, { cat, MONTH });
+    localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(month));
+  }, { cat, month, admin });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
-const toEdit = async page => { await page.click('#groc-view-home'); await page.click('#groc-edit'); };
-const setTax = async (page, store, pct) => {
-  await page.getByLabel(`Charges tax at ${store}`).check();
-  await page.getByLabel(`Tax rate at ${store}, percent`).fill(pct);
-  await page.getByLabel(`Tax rate at ${store}, percent`).press('Enter');
+const section = (page, store) => page.locator('section.gstore', { has: page.getByRole('heading', { name: store }) }).first();
+const setTax = async (page, store, amount) => {
+  await page.getByLabel(`Tax at ${store} this month`).check();
+  const box = page.getByLabel(`Tax at ${store}, dollars, from the receipt`);
+  await box.fill(amount); await box.press('Enter');
 };
 
-test('a store\'s tax is added to what you spent there and nowhere else, and it survives a reload', async ({ page }) => {
+test('a typed tax is added to what you spent at that store, shows its percent, and survives a reload', async ({ page }) => {
   await seed(page);
   await expect(page.locator('#groc-summary')).toContainText('Spent $29.99'); // 24.99 + 5.00, no tax yet
-  await toEdit(page);
-  await setTax(page, "BJ's", '8.875');
-  await page.click('#groc-done'); await page.click('#groc-view-get');
-  await expect(page.locator('#groc-summary')).toContainText('Spent $32.21'); // BJ's 24.99 + 2.22 tax, Aldi 5.00 untaxed
-  await expect(page.locator('#groc-summary')).toContainText('with tax');
+  await setTax(page, "BJ's", '2.22');
+  await expect(page.locator('#groc-summary')).toContainText('Spent $32.21 with tax');
+  await expect(section(page, "BJ's").locator('.gtaxpct')).toHaveText('8.88% of $24.99'); // 2.22 / 24.99 = 8.8836
   await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
-  await expect(page.locator('#groc-summary')).toContainText('Spent $32.21');
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).taxes);
-  expect(saved).toEqual({ "BJ's": 8875 });
+  await expect(page.locator('#groc-summary')).toContainText('Spent $32.21 with tax');
+  await expect(page.getByLabel("Tax at BJ's, dollars, from the receipt")).toHaveValue('2.22');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/2026-09')).tax)).toEqual({ "BJ's": 222 });
 });
 
-test('unticking Tax takes the tax off again', async ({ page }) => {
-  await seed(page, { ...CAT, taxes: { "BJ's": 8875 } });
-  await expect(page.locator('#groc-summary')).toContainText('Spent $32.21');
-  await toEdit(page);
-  await expect(page.getByLabel("Tax rate at BJ's, percent")).toHaveValue('8.875');
-  await page.getByLabel("Charges tax at BJ's").uncheck();
-  await page.click('#groc-done'); await page.click('#groc-view-get');
-  await expect(page.locator('#groc-summary')).toContainText('Spent $29.99');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).taxes)).toBeUndefined();
+test('the tax box is offered once something is ticked at the store, and unticking Tax clears it', async ({ page }) => {
+  await seed(page, { month: { lines: { rice: { got: true } }, pulled: [] } }); // nothing ticked at BJ's yet
+  await expect(page.getByLabel("Tax at BJ's this month")).toHaveCount(0);
+  await page.click('#groc-bought summary'); // Aldi is all bought, so its section is in the fold
+  await expect(page.getByLabel('Tax at Aldi this month')).toBeVisible();
+  await setTax(page, 'Aldi', '0.35');
+  await expect(page.locator('#groc-summary')).toContainText('Spent $5.35 with tax');
+  await page.getByLabel('Tax at Aldi this month').uncheck();
+  await expect(page.locator('#groc-summary')).toContainText('Spent $5.00');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/2026-09')).tax)).toBeUndefined();
 });
 
-test('a rate that is not a percent is refused with a message and nothing is saved', async ({ page }) => {
+test('an amount that is not dollars is refused with a message and nothing is saved', async ({ page }) => {
   await seed(page);
-  await toEdit(page);
   await setTax(page, "BJ's", 'abc');
-  await expect(page.getByRole('alert')).toContainText('Tax is a percent');
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).taxes)).toBeUndefined();
+  await expect(page.getByRole('alert')).toContainText('Tax is dollars');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/2026-09')).tax)).toBeUndefined();
 });
 
-test('the Stores section with a tax box has no accessibility violations', async ({ page }) => {
-  await seed(page, { ...CAT, taxes: { "BJ's": 8875 } });
-  await toEdit(page);
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-});
-
-test('with sharing, the bill and the store line show the tax, and the card says it is included', async ({ page }) => {
-  await page.evaluate(() => localStorage.setItem('ironlog:session/admin', 'true'));
+test('with sharing, the bill shows the tax and every share still adds up to it', async ({ page }) => {
   await seed(page, {
-    stores: ["BJ's"], items: [{ id: 'tp', n: 'Toilet paper', store: "BJ's", qty: 1, cents: 2499, every: true, out: false }],
-    groups: [{ id: 'g1', n: 'Costco run', people: [{ id: 'sis', n: 'Sister' }], stores: ["BJ's"] }], taxes: { "BJ's": 8875 },
+    admin: true,
+    cat: { stores: ["BJ's"], items: [{ id: 'tp', n: 'Toilet paper', store: "BJ's", qty: 1, cents: 2499, every: true, out: false }],
+      groups: [{ id: 'g1', n: 'Costco run', people: [{ id: 'sis', n: 'Sister' }], stores: ["BJ's"] }] },
+    month: { lines: { tp: { got: true } }, pulled: [], tax: { "BJ's": 222 } },
   });
-  await page.click('#groc-view-get');
   const card = page.getByRole('region', { name: 'Splitting this month' }).locator('.gsplitcard', { hasText: "BJ's" });
   await expect(card.locator('li', { hasText: 'Bill' }).first()).toContainText('$27.21'); // 24.99 + 2.22
   await expect(card.locator('li', { hasText: 'Includes tax' })).toContainText('$2.22');
   await page.click('#groc-bought summary');
   await expect(page.locator('.gstoremoney')).toContainText('Bought $27.21 (tax $2.22)');
-  // Your share and your sister's add up to the bill (27.21): 24.99 splits 12.49 / 12.50, and the 2.22 tax follows each person's share, 1.11 each.
+  // 24.99 splits 12.49 / 12.50 and the 2.22 follows each person's share, 1.11 each.
   await expect(card.locator('li', { hasText: 'Your share' })).toContainText('$13.60');
   await expect(card.locator('li', { hasText: 'Sister owes you' })).toContainText('$13.61');
+});
+
+test('the tax box has no accessibility violations', async ({ page }) => {
+  await seed(page, { month: { ...MONTH, tax: { "BJ's": 222 } } });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });

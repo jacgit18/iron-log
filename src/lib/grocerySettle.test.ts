@@ -142,21 +142,21 @@ describe('what is owed to you', () => {
 });
 
 describe('tax at a store', () => {
-  it('goes on that store\'s bill once, and every share still adds up to the bill', () => {
+  it('is the receipt\'s amount: on that store\'s bill once, and every share still adds up to the bill', () => {
     const base = storeSettlement(g, bought, "BJ's");
-    const taxed = storeSettlement({ ...g, taxes: { "BJ's": 8875 } }, bought, "BJ's");
-    const tax = Math.round((base.bill * 8875) / 100_000);
-    expect(taxed.tax).toBe(tax);
-    expect(taxed.bill).toBe(base.bill + tax);
+    const taxed = storeSettlement(g, { ...bought, tax: { "BJ's": 480 } }, "BJ's");
+    expect(taxed.tax).toBe(480);
+    expect(taxed.bill).toBe(base.bill + 480);
     const covered = taxed.rows.filter(r => r.kind === 'covered').reduce((a, r) => a + r.cents, 0);
     expect(taxed.yourShare + taxed.owedToYou + covered).toBe(taxed.bill); // you paid: you, those who owe you, and the one already paid
-    expect(storeSettlement({ ...g, taxes: { "BJ's": 8875 } }, bought, 'Aldi').tax).toBe(0); // another store: none
+    expect(storeSettlement(g, { ...bought, tax: { "BJ's": 480 } }, 'Aldi').tax).toBe(0); // another store: none
   });
-  it('is in what you paid and your share for the month', () => {
+  it('is in what you paid and your share for the month, and a tax with nothing bought there counts for nothing', () => {
     const plain = monthShare(g, bought);
-    const taxed = monthShare({ ...g, taxes: { "BJ's": 8875, Aldi: 8875 } }, bought);
-    expect(taxed.paid).toBeGreaterThan(plain.paid);
+    const taxed = monthShare(g, { ...bought, tax: { "BJ's": 480, Aldi: 35 } });
+    expect(taxed.paid).toBe(plain.paid + 515);
     expect(taxed.yours).toBeGreaterThan(plain.yours);
+    expect(monthShare(g, { ...bought, tax: { Costco: 999 } })).toEqual(plain);
   });
 });
 

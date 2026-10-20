@@ -1,11 +1,12 @@
 @layer base, components;
 @layer components {
-/* A store's tax while editing: the Tax checkbox and its percent box, beside the store's name. */
+/* A store's tax for the month, under its heading: the Tax checkbox, the dollar box and the percent it comes to. */
 .gtaxset {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--sp-8);
+  margin-top: var(--sp-4);
 }
 .gtaxchk {
   display: inline-flex;
@@ -13,14 +14,18 @@
   gap: var(--sp-8);
   min-height: 44px;
 }
-.gtaxrate {
+.gtaxamt {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-4);
 }
-.gtaxrate input {
-  width: 5.5rem;
+.gtaxamt input {
+  width: 6rem;
   min-height: 44px;
   text-align: right;
+}
+.gtaxpct {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
 }
 }

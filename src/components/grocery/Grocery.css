@@ -335,12 +335,8 @@
 .gform .btn {
   min-height: 44px;
 }
-.gstoreline .btn {
-  margin-left: auto;
-}
 .gstoreline {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-8);

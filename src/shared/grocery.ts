@@ -7,9 +7,6 @@ import { str } from './stretchWeek.js';
    say whether a value is already clean, for the API to refuse what the app would never send (ADR 039). */
 
 export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999, MAX_PRICES = 50;
-/** A store's sales tax is a whole number of thousandths of a percent (8.875% is 8875), from 0.001% to 30%. */
-export const MAX_TAX = 30_000;
-export const cleanTax = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= MAX_TAX ? v : null);
 export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40, MAX_NOTE = 120;
 export const MAX_GROUPS = 10, MAX_PEOPLE = 10, MAX_PERSON = 40;
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -65,8 +62,7 @@ export function normGroceryItem(x: unknown): GroceryItem | null {
 export function normGroceryStore(x: unknown): GroceryStore | null {
   const o = asObject(x);
   const n = o ? str(o.n ?? o.id, MAX_STORE) : '';
-  const tax = o ? cleanTax(o.tax) : null;
-  return n && n !== '__proto__' ? { id: n, n, ...(tax ? { tax } : {}) } : null;
+  return n && n !== '__proto__' ? { id: n, n } : null;
 }
 
 const exact = (v: unknown, max: number, allowEmpty = false) => typeof v === 'string' && v === v.trim() && v.length <= max && (allowEmpty || v.length > 0);
@@ -117,7 +113,7 @@ export function validGroceryItem(x: unknown): x is GroceryItem {
 
 export function validGroceryStore(x: unknown): x is GroceryStore {
   const o = asObject(x);
-  return !!o && exact(o.n, MAX_STORE) && o.id === o.n && o.n !== '__proto__' && (o.tax === undefined || cleanTax(o.tax) === o.tax);
+  return !!o && exact(o.n, MAX_STORE) && o.id === o.n && o.n !== '__proto__';
 }
 
 /** One month's list: ticks, counts and prices by item id, and the old `pulled` ids. At most MAX_ITEMS of each. */
@@ -148,6 +144,11 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
   Object.entries(asObject(raw.payer) ?? {}).slice(0, MAX_STORES).forEach(([store, id]) => {
     if (store !== '__proto__' && store.length <= MAX_STORE && typeof id === 'string' && id.length > 0 && id.length <= MAX_ID && id !== 'me') payer[store] = id;
   });
-  return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}) };
+  const tax: Record<string, number> = {}; // sales tax in cents, as typed from the receipt, for each store this month; no entry = none
+  Object.entries(asObject(raw.tax) ?? {}).slice(0, MAX_STORES).forEach(([store, c]) => {
+    const cents = cleanCents(c);
+    if (store !== '__proto__' && store.length <= MAX_STORE && cents) tax[store] = cents;
+  });
+  return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}), ...(Object.keys(tax).length ? { tax } : {}) };
 }
-export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length && !Object.keys(m.payer ?? {}).length;
+export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length && !Object.keys(m.payer ?? {}).length && !Object.keys(m.tax ?? {}).length;

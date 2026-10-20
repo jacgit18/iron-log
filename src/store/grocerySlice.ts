@@ -2,7 +2,7 @@ import { LS } from '../lib/storage.js';
 import {
   MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, parseDollars,
 } from '../lib/grocery.js';
-import { cleanShare, cleanTax } from '../shared/grocery.js';
+import { cleanShare } from '../shared/grocery.js';
 import type { Grocery, GroceryData, GroceryLine, GroceryMonth } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
 
@@ -158,12 +158,10 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     removeGroceryStore(name) {
       const i = get().grocery.stores.indexOf(name);
       const held = (get().grocery.groups ?? []).filter(x => x.stores.includes(name)).map(x => x.id); // the group it defaulted to, for Undo
-      const taxed = get().grocery.taxes?.[name]; // its tax, for Undo
       const err = mutateCatalogue(g => {
         if (g.items.some(it => it.store === name)) return 'Move or remove this store’s items first.';
         g.stores = g.stores.filter(s => s !== name);
         g.groups?.forEach(x => { x.stores = x.stores.filter(s => s !== name); });
-        if (g.taxes) { delete g.taxes[name]; if (!Object.keys(g.taxes).length) delete g.taxes; }
         return null;
       });
       if (!err && i >= 0) {
@@ -171,7 +169,6 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
           if (g.stores.includes(name)) return 'back';
           if (g.stores.length >= MAX_STORES) return 'full';
           g.stores.splice(Math.min(i, g.stores.length), 0, name);
-          if (taxed) g.taxes = { ...g.taxes, [name]: taxed };
           held.forEach(id => { const x = g.groups?.find(y => y.id === id); if (x && !g.groups!.some(y => y.stores.includes(name))) x.stores.push(name); }); // back in its group, if that still exists and no other group took it
           return null;
         }) === null);
@@ -300,14 +297,6 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     removeGroceryPerson(groupId, personId) {
       mutateCatalogue(g => { const x = g.groups?.find(y => y.id === groupId); if (x) x.people = x.people.filter(p => p.id !== personId); return null; });
     },
-    setGroceryStoreTax(store, rate) {
-      if (rate !== null && cleanTax(rate) === null) return 'Tax is a percent from 0.001 to 30.';
-      return mutateCatalogue(g => {
-        if (!g.stores.includes(store)) return 'That store is gone.';
-        if (rate === null) { if (g.taxes) { delete g.taxes[store]; if (!Object.keys(g.taxes).length) delete g.taxes; } } else g.taxes = { ...g.taxes, [store]: rate };
-        return null;
-      });
-    },
     setGroceryStoreGroup(store, groupId) {
       mutateCatalogue(g => {
         if (!g.stores.includes(store)) return 'That store is gone.';
@@ -348,6 +337,14 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         const payer = { ...(m.payer ?? {}) };
         if (personId) payer[store] = personId; else delete payer[store];
         if (Object.keys(payer).length) m.payer = payer; else delete m.payer;
+      });
+    },
+    setGroceryTax(month, store, cents) {
+      if (cents !== null && (cleanCents(cents) == null || cents <= 0)) return;
+      mutateMonth(month, m => {
+        const tax = { ...(m.tax ?? {}) };
+        if (cents) tax[store] = cents; else delete tax[store];
+        if (Object.keys(tax).length) m.tax = tax; else delete m.tax;
       });
     },
   };

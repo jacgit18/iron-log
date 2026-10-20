@@ -1,6 +1,5 @@
-import { MAX_GROUPS, MAX_ITEMS, MAX_PRICES, MAX_STORES, MONTH_RE, cleanTax, monthEmpty, normGroceryGroup, normGroceryItem, normGroceryMonth } from '../shared/grocery.js';
+import { MAX_GROUPS, MAX_ITEMS, MAX_PRICES, MAX_STORES, MONTH_RE, monthEmpty, normGroceryGroup, normGroceryItem, normGroceryMonth } from '../shared/grocery.js';
 import { str } from '../shared/stretchWeek.js';
-import { withTax } from './groceryTax.js';
 import type { Grocery, GroceryData, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryUnit } from '../types.ts';
 
 /* ---------- Grocery list ----------
@@ -11,7 +10,7 @@ import type { Grocery, GroceryData, GroceryGroup, GroceryItem, GroceryLine, Groc
    A month with no saved document has nothing ticked, so each month starts fresh with every item on it and nothing is copied or reset.
    Prices are whole cents, so totals never drift. The cleaning rules live in shared/grocery.ts, which the API uses too. */
 
-export { MAX_TAX, cleanTax, MAX_CENTS, MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_PRICES, MAX_QTY, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
+export { MAX_CENTS, MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_PRICES, MAX_QTY, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
 export const ANYWHERE = 'Anywhere';
 /** Stores offered in the drop-downs before you have used them; picking one adds it to your stores. */
 export const SUGGESTED_STORES = ["BJ's", 'C-Town', 'Whole Foods', 'Flatbush Co-Op', 'Aldi'];
@@ -64,7 +63,7 @@ function normGroups(raw: unknown, stores: string[]): GroceryGroup[] {
 }
 
 export function normGrocery(d: unknown): Grocery {
-  const raw = (d && typeof d === 'object' ? d : {}) as { stores?: unknown; items?: unknown; groups?: unknown; taxes?: unknown };
+  const raw = (d && typeof d === 'object' ? d : {}) as { stores?: unknown; items?: unknown; groups?: unknown };
   const seen = new Set<string>(); const items: GroceryItem[] = [];
   (Array.isArray(raw.items) ? raw.items : []).forEach((x: unknown) => {
     const item = normGroceryItem(x);
@@ -77,10 +76,7 @@ export function normGrocery(d: unknown): Grocery {
   (Array.isArray(raw.stores) ? raw.stores : []).forEach((s: unknown) => addStore(str(s, 40)));
   items.forEach(i => addStore(i.store));
   const groups = normGroups(raw.groups, stores);
-  // A tax only for a store that exists; a bad or zero rate is no tax.
-  const taxes: Record<string, number> = {};
-  if (raw.taxes && typeof raw.taxes === 'object') Object.entries(raw.taxes as Record<string, unknown>).forEach(([st, v]) => { const t = cleanTax(v); if (t && stores.includes(st)) taxes[st] = t; });
-  return { stores, items: items.map(i => (i.store && !stores.includes(i.store) ? { ...i, store: '' } : i)), ...(groups.length ? { groups } : {}), ...(Object.keys(taxes).length ? { taxes } : {}) };
+  return { stores, items: items.map(i => (i.store && !stores.includes(i.store) ? { ...i, store: '' } : i)), ...(groups.length ? { groups } : {}) };
 }
 
 /* ---------- Reading a month ---------- */
@@ -141,32 +137,32 @@ export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { st
 /** The words after a shared store's name: its group and how many others are in it ("Home +2"). */
 export const groupTag = (group: GroceryGroup) => `${group.n} +${group.people.length}`;
 
-/** Counts and money for a set of items: how many are ticked, what the list is expected to cost, and what the ticked ones cost. With `taxes`
- *  (store -> rate), each store's tax is added on its own subtotal, so both amounts are what the receipt would say. */
-export function tally(items: GroceryItem[], m: GroceryMonth, taxes?: Record<string, number>) {
-  let got = 0, unpriced = 0;
-  const plannedBy: Record<string, number> = {}, spentBy: Record<string, number> = {};
+/** Counts and money for a set of items: how many are ticked, what the list is expected to cost, and what the ticked ones cost. `spent` adds the
+ *  month's tax for each store that has something ticked here (the receipt's tax, typed in); `planned` is what the prices come to before tax. */
+export function tally(items: GroceryItem[], m: GroceryMonth) {
+  let got = 0, planned = 0, spent = 0, unpriced = 0;
+  const boughtAt = new Set<string>();
   items.forEach(i => {
     const l = lineOf(i, m); const t = lineCost(l);
-    plannedBy[i.store] = (plannedBy[i.store] ?? 0) + t; if (l.cents == null && !l.prices) unpriced++;
-    if (l.got) { got++; spentBy[i.store] = (spentBy[i.store] ?? 0) + t; }
+    planned += t; if (l.cents == null && !l.prices) unpriced++;
+    if (l.got) { got++; spent += t; boughtAt.add(i.store); }
   });
-  return { count: items.length, got, planned: withTax(plannedBy, taxes), spent: withTax(spentBy, taxes), unpriced };
+  boughtAt.forEach(store => { spent += m.tax?.[store] ?? 0; });
+  return { count: items.length, got, planned, spent, unpriced };
 }
 
-/** What was bought each month: the ticked lines' count × price plus each store's tax, for the `count` months ending at `endKey` (oldest first). A line keeps the
+/** What was bought each month: the ticked lines' count × price plus each store's tax from the receipt, for the `count` months ending at `endKey` (oldest first). A line keeps the
  *  price it was ticked at; one with no price of its own uses the item's, and a line for a removed item uses only its own. */
 export function spendByMonth(g: Grocery, months: Record<string, GroceryMonth>, endKey: string, count: number) {
   return Array.from({ length: count }, (_, i) => {
     const key = shiftMonth(endKey, i - count + 1); const m = months[key];
-    let bought = 0; const by: Record<string, number> = {};
+    let spent = 0, bought = 0; const boughtAt = new Set<string>();
     Object.entries(m?.lines ?? {}).forEach(([id, l]) => {
       if (!l.got) return;
       const it = g.items.find(x => x.id === id);
-      const cost = l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? it?.cents ?? null);
-      bought++; by[it?.store ?? ''] = (by[it?.store ?? ''] ?? 0) + cost;
+      bought++; boughtAt.add(it?.store ?? ''); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? it?.cents ?? null);
     });
-    const spent = withTax(by, g.taxes); // each store's tax on its own subtotal
+    boughtAt.forEach(store => { spent += m?.tax?.[store] ?? 0; }); // each store's tax from the receipt
     return { key, spent, bought };
   });
 }
@@ -196,12 +192,7 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     const id = g.items.some(x => x.id === i.id) ? newGroceryId(g.items, i.n) : i.id;
     g.items.push({ ...i, id }); map.set(i.id, id); changed = true;
   });
-  inc.stores.forEach(s => {
-    if (!g.stores.includes(s) && g.stores.length < MAX_STORES) {
-      g.stores.push(s); changed = true;
-      const t = inc.taxes?.[s]; if (t) g.taxes = { ...g.taxes, [s]: t }; // a new store brings its tax; one that is here keeps its own
-    }
-  });
+  inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); changed = true; } });
   // A group is matched by its id (made at random, so the same group in a backup of this account has the same id here); one that is missing is
   // added, with the stores it names that exist here. People keep their ids, so an item's share in the file still points at them.
   const have = new Set((g.groups ?? []).map(x => x.id)); const defaulted = new Set((g.groups ?? []).flatMap(x => x.stores));
@@ -215,14 +206,14 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     const lines: Record<string, GroceryLine> = {};
     Object.entries(fm.lines).forEach(([id, l]) => { const to = map.get(id); if (to) lines[to] = l; });
     const pulled = fm.pulled.map(id => map.get(id)).filter((x): x is string => !!x);
-    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}) };
+    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}), ...(fm.tax ? { tax: fm.tax } : {}) };
     if (monthEmpty(m)) return;
     const have = months[k];
     if (!have) { months[k] = m; changed = true; return; }
     const mergedLines = { ...m.lines, ...have.lines }; const mergedPulled = [...new Set([...have.pulled, ...m.pulled])];
-    const mergedPayer = { ...m.payer, ...have.payer };
-    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length || Object.keys(mergedPayer).length !== Object.keys(have.payer ?? {}).length) {
-      months[k] = { lines: mergedLines, pulled: mergedPulled, ...(Object.keys(mergedPayer).length ? { payer: mergedPayer } : {}) }; changed = true;
+    const mergedPayer = { ...m.payer, ...have.payer }; const mergedTax = { ...m.tax, ...have.tax }; // what is here wins, per store
+    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length || Object.keys(mergedPayer).length !== Object.keys(have.payer ?? {}).length || Object.keys(mergedTax).length !== Object.keys(have.tax ?? {}).length) {
+      months[k] = { lines: mergedLines, pulled: mergedPulled, ...(Object.keys(mergedPayer).length ? { payer: mergedPayer } : {}), ...(Object.keys(mergedTax).length ? { tax: mergedTax } : {}) }; changed = true;
     }
   });
   return { grocery: g, months, changed };

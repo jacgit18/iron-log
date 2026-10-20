@@ -131,8 +131,8 @@ export function documentFor(kind: PathKind, mirror: Mirror): unknown {
     case 'grocerymonths': { const r = live[0]; return r && r.table === 'grocery_months' ? r.record : null; }
     case 'grocery': {
       if (!scope.length) return null;
-      const stores = listOf(live, 'grocery_store') as { n: string; tax?: number }[];
-      return normGrocery({ stores: stores.map(s => s.n), items: listOf(live, 'grocery_item'), groups: listOf(live, 'grocery_group'), taxes: Object.fromEntries(stores.filter(s => s.tax).map(s => [s.n, s.tax])) });
+      const stores = listOf(live, 'grocery_store') as { n: string }[];
+      return normGrocery({ stores: stores.map(s => s.n), items: listOf(live, 'grocery_item'), groups: listOf(live, 'grocery_group') });
     }
     case 'body': {
       if (!scope.length) return null;
@@ -218,7 +218,7 @@ export function desiredRows(kind: PathKind, doc: unknown, mirror: Mirror): Desir
     case 'grocery': {
       // Cleaned as the app reads it first, so a store an item names is a row too, and the caps hold.
       const g = normGrocery(doc);
-      return [...listRows('grocery_store', g.stores.map(n => ({ id: n, n, ...(g.taxes?.[n] ? { tax: g.taxes[n] } : {}) })), normGroceryStore), ...listRows('grocery_item', g.items, normGroceryItem), ...listRows('grocery_group', g.groups ?? [], normGroceryGroup)];
+      return [...listRows('grocery_store', g.stores.map(n => ({ id: n, n })), normGroceryStore), ...listRows('grocery_item', g.items, normGroceryItem), ...listRows('grocery_group', g.groups ?? [], normGroceryGroup)];
     }
     case 'grocerymonths': {
       // An empty month is the fresh list: no row (the store removes the document, and an empty one saved anyway is not kept).

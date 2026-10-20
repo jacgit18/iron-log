@@ -227,17 +227,17 @@ export interface GroceryShare { with: string[]; notMine?: true }
  *  `qty` is then the weight and `cents` the price per unit; left out for the usual "each". */
 export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare }
 /** The catalogue: store names in the order shown, and the items. A month's list is drawn from it. */
-/** `taxes`: a store's sales tax in thousandths of a percent (8.875% is 8875), for the stores that charge one; added to what is bought there. */
-export interface Grocery { stores: string[]; items: GroceryItem[]; groups?: GroceryGroup[]; taxes?: Record<string, number> }
+export interface Grocery { stores: string[]; items: GroceryItem[]; groups?: GroceryGroup[] }
 /** A store as the server keeps it: one row per store, the name is its id. */
-export interface GroceryStore { id: string; n: string; tax?: number }
+export interface GroceryStore { id: string; n: string }
 /** One item in one month: ticked off (`got`, bought), or `have`: you have it, so it is not on that month's list (ADR 054); and the count and unit price (cents) paid when they differ from the catalogue or were recorded at the tick.
  *  `prices`: the price of each one bought this month, in cents, when they cost different amounts (beef, 3 packs: 8.99, 10.49, 9.25). The count is then how many there are and the line total is their sum; `qty` and `cents` are not used. */
 export interface GroceryLine { got?: true; have?: true; qty?: number; cents?: number; prices?: number[]; share?: GroceryShare; packShares?: (GroceryShare | null)[] }
 /** The catalogue plus every saved month: what the data file and the backups hold of the grocery list. */
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
 /** One month's list (`grocery/YYYY-MM`): its lines by item id, and `pulled`: items put on that month's list by older versions (read, no longer written). */
-export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[]; payer?: Record<string, string> }
+/** `tax`: the sales tax in cents typed from the receipt for each store this month, on top of what the ticked lines cost; no entry means none. */
+export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[]; payer?: Record<string, string>; tax?: Record<string, number> }
 
 export type StretchTier = 'primary' | 'secondary' | '';
 /** `catalogId`: added from the catalog (ADR 026, 027): a Library stretch, its name kept from the catalog. Without it the stretch is Custom. */
