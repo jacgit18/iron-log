@@ -12,12 +12,12 @@ const CATALOGUE = {
 const MONTH = { lines: { tp: { got: true }, chicken: { got: true, prices: [1049, 925, 899], packShares: [{ with: [] }, { with: [] }, null] }, rice: { got: true } }, pulled: [] };
 const BJS = "Bought $53.72 · Your share $31.06 · Owed to you $11.33";
 
-const seed = async (page, { admin = true, soapGot = false } = {}) => {
-  await page.evaluate(({ admin, soapGot, CATALOGUE, MONTH }) => {
+const seed = async (page, { admin = true, soapGot = false, payer = null } = {}) => {
+  await page.evaluate(({ admin, soapGot, payer, CATALOGUE, MONTH }) => {
     if (admin) localStorage.setItem('ironlog:session/admin', 'true');
     localStorage.setItem('ironlog:grocery/main', JSON.stringify(CATALOGUE));
-    localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(soapGot ? { ...MONTH, lines: { ...MONTH.lines, soap: { got: true } } } : MONTH));
-  }, { admin, soapGot, CATALOGUE, MONTH });
+    localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ ...(soapGot ? { ...MONTH, lines: { ...MONTH.lines, soap: { got: true } } } : MONTH), ...(payer ? { payer } : {}) }));
+  }, { admin, soapGot, payer, CATALOGUE, MONTH });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
@@ -25,6 +25,11 @@ const seed = async (page, { admin = true, soapGot = false } = {}) => {
 test('one line over the list says what you paid, your share and what is owed to you', async ({ page }) => {
   await seed(page);
   await expect(page.locator('#groc-money')).toHaveText('Paid $58.72 · Your share $36.06 · Owed to you $11.33');
+});
+
+test('when someone else paid BJ\'s the top line says what you owe instead of a $0.00 owed to you', async ({ page }) => {
+  await seed(page, { payer: { "BJ's": 'mom' } });
+  await expect(page.locator('#groc-money')).toHaveText('Paid $5.00 · Your share $36.06 · You owe $31.06');
 });
 
 test('a shared store with things still to get shows its money under its heading, once, and a solo store shows none', async ({ page }) => {

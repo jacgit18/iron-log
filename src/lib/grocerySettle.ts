@@ -80,11 +80,17 @@ export function monthShare(g: Grocery, m: GroceryMonth): { paid: number; yours: 
   return { paid, yours };
 }
 
-/** What others owe you this month, over every store you paid for (the "Owed to you" figure on the split card). */
-export function monthOwed(g: Grocery, m: GroceryMonth): number {
+/** What changes hands this month, over every store bought from: `owed` is what others owe you (the stores you paid for), `youOwe` is what you
+ *  owe others (the stores someone else paid). */
+export function monthOwes(g: Grocery, m: GroceryMonth): { owed: number; youOwe: number } {
   const purchases = purchasesOf(g, m);
-  return storesBought(g, purchases).reduce((a, store) => a + storeSettlement(g, m, store, purchases).owedToYou, 0);
+  let owed = 0, youOwe = 0;
+  storesBought(g, purchases).forEach(store => { const st = storeSettlement(g, m, store, purchases); owed += st.owedToYou; youOwe += st.youOwe; });
+  return { owed, youOwe };
 }
+
+/** What others owe you this month (the "Owed to you" figure on the split card). */
+export const monthOwed = (g: Grocery, m: GroceryMonth): number => monthOwes(g, m).owed;
 
 /** What was paid and your share for each of the `count` months ending at `endKey` (oldest first), for the Spending view. */
 export function shareByMonth(g: Grocery, months: Record<string, GroceryMonth>, endKey: string, count: number) {
