@@ -1,5 +1,6 @@
 // Runs the unit tests that a change can affect, instead of all of them: vitest follows imports from the changed files to the tests that load them.
-// Usage: node scripts/unit-tests.mjs --base=<ref> [-- <extra vitest args>]   changed files = diff against the merge-base with <ref>
+// Usage: node scripts/unit-tests.mjs --full [-- <extra vitest args>]                every unit test (the worker cap still applies)
+//        node scripts/unit-tests.mjs --base=<ref> [-- <extra vitest args>]   changed files = diff against the merge-base with <ref>
 //        node scripts/unit-tests.mjs --files=a,b                              pretend only those files changed
 //        add --list to print the vitest command without running it
 // Runs the whole suite (npm test) when a tooling or dependency file changed, a file tests read without importing (a .sh script, the PR template) changed, or a module was deleted.
@@ -48,12 +49,13 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const given = opts.find(a => a.startsWith('--files='));
   const base = opts.find(a => a.startsWith('--base='))?.slice(7);
   const git = (...a) => execFileSync('git', a, { encoding: 'utf8' }).split('\n').filter(Boolean);
-  let files;
-  if (given) files = given.slice(8).split(',');
+  let files = [];
+  if (opts.includes('--full')) { /* no changed files needed */ }
+  else if (given) files = given.slice(8).split(',');
   else if (base) files = [...new Set([...git('diff', '--name-only', git('merge-base', 'HEAD', base)[0]), ...git('ls-files', '--others', '--exclude-standard')])];
   else { console.error('Pass --base=<ref> or --files=a,b'); process.exit(2); }
 
-  const p = plan(files);
+  const p = opts.includes('--full') ? { full: true, why: '--full' } : plan(files);
   const workers = workerArgs(process.env, undefined, extra);
   const cmd = p.full ? ['vitest', 'run', ...workers, ...extra] : ['vitest', 'related', '--run', '--passWithNoTests', ...workers, ...p.related, ...extra];
   console.log(p.full ? `${p.why}: running every unit test.` : `Unit tests related to ${p.related.length - PROTECTED.length} changed source file(s), plus the ${PROTECTED.length} protected board and log tests.`);

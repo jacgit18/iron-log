@@ -120,7 +120,10 @@ if (!process.env.IRON_LOG_CHECK_LOCKED && !args.includes('--list')) {
     const env = { ...process.env, IRON_LOG_CHECK_LOCKED: '1' };
     const rerun = [process.execPath, ...process.argv.slice(1)];
     if (spawnSync('flock', ['-n', lock, 'true'], { stdio: 'ignore' }).status !== 0) console.log('Another check is running on this machine; waiting for it to finish (up to 30 minutes).');
-    process.exit(spawnSync('flock', ['-w', '1800', lock, ...rerun], { stdio: 'inherit', env }).status ?? 1);
+    // -E 75: flock's own "gave up waiting" code, told apart from the check failing (which exits 1).
+    const r = spawnSync('flock', ['-w', '1800', '-E', '75', lock, ...rerun], { stdio: 'inherit', env });
+    if (r.status === 75) { console.error('Gave up: another check on this machine held the lock for 30 minutes. This check did not run. Retry when it finishes, or skip once with SKIP_CHECK=1 git push.'); process.exit(75); }
+    process.exit(r.status ?? 1);
   }
 }
 
@@ -149,8 +152,10 @@ for (const c of plan) {
     continue;
   }
   const related = c === 'test' && !fullTests;
-  console.log(related ? '\n> node scripts/unit-tests.mjs (the tests related to what changed)' : `\n> npm run ${c}`);
-  const r = spawnSync(...(related ? ['node', ['scripts/unit-tests.mjs', `--base=${baseRef}`]] : ['npm', ['run', c]]), { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
+  // The unit step always goes through scripts/unit-tests.mjs, so the worker cap (UNIT_WORKERS) also applies to a full run.
+  const viaScript = c === 'test';
+  console.log(viaScript ? `\n> node scripts/unit-tests.mjs ${related ? '(the tests related to what changed)' : '--full (every unit test)'}` : `\n> npm run ${c}`);
+  const r = spawnSync(...(viaScript ? ['node', ['scripts/unit-tests.mjs', related ? `--base=${baseRef}` : '--full']] : ['npm', ['run', c]]), { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
   if (r.status !== 0) {
     console.error(`\nFailed: ${c}`);
     process.exit(r.status ?? 1);
