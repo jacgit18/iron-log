@@ -15,7 +15,7 @@ import { useSwipeCard } from './useSwipeCard.js';
 import type { CardState, SwipeAction } from '../../lib/swipe.js';
 import './Card.css';
 import {
-  DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, isItemSkipped, phaseOf, targetOf, lastLog, rxOf, stallOf, backoffOf, describe, holdPlan,
+  DAYS, isTimed, colOf, isDone, isSkipped, isPaired, isItemDone, isItemSkipped, phaseOf, targetOf, lastSession, rxOf, stallOf, backoffOf, describe, holdPlan,
   restsOf,
 } from '../../lib/logic.js';
 
@@ -114,7 +114,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
       {s.items.map((it, idx) => {
         const ex = exInfo(cfg, it.ex);
         const ph = phaseOf(cfg, week, s, idx);
-        const t = targetOf(cfg, logs, it, ph); const last = lastLog(logs, it.ex, ph);
+        const t = targetOf(cfg, logs, it, ph); const last = lastSession(logs, it.ex, ph);
         const idone = paired && isItemDone(s, idx, week);
         const isk = isItemSkipped(s, idx, week); // this exercise skipped on its own (superset)
         const rx = rxOf(cfg, it, ph);
