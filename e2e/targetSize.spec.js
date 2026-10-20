@@ -34,6 +34,20 @@ test('phone 390x844: every button, field and tab is at least 44x44 on each tab',
   }
 });
 
+// The test above only sees each tab's first view; these are the other views a tab opens (Groceries and Medical are admin-only, Stretches is its own area).
+for (const [name, clicks] of [
+  ['Progress > Muscles', [['tab', 'Progress'], ['button', 'Muscles']]],
+  ['Daily > Nutrition', [['tab', 'Daily'], ['button', 'Nutrition']]],
+  ['Program > Exercise library', [['tab', 'Program'], ['button', 'Exercise library']]],
+  ['Program > Stretch library', [['tab', 'Program'], ['button', 'Stretch library']]],
+]) {
+  test(`phone 390x844: ${name} has no target under 44px`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const [role, label] of clicks) await page.getByRole(role, { name: label, exact: true }).click();
+    expect(await small(page), `${name} has targets under 44px`).toEqual([]);
+  });
+}
+
 test('phone 390x844: the Log sheet has no target under 44px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: /^Log /i }).first().click();
