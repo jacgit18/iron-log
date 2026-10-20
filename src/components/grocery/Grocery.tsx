@@ -279,7 +279,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
   const setHave = (it: GroceryItem, on: boolean) => useAppStore.getState().setGroceryHave(nowKey, it.id, on);
   return (
     <div className={editing ? 'gathome editing' : 'gathome'}>
-      <div className="ghomehead">
+      <div className={sharing ? 'ghomehead gsharehead' : 'ghomehead'}>
         {editing && <b className="geditbadge">Editing</b>}
         <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'A tick means you have it this month, so it is off To get. Ticks clear on the 1st and everything is back on the list.'}</p>
         <div className="ghomebtns">

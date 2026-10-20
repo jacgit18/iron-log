@@ -46,6 +46,15 @@
 .gsnew {
   flex-wrap: wrap;
 }
+.ghomehead.gsharehead {
+  flex-wrap: wrap;
+}
+.ghomehead.gsharehead .note {
+  flex: 1 1 100%;
+}
+.ghomehead.gsharehead .ghomebtns {
+  margin-left: auto;
+}
 .ghomebtns {
   display: flex;
   flex: none;
