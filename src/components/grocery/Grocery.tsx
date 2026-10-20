@@ -12,6 +12,7 @@ import PriceChips from './PriceChips.js';
 import SharePicker from './SharePicker.js';
 import SharingGroups from './SharingGroups.js';
 import SplitSummary from './SplitSummary.js';
+import StoreTax from './StoreTax.js';
 import { MonthMoney, StoreMoney } from './StoreMoney.js';
 import useDockHeight from './useDockHeight.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from '../../types.ts';
@@ -86,7 +87,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const [off, setOff] = useState(0); // months from this one: below 0 is history, above 0 is planning ahead
   const mk = shiftMonth(nowKey, off);
   const month = months[mk] || emptyMonth();
-  const list = onList(g, month, off >= 0); const t = tally(list, month);
+  const list = onList(g, month, off >= 0); const t = tally(list, month, g.taxes);
   // This month, what you have bought leaves the list (it is on At home as "have"); it stays one tap away under "Bought this month" so a
   // mis-tap can be undone. An older or later month keeps every row, as a record of what was bought or what is planned.
   const current = off === 0;
@@ -122,13 +123,13 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       </div>
       {t.count > 0 && <div className="gprog" aria-hidden="true"><span style={{ width: `${Math.round((t.got / t.count) * 100)}%` }} /></div>}
       <p className="note" id="groc-summary" role="status">
-        {t.count ? <>{`Got ${t.got} of ${t.count} · Spent ${money(t.spent)} · Expected ${money(t.planned)}`}{t.unpriced > 0 && <>{' · '}<span className="gwarn">{t.unpriced} without a price</span></>}</> : off > 0 ? 'Nothing planned yet. Items you add on At home show up here.' : 'Nothing on this month’s list.'}
+        {t.count ? <>{`Got ${t.got} of ${t.count} · Spent ${money(t.spent)} · Expected ${money(t.planned)}${g.taxes ? ' · with tax' : ''}`}{t.unpriced > 0 && <>{' · '}<span className="gwarn">{t.unpriced} without a price</span></>}</> : off > 0 ? 'Nothing planned yet. Items you add on At home show up here.' : 'Nothing on this month’s list.'}
       </p>
       {split && <MonthMoney g={g} month={month} />}
       {!t.count && off === 0 && <p className="note">Add what you buy on <b>At home</b>. Tick an item there when you have it and it comes off this month’s list.</p>}
       {current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought.</p>}
       {byStore(g, todo, split).map((grp, gi) => {
-        const gt = tally(grp.items, month);
+        const gt = tally(grp.items, month, g.taxes);
         return (
           <section key={grp.store || '_'} className={`gstore${!current && gt.got === gt.count ? ' done' : ''}`} aria-labelledby={`groc-h-${gi}`}>
             <div className="gstorehead">
@@ -260,6 +261,7 @@ function Stores({ g }: { g: GroceryT }) {
         {g.stores.map(x => (
           <li key={x} className={`gstoreline${arming === x ? ' removing' : ''}`}>
             <span className="rmname">{x}</span>
+            <StoreTax store={x} rate={g.taxes?.[x]} onError={setErr} />
             <ArmedButton className={`btn sm ${arming === x ? 'danger' : 'ghost'}`} aria-label={`Remove the store ${x}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? x : null)} onConfirm={() => { setArming(null); setErr(s.removeGroceryStore(x)); }} />
           </li>
         ))}

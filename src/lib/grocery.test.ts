@@ -96,6 +96,14 @@ describe('groups and totals', () => {
     expect(off.map(x => x.label)).toEqual(['Veg market', 'Costco', 'Anywhere']);
     expect(off.every(x => !x.group)).toBe(true);
   });
+  it('adds a store\'s tax to expected and spent, on that store\'s own subtotal', () => {
+    const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] }; // kale 12.00 ticked; rice 18.99 and saffron 12.00 not
+    const plain = tally(onList(g, m, true), m);
+    const taxed = tally(onList(g, m, true), m, { 'Veg market': 8875 });
+    expect(taxed.spent).toBe(plain.spent + 107); // 1200 x 8.875% = 106.5
+    expect(taxed.planned).toBe(plain.planned + 107); // only the one store's items carry tax
+    expect(tally(onList(g, m, true), m, {})).toEqual(plain);
+  });
   it('splits expected from spent and counts the unpriced', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] };
     expect(tally(onList(g, m, true), m)).toEqual({ count: 4, got: 1, planned: 1200 + 1899 + 1200, spent: 1200, unpriced: 1 });

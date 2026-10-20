@@ -285,6 +285,7 @@ export interface GrocerySlice {
   addGroceryPerson(groupId: string, name: string): string | null;
   updateGroceryPerson(groupId: string, personId: string, patch: Partial<{ n: string; covered: boolean }>): string | null;
   removeGroceryPerson(groupId: string, personId: string): void;
+  setGroceryStoreTax(store: string, rate: number | null): string | null; // a store's sales tax, thousandths of a percent (8875 is 8.875%); null for none
   setGroceryStoreGroup(store: string, groupId: string | null): void; // a store defaults to one group at most
   setGroceryItemShare(id: string, share: GroceryShare | null): void; // the item's usual share; null goes back to the store's group
   setGroceryLineShare(month: string, id: string, share: GroceryShare | null): void; // this month's share for the item; null goes back to the item's

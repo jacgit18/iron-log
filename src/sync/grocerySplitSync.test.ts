@@ -137,3 +137,24 @@ describe('a list that uses no sharing is unchanged', () => {
     expect(merged.lines.rice).toEqual({ got: true, qty: 3, cents: 300 });
   });
 });
+
+describe('a store\'s tax syncs on the store row', () => {
+  const taxed: Grocery = { ...g, taxes: { "BJ's": 8875 } };
+  it('is part of the store row, and the catalogue reads back with it; a store without one reads back without', () => {
+    const rows = desiredRows(kind('grocery/main'), taxed, new Map());
+    const bjs = rows.find(r => r.table === 'list_items' && r.key === "grocery_store/BJ's");
+    expect(bjs).toMatchObject({ item: { id: "BJ's", n: "BJ's", tax: 8875 } });
+    expect(rows.find(r => r.table === 'list_items' && r.key === 'grocery_store/Aldi')).toMatchObject({ item: { id: 'Aldi', n: 'Aldi' } });
+    expect(documentFor(kind('grocery/main'), mirrorOf(rows))).toEqual(taxed);
+  });
+  it('an older store row with no tax reads back as no tax at all', () => {
+    const rows = desiredRows(kind('grocery/main'), g, new Map());
+    expect(documentFor(kind('grocery/main'), mirrorOf(rows))?.taxes).toBeUndefined();
+  });
+  it('the API accepts a store row with a good rate and refuses a bad one', () => {
+    expect(validateSaveListItem({ list: 'grocery_store', item: { id: "BJ's", n: "BJ's", tax: 8875 }, position: 0 })).toMatchObject({ list: 'grocery_store' });
+    expect(validateSaveListItem({ list: 'grocery_store', item: { id: "BJ's", n: "BJ's" }, position: 0 })).toMatchObject({ list: 'grocery_store' });
+    expect(validateSaveListItem({ list: 'grocery_store', item: { id: "BJ's", n: "BJ's", tax: 0 }, position: 0 })).toBeNull();
+    expect(validateSaveListItem({ list: 'grocery_store', item: { id: "BJ's", n: "BJ's", tax: 31000 }, position: 0 })).toBeNull();
+  });
+});

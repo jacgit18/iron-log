@@ -1,0 +1,26 @@
+@layer base, components;
+@layer components {
+/* A store's tax while editing: the Tax checkbox and its percent box, beside the store's name. */
+.gtaxset {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.gtaxchk {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+}
+.gtaxrate {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.gtaxrate input {
+  width: 5.5rem;
+  min-height: 44px;
+  text-align: right;
+}
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanShare, normGroceryGroup, normGroceryItem, normGroceryMonth, validGroceryGroup, validGroceryItem, validShare } from '../shared/grocery.js';
+import { cleanShare, cleanTax, normGroceryGroup, normGroceryItem, normGroceryMonth, normGroceryStore, validGroceryGroup, validGroceryItem, validGroceryStore, validShare } from '../shared/grocery.js';
 import { mergeGrocery, monthEmpty, normGrocery, normGroceryData } from './grocery.js';
 import type { GroceryData, GroceryGroup } from '../types.ts';
 
@@ -101,5 +101,29 @@ describe('add to my data', () => {
     const r = mergeGrocery(cur, { '2026-10': { lines: { rice: { got: true } }, pulled: [], payer: { "BJ's": 'mine' } } },
       inc({ months: { '2026-10': { lines: { rice: { got: true } }, pulled: [], payer: { "BJ's": 'theirs', Aldi: 'x' } } } }));
     expect(r.months['2026-10']!.payer).toEqual({ "BJ's": 'mine', Aldi: 'x' });
+  });
+});
+
+describe('store tax', () => {
+  it('a rate is a whole number of thousandths of a percent from 1 to 30000', () => {
+    expect(cleanTax(8875)).toBe(8875);
+    for (const bad of [0, -1, 30001, 8.5, '8875', null, undefined, NaN]) expect(cleanTax(bad), String(bad)).toBeNull();
+  });
+  it('a store row keeps a good rate, drops a bad one, and the strict check refuses a bad one', () => {
+    expect(normGroceryStore({ n: "BJ's", tax: 8875 })).toEqual({ id: "BJ's", n: "BJ's", tax: 8875 });
+    expect(normGroceryStore({ n: "BJ's", tax: 99999 })).toEqual({ id: "BJ's", n: "BJ's" });
+    expect('tax' in normGroceryStore({ id: 'Aldi', n: 'Aldi' })!).toBe(false); // an older store row has none
+    expect(validGroceryStore({ id: "BJ's", n: "BJ's", tax: 8875 })).toBe(true);
+    expect(validGroceryStore({ id: "BJ's", n: "BJ's" })).toBe(true);
+    expect(validGroceryStore({ id: "BJ's", n: "BJ's", tax: 0 })).toBe(false);
+    expect(validGroceryStore({ id: "BJ's", n: "BJ's", tax: '8.875' })).toBe(false);
+  });
+  it('the catalogue keeps taxes only for stores that exist, and a new store brings its tax on import', () => {
+    const g = normGrocery({ stores: ["BJ's"], items: [], taxes: { "BJ's": 8875, Gone: 7000, Bad: 99999 } });
+    expect(g.taxes).toEqual({ "BJ's": 8875 });
+    expect(normGrocery({ stores: ["BJ's"], items: [], taxes: { "BJ's": 0 } }).taxes).toBeUndefined();
+    const inc: GroceryData = { stores: ["BJ's", 'Aldi'], items: [], taxes: { "BJ's": 5000, Aldi: 7000 }, months: {} };
+    const r = mergeGrocery({ stores: ["BJ's"], items: [], taxes: { "BJ's": 8875 } }, {}, inc);
+    expect(r.grocery.taxes).toEqual({ "BJ's": 8875, Aldi: 7000 }); // BJ's keeps its own, Aldi is new and brings its own
   });
 });
