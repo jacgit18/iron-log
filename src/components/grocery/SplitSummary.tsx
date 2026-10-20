@@ -1,6 +1,6 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import { money } from '../../lib/grocery.js';
-import { allPeople, monthShare, payerOf, purchasesOf, storeSettlement, storesBought } from '../../lib/grocerySettle.js';
+import { allPeople, monthOwed, monthShare, payerOf, purchasesOf, storeSettlement, storesBought } from '../../lib/grocerySettle.js';
 import { ME } from '../../lib/grocerySplit.js';
 import type { Grocery, GroceryMonth } from '../../types.ts';
 import './SplitSummary.css';
@@ -15,7 +15,7 @@ export default function SplitSummary({ g, month, mk }: { g: Grocery; month: Groc
   const { paid, yours } = monthShare(g, month);
   // Every store that was bought from gets a card, so "Paid by" can be set for one that only holds your own things too (someone else may have paid it).
   const cards = storesBought(g, purchases).map(store => ({ store, payer: payerOf(g, month, store), s: storeSettlement(g, month, store, purchases) }));
-  const owed = cards.reduce((a, c) => a + c.s.owedToYou, 0);
+  const owed = monthOwed(g, month);
   const s = useAppStore.getState();
   return (
     <section className="gsplit" aria-labelledby={`groc-split-h-${mk}`}>

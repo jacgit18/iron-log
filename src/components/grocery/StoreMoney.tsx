@@ -1,5 +1,5 @@
 import { money } from '../../lib/grocery.js';
-import { monthOwed, monthShare, purchasesOf, storeSettlement } from '../../lib/grocerySettle.js';
+import { monthOwes, monthShare, purchasesOf, storeSettlement } from '../../lib/grocerySettle.js';
 import type { Grocery, GroceryMonth } from '../../types.ts';
 import './StoreMoney.css';
 
@@ -8,8 +8,9 @@ import './StoreMoney.css';
 export function MonthMoney({ g, month }: { g: Grocery; month: GroceryMonth }) {
   if (!purchasesOf(g, month).length) return null;
   const { paid, yours } = monthShare(g, month);
-  const owed = monthOwed(g, month);
-  return <p className="note gmoney" id="groc-money">Paid {money(paid)} · Your share {money(yours)} · Owed to you {money(owed)}</p>;
+  const { owed, youOwe } = monthOwes(g, month);
+  // Owed to you is always said (it is $0.00 when nothing is owed); You owe is added only when another store's payer is someone else.
+  return <p className="note gmoney" id="groc-money">Paid {money(paid)} · Your share {money(yours)}{youOwe > 0 && owed === 0 ? '' : ` · Owed to you ${money(owed)}`}{youOwe > 0 ? ` · You owe ${money(youOwe)}` : ''}</p>;
 }
 
 export function StoreMoney({ g, month, store }: { g: Grocery; month: GroceryMonth; store: string }) {

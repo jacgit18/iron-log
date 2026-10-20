@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allPeople, groupOfStore, hasSharing, knownPeople, monthOwed, monthShare, partiesFor, payerOf, purchasesOf, shareByMonth, shareText, storeSettlement, storesBought } from './grocerySettle.js';
+import { allPeople, groupOfStore, hasSharing, knownPeople, monthOwed, monthOwes, monthShare, partiesFor, payerOf, purchasesOf, shareByMonth, shareText, storeSettlement, storesBought } from './grocerySettle.js';
 import { ME } from './grocerySplit.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -138,6 +138,19 @@ describe('what is owed to you', () => {
     expect(monthOwed(g, bought)).toBe(sum);
     expect(monthOwed(g, { ...bought, payer: { "BJ's": 'mom', Aldi: 'mom' } })).toBe(0);
     expect(monthOwed({ stores: g.stores, items: g.items }, bought)).toBe(0);
+  });
+});
+
+describe('what changes hands', () => {
+  it('splits what others owe you from what you owe them by who paid each store', () => {
+    const mine = monthOwes(g, bought);
+    expect(mine.owed).toBe(monthOwed(g, bought));
+    expect(mine.youOwe).toBe(0); // you paid every store
+    const theirs = monthOwes(g, { ...bought, payer: { "BJ's": 'mom', Aldi: 'mom' } });
+    expect(theirs.owed).toBe(0);
+    expect(theirs.youOwe).toBeGreaterThan(0);
+    const mixed = monthOwes(g, { ...bought, payer: { "BJ's": 'mom' } });
+    expect(mixed.youOwe).toBeGreaterThan(0); // BJ's: you owe mom your share
   });
 });
 
