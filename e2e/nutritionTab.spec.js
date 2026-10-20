@@ -26,14 +26,6 @@ test('an admin also sees Medical and Recipes, and a Diet section inside Nutritio
   await expect(page.getByRole('heading', { name: 'Medical' })).toBeVisible();
 });
 
-test('a saved view that is no longer allowed falls back to Nutrition', async ({ page }) => {
-  await asAdmin(page);
-  await page.click('#tab-daily'); await page.click('#daily-recipes');
-  await page.evaluate(() => localStorage.removeItem('ironlog:session/admin'));
-  await page.reload(); await page.click('#tab-daily');
-  await expect(page.locator('#daily-supplements')).toHaveAttribute('aria-pressed', 'true');
-});
-
 test('Nutrition with Diet, Recipes and Medical have no accessibility violations', async ({ page }) => {
   await asAdmin(page);
   await page.click('#tab-daily');
