@@ -170,9 +170,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }));
   app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));
   app.use('/api/sync', rateLimit(limits.sync, undefined, byUser));
-  // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
   // The admin Issues screen (ADR 013 amendment): admin-only, and the database checks users.is_admin again.
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
+  // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
   if (db) app.use('/api/push', rateLimit(limits.push, undefined, byUser), pushRoutes({ db, publicKey: push?.publicKey, scheduler: push?.scheduler, now: push?.now }));
   app.post('/api/account/erase-data', rateLimit(limits.account, undefined, byUser), async (req, res) => {
     const result = await eraseMyData(db!, String(res.locals.userId), req.body);
