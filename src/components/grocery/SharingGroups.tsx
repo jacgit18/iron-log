@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { MAX_GROUPS, MAX_PEOPLE } from '../../lib/grocery.js';
 import ArmedButton from '../ArmedButton.jsx';
@@ -54,9 +54,12 @@ export default function SharingGroups({ g }: { g: Grocery }) {
   const s = useAppStore.getState();
   const [name, setName] = useState(''); const [people, setPeople] = useState(''); const [err, setErr] = useState<string | null>(null);
   const groups = g.groups ?? [];
+  // The panel opens from a button (or the prompt) that may disappear, so focus goes to its heading instead of being dropped on the page.
+  const head = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { head.current?.focus(); }, []);
   return (
     <section className="gform" aria-labelledby="groc-sharing-h">
-      <h3 id="groc-sharing-h">Sharing</h3>
+      <h3 id="groc-sharing-h" ref={head} tabIndex={-1}>Sharing</h3>
       <p className="note">Make a group for the people you split groceries with. You are always in it.</p>
       {groups.length > 0 && <ul className="glist">{groups.map(x => <GroupRow key={x.id} group={x} stores={g.stores} />)}</ul>}
       <form className="warmadd gsnew" noValidate onSubmit={e => {

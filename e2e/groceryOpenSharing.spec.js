@@ -23,6 +23,7 @@ test('with no group, a prompt and the Sharing button open the groups panel witho
   await expect(page.locator('.gshareprompt')).toContainText('Buy groceries with other people?');
   await page.click('#groc-sharing-prompt');
   await expect(panel(page)).toBeVisible();
+  await expect(page.locator('#groc-sharing-h')).toBeFocused(); // the prompt button is gone, so focus lands on the panel's heading
   await expect(page.locator('#groc-edit')).toHaveAttribute('aria-pressed', 'false'); // not in Edit mode
   await expect(page.locator('.gshareprompt')).toHaveCount(0);
   await page.getByLabel('New group', { exact: true }).fill('Home');
