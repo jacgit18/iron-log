@@ -1,0 +1,10 @@
+{
+  "notUserFacing": ["^docs/", "^\\.githooks/", "^e2e[\\w-]*/", "^scripts/", "^tools/", "^\\.github/", "^\\.claude/", "^spike/", "^db/", "^backups?/", "\\.test\\.[jt]sx?$", "\\.md$", "^package(-lock)?\\.json$", "^tsconfig[\\w.]*\\.json$", "^vite\\.config\\.", "^playwright[\\w.]*\\.config\\.", "^Dockerfile$", "^cloudbuild[\\w-]*\\.yaml$", "^docker-compose\\.yml$"],
+  "audiences": [
+    { "key": "paid", "label": "**Paid subscribers**", "diffFile": "src/features.ts", "diffPattern": "^\\+\\s*\\w+:\\s*'paid'", "reason": "a paid-subscriber entry was added to src/features.ts" },
+    { "key": "admin", "label": "**Admin only**", "files": ["server/admin.ts"], "diffFile": "src/features.ts", "diffPattern": "^\\+\\s*\\w+:\\s*'admin'", "reason": "an admin-only entry in src/features.ts, or server/admin.ts, changed" }
+  ],
+  "ui": ["^src/(components|hooks|assets)/", "\\.(css|tsx|svg|png|webp|woff2?)$", "^index\\.html$", "^vite\\.config\\.", "^public/"],
+  "autoTickWhenNoUi": "lighthouse\\.mjs",
+  "everyoneReason": "user-visible files changed and no admin-only or paid entry was added (standing rule: ship to everyone for now)"
+}
