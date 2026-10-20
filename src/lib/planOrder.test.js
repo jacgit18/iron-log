@@ -94,8 +94,8 @@ function checkPlan(cfg, week, slots, doneCol) {
   });
 
   // Honest numbers that go down.
-  expect(plan.before).toBe(clashCount(week, slots, doneCol));
-  expect(plan.after).toBe(clashCount(after, slots, doneCol));
+  expect(plan.before).toBe(clashCount(week, slots, doneCol, cfg));
+  expect(plan.after).toBe(clashCount(after, slots, doneCol, cfg));
   expect(plan.after).toBeLessThan(plan.before);
   expect(plan.lines.length).toBeGreaterThan(0);
   plan.lines.forEach(l => expect(typeof l).toBe('string'));
@@ -114,7 +114,7 @@ function checkPlan(cfg, week, slots, doneCol) {
       const ok = DAYS.every(c => (c > doneCol && open.includes(c)) || m[c - 1] === items[c - 1]);
       if (!ok) return;
       const restOnly = { ...week, rest: DAYS.filter(c => m[c - 1] === 'R') };
-      expect(clashCount(restOnly, slots, doneCol), `rest ${rc}->${to} would have helped`).toBeGreaterThanOrEqual(plan.before);
+      expect(clashCount(restOnly, slots, doneCol, cfg), `rest ${rc}->${to} would have helped`).toBeGreaterThanOrEqual(plan.before);
     }));
   }
   return plan;
@@ -172,8 +172,8 @@ describe('planOrder never loses, duplicates or splits a card', () => {
 
 /* ---------- v2: moving one card ----------
    Every legal single-card move, found independently of planCard, so its choice can be checked against them all. */
-function cardMoves(week, slots, doneCol) {
-  const cols = currentLayout(week, slots); const daily = dailyExercises(week, slots).sort().join();
+function cardMoves(cfg, week, slots, doneCol) {
+  const cols = currentLayout(week, slots); const daily = dailyExercises(week, slots, cfg).sort().join();
   const open = DAYS.filter(c => c > doneCol && dayAt(week, c) != null && cols[c].length > 0 && !started(week, cols[c]));
   const out = [];
   open.forEach(from => cols[from].forEach(s => {
@@ -185,8 +185,8 @@ function cardMoves(week, slots, doneCol) {
       const pd = dayAt(week, to);
       const moved = { ...week.moved }; if (pd === s.day) delete moved[s.id]; else moved[s.id] = pd;
       const cand = { ...week, moved };
-      if (dailyExercises(cand, slots).sort().join() !== daily) return; // every-day exercises unchanged
-      out.push({ slot: s.id, from, to, pd, cand, after: clashCount(cand, slots, doneCol) });
+      if (dailyExercises(cand, slots, cfg).sort().join() !== daily) return; // every-day exercises unchanged
+      out.push({ slot: s.id, from, to, pd, cand, after: clashCount(cand, slots, doneCol, cfg) });
     });
   }));
   return out;
@@ -197,8 +197,8 @@ function checkCard(cfg, week, slots, doneCol) {
   const copy = structuredClone(week);
   const plan = planCard(cfg, week, slots, doneCol);
   expect(week).toEqual(copy); // not mutated
-  const before = clashCount(week, slots, doneCol);
-  const moves = cardMoves(week, slots, doneCol);
+  const before = clashCount(week, slots, doneCol, cfg);
+  const moves = cardMoves(cfg, week, slots, doneCol);
   const min = Math.min(Infinity, ...moves.map(m => m.after));
   if (!plan) { expect(before === 0 || !(min < before), 'a card move would have helped').toBe(true); return null; }
 
