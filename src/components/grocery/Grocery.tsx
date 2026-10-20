@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, haveOf, lineCost, lineOf, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
+import { allPeople, hasSharing, partiesFor } from '../../lib/grocerySettle.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import GrocerySpend from './GrocerySpend.js';
 import PriceChips from './PriceChips.js';
+import SharePicker from './SharePicker.js';
+import SharingGroups from './SharingGroups.js';
+import SplitSummary from './SplitSummary.js';
 import useDockHeight from './useDockHeight.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from '../../types.ts';
 import type { GroceryForm } from '../../store/types.ts';
@@ -31,10 +36,11 @@ function NumBox({ label, value, onCommit, className }: { label: string; value: s
 
 /* ---------- To get ---------- */
 // One line of the shopping list: the whole row ticks it, and the trailing "2 × $3.49" opens the count and price for this month.
-function GetRow({ item, month, mk, future, onGot, open, onOpen }: { item: GroceryItem; month: GroceryMonth; mk: string; future: boolean; onGot: (on: boolean) => void; open: boolean; onOpen: (on: boolean) => void }) {
+function GetRow({ g, item, month, mk, future, onGot, open, onOpen }: { g: GroceryT; item: GroceryItem; month: GroceryMonth; mk: string; future: boolean; onGot: (on: boolean) => void; open: boolean; onOpen: (on: boolean) => void }) {
   const s = useAppStore.getState();
   const l = lineOf(item, month); const total = lineCost(l); const w = unitWords(item.unit);
   const moreId = `groc-more-${item.id}`;
+  const split = useFeature('grocerySplit') && hasSharing(g); const raw = month.lines[item.id]; const people = allPeople(g);
   return (
     <li className={`gget${l.got ? ' got' : ''}`}>
       <div className="ggetline">
@@ -57,6 +63,12 @@ function GetRow({ item, month, mk, future, onGot, open, onOpen }: { item: Grocer
               onCommit={t => { if (!t.trim()) { s.setGroceryCents(mk, item.id, null); return true; } const c = parseDollars(t); if (c == null) return false; s.setGroceryCents(mk, item.id, c); return true; }} />
           </label>
           {!item.unit && <PriceChips name={item.n} prices={l.prices} onChange={p => s.setGroceryPrices(mk, item.id, p)} />}
+          {split && !l.prices && <SharePicker name={item.n} people={people} parties={partiesFor(g, item, raw)} own={!!raw?.share} onChange={sh => s.setGroceryLineShare(mk, item.id, sh)} />}
+          {split && l.prices?.map((c, i) => (
+            <div key={i} className="gpackshare"><span>Pack {i + 1}, {money(c)}</span>
+              <SharePicker name={`${item.n} pack ${i + 1}`} people={people} parties={partiesFor(g, item, raw, i)} own={!!raw?.packShares?.[i]} onChange={sh => s.setGroceryPackShare(mk, item.id, i, sh)} />
+            </div>
+          ))}
           <span className="gtotal" aria-label={`Total for ${item.n}`}>{l.cents == null && !l.prices ? '' : money(total)}</span>
           {!future && <button type="button" className="btn sm ghost gtake" aria-label={`Take ${item.n} off the list`} onClick={() => s.takeGroceryOff(mk, item.id)}>Take off the list</button>}
         </div>
@@ -66,6 +78,7 @@ function GetRow({ item, month, mk, future, onGot, open, onOpen }: { item: Grocer
 }
 
 function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
+  const split = useFeature('grocerySplit') && hasSharing(g);
   const [off, setOff] = useState(0); // months from this one: below 0 is history, above 0 is planning ahead
   const mk = shiftMonth(nowKey, off);
   const month = months[mk] || emptyMonth();
@@ -116,7 +129,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
               <h3 id={`groc-h-${gi}`}>{grp.label}</h3>
               <span className="note">{current ? `${gt.count} to get` : `${gt.got}/${gt.count}`}{gt.planned ? ` · ${money(gt.planned)}` : ''}</span>
             </div>
-            <ul className="glist">{gotLast(grp.items, month).map(it => <GetRow key={it.id} item={it} month={month} mk={mk} future={off > 0} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} />)}</ul>
+            <ul className="glist">{gotLast(grp.items, month).map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={off > 0} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} />)}</ul>
           </section>
         );
       })}
@@ -127,11 +140,12 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
           {byStore(g, bought).map(grp => (
             <section key={grp.store || '_'} className="gstore" aria-label={`Bought from ${grp.label}`}>
               <div className="gstorehead"><h3>{grp.label}</h3></div>
-              <ul className="glist">{grp.items.map(it => <GetRow key={it.id} item={it} month={month} mk={mk} future={false} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} />)}</ul>
+              <ul className="glist">{grp.items.map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={false} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} />)}</ul>
             </section>
           ))}
         </details>
       )}
+      {split && <SplitSummary g={g} month={month} mk={mk} />}
     </>
   );
 }
@@ -157,6 +171,7 @@ function EditRow({ item, g, have, onHave }: { item: GroceryItem; g: GroceryT; ha
   const [name, setName] = useState(item.n);
   const [arming, setArming] = useState(false); // Remove was pressed once
   const { mine, suggested } = storeChoices(g);
+  const split = useFeature('grocerySplit') && hasSharing(g);
   return (
     <li className={`gedit${arming ? ' removing' : ''}`}>
       <input type="checkbox" className="chk gedithave" aria-label={`Have ${item.n}`} checked={have} onChange={e => onHave(e.target.checked)} />
@@ -175,6 +190,7 @@ function EditRow({ item, g, have, onHave }: { item: GroceryItem; g: GroceryT; ha
         <option value="">Each</option>
         {UNITS.map(u => <option key={u} value={u}>by the {u}</option>)}
       </select>
+      {split && <SharePicker name={item.n} people={allPeople(g)} parties={partiesFor(g, item)} own={!!item.share} onChange={sh => s.setGroceryItemShare(item.id, sh)} />}
       <ArmedButton className={`btn sm ${arming ? 'danger' : 'ghost'}`} aria-label={`Remove ${item.n} from your list`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setArming} onConfirm={() => s.removeGroceryItem(item.id)} />
       {err && <p className="note gerr" role="alert">{err}</p>}
     </li>
@@ -251,6 +267,7 @@ function Stores({ g }: { g: GroceryT }) {
 
 function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
   const [editing, setEditing] = useState(false);
+  const sharing = useFeature('grocerySplit');
   const month = months[nowKey] || emptyMonth();
   const hasIt = (it: GroceryItem) => haveOf(it, month);
   const setHave = (it: GroceryItem, on: boolean) => useAppStore.getState().setGroceryHave(nowKey, it.id, on);
@@ -270,6 +287,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
         </section>
       ))}
       {editing && <Stores g={g} />}
+      {editing && sharing && <SharingGroups g={g} />}
       {editing && <EditDock g={g} onDone={() => setEditing(false)} />}
     </div>
   );
