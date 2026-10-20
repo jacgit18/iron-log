@@ -39,6 +39,9 @@ async function connect(url) {
     const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 30_000, statement_timeout: 30_000 });
     try {
       await client.connect();
+      // If the connection is cut later, pg also emits 'error' on the client; with no listener Node dies with exit 1 (which `check` documents as
+      // "not marked as staging"). The query that is running rejects with the same error, and the catch at the bottom reports it.
+      client.on('error', () => {});
       return client;
     } catch (e) {
       await client.end().catch(() => {});

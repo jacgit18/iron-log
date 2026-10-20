@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { connect, createServer, type AddressInfo } from 'node:net';
+import { connect, createServer, type AddressInfo, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { sql, type Kysely } from 'kysely';
@@ -120,6 +120,8 @@ describe('staging-db.mjs', () => {
   });
 
   it('a failed query after the connect exits 2 ("cannot read"), not 1 ("not marked")', async () => {
+    // A role belongs to the whole cluster, so one left behind by an interrupted run would break every later run: clear it first.
+    await sql`drop role if exists probe_reader`.execute(db);
     await sql`create role probe_reader login password 'probe'`.execute(db);
     await sql`revoke execute on function shobj_description(oid, name) from public`.execute(db);
     try {
@@ -132,6 +134,46 @@ describe('staging-db.mjs', () => {
     } finally {
       await sql`grant execute on function shobj_description(oid, name) to public`.execute(db);
       await sql`drop role probe_reader`.execute(db);
+    }
+  });
+
+  it('a connection that is cut in the middle of the run exits 2 too, not with an uncaught error', async () => {
+    const real = new URL(url);
+    // The script talks to the database through a stand-in whose sockets the test can cut without a word, as a restarting compute or a
+    // dropped network does (no error message from the server, so the client sees only an unexpected end).
+    const sockets: Socket[] = [];
+    const proxy = createServer(client => {
+      const upstream = connect(Number(real.port), real.hostname);
+      sockets.push(client, upstream);
+      client.pipe(upstream).pipe(client);
+      client.on('error', () => upstream.destroy());
+      upstream.on('error', () => client.destroy());
+    });
+    await new Promise<void>(done => proxy.listen(0, '127.0.0.1', done));
+    // Hold a lock so the script's first query waits on the server; that is the moment to cut the connection.
+    const holder = new pg.Client({ connectionString: url });
+    await holder.connect();
+    await holder.query('begin');
+    await holder.query('lock table auth."session" in access exclusive mode');
+    try {
+      const viaProxy = new URL(url);
+      viaProxy.hostname = '127.0.0.1';
+      viaProxy.port = String((proxy.address() as AddressInfo).port);
+      const done = run(viaProxy.href, 'clear', '--host', '127.0.0.1');
+      let waiting = false;
+      for (let i = 0; i < 100 && !waiting; i++) {
+        waiting = Number((await sql<{ n: string }>`select count(*) as n from pg_stat_activity where wait_event_type = 'Lock' and query ilike '%auth."session"%' and pid <> pg_backend_pid()`.execute(db)).rows[0]!.n) > 0;
+        if (!waiting) await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      expect(waiting).toBe(true);
+      for (const socket of sockets) socket.destroy();
+      const out = await done;
+      expect(out.status).toBe(2);
+      expect(out.stderr).toContain('Cannot read the database');
+    } finally {
+      await holder.query('rollback').catch(() => {});
+      await holder.end().catch(() => {});
+      proxy.close();
     }
   });
 
