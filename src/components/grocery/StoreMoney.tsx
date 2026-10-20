@@ -19,7 +19,7 @@ export function StoreMoney({ g, month, store }: { g: Grocery; month: GroceryMont
   const st = storeSettlement(g, month, store, purchases);
   return (
     <p className="note gstoremoney">
-      Bought {money(st.bill)} · Your share {money(st.yourShare)}{st.owedToYou > 0 ? ` · Owed to you ${money(st.owedToYou)}` : ''}{st.youOwe > 0 ? ` · You owe ${money(st.youOwe)}` : ''}
+      Bought {money(st.bill)}{st.tax > 0 ? ` (tax ${money(st.tax)})` : ''} · Your share {money(st.yourShare)}{st.owedToYou > 0 ? ` · Owed to you ${money(st.owedToYou)}` : ''}{st.youOwe > 0 ? ` · You owe ${money(st.youOwe)}` : ''}
     </p>
   );
 }

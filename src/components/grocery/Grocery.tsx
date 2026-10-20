@@ -12,6 +12,7 @@ import PriceChips from './PriceChips.js';
 import SharePicker from './SharePicker.js';
 import SharingGroups from './SharingGroups.js';
 import SplitSummary from './SplitSummary.js';
+import StoreTax from './StoreTax.js';
 import { MonthMoney, StoreMoney } from './StoreMoney.js';
 import useDockHeight from './useDockHeight.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from '../../types.ts';
@@ -93,6 +94,13 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const todo = current ? list.filter(i => !lineOf(i, month).got) : list;
   const bought = current ? list.filter(i => lineOf(i, month).got) : [];
   const todoStores = new Set(byStore(g, todo, split).map(x => x.store)); // a shared store with nothing left to get shows its money line in the bought fold instead
+  // A store's tax box, once something is ticked there (or a tax is already typed): the receipt's tax for this month and what it comes to as a percent of the ticked items.
+  const taxRow = (store: string) => {
+    if (!store) return null;
+    const mine = list.filter(i => i.store === store); const cents = month.tax?.[store];
+    if (!cents && !mine.some(i => lineOf(i, month).got)) return null;
+    return <StoreTax key={`${mk}:${store}`} mk={mk} store={store} cents={cents} subtotal={tally(mine, month).spent - (cents ?? 0)} />;
+  };
   // A ticked row moves to another part of the page, which would drop keyboard focus to the top. Put it on the next row to get (or the
   // one before), else on the "Bought this month" line; a row unticked from the fold lands back in the list, so focus follows it there.
   // The count and price panels' open state lives here, not in the row: a ticked row moves to the fold and is built again, and an open
@@ -122,7 +130,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       </div>
       {t.count > 0 && <div className="gprog" aria-hidden="true"><span style={{ width: `${Math.round((t.got / t.count) * 100)}%` }} /></div>}
       <p className="note" id="groc-summary" role="status">
-        {t.count ? <>{`Got ${t.got} of ${t.count} · Spent ${money(t.spent)} · Expected ${money(t.planned)}`}{t.unpriced > 0 && <>{' · '}<span className="gwarn">{t.unpriced} without a price</span></>}</> : off > 0 ? 'Nothing planned yet. Items you add on At home show up here.' : 'Nothing on this month’s list.'}
+        {t.count ? <>{`Got ${t.got} of ${t.count} · Spent ${money(t.spent)}${t.taxed ? ' with tax' : ''} · Expected ${money(t.planned)}`}{t.unpriced > 0 && <>{' · '}<span className="gwarn">{t.unpriced} without a price</span></>}</> : off > 0 ? 'Nothing planned yet. Items you add on At home show up here.' : 'Nothing on this month’s list.'}
       </p>
       {split && <MonthMoney g={g} month={month} />}
       {!t.count && off === 0 && <p className="note">Add what you buy on <b>At home</b>. Tick an item there when you have it and it comes off this month’s list.</p>}
@@ -136,6 +144,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
               <span className="note">{current ? `${gt.count} to get` : `${gt.got}/${gt.count}`}{gt.planned ? ` · ${money(gt.planned)}` : ''}</span>
             </div>
             {split && grp.group && <StoreMoney g={g} month={month} store={grp.store} />}
+            {taxRow(grp.store)}
             <ul className="glist">{gotLast(grp.items, month).map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={off > 0} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} />)}</ul>
           </section>
         );
@@ -148,6 +157,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
             <section key={grp.store || '_'} className="gstore" aria-label={`Bought from ${grp.label}`}>
               <div className="gstorehead"><h3>{grp.label}{split && grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3></div>
               {split && grp.group && !todoStores.has(grp.store) && <StoreMoney g={g} month={month} store={grp.store} />}
+              {!todoStores.has(grp.store) && taxRow(grp.store)}
               <ul className="glist">{grp.items.map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={false} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} />)}</ul>
             </section>
           ))}

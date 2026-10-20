@@ -103,3 +103,21 @@ describe('add to my data', () => {
     expect(r.months['2026-10']!.payer).toEqual({ "BJ's": 'mine', Aldi: 'x' });
   });
 });
+
+describe('a month\'s tax', () => {
+  it('keeps a typed amount in cents per store, drops a bad one, and counts as something in the month', () => {
+    const m = normGroceryMonth({ lines: {}, pulled: [], tax: { "BJ's": 222, Aldi: 0, Bad: -5, Frac: 1.5, Str: '2' } });
+    expect(m.tax).toEqual({ "BJ's": 222 });
+    expect(monthEmpty(m)).toBe(false);
+    expect(normGroceryMonth({ lines: {}, pulled: [] }).tax).toBeUndefined(); // an older month has none
+    expect(monthEmpty(normGroceryMonth({ lines: {}, pulled: [], tax: {} }))).toBe(true);
+  });
+  it('add to my data brings a month\'s tax where there is none and keeps what is here', () => {
+    const cur = { stores: ["BJ's"], items: [] };
+    const have = { '2026-09': { lines: {}, pulled: [], tax: { "BJ's": 100 } } };
+    const inc: GroceryData = { stores: ["BJ's"], items: [], months: { '2026-09': { lines: { x: { got: true } }, pulled: [], tax: { "BJ's": 999, Aldi: 50 } }, '2026-08': { lines: { x: { got: true } }, pulled: [], tax: { "BJ's": 70 } } } };
+    const r = mergeGrocery(cur, have, inc);
+    expect(r.months['2026-09']!.tax).toEqual({ "BJ's": 100, Aldi: 50 }); // BJ's keeps its own, Aldi is new
+    expect(r.months['2026-08']!.tax).toEqual({ "BJ's": 70 });
+  });
+});

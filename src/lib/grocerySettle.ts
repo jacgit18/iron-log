@@ -69,7 +69,8 @@ export function storesBought(g: Grocery, purchases: readonly MonthPurchase[]): s
 /** Who pays whom for one store this month. */
 export function storeSettlement(g: Grocery, m: GroceryMonth, store: string, purchases: readonly MonthPurchase[] = purchasesOf(g, m)): Settlement {
   const covered = new Set((g.groups ?? []).flatMap(x => x.people.filter(p => p.covered).map(p => p.id)));
-  return settle(purchases.filter(p => p.store === store), payerOf(g, m, store), covered);
+  const mine = purchases.filter(p => p.store === store);
+  return settle(mine, payerOf(g, m, store), covered, mine.length ? m.tax?.[store] ?? 0 : 0); // the receipt's tax, typed in; only for a store with something bought
 }
 
 /** What you paid this month (the bills of the stores where you are the payer; a store someone else paid is not yours to have paid) and your share
