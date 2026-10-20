@@ -25,10 +25,28 @@ const MARKER = 'iron-log staging';
 
 const fail = (msg, code = 2) => { console.error(msg); process.exit(code); };
 
+// Neon archives a branch that is older than 14 days and has not been used for a day, and un-archives it on the first connection, which can
+// take longer than a normal connect (the docs give no time). So a failed connect is tried again, with a longer wait each time, unless the
+// database answered and said no (a wrong login or database name: trying again cannot help). Settings for tests: STAGING_DB_CONNECT_ATTEMPTS
+// (default 4, with 30 s to connect each time) and STAGING_DB_CONNECT_PAUSE_MS (default 5000, between tries).
+const REFUSED_FOR_GOOD = /^(28|3D|42)/; // invalid login, no such database, a missing role or table: the server answered
 async function connect(url) {
-  const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 15_000, statement_timeout: 30_000 });
-  try { await client.connect(); } catch (e) { fail(`Cannot connect: ${e instanceof Error ? e.message : String(e)}`); }
-  return client;
+  const attempts = Math.max(1, Number(process.env.STAGING_DB_CONNECT_ATTEMPTS) || 4);
+  const pause = Number(process.env.STAGING_DB_CONNECT_PAUSE_MS ?? 5000);
+  for (let n = 1; ; n++) {
+    const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 30_000, statement_timeout: 30_000 });
+    try {
+      await client.connect();
+      return client;
+    } catch (e) {
+      await client.end().catch(() => {});
+      const why = e instanceof Error ? e.message : String(e);
+      const code = typeof e === 'object' && e && 'code' in e ? String(e.code) : '';
+      if (n >= attempts || REFUSED_FOR_GOOD.test(code)) fail(`Cannot connect${attempts > 1 ? ` (attempt ${n} of ${attempts})` : ''}: ${why}`);
+      console.error(`Could not connect (attempt ${n} of ${attempts}): ${why}. The branch may be waking from Neon's archive; trying again in ${Math.round((pause * n) / 1000)} s.`);
+      await new Promise(done => setTimeout(done, pause * n));
+    }
+  }
 }
 
 async function readMark(client) {
