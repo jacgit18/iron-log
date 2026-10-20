@@ -52,6 +52,12 @@
   letter-spacing: .06em;
   color: var(--muted);
 }
+.gstorehead .gtag {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--accent);
+}
 .gstore.done .gstorehead h3 {
   color: var(--accent);
 }
