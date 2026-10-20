@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupOfStore, knownPeople, monthShare, payerOf, purchasesOf, storeSettlement, storesBought } from './grocerySettle.js';
+import { allPeople, groupOfStore, hasSharing, knownPeople, monthShare, partiesFor, payerOf, purchasesOf, shareByMonth, shareOfParties, shareText, storeSettlement, storesBought } from './grocerySettle.js';
 import { ME } from './grocerySplit.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -87,5 +87,45 @@ describe('the month', () => {
     expect(yours).toBeGreaterThan(500 + 1049 + 925); // the rice and two chicken packs, plus a third of the rest
     const plain: Grocery = { stores: ['Aldi'], items: [it_('rice', 'Aldi', 500)] };
     expect(monthShare(plain, { lines: { rice: { got: true } }, pulled: [] })).toEqual({ paid: 500, yours: 500 });
+  });
+});
+
+describe('what a picker shows', () => {
+  it('words a split', () => {
+    expect(shareText([ME])).toBe('Just me');
+    expect(shareText([ME, 'sis'])).toBe('Me +1');
+    expect(shareText([ME, 'sis', 'mom'])).toBe('Me +2');
+    expect(shareText(['sis', 'mom'])).toBe('Not mine');
+  });
+  it('turns the parties back into the share a picker ticks', () => {
+    expect(shareOfParties([ME])).toEqual({ with: [] });
+    expect(shareOfParties([ME, 'sis'])).toEqual({ with: ['sis'] });
+    expect(shareOfParties(['sis', 'mom'])).toEqual({ with: ['sis', 'mom'], notMine: true });
+  });
+  it('finds who shares an item, a line or a pack, most specific first', () => {
+    const tp = g.items.find(x => x.id === 'tp')!;
+    expect(partiesFor(g, tp)).toEqual([ME, 'sis', 'mom']); // the store's group
+    expect(partiesFor(g, { ...tp, share: { with: ['sis'] } })).toEqual([ME, 'sis']);
+    expect(partiesFor(g, tp, { share: { with: [] } })).toEqual([ME]);
+    expect(partiesFor(g, tp, { share: { with: [] }, prices: [1, 2], packShares: [null, { with: ['mom'] }] }, 1)).toEqual([ME, 'mom']);
+    expect(partiesFor(g, tp, { share: { with: [] }, prices: [1, 2], packShares: [null, { with: ['mom'] }] }, 0)).toEqual([ME]);
+  });
+  it('knows whether sharing is set up', () => {
+    expect(hasSharing(g)).toBe(true);
+    expect(hasSharing({ stores: [], items: [] })).toBe(false);
+  });
+  it('gives paid and your share for each month, oldest first', () => {
+    const r = shareByMonth(g, { '2026-10': bought }, '2026-10', 2);
+    expect(r.map(x => x.key)).toEqual(['2026-09', '2026-10']);
+    expect(r[0]).toEqual({ key: '2026-09', paid: 0, yours: 0 });
+    expect(r[1]!.paid).toBeGreaterThan(r[1]!.yours);
+  });
+});
+
+describe('allPeople', () => {
+  it('lists each person once across groups', () => {
+    const g2: Grocery = { ...g, groups: [...g.groups!, { id: 'g2', n: 'Home', people: [{ id: 'sis', n: 'Sister' }, { id: 'pat', n: 'Pat' }], stores: [] }] };
+    expect(allPeople(g2).map(p => p.id)).toEqual(['sis', 'mom', 'pat']);
+    expect(allPeople({ stores: [], items: [] })).toEqual([]);
   });
 });
