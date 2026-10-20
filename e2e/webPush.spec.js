@@ -43,7 +43,7 @@ const scheduled = calls => calls.filter(c => c.path === '/schedule' || c.path ==
 // A ticked card sinks to the end of its day, so a locator for "the first card" moves on after each tick: pin the card by its checkbox id.
 const firstOpen = async page => page.locator(`#${await page.locator('.col.sel article.card:not(.done) input.chk.cardchk').first().getAttribute('id')}`);
 
-test('Settings offers push to an admin, and turning it on subscribes this device', async ({ page }) => {
+test('Settings offers push, and turning it on subscribes this device', async ({ page }) => {
   const calls = await setup(page, { on: false });
   await page.locator('#tab-settings, #account-badge').first().click();
   const panel = page.getByRole('region', { name: 'Alerts when Iron Log is closed' });
@@ -59,12 +59,14 @@ test('Settings offers push to an admin, and turning it on subscribes this device
   expect(calls.at(-1)).toEqual({ path: '/unsubscribe', method: 'POST', body: { endpoint: 'https://push.example/phone-1' } });
 });
 
-test('is not offered to an account that is not an admin', async ({ page }) => {
+test('is offered to an account that is not an admin too, and turning it on subscribes this device', async ({ page }) => {
   const calls = await setup(page, { admin: false, on: false });
   await page.locator('#tab-settings, #account-badge').first().click();
-  await expect(page.getByRole('heading', { name: 'Rest timer alert' })).toBeAttached();
-  await expect(page.getByRole('heading', { name: 'Alerts when Iron Log is closed' })).toHaveCount(0);
-  expect(calls).toEqual([]);
+  const panel = page.getByRole('region', { name: 'Alerts when Iron Log is closed' });
+  await expect(panel).toBeVisible();
+  await panel.getByRole('checkbox', { name: /Send alerts to this device/ }).click();
+  await expect(panel.getByRole('checkbox', { name: /When a rest or hold ends/ })).toBeChecked();
+  expect(calls.map(c => `${c.method} ${c.path}`)).toEqual(['GET /key', 'POST /subscribe']);
 });
 
 test('ticking a card on a day with more to do asks for a nudge 30 minutes on; finishing the day takes it back', async ({ page }) => {

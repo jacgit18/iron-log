@@ -11,7 +11,6 @@ import type { PhaseKey, ProgKey } from '../../types.ts';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { useFeature } from '../../features.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../shared/dates.js';
 import { programFor, progName, programWeights, bestByPhase, injuryPreventionOn, round } from '../../lib/logic.js';
@@ -152,7 +151,6 @@ function PushPanel() {
   const [nudge, setNudge] = useState(() => pushKindWanted('day-nudge'));
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  if (!useFeature('webPush')) return null;
   // iPhone only allows push for an app on the Home Screen, and says nothing when it is missing, so say it here.
   if (!pushSupported()) return <section className="panel"><h3>Alerts when Iron Log is closed</h3><p>{isIOS() && !installed ? 'On iPhone, add Iron Log to your Home Screen first (Share, then Add to Home Screen) and open it from there. Then this setting appears.' : 'This browser cannot receive push alerts.'}</p></section>;
   const toggle = async (want: boolean) => {
@@ -161,7 +159,7 @@ function PushPanel() {
       const r = await enablePush();
       setOn(r === 'on');
       setNote(r === 'denied' ? 'Notifications are blocked for Iron Log. Allow them in your browser or phone settings, then try again.'
-        : r === 'unavailable' ? 'Push is not available for your account on this server yet.'
+        : r === 'unavailable' ? 'Push is not available right now. Sign in and try again, or check back later.'
         : r === 'failed' ? 'Could not turn push on. Check your connection and try again.' : '');
     } else { await disablePush(); setOn(false); }
     setBusy(false);
@@ -177,7 +175,7 @@ function PushPanel() {
           <p>The day alert never comes between 9:30 pm and 4 am, and goes away when you finish the day.</p>
         </>
       )}
-      <p>Saved on this device only. Admin-only for now.</p>
+      <p>Saved on this device only.</p>
       {note && <p role="status">{note}</p>}
       <More about="these alerts"><p>Alerts are sent by the Iron Log server, so they do not depend on the app running in the background. They contain only a short message. Turning this off, or signing out, removes this device from the server.</p></More>
     </section>
