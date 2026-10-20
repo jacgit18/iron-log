@@ -72,6 +72,22 @@ describe('a store defaults to one group', () => {
     st().setGroceryStoreGroup('Nowhere', st().grocery.groups[0].id);
     expect(group().stores).toEqual([]);
   });
+  it('Undo puts a removed store back in its group, unless that group is gone', () => {
+    st().addGroceryStore('A'); st().addGroceryStore("BJ's"); st().addGroceryGroup('Home', []); st().addGroceryGroup('Other', []);
+    const [home, other] = st().grocery.groups.map(x => x.id);
+    st().setGroceryStoreGroup("BJ's", home);
+    st().removeGroceryStore("BJ's");
+    expect(st().grocery.groups[0].stores).toEqual([]);
+    st().undoRemoved();
+    expect(st().grocery.stores).toEqual(['A', "BJ's"]);
+    expect(st().grocery.groups[0].stores).toEqual(["BJ's"]); // its default group came back with it
+    st().removeGroceryStore("BJ's");
+    st().removeGroceryGroup(home); // the group went meanwhile
+    st().undoRemoved();
+    expect(st().grocery.stores).toEqual(['A', "BJ's"]);
+    expect(st().grocery.groups.map(x => x.stores)).toEqual([[]]);
+    expect(st().grocery.groups.map(x => x.id)).toEqual([other]);
+  });
   it('removing a store takes it out of its group', () => {
     st().addGroceryGroup('A', []); st().addGroceryStore("BJ's");
     st().setGroceryStoreGroup("BJ's", group().id);

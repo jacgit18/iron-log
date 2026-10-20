@@ -157,6 +157,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
 
     removeGroceryStore(name) {
       const i = get().grocery.stores.indexOf(name);
+      const held = (get().grocery.groups ?? []).filter(x => x.stores.includes(name)).map(x => x.id); // the group it defaulted to, for Undo
       const err = mutateCatalogue(g => {
         if (g.items.some(it => it.store === name)) return 'Move or remove this store’s items first.';
         g.stores = g.stores.filter(s => s !== name);
@@ -167,7 +168,9 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         get().noteRemoved('grocerystores', name, () => mutateCatalogue(g => {
           if (g.stores.includes(name)) return 'back';
           if (g.stores.length >= MAX_STORES) return 'full';
-          g.stores.splice(Math.min(i, g.stores.length), 0, name); return null;
+          g.stores.splice(Math.min(i, g.stores.length), 0, name);
+          held.forEach(id => { const x = g.groups?.find(y => y.id === id); if (x && !g.groups!.some(y => y.stores.includes(name))) x.stores.push(name); }); // back in its group, if that still exists and no other group took it
+          return null;
         }) === null);
       }
       return err;

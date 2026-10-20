@@ -72,6 +72,42 @@ describe('a month with shares and a payer', () => {
   });
 });
 
+describe('pack shares travel with their prices when two devices merge', () => {
+  const sh = (id: string) => ({ with: [id] });
+  const base: GroceryMonth = { lines: { c: { got: true, prices: [100, 200, 300], packShares: [sh('s'), null, null] } }, pulled: [] };
+  it('a pack removed on one device and another tagged on the other: the share never lands on the wrong pack', () => {
+    const ours: GroceryMonth = { lines: { c: { got: true, prices: [200, 300] } }, pulled: [] }; // pack one removed, so no shares left
+    const theirs: GroceryMonth = { lines: { c: { got: true, prices: [100, 200, 300], packShares: [sh('s'), null, sh('t')] } }, pulled: [] };
+    const line = mergeGroceryMonth3(base, ours, theirs).week.lines.c!;
+    expect(line.prices).toEqual([200, 300]);
+    expect(line.packShares).toBeUndefined(); // not [sh('s'), null]: that would put the share on the pack that moved up
+  });
+  it('a pack added on the other device brings its own shares with it', () => {
+    const theirs: GroceryMonth = { lines: { c: { got: true, prices: [100, 200, 300, 400], packShares: [sh('s'), null, null, sh('x')] } }, pulled: [] };
+    const line = mergeGroceryMonth3(base, base, theirs).week.lines.c!;
+    expect(line.prices).toEqual([100, 200, 300, 400]);
+    expect(line.packShares).toEqual([sh('s'), null, null, sh('x')]);
+  });
+  it('when both changed the prices this device wins, shares and all', () => {
+    const ours: GroceryMonth = { lines: { c: { got: true, prices: [100, 250, 300], packShares: [null, sh('o'), null] } }, pulled: [] };
+    const theirs: GroceryMonth = { lines: { c: { got: true, prices: [100, 200, 300, 400], packShares: [sh('s'), null, null, null] } }, pulled: [] };
+    const line = mergeGroceryMonth3(base, ours, theirs).week.lines.c!;
+    expect(line).toEqual({ got: true, prices: [100, 250, 300], packShares: [null, sh('o'), null] });
+  });
+  it('with the same prices on both sides, shares still merge pack by pack', () => {
+    const ours: GroceryMonth = { lines: { c: { got: true, prices: [100, 200, 300], packShares: [sh('s'), sh('o'), null] } }, pulled: [] };
+    const theirs: GroceryMonth = { lines: { c: { got: true, prices: [100, 200, 300], packShares: [sh('s'), null, sh('t')] } }, pulled: [] };
+    const line = mergeGroceryMonth3(base, ours, theirs).week.lines.c!;
+    expect(line.prices).toEqual([100, 200, 300]);
+    expect(line.packShares).toHaveLength(3); // one array, taken whole from a side (an array is one value to the merge)
+  });
+  it('with no base, shares come only from the side whose prices are kept', () => {
+    const ours: GroceryMonth = { lines: { c: { prices: [1, 2] } }, pulled: [] };
+    const theirs: GroceryMonth = { lines: { c: { prices: [1, 2, 3], packShares: [sh('x'), null, null] } }, pulled: [] };
+    expect(mergeGroceryMonth3(null, ours, theirs).week.lines.c).toEqual({ prices: [1, 2] });
+  });
+});
+
 describe('a list that uses no sharing is unchanged', () => {
   // What the app wrote before sharing existed. Cleaning, syncing and reading it back must give the same bytes, so adding the feature
   // cannot alter anyone's list until they use it.
