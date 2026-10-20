@@ -127,11 +127,23 @@ export function mergeGroceryMonth3(baseIn: unknown, oursIn: unknown, theirsIn: u
   const fields = (l: GroceryLine | undefined): Record<string, unknown> => ({ ...l });
   const lines: Record<string, GroceryLine> = {};
   for (const id of new Set([...Object.keys(ours.lines), ...Object.keys(theirs.lines), ...Object.keys(base?.lines ?? {})])) {
-    const l = base ? mergeMap(fields(base.lines[id]), fields(ours.lines[id]), fields(theirs.lines[id])) : { ...theirs.lines[id], ...ours.lines[id] };
+    const l: Record<string, unknown> = base ? mergeMap(fields(base.lines[id]), fields(ours.lines[id]), fields(theirs.lines[id])) : { ...theirs.lines[id], ...ours.lines[id] };
+    // A pack's share belongs to the pack at the same place in `prices`, so the two travel together. When the devices ended with different
+    // prices (a pack added or removed), take prices and shares both from the side that changed them (this device when both did); the other
+    // side's share edits cannot be matched to packs that moved, so they are dropped rather than put on the wrong pack.
+    const o = ours.lines[id], t = theirs.lines[id], b = base?.lines[id];
+    if (JSON.stringify(o?.prices) !== JSON.stringify(t?.prices)) {
+      const from = !base || JSON.stringify(o?.prices) !== JSON.stringify(b?.prices) ? o : t;
+      delete l.prices; delete l.packShares;
+      if (from?.prices) l.prices = from.prices;
+      if (from?.packShares) l.packShares = from.packShares;
+    }
     if (Object.keys(l).length) lines[id] = l as GroceryLine;
   }
   const pulled = base ? Object.keys(mergeMap(flags(base.pulled), flags(ours.pulled), flags(theirs.pulled))) : [...new Set([...ours.pulled, ...theirs.pulled])];
-  const month = normGroceryMonth({ lines, pulled });
+  // Who paid for each store, store by store like the lines.
+  const payer = base ? mergeMap(base.payer ?? {}, ours.payer ?? {}, theirs.payer ?? {}) : { ...theirs.payer, ...ours.payer };
+  const month = normGroceryMonth({ lines, pulled, payer });
   return { week: month, tookTheirs: !same(month, ours), unskipped: false };
 }
 

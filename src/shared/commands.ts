@@ -2,10 +2,10 @@
    One module for what the phone sends and the API accepts. Each command has a name, an input type and a validator;
    the offline queue stores a Command and replays it unchanged. Framework-free: client and server import it. */
 
-import type { BodyEntry, Boost, Experiment, GroceryItem, GroceryMonth, GroceryStore, LibraryItem, LogEntry, Program, ProgKey, Stretch, StretchExperiment, StretchWeek, SupplementItem, Week } from '../types.ts';
+import type { BodyEntry, Boost, Experiment, GroceryGroup, GroceryItem, GroceryMonth, GroceryStore, LibraryItem, LogEntry, Program, ProgKey, Stretch, StretchExperiment, StretchWeek, SupplementItem, Week } from '../types.ts';
 import { LIMITS, normBody, normEntry, normLibrary, normProgram, validDate } from './validate.js';
 import { normConfigDoc, type ConfigDoc } from './config.js';
-import { MONTH_RE, normGroceryItem, normGroceryMonth, normGroceryStore, validGroceryItem, validGroceryStore } from './grocery.js';
+import { MONTH_RE, normGroceryGroup, normGroceryItem, normGroceryMonth, normGroceryStore, validGroceryGroup, validGroceryItem, validGroceryStore } from './grocery.js';
 import { normStretchWeek } from './stretchWeek.js';
 import { withAllDays } from '../lib/data.js';
 import { normExperimentItem, normStretchExperimentItem, normStretchItem, normSupplementItem } from './listItems.js';
@@ -234,12 +234,12 @@ export function validateDeleteLibraryItem(input: unknown): DeleteLibraryItemInpu
 }
 
 /** The small lists that are one row per item, in the order they are shown. */
-export const LIST_NAMES = ['stretch', 'stretch_experiment', 'experiment', 'supplement_item', 'grocery_item', 'grocery_store'] as const;
+export const LIST_NAMES = ['stretch', 'stretch_experiment', 'experiment', 'supplement_item', 'grocery_item', 'grocery_store', 'grocery_group'] as const;
 export type ListName = (typeof LIST_NAMES)[number];
-export type ListItem = Stretch | StretchExperiment | Experiment | SupplementItem | GroceryItem | GroceryStore;
+export type ListItem = Stretch | StretchExperiment | Experiment | SupplementItem | GroceryItem | GroceryStore | GroceryGroup;
 
 /** The most live items a list may hold, where there is a limit (the grocery list's, ADR 039). The API refuses a new item past it. */
-export const LIST_CAPS: Partial<Record<ListName, number>> = { grocery_item: 500, grocery_store: 30 };
+export const LIST_CAPS: Partial<Record<ListName, number>> = { grocery_item: 500, grocery_store: 30, grocery_group: 10 };
 
 /** Save one item of a list, keyed by the list and the item's own id. `position` is where it sits in the list (0 is first);
  *  moving an item is a save of each item whose position changed. baseVersion is the version the user saw, or null when
@@ -259,6 +259,7 @@ const LIST_ITEM_CLEANERS: Record<ListName, (x: unknown) => ListItem | null> = {
   // The grocery list is checked, not cleaned: a name too long or a count out of range is refused, as the app never sends one.
   grocery_item: x => (validGroceryItem(x) ? normGroceryItem(x) : null),
   grocery_store: x => (validGroceryStore(x) ? normGroceryStore(x) : null),
+  grocery_group: x => (validGroceryGroup(x) ? normGroceryGroup(x) : null),
 };
 const validList = (v: unknown): v is ListName => LIST_NAMES.includes(v as ListName);
 const validId = (v: unknown): v is string => typeof v === 'string' && v.length >= 1 && v.length <= LIMITS.text.id;

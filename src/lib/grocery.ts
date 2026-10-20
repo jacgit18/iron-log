@@ -1,6 +1,6 @@
-import { MAX_ITEMS, MAX_PRICES, MAX_STORES, MONTH_RE, monthEmpty, normGroceryItem, normGroceryMonth } from '../shared/grocery.js';
+import { MAX_GROUPS, MAX_ITEMS, MAX_PRICES, MAX_STORES, MONTH_RE, monthEmpty, normGroceryGroup, normGroceryItem, normGroceryMonth } from '../shared/grocery.js';
 import { str } from '../shared/stretchWeek.js';
-import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryUnit } from '../types.ts';
+import type { Grocery, GroceryData, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryUnit } from '../types.ts';
 
 /* ---------- Grocery list ----------
    The catalogue (`grocery/main`) holds every item once: where you buy it, the usual count and the last unit price. A month
@@ -10,7 +10,7 @@ import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, Groc
    A month with no saved document has nothing ticked, so each month starts fresh with every item on it and nothing is copied or reset.
    Prices are whole cents, so totals never drift. The cleaning rules live in shared/grocery.ts, which the API uses too. */
 
-export { MAX_CENTS, MAX_ITEMS, MAX_NOTE, MAX_PRICES, MAX_QTY, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
+export { MAX_CENTS, MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_PRICES, MAX_QTY, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
 export const ANYWHERE = 'Anywhere';
 /** Stores offered in the drop-downs before you have used them; picking one adds it to your stores. */
 export const SUGGESTED_STORES = ["BJ's", 'C-Town', 'Whole Foods', 'Flatbush Co-Op', 'Aldi'];
@@ -35,6 +35,12 @@ export function parseDollars(text: string): number | null {
 export const centsText = (c: number | null | undefined) => (c == null ? '' : (c / 100).toFixed(2));
 export const money = (c: number) => (c / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
+/** An id for a person or a group: random, so a group in a backup or on another device never clashes with one made here. */
+export function newShareId(): string {
+  const b = new Uint8Array(6); crypto.getRandomValues(b);
+  return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+}
+
 export function newGroceryId(items: GroceryItem[], name: string): string {
   const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'item';
   const taken = new Set(items.map(i => i.id)); let id = base, n = 2;
@@ -42,8 +48,22 @@ export function newGroceryId(items: GroceryItem[], name: string): string {
   return id;
 }
 
+/** The sharing groups, cleaned: a store that is not in the list is dropped from a group, and a store defaults to one group only (the first). */
+function normGroups(raw: unknown, stores: string[]): GroceryGroup[] {
+  const groups: GroceryGroup[] = []; const ids = new Set<string>(); const taken = new Set<string>();
+  (Array.isArray(raw) ? raw : []).forEach((x: unknown) => {
+    const g = normGroceryGroup(x);
+    if (!g || ids.has(g.id) || groups.length >= MAX_GROUPS) return;
+    ids.add(g.id);
+    const own = g.stores.filter(s => stores.includes(s) && !taken.has(s));
+    own.forEach(s => taken.add(s));
+    groups.push({ ...g, stores: own });
+  });
+  return groups;
+}
+
 export function normGrocery(d: unknown): Grocery {
-  const raw = (d && typeof d === 'object' ? d : {}) as { stores?: unknown; items?: unknown };
+  const raw = (d && typeof d === 'object' ? d : {}) as { stores?: unknown; items?: unknown; groups?: unknown };
   const seen = new Set<string>(); const items: GroceryItem[] = [];
   (Array.isArray(raw.items) ? raw.items : []).forEach((x: unknown) => {
     const item = normGroceryItem(x);
@@ -55,7 +75,8 @@ export function normGrocery(d: unknown): Grocery {
   const addStore = (s: string) => { if (s && !stores.includes(s) && stores.length < MAX_STORES) stores.push(s); };
   (Array.isArray(raw.stores) ? raw.stores : []).forEach((s: unknown) => addStore(str(s, 40)));
   items.forEach(i => addStore(i.store));
-  return { stores, items: items.map(i => (i.store && !stores.includes(i.store) ? { ...i, store: '' } : i)) };
+  const groups = normGroups(raw.groups, stores);
+  return { stores, items: items.map(i => (i.store && !stores.includes(i.store) ? { ...i, store: '' } : i)), ...(groups.length ? { groups } : {}) };
 }
 
 /* ---------- Reading a month ---------- */
@@ -140,7 +161,7 @@ export function normGroceryData(d: unknown): GroceryData | null {
   if (raw.months && typeof raw.months === 'object') {
     Object.entries(raw.months as Record<string, unknown>).forEach(([k, v]) => { if (MONTH_RE.test(k)) { const m = normGroceryMonth(v); if (!monthEmpty(m)) months[k] = m; } });
   }
-  return g.items.length || g.stores.length || Object.keys(months).length ? { ...g, months } : null;
+  return g.items.length || g.stores.length || g.groups?.length || Object.keys(months).length ? { ...g, months } : null;
 }
 
 /** "Add to my data": the file's items and months are added to what is here; where both have something, what is here stays.
@@ -158,16 +179,28 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     g.items.push({ ...i, id }); map.set(i.id, id); changed = true;
   });
   inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); changed = true; } });
+  // A group is matched by its id (made at random, so the same group in a backup of this account has the same id here); one that is missing is
+  // added, with the stores it names that exist here. People keep their ids, so an item's share in the file still points at them.
+  const have = new Set((g.groups ?? []).map(x => x.id)); const defaulted = new Set((g.groups ?? []).flatMap(x => x.stores));
+  (inc.groups ?? []).forEach(x => {
+    if (have.has(x.id) || (g.groups?.length ?? 0) >= MAX_GROUPS) return;
+    const stores = x.stores.filter(st => g.stores.includes(st) && !defaulted.has(st));
+    stores.forEach(st => defaulted.add(st));
+    g.groups = [...(g.groups ?? []), { ...x, stores }]; have.add(x.id); changed = true;
+  });
   Object.entries(inc.months).forEach(([k, fm]) => {
     const lines: Record<string, GroceryLine> = {};
     Object.entries(fm.lines).forEach(([id, l]) => { const to = map.get(id); if (to) lines[to] = l; });
     const pulled = fm.pulled.map(id => map.get(id)).filter((x): x is string => !!x);
-    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)] };
+    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}) };
     if (monthEmpty(m)) return;
     const have = months[k];
     if (!have) { months[k] = m; changed = true; return; }
     const mergedLines = { ...m.lines, ...have.lines }; const mergedPulled = [...new Set([...have.pulled, ...m.pulled])];
-    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length) { months[k] = { lines: mergedLines, pulled: mergedPulled }; changed = true; }
+    const mergedPayer = { ...m.payer, ...have.payer };
+    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length || Object.keys(mergedPayer).length !== Object.keys(have.payer ?? {}).length) {
+      months[k] = { lines: mergedLines, pulled: mergedPulled, ...(Object.keys(mergedPayer).length ? { payer: mergedPayer } : {}) }; changed = true;
+    }
   });
   return { grocery: g, months, changed };
 }

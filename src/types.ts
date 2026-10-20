@@ -215,22 +215,28 @@ export interface Supplements {
 /* ---------- Grocery list (synced to the account, ADR 039) ---------- */
 /** How a weighed item is sold. */
 export type GroceryUnit = 'lb' | 'kg' | 'oz';
+/** Someone you share groceries with. `covered`: their share is already paid some other way (money in the account that pays the card), so the settle-up does not ask them for it. */
+export interface GroceryPerson { id: string; n: string; covered?: true }
+/** A sharing group: the people you split with ("Home", "Costco run"), and the stores that default to it. You are always in it and are not listed. */
+export interface GroceryGroup { id: string; n: string; people: GroceryPerson[]; stores: string[] }
+/** Who shares one purchase with you: `with` are the people's ids (none = just you). `notMine`: it is for them, not you, so your share is nothing. */
+export interface GroceryShare { with: string[]; notMine?: true }
 /** A thing you buy. `store` is where ('' = anywhere), `qty` the usual count, `cents` the last unit price in cents. `every`: on each month's list
  *  ("Every month"); otherwise it is a "When out" item, on this month's list only while `out` is set (unchecked on the At home list).
  *  `note` is an optional short comment ("the green ones"), left out when empty. `unit` is set for things sold by weight (meat, produce):
  *  `qty` is then the weight and `cents` the price per unit; left out for the usual "each". */
-export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit }
+export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare }
 /** The catalogue: store names in the order shown, and the items. A month's list is drawn from it. */
-export interface Grocery { stores: string[]; items: GroceryItem[] }
+export interface Grocery { stores: string[]; items: GroceryItem[]; groups?: GroceryGroup[] }
 /** A store as the server keeps it: one row per store, the name is its id. */
 export interface GroceryStore { id: string; n: string }
 /** One item in one month: ticked off (`got`, bought), or `have`: you have it, so it is not on that month's list (ADR 054); and the count and unit price (cents) paid when they differ from the catalogue or were recorded at the tick.
  *  `prices`: the price of each one bought this month, in cents, when they cost different amounts (beef, 3 packs: 8.99, 10.49, 9.25). The count is then how many there are and the line total is their sum; `qty` and `cents` are not used. */
-export interface GroceryLine { got?: true; have?: true; qty?: number; cents?: number; prices?: number[] }
+export interface GroceryLine { got?: true; have?: true; qty?: number; cents?: number; prices?: number[]; share?: GroceryShare; packShares?: (GroceryShare | null)[] }
 /** The catalogue plus every saved month: what the data file and the backups hold of the grocery list. */
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
 /** One month's list (`grocery/YYYY-MM`): its lines by item id, and `pulled`: items put on that month's list by older versions (read, no longer written). */
-export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[] }
+export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[]; payer?: Record<string, string> }
 
 export type StretchTier = 'primary' | 'secondary' | '';
 /** `catalogId`: added from the catalog (ADR 026, 027): a Library stretch, its name kept from the catalog. Without it the stretch is Custom. */
