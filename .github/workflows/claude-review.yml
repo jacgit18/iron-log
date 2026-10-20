@@ -22,6 +22,8 @@ concurrency:
 jobs:
   review:
     if: ${{ !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') }}
+    # Optional (owner, 2026-10-20): never a required check, and a failure (for example the API credit running out) must not turn the PR red.
+    continue-on-error: true
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
