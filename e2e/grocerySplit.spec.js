@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// Sharing groceries with other people (ADR 059), from the phone's side. Admin-only for now: an account that is not an admin sees the grocery
+// Sharing groceries with other people (ADR 059), from the phone's side. Open to everyone: an account that is not an admin sees the grocery
 // list exactly as before. The fixed date is in September 2026, so the month below is 2026-09.
 const item = (id, n, store, cents) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const CATALOGUE = {
@@ -88,13 +88,9 @@ test('the split screen has no accessibility violations', async ({ page }) => {
   expect(result.violations).toEqual([]);
 });
 
-test('an account that is not an admin sees the list as it was', async ({ page }) => {
+test('an account that is not an admin sees the split too', async ({ page }) => {
   await seed(page, { admin: false });
-  await expect(page.locator('.gsplit')).toHaveCount(0);
-  await expect(page.locator('#groc-summary')).toContainText('Spent $58.72');
+  await expect(page.locator('.gsplit')).toHaveCount(1);
   await page.click('#groc-view-spend');
-  await expect(page.locator('#groc-spend-share')).toHaveCount(0);
-  await page.click('#groc-view-home'); await page.click('#groc-edit');
-  await expect(page.getByRole('heading', { name: 'Sharing' })).toHaveCount(0);
-  await expect(page.locator('.gshare')).toHaveCount(0);
+  await expect(page.locator('#groc-spend-share')).toHaveCount(1);
 });

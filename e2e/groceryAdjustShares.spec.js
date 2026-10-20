@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// Quieter share controls (admin-only grocery sharing, ADR 059). A row says how it is split on the closed To get row only when it differs from its
+// Quieter share controls (grocery sharing, ADR 059). A row says how it is split on the closed To get row only when it differs from its
 // store's group, and while editing a store's rows show their share controls only after "Adjust shares for <store>" (or when the item has its own split).
 // The fixed date is in September 2026, so the month below is 2026-09.
 const item = (id, n, store, cents, share) => ({ id, n, store, qty: 1, cents, every: true, out: false, ...(share ? { share } : {}) });

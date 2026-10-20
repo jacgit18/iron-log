@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// The shared-grocery money where you shop (admin-only sharing, ADR 059): one line over the To get list and a line under a shared store's heading.
+// The shared-grocery money where you shop (sharing, ADR 059): one line over the To get list and a line under a shared store's heading.
 // The fixed date is in September 2026, so the month below is 2026-09.
 const item = (id, n, store, cents) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const CATALOGUE = {
@@ -47,10 +47,10 @@ test('a shared store with nothing left to get shows its money in the Bought this
   await expect(page.locator('.gstoremoney')).toBeVisible();
 });
 
-test('without sharing there is no money line, and the page has no accessibility violations with it', async ({ page }) => {
+test('with no group there is no money line, and the page has no accessibility violations with it', async ({ page }) => {
   await seed(page);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page.evaluate(() => localStorage.removeItem('ironlog:session/admin'));
+  await page.evaluate(() => { const g = JSON.parse(localStorage.getItem('ironlog:grocery/main')); delete g.groups; localStorage.setItem('ironlog:grocery/main', JSON.stringify(g)); });
   await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
   await expect(page.locator('#groc-money')).toHaveCount(0);
   await expect(page.locator('.gstoremoney')).toHaveCount(0);
