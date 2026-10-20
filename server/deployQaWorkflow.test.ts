@@ -32,17 +32,29 @@ describe('the QA workflow (ADR 060)', () => {
       if (bare.length) expect(step, runs).toContain('working-directory: main');
       if (/\bnpx dbmate\b|\bnpm ci\b/.test(runs)) expect(step, runs).toContain('working-directory: main');
     }
-    // The only thing run in the app checkout is main's script, for its source and git history.
-    const inApp = steps.filter(s => s.includes('working-directory: app'));
-    expect(inApp.length).toBeGreaterThan(0);
-    for (const step of inApp) expect(step).toContain('$GITHUB_WORKSPACE/main/scripts/');
+    // The shared deploy steps are main's action, given main's scripts, and run in the app checkout only to take its source and git history.
+    const deploy = steps.filter(s => s.includes('deploy-candidate'));
+    expect(deploy).toHaveLength(1);
+    expect(deploy[0]).toContain('uses: ./main/.github/actions/deploy-candidate');
+    expect(deploy[0]).toContain('scripts: ${{ github.workspace }}/main/scripts');
+    expect(deploy[0]).toContain('working-directory: ${{ github.workspace }}/app');
+    expect(text).not.toContain('uses: ./.github/actions');
+    // Main's build file, not the ref's.
+    expect(text).toContain('CLOUDBUILD_CONFIG: ${{ github.workspace }}/main/cloudbuild.yaml');
+  });
+
+  it('the shared action runs only the scripts it is given, never a path of its own', () => {
+    const action = readFileSync('.github/actions/deploy-candidate/action.yml', 'utf8');
+    expect(action).toContain('"$SCRIPTS/deploy-cloud-run.sh" candidate');
+    expect(action).toContain('"$SCRIPTS/ci-deploy.sh" smoke');
+    expect(action).not.toMatch(/(?<![\w$/])scripts\/[\w.-]+\.(sh|mjs)/);
   });
 
   it('checks the QA mark before it migrates, and migrates before it deploys', () => {
     const at = (needle: string) => text.indexOf(needle);
     expect(at('qa-db.mjs check')).toBeGreaterThan(-1);
     expect(at('qa-db.mjs check')).toBeLessThan(at('dbmate'));
-    expect(at('dbmate')).toBeLessThan(at('deploy-cloud-run.sh" candidate'));
+    expect(at('dbmate')).toBeLessThan(at('deploy-candidate'));
     expect(text).toContain('--migrations-dir ../app/db/migrations');
   });
 

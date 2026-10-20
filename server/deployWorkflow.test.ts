@@ -47,6 +47,14 @@ describe('the deploy workflow gate (ADR 058)', () => {
     expect(text.slice(start, start + 12).some(l => l === '    needs: staging')).toBe(true);
   });
 
+  it('the staging job uses the shared deploy action, with the repository\'s own scripts', () => {
+    const whole = text.join('\n');
+    const staging = whole.slice(whole.indexOf('\n  staging:'), whole.indexOf('\n  deploy:'));
+    expect(staging).toContain('uses: ./.github/actions/deploy-candidate');
+    expect(staging).toContain('scripts: ${{ github.workspace }}/scripts');
+    expect(staging).toContain('label: staging');
+  });
+
   it('while STAGING_ENABLED is not true, staging is skipped and production deploys as it did before staging existed', () => {
     const s: Situation = { event: 'workflow_run' };
     expect(stagingRuns(s)).toBe(false);
