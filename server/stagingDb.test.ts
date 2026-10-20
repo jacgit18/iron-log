@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { connect, createServer, type AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { sql, type Kysely } from 'kysely';
@@ -125,6 +126,68 @@ describe('staging-db.mjs', () => {
 
   it('cannot tell without a URL or with an unreachable one', async () => {
     expect((await run('', 'check')).status).toBe(2);
-    expect((await run('postgres://u:p@127.0.0.1:1/x', 'check')).status).toBe(2);
+    expect((await runWith({ STAGING_DB_CONNECT_ATTEMPTS: '1' })('postgres://u:p@127.0.0.1:1/x', 'check')).status).toBe(2);
+  });
+
+  // Neon un-archives a branch on its first connection, which can be slow, so a failed connect is tried again (and a refusal from the
+  // server itself is not).
+  describe('connecting to a branch that is slow to wake', () => {
+    const quick = { STAGING_DB_CONNECT_ATTEMPTS: '5', STAGING_DB_CONNECT_PAUSE_MS: '300' };
+
+    it('tries again and gets through once the database answers', async () => {
+      const real = new URL(url);
+      // A stand-in for the database that drops every connection for the first half second (as a branch still waking does), then passes
+      // everything through. It owns its port from the start, so nothing else can take it.
+      let awake = false;
+      const proxy = createServer(client => {
+        if (!awake) { client.destroy(); return; }
+        const upstream = connect(Number(real.port), real.hostname);
+        client.pipe(upstream).pipe(client);
+        client.on('error', () => upstream.destroy());
+        upstream.on('error', () => client.destroy());
+      });
+      await new Promise<void>(done => proxy.listen(0, '127.0.0.1', done));
+      const port = (proxy.address() as AddressInfo).port;
+      const later = setTimeout(() => { awake = true; }, 500);
+      try {
+        const viaProxy = new URL(url);
+        viaProxy.hostname = '127.0.0.1';
+        viaProxy.port = String(port);
+        const out = await runWith(quick)(viaProxy.href, 'check');
+        expect(out.stderr).toContain('Could not connect (attempt 1 of 5)');
+        expect(out.stderr).toContain('archive');
+        expect(out.stdout).toContain('marked as staging');
+        expect(out.status).toBe(0);
+      } finally {
+        clearTimeout(later);
+        proxy.close();
+      }
+    });
+
+    it('gives up after the attempts, saying which one it was on', async () => {
+      const out = await runWith({ STAGING_DB_CONNECT_ATTEMPTS: '2', STAGING_DB_CONNECT_PAUSE_MS: '100' })('postgres://u:p@127.0.0.1:1/x', 'check');
+      expect(out.status).toBe(2);
+      expect(out.stderr).toContain('Could not connect (attempt 1 of 2)');
+      expect(out.stderr).toContain('Cannot connect (attempt 2 of 2)');
+    });
+
+    it('does not try again for a host name that does not exist', async () => {
+      const out = await runWith({ STAGING_DB_CONNECT_ATTEMPTS: '3', STAGING_DB_CONNECT_PAUSE_MS: '100' })('postgres://u:p@no-such-host.invalid/x', 'check');
+      expect(out.status).toBe(2);
+      // With no working resolver (offline, a sandbox) the lookup fails with EAI_AGAIN, a temporary failure the script rightly retries:
+      // that is not the case under test, so it is not judged here.
+      if (out.stderr.includes('EAI_AGAIN')) return;
+      expect(out.stderr).toContain('Cannot connect (attempt 1 of 3)');
+      expect(out.stderr).not.toContain('Could not connect');
+    });
+
+    it('does not try again when the server itself refuses the login', async () => {
+      const wrong = new URL(url);
+      wrong.password = 'not-the-password';
+      const out = await runWith({ STAGING_DB_CONNECT_ATTEMPTS: '3', STAGING_DB_CONNECT_PAUSE_MS: '100' })(wrong.href, 'check');
+      expect(out.status).toBe(2);
+      expect(out.stderr).toContain('Cannot connect (attempt 1 of 3)');
+      expect(out.stderr).not.toContain('Could not connect');
+    });
   });
 });
