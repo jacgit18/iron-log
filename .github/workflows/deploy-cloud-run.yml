@@ -66,6 +66,7 @@ jobs:
       REGION: us-central1
       IRON_LOG_ENV: staging
       SERVICE: iron-log-staging
+      BUILD_SA: iron-log-build@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
     steps:
       - uses: actions/checkout@v7
         with:
@@ -97,45 +98,23 @@ jobs:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: npx dbmate --no-dump-schema --migrations-dir db/migrations up
 
-      # The revision that has the traffic now, so a bad deploy can be put back. The first staging deploy is made by hand (runbook section 21),
-      # so the service exists by the time this runs.
-      - name: What is live on staging now
-        id: live
-        run: |
-          revision="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json \
-            | python3 -c 'import json,sys; t=json.load(sys.stdin)["status"]["traffic"]; print(max(t, key=lambda x: x.get("percent", 0))["revisionName"])')"
-          echo "revision=$revision" >> "$GITHUB_OUTPUT"
-          echo "Live on staging: $revision"
+      # Build, deploy with no traffic, check, promote, check live, and put the old revision back on a failure: the steps staging and QA share.
+      - name: Deploy and check the staging revision
+        id: deploy
+        uses: ./.github/actions/deploy-candidate
+        with:
+          label: staging
+          scripts: ${{ github.workspace }}/scripts
+          working-directory: ${{ github.workspace }}
+          failure-note: Production will not deploy.
 
-      - name: Build and deploy the staging revision with no traffic
-        id: candidate
+      - name: Say that staging passed
         env:
-          BUILD_SA: iron-log-build@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+          URL: ${{ steps.deploy.outputs.url }}
         run: |
-          scripts/deploy-cloud-run.sh candidate | tee "$RUNNER_TEMP/candidate.log"
-          echo "url=$(sed -n 's/^CANDIDATE_URL=//p' "$RUNNER_TEMP/candidate.log")" >> "$GITHUB_OUTPUT"
-
-      - name: Check the staging revision before it gets any traffic
-        run: |
-          if scripts/ci-deploy.sh smoke "${{ steps.candidate.outputs.url }}"; then exit 0; fi
-          echo "::error title=The staging revision failed its check::It never received traffic. Production will not deploy."
-          scripts/deploy-cloud-run.sh discard || true
-          exit 1
-
-      - name: Send traffic to the staging revision
-        run: scripts/deploy-cloud-run.sh promote
-
-      - name: Check the live staging service
-        run: |
-          url="https://${SERVICE}-$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)').${REGION}.run.app"
-          if ! scripts/ci-deploy.sh smoke "$url"; then
-            echo "::error title=The live staging service failed its check::Putting staging back on ${{ steps.live.outputs.revision }}. Production will not deploy."
-            gcloud run services update-traffic "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --to-revisions "${{ steps.live.outputs.revision }}=100"
-            exit 1
-          fi
           {
             echo "### Staging passed"
-            echo "Commit \`$(git rev-parse --short HEAD)\`: migrations applied to the staging database, the new revision passed its check with no traffic, and the live staging service passed its check at $url."
+            echo "Commit \`$(git rev-parse --short HEAD)\`: migrations applied to the staging database, the new revision passed its check with no traffic, and the live staging service passed its check at $URL."
             echo "Production is next, and waits for your approval."
           } >> "$GITHUB_STEP_SUMMARY"
 
