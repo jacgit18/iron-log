@@ -102,6 +102,9 @@ describe('groups and totals', () => {
     const plain = tally(onList(g, { ...m, tax: undefined }, true), { ...m, tax: undefined });
     expect(t.spent).toBe(plain.spent + 107); // Costco has nothing ticked: its tax is not counted
     expect(t.planned).toBe(plain.planned); // expected is the prices before tax
+    expect(t.taxed).toBe(true);
+    const none: GroceryMonth = { lines: {}, pulled: [], tax: { Costco: 500 } }; // a tax typed where nothing is ticked is not counted, and not claimed
+    expect(tally(onList(g, none, true), none)).toMatchObject({ spent: 0, taxed: false });
   });
   it('the monthly spend includes each store\'s typed tax', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 }, rice: { got: true } }, pulled: [], tax: { 'Veg market': 107, Costco: 160 } };
@@ -112,8 +115,8 @@ describe('groups and totals', () => {
   });
   it('splits expected from spent and counts the unpriced', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] };
-    expect(tally(onList(g, m, true), m)).toEqual({ count: 4, got: 1, planned: 1200 + 1899 + 1200, spent: 1200, unpriced: 1 });
-    expect(tally([], emptyMonth())).toEqual({ count: 0, got: 0, planned: 0, spent: 0, unpriced: 0 });
+    expect(tally(onList(g, m, true), m)).toEqual({ count: 4, got: 1, planned: 1200 + 1899 + 1200, spent: 1200, unpriced: 1, taxed: false });
+    expect(tally([], emptyMonth())).toEqual({ count: 0, got: 0, planned: 0, spent: 0, unpriced: 0, taxed: false });
   });
 });
 

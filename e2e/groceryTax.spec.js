@@ -78,3 +78,30 @@ test('the tax box has no accessibility violations', async ({ page }) => {
   await seed(page, { month: { ...MONTH, tax: { "BJ's": 222 } } });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+// Another device or tab writes the month (sync, Add to my data): the box and the summary follow it instead of keeping what they were showing.
+const writeMonth = (page, month) => page.evaluate(m => {
+  const key = 'ironlog:grocery/2026-09'; const value = JSON.stringify(m); localStorage.setItem(key, value);
+  window.dispatchEvent(new StorageEvent('storage', { key, newValue: value }));
+}, month);
+
+test('a tax changed elsewhere shows in the box, and one cleared elsewhere is not written back', async ({ page }) => {
+  await seed(page);
+  await expect(page.getByLabel("Tax at BJ's this month")).not.toBeChecked();
+  await writeMonth(page, { ...MONTH, tax: { "BJ's": 222 } });
+  await expect(page.getByLabel("Tax at BJ's this month")).toBeChecked();
+  await expect(page.getByLabel("Tax at BJ's, dollars, from the receipt")).toHaveValue('2.22');
+  await expect(page.locator('#groc-summary')).toContainText('Spent $32.21 with tax');
+  await writeMonth(page, MONTH); // cleared on the other device
+  await expect(page.getByLabel("Tax at BJ's this month")).not.toBeChecked();
+  await expect(page.locator('#groc-summary')).toContainText('Spent $29.99');
+  await page.getByLabel("Tax at BJ's this month").check();
+  await page.getByLabel("Tax at BJ's, dollars, from the receipt").press('Tab'); // leaving an empty box saves nothing
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/2026-09')).tax)).toBeUndefined();
+});
+
+test('"with tax" is only said when a tax is counted: a tax at a store with nothing ticked is not', async ({ page }) => {
+  await seed(page, { month: { lines: { tp: { got: true } }, pulled: [], tax: { Aldi: 35 } } }); // Aldi has a tax typed but nothing ticked
+  await expect(page.locator('#groc-summary')).toContainText('Spent $24.99');
+  await expect(page.locator('#groc-summary')).not.toContainText('with tax');
+});

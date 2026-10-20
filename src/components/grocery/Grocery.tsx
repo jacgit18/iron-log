@@ -130,7 +130,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       </div>
       {t.count > 0 && <div className="gprog" aria-hidden="true"><span style={{ width: `${Math.round((t.got / t.count) * 100)}%` }} /></div>}
       <p className="note" id="groc-summary" role="status">
-        {t.count ? <>{`Got ${t.got} of ${t.count} · Spent ${money(t.spent)}${Object.keys(month.tax ?? {}).length ? ' with tax' : ''} · Expected ${money(t.planned)}`}{t.unpriced > 0 && <>{' · '}<span className="gwarn">{t.unpriced} without a price</span></>}</> : off > 0 ? 'Nothing planned yet. Items you add on At home show up here.' : 'Nothing on this month’s list.'}
+        {t.count ? <>{`Got ${t.got} of ${t.count} · Spent ${money(t.spent)}${t.taxed ? ' with tax' : ''} · Expected ${money(t.planned)}`}{t.unpriced > 0 && <>{' · '}<span className="gwarn">{t.unpriced} without a price</span></>}</> : off > 0 ? 'Nothing planned yet. Items you add on At home show up here.' : 'Nothing on this month’s list.'}
       </p>
       {split && <MonthMoney g={g} month={month} />}
       {!t.count && off === 0 && <p className="note">Add what you buy on <b>At home</b>. Tick an item there when you have it and it comes off this month’s list.</p>}

@@ -147,8 +147,9 @@ export function tally(items: GroceryItem[], m: GroceryMonth) {
     planned += t; if (l.cents == null && !l.prices) unpriced++;
     if (l.got) { got++; spent += t; boughtAt.add(i.store); }
   });
-  boughtAt.forEach(store => { spent += m.tax?.[store] ?? 0; });
-  return { count: items.length, got, planned, spent, unpriced };
+  let taxed = false; // whether any tax was added: only a store with something ticked counts
+  boughtAt.forEach(store => { const t = m.tax?.[store] ?? 0; if (t) { spent += t; taxed = true; } });
+  return { count: items.length, got, planned, spent, unpriced, taxed };
 }
 
 /** What was bought each month: the ticked lines' count × price plus each store's tax from the receipt, for the `count` months ending at `endKey` (oldest first). A line keeps the

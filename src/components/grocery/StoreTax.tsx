@@ -10,6 +10,9 @@ export default function StoreTax({ mk, store, cents, subtotal, onError }: { mk: 
   const [on, setOn] = useState(!!cents);
   const [text, setText] = useState(centsText(cents ?? null));
   const [err, setErr] = useState<string | null>(null);
+  // The tax can change somewhere else (another device through sync, another tab, Add to my data): take that value, so the box never disagrees with the totals.
+  const [seen, setSeen] = useState(cents);
+  if (cents !== seen) { setSeen(cents); setOn(!!cents); setText(centsText(cents ?? null)); setErr(null); }
   const set = (msg: string | null) => { setErr(msg); onError?.(msg); };
   const save = () => {
     if (!on) return;
