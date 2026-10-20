@@ -23,6 +23,10 @@
 # leaves the email sign-in code and Web Push off, so a copy of production's data can never email or push a real person. The default is
 # IRON_LOG_ENV=production, which behaves as before. SERVICE and RUNTIME_SA can still be overridden.
 #
+# IRON_LOG_ENV=qa (ADR 060) is the same for the QA service: iron-log-qa, runtime account iron-log-qa-run, secrets iron-log-qa-*. Its
+# database holds no real users' data, so it has its own encryption key (iron-log-qa-pii-key, made by `secrets`) and shares nothing with
+# production or staging; email and Web Push are always off.
+#
 # It never touches a database: migrations are run by hand (docs: deploy-runbook.md). It sets max-instances=1 and min-instances=0,
 # so spend stays at the free tier, and it needs the budget alert from the runbook in place before the first deploy.
 set -euo pipefail
@@ -35,15 +39,24 @@ case "$IRON_LOG_ENV" in
   production)
     SECRET_PREFIX="iron-log"; DB_ROLE="ironlog_app"
     SERVICE="${SERVICE:-iron-log}"; RUNTIME_SA="${RUNTIME_SA:-iron-log-run}"
-    # Production secrets on the staging service would point it at the production database.
-    case "$SERVICE" in iron-log-staging*) echo "A staging service ('$SERVICE') needs IRON_LOG_ENV=staging; production secrets must not go to it." >&2; exit 2;; esac;;
+    PII_SECRET="iron-log-pii-key"
+    # Production secrets on the staging or QA service would point it at the production database.
+    case "$SERVICE" in iron-log-staging*) echo "A staging service ('$SERVICE') needs IRON_LOG_ENV=staging; production secrets must not go to it." >&2; exit 2;; esac
+    case "$SERVICE" in iron-log-qa*) echo "A QA service ('$SERVICE') needs IRON_LOG_ENV=qa; production secrets must not go to it." >&2; exit 2;; esac;;
   staging)
     SECRET_PREFIX="iron-log-staging"; DB_ROLE="ironlog_staging"
     SERVICE="${SERVICE:-iron-log-staging}"; RUNTIME_SA="${RUNTIME_SA:-iron-log-staging-run}"
     # Staging holds a copy of production's data (ADR 056): no real email and no real push, whatever secrets exist in the project.
     RESEND_OFF=1; PUSH_OFF=1
+    PII_SECRET="iron-log-pii-key"
     case "$SERVICE" in iron-log-staging*) ;; *) echo "IRON_LOG_ENV=staging must deploy a service named iron-log-staging*, not '$SERVICE'." >&2; exit 2;; esac;;
-  *) echo "IRON_LOG_ENV must be production or staging, not '$IRON_LOG_ENV'." >&2; exit 2;;
+  qa)
+    SECRET_PREFIX="iron-log-qa"; DB_ROLE="ironlog_qa"
+    SERVICE="${SERVICE:-iron-log-qa}"; RUNTIME_SA="${RUNTIME_SA:-iron-log-qa-run}"
+    PII_SECRET="iron-log-qa-pii-key"
+    RESEND_OFF=1; PUSH_OFF=1
+    case "$SERVICE" in iron-log-qa*) ;; *) echo "IRON_LOG_ENV=qa must deploy a service named iron-log-qa*, not '$SERVICE'." >&2; exit 2;; esac;;
+  *) echo "IRON_LOG_ENV must be production, staging or qa, not '$IRON_LOG_ENV'." >&2; exit 2;;
 esac
 
 gc() { gcloud --project "$PROJECT_ID" "$@"; }
@@ -93,10 +106,11 @@ resend_secret_wanted() { secret_wanted "$RESEND_SECRET" RESEND_API_KEY RESEND_OF
 
 # The key that seals names and emails in the database (ADR 046). No OFF switch: rows already sealed need it, and the app would write
 # new ones in the clear without it.
-PII_SECRET="iron-log-pii-key"
+# (PII_SECRET is set with the environment above: production's key for production and staging, QA's own for QA.)
 pii_secret_wanted() {
-  # Staging always passes production's key (ADR 057): its copied rows are sealed with it, and the CI deployer cannot see that the secret exists.
-  if [ "$IRON_LOG_ENV" = staging ]; then return 0; fi
+  # Staging always passes production's key (ADR 057): its copied rows are sealed with it. QA always passes its own (ADR 060). The CI deployer
+  # cannot see that the secret exists.
+  if [ "$IRON_LOG_ENV" != production ]; then return 0; fi
   secret_wanted "$PII_SECRET" PII_ENCRYPTION_KEY PII_NEVER_OFF
 }
 
@@ -144,12 +158,18 @@ cmd_secrets() {
     postgres://${DB_ROLE}:*|postgresql://${DB_ROLE}:*) ;;
     *) echo "APP_DATABASE_URL must log in as ${DB_ROLE}, the restricted role for ${IRON_LOG_ENV}. The owner would bypass row-level security." >&2; exit 1;;
   esac
-  # Fails closed: if production's client id exists but cannot be read, staging is not told it is fine.
-  if [ "$IRON_LOG_ENV" = staging ] && secret_exists iron-log-google-client-id; then
-    local prod_client_id
-    prod_client_id="$(gc secrets versions access latest --secret iron-log-google-client-id)" \
-      || { echo "Cannot read iron-log-google-client-id to check that staging uses its own OAuth client (ADR 057)." >&2; exit 1; }
-    if [ "$prod_client_id" = "$GOOGLE_CLIENT_ID" ]; then echo "GOOGLE_CLIENT_ID is production's. Staging needs its own OAuth client (ADR 057)." >&2; exit 1; fi
+  # Fails closed: if another environment's client id exists but cannot be read, this one is not told it is fine. Staging must differ from
+  # production's client (ADR 057); QA from production's and staging's (ADR 060).
+  if [ "$IRON_LOG_ENV" != production ]; then
+    local other_secret other_label other_id
+    for other_secret in iron-log-google-client-id iron-log-staging-google-client-id; do
+      if [ "$IRON_LOG_ENV" = staging ] && [ "$other_secret" = iron-log-staging-google-client-id ]; then continue; fi
+      secret_exists "$other_secret" || continue
+      other_label="production's"; [ "$other_secret" = iron-log-staging-google-client-id ] && other_label="staging's"
+      other_id="$(gc secrets versions access latest --secret "$other_secret")" \
+        || { echo "Cannot read $other_secret to check that ${IRON_LOG_ENV} uses its own OAuth client (ADR 057, 060)." >&2; exit 1; }
+      if [ "$other_id" = "$GOOGLE_CLIENT_ID" ]; then echo "GOOGLE_CLIENT_ID is ${other_label}. ${IRON_LOG_ENV} needs its own OAuth client (ADR 057, 060)." >&2; exit 1; fi
+    done
   fi
   echo "Storing secrets in project $PROJECT_ID:"
   printf '%s' "$APP_DATABASE_URL" | put_secret "${SECRET_PREFIX}-app-database-url"
@@ -165,13 +185,17 @@ cmd_secrets() {
     # Staging reads production's key (ADR 057); it makes none. Its runtime account is granted read on it below.
     if ! secret_exists "$PII_SECRET"; then echo "$PII_SECRET does not exist yet: make it for production first (PII_KEY_CREATE=1, runbook section 20)." >&2; exit 1; fi
     echo "  $PII_SECRET: production's key, shared with staging (ADR 057)"; pii_names=("$PII_SECRET")
+  elif [ "$IRON_LOG_ENV" = qa ]; then
+    # QA has no real users' data, so it gets its own key (ADR 060), made here on the first run and never replaced.
+    if secret_exists "$PII_SECRET"; then echo "  $PII_SECRET: kept"; else openssl rand -base64 32 | tr -d '\n' | put_secret "$PII_SECRET"; fi
+    pii_names=("$PII_SECRET")
   elif secret_exists "$PII_SECRET"; then echo "  $PII_SECRET: kept"; pii_names=("$PII_SECRET")
   elif [ "${PII_KEY_CREATE:-}" = 1 ]; then openssl rand -base64 32 | tr -d '\n' | put_secret "$PII_SECRET"; pii_names=("$PII_SECRET")
   else echo "  $PII_SECRET: not created (export PII_KEY_CREATE=1 to make it; see runbook section 20)"; fi
   # Optional: the Resend key for the emailed sign-in code. Not exporting it leaves the feature off (or as it already is).
   local secret_names=("${SECRET_PREFIX}-app-database-url" "${SECRET_PREFIX}-google-client-id" "${SECRET_PREFIX}-google-client-secret" "${SECRET_PREFIX}-auth-secret" ${pii_names[@]+"${pii_names[@]}"})
-  if [ "$IRON_LOG_ENV" = staging ]; then
-    echo "  Resend and Web Push keys: never stored for staging (it sends no email and no push, ADR 056)"
+  if [ "$IRON_LOG_ENV" != production ]; then
+    echo "  Resend and Web Push keys: never stored for ${IRON_LOG_ENV} (it sends no email and no push, ADR 056, 060)"
   elif [ -n "${RESEND_API_KEY:-}" ]; then
     printf '%s' "$RESEND_API_KEY" | put_secret "$RESEND_SECRET"
     secret_names+=("$RESEND_SECRET")
@@ -180,7 +204,7 @@ cmd_secrets() {
   fi
   # Optional: the Web Push keys. VAPID_SUBJECT (a mailto: address the push services can reach) says to store them. The key pair is made once
   # here and never shown; an existing pair is kept (a new one would orphan every device that already subscribed).
-  if [ "$IRON_LOG_ENV" = staging ]; then
+  if [ "$IRON_LOG_ENV" != production ]; then
     :
   elif [ -n "${VAPID_SUBJECT:-}" ]; then
     case "$VAPID_SUBJECT" in mailto:?*@?*|https://?*) ;; *) echo "VAPID_SUBJECT must be a mailto: or https: address." >&2; exit 1;; esac

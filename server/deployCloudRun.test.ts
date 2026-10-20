@@ -30,6 +30,10 @@ case "$*" in
   # PROD_CLIENT_ID: the Google client id production has stored.
   # PROD_CLIENT_UNREADABLE=1: the secret exists but this account cannot read its value.
   *"versions access latest --secret iron-log-google-client-id"*) [ "$PROD_CLIENT_UNREADABLE" = 1 ] && exit 1; echo "$PROD_CLIENT_ID";;
+  # HAS_QA_PII_KEY=1: QA's own database encryption key is already stored.
+  *"secrets describe iron-log-qa-pii"*) [ "$HAS_QA_PII_KEY" = 1 ] && exit 0; exit 1;;
+  # STAGING_CLIENT_ID: the Google client id staging has stored.
+  *"versions access latest --secret iron-log-staging-google-client-id"*) echo "$STAGING_CLIENT_ID";;
   *"secrets describe iron-log-vapid"*) [ "$PUSH_SECRET" = 1 ] && exit 0; exit 1;;
   # HAS_PII_KEY=1: the database encryption key is already stored (separate again, so the Resend and Push cases stay about themselves).
   *"secrets describe iron-log-pii"*) [ "$HAS_PII_KEY" = 1 ] && exit 0; exit 1;;
@@ -363,7 +367,7 @@ exit 0
 
     it('refuses an unknown environment', async () => {
       writeFileSync(calls, '');
-      expect((await run(['candidate'], { IRON_LOG_ENV: 'qa' })).status).toBe(2);
+      expect((await run(['candidate'], { IRON_LOG_ENV: 'dev' })).status).toBe(2);
     });
 
     it('production settings cannot be sent to a staging service either', async () => {
@@ -412,6 +416,84 @@ exit 0
       const out = await run(['secrets'], { IRON_LOG_ENV: 'staging', ...stagingDb });
       expect(out.status).toBe(1);
       expect(out.stderr).toContain('iron-log-pii-key');
+    });
+  });
+
+  // IRON_LOG_ENV=qa (ADR 060): the QA service has its own account, secrets and database key, and shares nothing with production or staging.
+  describe('IRON_LOG_ENV=qa', () => {
+    const secretsOf = (cmd: string) => /--set-secrets (\S+)/.exec(recorded().find(l => l.includes(cmd))!)![1]!.split(',');
+    const qaDb = { APP_DATABASE_URL: 'postgres://ironlog_qa:pw@db.example.com/x', GOOGLE_CLIENT_ID: 'qa-id', GOOGLE_CLIENT_SECRET: 'gs' };
+
+    it('deploys iron-log-qa as its own runtime account with iron-log-qa-* secrets and its own database key', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { IRON_LOG_ENV: 'qa' });
+      expect(out.status).toBe(0);
+      const deploy = recorded().find(l => l.includes('run deploy'))!;
+      expect(deploy).toContain('run deploy iron-log-qa ');
+      expect(deploy).toContain('--service-account iron-log-qa-run@p.iam.gserviceaccount.com');
+      expect(deploy).toContain('BASE_URL=https://iron-log-qa-123456.us-central1.run.app');
+      const secrets = secretsOf('run deploy');
+      expect(secrets).toContain('APP_DATABASE_URL=iron-log-qa-app-database-url:latest');
+      expect(secrets).toContain('BETTER_AUTH_SECRET=iron-log-qa-auth-secret:latest');
+      expect(secrets).toContain('GOOGLE_CLIENT_ID=iron-log-qa-google-client-id:latest');
+      expect(secrets).toContain('PII_ENCRYPTION_KEY=iron-log-qa-pii-key:latest');
+      expect(secrets.some(x => x.includes('iron-log-pii-key'))).toBe(false);
+    });
+
+    it('never passes the Resend or Web Push keys', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { IRON_LOG_ENV: 'qa', SECRETS_READABLE: '1', PUSH_SECRET: '1', LIVE_RESEND: '1', LIVE_PUSH: '1' })).status).toBe(0);
+      const secrets = secretsOf('run deploy');
+      expect(secrets.some(x => x.startsWith('RESEND_API_KEY') || x.startsWith('VAPID_'))).toBe(false);
+      expect(recorded().find(l => l.includes('run deploy'))).toContain('--remove-env-vars PUSH_QUEUE,PUSH_INVOKER_EMAIL');
+    });
+
+    it('keeps the three services apart: each refuses the others\' service names', async () => {
+      const wrong: Record<string, string>[] = [{ IRON_LOG_ENV: 'qa', SERVICE: 'iron-log' }, { IRON_LOG_ENV: 'qa', SERVICE: 'iron-log-staging' }, { SERVICE: 'iron-log-qa' }, { IRON_LOG_ENV: 'staging', SERVICE: 'iron-log-qa' }];
+      for (const env of wrong) {
+        writeFileSync(calls, '');
+        expect((await run(['candidate'], env)).status, JSON.stringify(env)).toBe(2);
+        expect(recorded().some(l => l.includes('run deploy'))).toBe(false);
+      }
+    });
+
+    it('`secrets` takes the QA login only, stores iron-log-qa-* names, makes QA\'s own key once, and touches no other environment\'s secrets', async () => {
+      writeFileSync(calls, '');
+      const wrongRole = await run(['secrets'], { IRON_LOG_ENV: 'qa', ...qaDb, APP_DATABASE_URL: 'postgres://ironlog_staging:pw@db.example.com/x' });
+      expect(wrongRole.status).toBe(1);
+      expect(recorded().some(l => l.includes('versions add'))).toBe(false);
+      writeFileSync(calls, '');
+      const first = await run(['secrets'], { IRON_LOG_ENV: 'qa', ...qaDb, RESEND_API_KEY: 'r', VAPID_SUBJECT: 'mailto:a@b.co' });
+      expect(first.status).toBe(0);
+      let lines = recorded();
+      expect(lines.some(l => l.includes('secrets create iron-log-qa-app-database-url'))).toBe(true);
+      expect(lines.some(l => l.includes('secrets create iron-log-qa-pii-key'))).toBe(true);
+      expect(lines.some(l => l.includes('versions add iron-log-qa-pii-key'))).toBe(true);
+      expect(lines.some(l => l.includes('iron-log-resend') || l.includes('iron-log-vapid'))).toBe(false);
+      expect(lines.some(l => l.includes('add-iam-policy-binding iron-log-qa-pii-key') && l.includes('iron-log-qa-run@p.iam.gserviceaccount.com'))).toBe(true);
+      expect(lines.some(l => (l.includes('iron-log-run@') || l.includes('iron-log-staging-run@')) && l.includes('add-iam-policy-binding'))).toBe(false);
+      expect(lines.some(l => l.includes(' iron-log-pii-key') && !l.includes('iron-log-qa'))).toBe(false);
+      writeFileSync(calls, '');
+      expect((await run(['secrets'], { IRON_LOG_ENV: 'qa', ...qaDb, HAS_QA_PII_KEY: '1' })).stdout).toContain('iron-log-qa-pii-key: kept');
+      lines = recorded();
+      expect(lines.some(l => l.includes('versions add iron-log-qa-pii-key'))).toBe(false);
+    });
+
+    it('`secrets` refuses the production or the staging Google client, and fails closed when one cannot be read', async () => {
+      const env = { IRON_LOG_ENV: 'qa', ...qaDb, SECRETS_READABLE: '1', PROD_CLIENT_ID: 'prod-id', STAGING_CLIENT_ID: 'stg-id' };
+      writeFileSync(calls, '');
+      const asProd = await run(['secrets'], { ...env, GOOGLE_CLIENT_ID: 'prod-id' });
+      expect(asProd.status).toBe(1);
+      expect(asProd.stderr).toContain("production's");
+      writeFileSync(calls, '');
+      const asStaging = await run(['secrets'], { ...env, GOOGLE_CLIENT_ID: 'stg-id' });
+      expect(asStaging.status).toBe(1);
+      expect(asStaging.stderr).toContain("staging's");
+      writeFileSync(calls, '');
+      const unreadable = await run(['secrets'], { ...env, PROD_CLIENT_UNREADABLE: '1' });
+      expect(unreadable.status).toBe(1);
+      expect(unreadable.stderr).toContain('Cannot read iron-log-google-client-id');
+      expect(recorded().some(l => l.includes('versions add'))).toBe(false);
     });
   });
 
