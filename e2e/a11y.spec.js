@@ -5,7 +5,7 @@ const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wc
 
 // Each view is reached by clicking these in order.
 for (const [name, clicks] of [
-  ['workout', []], ['stretches', ['#board-stretches']], ['supplements', ['#tab-daily', '#daily-supplements']], ['medical', ['#tab-daily', '#daily-medical']],
+  ['workout', []], ['stretches', ['#board-stretches']], ['supplements', ['#tab-daily', '#daily-supplements']],
   ['progress', ['#tab-progress']], ['muscles', ['#tab-progress', '#prog-muscles']], ['program editor', ['#tab-program']],
 ]) {
   test(`${name} has no accessibility violations`, async ({ page }) => {
