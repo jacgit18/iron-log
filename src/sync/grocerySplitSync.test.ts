@@ -71,3 +71,33 @@ describe('a month with shares and a payer', () => {
     expect(mergeGroceryMonth3(base, ours, theirs).week.lines.c).toEqual({ prices: [100, 200], got: true, packShares: [{ with: ['sis'] }, null] });
   });
 });
+
+describe('a list that uses no sharing is unchanged', () => {
+  // What the app wrote before sharing existed. Cleaning, syncing and reading it back must give the same bytes, so adding the feature
+  // cannot alter anyone's list until they use it.
+  const legacy: Grocery = {
+    stores: ['Aldi', "BJ's"],
+    items: [
+      { id: 'rice', n: 'Rice', store: 'Aldi', qty: 2, cents: 349, every: true, out: false, note: 'long grain' },
+      { id: 'beef', n: 'Beef', store: "BJ's", qty: 1.5, cents: 899, every: true, out: false, unit: 'lb' },
+    ],
+  };
+  const legacyMonth: GroceryMonth = {
+    lines: { rice: { got: true, qty: 2, cents: 300 }, beef: { got: true, prices: [899, 1049] }, kale: { have: true } },
+    pulled: ['old'],
+  };
+  it('the catalogue is the same bytes after cleaning, and makes no group rows', () => {
+    const rows = desiredRows(kind('grocery/main'), legacy, new Map());
+    expect(rows.some(r => r.table === 'list_items' && r.list === 'grocery_group')).toBe(false);
+    expect(JSON.stringify(documentFor(kind('grocery/main'), mirrorOf(rows)))).toBe(JSON.stringify(legacy));
+  });
+  it('a month is the same bytes after cleaning and after a trip through its row', () => {
+    const rows = desiredRows(kind('grocery/2026-10'), legacyMonth, new Map());
+    expect(JSON.stringify(documentFor(kind('grocery/2026-10'), mirrorOf(rows)))).toBe(JSON.stringify(legacyMonth));
+  });
+  it('merging two copies of an unshared month adds no sharing keys', () => {
+    const merged = mergeGroceryMonth3(legacyMonth, legacyMonth, { ...legacyMonth, lines: { ...legacyMonth.lines, rice: { got: true, qty: 3, cents: 300 } } }).week;
+    expect(Object.keys(merged).sort()).toEqual(['lines', 'pulled']);
+    expect(merged.lines.rice).toEqual({ got: true, qty: 3, cents: 300 });
+  });
+});
