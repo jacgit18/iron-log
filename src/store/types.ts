@@ -277,6 +277,7 @@ export interface GrocerySlice {
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
   setGroceryPrices(month: string, id: string, prices: number[] | null): void;
+  takeGroceryAllOff(month: string): number; // Skip all: every unticked item still to get that month is marked as had; returns how many (Undo is offered)
   takeGroceryOff(month: string, id: string): void; // not needed this month: marked as had, so off that month's list
   // Sharing what you buy with other people (groups, shares, who paid). Nothing here changes a price or a total: it only says who shares it.
   addGroceryGroup(name: string, people: string[]): string | null;

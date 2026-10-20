@@ -1,6 +1,6 @@
 import { LS } from '../lib/storage.js';
 import {
-  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, parseDollars,
+  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, parseDollars,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
 import type { Grocery, GroceryData, GroceryLine, GroceryMonth } from '../types.ts';
@@ -241,6 +241,25 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
 
     // "Take off the list": you don't need it this month. It is marked as had, so it is off that month's list, and its other lines stay.
     takeGroceryOff(month, id) { get().setGroceryHave(month, id, true); },
+    // Skip everything still to get this month: each unticked item is marked as had (off the list until the 1st), as Take off the list does for one.
+    // Undo takes that mark off again (a count or price typed since stays), except on one you bought since. Returns how many were skipped.
+    takeGroceryAllOff(month) {
+      if (!MONTH_RE.test(month) || get().blocked()) return 0;
+      const m = get().groceryMonths[month] || emptyMonth();
+      const ids = onList(get().grocery, m, true).filter(i => !lineOf(i, m).got).map(i => i.id);
+      if (!ids.length) return 0;
+      mutateMonth(month, mm => ids.forEach(id => { mm.lines[id] = { ...(mm.lines[id] || {}), have: true }; }));
+      get().noteRemoved('groceryoff', `${ids.length} ${ids.length === 1 ? 'item' : 'items'} from this month’s list`, () => {
+        if (get().blocked()) return false; // sync is loading: nothing was put back, so say so
+        mutateMonth(month, mm => ids.forEach(id => {
+          const l = { ...(mm.lines[id] || {}) }; if (l.got) return; // bought since: leave it
+          delete l.have;
+          if (Object.keys(l).length) mm.lines[id] = l; else delete mm.lines[id];
+        }));
+        return true;
+      });
+      return ids.length;
+    },
 
     // ---- Sharing what you buy with other people. Groups live in the catalogue (grocery/main); shares and who paid live on the item or the month. ----
     addGroceryGroup(name, people) {
