@@ -25,7 +25,7 @@ const split = page => page.getByRole('region', { name: 'Splitting this month' })
 test('an admin sees who owes what, and changing who shares a pack updates it and survives a reload', async ({ page }) => {
   await seed(page);
   await expect(split(page).getByText('Paid').locator('xpath=following-sibling::dd')).toHaveText('$58.72');
-  const rows = split(page).locator('.gsplitrows li');
+  const rows = split(page).locator('.gsplitcard', { hasText: "BJ's" }).locator('.gsplitrows li');
   await expect(rows).toHaveText(['Bill$53.72', 'Your share$31.06', 'Sister owes you$11.33', 'Mom, already paid$11.33']); // BJ's: the toilet paper and pack 3 are split three ways, packs 1 and 2 are mine
   // Pack 2 ($9.25) is shared with the sister too: she now owes her half of it as well.
   await page.click('#groc-bought summary');
@@ -44,6 +44,15 @@ test('who paid flips the card: when the mom paid you owe her your share', async 
   await expect(split(page).getByText('You owe Mom')).toBeVisible();
   await expect(split(page).getByText('Sister owes Mom')).toBeVisible();
   await expect(split(page).getByText('Sister owes you')).toHaveCount(0);
+  // What you paid is only the stores you paid for: the mom paid BJ's, so only the Aldi rice was yours.
+  await expect(split(page).getByText('Paid', { exact: true }).locator('xpath=following-sibling::dd')).toHaveText('$5.00');
+});
+
+test('a store that holds only your own things can still be marked as paid by someone else', async ({ page }) => {
+  await seed(page);
+  await split(page).getByLabel('Who paid at Aldi').selectOption({ label: 'Mom' });
+  await expect(split(page).locator('.gsplitcard', { hasText: 'Aldi' }).getByText('You owe Mom')).toBeVisible();
+  await expect(split(page).locator('.gsplitcard', { hasText: 'Aldi' }).locator('li.act')).toContainText('$5.00');
 });
 
 test('the Spending view shows your share and says what you paid', async ({ page }) => {

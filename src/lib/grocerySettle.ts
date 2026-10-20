@@ -1,6 +1,6 @@
 import { lineCost, lineOf, shiftMonth } from './grocery.js';
 import { ME, partiesOf, settle, type Purchase, type Settlement } from './grocerySplit.js';
-import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson, GroceryShare } from '../types.ts';
+import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson } from '../types.ts';
 
 /* ---------- A month of groceries, split ----------
    Turns what was bought in a month (ticked lines, packs priced one by one) into purchases with their parties, then into totals and a
@@ -29,12 +29,6 @@ export function partiesFor(g: Grocery, item: GroceryItem, line?: GroceryLine, pa
   const own = (pack !== undefined ? line?.packShares?.[pack] : undefined) ?? line?.share ?? item.share;
   return partiesOf(own, groupOfStore(g, item.store), knownPeople(g));
 }
-
-/** The share a picker shows as ticked for a set of parties (the inverse of partiesOf): the others, and whether it is not yours. */
-export const shareOfParties = (parties: readonly string[]): GroceryShare => {
-  const others = parties.filter(id => id !== ME);
-  return parties.includes(ME) || !others.length ? { with: others } : { with: others, notMine: true };
-};
 
 /** A short label for a split: Just me, Me +2, or Not mine. */
 export const shareText = (parties: readonly string[]): string =>
@@ -78,10 +72,11 @@ export function storeSettlement(g: Grocery, m: GroceryMonth, store: string, purc
   return settle(purchases.filter(p => p.store === store), payerOf(g, m, store), covered);
 }
 
-/** What the month cost in all (what was paid) and your share of it: the number that belongs in your own spending. */
+/** What you paid this month (the bills of the stores where you are the payer; a store someone else paid is not yours to have paid) and your share
+ *  of everything bought: the number that belongs in your own spending. */
 export function monthShare(g: Grocery, m: GroceryMonth): { paid: number; yours: number } {
   let paid = 0, yours = 0;
-  new Set(purchasesOf(g, m).map(p => p.store)).forEach(store => { const s = storeSettlement(g, m, store); paid += s.bill; yours += s.yourShare; });
+  new Set(purchasesOf(g, m).map(p => p.store)).forEach(store => { const s = storeSettlement(g, m, store); if (payerOf(g, m, store) === ME) paid += s.bill; yours += s.yourShare; });
   return { paid, yours };
 }
 

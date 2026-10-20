@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allPeople, groupOfStore, hasSharing, knownPeople, monthShare, partiesFor, payerOf, purchasesOf, shareByMonth, shareOfParties, shareText, storeSettlement, storesBought } from './grocerySettle.js';
+import { allPeople, groupOfStore, hasSharing, knownPeople, monthShare, partiesFor, payerOf, purchasesOf, shareByMonth, shareText, storeSettlement, storesBought } from './grocerySettle.js';
 import { ME } from './grocerySplit.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -97,11 +97,6 @@ describe('what a picker shows', () => {
     expect(shareText([ME, 'sis', 'mom'])).toBe('Me +2');
     expect(shareText(['sis', 'mom'])).toBe('Not mine');
   });
-  it('turns the parties back into the share a picker ticks', () => {
-    expect(shareOfParties([ME])).toEqual({ with: [] });
-    expect(shareOfParties([ME, 'sis'])).toEqual({ with: ['sis'] });
-    expect(shareOfParties(['sis', 'mom'])).toEqual({ with: ['sis', 'mom'], notMine: true });
-  });
   it('finds who shares an item, a line or a pack, most specific first', () => {
     const tp = g.items.find(x => x.id === 'tp')!;
     expect(partiesFor(g, tp)).toEqual([ME, 'sis', 'mom']); // the store's group
@@ -119,6 +114,19 @@ describe('what a picker shows', () => {
     expect(r.map(x => x.key)).toEqual(['2026-09', '2026-10']);
     expect(r[0]).toEqual({ key: '2026-09', paid: 0, yours: 0 });
     expect(r[1]!.paid).toBeGreaterThan(r[1]!.yours);
+  });
+});
+
+describe('what you paid', () => {
+  it('counts only the bills of stores where you are the payer, while your share still counts everything', () => {
+    const all = monthShare(g, bought);
+    const momPaidBJs = monthShare(g, { ...bought, payer: { "BJ's": 'mom' } });
+    expect(momPaidBJs.paid).toBe(500); // only the Aldi rice
+    expect(momPaidBJs.yours).toBe(all.yours);
+    expect(monthShare(g, { ...bought, payer: { "BJ's": 'mom', Aldi: 'sis' } }).paid).toBe(0);
+  });
+  it('the Spending series follows the same rule', () => {
+    expect(shareByMonth(g, { '2026-10': { ...bought, payer: { "BJ's": 'mom' } } }, '2026-10', 1)[0]!.paid).toBe(500);
   });
 });
 

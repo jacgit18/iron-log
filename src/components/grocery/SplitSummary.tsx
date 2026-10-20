@@ -6,15 +6,15 @@ import type { Grocery, GroceryMonth } from '../../types.ts';
 import './SplitSummary.css';
 
 // What a month's shared groceries come to: what you paid, your own share (the number that is your spending), and what is owed to you, then
-// one card per store that was shared or paid for by someone else, saying who pays whom. Only shown once a sharing group exists.
+// one card per store that was bought from, saying who pays whom and letting you say who paid. Only shown once a sharing group exists.
 export default function SplitSummary({ g, month, mk }: { g: Grocery; month: GroceryMonth; mk: string }) {
   const purchases = purchasesOf(g, month);
   if (!purchases.length) return null;
   const names = new Map(allPeople(g).map(p => [p.id, p.n]));
   const who = (id: string) => (id === ME ? 'You' : names.get(id) ?? 'Someone');
   const { paid, yours } = monthShare(g, month);
-  const cards = storesBought(g, purchases).map(store => ({ store, payer: payerOf(g, month, store), s: storeSettlement(g, month, store, purchases) }))
-    .filter(c => c.s.rows.length > 0 || c.payer !== ME);
+  // Every store that was bought from gets a card, so "Paid by" can be set for one that only holds your own things too (someone else may have paid it).
+  const cards = storesBought(g, purchases).map(store => ({ store, payer: payerOf(g, month, store), s: storeSettlement(g, month, store, purchases) }));
   const owed = cards.reduce((a, c) => a + c.s.owedToYou, 0);
   const s = useAppStore.getState();
   return (
