@@ -515,6 +515,19 @@ html:has(.gdock) body .toasts {
   bottom: calc(var(--tabbar, 0px) + env(safe-area-inset-bottom, 0px) + var(--gdock-top, 0px) + var(--sp-8));
 }
 
+/* Text fields and selects in Groceries (the list, the add dock, the store form, Sharing) get the app's field look, so none falls back to the
+   browser default (2px grey border, square corners). :where() keeps this at zero specificity: every rule above that sets a field's own
+   border, background or width (the dock's 2px edge, .gnum, .gtaxamt) still wins. The Board and Stretches are not in these scopes. */
+:where(.groc, .gdock, .gform) :where(input:not([type=checkbox]):not([type=radio]), select) {
+  border: 1px solid var(--field-line);
+  border-radius: var(--r-md);
+  padding: var(--sp-8);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: var(--fs-lg);
+  min-height: 44px;
+}
+
 /* A phone: the panel gives its width to the list. */
 @media (max-width:480px) {
   .groc.panel {
