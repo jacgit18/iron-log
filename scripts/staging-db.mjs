@@ -39,13 +39,18 @@ async function connect(url) {
     const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 30_000, statement_timeout: 30_000 });
     try {
       await client.connect();
+      // If the connection is cut later, pg also emits 'error' on the client; with no listener Node dies with exit 1 (which `check` documents as
+      // "not marked as staging"). The query that is running rejects with the same error, and the catch at the bottom reports it.
+      client.on('error', () => {});
       return client;
     } catch (e) {
       await client.end().catch(() => {});
       const why = e instanceof Error ? e.message : String(e);
       const code = typeof e === 'object' && e && 'code' in e ? String(e.code) : '';
       if (n >= attempts || REFUSED_FOR_GOOD.test(code) || NOT_A_WAKING_BRANCH.has(code)) fail(`Cannot connect${attempts > 1 ? ` (attempt ${n} of ${attempts})` : ''}: ${why}`);
-      console.error(`Could not connect (attempt ${n} of ${attempts}): ${why}. The branch may be waking from Neon's archive; trying again in ${((pause * n) / 1000).toFixed(1)} s.`);
+      // A refused or unreachable address is the URL or the network, not a branch waking up, so the archive hint is left off.
+      const hint = ['ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH'].includes(code) ? '' : " The branch may be waking from Neon's archive;";
+      console.error(`Could not connect (attempt ${n} of ${attempts}): ${why}.${hint} Trying again in ${((pause * n) / 1000).toFixed(1)} s.`);
       await new Promise(done => setTimeout(done, pause * n));
     }
   }
@@ -143,6 +148,11 @@ const client = await connect(url);
 let code = 2;
 try {
   code = cmd === 'check' ? await check(client) : await clear(client, url, args.includes('--apply'));
+} catch (e) {
+  // An error after the connect (the connection drops, the compute restarts) must not leave as an uncaught exception: Node exits 1 for that,
+  // which `check` documents as "not marked as staging".
+  console.error(`Cannot read the database: ${e instanceof Error ? e.message : String(e)}`);
+  code = 2;
 } finally {
   await client.end().catch(() => {});
 }
