@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useFeature } from '../../features.js';
 import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, haveOf, lineCost, lineOf, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
-import { allPeople, hasSharing, partiesFor } from '../../lib/grocerySettle.js';
+import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
@@ -41,6 +41,8 @@ function GetRow({ g, item, month, mk, future, onGot, open, onOpen }: { g: Grocer
   const l = lineOf(item, month); const total = lineCost(l); const w = unitWords(item.unit);
   const moreId = `groc-more-${item.id}`;
   const split = useFeature('grocerySplit') && hasSharing(g); const raw = month.lines[item.id]; const people = allPeople(g);
+  // Said on the closed row only when this item is split differently from its store's usual group, so most rows stay as quiet as without sharing.
+  const customSplit = raw?.packShares?.some(Boolean) ? 'Packs split' : raw?.share || item.share ? shareText(partiesFor(g, item, raw)) : '';
   return (
     <li className={`gget${l.got ? ' got' : ''}`}>
       <div className="ggetline">
@@ -48,6 +50,7 @@ function GetRow({ g, item, month, mk, future, onGot, open, onOpen }: { g: Grocer
           <input type="checkbox" className="chk" id={`groc-${item.id}`} checked={l.got} disabled={future} onChange={e => onGot(e.target.checked)} />
           <span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span>
         </label>
+        {split && customSplit && <span className="gsplittag">{customSplit}</span>}
         <button type="button" className="gqty" aria-expanded={open} aria-controls={moreId} aria-label={`${w.count} and price of ${item.n}`} onClick={() => onOpen(!open)}>
           <span className={`gpill${l.cents == null && !l.prices ? ' noprice' : ''}`}>{l.prices ? `${l.prices.length} × avg ${money(Math.round(total / l.prices.length))}` : `${w.qty(l.qty)} × ${l.cents == null ? 'no price' : `${money(l.cents)}${w.per}`}`}</span>
         </button>
@@ -165,7 +168,7 @@ function HomeRow({ item, have, bought, onHave }: { item: GroceryItem; have: bool
   );
 }
 
-function EditRow({ item, g, have, onHave }: { item: GroceryItem; g: GroceryT; have: boolean; onHave: (on: boolean) => void }) {
+function EditRow({ item, g, have, onHave, adjust }: { item: GroceryItem; g: GroceryT; have: boolean; onHave: (on: boolean) => void; adjust: boolean }) {
   const s = useAppStore.getState();
   const [err, setErr] = useState<string | null>(null);
   const [name, setName] = useState(item.n);
@@ -190,7 +193,7 @@ function EditRow({ item, g, have, onHave }: { item: GroceryItem; g: GroceryT; ha
         <option value="">Each</option>
         {UNITS.map(u => <option key={u} value={u}>by the {u}</option>)}
       </select>
-      {split && <SharePicker name={item.n} people={allPeople(g)} parties={partiesFor(g, item)} own={!!item.share} onChange={sh => s.setGroceryItemShare(item.id, sh)} />}
+      {split && (adjust || !!item.share) && <SharePicker name={item.n} people={allPeople(g)} parties={partiesFor(g, item)} own={!!item.share} onChange={sh => s.setGroceryItemShare(item.id, sh)} />}
       <ArmedButton className={`btn sm ${arming ? 'danger' : 'ghost'}`} aria-label={`Remove ${item.n} from your list`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setArming} onConfirm={() => s.removeGroceryItem(item.id)} />
       {err && <p className="note gerr" role="alert">{err}</p>}
     </li>
@@ -268,6 +271,8 @@ function Stores({ g }: { g: GroceryT }) {
 function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
   const [editing, setEditing] = useState(false);
   const sharing = useFeature('grocerySplit');
+  const [adjusting, setAdjusting] = useState<Set<string>>(new Set()); // stores whose rows show their share controls while editing (the rest show them only when an item has its own split)
+  const toggleAdjust = (store: string) => setAdjusting(prev => { const n = new Set(prev); if (n.has(store)) n.delete(store); else n.add(store); return n; });
   const month = months[nowKey] || emptyMonth();
   const hasIt = (it: GroceryItem) => haveOf(it, month);
   const setHave = (it: GroceryItem, on: boolean) => useAppStore.getState().setGroceryHave(nowKey, it.id, on);
@@ -283,7 +288,12 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
       {byStore(g, g.items).map((grp, gi) => (
         <section key={grp.store || '_'} className="gstore" aria-labelledby={`groc-home-h-${gi}`}>
           <div className="gstorehead"><h3 id={`groc-home-h-${gi}`}>{grp.label}</h3></div>
-          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} have={hasIt(it)} onHave={on => setHave(it, on)} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} bought={lineOf(it, month).got} onHave={on => setHave(it, on)} />))}</ul>
+          {editing && sharing && hasSharing(g) && (
+            <button type="button" className="btn sm ghost gadjust" aria-pressed={adjusting.has(grp.store)} onClick={() => toggleAdjust(grp.store)}>
+              {adjusting.has(grp.store) ? `Done adjusting ${grp.label}` : `Adjust shares for ${grp.label}`}
+            </button>
+          )}
+          <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} adjust={adjusting.has(grp.store)} have={hasIt(it)} onHave={on => setHave(it, on)} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} bought={lineOf(it, month).got} onHave={on => setHave(it, on)} />))}</ul>
         </section>
       ))}
       {editing && <Stores g={g} />}
