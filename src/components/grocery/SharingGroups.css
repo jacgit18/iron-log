@@ -46,4 +46,15 @@
 .gsnew {
   flex-wrap: wrap;
 }
+.ghomebtns {
+  display: flex;
+  flex: none;
+  gap: var(--sp-8);
+}
+.gshareprompt {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
 }

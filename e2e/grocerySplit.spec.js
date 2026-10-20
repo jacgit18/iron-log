@@ -62,18 +62,18 @@ test('the Spending view shows your share and says what you paid', async ({ page 
   await expect(page.locator('#groc-spend-summary')).toContainText('This month $');
 });
 
-test('groups are made while editing the list, and a store can default to one', async ({ page }) => {
+test('groups are made from the Sharing button on At home, and a store can default to one', async ({ page }) => {
   await seed(page);
   await page.evaluate(() => { const c = JSON.parse(localStorage.getItem('ironlog:grocery/main')); delete c.groups; localStorage.setItem('ironlog:grocery/main', JSON.stringify(c)); });
   await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
   await expect(split(page)).toHaveCount(0); // no group yet: nothing is split
-  await page.click('#groc-view-home'); await page.click('#groc-edit');
+  await page.click('#groc-view-home'); await page.click('#groc-sharing');
   await page.getByLabel('New group', { exact: true }).fill('Home');
   await page.getByLabel('People in the new group, separated by commas').fill('Sam, Pat');
   await page.getByRole('button', { name: 'Add group' }).click();
   await page.getByLabel('Sam’s share is already paid').check();
   await page.getByRole('group', { name: 'Stores that split with Home by default' }).getByLabel("BJ's").check();
-  await page.click('#groc-done'); await page.click('#groc-view-get');
+  await page.click('#groc-sharing'); await page.click('#groc-view-get');
   await expect(split(page)).toBeVisible();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).groups[0]);
   expect(saved).toMatchObject({ n: 'Home', stores: ["BJ's"], people: [{ n: 'Sam', covered: true }, { n: 'Pat' }] });
