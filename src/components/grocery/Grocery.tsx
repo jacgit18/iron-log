@@ -6,6 +6,7 @@ import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, groupTag, hav
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
+import Notice, { UNDO_MS } from '../Notice.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import GrocerySpend from './GrocerySpend.js';
 import PriceChips from './PriceChips.js';
@@ -50,10 +51,15 @@ function GetRow({ g, item, month, mk, future, onGot, open, onOpen, onMove }: { g
   return (
     <li className={`gget${l.got ? ' got' : ''}`}>
       <div className="ggetline">
-        <label className="gtick">
-          <input type="checkbox" className="chk" id={`groc-${item.id}`} checked={l.got} disabled={future} onChange={e => onGot(e.target.checked)} />
-          <span className="gtickname">{item.n}{item.note && <small className="gnote">{item.note}</small>}</span>
+        {/* Only the checkbox ticks (a 44px target of its own): tapping the name opens the count, price and Move to panel, so a stray tap on the row cannot mark it bought. */}
+        <label className="gtickbox">
+          <input type="checkbox" className="chk" id={`groc-${item.id}`} aria-label={`Got ${item.n}`} checked={l.got} disabled={future} onChange={e => onGot(e.target.checked)} />
         </label>
+        <button type="button" className="gtickname gnamebtn" aria-expanded={open} aria-controls={moreId} onClick={() => onOpen(!open)}>
+          {item.n}
+          {item.note && <small className="gnote">{item.note}</small>}
+          {item.store !== usual && <small className="gnote gmoved">Usually {usual || 'Anywhere'}</small>}
+        </button>
         {split && customSplit && <span className="gsplittag">{customSplit}</span>}
         <button type="button" className="gqty" aria-expanded={open} aria-controls={moreId} aria-label={`${w.count} and price of ${item.n}`} onClick={() => onOpen(!open)}>
           <span className={`gpill${l.cents == null && !l.prices ? ' noprice' : ''}`}>{l.prices ? `${l.prices.length} × avg ${money(Math.round(total / l.prices.length))}` : `${w.qty(l.qty)} × ${l.cents == null ? 'no price' : `${money(l.cents)}${w.per}`}`}</span>
@@ -123,6 +129,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const [boughtOpen, setBoughtOpen] = useState(false);
   const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
+  const [ticked, setTicked] = useState<{ id: string; name: string; mk: string; t: number } | null>(null); // the item just ticked bought, for the Undo notice
   const setPanel = (id: string, on: boolean) => setOpenIds(prev => { const n = new Set(prev); if (on) n.add(id); else n.delete(id); return n; });
   useEffect(() => { if (!bought.length && boughtOpen) setBoughtOpen(false); }, [bought.length, boughtOpen]); // an emptied fold starts folded next time
   const focusAfter = useRef<string | null>(null);
@@ -136,6 +143,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       focusAfter.current = !on || typing ? `groc-${id}` : next ? `groc-${next}` : 'groc-bought-sum';
     }
     useAppStore.getState().setGroceryGot(mk, id, on);
+    setTicked(on && current ? { id, name: g.items.find(x => x.id === id)?.n ?? '', mk, t: Date.now() } : null); // a tick can be taken back from the notice; any other change replaces or clears it
   };
   return (
     <>
@@ -187,6 +195,14 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
         </details>
       )}
       {split && <SplitSummary g={g} month={month} mk={mk} />}
+      {ticked && ticked.mk === mk && (
+        <div className="gtickednote">
+          <Notice kind="undo" expire={{ ms: UNDO_MS, onExpire: () => setTicked(null), key: ticked.t }}
+            actions={[{ label: 'Undo', onClick: () => tick(ticked.id, false) }, { label: 'Dismiss', ghost: true, onClick: () => setTicked(null) }]}>
+            <b>Bought</b> {ticked.name}.
+          </Notice>
+        </div>
+      )}
     </>
   );
 }

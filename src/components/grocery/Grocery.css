@@ -91,6 +91,36 @@
   gap: var(--sp-8);
   min-height: 44px;
 }
+.gtickbox {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.gnamebtn {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gnamebtn .gmoved {
+  font-style: italic;
+}
+.gtickednote {
+  position: sticky;
+  bottom: calc(var(--tabbar, 0px) + var(--sp-8) + env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-sticky);
+  margin-top: var(--sp-8);
+}
 .gtick {
   display: flex;
   align-items: center;
