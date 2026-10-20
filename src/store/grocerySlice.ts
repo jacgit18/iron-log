@@ -3,7 +3,7 @@ import {
   MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, parseDollars,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
-import type { Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
+import type { Grocery, GroceryData, GroceryLine, GroceryMonth } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
 
 // The grocery list is the account's, like the rest of the data (ADR 039, replacing ADR 019's device-only list): it is saved through the
