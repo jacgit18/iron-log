@@ -9,23 +9,19 @@
   flex-wrap: wrap;
   gap: var(--sp-8);
 }
-.groc .gtop .seg {
-  margin-left: 0;
-}
-.groc .gtop .seg button {
-  min-height: 44px;
-  padding: 0 14px;
-  font-size: var(--fs-md);
-}
 /* The view switch (To get, At home, Spending) is the second level under the Daily tabs, which are the filled pill: an underline for the selected
    view, no fill, so the two levels do not look like one control. Sizes and targets are unchanged. */
 .groc .gtop .seg {
+  margin-left: 0;
   background: none;
   padding: 0;
   gap: var(--sp-4);
   border-radius: 0;
 }
 .groc .gtop .seg button {
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: var(--fs-md);
   border-radius: 0;
   border-bottom: 3px solid transparent;
 }
