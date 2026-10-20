@@ -109,7 +109,7 @@ export default defineConfig({
   // *.test.* under server/; the app project takes the rest.
   test: {
     projects: [
-      { extends: true, test: { name: 'server', include: ['server/**/*.test.{js,jsx,ts,tsx}'], exclude: SKIP, testTimeout: 30_000 } },
+      { extends: true, test: { name: 'server', include: ['server/**/*.test.{js,jsx,ts,tsx}'], exclude: SKIP, testTimeout: 30_000, globalSetup: ['server/test/globalSetup.ts'] } },
       { extends: true, test: { name: 'app', include: ['**/*.test.{js,jsx,ts,tsx}'], exclude: [...SKIP, 'server/**'] } },
     ],
   },
