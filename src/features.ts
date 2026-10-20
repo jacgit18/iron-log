@@ -14,6 +14,7 @@ import { LS } from './lib/storage.js';
    use `requireAdmin` (server/admin.ts), or `requirePaid` (server/plan.ts) for a 'paid' feature. Add a feature with a line here, in alphabetical order, then `useFeature('name')` in the component. */
 export const FEATURES = {
   adminIssues: 'admin', // Production issues in Settings (ADR 013 amendment): an internal tool, so it stays admin-only for good; remove it only together with /api/issues and the Issues panel
+  grocerySplit: 'admin', // Sharing groceries with other people: groups, shares on items and packs, who paid and a settle-up (ADR 059); remove this line and its useFeature checks in components/grocery when the owner releases it
 } satisfies Record<string, Audience>;
 
 export type Audience = 'admin' | 'all' | 'off' | 'paid';
