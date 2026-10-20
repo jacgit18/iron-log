@@ -368,9 +368,9 @@ const dailyOf = (cols: Cols, w: WeekIn, cfg?: Cfg): Set<string> => {
 };
 const pairClash = (cols: Cols, w: WeekIn, skip: Set<string>, a: number, b: number) => { const x = exOfCol(cols[b] || [], w, skip); return [...exOfCol(cols[a] || [], w, skip)].filter(ex => x.has(ex)); };
 const countFrom = (cols: Cols, w: WeekIn, skip: Set<string>, from: number) => DAYS.filter(c => c >= from && c < DAY_COUNT).reduce((n, c) => n + pairClash(cols, w, skip, c, c + 1).length, 0);
-export const dailyExercises = (week: WeekIn, slots: Slot[]) => { const cols = currentLayout(week, slots); return [...dailyOf(cols, week)]; };
-export const dayClash = (week: WeekIn, slots: Slot[], a: number, b: number) => { const cols = currentLayout(week, slots); return pairClash(cols, week, dailyOf(cols, week), a, b); };
-export const clashCount = (week: WeekIn, slots: Slot[], from: number) => { const cols = currentLayout(week, slots); return countFrom(cols, week, dailyOf(cols, week), from); };
+export const dailyExercises = (week: WeekIn, slots: Slot[], cfg?: Cfg) => { const cols = currentLayout(week, slots); return [...dailyOf(cols, week, cfg)]; };
+export const dayClash = (week: WeekIn, slots: Slot[], a: number, b: number, cfg?: Cfg) => { const cols = currentLayout(week, slots); return pairClash(cols, week, dailyOf(cols, week, cfg), a, b); };
+export const clashCount = (week: WeekIn, slots: Slot[], from: number, cfg?: Cfg) => { const cols = currentLayout(week, slots); return countFrom(cols, week, dailyOf(cols, week, cfg), from); };
 
 // Every distinct arrangement of `items` (repeats allowed), the given order first.
 function arrangements<T>(items: T[]): T[][] {
