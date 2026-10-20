@@ -16,7 +16,7 @@ const seed = async (page, month = { lines: {}, pulled: [] }, admin = false) => {
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
-const section = (page, store) => page.locator('section.gstore', { has: page.getByRole('heading', { name: store, exact: true }) }).first();
+const section = (page, store) => page.locator('section.gstore', { has: page.getByRole('heading', { name: new RegExp(`^${store.replace(/[^\\w ]/g, '.')}( |$)`) }) }).first();
 const openPanel = (page, name) => page.getByRole('button', { name: new RegExp(`price of ${name}`, 'i') }).click();
 
 test('an item under Anywhere can be moved to BJ\'s from To get, for this month only, and next month it is back', async ({ page }) => {

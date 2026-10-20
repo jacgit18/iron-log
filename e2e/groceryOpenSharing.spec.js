@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// Reaching grocery sharing (admin-only, ADR 059) without Edit: a Sharing button beside Edit on At home opens the groups panel above the list, and
+// Reaching grocery sharing (ADR 059) without Edit: a Sharing button beside Edit on At home opens the groups panel above the list, and
 // a one-line prompt offers it until a group exists. The fixed date is in September 2026.
 const item = (id, n, store, cents) => ({ id, n, store, qty: 1, cents, every: true, out: false });
 const ITEMS = { stores: ["BJ's"], items: [item('tp', 'Toilet paper', "BJ's", 2499)] };
@@ -44,8 +44,8 @@ test('with a group the Sharing button still opens and closes the panel, and the 
   await expect(panel(page)).toHaveCount(0);
 });
 
-test('an account that is not an admin gets neither the button nor the prompt', async ({ page }) => {
+test('an account that is not an admin gets the button and the prompt too', async ({ page }) => {
   await open(page, { admin: false });
-  await expect(page.locator('#groc-sharing')).toHaveCount(0);
-  await expect(page.locator('.gshareprompt')).toHaveCount(0);
+  await expect(page.locator('#groc-sharing')).toHaveCount(1);
+  await expect(page.locator('.gshareprompt')).toHaveCount(1);
 });
