@@ -276,6 +276,7 @@ function Stores({ g }: { g: GroceryT }) {
 function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
   const [editing, setEditing] = useState(false);
   const sharing = useFeature('grocerySplit');
+  const [sharingOpen, setSharingOpen] = useState(false); // the Sharing panel (groups and who is in them) above the list, reachable without Edit
   const [adjusting, setAdjusting] = useState<Set<string>>(new Set()); // stores whose rows show their share controls while editing (the rest show them only when an item has its own split)
   const toggleAdjust = (store: string) => setAdjusting(prev => { const n = new Set(prev); if (n.has(store)) n.delete(store); else n.add(store); return n; });
   const month = months[nowKey] || emptyMonth();
@@ -283,11 +284,18 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
   const setHave = (it: GroceryItem, on: boolean) => useAppStore.getState().setGroceryHave(nowKey, it.id, on);
   return (
     <div className={editing ? 'gathome editing' : 'gathome'}>
-      <div className="ghomehead">
+      <div className={sharing ? 'ghomehead gsharehead' : 'ghomehead'}>
         {editing && <b className="geditbadge">Editing</b>}
         <p className="note">{editing ? 'Add, rename, move or remove what you buy.' : 'A tick means you have it this month, so it is off To get. Ticks clear on the 1st and everything is back on the list.'}</p>
-        <button type="button" className="btn sm ghost" id="groc-edit" aria-pressed={editing} onClick={() => setEditing(v => !v)}>{editing ? 'Done' : 'Edit'}</button>
+        <div className="ghomebtns">
+          {sharing && <button type="button" className="btn sm ghost" id="groc-sharing" aria-pressed={sharingOpen} onClick={() => setSharingOpen(v => !v)}>{sharingOpen ? 'Close sharing' : 'Sharing'}</button>}
+          <button type="button" className="btn sm ghost" id="groc-edit" aria-pressed={editing} onClick={() => setEditing(v => !v)}>{editing ? 'Done' : 'Edit'}</button>
+        </div>
       </div>
+      {sharing && !hasSharing(g) && !sharingOpen && g.items.length > 0 && (
+        <p className="note gshareprompt">Buy groceries with other people? <button type="button" className="btn sm ghost" id="groc-sharing-prompt" onClick={() => setSharingOpen(true)}>Set up sharing</button></p>
+      )}
+      {sharing && sharingOpen && <SharingGroups g={g} />}
       <RemovedNotice scope="grocery" />
       {!g.items.length && !editing && <p className="note">Your list is empty. Use Edit to add what you buy and where.</p>}
       {byStore(g, g.items, sharing).map((grp, gi) => (
@@ -302,7 +310,6 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
         </section>
       ))}
       {editing && <Stores g={g} />}
-      {editing && sharing && <SharingGroups g={g} />}
       {editing && <EditDock g={g} onDone={() => setEditing(false)} />}
     </div>
   );
