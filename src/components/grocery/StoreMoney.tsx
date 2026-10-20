@@ -9,7 +9,7 @@ export function MonthMoney({ g, month }: { g: Grocery; month: GroceryMonth }) {
   if (!purchasesOf(g, month).length) return null;
   const { paid, yours } = monthShare(g, month);
   const { owed, youOwe } = monthOwes(g, month);
-  // Owed to you is always said (it is $0.00 when nothing is owed); You owe is added only when another store's payer is someone else.
+  // Owed to you is said even at $0.00, except when you owe someone and nobody owes you; You owe is added only when another store's payer is someone else.
   return <p className="note gmoney" id="groc-money">Paid {money(paid)} · Your share {money(yours)}{youOwe > 0 && owed === 0 ? '' : ` · Owed to you ${money(owed)}`}{youOwe > 0 ? ` · You owe ${money(youOwe)}` : ''}</p>;
 }
 
