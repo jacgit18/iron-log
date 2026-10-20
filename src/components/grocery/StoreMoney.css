@@ -1,0 +1,13 @@
+@layer base, components;
+@layer components {
+/* The month's money line over the list, and a shared store's line under its heading. */
+.gmoney {
+  margin: 0 0 var(--sp-8);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.gstoremoney {
+  margin: var(--sp-4) 0 0;
+  font-variant-numeric: tabular-nums;
+}
+}
