@@ -120,12 +120,21 @@ export const onList = (g: Grocery, m: GroceryMonth, live: boolean) =>
 /** A store's items for the To get list: the ones still to get first, the ticked ones after them, each in catalogue order. */
 export const gotLast = (items: GroceryItem[], m: GroceryMonth) => [...items.filter(i => !lineOf(i, m).got), ...items.filter(i => lineOf(i, m).got)];
 
-/** The list split by store, in the order of `stores`; items with no store come last. Empty stores are left out. */
-export function byStore(g: Grocery, items: GroceryItem[]): { store: string; label: string; items: GroceryItem[] }[] {
-  const out = g.stores.map(store => ({ store, label: store, items: items.filter(i => i.store === store) }));
+/** The list split by store: stores shared with a group of other people first, then your own, each in the order of `stores`; items with no store
+ *  come last. Empty stores are left out. `group` is the sharing group a shared store defaults to. */
+export function byStore(g: Grocery, items: GroceryItem[]): { store: string; label: string; items: GroceryItem[]; group?: GroceryGroup }[] {
+  const out = g.stores.map(store => {
+    const group = g.groups?.find(x => x.people.length > 0 && x.stores.includes(store));
+    return { store, label: store, items: items.filter(i => i.store === store), ...(group ? { group } : {}) };
+  });
+  const shared = out.filter(x => x.group);
+  out.splice(0, out.length, ...shared, ...out.filter(x => !x.group));
   out.push({ store: '', label: ANYWHERE, items: items.filter(i => !i.store) });
   return out.filter(x => x.items.length);
 }
+
+/** The words after a shared store's name: its group and how many others are in it ("Home +2"). */
+export const groupTag = (group: GroceryGroup) => `${group.n} +${group.people.length}`;
 
 /** Counts and money for a set of items: how many are ticked, what the list is expected to cost, and what the ticked ones cost. */
 export function tally(items: GroceryItem[], m: GroceryMonth) {
