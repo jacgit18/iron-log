@@ -7,6 +7,8 @@
 // The db:check and e2e:sync steps need the local Postgres: it is started (npm run db:start) and used when DATABASE_URL is not set; if it cannot be reached the step is not run and the script exits 1.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createConnection } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const args = process.argv.slice(2);
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8' }).split('\n').filter(Boolean);
@@ -108,6 +110,23 @@ const reminder = () => {
 reminder();
 if (args.includes('--list')) process.exit(0);
 
+// One check at a time on this machine. Two sessions pushing at once each start a Postgres container per server test file plus Playwright, and
+// the load makes both runs time out (the reason for most "skip the hook" pushes). The second run waits for the first, up to 30 minutes.
+// Needs flock (Linux, util-linux); without it the check runs as before. IRON_LOG_CHECK_LOCK overrides the lock file, IRON_LOG_CHECK_LOCKED marks the re-run.
+if (!process.env.IRON_LOG_CHECK_LOCKED && !args.includes('--list')) {
+  const lock = process.env.IRON_LOG_CHECK_LOCK || join(tmpdir(), 'iron-log-check.lock');
+  const hasFlock = spawnSync('flock', ['--version'], { stdio: 'ignore' }).status === 0;
+  if (hasFlock) {
+    const env = { ...process.env, IRON_LOG_CHECK_LOCKED: '1' };
+    const rerun = [process.execPath, ...process.argv.slice(1)];
+    if (spawnSync('flock', ['-n', lock, 'true'], { stdio: 'ignore' }).status !== 0) console.log('Another check is running on this machine; waiting for it to finish (up to 30 minutes).');
+    // -E 75: flock's own "gave up waiting" code, told apart from the check failing (which exits 1).
+    const r = spawnSync('flock', ['-w', '1800', '-E', '75', lock, ...rerun], { stdio: 'inherit', env });
+    if (r.status === 75) { console.error('Gave up: another check on this machine held the lock for 30 minutes. This check did not run. Retry when it finishes, or skip once with SKIP_CHECK=1 git push.'); process.exit(75); }
+    process.exit(r.status ?? 1);
+  }
+}
+
 const needsDb = new Set(['db:check', 'e2e:sync']);
 // The sync and migration checks need the local Postgres. Rather than skip them (CI runs them, so a skip is how a sync bug reached a PR),
 // start it with `npm run db:start` and use its default address, unless DATABASE_URL is already set.
@@ -133,8 +152,10 @@ for (const c of plan) {
     continue;
   }
   const related = c === 'test' && !fullTests;
-  console.log(related ? '\n> node scripts/unit-tests.mjs (the tests related to what changed)' : `\n> npm run ${c}`);
-  const r = spawnSync(...(related ? ['node', ['scripts/unit-tests.mjs', `--base=${baseRef}`]] : ['npm', ['run', c]]), { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
+  // The unit step always goes through scripts/unit-tests.mjs, so the worker cap (UNIT_WORKERS) also applies to a full run.
+  const viaScript = c === 'test';
+  console.log(viaScript ? `\n> node scripts/unit-tests.mjs ${related ? '(the tests related to what changed)' : '--full (every unit test)'}` : `\n> npm run ${c}`);
+  const r = spawnSync(...(viaScript ? ['node', ['scripts/unit-tests.mjs', related ? `--base=${baseRef}` : '--full']] : ['npm', ['run', c]]), { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
   if (r.status !== 0) {
     console.error(`\nFailed: ${c}`);
     process.exit(r.status ?? 1);
