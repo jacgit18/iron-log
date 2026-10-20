@@ -149,7 +149,7 @@ describe('a store\'s tax syncs on the store row', () => {
   });
   it('an older store row with no tax reads back as no tax at all', () => {
     const rows = desiredRows(kind('grocery/main'), g, new Map());
-    expect(documentFor(kind('grocery/main'), mirrorOf(rows))?.taxes).toBeUndefined();
+    expect((documentFor(kind('grocery/main'), mirrorOf(rows)) as Grocery).taxes).toBeUndefined();
   });
   it('the API accepts a store row with a good rate and refuses a bad one', () => {
     expect(validateSaveListItem({ list: 'grocery_store', item: { id: "BJ's", n: "BJ's", tax: 8875 }, position: 0 })).toMatchObject({ list: 'grocery_store' });
