@@ -60,6 +60,14 @@ if gc iam service-accounts describe "$STAGING_RUNTIME_SA" >/dev/null 2>&1; then
 else
   echo "Staging runtime account not found yet: after \`IRON_LOG_ENV=staging scripts/deploy-cloud-run.sh setup\`, run this script again."
 fi
+# The QA service runs as its own account too (made by `IRON_LOG_ENV=qa scripts/deploy-cloud-run.sh setup`, ADR 060); same rule.
+QA_RUNTIME_SA="iron-log-qa-run@${PROJECT_ID}.iam.gserviceaccount.com"
+if gc iam service-accounts describe "$QA_RUNTIME_SA" >/dev/null 2>&1; then
+  gc iam service-accounts add-iam-policy-binding "$QA_RUNTIME_SA" --member "serviceAccount:$SA" --role roles/iam.serviceAccountUser >/dev/null
+  echo "The deployer may act as the QA runtime account."
+else
+  echo "QA runtime account not found yet: after \`IRON_LOG_ENV=qa scripts/deploy-cloud-run.sh setup\`, run this script again."
+fi
 # Uploading the source for a build: this bucket only.
 gc storage buckets add-iam-policy-binding "gs://${PROJECT_ID}_cloudbuild" --member "serviceAccount:$SA" --role roles/storage.admin >/dev/null
 # `gcloud builds submit` lists the project's buckets to check the upload bucket is the project's own. Names only; no object access.
@@ -85,6 +93,9 @@ Done. In GitHub (Settings -> Secrets and variables -> Actions -> Variables) add 
 Staging (ADR 058) also needs a GitHub environment named staging with one secret, STAGING_DATABASE_URL: the owner (unpooled) URL of the
 staging Neon branch, after scripts/staging-db.mjs clear --apply has marked it. The first deploy of the staging service is made by hand
 (IRON_LOG_ENV=staging scripts/deploy-cloud-run.sh deploy): making it public needs a permission the CI deployer deliberately lacks.
+
+QA (ADR 060) also needs a GitHub environment named qa with one secret, QA_DATABASE_URL: the owner (unpooled) URL of the QA Neon branch,
+after scripts/qa-db.mjs reset --apply has marked it. Its first deploy is made by hand (IRON_LOG_ENV=qa scripts/deploy-cloud-run.sh deploy).
 
 Then the next merge to main deploys itself once its tests pass. Optional: Settings -> Environments -> production -> Required reviewers
 to approve each deploy by hand.
