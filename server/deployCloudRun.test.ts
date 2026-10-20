@@ -95,6 +95,15 @@ exit 0
     expect(recorded().some(l => l.includes('builds submit'))).toBe(true);
   });
 
+  it('builds with the build file named in CLOUDBUILD_CONFIG (the QA workflow uses main\'s), cloudbuild.yaml otherwise', async () => {
+    writeFileSync(calls, '');
+    expect((await run(['candidate'])).status).toBe(0);
+    expect(recorded().find(l => l.includes('builds submit'))).toContain('--config cloudbuild.yaml ');
+    writeFileSync(calls, '');
+    expect((await run(['candidate'], { CLOUDBUILD_CONFIG: '/work/main/cloudbuild.yaml' })).status).toBe(0);
+    expect(recorded().find(l => l.includes('builds submit'))).toContain('--config /work/main/cloudbuild.yaml ');
+  });
+
   it('says so when it could not ask the registry whether the image exists, instead of silently building a different one', async () => {
     writeFileSync(calls, '');
     const out = await run(['candidate'], { IMAGE_ERROR: '1' });

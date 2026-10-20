@@ -27,6 +27,9 @@
 # database holds no real users' data, so it has its own encryption key (iron-log-qa-pii-key, made by `secrets`) and shares nothing with
 # production or staging; email and Web Push are always off.
 #
+# CLOUDBUILD_CONFIG (default cloudbuild.yaml in the current folder) names the build file; the QA workflow points it at main's copy so a branch's
+# own build file cannot push images into the registry that production and staging reuse by commit tag (ADR 060).
+#
 # It never touches a database: migrations are run by hand (docs: deploy-runbook.md). It sets max-instances=1 and min-instances=0,
 # so spend stays at the free tier, and it needs the budget alert from the runbook in place before the first deploy.
 set -euo pipefail
@@ -255,7 +258,7 @@ build_image() {
   # accounts up; on your machine it is used when it exists, otherwise the build runs as the project's default account.
   local build_as=() build_sa="${BUILD_SA:-iron-log-build@${PROJECT_ID}.iam.gserviceaccount.com}"
   if [ -n "${BUILD_SA:-}" ] || gc iam service-accounts describe "$build_sa" >/dev/null 2>&1; then build_as=(--service-account "projects/${PROJECT_ID}/serviceAccounts/${build_sa}"); fi
-  gc builds submit --config cloudbuild.yaml --substitutions "_IMAGE=${image},_APP_VERSION=${version}" ${build_as[@]+"${build_as[@]}"} .
+  gc builds submit --config "${CLOUDBUILD_CONFIG:-cloudbuild.yaml}" --substitutions "_IMAGE=${image},_APP_VERSION=${version}" ${build_as[@]+"${build_as[@]}"} .
 }
 
 # Deploys $image (COMMIT_SHA records which commit it is; the CI deploy reads it back to see what is live); extra arguments (for example --no-traffic --tag candidate) go straight to `gcloud run deploy`.
