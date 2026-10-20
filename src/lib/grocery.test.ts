@@ -87,11 +87,14 @@ describe('groups and totals', () => {
   it('puts a store shared with other people first, keeps the rest in order, and skips a group with nobody else in it', () => {
     const items = onList(g, emptyMonth(), true);
     const home = { id: 'g1', n: 'Home', people: [{ id: 'p1', n: 'Sam' }, { id: 'p2', n: 'Lee' }], stores: ['Costco'] };
-    const out = byStore({ ...g, groups: [home] }, items);
+    const out = byStore({ ...g, groups: [home] }, items, true);
     expect(out.map(x => x.label)).toEqual(['Costco', 'Veg market', 'Anywhere']);
     expect(out[0]!.group && groupTag(out[0]!.group)).toBe('Home +2');
     expect(out[1]!.group).toBeUndefined();
-    expect(byStore({ ...g, groups: [{ ...home, people: [] }] }, items).map(x => x.label)).toEqual(['Veg market', 'Costco', 'Anywhere']);
+    expect(byStore({ ...g, groups: [{ ...home, people: [] }] }, items, true).map(x => x.label)).toEqual(['Veg market', 'Costco', 'Anywhere']);
+    const off = byStore({ ...g, groups: [home] }, items); // sharing off: the groups in the data change nothing
+    expect(off.map(x => x.label)).toEqual(['Veg market', 'Costco', 'Anywhere']);
+    expect(off.every(x => !x.group)).toBe(true);
   });
   it('splits expected from spent and counts the unpriced', () => {
     const m: GroceryMonth = { lines: { kale: { got: true, qty: 4, cents: 300 } }, pulled: [] };
