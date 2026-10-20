@@ -6,6 +6,20 @@ React 19 + Vite PWA, TypeScript, zustand store, Vitest and Playwright.
 
 In `DevHiveMind/Projects/iron-log/` (the folder itself; there is no `docs/` subfolder): `ROADMAP.md` (what to build, out of scope), `ARCHITECTURE.md` (where code lives), `DECISIONS.md` (ADR index; do not re-litigate), `CHANGELOG.md` (add an entry in each PR). `README.md` is in this repo. Before any UI change read the UX set in `ux/` there: `UX-DESIGN-BRIEF.md`, `USERFLOW.md`, `DESIGN-SYSTEM.md` (tokens live in `src/styles.css`), `COMPONENTS.md`, `SCREEN-SPECS.md`; update them in the same PR as a UI change.
 
+## Definition of done
+
+Rule: `/home/jac/.claude/rules/definition-of-done.md`. A change is done when all of this holds, each line reported as verified, read-only, agent-reported or not run (a non-verified line is a named gap, not done). The feature's own **Done when** list (its `FEATURE-PLAN.md` row) comes on top.
+
+- `npm run check` passes for what changed (CI runs all); the board reorder and log write path tests stay green. Enforcer: pre-push hook, CI.
+- New behavior has a test that fails without it; a bug fix has its regression test; a feature has its own `e2e/<feature>.spec.js`. Enforcer: advisory (code review).
+- UI, style, font, image or bundle change: `node scripts/lighthouse.mjs --check` before and after in the PR, floors held; UX docs in `ux/` updated; seen in a browser at phone and desktop width. Enforcer: `scripts/lighthouse.mjs`, PR template.
+- Schema, migration or access change: `db:check` passes, `data/` docs updated, forward and rollback plan stated; owner runs production. Enforcer: `npm run check`, advisory for the docs.
+- Store, sync or `server/` change: `e2e:sync` run against the scratch database.
+- Docs: `CHANGELOG.md`, `feature-map.md`, and `DECISIONS.md` for a decision, in the same PR. Enforcer: PR changelog check.
+- PR body from `scripts/pr-body.mjs`, with the Done section filled. Enforcer: PR audience and changelog checks, template.
+- Device-only behavior (push, install prompt, back-swipe) is not done until tried on a real device; until then it is `not run`.
+- Done means merged; a deployed change also gets a smoke check of the live URL (owner approves prod).
+
 ## Language
 
 - **Write all new code in TypeScript** (`.ts`/`.tsx`, `strict`). Do not add `.js` or `.jsx` files. Convert a legacy file when you touch it.
