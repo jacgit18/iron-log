@@ -1,8 +1,9 @@
 import { LS } from '../lib/storage.js';
 import {
-  MAX_ITEMS, MAX_NOTE, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, normGrocery, normGroceryData, parseDollars,
+  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, parseDollars,
 } from '../lib/grocery.js';
-import type { Grocery, GroceryData, GroceryLine, GroceryMonth } from '../types.ts';
+import { cleanShare } from '../shared/grocery.js';
+import type { Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
 
 // The grocery list is the account's, like the rest of the data (ADR 039, replacing ADR 019's device-only list): it is saved through the
@@ -158,7 +159,9 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const i = get().grocery.stores.indexOf(name);
       const err = mutateCatalogue(g => {
         if (g.items.some(it => it.store === name)) return 'Move or remove this store’s items first.';
-        g.stores = g.stores.filter(s => s !== name); return null;
+        g.stores = g.stores.filter(s => s !== name);
+        g.groups?.forEach(x => { x.stores = x.stores.filter(s => s !== name); });
+        return null;
       });
       if (!err && i >= 0) {
         get().noteRemoved('grocerystores', name, () => mutateCatalogue(g => {
@@ -202,7 +205,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     setGroceryQty(month, id, qty) {
       const q = cleanQty(qty);
       if (q == null || q <= 0 || !get().grocery.items.some(i => i.id === id)) return;
-      mutateMonth(month, m => { const { prices: _p, ...l } = m.lines[id] || {}; m.lines[id] = { ...l, qty: q }; }); // a typed count goes back to one price for all
+      mutateMonth(month, m => { const { prices: _p, packShares: _s, ...l } = m.lines[id] || {}; m.lines[id] = { ...l, qty: q }; }); // a typed count goes back to one price for all
     },
 
     // The price of each one bought this month, when they differ (beef: 8.99, 10.49, 9.25). The count follows how many there are. Null (or
@@ -211,8 +214,9 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const list = prices === null ? null : cleanPrices(prices);
       if ((prices !== null && !list) || !get().grocery.items.some(i => i.id === id)) return;
       mutateMonth(month, m => {
-        const { prices: _p, qty: _q, cents: _c, ...l } = m.lines[id] || {};
-        const next: GroceryLine = list ? { ...l, prices: list } : l;
+        const { prices: _p, qty: _q, cents: _c, packShares: ps, ...l } = m.lines[id] || {};
+        const fit = ps && list ? list.map((_, i) => ps[i] ?? null) : null; // each pack keeps its share while the count changes
+        const next: GroceryLine = list ? { ...l, prices: list, ...(fit?.some(Boolean) ? { packShares: fit } : {}) } : l;
         if (Object.keys(next).length) m.lines[id] = next; else delete m.lines[id];
       });
     },
@@ -224,7 +228,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       if (!it) return;
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
-        delete l.prices; // one price for all
+        delete l.prices; delete l.packShares; // one price for all
         if (cents === null) delete l.cents; else l.cents = cents;
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
@@ -234,5 +238,103 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
 
     // "Take off the list": you don't need it this month. It is marked as had, so it is off that month's list, and its other lines stay.
     takeGroceryOff(month, id) { get().setGroceryHave(month, id, true); },
+
+    // ---- Sharing what you buy with other people. Groups live in the catalogue (grocery/main); shares and who paid live on the item or the month. ----
+    addGroceryGroup(name, people) {
+      const n = name.trim().replace(/\s+/g, ' ').slice(0, MAX_PERSON);
+      if (!n) return 'Give the group a name.';
+      const names = people.map(p => p.trim().replace(/\s+/g, ' ').slice(0, MAX_PERSON)).filter(Boolean);
+      if (names.length > MAX_PEOPLE) return `A group holds up to ${MAX_PEOPLE} people besides you.`;
+      return mutateCatalogue(g => {
+        const groups = g.groups ?? [];
+        if (groups.length >= MAX_GROUPS) return `Too many groups (${MAX_GROUPS}).`;
+        if (groups.some(x => x.n.toLowerCase() === n.toLowerCase())) return 'You already have a group with that name.';
+        g.groups = [...groups, { id: newShareId(), n, people: names.map(pn => ({ id: newShareId(), n: pn })), stores: [] }];
+        return null;
+      });
+    },
+    renameGroceryGroup(id, name) {
+      const n = name.trim().replace(/\s+/g, ' ').slice(0, MAX_PERSON);
+      if (!n) return 'Give the group a name.';
+      return mutateCatalogue(g => {
+        const x = g.groups?.find(y => y.id === id);
+        if (!x) return 'That group is gone.';
+        if (g.groups!.some(y => y !== x && y.n.toLowerCase() === n.toLowerCase())) return 'You already have a group with that name.';
+        x.n = n; return null;
+      });
+    },
+    // Items and months that named its people keep their shares; a person who no longer exists is simply left out of a split (partiesOf).
+    removeGroceryGroup(id) {
+      mutateCatalogue(g => { g.groups = (g.groups ?? []).filter(x => x.id !== id); if (!g.groups.length) delete g.groups; return null; });
+    },
+    addGroceryPerson(groupId, name) {
+      const n = name.trim().replace(/\s+/g, ' ').slice(0, MAX_PERSON);
+      if (!n) return 'Give the person a name.';
+      return mutateCatalogue(g => {
+        const x = g.groups?.find(y => y.id === groupId);
+        if (!x) return 'That group is gone.';
+        if (x.people.length >= MAX_PEOPLE) return `A group holds up to ${MAX_PEOPLE} people besides you.`;
+        if (x.people.some(p => p.n.toLowerCase() === n.toLowerCase())) return 'That person is already in this group.';
+        x.people.push({ id: newShareId(), n }); return null;
+      });
+    },
+    updateGroceryPerson(groupId, personId, patch) {
+      return mutateCatalogue(g => {
+        const p = g.groups?.find(y => y.id === groupId)?.people.find(z => z.id === personId);
+        if (!p) return 'That person is gone.';
+        if (patch.n !== undefined) {
+          const n = patch.n.trim().replace(/\s+/g, ' ').slice(0, MAX_PERSON);
+          if (!n) return 'Give the person a name.';
+          p.n = n;
+        }
+        if (patch.covered !== undefined) { if (patch.covered) p.covered = true; else delete p.covered; }
+        return null;
+      });
+    },
+    removeGroceryPerson(groupId, personId) {
+      mutateCatalogue(g => { const x = g.groups?.find(y => y.id === groupId); if (x) x.people = x.people.filter(p => p.id !== personId); return null; });
+    },
+    setGroceryStoreGroup(store, groupId) {
+      mutateCatalogue(g => {
+        if (!g.stores.includes(store)) return 'That store is gone.';
+        g.groups?.forEach(x => { x.stores = x.stores.filter(s => s !== store); }); // one group at most
+        const x = groupId ? g.groups?.find(y => y.id === groupId) : undefined;
+        if (x) x.stores.push(store);
+        return null;
+      });
+    },
+    setGroceryItemShare(id, share) {
+      const clean = share === null ? null : cleanShare(share);
+      if (share !== null && !clean) return;
+      mutateCatalogue(g => { const it = g.items.find(i => i.id === id); if (!it) return 'That item is gone.'; if (clean) it.share = clean; else delete it.share; return null; });
+    },
+    setGroceryLineShare(month, id, share) {
+      const clean = share === null ? null : cleanShare(share);
+      if ((share !== null && !clean) || !get().grocery.items.some(i => i.id === id)) return;
+      mutateMonth(month, m => {
+        const l = { ...(m.lines[id] || {}) };
+        if (clean) l.share = clean; else delete l.share;
+        if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
+      });
+    },
+    setGroceryPackShare(month, id, index, share) {
+      const clean = share === null ? null : cleanShare(share);
+      if ((share !== null && !clean) || !get().grocery.items.some(i => i.id === id)) return;
+      mutateMonth(month, m => {
+        const l = { ...(m.lines[id] || {}) };
+        if (!l.prices || !Number.isInteger(index) || index < 0 || index >= l.prices.length) return; // only a line priced pack by pack has packs
+        const packs = l.prices.map((_, i) => l.packShares?.[i] ?? null);
+        packs[index] = clean;
+        if (packs.some(Boolean)) l.packShares = packs; else delete l.packShares;
+        m.lines[id] = l;
+      });
+    },
+    setGroceryPayer(month, store, personId) {
+      mutateMonth(month, m => {
+        const payer = { ...(m.payer ?? {}) };
+        if (personId) payer[store] = personId; else delete payer[store];
+        if (Object.keys(payer).length) m.payer = payer; else delete m.payer;
+      });
+    },
   };
 };
