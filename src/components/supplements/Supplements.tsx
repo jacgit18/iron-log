@@ -8,6 +8,7 @@ import { SLOTS, scheduled, scheduleOf, slotLabel, slotTally } from '../../lib/su
 import { pickerKey } from '../../lib/picker.js';
 import Icon from '../Icon.jsx';
 import ItemPicker from '../ItemPicker.jsx';
+import Diet from './Diet.js';
 import SupplementLibrary from './SupplementLibrary.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
@@ -220,6 +221,7 @@ export default function Supplements() {
         <Week water={supp.water} goalOf={(k) => goalFor(supp, body, k).oz} end={d} selected={date} onPick={(k) => setSel(k === todayKey ? null : k)} />
         <p className="note">Ounces per day. A full bar means you hit your goal.</p>
       </section>
+      <Diet />
     </div>
   );
 }
