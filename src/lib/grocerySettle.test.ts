@@ -141,6 +141,24 @@ describe('what is owed to you', () => {
   });
 });
 
+describe('an item bought at another store this month', () => {
+  it('is that store\'s purchase, with that store\'s group as its default split and its bill', () => {
+    // Rice is Aldi's (just you); bought at BJ's this month it is split with BJ's group and is on BJ's bill.
+    const moved: GroceryMonth = { ...bought, lines: { ...bought.lines, rice: { got: true, store: "BJ's" } } };
+    const rice = purchasesOf(g, moved).find(p => p.itemId === 'rice')!;
+    expect(rice.store).toBe("BJ's");
+    expect(rice.parties).toEqual([ME, 'sis', 'mom']);
+    expect(storeSettlement(g, moved, "BJ's").bill).toBe(storeSettlement(g, bought, "BJ's").bill + 500);
+    expect(storesBought(g, purchasesOf(g, moved))).toEqual(["BJ's"]); // Aldi has nothing bought now
+    expect(purchasesOf(g, { ...bought, lines: { ...bought.lines, rice: { got: true, store: 'Gone' } } }).find(p => p.itemId === 'rice')!.store).toBe('Aldi'); // a removed store: back to the usual
+  });
+  it('an item\'s own split still wins over the new store\'s group', () => {
+    const own = { ...g, items: g.items.map(i => (i.id === 'rice' ? { ...i, share: { with: [] } } : i)) };
+    const moved: GroceryMonth = { ...bought, lines: { ...bought.lines, rice: { got: true, store: "BJ's" } } };
+    expect(purchasesOf(own, moved).find(p => p.itemId === 'rice')!.parties).toEqual([ME]);
+  });
+});
+
 describe('tax at a store', () => {
   it('is the receipt\'s amount: on that store\'s bill once, and every share still adds up to the bill', () => {
     const base = storeSettlement(g, bought, "BJ's");

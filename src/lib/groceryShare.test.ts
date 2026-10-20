@@ -121,3 +121,14 @@ describe('a month\'s tax', () => {
     expect(r.months['2026-08']!.tax).toEqual({ "BJ's": 70 });
   });
 });
+
+describe('a line\'s store this month', () => {
+  it('keeps a store name, keeps Anywhere (an empty name), and drops anything that is not a string', () => {
+    const m = normGroceryMonth({ lines: { a: { store: "BJ's" }, b: { store: '' }, c: { store: 5, got: true }, d: { store: '__proto__' } }, pulled: [] });
+    expect(m.lines.a).toEqual({ store: "BJ's" });
+    expect(m.lines.b).toEqual({ store: '' });
+    expect(m.lines.c).toEqual({ got: true });
+    expect(m.lines.d).toBeUndefined();
+    expect(normGroceryMonth({ lines: { a: { got: true } }, pulled: [] }).lines.a).toEqual({ got: true }); // an older line has none
+  });
+});
