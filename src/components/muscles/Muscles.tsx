@@ -89,9 +89,9 @@ function Ranking({ vol, onPick }: { vol: Volume; onPick: (m: MuscleKey) => void 
         ))}
       </div>
       {none.length > 0 && (
-        <p><b>Not trained:</b>{' '}
-          {none.map((r, i) => (
-            <span key={r.k}>{i > 0 && ', '}<button type="button" className="linkbtn" onClick={() => onPick(r.k)}>{MUSCLES[r.k].n}</button></span>
+        <p className="mnone"><b>Not trained:</b>
+          {none.map(r => (
+            <button key={r.k} type="button" className="linkbtn" onClick={() => onPick(r.k)}>{MUSCLES[r.k].n}</button>
           ))}
         </p>
       )}
