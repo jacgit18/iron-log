@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useFeature } from '../../features.js';
 import { money, monthLabel, spendByMonth } from '../../lib/grocery.js';
+import { hasSharing, shareByMonth } from '../../lib/grocerySettle.js';
 import './GrocerySpend.css';
 
 // What you bought each month: one bar per month (ticked items × price paid), a line at the average of the months you shopped in,
@@ -13,7 +15,11 @@ export default function GrocerySpend({ nowKey }: { nowKey: string }) {
   const g = useAppStore(s => s.grocery);
   const months = useAppStore(s => s.groceryMonths);
   const [count, setCount] = useState<(typeof RANGES)[number]>(6);
-  const rows = spendByMonth(g, months, nowKey, count);
+  // With sharing on, the bars are your share of what was bought (your own spending), not the whole bill; what you paid is said in the text.
+  const split = useFeature('grocerySplit') && hasSharing(g);
+  const shares = split ? shareByMonth(g, months, nowKey, count) : null;
+  const rows = spendByMonth(g, months, nowKey, count).map((r, i) => (shares ? { ...r, spent: shares[i]!.yours } : r));
+  const paidTotal = shares ? shares.reduce((a, r) => a + r.paid, 0) : 0;
   const shopped = rows.filter(r => r.bought > 0);
   const total = shopped.reduce((a, r) => a + r.spent, 0);
   const avg = shopped.length ? Math.round(total / shopped.length) : 0;
@@ -51,6 +57,7 @@ export default function GrocerySpend({ nowKey }: { nowKey: string }) {
           </div>
           <p className="gkey" aria-hidden="true"><i className="kbar" /> Bought <i className="kavg" /> Average {whole(avg)} <i className="kcur" /> This month so far</p>
           <p className="note">Total {money(total)} over {count} months{top ? ` · Most in ${monthLabel(top.key)} (${money(top.spent)})` : ''}. The current month is still filling in.</p>
+          {shares && <p className="note" id="groc-spend-share">These are your shares of what was split. You paid {money(paidTotal)} in all over these months.</p>}
         </>
       )}
     </>

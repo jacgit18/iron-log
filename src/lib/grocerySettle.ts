@@ -1,6 +1,6 @@
-import { lineCost, lineOf } from './grocery.js';
+import { lineCost, lineOf, shiftMonth } from './grocery.js';
 import { ME, partiesOf, settle, type Purchase, type Settlement } from './grocerySplit.js';
-import type { Grocery, GroceryGroup, GroceryMonth } from '../types.ts';
+import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson } from '../types.ts';
 
 /* ---------- A month of groceries, split ----------
    Turns what was bought in a month (ticked lines, packs priced one by one) into purchases with their parties, then into totals and a
@@ -8,6 +8,12 @@ import type { Grocery, GroceryGroup, GroceryMonth } from '../types.ts';
 
 /** The ids of everyone in any group, so a person who was removed is told apart from one who exists. */
 export const knownPeople = (g: Grocery): Set<string> => new Set((g.groups ?? []).flatMap(x => x.people.map(p => p.id)));
+
+/** Everyone in any group, once each, in the order the groups list them. */
+export const allPeople = (g: Grocery): GroceryPerson[] => {
+  const seen = new Set<string>();
+  return (g.groups ?? []).flatMap(x => x.people).filter(p => !seen.has(p.id) && !!seen.add(p.id));
+};
 
 /** The group a store defaults to, if any. */
 export const groupOfStore = (g: Grocery, store: string): GroceryGroup | undefined => g.groups?.find(x => x.stores.includes(store));
@@ -18,13 +24,23 @@ export function payerOf(g: Grocery, m: GroceryMonth, store: string): string {
   return id && knownPeople(g).has(id) ? id : ME;
 }
 
+/** Who shares an item this month, most specific first: the pack's own share, the line's, the item's, the store's group, else just you. */
+export function partiesFor(g: Grocery, item: GroceryItem, line?: GroceryLine, pack?: number): string[] {
+  const own = (pack !== undefined ? line?.packShares?.[pack] : undefined) ?? line?.share ?? item.share;
+  return partiesOf(own, groupOfStore(g, item.store), knownPeople(g));
+}
+
+/** A short label for a split: Just me, Me +2, or Not mine. */
+export const shareText = (parties: readonly string[]): string =>
+  !parties.includes(ME) ? 'Not mine' : parties.length === 1 ? 'Just me' : `Me +${parties.length - 1}`;
+
 export interface MonthPurchase extends Purchase { store: string; itemId: string }
 
 /** Every bought line of a month as purchases: a line priced pack by pack is one purchase per pack (each with its own share, else the line's,
  *  else the item's, else the store's group); any other line is one purchase for its whole cost. A line for an item that was removed counts
  *  as yours alone, as spending does. */
 export function purchasesOf(g: Grocery, m: GroceryMonth): MonthPurchase[] {
-  const known = knownPeople(g); const out: MonthPurchase[] = [];
+  const out: MonthPurchase[] = [];
   Object.entries(m.lines).forEach(([id, raw]) => {
     if (!raw.got) return;
     const it = g.items.find(x => x.id === id);
@@ -34,12 +50,15 @@ export function purchasesOf(g: Grocery, m: GroceryMonth): MonthPurchase[] {
       out.push({ store, itemId: id, cents, parties: [ME] });
       return;
     }
-    const l = lineOf(it, m); const group = groupOfStore(g, store); const usual = raw.share ?? it.share;
-    if (l.prices) l.prices.forEach((cents, i) => out.push({ store, itemId: id, cents, parties: partiesOf(raw.packShares?.[i] ?? usual, group, known) }));
-    else out.push({ store, itemId: id, cents: lineCost(l), parties: partiesOf(usual, group, known) });
+    const l = lineOf(it, m);
+    if (l.prices) l.prices.forEach((cents, i) => out.push({ store, itemId: id, cents, parties: partiesFor(g, it, raw, i) }));
+    else out.push({ store, itemId: id, cents: lineCost(l), parties: partiesFor(g, it, raw) });
   });
   return out;
 }
+
+/** Whether the list has any sharing set up, so the screens that show it can stay as they were for everyone else. */
+export const hasSharing = (g: Grocery): boolean => (g.groups?.length ?? 0) > 0;
 
 /** The stores that have something bought this month, in the list's order, with the no-store group last (`''`). */
 export function storesBought(g: Grocery, purchases: readonly MonthPurchase[]): string[] {
@@ -53,9 +72,19 @@ export function storeSettlement(g: Grocery, m: GroceryMonth, store: string, purc
   return settle(purchases.filter(p => p.store === store), payerOf(g, m, store), covered);
 }
 
-/** What the month cost in all (what was paid) and your share of it: the number that belongs in your own spending. */
+/** What you paid this month (the bills of the stores where you are the payer; a store someone else paid is not yours to have paid) and your share
+ *  of everything bought: the number that belongs in your own spending. */
 export function monthShare(g: Grocery, m: GroceryMonth): { paid: number; yours: number } {
   let paid = 0, yours = 0;
-  new Set(purchasesOf(g, m).map(p => p.store)).forEach(store => { const s = storeSettlement(g, m, store); paid += s.bill; yours += s.yourShare; });
+  new Set(purchasesOf(g, m).map(p => p.store)).forEach(store => { const s = storeSettlement(g, m, store); if (payerOf(g, m, store) === ME) paid += s.bill; yours += s.yourShare; });
   return { paid, yours };
+}
+
+/** What was paid and your share for each of the `count` months ending at `endKey` (oldest first), for the Spending view. */
+export function shareByMonth(g: Grocery, months: Record<string, GroceryMonth>, endKey: string, count: number) {
+  return Array.from({ length: count }, (_, i) => {
+    const key = shiftMonth(endKey, i - count + 1); const m = months[key];
+    const { paid, yours } = m ? monthShare(g, m) : { paid: 0, yours: 0 };
+    return { key, paid, yours };
+  });
 }
