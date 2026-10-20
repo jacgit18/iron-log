@@ -126,12 +126,15 @@ export function targetOf(cfg: Cfg, logs: Logs, item: CardItem, ph: PhaseKey | nu
 // The starting weight: the weight last logged for this exercise in this phase (on any card), else the program's weight.
 // A 1RM is kept for reference but does not set targets.
 export function baseTargetOf(cfg: Cfg, logs: Logs, item: CardItem, ph: PhaseKey | null | undefined): { w: number | null; src: string } {
-  const last = lastLog(logs, item.ex, ph);
+  const last = lastSession(logs, item.ex, ph);
   if (last && last.w != null && (last.w as unknown) !== '' && Number(last.w) > 0) return { w: Number(last.w), src: 'last session' };
   if (item.w != null) return { w: item.w, src: 'program' };
   if (item.bw) return { w: null, src: 'bodyweight' };
   return { w: null, src: '' };
 }
+// The last session you logged yourself: a check-off writes an entry at the target (`auto`), which is a plan ticked off, not a lift, so it
+// neither sets the next target nor shows as what you did last. Use `lastLog` where any entry will do (a date, a count).
+export const lastSession = (logs: Logs, exId: string, ph?: PhaseKey | null) => { const l = (logs[exId] || []).filter(e => !e.auto && (ph === undefined || (e.ph || null) === (ph || null))); return l.length ? l[l.length - 1] : null; };
 export const lastLog = (logs: Logs, exId: string, ph?: PhaseKey | null) => { const l = (logs[exId] || []).filter(e => ph === undefined || (e.ph || null) === (ph || null)); return l.length ? l[l.length - 1] : null; };
 
 // One lift can run in several phases (Chest Press: Strength on one day, Hypertrophy on another), so the
