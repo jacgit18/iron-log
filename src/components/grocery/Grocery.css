@@ -17,6 +17,23 @@
   padding: 0 14px;
   font-size: var(--fs-md);
 }
+/* The view switch (To get, At home, Spending) is the second level under the Daily tabs, which are the filled pill: an underline for the selected
+   view, no fill, so the two levels do not look like one control. Sizes and targets are unchanged. */
+.groc .gtop .seg {
+  background: none;
+  padding: 0;
+  gap: var(--sp-4);
+  border-radius: 0;
+}
+.groc .gtop .seg button {
+  border-radius: 0;
+  border-bottom: 3px solid transparent;
+}
+.groc .gtop .seg button.on {
+  background: none;
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
 .gmonth {
   display: flex;
   align-items: center;
