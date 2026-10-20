@@ -30,6 +30,8 @@ const fail = (msg, code = 2) => { console.error(msg); process.exit(code); };
 // database answered and said no (a wrong login or database name: trying again cannot help). Settings for tests: STAGING_DB_CONNECT_ATTEMPTS
 // (default 4, with 30 s to connect each time) and STAGING_DB_CONNECT_PAUSE_MS (default 5000, between tries).
 const REFUSED_FOR_GOOD = /^(28|3D|42)/; // invalid login, no such database, a missing role or table: the server answered
+// Failures that a waking branch cannot cause: the name does not exist (a typo) or the certificate is wrong. Say so at once.
+const NOT_A_WAKING_BRANCH = new Set(['ENOTFOUND', 'ERR_TLS_CERT_ALTNAME_INVALID', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'SELF_SIGNED_CERT_IN_CHAIN', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'CERT_HAS_EXPIRED']);
 async function connect(url) {
   const attempts = Math.max(1, Number(process.env.STAGING_DB_CONNECT_ATTEMPTS) || 4);
   const pause = Number(process.env.STAGING_DB_CONNECT_PAUSE_MS ?? 5000);
@@ -42,8 +44,8 @@ async function connect(url) {
       await client.end().catch(() => {});
       const why = e instanceof Error ? e.message : String(e);
       const code = typeof e === 'object' && e && 'code' in e ? String(e.code) : '';
-      if (n >= attempts || REFUSED_FOR_GOOD.test(code)) fail(`Cannot connect${attempts > 1 ? ` (attempt ${n} of ${attempts})` : ''}: ${why}`);
-      console.error(`Could not connect (attempt ${n} of ${attempts}): ${why}. The branch may be waking from Neon's archive; trying again in ${Math.round((pause * n) / 1000)} s.`);
+      if (n >= attempts || REFUSED_FOR_GOOD.test(code) || NOT_A_WAKING_BRANCH.has(code)) fail(`Cannot connect${attempts > 1 ? ` (attempt ${n} of ${attempts})` : ''}: ${why}`);
+      console.error(`Could not connect (attempt ${n} of ${attempts}): ${why}. The branch may be waking from Neon's archive; trying again in ${((pause * n) / 1000).toFixed(1)} s.`);
       await new Promise(done => setTimeout(done, pause * n));
     }
   }

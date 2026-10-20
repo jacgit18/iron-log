@@ -136,18 +136,19 @@ describe('staging-db.mjs', () => {
 
     it('tries again and gets through once the database answers', async () => {
       const real = new URL(url);
-      // A stand-in that only starts listening after a moment, then passes everything to the real database.
-      const probe = createServer().listen(0);
-      await new Promise(done => probe.once('listening', done));
-      const port = (probe.address() as AddressInfo).port;
-      await new Promise(done => probe.close(done));
+      // A stand-in for the database that drops every connection for the first half second (as a branch still waking does), then passes
+      // everything through. It owns its port from the start, so nothing else can take it.
+      let awake = false;
       const proxy = createServer(client => {
+        if (!awake) { client.destroy(); return; }
         const upstream = connect(Number(real.port), real.hostname);
         client.pipe(upstream).pipe(client);
         client.on('error', () => upstream.destroy());
         upstream.on('error', () => client.destroy());
       });
-      const later = setTimeout(() => proxy.listen(port, '127.0.0.1'), 500);
+      await new Promise<void>(done => proxy.listen(0, '127.0.0.1', done));
+      const port = (proxy.address() as AddressInfo).port;
+      const later = setTimeout(() => { awake = true; }, 500);
       try {
         const viaProxy = new URL(url);
         viaProxy.hostname = '127.0.0.1';
@@ -168,6 +169,13 @@ describe('staging-db.mjs', () => {
       expect(out.status).toBe(2);
       expect(out.stderr).toContain('Could not connect (attempt 1 of 2)');
       expect(out.stderr).toContain('Cannot connect (attempt 2 of 2)');
+    });
+
+    it('does not try again for a host name that does not exist', async () => {
+      const out = await runWith({ STAGING_DB_CONNECT_ATTEMPTS: '3', STAGING_DB_CONNECT_PAUSE_MS: '100' })('postgres://u:p@no-such-host.invalid/x', 'check');
+      expect(out.status).toBe(2);
+      expect(out.stderr).toContain('Cannot connect (attempt 1 of 3)');
+      expect(out.stderr).not.toContain('Could not connect');
     });
 
     it('does not try again when the server itself refuses the login', async () => {
