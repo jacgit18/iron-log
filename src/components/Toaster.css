@@ -23,7 +23,7 @@ body.timing .toasts {
 .toasts .notice {
   margin: 0;
   pointer-events: auto;
-  box-shadow: 0 4px 14px rgba(0,0,0,.28);
+  box-shadow: var(--shadow-toast);
   border: 1px solid var(--line);
 }
 
