@@ -1,6 +1,6 @@
 import { exInfo } from '../lib/data.js';
 import { fmtShort, parseDate } from '../shared/dates.js';
-import { defaultLogDate, describe, lastLog, newEntryId, phaseOf, setItemDone } from '../lib/logic.js';
+import { defaultLogDate, describe, lastSession, newEntryId, phaseOf, setItemDone } from '../lib/logic.js';
 import { setExerciseDefault, setOverride } from './librarySlice.js';
 import { entryId, findEntry } from '../lib/export.js';
 import { GOAL_KEYS, bestLift, goalPhaseLabel, liftGoalsOf } from '../lib/liftGoal.js';
@@ -27,7 +27,7 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
   quickLog(slotId, idx) {
     const s = get().slotById(slotId); if (!s) return;
     const { cfg, week, logs } = get();
-    const last = lastLog(logs, s.items[idx].ex, phaseOf(cfg, week, s, idx)); if (!last) return;
+    const last = lastSession(logs, s.items[idx].ex, phaseOf(cfg, week, s, idx)); if (!last) return;
     // Once per card and week: a second tap (the button stays on the card) would log the session twice.
     if ((logs[s.items[idx].ex] || []).some(e => !e.auto && e.slot === slotId && e.wk === get().weekKey())) { flag('Already logged this week'); return; }
     const e: LogEntry = { d: defaultLogDate(get().weekStart), ph: last.ph || null, w: last.w, s: last.s, slot: slotId, wk: get().weekKey() };

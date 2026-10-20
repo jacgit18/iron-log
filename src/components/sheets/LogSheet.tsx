@@ -5,7 +5,7 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
 import { ymd, parseDate, fmtShort } from '../../shared/dates.js';
 import {
-  phaseOf, isTimed, targetOf, rxOf, lastLog, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
+  phaseOf, isTimed, targetOf, rxOf, lastSession, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
 } from '../../lib/logic.js';
 import EquipmentField from '../EquipmentField.jsx';
 import Sheet from '../Sheet.jsx';
@@ -46,7 +46,7 @@ export default function LogSheet({ slotId, idx }: { slotId: string; idx: number 
   const phv = (ph || null) as PhaseKey | null; const iso = isTimed(phv);
   const t = targetOf(cfg, logs, it, phv);
   const rx = rxOf(cfg, it, phv);
-  const last = lastLog(logs, it.ex, phv);
+  const last = lastSession(logs, it.ex, phv);
   const hist = (logs[it.ex] || []).slice(-6).reverse();
   const goals = liftGoalsStatus(cfg, it.ex, logs[it.ex], today, phv);
 

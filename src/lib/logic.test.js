@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { parseDate } from '../shared/dates.js';
 import { BUILTIN, slotsFor } from './data.js';
 import {
-  DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, backoffOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
+  DEFAULT_CFG, programFor, round, rxOf, lastSession, progressionOf, stallOf, backoffOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
   programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, overflowSlots, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets, weekSlots, normExperiments,
   dayClash, clashCount, dailyExercises, planOrder, countsForClash, countsForFinish, isFinished, planCard, planFix,
@@ -62,6 +62,15 @@ describe('progression and stalls', () => {
   const item = { ex: 'hack', ph: 'hyp' };
   const e = (d, w, r, wk) => ({ d, ph: 'hyp', w, s: 4, r, wk });
 
+  it('a ticked-off card (an auto entry at the suggested weight) is not the last session you lifted', () => {
+    const real = [e('2026-09-01', 180, 15, '2026-08-31'), e('2026-09-08', 180, 15, '2026-09-07')];
+    const logs = { hack: [...real, { ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] };
+    expect(lastSession(logs, 'hack', 'hyp')).toBe(real[1]);
+    expect(lastSession({ hack: [{ ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] }, 'hack', 'hyp')).toBeNull();
+    expect(targetOf(cfg(), logs, item, 'hyp')).toEqual({ w: 185, src: 'up from 180 lb', up: true }); // still the green suggestion, not "last session"
+    const ticked = { hack: [{ ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] };
+    expect(targetOf(cfg(), ticked, { ...item, w: 150 }, 'hyp')).toEqual({ w: 150, src: 'program' }); // only ticks so far: the program weight, not the ticked 185
+  });
   it('suggests a heavier weight after two full sessions at the target', () => {
     const logs = { hack: [e('2026-09-01', 270, 15), e('2026-09-08', 270, 15)] };
     expect(progressionOf(cfg(), logs, item, 'hyp')).toEqual({ w: 275, from: 270 });
@@ -263,7 +272,7 @@ describe('check-offs log the planned numbers', () => {
   it('does not raise the suggested weight or flag a stall on check-offs alone', () => {
     const a = (d, wk) => ({ d, ph: 'hyp', w: 270, s: 4, r: 15, slot: 'A-d3s1', wk, auto: true });
     const logs = { hack: [a('2026-09-01', '2026-08-30'), a('2026-09-08', '2026-09-06'), a('2026-09-15', '2026-09-13')] };
-    expect(targetOf(cfg(), logs, { ex: 'hack', ph: 'hyp' }, 'hyp')).toEqual({ w: 270, src: 'last session' });
+    expect(targetOf(cfg(), logs, { ex: 'hack', ph: 'hyp', w: 270 }, 'hyp')).toEqual({ w: 270, src: 'program' }); // ticks are not a session: the program weight stays the source
     expect(stallOf(cfg(), logs, 'hack', 'hyp')).toBeNull();
   });
 });
@@ -680,6 +689,25 @@ describe('planOrder: a new day order after a day is finished', () => {
 describe('moving cards follows the planner\'s clash rule', () => {
   const sl = (id, day, ex, more = {}) => ({ id, day, type: 'single', items: [{ ex }], ...more });
   const c = cfg({ ex: { sq: { n: 'Squat' }, b: { n: 'Bench' }, r: { n: 'Row' }, sled: { n: 'Sled' }, grip: { n: 'Grip' } } });
+  it('an exercise trained on 3 or more days with under 4 sets a session gives no back-to-back warning, but 4 sets or 2 days still do', () => {
+    const w = normWeek(null);
+    const at = (id, day, sets) => ({ id, day, type: 'single', items: [{ ex: 'grip', ph: 'hyp', rx: `${sets} × 12` }] });
+    const x = sl('x', 6, 'b'); // a workout day without the exercise, so it is not simply "on every workout day"
+    const run = (cards, week = w) => moveClashes(c, week, [...cards, x], cards[0], 2);
+    const light = [at('a', 1, 3), at('b', 3, 3), at('c', 5, 3)];
+    expect(run(light)).toEqual([]); // 3 days, 3 sets: light and frequent
+    expect(run([at('a', 1, 3), at('b', 3, 4), at('c', 5, 3)]).length).toBeGreaterThan(0); // one of the cards has 4 sets
+    expect(run([at('a', 1, 3), at('b', 3, 3)]).length).toBeGreaterThan(0); // only 2 days
+    expect(run(light, normWeek({ skipped: { c: true } })).length).toBeGreaterThan(0); // a skipped card does not count toward 3
+    expect(run([...light, at('d', 2, 3)]).length).toBeGreaterThan(0); // the same day is a clash for any exercise
+  });
+  it('the order suggestion leaves out a light, frequent exercise too, but not the same one at 4 sets', () => {
+    const w = normWeek(null);
+    const at = (id, day, sets) => ({ id, day, type: 'single', items: [{ ex: 'grip', ph: 'hyp', rx: `${sets} × 12` }] });
+    const x = sl('x', 5, 'b');
+    expect(planOrder(c, w, [at('a', 1, 3), at('b', 2, 3), at('c', 3, 3), x], 1)).toBeNull(); // 3 days in a row, 3 sets: nothing to fix
+    expect(planOrder(c, w, [at('a', 1, 4), at('b', 2, 4), at('c', 3, 4), x], 1)).not.toBeNull(); // same days at 4 sets: still suggested
+  });
   it('Home and either/or cards give no back-to-back warning, either moving or sitting next door', () => {
     const w = normWeek(null);
     const home = sl('h', 1, 'grip', { sec: 'Home' }); const home3 = sl('h3', 3, 'grip', { sec: 'Home' });
