@@ -16,6 +16,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+// A key set in .github/pr-kit.json replaces that key's default entirely (it does not add to it), so a project that sets `notUserFacing` or `ui` lists every pattern.
 const DEFAULTS = {
   // Paths that can never change what a user sees (regex source strings).
   notUserFacing: ['^docs?/', '^tests?/', '^e2e[\\w-]*/', '^scripts/', '^tools/', '^\\.github/', '^\\.githooks/', '^\\.husky/', '^\\.claude/', '\\.(test|spec)\\.[jt]sx?$', '\\.md$', '^package(-lock)?\\.json$', '^tsconfig[\\w.]*\\.json$', '^Dockerfile$', '^docker-compose\\.ya?ml$'],
