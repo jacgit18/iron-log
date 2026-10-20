@@ -94,14 +94,25 @@ const commitTime = () => {
 };
 const appVersion = [process.env.APP_VERSION, commitTime()].find(v => v && /^\d{1,12}$/.test(v)) || 'dev';
 
+// Playwright's specs in e2e/, e2e-sync/ and e2e-accounts/ are run by `npm run e2e` and `npm run e2e:sync`, not Vitest.
+// .claude/worktrees holds agents' copies of the repo.
+const SKIP = ['**/node_modules/**', 'e2e/**', 'e2e-sync/**', 'e2e-accounts/**', '.claude/**'];
+
 export default defineConfig({
   base,
   define: { __APP_VERSION__: JSON.stringify(appVersion) },
   // The API runs on its own port in development; the app calls it on its own origin, as it will in production (ADR 010).
   // The proxy keeps the browser's Host header, as production's single origin does, so the API's Origin check (originGuard) sees a same-origin page.
   server: { proxy: { '/api': { target: process.env.API_ORIGIN || 'http://localhost:3001', changeOrigin: false } } },
-  // Playwright's specs in e2e/, e2e-sync/ and e2e-accounts/ are run by `npm run e2e` and `npm run e2e:sync`, not Vitest.
-  test: { exclude: ['**/node_modules/**', 'e2e/**', 'e2e-sync/**', 'e2e-accounts/**', '.claude/**'] }, // .claude/worktrees holds agents' copies of the repo
+  // Two projects so the server tests, which start a Postgres container each, get a 30 s limit instead of Vitest's 5 s: on a busy machine
+  // (several sessions' checks at once) a slow start is not a failure. Everything else keeps the default. A server test file is any
+  // *.test.* under server/; the app project takes the rest.
+  test: {
+    projects: [
+      { extends: true, test: { name: 'server', include: ['server/**/*.test.{js,jsx,ts,tsx}'], exclude: SKIP, testTimeout: 30_000 } },
+      { extends: true, test: { name: 'app', include: ['**/*.test.{js,jsx,ts,tsx}'], exclude: [...SKIP, 'server/**'] } },
+    ],
+  },
   plugins: [
     react(),
     preloadTitleFont(),
