@@ -242,19 +242,21 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     // "Take off the list": you don't need it this month. It is marked as had, so it is off that month's list, and its other lines stay.
     takeGroceryOff(month, id) { get().setGroceryHave(month, id, true); },
     // Skip everything still to get this month: each unticked item is marked as had (off the list until the 1st), as Take off the list does for one.
-    // Undo puts back each line as it was, except one you ticked bought since. Returns how many were skipped.
+    // Undo takes that mark off again (a count or price typed since stays), except on one you bought since. Returns how many were skipped.
     takeGroceryAllOff(month) {
       if (!MONTH_RE.test(month) || get().blocked()) return 0;
       const m = get().groceryMonths[month] || emptyMonth();
       const ids = onList(get().grocery, m, true).filter(i => !lineOf(i, m).got).map(i => i.id);
       if (!ids.length) return 0;
-      const before = Object.fromEntries(ids.map(id => [id, m.lines[id] ? structuredClone(m.lines[id]) : null]));
       mutateMonth(month, mm => ids.forEach(id => { mm.lines[id] = { ...(mm.lines[id] || {}), have: true }; }));
       get().noteRemoved('groceryoff', `${ids.length} ${ids.length === 1 ? 'item' : 'items'} from this month’s list`, () => {
+        if (get().blocked()) return false; // sync is loading: nothing was put back, so say so
         mutateMonth(month, mm => ids.forEach(id => {
-          if (mm.lines[id]?.got) return; // bought since: leave it
-          const was = before[id]; if (was) mm.lines[id] = was; else delete mm.lines[id];
+          const l = { ...(mm.lines[id] || {}) }; if (l.got) return; // bought since: leave it
+          delete l.have;
+          if (Object.keys(l).length) mm.lines[id] = l; else delete mm.lines[id];
         }));
+        return true;
       });
       return ids.length;
     },
