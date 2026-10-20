@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '../test/browserStubs.js';
 import { mem } from '../test/browserStubs.js';
-
-// vi.mock is hoisted above the imports, so the flag it returns is a plain holder the tests change.
 import { cancelPush, disablePush, enablePush, pushCovers, pushKindOn, pushOn, renewPush, schedulePush, setPushKind } from './pushClient.js';
 
 const saved: Record<string, PropertyDescriptor | undefined> = {};
