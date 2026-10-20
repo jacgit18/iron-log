@@ -119,6 +119,22 @@ describe('staging-db.mjs', () => {
     expect(await count('auth."session"')).toBe(0);
   });
 
+  it('a failed query after the connect exits 2 ("cannot read"), not 1 ("not marked")', async () => {
+    await sql`create role probe_reader login password 'probe'`.execute(db);
+    await sql`revoke execute on function shobj_description(oid, name) from public`.execute(db);
+    try {
+      const login = new URL(url);
+      login.username = 'probe_reader';
+      login.password = 'probe';
+      const out = await run(login.href, 'check');
+      expect(out.status).toBe(2);
+      expect(out.stderr).toContain('Cannot read the database');
+    } finally {
+      await sql`grant execute on function shobj_description(oid, name) to public`.execute(db);
+      await sql`drop role probe_reader`.execute(db);
+    }
+  });
+
   it('never prints the connection string', async () => {
     const out = await run(url, 'clear', '--host', new URL(url).hostname);
     expect(out.stdout + out.stderr).not.toContain(new URL(url).password);
@@ -136,11 +152,11 @@ describe('staging-db.mjs', () => {
 
     it('tries again and gets through once the database answers', async () => {
       const real = new URL(url);
-      // A stand-in for the database that drops every connection for the first half second (as a branch still waking does), then passes
-      // everything through. It owns its port from the start, so nothing else can take it.
-      let awake = false;
+      // A stand-in for the database that drops the first two connections (as a branch still waking does), then passes everything through.
+      // Counted, not timed, so a slow machine cannot change the outcome; it owns its port from the start, so nothing else can take it.
+      let dropped = 0;
       const proxy = createServer(client => {
-        if (!awake) { client.destroy(); return; }
+        if (dropped < 2) { dropped++; client.destroy(); return; }
         const upstream = connect(Number(real.port), real.hostname);
         client.pipe(upstream).pipe(client);
         client.on('error', () => upstream.destroy());
@@ -148,7 +164,6 @@ describe('staging-db.mjs', () => {
       });
       await new Promise<void>(done => proxy.listen(0, '127.0.0.1', done));
       const port = (proxy.address() as AddressInfo).port;
-      const later = setTimeout(() => { awake = true; }, 500);
       try {
         const viaProxy = new URL(url);
         viaProxy.hostname = '127.0.0.1';
@@ -159,7 +174,6 @@ describe('staging-db.mjs', () => {
         expect(out.stdout).toContain('marked as staging');
         expect(out.status).toBe(0);
       } finally {
-        clearTimeout(later);
         proxy.close();
       }
     });
@@ -171,12 +185,12 @@ describe('staging-db.mjs', () => {
       expect(out.stderr).toContain('Cannot connect (attempt 2 of 2)');
     });
 
-    it('does not try again for a host name that does not exist', async () => {
+    it('does not try again for a host name that does not exist', async ({ skip }) => {
       const out = await runWith({ STAGING_DB_CONNECT_ATTEMPTS: '3', STAGING_DB_CONNECT_PAUSE_MS: '100' })('postgres://u:p@no-such-host.invalid/x', 'check');
-      expect(out.status).toBe(2);
       // With no working resolver (offline, a sandbox) the lookup fails with EAI_AGAIN, a temporary failure the script rightly retries:
-      // that is not the case under test, so it is not judged here.
-      if (out.stderr.includes('EAI_AGAIN')) return;
+      // that is not the case under test, so the test is skipped (and shows as skipped) rather than passed.
+      if (out.stderr.includes('EAI_AGAIN')) skip();
+      expect(out.status).toBe(2);
       expect(out.stderr).toContain('Cannot connect (attempt 1 of 3)');
       expect(out.stderr).not.toContain('Could not connect');
     });
