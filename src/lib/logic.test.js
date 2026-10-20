@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { parseDate } from '../shared/dates.js';
 import { BUILTIN, slotsFor } from './data.js';
 import {
-  DEFAULT_CFG, programFor, round, rxOf, progressionOf, stallOf, backoffOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
+  DEFAULT_CFG, programFor, round, rxOf, lastSession, progressionOf, stallOf, backoffOf, targetOf, summarizeSets, setsOfEntry, describe as describeEntry,
   isDone, isItemDone, setCardDone, setItemDone, tally, normWeek, defaultLogDate, currentLayout, moveClashes,
   programWeights, bestByPhase, autoLogs, DAYS, shownDay, programDay, dayTitle, restBlocked, overflowSlots, isOrder, orderOf, posOf, colOf, dayAt, altDay, dayDate, todayCol, leftovers, moveTargets, weekSlots, normExperiments,
   dayClash, clashCount, dailyExercises, planOrder, countsForClash, countsForFinish, isFinished, planCard, planFix,
@@ -62,6 +62,15 @@ describe('progression and stalls', () => {
   const item = { ex: 'hack', ph: 'hyp' };
   const e = (d, w, r, wk) => ({ d, ph: 'hyp', w, s: 4, r, wk });
 
+  it('a ticked-off card (an auto entry at the suggested weight) is not the last session you lifted', () => {
+    const real = [e('2026-09-01', 180, 15, '2026-08-31'), e('2026-09-08', 180, 15, '2026-09-07')];
+    const logs = { hack: [...real, { ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] };
+    expect(lastSession(logs, 'hack', 'hyp')).toBe(real[1]);
+    expect(lastSession({ hack: [{ ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] }, 'hack', 'hyp')).toBeNull();
+    expect(targetOf(cfg(), logs, item, 'hyp')).toEqual({ w: 185, src: 'up from 180 lb', up: true }); // still the green suggestion, not "last session"
+    const ticked = { hack: [{ ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] };
+    expect(targetOf(cfg(), ticked, { ...item, w: 150 }, 'hyp')).toEqual({ w: 150, src: 'program' }); // only ticks so far: the program weight, not the ticked 185
+  });
   it('suggests a heavier weight after two full sessions at the target', () => {
     const logs = { hack: [e('2026-09-01', 270, 15), e('2026-09-08', 270, 15)] };
     expect(progressionOf(cfg(), logs, item, 'hyp')).toEqual({ w: 275, from: 270 });
@@ -263,7 +272,7 @@ describe('check-offs log the planned numbers', () => {
   it('does not raise the suggested weight or flag a stall on check-offs alone', () => {
     const a = (d, wk) => ({ d, ph: 'hyp', w: 270, s: 4, r: 15, slot: 'A-d3s1', wk, auto: true });
     const logs = { hack: [a('2026-09-01', '2026-08-30'), a('2026-09-08', '2026-09-06'), a('2026-09-15', '2026-09-13')] };
-    expect(targetOf(cfg(), logs, { ex: 'hack', ph: 'hyp' }, 'hyp')).toEqual({ w: 270, src: 'last session' });
+    expect(targetOf(cfg(), logs, { ex: 'hack', ph: 'hyp', w: 270 }, 'hyp')).toEqual({ w: 270, src: 'program' }); // ticks are not a session: the program weight stays the source
     expect(stallOf(cfg(), logs, 'hack', 'hyp')).toBeNull();
   });
 });
