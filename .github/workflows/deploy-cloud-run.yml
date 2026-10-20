@@ -272,6 +272,9 @@ jobs:
   # `production` reviewer already approved the deploy.
   release:
     needs: deploy
+    # `always()` because the default success() also looks at `staging`, which is skipped on a hand run with "skip staging" (or while
+    # STAGING_ENABLED is not true) and would skip this job too. A deploy that did not succeed still gets no release.
+    if: always() && needs.deploy.result == 'success'
     runs-on: ubuntu-26.04
     # Shares a lock with release-stage.yml, so two tags are never numbered at once.
     concurrency:
