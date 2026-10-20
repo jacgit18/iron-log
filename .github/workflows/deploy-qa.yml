@@ -1,0 +1,148 @@
+name: Deploy to QA
+
+# Puts one branch, tag, commit or pull request on the QA service to try it before it merges (ADR 060). Start it by hand: Actions -> Deploy to
+# QA -> Run workflow, with the ref (a branch name, a tag, a commit, or `refs/pull/<number>/head`; blank is main). The last deploy wins. It is
+# not part of the production gate and needs no approval.
+#
+# It applies that ref's database migrations to the QA database first (after checking the database carries the QA mark that
+# `scripts/qa-db.mjs reset --apply` sets), then deploys a no-traffic revision, checks it, promotes it and checks it live.
+#
+# The Google sign-in accepts this repository's `main` branch only, so the workflow itself runs from main. Two checkouts keep the code that
+# runs with the deployer's rights (the scripts, the database tools) from main, and take only the app source and its migrations from the ref:
+# a branch cannot change what the deploy does with production-capable credentials. The ref's Dockerfile is built by Cloud Build as the
+# narrow build account, and its migrations run against the QA database only (which holds no real users' data).
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'What to put on QA: a branch name, tag, commit, or refs/pull/<number>/head. Blank is main'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federation
+
+# One QA deploy at a time, and never cancel one halfway.
+concurrency:
+  group: deploy-qa
+  cancel-in-progress: false
+
+jobs:
+  qa:
+    # The keyless Google login accepts only this repository's main branch, so the workflow has to be started from it.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
+    environment: qa
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: us-central1
+      IRON_LOG_ENV: qa
+      SERVICE: iron-log-qa
+    steps:
+      # The scripts and tools: always main.
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          path: main
+      # What is being tried: the app source and its migrations.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+          path: app
+          fetch-depth: 0
+      - name: Say what is being deployed
+        id: what
+        env:
+          # A ref name is text from whoever started the run (git allows `$`, quotes and `;` in names): it reaches the shell only as a
+          # variable, never pasted into the script.
+          REF: ${{ inputs.ref || 'main' }}
+        run: |
+          sha="$(git -C app rev-parse --short HEAD)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Deploying $REF (commit $sha) to QA"
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: main/package-lock.json
+      - name: Install the database tools (from main)
+        working-directory: main
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      # The QA database must carry the mark `scripts/qa-db.mjs reset --apply` leaves, so a connection string that points at another database
+      # (production's or staging's) stops here, before a single migration runs.
+      - name: Check the database is the QA one
+        working-directory: main
+        env:
+          QA_DATABASE_URL: ${{ secrets.QA_DATABASE_URL }}
+        run: node scripts/qa-db.mjs check
+
+      # The ref's migrations, tried on the QA database before the code that needs them (dbmate applies only what has not run).
+      - name: Apply the ref's migrations to the QA database
+        working-directory: main
+        env:
+          DATABASE_URL: ${{ secrets.QA_DATABASE_URL }}
+        run: npx dbmate --no-dump-schema --migrations-dir ../app/db/migrations up
+
+      # The revision that has the traffic now, so a bad deploy can be put back. The first QA deploy is made by hand (runbook section 22),
+      # so the service exists by the time this runs.
+      - name: What is live on QA now
+        id: live
+        run: |
+          if ! described="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json)"; then
+            echo "::error title=QA is not set up yet::The service $SERVICE does not exist. Do the setup in runbook section 22 first (the first deploy is made by hand)."
+            exit 1
+          fi
+          revision="$(printf '%s' "$described" | python3 -c 'import json,sys; t=json.load(sys.stdin)["status"]["traffic"]; print(max(t, key=lambda x: x.get("percent", 0))["revisionName"])')"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "Live on QA: $revision"
+
+      # Run from the app checkout (that is the source Cloud Build takes) with main's copy of the script.
+      - name: Build and deploy the revision with no traffic
+        id: candidate
+        working-directory: app
+        env:
+          BUILD_SA: iron-log-build@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+          # Main's build file, not the ref's: a branch's own build steps would run as the build account, which can write to the image
+          # repository production and staging reuse images from.
+          CLOUDBUILD_CONFIG: ${{ github.workspace }}/main/cloudbuild.yaml
+        run: |
+          "$GITHUB_WORKSPACE/main/scripts/deploy-cloud-run.sh" candidate | tee "$RUNNER_TEMP/candidate.log"
+          echo "url=$(sed -n 's/^CANDIDATE_URL=//p' "$RUNNER_TEMP/candidate.log")" >> "$GITHUB_OUTPUT"
+
+      - name: Check the revision before it gets any traffic
+        working-directory: app
+        run: |
+          if "$GITHUB_WORKSPACE/main/scripts/ci-deploy.sh" smoke "${{ steps.candidate.outputs.url }}"; then exit 0; fi
+          echo "::error title=The QA revision failed its check::It never received traffic; QA still runs ${{ steps.live.outputs.revision }}."
+          "$GITHUB_WORKSPACE/main/scripts/deploy-cloud-run.sh" discard || true
+          exit 1
+
+      - name: Send traffic to the revision
+        working-directory: app
+        run: |
+          "$GITHUB_WORKSPACE/main/scripts/deploy-cloud-run.sh" promote
+
+      - name: Check the live QA service
+        working-directory: app
+        env:
+          REF: ${{ steps.what.outputs.ref }}
+        run: |
+          url="https://${SERVICE}-$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)').${REGION}.run.app"
+          if ! "$GITHUB_WORKSPACE/main/scripts/ci-deploy.sh" smoke "$url"; then
+            echo "::error title=The live QA service failed its check::Putting QA back on ${{ steps.live.outputs.revision }}."
+            gcloud run services update-traffic "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --to-revisions "${{ steps.live.outputs.revision }}=100"
+            exit 1
+          fi
+          {
+            echo "### QA is running $REF"
+            echo "Commit \`${{ steps.what.outputs.sha }}\`, at $url"
+            echo "Its migrations were applied to the QA database. QA starts empty: sign in with Google (the QA client), or import a data file in the app."
+          } >> "$GITHUB_STEP_SUMMARY"

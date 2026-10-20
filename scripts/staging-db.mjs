@@ -18,48 +18,9 @@
 //                               neither set it refuses too, because it could not tell. `check` needs neither.
 //
 // The URL is never printed. Run `clear` by hand each time staging is made or reset from production (the mark is lost on a reset).
-import { existsSync, readFileSync } from 'node:fs';
-import pg from 'pg';
+import { applyAppRole, connect, fail, guardHost, readMark, setMark } from './lib/db-script.mjs';
 
 const MARKER = 'iron-log staging';
-
-const fail = (msg, code = 2) => { console.error(msg); process.exit(code); };
-
-// Neon archives a branch that is older than 14 days and has not been used for a day, and un-archives it on the first connection, which can
-// take longer than a normal connect (the docs give no time). So a failed connect is tried again, with a longer wait each time, unless the
-// database answered and said no (a wrong login or database name: trying again cannot help). Settings for tests: STAGING_DB_CONNECT_ATTEMPTS
-// (default 4, with 30 s to connect each time) and STAGING_DB_CONNECT_PAUSE_MS (default 5000, between tries).
-const REFUSED_FOR_GOOD = /^(28|3D|42)/; // invalid login, no such database, a missing role or table: the server answered
-// Failures that a waking branch cannot cause: the name does not exist (a typo) or the certificate is wrong. Say so at once.
-const NOT_A_WAKING_BRANCH = new Set(['ENOTFOUND', 'ERR_TLS_CERT_ALTNAME_INVALID', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'SELF_SIGNED_CERT_IN_CHAIN', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'CERT_HAS_EXPIRED']);
-async function connect(url) {
-  const attempts = Math.max(1, Number(process.env.STAGING_DB_CONNECT_ATTEMPTS) || 4);
-  const pause = Number(process.env.STAGING_DB_CONNECT_PAUSE_MS ?? 5000);
-  for (let n = 1; ; n++) {
-    const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 30_000, statement_timeout: 30_000 });
-    try {
-      await client.connect();
-      // If the connection is cut later, pg also emits 'error' on the client; with no listener Node dies with exit 1 (which `check` documents as
-      // "not marked as staging"). The query that is running rejects with the same error, and the catch at the bottom reports it.
-      client.on('error', () => {});
-      return client;
-    } catch (e) {
-      await client.end().catch(() => {});
-      const why = e instanceof Error ? e.message : String(e);
-      const code = typeof e === 'object' && e && 'code' in e ? String(e.code) : '';
-      if (n >= attempts || REFUSED_FOR_GOOD.test(code) || NOT_A_WAKING_BRANCH.has(code)) fail(`Cannot connect${attempts > 1 ? ` (attempt ${n} of ${attempts})` : ''}: ${why}`);
-      // A refused or unreachable address is the URL or the network, not a branch waking up, so the archive hint is left off.
-      const hint = ['ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH'].includes(code) ? '' : " The branch may be waking from Neon's archive;";
-      console.error(`Could not connect (attempt ${n} of ${attempts}): ${why}.${hint} Trying again in ${((pause * n) / 1000).toFixed(1)} s.`);
-      await new Promise(done => setTimeout(done, pause * n));
-    }
-  }
-}
-
-async function readMark(client) {
-  const { rows } = await client.query("select shobj_description(oid, 'pg_database') as mark from pg_database where datname = current_database()");
-  return rows[0]?.mark ?? null;
-}
 
 // What `clear` touches: a statement to count and a statement to change, per table.
 const STEPS = [
@@ -75,45 +36,11 @@ const STEPS = [
 
 const APP_ROLE = 'ironlog_staging';
 
-// The staging login: created on this branch only (a role belongs to one Neon branch, so production never sees it), a member of ironlog_app.
-// A reset from production loses it with the rest, which is why `clear` makes it.
-async function applyAppRole(client) {
-  await client.query(`do $$ begin if not exists (select 1 from pg_roles where rolname = '${APP_ROLE}') then create role ${APP_ROLE} login; end if; end $$`);
-  await client.query(`grant ironlog_app to ${APP_ROLE}`);
-  const password = process.env.STAGING_APP_PASSWORD;
-  if (password) {
-    const { rows } = await client.query(`select format('alter role ${APP_ROLE} login password %L', $1::text) as q`, [password]);
-    await client.query(rows[0].q);
-  }
-}
-
 async function check(client) {
   const mark = await readMark(client);
   if (mark === MARKER) { console.log('This database is marked as staging.'); return 0; }
   console.error('This database is not marked as staging. Run: node scripts/staging-db.mjs clear --host <host> --apply');
   return 1;
-}
-
-// Neon's pooled address is the same compute as the direct one with "-pooler" in the first label.
-const sameHost = h => h.replace(/-pooler(?=\.)/, '');
-
-// Production's owner URL, from the same two places scripts/prod-db.sh reads; null when neither is there.
-function productionUrl() {
-  if (process.env.PROD_DATABASE_URL) return process.env.PROD_DATABASE_URL;
-  if (!existsSync('.env')) return null;
-  const line = readFileSync('.env', 'utf8').split('\n').find(l => l.startsWith('DATABASE_URL_UNPOOLED='));
-  return line ? line.slice(line.indexOf('=') + 1).replace(/^["']|["']$/g, '') : null;
-}
-
-// Run before any connection is made, so a refused URL is never even contacted.
-function guardClear(url, host) {
-  const actual = new URL(url).hostname;
-  if (actual !== host) fail(`--host ${host} does not match the host in STAGING_DATABASE_URL (${actual}). Nothing was changed.`);
-  // The typed host only catches a typo; this is what stops the production URL being used here, which would sign everyone out and mark
-  // production as staging.
-  const prod = productionUrl();
-  if (!prod) fail('Cannot tell which database is production: set PROD_DATABASE_URL (or DATABASE_URL_UNPOOLED in .env) so this can refuse it. Nothing was changed.');
-  if (sameHost(new URL(prod).hostname) === sameHost(actual)) fail(`${actual} is production's database. Nothing was changed.`);
 }
 
 async function clear(client, url, apply) {
@@ -125,8 +52,8 @@ async function clear(client, url, apply) {
   try {
     await client.query('begin');
     for (const step of STEPS) await client.query(step.change);
-    await applyAppRole(client);
-    await client.query("do $$ begin execute format('comment on database %I is %L', current_database(), 'iron-log staging'); end $$");
+    await applyAppRole(client, APP_ROLE, 'STAGING_APP_PASSWORD');
+    await setMark(client, MARKER);
     await client.query('commit');
   } catch (e) {
     await client.query('rollback').catch(() => {});
@@ -143,8 +70,8 @@ if (cmd !== 'check' && cmd !== 'clear') fail('Usage: staging-db.mjs check | clea
 const hostIndex = args.indexOf('--host');
 const host = hostIndex >= 0 ? args[hostIndex + 1] : undefined;
 if (cmd === 'clear' && !host) fail('clear needs --host <the host in STAGING_DATABASE_URL>.');
-if (cmd === 'clear') guardClear(url, host);
-const client = await connect(url);
+if (cmd === 'clear') guardHost(url, host, 'STAGING_DATABASE_URL');
+const client = await connect(url, 'STAGING');
 let code = 2;
 try {
   code = cmd === 'check' ? await check(client) : await clear(client, url, args.includes('--apply'));
