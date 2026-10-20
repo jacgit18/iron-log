@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allPeople, groupOfStore, hasSharing, knownPeople, monthShare, partiesFor, payerOf, purchasesOf, shareByMonth, shareText, storeSettlement, storesBought } from './grocerySettle.js';
+import { allPeople, groupOfStore, hasSharing, knownPeople, monthOwed, monthShare, partiesFor, payerOf, purchasesOf, shareByMonth, shareText, storeSettlement, storesBought } from './grocerySettle.js';
 import { ME } from './grocerySplit.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -127,6 +127,17 @@ describe('what you paid', () => {
   });
   it('the Spending series follows the same rule', () => {
     expect(shareByMonth(g, { '2026-10': { ...bought, payer: { "BJ's": 'mom' } } }, '2026-10', 1)[0]!.paid).toBe(500);
+  });
+});
+
+describe('what is owed to you', () => {
+  it('adds up what the others owe over the stores you paid for, and is nothing when someone else paid or nothing is shared', () => {
+    const purchases = purchasesOf(g, bought);
+    const sum = storesBought(g, purchases).reduce((a, st) => a + storeSettlement(g, bought, st, purchases).owedToYou, 0);
+    expect(sum).toBeGreaterThan(0);
+    expect(monthOwed(g, bought)).toBe(sum);
+    expect(monthOwed(g, { ...bought, payer: { "BJ's": 'mom', Aldi: 'mom' } })).toBe(0);
+    expect(monthOwed({ stores: g.stores, items: g.items }, bought)).toBe(0);
   });
 });
 
