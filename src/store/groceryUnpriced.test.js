@@ -137,4 +137,13 @@ describe('the unpriced mark, loose ends (overnight audit G-1 and G-4)', () => {
     expect(st().groceryMonths[last]?.lines[id]?.unpriced).toBeUndefined();
     expect(lib.lineOf(st().grocery.items[0], st().groceryMonths[last] ?? lib.emptyMonth()).cents).toBe(500);
   });
+  it('a count typed on a line bought unpriced does not pick up a price the item got later (closing audit X-7)', async () => {
+    const { id, last, spent } = await setup();
+    st().setGroceryGot(last, id, true); // bought with no price
+    st().updateGroceryItem(id, { cents: 400 }); // priced afterwards
+    st().setGroceryQty(last, id, 2);
+    expect(st().groceryMonths[last].lines[id]).toMatchObject({ qty: 2, unpriced: true });
+    expect(st().groceryMonths[last].lines[id].cents).toBeUndefined();
+    expect(spent(last)).toBe(0);
+  });
 });

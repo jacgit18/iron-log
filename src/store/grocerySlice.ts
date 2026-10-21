@@ -247,7 +247,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         const { prices: _p, packShares: _s, ...l } = m.lines[id] || {};
         const next: GroceryLine = { ...l, qty: q }; // a typed count goes back to one price for all
         // A bought line keeps what it was bought for: with no price of its own it takes the item's price as it is now, or stays unpriced, so a later price change does not reach back.
-        if (next.got && next.cents === undefined) { if (it.cents != null) next.cents = it.cents; else next.unpriced = true; }
+        if (next.got && next.cents === undefined && !next.unpriced) { if (it.cents != null) next.cents = it.cents; else next.unpriced = true; } // a line already bought unpriced stays so
         m.lines[id] = next;
       });
     },
