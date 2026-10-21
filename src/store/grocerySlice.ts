@@ -1,10 +1,12 @@
+import * as settle from '../lib/grocerySettle.js';
+import { ME as SELF } from '../lib/grocerySplit.js';
 import { LS } from '../lib/storage.js';
 import {
   MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, parseDollars, storeFor,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
 import { groupOfStore } from '../lib/grocerySettle.js';
-import type { Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
+import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
 import { activePeople, knownPeople, partiesFor } from '../lib/grocerySettle.js';
 import { ME } from '../lib/grocerySplit.js';
@@ -104,6 +106,24 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     });
   };
 
+  // An item that is removed leaves its bought lines in their months as purchases (only the line's own price and count remain). Each is pinned to the store it
+  // was bought at and the split it was counted with (read through partiesFor, so people who are gone are left out as they were), so its bill, its store's tax and
+  // who shares it stay as they were (code audit M-04). The pins stay if the removal is undone: they are the split and store it was bought with.
+  const pinRemoved = (item: GroceryItem) => {
+    const g = get().grocery;
+    Object.entries(get().groceryMonths).forEach(([key, m]) => {
+      const raw = m.lines[item.id];
+      if (!raw?.got) return;
+      const at = storeFor(g, item, m);
+      const valid = raw.store !== undefined && (raw.store === '' || g.stores.includes(raw.store)); // a month store that no longer exists reads as the item's usual store, so it is pinned too
+      const store = !valid; const share = !raw.share;
+      if (!store && !share) return;
+      const parties = settle.partiesFor(g, at === item.store ? item : { ...item, store: at }, raw); // no group and no split of its own pins "just you", so a group made later does not reach back
+      const usual: GroceryShare = { with: parties.filter(p => p !== SELF), ...(parties.includes(SELF) ? {} : { notMine: true as const }) };
+      mutateMonth(key, mm => { const l = { ...mm.lines[item.id] }; if (store) l.store = at; if (share) l.share = usual; mm.lines[item.id] = l; });
+    });
+  };
+
   return {
     grocery: normGrocery(null),
     groceryMonths: {},
@@ -155,7 +175,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (g.items.length >= MAX_ITEMS) return `The list is full (${MAX_ITEMS} items).`;
         if (g.items.some(i => i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
         if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
-        g.items.unshift({ id: newGroceryId(g.items, n), n, store, qty, cents, every: true, out: false, ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
+        g.items.unshift({ id: newGroceryId(g.items, n, Object.values(get().groceryMonths).flatMap(m => Object.keys(m.lines))), n, store, qty, cents, every: true, out: false, ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
         return null;
       });
     },
@@ -191,12 +211,15 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     removeGroceryItem(id) {
       const i = get().grocery.items.findIndex(x => x.id === id); if (i < 0) return;
       const it = get().grocery.items[i];
+      pinRemoved(it);
       if (mutateCatalogue(g => { g.items = g.items.filter(x => x.id !== id); return null; }) !== null) return;
-      get().noteRemoved('grocery', it.n, () => mutateCatalogue(g => {
-        if (g.items.some(x => x.id === id)) return 'back';
-        if (it.store && !g.stores.includes(it.store)) g.stores.push(it.store);
-        g.items.splice(Math.min(i, g.items.length), 0, it); return null;
-      }) === null);
+      get().noteRemoved('grocery', it.n, () => {
+        return mutateCatalogue(g => {
+          if (g.items.some(x => x.id === id)) return 'back';
+          if (it.store && !g.stores.includes(it.store)) g.stores.push(it.store);
+          g.items.splice(Math.min(i, g.items.length), 0, it); return null;
+        }) === null;
+      });
     },
 
     addGroceryStore(name) {
