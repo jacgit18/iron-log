@@ -8,10 +8,11 @@ import type { CommandName, ServerRow, SyncTable } from './types.js';
 
    The classes tell the queue what to do:
      network, server, auth, outdated -> pause and try again later; never discard
+     account                         -> the page's account is not the signed-in one (409 { error: 'account' }): pause until the person chooses; never discard
      refused                         -> the server will not take this write as sent: quarantine it, never drop it
      conflict                        -> a 409: the row changed (stale), was deleted, or is missing; merge and resend */
 
-export type FailureClass = 'network' | 'server' | 'auth' | 'outdated' | 'refused' | 'conflict';
+export type FailureClass = 'network' | 'server' | 'auth' | 'outdated' | 'account' | 'refused' | 'conflict';
 
 /** What the API answers to a command: the rows it wrote and the user's cursor after it. */
 export interface CommandRows {
@@ -23,24 +24,24 @@ export type CommandOutcome =
   | ({ ok: true; status: number } & CommandRows)
   | { ok: false; class: 'conflict'; status: 409; reason: 'stale' | 'deleted' | 'not-found' | string; current: ServerRow | null }
   | { ok: false; class: 'refused'; status: number; reason: string }
-  | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated'; status: number; retryAfterMs: number | null; message: string };
+  | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated' | 'account'; status: number; retryAfterMs: number | null; message: string };
 
 export type PullOutcome =
   | { ok: true; rows: (ServerRow & { table: SyncTable })[]; cursor: string; more: boolean; /** The account's data epoch (it goes up when the data is erased); absent from an older server, which means 1. */ epoch?: string }
-  | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated'; status: number; retryAfterMs: number | null; message: string };
+  | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated' | 'account'; status: number; retryAfterMs: number | null; message: string };
 
 /** The answer to the one-time upload of old data: all of it was taken, or none of it. */
 export type ImportOutcome =
   | { ok: true; imported: Record<string, number>; total: number }
   | { ok: false; class: 'not-empty' }
   | { ok: false; class: 'refused'; reason: string; at: number | null; command: string | null }
-  | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated'; status: number; retryAfterMs: number | null; message: string };
+  | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated' | 'account'; status: number; retryAfterMs: number | null; message: string };
 
 /** The answer to erasing the account's data or deleting the account: done, or why not. */
 export type AccountActionOutcome =
   | { ok: true }
   | { ok: false; class: 'refused'; status: number; message: string }
-  | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated'; status: number; retryAfterMs: number | null; message: string };
+  | { ok: false; class: 'network' | 'server' | 'auth' | 'outdated' | 'account'; status: number; retryAfterMs: number | null; message: string };
 
 export interface Envelope {
   clientId: string;
@@ -74,11 +75,16 @@ export function parseRetryAfter(value: string | null, now = Date.now()): number 
   return Number.isNaN(at) ? null : Math.min(Math.max(at - now, 0), MAX_RETRY_AFTER_MS);
 }
 
-type Pause = Extract<CommandOutcome, { class: 'network' | 'server' | 'auth' | 'outdated' }>;
+type Pause = Extract<CommandOutcome, { class: 'network' | 'server' | 'auth' | 'outdated' | 'account' }>;
 const pause = (cls: Pause['class'], status: number, retryAfterMs: number | null, message: string): Pause => {
   if (message === 'unexpected answer') reportSync(`unexpected answer (status ${status})`); // the server replied, but not in a shape the app knows
   return { ok: false, class: cls, status, retryAfterMs, message };
 };
+
+// The server answers 409 { ok: false, error: 'account' } when x-expected-user names someone other than the signed-in user. It shares the status with
+// a stale-row conflict, so the body decides; checked before the conflict branch.
+const isAccountRefusal = (status: number, body: Record<string, unknown> | undefined) => status === 409 && body?.error === 'account';
+const accountPause = (): Pause => pause('account', 409, null, 'this page holds data of another account than the one signed in');
 
 // A status the queue should wait on rather than act on.
 function pauseFor(status: number, retryAfterMs: number | null): Pause | null {
@@ -120,6 +126,7 @@ export function createTransport(options: TransportOptions) {
     const waiting = pauseFor(res.status, retryAfter);
     if (waiting) return waiting;
     const body = (await json(res)) as Record<string, unknown> | undefined;
+    if (isAccountRefusal(res.status, body)) return accountPause();
     if (res.status === 409) {
       const reason = typeof body?.refused === 'string' ? body.refused : 'stale';
       return { ok: false, class: 'conflict', status: 409, reason, current: (body?.current as ServerRow | null | undefined) ?? null };
@@ -141,6 +148,7 @@ export function createTransport(options: TransportOptions) {
     const waiting = pauseFor(res.status, retryAfter);
     if (waiting) return waiting;
     const body = (await json(res)) as Record<string, unknown> | undefined;
+    if (isAccountRefusal(res.status, body)) return accountPause();
     if (!res.ok || !body || !Array.isArray(body.rows) || typeof body.cursor !== 'string' || typeof body.more !== 'boolean') {
       // Reading is safe to repeat, so even a 400 waits instead of giving up.
       return pause('server', res.status, retryAfter, res.ok ? 'unexpected answer' : `server answered ${res.status}`);
@@ -156,6 +164,7 @@ export function createTransport(options: TransportOptions) {
     const waiting = pauseFor(res.status, parseRetryAfter(res.headers.get('retry-after')));
     if (waiting) return waiting;
     const answer = (await json(res)) as Record<string, unknown> | undefined;
+    if (isAccountRefusal(res.status, answer)) return accountPause();
     if (res.status === 201 && answer && typeof answer.total === 'number' && answer.imported && typeof answer.imported === 'object') {
       return { ok: true, imported: answer.imported as Record<string, number>, total: answer.total };
     }

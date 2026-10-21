@@ -20,7 +20,7 @@ export async function pullAll(transport: Pick<Transport, 'pull'>, store: MirrorS
   let reset = false;
   let pages = 0;
   let rows = 0;
-  const stop = (cls: 'network' | 'server' | 'auth' | 'outdated', message: string, retryAfterMs: number | null): PullResult =>
+  const stop = (cls: 'network' | 'server' | 'auth' | 'outdated' | 'account', message: string, retryAfterMs: number | null): PullResult =>
     ({ ok: false, class: cls, message, retryAfterMs, pages, rows, paths: [...paths] });
 
   while (pages < MAX_PAGES) {
