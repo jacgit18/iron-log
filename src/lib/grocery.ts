@@ -42,9 +42,9 @@ export function newShareId(): string {
   return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
 }
 
-export function newGroceryId(items: GroceryItem[], name: string): string {
+export function newGroceryId(items: GroceryItem[], name: string, used: Iterable<string> = []): string {
   const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'item';
-  const taken = new Set(items.map(i => i.id)); let id = base, n = 2;
+  const taken = new Set([...items.map(i => i.id), ...used]); let id = base, n = 2; // `used`: ids that months still hold lines for (a removed item's), so a new item never inherits them
   while (taken.has(id)) id = `${base}-${n++}`;
   return id;
 }
@@ -54,7 +54,7 @@ function normGroups(raw: unknown, stores: string[]): GroceryGroup[] {
   const groups: GroceryGroup[] = []; const ids = new Set<string>(); const taken = new Set<string>();
   (Array.isArray(raw) ? raw : []).forEach((x: unknown) => {
     const g = normGroceryGroup(x);
-    if (!g || ids.has(g.id) || groups.length >= MAX_GROUPS) return;
+    if (!g || ids.has(g.id) || groups.filter(x => !!x.gone === !!g.gone).length >= MAX_GROUPS) return; // up to MAX_GROUPS live groups, and as many again that are gone
     ids.add(g.id);
     const own = g.stores.filter(s => stores.includes(s) && !taken.has(s));
     own.forEach(s => taken.add(s));
@@ -129,7 +129,7 @@ export const own = <T,>(map: Record<string, T> | undefined, key: string): T | un
 
 export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { store: string; label: string; items: GroceryItem[]; group?: GroceryGroup }[] {
   const out = g.stores.map(store => {
-    const group = sharing ? g.groups?.find(x => x.people.length > 0 && x.stores.includes(store)) : undefined;
+    const group = sharing ? g.groups?.find(x => x.people.some(p => !p.gone) && x.stores.includes(store)) : undefined;
     return { store, label: store, items: items.filter(i => i.store === store), ...(group ? { group } : {}) };
   });
   const shared = out.filter(x => x.group);
@@ -149,12 +149,16 @@ export function storeFor(g: Grocery, item: GroceryItem, m: GroceryMonth): string
   // tax and shares count it there too.
   return store === '' || g.stores.includes(store) ? store : '';
 }
+/** The store a bought line of a removed item stays under: the one pinned on the line when the item was removed (so its bill and its store's tax stay), else Anywhere. */
+export const removedStore = (g: Grocery, l: GroceryLine): string => (l.store !== undefined && g.stores.includes(l.store) ? l.store : '');
+/** Stands in for an item that was removed, so its bought line is read like any other: no price of its own beyond the line's, the store it was pinned to. */
+export const removedItem = (g: Grocery, id: string, l: GroceryLine): GroceryItem => ({ id, n: '', store: removedStore(g, l), qty: 1, cents: null, every: true, out: false });
 /** The items as they sit in a month: each under the store it is bought at that month, so grouping, bills, tax and sharing all follow it. */
 export const inMonth = (g: Grocery, items: GroceryItem[], m: GroceryMonth): GroceryItem[] =>
   items.map(i => { const store = storeFor(g, i, m); return store === i.store ? i : { ...i, store }; });
 
 /** The words after a shared store's name: its group and how many others are in it ("Home +2"). */
-export const groupTag = (group: GroceryGroup) => `${group.n} +${group.people.length}`;
+export const groupTag = (group: GroceryGroup) => `${group.n} +${group.people.filter(p => !p.gone).length}`;
 
 /** Counts and money for a set of items: how many are ticked, what the list is expected to cost, and what the ticked ones cost. `spent` adds the
  *  month's tax for each store that has something ticked here (the receipt's tax, typed in); `planned` is what the prices come to before tax. */
@@ -180,7 +184,7 @@ export function spendByMonth(g: Grocery, months: Record<string, GroceryMonth>, e
     Object.entries(m?.lines ?? {}).forEach(([id, l]) => {
       if (!l.got) return;
       const it = g.items.find(x => x.id === id);
-      bought++; boughtAt.add(it ? storeFor(g, it, m!) : ''); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? (l.unpriced ? null : it?.cents ?? null));
+      bought++; boughtAt.add(storeFor(g, it ?? removedItem(g, id, l), m!)); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? (l.unpriced ? null : it?.cents ?? null));
     });
     boughtAt.forEach(store => { spent += own(m?.tax, store) ?? 0; }); // each store's tax from the receipt
     return { key, spent, bought };
@@ -220,7 +224,7 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
   // added, with the stores it names that exist here. People keep their ids, so an item's share in the file still points at them.
   const have = new Set((g.groups ?? []).map(x => x.id)); const defaulted = new Set((g.groups ?? []).flatMap(x => x.stores));
   (inc.groups ?? []).forEach(x => {
-    if (have.has(x.id) || (g.groups?.length ?? 0) >= MAX_GROUPS) return;
+    if (have.has(x.id) || (g.groups ?? []).filter(y => !y.gone).length >= MAX_GROUPS) return;
     const stores = x.stores.filter(st => g.stores.includes(st) && !defaulted.has(st));
     stores.forEach(st => defaulted.add(st));
     g.groups = [...(g.groups ?? []), { ...x, stores }]; have.add(x.id); changed = true;

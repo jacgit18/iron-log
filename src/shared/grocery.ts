@@ -76,22 +76,22 @@ export function normGroceryGroup(x: unknown): GroceryGroup | null {
   const seen = new Set<string>(); const people: GroceryPerson[] = [];
   (Array.isArray(o.people) ? o.people : []).forEach((p: unknown) => {
     const po = asObject(p); const pid = po ? str(po.id, MAX_ID) : ''; const pn = po ? str(po.n, MAX_PERSON) : '';
-    if (!po || !pid || !pn || pid === '__proto__' || pid === 'me' || seen.has(pid) || people.length >= MAX_PEOPLE) return;
-    seen.add(pid); people.push({ id: pid, n: pn, ...(po.covered === true ? { covered: true as const } : {}) });
+    if (!po || !pid || !pn || pid === '__proto__' || pid === 'me' || seen.has(pid) || people.filter(x => !!x.gone === (po.gone === true)).length >= MAX_PEOPLE) return; // up to MAX_PEOPLE who are in the group, and as many again who are gone
+    seen.add(pid); people.push({ id: pid, n: pn, ...(po.covered === true ? { covered: true as const } : {}), ...(po.gone === true ? { gone: true as const } : {}) });
   });
   const stores = [...new Set((Array.isArray(o.stores) ? o.stores : []).map((s: unknown) => str(s, MAX_STORE)).filter(Boolean))].slice(0, MAX_STORES);
-  return { id, n, people, stores };
+  return { id, n, people, stores, ...(o.gone === true ? { gone: true as const } : {}) };
 }
 
 /** True when `x` is a group exactly as the app writes one. */
 export function validGroceryGroup(x: unknown): x is GroceryGroup {
   const o = asObject(x);
-  if (!o || !exact(o.id, MAX_ID) || o.id === '__proto__' || !exact(o.n, MAX_PERSON)) return false;
-  if (!Array.isArray(o.people) || o.people.length > MAX_PEOPLE || !Array.isArray(o.stores) || o.stores.length > MAX_STORES) return false;
+  if (!o || !exact(o.id, MAX_ID) || o.id === '__proto__' || !exact(o.n, MAX_PERSON) || (o.gone !== undefined && o.gone !== true)) return false;
+  if (!Array.isArray(o.people) || o.people.length > MAX_PEOPLE * 2 || o.people.filter((p: unknown) => asObject(p)?.gone !== true).length > MAX_PEOPLE || !Array.isArray(o.stores) || o.stores.length > MAX_STORES) return false;
   const ids = new Set<string>();
   for (const p of o.people) {
     const po = asObject(p);
-    if (!po || !exact(po.id, MAX_ID) || po.id === '__proto__' || po.id === 'me' || ids.has(po.id as string) || !exact(po.n, MAX_PERSON) || (po.covered !== undefined && po.covered !== true)) return false;
+    if (!po || !exact(po.id, MAX_ID) || po.id === '__proto__' || po.id === 'me' || ids.has(po.id as string) || !exact(po.n, MAX_PERSON) || (po.covered !== undefined && po.covered !== true) || (po.gone !== undefined && po.gone !== true)) return false;
     ids.add(po.id as string);
   }
   return o.stores.every((s: unknown) => exact(s, MAX_STORE)) && new Set(o.stores).size === o.stores.length;
