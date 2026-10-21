@@ -18,6 +18,7 @@ import CommitInput from '../CommitInput.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import { motionOK } from '../../lib/motion.js';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
+import WaterReminderControls from './WaterReminderControls.js';
 import { disablePush, enablePush, pushKindWanted, pushOn, pushSupported, setPushKind } from '../../lib/pushClient.js';
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
@@ -173,6 +174,7 @@ function PushPanel() {
           <label className="inline"><input type="checkbox" checked={rest} onChange={e => { setRest(e.target.checked); setPushKind('rest', e.target.checked); }} /> When a rest or hold ends</label>
           <label className="inline"><input type="checkbox" checked={nudge} onChange={e => { setNudge(e.target.checked); setPushKind('day-nudge', e.target.checked); }} /> When a day is started but not finished, 30 minutes after your last tick</label>
           <p>The day alert never comes between 9:30 pm and 4 am, and goes away when you finish the day.</p>
+          <WaterReminderControls />
         </>
       )}
       <p>Saved on this device only.</p>

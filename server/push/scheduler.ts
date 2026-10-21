@@ -1,5 +1,5 @@
 // What the push routes need from the thing that sends later. The real one (Cloud Tasks) and the test fake both fit this.
-export const PUSH_KINDS = ['rest', 'day-nudge'] as const;
+export const PUSH_KINDS = ['rest', 'day-nudge', 'water'] as const;
 export type PushKind = (typeof PUSH_KINDS)[number];
 
 export interface PushJob {
@@ -11,6 +11,13 @@ export interface PushJob {
   /** When to send, ms since the epoch. */
   at: number;
   body: string;
+  /** Water reminders only: when this one has been sent, the fire route queues the next at `everyMs` later while that is not after `until` (ms since the epoch). */
+  repeat?: PushRepeat;
+}
+
+export interface PushRepeat {
+  everyMs: number;
+  until: number;
 }
 
 /**
