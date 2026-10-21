@@ -70,7 +70,7 @@ if (cmd !== 'check' && cmd !== 'clear') fail('Usage: staging-db.mjs check | clea
 const hostIndex = args.indexOf('--host');
 const host = hostIndex >= 0 ? args[hostIndex + 1] : undefined;
 if (cmd === 'clear' && !host) fail('clear needs --host <the host in STAGING_DATABASE_URL>.');
-if (cmd === 'clear') guardHost(url, host, 'STAGING_DATABASE_URL');
+if (cmd === 'clear') await guardHost(url, host, 'STAGING_DATABASE_URL');
 const client = await connect(url, 'STAGING');
 let code = 2;
 try {
