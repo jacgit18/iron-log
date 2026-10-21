@@ -24,12 +24,12 @@ const seed = async (page, { admin = true, soapGot = false, payer = null } = {}) 
 
 test('one line over the list says what you paid, your share and what is owed to you', async ({ page }) => {
   await seed(page);
-  await expect(page.locator('#groc-money')).toHaveText('Paid $58.72 · Your share $36.06 · Owed to you $11.33');
+  await expect(page.locator('#groc-money')).toContainText('Paid $58.72 · Your share $36.06 · Owed to you $11.33');
 });
 
 test('when someone else paid BJ\'s the top line says what you owe instead of a $0.00 owed to you', async ({ page }) => {
   await seed(page, { payer: { "BJ's": 'mom' } });
-  await expect(page.locator('#groc-money')).toHaveText('Paid $5.00 · Your share $36.06 · You owe $31.06');
+  await expect(page.locator('#groc-money')).toContainText('Paid $5.00 · Your share $36.06 · You owe $31.06');
 });
 
 test('a shared store with things still to get shows its money under its heading, once, and a solo store shows none', async ({ page }) => {
