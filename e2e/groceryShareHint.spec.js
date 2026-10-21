@@ -19,8 +19,10 @@ test('this month the hint says the share carries to next month; in a month ahead
   await page.getByLabel(/Shared with, for Chicken/).click();
   await page.getByLabel('Mom').uncheck();
   await expect(page.getByText('Saved as the usual for next month too.')).toBeVisible();
-  await page.click('#groc-next'); // the item's panel stays open across months
-  await expect(page.getByLabel(/Shared with, for Chicken/)).toBeVisible(); // and so does its open split list
+  await page.click('#groc-next'); // another month starts with its rows folded (audit N-14)
+  await expect(page.getByLabel(/Shared with, for Chicken/)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Chicken', exact: true }).click();
+  await page.getByLabel(/Shared with, for Chicken/).click();
   await page.getByLabel('Sister').uncheck();
   await expect(page.getByText('Saved as the usual from now on: it also changes this month’s items you have not bought yet.')).toBeVisible();
   await expect(page.getByText('Saved as the usual for next month too.')).toHaveCount(0);

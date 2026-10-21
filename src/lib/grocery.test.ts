@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, groupTag, haveOf, inMonth, storeFor, onList, parseDollars, shiftMonth, spendByMonth, tally,
+  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, groupTag, haveOf, inMonth, storeFor, onList, parseDollars, removedBought, shiftMonth, spendByMonth, tally,
 } from './grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -174,7 +174,7 @@ describe('cleaning saved or imported data', () => {
 describe('ids', () => {
   it('makes a readable id and avoids a taken one', () => {
     expect(newGroceryId([], 'Baby Spinach!')).toBe('baby-spinach');
-    expect(newGroceryId(g.items, 'Kale')).toBe('kale-2');
+    expect(newGroceryId(g.items, 'Kale')).toMatch(/^kale-[0-9a-f]{4}$/);
     expect(newGroceryId([], '???')).toBe('item');
   });
 });
@@ -226,8 +226,10 @@ describe('merging when two devices made different ids', () => {
       months: { '2026-03': { lines: { milk: { got: true, cents: 400 }, 'milk-2': { got: true, cents: 500 } }, pulled: [] } },
     })!;
     const r = mergeGrocery(here, {}, inc);
-    expect(r.grocery.items.map(i => [i.id, i.store])).toEqual([['milk', 'Giant'], ['milk-2', 'Costco']]); // Costco's milk got a new id
-    expect(r.months['2026-03'].lines).toEqual({ 'milk-2': { got: true, cents: 400 }, milk: { got: true, cents: 500 } }); // each tick is on its own item
+    const costco = r.grocery.items[1]!.id;
+    expect(costco).toMatch(/^milk-[0-9a-f]{4}$/);
+    expect(r.grocery.items.map(i => [i.id, i.store])).toEqual([['milk', 'Giant'], [costco, 'Costco']]); // Costco's milk got a new id
+    expect(r.months['2026-03'].lines).toEqual({ [costco]: { got: true, cents: 400 }, milk: { got: true, cents: 500 } }); // each tick is on its own item
   });
   it('drops the line of an item it could not add, but keeps the purchase of an item the file does not list (one removed after it was bought)', () => {
     const full = { stores: [], items: Array.from({ length: 500 }, (_, i) => item(`i${i}`, `Item ${i}`, '')) };
@@ -277,5 +279,20 @@ describe('a line with a price for each one', () => {
     expect(spendByMonth({ stores: [], items: [item] }, { '2026-10': m }, '2026-10', 1)[0]).toMatchObject({ spent: 1824, bought: 1 });
     expect(parsePrices('8.99, 10.49  $9.25;3')).toEqual([899, 1049, 925, 300]);
     expect(parsePrices('')).toBeNull(); expect(parsePrices('8.99, x')).toBeNull(); expect(parsePrices('1.234')).toBeNull();
+  });
+});
+
+describe('removed items in a month tally', () => {
+  const m: GroceryMonth = { lines: { gone: { got: true, qty: 2, cents: 300, store: 'Costco' }, kale: { got: true, cents: 400 }, ghost: { qty: 4 } }, tax: { Costco: 50 }, pulled: [] };
+  it('lists only the removed items that were bought, under their store', () => {
+    expect(removedBought(g, m).map(i => [i.id, i.store])).toEqual([['gone', 'Costco']]);
+  });
+  it('makes the tally agree with spendByMonth once the removed bought lines are added', () => {
+    const live = inMonth(g, onList(g, m, true), m);
+    const t = tally([...live, ...removedBought(g, m)], m);
+    const [row] = spendByMonth(g, { '2026-10': m }, '2026-10', 1);
+    expect(tally(live, m).spent).not.toBe(row!.spent); // the old tile missed the removed item
+    expect(t.spent).toBe(row!.spent);
+    expect(t.got).toBe(row!.bought);
   });
 });
