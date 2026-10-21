@@ -129,6 +129,13 @@ describe('schedule and cancel', () => {
     await post('/schedule', { ...job, kind: 'day-nudge', key: 'n1', at: NOW + 1_800_000, body: 'Day not finished' });
     expect(await pending()).toEqual([[endpointOf(1), { rest: { key: 'newer', at: NOW + 60_000 }, 'day-nudge': { key: 'n1', at: NOW + 1_800_000 } }]]);
   });
+  it('a water job\'s repeat reaches the scheduler; a repeat on another kind is refused', async () => {
+    await post('/subscribe', sub(1));
+    const repeat = { everyMs: 7_200_000, until: NOW + 36_000_000 };
+    expect((await post('/schedule', { ...job, kind: 'water', key: 'w1', repeat })).status).toBe(200);
+    expect(calls.at(-1)).toMatchObject({ kind: 'water', key: 'w1', repeat });
+    expect((await post('/schedule', { ...job, repeat })).status).toBe(422);
+  });
   it('refuses a device that is not subscribed, and one that belongs to another account', async () => {
     expect((await post('/schedule', job)).status).toBe(404);
     await post('/subscribe', sub(1), 'cat');

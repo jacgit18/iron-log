@@ -6,6 +6,8 @@ import { isCatalogId } from '../shared/listItems.js';
 import type { StretchTier, SupplementSlot } from '../types.ts';
 import type { Flag, StoreGet, StoreSet, WellnessSlice } from './types.ts';
 import { validOz, validGoal, normSupplements, MAX_TRAIN_MIN, fmtOz } from '../lib/water.js';
+import { goalMetNow, trackWater } from '../lib/waterReminder.js';
+import { ymd } from '../shared/dates.js';
 
 // The same supplement: name and brand, any case (a catalog supplement has a brand; your own has none).
 const sameSupplement = (x: { n: string; brand?: string }, n: string, brand?: string) => x.n.toLowerCase() === n.toLowerCase() && (x.brand || '').toLowerCase() === (brand || '').toLowerCase();
@@ -15,7 +17,10 @@ const r1 = (n: number) => Math.round(n * 10) / 10;
 
 // Stretches tab (routine and library, Experiment list, the week's check-offs) and Supplements tab (water log).
 // `flag` is the save-status helper from the app store.
-export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): WellnessSlice => ({
+export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): WellnessSlice => {
+  // The drink-water reminder follows today's log (lib/waterReminder.ts); a change to another day's log means nothing to it.
+  const trackWaterToday = (why: 'drink' | 'change', date = ymd(new Date())) => { if (date === ymd(new Date())) trackWater(why, goalMetNow(get().supp, get().body)); };
+  return {
   stretches: structuredClone(DEFAULT_STRETCHES), // the library: [{id, n, url, note, group, tier}]
   stretchExps: [], // stretches to try: [{id, n, url, note}]
   strWeek: normStretchWeek(null), // the viewed week's check-offs
@@ -288,31 +293,44 @@ export const wellnessSlice = (set: StoreSet, get: StoreGet, flag: Flag): Wellnes
   /* Water. `date` is 'YYYY-MM-DD'; each drink is kept on its own so the last one can be taken back. */
   addWater(date, oz) {
     const n = Number(oz); if (!validOz(n)) { flag('Enter ounces, up to 200'); return false; }
-    return get().mutateSupp(s => { s.water[date] = [...(s.water[date] || []), r1(n)]; });
+    const ok = get().mutateSupp(s => { s.water[date] = [...(s.water[date] || []), r1(n)]; });
+    if (ok) trackWaterToday('drink', date);
+    return ok;
   },
   removeWater(date, i) {
     const oz = (get().supp.water[date] || [])[i]; if (oz == null) return false;
     if (!get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(i, 1); if (l.length) s.water[date] = l; else delete s.water[date]; })) return false;
     // Drinks have no ids: Undo only while the day's list is as the removal left it, so a drink added again by hand is not doubled.
     const left = (get().supp.water[date] || []).join();
-    get().noteRemoved('water:' + date, `${fmtOz(oz)} oz of water`, () => (get().supp.water[date] || []).join() === left && get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(Math.min(i, l.length), 0, oz); s.water[date] = l; }));
+    get().noteRemoved('water:' + date, `${fmtOz(oz)} oz of water`, () => {
+      if ((get().supp.water[date] || []).join() !== left) return false;
+      const ok = get().mutateSupp(s => { const l = [...(s.water[date] || [])]; l.splice(Math.min(i, l.length), 0, oz); s.water[date] = l; });
+      if (ok) trackWaterToday('change', date);
+      return ok;
+    });
+    trackWaterToday('change', date);
     return true;
   },
   setWaterGoal(raw) {
     const n = Number(raw); if (!validGoal(n)) { flag('Enter a daily goal between 8 and 500 oz'); return false; }
-    return get().mutateSupp(s => { s.waterGoal = r1(n); s.waterMode = 'fixed'; });
+    const ok = get().mutateSupp(s => { s.waterGoal = r1(n); s.waterMode = 'fixed'; });
+    if (ok) trackWaterToday('change');
+    return ok;
   },
   // Extra water for a hot day or for training minutes. Clears the day's entry when both are off.
   setWaterBoost(date, patch) {
     if (patch.mins !== undefined && patch.mins !== '') {
       const m = Number(patch.mins); if (!Number.isFinite(m) || m < 0 || m > MAX_TRAIN_MIN) { flag(`Enter training minutes, up to ${MAX_TRAIN_MIN}`); return false; }
     }
-    return get().mutateSupp(s => {
+    const ok = get().mutateSupp(s => {
       const b = { ...((s.boost || {})[date] || {}) }; s.boost = { ...(s.boost || {}) };
       if (patch.hot !== undefined) { if (patch.hot) b.hot = true; else delete b.hot; }
       if (patch.mins !== undefined) { const m = Math.round(Number(patch.mins)); if (m > 0) b.mins = m; else delete b.mins; }
       if (Object.keys(b).length) s.boost[date] = b; else delete s.boost[date];
     });
+    if (ok) trackWaterToday('change', date);
+    return ok;
   },
-  setWaterByWeight() { return get().mutateSupp(s => { s.waterMode = 'weight'; }); },
-});
+  setWaterByWeight() { const ok = get().mutateSupp(s => { s.waterMode = 'weight'; }); if (ok) trackWaterToday('change'); return ok; },
+  };
+};

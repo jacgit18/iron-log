@@ -55,7 +55,7 @@ export function pushRoutes({ db, publicKey, scheduler, now = Date.now }: PushDep
   router.post('/schedule', async (req, res) => {
     if (!scheduler) return void res.status(503).json({ ok: false, error: 'push scheduling is not set up on this server' });
     const job = parseSchedule(req.body, now());
-    if (!job) { const r = bad('send { endpoint, kind: rest|day-nudge, key (letters, digits, - or _), at (ms, within 3 hours), body (up to 140 characters) }'); return void res.status(r.status).json(r.body); }
+    if (!job) { const r = bad('send { endpoint, kind: rest|day-nudge|water, key (letters, digits, - or _), at (ms, within 3 hours), body (up to 140 characters), repeat? (water only: { everyMs 1 to 3 hours, until within a day }) }'); return void res.status(r.status).json(r.body); }
     // Each accepted call queues a billed Cloud Task that fires even if replaced, so an account may have only so many waiting (pendingCap.ts, S-5).
     const who = mine(res.locals.userId);
     if (!cap.tryReserve(who, job.at, now())) return void res.status(429).json({ ok: false, error: 'too many scheduled notifications waiting; try again later' });
@@ -66,7 +66,7 @@ export function pushRoutes({ db, publicKey, scheduler, now = Date.now }: PushDep
         .where('endpoint', '=', job.endpoint).returning('id').executeTakeFirst())?.id);
     if (!id) { cap.release(who, job.at); return void res.status(404).json({ ok: false, error: 'this device is not subscribed' }); }
     try {
-      await scheduler.schedule({ subscriptionId: String(id), kind: job.kind, key: job.key, at: job.at, body: job.text });
+      await scheduler.schedule({ subscriptionId: String(id), kind: job.kind, key: job.key, at: job.at, body: job.text, ...(job.repeat ? { repeat: job.repeat } : {}) });
     } catch (err) {
       cap.release(who, job.at);
       console.error(JSON.stringify({ msg: 'push schedule failed', error: err instanceof Error ? err.message : String(err) }));
@@ -77,7 +77,7 @@ export function pushRoutes({ db, publicKey, scheduler, now = Date.now }: PushDep
 
   router.post('/cancel', async (req, res) => {
     const c = parseCancel(req.body);
-    if (!c) { const r = bad('send { endpoint, kind: rest|day-nudge, key? }'); return void res.status(r.status).json(r.body); }
+    if (!c) { const r = bad('send { endpoint, kind: rest|day-nudge|water, key? }'); return void res.status(r.status).json(r.body); }
     // With a key, only that schedule is cancelled, so a late cancel from an old timer cannot undo a newer one.
     await inUserTransaction(db, mine(res.locals.userId), trx => {
       let q = trx.updateTable('push_subscription').set({ pending: sql`pending - ${c.kind}::text` }).where('endpoint', '=', c.endpoint);

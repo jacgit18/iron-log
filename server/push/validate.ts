@@ -1,4 +1,4 @@
-import { PUSH_KINDS, type PushKind } from './scheduler.ts';
+import { PUSH_KINDS, type PushKind, type PushRepeat } from './scheduler.ts';
 
 // Reads the bodies of the push routes. Anything off returns null and the route answers 422; nothing is trimmed or guessed.
 const obj = (v: unknown): Record<string, unknown> | null => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
@@ -6,6 +6,10 @@ const str = (v: unknown, max: number): string | null => (typeof v === 'string' &
 
 export const MAX_AHEAD_MS = 3 * 60 * 60_000;
 export const MAX_BODY = 140;
+/** A repeating reminder (water): not more often than hourly, and the chain may end at most a day from now. */
+export const MIN_REPEAT_MS = 60 * 60_000;
+export const MAX_REPEAT_MS = MAX_AHEAD_MS;
+export const MAX_REPEAT_SPAN_MS = 24 * 60 * 60_000;
 export const MAX_SUBSCRIPTIONS = 10;
 
 /* The push services a browser can hand out an endpoint on. The server POSTs to whatever endpoint is stored, so a subscription is accepted only on one of these
@@ -52,7 +56,17 @@ const isKind = (v: unknown): v is PushKind => PUSH_KINDS.includes(v as PushKind)
 // The key becomes part of a task name, which allows letters, digits, hyphen and underscore only.
 const keyOf = (v: unknown) => (typeof v === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(v) ? v : null);
 
-export function parseSchedule(body: unknown, now: number): { endpoint: string; kind: PushKind; key: string; at: number; text: string } | null {
+/** { everyMs, until } for a repeating kind, null when absent or off. Only the water kind repeats. */
+function repeatOf(kind: PushKind, v: unknown, at: number, latest: number | null): PushRepeat | null | 'bad' {
+  if (v === undefined) return null;
+  const r = obj(v);
+  if (kind !== 'water' || !r || !Number.isSafeInteger(r.everyMs) || !Number.isSafeInteger(r.until)) return 'bad';
+  const everyMs = r.everyMs as number, until = r.until as number;
+  if (everyMs < MIN_REPEAT_MS || everyMs > MAX_REPEAT_MS || until < at || (latest !== null && until > latest)) return 'bad';
+  return { everyMs, until };
+}
+
+export function parseSchedule(body: unknown, now: number): { endpoint: string; kind: PushKind; key: string; at: number; text: string; repeat?: PushRepeat } | null {
   const b = obj(body);
   const endpoint = parseEndpoint(b?.endpoint);
   const key = keyOf(b?.key);
@@ -61,7 +75,9 @@ export function parseSchedule(body: unknown, now: number): { endpoint: string; k
   // eslint-disable-next-line no-control-regex
   if (!endpoint || !key || !text || /[\u0000-\u001f]/.test(text) || !isKind(b?.kind)) return null;
   if (typeof at !== 'number' || !Number.isFinite(at) || at < now - 5_000 || at > now + MAX_AHEAD_MS) return null;
-  return { endpoint, kind: b.kind, key, at: Math.round(at), text };
+  const repeat = repeatOf(b.kind, b?.repeat, at, now + MAX_REPEAT_SPAN_MS);
+  if (repeat === 'bad') return null;
+  return { endpoint, kind: b.kind, key, at: Math.round(at), text, ...(repeat ? { repeat } : {}) };
 }
 
 export function parseCancel(body: unknown): { endpoint: string; kind: PushKind; key?: string } | null {
@@ -74,11 +90,13 @@ export function parseCancel(body: unknown): { endpoint: string; kind: PushKind; 
 }
 
 /** What a Cloud Tasks task carries to /api/push/fire (see cloudTasks.ts). */
-export function parseFire(body: unknown): { subscriptionId: string; kind: PushKind; key: string; at: number; text: string } | null {
+export function parseFire(body: unknown): { subscriptionId: string; kind: PushKind; key: string; at: number; text: string; repeat?: PushRepeat } | null {
   const b = obj(body);
   const subscriptionId = typeof b?.subscriptionId === 'string' && /^[0-9]{1,18}$/.test(b.subscriptionId) ? b.subscriptionId : null;
   const key = keyOf(b?.key);
   const text = str(b?.body, MAX_BODY);
   if (!subscriptionId || !key || !text || !isKind(b?.kind) || typeof b?.at !== 'number' || !Number.isSafeInteger(b.at)) return null;
-  return { subscriptionId, kind: b.kind, key, at: b.at, text };
+  const repeat = repeatOf(b.kind, b?.repeat, b.at, null);
+  if (repeat === 'bad') return null;
+  return { subscriptionId, kind: b.kind, key, at: b.at, text, ...(repeat ? { repeat } : {}) };
 }

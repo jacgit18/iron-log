@@ -33,6 +33,16 @@ describe('cloudTasksScheduler', () => {
     expect(task.httpRequest).toMatchObject({ httpMethod: 'POST', url: config.fireUrl, oidcToken: { serviceAccountEmail: config.invokerEmail, audience: config.fireUrl } });
     expect(JSON.parse(Buffer.from(task.httpRequest.body, 'base64').toString())).toEqual({ subscriptionId: '42', kind: 'rest', key: 'k1', at: job.at, body: 'Rest over.' });
   });
+  it('carries a water reminder\'s repeat in the task body, and nothing extra for a job without one', async () => {
+    const bodies: unknown[] = [];
+    const sched = cloudTasksScheduler(config, async (_url, body) => { bodies.push(body); return { status: 200 }; });
+    const repeat = { everyMs: 7_200_000, until: job.at + 36_000_000 };
+    await sched.schedule({ ...job, kind: 'water', key: 'w1', repeat });
+    await sched.schedule(job);
+    const payload = (b: unknown) => JSON.parse(Buffer.from((b as { task: { httpRequest: { body: string } } }).task.httpRequest.body, 'base64').toString());
+    expect(payload(bodies[0]).repeat).toEqual(repeat);
+    expect(payload(bodies[1])).not.toHaveProperty('repeat');
+  });
   it('treats an already-queued task (409) as done and any other failure as an error', async () => {
     await expect(cloudTasksScheduler(config, async () => ({ status: 409 })).schedule(job)).resolves.toBeUndefined();
     await expect(cloudTasksScheduler(config, async () => ({ status: 403 })).schedule(job)).rejects.toThrow(/403/);
