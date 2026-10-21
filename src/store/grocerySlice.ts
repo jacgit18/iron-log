@@ -1,11 +1,15 @@
+import * as settle from '../lib/grocerySettle.js';
+import { ME as SELF } from '../lib/grocerySplit.js';
 import { LS } from '../lib/storage.js';
 import {
   MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, parseDollars, storeFor,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
 import { groupOfStore } from '../lib/grocerySettle.js';
-import type { Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
+import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
+import { activePeople, knownPeople, partiesFor } from '../lib/grocerySettle.js';
+import { ME } from '../lib/grocerySplit.js';
 
 // The grocery list is the account's, like the rest of the data (ADR 039, replacing ADR 019's device-only list): it is saved through the
 // same path as every other document (saveDoc / removeDoc), so with syncing on it goes to the server (grocery/main as list rows,
@@ -54,6 +58,28 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     set({ groceryMonths: months }); saveMonth(key, m);
   };
 
+  // Before the people or the groups change, every bought line of an earlier month that has no split of its own is pinned to the split it was counted with
+  // (the item's, else the store group's people, else just you), so adding or removing a person, or changing which group a store splits with, never rewrites
+  // a month already bought (code audit M-05, and G-2 of the overnight audit). The month being lived in is left to follow the change.
+  const pinPastParties = () => {
+    const g = get().grocery; if (!g.groups?.length) return;
+    const now = monthKey(new Date());
+    Object.entries(get().groceryMonths).forEach(([key, m]) => {
+      if (key >= now) return;
+      const pins: Record<string, GroceryShare> = {};
+      Object.entries(m.lines).forEach(([id, raw]) => {
+        const item = g.items.find(i => i.id === id);
+        if (!raw.got || raw.share || !item) return; // a removed item's line is pinned when it is removed
+        const at = storeFor(g, item, m);
+        pins[id] = shareOf(partiesFor(g, at === item.store ? item : { ...item, store: at }, raw));
+      });
+      if (Object.keys(pins).length) mutateMonth(key, mm => { Object.entries(pins).forEach(([id, share]) => { mm.lines[id] = { ...mm.lines[id], share }; }); });
+    });
+  };
+
+  // A split as the parties it came to (you included unless it was for others only): the form a line keeps when it is pinned.
+  const shareOf = (parties: string[]): GroceryShare => ({ with: parties.filter(p => p !== ME), ...(parties.includes(ME) ? {} : { notMine: true as const }) });
+
   // Before an item's usual split changes to `next`, a month earlier than `before` (the month being edited, so a bought line this month is
   // pinned when next month's split is set) whose bought line that has no split of its own gets the one it was counted
   // with (the old usual, else the store's group), so changing the usual only moves things on from this month and never rewrites what was paid.
@@ -63,7 +89,9 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     Object.entries(get().groceryMonths).forEach(([key, m]) => {
       const raw = m.lines[id];
       if (key >= before || !raw?.got || raw.share) return;
-      const pin: GroceryShare = item.share ?? { with: (groupOfStore(g, storeFor(g, item, m))?.people ?? []).map(p => p.id) };
+      const at = storeFor(g, item, m); // what it was counted with: people who are gone are not in the usual split or the store's group
+      const live = (id: string) => activePeople(g).has(id) || !knownPeople(g).has(id); // a person who is gone is left out; an id that names nobody is kept as it is
+      const pin = item.share ? { ...item.share, with: item.share.with.filter(live) } : shareOf(partiesFor(g, at === item.store ? item : { ...item, store: at }, raw));
       mutateMonth(key, mm => { mm.lines[id] = { ...mm.lines[id], share: pin }; });
     });
   };
@@ -75,6 +103,24 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const raw = m.lines[id];
       if (!raw?.got || raw.store !== undefined) return;
       mutateMonth(key, mm => { mm.lines[id] = { ...mm.lines[id], store: was }; });
+    });
+  };
+
+  // An item that is removed leaves its bought lines in their months as purchases (only the line's own price and count remain). Each is pinned to the store it
+  // was bought at and the split it was counted with (read through partiesFor, so people who are gone are left out as they were), so its bill, its store's tax and
+  // who shares it stay as they were (code audit M-04). The pins stay if the removal is undone: they are the split and store it was bought with.
+  const pinRemoved = (item: GroceryItem) => {
+    const g = get().grocery;
+    Object.entries(get().groceryMonths).forEach(([key, m]) => {
+      const raw = m.lines[item.id];
+      if (!raw?.got) return;
+      const at = storeFor(g, item, m);
+      const valid = raw.store !== undefined && (raw.store === '' || g.stores.includes(raw.store)); // a month store that no longer exists reads as the item's usual store, so it is pinned too
+      const store = !valid; const share = !raw.share;
+      if (!store && !share) return;
+      const parties = settle.partiesFor(g, at === item.store ? item : { ...item, store: at }, raw); // no group and no split of its own pins "just you", so a group made later does not reach back
+      const usual: GroceryShare = { with: parties.filter(p => p !== SELF), ...(parties.includes(SELF) ? {} : { notMine: true as const }) };
+      mutateMonth(key, mm => { const l = { ...mm.lines[item.id] }; if (store) l.store = at; if (share) l.share = usual; mm.lines[item.id] = l; });
     });
   };
 
@@ -129,7 +175,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (g.items.length >= MAX_ITEMS) return `The list is full (${MAX_ITEMS} items).`;
         if (g.items.some(i => i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
         if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
-        g.items.unshift({ id: newGroceryId(g.items, n), n, store, qty, cents, every: true, out: false, ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
+        g.items.unshift({ id: newGroceryId(g.items, n, Object.values(get().groceryMonths).flatMap(m => Object.keys(m.lines))), n, store, qty, cents, every: true, out: false, ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
         return null;
       });
     },
@@ -165,12 +211,15 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     removeGroceryItem(id) {
       const i = get().grocery.items.findIndex(x => x.id === id); if (i < 0) return;
       const it = get().grocery.items[i];
+      pinRemoved(it);
       if (mutateCatalogue(g => { g.items = g.items.filter(x => x.id !== id); return null; }) !== null) return;
-      get().noteRemoved('grocery', it.n, () => mutateCatalogue(g => {
-        if (g.items.some(x => x.id === id)) return 'back';
-        if (it.store && !g.stores.includes(it.store)) g.stores.push(it.store);
-        g.items.splice(Math.min(i, g.items.length), 0, it); return null;
-      }) === null);
+      get().noteRemoved('grocery', it.n, () => {
+        return mutateCatalogue(g => {
+          if (g.items.some(x => x.id === id)) return 'back';
+          if (it.store && !g.stores.includes(it.store)) g.stores.push(it.store);
+          g.items.splice(Math.min(i, g.items.length), 0, it); return null;
+        }) === null;
+      });
     },
 
     addGroceryStore(name) {
@@ -330,9 +379,9 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const names = people.map(p => p.trim().replace(/\s+/g, ' ').slice(0, MAX_PERSON)).filter(Boolean);
       if (names.length > MAX_PEOPLE) return `A group holds up to ${MAX_PEOPLE} people besides you.`;
       return mutateCatalogue(g => {
-        const groups = g.groups ?? [];
-        if (groups.length >= MAX_GROUPS) return `Too many groups (${MAX_GROUPS}).`;
-        if (groups.some(x => x.n.toLowerCase() === n.toLowerCase())) return 'You already have a group with that name.';
+        const groups = g.groups ?? []; const live = groups.filter(x => !x.gone); // a group that is gone does not count, and its name can be used again
+        if (live.length >= MAX_GROUPS || groups.length >= MAX_GROUPS * 2) return `Too many groups (${MAX_GROUPS}).`;
+        if (live.some(x => x.n.toLowerCase() === n.toLowerCase())) return 'You already have a group with that name.';
         g.groups = [...groups, { id: newShareId(), n, people: names.map(pn => ({ id: newShareId(), n: pn })), stores: [] }];
         return null;
       });
@@ -343,22 +392,35 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       return mutateCatalogue(g => {
         const x = g.groups?.find(y => y.id === id);
         if (!x) return 'That group is gone.';
-        if (g.groups!.some(y => y !== x && y.n.toLowerCase() === n.toLowerCase())) return 'You already have a group with that name.';
+        if (g.groups!.some(y => y !== x && !y.gone && y.n.toLowerCase() === n.toLowerCase())) return 'You already have a group with that name.';
         x.n = n; return null;
       });
     },
-    // Items and months that named its people keep their shares; a person who no longer exists is simply left out of a split (partiesOf).
+    // Past months keep the group's people: when a month names one of them (a pinned split, a payer) the group is kept hidden, marked gone with its people, so those
+    // months read as they did; with no month naming them it is deleted outright. An item's own split and anything new leave the people out (partiesOf, activePeople).
     removeGroceryGroup(id) {
-      mutateCatalogue(g => { g.groups = (g.groups ?? []).filter(x => x.id !== id); if (!g.groups.length) delete g.groups; return null; });
+      pinPastParties();
+      const members = new Set((get().grocery.groups ?? []).find(x => x.id === id)?.people.map(p => p.id));
+      const named = Object.values(get().groceryMonths).some(m =>
+        Object.values(m.payer ?? {}).some(p => members.has(p)) || Object.values(m.lines).some(l => l.share?.with.some(p => members.has(p)) || l.packShares?.some(s => s?.with.some(p => members.has(p)))));
+      mutateCatalogue(g => {
+        const x = g.groups?.find(y => y.id === id);
+        if (!x) return null;
+        if (named) { x.gone = true; x.stores = []; x.people.forEach(p => { p.gone = true; }); } else g.groups = g.groups!.filter(y => y.id !== id);
+        if (!g.groups!.length) delete g.groups;
+        return null;
+      });
     },
     addGroceryPerson(groupId, name) {
       const n = name.trim().replace(/\s+/g, ' ').slice(0, MAX_PERSON);
       if (!n) return 'Give the person a name.';
+      pinPastParties();
       return mutateCatalogue(g => {
         const x = g.groups?.find(y => y.id === groupId);
         if (!x) return 'That group is gone.';
-        if (x.people.length >= MAX_PEOPLE) return `A group holds up to ${MAX_PEOPLE} people besides you.`;
-        if (x.people.some(p => p.n.toLowerCase() === n.toLowerCase())) return 'That person is already in this group.';
+        const here = x.people.filter(p => !p.gone); // a person who is gone does not count, and their name can be used again
+        if (here.length >= MAX_PEOPLE || x.people.length >= MAX_PEOPLE * 2) return `A group holds up to ${MAX_PEOPLE} people besides you.`;
+        if (here.some(p => p.n.toLowerCase() === n.toLowerCase())) return 'That person is already in this group.';
         x.people.push({ id: newShareId(), n }); return null;
       });
     },
@@ -375,10 +437,21 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         return null;
       });
     },
+    // Past months keep the person: a split or a payer that names them stays as it was, so they are marked gone (hidden, left out of anything new) instead of deleted.
+    // A person no month names is deleted outright.
     removeGroceryPerson(groupId, personId) {
-      mutateCatalogue(g => { const x = g.groups?.find(y => y.id === groupId); if (x) x.people = x.people.filter(p => p.id !== personId); return null; });
+      pinPastParties();
+      const named = Object.values(get().groceryMonths).some(m =>
+        Object.values(m.payer ?? {}).includes(personId) || Object.values(m.lines).some(l => l.share?.with.includes(personId) || l.packShares?.some(s => s?.with.includes(personId))));
+      mutateCatalogue(g => {
+        const x = g.groups?.find(y => y.id === groupId); const p = x?.people.find(z => z.id === personId);
+        if (!x || !p) return null;
+        if (named) p.gone = true; else x.people = x.people.filter(z => z.id !== personId);
+        return null;
+      });
     },
     setGroceryStoreGroup(store, groupId) {
+      pinPastParties();
       mutateCatalogue(g => {
         if (!g.stores.includes(store)) return 'That store is gone.';
         g.groups?.forEach(x => { x.stores = x.stores.filter(s => s !== store); }); // one group at most

@@ -21,7 +21,7 @@ function GroupRow({ group, stores }: { group: GroceryGroup; stores: string[] }) 
           onArmedChange={a => setArming(a ? group.id : null)} onConfirm={() => { setArming(null); s.removeGroceryGroup(group.id); }} />
       </div>
       <ul className="glist">
-        {group.people.map(p => (
+        {group.people.filter(p => !p.gone).map(p => (
           <li key={p.id} className="gsperson">
             <span className="rmname">{p.n}</span>
             <label className="gscovered"><input type="checkbox" className="chk" checked={!!p.covered} aria-label={`${p.n}’s share is already paid`}
@@ -33,7 +33,7 @@ function GroupRow({ group, stores }: { group: GroceryGroup; stores: string[] }) 
       </ul>
       <form className="warmadd" noValidate onSubmit={e => { e.preventDefault(); const m = s.addGroceryPerson(group.id, person); setErr(m); if (!m) setPerson(''); }}>
         <input type="text" aria-label={`New person in ${group.n}`} placeholder="Add a person" maxLength={40} value={person} onChange={e => setPerson(e.target.value)} />
-        <button type="submit" className="btn sm" disabled={!person.trim() || group.people.length >= MAX_PEOPLE}>Add person</button>
+        <button type="submit" className="btn sm" disabled={!person.trim() || group.people.filter(p => !p.gone).length >= MAX_PEOPLE}>Add person</button>
       </form>
       {stores.length > 0 && (
         <fieldset className="gsstores">
@@ -53,7 +53,7 @@ function GroupRow({ group, stores }: { group: GroceryGroup; stores: string[] }) 
 export default function SharingGroups({ g }: { g: Grocery }) {
   const s = useAppStore.getState();
   const [name, setName] = useState(''); const [people, setPeople] = useState(''); const [err, setErr] = useState<string | null>(null);
-  const groups = g.groups ?? [];
+  const groups = (g.groups ?? []).filter(x => !x.gone);
   // The panel opens from a button (or the prompt) that may disappear, so focus goes to its heading instead of being dropped on the page.
   const head = useRef<HTMLHeadingElement>(null);
   useEffect(() => { head.current?.focus(); }, []);

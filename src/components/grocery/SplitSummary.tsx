@@ -1,6 +1,6 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import { money } from '../../lib/grocery.js';
-import { allPeople, monthOwed, monthShare, payerOf, purchasesOf, storeSettlement, storesBought } from '../../lib/grocerySettle.js';
+import { allPeople, everyone, monthOwed, monthShare, payerOf, purchasesOf, storeSettlement, storesBought } from '../../lib/grocerySettle.js';
 import { ME } from '../../lib/grocerySplit.js';
 import type { Grocery, GroceryMonth } from '../../types.ts';
 import './SplitSummary.css';
@@ -10,7 +10,9 @@ import './SplitSummary.css';
 export default function SplitSummary({ g, month, mk }: { g: Grocery; month: GroceryMonth; mk: string }) {
   const purchases = purchasesOf(g, month);
   if (!purchases.length) return null;
-  const names = new Map(allPeople(g).map(p => [p.id, p.n]));
+  const names = new Map(everyone(g).map(p => [p.id, p.n])); // people who are gone too: a past month still says who owed whom
+  const pickable = new Map(allPeople(g).map(p => [p.id, p.n]));
+  const optionsFor = (payer: string) => { const o = new Map(pickable); if (names.has(payer)) o.set(payer, names.get(payer)!); return [...o]; }; // the people you can pick, and the payer even when they are gone
   const who = (id: string) => (id === ME ? 'You' : names.get(id) ?? 'Someone');
   const { paid, yours } = monthShare(g, month);
   // Every store that was bought from gets a card, so "Paid by" can be set for one that only holds your own things too (someone else may have paid it).
@@ -32,7 +34,7 @@ export default function SplitSummary({ g, month, mk }: { g: Grocery; month: Groc
             <label className="gpayer">Paid by
               <select aria-label={`Who paid at ${store || 'Anywhere'}`} value={payer} onChange={e => s.setGroceryPayer(mk, store, e.target.value === ME ? null : e.target.value)}>
                 <option value={ME}>You</option>
-                {[...names].map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+                {optionsFor(payer).map(([id, n]) => <option key={id} value={id}>{n}</option>)}
               </select>
             </label>
           </div>
