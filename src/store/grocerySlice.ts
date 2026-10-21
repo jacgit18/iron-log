@@ -299,7 +299,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     // so a "have" tick is dropped; unticking puts it back on the list. Each month keeps its own ticks (ADR 054).
     setGroceryGot(month, id, on) {
       const it = get().grocery.items.find(i => i.id === id);
-      if (!it || !MONTH_RE.test(month)) return;
+      if (!it || !MONTH_RE.test(month) || get().blocked()) return false; // false: nothing changed (sync is loading), so the screen shows no Undo for it
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
         if (on) {
@@ -311,6 +311,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         } else { delete l.got; delete l.unpriced; }
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
+      return true;
     },
 
     // The At home tick: you have it this month, so it is off that month's list. Unticking brings it back, and undoes a purchase too (the
