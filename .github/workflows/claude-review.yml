@@ -22,8 +22,8 @@ concurrency:
 jobs:
   review:
     if: ${{ !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository && !endsWith(github.actor, '[bot]') }}
-    # Optional (owner, 2026-10-20): never a required check, and a failure (for example the API credit running out) must not turn the PR red.
-    continue-on-error: true
+    # Optional (owner, 2026-10-20): never a required check (it is not in the "Protect main" ruleset). A job-level continue-on-error only keeps the
+    # workflow run green; the job's own check on the PR would still show red. So it is the review step below that carries continue-on-error.
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -31,6 +31,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: anthropics/claude-code-action@v1
+        continue-on-error: true # a failed review (the API credit running out, an action error) leaves the job, and so the PR check, green
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
