@@ -64,6 +64,18 @@ describe('parseSchedule', () => {
     expect(parseSchedule({ ...good, at: NOW + MAX_AHEAD_MS }, NOW)).not.toBeNull();
     for (const at of [NOW + MAX_AHEAD_MS + 1, NOW - 6_000, NaN, Infinity, '1800000000000', null]) expect(parseSchedule({ ...good, at }, NOW)).toBeNull();
   });
+  it('accepts a water job with a repeat, and only a water job', () => {
+    const repeat = { everyMs: 2 * 3_600_000, until: NOW + 10 * 3_600_000 };
+    expect(parseSchedule({ ...good, kind: 'water', key: 'w', repeat }, NOW)).toEqual({ endpoint, kind: 'water', key: 'w', at: NOW + 90_000, text: good.body, repeat });
+    expect(parseSchedule({ ...good, kind: 'water', key: 'w' }, NOW)?.repeat).toBeUndefined();
+    expect(parseSchedule({ ...good, kind: 'rest', repeat }, NOW)).toBeNull();
+  });
+  it('refuses a repeat that is too often, too rare, ends before it starts, or runs past a day', () => {
+    const w = { ...good, kind: 'water', key: 'w' };
+    for (const repeat of [{ everyMs: 3_599_999, until: NOW + 1e7 }, { everyMs: 3 * 3_600_000 + 1, until: NOW + 1e7 }, { everyMs: 3_600_000, until: NOW }, { everyMs: 3_600_000, until: NOW + 24 * 3_600_000 + 1 }, { everyMs: 1.5e6, until: NOW + 1e7 }, { everyMs: '3600000', until: NOW + 1e7 }, null, 5]) {
+      expect(parseSchedule({ ...w, repeat }, NOW), JSON.stringify(repeat)).toBeNull();
+    }
+  });
   it('allows a few seconds of clock difference into the past', () => {
     expect(parseSchedule({ ...good, at: NOW - 4_000 }, NOW)).not.toBeNull();
   });
@@ -107,6 +119,10 @@ describe('parseFire', () => {
   const fire = { subscriptionId: '42', kind: 'rest', key: 'k1', at: NOW, body: 'Rest over.' };
   it('reads what a task carries', () => {
     expect(parseFire(fire)).toEqual({ subscriptionId: '42', kind: 'rest', key: 'k1', at: NOW, text: 'Rest over.' });
+  });
+  it('reads a water job with its repeat', () => {
+    const repeat = { everyMs: 7_200_000, until: NOW + 9e6 };
+    expect(parseFire({ ...fire, kind: 'water', repeat })).toEqual({ subscriptionId: '42', kind: 'water', key: 'k1', at: NOW, text: 'Rest over.', repeat });
   });
   it.each([{ subscriptionId: '4 2' }, { subscriptionId: 42 }, { subscriptionId: '' }, { kind: 'x' }, { key: '' }, { at: 1.5 }, { at: '1' }, { body: '' }])('refuses %j', bad => {
     expect(parseFire({ ...fire, ...bad })).toBeNull();
