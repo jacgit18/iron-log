@@ -84,7 +84,7 @@ export function normGrocery(d: unknown): Grocery {
 export function lineOf(item: GroceryItem, m: GroceryMonth) {
   const l = m.lines[item.id] || {};
   const prices = l.prices?.length ? l.prices : undefined; // priced one by one: the count is how many, the total their sum
-  return { got: l.got === true, have: l.have === true, qty: prices ? prices.length : l.qty ?? item.qty, cents: l.cents ?? item.cents, prices };
+  return { got: l.got === true, have: l.have === true, qty: prices ? prices.length : l.qty ?? item.qty, cents: l.cents ?? (l.unpriced ? null : item.cents), prices }; // bought with no price stays unpriced
 }
 /** The words around a count and a price: by weight (lb, kg, oz) the count is a weight and the price is per unit; otherwise each. */
 export const unitWords = (unit?: GroceryUnit) => ({
@@ -179,7 +179,7 @@ export function spendByMonth(g: Grocery, months: Record<string, GroceryMonth>, e
     Object.entries(m?.lines ?? {}).forEach(([id, l]) => {
       if (!l.got) return;
       const it = g.items.find(x => x.id === id);
-      bought++; boughtAt.add(it ? storeFor(g, it, m!) : ''); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? it?.cents ?? null);
+      bought++; boughtAt.add(it ? storeFor(g, it, m!) : ''); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? (l.unpriced ? null : it?.cents ?? null));
     });
     boughtAt.forEach(store => { spent += own(m?.tax, store) ?? 0; }); // each store's tax from the receipt
     return { key, spent, bought };

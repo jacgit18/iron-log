@@ -233,7 +233,8 @@ export interface GroceryStore { id: string; n: string }
 /** One item in one month: ticked off (`got`, bought), or `have`: you have it, so it is not on that month's list (ADR 054); and the count and unit price (cents) paid when they differ from the catalogue or were recorded at the tick.
  *  `prices`: the price of each one bought this month, in cents, when they cost different amounts (beef, 3 packs: 8.99, 10.49, 9.25). The count is then how many there are and the line total is their sum; `qty` and `cents` are not used. */
 /** `store`: where the item was bought this month when that is not its usual store (Move to on To get); '' is Anywhere, absent is the item's own store. */
-export interface GroceryLine { got?: true; have?: true; qty?: number; cents?: number; prices?: number[]; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string }
+/** `unpriced`: bought with no price at all (the item had none and none was typed), so a price given to the item later does not reach back and price this month's purchase. */
+export interface GroceryLine { got?: true; have?: true; qty?: number; cents?: number; prices?: number[]; unpriced?: true; share?: GroceryShare; packShares?: (GroceryShare | null)[]; store?: string }
 /** The catalogue plus every saved month: what the data file and the backups hold of the grocery list. */
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
 /** One month's list (`grocery/YYYY-MM`): its lines by item id, and `pulled`: items put on that month's list by older versions (read, no longer written). */
