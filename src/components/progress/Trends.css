@@ -246,6 +246,7 @@
   font-size: var(--fs-xs);
 }
 .heat {
+  container-type: inline-size;
   display: grid;
   gap: 3px;
   align-items: center;
@@ -254,7 +255,6 @@
 }
 .heat .hx {
   min-width: 0;
-  overflow: hidden;
   font-size: var(--fs-2xs);
   color: var(--muted);
   text-align: center;
@@ -295,9 +295,9 @@
   box-shadow: 0 0 0 2px var(--ink);
 }
 @media (max-width:700px) {
-  /* Two tiles a row on a phone; one a row when two do not fit (a large text size: 8rem grows with the text, the row does not). */
+  /* Two tiles a row on a phone (the 45% floor stops a wider phone fitting three or four); one a row when two do not fit (a large text size: 8rem grows with the text, the row does not). */
   .kpis {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8rem, 45%)), 1fr));
   }
   .kpis .kpi:first-child:nth-last-child(odd) {
     grid-column: 1 / -1;
@@ -444,8 +444,8 @@
     margin-left: auto;
   }
   .chrow {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "name name" "bar value";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "name" "value" "bar";
     row-gap: var(--sp-4);
   }
   .chn {
@@ -457,11 +457,14 @@
   }
   .chbar {
     grid-area: bar;
-    min-width: 4rem;
   }
   .chv {
     grid-area: value;
     white-space: normal;
+    text-align: left;
+  }
+  .heat .hx {
+    overflow: hidden;
   }
 }
 }

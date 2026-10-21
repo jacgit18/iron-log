@@ -52,11 +52,42 @@ test('at a normal text size the Log table and the body-weight table stay plain t
 test('the KPI tiles are two a row on a phone at a normal text size and one a row at 200%', async ({ page }) => {
   await open(page, 390, false);
   await page.click('#tab-progress');
+  await expect(page.locator('.kpis .kpi').first()).toBeVisible();
   const tops = async () => page.locator('.kpis .kpi').evaluateAll(es => es.map(e => Math.round(e.getBoundingClientRect().top)));
   const t1 = await tops();
   expect(t1[0]).toBe(t1[1]); // the first two share a row
   await page.addStyleTag({ content: 'html{font-size:200%!important}' });
   await page.waitForTimeout(200);
   const t2 = await tops();
+  expect(t2.length).toBeGreaterThan(1);
   expect(new Set(t2).size).toBe(t2.length); // every tile on its own row
+});
+
+// Review of PR 411: a wider phone (landscape, 480 to 700px) kept the old two tiles a row; the heat-map week labels were not cut at a normal text size;
+// at 200% text a weight-change row's bar no longer sits under its value.
+test('at 600px wide the KPI tiles are still two a row, not four', async ({ page }) => {
+  await open(page, 600, false);
+  await page.click('#tab-progress');
+  await expect(page.locator('.kpis .kpi').first()).toBeVisible();
+  const tops = await page.locator('.kpis .kpi').evaluateAll(es => es.map(e => Math.round(e.getBoundingClientRect().top)));
+  expect(tops[0]).toBe(tops[1]);
+  expect(tops[2]).toBeGreaterThan(tops[0]);
+});
+
+test('360px at a normal text size: the heat-map week labels are not cut', async ({ page }) => {
+  await open(page, 360, false);
+  await page.click('#tab-progress');
+  const labels = page.locator('.heat .hx:not(.alt)');
+  await expect(labels.first()).toBeVisible();
+  const cut = await labels.evaluateAll(es => es.filter(e => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow === 'hidden').length);
+  expect(cut).toBe(0);
+});
+
+test('320px at 200% text: a weight-change bar does not sit under its value', async ({ page }) => {
+  await open(page, 320, true);
+  await page.click('#tab-progress');
+  await expect(page.locator('.chrow').first()).toBeVisible();
+  const rows = await page.locator('.chrow').evaluateAll(es => es.map(e => { const b = e.querySelector('.chbar').getBoundingClientRect(), v = e.querySelector('.chv').getBoundingClientRect(); return { overlap: b.bottom > v.top + 1 && b.top < v.bottom - 1 && b.right > v.left && b.left < v.right }; }));
+  expect(rows.length).toBeGreaterThan(0);
+  for (const r of rows) expect(r.overlap).toBe(false);
 });
