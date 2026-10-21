@@ -53,6 +53,8 @@
   flex-direction: column;
 }
 .gfield select {
+  min-width: 0;
+  max-width: 100%;
   min-height: 44px;
 }
 .gskiprow {
@@ -101,11 +103,20 @@
 }
 
 /* A To get row: the label (tick + name) fills the row; the count and price button sits at the end. */
+/* At a large text size or on a narrow phone the count and price pill moves to a second line (right-aligned) instead of squeezing the name to a sliver. */
 .ggetline,.ghome {
   display: flex;
   align-items: center;
   gap: var(--sp-8);
   min-height: 44px;
+}
+.ggetline {
+  flex-wrap: wrap;
+}
+/* The name keeps at least 5rem (more specific than .gtickname, which sets min-width 0): below that the count and price wrap under it, not the name down to a letter a line. */
+.ggetline .gnamebtn {
+  flex: 1 1 0;
+  min-width: 5rem;
 }
 .gtickbox {
   display: flex;
@@ -175,6 +186,8 @@
 }
 .gqty {
   flex: none;
+  margin-left: auto;
+  max-width: 100%;
   min-height: 44px;
   padding: 0;
   border: 0;
@@ -235,6 +248,8 @@
 .gfield {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
   gap: var(--sp-2);
   font-size: var(--fs-xs);
   color: var(--muted);
@@ -484,13 +499,15 @@
   flex-direction: column;
   gap: var(--sp-6);
 }
+/* The input keeps at least 4rem; when the three buttons would leave it less (a large text size) they wrap under it. */
 .gdockrow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-6);
 }
 .gdockrow input {
-  flex: 1 1 auto;
+  flex: 1 1 4rem;
   min-width: 0;
   min-height: 44px;
 }

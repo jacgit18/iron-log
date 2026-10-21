@@ -42,9 +42,15 @@
 }
 .gpayer {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
+  max-width: 100%;
   gap: var(--sp-8);
   font-size: var(--fs-sm);
+}
+.gpayer select {
+  min-width: 0;
+  max-width: 100%;
 }
 .gsplitrows {
   list-style: none;
