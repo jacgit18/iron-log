@@ -7,8 +7,8 @@
 // The db:check and e2e:sync steps need the local Postgres: it is started (npm run db:start) and used when DATABASE_URL is not set; if it cannot be reached the step is not run and the script exits 1.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createConnection } from 'node:net';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { is, planChecks } from './lib/check-plan.mjs';
+import { userInfo } from 'node:os';
 
 const args = process.argv.slice(2);
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8' }).split('\n').filter(Boolean);
@@ -27,69 +27,15 @@ const [base, baseRef] = (() => {
 const given = args.find(a => a.startsWith('--files='));
 const files = given ? given.slice(8).split(',') : [...new Set([...git('diff', '--name-only', base), ...git('ls-files', '--others', '--exclude-standard')])];
 
-const is = {
-  docs: f => f !== '.github/pull_request_template.md' && (/\.md$/.test(f) || f.startsWith('docs/') || f.startsWith('.github/') || f === 'LICENSE'),
-  unitTest: f => /\.test\.(js|ts|tsx|jsx)$/.test(f) || f.startsWith('src/test/'),
-  e2eSpec: f => f.startsWith('e2e/') || f.startsWith('e2e-accounts/'),
-  css: f => /\.css$/.test(f),
-  sync: f => f.startsWith('src/sync/') || f.startsWith('src/shared/') || f.startsWith('server/') || f.startsWith('src/store/') || f.startsWith('e2e-sync/') || f === 'playwright.sync.config.js',
-  migration: f => f.startsWith('db/migrations/') || f === 'server/db/types.ts',
-  ui: f => f.startsWith('src/components/') || f.startsWith('src/hooks/') || f.startsWith('src/store/') || /\.(jsx|tsx)$/.test(f),
-  src: f => f.startsWith('src/') || f.startsWith('server/') || f.startsWith('public/') || f === 'index.html',
-  script: f => f.startsWith('scripts/') || f.startsWith('tools/') || f.startsWith('spike/'),
-  tooling: f => /^(package(-lock)?\.json|tsconfig.*\.json|vite\.config\.js|playwright.*\.js|\.oxlintrc.*|Dockerfile|neon\.ts)$/.test(f),
-};
-
-const checks = new Map(); // name -> why
-const want = (name, why) => checks.has(name) || checks.set(name, why);
-const ALL = ['typecheck', 'test', 'lint', 'e2e'];
-// The unit step runs only the tests related to the changed files (scripts/unit-tests.mjs) unless everything is asked for: --all, a tooling or dependency file, or a file this script does not know.
 let fullTests = args.includes('--all');
-
-if (args.includes('--all')) {
-  ALL.forEach(c => want(c, '--all'));
-} else if (!files.length) {
+let checks = new Map(); // name -> why
+if (!args.includes('--all') && !files.length) {
   console.log(`Nothing changed against ${baseRef}: no checks to run.`);
   process.exit(0);
-} else {
-  for (const f of files) {
-    if (is.docs(f)) continue;
-    if (is.tooling(f)) { fullTests = true; ALL.forEach(c => want(c, `${f} is tooling or a dependency file`)); }
-    else if (is.unitTest(f)) {
-      want('test', `${f} is a unit test`);
-      want('lint', `${f} is a unit test`);
-      if (/\.tsx?$/.test(f)) want('typecheck', `${f} is typed`);
-    } else if (is.e2eSpec(f)) {
-      want('lint', `${f} is a browser test`);
-      want('e2e', `${f} is a browser test`);
-    } else if (is.script(f) || f === '.github/pull_request_template.md') {
-      want('lint', `${f} is a helper script`);
-      want('test', `${f} is a helper script (only the tests that import it run)`);
-    } else if (is.migration(f)) {
-      want('db:check', `${f} changes the schema`);
-      want('typecheck', `${f} changes the schema`);
-    } else if (is.css(f)) {
-      want('e2e', `${f} is styling (e2e builds the app first)`);
-      want('lint', `${f} is styling (lint checks its format)`);
-    } else if (is.src(f) || /\.(mjs|js|ts)$/.test(f)) {
-      ['typecheck', 'test', 'lint'].forEach(c => want(c, `${f} is source`));
-      if (is.ui(f)) want('e2e', `${f} is UI or store code`);
-      else want('build', `${f} is source`);
-      if (is.sync(f)) {
-        want('e2e', `${f} is on the sync or server path`);
-        want('e2e:sync', `${f} is on the sync or server path`);
-        want('db:check', `${f} is on the sync or server path`);
-      }
-    } else {
-      fullTests = true;
-      ALL.forEach(c => want(c, `${f} is not a file this script knows, so everything runs`));
-    }
-  }
-  // e2e builds the app itself (playwright.config.js webServer), so a separate build adds nothing when it runs.
-  if (checks.has('e2e')) checks.delete('build');
 }
+({ checks, fullTests } = planChecks(files, args.includes('--all')));
 
-const order = ['typecheck', 'lint', 'test', 'build', 'db:check', 'e2e', 'e2e:sync'];
+const order = ['typecheck', 'lint', 'workflows', 'test', 'build', 'db:check', 'e2e', 'e2e:sync'];
 const plan = order.filter(c => checks.has(c));
 
 if (!plan.length) {
@@ -114,14 +60,16 @@ if (args.includes('--list')) process.exit(0);
 // the load makes both runs time out (the reason for most "skip the hook" pushes). The second run waits for the first, up to 30 minutes.
 // Needs flock (Linux, util-linux); without it the check runs as before. IRON_LOG_CHECK_LOCK overrides the lock file, IRON_LOG_CHECK_LOCKED marks the re-run.
 if (!process.env.IRON_LOG_CHECK_LOCKED && !args.includes('--list')) {
-  const lock = process.env.IRON_LOG_CHECK_LOCK || join(tmpdir(), 'iron-log-check.lock');
+  const lock = process.env.IRON_LOG_CHECK_LOCK || `/tmp/iron-log-check-${userInfo().uid}.lock`;
   const hasFlock = spawnSync('flock', ['--version'], { stdio: 'ignore' }).status === 0;
   if (hasFlock) {
     const env = { ...process.env, IRON_LOG_CHECK_LOCKED: '1' };
     const rerun = [process.execPath, ...process.argv.slice(1)];
     if (spawnSync('flock', ['-n', lock, 'true'], { stdio: 'ignore' }).status !== 0) console.log('Another check is running on this machine; waiting for it to finish (up to 30 minutes).');
     // -E 75: flock's own "gave up waiting" code, told apart from the check failing (which exits 1).
-    const r = spawnSync('flock', ['-w', '1800', '-E', '75', lock, ...rerun], { stdio: 'inherit', env });
+    // -o: the child does not inherit the lock descriptor, so a vite server orphaned by a hard kill cannot keep the lock held after flock itself is gone.
+    // The lock path is fixed (not os.tmpdir()), so a different TMPDIR in two shells still means one lock.
+    const r = spawnSync('flock', ['-o', '-w', '1800', '-E', '75', lock, ...rerun], { stdio: 'inherit', env });
     if (r.status === 75) { console.error('Gave up: another check on this machine held the lock for 30 minutes. This check did not run. Retry when it finishes, or skip once with SKIP_CHECK=1 git push.'); process.exit(75); }
     process.exit(r.status ?? 1);
   }
@@ -154,6 +102,12 @@ for (const c of plan) {
   const related = c === 'test' && !fullTests;
   // The unit step always goes through scripts/unit-tests.mjs, so the worker cap (UNIT_WORKERS) also applies to a full run.
   const viaScript = c === 'test';
+  if (c === 'workflows') {
+    console.log('\n> node scripts/check-workflows.mjs');
+    const w = spawnSync('node', ['scripts/check-workflows.mjs'], { stdio: 'inherit' });
+    if (w.status !== 0) { console.error('\nFailed: workflows'); process.exit(w.status ?? 1); }
+    continue;
+  }
   console.log(viaScript ? `\n> node scripts/unit-tests.mjs ${related ? '(the tests related to what changed)' : '--full (every unit test)'}` : `\n> npm run ${c}`);
   const r = spawnSync(...(viaScript ? ['node', ['scripts/unit-tests.mjs', related ? `--base=${baseRef}` : '--full']] : ['npm', ['run', c]]), { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
   if (r.status !== 0) {
