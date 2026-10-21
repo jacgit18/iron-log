@@ -43,6 +43,10 @@ export interface AuthConfig {
 export const SESSION_DAYS = 30;
 /** Codes sent to one address (per server instance, otpEmail.ts). */
 export const OTP_PER_ADDRESS = { max: 3, windowMs: 10 * 60_000 };
+/** Tries at the sign-in route for one address (per server instance). Better Auth's own limit of 3 wrong guesses per code counts with a read then a write, so
+ *  parallel guesses all get evaluated before the count catches up (60 parallel wrong guesses: 59 checked); counting every attempt here, at the moment it
+ *  arrives and before anything is awaited, cannot be raced. 10 is a little over what an honest person can need: 3 codes in 10 minutes, 3 tries each. */
+export const OTP_TRIES_PER_ADDRESS = { max: 10, windowMs: 10 * 60_000 };
 const DAY = 60 * 60 * 24;
 
 /**
@@ -87,6 +91,7 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
   });
   const pii = config.piiKey ? createPiiCrypto(config.piiKey) : undefined;
   const allowCode = perAddressLimit(OTP_PER_ADDRESS.max, OTP_PER_ADDRESS.windowMs);
+  const allowTry = perAddressLimit(OTP_TRIES_PER_ADDRESS.max, OTP_TRIES_PER_ADDRESS.windowMs);
   const auth = betterAuth({
     baseURL: config.baseURL,
     secret: config.secret,
@@ -140,6 +145,11 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
         const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
         // While the feature is owner-only, anyone else is turned away here, before a code is made, so calling the routes directly
         // creates no account and sends no mail. The answer is the usual one, so it does not reveal who is an admin.
+        // Every address is counted alike, before the owner-only check, so the answer does not tell an admin address from another.
+        if (ctx.path === '/sign-in/email-otp' && email && !allowTry(email)) {
+          console.warn(JSON.stringify({ msg: 'sign-in refused: too many tries for one address' }));
+          throw new APIError('TOO_MANY_REQUESTS', { message: 'TOO_MANY_ATTEMPTS' });
+        }
         const notYet = config.emailCodeAdminsOnly === true && !config.capExempt?.has(email);
         if (ctx.path === '/sign-in/email-otp' && notYet) throw new APIError('BAD_REQUEST', { message: 'INVALID_OTP' });
         if (ctx.path !== '/email-otp/send-verification-otp' || body?.type !== 'sign-in' || !email) return;
