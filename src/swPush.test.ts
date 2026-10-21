@@ -3,6 +3,7 @@ import { onNotificationClick, onPush, parsePushMessage, TAGS, type PushScope } f
 
 const SCOPE = 'https://iron.example/';
 const REST = JSON.stringify({ kind: 'rest', key: '1', at: 5, body: 'Rest over. Time for your next set.' });
+const WATER = JSON.stringify({ kind: 'water', key: 'w1', at: 5, body: 'Time for a glass of water.' });
 const NUDGE = JSON.stringify({ kind: 'day-nudge', key: 'n', at: 5, body: 'Day not finished: 2 of 5 exercises left.' });
 
 function scopeWith(clients: { visibilityState: string; focus: () => Promise<unknown> }[] = []) {
@@ -60,6 +61,12 @@ describe('onPush', () => {
     expect(shown[0]!.options).toMatchObject({ body: 'Open Iron Log.', tag: 'iron-log' }); // not a kind's tag, so it never replaces a real notice
     await onPush(scope, null, async () => {});
     expect(shown).toHaveLength(2);
+  });
+  it('a water reminder has its own tag (it never replaces a rest or day notice) and opens on Daily', async () => {
+    const { scope, shown } = scopeWith([{ visibilityState: 'hidden', focus: async () => {} }]);
+    await onPush(scope, WATER, async () => {});
+    expect(shown[0]!.options).toMatchObject({ body: 'Time for a glass of water.', tag: 'water-reminder', data: { url: `${SCOPE}?open=daily` } });
+    expect(new Set(Object.values(TAGS)).size).toBe(3);
   });
   it('the rest notice shares the in-page notice\'s tag, so the two replace each other', () => {
     expect(TAGS.rest).toBe('rest-timer');

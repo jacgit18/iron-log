@@ -12,7 +12,7 @@ export interface Subscription {
 export type PushSender = (sub: Subscription, message: { kind: PushKind; key: string; at: number; body: string }, ttlSeconds: number) => Promise<'sent' | 'gone' | 'failed'>;
 
 /** How long a push service should hold a message for a phone that is off or out of range. A late "rest over" is noise, so it is short. */
-export const TTL_SECONDS: Record<PushKind, number> = { rest: 90, 'day-nudge': 600 };
+export const TTL_SECONDS: Record<PushKind, number> = { rest: 90, 'day-nudge': 600, water: 1800 };
 
 export function webPushSender(config: PushConfig): PushSender {
   const vapidDetails = { subject: config.subject, publicKey: config.publicKey, privateKey: config.privateKey };
