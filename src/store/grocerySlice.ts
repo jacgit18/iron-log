@@ -234,7 +234,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       if (!get().grocery.items.some(i => i.id === id) || !MONTH_RE.test(month)) return;
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
-        if (on) { if (!l.got) l.have = true; } else { delete l.have; delete l.got; }
+        if (on) { if (!l.got) l.have = true; } else { delete l.have; delete l.got; delete l.unpriced; } // unticking drops the unpriced mark with the purchase
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
     },
@@ -242,7 +242,14 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     setGroceryQty(month, id, qty) {
       const q = cleanQty(qty);
       if (q == null || q <= 0 || !get().grocery.items.some(i => i.id === id)) return;
-      mutateMonth(month, m => { const { prices: _p, packShares: _s, ...l } = m.lines[id] || {}; m.lines[id] = { ...l, qty: q }; }); // a typed count goes back to one price for all
+      const it = get().grocery.items.find(i => i.id === id)!;
+      mutateMonth(month, m => {
+        const { prices: _p, packShares: _s, ...l } = m.lines[id] || {};
+        const next: GroceryLine = { ...l, qty: q }; // a typed count goes back to one price for all
+        // A bought line keeps what it was bought for: with no price of its own it takes the item's price as it is now, or stays unpriced, so a later price change does not reach back.
+        if (next.got && next.cents === undefined) { if (it.cents != null) next.cents = it.cents; else next.unpriced = true; }
+        m.lines[id] = next;
+      });
     },
 
     // The price of each one bought this month, when they differ (beef: 8.99, 10.49, 9.25). The count follows how many there are. Null (or
