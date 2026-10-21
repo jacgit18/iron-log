@@ -39,8 +39,8 @@ test('Make it the usual store moves the item for good, and the button goes', asy
   await seed(page);
   await openPanel(page, 'Rice');
   await page.getByLabel('Store for Rice this month').selectOption("BJ's");
-  await page.getByRole('button', { name: "Make BJ's the usual store for Rice" }).click();
-  await expect(page.getByRole('button', { name: /the usual store for Rice/ })).toHaveCount(0);
+  await page.getByRole('button', { name: "Make BJ's its usual store for Rice" }).click();
+  await expect(page.getByRole('button', { name: /usual store for Rice/ })).toHaveCount(0);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).items.find(i => i.id === 'rice').store)).toBe("BJ's");
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/2026-09') ?? 'null')?.lines?.rice?.store)).toBeUndefined(); // the month is empty again, so it is not kept
   await page.click('#groc-next');

@@ -176,6 +176,11 @@ export const removedItem = (g: Grocery, id: string, l: GroceryLine): GroceryItem
 export const inMonth = (g: Grocery, items: GroceryItem[], m: GroceryMonth): GroceryItem[] =>
   items.map(i => { const store = storeFor(g, i, m); return store === i.store ? i : { ...i, store }; });
 
+/** The bought lines of items that were removed from the list, read as items under the store they were bought at, so a month's tile, count and tax hint
+ *  see the same purchases as the store lines, the split card and Spending do (`purchasesOf`, `spendByMonth`). */
+export const removedBought = (g: Grocery, m: GroceryMonth): GroceryItem[] =>
+  Object.entries(m.lines).filter(([id, l]) => l.got && !g.items.some(x => x.id === id)).map(([id, l]) => { const it = removedItem(g, id, l); return { ...it, store: storeFor(g, it, m) }; });
+
 /** The words after a shared store's name: its group and how many others are in it ("Home +2"). */
 export const groupTag = (group: GroceryGroup) => `${group.n} +${group.people.filter(p => !p.gone).length}`;
 
