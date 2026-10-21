@@ -292,3 +292,42 @@ describe('guessing a code in parallel', () => {
     }
   });
 });
+
+// Code audit S-06: only a sign-in code is sent or kept, and deleting the account clears every record that carries the address.
+describe('codes of any other kind', () => {
+  const rowsFor = async (email: string) => (await sql<{ identifier: string }>`select identifier from auth.verification where identifier like ${`%${email}`}`.execute(db)).rows.map(r => r.identifier);
+
+  it('are answered like a sent code, but nothing is sent and nothing is stored', async () => {
+    const { base, sent } = await serve({}, NO_IP_LIMIT);
+    await ask(base, 'lifter@example.com'); // makes the account
+    await sql`delete from auth.verification`.execute(db);
+    sent.length = 0;
+    for (const type of ['forget-password', 'email-verification', 'change-email', 'something-else']) {
+      const res = await post(base, '/api/auth/email-otp/send-verification-otp', { email: 'lifter@example.com', type });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ success: true });
+    }
+    expect(sent).toEqual([]);
+    expect(await rowsFor('lifter@example.com')).toEqual([]);
+  });
+
+  it('a sign-in code is still sent and stored', async () => {
+    const { base, sent } = await serve({}, NO_IP_LIMIT);
+    await ask(base, 'lifter@example.com');
+    expect(sent).toHaveLength(1);
+    expect(await rowsFor('lifter@example.com')).toEqual(['sign-in-otp-lifter@example.com']);
+  });
+
+  it('deleting the account removes every code record that carries the address, whatever its kind', async () => {
+    const { base, sent } = await serve({}, NO_IP_LIMIT);
+    await ask(base, 'gone@example.com');
+    const cookie = (await enter(base, 'gone@example.com', sent[0]!.otp)).headers.getSetCookie().find(c => /session_token=/.test(c))!.split(';')[0]!;
+    for (const kind of ['forget-password', 'email-verification', 'sign-in']) {
+      await sql`insert into auth.verification (id, identifier, value, "expiresAt") values (${`seed-${kind}`}, ${`${kind}-otp-gone@example.com`}, 'x', now() + interval '1 hour') on conflict (id) do nothing`.execute(db);
+    }
+    expect((await rowsFor('gone@example.com')).length).toBeGreaterThanOrEqual(3);
+    const res = await fetch(`${base}/api/account/delete`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ confirm: 'DELETE' }) });
+    expect(res.status).toBe(200);
+    expect(await rowsFor('gone@example.com')).toEqual([]);
+  });
+});

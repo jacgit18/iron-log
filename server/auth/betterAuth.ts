@@ -152,7 +152,11 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
         }
         const notYet = config.emailCodeAdminsOnly === true && !config.capExempt?.has(email);
         if (ctx.path === '/sign-in/email-otp' && notYet) throw new APIError('BAD_REQUEST', { message: 'INVALID_OTP' });
-        if (ctx.path !== '/email-otp/send-verification-otp' || body?.type !== 'sign-in' || !email) return;
+        if (ctx.path !== '/email-otp/send-verification-otp') return;
+        // Only a sign-in code is ever sent or kept. A request for any other kind (password reset, email verification) is answered like a sent one without
+        // calling the plugin, which would store a record of that kind under the address, for anyone to plant for any account (code audit S-06).
+        if (body?.type !== 'sign-in') return ctx.json({ success: true });
+        if (!email) return;
         if (notYet) return ctx.json({ success: true });
         if (allowCode(email)) return;
         console.warn(JSON.stringify({ msg: 'sign-in code skipped: too many for one address' }));
