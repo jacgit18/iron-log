@@ -1,5 +1,5 @@
 import { money } from '../../lib/grocery.js';
-import { monthOwes, purchasesOf } from '../../lib/grocerySettle.js';
+import { monthOthersOwe, monthOwes, purchasesOf } from '../../lib/grocerySettle.js';
 import type { Grocery, GroceryMonth } from '../../types.ts';
 import Icon from '../Icon.jsx';
 import SplitSummary from './SplitSummary.js';
@@ -11,11 +11,13 @@ export default function SplitSection({ g, month, mk, open, onToggle }: { g: Groc
   if (!purchasesOf(g, month).length) return null; // nothing bought, nothing to split
   const { owed, youOwe } = monthOwes(g, month);
   const outstanding = owed + youOwe;
+  // "All settled" is said only when nothing is unpaid anywhere: rows between other people are not yours to chase (so not Outstanding) but are not settled either (audit Y-8).
+  const others = outstanding > 0 ? 0 : monthOthersOwe(g, month);
   const bodyId = `groc-split-body-${mk}`;
   return (
     <div className="gsplitsection" id={`groc-split-${mk}`}>
       <button type="button" className="gsplittoggle" aria-expanded={open} aria-controls={bodyId} onClick={() => onToggle(!open)}>
-        <span className="gsplittitle"><b>Splitting this month</b><small className={outstanding > 0 ? 'gsplitowed' : 'gsplitdone'}>{outstanding > 0 ? `Outstanding ${money(outstanding)}` : 'All settled ✓'}</small></span>
+        <span className="gsplittitle"><b>Splitting this month</b><small className={outstanding > 0 || others > 0 ? 'gsplitowed' : 'gsplitdone'}>{outstanding > 0 ? `Outstanding ${money(outstanding)}` : others > 0 ? `Others owe each other ${money(others)}` : 'All settled ✓'}</small></span>
         <Icon name={open ? 'chevron-up' : 'chevron-down'} />
       </button>
       <div id={bodyId} hidden={!open}>{open && <SplitSummary g={g} month={month} mk={mk} />}</div>

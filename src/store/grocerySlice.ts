@@ -6,7 +6,6 @@ import {
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
 import { storeStatus } from '../lib/grocerySettle.js';
-import { groupOfStore } from '../lib/grocerySettle.js';
 import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
 import { activePeople, knownPeople, partiesFor } from '../lib/grocerySettle.js';
@@ -243,6 +242,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     },
 
     removeGroceryStore(name) {
+      pinPastParties(); // the store leaves its group below: past months keep the split they were counted with
       const i = get().grocery.stores.indexOf(name);
       const retire = i >= 0 && historyUses(name);
       const held = (get().grocery.groups ?? []).filter(x => x.stores.includes(name)).map(x => x.id); // the group it defaulted to, for Undo
@@ -276,7 +276,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     // so a "have" tick is dropped; unticking puts it back on the list. Each month keeps its own ticks (ADR 054).
     setGroceryGot(month, id, on) {
       const it = get().grocery.items.find(i => i.id === id);
-      if (!it || !MONTH_RE.test(month)) return;
+      if (!it || !MONTH_RE.test(month) || get().blocked()) return false; // false: nothing changed (sync is loading), so the screen shows no Undo for it
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
         if (on) {
@@ -288,6 +288,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         } else { delete l.got; delete l.unpriced; }
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
+      return true;
     },
 
     // The At home tick: you have it this month, so it is off that month's list. Unticking brings it back, and undoes a purchase too (the

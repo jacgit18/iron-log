@@ -147,3 +147,17 @@ describe('the unpriced mark, loose ends (overnight audit G-1 and G-4)', () => {
     expect(spent(last)).toBe(0);
   });
 });
+
+describe('a price edited on At home (A4)', () => {
+  it('is the default for later months, and does not reach back into a month where the item was already bought', async () => {
+    const { lib, id, last, spent } = await setup('4.40');
+    st().setGroceryGot(last, id, true);
+    expect(spent(last)).toBe(440);
+    expect(st().updateGroceryItem(id, { cents: 700 })).toBeNull();
+    expect(st().grocery.items[0].cents).toBe(700);
+    expect(spent(last)).toBe(440); // the month it was bought keeps its price
+    const next = lib.shiftMonth(last, 2);
+    st().setGroceryGot(next, id, true);
+    expect(lib.lineOf(st().grocery.items[0], st().groceryMonths[next]).cents).toBe(700); // a later purchase takes the new default
+  });
+});

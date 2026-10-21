@@ -89,3 +89,18 @@ describe('retired stores in saved data and sync', () => {
     expect(normGroceryStore({ id: 'Aldi', n: 'Aldi' })).toEqual({ id: 'Aldi', n: 'Aldi' });
   });
 });
+
+describe('a retired store in the month that used it', () => {
+  it('still has its purchases and its card in that month, and not in a month that did not use it', async () => {
+    const { id, last, mk } = await setup();
+    st().setGroceryGot(last, id, true);
+    st().removeGroceryItem(id); st().removeGroceryStore('Aldi');
+    const settle = await import('../lib/grocerySettle.js');
+    const g = st().grocery;
+    expect(g.stores).not.toContain('Aldi');
+    const pastBought = settle.storesBought(g, settle.purchasesOf(g, st().groceryMonths[last]));
+    expect(pastBought).toEqual(['Aldi']);
+    const nowBought = settle.storesBought(g, settle.purchasesOf(g, st().groceryMonths[mk] ?? { lines: {}, pulled: [] }));
+    expect(nowBought).toEqual([]);
+  });
+});
