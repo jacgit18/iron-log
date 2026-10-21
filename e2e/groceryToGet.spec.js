@@ -81,3 +81,15 @@ test('with every row open the page has no accessibility violations in both theme
   await page.addStyleTag({ content: 'html { font-size: 200% }' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
 });
+
+test('a bought row offers no "I have this" (it would do nothing), and a count that rounds to nothing is refused with the message', async ({ page }) => {
+  await seed(page);
+  await page.click('#groc-bought summary');
+  await pill(page, 'Eggs').click();
+  await expect(page.getByLabel('Count of Eggs')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'I have this: Eggs' })).toHaveCount(0);
+  await pill(page, 'Milk').click();
+  await expect(page.getByRole('button', { name: 'I have this: Milk' })).toBeVisible(); // still to get: offered
+  await page.getByLabel('Count of Milk').fill('0.001'); await page.getByLabel('Count of Milk').blur();
+  await expect(page.getByRole('alert').filter({ hasText: 'The count must be a number from 0.01 to 999.' })).toBeVisible();
+});

@@ -48,7 +48,7 @@ function useIdSet() {
   return [ids, set, () => setIds(new Set())] as const;
 }
 // The two typed boxes of a row, for To get (this month) and At home (the usual): each says whether the text was accepted, and saves through `save` when it was.
-const commitQty = (t: string, save: (n: number) => void) => { const n = Number(t); if (!t.trim() || !Number.isFinite(n) || n <= 0 || n > 999) return false; save(n); return true; };
+const commitQty = (t: string, save: (n: number) => void) => { const n = Number(t); if (!t.trim() || !Number.isFinite(n) || Math.round(n * 100) / 100 <= 0 || n > 999) return false; save(n); return true; }; // the count is kept to two decimals, so 0.001 would round to nothing
 const commitPrice = (t: string, save: (cents: number | null) => void) => { if (!t.trim()) { save(null); return true; } const c = parseDollars(t); if (c == null) return false; save(c); return true; };
 
 /* ---------- Expand all ---------- */
@@ -117,7 +117,7 @@ function GetRow({ g, item, month, mk, future, carries, onGot, open, onOpen, onMo
             </div>
           ))}
           <span className="gtotal" aria-label={`Total for ${item.n}`}>{l.cents == null && !l.prices ? '' : money(total)}</span>
-          {!future && <button type="button" className="btn sm ghost gtake" aria-label={`I have this: ${item.n}`} onClick={() => s.takeGroceryOff(mk, item.id)}>I have this</button>}
+          {!future && !l.got && <button type="button" className="btn sm ghost gtake" aria-label={`I have this: ${item.n}`} onClick={() => s.takeGroceryOff(mk, item.id)}>I have this</button>}
         </div>
       )}
     </li>
