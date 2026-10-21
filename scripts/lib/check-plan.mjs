@@ -4,7 +4,9 @@
 
 export const is = {
   // Docs and repo metadata that no check reads. The workflow files, composite actions and pr-kit.json are not docs: they are checked by `workflows`.
-  docs: f => f !== '.github/pull_request_template.md' && !is.workflow(f) && (/\.md$/.test(f) || f.startsWith('docs/') || f.startsWith('.github/') || f === 'LICENSE'),
+  // README.md and SETUP.md carry a generated table of contents that `npm run lint` checks (scripts/doc-toc.mjs), so they are not plain docs.
+  tocDoc: f => f === 'README.md' || f === 'SETUP.md',
+  docs: f => f !== '.github/pull_request_template.md' && !is.tocDoc(f) && !is.workflow(f) && (/\.md$/.test(f) || f.startsWith('docs/') || f.startsWith('.github/') || f === 'LICENSE'),
   workflow: f => f.startsWith('.github/workflows/') || f.startsWith('.github/actions/') || f === '.github/pr-kit.json',
   unitTest: f => /\.test\.(js|ts|tsx|jsx)$/.test(f) || f.startsWith('src/test/'),
   e2eSpec: f => f.startsWith('e2e/') || f.startsWith('e2e-accounts/'),
@@ -43,6 +45,8 @@ export function planChecks(files, all = false) {
     } else if (is.e2eSpec(f)) {
       want('lint', `${f} is a browser test`);
       want('e2e', `${f} is a browser test`);
+    } else if (is.tocDoc(f)) {
+      want('lint', `${f} has a generated table of contents (npm run docs:toc)`);
     } else if (is.script(f) || f === '.github/pull_request_template.md') {
       want('lint', `${f} is a helper script`);
       want('test', `${f} is a helper script (only the tests that import it run)`);

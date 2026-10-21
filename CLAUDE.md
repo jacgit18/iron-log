@@ -16,6 +16,7 @@ Rule: `/home/jac/.claude/rules/definition-of-done.md`. A change is done when all
 - Schema, migration or access change: `db:check` passes, `data/` docs updated, forward and rollback plan stated; owner runs production. Enforcer: `npm run check`, advisory for the docs.
 - Store, sync or `server/` change: `e2e:sync` run against the scratch database.
 - Docs: `CHANGELOG.md`, `feature-map.md`, and `DECISIONS.md` for a decision, in the same PR. Enforcer: PR changelog check.
+- Docs have their generated table of contents (global rule `document-toc.md`): `README.md` and `SETUP.md` are checked by `npm run lint` (`npm run docs:toc`; `npm run docs:toc:write` refreshes them); the project docs in the vault are refreshed by the doc-toc hook. Enforcer: `npm run lint`, CI.
 - PR body from `scripts/pr-body.mjs`, with the Done section filled. Enforcer: PR audience and changelog checks, template.
 - Device-only behavior (push, install prompt, back-swipe) is not done until tried on a real device; until then it is `not run`.
 - Done means merged; a deployed change also gets a smoke check of the live URL (owner approves prod).

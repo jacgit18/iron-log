@@ -5,7 +5,11 @@ const names = files => [...planChecks(files).checks.keys()].sort();
 
 describe('planChecks', () => {
   it('runs nothing for docs and repo metadata', () => {
-    expect(names(['README.md', '.github/CODEOWNERS', 'docs/a.txt'])).toEqual([]);
+    expect(names(['.github/CODEOWNERS', 'docs/a.txt'])).toEqual([]);
+  });
+  it('lints README.md and SETUP.md, which carry a generated table of contents', () => {
+    expect(names(['README.md'])).toEqual(['lint']);
+    expect(names(['SETUP.md'])).toEqual(['lint']);
   });
   it('checks a workflow, an action or pr-kit.json (no longer treated as docs)', () => {
     expect(names(['.github/workflows/test.yml'])).toEqual(['workflows']);

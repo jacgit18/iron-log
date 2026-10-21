@@ -11,7 +11,9 @@ const run = (files, env = {}) => {
 
 describe('ci-changes', () => {
   it.each([
-    [['README.md', 'docs/a.md', '.github/CODEOWNERS'], []],
+    [['docs/a.md', '.github/CODEOWNERS'], []],
+    [['README.md'], ['unit']],
+    [['SETUP.md'], ['unit']],
     [['scripts/pr-body.mjs'], ['unit']],
     [['.github/pull_request_template.md'], ['unit']],
     [['e2e/a.spec.js'], ['unit', 'e2e']],

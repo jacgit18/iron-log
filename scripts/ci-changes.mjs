@@ -11,7 +11,7 @@ const args = process.argv.slice(2);
 const given = args.find(a => a.startsWith('--files='));
 
 const dep = /^(package(-lock)?\.json|tsconfig.*\.json|\.oxlintrc.*|vite\.config\.js)$/;
-const docs = f => f !== '.github/pull_request_template.md' && (/\.md$/.test(f) || f.startsWith('docs/') || f === 'LICENSE' || (f.startsWith('.github/') && !f.startsWith('.github/workflows/test.yml') && f !== '.github/pull_request_template.md'));
+const docs = f => f !== '.github/pull_request_template.md' && f !== 'README.md' && f !== 'SETUP.md' && (/\.md$/.test(f) || f.startsWith('docs/') || f === 'LICENSE' || (f.startsWith('.github/') && !f.startsWith('.github/workflows/test.yml') && f !== '.github/pull_request_template.md'));
 // Each job, and the files that make it worth running. A dependency or tsconfig change counts for all of them.
 const needs = {
   e2e: f => dep.test(f) || /^(src|public|e2e|e2e-accounts)\//.test(f) || /^(index\.html|playwright(\.accounts)?\.config\.js)$/.test(f),
@@ -20,8 +20,9 @@ const needs = {
   backup: f => dep.test(f) || /^(backup|db)\//.test(f) || /^scripts\/(restore-check\.sh|backup-cloud-run\.sh)$/.test(f),
   docker: f => dep.test(f) || /^(src|server|public|backup)\//.test(f) || /^(Dockerfile|\.dockerignore|index\.html|scripts\/build-server\.mjs)$/.test(f),
 };
+// README.md and SETUP.md are checked for their generated table of contents by `npm run lint` (the unit job), so they count as light, not docs.
 // Helper scripts, tools and spikes are linted and type-checked by the unit job and need nothing heavier (unless listed above).
-const light = f => /^(scripts|tools|spike)\//.test(f) || f === '.github/pull_request_template.md'; // the template is filled by scripts/pr-body.mjs, whose test reads it
+const light = f => /^(scripts|tools|spike)\//.test(f) || f === '.github/pull_request_template.md' || f === 'README.md' || f === 'SETUP.md'; // the template is filled by scripts/pr-body.mjs, whose test reads it
 
 const all = Object.fromEntries(JOBS.map(j => [j, true]));
 const result = Object.fromEntries(JOBS.map(j => [j, false]));
