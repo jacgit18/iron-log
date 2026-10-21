@@ -131,6 +131,7 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
       const qty = cleanQty(o.qty); if (qty != null) line.qty = qty;
       const cents = cleanCents(o.cents); if (cents != null) line.cents = cents;
       const prices = cleanPrices(o.prices); if (prices) line.prices = prices;
+      if (o.unpriced === true && o.got === true && line.cents === undefined && !prices) line.unpriced = true; // only a bought line with no price of its own
       const share = cleanShare(o.share); if (share) line.share = share;
       if (typeof o.store === 'string' && o.store !== '__proto__') line.store = str(o.store, MAX_STORE); // this month's store for the item ('' is Anywhere)
       if (prices && Array.isArray(o.packShares)) { // one share per pack, kept in step with the prices; null is the line's own
