@@ -1,6 +1,9 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import Board from './Board.jsx';
-import Stretches from '../stretches/Stretches.jsx';
+import { lazyTab } from '../../lib/lazyTab.js';
+
+// The stretch routine is a second screen of the Board tab; its code loads when it is first shown, not with the workout.
+const Stretches = lazyTab(() => import('../stretches/Stretches.js'));
 
 const MODES = [[1, 'Mode 1 · A only'], [2, 'Mode 2 · monthly'], [3, 'Mode 3 · 6 months']];
 
