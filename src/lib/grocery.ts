@@ -41,9 +41,9 @@ export function newShareId(): string {
   return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
 }
 
-export function newGroceryId(items: GroceryItem[], name: string): string {
+export function newGroceryId(items: GroceryItem[], name: string, used: Iterable<string> = []): string {
   const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'item';
-  const taken = new Set(items.map(i => i.id)); let id = base, n = 2;
+  const taken = new Set([...items.map(i => i.id), ...used]); let id = base, n = 2; // `used`: ids that months still hold lines for (a removed item's), so a new item never inherits them
   while (taken.has(id)) id = `${base}-${n++}`;
   return id;
 }
@@ -148,6 +148,10 @@ export function storeFor(g: Grocery, item: GroceryItem, m: GroceryMonth): string
   // tax and shares count it there too.
   return store === '' || g.stores.includes(store) ? store : '';
 }
+/** The store a bought line of a removed item stays under: the one pinned on the line when the item was removed (so its bill and its store's tax stay), else Anywhere. */
+export const removedStore = (g: Grocery, l: GroceryLine): string => (l.store !== undefined && g.stores.includes(l.store) ? l.store : '');
+/** Stands in for an item that was removed, so its bought line is read like any other: no price of its own beyond the line's, the store it was pinned to. */
+export const removedItem = (g: Grocery, id: string, l: GroceryLine): GroceryItem => ({ id, n: '', store: removedStore(g, l), qty: 1, cents: null, every: true, out: false });
 /** The items as they sit in a month: each under the store it is bought at that month, so grouping, bills, tax and sharing all follow it. */
 export const inMonth = (g: Grocery, items: GroceryItem[], m: GroceryMonth): GroceryItem[] =>
   items.map(i => { const store = storeFor(g, i, m); return store === i.store ? i : { ...i, store }; });
@@ -179,7 +183,7 @@ export function spendByMonth(g: Grocery, months: Record<string, GroceryMonth>, e
     Object.entries(m?.lines ?? {}).forEach(([id, l]) => {
       if (!l.got) return;
       const it = g.items.find(x => x.id === id);
-      bought++; boughtAt.add(it ? storeFor(g, it, m!) : ''); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? (l.unpriced ? null : it?.cents ?? null));
+      bought++; boughtAt.add(storeFor(g, it ?? removedItem(g, id, l), m!)); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? (l.unpriced ? null : it?.cents ?? null));
     });
     boughtAt.forEach(store => { spent += own(m?.tax, store) ?? 0; }); // each store's tax from the receipt
     return { key, spent, bought };
