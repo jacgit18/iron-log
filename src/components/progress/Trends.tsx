@@ -258,22 +258,24 @@ function BodyChart() {
       <RemovedNotice scope="body" />
       {L.length > 1 ? <LineChart entries={L.map(e => ({ d: e.d, w: e.w }))} height={180} label="Body weight over time" /> : <p className="note">One more weekly weigh-in and the trend line starts.</p>}
       <BodyGoal />
-      <table className="hist bwtab">
-        <thead><tr><th>Date</th><th className="num">Weight</th><th className="num">Change</th><th><span className="sr">Delete</span></th></tr></thead>
-        <tbody>
-          {rec.map((e, i) => {
-            const p = rec[i + 1];
-            return (
-              <tr key={e.wk} className={arming === e.wk ? 'removing' : undefined}>
-                <td className="rmname">{fmtShort(parseDate(e.d))}</td>
-                <td className="num">{fmtLb(e.w)} lb</td>
-                <td className="num">{p ? signed(e.w - p.w, 1) : '—'}</td>
-                <td className="num"><ArmedButton className={`btn sm ${arming === e.wk ? 'danger' : 'ghost'}`} aria-label={`Delete ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onArmedChange={a => setArming(a ? e.wk : null)} onConfirm={() => { setArming(null); deleteBodyWeight(e.wk); }} /></td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="hist-box">
+        <table className="hist bwtab" role="table">
+          <thead role="rowgroup"><tr role="row"><th role="columnheader">Date</th><th role="columnheader" className="num">Weight</th><th role="columnheader" className="num">Change</th><th role="columnheader"><span className="sr">Delete</span></th></tr></thead>
+          <tbody role="rowgroup">
+            {rec.map((e, i) => {
+              const p = rec[i + 1];
+              return (
+                <tr role="row" key={e.wk} className={arming === e.wk ? 'removing' : undefined}>
+                  <td role="cell" className="rmname">{fmtShort(parseDate(e.d))}</td>
+                  <td role="cell" className="num">{fmtLb(e.w)} lb</td>
+                  <td role="cell" className="num">{p ? signed(e.w - p.w, 1) : '—'}</td>
+                  <td role="cell" className="num"><ArmedButton className={`btn sm ${arming === e.wk ? 'danger' : 'ghost'}`} aria-label={`Delete ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onArmedChange={a => setArming(a ? e.wk : null)} onConfirm={() => { setArming(null); deleteBodyWeight(e.wk); }} /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {L.length > 6 && <p className="note">Showing the latest 6 of {L.length}. All of them are in the Excel and data exports.</p>}
     </section>
   );
