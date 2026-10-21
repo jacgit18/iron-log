@@ -1,3 +1,18 @@
+
+<!-- toc -->
+## Contents
+
+- [Screenshots](#screenshots)
+- [Features](#features)
+- [Running it](#running-it)
+- [Where data is stored](#where-data-is-stored)
+- [Project layout](#project-layout)
+- [Customizing](#customizing)
+- [Development](#development)
+- [Project docs](#project-docs)
+- [Notes](#notes)
+- [License](#license)
+<!-- /toc -->
 <p align="center">
   <img src="https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/banner.png" alt="Iron Log: a weekly training board for A/B program rotation, phase-based targets and a muscle map" width="100%">
 </p>
@@ -48,7 +63,8 @@ It's a React app built with Vite. You can install it on your phone or computer l
 
 - **Weekly board.** One column per training day (Sunday to Saturday week). You can check off exercises one at a time or a whole day at once. In a superset each exercise has its own checkbox and counts on its own; an either/or counts once, whichever option you do. When equipment is taken, drag a card to another day (or use "Move to" on a phone). If the move puts an exercise on the same day as, or the day next to, another session of that exercise, a heads-up says so, offers to move it back, and suggests the nearest day where it wouldn't clash. The make-up day (normally Day 5) is for anything skipped earlier in the week. When yesterday still has unchecked exercises, a notice offers to skip them all or move them all to a later day. **Skip** takes an exercise out of this week's counts without deleting it, and checking it off later undoes the skip. Checking off an exercise you haven't logged also logs its planned numbers (the target weight and sets × reps on the card), marked "from check-off", so it shows in Progress; logging your real numbers replaces it. Unchecking an exercise removes its log entry for that week, whether it came from the check-off or from you, and a notice at the top of the board (it scrolls into view) names what was unchecked and how many logged entries it removed, with an **Undo** that ticks it again and puts the entries back; skipping a card keeps what you logged. Done and skipped exercises drop to the bottom of their day, so what's left is always on top.
 - **Stretches.** On the Board tab, next to Workout, a daily stretch routine laid out like the workout week (same in every mode and program): one column per day, grouped cards you tick off, a days-complete count, and its own Experiments list. The routine lives in Program → Stretch library.
-- **Supplements.** A water log: tap a cup or bottle size (8 oz to a half gallon) or type an amount, against a daily goal, with the last 7 days. Mark a hot day (+16 oz) or enter training minutes (+12 oz per 30) to raise that day's goal.
+- **Nutrition.** On the Daily tab, next to Groceries. A water log: tap a cup or bottle size (8 oz to a half gallon) or type an amount, against a daily goal (half your body weight in ounces), with the last 7 days. Mark a hot day (+16 oz) or enter training minutes (+12 oz per 30) to raise that day's goal. It also keeps a supplement schedule (morning, noon, night) with a tick for each one taken, and a searchable supplement catalog.
+- **Groceries.** On the Daily tab. A master list of items by store, with a count, a price (or a weight and price per pound, kilo or ounce) and an optional note. **To get** shows this month's list: tick items as you buy them, see what you got, spent and expect to spend per store, add store tax, and fold what is bought under *Bought this month*. Use the month arrows to look back through history or plan up to 12 months ahead. **At home** lists every item by store with a *Have* tick per month, and holds Edit (add, rename, move store, remove with Undo). **Sharing:** put people in groups, set who shares each item, and the split card shows what each person owes per store, with owed amounts you can mark paid. Past months keep their split when people or stores change. It syncs with your account and is part of the export and import file.
 - **Experiments.** Keep exercises you want to try in a list under the board, and add one to any day of the week you're viewing. It's a normal card for that week only; your program doesn't change.
 - **Add exercise and details.** Each day has a **+ Add to program** button; it opens the same add sheet as the Program tab, so you pick Primary or Accessory, the section (Regular, Supersets, Plyometric or Home), single, superset or either/or, and it joins the program for every week. **+ This week only** adds a one-week card instead. **Details** on a card sets an exercise's optional video link, its equipment (barbell, short barbell, EZ bar, dumbbell, cable, machine, bodyweight and so on; also changeable from the Log sheet, which also edits the video link) and a default phase for every card with that exercise. Setting it replaces any slot default saved for that exercise; a phase picked for one week, or a slot default saved afterwards, still wins over it.
 - **Exercise library.** On the Program tab, **Exercise library** lists every exercise, built in and your own, with its equipment, video link, default phase, 1RM, muscles and which program it's in. Search it, filter by equipment or muscle, and edit everything about an exercise in one sheet (the same one the **Details** button on a card opens). **+ New exercise** adds one that isn't on a card yet, and you can delete your own exercises once nothing uses them. Changes apply to every card, day and week.
@@ -82,7 +98,7 @@ It's a React app built with Vite. You can install it on your phone or computer l
 ## Running it
 
 - **Hosted:** open **[the hosted app](https://iron-log-947510572244.us-central1.run.app)**, then install it from Settings if you like.
-- **Locally** (Node 20.19+ or 22.12+):
+- **Locally** (Node 22 or newer, per `package.json` engines; `scripts/bootstrap.sh` sets everything up):
 
   ```bash
   npm ci
@@ -121,7 +137,7 @@ server/                       the API (Express, Better Auth, Postgres)
 db/migrations/                database migrations (dbmate)
 src/lib/pwa.ts                install and persistent-storage helpers
 src/store/                    app state (Zustand): main store, editor, settings, timer
-src/components/               Board, Progress, Muscles, Program, Settings, dialogs, charts
+src/components/               Board, Daily (Groceries, Nutrition), Progress, Muscles, Program, Settings, dialogs, charts
 src/hooks/                    focus keeping and tooltips
 public/                       logo and app icons
 scripts/make-icons.mjs        renders public/icons/ from the logo
