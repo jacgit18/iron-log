@@ -13,8 +13,13 @@ export const MAX_SUBSCRIPTIONS = 10;
    Chrome, Edge, Brave, Opera and Samsung Internet use FCM; Firefox its own; Safari Apple's; Edge on Windows also WNS. */
 const PUSH_HOSTS = ['fcm.googleapis.com', 'android.googleapis.com', 'push.services.mozilla.com', 'push.apple.com', 'notify.windows.com'];
 
-/** Whether the URL is https on a push service's own host: no user or password, no port but 443, no IP address. */
+// The strict shape `https://<host>` as written: web-push connects with Node's legacy url.parse, which reads `https:host/x`, `https:///host/x` and `https://\host/x`
+// as having no host (so the request goes to the default host), while the WHATWG parser below reads the same text as `host`. Only the plain form is accepted.
+const PLAIN_HTTPS = /^https:\/\/[^\\/?#@\s]+(?:[/?#]|$)/i;
+
+/** Whether the URL is https on a push service's own host: written as `https://host`, no user or password, no port but 443, no IP address. */
 export function isPushServiceUrl(s: string): boolean {
+  if (!PLAIN_HTTPS.test(s) || /[\u0000-\u0020\u007f]/.test(s)) return false; // plain form only, and no space or control character anywhere (the WHATWG parser drops tabs and newlines silently)
   let u: URL;
   try { u = new URL(s); } catch { return false; }
   if (u.protocol !== 'https:' || u.username || u.password || (u.port && u.port !== '443')) return false;

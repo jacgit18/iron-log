@@ -111,7 +111,7 @@ function GetRow({ g, item, month, mk, future, carries, onGot, open, onOpen, onMo
           )}
           {moveErr && <p className="note gerr" role="alert">{moveErr}</p>}
           {!item.unit && <PriceChips name={item.n} prices={l.prices} onChange={p => s.setGroceryPrices(mk, item.id, p)} />}
-          {split && !l.prices && <SharePicker name={item.n} people={people} parties={partiesFor(g, item, raw)} own={!!raw?.share} hint={carries ? 'Saved as the usual for next month too.' : undefined} resetLabel={carries ? 'Back to the store’s split' : undefined} onChange={sh => s.setGroceryLineShare(mk, item.id, sh)} />}
+          {split && !l.prices && <SharePicker name={item.n} people={people} parties={partiesFor(g, item, raw)} own={!!raw?.share} hint={carries ? (future ? 'Saved as the usual from now on: it also changes this month’s items you have not bought yet.' : 'Saved as the usual for next month too.') : undefined} resetLabel={carries ? 'Back to the store’s split' : undefined} onChange={sh => s.setGroceryLineShare(mk, item.id, sh)} />}
           {split && l.prices?.map((c, i) => (
             <div key={i} className="gpackshare"><span>Pack {i + 1}, {money(c)}</span>
               <SharePicker name={`${item.n} pack ${i + 1}`} people={people} parties={partiesFor(g, item, raw, i)} own={!!raw?.packShares?.[i]} onChange={sh => s.setGroceryPackShare(mk, item.id, i, sh)} />
