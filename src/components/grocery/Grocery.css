@@ -345,7 +345,7 @@
   flex: none;
 }
 .gedit .gname {
-  flex: 1 1 10em;
+  flex: 1 1 5rem;
   min-width: 0;
   min-height: 44px;
 }

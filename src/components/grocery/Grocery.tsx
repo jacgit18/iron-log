@@ -41,6 +41,16 @@ function NumBox({ label, value, onCommit, className, error }: { label: string; v
   );
 }
 
+// A set of ids (open rows, stores being adjusted) with one setter for any number of ids at once, and a way to empty it.
+function useIdSet() {
+  const [ids, setIds] = useState<Set<string>>(new Set());
+  const set = (list: string[], on: boolean) => setIds(prev => { const n = new Set(prev); list.forEach(id => (on ? n.add(id) : n.delete(id))); return n; });
+  return [ids, set, () => setIds(new Set())] as const;
+}
+// The two typed boxes of a row, for To get (this month) and At home (the usual): each says whether the text was accepted, and saves through `save` when it was.
+const commitQty = (t: string, save: (n: number) => void) => { const n = Number(t); if (!t.trim() || !Number.isFinite(n) || n <= 0 || n > 999) return false; save(n); return true; };
+const commitPrice = (t: string, save: (cents: number | null) => void) => { if (!t.trim()) { save(null); return true; } const c = parseDollars(t); if (c == null) return false; save(c); return true; };
+
 /* ---------- Expand all ---------- */
 // One button on a store's heading: opens every row of that store, or closes them all once they are all open. Same words on To get and At home.
 function ExpandAll({ label, all, onToggle }: { label: string; all: boolean; onToggle: (on: boolean) => void }) {
@@ -80,11 +90,11 @@ function GetRow({ g, item, month, mk, future, carries, onGot, open, onOpen, onMo
         <div className="gmore" id={moreId}>
           <label className="gfield">{w.count}
             <NumBox label={`${w.count} of ${item.n}`} className="gcount" value={String(l.qty)} error={COUNT_ERROR}
-              onCommit={t => { const n = Number(t); if (!t.trim() || !Number.isFinite(n) || n <= 0 || n > 999) return false; s.setGroceryQty(mk, item.id, n); return true; }} />
+              onCommit={t => commitQty(t, n => s.setGroceryQty(mk, item.id, n))} />
           </label>
           <label className="gfield">{w.price}
             <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={l.prices ? '' : centsText(l.cents)} error={PRICE_ERROR}
-              onCommit={t => { if (!t.trim()) { s.setGroceryCents(mk, item.id, null); return true; } const c = parseDollars(t); if (c == null) return false; s.setGroceryCents(mk, item.id, c); return true; }} />
+              onCommit={t => commitPrice(t, c => s.setGroceryCents(mk, item.id, c))} />
           </label>
           {g.stores.length > 0 && (
             <label className="gfield">Move to
@@ -137,12 +147,11 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   // one before), else on the "Bought this month" line; a row unticked from the fold lands back in the list, so focus follows it there.
   // The count and price panels' open state lives here, not in the row: a ticked row moves to the fold and is built again, and an open
   // panel must stay open so a price can still be typed after the tick (which also opens the fold).
-  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const [openIds, setPanels] = useIdSet(); // Expand all / Collapse all and one row, by id
   const [boughtOpen, setBoughtOpen] = useState(false);
   const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
   const [ticked, setTicked] = useState<{ id: string; name: string; mk: string; t: number } | null>(null); // the item just ticked bought, for the Undo notice
-  const setPanel = (id: string, on: boolean) => setOpenIds(prev => { const n = new Set(prev); if (on) n.add(id); else n.delete(id); return n; });
-  const setPanels = (ids: string[], on: boolean) => setOpenIds(prev => { const n = new Set(prev); ids.forEach(id => (on ? n.add(id) : n.delete(id))); return n; }); // Expand all / Collapse all for one store
+  const setPanel = (id: string, on: boolean) => setPanels([id], on);
   useEffect(() => { if (!bought.length && boughtOpen) setBoughtOpen(false); }, [bought.length, boughtOpen]); // an emptied fold starts folded next time
   const focusAfter = useRef<string | null>(null);
   useEffect(() => { if (focusAfter.current) { document.getElementById(focusAfter.current)?.focus(); focusAfter.current = null; } });
@@ -245,15 +254,15 @@ function EditRow({ item, g, have, onHave, adjust, open, onOpen }: { item: Grocer
   const { mine, suggested } = storeChoices(g);
   const split = hasSharing(g);
   const w = unitWords(item.unit);
-  const panelId = `groc-edit-${item.id}`;
-  const arrow = <button type="button" className="garrow" aria-expanded={open} aria-controls={panelId} aria-label={`${open ? 'Collapse' : 'Expand'} ${item.n}`} onClick={() => onOpen(!open)}><Icon name={open ? 'chevron-up' : 'chevron-down'} /></button>;
+  const usualPrice = item.unit ? `Usual price per ${item.unit}` : 'Usual price each'; // this box sets the item's usual price; To get's Price each is this month's
+  const arrow = <button type="button" className="garrow" aria-expanded={open} aria-label={`${open ? 'Collapse' : 'Expand'} ${item.n}`} onClick={() => onOpen(!open)}><Icon name={open ? 'chevron-up' : 'chevron-down'} /></button>;
   const tick = <input type="checkbox" className="chk gedithave" aria-label={`Have ${item.n}`} checked={have} onChange={e => onHave(e.target.checked)} />;
   // Closed: one line, tick and name and what is unusual about it (a unit, its own split); the name and the arrow open it.
   if (!open) {
     return (
-      <li className="gedit gedshut" id={panelId}>
+      <li className="gedit gedshut">
         {tick}
-        <button type="button" className="gedname" aria-expanded={false} aria-controls={panelId} aria-label={`Edit ${item.n}`} onClick={() => onOpen(true)}>
+        <button type="button" className="gedname" aria-expanded={false} onClick={() => onOpen(true)}>
           {item.n}{item.note && <small className="gnote">{item.note}</small>}
         </button>
         {item.unit && <span className="gchip">by the {item.unit}</span>}
@@ -263,7 +272,7 @@ function EditRow({ item, g, have, onHave, adjust, open, onOpen }: { item: Grocer
     );
   }
   return (
-    <li className={`gedit${arming ? ' removing' : ''}`} id={panelId}>
+    <li className={`gedit${arming ? ' removing' : ''}`}>
       {tick}
       <input type="text" className="gname" aria-label={`Name of ${item.n}`} maxLength={80} value={name} onChange={e => setName(e.target.value)}
         onBlur={() => { if (name.trim() && name.trim() !== item.n) setErr(s.updateGroceryItem(item.id, { n: name })); else setName(item.n); }} />
@@ -284,15 +293,15 @@ function EditRow({ item, g, have, onHave, adjust, open, onOpen }: { item: Grocer
       <div className="gedrow">
         <label className="gfield">{w.count}
           <NumBox label={`${w.count} of ${item.n}`} className="gcount" value={String(item.qty)} error={COUNT_ERROR}
-            onCommit={t => { const n = Number(t); if (!t.trim() || !Number.isFinite(n) || n <= 0 || n > 999) return false; setErr(s.updateGroceryItem(item.id, { qty: n })); return true; }} />
+            onCommit={t => commitQty(t, n => setErr(s.updateGroceryItem(item.id, { qty: n })))} />
         </label>
-        <label className="gfield">{w.price}
-          <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={centsText(item.cents)} error={PRICE_ERROR}
-            onCommit={t => { if (!t.trim()) { setErr(s.updateGroceryItem(item.id, { cents: null })); return true; } const c = parseDollars(t); if (c == null) return false; setErr(s.updateGroceryItem(item.id, { cents: c })); return true; }} />
+        <label className="gfield">{usualPrice}
+          <NumBox label={`${usualPrice} of ${item.n}, dollars`} className="gprice" value={centsText(item.cents)} error={PRICE_ERROR}
+            onCommit={t => commitPrice(t, c => setErr(s.updateGroceryItem(item.id, { cents: c })))} />
         </label>
       </div>
       {split && (adjust || !!item.share) && <SharePicker name={item.n} people={allPeople(g)} parties={partiesFor(g, item)} own={!!item.share} onChange={sh => s.setGroceryItemShare(item.id, sh)} />}
-      <ArmedButton className={`btn sm ${arming ? 'danger' : 'ghost'}`} aria-label={`Remove ${item.n} from your list`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setArming} onConfirm={() => s.removeGroceryItem(item.id)} />
+      <ArmedButton className={`btn sm ${arming ? 'danger' : 'ghost'}`} aria-label={`Remove ${item.n} from your list`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setArming} onConfirm={() => { onOpen(false); s.removeGroceryItem(item.id); }} />
       {err && <p className="note gerr" role="alert">{err}</p>}
     </li>
   );
@@ -369,11 +378,10 @@ function Stores({ g }: { g: GroceryT }) {
 function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, GroceryMonth>; nowKey: string }) {
   const [editing, setEditing] = useState(false);
   const [sharingOpen, setSharingOpen] = useState(false); // the Sharing panel (groups and who is in them) above the list, reachable without Edit
-  const [openEdit, setOpenEdit] = useState<Set<string>>(new Set()); // items whose edit form is open; every item starts closed each time Edit is pressed
-  const setEditMode = (on: boolean) => { setEditing(on); setOpenEdit(new Set()); };
-  const setEdits = (ids: string[], on: boolean) => setOpenEdit(prev => { const n = new Set(prev); ids.forEach(id => (on ? n.add(id) : n.delete(id))); return n; });
-  const [adjusting, setAdjusting] = useState<Set<string>>(new Set()); // stores whose rows show their share controls while editing (the rest show them only when an item has its own split)
-  const toggleAdjust = (store: string) => setAdjusting(prev => { const n = new Set(prev); if (n.has(store)) n.delete(store); else n.add(store); return n; });
+  const [openEdit, setEdits, clearEdits] = useIdSet(); // items whose edit form is open; every item starts closed each time Edit is pressed
+  const setEditMode = (on: boolean) => { setEditing(on); clearEdits(); };
+  const [adjusting, setAdjust] = useIdSet(); // stores whose rows show their share controls while editing (the rest show them only when an item has its own split)
+  const toggleAdjust = (store: string) => setAdjust([store], !adjusting.has(store));
   const month = months[nowKey] || emptyMonth();
   const hasIt = (it: GroceryItem) => haveOf(it, month);
   const setHave = (it: GroceryItem, on: boolean) => useAppStore.getState().setGroceryHave(nowKey, it.id, on);
@@ -400,7 +408,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
             {editing && <ExpandAll label={grp.label} all={grp.items.every(i => openEdit.has(i.id))} onToggle={on => setEdits(grp.items.map(i => i.id), on)} />}
           </div>
           {editing && hasSharing(g) && (
-            <button type="button" className="btn sm ghost gadjust" aria-pressed={adjusting.has(grp.store)} onClick={() => toggleAdjust(grp.store)}>
+            <button type="button" className="btn sm ghost gadjust" aria-pressed={adjusting.has(grp.store)} onClick={() => { if (!adjusting.has(grp.store)) setEdits(grp.items.map(i => i.id), true); toggleAdjust(grp.store); }}>
               {adjusting.has(grp.store) ? `Done adjusting ${grp.label}` : `Adjust shares for ${grp.label}`}
             </button>
           )}

@@ -45,7 +45,7 @@ test('the arrow or the name opens one item and leaves the others closed; the arr
   await expect(page.getByLabel('Name of Toilet paper')).toBeVisible();
   await expect(page.getByLabel('Name of Chicken')).toHaveCount(0);
   await expect(arrow(page, 'Toilet paper')).toHaveAttribute('aria-expanded', 'true');
-  await page.getByRole('button', { name: 'Edit Chicken' }).click(); // the name opens it too
+  await page.locator('li.gedit button.gedname', { hasText: 'Chicken' }).click(); // the name opens it too
   await expect(page.getByLabel('Name of Chicken')).toBeVisible();
   await expect(page.getByLabel('Name of Toilet paper')).toBeVisible(); // each item keeps its own state
   await arrow(page, 'Toilet paper').click();
@@ -69,7 +69,7 @@ test('Expand all and Collapse all work on one store at a time, and Done then Edi
 test('an open item takes a new count and price, says what is wrong with a bad one, and saves nothing for it', async ({ page }) => {
   await seed(page);
   await arrow(page, 'Chicken').click();
-  const count = page.getByLabel('Weight (lb) of Chicken'); const price = page.getByLabel('Price per lb of Chicken, dollars');
+  const count = page.getByLabel('Weight (lb) of Chicken'); const price = page.getByLabel('Usual price per lb of Chicken, dollars');
   await expect(count).toHaveValue('2'); await expect(price).toHaveValue('6.25');
   await price.fill('7.10'); await price.blur();
   await count.fill('3'); await count.blur();
@@ -83,20 +83,23 @@ test('an open item takes a new count and price, says what is wrong with a bad on
   await expect.poll(async () => (await saved(page)).find(i => i.id === 'chicken').cents).toBeNull();
 });
 
-test('the tick works closed and open, Remove still asks twice, and Adjust shares shows the pill only on open rows', async ({ page }) => {
+test('the tick works closed and open, Adjust shares opens the store’s rows to show the pill, and Remove asks twice and stays closed for Undo', async ({ page }) => {
   await seed(page);
   await page.getByLabel('Have Milk').check(); // closed
   await expect(page.getByLabel('Have Milk')).toBeChecked();
-  await expect(page.getByLabel(/Shared with, for Toilet paper/)).toHaveCount(0);
-  await page.getByRole('button', { name: "Adjust shares for BJ's" }).click();
   await expect(page.getByLabel(/Shared with, for Toilet paper/)).toHaveCount(0); // closed rows hold no controls
-  await arrow(page, 'Toilet paper').click();
+  await page.getByRole('button', { name: "Adjust shares for BJ's" }).click(); // opens the store's rows, so the pills show
   await expect(page.getByLabel(/Shared with, for Toilet paper/)).toHaveCount(1);
+  await expect(page.getByLabel(/Shared with, for Chicken/)).toHaveCount(1);
+  await expect(page.getByLabel(/Shared with, for Milk/)).toHaveCount(0); // another store
   const remove = page.getByRole('button', { name: 'Remove Toilet paper from your list' });
   await remove.click();
   await expect(remove).toContainText('Tap again to remove');
   await remove.click();
   await expect(page.getByLabel('Have Toilet paper')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Undo' }).click(); // the item comes back closed, not open
+  await expect(page.getByLabel('Have Toilet paper')).toHaveCount(1);
+  await expect(page.getByLabel('Name of Toilet paper')).toHaveCount(0);
 });
 
 test('the dock keeps its own colours, and the edit screen with rows open has no accessibility violations in both themes', async ({ page }) => {
