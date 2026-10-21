@@ -120,8 +120,7 @@ export const onList = (g: Grocery, m: GroceryMonth, live: boolean) =>
 /** A store's items for the To get list: the ones still to get first, the ticked ones after them, each in catalogue order. */
 export const gotLast = (items: GroceryItem[], m: GroceryMonth) => [...items.filter(i => !lineOf(i, m).got), ...items.filter(i => lineOf(i, m).got)];
 
-/** The list split by store, in the order of `stores`; items with no store come last. Empty stores are left out. With `sharing` on (the
- *  grocerySplit feature), stores shared with a group of other people come first, then your own, and `group` is the group a shared store
+/** The list split by store, in the order of `stores`; items with no store come last. Empty stores are left out. With `sharing` on, stores shared with a group of other people come first, then your own, and `group` is the group a shared store
  *  defaults to; with it off the order is plain, whatever groups the data holds. */
 export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { store: string; label: string; items: GroceryItem[]; group?: GroceryGroup }[] {
   const out = g.stores.map(store => {

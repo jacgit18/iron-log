@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { useFeature } from '../../features.js';
 import { money, monthLabel, spendByMonth } from '../../lib/grocery.js';
 import { hasSharing, shareByMonth } from '../../lib/grocerySettle.js';
 import './GrocerySpend.css';
@@ -16,7 +15,7 @@ export default function GrocerySpend({ nowKey }: { nowKey: string }) {
   const months = useAppStore(s => s.groceryMonths);
   const [count, setCount] = useState<(typeof RANGES)[number]>(6);
   // With sharing on, the bars are your share of what was bought (your own spending), not the whole bill; what you paid is said in the text.
-  const split = useFeature('grocerySplit') && hasSharing(g);
+  const split = hasSharing(g);
   const shares = split ? shareByMonth(g, months, nowKey, count) : null;
   const rows = spendByMonth(g, months, nowKey, count).map((r, i) => (shares ? { ...r, spent: shares[i]!.yours } : r));
   const paidTotal = shares ? shares.reduce((a, r) => a + r.paid, 0) : 0;
