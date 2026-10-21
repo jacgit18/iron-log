@@ -1,0 +1,79 @@
+@layer base, components;
+@layer components {
+/* The history table in the Detail sheet (DetailSheet.tsx). On a phone its six columns and the Edit and delete buttons were wider than the sheet
+   (394px in a 390px sheet), so the buttons ended past the screen edge. Up to the phone breakpoint each entry is a two-line card instead:
+   date, load and volume on the first line; phase, note and the buttons on the second. The pieces wrap onto the next line when they do not
+   fit (a narrow phone, a large text size), so nothing runs past the sheet. The table roles are set in the markup, since changing a
+   table's display can drop its meaning for a screen reader. A wider sheet keeps the plain table. */
+@media (max-width:700px) {
+  .hist-stack,
+  .hist-stack tbody {
+    display: block;
+  }
+  .hist-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .hist-stack tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--sp-8);
+    row-gap: var(--sp-4);
+    padding: var(--sp-8) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  /* A full-width empty item: the line break between the two lines of an entry. */
+  .hist-stack tr::after {
+    content: "";
+    order: 4;
+    flex-basis: 100%;
+    height: 0;
+  }
+  .hist-stack td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .hist-stack td:nth-child(1) {
+    order: 1;
+    flex: 1 1 auto;
+    font-size: var(--fs-md);
+    font-weight: 600;
+  }
+  .hist-stack td:nth-child(3) {
+    order: 2;
+    flex: 0 0 auto;
+    min-width: 5rem;
+    text-align: right;
+  }
+  .hist-stack td:nth-child(4) {
+    order: 3;
+    flex: 0 0 auto;
+    min-width: 3.5rem;
+    text-align: right;
+  }
+  .hist-stack td:nth-child(2) {
+    order: 5;
+    flex: 0 1 auto;
+    color: var(--muted);
+  }
+  .hist-stack td:nth-child(5) {
+    order: 6;
+    flex: 1 1 8rem;
+    color: var(--muted);
+  }
+  .hist-stack td:nth-child(6) {
+    order: 7;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+}
+}
