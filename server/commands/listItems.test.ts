@@ -335,9 +335,9 @@ describe('grocery lists', () => {
     expect((await save('grocery_item', item(0), 0, null, 'revive')).body.refused).toBe('too-many');
   });
 
-  it('refuses a 31st store, and the cap is per list and per user', async () => {
-    await fillDirect('grocery_store', 30, i => ({ id: `Store ${i}`, n: `Store ${i}` }));
-    expect((await save('grocery_store', { id: 'One more', n: 'One more' }, 30)).body.refused).toBe('too-many');
+  it('refuses a 61st store (30 in use and as many retired), and the cap is per list and per user', async () => {
+    await fillDirect('grocery_store', 60, i => ({ id: `Store ${i}`, n: `Store ${i}` }));
+    expect((await save('grocery_store', { id: 'One more', n: 'One more' }, 60)).body.refused).toBe('too-many');
     expect((await save('grocery_item', item(1), 0)).status).toBe(201); // items have their own cap
     expect((await send('commands/save-list-item', { clientId: 'other', baseVersion: null, input: { list: 'grocery_store', item: { id: 'Aldi', n: 'Aldi' }, position: 0 } }, 'tester')).status).toBe(201);
   });
