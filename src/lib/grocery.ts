@@ -143,7 +143,10 @@ export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { st
  *  item's usual store. */
 export function storeFor(g: Grocery, item: GroceryItem, m: GroceryMonth): string {
   const s = m.lines[item.id]?.store;
-  return s !== undefined && (s === '' || g.stores.includes(s)) ? s : item.store;
+  const store = s !== undefined && (s === '' || g.stores.includes(s)) ? s : item.store;
+  // An item whose own store is not in the list (removed on another device, an import into a full list) is under Anywhere, as byStore shows it, so the bills,
+  // tax and shares count it there too.
+  return store === '' || g.stores.includes(store) ? store : '';
 }
 /** The items as they sit in a month: each under the store it is bought at that month, so grouping, bills, tax and sharing all follow it. */
 export const inMonth = (g: Grocery, items: GroceryItem[], m: GroceryMonth): GroceryItem[] =>

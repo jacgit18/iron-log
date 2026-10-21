@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_STORES, byStore, mergeGrocery, normGrocery, own, tally } from './grocery.js';
+import { MAX_STORES, byStore, inMonth, mergeGrocery, normGrocery, own, storeFor, tally } from './grocery.js';
 import { monthShare, payerOf } from './grocerySettle.js';
 import type { Grocery, GroceryData, GroceryItem, GroceryMonth } from '../types.ts';
 
@@ -85,5 +85,15 @@ describe('mergeGrocery with a store that does not fit', () => {
     const twice = mergeGrocery(once.grocery, once.months, inc);
     expect(once.grocery.items.filter(i => i.n === 'Noodles')).toHaveLength(1);
     expect(twice.grocery.items.filter(i => i.n === 'Noodles')).toHaveLength(1);
+  });
+});
+
+// Review of PR 410 (P-07): an item on a store that is not in the list is counted under Anywhere everywhere, not only shown there.
+describe('an item on a store that is not in the list', () => {
+  it('is bought, taxed and owed under Anywhere, like the screen shows it', () => {
+    const g: Grocery = { stores: ['Aldi'], items: [item('a', 'Apples', 'Gone', 200)] };
+    const m: GroceryMonth = { lines: { a: { got: true } }, pulled: [], tax: { Gone: 50 } };
+    expect(storeFor(g, g.items[0]!, m)).toBe('');
+    expect(tally(inMonth(g, g.items, m), m).spent).toBe(200); // the tax typed for a store that is not there is not added
   });
 });
