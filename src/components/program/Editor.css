@@ -1,8 +1,8 @@
 @layer base, components;
 @layer components {
-/* The panel shows the program's name (typed by the user, up to 60 characters) in its heading, notes and rows: one long word breaks inside itself, not
+/* The program editor's panel (not the exercise, stretch or supplement libraries, which share .edpanel and have an Edit button that must not break) shows the program's name (typed by the user, up to 60 characters) in its heading, notes and rows: one long word breaks inside itself, not
    push the page sideways. A word only breaks when it cannot fit, so a normal name looks the same. */
-.edpanel {
+.edpanel.edprog {
   overflow-wrap: anywhere;
 }
 /* The library program's name in the Program switch and in the note under it: one long word breaks inside itself. This is a class of its own on that one button,

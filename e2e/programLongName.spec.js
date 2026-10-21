@@ -19,3 +19,16 @@ for (const [w, zoom] of [[320, true], [390, true], [320, false]]) {
     expect(m.hRight).toBeLessThanOrEqual(m.w);
   });
 }
+
+// Review of PR 412: the rule was first on .edpanel, which the Exercise and Stretch libraries share, and it broke their Edit buttons into "Ed / it".
+for (const lib of ['Exercise library', 'Stretch library']) {
+  test(`${lib} at 320px: the Edit buttons stay on one line`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.click('#tab-program');
+    await page.getByRole('button', { name: lib, exact: true }).click();
+    const edits = page.locator('.exlib .btn.sm', { hasText: /^Edit$/ });
+    await expect(edits.first()).toBeVisible();
+    const bad = await edits.evaluateAll(els => els.filter(e => e.getBoundingClientRect().height > 46).length);
+    expect(bad).toBe(0);
+  });
+}

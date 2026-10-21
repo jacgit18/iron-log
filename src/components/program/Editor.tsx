@@ -46,7 +46,7 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
   const saved = !custom || library.some(it => sameProg(it.prog, cur));
   const loadLabel = `Tap to load into ${pn}`;
   return (
-    <section className="panel edpanel lib mt-16">
+    <section className="panel edpanel edprog lib mt-16">
       <div className="inline spread">
         <h2>Program library</h2>
         <button type="button" className="btn" onClick={() => { if (!st.blocked()) st.openModal({ type: 'newprog' }); }}>Create a program</button>
@@ -80,7 +80,7 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
 function LibItemPanel({ it }: { it: LibraryItem }) {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
   return (
-    <section className="panel edpanel lib mt-16">
+    <section className="panel edpanel edprog lib mt-16">
       <h2>Put it into the rotation</h2>
       <p className="note">Loading replaces what's in that slot. The program there now is saved to the library first if it isn't already, so nothing is lost. {it.name} stays in the library too.</p>
       <div className="actions start flexwrap">
@@ -144,7 +144,7 @@ function ProgramEditor() {
           </label>
         </>
       ) : null}
-      <section className="panel edpanel">
+      <section className="panel edpanel edprog">
         <div className="inline flexwrap"><h2 id="ed-title" tabIndex={-1} className="mr-auto">{edName} · {day.title}</h2></div>
         <label className="field">Day label
           <CommitInput key={`${k}:${edDay}:${day.sub || ''}`} id="ed-sub" value={day.sub || ''} placeholder="e.g. Lower body + reactive power" onCommit={st.setDaySub} />
