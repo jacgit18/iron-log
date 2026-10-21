@@ -309,8 +309,12 @@ export const weekSlots = (prog: Program, w: WeekIn, key?: string) => [...slotsFo
 // every other workout day (the sled). The same exercise twice on one day always warns.
 export function moveClashes(cfg: Cfg, week: WeekIn, slots: Slot[], s: Slot, day: number): string[] {
   const cols = currentLayout(week, slots); const out: string[] = [];
-  // "Every day" is judged without the moved card (it is leaving its day); "light and frequent" with it, since it is one of the 3 days.
-  const daily = new Set([...dailyOf(currentLayout(week, slots.filter(o => o.id !== s.id)), week), ...lightOf(cfg, cols, week)]);
+  // "Every day" is judged without the moved card (it is leaving its day); "light and frequent" with the card on the day it is
+  // moving to, not the day it leaves: judged on its source day, a move onto a day that already has the exercise would still
+  // count 3 days and hide a real back-to-back warning.
+  const after: Cols = Object.fromEntries(DAYS.map(d => [d, (cols[d] || []).filter(o => o.id !== s.id)]));
+  if (after[day]) after[day] = [s, ...after[day]];
+  const daily = new Set([...dailyOf(currentLayout(week, slots.filter(o => o.id !== s.id)), week), ...lightOf(cfg, after, week)]);
   ([[day, 'the same day'], [day + 1, 'the day after'], [day - 1, 'the day before']] as [number, string][]).forEach(([d, rel]) => {
     const near = d !== day;
     if (!cols[d] || (near && !countsForClash(s))) return;
