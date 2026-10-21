@@ -1,4 +1,4 @@
-import { lineCost, lineOf, own, shiftMonth, storeFor } from './grocery.js';
+import { lineCost, lineOf, own, removedItem, shiftMonth, storeFor } from './grocery.js';
 import { ME, partiesOf, settle, type Purchase, type Settlement } from './grocerySplit.js';
 import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson } from '../types.ts';
 
@@ -43,14 +43,10 @@ export function purchasesOf(g: Grocery, m: GroceryMonth): MonthPurchase[] {
   const out: MonthPurchase[] = [];
   Object.entries(m.lines).forEach(([id, raw]) => {
     if (!raw.got) return;
-    const found = g.items.find(x => x.id === id);
-    const store = found ? storeFor(g, found, m) : ''; // where it was bought this month
-    const it = found && store !== found.store ? { ...found, store } : found; // the store's group is the default split for it
-    if (!it) { // removed from the catalogue: only its own price and count remain
-      const cents = raw.prices?.length ? raw.prices.reduce((a, c) => a + c, 0) : Math.round((raw.qty ?? 1) * (raw.cents ?? 0));
-      out.push({ store, itemId: id, cents, parties: [ME] });
-      return;
-    }
+    // An item removed from the catalogue is read from its line alone: its own price and count, and the store and split pinned on the line when it was removed.
+    const base = g.items.find(x => x.id === id) ?? removedItem(g, id, raw);
+    const store = storeFor(g, base, m); // where it was bought this month
+    const it = store !== base.store ? { ...base, store } : base; // the store's group is the default split for it
     const l = lineOf(it, m);
     if (l.prices) l.prices.forEach((cents, i) => out.push({ store, itemId: id, cents, parties: partiesFor(g, it, raw, i) }));
     else out.push({ store, itemId: id, cents: lineCost(l), parties: partiesFor(g, it, raw) });
