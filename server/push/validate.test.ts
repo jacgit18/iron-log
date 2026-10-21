@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pushConfigFrom } from './config.ts';
-import { MAX_AHEAD_MS, parseCancel, parseEndpoint, parseFire, parseSchedule, parseSubscription, parseUnsubscribe } from './validate.ts';
+import { MAX_AHEAD_MS, isPushServiceUrl, parseCancel, parseEndpoint, parseFire, parseSchedule, parseSubscription, parseUnsubscribe } from './validate.ts';
 
 const NOW = 1_800_000_000_000;
 const endpoint = 'https://fcm.googleapis.com/fcm/send/abc';
@@ -9,15 +9,33 @@ const good = { endpoint, kind: 'rest', key: '1800000000000', at: NOW + 90_000, b
 describe('parseEndpoint', () => {
   it('takes https only, and not an empty, long or odd value', () => {
     expect(parseEndpoint(endpoint)).toBe(endpoint);
-    for (const v of ['http://x.example/a', 'ftp://x', 'https://', '', 5, null, undefined, `https://x.example/${'a'.repeat(2100)}`]) expect(parseEndpoint(v)).toBeNull();
+    for (const v of ['http://x.example/a', 'ftp://x', 'https://', '', 5, null, undefined, `https://fcm.googleapis.com/${'a'.repeat(2100)}`]) expect(parseEndpoint(v)).toBeNull();
   });
+});
+
+// Audit S-02: the server POSTs to a stored endpoint, so only a push service's own host is taken.
+describe('isPushServiceUrl', () => {
+  it.each([
+    'https://fcm.googleapis.com/fcm/send/abc',
+    'https://android.googleapis.com/gcm/send/abc',
+    'https://updates.push.services.mozilla.com/wpush/v2/abc',
+    'https://web.push.apple.com/QGhello',
+    'https://wns2-par02p.notify.windows.com/w/?token=abc',
+    'https://FCM.GOOGLEAPIS.COM:443/fcm/send/abc',
+  ])('takes %s', u => expect(isPushServiceUrl(u)).toBe(true));
+  it.each([
+    'https://127.0.0.1:9/x', 'https://localhost/x', 'https://[::1]/x', 'https://10.0.0.5/admin', 'https://169.254.169.254/computeMetadata/v1/',
+    'https://metadata.google.internal/x', 'https://internal.svc:8443/hook?a=b', 'https://user:pass@fcm.googleapis.com/x',
+    'https://fcm.googleapis.com:8443/x', 'https://evil-fcm.googleapis.com.example.com/x', 'https://notfcm.googleapis.com.evil.io/x', 'https://googleapis.com/x',
+    'https://fcm.googleapis.com@evil.example/x', 'http://fcm.googleapis.com/x', 'https://push.example/device-1', 'https://2130706433/x', 'https://0x7f.1/x',
+  ])('refuses %s', u => expect(isPushServiceUrl(u)).toBe(false));
 });
 
 describe('parseSubscription', () => {
   it("reads a browser's PushSubscription.toJSON()", () => {
     expect(parseSubscription({ endpoint, expirationTime: null, keys: { p256dh: 'k', auth: 'a' } })).toEqual({ endpoint, p256dh: 'k', auth: 'a' });
   });
-  it.each([null, 'x', [], {}, { endpoint }, { endpoint, keys: {} }, { endpoint, keys: { p256dh: 'k' } }, { endpoint: 'http://x', keys: { p256dh: 'k', auth: 'a' } }, { endpoint, keys: { p256dh: 'k'.repeat(300), auth: 'a' } }])('refuses %j', v => {
+  it.each([null, 'x', [], {}, { endpoint }, { endpoint, keys: {} }, { endpoint, keys: { p256dh: 'k' } }, { endpoint: 'http://x', keys: { p256dh: 'k', auth: 'a' } }, { endpoint: 'https://10.0.0.5/admin', keys: { p256dh: 'k', auth: 'a' } }, { endpoint, keys: { p256dh: 'k'.repeat(300), auth: 'a' } }])('refuses %j', v => {
     expect(parseSubscription(v)).toBeNull();
   });
 });
