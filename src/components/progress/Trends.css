@@ -246,6 +246,7 @@
   font-size: var(--fs-xs);
 }
 .heat {
+  container-type: inline-size;
   display: grid;
   gap: 3px;
   align-items: center;
@@ -253,6 +254,7 @@
   max-width: 820px;
 }
 .heat .hx {
+  min-width: 0;
   font-size: var(--fs-2xs);
   color: var(--muted);
   text-align: center;
@@ -293,8 +295,9 @@
   box-shadow: 0 0 0 2px var(--ink);
 }
 @media (max-width:700px) {
+  /* Two tiles a row on a phone (the 45% floor stops a wider phone fitting three or four); one a row when two do not fit (a large text size: 8rem grows with the text, the row does not). */
   .kpis {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8rem, 45%)), 1fr));
   }
   .kpis .kpi:first-child:nth-last-child(odd) {
     grid-column: 1 / -1;
@@ -384,5 +387,84 @@
 .chv .chgoal {
   display: block;
   line-height: 1.2;
+}
+/* Narrow for the text size (the box is under 15rem wide: a large text size on a phone; the rem grows with the text, the box does not). The body-weight
+   table becomes cards that wrap, since its four columns ran past the panel (330px in a 288px panel at 200% text) and pushed the delete button off the
+   screen; each weight-change row stacks the name above the bar and the value, and the name wraps instead of being cut. A normal text size keeps the
+   plain table and the three-column rows. */
+.tchart .hist-box,
+.chg {
+  container-type: inline-size;
+}
+@container (max-width: 15rem) {
+  .bwtab,
+  .bwtab tbody {
+    display: block;
+  }
+  .bwtab thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .bwtab tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--sp-8);
+    row-gap: var(--sp-2);
+    padding: var(--sp-8) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .bwtab td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+  .bwtab td:nth-child(1) {
+    flex: 1 1 auto;
+    font-weight: 600;
+  }
+  .bwtab td:nth-child(2) {
+    flex: 0 0 auto;
+    min-width: 5rem;
+    text-align: right;
+  }
+  .bwtab td:nth-child(3) {
+    flex: 0 0 auto;
+    min-width: 3.5rem;
+    text-align: right;
+  }
+  .bwtab td:nth-child(4) {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+  .chrow {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "name" "value" "bar";
+    row-gap: var(--sp-4);
+  }
+  .chn {
+    grid-area: name;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+  .chbar {
+    grid-area: bar;
+  }
+  .chv {
+    grid-area: value;
+    white-space: normal;
+    text-align: left;
+  }
+  .heat .hx {
+    overflow: hidden;
+  }
 }
 }
