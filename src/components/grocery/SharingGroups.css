@@ -10,11 +10,13 @@
 }
 .gsgrouphead {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-8);
 }
 .gsgrouphead .gname {
-  flex: 1;
+  flex: 1 1 8rem;
+  min-width: 0;
 }
 .gsperson {
   display: flex;
