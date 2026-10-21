@@ -7,7 +7,8 @@ import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import type { AppState, Flag, SettingsSlice, StoreGet, StoreSet } from './types.ts';
 import type { Logs, Program } from '../types.ts';
 import { importFileProblem, readFailure } from '../lib/importFile.js';
-import { parseExcelExport, parseCsvExport, entryKey, checkOffsFromLogs } from '../lib/excelImport.js';
+// The spreadsheet reader is only needed once a file is chosen or applied, so it loads then and not with the first screen.
+const loadExcelImport = () => import('../lib/excelImport.js');
 
 const ent = (o: any): [string, any][] => Object.entries(o); // eslint-disable-line
 
@@ -38,14 +39,14 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
       const head = new Uint8Array(buf.slice(0, 4));
       const zip = head[0] === 0x50 && head[1] === 0x4b; // .xlsx files are zip archives ("PK")
       if (zip || /\.xlsx$/i.test(file.name)) {
-        const data = await parseExcelExport(buf, get().cfg);
+        const data = await (await loadExcelImport()).parseExcelExport(buf, get().cfg);
         // A whole-backup workbook imports like the JSON data file; older ones only bring back sessions, body weight and settings.
         set({ importDraft: { data, name: file.name, kind: data.excel.complete ? 'json' : 'excel', useSettings: true }, modal: { type: 'import' } });
         return;
       }
       const text = new TextDecoder().decode(buf);
       if (/\.csv$/i.test(file.name)) {
-        set({ importDraft: { data: await parseCsvExport(text, get().cfg), name: file.name, kind: 'excel', useSettings: false }, modal: { type: 'import' } });
+        set({ importDraft: { data: await (await loadExcelImport()).parseCsvExport(text, get().cfg), name: file.name, kind: 'excel', useSettings: false }, modal: { type: 'import' } });
         return;
       }
       set({ importDraft: { data: parseDataFile(text), name: file.name, kind: 'json' }, modal: { type: 'import' } });
@@ -70,6 +71,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
     try {
       const d: any = draft.data; const on = draft.kind === 'excel' ? importSel({}) : importSel(draft); const today = libDate(new Date().toISOString());
       const localWeeks = await get().allWeeks();
+      const xl = draft.kind === 'excel' ? await loadExcelImport() : null; // already loaded by readImportFile; this only waits for it
       const wk = get().weekKey();
       if (mode === 'replace') {
         // Plan first (everything that can throw: cloning, normalizing, reading), then apply. A failure while
@@ -133,8 +135,8 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
             get().saveCfg();
           }
           // Every session in the file checks off, including ones already logged here; the weeks merge below.
-          d.weeks = checkOffsFromLogs(get().cfg, get().programs, d.logs, localWeeks);
-          Object.keys(d.logs).forEach(id => { const have = new Set((get().logs[id] || []).map(entryKey)); d.logs[id] = d.logs[id].filter((e: any) => !have.has(entryKey(e))); });
+          d.weeks = xl!.checkOffsFromLogs(get().cfg, get().programs, d.logs, localWeeks);
+          Object.keys(d.logs).forEach(id => { const have = new Set((get().logs[id] || []).map(xl!.entryKey)); d.logs[id] = d.logs[id].filter((e: any) => !have.has(xl!.entryKey(e))); });
         }
         const C = d.config; let ch = false; const cfg: any = structuredClone(get().cfg);
         ['rm', 'phDef', 'exPh', 'ex', 'muscleMap', 'rxOverride', 'progNames'].filter(k => on[cfgSection(k)]).forEach(k => {

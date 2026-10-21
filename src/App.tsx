@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, type ComponentType, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
 import { flag, useAppStore } from './store/useAppStore.js';
 import { takeAfterReload } from './lib/afterReload.js';
 import useTooltips from './hooks/useTooltips.js';
@@ -12,9 +12,6 @@ import AccountBadge from './components/AccountBadge.js';
 import useBadgeName from './hooks/useBadgeName.js';
 import ProgramSwitch from './components/board/ProgramSwitch.js';
 import UpdateBanner from './components/UpdateBanner.js';
-import LegacyCard from './components/LegacyCard.js';
-import OtherAccountCard from './components/OtherAccountCard.js';
-import SignInCard from './components/SignInCard.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
@@ -27,6 +24,16 @@ const Daily = lazyTab(() => import('./components/daily/Daily.js'));
 const Progress = lazyTab(() => import('./components/progress/Progress.js'));
 const Editor = lazyTab(() => import('./components/program/Editor.js'));
 const Settings = lazyTab(() => import('./components/settings/Settings.js'));
+// The sync cards (sign in, other account, upload this device's data) only exist while syncing is on, so their code (and the sync
+// planner behind it) loads only then. They draw nothing until they are needed, so waiting for the chunk moves nothing.
+const loadSyncCards = () => import('./components/SyncCards.js');
+const SignInCard = lazy(mapChunkError(() => loadSyncCards().then(m => ({ default: m.SignInCard }))));
+const OtherAccountCard = lazy(mapChunkError(() => loadSyncCards().then(m => ({ default: m.OtherAccountCard }))));
+const LegacyCard = lazy(mapChunkError(() => loadSyncCards().then(m => ({ default: m.LegacyCard }))));
+function WhenSyncing({ children }: { children: ReactNode }) {
+  const syncing = useAppStore(s => s.sync !== null);
+  return syncing ? <ErrorBoundary where="view"><Suspense fallback={null}>{children}</Suspense></ErrorBoundary> : null;
+}
 // The sheets (log, detail, slot, import, ...) are only drawn once one is opened, so they load as one chunk after the first screen is up
 // rather than before it. They are fetched shortly after, so the first one opens without waiting; offline they come from the precache.
 const loadModal = () => import('./components/sheets/Modal.js');
@@ -109,10 +116,10 @@ export default function App() {
         <UpdateBanner />
         <OfflineNotice />
         <SyncNotice />
-        <SignInCard />
-        <OtherAccountCard />
+        <WhenSyncing><SignInCard /></WhenSyncing>
+        <WhenSyncing><OtherAccountCard /></WhenSyncing>
         <InstallHint />
-        <LegacyCard />
+        <WhenSyncing><LegacyCard /></WhenSyncing>
         {/* Stays until the writes go through: a passing message isn't enough when data would be gone on reload. */}
         {unsaved.length > 0 && !syncing && (
           <div className="notice movewarn" role="alert">
