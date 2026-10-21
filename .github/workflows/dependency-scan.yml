@@ -2,7 +2,7 @@ name: Dependency scan
 
 # Rule: dependency-security.md. An AI agent (or a person) can add a vulnerable, malicious or typosquatted package without noticing; this blocks it before merge.
 #   audit       known high or critical advisories in production dependencies fail the run; dev dependencies are reported (a project with old dev findings can tighten later)
-#   review      GitHub dependency review: a PR that adds a package with a known vulnerability fails, and the whole delta shows in the run (needs the dependency graph, on by default for public repos)
+#   review      GitHub dependency review: a PR that adds a package with a known vulnerability fails, and the whole delta shows in the run (needs Dependency graph turned on in Settings, Code security: the job fails with "not supported" otherwise, even in a public repo)
 #   new-package scripts/dep-vet.mjs: a package that is new to package.json must not be days old, near-zero downloads, unknown to the registry or a lookalike of a popular name,
 #               unless the PR description carries "Dependency approval: <name>" written by the owner after checking it
 # It also runs weekly, so an advisory published after a merge still shows up. Only the package.json at the repository root is scanned; add paths for other manifests.
