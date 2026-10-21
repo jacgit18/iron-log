@@ -4,6 +4,8 @@
 //
 //   node scripts/pr-body.mjs --what "One paragraph on what changed and why" > /tmp/body.md
 //   (the Changelog section is filled from --what, or from --changelog "..." when it should say less)
+//   --brief <path or "n/a: why">   fills the Delivery section's Brief line (feature-delivery.md: one brief, one branch, one PR)
+//   --split "<reason>"             fills "Split because:" when the feature is not this PR alone (the reasons are in feature-delivery.md)
 //   gh pr create --title "..." --body-file /tmp/body.md
 //
 // The audience is worked out from the diff against origin/main (the reason goes to stderr), and --audience <key> overrides it:
@@ -63,7 +65,7 @@ export function shorten(text, max = 600) {
 }
 
 /** The template with exactly one Audience box ticked and the What section filled in. A change that touches no UI (`ui` false) also gets the config's `autoTickWhenNoUi` Checks line ticked (the Lighthouse line in iron-log, which reads n/a then); for a UI change it stays open for the author to tick after running the check, because that run is theirs to do. */
-export function buildBody(template, audience, what = '', ui = false, changelog = '', config = loadConfig()) {
+export function buildBody(template, audience, what = '', ui = false, changelog = '', config = loadConfig(), delivery = {}) {
   const labels = labelsOf(config);
   const auto = config.autoTickWhenNoUi ? new RegExp(config.autoTickWhenNoUi, 'i') : null;
   let inAudience = false;
@@ -75,11 +77,25 @@ export function buildBody(template, audience, what = '', ui = false, changelog =
   }).join('\n');
   const entry = changelog ? changelog.trim().replace(/\s+/g, ' ') : shorten(what);
   const withLog = entry ? out.replace(/^(## Changelog\n\n)((?:<!--[\s\S]*?-->\n)?)/m, (_, h, c) => `${h}${c}${entry}\n`) : out;
-  const body = what ? withLog.replace(/^## What and why\n\n/m, () => `## What and why\n\n${what.trim()}\n`) : withLog;
+  const withWhat = what ? withLog.replace(/^## What and why\n\n/m, () => `## What and why\n\n${what.trim()}\n`) : withLog;
+  const oneLine = t => t.trim().replace(/\s+/g, ' ');
+  const withBrief = delivery.brief ? withWhat.replace(/^Brief:.*$/m, () => `Brief: ${oneLine(delivery.brief)}`) : withWhat;
+  const body = delivery.split ? withBrief.replace(/^Split because:.*$/m, () => `Split because: ${oneLine(delivery.split)}`) : withBrief;
   const audienceSection = body.split('\n').reduce((acc, line) => { if (/^## /.test(line)) acc.on = /^## Audience/.test(line); if (acc.on) acc.lines.push(line); return acc; }, { on: false, lines: [] }).lines;
   if (audienceSection.filter(l => /^- \[x\]/i.test(l)).length !== 1) throw new Error('The template has no Audience box matching ' + audience);
   return body;
 }
+
+/** Warnings for the Delivery section (feature-delivery.md). Advisory: they print to stderr and never stop the PR. */
+export function deliveryWarnings({ brief, split, changed = 0, openPrs = 0 }) {
+  const w = [];
+  if (!brief) w.push('Delivery: no --brief given. Pass the feature brief path, or --brief "n/a: <why>" for a change that needs none.');
+  if (!split && openPrs > 0 && changed > 0 && changed < 40) w.push(`Delivery: ${changed} changed lines while ${openPrs} other PR(s) of yours are open. Fold this into that feature's PR, or say why with --split "<reason>".`);
+  return w;
+}
+
+const changedLines = (git, base) => { try { return git('diff', '--numstat', `${base}...HEAD`).split('\n').filter(Boolean).reduce((n, l) => n + (parseInt(l, 10) || 0) + (parseInt(l.split('\t')[1], 10) || 0), 0); } catch { return 0; } };
+const otherOpenPrs = git => { try { const branch = git('branch', '--show-current').trim(); return JSON.parse(execFileSync('gh', ['pr', 'list', '--author', '@me', '--state', 'open', '--json', 'headRefName'], { encoding: 'utf8', timeout: 8000 })).filter(p => p.headRefName !== branch).length; } catch { return 0; } };
 
 function main(argv) {
   const arg = name => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : undefined; };
@@ -95,7 +111,8 @@ function main(argv) {
   console.error(`Audience: ${found.audience} (${found.reason}). ${files.length} file(s) against ${base}.`);
   const template = readFileSync(fileURLToPath(new URL('../.github/pull_request_template.md', import.meta.url)), 'utf8');
   if (!arg('--changelog') && arg('--what')) console.error('No --changelog given: the Changelog section is the --what text (cut at a sentence end past 600 characters). Pass --changelog "..." to say it shorter.');
-  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files, config), arg('--changelog'), config));
+  for (const w of deliveryWarnings({ brief: arg('--brief'), split: arg('--split'), changed: changedLines(git, base), openPrs: otherOpenPrs(git) })) console.error(w);
+  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files, config), arg('--changelog'), config, { brief: arg('--brief'), split: arg('--split') }));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main(process.argv.slice(2));

@@ -8,6 +8,12 @@ vi.mock('node:dns/promises', () => ({ resolveCname: () => Promise.reject(new Err
 // `new URL(url).hostname`, which for a postgres: URL keeps the case and any percent-escapes and ignores a ?host= parameter that the pg driver lets replace the host,
 // so each of the forms below passed the guard and then connected to production (qa-db.mjs reset --apply empties user data; staging-db.mjs clear --apply signs everyone out).
 
+// productionUrl() falls back to DATABASE_URL_UNPOOLED in the working directory's .env. A developer's own .env would make "cannot tell production" untrue, so this file never sees one.
+vi.mock('node:fs', async importOriginal => {
+  const real = await importOriginal();
+  return { ...real, existsSync: path => (path === '.env' ? false : real.existsSync(path)) };
+});
+
 const PROD_HOST = 'ep-cool-123.us-east-2.aws.neon.tech';
 const PROD = `postgres://owner:pw@${PROD_HOST}/neondb`;
 const OTHER = 'ep-other-9.us-east-2.aws.neon.tech';
