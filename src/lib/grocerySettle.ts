@@ -61,7 +61,7 @@ export function purchasesOf(g: Grocery, m: GroceryMonth): MonthPurchase[] {
 }
 
 /** Whether the list has any sharing set up, so the screens that show it can stay as they were for everyone else. */
-export const hasSharing = (g: Grocery): boolean => (g.groups ?? []).some(x => !x.gone);
+export const hasSharing = (g: Grocery): boolean => (g.groups?.length ?? 0) > 0; // a group that is gone counts: past months still owe through it, and their money must stay visible
 
 /** The stores that have something bought this month, in the list's order, with the no-store group last (`''`). */
 export function storesBought(g: Grocery, purchases: readonly MonthPurchase[]): string[] {
