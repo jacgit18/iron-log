@@ -67,4 +67,45 @@
 .gsplitrows li.act {
   font-weight: 600;
 }
+/* An owed row: what it says (and a small tag once it is settled), the amount, and the button that settles it or takes it back. */
+.gsplitrows li {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.gsplitsay {
+  display: flex;
+  flex: 1 1 8rem;
+  flex-direction: column;
+  min-width: 0;
+}
+.gsplitrows li.settled .gsplitsay,.gsplitrows li.settled .gsplitsay+span {
+  color: var(--muted);
+}
+.gsplitok {
+  width: max-content;
+  padding: 0 var(--sp-6);
+  border-radius: var(--r-pill);
+  background: var(--sunk);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+}
+.gsplitbtn {
+  flex: none;
+  min-height: 44px;
+}
+.gsplitfoot {
+  margin: var(--sp-4) 0 0;
+  padding-top: var(--sp-6);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.gsplitfoot b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.gsettled {
+  color: var(--accent);
+}
 }

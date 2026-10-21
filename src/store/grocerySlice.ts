@@ -3,7 +3,7 @@ import {
   MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, parseDollars, storeFor,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
-import { groupOfStore } from '../lib/grocerySettle.js';
+import { groupOfStore, storeStatus } from '../lib/grocerySettle.js';
 import type { Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
 
@@ -419,6 +419,19 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         const payer = { ...(m.payer ?? {}) };
         if (personId) payer[store] = personId; else delete payer[store];
         if (Object.keys(payer).length) m.payer = payer; else delete m.payer;
+        // Another payer is another set of payments: the store's settled marks start over.
+        const paid = Object.fromEntries(Object.entries(m.paid ?? {}).filter(([k]) => !k.startsWith(`${store}\n`)));
+        if (Object.keys(paid).length) m.paid = paid; else delete m.paid;
+      });
+    },
+    // Marks an owed amount settled (or not) outside the app. Only a mark that differs from the default is kept; amounts never change.
+    setGroceryPaid(month, store, person, paid) {
+      const m = get().groceryMonths[month]; if (!m) return;
+      const row = storeStatus(get().grocery, m, store).rows.find(r => r.id === person); if (!row) return;
+      mutateMonth(month, mm => {
+        const marks = { ...(mm.paid ?? {}) };
+        if (paid === row.usual) delete marks[row.key]; else marks[row.key] = paid;
+        if (Object.keys(marks).length) mm.paid = marks; else delete mm.paid;
       });
     },
     setGroceryTax(month, store, cents) {
