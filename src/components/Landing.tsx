@@ -17,6 +17,14 @@ const PLANS = [
   { name: 'Paid', price: 'TBD', limits: 'TBD', features: 'TBD' },
 ];
 
+const FEATURES = [
+  { title: 'A weekly board.', text: 'One column per day, with A and B programs that rotate for you.' },
+  { title: 'Targets for every lift.', text: 'Weights and reps that follow your training phase and your last session.' },
+  { title: 'Timers built in.', text: 'Rest between sets and countdowns for holds.' },
+  { title: 'Progress you can see.', text: 'Lift history, body weight and a muscle map of what you have trained.' },
+  { title: 'Yours to keep.', text: 'Export everything, or delete your data and your account, any time.' },
+];
+
 export default function Landing({ offline = false }: { offline?: boolean }) {
   const [problem, setProblem] = useState('');
   const [done] = useState(takeAfterReload); // "Your account was deleted.": the reload after deleting lands here
@@ -58,11 +66,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
       <section aria-labelledby="landing-what">
         <h2 id="landing-what">What it does</h2>
         <ul className="landing-list">
-          <li><b>A weekly board.</b> One column per day, with A and B programs that rotate for you.</li>
-          <li><b>Targets for every lift.</b> Weights and reps that follow your training phase and your last session.</li>
-          <li><b>Timers built in.</b> Rest between sets and countdowns for holds.</li>
-          <li><b>Progress you can see.</b> Lift history, body weight and a muscle map of what you have trained.</li>
-          <li><b>Yours to keep.</b> Export everything, or delete your data and your account, any time.</li>
+          {FEATURES.map(f => <li key={f.title}><b>{f.title}</b> {f.text}</li>)}
         </ul>
       </section>
 
@@ -71,8 +75,8 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
         <p className="landing-fine">Nothing is decided yet beyond the beta, which is free. Everything marked TBD will be set before the beta ends.</p>
         <ul className="landing-plans">
           {PLANS.map(p => (
-            <li key={p.name} className="landing-plan">
-              <h3>{p.name}</h3>
+            <li key={p.name} className={`landing-plan${p.name === 'Beta' ? ' now' : ''}`}>
+              <h3>{p.name}{p.name === 'Beta' && <span className="landing-now">Now</span>}</h3>
               <dl>
                 <dt>Price</dt><dd>{p.price}</dd>
                 <dt>Limits</dt><dd>{p.limits}</dd>

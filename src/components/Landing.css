@@ -1,10 +1,14 @@
 @layer base, components;
 @layer components {
-/* ---------- Landing page (src/components/Landing.tsx): what a visitor without an account sees ---------- */
+/* ---------- Landing page (src/components/Landing.tsx): what a visitor without an account sees ----------
+   Its own look on purpose (ux/DESIGN-SYSTEM.md): bigger type and buttons than the app, a centred hero and framed screenshot. Colours, radii and
+   spacing still come from the app's tokens, so light and dark follow. */
 .landing {
-  max-width: 46rem;
+  max-width: 64rem;
   margin: 0 auto;
-  padding: 20px 0 40px;
+  padding: 20px 0 56px;
+  background-image: radial-gradient(ellipse 26rem 15rem at 50% 0, color-mix(in srgb, var(--accent) 13%, transparent), transparent);
+  background-repeat: no-repeat;
 }
 .landing-head {
   display: flex;
@@ -18,29 +22,56 @@
   font-size: var(--fs-4xl);
   letter-spacing: .02em;
 }
+.landing-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 24px;
+}
 .landing h1 {
   font-family: "Barlow Condensed","Barlow Fallback",system-ui,sans-serif;
   font-weight: 700;
-  font-size: clamp(2rem,7vw,3rem);
-  line-height: 1.1;
-  margin: 0 0 var(--sp-12);
+  font-size: clamp(2.25rem,8vw,3.75rem);
+  line-height: 1.05;
+  max-width: 26ch;
+  text-wrap: balance;
+  margin: 0 0 var(--sp-16);
 }
 .landing h2 {
-  font-size: var(--fs-2xl);
-  margin: 32px 0 var(--sp-8);
+  font-size: var(--fs-4xl);
+  text-align: center;
+  margin: 56px 0 var(--sp-12);
 }
 .landing-lead {
   font-size: var(--fs-xl);
-  max-width: 36rem;
-  margin: 0 0 20px;
+  max-width: 38rem;
+  margin: 0 0 var(--sp-8);
 }
 .landing-cta {
-  margin: 20px 0 var(--sp-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-12);
+  width: 100%;
+  max-width: 20rem;
+  margin: 24px 0 var(--sp-12);
 }
 .landing-cta .btn {
+  width: 100%;
+  justify-content: center;
   font-size: var(--fs-xl);
-  min-height: 48px;
+  min-height: 52px;
   padding: 0 24px;
+}
+.landing-cta .emailsignin-open {
+  margin-top: 0;
+}
+.landing-cta .emailsignin {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  text-align: left;
 }
 .landing-fine {
   color: var(--muted);
@@ -48,20 +79,39 @@
   max-width: 36rem;
 }
 .landing-shot {
-  margin: 28px 0 0;
+  margin: 40px auto 0;
+  max-width: 60rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 24px 48px -24px color-mix(in srgb, var(--ink) 38%, transparent);
 }
 .landing-shot img {
+  display: block;
   width: 100%;
   height: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
 }
 .landing-list {
-  padding-left: 20px;
-  max-width: 38rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(17rem,1fr));
+  gap: var(--sp-12);
 }
 .landing-list li {
-  margin: var(--sp-8) 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: var(--sp-16);
+}
+.landing-list b {
+  display: block;
+  font-family: "Barlow Condensed","Barlow Fallback",system-ui,sans-serif;
+  font-size: var(--fs-2xl);
+  line-height: 1.2;
+  margin-bottom: var(--sp-4);
 }
 .landing-plans {
   list-style: none;
@@ -72,13 +122,32 @@
   gap: var(--sp-12);
 }
 .landing-plan {
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  padding: var(--sp-12) 14px;
+  padding: var(--sp-16);
+}
+.landing-plan.now {
+  border: 2px solid var(--accent);
+  padding: 15px;
 }
 .landing-plan h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
   margin: 0 0 var(--sp-8);
   font-size: var(--fs-xl);
+}
+.landing-now {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: var(--r-pill);
+  padding: var(--sp-2) var(--sp-8);
+  font-family: "Barlow","Barlow Fallback",system-ui,sans-serif;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
 }
 .landing-plan dl {
   margin: 0;
@@ -91,12 +160,18 @@
 .landing-plan dd {
   margin: 0;
 }
+.landing section > .landing-fine {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
 .landing-foot {
-  margin-top: 36px;
+  margin-top: 48px;
   padding-top: var(--sp-16);
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: var(--fs-md);
+  text-align: center;
 }
 .landing-splash {
   display: flex;
@@ -108,8 +183,50 @@
   color: var(--muted);
 }
 .landing-dev {
+  max-width: 36rem;
   margin: var(--sp-12) 0 0;
   padding-top: var(--sp-12);
   border-top: 1px dashed var(--line);
+}
+/* Wider than a phone: the two sign-in buttons sit side by side. The email button arrives after the server answers (EmailCodeSignIn), so a
+   stacked layout would push everything below it down when it shows; side by side it adds no height. The opened email form takes its own row. */
+@media (min-width:560px) {
+  .landing-cta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 40rem;
+  }
+  .landing-cta .btn {
+    width: auto;
+    min-width: 15rem;
+  }
+  .landing-cta .emailsignin {
+    flex: 0 0 100%;
+    max-width: none;
+    align-items: center;
+  }
+  .landing-cta .emailsignin > * {
+    width: 100%;
+    max-width: 22rem;
+  }
+  .landing-cta .emailsignin .actions {
+    justify-content: center;
+  }
+}
+/* Wide screens: the five feature cards sit three and two, the second row centred, not three and a hole. */
+@media (min-width:900px) {
+  .landing-list {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .landing-list li {
+    grid-column: span 2;
+  }
+  .landing-list li:nth-child(4) {
+    grid-column: 2 / span 2;
+  }
+  .landing-list li:nth-child(5) {
+    grid-column: 4 / span 2;
+  }
 }
 }
