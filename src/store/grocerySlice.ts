@@ -244,12 +244,12 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
 
     removeGroceryStore(name) {
       const i = get().grocery.stores.indexOf(name);
-      const retire = i >= 0 && historyUses(name) && (get().grocery.retired?.length ?? 0) < MAX_STORES && !get().grocery.retired?.includes(name);
+      const retire = i >= 0 && historyUses(name);
       const held = (get().grocery.groups ?? []).filter(x => x.stores.includes(name)).map(x => x.id); // the group it defaulted to, for Undo
       const err = mutateCatalogue(g => {
         if (g.items.some(it => it.store === name)) return 'Move or remove this store’s items first.';
         g.stores = g.stores.filter(s => s !== name);
-        if (retire) g.retired = [...(g.retired ?? []), name]; // past months still name it: hidden, not forgotten
+        if (retire) g.retired = [...(g.retired ?? []).filter(x => x !== name && historyUses(x)), name].slice(-MAX_STORES); // past months still name it: hidden, not forgotten; retired names no month names any more are dropped, which keeps the list from filling
         g.groups?.forEach(x => { x.stores = x.stores.filter(s => s !== name); });
         return null;
       });

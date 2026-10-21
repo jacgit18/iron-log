@@ -61,6 +61,20 @@ describe('removing a store that history uses', () => {
   });
 });
 
+describe('the retired list does not fill up', () => {
+  it('drops retired names that no month names any more when another store is retired', async () => {
+    const { id, last } = await setup();
+    st().setGroceryGot(last, id, true);
+    st().removeGroceryItem(id); st().removeGroceryStore('Aldi');
+    useAppStore.setState({ groceryMonths: {} }); // the history that used Aldi is gone
+    st().addGroceryItem({ n: 'Eggs', store: 'Lidl', qty: '1', price: '2.00', every: true });
+    const egg = st().grocery.items[0].id; const lib = await import('../lib/grocery.js');
+    st().setGroceryGot(lib.shiftMonth(lib.monthKey(new Date()), -1), egg, true);
+    st().removeGroceryItem(egg); st().removeGroceryStore('Lidl');
+    expect(st().grocery.retired).toEqual(['Lidl']);
+  });
+});
+
 describe('retired stores in saved data and sync', () => {
   it('normGrocery keeps unique names that are not live', async () => {
     const { normGrocery } = await import('../lib/grocery.js');
