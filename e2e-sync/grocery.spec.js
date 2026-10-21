@@ -84,6 +84,7 @@ test('the list a phone held before syncing is added to an account that already h
 
   // Reloading does not add it again, even after the account's Salt is removed on this phone.
   await page.click('#groc-edit');
+  await page.getByRole('button', { name: 'Expand Salt' }).click(); // edit rows start closed
   await page.getByRole('button', { name: 'Remove Salt from your list' }).click();
   await page.getByRole('button', { name: 'Remove Salt from your list' }).click();
   await expect.poll(async () => (await server.grocery(user)).items).toEqual(['kale']);

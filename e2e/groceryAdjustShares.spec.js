@@ -31,23 +31,30 @@ test('a closed row says how it is split only when it differs from the store’s 
   await expect(row(page, 'Chicken').locator('.gsplittag')).toHaveText('Packs split');
 });
 
-test('while editing, a store’s rows show share controls only after Adjust shares, or when the item has its own split', async ({ page }) => {
+test('while editing, an open row shows its share control only after Adjust shares, or when the item has its own split; a closed row says its own split in a chip', async ({ page }) => {
   await seed(page);
   await page.click('#groc-view-home'); await page.click('#groc-edit');
-  await expect(page.getByLabel(/Shared with, for Toilet paper/)).toHaveCount(0);
-  await expect(page.getByLabel(/Shared with, for Chicken/)).toHaveCount(0);
+  await expect(page.getByLabel(/Shared with, for/)).toHaveCount(0); // edit rows start closed
+  await expect(page.locator('li.gedit', { has: page.getByLabel('Have Rice', { exact: true }) }).locator('.gsplittag')).toHaveText('Me +1'); // its own split, said on the closed row
+  await page.getByRole('button', { name: 'Expand Rice' }).click();
+  await page.getByRole('button', { name: 'Expand Toilet paper' }).click();
   await expect(page.getByLabel(/Shared with, for Rice/)).toHaveCount(1); // item with its own split keeps its control
+  await expect(page.getByLabel(/Shared with, for Toilet paper/)).toHaveCount(0); // follows the store's group
   await page.getByRole('button', { name: "Adjust shares for BJ's" }).click();
   await expect(page.getByLabel(/Shared with, for Toilet paper/)).toHaveCount(1);
+  await expect(page.getByLabel(/Shared with, for Chicken/)).toHaveCount(0); // still closed
+  await page.getByRole('button', { name: "Expand all in BJ's" }).click();
   await expect(page.getByLabel(/Shared with, for Chicken/)).toHaveCount(1);
   await page.getByRole('button', { name: "Done adjusting BJ's" }).click();
   await expect(page.getByLabel(/Shared with, for Toilet paper/)).toHaveCount(0);
+  await expect(page.getByLabel(/Shared with, for Rice/)).toHaveCount(1);
 });
 
 test('Adjust shares is offered only when a group exists, and the edit screen has no accessibility violations', async ({ page }) => {
   await seed(page);
   await page.click('#groc-view-home'); await page.click('#groc-edit');
   await page.getByRole('button', { name: "Adjust shares for BJ's" }).click();
+  await page.getByRole('button', { name: "Expand all in BJ's" }).click();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.evaluate(() => { const c = JSON.parse(localStorage.getItem('ironlog:grocery/main')); delete c.groups; localStorage.setItem('ironlog:grocery/main', JSON.stringify(c)); });
   await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await page.click('#groc-view-home'); await page.click('#groc-edit');
