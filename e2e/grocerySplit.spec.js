@@ -29,7 +29,7 @@ test('an admin sees who owes what, and changing who shares a pack updates it and
   await seed(page);
   await expect(split(page).getByText('Paid').locator('xpath=following-sibling::dd')).toHaveText('$58.72');
   const rows = split(page).locator('.gsplitcard', { hasText: "BJ's" }).locator('.gsplitrows li');
-  await expect(rows).toHaveText(['Bill$53.72', 'Your share$31.06', 'Sister owes you$11.33', 'Mom, already paid$11.33']); // BJ's: the toilet paper and pack 3 are split three ways, packs 1 and 2 are mine
+  await expect(rows).toHaveText(['Bill$53.72', 'Your share$31.06', 'Sister owes you$11.33Mark paid', 'Mom, already paidShare already paid$11.33Not paid']); // BJ's: the toilet paper and pack 3 are split three ways, packs 1 and 2 are mine
   // Pack 2 ($9.25) is shared with the sister too: she now owes her half of it as well.
   await page.click('#groc-bought summary');
   await page.getByRole('button', { name: 'Count and price of Chicken' }).click();

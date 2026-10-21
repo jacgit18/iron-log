@@ -7,7 +7,7 @@ import { str } from './stretchWeek.js';
    say whether a value is already clean, for the API to refuse what the app would never send (ADR 039). */
 
 export const MAX_ITEMS = 500, MAX_STORES = 30, MAX_QTY = 999, MAX_CENTS = 99_999_999, MAX_PRICES = 50;
-export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40, MAX_NOTE = 120;
+export const MAX_ID = 60, MAX_NAME = 80, MAX_STORE = 40, MAX_NOTE = 120, MAX_PAID = 600;
 export const MAX_GROUPS = 10, MAX_PEOPLE = 10, MAX_PERSON = 40;
 export const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -151,6 +151,14 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
     const cents = cleanCents(c);
     if (store !== '__proto__' && store.length <= MAX_STORE && cents) tax[store] = cents;
   });
-  return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}), ...(Object.keys(tax).length ? { tax } : {}) };
+  // Which owed amounts are settled, flat so that two devices merge it key by key: "store\npayer\nperson" (a store name never holds a newline) to the cents settled, or false for not paid.
+  const paid: Record<string, number | false> = {};
+  Object.entries(asObject(raw.paid) ?? {}).slice(0, MAX_PAID).forEach(([key, v]) => {
+    const [store, by, who, ...rest] = key.split('\n');
+    if ((v === false || (typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= MAX_CENTS)) && !rest.length && store !== undefined && store.length <= MAX_STORE && by && who && by.length <= MAX_ID && who.length <= MAX_ID && who !== 'me') paid[key] = v; // a "you owe" row has the payer as its person: payer and person are the same id there
+  });
+  return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}), ...(Object.keys(tax).length ? { tax } : {}), ...(Object.keys(paid).length ? { paid } : {}) };
 }
-export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length && !Object.keys(m.payer ?? {}).length && !Object.keys(m.tax ?? {}).length;
+/** The key a settled mark is kept under: the store, who paid the bill ('me' or a person's id) and the person whose amount it is. */
+export const paidKey = (store: string, payer: string, person: string) => `${store}\n${payer}\n${person}`;
+export const monthEmpty = (m: GroceryMonth) => !m.pulled.length && !Object.keys(m.lines).length && !Object.keys(m.payer ?? {}).length && !Object.keys(m.tax ?? {}).length && !Object.keys(m.paid ?? {}).length;

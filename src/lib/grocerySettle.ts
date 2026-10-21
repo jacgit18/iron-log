@@ -1,6 +1,8 @@
 import { lineCost, lineOf, own, removedItem, shiftMonth, storeFor } from './grocery.js';
 import { ME, partiesOf, settle, type Purchase, type Settlement } from './grocerySplit.js';
 import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson } from '../types.ts';
+import { paidKey } from './grocery.js';
+import type { SettleRow } from './grocerySplit.js';
 
 /* ---------- A month of groceries, split ----------
    Turns what was bought in a month (ticked lines, packs priced one by one) into purchases with their parties, then into totals and a
@@ -74,6 +76,27 @@ export function storeSettlement(g: Grocery, m: GroceryMonth, store: string, purc
   return settle(mine, payerOf(g, m, store), covered, mine.length ? own(m.tax, store) ?? 0 : 0); // the receipt's tax, typed in; only for a store with something bought
 }
 
+/** One owed amount of a store's card with whether it has been settled outside the app: `usual` is the default (someone marked Share already paid starts as paid, and "you owe"
+ *  never does), `paid` is what the card shows (a mark in the month's `paid`, else the default), `auto` says it is paid by default, and `key` is where a mark is kept. */
+export interface RowStatus extends SettleRow { paid: boolean; usual: boolean; auto: boolean; key: string }
+const coveredIds = (g: Grocery): Set<string> => new Set((g.groups ?? []).flatMap(x => x.people.filter(p => p.covered).map(p => p.id)));
+
+/** A store's settle-up with each owed row marked settled or not, and what is still outstanding: `owed` is what others still owe you, `youOwe` what you still owe.
+ *  Marks never change an amount, only whether it counts as outstanding. */
+export function storeStatus(g: Grocery, m: GroceryMonth, store: string, purchases: readonly MonthPurchase[] = purchasesOf(g, m)): { rows: RowStatus[]; owed: number; youOwe: number; outstanding: number } {
+  const st = storeSettlement(g, m, store, purchases); const payer = payerOf(g, m, store); const covered = coveredIds(g);
+  const rows = st.rows.map((r): RowStatus => {
+    const key = paidKey(store, payer, r.id); const set = own(m.paid, key);
+    const usual = r.kind === 'covered' || (r.kind === 'owesPayer' && covered.has(r.id));
+    // A mark holds the cents that were settled: the row is paid only while it is not above that (a later purchase that raises it is owed again); false is "not paid".
+    const paid = set === undefined ? usual : set !== false && r.cents <= set;
+    return { ...r, key, usual, paid, auto: set === undefined && usual };
+  });
+  const sum = (kinds: SettleRow['kind'][]) => rows.filter(r => kinds.includes(r.kind) && !r.paid).reduce((a, r) => a + r.cents, 0);
+  const owed = sum(['owesYou', 'covered']); const youOwe = sum(['youOwe']);
+  return { rows, owed, youOwe, outstanding: owed + youOwe };
+}
+
 /** What you paid this month (the bills of the stores where you are the payer; a store someone else paid is not yours to have paid) and your share
  *  of everything bought: the number that belongs in your own spending. */
 export function monthShare(g: Grocery, m: GroceryMonth): { paid: number; yours: number } {
@@ -82,12 +105,12 @@ export function monthShare(g: Grocery, m: GroceryMonth): { paid: number; yours: 
   return { paid, yours };
 }
 
-/** What changes hands this month, over every store bought from: `owed` is what others owe you (the stores you paid for), `youOwe` is what you
- *  owe others (the stores someone else paid). */
+/** What is still to change hands this month, over every store bought from: `owed` is what others still owe you (the stores you paid for), `youOwe` is what you
+ *  still owe others (the stores someone else paid); amounts marked settled are left out. */
 export function monthOwes(g: Grocery, m: GroceryMonth): { owed: number; youOwe: number } {
   const purchases = purchasesOf(g, m);
   let owed = 0, youOwe = 0;
-  storesBought(g, purchases).forEach(store => { const st = storeSettlement(g, m, store, purchases); owed += st.owedToYou; youOwe += st.youOwe; });
+  storesBought(g, purchases).forEach(store => { const st = storeStatus(g, m, store, purchases); owed += st.owed; youOwe += st.youOwe; });
   return { owed, youOwe };
 }
 
