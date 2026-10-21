@@ -7,6 +7,7 @@ import { createApp } from '../app.ts';
 import { createDb } from '../db/connection.ts';
 import type { DB } from '../db/types.ts';
 import { startTestDatabase } from '../test/postgres.ts';
+import type { PushJob } from './scheduler.ts';
 import type { PushSender, Subscription } from './send.ts';
 
 // The route Cloud Tasks calls (ADR 044, PR 4), against the real database as the restricted role, with a fake token check and a fake push service.
@@ -20,13 +21,16 @@ const sent: { sub: Subscription; message: unknown; ttl: number }[] = [];
 let outcome: 'sent' | 'gone' | 'failed' = 'sent';
 let clock = NOW;
 const send: PushSender = async (sub, message, ttl) => { sent.push({ sub, message, ttl }); return outcome; };
+const scheduled: PushJob[] = [];
+let scheduleFails = false;
+const scheduler = { schedule: async (j: PushJob) => { if (scheduleFails) throw new Error('queue down'); scheduled.push(j); } };
 const verify = async (token: string) => { if (token === 'explode') throw new Error('bad token'); return token === 'good'; };
 
 beforeAll(async () => {
   let appUrl: string;
   ({ db: owner, stop, appUrl } = await startTestDatabase());
   app = createDb(appUrl);
-  server = createApp({ db: app, admins: adminsFrom('dev:ann'), push: { publicKey: 'K', now: () => clock, fire: { verify, send } } }).listen(0);
+  server = createApp({ db: app, admins: adminsFrom('dev:ann'), push: { publicKey: 'K', scheduler, now: () => clock, fire: { verify, send } } }).listen(0);
   await new Promise(done => server.once('listening', done));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 }, 120_000);
@@ -40,6 +44,8 @@ let subId: string;
 beforeEach(async () => {
   await owner.deleteFrom('users').execute();
   sent.length = 0;
+  scheduled.length = 0;
+  scheduleFails = false;
   outcome = 'sent';
   clock = NOW;
   const uid = (await owner.insertInto('users').values({ auth_user_id: 'dev:ann' }).returning('id').executeTakeFirstOrThrow()).id;
@@ -132,5 +138,82 @@ describe('the database functions', () => {
         from pg_proc p where p.proname in ('push_claim', 'push_sent', 'push_gone', 'claim_push_endpoint') order by 1`.execute(owner);
     expect(rows.map(r => r.proname)).toEqual(['claim_push_endpoint', 'push_claim', 'push_gone', 'push_sent']);
     expect(rows.every(r => r.definer && r.app && !r.pub)).toBe(true);
+  });
+});
+
+describe('a repeating water reminder', () => {
+  const EVERY = 2 * 3_600_000;
+  const water = (over: Record<string, unknown> = {}) => ({ subscriptionId: subId, kind: 'water', key: 'w1', at: NOW, body: 'Time for a glass of water.', repeat: { everyMs: EVERY, until: NOW + 3 * EVERY }, ...over });
+  const arm = () => owner.updateTable('push_subscription').set({ pending: JSON.stringify({ water: { key: 'w1', at: NOW } }) }).execute();
+
+  it('sends, then marks and queues the next one an interval later', async () => {
+    await arm();
+    expect(await (await fire(water())).json()).toEqual({ ok: true, sent: true });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.ttl).toBe(1800);
+    const next = NOW + EVERY;
+    expect(scheduled).toEqual([{ subscriptionId: subId, kind: 'water', key: `w${next}`, at: next, body: 'Time for a glass of water.', repeat: { everyMs: EVERY, until: NOW + 3 * EVERY } }]);
+    expect((await row())!.pending).toEqual({ water: { key: `w${next}`, at: next } });
+  });
+  it('queues the next one from the real time when this one came late', async () => {
+    await arm();
+    clock = NOW + 600_000;
+    await fire(water());
+    expect(scheduled[0]!.at).toBe(NOW + 600_000 + EVERY);
+  });
+  it('stops at the end of the window', async () => {
+    await arm();
+    await fire(water({ repeat: { everyMs: EVERY, until: NOW + EVERY - 1 } }));
+    expect(sent).toHaveLength(1);
+    expect(scheduled).toEqual([]);
+    expect((await row())!.pending).toEqual({});
+  });
+  it('a job with no repeat sends once and queues nothing', async () => {
+    await arm();
+    await fire(water({ repeat: undefined }));
+    expect(sent).toHaveLength(1);
+    expect(scheduled).toEqual([]);
+  });
+  it('a reminder dropped as late still queues the next one', async () => {
+    await arm();
+    clock = NOW + 45 * 60_000; // past the 30 minutes a water reminder is worth
+    expect(await (await fire(water())).json()).toEqual({ ok: true, sent: false });
+    expect(sent).toEqual([]);
+    expect(scheduled).toHaveLength(1);
+    expect(scheduled[0]!.at).toBe(NOW + 45 * 60_000 + EVERY);
+  });
+  it('push_rearm sets a marker only where none is, so a newer ask from the phone is kept', async () => {
+    const rearm = async (key: string) => (await sql<{ ok: boolean | null }>`select push_rearm(${subId}, 'water', ${key}, ${NOW + 5}) as ok`.execute(owner)).rows[0]!.ok;
+    expect(await rearm('first')).toBe(true);
+    expect((await row())!.pending).toEqual({ rest: { key: 'k1', at: NOW }, water: { key: 'first', at: NOW + 5 } }); // the rest marker beside it is untouched
+    expect(await rearm('second')).toBeNull();
+    expect((await row())!.pending).toEqual({ rest: { key: 'k1', at: NOW }, water: { key: 'first', at: NOW + 5 } });
+  });
+  it('a cancelled reminder sends nothing and does not chain', async () => {
+    await fire(water());
+    expect(sent).toEqual([]);
+    expect(scheduled).toEqual([]);
+  });
+  it('a gone browser ends the chain; a failed send does not', async () => {
+    await arm();
+    outcome = 'gone';
+    await fire(water());
+    expect(scheduled).toEqual([]);
+    await owner.insertInto('push_subscription').values({ user_id: (await owner.selectFrom('users').select('id').executeTakeFirstOrThrow()).id, endpoint: 'https://push.example/two', p256dh: 'P', auth: 'A', pending: JSON.stringify({ water: { key: 'w1', at: NOW } }) }).execute();
+    const two = String((await owner.selectFrom('push_subscription').select('id').where('endpoint', '=', 'https://push.example/two').executeTakeFirstOrThrow()).id);
+    outcome = 'failed';
+    await fire(water({ subscriptionId: two }));
+    expect(scheduled).toHaveLength(1);
+  });
+  it('a queue that is down does not fail the call', async () => {
+    await arm();
+    scheduleFails = true;
+    const res = await fire(water());
+    expect(res.status).toBe(200);
+    expect(sent).toHaveLength(1);
+  });
+  it('refuses a repeat on another kind, too often, or backwards', async () => {
+    for (const repeat of [{ everyMs: 60_000, until: NOW + EVERY }, { everyMs: 5 * 3_600_000, until: NOW + EVERY }, { everyMs: EVERY, until: NOW - 1 }, 'x']) expect((await fire(water({ repeat }))).status).toBe(422);
+    expect((await fire({ ...job(), repeat: { everyMs: EVERY, until: NOW + EVERY } })).status).toBe(422);
   });
 });
