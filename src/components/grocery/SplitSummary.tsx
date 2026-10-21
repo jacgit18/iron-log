@@ -1,8 +1,8 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import { money } from '../../lib/grocery.js';
 import { allPeople, monthOwed, monthShare, payerOf, purchasesOf, storeSettlement, storesBought } from '../../lib/grocerySettle.js';
-import { monthOwes, storeStatus, type RowStatus } from '../../lib/grocerySettle.js';
 import { ME } from '../../lib/grocerySplit.js';
+import { monthOwes, storeStatus, type RowStatus } from '../../lib/grocerySettle.js';
 import type { Grocery, GroceryMonth } from '../../types.ts';
 import './SplitSummary.css';
 

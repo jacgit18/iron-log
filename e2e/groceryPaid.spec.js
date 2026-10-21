@@ -1,6 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
+// The split card may sit folded at the bottom of To get (a separate change); open it when it does, so this spec reads the card either way.
+const openSplit = async page => { const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
+
 // The split card's settled marks (ADR 062): every owed row can be marked paid (or sent) once the money has moved outside the app; amounts never change.
 // The fixed date is in September 2026, so the month below is 2026-09. $24.99 of toilet paper at BJ's, split three ways: $8.33 each (your share is $8.33 too).
 const CATALOGUE = {
@@ -15,7 +18,7 @@ const seed = async page => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(MONTH));
   }, { CATALOGUE, MONTH });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
 };
 const split = page => page.getByRole('region', { name: 'Splitting this month' });
 const tile = (page, name) => split(page).getByText(name, { exact: true }).locator('xpath=following-sibling::dd');
@@ -37,7 +40,7 @@ test('Mark paid settles a row without changing its amount, Undo takes it back, a
   await expect(tile(page, 'Still owed to you')).toHaveText('$0.00');
   await expect(split(page).locator('.gsplitfoot')).toHaveText('All settled');
   await expect(tile(page, 'Your share')).toHaveText('$8.33'); // untouched
-  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
   await expect(row(page, 'Sister paid you')).toBeVisible();
   await btn(page, 'Undo').click();
   await expect(row(page, 'Sister owes you')).toBeVisible();
