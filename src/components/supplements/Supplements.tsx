@@ -141,8 +141,8 @@ function Week({ water, goalOf, end, selected, onPick }: { water: Record<string, 
     <div className="mbars" role="group" aria-label="Last 7 days of water">
       {days.map(x => (
         <button type="button" key={x.d} className="mbar" aria-current={x.d === selected ? 'date' : undefined} aria-label={`${DAY_NAMES[x.date.getDay()].slice(0, 3)} ${x.date.getDate()} ${fmtOz(x.oz)} oz, ${DAY_NAMES[x.date.getDay()]} ${fmtShort(x.date)}${x.oz >= x.goal ? ', goal met' : ''}`} onClick={() => onPick(x.d)}>
-          <span>{DAY_NAMES[x.date.getDay()].slice(0, 3)} {x.date.getDate()}</span>
-          <span className="track"><i className="l3" style={{ width: `${x.oz / max * 100}%`, background: x.oz >= x.goal ? 'var(--accent)' : undefined }} /></span>
+          <span>{DAY_NAMES[x.date.getDay()].slice(0, 3)} {x.date.getDate()}</span>{' '}
+          <span className="track"><i className="l3" style={{ width: `${x.oz / max * 100}%`, background: x.oz >= x.goal ? 'var(--accent)' : undefined }} /></span>{' '}
           <b>{fmtOz(x.oz)}</b>
         </button>
       ))}
