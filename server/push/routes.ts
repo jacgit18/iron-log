@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { sql, type Kysely } from 'kysely';
 import { inUserTransaction } from '../auth.ts';
 import type { DB } from '../db/types.ts';
+import { pendingCap } from './pendingCap.ts';
 import type { PushScheduler } from './scheduler.ts';
 import { MAX_SUBSCRIPTIONS, parseCancel, parseSchedule, parseSubscription, parseUnsubscribe } from './validate.ts';
 
@@ -19,6 +20,7 @@ const bad = (error: string) => ({ status: 422, body: { ok: false, error } });
 export function pushRoutes({ db, publicKey, scheduler, now = Date.now }: PushDeps): Router {
   const router = Router();
   const mine = (userId: unknown) => String(userId);
+  const cap = pendingCap();
 
   router.get('/key', (_req, res) => {
     if (!publicKey) return void res.status(503).json({ ok: false, error: 'push is not set up on this server' });
@@ -54,15 +56,19 @@ export function pushRoutes({ db, publicKey, scheduler, now = Date.now }: PushDep
     if (!scheduler) return void res.status(503).json({ ok: false, error: 'push scheduling is not set up on this server' });
     const job = parseSchedule(req.body, now());
     if (!job) { const r = bad('send { endpoint, kind: rest|day-nudge, key (letters, digits, - or _), at (ms, within 3 hours), body (up to 140 characters) }'); return void res.status(r.status).json(r.body); }
+    // Each accepted call queues a billed Cloud Task that fires even if replaced, so an account may have only so many waiting (pendingCap.ts, S-5).
+    const who = mine(res.locals.userId);
+    if (!cap.tryReserve(who, job.at, now())) return void res.status(429).json({ ok: false, error: 'too many scheduled notifications waiting; try again later' });
     // The marker is what says this send is still wanted; a newer schedule of the same kind replaces it, so the older task sends nothing.
     const id = await inUserTransaction(db, mine(res.locals.userId), async trx =>
       (await trx.updateTable('push_subscription')
         .set({ pending: sql`jsonb_set(pending, ${[job.kind]}::text[], ${JSON.stringify({ key: job.key, at: job.at })}::jsonb)` })
         .where('endpoint', '=', job.endpoint).returning('id').executeTakeFirst())?.id);
-    if (!id) return void res.status(404).json({ ok: false, error: 'this device is not subscribed' });
+    if (!id) { cap.release(who, job.at); return void res.status(404).json({ ok: false, error: 'this device is not subscribed' }); }
     try {
       await scheduler.schedule({ subscriptionId: String(id), kind: job.kind, key: job.key, at: job.at, body: job.text });
     } catch (err) {
+      cap.release(who, job.at);
       console.error(JSON.stringify({ msg: 'push schedule failed', error: err instanceof Error ? err.message : String(err) }));
       return void res.status(502).json({ ok: false, error: 'could not schedule the push' });
     }

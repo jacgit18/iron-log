@@ -18,6 +18,21 @@ async function start(limit: Parameters<typeof rateLimit>[0], now?: () => number,
 afterAll(() => Promise.all(servers.map(s => new Promise<void>(done => s.close(() => done())))));
 
 describe('rateLimit', () => {
+  it('sweeps a large map at most once a second (audit S-6)', () => {
+    let t = 1_000_000;
+    let n = 0;
+    const handler = rateLimit({ max: 5, windowMs: 1_000_000 }, () => t, () => `k${n++}`);
+    const call = () => handler({ baseUrl: '', path: '/' } as never, { setHeader() {}, status() { return this; }, json() {} } as never, () => {});
+    for (let i = 0; i < 10_001; i++) call();
+    const walk = vi.spyOn(Map.prototype, Symbol.iterator);
+    for (let i = 0; i < 20; i++) call(); // same millisecond: at most one sweep
+    t += 1500;
+    for (let i = 0; i < 20; i++) call(); // a second later: at most one more
+    const walks = walk.mock.calls.length;
+    walk.mockRestore();
+    expect(walks).toBeLessThanOrEqual(2);
+  });
+
   it('logs once when a caller first goes over, without the address', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const base = await start({ max: 1, windowMs: 60_000 });

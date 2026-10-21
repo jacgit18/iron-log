@@ -9,6 +9,7 @@ import { readdirSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import pg from 'pg';
+import { notLocalProblem } from './lib/db-script.mjs';
 
 const SCRATCH = 'ironlog_migration_check';
 const MIGRATIONS = 'db/migrations';
@@ -20,8 +21,9 @@ if (!given) {
   process.exit(2);
 }
 const url = new URL(given);
-if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) {
-  console.error(`Refusing to run against ${url.hostname}: this check rolls back every migration. Use a local Postgres.`);
+const notLocal = notLocalProblem(given);
+if (notLocal) {
+  console.error(`Refusing to run: ${notLocal}. This check rolls back every migration. Use a local Postgres.`);
   process.exit(2);
 }
 url.searchParams.set('sslmode', 'disable');

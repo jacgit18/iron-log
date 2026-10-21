@@ -4,6 +4,7 @@
 // server that is not on this machine (a developer's .env points at Neon; the tests create users and rows).
 import { execFileSync, spawnSync } from 'node:child_process';
 import pg from 'pg';
+import { notLocalProblem } from './lib/db-script.mjs';
 
 const SCRATCH = 'ironlog_e2e';
 // The API connects as this login, which inherits the restricted role from migration 009 (ironlog_app), so row-level security applies to
@@ -16,8 +17,9 @@ if (!given) {
   process.exit(2);
 }
 const url = new URL(given);
-if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname)) {
-  console.error(`Refusing to run against ${url.hostname}: use a local Postgres.`);
+const notLocal = notLocalProblem(given);
+if (notLocal) {
+  console.error(`Refusing to run: ${notLocal}. Use a local Postgres.`);
   process.exit(2);
 }
 url.searchParams.set('sslmode', 'disable');

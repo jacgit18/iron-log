@@ -1,6 +1,8 @@
 // What the environment database scripts (scripts/staging-db.mjs, scripts/qa-db.mjs) share: a connect that waits for a Neon branch to wake,
 // the mark an environment's database carries, the login the app uses, and the check that refuses production's address.
 import { existsSync, readFileSync } from 'node:fs';
+import { lookup, resolveCname } from 'node:dns/promises';
+import { isIP } from 'node:net';
 import pg from 'pg';
 
 export const fail = (msg, code = 2) => { console.error(msg); process.exit(code); };
@@ -79,8 +81,32 @@ export function productionUrl() {
   return line ? line.slice(line.indexOf('=') + 1).replace(/^["']|["']$/g, '') : null;
 }
 
+/** The name a host finally points at: follows CNAME records (up to 8 hops), so an alias of production's address has production's name. A name with no CNAME,
+ *  or a lookup that fails, stays as it is. `cname` is injectable for tests. */
+export async function canonicalHost(host, cname = resolveCname) {
+  let h = sameHost(host);
+  for (let hop = 0; hop < 8 && !isIP(h); hop++) {
+    const next = await cname(h).then(r => r[0], () => undefined);
+    if (!next) break;
+    h = sameHost(next.toLowerCase().replace(/\.+$/, ''));
+  }
+  return h;
+}
+
+/** True when two hosts are the same machine by a name we can see: the same name once -pooler is dropped, the same final CNAME target, or (only when one of them is a
+ *  bare IP address) the same address list. Two different names that merely share a proxy's addresses are NOT treated as equal (Neon branches do). */
+export async function sameServer(a, b, { cname = resolveCname, addrs = h => lookup(h, { all: true }).then(r => r.map(x => x.address), () => []) } = {}) {
+  if (sameHost(a) === sameHost(b)) return true;
+  if ((await canonicalHost(a, cname)) === (await canonicalHost(b, cname))) return true;
+  if (isIP(a) || isIP(b)) {
+    const [x, y] = await Promise.all([isIP(a) ? [a] : addrs(a), isIP(b) ? [b] : addrs(b)]);
+    return x.some(ip => y.includes(ip));
+  }
+  return false;
+}
+
 /** Run before any connection is made, so a refused URL is never even contacted. `urlName` is the environment variable the URL came from. */
-export function guardHost(url, host, urlName) {
+export async function guardHost(url, host, urlName) {
   const actual = connectHost(url);
   if (!actual) fail(`The host in ${urlName} cannot be read. Nothing was changed.`);
   if (actual !== host.toLowerCase().replace(/\.+$/, '')) fail(`--host ${host} does not match the host in ${urlName} (${actual}). Nothing was changed.`);
@@ -88,5 +114,20 @@ export function guardHost(url, host, urlName) {
   // production as another environment.
   const prod = productionUrl();
   if (!prod) fail('Cannot tell which database is production: set PROD_DATABASE_URL (or DATABASE_URL_UNPOOLED in .env) so this can refuse it. Nothing was changed.');
-  if (sameHost(connectHost(prod)) === sameHost(actual)) fail(`${actual} is production's database. Nothing was changed.`);
+  // Second guard (audit S-7): not just the same spelling but the same machine, so a CNAME or an IP address of production is refused too. It does not
+  // look inside the database: a Neon branch copied from production holds the same data and cannot be told apart by content, so the owner still reads
+  // the host and database name the script prints before --apply.
+  if (await sameServer(connectHost(prod), actual)) fail(`${actual} is production's database (same host, or an alias or address of it). Nothing was changed.`);
+}
+
+/** The refusal for scripts that make and drop a scratch database (check-migrations, e2e-sync): only a Postgres on this machine. Reads the host the way pg
+ *  does, and rejects `host`/`hostaddr` in the query string outright, because pg lets them replace the host before the @ while `new URL(url).hostname` ignores
+ *  them, and dbmate (a different parser) may read them differently again (audit C-2). Returns the problem as text, or null when the URL is local. */
+export function notLocalProblem(url) {
+  let parsed;
+  try { parsed = new URL(url); } catch { return 'the database URL is not a valid URL'; }
+  for (const key of ['host', 'hostaddr']) if (parsed.searchParams.has(key)) return `the database URL has a ${key}= parameter, which can send the connection to another machine`;
+  const host = connectHost(url);
+  if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(host) || !['127.0.0.1', 'localhost', '[::1]', '::1'].includes(parsed.hostname.toLowerCase())) return `the database is on ${host || parsed.hostname}, not this machine`;
+  return null;
 }
