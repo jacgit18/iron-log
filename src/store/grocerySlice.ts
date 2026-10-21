@@ -2,7 +2,7 @@ import * as settle from '../lib/grocerySettle.js';
 import { ME as SELF } from '../lib/grocerySplit.js';
 import { LS } from '../lib/storage.js';
 import {
-  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor,
+  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, RESERVED_STORE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, isReservedName, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
 import { storeStatus } from '../lib/grocerySettle.js';
@@ -52,7 +52,8 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     return null;
   };
   // Whether any past month still leans on a store: a bought line pinned to it, its tax, or who paid there.
-  const historyUses = (name: string) => Object.values(get().groceryMonths).some(m => Object.values(m.lines).some(l => l.got && l.store === name) || own(m.tax, name) !== undefined || own(m.payer, name) !== undefined);
+  // A settled mark (`store\npayer\nperson`, paidKey) names it too: dropping the store would orphan the mark and the card it belongs to (N-17b).
+  const historyUses = (name: string) => Object.values(get().groceryMonths).some(m => Object.values(m.lines).some(l => l.got && l.store === name) || own(m.tax, name) !== undefined || own(m.payer, name) !== undefined || Object.keys(m.paid ?? {}).some(k => k.split('\n')[0] === name));
   const mutateCatalogue = (fn: (g: Grocery) => string | null): string | null => {
     if (get().blocked()) return 'Still loading your data…';
     const g = structuredClone(get().grocery);
@@ -85,6 +86,24 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         pins[id] = shareOf(partiesFor(g, at === item.store ? item : { ...item, store: at }, raw));
       });
       if (Object.keys(pins).length) mutateMonth(key, mm => { Object.entries(pins).forEach(([id, share]) => { mm.lines[id] = { ...mm.lines[id], share }; }); });
+    });
+  };
+
+  // Before a person's `covered` flag flips, each earlier month pins what it showed: a row of theirs with no settled mark of its own gets one for the state it is in
+  // now (paid at its cents, or false for not paid), because an unmarked row follows `covered` (storeStatus `usual`) and a later toggle would otherwise settle or
+  // reopen a month already lived (N-16). No new month key: the pin is an ordinary settled mark, which the cleaner and the merge already carry. This month follows the flag.
+  const pinPastCovered = (personId: string) => {
+    const g = get().grocery; const now = monthKey(new Date());
+    Object.entries(get().groceryMonths).forEach(([key, m]) => {
+      if (key >= now) return;
+      const purchases = settle.purchasesOf(g, m); const marks: Record<string, number | false> = {};
+      settle.storesBought(g, purchases).forEach(store => {
+        settle.storeStatus(g, m, store, purchases).rows.forEach(r => {
+          if (r.id !== personId || r.kind === 'youOwe' || own(m.paid, r.key) !== undefined) return;
+          marks[r.key] = r.paid ? r.cents : false;
+        });
+      });
+      if (Object.keys(marks).length) mutateMonth(key, mm => { mm.paid = { ...(mm.paid ?? {}), ...marks }; });
     });
   };
 
@@ -179,6 +198,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const cents = priceText === '' ? null : parseDollars(priceText);
       if (priceText !== '' && cents == null) return 'The price must be dollars, like 3.49.';
       const typedStore = d.store.trim().replace(/\s+/g, ' ').slice(0, 40);
+      if (isReservedName(typedStore)) return RESERVED_STORE;
       const note = (d.note ?? '').trim().replace(/\s+/g, ' ').slice(0, MAX_NOTE);
       const unit = UNITS.find(u => u === d.unit);
       return mutateCatalogue(g => {
@@ -202,7 +222,9 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
           it.n = n;
         }
         if (patch.store !== undefined) {
-          const store = sameStore(g, patch.store.trim().replace(/\s+/g, ' ').slice(0, 40));
+          const typed = patch.store.trim().replace(/\s+/g, ' ').slice(0, 40);
+          if (isReservedName(typed)) return RESERVED_STORE;
+          const store = sameStore(g, typed);
           const full = ensureStore(g, store); if (full) return full;
           it.store = store;
         }
@@ -236,6 +258,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     addGroceryStore(name) {
       const store = name.trim().replace(/\s+/g, ' ').slice(0, 40);
       if (!store) return 'Give the store a name.';
+      if (isReservedName(store)) return RESERVED_STORE;
       return mutateCatalogue(g => {
         if (g.stores.some(s => s.toLowerCase() === store.toLowerCase())) return 'You already have that store.';
         return ensureStore(g, sameStore(g, store)); // a retired store of that name comes back with its history
@@ -438,6 +461,8 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       });
     },
     updateGroceryPerson(groupId, personId, patch) {
+      const before = get().grocery.groups?.find(y => y.id === groupId)?.people.find(z => z.id === personId);
+      if (before && patch.covered !== undefined && (patch.covered === true) !== (before.covered === true)) pinPastCovered(personId);
       return mutateCatalogue(g => {
         const p = g.groups?.find(y => y.id === groupId)?.people.find(z => z.id === personId);
         if (!p) return 'That person is gone.';
