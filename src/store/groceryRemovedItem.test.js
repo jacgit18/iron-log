@@ -33,13 +33,13 @@ describe('removing an item bought this month', () => {
     expect(st().grocery.items).toHaveLength(0);
     expect(money()).toMatchObject({ spent: 1080, yours: 540, owed: 540 });
   });
-  it('pins the store and the split on the line, and Undo takes the pins off again', async () => {
+  it('pins the store and the split on the line, and the pins stay when the removal is undone (they are what it was bought with)', async () => {
     const { id, m, sis, money } = await setup();
     st().removeGroceryItem(id);
     expect(m().lines[id]).toMatchObject({ got: true, store: 'Aldi', share: { with: [sis] } });
     st().undoRemoved(); // the Undo the notice offers
     expect(st().grocery.items.map(i => i.n)).toEqual(['Milk']);
-    expect(m().lines[id]).toEqual({ got: true, qty: 1, cents: 1000 });
+    expect(m().lines[id]).toEqual({ got: true, qty: 1, cents: 1000, store: 'Aldi', share: { with: [sis] } });
     expect(money()).toMatchObject({ spent: 1080, yours: 540, owed: 540 });
   });
   it('keeps an item’s own split and a store it was moved to for the month, and touches no month where it was not bought', async () => {
