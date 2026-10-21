@@ -33,6 +33,7 @@ import { deleteGroceryMonth, deleteLibraryItem, deleteListItem, deleteProgram, d
 import { untickCard } from './commands/untickCard.ts';
 import { parseLimit, parseSince, syncPage } from './commands/sync.ts';
 import type { DB } from './db/types.ts';
+import { repairBody } from './wellFormed.ts';
 
 export interface AppDeps {
   db?: Kysely<DB>;
@@ -122,12 +123,13 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     app.all('/api/auth/*splat', toNodeHandler(auth));
   }
   // The phone's error reports: anyone may send one (a signed-out phone has errors too), so they are small, rate-limited and scrubbed.
-  app.post('/api/client-errors', rateLimit(limits.clientErrors), express.json({ limit: '4kb' }), clientErrors(recordIssue));
+  app.post('/api/client-errors', rateLimit(limits.clientErrors), express.json({ limit: '4kb' }), repairBody, clientErrors(recordIssue));
   // The one-time upload of a phone's old data is far bigger than any other request (years of entries), so it alone gets a larger limit,
   // but only once the caller is signed in and counted (below, after sessionAuth and its per-user limit). Before that it gets no parser
   // at all: an anonymous caller must not be able to make the one small instance buffer and parse 4 MB per request (audit run-2).
   const smallJson = express.json({ limit: '100kb' });
   app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) ? next() : smallJson(req, res, next)));
+  app.use(repairBody); // a note clipped through an emoji must not reach the database as a lone surrogate (it was a 500; overnight audit S-1)
   app.disable('x-powered-by');
 
   app.get('/api/health', (_req, res) => {
@@ -167,7 +169,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
   // Per signed-in user, after the lookup.
   app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
-  app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }));
+  app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }), repairBody);
   app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));
   app.use('/api/sync', rateLimit(limits.sync, undefined, byUser));
   // The admin Issues screen (ADR 013 amendment): admin-only, and the database checks users.is_admin again.
