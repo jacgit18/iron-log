@@ -27,10 +27,9 @@ const template = `## What and why
 // This file is the same in every project, so it tests the script with its own template and config; the project's real config is checked against its real template below.
 const config = {
   ...loadConfig('/nonexistent'),
-  audiences: [
-    { key: 'paid', label: '**Paid subscribers**', diffFile: 'src/features.ts', diffPattern: "^\\+\\s*\\w+:\\s*'paid'", reason: 'paid' },
-    { key: 'admin', label: '**Admin only**', files: ['server/admin.ts'], diffFile: 'src/features.ts', diffPattern: "^\\+\\s*\\w+:\\s*'admin'", reason: 'admin' },
-  ],
+  audiences: loadConfig().audiences, // the real rules: the tests below pin what they do and do not match
+  ui: loadConfig().ui,
+  notUserFacing: loadConfig().notUserFacing,
   autoTickWhenNoUi: 'lighthouse\\.mjs',
 };
 const features = text => ({ 'src/features.ts': text });
@@ -52,9 +51,24 @@ describe('inferAudience', () => {
     expect(inferAudience(['server/admin.ts'], {}, config).audience).toBe('admin');
     expect(inferAudience(['src/features.ts'], features("+  webPush: 'all',"), config).audience).toBe('everyone'); // releasing a feature is not adding an admin one
   });
+  it('is not admin or paid for a reworded comment or doc line that only contains the word', () => {
+    expect(inferAudience(['src/features.ts'], features("+     'admin' - only an account on the list sees it"), config).audience).toBe('everyone');
+    expect(inferAudience(['src/features.ts'], features("+  // note: 'admin' entries need requireAdmin"), config).audience).toBe('everyone');
+    expect(inferAudience(['src/features.ts'], features("+   see: 'paid' plans"), config).audience).toBe('everyone');
+    expect(inferAudience(['src/features.ts', 'src/App.tsx'], features("+  newThing: 'admin'"), config).audience).toBe('admin'); // last entry, no comma or comment
+  });
   it('is everyone for any other source change, and never n/a for an empty diff', () => {
     expect(inferAudience(['src/App.tsx', 'CHANGELOG.md'], {}, config).audience).toBe('everyone');
     expect(inferAudience([], {}, config).audience).toBe('everyone');
+  });
+});
+
+describe('a build config change', () => {
+  // vite.config can change the bundle and so the Lighthouse score and what loads: it is not "nothing a user can see" (n/a), it is Everyone with the Lighthouse line left to the author.
+  it('is not n/a and counts as UI', () => {
+    expect(inferAudience(['vite.config.js'], {}, config).audience).toBe('everyone');
+    expect(touchesUi(['vite.config.js'], config)).toBe(true);
+    expect(inferAudience(['playwright.config.js'], {}, config).audience).toBe('na');
   });
 });
 
@@ -81,6 +95,7 @@ describe('the Lighthouse line', () => {
     expect(touchesUi(['src/components/board/Card.tsx'], config)).toBe(true);
     expect(touchesUi(['src/styles.css'], config)).toBe(true);
     expect(touchesUi(['public/icon.png'], config)).toBe(true);
+    for (const f of ['src/fonts.ts', 'src/sw.ts', 'src/features.ts', 'vite.config.js']) expect(touchesUi([f], config), f).toBe(true);
     expect(touchesUi(['server/app.ts', 'src/lib/logic.ts', 'scripts/check.mjs'], config)).toBe(false);
   });
 });
