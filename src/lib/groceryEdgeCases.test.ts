@@ -8,7 +8,8 @@ import type { Grocery, GroceryData, GroceryItem, GroceryMonth } from '../types.t
 const item = (id: string, n: string, store: string, cents: number): GroceryItem => ({ id, n, store, qty: 1, cents, every: true, out: false });
 
 describe('a store named like an Object.prototype member', () => {
-  const g = normGrocery({ stores: ['constructor', 'toString', 'Aldi'], items: [item('q', 'Q', 'constructor', 200), item('w', 'W', 'toString', 300)] });
+  // Built by hand: normGrocery now drops such names (G-6), but a list saved before that, or one from another device mid-sync, can still hold them, and must read safely.
+  const g: Grocery = { stores: ['constructor', 'toString', 'Aldi'], items: [item('q', 'Q', 'constructor', 200), item('w', 'W', 'toString', 300)] };
   const m: GroceryMonth = { lines: { q: { got: true }, w: { got: true } }, pulled: [], tax: { Aldi: 10 }, payer: { Aldi: 'someone' } };
 
   it('own() reads only a map\'s own keys', () => {

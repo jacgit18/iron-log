@@ -109,6 +109,15 @@ describe('a fixed issue is reopened only by a report from a different version th
     expect((await issue()).fixed_version).toBe('12');
   });
 
+  it('a stale older version, a non-numeric version and a version from the future do not reopen it (audit S-3, S-4)', async () => {
+    await record('100');
+    await setStatus('fixed');
+    for (const v of ['99', 'dev', 'x1', '99999999999']) await record(v);
+    expect(await issue()).toMatchObject({ status: 'fixed', occurrences: '5', last_version: '99999999999' });
+    await record('101');
+    expect((await issue()).status).toBe('open');
+  });
+
   it('still leaves ignored and investigating issues as they are', async () => {
     for (const status of ['ignored', 'investigating']) {
       await owner.deleteFrom('issues').execute();

@@ -4,7 +4,7 @@
 //   node scripts/lighthouse.mjs --check         the same, and exit 1 if a score is under the floors below (a regression)
 //   node scripts/lighthouse.mjs --url=URL       audit a running site (the live app, a preview) instead; no build
 //   node scripts/lighthouse.mjs --tab=daily     audit ?open=<tab> (board, daily, progress, program, settings)
-// Scores wobble by about 3 points on a busy machine: repeat (--runs=3 takes the median) before calling a change a regression or a fix.
+// Scores wobble by about 3 points on a busy machine: repeat (--runs=3 takes the median; with an even count such as --runs=2 the worse of the two middle values is reported, so use 3 or more for a fair number) before calling a change a regression or a fix.
 // Needs Playwright's Chromium (npx playwright install chromium; found through Playwright itself, so it works on Linux, macOS and Windows, or set CHROME_PATH).
 // Lighthouse runs from npx at the pinned version below: its scoring changes between majors, so raise LIGHTHOUSE together with the floors, on purpose.
 import { spawn, spawnSync } from 'node:child_process';
@@ -50,7 +50,9 @@ if (!base) {
 }
 const url = tab ? `${base}${base.includes('?') ? '&' : '?'}open=${tab}` : base;
 const out = mkdtempSync(join(tmpdir(), 'lighthouse-'));
-const median = xs => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+// The median; for an even run count there are two middle values and the WORSE one is reported (--runs=2 never flatters a change):
+// the lower for a score (higher is better), the higher for a time or shift (lower is better).
+const median = (xs, lowerIsWorse = false) => { const s = [...xs].sort((a, b) => a - b); return s[lowerIsWorse ? Math.ceil(s.length / 2) - 1 : Math.floor(s.length / 2)]; };
 
 let failed = false;
 for (const form of ['mobile', 'desktop']) {
@@ -62,10 +64,10 @@ for (const form of ['mobile', 'desktop']) {
     results.push(JSON.parse(readFileSync(file, 'utf8')));
   }
   if (!results.length) { failed = true; continue; } // nothing audited is never a pass
-  const score = k => Math.round(100 * median(results.map(j => j.categories[k]?.score ?? 0)));
+  const score = k => Math.round(100 * median(results.map(j => j.categories[k]?.score ?? 0), true));
   const metric = id => median(results.map(j => j.audits[id].numericValue));
   const cls = metric('cumulative-layout-shift');
-  console.log(`\n${form} (${url}, median of ${results.length})`);
+  console.log(`\n${form} (${url}, median of ${results.length}${results.length % 2 ? '' : ', worse of the middle two'})`);
   const scores = Object.fromEntries(['performance', 'accessibility', 'best-practices', 'seo'].map(k => [k, score(k)]));
   console.log('  ' + Object.entries(scores).map(([k, v]) => `${k} ${v}`).join('  '));
   console.log(`  FCP ${(metric('first-contentful-paint') / 1000).toFixed(1)} s  LCP ${(metric('largest-contentful-paint') / 1000).toFixed(1)} s  TBT ${Math.round(metric('total-blocking-time'))} ms  CLS ${cls.toFixed(3)}`);

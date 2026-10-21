@@ -76,7 +76,7 @@ if (cmd !== 'check' && cmd !== 'reset') fail('Usage: qa-db.mjs check | reset --h
 const hostIndex = args.indexOf('--host');
 const host = hostIndex >= 0 ? args[hostIndex + 1] : undefined;
 if (cmd === 'reset' && !host) fail('reset needs --host <the host in QA_DATABASE_URL>.');
-if (cmd === 'reset') guardHost(url, host, 'QA_DATABASE_URL');
+if (cmd === 'reset') await guardHost(url, host, 'QA_DATABASE_URL');
 const client = await connect(url, 'QA');
 let code = 2;
 try {

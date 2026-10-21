@@ -105,7 +105,9 @@ describe('edges found by the independent review', () => {
   it('a person marked Share already paid stays that way for last month after they are removed', async () => {
     const { settle, group, gid, sis, owed, last } = await setup();
     st().updateGroceryPerson(gid, sis, { covered: true });
-    expect(owed(last)).toBe(0); // covered: not asked for
+    expect(owed(last)).toBe(500); // covering her now does not settle a month already lived (N-16); this one is marked paid by hand
+    st().setGroceryPaid(last, 'Aldi', sis, true);
+    expect(owed(last)).toBe(0);
     st().removeGroceryPerson(gid, sis);
     expect(group().people[0]).toEqual({ id: sis, n: 'Sis', covered: true, gone: true });
     expect(owed(last)).toBe(0);
