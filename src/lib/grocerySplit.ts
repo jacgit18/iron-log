@@ -5,6 +5,9 @@ import type { GroceryGroup, GroceryShare } from '../types.ts';
    Everyone gets an equal share rounded to the cent; you take the odd cents (or, for something that is not yours, the last person does),
    so the shares always add up to the price exactly. */
 
+/** A map from person id to cents with no inherited members, so an id like 'constructor' is just a person. */
+const bag = (from?: Record<string, number>): Record<string, number> => Object.assign(Object.create(null) as Record<string, number>, from);
+
 /** The id the owner of the list has in every split. People have ids of their own. */
 export const ME = 'me';
 
@@ -23,7 +26,7 @@ export function partiesOf(share: GroceryShare | null | undefined, storeGroup: Gr
 /** Divide `cents` equally among `parties`. Each other person gets the rounded share (never more than is left); you get the remainder, or the last
  *  party does when you are not in it. The result adds up to `cents`. */
 export function splitCents(cents: number, parties: readonly string[]): Record<string, number> {
-  const out: Record<string, number> = {};
+  const out = bag();
   const list = parties.length ? parties : [ME];
   const absorber = list.includes(ME) ? ME : list[list.length - 1];
   const each = Math.round(cents / list.length);
@@ -42,7 +45,7 @@ export interface Purchase { cents: number; parties: readonly string[] }
 
 /** Everyone's total over a set of purchases. */
 export function totalsOf(purchases: readonly Purchase[]): Record<string, number> {
-  const out: Record<string, number> = {};
+  const out = bag();
   purchases.forEach(p => { Object.entries(splitCents(p.cents, p.parties)).forEach(([id, c]) => { out[id] = (out[id] ?? 0) + c; }); });
   return out;
 }
@@ -59,9 +62,10 @@ export interface Settlement { bill: number; /** the sales tax inside `bill` */ t
  *  left); you take the remainder, or the last person does when you are not in it, so the tax adds up exactly. */
 export function addTax(totals: Record<string, number>, tax: number): Record<string, number> {
   const ids = Object.keys(totals); const sub = ids.reduce((a, id) => a + (totals[id] ?? 0), 0);
-  if (tax <= 0 || sub <= 0) return { ...totals };
+  if (tax <= 0) return bag(totals);
+  if (sub <= 0) { const out = bag(totals); out[ME] = (out[ME] ?? 0) + tax; return out; } // nothing priced to share it by (only unpriced or $0 purchases): the receipt's tax is yours alone, so the bill still equals the shares added up
   const absorber = ids.includes(ME) ? ME : ids[ids.length - 1]!;
-  const out = { ...totals }; let left = tax;
+  const out = bag(totals); let left = tax;
   ids.forEach(id => { if (id === absorber) return; const give = Math.min(Math.round((tax * (totals[id] ?? 0)) / sub), left); out[id] = (out[id] ?? 0) + give; left -= give; });
   out[absorber] = (out[absorber] ?? 0) + left;
   return out;

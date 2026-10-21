@@ -6,7 +6,6 @@ import {
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
 import { storeStatus } from '../lib/grocerySettle.js';
-import { groupOfStore } from '../lib/grocerySettle.js';
 import type { Grocery, GroceryData, GroceryItem, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
 import { activePeople, knownPeople, partiesFor } from '../lib/grocerySettle.js';
@@ -243,6 +242,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     },
 
     removeGroceryStore(name) {
+      pinPastParties(); // the store leaves its group below: past months keep the split they were counted with
       const i = get().grocery.stores.indexOf(name);
       const retire = i >= 0 && historyUses(name);
       const held = (get().grocery.groups ?? []).filter(x => x.stores.includes(name)).map(x => x.id); // the group it defaulted to, for Undo
