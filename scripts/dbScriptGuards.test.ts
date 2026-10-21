@@ -1,8 +1,7 @@
 import { execFile } from 'node:child_process';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error plain .mjs without types
-import { canonicalHost, notLocalProblem, sameServer } from '../scripts/lib/db-script.mjs';
+import { canonicalHost, notLocalProblem, sameServer } from './lib/db-script.mjs';
 
 // Audit 2026-10-21: S-7 (the production refusal compares more than spelling) and C-2 (the local-only scripts read the host the way pg does).
 const run = (script: string, env: Record<string, string>) =>
