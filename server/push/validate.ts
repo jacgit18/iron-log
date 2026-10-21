@@ -8,11 +8,24 @@ export const MAX_AHEAD_MS = 3 * 60 * 60_000;
 export const MAX_BODY = 140;
 export const MAX_SUBSCRIPTIONS = 10;
 
-/** The endpoint as the browser reports it: https, and short enough for the table's check. */
+/* The push services a browser can hand out an endpoint on. The server POSTs to whatever endpoint is stored, so a subscription is accepted only on one of these
+   (an endpoint on any other host would let a signed-in account make the server call an address of its choosing: an internal service, the cloud metadata server).
+   Chrome, Edge, Brave, Opera and Samsung Internet use FCM; Firefox its own; Safari Apple's; Edge on Windows also WNS. */
+const PUSH_HOSTS = ['fcm.googleapis.com', 'android.googleapis.com', 'push.services.mozilla.com', 'push.apple.com', 'notify.windows.com'];
+
+/** Whether the URL is https on a push service's own host: no user or password, no port but 443, no IP address. */
+export function isPushServiceUrl(s: string): boolean {
+  let u: URL;
+  try { u = new URL(s); } catch { return false; }
+  if (u.protocol !== 'https:' || u.username || u.password || (u.port && u.port !== '443')) return false;
+  const host = u.hostname.toLowerCase();
+  return PUSH_HOSTS.some(h => host === h || host.endsWith(`.${h}`));
+}
+
+/** The endpoint as the browser reports it: https on a known push service, and short enough for the table's check. */
 export function parseEndpoint(v: unknown): string | null {
   const s = str(v, 2048);
-  if (!s || !s.startsWith('https://')) return null;
-  try { return new URL(s).protocol === 'https:' ? s : null; } catch { return null; }
+  return s && isPushServiceUrl(s) ? s : null;
 }
 
 /** A browser's PushSubscription.toJSON(): { endpoint, keys: { p256dh, auth } }. */
