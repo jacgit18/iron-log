@@ -80,12 +80,13 @@ export function normGrocery(d: unknown): Grocery {
   const lower = (s: string) => s.toLowerCase();
   const addStore = (s: string) => { if (s && !isReservedName(s) && !stores.some(x => lower(x) === lower(s)) && stores.length < MAX_STORES) stores.push(s); }; // one store per name, whatever the case: the first spelling stays
   (Array.isArray(raw.stores) ? raw.stores : []).forEach((s: unknown) => addStore(str(s, 40)));
-  items.forEach(i => addStore(i.store));
-  const canon = (s: string) => stores.find(x => lower(x) === lower(s)) ?? s; // an item typed 'aldi' belongs to 'Aldi'
-  const groups = normGroups(raw.groups, stores);
   const retired: string[] = []; // removed stores that history still names; never one that is live
   (Array.isArray(raw.retired) ? raw.retired : []).forEach((s: unknown) => { const n = str(s, 40); if (n && !isReservedName(n) && !stores.some(x => lower(x) === lower(n)) && !retired.some(x => lower(x) === lower(n)) && retired.length < MAX_STORES) retired.push(n); }); // a live store wins over a retired twin
-  return { stores, items: items.map(i => (i.store && !stores.includes(canon(i.store)) ? { ...i, store: '' } : i.store ? { ...i, store: canon(i.store) } : i)), ...(groups.length ? { groups } : {}), ...(retired.length ? { retired } : {}) };
+  const isRetired = (s: string) => retired.some(x => lower(x) === lower(s));
+  items.forEach(i => { if (!isRetired(i.store)) addStore(i.store); }); // an item naming a retired store leaves it retired (it stays a known name); only an unknown name adds a live store
+  const canon = (s: string) => stores.find(x => lower(x) === lower(s)) ?? retired.find(x => lower(x) === lower(s)) ?? s; // an item typed 'aldi' belongs to 'Aldi'
+  const groups = normGroups(raw.groups, stores);
+  return { stores, items: items.map(i => (i.store ? (stores.includes(canon(i.store)) || retired.includes(canon(i.store)) ? { ...i, store: canon(i.store) } : { ...i, store: '' }) : i)), ...(groups.length ? { groups } : {}), ...(retired.length ? { retired } : {}) };
 }
 
 /* ---------- Reading a month ---------- */
