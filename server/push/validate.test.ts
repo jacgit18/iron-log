@@ -1,3 +1,4 @@
+import { parse } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { pushConfigFrom } from './config.ts';
 import { MAX_AHEAD_MS, isPushServiceUrl, parseCancel, parseEndpoint, parseFire, parseSchedule, parseSubscription, parseUnsubscribe } from './validate.ts';
@@ -28,7 +29,14 @@ describe('isPushServiceUrl', () => {
     'https://metadata.google.internal/x', 'https://internal.svc:8443/hook?a=b', 'https://user:pass@fcm.googleapis.com/x',
     'https://fcm.googleapis.com:8443/x', 'https://evil-fcm.googleapis.com.example.com/x', 'https://notfcm.googleapis.com.evil.io/x', 'https://googleapis.com/x',
     'https://fcm.googleapis.com@evil.example/x', 'http://fcm.googleapis.com/x', 'https://push.example/device-1', 'https://2130706433/x', 'https://0x7f.1/x',
+    // Forms the WHATWG parser reads as fcm.googleapis.com but Node's legacy url.parse (which web-push connects with) reads as having no host (audit S-2)
+    'https:fcm.googleapis.com/x', 'https:///fcm.googleapis.com/x', 'https://\\fcm.googleapis.com/x', 'https:/\\fcm.googleapis.com/x', 'https://fcm.googleapis.com\\@evil.example/x',
+    ' https://fcm.googleapis.com/x', 'https://fcm.googleapis.com/x\n', 'https://fcm.googleapis.com\t/x', 'HTTPS:fcm.googleapis.com/x',
   ])('refuses %s', u => expect(isPushServiceUrl(u)).toBe(false));
+  it('only takes URLs that the legacy parser (web-push) and the WHATWG parser read to the same host', () => {
+    for (const u of ['https://fcm.googleapis.com/fcm/send/abc', 'https://updates.push.services.mozilla.com/wpush/v2/abc', 'https://web.push.apple.com/QGhello', 'https://FCM.GOOGLEAPIS.COM:443/x', 'https://wns2-par02p.notify.windows.com/w/?token=abc'])
+      expect(parse(u).hostname).toBe(new URL(u).hostname);
+  });
 });
 
 describe('parseSubscription', () => {
