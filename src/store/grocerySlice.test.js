@@ -81,7 +81,7 @@ describe('the catalogue', () => {
     st().setGroceryPrices(mk, 'beef', [500]); st().setGroceryCents(mk, 'beef', 700);
     expect(st().groceryMonths[mk].lines.beef.prices).toBeUndefined();
     st().setGroceryPrices(mk, 'beef', [500]); st().setGroceryPrices(mk, 'beef', null);
-    expect(st().groceryMonths[mk].lines.beef).toEqual({ got: true });
+    expect(st().groceryMonths[mk].lines.beef).toEqual({ got: true, unpriced: true }); // a bought line with no price left keeps saying so (audit M-01)
   });
   it('puts a new item at the top of its store’s section', () => {
     st().addGroceryItem(form({ n: 'Eggs', store: 'Aldi' })); st().addGroceryItem(form({ n: 'Rice', store: 'Costco' })); st().addGroceryItem(form({ n: 'Oats', store: 'Aldi' }));

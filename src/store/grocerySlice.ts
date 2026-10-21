@@ -217,7 +217,13 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       if (!it || !MONTH_RE.test(month)) return;
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
-        if (on) { delete l.have; l.got = true; if (!l.prices) { l.qty = l.qty ?? it.qty; if (l.cents == null && it.cents != null) l.cents = it.cents; } } else delete l.got;
+        if (on) {
+          delete l.have; l.got = true;
+          if (!l.prices) {
+            l.qty = l.qty ?? it.qty; if (l.cents == null && it.cents != null) l.cents = it.cents;
+            if (l.cents == null) l.unpriced = true; else delete l.unpriced; // bought with no price: a price the item gets later must not price this month
+          }
+        } else { delete l.got; delete l.unpriced; }
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
     },
@@ -245,9 +251,9 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const list = prices === null ? null : cleanPrices(prices);
       if ((prices !== null && !list) || !get().grocery.items.some(i => i.id === id)) return;
       mutateMonth(month, m => {
-        const { prices: _p, qty: _q, cents: _c, packShares: ps, ...l } = m.lines[id] || {};
+        const { prices: _p, qty: _q, cents: _c, unpriced: _u, packShares: ps, ...l } = m.lines[id] || {};
         const fit = ps && list ? list.map((_, i) => ps[i] ?? null) : null; // each pack keeps its share while the count changes
-        const next: GroceryLine = list ? { ...l, prices: list, ...(fit?.some(Boolean) ? { packShares: fit } : {}) } : l;
+        const next: GroceryLine = list ? { ...l, prices: list, ...(fit?.some(Boolean) ? { packShares: fit } : {}) } : l.got ? { ...l, unpriced: true } : l; // back to one price with none typed: a bought line stays unpriced
         if (Object.keys(next).length) m.lines[id] = next; else delete m.lines[id];
       });
     },
@@ -260,7 +266,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       mutateMonth(month, m => {
         const l = { ...(m.lines[id] || {}) };
         delete l.prices; delete l.packShares; // one price for all
-        if (cents === null) delete l.cents; else l.cents = cents;
+        if (cents === null) { delete l.cents; if (l.got) l.unpriced = true; } else { l.cents = cents; delete l.unpriced; }
         if (Object.keys(l).length) m.lines[id] = l; else delete m.lines[id];
       });
       // Clearing the price this month clears the usual price too; otherwise the item falls back to it and still shows a price.

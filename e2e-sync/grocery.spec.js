@@ -28,7 +28,7 @@ test('an item and a tick made on one phone reach the account, show on a second p
   await page.click('#groc-view-get');
   await page.locator('#groc-kale').check();
   await expect.poll(() => server.grocery(user), { message: 'the item, its store and the tick reach the database' })
-    .toEqual({ items: ['kale'], stores: ['Aldi'], months: { [MONTH]: { lines: { kale: { got: true, qty: 1 } }, pulled: [] } } });
+    .toEqual({ items: ['kale'], stores: ['Aldi'], months: { [MONTH]: { lines: { kale: { got: true, qty: 1, unpriced: true } }, pulled: [] } } }); // kale has no price, so its tick says it was bought unpriced (audit M-01)
 
   // A second phone with nothing of its own sees the same list and tick.
   const b = await newPhone(browser, user);
@@ -41,7 +41,7 @@ test('an item and a tick made on one phone reach the account, show on a second p
   await addItem(second, 'Rice', 'Aldi', true);
   await second.click('#groc-view-get');
   await second.locator('#groc-rice').check();
-  await expect.poll(async () => (await server.grocery(user)).months[MONTH]?.lines).toEqual({ kale: { got: true, qty: 1 }, rice: { got: true, qty: 1 } });
+  await expect.poll(async () => (await server.grocery(user)).months[MONTH]?.lines).toEqual({ kale: { got: true, qty: 1, unpriced: true }, rice: { got: true, qty: 1, unpriced: true } });
   await reload(page);
   await openGroceries(page);
   await page.click('#groc-view-get');
