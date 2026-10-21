@@ -701,6 +701,16 @@ describe('moving cards follows the planner\'s clash rule', () => {
     expect(run(light, normWeek({ skipped: { c: true } })).length).toBeGreaterThan(0); // a skipped card does not count toward 3
     expect(run([...light, at('d', 2, 3)]).length).toBeGreaterThan(0); // the same day is a clash for any exercise
   });
+  it('light and frequent is judged with the moved card on its target day, so a move onto a day that has the exercise still warns next door', () => {
+    const w = normWeek(null);
+    const at = (id, day) => ({ id, day, type: 'single', items: [{ ex: 'grip', ph: 'hyp', rx: '3 × 12' }] });
+    const x = sl('x', 6, 'b');
+    const s = at('s', 1), o = at('o', 3), p = at('p', 4);
+    const lines = moveClashes(c, w, [s, o, p, x], s, 3);
+    expect(lines.some(l => l.includes('already on Day 3'))).toBe(true);
+    expect(lines.some(l => l.includes('Day 4') && l.includes('back-to-back'))).toBe(true); // only 2 days after the move: not light and frequent
+    expect(moveClashes(c, w, [s, o, p, x], s, 5)).toEqual([]); // 3, 4, 5 after the move: still 3 days, light
+  });
   it('the order suggestion leaves out a light, frequent exercise too, but not the same one at 4 sets', () => {
     const w = normWeek(null);
     const at = (id, day, sets) => ({ id, day, type: 'single', items: [{ ex: 'grip', ph: 'hyp', rx: `${sets} × 12` }] });
