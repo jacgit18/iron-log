@@ -25,6 +25,16 @@ test('the selected view has an underline and no fill, the others have neither, a
   expect((await look(page, '#groc-view-home')).underline).toBe('rgba(0, 0, 0, 0)');
 });
 
+test('at 320px wide and 200% text the three views wrap to a second row instead of making the page scroll sideways', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.addStyleTag({ content: 'html{font-size:200%!important}' });
+  await page.click('#tab-daily');
+  await page.click('#daily-grocery');
+  const m = await page.evaluate(() => ({ scrollW: document.documentElement.scrollWidth, W: innerWidth, rights: ['#groc-view-get', '#groc-view-home', '#groc-view-spend'].map(s => Math.round(document.querySelector(s).getBoundingClientRect().right)) }));
+  expect(m.scrollW).toBeLessThanOrEqual(m.W);
+  for (const r of m.rights) expect(r).toBeLessThanOrEqual(m.W);
+});
+
 test('the Daily tabs above keep the filled pill', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.click('#tab-daily');
