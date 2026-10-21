@@ -44,6 +44,7 @@ export function resendSender({ apiKey, from }: ResendConfig, fetchImpl: typeof f
  */
 export function perAddressLimit(max: number, windowMs: number, now: () => number = Date.now): (email: string) => boolean {
   const sent = new Map<string, number[]>();
+  let swept = 0;
   return email => {
     const key = email.trim().toLowerCase();
     const t = now();
@@ -54,8 +55,9 @@ export function perAddressLimit(max: number, windowMs: number, now: () => number
     }
     recent.push(t);
     sent.set(key, recent);
-    // Drop addresses whose window has passed, so the map cannot grow without bound.
-    if (sent.size > 5000) for (const [k, v] of sent) if (v.every(at => t - at >= windowMs)) sent.delete(k);
+    // Drop addresses whose window has passed, so the map cannot grow without bound. Once a second at most: scanning every key on every call would hand a
+    // flood of made-up addresses a way to make each request cost more.
+    if (sent.size > 5000 && t - swept >= 1000) { swept = t; for (const [k, v] of sent) if (v.every(at => t - at >= windowMs)) sent.delete(k); }
     return true;
   };
 }
