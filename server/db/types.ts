@@ -85,6 +85,7 @@ export interface Issues {
   fingerprint: string;
   first_seen: Generated<Timestamp>;
   first_version: Generated<string>;
+  fixed_version: Generated<string>;
   kind: string;
   last_seen: Generated<Timestamp>;
   last_version: Generated<string>;
