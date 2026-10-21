@@ -1,0 +1,62 @@
+@layer base, components;
+@layer components {
+/* The folded "Splitting this month": a header that says what is outstanding, and the cards under it once it is open. */
+.gsplitsection {
+  margin-top: var(--sp-16);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.gsplittoggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-8) var(--sp-12);
+  border: 0;
+  border-radius: 0;
+  background: var(--sunk);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gsplittitle {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.gsplittitle small {
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+.gsplittoggle:focus-visible {
+  outline-offset: -2px;
+  /* inside the box: the section clips what is drawn outside it */
+}
+.gsplitowed {
+  color: var(--accent);
+}
+.gsplitdone {
+  color: var(--muted);
+}
+.gsplitsection .gsplit {
+  margin-top: 0;
+  padding: var(--sp-12);
+}
+/* A long name or amount wraps instead of being clipped by the section's edge. */
+.gsplitsection .gsplitsay,.gsplitsection .gsplithead b,.gsplitsection .gsplitsum dd {
+  overflow-wrap: anywhere;
+}
+/* The card's own heading repeats the header's words: keep it for assistive technology, not for the eye. */
+.gsplitsection .gsplit > h3 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+}

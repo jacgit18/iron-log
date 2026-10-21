@@ -215,10 +215,11 @@ export interface Supplements {
 /* ---------- Grocery list (synced to the account, ADR 039) ---------- */
 /** How a weighed item is sold. */
 export type GroceryUnit = 'lb' | 'kg' | 'oz';
-/** Someone you share groceries with. `covered`: their share is already paid some other way (money in the account that pays the card), so the settle-up does not ask them for it. */
-export interface GroceryPerson { id: string; n: string; covered?: true }
+/** Someone you share groceries with. `covered`: their share is already paid some other way (money in the account that pays the card), so the settle-up does not ask them for it.
+ *  `gone`: removed from the group but still named by past months (a split or a payer), so those months read as they did; hidden everywhere else and left out of anything new. */
+export interface GroceryPerson { id: string; n: string; covered?: true; gone?: true }
 /** A sharing group: the people you split with ("Home", "Costco run"), and the stores that default to it. You are always in it and are not listed. */
-export interface GroceryGroup { id: string; n: string; people: GroceryPerson[]; stores: string[] }
+export interface GroceryGroup { id: string; n: string; people: GroceryPerson[]; stores: string[]; gone?: true } // `gone`: removed, but past months still name its people (all marked gone too); hidden everywhere else
 /** Who shares one purchase with you: `with` are the people's ids (none = just you). `notMine`: it is for them, not you, so your share is nothing. */
 export interface GroceryShare { with: string[]; notMine?: true }
 /** A thing you buy. `store` is where ('' = anywhere), `qty` the usual count, `cents` the last unit price in cents. `every`: on each month's list
@@ -239,7 +240,8 @@ export interface GroceryLine { got?: true; have?: true; qty?: number; cents?: nu
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
 /** One month's list (`grocery/YYYY-MM`): its lines by item id, and `pulled`: items put on that month's list by older versions (read, no longer written). */
 /** `tax`: the sales tax in cents typed from the receipt for each store this month, on top of what the ticked lines cost; no entry means none. */
-export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[]; payer?: Record<string, string>; tax?: Record<string, number> }
+/** `paid`: which owed amounts have been settled outside the app, by `paidKey(store, payer, person)`: the cents that were settled (the row counts as paid only while it is not above that, so a later purchase that raises it shows as owed again), or `false` for a person marked Share already paid whose amount you say is not paid. An entry is kept only when it differs from the default, so no entry means the default. */
+export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[]; payer?: Record<string, string>; tax?: Record<string, number>; paid?: Record<string, number | false> }
 
 export type StretchTier = 'primary' | 'secondary' | '';
 /** `catalogId`: added from the catalog (ADR 026, 027): a Library stretch, its name kept from the catalog. Without it the stretch is Custom. */
