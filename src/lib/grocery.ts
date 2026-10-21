@@ -201,17 +201,17 @@ export function normGroceryData(d: unknown): GroceryData | null {
 export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMonth>, inc: GroceryData) {
   const g = structuredClone(cur); const months = structuredClone(curMonths); let changed = false;
   const map = new Map<string, string>(); // the file's item id -> the id here
-  inc.items.forEach(i => {
+  // The stores go in first, so an item can be matched on the store it will have here: one whose store did not fit in a full list is kept under Anywhere (as
+  // normGrocery would on the next load) and, importing the same file again, is matched there instead of being added a second time.
+  inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); changed = true; } });
+  inc.items.forEach(raw => {
+    const i = raw.store && !g.stores.includes(raw.store) ? { ...raw, store: '' } : raw;
     const same = g.items.find(x => x.n.toLowerCase() === i.n.toLowerCase() && x.store === i.store);
-    if (same) { map.set(i.id, same.id); return; }
+    if (same) { map.set(raw.id, same.id); return; }
     if (g.items.length >= MAX_ITEMS) return;
     const id = g.items.some(x => x.id === i.id) ? newGroceryId(g.items, i.n) : i.id;
-    g.items.push({ ...i, id }); map.set(i.id, id); changed = true;
+    g.items.push({ ...i, id }); map.set(raw.id, id); changed = true;
   });
-  inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); changed = true; } });
-  // An item added from the file whose store did not fit in a full list goes under Anywhere, as normGrocery would on the next load, instead of being
-  // left on a store that is not in the list (where no screen shows it until then).
-  g.items.forEach(i => { if (i.store && !g.stores.includes(i.store)) { i.store = ''; changed = true; } });
   // A group is matched by its id (made at random, so the same group in a backup of this account has the same id here); one that is missing is
   // added, with the stores it names that exist here. People keep their ids, so an item's share in the file still points at them.
   const have = new Set((g.groups ?? []).map(x => x.id)); const defaulted = new Set((g.groups ?? []).flatMap(x => x.stores));

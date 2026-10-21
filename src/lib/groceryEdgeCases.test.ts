@@ -75,3 +75,15 @@ describe('Add to my data into a full list of stores', () => {
     expect(r.grocery.items[0].store).toBe('New store');
   });
 });
+
+// Review of PR 410: importing the same file twice into a full list must not add the item twice.
+describe('mergeGrocery with a store that does not fit', () => {
+  it('is idempotent: the second import finds the item under Anywhere', () => {
+    const cur: Grocery = { stores: Array.from({ length: MAX_STORES }, (_, k) => `S${k}`), items: [] };
+    const inc: GroceryData = { stores: ['Extra'], items: [item('z1', 'Noodles', 'Extra', 100)], months: {} };
+    const once = mergeGrocery(cur, {}, inc);
+    const twice = mergeGrocery(once.grocery, once.months, inc);
+    expect(once.grocery.items.filter(i => i.n === 'Noodles')).toHaveLength(1);
+    expect(twice.grocery.items.filter(i => i.n === 'Noodles')).toHaveLength(1);
+  });
+});
