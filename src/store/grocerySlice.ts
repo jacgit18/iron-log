@@ -431,7 +431,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const row = storeStatus(get().grocery, m, store).rows.find(r => r.id === person); if (!row) return;
       mutateMonth(month, mm => {
         const marks = { ...(mm.paid ?? {}) };
-        if (paid === row.usual) delete marks[row.key]; else marks[row.key] = paid;
+        if (paid === row.usual) delete marks[row.key]; else marks[row.key] = paid ? row.cents : false; // paid: the cents settled now
         if (Object.keys(marks).length) mm.paid = marks; else delete mm.paid;
       });
     },

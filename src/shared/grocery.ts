@@ -151,11 +151,11 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
     const cents = cleanCents(c);
     if (store !== '__proto__' && store.length <= MAX_STORE && cents) tax[store] = cents;
   });
-  // Which owed amounts are settled, flat so that two devices merge it key by key: "store\npayer\nperson" (a store name never holds a newline) to a yes or a no.
-  const paid: Record<string, boolean> = {};
+  // Which owed amounts are settled, flat so that two devices merge it key by key: "store\npayer\nperson" (a store name never holds a newline) to the cents settled, or false for not paid.
+  const paid: Record<string, number | false> = {};
   Object.entries(asObject(raw.paid) ?? {}).slice(0, MAX_PAID).forEach(([key, v]) => {
     const [store, by, who, ...rest] = key.split('\n');
-    if (typeof v === 'boolean' && !rest.length && store !== undefined && store.length <= MAX_STORE && by && who && by.length <= MAX_ID && who.length <= MAX_ID && who !== 'me') paid[key] = v; // a "you owe" row has the payer as its person: payer and person are the same id there
+    if ((v === false || (typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= MAX_CENTS)) && !rest.length && store !== undefined && store.length <= MAX_STORE && by && who && by.length <= MAX_ID && who.length <= MAX_ID && who !== 'me') paid[key] = v; // a "you owe" row has the payer as its person: payer and person are the same id there
   });
   return { lines, pulled, ...(Object.keys(payer).length ? { payer } : {}), ...(Object.keys(tax).length ? { tax } : {}), ...(Object.keys(paid).length ? { paid } : {}) };
 }

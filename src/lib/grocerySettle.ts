@@ -88,7 +88,9 @@ export function storeStatus(g: Grocery, m: GroceryMonth, store: string, purchase
   const rows = st.rows.map((r): RowStatus => {
     const key = paidKey(store, payer, r.id); const set = own(m.paid, key);
     const usual = r.kind === 'covered' || (r.kind === 'owesPayer' && covered.has(r.id));
-    return { ...r, key, usual, paid: set ?? usual, auto: set === undefined && usual };
+    // A mark holds the cents that were settled: the row is paid only while it is not above that (a later purchase that raises it is owed again); false is "not paid".
+    const paid = set === undefined ? usual : set !== false && r.cents <= set;
+    return { ...r, key, usual, paid, auto: set === undefined && usual };
   });
   const sum = (kinds: SettleRow['kind'][]) => rows.filter(r => kinds.includes(r.kind) && !r.paid).reduce((a, r) => a + r.cents, 0);
   const owed = sum(['owesYou', 'covered']); const youOwe = sum(['youOwe']);

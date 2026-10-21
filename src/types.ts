@@ -239,8 +239,8 @@ export interface GroceryLine { got?: true; have?: true; qty?: number; cents?: nu
 export interface GroceryData extends Grocery { months: Record<string, GroceryMonth> }
 /** One month's list (`grocery/YYYY-MM`): its lines by item id, and `pulled`: items put on that month's list by older versions (read, no longer written). */
 /** `tax`: the sales tax in cents typed from the receipt for each store this month, on top of what the ticked lines cost; no entry means none. */
-/** `paid`: which owed amounts have been settled outside the app, by `paidKey(store, payer, person)`; an entry is kept only when it differs from the default (a person marked Share already paid starts as paid), so no entry means the default. */
-export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[]; payer?: Record<string, string>; tax?: Record<string, number>; paid?: Record<string, boolean> }
+/** `paid`: which owed amounts have been settled outside the app, by `paidKey(store, payer, person)`: the cents that were settled (the row counts as paid only while it is not above that, so a later purchase that raises it shows as owed again), or `false` for a person marked Share already paid whose amount you say is not paid. An entry is kept only when it differs from the default, so no entry means the default. */
+export interface GroceryMonth { lines: Record<string, GroceryLine>; pulled: string[]; payer?: Record<string, string>; tax?: Record<string, number>; paid?: Record<string, number | false> }
 
 export type StretchTier = 'primary' | 'secondary' | '';
 /** `catalogId`: added from the catalog (ADR 026, 027): a Library stretch, its name kept from the catalog. Without it the stretch is Custom. */

@@ -92,23 +92,23 @@ describe('marking an owed amount settled', () => {
 });
 
 describe('settled marks in saved data and sync', () => {
-  it('are kept only as "store, payer, person" keys with a yes or a no', async () => {
+  it('are kept only as "store, payer, person" keys with the cents settled or false', async () => {
     const { normGroceryMonth, paidKey } = await import('../shared/grocery.js');
     const good = paidKey('Aldi', 'me', 'p1');
-    const m = normGroceryMonth({ lines: {}, pulled: [], paid: { [good]: true, 'Aldi\nme\np2': false, 'Aldi\nme': true, 'a\nb\nc\nd': true, 'Aldi\nme\nme': true, 'Aldi\nme\np3': 'yes', __proto__x: true } });
-    expect(m.paid).toEqual({ [good]: true, 'Aldi\nme\np2': false });
+    const m = normGroceryMonth({ lines: {}, pulled: [], paid: { [good]: 333, 'Aldi\nme\np2': false, 'Aldi\nme\np4': true, 'Aldi\nme\np5': 0, 'Aldi\nme\np6': 1.5, 'Aldi\nme': 333, 'a\nb\nc\nd': 333, 'Aldi\nme\nme': 333, 'Aldi\nme\np3': 'yes', __proto__x: 333 } });
+    expect(m.paid).toEqual({ [good]: 333, 'Aldi\nme\np2': false });
   });
   it('merge key by key: two phones marking different rows keep both, and the same row goes to this phone', async () => {
     const { mergeGroceryMonth3 } = await import('../sync/merge.js'); const { paidKey } = await import('../shared/grocery.js');
     const a = paidKey('Aldi', 'me', 'a'), b = paidKey('Aldi', 'me', 'b');
     const base = { lines: {}, pulled: [] };
-    const ours = { ...base, paid: { [a]: true } }; const theirs = { ...base, paid: { [b]: true, [a]: false } };
-    expect(mergeGroceryMonth3(base, ours, theirs).week.paid).toEqual({ [a]: true, [b]: true });
+    const ours = { ...base, paid: { [a]: 500 } }; const theirs = { ...base, paid: { [b]: 700, [a]: false } };
+    expect(mergeGroceryMonth3(base, ours, theirs).week.paid).toEqual({ [a]: 500, [b]: 700 });
   });
   it('an old month with no marks reads the defaults, and a month holding only marks is not empty', async () => {
     const { monthEmpty, paidKey } = await import('../shared/grocery.js');
     expect(monthEmpty({ lines: {}, pulled: [] })).toBe(true);
-    expect(monthEmpty({ lines: {}, pulled: [], paid: { [paidKey('Aldi', 'me', 'p')]: true } })).toBe(false);
+    expect(monthEmpty({ lines: {}, pulled: [], paid: { [paidKey('Aldi', 'me', 'p')]: 50 } })).toBe(false);
   });
 });
 
@@ -121,20 +121,20 @@ describe('review fixes', () => {
     expect(owes().youOwe).toBe(0);
     const key = Object.keys(m().paid)[0];
     expect(key).toBe(`Aldi\n${sam}\n${sam}`);
-    expect(normGroceryMonth(JSON.parse(JSON.stringify(m()))).paid).toEqual({ [key]: true });
-    expect(mergeGroceryMonth3(null, m(), { lines: {}, pulled: [] }).week.paid).toEqual({ [key]: true });
+    expect(normGroceryMonth(JSON.parse(JSON.stringify(m()))).paid).toEqual({ [key]: 334 });
+    expect(mergeGroceryMonth3(null, m(), { lines: {}, pulled: [] }).week.paid).toEqual({ [key]: 334 });
   });
   it('adding from a file into a month that already exists keeps the marks here, and takes marks the file brings', async () => {
     const lib = await import('../lib/grocery.js'); const { paidKey } = await import('../shared/grocery.js');
     const g = { stores: ['Aldi'], items: [{ id: 'milk', n: 'Milk', store: 'Aldi', qty: 1, cents: 100, every: true, out: false }, { id: 'rice', n: 'Rice', store: 'Aldi', qty: 1, cents: 100, every: true, out: false }] };
     const a = paidKey('Aldi', 'me', 'p1'), b = paidKey('Aldi', 'me', 'p2');
-    const months = { '2026-09': { lines: { milk: { got: true } }, pulled: [], paid: { [a]: true } } };
-    const out = lib.mergeGrocery(g, months, { ...g, months: { '2026-09': { lines: { rice: { got: true } }, pulled: [], paid: { [b]: true } } } });
-    expect(out.months['2026-09'].paid).toEqual({ [a]: true, [b]: true });
+    const months = { '2026-09': { lines: { milk: { got: true } }, pulled: [], paid: { [a]: 100 } } };
+    const out = lib.mergeGrocery(g, months, { ...g, months: { '2026-09': { lines: { rice: { got: true } }, pulled: [], paid: { [b]: 200 } } } });
+    expect(out.months['2026-09'].paid).toEqual({ [a]: 100, [b]: 200 });
     expect(Object.keys(out.months['2026-09'].lines).sort()).toEqual(['milk', 'rice']);
-    const onlyMarks = lib.mergeGrocery(g, months, { ...g, months: { '2026-09': { lines: { milk: { got: true } }, pulled: [], paid: { [b]: true } } } });
+    const onlyMarks = lib.mergeGrocery(g, months, { ...g, months: { '2026-09': { lines: { milk: { got: true } }, pulled: [], paid: { [b]: 200 } } } });
     expect(onlyMarks.changed).toBe(true);
-    expect(onlyMarks.months['2026-09'].paid).toEqual({ [a]: true, [b]: true });
+    expect(onlyMarks.months['2026-09'].paid).toEqual({ [a]: 100, [b]: 200 });
   });
   it('the store line says Settled once nothing is outstanding, and counts only what is still owed', async () => {
     const { mk, riley, sam } = await setup();
@@ -145,3 +145,30 @@ describe('review fixes', () => {
     expect(storeStatus(st().grocery, st().groceryMonths[mk], 'Aldi')).toMatchObject({ owed: 0, outstanding: 0 });
   });
 });
+
+describe('a mark remembers the amount it settled (closing audit X-4)', () => {
+  it('a later purchase that raises the owed amount makes the row owed again; a smaller or equal amount stays paid', async () => {
+    const { mk, riley, m, row, owes } = await setup();
+    st().setGroceryPaid(mk, 'Aldi', riley, true);
+    expect(m().paid[Object.keys(m().paid)[0]]).toBe(333);
+    expect(owes().owed).toBe(333);
+    st().addGroceryItem({ n: 'Steak', store: 'Aldi', qty: '1', price: '50.00', every: true });
+    const steak = st().grocery.items.find(i => i.n === 'Steak').id;
+    st().setGroceryGot(mk, steak, true); // shared the same way: Riley's row is now larger
+    expect(row(riley).cents).toBeGreaterThan(333);
+    expect(row(riley).paid).toBe(false);
+    expect(owes().owed).toBeGreaterThan(333 * 2);
+    st().setGroceryPaid(mk, 'Aldi', riley, true); // settle the new amount
+    expect(row(riley).paid).toBe(true);
+    st().setGroceryGot(mk, steak, false); // the amount falls back: still settled
+    expect(row(riley).paid).toBe(true);
+  });
+  it('a covered person overridden to not paid keeps false, and false never reads as paid', async () => {
+    const { mk, sam, m, row } = await setup();
+    st().updateGroceryPerson(st().grocery.groups[0].id, sam, { covered: true });
+    st().setGroceryPaid(mk, 'Aldi', sam, false);
+    expect(Object.values(m().paid)).toEqual([false]);
+    expect(row(sam).paid).toBe(false);
+  });
+});
+
