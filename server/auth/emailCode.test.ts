@@ -18,10 +18,10 @@ const BASE = 'http://localhost:3999';
 
 const running: { close: () => Promise<void> }[] = [];
 /** A server whose "sent" mail is kept in `sent`, newest last. */
-async function serve(over: Partial<AuthConfig> = {}) {
+async function serve(over: Partial<AuthConfig> = {}, authLimits?: { signIn: { max: number; windowMs: number }; other: { max: number; windowMs: number } }) {
   const sent: { email: string; otp: string }[] = [];
   const auth = createAuth({ baseURL: BASE, secret: SECRET, databaseUrl: url, google: GOOGLE, sendCode: async (email, otp) => void sent.push({ email, otp }), ...over }, 'test');
-  const server: Server = createApp({ db, auth }).listen(0);
+  const server: Server = createApp({ db, auth, ...(authLimits ? { authLimits } : {}) }).listen(0);
   await new Promise(done => server.once('listening', done));
   running.push({ close: async () => { await new Promise<void>(done => server.close(() => done())); await auth.pool.end(); } });
   return { sent, base: `http://127.0.0.1:${(server.address() as AddressInfo).port}` };
@@ -257,5 +257,77 @@ describe('authConfigFrom and the sender', () => {
   it('never prints the Resend key in a reason', () => {
     const r = authConfigFrom({ ...env, BASE_URL: '', RESEND_API_KEY: 're_topsecret' });
     expect(JSON.stringify(r)).not.toContain('re_topsecret');
+  });
+});
+
+// Code audit S-01: Better Auth counts wrong guesses with a read then a write, so parallel guesses all get checked. Every try is counted per address on arrival.
+// The per-IP limit is lifted here so that only the per-address one is measured (every test request comes from one address).
+const NO_IP_LIMIT = { signIn: { max: 10_000, windowMs: 60_000 }, other: { max: 10_000, windowMs: 60_000 } };
+describe('guessing a code in parallel', () => {
+  it('lets at most 10 tries through for one address, however many arrive at once', async () => {
+    const { base, sent } = await serve({}, NO_IP_LIMIT);
+    await ask(base, 'victim@example.com');
+    const wrong = sent[0]!.otp === '000000' ? '111111' : '000000';
+    const res = await Promise.all(Array.from({ length: 40 }, () => enter(base, 'victim@example.com', wrong)));
+    const statuses = res.map(r => r.status);
+    expect(statuses.filter(s => s === 429).length).toBeGreaterThanOrEqual(30);
+    expect(statuses.filter(s => s === 400 || s === 403).length).toBeLessThanOrEqual(10);
+    expect(statuses).not.toContain(200);
+  });
+
+  it('then refuses even the right code until the window passes, and leaves other addresses alone', async () => {
+    const { base, sent } = await serve({}, NO_IP_LIMIT);
+    await ask(base, 'victim@example.com');
+    await ask(base, 'other@example.com');
+    await Promise.all(Array.from({ length: 12 }, () => enter(base, 'victim@example.com', '000000')));
+    expect((await enter(base, 'victim@example.com', sent[0]!.otp)).status).toBe(429);
+    expect((await enter(base, 'other@example.com', sent[1]!.otp)).status).toBe(200);
+  });
+
+  it('counts the address the same whatever its case or spaces, and an owner-only address no differently from any other', async () => {
+    const { base } = await serve({ emailCodeAdminsOnly: true, capExempt: new Set(['owner@example.com']) }, NO_IP_LIMIT);
+    for (const email of ['stranger@example.com', 'owner@example.com']) {
+      const res = await Promise.all(Array.from({ length: 14 }, (_, n) => enter(base, n % 2 ? email.toUpperCase() : ` ${email} `, '000000')));
+      expect(res.filter(r => r.status === 429).length).toBeGreaterThanOrEqual(4);
+    }
+  });
+});
+
+// Code audit S-06: only a sign-in code is sent or kept, and deleting the account clears every record that carries the address.
+describe('codes of any other kind', () => {
+  const rowsFor = async (email: string) => (await sql<{ identifier: string }>`select identifier from auth.verification where identifier like ${`%${email}`}`.execute(db)).rows.map(r => r.identifier);
+
+  it('are answered like a sent code, but nothing is sent and nothing is stored', async () => {
+    const { base, sent } = await serve({}, NO_IP_LIMIT);
+    await ask(base, 'lifter@example.com'); // makes the account
+    await sql`delete from auth.verification`.execute(db);
+    sent.length = 0;
+    for (const type of ['forget-password', 'email-verification', 'change-email', 'something-else']) {
+      const res = await post(base, '/api/auth/email-otp/send-verification-otp', { email: 'lifter@example.com', type });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ success: true });
+    }
+    expect(sent).toEqual([]);
+    expect(await rowsFor('lifter@example.com')).toEqual([]);
+  });
+
+  it('a sign-in code is still sent and stored', async () => {
+    const { base, sent } = await serve({}, NO_IP_LIMIT);
+    await ask(base, 'lifter@example.com');
+    expect(sent).toHaveLength(1);
+    expect(await rowsFor('lifter@example.com')).toEqual(['sign-in-otp-lifter@example.com']);
+  });
+
+  it('deleting the account removes every code record that carries the address, whatever its kind', async () => {
+    const { base, sent } = await serve({}, NO_IP_LIMIT);
+    await ask(base, 'gone@example.com');
+    const cookie = (await enter(base, 'gone@example.com', sent[0]!.otp)).headers.getSetCookie().find(c => /session_token=/.test(c))!.split(';')[0]!;
+    for (const kind of ['forget-password', 'email-verification', 'sign-in']) {
+      await sql`insert into auth.verification (id, identifier, value, "expiresAt") values (${`seed-${kind}`}, ${`${kind}-otp-gone@example.com`}, 'x', now() + interval '1 hour') on conflict (id) do nothing`.execute(db);
+    }
+    expect((await rowsFor('gone@example.com')).length).toBeGreaterThanOrEqual(3);
+    const res = await fetch(`${base}/api/account/delete`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ confirm: 'DELETE' }) });
+    expect(res.status).toBe(200);
+    expect(await rowsFor('gone@example.com')).toEqual([]);
   });
 });
