@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { sql, type Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from './app.ts';
+import { repairWellFormed } from './wellFormed.ts';
 import { createDb } from './db/connection.ts';
 import type { DB } from './db/types.ts';
 import { startTestDatabase } from './test/postgres.ts';
@@ -41,6 +42,22 @@ describe('a command the database cannot store', () => {
     const res = await run('save-config', body);
     expect(res.status).toBe(422);
     expect((await fetch(`${base}/api/sync`, { headers: h })).status).toBe(200);
+  });
+
+  // Overnight audit S-1: a note clipped through an emoji ends in half of it (an unpaired surrogate, written as \ud800). jsonb refuses that with 22P02, which was a 500.
+  const LONE = 'a\ud83dz';
+  it.each(COMMANDS)('%s: a lone surrogate in the client id or the input is repaired, never a 500', async command => {
+    const inClientId = await run(command, { clientId: LONE, baseVersion: null, input: {} });
+    const inInput = await run(command, { clientId: 'c', baseVersion: null, input: { id: LONE, exerciseId: LONE, d: LONE, weekStart: LONE, month: LONE, key: LONE, entry: { id: LONE, ex: LONE, n: LONE, d: LONE }, config: { ex: { a: LONE } } } });
+    expect(inClientId.status).toBeLessThan(500);
+    expect(inInput.status).toBeLessThan(500);
+  });
+  it('repairs a lone surrogate in a value and in a key, keeps a whole emoji, and does not recurse into a body nested 20000 deep', () => {
+    const body = JSON.parse('{"k\\ud83d":1,"ok":"x\\ud83dy","pair":"\\ud83d\\ude00","list":["a\\ude00",{"n":"\\ud83d"}]}');
+    repairWellFormed(body);
+    expect(body).toEqual({ 'k\ufffd': 1, ok: 'x\ufffdy', pair: '\u{1F600}', list: ['a\ufffd', { n: '\ufffd' }] });
+    let deep: unknown = 'a\ud83d'; for (let i = 0; i < 20000; i++) deep = { a: deep };
+    expect(() => repairWellFormed(deep)).not.toThrow();
   });
 
   it('raises no server issue (so no 5xx alert) for any of it', async () => {

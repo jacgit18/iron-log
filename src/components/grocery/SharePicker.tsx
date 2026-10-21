@@ -11,6 +11,7 @@ export default function SharePicker({ name, people, parties, own, onChange, hint
   name: string; people: GroceryPerson[]; parties: readonly string[]; own: boolean; onChange: (share: GroceryShare | null) => void; hint?: string; resetLabel?: string;
 }) {
   const id = useId();
+  if (!people.length) return null; // everyone in the groups is gone: nobody to share with, so no picker (past months still read their old splits)
   const ticked = new Set(parties); const notMine = !ticked.has(ME);
   const others = parties.filter(p => p !== ME);
   const set = (next: string[], forThem: boolean) => onChange(next.length && forThem ? { with: next, notMine: true } : { with: next });
