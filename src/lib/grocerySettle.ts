@@ -1,4 +1,4 @@
-import { lineCost, lineOf, shiftMonth, storeFor } from './grocery.js';
+import { lineCost, lineOf, own, shiftMonth, storeFor } from './grocery.js';
 import { ME, partiesOf, settle, type Purchase, type Settlement } from './grocerySplit.js';
 import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson } from '../types.ts';
 
@@ -20,7 +20,7 @@ export const groupOfStore = (g: Grocery, store: string): GroceryGroup | undefine
 
 /** Who paid for a store: the person recorded, or you when none is recorded or that person no longer exists. */
 export function payerOf(g: Grocery, m: GroceryMonth, store: string): string {
-  const id = m.payer?.[store];
+  const id = own(m.payer, store);
   return id && knownPeople(g).has(id) ? id : ME;
 }
 
@@ -71,7 +71,7 @@ export function storesBought(g: Grocery, purchases: readonly MonthPurchase[]): s
 export function storeSettlement(g: Grocery, m: GroceryMonth, store: string, purchases: readonly MonthPurchase[] = purchasesOf(g, m)): Settlement {
   const covered = new Set((g.groups ?? []).flatMap(x => x.people.filter(p => p.covered).map(p => p.id)));
   const mine = purchases.filter(p => p.store === store);
-  return settle(mine, payerOf(g, m, store), covered, mine.length ? m.tax?.[store] ?? 0 : 0); // the receipt's tax, typed in; only for a store with something bought
+  return settle(mine, payerOf(g, m, store), covered, mine.length ? own(m.tax, store) ?? 0 : 0); // the receipt's tax, typed in; only for a store with something bought
 }
 
 /** What you paid this month (the bills of the stores where you are the payer; a store someone else paid is not yours to have paid) and your share
