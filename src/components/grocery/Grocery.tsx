@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, money, monthKey, monthLabel, onList, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
+import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, money, monthKey, monthLabel, onList, own, parseDollars, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
@@ -117,7 +117,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   // A store's tax box, once something is ticked there (or a tax is already typed): the receipt's tax for this month and what it comes to as a percent of the ticked items.
   const taxRow = (store: string) => {
     if (!store) return null;
-    const mine = list.filter(i => i.store === store); const cents = month.tax?.[store];
+    const mine = list.filter(i => i.store === store); const cents = own(month.tax, store);
     if (!cents && !mine.some(i => lineOf(i, month).got)) return null;
     return <StoreTax key={`${mk}:${store}`} mk={mk} store={store} cents={cents} subtotal={tally(mine, month).spent - (cents ?? 0)} />;
   };
