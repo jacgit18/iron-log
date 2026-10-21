@@ -3,7 +3,7 @@ name: PR changelog
 # A pull request must carry its changelog entry: real text under "Changelog" in the PR description (.github/pull_request_template.md).
 # The project's CHANGELOG.md lives outside this repository (DevHiveMind/Projects/iron-log/), so CI cannot see whether the file changed;
 # this makes the entry exist where CI can see it, and whoever merges pastes it into CHANGELOG.md. "n/a: <why>" is accepted for a change that
-# needs none. Only the repository's own automation (README screenshots, Dependabot) is skipped: any other bot, such as an agent, is checked.
+# needs none. Only the repository's own automation (README screenshots, Dependabot) is skipped: any other bot, such as an agent, is checked. The test is on the PR author, not the triggering actor, so a Dependabot PR stays skipped when a person rebases or edits it.
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   changelog:
-    if: ${{ !contains(fromJSON('["dependabot[bot]", "github-actions[bot]"]'), github.actor) }}
+    if: ${{ !contains(fromJSON('["dependabot[bot]", "github-actions[bot]"]'), github.event.pull_request.user.login) }}
     runs-on: ubuntu-26.04
     steps:
       - name: The description has a changelog entry

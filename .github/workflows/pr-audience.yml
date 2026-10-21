@@ -1,7 +1,7 @@
 name: PR audience
 
 # A pull request must say who can see its change: tick exactly one box under "Audience" in the PR description
-# (.github/pull_request_template.md). Fails when none, or more than one, is ticked. Only the repository's own automation (README screenshots, Dependabot) is skipped: any other bot, such as an agent, is checked.
+# (.github/pull_request_template.md). Fails when none, or more than one, is ticked. Only the repository's own automation (README screenshots, Dependabot) is skipped: any other bot, such as an agent, is checked. The test is on the PR author, not the triggering actor, so a Dependabot PR stays skipped when a person rebases or edits it.
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   audience:
-    if: ${{ !contains(fromJSON('["dependabot[bot]", "github-actions[bot]"]'), github.actor) }}
+    if: ${{ !contains(fromJSON('["dependabot[bot]", "github-actions[bot]"]'), github.event.pull_request.user.login) }}
     runs-on: ubuntu-26.04
     steps:
       - name: Exactly one audience box is ticked
