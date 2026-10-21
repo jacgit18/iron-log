@@ -17,6 +17,9 @@
   padding: 0;
   gap: var(--sp-4);
   border-radius: 0;
+  /* At a large text size the three views wrap to a second row instead of running past the page edge. */
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 .groc .gtop .seg button {
   min-height: 44px;
