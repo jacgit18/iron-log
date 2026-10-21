@@ -31,15 +31,15 @@ describe('a command the database cannot store', () => {
   it.each(COMMANDS)('%s: a NUL byte in the client id or the input answers 422, never 500', async command => {
     const inClientId = await run(command, { clientId: NUL, baseVersion: null, input: {} });
     const inInput = await run(command, { clientId: 'c', baseVersion: null, input: { id: NUL, exerciseId: NUL, d: NUL, weekStart: NUL, month: NUL, key: NUL, entry: { id: NUL, ex: NUL, n: NUL, d: NUL }, config: { ex: { a: NUL } } } });
-    expect(inClientId.status).toBeLessThan(500);
-    expect(inInput.status).toBeLessThan(500);
+    expect(inClientId.status).toBe(422);
+    expect(inInput.status).toBe(422);
   });
 
-  it('save-config with the content nested 8000 deep answers 4xx, and the feed still loads', async () => {
+  it('save-config with the content nested 8000 deep answers 422, and the feed still loads', async () => {
     const depth = 8000;
     const body = `{"clientId":"deep","baseVersion":null,"input":{"config":{"ex":${'{"a":'.repeat(depth)}1${'}'.repeat(depth)}}}}`;
     const res = await run('save-config', body);
-    expect(res.status).toBeLessThan(500);
+    expect(res.status).toBe(422);
     expect((await fetch(`${base}/api/sync`, { headers: h })).status).toBe(200);
   });
 
