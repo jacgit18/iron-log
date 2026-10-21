@@ -18,7 +18,7 @@ export default function SplitSection({ g, month, mk, open, onToggle }: { g: Groc
         <span className="gsplittitle"><b>Splitting this month</b><small className={outstanding > 0 ? 'gsplitowed' : 'gsplitdone'}>{outstanding > 0 ? `Outstanding ${money(outstanding)}` : 'All settled ✓'}</small></span>
         <Icon name={open ? 'chevron-up' : 'chevron-down'} />
       </button>
-      {open && <div id={bodyId}><SplitSummary g={g} month={month} mk={mk} /></div>}
+      <div id={bodyId} hidden={!open}>{open && <SplitSummary g={g} month={month} mk={mk} />}</div>
     </div>
   );
 }

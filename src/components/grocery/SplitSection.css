@@ -32,6 +32,10 @@
   font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
 }
+.gsplittoggle:focus-visible {
+  outline-offset: -2px;
+  /* inside the box: the section clips what is drawn outside it */
+}
 .gsplitowed {
   color: var(--accent);
 }
@@ -41,6 +45,10 @@
 .gsplitsection .gsplit {
   margin-top: 0;
   padding: var(--sp-12);
+}
+/* A long name or amount wraps instead of being clipped by the section's edge. */
+.gsplitsection .gsplitsay,.gsplitsection .gsplithead b,.gsplitsection .gsplitsum dd {
+  overflow-wrap: anywhere;
 }
 /* The card's own heading repeats the header's words: keep it for assistive technology, not for the eye. */
 .gsplitsection .gsplit > h3 {
