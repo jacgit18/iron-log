@@ -38,7 +38,20 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/dependency-review-action@v5
+      # The review needs Dependency graph turned on (Settings, Code security). Until it is, say so in the run instead of failing every PR; the audit and new-package jobs still guard.
+      - name: Is the dependency graph on
+        id: graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/dependency-graph/sbom" --silent 2>/dev/null; then
+            echo "on=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Dependency review skipped::Dependency graph is off for this repository, so GitHub's dependency review cannot run. Turn it on in Settings, Code security (also Dependabot alerts and security updates)."
+          fi
+      - if: steps.graph.outputs.on == 'true'
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
