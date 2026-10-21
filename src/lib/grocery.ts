@@ -205,10 +205,14 @@ export function normGroceryData(d: unknown): GroceryData | null {
 /** "Add to my data": the file's items and months are added to what is here; where both have something, what is here stays.
  *  Ids are made on each device, so one id can name different items in the file and here. An incoming item is matched to a local one by
  *  name and store; otherwise it is added (under a new id if its own is taken), and its month lines and pulled ids follow that mapping.
- *  A line for an item the file does not list, or one that could not be added, is dropped rather than attached to the wrong item. */
+ *  A line for an item that could not be added is dropped rather than attached to the wrong item. A line for an item the file does not list at all (one removed
+ *  after it was bought, whose purchase stays in its month) is kept under its own id when no item here has that id, so a backup added to other data keeps its history. */
 export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMonth>, inc: GroceryData) {
   const g = structuredClone(cur); const months = structuredClone(curMonths); let changed = false;
   const map = new Map<string, string>(); // the file's item id -> the id here
+  const listed = new Set(inc.items.map(i => i.id));
+  // Ids that month lines here or in the file still use for items that are gone: a new item must not take one, or it would inherit those purchases.
+  const keptIds = new Set([...Object.values(months).flatMap(m => Object.keys(m.lines)), ...Object.values(inc.months).flatMap(m => Object.keys(m.lines).filter(id => !listed.has(id)))]);
   // The stores go in first, so an item can be matched on the store it will have here: one whose store did not fit in a full list is kept under Anywhere (as
   // normGrocery would on the next load) and, importing the same file again, is matched there instead of being added a second time.
   inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); changed = true; } });
@@ -217,7 +221,7 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     const same = g.items.find(x => x.n.toLowerCase() === i.n.toLowerCase() && x.store === i.store);
     if (same) { map.set(raw.id, same.id); return; }
     if (g.items.length >= MAX_ITEMS) return;
-    const id = g.items.some(x => x.id === i.id) ? newGroceryId(g.items, i.n) : i.id;
+    const id = g.items.some(x => x.id === i.id) || keptIds.has(i.id) ? newGroceryId(g.items, i.n, keptIds) : i.id;
     g.items.push({ ...i, id }); map.set(raw.id, id); changed = true;
   });
   // A group is matched by its id (made at random, so the same group in a backup of this account has the same id here); one that is missing is
@@ -231,7 +235,7 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
   });
   Object.entries(inc.months).forEach(([k, fm]) => {
     const lines: Record<string, GroceryLine> = {};
-    Object.entries(fm.lines).forEach(([id, l]) => { const to = map.get(id); if (to) lines[to] = l; });
+    Object.entries(fm.lines).forEach(([id, l]) => { const to = map.get(id); if (to) lines[to] = l; else if (!listed.has(id) && !g.items.some(x => x.id === id)) lines[id] = l; }); // a removed item's purchase keeps its own id
     const pulled = fm.pulled.map(id => map.get(id)).filter((x): x is string => !!x);
     const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}), ...(fm.tax ? { tax: fm.tax } : {}), ...(fm.paid ? { paid: fm.paid } : {}) };
     if (monthEmpty(m)) return;

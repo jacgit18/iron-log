@@ -229,13 +229,13 @@ describe('merging when two devices made different ids', () => {
     expect(r.grocery.items.map(i => [i.id, i.store])).toEqual([['milk', 'Giant'], ['milk-2', 'Costco']]); // Costco's milk got a new id
     expect(r.months['2026-03'].lines).toEqual({ 'milk-2': { got: true, cents: 400 }, milk: { got: true, cents: 500 } }); // each tick is on its own item
   });
-  it('drops lines for items it could not add and for ids the file does not list', () => {
+  it('drops the line of an item it could not add, but keeps the purchase of an item the file does not list (one removed after it was bought)', () => {
     const full = { stores: [], items: Array.from({ length: 500 }, (_, i) => item(`i${i}`, `Item ${i}`, '')) };
     const inc = normGroceryData({ items: [item('new', 'New thing', '')], months: { '2026-03': { lines: { new: { got: true }, ghost: { got: true } }, pulled: ['ghost'] } } })!;
     const r = mergeGrocery(full, {}, inc);
     expect(r.grocery.items).toHaveLength(500);
-    expect(r.months).toEqual({});
-    expect(r.changed).toBe(false);
+    expect(r.months).toEqual({ '2026-03': { lines: { ghost: { got: true } }, pulled: [] } }); // the new item's tick is dropped (not added), the ghost's purchase is kept under its own id; the pulled id is not
+    expect(r.changed).toBe(true);
   });
 });
 
