@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildBody, inferAudience, labelsOf, loadConfig, shorten, touchesUi } from './pr-body.mjs';
+import { buildBody, deliveryWarnings, inferAudience, labelsOf, loadConfig, shorten, touchesUi } from './pr-body.mjs';
 
 const projectTemplate = readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8');
 const template = `## What and why
@@ -131,5 +131,21 @@ describe('shorten', () => {
     const cut = shorten(noStop);
     expect(cut.endsWith('word…')).toBe(true);
     expect(cut.length).toBeLessThanOrEqual(601);
+  });
+});
+
+describe('the Delivery section', () => {
+  const t = template + '\n## Delivery\n\nBrief: none given\nSplit because: n/a: whole feature\n';
+  it('fills the Brief and Split lines and leaves them alone otherwise', () => {
+    const b = buildBody(t, 'na', '', false, '', config, { brief: 'briefs/x.md', split: 'migration first' });
+    expect(b).toContain('Brief: briefs/x.md');
+    expect(b).toContain('Split because: migration first');
+    expect(buildBody(t, 'na', '', false, '', config)).toContain('Brief: none given');
+  });
+  it('warns without a brief, and about a tiny PR beside another open one', () => {
+    expect(deliveryWarnings({ brief: 'b.md', changed: 500 })).toEqual([]);
+    expect(deliveryWarnings({ changed: 500 })).toHaveLength(1);
+    expect(deliveryWarnings({ brief: 'b.md', changed: 12, openPrs: 1 })).toHaveLength(1);
+    expect(deliveryWarnings({ brief: 'b.md', split: 'file overlap', changed: 12, openPrs: 1 })).toEqual([]);
   });
 });
