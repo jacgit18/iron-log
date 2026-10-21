@@ -4,10 +4,14 @@ import { LS } from './storage.js';
 // The phone's side of Web Push (ADR 044): subscribe this browser, and ask the server to push a timer end or a "day not finished" nudge
 // later, so it reaches a phone that has locked. Released to everyone signed in (was admin-only). Device-local opt-in, like lib/restNotify.ts;
 // every failure is quiet, because the page's own beep and the local notice are the fallback.
-export type PushKind = 'rest' | 'day-nudge';
+export type PushKind = 'rest' | 'day-nudge' | 'water';
 
 const ON = 'webPush';
-const KIND_KEY: Record<PushKind, string> = { rest: 'pushRest', 'day-nudge': 'pushNudge' };
+/** The water reminder's note of the chain it has armed (lib/waterReminder.ts); forgotten whenever the server stops holding it, so a later start plans afresh. */
+export const WATER_ARMED_KEY = 'waterArmed';
+const KIND_KEY: Record<PushKind, string> = { rest: 'pushRest', 'day-nudge': 'pushNudge', water: 'pushWater' };
+// The water reminder repeats, so it is off until the person ticks it; the other two are on until unticked.
+const OFF_UNTIL_TICKED: PushKind[] = ['water'];
 
 export const pushSupported = (): boolean =>
   typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
@@ -15,10 +19,10 @@ export const pushSupported = (): boolean =>
 export const pushOn = (): boolean => pushSupported() && LS.get(ON) === true && Notification.permission === 'granted';
 /** A kind is wanted unless its box was unticked; the master switch comes first. */
 export const pushKindOn = (kind: PushKind): boolean => pushOn() && pushKindWanted(kind);
-/** The box for a kind, apart from the master switch: ticked unless it was unticked. */
-export const pushKindWanted = (kind: PushKind): boolean => LS.get(KIND_KEY[kind]) !== false;
+/** The box for a kind, apart from the master switch: ticked unless it was unticked (the water reminder: unticked unless it was ticked). */
+export const pushKindWanted = (kind: PushKind): boolean => (OFF_UNTIL_TICKED.includes(kind) ? LS.get(KIND_KEY[kind]) === true : LS.get(KIND_KEY[kind]) !== false);
 /** Ticks or unticks a kind's box. Unticking also takes back an ask already with the server, which would otherwise still arrive. */
-export const setPushKind = (kind: PushKind, on: boolean) => { LS.set(KIND_KEY[kind], on); if (!on) cancelPush(kind); };
+export const setPushKind = (kind: PushKind, on: boolean) => { LS.set(KIND_KEY[kind], on); if (!on) { cancelPush(kind); if (kind === 'water') LS.remove(WATER_ARMED_KEY); } };
 
 const headers = () => ({ 'content-type': 'application/json', 'x-client-version': __APP_VERSION__, ...signIn() });
 async function api(method: 'GET' | 'POST', path: string, body?: unknown): Promise<Response | null> {
@@ -65,6 +69,7 @@ export async function enablePush(): Promise<'on' | 'denied' | 'unsupported' | 'u
 export async function disablePush(): Promise<void> {
   const was = LS.get(ON) === true;
   LS.set(ON, false);
+  LS.remove(WATER_ARMED_KEY);
   if (!was || !pushSupported()) return;
   const sub = await currentSubscription();
   if (!sub) return;
@@ -89,17 +94,20 @@ const coverKey = (kind: PushKind, key: string) => `${kind}:${key}`;
 /** True when the server accepted the push for this kind and key (so the local notice would be a second one). */
 export const pushCovers = (kind: PushKind, key: string): boolean => covered.has(coverKey(kind, key));
 
-/** Asks for a push at `at` (ms). A newer ask of the same kind replaces it. */
-export function schedulePush(kind: PushKind, key: string, at: number, body: string): void {
-  if (!pushKindOn(kind) || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
-  chain = chain.then(async () => {
+/** Asks for a push at `at` (ms). A newer ask of the same kind replaces it. A repeating kind (water) carries `repeat`: the server queues the next one itself. Says whether the server took it. */
+export function schedulePush(kind: PushKind, key: string, at: number, body: string, repeat?: { everyMs: number; until: number }): Promise<boolean> {
+  if (!pushKindOn(kind) || (typeof navigator !== 'undefined' && navigator.onLine === false)) return Promise.resolve(false);
+  const done = chain.then(async () => {
     try {
       const sub = await currentSubscription();
-      if (!sub) return;
-      const res = await api('POST', '/schedule', { endpoint: sub.endpoint, kind, key, at, body: body.slice(0, 140) });
+      if (!sub) return false;
+      const res = await api('POST', '/schedule', { endpoint: sub.endpoint, kind, key, at, body: body.slice(0, 140), ...(repeat ? { repeat } : {}) });
       if (res?.ok) covered.add(coverKey(kind, key));
-    } catch { /* the page's own alerts remain */ }
+      return res?.ok === true;
+    } catch { return false; /* the page's own alerts remain */ }
   });
+  chain = done;
+  return done;
 }
 
 /** Takes the ask back. With a key, only that ask (so a late cancel of an old timer cannot undo a newer one). */

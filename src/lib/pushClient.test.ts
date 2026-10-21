@@ -152,6 +152,22 @@ describe('schedulePush and cancelPush', () => {
     expect(calls[1]!.body).toEqual({ endpoint: 'https://push.example/e1', kind: 'rest', key: '5' });
     expect(pushCovers('rest', '5')).toBe(false);
   });
+  it('the water reminder is off until ticked, and sends the repeat with the ask', async () => {
+    setup(); await enablePush(); calls = [];
+    expect(pushKindOn('water')).toBe(false);
+    expect(pushKindOn('rest')).toBe(true);
+    expect(await schedulePush('water', 'w1', Date.now() + 5000, 'x')).toBe(false);
+    expect(calls).toEqual([]);
+    setPushKind('water', true); await settle(); await settle();
+    expect(pushKindOn('water')).toBe(true);
+    const at = Date.now() + 5000, repeat = { everyMs: 7_200_000, until: at + 3_600_000 };
+    expect(await schedulePush('water', 'w1', at, 'Time for a glass of water.', repeat)).toBe(true);
+    expect(calls.at(-1)).toEqual({ path: '/schedule', method: 'POST', body: { endpoint: 'https://push.example/e1', kind: 'water', key: 'w1', at, body: 'Time for a glass of water.', repeat } });
+  });
+  it('schedulePush says false when the server refuses', async () => {
+    setup(); await enablePush(); answers['/schedule'] = { status: 429 };
+    expect(await schedulePush('rest', 'k', Date.now() + 5000, 'x')).toBe(false);
+  });
   it('cut a body to 140 characters', async () => {
     setup(); await enablePush(); calls = [];
     schedulePush('day-nudge', 'n', Date.now() + 5000, 'x'.repeat(200)); await settle(); await settle();
