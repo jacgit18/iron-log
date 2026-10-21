@@ -36,6 +36,7 @@ test('Groceries: the add dock, the store form and the list fields are styled', a
   await page.getByRole('button', { name: 'Add store' }).click();
   await page.fill('#groc-name', 'Eggs');
   await page.click('#groc-add');
+  await page.getByRole('button', { name: 'Expand Eggs' }).click(); // edit rows start closed; open one so its fields are checked
   await page.click('#groc-more');
   expect(await unstyled(page, 10)).toEqual([]); // the item's fields, the store form and the dock with its More row
 });
