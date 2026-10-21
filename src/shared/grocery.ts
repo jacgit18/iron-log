@@ -29,6 +29,9 @@ export const cleanPrices = (v: unknown): number[] | null => {
   return out.every((c): c is number => c != null) ? out : null;
 };
 
+/** An id or name that would collide with a member every object inherits ('constructor', 'toString', '__proto__' ...): refused as an id, because ids are used as keys. */
+export const reservedId = (s: string): boolean => s in Object.prototype;
+
 const asObject = (x: unknown) => (x && typeof x === 'object' && !Array.isArray(x) ? (x as Record<string, unknown>) : null);
 
 /** Who shares one purchase with you (the people's ids; none = just you), or null when it is not one. `notMine` is kept only when there is
@@ -36,7 +39,7 @@ const asObject = (x: unknown) => (x && typeof x === 'object' && !Array.isArray(x
 export function cleanShare(v: unknown): GroceryShare | null {
   const o = asObject(v);
   if (!o || !Array.isArray(o.with)) return null;
-  const ids = [...new Set(o.with.filter((x: unknown): x is string => typeof x === 'string' && x.length > 0 && x.length <= MAX_ID && x !== '__proto__'))].slice(0, MAX_PEOPLE);
+  const ids = [...new Set(o.with.filter((x: unknown): x is string => typeof x === 'string' && x.length > 0 && x.length <= MAX_ID && !reservedId(x)))].slice(0, MAX_PEOPLE);
   return ids.length && o.notMine === true ? { with: ids, notMine: true } : { with: ids };
 }
 /** Whether `v` is a share exactly as the app writes one (the API refuses anything else). */
@@ -51,7 +54,7 @@ export function normGroceryItem(x: unknown): GroceryItem | null {
   const o = asObject(x);
   if (!o) return null;
   const id = str(o.id, MAX_ID), n = str(o.n, MAX_NAME);
-  if (!id || !n || id === '__proto__') return null;
+  if (!id || !n || reservedId(id)) return null;
   const every = o.every === true || (o.every === undefined && o.once !== true);
   const qty = cleanQty(o.qty);
   const note = str(o.note, MAX_NOTE); const unit = cleanUnit(o.unit); const share = cleanShare(o.share);
@@ -62,7 +65,7 @@ export function normGroceryItem(x: unknown): GroceryItem | null {
 export function normGroceryStore(x: unknown): GroceryStore | null {
   const o = asObject(x);
   const n = o ? str(o.n ?? o.id, MAX_STORE) : '';
-  return n && n !== '__proto__' ? { id: n, n, ...(o && o.retired === true ? { retired: true as const } : {}) } : null;
+  return n && !reservedId(n) ? { id: n, n, ...(o && o.retired === true ? { retired: true as const } : {}) } : null;
 }
 
 const exact = (v: unknown, max: number, allowEmpty = false) => typeof v === 'string' && v === v.trim() && v.length <= max && (allowEmpty || v.length > 0);
@@ -72,11 +75,11 @@ export function normGroceryGroup(x: unknown): GroceryGroup | null {
   const o = asObject(x);
   if (!o) return null;
   const id = str(o.id, MAX_ID), n = str(o.n, MAX_PERSON);
-  if (!id || !n || id === '__proto__') return null;
+  if (!id || !n || reservedId(id)) return null;
   const seen = new Set<string>(); const people: GroceryPerson[] = [];
   (Array.isArray(o.people) ? o.people : []).forEach((p: unknown) => {
     const po = asObject(p); const pid = po ? str(po.id, MAX_ID) : ''; const pn = po ? str(po.n, MAX_PERSON) : '';
-    if (!po || !pid || !pn || pid === '__proto__' || pid === 'me' || seen.has(pid) || people.filter(x => !!x.gone === (po.gone === true)).length >= MAX_PEOPLE) return; // up to MAX_PEOPLE who are in the group, and as many again who are gone
+    if (!po || !pid || !pn || reservedId(pid) || pid === 'me' || seen.has(pid) || people.length >= MAX_PEOPLE * 2 || (po.gone !== true && people.filter(x => !x.gone).length >= MAX_PEOPLE)) return; // up to MAX_PEOPLE who are in the group, and at most twice that in all with those who are gone (what validGroceryGroup allows)
     seen.add(pid); people.push({ id: pid, n: pn, ...(po.covered === true ? { covered: true as const } : {}), ...(po.gone === true ? { gone: true as const } : {}) });
   });
   const stores = [...new Set((Array.isArray(o.stores) ? o.stores : []).map((s: unknown) => str(s, MAX_STORE)).filter(Boolean))].slice(0, MAX_STORES);
@@ -86,12 +89,12 @@ export function normGroceryGroup(x: unknown): GroceryGroup | null {
 /** True when `x` is a group exactly as the app writes one. */
 export function validGroceryGroup(x: unknown): x is GroceryGroup {
   const o = asObject(x);
-  if (!o || !exact(o.id, MAX_ID) || o.id === '__proto__' || !exact(o.n, MAX_PERSON) || (o.gone !== undefined && o.gone !== true)) return false;
+  if (!o || !exact(o.id, MAX_ID) || reservedId(o.id as string) || !exact(o.n, MAX_PERSON) || (o.gone !== undefined && o.gone !== true)) return false;
   if (!Array.isArray(o.people) || o.people.length > MAX_PEOPLE * 2 || o.people.filter((p: unknown) => asObject(p)?.gone !== true).length > MAX_PEOPLE || !Array.isArray(o.stores) || o.stores.length > MAX_STORES) return false;
   const ids = new Set<string>();
   for (const p of o.people) {
     const po = asObject(p);
-    if (!po || !exact(po.id, MAX_ID) || po.id === '__proto__' || po.id === 'me' || ids.has(po.id as string) || !exact(po.n, MAX_PERSON) || (po.covered !== undefined && po.covered !== true) || (po.gone !== undefined && po.gone !== true)) return false;
+    if (!po || !exact(po.id, MAX_ID) || reservedId(po.id as string) || po.id === 'me' || ids.has(po.id as string) || !exact(po.n, MAX_PERSON) || (po.covered !== undefined && po.covered !== true) || (po.gone !== undefined && po.gone !== true)) return false;
     ids.add(po.id as string);
   }
   return o.stores.every((s: unknown) => exact(s, MAX_STORE)) && new Set(o.stores).size === o.stores.length;
@@ -101,7 +104,7 @@ export function validGroceryGroup(x: unknown): x is GroceryGroup {
  *  cents or none, and the two mode flags. The API refuses anything else rather than cleaning it into something the user never typed. */
 export function validGroceryItem(x: unknown): x is GroceryItem {
   const o = asObject(x);
-  if (!o || !exact(o.id, MAX_ID) || o.id === '__proto__' || !exact(o.n, MAX_NAME) || !exact(o.store, MAX_STORE, true)) return false;
+  if (!o || !exact(o.id, MAX_ID) || reservedId(o.id as string) || !exact(o.n, MAX_NAME) || !exact(o.store, MAX_STORE, true)) return false;
   if (typeof o.qty !== 'number' || cleanQty(o.qty) !== o.qty || o.qty <= 0) return false;
   if (o.cents !== null && cleanCents(o.cents) === null) return false;
   if (o.note !== undefined && !exact(o.note, MAX_NOTE)) return false;
@@ -113,7 +116,7 @@ export function validGroceryItem(x: unknown): x is GroceryItem {
 
 export function validGroceryStore(x: unknown): x is GroceryStore {
   const o = asObject(x);
-  return !!o && exact(o.n, MAX_STORE) && o.id === o.n && o.n !== '__proto__' && (o.retired === undefined || o.retired === true);
+  return !!o && exact(o.n, MAX_STORE) && o.id === o.n && !reservedId(o.n as string) && (o.retired === undefined || o.retired === true);
 }
 
 /** One month's list: ticks, counts and prices by item id, and the old `pulled` ids. At most MAX_ITEMS of each. */
@@ -124,7 +127,7 @@ export function normGroceryMonth(d: unknown): GroceryMonth {
   if (rawLines) {
     Object.entries(rawLines).slice(0, MAX_ITEMS).forEach(([id, v]) => {
       const o = asObject(v);
-      if (id === '__proto__' || !id || id.length > MAX_ID || !o) return;
+      if (reservedId(id) || !id || id.length > MAX_ID || !o) return;
       const line: GroceryLine = {};
       if (o.got === true) line.got = true;
       if (o.have === true && !line.got) line.have = true;
