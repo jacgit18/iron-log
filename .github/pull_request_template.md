@@ -14,6 +14,13 @@
 
 <!-- One or two sentences for CHANGELOG.md in the project docs (the "PR changelog" check needs real text here; write "n/a: <why>" for a change that needs none). `node scripts/pr-body.mjs --changelog "..."` fills it. -->
 
+## Delivery
+
+<!-- One feature, one brief, one PR (feature-delivery.md). `node scripts/pr-body.mjs --brief "<path>" --split "<reason>"` fills these. A split needs one of: migration first, file overlap with an open PR (name it), over about 600 lines or 25 files, pure-move refactor first, device or owner-only part. -->
+
+Brief: none given (pass --brief)
+Split because: n/a: this PR is the whole feature
+
 ## Done
 
 <!-- Paste the card's "Done when" list (definition-of-done.md). Mark each line with its evidence label: verified, read-only, agent-reported or not run (say why). A line that is not verified means this is ready for review with a gap, not done. -->
