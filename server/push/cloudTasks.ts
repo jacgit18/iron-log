@@ -32,7 +32,7 @@ type Request = (url: string, body: unknown) => Promise<{ status: number }>;
 export function cloudTasksScheduler(config: TasksConfig, request: Request = googleRequest()): PushScheduler {
   return {
     async schedule(job) {
-      const payload = { subscriptionId: job.subscriptionId, kind: job.kind, key: job.key, at: job.at, body: job.body };
+      const payload = { subscriptionId: job.subscriptionId, kind: job.kind, key: job.key, at: job.at, body: job.body, ...(job.repeat ? { repeat: job.repeat } : {}) };
       const { status } = await request(`https://cloudtasks.googleapis.com/v2/${config.queue}/tasks`, {
         task: {
           name: `${config.queue}/tasks/${taskName(job)}`,
