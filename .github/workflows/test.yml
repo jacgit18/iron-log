@@ -55,8 +55,10 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       # A pull request runs the unit tests related to its changed files (scripts/unit-tests.mjs; every test when a tooling or dependency file changed). Main and manual runs run all of them.
-      - run: node scripts/unit-tests.mjs --base=origin/${{ github.base_ref }}
+      - run: node scripts/unit-tests.mjs --base="origin/$BASE_REF"
         if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
       - run: npm test
         if: github.event_name != 'pull_request'
 
@@ -232,11 +234,16 @@ jobs:
 
   # The "Protect main" ruleset requires a check named `e2e`; the shards are named `e2e (1)` to `e2e (4)`, so this one job stands for them.
   # It passes when the shards passed or were skipped (a PR that needs no browser tests) and fails when any shard failed or was cancelled.
+  # It also needs `changes`: every test job is skipped when `changes` fails, and "skipped" would then read as a pass, so `changes` must itself have succeeded.
   e2e:
-    needs: e2e-shards
+    needs: [changes, e2e-shards]
     if: always()
     runs-on: ubuntu-26.04
+    env:
+      CHANGES: ${{ needs.changes.result }}
+      SHARDS: ${{ needs.e2e-shards.result }}
     steps:
       - run: |
-          echo "e2e shards: ${{ needs.e2e-shards.result }}"
-          test "${{ needs.e2e-shards.result }}" = success || test "${{ needs.e2e-shards.result }}" = skipped
+          echo "changes: $CHANGES, e2e shards: $SHARDS"
+          test "$CHANGES" = success
+          test "$SHARDS" = success || test "$SHARDS" = skipped
