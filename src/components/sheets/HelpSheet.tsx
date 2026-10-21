@@ -46,7 +46,7 @@ const GLOSSARY = [
   ['Day date', 'Once you check something off on a day, its header shows the weekday and date the exercises were logged or checked off, for example Sunday 09/27. Check-offs made while viewing another week are dated to the first day of that week (Sunday), and a rest day shows the date you ticked it.'],
   ['Mode 1, 2, 3', 'How your two programs, A and B, take turns: Mode 1 · A only; Mode 2 · monthly (A and B by month); Mode 3 · 6 months each. Change it at the top of the Board or in Settings, Training.'],
   ['Goals', 'Body weight: a target on Progress, from the weight you save at the top of the Board each week. Lift weight goals: tap a lift on Progress. Exercise frequency: how many times a week you want to do an exercise, on Progress.'],
-  ['Water goal', 'On Daily, Supplements. It follows your body weight unless you set a fixed amount; Hot day and Training add to it for the day.'],
+  ['Water goal', 'On Daily, Nutrition. It follows your body weight unless you set a fixed amount; Hot day and Training add to it for the day.'],
   ['To get / At home', 'The two views of Groceries on the Daily tab. Untick an item under At home when you run out, and it shows up under To get.'],
 ];
 
@@ -70,7 +70,7 @@ export default function HelpSheet() {
         <h3 id="help-how">Where things are</h3>
         <ol className="helpsteps">
           <li><b>Board.</b> Switch between <b>Workout</b> and <b>Stretches</b> at the top. In Workout, each day of your plan is a column; on a phone, use the day buttons (D1 to D7) or swipe across. A card’s <b>⋯</b> moves it to another day or skips it this week, and you can drag cards between days. <b>Experiments</b> sit under the days. Body weight for the week is at the top.</li>
-          <li><b>Daily.</b> <b>Supplements</b> (your Morning, Noon and Night list and a water log), <b>Groceries</b> (what to get and what is at home, by store) and <b>Medical</b>, which has nothing in it yet. Edit changes the lists.</li>
+          <li><b>Daily.</b> <b>Nutrition</b> (your Morning, Noon and Night supplements and a water log) and <b>Groceries</b> (what to get and what is at home, by store). Edit changes the lists.</li>
           <li><b>Progress.</b> Sets and volume per week, weight change and personal bests per lift, body weight and goals, and every lift’s history. <b>Muscles</b>, the switch at the top, shows which muscles your plan trains.</li>
           <li><b>Program.</b> <b>Programs</b> edits A and B day by day and keeps a library of programs. <b>Exercise library</b> and <b>Stretch library</b> hold everything you use, with search and the catalog.</li>
           <li><b>Settings.</b> <b>Training</b> (program mode, phases, Injury prevention, 1RMs), <b>Data</b> (account, sync, export and import), <b>App</b> (appearance, rest timer alert, install, feedback) and <b>Erase &amp; delete</b>.</li>
