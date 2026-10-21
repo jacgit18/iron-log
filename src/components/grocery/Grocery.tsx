@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
+import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
 import { motionOK } from '../../lib/motion.js';
@@ -29,13 +30,13 @@ const PRICE_ERROR = 'The price must be dollars, like 3.49.';
 const AHEAD = 12; // how many months past this one you can plan
 
 // A count or price box that keeps what is typed and saves when you leave it (or press Enter), so a half-typed "3." is not rewritten under you.
-function NumBox({ label, value, onCommit, className, error }: { label: string; value: string; onCommit: (text: string) => boolean; className: string; error?: string }) {
+function NumBox({ label, value, onCommit, className, error, disabled }: { label: string; value: string; onCommit: (text: string) => boolean; className: string; error?: string; disabled?: boolean }) {
   const [text, setText] = useState(value); const [seen, setSeen] = useState(value); const [bad, setBad] = useState(false);
   if (value !== seen) { setSeen(value); setText(value); setBad(false); } // the saved value changed from elsewhere
   const commit = () => { if (text === value) return setBad(false); setBad(!onCommit(text)); };
   return (
     <>
-      <input type="text" inputMode="decimal" className={`gnum ${className}`} aria-label={label} aria-invalid={bad || undefined} value={text}
+      <input type="text" inputMode="decimal" className={`gnum ${className}`} aria-label={label} aria-invalid={bad || undefined} disabled={disabled} value={text}
         onChange={e => setText(e.target.value)} onBlur={commit} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }} />
       {bad && error && <span className="note gerr" role="alert">{error}</span>}
     </>
@@ -96,9 +97,10 @@ function GetRow({ g, item, month, mk, future, carries, onGot, open, onOpen, onMo
               onCommit={t => commitQty(t, n => s.setGroceryQty(mk, item.id, n))} />
           </label>
           <label className="gfield">{w.price}
-            <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={l.prices ? '' : centsText(l.cents)} error={PRICE_ERROR}
+            <NumBox label={`${w.price} of ${item.n}, dollars`} className="gprice" value={l.prices ? '' : centsText(l.cents)} error={PRICE_ERROR} disabled={!!l.prices && !item.unit}
               onCommit={t => commitPrice(t, c => s.setGroceryCents(mk, item.id, c))} />
           </label>
+          {l.prices && !item.unit && <span className="note">Each pack has its own price, below. Remove them to set one price.</span>}
           {g.stores.length > 0 && (
             <label className="gfield">Move to
               <select id={`groc-store-${item.id}`} aria-label={`Store for ${item.n} this month`} value={item.store}
@@ -142,12 +144,16 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const bought = current ? list.filter(i => lineOf(i, month).got) : [];
   const todoStores = new Set(byStore(g, todo, split).map(x => x.store)); // a shared store with nothing left to get shows its money line in the bought fold instead
   // A store's tax box, once something is ticked there (or a tax is already typed): the receipt's tax for this month and what it comes to as a percent of the ticked items.
+  // Items bought and then removed from the list still count in their store's tally and tax (audit X-8); a store left with none of its own items shows only its tax box.
+  const removed = removedBoughtByStore(g, month);
   const taxRow = (store: string) => {
     if (!store) return null;
     const mine = everBought.filter(i => i.store === store); const cents = own(month.tax, store);
     if (!cents && !mine.some(i => lineOf(i, month).got)) return null;
     return <StoreTax key={`${mk}:${store}`} mk={mk} store={store} cents={cents} subtotal={tally(mine, month).spent - (cents ?? 0)} />;
   };
+  const listStores = new Set(list.map(i => i.store));
+  const goneOnly = Object.keys(removed).filter(store => store && !listStores.has(store));
   // A ticked row moves to another part of the page, which would drop keyboard focus to the top. Put it on the next row to get (or the
   // one before), else on the "Bought this month" line; a row unticked from the fold lands back in the list, so focus follows it there.
   // The count and price panels' open state lives here, not in the row: a ticked row moves to the fold and is built again, and an open
@@ -165,6 +171,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const focusAfter = useRef<string | null>(null);
   useEffect(() => { if (focusAfter.current) { document.getElementById(focusAfter.current)?.focus(); focusAfter.current = null; } });
   const tick = (id: string, on: boolean) => {
+    if (!useAppStore.getState().setGroceryGot(mk, id, on)) return; // nothing changed (data still loading): no Undo notice and no focus jump for it
     if (current) {
       const order = byStore(g, todo, split).flatMap(grp => gotLast(grp.items, month)).map(i => i.id);
       const at = order.indexOf(id); const next = order[at + 1] ?? order[at - 1];
@@ -172,7 +179,6 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       if (typing) setBoughtOpen(true);
       focusAfter.current = !on || typing ? `groc-${id}` : next ? `groc-${next}` : 'groc-bought-sum';
     }
-    useAppStore.getState().setGroceryGot(mk, id, on);
     setTicked(on && current ? { id, name: g.items.find(x => x.id === id)?.n ?? '', mk, t: Date.now() } : null); // a tick can be taken back from the notice; any other change replaces or clears it
   };
   return (
@@ -197,7 +203,8 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       <RemovedNotice scope="groceryoff" />
       {current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought.</p>}
       {byStore(g, todo, split).map((grp, gi) => {
-        const gt = tally(grp.items, month);
+        const gt = tally(grp.items, month); const gone = removed[grp.store]; // the tally counts a purchase of a removed item too
+        if (gone) { gt.got += gone.count; gt.count += gone.count; gt.planned += gone.cents; }
         return (
           <section key={grp.store || '_'} className={`gstore${!current && gt.got === gt.count ? ' done' : ''}`} aria-labelledby={`groc-h-${gi}`}>
             <div className="gstorehead">
@@ -213,6 +220,13 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
           </section>
         );
       })}
+      {goneOnly.map(store => (
+        <section key={`gone:${store}`} className="gstore" aria-label={`Bought from ${store}`}>
+          <div className="gstorehead"><h3>{store}</h3></div>
+          <p className="note">Bought here, then removed from your list.</p>
+          {taxRow(store)}
+        </section>
+      ))}
       {bought.length > 0 && (
         <details className="gbought" id="groc-bought" open={boughtOpen} onToggle={e => setBoughtOpen(e.currentTarget.open)}>
           <summary id="groc-bought-sum">Bought this month ({bought.length})</summary>
@@ -319,8 +333,9 @@ function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const m = useAppStore.getState().addGroceryItem(f);
-    setErr(m); if (!m) setF({ ...EMPTY_FORM, store: f.store });
+    setErr(m); if (!m) { setF({ ...EMPTY_FORM, store: f.store }); document.getElementById('groc-name')?.focus(); } // the Add button goes off once the name is empty: keep focus in the name box for the next item
   };
+  const finish = () => { if (f.n.trim()) { setErr('Add or clear this item first.'); document.getElementById('groc-name')?.focus(); return; } onDone(); }; // typed text is kept, not dropped by Done
   const { mine, suggested } = storeChoices(g);
   const dockRef = useRef<HTMLDivElement>(null);
   const w = unitWords(f.unit || undefined);
@@ -347,7 +362,7 @@ function EditDock({ g, onDone }: { g: GroceryT; onDone: () => void }) {
           <input type="text" id="groc-name" aria-label="Item name" placeholder="Add an item" maxLength={80} value={f.n} onChange={e => setF({ ...f, n: e.target.value })} />
           <button type="submit" className="btn sm gdockadd" id="groc-add" disabled={!f.n.trim()}>Add</button>
           <button type="button" className="btn sm ghost gdockmorebtn" id="groc-more" aria-expanded={more} aria-controls="groc-dock-more" onClick={() => setMore(v => !v)}>{more ? 'Less' : 'More'}</button>
-          <button type="button" className="btn sm gdone" id="groc-done" onClick={onDone}>Done</button>
+          <button type="button" className="btn sm gdone" id="groc-done" onClick={finish}>Done</button>
         </div>
       </form>
     </div>

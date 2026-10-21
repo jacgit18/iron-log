@@ -174,7 +174,7 @@ describe('cleaning saved or imported data', () => {
 describe('ids', () => {
   it('makes a readable id and avoids a taken one', () => {
     expect(newGroceryId([], 'Baby Spinach!')).toBe('baby-spinach');
-    expect(newGroceryId(g.items, 'Kale')).toBe('kale-2');
+    expect(newGroceryId(g.items, 'Kale')).toMatch(/^kale-[0-9a-f]{4}$/);
     expect(newGroceryId([], '???')).toBe('item');
   });
 });
@@ -226,8 +226,10 @@ describe('merging when two devices made different ids', () => {
       months: { '2026-03': { lines: { milk: { got: true, cents: 400 }, 'milk-2': { got: true, cents: 500 } }, pulled: [] } },
     })!;
     const r = mergeGrocery(here, {}, inc);
-    expect(r.grocery.items.map(i => [i.id, i.store])).toEqual([['milk', 'Giant'], ['milk-2', 'Costco']]); // Costco's milk got a new id
-    expect(r.months['2026-03'].lines).toEqual({ 'milk-2': { got: true, cents: 400 }, milk: { got: true, cents: 500 } }); // each tick is on its own item
+    const costco = r.grocery.items[1]!.id;
+    expect(costco).toMatch(/^milk-[0-9a-f]{4}$/);
+    expect(r.grocery.items.map(i => [i.id, i.store])).toEqual([['milk', 'Giant'], [costco, 'Costco']]); // Costco's milk got a new id
+    expect(r.months['2026-03'].lines).toEqual({ [costco]: { got: true, cents: 400 }, milk: { got: true, cents: 500 } }); // each tick is on its own item
   });
   it('drops the line of an item it could not add, but keeps the purchase of an item the file does not list (one removed after it was bought)', () => {
     const full = { stores: [], items: Array.from({ length: 500 }, (_, i) => item(`i${i}`, `Item ${i}`, '')) };
