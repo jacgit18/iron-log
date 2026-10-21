@@ -1,5 +1,22 @@
 @layer base, components;
 @layer components {
+/* The panel shows the program's name (typed by the user, up to 60 characters) in its heading, notes and rows: one long word breaks inside itself, not
+   push the page sideways. A word only breaks when it cannot fit, so a normal name looks the same. */
+.edpanel {
+  overflow-wrap: anywhere;
+}
+/* The library program's name in the Program switch and in the note under it: one long word breaks inside itself. This is a class of its own on that one button,
+   so the shared .seg rules, the A and B buttons and the Day buttons are not touched. */
+.edtop .seg button.segname {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.libnote b {
+  overflow-wrap: anywhere;
+}
 .progname {
   max-width: 360px;
   margin-bottom: var(--sp-12);

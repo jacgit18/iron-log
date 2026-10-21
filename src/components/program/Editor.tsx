@@ -130,7 +130,7 @@ function ProgramEditor() {
       <div className="edtop">
         <div className="seg" role="group" aria-label="Program to edit">
           {['A', 'B'].map(p => <button type="button" key={p} className={p === k ? 'on' : ''} aria-pressed={p === k} onClick={() => st.setEdProg(p)}>{progName(cfg, p)}</button>)}
-          {lib && <button type="button" className="on" aria-pressed="true">{item.name}</button>}
+          {lib && <button type="button" className="on segname" aria-pressed="true">{item.name}</button>}
         </div>
         <div className="seg" role="group" aria-label="Day to edit">
           {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}</button>)}
