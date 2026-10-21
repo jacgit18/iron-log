@@ -70,6 +70,10 @@ function normGroups(raw: unknown, stores: string[]): GroceryGroup[] {
   return groups;
 }
 
+/** A name that is also a property of every object (`__proto__`, `constructor`, `toString`, ...): as a store name it breaks the per-store maps (tax, payer, paid) that are keyed by it, so it is refused. */
+export const isReservedName = (s: string): boolean => s in Object.prototype;
+export const RESERVED_STORE = 'That name can’t be used for a store. Try another.';
+
 export function normGrocery(d: unknown): Grocery {
   const raw = (d && typeof d === 'object' ? d : {}) as { stores?: unknown; items?: unknown; groups?: unknown; retired?: unknown };
   const seen = new Set<string>(); const items: GroceryItem[] = [];
@@ -80,13 +84,16 @@ export function normGrocery(d: unknown): Grocery {
     items.push(item);
   });
   const stores: string[] = [];
-  const addStore = (s: string) => { if (s && !stores.includes(s) && stores.length < MAX_STORES) stores.push(s); };
+  const lower = (s: string) => s.toLowerCase();
+  const addStore = (s: string) => { if (s && !isReservedName(s) && !stores.some(x => lower(x) === lower(s)) && stores.length < MAX_STORES) stores.push(s); }; // one store per name, whatever the case: the first spelling stays
   (Array.isArray(raw.stores) ? raw.stores : []).forEach((s: unknown) => addStore(str(s, 40)));
   const retired: string[] = []; // removed stores that history still names; never one that is live
-  (Array.isArray(raw.retired) ? raw.retired : []).forEach((s: unknown) => { const n = str(s, 40); if (n && n !== '__proto__' && !stores.includes(n) && !retired.includes(n) && retired.length < MAX_STORES) retired.push(n); });
-  items.forEach(i => { if (!retired.includes(i.store)) addStore(i.store); }); // an item naming a retired store leaves it retired (it stays a known name); only an unknown name adds a live store
+  (Array.isArray(raw.retired) ? raw.retired : []).forEach((s: unknown) => { const n = str(s, 40); if (n && !isReservedName(n) && !stores.some(x => lower(x) === lower(n)) && !retired.some(x => lower(x) === lower(n)) && retired.length < MAX_STORES) retired.push(n); }); // a live store wins over a retired twin
+  const isRetired = (s: string) => retired.some(x => lower(x) === lower(s));
+  items.forEach(i => { if (!isRetired(i.store)) addStore(i.store); }); // an item naming a retired store leaves it retired (it stays a known name); only an unknown name adds a live store
+  const canon = (s: string) => stores.find(x => lower(x) === lower(s)) ?? retired.find(x => lower(x) === lower(s)) ?? s; // an item typed 'aldi' belongs to 'Aldi'
   const groups = normGroups(raw.groups, stores);
-  return { stores, items: items.map(i => (i.store && !stores.includes(i.store) && !retired.includes(i.store) ? { ...i, store: '' } : i)), ...(groups.length ? { groups } : {}), ...(retired.length ? { retired } : {}) };
+  return { stores, items: items.map(i => (i.store ? (stores.includes(canon(i.store)) || retired.includes(canon(i.store)) ? { ...i, store: canon(i.store) } : { ...i, store: '' }) : i)), ...(groups.length ? { groups } : {}), ...(retired.length ? { retired } : {}) };
 }
 
 /* ---------- Reading a month ---------- */
@@ -232,10 +239,17 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
   const keptIds = new Set([...Object.values(months).flatMap(m => Object.keys(m.lines)), ...Object.values(inc.months).flatMap(m => Object.keys(m.lines).filter(id => !listed.has(id)))]);
   // The stores go in first, so an item can be matched on the store it will have here: one whose store did not fit in a full list is kept under Anywhere (as
   // normGrocery would on the next load) and, importing the same file again, is matched there instead of being added a second time.
-  inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); if (g.retired?.includes(s)) g.retired = g.retired.filter(x => x !== s); changed = true; } });
-  (inc.retired ?? []).forEach(s => { if (!g.stores.includes(s) && !g.retired?.includes(s) && (g.retired?.length ?? 0) < MAX_STORES) { g.retired = [...(g.retired ?? []), s]; changed = true; } }); // history in the file may name them
+  // Store names compare without case, as the store actions do: 'aldi' in the file is the 'Aldi' here (the live spelling wins), so no twin is added (N-17a).
+  const sameName = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+  const hereAs = (s: string) => g.stores.find(x => sameName(x, s)) ?? g.retired?.find(x => sameName(x, s));
+  inc.stores.forEach(s => {
+    if (isReservedName(s) || g.stores.some(x => sameName(x, s))) return;
+    if (g.stores.length < MAX_STORES) { const back = g.retired?.find(x => sameName(x, s)); g.stores.push(back ?? s); if (back) { g.retired = g.retired!.filter(x => x !== back); if (!g.retired.length) delete g.retired; } changed = true; } // a retired twin comes back under the spelling it had
+  });
+  (inc.retired ?? []).forEach(s => { if (!isReservedName(s) && !hereAs(s) && (g.retired?.length ?? 0) < MAX_STORES) { g.retired = [...(g.retired ?? []), s]; changed = true; } }); // history in the file may name them
   inc.items.forEach(raw => {
-    const i = raw.store && !g.stores.includes(raw.store) ? { ...raw, store: '' } : raw;
+    const here = raw.store ? g.stores.find(x => sameName(x, raw.store)) : undefined;
+    const i = raw.store && !here ? { ...raw, store: '' } : here && here !== raw.store ? { ...raw, store: here } : raw;
     const same = g.items.find(x => x.n.toLowerCase() === i.n.toLowerCase() && x.store === i.store);
     if (same) { map.set(raw.id, same.id); return; }
     if (g.items.length >= MAX_ITEMS) return;
