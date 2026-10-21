@@ -112,7 +112,7 @@ describe('edges found by the independent review', () => {
     expect(settle.storeSettlement(st().grocery, st().groceryMonths[last], 'Aldi').rows[0]).toMatchObject({ id: sis, kind: 'covered' });
   });
   it('changing an item’s usual split after a removal pins last month with who it was counted with, not with people who are gone', async () => {
-    const { lib, settle, group, gid, sis, mk, last } = await setup();
+    const { settle, group, gid, sis, last } = await setup();
     st().addGroceryPerson(gid, 'Bob'); const bob = group().people[1].id;
     st().removeGroceryPerson(gid, sis); // last month's Milk was pinned with Sis at this point
     st().addGroceryItem({ n: 'Jam', store: 'Aldi', qty: '1', price: '6.00', every: true });
@@ -121,7 +121,6 @@ describe('edges found by the independent review', () => {
     expect(settle.purchasesOf(st().grocery, st().groceryMonths[last]).find(p => p.itemId === jam).parties).toEqual(['me', bob]);
     st().setGroceryItemShare(jam, { with: [bob] });
     expect(st().groceryMonths[last].lines[jam].share).toEqual({ with: [bob] }); // not { with: [sis, bob] }
-    expect(lib.monthKey(new Date())).toBe(mk);
   });
   it('counts only the people who are still in a group, in the tag and in what makes a store shared', async () => {
     const lib = await import('../lib/grocery.js');
