@@ -73,8 +73,15 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         SCRIPTS: ${{ inputs.scripts }}
+        LABEL: ${{ inputs.label }}
+        PREVIOUS: ${{ steps.live.outputs.revision }}
       run: |
-        "$SCRIPTS/deploy-cloud-run.sh" promote
+        # A failure part-way (audit C-9) must not leave the candidate half-promoted: put the revision that was live back.
+        if ! "$SCRIPTS/deploy-cloud-run.sh" promote; then
+          echo "::error title=Sending traffic to the $LABEL revision failed::Putting $LABEL back on $PREVIOUS."
+          gcloud run services update-traffic "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --to-revisions "$PREVIOUS=100"
+          exit 1
+        fi
 
     - name: Check the live ${{ inputs.label }} service
       id: livecheck

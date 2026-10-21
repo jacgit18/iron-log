@@ -327,7 +327,8 @@ cmd_promote() {
   gc run services describe "$SERVICE" --region "$REGION" >/dev/null
   gc run services update-traffic "$SERVICE" --region "$REGION" --to-tags "${CANDIDATE_TAG}=100"
   # The tag has done its job; its address would otherwise keep serving this revision.
-  gc run services update-traffic "$SERVICE" --region "$REGION" --remove-tags "$CANDIDATE_TAG"
+  # Traffic is already switched; failing to drop the tag must not fail the promotion (it would trigger a rollback of a good deploy).
+  gc run services update-traffic "$SERVICE" --region "$REGION" --remove-tags "$CANDIDATE_TAG" || echo "::warning::The tag '$CANDIDATE_TAG' could not be removed; traffic is already on the candidate." >&2
   echo "Promoted: all traffic is on the candidate revision."
 }
 
