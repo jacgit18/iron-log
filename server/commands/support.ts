@@ -40,16 +40,24 @@ function scrubbed(input: unknown): unknown {
   return rest;
 }
 
+// refused_writes is a diagnostic: a refused write was invalid, so what is kept is the start of it, not all of it (an account could otherwise fill the table
+// at the command rate limit: code audit S-03). A NUL byte (\u0000) is replaced because jsonb cannot store it, which made the insert itself fail (S-04).
+export const REFUSED_PAYLOAD_MAX = 1000;
+export function refusedPayload(input: unknown): string {
+  const text = (JSON.stringify(scrubbed(input)) ?? 'null').replace(/\\u0000/g, '\\ufffd');
+  return text.length <= REFUSED_PAYLOAD_MAX ? text : JSON.stringify({ truncated: true, size: text.length, head: text.slice(0, REFUSED_PAYLOAD_MAX - 100) });
+}
+
 export async function refuse(trx: Transaction<DB>, userId: string, command: string, env: { clientId?: string; input: unknown }, reason: string, clientVersion: string | null) {
   await trx
     .insertInto('refused_writes')
     .values({
       user_id: userId,
       command,
-      client_id: env.clientId ?? null,
+      client_id: env.clientId ? env.clientId.replace(/\u0000/g, '\ufffd') : null,
       reason,
-      payload: JSON.stringify(scrubbed(env.input)),
-      client_version: clientVersion,
+      payload: refusedPayload(env.input),
+      client_version: clientVersion ? clientVersion.slice(0, 100) : null,
     })
     .execute();
 }

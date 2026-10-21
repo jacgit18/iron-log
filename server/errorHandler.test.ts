@@ -98,4 +98,30 @@ describe('the app', () => {
     expect(res.status).toBe(400);
     expect(res.headers.get('content-type')).toMatch(/json/);
   });
+
+  // Code audit S-04: a request the database cannot store is the sender's mistake: 422, no 5xx alert, no row in the issue store.
+  it.each([['22021', 'invalid byte sequence for encoding "UTF8": 0x00'], ['22P05', 'unsupported Unicode escape sequence'], ['22003', 'value out of range'], ['54001', 'stack depth limit exceeded']])('answers a database data error %s with a 422, not a 500', async (code, message) => {
+    const recorded: unknown[] = [];
+    const app = express();
+    app.get('/boom', () => { throw Object.assign(new Error(message), { code }); });
+    app.use(errorHandler(issue => void recorded.push(issue)));
+    const base = await listen(app);
+    const res = await fetch(`${base}/boom`);
+    expect(res.status).toBe(422);
+    expect(await res.json()).toEqual({ ok: false, error: 'the request could not be understood', requestId: expect.any(String) });
+    expect(recorded).toEqual([]);
+  });
+
+  it('answers JSON nested too deep for the stack (a RangeError) with a 422', async () => {
+    const base = await throwing(new RangeError('Maximum call stack size exceeded'));
+    expect((await fetch(`${base}/boom`)).status).toBe(422);
+  });
+
+  it('still answers a unique violation or a lost connection as before (500 and 503)', async () => {
+    const unique = await throwing(Object.assign(new Error('duplicate key'), { code: '23505' }));
+    expect((await fetch(`${unique}/boom`)).status).toBe(500);
+    await new Promise<void>(done => server!.close(() => done()));
+    const gone = await throwing(Object.assign(new Error('connection terminated'), { code: '08006' }));
+    expect((await fetch(`${gone}/boom`)).status).toBe(503);
+  });
 });
