@@ -57,7 +57,7 @@ test('the KPI tiles are two a row on a phone at a normal text size and one a row
   const t1 = await tops();
   expect(t1[0]).toBe(t1[1]); // the first two share a row
   await page.addStyleTag({ content: 'html{font-size:200%!important}' });
-  await page.waitForTimeout(200);
+  await expect.poll(async () => new Set(await tops()).size).toBeGreaterThan(1); // the 200% rule has applied
   const t2 = await tops();
   expect(t2.length).toBeGreaterThan(1);
   expect(new Set(t2).size).toBe(t2.length); // every tile on its own row
