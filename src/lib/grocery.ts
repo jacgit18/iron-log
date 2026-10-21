@@ -53,7 +53,7 @@ function normGroups(raw: unknown, stores: string[]): GroceryGroup[] {
   const groups: GroceryGroup[] = []; const ids = new Set<string>(); const taken = new Set<string>();
   (Array.isArray(raw) ? raw : []).forEach((x: unknown) => {
     const g = normGroceryGroup(x);
-    if (!g || ids.has(g.id) || groups.length >= MAX_GROUPS) return;
+    if (!g || ids.has(g.id) || groups.filter(x => !!x.gone === !!g.gone).length >= MAX_GROUPS) return; // up to MAX_GROUPS live groups, and as many again that are gone
     ids.add(g.id);
     const own = g.stores.filter(s => stores.includes(s) && !taken.has(s));
     own.forEach(s => taken.add(s));
@@ -128,7 +128,7 @@ export const own = <T,>(map: Record<string, T> | undefined, key: string): T | un
 
 export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { store: string; label: string; items: GroceryItem[]; group?: GroceryGroup }[] {
   const out = g.stores.map(store => {
-    const group = sharing ? g.groups?.find(x => x.people.length > 0 && x.stores.includes(store)) : undefined;
+    const group = sharing ? g.groups?.find(x => x.people.some(p => !p.gone) && x.stores.includes(store)) : undefined;
     return { store, label: store, items: items.filter(i => i.store === store), ...(group ? { group } : {}) };
   });
   const shared = out.filter(x => x.group);
@@ -153,7 +153,7 @@ export const inMonth = (g: Grocery, items: GroceryItem[], m: GroceryMonth): Groc
   items.map(i => { const store = storeFor(g, i, m); return store === i.store ? i : { ...i, store }; });
 
 /** The words after a shared store's name: its group and how many others are in it ("Home +2"). */
-export const groupTag = (group: GroceryGroup) => `${group.n} +${group.people.length}`;
+export const groupTag = (group: GroceryGroup) => `${group.n} +${group.people.filter(p => !p.gone).length}`;
 
 /** Counts and money for a set of items: how many are ticked, what the list is expected to cost, and what the ticked ones cost. `spent` adds the
  *  month's tax for each store that has something ticked here (the receipt's tax, typed in); `planned` is what the prices come to before tax. */
@@ -219,7 +219,7 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
   // added, with the stores it names that exist here. People keep their ids, so an item's share in the file still points at them.
   const have = new Set((g.groups ?? []).map(x => x.id)); const defaulted = new Set((g.groups ?? []).flatMap(x => x.stores));
   (inc.groups ?? []).forEach(x => {
-    if (have.has(x.id) || (g.groups?.length ?? 0) >= MAX_GROUPS) return;
+    if (have.has(x.id) || (g.groups ?? []).filter(y => !y.gone).length >= MAX_GROUPS) return;
     const stores = x.stores.filter(st => g.stores.includes(st) && !defaulted.has(st));
     stores.forEach(st => defaulted.add(st));
     g.groups = [...(g.groups ?? []), { ...x, stores }]; have.add(x.id); changed = true;
