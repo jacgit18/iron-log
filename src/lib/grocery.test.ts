@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, groupTag, haveOf, inMonth, storeFor, onList, parseDollars, shiftMonth, spendByMonth, tally,
+  SUGGESTED_STORES, storeChoices, byStore, centsText, emptyMonth, lineOf, lineTotal, mergeGrocery, money, monthKey, newGroceryId, normGrocery, normGroceryData, normGroceryMonth, gotLast, groupTag, haveOf, inMonth, storeFor, onList, parseDollars, removedBought, shiftMonth, spendByMonth, tally,
 } from './grocery.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
@@ -279,5 +279,20 @@ describe('a line with a price for each one', () => {
     expect(spendByMonth({ stores: [], items: [item] }, { '2026-10': m }, '2026-10', 1)[0]).toMatchObject({ spent: 1824, bought: 1 });
     expect(parsePrices('8.99, 10.49  $9.25;3')).toEqual([899, 1049, 925, 300]);
     expect(parsePrices('')).toBeNull(); expect(parsePrices('8.99, x')).toBeNull(); expect(parsePrices('1.234')).toBeNull();
+  });
+});
+
+describe('removed items in a month tally', () => {
+  const m: GroceryMonth = { lines: { gone: { got: true, qty: 2, cents: 300, store: 'Costco' }, kale: { got: true, cents: 400 }, ghost: { qty: 4 } }, tax: { Costco: 50 }, pulled: [] };
+  it('lists only the removed items that were bought, under their store', () => {
+    expect(removedBought(g, m).map(i => [i.id, i.store])).toEqual([['gone', 'Costco']]);
+  });
+  it('makes the tally agree with spendByMonth once the removed bought lines are added', () => {
+    const live = inMonth(g, onList(g, m, true), m);
+    const t = tally([...live, ...removedBought(g, m)], m);
+    const [row] = spendByMonth(g, { '2026-10': m }, '2026-10', 1);
+    expect(tally(live, m).spent).not.toBe(row!.spent); // the old tile missed the removed item
+    expect(t.spent).toBe(row!.spent);
+    expect(t.got).toBe(row!.bought);
   });
 });
