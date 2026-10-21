@@ -68,6 +68,16 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     });
   };
 
+  // Before an item's usual store changes, every bought line of it that has no store of its own is pinned to the store it was bought at (the old usual),
+  // so its bill, its store's tax, who paid and the group's split stay as they were; the new store applies to what is bought from now on (code audit M-02).
+  const pinPastStores = (id: string, was: string) => {
+    Object.entries(get().groceryMonths).forEach(([key, m]) => {
+      const raw = m.lines[id];
+      if (!raw?.got || raw.store !== undefined) return;
+      mutateMonth(key, mm => { mm.lines[id] = { ...mm.lines[id], store: was }; });
+    });
+  };
+
   return {
     grocery: normGrocery(null),
     groceryMonths: {},
@@ -125,7 +135,8 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     },
 
     updateGroceryItem(id, patch) {
-      return mutateCatalogue(g => {
+      const was = get().grocery.items.find(i => i.id === id)?.store;
+      const err = mutateCatalogue(g => {
         const it = g.items.find(i => i.id === id);
         if (!it) return 'That item is gone.';
         if (patch.n !== undefined) {
@@ -146,6 +157,8 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (g.items.some(i => i !== it && i.n.toLowerCase() === it.n.toLowerCase() && i.store === it.store)) return 'That item is already in this store’s list.';
         return null;
       });
+      if (!err && patch.store !== undefined && was !== undefined && get().grocery.items.find(i => i.id === id)?.store !== was) pinPastStores(id, was);
+      return err;
     },
 
     // Undo puts it back in its place (its ticks in each month were never removed), and its store if that went meanwhile.
