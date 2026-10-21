@@ -20,10 +20,12 @@ export const byUser = (_req: Request, res: Response): string => `user:${String(r
 
 export function rateLimit({ max, windowMs }: Limit, now: () => number = Date.now, key: (req: Request, res: Response) => string = byIp): RequestHandler {
   const windows = new Map<string, Window>();
+  let swept = 0;
   return (req, res, next) => {
     const t = now();
-    // Expired windows are dropped as they are met, and the map is swept when it grows, so it cannot fill with one-off addresses.
-    if (windows.size > 10_000) for (const [k, w] of windows) if (t - w.start >= windowMs) windows.delete(k);
+    // Expired windows are dropped as they are met, and the map is swept when it grows, so it cannot fill with one-off addresses. The sweep walks every key, so it
+    // runs at most once a second (as the sign-in limiter's does); otherwise each request past 10,000 live keys would cost O(n) (audit S-6).
+    if (windows.size > 10_000 && t - swept >= 1000) { swept = t; for (const [k, w] of windows) if (t - w.start >= windowMs) windows.delete(k); }
     const who = key(req, res);
     let w = windows.get(who);
     if (!w || t - w.start >= windowMs) {
