@@ -17,6 +17,7 @@ Rule: `/home/jac/.claude/rules/definition-of-done.md`. A change is done when all
 - Store, sync or `server/` change: `e2e:sync` run against the scratch database.
 - Docs: `CHANGELOG.md`, `feature-map.md`, and `DECISIONS.md` for a decision, in the same PR. Enforcer: PR changelog check.
 - Docs have their generated table of contents (global rule `document-toc.md`): `README.md` and `SETUP.md` are checked by `npm run lint` (`npm run docs:toc`; `npm run docs:toc:write` refreshes them); the project docs in the vault are refreshed by the doc-toc hook. Enforcer: `npm run lint`, CI.
+- No package is added without the owner's yes in chat (`/home/jac/.claude/rules/dependency-security.md`): check the exact name, vet it with `node scripts/dep-vet.mjs <name>`, first install with `--ignore-scripts`, and put `Dependency approval: <name>` in the PR. Enforcer: `.github/workflows/dependency-scan.yml` (npm audit on production dependencies, dependency review, `dep-vet` on packages the PR adds) and `permissions.ask` on install commands.
 - PR body from `scripts/pr-body.mjs`, with the Done section filled. Enforcer: PR audience and changelog checks, template.
 - Device-only behavior (push, install prompt, back-swipe) is not done until tried on a real device; until then it is `not run`.
 - Done means merged; a deployed change also gets a smoke check of the live URL (owner approves prod).
