@@ -28,12 +28,15 @@ export function distance(a, b) {
   return d[a.length][b.length];
 }
 
-/** Names this one imitates: within 2 edits (1 for names up to 5 letters; none up to 3, where every name is near another) of a different popular or existing name. */
+/** Names this one imitates: within 2 edits (1 for names up to 5 letters; none up to 3, where every name is near another) of a different popular or existing name.
+ *  A scoped name (@scope/pkg) is only compared with other scoped names, as a whole, and @types/* is skipped: the scope itself is the claim, and @types/x beside x is normal. */
 export function lookalikes(name, others = []) {
-  const bare = n => n.replace(/^@[^/]+\//, '');
-  if (bare(name).length <= 3) return [];
-  const limit = bare(name).length <= 5 ? 1 : 2;
-  return [...new Set([...POPULAR, ...others])].filter(o => o !== name && distance(bare(name), bare(o)) <= limit);
+  const scoped = name.startsWith('@');
+  if (name.startsWith('@types/')) return [];
+  const subject = scoped ? name : name;
+  if (subject.length <= 3) return [];
+  const limit = subject.length <= 5 ? 1 : 2;
+  return [...new Set([...POPULAR, ...others])].filter(o => o !== name && o.startsWith('@') === scoped && !o.startsWith('@types/') && distance(subject, o) <= limit);
 }
 
 /** Packages in `head` that `base` does not have, from the dependency fields of two package.json objects. */
@@ -58,7 +61,7 @@ export function judge(name, facts, others = [], now = Date.now()) {
   if (facts.weeklyDownloads !== null && facts.weeklyDownloads < MIN_WEEKLY_DOWNLOADS) block.push(`${facts.weeklyDownloads} downloads last week (under ${MIN_WEEKLY_DOWNLOADS})`);
   const near = lookalikes(name, others);
   // A real package with a similar name (vitest beside vite) is old and widely used; an imitation is young or barely downloaded.
-  const established = age !== null && age >= 365 && (facts.weeklyDownloads ?? 0) >= 100_000;
+  const established = age !== null && age >= 365 && (facts.weeklyDownloads === null || facts.weeklyDownloads >= 100_000); // unknown downloads (the API said no) do not make a year-old package look new
   if (near.length) (established ? warn : block).push(`name is within a few edits of ${near.slice(0, 3).join(', ')}${established ? ' (old and widely used, so only a warning)' : ''}`);
   const scripts = ['preinstall', 'install', 'postinstall'].filter(s => facts.scripts?.[s]);
   if (scripts.length) warn.push(`runs ${scripts.join(', ')} at install: read it`);
@@ -76,7 +79,8 @@ export async function lookup(name, get = jsonGet) {
   if (doc === undefined) return undefined;
   if (doc === null) return null;
   const latest = doc.versions?.[doc['dist-tags']?.latest] ?? {};
-  const dl = await registry(`https://api.npmjs.org/downloads/point/last-week/${name.replace('/', '%2F')}`, get);
+  const dlUrl = `https://api.npmjs.org/downloads/point/last-week/${name.replace('/', '%2F')}`;
+  const dl = (await registry(dlUrl, get)) ?? (await registry(dlUrl, get)); // the downloads API rate-limits: one retry
   return { created: doc.time?.created ?? null, weeklyDownloads: typeof dl?.downloads === 'number' ? dl.downloads : null, scripts: latest.scripts ?? {}, repository: doc.repository ?? latest.repository ?? null, license: latest.license ?? doc.license ?? null };
 }
 

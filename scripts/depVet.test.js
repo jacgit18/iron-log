@@ -16,6 +16,12 @@ describe('distance and lookalikes', () => {
     expect(lookalikes('lodash')).toEqual([]);
     expect(lookalikes('left-pad-thing')).toEqual([]);
   });
+  it('does not compare @types/x with x, or a scoped name with an unscoped one', () => {
+    expect(lookalikes('@types/react')).toEqual([]);
+    expect(lookalikes('@playwright/test')).toEqual([]);
+    expect(lookalikes('@types-react/core', ['@types/react'])).toEqual([]);
+    expect(lookalikes('@acme/utils', ['@acme/utlis'])).toEqual(['@acme/utlis']);
+  });
   it('flags a near name of a package already in the tree, and skips very short names', () => {
     expect(lookalikes('my-internal-utlis', ['my-internal-utils'])).toEqual(['my-internal-utils']);
     expect(lookalikes('ms', [])).toEqual([]);
@@ -32,6 +38,7 @@ describe('judge', () => {
   it('blocks a near name unless the package is old and widely used', () => {
     expect(judge('react-datepiicker', { ...good, created: new Date(now - 60 * day).toISOString(), weeklyDownloads: 5000 }, [], now).block.join()).toMatch(/react-datepicker/);
     expect(judge('vitest', good, [], now)).toMatchObject({ block: [], warn: [expect.stringMatching(/vite/)] });
+    expect(judge('vitest', { ...good, weeklyDownloads: null }, [], now).block).toEqual([]); // downloads unknown, but a year old
   });
   it('warns about install scripts, no repository and no license without blocking', () => {
     const r = judge('scripty', { ...good, scripts: { postinstall: 'node x.js' }, repository: null, license: null }, [], now);
