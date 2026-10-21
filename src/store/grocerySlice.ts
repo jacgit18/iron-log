@@ -3,10 +3,11 @@ import {
   MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, parseDollars, storeFor,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
-import { activePeople, groupOfStore, knownPeople, partiesFor } from '../lib/grocerySettle.js';
-import { ME } from '../lib/grocerySplit.js';
+import { groupOfStore } from '../lib/grocerySettle.js';
 import type { Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare } from '../types.ts';
 import type { GrocerySlice, StoreGet, StoreSet } from './types.ts';
+import { activePeople, knownPeople, partiesFor } from '../lib/grocerySettle.js';
+import { ME } from '../lib/grocerySplit.js';
 
 // The grocery list is the account's, like the rest of the data (ADR 039, replacing ADR 019's device-only list): it is saved through the
 // same path as every other document (saveDoc / removeDoc), so with syncing on it goes to the server (grocery/main as list rows,
@@ -55,6 +56,25 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     set({ groceryMonths: months }); saveMonth(key, m);
   };
 
+  // Before the people or the groups change, every bought line of an earlier month that has no split of its own is pinned to the split it was counted with
+  // (the item's, else the store group's people, else just you), so adding or removing a person, or changing which group a store splits with, never rewrites
+  // a month already bought (code audit M-05, and G-2 of the overnight audit). The month being lived in is left to follow the change.
+  const pinPastParties = () => {
+    const g = get().grocery; if (!g.groups?.length) return;
+    const now = monthKey(new Date());
+    Object.entries(get().groceryMonths).forEach(([key, m]) => {
+      if (key >= now) return;
+      const pins: Record<string, GroceryShare> = {};
+      Object.entries(m.lines).forEach(([id, raw]) => {
+        const item = g.items.find(i => i.id === id);
+        if (!raw.got || raw.share || !item) return; // a removed item's line is pinned when it is removed
+        const at = storeFor(g, item, m);
+        pins[id] = shareOf(partiesFor(g, at === item.store ? item : { ...item, store: at }, raw));
+      });
+      if (Object.keys(pins).length) mutateMonth(key, mm => { Object.entries(pins).forEach(([id, share]) => { mm.lines[id] = { ...mm.lines[id], share }; }); });
+    });
+  };
+
   // A split as the parties it came to (you included unless it was for others only): the form a line keeps when it is pinned.
   const shareOf = (parties: string[]): GroceryShare => ({ with: parties.filter(p => p !== ME), ...(parties.includes(ME) ? {} : { notMine: true as const }) });
 
@@ -81,25 +101,6 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       const raw = m.lines[id];
       if (!raw?.got || raw.store !== undefined) return;
       mutateMonth(key, mm => { mm.lines[id] = { ...mm.lines[id], store: was }; });
-    });
-  };
-
-  // Before the people or the groups change, every bought line of an earlier month that has no split of its own is pinned to the split it was counted with
-  // (the item's, else the store group's people, else just you), so adding or removing a person, or changing which group a store splits with, never rewrites
-  // a month already bought (code audit M-05, and G-2 of the overnight audit). The month being lived in is left to follow the change.
-  const pinPastParties = () => {
-    const g = get().grocery; if (!g.groups?.length) return;
-    const now = monthKey(new Date());
-    Object.entries(get().groceryMonths).forEach(([key, m]) => {
-      if (key >= now) return;
-      const pins: Record<string, GroceryShare> = {};
-      Object.entries(m.lines).forEach(([id, raw]) => {
-        const item = g.items.find(i => i.id === id);
-        if (!raw.got || raw.share || !item) return; // a removed item's line is pinned when it is removed
-        const at = storeFor(g, item, m);
-        pins[id] = shareOf(partiesFor(g, at === item.store ? item : { ...item, store: at }, raw));
-      });
-      if (Object.keys(pins).length) mutateMonth(key, mm => { Object.entries(pins).forEach(([id, share]) => { mm.lines[id] = { ...mm.lines[id], share }; }); });
     });
   };
 
