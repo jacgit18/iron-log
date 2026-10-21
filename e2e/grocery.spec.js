@@ -80,7 +80,7 @@ test('the count and price open from the row, and an item can be taken off this m
   await page.getByLabel('Count of Kale').fill('4'); await page.getByLabel('Count of Kale').blur();
   await expect(kale).toHaveText('4 × $2.50');
   await expect(page.locator('#groc-summary')).toHaveText('Got 0 of 2 · Spent $0.00 · Expected $28.99');
-  await page.getByRole('button', { name: 'Take Kale off the list' }).click();
+  await page.getByRole('button', { name: 'I have this: Kale' }).click();
   await expect(page.locator('#groc-summary')).toHaveText('Got 0 of 1 · Spent $0.00 · Expected $18.99');
   await page.click('#groc-view-home');
   await expect(page.getByLabel('Have Kale')).toBeChecked();
@@ -169,6 +169,7 @@ test('Groceries comes before Supplements, and the store lists offer the suggeste
   await expect(page.locator('#groc-stores option')).toHaveCount(5);
   await page.fill('#groc-name', 'Bananas'); await page.fill('#groc-store', 'Aldi'); await page.click('#groc-add');
   await expect(page.locator('#groc-stores option')).toHaveCount(5); // Aldi is now one of yours, not listed twice
+  await page.getByRole('button', { name: 'Expand Bananas' }).click(); // edit rows start closed
   await page.getByLabel('Store for Bananas').selectOption("BJ's");
   await done(page);
   await expect(page.getByRole('region', { name: "BJ's" })).toContainText('Bananas');

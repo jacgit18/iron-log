@@ -70,10 +70,12 @@ test('an existing item takes, changes and loses a note from its edit row', async
   await page.click('#groc-edit');
   await page.fill('#groc-name', 'Eggs'); await page.click('#groc-add');
   const note = page.getByLabel('Note for Eggs');
+  await page.getByRole('button', { name: 'Expand Eggs' }).click(); // edit rows start closed
   await note.fill('pasture raised'); await note.blur();
   await page.click('#groc-done');
   await expect(page.locator('.ghome')).toContainText('pasture raised');
   await page.click('#groc-edit');
+  await page.getByRole('button', { name: 'Expand Eggs' }).click(); // closed again after Done and Edit
   await note.fill(''); await note.blur();
   await page.click('#groc-done');
   await expect(page.locator('.ghome')).not.toContainText('pasture raised');
