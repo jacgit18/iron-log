@@ -1,6 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
+// The split card sits folded at the bottom of To get; these specs read it, so each opens it first (a page with no split section has nothing to open).
+const openSplit = async page => { const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
+
 // A store's tax for the month, typed in dollars from the receipt (a Tax checkbox and an amount under the store's name on To get). It is added to what
 // you spent there, and the percent it comes to on the ticked items is shown beside it. The fixed date is in September 2026 (month 2026-09).
 const CAT = { stores: ["BJ's", 'Aldi'], items: [
@@ -17,7 +20,7 @@ const seed = async (page, { cat = CAT, month = MONTH, admin = false } = {}) => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(month));
   }, { cat, month, admin });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
 };
 const section = (page, store) => page.locator('section.gstore', { has: page.getByRole('heading', { name: store }) }).first();
 const setTax = async (page, store, amount) => {
@@ -32,7 +35,7 @@ test('a typed tax is added to what you spent at that store, shows its percent, a
   await setTax(page, "BJ's", '2.22');
   await expect(page.locator('#groc-summary')).toContainText('Spent $32.21 with tax');
   await expect(section(page, "BJ's").locator('.gtaxpct')).toHaveText('8.88% of $24.99'); // 2.22 / 24.99 = 8.8836
-  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
   await expect(page.locator('#groc-summary')).toContainText('Spent $32.21 with tax');
   await expect(page.getByLabel("Tax at BJ's, dollars, from the receipt")).toHaveValue('2.22');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/2026-09')).tax)).toEqual({ "BJ's": 222 });
