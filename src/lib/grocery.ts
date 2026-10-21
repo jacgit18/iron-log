@@ -75,11 +75,11 @@ export function normGrocery(d: unknown): Grocery {
   const stores: string[] = [];
   const addStore = (s: string) => { if (s && !stores.includes(s) && stores.length < MAX_STORES) stores.push(s); };
   (Array.isArray(raw.stores) ? raw.stores : []).forEach((s: unknown) => addStore(str(s, 40)));
-  items.forEach(i => addStore(i.store));
-  const groups = normGroups(raw.groups, stores);
   const retired: string[] = []; // removed stores that history still names; never one that is live
   (Array.isArray(raw.retired) ? raw.retired : []).forEach((s: unknown) => { const n = str(s, 40); if (n && n !== '__proto__' && !stores.includes(n) && !retired.includes(n) && retired.length < MAX_STORES) retired.push(n); });
-  return { stores, items: items.map(i => (i.store && !stores.includes(i.store) ? { ...i, store: '' } : i)), ...(groups.length ? { groups } : {}), ...(retired.length ? { retired } : {}) };
+  items.forEach(i => { if (!retired.includes(i.store)) addStore(i.store); }); // an item naming a retired store leaves it retired (it stays a known name); only an unknown name adds a live store
+  const groups = normGroups(raw.groups, stores);
+  return { stores, items: items.map(i => (i.store && !stores.includes(i.store) && !retired.includes(i.store) ? { ...i, store: '' } : i)), ...(groups.length ? { groups } : {}), ...(retired.length ? { retired } : {}) };
 }
 
 /* ---------- Reading a month ---------- */
