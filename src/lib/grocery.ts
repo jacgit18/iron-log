@@ -122,6 +122,10 @@ export const gotLast = (items: GroceryItem[], m: GroceryMonth) => [...items.filt
 
 /** The list split by store, in the order of `stores`; items with no store come last. Empty stores are left out. With `sharing` on, stores shared with a group of other people come first, then your own, and `group` is the group a shared store
  *  defaults to; with it off the order is plain, whatever groups the data holds. */
+/** A value stored under a store's name (its tax or payer), or undefined. Only the map's own keys count: a store called "constructor" or "toString" must
+ *  not find a function on the object's prototype. */
+export const own = <T,>(map: Record<string, T> | undefined, key: string): T | undefined => map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
+
 export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { store: string; label: string; items: GroceryItem[]; group?: GroceryGroup }[] {
   const out = g.stores.map(store => {
     const group = sharing ? g.groups?.find(x => x.people.length > 0 && x.stores.includes(store)) : undefined;
@@ -129,7 +133,9 @@ export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { st
   });
   const shared = out.filter(x => x.group);
   out.splice(0, out.length, ...shared, ...out.filter(x => !x.group));
-  out.push({ store: '', label: ANYWHERE, items: items.filter(i => !i.store) });
+  // An item whose store is not in the list (a store removed on another device while this one added to it, an import into a full list) would vanish from the
+  // screens, so it is shown under Anywhere.
+  out.push({ store: '', label: ANYWHERE, items: items.filter(i => !i.store || !g.stores.includes(i.store)) });
   return out.filter(x => x.items.length);
 }
 
@@ -137,7 +143,10 @@ export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { st
  *  item's usual store. */
 export function storeFor(g: Grocery, item: GroceryItem, m: GroceryMonth): string {
   const s = m.lines[item.id]?.store;
-  return s !== undefined && (s === '' || g.stores.includes(s)) ? s : item.store;
+  const store = s !== undefined && (s === '' || g.stores.includes(s)) ? s : item.store;
+  // An item whose own store is not in the list (removed on another device, an import into a full list) is under Anywhere, as byStore shows it, so the bills,
+  // tax and shares count it there too.
+  return store === '' || g.stores.includes(store) ? store : '';
 }
 /** The items as they sit in a month: each under the store it is bought at that month, so grouping, bills, tax and sharing all follow it. */
 export const inMonth = (g: Grocery, items: GroceryItem[], m: GroceryMonth): GroceryItem[] =>
@@ -157,7 +166,7 @@ export function tally(items: GroceryItem[], m: GroceryMonth) {
     if (l.got) { got++; spent += t; boughtAt.add(i.store); }
   });
   let taxed = false; // whether any tax was added: only a store with something ticked counts
-  boughtAt.forEach(store => { const t = m.tax?.[store] ?? 0; if (t) { spent += t; taxed = true; } });
+  boughtAt.forEach(store => { const t = own(m.tax, store) ?? 0; if (t) { spent += t; taxed = true; } });
   return { count: items.length, got, planned, spent, unpriced, taxed };
 }
 
@@ -172,7 +181,7 @@ export function spendByMonth(g: Grocery, months: Record<string, GroceryMonth>, e
       const it = g.items.find(x => x.id === id);
       bought++; boughtAt.add(it ? storeFor(g, it, m!) : ''); spent += l.prices?.length ? lineCost({ qty: l.prices.length, cents: null, prices: l.prices }) : lineTotal(l.qty ?? it?.qty ?? 1, l.cents ?? it?.cents ?? null);
     });
-    boughtAt.forEach(store => { spent += m?.tax?.[store] ?? 0; }); // each store's tax from the receipt
+    boughtAt.forEach(store => { spent += own(m?.tax, store) ?? 0; }); // each store's tax from the receipt
     return { key, spent, bought };
   });
 }
@@ -195,14 +204,17 @@ export function normGroceryData(d: unknown): GroceryData | null {
 export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMonth>, inc: GroceryData) {
   const g = structuredClone(cur); const months = structuredClone(curMonths); let changed = false;
   const map = new Map<string, string>(); // the file's item id -> the id here
-  inc.items.forEach(i => {
+  // The stores go in first, so an item can be matched on the store it will have here: one whose store did not fit in a full list is kept under Anywhere (as
+  // normGrocery would on the next load) and, importing the same file again, is matched there instead of being added a second time.
+  inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); changed = true; } });
+  inc.items.forEach(raw => {
+    const i = raw.store && !g.stores.includes(raw.store) ? { ...raw, store: '' } : raw;
     const same = g.items.find(x => x.n.toLowerCase() === i.n.toLowerCase() && x.store === i.store);
-    if (same) { map.set(i.id, same.id); return; }
+    if (same) { map.set(raw.id, same.id); return; }
     if (g.items.length >= MAX_ITEMS) return;
     const id = g.items.some(x => x.id === i.id) ? newGroceryId(g.items, i.n) : i.id;
-    g.items.push({ ...i, id }); map.set(i.id, id); changed = true;
+    g.items.push({ ...i, id }); map.set(raw.id, id); changed = true;
   });
-  inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); changed = true; } });
   // A group is matched by its id (made at random, so the same group in a backup of this account has the same id here); one that is missing is
   // added, with the stores it names that exist here. People keep their ids, so an item's share in the file still points at them.
   const have = new Set((g.groups ?? []).map(x => x.id)); const defaulted = new Set((g.groups ?? []).flatMap(x => x.stores));
