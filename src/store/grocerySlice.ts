@@ -2,7 +2,7 @@ import * as settle from '../lib/grocerySettle.js';
 import { ME as SELF } from '../lib/grocerySplit.js';
 import { LS } from '../lib/storage.js';
 import {
-  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, parseDollars, storeFor,
+  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
 import { storeStatus } from '../lib/grocerySettle.js';
@@ -42,7 +42,17 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     else get().saveDoc(monthPath(key), m);
   };
   // A store typed in another case ("aldi") is the store you already have ("Aldi"), as addGroceryStore treats it.
-  const sameStore = (g: Grocery, store: string) => g.stores.find(x => x.toLowerCase() === store.toLowerCase()) ?? store;
+  const sameStore = (g: Grocery, store: string) => [...g.stores, ...(g.retired ?? [])].find(x => x.toLowerCase() === store.toLowerCase()) ?? store;
+  // Makes a store live: a retired one of that name comes back (its past months read the same), a new one is added. Returns an error when the list is full.
+  const ensureStore = (g: Grocery, store: string): string | null => {
+    if (!store || g.stores.includes(store)) return null;
+    if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`;
+    g.stores.push(store);
+    if (g.retired?.includes(store)) { g.retired = g.retired.filter(x => x !== store); if (!g.retired.length) delete g.retired; }
+    return null;
+  };
+  // Whether any past month still leans on a store: a bought line pinned to it, its tax, or who paid there.
+  const historyUses = (name: string) => Object.values(get().groceryMonths).some(m => Object.values(m.lines).some(l => l.got && l.store === name) || own(m.tax, name) !== undefined || own(m.payer, name) !== undefined);
   const mutateCatalogue = (fn: (g: Grocery) => string | null): string | null => {
     if (get().blocked()) return 'Still loading your data…';
     const g = structuredClone(get().grocery);
@@ -175,7 +185,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         const store = sameStore(g, typedStore);
         if (g.items.length >= MAX_ITEMS) return `The list is full (${MAX_ITEMS} items).`;
         if (g.items.some(i => i.n.toLowerCase() === n.toLowerCase() && i.store === store)) return 'That item is already in this store’s list.';
-        if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
+        const full = ensureStore(g, store); if (full) return full;
         g.items.unshift({ id: newGroceryId(g.items, n, Object.values(get().groceryMonths).flatMap(m => Object.keys(m.lines))), n, store, qty, cents, every: true, out: false, ...(note ? { note } : {}), ...(unit ? { unit } : {}) });
         return null;
       });
@@ -193,7 +203,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         }
         if (patch.store !== undefined) {
           const store = sameStore(g, patch.store.trim().replace(/\s+/g, ' ').slice(0, 40));
-          if (store && !g.stores.includes(store)) { if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`; g.stores.push(store); }
+          const full = ensureStore(g, store); if (full) return full;
           it.store = store;
         }
         if (patch.qty !== undefined) { const q = cleanQty(patch.qty); if (q == null || q <= 0) return 'The count must be a number from 0.01 to 999.'; it.qty = q; }
@@ -217,7 +227,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       get().noteRemoved('grocery', it.n, () => {
         return mutateCatalogue(g => {
           if (g.items.some(x => x.id === id)) return 'back';
-          if (it.store && !g.stores.includes(it.store)) g.stores.push(it.store);
+          if (it.store) ensureStore(g, it.store);
           g.items.splice(Math.min(i, g.items.length), 0, it); return null;
         }) === null;
       });
@@ -228,17 +238,18 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       if (!store) return 'Give the store a name.';
       return mutateCatalogue(g => {
         if (g.stores.some(s => s.toLowerCase() === store.toLowerCase())) return 'You already have that store.';
-        if (g.stores.length >= MAX_STORES) return `Too many stores (${MAX_STORES}).`;
-        g.stores.push(store); return null;
+        return ensureStore(g, sameStore(g, store)); // a retired store of that name comes back with its history
       });
     },
 
     removeGroceryStore(name) {
       const i = get().grocery.stores.indexOf(name);
+      const retire = i >= 0 && historyUses(name);
       const held = (get().grocery.groups ?? []).filter(x => x.stores.includes(name)).map(x => x.id); // the group it defaulted to, for Undo
       const err = mutateCatalogue(g => {
         if (g.items.some(it => it.store === name)) return 'Move or remove this store’s items first.';
         g.stores = g.stores.filter(s => s !== name);
+        if (retire) g.retired = [...(g.retired ?? []).filter(x => x !== name && historyUses(x)), name].slice(-MAX_STORES); // past months still name it: hidden, not forgotten; retired names no month names any more are dropped, which keeps the list from filling
         g.groups?.forEach(x => { x.stores = x.stores.filter(s => s !== name); });
         return null;
       });
@@ -247,6 +258,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
           if (g.stores.includes(name)) return 'back';
           if (g.stores.length >= MAX_STORES) return 'full';
           g.stores.splice(Math.min(i, g.stores.length), 0, name);
+          if (g.retired?.includes(name)) { g.retired = g.retired.filter(x => x !== name); if (!g.retired.length) delete g.retired; }
           held.forEach(id => { const x = g.groups?.find(y => y.id === id); if (x && !g.groups!.some(y => y.stores.includes(name))) x.stores.push(name); }); // back in its group, if that still exists and no other group took it
           return null;
         }) === null);

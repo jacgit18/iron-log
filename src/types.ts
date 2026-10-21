@@ -228,9 +228,10 @@ export interface GroceryShare { with: string[]; notMine?: true }
  *  `qty` is then the weight and `cents` the price per unit; left out for the usual "each". */
 export interface GroceryItem { id: string; n: string; store: string; qty: number; cents: number | null; every: boolean; out: boolean; note?: string; unit?: GroceryUnit; share?: GroceryShare }
 /** The catalogue: store names in the order shown, and the items. A month's list is drawn from it. */
-export interface Grocery { stores: string[]; items: GroceryItem[]; groups?: GroceryGroup[] }
+/** `retired`: stores that were removed while a past month still uses them (a purchase pinned to the store, its tax, who paid): hidden from every list and picker, but their name stays valid so those months read as they did; adding a store with the same name brings it back (ADR 063). */
+export interface Grocery { stores: string[]; items: GroceryItem[]; groups?: GroceryGroup[]; retired?: string[] }
 /** A store as the server keeps it: one row per store, the name is its id. */
-export interface GroceryStore { id: string; n: string }
+export interface GroceryStore { id: string; n: string; retired?: true }
 /** One item in one month: ticked off (`got`, bought), or `have`: you have it, so it is not on that month's list (ADR 054); and the count and unit price (cents) paid when they differ from the catalogue or were recorded at the tick.
  *  `prices`: the price of each one bought this month, in cents, when they cost different amounts (beef, 3 packs: 8.99, 10.49, 9.25). The count is then how many there are and the line total is their sum; `qty` and `cents` are not used. */
 /** `store`: where the item was bought this month when that is not its usual store (Move to on To get); '' is Anywhere, absent is the item's own store. */

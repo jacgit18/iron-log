@@ -66,7 +66,7 @@ export const hasSharing = (g: Grocery): boolean => (g.groups?.length ?? 0) > 0; 
 /** The stores that have something bought this month, in the list's order, with the no-store group last (`''`). */
 export function storesBought(g: Grocery, purchases: readonly MonthPurchase[]): string[] {
   const seen = new Set(purchases.map(p => p.store));
-  return [...g.stores.filter(s => seen.has(s)), ...(seen.has('') ? [''] : [])];
+  return [...g.stores.filter(s => seen.has(s)), ...(g.retired ?? []).filter(s => seen.has(s)), ...(seen.has('') ? [''] : [])]; // a retired store's card shows in the past months that used it
 }
 
 /** Who pays whom for one store this month. */

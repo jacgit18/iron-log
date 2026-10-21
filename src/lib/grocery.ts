@@ -64,7 +64,7 @@ function normGroups(raw: unknown, stores: string[]): GroceryGroup[] {
 }
 
 export function normGrocery(d: unknown): Grocery {
-  const raw = (d && typeof d === 'object' ? d : {}) as { stores?: unknown; items?: unknown; groups?: unknown };
+  const raw = (d && typeof d === 'object' ? d : {}) as { stores?: unknown; items?: unknown; groups?: unknown; retired?: unknown };
   const seen = new Set<string>(); const items: GroceryItem[] = [];
   (Array.isArray(raw.items) ? raw.items : []).forEach((x: unknown) => {
     const item = normGroceryItem(x);
@@ -77,7 +77,9 @@ export function normGrocery(d: unknown): Grocery {
   (Array.isArray(raw.stores) ? raw.stores : []).forEach((s: unknown) => addStore(str(s, 40)));
   items.forEach(i => addStore(i.store));
   const groups = normGroups(raw.groups, stores);
-  return { stores, items: items.map(i => (i.store && !stores.includes(i.store) ? { ...i, store: '' } : i)), ...(groups.length ? { groups } : {}) };
+  const retired: string[] = []; // removed stores that history still names; never one that is live
+  (Array.isArray(raw.retired) ? raw.retired : []).forEach((s: unknown) => { const n = str(s, 40); if (n && n !== '__proto__' && !stores.includes(n) && !retired.includes(n) && retired.length < MAX_STORES) retired.push(n); });
+  return { stores, items: items.map(i => (i.store && !stores.includes(i.store) ? { ...i, store: '' } : i)), ...(groups.length ? { groups } : {}), ...(retired.length ? { retired } : {}) };
 }
 
 /* ---------- Reading a month ---------- */
@@ -121,6 +123,9 @@ export const onList = (g: Grocery, m: GroceryMonth, live: boolean) =>
 /** A store's items for the To get list: the ones still to get first, the ticked ones after them, each in catalogue order. */
 export const gotLast = (items: GroceryItem[], m: GroceryMonth) => [...items.filter(i => !lineOf(i, m).got), ...items.filter(i => lineOf(i, m).got)];
 
+/** Whether a store name still means something: a live store, or one that was removed while history uses it (retired). */
+export const storeKnown = (g: Grocery, store: string): boolean => g.stores.includes(store) || !!g.retired?.includes(store);
+
 /** The list split by store, in the order of `stores`; items with no store come last. Empty stores are left out. With `sharing` on, stores shared with a group of other people come first, then your own, and `group` is the group a shared store
  *  defaults to; with it off the order is plain, whatever groups the data holds. */
 /** A value stored under a store's name (its tax or payer), or undefined. Only the map's own keys count: a store called "constructor" or "toString" must
@@ -128,7 +133,7 @@ export const gotLast = (items: GroceryItem[], m: GroceryMonth) => [...items.filt
 export const own = <T,>(map: Record<string, T> | undefined, key: string): T | undefined => map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
 
 export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { store: string; label: string; items: GroceryItem[]; group?: GroceryGroup }[] {
-  const out = g.stores.map(store => {
+  const out = [...g.stores, ...(g.retired ?? [])].map(store => { // a retired store has a section only in a past month that still names it
     const group = sharing ? g.groups?.find(x => x.people.some(p => !p.gone) && x.stores.includes(store)) : undefined;
     return { store, label: store, items: items.filter(i => i.store === store), ...(group ? { group } : {}) };
   });
@@ -136,7 +141,7 @@ export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { st
   out.splice(0, out.length, ...shared, ...out.filter(x => !x.group));
   // An item whose store is not in the list (a store removed on another device while this one added to it, an import into a full list) would vanish from the
   // screens, so it is shown under Anywhere.
-  out.push({ store: '', label: ANYWHERE, items: items.filter(i => !i.store || !g.stores.includes(i.store)) });
+  out.push({ store: '', label: ANYWHERE, items: items.filter(i => !i.store || !storeKnown(g, i.store)) });
   return out.filter(x => x.items.length);
 }
 
@@ -144,13 +149,13 @@ export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { st
  *  item's usual store. */
 export function storeFor(g: Grocery, item: GroceryItem, m: GroceryMonth): string {
   const s = m.lines[item.id]?.store;
-  const store = s !== undefined && (s === '' || g.stores.includes(s)) ? s : item.store;
+  const store = s !== undefined && (s === '' || storeKnown(g, s)) ? s : item.store;
   // An item whose own store is not in the list (removed on another device, an import into a full list) is under Anywhere, as byStore shows it, so the bills,
   // tax and shares count it there too.
-  return store === '' || g.stores.includes(store) ? store : '';
+  return store === '' || storeKnown(g, store) ? store : '';
 }
 /** The store a bought line of a removed item stays under: the one pinned on the line when the item was removed (so its bill and its store's tax stay), else Anywhere. */
-export const removedStore = (g: Grocery, l: GroceryLine): string => (l.store !== undefined && g.stores.includes(l.store) ? l.store : '');
+export const removedStore = (g: Grocery, l: GroceryLine): string => (l.store !== undefined && storeKnown(g, l.store) ? l.store : '');
 /** Stands in for an item that was removed, so its bought line is read like any other: no price of its own beyond the line's, the store it was pinned to. */
 export const removedItem = (g: Grocery, id: string, l: GroceryLine): GroceryItem => ({ id, n: '', store: removedStore(g, l), qty: 1, cents: null, every: true, out: false });
 /** The items as they sit in a month: each under the store it is bought at that month, so grouping, bills, tax and sharing all follow it. */
@@ -215,7 +220,8 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
   const keptIds = new Set([...Object.values(months).flatMap(m => Object.keys(m.lines)), ...Object.values(inc.months).flatMap(m => Object.keys(m.lines).filter(id => !listed.has(id)))]);
   // The stores go in first, so an item can be matched on the store it will have here: one whose store did not fit in a full list is kept under Anywhere (as
   // normGrocery would on the next load) and, importing the same file again, is matched there instead of being added a second time.
-  inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); changed = true; } });
+  inc.stores.forEach(s => { if (!g.stores.includes(s) && g.stores.length < MAX_STORES) { g.stores.push(s); if (g.retired?.includes(s)) g.retired = g.retired.filter(x => x !== s); changed = true; } });
+  (inc.retired ?? []).forEach(s => { if (!g.stores.includes(s) && !g.retired?.includes(s) && (g.retired?.length ?? 0) < MAX_STORES) { g.retired = [...(g.retired ?? []), s]; changed = true; } }); // history in the file may name them
   inc.items.forEach(raw => {
     const i = raw.store && !g.stores.includes(raw.store) ? { ...raw, store: '' } : raw;
     const same = g.items.find(x => x.n.toLowerCase() === i.n.toLowerCase() && x.store === i.store);

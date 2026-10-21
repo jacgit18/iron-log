@@ -62,7 +62,7 @@ export function normGroceryItem(x: unknown): GroceryItem | null {
 export function normGroceryStore(x: unknown): GroceryStore | null {
   const o = asObject(x);
   const n = o ? str(o.n ?? o.id, MAX_STORE) : '';
-  return n && n !== '__proto__' ? { id: n, n } : null;
+  return n && n !== '__proto__' ? { id: n, n, ...(o && o.retired === true ? { retired: true as const } : {}) } : null;
 }
 
 const exact = (v: unknown, max: number, allowEmpty = false) => typeof v === 'string' && v === v.trim() && v.length <= max && (allowEmpty || v.length > 0);
@@ -113,7 +113,7 @@ export function validGroceryItem(x: unknown): x is GroceryItem {
 
 export function validGroceryStore(x: unknown): x is GroceryStore {
   const o = asObject(x);
-  return !!o && exact(o.n, MAX_STORE) && o.id === o.n && o.n !== '__proto__';
+  return !!o && exact(o.n, MAX_STORE) && o.id === o.n && o.n !== '__proto__' && (o.retired === undefined || o.retired === true);
 }
 
 /** One month's list: ticks, counts and prices by item id, and the old `pulled` ids. At most MAX_ITEMS of each. */

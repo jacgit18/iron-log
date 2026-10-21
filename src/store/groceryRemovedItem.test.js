@@ -72,14 +72,15 @@ describe('removing an item bought this month', () => {
 });
 
 describe('edges of removing an item (independent review of M-04)', () => {
-  it('pins the store when the month’s own store no longer exists, so the item’s usual store (and its tax) is kept', async () => {
+  it('keeps the month’s own store when it was removed afterwards (retired), and pins it with the removed item', async () => {
     const { id, mk, m, money } = await setup();
     st().addGroceryStore('Lidl'); st().setGroceryLineStore(mk, id, 'Lidl');
-    st().removeGroceryStore('Lidl'); // allowed: no item has Lidl as its usual store; the line now reads as Aldi
-    expect(money()).toMatchObject({ spent: 1080, yours: 540, owed: 540 });
+    st().removeGroceryStore('Lidl'); // allowed: no item has Lidl as its usual store; this month still bought it there, so it is retired, not forgotten
+    expect(st().grocery.retired).toEqual(['Lidl']);
+    const before = money();
     st().removeGroceryItem(id);
-    expect(m().lines[id].store).toBe('Aldi');
-    expect(money()).toMatchObject({ spent: 1080, yours: 540, owed: 540 });
+    expect(m().lines[id].store).toBe('Lidl');
+    expect(money()).toEqual(before);
   });
   it('pins "just you" when there is no group or split, so a group made later does not reach back to the removed item', async () => {
     const lib = await import('../lib/grocery.js'); const settle = await import('../lib/grocerySettle.js');
