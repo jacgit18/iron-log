@@ -16,7 +16,7 @@ export function partiesOf(share: GroceryShare | null | undefined, storeGroup: Gr
     if (share.notMine && ids.length) return ids; // for others only: you pay now and are repaid in full
     return [ME, ...ids];
   }
-  if (storeGroup) return [ME, ...storeGroup.people.map(p => p.id).filter(id => known.has(id))];
+  if (storeGroup) return [ME, ...storeGroup.people.filter(p => !p.gone).map(p => p.id).filter(id => known.has(id))]; // a person who is gone is not in what is bought from now on
   return [ME];
 }
 

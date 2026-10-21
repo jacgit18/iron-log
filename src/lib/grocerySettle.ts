@@ -6,17 +6,21 @@ import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, Gro
    Turns what was bought in a month (ticked lines, packs priced one by one) into purchases with their parties, then into totals and a
    settle-up per store. Pure: no store, no screen. Money is whole cents (grocerySplit.ts). */
 
-/** The ids of everyone in any group, so a person who was removed is told apart from one who exists. */
+/** The ids of everyone in any group, people who are gone included (past months still name them), so a person who was deleted outright is told apart from one who exists. */
 export const knownPeople = (g: Grocery): Set<string> => new Set((g.groups ?? []).flatMap(x => x.people.map(p => p.id)));
+/** The ids of the people who are still in a group: who a new split can name. */
+export const activePeople = (g: Grocery): Set<string> => new Set((g.groups ?? []).flatMap(x => x.people.filter(p => !p.gone).map(p => p.id)));
 
-/** Everyone in any group, once each, in the order the groups list them. */
-export const allPeople = (g: Grocery): GroceryPerson[] => {
+/** Everyone in any group, once each, in the order the groups list them, people who are gone included: for naming someone a past month mentions. */
+export const everyone = (g: Grocery): GroceryPerson[] => {
   const seen = new Set<string>();
   return (g.groups ?? []).flatMap(x => x.people).filter(p => !seen.has(p.id) && !!seen.add(p.id));
 };
+/** The people you can still pick: everyone except those who are gone. */
+export const allPeople = (g: Grocery): GroceryPerson[] => everyone(g).filter(p => !p.gone);
 
 /** The group a store defaults to, if any. */
-export const groupOfStore = (g: Grocery, store: string): GroceryGroup | undefined => g.groups?.find(x => x.stores.includes(store));
+export const groupOfStore = (g: Grocery, store: string): GroceryGroup | undefined => g.groups?.find(x => !x.gone && x.stores.includes(store));
 
 /** Who paid for a store: the person recorded, or you when none is recorded or that person no longer exists. */
 export function payerOf(g: Grocery, m: GroceryMonth, store: string): string {
@@ -26,8 +30,8 @@ export function payerOf(g: Grocery, m: GroceryMonth, store: string): string {
 
 /** Who shares an item this month, most specific first: the pack's own share, the line's, the item's, the store's group, else just you. */
 export function partiesFor(g: Grocery, item: GroceryItem, line?: GroceryLine, pack?: number): string[] {
-  const own = (pack !== undefined ? line?.packShares?.[pack] : undefined) ?? line?.share ?? item.share;
-  return partiesOf(own, groupOfStore(g, item.store), knownPeople(g));
+  const set = (pack !== undefined ? line?.packShares?.[pack] : undefined) ?? line?.share; // chosen for this line or pack (or pinned there): it keeps the people it names, gone or not
+  return partiesOf(set ?? item.share, groupOfStore(g, item.store), set ? knownPeople(g) : activePeople(g)); // the item's usual split and the store's group leave out people who are gone
 }
 
 /** A short label for a split: Just me, Me +2, or Not mine. */
@@ -55,7 +59,7 @@ export function purchasesOf(g: Grocery, m: GroceryMonth): MonthPurchase[] {
 }
 
 /** Whether the list has any sharing set up, so the screens that show it can stay as they were for everyone else. */
-export const hasSharing = (g: Grocery): boolean => (g.groups?.length ?? 0) > 0;
+export const hasSharing = (g: Grocery): boolean => (g.groups ?? []).some(x => !x.gone);
 
 /** The stores that have something bought this month, in the list's order, with the no-store group last (`''`). */
 export function storesBought(g: Grocery, purchases: readonly MonthPurchase[]): string[] {
