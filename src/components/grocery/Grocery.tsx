@@ -11,7 +11,7 @@ import GrocerySpend from './GrocerySpend.js';
 import PriceChips from './PriceChips.js';
 import SharePicker from './SharePicker.js';
 import SharingGroups from './SharingGroups.js';
-import SplitSummary from './SplitSummary.js';
+import SplitSection from './SplitSection.js';
 import StoreTax from './StoreTax.js';
 import { MonthMoney, StoreMoney } from './StoreMoney.js';
 import useDockHeight from './useDockHeight.js';
@@ -149,6 +149,8 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   // panel must stay open so a price can still be typed after the tick (which also opens the fold).
   const [openIds, setPanels] = useIdSet(); // Expand all / Collapse all and one row, by id
   const [boughtOpen, setBoughtOpen] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false); // the folded split section at the bottom; closed each time To get opens
+  const openSplit = () => { setSplitOpen(true); window.setTimeout(() => document.getElementById(`groc-split-${mk}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 0); }; // the money line over the list opens it and takes you there
   const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
   const [ticked, setTicked] = useState<{ id: string; name: string; mk: string; t: number } | null>(null); // the item just ticked bought, for the Undo notice
   const setPanel = (id: string, on: boolean) => setPanels([id], on);
@@ -177,7 +179,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       <p className="note" id="groc-summary" role="status">
         {t.count ? <>{`Got ${t.got} of ${t.count} · Spent ${money(t.spent)}${t.taxed ? ' with tax' : ''} · Expected ${money(t.planned)}`}{t.unpriced > 0 && <>{' · '}<span className="gwarn">{t.unpriced} without a price</span></>}</> : off > 0 ? 'Nothing planned yet. Items you add on At home show up here.' : 'Nothing on this month’s list.'}
       </p>
-      {split && <MonthMoney g={g} month={month} />}
+      {split && <MonthMoney g={g} month={month} onOpen={openSplit} />}
       {!t.count && off === 0 && <p className="note">Add what you buy on <b>At home</b>. Tick an item there when you have it and it comes off this month’s list.</p>}
       {current && todo.length > 0 && (
         <div className="gskiprow">
@@ -218,7 +220,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
           ))}
         </details>
       )}
-      {split && <SplitSummary g={g} month={month} mk={mk} />}
+      {split && <SplitSection g={g} month={month} mk={mk} open={splitOpen} onToggle={setSplitOpen} />}
       {ticked && ticked.mk === mk && (
         <div className="gtickednote">
           <Notice kind="undo" expire={{ ms: UNDO_MS, onExpire: () => setTicked(null), key: ticked.t }}

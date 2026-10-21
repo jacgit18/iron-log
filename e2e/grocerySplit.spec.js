@@ -1,6 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
+// The split card sits folded at the bottom of To get; these specs read it, so each opens it first (a page with no split section has nothing to open).
+const openSplit = async page => { const t = page.locator('.gsplittoggle'); if ((await t.count()) && (await t.getAttribute('aria-expanded')) === 'false') await t.click(); };
+
 // Sharing groceries with other people (ADR 059), from the phone's side. Open to everyone: an account that is not an admin sees the grocery
 // list exactly as before. The fixed date is in September 2026, so the month below is 2026-09.
 const item = (id, n, store, cents) => ({ id, n, store, qty: 1, cents, every: true, out: false });
@@ -18,7 +21,7 @@ const seed = async (page, { admin = true } = {}) => {
     localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(MONTH));
   }, { admin, CATALOGUE, MONTH });
   await page.reload();
-  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
 };
 const split = page => page.getByRole('region', { name: 'Splitting this month' });
 
@@ -34,7 +37,7 @@ test('an admin sees who owes what, and changing who shares a pack updates it and
   await page.locator('details.gshare', { has: page.getByLabel(/for Chicken pack 2/) }).getByLabel('Sister').check();
   await expect(page.getByLabel('Shared with, for Chicken pack 2: Me +1')).toBeVisible();
   await expect(split(page).getByText('Sister owes you').locator('xpath=following-sibling::span')).toHaveText('$15.96');
-  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
   await expect(split(page).getByText('Sister owes you').locator('xpath=following-sibling::span')).toHaveText('$15.96');
 });
 
@@ -65,7 +68,7 @@ test('the Spending view shows your share and says what you paid', async ({ page 
 test('groups are made from the Sharing button on At home, and a store can default to one', async ({ page }) => {
   await seed(page);
   await page.evaluate(() => { const c = JSON.parse(localStorage.getItem('ironlog:grocery/main')); delete c.groups; localStorage.setItem('ironlog:grocery/main', JSON.stringify(c)); });
-  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.reload(); await page.click('#tab-daily'); await page.click('#daily-grocery'); await openSplit(page);
   await expect(split(page)).toHaveCount(0); // no group yet: nothing is split
   await page.click('#groc-view-home'); await page.click('#groc-sharing');
   await page.getByLabel('New group', { exact: true }).fill('Home');
@@ -73,7 +76,7 @@ test('groups are made from the Sharing button on At home, and a store can defaul
   await page.getByRole('button', { name: 'Add group' }).click();
   await page.getByLabel('Sam’s share is already paid').check();
   await page.getByRole('group', { name: 'Stores that split with Home by default' }).getByLabel("BJ's").check();
-  await page.click('#groc-sharing'); await page.click('#groc-view-get');
+  await page.click('#groc-sharing'); await page.click('#groc-view-get'); await openSplit(page);
   await expect(split(page)).toBeVisible();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:grocery/main')).groups[0]);
   expect(saved).toMatchObject({ n: 'Home', stores: ["BJ's"], people: [{ n: 'Sam', covered: true }, { n: 'Pat' }] });
