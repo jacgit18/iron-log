@@ -180,7 +180,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   });
   app.post('/api/account/delete', rateLimit(limits.account, undefined, byUser), async (req, res) => {
     const email = (res.locals.account as Account).email;
-    const purge = auth && email ? async () => void (await (await auth.$context).internalAdapter.deleteVerificationByIdentifier(`sign-in-otp-${email.toLowerCase()}`)) : undefined;
+    // Better Auth keeps a code under `<kind>-otp-<email>`; every kind is cleared, so nothing carrying the address is left after the account goes.
+    const purge = auth && email ? async () => { const adapter = (await auth.$context).internalAdapter; for (const kind of ['sign-in', 'email-verification', 'forget-password']) await adapter.deleteVerificationByIdentifier(`${kind}-otp-${email.toLowerCase()}`); } : undefined;
     const result = await deleteMyAccount(db!, String(res.locals.userId), req.body, purge);
     res.status(result.status).json(result.body);
   });

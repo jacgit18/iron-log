@@ -21,7 +21,7 @@ export async function eraseMyData(db: Kysely<DB>, userId: string, body: unknown)
   return { status: 200, body: { ok: true } };
 }
 
-/** Removes the person's emailed sign-in code, which Better Auth keeps under `sign-in-otp-<email>`. */
+/** Removes the person's emailed codes, which Better Auth keeps under `<kind>-otp-<email>` (app.ts clears every kind). */
 export type PurgeCodes = () => Promise<void>;
 
 export async function deleteMyAccount(db: Kysely<DB>, userId: string, body: unknown, purgeCodes?: PurgeCodes): Promise<AccountResult> {
