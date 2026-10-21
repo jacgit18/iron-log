@@ -10,6 +10,7 @@ import type { Grocery, GroceryData, GroceryGroup, GroceryItem, GroceryLine, Groc
    A month with no saved document has nothing ticked, so each month starts fresh with every item on it and nothing is copied or reset.
    Prices are whole cents, so totals never drift. The cleaning rules live in shared/grocery.ts, which the API uses too. */
 
+export { paidKey } from '../shared/grocery.js';
 export { MAX_CENTS, MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_PRICES, MAX_QTY, MAX_STORES, MONTH_RE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, monthEmpty, normGroceryMonth } from '../shared/grocery.js';
 export const ANYWHERE = 'Anywhere';
 /** Stores offered in the drop-downs before you have used them; picking one adds it to your stores. */
@@ -232,14 +233,14 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     const lines: Record<string, GroceryLine> = {};
     Object.entries(fm.lines).forEach(([id, l]) => { const to = map.get(id); if (to) lines[to] = l; });
     const pulled = fm.pulled.map(id => map.get(id)).filter((x): x is string => !!x);
-    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}), ...(fm.tax ? { tax: fm.tax } : {}) };
+    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}), ...(fm.tax ? { tax: fm.tax } : {}), ...(fm.paid ? { paid: fm.paid } : {}) };
     if (monthEmpty(m)) return;
     const have = months[k];
     if (!have) { months[k] = m; changed = true; return; }
     const mergedLines = { ...m.lines, ...have.lines }; const mergedPulled = [...new Set([...have.pulled, ...m.pulled])];
-    const mergedPayer = { ...m.payer, ...have.payer }; const mergedTax = { ...m.tax, ...have.tax }; // what is here wins, per store
-    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length || Object.keys(mergedPayer).length !== Object.keys(have.payer ?? {}).length || Object.keys(mergedTax).length !== Object.keys(have.tax ?? {}).length) {
-      months[k] = { lines: mergedLines, pulled: mergedPulled, ...(Object.keys(mergedPayer).length ? { payer: mergedPayer } : {}), ...(Object.keys(mergedTax).length ? { tax: mergedTax } : {}) }; changed = true;
+    const mergedPayer = { ...m.payer, ...have.payer }; const mergedTax = { ...m.tax, ...have.tax }; const mergedPaid = { ...m.paid, ...have.paid }; // what is here wins, per store (and per settled mark)
+    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length || Object.keys(mergedPayer).length !== Object.keys(have.payer ?? {}).length || Object.keys(mergedTax).length !== Object.keys(have.tax ?? {}).length || Object.keys(mergedPaid).length !== Object.keys(have.paid ?? {}).length) {
+      months[k] = { lines: mergedLines, pulled: mergedPulled, ...(Object.keys(mergedPayer).length ? { payer: mergedPayer } : {}), ...(Object.keys(mergedTax).length ? { tax: mergedTax } : {}), ...(Object.keys(mergedPaid).length ? { paid: mergedPaid } : {}) }; changed = true;
     }
   });
   return { grocery: g, months, changed };

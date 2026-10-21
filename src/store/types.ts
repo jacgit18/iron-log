@@ -294,6 +294,7 @@ export interface GrocerySlice {
   setGroceryPackShare(month: string, id: string, index: number, share: GroceryShare | null): void; // one pack of an item priced pack by pack
   setGroceryTax(month: string, store: string, cents: number | null): void; // the receipt's sales tax for that store this month, in cents; null clears it
   setGroceryPayer(month: string, store: string, personId: string | null): void; // who paid for that store this month; null is you
+  setGroceryPaid(month: string, store: string, person: string, paid: boolean): void; // an owed amount of that store this month has (or has not) been settled outside the app; amounts never change
 }
 
 export interface WellnessSlice {

@@ -1,5 +1,5 @@
 import { money } from '../../lib/grocery.js';
-import { monthOwes, monthShare, purchasesOf, storeSettlement } from '../../lib/grocerySettle.js';
+import { monthOwes, monthShare, purchasesOf, storeSettlement, storeStatus } from '../../lib/grocerySettle.js';
 import type { Grocery, GroceryMonth } from '../../types.ts';
 import './StoreMoney.css';
 
@@ -16,10 +16,11 @@ export function MonthMoney({ g, month }: { g: Grocery; month: GroceryMonth }) {
 export function StoreMoney({ g, month, store }: { g: Grocery; month: GroceryMonth; store: string }) {
   const purchases = purchasesOf(g, month);
   if (!purchases.some(p => p.store === store)) return null;
-  const st = storeSettlement(g, month, store, purchases);
+  const st = storeSettlement(g, month, store, purchases); const t = storeStatus(g, month, store, purchases); // what is still owed: amounts marked settled are left out
+  const involvesYou = t.rows.some(r => r.kind !== 'owesPayer');
   return (
     <p className="note gstoremoney">
-      Bought {money(st.bill)}{st.tax > 0 ? ` (tax ${money(st.tax)})` : ''} · Your share {money(st.yourShare)}{st.owedToYou > 0 ? ` · Owed to you ${money(st.owedToYou)}` : ''}{st.youOwe > 0 ? ` · You owe ${money(st.youOwe)}` : ''}
+      Bought {money(st.bill)}{st.tax > 0 ? ` (tax ${money(st.tax)})` : ''} · Your share {money(st.yourShare)}{t.owed > 0 ? ` · Owed to you ${money(t.owed)}` : ''}{t.youOwe > 0 ? ` · You owe ${money(t.youOwe)}` : ''}{involvesYou && t.outstanding === 0 ? ' · Settled ✓' : ''}
     </p>
   );
 }
