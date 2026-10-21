@@ -22,6 +22,15 @@ describe('refusedPayload', () => {
     expect(JSON.parse(out)).toEqual({ id: 'a\ufffdb', 'k\ufffd': 1 });
   });
 
+  it('does not cut an emoji in half when it shortens a long payload', () => {
+    for (let pad = 0; pad < 2; pad++) {
+      const out = refusedPayload({ weekStart: 'x'.repeat(pad) + '\u{1F600}'.repeat(2000) });
+      expect(out.length).toBeLessThanOrEqual(REFUSED_PAYLOAD_MAX + 50);
+      expect(() => JSON.parse(out)).not.toThrow();
+      expect(JSON.parse(out).head).not.toMatch(/[\ud800-\udbff]$/);
+    }
+  });
+
   it('copes with a payload that is not an object', () => {
     for (const v of [null, undefined, 5, 'x', []]) expect(() => JSON.parse(refusedPayload(v))).not.toThrow();
   });

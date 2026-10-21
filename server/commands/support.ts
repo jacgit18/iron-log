@@ -45,7 +45,7 @@ function scrubbed(input: unknown): unknown {
 export const REFUSED_PAYLOAD_MAX = 1000;
 export function refusedPayload(input: unknown): string {
   const text = (JSON.stringify(scrubbed(input)) ?? 'null').replace(/\\u0000/g, '\\ufffd');
-  return text.length <= REFUSED_PAYLOAD_MAX ? text : JSON.stringify({ truncated: true, size: text.length, head: text.slice(0, REFUSED_PAYLOAD_MAX - 100) });
+  return text.length <= REFUSED_PAYLOAD_MAX ? text : JSON.stringify({ truncated: true, size: text.length, head: text.slice(0, REFUSED_PAYLOAD_MAX - 100).replace(/[\ud800-\udbff]$/, '') });
 }
 
 export async function refuse(trx: Transaction<DB>, userId: string, command: string, env: { clientId?: string; input: unknown }, reason: string, clientVersion: string | null) {

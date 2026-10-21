@@ -16,11 +16,11 @@ const RETRY_AFTER_SECONDS = 5;
 // Postgres class 08 (connection), 53 (out of resources), 57 (shutdown, cancelled query, 57014 statement timeout), 40 (rolled back) and the Node socket errors.
 const TRANSIENT_CODE = /^(08|53|57|40)/;
 const SOCKET_CODES = new Set(['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'EPIPE', 'ENOTFOUND']);
-// Postgres class 22 (data exception: a NUL byte in text 22021, an escape jsonb cannot hold 22P05, a number out of range) and 54001 (statement too complex: JSON
+// Postgres 22021 (a NUL byte in text), 22P05 (an escape jsonb cannot hold) and 54001 (statement too complex: JSON
 // nested thousands deep) mean the request carried something the database cannot store; JSON nested so deep that Node's own JSON.stringify runs out of stack
 // (a RangeError) is the same kind of mistake. That is the sender's mistake, not a server failure, so it is a 422
 // and does not raise the 5xx alert or add a row to the issue store (code audit S-04).
-const DATA_ERROR = /^(22|54001$)/;
+const DATA_ERROR = /^(22021|22P05|54001)$/;
 
 interface Failure {
   status?: number;
@@ -67,7 +67,8 @@ export function errorHandler(record?: RecordIssue): ErrorRequestHandler {
     // A 4xx Express or body-parser already chose (a bad percent-escape in a path, an unsupported charset) is the client's mistake, not ours.
     const given = failure.status ?? failure.statusCode;
     const clientError = given !== undefined && given >= 400 && given < 500 ? given : null;
-    const tooDeep = err instanceof RangeError && /call stack/i.test(err.message);
+    // Only when the overflow came out of JSON.stringify of the request's own content; a recursion bug elsewhere on the server stays a 500.
+    const tooDeep = err instanceof RangeError && /call stack/i.test(err.message) && /stringify/.test(err.stack ?? '');
     const dataError = !badBody && !clientError && ((failure.code !== undefined && DATA_ERROR.test(failure.code)) || tooDeep);
     const status = tooBig ? 413 : badBody ? 400 : clientError ?? (dataError ? 422 : trouble ? 503 : 500);
     console.error(JSON.stringify({
