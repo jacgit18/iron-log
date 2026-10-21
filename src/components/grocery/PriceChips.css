@@ -6,6 +6,8 @@
   flex: 1 1 100%;
   flex-direction: column;
   gap: var(--sp-6);
+  min-width: 0;
+  max-width: 100%;
 }
 .gchipslab {
   font-size: var(--fs-xs);
@@ -36,10 +38,12 @@
 }
 .gchipadd {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-6);
 }
+/* The box keeps 4rem and the button wraps under it at a large text size, so opening every row never makes the page scroll sideways. */
 .gchipin {
-  flex: 1 1 auto;
+  flex: 1 1 4rem;
   min-width: 0;
   min-height: 44px;
 }

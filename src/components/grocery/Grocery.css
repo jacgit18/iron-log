@@ -185,7 +185,10 @@
   margin-top: var(--sp-4);
 }
 .gqty {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  gap: var(--sp-4);
   margin-left: auto;
   max-width: 100%;
   min-height: 44px;
@@ -342,7 +345,7 @@
   flex: none;
 }
 .gedit .gname {
-  flex: 1 1 10em;
+  flex: 1 1 5rem;
   min-width: 0;
   min-height: 44px;
 }
@@ -569,5 +572,69 @@ html:has(.gdock) body .toasts {
   .gmore {
     padding-left: 0;
   }
+}
+
+/* The arrow that opens and closes a row (edit rows, and inside the count and price pill on To get), and Expand all on a store's heading. */
+.garrow {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-lg);
+  cursor: pointer;
+}
+.gedit .garrow {
+  margin-left: auto;
+}
+.gqty .icon {
+  flex: none;
+  color: var(--muted);
+}
+.gstoremeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-4) var(--sp-8);
+}
+.gstoremeta .btn,.gstorehead>.gall {
+  min-height: 44px;
+}
+.gstorehead:has(.gall) {
+  align-items: center;
+}
+
+/* An edit row closed to one line: tick, name (opens it), a chip for a unit or its own split, the arrow. The name keeps 5rem; the chips wrap under it at a large text size. */
+.gedit.gedshut {
+  gap: var(--sp-4) var(--sp-8);
+  padding: 0;
+}
+.gedname {
+  flex: 1 1 0;
+  min-width: 5rem;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gedit.gedshut .gsplittag,.gedit.gedshut .gchip {
+  margin-left: 0;
+}
+.gedrow .gfield {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+.gedrow .gnum {
+  width: 100%;
 }
 }
