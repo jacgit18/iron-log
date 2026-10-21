@@ -1,6 +1,8 @@
-import { lineCost, lineOf, own, paidKey, shiftMonth, storeFor } from './grocery.js';
-import { ME, partiesOf, settle, type Purchase, type SettleRow, type Settlement } from './grocerySplit.js';
+import { lineCost, lineOf, own, shiftMonth, storeFor } from './grocery.js';
+import { ME, partiesOf, settle, type Purchase, type Settlement } from './grocerySplit.js';
 import type { Grocery, GroceryGroup, GroceryItem, GroceryLine, GroceryMonth, GroceryPerson } from '../types.ts';
+import { paidKey } from './grocery.js';
+import type { SettleRow } from './grocerySplit.js';
 
 /* ---------- A month of groceries, split ----------
    Turns what was bought in a month (ticked lines, packs priced one by one) into purchases with their parties, then into totals and a
