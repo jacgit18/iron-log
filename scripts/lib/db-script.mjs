@@ -60,6 +60,14 @@ export async function applyAppRole(client, role, passwordEnv) {
   }
 }
 
+/** The host the pg driver will connect to for this URL, in one spelling (lower case, no trailing dot). It is not `new URL(url).hostname`: for a postgres: URL that
+ *  keeps the case and any percent-escapes, and ignores a `?host=` parameter, which pg lets replace the host before the @, so such a URL could name one machine to
+ *  the guard and connect to another (code review R-01). Asking the driver itself cannot disagree with what it then does. */
+export function connectHost(url) {
+  const host = new pg.Client({ connectionString: url }).host;
+  return typeof host === 'string' ? host.toLowerCase().replace(/\.+$/, '') : '';
+}
+
 // Neon's pooled address is the same compute as the direct one with "-pooler" in the first label.
 export const sameHost = h => h.replace(/-pooler(?=\.)/, '');
 
@@ -73,11 +81,12 @@ export function productionUrl() {
 
 /** Run before any connection is made, so a refused URL is never even contacted. `urlName` is the environment variable the URL came from. */
 export function guardHost(url, host, urlName) {
-  const actual = new URL(url).hostname;
-  if (actual !== host) fail(`--host ${host} does not match the host in ${urlName} (${actual}). Nothing was changed.`);
+  const actual = connectHost(url);
+  if (!actual) fail(`The host in ${urlName} cannot be read. Nothing was changed.`);
+  if (actual !== host.toLowerCase().replace(/\.+$/, '')) fail(`--host ${host} does not match the host in ${urlName} (${actual}). Nothing was changed.`);
   // The typed host only catches a typo; this is what stops the production URL being used here, which would sign everyone out and mark
   // production as another environment.
   const prod = productionUrl();
   if (!prod) fail('Cannot tell which database is production: set PROD_DATABASE_URL (or DATABASE_URL_UNPOOLED in .env) so this can refuse it. Nothing was changed.');
-  if (sameHost(new URL(prod).hostname) === sameHost(actual)) fail(`${actual} is production's database. Nothing was changed.`);
+  if (sameHost(connectHost(prod)) === sameHost(actual)) fail(`${actual} is production's database. Nothing was changed.`);
 }
