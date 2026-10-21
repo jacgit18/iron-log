@@ -44,7 +44,7 @@ beforeEach(async () => {
 
 const dev = (user: string) => ({ 'x-dev-user': user, 'x-client-version': 'test-1', 'content-type': 'application/json' });
 const post = (path: string, body: unknown, user = 'ann') => fetch(`${base}/api/push${path}`, { method: 'POST', headers: dev(user), body: JSON.stringify(body) });
-const endpointOf = (n: number) => `https://push.example/device-${n}`;
+const endpointOf = (n: number) => `https://fcm.googleapis.com/fcm/send/device-${n}`;
 const sub = (n: number) => ({ endpoint: endpointOf(n), keys: { p256dh: `k${n}`, auth: `a${n}` } });
 const rows = () => owner.selectFrom('push_subscription').innerJoin('users', 'users.id', 'push_subscription.user_id').select(['push_subscription.endpoint', 'push_subscription.p256dh', 'users.auth_user_id']).orderBy('push_subscription.id').execute();
 
@@ -74,6 +74,13 @@ describe('subscribe and unsubscribe', () => {
     expect(res.status).toBe(422);
     expect(((await res.json()) as { error: string }).error).toMatch(/endpoint/);
     expect(await rows()).toEqual([]);
+  });
+  // Audit S-02: the server POSTs to a stored endpoint, so an endpoint is taken only on a push service's own host.
+  it.each(['https://127.0.0.1:9/x', 'https://localhost/x', 'https://[::1]/x', 'https://10.0.0.5/admin', 'https://169.254.169.254/computeMetadata/v1/', 'https://metadata.google.internal/x', 'https://user:pass@internal.svc:8443/hook?a=b', 'https://push.example/device-1'])('refuses to subscribe an endpoint that is not a push service: %s', async endpoint => {
+    const res = await post('/subscribe', { endpoint, keys: { p256dh: 'k', auth: 'a' } });
+    expect(res.status).toBe(422);
+    expect(await rows()).toEqual([]);
+    expect((await post('/schedule', { endpoint, kind: 'rest', key: 'k1', at: Date.now() + 60_000, body: 'Rest over.' })).status).toBe(422);
   });
   it('moves a shared phone to the account that subscribes last', async () => {
     await post('/subscribe', sub(1), 'ann');
