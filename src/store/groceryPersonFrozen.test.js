@@ -144,3 +144,16 @@ describe('edges found by the independent review', () => {
     expect(shared.normGroceryGroup({ id: 'g', n: 'Big', stores: [], people }).people).toHaveLength(12);
   });
 });
+
+describe('after the only group is removed (overnight closing audit Y-2)', () => {
+  it('still counts as sharing, so the money for past months stays visible, and offers nobody to pick', async () => {
+    const settle = await import('../lib/grocerySettle.js');
+    const { gid, owed, last } = await setup();
+    expect(settle.hasSharing(st().grocery)).toBe(true);
+    st().removeGroceryGroup(gid);
+    expect(st().grocery.groups[0].gone).toBe(true);
+    expect(settle.hasSharing(st().grocery)).toBe(true); // To get keeps its money line, the split section and the Spending share line
+    expect(owed(last)).toBe(500);
+    expect(settle.allPeople(st().grocery)).toEqual([]); // nobody to pick: the share pickers hide themselves
+  });
+});

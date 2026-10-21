@@ -239,7 +239,7 @@ export type ListName = (typeof LIST_NAMES)[number];
 export type ListItem = Stretch | StretchExperiment | Experiment | SupplementItem | GroceryItem | GroceryStore | GroceryGroup;
 
 /** The most live items a list may hold, where there is a limit (the grocery list's, ADR 039). The API refuses a new item past it. */
-export const LIST_CAPS: Partial<Record<ListName, number>> = { grocery_item: 500, grocery_store: 30, grocery_group: 10 };
+export const LIST_CAPS: Partial<Record<ListName, number>> = { grocery_item: 500, grocery_store: 30, grocery_group: 20 }; // 10 groups in use and as many again that are gone (ADR 061)
 
 /** Save one item of a list, keyed by the list and the item's own id. `position` is where it sits in the list (0 is first);
  *  moving an item is a save of each item whose position changed. baseVersion is the version the user saw, or null when
