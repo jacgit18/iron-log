@@ -1,0 +1,60 @@
+name: Dependency scan
+
+# Rule: dependency-security.md. An AI agent (or a person) can add a vulnerable, malicious or typosquatted package without noticing; this blocks it before merge.
+#   audit       known high or critical advisories in production dependencies fail the run; dev dependencies are reported (a project with old dev findings can tighten later)
+#   review      GitHub dependency review: a PR that adds a package with a known vulnerability fails, and the whole delta shows in the run (needs the dependency graph, on by default for public repos)
+#   new-package scripts/dep-vet.mjs: a package that is new to package.json must not be days old, near-zero downloads, unknown to the registry or a lookalike of a popular name,
+#               unless the PR description carries "Dependency approval: <name>" written by the owner after checking it
+# It also runs weekly, so an advisory published after a merge still shows up. Only the package.json at the repository root is scanned; add paths for other manifests.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Production dependencies have no known high or critical advisory
+        run: npm audit --omit=dev --audit-level=high
+      - name: Development dependencies are reported only
+        run: npm audit --audit-level=high || echo "::warning title=Dev dependency advisories::npm audit reports high or critical advisories in development dependencies (not blocking)."
+
+  review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  new-package:
+    if: github.event_name == 'pull_request' && !contains(fromJSON('["dependabot[bot]", "github-actions[bot]"]'), github.event.pull_request.user.login)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Vet the packages this PR adds
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/dep-vet.mjs --base "origin/$BASE_REF" --pr-body "$PR_BODY"
