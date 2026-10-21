@@ -38,7 +38,7 @@ test('the money line over the list opens it and brings it into view', async ({ p
   await page.click('#groc-bought summary'); // a longer page, so the section starts below the first screen
   await page.locator('#groc-money').click();
   await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('#groc-money')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#groc-money')).not.toHaveAttribute('aria-expanded', /.*/); // it opens the section, it does not toggle
   await expect(toggle(page)).toBeFocused(); // the next Tab goes inside the section
   await expect(page.locator('.gsplitcard')).toBeInViewport();
 });

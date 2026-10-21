@@ -241,6 +241,9 @@
 .gget.got .gqty {
   color: var(--muted);
 }
+.gmore[hidden] {
+  display: none;
+}
 .gmore {
   display: flex;
   flex-wrap: wrap;
