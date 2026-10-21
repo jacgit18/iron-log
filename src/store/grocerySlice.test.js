@@ -77,7 +77,7 @@ describe('the catalogue', () => {
     st().setGroceryPrices(mk, 'beef', [1, -5]); st().setGroceryPrices(mk, 'beef', []); // not prices: ignored
     expect(st().groceryMonths[mk].lines.beef.prices).toEqual([899, 1049, 925]);
     st().setGroceryQty(mk, 'beef', 2);
-    expect(st().groceryMonths[mk].lines.beef).toEqual({ got: true, qty: 2 });
+    expect(st().groceryMonths[mk].lines.beef).toEqual({ got: true, qty: 2, unpriced: true }); // a bought line with no price stays unpriced (audit G-1)
     st().setGroceryPrices(mk, 'beef', [500]); st().setGroceryCents(mk, 'beef', 700);
     expect(st().groceryMonths[mk].lines.beef.prices).toBeUndefined();
     st().setGroceryPrices(mk, 'beef', [500]); st().setGroceryPrices(mk, 'beef', null);

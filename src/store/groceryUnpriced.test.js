@@ -101,3 +101,49 @@ describe('the mark in saved data and sync', () => {
     expect(line.b).toEqual({ got: true });
   });
 });
+
+describe('the unpriced mark, loose ends (overnight audit G-1 and G-4)', () => {
+  it('typing a count on a bought line priced pack by pack keeps what it was bought at: the item’s price as it is then, so a later price change does not reach back', async () => {
+    const { lib, id, last, spent } = await setup('5.00');
+    st().setGroceryGot(last, id, true);
+    st().setGroceryPrices(last, id, [899, 1049]); // priced pack by pack: $19.48
+    expect(spent(last)).toBe(1948);
+    st().setGroceryQty(last, id, 3); // back to one price for all: the item's $5.00
+    expect(spent(last)).toBe(1500);
+    expect(st().groceryMonths[last].lines[id]).toMatchObject({ got: true, qty: 3, cents: 500 });
+    st().updateGroceryItem(id, { cents: 1000 });
+    expect(spent(last)).toBe(1500); // not $30.00
+    expect(lib.lineOf(st().grocery.items[0], st().groceryMonths[last]).cents).toBe(500);
+  });
+  it('a count on a bought line of an item with no price stays unpriced', async () => {
+    const { id, last, spent } = await setup();
+    st().setGroceryGot(last, id, true);
+    st().setGroceryQty(last, id, 2);
+    expect(st().groceryMonths[last].lines[id].unpriced).toBe(true);
+    st().updateGroceryItem(id, { cents: 700 });
+    expect(spent(last)).toBe(0);
+  });
+  it('a count on a line not bought leaves it alone', async () => {
+    const { id, mk } = await setup('5.00');
+    st().setGroceryQty(mk, id, 2);
+    expect(st().groceryMonths[mk].lines[id]).toEqual({ qty: 2 });
+  });
+  it('unticking on At home drops the mark with the purchase, so the item reads at its price again', async () => {
+    const { lib, id, last } = await setup();
+    st().setGroceryGot(last, id, true);
+    expect(st().groceryMonths[last].lines[id].unpriced).toBe(true);
+    st().setGroceryHave(last, id, false);
+    st().updateGroceryItem(id, { cents: 500 });
+    expect(st().groceryMonths[last]?.lines[id]?.unpriced).toBeUndefined();
+    expect(lib.lineOf(st().grocery.items[0], st().groceryMonths[last] ?? lib.emptyMonth()).cents).toBe(500);
+  });
+  it('a count typed on a line bought unpriced does not pick up a price the item got later (closing audit X-7)', async () => {
+    const { id, last, spent } = await setup();
+    st().setGroceryGot(last, id, true); // bought with no price
+    st().updateGroceryItem(id, { cents: 400 }); // priced afterwards
+    st().setGroceryQty(last, id, 2);
+    expect(st().groceryMonths[last].lines[id]).toMatchObject({ qty: 2, unpriced: true });
+    expect(st().groceryMonths[last].lines[id].cents).toBeUndefined();
+    expect(spent(last)).toBe(0);
+  });
+});
