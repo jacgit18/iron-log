@@ -1,3 +1,4 @@
+import './LogSheet.css';
 import type { EquipmentId, LogEntry, LogSet, PhaseKey } from '../../types.ts';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -138,17 +139,17 @@ export default function LogSheet({ slotId, idx }: { slotId: string; idx: number 
         <button type="submit" className="btn primary">Save set</button>
       </div>
       {hist.length > 0 && (
-        <div>
+        <div className="hist-box">
           <div className="sect sect-tight">Recent</div>
-          <table className="hist">
-            <thead><tr><th>Date</th><th>Phase</th><th className="num">Load</th><th className="num">Sets</th></tr></thead>
-            <tbody>
+          <table className="hist hist-recent" role="table">
+            <thead role="rowgroup"><tr role="row"><th role="columnheader">Date</th><th role="columnheader">Phase</th><th role="columnheader" className="num">Load</th><th role="columnheader" className="num">Sets</th></tr></thead>
+            <tbody role="rowgroup">
               {hist.map((e, i) => (
-                <tr key={i}>
-                  <td>{fmtShort(parseDate(e.d))}</td>
-                  <td>{e.ph ? PHASES[e.ph].label : '—'}</td>
-                  <td className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
-                  <td className="num">{volText(e)}</td>
+                <tr role="row" key={i}>
+                  <td role="cell">{fmtShort(parseDate(e.d))}</td>
+                  <td role="cell">{e.ph ? PHASES[e.ph].label : '—'}</td>
+                  <td role="cell" className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
+                  <td role="cell" className="num">{volText(e)}</td>
                 </tr>
               ))}
             </tbody>
