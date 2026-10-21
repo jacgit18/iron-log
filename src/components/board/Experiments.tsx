@@ -2,7 +2,7 @@ import { useState, type DragEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, exInfo } from '../../lib/data.js';
-import { DAYS, colOf, lastLog, describe, todayCol } from '../../lib/logic.js';
+import { DAYS, colOf, describe, lastSession, todayCol } from '../../lib/logic.js';
 import { ymd, weekStartOf } from '../../shared/dates.js';
 import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import ExperimentCard from '../ExperimentCard.jsx';
@@ -38,7 +38,7 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
       {!items.length ? <p className="note">Keep exercises you want to try here, then add them to a day.</p> : !shown.length ? <p className="note">No exercise matches. Clear the search.</p> : (
         <ul className="explist">
           {shown.map(e => {
-            const n = exInfo(cfg, e.ex).n; const last = lastLog(logs, e.ex);
+            const n = exInfo(cfg, e.ex).n; const last = lastSession(logs, e.ex); // a ticked-off card writes an auto entry for a weight never lifted; only a session you logged is "Last"
             const on = [...new Set((week.extra || []).filter(x => x.ex === e.ex).map(x => colOf(week, week.moved?.[x.id] || x.day)))].sort((a, b) => a - b); // the days of this week it is already on, where a dragged card now sits
             const to = days.includes(pick[e.id]) ? pick[e.id] : def;
             return (

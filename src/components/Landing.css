@@ -97,7 +97,7 @@
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(17rem,1fr));
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,17rem),1fr));
   gap: var(--sp-12);
 }
 .landing-list li {
@@ -118,7 +118,7 @@
   padding: 0;
   margin: var(--sp-12) 0 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(13rem,1fr));
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,13rem),1fr));
   gap: var(--sp-12);
 }
 .landing-plan {
