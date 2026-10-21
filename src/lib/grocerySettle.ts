@@ -114,6 +114,13 @@ export function monthOwes(g: Grocery, m: GroceryMonth): { owed: number; youOwe: 
   return { owed, youOwe };
 }
 
+/** What is still unpaid between other people this month (a store someone else paid, rows that do not involve you): not yours to chase or to pay, but not settled either, so
+ *  the "All settled" header must not say it (audit Y-8). Amounts marked settled are left out. */
+export function monthOthersOwe(g: Grocery, m: GroceryMonth): number {
+  const purchases = purchasesOf(g, m);
+  return storesBought(g, purchases).reduce((a, store) => a + storeStatus(g, m, store, purchases).rows.filter(r => r.kind === 'owesPayer' && !r.paid).reduce((b, r) => b + r.cents, 0), 0);
+}
+
 /** What others owe you this month (the "Owed to you" figure on the split card). */
 export const monthOwed = (g: Grocery, m: GroceryMonth): number => monthOwes(g, m).owed;
 

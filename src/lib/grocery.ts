@@ -42,10 +42,17 @@ export function newShareId(): string {
   return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
 }
 
+/** Ids the page already uses for its own elements (`groc-prev`, `groc-store-<id>`, `groc-more-<id>`, ...): an item id that starts with one would clash with them (audit U-9). */
+const RESERVED_ID = /^(prev|next|month|summary|bought|skipall|alldone|money|h|edit|sharing|add|name|note|qty|price|unit|store|stores|more|done|spend|split|have|view|dock|home)(-|$)/;
+
+/** An id for a new item: its name as a slug. A name whose slug is taken (here, or by a month line of a removed item) gets a short random suffix instead of -2, -3, so two
+ *  devices that each add "Milk" for another store offline do not make the same id (audit G-5). Old ids stay valid as they are. */
 export function newGroceryId(items: GroceryItem[], name: string, used: Iterable<string> = []): string {
-  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'item';
-  const taken = new Set([...items.map(i => i.id), ...used]); let id = base, n = 2; // `used`: ids that months still hold lines for (a removed item's), so a new item never inherits them
-  while (taken.has(id)) id = `${base}-${n++}`;
+  let base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'item';
+  if (RESERVED_ID.test(base)) base = `item-${base}`.slice(0, 45);
+  const taken = new Set([...items.map(i => i.id), ...used]); // `used`: ids that months still hold lines for (a removed item's), so a new item never inherits them
+  let id = base;
+  while (taken.has(id)) id = `${base}-${newShareId().slice(0, 4)}`;
   return id;
 }
 

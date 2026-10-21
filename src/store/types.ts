@@ -272,7 +272,7 @@ export interface GrocerySlice {
   addGroceryStore(name: string): string | null;
   removeGroceryStore(name: string): string | null;
   setGroceryOut(id: string, out: boolean): void; // the At home list: unchecking "Have" puts a When-out item on this month's list
-  setGroceryGot(month: string, id: string, on: boolean): void; // bought this month: it counts as had, and leaves that month's list
+  setGroceryGot(month: string, id: string, on: boolean): boolean; // bought this month: it counts as had, and leaves that month's list; false when nothing changed
   setGroceryHave(month: string, id: string, on: boolean): void; // the At home tick: had this month, so off that month's list (ADR 054)
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
