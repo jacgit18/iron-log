@@ -163,7 +163,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (auth && process.env.NODE_ENV === 'development') app.get('/dev/auth', (_req, res) => void res.type('html').send(AUTH_CHECK_PAGE));
 
   // Cloud Tasks calls this at the time a push is due: no person, no session, only a Google-signed token (push/fire.ts). Not an admin route.
-  if (db && push?.fire) app.use('/api/push', fireRoute({ db, now: push.now, ...push.fire, limit: rateLimit(limits.pushFire) }));
+  if (db && push?.fire) app.use('/api/push', fireRoute({ db, now: push.now, scheduler: push.scheduler, ...push.fire, limit: rateLimit(limits.pushFire) }));
 
   // Everything below this line needs a signed-in user. The per-address limit comes first, so an anonymous flood never reaches the database.
   app.use('/api', rateLimit(limits.api));
