@@ -1,3 +1,4 @@
+import './DetailSheet.css';
 import type { LogEntry, PhaseKey } from '../../types.ts';
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -94,17 +95,17 @@ export default function DetailSheet({ exId }: { exId: string }) {
       <LiftGoal exId={exId} />
       {editOpen && <EditEntry key={entryId(editing)} exId={exId} entry={editing} onDone={() => setEditing(null)} />}
       <RemovedNotice scope={'log:' + exId} />
-      <table className="hist">
-        <thead><tr><th>Date</th><th>Phase</th><th className="num">Load</th><th className="num">Volume</th><th>Note</th><th><span className="sr">Edit or delete</span></th></tr></thead>
-        <tbody>
+      <table className="hist hist-stack" role="table">
+        <thead role="rowgroup"><tr role="row"><th role="columnheader">Date</th><th role="columnheader">Phase</th><th role="columnheader" className="num">Load</th><th role="columnheader" className="num">Volume</th><th role="columnheader">Note</th><th role="columnheader"><span className="sr">Edit or delete</span></th></tr></thead>
+        <tbody role="rowgroup">
           {L.map((e, i) => ({ e, i })).reverse().map(({ e, i }) => (
-            <tr key={`${entryId(e)}-${i}`} className={arming === `${entryId(e)}-${i}` ? 'removing' : undefined}>
-              <td className="rmname">{fmtShort(parseDate(e.d))}</td>
-              <td>{e.ph ? PHASES[e.ph].label : '—'}</td>
-              <td className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
-              <td className="num">{volText(e)}</td>
-              <td>{e.n || (e.auto ? AUTO_NOTE : '')}</td>
-              <td className="nowrap">
+            <tr role="row" key={`${entryId(e)}-${i}`} className={arming === `${entryId(e)}-${i}` ? 'removing' : undefined}>
+              <td role="cell" className="rmname">{fmtShort(parseDate(e.d))}</td>
+              <td role="cell">{e.ph ? PHASES[e.ph].label : '—'}</td>
+              <td role="cell" className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
+              <td role="cell" className="num">{volText(e)}</td>
+              <td role="cell">{e.n || (e.auto ? AUTO_NOTE : '')}</td>
+              <td role="cell" className="nowrap">
                 <button type="button" className="btn sm ghost" aria-label={`Edit entry from ${fmtShort(parseDate(e.d))}`} onClick={() => setEditing(e)}>Edit</button>{' '}
                 <ArmedButton className={`btn sm ${arming === `${entryId(e)}-${i}` ? 'danger' : 'ghost'}`} aria-label={`Delete entry from ${fmtShort(parseDate(e.d))}`} label="✕" armedLabel="Delete?" onArmedChange={a => setArming(a ? `${entryId(e)}-${i}` : null)} onConfirm={() => { setArming(null); setEditing(null); deleteLog(exId, e); }} />
               </td>
