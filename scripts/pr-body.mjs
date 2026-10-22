@@ -6,6 +6,7 @@
 //   (the Changelog section is filled from --what, or from --changelog "..." when it should say less)
 //   --brief <path or "n/a: why">   fills the Delivery section's Brief line (feature-delivery.md: one brief, one branch, one PR)
 //   --split "<reason>"             fills "Split because:" when the feature is not this PR alone (the reasons are in feature-delivery.md)
+//   --tracker "<note>"             fills the "PR tracker:" line: the PR-TRACKER.md row you updated (feature; for a fix PR also the cause code)
 //   gh pr create --title "..." --body-file /tmp/body.md
 //
 // The audience is worked out from the diff against origin/main (the reason goes to stderr), and --audience <key> overrides it:
@@ -80,17 +81,19 @@ export function buildBody(template, audience, what = '', ui = false, changelog =
   const withWhat = what ? withLog.replace(/^## What and why\n\n/m, () => `## What and why\n\n${what.trim()}\n`) : withLog;
   const oneLine = t => t.trim().replace(/\s+/g, ' ');
   const withBrief = delivery.brief ? withWhat.replace(/^Brief:.*$/m, () => `Brief: ${oneLine(delivery.brief)}`) : withWhat;
-  const body = delivery.split ? withBrief.replace(/^Split because:.*$/m, () => `Split because: ${oneLine(delivery.split)}`) : withBrief;
+  const withSplit = delivery.split ? withBrief.replace(/^Split because:.*$/m, () => `Split because: ${oneLine(delivery.split)}`) : withBrief;
+  const body = delivery.tracker ? withSplit.replace(/^PR tracker:.*$/m, () => `PR tracker: ${oneLine(delivery.tracker)}`) : withSplit;
   const audienceSection = body.split('\n').reduce((acc, line) => { if (/^## /.test(line)) acc.on = /^## Audience/.test(line); if (acc.on) acc.lines.push(line); return acc; }, { on: false, lines: [] }).lines;
   if (audienceSection.filter(l => /^- \[x\]/i.test(l)).length !== 1) throw new Error('The template has no Audience box matching ' + audience);
   return body;
 }
 
 /** Warnings for the Delivery section (feature-delivery.md). Advisory: they print to stderr and never stop the PR. */
-export function deliveryWarnings({ brief, split, changed = 0, openPrs = 0 }) {
+export function deliveryWarnings({ brief, split, tracker, trackerLine = false, changed = 0, openPrs = 0 }) {
   const w = [];
   if (!brief) w.push('Delivery: no --brief given. Pass the feature brief path, or --brief "n/a: <why>" for a change that needs none.');
   if (!split && openPrs > 0 && changed > 0 && changed < 40) w.push(`Delivery: ${changed} changed lines while ${openPrs} other PR(s) of yours are open. Fold this into that feature's PR, or say why with --split "<reason>".`);
+  if (trackerLine && !tracker) w.push('Delivery: no --tracker given. Update this feature\'s row in PR-TRACKER.md (project docs) and say which with --tracker "<feature; fix cause>", or --tracker "n/a: <why>" (tooling, docs, Dependabot).');
   return w;
 }
 
@@ -111,8 +114,8 @@ function main(argv) {
   console.error(`Audience: ${found.audience} (${found.reason}). ${files.length} file(s) against ${base}.`);
   const template = readFileSync(fileURLToPath(new URL('../.github/pull_request_template.md', import.meta.url)), 'utf8');
   if (!arg('--changelog') && arg('--what')) console.error('No --changelog given: the Changelog section is the --what text (cut at a sentence end past 600 characters). Pass --changelog "..." to say it shorter.');
-  for (const w of deliveryWarnings({ brief: arg('--brief'), split: arg('--split'), changed: changedLines(git, base), openPrs: otherOpenPrs(git) })) console.error(w);
-  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files, config), arg('--changelog'), config, { brief: arg('--brief'), split: arg('--split') }));
+  for (const w of deliveryWarnings({ brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker'), trackerLine: /^PR tracker:/m.test(template), changed: changedLines(git, base), openPrs: otherOpenPrs(git) })) console.error(w);
+  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files, config), arg('--changelog'), config, { brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker') }));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main(process.argv.slice(2));
