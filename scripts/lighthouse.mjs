@@ -7,6 +7,8 @@
 // Scores wobble by about 3 points on a busy machine: repeat (--runs=3 takes the median; with an even count such as --runs=2 the worse of the two middle values is reported, so use 3 or more for a fair number) before calling a change a regression or a fix.
 // Needs Playwright's Chromium (npx playwright install chromium; found through Playwright itself, so it works on Linux, macOS and Windows, or set CHROME_PATH).
 // Lighthouse runs from npx at the pinned version below: its scoring changes between majors, so raise LIGHTHOUSE together with the floors, on purpose.
+// The browser changes scores too: the same app code scored 88 on Playwright 1.63's Chromium and 85 on 1.64's (Chromium 156), with identical bundles (2026-10-22). So a Playwright bump
+// is a measurement change: the PR that bumps it measures main before and after (this prints the Chrome version) and moves FLOORS and CALIBRATED_CHROME in the same PR, on purpose.
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
@@ -22,11 +24,18 @@ const LIGHTHOUSE = 'lighthouse@13.5.0';
 const shell = process.platform === 'win32'; // npx and npm are .cmd files there
 const tab = opt('tab', '');
 // Floors: the lowest scores that count as "not worse than now". The goal is 100 everywhere; raise a floor when a change earns it.
-const FLOORS = { mobile: { performance: 88, accessibility: 100, 'best-practices': 100, seo: 100 }, desktop: { performance: 97, accessibility: 100, 'best-practices': 100, seo: 100 } };
+const FLOORS = { mobile: { performance: 82, accessibility: 100, 'best-practices': 100, seo: 100 }, desktop: { performance: 97, accessibility: 100, 'best-practices': 100, seo: 100 } };
 const MAX_CLS = 0.01;
+// The Chrome major the floors above were measured with. Mobile performance on this Chrome: 85, 85, 84 on a quiet machine, 82 with the owner's browsers open (load 7 to 9 on 12 cores), 80 once;
+// the floor is the ordinary busy-machine reading. A miss means: measure main the same way on the same machine before blaming the change (test-run-protocol). Desktop reads 99. A different major only warns.
+const CALIBRATED_CHROME = 156;
 
 const chrome = process.env.CHROME_PATH || chromium.executablePath();
 if (!chrome || !existsSync(chrome)) { console.error('No Chromium found. Run: npx playwright install chromium (or set CHROME_PATH)'); process.exit(2); }
+const chromeVersion = (/(\d+)\.\d+\.\d+\.\d+/.exec(spawnSync(chrome, ['--version'], { encoding: 'utf8' }).stdout || '') || [])[0];
+const chromeMajor = chromeVersion ? Number(chromeVersion.split('.')[0]) : null;
+console.log(`Browser: Chrome ${chromeVersion ?? 'version unknown'}`);
+if (chromeMajor !== CALIBRATED_CHROME) console.log(`  Note: the floors were measured with Chrome ${CALIBRATED_CHROME}. A different Chrome can move scores by a few points without any app change: measure main with this browser first, and move FLOORS and CALIBRATED_CHROME together, on purpose.`);
 
 let server;
 const stop = () => { if (server && server.exitCode === null) server.kill(); };
