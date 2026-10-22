@@ -1013,6 +1013,28 @@ describe('whose data this device holds (B2e)', () => {
     expect(again.status()).toMatchObject({ state: 'idle', ready: true });
   });
 
+  it('tells the browser whose data the page holds each time it settles on an account, so the server can check it', async () => {
+    who = as('ann');
+    const seen: string[] = [];
+    const { db } = setup({ identity, onVerified: id => seen.push(id) });
+    db.start();
+    await settle();
+    expect(seen).toEqual(['ann']);
+  });
+
+  it('a server that says this page is for another account (409 account) keeps the change, pauses until the person chooses, and sends nothing more', async () => {
+    who = as('ann');
+    const { server, gate, db } = setup({ identity });
+    db.start();
+    await settle();
+    server.fail.push(down('account'));
+    await db.doc('logs/squat').set(logsDoc(entry('S1')));
+    expect(db.status()).toMatchObject({ state: 'paused', pausedBecause: 'account', pendingPaths: ['logs/squat'] });
+    expect(gate.waits).toEqual([OUTDATED_WAIT_MS]); // no retry on a short timer
+    expect(server.sent).toHaveLength(1);
+    expect(server.rows.size).toBe(0);
+  });
+
   it('another account is held back: nothing is pulled or sent, and the first account\'s unsent change stays', async () => {
     who = as('ann');
     const { server, storage, make, db } = setup({ identity });
