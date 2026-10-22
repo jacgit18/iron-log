@@ -1,0 +1,9 @@
+@layer base, components;
+@layer components {
+.billingpanel {
+  min-height: 7rem;
+}
+.billingpanel .actions {
+  flex-wrap: wrap;
+}
+}
