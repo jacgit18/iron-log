@@ -1,0 +1,6 @@
+@layer base, components;
+@layer components {
+.billingpanel .actions {
+  flex-wrap: wrap;
+}
+}
