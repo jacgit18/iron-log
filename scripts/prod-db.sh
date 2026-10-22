@@ -10,6 +10,9 @@
 #   catalog <source> [--apply]  npm run catalog:import against production (source: fedb): a dry run, or with --apply a backup, then the write.
 #   injury-default [--apply]    one-off (ADR 045): npm run keep:injury-prevention against production: a dry run, or with --apply a backup, then
 #                               the write (existing accounts keep Injury prevention on). Run right before deploying that change.
+#   beta-to-free [--apply]      one-off (billing go-live): npm run beta:to-free against production: a dry run that prints how many accounts are on
+#                               beta (ids only), or with --apply a backup, then every beta account moves to free so it can subscribe. Run it after
+#                               the default-free migration (`migrate --apply`) and before opening billing to everyone.
 #   encrypt-users [--apply]     one-off (ADR 046): npm run encrypt:users against production: a dry run, or with --apply a backup, then the write
 #                               (seals the names and emails already stored). The key is read from Secret Manager (iron-log-pii-key) and never
 #                               shown. Run it after the deploy that carries the key; then set PII_PLAINTEXT_DONE=true (runbook section 20).
@@ -31,6 +34,7 @@ BACKUP="${BACKUP:-scripts/backup-cloud-run.sh}"
 CATALOG_IMPORT="${CATALOG_IMPORT:-npm run -s catalog:import --}"
 KEEP_INJURY="${KEEP_INJURY:-npm run -s keep:injury-prevention --}"
 ENCRYPT_USERS="${ENCRYPT_USERS:-npm run -s encrypt:users --}"
+BETA_TO_FREE="${BETA_TO_FREE:-npm run -s beta:to-free --}"
 FIND_USER="${FIND_USER:-npm run -s find:user --}"
 PII_KEY_CMD="${PII_KEY_CMD:-gcloud --project $PROJECT_ID secrets versions access latest --secret iron-log-pii-key}"   # overridable for tests
 DB_READER="${DB_READER:-node scripts/db-reader.mjs}"
@@ -100,6 +104,10 @@ case "$cmd" in
     URL="$(owner_url)"
     if $apply; then backup; DATABASE_URL="$URL" $KEEP_INJURY --apply
     else DATABASE_URL="$URL" $KEEP_INJURY; fi ;;
+  beta-to-free)
+    URL="$(owner_url)"; where
+    if $apply; then backup; DATABASE_URL="$URL" $BETA_TO_FREE --apply
+    else DATABASE_URL="$URL" $BETA_TO_FREE; fi ;;
   encrypt-users)
     URL="$(owner_url)"; where
     # The key goes from Secret Manager into the one command's environment: not printed, not written anywhere.

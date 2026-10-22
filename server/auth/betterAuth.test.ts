@@ -253,10 +253,10 @@ describe('the signup cap (SIGNUP_CAP)', () => {
     const again = await post(base, '/api/auth/sign-in/email', { email: 'a@example.com', password: 'correct horse battery staple' });
     expect(again.status).toBe(200);
   });
-  it('gives every account the beta plan', async () => {
+  it('gives every new account the free plan', async () => {
     const { sql } = await import('kysely');
     await sql`select ensure_user('plan-test')`.execute(db);
-    expect((await sql<{ plan: string }>`select plan from users where auth_user_id = 'plan-test'`.execute(db)).rows[0]!.plan).toBe('beta');
+    expect((await sql<{ plan: string }>`select plan from users where auth_user_id = 'plan-test'`.execute(db)).rows[0]!.plan).toBe('free');
     await expect(sql`update users set plan = 'vip' where auth_user_id = 'plan-test'`.execute(db)).rejects.toThrow();
     for (const plan of ['free', 'paid', 'lifetime', 'founder', 'beta']) await sql`update users set plan = ${plan} where auth_user_id = 'plan-test'`.execute(db);
   });

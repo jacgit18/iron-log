@@ -5,7 +5,7 @@ import type { DB } from './db/types.ts';
 
 // Who counts as a paid subscriber (feature flags, see src/features.ts). `users.plan` holds the tier; nothing in the app changes it
 // yet, so the owner sets it by hand (`update users set plan = 'paid' where id = ...`) until a payment processor does. The tiers:
-//   beta      the alpha and beta testers (every account made before billing); NOT paid. Move them to 'paid' or 'lifetime' to grandfather them.
+//   beta      the alpha and beta testers (every account made before billing); NOT paid. Move them to 'paid' or 'lifetime' to grandfather them. New accounts start on free since migration 20261022000003; `scripts/prod-db.sh beta-to-free` moves the rest.
 //   free      signed up after billing, no subscription
 //   paid      an active subscriber
 //   lifetime  an early user given everything for good

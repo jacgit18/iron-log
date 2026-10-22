@@ -24,7 +24,7 @@ const run = (args: string[], env: Record<string, string> = {}) =>
       // DATABASE_URL from the caller's shell (a local one for the db checks) must not leak in: the stubs log what each step was given.
       env: {
         ...process.env, DATABASE_URL: '', PROD_DATABASE_URL: URL,
-        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), KEEP_INJURY: join(dir, 'keep-injury'), ENCRYPT_USERS: join(dir, 'encrypt-users'), FIND_USER: join(dir, 'find-user'), PII_KEY_CMD: join(dir, 'pii-key'), ...env,
+        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), BETA_TO_FREE: join(dir, 'beta-to-free'), KEEP_INJURY: join(dir, 'keep-injury'), ENCRYPT_USERS: join(dir, 'encrypt-users'), FIND_USER: join(dir, 'find-user'), PII_KEY_CMD: join(dir, 'pii-key'), ...env,
       },
       encoding: 'utf8',
     }, (err, stdout, stderr) => {
@@ -47,6 +47,7 @@ beforeEach(() => {
   writeFileSync(log, '');
   stub('backup', '');
   stub('catalog', '');
+  stub('beta-to-free', '');
   stub('keep-injury', '');
   stub('find-user', 'echo "key=${PII_ENCRYPTION_KEY:+set}" >> "' + log + '"');
   stub('encrypt-users', 'echo "key=${PII_ENCRYPTION_KEY:+set}" >> "' + log + '"');
@@ -90,6 +91,15 @@ describe('prod-db.sh', () => {
     const r = await run(['migrate', '--apply']);
     expect(r.out).toContain('Nothing to do');
     expect(r.calls).toEqual([`dbmate status url=${URL}`]);
+  });
+
+  it('beta-to-free is a dry run by default; --apply backs up first and passes --apply on', async () => {
+    const dry = await run(['beta-to-free']);
+    expect(dry.calls).toEqual([`beta-to-free  url=${URL}`]);
+    expect(dry.out).toContain('database: ep-prod.neon.tech/neondb');
+    expect(dry.out).not.toContain('s3cret');
+    writeFileSync(log, '');
+    expect((await run(['beta-to-free', '--apply'])).calls).toEqual(['backup run url=', `beta-to-free --apply url=${URL}`]);
   });
 
   it('injury-default is a dry run by default; --apply backs up first and passes --apply on', async () => {
@@ -160,7 +170,7 @@ describe('prod-db.sh', () => {
     expect((await run(['drop-everything'])).status).toBe(2);
     const help = await run([]);
     expect(help.status).toBe(2);
-    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default', 'encrypt-users', 'find-user <email>', 'reader']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
+    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default', 'beta-to-free', 'encrypt-users', 'find-user <email>', 'reader']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
     expect(readFileSync(log, 'utf8')).toBe('');
   });
 });
