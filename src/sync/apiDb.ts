@@ -85,6 +85,9 @@ export interface ApiDbOptions {
   /** Called when this device is handed to a different account (an empty device taken over, or the user chose to wipe it), so the app can
    *  forget what it keeps outside the sync, such as the grocery list. Not called when the same account signs in again. */
   onOwnerChange?: () => void;
+  /** Called each time this page settles on whose data it holds (the signed-in account matched or took over the device), with that user's id.
+   *  The browser sends it as x-expected-user so the server refuses a request when the cookie has since moved to another account. */
+  onVerified?: (userId: string) => void;
   /** Calls back when the app returns to the foreground or the network comes back; returns how to stop listening. */
   onWake?: (wake: () => void) => () => void;
 }
@@ -152,7 +155,7 @@ export function createApiDb(options: ApiDbOptions) {
     return isObjectLike(saved) && typeof saved.userId === 'string' ? saved.userId : null;
   };
   const hasData = () => mirror.rows().size > 0 || outbox.paths().length > 0 || outbox.quarantined().length > 0;
-  const adopt = (userId: string) => { storage.set(OWNER_KEY, { userId }); verified = true; };
+  const adopt = (userId: string) => { storage.set(OWNER_KEY, { userId }); verified = true; options.onVerified?.(userId); };
   type Gate = { ok: true } | { ok: false; because: PauseReason };
   async function gate(): Promise<Gate> {
     if (!options.identity || verified) return { ok: true };
@@ -480,7 +483,8 @@ export function createApiDb(options: ApiDbOptions) {
         setState('paused', out.class);
         onPause();
         const wait = backoffMs(attempt++, out.retryAfterMs, options.random);
-        await waitFor(out.class === 'outdated' ? Math.max(wait, OUTDATED_WAIT_MS) : wait);
+        // An update or the person's choice about the account ends these waits, so they do not retry on a short timer.
+        await waitFor(out.class === 'outdated' || out.class === 'account' ? Math.max(wait, OUTDATED_WAIT_MS) : wait);
         again = true;
         break;
       }
@@ -654,7 +658,7 @@ export function createApiDb(options: ApiDbOptions) {
         // This device must hold nothing of its own: anything pulled or unsent means the account is not the empty one the upload needs.
         if (hasData()) return { ok: false as const, class: 'not-empty' as const };
         const sent = await transport.importLegacy!(commands);
-        if (!sent.ok) { if (sent.class === 'network' || sent.class === 'server' || sent.class === 'auth' || sent.class === 'outdated') setState('paused', sent.class); return sent; }
+        if (!sent.ok) { if (sent.class === 'network' || sent.class === 'server' || sent.class === 'auth' || sent.class === 'outdated' || sent.class === 'account') setState('paused', sent.class); return sent; }
         const want: Record<string, number> = {};
         for (const c of commands) want[c.name] = (want[c.name] ?? 0) + 1;
         const same = sent.total === commands.length && Object.keys(want).length === Object.keys(sent.imported).length && Object.entries(want).every(([k, n]) => sent.imported[k] === n);
