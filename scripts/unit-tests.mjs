@@ -4,7 +4,7 @@
 //        node scripts/unit-tests.mjs --files=a,b                              pretend only those files changed
 //        add --list to print the vitest command without running it
 // Runs the whole suite (npm test) when a tooling or dependency file changed, a file tests read without importing (a .sh script, the PR template) changed, or a module was deleted.
-// The board reorder and log write path tests (CLAUDE.md) are always included, so no change can skip them.
+// The board reorder and log write path tests (CLAUDE.md) are always included, so no change can skip them. So are the tests that read source files as text (TEXT_READERS).
 // Worker count: UNIT_WORKERS=<n> (default half the cores off CI, see workerArgs).
 // Main and manual CI runs call npm test directly; this is for pull requests and the pre-push check (scripts/check.mjs).
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -13,6 +13,10 @@ import { cpus } from 'node:os';
 import { pathToFileURL } from 'node:url';
 
 export const PROTECTED = ['src/lib/planOrder.test.js', 'src/lib/logic.test.js', 'src/store/useAppStore.test.js'];
+// Tests that read other source files by path (as text) instead of importing them, so vitest's import graph never links a change to them. Always run,
+// like PROTECTED; they are fast. server/legal.test.ts pins the privacy policy to the code (push payload fields, retention, deletion paths): PR #457 changed
+// the Cloud Tasks payload, the local check skipped this test, and main went red.
+export const TEXT_READERS = ['server/legal.test.ts'];
 const tooling = f => /^(package(-lock)?\.json|tsconfig.*\.json|vite\.config\.js|\.oxlintrc.*|src\/test\/.*)$/.test(f);
 
 // Files a test reads by path rather than imports (a shell script it runs, the PR template it fills), so vitest's import graph cannot link them to their tests.
@@ -38,7 +42,7 @@ export function plan(files) {
   const gone = files.find(f => code(f) && !existsSync(f));
   if (gone) return { full: true, why: `${gone} was deleted or renamed` };
   const related = files.filter(code);
-  return { full: false, related: [...new Set([...related, ...PROTECTED])] };
+  return { full: false, related: [...new Set([...related, ...PROTECTED, ...TEXT_READERS])] };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -58,7 +62,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const p = opts.includes('--full') ? { full: true, why: '--full' } : plan(files);
   const workers = workerArgs(process.env, undefined, extra);
   const cmd = p.full ? ['vitest', 'run', ...workers, ...extra] : ['vitest', 'related', '--run', '--passWithNoTests', ...workers, ...p.related, ...extra];
-  console.log(p.full ? `${p.why}: running every unit test.` : `Unit tests related to ${p.related.length - PROTECTED.length} changed source file(s), plus the ${PROTECTED.length} protected board and log tests.`);
+  console.log(p.full ? `${p.why}: running every unit test.` : `Unit tests related to ${p.related.length - PROTECTED.length - TEXT_READERS.length} changed source file(s), plus the ${PROTECTED.length} protected board and log tests and ${TEXT_READERS.length} source-reading test(s).`);
   if (opts.includes('--list')) { console.log(`npx ${cmd.join(' ')}`); process.exit(0); }
   process.exit(spawnSync('npx', cmd, { stdio: 'inherit' }).status ?? 1);
 }
