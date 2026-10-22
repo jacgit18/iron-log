@@ -39,7 +39,7 @@ describe('the policy and the system agree', () => {
     // The refund window the Terms state.
     expect(terms).toContain('refund within 14 days');
     // The summary and the transfers section name Stripe, as the processor table does.
-    expect(text).toMatch(/Stripe takes the payment/);
+    expect(text).toMatch(/Stripe, takes the payment/);
     expect(text).toMatch(/including Stripe for payments/);
   });
 
