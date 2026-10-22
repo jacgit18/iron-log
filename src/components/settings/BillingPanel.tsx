@@ -14,6 +14,17 @@ const dateOf = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(u
 const POLL_MS = 2000;
 const POLL_TRIES = 5;
 
+function useOnline(): boolean {
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
+  useEffect(() => {
+    const set = () => setOnline(navigator.onLine !== false);
+    window.addEventListener('online', set);
+    window.addEventListener('offline', set);
+    return () => { window.removeEventListener('online', set); window.removeEventListener('offline', set); };
+  }, []);
+  return online;
+}
+
 export default function BillingPanel() {
   const api = getSyncApi();
   const on = useFeature('billing');
@@ -25,7 +36,7 @@ export default function BillingPanel() {
     return how === 'success' || how === 'cancel' ? how : null;
   });
   const [tries, setTries] = useState(0);
-  const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+  const online = useOnline();
 
   // Back from Stripe's Checkout: the address says how it went (read once above). Take it off the address, and since the webhook may be
   // a moment behind, look again a few times below.
@@ -43,8 +54,9 @@ export default function BillingPanel() {
     return () => clearTimeout(t);
   }, [returned, settled, tries, recheck]);
 
-  if (!api || !on) return null;
-  if (who?.status === 'signed-out') return null;
+  // Nothing is drawn until the first answer: when the server has billing off (every admin until go-live) a placeholder would appear and then
+  // vanish, moving the Settings page. When billing is on the panel appears once, after the answer.
+  if (!api || !on || who === null || who.status === 'signed-out') return null;
   if (signedIn && !signedIn.billing?.available) return null;
 
   const go = async (what: string, open: () => ReturnType<typeof client.billingPortal>) => {
@@ -63,8 +75,7 @@ export default function BillingPanel() {
   return (
     <section className="panel billingpanel" aria-labelledby="billing-h">
       <h3 id="billing-h">Billing</h3>
-      {who === null && <p className="note" role="status">Checking your plan…</p>}
-      {who?.status === 'unreachable' && (
+      {who.status === 'unreachable' && (
         <>
           <p className="notice" role="status">Could not check your plan. It checks again when the connection comes back.</p>
           <div className="actions"><button type="button" className="btn" onClick={recheck}>Try again</button></div>
