@@ -6,6 +6,7 @@
 #   secrets   put the four secrets in Secret Manager from your shell (once, and when one changes); with RESEND_API_KEY exported it also
 #             stores the email-code key (optional: without it the email sign-in code stays off, ADR 042)
 #             With VAPID_SUBJECT exported (mailto:you@example.com) it also stores the Web Push keys, making the pair once; see push-setup (ADR 044)
+#   stripe    put only the four Stripe billing settings in Secret Manager (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY; ADR 065)
 #   push-setup  make the Cloud Tasks queue, the invoker account and the permissions for Web Push (once; needs the cloudtasks API)
 #   url       print the address the service will have, for the Google console's redirect URI (needs no deploy)
 #             The key that seals names and emails in the database (PII_ENCRYPTION_KEY, ADR 046) is made here once (only with PII_KEY_CREATE=1) and never replaced: a
@@ -157,6 +158,34 @@ cmd_push_setup() {
   echo "Queue $PUSH_QUEUE_NAME and account $invoker are ready. Next: VAPID_SUBJECT=mailto:you@example.com scripts/deploy-cloud-run.sh secrets, then deploy."
 }
 
+# Stores the four Stripe settings (ADR 065) and fills STRIPE_NAMES with their secret names. A missing companion or a value that is not a Stripe
+# key is refused; staging and QA take test keys only, because they hold a copy of production's data and must never charge a real card.
+STRIPE_NAMES=()
+store_stripe_secrets() {
+  : "${STRIPE_SECRET_KEY:?Export STRIPE_SECRET_KEY (sk_test_... for staging and QA)}"
+  : "${STRIPE_WEBHOOK_SECRET:?Export STRIPE_WEBHOOK_SECRET (the whsec_ signing secret of this environment webhook endpoint)}"
+  : "${STRIPE_PRICE_MONTHLY:?Export STRIPE_PRICE_MONTHLY (the price_ id of the monthly price)}"
+  : "${STRIPE_PRICE_YEARLY:?Export STRIPE_PRICE_YEARLY (the price_ id of the yearly price)}"
+  case "$STRIPE_SECRET_KEY" in sk_test_*|rk_test_*) ;; sk_live_*|rk_live_*)
+    if [ "$IRON_LOG_ENV" != production ]; then echo "${IRON_LOG_ENV} takes Stripe test keys only (a live key here would charge real cards from a copy of production data)." >&2; exit 1; fi;;
+    *) echo "STRIPE_SECRET_KEY does not look like a Stripe key (sk_test_... or sk_live_...)." >&2; exit 1;; esac
+  printf '%s' "$STRIPE_SECRET_KEY" | put_secret "${SECRET_PREFIX}-stripe-secret-key"
+  printf '%s' "$STRIPE_WEBHOOK_SECRET" | put_secret "${SECRET_PREFIX}-stripe-webhook-secret"
+  printf '%s' "$STRIPE_PRICE_MONTHLY" | put_secret "${SECRET_PREFIX}-stripe-price-monthly"
+  printf '%s' "$STRIPE_PRICE_YEARLY" | put_secret "${SECRET_PREFIX}-stripe-price-yearly"
+  STRIPE_NAMES=("${SECRET_PREFIX}-stripe-secret-key" "${SECRET_PREFIX}-stripe-webhook-secret" "${SECRET_PREFIX}-stripe-price-monthly" "${SECRET_PREFIX}-stripe-price-yearly")
+}
+
+# Only the Stripe settings, for turning billing on or changing a key without the database and Google values `secrets` also needs.
+cmd_stripe() {
+  store_stripe_secrets
+  local s
+  for s in "${STRIPE_NAMES[@]}"; do
+    gc secrets add-iam-policy-binding "$s" --member "serviceAccount:${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" --role roles/secretmanager.secretAccessor >/dev/null
+  done
+  echo "Done. Next: deploy (Actions, Deploy to Cloud Run, or scripts/deploy-cloud-run.sh deploy): it passes them to the service."
+}
+
 cmd_secrets() {
   : "${APP_DATABASE_URL:?Export APP_DATABASE_URL: the POOLED Neon URL of the ${IRON_LOG_ENV} branch as ${DB_ROLE} (not the owner)}"
   : "${GOOGLE_CLIENT_ID:?Export GOOGLE_CLIENT_ID}"
@@ -202,19 +231,10 @@ cmd_secrets() {
   else echo "  $PII_SECRET: not created (export PII_KEY_CREATE=1 to make it; see runbook section 20)"; fi
   # Optional: the Resend key for the emailed sign-in code. Not exporting it leaves the feature off (or as it already is).
   local secret_names=("${SECRET_PREFIX}-app-database-url" "${SECRET_PREFIX}-google-client-id" "${SECRET_PREFIX}-google-client-secret" "${SECRET_PREFIX}-auth-secret" ${pii_names[@]+"${pii_names[@]}"})
-  # Optional: Stripe billing (ADR 065). STRIPE_SECRET_KEY says to store all four; a missing one is refused. Staging and QA take test keys only.
+  # Optional: Stripe billing (ADR 065). STRIPE_SECRET_KEY says to store all four (see store_stripe_secrets).
   if [ -n "${STRIPE_SECRET_KEY:-}" ]; then
-    : "${STRIPE_WEBHOOK_SECRET:?Export STRIPE_WEBHOOK_SECRET (the whsec_ signing secret of this environment webhook endpoint)}"
-    : "${STRIPE_PRICE_MONTHLY:?Export STRIPE_PRICE_MONTHLY (the price_ id of the monthly price)}"
-    : "${STRIPE_PRICE_YEARLY:?Export STRIPE_PRICE_YEARLY (the price_ id of the yearly price)}"
-    case "$STRIPE_SECRET_KEY" in sk_test_*|rk_test_*) ;; sk_live_*|rk_live_*)
-      if [ "$IRON_LOG_ENV" != production ]; then echo "${IRON_LOG_ENV} takes Stripe test keys only (a live key here would charge real cards from a copy of production's data)." >&2; exit 1; fi;;
-      *) echo "STRIPE_SECRET_KEY does not look like a Stripe key (sk_test_... or sk_live_...)." >&2; exit 1;; esac
-    printf '%s' "$STRIPE_SECRET_KEY" | put_secret "${SECRET_PREFIX}-stripe-secret-key"
-    printf '%s' "$STRIPE_WEBHOOK_SECRET" | put_secret "${SECRET_PREFIX}-stripe-webhook-secret"
-    printf '%s' "$STRIPE_PRICE_MONTHLY" | put_secret "${SECRET_PREFIX}-stripe-price-monthly"
-    printf '%s' "$STRIPE_PRICE_YEARLY" | put_secret "${SECRET_PREFIX}-stripe-price-yearly"
-    secret_names+=("${SECRET_PREFIX}-stripe-secret-key" "${SECRET_PREFIX}-stripe-webhook-secret" "${SECRET_PREFIX}-stripe-price-monthly" "${SECRET_PREFIX}-stripe-price-yearly")
+    store_stripe_secrets
+    secret_names+=("${STRIPE_NAMES[@]}")
   else
     echo "  ${SECRET_PREFIX}-stripe-*: not touched (export STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY and STRIPE_PRICE_YEARLY to store them)"
   fi
@@ -366,6 +386,7 @@ cmd_restore() { gc run services update-traffic "$SERVICE" --region "$REGION" --t
 case "${1:-}" in
   setup) cmd_setup;;
   secrets) cmd_secrets;;
+  stripe) cmd_stripe;;
   push-setup) cmd_push_setup;;
   url) service_url;;
   deploy) cmd_deploy;;
@@ -373,5 +394,5 @@ case "${1:-}" in
   promote) cmd_promote;;
   discard) cmd_discard;;
   restore) cmd_restore;;
-  *) sed -n '2,20p' "$0"; exit 2;;
+  *) sed -n '2,21p' "$0"; exit 2;;
 esac

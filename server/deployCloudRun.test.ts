@@ -243,6 +243,24 @@ exit 0
       }
     });
 
+    it('the stripe command stores only the four, with no database or Google values, and lets the runtime account read them', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['stripe'], { ...stripeEnv, IRON_LOG_ENV: 'staging' });
+      expect(out.status).toBe(0);
+      const lines = recorded();
+      expect(lines.some(l => l.includes('secrets create iron-log-staging-stripe-secret-key'))).toBe(true);
+      expect(lines.some(l => l.includes('add-iam-policy-binding iron-log-staging-stripe-webhook-secret') && l.includes('iron-log-staging-run@p.iam.gserviceaccount.com'))).toBe(true);
+      expect(lines.some(l => l.includes('google-client') || l.includes('app-database-url'))).toBe(false);
+      expect(lines.join('\n') + out.stdout + out.stderr).not.toMatch(/sk_test_abc123|whsec_abc123/);
+    });
+
+    it('the stripe command refuses a live key for staging and says what to export when a value is missing', async () => {
+      expect((await run(['stripe'], { ...stripeEnv, STRIPE_SECRET_KEY: 'sk_live_abc123', IRON_LOG_ENV: 'staging' })).stderr).toContain('test keys only');
+      const missing = await run(['stripe'], { STRIPE_SECRET_KEY: 'sk_test_abc123' });
+      expect(missing.status).not.toBe(0);
+      expect(missing.stderr).toContain('STRIPE_WEBHOOK_SECRET');
+    });
+
     it('staging uses its own secret names', async () => {
       writeFileSync(calls, '');
       await run(['candidate'], { IRON_LOG_ENV: 'staging', STRIPE_SECRET: '1', HAS_PII_KEY: '1' });
