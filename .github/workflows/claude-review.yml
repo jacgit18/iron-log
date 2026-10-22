@@ -31,6 +31,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: anthropics/claude-code-action@v1
+        id: review
         continue-on-error: true # a failed review (the API credit running out, an action error) leaves the job, and so the PR check, green
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -45,3 +46,15 @@ jobs:
           claude_args: |
             --max-turns 30
             --allowedTools "Bash(git diff:*),Bash(git log:*),Bash(git show:*),Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+      # Loud failure (owner, 2026-10-22): the step above stays non-blocking, but a failed review must not look like a green one
+      # (it did for two days while the API balance was negative). Say so on the PR and in the run summary.
+      - name: Report a failed review
+        if: ${{ steps.review.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          echo "::warning title=Claude review did not run::The review step failed (usually API credit or a bad ANTHROPIC_API_KEY). See $RUN_URL"
+          echo "### Claude review did not run" >> "$GITHUB_STEP_SUMMARY"
+          echo "The review step failed; this PR has no automated review. Check the API credit balance and the ANTHROPIC_API_KEY secret." >> "$GITHUB_STEP_SUMMARY"
+          gh pr comment ${{ github.event.pull_request.number }} --body "**Claude review did not run** (the API call failed, usually credit or the key). This PR has no automated review: review it by hand. Run: $RUN_URL"
