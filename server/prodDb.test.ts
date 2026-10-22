@@ -160,7 +160,7 @@ describe('prod-db.sh', () => {
     expect((await run(['drop-everything'])).status).toBe(2);
     const help = await run([]);
     expect(help.status).toBe(2);
-    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default', 'encrypt-users']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
+    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default', 'encrypt-users', 'find-user <email>', 'reader']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
     expect(readFileSync(log, 'utf8')).toBe('');
   });
 });

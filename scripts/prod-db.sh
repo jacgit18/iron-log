@@ -37,7 +37,7 @@ DB_READER="${DB_READER:-node scripts/db-reader.mjs}"
 GH="${GH:-gh}"
 READER_SECRET=MIGRATIONS_CHECK_URL                  # read by the deploy workflow's migration check
 
-usage() { sed -n '5,18p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '5,/^#$/{/^#$/!p}' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 owner_url() {
   local url="${PROD_DATABASE_URL:-}"
