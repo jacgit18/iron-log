@@ -50,8 +50,11 @@ describe('the policy and the system agree', () => {
     expect(text).toContain('Cloud Tasks');
     expect(text).toMatch(/notification service of your browser or phone maker/);
     expect(text).toMatch(/Push alerts: your device’s address and keys/);
-    // An alert carries the device entry, a time and a short text, never workout data: the fire route's payload has exactly these fields.
-    expect(read('server/push/cloudTasks.ts')).toMatch(/payload = \{ subscriptionId: job\.subscriptionId, kind: job\.kind, key: job\.key, at: job\.at, body: job\.body \}/);
+    // An alert carries the device entry, a time and a short text, never workout data: the fire route's payload has exactly these fields, plus, for the
+    // drink-water reminder only, how often it repeats and when its hours end (`repeat`), which the policy names.
+    expect(read('server/push/cloudTasks.ts')).toMatch(/payload = \{ subscriptionId: job\.subscriptionId, kind: job\.kind, key: job\.key, at: job\.at, body: job\.body, \.\.\.\(job\.repeat \? \{ repeat: job\.repeat \} : \{\}\) \}/);
+    expect(text).toMatch(/drink-water reminder[\s\S]*?asks for the next one after each is sent/);
+    expect(text).toMatch(/how often it repeats and when your reminder hours end/);
   });
 
   it('push alerts: the deletion triggers the policy lists are the ones in the database', () => {
