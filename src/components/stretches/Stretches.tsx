@@ -85,7 +85,7 @@ function Experiments({ day }: { day: number }) {
               <ExperimentCard key={e.id} id={e.id} prefix="sexp" name={e.n} tag={e.group} note={e.note}
                 detail={<>{on.length > 0 && <div className="note onday">On {on.map(d => DAY_NAMES[d]).join(', ')} this week</div>}<Link n={e.n} url={e.url} /></>}
                 days={DAYS7.map(d => ({ value: d, label: DAY_NAMES[d] }))} to={to} onTo={d => setPick(p => ({ ...p, [e.id]: d }))} onAdd={() => s.addStretchToDay(e.id, to)}
-                extra={<button type="button" className="btn sm ghost" aria-label={`Add ${e.n} to your stretches`} onClick={() => s.promoteStretchExp(e.id)}>To my stretches</button>}
+                extra={<button type="button" className="btn sm ghost" aria-label={`Add ${e.n} to my stretches`} onClick={() => s.promoteStretchExp(e.id)}>To my stretches</button>}
                 onEdit={() => s.openModal({ type: 'stretchexp', id: e.id })} onDelete={() => s.deleteStretchExp(e.id)} />
             );
           })}
