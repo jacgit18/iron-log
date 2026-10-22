@@ -7,7 +7,7 @@ import type { DB } from './db/types.ts';
 // Billing (ADR 065, brief billing-stripe-subscriptions). Stripe-hosted Checkout and Customer Portal; the webhook turns subscription
 // events into `users.plan` through apply_subscription_event (which owns the rules: only free and paid move, an older event never undoes a
 // newer one, a repeated event does nothing). Everything here is behind a seam (StripeApi) so tests run without Stripe.
-// While billing is in test mode it is admin-only: remove ADMIN_ONLY and the `billing` line in src/features.ts together when the owner goes live.
+// While billing is in test mode it is admin-only: remove ADMIN_ONLY here and the `billing` line in src/features.ts (added with the UI in the next PR) together when the owner goes live.
 
 export const ADMIN_ONLY = true;
 
@@ -86,8 +86,8 @@ export function eventFrom(event: { id: string; type: string; created: number; da
 }
 
 /** The real Stripe client. */
-export function stripeApi(config: BillingConfig): StripeApi {
-  const stripe = new Stripe(config.secretKey, { maxNetworkRetries: 2, timeout: 15_000 });
+export function stripeApi(config: BillingConfig, client?: Stripe): StripeApi {
+  const stripe = client ?? new Stripe(config.secretKey, { maxNetworkRetries: 2, timeout: 15_000 });
   return {
     async checkoutUrl({ userId, customerId, price, returnUrl }) {
       const session = await stripe.checkout.sessions.create({
@@ -106,7 +106,12 @@ export function stripeApi(config: BillingConfig): StripeApi {
       return (await stripe.billingPortal.sessions.create({ customer: customerId, return_url: `${returnUrl}/` })).url;
     },
     async deleteCustomer(customerId) {
-      await stripe.customers.del(customerId);
+      try {
+        await stripe.customers.del(customerId);
+      } catch (err) {
+        // Already gone (deleted in the dashboard, a first attempt that got that far, a test-mode id after switching keys): nothing left to cancel.
+        if ((err as { code?: string }).code !== 'resource_missing') throw err;
+      }
     },
     readEvent(rawBody, signature) {
       if (!signature) throw new Error('no signature');
@@ -138,6 +143,7 @@ const readBilling = (db: Kysely<DB>, userId: string) =>
 
 /** What /api/me tells the Billing section. `available` is false when billing is off, or while it is admin-only and this is not an admin. */
 export async function billingSummary(db: Kysely<DB>, userId: string, isAdmin: boolean, on: boolean): Promise<BillingSummary> {
+  if (!on) return { available: false, source: 'manual', status: null, renewsAt: null, hasCustomer: false }; // billing off: no second database read on every /api/me
   const row = await readBilling(db, userId);
   return {
     available: on && (!ADMIN_ONLY || isAdmin),

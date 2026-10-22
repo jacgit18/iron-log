@@ -267,6 +267,14 @@ describe('deleting an account with a subscription', () => {
     expect(await row('ann')).toBeDefined();
   });
 
+  it('treats a Stripe customer that is already gone as cancelled, so the account can still be deleted', async () => {
+    const gone = Object.assign(new Error('No such customer'), { code: 'resource_missing' });
+    const fake = { customers: { del: async () => { throw gone; } } } as unknown as Stripe;
+    expect(await stripeApi(CONFIG, fake).deleteCustomer('cus_gone')).toBeUndefined();
+    const down = { customers: { del: async () => { throw Object.assign(new Error('api down'), { code: 'api_connection_error' }); } } } as unknown as Stripe;
+    await expect(stripeApi(CONFIG, down).deleteCustomer('cus_x')).rejects.toThrow('api down');
+  });
+
   it('does not call Stripe for an account with no customer', async () => {
     const { as, account } = await start();
     await account('ann');

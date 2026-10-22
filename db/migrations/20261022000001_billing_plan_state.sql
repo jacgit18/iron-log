@@ -48,7 +48,7 @@ begin
     select * into u from users where stripe_customer_id = p_customer_id for update;
   end if;
   if u.id is null then
-    return 'unknown'; -- not recorded, so a retry after the customer is linked can still be applied
+    return 'unknown'; -- dropped: the route answers 200 so Stripe does not resend it (a Stripe account can also hold subscriptions of other products). Checkout puts the user id on the session and the subscription, so a subscription made through Checkout always finds its user.
   end if;
   insert into stripe_events (event_id, type) values (p_event_id, p_type) on conflict (event_id) do nothing;
   if not found then
