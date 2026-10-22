@@ -148,4 +148,13 @@ describe('the Delivery section', () => {
     expect(deliveryWarnings({ brief: 'b.md', changed: 12, openPrs: 1 })).toHaveLength(1);
     expect(deliveryWarnings({ brief: 'b.md', split: 'file overlap', changed: 12, openPrs: 1 })).toEqual([]);
   });
+  it('warns about a missing tracker note only when the template has the line', () => {
+    expect(deliveryWarnings({ brief: 'b.md', changed: 500, trackerLine: true })).toHaveLength(1);
+    expect(deliveryWarnings({ brief: 'b.md', changed: 500, trackerLine: true, tracker: 'water reminder' })).toEqual([]);
+    expect(deliveryWarnings({ brief: 'b.md', changed: 500 })).toEqual([]);
+  });
+  it('fills the PR tracker line from --tracker', () => {
+    const body = buildBody('## What and why\n\n## Audience\n\n- [ ] n/a: x\n\n## Delivery\n\nPR tracker: not updated (pass --tracker)\n', 'na', '', false, '', loadConfig(), { tracker: 'water reminder; fix: main-break' });
+    expect(body).toContain('PR tracker: water reminder; fix: main-break');
+  });
 });

@@ -66,7 +66,7 @@ function Slot({ slot, label, date, items, taken, editing }: { slot: SupplementSl
               <input type="checkbox" className="chk" id={`supp-${x.id}`} checked={!!(taken[date] || {})[x.id]} onChange={e => s.setSupplementTaken(date, x.id, e.target.checked)} />
               <span className="sname"><span className="rmname">{x.n}</span>{x.dose && <span className="sdose">{x.dose}</span>}</span>
             </label>
-            {editing && <ArmedButton className={`btn sm ${arming === x.id ? 'danger' : 'ghost'}`} aria-label={`Take ${x.n} off ${label}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? x.id : null)} onConfirm={() => { setArming(null); s.removeSupplement(x.id); }} />}
+            {editing && <ArmedButton className={`btn sm ${arming === x.id ? 'danger' : 'ghost'}`} aria-label={`Remove ${x.n} from ${label}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? x.id : null)} onConfirm={() => { setArming(null); s.removeSupplement(x.id); }} />}
           </li>
         ))}
       </ul>
