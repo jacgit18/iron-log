@@ -311,9 +311,20 @@ deploy_image() {
   local secrets="APP_DATABASE_URL=${SECRET_PREFIX}-app-database-url:latest,BETTER_AUTH_SECRET=${SECRET_PREFIX}-auth-secret:latest,GOOGLE_CLIENT_ID=${SECRET_PREFIX}-google-client-id:latest,GOOGLE_CLIENT_SECRET=${SECRET_PREFIX}-google-client-secret:latest"
   if resend_secret_wanted; then secrets+=",RESEND_API_KEY=${RESEND_SECRET}:latest"; echo "Email sign-in code: RESEND_API_KEY is passed to the service."; else echo "Email sign-in code: no RESEND_API_KEY, so the feature stays off${RESEND_OFF:+ (RESEND_OFF=1: any mapping is removed)}."; fi
   if pii_secret_wanted; then secrets+=",PII_ENCRYPTION_KEY=${PII_SECRET}:latest"; echo "Database encryption: PII_ENCRYPTION_KEY is passed to the service."; else echo "Database encryption: no key yet, so names and emails are stored as before."; fi
+  local billing_env=()
   if stripe_secret_wanted; then
     secrets+=",STRIPE_SECRET_KEY=${SECRET_PREFIX}-stripe-secret-key:latest,STRIPE_WEBHOOK_SECRET=${SECRET_PREFIX}-stripe-webhook-secret:latest,STRIPE_PRICE_MONTHLY=${SECRET_PREFIX}-stripe-price-monthly:latest,STRIPE_PRICE_YEARLY=${SECRET_PREFIX}-stripe-price-yearly:latest"
     echo "Billing: the Stripe settings are passed to the service."
+    # The server keeps billing off for a live (sk_live_) key unless BILLING_LIVE=1 is set (server/billing.ts), so going live is a deliberate
+    # step: export BILLING_LIVE=1 for the production deploy. --update-env-vars keeps it on later deploys, so it is passed once, not every time.
+    if [ "${BILLING_LIVE:-}" = 1 ] && [ "$IRON_LOG_ENV" = production ]; then
+      billing_env=(BILLING_LIVE=1)
+      echo "Billing: BILLING_LIVE=1 is passed, so a live Stripe key turns billing on."
+    elif [ "${BILLING_LIVE:-}" = 1 ]; then
+      echo "Billing: BILLING_LIVE=1 is ignored for ${IRON_LOG_ENV}, which takes test keys only."
+    else
+      echo "Billing: a live (sk_live_) key also needs BILLING_LIVE=1 exported for a production deploy, or billing stays off. A test key does not."
+    fi
   else
     echo "Billing: no Stripe settings, so billing stays off${STRIPE_OFF:+ (STRIPE_OFF=1: any mapping is removed)}."
   fi
@@ -329,7 +340,7 @@ deploy_image() {
     echo "Web Push: no VAPID keys, so push stays off${PUSH_OFF:+ (PUSH_OFF=1: any settings are removed)}."
   fi
   local env_vars="NODE_ENV=production,BASE_URL=${url},COMMIT_SHA=${commit}"
-  for kv in ${push_env[@]+"${push_env[@]}"}; do env_vars+=",${kv}"; done
+  for kv in ${push_env[@]+"${push_env[@]}"} ${billing_env[@]+"${billing_env[@]}"}; do env_vars+=",${kv}"; done
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
     ${public[@]+"${public[@]}"} \

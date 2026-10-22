@@ -209,6 +209,29 @@ exit 0
       expect(out.stdout).toContain('billing stays off');
     });
 
+    // server/billing.ts keeps billing off for an sk_live_ key unless BILLING_LIVE=1, so the production deploy has to be able to set it.
+    it('BILLING_LIVE=1 is passed to a production deploy, so a live key turns billing on', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['deploy'], { STRIPE_SECRET: '1', BILLING_LIVE: '1' });
+      expect(out.status).toBe(0);
+      expect(recorded().find(l => l.includes('run deploy'))!).toMatch(/--update-env-vars \S*BILLING_LIVE=1/);
+      expect(out.stdout).toContain('BILLING_LIVE=1 is passed');
+    });
+
+    it('without BILLING_LIVE the deploy does not set it and says a live key needs it', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['deploy'], { STRIPE_SECRET: '1' });
+      expect(recorded().find(l => l.includes('run deploy'))!).not.toContain('BILLING_LIVE');
+      expect(out.stdout).toContain('live (sk_live_) key also needs BILLING_LIVE=1');
+    });
+
+    it('BILLING_LIVE=1 is ignored for staging and QA, which take test keys only', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['deploy'], { IRON_LOG_ENV: 'staging', STRIPE_SECRET: '1', BILLING_LIVE: '1' });
+      expect(recorded().find(l => l.includes('run deploy'))!).not.toContain('BILLING_LIVE');
+      expect(out.stdout).toContain('BILLING_LIVE=1 is ignored for staging');
+    });
+
     it('STRIPE_OFF=1 leaves them out even when they exist and the live service has them', async () => {
       writeFileSync(calls, '');
       const out = await run(['candidate'], { STRIPE_SECRET: '1', LIVE_STRIPE: '1', STRIPE_OFF: '1' });
