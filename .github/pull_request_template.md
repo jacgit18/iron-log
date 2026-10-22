@@ -16,10 +16,11 @@
 
 ## Delivery
 
-<!-- One feature, one brief, one PR (feature-delivery.md). `node scripts/pr-body.mjs --brief "<path>" --split "<reason>"` fills these. A split needs one of: migration first, file overlap with an open PR (name it), over about 600 lines or 25 files, pure-move refactor first, device or owner-only part. -->
+<!-- One feature, one brief, one PR (feature-delivery.md). `node scripts/pr-body.mjs --brief "<path>" --split "<reason>" --tracker "<note>"` fills these. The tracker line says which PR-TRACKER.md row you updated (feature, and for a fix the cause code). A split needs one of: migration first, file overlap with an open PR (name it), over about 600 lines or 25 files, pure-move refactor first, device or owner-only part. -->
 
 Brief: none given (pass --brief)
 Split because: n/a: this PR is the whole feature
+PR tracker: not updated (pass --tracker)
 
 ## Done
 
