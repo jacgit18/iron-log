@@ -171,6 +171,42 @@ describe('push_subscription', () => {
   });
 });
 
+// Backup snapshots (migration 20261022000002, ADR 066) are copies of an export, not synced data: the API role may delete its own (pruning).
+describe('backup_snapshots', () => {
+  const snap = (user: string, day = '2026-10-20') => sql`insert into backup_snapshots (user_id, day, entries, score, size_bytes, data) values (${user}, ${day}, 1, 1, 3, '\\x010203')`;
+
+  it('a user sees only their own, and can add, change and delete them', async () => {
+    await asUser(A, trx => snap(A).execute(trx));
+    await asUser(B, trx => snap(B).execute(trx));
+    expect(await asUser(A, trx => count(trx as never, 'backup_snapshots'))).toBe(1);
+    await asUser(A, trx => sql`update backup_snapshots set score = 2`.execute(trx));
+    expect(await asUser(A, trx => sql`delete from backup_snapshots`.execute(trx)).then(r => Number(r.numAffectedRows))).toBe(1);
+    expect(await count(owner, 'backup_snapshots')).toBe(1);
+  });
+
+  it("a user cannot add one for someone else, read, change or delete someone else's", async () => {
+    await asUser(B, trx => snap(B).execute(trx));
+    expect(await refusal(asUser(A, trx => snap(B, '2026-10-21').execute(trx)))).toMatch(/row-level security/);
+    expect(Number((await asUser(A, trx => sql`delete from backup_snapshots`.execute(trx))).numAffectedRows)).toBe(0);
+    expect(Number((await asUser(A, trx => sql`update backup_snapshots set score = 9`.execute(trx))).numAffectedRows)).toBe(0);
+    expect(await count(owner, 'backup_snapshots')).toBe(1);
+  });
+
+  it('with no user set, nothing is visible or writable', async () => {
+    await asUser(A, trx => snap(A).execute(trx));
+    expect(await count(app, 'backup_snapshots')).toBe(0);
+    expect(await refusal(snap(A).execute(app))).toMatch(/row-level security/);
+  });
+
+  it('refuses a second copy for the same day, an empty or oversize file, and a day out of range', async () => {
+    await asUser(A, trx => snap(A).execute(trx));
+    expect(await refusal(asUser(A, trx => snap(A).execute(trx)))).toMatch(/duplicate key/);
+    expect(await refusal(asUser(A, trx => sql`insert into backup_snapshots (user_id, day, entries, score, size_bytes, data) values (${A}, '2026-10-21', 0, 0, 1, ''::bytea)`.execute(trx)))).toMatch(/check constraint/);
+    expect(await refusal(asUser(A, trx => sql`insert into backup_snapshots (user_id, day, entries, score, size_bytes, data) values (${A}, '2026-10-21', 0, 0, 2000000, '\\x01')`.execute(trx)))).toMatch(/check constraint/);
+    expect(await refusal(asUser(A, trx => snap(A, '1900-01-01').execute(trx)))).toMatch(/check constraint/);
+  });
+});
+
 describe('users', () => {
   it('cannot be added, or promoted, or renamed, by the API role', async () => {
     expect(await refusal(app.insertInto('users').values({ auth_user_id: 'x' }).execute())).toMatch(/permission denied/);
@@ -258,7 +294,7 @@ describe('every table is covered (a forgotten table fails here)', () => {
         select has_table_privilege('ironlog_app', ${`public.${relname}`}, 'delete') as del,
                has_table_privilege('ironlog_app', ${`public.${relname}`}, 'truncate') as trunc,
                has_table_privilege('ironlog_app', ${`public.${relname}`}, 'select') as sel`.execute(owner)).rows[0]!;
-      expect(p.del, `${relname}: delete`).toBe(relname === 'push_subscription'); // the one table a user may delete from: turning push off
+      expect(p.del, `${relname}: delete`).toBe(relname === 'push_subscription' || relname === 'backup_snapshots'); // the tables a user may delete from: turning push off, and pruning old backup days
       expect(p.trunc, `${relname}: truncate`).toBe(false);
       if (relname === 'row_history' || relname === 'refused_writes') expect(p.sel, `${relname}: select`).toBe(false);
     }

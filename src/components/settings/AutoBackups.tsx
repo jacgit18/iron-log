@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { DAY_NAMES, fmtShort, parseDate, ymd } from '../../shared/dates.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
+import ServerBackups from './ServerBackups.js';
 
 // The automatic backups (lib/autoBackup.ts): one copy of your data a day for the last 7 days, kept in this browser. Restore opens a copy in
 // the import review, which asks Merge or Replace before anything changes.
@@ -14,6 +15,7 @@ export default function AutoBackups() {
   useEffect(() => { void useAppStore.getState().refreshBackups(); }, []);
   const label = (date: string) => { const d = parseDate(date); return date === today ? `Today, ${fmtShort(d)}` : `${DAY_NAMES[d.getDay()]}, ${fmtShort(d)}`; };
   return (
+    <>
     <div className="subblock" role="group" aria-labelledby="autobk-h">
       <h4 id="autobk-h">Automatic backups</h4>
       <p>Iron Log keeps a copy of your data on this device, one for each of the last {BACKUP_DAYS} days. If your data gets messed up or deleted, restore one. You review it before anything changes.</p>
@@ -36,5 +38,7 @@ export default function AutoBackups() {
       )}
       <p className="note">These stay in this browser. Clearing the site's data removes them, so use Export all data for a copy you keep elsewhere.</p>
     </div>
+    <ServerBackups />
+    </>
   );
 }

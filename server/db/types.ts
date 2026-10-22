@@ -27,6 +27,17 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface BackupSnapshots {
+  data: Buffer;
+  day: string;
+  entries: number;
+  id: Generated<Int8>;
+  saved_at: Generated<Timestamp>;
+  score: number;
+  size_bytes: number;
+  user_id: Int8;
+}
+
 export interface BodyEntries {
   client_updated_at: Timestamp | null;
   created_at: Generated<Timestamp>;
@@ -262,6 +273,7 @@ export interface Weeks {
 }
 
 export interface DB {
+  backup_snapshots: BackupSnapshots;
   body_entries: BodyEntries;
   catalog_items: CatalogItems;
   config: Config;
