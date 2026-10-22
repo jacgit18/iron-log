@@ -45,7 +45,7 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
               <ExperimentCard key={e.id} id={e.id} prefix="exp" name={n} tag={e.ph ? PHASES[e.ph].label : undefined} note={e.note}
                 detail={<>{on.length > 0 && <div className="note onday">On {on.map(d => `Day ${d}`).join(', ')} this week</div>}{last && <div className="lastlog">Last: {describe(last)}</div>}</>}
                 days={days.map(d => ({ value: d, label: `Day ${d}` }))} to={to} onTo={d => setPick(p => ({ ...p, [e.id]: d }))} addLabel="This week only" onAdd={() => st.addToDay(e.id, to)}
-                extra={<button type="button" className="btn sm ghost" aria-label={`Add ${n} to the program, Day ${to}`} onClick={() => st.openAddToProgram(to, e.id)}>To program</button>}
+                extra={<button type="button" className="btn sm ghost" aria-label={`Add ${n} to program, Day ${to}`} onClick={() => st.openAddToProgram(to, e.id)}>To program</button>}
                 onEdit={() => st.openModal({ type: 'experiment', id: e.id })} onDelete={() => st.deleteExperiment(e.id)}
                 drag={{ onStart: ev => onDragStart(ev, 'exp:' + e.id), onEnd: onDragEnd }} />
             );

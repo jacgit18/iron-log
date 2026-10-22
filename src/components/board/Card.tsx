@@ -103,7 +103,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
           <select id={`mv-${s.id}`} aria-label={`Move to (${cardName})`} value={cur} onChange={e => moveSlot(s.id, Number(e.target.value))}>
             {DAYS.map(d => <option key={d} value={d} disabled={restsOf(week).includes(d)}>Day {d}{restsOf(week).includes(d) ? ' (rest)' : d === planned ? ' (planned)' : ''}</option>)}
           </select>
-          {!sk && <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={`Skip ${cardName} this week`} onClick={() => { skipCard(s.id); setMore(false); focusSkipped(); }}>{paired ? (s.items.length === 2 ? 'Skip both' : 'Skip all') : 'Skip'}</button>}
+          {!sk && <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={paired ? `${s.items.length === 2 ? 'Skip both' : 'Skip all'}: ${cardName} this week` : `Skip ${cardName} this week`} onClick={() => { skipCard(s.id); setMore(false); focusSkipped(); }}>{paired ? (s.items.length === 2 ? 'Skip both' : 'Skip all') : 'Skip'}</button>}
           {!sk && paired && s.items.map((it, idx) => !isItemSkipped(s, idx, week) && (
             <button key={idx} type="button" className="btn sm ghost skipbtn" id={`skipi-${s.id}-${idx}`} aria-label={`Skip ${exInfo(cfg, it.ex).n} this week`} onClick={() => { skipItem(s.id, idx); setMore(false); focusMore(); }}>Skip {exInfo(cfg, it.ex).n}</button>
           ))}
