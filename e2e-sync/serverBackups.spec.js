@@ -9,6 +9,7 @@ const snapshots = async user => (await pool.query(
 
 test('a signed-in phone uploads its daily copy, and Settings lists it from the server', async ({ browser, user }) => {
   await server.seedPrograms(user);
+  await pool.query("update users set plan = 'paid' where auth_user_id = $1", [`dev:${user}`]); // account backups are for paid accounts and admins
   const a = await newPhone(browser, user);
   await a.page.clock.setSystemTime(new Date()); // the server accepts only a day near its own today; the other tests run on a fixed September date
   const page = await a.open();

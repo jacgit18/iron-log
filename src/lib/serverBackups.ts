@@ -1,6 +1,6 @@
 /* ---------- Server backup history (ADR 066): the daily export file, kept on the account ----------
    The app uploads the same file it saves to IndexedDB (lib/autoBackup.ts), once the local copy is saved, and lists and fetches the days
-   back for Restore. The server keeps the newest 7 days (free) or 30 (paid, admin); it decides, this file only asks. Nothing here throws:
+   back for Restore. The server keeps the newest 30 days, for paid subscribers and admins (402 for others); it decides, this file only asks. Nothing here throws:
    every failure comes back as a plain reason, because a missed upload is simply tried again at the next change. */
 import { signIn } from '../sync/devUser.js';
 import type { BackupInfo } from './autoBackup.js';
@@ -8,10 +8,15 @@ import type { BackupInfo } from './autoBackup.js';
 /** The largest compressed file the server takes (server/backups.ts MAX_BYTES). A bigger one is not sent. */
 export const SERVER_MAX_BYTES = 1024 * 1024;
 
-export type UploadResult = 'saved' | 'kept' | 'offline' | 'signed-out' | 'refused' | 'off' | 'failed';
+export type UploadResult = 'saved' | 'kept' | 'offline' | 'signed-out' | 'account' | 'refused' | 'off' | 'failed';
 export type ServerBackupList = { ok: true; days: number; backups: BackupInfo[] } | { ok: false; reason: 'offline' | 'signed-out' | 'off' | 'failed' };
 
-const headers = (more: Record<string, string> = {}) => ({ 'x-client-version': __APP_VERSION__, ...signIn(), ...more });
+// Whom this page holds data for, as the sync last verified it (sync/browser.ts calls setExpectedUser). Sent as x-expected-user so the server refuses
+// (409) a request when the cookie has since moved to another account, as it does for sync; a page with no verified account sends and shows nothing.
+let expectedUser: string | null = null;
+export const setExpectedUser = (id: string | null) => { expectedUser = id; };
+export const hasExpectedUser = () => expectedUser !== null;
+const headers = (more: Record<string, string> = {}) => ({ 'x-client-version': __APP_VERSION__, ...signIn(), ...(expectedUser ? { 'x-expected-user': expectedUser } : {}), ...more });
 const base = (day?: string) => `/api/backups${day ? `/${day}` : ''}`;
 
 /** The text as gzip bytes when the browser can, else as plain text (the server accepts both). */
@@ -25,8 +30,8 @@ export async function packFile(text: string): Promise<{ body: Uint8Array<ArrayBu
 }
 
 /** What a failed answer means for the caller: wait and retry (offline, failed), stop for now (signed-out, off), or never resend this file (refused). */
-const reasonOf = (status: number): 'signed-out' | 'off' | 'refused' | 'failed' =>
-  status === 401 || status === 403 ? 'signed-out' : status === 503 ? 'off' : status === 413 || status === 422 ? 'refused' : 'failed';
+const reasonOf = (status: number): 'signed-out' | 'account' | 'off' | 'refused' | 'failed' =>
+  status === 409 ? 'account' : status === 401 || status === 403 ? 'signed-out' : status === 402 || status === 503 ? 'off' : status === 413 || status === 422 ? 'refused' : 'failed';
 
 /** Whether this file is worth sending: not the one already sent for this day. `sent` is `day:score:length` of the last file the server answered for. */
 export const uploadKey = (day: string, score: number, length: number) => `${day}:${score}:${length}`;
@@ -45,7 +50,7 @@ export async function uploadBackup(day: string, text: string, entries: number, s
 export async function listServerBackups(): Promise<ServerBackupList> {
   let res: Response;
   try { res = await fetch(base(), { headers: headers() }); } catch { return { ok: false, reason: 'offline' }; }
-  if (!res.ok) { const r = reasonOf(res.status); return { ok: false, reason: r === 'refused' ? 'failed' : r }; }
+  if (!res.ok) { const r = reasonOf(res.status); return { ok: false, reason: r === 'refused' ? 'failed' : r === 'account' ? 'signed-out' : r }; }
   try {
     const { days, backups } = await res.json() as { days?: number; backups?: BackupInfo[] };
     return Array.isArray(backups) && typeof days === 'number' ? { ok: true, days, backups } : { ok: false, reason: 'failed' };

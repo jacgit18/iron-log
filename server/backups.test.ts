@@ -5,7 +5,7 @@ import { sql, type Kysely } from 'kysely';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from './app.ts';
 import { createDb } from './db/connection.ts';
-import { MAX_BYTES, daysFor, dayIsNear, parseDay, prepareFile, shouldReplace } from './backups.ts';
+import { KEEP_DAYS, MAX_BYTES, dayIsNear, parseDay, prepareFile, shouldReplace } from './backups.ts';
 import type { DB } from './db/types.ts';
 import { startTestDatabase } from './test/postgres.ts';
 
@@ -25,16 +25,23 @@ const dayOf = (offset: number) => new Date(Math.floor(Date.now() / DAY_MS) * DAY
 const TODAY = dayOf(0);
 const fileOf = (extra: Record<string, unknown> = {}) => JSON.stringify({ app: 'iron-log', format: 1, ...extra });
 
+const plans = new Set(['pat']); // the user the plan tests set up by hand
 async function start(options: Parameters<typeof createApp>[0] = {}) {
   server = createApp({ db: app, admins: new Set(['dev:boss']), ...options }).listen(0);
   await new Promise(done => server!.once('listening', done));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const headers = (who: string, more: Record<string, string> = {}) => ({ 'x-dev-user': who, 'x-client-version': '1', ...more });
-  const put = (who: string, day: string, body: string | Buffer = gzipSync(fileOf()), score = 20, more: Record<string, string> = {}) =>
+  // Every test user is a paid account the first time they are seen, unless the test sets the plan itself (`plans` names who to leave alone).
+  const seen = new Set<string>();
+  const paid = async (who: string) => { if (seen.has(who) || who === 'boss' || plans.has(who)) return; seen.add(who); await fetch(`${base}/api/me`, { headers: headers(who) }); await setPlan(who, 'paid'); };
+  const put0 = (who: string, day: string, body: string | Buffer = gzipSync(fileOf()), score = 20, more: Record<string, string> = {}) =>
     fetch(`${base}/api/backups/${day}`, { method: 'PUT', headers: headers(who, { 'content-type': 'application/octet-stream', 'x-backup-entries': String(score), 'x-backup-score': String(score), 'x-backup-encoding': 'gzip', ...more }), body: body as never });
-  const list = (who: string) => fetch(`${base}/api/backups`, { headers: headers(who) });
-  const get = (who: string, day: string) => fetch(`${base}/api/backups/${day}`, { headers: headers(who) });
+  const list0 = (who: string) => fetch(`${base}/api/backups`, { headers: headers(who) });
+  const get0 = (who: string, day: string) => fetch(`${base}/api/backups/${day}`, { headers: headers(who) });
   const ensure = (who: string) => fetch(`${base}/api/me`, { headers: headers(who) });
+  const put: typeof put0 = async (who, ...rest) => { await paid(who); return put0(who, ...rest); };
+  const list: typeof list0 = async who => { await paid(who); return list0(who); };
+  const get: typeof get0 = async (who, day) => { await paid(who); return get0(who, day); };
   return { base, headers, put, list, get, ensure };
 }
 const setPlan = (name: string, plan: string) => sql`update users set plan = ${plan} where auth_user_id = ${'dev:' + name}`.execute(db);
@@ -47,11 +54,6 @@ async function seed(name: string, days: number) {
 }
 
 describe('helpers', () => {
-  it('daysFor: free and beta 7, paid, lifetime, founder and admin 30', () => {
-    for (const plan of ['beta', 'free', '', null, 'vip']) expect(daysFor(plan, false)).toBe(7);
-    for (const plan of ['paid', 'lifetime', 'founder']) expect(daysFor(plan, false)).toBe(30);
-    expect(daysFor('free', true)).toBe(30);
-  });
   it('parseDay takes real calendar days only', () => {
     expect(parseDay('2026-10-22')).toBe('2026-10-22');
     for (const bad of ['2026-02-30', '2026-13-01', '26-10-22', '2026-10-2', 'today', '', 5, undefined]) expect(parseDay(bad)).toBeNull();
@@ -82,7 +84,7 @@ describe('upload, list and fetch', () => {
     const body = fileOf({ logs: { squat: [1, 2] } });
     expect((await c.put('ann', TODAY, gzipSync(body))).status).toBe(200);
     const listed = (await (await c.list('ann')).json()) as { days: number; backups: { date: string; entries: number; score: number }[] };
-    expect(listed.days).toBe(7);
+    expect(listed.days).toBe(30);
     expect(listed.backups).toEqual([expect.objectContaining({ date: TODAY, entries: 20, score: 20 })]);
     const res = await c.get('ann', TODAY);
     expect(res.status).toBe(200);
@@ -121,38 +123,43 @@ describe('upload, list and fetch', () => {
   });
 });
 
-describe('retention follows the plan', () => {
-  const cases = [['beta', 7], ['free', 7], ['paid', 30], ['lifetime', 30], ['founder', 30]] as const;
-  it.each(cases)('%s keeps the newest %i days after an upload', async (plan, days) => {
+describe('paid and admin accounts only', () => {
+  it.each(['beta', 'free'])('a %s account gets 402 on every route and nothing is written', async plan => {
     const c = await start();
-    await c.ensure('ann'); await setPlan('ann', plan); await seed('ann', 34);
-    expect((await c.put('ann', TODAY)).status).toBe(200);
-    expect(await count('ann')).toBe(days);
-    const listed = (await (await c.list('ann')).json()) as { days: number; backups: { date: string }[] };
-    expect(listed.days).toBe(days);
-    expect(listed.backups).toHaveLength(days);
-    expect(listed.backups[0]!.date).toBe(TODAY);
-    expect(listed.backups.at(-1)!.date).toBe(dayOf(-(days - 1)));
+    await c.ensure('pat'); await setPlan('pat', plan);
+    expect((await c.put('pat', TODAY)).status).toBe(402);
+    expect((await c.list('pat')).status).toBe(402);
+    expect((await c.get('pat', TODAY)).status).toBe(402);
+    expect(await count()).toBe(0);
   });
 
-  it('an admin keeps 30 whatever the plan', async () => {
+  it.each(['paid', 'lifetime', 'founder'])('a %s account keeps the newest 30 days after an upload', async plan => {
+    const c = await start();
+    await c.ensure('pat'); await setPlan('pat', plan); await seed('pat', 34);
+    expect((await c.put('pat', TODAY)).status).toBe(200);
+    expect(await count('pat')).toBe(KEEP_DAYS);
+    const listed = (await (await c.list('pat')).json()) as { days: number; backups: { date: string }[] };
+    expect(listed.days).toBe(30);
+    expect(listed.backups).toHaveLength(30);
+    expect(listed.backups[0]!.date).toBe(TODAY);
+    expect(listed.backups.at(-1)!.date).toBe(dayOf(-29));
+  });
+
+  it('an admin is allowed whatever the plan', async () => {
     const c = await start();
     await c.ensure('boss'); await setPlan('boss', 'free'); await seed('boss', 34);
-    await c.put('boss', TODAY);
+    expect((await c.put('boss', TODAY)).status).toBe(200);
     expect(await count('boss')).toBe(30);
   });
 
-  it('a paid account that falls back to free sees 7 at once, cannot fetch an older day, and is pruned at the next upload', async () => {
+  it('a paid account that falls back to free is locked out at once; its stored days stay until it is paid again', async () => {
     const c = await start();
-    await c.ensure('ann'); await setPlan('ann', 'paid'); await seed('ann', 20);
-    expect(((await (await c.list('ann')).json()) as { backups: unknown[] }).backups).toHaveLength(20);
-    await setPlan('ann', 'free');
-    expect(((await (await c.list('ann')).json()) as { backups: unknown[] }).backups).toHaveLength(7);
-    expect((await c.get('ann', dayOf(-3))).status).toBe(200);
-    expect((await c.get('ann', dayOf(-10))).status).toBe(404);
-    expect(await count('ann')).toBe(20);
-    await c.put('ann', TODAY);
-    expect(await count('ann')).toBe(7);
+    await c.ensure('pat'); await setPlan('pat', 'paid'); await seed('pat', 5);
+    expect(((await (await c.list('pat')).json()) as { backups: unknown[] }).backups).toHaveLength(5);
+    await setPlan('pat', 'free');
+    expect((await c.list('pat')).status).toBe(402);
+    expect((await c.get('pat', dayOf(-3))).status).toBe(402);
+    expect(await count('pat')).toBe(5);
   });
 });
 
@@ -167,6 +174,18 @@ describe('whose copies', () => {
     await c.ensure('cy');
     expect(((await (await c.list('cy')).json()) as { backups: unknown[] }).backups).toEqual([]);
     expect((await c.get('cy', TODAY)).status).toBe(404);
+  });
+
+  it("a page for another account is refused with 409 and writes and reads nothing", async () => {
+    const c = await start();
+    await c.put('ann', TODAY);
+    const bobId = await (async () => { await c.put('bob', TODAY); return idOf('bob'); })();
+    const wrong = { 'content-type': 'application/octet-stream', 'x-backup-entries': '20', 'x-backup-score': '20', 'x-backup-encoding': 'gzip', 'x-expected-user': bobId };
+    const put = await fetch(`${c.base}/api/backups/${TODAY}`, { method: 'PUT', headers: c.headers('ann', wrong), body: gzipSync(fileOf({ stray: true })) as never });
+    expect(put.status).toBe(409);
+    expect((await fetch(`${c.base}/api/backups`, { headers: c.headers('ann', { 'x-expected-user': bobId }) })).status).toBe(409);
+    expect(await (await c.get('ann', TODAY)).text()).toBe(fileOf());
+    expect(await count('ann')).toBe(1);
   });
 
   it('a stranger gets 401', async () => {

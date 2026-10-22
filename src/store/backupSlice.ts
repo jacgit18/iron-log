@@ -1,6 +1,7 @@
 import { buildDataFile, dataStats, parseDataFile } from '../lib/export.js';
 import { backupScore, clearBackups, getBackup, listBackups, pruneBackups, saveDailyBackup } from '../lib/autoBackup.js';
-import { fetchServerBackup, listServerBackups, uploadBackup, uploadKey } from '../lib/serverBackups.js';
+import { featureNow } from '../features.js';
+import { fetchServerBackup, hasExpectedUser, listServerBackups, uploadBackup, uploadKey } from '../lib/serverBackups.js';
 import { ymd } from '../shared/dates.js';
 import type { BackupSlice, Flag, StoreGet, StoreSet } from './types.ts';
 
@@ -25,13 +26,13 @@ export const backupSlice = (set: StoreSet, get: StoreGet, flag: Flag): BackupSli
     } catch { /* a backup that fails is tried again at the next change */ }
     await get().refreshBackups(); // the list on this device first: it never waits on the network
     // Syncing on means there is an account; the server keeps this day beside the browser's copy. Only a file that was just saved goes up.
-    if (uploadAfter && get().sync && !serverOff && !stopped && navigator.onLine !== false) {
+    if (uploadAfter && get().sync && featureNow('serverBackups') && hasExpectedUser() && !serverOff && !stopped && navigator.onLine !== false) {
       const { file, text, day } = uploadAfter; const score = backupScore(file);
       const key = uploadKey(day, score, text.length);
       if (key !== lastSent) {
         const r = await uploadBackup(day, text, dataStats(file).entries, score);
         if (r === 'saved' || r === 'kept' || r === 'refused') lastSent = key; // a refused file is not sent again until the data changes
-        if (r === 'off' || r === 'signed-out') serverOff = true; // no account to save to (or switched off): quiet until the page reloads
+        if (r === 'off' || r === 'signed-out' || r === 'account') serverOff = true; // no account to save to (a signed-out or other account, or switched off): quiet until the page reloads
         if (r === 'saved' && !stopped) void get().refreshServerBackups();
       }
     }
@@ -52,7 +53,7 @@ export const backupSlice = (set: StoreSet, get: StoreGet, flag: Flag): BackupSli
   },
   async forgetBackups() { stopped = true; await clearBackups(); set({ backups: [], serverBackups: null }); },
   serverBackups: null,
-  async refreshServerBackups() { if (get().sync) set({ serverBackups: stopped ? null : await listServerBackups() }); },
+  async refreshServerBackups() { if (get().sync && featureNow('serverBackups')) set({ serverBackups: stopped ? null : await listServerBackups() }); },
   async restoreServerBackup(date) {
     if (get().blocked()) return;
     const text = await fetchServerBackup(date);

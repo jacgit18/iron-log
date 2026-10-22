@@ -21,7 +21,7 @@ describe('FEATURES registry', () => {
   });
   it('every registry line has a removal condition in a // comment', () => {
     const body = featuresSource.slice(featuresSource.indexOf('export const FEATURES'), featuresSource.indexOf('satisfies'));
-    const lines = body.split('\n').filter((l: string) => /^\s*[A-Za-z_$][\w$]*\s*:\s*'(admin|all|off)'/.test(l));
+    const lines = body.split('\n').filter((l: string) => /^\s*[A-Za-z_$][\w$]*\s*:\s*'(admin|all|off|paid)'/.test(l));
     expect(lines.length).toBe(Object.keys(FEATURES).length);
     expect(lines.filter((l: string) => !/\/\/\s*\S+/.test(l))).toEqual([]);
   });

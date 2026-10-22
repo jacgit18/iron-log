@@ -1,19 +1,21 @@
 import { useEffect } from 'react';
+import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { DAY_NAMES, fmtShort, parseDate, ymd } from '../../shared/dates.js';
 
-// The days kept on the account (ADR 066, lib/serverBackups.ts), under the browser copies in Automatic backups. Free keeps 7 days, paid and
-// admin 30; the server says which. Restore opens a day in the import review, which asks Merge or Replace before anything changes.
+// The days kept on the account (ADR 066, lib/serverBackups.ts), under the browser copies in Automatic backups. Paid subscribers and admins only,
+// the last 30 days. Restore opens a day in the import review, which asks Merge or Replace before anything changes.
 export default function ServerBackups() {
   const list = useAppStore(s => s.serverBackups);
-  const syncOn = useAppStore(s => !!s.sync);
+  const allowed = useFeature('serverBackups');
+  const syncOn = useAppStore(s => !!s.sync) && allowed;
   const today = ymd(useToday(s => s.today));
   const st = useAppStore.getState();
   useEffect(() => { if (syncOn) void useAppStore.getState().refreshServerBackups(); }, [syncOn]);
   if (!syncOn) return null;
   const label = (date: string) => { const d = parseDate(date); return date === today ? `Today, ${fmtShort(d)}` : `${DAY_NAMES[d.getDay()]}, ${fmtShort(d)}`; };
-  const days = list?.ok ? list.days : 7;
+  const days = list?.ok ? list.days : 30;
   return (
     <div className="subblock serverbk" role="group" aria-labelledby="serverbk-h">
       <h4 id="serverbk-h">Saved on your account</h4>

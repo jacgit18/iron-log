@@ -1,3 +1,4 @@
+import { setExpectedUser } from '../lib/serverBackups.js';
 import { LS } from '../lib/storage.js';
 import { createAccountClient } from './account.js';
 import { signIn } from './devUser.js';
@@ -19,7 +20,7 @@ export function createBrowserApiDb(hooks: { onOwnerChange?: () => void } = {}) {
     transport: createTransport({ clientVersion: __APP_VERSION__, headers: sync }),
     storage: LS,
     onOwnerChange: hooks.onOwnerChange,
-    onVerified: userId => { expectedUser = userId; },
+    onVerified: userId => { expectedUser = userId; setExpectedUser(userId); },
     visible: () => document.visibilityState !== 'hidden',
     onWake: wake => {
       const onVisible = () => { if (document.visibilityState === 'visible') wake(); };

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SERVER_MAX_BYTES, fetchServerBackup, listServerBackups, packFile, uploadBackup, uploadKey } from './serverBackups.js';
+import { SERVER_MAX_BYTES, fetchServerBackup, hasExpectedUser, listServerBackups, setExpectedUser, packFile, uploadBackup, uploadKey } from './serverBackups.js';
 
 // The phone's side of server backup history (ADR 066): what is sent, how an answer is read, and the fallback when the browser cannot gzip.
 afterEach(() => { vi.unstubAllGlobals(); });
@@ -33,8 +33,8 @@ describe('uploadBackup', () => {
   });
   it.each([
     [200, { ok: true, saved: false }, 'kept'],
-    [401, {}, 'signed-out'], [403, {}, 'signed-out'],
-    [503, {}, 'off'],
+    [409, {}, 'account'], [401, {}, 'signed-out'], [403, {}, 'signed-out'],
+    [402, {}, 'off'], [503, {}, 'off'],
     [413, {}, 'refused'], [422, {}, 'refused'],
     [429, {}, 'failed'], [500, {}, 'failed'], [426, {}, 'failed'],
   ] as const)('status %i reads as %s', async (status, body, expected) => {
@@ -69,6 +69,16 @@ describe('listServerBackups and fetchServerBackup', () => {
     vi.stubGlobal('fetch', answer(200, '{"app":"iron-log"}')); expect(await fetchServerBackup('2026-10-22')).toBe('{"app":"iron-log"}');
     vi.stubGlobal('fetch', answer(404)); expect(await fetchServerBackup('2026-10-22')).toBeNull();
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('offline'); })); expect(await fetchServerBackup('2026-10-22')).toBeNull();
+  });
+});
+
+describe('expected user', () => {
+  it('is sent once the sync has verified the account', async () => {
+    const fetchMock = answer(200, { ok: true, backups: [], days: 30 }); vi.stubGlobal('fetch', fetchMock);
+    setExpectedUser('42'); await listServerBackups();
+    expect((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].headers).toMatchObject({ 'x-expected-user': '42' });
+    expect(hasExpectedUser()).toBe(true);
+    setExpectedUser(null);
   });
 });
 
