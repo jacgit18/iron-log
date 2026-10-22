@@ -211,6 +211,12 @@ export interface StretchWeeks {
   week_start: string;
 }
 
+export interface StripeEvents {
+  event_id: string;
+  received_at: Generated<Timestamp>;
+  type: string;
+}
+
 export interface SupplementDays {
   boost: Json | null;
   client_updated_at: Timestamp | null;
@@ -234,6 +240,11 @@ export interface Users {
   id: Generated<Int8>;
   is_admin: Generated<boolean>;
   plan: Generated<string>;
+  plan_renews_at: Timestamp | null;
+  plan_source: Generated<string>;
+  plan_status: string | null;
+  plan_updated_at: Timestamp | null;
+  stripe_customer_id: string | null;
 }
 
 export interface Weeks {
@@ -264,6 +275,7 @@ export interface DB {
   refused_writes: RefusedWrites;
   row_history: RowHistory;
   stretch_weeks: StretchWeeks;
+  stripe_events: StripeEvents;
   supplement_days: SupplementDays;
   users: Users;
   weeks: Weeks;

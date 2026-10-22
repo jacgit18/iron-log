@@ -3,9 +3,18 @@
    throws for a network problem: "can't tell" is an answer of its own, and must never read as "signed out". Browser calls are
    same-origin, so the API's Origin check passes and the session cookie travels without any extra setup. */
 
+/** What /api/me says about billing (ADR 065): `available` is false when billing is off or not yet offered to this account. */
+export interface BillingInfo {
+  available: boolean;
+  source: string;
+  status: string | null;
+  renewsAt: string | null;
+  hasCustomer: boolean;
+}
+
 export type AccountState =
   | { status: 'signed-out' }
-  | { status: 'signed-in'; userId: string; kind: 'session' | 'dev'; email: string | null; name: string | null; isAdmin: boolean; isPaid: boolean }
+  | { status: 'signed-in'; userId: string; kind: 'session' | 'dev'; email: string | null; name: string | null; isAdmin: boolean; isPaid: boolean; plan?: string; billing?: BillingInfo }
   | { status: 'unreachable' };
 
 /** `refused` is a code that is wrong, used or expired, or an address that is not one; `slow-down` is the rate limit. */
@@ -20,6 +29,12 @@ export interface AccountOptions {
 
 const asString = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
 
+function billingFrom(v: unknown): BillingInfo | undefined {
+  if (!v || typeof v !== 'object') return undefined;
+  const b = v as Record<string, unknown>;
+  return { available: b.available === true, source: asString(b.source) ?? 'manual', status: asString(b.status), renewsAt: asString(b.renewsAt), hasCustomer: b.hasCustomer === true };
+}
+
 export function createAccountClient(options: AccountOptions = {}) {
   const { baseUrl = '', headers } = options;
   const doFetch = options.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
@@ -29,11 +44,13 @@ export function createAccountClient(options: AccountOptions = {}) {
       const res = await doFetch(`${baseUrl}/api/me`, { headers: { accept: 'application/json', ...(headers?.() ?? {}) }, credentials: 'same-origin' });
       if (res.status === 401) return { status: 'signed-out' };
       if (!res.ok) return { status: 'unreachable' };
-      const body = (await res.json().catch(() => undefined)) as { userId?: unknown; account?: { kind?: unknown; email?: unknown; name?: unknown; isAdmin?: unknown; isPaid?: unknown } } | undefined;
+      const body = (await res.json().catch(() => undefined)) as { userId?: unknown; account?: { kind?: unknown; email?: unknown; name?: unknown; isAdmin?: unknown; isPaid?: unknown; plan?: unknown; billing?: unknown } } | undefined;
       const userId = asString(body?.userId);
       // An answer that is not what the API sends (a proxy page, a half-deployed API) says nothing about who is signed in.
       if (!userId) return { status: 'unreachable' };
-      return { status: 'signed-in', userId, kind: body?.account?.kind === 'dev' ? 'dev' : 'session', email: asString(body?.account?.email), name: asString(body?.account?.name), isAdmin: body?.account?.isAdmin === true, isPaid: body?.account?.isPaid === true };
+      const plan = asString(body?.account?.plan);
+      const billing = billingFrom(body?.account?.billing);
+      return { status: 'signed-in', userId, kind: body?.account?.kind === 'dev' ? 'dev' : 'session', email: asString(body?.account?.email), name: asString(body?.account?.name), isAdmin: body?.account?.isAdmin === true, isPaid: body?.account?.isPaid === true, ...(plan ? { plan } : {}), ...(billing ? { billing } : {}) };
     } catch {
       return { status: 'unreachable' };
     }
@@ -93,6 +110,19 @@ export function createAccountClient(options: AccountOptions = {}) {
     }
   }
 
+  /** Billing (ADR 065): the address of Stripe's hosted Checkout or Customer Portal, which the caller sends the browser to. */
+  async function billingUrl(path: '/api/billing/checkout' | '/api/billing/portal', body: unknown): Promise<{ ok: true; url: string } | { ok: false }> {
+    try {
+      const res = await doFetch(`${baseUrl}${path}`, { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json', ...(headers?.() ?? {}) }, credentials: 'same-origin', body: JSON.stringify(body) });
+      const url = res.ok ? asString(((await res.json().catch(() => undefined)) as { url?: unknown } | undefined)?.url) : null;
+      return url ? { ok: true, url } : { ok: false };
+    } catch {
+      return { ok: false };
+    }
+  }
+  const billingCheckout = (interval: 'month' | 'year') => billingUrl('/api/billing/checkout', { interval });
+  const billingPortal = () => billingUrl('/api/billing/portal', {});
+
   async function signOut(): Promise<boolean> {
     try {
       const res = await doFetch(`${baseUrl}/api/auth/sign-out`, { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' }, credentials: 'same-origin', body: '{}' });
@@ -102,7 +132,7 @@ export function createAccountClient(options: AccountOptions = {}) {
     }
   }
 
-  return { me, startGoogleSignIn, emailCodeOpen, sendEmailCode, signInWithEmailCode, signOut };
+  return { me, billingCheckout, billingPortal, startGoogleSignIn, emailCodeOpen, sendEmailCode, signInWithEmailCode, signOut };
 }
 
 export type AccountClient = ReturnType<typeof createAccountClient>;

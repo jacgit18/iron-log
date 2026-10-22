@@ -1,4 +1,5 @@
 import AccountPanel from './AccountPanel.js';
+import BillingPanel from './BillingPanel.js';
 import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
 import IssuesPanel from './IssuesPanel.js';
@@ -461,6 +462,7 @@ export default function Settings() {
       <Group id="data" title="Data">
         <div className="scol">
           <AccountPanel />
+          <BillingPanel />
           <SyncPanel />
         </div>
         <div className="scol"><DataPanel key={importCount} /></div>

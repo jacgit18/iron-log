@@ -14,6 +14,7 @@ import { LS } from './lib/storage.js';
    use `requireAdmin` (server/admin.ts), or `requirePaid` (server/plan.ts) for a 'paid' feature. Add a feature with a line here, in alphabetical order, then `useFeature('name')` in the component. */
 export const FEATURES = {
   adminIssues: 'admin', // Production issues in Settings (ADR 013 amendment): an internal tool, so it stays admin-only for good; remove it only together with /api/issues and the Issues panel
+  billing: 'admin', // The Billing section in Settings (ADR 065), Stripe in test mode; remove this line and its useFeature check in components/settings/BillingPanel.tsx, and ADMIN_ONLY in server/billing.ts, when the owner goes live
   diet: 'admin', // A Diet section inside the Nutrition tab (Daily); a placeholder until diet tracking is planned; remove this line and its useFeature check in components/supplements/Diet.tsx when the owner releases it
   medical: 'admin', // The Medical section on Daily (a placeholder, nothing is stored); remove this line and its useFeature check in components/daily/Daily.tsx when the owner releases it
   recipes: 'admin', // The Recipes section on Daily (a placeholder); remove this line and its useFeature check in components/daily/Daily.tsx when the owner releases it
