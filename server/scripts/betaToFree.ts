@@ -21,7 +21,7 @@ export async function betaToFree(db: Kysely<DB>, { apply }: { apply: boolean }):
     const betas = await trx.selectFrom('users').select('id').where('plan', '=', 'beta').orderBy('id').forUpdate().execute();
     const total = await trx.selectFrom('users').select(({ fn }) => fn.countAll<string>().as('n')).executeTakeFirstOrThrow();
     const ids = betas.map(b => String(b.id));
-    if (apply && ids.length) await trx.updateTable('users').set({ plan: 'free' }).where('plan', '=', 'beta').execute();
+    if (apply && ids.length) await trx.updateTable('users').set({ plan: 'free' }).where('id', 'in', betas.map(b => b.id)).execute();
     return { applied: apply, moved: ids.length, kept: Number(total.n) - ids.length, ids };
   });
 }
