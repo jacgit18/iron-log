@@ -9,6 +9,7 @@ import type {
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
 import type { BackupInfo } from '../lib/autoBackup.ts';
+import type { ServerBackupList } from '../lib/serverBackups.ts';
 
 export type Flag = (text: string) => void;
 
@@ -447,6 +448,11 @@ export interface BackupSlice {
   downloadBackup(date: string): Promise<void>;
   /** Deletes every copy (Erase everything, Delete my account). */
   forgetBackups(): Promise<void>;
+  /** The days kept on the account (ADR 066); null until asked, and unused when syncing is off. */
+  serverBackups: ServerBackupList | null;
+  refreshServerBackups(): Promise<void>;
+  /** Opens a day kept on the account in the import review. */
+  restoreServerBackup(date: string): Promise<void>;
 }
 
 export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice;
