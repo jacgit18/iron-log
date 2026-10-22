@@ -13,6 +13,7 @@ import { LISTED_KINDS, listCatalog, parseSearch, searchCatalog } from './catalog
 import { clientErrors } from './clientErrors.ts';
 import { clientVersionGate } from './clientVersion.ts';
 import { errorHandler } from './errorHandler.ts';
+import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
 import { originGuard } from './originGuard.ts';
@@ -167,6 +168,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Everything below this line needs a signed-in user. The per-address limit comes first, so an anonymous flood never reaches the database.
   app.use('/api', rateLimit(limits.api));
   app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
+  // A page that holds another account's data is refused before any route runs (server/expectedUser.ts).
+  app.use(['/api/commands', '/api/sync'], expectedUserGate());
   // Per signed-in user, after the lookup.
   app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
   app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }), repairBody);
