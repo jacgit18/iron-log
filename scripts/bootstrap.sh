@@ -11,9 +11,9 @@ TODOS=0
 echo "Tools"
 command -v git >/dev/null && ok "git" || todo "install git"
 if command -v node >/dev/null; then
-  major="$(node -p 'process.versions.node.split(".")[0]')"
-  [ "$major" -ge 22 ] && ok "node $(node -v)" || todo "node 22 or newer is needed (found $(node -v))"
-else todo "install node 22 or newer"; fi
+  # 22.12 is the floor package.json engines names (vitest 5 needs it); a newer major is fine.
+  node -p 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a>22||(a===22&&b>=12)?0:1)' && ok "node $(node -v)" || todo "node 22.12 or newer is needed (found $(node -v))"
+else todo "install node 22.12 or newer"; fi
 command -v gh >/dev/null && ok "gh (GitHub CLI)" || todo "install the GitHub CLI (gh): PRs are opened with it"
 command -v docker >/dev/null && ok "docker" || todo "install Docker (only for the local database and e2e:sync / db:check)"
 
