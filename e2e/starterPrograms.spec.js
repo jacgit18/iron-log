@@ -26,7 +26,7 @@ test('a new account picks a starter and gets its cards on the first days, withou
   await expect(prompt).toBeVisible({ timeout: 30_000 });
   const { violations } = await scan(page);
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
-  await prompt.getByRole('button', { name: 'Use Upper / Lower, 4 days a week' }).click();
+  await prompt.getByRole('button', { name: 'Use this starter: Upper / Lower, 4 days a week' }).click();
   await expect(prompt).toHaveCount(0);
   await expect(page.locator('#chk-A-d1s1')).toBeVisible();
   await expect(page.getByText('Bench press').first()).toBeVisible();
@@ -38,7 +38,7 @@ test('the days-a-week choice changes how many days are filled', async ({ page })
   const prompt = page.getByRole('region', { name: 'Build your first workout' });
   await expect(prompt).toBeVisible({ timeout: 30_000 });
   await prompt.getByLabel('Push / Pull / Legs days a week').selectOption('6');
-  await prompt.getByRole('button', { name: 'Use Push / Pull / Legs, 6 days a week' }).click();
+  await prompt.getByRole('button', { name: 'Use this starter: Push / Pull / Legs, 6 days a week' }).click();
   await expect(page.locator('#chk-A-d6s1')).toBeVisible();
   await expect(page.locator('#chk-A-d7s1')).toHaveCount(0);
 });

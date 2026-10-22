@@ -28,7 +28,7 @@ function StarterRow({ starter }: { starter: Starter }) {
             </select>
           </label>
         ) : <span className="note">{choices[0]} days a week</span>}
-        <button type="button" className="btn" onClick={use} aria-label={`Use ${starter.name}, ${days} days a week`}>Use this</button>
+        <button type="button" className="btn" onClick={use} aria-label={`Use this starter: ${starter.name}, ${days} days a week`}>Use this</button>
       </div>
     </li>
   );
