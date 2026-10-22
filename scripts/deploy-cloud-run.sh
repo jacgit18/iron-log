@@ -6,6 +6,7 @@
 #   secrets   put the four secrets in Secret Manager from your shell (once, and when one changes); with RESEND_API_KEY exported it also
 #             stores the email-code key (optional: without it the email sign-in code stays off, ADR 042)
 #             With VAPID_SUBJECT exported (mailto:you@example.com) it also stores the Web Push keys, making the pair once; see push-setup (ADR 044)
+#   stripe    put only the four Stripe billing settings in Secret Manager (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY; ADR 065)
 #   push-setup  make the Cloud Tasks queue, the invoker account and the permissions for Web Push (once; needs the cloudtasks API)
 #   url       print the address the service will have, for the Google console's redirect URI (needs no deploy)
 #             The key that seals names and emails in the database (PII_ENCRYPTION_KEY, ADR 046) is made here once (only with PII_KEY_CREATE=1) and never replaced: a
@@ -107,6 +108,11 @@ sys.exit(0 if any(e.get("name") == sys.argv[1] and e.get("valueFrom", {}).get("s
 }
 resend_secret_wanted() { secret_wanted "$RESEND_SECRET" RESEND_API_KEY RESEND_OFF; }
 
+# Stripe billing (ADR 065): four secrets, each environment with its own (iron-log-stripe-*, iron-log-staging-stripe-*, iron-log-qa-stripe-*): the
+# secret key, the webhook signing secret and the two price ids (the price ids are not secret, but a CI deploy can only pass what it can name).
+# Optional like Resend: without them the server's billing stays off. STRIPE_OFF=1 removes them from the service.
+stripe_secret_wanted() { secret_wanted "${SECRET_PREFIX}-stripe-secret-key" STRIPE_SECRET_KEY STRIPE_OFF; }
+
 # The key that seals names and emails in the database (ADR 046). No OFF switch: rows already sealed need it, and the app would write
 # new ones in the clear without it.
 # (PII_SECRET is set with the environment above: production's key for production and staging, QA's own for QA.)
@@ -150,6 +156,34 @@ cmd_push_setup() {
   gc tasks queues add-iam-policy-binding "$PUSH_QUEUE_NAME" --location "$REGION" --member "serviceAccount:$runtime" --role roles/cloudtasks.enqueuer >/dev/null
   gc iam service-accounts add-iam-policy-binding "$invoker" --member "serviceAccount:$runtime" --role roles/iam.serviceAccountUser >/dev/null
   echo "Queue $PUSH_QUEUE_NAME and account $invoker are ready. Next: VAPID_SUBJECT=mailto:you@example.com scripts/deploy-cloud-run.sh secrets, then deploy."
+}
+
+# Stores the four Stripe settings (ADR 065) and fills STRIPE_NAMES with their secret names. A missing companion or a value that is not a Stripe
+# key is refused; staging and QA take test keys only, because they hold a copy of production's data and must never charge a real card.
+STRIPE_NAMES=()
+store_stripe_secrets() {
+  : "${STRIPE_SECRET_KEY:?Export STRIPE_SECRET_KEY (sk_test_... for staging and QA)}"
+  : "${STRIPE_WEBHOOK_SECRET:?Export STRIPE_WEBHOOK_SECRET (the whsec_ signing secret of this environment webhook endpoint)}"
+  : "${STRIPE_PRICE_MONTHLY:?Export STRIPE_PRICE_MONTHLY (the price_ id of the monthly price)}"
+  : "${STRIPE_PRICE_YEARLY:?Export STRIPE_PRICE_YEARLY (the price_ id of the yearly price)}"
+  case "$STRIPE_SECRET_KEY" in sk_test_*|rk_test_*) ;; sk_live_*|rk_live_*)
+    if [ "$IRON_LOG_ENV" != production ]; then echo "${IRON_LOG_ENV} takes Stripe test keys only (a live key here would charge real cards from a copy of production data)." >&2; exit 1; fi;;
+    *) echo "STRIPE_SECRET_KEY does not look like a Stripe key (sk_test_... or sk_live_...)." >&2; exit 1;; esac
+  printf '%s' "$STRIPE_SECRET_KEY" | put_secret "${SECRET_PREFIX}-stripe-secret-key"
+  printf '%s' "$STRIPE_WEBHOOK_SECRET" | put_secret "${SECRET_PREFIX}-stripe-webhook-secret"
+  printf '%s' "$STRIPE_PRICE_MONTHLY" | put_secret "${SECRET_PREFIX}-stripe-price-monthly"
+  printf '%s' "$STRIPE_PRICE_YEARLY" | put_secret "${SECRET_PREFIX}-stripe-price-yearly"
+  STRIPE_NAMES=("${SECRET_PREFIX}-stripe-secret-key" "${SECRET_PREFIX}-stripe-webhook-secret" "${SECRET_PREFIX}-stripe-price-monthly" "${SECRET_PREFIX}-stripe-price-yearly")
+}
+
+# Only the Stripe settings, for turning billing on or changing a key without the database and Google values `secrets` also needs.
+cmd_stripe() {
+  store_stripe_secrets
+  local s
+  for s in "${STRIPE_NAMES[@]}"; do
+    gc secrets add-iam-policy-binding "$s" --member "serviceAccount:${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" --role roles/secretmanager.secretAccessor >/dev/null
+  done
+  echo "Done. Next: deploy (Actions, Deploy to Cloud Run, or scripts/deploy-cloud-run.sh deploy): it passes them to the service."
 }
 
 cmd_secrets() {
@@ -197,6 +231,13 @@ cmd_secrets() {
   else echo "  $PII_SECRET: not created (export PII_KEY_CREATE=1 to make it; see runbook section 20)"; fi
   # Optional: the Resend key for the emailed sign-in code. Not exporting it leaves the feature off (or as it already is).
   local secret_names=("${SECRET_PREFIX}-app-database-url" "${SECRET_PREFIX}-google-client-id" "${SECRET_PREFIX}-google-client-secret" "${SECRET_PREFIX}-auth-secret" ${pii_names[@]+"${pii_names[@]}"})
+  # Optional: Stripe billing (ADR 065). STRIPE_SECRET_KEY says to store all four (see store_stripe_secrets).
+  if [ -n "${STRIPE_SECRET_KEY:-}" ]; then
+    store_stripe_secrets
+    secret_names+=("${STRIPE_NAMES[@]}")
+  else
+    echo "  ${SECRET_PREFIX}-stripe-*: not touched (export STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY and STRIPE_PRICE_YEARLY to store them)"
+  fi
   if [ "$IRON_LOG_ENV" != production ]; then
     echo "  Resend and Web Push keys: never stored for ${IRON_LOG_ENV} (it sends no email and no push, ADR 056, 060)"
   elif [ -n "${RESEND_API_KEY:-}" ]; then
@@ -270,6 +311,23 @@ deploy_image() {
   local secrets="APP_DATABASE_URL=${SECRET_PREFIX}-app-database-url:latest,BETTER_AUTH_SECRET=${SECRET_PREFIX}-auth-secret:latest,GOOGLE_CLIENT_ID=${SECRET_PREFIX}-google-client-id:latest,GOOGLE_CLIENT_SECRET=${SECRET_PREFIX}-google-client-secret:latest"
   if resend_secret_wanted; then secrets+=",RESEND_API_KEY=${RESEND_SECRET}:latest"; echo "Email sign-in code: RESEND_API_KEY is passed to the service."; else echo "Email sign-in code: no RESEND_API_KEY, so the feature stays off${RESEND_OFF:+ (RESEND_OFF=1: any mapping is removed)}."; fi
   if pii_secret_wanted; then secrets+=",PII_ENCRYPTION_KEY=${PII_SECRET}:latest"; echo "Database encryption: PII_ENCRYPTION_KEY is passed to the service."; else echo "Database encryption: no key yet, so names and emails are stored as before."; fi
+  local billing_env=()
+  if stripe_secret_wanted; then
+    secrets+=",STRIPE_SECRET_KEY=${SECRET_PREFIX}-stripe-secret-key:latest,STRIPE_WEBHOOK_SECRET=${SECRET_PREFIX}-stripe-webhook-secret:latest,STRIPE_PRICE_MONTHLY=${SECRET_PREFIX}-stripe-price-monthly:latest,STRIPE_PRICE_YEARLY=${SECRET_PREFIX}-stripe-price-yearly:latest"
+    echo "Billing: the Stripe settings are passed to the service."
+    # The server keeps billing off for a live (sk_live_) key unless BILLING_LIVE=1 is set (server/billing.ts), so going live is a deliberate
+    # step: export BILLING_LIVE=1 for the production deploy. --update-env-vars keeps it on later deploys, so it is passed once, not every time.
+    if [ "${BILLING_LIVE:-}" = 1 ] && [ "$IRON_LOG_ENV" = production ]; then
+      billing_env=(BILLING_LIVE=1)
+      echo "Billing: BILLING_LIVE=1 is passed, so a live Stripe key turns billing on."
+    elif [ "${BILLING_LIVE:-}" = 1 ]; then
+      echo "Billing: BILLING_LIVE=1 is ignored for ${IRON_LOG_ENV}, which takes test keys only."
+    else
+      echo "Billing: a live (sk_live_) key also needs BILLING_LIVE=1 exported for a production deploy, or billing stays off. A test key does not."
+    fi
+  else
+    echo "Billing: no Stripe settings, so billing stays off${STRIPE_OFF:+ (STRIPE_OFF=1: any mapping is removed)}."
+  fi
   # Web Push (ADR 044): the keys as secrets, and where the queue and its signing account are (they are named by project, region and the
   # defaults above, so a CI deploy can pass them without looking anything up). PUSH_OFF=1 removes all of it.
   local push_env=() push_remove=()
@@ -282,7 +340,7 @@ deploy_image() {
     echo "Web Push: no VAPID keys, so push stays off${PUSH_OFF:+ (PUSH_OFF=1: any settings are removed)}."
   fi
   local env_vars="NODE_ENV=production,BASE_URL=${url},COMMIT_SHA=${commit}"
-  for kv in ${push_env[@]+"${push_env[@]}"}; do env_vars+=",${kv}"; done
+  for kv in ${push_env[@]+"${push_env[@]}"} ${billing_env[@]+"${billing_env[@]}"}; do env_vars+=",${kv}"; done
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
     ${public[@]+"${public[@]}"} \
@@ -339,6 +397,7 @@ cmd_restore() { gc run services update-traffic "$SERVICE" --region "$REGION" --t
 case "${1:-}" in
   setup) cmd_setup;;
   secrets) cmd_secrets;;
+  stripe) cmd_stripe;;
   push-setup) cmd_push_setup;;
   url) service_url;;
   deploy) cmd_deploy;;
@@ -346,5 +405,5 @@ case "${1:-}" in
   promote) cmd_promote;;
   discard) cmd_discard;;
   restore) cmd_restore;;
-  *) sed -n '2,20p' "$0"; exit 2;;
+  *) sed -n '2,21p' "$0"; exit 2;;
 esac
