@@ -142,8 +142,8 @@ export function fakeServer() {
   };
 }
 
-export const down = (cls: 'network' | 'server' | 'auth' | 'outdated' = 'network', retryAfterMs: number | null = null): CommandOutcome =>
-  ({ ok: false, class: cls, status: cls === 'network' ? 0 : 503, retryAfterMs, message: `${cls} failure` });
+export const down = (cls: 'network' | 'server' | 'auth' | 'outdated' | 'account' = 'network', retryAfterMs: number | null = null): CommandOutcome =>
+  ({ ok: false, class: cls, status: cls === 'network' ? 0 : cls === 'account' ? 409 : 503, retryAfterMs, message: `${cls} failure` });
 
 /* A sleep the test controls: every wait is recorded and stays pending until released. */
 export function gatedSleep() {
