@@ -98,7 +98,7 @@ It's a React app built with Vite. You can install it on your phone or computer l
 ## Running it
 
 - **Hosted:** open **[the hosted app](https://iron-log-947510572244.us-central1.run.app)**, then install it from Settings if you like.
-- **Locally** (Node 22 or newer, per `package.json` engines; `scripts/bootstrap.sh` sets everything up):
+- **Locally** (Node 22.12 or newer, per `package.json` engines; `scripts/bootstrap.sh` sets everything up):
 
   ```bash
   npm ci

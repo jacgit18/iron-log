@@ -8,7 +8,7 @@ cd iron-log
 scripts/bootstrap.sh
 ```
 
-`scripts/bootstrap.sh` checks the tools (git, Node 22+, `gh`, Docker), runs `npm ci`, turns on the git hooks, installs the test browser and starts the local Postgres. It prints a `TODO` line for anything it cannot do. Run it again after fixing them.
+`scripts/bootstrap.sh` checks the tools (git, Node 22.12+, `gh`, Docker), runs `npm ci`, turns on the git hooks, installs the test browser and starts the local Postgres. It prints a `TODO` line for anything it cannot do. Run it again after fixing them.
 
 What the clone already carries: `CLAUDE.md` (the rules for agents), the PR template and the checks that read it (`pr-audience`, `pr-changelog`), `scripts/pr-body.mjs` (writes the PR description), `scripts/check.mjs` (runs the checks that fit what changed), `scripts/lighthouse.mjs` (Lighthouse with floors), and `.githooks/pre-push`.
 
