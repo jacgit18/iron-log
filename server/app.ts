@@ -16,6 +16,7 @@ import { errorHandler } from './errorHandler.ts';
 import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
+import { ADMIN_ONLY, billingRoutes, billingSummary, cancelBillingFor, webhookRoute, type BillingConfig, type StripeApi } from './billing.ts';
 import { originGuard } from './originGuard.ts';
 import { fireRoute, type FireDeps } from './push/fire.ts';
 import { pushRoutes } from './push/routes.ts';
@@ -54,6 +55,8 @@ export interface AppDeps {
   authLimits?: { signIn: Limit; other: Limit };
   /** Web Push (ADR 044): the public VAPID key the browser subscribes with, and what schedules a later send. Without a key the routes answer 503. */
   push?: { publicKey?: string; scheduler?: PushScheduler; now?: () => number; fire?: Pick<FireDeps, 'verify' | 'send'> };
+  /** Stripe billing (ADR 065). Unset: the billing routes answer 503 and /api/me says billing is not available. */
+  billing?: { api: StripeApi; config: BillingConfig };
   /** Limits on the rest of the API (see LIMITS). They are generous: a phone back online after two days sends a burst. */
   limits?: Partial<typeof LIMITS>;
 }
@@ -75,6 +78,9 @@ const LIMITS = {
   account: { max: 5, windowMs: 60 * 60_000 } as Limit,
   // Push: a timer or a tick schedules or cancels, so a busy session sends a few a minute. A loop is what this stops.
   push: { max: 60, windowMs: 60_000 } as Limit,
+  // Billing: a person pressing Upgrade or Manage billing. The webhook is Stripe's, per address, and far above its real rate: a 429 makes Stripe retry later.
+  billing: { max: 20, windowMs: 60_000 } as Limit,
+  stripeWebhook: { max: 600, windowMs: 60_000 } as Limit,
   // The admin Issues screen: a person reading a list and changing a status, a few calls a minute at most.
   issues: { max: 60, windowMs: 60_000 } as Limit,
   // Cloud Tasks calling the fire route: per address (a few Google ones), checked before the token. A 429 would push an alert past its
@@ -100,7 +106,7 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   const recordIssue = db ? issueRecorder(db) : undefined;
@@ -125,6 +131,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   }
   // The phone's error reports: anyone may send one (a signed-out phone has errors too), so they are small, rate-limited and scrubbed.
   app.post('/api/client-errors', rateLimit(limits.clientErrors), express.json({ limit: '4kb' }), repairBody, clientErrors(recordIssue));
+  // Stripe's webhook: no sign-in, and its body must reach the signature check as the exact bytes, so it comes before every JSON parser.
+  if (db) app.post('/api/stripe/webhook', rateLimit(limits.stripeWebhook), ...webhookRoute(db, billing?.api));
   // The one-time upload of a phone's old data is far bigger than any other request (years of entries), so it alone gets a larger limit,
   // but only once the caller is signed in and counted (below, after sessionAuth and its per-user limit). Before that it gets no parser
   // at all: an anonymous caller must not be able to make the one small instance buffer and parse 4 MB per request (audit run-2).
@@ -176,6 +184,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));
   app.use('/api/sync', rateLimit(limits.sync, undefined, byUser));
   // The admin Issues screen (ADR 013 amendment): admin-only, and the database checks users.is_admin again.
+  // Billing (ADR 065): admin-only while Stripe is in test mode (ADMIN_ONLY in billing.ts).
+  if (db) app.use('/api/billing', ...(ADMIN_ONLY ? [requireAdmin] : []), rateLimit(limits.billing, undefined, byUser), billingRoutes({ db, api: billing?.api, config: billing?.config }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
   if (db) app.use('/api/push', rateLimit(limits.push, undefined, byUser), pushRoutes({ db, publicKey: push?.publicKey, scheduler: push?.scheduler, now: push?.now }));
@@ -187,14 +197,15 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     const email = (res.locals.account as Account).email;
     // Better Auth keeps a code under `<kind>-otp-<email>`; every kind is cleared, so nothing carrying the address is left after the account goes.
     const purge = auth && email ? async () => { const adapter = (await auth.$context).internalAdapter; for (const kind of ['sign-in', 'email-verification', 'forget-password']) await adapter.deleteVerificationByIdentifier(`${kind}-otp-${email.toLowerCase()}`); } : undefined;
-    const result = await deleteMyAccount(db!, String(res.locals.userId), req.body, purge);
+    const userId = String(res.locals.userId);
+    const result = await deleteMyAccount(db!, userId, req.body, purge, () => cancelBillingFor(db!, billing?.api)(userId));
     res.status(result.status).json(result.body);
   });
   app.get('/api/me', async (_req, res) => {
     const userId = String(res.locals.userId);
     const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string; plan: string | null }>`select current_setting('app.user_id') as id, (select plan from users where id = current_setting('app.user_id')::bigint) as plan`.execute(trx)).rows[0]);
     const account = res.locals.account as Account;
-    res.json({ ok: true, userId: row?.id, minClientVersion, account: { ...account, plan: row?.plan ?? 'free', isPaid: isPaid(row?.plan, account.isAdmin) } });
+    res.json({ ok: true, userId: row?.id, minClientVersion, account: { ...account, plan: row?.plan ?? 'free', isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, account.isAdmin, !!billing) } });
   });
 
   app.post('/api/commands/import-legacy', async (req, res) => {

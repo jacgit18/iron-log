@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { adminsFrom } from './admin.ts';
 import { createApp } from './app.ts';
 import { authConfigFrom, createAuth } from './auth/betterAuth.ts';
+import { billingConfigFrom, stripeApi } from './billing.ts';
 import { minVersionFrom } from './clientVersion.ts';
 import { createDb } from './db/connection.ts';
 import { remoteDatabaseProblem } from './db/localOnly.ts';
@@ -54,6 +55,11 @@ const push = pushSetup.config && tasksSetup.config
   ? { publicKey: pushSetup.config.publicKey, scheduler: cloudTasksScheduler(tasksSetup.config), fire: { verify: oidcVerifier(tasksSetup.config), send: webPushSender(pushSetup.config) } }
   : { publicKey: pushSetup.config?.publicKey };
 
+// Stripe billing (ADR 065): off unless every setting is present; a live key also needs BILLING_LIVE=1. The return address is this app's own.
+const billingSetup = billingConfigFrom(process.env, setup.enabled ? setup.config.baseURL : undefined);
+console.log(JSON.stringify(billingSetup.config ? { msg: 'billing is on' } : { msg: 'billing is off', reason: billingSetup.problem ?? 'not configured' }));
+const billing = billingSetup.config ? { api: stripeApi(billingSetup.config), config: billingSetup.config } : undefined;
+
 // Outside development and test the development sign-in is refused, so without sign-in nobody can use the API at all. Say so loudly.
 if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
   console.error(JSON.stringify({ msg: 'NOBODY CAN SIGN IN: sign-in is off and the development sign-in is not allowed here', reasons: setup.enabled ? [] : setup.reasons }));
@@ -63,7 +69,7 @@ if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 
 const trustProxy = process.env.TRUST_PROXY !== undefined ? (process.env.TRUST_PROXY === 'false' ? false : Number(process.env.TRUST_PROXY)) : process.env.K_SERVICE ? 1 : undefined;
 if (typeof trustProxy === 'number' && !Number.isInteger(trustProxy)) throw new Error('TRUST_PROXY must be a whole number of proxies, or false');
 
-const server = createApp({ db, staticDir, minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], trustProxy, push }).listen(port, () => {
+const server = createApp({ db, staticDir, minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], trustProxy, push, billing }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 
