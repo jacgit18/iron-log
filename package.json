@@ -72,7 +72,7 @@
     "esbuild": "^0.28.2",
     "kysely-codegen": "^0.20.0",
     "oxlint": "^1.81.0",
-    "pixelmatch": "^7.2.0",
+    "pixelmatch": "^8.0.0",
     "pngjs": "^7.0.0",
     "postcss": "8.5.28",
     "tsx": "^4.23.15",
