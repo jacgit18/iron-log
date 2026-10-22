@@ -9,7 +9,7 @@ import type { DB } from '../db/types.ts';
 export const ERASE_WORD = 'ERASE';
 export const DELETE_WORD = 'DELETE';
 
-export type AccountResult = { status: 200; body: { ok: true } } | { status: 422; body: { ok: false; error: string } };
+export type AccountResult = { status: 200; body: { ok: true } } | { status: 422 | 503; body: { ok: false; error: string } };
 
 const asked = (body: unknown, word: string) => !!body && typeof body === 'object' && (body as { confirm?: unknown }).confirm === word;
 
@@ -24,8 +24,17 @@ export async function eraseMyData(db: Kysely<DB>, userId: string, body: unknown)
 /** Removes the person's emailed codes, which Better Auth keeps under `<kind>-otp-<email>` (app.ts clears every kind). */
 export type PurgeCodes = () => Promise<void>;
 
-export async function deleteMyAccount(db: Kysely<DB>, userId: string, body: unknown, purgeCodes?: PurgeCodes): Promise<AccountResult> {
+/** Ends a paid subscription before the account goes (billing.ts). It throws when it cannot, and then nothing is erased. */
+export type CancelBilling = () => Promise<void>;
+
+export async function deleteMyAccount(db: Kysely<DB>, userId: string, body: unknown, purgeCodes?: PurgeCodes, cancelBilling?: CancelBilling): Promise<AccountResult> {
   if (!asked(body, DELETE_WORD)) return { status: 422, body: { ok: false, error: `send {"confirm":"${DELETE_WORD}"} to delete the account` } };
+  try {
+    await cancelBilling?.();
+  } catch (err) {
+    console.error(JSON.stringify({ msg: 'could not end the subscription before deleting the account', error: err instanceof Error ? err.message : String(err) }));
+    return { status: 503, body: { ok: false, error: 'could not cancel your subscription, so nothing was deleted; try again' } };
+  }
   // The SQL function cannot do this: it looks for the plain address, but the record is stored under `sign-in-otp-<email>` (and, with
   // ADR 046, sealed), so it is removed here through Better Auth, which knows both. Before the account goes, while the address is known.
   await purgeCodes?.();
