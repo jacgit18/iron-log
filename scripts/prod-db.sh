@@ -13,6 +13,9 @@
 #   encrypt-users [--apply]     one-off (ADR 046): npm run encrypt:users against production: a dry run, or with --apply a backup, then the write
 #                               (seals the names and emails already stored). The key is read from Secret Manager (iron-log-pii-key) and never
 #                               shown. Run it after the deploy that carries the key; then set PII_PLAINTEXT_DONE=true (runbook section 20).
+#   find-user <email>           read-only: the id, plan, admin flag and dates of the account behind one address (npm run find:user against
+#                               production). Names and emails are sealed, so the key is read from Secret Manager into this one command and
+#                               never shown; the address and name are not printed either. Takes no backup.
 #   reader [--apply]            with --apply: make (or re-key) the read-only role the CI deploy uses to see which migrations production
 #                               has, and store its URL in the GitHub secret MIGRATIONS_CHECK_URL (environment production), never shown.
 #                               It changes a login, not data, so it takes no backup.
@@ -28,6 +31,7 @@ BACKUP="${BACKUP:-scripts/backup-cloud-run.sh}"
 CATALOG_IMPORT="${CATALOG_IMPORT:-npm run -s catalog:import --}"
 KEEP_INJURY="${KEEP_INJURY:-npm run -s keep:injury-prevention --}"
 ENCRYPT_USERS="${ENCRYPT_USERS:-npm run -s encrypt:users --}"
+FIND_USER="${FIND_USER:-npm run -s find:user --}"
 PII_KEY_CMD="${PII_KEY_CMD:-gcloud --project $PROJECT_ID secrets versions access latest --secret iron-log-pii-key}"   # overridable for tests
 DB_READER="${DB_READER:-node scripts/db-reader.mjs}"
 GH="${GH:-gh}"
@@ -103,5 +107,11 @@ case "$cmd" in
     [ -n "$key" ] || { echo "No key came back from Secret Manager; nothing was changed." >&2; exit 1; }
     if $apply; then backup; DATABASE_URL="$URL" PII_ENCRYPTION_KEY="$key" $ENCRYPT_USERS --apply
     else DATABASE_URL="$URL" PII_ENCRYPTION_KEY="$key" $ENCRYPT_USERS; fi ;;
+  find-user)
+    email="${args[0]:-}"; [ -n "$email" ] || usage
+    URL="$(owner_url)"; where
+    key="$($PII_KEY_CMD)"
+    [ -n "$key" ] || { echo "No key came back from Secret Manager; nothing was read." >&2; exit 1; }
+    DATABASE_URL="$URL" PII_ENCRYPTION_KEY="$key" $FIND_USER "$email" ;;
   *) usage ;;
 esac

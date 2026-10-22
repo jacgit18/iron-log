@@ -12,6 +12,7 @@
     "reset:accounts": "tsx scripts/reset-accounts.mjs",
     "keep:injury-prevention": "tsx scripts/keep-injury-prevention.mjs",
     "encrypt:users": "tsx scripts/encrypt-users.mjs",
+    "find:user": "tsx scripts/find-user.mjs",
     "own:exercises": "tsx scripts/own-exercises.mjs",
     "catalog:import": "tsx scripts/catalog-import.mjs",
     "prod:db": "scripts/prod-db.sh",
