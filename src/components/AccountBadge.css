@@ -21,6 +21,9 @@
     filter: brightness(1.12);
   }
 }
+.acctavatar::before {
+  content: attr(data-initial);
+}
 .acctavatar {
   position: relative;
   display: inline-flex;

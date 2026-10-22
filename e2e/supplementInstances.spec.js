@@ -35,7 +35,7 @@ test('a supplement already in Morning gets a second instance in Night, ticked an
   await expect(morning.locator('.srow')).toContainText(['Fish Oil1 g']); // still in Morning
   await night.getByRole('checkbox').check();
   await expect(morning.getByRole('checkbox')).not.toBeChecked();
-  await night.getByRole('button', { name: 'Take Fish Oil off Night' }).click();
+  await night.getByRole('button', { name: 'Remove Fish Oil from Night' }).click();
   await night.getByRole('button', { name: 'Tap again to remove' }).click();
   await expect(night.locator('.srow')).toHaveCount(0);
   await expect(morning.locator('.srow')).toHaveCount(1);
