@@ -39,7 +39,7 @@ describe('/api/me reports the plan and whether the account is paid', () => {
   const me = async (url: string, name: string) => ((await (await fetch(`${url}/api/me`, { headers: { 'x-dev-user': name } })).json()) as { account: { plan: string; isPaid: boolean } }).account;
   it('follows users.plan', async () => {
     const url = await listen(createApp({ db }));
-    expect(await me(url, 'newbie')).toMatchObject({ plan: 'beta', isPaid: false }); // every new row starts as beta
+    expect(await me(url, 'newbie')).toMatchObject({ plan: 'free', isPaid: false }); // every new row starts as free (it was beta until billing went live)
     for (const [plan, paid] of [['free', false], ['paid', true], ['lifetime', true], ['founder', true], ['beta', false]] as const) {
       await setPlan('newbie', plan);
       expect(await me(url, 'newbie')).toMatchObject({ plan, isPaid: paid });

@@ -10,6 +10,7 @@
     "dev": "vite",
     "seed:test-user": "tsx server/scripts/seedTestUserCli.ts",
     "reset:accounts": "tsx scripts/reset-accounts.mjs",
+    "beta:to-free": "tsx scripts/beta-to-free.mjs",
     "keep:injury-prevention": "tsx scripts/keep-injury-prevention.mjs",
     "encrypt:users": "tsx scripts/encrypt-users.mjs",
     "find:user": "tsx scripts/find-user.mjs",
