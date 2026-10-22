@@ -107,6 +107,11 @@ sys.exit(0 if any(e.get("name") == sys.argv[1] and e.get("valueFrom", {}).get("s
 }
 resend_secret_wanted() { secret_wanted "$RESEND_SECRET" RESEND_API_KEY RESEND_OFF; }
 
+# Stripe billing (ADR 065): four secrets, each environment with its own (iron-log-stripe-*, iron-log-staging-stripe-*, iron-log-qa-stripe-*): the
+# secret key, the webhook signing secret and the two price ids (the price ids are not secret, but a CI deploy can only pass what it can name).
+# Optional like Resend: without them the server's billing stays off. STRIPE_OFF=1 removes them from the service.
+stripe_secret_wanted() { secret_wanted "${SECRET_PREFIX}-stripe-secret-key" STRIPE_SECRET_KEY STRIPE_OFF; }
+
 # The key that seals names and emails in the database (ADR 046). No OFF switch: rows already sealed need it, and the app would write
 # new ones in the clear without it.
 # (PII_SECRET is set with the environment above: production's key for production and staging, QA's own for QA.)
@@ -197,6 +202,22 @@ cmd_secrets() {
   else echo "  $PII_SECRET: not created (export PII_KEY_CREATE=1 to make it; see runbook section 20)"; fi
   # Optional: the Resend key for the emailed sign-in code. Not exporting it leaves the feature off (or as it already is).
   local secret_names=("${SECRET_PREFIX}-app-database-url" "${SECRET_PREFIX}-google-client-id" "${SECRET_PREFIX}-google-client-secret" "${SECRET_PREFIX}-auth-secret" ${pii_names[@]+"${pii_names[@]}"})
+  # Optional: Stripe billing (ADR 065). STRIPE_SECRET_KEY says to store all four; a missing one is refused. Staging and QA take test keys only.
+  if [ -n "${STRIPE_SECRET_KEY:-}" ]; then
+    : "${STRIPE_WEBHOOK_SECRET:?Export STRIPE_WEBHOOK_SECRET (the whsec_ signing secret of this environment webhook endpoint)}"
+    : "${STRIPE_PRICE_MONTHLY:?Export STRIPE_PRICE_MONTHLY (the price_ id of the monthly price)}"
+    : "${STRIPE_PRICE_YEARLY:?Export STRIPE_PRICE_YEARLY (the price_ id of the yearly price)}"
+    case "$STRIPE_SECRET_KEY" in sk_test_*|rk_test_*) ;; sk_live_*|rk_live_*)
+      if [ "$IRON_LOG_ENV" != production ]; then echo "${IRON_LOG_ENV} takes Stripe test keys only (a live key here would charge real cards from a copy of production's data)." >&2; exit 1; fi;;
+      *) echo "STRIPE_SECRET_KEY does not look like a Stripe key (sk_test_... or sk_live_...)." >&2; exit 1;; esac
+    printf '%s' "$STRIPE_SECRET_KEY" | put_secret "${SECRET_PREFIX}-stripe-secret-key"
+    printf '%s' "$STRIPE_WEBHOOK_SECRET" | put_secret "${SECRET_PREFIX}-stripe-webhook-secret"
+    printf '%s' "$STRIPE_PRICE_MONTHLY" | put_secret "${SECRET_PREFIX}-stripe-price-monthly"
+    printf '%s' "$STRIPE_PRICE_YEARLY" | put_secret "${SECRET_PREFIX}-stripe-price-yearly"
+    secret_names+=("${SECRET_PREFIX}-stripe-secret-key" "${SECRET_PREFIX}-stripe-webhook-secret" "${SECRET_PREFIX}-stripe-price-monthly" "${SECRET_PREFIX}-stripe-price-yearly")
+  else
+    echo "  ${SECRET_PREFIX}-stripe-*: not touched (export STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY and STRIPE_PRICE_YEARLY to store them)"
+  fi
   if [ "$IRON_LOG_ENV" != production ]; then
     echo "  Resend and Web Push keys: never stored for ${IRON_LOG_ENV} (it sends no email and no push, ADR 056, 060)"
   elif [ -n "${RESEND_API_KEY:-}" ]; then
@@ -270,6 +291,12 @@ deploy_image() {
   local secrets="APP_DATABASE_URL=${SECRET_PREFIX}-app-database-url:latest,BETTER_AUTH_SECRET=${SECRET_PREFIX}-auth-secret:latest,GOOGLE_CLIENT_ID=${SECRET_PREFIX}-google-client-id:latest,GOOGLE_CLIENT_SECRET=${SECRET_PREFIX}-google-client-secret:latest"
   if resend_secret_wanted; then secrets+=",RESEND_API_KEY=${RESEND_SECRET}:latest"; echo "Email sign-in code: RESEND_API_KEY is passed to the service."; else echo "Email sign-in code: no RESEND_API_KEY, so the feature stays off${RESEND_OFF:+ (RESEND_OFF=1: any mapping is removed)}."; fi
   if pii_secret_wanted; then secrets+=",PII_ENCRYPTION_KEY=${PII_SECRET}:latest"; echo "Database encryption: PII_ENCRYPTION_KEY is passed to the service."; else echo "Database encryption: no key yet, so names and emails are stored as before."; fi
+  if stripe_secret_wanted; then
+    secrets+=",STRIPE_SECRET_KEY=${SECRET_PREFIX}-stripe-secret-key:latest,STRIPE_WEBHOOK_SECRET=${SECRET_PREFIX}-stripe-webhook-secret:latest,STRIPE_PRICE_MONTHLY=${SECRET_PREFIX}-stripe-price-monthly:latest,STRIPE_PRICE_YEARLY=${SECRET_PREFIX}-stripe-price-yearly:latest"
+    echo "Billing: the Stripe settings are passed to the service."
+  else
+    echo "Billing: no Stripe settings, so billing stays off${STRIPE_OFF:+ (STRIPE_OFF=1: any mapping is removed)}."
+  fi
   # Web Push (ADR 044): the keys as secrets, and where the queue and its signing account are (they are named by project, region and the
   # defaults above, so a CI deploy can pass them without looking anything up). PUSH_OFF=1 removes all of it.
   local push_env=() push_remove=()

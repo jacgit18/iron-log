@@ -34,6 +34,8 @@ case "$*" in
   *"secrets describe iron-log-qa-pii"*) [ "$HAS_QA_PII_KEY" = 1 ] && exit 0; exit 1;;
   # STAGING_CLIENT_ID: the Google client id staging has stored.
   *"versions access latest --secret iron-log-staging-google-client-id"*) echo "$STAGING_CLIENT_ID";;
+  # STRIPE_SECRET=1: the Stripe billing secrets are already stored (separate, so the Resend, Push and database cases stay about themselves).
+  *"secrets describe iron-log-stripe"*|*"secrets describe iron-log-staging-stripe"*|*"secrets describe iron-log-qa-stripe"*) [ "$STRIPE_SECRET" = 1 ] && exit 0; exit 1;;
   *"secrets describe iron-log-vapid"*) [ "$PUSH_SECRET" = 1 ] && exit 0; exit 1;;
   # HAS_PII_KEY=1: the database encryption key is already stored (separate again, so the Resend and Push cases stay about themselves).
   *"secrets describe iron-log-pii"*) [ "$HAS_PII_KEY" = 1 ] && exit 0; exit 1;;
@@ -43,6 +45,7 @@ case "$*" in
     env='[]'
     [ "$LIVE_RESEND" = 1 ] && env='[{"name":"RESEND_API_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-resend-api-key","key":"latest"}}}]'
     [ "$LIVE_PII" = 1 ] && env='[{"name":"PII_ENCRYPTION_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-pii-key","key":"latest"}}}]'
+    [ "$LIVE_STRIPE" = 1 ] && env='[{"name":"STRIPE_SECRET_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-stripe-secret-key","key":"latest"}}}]'
     [ "$LIVE_PUSH" = 1 ] && env='[{"name":"VAPID_PRIVATE_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-vapid-private-key","key":"latest"}}}]'
     echo '{"spec":{"template":{"spec":{"containers":[{"env":'"$env"'}]}}},"status":{"traffic":[{"revisionName":"iron-log-00001-aaa","percent":100},{"tag":"candidate","url":"https://candidate---iron-log-x.run.app","revisionName":"iron-log-00002-bbb"}]}}';;
 esac
@@ -174,6 +177,76 @@ exit 0
       expect(again.status).toBe(0);
       expect(recorded().some(l => l.includes('iron-log-pii-key') && (l.includes('secrets create') || l.includes('versions add')))).toBe(false);
       expect(again.stdout).toContain('iron-log-pii-key: kept');
+    });
+  });
+
+  // --set-secrets replaces the service's whole secret list, so the Stripe settings have to be in it on every deploy that should keep billing (ADR 065).
+  describe('the Stripe billing settings', () => {
+    const FOUR = ['APP_DATABASE_URL=iron-log-app-database-url:latest', 'BETTER_AUTH_SECRET=iron-log-auth-secret:latest', 'GOOGLE_CLIENT_ID=iron-log-google-client-id:latest', 'GOOGLE_CLIENT_SECRET=iron-log-google-client-secret:latest'];
+    const stripeFor = (prefix: string) => [`STRIPE_SECRET_KEY=${prefix}-stripe-secret-key:latest`, `STRIPE_WEBHOOK_SECRET=${prefix}-stripe-webhook-secret:latest`, `STRIPE_PRICE_MONTHLY=${prefix}-stripe-price-monthly:latest`, `STRIPE_PRICE_YEARLY=${prefix}-stripe-price-yearly:latest`];
+    const secretsOf = (cmd: string) => /--set-secrets (\S+)/.exec(recorded().find(l => l.includes(cmd))!)![1]!.split(',');
+    const stripeEnv = { STRIPE_SECRET_KEY: 'sk_test_abc123', STRIPE_WEBHOOK_SECRET: 'whsec_abc123', STRIPE_PRICE_MONTHLY: 'price_m1', STRIPE_PRICE_YEARLY: 'price_y1' };
+    const base = { APP_DATABASE_URL: 'postgres://ironlog_app:pw@db.example.com/x', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'gs' };
+
+    it('are passed, with the other four, when the secrets exist in Secret Manager (your machine)', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['deploy'], { STRIPE_SECRET: '1' })).status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual([...FOUR, ...stripeFor('iron-log')]);
+    });
+
+    it('are kept by a deploy that cannot read secrets (CI) when the live service already has them', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { LIVE_STRIPE: '1' });
+      expect(out.status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual([...FOUR, ...stripeFor('iron-log')]);
+      expect(out.stdout).toContain('Stripe settings are passed');
+    });
+
+    it('are left out, and billing stays off, when they do not exist and the service does not have them', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['deploy']);
+      expect(secretsOf('run deploy').some(s => s.startsWith('STRIPE_'))).toBe(false);
+      expect(out.stdout).toContain('billing stays off');
+    });
+
+    it('STRIPE_OFF=1 leaves them out even when they exist and the live service has them', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { STRIPE_SECRET: '1', LIVE_STRIPE: '1', STRIPE_OFF: '1' });
+      expect(secretsOf('run deploy').some(s => s.startsWith('STRIPE_'))).toBe(false);
+      expect(out.stdout).toContain('STRIPE_OFF=1');
+    });
+
+    it('the secrets command stores all four, lets the runtime account read them, and no value is a gcloud argument', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['secrets'], { ...base, ...stripeEnv });
+      expect(out.status).toBe(0);
+      const lines = recorded();
+      for (const name of ['stripe-secret-key', 'stripe-webhook-secret', 'stripe-price-monthly', 'stripe-price-yearly']) {
+        expect(lines.some(l => l.includes(`secrets create iron-log-${name}`))).toBe(true);
+        expect(lines.some(l => l.includes(`add-iam-policy-binding iron-log-${name}`) && l.includes('iron-log-run@p.iam.gserviceaccount.com'))).toBe(true);
+      }
+      expect(lines.join('\n') + out.stdout + out.stderr).not.toMatch(/sk_test_abc123|whsec_abc123/);
+    });
+
+    it('the secrets command refuses a key without its three companions, and a value that is not a Stripe key', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['secrets'], { ...base, STRIPE_SECRET_KEY: 'sk_test_abc123' })).status).not.toBe(0);
+      expect((await run(['secrets'], { ...base, ...stripeEnv, STRIPE_SECRET_KEY: 'hello' })).status).not.toBe(0);
+    });
+
+    it('staging and QA take test keys only: a live key is refused, so a copy of production data cannot charge real cards', async () => {
+      for (const IRON_LOG_ENV of ['staging', 'qa']) {
+        writeFileSync(calls, '');
+        const out = await run(['secrets'], { ...base, APP_DATABASE_URL: `postgres://ironlog_${IRON_LOG_ENV}:pw@db.example.com/x`, ...stripeEnv, STRIPE_SECRET_KEY: 'sk_live_abc123', IRON_LOG_ENV, HAS_PII_KEY: '1', HAS_QA_PII_KEY: '1' });
+        expect(out.status).not.toBe(0);
+        expect(out.stderr).toContain('test keys only');
+      }
+    });
+
+    it('staging uses its own secret names', async () => {
+      writeFileSync(calls, '');
+      await run(['candidate'], { IRON_LOG_ENV: 'staging', STRIPE_SECRET: '1', HAS_PII_KEY: '1' });
+      expect(secretsOf('run deploy')).toEqual(expect.arrayContaining(stripeFor('iron-log-staging')));
     });
   });
 
