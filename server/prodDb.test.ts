@@ -24,7 +24,7 @@ const run = (args: string[], env: Record<string, string> = {}) =>
       // DATABASE_URL from the caller's shell (a local one for the db checks) must not leak in: the stubs log what each step was given.
       env: {
         ...process.env, DATABASE_URL: '', PROD_DATABASE_URL: URL,
-        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), KEEP_INJURY: join(dir, 'keep-injury'), ENCRYPT_USERS: join(dir, 'encrypt-users'), PII_KEY_CMD: join(dir, 'pii-key'), ...env,
+        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), KEEP_INJURY: join(dir, 'keep-injury'), ENCRYPT_USERS: join(dir, 'encrypt-users'), FIND_USER: join(dir, 'find-user'), PII_KEY_CMD: join(dir, 'pii-key'), ...env,
       },
       encoding: 'utf8',
     }, (err, stdout, stderr) => {
@@ -48,6 +48,7 @@ beforeEach(() => {
   stub('backup', '');
   stub('catalog', '');
   stub('keep-injury', '');
+  stub('find-user', 'echo "key=${PII_ENCRYPTION_KEY:+set}" >> "' + log + '"');
   stub('encrypt-users', 'echo "key=${PII_ENCRYPTION_KEY:+set}" >> "' + log + '"');
   stub('pii-key', 'echo -n "a2V5LXZhbHVlLXRoYXQtbXVzdC1ub3QtYmUtc2hvd24="');
   dbmateWith([]);
@@ -107,6 +108,13 @@ describe('prod-db.sh', () => {
     expect(applied.out).not.toContain('a2V5LXZhbHVl');
   });
 
+  it('find-user reads only: no backup, the key reaches the command but is never shown, and the address is passed along', async () => {
+    const r = await run(['find-user', 'someone@example.com']);
+    expect(r.calls).toEqual(['pii-key  url=', `find-user someone@example.com url=${URL}`, 'key=set']);
+    expect(r.out).not.toContain('s3cret');
+    expect((await run(['find-user'])).status).toBe(2);
+  });
+
   it('encrypt-users stops, changing nothing, when Secret Manager gives no key', async () => {
     const r = await run(['encrypt-users', '--apply'], { PII_KEY_CMD: stub('no-key', 'true') });
     expect(r.status).toBe(1);
@@ -152,7 +160,7 @@ describe('prod-db.sh', () => {
     expect((await run(['drop-everything'])).status).toBe(2);
     const help = await run([]);
     expect(help.status).toBe(2);
-    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default', 'encrypt-users']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
+    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default', 'encrypt-users', 'find-user <email>', 'reader']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
     expect(readFileSync(log, 'utf8')).toBe('');
   });
 });
