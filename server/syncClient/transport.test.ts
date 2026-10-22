@@ -106,6 +106,20 @@ describe('command: what comes back', () => {
     expect(await transport().command('log-session', env)).toEqual({ ok: false, class: 'conflict', status: 409, reason: 'stale', current: null });
   });
 
+  it('a 409 account is the page being for another account, not a stale row: pause, never a conflict', async () => {
+    reply(409, { ok: false, error: 'account' });
+    expect(await transport().command('log-session', env)).toMatchObject({ ok: false, class: 'account', status: 409 });
+    // an ordinary 409 (stale, deleted, a refusal reason) is still a conflict
+    reply(409, { ok: false, refused: 'stale', current: row });
+    expect(await transport().command('log-session', env)).toMatchObject({ ok: false, class: 'conflict', reason: 'stale' });
+  });
+
+  it('a 409 account on a pull and on the one-time upload pauses the same way', async () => {
+    reply(409, { ok: false, error: 'account' });
+    expect(await transport().pull('0')).toMatchObject({ ok: false, class: 'account' });
+    expect(await transport().importLegacy!([{ name: 'log-session', clientId: 'L1', input: env.input }])).toMatchObject({ ok: false, class: 'account' });
+  });
+
   it('passes on how long the server asked us to wait', async () => {
     reply(503, undefined, { 'retry-after': '12' });
     expect(await transport().command('log-session', env)).toMatchObject({ class: 'server', retryAfterMs: 12_000 });
