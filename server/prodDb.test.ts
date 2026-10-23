@@ -24,7 +24,7 @@ const run = (args: string[], env: Record<string, string> = {}) =>
       // DATABASE_URL from the caller's shell (a local one for the db checks) must not leak in: the stubs log what each step was given.
       env: {
         ...process.env, DATABASE_URL: '', PROD_DATABASE_URL: URL,
-        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), KEEP_INJURY: join(dir, 'keep-injury'), ENCRYPT_USERS: join(dir, 'encrypt-users'), PII_KEY_CMD: join(dir, 'pii-key'), ...env,
+        DBMATE: join(dir, 'dbmate'), BACKUP: join(dir, 'backup'), CATALOG_IMPORT: join(dir, 'catalog'), BETA_TO_FREE: join(dir, 'beta-to-free'), KEEP_INJURY: join(dir, 'keep-injury'), ENCRYPT_USERS: join(dir, 'encrypt-users'), FIND_USER: join(dir, 'find-user'), PII_KEY_CMD: join(dir, 'pii-key'), ...env,
       },
       encoding: 'utf8',
     }, (err, stdout, stderr) => {
@@ -47,7 +47,9 @@ beforeEach(() => {
   writeFileSync(log, '');
   stub('backup', '');
   stub('catalog', '');
+  stub('beta-to-free', '');
   stub('keep-injury', '');
+  stub('find-user', 'echo "key=${PII_ENCRYPTION_KEY:+set}" >> "' + log + '"');
   stub('encrypt-users', 'echo "key=${PII_ENCRYPTION_KEY:+set}" >> "' + log + '"');
   stub('pii-key', 'echo -n "a2V5LXZhbHVlLXRoYXQtbXVzdC1ub3QtYmUtc2hvd24="');
   dbmateWith([]);
@@ -91,6 +93,15 @@ describe('prod-db.sh', () => {
     expect(r.calls).toEqual([`dbmate status url=${URL}`]);
   });
 
+  it('beta-to-free is a dry run by default; --apply backs up first and passes --apply on', async () => {
+    const dry = await run(['beta-to-free']);
+    expect(dry.calls).toEqual([`beta-to-free  url=${URL}`]);
+    expect(dry.out).toContain('database: ep-prod.neon.tech/neondb');
+    expect(dry.out).not.toContain('s3cret');
+    writeFileSync(log, '');
+    expect((await run(['beta-to-free', '--apply'])).calls).toEqual(['backup run url=', `beta-to-free --apply url=${URL}`]);
+  });
+
   it('injury-default is a dry run by default; --apply backs up first and passes --apply on', async () => {
     expect((await run(['injury-default'])).calls).toEqual([`keep-injury  url=${URL}`]);
     writeFileSync(log, '');
@@ -105,6 +116,13 @@ describe('prod-db.sh', () => {
     const applied = await run(['encrypt-users', '--apply']);
     expect(applied.calls).toEqual(['pii-key  url=', 'backup run url=', `encrypt-users --apply url=${URL}`, 'key=set']);
     expect(applied.out).not.toContain('a2V5LXZhbHVl');
+  });
+
+  it('find-user reads only: no backup, the key reaches the command but is never shown, and the address is passed along', async () => {
+    const r = await run(['find-user', 'someone@example.com']);
+    expect(r.calls).toEqual(['pii-key  url=', `find-user someone@example.com url=${URL}`, 'key=set']);
+    expect(r.out).not.toContain('s3cret');
+    expect((await run(['find-user'])).status).toBe(2);
   });
 
   it('encrypt-users stops, changing nothing, when Secret Manager gives no key', async () => {
@@ -152,7 +170,57 @@ describe('prod-db.sh', () => {
     expect((await run(['drop-everything'])).status).toBe(2);
     const help = await run([]);
     expect(help.status).toBe(2);
-    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default', 'encrypt-users']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
+    for (const c of ['status', 'pending', 'migrate', 'catalog <source>', 'injury-default', 'beta-to-free', 'encrypt-users', 'find-user <email>', 'reader']) expect(help.out).toContain(`  ${c}`); // the usage text lists every command
     expect(readFileSync(log, 'utf8')).toBe('');
+  });
+});
+
+// Where production's owner URL comes from (secrets-and-keys-hygiene, item 2): the environment, else Secret Manager on demand, else (with a
+// warning) the old .env line. It is never printed, and storing it shows nothing.
+describe('the production URL source', () => {
+  const SECRET_URL = 'postgres://owner:fetched-pw@ep-prod-1.us-east-2.aws.neon.tech/neondb';
+  const noEnv = (extra: Record<string, string> = {}) => ({ PROD_DATABASE_URL: '', ENV_FILE: join(dir, 'no-such.env'), ...extra });
+  it('fetches the URL from Secret Manager when PROD_DATABASE_URL is not set, and never prints it', async () => {
+    dbmateWith([]);
+    const r = await run(['status'], noEnv({ FETCH_URL: stub('fetch', `printf '%s' '${SECRET_URL}'`) }));
+    expect(r.status).toBe(0);
+    expect(r.calls.some(c => c.startsWith('dbmate status') && c.includes('fetched-pw'))).toBe(true);
+    expect(r.out).not.toContain('fetched-pw');
+    expect(r.out).toContain('database: ep-prod-1.us-east-2.aws.neon.tech/neondb');
+  });
+  it('prefers PROD_DATABASE_URL to the secret', async () => {
+    dbmateWith([]);
+    const r = await run(['status'], { FETCH_URL: stub('fetch', `printf '%s' '${SECRET_URL}'`) });
+    expect(r.calls.some(c => c.startsWith('dbmate status') && c.includes('fetched-pw'))).toBe(false);
+  });
+  it('falls back to the old .env line with a warning, and says how to move it', async () => {
+    dbmateWith([]);
+    const env = join(dir, 'old.env');
+    writeFileSync(env, 'OTHER=1\nDATABASE_URL_UNPOOLED="postgres://owner:dotenv-pw@ep-prod-2.us-east-2.aws.neon.tech/neondb"\n');
+    const r = await run(['status'], noEnv({ ENV_FILE: env, FETCH_URL: stub('fetch', 'exit 1') }));
+    expect(r.status).toBe(0);
+    expect(r.out).toContain('Warning: using the production URL in .env');
+    expect(r.out).not.toContain('dotenv-pw');
+  });
+  it('stops with a clear message when there is no URL anywhere', async () => {
+    const r = await run(['status'], noEnv({ FETCH_URL: stub('fetch', 'exit 1') }));
+    expect(r.status).toBe(2);
+    expect(r.out).toContain('No production URL');
+  });
+  it('store-owner-url is a dry run without --apply, and with it stores the URL without showing it', async () => {
+    const gcloud = stub('gcloud', 'case "$*" in *"versions add"*) cat >/dev/null;; esac; exit 0');
+    const dry = await run(['store-owner-url'], { GCLOUD: gcloud });
+    expect(dry.status).toBe(0);
+    expect(dry.out).toContain('Dry run');
+    expect(dry.calls.some(c => c.startsWith('gcloud'))).toBe(false);
+    const done = await run(['store-owner-url', '--apply'], { GCLOUD: gcloud });
+    expect(done.status).toBe(0);
+    expect(done.calls.some(c => c.includes('secrets versions add iron-log-prod-owner-url'))).toBe(true);
+    expect(done.out).not.toContain(URL.split('@')[0]);
+  });
+  it('store-owner-url refuses a pooled URL', async () => {
+    const r = await run(['store-owner-url', '--apply'], { PROD_DATABASE_URL: 'postgres://o:p@ep-x-pooler.us-east-2.aws.neon.tech/neondb', GCLOUD: stub('gcloud', 'exit 0') });
+    expect(r.status).toBe(2);
+    expect(r.out).toContain('pooled');
   });
 });

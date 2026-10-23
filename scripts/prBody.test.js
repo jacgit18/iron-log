@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildBody, deliveryWarnings, inferAudience, labelsOf, loadConfig, shorten, touchesUi } from './pr-body.mjs';
+import { buildBody, deliveryWarnings, inferAudience, inferType, labelsOf, loadConfig, shorten, touchesUi } from './pr-body.mjs';
 
 const projectTemplate = readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8');
 const template = `## What and why
@@ -39,6 +39,9 @@ const ticked = body => (body.match(/## Audience[\s\S]*?(?=\n## |$)/) || [''])[0]
 describe('inferAudience', () => {
   it('is n/a when nothing a user can see changed', () => {
     expect(inferAudience(['README.md', 'e2e/board.spec.js', 'scripts/check.mjs', '.github/workflows/test.yml', '.githooks/pre-push', 'src/lib/logic.test.js'], {}, config).audience).toBe('na');
+  });
+  it('is n/a for a Dockerfile in a folder and a Cloud Build config of a job (parity/Dockerfile, cloudbuild-parity.yaml), not only the root ones', () => {
+    expect(inferAudience(['parity/Dockerfile', 'cloudbuild-parity.yaml', 'backup/Dockerfile'], {}, config).audience).toBe('na');
   });
   it('is paid when a paid-subscriber entry is added, and a paid entry wins over an admin one', () => {
     expect(inferAudience(['src/features.ts', 'src/App.tsx'], features("+  coach: 'paid', // Coaching notes"), config).audience).toBe('paid');
@@ -156,5 +159,24 @@ describe('the Delivery section', () => {
   it('fills the PR tracker line from --tracker', () => {
     const body = buildBody('## What and why\n\n## Audience\n\n- [ ] n/a: x\n\n## Delivery\n\nPR tracker: not updated (pass --tracker)\n', 'na', '', false, '', loadConfig(), { tracker: 'water reminder; fix: main-break' });
     expect(body).toContain('PR tracker: water reminder; fix: main-break');
+  });
+});
+
+describe('inferType (the PR label)', () => {
+  const ui = ['src/components/board/Board.tsx'];
+  it('calls a fix a bug from the branch, the description or the tracker note', () => {
+    expect(inferType({ branch: 'fix/rest-day', files: ui }).type).toBe('bug');
+    expect(inferType({ branch: 'f-x-fix', files: ui }).type).toBe('bug');
+    expect(inferType({ branch: 'f-x', files: ui, what: 'Fix the second rest day' }).type).toBe('bug');
+    expect(inferType({ branch: 'f-x', files: ui, tracker: 'PR tracker: rest-day; fix cause: logic gap' }).type).toBe('bug');
+  });
+  it('does not call a feature or a word like prefix a bug', () => {
+    expect(inferType({ branch: 'f-prefix-settings', files: ui, what: 'Adds a prefix setting' }).type).toBe('enhancement');
+    expect(inferType({ branch: 'claude/rest-day', files: ui }).type).toBe('enhancement');
+  });
+  it('labels dependency, docs and chore-only changes', () => {
+    expect(inferType({ branch: 'dependabot/npm_and_yarn/x', files: ['package.json', 'package-lock.json'] }).type).toBe('dependencies');
+    expect(inferType({ branch: 'docs-x', files: ['README.md'] }).type).toBe('documentation');
+    expect(inferType({ branch: 'f-x', files: ['scripts/a.mjs', 'e2e/a.spec.js'] }).type).toBe('chore');
   });
 });

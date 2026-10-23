@@ -23,13 +23,33 @@ const cleanMap = <T>(o: unknown, f: (v: any) => T | undefined): Record<string, T
   return out;
 };
 const flagOf = (v: unknown) => (v ? true : undefined);
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// The rest dates of a stored week: a map from rest column to date, or the one string older files kept (the first rest day's date).
+// Only dates of columns that are rest days are kept.
+export const restDatesIn = (v: unknown, rest: number[] | undefined): Record<string, string> => {
+  const out: Record<string, string> = {};
+  if (!rest || !rest.length) return out;
+  if (typeof v === 'string') { if (DATE_RE.test(v)) out[String(rest[0])] = v; return out; }
+  if (v && typeof v === 'object' && !Array.isArray(v)) rest.forEach(r => { const t = (v as Record<string, unknown>)[String(r)]; if (typeof t === 'string' && DATE_RE.test(t)) out[String(r)] = t; });
+  return out;
+};
+// Which program day each in-place rest displaced (rest column to day 1..DAY_COUNT); only rest columns are kept.
+export const restTookIn = (v: unknown, rest: number[] | undefined): Record<string, number> => {
+  const out: Record<string, number> = {};
+  if (!rest || !rest.length || !v || typeof v !== 'object' || Array.isArray(v)) return out;
+  rest.forEach(r => { const d = (v as Record<string, unknown>)[String(r)]; if (Number.isInteger(d) && (d as number) >= 1 && (d as number) <= DAY_COUNT) out[String(r)] = d as number; });
+  return out;
+};
 // The rest days, day order and rest date of a stored week (or of one program's stash entry), cleaned.
 const layoutOf = (w: any): WeekLayout => {
   const out: WeekLayout = {};
   const rest = [...new Set([].concat((w && w.rest) ?? []).map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= DAY_COUNT))].sort((a, b) => a - b);
   if (rest.length) out.rest = rest;
   if (isOrder(w && w.order) && w.order.some((v: number, i: number) => v !== i + 1)) out.order = [...w.order];
-  if (out.rest && typeof (w && w.restOn) === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(w.restOn)) out.restOn = w.restOn;
+  const dates = restDatesIn(w && w.restOn, out.rest);
+  if (Object.keys(dates).length) out.restOn = dates;
+  const took = restTookIn(w && w.restTook, out.rest);
+  if (Object.keys(took).length) out.restTook = took;
   return out;
 };
 export const normWeek = (w?: any): Week => {

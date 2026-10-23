@@ -18,6 +18,7 @@ export const FEATURES = {
   diet: 'admin', // A Diet section inside the Nutrition tab (Daily); a placeholder until diet tracking is planned; remove this line and its useFeature check in components/supplements/Diet.tsx when the owner releases it
   medical: 'admin', // The Medical section on Daily (a placeholder, nothing is stored); remove this line and its useFeature check in components/daily/Daily.tsx when the owner releases it
   recipes: 'admin', // The Recipes section on Daily (a placeholder); remove this line and its useFeature check in components/daily/Daily.tsx when the owner releases it
+  serverBackups: 'paid', // Backups kept on the account (ADR 066): the upload, and the Your account rows of the Backups list in Settings; paid subscribers and admins; routes use requirePaid; remove this line, its useFeature check in components/settings/BackupCopies.tsx and featureNow in store/backupSlice.ts, and requirePaid in server/app.ts if the owner opens it to everyone
 } satisfies Record<string, Audience>;
 
 export type Audience = 'admin' | 'all' | 'off' | 'paid';

@@ -1,11 +1,11 @@
 import { test, expect } from './fixtures.js';
 
 // The automatic backup (one copy a day, the last 7, in this browser): made a few seconds after the app opens, listed under Settings →
-// Export & import, and restored through the import review. The fixture's clock is fixed at Sep 24 2026, so the timers are moved by hand.
+// Backups & data, and restored through the import review. The fixture's clock is fixed at Sep 24 2026, so the timers are moved by hand.
 const openBackups = async page => {
   await page.clock.fastForward(11_000); // past the first copy
   await page.click('#tab-settings');
-  return page.getByRole('group', { name: 'Automatic backups' });
+  return page.getByRole('group', { name: 'Backups' });
 };
 
 test('a copy of today is made after the app opens, and Restore opens it in the import review', async ({ page }) => {

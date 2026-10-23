@@ -115,7 +115,7 @@ export function checkRows(weeks: Record<string, Week>) {
     if (w.prog) rows.push([k, 'prog', '', w.prog]);
     if (w.ran) rows.push([k, 'ran', '', w.ran.prog]); // its cards are on the Programs sheet as program `ran:<week>`
     if (w.rest) rows.push([k, 'rest', '', w.rest.join(' ')]);
-    if (w.restOn) rows.push([k, 'restOn', '', w.restOn]);
+    if (w.restOn) Object.entries(w.restOn).forEach(([col, date]) => rows.push([k, 'restOn', col, date])); // one row per rest day, the column in the key
     if (w.order) rows.push([k, 'order', '', w.order.join(' ')]);
     (w.extra || []).forEach(x => rows.push([k, 'extra', x.id, JSON.stringify(x)]));
     (['done', 'skipped'] as const).forEach(kind => Object.keys(w[kind]).forEach(id => { if (w[kind][id]) rows.push([k, kind, id, 'Yes']); }));

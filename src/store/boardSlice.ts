@@ -1,14 +1,17 @@
 import { trackNudge } from '../lib/dayNudge.js';
 import { exInfo } from '../lib/data.js';
 import { weekStartOf, ymd } from '../shared/dates.js';
-import { DAYS, autoLogs, clearForSkip, colOf, currentLayout, dayAt, defaultLogDate, injuryPreventionOn, isFinished, isPaired, isSkipped, itemKey2, moveClashes, planFix, setCardDone, setItemDone, setItemSkipped, orderOf, restsOf } from '../lib/logic.js';
+import { DAYS, autoLogs, clearForSkip, colOf, currentLayout, dayAt, defaultLogDate, injuryPreventionOn, isFinished, isPaired, isSkipped, itemKey2, moveClashes, planFix, setCardDone, setItemDone, setItemSkipped, moveRestDates, orderOf, restDatesOf, restTookOf, restsOf } from '../lib/logic.js';
 import type { FlatSlot, Logs, Week } from '../types.ts';
 import type { BoardSlice, Flag, OrderNote, OrderState, StoreGet, StoreSet } from './types.ts';
 
-// Write a day order and rest days onto a week (the normal order is stored as no order). restOn stays with the rest days.
+// Write a day order and rest days onto a week (the normal order is stored as no order). each rest day keeps its date (the first rest keeps the first date).
 const writeOrder = (w: Week, { order, rest }: { order: number[]; rest: number[] }) => {
   if (order.every((v, k) => v === k + 1)) delete w.order; else w.order = [...order];
-  if (rest.length) w.rest = [...rest]; else { delete w.rest; delete w.restOn; }
+  const dates = moveRestDates(restDatesOf(w), restsOf(w), rest); const took = moveRestDates(restTookOf(w), restsOf(w), rest); // each follows its rest day
+  if (rest.length) w.rest = [...rest]; else delete w.rest;
+  if (Object.keys(dates).length) w.restOn = dates; else delete w.restOn;
+  if (Object.keys(took).length) w.restTook = took; else delete w.restTook;
 };
 // One card's place for the week: `moved` is its week.moved value, null for its own day.
 const writeMoved = (w: Week, { slot, moved }: { slot: string; moved: number | null }) => { if (moved == null) delete w.moved[slot]; else w.moved[slot] = moved; };

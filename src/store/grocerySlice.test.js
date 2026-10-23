@@ -151,16 +151,27 @@ describe('a month', () => {
     expect(st().groceryMonths[mk].lines.kale).toMatchObject({ qty: 2, cents: 250 });
     expect(st().groceryMonths[shiftMonth(mk, 1)]).toBeUndefined();
   });
-  it('a count or price change is this month’s only; the price typed this month is remembered for next', async () => {
+  it('the count and price typed this month are remembered for next; an old month’s edit is its own', async () => {
     const mk = await thisMonth(); const { shiftMonth } = await import('../lib/grocery.js');
     st().addGroceryItem(form());
     st().setGroceryQty(mk, 'kale', 5);
-    expect(st().grocery.items[0].qty).toBe(2);
+    expect(st().grocery.items[0].qty).toBe(5); // the usual count moves on (owner, 2026-10-23)
+    expect(saved('grocery/main').items[0].qty).toBe(5);
     st().setGroceryCents(mk, 'kale', 300);
     expect(st().grocery.items[0].cents).toBe(300);
-    st().setGroceryCents(shiftMonth(mk, -2), 'kale', 100); // fixing an old month does not change today’s price
+    st().setGroceryQty(shiftMonth(mk, -2), 'kale', 9); // fixing an old month does not change today’s count or price
+    st().setGroceryCents(shiftMonth(mk, -2), 'kale', 100);
+    expect(st().grocery.items[0].qty).toBe(5);
     expect(st().grocery.items[0].cents).toBe(300);
-    expect(st().groceryMonths[shiftMonth(mk, -2)].lines.kale.cents).toBe(100);
+    expect(st().groceryMonths[shiftMonth(mk, -2)].lines.kale).toMatchObject({ qty: 9, cents: 100 });
+  });
+  it('a count typed this month does not reach back into an earlier month that was bought', async () => {
+    const mk = await thisMonth(); const { shiftMonth } = await import('../lib/grocery.js');
+    st().addGroceryItem(form());
+    const last = shiftMonth(mk, -1);
+    st().setGroceryGot(last, 'kale', true); // bought last month at the count of 2
+    st().setGroceryQty(mk, 'kale', 6);
+    expect(st().groceryMonths[last].lines.kale.qty).toBe(2);
   });
   it('ignores a bad month key, a bad count and an unknown item', async () => {
     st().addGroceryItem(form());

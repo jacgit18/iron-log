@@ -11,6 +11,7 @@ import ExperimentSheet from './ExperimentSheet.js';
 import NewProgramSheet from './NewProgramSheet.js';
 import ImportSheet from './ImportSheet.js';
 import HelpSheet from './HelpSheet.js';
+import RestDateSheet from './RestDateSheet.js';
 
 // The open sheet, if any (state.modal). Its own chunk: App loads it after the first screen.
 export default function Modal() {
@@ -30,6 +31,7 @@ export default function Modal() {
     case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
     case 'newprog': return <NewProgramSheet />;
     case 'import': return <ImportSheet />;
+    case 'restdate': return <RestDateSheet key={modal.day as number} day={modal.day as number} />;
     case 'help': return <HelpSheet />;
     default: return null;
   }

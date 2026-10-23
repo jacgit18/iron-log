@@ -5,7 +5,7 @@ import compression from 'compression';
 import express from 'express';
 import { sql, type Kysely, type Transaction } from 'kysely';
 import { requireAdmin, type Admins } from './admin.ts';
-import { isPaid } from './plan.ts';
+import { isPaid, requirePaid } from './plan.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
 import { bodyLimit } from './bodyLimit.ts';
@@ -16,6 +16,7 @@ import { errorHandler } from './errorHandler.ts';
 import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
+import { backupsRoutes } from './backups.ts';
 import { ADMIN_ONLY, billingRoutes, billingSummary, cancelBillingFor, webhookRoute, type BillingConfig, type StripeApi } from './billing.ts';
 import { originGuard } from './originGuard.ts';
 import { fireRoute, type FireDeps } from './push/fire.ts';
@@ -83,6 +84,8 @@ const LIMITS = {
   stripeWebhook: { max: 600, windowMs: 60_000 } as Limit,
   // The admin Issues screen: a person reading a list and changing a status, a few calls a minute at most.
   issues: { max: 60, windowMs: 60_000 } as Limit,
+  // Server backup history (ADR 066): the app uploads once a day and reads the list in Settings; a loop is what this stops.
+  backups: { max: 30, windowMs: 60_000 } as Limit,
   // Cloud Tasks calling the fire route: per address (a few Google ones), checked before the token. A 429 would push an alert past its
   // 90 s window and lose it, so this is far above any real traffic; the token is what keeps others out.
   pushFire: { max: 1200, windowMs: 60_000 } as Limit,
@@ -177,7 +180,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api', rateLimit(limits.api));
   app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
   // A page that holds another account's data is refused before any route runs (server/expectedUser.ts).
-  app.use(['/api/commands', '/api/sync'], expectedUserGate());
+  app.use(['/api/commands', '/api/sync', '/api/backups'], expectedUserGate());
   // Per signed-in user, after the lookup.
   app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
   app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }), repairBody);
@@ -186,6 +189,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // The admin Issues screen (ADR 013 amendment): admin-only, and the database checks users.is_admin again.
   // Billing (ADR 065): admin-only while Stripe is in test mode (ADMIN_ONLY in billing.ts).
   if (db) app.use('/api/billing', ...(ADMIN_ONLY ? [requireAdmin] : []), rateLimit(limits.billing, undefined, byUser), billingRoutes({ db, api: billing?.api, config: billing?.config }));
+  // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
+  if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
   if (db) app.use('/api/push', rateLimit(limits.push, undefined, byUser), pushRoutes({ db, publicKey: push?.publicKey, scheduler: push?.scheduler, now: push?.now }));

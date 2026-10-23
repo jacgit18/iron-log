@@ -55,8 +55,8 @@ describe('qa-db.mjs', () => {
     const same = await runWith({ PROD_DATABASE_URL: `postgres://owner:pw@${host}/neondb` })(url, 'reset', '--host', host, '--apply');
     expect(same.status).toBe(2);
     expect(same.stderr).toContain("production's database");
-    // An empty folder: no .env there to name production either (a developer's own checkout has one).
-    const unknown = await runWith({ PROD_DATABASE_URL: '' }, tmpdir())(url, 'reset', '--host', host, '--apply');
+    // An empty folder: no .env there to name production either (a developer's own checkout has one), and no Secret Manager lookup (a signed-in gcloud would find it).
+    const unknown = await runWith({ PROD_DATABASE_URL: '', PROD_URL_LOOKUP: 'off' }, tmpdir())(url, 'reset', '--host', host, '--apply');
     expect(unknown.status).toBe(2);
     expect(unknown.stderr).toContain('Cannot tell which database is production');
     expect(await count('auth."session"')).toBe(1);

@@ -169,7 +169,10 @@ export interface Week {
   warm: Record<string, Record<string, boolean>>;
   rest?: number[];
   order?: number[];
-  restOn?: string;
+  /** Each rest day's own date (YYYY-MM-DD), keyed by its column. Older files stored one string, read as the first rest day's date. */
+  restOn?: Record<string, string>;
+  /** For a rest ticked on an empty day (it took that day's place): rest column to the program day it displaced, so unticking puts that day back. */
+  restTook?: Record<string, number>;
   /** The rest days, day order and rest date of the program this week is NOT showing, so ticking rest on one program leaves the other alone. */
   stash?: Partial<Record<ProgKey, WeekLayout>>;
   extra?: ExtraCard[];
@@ -178,7 +181,7 @@ export interface Week {
   ran?: WeekRan;
 }
 
-export interface WeekLayout { rest?: number[]; order?: number[]; restOn?: string }
+export interface WeekLayout { rest?: number[]; order?: number[]; restOn?: Record<string, string>; restTook?: Record<string, number> }
 
 export interface WeekRan { prog: ProgKey; program: Program }
 

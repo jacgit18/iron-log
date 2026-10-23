@@ -7,7 +7,7 @@ import { exInfo } from '../../lib/data.js';
 import { eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
-import { restsOf, weekSlots, tally, currentLayout, isOpen, isSkipped, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
+import { colOf, restDatesOf, restsOf, weekSlots, workoutsOf, tally, currentLayout, isOpen, isSkipped, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
@@ -30,12 +30,16 @@ const swapFrom = (swapFlash: number[] | null, d: number) => swapFlash?.includes(
 // The date line under a day's title, "Sunday" over "09/27". The room for the longest one ("Wednesday" over "00/00") is always held (the hidden pad), so
 // stamping a date changes no width or height in the header: the Rest box and the swap arrows stay where they were. Until a date is stamped
 // (`nodate`) the title drops into that room so it lines up with the day's tick box (DayHeader.css); stamping lifts it above the date.
-function DayDate({ date }: { date?: string | null }) {
+// On a rest day the date is a button that opens the date sheet (RestDateSheet): same text, size and place, underlined with dots. A rest with
+// no date yet (an older week) keeps the empty room, and the button fills it so a date can still be set.
+function DayDate({ date, restDay }: { date?: string | null; restDay?: number }) {
   const [name, md] = date ? fmtDayDate(date).split(' ') : [];
   return (
     <div className={`sub daydate${date ? '' : ' nodate'}`}>
       <span className="dd-pad" aria-hidden="true"><span>Wednesday</span><span>00/00</span></span>
-      {date && <span className="dd-text"><span>{name}</span><span>{md}</span></span>}
+      {restDay != null
+        ? <button type="button" className="dd-text dd-edit" id={`restdate-${restDay}`} aria-label={`Change rest date, Day ${restDay}`} onClick={() => useAppStore.getState().openModal({ type: 'restdate', day: restDay })}>{date && <><span>{name}</span><span>{md}</span></>}</button>
+        : date && <span className="dd-text"><span>{name}</span><span>{md}</span></span>}
     </div>
   );
 }
@@ -79,6 +83,7 @@ export default function Board() {
   const slots = weekSlots(prog, week, st.weekKey());
   const cols = currentLayout(week, slots);
   const rest = restsOf(week);
+  const restDates = restDatesOf(week);
   const { total, done, skipped: skippedN } = tally(slots, week);
   const pct = total ? Math.round(done / total * 100) : 0;
   const wk = ymd(weekStart);
@@ -87,10 +92,11 @@ export default function Board() {
   let day = mDay;
   if (day == null) { day = DAYS.find(d => !rest.includes(d)) ?? null; for (const d of DAYS) { if (!rest.includes(d) && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
 
-  // Ticking a rest day that would push workouts off the week asks first: skip them for the week, or cancel and move them yourself.
+  // A rest on an empty day takes its place and asks nothing. One workout that no longer fits is skipped with a message (the store).
+  // Two or more ask first: skip them for the week, or cancel and move them yourself.
   const tickRest = (d: number) => {
-    const over = st.restOverflow(d);
-    if (over.length && !window.confirm(`A rest day on Day ${d} pushes ${over.length === 1 ? 'a workout' : `${over.length} workouts`} off the week:\n\n${over.map(s => `• ${s.items.map(it => exInfo(cfg, it.ex).n).join(' + ')}`).join('\n')}\n\nOK skips ${over.length === 1 ? 'it' : 'them'} for this week. Cancel lets you move ${over.length === 1 ? 'it' : 'them'} first.`)) return;
+    const over = st.restOverflow(d); const days = workoutsOf(week, over);
+    if (days.length > 1 && !window.confirm(`A rest day on Day ${d} leaves no room for ${days.length} workouts this week:\n\n${days.map(l => `• Day ${colOf(week, week.moved[l[0].id] || l[0].day)}: ${[...new Set(l.flatMap(s => s.items.map(it => exInfo(cfg, it.ex).n)))].slice(0, 3).join(', ')}`).join('\n')}\n\nOK skips them for this week. Cancel lets you move them first.`)) return;
     st.setRestDay(d, { skipOverflow: true });
   };
   const [, forceTips] = useState(0);
@@ -231,7 +237,7 @@ export default function Board() {
           if (pd == null) return (
             <section key={d} id={`col-${d}`} aria-labelledby={`colh-${d} colsub-${d}`} className={`col rest complete${d === day ? ' sel' : ''}${swapFlash?.includes(d) ? ' swapped' : ''}`}>
               {swapFrom(swapFlash, d)}
-              <div className="colhead"><div className="daytitle"><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div><DayDate date={week.restOn} /></div><SwapArrows d={d} /><label className="restchk"><span className="cond" aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /></label></div>
+              <div className="colhead"><div className="daytitle"><h3 id={`colh-${d}`}>Day {d}</h3><div className="sub" id={`colsub-${d}`}>Rest day</div><DayDate date={restDates[d]} restDay={d} /></div><SwapArrows d={d} /><label className="restchk"><span className="cond" aria-hidden="true">Rest</span><input type="checkbox" className="chk" id={`rest-${d}`} aria-label={`Rest day, Day ${d}`} checked onChange={() => tickRest(d)} /></label></div>
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
