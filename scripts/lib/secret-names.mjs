@@ -4,14 +4,14 @@
 // own token from the metadata server (no new dependency).
 import { INVENTORY, PREFIXES, inventoryNames } from '../secret-inventory.mjs';
 
-/** The secrets the inventory says should exist in Secret Manager: [{ name, envs: [...], optional }], one per concrete name. */
+/** The secrets the inventory says should exist in Secret Manager: [{ name, envs: [...], optional, group, trigger }], one per concrete name. */
 export function expectedSecrets() {
   const byName = new Map();
   for (const e of INVENTORY) {
     if (e.where !== 'SM') continue;
     for (const env of e.envs) {
       const name = e.name.replace('{p}', PREFIXES[env]).replace('{e}', env);
-      const at = byName.get(name) ?? { name, envs: [], optional: !!e.optional, entry: e.name };
+      const at = byName.get(name) ?? { name, envs: [], optional: !!e.optional, group: typeof e.optional === 'string' ? e.optional : null, trigger: !!e.trigger, entry: e.name };
       at.envs.push(env);
       byName.set(name, at);
     }
@@ -22,23 +22,27 @@ export function expectedSecrets() {
 /**
  * Compare the names present with the inventory. Codes follow the parity report: 0 OK; 3 UNLISTED (a secret named iron-log-* that the inventory
  * does not know: yellow, add it to the inventory or delete it); 4 MISSING (a required secret is absent: red, a deploy would break);
- * MISSING wins. `mixed` is information only: an optional feature that is set in some environments and not in others (Stripe in production
+ * MISSING wins. `mixed` is information only (it looks at each group's trigger): an optional feature that is set in some environments and not in others (Stripe in production
  * but not staging, say), which can be on purpose.
  */
 export function checkSecretNames(present, expected = expectedSecrets(), known = inventoryNames()) {
   const have = new Set(present);
-  const missing = expected.filter(x => !x.optional && !have.has(x.name)).map(x => x.name).sort();
+  // A group deploy treats as one (Stripe: four secrets; Web Push: three): deploy checks only the trigger, then maps all of them, so once the trigger
+  // exists in an environment the rest of its group is required there.
+  const on = new Set(expected.filter(x => x.group && x.trigger && have.has(x.name)).flatMap(x => x.envs.map(e => `${x.group}:${e}`)));
+  const required = x => !x.optional || (x.group && x.envs.some(e => on.has(`${x.group}:${e}`)));
+  const missing = expected.filter(x => required(x) && !have.has(x.name)).map(x => x.name).sort();
   const unlisted = [...have].filter(n => n.startsWith('iron-log') && !known.has(n)).sort();
   // Optional entries that share a pattern across environments ({p}-stripe-secret-key): present somewhere, absent elsewhere.
   const groups = new Map();
-  for (const x of expected.filter(x => x.optional && x.entry.includes('{p}'))) {
+  for (const x of expected.filter(x => x.optional && x.entry.includes('{p}') && (!x.group || x.trigger))) {
     const g = groups.get(x.entry) ?? { yes: [], no: [] };
     (have.has(x.name) ? g.yes : g.no).push(x.envs[0]);
     groups.set(x.entry, g);
   }
   const mixed = [...groups].filter(([, g]) => g.yes.length && g.no.length).map(([entry, g]) => ({ entry, set: g.yes, notSet: g.no }));
   const code = missing.length ? 4 : unlisted.length ? 3 : 0;
-  return { code, missing, unlisted, mixed, checked: expected.filter(x => !x.optional).length };
+  return { code, missing, unlisted, mixed, checked: expected.filter(required).length };
 }
 
 /** One summary line, no values. */

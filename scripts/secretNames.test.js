@@ -46,11 +46,34 @@ describe('checkSecretNames', () => {
   });
   it('mentions, without failing, an optional feature set in some environments only (Stripe in production, not staging)', () => {
     const have = required();
-    have.add('iron-log-stripe-secret-key');
+    for (const n of ['secret-key', 'webhook-secret', 'price-monthly', 'price-yearly']) have.add(`iron-log-stripe-${n}`);
     const r = checkSecretNames(have);
     expect(r.code).toBe(0);
     expect(r.mixed).toEqual([expect.objectContaining({ entry: '{p}-stripe-secret-key', set: ['production'], notSet: ['staging', 'qa'] })]);
     expect(line(r)).toContain('optional features set in some environments only: {p}-stripe-secret-key (set: production; not set: staging, qa)');
+  });
+  it('requires the rest of a group once its trigger exists: Stripe secret key set, webhook secret missing is MISSING (4), not OK', () => {
+    const have = required();
+    for (const n of ['iron-log-stripe-secret-key', 'iron-log-stripe-price-monthly', 'iron-log-stripe-price-yearly']) have.add(n); // webhook secret absent
+    const r = checkSecretNames(have);
+    expect(r.code).toBe(4);
+    expect(r.missing).toEqual(['iron-log-stripe-webhook-secret']);
+    expect(line(r)).toContain('MISSING 1 (iron-log-stripe-webhook-secret)');
+  });
+  it('treats each environment on its own: Stripe complete in production, not started in staging, is OK', () => {
+    const have = required();
+    for (const n of ['secret-key', 'webhook-secret', 'price-monthly', 'price-yearly']) have.add(`iron-log-stripe-${n}`);
+    expect(checkSecretNames(have).code).toBe(0);
+  });
+  it('requires the whole Web Push group once the private key exists, and the whole Stripe group names every missing member', () => {
+    const push = required(); push.add('iron-log-vapid-private-key');
+    expect(checkSecretNames(push).missing).toEqual(['iron-log-vapid-public-key', 'iron-log-vapid-subject']);
+    const stripe = required(); stripe.add('iron-log-staging-stripe-secret-key');
+    expect(checkSecretNames(stripe).missing).toEqual(['iron-log-staging-stripe-price-monthly', 'iron-log-staging-stripe-price-yearly', 'iron-log-staging-stripe-webhook-secret']);
+  });
+  it('does not require a group member when only that member exists and the trigger does not (a stray price id is not a switched-on feature)', () => {
+    const have = required(); have.add('iron-log-stripe-price-monthly');
+    expect(checkSecretNames(have).code).toBe(0);
   });
   it('does not call an optional secret that nobody set a mismatch', () => {
     expect(checkSecretNames(required()).mixed).toEqual([]);
