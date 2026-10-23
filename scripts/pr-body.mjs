@@ -105,17 +105,23 @@ export function buildBody(template, audience, what = '', ui = false, changelog =
   return body;
 }
 
+/** Open PRs of yours that change a file this PR also changes, with the shared files. A shared file is the one reason to wait for another PR or fold into it
+ *  (parallel-agent-structure.md, "Serial or parallel"); two PRs with no file in common run side by side. */
+export function overlappingPrs(files, prs) {
+  const mine = new Set(files);
+  return prs.map(p => ({ number: p.number, shared: (p.files ?? []).map(f => (typeof f === 'string' ? f : f.path)).filter(f => mine.has(f)) })).filter(p => p.shared.length);
+}
+
 /** Warnings for the Delivery section (feature-delivery.md). Advisory: they print to stderr and never stop the PR. */
-export function deliveryWarnings({ brief, split, tracker, trackerLine = false, changed = 0, openPrs = 0 }) {
+export function deliveryWarnings({ brief, split, tracker, trackerLine = false, overlaps = [] }) {
   const w = [];
   if (!brief) w.push('Delivery: no --brief given. Pass the feature brief path, or --brief "n/a: <why>" for a change that needs none.');
-  if (!split && openPrs > 0 && changed > 0 && changed < 40) w.push(`Delivery: ${changed} changed lines while ${openPrs} other PR(s) of yours are open. Fold this into that feature's PR, or say why with --split "<reason>".`);
+  if (!split && overlaps.length) w.push(`Delivery: this PR changes ${overlaps.map(o => `${o.shared.slice(0, 3).join(', ')}${o.shared.length > 3 ? ` and ${o.shared.length - 3} more` : ''} (also in #${o.number})`).join('; ')}. Wait for that PR to merge and branch off main, fold this into it, or say why with --split "file overlap: <file>". PRs with no file in common need no warning.`);
   if (trackerLine && !tracker) w.push('Delivery: no --tracker given. Update this feature\'s row in PR-TRACKER.md (project docs) and say which with --tracker "<feature; fix cause>", or --tracker "n/a: <why>" (tooling, docs, Dependabot).');
   return w;
 }
 
-const changedLines = (git, base) => { try { return git('diff', '--numstat', `${base}...HEAD`).split('\n').filter(Boolean).reduce((n, l) => n + (parseInt(l, 10) || 0) + (parseInt(l.split('\t')[1], 10) || 0), 0); } catch { return 0; } };
-const otherOpenPrs = git => { try { const branch = git('branch', '--show-current').trim(); return JSON.parse(execFileSync('gh', ['pr', 'list', '--author', '@me', '--state', 'open', '--json', 'headRefName'], { encoding: 'utf8', timeout: 8000 })).filter(p => p.headRefName !== branch).length; } catch { return 0; } };
+const otherOpenPrs = git => { try { const branch = git('branch', '--show-current').trim(); return JSON.parse(execFileSync('gh', ['pr', 'list', '--author', '@me', '--state', 'open', '--json', 'number,headRefName,files'], { encoding: 'utf8', timeout: 8000 })).filter(p => p.headRefName !== branch); } catch { return []; } };
 
 function main(argv) {
   const arg = name => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : undefined; };
@@ -145,7 +151,7 @@ function main(argv) {
   console.error(`Label: ${kind.type} (${kind.reason}). After the PR is open: node scripts/pr-body.mjs --apply <number> (or gh pr create --label ${kind.type}).`);
   const template = readFileSync(fileURLToPath(new URL('../.github/pull_request_template.md', import.meta.url)), 'utf8');
   if (!arg('--changelog') && arg('--what')) console.error('No --changelog given: the Changelog section is the --what text (cut at a sentence end past 600 characters). Pass --changelog "..." to say it shorter.');
-  for (const w of deliveryWarnings({ brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker'), trackerLine: /^PR tracker:/m.test(template), changed: changedLines(git, base), openPrs: otherOpenPrs(git) })) console.error(w);
+  for (const w of deliveryWarnings({ brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker'), trackerLine: /^PR tracker:/m.test(template), overlaps: overlappingPrs(files, otherOpenPrs(git)) })) console.error(w);
   process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files, config), arg('--changelog'), config, { brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker') }));
 }
 
