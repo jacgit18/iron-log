@@ -34,7 +34,7 @@ export default function BackupCopies() {
     <div className="subblock" role="group" aria-labelledby="bk-h">
       <h4 id="bk-h">Backups</h4>
       <p>Iron Log keeps a copy of your data on this device, one for each of the last {BACKUP_DAYS} days.{account && <> It also keeps a copy on your account, one for each of the last {days} days, so it survives clearing this browser or replacing your phone.</>} If your data gets messed up or deleted, restore one. You review it before anything changes.</p>
-      {backups && !backups.length && <p className="note" role="status">No backup yet. The first one is made a few seconds after the app opens.</p>}
+      {backups && !rows.length && <p className="note" role="status">No backup yet. The first one is made a few seconds after the app opens.</p>}
       {account && !list && <p className="note" role="status">Looking for your account backups…</p>}
       {account && list && !list.ok && (
         <>
