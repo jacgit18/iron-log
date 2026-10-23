@@ -13,6 +13,8 @@ case "$*" in
   *"projects get-iam-policy"*) echo '{"bindings":[{"role":"roles/run.developer","members":["serviceAccount:iron-log-deployer@p.iam.gserviceaccount.com","user:someone@example.com"]},{"role":"roles/secretmanager.secretAccessor","members":["serviceAccount:iron-log-run@p.iam.gserviceaccount.com"]},{"role":"roles/editor","members":["serviceAccount:123-compute@developer.gserviceaccount.com"]}]}';;
   *"run jobs list"*) [ -n "\${STUB_FAIL_LIST:-}" ] && exit 1; echo "iron-log-backup";;
   *"secrets list"*) [ -n "\${STUB_FAIL_LIST:-}" ] && exit 1; echo "iron-log-pii-key";;
+  *"service-accounts list"*) [ -n "\${STUB_FAIL_LIST:-}" ] && exit 1; echo "iron-log-run@p.iam.gserviceaccount.com";;
+  *"service-accounts get-iam-policy"*) echo "roles/iam.serviceAccountUser  serviceAccount:iron-log-deployer@p.iam.gserviceaccount.com";;
   *"describe"*) echo "iron-log-backup@p.iam.gserviceaccount.com";;
   *) echo "ROLE  MEMBERS";;
 esac
@@ -39,6 +41,8 @@ describe('iam-audit.sh', () => {
     expect(r.out).not.toContain('someone@example.com'); // service accounts only, not people
     expect(r.out).toContain('-- job iron-log-backup');
     expect(r.out).toContain('-- iron-log-pii-key');
+    expect(r.out).toContain('-- iron-log-run@p.iam.gserviceaccount.com'); // section 3: who may act as each account
+    expect(r.out).toContain('roles/iam.serviceAccountUser');
     expect(r.out).toContain('Nothing was changed.');
   });
   it('makes only read calls: list, describe, get-iam-policy, never a write or a secret access', async () => {
@@ -56,6 +60,7 @@ describe('iam-audit.sh', () => {
     expect(r.status).toBe(1);
     expect(r.out).toContain('could not list the Cloud Run jobs');
     expect(r.out).toContain('could not list the secrets');
+    expect(r.out).toContain('could not list the service accounts');
     expect(r.out).toContain('MISSING, not empty');
     expect(r.out).toContain('INCOMPLETE');
     expect(r.out).not.toContain('Done. Nothing was changed.');

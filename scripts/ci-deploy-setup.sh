@@ -5,9 +5,11 @@
 #
 # What it makes, and why it is safe:
 #   - a workload identity pool and provider that accept a token ONLY from this repository AND only from its main branch;
-#   - a service account, iron-log-deployer, that may build, deploy a new revision and move traffic, and act as the app's own runtime
-#     account and the build account. It cannot read the database, the secrets or the backups, change who may call the service, or
-#     touch anything else;
+#   - a service account, iron-log-deployer, that may build, deploy a new revision and move traffic of the three services (iron-log,
+#     iron-log-staging, iron-log-qa: the developer role on each service, not on the project), read Cloud Run (the viewer role, so a deploy can
+#     follow its operation), and act as the app's own runtime accounts and the build account. It may start ONE job, the parity job, with
+#     arguments (an explicit grant made by scripts/parity-job.sh deploy). It has no right on any other job: the backup job holds production's
+#     owner database URL, and a project-wide developer role would let CI start it with overridden arguments (audit 2026-10-23, deployer rights);
 #   - a second account, iron-log-build, that the image build runs as: it can write build logs, push to the app's image repository and
 #     read the uploaded source, nothing more. (Without it a build runs as the project's default Compute account, which has the broad
 #     Editor role, and letting CI act as that would undo everything above.)
@@ -46,9 +48,25 @@ gc iam service-accounts describe "$SA" >/dev/null 2>&1 || gc iam service-account
 gc iam service-accounts add-iam-policy-binding "$SA" --role roles/iam.workloadIdentityUser \
   --member "principalSet://iam.googleapis.com/projects/${NUMBER}/locations/global/workloadIdentityPools/${POOL}/attribute.repository/${GITHUB_REPO}" >/dev/null
 
-for role in roles/run.developer roles/cloudbuild.builds.editor roles/serviceusage.serviceUsageConsumer roles/artifactregistry.reader; do
+for role in roles/run.viewer roles/cloudbuild.builds.editor roles/serviceusage.serviceUsageConsumer roles/artifactregistry.reader; do
   gc projects add-iam-policy-binding "$PROJECT_ID" --member "serviceAccount:$SA" --role "$role" --condition=None >/dev/null
 done
+# The developer role on each service, not on the project: a project-wide run.developer includes starting ANY job with overridden arguments
+# (run.jobs.runWithOverrides) and updating jobs, which would let CI run commands with the backup job's production credentials. A service that
+# does not exist yet is skipped: after its first deploy by hand, run this script again.
+for svc in iron-log iron-log-staging iron-log-qa; do
+  if gc run services describe "$svc" --region "$REGION" >/dev/null 2>&1; then
+    gc run services add-iam-policy-binding "$svc" --region "$REGION" --member "serviceAccount:$SA" --role roles/run.developer >/dev/null
+    echo "The deployer may deploy and move traffic of $svc."
+  else
+    echo "Service $svc not found yet: after its first deploy, run this script again."
+  fi
+done
+# This script never takes a role away. If the deployer still holds the old project-wide run.developer, remove it AFTER the bindings above exist and
+# a QA deploy, the parity run and Migrate staging have passed (rollback: the same command with add-iam-policy-binding):
+if gc projects get-iam-policy "$PROJECT_ID" --flatten='bindings[].members' --filter="bindings.role=roles/run.developer AND bindings.members:serviceAccount:$SA" --format='value(bindings.role)' 2>/dev/null | grep run.developer >/dev/null; then
+  echo "NOTE: the deployer still holds the project-wide roles/run.developer. When ready: gcloud projects remove-iam-policy-binding $PROJECT_ID --member serviceAccount:$SA --role roles/run.developer --condition=None"
+fi
 # Deploying a revision that runs as the app's own account means acting as it.
 gc iam service-accounts add-iam-policy-binding "$RUNTIME_SA" --member "serviceAccount:$SA" --role roles/iam.serviceAccountUser >/dev/null
 # Staging runs as its own account (made by `IRON_LOG_ENV=staging scripts/deploy-cloud-run.sh setup`, ADR 058): the deployer may act as it
