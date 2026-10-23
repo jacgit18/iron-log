@@ -8,21 +8,32 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // unreadable result is UNKNOWN (never OK), and only AHEAD OF MAIN and UNKNOWN (and staging BEHIND when asked) turn the run red.
 let dir; let bin; let migrations;
 const STUB = `#!/usr/bin/env bash
-# args seen: run jobs execute JOB --region R --args "env,list" --wait --format=value(metadata.name) | run jobs executions tasks list --execution NAME ...
+# Models real gcloud (checked 2026-10-23): a failed job prints nothing on stdout for --format=value(metadata.name); its error text says
+# "Task <execution>-task0 failed with exit code: N" and "gcloud run jobs executions describe <execution>". Executions are named <job>-<5 chars>.
 echo "$*" >> "$STUB_DIR/calls"
+name_of() { echo "iron-log-parity-$(printf '%s' "$1xxxxx" | cut -c1-5)"; }
+env_of() { case "$1" in *-produ*) echo PRODUCTION;; *-stagi*) echo STAGING;; *-qaxxx*) echo QA;; *-secre*) echo SECRETS;; esac; }
 case "$*" in
   *"jobs execute"*)
     args=""; prev=""; for a in "$@"; do [ "$prev" = "--args" ] && args="$a"; prev="$a"; done
-    env="\${args%%,*}"
-    ns="STUB_NOSTART_$(echo "$env" | tr a-z A-Z)"; [ -n "\${!ns:-}" ] && exit 1   # could not start: no new execution exists
-    echo "$env" > "$STUB_DIR/last"; echo "$args" >> "$STUB_DIR/args"
-    echo "exec-$env"   # the execution that was started (printed even when the job later fails)
-    v="STUB_RC_$(echo "$env" | tr a-z A-Z)"; exit "\${!v:-0}";;
+    env="\${args%%,*}"; up="$(echo "$env" | tr a-z A-Z)"
+    ns="STUB_NOSTART_$up"; [ -n "\${!ns:-}" ] && { echo "ERROR: (gcloud.run.jobs.execute) PERMISSION_DENIED" >&2; exit 1; }   # no execution exists
+    echo "$args" >> "$STUB_DIR/args"
+    n="$(name_of "$env")"
+    v="STUB_RC_$up"; rc="\${!v:-0}"
+    if [ "$rc" = 0 ]; then echo "$n"; exit 0; fi
+    x="STUB_EXIT_$up"; nt="STUB_NOTEXT_$up"
+    if [ -n "\${!x:-}" ] && [ -z "\${!nt:-}" ]; then echo "X Creating execution... Task $n-task0 failed with exit code: \${!x} and message: The container exited with an error." >&2; fi
+    echo "Executing job failed" >&2
+    echo "ERROR: (gcloud.run.jobs.execute) The execution failed." >&2
+    echo "View details about this execution by running:" >&2
+    echo "gcloud run jobs executions describe $n" >&2
+    exit "$rc";;
   *"executions tasks list"*)
-    env="$(sed 's/^exec-//' <<< "$(grep -o 'exec-[a-z]*' <<< "$*" | head -1)")"
-    v="STUB_EXIT_$(echo "$env" | tr a-z A-Z)"
+    n="$(grep -oE 'iron-log-parity-[a-z0-9]{5}' <<< "$*" | head -1)"
+    v="STUB_EXIT_$(env_of "$n")"
     if [ -n "\${!v:-}" ]; then echo "[{\\"status\\":{\\"lastAttemptResult\\":{\\"exitCode\\":\${!v}}}}]"; else echo "[{}]"; fi;;
-  *"executions list"*) echo "exec-SOMEONE-ELSES-RUN";;   # must never be used: another run could be the newest
+  *"executions list"*) echo "iron-log-parity-SOMEONE-ELSES-RUN";;   # must never be used: another run could be the newest
 esac
 `;
 beforeAll(() => {
@@ -86,8 +97,18 @@ describe('parity-run.sh', () => {
     const r = await go({ STUB_RC_QA: '1', STUB_EXIT_QA: '4' });
     expect(r.status).toBe(1);
     expect(r.summary).toContain('| qa | AHEAD OF MAIN |');
-    expect(r.summary).toContain('executions/details/us-central1/exec-qa?');
+    expect(r.summary).toContain('executions/details/us-central1/iron-log-parity-qaxxx?');
     expect(r.summary).not.toContain('SOMEONE-ELSES-RUN');
+  });
+  it('reads the exit code from the error text real gcloud prints on failure, where --format prints no name', async () => {
+    const r = await go({ STUB_RC_STAGING: '1', STUB_EXIT_STAGING: '3' });
+    expect(r.summary).toContain('| staging | BEHIND |');
+    expect(r.summary).toContain('executions/details/us-central1/iron-log-parity-stagi?'); // the name comes from the "executions describe" line
+  });
+  it('falls back to the task list when the error text has no exit code', async () => {
+    const r = await go({ STUB_RC_QA: '1', STUB_EXIT_QA: '4', STUB_NOTEXT_QA: '1' });
+    expect(r.status).toBe(1);
+    expect(r.summary).toContain('| qa | AHEAD OF MAIN |');
   });
   it('never reads exit code 0 from a failed run as OK', async () => {
     const r = await go({ STUB_RC_PRODUCTION: '1', STUB_EXIT_PRODUCTION: '0' });
