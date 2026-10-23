@@ -38,6 +38,8 @@ test('a free account sees one panel with this-device copies only', async ({ page
   const box = await open(page, false);
   await expect(page.getByRole('heading', { level: 3, name: 'Backups & data' })).toHaveCount(1);
   await expect(box).not.toContainText('Your account');
+  await expect(page.getByRole('button', { name: 'Export all data', exact: true })).toBeHidden(); // the manual file copy is folded away
+  await page.getByText('Save or load a file yourself').click();
   await expect(page.getByRole('button', { name: 'Export all data', exact: true })).toBeVisible();
   await expect(page.getByText('Import from file')).toBeVisible();
 });

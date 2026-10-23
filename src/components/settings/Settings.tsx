@@ -273,8 +273,12 @@ function DataPanel() {
     <section className="panel" aria-labelledby="data-h">
       <h3 id="data-h">Backups &amp; data</h3>
       {/* Nothing while loading: a signed-in person must not read "this browser only" before the data source is known. */}
-      {storeMode === 'db' && <p>Your data is already saved to your account; exporting a copy is optional.</p>}
-      {storeMode === 'local' && <p>Your data is in this browser only; export a copy now and then.</p>}
+      {storeMode === 'db' && <p>Your data is already saved to your account, and Iron Log keeps backups for you.</p>}
+      {storeMode === 'local' && <p>Your data is in this browser only. Iron Log keeps a backup for you each day; save a file now and then for a copy outside the browser.</p>}
+      <BackupCopies />
+      {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
+      <details className="manualcopy">
+        <summary>Save or load a file yourself</summary>
       <div className="actions">
         {dl && <button type="button" className="btn primary" disabled={!!exporting} onClick={st.downloadData}>Export all data</button>}
         <label className="btn filebtn">Import from file
@@ -282,7 +286,6 @@ function DataPanel() {
         </label>
       </div>
       <p className="note" id="imp-help">Import can add to your data or replace it, and you choose after the review. It takes the data file, or a workbook or .csv from an earlier version (an older workbook or a .csv only brings back logged sessions, body weight and main settings). You review before anything changes.</p>
-      {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
       <details className="imppaste">
         <summary>Can't pick a file? Paste its contents instead</summary>
         <textarea id="imp-text" rows={4} aria-label="Contents of an iron-log-data file" placeholder="Paste the contents of an iron-log-data file" value={paste} onChange={e => setPaste(e.target.value)} />
@@ -290,10 +293,10 @@ function DataPanel() {
           <button type="button" className="btn sm" onClick={() => st.pasteImport(paste)}>Review import</button>
         </div>
       </details>
-      <BackupCopies />
       <More about="export and import">
         <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
       </More>
+      </details>
       {dl && (
         <div className="subblock">
           <h4>Spreadsheet report</h4>
