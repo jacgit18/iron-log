@@ -55,17 +55,22 @@ red=0; yellow=0
 } >> "$OUT"
 
 for env in $ENVS; do
-  # The execution this loop started is read from the execute call's own output (empty when none started), never worked out from "the newest
-  # execution": another run (by hand, or a second trigger) could be the newest. exit_code_of then only ever looks at this loop's own execution.
+  # The execution this loop started is read from the execute call's own output, never worked out from "the newest execution" (another run, by
+  # hand or a second trigger, could be the newest). Checked against real gcloud (2026-10-23): when the job fails, `--format=value(metadata.name)`
+  # prints nothing, but the error text carries both what we need: "Task <execution>-task0 failed with exit code: 4" and "gcloud run jobs
+  # executions describe <execution>". So stdout and stderr are read together; the task-list lookup (exit_code_of) is only a fallback.
   out="$(mktemp)"
-  gc run jobs execute "$JOB" --region "$REGION" --args "$env,$expected" --wait --format='value(metadata.name)' > "$out" 2>/dev/null
+  gc run jobs execute "$JOB" --region "$REGION" --args "$env,$expected" --wait --format='value(metadata.name)' > "$out" 2>&1
   rc=$?
-  name="$(grep -v '^[[:space:]]*$' "$out" | tail -1)"; rm -f "$out"
+  name="$(grep -oE "${JOB}-[a-z0-9]{5}\b" "$out" | tail -1)"
+  said="$(grep -oE 'exit code: [0-9]+' "$out" | tail -1 | grep -oE '[0-9]+$')"
+  rm -f "$out"
   code=""
   if [ "$rc" = 0 ]; then code=0
-  elif [ -n "$name" ]; then
+  else
     # A failed run: the exit code belongs to the execution this run started, and 0 from a failed run is never read as OK.
-    code="$(exit_code_of "$name")"; [ "$code" = 0 ] && code=""
+    if [ -n "$said" ]; then code="$said"; elif [ -n "$name" ]; then code="$(exit_code_of "$name")"; fi
+    [ "$code" = 0 ] && code=""
   fi
   link=""; [ -n "$name" ] && link="[job logs](https://console.cloud.google.com/run/jobs/executions/details/${REGION}/${name}?project=${PROJECT_ID})"
   if [ "$env" = secrets ]; then
