@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// Settings → Automatic backups → "Saved on your account" (ServerBackups.tsx, ADR 066). There is no real API behind `vite preview`, so /api is
+// Settings → Backups & data → the "Your account" rows of the Backups list (BackupCopies.tsx, ADR 066). There is no real API behind `vite preview`, so /api is
 // scripted; the real server routes are covered by server/backups.test.ts and e2e-sync/serverBackups.spec.js. The clock is fixed at Sep 24 2026.
 const json = (body, status = 200) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 const me = (isPaid = true) => ({ ok: true, userId: 'u1', account: { kind: 'session', email: 'jo@example.com', name: 'Jo', isAdmin: false, isPaid, plan: isPaid ? 'paid' : 'free', billing: { available: false } } });
@@ -24,13 +24,13 @@ async function open(page, { list, uploads, paid = true } = {}) {
   await page.goto('/');
   await page.waitForLoadState('networkidle').catch(() => {});
   await page.locator('#account-badge').click();
-  return page.getByRole('group', { name: 'Saved on your account' });
+  return page.getByRole('group', { name: 'Backups' });
 }
 
 test('lists the days kept on the account, and Restore opens that day in the import review', async ({ page }) => {
   const box = await open(page, { list: json({ ok: true, days: 30, backups: days('2026-09-24', '2026-09-23') }) });
-  await expect(box.locator('.exrow')).toHaveCount(2);
-  await expect(box.locator('.exrow b').first()).toHaveText('Today, Sep 24');
+  await expect(box.locator('.exrow[data-where=account]')).toHaveCount(2);
+  await expect(box.locator('.exrow[data-where=account] b').first()).toHaveText('Today, Sep 24');
   await expect(box).toContainText('last 30 days');
   await box.getByRole('button', { name: 'Restore the account backup from Sep 23' }).click();
   const dialog = page.getByRole('dialog');
@@ -42,8 +42,9 @@ test('a free account sees no account backups and uploads nothing', async ({ page
   const uploads = [];
   let listed = 0;
   const box = await open(page, { paid: false, uploads, list: route => { listed++; return json({ ok: true, days: 30, backups: [] })(route); } });
-  await expect(page.getByRole('group', { name: 'Automatic backups' })).toBeVisible();
-  await expect(box).toHaveCount(0);
+  await expect(box).toBeVisible();
+  await expect(box).not.toContainText('Your account');
+  await expect(box.locator('.exrow[data-where=account]')).toHaveCount(0);
   await page.clock.fastForward(40_000);
   expect(uploads).toHaveLength(0);
   expect(listed).toBe(0);
@@ -56,22 +57,21 @@ test('a paid account reads 30 days', async ({ page }) => {
 
 test('with nothing on the account yet it says so', async ({ page }) => {
   const box = await open(page);
-  await expect(box.getByRole('status')).toContainText('No account backup yet');
+  await expect(box.getByRole('status').filter({ hasText: 'No account backup yet' })).toBeVisible();
 });
 
 test('offline it says the list cannot be reached, offers Try again, and the browser copies still work', async ({ page }) => {
   let offline = true;
   const box = await open(page, { list: route => (offline ? route.abort('internetdisconnected') : json({ ok: true, days: 30, backups: days('2026-09-24') })(route)) });
-  await expect(box.getByRole('status')).toContainText('can’t be reached');
-  const local = page.getByRole('group', { name: 'Automatic backups' });
+  await expect(box.getByRole('status').filter({ hasText: 'can’t be reached' })).toBeVisible();
   await page.clock.fastForward(11_000);
-  await expect(local.locator('.exrow')).toHaveCount(1, { timeout: 15_000 });
+  await expect(box.locator('.exrow[data-where=device]')).toHaveCount(1, { timeout: 15_000 });
   offline = false;
   // The upload after the browser copy also refreshes this list, so it may already be back; otherwise Try again does it.
   const again = box.getByRole('button', { name: 'Try again' });
   await expect(async () => {
     if (await again.isVisible()) await again.click({ timeout: 1000 }).catch(() => {});
-    await expect(box.locator('.exrow')).toHaveCount(1, { timeout: 1000 });
+    await expect(box.locator('.exrow[data-where=account]')).toHaveCount(1, { timeout: 1000 });
   }).toPass({ timeout: 10_000 });
 });
 
