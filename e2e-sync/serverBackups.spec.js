@@ -20,8 +20,8 @@ test('a signed-in phone uploads its daily copy, and Settings lists it from the s
   expect(row.size_bytes).toBeGreaterThan(0);
 
   await page.locator('#account-badge').click();
-  const box = page.getByRole('group', { name: 'Saved on your account' });
-  await expect(box.locator('.exrow')).toHaveCount(1);
+  const box = page.getByRole('group', { name: 'Backups' });
+  await expect(box.locator('.exrow[data-where=account]')).toHaveCount(1);
   await box.getByRole('button', { name: /^Restore the account backup from/ }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await a.close();
