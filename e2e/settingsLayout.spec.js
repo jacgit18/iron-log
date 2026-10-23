@@ -2,13 +2,13 @@ import { test, expect } from './fixtures.js';
 
 // Settings is four groups (Training, Data, App, then Erase & delete last) with a jump row. The row moves focus to a group's heading, then scrolls to it.
 // GitHub backup is gone (ADR 035): the data file is the one backup path.
-const openSettings = async page => { await page.locator('#tab-settings, #account-badge').first().click(); await expect(page.getByRole('heading', { name: 'Export & import' })).toBeAttached(); };
+const openSettings = async page => { await page.locator('#tab-settings, #account-badge').first().click(); await expect(page.getByRole('heading', { name: 'Backups & data' })).toBeAttached(); };
 
 test('Settings has the four groups, one export and import panel, and no GitHub backup', async ({ page }) => {
   await page.goto('/');
   await openSettings(page);
   for (const name of ['Training', 'Data', 'App', 'Erase & delete']) await expect(page.getByRole('heading', { level: 2, name, exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 3, name: 'Export & import' })).toHaveCount(1);
+  await expect(page.getByRole('heading', { level: 3, name: 'Backups & data' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Export all data', exact: true })).toBeVisible();
   await expect(page.getByText('Import from file')).toBeVisible();
   await expect(page.getByText(/GitHub/i)).toHaveCount(0);
