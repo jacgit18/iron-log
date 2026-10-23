@@ -1,6 +1,6 @@
 import { exInfo } from '../lib/data.js';
 import { addDays, ymd } from '../shared/dates.js';
-import { DAYS, altDay, autoEntry, colOf, dayAt, injuryPreventionOn, isSkipped, moveClashes, newEntryId, orderAfterUntick, orderOf, overflowSlots, programFor, restDateCap, restDatesOf, restInPlace, restOwnDate, restsOf, workoutsOf } from '../lib/logic.js';
+import { DAYS, altDay, autoEntry, colOf, dayAt, injuryPreventionOn, isSkipped, moveClashes, newEntryId, orderAfterUntick, orderOf, overflowSlots, programFor, restDateCap, restDatesOf, restInPlace, restOwnDate, restTookOf, restsOf, workoutsOf } from '../lib/logic.js';
 import type { ProgKey, Week, WeekLayout } from '../types.ts';
 import type { Flag, ProgramSlice, StoreGet, StoreSet } from './types.ts';
 
@@ -11,10 +11,10 @@ const SWAP_FLASH_MS = 1800; // how long the two swapped days stay outlined
 // brings back the ones parked for the one chosen, so a rest day ticked on one program never shows on the other.
 export function swapLayout(w: Week, from: ProgKey, to: ProgKey) {
   const stash = { ...(w.stash || {}) };
-  const leaving: WeekLayout = {}; if (w.rest) leaving.rest = w.rest; if (w.order) leaving.order = w.order; if (w.restOn) leaving.restOn = w.restOn;
+  const leaving: WeekLayout = {}; if (w.rest) leaving.rest = w.rest; if (w.order) leaving.order = w.order; if (w.restOn) leaving.restOn = w.restOn; if (w.restTook) leaving.restTook = w.restTook;
   if (Object.keys(leaving).length) stash[from] = leaving; else delete stash[from];
   const back = stash[to]; delete stash[to];
-  delete w.rest; delete w.order; delete w.restOn;
+  delete w.rest; delete w.order; delete w.restOn; delete w.restTook;
   if (back) Object.assign(w, back);
   if (Object.keys(stash).length) w.stash = stash; else delete w.stash;
 }
@@ -41,14 +41,14 @@ export const programSlice = (set: StoreSet, get: StoreGet, flag: Flag): ProgramS
     const ok = get().mutateWeek(x => {
       const rest = restsOf(x); const dates = restDatesOf(x);
       if (on) {
-        const left = rest.filter(r => r !== n); const back = orderAfterUntick(x, slots, n);
+        const left = rest.filter(r => r !== n); const back = orderAfterUntick(x, n);
         if (back) { if (back.every((v, k) => v === k + 1)) delete x.order; else x.order = back; }
-        delete dates[n];
-        if (left.length) { x.rest = left; if (Object.keys(dates).length) x.restOn = dates; else delete x.restOn; } else { delete x.rest; delete x.restOn; }
+        delete dates[n]; const took = restTookOf(x); delete took[n];
+        if (left.length) { x.rest = left; if (Object.keys(dates).length) x.restOn = dates; else delete x.restOn; if (Object.keys(took).length) x.restTook = took; else delete x.restTook; } else { delete x.rest; delete x.restOn; delete x.restTook; }
       } else {
         x.rest = [...rest, n].sort((a, b) => a - b);
         x.restOn = { ...dates, [n]: restOwnDate(get().weekStart, n) };
-        if (inPlace) { if (inPlace.every((v, k) => v === k + 1)) delete x.order; else x.order = inPlace; }
+        if (inPlace) { x.restTook = { ...restTookOf(x), [n]: dayAt(w, n) as number }; if (inPlace.every((v, k) => v === k + 1)) delete x.order; else x.order = inPlace; }
       }
     });
     if (ok && over.length) {
@@ -72,10 +72,12 @@ export const programSlice = (set: StoreSet, get: StoreGet, flag: Flag): ProgramS
     const restInvolved = dRest || eRest;
     const ok = get().mutateWeek(x => {
       if (restInvolved) {
-        const was = restsOf(x); const dates = restDatesOf(x);
+        const was = restsOf(x); const dates = restDatesOf(x); const tookNow = restTookOf(x);
         x.rest = was.map(r => (r === d ? e : r === e ? d : r)).sort((a, b) => a - b);
         const moved = Object.fromEntries(was.filter(r => dates[r]).map(r => [r === d ? e : r === e ? d : r, dates[r]])); // each date stays with its rest
         if (Object.keys(moved).length) x.restOn = moved; else delete x.restOn;
+        const took = Object.fromEntries(was.filter(r => tookNow[r]).map(r => [r === d ? e : r === e ? d : r, tookNow[r]]));
+        if (Object.keys(took).length) x.restTook = took; else delete x.restTook;
       }
       else {
         const a = dayAt(x, d) as number, b = dayAt(x, e) as number; const o = [...orderOf(x)];
