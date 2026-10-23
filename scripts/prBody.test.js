@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildBody, deliveryWarnings, inferAudience, inferType, labelsOf, loadConfig, shorten, touchesUi } from './pr-body.mjs';
+import { buildBody, deliveryWarnings, inferAudience, inferType, labelsOf, loadConfig, overlappingPrs, shorten, touchesUi } from './pr-body.mjs';
 
 const projectTemplate = readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8');
 const template = `## What and why
@@ -145,16 +145,23 @@ describe('the Delivery section', () => {
     expect(b).toContain('Split because: migration first');
     expect(buildBody(t, 'na', '', false, '', config)).toContain('Brief: none given');
   });
-  it('warns without a brief, and about a tiny PR beside another open one', () => {
-    expect(deliveryWarnings({ brief: 'b.md', changed: 500 })).toEqual([]);
-    expect(deliveryWarnings({ changed: 500 })).toHaveLength(1);
-    expect(deliveryWarnings({ brief: 'b.md', changed: 12, openPrs: 1 })).toHaveLength(1);
-    expect(deliveryWarnings({ brief: 'b.md', split: 'file overlap', changed: 12, openPrs: 1 })).toEqual([]);
+  it('warns without a brief, and about a file another open PR also changes, not about an open PR alone', () => {
+    const overlaps = overlappingPrs(['a.ts', 'b.ts'], [{ number: 7, files: [{ path: 'b.ts' }, { path: 'c.ts' }] }]);
+    expect(deliveryWarnings({ brief: 'b.md' })).toEqual([]);
+    expect(deliveryWarnings({})).toHaveLength(1);
+    expect(deliveryWarnings({ brief: 'b.md', overlaps })).toEqual([expect.stringContaining('b.ts (also in #7)')]);
+    expect(deliveryWarnings({ brief: 'b.md', split: 'file overlap: b.ts', overlaps })).toEqual([]);
+  });
+  it('overlappingPrs lists only the PRs that share a file, and says which files', () => {
+    const prs = [{ number: 1, files: [{ path: 'x.ts' }] }, { number: 2, files: [{ path: 'a.ts' }, { path: 'b.ts' }] }, { number: 3 }];
+    expect(overlappingPrs(['a.ts', 'b.ts', 'z.ts'], prs)).toEqual([{ number: 2, shared: ['a.ts', 'b.ts'] }]);
+    expect(overlappingPrs(['z.ts'], prs)).toEqual([]);
+    expect(overlappingPrs(['a.ts'], [{ number: 4, files: ['a.ts'] }])).toEqual([{ number: 4, shared: ['a.ts'] }]);
   });
   it('warns about a missing tracker note only when the template has the line', () => {
-    expect(deliveryWarnings({ brief: 'b.md', changed: 500, trackerLine: true })).toHaveLength(1);
-    expect(deliveryWarnings({ brief: 'b.md', changed: 500, trackerLine: true, tracker: 'water reminder' })).toEqual([]);
-    expect(deliveryWarnings({ brief: 'b.md', changed: 500 })).toEqual([]);
+    expect(deliveryWarnings({ brief: 'b.md', trackerLine: true })).toHaveLength(1);
+    expect(deliveryWarnings({ brief: 'b.md', trackerLine: true, tracker: 'water reminder' })).toEqual([]);
+    expect(deliveryWarnings({ brief: 'b.md' })).toEqual([]);
   });
   it('fills the PR tracker line from --tracker', () => {
     const body = buildBody('## What and why\n\n## Audience\n\n- [ ] n/a: x\n\n## Delivery\n\nPR tracker: not updated (pass --tracker)\n', 'na', '', false, '', loadConfig(), { tracker: 'water reminder; fix: main-break' });
