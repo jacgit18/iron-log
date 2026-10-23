@@ -20,22 +20,13 @@ test('a rest day shifts the later workouts and unticking puts them back', async 
   await expect(page.locator('#col-3 #chk-A-d3s1')).toHaveCount(1);
 });
 
-test('a second rest day asks before pushing workouts off the week, and cancel changes nothing', async ({ page }) => {
+test('a second rest day that pushes one workout off the week skips it with a message, no question asked', async ({ page }) => {
   await restBox(page, 3).check();
-  let asked = '';
-  page.once('dialog', d => { asked = d.message(); d.dismiss(); });
-  await restBox(page, 5).click(); // cancelled, so it stays unticked
-  expect(asked).toContain('off the week');
-  await expect(restBox(page, 5)).not.toBeChecked();
-  await expect(restBox(page, 5)).not.toBeChecked();
-});
-
-test('accepting skips the pushed-off workouts and both rest days stay ticked', async ({ page }) => {
-  await restBox(page, 3).check();
-  page.once('dialog', d => d.accept());
+  page.on('dialog', d => { throw new Error('unexpected dialog: ' + d.message()); });
   await restBox(page, 5).check();
   await expect(restBox(page, 3)).toBeChecked();
   await expect(restBox(page, 5)).toBeChecked();
+  await expect(page.getByText(/Day 5 is a rest day now/)).toBeVisible();
   await restBox(page, 5).uncheck();
   await expect(restBox(page, 5)).not.toBeChecked();
   await expect(restBox(page, 3)).toBeChecked();

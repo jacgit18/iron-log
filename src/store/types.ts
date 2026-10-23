@@ -136,6 +136,8 @@ export interface LibrarySlice {
 export interface ProgramSlice {
   restOverflow(n: number): FlatSlot[];
   setRestDay(n: number, opts?: { skipOverflow?: boolean }): boolean | undefined;
+  /** Change a rest day's date: false unless it is a day of this week, no later than today, and `n` is a rest day. */
+  setRestDate(n: number, date: string): boolean;
   swapDays(d: number, dir: number): boolean;
   setPhase(slotId: string, idx: number, ph: PhaseKey): void;
   setWeekProg(k: ProgKey): void;

@@ -120,9 +120,21 @@ describe('workbook round trip', () => {
     });
     expect(restOnConverted).toBe(true);
     const viaResave = await parseExcelExport(bytes(resaved), DEFAULT_CFG);
-    expect(viaJson.weeks['2030-01-06'].restOn).toBe('2030-01-08');
-    expect(viaXlsx.weeks['2030-01-06'].restOn).toBe('2030-01-08');
-    expect(viaResave.weeks['2030-01-06'].restOn).toBe('2030-01-08');
+    expect(viaJson.weeks['2030-01-06'].restOn).toEqual({ 3: '2030-01-08' });
+    expect(viaXlsx.weeks['2030-01-06'].restOn).toEqual({ 3: '2030-01-08' });
+    expect(viaResave.weeks['2030-01-06'].restOn).toEqual({ 3: '2030-01-08' });
+  });
+
+  it('keeps a date for each rest day through the workbook, and reads an old restOn row that has no column', async () => {
+    const weeks = { ...raw.weeks, '2030-01-06': { done: {}, rest: [3, 5], restOn: { 3: '2030-01-08', 5: '2030-01-10' } } };
+    const wb = buildOverallWorkbook(X, S, weeks);
+    expect((await parseExcelExport(bytes(wb), DEFAULT_CFG)).weeks['2030-01-06'].restOn).toEqual({ 3: '2030-01-08', 5: '2030-01-10' });
+    // An older file: one restOn row with an empty key. It is the first rest day's date.
+    const old = X.read(bytes(wb), { type: 'array' });
+    const ws = old.Sheets['Check-offs']; let n = 0;
+    Object.keys(ws).filter(k => /^B([2-9]|\d\d+)$/.test(k) && ws[k].v === 'restOn').forEach(k => { const row = k.slice(1); if (n++ === 0) delete ws['C' + row]; else ws[k].v = 'ignored'; });
+    expect(n).toBe(2);
+    expect((await parseExcelExport(bytes(old), DEFAULT_CFG)).weeks['2030-01-06'].restOn).toEqual({ 3: '2030-01-08' });
   });
 
   // ADR 022: a finished week keeps what it ran, so the workbook carries that record like the JSON file does.
