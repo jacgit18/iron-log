@@ -34,18 +34,12 @@ const swapFrom = (swapFlash: number[] | null, d: number) => swapFlash?.includes(
 // no date yet (an older week) shows "Set date" in that room.
 function DayDate({ date, restDay }: { date?: string | null; restDay?: number }) {
   const [name, md] = date ? fmtDayDate(date).split(' ') : [];
-  if (restDay != null) return (
-    <div className={`sub daydate${date ? '' : ' nodate'}`}>
-      <span className="dd-pad" aria-hidden="true"><span>Wednesday</span><span>00/00</span></span>
-      <button type="button" className="dd-text dd-edit" id={`restdate-${restDay}`} aria-label={`Change rest date, Day ${restDay}`} onClick={() => useAppStore.getState().openModal({ type: 'restdate', day: restDay })}>
-        {date ? <><span>{name}</span><span>{md}</span></> : <span>Set date</span>}
-      </button>
-    </div>
-  );
   return (
     <div className={`sub daydate${date ? '' : ' nodate'}`}>
       <span className="dd-pad" aria-hidden="true"><span>Wednesday</span><span>00/00</span></span>
-      {date && <span className="dd-text"><span>{name}</span><span>{md}</span></span>}
+      {restDay != null
+        ? <button type="button" className="dd-text dd-edit" id={`restdate-${restDay}`} aria-label={`Change rest date, Day ${restDay}`} onClick={() => useAppStore.getState().openModal({ type: 'restdate', day: restDay })}>{date ? <><span>{name}</span><span>{md}</span></> : <span>Set date</span>}</button>
+        : date && <span className="dd-text"><span>{name}</span><span>{md}</span></span>}
     </div>
   );
 }

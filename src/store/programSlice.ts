@@ -34,7 +34,7 @@ export const programSlice = (set: StoreSet, get: StoreGet, flag: Flag): ProgramS
   setRestDay(n, { skipOverflow = false } = {}) {
     const w = get().week; const rests = restsOf(w); const on = rests.includes(n); const slots = get().activeSlots();
     const inPlace = on ? null : restInPlace(w, slots, n);
-    const over = get().restOverflow(n);
+    const over = on || inPlace ? [] : overflowSlots(w, slots, n).filter(s => !isSkipped(s, w)); // same as restOverflow, without computing restInPlace again
     const workouts = workoutsOf(w, over);
     if (workouts.length > 1 && !skipOverflow) { flag(`A rest day on Day ${n} would push ${workouts.length} workouts off the week. Move them or skip them for this week first.`); return false; }
     set({ moveNote: null, orderNote: null });
