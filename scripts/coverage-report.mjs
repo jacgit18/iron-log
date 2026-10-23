@@ -1,8 +1,8 @@
 // Prints the coverage per area from coverage/coverage-summary.json (written by `npm run coverage`), then lists the files
 // no test loaded. Vitest 5's v8 provider reports such a file as 0 statements / 100%, so the percentages cover loaded files only
 // and a new file with no tests lowers none of them. `--check` (ADR 069) closes that gap: it exits 1 when a logic area has more
-// unloaded files than its cap. The floors on the percentages are in vite.config.js (coverage.thresholds). `--list` prints the names.
-import { readFileSync } from 'node:fs';
+// unloaded files than its cap, or fewer (the cap is then lowered). The floors on the percentages are in vite.config.js (coverage.thresholds). `--list` prints the names.
+import { readFileSync, realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 // Unloaded files allowed per logic area, as of 2026-10-23. A cap only goes down: load a file from a test, then lower its cap.
@@ -19,10 +19,23 @@ export const unloadedFiles = entries => entries
   .filter(([f, v]) => v.statements.total === 0 && /\.(tsx?|jsx?)$/.test(f) && !/(^|\/)types?\.ts$/.test(f))
   .map(([f]) => f);
 
-export function overCap(unloaded, caps = CAPS) {
+function countByArea(unloaded) {
   const counts = {};
   for (const f of unloaded) counts[capArea(f)] = (counts[capArea(f)] ?? 0) + 1;
+  return counts;
+}
+
+// Areas with more unloaded files than their cap: a new file has no test.
+export function overCap(unloaded, caps = CAPS) {
+  const counts = countByArea(unloaded);
   return Object.entries(caps).filter(([k, cap]) => (counts[k] ?? 0) > cap).map(([k, cap]) => ({ area: k, cap, count: counts[k] }));
+}
+
+// Areas with fewer unloaded files than their cap: tests now load files the cap still allows, and that slack would let new untested
+// files in later. --check fails on it so the cap is lowered in the same PR ("a cap only goes down").
+export function underCap(unloaded, caps = CAPS) {
+  const counts = countByArea(unloaded);
+  return Object.entries(caps).filter(([k, cap]) => (counts[k] ?? 0) < cap).map(([k, cap]) => ({ area: k, cap, count: counts[k] ?? 0 }));
 }
 
 function main() {
@@ -55,10 +68,14 @@ function main() {
 
   if (process.argv.includes('--check')) {
     const over = overCap(unloaded);
+    const under = underCap(unloaded);
     for (const o of over) console.error(`\n${o.area}: ${o.count} files no test loads, cap is ${o.cap}. Add a test that imports the new file (run with --list to see which).`);
-    if (over.length) process.exit(1);
+    for (const u of under) console.error(`\n${u.area}: only ${u.count} files no test loads, cap is ${u.cap}. Lower CAPS['${u.area}'] to ${u.count} in scripts/coverage-report.mjs so the slack cannot be refilled.`);
+    if (over.length || under.length) process.exit(1);
     console.log('\nUnloaded-file caps hold.');
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+// realpath: node leaves argv[1] as typed while import.meta.url is the real path, so through a symlinked directory the two differ and main()
+// would silently never run, passing --check without checking anything.
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) main();

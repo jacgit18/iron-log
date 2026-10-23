@@ -73,7 +73,7 @@
     "@types/react-dom": "^19.2.7",
     "@types/web-push": "^3.6.4",
     "@vitejs/plugin-react": "^6.1.1",
-    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/coverage-v8": "^5.0.5",
     "dbmate": "^2.37.0",
     "esbuild": "^0.28.2",
     "kysely-codegen": "^0.20.0",
