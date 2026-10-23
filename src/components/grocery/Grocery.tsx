@@ -70,9 +70,10 @@ function GetRow({ g, item, month, mk, future, carries, onGot, open, onOpen, onMo
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) { setWasOpen(open); if (!open) setMoveErr(null); } // a Move to message does not wait for the next time the row opens
   const split = hasSharing(g); const raw = month.lines[item.id]; const people = allPeople(g);
-  // Said on the closed row only when this item is split differently from its store's usual group, so most rows stay as quiet as without sharing.
   const pill = l.prices ? `${l.prices.length} × avg ${money(Math.round(total / l.prices.length))}` : `${w.qty(l.qty)} × ${l.cents == null ? 'no price' : `${money(l.cents)}${w.per}`}`; // the visible words of the count and price button; its accessible name starts with them
-  const customSplit = raw?.packShares?.some(Boolean) ? 'Packs split' : raw?.share || item.share ? shareText(partiesFor(g, item, raw)) : '';
+  // Said on every row that is not plain "Just me": the store's group split shows by default, not only after the row is changed (ADR 059 amended 2026-10-23).
+  const parties = partiesFor(g, item, raw); // always computed: with no groups it reads Just me, never Not mine
+  const customSplit = raw?.packShares?.some(Boolean) ? 'Packs split' : raw?.share || item.share || (split && shareText(parties) !== 'Just me') ? shareText(parties) : '';
   return (
     <li className={`gget${l.got ? ' got' : ''}`}>
       <div className="ggetline">
@@ -163,6 +164,8 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const [splitOpen, setSplitOpen] = useState<string | null>(null); // the month whose folded split section is open (one at a time, closed each time To get opens)
   // The money line over the list opens it, takes you there and puts focus on its header, so the next Tab is inside it; reduced motion jumps instead of gliding.
   const openSplit = () => { setSplitOpen(mk); window.setTimeout(() => { const at = document.getElementById(`groc-split-${mk}`); at?.scrollIntoView({ block: 'start', behavior: motionOK() ? 'smooth' : 'instant' }); at?.querySelector<HTMLElement>('.gsplittoggle')?.focus({ preventScroll: true }); }, 0); };
+  // Expand all and Collapse all on a store cover its rows to get and the ones already bought this month (a row ticked while open stays open in the fold).
+  const storeRows = (grp: { store: string; items: GroceryItem[] }) => [...grp.items, ...bought.filter(i => i.store === grp.store)];
   const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
   const [ticked, setTicked] = useState<{ id: string; name: string; mk: string; t: number } | null>(null); // the item just ticked bought, for the Undo notice
   const setPanel = (id: string, on: boolean) => setPanels([id], on);
@@ -211,7 +214,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
               <h3 id={`groc-h-${gi}`}>{grp.label}{split && grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3>
               <span className="gstoremeta">
                 <span className="note">{current ? `${gt.count} to get` : `${gt.got}/${gt.count}`}{gt.planned ? ` · ${money(gt.planned)}` : ''}</span>
-                <ExpandAll label={grp.label} all={grp.items.every(i => openIds.has(i.id))} onToggle={on => setPanels(grp.items.map(i => i.id), on)} />
+                <ExpandAll label={grp.label} all={storeRows(grp).every(i => openIds.has(i.id))} onToggle={on => setPanels(storeRows(grp).map(i => i.id), on)} />
               </span>
             </div>
             {split && grp.group && <StoreMoney g={g} month={month} store={grp.store} />}

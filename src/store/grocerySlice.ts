@@ -336,6 +336,9 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (next.got && next.cents === undefined && !next.unpriced) { if (it.cents != null) next.cents = it.cents; else next.unpriced = true; } // a line already bought unpriced stays so
         m.lines[id] = next;
       });
+      // The count typed this month is remembered as the item's usual count, like the price, but only for the current month: fixing an old month must not change today's.
+      // A bought line pinned its own count when it was ticked, so no earlier month moves.
+      if (month === monthKey(new Date()) && it.qty !== q) get().updateGroceryItem(id, { qty: q });
     },
 
     // The price of each one bought this month, when they differ (beef: 8.99, 10.49, 9.25). The count follows how many there are. Null (or

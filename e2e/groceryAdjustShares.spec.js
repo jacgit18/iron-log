@@ -1,8 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// Quieter share controls (grocery sharing, ADR 059). A row says how it is split on the closed To get row only when it differs from its
-// store's group, and while editing a store's rows show their share controls only after "Adjust shares for <store>" (or when the item has its own split).
+// Quieter share controls (grocery sharing, ADR 059). A row says how it is split on the closed To get row (the store's group split too since 2026-10-23, never plain Just me), and while editing a store's rows show their share controls only after "Adjust shares for <store>" (or when the item has its own split).
 // The fixed date is in September 2026, so the month below is 2026-09.
 const item = (id, n, store, cents, share) => ({ id, n, store, qty: 1, cents, every: true, out: false, ...(share ? { share } : {}) });
 const CATALOGUE = {
@@ -23,10 +22,10 @@ const seed = async page => {
 };
 const row = (page, name) => page.locator('li.gget', { has: page.getByLabel(`Got ${name}`, { exact: true }) });
 
-test('a closed row says how it is split only when it differs from the store’s group', async ({ page }) => {
+test('a closed row says how it is split, the store’s group split included', async ({ page }) => {
   await seed(page);
   await page.click('#groc-bought summary');
-  await expect(row(page, 'Toilet paper').locator('.gsplittag')).toHaveCount(0); // follows BJ's group
+  await expect(row(page, 'Toilet paper').locator('.gsplittag')).toHaveText('Me +2'); // follows BJ's group, and says so without being touched (amended 2026-10-23)
   await expect(row(page, 'Rice').locator('.gsplittag')).toHaveText('Me +1'); // its own split
   await expect(row(page, 'Chicken').locator('.gsplittag')).toHaveText('Packs split');
 });
