@@ -66,7 +66,11 @@ cmd_deploy() {
   tag="$(git rev-parse --short HEAD)"
   if [ -n "$(git status --porcelain backup cloudbuild-backup.yaml)" ]; then echo "backup/ has uncommitted changes. Commit first." >&2; exit 1; fi
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/backup:${tag}"
-  gc builds submit --config cloudbuild-backup.yaml --substitutions "_IMAGE=${image}" .
+  # Build as the small build-only account (made by ci-deploy-setup.sh), as deploy-cloud-run.sh does; without it a build runs as the default Compute
+  # account, which holds the broad Editor role (audit 2026-10-23, deployer rights). Falls back to the default only while that account does not exist.
+  local build_as=() build_sa="${BUILD_SA:-iron-log-build@${PROJECT_ID}.iam.gserviceaccount.com}"
+  if gc iam service-accounts describe "$build_sa" >/dev/null 2>&1; then build_as=(--service-account "projects/${PROJECT_ID}/serviceAccounts/${build_sa}"); fi
+  gc builds submit --config cloudbuild-backup.yaml --substitutions "_IMAGE=${image}" ${build_as[@]+"${build_as[@]}"} .
   local verb=create
   gc run jobs describe "$JOB" --region "$REGION" >/dev/null 2>&1 && verb=update
   gc run jobs "$verb" "$JOB" --region "$REGION" --image "$image" --service-account "$SA" \
