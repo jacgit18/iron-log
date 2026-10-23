@@ -1,4 +1,6 @@
-import { DAYS, altDay, autoEntry, colOf, dayAt, defaultLogDate, injuryPreventionOn, isSkipped, moveClashes, newEntryId, orderOf, overflowSlots, programFor, restsOf } from '../lib/logic.js';
+import { exInfo } from '../lib/data.js';
+import { addDays, ymd } from '../shared/dates.js';
+import { DAYS, altDay, autoEntry, colOf, dayAt, injuryPreventionOn, isSkipped, moveClashes, newEntryId, orderAfterUntick, orderOf, overflowSlots, programFor, restDateCap, restDatesOf, restInPlace, restOwnDate, restsOf, workoutsOf } from '../lib/logic.js';
 import type { ProgKey, Week, WeekLayout } from '../types.ts';
 import type { Flag, ProgramSlice, StoreGet, StoreSet } from './types.ts';
 
@@ -19,24 +21,48 @@ export function swapLayout(w: Week, from: ProgKey, to: ProgKey) {
 
 // Rest days, day swaps, phases and the week's program, and moving a card to another day.
 export const programSlice = (set: StoreSet, get: StoreGet, flag: Flag): ProgramSlice => ({
-  // Cards a rest day on column n would push off the board and that are still in play (not skipped).
-  restOverflow(n) { const w = get().week; return restsOf(w).includes(n) ? [] : overflowSlots(w, get().activeSlots(), n).filter(s => !isSkipped(s, w)); },
-  // Tick or untick a rest day. A week can have several. Ticking one that would push workouts off the board is
-  // refused unless skipOverflow is set, which skips those workouts for the week (unticking brings them back).
+  // Cards a rest day on column n would push off the board and that are still in play (not skipped). None when the rest takes an
+  // empty day's place (restInPlace): nothing shifts then.
+  restOverflow(n) {
+    const w = get().week; const slots = get().activeSlots();
+    if (restsOf(w).includes(n) || restInPlace(w, slots, n)) return [];
+    return overflowSlots(w, slots, n).filter(s => !isSkipped(s, w));
+  },
+  // Tick or untick a rest day. A week can have several, each with its own date. A rest on an empty day takes its place in the
+  // week. Otherwise it pushes later workouts one day later; one workout that no longer fits is skipped for the week (with a
+  // message), two or more are refused unless skipOverflow is set. Unticking puts everything back (skipped workouts show again).
   setRestDay(n, { skipOverflow = false } = {}) {
-    const w = get().week; const on = restsOf(w).includes(n);
-    const over = get().restOverflow(n);
-    if (over.length) {
-      if (!skipOverflow) { flag(`A rest day on Day ${n} would push ${over.length === 1 ? 'a workout' : `${over.length} workouts`} off the week. Move ${over.length === 1 ? 'it' : 'them'} or skip ${over.length === 1 ? 'it' : 'them'} for this week first.`); return false; }
-      get().skipCards(over.map(s => s.id));
-    }
+    const w = get().week; const rests = restsOf(w); const on = rests.includes(n); const slots = get().activeSlots();
+    const inPlace = on ? null : restInPlace(w, slots, n);
+    const over = on || inPlace ? [] : overflowSlots(w, slots, n).filter(s => !isSkipped(s, w)); // same as restOverflow, without computing restInPlace again
+    const workouts = workoutsOf(w, over);
+    if (workouts.length > 1 && !skipOverflow) { flag(`A rest day on Day ${n} would push ${workouts.length} workouts off the week. Move them or skip them for this week first.`); return false; }
     set({ moveNote: null, orderNote: null });
-    const date = defaultLogDate(get().weekStart);
-    return get().mutateWeek(x => {
-      const rest = restsOf(x);
-      if (on) { const left = rest.filter(r => r !== n); if (left.length) x.rest = left; else { delete x.rest; delete x.restOn; } }
-      else { x.rest = [...rest, n].sort((a, b) => a - b); x.restOn = x.restOn || date; }
+    const ok = get().mutateWeek(x => {
+      const rest = restsOf(x); const dates = restDatesOf(x);
+      if (on) {
+        const left = rest.filter(r => r !== n); const back = orderAfterUntick(x, slots, n);
+        if (back) { if (back.every((v, k) => v === k + 1)) delete x.order; else x.order = back; }
+        delete dates[n];
+        if (left.length) { x.rest = left; if (Object.keys(dates).length) x.restOn = dates; else delete x.restOn; } else { delete x.rest; delete x.restOn; }
+      } else {
+        x.rest = [...rest, n].sort((a, b) => a - b);
+        x.restOn = { ...dates, [n]: restOwnDate(get().weekStart, n) };
+        if (inPlace) { if (inPlace.every((v, k) => v === k + 1)) delete x.order; else x.order = inPlace; }
+      }
     });
+    if (ok && over.length) {
+      get().skipCards(over.map(s => s.id)); // only once the rest is written
+      const names = (l: typeof over) => { const ns = [...new Set(l.flatMap(s => s.items.map(it => exInfo(get().cfg, it.ex).n)))]; return ns.length > 2 ? `${ns.slice(0, 2).join(', ')} and ${ns.length - 2} more` : ns.join(' and '); };
+      if (workouts.length === 1) flag(`Day ${n} is a rest day now. The workout that moved off the end of the week (${names(over)}) was skipped. Untick Rest to see it again.`);
+    }
+    return ok;
+  },
+  // Change the date of a rest day (it must be a day of this week, no later than today).
+  setRestDate(n, date) {
+    const w = get().week; const ws = ymd(get().weekStart);
+    if (!restsOf(w).includes(n) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || date < ws || date > ymd(addDays(get().weekStart, 6)) || date > restDateCap(get().weekStart)) return false;
+    return get().mutateWeek(x => { x.restOn = { ...restDatesOf(x), [n]: date }; });
   },
   // Swap displayed column d with its neighbor d + dir, for this week. Swapping with a rest column moves that rest day.
   swapDays(d, dir) {
@@ -45,7 +71,12 @@ export const programSlice = (set: StoreSet, get: StoreGet, flag: Flag): ProgramS
     if (dRest && eRest) return false;
     const restInvolved = dRest || eRest;
     const ok = get().mutateWeek(x => {
-      if (restInvolved) x.rest = restsOf(x).map(r => (r === d ? e : r === e ? d : r)).sort((a, b) => a - b);
+      if (restInvolved) {
+        const was = restsOf(x); const dates = restDatesOf(x);
+        x.rest = was.map(r => (r === d ? e : r === e ? d : r)).sort((a, b) => a - b);
+        const moved = Object.fromEntries(was.filter(r => dates[r]).map(r => [r === d ? e : r === e ? d : r, dates[r]])); // each date stays with its rest
+        if (Object.keys(moved).length) x.restOn = moved; else delete x.restOn;
+      }
       else {
         const a = dayAt(x, d) as number, b = dayAt(x, e) as number; const o = [...orderOf(x)];
         const i = o.indexOf(a), j = o.indexOf(b); [o[i], o[j]] = [o[j], o[i]];

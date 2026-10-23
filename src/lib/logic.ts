@@ -2,7 +2,7 @@ import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
 import { nowStamp } from '../shared/validate.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
 import { normExperimentItem } from '../shared/listItems.js';
-import { isOrder, normWeek } from '../shared/week.js';
+import { isOrder, normWeek, restDatesIn } from '../shared/week.js';
 import type { Cfg, CardItem, Experiment, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week, WeekRan } from '../types.ts';
 
 export { isOrder, normWeek };
@@ -279,6 +279,44 @@ export const overflowSlots = (week: WeekIn, slots: Slot[], n = 1) => {
 };
 // A rest day would push a workout off the board (skipped ones may go; they come back when the rest day is unticked).
 export const restBlocked = (week: WeekIn, slots: Slot[], n: number) => overflowSlots(week, slots, n).some(s => !isSkipped(s, week));
+// The workouts (distinct board days) that hold these cards, each as its list of cards.
+export const workoutsOf = (week: WeekIn, slots: Slot[]): Slot[][] => {
+  const by = new Map<number, Slot[]>();
+  slots.forEach(s => { const p = posOf(week, (week.moved && week.moved[s.id]) || s.day); by.set(p, [...(by.get(p) || []), s]); });
+  return [...by.entries()].sort((a, b) => a[0] - b[0]).map(([, l]) => l);
+};
+// No card in play on column c: skipped cards do not count, and cards moved out sit in their new column.
+export const emptyCol = (week: WeekIn, slots: Slot[], c: number) => dayAt(week, c) != null && (currentLayout(week, slots)[c] || []).every(s => isSkipped(s, week));
+/* A rest on an empty day takes its place and shifts nothing: the day's workout (empty) goes to the last position of week.order, so
+   later workouts keep their columns. Returns the new order, or null when the day is not empty or the week has no room for it. */
+export function restInPlace(week: WeekIn, slots: Slot[], n: number): number[] | null {
+  const rest = restsOf(week); const pd = dayAt(week, n);
+  if (pd == null || rest.length + 1 >= DAY_COUNT || !emptyCol(week, slots, n)) return null;
+  const order = [...orderOf(week).filter(v => v !== pd), pd];
+  const next = { ...week, rest: [...rest, n].sort((a, b) => a - b), order };
+  return overflowSlots(next, slots, n).some(s => !isSkipped(s, week)) ? null : order;
+}
+// Unticking a rest that took an empty day's place puts that day back where it was, when that gives the normal order again.
+export function orderAfterUntick(week: WeekIn, slots: Slot[], n: number): number[] | null {
+  const o = orderOf(week); const x = o[DAY_COUNT - 1]; const others = o.slice(0, -1);
+  if (!others.every((v, i) => !i || v > others[i - 1])) return null;
+  const pos = n - restsOf(week).filter(r => r < n).length; // where column n lands once it is a workout column again
+  const back = [...others.slice(0, pos - 1), x, ...others.slice(pos - 1)];
+  const cards = slots.filter(s => ((week.moved && week.moved[s.id]) || s.day) === x);
+  return back.every((v, i) => v === i + 1) && cards.every(s => isSkipped(s, week)) ? back : null;
+}
+// Rest dates by rest column (the one string older files kept is the first rest day's date).
+export const restDatesOf = (w: WeekIn | null | undefined): Record<string, string> => restDatesIn(w?.restOn, restsOf(w));
+// The dates when the rest days move from `from` to `to` (same count in order: the first rest keeps the first date), by new column.
+export function moveRestDates(dates: Record<string, string>, from: number[], to: number[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  from.forEach((c, i) => { if (dates[c] && to[i] != null) out[to[i]] = dates[c]; });
+  return out;
+}
+// The latest date a rest may carry: today in this week, the last day of a week that is over, the first day of one still to come.
+export function restDateCap(weekStart: Date) { const today = ymd(new Date()); const start = ymd(weekStart), end = ymd(addDays(weekStart, 6)); return today < start ? start : today > end ? end : today; }
+// A rest on column c gets that day's own date, or the latest allowed date when the day has not come yet.
+export function restOwnDate(weekStart: Date, c: number) { const own = ymd(addDays(weekStart, c - 1)); const cap = restDateCap(weekStart); return own < cap ? own : cap; }
 export function currentLayout(week: WeekIn, slots: Slot[]): Cols {
   const cols: Cols = Object.fromEntries(DAYS.map(d => [d, [] as Slot[]]));
   slots.forEach(s => { const c = colOfSlot(week, s); if (cols[c]) cols[c].push(s); });

@@ -162,4 +162,22 @@
 .boardroot .col:not(.rest) .colhead > div:has(> .daydate.nodate):not(:has(> .daydate + .sub)) > h3 {
   transform: translateY(1rem);
 }
+
+/* A rest day's date is a button with the same box as the plain date text (the pad above holds the room), dotted underline as the cue;
+   its box is 2rem tall and as wide as the date room, so the hit area is well over 24px. */
+.boardroot .colhead .daydate .dd-edit {
+  appearance: none;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  margin: 0;
+  min-height: 0;
+  padding: 0;
+  text-align: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
 }
