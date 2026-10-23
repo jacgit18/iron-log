@@ -43,7 +43,7 @@ jobs:
     if: needs.changes.outputs.unit == 'true'
     runs-on: ubuntu-26.04
     steps:
-      # Full history (kept from when this job picked tests by merge-base; harmless now that it runs every test).
+      # Full history: scripts/parityRun.test.js reads HEAD~2 (a shallow checkout has no such commit).
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
