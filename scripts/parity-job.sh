@@ -64,7 +64,11 @@ cmd_deploy() {
   if [ -n "$(git status --porcelain parity cloudbuild-parity.yaml scripts/env-parity.mjs scripts/lib/migration-state.mjs)" ]; then echo "The parity files have uncommitted changes. Commit first." >&2; exit 1; fi
   local tag image; tag="$(git rev-parse --short HEAD)"
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/parity:${tag}"
-  gc builds submit --config cloudbuild-parity.yaml --substitutions "_IMAGE=${image}" .
+  # Build as the small build-only account (made by ci-deploy-setup.sh), as deploy-cloud-run.sh does; without it a build runs as the default Compute
+  # account, which holds the broad Editor role (audit 2026-10-23, deployer rights). Falls back to the default only while that account does not exist.
+  local build_as=() build_sa="${BUILD_SA:-iron-log-build@${PROJECT_ID}.iam.gserviceaccount.com}"
+  if gc iam service-accounts describe "$build_sa" >/dev/null 2>&1; then build_as=(--service-account "projects/${PROJECT_ID}/serviceAccounts/${build_sa}"); fi
+  gc builds submit --config cloudbuild-parity.yaml --substitutions "_IMAGE=${image}" ${build_as[@]+"${build_as[@]}"} .
   local verb=create
   gc run jobs describe "$JOB" --region "$REGION" >/dev/null 2>&1 && verb=update
   gc run jobs "$verb" "$JOB" --region "$REGION" --image "$image" --service-account "$SA" \

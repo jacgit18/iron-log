@@ -9,6 +9,7 @@ test('Settings has the four groups, one export and import panel, and no GitHub b
   await openSettings(page);
   for (const name of ['Training', 'Data', 'App', 'Erase & delete']) await expect(page.getByRole('heading', { level: 2, name, exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { level: 3, name: 'Backups & data' })).toHaveCount(1);
+  await page.getByText('Save or load a file yourself').click(); // the automatic backups come first; the manual file copy is one fold below them
   await expect(page.getByRole('button', { name: 'Export all data', exact: true })).toBeVisible();
   await expect(page.getByText('Import from file')).toBeVisible();
   await expect(page.getByText(/GitHub/i)).toHaveCount(0);

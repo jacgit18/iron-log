@@ -7,6 +7,7 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.manualcopy summary,
 .imppaste summary {
   cursor: pointer;
   color: var(--muted);
@@ -221,6 +222,7 @@ html:has(.sjump) {
 .tbl td:first-child {
   min-width: 110px;
 }
+.manualcopy summary,
 .imppaste summary {
   padding: var(--sp-12) 0;
 }
