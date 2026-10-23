@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 22
       - name: Production dependencies have no known high or critical advisory
         run: npm audit --omit=dev --audit-level=high
       - name: Development dependencies are reported only
@@ -65,7 +65,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 22
       - name: Vet the packages this PR adds
         env:
           BASE_REF: ${{ github.base_ref }}
