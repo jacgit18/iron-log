@@ -51,10 +51,10 @@ export default function ExportUpload() {
     <div>
       <h4>Upload a file to an empty account</h4>
       {sync.holdsData
-        ? <p className="note">Your account already has data, so a file cannot be uploaded this way. Use Export &amp; import to merge a file into it.</p>
+        ? <p className="note">Your account already has data, so a file cannot be uploaded this way. Use Import from file in Backups &amp; data to merge a file into it.</p>
         : (
           <>
-            <p>Moving from another copy of Iron Log? Choose its export file (Settings → Export &amp; import → Download data there). It is added to your account once, all or nothing, and only while the account is empty. Do this before logging anything here.</p>
+            <p>Moving from another copy of Iron Log? Choose its export file (Settings → Backups &amp; data → Export all data there). It is added to your account once, all or nothing, and only while the account is empty. Do this before logging anything here.</p>
             <input ref={input} type="file" accept={JSON_ACCEPT} hidden aria-label="Iron Log export file" onChange={e => { void choose(e.target.files?.[0]); e.target.value = ''; }} />
             <div className="actions">
               <button type="button" className="btn" disabled={busy} onClick={() => input.current?.click()}>Choose export file…</button>

@@ -3,7 +3,7 @@ import BillingPanel from './BillingPanel.js';
 import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
 import IssuesPanel from './IssuesPanel.js';
-import AutoBackups from './AutoBackups.js';
+import BackupCopies from './BackupCopies.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
 import SyncPanel from './SyncPanel.js';
 import type { Appearance } from '../../lib/appearance.ts';
@@ -271,7 +271,7 @@ function DataPanel() {
   const [paste, setPaste] = useState('');
   return (
     <section className="panel" aria-labelledby="data-h">
-      <h3 id="data-h">Export &amp; import</h3>
+      <h3 id="data-h">Backups &amp; data</h3>
       {/* Nothing while loading: a signed-in person must not read "this browser only" before the data source is known. */}
       {storeMode === 'db' && <p>Your data is already saved to your account; exporting a copy is optional.</p>}
       {storeMode === 'local' && <p>Your data is in this browser only; export a copy now and then.</p>}
@@ -290,7 +290,7 @@ function DataPanel() {
           <button type="button" className="btn sm" onClick={() => st.pasteImport(paste)}>Review import</button>
         </div>
       </details>
-      <AutoBackups />
+      <BackupCopies />
       <More about="export and import">
         <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
       </More>
