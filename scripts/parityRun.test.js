@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -149,7 +149,9 @@ describe('parity-run.sh', () => {
 
   describe('the running commit table', () => {
     const git = (...a) => new Promise(done => execFile('git', a, { encoding: 'utf8' }, (_e, out) => done(out.trim())));
-    it('says each service is on main\'s tip, behind it, or not on main, and never turns the run red or yellow', async () => {
+    // Needs two commits of history: a shallow clone skips it (CI checks out with fetch-depth: 0, so it runs there).
+    const hasHistory = spawnSync('git', ['rev-parse', '--verify', '-q', 'HEAD~2']).status === 0;
+    it.skipIf(!hasHistory)('says each service is on main\'s tip, behind it, or not on main, and never turns the run red or yellow', async () => {
       const tip = await git('rev-parse', 'HEAD'); const older = await git('rev-parse', 'HEAD~2'); const other = '0'.repeat(40);
       const behind = await git('rev-list', '--count', `${older}..${tip}`);
       const r = await go({ STUB_SHA_IRON_LOG: tip, STUB_SHA_IRON_LOG_STAGING: older, STUB_SHA_IRON_LOG_QA: other });

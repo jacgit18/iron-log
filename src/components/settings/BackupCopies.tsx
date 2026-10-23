@@ -4,7 +4,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { DAY_NAMES, fmtShort, parseDate, ymd } from '../../shared/dates.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
-import { DEVICE_NAME_MAX, deviceName, renameDevice } from '../../lib/deviceName.js';
+import { DEVICE_NAME_MAX, cleanDeviceName, deviceName, renameDevice } from '../../lib/deviceName.js';
 
 // Every backup copy in one list, newest first (ADR 047 browser copies: the last 7 days; ADR 066 account copies: the last 30 days, paid
 // subscribers and admins only, with syncing on). One row per day, saying where it lives (this device, your account, or both) and, for the account
@@ -32,8 +32,9 @@ export default function BackupCopies() {
   const rows = [...byDate.values()].sort((a, b) => (a.date < b.date ? 1 : -1));
   const [name, setName] = useState(deviceName());
   const [renaming, setRenaming] = useState<string | null>(null); // the text being typed, or null when the name is not being changed
-  const [renameError, setRenameError] = useState(false);
-  const saveName = () => { if (renaming !== null && renameDevice(renaming)) { setName(deviceName()); setRenaming(null); setRenameError(false); } else setRenameError(true); };
+  const [renameError, setRenameError] = useState<'name' | 'save' | null>(null); // a name that is not usable, or a good name the browser would not keep
+  const saveName = () => { if (renaming === null) return; if (renameDevice(renaming)) { setName(deviceName()); setRenaming(null); setRenameError(null); } else setRenameError(cleanDeviceName(renaming) ? 'save' : 'name'); };
+  const sets = (r: Row) => { const n = (c?: Copy) => `${c!.entries} logged set${c!.entries === 1 ? '' : 's'}`; return r.here && r.account && r.here.entries !== r.account.entries ? `${n(r.here)} here, ${n(r.account)} on your account` : n(r.here ?? r.account); };
   const where = (r: Row) => (r.here && r.account ? 'This device and your account' : r.here ? 'This device' : 'Your account');
   const writer = (r: Row) => (!r.account?.device ? '' : !r.here ? ` · from ${r.account.device}` : r.account.device !== name ? ` · account copy from ${r.account.device}` : '');
   const newest = (r: Row) => [r.here?.savedAt, r.account?.savedAt].filter((x): x is string | number => x != null).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
@@ -56,12 +57,12 @@ export default function BackupCopies() {
       {!!rows.length && (
         <div className="exrows">
           {shown.map(r => {
-            const first = (r.here ?? r.account)!; const day = fmtShort(parseDate(r.date));
+            const day = fmtShort(parseDate(r.date));
             return (
               <div className="exrow" key={r.date} data-where={r.here && r.account ? 'both' : r.here ? 'device' : 'account'}>
                 <div className="exmain">
                   <b>{label(r.date)}</b>
-                  <span className="note">{where(r)}{writer(r)} · {first.entries} logged set{first.entries === 1 ? '' : 's'} · saved {new Date(newest(r)!).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                  <span className="note">{where(r)}{writer(r)} · {sets(r)} · saved {new Date(newest(r)!).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
                 </div>
                 <div className="actions flush">
                   {r.here && dl && <button type="button" className="btn sm ghost" aria-label={`Download the backup from ${day}`} onClick={() => void st.downloadBackup(r.date)}>Download</button>}
@@ -90,12 +91,12 @@ export default function BackupCopies() {
             ? <p className="note">This device is called <b>{name}</b>, so a copy on your account says which device saved it. <button type="button" className="btn sm ghost" onClick={() => setRenaming(name)}>Rename</button></p>
             : (
               <div className="actions flush">
-                <label className="field">Device name<input value={renaming} maxLength={DEVICE_NAME_MAX} aria-invalid={renameError} onChange={e => setRenaming(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') saveName(); }} /></label>
+                <label className="field">Device name<input value={renaming} maxLength={DEVICE_NAME_MAX} aria-invalid={renameError === 'name'} onChange={e => setRenaming(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') saveName(); }} /></label>
                 <button type="button" className="btn sm" onClick={saveName}>Save name</button>
-                <button type="button" className="btn sm ghost" onClick={() => { setRenaming(null); setRenameError(false); }}>Cancel</button>
+                <button type="button" className="btn sm ghost" onClick={() => { setRenaming(null); setRenameError(null); }}>Cancel</button>
               </div>
             )}
-          {renameError && <p className="note err" role="alert">Use 1 to {DEVICE_NAME_MAX} characters.</p>}
+          {renameError && <p className="note err" role="alert">{renameError === 'name' ? `Use 1 to ${DEVICE_NAME_MAX} characters.` : 'This browser would not save the name. Free some space or allow site data, then try again.'}</p>}
         </div>
       )}
       <p className="note">The copies on this device stay in this browser. Clearing the site's data removes them, so use Export all data for a copy you keep elsewhere.{account && ' Your account copies are removed when you erase everything or delete your account.'}</p>
