@@ -53,21 +53,20 @@ red=0; yellow=0
   echo "|---|---|---|"
 } >> "$OUT"
 
-latest() { gc run jobs executions list --job "$JOB" --region "$REGION" --limit 1 --sort-by '~metadata.creationTimestamp' --format 'value(metadata.name)' 2>/dev/null | head -1; }
-
 for env in $ENVS; do
-  before="$(latest)"
-  gc run jobs execute "$JOB" --region "$REGION" --args "$env,$expected" --wait >/dev/null 2>&1
+  # The execution this loop started is read from the execute call's own output (empty when none started), never worked out from "the newest
+  # execution": another run (by hand, or a second trigger) could be the newest. exit_code_of then only ever looks at this loop's own execution.
+  out="$(mktemp)"
+  gc run jobs execute "$JOB" --region "$REGION" --args "$env,$expected" --wait --format='value(metadata.name)' > "$out" 2>/dev/null
   rc=$?
-  name="$(latest)"
+  name="$(grep -v '^[[:space:]]*$' "$out" | tail -1)"; rm -f "$out"
   code=""
   if [ "$rc" = 0 ]; then code=0
-  elif [ -n "$name" ] && [ "$name" != "$before" ]; then
-    # A failed run: trust the exit code only when it belongs to the execution this run started (a job that could not start must not
-    # inherit an older execution's result), and never read 0 from a failed run as OK.
+  elif [ -n "$name" ]; then
+    # A failed run: the exit code belongs to the execution this run started, and 0 from a failed run is never read as OK.
     code="$(exit_code_of "$name")"; [ "$code" = 0 ] && code=""
   fi
-  link=""; [ -n "$name" ] && [ "$name" != "$before" ] && link="[job logs](https://console.cloud.google.com/run/jobs/executions/details/${REGION}/${name}?project=${PROJECT_ID})"
+  link=""; [ -n "$name" ] && link="[job logs](https://console.cloud.google.com/run/jobs/executions/details/${REGION}/${name}?project=${PROJECT_ID})"
   case "$code" in
     0) status="OK"; detail="matches main";;
     3) status="BEHIND"; detail="main has migrations this database lacks; names are in the job logs";;
