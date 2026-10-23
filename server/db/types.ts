@@ -30,6 +30,7 @@ export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 export interface BackupSnapshots {
   data: Buffer;
   day: string;
+  device: string | null;
   entries: number;
   id: Generated<Int8>;
   saved_at: Generated<Timestamp>;

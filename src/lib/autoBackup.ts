@@ -10,7 +10,7 @@ const SHRINK_FLOOR = 10; // a copy this small is not worth guarding
 const SHRINK_RATIO = 0.5;
 const DB_NAME = 'ironlog-backups'; const STORE = 'days';
 
-export interface BackupInfo { date: string; savedAt: string; score: number; entries: number }
+export interface BackupInfo { date: string; savedAt: string; score: number; entries: number; device?: string }
 interface BackupRecord extends BackupInfo { text: string }
 
 /** How much a data file holds, as one number: sessions, body weights, weeks, saved programs, experiments, stretches, water days, groceries, edited programs. */

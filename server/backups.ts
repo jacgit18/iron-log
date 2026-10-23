@@ -60,6 +60,15 @@ const killSwitch: RequestHandler = (_req, res, next) => {
   next();
 };
 
+/** The device name a phone sends (x-backup-device, percent-encoded because a header holds Latin-1 only): 1 to 40 printable characters once
+ *  decoded and trimmed, else null (the copy is saved without a name). */
+export const deviceOf = (v: string | undefined): string | null => {
+  let t = '';
+  try { t = decodeURIComponent(v ?? '').trim(); } catch { return null; }
+  // oxlint-disable-next-line no-control-regex
+  return t.length >= 1 && t.length <= 40 && !/[\x00-\x1f\x7f]/.test(t) ? t : null;
+};
+
 export function backupsRoutes({ db, now = Date.now }: BackupsDeps): Router {
   const router = Router();
   router.use(killSwitch);
@@ -68,9 +77,9 @@ export function backupsRoutes({ db, now = Date.now }: BackupsDeps): Router {
   router.get('/', async (_req, res) => {
     const userId = String(res.locals.userId);
     const out = await inUserTransaction(db, userId, async trx => {
-      const { rows } = await sql<{ day: string; saved_at: string; entries: number; score: number }>`
-        select to_char(day, 'YYYY-MM-DD') as day, saved_at, entries, score from backup_snapshots order by day desc limit ${KEEP_DAYS}`.execute(trx);
-      return { days: KEEP_DAYS, backups: rows.map(r => ({ date: r.day, savedAt: new Date(r.saved_at).toISOString(), entries: r.entries, score: r.score })) };
+      const { rows } = await sql<{ day: string; saved_at: string; entries: number; score: number; device: string | null }>`
+        select to_char(day, 'YYYY-MM-DD') as day, saved_at, entries, score, device from backup_snapshots order by day desc limit ${KEEP_DAYS}`.execute(trx);
+      return { days: KEEP_DAYS, backups: rows.map(r => ({ date: r.day, savedAt: new Date(r.saved_at).toISOString(), entries: r.entries, score: r.score, ...(r.device ? { device: r.device } : {}) })) };
     });
     res.set('Cache-Control', 'private, no-cache').json({ ok: true, ...out });
   });
@@ -96,6 +105,7 @@ export function backupsRoutes({ db, now = Date.now }: BackupsDeps): Router {
     const entries = req.get('x-backup-entries') ?? '';
     const score = req.get('x-backup-score') ?? '';
     const encoding = req.get('x-backup-encoding') ?? 'identity';
+    const device = deviceOf(req.get('x-backup-device'));
     const refuse = (status: number, error: string) => void res.status(status).json({ ok: false, error });
     if (!day || !dayIsNear(day, now())) return refuse(422, 'day must be today, as YYYY-MM-DD');
     if (!COUNT.test(entries) || !COUNT.test(score) || (encoding !== 'gzip' && encoding !== 'identity')) return refuse(422, 'x-backup-entries, x-backup-score and x-backup-encoding are required');
@@ -106,9 +116,9 @@ export function backupsRoutes({ db, now = Date.now }: BackupsDeps): Router {
     const saved = await inUserTransaction(db, userId, async trx => {
       // The conflict clause carries the shrink guard, so two phones writing at once cannot race past it.
       const { rows } = await sql<{ id: string }>`
-        insert into backup_snapshots (user_id, day, entries, score, size_bytes, data)
-        values (current_setting('app.user_id')::bigint, ${day}::date, ${Number(entries)}, ${Number(score)}, ${file.zipped.length}, ${file.zipped})
-        on conflict (user_id, day) do update set saved_at = now(), entries = excluded.entries, score = excluded.score, size_bytes = excluded.size_bytes, data = excluded.data
+        insert into backup_snapshots (user_id, day, entries, score, size_bytes, data, device)
+        values (current_setting('app.user_id')::bigint, ${day}::date, ${Number(entries)}, ${Number(score)}, ${file.zipped.length}, ${file.zipped}, ${device})
+        on conflict (user_id, day) do update set saved_at = now(), entries = excluded.entries, score = excluded.score, size_bytes = excluded.size_bytes, data = excluded.data, device = excluded.device
           where backup_snapshots.score < ${SHRINK_FLOOR} or excluded.score >= backup_snapshots.score * ${SHRINK_RATIO}::numeric
         returning id`.execute(trx);
       // Keep the newest KEEP_DAYS days, so an account never holds more than that many rows.

@@ -71,7 +71,7 @@ test('offline it says the list cannot be reached, offers Try again, and the brow
   const again = box.getByRole('button', { name: 'Try again' });
   await expect(async () => {
     if (await again.isVisible()) await again.click({ timeout: 1000 }).catch(() => {});
-    await expect(box.locator('.exrow[data-where=account]')).toHaveCount(1, { timeout: 1000 });
+    await expect(box.locator('.exrow[data-where=both]')).toHaveCount(1, { timeout: 1000 }); // today is on this device and the account: one row
   }).toPass({ timeout: 10_000 });
 });
 
@@ -86,4 +86,38 @@ test("today's file is uploaded after the browser copy is saved, once, with the c
   expect(uploads[0].headers['x-backup-entries']).toMatch(/^\d+$/);
   await page.clock.fastForward(40_000); // nothing changed, so nothing more is sent
   expect(uploads).toHaveLength(1);
+});
+
+test('a day on this device and on the account is one row, and the account copy says which device wrote it', async ({ page }) => {
+  const list = json({ ok: true, days: 30, backups: [{ date: '2026-09-24', savedAt: '2026-09-24T15:00:00.000Z', entries: 12, score: 20, device: 'iPad' }, { date: '2026-09-23', savedAt: '2026-09-23T15:00:00.000Z', entries: 12, score: 20, device: 'iPhone' }] });
+  const box = await open(page, { list });
+  await page.clock.fastForward(11_000);
+  const today = box.locator('.exrow', { hasText: 'Today, Sep 24' });
+  await expect(today).toHaveCount(1, { timeout: 15_000 });
+  await expect(today).toContainText('This device and your account');
+  await expect(today).toContainText('account copy from iPad');
+  await expect(today.getByRole('button', { name: 'Restore device copy from Sep 24' })).toBeVisible();
+  await expect(today.getByRole('button', { name: 'Restore account copy from Sep 24' })).toBeVisible();
+  const yesterday = box.locator('.exrow', { hasText: 'Sep 23' });
+  await expect(yesterday).toContainText('Your account · from iPhone');
+  await expect(yesterday.getByRole('button', { name: 'Restore the account backup from Sep 23' })).toBeVisible();
+  await expect(box.locator('.exrow')).toHaveCount(2); // one row per day, not one per place
+});
+
+test('the device can be renamed, and the new name goes up with the next backup', async ({ page }) => {
+  const uploads = [];
+  const box = await open(page, { uploads, list: json({ ok: true, days: 30, backups: days('2026-09-23') }) });
+  await expect(box).toContainText('This device is called');
+  await box.getByRole('button', { name: 'Rename' }).click();
+  await box.getByLabel('Device name').fill('Work laptop');
+  await box.getByRole('button', { name: 'Save name' }).click();
+  await expect(box.locator('.devname b')).toHaveText('Work laptop');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ironlog:devicename')))).toBe('Work laptop');
+  await box.getByRole('button', { name: 'Rename' }).click(); // Cancel leaves the name alone
+  await box.getByLabel('Device name').fill('Something else');
+  await box.getByRole('button', { name: 'Cancel' }).click();
+  await expect(box.locator('.devname b')).toHaveText('Work laptop');
+  await page.clock.fastForward(11_000);
+  await expect.poll(() => uploads.length, { timeout: 15_000 }).toBeGreaterThan(0);
+  expect(uploads[0].headers['x-backup-device']).toBe('Work%20laptop');
 });

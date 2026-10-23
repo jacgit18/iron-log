@@ -22,6 +22,13 @@ describe('packFile', () => {
 });
 
 describe('uploadBackup', () => {
+  it('sends this device\'s name, percent-encoded because a header holds Latin-1 only', async () => {
+    const fetchMock = answer(200, { ok: true, saved: true }); vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('localStorage', { getItem: (k: string) => (k === 'ironlog:devicename' ? JSON.stringify('Josh’s phone') : null), setItem() {}, removeItem() {} });
+    await uploadBackup('2026-10-22', '{"app":"iron-log"}', 1, 1);
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect((init.headers as Record<string, string>)['x-backup-device']).toBe(encodeURIComponent('Josh’s phone'));
+  });
   it('PUTs the day with the counts, the encoding and the client version', async () => {
     const fetchMock = answer(200, { ok: true, saved: true }); vi.stubGlobal('fetch', fetchMock);
     expect(await uploadBackup('2026-10-22', '{"app":"iron-log"}', 12, 30)).toBe('saved');
