@@ -92,7 +92,10 @@ export function productionUrl() {
   if (fetched) return fetched;
   if (!existsSync('.env')) return null;
   const line = readFileSync('.env', 'utf8').split('\n').find(l => l.startsWith('DATABASE_URL_UNPOOLED='));
-  return line ? line.slice(line.indexOf('=') + 1).replace(/^["']|["']$/g, '') : null;
+  if (!line) return null;
+  // The old place: say so, as scripts/prod-db.sh does, so nobody keeps relying on it by accident.
+  console.error('Warning: using the production URL in .env. Move it: scripts/prod-db.sh store-owner-url --apply, then delete the DATABASE_URL_UNPOOLED line from .env.');
+  return line.slice(line.indexOf('=') + 1).replace(/^["']|["']$/g, '');
 }
 
 /** The name a host finally points at: follows CNAME records (up to 8 hops), so an alias of production's address has production's name. A name with no CNAME,
