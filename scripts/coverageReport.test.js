@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
+import { AREAS } from './coverage-areas.mjs';
 import { CAPS, capArea, overCap, underCap, unloadedFiles } from './coverage-report.mjs';
 
 const empty = { statements: { total: 0 } };
@@ -13,6 +14,20 @@ describe('unloadedFiles', () => {
   it('lists source files with no statements counted, not loaded ones, type-only files or non-source files', () => {
     const entries = [['src/lib/a.ts', empty], ['src/lib/b.ts', some], ['src/store/types.ts', empty], ['src/styles.css', empty], ['src/components/C.tsx', empty]];
     expect(unloadedFiles(entries)).toEqual(['src/lib/a.ts', 'src/components/C.tsx']);
+  });
+});
+
+describe('unloadedFiles skip list', () => {
+  it('leaves out a file listed as holding only types or re-exports', () => {
+    const entries = [['src/store/barrel.ts', empty], ['src/store/slice.ts', empty]];
+    expect(unloadedFiles(entries, ['src/store/barrel.ts'])).toEqual(['src/store/slice.ts']);
+  });
+});
+
+describe('areas', () => {
+  it('gives every area an integer cap, so no area has a floor without a cap', () => {
+    for (const [name, a] of Object.entries(AREAS)) expect(Number.isInteger(a.cap), name).toBe(true);
+    expect(Object.keys(CAPS)).toEqual(Object.keys(AREAS));
   });
 });
 
@@ -77,7 +92,7 @@ describe('--check as a command', () => {
   it('exits 1 when tests now load files the cap still allows', () => {
     const r = run(project(atCaps().slice(1)));
     expect(r.status).toBe(1);
-    expect(r.stderr).toContain('Lower CAPS');
+    expect(r.stderr).toContain('Lower the cap');
   });
   it('still runs when started through a symlinked directory (it must not pass without checking)', () => {
     const cwd = project([...atCaps(), 'src/store/newSlice.ts']);

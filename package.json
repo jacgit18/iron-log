@@ -28,7 +28,7 @@
     "typecheck": "tsc && tsc -p tsconfig.sw.json && tsc -p server",
     "preview": "vite preview",
     "test": "vitest run",
-    "coverage": "vitest run --coverage && node scripts/coverage-report.mjs --check",
+    "coverage": "vitest run --coverage; s=$?; [ -f coverage/coverage-summary.json ] && { node scripts/coverage-report.mjs --check || [ $s -ne 0 ] || s=1; }; exit $s",
     "e2e": "playwright test",
     "check": "node scripts/check.mjs",
     "e2e:sync": "node scripts/e2e-sync.mjs",
