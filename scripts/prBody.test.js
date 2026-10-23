@@ -173,6 +173,7 @@ describe('inferType (the PR label)', () => {
   const ui = ['src/components/board/Board.tsx'];
   it('calls a fix a bug from the branch, the description or the tracker note', () => {
     expect(inferType({ branch: 'fix/rest-day', files: ui }).type).toBe('bug');
+    expect(inferType({ branch: 'b-rest-day', files: ui }).type).toBe('bug');
     expect(inferType({ branch: 'f-x-fix', files: ui }).type).toBe('bug');
     expect(inferType({ branch: 'f-x', files: ui, what: 'Fix the second rest day' }).type).toBe('bug');
     expect(inferType({ branch: 'f-x', files: ui, tracker: 'PR tracker: rest-day; fix cause: logic gap' }).type).toBe('bug');
@@ -184,6 +185,9 @@ describe('inferType (the PR label)', () => {
   it('labels dependency, docs and chore-only changes', () => {
     expect(inferType({ branch: 'dependabot/npm_and_yarn/x', files: ['package.json', 'package-lock.json'] }).type).toBe('dependencies');
     expect(inferType({ branch: 'docs-x', files: ['README.md'] }).type).toBe('documentation');
+    expect(inferType({ branch: 'd-readme', files: ui }).type).toBe('documentation');
+    expect(inferType({ branch: 'c-ci', files: ui }).type).toBe('chore');
+    expect(inferType({ branch: 'p-zod', files: ui }).type).toBe('dependencies');
     expect(inferType({ branch: 'f-x', files: ['scripts/a.mjs', 'e2e/a.spec.js'] }).type).toBe('chore');
   });
 });
