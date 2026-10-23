@@ -316,7 +316,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     // stale link never receives HTML where JavaScript was expected. /.well-known has no files, as on GitHub Pages.
     app.use((req, res, next) => {
       if ((req.method !== 'GET' && req.method !== 'HEAD') || extname(req.path) !== '' || req.path.startsWith('/.well-known/')) return next();
-      res.set('Cache-Control', NO_CACHE).sendFile(join(root, 'index.html'));
+      res.set('Cache-Control', NO_CACHE).sendFile('index.html', { root }); // with `root`, so a checkout under a hidden folder (.claude/worktrees/...) still serves the page
     });
   }
 
