@@ -1,0 +1,61 @@
+name: Migrate staging
+
+# Keeps the staging database on main's migrations, even while deploys are paused (DEPLOY_PAUSED): every push to main that changes
+# db/migrations/** applies the new migrations to staging, and a person can start it by hand to catch staging up (Actions -> Migrate staging
+# -> Run workflow, on main). A migration is therefore tried on a real database within minutes of the merge, before production sees it
+# (ADR 017), and the parity report (env-parity.yml) shows staging OK. It is not part of the production gate and deploys nothing: the staging
+# service itself changes only in a real Deploy to Cloud Run run. QA and production stay manual.
+#
+# It needs no Google login, only the staging database URL from the `staging` environment (restricted to main). The database must carry the
+# staging mark that `scripts/staging-db.mjs clear --apply` leaves, so a connection string that points at another database stops the run
+# before a single migration runs. Brief: Projects/iron-log/briefs/staging-migrates-on-merge.md.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'db/migrations/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run at a time, never cancelled halfway. (Not the staging deploy job's group: GitHub drops a queued job when another queues behind the same
+# group, which could cancel a queued staging deploy and block production. dbmate records each migration in its own transaction, so a rare overlap
+# with the deploy's own migrate step at worst fails one of the two runs; it cannot apply a migration twice.)
+concurrency:
+  group: migrate-staging
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    # Only main, and only while staging is set up (the same switch as the staging deploy job).
+    if: github.ref == 'refs/heads/main' && vars.STAGING_ENABLED == 'true'
+    runs-on: ubuntu-26.04
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the database tools
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      # The staging database must carry the staging mark, so a connection string that points at the wrong database (production's) stops here.
+      - name: Check the database is the staging one
+        env:
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: node scripts/staging-db.mjs check
+
+      # dbmate applies only what the staging database has not run; with nothing to apply it says so and the run is green.
+      - name: Apply the migrations to the staging database
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: npx dbmate --no-dump-schema --migrations-dir db/migrations up
+
+      - name: Say what staging is on
+        run: |
+          {
+            echo "### Staging migrated"
+            echo "Commit \`$(git rev-parse --short HEAD)\`: the staging database has every migration of this commit. The staging service itself is unchanged (a Deploy to Cloud Run run updates it)."
+          } >> "$GITHUB_STEP_SUMMARY"
