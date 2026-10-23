@@ -140,3 +140,21 @@ describe('without a built PWA', () => {
     }
   });
 });
+
+// A checkout under a hidden folder (.claude/worktrees/..., as the agent worktrees are) must still serve the page: the file sender
+// refuses a full path that contains a dot-directory unless the folder is passed as `root`.
+describe('a build under a hidden folder', () => {
+  it('serves the app page for a page route', async () => {
+    const hidden = mkdtempSync(join(tmpdir(), 'ironlog-hidden-'));
+    const out = join(hidden, '.worktrees', 'dist');
+    mkdirSync(out, { recursive: true });
+    writeFileSync(join(out, 'index.html'), '<!doctype html><title>Hidden</title>');
+    const s = createApp({ staticDir: out }).listen(0);
+    await new Promise(done => s.once('listening', done));
+    try {
+      const r = await fetch(`http://127.0.0.1:${(s.address() as AddressInfo).port}/`);
+      expect(r.status).toBe(200);
+      expect(await r.text()).toContain('Hidden');
+    } finally { await new Promise<void>(done => s.close(() => done())); rmSync(hidden, { recursive: true, force: true }); }
+  });
+});
