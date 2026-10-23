@@ -15,6 +15,15 @@ const node = (script: string, env: Record<string, string>) =>
     execFile('node', [resolve('scripts', script)], { env: { ...process.env, DATABASE_URL: '', MIGRATIONS_CHECK_URL: '', ...env }, encoding: 'utf8' }, (err, stdout, stderr) =>
       done({ status: err ? Number((err as { code?: number }).code ?? 1) : 0, stdout, stderr }));
   });
+// The environment parity job (scripts/env-parity.mjs) shares this login (the migrations_reader role is one per Postgres cluster, so these tests live in this file, not in a
+// second one that would re-key it while the tests above run). OK, BEHIND, AHEAD OF MAIN and UNKNOWN each give their own exit code; UNKNOWN is never reported as OK.
+const run = (args: string[], env: Record<string, string>) =>
+  new Promise<{ status: number; out: string }>(done => {
+    execFile('node', [resolve('scripts/env-parity.mjs'), ...args], { env: { PATH: process.env.PATH ?? '', PARITY_RETRY_DELAY_MS: '10', ...env }, encoding: 'utf8' }, (err, stdout, stderr) =>
+      done({ status: err ? Number((err as { code?: number }).code ?? 1) : 0, out: stdout + stderr }));
+  });
+const versions = readdirSync('db/migrations').filter(f => /^\d+_.*\.sql$/.test(f)).map(f => f.slice(0, f.indexOf('_'))).sort();
+const list = versions.join(',');
 const asReader = async <T>(url: string, fn: (c: pg.Client) => Promise<T>) => {
   const c = new pg.Client({ connectionString: url });
   await c.connect();
@@ -95,5 +104,71 @@ describe('db-pending.mjs', () => {
     expect(r.status).toBe(2);
     expect(r.stdout + r.stderr).not.toContain('not-the-password-xyz');
     expect(r.stdout + r.stderr).not.toContain(new URL(reader).password);
+  });
+});
+
+describe('env-parity.mjs', () => {
+  it('says OK and exits 0 when the database has every migration main has', async () => {
+    const r = await run(['production', list], { PARITY_PRODUCTION_URL: reader });
+    expect(r.status).toBe(0);
+    expect(r.out.trim()).toBe(`production: OK (${versions.length} applied, 0 behind)`);
+  });
+  it('accepts the migration list as one argument or one argument per version (gcloud splits --args on commas)', async () => {
+    const r = await run(['production', ...versions], { PARITY_PRODUCTION_URL: reader });
+    expect(r.status).toBe(0);
+    expect(r.out.trim()).toBe(`production: OK (${versions.length} applied, 0 behind)`);
+  });
+  it('picks the URL by the environment name', async () => {
+    expect((await run(['staging', list], { PARITY_STAGING_URL: reader })).status).toBe(0);
+    expect((await run(['qa', list], { PARITY_QA_URL: reader })).status).toBe(0);
+    expect((await run(['qa', list], { PARITY_STAGING_URL: reader })).status).toBe(2); // the wrong variable is no URL
+  });
+  it('says BEHIND n and exits 3 when main has a migration the database lacks, naming it', async () => {
+    const r = await run(['staging', `${list},20991231000001`], { PARITY_STAGING_URL: reader });
+    expect(r.status).toBe(3);
+    expect(r.out.trim()).toBe('staging: BEHIND 1 (not applied: 20991231000001)');
+  });
+  it('says AHEAD OF MAIN and exits 4 when the database has a version main lacks (a branch tried on QA)', async () => {
+    await sql`insert into schema_migrations (version) values ('20991231000002')`.execute(owner);
+    try {
+      const r = await run(['qa', list], { PARITY_QA_URL: reader });
+      expect(r.status).toBe(4);
+      expect(r.out.trim()).toBe('qa: AHEAD OF MAIN 1 (applied but not in main: 20991231000002)');
+      // Ahead wins when it is also behind.
+      const both = await run(['qa', `${list},20991231000001`], { PARITY_QA_URL: reader });
+      expect(both.status).toBe(4);
+      expect(both.out).toContain('also not applied: 20991231000001');
+    } finally {
+      await sql`delete from schema_migrations where version = '20991231000002'`.execute(owner);
+    }
+  });
+  it('exits 2 UNKNOWN, never OK, when it cannot tell: no URL, no list, a bad name, a wrong password', async () => {
+    expect((await run(['production', list], {})).status).toBe(2);
+    expect((await run(['production', ''], { PARITY_PRODUCTION_URL: reader })).status).toBe(2);
+    expect((await run(['production', 'not,numbers'], { PARITY_PRODUCTION_URL: reader })).status).toBe(2);
+    expect((await run([], { PARITY_PRODUCTION_URL: reader })).status).toBe(2);
+    const wrong = new URL(reader); wrong.password = 'not-the-password-xyz';
+    const r = await run(['production', list], { PARITY_PRODUCTION_URL: wrong.href });
+    expect(r.status).toBe(2);
+    expect(r.out).toMatch(/^production: UNKNOWN \(cannot read the database/);
+    expect(r.out).not.toContain('not-the-password-xyz');
+    expect(r.out).not.toContain(new URL(reader).password);
+    expect(r.out).not.toContain(wrong.href);
+  });
+  it('exits 2 UNKNOWN when the database has no schema_migrations table (a QA branch after a reset)', async () => {
+    await sql.raw('create database parity_empty').execute(owner);
+    try {
+      const empty = new URL(ownerUrl); empty.pathname = '/parity_empty';
+      const r = await run(['qa', list], { PARITY_QA_URL: empty.href });
+      expect(r.status).toBe(2);
+      expect(r.out).toMatch(/^qa: UNKNOWN/);
+    } finally {
+      await sql.raw('drop database parity_empty').execute(owner);
+    }
+  });
+  it('never prints the reader URL or its password on success either', async () => {
+    const r = await run(['production', list], { PARITY_PRODUCTION_URL: reader });
+    expect(r.out).not.toContain(reader);
+    expect(r.out).not.toContain(new URL(reader).password);
   });
 });
