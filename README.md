@@ -171,7 +171,7 @@ npm run e2e                     # builds the app and runs the browser tests
 
 ## Project docs
 
-The project's docs (roadmap, architecture, decisions, changelog, UX docs, backlog, runbooks) are stored outside this repository in the DevHiveMind repository: [DevHiveMind/Projects](https://github.com/jacgit18/DevHiveMind/tree/main/Projects).
+The project's docs (roadmap, architecture, decisions, changelog, UX docs, backlog, runbooks) are stored outside this repository in the DevHiveMind garden. Start with the [priority read](https://devhivemind-garden.vercel.app/projects/iron-log/priority-read/), which says which docs to read first.
 
 ## Notes
 
