@@ -33,6 +33,13 @@ case "$*" in
     n="$(grep -oE 'iron-log-parity-[a-z0-9]{5}' <<< "$*" | head -1)"
     v="STUB_EXIT_$(env_of "$n")"
     if [ -n "\${!v:-}" ]; then echo "[{\\"status\\":{\\"lastAttemptResult\\":{\\"exitCode\\":\${!v}}}}]"; else echo "[{}]"; fi;;
+  *"services describe"*)
+    svc="$(grep -oE 'iron-log(-[a-z]+)?' <<< "$*" | head -1)"; up="$(echo "$svc" | tr a-z- A-Z_)"
+    v="STUB_NOSVC_$up"; [ -n "\${!v:-}" ] && { echo "ERROR: (gcloud.run.services.describe) PERMISSION_DENIED" >&2; exit 1; }
+    echo "{\\"status\\":{\\"traffic\\":[{\\"revisionName\\":\\"$svc-00002\\",\\"percent\\":100},{\\"revisionName\\":\\"$svc-00003\\",\\"percent\\":0}]}}";;
+  *"revisions describe"*)
+    rev="$(grep -oE 'iron-log(-[a-z]+)?-0000[0-9]' <<< "$*" | head -1)"; svc="\${rev%-0000*}"; up="$(echo "$svc" | tr a-z- A-Z_)"
+    v="STUB_SHA_$up"; case "$rev" in *-00003) v=STUB_NO_SUCH_VAR;; esac; echo "{\\"spec\\":{\\"containers\\":[{\\"env\\":[{\\"name\\":\\"NODE_ENV\\",\\"value\\":\\"production\\"},{\\"name\\":\\"COMMIT_SHA\\",\\"value\\":\\"\${!v:-}\\"}]}]}}";;
   *"executions list"*) echo "iron-log-parity-SOMEONE-ELSES-RUN";;   # must never be used: another run could be the newest
 esac
 `;
@@ -138,5 +145,34 @@ describe('parity-run.sh', () => {
     const r = await go({}, empty);
     expect(r.status).toBe(1);
     expect(r.out).toContain('No migration files found');
+  });
+
+  describe('the running commit table', () => {
+    const git = (...a) => new Promise(done => execFile('git', a, { encoding: 'utf8' }, (_e, out) => done(out.trim())));
+    it('says each service is on main\'s tip, behind it, or not on main, and never turns the run red or yellow', async () => {
+      const tip = await git('rev-parse', 'HEAD'); const older = await git('rev-parse', 'HEAD~2'); const other = '0'.repeat(40);
+      const behind = await git('rev-list', '--count', `${older}..${tip}`);
+      const r = await go({ STUB_SHA_IRON_LOG: tip, STUB_SHA_IRON_LOG_STAGING: older, STUB_SHA_IRON_LOG_QA: other });
+      expect(r.status).toBe(0);
+      expect(r.summary).toContain(`### Running commit (main's tip is \`${tip.slice(0, 7)}\`)`);
+      expect(r.summary).toContain(`| production | iron-log | \`${tip.slice(0, 7)}\` | main's tip |`);
+      expect(r.summary).toContain(`| staging | iron-log-staging | \`${older.slice(0, 7)}\` | ${behind} commit(s) behind main |`);
+      expect(r.summary).toContain('| qa | iron-log-qa | `0000000` | this checkout does not have that commit |');
+      expect(r.out).not.toContain('::warning');
+      expect(r.out).not.toContain('::error');
+    });
+    it('says unknown, with a notice and no failure, when a service cannot be read or has no commit', async () => {
+      const r = await go({ STUB_NOSVC_IRON_LOG: '1', STUB_SHA_IRON_LOG_STAGING: '' });
+      expect(r.status).toBe(0);
+      expect(r.summary).toContain('| production | iron-log | `unknown` | could not read it');
+      expect(r.summary).toContain('| staging | iron-log-staging | `unknown` | could not read it');
+      expect(r.out).toContain('::notice title=production: running commit unknown');
+    });
+    it('reads the revision that has the traffic, not the latest one', async () => {
+      const tip = await git('rev-parse', 'HEAD');
+      const r = await go({ STUB_SHA_IRON_LOG: tip });
+      // The stub gives revision -00003 (0% traffic, the latest) no COMMIT_SHA: reading it would say unknown.
+      expect(r.summary).toContain(`| production | iron-log | \`${tip.slice(0, 7)}\` | main's tip |`);
+    });
   });
 });
