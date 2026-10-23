@@ -4,6 +4,7 @@
    every failure comes back as a plain reason, because a missed upload is simply tried again at the next change. */
 import { signIn } from '../sync/devUser.js';
 import type { BackupInfo } from './autoBackup.js';
+import { deviceName } from './deviceName.js';
 
 /** The largest compressed file the server takes (server/backups.ts MAX_BYTES). A bigger one is not sent. */
 export const SERVER_MAX_BYTES = 1024 * 1024;
@@ -41,7 +42,7 @@ export async function uploadBackup(day: string, text: string, entries: number, s
   if (body.length > SERVER_MAX_BYTES) return 'refused';
   let res: Response;
   try {
-    res = await fetch(base(day), { method: 'PUT', headers: headers({ 'content-type': 'application/octet-stream', 'x-backup-entries': String(entries), 'x-backup-score': String(score), 'x-backup-encoding': encoding }), body: body as BodyInit });
+    res = await fetch(base(day), { method: 'PUT', headers: headers({ 'content-type': 'application/octet-stream', 'x-backup-device': encodeURIComponent(deviceName()), 'x-backup-entries': String(entries), 'x-backup-score': String(score), 'x-backup-encoding': encoding }), body: body as BodyInit });
   } catch { return 'offline'; }
   if (!res.ok) return reasonOf(res.status);
   try { return (await res.json() as { saved?: boolean }).saved === false ? 'kept' : 'saved'; } catch { return 'saved'; }
