@@ -40,6 +40,9 @@ describe('inferAudience', () => {
   it('is n/a when nothing a user can see changed', () => {
     expect(inferAudience(['README.md', 'e2e/board.spec.js', 'scripts/check.mjs', '.github/workflows/test.yml', '.githooks/pre-push', 'src/lib/logic.test.js'], {}, config).audience).toBe('na');
   });
+  it('is n/a for a Dockerfile in a folder and a Cloud Build config of a job (parity/Dockerfile, cloudbuild-parity.yaml), not only the root ones', () => {
+    expect(inferAudience(['parity/Dockerfile', 'cloudbuild-parity.yaml', 'backup/Dockerfile'], {}, config).audience).toBe('na');
+  });
   it('is paid when a paid-subscriber entry is added, and a paid entry wins over an admin one', () => {
     expect(inferAudience(['src/features.ts', 'src/App.tsx'], features("+  coach: 'paid', // Coaching notes"), config).audience).toBe('paid');
     expect(inferAudience(['src/features.ts'], features("+  a: 'admin',\n+  b: 'paid',"), config).audience).toBe('paid');
