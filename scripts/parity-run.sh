@@ -5,7 +5,8 @@
 #
 #   PROJECT_ID=iron-log-jacgit18 scripts/parity-run.sh
 #
-# Status from the job's exit code (scripts/env-parity.mjs): 0 OK; 3 BEHIND (yellow); 4 AHEAD OF MAIN (red); anything else, including a job
+# Status from the job's exit code (scripts/env-parity.mjs): 0 OK; 3 BEHIND (yellow); 4 AHEAD OF MAIN (red). The extra row `secrets` compares
+# secret names with the inventory: 3 UNLISTED (yellow), 4 MISSING (red); anything else, including a job
 # that could not start or whose exit code cannot be read, UNKNOWN (red). Never OK by accident. PARITY_STAGING_BEHIND=fail makes staging
 # BEHIND red (set it once staging migrates on every merge); production and QA BEHIND stay yellow.
 set -uo pipefail
@@ -14,7 +15,7 @@ PROJECT_ID="${PROJECT_ID:?Set PROJECT_ID}"
 REGION="${REGION:-us-central1}"
 JOB="${JOB:-iron-log-parity}"
 MIGRATIONS_DIR="${MIGRATIONS_DIR:-db/migrations}"
-ENVS="${PARITY_ENVS:-production staging qa}"
+ENVS="${PARITY_ENVS:-production staging qa secrets}"
 STAGING_BEHIND="${PARITY_STAGING_BEHIND:-warn}"
 OUT="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
 
@@ -67,16 +68,27 @@ for env in $ENVS; do
     code="$(exit_code_of "$name")"; [ "$code" = 0 ] && code=""
   fi
   link=""; [ -n "$name" ] && link="[job logs](https://console.cloud.google.com/run/jobs/executions/details/${REGION}/${name}?project=${PROJECT_ID})"
-  case "$code" in
-    0) status="OK"; detail="matches main";;
-    3) status="BEHIND"; detail="main has migrations this database lacks; names are in the job logs";;
-    4) status="AHEAD OF MAIN"; detail="this database has a migration main does not; names are in the job logs";;
-    *) status="UNKNOWN"; detail="could not tell (job failed, could not start, or its result was unreadable)";;
-  esac
+  if [ "$env" = secrets ]; then
+    # Not a database: the job compared the names of the secrets in Secret Manager with the inventory (scripts/secret-inventory.mjs).
+    case "$code" in
+      0) status="OK"; detail="every expected secret exists, and none is unknown to the inventory";;
+      3) status="UNLISTED"; detail="a secret the inventory does not know (add it to scripts/secret-inventory.mjs or delete it); names are in the job logs";;
+      4) status="MISSING"; detail="a required secret is absent (a deploy would break); names are in the job logs";;
+      *) status="UNKNOWN"; detail="could not tell (job failed, could not start, or its result was unreadable)";;
+    esac
+  else
+    case "$code" in
+      0) status="OK"; detail="matches main";;
+      3) status="BEHIND"; detail="main has migrations this database lacks; names are in the job logs";;
+      4) status="AHEAD OF MAIN"; detail="this database has a migration main does not; names are in the job logs";;
+      *) status="UNKNOWN"; detail="could not tell (job failed, could not start, or its result was unreadable)";;
+    esac
+  fi
   [ -n "$link" ] && detail="$detail; $link"
   echo "| $env | $status | $detail |" >> "$OUT"
   case "$status" in
     OK) ;;
+    UNLISTED) yellow=1; echo "::warning title=secrets: UNLISTED::$detail";;
     BEHIND)
       if [ "$env" = staging ] && [ "$STAGING_BEHIND" = fail ]; then red=1; echo "::error title=$env is behind main::$detail"
       else yellow=1; echo "::warning title=$env is behind main::$detail"; fi;;
