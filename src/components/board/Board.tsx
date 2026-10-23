@@ -31,14 +31,14 @@ const swapFrom = (swapFlash: number[] | null, d: number) => swapFlash?.includes(
 // stamping a date changes no width or height in the header: the Rest box and the swap arrows stay where they were. Until a date is stamped
 // (`nodate`) the title drops into that room so it lines up with the day's tick box (DayHeader.css); stamping lifts it above the date.
 // On a rest day the date is a button that opens the date sheet (RestDateSheet): same text, size and place, underlined with dots. A rest with
-// no date yet (an older week) shows "Set date" in that room.
+// no date yet (an older week) keeps the empty room, and the button fills it so a date can still be set.
 function DayDate({ date, restDay }: { date?: string | null; restDay?: number }) {
   const [name, md] = date ? fmtDayDate(date).split(' ') : [];
   return (
     <div className={`sub daydate${date ? '' : ' nodate'}`}>
       <span className="dd-pad" aria-hidden="true"><span>Wednesday</span><span>00/00</span></span>
       {restDay != null
-        ? <button type="button" className="dd-text dd-edit" id={`restdate-${restDay}`} aria-label={`Change rest date, Day ${restDay}`} onClick={() => useAppStore.getState().openModal({ type: 'restdate', day: restDay })}>{date ? <><span>{name}</span><span>{md}</span></> : <span>Set date</span>}</button>
+        ? <button type="button" className="dd-text dd-edit" id={`restdate-${restDay}`} aria-label={`Change rest date, Day ${restDay}`} onClick={() => useAppStore.getState().openModal({ type: 'restdate', day: restDay })}>{date && <><span>{name}</span><span>{md}</span></>}</button>
         : date && <span className="dd-text"><span>{name}</span><span>{md}</span></span>}
     </div>
   );
