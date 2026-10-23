@@ -476,7 +476,9 @@ describe('dayDate: the date a board was worked', () => {
 
 describe('normWeek keeps restOn only with a rest day', () => {
   it('keeps a well-formed restOn alongside a valid rest', () => {
-    expect(normWeek({ rest: 3, restOn: '2026-09-29' }).restOn).toBe('2026-09-29');
+    expect(normWeek({ rest: 3, restOn: '2026-09-29' }).restOn).toEqual({ 3: '2026-09-29' }); // the old single string goes to the first rest day
+    expect(normWeek({ rest: [2, 5], restOn: '2026-09-29' }).restOn).toEqual({ 2: '2026-09-29' }); // the others are undated
+    expect(normWeek({ rest: [2, 5], restOn: { 2: '2026-09-29', 5: '2026-10-01', 4: '2026-09-30', 6: 'x' } }).restOn).toEqual({ 2: '2026-09-29', 5: '2026-10-01' });
   });
   it('drops it without a rest day or when malformed', () => {
     expect(normWeek({ restOn: '2026-09-29' })).not.toHaveProperty('restOn');
