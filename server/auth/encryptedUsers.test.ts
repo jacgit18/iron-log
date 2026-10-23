@@ -45,7 +45,8 @@ describe('with PII_ENCRYPTION_KEY set', () => {
     const [row] = await rawUsers();
     expect(row!.email).toMatch(/^enc1:/);
     expect(row!.name).toMatch(/^enc1:/);
-    expect(JSON.stringify(row)).not.toMatch(/ada|lovelace/i);
+    // The sealed values are random base64url, so a short fragment like "ada" turns up by chance (CI failed on it); "lovelace" and the domain (a dot is not base64url) cannot.
+    expect(JSON.stringify(row)).not.toMatch(/lovelace|example\.com/i);
     const me = await (await fetch(`${base}/api/auth/get-session`, { headers: { cookie: cookieOf(res) } })).json();
     expect(me).toMatchObject({ user: { email: EMAIL, name: 'Ada Lovelace' } });
     const again = await signIn(base);
