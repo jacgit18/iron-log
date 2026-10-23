@@ -64,7 +64,7 @@ for svc in iron-log iron-log-staging iron-log-qa; do
 done
 # This script never takes a role away. If the deployer still holds the old project-wide run.developer, remove it AFTER the bindings above exist and
 # a QA deploy, the parity run and Migrate staging have passed (rollback: the same command with add-iam-policy-binding):
-if gc projects get-iam-policy "$PROJECT_ID" --flatten='bindings[].members' --filter="bindings.role=roles/run.developer AND bindings.members:serviceAccount:$SA" --format='value(bindings.role)' 2>/dev/null | grep -q run.developer; then
+if gc projects get-iam-policy "$PROJECT_ID" --flatten='bindings[].members' --filter="bindings.role=roles/run.developer AND bindings.members:serviceAccount:$SA" --format='value(bindings.role)' 2>/dev/null | grep run.developer >/dev/null; then
   echo "NOTE: the deployer still holds the project-wide roles/run.developer. When ready: gcloud projects remove-iam-policy-binding $PROJECT_ID --member serviceAccount:$SA --role roles/run.developer --condition=None"
 fi
 # Deploying a revision that runs as the app's own account means acting as it.
