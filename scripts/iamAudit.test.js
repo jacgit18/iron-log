@@ -1,0 +1,50 @@
+import { execFile } from 'node:child_process';
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+// scripts/iam-audit.sh is read-only by construction: with a stub `gcloud` that records every call, it only ever lists, describes or reads
+// IAM policies, and never prints a secret value.
+let dir; let log;
+const STUB = `#!/usr/bin/env bash
+echo "$*" >> "$STUB_LOG"
+case "$*" in
+  *"projects get-iam-policy"*) echo '{"bindings":[{"role":"roles/run.developer","members":["serviceAccount:iron-log-deployer@p.iam.gserviceaccount.com","user:someone@example.com"]},{"role":"roles/secretmanager.secretAccessor","members":["serviceAccount:iron-log-run@p.iam.gserviceaccount.com"]}]}';;
+  *"run jobs list"*) echo "iron-log-backup";;
+  *"secrets list"*) echo "iron-log-pii-key";;
+  *"describe"*) echo "iron-log-backup@p.iam.gserviceaccount.com";;
+  *) echo "ROLE  MEMBERS";;
+esac
+`;
+beforeAll(() => {
+  dir = mkdtempSync(join(tmpdir(), 'iam-'));
+  writeFileSync(join(dir, 'gcloud'), STUB); chmodSync(join(dir, 'gcloud'), 0o755);
+  log = join(dir, 'calls'); writeFileSync(log, '');
+});
+afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+const run = () => new Promise(done => {
+  execFile('bash', [resolve('scripts/iam-audit.sh')], { env: { PATH: `${dir}:${process.env.PATH}`, PROJECT_ID: 'p', STUB_LOG: log }, encoding: 'utf8' }, (err, stdout) => done({ status: err ? Number(err.code ?? 1) : 0, out: stdout }));
+});
+
+describe('iam-audit.sh', () => {
+  it('lists the Iron Log service accounts with their project roles, the jobs, and the secrets', async () => {
+    const r = await run();
+    expect(r.status).toBe(0);
+    expect(r.out).toContain('serviceAccount:iron-log-deployer@p.iam.gserviceaccount.com');
+    expect(r.out).toContain('roles/run.developer');
+    expect(r.out).not.toContain('someone@example.com'); // only Iron Log's own service accounts
+    expect(r.out).toContain('-- job iron-log-backup');
+    expect(r.out).toContain('-- iron-log-pii-key');
+    expect(r.out).toContain('Nothing was changed.');
+  });
+  it('makes only read calls: list, describe, get-iam-policy, never a write or a secret access', () => {
+    const calls = readFileSync(log, 'utf8').split('\n').filter(Boolean);
+    expect(calls.length).toBeGreaterThan(5);
+    for (const c of calls) {
+      expect(c, c).toMatch(/\b(get-iam-policy|list|describe)\b/);
+      expect(c, c).not.toMatch(/\b(add-iam-policy-binding|remove-iam-policy-binding|set-iam-policy|create|update|delete|add|disable|destroy|execute|access)\b/);
+    }
+  });
+});

@@ -19,11 +19,14 @@
 #   find-user <email>           read-only: the id, plan, admin flag and dates of the account behind one address (npm run find:user against
 #                               production). Names and emails are sealed, so the key is read from Secret Manager into this one command and
 #                               never shown; the address and name are not printed either. Takes no backup.
+#   store-owner-url [--apply]   with --apply: store production's owner URL (from PROD_DATABASE_URL or the old .env line) in Secret Manager as
+#                               iron-log-prod-owner-url, never shown. Afterwards this script fetches it for each run, and you delete the .env line.
 #   reader [--apply]            with --apply: make (or re-key) the read-only role the CI deploy uses to see which migrations production
 #                               has, and store its URL in the GitHub secret MIGRATIONS_CHECK_URL (environment production), never shown.
 #                               It changes a login, not data, so it takes no backup.
 #
-# The owner URL is PROD_DATABASE_URL, or else DATABASE_URL_UNPOOLED from .env; it is never printed. Backups run
+# The owner URL is PROD_DATABASE_URL, else fetched from Secret Manager (iron-log-prod-owner-url) on demand, else (with a warning) the old
+# DATABASE_URL_UNPOOLED line in .env; it is never printed. Backups run
 # scripts/backup-cloud-run.sh run (PROJECT_ID defaults to iron-log-jacgit18). It refuses a database on this machine: that is not production.
 set -euo pipefail
 
@@ -40,13 +43,23 @@ PII_KEY_CMD="${PII_KEY_CMD:-gcloud --project $PROJECT_ID secrets versions access
 DB_READER="${DB_READER:-node scripts/db-reader.mjs}"
 GH="${GH:-gh}"
 READER_SECRET=MIGRATIONS_CHECK_URL                  # read by the deploy workflow's migration check
+PROD_URL_SECRET="${PROD_URL_SECRET:-iron-log-prod-owner-url}"   # Secret Manager: production's owner URL (secrets-and-keys-hygiene brief, item 2)
+FETCH_URL="${FETCH_URL:-gcloud --project $PROJECT_ID secrets versions access latest --secret $PROD_URL_SECRET}"   # overridable for tests
+ENV_FILE="${ENV_FILE:-.env}"                                  # the old place for the owner URL (tests point it elsewhere)
+GCLOUD="${GCLOUD:-gcloud}"                                  # overridable for tests
 
 usage() { sed -n '5,/^#$/{/^#$/!p}' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
+# Production's owner URL: PROD_DATABASE_URL, else fetched from Secret Manager on demand (never stored on this machine), else, for now, the
+# old DATABASE_URL_UNPOOLED line in .env (with a warning: move it with `store-owner-url`, then delete the line).
 owner_url() {
-  local url="${PROD_DATABASE_URL:-}"
-  if [ -z "$url" ] && [ -f .env ]; then url="$(grep '^DATABASE_URL_UNPOOLED=' .env | head -1 | cut -d= -f2- | tr -d "\"'")"; fi
-  if [ -z "$url" ]; then echo "No production URL: set DATABASE_URL_UNPOOLED in .env (or PROD_DATABASE_URL)." >&2; exit 2; fi
+  local url="${PROD_DATABASE_URL:-}" from=env
+  if [ -z "$url" ]; then url="$($FETCH_URL 2>/dev/null || true)"; from=secret; fi
+  if [ -z "$url" ] && [ -f "$ENV_FILE" ]; then
+    url="$(grep '^DATABASE_URL_UNPOOLED=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d "\"'")"; from=dotenv
+    if [ -n "$url" ]; then echo "Warning: using the production URL in .env. Move it: scripts/prod-db.sh store-owner-url --apply, then delete the DATABASE_URL_UNPOOLED line from .env." >&2; fi
+  fi
+  if [ -z "$url" ]; then echo "No production URL: set PROD_DATABASE_URL, or store it in Secret Manager as $PROD_URL_SECRET (scripts/prod-db.sh store-owner-url) and sign in with gcloud." >&2; exit 2; fi
   case "$url" in
     *@localhost[:/]*|*@127.0.0.1[:/]*|*@\[::1\][:/]*) echo "Refusing: that URL is a database on this machine, not production." >&2; exit 2 ;;
   esac
@@ -83,6 +96,18 @@ case "$cmd" in
     backup
     dbmate up
     dbmate status ;;
+  store-owner-url)
+    URL="$(owner_url)"; where
+    case "$URL" in *-pooler*) echo "That is the pooled URL. Store the unpooled one (no -pooler in the host): dbmate and pg_dump need a real session." >&2; exit 2;; esac
+    if ! $apply; then
+      echo "Dry run: --apply stores this URL in Secret Manager as $PROD_URL_SECRET without showing it (a new version if it already exists)."
+      echo "No service account is granted it: only people with the project's owner rights can read it. Afterwards delete the DATABASE_URL_UNPOOLED"
+      echo "line from .env; this script then fetches the URL for each run."
+      exit 0
+    fi
+    $GCLOUD --project "$PROJECT_ID" secrets describe "$PROD_URL_SECRET" >/dev/null 2>&1 || $GCLOUD --project "$PROJECT_ID" secrets create "$PROD_URL_SECRET" --replication-policy=automatic >/dev/null
+    printf '%s' "$URL" | $GCLOUD --project "$PROJECT_ID" secrets versions add "$PROD_URL_SECRET" --data-file=- >/dev/null
+    echo "Done: $PROD_URL_SECRET is stored. Delete the DATABASE_URL_UNPOOLED line from .env, then try: scripts/prod-db.sh status" ;;
   reader)
     URL="$(owner_url)"; where
     if ! $apply; then

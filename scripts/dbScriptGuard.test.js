@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { connectHost, guardHost } from './lib/db-script.mjs';
+import { execFileSync } from 'node:child_process';
+import { connectHost, guardHost, productionUrl } from './lib/db-script.mjs';
 
 // The guard also asks DNS whether two names are the same machine (audit S-7). These hosts are made up, so keep the test off the network: no record, no alias.
 vi.mock('node:dns/promises', () => ({ resolveCname: () => Promise.reject(new Error('ENOTFOUND')), lookup: () => Promise.reject(new Error('ENOTFOUND')) }));
@@ -14,6 +15,9 @@ vi.mock('node:fs', async importOriginal => {
   return { ...real, existsSync: path => (path === '.env' ? false : real.existsSync(path)) };
 });
 
+// productionUrl() also asks Secret Manager (gcloud) for iron-log-prod-owner-url; here gcloud is replaced, so no test reaches a real login.
+vi.mock('node:child_process', () => ({ execFileSync: vi.fn(() => { throw new Error('no gcloud'); }) }));
+
 const PROD_HOST = 'ep-cool-123.us-east-2.aws.neon.tech';
 const PROD = `postgres://owner:pw@${PROD_HOST}/neondb`;
 const OTHER = 'ep-other-9.us-east-2.aws.neon.tech';
@@ -27,6 +31,7 @@ let saved;
 beforeEach(() => {
   saved = process.env.PROD_DATABASE_URL;
   process.env.PROD_DATABASE_URL = PROD;
+  delete process.env.PROD_URL_LOOKUP;
   vi.spyOn(process, 'exit').mockImplementation(code => { throw new Error(`exit ${code}`); });
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
@@ -86,5 +91,31 @@ describe('guardHost lets another database through', () => {
     ['a ?host= parameter that names itself', `postgres://o:p@${OTHER}/neondb?host=${OTHER}`],
   ])('%s', async (_name, url) => {
     expect(await refused(url)).toBe(false);
+  });
+});
+
+describe('productionUrl: where production\'s URL comes from', () => {
+  it('prefers PROD_DATABASE_URL and does not ask gcloud', () => {
+    expect(productionUrl()).toBe(PROD);
+    expect(execFileSync).not.toHaveBeenCalled();
+  });
+  it('fetches it from Secret Manager (iron-log-prod-owner-url) when the variable is not set', () => {
+    delete process.env.PROD_DATABASE_URL;
+    execFileSync.mockReturnValueOnce(`${PROD}\n`);
+    expect(productionUrl()).toBe(PROD);
+    const [cmd, args] = execFileSync.mock.calls.at(-1);
+    expect(cmd).toBe('gcloud');
+    expect(args).toEqual(expect.arrayContaining(['secrets', 'versions', 'access', 'latest', '--secret', 'iron-log-prod-owner-url']));
+  });
+  it('is null, not a throw, when gcloud is missing or signed out and no .env names production', () => {
+    delete process.env.PROD_DATABASE_URL;
+    expect(productionUrl()).toBeNull();
+  });
+  it('skips the lookup entirely with PROD_URL_LOOKUP=off', () => {
+    delete process.env.PROD_DATABASE_URL;
+    process.env.PROD_URL_LOOKUP = 'off';
+    execFileSync.mockClear();
+    expect(productionUrl()).toBeNull();
+    expect(execFileSync).not.toHaveBeenCalled();
   });
 });

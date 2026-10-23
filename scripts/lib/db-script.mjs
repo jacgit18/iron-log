@@ -1,5 +1,6 @@
 // What the environment database scripts (scripts/staging-db.mjs, scripts/qa-db.mjs) share: a connect that waits for a Neon branch to wake,
 // the mark an environment's database carries, the login the app uses, and the check that refuses production's address.
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { lookup, resolveCname } from 'node:dns/promises';
 import { isIP } from 'node:net';
@@ -73,9 +74,22 @@ export function connectHost(url) {
 // Neon's pooled address is the same compute as the direct one with "-pooler" in the first label.
 export const sameHost = h => h.replace(/-pooler(?=\.)/, '');
 
-// Production's owner URL, from the same two places scripts/prod-db.sh reads; null when neither is there.
+// Production's owner URL, from the same places scripts/prod-db.sh reads, in this order: PROD_DATABASE_URL; the Secret Manager secret
+// iron-log-prod-owner-url, fetched on demand and never stored (secrets-and-keys-hygiene, item 2); DATABASE_URL_UNPOOLED in .env (the old
+// place, kept for now with a warning so nothing breaks before the URL is moved). null when none is there.
+// PROD_URL_LOOKUP=off skips the Secret Manager step (tests, and a machine with no gcloud).
+function fetchProductionUrl() {
+  if (process.env.PROD_URL_LOOKUP === 'off') return null;
+  try {
+    const out = execFileSync('gcloud', ['--project', process.env.PROJECT_ID || 'iron-log-jacgit18', 'secrets', 'versions', 'access', 'latest', '--secret', process.env.PROD_URL_SECRET || 'iron-log-prod-owner-url'],
+      { encoding: 'utf8', timeout: 15_000, stdio: ['ignore', 'pipe', 'ignore'] });
+    return out.trim() || null;
+  } catch { return null; }
+}
 export function productionUrl() {
   if (process.env.PROD_DATABASE_URL) return process.env.PROD_DATABASE_URL;
+  const fetched = fetchProductionUrl();
+  if (fetched) return fetched;
   if (!existsSync('.env')) return null;
   const line = readFileSync('.env', 'utf8').split('\n').find(l => l.startsWith('DATABASE_URL_UNPOOLED='));
   return line ? line.slice(line.indexOf('=') + 1).replace(/^["']|["']$/g, '') : null;
