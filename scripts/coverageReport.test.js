@@ -4,8 +4,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
+import config from '../vite.config.js';
 import { AREAS } from './coverage-areas.mjs';
-import { CAPS, capArea, overCap, underCap, unloadedFiles } from './coverage-report.mjs';
+import { CAPS, capArea, overCap, staleSkips, underCap, unloadedFiles } from './coverage-report.mjs';
 
 const empty = { statements: { total: 0 } };
 const some = { statements: { total: 10 } };
@@ -24,10 +25,22 @@ describe('unloadedFiles skip list', () => {
   });
 });
 
+describe('staleSkips', () => {
+  it('lists skip-list paths that are no longer in the coverage summary', () => {
+    const entries = [['src/store/barrel.ts', empty]];
+    expect(staleSkips(entries, ['src/store/barrel.ts', 'src/store/gone.ts'])).toEqual(['src/store/gone.ts']);
+    expect(staleSkips(entries, [])).toEqual([]);
+  });
+});
+
 describe('areas', () => {
-  it('gives every area an integer cap, so no area has a floor without a cap', () => {
+  it('gives every area an integer cap', () => {
     for (const [name, a] of Object.entries(AREAS)) expect(Number.isInteger(a.cap), name).toBe(true);
-    expect(Object.keys(CAPS)).toEqual(Object.keys(AREAS));
+  });
+  it('has exactly the floors vite.config.js applies, each for an area that has a cap', () => {
+    const floored = Object.keys(config.test.coverage.thresholds).map(k => k.replace(/\/\*\*$/, '')).sort();
+    expect(floored).toEqual(Object.keys(AREAS).filter(k => AREAS[k].floor).sort());
+    for (const k of floored) expect(CAPS).toHaveProperty([k]);
   });
 });
 

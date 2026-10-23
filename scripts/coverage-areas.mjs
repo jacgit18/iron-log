@@ -11,3 +11,8 @@ export const AREAS = {
   'src/store': { floor: { statements: 85, branches: 78 }, cap: 0 },
   'src/sync': { floor: { statements: 92, branches: 84 }, cap: 2 },
 };
+
+// Files that hold only types or re-exports have no statements even when imported, so they would count as unloaded and a test cannot
+// change that. List one here (path from the repo root) instead of raising a cap; `--check` fails on a listed path that is not in the
+// coverage summary any more (renamed or deleted). Empty today: every unloaded file has runtime code.
+export const NO_STATEMENTS = [];

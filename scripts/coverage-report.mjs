@@ -1,17 +1,13 @@
 // Prints the coverage per area from coverage/coverage-summary.json (written by `npm run coverage`), then lists the files
 // no test loaded. Vitest 5's v8 provider reports such a file as 0 statements / 100%, so the percentages cover loaded files only
 // and a new file with no tests lowers none of them. `--check` (ADR 069) closes that gap: it exits 1 when a logic area has more
-// unloaded files than its cap, or fewer (the cap is then lowered). The floors on the percentages are in vite.config.js (coverage.thresholds). `--list` prints the names.
+// unloaded files than its cap, or fewer (the cap is then lowered). The floors on the percentages are in scripts/coverage-areas.mjs (vite.config.js builds coverage.thresholds from them). `--list` prints the names.
 import { readFileSync, realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { AREAS } from './coverage-areas.mjs';
+import { AREAS, NO_STATEMENTS } from './coverage-areas.mjs';
 
 // Unloaded files allowed per logic area (scripts/coverage-areas.mjs). A cap only goes down: load a file from a test, then lower its cap.
 export const CAPS = Object.fromEntries(Object.entries(AREAS).map(([k, a]) => [k, a.cap]));
-
-// Files that hold only types or re-exports have no statements even when imported, so they would count as unloaded and a test cannot
-// change that. List one here (path from the repo root) instead of raising a cap. Empty today: every unloaded file has runtime code.
-export const NO_STATEMENTS = [];
 
 const pct = (a, b) => (b ? `${((100 * a) / b).toFixed(1)}%` : 'n/a');
 
@@ -22,6 +18,9 @@ export const capArea = f => (f.startsWith('server/') ? 'server' : area(f));
 export const unloadedFiles = (entries, skip = NO_STATEMENTS) => entries
   .filter(([f, v]) => v.statements.total === 0 && /\.(tsx?|jsx?)$/.test(f) && !/(^|\/)types?\.ts$/.test(f) && !skip.includes(f))
   .map(([f]) => f);
+
+// Skip-list paths that are not in the coverage summary (renamed or deleted), so a stale entry cannot outlive its file.
+export const staleSkips = (entries, skip = NO_STATEMENTS) => skip.filter(f => !entries.some(([p]) => p === f));
 
 function countByArea(unloaded) {
   const counts = {};
@@ -73,9 +72,11 @@ function main() {
   if (process.argv.includes('--check')) {
     const over = overCap(unloaded);
     const under = underCap(unloaded);
-    for (const o of over) console.error(`\n${o.area}: ${o.count} files no test loads, cap is ${o.cap}. Add a test that imports the new file (run with --list to see which), or list it in NO_STATEMENTS if it holds only types or re-exports.`);
+    const stale = staleSkips(files);
+    for (const o of over) console.error(`\n${o.area}: ${o.count} files no test loads, cap is ${o.cap}. Add a test that imports the new file (run with --list to see which), or list it in NO_STATEMENTS (scripts/coverage-areas.mjs) if it holds only types or re-exports.`);
     for (const u of under) console.error(`\n${u.area}: only ${u.count} files no test loads, cap is ${u.cap}. Lower the cap of '${u.area}' to ${u.count} in scripts/coverage-areas.mjs so the slack cannot be refilled.`);
-    if (over.length || under.length) process.exit(1);
+    for (const f of stale) console.error(`\n${f}: listed in NO_STATEMENTS (scripts/coverage-areas.mjs) but not in the coverage summary. Remove it from the list.`);
+    if (over.length || under.length || stale.length) process.exit(1);
     console.log('\nUnloaded-file caps hold.');
   }
 }
