@@ -20,10 +20,14 @@ describe('ci-deploy-setup.sh', () => {
     expect(code).toMatch(/run services add-iam-policy-binding "\$svc" --region "\$REGION" --member "serviceAccount:\$SA" --role roles\/run\.developer/);
     expect(code).toContain('run services describe "$svc"');
   });
-  it('never grants anything on a job, or acts as the backup or parity accounts', () => {
-    expect(code).not.toMatch(/run jobs add-iam-policy-binding/);
-    expect(code).not.toContain('iron-log-backup');
+  it('grants on a job only run-without-overrides on the backup job, and never acts as the backup or parity accounts', () => {
+    const jobGrants = code.split('\n').filter(l => /run jobs add-iam-policy-binding/.test(l));
+    expect(jobGrants).toHaveLength(1);
+    expect(jobGrants[0]).toContain('iron-log-backup');
+    expect(jobGrants[0]).toContain('--role roles/run.jobsExecutor ');
+    expect(jobGrants[0]).not.toMatch(/WithOverrides|run\.developer|run\.admin/);
     expect(code).not.toContain('iron-log-parity');
+    expect(code).not.toMatch(/iam\.serviceAccountUser[^\n]*iron-log-backup|iron-log-backup@[^\n]*serviceAccountUser/);
     // Acting as an account is granted only on the three runtime accounts and the build account.
     const actAs = [...code.matchAll(/service-accounts add-iam-policy-binding "\$(\w+)" --member "serviceAccount:\$SA" --role roles\/iam\.serviceAccountUser/g)].map(m => m[1]).sort();
     expect(actAs).toEqual(['BUILD_SA', 'QA_RUNTIME_SA', 'RUNTIME_SA', 'STAGING_RUNTIME_SA']);
@@ -34,7 +38,7 @@ describe('ci-deploy-setup.sh', () => {
   });
   it('does not claim the deployer cannot reach the database (the header says what it may and may not do)', () => {
     expect(text).not.toContain('It cannot read the database, the secrets or the backups');
-    expect(text).toContain('It may start ONE job, the parity job');
+    expect(text).toContain('may start the parity job with arguments');
   });
 });
 

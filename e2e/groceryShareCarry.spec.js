@@ -18,7 +18,7 @@ test('a share set this month becomes the usual, and last month keeps the split i
   }, { CATALOGUE, AUGUST });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
-  await page.getByRole('button', { name: 'Chicken', exact: true }).click();
+  await page.getByRole('button', { name: /^Chicken/ }).first().click();
   await page.getByLabel(/Shared with, for Chicken/).click();
   await page.getByLabel('Mom').uncheck();
   await expect(page.getByText('Saved as the usual for next month too.')).toBeVisible();
