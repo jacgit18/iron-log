@@ -7,5 +7,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 COPY scripts/env-parity.mjs ./scripts/env-parity.mjs
 COPY scripts/lib/migration-state.mjs ./scripts/lib/migration-state.mjs
+COPY scripts/lib/secret-names.mjs ./scripts/lib/secret-names.mjs
+COPY scripts/secret-inventory.mjs ./scripts/secret-inventory.mjs
 USER node
 ENTRYPOINT ["node", "scripts/env-parity.mjs"]
