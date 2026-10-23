@@ -107,7 +107,27 @@ export default defineConfig({
   // Two projects so the server tests, which start a Postgres container each, get a 30 s limit instead of Vitest's 5 s: on a busy machine
   // (several sessions' checks at once) a slow start is not a failure. Everything else keeps the default. A server test file is any
   // *.test.* under server/; the app project takes the rest.
+  // `npm run coverage` (scripts/coverage-report.mjs). Vitest 5's v8 provider reports a file that no test loads as 0 statements / 100%,
+  // so the totals cover loaded files only; the report script lists the unloaded ones next to them.
   test: {
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx,js,jsx}', 'server/**/*.{ts,js}'],
+      exclude: ['**/*.test.*', '**/*.d.ts', 'src/test/**', 'server/test/**'],
+      reporter: ['json-summary'],
+      reportsDirectory: 'coverage',
+      // ADR 069: a floor per logic area, a point or two under what it measured on 2026-10-23, so ordinary edits do not trip it and a real
+      // drop does. Statements and branches only. The UI (src/components) has no floor until the component-test decision. A floor only counts
+      // files a test loads, so scripts/coverage-report.mjs --check also caps the files no test loads (coverage-report.mjs CAPS).
+      // Raise a floor in the PR that earns it.
+      thresholds: {
+        'server/**': { statements: 92, branches: 86 },
+        'src/lib/**': { statements: 93, branches: 88 },
+        'src/shared/**': { statements: 97, branches: 96 },
+        'src/store/**': { statements: 85, branches: 78 },
+        'src/sync/**': { statements: 92, branches: 84 },
+      },
+    },
     projects: [
       { extends: true, test: { name: 'server', include: ['server/**/*.test.{js,jsx,ts,tsx}'], exclude: SKIP, testTimeout: 30_000, globalSetup: ['server/test/globalSetup.ts'] } },
       { extends: true, test: { name: 'app', include: ['**/*.test.{js,jsx,ts,tsx}'], exclude: [...SKIP, 'server/**'] } },
