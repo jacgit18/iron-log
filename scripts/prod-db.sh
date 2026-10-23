@@ -44,7 +44,7 @@ DB_READER="${DB_READER:-node scripts/db-reader.mjs}"
 GH="${GH:-gh}"
 READER_SECRET=MIGRATIONS_CHECK_URL                  # read by the deploy workflow's migration check
 PROD_URL_SECRET="${PROD_URL_SECRET:-iron-log-prod-owner-url}"   # Secret Manager: production's owner URL (secrets-and-keys-hygiene brief, item 2)
-FETCH_URL="${FETCH_URL:-gcloud --project $PROJECT_ID secrets versions access latest --secret $PROD_URL_SECRET}"   # overridable for tests
+FETCH_URL="${FETCH_URL:-gcloud --quiet --project $PROJECT_ID secrets versions access latest --secret $PROD_URL_SECRET}"   # overridable for tests; --quiet: never an invisible prompt
 ENV_FILE="${ENV_FILE:-.env}"                                  # the old place for the owner URL (tests point it elsewhere)
 GCLOUD="${GCLOUD:-gcloud}"                                  # overridable for tests
 
@@ -53,10 +53,11 @@ usage() { sed -n '5,/^#$/{/^#$/!p}' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 # Production's owner URL: PROD_DATABASE_URL, else fetched from Secret Manager on demand (never stored on this machine), else, for now, the
 # old DATABASE_URL_UNPOOLED line in .env (with a warning: move it with `store-owner-url`, then delete the line).
 owner_url() {
-  local url="${PROD_DATABASE_URL:-}" from=env
-  if [ -z "$url" ]; then url="$($FETCH_URL 2>/dev/null || true)"; from=secret; fi
+  local url="${PROD_DATABASE_URL:-}"
+  # stdin closed and stderr hidden: a signed-out gcloud must fail quietly (falling back to .env), not wait on a prompt nobody can see.
+  if [ -z "$url" ]; then url="$($FETCH_URL </dev/null 2>/dev/null || true)"; fi
   if [ -z "$url" ] && [ -f "$ENV_FILE" ]; then
-    url="$(grep '^DATABASE_URL_UNPOOLED=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d "\"'")"; from=dotenv
+    url="$(grep '^DATABASE_URL_UNPOOLED=' "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d "\"'")"
     if [ -n "$url" ]; then echo "Warning: using the production URL in .env. Move it: scripts/prod-db.sh store-owner-url --apply, then delete the DATABASE_URL_UNPOOLED line from .env." >&2; fi
   fi
   if [ -z "$url" ]; then echo "No production URL: set PROD_DATABASE_URL, or store it in Secret Manager as $PROD_URL_SECRET (scripts/prod-db.sh store-owner-url) and sign in with gcloud." >&2; exit 2; fi

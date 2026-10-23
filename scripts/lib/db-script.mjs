@@ -81,7 +81,7 @@ export const sameHost = h => h.replace(/-pooler(?=\.)/, '');
 function fetchProductionUrl() {
   if (process.env.PROD_URL_LOOKUP === 'off') return null;
   try {
-    const out = execFileSync('gcloud', ['--project', process.env.PROJECT_ID || 'iron-log-jacgit18', 'secrets', 'versions', 'access', 'latest', '--secret', process.env.PROD_URL_SECRET || 'iron-log-prod-owner-url'],
+    const out = execFileSync('gcloud', ['--quiet', '--project', process.env.PROJECT_ID || 'iron-log-jacgit18', 'secrets', 'versions', 'access', 'latest', '--secret', process.env.PROD_URL_SECRET || 'iron-log-prod-owner-url'],
       { encoding: 'utf8', timeout: 15_000, stdio: ['ignore', 'pipe', 'ignore'] });
     return out.trim() || null;
   } catch { return null; }
