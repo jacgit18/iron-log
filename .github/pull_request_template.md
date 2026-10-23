@@ -35,4 +35,5 @@ PR tracker: not updated (pass --tracker)
 - [ ] `npm run e2e` (and `e2e:sync` if `src/sync/`, `server/` or store startup changed)
 - [ ] UI, style, font, image or bundle change: `node scripts/lighthouse.mjs --check` run, before and after in the description (n/a otherwise)
 - [ ] `feature-map.md` (including "Audience at a glance") and `CHANGELOG.md` updated
+- [ ] Environments: a change that adds a migration, a secret, an environment variable or a setting says where it is applied (production, staging, QA) and what is left to do (n/a otherwise; the parity report checks migrations and secret names, nothing else)
 - [ ] New packages: none, or listed in the description with the lower ladder rung and a `Dependency approval:` line (`dependency-security.md`)
