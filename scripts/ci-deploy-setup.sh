@@ -7,8 +7,9 @@
 #   - a workload identity pool and provider that accept a token ONLY from this repository AND only from its main branch;
 #   - a service account, iron-log-deployer, that may build, deploy a new revision and move traffic of the three services (iron-log,
 #     iron-log-staging, iron-log-qa: the developer role on each service, not on the project), read Cloud Run (the viewer role, so a deploy can
-#     follow its operation), and act as the app's own runtime accounts and the build account. It may start ONE job, the parity job, with
-#     arguments (an explicit grant made by scripts/parity-job.sh deploy). It has no right on any other job: the backup job holds production's
+#     follow its operation), and act as the app's own runtime accounts and the build account. It may start the parity job with arguments (an explicit
+#     grant made by scripts/parity-job.sh deploy) and run the backup job WITHOUT overrides (the production deploy backs up before it migrates). It has no
+#     other right on any job: the backup job holds production's
 #     owner database URL, and a project-wide developer role would let CI start it with overridden arguments (audit 2026-10-23, deployer rights);
 #   - a second account, iron-log-build, that the image build runs as: it can write build logs, push to the app's image repository and
 #     read the uploaded source, nothing more. (Without it a build runs as the project's default Compute account, which has the broad
@@ -62,6 +63,14 @@ for svc in iron-log iron-log-staging iron-log-qa; do
     echo "Service $svc not found yet: after its first deploy, run this script again."
   fi
 done
+# The production deploy backs production up before it migrates (brief production-migrates-in-deploy): it may RUN the backup job, without
+# overrides (roles/run.jobsExecutor has run.jobs.run only), and on that job only. A job that does not exist yet is skipped.
+if gc run jobs describe iron-log-backup --region "$REGION" >/dev/null 2>&1; then
+  gc run jobs add-iam-policy-binding iron-log-backup --region "$REGION" --member "serviceAccount:$SA" --role roles/run.jobsExecutor >/dev/null
+  echo "The deployer may run the backup job (no overrides)."
+else
+  echo "Backup job not found yet: after scripts/backup-cloud-run.sh deploy, run this script again."
+fi
 # This script never takes a role away. If the deployer still holds the old project-wide run.developer, remove it AFTER the bindings above exist and
 # a QA deploy, the parity run and Migrate staging have passed (rollback: the same command with add-iam-policy-binding):
 if gc projects get-iam-policy "$PROJECT_ID" --flatten='bindings[].members' --filter="bindings.role=roles/run.developer AND bindings.members:serviceAccount:$SA" --format='value(bindings.role)' 2>/dev/null | grep run.developer >/dev/null; then

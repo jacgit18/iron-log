@@ -12,9 +12,9 @@ name: Deploy to Cloud Run
 # No keys are stored in GitHub: it signs in to Google with Workload Identity Federation, which only accepts this repository on the main
 # branch (set up once by scripts/ci-deploy-setup.sh, which also prints the three repository variables this reads).
 #
-# The production job never touches the database (the staging job migrates only the staging one). A new migration must be applied to production BEFORE the code that needs it (runbook section 8),
-# so when migrations were added since the live revision it stops and says so. Apply them, then run this workflow by hand
-# (Actions -> Deploy to Cloud Run -> Run workflow) and tick the box.
+# The production job migrates production's database itself, after the approval (brief production-migrates-in-deploy): it asks the database which
+# migrations wait, refuses a destructive one (apply it by hand: runbook section 8), backs production up, applies the rest and checks none is left,
+# then deploys. The staging job migrates the staging database the same way before it.
 on:
   workflow_run:
     workflows: [Tests]
@@ -26,11 +26,6 @@ on:
         description: 'Emergency only: deploy to production without going through staging (a hotfix when staging itself is what is broken). Production still needs its approval'
         type: boolean
         default: false
-      migrations_applied:
-        description: 'I have applied any new database migration to production (runbook section 8). Only needed without the read-only check (MIGRATIONS_CHECK_URL)'
-        type: boolean
-        default: false
-
 permissions:
   contents: read
   id-token: write # Workload Identity Federation
@@ -144,7 +139,6 @@ jobs:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: us-central1
       SERVICE: iron-log
-      HAS_MIGRATIONS_CHECK: ${{ secrets.MIGRATIONS_CHECK_URL != '' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -186,49 +180,75 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Live: $revision (commit ${sha:-unknown})"
 
-      # Which migrations production still needs. With the read-only login (MIGRATIONS_CHECK_URL, made by `scripts/prod-db.sh reader
-      # --apply`) the database itself is asked, so a migration applied by hand is seen and no box needs ticking; a waiting one always
-      # stops the deploy. Without that secret it falls back to comparing commits, which cannot see the database: then the box says
-      # "I applied it" (runbook section 8).
+      # Production migrates here, after the approval (brief production-migrates-in-deploy). Which migrations are waiting is asked of the database
+      # itself with the read-only login (MIGRATIONS_CHECK_URL, the same login the parity report uses). If any: a migration that drops, renames,
+      # truncates or deletes is refused (scripts/migration-guard.mjs: apply it by hand with scripts/prod-db.sh migrate --apply, runbook section 8),
+      # the owner login is checked to be the same database, the backup job runs and must succeed, the migrations are applied, and the run checks
+      # none is left. Only then is the revision built and deployed. With nothing waiting these steps do nothing.
       - uses: actions/setup-node@v7
-        if: env.HAS_MIGRATIONS_CHECK == 'true'
         with:
           node-version: 24
           cache: npm
-      - name: Install the database client
-        if: env.HAS_MIGRATIONS_CHECK == 'true'
-        run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
-      - name: Stop if a migration is waiting
+      - name: Install the database tools
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Which migrations are waiting
+        id: waiting
         env:
           MIGRATIONS_CHECK_URL: ${{ secrets.MIGRATIONS_CHECK_URL }}
-          TICKED: ${{ inputs.migrations_applied == true }}
         run: |
           set +e
-          if [ -n "$MIGRATIONS_CHECK_URL" ]; then
-            waiting="$(node scripts/db-pending.mjs)"
-            code=$?
-            if [ "$code" = 0 ]; then echo "Production has every migration (asked the database)."; exit 0; fi
-            if [ "$code" = 3 ]; then
-              echo "::error title=A database migration is waiting::Production has not applied these yet. Run scripts/prod-db.sh migrate --apply (runbook section 8), then run this workflow again."
-              echo "$waiting"
-              exit 1
-            fi
-            if [ "$TICKED" = true ]; then echo "::warning title=Could not ask the database::Going ahead because the migrations-applied box is ticked."; exit 0; fi
-            echo "::error title=Could not ask the database which migrations it has::Check by hand with npm run prod:db -- pending, then run this workflow by hand and tick the box."
+          if [ -z "$MIGRATIONS_CHECK_URL" ]; then
+            echo "::error title=No way to ask the database::MIGRATIONS_CHECK_URL (a read-only login on production, environment production) is not set. Set it as runbook section 24 says, then run this workflow again."
             exit 1
           fi
-          if [ "$TICKED" = true ]; then echo "Migrations applied by hand (box ticked); no read-only check is set up."; exit 0; fi
-          waiting="$(scripts/ci-deploy.sh pending-migrations "${{ steps.live.outputs.sha }}")"
+          waiting="$(node scripts/db-pending.mjs)"
           code=$?
+          if [ "$code" = 0 ]; then echo "Production has every migration (asked the database)."; echo "any=false" >> "$GITHUB_OUTPUT"; exit 0; fi
           if [ "$code" = 3 ]; then
-            echo "::error title=A database migration is waiting::These migrations were added since the live revision. Apply them to production first (runbook section 8), then run this workflow by hand and tick the box."
-            echo "$waiting"
-            exit 1
-          elif [ "$code" != 0 ]; then
-            echo "::error title=Cannot tell whether a migration is waiting::The live revision's commit is not in this checkout. Check by hand (runbook section 8), then run this workflow by hand and tick the box."
+            echo "any=true" >> "$GITHUB_OUTPUT"
+            printf '%s\n' "$waiting" > "$RUNNER_TEMP/waiting.txt"
+            echo "Waiting for production:"; echo "$waiting"
+            exit 0
+          fi
+          echo "::error title=Could not ask the database which migrations it has::Check by hand with npm run prod:db -- pending, then run this workflow again."
+          exit 1
+      - name: Refuse a destructive migration
+        if: steps.waiting.outputs.any == 'true'
+        run: |
+          set +e
+          mapfile -t files < "$RUNNER_TEMP/waiting.txt"
+          out="$(node scripts/migration-guard.mjs "${files[@]}")"
+          code=$?
+          if [ "$code" = 0 ]; then echo "Every waiting migration is safe to apply automatically."; exit 0; fi
+          if [ "$code" = 1 ]; then
+            echo "::error title=A waiting migration is destructive::It is not applied automatically. Check that the live app no longer uses what it removes, apply it by hand (scripts/prod-db.sh migrate --apply, runbook section 8), then run this workflow again."
+            echo "$out"
             exit 1
           fi
-          echo "No migration waiting."
+          echo "::error title=Could not check the waiting migrations::The destructive-migration check could not read them, so nothing was applied. Output: $out"
+          exit 1
+      - name: Check the owner login is production's database
+        if: steps.waiting.outputs.any == 'true'
+        env:
+          OWNER_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          READER_URL: ${{ secrets.MIGRATIONS_CHECK_URL }}
+        run: node scripts/same-database.mjs
+      - name: Back up production first
+        if: steps.waiting.outputs.any == 'true'
+        run: gcloud run jobs execute iron-log-backup --project "$PROJECT_ID" --region "$REGION" --wait
+      - name: Apply the migrations to production
+        if: steps.waiting.outputs.any == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: npx dbmate --no-dump-schema --migrations-dir db/migrations up
+      - name: Check production has none left
+        if: steps.waiting.outputs.any == 'true'
+        env:
+          MIGRATIONS_CHECK_URL: ${{ secrets.MIGRATIONS_CHECK_URL }}
+        run: |
+          if node scripts/db-pending.mjs; then echo "Production has every migration."; exit 0; fi
+          echo "::error title=A migration is still waiting::The migrations ran but production still reports one waiting. Nothing was deployed. Check by hand: npm run prod:db -- pending."
+          exit 1
 
       # The new revision is deployed with no traffic and checked on its own tagged address first (ADR 017): a revision that fails
       # never reaches a user, so there is nothing to roll back.
