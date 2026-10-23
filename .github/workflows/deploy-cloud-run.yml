@@ -216,11 +216,16 @@ jobs:
         if: steps.waiting.outputs.any == 'true'
         run: |
           set +e
-          out="$(xargs -a "$RUNNER_TEMP/waiting.txt" node scripts/migration-guard.mjs)"
+          mapfile -t files < "$RUNNER_TEMP/waiting.txt"
+          out="$(node scripts/migration-guard.mjs "${files[@]}")"
           code=$?
           if [ "$code" = 0 ]; then echo "Every waiting migration is safe to apply automatically."; exit 0; fi
-          echo "::error title=A waiting migration is destructive::It is not applied automatically. Check that the live app no longer uses what it removes, apply it by hand (scripts/prod-db.sh migrate --apply, runbook section 8), then run this workflow again."
-          echo "$out"
+          if [ "$code" = 1 ]; then
+            echo "::error title=A waiting migration is destructive::It is not applied automatically. Check that the live app no longer uses what it removes, apply it by hand (scripts/prod-db.sh migrate --apply, runbook section 8), then run this workflow again."
+            echo "$out"
+            exit 1
+          fi
+          echo "::error title=Could not check the waiting migrations::The destructive-migration check could not read them, so nothing was applied. Output: $out"
           exit 1
       - name: Check the owner login is production's database
         if: steps.waiting.outputs.any == 'true'

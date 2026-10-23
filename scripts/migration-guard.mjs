@@ -23,13 +23,15 @@ export const upPart = text => {
 export const runnableSql = sql => {
   let s = sql.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--[^\n]*/g, ' ');
   // Dollar-quoted blocks: keep a `do $$ ... $$` body (it runs now), drop every other one (function bodies).
-  s = s.replace(/(\bdo\s+)?(\$[A-Za-z_]*\$)([\s\S]*?)\2/gi, (_m, isDo, _tag, body) => (isDo ? ` ${body} ` : ' '));
+  s = s.replace(/(\bdo\s+(?:language\s+\w+\s+)?)?(\$[A-Za-z_]*\$)([\s\S]*?)\2/gi, (_m, isDo, _tag, body) => (isDo ? ` ${body} ` : ' '));
   return s.replace(/'(?:[^']|'')*'/g, "''"); // string literals can hold any word
 };
 
 const RULES = [
   [/\bdrop\s+table\b/i, 'drops a table'],
   [/\bdrop\s+column\b/i, 'drops a column'],
+  // `alter table t drop c` drops a column too (COLUMN is optional in Postgres); drop constraint, default, not null, identity and expression are not.
+  [/\balter\s+table\b[^;]*?\bdrop\s+(?!constraint\b|default\b|not\b|identity\b|expression\b|column\b)[a-z_"]/i, 'drops a column'],
   [/\bdrop\s+schema\b/i, 'drops a schema'],
   [/\bdrop\s+database\b/i, 'drops a database'],
   [/\btruncate\b/i, 'truncates a table'],
@@ -41,7 +43,7 @@ const RULES = [
 /** The reasons a migration's up part is destructive: [] when it is safe to apply automatically. */
 export const destructiveReasons = text => {
   const sql = runnableSql(upPart(text));
-  return RULES.filter(([re]) => re.test(sql)).map(([, why]) => why);
+  return [...new Set(RULES.filter(([re]) => re.test(sql)).map(([, why]) => why))];
 };
 
 if (process.argv[1] && import.meta.url === new URL(process.argv[1], 'file:').href) {

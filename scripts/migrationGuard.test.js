@@ -19,12 +19,15 @@ describe('destructiveReasons', () => {
   it('lets additions through: tables, columns, indexes, functions, policies, grants', () => {
     for (const up of ['create table t (id int);', 'alter table t add column c text;', 'create index i on t (c);', 'grant select on t to app;', 'create policy p on t using (true);',
       'create or replace function f() returns int language sql as $$ select 1 $$;', 'drop index if exists i;', 'drop function f(int);', 'alter table t alter column c set default 1;',
-      'alter table t drop constraint t_check; alter table t add constraint t_check check (a in (1, 2, 3));'])
+      'alter table t drop constraint t_check; alter table t add constraint t_check check (a in (1, 2, 3));', 'alter table t alter column a drop default;', 'alter table t alter column a drop not null;', 'alter table t drop constraint k;'])
       expect(destructiveReasons(mig(up)), up).toEqual([]);
   });
   it('stops each destructive statement and says why', () => {
     expect(destructiveReasons(mig('drop table t;'))).toEqual(['drops a table']);
     expect(destructiveReasons(mig('alter table t drop column c;'))).toEqual(['drops a column']);
+    expect(destructiveReasons(mig('alter table t drop c;'))).toEqual(['drops a column']); // COLUMN is optional in Postgres
+    expect(destructiveReasons(mig('alter table t drop if exists c;'))).toEqual(['drops a column']); // COLUMN is optional with IF EXISTS too
+    expect(destructiveReasons(mig('alter table t drop constraint k, drop c;'))).toEqual(['drops a column']);
     expect(destructiveReasons(mig('drop schema s cascade;'))).toEqual(['drops a schema']);
     expect(destructiveReasons(mig('truncate t;'))).toEqual(['truncates a table']);
     expect(destructiveReasons(mig('alter table t rename to u;'))).toEqual(['renames something']);
@@ -40,6 +43,7 @@ describe('destructiveReasons', () => {
     expect(destructiveReasons(mig("insert into log (msg) values ('drop table t; delete from x');"))).toEqual([]);
     expect(destructiveReasons(mig('create function f() returns void language plpgsql as $body$ begin delete from t; truncate u; end $body$;'))).toEqual([]);
     expect(destructiveReasons(mig('do $$ begin delete from t; end $$;'))).toEqual(['deletes rows']);
+    expect(destructiveReasons(mig('do language plpgsql $body$ begin truncate t; end $body$;'))).toEqual(['truncates a table']);
   });
   it('does not count the down part', () => {
     expect(destructiveReasons(mig('create table t (id int);', 'drop table t; delete from u;'))).toEqual([]);
