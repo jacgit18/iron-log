@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { connectHost, guardHost } from './lib/db-script.mjs';
+import { execFileSync } from 'node:child_process';
+import { connectHost, guardHost, productionUrl } from './lib/db-script.mjs';
 
 // The guard also asks DNS whether two names are the same machine (audit S-7). These hosts are made up, so keep the test off the network: no record, no alias.
 vi.mock('node:dns/promises', () => ({ resolveCname: () => Promise.reject(new Error('ENOTFOUND')), lookup: () => Promise.reject(new Error('ENOTFOUND')) }));
@@ -9,10 +10,18 @@ vi.mock('node:dns/promises', () => ({ resolveCname: () => Promise.reject(new Err
 // so each of the forms below passed the guard and then connected to production (qa-db.mjs reset --apply empties user data; staging-db.mjs clear --apply signs everyone out).
 
 // productionUrl() falls back to DATABASE_URL_UNPOOLED in the working directory's .env. A developer's own .env would make "cannot tell production" untrue, so this file never sees one.
+const dotenv = vi.hoisted(() => ({ text: null })); // null: no .env; a string: the file's text (a case below)
 vi.mock('node:fs', async importOriginal => {
   const real = await importOriginal();
-  return { ...real, existsSync: path => (path === '.env' ? false : real.existsSync(path)) };
+  return {
+    ...real,
+    existsSync: path => (path === '.env' ? dotenv.text !== null : real.existsSync(path)),
+    readFileSync: (path, ...rest) => (path === '.env' && dotenv.text !== null ? dotenv.text : real.readFileSync(path, ...rest)),
+  };
 });
+
+// productionUrl() also asks Secret Manager (gcloud) for iron-log-prod-owner-url; here gcloud is replaced, so no test reaches a real login.
+vi.mock('node:child_process', () => ({ execFileSync: vi.fn(() => { throw new Error('no gcloud'); }) }));
 
 const PROD_HOST = 'ep-cool-123.us-east-2.aws.neon.tech';
 const PROD = `postgres://owner:pw@${PROD_HOST}/neondb`;
@@ -27,6 +36,8 @@ let saved;
 beforeEach(() => {
   saved = process.env.PROD_DATABASE_URL;
   process.env.PROD_DATABASE_URL = PROD;
+  delete process.env.PROD_URL_LOOKUP;
+  dotenv.text = null;
   vi.spyOn(process, 'exit').mockImplementation(code => { throw new Error(`exit ${code}`); });
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
@@ -86,5 +97,48 @@ describe('guardHost lets another database through', () => {
     ['a ?host= parameter that names itself', `postgres://o:p@${OTHER}/neondb?host=${OTHER}`],
   ])('%s', async (_name, url) => {
     expect(await refused(url)).toBe(false);
+  });
+});
+
+describe('productionUrl: where production\'s URL comes from', () => {
+  it('prefers PROD_DATABASE_URL and does not ask gcloud', () => {
+    expect(productionUrl()).toBe(PROD);
+    expect(execFileSync).not.toHaveBeenCalled();
+  });
+  it('fetches it from Secret Manager (iron-log-prod-owner-url) when the variable is not set', () => {
+    delete process.env.PROD_DATABASE_URL;
+    execFileSync.mockReturnValueOnce(`${PROD}\n`);
+    expect(productionUrl()).toBe(PROD);
+    const [cmd, args] = execFileSync.mock.calls.at(-1);
+    expect(cmd).toBe('gcloud');
+    expect(args).toEqual(expect.arrayContaining(['secrets', 'versions', 'access', 'latest', '--secret', 'iron-log-prod-owner-url']));
+  });
+  it('is null, not a throw, when gcloud is missing or signed out and no .env names production', () => {
+    delete process.env.PROD_DATABASE_URL;
+    expect(productionUrl()).toBeNull();
+  });
+  it('falls back to the old .env line, and says so on stderr (the same warning prod-db.sh gives)', () => {
+    delete process.env.PROD_DATABASE_URL;
+    process.env.PROD_URL_LOOKUP = 'off';
+    dotenv.text = `OTHER=1\nDATABASE_URL_UNPOOLED="${PROD}"\n`;
+    expect(productionUrl()).toBe(PROD);
+    const said = console.error.mock.calls.map(c => c.join(' ')).join('\n');
+    expect(said).toContain('Warning: using the production URL in .env');
+    expect(said).toContain('store-owner-url --apply');
+    expect(said).not.toContain('pw@'); // the URL itself is never printed
+  });
+  it('does not warn when there is no .env line', () => {
+    delete process.env.PROD_DATABASE_URL;
+    process.env.PROD_URL_LOOKUP = 'off';
+    dotenv.text = 'OTHER=1\n';
+    expect(productionUrl()).toBeNull();
+    expect(console.error).not.toHaveBeenCalled();
+  });
+  it('skips the lookup entirely with PROD_URL_LOOKUP=off', () => {
+    delete process.env.PROD_DATABASE_URL;
+    process.env.PROD_URL_LOOKUP = 'off';
+    execFileSync.mockClear();
+    expect(productionUrl()).toBeNull();
+    expect(execFileSync).not.toHaveBeenCalled();
   });
 });
