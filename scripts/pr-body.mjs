@@ -7,7 +7,9 @@
 //   --brief <path or "n/a: why">   fills the Delivery section's Brief line (feature-delivery.md: one brief, one branch, one PR)
 //   --split "<reason>"             fills "Split because:" when the feature is not this PR alone (the reasons are in feature-delivery.md)
 //   --tracker "<note>"             fills the "PR tracker:" line: the PR-TRACKER.md row you updated (feature; for a fix PR also the cause code)
-//   gh pr create --title "..." --body-file /tmp/body.md
+//   --type <bug|enhancement|documentation|dependencies|chore>   the PR's label when the guess below is wrong
+//   --apply <pr number>            after the PR exists, add its label: `node scripts/pr-body.mjs --apply 478` (creates the label if the repo lacks it)
+//   gh pr create --title "..." --body-file /tmp/body.md --label <the label printed on stderr>
 //
 // The audience is worked out from the diff against origin/main (the reason goes to stderr), and --audience <key> overrides it:
 //   na        every changed file is a doc, test, script, tool, CI or config file: nothing a user can see
@@ -51,6 +53,19 @@ export function inferAudience(files, diffs = {}, config = loadConfig()) {
     if (byFile || byDiff) return { audience: a.key, reason: a.reason };
   }
   return { audience: 'everyone', reason: config.everyoneReason };
+}
+
+// The label a PR gets, by what the work is: bug (a fix), dependencies, documentation, chore (tests, scripts, CI, config), else enhancement.
+export const LABELS = { bug: ['d73a4a', 'Something isn\'t working'], enhancement: ['a2eeef', 'New feature or request'], documentation: ['0075ca', 'Improvements or additions to documentation'], dependencies: ['0366d6', 'Pull requests that update a dependency file'], chore: ['ededed', 'Tests, scripts, CI or config: nothing a user sees'] };
+/** What the work is. `branch`, `what` and `tracker` carry the author's own words; a fix says so there ("fix/..." branch, "Fix ..." text, "fix cause" in the tracker note). Returns { type, reason }. */
+export function inferType({ branch = '', files = [], what = '', tracker = '' }, config = loadConfig()) {
+  if (/^(fix|bug|hotfix)[/-]|[/-](fix|bugfix)([/-]|$)/i.test(branch)) return { type: 'bug', reason: 'the branch name says fix' };
+  if (/^\s*(fix|fixes|fixed|bug)\b/i.test(what)) return { type: 'bug', reason: 'the description starts with a fix' };
+  if (/\bfix cause\b|\b(main-break|logic gap|regression)\b/i.test(tracker)) return { type: 'bug', reason: 'the tracker note names a fix cause' };
+  if (/^dependabot\/|^deps?[/-]/i.test(branch) || (files.length > 0 && files.every(f => /(^|\/)package(-lock)?\.json$/.test(f)))) return { type: 'dependencies', reason: 'only dependency files changed' };
+  if (files.length > 0 && files.every(f => /\.md$/.test(f) || /^docs?\//.test(f))) return { type: 'documentation', reason: 'only docs changed' };
+  if (files.length > 0 && files.every(f => any(config.notUserFacing, f))) return { type: 'chore', reason: 'only tests, scripts, CI or config changed' };
+  return { type: 'enhancement', reason: 'user-visible work that is not a fix' };
 }
 
 /** True when the change can move a Lighthouse score: UI code, styles, fonts, images, the page shell or the build config. */
@@ -104,6 +119,18 @@ function main(argv) {
   const arg = name => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : undefined; };
   const git = (...a) => execFileSync('git', a, { encoding: 'utf8' });
   const config = loadConfig();
+  const typeGiven = arg('--type');
+  if (typeGiven && !LABELS[typeGiven]) { console.error(`--type must be one of: ${Object.keys(LABELS).join(', ')}`); process.exit(2); }
+  const applyTo = arg('--apply');
+  if (applyTo !== undefined) { // label an existing PR from its own branch, files and body
+    const pr = JSON.parse(execFileSync('gh', ['pr', 'view', applyTo, '--json', 'headRefName,files,body,title'], { encoding: 'utf8' }));
+    const { type, reason } = typeGiven ? { type: typeGiven, reason: 'given with --type' } : inferType({ branch: pr.headRefName, files: pr.files.map(f => f.path), what: pr.title, tracker: (pr.body.match(/^PR tracker:.*$/m) || [''])[0] }, config);
+    const have = execFileSync('gh', ['label', 'list', '--limit', '200', '--json', 'name'], { encoding: 'utf8' });
+    if (!JSON.parse(have).some(l => l.name === type)) execFileSync('gh', ['label', 'create', type, '--color', LABELS[type][0], '--description', LABELS[type][1]], { stdio: 'inherit' });
+    execFileSync('gh', ['pr', 'edit', applyTo, '--add-label', type], { stdio: 'inherit' });
+    console.error(`Label: ${type} (${reason}) added to PR ${applyTo}.`);
+    return;
+  }
   const labels = labelsOf(config);
   const base = ['origin/main', 'main'].find(b => { try { git('rev-parse', '--verify', b); return true; } catch { return false; } }) || 'HEAD';
   const files = git('diff', '--name-only', `${base}...HEAD`).split('\n').filter(Boolean);
@@ -112,6 +139,8 @@ function main(argv) {
   if (given && !labels[given]) { console.error(`--audience must be one of: ${Object.keys(labels).join(', ')}`); process.exit(2); }
   const found = given ? { audience: given, reason: 'given with --audience' } : inferAudience(files, diffs, config);
   console.error(`Audience: ${found.audience} (${found.reason}). ${files.length} file(s) against ${base}.`);
+  const kind = typeGiven ? { type: typeGiven, reason: 'given with --type' } : inferType({ branch: git('branch', '--show-current').trim(), files, what: arg('--what') || '', tracker: arg('--tracker') || '' }, config);
+  console.error(`Label: ${kind.type} (${kind.reason}). After the PR is open: node scripts/pr-body.mjs --apply <number> (or gh pr create --label ${kind.type}).`);
   const template = readFileSync(fileURLToPath(new URL('../.github/pull_request_template.md', import.meta.url)), 'utf8');
   if (!arg('--changelog') && arg('--what')) console.error('No --changelog given: the Changelog section is the --what text (cut at a sentence end past 600 characters). Pass --changelog "..." to say it shorter.');
   for (const w of deliveryWarnings({ brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker'), trackerLine: /^PR tracker:/m.test(template), changed: changedLines(git, base), openPrs: otherOpenPrs(git) })) console.error(w);
