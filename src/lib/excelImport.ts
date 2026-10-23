@@ -176,7 +176,11 @@ function readWeeks(X: XLSX, rows: Rows) {
     if (kind === 'prog') w.prog = str(v);
     else if (kind === 'ran') w.ran = { prog: str(v) }; // its program is filled in from the Programs sheet by readDataSheets
     else if (kind === 'rest') w.rest = str(v).split(/[\s,]+/).filter(Boolean).map(Number).filter(n => n >= 1);
-    else if (kind === 'restOn') { const t = dateText(X, v); if (WEEK_RE.test(t)) w.restOn = t; }
+    else if (kind === 'restOn') { // a column in the key is that rest day's date; an empty key is the one date older files had (normWeek gives it to the first rest day)
+      const t = dateText(X, v);
+      if (!WEEK_RE.test(t)) return;
+      if (/^\d+$/.test(key)) w.restOn = { ...(typeof w.restOn === 'object' ? w.restOn : {}), [key]: t }; else if (typeof w.restOn !== 'object') w.restOn = t;
+    }
     else if (kind === 'order') w.order = str(v).split(/[\s,]+/).filter(Boolean).map(Number);
     else if (kind === 'extra') { try { (w.extra = w.extra || []).push(JSON.parse(str(v))); } catch { /* skip an unreadable card */ } }
     else if (kind === 'done' || kind === 'skipped') w[kind][key] = true;

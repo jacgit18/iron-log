@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { mem, clearStorage, saved } from '../test/browserStubs.js';
 
-let useAppStore, BUILTIN, warmupOf, withAllDays, DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf, orderOf;
+let useAppStore, BUILTIN, warmupOf, withAllDays, DEFAULT_CFG, currentLayout, defaultLogDate, restOwnDate, dayDate, tally, phaseOf, orderOf;
 const st = () => useAppStore.getState();
 
 beforeAll(async () => {
   ({ useAppStore } = await import('./useAppStore.js'));
   ({ BUILTIN, warmupOf, withAllDays } = await import('../lib/data.js'));
-  ({ DEFAULT_CFG, currentLayout, defaultLogDate, dayDate, tally, phaseOf, orderOf } = await import('../lib/logic.js'));
+  ({ DEFAULT_CFG, currentLayout, defaultLogDate, restOwnDate, dayDate, tally, phaseOf, orderOf } = await import('../lib/logic.js'));
   await st().init();
 });
 beforeEach(() => {
@@ -293,22 +293,27 @@ describe('rest day', () => {
     expect(st().week.rest).toBeUndefined();
     expect(st().week.restOn).toBeUndefined();
   });
-  it('refuses a rest day that pushes workouts off the week, unless told to skip them', () => {
+  it('skips the one workout a rest day pushes off the week, with a message, and unticking shows it again', () => {
     st().setRestDay(1);
     const over = st().restOverflow(2);
-    expect(over.length).toBeGreaterThan(0);
-    expect(st().setRestDay(2)).toBe(false);
-    expect(st().week.rest).toEqual([1]);
-    expect(st().setRestDay(2, { skipOverflow: true })).toBe(true);
+    expect(over.length).toBeGreaterThan(0); // the Day 6 workout would fall off
+    expect(st().setRestDay(2)).toBe(true);
     expect(st().week.rest).toEqual([1, 2]);
     over.forEach(s => expect(st().week.skipped[s.id]).toBe(true));
+    expect(st().saveFlag).toMatch(/Day 2 is a rest day now.*skipped/);
     st().setRestDay(2);
     expect(st().week.rest).toEqual([1]);
+    expect(ids(7)).toContain('A-d6s1'); // back on the board (still marked skipped)
   });
-  it('is blocked, with a message, when Day 7 has exercises', () => {
-    st().mutateWeek(w => { w.moved['A-d3s1'] = 7; });
+  it('refuses a rest day that pushes two workouts off the week, unless told to skip them', () => {
+    st().setRestDay(1);
+    st().mutateWeek(w => { w.moved['A-d3s1'] = 7; }); // Day 7 holds a live card, so a second rest pushes it and the Day 6 workout off
+    expect(st().restOverflow(2).length).toBeGreaterThan(0);
     expect(st().setRestDay(2)).toBe(false);
-    expect(st().week.rest).toBeUndefined();
+    expect(st().week.rest).toEqual([1]);
+    expect(st().saveFlag).toMatch(/2 workouts/);
+    expect(st().setRestDay(2, { skipOverflow: true })).toBe(true);
+    expect(st().week.skipped['A-d3s1']).toBe(true);
   });
   it('moves a card to the program day behind a displayed day', () => {
     st().setRestDay(3);
@@ -404,12 +409,14 @@ describe('swap days', () => {
     for (let d = 1; d <= 6; d++) st().swapDays(d, 1);
     expect((st().week.order || [])[6] ?? 7).toBe(7);
   });
-  it('blocks a rest day when the empty day has been swapped away from the end, and allows it once it is back', () => {
+  it('a rest day skips the workout that sits last once the empty day has been swapped away from the end', () => {
     st().swapDays(6, 1); // the Day 6 workout now sits last
-    expect(st().setRestDay(2)).toBe(false);
-    expect(st().week.rest).toBeUndefined();
+    expect(st().setRestDay(2)).toBe(true);
+    expect(st().week.skipped['A-d6s1']).toBe(true);
+    st().setRestDay(2); st().mutateWeek(w => { delete w.skipped['A-d6s1']; });
     st().swapDays(7, -1);
     expect(st().setRestDay(2)).toBe(true);
+    expect(st().week.skipped['A-d6s1']).toBeUndefined();
   });
   it('moves a card onto the workout shown in the column, and undo restores it', () => {
     st().swapDays(6, 1);
@@ -485,19 +492,19 @@ describe('swap days', () => {
 describe('day dates', () => {
   it('stamps the rest day with today’s date, keeps it when the rest day moves, and clears it on untick', () => {
     st().setRestDay(3);
-    expect(st().week.restOn).toBe(defaultLogDate(st().weekStart));
-    st().mutateWeek(w => { w.restOn = '2026-01-04'; });
+    expect(st().week.restOn).toEqual({ 3: restOwnDate(st().weekStart, 3) });
+    st().mutateWeek(w => { w.restOn = { 3: '2026-01-04' }; });
     st().swapDays(3, -1); // the swap arrows move the rest day
     expect(st().week.rest).toEqual([2]);
-    expect(st().week.restOn).toBe('2026-01-04');
+    expect(st().week.restOn).toEqual({ 2: '2026-01-04' });
     st().swapDays(2, 1);
     expect(st().week.rest).toEqual([3]);
-    expect(st().week.restOn).toBe('2026-01-04');
+    expect(st().week.restOn).toEqual({ 3: '2026-01-04' });
     st().setRestDay(3); // untick
     expect(st().week.rest).toBeUndefined();
     expect(st().week.restOn).toBeUndefined();
     st().setRestDay(3); // ticking again stamps a fresh date
-    expect(st().week.restOn).toBe(defaultLogDate(st().weekStart));
+    expect(st().week.restOn).toEqual({ 3: restOwnDate(st().weekStart, 3) });
   });
   it('a check-off dates its board, and unchecking removes the date', () => {
     const cards = () => currentLayout(st().week, st().activeSlots())[3];
@@ -1259,14 +1266,14 @@ describe('a suggestion after a day is finished', () => {
   });
   it('moving the rest day still comes first, and keeps its date', () => {
     st().setRestDay(6);
-    const restOn = st().week.restOn;
+    const restOn = Object.values(st().week.restOn);
     st().checkDay(2, true);
     expect(st().orderNote.kind).toBe('order');
     expect(st().orderNote.next.rest).toEqual([3]);
     st().applyOrder();
     expect(st().week.rest).toEqual([3]);
     expect(st().week.order).toBeUndefined();
-    expect(st().week.restOn).toBe(restOn);
+    expect(Object.values(st().week.restOn)).toEqual(restOn); // the date went with the rest day
     st().undoOrder();
     expect(st().week.rest).toEqual([6]);
   });
@@ -1361,7 +1368,7 @@ describe('applying a suggestion keeps every card and can be put back exactly', (
       Object.values(moved).forEach(cs => expect(cs.length).toBe(1)); // none duplicated
       expect(after.done).toEqual(before.done);
       expect(after.skipped).toEqual(before.skipped);
-      expect(after.restOn).toEqual(before.restOn);
+      expect(Object.values(after.restOn || {})).toEqual(Object.values(before.restOn || {})); // each date stays with its rest day
       expect(st().logs).toEqual(logs);
       if (n.kind === 'card') {
         expect(after.order).toEqual(before.order);
