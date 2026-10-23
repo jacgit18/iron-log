@@ -142,3 +142,22 @@ describe('productionUrl: where production\'s URL comes from', () => {
     expect(execFileSync).not.toHaveBeenCalled();
   });
 });
+
+describe('sameServer with a provider\'s shared front name (found 2026-10-23 against real DNS)', () => {
+  // Every Neon endpoint of a region is a CNAME to the same regional name; that must not make two endpoints one server.
+  const REGION = 'c-6.us-east-2.aws.neon.tech';
+  const records = { [`ep-prod-1.${REGION}`]: REGION, [`ep-stage-2.${REGION}`]: REGION, [`ep-qa-3.${REGION}`]: REGION, 'db.example.com': `ep-prod-1.${REGION}` };
+  const cname = async h => { if (records[h]) return [records[h]]; throw new Error('ENOTFOUND'); };
+  const addrs = async () => [];
+  it('treats two endpoints behind the same regional name as different servers', async () => {
+    const { sameServer } = await import('./lib/db-script.mjs');
+    expect(await sameServer(`ep-prod-1.${REGION}`, `ep-stage-2.${REGION}`, { cname, addrs })).toBe(false);
+    expect(await sameServer(`ep-prod-1.${REGION}`, `ep-qa-3.${REGION}`, { cname, addrs })).toBe(false);
+  });
+  it('still treats the pooled spelling and a real alias of one endpoint as the same server', async () => {
+    const { sameServer } = await import('./lib/db-script.mjs');
+    expect(await sameServer(`ep-prod-1-pooler.${REGION}`, `ep-prod-1.${REGION}`, { cname, addrs })).toBe(true);
+    expect(await sameServer('db.example.com', `ep-prod-1.${REGION}`, { cname, addrs })).toBe(true);
+    expect(await sameServer('db.example.com', `ep-stage-2.${REGION}`, { cname, addrs })).toBe(false);
+  });
+});
