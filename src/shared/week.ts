@@ -33,6 +33,13 @@ export const restDatesIn = (v: unknown, rest: number[] | undefined): Record<stri
   if (v && typeof v === 'object' && !Array.isArray(v)) rest.forEach(r => { const t = (v as Record<string, unknown>)[String(r)]; if (typeof t === 'string' && DATE_RE.test(t)) out[String(r)] = t; });
   return out;
 };
+// Which program day each in-place rest displaced (rest column to day 1..DAY_COUNT); only rest columns are kept.
+export const restTookIn = (v: unknown, rest: number[] | undefined): Record<string, number> => {
+  const out: Record<string, number> = {};
+  if (!rest || !rest.length || !v || typeof v !== 'object' || Array.isArray(v)) return out;
+  rest.forEach(r => { const d = (v as Record<string, unknown>)[String(r)]; if (Number.isInteger(d) && (d as number) >= 1 && (d as number) <= DAY_COUNT) out[String(r)] = d as number; });
+  return out;
+};
 // The rest days, day order and rest date of a stored week (or of one program's stash entry), cleaned.
 const layoutOf = (w: any): WeekLayout => {
   const out: WeekLayout = {};
@@ -41,6 +48,8 @@ const layoutOf = (w: any): WeekLayout => {
   if (isOrder(w && w.order) && w.order.some((v: number, i: number) => v !== i + 1)) out.order = [...w.order];
   const dates = restDatesIn(w && w.restOn, out.rest);
   if (Object.keys(dates).length) out.restOn = dates;
+  const took = restTookIn(w && w.restTook, out.rest);
+  if (Object.keys(took).length) out.restTook = took;
   return out;
 };
 export const normWeek = (w?: any): Week => {

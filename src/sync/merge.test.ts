@@ -102,6 +102,9 @@ describe('mergeWeek3', () => {
     // Two rest days keep their own dates together.
     const two = mergeWeek3(base, base, week({ rest: [3, 5], restOn: { 3: '2026-09-22', 5: '2026-09-24' } }));
     expect(two.week.restOn).toEqual({ 3: '2026-09-22', 5: '2026-09-24' });
+    // What an in-place rest displaced travels with its rest.
+    const took = mergeWeek3(base, base, week({ rest: [3], restTook: { 3: 3 }, order: [1, 2, 4, 5, 6, 7, 3] }));
+    expect(took.week.restTook).toEqual({ 3: 3 });
   });
 
   it('prog and ran come from the same side', () => {

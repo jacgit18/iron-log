@@ -74,6 +74,36 @@ describe('rest on a missed day (the owner case)', () => {
   });
 });
 
+describe('unticking an in-place rest (week.restTook)', () => {
+  it('puts the displaced day back where it was, even after a manual swap', () => {
+    skipDay(3); st().swapDays(1, 1); // order 2,1,3,...
+    const before = [...st().week.order];
+    st().setRestDay(3);
+    expect(st().week.restTook).toEqual({ 3: 3 });
+    st().setRestDay(3);
+    expect(st().week.order).toEqual(before);
+    expect(st().week.restTook).toBeUndefined();
+    expect(st().week.rest).toBeUndefined();
+  });
+  it('does not touch a manual swap of an empty last day when an ordinary rest is unticked', () => {
+    skipDay(6); st().swapDays(6, 1); // order 1..5,7,6
+    const before = [...st().week.order];
+    st().setRestDay(4); st().setRestDay(4);
+    expect(st().week.order).toEqual(before);
+    expect(st().week.restTook).toBeUndefined();
+  });
+  it('keeps the marker with its rest when the rest is swapped with a neighbor', () => {
+    skipDay(3); st().setRestDay(3);
+    st().swapDays(3, 1);
+    expect(st().week.rest).toEqual([4]);
+    expect(st().week.restTook).toEqual({ 4: 3 });
+  });
+  it('is cleaned on load: only rest columns, only valid days', () => {
+    expect(normWeek({ rest: [3], restTook: { 3: 3, 5: 2, 9: 1 } }).restTook).toEqual({ 3: 3 });
+    expect(normWeek({ rest: [3], restTook: { 3: 'x' } })).not.toHaveProperty('restTook');
+  });
+});
+
 describe('a date for each rest day', () => {
   it('stamps an earlier day with its own date and today for today', () => {
     useAppStore.setState({ weekStart: PAST });

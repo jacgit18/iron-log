@@ -67,12 +67,13 @@ export function mergeWeek3(baseIn: unknown, oursIn: unknown, theirsIn: unknown):
     if (extra.length) week.extra = extra; else delete week.extra;
     // The shown program, its record, and the rest days, day order and stash that go with it change together (switching programs
     // parks one program's layout and restores the other's), so they all come from one side.
-    const layout = (x: Week) => ({ prog: x.prog, ran: x.ran, rest: x.rest, restOn: x.restOn, order: x.order, stash: x.stash });
+    const layout = (x: Week) => ({ prog: x.prog, ran: x.ran, rest: x.rest, restOn: x.restOn, restTook: x.restTook, order: x.order, stash: x.stash });
     const l = pick(layout(base), layout(ours), layout(theirs));
-    delete week.rest; delete week.restOn; delete week.order; delete week.stash; delete week.ran;
+    delete week.rest; delete week.restOn; delete week.restTook; delete week.order; delete week.stash; delete week.ran;
     week.prog = l.prog;
     if (l.rest) week.rest = l.rest;
     if (l.restOn) week.restOn = l.restOn;
+    if (l.restTook) week.restTook = l.restTook;
     if (l.order) week.order = l.order;
     if (l.stash) week.stash = l.stash;
     if (l.ran) week.ran = l.ran;
