@@ -5,7 +5,7 @@ import { sql, type Kysely } from 'kysely';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from './app.ts';
 import { createDb } from './db/connection.ts';
-import { KEEP_DAYS, MAX_BYTES, dayIsNear, parseDay, prepareFile, shouldReplace } from './backups.ts';
+import { KEEP_DAYS, MAX_BYTES, dayIsNear, deviceOf, parseDay, prepareFile, shouldReplace } from './backups.ts';
 import type { DB } from './db/types.ts';
 import { startTestDatabase } from './test/postgres.ts';
 
@@ -75,6 +75,38 @@ describe('helpers', () => {
     const plain = prepareFile(Buffer.from(fileOf()), 'identity');
     expect(plain.ok && gunzipSync(plain.zipped).toString()).toBe(fileOf());
     for (const [body, enc] of [[Buffer.from('nope'), 'gzip'], [Buffer.from('{"app":"other"}'), 'identity'], [Buffer.from('[1]'), 'identity'], [Buffer.from('not json'), 'identity'], [gzipSync('null'), 'gzip']] as const) expect(prepareFile(body, enc).ok).toBe(false);
+  });
+});
+
+describe('device names', () => {
+  it('deviceOf takes 1 to 40 printable characters, percent-encoded, and nothing else', () => {
+    expect(deviceOf(encodeURIComponent('iPhone'))).toBe('iPhone');
+    expect(deviceOf(encodeURIComponent('  Josh’s Mac  '))).toBe('Josh’s Mac');
+    for (const bad of [undefined, '', '   ', 'x'.repeat(41), '%00', '%0A', 'bad%', encodeURIComponent('a\u0007b')]) expect(deviceOf(bad)).toBeNull();
+    expect(deviceOf('x'.repeat(40))).toBe('x'.repeat(40));
+  });
+  it('stores the name with the copy, returns it in the list, and a later device replaces it', async () => {
+    const c = await start();
+    expect((await c.put('ann', TODAY, undefined, 20, { 'x-backup-device': encodeURIComponent('iPhone') })).status).toBe(200);
+    let listed = (await (await c.list('ann')).json()) as { backups: { date: string; device?: string }[] };
+    expect(listed.backups).toEqual([expect.objectContaining({ date: TODAY, device: 'iPhone' })]);
+    await c.put('ann', TODAY, undefined, 20, { 'x-backup-device': encodeURIComponent('Windows PC') });
+    listed = (await (await c.list('ann')).json()) as { backups: { date: string; device?: string }[] };
+    expect(listed.backups[0].device).toBe('Windows PC');
+  });
+  it('keeps the earlier name when a much smaller copy from another device is refused by the shrink guard', async () => {
+    const c = await start();
+    await c.put('ann', TODAY, undefined, 40, { 'x-backup-device': encodeURIComponent('iPhone') });
+    await c.put('ann', TODAY, undefined, 5, { 'x-backup-device': encodeURIComponent('Windows PC') });
+    const listed = (await (await c.list('ann')).json()) as { backups: { device?: string }[] };
+    expect(listed.backups[0].device).toBe('iPhone');
+  });
+  it('saves the copy without a name when the header is missing or malformed', async () => {
+    const c = await start();
+    expect((await c.put('ann', TODAY, undefined, 20, { 'x-backup-device': '%00' })).status).toBe(200);
+    const listed = (await (await c.list('ann')).json()) as { backups: { device?: string }[] };
+    expect(listed.backups).toHaveLength(1);
+    expect(listed.backups[0].device).toBeUndefined();
   });
 });
 

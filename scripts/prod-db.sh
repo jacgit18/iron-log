@@ -19,6 +19,8 @@
 #   find-user <email>           read-only: the id, plan, admin flag and dates of the account behind one address (npm run find:user against
 #                               production). Names and emails are sealed, so the key is read from Secret Manager into this one command and
 #                               never shown; the address and name are not printed either. Takes no backup.
+#   grocery-shares <user id>    read-only: counts and shapes of one account's grocery splits (items and month lines by kind of share), never a
+#                               name, id or amount (npm run grocery:shares against production). The id comes from find-user. No backup.
 #   store-owner-url [--apply]   with --apply: store production's owner URL (from PROD_DATABASE_URL or the old .env line) in Secret Manager as
 #                               iron-log-prod-owner-url, never shown. Afterwards this script fetches it for each run, and you delete the .env line.
 #   reader [--apply]            with --apply: make (or re-key) the read-only role the CI deploy uses to see which migrations production
@@ -149,5 +151,9 @@ case "$cmd" in
     key="$($PII_KEY_CMD)"
     [ -n "$key" ] || { echo "No key came back from Secret Manager; nothing was read." >&2; exit 1; }
     DATABASE_URL="$URL" PII_ENCRYPTION_KEY="$key" $FIND_USER "$email" ;;
+  grocery-shares)
+    uid="${args[0]:-}"; [ -n "$uid" ] || usage
+    URL="$(owner_url)"; where
+    DATABASE_URL="$URL" npm run -s grocery:shares -- "$uid" ;;
   *) usage ;;
 esac

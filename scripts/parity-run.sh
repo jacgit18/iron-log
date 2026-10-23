@@ -9,6 +9,11 @@
 # secret names with the inventory: 3 UNLISTED (yellow), 4 MISSING (red); anything else, including a job
 # that could not start or whose exit code cannot be read, UNKNOWN (red). Never OK by accident. PARITY_STAGING_BEHIND=fail makes staging
 # BEHIND red (set it once staging migrates on every merge); production and QA BEHIND stay yellow.
+#
+# After the migration table a second table says which commit each service is running (the COMMIT_SHA the deploy puts on the revision that has
+# the traffic, read the way the deploy's "What is live now" step reads it) and where that commit is against main's tip. Informational: it never
+# turns the run yellow or red, because deploys are paused on purpose (DEPLOY_PAUSED) and QA runs a branch on purpose. It needs the full history of
+# main in the checkout (the workflow uses fetch-depth: 0) and read access to the services (the deployer has `viewer`).
 set -uo pipefail
 
 PROJECT_ID="${PROJECT_ID:?Set PROJECT_ID}"
@@ -17,6 +22,7 @@ JOB="${JOB:-iron-log-parity}"
 MIGRATIONS_DIR="${MIGRATIONS_DIR:-db/migrations}"
 ENVS="${PARITY_ENVS:-production staging qa secrets}"
 STAGING_BEHIND="${PARITY_STAGING_BEHIND:-warn}"
+COMMIT_SERVICES="${PARITY_COMMIT_SERVICES:-production:iron-log staging:iron-log-staging qa:iron-log-qa}"
 OUT="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
 
 expected="$(ls "$MIGRATIONS_DIR" | grep -E '^[0-9]+_.*\.sql$' | sed 's/_.*//' | sort | paste -sd, -)"
@@ -99,6 +105,38 @@ for env in $ENVS; do
       else yellow=1; echo "::warning title=$env is behind main::$detail"; fi;;
     *) red=1; echo "::error title=$env: $status::$detail";;
   esac
+done
+
+# The commit a service is running: the revision with the traffic (not the latest one: a candidate that failed its check is the latest but never
+# served anyone), then its COMMIT_SHA setting. Empty when it cannot be read or is not a commit id.
+live_commit() {
+  local svc="$1" revision sha
+  revision="$(gc run services describe "$svc" --region "$REGION" --format=json 2>/dev/null | python3 -c 'import json,sys; t=json.load(sys.stdin)["status"]["traffic"]; print(max(t, key=lambda x: x.get("percent", 0))["revisionName"])' 2>/dev/null)" || return 0
+  [ -n "$revision" ] || return 0
+  sha="$(gc run revisions describe "$revision" --region "$REGION" --format=json 2>/dev/null | python3 -c 'import json,sys; e=json.load(sys.stdin)["spec"]["containers"][0].get("env", []); print(next((x.get("value", "") for x in e if x["name"] == "COMMIT_SHA"), ""))' 2>/dev/null)" || return 0
+  case "$sha" in ''|*[!0-9a-f]*) return 0;; esac
+  echo "$sha"
+}
+tip="$(git rev-parse HEAD 2>/dev/null || true)"
+{
+  echo
+  echo "### Running commit (main's tip is \`${tip:0:7}\`)"
+  echo
+  echo "| Environment | Service | Commit | Against main |"
+  echo "|---|---|---|---|"
+} >> "$OUT"
+for pair in $COMMIT_SERVICES; do
+  env="${pair%%:*}"; svc="${pair#*:}"
+  sha="$(live_commit "$svc")"
+  if [ -z "$sha" ]; then where="could not read it (no revision, no COMMIT_SHA, or no access)"; short="unknown"; echo "::notice title=$env: running commit unknown::$where"
+  else
+    short="${sha:0:7}"
+    if [ -z "$tip" ] || ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then where="this checkout does not have that commit"
+    elif [ "$sha" = "$tip" ]; then where="main's tip"
+    elif git merge-base --is-ancestor "$sha" "$tip" 2>/dev/null; then n="$(git rev-list --count "${sha}..${tip}")"; where="$n commit(s) behind main"
+    else where="not on main (a branch or pull request)"; fi
+  fi
+  echo "| $env | $svc | \`$short\` | $where |" >> "$OUT"
 done
 
 [ "$red" = 1 ] && exit 1
