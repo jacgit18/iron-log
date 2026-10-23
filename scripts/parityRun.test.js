@@ -48,10 +48,11 @@ describe('parity-run.sh', () => {
   it('passes main\'s migration versions to the job, once per environment, and is green when all match', async () => {
     const r = await go();
     expect(r.status).toBe(0);
-    expect(r.args).toEqual(['production,20261001000001,20261002000001', 'staging,20261001000001,20261002000001', 'qa,20261001000001,20261002000001']);
+    expect(r.args).toEqual(['production,20261001000001,20261002000001', 'staging,20261001000001,20261002000001', 'qa,20261001000001,20261002000001', 'secrets,20261001000001,20261002000001']);
     expect(r.summary).toContain('| production | OK |');
     expect(r.summary).toContain('| staging | OK |');
     expect(r.summary).toContain('| qa | OK |');
+    expect(r.summary).toContain('| secrets | OK |');
     expect(r.summary).toContain('main has 2 migrations');
   });
   it('shows BEHIND as a warning, not a failure, for production, staging and QA', async () => {
@@ -92,6 +93,19 @@ describe('parity-run.sh', () => {
     const r = await go({ STUB_RC_PRODUCTION: '1', STUB_EXIT_PRODUCTION: '0' });
     expect(r.status).toBe(1);
     expect(r.summary).toContain('| production | UNKNOWN |');
+  });
+  it('shows the secrets check: UNLISTED (3) is a warning, MISSING (4) fails, anything else is UNKNOWN', async () => {
+    const unlisted = await go({ STUB_RC_SECRETS: '1', STUB_EXIT_SECRETS: '3' });
+    expect(unlisted.status).toBe(0);
+    expect(unlisted.summary).toContain('| secrets | UNLISTED |');
+    expect(unlisted.out).toContain('::warning title=secrets: UNLISTED');
+    const missing = await go({ STUB_RC_SECRETS: '1', STUB_EXIT_SECRETS: '4' });
+    expect(missing.status).toBe(1);
+    expect(missing.summary).toContain('| secrets | MISSING |');
+    expect(missing.out).toContain('::error title=secrets: MISSING');
+    const unknown = await go({ STUB_RC_SECRETS: '1' });
+    expect(unknown.status).toBe(1);
+    expect(unknown.summary).toContain('| secrets | UNKNOWN |');
   });
   it('makes staging BEHIND a failure when PARITY_STAGING_BEHIND=fail (once staging migrates on every merge)', async () => {
     const r = await go({ PARITY_STAGING_BEHIND: 'fail', STUB_RC_STAGING: '1', STUB_EXIT_STAGING: '3' });
