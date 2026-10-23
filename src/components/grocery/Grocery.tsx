@@ -85,8 +85,8 @@ function GetRow({ g, item, month, mk, future, carries, onGot, open, onOpen, onMo
           {item.n}
           {item.note && <small className="gnote">{item.note}</small>}
           {item.store !== usual && <small className="gnote gmoved">Usually {usual || 'Anywhere'}</small>}
+          {split && customSplit && <span className="gsplittag gsplitunder">{customSplit}</span>}
         </button>
-        {split && customSplit && <span className="gsplittag">{customSplit}</span>}
         <button type="button" className="gqty" aria-expanded={open} aria-controls={moreId} aria-label={`${pill}, ${w.count.toLowerCase()} and price of ${item.n}`} onClick={() => onOpen(!open)}>
           <span className={`gpill${l.cents == null && !l.prices ? ' noprice' : ''}`}>{pill}</span>
           <Icon name={open ? 'chevron-up' : 'chevron-down'} />
