@@ -32,7 +32,7 @@ export function ownChanges(kind: PathKind, doc: unknown, before: Mirror): unknow
     // Copied as this device's document holds them (the store keeps it normalized; the send cleans it again).
     const w = doc as Record<string, unknown>;
     const kept = { ...own } as Record<string, unknown>;
-    for (const k of ['prog', 'ran', 'rest', 'restOn', 'order', 'stash']) { if (w[k] !== undefined) kept[k] = w[k]; else delete kept[k]; }
+    for (const k of ['prog', 'ran', 'rest', 'restOn', 'restTook', 'order', 'stash']) { if (w[k] !== undefined) kept[k] = w[k]; else delete kept[k]; }
     return kept;
   }
   const mine = desiredRows(kind, doc, before).filter(r => {

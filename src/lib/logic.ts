@@ -2,7 +2,7 @@ import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
 import { nowStamp } from '../shared/validate.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
 import { normExperimentItem } from '../shared/listItems.js';
-import { isOrder, normWeek, restDatesIn } from '../shared/week.js';
+import { isOrder, normWeek, restDatesIn, restTookIn } from '../shared/week.js';
 import type { Cfg, CardItem, Experiment, FlatSlot, LogEntry, LogSet, Logs, PhaseKey, ProgKey, Program, Week, WeekRan } from '../types.ts';
 
 export { isOrder, normWeek };
@@ -296,20 +296,20 @@ export function restInPlace(week: WeekIn, slots: Slot[], n: number): number[] | 
   const next = { ...week, rest: [...rest, n].sort((a, b) => a - b), order };
   return overflowSlots(next, slots, n).some(s => !isSkipped(s, week)) ? null : order;
 }
-// Unticking a rest that took an empty day's place puts that day back where it was, when that gives the normal order again.
-export function orderAfterUntick(week: WeekIn, slots: Slot[], n: number): number[] | null {
-  const o = orderOf(week); const x = o[DAY_COUNT - 1]; const others = o.slice(0, -1);
-  if (!others.every((v, i) => !i || v > others[i - 1])) return null;
+// Unticking a rest that took an empty day's place (week.restTook) puts that day back at the position column n has again; null when
+// the rest did not take a day's place.
+export function orderAfterUntick(week: WeekIn, n: number): number[] | null {
+  const pd = restTookOf(week)[n]; if (!pd) return null;
   const pos = n - restsOf(week).filter(r => r < n).length; // where column n lands once it is a workout column again
-  const back = [...others.slice(0, pos - 1), x, ...others.slice(pos - 1)];
-  const cards = slots.filter(s => ((week.moved && week.moved[s.id]) || s.day) === x);
-  return back.every((v, i) => v === i + 1) && cards.every(s => isSkipped(s, week)) ? back : null;
+  const others = orderOf(week).filter(v => v !== pd);
+  return [...others.slice(0, pos - 1), pd, ...others.slice(pos - 1)];
 }
+export const restTookOf = (w: WeekIn | null | undefined): Record<string, number> => restTookIn(w?.restTook, restsOf(w));
 // Rest dates by rest column (the one string older files kept is the first rest day's date).
 export const restDatesOf = (w: WeekIn | null | undefined): Record<string, string> => restDatesIn(w?.restOn, restsOf(w));
 // The dates when the rest days move from `from` to `to` (same count in order: the first rest keeps the first date), by new column.
-export function moveRestDates(dates: Record<string, string>, from: number[], to: number[]): Record<string, string> {
-  const out: Record<string, string> = {};
+export function moveRestDates<T = string>(dates: Record<string, T>, from: number[], to: number[]): Record<string, T> {
+  const out: Record<string, T> = {};
   from.forEach((c, i) => { if (dates[c] && to[i] != null) out[to[i]] = dates[c]; });
   return out;
 }
