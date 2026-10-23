@@ -81,7 +81,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v3
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
       - name: Install the database tools
         run: npm ci --ignore-scripts --no-audit --no-fund
@@ -187,7 +187,7 @@ jobs:
       # none is left. Only then is the revision built and deployed. With nothing waiting these steps do nothing.
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
       - name: Install the database tools
         run: npm ci --ignore-scripts --no-audit --no-fund
