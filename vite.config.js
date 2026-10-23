@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { AREAS } from './scripts/coverage-areas.mjs';
 
 const base = process.env.BASE_PATH || '/';
 
@@ -104,10 +105,21 @@ export default defineConfig({
   // The API runs on its own port in development; the app calls it on its own origin, as it will in production (ADR 010).
   // The proxy keeps the browser's Host header, as production's single origin does, so the API's Origin check (originGuard) sees a same-origin page.
   server: { proxy: { '/api': { target: process.env.API_ORIGIN || 'http://localhost:3001', changeOrigin: false } } },
-  // Two projects so the server tests, which start a Postgres container each, get a 30 s limit instead of Vitest's 5 s: on a busy machine
-  // (several sessions' checks at once) a slow start is not a failure. Everything else keeps the default. A server test file is any
-  // *.test.* under server/; the app project takes the rest.
   test: {
+    // `npm run coverage` (scripts/coverage-report.mjs). Vitest 5's v8 provider reports a file that no test loads as 0 statements / 100%,
+    // so the totals cover loaded files only; the report script lists the unloaded ones next to them and --check caps them.
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx,js,jsx}', 'server/**/*.{ts,js}'],
+      exclude: ['**/*.test.*', '**/*.d.ts', 'src/test/**', 'server/test/**'],
+      reporter: ['json-summary'],
+      reportsDirectory: 'coverage',
+      // ADR 069: a floor per logic area, from scripts/coverage-areas.mjs (the same list holds each area's cap on files no test loads).
+      thresholds: Object.fromEntries(Object.entries(AREAS).filter(([, a]) => a.floor).map(([k, a]) => [`${k}/**`, a.floor])),
+    },
+    // Two projects so the server tests, which start a Postgres container each, get a 30 s limit instead of Vitest's 5 s: on a busy machine
+    // (several sessions' checks at once) a slow start is not a failure. Everything else keeps the default. A server test file is any
+    // *.test.* under server/; the app project takes the rest.
     projects: [
       { extends: true, test: { name: 'server', include: ['server/**/*.test.{js,jsx,ts,tsx}'], exclude: SKIP, testTimeout: 30_000, globalSetup: ['server/test/globalSetup.ts'] } },
       { extends: true, test: { name: 'app', include: ['**/*.test.{js,jsx,ts,tsx}'], exclude: [...SKIP, 'server/**'] } },

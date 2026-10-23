@@ -43,7 +43,7 @@ jobs:
     if: needs.changes.outputs.unit == 'true'
     runs-on: ubuntu-26.04
     steps:
-      # Full history: scripts/unit-tests.mjs needs the merge-base with the PR's base branch.
+      # Full history: scripts/parityRun.test.js reads HEAD~2 (a shallow checkout has no such commit).
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -54,13 +54,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      # A pull request runs the unit tests related to its changed files (scripts/unit-tests.mjs; every test when a tooling or dependency file changed). Main and manual runs run all of them.
-      - run: node scripts/unit-tests.mjs --base="origin/$BASE_REF"
-        if: github.event_name == 'pull_request'
-        env:
-          BASE_REF: ${{ github.base_ref }}
-      - run: npm test
-        if: github.event_name != 'pull_request'
+      # Every unit test, with coverage, on pull requests and on main (ADR 069): the floors and the cap on files no test loads only mean something over the whole suite. `npm run check` still runs just the related tests locally.
+      - run: npm run coverage
 
   docker:
     needs: changes
