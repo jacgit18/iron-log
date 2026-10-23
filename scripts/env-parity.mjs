@@ -6,14 +6,16 @@
 //   PARITY_PRODUCTION_URL=<read-only URL> node scripts/env-parity.mjs production 20261007000001,20261007000002,...
 //
 // The first argument names the environment and picks the URL (PARITY_<NAME>_URL); the second is main's migration versions, comma
-// separated (the workflow lists db/migrations and passes them, so the job image never changes with a commit). The URL is a
+// separated, or one argument each (the workflow lists db/migrations and passes them, so the job image never changes with a commit). The URL is a
 // `migrations_reader` login (scripts/db-reader.mjs): it reads schema_migrations and nothing else. The URL is never printed.
 //
 // Exit 0 OK; 3 BEHIND (main has migrations the database lacks); 4 AHEAD OF MAIN (the database has a version main lacks; wins over
 // BEHIND); 2 UNKNOWN (no URL, no list, no connection, no schema_migrations table). UNKNOWN is never reported as OK.
 import { EXIT, appliedVersions, classify } from './lib/migration-state.mjs';
 
-const [name = '', list = ''] = process.argv.slice(2);
+// gcloud splits `--args` on commas, so the list can arrive as one argument or as many: take every argument after the name.
+const [name = '', ...rest] = process.argv.slice(2);
+const list = rest.join(',');
 const label = name.toLowerCase();
 const unknown = why => { console.log(`${label || '?'}: UNKNOWN (${why})`); process.exit(EXIT.UNKNOWN); };
 

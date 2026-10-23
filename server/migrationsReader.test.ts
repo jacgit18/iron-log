@@ -113,6 +113,11 @@ describe('env-parity.mjs', () => {
     expect(r.status).toBe(0);
     expect(r.out.trim()).toBe(`production: OK (${versions.length} applied, 0 behind)`);
   });
+  it('accepts the migration list as one argument or one argument per version (gcloud splits --args on commas)', async () => {
+    const r = await run(['production', ...versions], { PARITY_PRODUCTION_URL: reader });
+    expect(r.status).toBe(0);
+    expect(r.out.trim()).toBe(`production: OK (${versions.length} applied, 0 behind)`);
+  });
   it('picks the URL by the environment name', async () => {
     expect((await run(['staging', list], { PARITY_STAGING_URL: reader })).status).toBe(0);
     expect((await run(['qa', list], { PARITY_QA_URL: reader })).status).toBe(0);

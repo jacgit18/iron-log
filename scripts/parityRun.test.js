@@ -13,7 +13,9 @@ echo "$*" >> "$STUB_DIR/calls"
 case "$*" in
   *"jobs execute"*)
     args=""; prev=""; for a in "$@"; do [ "$prev" = "--args" ] && args="$a"; prev="$a"; done
-    env="\${args%%,*}"; echo "$env" > "$STUB_DIR/last"; echo "$args" >> "$STUB_DIR/args"
+    env="\${args%%,*}"
+    ns="STUB_NOSTART_$(echo "$env" | tr a-z A-Z)"; [ -n "\${!ns:-}" ] && exit 1   # could not start: no new execution exists
+    echo "$env" > "$STUB_DIR/last"; echo "$args" >> "$STUB_DIR/args"
     v="STUB_RC_$(echo "$env" | tr a-z A-Z)"; exit "\${!v:-0}";;
   *"executions tasks list"*)
     env="$(sed 's/^exec-//' <<< "$(grep -o 'exec-[a-z]*' <<< "$*" | head -1)")"
@@ -71,6 +73,17 @@ describe('parity-run.sh', () => {
     const two = await go({ STUB_RC_STAGING: '1', STUB_EXIT_STAGING: '2' });
     expect(two.status).toBe(1);
     expect(two.summary).toContain('| staging | UNKNOWN |');
+  });
+  it('does not let a job that could not start inherit an older execution\'s result (UNKNOWN, never OK)', async () => {
+    // qa cannot start; the newest execution is still staging's, whose task exited 0.
+    const r = await go({ STUB_NOSTART_QA: '1', STUB_EXIT_STAGING: '0' });
+    expect(r.status).toBe(1);
+    expect(r.summary).toContain('| qa | UNKNOWN |');
+  });
+  it('never reads exit code 0 from a failed run as OK', async () => {
+    const r = await go({ STUB_RC_PRODUCTION: '1', STUB_EXIT_PRODUCTION: '0' });
+    expect(r.status).toBe(1);
+    expect(r.summary).toContain('| production | UNKNOWN |');
   });
   it('makes staging BEHIND a failure when PARITY_STAGING_BEHIND=fail (once staging migrates on every merge)', async () => {
     const r = await go({ PARITY_STAGING_BEHIND: 'fail', STUB_RC_STAGING: '1', STUB_EXIT_STAGING: '3' });

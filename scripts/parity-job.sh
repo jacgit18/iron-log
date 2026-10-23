@@ -26,7 +26,7 @@ ENVS="production staging qa"
 
 gc() { gcloud --project "$PROJECT_ID" "$@"; }
 secret_name() { echo "iron-log-parity-$1-url"; }
-usage() { sed -n '2,19p' "$0"; exit 2; }
+usage() { sed -n '2,15p' "$0"; exit 2; }
 valid_env() { case "$1" in production|staging|qa) return 0;; *) return 1;; esac; }
 
 cmd_setup() {
