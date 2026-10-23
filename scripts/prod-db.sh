@@ -23,7 +23,9 @@
 #                               iron-log-prod-owner-url, never shown. Afterwards this script fetches it for each run, and you delete the .env line.
 #   reader [--apply]            with --apply: make (or re-key) the read-only role the CI deploy uses to see which migrations production
 #                               has, and store its URL in the GitHub secret MIGRATIONS_CHECK_URL (environment production), never shown.
-#                               It changes a login, not data, so it takes no backup.
+#                               It changes a login, not data, so it takes no backup. The login (migrations_reader) is shared with the parity job's
+#                               production secret: re-keying it breaks that one until you run `parity-job.sh reader production` or copy the new URL there.
+#                               To set MIGRATIONS_CHECK_URL from the parity login without re-keying, see runbook section 24.
 #
 # The owner URL is PROD_DATABASE_URL, else fetched from Secret Manager (iron-log-prod-owner-url) on demand, else (with a warning) the old
 # DATABASE_URL_UNPOOLED line in .env; it is never printed. Backups run

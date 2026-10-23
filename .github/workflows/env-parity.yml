@@ -36,4 +36,7 @@ jobs:
           service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
       - uses: google-github-actions/setup-gcloud@v3
       - name: Compare each environment with main
+        env:
+          # Staging migrates on every merge to main (migrate-staging.yml), so a staging that is behind is a real problem: red.
+          PARITY_STAGING_BEHIND: fail
         run: scripts/parity-run.sh
