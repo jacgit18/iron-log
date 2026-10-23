@@ -1,0 +1,39 @@
+name: Environment parity
+
+# Every day, and on demand (Actions -> Environment parity -> Run workflow, for example after a production migration): are production,
+# staging and QA on the same migrations as main? Starts the Cloud Run job `iron-log-parity` once per environment (scripts/parity-run.sh);
+# the job reads each database with a read-only login kept in Secret Manager, so this workflow holds no database credential.
+# Red: an environment is AHEAD OF MAIN (it has a migration main lacks) or UNKNOWN (could not tell). Yellow: BEHIND (a warning).
+# Plan: Projects/iron-log/specs/env-parity-report-plan.md; brief: briefs/env-parity-report.md.
+on:
+  schedule:
+    - cron: '30 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federation
+
+concurrency:
+  group: env-parity
+  cancel-in-progress: false
+
+jobs:
+  parity:
+    # The keyless Google login accepts this repository's main branch only.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: us-central1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Compare each environment with main
+        run: scripts/parity-run.sh
