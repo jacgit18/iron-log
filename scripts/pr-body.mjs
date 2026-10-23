@@ -59,6 +59,8 @@ export function inferAudience(files, diffs = {}, config = loadConfig()) {
 export const LABELS = { bug: ['d73a4a', 'Something isn\'t working'], enhancement: ['a2eeef', 'New feature or request'], documentation: ['0075ca', 'Improvements or additions to documentation'], dependencies: ['0366d6', 'Pull requests that update a dependency file'], chore: ['ededed', 'Tests, scripts, CI or config: nothing a user sees'] };
 /** What the work is. `branch`, `what` and `tracker` carry the author's own words; a fix says so there ("fix/..." branch, "Fix ..." text, "fix cause" in the tracker note). Returns { type, reason }. */
 export function inferType({ branch = '', files = [], what = '', tracker = '' }, config = loadConfig()) {
+  const letter = { b: 'bug', d: 'documentation', c: 'chore', p: 'dependencies' }[(branch.match(/^([bdcp])-/) || [])[1]]; // rules/branch-naming.md; f- falls through to the checks below
+  if (letter) return { type: letter, reason: `the branch name starts with ${branch[0]}-` };
   if (/^(fix|bug|hotfix)[/-]|[/-](fix|bugfix)([/-]|$)/i.test(branch)) return { type: 'bug', reason: 'the branch name says fix' };
   if (/^\s*(fix|fixes|fixed|bug)\b/i.test(what)) return { type: 'bug', reason: 'the description starts with a fix' };
   if (/\bfix cause\b|\b(main-break|logic gap|regression)\b/i.test(tracker)) return { type: 'bug', reason: 'the tracker note names a fix cause' };
