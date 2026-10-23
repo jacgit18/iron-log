@@ -5,7 +5,7 @@ import { expect, newPhone, server, test } from './stack.js';
 // the server keeps it under the account, and the Settings list reads it back.
 const pool = new pg.Pool({ connectionString: process.env.E2E_DATABASE_URL });
 const snapshots = async user => (await pool.query(
-  `select to_char(b.day, 'YYYY-MM-DD') as day, b.entries, b.score, b.size_bytes from backup_snapshots b join users u on u.id = b.user_id where u.auth_user_id = $1 order by b.day`, [`dev:${user}`])).rows;
+  `select to_char(b.day, 'YYYY-MM-DD') as day, b.entries, b.score, b.size_bytes, b.device from backup_snapshots b join users u on u.id = b.user_id where u.auth_user_id = $1 order by b.day`, [`dev:${user}`])).rows;
 
 test('a signed-in phone uploads its daily copy, and Settings lists it from the server', async ({ browser, user }) => {
   await server.seedPrograms(user);
@@ -18,11 +18,12 @@ test('a signed-in phone uploads its daily copy, and Settings lists it from the s
   await expect.poll(async () => (await snapshots(user)).length, { timeout: 30_000 }).toBe(1);
   const [row] = await snapshots(user);
   expect(row.size_bytes).toBeGreaterThan(0);
+  expect(row.device).toBeTruthy(); // the phone sent its device name with the copy
 
   await page.locator('#account-badge').click();
   const box = page.getByRole('group', { name: 'Backups' });
-  await expect(box.locator('.exrow[data-where=account]')).toHaveCount(1);
-  await box.getByRole('button', { name: /^Restore the account backup from/ }).click();
+  await expect(box.locator('.exrow[data-where=both]')).toHaveCount(1); // today is on this device and on the account: one row
+  await box.getByRole('button', { name: /^Restore account copy from/ }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await a.close();
 });
