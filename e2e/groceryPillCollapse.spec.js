@@ -41,3 +41,15 @@ test('Collapse all on a store also closes a row ticked bought while it was open'
   await expect(pill(page, 'Toilet paper')).toHaveAttribute('aria-expanded', 'true');
   await expect(bought.getByRole('button', { name: 'Count and price of Rice' })).toHaveAttribute('aria-expanded', 'true');
 });
+
+test('with no sharing groups a row that still holds its own split says nothing', async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem('ironlog:session/admin', 'true');
+    localStorage.setItem('ironlog:grocery/main', JSON.stringify({ stores: ["BJ's"], items: [{ id: 'tp', n: 'Toilet paper', store: "BJ's", qty: 1, cents: 2499, every: true, out: false, share: { with: ['gone'] } }] }));
+  });
+  await page.reload();
+  await page.click('#tab-daily'); await page.click('#daily-grocery');
+  await page.click('#groc-view-get');
+  await expect(row(page, 'Toilet paper')).toBeVisible();
+  await expect(page.locator('.gsplittag')).toHaveCount(0);
+});

@@ -72,7 +72,7 @@ function GetRow({ g, item, month, mk, future, carries, onGot, open, onOpen, onMo
   const split = hasSharing(g); const raw = month.lines[item.id]; const people = allPeople(g);
   const pill = l.prices ? `${l.prices.length} × avg ${money(Math.round(total / l.prices.length))}` : `${w.qty(l.qty)} × ${l.cents == null ? 'no price' : `${money(l.cents)}${w.per}`}`; // the visible words of the count and price button; its accessible name starts with them
   // Said on every row that is not plain "Just me": the store's group split shows by default, not only after the row is changed (ADR 059 amended 2026-10-23).
-  const parties = split ? partiesFor(g, item, raw) : [];
+  const parties = partiesFor(g, item, raw); // always computed: with no groups it reads Just me, never Not mine
   const customSplit = raw?.packShares?.some(Boolean) ? 'Packs split' : raw?.share || item.share || (split && shareText(parties) !== 'Just me') ? shareText(parties) : '';
   return (
     <li className={`gget${l.got ? ' got' : ''}`}>
