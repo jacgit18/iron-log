@@ -98,14 +98,19 @@ export function productionUrl() {
   return line.slice(line.indexOf('=') + 1).replace(/^["']|["']$/g, '');
 }
 
-/** The name a host finally points at: follows CNAME records (up to 8 hops), so an alias of production's address has production's name. A name with no CNAME,
- *  or a lookup that fails, stays as it is. `cname` is injectable for tests. */
+/** The name a host finally points at: follows CNAME records (up to 8 hops), so an alias of production's address (db.example.com pointing at its endpoint) has
+ *  production's name. A name with no CNAME, or a lookup that fails, stays as it is. A CNAME to the host's OWN PARENT DOMAIN is not followed: that is a
+ *  provider's shared front name (every Neon endpoint in a region, ep-xxx.c-6.us-east-2.aws.neon.tech, points at c-6.us-east-2.aws.neon.tech), and
+ *  following it would make every endpoint look like one server (found 2026-10-23: it would have refused staging and QA as "production"). `cname` is
+ *  injectable for tests. */
 export async function canonicalHost(host, cname = resolveCname) {
   let h = sameHost(host);
   for (let hop = 0; hop < 8 && !isIP(h); hop++) {
     const next = await cname(h).then(r => r[0], () => undefined);
     if (!next) break;
-    h = sameHost(next.toLowerCase().replace(/\.+$/, ''));
+    const target = sameHost(next.toLowerCase().replace(/\.+$/, ''));
+    if (h.endsWith(`.${target}`)) break; // a shared parent name, not an alias of one server
+    h = target;
   }
   return h;
 }
