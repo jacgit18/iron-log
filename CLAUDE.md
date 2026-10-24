@@ -8,21 +8,21 @@ In `DevHiveMind/Projects/iron-log/` (the folder itself; there is no `docs/` subf
 
 ## Definition of done
 
-Rule: `/home/jac/.claude/rules/definition-of-done.md`. A change is done when all of this holds, each line reported as verified, read-only, agent-reported or not run (a non-verified line is a named gap, not done). The feature's own **Done when** list (its `FEATURE-PLAN.md` row) comes on top.
+A change is done when all of this holds. Report each line with how it is known: `verified` (you ran it and saw the result), `read-only` (you read the code; nothing was run), `agent-reported` (a subagent said so and you have not opened the cited file and line), or `not run` (skipped, with the reason). A line that is not `verified` is a named gap, not done. (The owner's general rule is `definition-of-done.md` in the owner's private `~/.claude/rules/`; this section is the whole project version.) The feature's own **Done when** list (its `FEATURE-PLAN.md` row) comes on top.
 
 - `npm run check` passes for what changed (CI runs all); the board reorder and log write path tests stay green. Enforcer: pre-push hook, CI.
 - New behavior has a test that fails without it; a bug fix has its regression test; a feature has its own `e2e/<feature>.spec.js`. Enforcer: advisory (code review).
 - UI, style, font, image or bundle change: `node scripts/lighthouse.mjs --check` before and after in the PR, floors held; UX docs in `ux/` updated; seen in a browser at phone and desktop width. Enforcer: `scripts/lighthouse.mjs`, PR template.
-- Schema, migration or access change: `db:check` passes, `data/` docs updated, forward and rollback plan stated; owner runs production. Enforcer: `npm run check`, advisory for the docs.
-- Store, sync or `server/` change: `e2e:sync` run against the scratch database.
+- Schema, migration or access change: `db:check` passes, the `data/` docs in the project docs folder (`DevHiveMind/Projects/iron-log/data/`, outside this repo) updated, forward and rollback plan stated; owner runs production. Enforcer: `npm run check`, advisory for the docs.
+- Store, sync or `server/` change: `e2e:sync` run against the scratch database. Enforcer: `npm run check`, CI.
 - Docs: `CHANGELOG.md`, `feature-map.md`, and `DECISIONS.md` for a decision, in the same PR. Enforcer: PR changelog check.
 - Docs have their generated table of contents (global rule `document-toc.md`): `README.md` and `SETUP.md` are checked by `npm run lint` (`npm run docs:toc`; `npm run docs:toc:write` refreshes them); the project docs in the vault are refreshed by the doc-toc hook. Enforcer: `npm run lint`, CI.
 - No package is added without the owner's yes in chat (`/home/jac/.claude/rules/dependency-security.md`): check the exact name, vet it with `node scripts/dep-vet.mjs <name>`, first install with `--ignore-scripts`, and put `Dependency approval: <name>` in the PR. Enforcer: `.github/workflows/dependency-scan.yml` (npm audit on production dependencies, dependency review, `dep-vet` on packages the PR adds) and `permissions.ask` on install commands.
 - Dependency upgrade (Dependabot or by hand): a patch or minor bump rides the weekly group once CI is green. A major bump, or any package that touches the service worker, auth, sync or the build (`vite`, `vite-plugin-pwa`, `react`; whichever section of `package.json` it is in), gets its release notes read and e2e green, and is smoke-checked on staging before the production approval. Only test, type and lint tooling (`vitest`, `pixelmatch`, `@types/*`, `oxlint`) needs CI alone. The lockfile is what ships (`npm ci` in the Dockerfile and deploy workflows; never `npm install` in CI). Rollback is a revert of the whole upgrade commit (`package.json` and `package-lock.json` together, or `npm ci` fails) and a redeploy. The staging step runs only while the repository variable `STAGING_ENABLED` is `true`; if it is not, say in the PR that the staging smoke check was skipped. Enforcer: `.github/workflows/deploy-cloud-run.yml` (staging before production, owner approval), advisory for the release-notes read.
 - PR tracker row updated in the same session: the feature's row in `PR-TRACKER.md` (project docs; a fix PR gets its cause code there), named in the PR with `--tracker "<feature; fix cause>"` (`--tracker "n/a: <why>"` for tooling, docs or Dependabot). Review the tracker every five features or at each milestone. Enforcer: `pr-body.mjs` warns when `--tracker` is missing (advisory, never blocks).
 - PR body from `scripts/pr-body.mjs`, with the Done section filled. Enforcer: PR audience and changelog checks, template.
-- Device-only behavior (push, install prompt, back-swipe) is not done until tried on a real device; until then it is `not run`.
-- Done means merged; a deployed change also gets a smoke check of the live URL (owner approves prod).
+- Device-only behavior (push, install prompt, back-swipe) is not done until tried on a real device; until then it is `not run`. Enforcer: advisory (owner).
+- Done means merged; a deployed change also gets a smoke check of the live URL (owner approves prod). Enforcer: advisory (owner).
 
 ## Language
 
