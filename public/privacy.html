@@ -26,7 +26,7 @@
 <main>
 <a class="back" href="./">← Back to Iron Log</a>
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated: 21 October 2026 · Version 1.3</p>
+<p class="meta">Last updated: 22 October 2026 · Version 1.4</p>
 
 <p>Iron Log is a workout log. This policy explains what personal data it collects when you use the signed-in version of the app, why, where it is kept, who can see it, how long it is kept, and the choices and rights you have. It is written to be read. If anything here is unclear, ask: the contact details are at the end.</p>
 
@@ -35,9 +35,9 @@
 
 <h2>2. The short version</h2>
 <ul>
-  <li>We collect what is needed to sign you in and to store and sync the workouts you log. Nothing else.</li>
+  <li>We collect what is needed to sign you in and to store and sync the workouts you log and, only if you subscribe to a paid plan, to take payment. Nothing else.</li>
   <li>There is <b>no advertising, no analytics and no tracking</b>. We do not sell your data and do not share it for advertising.</li>
-  <li>Your data is stored with two service providers (Google Cloud and Neon), in the United States.</li>
+  <li>Your data is stored with two service providers (Google Cloud and Neon), in the United States. If you subscribe to a paid plan, a third, Stripe, takes the payment: it sees your card, we never do.</li>
   <li>You can <b>export</b> everything and <b>erase</b> it, or <b>delete your account</b>, yourself, at any time, in Settings. Deleted data is removed from the live service immediately and from backups within 30 days.</li>
   <li>The app is for people aged <b>16 and over</b>.</li>
 </ul>
@@ -47,6 +47,8 @@
 <p>The workout data you enter: logged sessions (exercise, date, weight, sets, reps, time, notes), check-offs on the weekly board, body weight entries, body-weight goals, programs you edit or save, exercises you add, stretches and supplement or water logs, and your settings (for example program mode, rest times and one-rep maxes).</p>
 <h3>From Google, when you sign in with Google</h3>
 <p>Your Google account’s email address, name, profile picture address and Google’s identifier for your account, and the sign-in tokens Google issues for the app (stored encrypted; we do not use them to access anything in your Google account). We do not receive your Google password. We request only basic profile access (identity, email and profile) and do not read your Gmail, contacts, calendar or anything else.</p>
+<h3>From Stripe, only if you subscribe to a paid plan</h3>
+<p>When you subscribe, Stripe collects your payment details and email address directly; we never see your card number. We keep your Stripe customer identifier, whether your subscription is active, and the date it renews or ends, so the app can show your plan and send you to Stripe to manage it.</p>
 <h3>Collected automatically</h3>
 <ul>
   <li><b>Session records:</b> while you are signed in, a session record with its expiry. This is used to keep you signed in. The IP address and browser or device description a session is created from are not stored.</li>
@@ -66,6 +68,7 @@
   <tbody>
     <tr><td>Create and secure your account, keep you signed in</td><td>Google profile data, session records</td><td>Performance of the contract (providing the service you asked for); legitimate interests in security</td></tr>
     <tr><td>Store, show and sync your workouts and settings</td><td>The data you enter</td><td>Performance of the contract. For health-related data: your <b>explicit consent</b> (Art. 9(2)(a)), given when you choose to enter it and sign in to sync it. You can withdraw consent at any time by erasing your data or deleting your account.</td></tr>
+    <tr><td>Take payment for a paid plan and manage your subscription</td><td>Stripe customer identifier, subscription status and dates</td><td>Performance of the contract; legal obligation (tax and accounting records, kept by Stripe)</td></tr>
     <tr><td>Send the alerts you ask for (timer ended, day not finished)</td><td>Push address and keys, the alert text and time</td><td>Performance of the contract; your consent, given when you turn the alerts on and allow notifications</td></tr>
     <tr><td>Protect the service from abuse, find and fix errors, keep backups</td><td>Logs, rate-limit counters, error reports, backups</td><td>Legitimate interests in running a reliable and secure service</td></tr>
     <tr><td>Answer your requests and comply with the law</td><td>Whatever the request needs</td><td>Legal obligation; legitimate interests</td></tr>
@@ -79,18 +82,20 @@
   <tbody>
     <tr><td>Google (Google Cloud: Cloud Run, Cloud Storage, Cloud Build, Cloud Tasks, Secret Manager, Cloud Logging; Google Sign-In)</td><td>Hosting the app and API, nightly encrypted backups, logs, signing you in, and sending the alerts you turn on at the right time</td><td>United States (us-central1)</td></tr>
     <tr><td>The notification service of your browser or phone maker (Google for Chrome and Android, Apple for iPhone and iPad, Mozilla for Firefox)</td><td>Delivering the alerts you turn on to your device. It sees the address of your device and the time, and carries the encrypted message</td><td>Wherever that provider runs it</td></tr>
+    <tr><td>Stripe (payment processing, only if you subscribe)</td><td>Taking your payment, billing you, sending receipts, and the page where you manage or cancel your subscription. It sees your payment details and email address; we see only the status of your subscription</td><td>United States and other countries where Stripe operates</td></tr>
     <tr><td>Neon (database hosting, on Amazon Web Services)</td><td>Storing your account and workout data</td><td>United States (us-east-2)</td></tr>
   </tbody>
 </table>
 <p>We may also disclose data where the law requires it (for example a valid legal order), or to protect rights, safety and the security of the service. If the operator’s role is ever transferred (for example to a company), your data would move with the service, subject to this policy, and you would be told first.</p>
 
 <h2>7. International transfers</h2>
-<p>Your data is processed in the United States. If you are in the European Economic Area or the United Kingdom, this means your data is transferred outside it. We rely on the transfer mechanisms our providers offer (such as standard contractual clauses and, where applicable, the EU–US Data Privacy Framework). You can ask us for details using the contact address.</p>
+<p>Your data is processed in the United States. If you are in the European Economic Area or the United Kingdom, this means your data is transferred outside it. We rely on the transfer mechanisms our providers, including Stripe for payments, offer (such as standard contractual clauses and, where applicable, the EU–US Data Privacy Framework). You can ask us for details using the contact address.</p>
 
 <h2>8. How long we keep it</h2>
 <table>
   <thead><tr><th>Data</th><th>Kept</th></tr></thead>
   <tbody>
+    <tr><td>Subscription status and your Stripe customer identifier</td><td>Until you delete your account; deleting your account also deletes your customer record at Stripe and ends any subscription. Stripe keeps its own payment records for as long as the law requires.</td></tr>
     <tr><td>Your workout data and settings</td><td>Until you erase it or delete your account. Erasing removes the rows from the live database immediately, including older versions of edited entries kept for recovery.</td></tr>
     <tr><td>Your account and Google sign-in record</td><td>Until you delete your account (removed immediately from the live service).</td></tr>
     <tr><td>Push alerts: your device’s address and keys</td><td>Until you turn the alerts off, sign out, erase your data or delete your account (removed immediately from the live service). A notification service may drop an address that stops working.</td></tr>
