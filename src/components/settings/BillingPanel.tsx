@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import './BillingPanel.css';
-import { useFeature } from '../../features.js';
 import { createAccountClient } from '../../sync/account.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { flag, getSyncApi } from '../../store/useAppStore.js';
@@ -27,9 +26,8 @@ function useOnline(): boolean {
 
 export default function BillingPanel() {
   const api = getSyncApi();
-  const on = useFeature('billing');
   const client = useMemo(() => createAccountClient({ headers: devHeaders }), []);
-  const { who, recheck } = useWho(!!api && on, client);
+  const { who, recheck } = useWho(!!api, client);
   const [busy, setBusy] = useState<string | null>(null);
   const [returned] = useState<'success' | 'cancel' | null>(() => {
     const how = typeof window === 'undefined' ? null : new URL(window.location.href).searchParams.get('billing');
@@ -41,11 +39,11 @@ export default function BillingPanel() {
   // Back from Stripe's Checkout: the address says how it went (read once above). Take it off the address, and since the webhook may be
   // a moment behind, look again a few times below.
   useEffect(() => {
-    if (!on || !returned) return;
+    if (!returned) return;
     const url = new URL(window.location.href);
     url.searchParams.delete('billing');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-  }, [on, returned]);
+  }, [returned]);
   const signedIn = who?.status === 'signed-in' ? who : null;
   const settled = signedIn?.billing?.source === 'stripe' && signedIn.isPaid;
   useEffect(() => {
@@ -56,7 +54,7 @@ export default function BillingPanel() {
 
   // Nothing is drawn until the first answer: when the server has billing off (every admin until go-live) a placeholder would appear and then
   // vanish, moving the Settings page. When billing is on the panel appears once, after the answer.
-  if (!api || !on || who === null || who.status === 'signed-out') return null;
+  if (!api || who === null || who.status === 'signed-out') return null;
   if (signedIn && !signedIn.billing?.available) return null;
 
   const go = async (what: string, open: () => ReturnType<typeof client.billingPortal>) => {

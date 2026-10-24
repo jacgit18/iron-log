@@ -207,19 +207,19 @@ describe('the webhook', () => {
 });
 
 describe('Checkout and Portal', () => {
-  it('is admin-only for now: a non-admin gets 403, and billing is not offered to them', async () => {
-    const { as } = await start();
-    expect((await as('ann', 'POST', '/api/billing/checkout', { interval: 'month' })).status).toBe(403);
-    expect((await as('ann', 'POST', '/api/billing/portal', {})).status).toBe(403);
-    expect((await (await as('ann', 'GET', '/api/me')).json() as { account: { billing: { available: boolean } } }).account.billing.available).toBe(false);
+  it('is open to a non-admin free account: Checkout works and billing is offered to them', async () => {
+    const { as, account } = await start();
+    const id = await account('ann');
+    expect(await (await as('ann', 'GET', '/api/me')).json() as { account: { isAdmin: boolean; plan: string } }).toMatchObject({ account: { isAdmin: false, plan: 'free' } });
+    expect(await (await as('ann', 'POST', '/api/billing/checkout', { interval: 'month' })).json()).toEqual({ ok: true, url: `https://checkout.example/${id}/new/price_m` });
+    expect((await (await as('ann', 'GET', '/api/me')).json() as { account: { billing: { available: boolean } } }).account.billing.available).toBe(true);
   });
 
-  it('gives an admin a Checkout address for the chosen price, tied to their account', async () => {
+  it('gives an account a Checkout address for the chosen price, tied to their account', async () => {
     const { as, account } = await start();
     const id = await account('boss');
     expect(await (await as('boss', 'POST', '/api/billing/checkout', { interval: 'year' })).json()).toEqual({ ok: true, url: `https://checkout.example/${id}/new/price_y` });
     expect(await (await as('boss', 'POST', '/api/billing/checkout', { interval: 'month' })).json()).toMatchObject({ url: expect.stringMatching(/price_m$/) });
-    expect((await (await as('boss', 'GET', '/api/me')).json() as { account: { billing: { available: boolean } } }).account.billing.available).toBe(true);
   });
 
   it('refuses an unknown interval, a plan nothing can be bought for, and a second subscription', async () => {
