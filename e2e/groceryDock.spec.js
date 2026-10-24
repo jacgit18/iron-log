@@ -20,6 +20,22 @@ test('editing At home: the add form and Done float, an item takes a note, and th
   await expect(page.getByLabel('Have Oat milk')).toBeChecked();
 });
 
+test('an existing item takes, changes and loses a note from its edit row', async ({ page }) => {
+  await open(page);
+  await page.click('#groc-edit');
+  await page.fill('#groc-name', 'Eggs'); await page.click('#groc-add');
+  const note = page.getByLabel('Note for Eggs');
+  await page.getByRole('button', { name: 'Expand Eggs' }).click(); // edit rows start closed
+  await note.fill('pasture raised'); await note.blur();
+  await page.click('#groc-done');
+  await expect(page.locator('.ghome')).toContainText('pasture raised');
+  await page.click('#groc-edit');
+  await page.getByRole('button', { name: 'Expand Eggs' }).click(); // closed again after Done and Edit
+  await note.fill(''); await note.blur();
+  await page.click('#groc-done');
+  await expect(page.locator('.ghome')).not.toContainText('pasture raised');
+});
+
 test('To get can go past this month to plan, and ticking is closed there', async ({ page }) => {
   await open(page);
   await page.click('#groc-edit');
@@ -63,20 +79,4 @@ test('with a rest timer running the dock sits above the timer bar, and the end o
   await expect(page.locator('#groc-add')).toBeEnabled();
   await page.click('#groc-add'); // reachable: the click would be intercepted if the timer bar covered it
   await expect(page.locator('#groc-name')).toHaveValue('');
-});
-
-test('an existing item takes, changes and loses a note from its edit row', async ({ page }) => {
-  await open(page);
-  await page.click('#groc-edit');
-  await page.fill('#groc-name', 'Eggs'); await page.click('#groc-add');
-  const note = page.getByLabel('Note for Eggs');
-  await page.getByRole('button', { name: 'Expand Eggs' }).click(); // edit rows start closed
-  await note.fill('pasture raised'); await note.blur();
-  await page.click('#groc-done');
-  await expect(page.locator('.ghome')).toContainText('pasture raised');
-  await page.click('#groc-edit');
-  await page.getByRole('button', { name: 'Expand Eggs' }).click(); // closed again after Done and Edit
-  await note.fill(''); await note.blur();
-  await page.click('#groc-done');
-  await expect(page.locator('.ghome')).not.toContainText('pasture raised');
 });
