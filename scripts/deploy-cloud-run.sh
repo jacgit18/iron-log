@@ -31,7 +31,8 @@
 # PUBLIC_BASE_URL (optional, an https origin with no path, for example https://example.app) is the address people sign in on: it becomes the
 # service's BASE_URL on every deploy. Without it BASE_URL is the Cloud Run address, as before. Set it once a custom domain is mapped to the
 # service and its address is in the Google client's redirect URIs. Production only: the script refuses it for staging and QA.
-# Checks of a new revision still use the Cloud Run address, which keeps working next to the custom one.
+# Checks of a new revision still use the Cloud Run address, which keeps answering, but only for reads: sign-in and writes work only on BASE_URL
+# (the origin guard and Better Auth trust that origin alone). Web Push tasks also go to BASE_URL, so map the domain before setting this.
 #
 # CLOUDBUILD_CONFIG (default cloudbuild.yaml in the current folder) names the build file; the QA workflow points it at main's copy so a branch's
 # own build file cannot push images into the registry that production and staging reuse by commit tag (ADR 060).
