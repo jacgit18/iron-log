@@ -5,7 +5,7 @@ export const AUTH_CHECK_PAGE = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Iron Log: sign-in check</title>
+<title>Loadbearer: sign-in check</title>
 <style>body{font:16px system-ui;background:#111;color:#eee;margin:0;padding:24px 16px;max-width:640px}button{font-size:18px;padding:12px 18px;margin:6px 6px 6px 0;border-radius:8px;border:1px solid #555;background:#222;color:#eee}pre{background:#1b1b1b;padding:12px;border-radius:8px;white-space:pre-wrap;word-break:break-word}</style>
 </head>
 <body>

@@ -192,9 +192,9 @@ export function dataStats(d: Partial<DataFile>) {
 }
 export function parseDataFile(text: string): DataFile {
   let d: any; try { d = JSON.parse(text); } catch { throw new Error('That file isn’t valid JSON.'); }
-  if (!d || d.app !== 'iron-log') throw new Error('That isn’t an Iron Log data file.');
+  if (!d || d.app !== 'iron-log') throw new Error('That isn’t a Loadbearer data file.');
   if (!(d.format >= 1)) throw new Error('Unknown file format.');
-  if (d.format > DATA_FORMAT) throw new Error('This file is from a newer version of Iron Log. Update the app first.');
+  if (d.format > DATA_FORMAT) throw new Error('This file is from a newer version of Loadbearer. Update the app first.');
   return normalizeData(d);
 }
 // Checks and cleans a data-file-shaped object. Used for both the JSON file and a full Excel workbook.

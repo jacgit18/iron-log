@@ -227,7 +227,7 @@ test('an export file from another copy of the app is uploaded into an empty acco
   const page = await a.open({ blank: true });
   await page.locator('#tab-settings, #account-badge').first().click();
   const panel = page.getByRole('region', { name: 'Account' });
-  const choose = () => panel.locator('input[aria-label="Iron Log export file"]').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exportFile)) });
+  const choose = () => panel.locator('input[aria-label="Loadbearer export file"]').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exportFile)) });
   await choose();
   await expect(panel).toContainText('2 logged sessions');
   await expect(panel).toContainText('keep separate ids');

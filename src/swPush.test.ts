@@ -36,7 +36,7 @@ describe('onPush', () => {
     const sleep = vi.fn(async () => {});
     await onPush(scope, REST, sleep);
     expect(shown).toHaveLength(1);
-    expect(shown[0]!.title).toBe('Iron Log');
+    expect(shown[0]!.title).toBe('Loadbearer');
     expect(shown[0]!.options).toMatchObject({ body: 'Rest over. Time for your next set.', tag: TAGS.rest, renotify: true, silent: false, icon: `${SCOPE}icons/icon-192.png`, data: { url: `${SCOPE}?open=board` } });
     expect(sleep).not.toHaveBeenCalled();
     expect(closed).toEqual([]);
@@ -58,7 +58,7 @@ describe('onPush', () => {
     const { scope, shown } = scopeWith();
     await onPush(scope, 'garbage', async () => {});
     expect(shown).toHaveLength(1);
-    expect(shown[0]!.options).toMatchObject({ body: 'Open Iron Log.', tag: 'iron-log' }); // not a kind's tag, so it never replaces a real notice
+    expect(shown[0]!.options).toMatchObject({ body: 'Open Loadbearer.', tag: 'iron-log' }); // not a kind's tag, so it never replaces a real notice
     await onPush(scope, null, async () => {});
     expect(shown).toHaveLength(2);
   });

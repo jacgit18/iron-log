@@ -91,7 +91,7 @@ describe('Excel import', () => {
     const week = toBytes(buildWeekWorkbook(X, S(), '2026-09-20', {}));
     await expect(parseExcelExport(week, cfg())).rejects.toThrow('single-week Excel file');
     const other = X.utils.book_new(); X.utils.book_append_sheet(other, X.utils.aoa_to_sheet([['a']]), 'Sheet1');
-    await expect(parseExcelExport(toBytes(other), cfg())).rejects.toThrow('isn’t an Iron Log Excel export');
+    await expect(parseExcelExport(toBytes(other), cfg())).rejects.toThrow('isn’t a Loadbearer Excel export');
     await expect(parseExcelExport(new TextEncoder().encode('hello').buffer, cfg())).rejects.toThrow();
   });
 });
@@ -176,7 +176,7 @@ describe('CSV import (fallback)', () => {
     expect(d.logs.hack[0].n).toBe("'=x");
   });
   it('rejects other CSV files', async () => {
-    await expect(parseCsvExport('a,b\n1,2', cfg())).rejects.toThrow('isn’t an Iron Log CSV export');
+    await expect(parseCsvExport('a,b\n1,2', cfg())).rejects.toThrow('isn’t a Loadbearer CSV export');
   });
 });
 
