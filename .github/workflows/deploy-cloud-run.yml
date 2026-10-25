@@ -183,8 +183,8 @@ jobs:
       # Production migrates here, after the approval (brief production-migrates-in-deploy). Which migrations are waiting is asked of the database
       # itself with the read-only login (MIGRATIONS_CHECK_URL, the same login the parity report uses). If any: a migration that drops, renames,
       # truncates or deletes is refused (scripts/migration-guard.mjs: apply it by hand with scripts/prod-db.sh migrate --apply, runbook section 8),
-      # the owner login is checked to be the same database, the backup job runs and must succeed, the migrations are applied, and the run checks
-      # none is left. Only then is the revision built and deployed. With nothing waiting these steps do nothing.
+      # the backup job runs and must succeed, the migrations are handed to the migrate job, which applies them with the owner login kept in
+      # Secret Manager (after its own checks), and the run checks none is left. Only then is the revision built and deployed. With nothing waiting these steps do nothing.
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -227,20 +227,21 @@ jobs:
           fi
           echo "::error title=Could not check the waiting migrations::The destructive-migration check could not read them, so nothing was applied. Output: $out"
           exit 1
-      - name: Check the owner login is production's database
-        if: steps.waiting.outputs.any == 'true'
-        env:
-          OWNER_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-          READER_URL: ${{ secrets.MIGRATIONS_CHECK_URL }}
-        run: node scripts/same-database.mjs
       - name: Back up production first
         if: steps.waiting.outputs.any == 'true'
         run: gcloud run jobs execute iron-log-backup --project "$PROJECT_ID" --region "$REGION" --wait
+      # The owner login never reaches GitHub: the migrate job (scripts/migrate-run.mjs, brief production-migrate-job) holds it in Secret Manager. This job
+      # copies the commit's migration files to the job's private bucket and starts it, without overrides. The job checks it is talking to
+      # production, re-checks the files for a destructive migration, applies them and checks none is left.
+      - name: Hand the migrations to the job
+        if: steps.waiting.outputs.any == 'true'
+        run: |
+          bucket="gs://${PROJECT_ID}-iron-log-migrations/current"
+          gcloud storage rsync db/migrations "$bucket" --recursive --delete-unmatched-destination-objects
+          git rev-parse HEAD | gcloud storage cp - "$bucket/COMMIT"
       - name: Apply the migrations to production
         if: steps.waiting.outputs.any == 'true'
-        env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-        run: npx dbmate --no-dump-schema --migrations-dir db/migrations up
+        run: gcloud run jobs execute iron-log-migrate --project "$PROJECT_ID" --region "$REGION" --wait
       - name: Check production has none left
         if: steps.waiting.outputs.any == 'true'
         env:
