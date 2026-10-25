@@ -1,0 +1,26 @@
+@layer base, components;
+@layer components {
+/* Help and the colours button (ThemeButton.tsx) sit together at the right of the header. The group takes the place Help had in the header's
+   row and grid, so the phone layout still has the same three columns. */
+.topact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--sp-4);
+  margin-left: auto;
+  min-width: 0;
+}
+.topact + .tabs {
+  margin-left: 0;
+}
+.themebtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: var(--sp-8);
+  font-size: var(--fs-2xl);
+}
+}

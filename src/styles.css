@@ -1550,7 +1550,7 @@ body.timing {
   }
   header.top {
     display: grid;
-    grid-template-columns: auto minmax(0,1fr) auto;
+    grid-template-columns: auto minmax(0,1fr) minmax(0,auto);
     align-items: center;
     padding-block: var(--sp-12) var(--sp-6);
     gap: var(--sp-4) var(--sp-8);
@@ -1854,13 +1854,7 @@ html:has(body.timing) {
   }
 }
 
-/* ---- Help, appearance ---- */
-.helpbtn {
-  margin-left: auto;
-}
-.helpbtn + .tabs {
-  margin-left: 0;
-}
+/* ---- Help, appearance (the Help and colours group is .topact, in ThemeButton.css) ---- */
 fieldset.plain {
   border: 0;
   margin: 0;
