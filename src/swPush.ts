@@ -12,7 +12,7 @@ export interface PushMessage {
 export const TAGS: Record<PushKind, string> = { rest: 'rest-timer', 'day-nudge': 'day-nudge', water: 'water-reminder' };
 // A tap opens on the board, except a water reminder, which opens Daily where the water log is.
 const OPEN: Record<PushKind, string> = { rest: 'board', 'day-nudge': 'board', water: 'daily' };
-const FALLBACK = 'Open Iron Log.';
+const FALLBACK = 'Open Loadbearer.';
 // Its own tag: a message this worker cannot read (a kind a newer server added) must not replace, or close, a real rest or nudge notice.
 const FALLBACK_TAG = 'iron-log';
 const CLOSE_AFTER_MS = 3000;
@@ -54,7 +54,7 @@ export async function onPush(scope: PushScope, text: string | null | undefined, 
   const message = parsePushMessage(text);
   const tag = message ? TAGS[message.kind] : FALLBACK_TAG;
   const visible = (await scope.clients.matchAll({ type: 'window', includeUncontrolled: true })).some(c => c.visibilityState === 'visible');
-  await scope.registration.showNotification('Iron Log', {
+  await scope.registration.showNotification('Loadbearer', {
     body: message?.body ?? FALLBACK,
     tag,
     renotify: true,

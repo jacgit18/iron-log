@@ -62,8 +62,8 @@ export default function HelpSheet() {
           <li><b>Train.</b> Tick an exercise when you have done it (on a phone, swipe it right; left skips it). Press <b>Log</b> to record the weight and reps of each set, or <b>Same as last</b> to repeat your last session.</li>
           <li><b>Watch the targets.</b> The weight on each card is a suggestion. It goes up when you complete all your sets two sessions in a row, and Progress shows how each lift is going.</li>
           <li><b>Try something new.</b> Saw an exercise on Instagram, TikTok or YouTube? Under the board, <b>+ Add experiment</b>, type its name and paste the post into <b>Video link</b>. Pick a day and <b>This week only</b> to try it; <b>To program</b> keeps it for good.</li>
-          <li><b>Install it.</b> Settings, App on this device: add Iron Log to your home screen so it opens like an app and works without a connection at the gym.</li>
-          <li><b>Something wrong or missing?</b> Settings, Send feedback: <b>Copy problem details</b> and <b>Open feedback form</b>. Iron Log is still early, so every report helps.</li>
+          <li><b>Install it.</b> Settings, App on this device: add Loadbearer to your home screen so it opens like an app and works without a connection at the gym.</li>
+          <li><b>Something wrong or missing?</b> Settings, Send feedback: <b>Copy problem details</b> and <b>Open feedback form</b>. Loadbearer is still early, so every report helps.</li>
         </ol>
       </section>
       <section aria-labelledby="help-how">

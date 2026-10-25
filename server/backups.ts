@@ -37,13 +37,13 @@ export const dayIsNear = (day: string, now: number): boolean => Math.abs(Date.pa
 /** Replace a stored copy only with one that holds at least half as much, so a wipe or a failed load cannot overwrite a good copy. */
 export const shouldReplace = (stored: number | null, next: number): boolean => stored == null || stored < SHRINK_FLOOR || next >= stored * SHRINK_RATIO;
 
-/** A data file the server will keep: gzip (or plain) JSON that is an Iron Log export. Returns the gzipped bytes to store, or why not. */
+/** A data file the server will keep: gzip (or plain) JSON that is a Loadbearer export. Returns the gzipped bytes to store, or why not. */
 export function prepareFile(raw: Buffer, encoding: string): { ok: true; zipped: Buffer } | { ok: false; error: string } {
   let text: Buffer;
   try { text = encoding === 'gzip' ? gunzipSync(raw, { maxOutputLength: MAX_UNZIPPED }) : raw; } catch { return { ok: false, error: 'the body is not a gzip file' }; }
   try {
     const file: unknown = JSON.parse(text.toString('utf8'));
-    if (!file || typeof file !== 'object' || Array.isArray(file) || (file as { app?: unknown }).app !== 'iron-log') return { ok: false, error: 'the body is not an Iron Log data file' };
+    if (!file || typeof file !== 'object' || Array.isArray(file) || (file as { app?: unknown }).app !== 'iron-log') return { ok: false, error: 'the body is not a Loadbearer data file' };
   } catch { return { ok: false, error: 'the body is not valid JSON' }; }
   const zipped = encoding === 'gzip' ? raw : gzipSync(text);
   return zipped.length > MAX_BYTES ? { ok: false, error: 'the backup is too large' } : { ok: true, zipped };

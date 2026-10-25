@@ -254,7 +254,7 @@ test.describe('the Sync panel', () => {
       const [download] = await Promise.all([page.waitForEvent('download'), first.getByRole('button', { name: /^Download/ }).click()]);
       expect(download.suggestedFilename()).toMatch(/^iron-log-not-sent-\d{4}-\d{2}-\d{2}\.json$/);
       const file = JSON.parse(await (await import('node:fs/promises')).readFile(await download.path(), 'utf8'));
-      expect(file).toMatchObject({ app: 'Iron Log', kind: 'changes the server would not take' });
+      expect(file).toMatchObject({ app: 'Loadbearer', kind: 'changes the server would not take' });
       expect(file.items).toHaveLength(1);
       expect(file.items[0]).toMatchObject({ reason: 'The server would not take this (invalid-input).' });
       expect(file.items[0].document).toBeTruthy();
@@ -575,7 +575,7 @@ test.describe('uploading from an export file', () => {
   test('shows what the file holds before anything is sent, then uploads it in one request', async ({ page }) => {
     let body;
     await open(page, route => { body = route.request().postDataJSON(); return json(201, { imported: { 'log-session': 2, 'log-body-weight': 1, 'save-config': 1 }, total: 4 })(route); });
-    await page.locator('input[aria-label="Iron Log export file"]').setInputFiles(file());
+    await page.locator('input[aria-label="Loadbearer export file"]').setInputFiles(file());
     const summary = panel(page).getByRole('status').filter({ hasText: 'iron-log-data-2026-10-07.json' });
     await expect(summary).toContainText('2 logged sessions, 1 body weight');
     await expect(summary).toContainText('exported 2026-10-07');
@@ -591,19 +591,19 @@ test.describe('uploading from an export file', () => {
   test('Cancel sends nothing', async ({ page }) => {
     let sent = 0;
     await open(page, route => { sent++; return json(201, { imported: {}, total: 0 })(route); });
-    await page.locator('input[aria-label="Iron Log export file"]').setInputFiles(file());
+    await page.locator('input[aria-label="Loadbearer export file"]').setInputFiles(file());
     await panel(page).getByRole('button', { name: 'Cancel' }).click();
     await expect(panel(page).getByRole('button', { name: 'Upload to my account' })).toHaveCount(0);
     expect(sent).toBe(0);
   });
 
-  test('a file that is not an Iron Log export, is empty, or is too new says so', async ({ page }) => {
+  test('a file that is not a Loadbearer export, is empty, or is too new says so', async ({ page }) => {
     await open(page, json(201, {}));
-    const input = page.locator('input[aria-label="Iron Log export file"]');
+    const input = page.locator('input[aria-label="Loadbearer export file"]');
     await input.setInputFiles(file('not json at all'));
     await expect(panel(page).getByRole('alert')).toContainText('isn’t valid JSON');
     await input.setInputFiles(file({ hello: 1 }));
-    await expect(panel(page).getByRole('alert')).toContainText('isn’t an Iron Log data file');
+    await expect(panel(page).getByRole('alert')).toContainText('isn’t a Loadbearer data file');
     await input.setInputFiles(file({ ...exportFile, format: 99 }));
     await expect(panel(page).getByRole('alert')).toContainText('newer version');
     await input.setInputFiles(file({ app: 'iron-log', format: 1, config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: [] }));
@@ -612,7 +612,7 @@ test.describe('uploading from an export file', () => {
 
   test('when the server refuses, says where and that nothing was uploaded, and keeps the file chosen', async ({ page }) => {
     await open(page, json(422, { refused: 'invalid-input', at: 0, command: 'log-session' }));
-    await page.locator('input[aria-label="Iron Log export file"]').setInputFiles(file());
+    await page.locator('input[aria-label="Loadbearer export file"]').setInputFiles(file());
     await panel(page).getByRole('button', { name: 'Upload to my account' }).click();
     await expect(panel(page).getByRole('alert')).toContainText('The server would not take row 1 (log-session): invalid-input. Nothing was uploaded.');
     await expect(panel(page).getByRole('button', { name: 'Upload to my account' })).toBeEnabled();

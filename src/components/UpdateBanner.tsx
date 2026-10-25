@@ -69,7 +69,7 @@ export default function UpdateBanner() {
   if (tooOld) {
     return (
       <div className="notice movewarn" role="alert">
-        <span><b>Update needed.</b> This version of Iron Log is too old to sync. Your changes are kept on this device and will be sent once you update.{timing ? ' Reloading stops the running timer.' : ''}</span>
+        <span><b>Update needed.</b> This version of Loadbearer is too old to sync. Your changes are kept on this device and will be sent once you update.{timing ? ' Reloading stops the running timer.' : ''}</span>
         <span className="actions">
           <button type="button" className="btn sm primary" onClick={() => (needRefresh ? updateServiceWorker(true) : window.location.reload())}>Reload to update</button>
         </span>
@@ -79,7 +79,7 @@ export default function UpdateBanner() {
   if (!needRefresh) return null;
   return (
     <div className="notice tip updatebar" role="status">
-      <span>A new version of Iron Log is ready; it installs by itself when you're not in the middle of something.{timing ? ' Reloading stops the running timer.' : ''}</span>
+      <span>A new version of Loadbearer is ready; it installs by itself when you're not in the middle of something.{timing ? ' Reloading stops the running timer.' : ''}</span>
       <span className="actions">
         <button type="button" className="btn sm primary" onClick={() => updateServiceWorker(true)}>Reload now</button>
         <button type="button" className="btn sm ghost" onClick={() => setNeedRefresh(false)}>Later</button>

@@ -5,12 +5,12 @@
 export const IMPORT_ACCEPT = '.json,application/json,.csv,text/csv,application/vnd.ms-excel,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 export const JSON_ACCEPT = '.json,application/json';
 
-// A real export is well under 2 MB. Past this the file is not an Iron Log export, and reading it into memory on a phone could hang the tab.
+// A real export is well under 2 MB. Past this the file is not a Loadbearer export, and reading it into memory on a phone could hang the tab.
 export const MAX_IMPORT_BYTES = 25 * 1024 * 1024;
 
 /** A message when the file should not be read at all, else ''. */
 export function importFileProblem(file: { name: string; size: number }): string {
-  if (file.size > MAX_IMPORT_BYTES) return `That file is too big (${(file.size / 1048576).toFixed(0)} MB). An Iron Log export is a few MB at most.`;
+  if (file.size > MAX_IMPORT_BYTES) return `That file is too big (${(file.size / 1048576).toFixed(0)} MB). A Loadbearer export is a few MB at most.`;
   if (file.size === 0) return 'That file is empty.';
   return '';
 }

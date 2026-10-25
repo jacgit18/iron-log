@@ -1,4 +1,4 @@
-/* ---------- Recover data from an Iron Log Excel export (iron-log-YYYY-MM-DD.xlsx) ----------
+/* ---------- Recover data from a Loadbearer Excel export (iron-log-YYYY-MM-DD.xlsx) ----------
    The workbook is a report, not a backup: it has every logged session, body weight and the main
    settings, but not weekly check-offs, edited programs, saved versions or phase defaults. This turns
    what it does have into the same shape as a parsed JSON data file, so the normal merge can add it. */
@@ -112,7 +112,7 @@ export async function parseExcelExport(buffer: ArrayBuffer, cfg: Cfg): Promise<E
   const sessions = rows('Sessions');
   if (!sessions || String(sessions[0]?.[2]) !== 'Exercise' || String(sessions[0]?.[0]) !== 'Date') {
     if (rows('Plan')) throw new Error('That’s a single-week Excel file. Import the main iron-log workbook, or better, the iron-log-data .json file.');
-    throw new Error('That isn’t an Iron Log Excel export.');
+    throw new Error('That isn’t a Loadbearer Excel export.');
   }
 
   const { logs, newEx, muscleMap, skipped, idFor } = readSessions(X, sessions, cfg);
@@ -246,7 +246,7 @@ export async function parseCsvExport(text: string, cfg: Cfg): Promise<ExcelImpor
   const X = await loadXLSX();
   const r = csvRows(text.replace(/^\uFEFF/, ''));
   const head = (r[0] || []).map(v => v.trim().toLowerCase());
-  if (head[0] !== 'date' || head[1] !== 'exercise') throw new Error('That isn’t an Iron Log CSV export.');
+  if (head[0] !== 'date' || head[1] !== 'exercise') throw new Error('That isn’t a Loadbearer CSV export.');
   const at = (n: string) => head.indexOf(n);
   const sessions = [[], ...r.slice(1).map(c => {
     const g = (n: string) => (at(n) >= 0 ? (c[at(n)] ?? '').replace(/^'(?='*[=+\-@\t\r])/, '') : ''); // undo the formula guard added by buildCsv

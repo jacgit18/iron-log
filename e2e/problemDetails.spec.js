@@ -8,7 +8,7 @@ test('Copy problem details copies the build and sync state, and none of the logg
   await page.getByRole('button', { name: 'Copy problem details' }).click();
   await expect(page.getByText('Details copied. Paste them into the form.')).toBeVisible();
   const text = await page.evaluate(() => navigator.clipboard.readText());
-  expect(text).toContain('Iron Log problem details');
+  expect(text).toContain('Loadbearer problem details');
   expect(text).toContain('App build:');
   expect(text).toContain('Sync: off (this device only)');
   expect(text).toContain('Network: online');
@@ -19,5 +19,5 @@ test('when the clipboard is refused the details are shown to copy by hand', asyn
   await page.goto('/');
   await page.locator('#tab-settings, #account-badge').first().click();
   await page.getByRole('button', { name: 'Copy problem details' }).click();
-  await expect(page.getByLabel('Select all and copy')).toHaveValue(/Iron Log problem details/);
+  await expect(page.getByLabel('Select all and copy')).toHaveValue(/Loadbearer problem details/);
 });

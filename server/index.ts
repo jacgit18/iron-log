@@ -69,7 +69,7 @@ if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 
 const trustProxy = process.env.TRUST_PROXY !== undefined ? (process.env.TRUST_PROXY === 'false' ? false : Number(process.env.TRUST_PROXY)) : process.env.K_SERVICE ? 1 : undefined;
 if (typeof trustProxy === 'number' && !Number.isInteger(trustProxy)) throw new Error('TRUST_PROXY must be a whole number of proxies, or false');
 
-const server = createApp({ db, staticDir, minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], trustProxy, push, billing }).listen(port, () => {
+const server = createApp({ db, staticDir, minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], canonicalOrigin: setup.enabled ? setup.config.baseURL : undefined, trustProxy, push, billing }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 

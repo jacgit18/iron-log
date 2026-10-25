@@ -1,7 +1,7 @@
 import { defineConfig } from "@neon/config/v1";
 
 export default defineConfig({
-  // Iron Log uses Neon for Postgres only; the API is its own Express server.
+  // Loadbearer uses Neon for Postgres only; the API is its own Express server.
   auth: false,
   dataApi: false,
   aiGateway: false,

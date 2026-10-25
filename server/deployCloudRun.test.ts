@@ -135,6 +135,99 @@ exit 0
     expect(lines[lines.length - 1]).toContain('--to-latest');
   });
 
+  // BASE_URL is the address people sign in on. It is the Cloud Run address unless PUBLIC_BASE_URL names a custom domain (ADR 073), and it is
+  // applied on every deploy, so a later deploy cannot quietly put the Cloud Run address back.
+  describe('the address people sign in on (PUBLIC_BASE_URL)', () => {
+    const deployLine = () => recorded().find(l => l.includes('run deploy'))!;
+
+    it('is the Cloud Run address when PUBLIC_BASE_URL is not set', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'])).status).toBe(0);
+      expect(deployLine()).toContain('BASE_URL=https://iron-log-123456.us-central1.run.app,');
+    });
+
+    it('is the custom domain on a deploy when PUBLIC_BASE_URL is set, and on the candidate too', async () => {
+      for (const cmd of ['candidate', 'deploy']) {
+        writeFileSync(calls, '');
+        expect((await run([cmd], { PUBLIC_BASE_URL: 'https://loadbearer.app' })).status).toBe(0);
+        expect(deployLine()).toContain('BASE_URL=https://loadbearer.app,');
+        expect(deployLine()).not.toContain('BASE_URL=https://iron-log-123456');
+      }
+    });
+
+    it('`url` prints it, for the Google console redirect URI', async () => {
+      expect((await run(['url'], { PUBLIC_BASE_URL: 'https://loadbearer.app' })).stdout.trim()).toBe('https://loadbearer.app');
+      expect((await run(['url'])).stdout.trim()).toBe('https://iron-log-123456.us-central1.run.app');
+    });
+
+    it('says so when a production deploy leaves PUBLIC_BASE_URL out, because that resets a custom domain', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate']);
+      expect(out.status).toBe(0);
+      expect(out.stderr).toContain('PUBLIC_BASE_URL is not set');
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { PUBLIC_BASE_URL: 'https://loadbearer.app' })).stderr).not.toContain('PUBLIC_BASE_URL is not set');
+    });
+
+    it.each(['https://localhost', 'https://a-b.example.app', 'https://a1.example.app:65535', 'https://example.app:1'])('accepts %s', async good => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { PUBLIC_BASE_URL: good })).status).toBe(0);
+      expect(deployLine()).toContain(`BASE_URL=${good},`);
+    });
+
+    it('accepts a port', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { PUBLIC_BASE_URL: 'https://loadbearer.app:8443' })).status).toBe(0);
+      expect(deployLine()).toContain('BASE_URL=https://loadbearer.app:8443,');
+    });
+
+    it.each(['staging', 'qa'])('is refused for %s, so a value left in the shell cannot point it at production', async IRON_LOG_ENV => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { IRON_LOG_ENV, PUBLIC_BASE_URL: 'https://loadbearer.app' });
+      expect(out.status).not.toBe(0);
+      expect(out.stderr).toContain('PUBLIC_BASE_URL is for production only');
+      expect(recorded().some(l => l.includes('builds submit') || l.includes('run deploy'))).toBe(false);
+      expect((await run(['url'], { IRON_LOG_ENV, PUBLIC_BASE_URL: 'https://loadbearer.app' })).status).not.toBe(0);
+    });
+
+    // The workflow is what puts the value there, so the wiring is pinned: only the production job, and only the repository variable.
+    it('the workflow passes the variable in the production job only', () => {
+      const yml = readFileSync(resolve('.github/workflows/deploy-cloud-run.yml'), 'utf8');
+      // One job's text, from its heading to the next job's. A job that is renamed or gone fails here instead of leaving an empty string that every `not.toContain` passes.
+      const job = (name: string) => {
+        const start = yml.indexOf(`\n  ${name}:`);
+        expect(start, `job ${name} not found`).toBeGreaterThan(-1);
+        const rest = yml.slice(start + 1);
+        const next = rest.slice(1).search(/\n  [A-Za-z_-]+:[ \t]*\n/);
+        return next === -1 ? rest : rest.slice(0, next + 1);
+      };
+      const staging = job('staging');
+      const production = job('deploy');
+      expect(staging.length).toBeGreaterThan(200);
+      expect(production.length).toBeGreaterThan(200);
+      expect(yml.match(/^\s+PUBLIC_BASE_URL:/gm)).toHaveLength(1); // set once, as a key; a comment that names it does not count
+      expect(production).toContain('PUBLIC_BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}');
+      expect(staging).not.toContain('PUBLIC_BASE_URL');
+      // A failing script must fail the step, not be hidden by the pipe into tee.
+      expect(production).toMatch(/set -o pipefail[^\n]*\n\s+scripts\/deploy-cloud-run\.sh candidate \| tee/);
+    });
+
+    it.each([
+      'http://loadbearer.app', 'loadbearer.app', 'https://loadbearer.app/', 'https://loadbearer.app/path', 'https://load bearer.app', 'https://',
+      'https://loadbearer.app?x=1', 'https://loadbearer.app#top', 'https://user@loadbearer.app', 'https://loadbearer.app\n', 'https://loadbearer.app\t',
+      'https://loadbearer..app', 'https://-a.app', 'https://a-.app', 'https://.', 'https://loadbearer.app.', 'https://loadbearer.app:99999', 'https://loadbearer.app:0', 'https://loadbearer.app:',
+    ])(
+      'refuses %s before building or deploying anything',
+      async bad => {
+        writeFileSync(calls, '');
+        const out = await run(['candidate'], { PUBLIC_BASE_URL: bad });
+        expect(out.status).not.toBe(0);
+        expect(out.stderr).toContain('PUBLIC_BASE_URL must');
+        expect(recorded().some(l => l.includes('builds submit') || l.includes('run deploy'))).toBe(false);
+      },
+    );
+  });
+
   // The key that seals names and emails (ADR 046) is made once by `secrets`, is never replaced, and must ride along on every deploy once it exists.
   describe('the database encryption key (ADR 046)', () => {
     const secretsOf = (cmd: string) => /--set-secrets (\S+)/.exec(recorded().find(l => l.includes(cmd))!)![1]!.split(',');

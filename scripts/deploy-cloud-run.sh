@@ -8,7 +8,7 @@
 #             With VAPID_SUBJECT exported (mailto:you@example.com) it also stores the Web Push keys, making the pair once; see push-setup (ADR 044)
 #   stripe    put only the four Stripe billing settings in Secret Manager (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY; ADR 065)
 #   push-setup  make the Cloud Tasks queue, the invoker account and the permissions for Web Push (once; needs the cloudtasks API)
-#   url       print the address the service will have, for the Google console's redirect URI (needs no deploy)
+#   url       print the address people sign in on (the Cloud Run address, or PUBLIC_BASE_URL), for the Google console's redirect URI (needs no deploy)
 #             The key that seals names and emails in the database (PII_ENCRYPTION_KEY, ADR 046) is made here once (only with PII_KEY_CREATE=1) and never replaced: a
 #             new one could not read what the old one sealed. Back it up (see deploy-runbook.md) before the first deploy that uses it.
 #   (RESEND_OFF=1 on candidate or deploy turns the email sign-in code off: the key is left out and the service stops mapping it;
@@ -27,6 +27,12 @@
 # IRON_LOG_ENV=qa (ADR 060) is the same for the QA service: iron-log-qa, runtime account iron-log-qa-run, secrets iron-log-qa-*. Its
 # database holds no real users' data, so it has its own encryption key (iron-log-qa-pii-key, made by `secrets`) and shares nothing with
 # production or staging; email and Web Push are always off.
+#
+# PUBLIC_BASE_URL (optional, an https origin with no path, for example https://example.app) is the address people sign in on: it becomes the
+# service's BASE_URL on every deploy. Without it BASE_URL is the Cloud Run address, as before. Set it once a custom domain is mapped to the
+# service and its address is in the Google client's redirect URIs. Production only: the script refuses it for staging and QA.
+# Checks of a new revision still use the Cloud Run address, which keeps answering, but only for reads: sign-in and writes work only on BASE_URL
+# (the origin guard and Better Auth trust that origin alone). Web Push tasks also go to BASE_URL, so map the domain before setting this.
 #
 # CLOUDBUILD_CONFIG (default cloudbuild.yaml in the current folder) names the build file; the QA workflow points it at main's copy so a branch's
 # own build file cannot push images into the registry that production and staging reuse by commit tag (ADR 060).
@@ -67,6 +73,19 @@ gc() { gcloud --project "$PROJECT_ID" "$@"; }
 project_number() { gc projects describe "$PROJECT_ID" --format='value(projectNumber)'; }
 # Cloud Run's address is deterministic: service, project number, region.
 service_url() { echo "https://${SERVICE}-$(project_number).${REGION}.run.app"; }
+# The address people sign in on (BASE_URL): the Cloud Run address (the first argument, or looked up when there is none) unless PUBLIC_BASE_URL
+# names a custom domain. PUBLIC_BASE_URL is for production only (staging and QA keep their own addresses, so a value left in the shell cannot
+# point them at production's domain) and must be a bare https origin: a path, query, fragment, user name, space or newline would make every
+# sign-in redirect and origin check disagree with it.
+public_base_url() {
+  local u="${PUBLIC_BASE_URL:-}"
+  if [ -z "$u" ]; then echo "${1:-$(service_url)}"; return; fi
+  if [ "$IRON_LOG_ENV" != production ]; then echo "PUBLIC_BASE_URL is for production only; ${IRON_LOG_ENV} keeps its own Cloud Run address. Unset it for this run." >&2; return 1; fi
+  # https://, then dot-separated host parts of letters, digits and inner hyphens (no empty part, none starting or ending with a hyphen), then an optional port from 1 to 65535.
+  local re='^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*(:([0-9]{1,5}))?$'
+  if ! [[ "$u" =~ $re ]] || { [ -n "${BASH_REMATCH[5]}" ] && { [ "${BASH_REMATCH[5]}" -lt 1 ] || [ "${BASH_REMATCH[5]}" -gt 65535 ]; }; }; then echo "PUBLIC_BASE_URL must be an https origin: https://host or https://host:port (port 1 to 65535), a valid host name, with no path, query, fragment, user name or space (got '$u')." >&2; return 1; fi
+  echo "$u"
+}
 
 secret_exists() { gc secrets describe "$1" >/dev/null 2>&1; }
 put_secret() { # name, value (from stdin). Adds a version only when the value changed.
@@ -273,7 +292,7 @@ cmd_secrets() {
 CANDIDATE_TAG="${CANDIDATE_TAG:-candidate}"
 # 0 lets the service scale to zero (free when idle, a cold start on the first request). MIN_INSTANCES=1 keeps one warm, for a small monthly cost.
 
-# Builds the image from the current commit; sets $image, $version, $url and $commit for the caller.
+# Builds the image from the current commit; sets $image, $version, $url (the Cloud Run address), $base_url (BASE_URL) and $commit for the caller.
 build_image() {
   local tag
   version="$(git log -1 --format=%ct)"
@@ -282,6 +301,9 @@ build_image() {
   if [ -n "$(git status --porcelain)" ]; then echo "The working tree has uncommitted changes; the image is built from the files on disk, not the commit. Commit or stash first." >&2; exit 1; fi
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/app:${tag}"
   url="$(service_url)"
+  base_url="$(public_base_url "$url")" || exit 1
+  # Every deploy writes BASE_URL, so one that leaves PUBLIC_BASE_URL out puts a custom domain back to the Cloud Run address: say so (stderr), loudly enough to see in a log.
+  if [ -z "${PUBLIC_BASE_URL:-}" ] && [ "$IRON_LOG_ENV" = production ]; then echo "Note: PUBLIC_BASE_URL is not set, so BASE_URL becomes the Cloud Run address ($base_url). If production signs in on a custom domain, set PUBLIC_BASE_URL (runbook section 27) or sign-in breaks until a deploy that sets it." >&2; fi
   # The same commit is one image for both environments (it holds no environment-specific value, ADR 058): when staging has already built it,
   # production deploys that exact image. FORCE_BUILD=1 builds it again.
   if [ "${FORCE_BUILD:-}" != 1 ]; then
@@ -339,7 +361,7 @@ deploy_image() {
     if [ "${PUSH_OFF:-}" = 1 ]; then push_remove=(--remove-env-vars PUSH_QUEUE,PUSH_INVOKER_EMAIL); fi
     echo "Web Push: no VAPID keys, so push stays off${PUSH_OFF:+ (PUSH_OFF=1: any settings are removed)}."
   fi
-  local env_vars="NODE_ENV=production,BASE_URL=${url},COMMIT_SHA=${commit}"
+  local env_vars="NODE_ENV=production,BASE_URL=${base_url},COMMIT_SHA=${commit}"
   for kv in ${push_env[@]+"${push_env[@]}"} ${billing_env[@]+"${billing_env[@]}"}; do env_vars+=",${kv}"; done
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
@@ -351,9 +373,10 @@ deploy_image() {
 }
 
 cmd_deploy() {
-  local image version url commit
+  local image version url base_url commit
   build_image
   echo "Deploying to $url ..."
+  if [ "$base_url" != "$url" ]; then echo "Sign-in address (BASE_URL): $base_url"; fi
   deploy_image
   # A rollback pins traffic to one older revision; without this a later deploy would be ready but get no traffic.
   gc run services update-traffic "$SERVICE" --region "$REGION" --to-latest
@@ -369,7 +392,7 @@ candidate_url() {
 }
 
 cmd_candidate() {
-  local image version url commit cand
+  local image version url base_url commit cand
   build_image
   echo "Deploying $image as '$CANDIDATE_TAG' with no traffic ..."
   deploy_image --no-traffic --tag "$CANDIDATE_TAG"
@@ -399,7 +422,7 @@ case "${1:-}" in
   secrets) cmd_secrets;;
   stripe) cmd_stripe;;
   push-setup) cmd_push_setup;;
-  url) service_url;;
+  url) public_base_url;;
   deploy) cmd_deploy;;
   candidate) cmd_candidate;;
   promote) cmd_promote;;

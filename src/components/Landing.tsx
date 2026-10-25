@@ -33,7 +33,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
     <main className="landing" aria-labelledby="landing-h">
       <header className="landing-head">
         <img src="/logo.svg" alt="" width="40" height="40" />
-        <span className="landing-brand">Iron Log</span>
+        <span className="landing-brand">Loadbearer</span>
       </header>
 
       <section className="landing-hero">
@@ -88,7 +88,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
       </section>
 
       <footer className="landing-foot">
-        <p>Iron Log is a record-keeping tool, not medical advice. It uses no advertising and no tracking, and it never sells your data.</p>
+        <p>Loadbearer is a record-keeping tool, not medical advice. It uses no advertising and no tracking, and it never sells your data.</p>
       </footer>
     </main>
   );

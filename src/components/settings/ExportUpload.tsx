@@ -6,7 +6,7 @@ import { importFailure } from '../../sync/labels.js';
 import { JSON_ACCEPT, importFileProblem, readFailure } from '../../lib/importFile.js';
 import { flag, getSyncApi, useAppStore } from '../../store/useAppStore.js';
 
-// Phase E, from a file: the same all-or-nothing upload as the card, but the data comes from an Iron Log export instead of this
+// Phase E, from a file: the same all-or-nothing upload as the card, but the data comes from a Loadbearer export instead of this
 // browser's own storage. This is the way from the old address (the GitHub Pages copy) to a new one, whose browser holds nothing.
 export default function ExportUpload() {
   const sync = useAppStore(s => s.sync);
@@ -54,8 +54,8 @@ export default function ExportUpload() {
         ? <p className="note">Your account already has data, so a file cannot be uploaded this way. Use Import from file in Backups &amp; data to merge a file into it.</p>
         : (
           <>
-            <p>Moving from another copy of Iron Log? Choose its export file (Settings → Backups &amp; data → Export all data there). It is added to your account once, all or nothing, and only while the account is empty. Do this before logging anything here.</p>
-            <input ref={input} type="file" accept={JSON_ACCEPT} hidden aria-label="Iron Log export file" onChange={e => { void choose(e.target.files?.[0]); e.target.value = ''; }} />
+            <p>Moving from another copy of Loadbearer? Choose its export file (Settings → Backups &amp; data → Export all data there). It is added to your account once, all or nothing, and only while the account is empty. Do this before logging anything here.</p>
+            <input ref={input} type="file" accept={JSON_ACCEPT} hidden aria-label="Loadbearer export file" onChange={e => { void choose(e.target.files?.[0]); e.target.value = ''; }} />
             <div className="actions">
               <button type="button" className="btn" disabled={busy} onClick={() => input.current?.click()}>Choose export file…</button>
             </div>
