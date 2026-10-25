@@ -5,6 +5,10 @@
     { "key": "admin", "label": "**Admin only**", "files": ["server/admin.ts"], "diffFile": "src/features.ts", "diffPattern": "^\\+ {2}[A-Za-z_$][\\w$]*: 'admin',?(\\s*//.*)?$", "reason": "an admin-only entry in src/features.ts, or server/admin.ts, changed" }
   ],
   "ui": ["^src/(components|hooks|assets)/", "\\.(css|tsx|svg|png|webp|woff2?)$", "^index\\.html$", "^vite\\.config\\.", "^public/", "^src/(fonts|sw|features)\\.ts$"],
+  "autoTickFromCheck": [
+    { "line": "npm run typecheck && npm test", "needs": ["typecheck", "test", "lint", "build|e2e"] },
+    { "line": "npm run e2e`", "needs": ["e2e"] }
+  ],
   "autoTickWhenNoUi": "lighthouse\\.mjs",
   "everyoneReason": "user-visible files changed and no admin-only or paid entry was added (standing rule: ship to everyone for now)"
 }
