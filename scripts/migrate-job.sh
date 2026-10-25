@@ -49,8 +49,13 @@ cmd_setup() {
 cmd_deploy() {
   gc secrets describe "$OWNER_SECRET" >/dev/null 2>&1 || { echo "Missing secret $OWNER_SECRET." >&2; exit 1; }
   gc secrets describe "$READER_SECRET" >/dev/null 2>&1 || { echo "Missing secret $READER_SECRET." >&2; exit 1; }
-  if [ -n "$(git status --porcelain migrate cloudbuild-migrate.yaml scripts/migration-guard.mjs scripts/same-database.mjs scripts/lib/db-script.mjs scripts/lib/migration-state.mjs package.json package-lock.json)" ]; then
-    echo "The migrate job's files have uncommitted changes. Commit first." >&2; exit 1
+  # The image is built from this checkout and runs with the production owner login, so it is built only from merged code: on main, matching
+  # origin/main, for every file the image contains (the Dockerfile's COPY lines and its lockfile inputs).
+  local files=(migrate cloudbuild-migrate.yaml scripts/migrate-run.mjs scripts/migration-guard.mjs scripts/same-database.mjs scripts/lib/db-script.mjs scripts/lib/migration-state.mjs package.json package-lock.json)
+  [ "$(git branch --show-current)" = main ] || { echo "Build the migrate job from main: it runs with the production owner login, so only merged code may go into it." >&2; exit 1; }
+  git fetch -q origin main
+  if [ -n "$(git status --porcelain -- "${files[@]}")" ] || [ -n "$(git diff origin/main -- "${files[@]}")" ]; then
+    echo "The migrate job's files differ from origin/main (uncommitted or unmerged changes). Pull main first." >&2; exit 1
   fi
   local tag image; tag="$(git rev-parse --short HEAD)"
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/migrate:${tag}"

@@ -22,13 +22,12 @@ describe('decide', () => {
     expect(decide(files, new Set()).destructive).toEqual([{ file: '20261001000001_old.sql', why: ['drops a table'] }]);
     expect(decide(files, new Set(['20261001000001'])).destructive).toEqual([]); // already applied by hand
   });
-  it('finds no destructive migration among the real ones, except those that truly are', () => {
+  it('finds no destructive migration among the real ones (a new destructive migration, or a change in the guard, must show up here)', () => {
     const dir = 'db/migrations';
     const files = Object.fromEntries(readdirSync(dir).filter(f => f.endsWith('.sql')).map(f => [f, readFileSync(`${dir}/${f}`, 'utf8')]));
-    const flagged = decide(files, new Set()).destructive.map(d => d.file);
-    // The same guard the runner uses (scripts/migrationGuard.test.js lists what it knows is destructive); this pins that the job agrees.
-    expect(Array.isArray(flagged)).toBe(true);
-    expect(flagged.every(f => files[f] !== undefined)).toBe(true);
+    expect(Object.keys(files).length).toBeGreaterThan(20); // the folder was read
+    // The same guard the runner uses. If a migration is destructive on purpose, list it here with its reasons: it is applied by hand, never by the job.
+    expect(decide(files, new Set()).destructive).toEqual([]);
   });
 });
 
@@ -61,6 +60,16 @@ describe('the job image and the scripts around it', () => {
   it('copies every file the entry script imports into the image, and runs no install script', () => {
     for (const f of ['scripts/migrate-run.mjs', 'scripts/migration-guard.mjs', 'scripts/same-database.mjs', 'scripts/lib/db-script.mjs', 'scripts/lib/migration-state.mjs']) expect(docker, f).toContain(`COPY ${f} `);
     expect(docker.match(/npm ci [^\n]*/g)?.every(l => l.includes('--ignore-scripts'))).toBe(true);
+  });
+  it('migrate-job.sh deploy guards every file the image contains, and builds only from main', () => {
+    const sh = readFileSync('scripts/migrate-job.sh', 'utf8');
+    const guard = sh.match(/local files=\(([^)]*)\)/)?.[1].split(/\s+/) ?? [];
+    const copied = [...docker.matchAll(/^COPY (?!--from)(\S+) /gm)].map(m => m[1]).filter(f => f !== 'package.json');
+    expect(copied.length).toBeGreaterThan(4);
+    for (const f of copied) expect(guard, f).toContain(f);
+    for (const f of ['migrate', 'cloudbuild-migrate.yaml', 'package.json', 'package-lock.json']) expect(guard, f).toContain(f);
+    expect(sh).toMatch(/cmd_deploy\(\) \{[\s\S]*git branch --show-current\)" = main[\s\S]*gc builds submit/);
+    expect(sh).toContain('git diff origin/main -- "${files[@]}"');
   });
   it('migrate-job.sh gives the job exactly the two secrets and refuses to run from a branch other than main', () => {
     const sh = readFileSync('scripts/migrate-job.sh', 'utf8');
