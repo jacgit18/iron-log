@@ -718,7 +718,7 @@ test.describe('the legal pages', () => {
       await page.goto(`/${file}`);
       await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
       await expect(page.getByText('Joshua Carpentier').first()).toBeVisible();
-      await expect(page.getByRole('link', { name: 'joshuaxcarpentier@gmail.com' }).first()).toHaveAttribute('href', 'mailto:joshuaxcarpentier@gmail.com');
+      await expect(page.getByRole('link', { name: 'hello@loadbearer.app' }).first()).toHaveAttribute('href', 'mailto:hello@loadbearer.app');
       const { violations } = await scan(page);
       expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
     });
