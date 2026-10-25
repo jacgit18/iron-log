@@ -80,7 +80,9 @@ public_base_url() {
   local u="${PUBLIC_BASE_URL:-}"
   if [ -z "$u" ]; then echo "${1:-$(service_url)}"; return; fi
   if [ "$IRON_LOG_ENV" != production ]; then echo "PUBLIC_BASE_URL is for production only; ${IRON_LOG_ENV} keeps its own Cloud Run address. Unset it for this run." >&2; return 1; fi
-  if ! [[ "$u" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?$ ]]; then echo "PUBLIC_BASE_URL must be an https origin: https://host or https://host:port, with no path, query, fragment, user name or space (got '$u')." >&2; return 1; fi
+  # https://, then dot-separated host parts of letters, digits and inner hyphens (no empty part, none starting or ending with a hyphen), then an optional port from 1 to 65535.
+  local re='^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*(:([0-9]{1,5}))?$'
+  if ! [[ "$u" =~ $re ]] || { [ -n "${BASH_REMATCH[5]}" ] && { [ "${BASH_REMATCH[5]}" -lt 1 ] || [ "${BASH_REMATCH[5]}" -gt 65535 ]; }; }; then echo "PUBLIC_BASE_URL must be an https origin: https://host or https://host:port (port 1 to 65535), a valid host name, with no path, query, fragment, user name or space (got '$u')." >&2; return 1; fi
   echo "$u"
 }
 

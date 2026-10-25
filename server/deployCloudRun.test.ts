@@ -169,6 +169,12 @@ exit 0
       expect((await run(['candidate'], { PUBLIC_BASE_URL: 'https://loadbearer.app' })).stderr).not.toContain('PUBLIC_BASE_URL is not set');
     });
 
+    it.each(['https://localhost', 'https://a-b.example.app', 'https://a1.example.app:65535', 'https://example.app:1'])('accepts %s', async good => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { PUBLIC_BASE_URL: good })).status).toBe(0);
+      expect(deployLine()).toContain(`BASE_URL=${good},`);
+    });
+
     it('accepts a port', async () => {
       writeFileSync(calls, '');
       expect((await run(['candidate'], { PUBLIC_BASE_URL: 'https://loadbearer.app:8443' })).status).toBe(0);
@@ -209,6 +215,7 @@ exit 0
     it.each([
       'http://loadbearer.app', 'loadbearer.app', 'https://loadbearer.app/', 'https://loadbearer.app/path', 'https://load bearer.app', 'https://',
       'https://loadbearer.app?x=1', 'https://loadbearer.app#top', 'https://user@loadbearer.app', 'https://loadbearer.app\n', 'https://loadbearer.app\t',
+      'https://loadbearer..app', 'https://-a.app', 'https://a-.app', 'https://.', 'https://loadbearer.app.', 'https://loadbearer.app:99999', 'https://loadbearer.app:0', 'https://loadbearer.app:',
     ])(
       'refuses %s before building or deploying anything',
       async bad => {
