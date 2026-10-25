@@ -6,7 +6,6 @@ import IssuesPanel from './IssuesPanel.js';
 import BackupCopies from './BackupCopies.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
 import SyncPanel from './SyncPanel.js';
-import type { Appearance } from '../../lib/appearance.ts';
 import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -102,24 +101,13 @@ function ModePanel() {
   );
 }
 
-function AppearancePanel() {
-  const [a, setA] = useState(getAppearance);
-  const upd = (patch: Partial<Appearance>) => setA(setAppearance(patch));
+// The colours choice moved to the button beside Help at the top of every screen (ThemeButton.tsx); this keeps the text spacing option.
+function TextSpacingPanel() {
+  const [roomy, setRoomy] = useState(() => getAppearance().roomy);
   return (
     <section className="panel">
-      <h3>Appearance</h3>
-      <fieldset className="plain">
-        <legend>Colours</legend>
-        <div className="modes">
-          {[['system', 'Match this device', 'Light or dark, following your system setting.'], ['light', 'Light', 'Dark text on a light background.'], ['dark', 'Dark', 'Light text on a dark background.']].map(([k, t, d]) => (
-            <label className="mode" key={k}>
-              <input type="radio" name="theme" value={k} checked={a.theme === k} onChange={() => upd({ theme: k as Appearance['theme'] })} />
-              <div><b>{t}</b><span>{d}</span></div>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <label className="inline"><input type="checkbox" checked={a.roomy} onChange={e => upd({ roomy: e.target.checked })} /> Roomier text (more space between lines and paragraphs)</label>
+      <h3>Text spacing</h3>
+      <label className="inline"><input type="checkbox" checked={roomy} onChange={e => setRoomy(setAppearance({ roomy: e.target.checked }).roomy)} /> Roomier text (more space between lines and paragraphs)</label>
       <p>Saved on this device only.</p>
     </section>
   );
@@ -472,7 +460,7 @@ export default function Settings() {
       </Group>
       <Group id="app" title="App">
         <div className="scol">
-          <AppearancePanel />
+          <TextSpacingPanel />
           <RestAlertPanel />
           <PushPanel />
         </div>

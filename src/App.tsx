@@ -11,6 +11,7 @@ import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
 import useBadgeName from './hooks/useBadgeName.js';
 import ProgramSwitch from './components/board/ProgramSwitch.js';
+import ThemeButton from './components/ThemeButton.js';
 import UpdateBanner from './components/UpdateBanner.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
@@ -104,7 +105,10 @@ export default function App() {
         <header className="top">
           <h1>Loadbearer</h1>
           <ProgramSwitch />
-          <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
+          <div className="topact">
+            <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
+            <ThemeButton />
+          </div>
           <nav className="tabs" aria-label="Sections" ref={tabsRef}>
             <div role="tablist" aria-label="Sections" className="tablist" onKeyDown={onTabKey}>
               {tabs.map(([k, l]) => (
