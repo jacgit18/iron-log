@@ -90,7 +90,7 @@ export function versionLabel(version: string): string {
  *  wiped for another account. Each document is whole; `notSent` lists what the server had refused. */
 export function deviceDataFile(items: readonly { path: string; doc: unknown }[], notSent: readonly QuarantineEntry[], nameOf: (id: string) => string, version: string, now: Date = new Date()): string {
   // The `app` value here is the display name; the data export marker stays 'iron-log' (src/lib/export.ts, ADR 073). Files saved before the
-  // rename say 'Iron Log'. Nothing reads these rescue files back, so a future importer must accept all three.
+  // rename carry the old display name. Nothing reads these rescue files back, so a future importer must accept all three.
   return JSON.stringify({
     app: 'Loadbearer',
     kind: 'everything this device held',
