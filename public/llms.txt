@@ -4,5 +4,5 @@
 
 ## Links
 
-- [Open the app](https://jacgit18.github.io/iron-log/): the live app on GitHub Pages
+- [Open the app](https://iron-log-947510572244.us-central1.run.app): the live app (moves to loadbearer.app once that domain is live)
 - [Source and README](https://github.com/jacgit18/iron-log): features, screenshots and how to run it

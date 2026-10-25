@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 // a person can read: the page, the public files, the app and the server's responses.
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
-// Renamed on the held legal PR (#467); remove these two lines when it merges so the pages are guarded too.
+// Renamed on the held legal PR (#467), which must merge first or in the same deploy as this change, or the live Terms and Privacy pages
+// say Iron Log beside an app called Loadbearer. Remove these two lines once #467 has merged so the pages are guarded too.
 const NOT_YET = new Set(['public/privacy.html', 'public/terms.html']);
 
 const isTest = p => /\.(test|spec)\.[jt]sx?$/.test(p);
