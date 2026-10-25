@@ -20,6 +20,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { STAMP_FILE, ticksFrom } from './lib/check-stamp.mjs';
 
 // A key set in .github/pr-kit.json replaces that key's default entirely (it does not add to it), so a project that sets `notUserFacing` or `ui` lists every pattern.
 const DEFAULTS = {
@@ -83,13 +84,15 @@ export function shorten(text, max = 600) {
 }
 
 /** The template with exactly one Audience box ticked and the What section filled in. A change that touches no UI (`ui` false) also gets the config's `autoTickWhenNoUi` Checks line ticked (the Lighthouse line in iron-log, which reads n/a then); for a UI change it stays open for the author to tick after running the check, because that run is theirs to do. */
-export function buildBody(template, audience, what = '', ui = false, changelog = '', config = loadConfig(), delivery = {}) {
+export function buildBody(template, audience, what = '', ui = false, changelog = '', config = loadConfig(), delivery = {}, verified = []) {
   const labels = labelsOf(config);
   const auto = config.autoTickWhenNoUi ? new RegExp(config.autoTickWhenNoUi, 'i') : null;
   let inAudience = false;
+  let inChecks = false;
   const out = template.split('\n').map(line => {
-    if (/^## /.test(line)) inAudience = /^## Audience/.test(line);
+    if (/^## /.test(line)) { inAudience = /^## Audience/.test(line); inChecks = /^## Checks/.test(line); }
     if (inAudience && /^- \[ \]/.test(line)) return line.includes(labels[audience]) ? line.replace('- [ ]', '- [x]') : line;
+    if (inChecks && /^- \[ \]/.test(line) && verified.some(r => new RegExp(r).test(line))) return line.replace('- [ ]', '- [x]'); // a check stamp backs it (scripts/lib/check-stamp.mjs)
     if (!ui && auto && /^- \[ \]/.test(line) && auto.test(line)) return line.replace('- [ ]', '- [x]'); // not a UI change: n/a, as the line says
     return line;
   }).join('\n');
@@ -152,7 +155,12 @@ function main(argv) {
   const template = readFileSync(fileURLToPath(new URL('../.github/pull_request_template.md', import.meta.url)), 'utf8');
   if (!arg('--changelog') && arg('--what')) console.error('No --changelog given: the Changelog section is the --what text (cut at a sentence end past 600 characters). Pass --changelog "..." to say it shorter.');
   for (const w of deliveryWarnings({ brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker'), trackerLine: /^PR tracker:/m.test(template), overlaps: overlappingPrs(files, otherOpenPrs(git)) })) console.error(w);
-  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files, config), arg('--changelog'), config, { brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker') }));
+  // Checks boxes the last `npm run check` backs for this exact commit (rules: autoTickFromCheck in .github/pr-kit.json). Anything else stays open.
+  const stampPath = git('rev-parse', '--git-path', STAMP_FILE).trim();
+  const stamp = existsSync(stampPath) ? JSON.parse(readFileSync(stampPath, 'utf8')) : null;
+  const ticks = ticksFrom(stamp, git('rev-parse', 'HEAD').trim(), config.autoTickFromCheck);
+  if (ticks.note) console.error(ticks.note);
+  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files, config), arg('--changelog'), config, { brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker') }, ticks.lines));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main(process.argv.slice(2));

@@ -6,7 +6,9 @@
 // CI (.github/workflows/test.yml) runs everything on main and the jobs scripts/ci-changes.mjs picks on a pull request; this is the local shortcut. A file it does not recognise runs everything.
 // The db:check and e2e:sync steps need the local Postgres: it is started (npm run db:start) and used when DATABASE_URL is not set; if it cannot be reached the step is not run and the script exits 1.
 import { execFileSync, spawnSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 import { createConnection } from 'node:net';
+import { STAMP_FILE, makeStamp } from './lib/check-stamp.mjs';
 import { is, planChecks } from './lib/check-plan.mjs';
 import { userInfo } from 'node:os';
 
@@ -120,4 +122,11 @@ if (skipped.length) {
   process.exit(1);
 }
 console.log('\nAll chosen checks passed. CI still runs everything.');
+// The stamp scripts/pr-body.mjs reads to tick the PR's Checks boxes. Not written for a pretend file list. It records the commit and whether the tree was clean.
+if (!given) {
+  try {
+    const stampPath = git('rev-parse', '--git-path', STAMP_FILE)[0];
+    writeFileSync(stampPath, JSON.stringify(makeStamp({ head: git('rev-parse', 'HEAD')[0], dirty: git('status', '--porcelain').length > 0, ran: plan, relatedTests: !fullTests })) + '\n');
+  } catch { /* no git directory to write to: the boxes just stay open */ }
+}
 reminder();
