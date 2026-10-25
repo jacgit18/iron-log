@@ -1,5 +1,8 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import Board from './Board.jsx';
+import BodyWeightRow from './BodyWeightRow.js';
+import { useWide } from './useWide.js';
+import { ymd } from '../../shared/dates.js';
 import { lazyTab } from '../../lib/lazyTab.js';
 
 // The stretch routine is a second screen of the Board tab; its code loads when it is first shown, not with the workout.
@@ -14,6 +17,8 @@ export default function BoardTab() {
   const setBoardView = useAppStore(s => s.setBoardView);
   const mode = useAppStore(s => s.cfg.mode);
   const setMode = useAppStore(s => s.setMode);
+  const weekStart = useAppStore(s => s.weekStart);
+  const wide = useWide();
   return (
     <>
       <div className="edtop boardtabtop">
@@ -29,6 +34,8 @@ export default function BoardTab() {
             </select>
           </label>
         )}
+        {/* On a wide screen the body weight sits next to the mode menu (a phone keeps it under the notices, in Board.tsx). */}
+        {view === 'workout' && wide && <BodyWeightRow key={ymd(weekStart)} />}
       </div>
       {view === 'stretches' ? <Stretches /> : <Board />}
     </>

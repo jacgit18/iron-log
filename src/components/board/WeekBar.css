@@ -1,0 +1,41 @@
+@layer base, components;
+@layer components {
+/* The Board's week bar: the week switcher at the left, the A / B program switch (ProgramSwitch.tsx, Mode 2 only) at the right end of the same
+   row on a phone, and the progress on its own row under both. Two columns: the switcher takes what is left (its own buttons wrap inside it,
+   so the "This week" link drops under the date on a narrow phone and the program switch stays put), the switch takes its own width. The pill
+   is 32px and the week buttons 44px, so the switch is nudged down to sit level with the first row. */
+.weekbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  justify-content: stretch;
+}
+.weekbar > .progswitch {
+  margin-block-start: var(--sp-6);
+}
+.weekbar > .progress {
+  grid-column: 1 / -1;
+  max-width: 32rem;
+}
+.weekbar > .progress .bar {
+  flex: 1;
+}
+
+/* A wide screen: two rows. Row one is the week switcher at the left and the program switch level with it at the right end; row two is the
+   progress under the week switcher. (The body weight is not here: on a wide screen it sits next to the mode menu, see BodyWeightRow.css.) */
+@media (min-width: 701px) {
+  .weekbar > .weeknav {
+    grid-area: 1 / 1;
+  }
+  .weekbar > .progress {
+    grid-area: 2 / 1;
+    align-self: center;
+  }
+  .weekbar > .progswitch {
+    grid-area: 1 / 2;
+    align-self: center;
+    justify-self: end;
+    margin-block-start: 0;
+  }
+}
+}

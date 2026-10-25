@@ -45,4 +45,36 @@
 .bwrow button[type=submit] + .btn {
   margin-left: 0;
 }
+
+/* A wide screen: the body weight sits in the Workout / Stretches row, right after the mode menu (BoardTab.tsx), small: the shorter label, a
+   narrow number box, no extra padding, and one line. A phone keeps the full row under the notices. */
+@media (min-width: 701px) {
+  .boardtabtop > .bwrow {
+    align-self: center;
+    flex-wrap: nowrap;
+    gap: var(--sp-4) var(--sp-8);
+    margin: 0 0 0 var(--sp-12);
+    padding: 0 var(--sp-8);
+    border-radius: var(--r-lg);
+  }
+  .boardtabtop > .bwrow .bwsub {
+    display: none;
+  }
+  .boardtabtop > .bwrow .bwl {
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+  }
+  .boardtabtop > .bwrow b {
+    font-size: var(--fs-md);
+    white-space: nowrap;
+  }
+  .boardtabtop > .bwrow input {
+    width: 72px;
+    padding: var(--sp-4) var(--sp-6);
+    font-size: var(--fs-md);
+  }
+  .boardtabtop > .bwrow .note {
+    white-space: nowrap;
+  }
+}
 }
