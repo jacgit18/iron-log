@@ -1,6 +1,8 @@
 name: Deploy to Cloud Run
 
-# After a merge to main, once the Tests workflow has passed on that exact commit, the `staging` job deploys it to the staging service
+# A person starts this by hand (Actions -> Deploy to Cloud Run -> Run workflow, on main, or `gh workflow run deploy-cloud-run.yml --ref main`);
+# a merge to main no longer starts it (the automatic trigger was removed, owner's call 2026-10-25: deploys were paused anyway, and every merge
+# left a run that only said so). The `staging` job deploys main to the staging service
 # first (ADRs 055 to 058): it migrates the staging database, deploys a revision with no traffic, checks it, promotes it and checks the
 # live staging service. Only when that passes does the `deploy` job (production) start; the `production` environment's required reviewer
 # approves it (ADR 017). Production builds nothing twice: it reuses the image staging built for the same commit.
@@ -16,10 +18,6 @@ name: Deploy to Cloud Run
 # migrations wait, refuses a destructive one (apply it by hand: runbook section 8), backs production up, applies the rest and checks none is left,
 # then deploys. The staging job migrates the staging database the same way before it.
 on:
-  workflow_run:
-    workflows: [Tests]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       skip_staging:
@@ -36,24 +34,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Says why the deploy below was skipped, so a forgotten pause is visible in the run summary.
-  paused:
-    if: github.event_name == 'workflow_run' && vars.DEPLOY_PAUSED == 'true'
-    runs-on: ubuntu-26.04
-    steps:
-      - run: |
-          echo "### Deploys are paused (DEPLOY_PAUSED=true)" >> "$GITHUB_STEP_SUMMARY"
-          echo "This merge was not deployed. To ship everything on main in one deploy: unpause with \`gh variable set DEPLOY_PAUSED --body false\`, then run \`gh workflow run deploy-cloud-run.yml --ref main\`." >> "$GITHUB_STEP_SUMMARY"
-
   # Staging (ADRs 055 to 058). It runs before production and needs no approval. Production waits for it (`needs: staging`) unless a person
   # starts the workflow by hand and ticks "skip staging". It is off until the repository variable STAGING_ENABLED is `true` (set it
   # after the setup in runbook section 21): until then this job is skipped and production deploys as it did before staging existed.
   staging:
     if: >-
       vars.STAGING_ENABLED == 'true' &&
-      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.skip_staging != true) ||
-      (github.event_name == 'workflow_run' && vars.DEPLOY_PAUSED != 'true' && github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository))
+      github.ref == 'refs/heads/main' && inputs.skip_staging != true
     runs-on: ubuntu-26.04
     environment: staging
     env:
@@ -65,15 +52,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # The commit whose tests passed, not whatever main has moved to since.
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
-      # Re-running an old green Tests run would deploy that old commit (audit C-3): after a merge lands, the newer run takes over and this one stops here.
-      - name: Refuse a commit that is not main's tip
-        if: github.event_name == 'workflow_run'
-        run: |
-          git fetch origin main
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || { echo "::error::This commit is not main's tip; re-run on the latest Tests run"; exit 1; }
       - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
@@ -120,18 +100,15 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
-    # Only a successful Tests run for a push to main of this repository, or a person starting it by hand on main.
-    # A repository variable DEPLOY_PAUSED=true skips the automatic runs only; a person starting it by hand is never blocked.
+    # Only a person starting it by hand on main (there is no automatic trigger).
     # Staging must have passed (ADR 058). It may be skipped only while STAGING_ENABLED is not `true` (staging not set up yet), or by a person
     # who ticked "skip staging" when starting the workflow by hand. A staging job that ran and failed always blocks production.
     needs: staging
     if: >-
       always() &&
       (needs.staging.result == 'success' ||
-       (needs.staging.result == 'skipped' && (vars.STAGING_ENABLED != 'true' || (github.event_name == 'workflow_dispatch' && inputs.skip_staging == true)))) &&
-      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-       (github.event_name == 'workflow_run' && vars.DEPLOY_PAUSED != 'true' && github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository))
+       (needs.staging.result == 'skipped' && (vars.STAGING_ENABLED != 'true' || inputs.skip_staging == true))) &&
+      github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
     # Add required reviewers to this environment (Settings -> Environments -> production) to approve each deploy by hand.
     environment: production
@@ -142,15 +119,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # The commit whose tests passed, not whatever main has moved to since.
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
-      # Re-running an old green Tests run would deploy that old commit (audit C-3): after a merge lands, the newer run takes over and this one stops here.
-      - name: Refuse a commit that is not main's tip
-        if: github.event_name == 'workflow_run'
-        run: |
-          git fetch origin main
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || { echo "::error::This commit is not main's tip; re-run on the latest Tests run"; exit 1; }
       - uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
@@ -300,7 +270,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0 # all tags
       - name: Release the commit that went live
         env:

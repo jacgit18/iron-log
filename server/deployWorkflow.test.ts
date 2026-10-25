@@ -18,20 +18,13 @@ function condition(job: string): string {
 
 interface Situation {
   enabled?: boolean;
-  paused?: boolean;
-  event: 'workflow_run' | 'workflow_dispatch';
-  testsPassed?: boolean;
+  ref?: string;
   skipStaging?: boolean;
 }
 const contexts = (s: Situation, staging: string) => ({
-  vars: { STAGING_ENABLED: s.enabled ? 'true' : undefined, DEPLOY_PAUSED: s.paused ? 'true' : undefined },
-  github: {
-    event_name: s.event,
-    ref: 'refs/heads/main',
-    repository: 'o/r',
-    event: { workflow_run: { conclusion: s.testsPassed === false ? 'failure' : 'success', event: 'push', head_repository: { full_name: 'o/r' } } },
-  },
-  inputs: s.event === 'workflow_dispatch' ? { skip_staging: !!s.skipStaging } : {},
+  vars: { STAGING_ENABLED: s.enabled ? 'true' : undefined },
+  github: { event_name: 'workflow_dispatch', ref: s.ref ?? 'refs/heads/main', repository: 'o/r' },
+  inputs: { skip_staging: !!s.skipStaging },
   needs: { staging: { result: staging } },
 });
 const evaluate = (expr: string, s: Situation, staging = 'success') => {
@@ -55,49 +48,38 @@ describe('the deploy workflow gate (ADR 058)', () => {
     expect(staging).toContain('label: staging');
   });
 
-  it('while STAGING_ENABLED is not true, staging is skipped and production deploys as it did before staging existed', () => {
-    const s: Situation = { event: 'workflow_run' };
-    expect(stagingRuns(s)).toBe(false);
-    expect(productionRuns(s, 'skipped')).toBe(true);
-    expect(productionRuns({ event: 'workflow_dispatch' }, 'skipped')).toBe(true);
+  it('nothing starts the workflow but a person: no automatic trigger, no pause switch', () => {
+    const whole = text.join('\n');
+    expect(whole).not.toContain('workflow_run');
+    expect(whole).not.toContain('DEPLOY_PAUSED');
+    expect(text.some(l => l === '  workflow_dispatch:')).toBe(true);
   });
 
-  it('once enabled, a merge runs staging, and production follows only a staging that passed', () => {
-    const s: Situation = { enabled: true, event: 'workflow_run' };
+  it('while STAGING_ENABLED is not true, staging is skipped and production deploys as it did before staging existed', () => {
+    const s: Situation = {};
+    expect(stagingRuns(s)).toBe(false);
+    expect(productionRuns(s, 'skipped')).toBe(true);
+  });
+
+  it('once enabled, a run goes through staging, and production follows only a staging that passed', () => {
+    const s: Situation = { enabled: true };
     expect(stagingRuns(s)).toBe(true);
     expect(productionRuns(s, 'success')).toBe(true);
     expect(productionRuns(s, 'failure')).toBe(false);
     expect(productionRuns(s, 'cancelled')).toBe(false);
   });
 
-  it('once enabled, a staging that was skipped does not let an automatic run through', () => {
-    expect(productionRuns({ enabled: true, event: 'workflow_run' }, 'skipped')).toBe(false);
-  });
-
-  it('a failed Tests run runs neither job', () => {
-    const s: Situation = { enabled: true, event: 'workflow_run', testsPassed: false };
-    expect(stagingRuns(s)).toBe(false);
-    expect(productionRuns(s, 'skipped')).toBe(false);
-    expect(productionRuns({ event: 'workflow_run', testsPassed: false }, 'skipped')).toBe(false);
-  });
-
-  it('DEPLOY_PAUSED stops both automatic jobs', () => {
-    const s: Situation = { enabled: true, paused: true, event: 'workflow_run' };
-    expect(stagingRuns(s)).toBe(false);
-    expect(productionRuns(s, 'skipped')).toBe(false);
-  });
-
-  it('a manual run goes through staging, unless "skip staging" is ticked, which lets production run alone', () => {
-    const manual: Situation = { enabled: true, event: 'workflow_dispatch' };
-    expect(stagingRuns(manual)).toBe(true);
-    expect(productionRuns(manual, 'success')).toBe(true);
-    expect(productionRuns(manual, 'failure')).toBe(false);
-    const skip: Situation = { ...manual, skipStaging: true };
+  it('once enabled, a skipped staging does not let production through, unless "skip staging" is ticked, which lets production run alone', () => {
+    expect(productionRuns({ enabled: true }, 'skipped')).toBe(false);
+    const skip: Situation = { enabled: true, skipStaging: true };
     expect(stagingRuns(skip)).toBe(false);
     expect(productionRuns(skip, 'skipped')).toBe(true);
   });
 
-  it('a manual run is not blocked by DEPLOY_PAUSED', () => {
-    expect(productionRuns({ enabled: true, paused: true, event: 'workflow_dispatch', skipStaging: true }, 'skipped')).toBe(true);
+  it('a run started on a branch other than main runs neither job', () => {
+    const s: Situation = { enabled: true, ref: 'refs/heads/f-x' };
+    expect(stagingRuns(s)).toBe(false);
+    expect(productionRuns(s, 'success')).toBe(false);
+    expect(productionRuns({ ref: 'refs/heads/f-x' }, 'skipped')).toBe(false);
   });
 });
