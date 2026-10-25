@@ -11,14 +11,17 @@ import { colOf, restDatesOf, restsOf, weekSlots, workoutsOf, tally, currentLayou
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
-import BodyWeightRow from './BodyWeightRow.jsx';
+import BodyWeightRow, { type BodyWeightDraft } from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
 import FirstRun from './FirstRun.jsx';
 import InjurySwitch from './InjurySwitch.jsx';
 import Icon from '../Icon.jsx';
+import ProgramSwitch from './ProgramSwitch.js';
+import { useWide } from './useWide.js';
 import './BoardTop.css';
 import './DayHeader.css';
 import './Leftovers.css';
+import './WeekBar.css';
 
 // Cards moved in from another day are grouped under their own heading.
 const secOf = (s: FlatSlot, day: number) => (s.day === day ? s.sec : 'Moved here');
@@ -65,7 +68,8 @@ function SwapArrows({ d }: { d: number }) {
   );
 }
 
-export default function Board() {
+export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
+  const wide = useWide(); // a wide screen draws the body weight next to the mode menu (BoardTab.tsx); a phone keeps it under the notices, here
   const cfg = useAppStore(s => s.cfg);
   const week = useAppStore(s => s.week);
   const weekStart = useAppStore(s => s.weekStart);
@@ -152,6 +156,7 @@ export default function Board() {
           <button type="button" className="btn sm" aria-label="Next week" onClick={() => st.gotoWeek('next')}><Icon name="chevron-right" /></button>
           {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
         </div>
+        <ProgramSwitch />
         <div className="progress">
           <span>{done} of {total} done{skippedN ? ` · ${skippedN} skipped` : ''}</span>
           <div className="bar"><i style={{ width: `${pct}%` }} /></div>
@@ -186,7 +191,7 @@ export default function Board() {
         </div>
       )}
       {slots.length === 0 && <FirstRun />}
-      <BodyWeightRow key={wk} />
+      {!wide && <BodyWeightRow draft={bodyWeight} />}
       <div className="filterbar">
         <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
           <button type="button" className="btn sm filtertoggle" aria-expanded={filterOpen} aria-controls="filter-fields" onClick={() => setFilterOpen(o => !o)}>

@@ -10,7 +10,6 @@ import Toaster from './components/Toaster.js';
 import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
 import useBadgeName from './hooks/useBadgeName.js';
-import ProgramSwitch from './components/board/ProgramSwitch.js';
 import ThemeButton from './components/ThemeButton.js';
 import UpdateBanner from './components/UpdateBanner.js';
 import SyncNotice from './components/SyncNotice.js';
@@ -104,7 +103,6 @@ export default function App() {
       <div className="wrap">
         <header className="top">
           <h1>Loadbearer</h1>
-          <ProgramSwitch />
           <div className="topact">
             <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
             <ThemeButton />

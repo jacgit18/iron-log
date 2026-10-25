@@ -11,7 +11,6 @@ const STROKE = {
   'chevron-right': 'M9 5l7 7-7 7',
   'chevron-up': 'M5 15l7-7 7 7',
   close: 'M6 6l12 12M18 6L6 18',
-  contrast: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 3v18M12 3a9 9 0 010 18',
   info: 'M12 11v6M12 7.5v.01M12 3a9 9 0 100 18 9 9 0 000-18z',
   moon: 'M12 3a6 6 0 009 9 9 9 0 11-9-9z',
   spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z',
@@ -21,6 +20,8 @@ const STROKE = {
   warning: 'M12 4l9 16H3zM12 10v4M12 17v.01',
 } as const satisfies Record<string, string>;
 const FILLED = {
+  // A ring with its right half solid (the match-this-device colours icon): the ring is two circles drawn in opposite directions, the half disc fills inside it.
+  contrast: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 5a7 7 0 110 14 7 7 0 010-14zM12 5a7 7 0 010 14z',
   dots: 'M5 10.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM12 10.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM19 10.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z',
   play: 'M8 5v14l11-7z',
 } as const satisfies Record<string, string>;
