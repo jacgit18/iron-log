@@ -1,6 +1,6 @@
 import { useAppStore } from '../../store/useAppStore.js';
 import Board from './Board.jsx';
-import BodyWeightRow from './BodyWeightRow.js';
+import BodyWeightRow, { useBodyWeightDraft } from './BodyWeightRow.js';
 import { useWide } from './useWide.js';
 import { ymd } from '../../shared/dates.js';
 import { lazyTab } from '../../lib/lazyTab.js';
@@ -19,6 +19,7 @@ export default function BoardTab() {
   const setMode = useAppStore(s => s.setMode);
   const weekStart = useAppStore(s => s.weekStart);
   const wide = useWide();
+  const bodyWeight = useBodyWeightDraft(ymd(weekStart)); // one form state for the row, whichever side of 700px draws it
   return (
     <>
       <div className="edtop boardtabtop">
@@ -35,9 +36,9 @@ export default function BoardTab() {
           </label>
         )}
         {/* On a wide screen the body weight sits next to the mode menu (a phone keeps it under the notices, in Board.tsx). */}
-        {view === 'workout' && wide && <BodyWeightRow key={ymd(weekStart)} />}
+        {view === 'workout' && wide && <BodyWeightRow draft={bodyWeight} />}
       </div>
-      {view === 'stretches' ? <Stretches /> : <Board />}
+      {view === 'stretches' ? <Stretches /> : <Board bodyWeight={bodyWeight} />}
     </>
   );
 }

@@ -11,7 +11,7 @@ import { colOf, restDatesOf, restsOf, weekSlots, workoutsOf, tally, currentLayou
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
-import BodyWeightRow from './BodyWeightRow.jsx';
+import BodyWeightRow, { type BodyWeightDraft } from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
 import FirstRun from './FirstRun.jsx';
 import InjurySwitch from './InjurySwitch.jsx';
@@ -68,7 +68,7 @@ function SwapArrows({ d }: { d: number }) {
   );
 }
 
-export default function Board() {
+export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
   const wide = useWide(); // a wide screen draws the body weight next to the mode menu (BoardTab.tsx); a phone keeps it under the notices, here
   const cfg = useAppStore(s => s.cfg);
   const week = useAppStore(s => s.week);
@@ -191,7 +191,7 @@ export default function Board() {
         </div>
       )}
       {slots.length === 0 && <FirstRun />}
-      {!wide && <BodyWeightRow key={wk} />}
+      {!wide && <BodyWeightRow draft={bodyWeight} />}
       <div className="filterbar">
         <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
           <button type="button" className="btn sm filtertoggle" aria-expanded={filterOpen} aria-controls="filter-fields" onClick={() => setFilterOpen(o => !o)}>

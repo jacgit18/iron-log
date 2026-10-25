@@ -109,3 +109,36 @@ test('phone: the body weight stays under the notices, not next to the mode menu'
   await expect(page.locator('.boardtabtop > .bwrow')).toHaveCount(0);
   await expect(page.locator('.boardroot > .bwrow')).toHaveCount(1);
 });
+
+// The body weight is drawn in one of two places (next to the mode menu above 700px, under the notices below), so the form's state lives above both:
+// turning a phone to landscape in the middle of an edit must not lose what was typed or close the form.
+test('turning the screen across 700px in the middle of a body weight entry keeps what was typed', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  await page.locator('.boardroot > .bwrow input').fill('181.5');
+  await page.setViewportSize({ width: 1280, height: 900 }); // landscape: the row moves next to the mode menu
+  await expect(page.locator('.boardtabtop > .bwrow input')).toHaveValue('181.5');
+  await page.setViewportSize({ width: 375, height: 812 }); // and back under the notices
+  await expect(page.locator('.boardroot > .bwrow input')).toHaveValue('181.5');
+});
+
+test('turning the screen across 700px in the middle of editing a saved body weight keeps the form open', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  await page.locator('.boardroot > .bwrow input').fill('180');
+  await page.locator('.boardroot > .bwrow').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.boardroot > .bwrow b')).toHaveText('180 lb');
+  await page.locator('.boardroot > .bwrow').getByRole('button', { name: 'Edit' }).click();
+  await page.locator('.boardroot > .bwrow input').fill('182');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.locator('.boardtabtop > .bwrow input')).toHaveValue('182'); // still editing, number kept
+  await page.locator('.boardtabtop > .bwrow').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.boardtabtop > .bwrow b')).toHaveText('182 lb');
+});
+
+test('the typed body weight does not carry over to another week', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.locator('.boardtabtop > .bwrow input').fill('190');
+  await page.getByRole('button', { name: 'Next week' }).click();
+  await expect(page.locator('.boardtabtop > .bwrow input')).toHaveValue('');
+});
