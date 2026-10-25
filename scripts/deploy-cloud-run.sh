@@ -299,6 +299,8 @@ build_image() {
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/app:${tag}"
   url="$(service_url)"
   base_url="$(public_base_url "$url")" || exit 1
+  # Every deploy writes BASE_URL, so one that leaves PUBLIC_BASE_URL out puts a custom domain back to the Cloud Run address: say so (stderr), loudly enough to see in a log.
+  if [ -z "${PUBLIC_BASE_URL:-}" ] && [ "$IRON_LOG_ENV" = production ]; then echo "Note: PUBLIC_BASE_URL is not set, so BASE_URL becomes the Cloud Run address ($base_url). If production signs in on a custom domain, set PUBLIC_BASE_URL (runbook section 27) or sign-in breaks until a deploy that sets it." >&2; fi
   # The same commit is one image for both environments (it holds no environment-specific value, ADR 058): when staging has already built it,
   # production deploys that exact image. FORCE_BUILD=1 builds it again.
   if [ "${FORCE_BUILD:-}" != 1 ]; then

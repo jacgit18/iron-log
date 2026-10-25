@@ -160,6 +160,15 @@ exit 0
       expect((await run(['url'])).stdout.trim()).toBe('https://iron-log-123456.us-central1.run.app');
     });
 
+    it('says so when a production deploy leaves PUBLIC_BASE_URL out, because that resets a custom domain', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate']);
+      expect(out.status).toBe(0);
+      expect(out.stderr).toContain('PUBLIC_BASE_URL is not set');
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { PUBLIC_BASE_URL: 'https://loadbearer.app' })).stderr).not.toContain('PUBLIC_BASE_URL is not set');
+    });
+
     it('accepts a port', async () => {
       writeFileSync(calls, '');
       expect((await run(['candidate'], { PUBLIC_BASE_URL: 'https://loadbearer.app:8443' })).status).toBe(0);
@@ -178,11 +187,23 @@ exit 0
     // The workflow is what puts the value there, so the wiring is pinned: only the production job, and only the repository variable.
     it('the workflow passes the variable in the production job only', () => {
       const yml = readFileSync(resolve('.github/workflows/deploy-cloud-run.yml'), 'utf8');
-      const staging = yml.slice(yml.indexOf('\n  staging:'), yml.indexOf('\n  deploy:'));
-      const production = yml.slice(yml.indexOf('\n  deploy:'), yml.indexOf('\n  release:'));
-      expect(yml.match(/PUBLIC_BASE_URL/g)).toHaveLength(1);
+      // One job's text, from its heading to the next job's. A job that is renamed or gone fails here instead of leaving an empty string that every `not.toContain` passes.
+      const job = (name: string) => {
+        const start = yml.indexOf(`\n  ${name}:`);
+        expect(start, `job ${name} not found`).toBeGreaterThan(-1);
+        const rest = yml.slice(start + 1);
+        const next = rest.slice(1).search(/\n  [A-Za-z_-]+:[ \t]*\n/);
+        return next === -1 ? rest : rest.slice(0, next + 1);
+      };
+      const staging = job('staging');
+      const production = job('deploy');
+      expect(staging.length).toBeGreaterThan(200);
+      expect(production.length).toBeGreaterThan(200);
+      expect(yml.match(/^\s+PUBLIC_BASE_URL:/gm)).toHaveLength(1); // set once, as a key; a comment that names it does not count
       expect(production).toContain('PUBLIC_BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}');
       expect(staging).not.toContain('PUBLIC_BASE_URL');
+      // A failing script must fail the step, not be hidden by the pipe into tee.
+      expect(production).toMatch(/set -o pipefail[^\n]*\n\s+scripts\/deploy-cloud-run\.sh candidate \| tee/);
     });
 
     it.each([
