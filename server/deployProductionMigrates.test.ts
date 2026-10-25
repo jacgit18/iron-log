@@ -2,8 +2,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// Production migrates inside the approved deploy (brief production-migrates-in-deploy). The production job of deploy-cloud-run.yml holds the
-// production owner URL, so what it does with it, and in which order, is pinned here. Read as text: no YAML library.
+// Production migrates inside the approved deploy (briefs production-migrates-in-deploy and production-migrate-job). The production job of
+// deploy-cloud-run.yml hands the migrations to the migrate job, which holds the owner login in Secret Manager; GitHub holds no owner URL for
+// production. The order of the steps is pinned here. Read as text: no YAML library.
 const all = readFileSync('.github/workflows/deploy-cloud-run.yml', 'utf8');
 const job = all.slice(all.indexOf('\n  deploy:\n'), all.indexOf('\n  release:\n'));
 const stagingJob = all.slice(all.indexOf('\n  staging:\n'), all.indexOf('\n  deploy:\n'));
@@ -23,25 +24,33 @@ describe('the production job migrates production after the approval', () => {
     expect(all).not.toContain('pending-migrations');
   });
 
-  it('asks the database, refuses a destructive migration, checks the login, backs up, applies, checks none is left, then builds', () => {
-    const order = ['Which migrations are waiting', 'Refuse a destructive migration', "Check the owner login is production's database", 'Back up production first', 'Apply the migrations to production', 'Check production has none left', 'Build and deploy the new revision with no traffic'].map(n => at(`- name: ${n}`));
+  it('asks the database, refuses a destructive migration, backs up, hands over the files, runs the job, checks none is left, then builds', () => {
+    const order = ['Which migrations are waiting', 'Refuse a destructive migration', 'Back up production first', 'Hand the migrations to the job', 'Apply the migrations to production', 'Check production has none left', 'Build and deploy the new revision with no traffic'].map(n => at(`- name: ${n}`));
     for (const o of order) expect(o).toBeGreaterThan(-1);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(at('- name: What is live now')).toBeLessThan(order[0]!);
   });
 
-  it('does the backup, the login check, the apply and the final check only when a migration is waiting', () => {
-    for (const n of ['Refuse a destructive migration', "Check the owner login is production's database", 'Back up production first', 'Apply the migrations to production', 'Check production has none left'])
+  it('does the backup, the hand-over, the job and the final check only when a migration is waiting', () => {
+    for (const n of ['Refuse a destructive migration', 'Back up production first', 'Hand the migrations to the job', 'Apply the migrations to production', 'Check production has none left'])
       expect(step(n), n).toContain("if: steps.waiting.outputs.any == 'true'");
     expect(step('Which migrations are waiting')).not.toContain('if:');
   });
 
-  it('runs the backup job and waits, with no overridden arguments, and applies with dbmate on the repository migrations', () => {
+  it('runs the backup job and the migrate job and waits, both with no overridden arguments', () => {
     expect(step('Back up production first')).toContain('gcloud run jobs execute iron-log-backup --project "$PROJECT_ID" --region "$REGION" --wait');
-    expect(step('Back up production first')).not.toMatch(/--args|--update-env-vars|--container/);
-    expect(step('Apply the migrations to production')).toContain('npx dbmate --no-dump-schema --migrations-dir db/migrations up');
+    expect(step('Apply the migrations to production')).toContain('gcloud run jobs execute iron-log-migrate --project "$PROJECT_ID" --region "$REGION" --wait');
+    for (const n of ['Back up production first', 'Apply the migrations to production']) expect(step(n), n).not.toMatch(/--args|--update-env-vars|--set-env-vars|--container|--command/);
     expect(step('Refuse a destructive migration')).toContain('scripts/migration-guard.mjs');
-    expect(step("Check the owner login is production's database")).toContain('node scripts/same-database.mjs');
+  });
+
+  it('hands over the repository migrations to the private bucket, then the commit, and runs no database tool or owner login itself', () => {
+    const hand = step('Hand the migrations to the job');
+    expect(hand).toContain('gcloud storage rsync db/migrations "$bucket" --recursive --delete-unmatched-destination-objects');
+    expect(hand).toContain('bucket="gs://${PROJECT_ID}-iron-log-migrations/current"');
+    expect(hand.indexOf('rsync')).toBeLessThan(hand.indexOf('COMMIT')); // the sync deletes unmatched objects, so the marker goes in after it
+    expect(job).not.toContain('dbmate');
+    expect(job).not.toContain('same-database');
   });
 
   it('never lets a failed step carry on: no continue-on-error in the production job, and the waiting check fails when it cannot ask', () => {
@@ -50,11 +59,10 @@ describe('the production job migrates production after the approval', () => {
     expect(step('Which migrations are waiting')).toMatch(/Could not ask the database[\s\S]*exit 1/);
   });
 
-  it('reads the production owner URL only in this job, only as an environment variable, and nowhere else', () => {
-    const uses = all.split('\n').filter(l => l.includes('PRODUCTION_DATABASE_URL'));
-    expect(uses.length).toBeGreaterThan(0);
-    for (const l of uses) expect(l, l).toMatch(/^\s+(OWNER_URL|DATABASE_URL): \$\{\{ secrets\.PRODUCTION_DATABASE_URL \}\}$/);
-    expect(stagingJob).not.toContain('PRODUCTION_DATABASE_URL');
-    for (const f of readdirSync('.github/workflows').filter(f => f !== 'deploy-cloud-run.yml')) expect(readFileSync(join('.github/workflows', f), 'utf8'), f).not.toContain('PRODUCTION_DATABASE_URL');
+  it('keeps no production owner URL in GitHub: not in any workflow, and the read-only login is the only database secret the production job reads', () => {
+    for (const f of readdirSync('.github/workflows')) expect(readFileSync(join('.github/workflows', f), 'utf8'), f).not.toContain('PRODUCTION_DATABASE_URL');
+    const secretsInJob = [...job.matchAll(/secrets\.([A-Z][A-Z0-9_]*)/g)].map(m => m[1]);
+    expect([...new Set(secretsInJob)]).toEqual(['MIGRATIONS_CHECK_URL']);
+    expect(stagingJob).not.toContain('MIGRATIONS_CHECK_URL');
   });
 });
