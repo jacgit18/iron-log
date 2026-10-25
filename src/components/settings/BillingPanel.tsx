@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './BillingPanel.css';
+import BillingNotice from './BillingNotice.js';
 import { createAccountClient } from '../../sync/account.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { flag, getSyncApi } from '../../store/useAppStore.js';
@@ -73,6 +74,7 @@ export default function BillingPanel() {
   return (
     <section className="panel billingpanel" aria-labelledby="billing-h">
       <h3 id="billing-h">Billing</h3>
+      {signedIn && billing?.available && <BillingNotice />}
       {who.status === 'unreachable' && (
         <>
           <p className="notice" role="status">Could not check your plan. It checks again when the connection comes back.</p>
