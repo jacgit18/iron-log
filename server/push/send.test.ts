@@ -22,8 +22,9 @@ describe('webPushSender', () => {
   // TG-10: the fire route removes a subscription only when the push service says it is gone (404, 410); any other failure keeps it for next time.
   describe('what the push service answers', () => {
     const endpoint = 'https://fcm.googleapis.com/fcm/send/secret-device-token';
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    afterEach(() => warn.mockClear());
+    let warn: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => { warn = vi.spyOn(console, 'warn').mockImplementation(() => {}); });
+    afterEach(() => warn.mockRestore()); // scoped to these tests: warnings elsewhere in the file stay visible
 
     it('reports a 404 and a 410 as gone, so the subscription is forgotten', async () => {
       for (const statusCode of [404, 410]) {
