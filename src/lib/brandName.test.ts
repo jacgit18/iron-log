@@ -1,3 +1,5 @@
+/// <reference types="node" />
+// src's tsconfig only loads the Vite types; this file reads the repo from disk, so it asks for Node's.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,8 +14,8 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 // say Iron Log beside an app called Loadbearer. Remove these two lines once #467 has merged so the pages are guarded too.
 const NOT_YET = new Set(['public/privacy.html', 'public/terms.html']);
 
-const isTest = p => /\.(test|spec)\.[jt]sx?$/.test(p);
-const walk = dir =>
+const isTest = (p: string) => /\.(test|spec)\.[jt]sx?$/.test(p);
+const walk = (dir: string): string[] =>
   readdirSync(join(root, dir)).flatMap(name => {
     const rel = `${dir}/${name}`;
     return statSync(join(root, rel)).isDirectory() ? walk(rel) : [rel];
@@ -25,7 +27,7 @@ const files = [
   ...walk('public').filter(p => /\.(html|svg|txt|webmanifest)$/.test(p)),
   ...walk('src').filter(p => /\.(tsx?|css)$/.test(p)),
   ...walk('server').filter(p => /\.tsx?$/.test(p)),
-].filter(p => !isTest(p) && !NOT_YET.has(p) && !p.endsWith('brandName.test.js'));
+].filter(p => !isTest(p) && !NOT_YET.has(p));
 
 describe('the display name', () => {
   it('scans the files a person can read', () => {
