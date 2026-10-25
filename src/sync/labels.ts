@@ -35,7 +35,7 @@ export function describeSync(s: SyncStatus, clock: (ms: number) => string = form
   if (s.state === 'paused') {
     switch (s.pausedBecause) {
       case 'outdated':
-        return { headline: 'Update needed', detail: `This version of Iron Log is too old to sync. ${waiting ? `${kept} and will be sent` : 'Your changes are kept on this device and will be sent'} once you update.`, tone: 'bad', canSyncNow: true };
+        return { headline: 'Update needed', detail: `This version of Loadbearer is too old to sync. ${waiting ? `${kept} and will be sent` : 'Your changes are kept on this device and will be sent'} once you update.`, tone: 'bad', canSyncNow: true };
       case 'auth':
         return { headline: 'Sign-in needed', detail: `${kept}${waiting ? ' and will be sent' : ''} once you are signed in.${last}`, tone: 'bad', canSyncNow: true };
       case 'account':
@@ -90,7 +90,7 @@ export function versionLabel(version: string): string {
  *  wiped for another account. Each document is whole; `notSent` lists what the server had refused. */
 export function deviceDataFile(items: readonly { path: string; doc: unknown }[], notSent: readonly QuarantineEntry[], nameOf: (id: string) => string, version: string, now: Date = new Date()): string {
   return JSON.stringify({
-    app: 'Iron Log',
+    app: 'Loadbearer',
     kind: 'everything this device held',
     version,
     savedAt: now.toISOString(),
@@ -103,7 +103,7 @@ export function deviceDataFile(items: readonly { path: string; doc: unknown }[],
  *  nothing is trapped on the device. */
 export function notSentFile(entries: readonly QuarantineEntry[], nameOf: (id: string) => string, version: string, now: Date = new Date()): string {
   return JSON.stringify({
-    app: 'Iron Log',
+    app: 'Loadbearer',
     kind: 'changes the server would not take',
     version,
     savedAt: now.toISOString(),

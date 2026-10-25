@@ -27,7 +27,7 @@ export default function WaterReminderControls() {
             <input id="water-until" type="time" value={prefs.until} onChange={e => validTime(e.target.value) && save({ until: e.target.value })} />
           </label>
           {prefs.until <= prefs.from && <p role="status">Until has to be later than From, or no reminders will come.</p>}
-          <p>Reminders come between these times, and stop for the day once you reach your water goal. After you log a drink the next one is an interval from then. Open Iron Log in the morning to start the day's reminders.</p>
+          <p>Reminders come between these times, and stop for the day once you reach your water goal. After you log a drink the next one is an interval from then. Open Loadbearer in the morning to start the day's reminders.</p>
         </>
       )}
     </>

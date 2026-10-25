@@ -17,7 +17,7 @@ beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'ironlog-static-'));
   mkdirSync(join(dir, 'assets'));
   mkdirSync(join(dir, 'icons'));
-  writeFileSync(join(dir, 'index.html'), '<!doctype html><title>Iron Log</title>');
+  writeFileSync(join(dir, 'index.html'), '<!doctype html><title>Loadbearer</title>');
   writeFileSync(join(dir, 'sw.js'), '// service worker');
   writeFileSync(join(dir, 'workbox-2fbc6a65.js'), '// workbox');
   writeFileSync(join(dir, 'manifest.webmanifest'), '{}');
@@ -53,7 +53,7 @@ describe('serving the PWA', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');
     expect(res.headers.get('cache-control')).toBe('no-cache');
-    expect(await res.text()).toContain('Iron Log');
+    expect(await res.text()).toContain('Loadbearer');
   });
 
   it.each(['/sw.js', '/workbox-2fbc6a65.js', '/manifest.webmanifest', '/index.html'])('never caches %s, so an update reaches the phone', async path => {
@@ -79,7 +79,7 @@ describe('serving the PWA', () => {
       const res = await get(path);
       expect(res.status, path).toBe(200);
       expect(res.headers.get('cache-control')).toBe('no-cache');
-      expect(await res.text()).toContain('Iron Log');
+      expect(await res.text()).toContain('Loadbearer');
     }
   });
 
@@ -91,14 +91,14 @@ describe('serving the PWA', () => {
     for (const path of ['/assets/old-Zz9.js', '/nope.css', '/icons/missing.png']) {
       const res = await get(path);
       expect(res.status, path).toBe(404);
-      expect(await res.text()).not.toContain('Iron Log');
+      expect(await res.text()).not.toContain('Loadbearer');
     }
   });
 
   it('has nothing under /.well-known, as on GitHub Pages', async () => {
     const res = await get('/.well-known/ai-catalog.json');
     expect(res.status).toBe(404);
-    expect(await res.text()).not.toContain('Iron Log');
+    expect(await res.text()).not.toContain('Loadbearer');
   });
 
   it('does not answer a write to a page route with the app', async () => {
@@ -117,7 +117,7 @@ describe('the API next to the PWA', () => {
     for (const path of ['/api', '/api/nope', '/api/commands/nope']) {
       const res = await get(path);
       expect(res.headers.get('content-type'), path).toContain('application/json');
-      expect(await res.text(), path).not.toContain('Iron Log');
+      expect(await res.text(), path).not.toContain('Loadbearer');
     }
   });
 });

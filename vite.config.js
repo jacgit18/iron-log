@@ -138,8 +138,8 @@ export default defineConfig({
       includeAssets: ['logo.svg', 'icons/apple-touch-icon.png'],
       manifest: {
         id: './',
-        name: 'Iron Log',
-        short_name: 'Iron Log',
+        name: 'Loadbearer',
+        short_name: 'Loadbearer',
         description: 'A weekly workout board with A/B program rotation, phase-based targets, timers and a muscle map.',
         start_url: './',
         scope: './',

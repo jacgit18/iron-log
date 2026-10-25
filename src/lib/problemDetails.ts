@@ -18,7 +18,7 @@ export function problemDetails({ version, sync, online, userAgent, standalone, n
     ? `${describeSync(sync).headline} (${sync.state}${sync.pausedBecause ? `, ${sync.pausedBecause}` : ''}); ${sync.pendingPaths.length} waiting to send, ${sync.quarantined} not sent${sync.persisted ? '' : ', browser refused a save'}`
     : 'off (this device only)';
   return [
-    'Iron Log problem details',
+    'Loadbearer problem details',
     `App build: ${versionLabel(version)}`,
     `Sync: ${syncLine}`,
     `Network: ${online ? 'online' : 'offline'}`,
