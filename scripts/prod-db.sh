@@ -19,6 +19,9 @@
 #   find-user <email>           read-only: the id, plan, admin flag and dates of the account behind one address (npm run find:user against
 #                               production). Names and emails are sealed, so the key is read from Secret Manager into this one command and
 #                               never shown; the address and name are not printed either. Takes no backup.
+#   list-users [--reveal]       read-only: every account's id, plan, admin flag and created date (npm run list:users against production).
+#                               Names and emails stay sealed; --reveal opens them with the key from Secret Manager for this one command.
+#                               Takes no backup.
 #   grocery-shares <user id>    read-only: counts and shapes of one account's grocery splits (items and month lines by kind of share), never a
 #                               name, id or amount (npm run grocery:shares against production). The id comes from find-user. No backup.
 #   store-owner-url [--apply]   with --apply: store production's owner URL (from PROD_DATABASE_URL or the old .env line) in Secret Manager as
@@ -151,6 +154,11 @@ case "$cmd" in
     key="$($PII_KEY_CMD)"
     [ -n "$key" ] || { echo "No key came back from Secret Manager; nothing was read." >&2; exit 1; }
     DATABASE_URL="$URL" PII_ENCRYPTION_KEY="$key" $FIND_USER "$email" ;;
+  list-users)
+    URL="$(owner_url)"; where
+    key="$($PII_KEY_CMD)"
+    [ -n "$key" ] || { echo "No key came back from Secret Manager; nothing was read." >&2; exit 1; }
+    DATABASE_URL="$URL" PII_ENCRYPTION_KEY="$key" npm run -s list:users -- "${args[@]}" ;;
   grocery-shares)
     uid="${args[0]:-}"; [ -n "$uid" ] || usage
     URL="$(owner_url)"; where
