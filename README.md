@@ -18,14 +18,14 @@
 </p>
 
 <p align="center">
-  <a href="https://iron-log-947510572244.us-central1.run.app"><b>Open the app</b></a> ·
+  <a href="https://loadbearer.app"><b>Open the app</b></a> ·
   <a href="#features">Features</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#running-it">Running it</a>
 </p>
 
 <p align="center">
-  <a href="https://iron-log-947510572244.us-central1.run.app"><img alt="Live on Google Cloud Run" src="https://img.shields.io/badge/live-Cloud%20Run-1F5E5B"></a>
+  <a href="https://loadbearer.app"><img alt="Live on Google Cloud Run" src="https://img.shields.io/badge/live-Cloud%20Run-1F5E5B"></a>
   <img alt="React and Vite" src="https://img.shields.io/badge/stack-React%20%C2%B7%20Vite%20%C2%B7%20Zustand-1F5E5B">
   <img alt="Installable, works offline" src="https://img.shields.io/badge/PWA-installable%20%C2%B7%20offline-1F5E5B">
   <img alt="Built to WCAG 2.2 AAA" src="https://img.shields.io/badge/accessibility-WCAG%202.2%20AAA-1F5E5B">
@@ -97,7 +97,7 @@ It's a React app built with Vite. You can install it on your phone or computer l
 
 ## Running it
 
-- **Hosted:** open **[the hosted app](https://iron-log-947510572244.us-central1.run.app)**, then install it from Settings if you like.
+- **Hosted:** open **[the hosted app](https://loadbearer.app)**, then install it from Settings if you like.
 - **Locally** (Node 22.12 or newer, per `package.json` engines; `scripts/bootstrap.sh` sets everything up):
 
   ```bash

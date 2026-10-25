@@ -10,10 +10,6 @@ import { describe, expect, it } from 'vitest';
 // a person can read: the page, the public files, the app and the server's responses.
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
-// Renamed on the held legal PR (#467), which must merge first or in the same deploy as this change, or the live Terms and Privacy pages
-// say Iron Log beside an app called Loadbearer. Remove these two lines once #467 has merged so the pages are guarded too.
-const NOT_YET = new Set(['public/privacy.html', 'public/terms.html']);
-
 const isTest = (p: string) => /\.(test|spec)\.[jt]sx?$/.test(p);
 const walk = (dir: string): string[] =>
   readdirSync(join(root, dir)).flatMap(name => {
@@ -27,7 +23,7 @@ const files = [
   ...walk('public').filter(p => /\.(html|svg|txt|webmanifest)$/.test(p)),
   ...walk('src').filter(p => /\.(tsx?|css)$/.test(p)),
   ...walk('server').filter(p => /\.tsx?$/.test(p)),
-].filter(p => !isTest(p) && !NOT_YET.has(p));
+].filter(p => !isTest(p));
 
 describe('the display name', () => {
   it('scans the files a person can read', () => {
