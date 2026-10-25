@@ -1,6 +1,6 @@
 name: Migrate staging
 
-# Keeps the staging database on main's migrations, even while deploys are paused (DEPLOY_PAUSED): every push to main that changes
+# Keeps the staging database on main's migrations, even though deploys are manual (a merge to main does not start Deploy to Cloud Run): every push to main that changes
 # db/migrations/** applies the new migrations to staging, and a person can start it by hand to catch staging up (Actions -> Migrate staging
 # -> Run workflow, on main). A migration is therefore tried on a real database within minutes of the merge, before production sees it
 # (ADR 017), and the parity report (env-parity.yml) shows staging OK. It is not part of the production gate and deploys nothing: the staging
