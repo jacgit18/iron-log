@@ -5,6 +5,7 @@ import compression from 'compression';
 import express from 'express';
 import { sql, type Kysely, type Transaction } from 'kysely';
 import { requireAdmin, type Admins } from './admin.ts';
+import { canonicalHost } from './canonicalHost.ts';
 import { isPaid, requirePaid } from './plan.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
 import type { Auth } from './auth/betterAuth.ts';
@@ -50,6 +51,8 @@ export interface AppDeps {
   admins?: Admins;
   /** Origins, besides this server's own host, whose browsers may send state-changing requests (see originGuard.ts). */
   allowedOrigins?: string[];
+  /** BASE_URL: a browser that opens this server on a different *.run.app address is redirected here (canonicalHost.ts). */
+  canonicalOrigin?: string;
   /** Express's `trust proxy`: how many proxies sit in front (1 on Cloud Run), so the client IP and https come from X-Forwarded-*. Unset trusts none. */
   trustProxy?: number | boolean;
   /** Limits on /api/auth per client IP: starting a sign-in is the expensive, abusable call. Defaults below. */
@@ -109,11 +112,13 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   const recordIssue = db ? issueRecorder(db) : undefined;
   if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
+  // First of all: a browser opening the old Cloud Run address goes to the custom domain (BASE_URL) before anything else runs.
+  app.use(canonicalHost(canonicalOrigin));
   app.use(securityHeaders());
   // gzip/brotli for the app's scripts and the sync pages: Cloud Run does not compress, and the first load is on a phone's connection.
   app.use(compression());
