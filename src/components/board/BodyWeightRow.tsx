@@ -12,14 +12,26 @@ function GoalNote({ goal, body, today }: { goal: BodyGoal; body: BodyEntry[]; to
   return <span className="note">Goal {fmtLb(g.target)} lb · {g.reached ? 'reached' : `${fmtLb(Math.abs(g.left))} lb to go`}</span>;
 }
 
-export default function BodyWeightRow() {
+/**
+ * The row's form state (editing, and the typed number). It lives in BoardTab, above both places the row can be drawn (next to the mode menu on a
+ * wide screen, under the notices on a phone), so turning a phone to landscape in the middle of an edit moves the row without losing what was typed.
+ * It starts empty again when the week changes.
+ */
+export interface BodyWeightDraft { editing: boolean; value: string; setEditing: (v: boolean) => void; setValue: (v: string) => void }
+export function useBodyWeightDraft(wk: string): BodyWeightDraft {
+  const [s, setS] = useState({ wk, editing: false, value: '' });
+  const now = s.wk === wk ? s : { wk, editing: false, value: '' };
+  const next = (prev: typeof s, patch: Partial<typeof s>) => ({ ...(prev.wk === wk ? prev : { wk, editing: false, value: '' }), ...patch });
+  return { editing: now.editing, value: now.value, setEditing: editing => setS(p => next(p, { editing })), setValue: value => setS(p => next(p, { value })) };
+}
+
+export default function BodyWeightRow({ draft }: { draft: BodyWeightDraft }) {
   const body = useAppStore(s => s.body);
   const weekStart = useAppStore(s => s.weekStart);
   const saveBodyWeight = useAppStore(s => s.saveBodyWeight);
   const goal = useAppStore(s => s.cfg.bwGoal);
   const today = useToday(s => s.today);
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState('');
+  const { editing, value, setEditing, setValue } = draft;
 
   const wk = ymd(weekStart);
   const cur = body.find(e => e.wk === wk);

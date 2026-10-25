@@ -4,7 +4,7 @@ import { programLabel } from '../../lib/programLabel.js';
 import type { ProgKey } from '../../types.ts';
 import './ProgramSwitch.css';
 
-// Mode 2 (monthly) alternates programs A and B by the month; this switch, in the header, flips the week on the Board to the other one.
+// Mode 2 (monthly) alternates programs A and B by the month; this switch, at the right end of the week bar beside the week switcher, flips the week on the Board to the other one.
 // Whether the week follows the month or was switched is not drawn (it was a stray line beside the switch); a screen reader still hears it with the switch.
 // It is only there where it does something: Mode 2, on the Board. The other modes have one program or follow the schedule, so nothing to switch.
 export default function ProgramSwitch() {
