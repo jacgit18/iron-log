@@ -30,7 +30,7 @@
 #
 # PUBLIC_BASE_URL (optional, an https origin with no path, for example https://example.app) is the address people sign in on: it becomes the
 # service's BASE_URL on every deploy. Without it BASE_URL is the Cloud Run address, as before. Set it once a custom domain is mapped to the
-# service and its address is in the Google client's redirect URIs; set it for production only (staging and QA keep their own addresses).
+# service and its address is in the Google client's redirect URIs. Production only: the script refuses it for staging and QA.
 # Checks of a new revision still use the Cloud Run address, which keeps working next to the custom one.
 #
 # CLOUDBUILD_CONFIG (default cloudbuild.yaml in the current folder) names the build file; the QA workflow points it at main's copy so a branch's
@@ -72,13 +72,15 @@ gc() { gcloud --project "$PROJECT_ID" "$@"; }
 project_number() { gc projects describe "$PROJECT_ID" --format='value(projectNumber)'; }
 # Cloud Run's address is deterministic: service, project number, region.
 service_url() { echo "https://${SERVICE}-$(project_number).${REGION}.run.app"; }
-# The address people sign in on (BASE_URL): the Cloud Run address unless PUBLIC_BASE_URL names a custom domain. It must be an https origin: a
-# path, a trailing slash or a space would make every sign-in redirect and origin check disagree with it.
+# The address people sign in on (BASE_URL): the Cloud Run address (the first argument, or looked up when there is none) unless PUBLIC_BASE_URL
+# names a custom domain. PUBLIC_BASE_URL is for production only (staging and QA keep their own addresses, so a value left in the shell cannot
+# point them at production's domain) and must be a bare https origin: a path, query, fragment, user name, space or newline would make every
+# sign-in redirect and origin check disagree with it.
 public_base_url() {
   local u="${PUBLIC_BASE_URL:-}"
-  if [ -z "$u" ]; then service_url; return; fi
-  case "$u" in https://*) ;; *) echo "PUBLIC_BASE_URL must start with https:// (got '$u')." >&2; return 1;; esac
-  case "${u#https://}" in ""|*[/\ ]*) echo "PUBLIC_BASE_URL must be an origin: https://host, with no path, trailing slash or space (got '$u')." >&2; return 1;; esac
+  if [ -z "$u" ]; then echo "${1:-$(service_url)}"; return; fi
+  if [ "$IRON_LOG_ENV" != production ]; then echo "PUBLIC_BASE_URL is for production only; ${IRON_LOG_ENV} keeps its own Cloud Run address. Unset it for this run." >&2; return 1; fi
+  if ! [[ "$u" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?$ ]]; then echo "PUBLIC_BASE_URL must be an https origin: https://host or https://host:port, with no path, query, fragment, user name or space (got '$u')." >&2; return 1; fi
   echo "$u"
 }
 
@@ -296,7 +298,7 @@ build_image() {
   if [ -n "$(git status --porcelain)" ]; then echo "The working tree has uncommitted changes; the image is built from the files on disk, not the commit. Commit or stash first." >&2; exit 1; fi
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/app:${tag}"
   url="$(service_url)"
-  base_url="$(public_base_url)" || exit 1
+  base_url="$(public_base_url "$url")" || exit 1
   # The same commit is one image for both environments (it holds no environment-specific value, ADR 058): when staging has already built it,
   # production deploys that exact image. FORCE_BUILD=1 builds it again.
   if [ "${FORCE_BUILD:-}" != 1 ]; then
@@ -354,7 +356,7 @@ deploy_image() {
     if [ "${PUSH_OFF:-}" = 1 ]; then push_remove=(--remove-env-vars PUSH_QUEUE,PUSH_INVOKER_EMAIL); fi
     echo "Web Push: no VAPID keys, so push stays off${PUSH_OFF:+ (PUSH_OFF=1: any settings are removed)}."
   fi
-  local env_vars="NODE_ENV=production,BASE_URL=${base_url:-$url},COMMIT_SHA=${commit}"
+  local env_vars="NODE_ENV=production,BASE_URL=${base_url},COMMIT_SHA=${commit}"
   for kv in ${push_env[@]+"${push_env[@]}"} ${billing_env[@]+"${billing_env[@]}"}; do env_vars+=",${kv}"; done
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \

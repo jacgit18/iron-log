@@ -160,7 +160,35 @@ exit 0
       expect((await run(['url'])).stdout.trim()).toBe('https://iron-log-123456.us-central1.run.app');
     });
 
-    it.each(['http://loadbearer.app', 'loadbearer.app', 'https://loadbearer.app/', 'https://loadbearer.app/path', 'https://load bearer.app', 'https://'])(
+    it('accepts a port', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { PUBLIC_BASE_URL: 'https://loadbearer.app:8443' })).status).toBe(0);
+      expect(deployLine()).toContain('BASE_URL=https://loadbearer.app:8443,');
+    });
+
+    it.each(['staging', 'qa'])('is refused for %s, so a value left in the shell cannot point it at production', async IRON_LOG_ENV => {
+      writeFileSync(calls, '');
+      const out = await run(['candidate'], { IRON_LOG_ENV, PUBLIC_BASE_URL: 'https://loadbearer.app' });
+      expect(out.status).not.toBe(0);
+      expect(out.stderr).toContain('PUBLIC_BASE_URL is for production only');
+      expect(recorded().some(l => l.includes('builds submit') || l.includes('run deploy'))).toBe(false);
+      expect((await run(['url'], { IRON_LOG_ENV, PUBLIC_BASE_URL: 'https://loadbearer.app' })).status).not.toBe(0);
+    });
+
+    // The workflow is what puts the value there, so the wiring is pinned: only the production job, and only the repository variable.
+    it('the workflow passes the variable in the production job only', () => {
+      const yml = readFileSync(resolve('.github/workflows/deploy-cloud-run.yml'), 'utf8');
+      const staging = yml.slice(yml.indexOf('\n  staging:'), yml.indexOf('\n  deploy:'));
+      const production = yml.slice(yml.indexOf('\n  deploy:'), yml.indexOf('\n  release:'));
+      expect(yml.match(/PUBLIC_BASE_URL/g)).toHaveLength(1);
+      expect(production).toContain('PUBLIC_BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}');
+      expect(staging).not.toContain('PUBLIC_BASE_URL');
+    });
+
+    it.each([
+      'http://loadbearer.app', 'loadbearer.app', 'https://loadbearer.app/', 'https://loadbearer.app/path', 'https://load bearer.app', 'https://',
+      'https://loadbearer.app?x=1', 'https://loadbearer.app#top', 'https://user@loadbearer.app', 'https://loadbearer.app\n', 'https://loadbearer.app\t',
+    ])(
       'refuses %s before building or deploying anything',
       async bad => {
         writeFileSync(calls, '');
