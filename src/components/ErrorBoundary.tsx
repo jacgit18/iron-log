@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component<Props, { error: Error | nul
     return (
       <section className="notice crash" role="alert" aria-labelledby="crash-h">
         <h2 id="crash-h">Something went wrong</h2>
-        <p>{download ? 'This screen could not be downloaded. Check your connection, then reload. ' : `${view ? 'This screen' : 'Iron Log'} hit an error while drawing. `}What you saved before is still stored. {download ? 'The other tabs still work.' : view ? 'Try again, or use the other tabs.' : 'Reload to start again.'}</p>
+        <p>{download ? 'This screen could not be downloaded. Check your connection, then reload. ' : `${view ? 'This screen' : 'Loadbearer'} hit an error while drawing. `}What you saved before is still stored. {download ? 'The other tabs still work.' : view ? 'Try again, or use the other tabs.' : 'Reload to start again.'}</p>
         <div className="actions">
           {view && !download
             ? <button type="button" className="btn primary" onClick={() => this.setState({ error: null })}>Try again</button>

@@ -46,7 +46,7 @@ const firstOpen = async page => page.locator(`#${await page.locator('.col.sel ar
 test('Settings offers push, and turning it on subscribes this device', async ({ page }) => {
   const calls = await setup(page, { on: false });
   await page.locator('#tab-settings, #account-badge').first().click();
-  const panel = page.getByRole('region', { name: 'Alerts when Iron Log is closed' });
+  const panel = page.getByRole('region', { name: 'Alerts when Loadbearer is closed' });
   await expect(panel).toBeVisible();
   await expect(panel.getByRole('checkbox', { name: /Send alerts to this device/ })).not.toBeChecked();
   await panel.getByRole('checkbox', { name: /Send alerts to this device/ }).click(); // the box follows the answer from the server, so it is not ticked at once
@@ -62,7 +62,7 @@ test('Settings offers push, and turning it on subscribes this device', async ({ 
 test('is offered to an account that is not an admin too, and turning it on subscribes this device', async ({ page }) => {
   const calls = await setup(page, { admin: false, on: false });
   await page.locator('#tab-settings, #account-badge').first().click();
-  const panel = page.getByRole('region', { name: 'Alerts when Iron Log is closed' });
+  const panel = page.getByRole('region', { name: 'Alerts when Loadbearer is closed' });
   await expect(panel).toBeVisible();
   await panel.getByRole('checkbox', { name: /Send alerts to this device/ }).click();
   await expect(panel.getByRole('checkbox', { name: /When a rest or hold ends/ })).toBeChecked();
@@ -107,7 +107,7 @@ test('with push off on this device, ticking asks for nothing', async ({ page }) 
 test('the push panel has no accessibility violations, off and on', async ({ page }) => {
   await setup(page, { on: true });
   await page.locator('#tab-settings, #account-badge').first().click();
-  const panel = page.getByRole('region', { name: 'Alerts when Iron Log is closed' });
+  const panel = page.getByRole('region', { name: 'Alerts when Loadbearer is closed' });
   await expect(panel.getByRole('checkbox', { name: /started but not finished/ })).toBeVisible();
   const scan = () => new AxeBuilder({ page }).include('#pushalerts').include('section[aria-labelledby="pushalerts"]').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect((await scan()).violations.map(v => v.id)).toEqual([]);

@@ -39,7 +39,7 @@ const water = calls => calls.filter(c => (c.path === '/schedule' || c.path === '
 const near = (got, want) => expect(Math.abs(got - want)).toBeLessThan(60_000);
 const openSettings = async page => {
   await page.locator('#tab-settings, #account-badge').first().click();
-  return page.getByRole('region', { name: 'Alerts when Iron Log is closed' });
+  return page.getByRole('region', { name: 'Alerts when Loadbearer is closed' });
 };
 
 test('is off until ticked; ticking asks for the first reminder two hours on, carrying the window end', async ({ page }) => {

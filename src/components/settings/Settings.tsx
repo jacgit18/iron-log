@@ -132,15 +132,15 @@ function RestAlertPanel() {
   const toggle = async (want: boolean) => {
     const r = await setRestNotify(want);
     setOn(r === 'on');
-    setNote(r === 'denied' ? 'Notifications are blocked for Iron Log. Allow them in your browser or phone settings, then try again.' : '');
+    setNote(r === 'denied' ? 'Notifications are blocked for Loadbearer. Allow them in your browser or phone settings, then try again.' : '');
   };
   return (
     <section className="panel">
       <h3>Rest timer alert</h3>
-      <label className="inline"><input type="checkbox" checked={on} onChange={e => void toggle(e.target.checked)} /> Show a notification when a rest or hold ends while Iron Log is in the background</label>
+      <label className="inline"><input type="checkbox" checked={on} onChange={e => void toggle(e.target.checked)} /> Show a notification when a rest or hold ends while Loadbearer is in the background</label>
       <p>Saved on this device only.</p>
       {note && <p role="status">{note}</p>}
-      <More about="the alert"><p>It only shows while the phone still lets Iron Log run in the background. If the screen has been locked for a while the alert can be late, and the timer is right when you open the app again.</p></More>
+      <More about="the alert"><p>It only shows while the phone still lets Loadbearer run in the background. If the screen has been locked for a while the alert can be late, and the timer is right when you open the app again.</p></More>
     </section>
   );
 }
@@ -154,13 +154,13 @@ function PushPanel() {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   // iPhone only allows push for an app on the Home Screen, and says nothing when it is missing, so say it here.
-  if (!pushSupported()) return <section className="panel"><h3>Alerts when Iron Log is closed</h3><p>{isIOS() && !installed ? 'On iPhone, add Iron Log to your Home Screen first (Share, then Add to Home Screen) and open it from there. Then this setting appears.' : 'This browser cannot receive push alerts.'}</p></section>;
+  if (!pushSupported()) return <section className="panel"><h3>Alerts when Loadbearer is closed</h3><p>{isIOS() && !installed ? 'On iPhone, add Loadbearer to your Home Screen first (Share, then Add to Home Screen) and open it from there. Then this setting appears.' : 'This browser cannot receive push alerts.'}</p></section>;
   const toggle = async (want: boolean) => {
     setBusy(true); setNote('');
     if (want) {
       const r = await enablePush();
       setOn(r === 'on');
-      setNote(r === 'denied' ? 'Notifications are blocked for Iron Log. Allow them in your browser or phone settings, then try again.'
+      setNote(r === 'denied' ? 'Notifications are blocked for Loadbearer. Allow them in your browser or phone settings, then try again.'
         : r === 'unavailable' ? 'Push is not available right now. Sign in and try again, or check back later.'
         : r === 'failed' ? 'Could not turn push on. Check your connection and try again.' : '');
     } else { await disablePush(); setOn(false); }
@@ -168,7 +168,7 @@ function PushPanel() {
   };
   return (
     <section className="panel" aria-labelledby="pushalerts">
-      <h3 id="pushalerts">Alerts when Iron Log is closed</h3>
+      <h3 id="pushalerts">Alerts when Loadbearer is closed</h3>
       <label className="inline"><input type="checkbox" checked={on} disabled={busy} onChange={e => void toggle(e.target.checked)} /> Send alerts to this device, even when the screen is locked</label>
       {on && (
         <>
@@ -180,7 +180,7 @@ function PushPanel() {
       )}
       <p>Saved on this device only.</p>
       {note && <p role="status">{note}</p>}
-      <More about="these alerts"><p>Alerts are sent by the Iron Log server, so they do not depend on the app running in the background. They contain only a short message. Turning this off, or signing out, removes this device from the server.</p></More>
+      <More about="these alerts"><p>Alerts are sent by the Loadbearer server, so they do not depend on the app running in the background. They contain only a short message. Turning this off, or signing out, removes this device from the server.</p></More>
     </section>
   );
 }
@@ -191,10 +191,10 @@ function DevicePanel() {
   return (
     <section className="panel">
       <h3>App on this device</h3>
-      {installed ? <p>Iron Log is installed. It opens from your home screen and works without a connection.</p>
+      {installed ? <p>Loadbearer is installed. It opens from your home screen and works without a connection.</p>
         : installEvent ? (
           <>
-            <p>Install Iron Log to open it from your home screen like any other app. It works without a connection.</p>
+            <p>Install Loadbearer to open it from your home screen like any other app. It works without a connection.</p>
             <div className="actions"><button type="button" className="btn primary" onClick={install}>Install app</button></div>
           </>
         ) : isIOS() ? (
@@ -273,8 +273,8 @@ function DataPanel() {
     <section className="panel" aria-labelledby="data-h">
       <h3 id="data-h">Backups &amp; data</h3>
       {/* Nothing while loading: a signed-in person must not read "this browser only" before the data source is known. */}
-      {storeMode === 'db' && <p>Your data is already saved to your account, and Iron Log keeps backups for you.</p>}
-      {storeMode === 'local' && <p>Your data is in this browser only. Iron Log keeps a backup for you each day; save a file now and then for a copy outside the browser.</p>}
+      {storeMode === 'db' && <p>Your data is already saved to your account, and Loadbearer keeps backups for you.</p>}
+      {storeMode === 'local' && <p>Your data is in this browser only. Loadbearer keeps a backup for you each day; save a file now and then for a copy outside the browser.</p>}
       <BackupCopies />
       {importError && <p className="bkmsg err" role="alert" id="imp-err">{importError}</p>}
       <details className="manualcopy">

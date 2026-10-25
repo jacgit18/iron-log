@@ -1,4 +1,4 @@
-# Setting up Iron Log on a new computer
+# Setting up Loadbearer on a new computer
 
 ## 1. The repo (everything the project enforces comes with the clone)
 

@@ -7,12 +7,12 @@ export type SendCode = (email: string, otp: string) => Promise<void>;
 
 export interface ResendConfig {
   apiKey: string;
-  /** The From header, e.g. `Iron Log <onboarding@resend.dev>`. Resend's test address only delivers to the account owner's own email. */
+  /** The From header, e.g. `Loadbearer <onboarding@resend.dev>`. Resend's test address only delivers to the account owner's own email. */
   from: string;
 }
 
 /** Resend's shared test sender: works with no domain, but only to the email on the Resend account. */
-export const RESEND_TEST_FROM = 'Iron Log <onboarding@resend.dev>';
+export const RESEND_TEST_FROM = 'Loadbearer <onboarding@resend.dev>';
 
 export const CODE_MINUTES = 5;
 
@@ -24,8 +24,8 @@ export function resendSender({ apiKey, from }: ResendConfig, fetchImpl: typeof f
       body: JSON.stringify({
         from,
         to: [email],
-        subject: `Your Iron Log code: ${otp}`,
-        text: `Your Iron Log sign-in code is ${otp}. It works for ${CODE_MINUTES} minutes. If you did not ask for it, ignore this email.`,
+        subject: `Your Loadbearer code: ${otp}`,
+        text: `Your Loadbearer sign-in code is ${otp}. It works for ${CODE_MINUTES} minutes. If you did not ask for it, ignore this email.`,
       }),
       // A hung provider must not hold the request open (and a Cloud Run instance) for long.
       signal: AbortSignal.timeout(8000),

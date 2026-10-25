@@ -53,7 +53,7 @@ describe('showing and clearing the notice', () => {
   it('shows it through the service worker under one tag', async () => {
     setup('granted');
     await showRestNotice('Rest over.');
-    expect(showNotification).toHaveBeenCalledWith('Iron Log', expect.objectContaining({ body: 'Rest over.', tag: 'rest-timer' }));
+    expect(showNotification).toHaveBeenCalledWith('Loadbearer', expect.objectContaining({ body: 'Rest over.', tag: 'rest-timer' }));
   });
   it('takes it down when asked', async () => {
     setup('granted');

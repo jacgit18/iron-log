@@ -70,7 +70,7 @@ describe('helpers', () => {
     expect(shouldReplace(10, 5)).toBe(true);
     expect(shouldReplace(100, 49)).toBe(false);
   });
-  it('prepareFile: gzip or plain JSON of an Iron Log export, nothing else', () => {
+  it('prepareFile: gzip or plain JSON of a Loadbearer export, nothing else', () => {
     expect(prepareFile(gzipSync(fileOf()), 'gzip').ok).toBe(true);
     const plain = prepareFile(Buffer.from(fileOf()), 'identity');
     expect(plain.ok && gunzipSync(plain.zipped).toString()).toBe(fileOf());

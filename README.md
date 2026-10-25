@@ -14,7 +14,7 @@
 - [License](#license)
 <!-- /toc -->
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/banner.png" alt="Iron Log: a weekly training board for A/B program rotation, phase-based targets and a muscle map" width="100%">
+  <img src="https://raw.githubusercontent.com/jacgit18/iron-log/readme-images/banner.png" alt="Loadbearer: a weekly training board for A/B program rotation, phase-based targets and a muscle map" width="100%">
 </p>
 
 <p align="center">
@@ -32,7 +32,7 @@
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1F5E5B"></a>
 </p>
 
-Iron Log is a single-page workout tracker built around a weekly board. It runs two training programs (A and B) on a rotation schedule, sets targets for each exercise by training phase, and shows which muscles a program trains.
+Loadbearer is a single-page workout tracker built around a weekly board. It runs two training programs (A and B) on a rotation schedule, sets targets for each exercise by training phase, and shows which muscles a program trains.
 
 It's a React app built with Vite. You can install it on your phone or computer like any other app, and it works with no connection. It was built and tested against WCAG 2.2 at level AAA.
 

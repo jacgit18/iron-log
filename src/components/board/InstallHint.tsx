@@ -15,7 +15,7 @@ export default function InstallHint() {
   const hide = () => { dismissInstallHint(); setDismissed(true); };
   return (
     <div className="notice tip" id="install-hint">
-      <span>{installEvent ? 'Install Iron Log to open it from your home screen. It works without a connection.' : 'To install: in Safari tap Share, then Add to Home Screen.'}</span>
+      <span>{installEvent ? 'Install Loadbearer to open it from your home screen. It works without a connection.' : 'To install: in Safari tap Share, then Add to Home Screen.'}</span>
       <span>
         {installEvent && <><button type="button" className="btn sm" onClick={() => { void install(); hide(); }}>Install</button>{' '}</>}
         <button type="button" className="btn sm ghost" onClick={hide}>{installEvent ? 'Not now' : 'Got it'}</button>

@@ -26,7 +26,7 @@ export async function showRestNotice(body: string): Promise<void> {
   try {
     const opts: Options = { body, tag: TAG, renotify: true, icon: `${import.meta.env.BASE_URL}icons/icon-192.png` };
     const reg = await navigator.serviceWorker.getRegistration();
-    if (reg) await reg.showNotification('Iron Log', opts); else new Notification('Iron Log', opts);
+    if (reg) await reg.showNotification('Loadbearer', opts); else new Notification('Loadbearer', opts);
   } catch { /* the browser refused: the beep and buzz are the fallback */ }
 }
 

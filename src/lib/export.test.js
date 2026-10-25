@@ -34,9 +34,9 @@ describe('JSON data file', () => {
     expect(d.programs).toEqual({}); // built-in programs aren't written out
   });
 
-  it('rejects files that are not Iron Log data', () => {
+  it('rejects files that are not Loadbearer data', () => {
     expect(() => parseDataFile('not json')).toThrow('isn’t valid JSON');
-    expect(() => parseDataFile('{"app":"other"}')).toThrow('isn’t an Iron Log data file');
+    expect(() => parseDataFile('{"app":"other"}')).toThrow('isn’t a Loadbearer data file');
     expect(() => parseDataFile('{"app":"iron-log","format":99}')).toThrow('newer version');
   });
 

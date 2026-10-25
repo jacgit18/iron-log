@@ -74,7 +74,7 @@ export default function App() {
   const tabs = badgeName === null && !badgePending ? TABS : TABS.filter(([k]) => k !== 'settings');
   const tabDrawn = tabs.some(([k]) => k === tab); // false on Settings reached through the badge
   const label = TABS.find(([k]) => k === tab)![1];
-  useEffect(() => { document.title = `${label} · Iron Log`; }, [label]);
+  useEffect(() => { document.title = `${label} · Loadbearer`; }, [label]);
 
   // Tabs pattern: arrows / Home / End move between tabs and select them.
   const onTabKey = (e: KeyboardEvent) => {
@@ -102,7 +102,7 @@ export default function App() {
       <a className="skip" href="#view">Skip to content</a>
       <div className="wrap">
         <header className="top">
-          <h1>Iron Log</h1>
+          <h1>Loadbearer</h1>
           <ProgramSwitch />
           <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
           <nav className="tabs" aria-label="Sections" ref={tabsRef}>
