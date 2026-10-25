@@ -256,6 +256,8 @@ jobs:
         id: candidate
         env:
           BUILD_SA: iron-log-build@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+          # Production only: the custom domain people sign in on (a repository variable, empty until the domain is mapped). Empty keeps BASE_URL on the Cloud Run address.
+          PUBLIC_BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}
         run: |
           scripts/deploy-cloud-run.sh candidate | tee "$RUNNER_TEMP/candidate.log"
           echo "url=$(sed -n 's/^CANDIDATE_URL=//p' "$RUNNER_TEMP/candidate.log")" >> "$GITHUB_OUTPUT"

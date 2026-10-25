@@ -135,6 +135,43 @@ exit 0
     expect(lines[lines.length - 1]).toContain('--to-latest');
   });
 
+  // BASE_URL is the address people sign in on. It is the Cloud Run address unless PUBLIC_BASE_URL names a custom domain (ADR 073), and it is
+  // applied on every deploy, so a later deploy cannot quietly put the Cloud Run address back.
+  describe('the address people sign in on (PUBLIC_BASE_URL)', () => {
+    const deployLine = () => recorded().find(l => l.includes('run deploy'))!;
+
+    it('is the Cloud Run address when PUBLIC_BASE_URL is not set', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'])).status).toBe(0);
+      expect(deployLine()).toContain('BASE_URL=https://iron-log-123456.us-central1.run.app,');
+    });
+
+    it('is the custom domain on a deploy when PUBLIC_BASE_URL is set, and on the candidate too', async () => {
+      for (const cmd of ['candidate', 'deploy']) {
+        writeFileSync(calls, '');
+        expect((await run([cmd], { PUBLIC_BASE_URL: 'https://loadbearer.app' })).status).toBe(0);
+        expect(deployLine()).toContain('BASE_URL=https://loadbearer.app,');
+        expect(deployLine()).not.toContain('BASE_URL=https://iron-log-123456');
+      }
+    });
+
+    it('`url` prints it, for the Google console redirect URI', async () => {
+      expect((await run(['url'], { PUBLIC_BASE_URL: 'https://loadbearer.app' })).stdout.trim()).toBe('https://loadbearer.app');
+      expect((await run(['url'])).stdout.trim()).toBe('https://iron-log-123456.us-central1.run.app');
+    });
+
+    it.each(['http://loadbearer.app', 'loadbearer.app', 'https://loadbearer.app/', 'https://loadbearer.app/path', 'https://load bearer.app', 'https://'])(
+      'refuses %s before building or deploying anything',
+      async bad => {
+        writeFileSync(calls, '');
+        const out = await run(['candidate'], { PUBLIC_BASE_URL: bad });
+        expect(out.status).not.toBe(0);
+        expect(out.stderr).toContain('PUBLIC_BASE_URL must');
+        expect(recorded().some(l => l.includes('builds submit') || l.includes('run deploy'))).toBe(false);
+      },
+    );
+  });
+
   // The key that seals names and emails (ADR 046) is made once by `secrets`, is never replaced, and must ride along on every deploy once it exists.
   describe('the database encryption key (ADR 046)', () => {
     const secretsOf = (cmd: string) => /--set-secrets (\S+)/.exec(recorded().find(l => l.includes(cmd))!)![1]!.split(',');
