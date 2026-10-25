@@ -3,7 +3,7 @@
 # running until the deploy has finished; it asks the service once a second and prints one line per request, then a summary.
 #
 # Usage:  scripts/deploy-probe.sh <base-url> [seconds]     (default 600; Ctrl-C ends it early and still prints the summary)
-#   scripts/deploy-probe.sh https://iron-log-947510572244.us-central1.run.app 600
+#   scripts/deploy-probe.sh https://loadbearer.app 600
 #
 # It only reads /api/health and /api/health/db, which are public. A "drop" is any answer that is not 200 (000 means no answer within 30 s).
 # Slow answers (over 3 s) are counted separately: a cold start shows up as slow, not as a failure.
