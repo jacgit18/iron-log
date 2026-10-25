@@ -22,9 +22,9 @@ afterAll(async () => {
 });
 
 describe('security-definer functions', () => {
-  it('all have search_path = public, pg_temp (a new function must say so too)', async () => {
+  it('all have search_path = public, pg_temp, in the public and auth schemas (a new function must say so too)', async () => {
     const { rows } = await owner.query<{ fn: string; cfg: string[] | null }>(
-      `select p.oid::regprocedure::text as fn, p.proconfig as cfg from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prosecdef order by 1`);
+      `select p.oid::regprocedure::text as fn, p.proconfig as cfg from pg_proc p where p.pronamespace in ('public'::regnamespace, 'auth'::regnamespace) and p.prosecdef order by 1`);
     expect(rows.length).toBeGreaterThan(10); // the query reads the functions
     const wrong = rows.filter(r => !(r.cfg ?? []).includes('search_path=public, pg_temp')).map(r => r.fn);
     expect(wrong, `add "set search_path = public, pg_temp" to: ${wrong.join(', ')}`).toEqual([]);
@@ -38,6 +38,9 @@ describe('temporary tables', () => {
     const name = inject('pgBase') ? TEMPLATE : (await owner.query<{ n: string }>('select current_database() as n')).rows[0]!.n;
     const { rows } = await owner.query<{ t: boolean }>(`select has_database_privilege('public', $1, 'TEMPORARY') as t`, [name]);
     expect(rows[0]!.t).toBe(false);
+    // The role the API runs as, which is what matters: a member of PUBLIC only, and not the owner (the owner keeps the right).
+    const app = await owner.query<{ t: boolean }>(`select has_database_privilege('ironlog_app', $1, 'TEMPORARY') as t`, [name]);
+    expect(app.rows[0]!.t).toBe(false);
   });
 });
 
