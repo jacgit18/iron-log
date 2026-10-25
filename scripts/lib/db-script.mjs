@@ -50,6 +50,25 @@ export async function readMark(client) {
 /** Marks the database. Inside the caller's transaction. */
 export const setMark = (client, mark) => client.query("do $$ begin execute format('comment on database %I is %L', current_database(), $m$" + mark + "$m$); end $$");
 
+// Not user data: dbmate's record of applied migrations, and the exercise, stretch and supplement catalog (imported, not made by users).
+// What `reset` (staging) and `reset` (QA) leave in place when they empty a database.
+export const KEEP_TABLES = ['schema_migrations', 'catalog_items'];
+
+/** Every table `reset` empties, as quoted `"schema"."table"` names: all base tables in public and auth except KEEP_TABLES. */
+export async function userTables(client) {
+  const { rows } = await client.query(
+    `select table_schema as s, table_name as t from information_schema.tables
+      where table_type = 'BASE TABLE' and table_schema in ('public', 'auth') and table_name <> all($1) order by 1, 2`, [KEEP_TABLES]);
+  return rows.map(r => `"${r.s}"."${r.t}"`);
+}
+
+/** Gives the role the script is connected as (the owner) the password in the environment variable `passwordEnv`, if set. Never printed. */
+export async function rotateOwnerPassword(client, passwordEnv) {
+  if (!process.env[passwordEnv]) return;
+  const { rows } = await client.query("select format('alter role %I password %L', current_user, $1::text) as q", [process.env[passwordEnv]]);
+  await client.query(rows[0].q);
+}
+
 // The environment's login: created on this branch only (a role belongs to one Neon branch, so production never sees it), a member of
 // ironlog_app, whose grants and row-level-security policies it inherits. A reset from production loses it, so the scripts make it.
 // `role` is a fixed name from the calling script; the password, if given in the environment variable `passwordEnv`, is never printed.

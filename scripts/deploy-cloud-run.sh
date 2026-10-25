@@ -20,8 +20,9 @@
 #   restore   send traffic to the latest revision again (after a rollback pinned it to an older one)
 #
 # IRON_LOG_ENV=staging (ADRs 055 to 058) runs every command above against the staging service instead: service iron-log-staging, runtime
-# account iron-log-staging-run, secrets named iron-log-staging-*. It reuses production's database encryption key (ADR 057) and always
-# leaves the email sign-in code and Web Push off, so a copy of production's data can never email or push a real person. The default is
+# account iron-log-staging-run, secrets named iron-log-staging-*. It has its own database encryption key (iron-log-staging-pii-key, made by `secrets`; backlog EP2,
+# ADR 057 revisited) and shares nothing with production, and it always leaves the email sign-in code and Web Push off. Its database is
+# emptied with `scripts/staging-db.mjs reset` before it first runs on this key: rows sealed with production's key cannot be opened with another. The default is
 # IRON_LOG_ENV=production, which behaves as before. SERVICE and RUNTIME_SA can still be overridden.
 #
 # IRON_LOG_ENV=qa (ADR 060) is the same for the QA service: iron-log-qa, runtime account iron-log-qa-run, secrets iron-log-qa-*. Its
@@ -56,9 +57,9 @@ case "$IRON_LOG_ENV" in
   staging)
     SECRET_PREFIX="iron-log-staging"; DB_ROLE="ironlog_staging"
     SERVICE="${SERVICE:-iron-log-staging}"; RUNTIME_SA="${RUNTIME_SA:-iron-log-staging-run}"
-    # Staging holds a copy of production's data (ADR 056): no real email and no real push, whatever secrets exist in the project.
+    # Staging must never email or push a real person, whatever secrets exist in the project (ADR 056; until `staging-db.mjs reset` has run it may still hold a copy of production's data).
     RESEND_OFF=1; PUSH_OFF=1
-    PII_SECRET="iron-log-pii-key"
+    PII_SECRET="iron-log-staging-pii-key"
     case "$SERVICE" in iron-log-staging*) ;; *) echo "IRON_LOG_ENV=staging must deploy a service named iron-log-staging*, not '$SERVICE'." >&2; exit 2;; esac;;
   qa)
     SECRET_PREFIX="iron-log-qa"; DB_ROLE="ironlog_qa"
@@ -134,10 +135,25 @@ stripe_secret_wanted() { secret_wanted "${SECRET_PREFIX}-stripe-secret-key" STRI
 
 # The key that seals names and emails in the database (ADR 046). No OFF switch: rows already sealed need it, and the app would write
 # new ones in the clear without it.
-# (PII_SECRET is set with the environment above: production's key for production and staging, QA's own for QA.)
+# (PII_SECRET is set with the environment above: each environment has its own key.)
+# Whether the live service already maps this env var to this exact secret (the CI deployer cannot read secrets but can read the service).
+live_maps_secret() {
+  gc run services describe "$SERVICE" --region "$REGION" --format=json 2>/dev/null | python3 -c '
+import json, sys
+try:
+    svc = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+containers = svc.get("spec", {}).get("template", {}).get("spec", {}).get("containers") or [{}]
+env = containers[0].get("env") or []
+sys.exit(0 if any(e.get("name") == sys.argv[1] and (e.get("valueFrom", {}).get("secretKeyRef") or {}).get("name") == sys.argv[2] for e in env) else 1)
+' "$1" "$2"
+}
 pii_secret_wanted() {
-  # Staging always passes production's key (ADR 057): its copied rows are sealed with it. QA always passes its own (ADR 060). The CI deployer
-  # cannot see that the secret exists.
+  # QA always passes its own key (ADR 060). Staging passes its own key (ADR 057 revisited) once it exists: seen by `secrets` on the owner's
+  # machine, or already mapped on the live service for a CI deploy (which cannot read secrets). Until then staging keeps production's key, so a
+  # deploy before the owner has run `secrets` does not point at a missing secret and fail (the owner steps are in runbook section 21).
+  if [ "$IRON_LOG_ENV" = staging ] && ! secret_exists "$PII_SECRET" && ! live_maps_secret PII_ENCRYPTION_KEY "$PII_SECRET"; then PII_SECRET="iron-log-pii-key"; fi
   if [ "$IRON_LOG_ENV" != production ]; then return 0; fi
   secret_wanted "$PII_SECRET" PII_ENCRYPTION_KEY PII_NEVER_OFF
 }
@@ -237,13 +253,16 @@ cmd_secrets() {
   # and email unreadable). Made only when asked (PII_KEY_CREATE=1), because the next deploy, CI included, turns encryption on as soon as
   # the secret exists; do that on purpose, after the runbook's backup step (section 20), not as a side effect of changing another secret.
   local pii_names=()
-  if [ "$IRON_LOG_ENV" = staging ]; then
-    # Staging reads production's key (ADR 057); it makes none. Its runtime account is granted read on it below.
-    if ! secret_exists "$PII_SECRET"; then echo "$PII_SECRET does not exist yet: make it for production first (PII_KEY_CREATE=1, runbook section 20)." >&2; exit 1; fi
-    echo "  $PII_SECRET: production's key, shared with staging (ADR 057)"; pii_names=("$PII_SECRET")
-  elif [ "$IRON_LOG_ENV" = qa ]; then
-    # QA has no real users' data, so it gets its own key (ADR 060), made here on the first run and never replaced.
-    if secret_exists "$PII_SECRET"; then echo "  $PII_SECRET: kept"; else openssl rand -base64 32 | tr -d '\n' | put_secret "$PII_SECRET"; fi
+  if [ "$IRON_LOG_ENV" = staging ] || [ "$IRON_LOG_ENV" = qa ]; then
+    # Staging and QA hold no real users' data, so each gets its own key (ADR 060; staging since backlog EP2, ADR 057 revisited), made here on
+    # the first run and never replaced. Production's key is not read or granted. Empty staging first (`staging-db.mjs reset`): rows sealed
+    # with production's key cannot be opened with this one.
+    if secret_exists "$PII_SECRET"; then echo "  $PII_SECRET: kept"
+    else
+      # Rows sealed with production's key cannot be opened with a new one: the owner confirms staging was emptied (`staging-db.mjs reset --apply`) first.
+      if [ "$IRON_LOG_ENV" = staging ] && [ "${STAGING_DB_EMPTIED:-}" != 1 ]; then echo "$PII_SECRET does not exist yet. Run 'node scripts/staging-db.mjs reset --host <host> --apply' first, then export STAGING_DB_EMPTIED=1 and run this again (runbook section 21)." >&2; exit 1; fi
+      openssl rand -base64 32 | tr -d '\n' | put_secret "$PII_SECRET"
+    fi
     pii_names=("$PII_SECRET")
   elif secret_exists "$PII_SECRET"; then echo "  $PII_SECRET: kept"; pii_names=("$PII_SECRET")
   elif [ "${PII_KEY_CREATE:-}" = 1 ]; then openssl rand -base64 32 | tr -d '\n' | put_secret "$PII_SECRET"; pii_names=("$PII_SECRET")
