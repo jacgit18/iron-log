@@ -136,24 +136,40 @@ stripe_secret_wanted() { secret_wanted "${SECRET_PREFIX}-stripe-secret-key" STRI
 # The key that seals names and emails in the database (ADR 046). No OFF switch: rows already sealed need it, and the app would write
 # new ones in the clear without it.
 # (PII_SECRET is set with the environment above: each environment has its own key.)
-# Whether the live service already maps this env var to this exact secret (the CI deployer cannot read secrets but can read the service).
-live_maps_secret() {
-  gc run services describe "$SERVICE" --region "$REGION" --format=json 2>/dev/null | python3 -c '
+# Which secret the live service maps PII_ENCRYPTION_KEY to (the CI deployer cannot read secrets but can read the service). Prints one word:
+# `staging` (the secret named in $1), `production` (iron-log-pii-key), `none` (the service maps neither), `notfound` (no such service yet) or
+# `error` (the describe failed for another reason, or its output could not be read): an error is never taken to mean "not mapped".
+live_pii_state() {
+  local json errf rc=0; errf="$(mktemp)"
+  json="$(gc run services describe "$SERVICE" --region "$REGION" --format=json 2>"$errf")" || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    if grep -q -i -E 'NOT_FOUND|not found|cannot find service' "$errf"; then echo notfound; else echo error; fi
+    rm -f "$errf"; return 0
+  fi
+  rm -f "$errf"
+  printf '%s' "$json" | python3 -c '
 import json, sys
 try:
     svc = json.load(sys.stdin)
 except Exception:
-    sys.exit(1)
+    print("error"); sys.exit(0)
 containers = svc.get("spec", {}).get("template", {}).get("spec", {}).get("containers") or [{}]
-env = containers[0].get("env") or []
-sys.exit(0 if any(e.get("name") == sys.argv[1] and (e.get("valueFrom", {}).get("secretKeyRef") or {}).get("name") == sys.argv[2] for e in env) else 1)
-' "$1" "$2"
+names = [(e.get("valueFrom", {}).get("secretKeyRef") or {}).get("name") for e in (containers[0].get("env") or []) if e.get("name") == "PII_ENCRYPTION_KEY"]
+print("staging" if sys.argv[1] in names else "production" if "iron-log-pii-key" in names else "none")
+' "$1"
 }
 pii_secret_wanted() {
   # QA always passes its own key (ADR 060). Staging passes its own key (ADR 057 revisited) once it exists: seen by `secrets` on the owner's
-  # machine, or already mapped on the live service for a CI deploy (which cannot read secrets). Until then staging keeps production's key, so a
-  # deploy before the owner has run `secrets` does not point at a missing secret and fail (the owner steps are in runbook section 21).
-  if [ "$IRON_LOG_ENV" = staging ] && ! secret_exists "$PII_SECRET" && ! live_maps_secret PII_ENCRYPTION_KEY "$PII_SECRET"; then PII_SECRET="iron-log-pii-key"; fi
+  # machine, or already mapped on the live service for a CI deploy (which cannot read secrets). Until then staging keeps production's key, but only
+  # when the live service positively maps it (or does not exist yet): a deploy before the owner has run `secrets` then does not point at a
+  # missing secret, and a failed describe stops the deploy instead of silently moving staging back to production's key (runbook section 21).
+  if [ "$IRON_LOG_ENV" = staging ] && ! secret_exists "$PII_SECRET"; then
+    case "$(live_pii_state "$PII_SECRET")" in
+      staging) ;;
+      production|notfound) PII_SECRET="iron-log-pii-key";;
+      *) echo "Cannot tell which database key the live $SERVICE service uses (the describe failed, or it maps no PII_ENCRYPTION_KEY). Not deploying: this could move staging back to production's key." >&2; exit 1;;
+    esac
+  fi
   if [ "$IRON_LOG_ENV" != production ]; then return 0; fi
   secret_wanted "$PII_SECRET" PII_ENCRYPTION_KEY PII_NEVER_OFF
 }

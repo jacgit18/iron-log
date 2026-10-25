@@ -46,6 +46,8 @@ case "$*" in
   *"run services describe"*"--format=json"*)
     env='[]'
     [ "$LIVE_RESEND" = 1 ] && env='[{"name":"RESEND_API_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-resend-api-key","key":"latest"}}}]'
+    [ "$DESCRIBE_FAIL" = 1 ] && { echo "ERROR: (gcloud.run.services.describe) UNAVAILABLE: network error" >&2; exit 1; }
+    [ "$DESCRIBE_NOTFOUND" = 1 ] && { echo "ERROR: (gcloud.run.services.describe) NOT_FOUND: Cannot find service [iron-log-staging]" >&2; exit 1; }
     [ "$LIVE_STAGING_PII" = 1 ] && env='[{"name":"PII_ENCRYPTION_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-staging-pii-key","key":"latest"}}}]'
     [ "$LIVE_PII" = 1 ] && env='[{"name":"PII_ENCRYPTION_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-pii-key","key":"latest"}}}]'
     [ "$LIVE_STRIPE" = 1 ] && env='[{"name":"STRIPE_SECRET_KEY","valueFrom":{"secretKeyRef":{"name":"iron-log-stripe-secret-key","key":"latest"}}}]'
@@ -323,7 +325,7 @@ exit 0
 
     it('BILLING_LIVE=1 is ignored for staging and QA, which take test keys only', async () => {
       writeFileSync(calls, '');
-      const out = await run(['deploy'], { IRON_LOG_ENV: 'staging', STRIPE_SECRET: '1', BILLING_LIVE: '1' });
+      const out = await run(['deploy'], { IRON_LOG_ENV: 'staging', STRIPE_SECRET: '1', BILLING_LIVE: '1', HAS_STAGING_PII_KEY: '1' });
       expect(recorded().find(l => l.includes('run deploy'))!).not.toContain('BILLING_LIVE');
       expect(out.stdout).toContain('BILLING_LIVE=1 is ignored for staging');
     });
@@ -547,7 +549,7 @@ exit 0
 
     it('deploys the staging service as its own runtime account with iron-log-staging-* secrets', async () => {
       writeFileSync(calls, '');
-      const out = await run(['candidate'], { IRON_LOG_ENV: 'staging' });
+      const out = await run(['candidate'], { IRON_LOG_ENV: 'staging', HAS_STAGING_PII_KEY: '1' });
       expect(out.status).toBe(0);
       const deploy = recorded().find(l => l.includes('run deploy'))!;
       expect(deploy).toContain('run deploy iron-log-staging ');
@@ -571,17 +573,30 @@ exit 0
       }
     });
 
-    it("keeps production's key until staging's own exists, so a deploy before the owner has run `secrets` does not name a missing secret", async () => {
-      writeFileSync(calls, '');
-      expect((await run(['candidate'], { IRON_LOG_ENV: 'staging', LIVE_PII: '1' })).status).toBe(0);
-      const secrets = secretsOf('run deploy');
-      expect(secrets).toContain('PII_ENCRYPTION_KEY=iron-log-pii-key:latest');
-      expect(secrets.some(x => x.includes('iron-log-staging-pii-key'))).toBe(false);
+    it("keeps production's key until staging's own exists, when the live service maps it or there is no service yet", async () => {
+      for (const env of [{ LIVE_PII: '1' }, { DESCRIBE_NOTFOUND: '1' }] as Record<string, string>[]) {
+        writeFileSync(calls, '');
+        // With no service the later traffic steps cannot describe it either, so only the deploy that was sent is checked.
+        await run(['candidate'], { IRON_LOG_ENV: 'staging', ...env });
+        const secrets = secretsOf('run deploy');
+        expect(secrets).toContain('PII_ENCRYPTION_KEY=iron-log-pii-key:latest');
+        expect(secrets.some(x => x.includes('iron-log-staging-pii-key'))).toBe(false);
+      }
+    });
+
+    it("stops instead of falling back to production's key when the describe fails or the service maps no key", async () => {
+      for (const env of [{ DESCRIBE_FAIL: '1' }, {}] as Record<string, string>[]) {
+        writeFileSync(calls, '');
+        const out = await run(['candidate'], { IRON_LOG_ENV: 'staging', ...env });
+        expect(out.status).toBe(1);
+        expect(out.stderr).toContain('Cannot tell which database key');
+        expect(recorded().some(l => l.includes('run deploy'))).toBe(false);
+      }
     });
 
     it('never passes the Resend or Web Push keys, even when they exist and the live service has them (ADR 056)', async () => {
       writeFileSync(calls, '');
-      const out = await run(['candidate'], { IRON_LOG_ENV: 'staging', SECRETS_READABLE: '1', PUSH_SECRET: '1', LIVE_RESEND: '1', LIVE_PUSH: '1' });
+      const out = await run(['candidate'], { IRON_LOG_ENV: 'staging', HAS_STAGING_PII_KEY: '1', SECRETS_READABLE: '1', PUSH_SECRET: '1', LIVE_RESEND: '1', LIVE_PUSH: '1' });
       expect(out.status).toBe(0);
       const secrets = secretsOf('run deploy');
       expect(secrets.some(x => x.startsWith('RESEND_API_KEY'))).toBe(false);
