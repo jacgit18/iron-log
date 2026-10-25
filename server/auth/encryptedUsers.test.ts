@@ -100,6 +100,19 @@ describe('with PII_ENCRYPTION_KEY set', () => {
     const me = await (await fetch(`${base}/api/auth/get-session`, { headers: { cookie: cookieOf(res) } })).json();
     expect(me).toMatchObject({ user: { email: EMAIL } });
   });
+
+  it('an account made another way is the same account when the emailed code signs in with its address (sealed email lookup)', async () => {
+    const sent: { email: string; otp: string }[] = [];
+    const base = await serve({ piiKey: KEY, sendCode: async (email, otp) => { sent.push({ email, otp }); } });
+    const first = await signUp(base);
+    const before = await (await fetch(`${base}/api/auth/get-session`, { headers: { cookie: cookieOf(first) } })).json() as { user: { id: string } };
+    await post(base, '/api/auth/email-otp/send-verification-otp', { email: EMAIL, type: 'sign-in' });
+    const res = await post(base, '/api/auth/sign-in/email-otp', { email: EMAIL, otp: sent[0]!.otp });
+    expect(res.status).toBe(200);
+    const after = await (await fetch(`${base}/api/auth/get-session`, { headers: { cookie: cookieOf(res) } })).json() as { user: { id: string } };
+    expect(after.user.id).toBe(before.user.id);
+    expect(await rawUsers()).toHaveLength(1);
+  });
 });
 
 describe('without the key', () => {

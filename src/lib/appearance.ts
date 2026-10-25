@@ -16,3 +16,11 @@ export function applyAppearance(a: Appearance = getAppearance()) {
   });
 }
 export function setAppearance(patch: Partial<Appearance>) { const a = { ...getAppearance(), ...patch }; LS.set('appearance', a); applyAppearance(a); return a; }
+
+// The colours button in the header (ThemeButton.tsx) steps through these in order, one tap each, and wraps.
+export type Theme = Appearance['theme'];
+const THEMES: readonly Theme[] = ['system', 'light', 'dark'];
+const THEME_NAME: Record<Theme, string> = { system: 'match this device', light: 'light', dark: 'dark' };
+export const nextTheme = (t: Theme): Theme => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length]!;
+/** The button's accessible name and tooltip: where it is now and where the next tap goes. */
+export const themeButtonLabel = (t: Theme): string => `Colours: ${THEME_NAME[t]}. Switch to ${THEME_NAME[nextTheme(t)]}`;

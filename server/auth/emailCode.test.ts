@@ -114,6 +114,20 @@ describe('signing in with an emailed code', () => {
     expect(await count('session')).toBe(2);
   });
 
+  it('an address that already has a Google account signs in to that same account with a code (the Privacy Policy says so)', async () => {
+    // The rows Google sign-in leaves behind: a verified user and a `google` account for it.
+    await sql`insert into auth."user" ("id", "name", "email", "emailVerified") values ('google-user-1', 'Lifter', 'lifter@example.com', true)`.execute(db);
+    await sql`insert into auth."account" ("id", "accountId", "providerId", "userId", "updatedAt") values ('account-1', 'google-sub-1', 'google', 'google-user-1', now())`.execute(db);
+    const { base, sent } = await serve();
+    await ask(base, 'lifter@example.com');
+    const res = await enter(base, 'lifter@example.com', sent[0]!.otp);
+    expect(res.status).toBe(200);
+    const cookie = (res.headers.getSetCookie().find(c => /session_token=/.test(c)) ?? '').split(';')[0]!;
+    const me = await (await fetch(`${base}/api/auth/get-session`, { headers: { cookie } })).json();
+    expect(me).toMatchObject({ user: { id: 'google-user-1', email: 'lifter@example.com' } });
+    expect(await count('user')).toBe(1);
+  });
+
   it('sends at most three codes per address in ten minutes, and answers the same either way', async () => {
     const { base, sent } = await serve();
     const statuses: number[] = [];

@@ -73,7 +73,8 @@ export default function HelpSheet() {
           <li><b>Daily.</b> <b>Nutrition</b> (your Morning, Noon and Night supplements and a water log) and <b>Groceries</b> (what to get and what is at home, by store). Edit changes the lists.</li>
           <li><b>Progress.</b> Sets and volume per week, weight change and personal bests per lift, body weight and goals, and every lift’s history. <b>Muscles</b>, the switch at the top, shows which muscles your plan trains.</li>
           <li><b>Program.</b> <b>Programs</b> edits A and B day by day and keeps a library of programs. <b>Exercise library</b> and <b>Stretch library</b> hold everything you use, with search and the catalog.</li>
-          <li><b>Settings.</b> <b>Training</b> (program mode, phases, Injury prevention, 1RMs), <b>Data</b> (account, sync, export and import), <b>App</b> (appearance, rest timer alert, install, feedback) and <b>Erase &amp; delete</b>.</li>
+          <li><b>Settings.</b> <b>Training</b> (program mode, phases, Injury prevention, 1RMs), <b>Data</b> (account, sync, export and import), <b>App</b> (text spacing, rest timer alert, install, feedback) and <b>Erase &amp; delete</b>.</li>
+          <li><b>Top bar.</b> <b>Help</b> opens this guide. The button beside it (a half circle, a sun or a moon) switches the colours between <b>match this device</b>, <b>light</b> and <b>dark</b>.</li>
         </ol>
       </section>
       <section aria-labelledby="help-words">

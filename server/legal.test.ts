@@ -47,10 +47,23 @@ describe('the policy and the system agree', () => {
     const terms = read('public/terms.html');
     for (const page of [policy, terms]) {
       expect(page).toContain('Joshua Carpentier');
-      expect(page).toContain('mailto:joshuaxcarpentier@gmail.com');
+      expect(page).toContain('mailto:hello@loadbearer.app');
     }
     expect(text).toContain('16 and over');
     expect(terms).toContain('16 years old');
+  });
+
+  it('the emailed sign-in code wording matches the code rules and names Resend', () => {
+    const auth = read('server/auth/betterAuth.ts');
+    expect(/export const CODE_MINUTES = (\d+)/.exec(read('server/auth/otpEmail.ts'))?.[1]).toBe('5');
+    expect(auth).toMatch(/otpLength: 6[\s\S]*expiresIn: CODE_MINUTES \* 60[\s\S]*allowedAttempts: 3[\s\S]*storeOTP: \{ hash:/);
+    expect(text).toContain('six-digit code');
+    expect(text).toContain('expires after 5 minutes and allows 3 wrong tries');
+    expect(text).toContain('stored only as a hash');
+    expect(text).toMatch(/Resend \(email delivery/);
+    expect(text).toMatch(/Sign-in codes \(emailed\)/);
+    // "removed when you delete your account": the delete route clears every code kept under the address.
+    expect(read('server/app.ts')).toMatch(/deleteVerificationByIdentifier\(`\$\{kind\}-otp-\$\{email\.toLowerCase\(\)\}`\)/);
   });
 
   it('says what the app really keeps about sessions and what it never does', () => {
