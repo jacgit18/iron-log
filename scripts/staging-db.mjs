@@ -17,8 +17,19 @@
 //                               production's: PROD_DATABASE_URL, or else DATABASE_URL_UNPOOLED from .env, as scripts/prod-db.sh reads it. With
 //                               neither set it refuses too, because it could not tell. `check` needs neither.
 //
-// The URL is never printed. Run `clear` by hand each time staging is made or reset from production (the mark is lost on a reset).
-import { applyAppRole, connect, fail, guardHost, readMark, setMark } from './lib/db-script.mjs';
+//   reset --host <host> [--apply]
+//                               empties staging of every user's data (the step before staging gets its own PII key, backlog EP2): without
+//                               --apply it lists the tables and row counts and changes nothing. With --apply, in one transaction: truncates
+//                               every table in the public and auth schemas except schema_migrations and the exercise catalog (catalog_items),
+//                               restarts their counters, keeps the staging login ironlog_staging a member of ironlog_app (STAGING_APP_PASSWORD
+//                               sets its password) and keeps the staging mark. With STAGING_OWNER_PASSWORD set it also gives the role it is
+//                               connected as (the owner) that new password. Same guards as `clear` (--host typed on purpose, production's
+//                               host refused), and it refuses a database that is not marked as staging (run `clear` first) or is marked QA.
+//                               Run it BEFORE the staging service restarts on its own key: rows sealed with production's key cannot be
+//                               opened with another one. Staging is not copied from production again; "fresh" means `reset`.
+//
+// The URL is never printed. Run `clear` by hand after staging is made from a production branch (the mark and the login are lost then); `reset` keeps both.
+import { applyAppRole, connect, fail, guardHost, KEEP_TABLES, readMark, rotateOwnerPassword, setMark, userTables } from './lib/db-script.mjs';
 
 const MARKER = 'iron-log staging';
 
@@ -35,6 +46,7 @@ const STEPS = [
 ];
 
 const APP_ROLE = 'ironlog_staging';
+const QA_MARKER = 'iron-log qa';
 
 async function check(client) {
   const mark = await readMark(client);
@@ -63,18 +75,44 @@ async function clear(client, url, apply) {
   return 0;
 }
 
+async function reset(client, url, apply) {
+  console.log(`database host: ${new URL(url).hostname}`);
+  const mark = await readMark(client);
+  if (mark === QA_MARKER) fail('This database is marked as QA, not staging. Nothing was changed.');
+  if (mark !== MARKER) fail('This database is not marked as staging. Run `clear` first: node scripts/staging-db.mjs clear --host <host> --apply. Nothing was changed.');
+  const tables = await userTables(client);
+  for (const t of tables) console.log(`${apply ? 'emptying' : 'would empty'}: ${t} (${(await client.query(`select count(*)::int as n from ${t}`)).rows[0].n} rows)`);
+  console.log(`keeping: ${KEEP_TABLES.join(', ')}`);
+  console.log(`${apply ? 'setting up' : 'would set up'}: login ${APP_ROLE} as a member of ironlog_app${process.env.STAGING_APP_PASSWORD ? ', with the password from STAGING_APP_PASSWORD' : ' (no password: set STAGING_APP_PASSWORD to give it one)'}`);
+  console.log(`${apply ? 'rotating' : 'would rotate'}: the owner role's password${process.env.STAGING_OWNER_PASSWORD ? ', to the one in STAGING_OWNER_PASSWORD' : ' (not asked: set STAGING_OWNER_PASSWORD to change it)'}`);
+  if (!apply) { console.log('Dry run. Add --apply to empty these.'); return 0; }
+  try {
+    await client.query('begin');
+    if (tables.length) await client.query(`truncate table ${tables.join(', ')} restart identity cascade`);
+    await applyAppRole(client, APP_ROLE, 'STAGING_APP_PASSWORD');
+    await rotateOwnerPassword(client, 'STAGING_OWNER_PASSWORD');
+    await setMark(client, MARKER);
+    await client.query('commit');
+  } catch (e) {
+    await client.query('rollback').catch(() => {});
+    fail(`Nothing was changed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  console.log('Emptied; the database is still marked as staging.');
+  return 0;
+}
+
 const [, , cmd, ...args] = process.argv;
 const url = process.env.STAGING_DATABASE_URL;
 if (!url) fail('No STAGING_DATABASE_URL: set it to the owner URL of the staging branch.');
-if (cmd !== 'check' && cmd !== 'clear') fail('Usage: staging-db.mjs check | clear --host <host> [--apply]');
+if (cmd !== 'check' && cmd !== 'clear' && cmd !== 'reset') fail('Usage: staging-db.mjs check | clear --host <host> [--apply] | reset --host <host> [--apply]');
 const hostIndex = args.indexOf('--host');
 const host = hostIndex >= 0 ? args[hostIndex + 1] : undefined;
-if (cmd === 'clear' && !host) fail('clear needs --host <the host in STAGING_DATABASE_URL>.');
-if (cmd === 'clear') await guardHost(url, host, 'STAGING_DATABASE_URL');
+if (cmd !== 'check' && !host) fail(`${cmd} needs --host <the host in STAGING_DATABASE_URL>.`);
+if (cmd !== 'check') await guardHost(url, host, 'STAGING_DATABASE_URL');
 const client = await connect(url, 'STAGING');
 let code = 2;
 try {
-  code = cmd === 'check' ? await check(client) : await clear(client, url, args.includes('--apply'));
+  code = cmd === 'check' ? await check(client) : await (cmd === 'reset' ? reset : clear)(client, url, args.includes('--apply'));
 } catch (e) {
   // An error after the connect (the connection drops, the compute restarts) must not leave as an uncaught exception: Node exits 1 for that,
   // which `check` documents as "not marked as staging".
