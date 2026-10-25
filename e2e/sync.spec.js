@@ -5,6 +5,25 @@ import { test, expect } from '@playwright/test';
 // there is no real API behind `vite preview`, so every /api request is intercepted.
 const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 
+// A phone with push on: a stand-in browser subscription (as in webPush.spec.js), installed once per tab so a reload keeps what the app did to it.
+// Returns the list of /api/push/unsubscribe bodies; the browser side shows in sessionStorage (`pushUnsubscribed`) and in the stored switch.
+async function pushOn(page) {
+  const unsubscribed = [];
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('pushSeeded')) { sessionStorage.setItem('pushSeeded', '1'); localStorage.setItem('ironlog:webPush', 'true'); }
+    const make = () => ({ endpoint: 'https://push.example/phone-1', toJSON() { return { endpoint: this.endpoint, keys: { p256dh: 'k', auth: 'a' } }; }, unsubscribe: async () => { sessionStorage.setItem('pushUnsubscribed', '1'); return true; } });
+    const sub = sessionStorage.getItem('pushUnsubscribed') ? null : make();
+    const registration = { pushManager: { getSubscription: async () => sub, subscribe: async () => make() } };
+    Object.defineProperty(navigator.serviceWorker, 'ready', { get: () => Promise.resolve(registration), configurable: true });
+    window.PushManager = window.PushManager || function PushManager() {};
+    const N = function Notification() {};
+    Object.defineProperty(N, 'permission', { get: () => 'granted' });
+    window.Notification = N;
+  });
+  await page.route('**/api/push/unsubscribe', route => { unsubscribed.push(route.request().postDataJSON()); return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
+  return unsubscribed;
+}
+
 const signedInAsDev = route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, userId: 'dev-user', account: { kind: 'dev', email: null, name: null } }) });
 
 // What the server sends an account that already has data: its own saved Program A (one Lat Pulldown card), a saved stretch, and one past
@@ -483,13 +502,20 @@ test.describe('another account signs in on a device that holds the first one’s
   });
 
   test('Sign out leaves the data alone and asks for sign-in', async ({ page }) => {
+    const unsubscribed = await pushOn(page);
     await openAsBob(page);
     let out = false;
+    const order = [];
     await page.route('**/api/me', route => (out ? json2({ ok: false }, 401)(route) : json2(bob)(route)));
-    await page.route('**/api/auth/sign-out', route => { out = true; return json2({ success: true })(route); });
+    await page.route('**/api/push/unsubscribe', route => { order.push('unsubscribe'); return route.fallback(); });
+    await page.route('**/api/auth/sign-out', route => { out = true; order.push('sign-out'); return json2({ success: true })(route); });
     await page.getByRole('button', { name: 'Sign out' }).first().click();
     await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible(); // landing page; the device's data is untouched
     expect(await page.evaluate(() => localStorage.getItem('ironlog:sync/pending'))).toContain('ann-1');
+    // This phone stops being a push target first, while still signed in, so the next person to use it is not sent the last one's alerts.
+    expect(order).toEqual(['unsubscribe', 'sign-out']);
+    expect(unsubscribed).toEqual([{ endpoint: 'https://push.example/phone-1' }]);
+    expect(await page.evaluate(() => [sessionStorage.getItem('pushUnsubscribed'), localStorage.getItem('ironlog:webPush')])).toEqual(['1', 'false']);
   });
 });
 
@@ -674,6 +700,7 @@ test.describe('Delete my data', () => {
       localStorage.setItem('ironlog:grocery/main', JSON.stringify({ stores: [], items: [{ id: 'kale', n: 'Kale', store: '', qty: 1, cents: null, once: false }] })); // the grocery list from before it synced (ADR 039)
       localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify({ lines: { kale: { got: true } }, pulled: [] }));
     });
+    const unsubscribed = await pushOn(page);
     const calls = await open(page, { '/api/account/erase-data': ok });
     await panel(page).getByLabel(/Type ERASE/).fill('ERASE');
     // The heading is on screen before the reload too, so wait for the reload itself, or the reads below can land mid-navigation.
@@ -688,9 +715,12 @@ test.describe('Delete my data', () => {
     expect(left.docs).toBeNull();
     expect(await page.evaluate(() => [localStorage.getItem('ironlog:grocery/main'), localStorage.getItem('ironlog:grocery/2026-09')])).toEqual([null, null]); // the old grocery list goes with the rest of the old documents
     expect(left.marker).toContain('dismissed'); // the erased old data is never offered for upload again
+    expect(unsubscribed).toEqual([{ endpoint: 'https://push.example/phone-1' }]); // this phone stops being a push target of the erased account
+    expect(await page.evaluate(() => [sessionStorage.getItem('pushUnsubscribed'), localStorage.getItem('ironlog:webPush')])).toEqual(['1', 'false']);
   });
 
   test('delete account sends its own word', async ({ page }) => {
+    const unsubscribed = await pushOn(page);
     const calls = await open(page, { '/api/account/delete': ok });
     await panel(page).getByLabel(/Type DELETE/).fill('DELETE');
     const reloaded = page.waitForEvent('load');
@@ -699,14 +729,19 @@ test.describe('Delete my data', () => {
     expect(calls[0].body).toEqual({ confirm: 'DELETE' });
     await reloaded;
     await expect(page.getByText('Your account was deleted.')).toBeVisible(); // said after the reload, not lost to it
+    expect(unsubscribed).toEqual([{ endpoint: 'https://push.example/phone-1' }]);
+    expect(await page.evaluate(() => [sessionStorage.getItem('pushUnsubscribed'), localStorage.getItem('ironlog:webPush')])).toEqual(['1', 'false']); // the browser dropped its subscription too
   });
 
   test('when the server cannot do it, says nothing was erased and keeps the data here', async ({ page }) => {
     await page.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('ironlog:logs/hack', JSON.stringify({ schema: 1, entries: [{ d: '2026-09-14', w: 200, s: 3, r: 8 }] })); } });
+    const unsubscribed = await pushOn(page);
     await open(page, { '/api/account/erase-data': route => route.abort() });
     await panel(page).getByLabel(/Type ERASE/).fill('ERASE');
     await panel(page).getByRole('button', { name: 'Erase everything permanently' }).click();
     await expect(panel(page).getByRole('alert')).toContainText('Nothing was erased');
+    expect(unsubscribed).toEqual([]); // nothing was erased, so this phone keeps its alerts
+    expect(await page.evaluate(() => localStorage.getItem('ironlog:webPush'))).toBe('true');
     expect(await page.evaluate(() => localStorage.getItem('ironlog:logs/hack'))).toContain('"w":200');
     await expect(panel(page).getByRole('button', { name: 'Erase everything permanently' })).toBeEnabled();
   });
