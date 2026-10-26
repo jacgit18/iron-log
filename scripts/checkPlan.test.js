@@ -32,3 +32,22 @@ describe('planChecks', () => {
     expect(names(['mystery.bin'])).toEqual(expect.arrayContaining(['typecheck', 'test', 'lint', 'e2e', 'workflows']));
   });
 });
+
+describe('planChecks e2eSpecs', () => {
+  const specs = files => planChecks(files).e2eSpecs;
+  it('runs only the changed specs when specs are the only reason for the browser tests', () => {
+    expect(specs(['e2e/board.spec.js', 'e2e/layout.spec.js'])).toEqual(['e2e/board.spec.js', 'e2e/layout.spec.js']);
+  });
+  it('runs the whole suite when app code, a style or tooling changed too', () => {
+    for (const other of ['src/lib/logic.ts', 'src/styles.css', 'public/icon.png', 'package.json']) {
+      expect(specs(['e2e/board.spec.js', other]), other).toBeNull();
+    }
+  });
+  it('runs the whole suite for a fixture, a helper, a deleted spec or the accounts specs', () => {
+    for (const f of ['e2e/fixtures.js', 'e2e/gone.spec.js', 'e2e-accounts/a.spec.js']) expect(specs([f]), f).toBeNull();
+  });
+  it('is null when the browser tests are not planned or --all asks for everything', () => {
+    expect(specs(['tools/x.mjs'])).toBeNull();
+    expect(planChecks([], true).e2eSpecs).toBeNull();
+  });
+});

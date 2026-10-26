@@ -3,14 +3,17 @@
 //        npm run check -- --list  show which checks it would run and why, without running them
 //        npm run check -- --files=a,b  pretend only those files changed (with --list, to see what a change would run)
 //        npm run check -- --all   run every check that does not need a database (typecheck, test, lint, e2e)
+//        npm run check -- --force run even when the check stamp says this clean commit already passed the same checks
+// typecheck, lint and the unit tests run side by side (output shown per check once it finishes); the browser tests, build and database checks follow one at a time.
+// A change to browser specs only runs those specs (Playwright's own --only-changed follows imports, and a spec never imports the app it drives, so source and style changes keep the full suite).
 // CI (.github/workflows/test.yml) runs everything on main and the jobs scripts/ci-changes.mjs picks on a pull request; this is the local shortcut. A file it does not recognise runs everything.
 // The db:check and e2e:sync steps need the local Postgres: it is started (npm run db:start) and used when DATABASE_URL is not set; if it cannot be reached the step is not run and the script exits 1.
-import { execFileSync, spawnSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createConnection } from 'node:net';
-import { STAMP_FILE, makeStamp } from './lib/check-stamp.mjs';
+import { STAMP_FILE, makeStamp, stampCovers, stampNames } from './lib/check-stamp.mjs';
 import { is, planChecks } from './lib/check-plan.mjs';
-import { userInfo } from 'node:os';
+import { cpus, userInfo } from 'node:os';
 
 const args = process.argv.slice(2);
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8' }).split('\n').filter(Boolean);
@@ -35,7 +38,8 @@ if (!args.includes('--all') && !files.length) {
   console.log(`Nothing changed against ${baseRef}: no checks to run.`);
   process.exit(0);
 }
-({ checks, fullTests } = planChecks(files, args.includes('--all')));
+let e2eSpecs = null;
+({ checks, fullTests, e2eSpecs } = planChecks(files, args.includes('--all')));
 
 const order = ['typecheck', 'lint', 'workflows', 'test', 'build', 'db:check', 'e2e', 'e2e:sync'];
 const plan = order.filter(c => checks.has(c));
@@ -57,6 +61,19 @@ const reminder = () => {
 };
 reminder();
 if (args.includes('--list')) process.exit(0);
+
+// The same commit on a clean tree already passed these exact checks (the stamp this script writes): a second push, or a push after only a PR-body edit, has nothing new to prove.
+// A pretend file list, --all and --force never skip.
+const names = stampNames(plan, { relatedTests: !fullTests, scopedE2e: Boolean(e2eSpecs) });
+if (!given && !args.includes('--force') && !args.includes('--all') && !process.env.IRON_LOG_CHECK_LOCKED) {
+  try {
+    const stamp = JSON.parse(readFileSync(git('rev-parse', '--git-path', STAMP_FILE)[0], 'utf8'));
+    if (stampCovers(stamp, git('rev-parse', 'HEAD')[0], git('status', '--porcelain').length > 0, names)) {
+      console.log(`\nSkipped: ${stamp.head.slice(0, 7)} already passed ${names.join(', ')} on a clean tree at ${stamp.at}. Run with --force to run them again.`);
+      process.exit(0);
+    }
+  } catch { /* no stamp yet, or it cannot be read: run the checks */ }
+}
 
 // One check at a time on this machine. Two sessions pushing at once each start a Postgres container per server test file plus Playwright, and
 // the load makes both runs time out (the reason for most "skip the hook" pushes). The second run waits for the first, up to 30 minutes.
@@ -96,26 +113,47 @@ if (plan.some(c => needsDb.has(c)) && !process.env.DATABASE_URL) {
   }
 }
 const skipped = [];
+const env = { ...process.env, FRESH_SERVER: '1' };
+const related = !fullTests;
+// [command, args, label] for one check.
+const command = c => {
+  if (c === 'workflows') return ['node', ['scripts/check-workflows.mjs'], 'node scripts/check-workflows.mjs'];
+  // The unit step always goes through scripts/unit-tests.mjs, so the worker cap (UNIT_WORKERS) also applies to a full run.
+  if (c === 'test') return ['node', ['scripts/unit-tests.mjs', related ? `--base=${baseRef}` : '--full'], `node scripts/unit-tests.mjs ${related ? '(the tests related to what changed)' : '--full (every unit test)'}`];
+  if (c === 'e2e' && e2eSpecs) return ['npx', ['playwright', 'test', ...e2eSpecs], `npx playwright test ${e2eSpecs.join(' ')} (only the changed specs)`];
+  return ['npm', ['run', c], `npm run ${c}`];
+};
+const fail = c => { console.error(`\nFailed: ${c}`); process.exit(1); };
+
+// typecheck, lint and the unit tests do not depend on each other: start them together and show each one's output when it finishes.
+const together = plan.filter(c => ['typecheck', 'lint', 'test'].includes(c));
+if (together.length > 1) {
+  console.log(`\nRunning ${together.join(', ')} side by side...`);
+  const results = await Promise.all(together.map(c => new Promise(resolve => {
+    const [cmd, cmdArgs, label] = command(c);
+    // The unit tests default to half the cores; with tsc and oxlint beside them that is more than the machine has to spare and the 5 s test limit trips,
+    // so they get two fewer workers (at least 2) unless UNIT_WORKERS says otherwise.
+    const childEnv = c === 'test' && !process.env.UNIT_WORKERS ? { ...env, UNIT_WORKERS: String(Math.max(2, Math.floor(cpus().length / 2) - 2)) } : env;
+    const child = spawn(cmd, cmdArgs, { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
+    let out = '';
+    child.stdout.on('data', d => { out += d; });
+    child.stderr.on('data', d => { out += d; });
+    child.on('error', e => resolve({ c, label, out: `${out}${e.message}\n`, status: 1 }));
+    child.on('close', status => resolve({ c, label, out, status: status ?? 1 }));
+  })));
+  for (const r of results) console.log(`\n> ${r.label}\n${r.out}`);
+  const bad = results.filter(r => r.status !== 0).map(r => r.c);
+  if (bad.length) fail(bad.join(', '));
+}
 for (const c of plan) {
+  if (together.length > 1 && together.includes(c)) continue;
   if (needsDb.has(c) && !process.env.DATABASE_URL) {
     skipped.push(c);
     continue;
   }
-  const related = c === 'test' && !fullTests;
-  // The unit step always goes through scripts/unit-tests.mjs, so the worker cap (UNIT_WORKERS) also applies to a full run.
-  const viaScript = c === 'test';
-  if (c === 'workflows') {
-    console.log('\n> node scripts/check-workflows.mjs');
-    const w = spawnSync('node', ['scripts/check-workflows.mjs'], { stdio: 'inherit' });
-    if (w.status !== 0) { console.error('\nFailed: workflows'); process.exit(w.status ?? 1); }
-    continue;
-  }
-  console.log(viaScript ? `\n> node scripts/unit-tests.mjs ${related ? '(the tests related to what changed)' : '--full (every unit test)'}` : `\n> npm run ${c}`);
-  const r = spawnSync(...(viaScript ? ['node', ['scripts/unit-tests.mjs', related ? `--base=${baseRef}` : '--full']] : ['npm', ['run', c]]), { stdio: 'inherit', env: { ...process.env, FRESH_SERVER: '1' } });
-  if (r.status !== 0) {
-    console.error(`\nFailed: ${c}`);
-    process.exit(r.status ?? 1);
-  }
+  const [cmd, cmdArgs, label] = command(c);
+  console.log(`\n> ${label}`);
+  if (spawnSync(cmd, cmdArgs, { stdio: 'inherit', env }).status !== 0) fail(c);
 }
 if (skipped.length) {
   console.warn(`\nNot run, and CI will run them (set DATABASE_URL, or fix the local database with npm run db:start): ${skipped.join(', ')}`);
@@ -126,7 +164,7 @@ console.log('\nAll chosen checks passed. CI still runs everything.');
 if (!given) {
   try {
     const stampPath = git('rev-parse', '--git-path', STAMP_FILE)[0];
-    writeFileSync(stampPath, JSON.stringify(makeStamp({ head: git('rev-parse', 'HEAD')[0], dirty: git('status', '--porcelain').length > 0, ran: plan, relatedTests: !fullTests })) + '\n');
+    writeFileSync(stampPath, JSON.stringify(makeStamp({ head: git('rev-parse', 'HEAD')[0], dirty: git('status', '--porcelain').length > 0, ran: plan, relatedTests: !fullTests, scopedE2e: Boolean(e2eSpecs) })) + '\n');
   } catch { /* no git directory to write to: the boxes just stay open */ }
 }
 reminder();
