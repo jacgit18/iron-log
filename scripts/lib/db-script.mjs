@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { lookup, resolveCname } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import pg from 'pg';
-import { pinSslMode } from '../../server/db/sslMode.ts';
+import { pinSslMode } from './ssl-mode.mjs';
 
 export const fail = (msg, code = 2) => { console.error(msg); process.exit(code); };
 

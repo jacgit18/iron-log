@@ -1,7 +1,7 @@
 // Which migrations a database has applied (dbmate's schema_migrations table) and how that compares with the migration files, shared by
 // scripts/db-pending.mjs (the deploy's check) and scripts/env-parity.mjs (the parity report). Read-only: one select, short timeouts.
 import pg from 'pg';
-import { pinSslMode } from '../../server/db/sslMode.ts';
+import { pinSslMode } from './ssl-mode.mjs';
 
 /** Exit codes of the parity report. UNKNOWN is 2 (as in db-pending.mjs), never confused with OK. */
 export const EXIT = { OK: 0, UNKNOWN: 2, BEHIND: 3, AHEAD: 4 };
