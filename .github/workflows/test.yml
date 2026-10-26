@@ -203,7 +203,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-26.04
-    timeout-minutes: 20 # timeout-ok: slowest shard 15 min on 2026-10-26 runs; shards 1 and 4 are unbalanced, rebalance then lower
+    timeout-minutes: 20 # timeout-ok: slowest shard 15 min on 2026-10-26 runs, all in `playwright install --with-deps` (apt mirror at 35 kB/s); the tests take about 2 min a shard
     strategy:
       fail-fast: false
       matrix:
