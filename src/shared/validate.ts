@@ -6,7 +6,7 @@ import { PH_KEYS, hasValidDays } from '../lib/data.js';
 import type { BodyEntry, LibraryItem, LogEntry, LogSet, Program, ProgramDay, ProgramItem, ProgramSlot, SlotType } from '../types.ts';
 
 export const LIMITS = {
-  bodyLb: { max: 1500 },        // body weight and body-weight target, exclusive
+  bodyLb: { min: 0.0001, max: 1500 }, // body weight and body-weight target; min is the column's 4 decimals (below it rounds to 0 and fails its check), max exclusive
   liftGoalLb: { max: 5000 },    // a lift goal, exclusive
   rest: { min: 0, max: 600 },   // rest timer, seconds
   pct: { min: 0, max: 110 },    // a phase's percent of 1RM
@@ -21,7 +21,7 @@ export const LIMITS = {
 } as const;
 
 const fin = (n: unknown): n is number => Number.isFinite(n);
-export const validBodyLb = (n: unknown) => fin(n) && n > 0 && n < LIMITS.bodyLb.max;
+export const validBodyLb = (n: unknown) => fin(n) && n >= LIMITS.bodyLb.min && n < LIMITS.bodyLb.max;
 export const validLiftGoalLb = (n: unknown) => fin(n) && n > 0 && n < LIMITS.liftGoalLb.max;
 export const validFreq = (n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 7; // sessions of one exercise in a week
 export const validRest = (n: unknown) => fin(n) && n >= LIMITS.rest.min && n <= LIMITS.rest.max;
