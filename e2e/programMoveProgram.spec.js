@@ -50,7 +50,18 @@ test('Cancel and Escape change nothing and return focus to Move…', async ({ pa
   await moveBtn(page).click();
   await page.keyboard.press('Escape');
   await expect(sheet(page)).toHaveCount(0);
+  await expect(moveBtn(page)).toBeFocused();
   expect(await names(page)).toEqual(before);
+});
+
+test('Move is off while the preview says the card is already there', async ({ page }) => {
+  await openDay(page, 1);
+  await moveBtn(page).click();
+  await sheet(page).getByRole('button', { name: 'Day 1', exact: true }).click();
+  await expect(sheet(page).getByRole('status')).toContainText('already there');
+  await expect(sheet(page).getByRole('button', { name: 'Move', exact: true })).toBeDisabled();
+  await sheet(page).getByRole('button', { name: 'Day 2', exact: true }).click();
+  await expect(sheet(page).getByRole('button', { name: 'Move', exact: true })).toBeEnabled();
 });
 
 test('the sheet has 44px targets and no accessibility violations at phone width', async ({ page }) => {

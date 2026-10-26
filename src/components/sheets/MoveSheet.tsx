@@ -38,7 +38,7 @@ export default function MoveSheet({ idx }: { idx: number }) {
       </div>
       <div className="actions">
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
-        <button type="button" className="btn primary" onClick={go}>Move</button>
+        <button type="button" className="btn primary" disabled={preview.same} onClick={go}>Move</button>
       </div>
     </Sheet>
   );
