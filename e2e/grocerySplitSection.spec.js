@@ -65,3 +65,19 @@ test('closed and open the section has no accessibility violations in both themes
   await page.addStyleTag({ content: 'html { font-size: 200% }' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
 });
+
+// Done-when C6 (keyboard): the header is a real button, so Enter and Space open and close it.
+test('the header opens and closes with Enter and with Space', async ({ page }) => {
+  await seed(page);
+  await toggle(page).focus();
+  await expect(toggle(page)).toHaveAttribute('aria-expanded', 'false');
+  for (const key of ['Enter', 'Space']) {
+    await page.keyboard.press(key);
+    await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.gsplitcard')).toHaveCount(1);
+    await expect(toggle(page)).toBeFocused();
+    await page.keyboard.press(key);
+    await expect(toggle(page)).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('.gsplitcard')).toHaveCount(0);
+  }
+});

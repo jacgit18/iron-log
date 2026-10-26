@@ -16,58 +16,59 @@ const CATALOGUE = {
   groups: [{ id: 'g1', n: 'Costco run', people: [{ id: 'sis', n: 'Sister' }, { id: 'mom', n: 'Mom' }], stores: ["BJ's"] }],
 };
 
-for (const [label, nexts] of [['this month', 0], ['next month', 1], ['two months ahead', 2]]) {
-  test(`every row's arrow closes it again: ${label}`, async ({ page }) => {
-    await page.evaluate(C => { localStorage.setItem('ironlog:session/admin', 'true'); localStorage.setItem('ironlog:grocery/main', JSON.stringify(C)); }, CATALOGUE);
-    await page.reload();
-    await page.click('#tab-daily'); await page.click('#daily-grocery');
+// Each flow runs for this month, next month and two months ahead inside one test: every leg seeds and reloads, so it starts clean.
+const seedCatalogue = async page => {
+  await page.evaluate(C => { localStorage.setItem('ironlog:session/admin', 'true'); localStorage.setItem('ironlog:grocery/main', JSON.stringify(C)); }, CATALOGUE);
+  await page.reload();
+  await page.click('#tab-daily'); await page.click('#daily-grocery');
+};
+
+test('every row\'s arrow closes it again: this month, next month and two months ahead', async ({ page }) => {
+  for (const [label, nexts] of [['this month', 0], ['next month', 1], ['two months ahead', 2]]) {
+    await seedCatalogue(page);
     for (let i = 0; i < Math.abs(nexts); i++) await page.click(nexts > 0 ? '#groc-next' : '#groc-prev');
     for (const name of ['Chicken', 'Rice', 'Eggs', 'Soap', 'Tea', 'Milk']) {
       const arrow = page.getByRole('button', { name: new RegExp(`and price of ${name}$`) });
       await arrow.tap();
-      await expect(arrow, `${name} opens`).toHaveAttribute('aria-expanded', 'true');
-      await expect(page.locator(`#${await arrow.getAttribute('aria-controls')}`), `${name}'s panel shows`).toBeVisible();
+      await expect(arrow, `${label}: ${name} opens`).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator(`#${await arrow.getAttribute('aria-controls')}`), `${label}: ${name}'s panel shows`).toBeVisible();
       await arrow.tap();
-      await expect(arrow, `${name} closes`).toHaveAttribute('aria-expanded', 'false');
-      await expect(page.locator(`#${await arrow.getAttribute('aria-controls')}`), `${name}'s panel is out of sight`).toBeHidden();
+      await expect(arrow, `${label}: ${name} closes`).toHaveAttribute('aria-expanded', 'false');
+      await expect(page.locator(`#${await arrow.getAttribute('aria-controls')}`), `${label}: ${name}'s panel is out of sight`).toBeHidden();
     }
-  });
-}
+  }
+});
 
-for (const nexts of [0, 1, 2]) {
-  test(`Expand all then Collapse all closes every row of each store (${nexts} months ahead)`, async ({ page }) => {
-    await page.evaluate(C => { localStorage.setItem('ironlog:session/admin', 'true'); localStorage.setItem('ironlog:grocery/main', JSON.stringify(C)); }, CATALOGUE);
-    await page.reload();
-    await page.click('#tab-daily'); await page.click('#daily-grocery');
+test('Expand all then Collapse all closes every row of each store (0, 1 and 2 months ahead)', async ({ page }) => {
+  for (const nexts of [0, 1, 2]) {
+    await seedCatalogue(page);
     for (let i = 0; i < nexts; i++) await page.tap('#groc-next');
     const buttons = page.getByRole('button', { name: /^(Expand|Collapse) all in / });
     const n = await buttons.count();
-    expect(n).toBeGreaterThan(0);
+    expect(n, `${nexts} months ahead has stores`).toBeGreaterThan(0);
     for (let i = 0; i < n; i++) await page.getByRole('button', { name: /^Expand all in / }).first().click();
     await expect(page.locator('.gqty[aria-expanded="false"]')).toHaveCount(0);
     for (let i = 0; i < n; i++) await page.getByRole('button', { name: /^Collapse all in / }).first().click();
-    await expect(page.locator('.gqty[aria-expanded="true"]'), 'every row closed again').toHaveCount(0);
+    await expect(page.locator('.gqty[aria-expanded="true"]'), `${nexts} months ahead: every row closed again`).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^Collapse all in / })).toHaveCount(0);
-  });
-}
+  }
+});
 
-for (const nexts of [0, 1, 2]) {
-  test(`the Shared with arrow opens and closes again on every kind of row (${nexts} months ahead)`, async ({ page }) => {
-    await page.evaluate(C => { localStorage.setItem('ironlog:session/admin', 'true'); localStorage.setItem('ironlog:grocery/main', JSON.stringify(C)); }, CATALOGUE);
-    await page.reload();
-    await page.click('#tab-daily'); await page.click('#daily-grocery');
+test('the Shared with arrow opens and closes again on every kind of row (0, 1 and 2 months ahead)', async ({ page }) => {
+  for (const nexts of [0, 1, 2]) {
+    await seedCatalogue(page);
     for (let i = 0; i < nexts; i++) await page.tap('#groc-next');
     for (const name of ['Chicken', 'Rice', 'Eggs', 'Soap', 'Tea', 'Milk']) {
       await page.getByRole('button', { name: new RegExp(`and price of ${name}$`) }).click();
       const picker = page.locator('li', { has: page.getByRole('button', { name: new RegExp(`and price of ${name}$`) }) }).locator('details.gshare');
       if (!(await picker.count())) continue; // a row with no groups has no picker
       await picker.locator('summary').click();
-      await expect(picker, `${name}: Shared with opens`).toHaveJSProperty('open', true);
+      await expect(picker, `${nexts} ahead, ${name}: Shared with opens`).toHaveJSProperty('open', true);
       await picker.locator('summary').click();
-      await expect(picker, `${name}: Shared with closes`).toHaveJSProperty('open', false);
+      await expect(picker, `${nexts} ahead, ${name}: Shared with closes`).toHaveJSProperty('open', false);
     }
-  });
-}
+  }
+});
 
 test('after the split is set to Just me or Not mine, the Shared with arrow still closes', async ({ page }) => {
   await page.evaluate(C => { localStorage.setItem('ironlog:session/admin', 'true'); localStorage.setItem('ironlog:grocery/main', JSON.stringify(C)); }, CATALOGUE);
