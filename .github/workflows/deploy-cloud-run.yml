@@ -49,6 +49,8 @@ jobs:
       IRON_LOG_ENV: staging
       SERVICE: iron-log-staging
       BUILD_SA: iron-log-build@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+      # The custom domain staging signs in on (a repository variable, empty until the domain is mapped; ADR 076). Empty keeps BASE_URL on the Cloud Run address.
+      STAGING_PUBLIC_BASE_URL: ${{ vars.STAGING_BASE_URL }}
     steps:
       - uses: actions/checkout@v7
         with:

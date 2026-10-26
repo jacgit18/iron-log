@@ -40,6 +40,8 @@ jobs:
       IRON_LOG_ENV: qa
       SERVICE: iron-log-qa
       BUILD_SA: iron-log-build@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+      # The custom domain QA signs in on (a repository variable, empty until the domain is mapped; ADR 076). Empty keeps BASE_URL on the Cloud Run address.
+      QA_PUBLIC_BASE_URL: ${{ vars.QA_BASE_URL }}
       # Main's build file, not the ref's: a branch's own build steps would run as the build account, which can write to the image
       # repository production and staging reuse images from.
       CLOUDBUILD_CONFIG: ${{ github.workspace }}/main/cloudbuild.yaml
