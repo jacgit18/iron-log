@@ -4,10 +4,22 @@
 
 export const STAMP_FILE = 'check-stamp.json'; // resolved with `git rev-parse --git-path`, so it sits in the git directory: never committed, one per worktree
 
-/** `ran` is the plan that passed (typecheck, lint, test, e2e, ...). A test step that ran only the tests related to the change is recorded as
- *  `test:related`, so it never counts as the full unit suite. */
-export function makeStamp({ head, dirty, ran, relatedTests = false, at = new Date().toISOString() }) {
-  return { head, dirty: Boolean(dirty), ran: ran.map(c => (c === 'test' && relatedTests ? 'test:related' : c)), at };
+/** The names a plan is recorded under. A test step that ran only the tests related to the change is `test:related`, and a browser run of only the
+ *  changed specs is `e2e:changed`, so neither counts as the full suite. */
+export function stampNames(plan, { relatedTests = false, scopedE2e = false } = {}) {
+  return plan.map(c => (c === 'test' && relatedTests ? 'test:related' : c === 'e2e' && scopedE2e ? 'e2e:changed' : c));
+}
+
+/** `ran` is the plan that passed (typecheck, lint, test, e2e, ...). */
+export function makeStamp({ head, dirty, ran, relatedTests = false, scopedE2e = false, at = new Date().toISOString() }) {
+  return { head, dirty: Boolean(dirty), ran: stampNames(ran, { relatedTests, scopedE2e }), at };
+}
+
+/** True when this exact commit, on a clean tree, already passed every check in `names` (stampNames of the plan): the push has nothing new to prove.
+ *  A dirty tree on either side, another commit, or a check the stamp lacks all say no. */
+export function stampCovers(stamp, head, dirty, names) {
+  if (!stamp || dirty || stamp.dirty || stamp.head !== head || !Array.isArray(stamp.ran)) return false;
+  return names.every(n => stamp.ran.includes(n));
 }
 
 /** Which of the project's rules (`autoTickFromCheck` in .github/pr-kit.json: { line, needs }) the stamp backs for `head`.
