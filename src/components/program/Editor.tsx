@@ -123,6 +123,15 @@ function ProgramEditor() {
   useEffect(() => { if (removed && justRemoved.current) { justRemoved.current = false; undoRef.current?.focus(); } }, [removed]);
   // The Undo belongs to this visit to the editor: leaving the Program tab drops it.
   useEffect(() => () => { useAppStore.getState().dismissEdRemoved(); }, []);
+  // Same for the Moved notice. Its Go to button opens the day the card went to and puts focus on that card's Move to select.
+  const moved = useAppStore(s => s.edMoved);
+  const showMoved = moved && moved.key === k && moved.from === edDay ? moved : null;
+  const movedUndoRef = useRef<HTMLButtonElement>(null);
+  const justMoved = useRef(false);
+  const focusAfterGo = useRef<string | null>(null);
+  useEffect(() => { if (moved && justMoved.current) { justMoved.current = false; movedUndoRef.current?.focus(); } }, [moved]);
+  useEffect(() => { if (focusAfterGo.current) { document.getElementById(focusAfterGo.current)?.focus(); focusAfterGo.current = null; } }, [edDay]);
+  useEffect(() => () => { useAppStore.getState().dismissEdMoved(); }, []);
   const addBtn = <button type="button" className="btn primary" onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: null }); }}>+ Add exercise</button>;
 
   return (
@@ -159,6 +168,16 @@ function ProgramEditor() {
             </div>
           </div>
         )}
+        {showMoved && (
+          <div className="notice movewarn removednote" role="status">
+            <div><b>Moved</b> {slotSummary(cfg, showMoved.slot)} to {prog.days[showMoved.to - 1]!.title}.</div>
+            <div className="actions">
+              <button type="button" className="btn sm" ref={movedUndoRef} onClick={st.undoMoveEdSlot}>Undo</button>
+              <button type="button" className="btn sm" onClick={() => { focusAfterGo.current = showMoved.slot.id ? `mv-${showMoved.slot.id}` : null; st.setEdDay(showMoved.to); }}>Go to {prog.days[showMoved.to - 1]!.title}</button>
+              <button type="button" className="btn sm ghost" onClick={st.dismissEdMoved}>Dismiss</button>
+            </div>
+          </div>
+        )}
         <div className="edlist">
           {!day.slots.length && <p className="note">No exercises on this day yet.</p>}
           {day.slots.map((sl, i) => {
@@ -182,6 +201,10 @@ function ProgramEditor() {
                   <div className="edbtns">
                     <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}><Icon name="arrow-up" /></button>
                     <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}><Icon name="arrow-down" /></button>
+                    <select className="edmove" id={`mv-${sl.id}`} aria-label={`Move to day (${slotSummary(cfg, sl)})`} value={edDay}
+                      onChange={e => { const to = Number(e.target.value); justMoved.current = to !== edDay; st.moveEdSlotToDay(i, to); }}>
+                      {DAYS.map(d => <option key={d} value={d}>{d === edDay ? `Move to… (Day ${d})` : `Move to Day ${d}`}</option>)}
+                    </select>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
                     <ArmedButton className={`btn sm ${arming === i ? 'danger' : 'ghost'}`} id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? i : null)} onConfirm={() => { setArming(null); justRemoved.current = true; st.removeEdSlot(i); }} />
                   </div>
