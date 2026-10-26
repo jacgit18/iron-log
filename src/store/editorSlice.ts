@@ -61,8 +61,8 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const ak = get().activeProgKey();
     set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd }, ...(fromExp ? { fromExp } : {}) } });
   },
-  setEdProg: edProg => set({ edProg, edRemoved: null }),
-  setEdDay: edDay => set({ edDay, edRemoved: null }),
+  setEdProg: edProg => set({ edProg, edRemoved: null, edMoved: null }),
+  setEdDay: edDay => set({ edDay, edRemoved: null, edMoved: null }),
 
   saveEdited(prog) {
     const it = get().edItem();
@@ -85,7 +85,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   removeEdSlot(i) {
     const key = get().edKey(); const day = get().edDay;
     const gone: ProgramSlot[] = [];
-    if (get().editProgram(prog => { pinIds(prog, day); gone.push(...prog.days[day - 1].slots.splice(i, 1)); }) && gone[0]) set({ edRemoved: { key, day, idx: i, slot: gone[0] } });
+    if (get().editProgram(prog => { pinIds(prog, day); gone.push(...prog.days[day - 1].slots.splice(i, 1)); }) && gone[0]) set({ edRemoved: { key, day, idx: i, slot: gone[0] }, edMoved: null });
   },
   undoRemoveEdSlot() {
     const r = get().edRemoved;
@@ -95,6 +95,32 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     }
   },
   dismissEdRemoved() { set({ edRemoved: null }); },
+  edMoved: null,
+  // Move the open day's card at `i` to the end of its section on `toDay` of the same program. Ids are written down on both days first
+  // (as for a reorder), so the cards that stay keep their own ticks and phase defaults; the moved card keeps its id and start week.
+  moveEdSlotToDay(i, toDay) {
+    const key = get().edKey(); const from = get().edDay;
+    if (toDay === from || !DAYS.includes(toDay) || !get().edProgram().days[from - 1].slots[i]) return;
+    const moved: ProgramSlot[] = [];
+    if (get().editProgram(prog => {
+      pinIds(prog, from); pinIds(prog, toDay);
+      const [sl] = prog.days[from - 1].slots.splice(i, 1);
+      if (sl) { moved.push(structuredClone(sl)); insertSlot(prog.days[toDay - 1].slots, sl); }
+    }) && moved[0]) set({ edMoved: { key, from, to: toDay, idx: i, slot: moved[0] }, edRemoved: null });
+  },
+  // Put the moved card back on its old day at its old place. The card is found on the new day by what it holds, as a library program's cards have no id.
+  undoMoveEdSlot() {
+    const m = get().edMoved;
+    if (!m || m.key !== get().edKey() || m.from !== get().edDay) { set({ edMoved: null }); return; }
+    const want = JSON.stringify(m.slot);
+    // The card was changed or removed since (Edit, Remove): there is nothing to put back, and nothing is saved.
+    if (get().edProgram().days[m.to - 1].slots.findIndex(x => JSON.stringify(x) === want) < 0) { set({ edMoved: null }); flag('Could not put it back'); return; }
+    if (get().editProgram(prog => {
+      const there = prog.days[m.to - 1].slots; const [sl] = there.splice(there.findIndex(x => JSON.stringify(x) === want), 1);
+      const back = prog.days[m.from - 1].slots; back.splice(Math.min(m.idx, back.length), 0, sl!);
+    })) { set({ edMoved: null }); flag('Put back'); }
+  },
+  dismissEdMoved() { set({ edMoved: null }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
 
   renameLibItem(raw) {

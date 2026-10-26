@@ -16,7 +16,7 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   clearStorage();
-  useAppStore.setState({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], cfg: structuredClone(DEFAULT_CFG), edProg: null, edDay: 1, modal: null });
+  useAppStore.setState({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], cfg: structuredClone(DEFAULT_CFG), edProg: null, edDay: 1, edMoved: null, edRemoved: null, modal: null });
 });
 
 // Program A's Day 1: five Regular cards, two Supersets, two Home cards.
@@ -113,6 +113,88 @@ describe('editing a program', () => {
     st().removeEdSlot(0);
     expect(st().edProgram().days[2].slots).toHaveLength(BUILTIN.A.days[2].slots.length - 1);
     expect(day1()).toHaveLength(10);
+  });
+});
+
+describe('moving a card to another day', () => {
+  const day = n => st().edProgram().days[n - 1].slots;
+  it('moves the card to the end of its section on the new day, keeping it whole', () => {
+    const card = structuredClone(day1()[0]); const before3 = ids(day(3));
+    st().moveEdSlotToDay(0, 3);
+    expect(ids(day1())).toEqual(builtinA().slice(1));
+    expect(day(3).find(s => s.id === card.id)).toEqual(card); // id, items, tier, type, note and start all kept
+    expect(day(3)).toHaveLength(before3.length + 1);
+    const at = day(3).findIndex(s => s.id === card.id);
+    expect(day(3).filter((s, j) => s.sec === card.sec && j > at)).toHaveLength(0); // nothing of its section after it
+    expect(ids(day(3)).filter(id => id !== card.id)).toEqual(before3); // the others untouched and in order
+    expect(saved('programs/A').days[2].slots.map(s => s.id)).toContain(card.id);
+  });
+  it('loses and duplicates nothing for any card and any day', () => {
+    const all = () => st().edProgram().days.flatMap(d => ids(d.slots)).sort();
+    const want = all();
+    for (let i = 0; i < day1().length; i++) for (let to = 2; to <= 7; to++) {
+      useAppStore.setState({ programs: { A: BUILTIN.A, B: BUILTIN.B }, edDay: 1 });
+      st().moveEdSlotToDay(i, to);
+      expect(all()).toEqual(want);
+    }
+  });
+  it('does nothing for the same day, a day that does not exist or a card that is not there', () => {
+    const before = structuredClone(st().programs.A);
+    st().moveEdSlotToDay(0, 1); st().moveEdSlotToDay(0, 8); st().moveEdSlotToDay(0, 0); st().moveEdSlotToDay(99, 2);
+    expect(st().programs.A).toEqual(before);
+    expect(st().edMoved).toBeNull();
+  });
+  it('a superset moves as one card', () => {
+    const i = day1().findIndex(s => s.type === 'superset');
+    const card = structuredClone(day1()[i]);
+    st().moveEdSlotToDay(i, 2);
+    expect(day(2).find(s => s.id === card.id)).toEqual(card);
+  });
+  it('a card saved without an id keeps its position id, and the cards left behind keep theirs', () => {
+    const p = structuredClone(BUILTIN.A); p.days[0].slots.forEach(sl => { delete sl.id; }); p.days[1].slots.forEach(sl => { delete sl.id; });
+    useAppStore.setState(x => ({ programs: { ...x.programs, A: p } }));
+    const named = day1().map((s, i) => s.id || `A-d1s${i + 1}`); const named2 = day(2).map((s, i) => s.id || `A-d2s${i + 1}`);
+    st().moveEdSlotToDay(1, 2);
+    expect(ids(day1())).toEqual(named.filter((_, i) => i !== 1));
+    expect(ids(day(2)).slice().sort()).toEqual([...named2, named[1]].sort());
+  });
+  it('Undo puts the card back in its old place, once', () => {
+    const before = structuredClone(st().edProgram().days);
+    st().moveEdSlotToDay(2, 5);
+    expect(st().edMoved).toMatchObject({ from: 1, to: 5, idx: 2 });
+    st().undoMoveEdSlot();
+    expect(st().edProgram().days.map(d => d.slots.map(s => s.id))).toEqual(before.map(d => d.slots.map(s => s.id)));
+    expect(st().edMoved).toBeNull();
+    st().undoMoveEdSlot();
+    expect(day1()).toHaveLength(before[0].slots.length);
+  });
+  it('Undo after the card was changed saves nothing and says so', () => {
+    st().moveEdSlotToDay(0, 2);
+    const id = st().edMoved.slot.id;
+    st().editProgram(p => { p.days[1].slots.find(s => s.id === id).note = 'changed'; });
+    const before = structuredClone(st().programs.A);
+    st().undoMoveEdSlot();
+    expect(st().programs.A).toEqual(before);
+    expect(st().edMoved).toBeNull();
+  });
+  it('drops the Undo when you switch day or program, and a remove replaces it', () => {
+    st().moveEdSlotToDay(0, 2); st().setEdDay(2);
+    expect(st().edMoved).toBeNull();
+    st().setEdDay(1); st().moveEdSlotToDay(0, 2); st().setEdProg('B');
+    expect(st().edMoved).toBeNull();
+    st().setEdProg('A'); st().moveEdSlotToDay(0, 2); st().removeEdSlot(0);
+    expect(st().edMoved).toBeNull();
+    expect(st().edRemoved).not.toBeNull();
+  });
+  it('works on a library program and never touches the built-in', () => {
+    st().createProgram('Mine', 'A');
+    const key = st().edKey(); expect(key.startsWith('L:')).toBe(true);
+    const card = structuredClone(day1()[0]);
+    st().moveEdSlotToDay(0, 4);
+    expect(day(4).some(s => JSON.stringify(s) === JSON.stringify(card))).toBe(true);
+    st().undoMoveEdSlot();
+    expect(day1()[0]).toEqual(card);
+    expect(ids(BUILTIN.A.days[0].slots)).toEqual(builtinA());
   });
 });
 

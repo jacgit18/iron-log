@@ -61,6 +61,9 @@
   gap: var(--sp-4);
   flex-wrap: wrap;
 }
+.edmove {
+  max-width: 100%;
+}
 .draghandle {
   flex: 0 0 auto;
   align-self: stretch;
