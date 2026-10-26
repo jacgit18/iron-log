@@ -97,7 +97,7 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
     secret: config.secret,
     database: pii
       ? (options: BetterAuthOptions) =>
-          encryptedAdapter(kyselyAdapter(new Kysely({ dialect: new PostgresDialect({ pool }) }), { type: 'postgres' })(options), pii, { matchPlaintext: config.piiMatchPlaintext !== false })
+          encryptedAdapter(kyselyAdapter(new Kysely({ dialect: new PostgresDialect({ pool }) }), { type: 'postgres' })(options), pii, { matchPlaintext: config.piiMatchPlaintext !== false, rejectUnsealed: config.piiMatchPlaintext === false })
       : pool,
     user: { modelName: 'auth.user' },
     session: { modelName: 'auth.session', expiresIn: SESSION_DAYS * DAY, updateAge: DAY },
