@@ -1,0 +1,18 @@
+@layer base, components;
+@layer components {
+/* The app title in the header is a button that goes back to the Board. It looks like the plain title it replaced (same size, case and
+   spacing as `header.top h1`); only the 44px target, the pointer and the focus ring are new. */
+header.top h1 .brandlink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+}

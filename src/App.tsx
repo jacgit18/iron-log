@@ -18,6 +18,7 @@ import ErrorBoundary from './components/ErrorBoundary.js';
 import { lazyTab, mapChunkError } from './lib/lazyTab.js';
 import { renewPush } from './lib/pushClient.js';
 import { useWaterReminder } from './hooks/useWaterReminder.js';
+import './components/BrandLink.css';
 
 // The Board (the first screen) and the shell are in the main bundle; the other tabs are fetched when first opened. Every chunk is in the
 // service worker's precache, so they open offline too.
@@ -102,7 +103,7 @@ export default function App() {
       <a className="skip" href="#view">Skip to content</a>
       <div className="wrap">
         <header className="top">
-          <h1>Loadbearer</h1>
+          <h1><button type="button" className="brandlink" aria-current={tab === 'board' ? 'page' : undefined} onClick={() => { setTab('board'); window.scrollTo({ top: 0 }); }}>Loadbearer</button></h1>
           <div className="topact">
             <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
             <ThemeButton />
