@@ -272,7 +272,8 @@ export function createApiDb(options: ApiDbOptions) {
         ? `Everything in this account was erased on another device. What this device changed itself (${n(kept.length, 'one item', 'items')}) is kept under Not sent, to send again or discard; the rest was dropped.`
         : `Everything in this account was erased on another device, so ${n(held.size, 'a change', 'changes')} from here ${held.size === 1 ? 'was' : 'were'} dropped.`);
     }
-    emitAll(); announce();
+    if (mirror.hasPulled()) emitAll(); // a pull that stopped partway (the copy is not ready) must not hand listeners half the new account
+    announce();
     return held.size > 0;
   }
   function pull(): Promise<void> {

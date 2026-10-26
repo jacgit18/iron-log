@@ -1357,6 +1357,10 @@ describe('erasing the account (Phase F)', () => {
     server.fail.push({ ok: false, class: 'refused', status: 422, reason: 'invalid-input' });
     await db.doc('logs/squat').set(logs2('e1', 'e2')).catch(() => undefined); // set aside, nothing pending
     server.erase(); // erased on another device
+    const seen: number[] = [];
+    db.collection('logs').onSnapshot(snap => seen.push(snap.size));
+    await settle();
+    const before = seen.length;
     // page 1 shows the new epoch and says there is more; page 2 fails. The next pull will find the epoch already current.
     server.fail.push({ ok: true, rows: [], cursor: '99', more: true, epoch: server.epoch }, { ok: false, class: 'network', status: 0, retryAfterMs: null, message: 'offline' });
     await db.syncNow();
@@ -1364,6 +1368,7 @@ describe('erasing the account (Phase F)', () => {
     expect((q!.doc as { entries: { id: string }[] }).entries.map(x => x.id)).toEqual(['e2']); // e1 was the erased data
     expect(db.status().notices.map(n => n.text)).toEqual(['Everything in this account was erased on another device. What this device changed itself (one item) is kept under Not sent, to send again or discard; the rest was dropped.']);
     expect(db.status().state).toBe('paused');
+    expect(seen.slice(before)).toEqual([]); // the copy is not ready: a collection listener is not handed page 1 of the new account as the whole of it
     await db.syncNow(); // the retry says nothing more about the erase
     expect(db.quarantined().length).toBe(1);
   });
