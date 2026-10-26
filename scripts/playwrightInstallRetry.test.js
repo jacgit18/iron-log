@@ -23,6 +23,16 @@ describe('the Chromium install for Playwright', () => {
     expect(action.indexOf('pkill -x apt-get')).toBeLessThan(action.indexOf('dpkg --configure -a'));
   });
 
+  it('caches the downloaded .deb files, keyed on the Playwright version, and puts them back before apt runs', () => {
+    const action = readFileSync(ACTION, 'utf8');
+    expect(action).toMatch(/uses: actions\/cache@v\d+/);
+    expect(action).toMatch(/key: .*playwright-\$\{\{ steps\.version\.outputs\.playwright \}\}/);
+    expect(action.indexOf('/var/cache/apt/archives/')).toBeGreaterThan(-1);
+    // restored files are copied in before the install, the install's downloads are copied out after it
+    expect(action.indexOf('playwright-apt-debs/*.deb /var/cache/apt/archives/')).toBeLessThan(action.indexOf('timeout 90 npx'));
+    expect(action.indexOf('/var/cache/apt/archives/*.deb ~/.cache/playwright-apt-debs/')).toBeGreaterThan(action.indexOf('npx playwright install --with-deps chromium\n          }\n        }'));
+  });
+
   it('ends with an attempt that has no cutoff, so a slow install passes instead of failing', () => {
     const lines = readFileSync(ACTION, 'utf8').split('\n').filter(l => /npx playwright install --with-deps chromium/.test(l));
     expect(lines).toHaveLength(3);
