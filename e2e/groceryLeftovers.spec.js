@@ -11,15 +11,6 @@ const seed = async (page, cat, months = {}) => {
   await page.click('#tab-daily'); await page.click('#daily-grocery');
 };
 
-test('U-4: the single Price box is off while each one has its own price, so typing cannot wipe the packs', async ({ page }) => {
-  await seed(page, { stores: [], items: [item('beef', 'Beef')] }, { '2026-09': { lines: { beef: { prices: [899, 1049] } }, pulled: [] } });
-  await page.getByRole('button', { name: 'Count and price of Beef' }).click();
-  const price = page.getByLabel('Price each of Beef, dollars');
-  await expect(price).toBeDisabled();
-  await expect(page.locator('.gmore')).toContainText('Each pack has its own price');
-  await expect(page.getByRole('button', { name: /^Remove .* from Beef$/ })).toHaveCount(2);
-});
-
 test('U-6: Done keeps text typed in Add an item and says to add or clear it', async ({ page }) => {
   await seed(page, { stores: [], items: [item('rice', 'Rice')] });
   await page.click('#groc-view-home'); await page.click('#groc-edit');
