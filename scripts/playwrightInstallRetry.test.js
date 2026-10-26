@@ -23,6 +23,12 @@ describe('the Chromium install for Playwright', () => {
     expect(action.indexOf('pkill -x apt-get')).toBeLessThan(action.indexOf('dpkg --configure -a'));
   });
 
+  it('ends with an attempt that has no cutoff, so a slow install passes instead of failing', () => {
+    const lines = readFileSync(ACTION, 'utf8').split('\n').filter(l => /npx playwright install --with-deps chromium/.test(l));
+    expect(lines).toHaveLength(3);
+    expect(lines[2]).not.toMatch(/timeout \d/);
+  });
+
   it('is used by the three jobs that run a browser', () => {
     const used = readdirSync(WORKFLOWS).filter(f => readFileSync(join(WORKFLOWS, f), 'utf8').includes('./.github/actions/install-chromium'));
     expect(used.sort()).toEqual(['screenshots.yml', 'test.yml']);

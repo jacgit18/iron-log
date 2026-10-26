@@ -45,7 +45,7 @@ concurrency:
 jobs:
   screenshots:
     runs-on: ubuntu-26.04
-    timeout-minutes: 10
+    timeout-minutes: 20 # timeout-ok: the same install on a slow mirror took 11 min on 2026-10-26
     steps:
       - uses: actions/checkout@v7
         with:

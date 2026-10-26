@@ -162,7 +162,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e_sync == 'true'
     runs-on: ubuntu-26.04
-    timeout-minutes: 10
+    timeout-minutes: 20 # timeout-ok: the same install on a slow mirror (see e2e-shards)
     services:
       postgres:
         image: postgres:17
@@ -203,7 +203,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-26.04
-    timeout-minutes: 10 # about 1 min of setup and 2.5 min of tests; the install retry adds up to 4.5 min on a stuck mirror
+    timeout-minutes: 20 # timeout-ok: a slow-mirror install took 10 to 12 min on 2026-10-26 (setup 1 min, tests 2.5 min); lower once the download itself is fixed
     strategy:
       fail-fast: false
       matrix:

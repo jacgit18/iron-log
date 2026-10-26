@@ -1,19 +1,27 @@
 name: Install Chromium for Playwright
 description: >
-  `playwright install --with-deps` fetches about 21 MB from the Ubuntu mirror, normally in 20 s. On 2026-10-26 the mirror served 35 kB/s and one
-  install took 10 minutes (13 of 52 shard runs took over 60 s). A stuck first attempt is cut off and tried once more, with a warning annotation so
-  retries stay visible. Every workflow installs the browser through this action (scripts/playwrightInstallRetry.test.js).
+  `playwright install --with-deps` fetches about 25 MB from the Ubuntu mirror, normally in 20 s. On a slow runner the mirror serves about 35 kB/s and
+  the same install takes 10 minutes or more (13 of 52 shard runs took over 60 s; PR 540's own run had two jobs stall on both attempts). A stuck first
+  attempt is cut off and tried again, then once more with no cutoff, so a slow install still finishes (the job timeout applies) instead of failing;
+  each retry is a warning annotation so they stay countable. Every workflow installs the browser through this action (scripts/playwrightInstallRetry.test.js).
 runs:
   using: composite
   steps:
     - shell: bash
       run: |
-        timeout 90 npx playwright install --with-deps chromium || {
-          echo "::warning::playwright install did not finish in 90 s (slow apt mirror?); trying once more"
-          # `timeout` stops npx but not the apt-get it started under sudo, which keeps the dpkg lock (run 40382012906: "dpkg frontend lock was locked by apt-get").
+        # `timeout` stops npx but not the apt-get it started under sudo, which keeps the dpkg lock (run 40382012906: "dpkg frontend lock was locked by apt-get").
+        free_apt() {
           sudo pkill -x apt-get || true
           for _ in $(seq 20); do pgrep -x apt-get > /dev/null || break; sleep 1; done
           sudo pkill -KILL -x apt-get || true
           sudo dpkg --configure -a
-          timeout 180 npx playwright install --with-deps chromium
+        }
+        timeout 90 npx playwright install --with-deps chromium || {
+          echo "::warning::playwright install did not finish in 90 s (slow apt mirror?); trying once more"
+          free_apt
+          timeout 180 npx playwright install --with-deps chromium || {
+            echo "::warning::playwright install stalled again; waiting it out (apt resumes partial downloads)"
+            free_apt
+            npx playwright install --with-deps chromium
+          }
         }
