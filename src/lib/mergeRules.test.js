@@ -1,10 +1,30 @@
 // The merge rules in the backend spec (DevHiveMind/Projects/iron-log/docs/backend-data-rules.md, section 4), one test per claim.
 import { describe, it, expect } from 'vitest';
-import { mergeEntries, mergeWeek, entryId, findEntry } from './export.js';
+import { entriesChanged, mergeEntries, mergeWeek, entryId, findEntry } from './export.js';
 import { normWeek } from './logic.js';
 
 const real = (o = {}) => ({ id: 'r1', d: '2026-10-05', ph: 'hyp', w: 100, s: 3, r: 8, slot: 'A-d1s1', wk: '2026-10-05', ...o });
 const auto = (o = {}) => ({ id: 'a1', d: '2026-10-05', ph: 'hyp', w: 100, s: 3, r: 8, slot: 'A-d1s1', wk: '2026-10-05', auto: true, ...o });
+
+describe('entriesChanged', () => {
+  const old = real({ updatedAt: '2026-10-05T10:00:00.000Z' });
+  const later = real({ w: 120, updatedAt: '2026-10-05T11:00:00.000Z' });
+  it('sees a replaced copy even though the count is the same', () => {
+    expect(entriesChanged([old], mergeEntries([old], [later]))).toBe(true);
+  });
+  it('sees a real session replacing a check-off (same count)', () => {
+    const a = auto(); const r = real({ id: 'r9' });
+    expect(entriesChanged([a], mergeEntries([a], [r]))).toBe(true);
+  });
+  it('sees an added entry', () => {
+    expect(entriesChanged([real()], mergeEntries([real()], [real({ id: 'r2', w: 105, slot: 'A-d1s2' })]))).toBe(true);
+  });
+  it('says nothing changed for a merge that kept everything, whatever the order', () => {
+    const a = [real({ id: 'r2', d: '2026-10-06' }), real()];
+    expect(entriesChanged(a, mergeEntries(a, [real()]))).toBe(false); // sorted by date, same entries
+    expect(entriesChanged([], mergeEntries([], []))).toBe(false);
+  });
+});
 
 describe('mergeEntries', () => {
   it('adds an entry whose id and content are both new', () => {
