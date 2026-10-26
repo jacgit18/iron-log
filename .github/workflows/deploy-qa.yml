@@ -33,6 +33,7 @@ jobs:
     # The keyless Google login accepts only this repository's main branch, so the workflow has to be started from it.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
+    timeout-minutes: 15 # timeout-ok: not measured: deploys paused; same steps as deploy
     environment: qa
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}

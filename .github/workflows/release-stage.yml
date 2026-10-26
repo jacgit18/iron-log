@@ -42,6 +42,7 @@ jobs:
   stage:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: us-central1

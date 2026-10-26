@@ -23,6 +23,7 @@ jobs:
     # The keyless Google login accepts this repository's main branch only.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
+    timeout-minutes: 15 # timeout-ok: scheduled run takes about 7 min
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: us-central1
