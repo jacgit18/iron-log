@@ -129,7 +129,7 @@ function ProgramEditor() {
   const movedUndoRef = useRef<HTMLButtonElement>(null);
   const justMoved = useRef(false);
   const focusAfterGo = useRef<string | null>(null);
-  // Arrow keys on a closed select change its value at once. A change that comes from them waits here for Enter (Escape or leaving drops it), so a keyboard user can look through the days before a card moves.
+  // Arrow keys on a closed select change its value at once (on macOS they open the menu). A change that comes from them waits here for Enter (Escape or leaving drops it), so a keyboard user can look through the days before a card moves.
   const [pendingDay, setPendingDay] = useState<{ i: number; to: number } | null>(null);
   const arrowKey = useRef(false);
   const applyMove = (i: number, to: number) => {
@@ -213,9 +213,10 @@ function ProgramEditor() {
                       onChange={e => { const to = Number(e.target.value); if (arrowKey.current) setPendingDay({ i, to }); else applyMove(i, to); }}
                       onKeyDown={e => {
                         arrowKey.current = e.key.startsWith('Arrow') && !e.altKey;
+                        if (arrowKey.current) setTimeout(() => { arrowKey.current = false; }, 0); // a closed select changes inside this keydown; where the arrow opens the menu instead (macOS) the later pick must move the card
                         if (e.key === 'Enter' && pendingDay?.i === i) { e.preventDefault(); applyMove(i, pendingDay.to); } else if (e.key === 'Escape') setPendingDay(null);
                       }}
-                      onKeyUp={() => { arrowKey.current = false; }} onBlur={() => setPendingDay(null)}>
+                      onBlur={() => setPendingDay(null)}>
                       {DAYS.map(d => <option key={d} value={d}>{d === edDay ? `Move to… (Day ${d})` : `Move to Day ${d}`}</option>)}
                     </select>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
