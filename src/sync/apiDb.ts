@@ -249,7 +249,7 @@ export function createApiDb(options: ApiDbOptions) {
 
   /* ---------- pulling ---------- */
   // Seen on a pull, even one that then failed on a later page.
-  function dropErasedWrites(before: Mirror) {
+  function dropErasedWrites(before: Mirror): boolean {
     // The account's data was erased from another device: every document is different now. This device's unsent and set-aside
     // writes were made from the old data: sent whole (against the emptied mirror, or by Try again) they would bring the erased
     // history back, as a log document holds every session of an exercise. So they go, except what this device added or changed
@@ -271,9 +271,9 @@ export function createApiDb(options: ApiDbOptions) {
       note('', kept.length
         ? `Everything in this account was erased on another device. What this device changed itself (${n(kept.length, 'one item', 'items')}) is kept under Not sent, to send again or discard; the rest was dropped.`
         : `Everything in this account was erased on another device, so ${n(held.size, 'a change', 'changes')} from here ${held.size === 1 ? 'was' : 'were'} dropped.`);
-      lastSyncedAt = lastPullAt;
     }
     emitAll(); announce();
+    return held.size > 0;
   }
   function pull(): Promise<void> {
     return exclusive(async () => {
@@ -292,7 +292,7 @@ export function createApiDb(options: ApiDbOptions) {
         setState('idle');
         if (!wasReady && mirror.hasPulled()) emitAll();
         else emitPaths(out.paths);
-        if (out.reset) dropErasedWrites(before);
+        if (out.reset && dropErasedWrites(before)) lastSyncedAt = lastPullAt;
         if (out.paths.length) announce(); // rows arrived: the status (holdsData) changed even though the state did not
         return;
       }

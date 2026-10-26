@@ -103,15 +103,16 @@ export function createTransport(options: TransportOptions) {
   type Answer = { status: number; ok: boolean; headers: Headers; body: unknown };
 
   // Sends one request and reads its body under the same timer, so a server that sends headers and then stalls cannot hold the
-  // sync forever (everything runs one at a time). Returns the answer, or a network failure.
-  async function send(path: string, init: RequestInit): Promise<Answer | Pause> {
+  // sync forever (everything runs one at a time). Returns the answer, or a network failure. A status that only ever pauses the queue
+  // (see pauseFor) is answered without its body, so a slow body there cannot hide the Retry-After the server sent.
+  async function send(path: string, init: RequestInit, wantBody: (status: number) => boolean = status => pauseFor(status, null) === null): Promise<Answer | Pause> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const extra = headers ? await headers() : {};
       const res = await doFetch(baseUrl + path, { ...init, headers: { accept: 'application/json', 'x-client-version': clientVersion, ...extra, ...(init.headers as Record<string, string> | undefined) }, signal: controller.signal });
       let body: unknown;
-      try { body = await res.json(); } catch (err) { if (controller.signal.aborted) throw err; /* an empty or non-JSON body stays undefined */ }
+      if (wantBody(res.status)) try { body = await res.json(); } catch (err) { if (controller.signal.aborted) throw err; /* an empty or non-JSON body stays undefined */ }
       return { status: res.status, ok: res.ok, headers: res.headers, body };
     } catch (err) {
       return pause('network', 0, null, controller.signal.aborted ? `no answer in ${timeoutMs} ms` : err instanceof Error ? err.message : String(err));
@@ -183,7 +184,8 @@ export function createTransport(options: TransportOptions) {
 
   // Erasing the account's data, or deleting the account (Phase F). Never retried on its own: the person asked once, and sees the answer.
   async function accountAction(path: '/api/account/erase-data' | '/api/account/delete', word: 'ERASE' | 'DELETE'): Promise<AccountActionOutcome> {
-    const res = await send(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: word }) });
+    const res = await send(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: word }) },
+      status => status >= 300 && pauseFor(status, null) === null); // a success needs no body: do not turn an erase that happened into a timeout
     if (isPause(res)) return res;
     const waiting = pauseFor(res.status, parseRetryAfter(res.headers.get('retry-after')));
     if (waiting) return waiting;

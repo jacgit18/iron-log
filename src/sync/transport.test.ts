@@ -45,4 +45,16 @@ describe('transport: a body that never arrives', () => {
     expect(await guard(t.pull('0'))).toMatchObject({ ok: false, class: 'network' });
     expect(await guard(t.pull('0'))).toMatchObject({ ok: true });
   });
+
+  it('a 503 is answered from its status and Retry-After without waiting on its body', async () => {
+    const stalled = (async () => ({ ok: false, status: 503, headers: new Headers({ 'retry-after': '120' }), json: () => new Promise(() => undefined) }) as unknown as Response) as typeof fetch;
+    const t = createTransport({ clientVersion: 'x', timeoutMs: 50, fetch: stalled });
+    expect(await guard(t.pull('0'))).toMatchObject({ ok: false, class: 'server', status: 503, retryAfterMs: 120_000 });
+  });
+
+  it('an erase that succeeded is not turned into a timeout by a body that never arrives', async () => {
+    const ok = (async () => ({ ok: true, status: 200, headers: new Headers(), json: () => new Promise(() => undefined) }) as unknown as Response) as typeof fetch;
+    const t = createTransport({ clientVersion: 'x', timeoutMs: 50, fetch: ok });
+    expect(await guard(t.eraseData())).toEqual({ ok: true });
+  });
 });
