@@ -15,6 +15,7 @@ jobs:
   changelog:
     if: ${{ !contains(fromJSON('["dependabot[bot]", "github-actions[bot]"]'), github.event.pull_request.user.login) }}
     runs-on: ubuntu-26.04
+    timeout-minutes: 2
     steps:
       - name: The description has a changelog entry
         env:

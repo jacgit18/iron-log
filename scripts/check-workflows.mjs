@@ -31,4 +31,6 @@ if (spawnSync('actionlint', ['-version'], { stdio: 'ignore' }).status === 0) {
 if (existsSync('.github/pr-kit.json')) {
   try { JSON.parse(readFileSync('.github/pr-kit.json', 'utf8')); console.log('ok .github/pr-kit.json'); } catch (e) { console.error(`.github/pr-kit.json: ${e.message}`); bad++; }
 }
+// Every job needs a timeout (ci-budget.md); the same script runs in .github/workflows/ci-timeouts.yml.
+if (spawnSync('node', ['scripts/ci-timeouts.mjs'], { stdio: 'inherit' }).status !== 0) bad++;
 process.exit(bad ? 1 : 0);
