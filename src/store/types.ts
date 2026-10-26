@@ -193,6 +193,8 @@ export interface ExportSlice {
   downloadData(): Promise<void>;
 }
 
+/** The card the Program editor last moved to another day: its old day and place, and the day it went to. */
+export interface EdMoved { key: string; from: number; to: number; idx: number; slot: ProgramSlot }
 export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot }
 
 export interface EditorSlice {
@@ -219,6 +221,12 @@ export interface EditorSlice {
   removeEdSlot(i: number): void;
   undoRemoveEdSlot(): void;
   dismissEdRemoved(): void;
+  /** The card the Program editor last moved to another day, so its notice can offer Undo. */
+  edMoved: EdMoved | null;
+  /** Moves the open day's card at `i` to the end of its section on day `toDay` of the same program. */
+  moveEdSlotToDay(i: number, toDay: number): void;
+  undoMoveEdSlot(): void;
+  dismissEdMoved(): void;
   setDaySub(v: string): boolean;
   renameLibItem(raw: string): false | void;
   libSnapshot(name: string, prog: Program, from: string, auto: boolean): LibraryItem;

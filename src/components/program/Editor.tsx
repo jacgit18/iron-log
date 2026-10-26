@@ -123,6 +123,23 @@ function ProgramEditor() {
   useEffect(() => { if (removed && justRemoved.current) { justRemoved.current = false; undoRef.current?.focus(); } }, [removed]);
   // The Undo belongs to this visit to the editor: leaving the Program tab drops it.
   useEffect(() => () => { useAppStore.getState().dismissEdRemoved(); }, []);
+  // Same for the Moved notice. Its Go to button opens the day the card went to and puts focus on that card's Move to select.
+  const moved = useAppStore(s => s.edMoved);
+  const showMoved = moved && moved.key === k && moved.from === edDay ? moved : null;
+  const movedUndoRef = useRef<HTMLButtonElement>(null);
+  const justMoved = useRef(false);
+  const focusAfterGo = useRef<string | null>(null);
+  // Arrow keys on a closed select change its value at once (on macOS they open the menu). A change that comes from them waits here for Enter (Escape or leaving drops it), so a keyboard user can look through the days before a card moves.
+  const [pendingDay, setPendingDay] = useState<{ i: number; to: number } | null>(null);
+  const arrowKey = useRef(false);
+  const applyMove = (i: number, to: number) => {
+    setPendingDay(null);
+    if (to === edDay) return;
+    st.moveEdSlotToDay(i, to); justMoved.current = useAppStore.getState().edMoved != null; // only a move that happened takes focus to Undo
+  };
+  useEffect(() => { if (moved && justMoved.current) { justMoved.current = false; movedUndoRef.current?.focus(); } }, [moved]);
+  useEffect(() => { if (focusAfterGo.current) { document.getElementById(focusAfterGo.current)?.focus(); focusAfterGo.current = null; } }, [edDay]);
+  useEffect(() => () => { useAppStore.getState().dismissEdMoved(); }, []);
   const addBtn = <button type="button" className="btn primary" onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: null }); }}>+ Add exercise</button>;
 
   return (
@@ -159,6 +176,16 @@ function ProgramEditor() {
             </div>
           </div>
         )}
+        {showMoved && (
+          <div className="notice movewarn removednote" role="status">
+            <div><b>Moved</b> {slotSummary(cfg, showMoved.slot)} to {prog.days[showMoved.to - 1]!.title}.</div>
+            <div className="actions">
+              <button type="button" className="btn sm" ref={movedUndoRef} onClick={st.undoMoveEdSlot}>Undo</button>
+              <button type="button" className="btn sm" onClick={() => { focusAfterGo.current = showMoved.slot.id ? `mv-${showMoved.slot.id}` : null; st.setEdDay(showMoved.to); }}>Go to {prog.days[showMoved.to - 1]!.title}</button>
+              <button type="button" className="btn sm ghost" onClick={st.dismissEdMoved}>Dismiss</button>
+            </div>
+          </div>
+        )}
         <div className="edlist">
           {!day.slots.length && <p className="note">No exercises on this day yet.</p>}
           {day.slots.map((sl, i) => {
@@ -182,6 +209,16 @@ function ProgramEditor() {
                   <div className="edbtns">
                     <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}><Icon name="arrow-up" /></button>
                     <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}><Icon name="arrow-down" /></button>
+                    <select className="edmove" id={`mv-${sl.id}`} aria-label={`Move to day (${slotSummary(cfg, sl)})`} value={pendingDay?.i === i ? pendingDay.to : edDay}
+                      onChange={e => { const to = Number(e.target.value); if (arrowKey.current) setPendingDay({ i, to }); else applyMove(i, to); }}
+                      onKeyDown={e => {
+                        arrowKey.current = e.key.startsWith('Arrow') && !e.altKey;
+                        if (arrowKey.current) setTimeout(() => { arrowKey.current = false; }, 0); // a closed select changes inside this keydown; where the arrow opens the menu instead (macOS) the later pick must move the card
+                        if (e.key === 'Enter' && pendingDay?.i === i) { e.preventDefault(); applyMove(i, pendingDay.to); } else if (e.key === 'Escape') setPendingDay(null);
+                      }}
+                      onBlur={() => setPendingDay(null)}>
+                      {DAYS.map(d => <option key={d} value={d}>{d === edDay ? `Move to… (Day ${d})` : `Move to Day ${d}`}</option>)}
+                    </select>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
                     <ArmedButton className={`btn sm ${arming === i ? 'danger' : 'ghost'}`} id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? i : null)} onConfirm={() => { setArming(null); justRemoved.current = true; st.removeEdSlot(i); }} />
                   </div>
