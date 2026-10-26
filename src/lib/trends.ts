@@ -1,7 +1,7 @@
 import type { Cfg, LogEntry, LogSet, Logs, PersonalBest, Program, Week, WeightChange } from '../types.ts';
 import { BUILTIN, exInfo } from './data.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
-import { weekProgKey, weekProgram, weekSlots, tally, currentLayout, DAYS, isUniform } from './logic.js';
+import { weekProgKey, weekProgram, weekSlots, tally, currentLayout, DAYS, isUniform, normWeek } from './logic.js';
 import { M_KEYS, tagsOf } from './muscles.js';
 
 export const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -24,6 +24,15 @@ export function weekSummary(cfg: Cfg, programs: Record<string, Program>, key: st
   const days = tallies.map(t => (t.full ? 2 : t.done > 0 ? 1 : 0));
   const t = tally(slots, w);
   return { key, start, pk, days, dayDone: tallies.map(t => t.done), full: days.filter(x => x === 2).length, ex: t.done, total: t.total, skipped: t.skipped };
+}
+
+// The record behind Progress's "This week" tile: the real current week's, whichever week the Board is showing. The Board's own record
+// is only used while it is on the current week; on another week the saved weeks (`hist`, loaded on demand) hold it, and a current week
+// nobody has opened yet reads as untouched. Null while the saved weeks are still loading and the Board is on another week.
+export function currentWeekRecord(shownKey: string, shownWeek: Week, hist: Record<string, Week> | null, currentKey: string): Week | null {
+  if (shownKey === currentKey) return shownWeek;
+  if (!hist) return null;
+  return hist[currentKey] ?? normWeek(null);
 }
 
 // Week keys for the charts: up to `max` weeks ending this week, starting no earlier than the first logged week (min `min` columns).
