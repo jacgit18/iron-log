@@ -124,7 +124,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const src = structuredClone(get().edProgram()); const dst = programByKey(get().programs, get().library, toKey);
     if (!dst) { flag('That program is gone'); return; }
     const to = structuredClone(dst);
-    pinIds(src, from);
+    pinIds(src, from); pinIds(to, toDay); // ids written down first, so the cards after the new one keep their own ticks and phase defaults
     const sl = src.days[from - 1].slots[i];
     if (!sl) return;
     const oldId = sl.id; const newId = moveSlotId(toKey, Date.now().toString(36) + Math.random().toString(36).slice(2, 5));

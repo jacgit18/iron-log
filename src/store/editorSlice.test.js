@@ -213,6 +213,15 @@ describe('moving a card to another program', () => {
     expect(saved('programs/B').days[2].slots.map(s => s.id)).toContain(got.id);
     expect(st().edMoved).toMatchObject({ key: 'A', from: 1, to: 3, toKey: 'B', toLabel: 'Program B' });
   });
+  it('a target day saved without ids keeps each of its cards’ own ids when the new card goes in', () => {
+    const p = structuredClone(BUILTIN.B); p.days[2].slots.forEach(sl => { delete sl.id; });
+    useAppStore.setState(x => ({ programs: { ...x.programs, B: p } }));
+    const named = dayOf('B', 3).map((s, i) => s.id || `B-d3s${i + 1}`);
+    st().moveEdSlotToProgram(0, 'B', 3);
+    const after = ids(dayOf('B', 3));
+    expect(after.filter(id => !id.startsWith('B-x'))).toEqual(named);
+    expect(after).toHaveLength(named.length + 1);
+  });
   it('carries the phase defaults to the new id', () => {
     const first = day1()[0].id; const second = day1()[1].id;
     useAppStore.setState(x => ({ cfg: { ...x.cfg, phDef: { [first + ':0']: 'hyp', [second + ':0']: 'iso' } } }));
