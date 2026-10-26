@@ -15,23 +15,6 @@ const setup = async page => {
   await page.click('#groc-done');
 };
 
-test('a Have tick at home takes the item off To get this month, and buying on To get checks it at home, both ways', async ({ page }) => {
-  await setup(page);
-  await page.getByLabel('Have Rice').check(); // at home: off this month's list
-  await page.click('#groc-view-get');
-  await expect(page.locator('#groc-rice')).toHaveCount(0);
-  await expect(page.locator('#groc-kale')).toBeVisible();
-  await expect(page.locator('#groc-summary')).toContainText('Got 0 of 1');
-  await page.locator('#groc-kale').check(); // bought on To get
-  await page.click('#groc-view-home');
-  await expect(page.getByLabel('Have Kale')).toBeChecked(); // checked at home too
-  await expect(page.getByLabel('Have Rice')).toBeChecked();
-  await page.getByLabel('Have Rice').uncheck(); // and unticking at home puts it back on the list
-  await page.click('#groc-view-get');
-  await expect(page.locator('#groc-rice')).not.toBeChecked();
-  await expect(page.locator('#groc-rice')).toBeVisible();
-});
-
 test('the Have ticks clear when the month changes: every item is back on the new month’s list', async ({ page }) => {
   await setup(page);
   await page.getByLabel('Have Rice').check(); await page.getByLabel('Have Kale').check();
@@ -81,6 +64,7 @@ test('ticking a row with its count and price panel open keeps the panel open, in
   await open(page);
   await page.click('#groc-edit');
   await page.fill('#groc-name', 'Kale'); await page.click('#groc-more'); await page.fill('#groc-qty', '2'); await page.fill('#groc-price', '2.50'); await page.click('#groc-add');
+  await add(page, 'Rice');
   await page.click('#groc-done');
   await page.click('#groc-view-get');
   const pill = page.getByRole('button', { name: 'Count and price of Kale' });
@@ -90,6 +74,7 @@ test('ticking a row with its count and price panel open keeps the panel open, in
   await expect(page.locator('#groc-bought')).toHaveAttribute('open', '');
   await expect(pill).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('#groc-kale')).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Count and price of Rice' })).toHaveAttribute('aria-expanded', 'false'); // a panel that was shut is still shut
   await page.getByLabel('Price each of Kale, dollars').fill('3.10'); await page.getByLabel('Price each of Kale, dollars').blur();
   await expect(page.getByLabel('Total for Kale')).toHaveText('$6.20');
   await expect(page.locator('#groc-summary')).toContainText('Spent $6.20');

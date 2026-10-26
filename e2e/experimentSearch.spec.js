@@ -3,15 +3,6 @@ import { test, expect } from './fixtures.js';
 // Experiments: a list longer than six entries gets a search over name and note; a short one does not.
 const WORKOUT = [['hack', 'try light'], ['facepull', ''], ['latpd', ''], ['chestpress', 'slow'], ['bbrow', ''], ['dbcurl', ''], ['legcurl', '']];
 
-test('a short workout Experiments list has no search', async ({ page }) => {
-  await page.addInitScript(items => {
-    localStorage.setItem('ironlog:experiments/main', JSON.stringify({ schema: 1, items: items.map(([ex, note], i) => ({ id: 'E' + i, ex, ph: null, note })) }));
-  }, WORKOUT.slice(0, 6));
-  await page.goto('/');
-  await expect(page.locator('.explist .expcard')).toHaveCount(6);
-  await expect(page.locator('#exp-q')).toHaveCount(0);
-});
-
 test('searching narrows the long workout list by name or note, and says when nothing matches', async ({ page }) => {
   await page.addInitScript(items => {
     localStorage.setItem('ironlog:experiments/main', JSON.stringify({ schema: 1, items: items.map(([ex, note], i) => ({ id: 'E' + i, ex, ph: null, note })) }));

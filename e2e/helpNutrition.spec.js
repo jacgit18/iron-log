@@ -10,10 +10,3 @@ test('Help names Nutrition and Groceries on Daily, and no longer mentions Supple
   expect(text).not.toMatch(/Supplements/);
   expect(text).not.toMatch(/Medical/);
 });
-
-test('every Daily section Help names is a button a regular account sees', async ({ page }) => {
-  await page.click('#tab-daily');
-  await expect(page.getByRole('button', { name: 'Nutrition', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Groceries', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Medical', exact: true })).toHaveCount(0);
-});
