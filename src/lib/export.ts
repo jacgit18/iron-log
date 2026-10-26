@@ -231,6 +231,7 @@ export const findEntry = (L: LogEntry[], target: LogEntry) => (target.id ? L.fin
 // any entry for that card and week, and a session logged by hand replaces it, as on the board.
 // Same id on both sides: this device's copy stays, unless both carry an updatedAt and the incoming one is later (it was edited
 // after this one), in which case it replaces it. Copies without a timestamp (older data, Excel files) never replace anything.
+// Entries it leaves alone are returned as the same objects: `entriesChanged` (below) tells a change by identity, so do not copy them here.
 export function mergeEntries(a: LogEntry[], b: LogEntry[]) {
   let out = [...a]; const ids = new Set(a.map(entryId)); const keys = new Set(a.map(sameKey));
   b.forEach(e => {
@@ -248,6 +249,12 @@ export function mergeEntries(a: LogEntry[], b: LogEntry[]) {
   });
   return out.sort((x, y) => x.d.localeCompare(y.d));
 }
+// True when a merge changed the list: an entry was added, replaced or dropped. mergeEntries keeps every untouched entry as the same
+// object, so identity is the test; a count alone misses a copy replaced by a newer one and a check-off swapped for a real session.
+export const entriesChanged = (before: LogEntry[], after: LogEntry[]) => {
+  const kept = new Set(before);
+  return before.length !== after.length || after.some(e => !kept.has(e));
+};
 const newer = (x: LogEntry, y: LogEntry) => validStamp(x.updatedAt) && validStamp(y.updatedAt) && Date.parse(x.updatedAt) > Date.parse(y.updatedAt);
 export function mergeWeek(a: unknown, b: unknown): Week {
   const w = normWeek(a); const o = normWeek(b);

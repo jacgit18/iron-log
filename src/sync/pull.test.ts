@@ -69,6 +69,19 @@ describe('pullAll', () => {
     expect(second.rows().size).toBe(2);
   });
 
+  it('a first pull that fails on page 2 is not ready; the next pull continues from the cursor and then is', async () => {
+    const storage = memoryStorage();
+    const store = createMirrorStore(storage);
+    const out = await pullAll(scripted([page([L('L1', '1')], '1', true), failure('network')]), store);
+    expect(out).toMatchObject({ ok: false, pages: 1 });
+    expect(store.hasPulled()).toBe(false);
+    expect(createMirrorStore(storage).hasPulled()).toBe(false); // nor after a reload
+    const t = scripted([page([L('L2', '2')], '2', false)]);
+    expect(await pullAll(t, store)).toMatchObject({ ok: true });
+    expect(t.asked[0]!.since).toBe('1');
+    expect(store.hasPulled()).toBe(true);
+  });
+
   it.each([['network', 0], ['server', 503], ['auth', 401], ['outdated', 426]] as const)('a %s failure stops the pull and passes the class on', async (cls, status) => {
     const store = createMirrorStore(memoryStorage());
     const out = await pullAll(scripted([failure(cls, status, 7000)]), store);
@@ -115,6 +128,17 @@ describe('pullAll', () => {
 
 describe('pullAll and the account\'s data epoch', () => {
   const epochPage = (rows: object[], cursor: string, epoch: string): PullOutcome => ({ ok: true, rows: rows as Page['rows'], cursor, more: false, epoch });
+
+  it('an erase seen on page 1 is still reported when page 2 fails, and not twice once a pull finishes', async () => {
+    const store = createMirrorStore(memoryStorage());
+    await pullAll(scripted([epochPage([L('L1', '1')], '1', '1')]), store);
+    const moreAt2: PullOutcome = { ok: true, rows: [L('L9', '7')] as Page['rows'], cursor: '7', more: true, epoch: '2' };
+    const failed = await pullAll(scripted([moreAt2, failure('network')]), store);
+    expect(failed).toMatchObject({ ok: false, reset: true });
+    // the next pull sees an equal epoch, so it cannot say reset itself: the caller already got it above
+    const next = await pullAll(scripted([epochPage([L('L10', '8')], '8', '2')]), store);
+    expect(next).toMatchObject({ ok: true, reset: false });
+  });
 
   it('a different epoch throws the old copy away and keeps the cursor, so the page is the whole new account', async () => {
     const storage = memoryStorage();

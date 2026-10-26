@@ -13,7 +13,7 @@ const MAX_PAGES = 1000;
 
 export type PullResult =
   | { ok: true; pages: number; rows: number; paths: string[]; /** The account's data was reset on the server and this copy was thrown away. */ reset: boolean }
-  | { ok: false; class: Exclude<FailureClass, 'refused' | 'conflict'>; message: string; retryAfterMs: number | null; pages: number; rows: number; paths: string[] };
+  | { ok: false; class: Exclude<FailureClass, 'refused' | 'conflict'>; message: string; retryAfterMs: number | null; pages: number; rows: number; paths: string[]; /** An erase seen on an earlier page of this pull: the store already holds the new epoch, so no later pull will report it. */ reset: boolean };
 
 export async function pullAll(transport: Pick<Transport, 'pull'>, store: MirrorStore, limit = PAGE_LIMIT): Promise<PullResult> {
   const paths = new Set<string>();
@@ -21,7 +21,7 @@ export async function pullAll(transport: Pick<Transport, 'pull'>, store: MirrorS
   let pages = 0;
   let rows = 0;
   const stop = (cls: 'network' | 'server' | 'auth' | 'outdated' | 'account', message: string, retryAfterMs: number | null): PullResult =>
-    ({ ok: false, class: cls, message, retryAfterMs, pages, rows, paths: [...paths] });
+    ({ ok: false, class: cls, message, retryAfterMs, pages, rows, paths: [...paths], reset });
 
   while (pages < MAX_PAGES) {
     const out: PullOutcome = await transport.pull(store.cursor(), limit);
@@ -40,7 +40,7 @@ export async function pullAll(transport: Pick<Transport, 'pull'>, store: MirrorS
     if (out.more && BigInt(out.cursor) <= BigInt(store.cursor())) return stop('server', 'the server did not advance the cursor', null);
     if (BigInt(out.cursor) < BigInt(store.cursor())) return stop('server', 'the server sent a cursor behind ours', null);
 
-    const applied = store.applyPage(byTable, out.cursor);
+    const applied = store.applyPage(byTable, out.cursor, !out.more);
     applied.paths.forEach(p => paths.add(p));
     pages++;
     rows += out.rows.length;
