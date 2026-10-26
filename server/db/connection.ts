@@ -1,6 +1,7 @@
 import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
 import { POOL_OPTIONS } from './poolOptions.ts';
+import { pinSslMode } from './sslMode.ts';
 import type { DB } from './types.ts';
 
 const DATE_OID = 1082;
@@ -10,7 +11,7 @@ const DATE_OID = 1082;
 // The generated types match this (`--date-parser string` in the db:types script).
 export function createDb(connectionString: string): Kysely<DB> {
   const pool = new pg.Pool({
-    connectionString,
+    connectionString: pinSslMode(connectionString),
     ...POOL_OPTIONS,
     types: {
       getTypeParser: ((oid: number, format?: 'text' | 'binary') =>

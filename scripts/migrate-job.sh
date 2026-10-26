@@ -51,7 +51,7 @@ cmd_deploy() {
   gc secrets describe "$READER_SECRET" >/dev/null 2>&1 || { echo "Missing secret $READER_SECRET." >&2; exit 1; }
   # The image is built from this checkout and runs with the production owner login, so it is built only from merged code: on main, matching
   # origin/main, for every file the image contains (the Dockerfile's COPY lines and its lockfile inputs).
-  local files=(migrate cloudbuild-migrate.yaml scripts/migrate-run.mjs scripts/migration-guard.mjs scripts/same-database.mjs scripts/lib/db-script.mjs scripts/lib/migration-state.mjs package.json package-lock.json)
+  local files=(migrate cloudbuild-migrate.yaml scripts/migrate-run.mjs scripts/migration-guard.mjs scripts/same-database.mjs scripts/lib/db-script.mjs scripts/lib/migration-state.mjs scripts/lib/ssl-mode.mjs package.json package-lock.json)
   [ "$(git branch --show-current)" = main ] || { echo "Build the migrate job from main: it runs with the production owner login, so only merged code may go into it." >&2; exit 1; }
   git fetch -q origin main
   if [ -n "$(git status --porcelain -- "${files[@]}")" ] || [ -n "$(git diff origin/main -- "${files[@]}")" ]; then

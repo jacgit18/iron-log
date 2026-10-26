@@ -6,6 +6,7 @@ import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
 import { adminsFrom } from '../admin.ts';
 import { POOL_OPTIONS } from '../db/poolOptions.ts';
+import { pinSslMode } from '../db/sslMode.ts';
 import { encryptedAdapter } from './encryptedAdapter.ts';
 import { otpHasher } from './otpHash.ts';
 import { createPiiCrypto, parsePiiKey } from './piiCrypto.ts';
@@ -83,7 +84,7 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
     throw new Error('testSignIn (email and password sign-in) is for tests only and cannot be enabled when NODE_ENV is not development or test');
   }
   const origin = new URL(config.baseURL);
-  const pool = new pg.Pool({ connectionString: config.databaseUrl, ...POOL_OPTIONS, max: 5 });
+  const pool = new pg.Pool({ connectionString: pinSslMode(config.databaseUrl), ...POOL_OPTIONS, max: 5 });
   // An idle pooled connection can be dropped at any time (a database restart, Neon scaling to zero). pg reports that as an 'error'
   // event on the pool; with no listener Node would crash the whole process (see createDb, which does the same for the other pool).
   pool.on('error', err => {

@@ -61,7 +61,7 @@ cmd_deploy() {
     gc secrets describe "$(secret_name "$e")" >/dev/null 2>&1 || { echo "Missing secret $(secret_name "$e"): run scripts/parity-job.sh reader $e --host <host>" >&2; missing=1; }
   done
   [ "$missing" = 0 ] || exit 1
-  if [ -n "$(git status --porcelain parity cloudbuild-parity.yaml scripts/env-parity.mjs scripts/lib/migration-state.mjs)" ]; then echo "The parity files have uncommitted changes. Commit first." >&2; exit 1; fi
+  if [ -n "$(git status --porcelain parity cloudbuild-parity.yaml scripts/env-parity.mjs scripts/lib/migration-state.mjs scripts/lib/ssl-mode.mjs)" ]; then echo "The parity files have uncommitted changes. Commit first." >&2; exit 1; fi
   local tag image; tag="$(git rev-parse --short HEAD)"
   image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/parity:${tag}"
   # Build as the small build-only account (made by ci-deploy-setup.sh), as deploy-cloud-run.sh does; without it a build runs as the default Compute
