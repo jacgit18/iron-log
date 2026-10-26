@@ -1,4 +1,5 @@
-import type { Cfg, LibraryItem, PhaseKey, ProgramSlot } from '../types.ts';
+import type { Cfg, LibraryItem, PhaseKey, Program, ProgramSlot } from '../types.ts';
+import { exInfo } from './data.js';
 import { itemKey, progName } from './logic.js';
 
 // Moving a card to another program and day (Program tab > Move…). Pure helpers: which programs can be a target, where the sheet opens,
@@ -8,7 +9,20 @@ import { itemKey, progName } from './logic.js';
 export interface MoveTarget { key: string; label: string; onBoard: boolean }
 export interface MovePreview { line: string; same: boolean; notes: string[] }
 
+// A card's name for lists, notices and button names: the exercise, or the exercises joined for a superset or an either/or card.
+export function slotSummary(cfg: Cfg, sl: ProgramSlot): string {
+  const names = sl.items.map(i => exInfo(cfg, i.ex).n);
+  return sl.type === 'superset' ? names.join(' → ') : sl.type === 'either' ? names.join(' or ') : names[0]!;
+}
+
 export const isLibKey = (key: string) => key.startsWith('L:');
+
+// The program a key names, or null when a saved program has been deleted.
+export function programByKey(programs: Record<string, Program | undefined>, library: LibraryItem[], key: string): Program | null {
+  if (!isLibKey(key)) return programs[key] ?? null;
+  const it = library.find(x => 'L:' + x.id === key);
+  return it ? { ...it.prog, key: 'N' } : null;
+}
 
 // A and B, then the saved programs by name. Only A and B can be on the board; a saved program waits until it is loaded.
 export function moveTargets(cfg: Cfg, library: LibraryItem[]): MoveTarget[] {

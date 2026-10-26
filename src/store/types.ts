@@ -194,7 +194,11 @@ export interface ExportSlice {
 }
 
 /** The card the Program editor last moved to another day: its old day and place, and the day it went to. */
-export interface EdMoved { key: string; from: number; to: number; idx: number; slot: ProgramSlot }
+export interface EdMoved {
+  key: string; from: number; to: number; idx: number; slot: ProgramSlot;
+  /** Only for a move to another program: where it went (program key and name) and the card as it was, with its old id, for Undo. */
+  toKey?: string; toLabel?: string; orig?: ProgramSlot;
+}
 export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot }
 
 export interface EditorSlice {
@@ -208,6 +212,8 @@ export interface EditorSlice {
   openAddToProgram(col: number, fromExp?: string): void;
   setEdProg(edProg: string | null): void;
   setEdDay(edDay: number): void;
+  /** Saves a program by key: 'A', 'B' or 'L:<library id>'. */
+  saveProg(key: string, prog: Program): void;
   saveEdited(prog: Program): void;
   editProgram(fn: (prog: Program) => void): boolean;
   /** Fills the empty active program from a starter (lib/starterPrograms.ts). Returns why it could not, or null. */
@@ -225,6 +231,8 @@ export interface EditorSlice {
   edMoved: EdMoved | null;
   /** Moves the open day's card at `i` to the end of its section on day `toDay` of the same program. */
   moveEdSlotToDay(i: number, toDay: number): void;
+  /** Moves the open day's card at `i` to day `toDay` of another program (or the same one: then it is `moveEdSlotToDay`). */
+  moveEdSlotToProgram(i: number, toKey: string, toDay: number): void;
   undoMoveEdSlot(): void;
   dismissEdMoved(): void;
   setDaySub(v: string): boolean;

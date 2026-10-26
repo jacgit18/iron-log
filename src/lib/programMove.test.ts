@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { LibraryItem, ProgramSlot } from '../types.ts';
 import { DEFAULT_CFG } from './logic.js';
-import { carryPhDef, defaultDestination, isLibKey, moveSlotId, movePreview, moveTargets } from './programMove.js';
+import { carryPhDef, defaultDestination, isLibKey, moveSlotId, movePreview, moveTargets, programByKey, slotSummary } from './programMove.js';
 
 const cfg = { ...structuredClone(DEFAULT_CFG), progNames: { B: 'Upper' } };
 const lib = [{ id: 'q1', name: 'Mine', at: 'x', prog: { key: 'N', days: [] } }] as unknown as LibraryItem[];
@@ -18,6 +18,16 @@ describe('moveTargets', () => {
   });
   it('lists only A and B when nothing is saved', () => { expect(moveTargets(cfg, []).map(t => t.key)).toEqual(['A', 'B']); });
   it('knows a library key', () => { expect(isLibKey('L:q1')).toBe(true); expect(isLibKey('A')).toBe(false); });
+});
+
+describe('programByKey', () => {
+  const progs = { A: { key: 'A', days: [] }, B: undefined } as never;
+  it('finds A, a saved program, and null for one that is gone', () => {
+    expect(programByKey(progs, lib, 'A')?.key).toBe('A');
+    expect(programByKey(progs, lib, 'L:q1')?.key).toBe('N');
+    expect(programByKey(progs, lib, 'L:gone')).toBeNull();
+    expect(programByKey(progs, lib, 'B')).toBeNull();
+  });
 });
 
 describe('defaultDestination', () => {
@@ -67,4 +77,14 @@ describe('carryPhDef', () => {
     expect(carryPhDef({ ...ph }, 'A-d1s1', 'B-xk1', 3)).toEqual({ 'B-xk1:0': 'hyp', 'B-xk1:2': 'iso' });
   });
   it('returns nothing when the card has none', () => { expect(carryPhDef({}, 'A-d1s1', 'B-xk1', 2)).toEqual({}); });
+});
+
+describe('slotSummary', () => {
+  it('names a single card by its exercise and joins a superset or an either/or card', () => {
+    const c = structuredClone(DEFAULT_CFG);
+    const one = slotSummary(c, card());
+    const two = { ...card(), items: [{ ex: 'arnold', ph: 'strength' }, { ex: 'arnold', ph: 'hyp' }] } as ProgramSlot;
+    expect(slotSummary(c, { ...two, type: 'superset' })).toBe(`${one} → ${one}`);
+    expect(slotSummary(c, { ...two, type: 'either' })).toBe(`${one} or ${one}`);
+  });
 });
