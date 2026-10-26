@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { DEFAULT_CFG } from './logic.js';
-import { weekSummary, trendWeeks, setsByWeek, muscleWeeks, weightChanges, niceStep, mdLabel, entryWeek } from './trends.js';
+import { weekSummary, currentWeekRecord, trendWeeks, setsByWeek, muscleWeeks, weightChanges, niceStep, mdLabel, entryWeek } from './trends.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
 // A small program so every number can be checked by hand:
@@ -131,5 +131,31 @@ describe('chart helpers', () => {
   it('picks a round axis step and short date labels', () => {
     expect([3, 12, 40, 90, 900, 5000, 17000, 120000].map(niceStep)).toEqual([1, 5, 10, 25, 250, 2000, 5000, 50000]);
     expect(mdLabel('2026-09-07')).toBe('9/7');
+  });
+});
+
+describe('currentWeekRecord: the week behind the "This week" tile', () => {
+  const shown = { done: { a: true }, skipped: {}, moved: {} };
+  const current = { done: { a: true, c: true }, skipped: {}, moved: {} };
+
+  it('is the Board\'s own record while the Board is on the current week', () => {
+    expect(currentWeekRecord('2026-10-25', shown, null, '2026-10-25')).toBe(shown);
+  });
+  it('is the saved current week, not the shown one, when the Board has stepped back', () => {
+    expect(currentWeekRecord('2026-10-18', shown, { '2026-10-18': shown, '2026-10-25': current }, '2026-10-25')).toBe(current);
+  });
+  it('reads as untouched when the current week was never saved', () => {
+    const r = currentWeekRecord('2026-10-18', shown, { '2026-10-18': shown }, '2026-10-25');
+    expect(r).toMatchObject({ done: {}, skipped: {} });
+    expect(weekSummary(cfg(), programs, '2026-10-25', r)).toMatchObject({ ex: 0, full: 0 });
+  });
+  it('is null while the saved weeks are still loading and the Board is on another week', () => {
+    expect(currentWeekRecord('2026-10-18', shown, null, '2026-10-25')).toBeNull();
+  });
+  it('gives the current week\'s numbers whatever week is shown', () => {
+    const hist = { '2026-10-18': shown, '2026-10-25': current };
+    const onCurrent = weekSummary(cfg(), programs, '2026-10-25', currentWeekRecord('2026-10-25', current, hist, '2026-10-25'));
+    const onPast = weekSummary(cfg(), programs, '2026-10-25', currentWeekRecord('2026-10-18', shown, hist, '2026-10-25'));
+    expect(onPast).toEqual(onCurrent);
   });
 });
