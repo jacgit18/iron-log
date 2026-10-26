@@ -105,6 +105,10 @@ describe('stampCovers', () => {
     expect(stampCovers({ ...s, dirty: true }, HEAD, false, plan)).toBe(false);
     expect(stampCovers(null, HEAD, false, plan)).toBe(false);
   });
+  it('lets a full run cover the narrower related-tests or changed-specs run', () => {
+    const fullRun = makeStamp({ head: HEAD, dirty: false, ran: ['typecheck', 'lint', 'test', 'e2e'] });
+    expect(stampCovers(fullRun, HEAD, false, stampNames(['typecheck', 'test', 'e2e'], { relatedTests: true, scopedE2e: true }))).toBe(true);
+  });
   it('does not cover a plan with a check the stamp lacks, or the full suite when only related tests ran', () => {
     expect(stampCovers(s, HEAD, false, stampNames(['typecheck', 'lint', 'test', 'e2e']))).toBe(false);
     expect(stampCovers(s, HEAD, false, stampNames(['test']))).toBe(false);

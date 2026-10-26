@@ -19,7 +19,9 @@ export function makeStamp({ head, dirty, ran, relatedTests = false, scopedE2e = 
  *  A dirty tree on either side, another commit, or a check the stamp lacks all say no. */
 export function stampCovers(stamp, head, dirty, names) {
   if (!stamp || dirty || stamp.dirty || stamp.head !== head || !Array.isArray(stamp.ran)) return false;
-  return names.every(n => stamp.ran.includes(n));
+  // A full run covers the narrower one the plan now asks for (all the unit tests cover the related ones, the whole browser suite covers the changed specs).
+  const broader = { 'test:related': 'test', 'e2e:changed': 'e2e' };
+  return names.every(n => stamp.ran.includes(n) || (broader[n] && stamp.ran.includes(broader[n])));
 }
 
 /** Which of the project's rules (`autoTickFromCheck` in .github/pr-kit.json: { line, needs }) the stamp backs for `head`.

@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { createConnection } from 'node:net';
 import { STAMP_FILE, makeStamp, stampCovers, stampNames } from './lib/check-stamp.mjs';
 import { is, planChecks } from './lib/check-plan.mjs';
-import { userInfo } from 'node:os';
+import { cpus, userInfo } from 'node:os';
 
 const args = process.argv.slice(2);
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8' }).split('\n').filter(Boolean);
@@ -131,7 +131,10 @@ if (together.length > 1) {
   console.log(`\nRunning ${together.join(', ')} side by side...`);
   const results = await Promise.all(together.map(c => new Promise(resolve => {
     const [cmd, cmdArgs, label] = command(c);
-    const child = spawn(cmd, cmdArgs, { env, stdio: ['ignore', 'pipe', 'pipe'] });
+    // The unit tests default to half the cores; with tsc and oxlint beside them that is more than the machine has to spare and the 5 s test limit trips,
+    // so they get two fewer workers (at least 2) unless UNIT_WORKERS says otherwise.
+    const childEnv = c === 'test' && !process.env.UNIT_WORKERS ? { ...env, UNIT_WORKERS: String(Math.max(2, Math.floor(cpus().length / 2) - 2)) } : env;
+    const child = spawn(cmd, cmdArgs, { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
     child.stdout.on('data', d => { out += d; });
     child.stderr.on('data', d => { out += d; });
