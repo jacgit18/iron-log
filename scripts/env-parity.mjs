@@ -13,7 +13,7 @@
 // BEHIND); 2 UNKNOWN (no URL, no list, no connection, no schema_migrations table). UNKNOWN is never reported as OK.
 // The name `secrets` runs the secrets-name check instead (scripts/lib/secret-names.mjs): exit 0 OK, 3 UNLISTED, 4 MISSING, 2 UNKNOWN.
 import { EXIT, appliedVersions, classify } from './lib/migration-state.mjs';
-import { checkSecretNames, describe, listSecretNames } from './lib/secret-names.mjs';
+import { checkSecretNames, describe, inventoryFor, listSecretNames } from './lib/secret-names.mjs';
 
 // gcloud splits `--args` on commas, so the list can arrive as one argument or as many: take every argument after the name.
 const [name = '', ...rest] = process.argv.slice(2);
@@ -28,8 +28,10 @@ if (!/^[a-z][a-z0-9-]*$/.test(label)) unknown('no environment name given');
 if (label === 'secrets') {
   let names;
   try { names = await listSecretNames(); } catch (e) { unknown(`cannot list the secrets: ${e instanceof Error ? e.message : String(e)}`); }
-  const r = checkSecretNames(names);
-  console.log(describe(r));
+  let inv;
+  try { inv = inventoryFor(list); } catch (e) { unknown(`cannot read the inventory argument: ${e instanceof Error ? e.message : String(e)}`); }
+  const r = checkSecretNames(names, inv.expected, inv.known);
+  console.log(describe(r, inv.source));
   process.exit(r.code);
 }
 const url = process.env[`PARITY_${label.toUpperCase().replace(/-/g, '_')}_URL`];

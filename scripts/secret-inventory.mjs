@@ -3,6 +3,7 @@
 // brief, item 1). It is data, and `scripts/secretInventory.test.js` fails when the deploy scripts or workflows name a secret that is not
 // listed here, so the table cannot fall behind the code. It holds names only, never a value.
 //
+//   node scripts/secret-inventory.mjs --encode   prints the Secret Manager entries as one base64 argument (what parity-run.sh hands the parity job)
 //   node scripts/secret-inventory.mjs        prints the table as markdown (paste it into the runbook, section 25, and fill "Last rotated" there)
 //
 // `optional: true` marks a secret that only exists once its feature is switched on (Resend, the moved owner URL): the parity job's secrets check does
@@ -38,12 +39,12 @@ export const INVENTORY = [
   { name: 'PROD_DATABASE_URL (shell variable)', where: 'LOCAL', envs: ['production'], usedBy: 'scripts that need production\'s owner URL (first choice, before Secret Manager)', rotate: 'n/a (set per shell, not stored)', note: 'Do not put it in a file.' },
 ];
 
-const expand = entry => entry.name.includes('{p}')
-  ? entry.envs.map(e => entry.name.replace('{p}', PREFIXES[e]))
+const expand = (entry, prefixes = PREFIXES) => entry.name.includes('{p}')
+  ? entry.envs.map(e => entry.name.replace('{p}', prefixes[e]))
   : entry.name.includes('{e}') ? entry.envs.map(e => entry.name.replace('{e}', e)) : [entry.name];
 
 /** Every concrete secret name in the inventory (prefixes expanded), for the tests. */
-export const inventoryNames = () => new Set(INVENTORY.flatMap(expand));
+export const inventoryNames = (inventory = INVENTORY, prefixes = PREFIXES) => new Set(inventory.flatMap(e => expand(e, prefixes)));
 
 /** The inventory as a markdown table (names only). "Last rotated" is left for the owner to fill in the runbook. */
 export function toMarkdown() {
@@ -51,4 +52,23 @@ export function toMarkdown() {
   return ['| Name | Where | Environments | Used by | How to rotate | Notes | Last rotated |', '|---|---|---|---|---|---|---|', ...rows].join('\n');
 }
 
-if (process.argv[1] && import.meta.url === new URL(process.argv[1], 'file:').href) console.log(toMarkdown());
+/**
+ * The Secret Manager part of the inventory as ONE comma-free argument (base64 JSON), for the parity job: `parity-run.sh` passes it on every run, like
+ * the migration list, so the job checks main's inventory and not the copy baked into its image (gcloud splits `--args` on commas, hence base64).
+ * Names and flags only, never a value.
+ */
+export function encodeInventory(inventory = INVENTORY, prefixes = PREFIXES) {
+  const entries = inventory.filter(e => e.where === 'SM').map(({ name, envs, optional, trigger }) => ({ name, envs, optional: optional ?? false, trigger: !!trigger, where: 'SM' }));
+  return Buffer.from(JSON.stringify({ prefixes, entries })).toString('base64');
+}
+
+/** Inverse of `encodeInventory`: { inventory, prefixes }. Throws on anything that is not that shape, so the job answers UNKNOWN, never a guess. */
+export function decodeInventory(text) {
+  const v = JSON.parse(Buffer.from(String(text), 'base64').toString('utf8'));
+  const ok = v && typeof v.prefixes === 'object' && Array.isArray(v.entries) && v.entries.length
+    && v.entries.every(e => e && typeof e.name === 'string' && Array.isArray(e.envs) && e.envs.every(x => typeof x === 'string' && x in v.prefixes));
+  if (!ok) throw new Error('the inventory argument is not a valid inventory');
+  return { inventory: v.entries, prefixes: v.prefixes };
+}
+
+if (process.argv[1] && import.meta.url === new URL(process.argv[1], 'file:').href) console.log(process.argv.includes('--encode') ? encodeInventory() : toMarkdown());

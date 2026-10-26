@@ -3,6 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { decodeInventory } from './secret-inventory.mjs';
 
 // scripts/parity-run.sh (what the Environment parity workflow runs) with a stub `gcloud`: each job result becomes a status, a missing or
 // unreadable result is UNKNOWN (never OK), and only AHEAD OF MAIN and UNKNOWN (and staging BEHIND when asked) turn the run red.
@@ -66,7 +67,9 @@ describe('parity-run.sh', () => {
   it('passes main\'s migration versions to the job, once per environment, and is green when all match', async () => {
     const r = await go();
     expect(r.status).toBe(0);
-    expect(r.args).toEqual(['production,20261001000001,20261002000001', 'staging,20261001000001,20261002000001', 'qa,20261001000001,20261002000001', 'secrets,20261001000001,20261002000001']);
+    expect(r.args.slice(0, 3)).toEqual(['production,20261001000001,20261002000001', 'staging,20261001000001,20261002000001', 'qa,20261001000001,20261002000001']);
+    expect(r.args[3]).toMatch(/^secrets,[A-Za-z0-9+/=]+$/); // main's inventory as one comma-free argument, not the migration list
+    expect(() => decodeInventory(r.args[3].slice('secrets,'.length))).not.toThrow();
     expect(r.summary).toContain('| production | OK |');
     expect(r.summary).toContain('| staging | OK |');
     expect(r.summary).toContain('| qa | OK |');
