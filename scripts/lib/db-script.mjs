@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { lookup, resolveCname } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import pg from 'pg';
+import { pinSslMode } from './ssl-mode.mjs';
 
 export const fail = (msg, code = 2) => { console.error(msg); process.exit(code); };
 
@@ -21,7 +22,7 @@ export async function connect(url, prefix) {
   const attempts = Math.max(1, Number(process.env[`${prefix}_DB_CONNECT_ATTEMPTS`]) || 4);
   const pause = Number(process.env[`${prefix}_DB_CONNECT_PAUSE_MS`] ?? 5000);
   for (let n = 1; ; n++) {
-    const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 30_000, statement_timeout: 30_000 });
+    const client = new pg.Client({ connectionString: pinSslMode(url), connectionTimeoutMillis: 30_000, statement_timeout: 30_000 });
     try {
       await client.connect();
       // If the connection is cut later, pg also emits 'error' on the client; with no listener Node dies with exit 1 (which `check` documents as
@@ -86,7 +87,7 @@ export async function applyAppRole(client, role, passwordEnv) {
  *  keeps the case and any percent-escapes, and ignores a `?host=` parameter, which pg lets replace the host before the @, so such a URL could name one machine to
  *  the guard and connect to another (code review R-01). Asking the driver itself cannot disagree with what it then does. */
 export function connectHost(url) {
-  const host = new pg.Client({ connectionString: url }).host;
+  const host = new pg.Client({ connectionString: pinSslMode(url) }).host;
   return typeof host === 'string' ? host.toLowerCase().replace(/\.+$/, '') : '';
 }
 

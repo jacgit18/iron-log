@@ -9,13 +9,14 @@
 // gives the role a new password, which is how to rotate it. Prints the role's connection URL on stdout and nothing else.
 import { randomBytes } from 'node:crypto';
 import pg from 'pg';
+import { pinSslMode } from './lib/ssl-mode.mjs';
 
 const ROLE = 'migrations_reader';
 const owner = process.env.DATABASE_URL;
 if (!owner) { console.error('No DATABASE_URL (the owner URL).'); process.exit(2); }
 
 const password = randomBytes(24).toString('base64url');
-const client = new pg.Client({ connectionString: owner, connectionTimeoutMillis: 15_000 });
+const client = new pg.Client({ connectionString: pinSslMode(owner), connectionTimeoutMillis: 15_000 });
 try {
   await client.connect();
   const db = (await client.query('select current_database() as d')).rows[0].d;

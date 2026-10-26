@@ -20,5 +20,6 @@ COPY scripts/migration-guard.mjs ./scripts/migration-guard.mjs
 COPY scripts/same-database.mjs ./scripts/same-database.mjs
 COPY scripts/lib/db-script.mjs ./scripts/lib/db-script.mjs
 COPY scripts/lib/migration-state.mjs ./scripts/lib/migration-state.mjs
+COPY scripts/lib/ssl-mode.mjs ./scripts/lib/ssl-mode.mjs
 USER node
 ENTRYPOINT ["node", "scripts/migrate-run.mjs"]

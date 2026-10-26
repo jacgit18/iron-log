@@ -1,6 +1,17 @@
 import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { commitOf, decide, ownerProblem, safeName } from './migrate-run.mjs';
+
+// Every file an entry script reaches through relative imports, found by reading the files (not from a list kept by hand): a job image copies single
+// files, so an import of a file the Dockerfile does not copy only fails once the image is built and run. Paths are relative to the repository root.
+const importsOf = file => [...readFileSync(file, 'utf8').matchAll(/(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g)].map(m => join(dirname(file), m[1]));
+const reachableFrom = entry => {
+  const seen = new Set();
+  const walk = f => { if (seen.has(f)) return; seen.add(f); if (/\.(mjs|js|ts)$/.test(f)) importsOf(f).forEach(walk); };
+  walk(entry);
+  return [...seen];
+};
 
 // scripts/migrate-run.mjs: the production migrate job decides what to apply, and refuses what is destructive, inside Google Cloud, so the decision is
 // tested here on file text and applied versions, with no database. Brief: production-migrate-job.
@@ -58,7 +69,11 @@ describe('the job image and the scripts around it', () => {
     for (const l of run.split('\n').filter(l => /console\.(log|error)|\bsay\(|\bstop\(/.test(l))) expect(l, l).not.toMatch(/process\.env\.(OWNER|READER)_DATABASE_URL|\$\{(owner|reader)\}/);
   });
   it('copies every file the entry script imports into the image, and runs no install script', () => {
-    for (const f of ['scripts/migrate-run.mjs', 'scripts/migration-guard.mjs', 'scripts/same-database.mjs', 'scripts/lib/db-script.mjs', 'scripts/lib/migration-state.mjs']) expect(docker, f).toContain(`COPY ${f} `);
+    // The entry's own imports, plus the script it starts as a separate process (same-database.mjs, with what that one imports).
+    const needed = [...new Set([...reachableFrom('scripts/migrate-run.mjs'), ...reachableFrom('scripts/same-database.mjs')])];
+    expect(needed.length).toBeGreaterThan(5); // the walk found the chain, not just the entry
+    expect(needed).toContain('scripts/lib/ssl-mode.mjs');
+    for (const f of needed) expect(docker, f).toContain(`COPY ${f} `);
     expect(docker.match(/npm ci [^\n]*/g)?.every(l => l.includes('--ignore-scripts'))).toBe(true);
   });
   it('migrate-job.sh deploy guards every file the image contains, and builds only from main', () => {
@@ -76,5 +91,15 @@ describe('the job image and the scripts around it', () => {
     expect(sh).toContain('OWNER_DATABASE_URL=${OWNER_SECRET}:latest,READER_DATABASE_URL=${READER_SECRET}:latest');
     expect(sh).toContain('--max-retries 0');
     expect(sh).toMatch(/\[ "\$\(git branch --show-current\)" = main \]/);
+  });
+});
+
+describe('the parity job image', () => {
+  const docker = readFileSync('parity/Dockerfile', 'utf8');
+  it('copies every file the entry script reaches through its imports, so the report starts', () => {
+    const needed = reachableFrom('scripts/env-parity.mjs');
+    expect(needed.length).toBeGreaterThan(3);
+    expect(needed).toContain('scripts/lib/ssl-mode.mjs');
+    for (const f of needed) expect(docker, f).toContain(`COPY ${f} `);
   });
 });
