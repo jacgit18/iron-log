@@ -6,6 +6,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES } from '../../lib/data.js';
 import { progName, DAYS } from '../../lib/logic.js';
+import { exerciseCount } from '../../lib/exerciseCount.js';
 import { slotSummary } from '../../lib/programMove.js';
 import { sameProg, libDate } from '../../lib/export.js';
 import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
@@ -150,7 +151,7 @@ function ProgramEditor() {
           {lib && <button type="button" className="on segname" aria-pressed="true">{item.name}</button>}
         </div>
         <div className="seg" role="group" aria-label="Day to edit">
-          {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}</button>)}
+          {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}<span className="edcount" aria-hidden="true">{exerciseCount(prog.days[d - 1]?.slots ?? [])}</span></button>)}
         </div>
       </div>
       {lib ? (
