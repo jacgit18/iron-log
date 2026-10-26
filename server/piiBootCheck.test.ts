@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { sql, type Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -96,13 +97,18 @@ describe('piiBootCheck', () => {
 describe('server/index.ts', () => {
   it('exits with code 1 and the reason when production has no database key', async () => {
     // Run the way development runs it (tsx), since Node's own TypeScript stripping cannot read this server's source.
+    // From an empty folder: server/index.ts loads a .env from its working directory, and a developer's own .env may hold a key, which
+    // would let the child start and never exit. A timer kills it if it ever does.
     const child = spawn(resolve('node_modules/.bin/tsx'), [resolve('server/index.ts')], {
+      cwd: tmpdir(),
       env: { PATH: process.env.PATH ?? '', NODE_ENV: 'production', APP_DATABASE_URL: appUrl, PORT: '3991' },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    const killer = setTimeout(() => child.kill(), 20_000);
     let err = '';
     child.stderr.on('data', d => { err += String(d); });
     const code = await new Promise<number | null>(done => child.on('close', done));
+    clearTimeout(killer);
     expect(code).toBe(1);
     expect(err).toContain('Refusing to start: PII_ENCRYPTION_KEY is not set');
   });
