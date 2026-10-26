@@ -9,7 +9,7 @@ describe('the Chromium install for Playwright', () => {
   it('goes through the retrying action in every workflow, never a bare `playwright install`', () => {
     const bare = readdirSync(WORKFLOWS)
       .filter(f => /\.ya?ml$/.test(f))
-      .filter(f => /^\s*-?\s*run:.*playwright install/m.test(readFileSync(join(WORKFLOWS, f), 'utf8')));
+      .filter(f => /^(?!\s*#).*\bplaywright install\b/m.test(readFileSync(join(WORKFLOWS, f), 'utf8'))); // any non-comment line, so a `run: |` block counts too
     expect(bare, 'use `uses: ./.github/actions/install-chromium` (a stuck apt mirror took 10 minutes on 2026-10-26)').toEqual([]);
   });
 

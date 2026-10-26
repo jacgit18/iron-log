@@ -19,6 +19,7 @@ on:
       - 'vite.config.js'
       - 'tools/**'
       - '.github/workflows/screenshots.yml'
+      - '.github/actions/install-chromium/**'
   push:
     branches: [main]
     paths:
@@ -30,6 +31,7 @@ on:
       - 'vite.config.js'
       - 'tools/**'
       - '.github/workflows/screenshots.yml'
+      - '.github/actions/install-chromium/**'
 
 permissions:
   contents: write
