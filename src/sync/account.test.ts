@@ -31,6 +31,26 @@ describe('account client', () => {
     expect(await createAccountClient({ fetch: reply(200, { hello: 1 }) }).me()).toEqual({ status: 'unreachable' });
   });
 
+  describe('a /api/me that never answers', () => {
+    const guard = <T>(p: Promise<T>, ms = 1000) => Promise.race([p, new Promise<'hung'>(r => setTimeout(() => r('hung'), ms))]);
+    // Like a real fetch: the promise or the body read fails when the request is aborted.
+    const neverAnswers: typeof fetch = (_u, init) => new Promise((_ok, fail) => init?.signal?.addEventListener('abort', () => fail(new DOMException('aborted', 'AbortError'))));
+    const stalledBody: typeof fetch = async (_u, init) => ({
+      ok: true, status: 200, json: () => new Promise((_ok, fail) => init?.signal?.addEventListener('abort', () => fail(new DOMException('aborted', 'AbortError')))),
+    }) as unknown as Response;
+
+    it('gives up after the timeout and says unreachable, never signed out', async () => {
+      expect(await guard(createAccountClient({ fetch: neverAnswers, timeoutMs: 50 }).me())).toEqual({ status: 'unreachable' });
+    });
+    it('gives up on a body that stalls after the headers', async () => {
+      expect(await guard(createAccountClient({ fetch: stalledBody, timeoutMs: 50 }).me())).toEqual({ status: 'unreachable' });
+    });
+    it('still reads an answer that arrives inside the timeout', async () => {
+      const slow: typeof fetch = async () => { await new Promise(r => setTimeout(r, 20)); return new Response(JSON.stringify({ ok: true, userId: 'u1', account: { kind: 'session' } }), { status: 200 }); };
+      expect(await guard(createAccountClient({ fetch: slow, timeoutMs: 300 }).me())).toMatchObject({ status: 'signed-in', userId: 'u1' });
+    });
+  });
+
   it('sends the dev header when given one', async () => {
     let seen: Headers | undefined;
     const f: typeof fetch = async (_u, init) => { seen = new Headers(init?.headers); return new Response('{}', { status: 401 }); };
