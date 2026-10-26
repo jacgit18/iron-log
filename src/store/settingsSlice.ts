@@ -1,6 +1,6 @@
 import { PHASES } from '../lib/data.js';
 import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
-import { parseDataFile, importSel, cfgSection, mergeEntries, mergeWeek, sameProg, progBody, libDate } from '../lib/export.js';
+import { parseDataFile, importSel, cfgSection, entriesChanged, mergeEntries, mergeWeek, sameProg, progBody, libDate } from '../lib/export.js';
 import { WEEK_RE } from '../lib/trends.js';
 import { validPct, validRest, validRm } from '../shared/validate.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
@@ -185,7 +185,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
         if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); }
         ent(on.progress ? d.logs : {}).forEach(([id, l]) => {
           const cur = get().logs[id] || []; const m = mergeEntries(cur, l);
-          if (m.length !== cur.length) { set(s => ({ logs: { ...s.logs, [id]: m } })); get().saveLog(id); }
+          if (entriesChanged(cur, m)) { set(s => ({ logs: { ...s.logs, [id]: m } })); get().saveLog(id); }
         });
         ent(on.board ? d.weeks : {}).forEach(([k, w]) => {
           if (k === wk) { const m = mergeWeek(get().week, w); if (JSON.stringify(m) !== JSON.stringify(normWeek(get().week))) { set({ week: m }); get().saveWeek(); } return; }

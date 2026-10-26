@@ -12,7 +12,7 @@
 #
 # After the migration table a second table says which commit each service is running (the COMMIT_SHA the deploy puts on the revision that has
 # the traffic, read the way the deploy's "What is live now" step reads it) and where that commit is against main's tip. Informational: it never
-# turns the run yellow or red, because deploys are paused on purpose (DEPLOY_PAUSED) and QA runs a branch on purpose. It needs the full history of
+# turns the run yellow or red, because deploys are manual (a merge does not deploy) and QA runs a branch on purpose. It needs the full history of
 # main in the checkout (the workflow uses fetch-depth: 0) and read access to the services (the deployer has `viewer`).
 set -uo pipefail
 

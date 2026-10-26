@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { lookup, resolveCname } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import pg from 'pg';
+import { pinSslMode } from './ssl-mode.mjs';
 
 export const fail = (msg, code = 2) => { console.error(msg); process.exit(code); };
 
@@ -21,7 +22,7 @@ export async function connect(url, prefix) {
   const attempts = Math.max(1, Number(process.env[`${prefix}_DB_CONNECT_ATTEMPTS`]) || 4);
   const pause = Number(process.env[`${prefix}_DB_CONNECT_PAUSE_MS`] ?? 5000);
   for (let n = 1; ; n++) {
-    const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 30_000, statement_timeout: 30_000 });
+    const client = new pg.Client({ connectionString: pinSslMode(url), connectionTimeoutMillis: 30_000, statement_timeout: 30_000 });
     try {
       await client.connect();
       // If the connection is cut later, pg also emits 'error' on the client; with no listener Node dies with exit 1 (which `check` documents as
@@ -50,6 +51,25 @@ export async function readMark(client) {
 /** Marks the database. Inside the caller's transaction. */
 export const setMark = (client, mark) => client.query("do $$ begin execute format('comment on database %I is %L', current_database(), $m$" + mark + "$m$); end $$");
 
+// Not user data: dbmate's record of applied migrations, and the exercise, stretch and supplement catalog (imported, not made by users).
+// What `reset` (staging) and `reset` (QA) leave in place when they empty a database.
+export const KEEP_TABLES = ['schema_migrations', 'catalog_items'];
+
+/** Every table `reset` empties, as quoted `"schema"."table"` names: all base tables in public and auth except KEEP_TABLES. */
+export async function userTables(client) {
+  const { rows } = await client.query(
+    `select table_schema as s, table_name as t from information_schema.tables
+      where table_type = 'BASE TABLE' and table_schema in ('public', 'auth') and table_name <> all($1) order by 1, 2`, [KEEP_TABLES]);
+  return rows.map(r => `"${r.s}"."${r.t}"`);
+}
+
+/** Gives the role the script is connected as (the owner) the password in the environment variable `passwordEnv`, if set. Never printed. */
+export async function rotateOwnerPassword(client, passwordEnv) {
+  if (!process.env[passwordEnv]) return;
+  const { rows } = await client.query("select format('alter role %I password %L', current_user, $1::text) as q", [process.env[passwordEnv]]);
+  await client.query(rows[0].q);
+}
+
 // The environment's login: created on this branch only (a role belongs to one Neon branch, so production never sees it), a member of
 // ironlog_app, whose grants and row-level-security policies it inherits. A reset from production loses it, so the scripts make it.
 // `role` is a fixed name from the calling script; the password, if given in the environment variable `passwordEnv`, is never printed.
@@ -67,7 +87,7 @@ export async function applyAppRole(client, role, passwordEnv) {
  *  keeps the case and any percent-escapes, and ignores a `?host=` parameter, which pg lets replace the host before the @, so such a URL could name one machine to
  *  the guard and connect to another (code review R-01). Asking the driver itself cannot disagree with what it then does. */
 export function connectHost(url) {
-  const host = new pg.Client({ connectionString: url }).host;
+  const host = new pg.Client({ connectionString: pinSslMode(url) }).host;
   return typeof host === 'string' ? host.toLowerCase().replace(/\.+$/, '') : '';
 }
 

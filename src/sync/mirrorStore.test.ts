@@ -148,6 +148,24 @@ describe('the mirror store', () => {
     expect(createMirrorStore(storage).hasPulled()).toBe(true);
   });
 
+  it('a page that is not the last moves the cursor but does not make the copy ready', () => {
+    const storage = memoryStorage();
+    const a = createMirrorStore(storage);
+    a.applyPage({ log_entries: [logServerRow('L1')] }, '4', false);
+    expect(a.cursor()).toBe('4');
+    expect(a.hasPulled()).toBe(false);
+    expect(createMirrorStore(storage).hasPulled()).toBe(false);
+    a.applyPage({ log_entries: [logServerRow('L2')] }, '5', true);
+    expect(a.hasPulled()).toBe(true);
+  });
+
+  it('a middle page never takes readiness back from a copy that already pulled', () => {
+    const a = createMirrorStore(memoryStorage());
+    a.applyPage({}, '1');
+    a.applyPage({ log_entries: [logServerRow('L1')] }, '2', false);
+    expect(a.hasPulled()).toBe(true);
+  });
+
   it('a copy that had to be repaired has not pulled', () => {
     const storage = memoryStorage();
     createMirrorStore(storage).applyPage({ log_entries: [logServerRow('L1')] }, '7');

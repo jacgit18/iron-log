@@ -20,20 +20,11 @@
 //                               already marked as staging.
 //
 // The URL is never printed. Run `reset` by hand whenever QA is made or reset from its parent (the mark and the login are lost on a reset).
-import { applyAppRole, connect, fail, guardHost, readMark, setMark } from './lib/db-script.mjs';
+import { applyAppRole, connect, fail, guardHost, KEEP_TABLES, readMark, rotateOwnerPassword, setMark, userTables } from './lib/db-script.mjs';
 
 const MARKER = 'iron-log qa';
 const STAGING_MARKER = 'iron-log staging';
 const APP_ROLE = 'ironlog_qa';
-// Not user data: dbmate's record of applied migrations, and the exercise, stretch and supplement catalog (imported, not made by users).
-const KEEP = ['schema_migrations', 'catalog_items'];
-
-async function userTables(client) {
-  const { rows } = await client.query(
-    `select table_schema as s, table_name as t from information_schema.tables
-      where table_type = 'BASE TABLE' and table_schema in ('public', 'auth') and table_name <> all($1) order by 1, 2`, [KEEP]);
-  return rows.map(r => `"${r.s}"."${r.t}"`);
-}
 
 async function check(client) {
   if ((await readMark(client)) === MARKER) { console.log('This database is marked as QA.'); return 0; }
@@ -47,7 +38,7 @@ async function reset(client, url, apply) {
   if ((await readMark(client)) === STAGING_MARKER) fail('This database is marked as staging, not QA. Nothing was changed.');
   const tables = await userTables(client);
   for (const t of tables) console.log(`${apply ? 'emptying' : 'would empty'}: ${t} (${(await client.query(`select count(*)::int as n from ${t}`)).rows[0].n} rows)`);
-  console.log(`keeping: ${KEEP.join(', ')}`);
+  console.log(`keeping: ${KEEP_TABLES.join(', ')}`);
   console.log(`${apply ? 'setting up' : 'would set up'}: login ${APP_ROLE} as a member of ironlog_app${process.env.QA_APP_PASSWORD ? ', with the password from QA_APP_PASSWORD' : ' (no password: set QA_APP_PASSWORD to give it one)'}`);
   console.log(`${apply ? 'rotating' : 'would rotate'}: the owner role's password${process.env.QA_OWNER_PASSWORD ? ', to the one in QA_OWNER_PASSWORD' : ' (not asked: set QA_OWNER_PASSWORD, otherwise the owner password is still production\'s)'}`);
   if (!apply) { console.log('Dry run. Add --apply to empty these and mark the database as QA.'); return 0; }
@@ -55,10 +46,7 @@ async function reset(client, url, apply) {
     await client.query('begin');
     if (tables.length) await client.query(`truncate table ${tables.join(', ')} restart identity cascade`);
     await applyAppRole(client, APP_ROLE, 'QA_APP_PASSWORD');
-    if (process.env.QA_OWNER_PASSWORD) {
-      const { rows } = await client.query("select format('alter role %I password %L', current_user, $1::text) as q", [process.env.QA_OWNER_PASSWORD]);
-      await client.query(rows[0].q);
-    }
+    await rotateOwnerPassword(client, 'QA_OWNER_PASSWORD');
     await setMark(client, MARKER);
     await client.query('commit');
   } catch (e) {

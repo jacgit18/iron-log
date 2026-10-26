@@ -154,6 +154,22 @@ describe('adding imported data', () => {
     expect(saved('logs/row').entries).toHaveLength(1);
     expect(st()).toMatchObject({ importDraft: null, importBusy: false, modal: null, importCount: 1, saveFlag: 'Data added' });
   });
+  it('saves a log whose entry came back newer from another copy, though the count is the same', async () => {
+    const mine = { id: 'e1', ...entry('2026-01-05', 100), updatedAt: '2026-01-05T10:00:00.000Z' };
+    const theirs = { ...mine, w: 120, updatedAt: '2026-01-05T11:00:00.000Z' };
+    useAppStore.setState({ logs: { hack: [mine] } });
+    await addJson(dataText({ logs: { hack: [theirs] } }));
+    expect(st().logs.hack.map(e => e.w)).toEqual([120]);
+    expect(saved('logs/hack').entries.map(e => e.w)).toEqual([120]); // written, not only held in memory
+  });
+  it('leaves a log alone when the file adds nothing to it', async () => {
+    const mine = { id: 'e1', ...entry('2026-01-05', 100), updatedAt: '2026-01-05T10:00:00.000Z' };
+    useAppStore.setState({ logs: { hack: [mine] } });
+    const before = st().logs.hack;
+    await addJson(dataText({ logs: { hack: [{ ...mine, w: 5, updatedAt: '2026-01-05T09:00:00.000Z' }] } })); // an older copy
+    expect(st().logs.hack).toBe(before);
+    expect(saved('logs/hack')).toBeNull();
+  });
   it('adds config entries it lacks, but never overwrites existing ones', async () => {
     useAppStore.setState({ cfg: { ...structuredClone(DEFAULT_CFG), rm: { hack: 300 } } });
     const cfg = { ...structuredClone(DEFAULT_CFG), rm: { hack: 999, row: 150 }, muscleMap: { row: { p: ['lats'], s: [] } }, ex: { zz: { n: 'Zed Press' } } };

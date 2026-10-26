@@ -24,6 +24,11 @@ export interface EncryptedAdapterOptions {
    * plain value too, so a returning user is found rather than made a second time. Turn it off after scripts/encrypt-users.mjs has run.
    */
   matchPlaintext: boolean;
+  /**
+   * True once every row is sealed (PII_PLAINTEXT_DONE=true): reading a sealed column that still holds plain text then throws, so a
+   * leftover plaintext row cannot pass as sealed. A verification identifier that is not an address (an OAuth state) is stored as is.
+   */
+  rejectUnsealed?: boolean;
 }
 
 export function encryptedAdapter(inner: DBAdapter, crypto: PiiCrypto, options: EncryptedAdapterOptions): DBAdapter {
@@ -69,7 +74,12 @@ export function encryptedAdapter(inner: DBAdapter, crypto: PiiCrypto, options: E
     const out: Row = { ...(row as Row) };
     for (const field of Object.keys(SEALED_FIELDS[model] ?? {})) {
       const v = out[field];
-      if (typeof v === 'string') out[field] = crypto.open(v);
+      if (typeof v === 'string') {
+        if (options.rejectUnsealed && v !== '' && !crypto.isSealed(v) && !(model === 'verification' && !v.includes('@'))) {
+          throw new Error(`encryptedAdapter: ${model}.${field} holds an unsealed value`);
+        }
+        out[field] = crypto.open(v);
+      }
     }
     // A session found together with its user: `{ ...session, user: {...} }`.
     if (model !== 'user' && out.user && typeof out.user === 'object') out.user = openRow('user', out.user);

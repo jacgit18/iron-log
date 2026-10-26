@@ -55,6 +55,18 @@ describe('log-body-weight create', () => {
     expect(user.change_seq).toBe(res.body.cursor);
   });
 
+  it('refuses a weight below the column\'s precision with a 422 instead of failing the insert', async () => {
+    const res = await log(null, { ...weighIn, w: 0.00001 });
+    expect(res.status).toBe(422);
+    expect(await db.selectFrom('body_entries').selectAll().execute()).toHaveLength(0);
+  });
+
+  it('refuses a weight that would round up to the column\'s ceiling with a 422', async () => {
+    const res = await log(null, { ...weighIn, w: 1499.99995 });
+    expect(res.status).toBe(422);
+    expect(await db.selectFrom('body_entries').selectAll().execute()).toHaveLength(0);
+  });
+
   it('returns the same row for a retry and writes nothing new', async () => {
     const first = await log(null);
     const retry = await log(null);

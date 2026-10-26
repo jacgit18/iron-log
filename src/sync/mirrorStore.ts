@@ -122,12 +122,13 @@ export function createMirrorStore(storage: Storage) {
       return out;
     },
 
-    /** Takes one page of the pull and moves the cursor with it, in a single write, so the two never disagree. */
-    applyPage(byTable: Partial<Record<SyncTable, ServerRow[]>>, nextCursor: string): Applied {
+    /** Takes one page of the pull and moves the cursor with it, in a single write, so the two never disagree. Only the last page
+     *  of a pull makes the copy ready: a first pull that stops after page 1 has not seen the whole account. */
+    applyPage(byTable: Partial<Record<SyncTable, ServerRow[]>>, nextCursor: string, last = true): Applied {
       const before = rows;
       for (const table of TABLES) if (byTable[table]?.length) rows = applyRows(rows, table, byTable[table]!);
       cursor = nextCursor;
-      pulled = true;
+      if (last) pulled = true;
       persist();
       return diff(before, rows);
     },

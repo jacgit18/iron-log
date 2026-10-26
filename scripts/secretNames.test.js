@@ -14,7 +14,9 @@ describe('expectedSecrets', () => {
     expect(names).toContain('iron-log-qa-google-client-id');
     expect(names).toContain('iron-log-parity-production-url');
     expect(names).not.toContain('ANTHROPIC_API_KEY'); // a GitHub secret, not Secret Manager
-    expect(expectedSecrets().find(x => x.name === 'iron-log-pii-key').envs).toEqual(['production', 'staging']); // shared on purpose
+    expect(expectedSecrets().find(x => x.name === 'iron-log-pii-key').envs).toEqual(['production']); // staging has its own since backlog EP2
+    expect(names).toContain('iron-log-staging-pii-key');
+    expect(names).toContain('iron-log-qa-pii-key');
   });
 });
 

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { forgetSession } from '../../lib/gate.js';
+import { disablePush } from '../../lib/pushClient.js';
 import { LS } from '../../lib/storage.js';
 import { parsePath } from '../../sync/documents.js';
 import { createAccountClient } from '../../sync/account.js';
@@ -55,6 +56,7 @@ export default function DeleteMyData() {
     setProblem('');
     const out = await api.eraseEverything(what);
     if (!out.ok) { setBusy(null); setProblem(WHY[out.class] ?? WHY.unavailable!); return; }
+    await disablePush().catch(() => undefined); // only once the erase worked, so "Nothing was erased" stays true; this phone stops being a push target of an account that is gone or empty
     await forgetDevice();
     noteAfterReload(what === 'data' ? 'Everything in your account was erased.' : 'Your account was deleted.'); // shown after the reload
     window.location.reload(); // the app still holds the old data in memory; start clean

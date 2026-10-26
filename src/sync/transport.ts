@@ -1,3 +1,4 @@
+import { DEFAULT_TIMEOUT_MS } from './timeouts.js';
 import { reportSync } from './reportErrors.js';
 import type { CommandName, ServerRow, SyncTable } from './types.js';
 
@@ -61,7 +62,7 @@ export interface TransportOptions {
   fetch?: typeof fetch;
 }
 
-export const DEFAULT_TIMEOUT_MS = 60_000;
+export { DEFAULT_TIMEOUT_MS };
 const MAX_RETRY_AFTER_MS = 5 * 60_000;
 
 // "Retry-After" is seconds or a date. Anything unreadable is ignored; a huge value is capped.
@@ -99,13 +100,21 @@ export function createTransport(options: TransportOptions) {
   const { clientVersion, baseUrl = '', headers, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   const doFetch = options.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
 
-  // Sends one request. Returns the response, or a network failure; the body is read by the caller.
-  async function send(path: string, init: RequestInit): Promise<Response | Pause> {
+  // What came back: the status line and headers, and the body already read (undefined when it was empty or not JSON).
+  type Answer = { status: number; ok: boolean; headers: Headers; body: unknown };
+
+  // Sends one request and reads its body under the same timer, so a server that sends headers and then stalls cannot hold the
+  // sync forever (everything runs one at a time). Returns the answer, or a network failure. A status that only ever pauses the queue
+  // (see pauseFor) is answered without its body, so a slow body there cannot hide the Retry-After the server sent.
+  async function send(path: string, init: RequestInit, wantBody: (status: number) => boolean = status => pauseFor(status, null) === null): Promise<Answer | Pause> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const extra = headers ? await headers() : {};
-      return await doFetch(baseUrl + path, { ...init, headers: { accept: 'application/json', 'x-client-version': clientVersion, ...extra, ...(init.headers as Record<string, string> | undefined) }, signal: controller.signal });
+      const res = await doFetch(baseUrl + path, { ...init, headers: { accept: 'application/json', 'x-client-version': clientVersion, ...extra, ...(init.headers as Record<string, string> | undefined) }, signal: controller.signal });
+      let body: unknown;
+      if (wantBody(res.status)) try { body = await res.json(); } catch (err) { if (controller.signal.aborted) throw err; /* an empty or non-JSON body stays undefined */ }
+      return { status: res.status, ok: res.ok, headers: res.headers, body };
     } catch (err) {
       return pause('network', 0, null, controller.signal.aborted ? `no answer in ${timeoutMs} ms` : err instanceof Error ? err.message : String(err));
     } finally {
@@ -113,11 +122,7 @@ export function createTransport(options: TransportOptions) {
     }
   }
 
-  const isPause = (r: Response | Pause): r is Pause => 'class' in r;
-
-  async function json(res: Response): Promise<unknown> {
-    try { return await res.json(); } catch { return undefined; }
-  }
+  const isPause = (r: Answer | Pause): r is Pause => 'class' in r;
 
   async function command(name: CommandName, envelope: Envelope): Promise<CommandOutcome> {
     const res = await send(`/api/commands/${name}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(envelope) });
@@ -125,7 +130,7 @@ export function createTransport(options: TransportOptions) {
     const retryAfter = parseRetryAfter(res.headers.get('retry-after'));
     const waiting = pauseFor(res.status, retryAfter);
     if (waiting) return waiting;
-    const body = (await json(res)) as Record<string, unknown> | undefined;
+    const body = res.body as Record<string, unknown> | undefined;
     if (isAccountRefusal(res.status, body)) return accountPause();
     if (res.status === 409) {
       const reason = typeof body?.refused === 'string' ? body.refused : 'stale';
@@ -147,7 +152,7 @@ export function createTransport(options: TransportOptions) {
     const retryAfter = parseRetryAfter(res.headers.get('retry-after'));
     const waiting = pauseFor(res.status, retryAfter);
     if (waiting) return waiting;
-    const body = (await json(res)) as Record<string, unknown> | undefined;
+    const body = res.body as Record<string, unknown> | undefined;
     if (isAccountRefusal(res.status, body)) return accountPause();
     if (!res.ok || !body || !Array.isArray(body.rows) || typeof body.cursor !== 'string' || typeof body.more !== 'boolean') {
       // Reading is safe to repeat, so even a 400 waits instead of giving up.
@@ -163,7 +168,7 @@ export function createTransport(options: TransportOptions) {
     if (isPause(res)) return res;
     const waiting = pauseFor(res.status, parseRetryAfter(res.headers.get('retry-after')));
     if (waiting) return waiting;
-    const answer = (await json(res)) as Record<string, unknown> | undefined;
+    const answer = res.body as Record<string, unknown> | undefined;
     if (isAccountRefusal(res.status, answer)) return accountPause();
     if (res.status === 201 && answer && typeof answer.total === 'number' && answer.imported && typeof answer.imported === 'object') {
       return { ok: true, imported: answer.imported as Record<string, number>, total: answer.total };
@@ -180,12 +185,13 @@ export function createTransport(options: TransportOptions) {
 
   // Erasing the account's data, or deleting the account (Phase F). Never retried on its own: the person asked once, and sees the answer.
   async function accountAction(path: '/api/account/erase-data' | '/api/account/delete', word: 'ERASE' | 'DELETE'): Promise<AccountActionOutcome> {
-    const res = await send(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: word }) });
+    const res = await send(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: word }) },
+      status => status >= 300 && pauseFor(status, null) === null); // a success needs no body: do not turn an erase that happened into a timeout
     if (isPause(res)) return res;
     const waiting = pauseFor(res.status, parseRetryAfter(res.headers.get('retry-after')));
     if (waiting) return waiting;
     if (res.ok) return { ok: true };
-    const answer = (await json(res)) as { error?: unknown } | undefined;
+    const answer = res.body as { error?: unknown } | undefined;
     return { ok: false, class: 'refused', status: res.status, message: typeof answer?.error === 'string' ? answer.error : `status ${res.status}` };
   }
   const eraseData = () => accountAction('/api/account/erase-data', 'ERASE');

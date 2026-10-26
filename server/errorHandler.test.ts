@@ -123,8 +123,10 @@ describe('the app', () => {
   });
 
   // Review of PR 409 (P-02): a server fault must stay a 500, so the phone pauses and retries instead of marking the write refused for good.
-  it('keeps a division by zero (22012), a number out of range (22003) and a recursion bug on the server at 500', async () => {
-    for (const err of [Object.assign(new Error('division by zero'), { code: '22012' }), Object.assign(new Error('value out of range'), { code: '22003' }), new RangeError('Maximum call stack size exceeded')]) {
+  // A check violation is the same: it means the app's own rule and the column disagree, and the 5xx alert is how that gets found (body weight 0.00001,
+  // fixed at its source in validBodyLb). A value the app lets through is a server gap to fix there, not a sender's mistake to hide.
+  it('keeps a division by zero (22012), a number out of range (22003), a check violation (23514) and a recursion bug on the server at 500', async () => {
+    for (const err of [Object.assign(new Error('division by zero'), { code: '22012' }), Object.assign(new Error('value out of range'), { code: '22003' }), Object.assign(new Error('violates check constraint'), { code: '23514' }), new RangeError('Maximum call stack size exceeded')]) {
       const base = await throwing(err);
       expect((await fetch(`${base}/boom`)).status).toBe(500);
       await new Promise<void>(done => server!.close(() => done()));
