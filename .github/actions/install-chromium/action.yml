@@ -10,6 +10,10 @@ runs:
       run: |
         timeout 90 npx playwright install --with-deps chromium || {
           echo "::warning::playwright install did not finish in 90 s (slow apt mirror?); trying once more"
+          # `timeout` stops npx but not the apt-get it started under sudo, which keeps the dpkg lock (run 40382012906: "dpkg frontend lock was locked by apt-get").
+          sudo pkill -x apt-get || true
+          for _ in $(seq 20); do pgrep -x apt-get > /dev/null || break; sleep 1; done
+          sudo pkill -KILL -x apt-get || true
           sudo dpkg --configure -a
           timeout 180 npx playwright install --with-deps chromium
         }

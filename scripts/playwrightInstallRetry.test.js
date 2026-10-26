@@ -19,6 +19,8 @@ describe('the Chromium install for Playwright', () => {
     expect(action).toMatch(/timeout 180 npx playwright install --with-deps chromium/);
     expect(action).toMatch(/::warning::/); // a retry stays visible in the run
     expect(action).toMatch(/dpkg --configure -a/); // a first attempt killed during unpack leaves dpkg half done
+    expect(action).toMatch(/pkill -x apt-get/); // timeout stops npx, not the apt-get under it, which keeps the dpkg lock
+    expect(action.indexOf('pkill -x apt-get')).toBeLessThan(action.indexOf('dpkg --configure -a'));
   });
 
   it('is used by the three jobs that run a browser', () => {
