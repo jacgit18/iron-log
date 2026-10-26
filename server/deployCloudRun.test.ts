@@ -253,10 +253,13 @@ exit 0
       expect(secretsOf('run deploy')).toContain(PII);
     });
 
-    it('is left out before the key exists', async () => {
+    it('is left out before the key exists, and says the server will refuse to start without it', async () => {
       writeFileSync(calls, '');
-      expect((await run(['deploy'])).status).toBe(0);
+      const out = await run(['deploy']);
+      expect(out.status).toBe(0);
       expect(secretsOf('run deploy').some(x => x.startsWith('PII_ENCRYPTION_KEY'))).toBe(false);
+      expect(out.stderr).toContain('refuses to start in production without it');
+      expect(out.stderr).not.toContain('stored as before');
     });
 
     it('is made by `secrets` only with PII_KEY_CREATE=1, kept (no new version) after, and its value is never shown', async () => {

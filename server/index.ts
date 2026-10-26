@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { adminsFrom } from './admin.ts';
 import { createApp } from './app.ts';
 import { authConfigFrom, createAuth } from './auth/betterAuth.ts';
+import { piiBootCheck } from './auth/piiBootCheck.ts';
 import { billingConfigFrom, stripeApi } from './billing.ts';
 import { minVersionFrom } from './clientVersion.ts';
 import { createDb } from './db/connection.ts';
@@ -31,6 +32,15 @@ if (db) {
   const problem = await checkDbRole(db, process.env.NODE_ENV);
   if (problem) console.warn(JSON.stringify({ msg: 'row-level security is not protecting this connection', problem }));
 }
+
+// The database key (ADR 046): in production a missing or wrong PII_ENCRYPTION_KEY stops the server here, with the reason, instead of
+// storing names and emails in the clear or failing every signed-in request. A revision that stops fails its smoke check and gets no traffic.
+const pii = await piiBootCheck(process.env, db);
+if (pii.problem) {
+  console.error(JSON.stringify({ msg: `Refusing to start: ${pii.problem}` }));
+  process.exit(1);
+}
+console.log(JSON.stringify({ msg: 'database key checked', result: pii.note }));
 
 // The built PWA, served from the same origin as the API. Absent in development, where Vite serves it.
 const staticDir = process.env.STATIC_DIR ?? 'dist';
