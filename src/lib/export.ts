@@ -231,6 +231,7 @@ export const findEntry = (L: LogEntry[], target: LogEntry) => (target.id ? L.fin
 // any entry for that card and week, and a session logged by hand replaces it, as on the board.
 // Same id on both sides: this device's copy stays, unless both carry an updatedAt and the incoming one is later (it was edited
 // after this one), in which case it replaces it. Copies without a timestamp (older data, Excel files) never replace anything.
+// Entries it leaves alone are returned as the same objects: `entriesChanged` (below) tells a change by identity, so do not copy them here.
 export function mergeEntries(a: LogEntry[], b: LogEntry[]) {
   let out = [...a]; const ids = new Set(a.map(entryId)); const keys = new Set(a.map(sameKey));
   b.forEach(e => {
