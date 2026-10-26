@@ -61,6 +61,11 @@
   gap: var(--sp-4);
   flex-wrap: wrap;
 }
+.edcount {
+  display: block;
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+}
 .edmove {
   max-width: 100%;
 }

@@ -54,29 +54,26 @@ test('a renamed program keeps its letter in the slider button name, and its full
   await expect(sw.locator('button').first()).toHaveText('A'); // what is drawn is the letter; the name above starts with it
 });
 
-// The week bar: the week switcher at the left, the A / B switch level with it at the right end, the progress on its own row under the switcher.
+// The week bar: the week switcher at the left, the A / B switch level with it at the right end. There is no progress row (Progress shows the week).
 for (const [name, width] of [['phone', 375], ['desktop', 1280]]) {
-  test(`${name}: the A / B switch is at the right of the week switcher's row and the progress is under the week switcher`, async ({ page }) => {
+  test(`${name}: the A / B switch is at the right of the week switcher's row and there is no progress row`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.locator('#board-mode').selectOption('2');
     const box = async sel => page.locator(sel).first().boundingBox();
     const nav = await box('.weekbar .weeknav');
     const sw = await box('.weekbar .progswitch');
-    const progress = await box('.weekbar .progress');
     expect(Math.abs((sw.y + sw.height / 2) - (nav.y + 22))).toBeLessThan(14); // level with the first row of the week switcher
     expect(sw.x).toBeGreaterThan(nav.x + nav.width - 1); // to its right, not wrapped under it
     expect(sw.x + sw.width).toBeLessThanOrEqual(width - 8);
-    expect(progress.y).toBeGreaterThanOrEqual(nav.y + nav.height - 1); // under the week switcher
-    expect(Math.abs(progress.x - nav.x)).toBeLessThan(2); // starting at its left edge
+    await expect(page.locator('.weekbar .progress')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 }
 
-test('in Mode 1 the week bar has no switch and the progress is still under the week switcher', async ({ page }) => {
+test('in Mode 1 the week bar has no switch and no progress row', async ({ page }) => {
   await expect(page.locator('.weekbar .progswitch')).toHaveCount(0);
-  const nav = await page.locator('.weekbar .weeknav').boundingBox();
-  const progress = await page.locator('.weekbar .progress').boundingBox();
-  expect(progress.y).toBeGreaterThanOrEqual(nav.y + nav.height - 1);
+  await expect(page.locator('.weekbar .weeknav')).toBeVisible();
+  await expect(page.locator('.weekbar .progress')).toHaveCount(0);
 });
 
 // Wide screens: the body weight leaves its own row and sits right after the mode menu in the Workout / Stretches row, small. A phone keeps it under the notices.
