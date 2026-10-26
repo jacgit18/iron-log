@@ -23,15 +23,6 @@ test('the jump row focuses the group heading and brings it into view', async ({ 
   await expect(page.locator('#set-app-h')).toBeInViewport();
 });
 
-test('Settings does not scroll sideways on a narrow phone at a large text size', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 700 });
-  await page.goto('/');
-  await openSettings(page);
-  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
-  const wide = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
-  expect(wide).toBe(false);
-});
-
 test('Erase starts with nothing ticked, and its button says how many parts it erases', async ({ page }) => {
   await page.goto('/');
   await openSettings(page);

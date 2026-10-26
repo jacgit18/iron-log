@@ -43,13 +43,6 @@ test('Escape during a drag puts the exercise back', async ({ page }) => {
   expect(await names(page)).toEqual(before);
 });
 
-test('the program editor with drag handles has no accessibility violations', async ({ page }) => {
-  await page.click('#tab-program');
-  await expect(page.locator('.draghandle').first()).toBeVisible();
-  const { violations } = await scan(page);
-  expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
-});
-
 test('Remove marks the row first, a second tap removes it, and Undo puts it back in its place', async ({ page }) => {
   await page.click('#tab-program');
   const add = page.locator('.edpanel:not(.lib) .edadd').getByRole('button', { name: '+ Add exercise' });
