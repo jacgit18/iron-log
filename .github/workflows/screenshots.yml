@@ -43,7 +43,7 @@ concurrency:
 jobs:
   screenshots:
     runs-on: ubuntu-26.04
-    timeout-minutes: 20 # timeout-ok: slowest run 11 min with browser install
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -55,7 +55,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/install-chromium
       - run: npm run screenshots
       - name: Compare with the published images and comment on the pull request
         if: github.event_name == 'pull_request'

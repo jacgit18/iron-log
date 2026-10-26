@@ -1,0 +1,15 @@
+name: Install Chromium for Playwright
+description: >
+  `playwright install --with-deps` fetches about 21 MB from the Ubuntu mirror, normally in 20 s. On 2026-10-26 the mirror served 35 kB/s and one
+  install took 10 minutes (13 of 52 shard runs took over 60 s). A stuck first attempt is cut off and tried once more, with a warning annotation so
+  retries stay visible. Every workflow installs the browser through this action (scripts/playwrightInstallRetry.test.js).
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        timeout 90 npx playwright install --with-deps chromium || {
+          echo "::warning::playwright install did not finish in 90 s (slow apt mirror?); trying once more"
+          sudo dpkg --configure -a
+          timeout 180 npx playwright install --with-deps chromium
+        }

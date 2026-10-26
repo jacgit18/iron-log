@@ -162,7 +162,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e_sync == 'true'
     runs-on: ubuntu-26.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:17
@@ -184,7 +184,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/install-chromium
       # Makes and drops its own scratch database on this server.
       - run: npm run e2e:sync
         env:
@@ -203,7 +203,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-26.04
-    timeout-minutes: 20 # timeout-ok: slowest shard 15 min on 2026-10-26 runs; shards 1 and 4 are unbalanced, rebalance then lower
+    timeout-minutes: 10 # about 1 min of setup and 2.5 min of tests; the install retry adds up to 4.5 min on a stuck mirror
     strategy:
       fail-fast: false
       matrix:
@@ -215,7 +215,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/install-chromium
       - run: npx playwright test --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v7
         if: failure()
