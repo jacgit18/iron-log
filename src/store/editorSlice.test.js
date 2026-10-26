@@ -198,6 +198,97 @@ describe('moving a card to another day', () => {
   });
 });
 
+describe('moving a card to another program', () => {
+  const dayOf = (key, n) => (key.startsWith('L:') ? st().library.find(x => 'L:' + x.id === key).prog : st().programs[key]).days[n - 1].slots;
+  const total = () => ['A', 'B'].reduce((a, k) => a + st().programs[k].days.reduce((b, d) => b + d.slots.length, 0), 0);
+  it('moves the card to the end of its section in the other program with a new id, keeping what it holds', () => {
+    const card = structuredClone(day1()[0]); const before3 = ids(dayOf('B', 3));
+    st().moveEdSlotToProgram(0, 'B', 3);
+    expect(ids(day1())).toEqual(builtinA().slice(1));
+    const got = dayOf('B', 3).find(s => !before3.includes(s.id));
+    expect(got.id).toMatch(/^B-x/);
+    expect({ ...got, id: card.id }).toEqual(card);
+    expect(ids(dayOf('B', 3)).filter(id => id !== got.id)).toEqual(before3);
+    expect(dayOf('B', 3).filter((s, j) => j > dayOf('B', 3).indexOf(got) && s.sec === card.sec)).toHaveLength(0);
+    expect(saved('programs/B').days[2].slots.map(s => s.id)).toContain(got.id);
+    expect(st().edMoved).toMatchObject({ key: 'A', from: 1, to: 3, toKey: 'B', toLabel: 'Program B' });
+  });
+  it('a target day saved without ids keeps each of its cards’ own ids when the new card goes in', () => {
+    const p = structuredClone(BUILTIN.B); p.days[2].slots.forEach(sl => { delete sl.id; });
+    useAppStore.setState(x => ({ programs: { ...x.programs, B: p } }));
+    const named = dayOf('B', 3).map((s, i) => s.id || `B-d3s${i + 1}`);
+    st().moveEdSlotToProgram(0, 'B', 3);
+    const after = ids(dayOf('B', 3));
+    expect(after.filter(id => !id.startsWith('B-x'))).toEqual(named);
+    expect(after).toHaveLength(named.length + 1);
+  });
+  it('carries the phase defaults to the new id', () => {
+    const first = day1()[0].id; const second = day1()[1].id;
+    useAppStore.setState(x => ({ cfg: { ...x.cfg, phDef: { [first + ':0']: 'hyp', [second + ':0']: 'iso' } } }));
+    st().moveEdSlotToProgram(0, 'B', 2);
+    const got = dayOf('B', 2).find(s => s.id.startsWith('B-x'));
+    expect(st().cfg.phDef[got.id + ':0']).toBe('hyp');
+    expect(st().cfg.phDef[second + ':0']).toBe('iso');
+  });
+  it('loses and duplicates nothing for any card, program and day', () => {
+    const want = total();
+    for (let i = 0; i < day1().length; i++) for (let to = 1; to <= 7; to++) {
+      useAppStore.setState({ programs: { A: BUILTIN.A, B: BUILTIN.B }, edDay: 1, edProg: null });
+      st().moveEdSlotToProgram(i, 'B', to);
+      expect(total()).toBe(want);
+    }
+  });
+  it('moves to and from a saved program, and the saved program is the one edited', () => {
+    st().createProgram('Mine', 'A'); const lib = 'L:' + st().library[0].id;
+    st().setEdProg('A'); st().setEdDay(1);
+    st().moveEdSlotToProgram(0, lib, 5);
+    expect(dayOf(lib, 5).some(s => s.id.startsWith('N-x'))).toBe(true);
+    expect(ids(day1())).toEqual(builtinA().slice(1));
+    st().setEdProg(lib); st().setEdDay(5);
+    const i = dayOf(lib, 5).findIndex(s => s.id.startsWith('N-x'));
+    st().moveEdSlotToProgram(i, 'B', 1);
+    expect(dayOf(lib, 5).some(s => s.id.startsWith('N-x'))).toBe(false);
+    expect(dayOf('B', 1).some(s => s.id.startsWith('B-x'))).toBe(true);
+  });
+  it('the same program is the same-program move: the id is kept', () => {
+    const card = structuredClone(day1()[0]);
+    st().moveEdSlotToProgram(0, 'A', 4);
+    expect(dayOf('A', 4).find(s => s.id === card.id)).toEqual(card);
+    expect(st().edMoved.toKey).toBeUndefined();
+  });
+  it('refuses a program that is gone and changes nothing', () => {
+    const before = structuredClone(st().programs);
+    st().moveEdSlotToProgram(0, 'L:gone', 2);
+    expect(st().programs).toEqual(before);
+    expect(st().edMoved).toBeNull();
+  });
+  it('Undo puts the card back in its program, day, place and id, and takes it out of the other', () => {
+    const before = structuredClone(day1());
+    st().moveEdSlotToProgram(2, 'B', 6);
+    st().undoMoveEdSlot();
+    expect(day1()).toEqual(before);
+    expect(dayOf('B', 6).some(s => s.id.startsWith('B-x'))).toBe(false);
+    expect(st().edMoved).toBeNull();
+    st().undoMoveEdSlot();
+    expect(day1()).toEqual(before);
+  });
+  it('Undo after the card was changed in the other program saves nothing', () => {
+    st().moveEdSlotToProgram(0, 'B', 2);
+    const id = st().edMoved.slot.id;
+    st().saveProgram('B', { ...st().programs.B, days: st().programs.B.days.map(d => ({ ...d, slots: d.slots.map(s => (s.id === id ? { ...s, note: 'changed' } : s)) })) });
+    const a = structuredClone(st().programs.A); const b = structuredClone(st().programs.B);
+    st().undoMoveEdSlot();
+    expect(st().programs.A).toEqual(a);
+    expect(st().programs.B).toEqual(b);
+    expect(st().edMoved).toBeNull();
+  });
+  it('Go to: the notice is dropped by switching program, like any other', () => {
+    st().moveEdSlotToProgram(0, 'B', 2);
+    st().setEdProg('B');
+    expect(st().edMoved).toBeNull();
+  });
+});
+
 describe('the add/edit exercise sheet', () => {
   it('adds one card to each ticked day, each with its own id, and nothing else moves', () => {
     const before = st().edProgram().days.map(d => ids(d.slots));

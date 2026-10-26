@@ -7,6 +7,7 @@ import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
 import type { ExerciseInfo, MuscleTags, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
+import { carryPhDef, isLibKey, moveSlotId, moveTargets, programByKey } from '../lib/programMove.js';
 
 export const SECTIONS = ['Optional', 'Regular', 'Supersets', 'Plyometric', 'Home']; // Optional and Home cards don't count toward finishing a day (countsForFinish)
 const newId = (): string => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -64,6 +65,11 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   setEdProg: edProg => set({ edProg, edRemoved: null, edMoved: null }),
   setEdDay: edDay => set({ edDay, edRemoved: null, edMoved: null }),
 
+  // Save a program by key: A or B, or a saved program (its library item).
+  saveProg(key, prog) {
+    if (isLibKey(key)) get().setLibrary(get().library.map(x => ('L:' + x.id === key ? { ...x, prog: progBody(prog) as Program } : x)));
+    else get().saveProgram(key, prog);
+  },
   saveEdited(prog) {
     const it = get().edItem();
     if (it) { const body = progBody(prog); get().setLibrary(get().library.map(x => (x.id === it.id ? { ...x, prog: body } : x))); }
@@ -108,17 +114,54 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
       if (sl) { moved.push(structuredClone(sl)); insertSlot(prog.days[toDay - 1].slots, sl); }
     }) && moved[0]) set({ edMoved: { key, from, to: toDay, idx: i, slot: moved[0] }, edRemoved: null });
   },
-  // Put the moved card back on its old day at its old place. The card is found on the new day by what it holds, as a library program's cards have no id.
+  // Move the open day's card at `i` to the end of its section on `toDay` of another program (A, B or a saved one). In the new program the card
+  // takes a new id (ticks and phase defaults are keyed by id), its phase defaults follow it, and this week's ticks stay behind. The target is
+  // written first and the source second, so a failure between them leaves the card in both places, never in neither.
+  moveEdSlotToProgram(i, toKey, toDay) {
+    const fromKey = get().edKey(); const from = get().edDay;
+    if (toKey === fromKey) { get().moveEdSlotToDay(i, toDay); return; }
+    if (get().blocked() || !DAYS.includes(toDay)) return;
+    const src = structuredClone(get().edProgram()); const dst = programByKey(get().programs, get().library, toKey);
+    if (!dst) { flag('That program is gone'); return; }
+    const to = structuredClone(dst);
+    pinIds(src, from); pinIds(to, toDay); // ids written down first, so the cards after the new one keep their own ticks and phase defaults
+    const sl = src.days[from - 1].slots[i];
+    if (!sl) return;
+    const oldId = sl.id; const newId = moveSlotId(toKey, Date.now().toString(36) + Math.random().toString(36).slice(2, 5));
+    const orig = structuredClone(sl); const moved = { ...structuredClone(sl), id: newId };
+    insertSlot(to.days[toDay - 1].slots, structuredClone(moved));
+    get().saveProg(toKey, to);
+    const carried = carryPhDef(get().cfg.phDef, oldId, newId, sl.items.length);
+    if (Object.keys(carried).length) get().mutateCfg(c => { Object.assign(c.phDef, carried); });
+    src.days[from - 1].slots.splice(i, 1);
+    get().saveEdited(src);
+    const toLabel = moveTargets(get().cfg, get().library).find(t => t.key === toKey)?.label ?? toKey;
+    set({ edMoved: { key: fromKey, from, to: toDay, idx: i, slot: moved, toKey, toLabel, orig }, edRemoved: null });
+  },
+  // Put the moved card back on its old day at its old place (and in its old program). The card is found by what it holds, as a library program's cards have no id.
   undoMoveEdSlot() {
     const m = get().edMoved;
     if (!m || m.key !== get().edKey() || m.from !== get().edDay) { set({ edMoved: null }); return; }
     const want = JSON.stringify(m.slot);
+    const targetKey = m.toKey ?? m.key;
+    const there = programByKey(get().programs, get().library, targetKey);
+    const at = there ? there.days[m.to - 1].slots.findIndex(x => JSON.stringify(x) === want) : -1;
     // The card was changed or removed since (Edit, Remove): there is nothing to put back, and nothing is saved.
-    if (get().edProgram().days[m.to - 1].slots.findIndex(x => JSON.stringify(x) === want) < 0) { set({ edMoved: null }); flag('Could not put it back'); return; }
-    if (get().editProgram(prog => {
-      const there = prog.days[m.to - 1].slots; const [sl] = there.splice(there.findIndex(x => JSON.stringify(x) === want), 1);
-      const back = prog.days[m.from - 1].slots; back.splice(Math.min(m.idx, back.length), 0, sl!);
-    })) { set({ edMoved: null }); flag('Put back'); }
+    if (!there || at < 0) { set({ edMoved: null }); flag('Could not put it back'); return; }
+    if (!m.toKey) {
+      if (get().editProgram(prog => {
+        const day = prog.days[m.to - 1].slots; const [sl] = day.splice(day.findIndex(x => JSON.stringify(x) === want), 1);
+        const back = prog.days[m.from - 1].slots; back.splice(Math.min(m.idx, back.length), 0, sl!);
+      })) { set({ edMoved: null }); flag('Put back'); }
+      return;
+    }
+    if (get().blocked() || !m.orig) return;
+    // Another program: the source first (the card is then in both places for a moment, never in neither), then the target.
+    const src = structuredClone(get().edProgram()); const back = src.days[m.from - 1].slots; back.splice(Math.min(m.idx, back.length), 0, structuredClone(m.orig));
+    get().saveEdited(src);
+    const rest = structuredClone(there); rest.days[m.to - 1].slots.splice(at, 1);
+    get().saveProg(targetKey, rest);
+    set({ edMoved: null }); flag('Put back');
   },
   dismissEdMoved() { set({ edMoved: null }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
