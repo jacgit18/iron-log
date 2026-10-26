@@ -11,7 +11,7 @@ import { ownChanges } from './ownChanges.js';
 import { pullAll } from './pull.js';
 import { reportSync } from './reportErrors.js';
 import type { AccountActionOutcome, FailureClass, ImportOutcome, Transport } from './transport.js';
-import { mirrorId, type PlannedCommand } from './types.js';
+import { mirrorId, type Mirror, type PlannedCommand } from './types.js';
 
 /* ---------- The database the store talks to, backed by the API ----------
    The store reads and writes through a small Firestore-like handle: db.doc(path).set / delete / onSnapshot and
@@ -248,6 +248,33 @@ export function createApiDb(options: ApiDbOptions) {
   }
 
   /* ---------- pulling ---------- */
+  // Seen on a pull, even one that then failed on a later page.
+  function dropErasedWrites(before: Mirror) {
+    // The account's data was erased from another device: every document is different now. This device's unsent and set-aside
+    // writes were made from the old data: sent whole (against the emptied mirror, or by Try again) they would bring the erased
+    // history back, as a log document holds every session of an exercise. So they go, except what this device added or changed
+    // itself (sessions logged offline meanwhile), which is set aside on its own for the user to send again or discard.
+    const held = new Map<string, unknown>();
+    for (const q of outbox.quarantined()) held.set(q.path, q.doc); // older first, so a newer one for the same path wins
+    for (const path of outbox.paths()) held.set(path, outbox.get(path));
+    if (held.size) {
+      const kept: [string, unknown][] = [];
+      for (const [path, doc] of held) {
+        const kind = parsePath(path);
+        const own = kind ? ownChanges(kind, doc, before) : null;
+        if (own != null) kept.push([path, own]);
+      }
+      outbox.clear(); bases.clear(); handed.clear(); retryKeep.clear();
+      // Set aside with no versions seen: Try again only adds, leaving whatever the account holds by then as it is.
+      for (const [path, own] of kept) outbox.refuse(path, own, 'Made on this device before the account was erased on another device. Send it again to add it to the account, or discard it.', { seen: {} });
+      const n = (k: number, one: string, many: string) => (k === 1 ? one : `${k} ${many}`);
+      note('', kept.length
+        ? `Everything in this account was erased on another device. What this device changed itself (${n(kept.length, 'one item', 'items')}) is kept under Not sent, to send again or discard; the rest was dropped.`
+        : `Everything in this account was erased on another device, so ${n(held.size, 'a change', 'changes')} from here ${held.size === 1 ? 'was' : 'were'} dropped.`);
+      lastSyncedAt = lastPullAt;
+    }
+    emitAll(); announce();
+  }
   function pull(): Promise<void> {
     return exclusive(async () => {
       if (halted) return;
@@ -265,37 +292,14 @@ export function createApiDb(options: ApiDbOptions) {
         setState('idle');
         if (!wasReady && mirror.hasPulled()) emitAll();
         else emitPaths(out.paths);
-        if (out.reset) {
-          // The account's data was erased from another device: every document is different now. This device's unsent and set-aside
-          // writes were made from the old data: sent whole (against the emptied mirror, or by Try again) they would bring the erased
-          // history back, as a log document holds every session of an exercise. So they go, except what this device added or changed
-          // itself (sessions logged offline meanwhile), which is set aside on its own for the user to send again or discard.
-          const held = new Map<string, unknown>();
-          for (const q of outbox.quarantined()) held.set(q.path, q.doc); // older first, so a newer one for the same path wins
-          for (const path of outbox.paths()) held.set(path, outbox.get(path));
-          if (held.size) {
-            const kept: [string, unknown][] = [];
-            for (const [path, doc] of held) {
-              const kind = parsePath(path);
-              const own = kind ? ownChanges(kind, doc, before) : null;
-              if (own != null) kept.push([path, own]);
-            }
-            outbox.clear(); bases.clear(); handed.clear(); retryKeep.clear();
-            // Set aside with no versions seen: Try again only adds, leaving whatever the account holds by then as it is.
-            for (const [path, own] of kept) outbox.refuse(path, own, 'Made on this device before the account was erased on another device. Send it again to add it to the account, or discard it.', { seen: {} });
-            const n = (k: number, one: string, many: string) => (k === 1 ? one : `${k} ${many}`);
-            note('', kept.length
-              ? `Everything in this account was erased on another device. What this device changed itself (${n(kept.length, 'one item', 'items')}) is kept under Not sent, to send again or discard; the rest was dropped.`
-              : `Everything in this account was erased on another device, so ${n(held.size, 'a change', 'changes')} from here ${held.size === 1 ? 'was' : 'were'} dropped.`);
-            lastSyncedAt = lastPullAt;
-          }
-          emitAll(); announce();
-        }
+        if (out.reset) dropErasedWrites(before);
         if (out.paths.length) announce(); // rows arrived: the status (holdsData) changed even though the state did not
         return;
       }
-      // Whatever pages did arrive are in the mirror; the rest waits for the next try.
+      // Whatever pages did arrive are in the mirror; the rest waits for the next try. An erase seen on a page that did arrive is
+      // handled now: the next pull will find the epoch already current and say nothing.
       if (out.paths.length) emitPaths(out.paths);
+      if (out.reset) dropErasedWrites(before);
       setState('paused', out.class);
     });
   }
