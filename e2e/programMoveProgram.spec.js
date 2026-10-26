@@ -68,6 +68,7 @@ test('the sheet has 44px targets and no accessibility violations at phone width'
   await page.setViewportSize({ width: 390, height: 844 });
   await openDay(page, 1);
   await moveBtn(page).click();
+  await expect(sheet(page)).toBeVisible(); // the sheet is a lazy chunk: wait for it before reading its buttons or running axe
   for (const b of await sheet(page).getByRole('button').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
   const { violations } = await new AxeBuilder({ page }).include('[role=dialog]').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => v.id)).toEqual([]);
