@@ -31,7 +31,9 @@
 #
 # PUBLIC_BASE_URL (optional, an https origin with no path, for example https://example.app) is the address people sign in on: it becomes the
 # service's BASE_URL on every deploy. Without it BASE_URL is the Cloud Run address, as before. Set it once a custom domain is mapped to the
-# service and its address is in the Google client's redirect URIs. Production only: the script refuses it for staging and QA.
+# service and its address is in the Google client's redirect URIs. PUBLIC_BASE_URL is production's: staging reads STAGING_PUBLIC_BASE_URL and QA
+# reads QA_PUBLIC_BASE_URL (ADR 076), each its own variable, so a value left in the shell for one environment can never point another at it, and
+# the script refuses PUBLIC_BASE_URL itself for staging and QA.
 # Checks of a new revision still use the Cloud Run address, which keeps answering, but only for reads: sign-in and writes work only on BASE_URL
 # (the origin guard and Better Auth trust that origin alone). Web Push tasks also go to BASE_URL, so map the domain before setting this.
 #
@@ -74,17 +76,18 @@ gc() { gcloud --project "$PROJECT_ID" "$@"; }
 project_number() { gc projects describe "$PROJECT_ID" --format='value(projectNumber)'; }
 # Cloud Run's address is deterministic: service, project number, region.
 service_url() { echo "https://${SERVICE}-$(project_number).${REGION}.run.app"; }
-# The address people sign in on (BASE_URL): the Cloud Run address (the first argument, or looked up when there is none) unless PUBLIC_BASE_URL
-# names a custom domain. PUBLIC_BASE_URL is for production only (staging and QA keep their own addresses, so a value left in the shell cannot
-# point them at production's domain) and must be a bare https origin: a path, query, fragment, user name, space or newline would make every
-# sign-in redirect and origin check disagree with it.
+# The address people sign in on (BASE_URL): the Cloud Run address (the first argument, or looked up when there is none) unless this environment's
+# variable names a custom domain: PUBLIC_BASE_URL (production), STAGING_PUBLIC_BASE_URL (staging) or QA_PUBLIC_BASE_URL (QA). Each environment
+# reads only its own, and PUBLIC_BASE_URL is refused for staging and QA, so a value left in the shell cannot point one at another's domain. The value
+# must be a bare https origin: a path, query, fragment, user name, space or newline would make every sign-in redirect and origin check disagree with it.
+base_url_var() { case "$IRON_LOG_ENV" in staging) echo STAGING_PUBLIC_BASE_URL;; qa) echo QA_PUBLIC_BASE_URL;; *) echo PUBLIC_BASE_URL;; esac; }
 public_base_url() {
-  local u="${PUBLIC_BASE_URL:-}"
+  local var u; var="$(base_url_var)"; u="${!var:-}"
+  if [ "$IRON_LOG_ENV" != production ] && [ -n "${PUBLIC_BASE_URL:-}" ]; then echo "PUBLIC_BASE_URL is for production only; ${IRON_LOG_ENV} uses ${var}. Unset PUBLIC_BASE_URL for this run." >&2; return 1; fi
   if [ -z "$u" ]; then echo "${1:-$(service_url)}"; return; fi
-  if [ "$IRON_LOG_ENV" != production ]; then echo "PUBLIC_BASE_URL is for production only; ${IRON_LOG_ENV} keeps its own Cloud Run address. Unset it for this run." >&2; return 1; fi
   # https://, then dot-separated host parts of letters, digits and inner hyphens (no empty part, none starting or ending with a hyphen), then an optional port from 1 to 65535.
   local re='^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*(:([0-9]{1,5}))?$'
-  if ! [[ "$u" =~ $re ]] || { [ -n "${BASH_REMATCH[5]}" ] && { [ "${BASH_REMATCH[5]}" -lt 1 ] || [ "${BASH_REMATCH[5]}" -gt 65535 ]; }; }; then echo "PUBLIC_BASE_URL must be an https origin: https://host or https://host:port (port 1 to 65535), a valid host name, with no path, query, fragment, user name or space (got '$u')." >&2; return 1; fi
+  if ! [[ "$u" =~ $re ]] || { [ -n "${BASH_REMATCH[5]}" ] && { [ "${BASH_REMATCH[5]}" -lt 1 ] || [ "${BASH_REMATCH[5]}" -gt 65535 ]; }; }; then echo "${var} must be an https origin: https://host or https://host:port (port 1 to 65535), a valid host name, with no path, query, fragment, user name or space (got '$u')." >&2; return 1; fi
   echo "$u"
 }
 
@@ -338,7 +341,9 @@ build_image() {
   url="$(service_url)"
   base_url="$(public_base_url "$url")" || exit 1
   # Every deploy writes BASE_URL, so one that leaves PUBLIC_BASE_URL out puts a custom domain back to the Cloud Run address: say so (stderr), loudly enough to see in a log.
-  if [ -z "${PUBLIC_BASE_URL:-}" ] && [ "$IRON_LOG_ENV" = production ]; then echo "Note: PUBLIC_BASE_URL is not set, so BASE_URL becomes the Cloud Run address ($base_url). If production signs in on a custom domain, set PUBLIC_BASE_URL (runbook section 27) or sign-in breaks until a deploy that sets it." >&2; fi
+  local var; var="$(base_url_var)"
+  if [ -z "${!var:-}" ] && [ "$IRON_LOG_ENV" = production ]; then echo "Note: PUBLIC_BASE_URL is not set, so BASE_URL becomes the Cloud Run address ($base_url). If production signs in on a custom domain, set PUBLIC_BASE_URL (runbook section 27) or sign-in breaks until a deploy that sets it." >&2
+  elif [ -z "${!var:-}" ]; then echo "Note: ${var} is not set, so BASE_URL becomes the Cloud Run address ($base_url). If ${IRON_LOG_ENV} signs in on a custom domain, set ${var} (the repository variable ${IRON_LOG_ENV^^}_BASE_URL in CI) or sign-in breaks until a deploy that sets it." >&2; fi
   # The same commit is one image for both environments (it holds no environment-specific value, ADR 058): when staging has already built it,
   # production deploys that exact image. FORCE_BUILD=1 builds it again.
   if [ "${FORCE_BUILD:-}" != 1 ]; then
