@@ -1265,7 +1265,7 @@ body.timing {
   font-size: var(--fs-xs);
   color: var(--muted);
 }
-.cardfoot select {
+.cardfoot select,.edmove {
   border: 1px solid var(--field-line);
   background: var(--surface);
   border-radius: var(--r-sm);
@@ -1662,7 +1662,7 @@ body.timing {
   .card {
     padding: var(--sp-12);
   }
-  select,input,textarea,.phase,.cardfoot select,.tbl input,.phrow input {
+  select,input,textarea,.phase,.cardfoot select,.edmove,.tbl input,.phrow input {
     font-size: max(1rem,16px);
   }
   .phase {
@@ -1746,7 +1746,7 @@ select.btn {
 .seg button {
   padding: var(--sp-6) var(--sp-12);
 }
-.modesel select,.cardfoot select,select.btn,.phase {
+.modesel select,.cardfoot select,.edmove,select.btn,.phase {
   min-height: 44px;
 }
 .phase {

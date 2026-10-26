@@ -36,3 +36,32 @@ test('the select is a 44px target with no accessibility violations', async ({ pa
   const { violations } = await new AxeBuilder({ page }).include('.edpanel').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => v.id)).toEqual([]);
 });
+
+test('Go to Day 3 puts focus on the moved card’s select', async ({ page }) => {
+  await open(page, 1);
+  const id = await firstRow(page).getByRole('combobox', { name: /^Move to day/ }).getAttribute('id');
+  await firstRow(page).getByRole('combobox', { name: /^Move to day/ }).selectOption('3');
+  await page.getByRole('button', { name: 'Go to Day 3' }).click();
+  await expect(page.locator(`#${id}`)).toBeFocused();
+});
+
+test('a superset moves as one card', async ({ page }) => {
+  await open(page, 1);
+  const row = page.locator('.edpanel:not(.lib) .edrow').filter({ hasText: 'Superset' }).first();
+  const name = await row.locator('.edmain b').textContent();
+  await row.getByRole('combobox', { name: /^Move to day/ }).selectOption('2');
+  expect(await names(page)).not.toContain(name);
+  await page.getByRole('button', { name: 'Go to Day 2' }).click();
+  expect((await names(page)).filter(n => n === name)).toHaveLength(1);
+});
+
+test('arrow keys browse the days; the card moves only on Enter', async ({ page }) => {
+  await open(page, 1);
+  const before = await names(page);
+  const select = firstRow(page).getByRole('combobox', { name: /^Move to day/ });
+  await select.focus();
+  await page.keyboard.press('ArrowDown');
+  expect(await names(page)).toEqual(before);
+  await page.keyboard.press('Enter');
+  expect(await names(page)).toEqual(before.slice(1));
+});

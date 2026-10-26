@@ -129,6 +129,14 @@ function ProgramEditor() {
   const movedUndoRef = useRef<HTMLButtonElement>(null);
   const justMoved = useRef(false);
   const focusAfterGo = useRef<string | null>(null);
+  // Arrow keys on a closed select change its value at once. A change that comes from them waits here for Enter (Escape or leaving drops it), so a keyboard user can look through the days before a card moves.
+  const [pendingDay, setPendingDay] = useState<{ i: number; to: number } | null>(null);
+  const arrowKey = useRef(false);
+  const applyMove = (i: number, to: number) => {
+    setPendingDay(null);
+    if (to === edDay) return;
+    st.moveEdSlotToDay(i, to); justMoved.current = useAppStore.getState().edMoved != null; // only a move that happened takes focus to Undo
+  };
   useEffect(() => { if (moved && justMoved.current) { justMoved.current = false; movedUndoRef.current?.focus(); } }, [moved]);
   useEffect(() => { if (focusAfterGo.current) { document.getElementById(focusAfterGo.current)?.focus(); focusAfterGo.current = null; } }, [edDay]);
   useEffect(() => () => { useAppStore.getState().dismissEdMoved(); }, []);
@@ -201,8 +209,13 @@ function ProgramEditor() {
                   <div className="edbtns">
                     <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}><Icon name="arrow-up" /></button>
                     <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}><Icon name="arrow-down" /></button>
-                    <select className="edmove" id={`mv-${sl.id}`} aria-label={`Move to day (${slotSummary(cfg, sl)})`} value={edDay}
-                      onChange={e => { const to = Number(e.target.value); st.moveEdSlotToDay(i, to); justMoved.current = useAppStore.getState().edMoved != null; }}>
+                    <select className="edmove" id={`mv-${sl.id}`} aria-label={`Move to day (${slotSummary(cfg, sl)})`} value={pendingDay?.i === i ? pendingDay.to : edDay}
+                      onChange={e => { const to = Number(e.target.value); if (arrowKey.current) setPendingDay({ i, to }); else applyMove(i, to); }}
+                      onKeyDown={e => {
+                        arrowKey.current = e.key.startsWith('Arrow') && !e.altKey;
+                        if (e.key === 'Enter' && pendingDay?.i === i) { e.preventDefault(); applyMove(i, pendingDay.to); } else if (e.key === 'Escape') setPendingDay(null);
+                      }}
+                      onKeyUp={() => { arrowKey.current = false; }} onBlur={() => setPendingDay(null)}>
                       {DAYS.map(d => <option key={d} value={d}>{d === edDay ? `Move to… (Day ${d})` : `Move to Day ${d}`}</option>)}
                     </select>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>

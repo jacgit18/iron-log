@@ -62,13 +62,7 @@
   flex-wrap: wrap;
 }
 .edmove {
-  min-height: 44px;
   max-width: 100%;
-  border: 1px solid var(--field-line);
-  background: var(--surface);
-  border-radius: var(--r-sm);
-  padding: var(--sp-2) var(--sp-8);
-  font-size: var(--fs-xs);
 }
 .draghandle {
   flex: 0 0 auto;
