@@ -64,10 +64,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: docker build --build-arg APP_VERSION=$(git log -1 --format=%ct) -t iron-log .
-      # No database here: the health check and the app need none.
+      # No database here: the health check and the app need none. The image runs as production, which now refuses to start without a valid
+      # database key (server/auth/piiBootCheck.ts), so it gets a throwaway one; with no database there is no sealed value to check it against.
       - name: Start the image and check it answers
         run: |
-          docker run -d --name app -p 8080:8080 iron-log
+          docker run -d --name app -p 8080:8080 -e PII_ENCRYPTION_KEY="$(openssl rand -base64 32)" iron-log
           for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/api/health && break; sleep 1; done
           curl -fsS http://127.0.0.1:8080/api/health
           curl -fsS -o /dev/null http://127.0.0.1:8080/

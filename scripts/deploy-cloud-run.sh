@@ -367,7 +367,10 @@ deploy_image() {
   gc run services describe "$SERVICE" --region "$REGION" >/dev/null 2>&1 || public=(--allow-unauthenticated)
   local secrets="APP_DATABASE_URL=${SECRET_PREFIX}-app-database-url:latest,BETTER_AUTH_SECRET=${SECRET_PREFIX}-auth-secret:latest,GOOGLE_CLIENT_ID=${SECRET_PREFIX}-google-client-id:latest,GOOGLE_CLIENT_SECRET=${SECRET_PREFIX}-google-client-secret:latest"
   if resend_secret_wanted; then secrets+=",RESEND_API_KEY=${RESEND_SECRET}:latest"; echo "Email sign-in code: RESEND_API_KEY is passed to the service."; else echo "Email sign-in code: no RESEND_API_KEY, so the feature stays off${RESEND_OFF:+ (RESEND_OFF=1: any mapping is removed)}."; fi
-  if pii_secret_wanted; then secrets+=",PII_ENCRYPTION_KEY=${PII_SECRET}:latest"; echo "Database encryption: PII_ENCRYPTION_KEY is passed to the service."; else echo "Database encryption: no key yet, so names and emails are stored as before."; fi
+  if pii_secret_wanted; then secrets+=",PII_ENCRYPTION_KEY=${PII_SECRET}:latest"; echo "Database encryption: PII_ENCRYPTION_KEY is passed to the service."; else
+    # Production refuses to start without the key (server/auth/piiBootCheck.ts): this revision will exit at boot and, as a candidate, get no traffic.
+    echo "Database encryption: no PII_ENCRYPTION_KEY is available ($PII_SECRET does not exist and the live service does not map it). The server refuses to start in production without it, so this revision will fail its start-up check. Make the key first: PII_KEY_CREATE=1 $0 secrets (runbook section 20)." >&2
+  fi
   local billing_env=()
   if stripe_secret_wanted; then
     secrets+=",STRIPE_SECRET_KEY=${SECRET_PREFIX}-stripe-secret-key:latest,STRIPE_WEBHOOK_SECRET=${SECRET_PREFIX}-stripe-webhook-secret:latest,STRIPE_PRICE_MONTHLY=${SECRET_PREFIX}-stripe-price-monthly:latest,STRIPE_PRICE_YEARLY=${SECRET_PREFIX}-stripe-price-yearly:latest"
