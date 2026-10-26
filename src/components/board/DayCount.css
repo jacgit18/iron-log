@@ -1,0 +1,9 @@
+@layer base, components;
+@layer components {
+/* A day column's first section label carries the day's count at its right on a wide screen (the phone's day tabs show it). */
+.sect.withcount {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+}
