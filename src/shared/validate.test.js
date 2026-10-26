@@ -14,6 +14,8 @@ describe('validate', () => {
     expect([validBodyLb(0), validBodyLb(-1), validBodyLb(0.1), validBodyLb(1499.9), validBodyLb(1500)]).toEqual([false, false, true, true, false]);
     // the column keeps 4 decimals: anything that would round to 0 fails its check and is refused here instead
     expect([validBodyLb(0.00001), validBodyLb(0.00009), validBodyLb(0.0001), validBodyLb(0.00011)]).toEqual([false, false, true, true]);
+    // and at the top: 1499.99995 rounds to 1500.0000, which fails the column's `< 1500` check
+    expect([validBodyLb(1499.99995), validBodyLb(1499.99996), validBodyLb(1499.99994), validBodyLb(1499.9999)]).toEqual([false, false, true, true]);
   });
   it('lift goal: above 0, below 5000', () => {
     expect([validLiftGoalLb(0), validLiftGoalLb(4999), validLiftGoalLb(5000)]).toEqual([false, true, false]);

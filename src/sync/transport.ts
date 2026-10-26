@@ -1,3 +1,4 @@
+import { DEFAULT_TIMEOUT_MS } from './timeouts.js';
 import { reportSync } from './reportErrors.js';
 import type { CommandName, ServerRow, SyncTable } from './types.js';
 
@@ -61,7 +62,7 @@ export interface TransportOptions {
   fetch?: typeof fetch;
 }
 
-export const DEFAULT_TIMEOUT_MS = 60_000;
+export { DEFAULT_TIMEOUT_MS };
 const MAX_RETRY_AFTER_MS = 5 * 60_000;
 
 // "Retry-After" is seconds or a date. Anything unreadable is ignored; a huge value is capped.

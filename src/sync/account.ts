@@ -2,7 +2,7 @@
    The things the account screen needs from the API: who am I, sign in with Google or an emailed code, sign out. Like the transport it never
    throws for a network problem: "can't tell" is an answer of its own, and must never read as "signed out". Browser calls are
    same-origin, so the API's Origin check passes and the session cookie travels without any extra setup. */
-import { DEFAULT_TIMEOUT_MS } from './transport.js';
+import { DEFAULT_TIMEOUT_MS } from './timeouts.js';
 
 /** What /api/me says about billing (ADR 065): `available` is false when billing is off or not yet offered to this account. */
 export interface BillingInfo {
