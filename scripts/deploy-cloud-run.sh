@@ -88,6 +88,12 @@ public_base_url() {
   # https://, then dot-separated host parts of letters, digits and inner hyphens (no empty part, none starting or ending with a hyphen), then an optional port from 1 to 65535.
   local re='^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*(:([0-9]{1,5}))?$'
   if ! [[ "$u" =~ $re ]] || { [ -n "${BASH_REMATCH[5]}" ] && { [ "${BASH_REMATCH[5]}" -lt 1 ] || [ "${BASH_REMATCH[5]}" -gt 65535 ]; }; }; then echo "${var} must be an https origin: https://host or https://host:port (port 1 to 65535), a valid host name, with no path, query, fragment, user name or space (got '$u')." >&2; return 1; fi
+  # A staging or QA value must be a host of its own environment (staging.… or qa.…): a repository variable that holds production's domain by mistake
+  # would point this environment's BASE_URL, its canonical-host redirect and its push tasks at production (review of #533).
+  if [ "$IRON_LOG_ENV" != production ]; then
+    local host="${u#https://}"; host="${host%%:*}"
+    case "$host" in "${IRON_LOG_ENV}".*) ;; *) echo "${var} must be a host that starts with '${IRON_LOG_ENV}.' (for example https://${IRON_LOG_ENV}.example.app), never production's domain (got '$u')." >&2; return 1;; esac
+  fi
   echo "$u"
 }
 

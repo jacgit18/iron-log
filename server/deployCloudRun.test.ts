@@ -214,6 +214,14 @@ exit 0
         expect(deployLine()).toContain(`BASE_URL=https://iron-log-${IRON_LOG_ENV}-123456.us-central1.run.app,`);
         expect(out.stderr).toContain(`${VAR} is not set`);
       });
+      it.each(['https://loadbearer.app', 'https://other.loadbearer.app', 'https://staging-qa.loadbearer.app', 'https://iron-log-123456.us-central1.run.app'])('refuses %s: it is not a host of this environment, so production\'s domain can never be set here', async wrong => {
+        writeFileSync(calls, '');
+        const out = await run(['candidate'], { ...base, [VAR]: wrong });
+        expect(out.status).not.toBe(0);
+        expect(out.stderr).toContain(`${VAR} must be a host that starts with '${IRON_LOG_ENV}.'`);
+        expect(recorded().some(l => l.includes('builds submit') || l.includes('run deploy'))).toBe(false);
+        expect((await run(['url'], { ...base, [VAR]: wrong })).status).not.toBe(0);
+      });
       it('ignores the other environment\'s variable', async () => {
         writeFileSync(calls, '');
         const other = IRON_LOG_ENV === 'qa' ? 'STAGING_PUBLIC_BASE_URL' : 'QA_PUBLIC_BASE_URL';
