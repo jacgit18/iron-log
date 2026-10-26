@@ -151,7 +151,7 @@ function ProgramEditor() {
           {lib && <button type="button" className="on segname" aria-pressed="true">{item.name}</button>}
         </div>
         <div className="seg" role="group" aria-label="Day to edit">
-          {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}<span className="edcount" aria-hidden="true">{exerciseCount(prog.days[d - 1].slots)}</span></button>)}
+          {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}<span className="edcount" aria-hidden="true">{exerciseCount(prog.days[d - 1]?.slots ?? [])}</span></button>)}
         </div>
       </div>
       {lib ? (
