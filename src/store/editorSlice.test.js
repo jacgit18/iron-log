@@ -168,6 +168,15 @@ describe('moving a card to another day', () => {
     st().undoMoveEdSlot();
     expect(day1()).toHaveLength(before[0].slots.length);
   });
+  it('Undo after the card was changed saves nothing and says so', () => {
+    st().moveEdSlotToDay(0, 2);
+    const id = st().edMoved.slot.id;
+    st().editProgram(p => { p.days[1].slots.find(s => s.id === id).note = 'changed'; });
+    const before = structuredClone(st().programs.A);
+    st().undoMoveEdSlot();
+    expect(st().programs.A).toEqual(before);
+    expect(st().edMoved).toBeNull();
+  });
   it('drops the Undo when you switch day or program, and a remove replaces it', () => {
     st().moveEdSlotToDay(0, 2); st().setEdDay(2);
     expect(st().edMoved).toBeNull();

@@ -112,12 +112,13 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   undoMoveEdSlot() {
     const m = get().edMoved;
     if (!m || m.key !== get().edKey() || m.from !== get().edDay) { set({ edMoved: null }); return; }
-    const want = JSON.stringify(m.slot); let found = false;
+    const want = JSON.stringify(m.slot);
+    // The card was changed or removed since (Edit, Remove): there is nothing to put back, and nothing is saved.
+    if (get().edProgram().days[m.to - 1].slots.findIndex(x => JSON.stringify(x) === want) < 0) { set({ edMoved: null }); flag('Could not put it back'); return; }
     if (get().editProgram(prog => {
-      const there = prog.days[m.to - 1].slots; const j = there.findIndex(x => JSON.stringify(x) === want);
-      if (j < 0) return;
-      found = true; const [sl] = there.splice(j, 1); const back = prog.days[m.from - 1].slots; back.splice(Math.min(m.idx, back.length), 0, sl!);
-    })) { set({ edMoved: null }); flag(found ? 'Put back' : 'Could not put it back'); }
+      const there = prog.days[m.to - 1].slots; const [sl] = there.splice(there.findIndex(x => JSON.stringify(x) === want), 1);
+      const back = prog.days[m.from - 1].slots; back.splice(Math.min(m.idx, back.length), 0, sl!);
+    })) { set({ edMoved: null }); flag('Put back'); }
   },
   dismissEdMoved() { set({ edMoved: null }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
