@@ -2,21 +2,31 @@
 // inventory (scripts/secret-inventory.mjs). Names only: this never reads a secret value, and the job's account holds a metadata-only role
 // (roles/secretmanager.viewer), which cannot read one. Pure comparison plus a small lister that talks to the Secret Manager API with the job's
 // own token from the metadata server (no new dependency).
-import { INVENTORY, PREFIXES, inventoryNames } from '../secret-inventory.mjs';
+import { INVENTORY, PREFIXES, decodeInventory, inventoryNames } from '../secret-inventory.mjs';
 
 /** The secrets the inventory says should exist in Secret Manager: [{ name, envs: [...], optional, group, trigger }], one per concrete name. */
-export function expectedSecrets() {
+export function expectedSecrets(inventory = INVENTORY, prefixes = PREFIXES) {
   const byName = new Map();
-  for (const e of INVENTORY) {
+  for (const e of inventory) {
     if (e.where !== 'SM') continue;
     for (const env of e.envs) {
-      const name = e.name.replace('{p}', PREFIXES[env]).replace('{e}', env);
+      const name = e.name.replace('{p}', prefixes[env]).replace('{e}', env);
       const at = byName.get(name) ?? { name, envs: [], optional: !!e.optional, group: typeof e.optional === 'string' ? e.optional : null, trigger: !!e.trigger, entry: e.name };
       at.envs.push(env);
       byName.set(name, at);
     }
   }
   return [...byName.values()];
+}
+
+/**
+ * The inventory to check against. `arg` is the base64 argument parity-run.sh passes from main (`encodeInventory`); without one the copy baked into
+ * the image is used and `source` says so, so a stale image is never silent. A bad argument throws (the job answers UNKNOWN).
+ */
+export function inventoryFor(arg) {
+  if (!arg) return { expected: expectedSecrets(), known: inventoryNames(), source: 'image' };
+  const { inventory, prefixes } = decodeInventory(arg);
+  return { expected: expectedSecrets(inventory, prefixes), known: inventoryNames(inventory, prefixes), source: 'main' };
 }
 
 /**
@@ -46,13 +56,14 @@ export function checkSecretNames(present, expected = expectedSecrets(), known = 
 }
 
 /** One summary line, no values. */
-export function describe(r) {
+export function describe(r, source = 'main') {
   const parts = [];
   if (r.missing.length) parts.push(`MISSING ${r.missing.length} (${r.missing.join(', ')})`);
   if (r.unlisted.length) parts.push(`UNLISTED ${r.unlisted.length} (${r.unlisted.join(', ')}; add to scripts/secret-inventory.mjs or delete)`);
   if (!parts.length) parts.push(`OK (${r.checked} expected secrets exist)`);
   const mixed = r.mixed.length ? `; optional features set in some environments only: ${r.mixed.map(m => `${m.entry} (set: ${m.set.join(', ')}; not set: ${m.notSet.join(', ')})`).join('; ')}` : '';
-  return `secrets: ${parts.join('; ')}${mixed}`;
+  const stale = source === 'image' ? ' [inventory from the job image, not main: rebuild it with scripts/parity-job.sh deploy]' : '';
+  return `secrets: ${parts.join('; ')}${mixed}${stale}`;
 }
 
 const META = 'http://metadata.google.internal/computeMetadata/v1';

@@ -42,6 +42,7 @@ jobs:
       vars.STAGING_ENABLED == 'true' &&
       github.ref == 'refs/heads/main' && inputs.skip_staging != true
     runs-on: ubuntu-26.04
+    timeout-minutes: 8
     environment: staging
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
@@ -49,6 +50,8 @@ jobs:
       IRON_LOG_ENV: staging
       SERVICE: iron-log-staging
       BUILD_SA: iron-log-build@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+      # The custom domain staging signs in on (a repository variable, empty until the domain is mapped; ADR 076). Empty keeps BASE_URL on the Cloud Run address.
+      STAGING_PUBLIC_BASE_URL: ${{ vars.STAGING_BASE_URL }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -110,6 +113,7 @@ jobs:
        (needs.staging.result == 'skipped' && (vars.STAGING_ENABLED != 'true' || inputs.skip_staging == true))) &&
       github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
+    timeout-minutes: 20 # timeout-ok: slowest deploy 9.5 min incl. image build
     # Add required reviewers to this environment (Settings -> Environments -> production) to approve each deploy by hand.
     environment: production
     env:
@@ -261,6 +265,7 @@ jobs:
     # STAGING_ENABLED is not true) and would skip this job too. A deploy that did not succeed still gets no release.
     if: always() && needs.deploy.result == 'success'
     runs-on: ubuntu-26.04
+    timeout-minutes: 3
     # Shares a lock with release-stage.yml, so two tags are never numbered at once.
     concurrency:
       group: release-tags

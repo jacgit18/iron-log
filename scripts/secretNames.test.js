@@ -1,7 +1,8 @@
 import { execFile } from 'node:child_process';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { checkSecretNames, describe as line, expectedSecrets, listSecretNames } from './lib/secret-names.mjs';
+import { checkSecretNames, describe as line, expectedSecrets, inventoryFor, listSecretNames } from './lib/secret-names.mjs';
+import { INVENTORY, decodeInventory, encodeInventory } from './secret-inventory.mjs';
 
 // The secrets-name check of the parity job: Secret Manager's secret NAMES against the inventory. Names only, never a value.
 const required = () => new Set(expectedSecrets().filter(x => !x.optional).map(x => x.name));
@@ -17,6 +18,36 @@ describe('expectedSecrets', () => {
     expect(expectedSecrets().find(x => x.name === 'iron-log-pii-key').envs).toEqual(['production']); // staging has its own since backlog EP2
     expect(names).toContain('iron-log-staging-pii-key');
     expect(names).toContain('iron-log-qa-pii-key');
+  });
+});
+
+describe('the inventory argument (a job image older than main must not cause a false UNLISTED)', () => {
+  it('round-trips: one comma-free string, Secret Manager entries only, names and flags with no value', () => {
+    const arg = encodeInventory();
+    expect(arg).toMatch(/^[A-Za-z0-9+/=]+$/);
+    const { inventory } = decodeInventory(arg);
+    expect(inventory.every(e => e.where === 'SM')).toBe(true);
+    expect(inventory.length).toBe(INVENTORY.filter(e => e.where === 'SM').length);
+    expect(Object.keys(inventory[0]).sort()).toEqual(['envs', 'name', 'optional', 'trigger', 'where']);
+    expect(inventoryFor(arg).expected).toEqual(expectedSecrets());
+  });
+  it('wins over the baked inventory: a secret only main knows is not UNLISTED, and without the argument it is, with the stale-image note', () => {
+    const newer = INVENTORY.concat({ name: '{p}-new-thing', where: 'SM', envs: ['staging'], usedBy: 'x', rotate: 'x', note: '' });
+    const present = new Set([...required(), 'iron-log-staging-new-thing']);
+    const viaArg = inventoryFor(encodeInventory(newer));
+    expect(checkSecretNames(present, viaArg.expected, viaArg.known)).toMatchObject({ code: 0, unlisted: [] });
+    expect(viaArg.source).toBe('main');
+    const baked = inventoryFor(undefined);
+    const r = checkSecretNames(present, baked.expected, baked.known);
+    expect(r).toMatchObject({ code: 3, unlisted: ['iron-log-staging-new-thing'] });
+    expect(baked.source).toBe('image');
+    expect(line(r, baked.source)).toContain('inventory from the job image, not main');
+    expect(line(r, 'main')).not.toContain('job image');
+  });
+  it('throws on an argument that is not an inventory, so the job answers UNKNOWN and never a guess', () => {
+    expect(() => inventoryFor('not-base64-json!')).toThrow();
+    expect(() => inventoryFor(Buffer.from('{"prefixes":{},"entries":[]}').toString('base64'))).toThrow(/not a valid inventory/);
+    expect(() => inventoryFor(Buffer.from(JSON.stringify({ prefixes: { qa: 'x' }, entries: [{ name: 'a', envs: ['nope'] }] })).toString('base64'))).toThrow();
   });
 });
 

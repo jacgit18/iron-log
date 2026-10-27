@@ -31,7 +31,11 @@ describe('piiCrypto', () => {
 
   it('refuses a tampered value and a different key', () => {
     const sealed = crypto.seal('Ada');
-    const flipped = sealed.slice(0, -2) + (sealed.endsWith('A') ? 'BB' : 'AA');
+    // Flip every bit of the last byte of the decoded value. (Swapping the last two characters for 'AA' left the bytes unchanged about one run in 256,
+    // when the real last byte was 0, so the test failed at random.)
+    const raw = Buffer.from(sealed.slice('enc1:'.length), 'base64url');
+    raw[raw.length - 1] ^= 0xff;
+    const flipped = `enc1:${raw.toString('base64url')}`;
     expect(() => crypto.open(flipped)).toThrow();
     expect(() => createPiiCrypto(randomBytes(32)).open(sealed)).toThrow();
     expect(() => crypto.open('enc1:abc')).toThrow();

@@ -75,6 +75,16 @@ async function open({ width, height, dpr = 2, dark = false, mobile = false }) {
   await page.goto(BASE + '/');
   await page.waitForLoadState('networkidle').catch(() => {});
   await page.evaluate(() => document.fonts && document.fonts.ready);
+  // The screenshots show the signed-in app, as people use it: the account badge is the way to Settings, so the Settings tab is not drawn
+  // (App.tsx). The sample data runs without an account, so the badge is put in here, built like components/AccountBadge.tsx draws it.
+  await page.evaluate(name => {
+    document.getElementById('tab-settings')?.remove();
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'acctbadge'; b.id = 'account-badge';
+    b.setAttribute('aria-label', `Signed in as ${name}. Open account settings`);
+    b.innerHTML = `<span class="acctavatar" aria-hidden="true" data-initial="${name[0]}"><i class="acctdot"></i></span><span class="acctname" aria-hidden="true">${name}</span>`;
+    document.querySelector('header.top')?.append(b);
+  }, 'Sam');
   await page.waitForTimeout(300);
   return { ctx, page };
 }

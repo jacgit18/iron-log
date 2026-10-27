@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { showInstallHint, type HintInputs, installHintDismissed, dismissInstallHint } from './installHint.js';
+import { showInstallHint, type HintInputs, installHintDismissed, dismissInstallHint, onInstallHintDismissed } from './installHint.js';
 
 const base: HintInputs = { installed: false, canPrompt: true, ios: false, signedOut: false, dismissed: false };
 
@@ -25,5 +25,14 @@ describe('dismissal', () => {
     expect(installHintDismissed()).toBe(false);
     dismissInstallHint();
     expect(installHintDismissed()).toBe(true);
+  });
+  it('tells anything waiting for it, so a tip can draw as soon as the hint is gone', () => {
+    const heard = vi.fn();
+    const stop = onInstallHintDismissed(heard);
+    dismissInstallHint();
+    expect(heard).toHaveBeenCalledTimes(1);
+    stop();
+    dismissInstallHint();
+    expect(heard).toHaveBeenCalledTimes(1);
   });
 });

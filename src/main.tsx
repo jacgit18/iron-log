@@ -7,8 +7,10 @@ import App from './App.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import Landing, { Splash } from './components/Landing.js';
 import { setAdmin, setPaid } from './features.js';
+import { inAndroidApp } from './lib/androidApp.js';
 import { applyAppearance } from './lib/appearance.js';
 import { decideGate, quickGate } from './lib/gate.js';
+import { isPlansPath } from './lib/plansPage.js';
 import { initPwa } from './lib/pwa.js';
 import { LS } from './lib/storage.js';
 import { apiSyncEnabled, FLAG_KEY } from './sync/flag.js';
@@ -43,7 +45,15 @@ function learnAdmin() {
 
 // With syncing on, a visitor this browser has never seen signed in gets the landing page instead of the app (src/lib/gate.ts). Everyone
 // else, and every build with syncing off, goes straight to the app exactly as before, with nothing to wait for.
-if (quickGate(apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC), LS) === 'app') {
+//
+// The public Plans page (/plans) is shown to anyone, signed in or not, and never mounts the app. Inside the Android app it is not
+// shown at all (the Play build carries no prices, ADR 065 point 8 and ADR 078): the address goes back to / and the gate below decides as usual.
+const onPlans = isPlansPath(window.location.pathname) && !inAndroidApp();
+if (isPlansPath(window.location.pathname) && !onPlans) window.history.replaceState(null, '', '/');
+if (onPlans) {
+  // Loaded on demand: the Plans page is its own small chunk, so the app and the landing page do not carry it.
+  void import('./components/Plans.js').then(m => show(<m.default />), () => window.location.replace('/'));
+} else if (quickGate(apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC), LS) === 'app') {
   openApp();
 } else {
   show(<Splash />);

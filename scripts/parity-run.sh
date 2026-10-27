@@ -28,6 +28,9 @@ OUT="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
 expected="$(ls "$MIGRATIONS_DIR" | grep -E '^[0-9]+_.*\.sql$' | sed 's/_.*//' | sort | paste -sd, -)"
 if [ -z "$expected" ]; then echo "::error::No migration files found in $MIGRATIONS_DIR: cannot compare anything." >&2; exit 1; fi
 
+# The secrets run gets main's secret inventory as its argument (one base64 string, names and flags only), not the migration list, so the job
+# never checks against the copy baked into its image (2026-10-26: an image older than the inventory reported a known secret as UNLISTED).
+inventory_arg="$(node "$(dirname "$0")/secret-inventory.mjs" --encode)" || inventory_arg=""
 gc() { gcloud --project "$PROJECT_ID" "$@"; }
 # The container's exit code from the latest execution's task, or empty when this gcloud does not show it.
 exit_code_of() {
@@ -66,7 +69,8 @@ for env in $ENVS; do
   # prints nothing, but the error text carries both what we need: "Task <execution>-task0 failed with exit code: 4" and "gcloud run jobs
   # executions describe <execution>". So stdout and stderr are read together; the task-list lookup (exit_code_of) is only a fallback.
   out="$(mktemp)"
-  gc run jobs execute "$JOB" --region "$REGION" --args "$env,$expected" --wait --format='value(metadata.name)' > "$out" 2>&1
+  args="$env,$expected"; [ "$env" = secrets ] && args="$env,$inventory_arg"
+  gc run jobs execute "$JOB" --region "$REGION" --args "$args" --wait --format='value(metadata.name)' > "$out" 2>&1
   rc=$?
   name="$(grep -oE "${JOB}-[a-z0-9]{5}\b" "$out" | tail -1)"
   said="$(grep -oE 'exit code: [0-9]+' "$out" | tail -1 | grep -oE '[0-9]+$')"

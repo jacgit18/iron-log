@@ -33,6 +33,7 @@ jobs:
     # The keyless Google login accepts only this repository's main branch, so the workflow has to be started from it.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
+    timeout-minutes: 15 # timeout-ok: not measured: deploys paused; same steps as deploy
     environment: qa
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
@@ -40,6 +41,8 @@ jobs:
       IRON_LOG_ENV: qa
       SERVICE: iron-log-qa
       BUILD_SA: iron-log-build@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+      # The custom domain QA signs in on (a repository variable, empty until the domain is mapped; ADR 076). Empty keeps BASE_URL on the Cloud Run address.
+      QA_PUBLIC_BASE_URL: ${{ vars.QA_BASE_URL }}
       # Main's build file, not the ref's: a branch's own build steps would run as the build account, which can write to the image
       # repository production and staging reuse images from.
       CLOUDBUILD_CONFIG: ${{ github.workspace }}/main/cloudbuild.yaml

@@ -18,6 +18,12 @@ const seed = async page => {
   await page.click('#tab-daily'); await page.click('#daily-grocery');
   await page.click('#groc-view-get');
 };
+const open = async page => { await page.click('#tab-daily'); await page.click('#daily-grocery'); };
+const add = async (page, n, price) => {
+  await page.fill('#groc-name', n);
+  if (price) { await page.click('#groc-more'); await page.fill('#groc-price', price); await page.click('#groc-more'); }
+  await page.click('#groc-add');
+};
 const pill = (page, name) => page.getByRole('button', { name: `Count and price of ${name}` });
 
 test('the pill has an arrow, and the arrow, the pill and the name all open and close the panel without ticking', async ({ page }) => {
@@ -92,4 +98,38 @@ test('a bought row offers no "I have this" (it would do nothing), and a count th
   await expect(page.getByRole('button', { name: 'I have this: Milk' })).toBeVisible(); // still to get: offered
   await page.getByLabel('Count of Milk').fill('0.001'); await page.getByLabel('Count of Milk').blur();
   await expect(page.getByRole('alert').filter({ hasText: 'The count must be a number from 0.01 to 999.' })).toBeVisible();
+});
+
+// Merged from groceryCountCarries: a count typed on To get this month becomes the item's usual count, so next month starts from it.
+test('a count changed on To get is the starting count next month', async ({ page }) => {
+  await seed(page);
+  await page.getByRole('button', { name: /Count and price of Rice/i }).click();
+  const count = page.getByLabel('Count of Rice');
+  await count.fill('3');
+  await count.blur();
+  await expect(page.getByRole('button', { name: /^3 × .*count and price of Rice/i })).toBeVisible();
+  await page.click('#groc-next');
+  await expect(page.getByRole('button', { name: /^3 × .*count and price of Rice/i })).toBeVisible(); // next month starts at 3, not 1
+});
+
+// Merged from groceryMonthBar: own setup (items added through the editor), no seed.
+test('To get shows a bar of how much is bought, and items with no price are marked and counted', async ({ page }) => {
+  await open(page);
+  await page.click('#groc-edit');
+  await add(page, 'Eggs', '3.50'); await add(page, 'Rice');
+  await page.click('#groc-done');
+  await page.click('#groc-view-get');
+  const fill = page.locator('.gprog > span');
+  await expect(fill).toHaveCSS('width', '0px');
+  await expect(page.locator('#groc-summary .gwarn')).toHaveText('1 without a price');
+  await expect(page.getByRole('button', { name: 'Count and price of Rice' }).locator('.gpill')).toHaveClass(/noprice/);
+  await expect(page.getByRole('button', { name: 'Count and price of Eggs' }).locator('.gpill')).not.toHaveClass(/noprice/);
+  await page.locator('#groc-eggs').check();
+  await expect.poll(async () => fill.evaluate(el => Math.round(100 * el.getBoundingClientRect().width / el.parentElement.getBoundingClientRect().width))).toBe(50);
+  await expect(page.locator('#groc-summary')).toContainText('Got 1 of 2 · Spent $3.50 · Expected $3.50 · 1 without a price');
+  for (const colorScheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme });
+    const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+    expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
+  }
 });

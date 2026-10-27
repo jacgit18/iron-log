@@ -28,6 +28,7 @@ describe('ci-changes', () => {
     [['Dockerfile'], ['unit', 'docker']],
     [['package.json'], JOBS],
     [['.github/workflows/test.yml'], JOBS],
+    [['.github/actions/install-chromium/action.yml'], ['unit', 'e2e', 'e2e_sync']],
     [['neon.ts'], JOBS],
   ])('%j runs %j', (files, jobs) => {
     expect(run(files)).toEqual(jobs);

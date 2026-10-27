@@ -8,6 +8,7 @@ import DayAddSheet from './DayAddSheet.js';
 import { StretchSheet, StretchExpSheet } from './StretchSheets.js';
 import SupplementSheet from './SupplementSheet.js';
 import ExperimentSheet from './ExperimentSheet.js';
+import MoveSheet from './MoveSheet.js';
 import NewProgramSheet from './NewProgramSheet.js';
 import ImportSheet from './ImportSheet.js';
 import HelpSheet from './HelpSheet.js';
@@ -29,6 +30,7 @@ export default function Modal() {
     case 'supplement': return <SupplementSheet key={modal.id || 'new'} id={modal.id} />;
     case 'exercise': return <ExerciseSheet key={modal.exId} exId={modal.exId} />;
     case 'dayadd': return <DayAddSheet key={modal.col} col={modal.col} />;
+    case 'moveprog': return <MoveSheet key={`move-${modal.idx}`} idx={modal.idx as number} />;
     case 'newprog': return <NewProgramSheet />;
     case 'import': return <ImportSheet />;
     case 'restdate': return <RestDateSheet key={modal.day as number} day={modal.day as number} />;

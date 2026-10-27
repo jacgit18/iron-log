@@ -1,0 +1,48 @@
+name: Install Chromium for Playwright
+description: >
+  `playwright install --with-deps` fetches about 25 MB from the Ubuntu mirror, normally in 20 s. On a slow runner the mirror serves about 35 kB/s and
+  the same install takes 10 minutes or more (13 of 52 shard runs took over 60 s; PR 540's own run had two jobs stall on both attempts). A stuck first
+  attempt is cut off and tried again, then once more with no cutoff, so a slow install still finishes (the job timeout applies) instead of failing;
+  each retry is a warning annotation so they stay countable. The downloaded .deb files are cached between runs (key: the Playwright version), so a warm run
+  downloads nothing from the mirror. Every workflow installs the browser through this action (scripts/playwrightInstallRetry.test.js).
+runs:
+  using: composite
+  steps:
+    - id: version
+      shell: bash
+      run: echo "playwright=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+    # Restores on a hit; on a miss the files copied in below are saved when the job ends (only a job that passed saves).
+    - uses: actions/cache@v6
+      with:
+        path: ~/.cache/playwright-apt-debs
+        key: apt-debs-${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.version.outputs.playwright }}
+        restore-keys: apt-debs-${{ runner.os }}-${{ runner.arch }}-playwright-
+    # apt uses a .deb already in its archive when the name and hash match the package index, and downloads only the rest.
+    - shell: bash
+      run: |
+        mkdir -p ~/.cache/playwright-apt-debs
+        echo "cached .deb files: $(ls ~/.cache/playwright-apt-debs | wc -l)"
+        sudo cp ~/.cache/playwright-apt-debs/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+    - shell: bash
+      run: |
+        # `timeout` stops npx but not the apt-get it started under sudo, which keeps the dpkg lock (run 40382012906: "dpkg frontend lock was locked by apt-get").
+        free_apt() {
+          sudo pkill -x apt-get || true
+          for _ in $(seq 20); do pgrep -x apt-get > /dev/null || break; sleep 1; done
+          sudo pkill -KILL -x apt-get || true
+          sudo dpkg --configure -a
+        }
+        timeout 90 npx playwright install --with-deps chromium || {
+          echo "::warning::playwright install did not finish in 90 s (slow apt mirror?); trying once more"
+          free_apt
+          timeout 180 npx playwright install --with-deps chromium || {
+            echo "::warning::playwright install stalled again; waiting it out (apt resumes partial downloads)"
+            free_apt
+            npx playwright install --with-deps chromium
+          }
+        }
+    - shell: bash
+      run: |
+        sudo cp /var/cache/apt/archives/*.deb ~/.cache/playwright-apt-debs/ 2>/dev/null || true
+        sudo chown -R "$(id -u):$(id -g)" ~/.cache/playwright-apt-debs
+        echo "saved for the next run: $(ls ~/.cache/playwright-apt-debs | wc -l) .deb files, $(du -sh ~/.cache/playwright-apt-debs | cut -f1)"

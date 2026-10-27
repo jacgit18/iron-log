@@ -6,7 +6,7 @@
 export const AREAS = {
   server: { floor: { statements: 92, branches: 86 }, cap: 0 },
   'src/hooks': { cap: 7 },
-  'src/lib': { floor: { statements: 93, branches: 88 }, cap: 5 },
+  'src/lib': { floor: { statements: 93, branches: 88 }, cap: 4 },
   'src/shared': { floor: { statements: 97, branches: 96 }, cap: 0 },
   'src/store': { floor: { statements: 85, branches: 78 }, cap: 0 },
   'src/sync': { floor: { statements: 92, branches: 84 }, cap: 2 },

@@ -3,16 +3,7 @@ import { test, expect } from './fixtures.js';
 // Experiments: a list longer than six entries gets a search over name and note; a short one does not.
 const WORKOUT = [['hack', 'try light'], ['facepull', ''], ['latpd', ''], ['chestpress', 'slow'], ['bbrow', ''], ['dbcurl', ''], ['legcurl', '']];
 
-test('a short workout Experiments list has no search', async ({ page }) => {
-  await page.addInitScript(items => {
-    localStorage.setItem('ironlog:experiments/main', JSON.stringify({ schema: 1, items: items.map(([ex, note], i) => ({ id: 'E' + i, ex, ph: null, note })) }));
-  }, WORKOUT.slice(0, 6));
-  await page.goto('/');
-  await expect(page.locator('.explist .expcard')).toHaveCount(6);
-  await expect(page.locator('#exp-q')).toHaveCount(0);
-});
-
-test('searching narrows the long workout list by name or note, and says when nothing matches', async ({ page }) => {
+test('searching narrows the long workout list by name or note, says when nothing matches, and forgets its text when the list gets short', async ({ page }) => {
   await page.addInitScript(items => {
     localStorage.setItem('ironlog:experiments/main', JSON.stringify({ schema: 1, items: items.map(([ex, note], i) => ({ id: 'E' + i, ex, ph: null, note })) }));
   }, WORKOUT);
@@ -27,14 +18,8 @@ test('searching narrows the long workout list by name or note, and says when not
   await expect(page.locator('.experiments')).toContainText('No exercise matches');
   await page.getByRole('button', { name: 'Clear' }).click();
   await expect(cards).toHaveCount(7);
-});
 
-test('the search forgets its text when the list gets short, so it does not come back filled in', async ({ page }) => {
-  await page.addInitScript(items => {
-    localStorage.setItem('ironlog:experiments/main', JSON.stringify({ schema: 1, items: items.map(([ex, note], i) => ({ id: 'E' + i, ex, ph: null, note })) }));
-  }, WORKOUT);
-  await page.goto('/');
-  const cards = page.locator('.explist .expcard');
+  // Then it forgets its text when the list gets short, so it does not come back filled in.
   await page.fill('#exp-q', 'slow');
   await expect(cards).toHaveCount(1);
   await cards.first().getByRole('button', { name: /delete/i }).click();

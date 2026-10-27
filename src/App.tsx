@@ -20,6 +20,7 @@ import ErrorBoundary from './components/ErrorBoundary.js';
 import { lazyTab, mapChunkError } from './lib/lazyTab.js';
 import { renewPush } from './lib/pushClient.js';
 import { useWaterReminder } from './hooks/useWaterReminder.js';
+import './components/BrandLink.css';
 
 // The Board (the first screen) and the shell are in the main bundle; the other tabs are fetched when first opened. Every chunk is in the
 // service worker's precache, so they open offline too.
@@ -28,6 +29,8 @@ const Progress = lazyTab(() => import('./components/progress/Progress.js'));
 const Editor = lazyTab(() => import('./components/program/Editor.js'));
 const PlansTab = lazyTab(() => import('./components/plans/PlansTab.js'));
 const Settings = lazyTab(() => import('./components/settings/Settings.js'));
+// The Program tab's "plan on a computer" tip floats above the page and draws nothing until it is due, so its chunk is fetched with the tab.
+const ProgramOnComputer = lazy(mapChunkError(() => import('./components/ProgramOnComputer.js')));
 // The sync cards (sign in, other account, upload this device's data) only exist while syncing is on, so their code (and the sync
 // planner behind it) loads only then. They draw nothing until they are needed, so waiting for the chunk moves nothing.
 const loadSyncCards = () => import('./components/SyncCards.js');
@@ -110,7 +113,7 @@ export default function App() {
       <a className="skip" href="#view">Skip to content</a>
       <div className="wrap">
         <header className="top">
-          <h1>Loadbearer</h1>
+          <h1><button type="button" className="brandlink" aria-current={tab === 'board' ? 'page' : undefined} onClick={() => { setTab('board'); window.scrollTo({ top: 0 }); }}>Loadbearer</button></h1>
           <div className="topact">
             <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
             <ThemeButton />
@@ -131,6 +134,7 @@ export default function App() {
         <WhenSyncing><SignInCard /></WhenSyncing>
         <WhenSyncing><OtherAccountCard /></WhenSyncing>
         <InstallHint />
+        {tab === 'program' && <ErrorBoundary where="view"><Suspense fallback={null}><ProgramOnComputer /></Suspense></ErrorBoundary>}
         <WhenSyncing><LegacyCard /></WhenSyncing>
         {/* Stays until the writes go through: a passing message isn't enough when data would be gone on reload. */}
         {unsaved.length > 0 && !syncing && (

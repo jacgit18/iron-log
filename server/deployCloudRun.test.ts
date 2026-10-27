@@ -191,8 +191,68 @@ exit 0
       const out = await run(['candidate'], { IRON_LOG_ENV, PUBLIC_BASE_URL: 'https://loadbearer.app' });
       expect(out.status).not.toBe(0);
       expect(out.stderr).toContain('PUBLIC_BASE_URL is for production only');
+      expect(out.stderr).toContain(IRON_LOG_ENV === 'qa' ? 'QA_PUBLIC_BASE_URL' : 'STAGING_PUBLIC_BASE_URL');
       expect(recorded().some(l => l.includes('builds submit') || l.includes('run deploy'))).toBe(false);
       expect((await run(['url'], { IRON_LOG_ENV, PUBLIC_BASE_URL: 'https://loadbearer.app' })).status).not.toBe(0);
+    });
+
+    // Staging and QA each have their own variable (ADR 076): an environment reads only its own, so a stale value in the shell for one cannot point another at it.
+    describe.each([['staging', 'STAGING_PUBLIC_BASE_URL', 'https://staging.loadbearer.app'], ['qa', 'QA_PUBLIC_BASE_URL', 'https://qa.loadbearer.app']])('%s own domain (%s)', (IRON_LOG_ENV, VAR, domain) => {
+      const base = { IRON_LOG_ENV, HAS_STAGING_PII_KEY: '1' }; // staging's own key must exist (the stub answers for it)
+      it('is BASE_URL on a deploy and on the candidate, and `url` prints it', async () => {
+        for (const cmd of ['candidate', 'deploy']) {
+          writeFileSync(calls, '');
+          expect((await run([cmd], { ...base, [VAR]: domain })).status).toBe(0);
+          expect(deployLine()).toContain(`BASE_URL=${domain},`);
+        }
+        expect((await run(['url'], { ...base, [VAR]: domain })).stdout.trim()).toBe(domain);
+      });
+      it('is the Cloud Run address, with a note naming the variable, when the variable is not set', async () => {
+        writeFileSync(calls, '');
+        const out = await run(['candidate'], { ...base });
+        expect(out.status).toBe(0);
+        expect(deployLine()).toContain(`BASE_URL=https://iron-log-${IRON_LOG_ENV}-123456.us-central1.run.app,`);
+        expect(out.stderr).toContain(`${VAR} is not set`);
+      });
+      it.each(['https://loadbearer.app', 'https://other.loadbearer.app', 'https://staging-qa.loadbearer.app', 'https://iron-log-123456.us-central1.run.app'])('refuses %s: it is not a host of this environment, so production\'s domain can never be set here', async wrong => {
+        writeFileSync(calls, '');
+        const out = await run(['candidate'], { ...base, [VAR]: wrong });
+        expect(out.status).not.toBe(0);
+        expect(out.stderr).toContain(`${VAR} must be a host that starts with '${IRON_LOG_ENV}.'`);
+        expect(recorded().some(l => l.includes('builds submit') || l.includes('run deploy'))).toBe(false);
+        expect((await run(['url'], { ...base, [VAR]: wrong })).status).not.toBe(0);
+      });
+      it('ignores the other environment\'s variable', async () => {
+        writeFileSync(calls, '');
+        const other = IRON_LOG_ENV === 'qa' ? 'STAGING_PUBLIC_BASE_URL' : 'QA_PUBLIC_BASE_URL';
+        expect((await run(['candidate'], { ...base, [other]: 'https://elsewhere.example.app' })).status).toBe(0);
+        expect(deployLine()).not.toContain('elsewhere');
+      });
+      it('refuses a value that is not a bare https origin, naming its own variable', async () => {
+        writeFileSync(calls, '');
+        const out = await run(['candidate'], { ...base, [VAR]: `${domain}/path` });
+        expect(out.status).not.toBe(0);
+        expect(out.stderr).toContain(`${VAR} must be an https origin`);
+        expect(recorded().some(l => l.includes('builds submit') || l.includes('run deploy'))).toBe(false);
+      });
+    });
+
+    it('production ignores the staging and QA variables', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['candidate'], { STAGING_PUBLIC_BASE_URL: 'https://staging.loadbearer.app', QA_PUBLIC_BASE_URL: 'https://qa.loadbearer.app' })).status).toBe(0);
+      expect(deployLine()).toContain('BASE_URL=https://iron-log-123456.us-central1.run.app,');
+    });
+
+    it('the staging and QA workflows pass their own repository variable, each once, and only in their own job', () => {
+      const stagingYml = readFileSync(resolve('.github/workflows/deploy-cloud-run.yml'), 'utf8');
+      const qaYml = readFileSync(resolve('.github/workflows/deploy-qa.yml'), 'utf8');
+      expect(stagingYml.match(/^\s+STAGING_PUBLIC_BASE_URL:/gm)).toHaveLength(1);
+      expect(stagingYml).toContain('STAGING_PUBLIC_BASE_URL: ${{ vars.STAGING_BASE_URL }}');
+      expect(stagingYml).not.toContain('QA_PUBLIC_BASE_URL');
+      expect(qaYml.match(/^\s+QA_PUBLIC_BASE_URL:/gm)).toHaveLength(1);
+      expect(qaYml).toContain('QA_PUBLIC_BASE_URL: ${{ vars.QA_BASE_URL }}');
+      expect(qaYml).not.toMatch(/\bPUBLIC_BASE_URL: \$\{\{ vars\.PRODUCTION_BASE_URL/);
+      expect(qaYml).not.toContain('STAGING_PUBLIC_BASE_URL');
     });
 
     // The workflow is what puts the value there, so the wiring is pinned: only the production job, and only the repository variable.
@@ -212,7 +272,7 @@ exit 0
       expect(production.length).toBeGreaterThan(200);
       expect(yml.match(/^\s+PUBLIC_BASE_URL:/gm)).toHaveLength(1); // set once, as a key; a comment that names it does not count
       expect(production).toContain('PUBLIC_BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}');
-      expect(staging).not.toContain('PUBLIC_BASE_URL');
+      expect(staging).not.toMatch(/(?<![A-Z_])PUBLIC_BASE_URL/); // staging has its own variable (STAGING_PUBLIC_BASE_URL), never production's
       // A failing script must fail the step, not be hidden by the pipe into tee.
       expect(production).toMatch(/set -o pipefail[^\n]*\n\s+scripts\/deploy-cloud-run\.sh candidate \| tee/);
     });

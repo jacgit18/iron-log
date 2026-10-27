@@ -193,6 +193,12 @@ export interface ExportSlice {
   downloadData(): Promise<void>;
 }
 
+/** The card the Program editor last moved to another day: its old day and place, and the day it went to. */
+export interface EdMoved {
+  key: string; from: number; to: number; idx: number; slot: ProgramSlot;
+  /** Only for a move to another program: where it went (program key and name) and the card as it was, with its old id, for Undo. */
+  toKey?: string; toLabel?: string; orig?: ProgramSlot;
+}
 export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot }
 
 export interface EditorSlice {
@@ -206,6 +212,8 @@ export interface EditorSlice {
   openAddToProgram(col: number, fromExp?: string): void;
   setEdProg(edProg: string | null): void;
   setEdDay(edDay: number): void;
+  /** Saves a program by key: 'A', 'B' or 'L:<library id>'. */
+  saveProg(key: string, prog: Program): void;
   saveEdited(prog: Program): void;
   editProgram(fn: (prog: Program) => void): boolean;
   /** Fills the empty active program from a starter (lib/starterPrograms.ts). Returns why it could not, or null. */
@@ -219,6 +227,14 @@ export interface EditorSlice {
   removeEdSlot(i: number): void;
   undoRemoveEdSlot(): void;
   dismissEdRemoved(): void;
+  /** The card the Program editor last moved to another day, so its notice can offer Undo. */
+  edMoved: EdMoved | null;
+  /** Moves the open day's card at `i` to the end of its section on day `toDay` of the same program. */
+  moveEdSlotToDay(i: number, toDay: number): void;
+  /** Moves the open day's card at `i` to day `toDay` of another program (or the same one: then it is `moveEdSlotToDay`). */
+  moveEdSlotToProgram(i: number, toKey: string, toDay: number): void;
+  undoMoveEdSlot(): void;
+  dismissEdMoved(): void;
   setDaySub(v: string): boolean;
   renameLibItem(raw: string): false | void;
   libSnapshot(name: string, prog: Program, from: string, auto: boolean): LibraryItem;
@@ -282,6 +298,7 @@ export interface GrocerySlice {
   setGroceryPrices(month: string, id: string, prices: number[] | null): void;
   setGroceryLineStore(month: string, id: string, store: string | null): string | null; // where it was bought that month ('' is Anywhere; its usual store or null clears the choice)
   makeGroceryStoreUsual(month: string, id: string): string | null; // Move to made permanent: the item's own store becomes the one it is in that month
+  carryGroceryTicks(month: string): void; // the first time the current month (the key the screen shows as this month) opens: its At home ticks start as the latest earlier month's (ADR 079); once per month
   takeGroceryAllOff(month: string): number; // Skip all: every unticked item still to get that month is marked as had; returns how many (Undo is offered)
   takeGroceryOff(month: string, id: string): void; // not needed this month: marked as had, so off that month's list
   // Sharing what you buy with other people (groups, shares, who paid). Nothing here changes a price or a total: it only says who shares it.

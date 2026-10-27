@@ -19,6 +19,7 @@ import Icon from '../Icon.jsx';
 import ProgramSwitch from './ProgramSwitch.js';
 import { useWide } from './useWide.js';
 import './BoardTop.css';
+import './DayCount.css';
 import './DayHeader.css';
 import './Leftovers.css';
 import './WeekBar.css';
@@ -88,8 +89,6 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
   const cols = currentLayout(week, slots);
   const rest = restsOf(week);
   const restDates = restDatesOf(week);
-  const { total, done, skipped: skippedN } = tally(slots, week);
-  const pct = total ? Math.round(done / total * 100) : 0;
   const wk = ymd(weekStart);
 
   // Phones show one day; default to the first day that still has open work.
@@ -157,10 +156,6 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
           {ymd(weekStartOf(today)) !== wk && <button type="button" className="btn sm ghost" onClick={() => st.gotoWeek('today')}>This week</button>}
         </div>
         <ProgramSwitch />
-        <div className="progress">
-          <span>{done} of {total} done{skippedN ? ` · ${skippedN} skipped` : ''}</span>
-          <div className="bar"><i style={{ width: `${pct}%` }} /></div>
-        </div>
       </div>
 
       {!fromRecord && !programs[progKey] && <div className="notice">{progName(cfg, progKey)} is scheduled this week but hasn't been added yet, so {progName(cfg, 'A')} is shown.</div>}
@@ -255,6 +250,7 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
           const list = cols[d];
           const date = dayDate(list, logs, wk);
           const t = tally(list, week);
+          const count = wide ? <span>{t.done}/{t.total} exercises</span> : null; // the phone's day tabs already show it
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const vis = shown(list);
           const open = vis.filter(s => isOpen(s, week));
@@ -285,14 +281,14 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
                 const newSec = i === 0 || sec !== headOf(open[i - 1], pd);
                 return (
                   <Fragment key={s.id}>
-                    {newSec && <div className="sect">{sec}</div>}
+                    {newSec && <div className={`sect${i === 0 && wide ? ' withcount' : ''}`}>{sec}{i === 0 && count}</div>}
                     <Card s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />
                   </Fragment>
                 );
               })}
               {finished.length > 0 && (
                 <>
-                  <div className="sect donesect">{[ft.done ? `${ft.done} done` : '', ft.skipped ? `${ft.skipped} skipped` : ''].filter(Boolean).join(' · ')}</div>
+                  <div className={`sect donesect${!open.length && wide ? ' withcount' : ''}`}>{[ft.done ? `${ft.done} done` : '', ft.skipped ? `${ft.skipped} skipped` : ''].filter(Boolean).join(' · ')}{!open.length && count}</div>
                   {finished.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
                 </>
               )}

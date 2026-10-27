@@ -24,6 +24,7 @@ concurrency:
 jobs:
   changes:
     runs-on: ubuntu-26.04
+    timeout-minutes: 3
     outputs:
       unit: ${{ steps.pick.outputs.unit }}
       e2e: ${{ steps.pick.outputs.e2e }}
@@ -42,6 +43,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.unit == 'true'
     runs-on: ubuntu-26.04
+    timeout-minutes: 6
     steps:
       # Full history: scripts/parityRun.test.js reads HEAD~2 (a shallow checkout has no such commit).
       - uses: actions/checkout@v7
@@ -61,6 +63,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-26.04
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v7
       - run: docker build --build-arg APP_VERSION=$(git log -1 --format=%ct) -t iron-log .
@@ -83,6 +86,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.database == 'true'
     runs-on: ubuntu-26.04
+    timeout-minutes: 5
     services:
       postgres:
         image: postgres:17
@@ -114,6 +118,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backup == 'true'
     runs-on: ubuntu-26.04
+    timeout-minutes: 4
     services:
       postgres:
         image: postgres:17
@@ -157,6 +162,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e_sync == 'true'
     runs-on: ubuntu-26.04
+    timeout-minutes: 10 # about 4 min when the apt cache hits (232 s worst of 28 runs); a cold cache on a slow mirror can exceed this: rerun
     services:
       postgres:
         image: postgres:17
@@ -178,7 +184,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/install-chromium
       # Makes and drops its own scratch database on this server.
       - run: npm run e2e:sync
         env:
@@ -197,6 +203,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-26.04
+    timeout-minutes: 10 # about 4 min when the apt cache hits (232 s worst of 28 runs); a cold cache on a slow mirror can exceed this: rerun
     strategy:
       fail-fast: false
       matrix:
@@ -208,7 +215,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - uses: ./.github/actions/install-chromium
       - run: npx playwright test --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v7
         if: failure()
@@ -235,6 +242,7 @@ jobs:
     needs: [changes, e2e-shards]
     if: always()
     runs-on: ubuntu-26.04
+    timeout-minutes: 2
     env:
       CHANGES: ${{ needs.changes.result }}
       SHARDS: ${{ needs.e2e-shards.result }}
