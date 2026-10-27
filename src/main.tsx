@@ -52,7 +52,7 @@ const onPlans = isPlansPath(window.location.pathname) && !inAndroidApp();
 if (isPlansPath(window.location.pathname) && !onPlans) window.history.replaceState(null, '', '/');
 if (onPlans) {
   // Loaded on demand: the Plans page is its own small chunk, so the app and the landing page do not carry it.
-  void import('./components/Plans.js').then(m => show(<m.default />));
+  void import('./components/Plans.js').then(m => show(<m.default />), () => window.location.replace('/'));
 } else if (quickGate(apiSyncEnabled(LS.get(FLAG_KEY), import.meta.env.VITE_API_SYNC), LS) === 'app') {
   openApp();
 } else {
