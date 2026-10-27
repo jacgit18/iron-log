@@ -2,6 +2,7 @@
    The things the account screen needs from the API: who am I, sign in with Google or an emailed code, sign out. Like the transport it never
    throws for a network problem: "can't tell" is an answer of its own, and must never read as "signed out". Browser calls are
    same-origin, so the API's Origin check passes and the session cookie travels without any extra setup. */
+import { setQa } from './qaState.js';
 import { DEFAULT_TIMEOUT_MS } from './timeouts.js';
 
 /** What /api/me says about billing (ADR 065): `available` is false when billing is off or not yet offered to this account. */
@@ -13,9 +14,17 @@ export interface BillingInfo {
   hasCustomer: boolean;
 }
 
+/** What /api/me says on a QA service only (brief qa-persona-picker): the name of the test account this session is, if it is one, and whether an admin may switch. */
+export interface QaInfo { persona: string | null; canSwitch: boolean }
+const qaFrom = (v: unknown): QaInfo | undefined => {
+  if (!v || typeof v !== 'object') return undefined;
+  const q = v as Record<string, unknown>;
+  return { persona: asString(q.persona), canSwitch: q.canSwitch === true };
+};
+
 export type AccountState =
   | { status: 'signed-out' }
-  | { status: 'signed-in'; userId: string; kind: 'session' | 'dev'; email: string | null; name: string | null; isAdmin: boolean; isPaid: boolean; plan?: string; billing?: BillingInfo }
+  | { status: 'signed-in'; userId: string; kind: 'session' | 'dev'; email: string | null; name: string | null; isAdmin: boolean; isPaid: boolean; plan?: string; billing?: BillingInfo; qa?: QaInfo }
   | { status: 'unreachable' };
 
 /** `refused` is a code that is wrong, used or expired, or an address that is not one; `slow-down` is the rate limit. */
@@ -48,15 +57,16 @@ export function createAccountClient(options: AccountOptions = {}) {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await doFetch(`${baseUrl}/api/me`, { headers: { accept: 'application/json', ...(headers?.() ?? {}) }, credentials: 'same-origin', signal: controller.signal });
-      if (res.status === 401) return { status: 'signed-out' };
+      if (res.status === 401) { setQa(undefined); return { status: 'signed-out' }; }
       if (!res.ok) return { status: 'unreachable' };
-      const body = (await res.json().catch(() => undefined)) as { userId?: unknown; account?: { kind?: unknown; email?: unknown; name?: unknown; isAdmin?: unknown; isPaid?: unknown; plan?: unknown; billing?: unknown } } | undefined;
+      const body = (await res.json().catch(() => undefined)) as { userId?: unknown; qa?: unknown; account?: { kind?: unknown; email?: unknown; name?: unknown; isAdmin?: unknown; isPaid?: unknown; plan?: unknown; billing?: unknown } } | undefined;
       const userId = asString(body?.userId);
       // An answer that is not what the API sends (a proxy page, a half-deployed API) says nothing about who is signed in.
       if (!userId) return { status: 'unreachable' };
       const plan = asString(body?.account?.plan);
       const billing = billingFrom(body?.account?.billing);
-      return { status: 'signed-in', userId, kind: body?.account?.kind === 'dev' ? 'dev' : 'session', email: asString(body?.account?.email), name: asString(body?.account?.name), isAdmin: body?.account?.isAdmin === true, isPaid: body?.account?.isPaid === true, ...(plan ? { plan } : {}), ...(billing ? { billing } : {}) };
+      setQa(qaFrom(body?.qa));
+      return { status: 'signed-in', userId, kind: body?.account?.kind === 'dev' ? 'dev' : 'session', email: asString(body?.account?.email), name: asString(body?.account?.name), isAdmin: body?.account?.isAdmin === true, isPaid: body?.account?.isPaid === true, ...(qaFrom(body?.qa) ? { qa: qaFrom(body?.qa) } : {}), ...(plan ? { plan } : {}), ...(billing ? { billing } : {}) };
     } catch {
       return { status: 'unreachable' };
     } finally {

@@ -1,5 +1,6 @@
 import AccountPanel from './AccountPanel.js';
 import BillingPanel from './BillingPanel.js';
+import QaAccountsPanel from './QaAccountsPanel.js';
 import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
 import IssuesPanel from './IssuesPanel.js';
@@ -456,6 +457,7 @@ export default function Settings() {
         <div className="scol">
           <AccountPanel />
           {!inAndroidApp() && <BillingPanel />}
+          <QaAccountsPanel />
           <SyncPanel />
         </div>
         <div className="scol"><DataPanel key={importCount} /></div>

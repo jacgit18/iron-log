@@ -412,6 +412,9 @@ deploy_image() {
   fi
   local env_vars="NODE_ENV=production,BASE_URL=${base_url},COMMIT_SHA=${commit}"
   for kv in ${push_env[@]+"${push_env[@]}"} ${billing_env[@]+"${billing_env[@]}"}; do env_vars+=",${kv}"; done
+  # QA only: an admin may switch to the seeded test accounts (server/auth/qaPersonas.ts). The server also needs the QA mark on its database, so
+  # this setting alone does nothing on another environment, and it is never passed to staging or production.
+  if [ "$IRON_LOG_ENV" = qa ]; then env_vars+=",QA_PERSONAS=true"; fi
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
     ${public[@]+"${public[@]}"} \

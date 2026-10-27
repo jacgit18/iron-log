@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "qa:seed": "tsx scripts/qa-seed.mjs",
     "seed:test-user": "tsx server/scripts/seedTestUserCli.ts",
     "reset:accounts": "tsx scripts/reset-accounts.mjs",
     "beta:to-free": "tsx scripts/beta-to-free.mjs",
