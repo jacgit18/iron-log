@@ -1,25 +1,17 @@
-import type { Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
 import type { Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../app.ts';
 import type { DB } from '../db/types.ts';
-import { startTestDatabase } from '../test/postgres.ts';
+import { makeSend, startCommandApp } from '../test/commandApp.ts';
 
 let db: Kysely<DB>;
 let stop: () => Promise<void>;
-let server: Server;
 let base: string;
 
 beforeAll(async () => {
-  ({ db, stop } = await startTestDatabase());
-  server = createApp({ db }).listen(0);
-  await new Promise(done => server.once('listening', done));
-  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  ({ db, base, stop } = await startCommandApp());
 }, 120_000);
 
 afterAll(async () => {
-  await new Promise<void>(done => server.close(() => done()));
   await stop?.();
 });
 
@@ -27,14 +19,7 @@ beforeEach(async () => {
   await db.deleteFrom('users').execute();
 });
 
-async function send(path: string, body: unknown, user = 'owner') {
-  const res = await fetch(`${base}/api/${path}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-dev-user': user, 'x-client-version': 'test-1' },
-    body: JSON.stringify(body),
-  });
-  return { status: res.status, body: (await res.json()) as any };
-}
+const send = makeSend(() => base);
 
 // A six-day program with one card a day; the server pads it to seven days.
 const program = (squatW = 135) => ({ days: Array.from({ length: 6 }, (_, i) => ({ title: `Day ${i + 1}`, slots: [{ id: `A-d${i + 1}s1`, items: [{ ex: 'squat', ph: 'strength', w: squatW }] }] })) });

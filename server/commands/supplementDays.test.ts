@@ -1,25 +1,17 @@
-import type { Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
 import type { Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../app.ts';
 import type { DB } from '../db/types.ts';
-import { startTestDatabase } from '../test/postgres.ts';
+import { makeSend, startCommandApp } from '../test/commandApp.ts';
 
 let db: Kysely<DB>;
 let stop: () => Promise<void>;
-let server: Server;
 let base: string;
 
 beforeAll(async () => {
-  ({ db, stop } = await startTestDatabase());
-  server = createApp({ db }).listen(0);
-  await new Promise(done => server.once('listening', done));
-  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  ({ db, base, stop } = await startCommandApp());
 }, 120_000);
 
 afterAll(async () => {
-  await new Promise<void>(done => server.close(() => done()));
   await stop?.();
 });
 
@@ -31,14 +23,7 @@ const DAY = '2026-10-07';
 const record = { day: DAY, water: [16, 8], boost: { hot: true, mins: 45 }, taken: { creatine: true } };
 const other = { ...record, water: [16, 8, 12], taken: { creatine: true, zinc: true } };
 
-async function send(path: string, body: unknown, user = 'owner') {
-  const res = await fetch(`${base}/api/${path}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-dev-user': user, 'x-client-version': 'test-1' },
-    body: JSON.stringify(body),
-  });
-  return { status: res.status, body: (await res.json()) as any };
-}
+const send = makeSend(() => base);
 const put = (baseVersion: number | null, input: object = record, clientId = 'c1', user = 'owner') => send('commands/save-supplement-day', { clientId, baseVersion, input }, user);
 const del = (baseVersion: number | null, day = DAY, clientId = 'd1', user = 'owner') => send('commands/delete-supplement-day', { clientId, baseVersion, input: { day } }, user);
 const row = (day = DAY) => db.selectFrom('supplement_days').selectAll().where('day', '=', day).executeTakeFirstOrThrow();
