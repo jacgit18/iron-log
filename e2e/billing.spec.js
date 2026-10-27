@@ -9,13 +9,21 @@ const meWith = (account = {}, billing = {}) => ({
   account: { kind: 'session', email: 'jo@example.com', name: 'Jo Lifter', isAdmin: true, isPaid: false, plan: 'free', billing: { available: true, source: 'manual', status: null, renewsAt: null, hasCustomer: false, ...billing }, ...account },
 });
 
-async function open(page, me, path = '/') {
+async function open(page, me, path = '/', { referrer = '' } = {}) {
   await page.addInitScript(() => {
     localStorage.setItem('ironlog:hidetip', '1');
     localStorage.setItem('ironlog:hidelocal', '1');
     localStorage.setItem('ironlog:flag:apiSync', 'true');
     localStorage.setItem('ironlog:session/known', 'true');
   });
+  if (referrer) {
+    // A Trusted Web Activity launch sets document.referrer to android-app://<package> on the first load only; a header cannot carry that scheme, so a script does (as in plansPage.spec.js).
+    await page.addInitScript(ref => {
+      if (sessionStorage.getItem('e2e-referrer-used')) return;
+      sessionStorage.setItem('e2e-referrer-used', '1');
+      Object.defineProperty(document, 'referrer', { get: () => ref });
+    }, referrer);
+  }
   await page.route('**/api/**', json({ ok: false }, 401));
   await page.route('**/api/sync*', json({ rows: [], cursor: '0', more: false }));
   await page.route('**/api/me', typeof me === 'function' ? me : json(me));
@@ -24,6 +32,18 @@ async function open(page, me, path = '/') {
 }
 
 test.describe('Billing section', () => {
+  // A unit test of inAndroidApp() cannot catch the Settings render: only a real page shows whether the Billing section is drawn or not.
+  test('inside the Android app (referrer android-app://) Settings has no Billing section; in a browser it does', async ({ page, browser }) => {
+    await open(page, meWith(), '/', { referrer: 'android-app://app.loadbearer' });
+    await expect(page.getByRole('heading', { name: 'Backups & data' })).toBeVisible(); // Settings is open: the Data group is drawn
+    await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toHaveCount(0);
+    const ctx = await browser.newContext();
+    const plain = await ctx.newPage();
+    await open(plain, meWith());
+    await expect(plain.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible();
+    await ctx.close();
+  });
+
   test('a free admin can subscribe: the choice goes to Checkout and the browser follows the address', async ({ page }) => {
     let asked;
     await open(page, meWith());
