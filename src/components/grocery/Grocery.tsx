@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { MAX_NOTE, UNITS, byStore, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
+import { MAX_NOTE, UNITS, byStore, carriedCount, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
 import ArmedButton from '../ArmedButton.jsx';
@@ -21,8 +21,8 @@ import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from
 import type { GroceryForm } from '../../store/types.ts';
 import './Grocery.css';
 
-// Three views (ADR 038, changed by ADR 054): To get is this month's shopping list; At home is every item you buy, ticked while you have it
-// this month, which takes it off To get (a bought item counts as had); Spending charts what was bought. Every month starts with nothing ticked.
+// Three views (ADR 038, changed by ADR 054 and 079): To get is this month's shopping list; At home is every item you buy, ticked while you have it (a new month keeps last month's ticks)
+// this month, which takes it off To get (a bought item counts as had); Spending charts what was bought. A new month starts with last month’s ticks (ADR 079).
 type View = 'get' | 'home' | 'spend';
 const EMPTY_FORM: GroceryForm = { n: '', store: '', qty: '1', price: '', every: false, note: '', unit: '' };
 const COUNT_ERROR = 'The count must be a number from 0.01 to 999.';
@@ -143,6 +143,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const current = off === 0;
   const todo = current ? list.filter(i => !lineOf(i, month).got) : list;
   const bought = current ? list.filter(i => lineOf(i, month).got) : [];
+  const carried = useMemo(() => (current ? carriedCount(g, months, mk) : 0), [current, g, months, mk]); // ticks the month started with that are still ticked (ADR 079)
   const todoStores = new Set(byStore(g, todo, split).map(x => x.store)); // a shared store with nothing left to get shows its money line in the bought fold instead
   // A store's tax box, once something is ticked there (or a tax is already typed): the receipt's tax for this month and what it comes to as a percent of the ticked items.
   // Items bought and then removed from the list still count in their store's tally and tax (audit X-8); a store left with none of its own items shows only its tax box.
@@ -195,6 +196,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       <p className="note" id="groc-summary" role="status">
         {t.count ? <>{`Got ${t.got} of ${t.count} · Spent ${money(t.spent)}${t.taxed ? ' with tax' : ''} · Expected ${money(t.planned)}`}{t.unpriced > 0 && <>{' · '}<span className="gwarn">{t.unpriced} without a price</span></>}</> : off > 0 ? 'Nothing planned yet. Items you add on At home show up here.' : 'Nothing on this month’s list.'}
       </p>
+      {current && carried > 0 && <p className="note" id="groc-carried">{`Carried over ${carried} ${carried === 1 ? 'item' : 'items'} you still have from ${monthLabel(month.carried!)}.`}</p>}
       {split && <MonthMoney g={g} month={month} onOpen={openSplit} />}
       {!t.count && off === 0 && <p className="note">Add what you buy on <b>At home</b>. Tick an item there when you have it and it comes off this month’s list.</p>}
       {current && todo.length > 0 && (
@@ -457,6 +459,9 @@ export default function Grocery() {
   const g = useAppStore(s => s.grocery);
   const months = useAppStore(s => s.groceryMonths);
   const today = useToday(s => s.today);
+  const ready = useAppStore(s => s.isReady());
+  const nowKey = monthKey(today);
+  useEffect(() => { if (ready) useAppStore.getState().carryGroceryTicks(nowKey); }, [ready, nowKey]); // a new month starts with the At home ticks of the last one (ADR 079)
   const [view, setView] = useState<View>(() => (g.items.length ? 'get' : 'home')); // nothing to get from an empty list: start where you add
   return (
     <section className="panel groc" aria-labelledby="groc-h">
