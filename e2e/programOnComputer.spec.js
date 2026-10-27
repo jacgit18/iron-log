@@ -43,10 +43,27 @@ test.describe('on a phone', () => {
     await expect(card(page)).toBeVisible();
   });
 
+  test('waits while the install hint shows, and draws the moment that hint is dismissed, without a tab change', async ({ page }) => {
+    await openTab(page, 'Program');
+    await expect(card(page)).toBeVisible();
+    await page.evaluate(() => { // the browser says the app can be installed: the install hint arrives
+      const e = new Event('beforeinstallprompt');
+      Object.assign(e, { prompt: () => Promise.resolve(), userChoice: Promise.resolve({ outcome: 'dismissed' }) });
+      window.dispatchEvent(e);
+    });
+    const hint = page.locator('#install-hint');
+    await expect(hint).toBeVisible();
+    await expect(card(page)).toHaveCount(0); // one floating tip at a time
+    await hint.getByRole('button', { name: 'Not now' }).click();
+    await expect(hint).toHaveCount(0);
+    await expect(card(page)).toBeVisible(); // reviewer-found bug: it used to wait for the next tab switch
+  });
+
   test('Send me the link opens the share sheet with this address', async ({ page }) => {
     await openTab(page, 'Program');
     await stubShare(page, { share: true });
     await card(page).getByRole('button', { name: 'Send me the link' }).click();
+    await expect.poll(() => page.evaluate(() => window.__shared.length)).toBe(1); // the press is handled asynchronously: wait for it
     const [shared, copied] = await Promise.all([page.evaluate(() => window.__shared), page.evaluate(() => window.__copied)]);
     expect(shared).toHaveLength(1);
     expect(shared[0].url).toBe(new URL('/', page.url()).href);

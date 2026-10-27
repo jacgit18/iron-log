@@ -1,7 +1,8 @@
+import { useSyncExternalStore } from 'react';
 import { useAppStore } from '../store/useAppStore.js';
 import type { AppState } from '../store/types.js';
 import { usePwa, isIOS } from './pwa.js';
-import { showInstallHint, installHintDismissed } from './installHint.js';
+import { showInstallHint, installHintDismissed, onInstallHintDismissed } from './installHint.js';
 
 // What the floating tips (the install hint, the Program tab's "plan on a computer" card) wait for, in one place so they agree.
 
@@ -16,5 +17,8 @@ export const useWaitingForSignIn = (): boolean => useAppStore(waitingForSignIn);
 export function useInstallHintShowing(): boolean {
   const { installEvent, installed } = usePwa();
   const signedOut = useWaitingForSignIn();
-  return showInstallHint({ installed, canPrompt: !!installEvent, ios: isIOS(), signedOut, dismissed: installHintDismissed() });
+  // Subscribed, so dismissing the hint redraws whatever waits for it (a tip reading storage during render would stay hidden until
+  // something else happened to render it).
+  const dismissed = useSyncExternalStore(onInstallHintDismissed, installHintDismissed);
+  return showInstallHint({ installed, canPrompt: !!installEvent, ios: isIOS(), signedOut, dismissed });
 }
