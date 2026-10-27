@@ -19,6 +19,10 @@
 #   find-user <email>           read-only: the id, plan, admin flag and dates of the account behind one address (npm run find:user against
 #                               production). Names and emails are sealed, so the key is read from Secret Manager into this one command and
 #                               never shown; the address and name are not printed either. Takes no backup.
+#   delete-user <email> [--apply]  deletes one account on request (the same deletion as Settings > Delete my account; runbook ops/delete-user-on-request.md).
+#                               Without --apply: a dry run with the account's plan and row counts (never the address or content). With --apply: a backup,
+#                               then it asks for the address to be typed again, then deletes for good. An admin account, or one with a Stripe customer,
+#                               is refused until the owner has dealt with it (pass --billing-cancelled once the subscription is ended in Stripe).
 #   list-users [--reveal]       read-only: every account's id, plan, admin flag and created date (npm run list:users against production).
 #                               Names and emails stay sealed; --reveal opens them with the key from Secret Manager for this one command.
 #                               Takes no backup.
@@ -46,6 +50,7 @@ KEEP_INJURY="${KEEP_INJURY:-npm run -s keep:injury-prevention --}"
 ENCRYPT_USERS="${ENCRYPT_USERS:-npm run -s encrypt:users --}"
 BETA_TO_FREE="${BETA_TO_FREE:-npm run -s beta:to-free --}"
 FIND_USER="${FIND_USER:-npm run -s find:user --}"
+DELETE_USER="${DELETE_USER:-npm run -s delete:user --}"
 PII_KEY_CMD="${PII_KEY_CMD:-gcloud --project $PROJECT_ID secrets versions access latest --secret iron-log-pii-key}"   # overridable for tests
 DB_READER="${DB_READER:-node scripts/db-reader.mjs}"
 GH="${GH:-gh}"
@@ -154,6 +159,14 @@ case "$cmd" in
     key="$($PII_KEY_CMD)"
     [ -n "$key" ] || { echo "No key came back from Secret Manager; nothing was read." >&2; exit 1; }
     DATABASE_URL="$URL" PII_ENCRYPTION_KEY="$key" $FIND_USER "$email" ;;
+  delete-user)
+    email="${args[0]:-}"; [ -n "$email" ] || usage
+    URL="$(owner_url)"; where
+    key="$($PII_KEY_CMD)"
+    [ -n "$key" ] || { echo "No key came back from Secret Manager; nothing was changed." >&2; exit 1; }
+    # Production is the point of this command, so the script's own --allow-production is passed here; --billing-cancelled is forwarded as typed.
+    if $apply; then backup; DATABASE_URL="$URL" PII_ENCRYPTION_KEY="$key" $DELETE_USER "${args[@]}" --allow-production --yes
+    else DATABASE_URL="$URL" PII_ENCRYPTION_KEY="$key" $DELETE_USER "${args[@]}" --allow-production; fi ;;
   list-users)
     URL="$(owner_url)"; where
     key="$($PII_KEY_CMD)"

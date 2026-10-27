@@ -14,6 +14,7 @@
     "beta:to-free": "tsx scripts/beta-to-free.mjs",
     "keep:injury-prevention": "tsx scripts/keep-injury-prevention.mjs",
     "encrypt:users": "tsx scripts/encrypt-users.mjs",
+    "delete:user": "tsx scripts/delete-user.mjs",
     "find:user": "tsx scripts/find-user.mjs",
     "list:users": "tsx scripts/list-users.mjs",
     "grocery:shares": "tsx scripts/grocery-shares.mjs",
