@@ -8,6 +8,7 @@ import type {
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
+import type { WeekPatch } from '../lib/programMove.ts';
 import type { BackupInfo } from '../lib/autoBackup.ts';
 import type { ServerBackupList } from '../lib/serverBackups.ts';
 
@@ -199,7 +200,7 @@ export interface EdMoved {
   /** Only for a move to another program: where it went (program key and name) and the card as it was, with its old id, for Undo. */
   toKey?: string; toLabel?: string; orig?: ProgramSlot;
   /** Only for one exercise taken out of a superset: `slot` is that exercise as a card of its own, `orig` the superset as it was, `ph` its phase defaults. */
-  split?: { ph: Record<string, PhaseKey | null> };
+  split?: { ph: Record<string, PhaseKey | null>; /** What to write back into this week (null = remove the key) if it is still the same week. */ week?: WeekPatch; weekKey?: string };
 }
 export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot }
 

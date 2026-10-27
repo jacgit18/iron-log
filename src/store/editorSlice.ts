@@ -7,7 +7,7 @@ import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
 import type { ExerciseInfo, MuscleTags, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
-import { carryPhDef, isLibKey, moveSlotId, moveTargets, programByKey, splitPhDef, splitSuperset } from '../lib/programMove.js';
+import { applyWeekPatch, carryPhDef, isLibKey, moveSlotId, moveTargets, programByKey, splitPhDef, splitSuperset, splitWeekState } from '../lib/programMove.js';
 
 export const SECTIONS = ['Optional', 'Regular', 'Supersets', 'Plyometric', 'Home']; // Optional and Home cards don't count toward finishing a day (countsForFinish)
 const newId = (): string => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -139,24 +139,26 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     set({ edMoved: { key: fromKey, from, to: toDay, idx: i, slot: moved, toKey, toLabel, orig }, edRemoved: null });
   },
   // Take exercise `k` out of the superset at `i` and put it on `toDay` of the same program as a card of its own (supersets only). It takes a new
-  // id, its phase default follows it, and this week's ticks stay behind; the superset keeps its id and its other exercises' defaults shift up.
+  // id, its phase default and this week's tick, skip and phase follow it; the superset keeps its id and its other exercises' state shifts up.
   moveEdItemToDay(i, k, toDay) {
     const key = get().edKey(); const from = get().edDay;
     const orig = get().edProgram().days[from - 1]?.slots[i];
     if (toDay === from || !DAYS.includes(toDay) || !orig || orig.type !== 'superset' || !orig.items[k]) return;
-    const moved: ProgramSlot[] = []; let ph: ReturnType<typeof splitPhDef> | null = null; let snap: ProgramSlot | null = null;
+    const moved: ProgramSlot[] = []; let ph: ReturnType<typeof splitPhDef> | null = null; let snap: ProgramSlot | null = null; let wk: ReturnType<typeof splitWeekState> | null = null;
     if (get().editProgram(prog => {
       pinIds(prog, from); pinIds(prog, toDay);
       const sl = prog.days[from - 1].slots[i];
       const split = sl && splitSuperset(sl, k, moveSlotId(key, Date.now().toString(36) + Math.random().toString(36).slice(2, 5)));
       if (!sl || !split) return;
       snap = structuredClone(sl); ph = splitPhDef(get().cfg.phDef, sl.id, sl.items.length, k, split.moved.id);
+      wk = splitWeekState(get().week, sl.id, sl.items.length, k, split.moved.id);
       prog.days[from - 1].slots[i] = split.rest;
       moved.push(structuredClone(split.moved)); insertSlot(prog.days[toDay - 1].slots, split.moved);
-    }) && moved[0] && snap && ph) {
-      const p = ph as ReturnType<typeof splitPhDef>;
+    }) && moved[0] && snap && ph && wk) {
+      const p = ph as ReturnType<typeof splitPhDef>; const w = wk as ReturnType<typeof splitWeekState>;
       get().mutateCfg(c => { p.del.forEach(d => { delete c.phDef[d]; }); Object.assign(c.phDef, p.set); });
-      set({ edMoved: { key, from, to: toDay, idx: i, slot: moved[0], orig: snap, split: { ph: p.before } }, edRemoved: null });
+      if (w.changed) get().mutateWeek(x => applyWeekPatch(x, w.patch));
+      set({ edMoved: { key, from, to: toDay, idx: i, slot: moved[0], orig: snap, split: { ph: p.before, week: w.undo, weekKey: get().weekKey() } }, edRemoved: null });
     }
   },
   // Put the moved card back on its old day at its old place (and in its old program). The card is found by what it holds, as a library program's cards have no id.
@@ -182,6 +184,8 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
           for (let j = 0; j < count; j++) delete c.phDef[`${origId}:${j}`];
           delete c.phDef[`${newId}:0`]; Object.assign(c.phDef, m.split!.ph);
         });
+        const wu = m.split!.week;
+        if (wu && m.split!.weekKey === get().weekKey()) get().mutateWeek(x => applyWeekPatch(x, wu)); // this week's ticks, skips and phases go back too
         set({ edMoved: null }); flag('Put back');
       }
       return;

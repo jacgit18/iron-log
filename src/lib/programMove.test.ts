@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { LibraryItem, ProgramSlot } from '../types.ts';
 import { DEFAULT_CFG } from './logic.js';
-import { carryPhDef, defaultDestination, isLibKey, moveSlotId, movePreview, moveTargets, programByKey, slotSummary, splitPhDef, splitSuperset } from './programMove.js';
+import { carryPhDef, defaultDestination, isLibKey, moveSlotId, movePreview, moveTargets, programByKey, slotSummary, splitPhDef, splitSuperset, splitWeekState, applyWeekPatch } from './programMove.js';
 
 const cfg = { ...structuredClone(DEFAULT_CFG), progNames: { B: 'Upper' } };
 const lib = [{ id: 'q1', name: 'Mine', at: 'x', prog: { key: 'N', days: [] } }] as unknown as LibraryItem[];
@@ -120,5 +120,42 @@ describe('splitPhDef', () => {
   });
   it('leaves out exercises with no saved default', () => {
     expect(splitPhDef({ 'c:1': 'iso' }, 'c', 2, 1, 'n').set).toEqual({ 'n:0': 'iso' });
+  });
+});
+
+describe('splitWeekState', () => {
+  const run = (week: Parameters<typeof splitWeekState>[0], count: number, k: number) => {
+    const r = splitWeekState(week, 'S', count, k, 'N');
+    const w = structuredClone({ done: {}, skipped: {}, ph: {}, ...week }) as Parameters<typeof applyWeekPatch>[0];
+    applyWeekPatch(w, r.patch);
+    return { ...r, w };
+  };
+  it('a two-exercise superset: the tick of the exercise left behind moves to the plain card, the leaving one takes its own', () => {
+    expect(run({ done: { 'S#1': true } }, 2, 0).w).toEqual({ done: { S: true }, skipped: {}, ph: {} });
+    expect(run({ done: { 'S#0': true } }, 2, 0).w).toEqual({ done: { N: true }, skipped: {}, ph: {} });
+  });
+  it('a ticked superset leaves both exercises ticked', () => {
+    expect(run({ done: { S: true } }, 2, 1).w.done).toEqual({ S: true, N: true });
+    expect(run({ done: { S: true } }, 3, 0).w.done).toEqual({ S: true, N: true });
+  });
+  it('a three-exercise superset: later exercises shift up with their tick, skip and phase', () => {
+    const r = run({ done: { 'S#1': true }, skipped: { 'S#2': true }, ph: { 'S:0': 'iso', 'S:2': 'hyp' } }, 3, 0);
+    expect(r.w.done).toEqual({ 'S#0': true });
+    expect(r.w.skipped).toEqual({ 'S#1': true });
+    expect(r.w.ph).toEqual({ 'N:0': 'iso', 'S:1': 'hyp' });
+  });
+  it('a skipped exercise stays skipped on its plain card, and a skipped card stays skipped on both', () => {
+    expect(run({ skipped: { 'S#0': true } }, 2, 0).w.skipped).toEqual({ N: true });
+    expect(run({ skipped: { S: true } }, 3, 1).w.skipped).toEqual({ S: true, N: true });
+  });
+  it('the undo patch restores the week exactly', () => {
+    const week = { done: { 'S#1': true as const }, skipped: { 'S#2': true as const }, ph: { 'S:1': 'iso' as const } };
+    const r = run(week, 3, 0);
+    expect(r.w).not.toEqual(week);
+    applyWeekPatch(r.w, r.undo);
+    expect(r.w).toEqual(week);
+  });
+  it('reports no change when the week has no state for the card', () => {
+    expect(splitWeekState({}, 'S', 3, 1, 'N').changed).toBe(false);
   });
 });
