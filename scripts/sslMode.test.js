@@ -5,7 +5,7 @@ import { pinSslMode as pinForServer } from '../server/db/sslMode.ts';
 const HOST = 'postgresql://u:p%40ss@ep-cool-123-pooler.us-east-2.aws.neon.tech/neondb';
 
 // The server and the scripts each keep their own copy (ADR 015 keeps server/ from importing scripts/, and a job image copies plain JavaScript files);
-// every case below runs against both, so the two cannot drift apart. (server/db/sslMode.test.ts tests the server copy on its own, beside it.)
+// every case below runs against both, so the two cannot drift apart.
 describe.each([['server/db/sslMode.ts', pinForServer], ['scripts/lib/ssl-mode.mjs', pinForScripts]])('pinSslMode in %s', (_name, pinSslMode) => {
   it.each(['require', 'prefer', 'verify-ca'])('turns sslmode=%s into verify-full, so a pg upgrade cannot weaken the check', mode => {
     expect(pinSslMode(`${HOST}?sslmode=${mode}`)).toBe(`${HOST}?sslmode=verify-full`);

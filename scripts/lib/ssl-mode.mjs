@@ -5,7 +5,7 @@
    the warning, and needs no change to the stored URLs. A URL that asks for libpq's own behaviour (`uselibpqcompat=true`), or any other mode
    (disable for the local test database, verify-full already), is left exactly as it is.
    A plain .mjs on purpose: the migrate and parity job images copy single files from scripts/ (not server/ or any TypeScript). server/db/sslMode.ts
-   is the same function for the server (server/ may import only from src/shared, ADR 015); server/db/sslMode.test.ts runs both over the same URLs. */
+   is the same function for the server (server/ may import only from src/shared, ADR 015); scripts/sslMode.test.js runs both over the same URLs. */
 const LIBPQ_COMPAT = /[?&]uselibpqcompat=true(?=&|$)/;
 const ALIASED_MODE = /([?&]sslmode=)(prefer|require|verify-ca)(?=&|$)/;
 
