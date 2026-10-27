@@ -25,7 +25,7 @@ test('Groceries is on the Daily tab for everyone, opens on At home while empty, 
   await expect(page.getByText('On this device only')).toHaveCount(0);
 });
 
-test('ticking Have at home takes an item off this month’s To get; buying it checks it at home; each month starts with nothing ticked', async ({ page }) => {
+test('ticking Have at home takes an item off this month’s To get; buying it checks it at home', async ({ page }) => {
   await open(page);
   await editing(page);
   await add(page, 'Kale', 'Veg market', '2', '2.50');
@@ -105,7 +105,7 @@ test('a bought item leaves the list and waits under Bought this month, where it 
   await expect(page.locator('#groc-alldone')).toBeVisible();
 });
 
-test('the next month starts fresh with the Every-month items and what is still out, and the price typed is remembered', async ({ page }) => {
+test('the next month starts with last month’s At home ticks: what was bought stays off the list, what was out is on it, and the price typed is remembered', async ({ page }) => {
   await open(page);
   await editing(page);
   await add(page, 'Kale', 'Veg market', '2', '2.50', true);
@@ -120,8 +120,11 @@ test('the next month starts fresh with the Every-month items and what is still o
   await page.clock.setFixedTime(new Date('2026-10-02T12:00:00-04:00'));
   await page.reload(); await open(page);
   await expect(page.locator('#groc-month')).toContainText('October 2026');
-  await expect(page.locator('#groc-kale')).not.toBeChecked();
+  await expect(page.locator('#groc-kale')).toHaveCount(0); // bought in September, so it is at home: ticked on At home, off the list (ADR 075)
   await expect(page.locator('#groc-saffron')).not.toBeChecked(); // still out: still on the list
+  await page.click('#groc-view-home');
+  await page.getByLabel('Have Kale').uncheck(); // ran out: back on the list at the price typed last month
+  await page.click('#groc-view-get');
   await expect(page.getByRole('button', { name: 'Count and price of Kale' })).toHaveText('2 × $3.10');
   await page.click('#groc-prev');
   await expect(page.locator('#groc-month')).toContainText('September 2026');

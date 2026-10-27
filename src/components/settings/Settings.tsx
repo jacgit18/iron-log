@@ -3,6 +3,7 @@ import BillingPanel from './BillingPanel.js';
 import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
 import IssuesPanel from './IssuesPanel.js';
+import ProgramOnComputerRow from './ProgramOnComputerRow.js';
 import BackupCopies from './BackupCopies.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
 import SyncPanel from './SyncPanel.js';
@@ -465,6 +466,7 @@ export default function Settings() {
           <PushPanel />
         </div>
         <div className="scol">
+          <ProgramOnComputerRow />
           <DevicePanel />
           <FeedbackPanel />
           <IssuesPanel />
