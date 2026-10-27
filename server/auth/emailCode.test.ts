@@ -221,9 +221,10 @@ describe('GET /api/auth-options (what the sign-in screen may offer)', () => {
     return { status: res.status, body: await res.json() };
   };
   it('says the code is closed while it is owner-only, open once released, and closed with no sender', async () => {
-    expect(await options({ emailCodeAdminsOnly: true })).toEqual({ status: 200, body: { ok: true, emailCode: false } });
-    expect(await options({ emailCodeAdminsOnly: false })).toEqual({ status: 200, body: { ok: true, emailCode: true } });
-    expect(await options({ sendCode: undefined })).toEqual({ status: 200, body: { ok: true, emailCode: false } });
+    // qaPersonas is false everywhere but a QA service (qaPersonas.test.ts).
+    expect(await options({ emailCodeAdminsOnly: true })).toEqual({ status: 200, body: { ok: true, emailCode: false, qaPersonas: false } });
+    expect(await options({ emailCodeAdminsOnly: false })).toEqual({ status: 200, body: { ok: true, emailCode: true, qaPersonas: false } });
+    expect(await options({ sendCode: undefined })).toEqual({ status: 200, body: { ok: true, emailCode: false, qaPersonas: false } });
   });
   it('is public, names no address or secret, and needs no sign-in', async () => {
     const out = JSON.stringify((await options({ emailCodeAdminsOnly: false })).body);

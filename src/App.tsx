@@ -11,6 +11,7 @@ import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
 import useBadgeName from './hooks/useBadgeName.js';
 import ThemeButton from './components/ThemeButton.js';
+import QaBanner from './components/QaBanner.js';
 import UpdateBanner from './components/UpdateBanner.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
@@ -121,6 +122,7 @@ export default function App() {
           <AccountBadge name={badgeName} />
         </header>
         <UpdateBanner />
+        <QaBanner />
         <OfflineNotice />
         <SyncNotice />
         <WhenSyncing><SignInCard /></WhenSyncing>
