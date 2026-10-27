@@ -16,17 +16,20 @@ const isExtra = (x: any): x is ExtraCard => !!x && typeof x.id === 'string' && /
 const SPLIT_ID = /^[\w.~:@+-]{1,100}$/;
 const SPLIT_MAX = 40;
 // The valid entries in order, each id once. A card that names an id twice, a position outside a superset or a day outside the week is dropped.
+// The app makes its ids `S-…`, so a move cannot reuse a program card's id or an experiment card's `X-…`. A card is split once (the first entry
+// to name it as `from` wins, e.g. when two devices each moved a different exercise out of it), and a moved exercise is never a `from`.
 export const normSplit = (list: unknown): SplitCard[] => {
-  const seen = new Set<string>(); const out: SplitCard[] = [];
+  const seen = new Set<string>(); const froms = new Set<string>(); const out: SplitCard[] = [];
+  const safe = (v: unknown) => typeof v === 'string' && SPLIT_ID.test(v) && !['__proto__', 'constructor', 'prototype'].includes(v);
   (Array.isArray(list) ? list : []).forEach((x: any) => {
     if (out.length >= SPLIT_MAX || !x || typeof x !== 'object') return;
-    const ids = [x.id, x.from, x.rest];
-    if (!ids.every(v => typeof v === 'string' && SPLIT_ID.test(v) && !['__proto__', 'constructor', 'prototype'].includes(v)) || x.id === x.rest || seen.has(x.id) || seen.has(x.rest)) return;
+    if (!safe(x.id) || !safe(x.from) || !safe(x.rest) || !x.id.startsWith('S-') || !x.rest.startsWith('S-')) return;
+    if (x.id === x.rest || x.from === x.id || x.from === x.rest || seen.has(x.id) || seen.has(x.rest) || froms.has(x.from)) return;
     if (!Number.isInteger(x.k) || x.k < 0 || x.k > 19 || !Number.isInteger(x.day) || x.day < 1 || x.day > DAY_COUNT) return;
     const item = normItem(x.item); if (!item) return;
-    seen.add(x.id); seen.add(x.rest); out.push({ id: x.id, from: x.from, rest: x.rest, k: x.k, day: x.day, item });
+    seen.add(x.id); seen.add(x.rest); froms.add(x.from); out.push({ id: x.id, from: x.from, rest: x.rest, k: x.k, day: x.day, item });
   });
-  return out;
+  return out.filter(x => !seen.has(x.from) || out.some(y => y.rest === x.from));
 };
 
 // A plain object's entries as a new object, keeping the ones `f(value)` maps to something (not undefined). Keys must look

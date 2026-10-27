@@ -170,6 +170,8 @@ export interface BoardSlice {
   skipCards(ids: string[]): void;
   /** Take exercise `idx` out of a superset card and put it on the displayed day `day` for this week only (Undo in the notice). */
   moveSupersetItem(slotId: string, idx: number, day: number): boolean;
+  /** Put a moved exercise (and any move made from its cards) back in its superset; what was ticked or skipped on the new cards goes back with it. */
+  unmoveSupersetItem(movedId: string): boolean;
   moveCards(ids: string[], day: number): void;
 }
 

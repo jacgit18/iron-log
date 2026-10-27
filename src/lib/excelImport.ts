@@ -183,7 +183,7 @@ function readWeeks(X: XLSX, rows: Rows) {
     }
     else if (kind === 'order') w.order = str(v).split(/[\s,]+/).filter(Boolean).map(Number);
     else if (kind === 'extra') { try { (w.extra = w.extra || []).push(JSON.parse(str(v))); } catch { /* skip an unreadable card */ } }
-    else if (kind === 'split') { try { (w.split = w.split || []).push(JSON.parse(str(v))); } catch { /* skip an unreadable move */ } }
+    else if (kind === 'split') { try { const x = JSON.parse(str(v)); if (x && typeof x === 'object' && !Array.isArray(x)) (w.split = w.split || []).push(x); } catch { /* skip an unreadable move */ } }
     else if (kind === 'done' || kind === 'skipped') w[kind][key] = true;
     else if (kind === 'moved') w.moved[key] = num(v);
     else if (kind === 'phase') w.ph[key] = str(v);

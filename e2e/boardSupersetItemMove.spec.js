@@ -55,3 +55,14 @@ test('the day the exercise is already on cannot be picked', async ({ page }) => 
   const sel = card.getByRole('combobox', { name: `Move ${first} to another day (this week)` });
   await expect(sel.locator('option', { hasText: '(here)' })).toBeDisabled();
 });
+
+test('Put back on the moved card regroups the superset after the Undo notice is gone', async ({ page }) => {
+  const card = supersetCard(page);
+  const [first, second] = await names(card);
+  await card.getByRole('button', { name: /^More actions/ }).click();
+  await card.getByRole('combobox', { name: `Move ${first} to another day (this week)` }).selectOption('4');
+  const moved = column(page, 4).locator('article.card').filter({ has: page.locator('.exh', { hasText: first }) }).last();
+  await moved.getByRole('button', { name: /^More actions/ }).click();
+  await moved.getByRole('button', { name: /^Put back/ }).click();
+  await expect(supersetCard(page).locator('.exh')).toHaveText([first, second]);
+});

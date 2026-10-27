@@ -1,7 +1,7 @@
 import { trackNudge } from '../lib/dayNudge.js';
 import { exInfo } from '../lib/data.js';
-import { applySplits, splitMoveState } from '../lib/boardSplit.js';
-import { applyWeekPatch } from '../lib/programMove.js';
+import { applySplits, joinMoveState } from '../lib/boardSplit.js';
+import { applyWeekPatch, splitWeekState } from '../lib/programMove.js';
 import { weekStartOf, ymd } from '../shared/dates.js';
 import { DAYS, autoLogs, phaseOf, clearForSkip, colOf, currentLayout, dayAt, defaultLogDate, injuryPreventionOn, isFinished, isPaired, isSkipped, itemKey2, moveClashes, planFix, setCardDone, setItemDone, setItemSkipped, moveRestDates, orderOf, restDatesOf, restTookOf, restsOf } from '../lib/logic.js';
 import type { FlatSlot, Logs, SplitCard, Week } from '../types.ts';
@@ -187,18 +187,18 @@ export const boardSlice = (set: StoreSet, get: StoreGet, flag: Flag): BoardSlice
     if (!warn) flag(`Moved ${cards.length} to Day ${day}`); // a heads-up is its own notice
   },
   // One exercise of a superset card to another day, for this week only. The card is shown without it under a new id, the exercise is a plain card of
-  // its own, and this week's ticks, skips and phases follow them (lib/boardSplit.ts). Undo takes it out of week.split and deletes the new keys.
+  // its own, and this week's ticks, skips and phases follow them (lib/boardSplit.ts). Undo (or Put back on the moved card) takes it out of week.split.
   moveSupersetItem(slotId, idx, day) {
     const s = get().slotById(slotId); if (!s || s.type !== 'superset' || s.items.length < 2 || !s.items[idx]) return false;
-    const week0 = get().week; const wk = get().weekKey(); const pd = dayAt(week0, day);
-    if (pd == null) { flag('That is your rest day'); return false; }
-    if (colOf(week0, week0.moved[s.id] || s.day) === day) return false; // already on that day
-    const sfx = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-    const movedId = `S-${sfx}m`; const restId = `S-${sfx}r`; const cfg = get().cfg;
-    const st = splitMoveState(week0, s.id, s.items.length, idx, movedId, restId, j => phaseOf(cfg, week0, s, j));
-    const entry = { id: movedId, from: s.id, rest: restId, k: idx, day: pd, item: structuredClone(s.items[idx]) as SplitCard['item'] };
-    if (!applySplits([s], [entry]).some(x => x.id === movedId)) return false; // the item must be one the week can show
+    const week0 = get().week; const wk = get().weekKey(); const pd = dayAt(week0, day); const cfg = get().cfg;
     const name = exInfo(cfg, s.items[idx].ex).n;
+    if (pd == null) { flag('That is your rest day'); return false; }
+    if (colOf(week0, week0.moved[s.id] || s.day) === day) { flag(`${name} is already on Day ${day}`); return false; }
+    const sfx = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    const movedId = `S-${sfx}m`; const restId = `S-${sfx}r`;
+    const st = splitWeekState(week0, s.id, s.items.length, idx, movedId, { restId, phase: j => phaseOf(cfg, week0, s, j) });
+    const entry = { id: movedId, from: s.id, rest: restId, k: idx, day: pd, item: structuredClone(s.items[idx]) as SplitCard['item'] };
+    if (!applySplits([s], [entry]).some(x => x.id === movedId)) { flag(`${name} cannot be moved on its own`); return false; } // the item must be one the week can show
     const ok = get().mutateWeek(w => {
       w.split = [...(w.split || []), entry]; applyWeekPatch(w, st.patch);
       if (w.moved[s.id]) w.moved[restId] = w.moved[s.id]; // the rest of the card stays where it was
@@ -206,15 +206,27 @@ export const boardSlice = (set: StoreSet, get: StoreGet, flag: Flag): BoardSlice
     if (!ok) return false;
     set({ orderNote: null, moveNote: null });
     get().noteRemoved('board:' + wk, `${name} to Day ${day} for this week`, () => {
-      const w = get().week;
-      if (get().weekKey() !== wk || !(w.split || []).some(x => x.id === movedId)) { flag('Could not put it back'); return false; }
-      if ((w.split || []).some(x => x.from === restId || x.from === movedId)) { flag('Put the later move back first'); return false; }
-      return get().mutateWeek(x => {
-        x.split = (x.split || []).filter(y => y.id !== movedId); if (!x.split.length) delete x.split;
-        applyWeekPatch(x, st.undo); delete x.moved[restId]; delete x.moved[movedId];
-      });
+      if (get().weekKey() !== wk || !(get().week.split || []).some(x => x.id === movedId)) { flag('Could not put it back'); return false; }
+      return get().unmoveSupersetItem(movedId);
     });
     flag(`Moved ${name} to Day ${day}`);
     return true;
+  },
+  // Put a moved exercise back in its superset (Undo in the notice, or Put back on the moved card, which stays possible after later moves). A move made
+  // from the cards of this one goes back first. What was ticked or skipped on the new cards goes back onto the card (lib/boardSplit.ts).
+  unmoveSupersetItem(movedId) {
+    const list = get().week.split || [];
+    if (!list.some(x => x.id === movedId)) { flag('Could not put it back'); return false; }
+    const gone = new Set([movedId]);
+    for (let grew = true; grew;) { grew = false; for (const x of list) if (!gone.has(x.id) && list.some(y => gone.has(y.id) && y.rest === x.from)) { gone.add(x.id); grew = true; } }
+    const todo = list.filter(x => gone.has(x.id)); const order: SplitCard[] = [];
+    while (todo.length) { const i = todo.findIndex(x => !todo.some(y => y.from === x.rest)); order.push(...todo.splice(i < 0 ? 0 : i, 1)); }
+    // how many exercises the card each move came from had: the card left behind now, or the one a later move took it from
+    const count = (e: SplitCard): number => { const cur = get().slotById(e.rest); const next = list.find(y => y.from === e.rest); return (cur ? cur.items.length : next ? count(next) : e.k + 1) + 1; };
+    const counts = new Map(order.map(e => [e.id, count(e)] as const));
+    return get().mutateWeek(w => {
+      order.forEach(e => { applyWeekPatch(w, joinMoveState(w, e, counts.get(e.id)!)); delete w.moved[e.rest]; delete w.moved[e.id]; });
+      w.split = (w.split || []).filter(y => !gone.has(y.id)); if (!w.split.length) delete w.split;
+    });
   },
 });

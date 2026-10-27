@@ -266,7 +266,7 @@ export function mergeWeek(a: unknown, b: unknown): Week {
   (['moved', 'ph'] as const).forEach(k => { (w as any)[k] = { ...o[k], ...w[k] }; });
   Object.keys(o.warm).forEach(d => { w.warm[d] = { ...o.warm[d], ...(w.warm[d] || {}) }; });
   const have = new Set((w.extra || []).map(x => x.id)); const more = (o.extra || []).filter(x => !have.has(x.id)); if (more.length) w.extra = [...(w.extra || []), ...more];
-  const haveSplit = new Set((w.split || []).flatMap(x => [x.id, x.rest])); const moreSplit = (o.split || []).filter(x => !haveSplit.has(x.id) && !haveSplit.has(x.rest)); if (moreSplit.length) w.split = [...(w.split || []), ...moreSplit];
+  const haveSplit = new Set((w.split || []).flatMap(x => [x.id, x.rest])); const haveFrom = new Set((w.split || []).map(x => x.from)); const moreSplit = (o.split || []).filter(x => !haveSplit.has(x.id) && !haveSplit.has(x.rest) && !haveFrom.has(x.from)); if (moreSplit.length) w.split = [...(w.split || []), ...moreSplit];
   w.done = { ...o.done, ...w.done }; w.skipped = { ...o.skipped, ...w.skipped }; Object.keys(w.done).forEach(id => delete w.skipped[id]);
   // What the week ran (ADR 022): this device's record, else the other's. With the same program, a card only the other record has stays
   // when the merged week ticked, skipped or moved it, so that check-off still counts.

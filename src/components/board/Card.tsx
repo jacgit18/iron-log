@@ -48,8 +48,9 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
   // Only this card's part of the week and logs (lib/cardView.ts), so a tick on another card does not redraw this one.
   const week = useCardWeek(s);
   const logs = useAppStore(useShallow((st: AppState) => cardLogs(st.logs, s)));
-  const { checkCard, checkItem, setPhase, quickLog, openModal, moveSlot, moveSupersetItem, skipCard, skipItem, removeExtra } = useAppStore.getState();
+  const { checkCard, checkItem, setPhase, quickLog, openModal, moveSlot, moveSupersetItem, unmoveSupersetItem, skipCard, skipItem, removeExtra } = useAppStore.getState();
   const startHold = useTimerStore(st => st.startHold);
+  const putBack = useAppStore(st => (st.week.split || []).some(x => x.id === s.id)); // this card is an exercise moved out of a superset
   const [removing, setRemoving] = useState(false); // an experiment card's Remove was pressed once
   const [more, setMore] = useState(false); // the card's less-used actions (Move to, Skip, Remove) are folded behind the ⋯ button
   const moreBtn = useRef<HTMLButtonElement>(null);
@@ -107,6 +108,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
           {!sk && paired && s.items.map((it, idx) => !isItemSkipped(s, idx, week) && (
             <button key={idx} type="button" className="btn sm ghost skipbtn" id={`skipi-${s.id}-${idx}`} aria-label={`Skip ${exInfo(cfg, it.ex).n} this week`} onClick={() => { skipItem(s.id, idx); setMore(false); focusMore(); }}>Skip {exInfo(cfg, it.ex).n}</button>
           ))}
+          {putBack && <button type="button" className="btn sm ghost skipbtn" id={`putback-${s.id}`} aria-label={`Put back ${cardName} in its superset`} onClick={() => { unmoveSupersetItem(s.id); setMore(false); focusMore(); }}>Put back</button>}
           {s.type === 'superset' && s.items.length > 1 && s.items.map((it, idx) => (
             <select key={idx} className="mvitem" id={`mvi-${s.id}-${idx}`} aria-label={`Move ${exInfo(cfg, it.ex).n} to another day (this week)`} value=""
               onChange={e => { moveSupersetItem(s.id, idx, Number(e.target.value)); setMore(false); }}>

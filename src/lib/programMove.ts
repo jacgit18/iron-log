@@ -112,7 +112,10 @@ export function splitPhDef(phDef: Record<string, PhaseKey | null>, oldId: string
 export interface WeekPatch { done: Record<string, true | null>; skipped: Record<string, true | null>; ph: Record<string, PhaseKey | null> }
 export interface WeekState { done?: Record<string, true>; skipped?: Record<string, true>; ph?: Record<string, PhaseKey> }
 
-export function splitWeekState(week: WeekState, oldId: string, count: number, k: number, newId: string): { patch: WeekPatch; undo: WeekPatch; changed: boolean } {
+// `opts.restId` gives the card left behind a new id (the Board does, for one week only): the keys under `oldId` are then left alone, and
+// `opts.phase(j)` is the phase shown for exercise j, written as this week's pick (the new cards have no saved default).
+export function splitWeekState(week: WeekState, oldId: string, count: number, k: number, newId: string, opts: { restId?: string; phase?: (j: number) => PhaseKey | null } = {}): { patch: WeekPatch; undo: WeekPatch; changed: boolean } {
+  const rid = opts.restId ?? oldId;
   const done = week.done || {}; const skipped = week.skipped || {}; const ph = week.ph || {};
   const at = (j: number) => `${oldId}#${j}`;
   const sk = (j: number) => !!skipped[at(j)];
@@ -121,18 +124,22 @@ export function splitWeekState(week: WeekState, oldId: string, count: number, k:
   const rest = Array.from({ length: count }, (_, j) => j).filter(j => j !== k);
   const plain = rest.length === 1;
   const want: WeekPatch = { done: {}, skipped: {}, ph: {} };
-  const touched = { done: [oldId, newId, ...rest.concat(k).map(at)], skipped: [oldId, newId, ...rest.concat(k).map(at)], ph: [`${newId}:0`, ...rest.concat(k).map(j => `${oldId}:${j}`)] };
+  const slots = rest.concat(k); // positions that can hold state: the old card's, or (own rest id) the new card's
+  const touched = rid === oldId
+    ? { done: [oldId, newId, ...slots.map(at)], skipped: [oldId, newId, ...slots.map(at)], ph: [`${newId}:0`, ...slots.map(j => `${oldId}:${j}`)] }
+    : { done: [rid, newId, ...rest.map((_, n) => `${rid}#${n}`)], skipped: [rid, newId, ...rest.map((_, n) => `${rid}#${n}`)], ph: [`${newId}:0`, ...rest.map((_, n) => `${rid}:${n}`)] };
+  const phOf = (j: number) => (opts.phase ? opts.phase(j) : ph[`${oldId}:${j}`]);
   const put = <T,>(m: Record<string, T | null>, key: string, v: T | null | undefined | false) => { m[key] = v || null; };
   // the exercise that leaves is a plain card of its own
-  put(want.done, newId, dn(k) && true); put(want.skipped, newId, (sk(k) || cardSkipped) && true); put(want.ph, `${newId}:0`, ph[`${oldId}:${k}`]);
+  put(want.done, newId, dn(k) && true); put(want.skipped, newId, (sk(k) || cardSkipped) && true); put(want.ph, `${newId}:0`, phOf(k));
   if (plain) {
     const r = rest[0]!;
-    put(want.done, oldId, dn(r) && true); put(want.skipped, oldId, (cardSkipped || sk(r)) && true); put(want.ph, `${oldId}:0`, ph[`${oldId}:${r}`]);
+    put(want.done, rid, dn(r) && true); put(want.skipped, rid, (cardSkipped || sk(r)) && true); put(want.ph, `${rid}:0`, phOf(r));
   } else {
     const whole = rest.every(j => dn(j));
-    put(want.done, oldId, whole && true); put(want.skipped, oldId, cardSkipped && true);
+    put(want.done, rid, whole && true); put(want.skipped, rid, cardSkipped && true);
     rest.forEach((j, n) => {
-      put(want.done, at(n), !whole && dn(j) && true); put(want.skipped, at(n), sk(j) && true); put(want.ph, `${oldId}:${n}`, ph[`${oldId}:${j}`]);
+      put(want.done, `${rid}#${n}`, !whole && dn(j) && true); put(want.skipped, `${rid}#${n}`, sk(j) && true); put(want.ph, `${rid}:${n}`, phOf(j));
     });
   }
   const patch: WeekPatch = { done: {}, skipped: {}, ph: {} }; const undo: WeekPatch = { done: {}, skipped: {}, ph: {} };

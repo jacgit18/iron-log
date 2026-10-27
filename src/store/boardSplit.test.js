@@ -71,7 +71,7 @@ describe('moving one exercise of a superset to another day for this week (Board)
     expect(slots()).toEqual(cards); expect(st().week.done).toEqual(week.done); expect(st().week.ph).toEqual(week.ph); expect(st().week.skipped).toEqual(week.skipped);
     expect(st().week.split).toBeUndefined(); expect(st().week.moved).toEqual(week.moved);
   });
-  it('a second exercise can follow from a three-exercise superset, and Undo of the first waits for the second to be put back', () => {
+  it('a second exercise can follow from a three-exercise superset, and Undo takes back the latest move first', () => {
     const A = structuredClone(BUILTIN.A);
     A.days[0].slots.push({ id: 'T-3', sec: 'Supersets', type: 'superset', items: ['x1', 'x2', 'x3'].map(ex => ({ ex, ph: 'hyp', w: 10 })) });
     useAppStore.setState({ programs: { A, B: BUILTIN.B } });
@@ -83,6 +83,21 @@ describe('moving one exercise of a superset to another day for this week (Board)
     const [, second] = st().week.split; expect(slots().find(x => x.id === second.rest).items.map(i => i.ex)).toEqual(['x2']);
     st().undoRemoved(); // the latest note is the second move's
     expect(st().week.split).toHaveLength(1); expect(exs()).toEqual(before);
+  });
+  it('the first of two chained moves can still be put back later: the second goes back with it, and what was ticked on the new cards comes along', () => {
+    const A = structuredClone(BUILTIN.A);
+    A.days[0].slots.push({ id: 'T-3', sec: 'Supersets', type: 'superset', items: ['x1', 'x2', 'x3'].map(ex => ({ ex, ph: 'hyp', w: 10 })) });
+    useAppStore.setState({ programs: { A, B: BUILTIN.B } });
+    const before = exs();
+    st().moveSupersetItem('T-3', 0, 4);
+    const first = st().week.split[0];
+    st().moveSupersetItem(first.rest, 1, 5);
+    const second = st().week.split[1];
+    useAppStore.setState(x => ({ week: { ...x.week, done: { ...x.week.done, [first.id]: true, [second.id]: true } } }));
+    expect(st().unmoveSupersetItem(first.id)).toBe(true);
+    expect(st().week.split).toBeUndefined(); expect(exs()).toEqual(before);
+    expect(slots().find(x => x.id === 'T-3').items.map(i => i.ex)).toEqual(['x1', 'x2', 'x3']);
+    expect(st().week.done).toEqual({ 'T-3#0': true, 'T-3#2': true }); // x1 and x3 were ticked on the new cards; x2 was not
   });
   it('a program edited since leaves the card as it was instead of losing the exercise', () => {
     const s = superset(); st().moveSupersetItem(s.id, 0, 4);
