@@ -134,6 +134,25 @@ export const onList = (g: Grocery, m: GroceryMonth, live: boolean) =>
     return l?.got === true || l?.qty !== undefined || l?.cents !== undefined || m.pulled.includes(i.id);
   });
 
+/** The At home ticks a new month starts with (ADR 079): the items you have (ticked Have, or bought) in the latest earlier month that has any, still in the catalogue.
+ *  Null when the month was seeded before, already holds its own ticks or purchases, or nothing earlier has a tick. Only ever asked for the current month. */
+export function carryOver(g: Grocery, months: Record<string, GroceryMonth>, nowKey: string): { from: string; ids: string[] } | null {
+  const cur = months[nowKey];
+  if (cur?.carried || (cur && Object.values(cur.lines).some(l => l.have || l.got))) return null;
+  const earlier = Object.keys(months).filter(k => MONTH_RE.test(k) && k < nowKey).sort().reverse();
+  for (const from of earlier) {
+    const ids = g.items.filter(i => haveOf(i, months[from])).map(i => i.id);
+    if (ids.length) return { from, ids };
+  }
+  return null;
+}
+
+/** How many carried items are still ticked in a seeded month (the To get note); 0 when the month was not seeded. */
+export const carriedCount = (g: Grocery, months: Record<string, GroceryMonth>, key: string) => {
+  const m = months[key]; const from = m?.carried && months[m.carried];
+  return m && from ? g.items.filter(i => haveOf(i, from) && haveOf(i, m)).length : 0;
+};
+
 /** A store's items for the To get list: the ones still to get first, the ticked ones after them, each in catalogue order. */
 export const gotLast = (items: GroceryItem[], m: GroceryMonth) => [...items.filter(i => !lineOf(i, m).got), ...items.filter(i => lineOf(i, m).got)];
 
@@ -269,14 +288,14 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     const lines: Record<string, GroceryLine> = {};
     Object.entries(fm.lines).forEach(([id, l]) => { const to = map.get(id); if (to) lines[to] = l; else if (!listed.has(id) && !g.items.some(x => x.id === id)) lines[id] = l; }); // a removed item's purchase keeps its own id
     const pulled = fm.pulled.map(id => map.get(id)).filter((x): x is string => !!x);
-    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}), ...(fm.tax ? { tax: fm.tax } : {}), ...(fm.paid ? { paid: fm.paid } : {}) };
+    const m: GroceryMonth = { lines, pulled: [...new Set(pulled)], ...(fm.payer ? { payer: fm.payer } : {}), ...(fm.tax ? { tax: fm.tax } : {}), ...(fm.paid ? { paid: fm.paid } : {}), ...(fm.carried ? { carried: fm.carried } : {}) };
     if (monthEmpty(m)) return;
     const have = months[k];
     if (!have) { months[k] = m; changed = true; return; }
     const mergedLines = { ...m.lines, ...have.lines }; const mergedPulled = [...new Set([...have.pulled, ...m.pulled])];
     const mergedPayer = { ...m.payer, ...have.payer }; const mergedTax = { ...m.tax, ...have.tax }; const mergedPaid = { ...m.paid, ...have.paid }; // what is here wins, per store (and per settled mark)
-    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length || Object.keys(mergedPayer).length !== Object.keys(have.payer ?? {}).length || Object.keys(mergedTax).length !== Object.keys(have.tax ?? {}).length || Object.keys(mergedPaid).length !== Object.keys(have.paid ?? {}).length) {
-      months[k] = { lines: mergedLines, pulled: mergedPulled, ...(Object.keys(mergedPayer).length ? { payer: mergedPayer } : {}), ...(Object.keys(mergedTax).length ? { tax: mergedTax } : {}), ...(Object.keys(mergedPaid).length ? { paid: mergedPaid } : {}) }; changed = true;
+    if (JSON.stringify(mergedLines) !== JSON.stringify(have.lines) || mergedPulled.length !== have.pulled.length || Object.keys(mergedPayer).length !== Object.keys(have.payer ?? {}).length || Object.keys(mergedTax).length !== Object.keys(have.tax ?? {}).length || Object.keys(mergedPaid).length !== Object.keys(have.paid ?? {}).length || (!have.carried && m.carried)) {
+      months[k] = { lines: mergedLines, pulled: mergedPulled, ...(Object.keys(mergedPayer).length ? { payer: mergedPayer } : {}), ...(Object.keys(mergedTax).length ? { tax: mergedTax } : {}), ...(Object.keys(mergedPaid).length ? { paid: mergedPaid } : {}), ...((have.carried ?? m.carried) ? { carried: have.carried ?? m.carried } : {}) }; changed = true;
     }
   });
   return { grocery: g, months, changed };

@@ -298,6 +298,7 @@ export interface GrocerySlice {
   setGroceryPrices(month: string, id: string, prices: number[] | null): void;
   setGroceryLineStore(month: string, id: string, store: string | null): string | null; // where it was bought that month ('' is Anywhere; its usual store or null clears the choice)
   makeGroceryStoreUsual(month: string, id: string): string | null; // Move to made permanent: the item's own store becomes the one it is in that month
+  carryGroceryTicks(): void; // the first time the current month opens: its At home ticks start as the latest earlier month's (ADR 079); once per month
   takeGroceryAllOff(month: string): number; // Skip all: every unticked item still to get that month is marked as had; returns how many (Undo is offered)
   takeGroceryOff(month: string, id: string): void; // not needed this month: marked as had, so off that month's list
   // Sharing what you buy with other people (groups, shares, who paid). Nothing here changes a price or a total: it only says who shares it.

@@ -15,20 +15,6 @@ const setup = async page => {
   await page.click('#groc-done');
 };
 
-test('the Have ticks clear when the month changes: every item is back on the new month’s list', async ({ page }) => {
-  await setup(page);
-  await page.getByLabel('Have Rice').check(); await page.getByLabel('Have Kale').check();
-  await page.click('#groc-view-get');
-  await expect(page.locator('#groc-summary')).toContainText('Nothing on this month');
-  await page.clock.setFixedTime(new Date('2026-10-02T12:00:00-04:00'));
-  await page.reload(); await open(page);
-  await expect(page.locator('#groc-month')).toContainText('October 2026');
-  await expect(page.locator('#groc-summary')).toContainText('Got 0 of 2');
-  await page.click('#groc-view-home');
-  await expect(page.getByLabel('Have Rice')).not.toBeChecked();
-  await expect(page.getByLabel('Have Kale')).not.toBeChecked();
-});
-
 test('ticking a row on To get keeps keyboard focus in the list: the next row, the one before, then the Bought line', async ({ page }) => {
   await open(page);
   await page.click('#groc-edit');

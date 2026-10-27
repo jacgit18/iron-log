@@ -8,14 +8,16 @@ const CATALOGUE = {
   groups: [{ id: 'g1', n: 'Costco run', people: [{ id: 'sis', n: 'Sister' }, { id: 'mom', n: 'Mom' }], stores: ["BJ's"] }],
 };
 const AUGUST = { lines: { chicken: { got: true } }, pulled: [] };
+const SEPTEMBER = { lines: {}, pulled: [], carried: '2026-08' }; // already seeded from August and ticks cleared: Chicken is back on To get (ADR 079)
 const stored = (page, key) => page.evaluate(k => JSON.parse(localStorage.getItem('ironlog:' + k) || 'null'), key);
 
 test('a share set this month becomes the usual, and last month keeps the split it was bought with', async ({ page }) => {
-  await page.evaluate(({ CATALOGUE, AUGUST }) => {
+  await page.evaluate(({ CATALOGUE, AUGUST, SEPTEMBER }) => {
     localStorage.setItem('ironlog:session/admin', 'true');
     localStorage.setItem('ironlog:grocery/main', JSON.stringify(CATALOGUE));
     localStorage.setItem('ironlog:grocery/2026-08', JSON.stringify(AUGUST));
-  }, { CATALOGUE, AUGUST });
+    localStorage.setItem('ironlog:grocery/2026-09', JSON.stringify(SEPTEMBER));
+  }, { CATALOGUE, AUGUST, SEPTEMBER });
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-grocery');
   await page.getByRole('button', { name: /^Chicken/ }).first().click();

@@ -146,7 +146,7 @@ export function mergeGroceryMonth3(baseIn: unknown, oursIn: unknown, theirsIn: u
   const payer = base ? mergeMap(base.payer ?? {}, ours.payer ?? {}, theirs.payer ?? {}) : { ...theirs.payer, ...ours.payer };
   const tax = base ? mergeMap(base.tax ?? {}, ours.tax ?? {}, theirs.tax ?? {}) : { ...theirs.tax, ...ours.tax }; // each store's tax, store by store too
   const paid = base ? mergeMap(base.paid ?? {}, ours.paid ?? {}, theirs.paid ?? {}) : { ...theirs.paid, ...ours.paid }; // each settled mark, key by key
-  const month = normGroceryMonth({ lines, pulled, payer, tax, paid });
+  const month = normGroceryMonth({ lines, pulled, payer, tax, paid, carried: ours.carried ?? theirs.carried }); // the once-only marker: either side's wins (ADR 079)
   return { week: month, tookTheirs: !same(month, ours), unskipped: false };
 }
 
