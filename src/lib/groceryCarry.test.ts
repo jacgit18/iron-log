@@ -39,9 +39,12 @@ describe('carryOver', () => {
     expect(carryOver(g, { '2026-09': gone }, '2026-10')?.ids).toEqual(['rice']);
   });
 
-  it('does not seed a month that has its own ticks or purchases', () => {
+  it('does not seed a month that already has a Have tick of its own', () => {
     expect(carryOver(g, { '2026-09': sep, '2026-10': month({ milk: { have: true } }) }, '2026-10')).toBeNull();
-    expect(carryOver(g, { '2026-09': sep, '2026-10': month({ milk: { got: true } }) }, '2026-10')).toBeNull();
+  });
+
+  it('seeds a month bought ahead, but not the item already bought in it', () => {
+    expect(carryOver(g, { '2026-09': sep, '2026-10': month({ rice: { got: true } }) }, '2026-10')?.ids).toEqual(['kale']);
   });
 
   it('seeds a month that only has a count or price typed', () => {
@@ -99,6 +102,15 @@ describe('the marker through the sync merge', () => {
     expect(mergeGroceryMonth3(null, seeded, month({})).week.carried).toBe('2026-09');
     expect(mergeGroceryMonth3(null, month({}), seeded).week.carried).toBe('2026-09');
     expect(mergeGroceryMonth3(month({}), seeded, month({ kale: { qty: 2 } })).week.carried).toBe('2026-09');
+  });
+  it('with no base, a seeded tick only one seeded side still has is cleared', () => {
+    const a = month({ kale: { have: true } }, { carried: '2026-09' }); // rice was cleared here
+    const b = month({ rice: { have: true }, kale: { have: true } }, { carried: '2026-09' });
+    expect(mergeGroceryMonth3(null, b, a).week.lines).toEqual({ kale: { have: true } });
+    expect(mergeGroceryMonth3(null, a, b).week.lines).toEqual({ kale: { have: true } });
+  });
+  it('with no base and only one side seeded, both sides ticks stay', () => {
+    expect(Object.keys(mergeGroceryMonth3(null, month({ rice: { have: true } }), month({ kale: { have: true } }, { carried: '2026-09' })).week.lines).sort()).toEqual(['kale', 'rice']);
   });
   it('does not invent a marker, and keeps it when the other side only changed a count', () => {
     expect(mergeGroceryMonth3(null, month({ rice: { have: true } }), month({})).week.carried).toBeUndefined();

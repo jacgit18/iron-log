@@ -135,13 +135,13 @@ export const onList = (g: Grocery, m: GroceryMonth, live: boolean) =>
   });
 
 /** The At home ticks a new month starts with (ADR 079): the items you have (ticked Have, or bought) in the latest earlier month that has any, still in the catalogue.
- *  Null when the month was seeded before, already holds its own ticks or purchases, or nothing earlier has a tick. Only ever asked for the current month. */
+ *  Null when the month was seeded before, already holds a Have tick of its own, or nothing earlier has a tick (a month with only purchases, bought ahead, is still seeded). Only ever asked for the current month. */
 export function carryOver(g: Grocery, months: Record<string, GroceryMonth>, nowKey: string): { from: string; ids: string[] } | null {
   const cur = months[nowKey];
-  if (cur?.carried || (cur && Object.values(cur.lines).some(l => l.have || l.got))) return null;
+  if (cur?.carried || (cur && Object.values(cur.lines).some(l => l.have))) return null; // a Have tick is only made on the current month's At home list, so it means the month is already lived in
   const earlier = Object.keys(months).filter(k => MONTH_RE.test(k) && k < nowKey).sort().reverse();
   for (const from of earlier) {
-    const ids = g.items.filter(i => haveOf(i, months[from])).map(i => i.id);
+    const ids = g.items.filter(i => haveOf(i, months[from]) && !cur?.lines[i.id]?.got).map(i => i.id); // an item already bought this month needs no tick
     if (ids.length) return { from, ids };
   }
   return null;

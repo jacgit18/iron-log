@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, UNITS, byStore, carriedCount, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
@@ -143,7 +143,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const current = off === 0;
   const todo = current ? list.filter(i => !lineOf(i, month).got) : list;
   const bought = current ? list.filter(i => lineOf(i, month).got) : [];
-  const carried = current ? carriedCount(g, months, mk) : 0; // ticks the month started with that are still ticked (ADR 079)
+  const carried = useMemo(() => (current ? carriedCount(g, months, mk) : 0), [current, g, months, mk]); // ticks the month started with that are still ticked (ADR 079)
   const todoStores = new Set(byStore(g, todo, split).map(x => x.store)); // a shared store with nothing left to get shows its money line in the bought fold instead
   // A store's tax box, once something is ticked there (or a tax is already typed): the receipt's tax for this month and what it comes to as a percent of the ticked items.
   // Items bought and then removed from the list still count in their store's tally and tax (audit X-8); a store left with none of its own items shows only its tax box.
