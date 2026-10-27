@@ -118,6 +118,7 @@ export function checkRows(weeks: Record<string, Week>) {
     if (w.restOn) Object.entries(w.restOn).forEach(([col, date]) => rows.push([k, 'restOn', col, date])); // one row per rest day, the column in the key
     if (w.order) rows.push([k, 'order', '', w.order.join(' ')]);
     (w.extra || []).forEach(x => rows.push([k, 'extra', x.id, JSON.stringify(x)]));
+    (w.split || []).forEach(x => rows.push([k, 'split', x.id, JSON.stringify(x)]));
     (['done', 'skipped'] as const).forEach(kind => Object.keys(w[kind]).forEach(id => { if (w[kind][id]) rows.push([k, kind, id, 'Yes']); }));
     Object.entries(w.moved).forEach(([id, day]) => rows.push([k, 'moved', id, day]));
     Object.entries(w.ph).forEach(([id, ph]) => rows.push([k, 'phase', id, ph]));
@@ -170,7 +171,7 @@ export const DATA_FORMAT = 1;
 export function utf8b64(s: string) { const b = new TextEncoder().encode(s); let bin = ''; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000) as unknown as number[]); return btoa(bin); }
 export function buildDataFile(S: Snapshot, weeks: Record<string, Week>) {
   const { cfg, logs, programs, library, body } = S; const W: Record<string, Week> = {};
-  Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || w.rest || w.order || w.extra || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
+  Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || w.rest || w.order || w.extra || w.split || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
   const P: Record<string, Omit<Program, 'key'>> = {}; (['A', 'B'] as const).forEach(k => { if (programs[k] !== BUILTIN[k]) P[k] = progBody(programs[k]); });
   const L: Logs = {}; Object.keys(logs).sort().forEach(id => { if (logs[id] && logs[id].length) L[id] = logs[id]; });
   return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body), experiments: normExperiments(S.experiments), ...wellnessOut(S), ...groceryOut(S) };
@@ -265,6 +266,7 @@ export function mergeWeek(a: unknown, b: unknown): Week {
   (['moved', 'ph'] as const).forEach(k => { (w as any)[k] = { ...o[k], ...w[k] }; });
   Object.keys(o.warm).forEach(d => { w.warm[d] = { ...o.warm[d], ...(w.warm[d] || {}) }; });
   const have = new Set((w.extra || []).map(x => x.id)); const more = (o.extra || []).filter(x => !have.has(x.id)); if (more.length) w.extra = [...(w.extra || []), ...more];
+  const haveSplit = new Set((w.split || []).flatMap(x => [x.id, x.rest])); const haveFrom = new Set((w.split || []).map(x => x.from)); const moreSplit = (o.split || []).filter(x => !haveSplit.has(x.id) && !haveSplit.has(x.rest) && !haveFrom.has(x.from)); if (moreSplit.length) w.split = [...(w.split || []), ...moreSplit];
   w.done = { ...o.done, ...w.done }; w.skipped = { ...o.skipped, ...w.skipped }; Object.keys(w.done).forEach(id => delete w.skipped[id]);
   // What the week ran (ADR 022): this device's record, else the other's. With the same program, a card only the other record has stays
   // when the merged week ticked, skipped or moved it, so that check-off still counts.

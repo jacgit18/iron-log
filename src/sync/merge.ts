@@ -1,5 +1,5 @@
 import { normGroceryMonth } from '../shared/grocery.js';
-import { normWeek } from '../shared/week.js';
+import { normSplit, normWeek } from '../shared/week.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
 import { mergeWeek } from '../lib/export.js';
 import { stable } from './canon.js';
@@ -65,6 +65,8 @@ export function mergeWeek3(baseIn: unknown, oursIn: unknown, theirsIn: unknown):
     }
     const extra = mergeById(base.extra || [], ours.extra || [], theirs.extra || []);
     if (extra.length) week.extra = extra; else delete week.extra;
+    const split = normSplit(mergeById(base.split || [], ours.split || [], theirs.split || [])); // one move per card: the first to name it wins
+    if (split.length) week.split = split; else delete week.split;
     // The shown program, its record, and the rest days, day order and stash that go with it change together (switching programs
     // parks one program's layout and restores the other's), so they all come from one side.
     const layout = (x: Week) => ({ prog: x.prog, ran: x.ran, rest: x.rest, restOn: x.restOn, restTook: x.restTook, order: x.order, stash: x.stash });

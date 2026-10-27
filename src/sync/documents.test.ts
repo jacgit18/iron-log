@@ -66,6 +66,13 @@ describe('rows to document and back', () => {
     expect(roundTrip('stretchweeks/2026-10-04', sw)).toEqual(sw);
   });
 
+  it('a week keeps a superset exercise moved to another day, sets and weight included', () => {
+    const split = [{ id: 'S-1m', from: 'A-d1s2', rest: 'S-1r', k: 0, day: 3, item: { ex: 'squat', ph: 'hyp', w: 22.5, rx: '3×10' } }];
+    const week = { prog: 'A', done: { 'S-1m': true }, skipped: {}, moved: {}, ph: {}, warm: {}, split };
+    expect(roundTrip('weeks/2026-10-04', week)).toEqual(normWeek(week));
+    expect((roundTrip('weeks/2026-10-04', week) as { split: unknown }).split).toEqual(split);
+  });
+
   it('programs: the body without its key, padded to seven days', () => {
     const body = (({ key: _k, ...b }) => b)(structuredClone(BUILTIN.A));
     expect(roundTrip('programs/A', structuredClone(BUILTIN.A))).toEqual(body);
