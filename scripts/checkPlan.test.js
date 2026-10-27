@@ -43,8 +43,14 @@ describe('planChecks e2eSpecs', () => {
       expect(specs(['e2e/board.spec.js', other]), other).toBeNull();
     }
   });
-  it('runs the whole suite for a fixture, a helper, a deleted spec or the accounts specs', () => {
-    for (const f of ['e2e/fixtures.js', 'e2e/gone.spec.js', 'e2e-accounts/a.spec.js']) expect(specs([f]), f).toBeNull();
+  it('runs the whole suite for a fixture, a helper, or a deleted spec', () => {
+    for (const f of ['e2e/fixtures.js', 'e2e/gone.spec.js']) expect(specs([f]), f).toBeNull();
+  });
+  it('runs e2e:sync, not e2e, for the accounts specs (e2e only runs e2e/)', () => {
+    const n = names(['e2e-accounts/a.spec.js']);
+    expect(n).toContain('e2e:sync');
+    expect(n).toContain('lint');
+    expect(n).not.toContain('e2e');
   });
   it('is null when the browser tests are not planned or --all asks for everything', () => {
     expect(specs(['tools/x.mjs'])).toBeNull();
