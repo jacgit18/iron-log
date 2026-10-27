@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { carriedCount, carryOver, mergeGrocery, normGroceryMonth, onList, tally } from './grocery.js';
 import { monthEmpty } from '../shared/grocery.js';
+import { mergeGroceryMonth3 } from '../sync/merge.js';
 import type { Grocery, GroceryItem, GroceryMonth } from '../types.ts';
 
 // ADR 079: a new month starts with the At home ticks of the latest earlier month that had any.
@@ -89,5 +90,19 @@ describe('the marker in a saved month', () => {
     const inc = { stores: [], items: [item('rice')], months: { '2026-10': month({ rice: { have: true } }, { carried: '2026-09' }) } };
     const out = mergeGrocery({ stores: [], items: [item('rice')] }, {}, inc);
     expect(out.months['2026-10']?.carried).toBe('2026-09');
+  });
+});
+
+describe('the marker through the sync merge', () => {
+  const seeded = month({ rice: { have: true } }, { carried: '2026-09' });
+  it('keeps the marker when only one side has it, with or without a common base', () => {
+    expect(mergeGroceryMonth3(null, seeded, month({})).week.carried).toBe('2026-09');
+    expect(mergeGroceryMonth3(null, month({}), seeded).week.carried).toBe('2026-09');
+    expect(mergeGroceryMonth3(month({}), seeded, month({ kale: { qty: 2 } })).week.carried).toBe('2026-09');
+  });
+  it('does not invent a marker, and keeps it when the other side only changed a count', () => {
+    expect(mergeGroceryMonth3(null, month({ rice: { have: true } }), month({})).week.carried).toBeUndefined();
+    const m = mergeGroceryMonth3(seeded, month({}, { carried: '2026-09' }), { ...seeded, lines: { rice: { have: true, qty: 2 } } }).week;
+    expect(m.carried).toBe('2026-09');
   });
 });

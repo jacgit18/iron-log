@@ -21,8 +21,8 @@ import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from
 import type { GroceryForm } from '../../store/types.ts';
 import './Grocery.css';
 
-// Three views (ADR 038, changed by ADR 054): To get is this month's shopping list; At home is every item you buy, ticked while you have it
-// this month, which takes it off To get (a bought item counts as had); Spending charts what was bought. Every month starts with nothing ticked.
+// Three views (ADR 038, changed by ADR 054 and 079): To get is this month's shopping list; At home is every item you buy, ticked while you have it (a new month keeps last month's ticks)
+// this month, which takes it off To get (a bought item counts as had); Spending charts what was bought. A new month starts with last month’s ticks (ADR 079).
 type View = 'get' | 'home' | 'spend';
 const EMPTY_FORM: GroceryForm = { n: '', store: '', qty: '1', price: '', every: false, note: '', unit: '' };
 const COUNT_ERROR = 'The count must be a number from 0.01 to 999.';
@@ -461,7 +461,7 @@ export default function Grocery() {
   const today = useToday(s => s.today);
   const ready = useAppStore(s => s.isReady());
   const nowKey = monthKey(today);
-  useEffect(() => { if (ready) useAppStore.getState().carryGroceryTicks(); }, [ready, nowKey]); // a new month starts with the At home ticks of the last one (ADR 079)
+  useEffect(() => { if (ready) useAppStore.getState().carryGroceryTicks(nowKey); }, [ready, nowKey]); // a new month starts with the At home ticks of the last one (ADR 079)
   const [view, setView] = useState<View>(() => (g.items.length ? 'get' : 'home')); // nothing to get from an empty list: start where you add
   return (
     <section className="panel groc" aria-labelledby="groc-h">

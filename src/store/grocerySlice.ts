@@ -394,9 +394,8 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     },
     // A new month starts with the At home ticks of the latest month that had any (ADR 079). Waits for the stored months to load, so a tick another device
     // already wrote is seen first; the `carried` marker means it happens once, even if every tick is cleared afterwards.
-    carryGroceryTicks() {
-      if (!get().isReady()) return;
-      const key = monthKey(new Date());
+    carryGroceryTicks(key) {
+      if (!MONTH_RE.test(key) || !get().isReady()) return; // the month the screen shows as this month, so the one seeded is the one seen
       const r = carryOver(get().grocery, get().groceryMonths, key);
       if (!r) return;
       mutateMonth(key, m => { r.ids.forEach(id => { m.lines[id] = { ...(m.lines[id] || {}), have: true }; }); m.carried = r.from; });

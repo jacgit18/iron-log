@@ -121,11 +121,11 @@ export function parsePrices(text: string): number[] | null {
   return out.every((c): c is number => c != null) ? out : null;
 }
 
-/** Whether you have an item this month: ticked "have" on At home, or bought (ticked on To get). It starts every month unticked (ADR 054). */
+/** Whether you have an item this month: ticked "have" on At home, or bought (ticked on To get). A new month starts with the last month's ticks (ADR 079); before that, every month started unticked (ADR 054). */
 export const haveOf = (item: GroceryItem, m: GroceryMonth) => { const l = lineOf(item, m); return l.have || l.got; };
 
-/** The items on a month's list, in catalogue order. This month and later ones (`live`): everything you do not have yet, so each month starts
- *  with every item on it and a tick on At home takes one off. A past month shows what was bought then (a ticked item, or one with its own
+/** The items on a month's list, in catalogue order. This month and later ones (`live`): everything you do not have yet, so a tick on At home takes one off
+ *  (a new month starts with the last month's ticks, `carryOver`, ADR 079). A past month shows what was bought then (a ticked item, or one with its own
  *  count or price), not what is out today. */
 export const onList = (g: Grocery, m: GroceryMonth, live: boolean) =>
   g.items.filter(i => {
