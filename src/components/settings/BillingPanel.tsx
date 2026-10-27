@@ -4,6 +4,7 @@ import BillingNotice from './BillingNotice.js';
 import { createAccountClient } from '../../sync/account.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { flag, getSyncApi } from '../../store/useAppStore.js';
+import { useOnline } from '../../hooks/useOnline.js';
 import { useWho } from './useWho.js';
 
 // The Billing section (ADR 065, brief billing-stripe-subscriptions): the plan, Subscribe (Stripe's hosted Checkout) and Manage billing
@@ -13,17 +14,6 @@ const PLAN_NAMES: Record<string, string> = { beta: 'Beta tester', founder: 'Foun
 const dateOf = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null);
 const POLL_MS = 2000;
 const POLL_TRIES = 5;
-
-function useOnline(): boolean {
-  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
-  useEffect(() => {
-    const set = () => setOnline(navigator.onLine !== false);
-    window.addEventListener('online', set);
-    window.addEventListener('offline', set);
-    return () => { window.removeEventListener('online', set); window.removeEventListener('offline', set); };
-  }, []);
-  return online;
-}
 
 export default function BillingPanel() {
   const api = getSyncApi();

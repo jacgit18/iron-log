@@ -10,6 +10,8 @@ import Toaster from './components/Toaster.js';
 import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
 import useBadgeName from './hooks/useBadgeName.js';
+import { useWide } from './components/board/useWide.js';
+import { showPlansTab } from './lib/plansTab.js';
 import ThemeButton from './components/ThemeButton.js';
 import UpdateBanner from './components/UpdateBanner.js';
 import SyncNotice from './components/SyncNotice.js';
@@ -24,6 +26,7 @@ import { useWaterReminder } from './hooks/useWaterReminder.js';
 const Daily = lazyTab(() => import('./components/daily/Daily.js'));
 const Progress = lazyTab(() => import('./components/progress/Progress.js'));
 const Editor = lazyTab(() => import('./components/program/Editor.js'));
+const PlansTab = lazyTab(() => import('./components/plans/PlansTab.js'));
 const Settings = lazyTab(() => import('./components/settings/Settings.js'));
 // The sync cards (sign in, other account, upload this device's data) only exist while syncing is on, so their code (and the sync
 // planner behind it) loads only then. They draw nothing until they are needed, so waiting for the chunk moves nothing.
@@ -51,7 +54,7 @@ function Modal() {
   return open ? <ErrorBoundary where="view"><Suspense fallback={null}><LazyModal /></Suspense></ErrorBoundary> : null;
 }
 
-const TABS: [string, string, ComponentType][] = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
+const TABS: [string, string, ComponentType][] = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['plans', 'Plans', PlansTab], ['settings', 'Settings', Settings]];
 
 export default function App() {
   const tab = useAppStore(s => s.tab);
@@ -70,8 +73,10 @@ export default function App() {
   useTabbarHeight(tabsRef);
 
   // With the account badge showing, the badge is the way to Settings, so the Settings tab is not drawn (it is when nobody is signed in).
-  const { name: badgeName, pending: badgePending } = useBadgeName();
-  const tabs = badgeName === null && !badgePending ? TABS : TABS.filter(([k]) => k !== 'settings');
+  const { name: badgeName, pending: badgePending, who } = useBadgeName();
+  // The Plans tab is for a signed-in free account on a wide screen (src/lib/plansTab.ts); everyone else's bar is as before.
+  const plansShown = showPlansTab(useWide(), who);
+  const tabs = TABS.filter(([k]) => (k !== 'settings' || badgeName === null && !badgePending) && (k !== 'plans' || plansShown));
   const tabDrawn = tabs.some(([k]) => k === tab); // false on Settings reached through the badge
   const label = TABS.find(([k]) => k === tab)![1];
   useEffect(() => { document.title = `${label} · Loadbearer`; }, [label]);
@@ -96,7 +101,10 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, [closeModal]);
 
-  const View = TABS.find(([k]) => k === tab)![2];
+  // Plans reached after it stopped applying (the window narrowed, a plan was bought, signed out): back to the Board.
+  const plansGone = tab === 'plans' && !plansShown;
+  useEffect(() => { if (plansGone && !badgePending) setTab('board'); }, [plansGone, badgePending, setTab]);
+  const View = TABS.find(([k]) => k === (plansGone ? 'board' : tab))![2];
   return (
     <>
       <a className="skip" href="#view">Skip to content</a>
