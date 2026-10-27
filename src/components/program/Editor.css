@@ -69,6 +69,20 @@
 .edmove {
   max-width: 100%;
 }
+/* A superset's own row of selects: one exercise at a time can go to another day. */
+.edsplit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  flex: 1 0 100%;
+}
+.edsplititem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  flex-wrap: wrap;
+}
 .draghandle {
   flex: 0 0 auto;
   align-self: stretch;

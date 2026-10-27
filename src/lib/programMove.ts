@@ -72,3 +72,86 @@ export function carryPhDef(phDef: Record<string, PhaseKey | null>, oldId: string
   }
   return out;
 }
+
+// Taking one exercise out of a superset and putting it on another day (Program tab > the exercise's own Move to day). Supersets only: an
+// either/or card is one choice, so it moves whole. The exercise becomes a card of its own with a new id; the card it left keeps its id,
+// and a superset left with one exercise becomes a plain card. Both move out of the "Supersets" section, which now holds neither.
+export interface SupersetSplit { rest: ProgramSlot; moved: ProgramSlot }
+
+export function splitSuperset(slot: ProgramSlot, k: number, newId: string): SupersetSplit | null {
+  if (slot.type !== 'superset' || slot.items.length < 2 || !slot.items[k]) return null;
+  const plain = (sec?: string) => (sec === 'Supersets' ? 'Regular' : sec);
+  const rest: ProgramSlot = { ...structuredClone(slot), items: slot.items.filter((_, i) => i !== k).map(it => structuredClone(it)) };
+  if (rest.items.length === 1) { delete rest.type; if (rest.sec) rest.sec = plain(rest.sec); }
+  const moved: ProgramSlot = { id: newId, items: [structuredClone(slot.items[k]!)] };
+  if (slot.sec) moved.sec = plain(slot.sec);
+  if (slot.tier) moved.tier = slot.tier;
+  if (slot.from) moved.from = slot.from;
+  return { rest, moved };
+}
+
+// Phase defaults are keyed `<card id>:<position>`, so when an exercise leaves, the ones after it shift up and the moved one gets its new
+// id. `del` lists every old key of the card; `set` is what to write. `before` is the old values, so Undo can restore them.
+export function splitPhDef(phDef: Record<string, PhaseKey | null>, oldId: string, count: number, k: number, newId: string) {
+  const del: string[] = []; const set: Record<string, PhaseKey | null> = {}; const before: Record<string, PhaseKey | null> = {};
+  for (let j = 0; j < count; j++) {
+    const key = itemKey({ id: oldId }, j); const v = phDef[key];
+    del.push(key);
+    if (v) before[key] = v;
+    if (!v) continue;
+    if (j === k) set[itemKey({ id: newId }, 0)] = v;
+    else set[itemKey({ id: oldId }, j > k ? j - 1 : j)] = v;
+  }
+  return { del, set, before };
+}
+
+// The open week's per-exercise state is keyed by position too: `done` (`<id>#<position>`, or `<id>` for a ticked card or a whole superset),
+// `skipped` (`<id>#<position>`, `<id>` for a skipped card) and `ph` (`<id>:<position>`). When an exercise leaves a superset its state goes
+// with it: the moved card takes the exercise's tick, skip and phase for this week, and the exercises after it shift up. A superset left with
+// one exercise is a plain card, which reads `<id>` alone, so the tick or skip moves there. A value of null deletes the key.
+export interface WeekPatch { done: Record<string, true | null>; skipped: Record<string, true | null>; ph: Record<string, PhaseKey | null> }
+export interface WeekState { done?: Record<string, true>; skipped?: Record<string, true>; ph?: Record<string, PhaseKey> }
+
+export function splitWeekState(week: WeekState, oldId: string, count: number, k: number, newId: string): { patch: WeekPatch; undo: WeekPatch; changed: boolean } {
+  const done = week.done || {}; const skipped = week.skipped || {}; const ph = week.ph || {};
+  const at = (j: number) => `${oldId}#${j}`;
+  const sk = (j: number) => !!skipped[at(j)];
+  const dn = (j: number) => !sk(j) && (!!done[oldId] || !!done[at(j)]); // a ticked superset has every exercise ticked
+  const cardSkipped = !!skipped[oldId];
+  const rest = Array.from({ length: count }, (_, j) => j).filter(j => j !== k);
+  const plain = rest.length === 1;
+  const want: WeekPatch = { done: {}, skipped: {}, ph: {} };
+  const touched = { done: [oldId, newId, ...rest.concat(k).map(at)], skipped: [oldId, newId, ...rest.concat(k).map(at)], ph: [`${newId}:0`, ...rest.concat(k).map(j => `${oldId}:${j}`)] };
+  const put = <T,>(m: Record<string, T | null>, key: string, v: T | null | undefined | false) => { m[key] = v || null; };
+  // the exercise that leaves is a plain card of its own
+  put(want.done, newId, dn(k) && true); put(want.skipped, newId, (sk(k) || cardSkipped) && true); put(want.ph, `${newId}:0`, ph[`${oldId}:${k}`]);
+  if (plain) {
+    const r = rest[0]!;
+    put(want.done, oldId, dn(r) && true); put(want.skipped, oldId, (cardSkipped || sk(r)) && true); put(want.ph, `${oldId}:0`, ph[`${oldId}:${r}`]);
+  } else {
+    const whole = rest.every(j => dn(j));
+    put(want.done, oldId, whole && true); put(want.skipped, oldId, cardSkipped && true);
+    rest.forEach((j, n) => {
+      put(want.done, at(n), !whole && dn(j) && true); put(want.skipped, at(n), sk(j) && true); put(want.ph, `${oldId}:${n}`, ph[`${oldId}:${j}`]);
+    });
+  }
+  const patch: WeekPatch = { done: {}, skipped: {}, ph: {} }; const undo: WeekPatch = { done: {}, skipped: {}, ph: {} };
+  let changed = false;
+  (['done', 'skipped', 'ph'] as const).forEach(f => {
+    const cur = { done, skipped, ph }[f] as Record<string, unknown>;
+    touched[f].forEach(key => {
+      const w = (want[f] as Record<string, unknown>)[key] ?? null; const c = cur[key] ?? null;
+      (patch[f] as Record<string, unknown>)[key] = w; (undo[f] as Record<string, unknown>)[key] = c;
+      if (w !== c) changed = true;
+    });
+  });
+  return { patch, undo, changed };
+}
+
+// Write a patch into a week (the open week's copy inside mutateWeek).
+export function applyWeekPatch(week: { done: Record<string, true>; skipped: Record<string, true>; ph: Record<string, PhaseKey> }, patch: WeekPatch): void {
+  (['done', 'skipped', 'ph'] as const).forEach(f => {
+    const m = (week[f] ||= {}) as Record<string, unknown>;
+    Object.entries(patch[f]).forEach(([key, v]) => { if (v === null) delete m[key]; else m[key] = v; });
+  });
+}
