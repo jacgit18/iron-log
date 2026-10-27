@@ -1,0 +1,23 @@
+{
+  "packageId": "com.example.changeme",
+  "host": "loadbearer.app",
+  "name": "Loadbearer",
+  "launcherName": "Loadbearer",
+  "display": "standalone",
+  "themeColor": "#1F5E5B",
+  "navigationColor": "#1F5E5B",
+  "backgroundColor": "#EEF0EC",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://loadbearer.app/icons/icon-512.png",
+  "maskableIconUrl": "https://loadbearer.app/icons/maskable-512.png",
+  "webManifestUrl": "https://loadbearer.app/manifest.webmanifest",
+  "appVersionCode": 1,
+  "appVersion": "1.0.0",
+  "fallbackType": "customtabs",
+  "orientation": "default",
+  "isChromeOSOnly": false,
+  "features": {},
+  "signingKey": { "path": "./android.keystore", "alias": "android" },
+  "fingerprints": []
+}
