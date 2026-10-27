@@ -23,7 +23,7 @@ const PASSWORD = 'correct horse battery staple';
 const running: { close: () => Promise<void> }[] = [];
 async function serve(over: Partial<AuthConfig> = {}) {
   const auth = createAuth({ baseURL: BASE, secret: SECRET, databaseUrl: url, google: GOOGLE, testSignIn: true, capExempt: new Set([ADMIN]), qaPersonas: true, ...over }, 'test');
-  const server: Server = createApp({ db, auth }).listen(0);
+  const server: Server = createApp({ db, auth, admins: new Set([ADMIN]) }).listen(0); // production passes the same ADMIN_EMAILS list to both
   await new Promise(done => server.once('listening', done));
   running.push({ close: async () => { await new Promise<void>(done => server.close(() => done())); await auth.pool.end(); } });
   return { auth, base: `http://127.0.0.1:${(server.address() as AddressInfo).port}` };
@@ -113,6 +113,36 @@ describe('who may switch', () => {
     for (const id of [adminId, 'admin', '', 5, null, undefined]) expect((await call(base, jar, 'POST', '/qa/personas/switch', { id })).status).toBe(400);
     expect((await call(base, jar, 'POST', '/qa/personas/switch', { id: 'new-user' })).status).toBe(404); // in the list but never seeded
     expect(await me(base, jar)).toBe(ADMIN);
+  });
+});
+
+describe('what /api/me says (the banner and the Settings panel read it)', () => {
+  const meOf = async (base: string, jar: Jar) => (await (await fetch(`${base}/api/me`, { headers: { cookie: jar.header } })).json()) as { qa?: { persona: string | null; canSwitch: boolean } };
+
+  it('says an admin may switch, then which test account they are, with no right to switch from inside it', async () => {
+    const { base } = await serve();
+    await seedPersona('paid-past-due');
+    const jar = await signUp(base, ADMIN);
+    expect((await meOf(base, jar)).qa).toEqual({ persona: null, canSwitch: true });
+    await call(base, jar, 'POST', '/qa/personas/switch', { id: 'paid-past-due' });
+    expect((await meOf(base, jar)).qa).toEqual({ persona: 'Paid, past due', canSwitch: false });
+    await call(base, jar, 'POST', '/qa/personas/return');
+    expect((await meOf(base, jar)).qa).toEqual({ persona: null, canSwitch: true });
+  });
+
+  it('says a signed-in non-admin may not switch', async () => {
+    const { base } = await serve();
+    const stranger = await signUp(base, 'stranger@example.com');
+    expect((await meOf(base, stranger)).qa).toEqual({ persona: null, canSwitch: false });
+  });
+
+  it('has no qa key at all without the QA mark or with the setting off (production\'s answer is unchanged)', async () => {
+    const off = await serve({ qaPersonas: false });
+    const jar = await signUp(off.base, ADMIN);
+    expect('qa' in (await meOf(off.base, jar))).toBe(false);
+    await mark(null);
+    const unmarked = await serve();
+    expect('qa' in (await meOf(unmarked.base, jar))).toBe(false);
   });
 });
 

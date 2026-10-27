@@ -55,6 +55,7 @@ export const PERSONAS: readonly Persona[] = [
 ];
 
 export const personaById = (id: string): Persona | undefined => PERSONAS.find(p => p.id === id);
+export const personaByEmail = (email: string | null | undefined): Persona | undefined => (email ? PERSONAS.find(p => personaEmail(p.id) === email.toLowerCase()) : undefined);
 /** The auth.user id the seed script gives a persona. Fixed, so a re-run finds the same account. */
 export const personaAuthId = (id: string) => `qa-persona-${id}`;
 export const personaEmail = (id: string) => `${id}@qa.invalid`;

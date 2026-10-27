@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { toNodeHandler } from 'better-auth/node';
+import { personaByEmail } from './qa/personas.ts';
 import compression from 'compression';
 import express from 'express';
 import { sql, type Kysely, type Transaction } from 'kysely';
@@ -215,7 +216,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     const userId = String(res.locals.userId);
     const row = await inUserTransaction(db!, userId, async trx => (await sql<{ id: string; plan: string | null }>`select current_setting('app.user_id') as id, (select plan from users where id = current_setting('app.user_id')::bigint) as plan`.execute(trx)).rows[0]);
     const account = res.locals.account as Account;
-    res.json({ ok: true, userId: row?.id, minClientVersion, account: { ...account, plan: row?.plan ?? 'free', isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, account.isAdmin, !!billing) } });
+    // QA only (qaPersonas.ts): whether this session is a test account, and whether an admin may switch. Absent everywhere else, so production's answer is unchanged.
+    const qa = auth && (await auth.qaPersonasOn()) ? { persona: personaByEmail(account.email)?.name ?? null, canSwitch: account.isAdmin === true } : undefined;
+    res.json({ ok: true, userId: row?.id, minClientVersion, ...(qa ? { qa } : {}), account: { ...account, plan: row?.plan ?? 'free', isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, account.isAdmin, !!billing) } });
   });
 
   app.post('/api/commands/import-legacy', async (req, res) => {
