@@ -171,7 +171,7 @@ export const DATA_FORMAT = 1;
 export function utf8b64(s: string) { const b = new TextEncoder().encode(s); let bin = ''; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000) as unknown as number[]); return btoa(bin); }
 export function buildDataFile(S: Snapshot, weeks: Record<string, Week>) {
   const { cfg, logs, programs, library, body } = S; const W: Record<string, Week> = {};
-  Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || w.rest || w.order || w.extra || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
+  Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || w.rest || w.order || w.extra || w.split || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
   const P: Record<string, Omit<Program, 'key'>> = {}; (['A', 'B'] as const).forEach(k => { if (programs[k] !== BUILTIN[k]) P[k] = progBody(programs[k]); });
   const L: Logs = {}; Object.keys(logs).sort().forEach(id => { if (logs[id] && logs[id].length) L[id] = logs[id]; });
   return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body), experiments: normExperiments(S.experiments), ...wellnessOut(S), ...groceryOut(S) };

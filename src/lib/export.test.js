@@ -34,6 +34,13 @@ describe('JSON data file', () => {
     expect(d.programs).toEqual({}); // built-in programs aren't written out
   });
 
+  it('keeps a week whose only content is a superset exercise moved to another day', () => {
+    const split = [{ id: 'S-1m', from: 'A-d1s2', rest: 'S-1r', k: 0, day: 3, item: { ex: 'squat', ph: 'hyp', w: 22.5 } }];
+    const d = parseDataFile(JSON.stringify(buildDataFile(snapshot(), { '2026-09-20': { split } })));
+    expect(Object.keys(d.weeks)).toEqual(['2026-09-20']);
+    expect(d.weeks['2026-09-20'].split).toEqual(split);
+  });
+
   it('rejects files that are not Loadbearer data', () => {
     expect(() => parseDataFile('not json')).toThrow('isn’t valid JSON');
     expect(() => parseDataFile('{"app":"other"}')).toThrow('isn’t a Loadbearer data file');
