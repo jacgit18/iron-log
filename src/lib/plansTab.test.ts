@@ -12,6 +12,10 @@ describe('showPlansTab', () => {
   it('is not drawn on a phone', () => {
     expect(showPlansTab(false, signedIn())).toBe(false);
   });
+  it('is not drawn inside the Android app, even on a wide screen for a free account', () => {
+    expect(showPlansTab(true, signedIn(), true)).toBe(false);
+    expect(showPlansTab(true, signedIn(), false)).toBe(true);
+  });
   it('is not drawn before the first answer, signed out, or when the server could not be reached', () => {
     expect(showPlansTab(true, null)).toBe(false);
     expect(showPlansTab(true, { status: 'signed-out' })).toBe(false);

@@ -1,11 +1,11 @@
 import type { AccountState } from '../sync/account.js';
 
 // Whether the Plans tab is drawn (brief desktop-plans-tab). Desktop only: the phone's tab bar has no room, and the Android app must show no prices
-// (ADR 065 point 8). Only a signed-in account on the free plan, with billing on, has anything to buy; after subscribing the tab goes and
+// (ADR 065 point 8), so a wide Android screen (a tablet) is turned away by `inApp` (inAndroidApp, src/lib/androidApp.ts). Only a signed-in account on the free plan, with billing on, has anything to buy; after subscribing the tab goes and
 // billing lives in Settings. While the first who-am-I answer is pending nothing is drawn, so the bar does not change shape late for a
 // subscriber (a free account's bar gains the tab once, at the end, where nothing else moves).
-export function showPlansTab(wide: boolean, who: AccountState | null): boolean {
-  if (!wide || who === null || who.status !== 'signed-in') return false;
+export function showPlansTab(wide: boolean, who: AccountState | null, inApp = false): boolean {
+  if (inApp || !wide || who === null || who.status !== 'signed-in') return false;
   const plan = who.plan ?? (who.isPaid ? 'paid' : 'free');
   return plan === 'free' && who.billing?.available === true;
 }

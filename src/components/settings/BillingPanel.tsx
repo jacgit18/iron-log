@@ -4,7 +4,7 @@ import BillingNotice from './BillingNotice.js';
 import { createAccountClient } from '../../sync/account.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { flag, getSyncApi } from '../../store/useAppStore.js';
-import { useOnline } from '../../hooks/useOnline.js';
+import { useOnline } from './useOnline.js';
 import { useWho } from './useWho.js';
 
 // The Billing section (ADR 065, brief billing-stripe-subscriptions): the plan, Subscribe (Stripe's hosted Checkout) and Manage billing

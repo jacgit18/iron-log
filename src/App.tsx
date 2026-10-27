@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
 import { flag, useAppStore } from './store/useAppStore.js';
 import { takeAfterReload } from './lib/afterReload.js';
 import useTooltips from './hooks/useTooltips.js';
@@ -11,6 +11,7 @@ import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
 import useBadgeName from './hooks/useBadgeName.js';
 import { useWide } from './components/board/useWide.js';
+import { inAndroidApp } from './lib/androidApp.js';
 import { showPlansTab } from './lib/plansTab.js';
 import ThemeButton from './components/ThemeButton.js';
 import UpdateBanner from './components/UpdateBanner.js';
@@ -78,7 +79,8 @@ export default function App() {
   // With the account badge showing, the badge is the way to Settings, so the Settings tab is not drawn (it is when nobody is signed in).
   const { name: badgeName, pending: badgePending, who } = useBadgeName();
   // The Plans tab is for a signed-in free account on a wide screen (src/lib/plansTab.ts); everyone else's bar is as before.
-  const plansShown = showPlansTab(useWide(), who);
+  const [inApp] = useState(inAndroidApp); // asked once: the Play build shows no prices, whatever the screen width (ADR 065 point 8)
+  const plansShown = showPlansTab(useWide(), who, inApp);
   const tabs = TABS.filter(([k]) => (k !== 'settings' || badgeName === null && !badgePending) && (k !== 'plans' || plansShown));
   const tabDrawn = tabs.some(([k]) => k === tab); // false on Settings reached through the badge
   const label = TABS.find(([k]) => k === tab)![1];

@@ -9,14 +9,15 @@ const meWith = (account = {}) => ({
   account: { kind: 'session', email: 'jo@example.com', name: 'Jo Lifter', isAdmin: false, isPaid: false, plan: 'free', billing: { available: true, source: 'manual', status: null, renewsAt: null, hasCustomer: false }, ...account },
 });
 
-async function open(page, me, size = { width: 1280, height: 800 }) {
+async function open(page, me, size = { width: 1280, height: 800 }, fromAndroidApp = false) {
   await page.setViewportSize(size);
-  await page.addInitScript(() => {
+  await page.addInitScript(fromApp => {
+    if (fromApp) sessionStorage.setItem('fromAndroidApp', '1');
     localStorage.setItem('ironlog:hidetip', '1');
     localStorage.setItem('ironlog:hidelocal', '1');
     localStorage.setItem('ironlog:flag:apiSync', 'true');
     localStorage.setItem('ironlog:session/known', 'true');
-  });
+  }, fromAndroidApp);
   await page.route('**/api/**', json({ ok: false }, 401));
   await page.route('**/api/sync*', json({ rows: [], cursor: '0', more: false }));
   await page.route('**/api/me', json(me));
@@ -52,6 +53,12 @@ test.describe('Plans tab', () => {
 
   test('there is no tab on a phone', async ({ page }) => {
     await open(page, meWith(), { width: 390, height: 800 });
+    await expect(page.getByRole('tab', { name: 'Program' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Plans' })).toHaveCount(0);
+  });
+
+  test('there is no tab inside the Android app, even on a wide screen', async ({ page }) => {
+    await open(page, meWith(), { width: 1280, height: 800 }, true);
     await expect(page.getByRole('tab', { name: 'Program' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Plans' })).toHaveCount(0);
   });

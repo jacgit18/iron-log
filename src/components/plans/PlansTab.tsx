@@ -3,7 +3,7 @@ import './PlansTab.css';
 import { PLAN_CARDS } from '../../lib/plansTab.js';
 import { createAccountClient } from '../../sync/account.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
-import { useOnline } from '../../hooks/useOnline.js';
+import { useOnline } from '../settings/useOnline.js';
 import { flag } from '../../store/useAppStore.js';
 
 // The Plans tab (brief desktop-plans-tab): the three plans side by side for a signed-in free account on a wide screen. App.tsx draws the tab
