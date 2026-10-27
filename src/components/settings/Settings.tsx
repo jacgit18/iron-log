@@ -23,6 +23,7 @@ import WaterReminderControls from './WaterReminderControls.js';
 import { disablePush, enablePush, pushKindWanted, pushOn, pushSupported, setPushKind } from '../../lib/pushClient.js';
 import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNotify.js';
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
+import { inAndroidApp } from '../../lib/androidApp.js';
 import { IMPORT_ACCEPT } from '../../lib/importFile.js';
 import './Settings.css';
 
@@ -454,7 +455,7 @@ export default function Settings() {
       <Group id="data" title="Data">
         <div className="scol">
           <AccountPanel />
-          <BillingPanel />
+          {!inAndroidApp() && <BillingPanel />}
           <SyncPanel />
         </div>
         <div className="scol"><DataPanel key={importCount} /></div>

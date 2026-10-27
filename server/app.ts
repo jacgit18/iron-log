@@ -5,6 +5,7 @@ import compression from 'compression';
 import express from 'express';
 import { sql, type Kysely, type Transaction } from 'kysely';
 import { requireAdmin, type Admins } from './admin.ts';
+import { assetLinksRoute } from './assetLinks.ts';
 import { canonicalHost } from './canonicalHost.ts';
 import { isPaid, requirePaid } from './plan.ts';
 import { sessionAuth, devAuthAllowed, inUserTransaction, type Account } from './auth.ts';
@@ -175,6 +176,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // An app older than the minimum is told so before anything else, signed in or not, so it stops sending and keeps its data.
   app.use(['/api/commands', '/api/sync'], clientVersionGate({ min: minClientVersion, allowDev: devAuthAllowed(process.env.NODE_ENV) }));
 
+  // The one file served under /.well-known: the Android app's Digital Asset Links, built from env vars on each request (assetLinks.ts). 404 until they are set.
+  app.get('/.well-known/assetlinks.json', assetLinksRoute());
+
   // A page for trying real sign-in by hand while developing (Google on a desktop, later the phone). Not served anywhere else.
   if (auth && process.env.NODE_ENV === 'development') app.get('/dev/auth', (_req, res) => void res.type('html').send(AUTH_CHECK_PAGE));
 
@@ -316,9 +320,13 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
 
   if (staticDir && existsSync(join(staticDir, 'index.html'))) {
     const root = resolve(staticDir);
+    // The public account-deletion page (Google Play's Data safety form links to this address). It is a plain file, so it reads signed out and without script.
+    app.get('/delete-account', (_req, res, next) => {
+      res.set('Cache-Control', cacheControl(join(root, 'delete-account.html'), root)).sendFile('delete-account.html', { root }, err => void (err && next()));
+    });
     app.use(express.static(root, { index: false, setHeaders: (res, file) => void res.setHeader('Cache-Control', cacheControl(file, root)) }));
     // A page route (no file extension) gets the app, which draws it. A missing file (/assets/old.js) stays a 404, so a
-    // stale link never receives HTML where JavaScript was expected. /.well-known has no files, as on GitHub Pages.
+    // stale link never receives HTML where JavaScript was expected. /.well-known has no files, as on GitHub Pages, except assetlinks.json above.
     app.use((req, res, next) => {
       if ((req.method !== 'GET' && req.method !== 'HEAD') || extname(req.path) !== '' || req.path.startsWith('/.well-known/')) return next();
       res.set('Cache-Control', NO_CACHE).sendFile('index.html', { root }); // with `root`, so a checkout under a hidden folder (.claude/worktrees/...) still serves the page

@@ -14,7 +14,7 @@ cleanupOutdatedCaches();
 
 // The API shares the origin (ADR 010). A page load of an /api path, such as the sign-in callback, must reach the server, not be
 // answered with the app by the service worker.
-registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: [/^\/api\//] }));
+registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: [/^\/api\//, /^\/delete-account\/?(\?|$)/] }));
 
 // The landing page's screenshots (WebP) are left out of the install download, as only signed-out visitors see them. Cached the first
 // time they load instead, so the landing page still shows them offline. Names are hashed, so a cached copy never goes stale; the limit
