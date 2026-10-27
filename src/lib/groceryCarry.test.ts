@@ -73,6 +73,8 @@ describe('a seeded month', () => {
     expect(carriedCount(g, { '2026-09': sep, '2026-10': oct }, '2026-10')).toBe(2);
     expect(carriedCount(g, { '2026-09': sep, '2026-10': month({ rice: { have: true } }, { carried: '2026-09' }) }, '2026-10')).toBe(1);
     expect(carriedCount(g, { '2026-09': sep, '2026-10': month({}, { carried: '2026-09' }) }, '2026-10')).toBe(0);
+    // bought ahead, or bought since seeding: a purchase is not a carried tick
+    expect(carriedCount(g, { '2026-09': sep, '2026-10': month({ rice: { got: true }, kale: { have: true } }, { carried: '2026-09' }) }, '2026-10')).toBe(1);
     expect(carriedCount(g, { '2026-09': sep, '2026-10': month({ rice: { have: true } }) }, '2026-10')).toBe(0);
   });
 });
@@ -103,14 +105,10 @@ describe('the marker through the sync merge', () => {
     expect(mergeGroceryMonth3(null, month({}), seeded).week.carried).toBe('2026-09');
     expect(mergeGroceryMonth3(month({}), seeded, month({ kale: { qty: 2 } })).week.carried).toBe('2026-09');
   });
-  it('with no base, a seeded tick only one seeded side still has is cleared', () => {
-    const a = month({ kale: { have: true } }, { carried: '2026-09' }); // rice was cleared here
+  it('with no base, both sides ticks stay, a seeded one and one added after seeding', () => {
+    const a = month({ rice: { have: true }, milk: { have: true } }, { carried: '2026-09' }); // milk ticked after seeding
     const b = month({ rice: { have: true }, kale: { have: true } }, { carried: '2026-09' });
-    expect(mergeGroceryMonth3(null, b, a).week.lines).toEqual({ kale: { have: true } });
-    expect(mergeGroceryMonth3(null, a, b).week.lines).toEqual({ kale: { have: true } });
-  });
-  it('with no base and only one side seeded, both sides ticks stay', () => {
-    expect(Object.keys(mergeGroceryMonth3(null, month({ rice: { have: true } }), month({ kale: { have: true } }, { carried: '2026-09' })).week.lines).sort()).toEqual(['kale', 'rice']);
+    expect(Object.keys(mergeGroceryMonth3(null, a, b).week.lines).sort()).toEqual(['kale', 'milk', 'rice']);
   });
   it('does not invent a marker, and keeps it when the other side only changed a count', () => {
     expect(mergeGroceryMonth3(null, month({ rice: { have: true } }), month({})).week.carried).toBeUndefined();

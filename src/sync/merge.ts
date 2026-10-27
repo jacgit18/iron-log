@@ -133,7 +133,6 @@ export function mergeGroceryMonth3(baseIn: unknown, oursIn: unknown, theirsIn: u
     // prices (a pack added or removed), take prices and shares both from the side that changed them (this device when both did); the other
     // side's share edits cannot be matched to packs that moved, so they are dropped rather than put on the wrong pack.
     const o = ours.lines[id], t = theirs.lines[id], b = base?.lines[id];
-    if (!base && ours.carried && theirs.carried && !(o?.have && t?.have)) delete l.have; // both devices seeded this month before meeting: a seeded tick only one side still has was cleared on the other (ADR 079)
     if (JSON.stringify(o?.prices) !== JSON.stringify(t?.prices)) {
       const from = !base || JSON.stringify(o?.prices) !== JSON.stringify(b?.prices) ? o : t;
       delete l.prices; delete l.packShares;

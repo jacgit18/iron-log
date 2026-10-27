@@ -147,10 +147,10 @@ export function carryOver(g: Grocery, months: Record<string, GroceryMonth>, nowK
   return null;
 }
 
-/** How many carried items are still ticked in a seeded month (the To get note); 0 when the month was not seeded. */
+/** How many carried items are still ticked Have in a seeded month (the To get note); 0 when the month was not seeded. An item bought since is not counted. */
 export const carriedCount = (g: Grocery, months: Record<string, GroceryMonth>, key: string) => {
   const m = months[key]; const from = m?.carried && months[m.carried];
-  return m && from ? g.items.filter(i => haveOf(i, from) && haveOf(i, m)).length : 0;
+  return m && from ? g.items.filter(i => haveOf(i, from) && lineOf(i, m).have).length : 0;
 };
 
 /** A store's items for the To get list: the ones still to get first, the ticked ones after them, each in catalogue order. */
