@@ -96,8 +96,18 @@ describe('serving the PWA', () => {
     }
   });
 
-  it('has nothing under /.well-known, as on GitHub Pages', async () => {
-    const res = await get('/.well-known/ai-catalog.json');
+  it('has nothing under /.well-known but assetlinks.json, as on GitHub Pages', async () => {
+    for (const path of ['/.well-known/ai-catalog.json', '/.well-known/', '/.well-known/assetlinks.json.bak', '/.well-known/assetlinks.json/x']) {
+      const res = await get(path);
+      expect(res.status, path).toBe(404);
+      expect(await res.text(), path).not.toContain('Loadbearer');
+    }
+  });
+
+  it('answers /.well-known/assetlinks.json with a 404 (not the app) while its variables are unset', async () => {
+    delete process.env.ANDROID_PACKAGE_NAME;
+    delete process.env.ANDROID_SHA256_CERT_FINGERPRINTS;
+    const res = await get('/.well-known/assetlinks.json');
     expect(res.status).toBe(404);
     expect(await res.text()).not.toContain('Loadbearer');
   });
