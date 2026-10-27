@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import './Landing.css'; // the plan cards share the landing page's look
 import './Plans.css';
+import { appTitle } from '../lib/envName.js';
 
 // The public Plans page (/plans, src/lib/plansPage.ts): shown to anyone, with or without an account, and never inside the Android app
 // (main.tsx sends that to the landing page: the Play build shows no prices, ADR 065 point 8 and ADR 078). Plain text, nothing to buy here: paying happens
@@ -13,7 +14,7 @@ const PLANS = [
 ];
 
 export default function Plans() {
-  useEffect(() => { document.title = 'Plans · Loadbearer'; }, []);
+  useEffect(() => { document.title = `Plans · ${appTitle(window.location.hostname)}`; }, []);
   return (
     <main className="landing" aria-labelledby="plans-h">
       <header className="landing-head">
