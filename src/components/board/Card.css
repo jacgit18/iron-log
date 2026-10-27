@@ -52,6 +52,9 @@
   font-size: var(--fs-2xl);
   line-height: 1;
 }
+.cardmore .mvitem {
+  max-width: 100%;
+}
 .cardmore {
   border-top: 1px solid var(--line);
   padding-top: var(--sp-8);

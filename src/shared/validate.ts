@@ -126,7 +126,7 @@ const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
 const idOk = (v: unknown): v is string => typeof v === 'string' && ID_RE.test(v) && !UNSAFE.has(v);
 const SLOT_TYPES: SlotType[] = ['single', 'superset', 'either'];
 
-function normItem(it: unknown): ProgramItem | null {
+export function normItem(it: unknown): ProgramItem | null {
   if (!isObj(it) || typeof it.ex !== 'string' || !EX_RE.test(it.ex) || UNSAFE.has(it.ex)) return null;
   const w = cleanNum(it.w, validSetWeight);
   const out: ProgramItem = { ex: it.ex, ph: PH_KEYS.includes(it.ph) ? it.ph : null, w: w === undefined ? null : w };

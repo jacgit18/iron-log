@@ -1,8 +1,10 @@
 import { trackNudge } from '../lib/dayNudge.js';
 import { exInfo } from '../lib/data.js';
+import { applySplits, splitMoveState } from '../lib/boardSplit.js';
+import { applyWeekPatch } from '../lib/programMove.js';
 import { weekStartOf, ymd } from '../shared/dates.js';
-import { DAYS, autoLogs, clearForSkip, colOf, currentLayout, dayAt, defaultLogDate, injuryPreventionOn, isFinished, isPaired, isSkipped, itemKey2, moveClashes, planFix, setCardDone, setItemDone, setItemSkipped, moveRestDates, orderOf, restDatesOf, restTookOf, restsOf } from '../lib/logic.js';
-import type { FlatSlot, Logs, Week } from '../types.ts';
+import { DAYS, autoLogs, phaseOf, clearForSkip, colOf, currentLayout, dayAt, defaultLogDate, injuryPreventionOn, isFinished, isPaired, isSkipped, itemKey2, moveClashes, planFix, setCardDone, setItemDone, setItemSkipped, moveRestDates, orderOf, restDatesOf, restTookOf, restsOf } from '../lib/logic.js';
+import type { FlatSlot, Logs, SplitCard, Week } from '../types.ts';
 import type { BoardSlice, Flag, OrderNote, OrderState, StoreGet, StoreSet } from './types.ts';
 
 // Write a day order and rest days onto a week (the normal order is stored as no order). each rest day keeps its date (the first rest keeps the first date).
@@ -183,5 +185,36 @@ export const boardSlice = (set: StoreSet, get: StoreGet, flag: Flag): BoardSlice
     const warn = lines.length > 0 && injuryPreventionOn(cfg);
     set({ moveNote: warn ? { batch, fromShown, to: day, week: get().weekKey(), lines } : null });
     if (!warn) flag(`Moved ${cards.length} to Day ${day}`); // a heads-up is its own notice
+  },
+  // One exercise of a superset card to another day, for this week only. The card is shown without it under a new id, the exercise is a plain card of
+  // its own, and this week's ticks, skips and phases follow them (lib/boardSplit.ts). Undo takes it out of week.split and deletes the new keys.
+  moveSupersetItem(slotId, idx, day) {
+    const s = get().slotById(slotId); if (!s || s.type !== 'superset' || s.items.length < 2 || !s.items[idx]) return false;
+    const week0 = get().week; const wk = get().weekKey(); const pd = dayAt(week0, day);
+    if (pd == null) { flag('That is your rest day'); return false; }
+    if (colOf(week0, week0.moved[s.id] || s.day) === day) return false; // already on that day
+    const sfx = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    const movedId = `S-${sfx}m`; const restId = `S-${sfx}r`; const cfg = get().cfg;
+    const st = splitMoveState(week0, s.id, s.items.length, idx, movedId, restId, j => phaseOf(cfg, week0, s, j));
+    const entry = { id: movedId, from: s.id, rest: restId, k: idx, day: pd, item: structuredClone(s.items[idx]) as SplitCard['item'] };
+    if (!applySplits([s], [entry]).some(x => x.id === movedId)) return false; // the item must be one the week can show
+    const name = exInfo(cfg, s.items[idx].ex).n;
+    const ok = get().mutateWeek(w => {
+      w.split = [...(w.split || []), entry]; applyWeekPatch(w, st.patch);
+      if (w.moved[s.id]) w.moved[restId] = w.moved[s.id]; // the rest of the card stays where it was
+    });
+    if (!ok) return false;
+    set({ orderNote: null, moveNote: null });
+    get().noteRemoved('board:' + wk, `${name} to Day ${day} for this week`, () => {
+      const w = get().week;
+      if (get().weekKey() !== wk || !(w.split || []).some(x => x.id === movedId)) { flag('Could not put it back'); return false; }
+      if ((w.split || []).some(x => x.from === restId || x.from === movedId)) { flag('Put the later move back first'); return false; }
+      return get().mutateWeek(x => {
+        x.split = (x.split || []).filter(y => y.id !== movedId); if (!x.split.length) delete x.split;
+        applyWeekPatch(x, st.undo); delete x.moved[restId]; delete x.moved[movedId];
+      });
+    });
+    flag(`Moved ${name} to Day ${day}`);
+    return true;
   },
 });

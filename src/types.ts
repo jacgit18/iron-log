@@ -159,6 +159,18 @@ export interface ExtraCard {
   add?: true;
 }
 
+/** One exercise taken out of a superset card for this week and put on another day (Board > a superset card's ⋯ > Move <exercise>). The
+ *  card `from` shows without exercise `k`, as the new card `rest` (new ids, so the week's ticks, skips and phases are keyed afresh and the
+ *  program's own keys stay as they were); the exercise is the plain card `id` on `day`, with the sets and weight it had. */
+export interface SplitCard {
+  id: string;
+  from: string;
+  rest: string;
+  k: number;
+  day: number;
+  item: ProgramItem;
+}
+
 /** One week's state. Keys are card ids ("A-d1s1"), item keys ("A-d1s1#0" / "A-d1s1:0") and day numbers. */
 export interface Week {
   prog: ProgKey | null;
@@ -176,6 +188,8 @@ export interface Week {
   /** The rest days, day order and rest date of the program this week is NOT showing, so ticking rest on one program leaves the other alone. */
   stash?: Partial<Record<ProgKey, WeekLayout>>;
   extra?: ExtraCard[];
+  /** Superset exercises moved to another day for this week only; see SplitCard. */
+  split?: SplitCard[];
   /** What the week ran (ADR 022): the program it used and that program's cards, written down each time the week is saved. A week
    *  before this one is shown and counted from this, so editing or loading a program, or changing the mode, never rewrites it. */
   ran?: WeekRan;

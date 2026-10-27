@@ -48,7 +48,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
   // Only this card's part of the week and logs (lib/cardView.ts), so a tick on another card does not redraw this one.
   const week = useCardWeek(s);
   const logs = useAppStore(useShallow((st: AppState) => cardLogs(st.logs, s)));
-  const { checkCard, checkItem, setPhase, quickLog, openModal, moveSlot, skipCard, skipItem, removeExtra } = useAppStore.getState();
+  const { checkCard, checkItem, setPhase, quickLog, openModal, moveSlot, moveSupersetItem, skipCard, skipItem, removeExtra } = useAppStore.getState();
   const startHold = useTimerStore(st => st.startHold);
   const [removing, setRemoving] = useState(false); // an experiment card's Remove was pressed once
   const [more, setMore] = useState(false); // the card's less-used actions (Move to, Skip, Remove) are folded behind the ⋯ button
@@ -106,6 +106,13 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
           {!sk && <button type="button" className="btn sm ghost skipbtn" id={`skip-${s.id}`} aria-label={paired ? `${s.items.length === 2 ? 'Skip both' : 'Skip all'}: ${cardName} this week` : `Skip ${cardName} this week`} onClick={() => { skipCard(s.id); setMore(false); focusSkipped(); }}>{paired ? (s.items.length === 2 ? 'Skip both' : 'Skip all') : 'Skip'}</button>}
           {!sk && paired && s.items.map((it, idx) => !isItemSkipped(s, idx, week) && (
             <button key={idx} type="button" className="btn sm ghost skipbtn" id={`skipi-${s.id}-${idx}`} aria-label={`Skip ${exInfo(cfg, it.ex).n} this week`} onClick={() => { skipItem(s.id, idx); setMore(false); focusMore(); }}>Skip {exInfo(cfg, it.ex).n}</button>
+          ))}
+          {s.type === 'superset' && s.items.length > 1 && s.items.map((it, idx) => (
+            <select key={idx} className="mvitem" id={`mvi-${s.id}-${idx}`} aria-label={`Move ${exInfo(cfg, it.ex).n} to another day (this week)`} value=""
+              onChange={e => { moveSupersetItem(s.id, idx, Number(e.target.value)); setMore(false); }}>
+              <option value="" disabled>Move {exInfo(cfg, it.ex).n} to…</option>
+              {DAYS.map(d => <option key={d} value={d} disabled={restsOf(week).includes(d) || d === cur}>Day {d}{restsOf(week).includes(d) ? ' (rest)' : d === cur ? ' (here)' : ''}</option>)}
+            </select>
           ))}
           {s.experiment && <ArmedButton className={`btn sm ${removing ? 'danger' : 'ghost'}`} id={`rm-${s.id}`} aria-label={`Remove ${cardName} from this week`} label="Remove" armedLabel="Tap again to remove" onArmedChange={setRemoving} onConfirm={() => removeExtra(s.id)} />}
         </div>

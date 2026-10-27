@@ -256,3 +256,19 @@ describe('save-week with what the week ran', () => {
     expect(res.body.rows[0].data.done).toEqual({ 'A-d1s1': true });
   });
 });
+
+describe('a week with a superset exercise moved to another day (week.split)', () => {
+  const split = [{ id: 'S-1m', from: 'A-d1s2', rest: 'S-1r', k: 0, day: 3, item: { ex: 'squat', ph: 'hyp', w: 22.5, rx: '3×10' } }];
+  const put = (week: object, baseVersion: number | null = null) => send('commands/save-week', { clientId: 'c-split', baseVersion, input: { weekStart: WS, week } }, 'owner');
+
+  it('is stored with its sets and weight, and damaged entries are dropped by the same rules as the app', async () => {
+    const res = await put({ prog: 'A', done: {}, skipped: {}, moved: {}, ph: {}, warm: {}, split: [...split, { id: 'S-2m', from: 'A-d1s2', rest: 'S-2r', k: 0, day: 12, item: split[0]!.item }] });
+    expect(res.status).toBe(201);
+    expect(res.body.rows[0].data.split).toEqual(split);
+  });
+
+  it('a week without the field is stored as before', async () => {
+    const res = await put({ prog: 'A', done: { 'A-d1s1:0': true }, skipped: {}, moved: {}, ph: {}, warm: {} });
+    expect(res.body.rows[0].data.split).toBeUndefined();
+  });
+});
