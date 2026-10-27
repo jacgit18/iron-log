@@ -2,7 +2,7 @@ import * as settle from '../lib/grocerySettle.js';
 import { ME as SELF } from '../lib/grocerySplit.js';
 import { LS } from '../lib/storage.js';
 import {
-  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, RESERVED_STORE, UNITS, cleanCents, cleanPrices, cleanQty, emptyMonth, isReservedName, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor,
+  MAX_GROUPS, MAX_ITEMS, MAX_NOTE, MAX_PEOPLE, MAX_PERSON, MAX_STORES, MONTH_RE, RESERVED_STORE, UNITS, carryOver, cleanCents, cleanPrices, cleanQty, emptyMonth, isReservedName, lineOf, mergeGrocery, monthEmpty, monthKey, newGroceryId, newShareId, normGrocery, normGroceryData, onList, own, parseDollars, storeFor,
 } from '../lib/grocery.js';
 import { cleanShare } from '../shared/grocery.js';
 import { storeStatus } from '../lib/grocerySettle.js';
@@ -392,6 +392,15 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       if (err) return err;
       return get().setGroceryLineStore(month, id, null);
     },
+    // A new month starts with the At home ticks of the latest month that had any (ADR 079). Waits for the stored months to load, so a tick another device
+    // already wrote is seen first; the `carried` marker means it happens once, even if every tick is cleared afterwards.
+    carryGroceryTicks(key) {
+      if (!MONTH_RE.test(key) || !get().isReady()) return; // the month the screen shows as this month, so the one seeded is the one seen
+      const r = carryOver(get().grocery, get().groceryMonths, key);
+      if (!r) return;
+      mutateMonth(key, m => { r.ids.forEach(id => { m.lines[id] = { ...(m.lines[id] || {}), have: true }; }); m.carried = r.from; });
+    },
+
     // Skip everything still to get this month: each unticked item is marked as had (off the list until the 1st), as Take off the list does for one.
     // Undo takes that mark off again (a count or price typed since stays), except on one you bought since. Returns how many were skipped.
     takeGroceryAllOff(month) {
