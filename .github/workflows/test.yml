@@ -162,7 +162,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e_sync == 'true'
     runs-on: ubuntu-26.04
-    timeout-minutes: 20 # timeout-ok: the same install on a slow mirror (see e2e-shards)
+    timeout-minutes: 10 # about 4 min when the apt cache hits (232 s worst of 28 runs); a cold cache on a slow mirror can exceed this: rerun
     services:
       postgres:
         image: postgres:17
@@ -203,7 +203,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-26.04
-    timeout-minutes: 20 # timeout-ok: a slow-mirror install took 10 to 12 min on 2026-10-26 (setup 1 min, tests 2.5 min); lower once the download itself is fixed
+    timeout-minutes: 10 # about 4 min when the apt cache hits (232 s worst of 28 runs); a cold cache on a slow mirror can exceed this: rerun
     strategy:
       fail-fast: false
       matrix:
