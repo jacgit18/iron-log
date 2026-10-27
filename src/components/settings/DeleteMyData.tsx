@@ -85,7 +85,7 @@ export default function DeleteMyData() {
       {dl && <div className="actions"><button type="button" className="btn" disabled={!!exporting} onClick={() => void useAppStore.getState().downloadData()}>Export all data first</button></div>}
       {block('data', 'Erase everything in my account', 'Removes every workout, check-off, body weight, program and setting from the server, and from this device. You stay signed in with an empty account. Your other devices clear themselves the next time they sync; anything made on one that it had not sent yet is kept there under Sync, Not sent, for you to send again or discard.', 'Erase everything permanently')}
       {block('account', 'Delete my account', 'Does the above, and also deletes your account and its Google sign-in record. Signing in with the same Google account afterwards starts a new, empty account.', 'Delete my account permanently')}
-      <p className="note">Copies in the server's nightly backups are deleted automatically within 30 days. Nothing else about you is kept. {' '}<a href="/privacy.html">Privacy policy</a></p>
+      <p className="note">Copies in the server's nightly backups are deleted automatically within 30 days. Nothing else about you is kept. {' '}<a href="/privacy.html">Privacy policy</a> · <a href="/delete-account">Account deletion page</a></p>
       {problem && <p className="notice" role="alert"><b>{problem}</b></p>}
     </section>
   );
