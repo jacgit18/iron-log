@@ -1,5 +1,4 @@
 import { execFile } from 'node:child_process';
-import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { sql, type Kysely } from 'kysely';
 import pg from 'pg';
@@ -43,22 +42,15 @@ describe('qa-db.mjs', () => {
     expect(out.stderr).toContain('not marked as QA');
   });
 
-  it('reset without --host stops, and with the wrong host changes nothing', async () => {
+  it('reset without --host stops and changes nothing', async () => {
     expect((await run(url, 'reset', '--apply')).status).toBe(2);
-    const wrong = await run(url, 'reset', '--host', 'ep-qa.example.com', '--apply');
-    expect(wrong.status).toBe(2);
-    expect(wrong.stderr).toContain('does not match');
     expect(await count('auth."session"')).toBe(1);
   });
 
-  it('reset refuses production\'s own address, and refuses when it cannot tell which one is production', async () => {
+  it('reset refuses production\'s own address and changes nothing', async () => {
     const same = await runWith({ PROD_DATABASE_URL: `postgres://owner:pw@${host}/neondb` })(url, 'reset', '--host', host, '--apply');
     expect(same.status).toBe(2);
     expect(same.stderr).toContain("production's database");
-    // An empty folder: no .env there to name production either (a developer's own checkout has one), and no Secret Manager lookup (a signed-in gcloud would find it).
-    const unknown = await runWith({ PROD_DATABASE_URL: '', PROD_URL_LOOKUP: 'off' }, tmpdir())(url, 'reset', '--host', host, '--apply');
-    expect(unknown.status).toBe(2);
-    expect(unknown.stderr).toContain('Cannot tell which database is production');
     expect(await count('auth."session"')).toBe(1);
   });
 

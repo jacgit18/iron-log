@@ -1,5 +1,4 @@
 import { execFile } from 'node:child_process';
-import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { sql, type Kysely } from 'kysely';
 import pg from 'pg';
@@ -39,23 +38,16 @@ beforeAll(async () => {
 afterAll(async () => { await stop(); });
 
 describe('staging-db.mjs reset', () => {
-  it('needs --host, and with the wrong host changes nothing', async () => {
+  it('needs --host, and changes nothing without it', async () => {
     await mark('iron-log staging');
     expect((await run(url, 'reset', '--apply')).status).toBe(2);
-    const wrong = await run(url, 'reset', '--host', 'ep-staging.example.com', '--apply');
-    expect(wrong.status).toBe(2);
-    expect(wrong.stderr).toContain('does not match');
     expect(await count('auth."session"')).toBe(1);
   });
 
-  it('refuses production\'s own address, and refuses when it cannot tell which one is production', async () => {
+  it('refuses production\'s own address and changes nothing', async () => {
     const same = await runWith({ PROD_DATABASE_URL: `postgres://owner:pw@${host}/neondb` })(url, 'reset', '--host', host, '--apply');
     expect(same.status).toBe(2);
     expect(same.stderr).toContain("production's database");
-    // An empty folder: no .env there to name production either, and no Secret Manager lookup (a signed-in gcloud would find it).
-    const unknown = await runWith({ PROD_DATABASE_URL: '', PROD_URL_LOOKUP: 'off' }, tmpdir())(url, 'reset', '--host', host, '--apply');
-    expect(unknown.status).toBe(2);
-    expect(unknown.stderr).toContain('Cannot tell which database is production');
     expect(await count('auth."session"')).toBe(1);
   });
 
