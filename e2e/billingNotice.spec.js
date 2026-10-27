@@ -70,6 +70,16 @@ test.describe('the one-time billing notice', () => {
     await expect(notice(page)).toBeVisible();
   });
 
+  test('inside the Android app the Billing section shows no prices, no Subscribe buttons and no notice', async ({ page }) => {
+    await page.addInitScript(() => sessionStorage.setItem('fromAndroidApp', '1'));
+    await open(page, json(me()));
+    await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible();
+    await expect(page.getByText(/Plan:/)).toBeVisible();
+    await expect(notice(page)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Plus,/ })).toHaveCount(0);
+    await expect(page.locator('section[aria-labelledby="billing-h"]').getByText(/\$\d/)).toHaveCount(0);
+  });
+
   test('has no accessibility violations, with the notice showing', async ({ page }) => {
     await open(page, json(me()));
     const section = page.locator('section[aria-labelledby="billing-h"]');
