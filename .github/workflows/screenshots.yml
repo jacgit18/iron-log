@@ -45,7 +45,7 @@ concurrency:
 jobs:
   screenshots:
     runs-on: ubuntu-26.04
-    timeout-minutes: 20 # timeout-ok: the same install on a slow mirror took 11 min on 2026-10-26
+    timeout-minutes: 10 # about 2 min (baseline average 130 s; not re-measured since the apt cache); a cold cache on a slow mirror can exceed this: rerun
     steps:
       - uses: actions/checkout@v7
         with:
