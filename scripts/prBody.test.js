@@ -40,6 +40,10 @@ describe('inferAudience', () => {
   it('is n/a when nothing a user can see changed', () => {
     expect(inferAudience(['README.md', 'e2e/board.spec.js', 'scripts/check.mjs', '.github/workflows/test.yml', '.githooks/pre-push', 'src/lib/logic.test.js'], {}, config).audience).toBe('na');
   });
+  it('is n/a for the shared server test helpers (server/test/commandApp.ts, postgres.ts), which are not .test files', () => {
+    expect(inferAudience(['server/test/commandApp.ts', 'server/commands/logSession.test.ts'], {}, config).audience).toBe('na');
+    expect(inferAudience(['server/test/commandApp.ts', 'server/app.ts'], {}, config).audience).toBe('everyone'); // a real server change next to it still counts
+  });
   it('is n/a for a Dockerfile in a folder and a Cloud Build config of a job (parity/Dockerfile, cloudbuild-parity.yaml), not only the root ones', () => {
     expect(inferAudience(['parity/Dockerfile', 'cloudbuild-parity.yaml', 'backup/Dockerfile'], {}, config).audience).toBe('na');
   });

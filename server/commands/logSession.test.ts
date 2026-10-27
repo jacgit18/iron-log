@@ -1,25 +1,17 @@
-import type { Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
 import type { Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../app.ts';
 import type { DB } from '../db/types.ts';
-import { startTestDatabase } from '../test/postgres.ts';
+import { startCommandApp } from '../test/commandApp.ts';
 
 let db: Kysely<DB>;
 let stop: () => Promise<void>;
-let server: Server;
 let base: string;
 
 beforeAll(async () => {
-  ({ db, stop } = await startTestDatabase());
-  server = createApp({ db }).listen(0);
-  await new Promise(done => server.once('listening', done));
-  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  ({ db, base, stop } = await startCommandApp());
 }, 120_000);
 
 afterAll(async () => {
-  await new Promise<void>(done => server.close(() => done()));
   await stop?.();
 });
 
