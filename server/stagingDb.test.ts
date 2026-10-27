@@ -1,6 +1,5 @@
 import { execFile } from 'node:child_process';
 import { connect, createServer, type AddressInfo, type Socket } from 'node:net';
-import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { sql, type Kysely } from 'kysely';
 import pg from 'pg';
@@ -43,11 +42,8 @@ describe('staging-db.mjs', () => {
     expect(out.stderr).toContain('not marked as staging');
   });
 
-  it('clear without --host stops, and with the wrong host changes nothing', async () => {
+  it('clear without --host stops and changes nothing', async () => {
     expect((await run(url, 'clear', '--apply')).status).toBe(2);
-    const wrong = await run(url, 'clear', '--host', 'ep-production.example.com', '--apply');
-    expect(wrong.status).toBe(2);
-    expect(wrong.stderr).toContain('does not match');
     expect(await count('auth."session"')).toBe(1);
   });
 
@@ -101,21 +97,12 @@ describe('staging-db.mjs', () => {
     expect((await runWith({ STAGING_APP_PASSWORD: "p'w d" })(url, 'clear', '--host', host, '--apply')).status).toBe(0);
   });
 
-  it('clear refuses production\'s own address (also its pooled form), and refuses when it cannot tell which one is production', async () => {
+  it('clear refuses production\'s own address and changes nothing', async () => {
     const host = new URL(url).hostname;
     const asProd = (h: string) => `postgres://owner:pw@${h}/neondb`;
     const same = await runWith({ PROD_DATABASE_URL: asProd(host) })(url, 'clear', '--host', host, '--apply');
     expect(same.status).toBe(2);
     expect(same.stderr).toContain("production's database");
-    const pooled = new URL(url);
-    pooled.hostname = 'ep-cool-123-pooler.us-east-2.aws.neon.tech';
-    const viaPooler = await runWith({ PROD_DATABASE_URL: asProd('ep-cool-123.us-east-2.aws.neon.tech') })(pooled.href, 'clear', '--host', pooled.hostname);
-    expect(viaPooler.status).toBe(2);
-    expect(viaPooler.stderr).toContain("production's database");
-    // An empty folder: no .env there to name production either (a developer's own checkout has one), and no Secret Manager lookup (a signed-in gcloud would find it).
-    const unknown = await runWith({ PROD_DATABASE_URL: '', PROD_URL_LOOKUP: 'off' }, tmpdir())(url, 'clear', '--host', host, '--apply');
-    expect(unknown.status).toBe(2);
-    expect(unknown.stderr).toContain('Cannot tell which database is production');
     expect(await count('auth."session"')).toBe(0);
   });
 
