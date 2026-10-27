@@ -22,7 +22,8 @@ describe('android/twa-manifest.json', () => {
   it('sells nothing: no Play Billing feature', () => {
     expect(twa.features?.playBilling).toBeUndefined();
   });
-  it('keeps the package name an obvious placeholder until the owner chooses one (change this test with the name)', () => {
-    expect(twa.packageId).toBe('com.example.changeme');
+  it('uses the chosen package name and never the placeholder (change with the name, only before the first Play upload)', () => {
+    expect(twa.packageId).toBe('app.loadbearer');
+    expect(twa.packageId).not.toMatch(/^com\.example\./);
   });
 });
