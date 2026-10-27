@@ -100,10 +100,15 @@ describe('staging-db.mjs', () => {
   it('clear refuses production\'s own address and changes nothing', async () => {
     const host = new URL(url).hostname;
     const asProd = (h: string) => `postgres://owner:pw@${h}/neondb`;
+    // The earlier clears left no sessions, so put one back: a clear that got past the guard would delete it.
+    await sql`insert into auth."user" ("id","name","email","emailVerified") values ('u2','n','g@x.co',true)`.execute(db);
+    await sql`insert into auth."session" ("id","expiresAt","token","updatedAt","userId") values ('s2', now() + interval '1 day', 'tok2', now(), 'u2')`.execute(db);
     const same = await runWith({ PROD_DATABASE_URL: asProd(host) })(url, 'clear', '--host', host, '--apply');
     expect(same.status).toBe(2);
     expect(same.stderr).toContain("production's database");
-    expect(await count('auth."session"')).toBe(0);
+    expect(await count('auth."session"')).toBe(1);
+    await sql`delete from auth."session" where "id" = 's2'`.execute(db);
+    await sql`delete from auth."user" where "id" = 'u2'`.execute(db);
   });
 
   it('a failed query after the connect exits 2 ("cannot read"), not 1 ("not marked")', async () => {
