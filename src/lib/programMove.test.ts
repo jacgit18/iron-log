@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { LibraryItem, ProgramSlot } from '../types.ts';
 import { DEFAULT_CFG } from './logic.js';
-import { carryPhDef, defaultDestination, isLibKey, moveSlotId, movePreview, moveTargets, programByKey, slotSummary } from './programMove.js';
+import { carryPhDef, defaultDestination, isLibKey, moveSlotId, movePreview, moveTargets, programByKey, slotSummary, splitPhDef, splitSuperset } from './programMove.js';
 
 const cfg = { ...structuredClone(DEFAULT_CFG), progNames: { B: 'Upper' } };
 const lib = [{ id: 'q1', name: 'Mine', at: 'x', prog: { key: 'N', days: [] } }] as unknown as LibraryItem[];
@@ -86,5 +86,39 @@ describe('slotSummary', () => {
     const two = { ...card(), items: [{ ex: 'arnold', ph: 'strength' }, { ex: 'arnold', ph: 'hyp' }] } as ProgramSlot;
     expect(slotSummary(c, { ...two, type: 'superset' })).toBe(`${one} → ${one}`);
     expect(slotSummary(c, { ...two, type: 'either' })).toBe(`${one} or ${one}`);
+  });
+});
+
+describe('splitSuperset', () => {
+  const ss = (n = 2): ProgramSlot => ({ id: 'A-d1s4', sec: 'Supersets', tier: 'T1', type: 'superset', items: Array.from({ length: n }, (_, i) => ({ ex: `ex${i}`, ph: 'strength' })) }) as ProgramSlot;
+  it('takes one exercise out as a plain card with the new id; the other becomes a plain card too', () => {
+    const r = splitSuperset(ss(), 0, 'A-xnew')!;
+    expect(r.moved).toEqual({ id: 'A-xnew', sec: 'Regular', tier: 'T1', items: [{ ex: 'ex0', ph: 'strength' }] });
+    expect(r.rest).toEqual({ id: 'A-d1s4', sec: 'Regular', tier: 'T1', items: [{ ex: 'ex1', ph: 'strength' }] });
+  });
+  it('keeps a superset of three as a superset of two', () => {
+    const r = splitSuperset(ss(3), 1, 'n')!;
+    expect(r.rest.type).toBe('superset'); expect(r.rest.sec).toBe('Supersets');
+    expect(r.rest.items.map(i => i.ex)).toEqual(['ex0', 'ex2']);
+  });
+  it('refuses a plain card, an either/or card and a position that is not there', () => {
+    expect(splitSuperset(card(), 0, 'n')).toBeNull();
+    expect(splitSuperset({ ...ss(), type: 'either' }, 0, 'n')).toBeNull();
+    expect(splitSuperset(ss(), 5, 'n')).toBeNull();
+  });
+  it('does not change the card it was given', () => {
+    const o = ss(); splitSuperset(o, 0, 'n'); expect(o).toEqual(ss());
+  });
+});
+
+describe('splitPhDef', () => {
+  it('moves the leaving exercise\'s default to the new id and shifts the later ones up', () => {
+    const r = splitPhDef({ 'A-d1s4:0': 'iso', 'A-d1s4:1': 'hyp', 'A-d1s4:2': 'strength', 'other:0': 'iso' }, 'A-d1s4', 3, 0, 'new');
+    expect(r.set).toEqual({ 'new:0': 'iso', 'A-d1s4:0': 'hyp', 'A-d1s4:1': 'strength' });
+    expect(r.del).toEqual(['A-d1s4:0', 'A-d1s4:1', 'A-d1s4:2']);
+    expect(r.before).toEqual({ 'A-d1s4:0': 'iso', 'A-d1s4:1': 'hyp', 'A-d1s4:2': 'strength' });
+  });
+  it('leaves out exercises with no saved default', () => {
+    expect(splitPhDef({ 'c:1': 'iso' }, 'c', 2, 1, 'n').set).toEqual({ 'n:0': 'iso' });
   });
 });

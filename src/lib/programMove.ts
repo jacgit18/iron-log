@@ -72,3 +72,35 @@ export function carryPhDef(phDef: Record<string, PhaseKey | null>, oldId: string
   }
   return out;
 }
+
+// Taking one exercise out of a superset and putting it on another day (Program tab > the exercise's own Move to day). Supersets only: an
+// either/or card is one choice, so it moves whole. The exercise becomes a card of its own with a new id; the card it left keeps its id,
+// and a superset left with one exercise becomes a plain card. Both move out of the "Supersets" section, which now holds neither.
+export interface SupersetSplit { rest: ProgramSlot; moved: ProgramSlot }
+
+export function splitSuperset(slot: ProgramSlot, k: number, newId: string): SupersetSplit | null {
+  if (slot.type !== 'superset' || slot.items.length < 2 || !slot.items[k]) return null;
+  const plain = (sec?: string) => (sec === 'Supersets' ? 'Regular' : sec);
+  const rest: ProgramSlot = { ...structuredClone(slot), items: slot.items.filter((_, i) => i !== k).map(it => structuredClone(it)) };
+  if (rest.items.length === 1) { delete rest.type; if (rest.sec) rest.sec = plain(rest.sec); }
+  const moved: ProgramSlot = { id: newId, items: [structuredClone(slot.items[k]!)] };
+  if (slot.sec) moved.sec = plain(slot.sec);
+  if (slot.tier) moved.tier = slot.tier;
+  if (slot.from) moved.from = slot.from;
+  return { rest, moved };
+}
+
+// Phase defaults are keyed `<card id>:<position>`, so when an exercise leaves, the ones after it shift up and the moved one gets its new
+// id. `del` lists every old key of the card; `set` is what to write. `before` is the old values, so Undo can restore them.
+export function splitPhDef(phDef: Record<string, PhaseKey | null>, oldId: string, count: number, k: number, newId: string) {
+  const del: string[] = []; const set: Record<string, PhaseKey | null> = {}; const before: Record<string, PhaseKey | null> = {};
+  for (let j = 0; j < count; j++) {
+    const key = itemKey({ id: oldId }, j); const v = phDef[key];
+    del.push(key);
+    if (v) before[key] = v;
+    if (!v) continue;
+    if (j === k) set[itemKey({ id: newId }, 0)] = v;
+    else set[itemKey({ id: oldId }, j > k ? j - 1 : j)] = v;
+  }
+  return { del, set, before };
+}
