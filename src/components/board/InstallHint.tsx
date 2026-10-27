@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useWaitingForSignIn } from '../../hooks/useInstallHint.js';
+import { useWaitingForSignIn } from '../../lib/installHintState.js';
 import { usePwa, install, isIOS } from '../../lib/pwa.js';
 import { showInstallHint, installHintDismissed, dismissInstallHint } from '../../lib/installHint.js';
 import './InstallHint.css';

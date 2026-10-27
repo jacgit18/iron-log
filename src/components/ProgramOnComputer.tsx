@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { isTouchScreen } from '../lib/revealField.js';
 import { CARD_TEXT, COPIED_LABEL, COPY_FAILED, SEND_LABEL, dismissProgramCard, programCardDismissed, sendLink, showProgramCard, type SendOutcome } from '../lib/programOnComputer.js';
-import { useInstallHintShowing, useWaitingForSignIn } from '../hooks/useInstallHint.js';
+import { useInstallHintShowing, useWaitingForSignIn } from '../lib/installHintState.js';
 import Icon from './Icon.js';
 import './ProgramOnComputer.css';
 
