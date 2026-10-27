@@ -80,9 +80,53 @@ describe('the policy and the system agree', () => {
     expect(text).toMatch(/Push alerts: your device’s address and keys[^.]*turn the alerts off[^.]*erase your data or delete your account/);
   });
 
+  it('the deletion page says what the app and the policy say', () => {
+    const page = read('public/delete-account.html');
+    const words = page.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+    // The same operator and contact as the policy and the terms, and the page names the app.
+    expect(page).toContain('mailto:hello@loadbearer.app');
+    expect(page).toContain('Joshua Carpentier');
+    expect(words).toContain('Loadbearer');
+    // The in-app path: the group title and the buttons are the ones Settings draws, and the typed word is the one the API wants.
+    const settings = read('src/components/settings/Settings.tsx');
+    const panel = read('src/components/settings/DeleteMyData.tsx');
+    expect(settings).toContain('title="Erase & delete"');
+    expect(panel).toContain('Delete my account permanently');
+    expect(panel).toContain('Erase everything in my account');
+    expect(panel).toContain('Export all data first');
+    expect(words).toContain('Erase & delete');
+    expect(words).toContain('Delete my account permanently');
+    expect(words).toContain('Erase everything in my account');
+    expect(words).toContain('Export all data first');
+    expect(read('server/commands/account.ts')).toContain("DELETE_WORD = 'DELETE'");
+    expect(read('server/commands/account.ts')).toContain("ERASE_WORD = 'ERASE'");
+    expect(words).toMatch(/type DELETE and tap/);
+    expect(words).toMatch(/type ERASE/);
+    // Retention is the policy's: backups 30 days, logs about 30 days, messages to us 24 months, and the answer time is one month.
+    expect(words).toMatch(/Nightly backups of the service Up to 30 days/);
+    expect(words).toContain('within 30 days');
+    expect(words).toMatch(/Platform logs and error reports About 30 days/);
+    expect(words).toContain('no longer than 24 months');
+    expect(words).toContain('We answer within one month');
+    expect(text).toContain('24 months');
+    expect(text).toContain('within one month');
+  });
+
+  it('serves the deletion page at /delete-account, past the service worker and the preview server', () => {
+    expect(read('server/app.ts')).toMatch(/app\.get\('\/delete-account'[\s\S]*sendFile\('delete-account\.html'/);
+    // An installed app's worker would otherwise answer a visit to the extensionless address with the app.
+    // Workbox tests the denylist against pathname + search, so the query string and a trailing slash must be let through too.
+    const line = read('src/sw.ts').split('\n').find(l => l.includes('denylist:')) ?? '';
+    const list = [...line.matchAll(/(?<=[\[,]\s)\/(.+?)\/(?=[,\]])/g)].map(m => new RegExp(m[1]!));
+    const denied = (path: string) => list.some(re => re.test(path));
+    for (const path of ['/delete-account', '/delete-account?from=play', '/delete-account/', '/delete-account/?a=1']) expect(denied(path), path).toBe(true);
+    for (const path of ['/', '/delete-accounts', '/delete-account.html', '/board']) expect(denied(path), path).toBe(false);
+    expect(read('vite.config.js')).toContain('deleteAccountPage()');
+  });
+
   it('the pages link to each other and carry a date and version', () => {
     expect(policy).toContain('href="terms.html"');
     expect(read('public/terms.html')).toContain('href="privacy.html"');
-    for (const page of [policy, read('public/terms.html')]) expect(page).toMatch(/Last updated: \d+ \w+ \d{4} · Version \d+\.\d+/);
+    for (const page of [policy, read('public/terms.html'), read('public/delete-account.html')]) expect(page).toMatch(/Last updated: \d+ \w+ \d{4} · Version \d+\.\d+/);
   });
 });

@@ -66,6 +66,17 @@ function checkReferencedAssets() {
   };
 }
 
+// The server answers /delete-account with public/delete-account.html (server/app.ts). The dev and preview servers would hand out the
+// app's index.html for that extensionless path, so they map it to the same file and the e2e test reaches the address Google Play links to.
+function deleteAccountPage() {
+  const rewrite = (req, _res, next) => { if (/^\/delete-account(\?|$)/.test(req.url)) req.url = req.url.replace('/delete-account', '/delete-account.html'); next(); };
+  return {
+    name: 'delete-account-page',
+    configureServer: server => { server.middlewares.use(rewrite); },
+    configurePreviewServer: server => { server.middlewares.use(rewrite); },
+  };
+}
+
 // The dev and preview servers answer any unknown path with the app's index.html, so a request for
 // /.well-known/ai-catalog.json (Lighthouse's agentic audit) got HTML and failed as malformed. There's no such
 // file, so say so with a 404, the same as GitHub Pages does. The same goes for a built file under /assets/ that is not in dist: the
@@ -128,6 +139,7 @@ export default defineConfig({
   plugins: [
     react(),
     preloadTitleFont(),
+    deleteAccountPage(),
     inlineEntryCss(),
     noWellKnownFallback(),
     checkReferencedAssets(),
