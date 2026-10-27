@@ -9,6 +9,7 @@ import { POOL_OPTIONS } from '../db/poolOptions.ts';
 import { pinSslMode } from '../db/sslMode.ts';
 import { encryptedAdapter } from './encryptedAdapter.ts';
 import { otpHasher } from './otpHash.ts';
+import { qaMarkReader, qaPersonas } from './qaPersonas.ts';
 import { createPiiCrypto, parsePiiKey } from './piiCrypto.ts';
 import { CODE_MINUTES, perAddressLimit, RESEND_TEST_FROM, resendSender, type SendCode } from './otpEmail.ts';
 
@@ -39,6 +40,8 @@ export interface AuthConfig {
   piiKey?: Buffer;
   /** False once scripts/encrypt-users.mjs has sealed every row (PII_PLAINTEXT_DONE=true): lookups then stop matching plaintext emails. */
   piiMatchPlaintext?: boolean;
+  /** QA_PERSONAS=true (set by the deploy script for the QA service only): an admin may switch to a seeded test account (qaPersonas.ts). Also needs the QA mark on the database. */
+  qaPersonas?: boolean;
 }
 
 export const SESSION_DAYS = 30;
@@ -164,7 +167,9 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
         return ctx.json({ success: true });
       }),
     },
-    plugins: config.sendCode
+    plugins: [
+      ...(config.qaPersonas ? [qaPersonas({ admins: config.capExempt ?? new Set<string>(), pool })] : []),
+      ...(config.sendCode
       ? [
           emailOTP({
             otpLength: 6,
@@ -186,7 +191,8 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
             },
           }),
         ]
-      : [],
+      : []),
+    ],
     // Only this origin may call the auth routes with a cookie.
     trustedOrigins: [origin.origin],
     disabledPaths: unusedAuthPaths(config.testSignIn === true),
@@ -196,7 +202,10 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
   // What the sign-in screen may offer a signed-out visitor (GET /api/auth-options). The server enforces owner-only on its own (the hook
   // above); this only lets the app hide a form that would not send a code. `open` is true once EMAIL_CODE_OPEN=true.
   const emailCode = { on: config.sendCode !== undefined, open: config.sendCode !== undefined && config.emailCodeAdminsOnly !== true };
-  return Object.assign(auth, { pool, emailCode });
+  // GET /api/auth-options says whether the QA test accounts exist here: the setting is on and the database carries the QA mark.
+  const isQa = qaMarkReader(pool);
+  const qaPersonasOn = async () => config.qaPersonas === true && (await isQa());
+  return Object.assign(auth, { pool, emailCode, qaPersonasOn });
 }
 
 export type Auth = ReturnType<typeof createAuth>;
@@ -248,6 +257,6 @@ export function authConfigFrom(env: NodeJS.ProcessEnv): AuthSetup {
   if (reasons.length) return { enabled: false, reasons };
   return {
     enabled: true,
-    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, emailCodeAdminsOnly: env.EMAIL_CODE_OPEN !== 'true', signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS), piiKey, piiMatchPlaintext: env.PII_PLAINTEXT_DONE !== 'true' },
+    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, emailCodeAdminsOnly: env.EMAIL_CODE_OPEN !== 'true', signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS), piiKey, piiMatchPlaintext: env.PII_PLAINTEXT_DONE !== 'true', qaPersonas: env.QA_PERSONAS === 'true' },
   };
 }
