@@ -10,12 +10,13 @@ import LegalLinks from './LegalLinks.js';
 
 // What someone sees before they have an account here (src/lib/gate.ts decides): what the app is, and the way in. It replaces the app
 // entirely; nothing of the app is mounted behind it. Plain words, no tracking, and a clear note that signing in creates the account.
-// The plans as shown to visitors. Plus is users.plan 'paid' (the stored value keeps its name; the shown name is Plus, so a higher tier can sit above it later).
+// The plans as shown to visitors. Plus is users.plan 'paid' (the stored value keeps its name; the shown name is Plus). Pro is the planned higher tier with AI: shown so people know, not for sale, no stored value yet.
 // The amounts must match the two Stripe prices (STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY); Stripe, not this text, is what is charged.
 const PLANS = [
   { name: 'Beta', price: 'Free during the beta', limits: 'Everything below, no caps', features: 'All of Free and Plus while the beta lasts' },
   { name: 'Free', price: '$0', limits: '7 daily backups kept in your browser', features: 'The weekly board, logging, programs, progress, timers, sync across devices, export and delete' },
   { name: 'Plus', price: '$5.99 a month, or $49.99 a year', limits: '30 daily backups kept on your account', features: 'Everything in Free, plus automatic off-device backups you can restore from' },
+  { name: 'Pro', price: 'Coming later, not priced yet', limits: 'A monthly AI allowance, to be set', features: 'Everything in Plus, plus AI features. Not available yet: a beta test comes first, to see how much people want it' },
 ];
 
 const FEATURES = [
