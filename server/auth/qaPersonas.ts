@@ -56,9 +56,10 @@ export function qaPersonas(config: QaPersonasConfig): BetterAuthPlugin {
         if (!(await isQa())) throw notFound();
         const session = ctx.context.session;
         const hasReturn = !!(await ctx.getSignedCookie(ctx.context.createAuthCookie(ADMIN_COOKIE).name, ctx.context.secret));
-        // Someone already switched has no admin session of their own, only the way back; they may see where they are, not switch again.
-        if (!isAdminSession(session) && !hasReturn) throw new APIError('FORBIDDEN', { message: 'Not allowed' });
         const current = PERSONAS.find(p => personaAuthId(p.id) === session.user.id)?.id ?? null;
+        // Someone already switched has no admin session of their own, only the way back; they may see where they are, not switch again. The way back
+        // counts only for a test account's session: the cookie is signed over its value, so any signed cookie value could be copied into it.
+        if (!isAdminSession(session) && !(hasReturn && current)) throw new APIError('FORBIDDEN', { message: 'Not allowed' });
         return ctx.json({
           ok: true,
           current,
@@ -92,9 +93,11 @@ export function qaPersonas(config: QaPersonasConfig): BetterAuthPlugin {
         if (!token) throw new APIError('BAD_REQUEST', { message: 'You are not switched to a test account' });
         const admin = await ctx.context.internalAdapter.findSession(token);
         // The kept session must still exist, still be an admin's, and the current session must be one of the test accounts.
-        if (!admin || !isAdminSession(admin) || !PERSONAS.some(p => personaAuthId(p.id) === ctx.context.session.user.id)) throw new APIError('FORBIDDEN', { message: 'Not allowed' });
+        if (!admin || !isAdminSession(admin) || admin.session.expiresAt <= new Date() || !PERSONAS.some(p => personaAuthId(p.id) === ctx.context.session.user.id)) throw new APIError('FORBIDDEN', { message: 'Not allowed' });
         await ctx.context.internalAdapter.deleteSession(ctx.context.session.session.token);
-        await setSessionCookie(ctx, admin, true);
+        // false: the admin's own session goes back as the usual 30-day cookie. The switch set the "don't remember" cookie for the test account's one hour; it goes too.
+        await setSessionCookie(ctx, admin, false);
+        expireCookie(ctx, ctx.context.authCookies.dontRememberToken);
         expireCookie(ctx, adminCookie);
         return ctx.json({ ok: true });
       }),

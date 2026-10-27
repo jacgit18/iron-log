@@ -166,6 +166,37 @@ describe('switching and returning', () => {
     expect(await me(base, jar)).toBe(ADMIN);
   });
 
+  it('puts the admin\'s own session back as the usual long-lived cookie, with no "don\'t remember" left over (code review, 2026-10-27)', async () => {
+    const { base } = await serve();
+    await seedPersona('lifetime');
+    const jar = await signUp(base, ADMIN);
+    await call(base, jar, 'POST', '/qa/personas/switch', { id: 'lifetime' });
+    const res = await call(base, jar, 'POST', '/qa/personas/return');
+    const set = res.headers.getSetCookie();
+    const session = set.find(c => /session_token=/.test(c))!;
+    expect(session).toMatch(/Max-Age=\d{6,}/i); // about 30 days, not a browser-session cookie
+    expect(set.some(c => /dont_remember=true/.test(c))).toBe(false);
+    expect(jar.has('dont_remember')).toBe(false);
+  });
+
+  it('does not show the list to a non-admin who copies a signed cookie into admin_session (code review, 2026-10-27)', async () => {
+    const { base } = await serve();
+    const stranger = await signUp(base, 'stranger@example.com');
+    const own = (stranger as unknown as { c: Map<string, string> }).c;
+    const token = [...own].find(([k]) => k.includes('session_token'))![1];
+    own.set('better-auth.admin_session', token);
+    expect((await call(base, stranger, 'GET', '/qa/personas')).status).toBe(403);
+  });
+
+  it('refuses to return to an admin session that has expired (code review, 2026-10-27)', async () => {
+    const { base } = await serve();
+    await seedPersona('founder');
+    const jar = await signUp(base, ADMIN);
+    await call(base, jar, 'POST', '/qa/personas/switch', { id: 'founder' });
+    await sql`update auth."session" set "expiresAt" = now() - interval '1 minute' where "userId" in (select id from auth."user" where email = ${ADMIN})`.execute(db);
+    expect((await call(base, jar, 'POST', '/qa/personas/return')).status).toBe(403);
+  });
+
   it('gives the test account a session of about an hour, not 30 days', async () => {
     const { base } = await serve();
     await seedPersona('lifetime');
