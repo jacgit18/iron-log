@@ -80,8 +80,8 @@ test.describe('Billing section', () => {
     expect(page.url()).not.toContain('billing=');
   });
 
-  test('is not drawn for a non-admin, nor when the server has billing off', async ({ page }) => {
-    await open(page, meWith({ isAdmin: false }, { available: false }));
+  test('is not drawn for a non-admin, even with billing on', async ({ page }) => {
+    await open(page, meWith({ isAdmin: false }));
     await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toHaveCount(0);
   });
