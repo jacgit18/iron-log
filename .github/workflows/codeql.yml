@@ -22,7 +22,7 @@ concurrency:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 15 # timeout-ok: CodeQL database build plus analysis; first run is measured and this is lowered to about 2x it
+    timeout-minutes: 6 # first run took 1m33s; about 4x because one run is a thin sample
     permissions:
       contents: read
       security-events: write
