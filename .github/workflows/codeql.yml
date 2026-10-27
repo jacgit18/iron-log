@@ -1,0 +1,37 @@
+name: CodeQL
+
+# Static code scanning for the app's TypeScript and JavaScript (src/, server/, scripts/). Results show under Security, Code scanning.
+# It runs on pull requests to main, on pushes to main and weekly, so a query added to CodeQL after a merge still reports on old code.
+# It is not a required check and reads no secrets. Free for a public repository.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '41 5 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15 # timeout-ok: CodeQL database build plus analysis; first run is measured and this is lowered to about 2x it
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript
