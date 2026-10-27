@@ -685,6 +685,7 @@ test.describe('Delete my data', () => {
     const del = panel(page).getByRole('button', { name: 'Delete my account permanently' });
     await expect(erase).toBeDisabled();
     await expect(del).toBeDisabled();
+    await expect(panel(page).getByRole('link', { name: 'Account deletion page' })).toHaveAttribute('href', '/delete-account'); // the public page, for a reader who wants the same steps outside the app
     await panel(page).getByLabel(/Type ERASE/).fill('erase');
     await expect(erase).toBeDisabled(); // not the exact word
     await panel(page).getByLabel(/Type ERASE/).fill('ERASE');
@@ -791,7 +792,7 @@ test.describe('the landing page', () => {
     await expect(page.getByText('creates your account the first time')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Terms of Use' })).toHaveAttribute('href', '/terms.html');
     await expect(page.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy.html');
-    await expect(page.getByText('aged 16 and over')).toBeVisible();
+    await expect(page.getByText('aged 18 and over')).toBeVisible();
     await expect(page.locator('#tab-board, #tab-settings, #chk-A-d1s1')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /development user/i })).toHaveCount(0); // the dev-only skip button is not in a production build
     const { violations } = await scan(page);

@@ -32,8 +32,8 @@ describe('the policy and the system agree', () => {
       expect(page).toContain('Joshua Carpentier');
       expect(page).toContain('mailto:hello@loadbearer.app');
     }
-    expect(text).toContain('16 and over');
-    expect(terms).toContain('16 years old');
+    expect(text).toContain('18 and over');
+    expect(terms).toContain('18 years old');
   });
 
   it('the emailed sign-in code wording matches the code rules and names Resend', () => {
@@ -78,6 +78,11 @@ describe('the policy and the system agree', () => {
     // "sign out": the Sign out button takes this phone off the server first, while still signed in (PR 6).
     expect(read('src/components/settings/AccountPanel.tsx')).toMatch(/await disablePush\(\)[^\n]*\n\s*const done = await account\.signOut\(\)/);
     expect(text).toMatch(/Push alerts: your device’s address and keys[^.]*turn the alerts off[^.]*erase your data or delete your account/);
+  });
+
+  it('the policy and Settings link the public deletion page', () => {
+    expect(policy).toContain('href="/delete-account"');
+    expect(read('src/components/settings/DeleteMyData.tsx')).toContain('href="/delete-account"');
   });
 
   it('the deletion page says what the app and the policy say', () => {
