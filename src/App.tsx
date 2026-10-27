@@ -16,6 +16,7 @@ import UpdateBanner from './components/UpdateBanner.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
+import { appTitle } from './lib/envName.js';
 import { lazyTab, mapChunkError } from './lib/lazyTab.js';
 import { renewPush } from './lib/pushClient.js';
 import { useWaterReminder } from './hooks/useWaterReminder.js';
@@ -57,6 +58,8 @@ function Modal() {
 
 const TABS: [string, string, ComponentType][] = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
 
+const APP_TITLE = appTitle(window.location.hostname); // "Loadbearer - QA" on the QA host, "Loadbearer - Staging" on staging
+
 export default function App() {
   const tab = useAppStore(s => s.tab);
   const saveFlag = useAppStore(s => s.saveFlag);
@@ -78,7 +81,7 @@ export default function App() {
   const tabs = badgeName === null && !badgePending ? TABS : TABS.filter(([k]) => k !== 'settings');
   const tabDrawn = tabs.some(([k]) => k === tab); // false on Settings reached through the badge
   const label = TABS.find(([k]) => k === tab)![1];
-  useEffect(() => { document.title = `${label} · Loadbearer`; }, [label]);
+  useEffect(() => { document.title = `${label} · ${APP_TITLE}`; }, [label]);
 
   // Tabs pattern: arrows / Home / End move between tabs and select them.
   const onTabKey = (e: KeyboardEvent) => {
@@ -106,7 +109,7 @@ export default function App() {
       <a className="skip" href="#view">Skip to content</a>
       <div className="wrap">
         <header className="top">
-          <h1><button type="button" className="brandlink" aria-current={tab === 'board' ? 'page' : undefined} onClick={() => { setTab('board'); window.scrollTo({ top: 0 }); }}>Loadbearer</button></h1>
+          <h1><button type="button" className="brandlink" aria-current={tab === 'board' ? 'page' : undefined} onClick={() => { setTab('board'); window.scrollTo({ top: 0 }); }}>{APP_TITLE}</button></h1>
           <div className="topact">
             <button type="button" className="btn ghost helpbtn" id="help-btn" onClick={() => openModal({ type: 'help' })}>Help</button>
             <ThemeButton />
