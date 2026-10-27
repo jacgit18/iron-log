@@ -39,6 +39,13 @@ test('Mark paid settles a row without changing its amount, Undo takes it back, a
   await expect(tile(page, 'Still owed to you')).toHaveText('$8.33');
 });
 
+test('Not paid on a person marked Share already paid makes the row owe again', async ({ page }) => {
+  await seed(page);
+  await btn(page, 'Not paid').click();
+  await expect(row(page, 'Mom owes you')).toContainText('$8.33');
+  await expect(tile(page, 'Still owed to you')).toHaveText('$16.66');
+});
+
 test('when Mom paid, you can mark yours as sent, a row between others can be marked, and changing who paid starts the marks over', async ({ page }) => {
   await seed(page);
   await split(page).getByLabel("Who paid at BJ's").selectOption('mom');
