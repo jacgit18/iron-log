@@ -48,7 +48,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
             <span className="note"> Development builds only, and the way in without Google here. Needs the API running; the real sign-in is the button above.</span>
           </p>
         )}
-        <p className="landing-fine"><LegalLinks /> Free during the beta. For people aged 16 and over.</p>
+        <p className="landing-fine"><LegalLinks /> Free during the beta. For people aged 18 and over.</p>
       </section>
 
       <section className="landing-shot" aria-label="A look at the board">
