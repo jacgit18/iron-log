@@ -47,12 +47,15 @@ test('a typed count goes back to one price, and something that is not a price is
   await expect(page.getByRole('button', { name: /^Remove .* from Beef$/ })).toHaveCount(0);
 });
 
-test('the single price box is empty while each one has its own price, so the catalogue price is not mistaken for it', async ({ page }) => {
+test('the single price box is empty and off while each one has its own price, so the catalogue price is not mistaken for it and typing cannot wipe the packs', async ({ page }) => {
   await open(page);
   await addBeef(page, '9');
   await expect(page.getByLabel('Price each of Beef, dollars')).toHaveValue('9.00');
   await addPrice(page, '8.99 10.49');
   await expect(page.getByLabel('Price each of Beef, dollars')).toHaveValue('');
+  await expect(page.getByLabel('Price each of Beef, dollars')).toBeDisabled(); // typing there cannot wipe the packs
+  await expect(page.locator('.gmore')).toContainText('Each pack has its own price');
+  await expect(page.getByRole('button', { name: /^Remove .* from Beef$/ })).toHaveCount(2);
   await expect(page.getByLabel('Total for Beef')).toHaveText('$19.48');
 });
 
