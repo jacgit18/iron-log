@@ -18,6 +18,7 @@ beforeAll(async () => {
   mkdirSync(join(dir, 'assets'));
   mkdirSync(join(dir, 'icons'));
   writeFileSync(join(dir, 'index.html'), '<!doctype html><title>Loadbearer</title>');
+  writeFileSync(join(dir, 'delete-account.html'), '<!doctype html><title>Delete your account</title>');
   writeFileSync(join(dir, 'sw.js'), '// service worker');
   writeFileSync(join(dir, 'workbox-2fbc6a65.js'), '// workbox');
   writeFileSync(join(dir, 'manifest.webmanifest'), '{}');
@@ -113,6 +114,37 @@ describe('serving the PWA', () => {
 
   it('does not answer a write to a page route with the app', async () => {
     expect((await get('/board', { method: 'POST' })).status).toBe(404);
+  });
+});
+
+describe('the public account-deletion page', () => {
+  it.each(['/delete-account', '/delete-account/', '/delete-account.html'])('serves %s as the page itself, not the app, with no sign-in', async path => {
+    const res = await get(path);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const body = await res.text();
+    expect(body).toContain('Delete your account');
+    expect(body).not.toContain('<title>Loadbearer</title>');
+  });
+
+  it('answers HEAD and a query string, and leaves a write alone', async () => {
+    expect((await get('/delete-account', { method: 'HEAD' })).status).toBe(200);
+    expect((await get('/delete-account?from=play')).status).toBe(200);
+    expect((await get('/delete-account', { method: 'POST' })).status).toBe(404);
+  });
+
+  it('falls through to the app, not a 500, when the page file is missing from the build', async () => {
+    const empty = mkdtempSync(join(tmpdir(), 'ironlog-nodelete-'));
+    writeFileSync(join(empty, 'index.html'), '<!doctype html><title>Loadbearer</title>');
+    const s = createApp({ staticDir: empty }).listen(0);
+    await new Promise(done => s.once('listening', done));
+    try {
+      // The app answers a page route; the missing file must not turn into a 500.
+      expect((await fetch(`http://127.0.0.1:${(s.address() as AddressInfo).port}/delete-account`)).status).toBe(200);
+    } finally {
+      await new Promise<void>(done => s.close(() => done()));
+      rmSync(empty, { recursive: true, force: true });
+    }
   });
 });
 

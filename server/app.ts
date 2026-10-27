@@ -320,6 +320,10 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
 
   if (staticDir && existsSync(join(staticDir, 'index.html'))) {
     const root = resolve(staticDir);
+    // The public account-deletion page (Google Play's Data safety form links to this address). It is a plain file, so it reads signed out and without script.
+    app.get('/delete-account', (_req, res, next) => {
+      res.set('Cache-Control', cacheControl(join(root, 'delete-account.html'), root)).sendFile('delete-account.html', { root }, err => void (err && next()));
+    });
     app.use(express.static(root, { index: false, setHeaders: (res, file) => void res.setHeader('Cache-Control', cacheControl(file, root)) }));
     // A page route (no file extension) gets the app, which draws it. A missing file (/assets/old.js) stays a 404, so a
     // stale link never receives HTML where JavaScript was expected. /.well-known has no files, as on GitHub Pages, except assetlinks.json above.
