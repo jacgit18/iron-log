@@ -48,3 +48,20 @@ docs/images/
 
 # Output of npm run coverage
 coverage/
+
+# Android app (Bubblewrap/Gradle output and signing keys; twa-manifest.json and README.md stay tracked)
+android/*.keystore
+android/*.jks
+android/*.aab
+android/*.apk
+android/app/
+android/.gradle/
+android/build/
+android/local.properties
+android/gradle/
+android/gradlew
+android/gradlew.bat
+android/*.gradle
+android/gradle.properties
+android/manifest-checksum.txt
+android/store_icon.png
