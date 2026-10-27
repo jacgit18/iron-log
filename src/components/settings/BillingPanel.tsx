@@ -9,7 +9,7 @@ import { useWho } from './useWho.js';
 // The Billing section (ADR 065, brief billing-stripe-subscriptions): the plan, Subscribe (Stripe's hosted Checkout) and Manage billing
 // (Stripe's hosted Customer Portal). Admin-only while Stripe is in test mode (the `billing` line in src/features.ts); it draws nothing when
 // the server has billing off. The plan itself is set by the server from Stripe's events; this only shows it and sends the browser to Stripe.
-const PLAN_NAMES: Record<string, string> = { beta: 'Beta tester', founder: 'Founder', free: 'Free', lifetime: 'Lifetime', paid: 'Supporter' };
+const PLAN_NAMES: Record<string, string> = { beta: 'Beta tester', founder: 'Founder', free: 'Free', lifetime: 'Lifetime', paid: 'Plus' };
 const dateOf = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null);
 const POLL_MS = 2000;
 const POLL_TRIES = 5;
@@ -96,8 +96,8 @@ export default function BillingPanel() {
           <div className="actions">
             {plan === 'free' && (
               <>
-                <button type="button" className="btn" disabled={busy !== null || !online} onClick={() => void go('month', () => client.billingCheckout('month'))}>{busy === 'month' ? 'Opening…' : 'Subscribe monthly'}</button>
-                <button type="button" className="btn" disabled={busy !== null || !online} onClick={() => void go('year', () => client.billingCheckout('year'))}>{busy === 'year' ? 'Opening…' : 'Subscribe yearly'}</button>
+                <button type="button" className="btn" disabled={busy !== null || !online} onClick={() => void go('month', () => client.billingCheckout('month'))}>{busy === 'month' ? 'Opening…' : 'Plus, $5.99 a month'}</button>
+                <button type="button" className="btn" disabled={busy !== null || !online} onClick={() => void go('year', () => client.billingCheckout('year'))}>{busy === 'year' ? 'Opening…' : 'Plus, $49.99 a year'}</button>
               </>
             )}
             {billing.hasCustomer && (

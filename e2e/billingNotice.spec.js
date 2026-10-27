@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-// The one-time "paid plans are here" notice (BillingNotice.tsx, src/lib/billingNotice.ts). Privacy section 14 and Terms section 2 promise it. It is drawn inside
+// The one-time "Plus is here" notice (BillingNotice.tsx, src/lib/billingNotice.ts). Privacy section 14 and Terms section 2 promise it. It is drawn inside
 // the Billing section, so it shows only to a signed-in person whose server has billing on, once per browser.
 const json = (body, status = 200) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 const me = (account = {}, billing = {}) => ({
@@ -24,7 +24,7 @@ async function open(page, answer, { toSettings = true } = {}) {
   if (toSettings) await page.locator('#account-badge').click();
 }
 
-const notice = page => page.getByText(/Paid plans are here/);
+const notice = page => page.getByText(/Plus is here/);
 
 test.describe('the one-time billing notice', () => {
   test('shows once to a signed-in account with billing on, and stays gone after Dismiss, also after a reload', async ({ page }) => {
@@ -35,7 +35,7 @@ test.describe('the one-time billing notice', () => {
     await expect(page.getByRole('link', { name: 'Read the updated Terms' })).toHaveAttribute('href', '/terms.html');
     await page.getByRole('button', { name: 'Dismiss' }).click();
     await expect(notice(page)).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Subscribe monthly' })).toBeVisible(); // the Billing section itself stays
+    await expect(page.getByRole('button', { name: 'Plus, $5.99 a month' })).toBeVisible(); // the Billing section itself stays
     await page.reload();
     await page.locator('#account-badge').click();
     await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible();

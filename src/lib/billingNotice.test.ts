@@ -31,7 +31,7 @@ describe('the one-time billing notice', () => {
   });
 
   it('says what the Terms and Privacy pages promise: paid plans exist, the app stays free, the paid benefit, and that nothing changes unless you subscribe', () => {
-    expect(BILLING_NOTICE_TEXT).toMatch(/Paid plans are here/);
+    expect(BILLING_NOTICE_TEXT).toMatch(/Plus is here/);
     expect(BILLING_NOTICE_TEXT).toMatch(/stays free/);
     expect(BILLING_NOTICE_TEXT).toMatch(/30-day backups/);
     expect(BILLING_NOTICE_TEXT).toMatch(/Nothing changes unless you subscribe/);

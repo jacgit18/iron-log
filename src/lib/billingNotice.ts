@@ -1,6 +1,6 @@
 import { LS } from './storage.js';
 
-/* ---------- The one-time "paid plans are here" notice (brief billing-go-live, ADR 065) ----------
+/* ---------- The one-time "Plus is here" notice (brief billing-go-live, ADR 065) ----------
    Privacy section 14 and Terms section 2 promise that paid plans are announced in the app. BillingPanel draws the notice only for a signed-in
    person whose server has billing on (so it never announces something that is not there); here it is shown once per browser and stays gone after Dismiss. "Once" is this browser
    only (localStorage): a new device shows it once more, and a browser that blocks storage shows it on each visit rather than failing. */
@@ -17,4 +17,4 @@ export const isBillingNoticeDismissed = (store: NoticeStore = LS): boolean => st
 /** Remembers the Dismiss. A refused write (storage full or blocked) is not an error: the notice is hidden for this visit by the caller. */
 export const dismissBillingNotice = (store: NoticeStore = LS): void => { store.set(KEY, true); };
 
-export const BILLING_NOTICE_TEXT = 'Paid plans are here. Loadbearer stays free to use. A paid plan adds 30-day backups on your account. Nothing changes unless you subscribe.';
+export const BILLING_NOTICE_TEXT = 'Plus is here. Loadbearer stays free to use. Plus ($5.99 a month or $49.99 a year) adds 30-day backups on your account. Nothing changes unless you subscribe.';

@@ -32,16 +32,16 @@ test.describe('Billing section', () => {
     await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible();
     await expect(page.getByText('Plan: Free')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Manage billing' })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Subscribe yearly' }).click();
+    await page.getByRole('button', { name: 'Plus, $49.99 a year' }).click();
     await expect(page).toHaveURL(/checkout\.stripe\.test/);
     expect(asked).toEqual({ interval: 'year' });
   });
 
-  test('a subscriber sees Supporter, the renewal date and Manage billing, which opens the Portal', async ({ page }) => {
+  test('a subscriber sees Plus, the renewal date and Manage billing, which opens the Portal', async ({ page }) => {
     await open(page, meWith({ plan: 'paid', isPaid: true }, { source: 'stripe', status: 'active', renewsAt: '2027-01-15T12:00:00.000Z', hasCustomer: true }));
     await page.route('**/api/billing/portal', json({ ok: true, url: 'https://portal.stripe.test/p/1' }));
     await page.route('https://portal.stripe.test/**', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<title>Portal stand-in</title>' }));
-    await expect(page.getByText('Plan: Supporter')).toBeVisible();
+    await expect(page.getByText('Plan: Plus')).toBeVisible();
     await expect(page.getByText(/Renews on .*2027/)).toBeVisible();
     await expect(page.getByRole('button', { name: /Subscribe/ })).toHaveCount(0);
     await page.getByRole('button', { name: 'Manage billing' }).click();
@@ -64,9 +64,9 @@ test.describe('Billing section', () => {
   test('Checkout failing says so and leaves the buttons usable', async ({ page }) => {
     await open(page, meWith());
     await page.route('**/api/billing/checkout', json({ ok: false, error: 'Billing is unavailable, try again' }, 502)); // after open(): the later route wins
-    await page.getByRole('button', { name: 'Subscribe monthly' }).click();
+    await page.getByRole('button', { name: 'Plus, $5.99 a month' }).click();
     await expect(page.getByText('Billing is unavailable, try again')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Subscribe monthly' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Plus, $5.99 a month' })).toBeEnabled();
   });
 
   test('back from Checkout, the plan is looked up again until it changes, and the address is cleaned', async ({ page }) => {
@@ -75,7 +75,7 @@ test.describe('Billing section', () => {
       calls += 1;
       return json(calls < 3 ? meWith() : meWith({ plan: 'paid', isPaid: true }, { source: 'stripe', status: 'active', renewsAt: '2027-01-15T12:00:00.000Z', hasCustomer: true }))(route);
     }, '/?billing=success');
-    await expect(page.getByText('Plan: Supporter')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Plan: Plus')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Thanks. Your plan is updated.')).toBeVisible();
     expect(page.url()).not.toContain('billing=');
   });

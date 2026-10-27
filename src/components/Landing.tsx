@@ -10,11 +10,12 @@ import LegalLinks from './LegalLinks.js';
 
 // What someone sees before they have an account here (src/lib/gate.ts decides): what the app is, and the way in. It replaces the app
 // entirely; nothing of the app is mounted behind it. Plain words, no tracking, and a clear note that signing in creates the account.
-// Placeholders until the tiers are decided; they match users.plan (beta, free, paid).
+// The plans as shown to visitors. Plus is users.plan 'paid' (the stored value keeps its name; the shown name is Plus, so a higher tier can sit above it later).
+// The amounts must match the two Stripe prices (STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY); Stripe, not this text, is what is charged.
 const PLANS = [
-  { name: 'Beta', price: 'Free during the beta', limits: 'TBD', features: 'TBD' },
-  { name: 'Free', price: 'TBD', limits: 'TBD', features: 'TBD' },
-  { name: 'Paid', price: 'TBD', limits: 'TBD', features: 'TBD' },
+  { name: 'Beta', price: 'Free during the beta', limits: 'Everything below, no caps', features: 'All of Free and Plus while the beta lasts' },
+  { name: 'Free', price: '$0', limits: '7 daily backups kept in your browser', features: 'The weekly board, logging, programs, progress, timers, sync across devices, export and delete' },
+  { name: 'Plus', price: '$5.99 a month, or $49.99 a year', limits: '30 daily backups kept on your account', features: 'Everything in Free, plus automatic off-device backups you can restore from' },
 ];
 
 const FEATURES = [
@@ -72,7 +73,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
 
       <section aria-labelledby="landing-plans">
         <h2 id="landing-plans">Plans</h2>
-        <p className="landing-fine">Nothing is decided yet beyond the beta, which is free. Everything marked TBD will be set before the beta ends.</p>
+        <p className="landing-fine">Free stays free: your data, export and delete never depend on a plan. Plus is optional, renews until you cancel, and can be cancelled any time.</p>
         <ul className="landing-plans">
           {PLANS.map(p => (
             <li key={p.name} className={`landing-plan${p.name === 'Beta' ? ' now' : ''}`}>

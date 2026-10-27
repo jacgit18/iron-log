@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Notice from '../Notice.jsx';
 import { BILLING_NOTICE_TEXT, dismissBillingNotice, isBillingNoticeDismissed } from '../../lib/billingNotice.js';
 
-// The one-time "paid plans are here" announcement (Privacy section 14, Terms section 2), drawn by BillingPanel only for a signed-in person whose
+// The one-time "Plus is here" announcement (Privacy section 14, Terms section 2), drawn by BillingPanel only for a signed-in person whose
 // server has billing on. The rules (once per browser, a blocked storage shows it each visit) are in src/lib/billingNotice.ts.
 export default function BillingNotice() {
   const [hidden, setHidden] = useState(() => isBillingNoticeDismissed()); // stays true for this visit even if the browser refused the write
