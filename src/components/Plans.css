@@ -1,0 +1,14 @@
+@layer base, components;
+@layer components {
+/* The Plans page title is the page's h1 (a page needs one), but it keeps the look of the section title it replaced (`.landing h2`): the
+   landing hero's h1 is far bigger. Same font, size and spacing as that h2, centred. */
+.landing h1.plans-title {
+  font-family: "Barlow Condensed","Barlow Condensed Fallback","Arial Narrow",system-ui,sans-serif;
+  font-size: var(--fs-4xl);
+  line-height: normal;
+  max-width: none;
+  text-align: center;
+  text-wrap: wrap;
+  margin: 56px 0 var(--sp-12);
+}
+}

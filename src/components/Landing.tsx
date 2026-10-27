@@ -3,20 +3,15 @@ import boardLight from '../assets/landing/board.webp';
 import boardDark from '../assets/landing/board-dark.webp';
 import { setDevUser } from '../sync/devUser.js';
 import { useGoogleSignIn } from '../sync/useGoogleSignIn.js';
+import { inAndroidApp } from '../lib/androidApp.js';
 import { takeAfterReload } from '../lib/afterReload.js';
+import { PLANS_PATH } from '../lib/plansPage.js';
 import './Landing.css'; // before EmailCodeSignIn, whose .emailsignin .btn rules must still win over .landing-cta .btn
 import EmailCodeSignIn from './EmailCodeSignIn.js';
 import LegalLinks from './LegalLinks.js';
 
 // What someone sees before they have an account here (src/lib/gate.ts decides): what the app is, and the way in. It replaces the app
 // entirely; nothing of the app is mounted behind it. Plain words, no tracking, and a clear note that signing in creates the account.
-// Placeholders until the tiers are decided; they match users.plan (beta, free, paid).
-const PLANS = [
-  { name: 'Beta', price: 'Free during the beta', limits: 'TBD', features: 'TBD' },
-  { name: 'Free', price: 'TBD', limits: 'TBD', features: 'TBD' },
-  { name: 'Paid', price: 'TBD', limits: 'TBD', features: 'TBD' },
-];
-
 const FEATURES = [
   { title: 'A weekly board.', text: 'One column per day, with A and B programs that rotate for you.' },
   { title: 'Targets for every lift.', text: 'Weights and reps that follow your training phase and your last session.' },
@@ -70,25 +65,10 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
         </ul>
       </section>
 
-      <section aria-labelledby="landing-plans">
-        <h2 id="landing-plans">Plans</h2>
-        <p className="landing-fine">Nothing is decided yet beyond the beta, which is free. Everything marked TBD will be set before the beta ends.</p>
-        <ul className="landing-plans">
-          {PLANS.map(p => (
-            <li key={p.name} className={`landing-plan${p.name === 'Beta' ? ' now' : ''}`}>
-              <h3>{p.name}{p.name === 'Beta' && <span className="landing-now">Now</span>}</h3>
-              <dl>
-                <dt>Price</dt><dd>{p.price}</dd>
-                <dt>Limits</dt><dd>{p.limits}</dd>
-                <dt>Features</dt><dd>{p.features}</dd>
-              </dl>
-            </li>
-          ))}
-        </ul>
-      </section>
-
       <footer className="landing-foot">
         <p>Loadbearer is a record-keeping tool, not medical advice. It uses no advertising and no tracking, and it never sells your data.</p>
+        {/* The Plans page is for the web: the Android app carries no prices and no link to them (ADR 065 point 8, ADR 078). */}
+        {!inAndroidApp() && <p><a href={PLANS_PATH}>Plans</a></p>}
       </footer>
     </main>
   );
