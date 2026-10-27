@@ -5,7 +5,7 @@
    the warning, and needs no change to the stored URLs. A URL that asks for libpq's own behaviour (`uselibpqcompat=true`), or any other mode
    (disable for the local test database, verify-full already), is left exactly as it is.
    scripts/lib/ssl-mode.mjs is the same function for the scripts and the job images (server/ may import only from src/shared, ADR 015, and an
-   image copies single plain-JavaScript files); server/db/sslMode.test.ts runs both over the same URLs so they cannot drift apart. */
+   image copies single plain-JavaScript files); scripts/sslMode.test.js runs both over the same URLs so they cannot drift apart. */
 const LIBPQ_COMPAT = /[?&]uselibpqcompat=true(?=&|$)/;
 const ALIASED_MODE = /([?&]sslmode=)(prefer|require|verify-ca)(?=&|$)/;
 

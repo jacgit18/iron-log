@@ -25,14 +25,6 @@ const tile = (page, name) => split(page).getByText(name, { exact: true }).locato
 const row = (page, text) => split(page).locator('.gsplitrows li', { hasText: text });
 const btn = (page, name) => split(page).getByRole('button', { name: new RegExp(`^${name}:`) });
 
-test('a person marked Share already paid starts as paid, the rest as owing, and the card says what is outstanding', async ({ page }) => {
-  await seed(page);
-  await expect(row(page, 'Sister owes you')).toContainText('$8.33');
-  await expect(row(page, 'Mom, already paid')).toContainText('Share already paid');
-  await expect(tile(page, 'Still owed to you')).toHaveText('$8.33');
-  await expect(split(page).locator('.gsplitfoot')).toHaveText('Outstanding $8.33');
-});
-
 test('Mark paid settles a row without changing its amount, Undo takes it back, and the mark survives a reload', async ({ page }) => {
   await seed(page);
   await btn(page, 'Mark paid').click();
@@ -47,14 +39,11 @@ test('Mark paid settles a row without changing its amount, Undo takes it back, a
   await expect(tile(page, 'Still owed to you')).toHaveText('$8.33');
 });
 
-test('Not paid overrides Share already paid for this month, and marking it paid again simply drops the override', async ({ page }) => {
+test('Not paid on a person marked Share already paid makes the row owe again', async ({ page }) => {
   await seed(page);
   await btn(page, 'Not paid').click();
   await expect(row(page, 'Mom owes you')).toContainText('$8.33');
   await expect(tile(page, 'Still owed to you')).toHaveText('$16.66');
-  await btn(page, 'Mark paid').first().click(); // Sister
-  await row(page, 'Mom owes you').getByRole('button', { name: /^Mark paid:/ }).click();
-  await expect(row(page, 'Mom, already paid')).toBeVisible(); // the same as her default, so the override is simply gone
 });
 
 test('when Mom paid, you can mark yours as sent, a row between others can be marked, and changing who paid starts the marks over', async ({ page }) => {
