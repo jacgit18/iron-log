@@ -26,6 +26,8 @@ const Daily = lazyTab(() => import('./components/daily/Daily.js'));
 const Progress = lazyTab(() => import('./components/progress/Progress.js'));
 const Editor = lazyTab(() => import('./components/program/Editor.js'));
 const Settings = lazyTab(() => import('./components/settings/Settings.js'));
+// The Program tab's "plan on a computer" tip floats above the page and draws nothing until it is due, so its chunk is fetched with the tab.
+const ProgramOnComputer = lazy(mapChunkError(() => import('./components/ProgramOnComputer.js')));
 // The sync cards (sign in, other account, upload this device's data) only exist while syncing is on, so their code (and the sync
 // planner behind it) loads only then. They draw nothing until they are needed, so waiting for the chunk moves nothing.
 const loadSyncCards = () => import('./components/SyncCards.js');
@@ -124,6 +126,7 @@ export default function App() {
         <WhenSyncing><SignInCard /></WhenSyncing>
         <WhenSyncing><OtherAccountCard /></WhenSyncing>
         <InstallHint />
+        {tab === 'program' && <ErrorBoundary where="view"><Suspense fallback={null}><ProgramOnComputer /></Suspense></ErrorBoundary>}
         <WhenSyncing><LegacyCard /></WhenSyncing>
         {/* Stays until the writes go through: a passing message isn't enough when data would be gone on reload. */}
         {unsaved.length > 0 && !syncing && (
