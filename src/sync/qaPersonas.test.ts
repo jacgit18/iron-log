@@ -3,7 +3,7 @@ import { loadPersonas, returnToAdmin, switchPersona } from './qaPersonas.js';
 import { getQa, setQa } from './qaState.js';
 
 // The three calls to the QA-only routes (brief qa-persona-picker): none throws, a failure is an answer.
-const reply = (status: number, body: unknown = {}) => vi.fn(async () => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
+const reply = (status: number, body: unknown = {}) => vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 afterEach(() => { vi.unstubAllGlobals(); setQa(undefined); });
 
 describe('loadPersonas', () => {
