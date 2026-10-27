@@ -115,7 +115,12 @@ describe('the policy and the system agree', () => {
   it('serves the deletion page at /delete-account, past the service worker and the preview server', () => {
     expect(read('server/app.ts')).toMatch(/app\.get\('\/delete-account'[\s\S]*sendFile\('delete-account\.html'/);
     // An installed app's worker would otherwise answer a visit to the extensionless address with the app.
-    expect(read('src/sw.ts')).toMatch(/denylist: \[[^\]]*\\\/delete-account\$/);
+    // Workbox tests the denylist against pathname + search, so the query string and a trailing slash must be let through too.
+    const line = read('src/sw.ts').split('\n').find(l => l.includes('denylist:')) ?? '';
+    const list = [...line.matchAll(/(?<=[\[,]\s)\/(.+?)\/(?=[,\]])/g)].map(m => new RegExp(m[1]!));
+    const denied = (path: string) => list.some(re => re.test(path));
+    for (const path of ['/delete-account', '/delete-account?from=play', '/delete-account/', '/delete-account/?a=1']) expect(denied(path), path).toBe(true);
+    for (const path of ['/', '/delete-accounts', '/delete-account.html', '/board']) expect(denied(path), path).toBe(false);
     expect(read('vite.config.js')).toContain('deleteAccountPage()');
   });
 

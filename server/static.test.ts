@@ -108,7 +108,7 @@ describe('serving the PWA', () => {
 });
 
 describe('the public account-deletion page', () => {
-  it.each(['/delete-account', '/delete-account.html'])('serves %s as the page itself, not the app, with no sign-in', async path => {
+  it.each(['/delete-account', '/delete-account/', '/delete-account.html'])('serves %s as the page itself, not the app, with no sign-in', async path => {
     const res = await get(path);
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/html');

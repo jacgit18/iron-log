@@ -23,7 +23,7 @@ test.describe('the account-deletion page', () => {
     await expect(page.getByText('Delete my account permanently').first()).toBeVisible();
     await expect(page.getByRole('cell', { name: /Nightly backups/ })).toBeVisible();
     await expect(page.getByRole('link', { name: 'hello@loadbearer.app' }).first()).toHaveAttribute('href', /^mailto:hello@loadbearer\.app/);
-    await expect(page.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', 'privacy.html');
+    await expect(page.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy.html');
     expect(await page.title()).toContain('Delete your account');
     // The page, not the app: the app's root element is absent.
     await expect(page.locator('#root')).toHaveCount(0);
