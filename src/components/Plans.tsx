@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import './Landing.css'; // the plan cards share the landing page's look
+import './Plans.css';
 
 // The public Plans page (/plans, src/lib/plansPage.ts): shown to anyone, with or without an account, and never inside the Android app
-// (main.tsx sends that to the landing page: the Play build shows no prices, ADR 065). Plain text, nothing to buy here: paying happens
+// (main.tsx sends that to the landing page: the Play build shows no prices, ADR 065 point 8 and ADR 078). Plain text, nothing to buy here: paying happens
 // after signing in.
 // Placeholders until the tiers are decided; they match users.plan (beta, free, paid).
 const PLANS = [
@@ -22,7 +23,7 @@ export default function Plans() {
 
       <section>
         <p className="landing-fine"><a href="/">Back to Loadbearer</a></p>
-        <h2 id="plans-h">Plans</h2>
+        <h1 id="plans-h" className="plans-title">Plans</h1>
         <p className="landing-fine">Nothing is decided yet beyond the beta, which is free. Everything marked TBD will be set before the beta ends.</p>
         <ul className="landing-plans">
           {PLANS.map(p => (

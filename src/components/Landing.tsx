@@ -67,7 +67,7 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
 
       <footer className="landing-foot">
         <p>Loadbearer is a record-keeping tool, not medical advice. It uses no advertising and no tracking, and it never sells your data.</p>
-        {/* The Plans page is for the web: the Android app carries no prices and no link to them (ADR 065). */}
+        {/* The Plans page is for the web: the Android app carries no prices and no link to them (ADR 065 point 8, ADR 078). */}
         {!inAndroidApp() && <p><a href={PLANS_PATH}>Plans</a></p>}
       </footer>
     </main>

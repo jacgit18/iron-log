@@ -19,11 +19,23 @@ test.describe('plans page', () => {
   test('is a public page of its own, with no app behind it', async ({ page }) => {
     await stranger(page);
     await page.goto('/plans');
-    await expect(page.getByRole('heading', { level: 2, name: 'Plans' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Plans' })).toBeVisible();
     await expect(page).toHaveTitle('Plans · Loadbearer');
     await expect(page.getByRole('tab')).toHaveCount(0);
     await expect(page.getByText('Free during the beta')).toBeVisible();
     expect(await scan(page).then(r => r.violations)).toEqual([]);
+  });
+
+  test('opens for a browser that is already signed in, without asking the server who it is', async ({ page }) => {
+    const asked = [];
+    page.on('request', r => { if (new URL(r.url()).pathname === '/api/me') asked.push(r.url()); });
+    await stranger(page);
+    await page.addInitScript(() => localStorage.setItem('ironlog:session/known', 'true')); // a browser that has been signed in before
+    await page.goto('/plans');
+    await expect(page.getByRole('heading', { level: 1, name: 'Plans' })).toBeVisible();
+    await expect(page.getByRole('tab')).toHaveCount(0); // the page, not the app
+    await expect(page.getByRole('link', { name: 'Back to Loadbearer' })).toBeVisible();
+    expect(asked).toEqual([]);
   });
 
   test('is reached from the landing page, which no longer holds the plans', async ({ page }) => {
@@ -33,7 +45,7 @@ test.describe('plans page', () => {
     await expect(page.getByRole('heading', { name: 'Plans' })).toHaveCount(0);
     await page.getByRole('link', { name: 'Plans' }).click();
     await expect(page).toHaveURL(/\/plans$/);
-    await expect(page.getByRole('heading', { level: 2, name: 'Plans' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Plans' })).toBeVisible();
     await page.getByRole('link', { name: 'Back to Loadbearer' }).click();
     await expect(page.getByRole('heading', { level: 1, name: LANDING })).toBeVisible();
   });
