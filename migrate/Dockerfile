@@ -2,12 +2,12 @@
 # OWNER login at run time only (Secret Manager, mounted by the job); the CI deployer can start it but not read that login or change the job.
 # Built by scripts/migrate-job.sh deploy (cloudbuild-migrate.yaml). dbmate is a development dependency of the app, so it is copied from a full
 # install in a build stage; the install uses the lockfile and runs no install scripts.
-FROM node:22-slim AS tools
+FROM node:26-slim AS tools
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
 
-FROM node:22-slim
+FROM node:26-slim
 ENV NODE_ENV=production
 WORKDIR /app
 COPY package.json package-lock.json ./

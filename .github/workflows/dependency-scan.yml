@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
       - name: Production dependencies have no known high or critical advisory
         run: npm audit --omit=dev --audit-level=high
       - name: Development dependencies are reported only
@@ -53,7 +53,7 @@ jobs:
             echo "::warning title=Dependency review skipped::Dependency graph is off for this repository, so GitHub's dependency review cannot run. Turn it on in Settings, Code security (also Dependabot alerts and security updates)."
           fi
       - if: steps.graph.outputs.on == 'true'
-        uses: actions/dependency-review-action@v5
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
@@ -68,7 +68,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
       - name: Vet the packages this PR adds
         env:
           BASE_REF: ${{ github.base_ref }}

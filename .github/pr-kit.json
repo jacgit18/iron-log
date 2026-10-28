@@ -1,5 +1,5 @@
 {
-  "notUserFacing": ["^docs/", "^\\.githooks/", "^e2e[\\w-]*/", "^scripts/", "^server/test/", "^tools/", "^\\.github/", "^\\.claude/", "^spike/", "^db/", "^backups?/", "\\.test\\.[jt]sx?$", "\\.md$", "^package(-lock)?\\.json$", "^tsconfig[\\w.]*\\.json$", "^playwright[\\w.]*\\.config\\.", "(^|/)Dockerfile$", "^cloudbuild[\\w-]*\\.yaml$", "^docker-compose\\.yml$"],
+  "notUserFacing": ["^docs/", "^\\.githooks/", "^e2e[\\w-]*/", "^scripts/", "^server/test/", "^tools/", "^\\.github/", "^\\.claude/", "^spike/", "^db/", "^backups?/", "\\.test\\.[jt]sx?$", "\\.md$", "^\\.nvmrc$", "^package(-lock)?\\.json$", "^tsconfig[\\w.]*\\.json$", "^playwright[\\w.]*\\.config\\.", "(^|/)Dockerfile$", "^cloudbuild[\\w-]*\\.yaml$", "^docker-compose\\.yml$"],
   "audiences": [
     { "key": "paid", "label": "**Paid subscribers**", "diffFile": "src/features.ts", "diffPattern": "^\\+ {2}[A-Za-z_$][\\w$]*: 'paid',?(\\s*//.*)?$", "reason": "a paid-subscriber entry was added to src/features.ts" },
     { "key": "admin", "label": "**Admin only**", "files": ["server/admin.ts"], "diffFile": "src/features.ts", "diffPattern": "^\\+ {2}[A-Za-z_$][\\w$]*: 'admin',?(\\s*//.*)?$", "reason": "an admin-only entry in src/features.ts, or server/admin.ts, changed" }
@@ -10,5 +10,8 @@
     { "line": "npm run e2e`", "needs": ["e2e"] }
   ],
   "autoTickWhenNoUi": "lighthouse\\.mjs",
+  "review": {
+    "highRisk": ["^src/store/", "^src/sync/", "^server/(?!test/)", "^db/", "^src/lib/logic\\.ts$", "^src/features\\.ts$"]
+  },
   "everyoneReason": "user-visible files changed and no admin-only or paid entry was added (standing rule: ship to everyone for now)"
 }
