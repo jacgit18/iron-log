@@ -1,6 +1,6 @@
 # The parity job (scripts/env-parity.mjs): Node, the lockfile's production dependencies (pg is one) and the one script. Read-only: it
 # gets a migrations_reader URL, never an owner URL. Built by scripts/parity-job.sh deploy (cloudbuild-parity.yaml).
-FROM node:22-slim
+FROM node:26-slim
 ENV NODE_ENV=production
 WORKDIR /app
 COPY package.json package-lock.json ./

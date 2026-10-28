@@ -10,6 +10,23 @@ type WellFormed = string & { isWellFormed(): boolean; toWellFormed(): string };
 const ok = (s: string) => (s as WellFormed).isWellFormed();
 const fix = (s: string) => (s as WellFormed).toWellFormed();
 
+// The deepest nesting a request body may have. The app's own documents are about 10 levels deep (the v1 data fixture), so 64 leaves plenty of room; a deeper body
+// is refused with a 422 before anything is stored (code audit S-04). Node's stack cannot be relied on to refuse it: JSON.stringify no longer overflows on Node 26, so a
+// config nested 8000 deep was stored, and Express then failed to send it back, which broke that account's sync feed for good.
+export const MAX_JSON_DEPTH = 64;
+
+/** True when the value is nested deeper than `max` levels (the root counts as 1). Walks with its own stack, so no depth can overflow it. */
+export function jsonDepthExceeds(root: unknown, max = MAX_JSON_DEPTH): boolean {
+  const stack: Array<[unknown, number]> = [[root, 1]];
+  while (stack.length) {
+    const [node, depth] = stack.pop() as [unknown, number];
+    if (!node || typeof node !== 'object') continue;
+    if (depth > max) return true;
+    for (const child of Object.values(node)) if (child && typeof child === 'object') stack.push([child, depth + 1]);
+  }
+  return false;
+}
+
 export function repairWellFormed(root: unknown): void {
   const stack: unknown[] = [root];
   while (stack.length) {
@@ -31,5 +48,9 @@ export function repairWellFormed(root: unknown): void {
   }
 }
 
-/** Express middleware: repairs the parsed body in place. Put it right after a JSON body parser. */
-export const repairBody = (req: Request, _res: Response, next: NextFunction) => { repairWellFormed(req.body); next(); };
+/** Express middleware: refuses a body nested too deep (a 422 through the error handler, code 54001), then repairs the parsed body in place. Put it right after a JSON body parser. */
+export const repairBody = (req: Request, _res: Response, next: NextFunction) => {
+  if (jsonDepthExceeds(req.body)) return next(Object.assign(new Error('JSON nested too deep'), { code: '54001' }));
+  repairWellFormed(req.body);
+  next();
+};
