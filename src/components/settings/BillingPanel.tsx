@@ -1,29 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import './BillingPanel.css';
+import BillingNotice from './BillingNotice.js';
 import { useFeature } from '../../features.js';
+import { inAndroidApp } from '../../lib/androidApp.js';
 import { createAccountClient } from '../../sync/account.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { flag, getSyncApi } from '../../store/useAppStore.js';
+import { useOnline } from './useOnline.js';
 import { useWho } from './useWho.js';
 
 // The Billing section (ADR 065, brief billing-stripe-subscriptions): the plan, Subscribe (Stripe's hosted Checkout) and Manage billing
 // (Stripe's hosted Customer Portal). Admin-only while Stripe is in test mode (the `billing` line in src/features.ts); it draws nothing when
 // the server has billing off. The plan itself is set by the server from Stripe's events; this only shows it and sends the browser to Stripe.
-const PLAN_NAMES: Record<string, string> = { beta: 'Beta tester', founder: 'Founder', free: 'Free', lifetime: 'Lifetime', paid: 'Supporter' };
+const PLAN_NAMES: Record<string, string> = { beta: 'Beta tester', founder: 'Founder', free: 'Free', lifetime: 'Lifetime', paid: 'Plus' };
 const dateOf = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null);
 const POLL_MS = 2000;
 const POLL_TRIES = 5;
-
-function useOnline(): boolean {
-  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
-  useEffect(() => {
-    const set = () => setOnline(navigator.onLine !== false);
-    window.addEventListener('online', set);
-    window.addEventListener('offline', set);
-    return () => { window.removeEventListener('online', set); window.removeEventListener('offline', set); };
-  }, []);
-  return online;
-}
 
 export default function BillingPanel() {
   const api = getSyncApi();
@@ -71,10 +63,12 @@ export default function BillingPanel() {
   const plan = signedIn?.plan ?? (signedIn?.isPaid ? 'paid' : 'free');
   const renews = dateOf(billing?.renewsAt ?? null);
   const stripePaid = plan === 'paid' && billing?.source === 'stripe';
+  const inApp = inAndroidApp(); // the Play build shows no prices and no way to buy (ADR 065 point 8, ADR 078)
 
   return (
     <section className="panel billingpanel" aria-labelledby="billing-h">
       <h3 id="billing-h">Billing</h3>
+      {signedIn && billing?.available && !inApp && <BillingNotice />}
       {who.status === 'unreachable' && (
         <>
           <p className="notice" role="status">Could not check your plan. It checks again when the connection comes back.</p>
@@ -94,10 +88,10 @@ export default function BillingPanel() {
           {plan === 'beta' && <p className="note">Your plan is set by the owner.</p>}
           {!online && <p className="note" role="status">You are offline. Billing needs a connection.</p>}
           <div className="actions">
-            {plan === 'free' && (
+            {plan === 'free' && !inApp && (
               <>
-                <button type="button" className="btn" disabled={busy !== null || !online} onClick={() => void go('month', () => client.billingCheckout('month'))}>{busy === 'month' ? 'Opening…' : 'Subscribe monthly'}</button>
-                <button type="button" className="btn" disabled={busy !== null || !online} onClick={() => void go('year', () => client.billingCheckout('year'))}>{busy === 'year' ? 'Opening…' : 'Subscribe yearly'}</button>
+                <button type="button" className="btn" disabled={busy !== null || !online} onClick={() => void go('month', () => client.billingCheckout('month'))}>{busy === 'month' ? 'Opening…' : 'Plus, $5.99 a month'}</button>
+                <button type="button" className="btn" disabled={busy !== null || !online} onClick={() => void go('year', () => client.billingCheckout('year'))}>{busy === 'year' ? 'Opening…' : 'Plus, $49.99 a year'}</button>
               </>
             )}
             {billing.hasCustomer && (

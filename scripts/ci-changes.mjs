@@ -13,10 +13,11 @@ const given = args.find(a => a.startsWith('--files='));
 const dep = /^(package(-lock)?\.json|tsconfig.*\.json|\.oxlintrc.*|vite\.config\.js)$/;
 const chromiumAction = f => f.startsWith('.github/actions/install-chromium/'); // the browser install every e2e job runs through (.github/workflows/test.yml, screenshots.yml)
 const docs = f => f !== '.github/pull_request_template.md' && f !== 'README.md' && f !== 'SETUP.md' && !chromiumAction(f) && (/\.md$/.test(f) || f.startsWith('docs/') || f === 'LICENSE' || (f.startsWith('.github/') && !f.startsWith('.github/workflows/test.yml') && f !== '.github/pull_request_template.md'));
+// e2e-accounts/ belongs to e2e_sync: `npm run e2e:sync` (scripts/e2e-sync.mjs) runs both the sync and the accounts config; the sharded e2e job only runs e2e/.
 // Each job, and the files that make it worth running. A dependency or tsconfig change counts for all of them.
 const needs = {
-  e2e: f => dep.test(f) || chromiumAction(f) || /^(src|public|e2e|e2e-accounts)\//.test(f) || /^(index\.html|playwright(\.accounts)?\.config\.js)$/.test(f),
-  e2e_sync: f => dep.test(f) || chromiumAction(f) || /^(src\/sync|src\/store|src\/shared|server|e2e-sync|db)\//.test(f) || /^(playwright\.sync\.config\.js|scripts\/e2e-sync\.mjs)$/.test(f),
+  e2e: f => dep.test(f) || chromiumAction(f) || /^(src|public|e2e)\//.test(f) || /^(index\.html|playwright\.config\.js)$/.test(f),
+  e2e_sync: f => dep.test(f) || chromiumAction(f) || /^(src\/sync|src\/store|src\/shared|server|e2e-sync|e2e-accounts|db)\//.test(f) || /^(playwright\.(sync|accounts)\.config\.js|scripts\/e2e-sync\.mjs)$/.test(f),
   database: f => dep.test(f) || /^(db|server\/db)\//.test(f) || /^(docker-compose\.yml|scripts\/check-migrations\.mjs)$/.test(f),
   backup: f => dep.test(f) || /^(backup|db)\//.test(f) || /^scripts\/(restore-check\.sh|backup-cloud-run\.sh)$/.test(f),
   docker: f => dep.test(f) || /^(src|server|public|backup)\//.test(f) || /^(Dockerfile|\.dockerignore|index\.html|scripts\/build-server\.mjs)$/.test(f),
