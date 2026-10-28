@@ -54,6 +54,7 @@ android/*.keystore
 android/*.jks
 android/*.aab
 android/*.apk
+android/*.idsig
 android/app/
 android/.gradle/
 android/build/

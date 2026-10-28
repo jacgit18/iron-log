@@ -5,19 +5,56 @@
   "launcherName": "Loadbearer",
   "display": "standalone",
   "themeColor": "#1F5E5B",
+  "themeColorDark": "#000000",
   "navigationColor": "#1F5E5B",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
   "backgroundColor": "#EEF0EC",
   "enableNotifications": true,
   "startUrl": "/",
   "iconUrl": "https://loadbearer.app/icons/icon-512.png",
   "maskableIconUrl": "https://loadbearer.app/icons/maskable-512.png",
-  "webManifestUrl": "https://loadbearer.app/manifest.webmanifest",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1",
   "appVersionCode": 1,
-  "appVersion": "1.0.0",
+  "shortcuts": [
+    {
+      "name": "Today's workout",
+      "shortName": "Today",
+      "url": "https://loadbearer.app/?open=board",
+      "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
+    },
+    {
+      "name": "Daily log",
+      "shortName": "Daily",
+      "url": "https://loadbearer.app/?open=daily",
+      "chosenIconUrl": "https://loadbearer.app/icons/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://loadbearer.app/manifest.webmanifest",
   "fallbackType": "customtabs",
-  "orientation": "default",
-  "isChromeOSOnly": false,
   "features": {},
-  "signingKey": { "path": "./android.keystore", "alias": "android" },
-  "fingerprints": []
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://loadbearer.app/",
+  "minSdkVersion": 24,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1"
 }
