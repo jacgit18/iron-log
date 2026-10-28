@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { sql, type Kysely } from 'kysely';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from './app.ts';
-import { repairWellFormed } from './wellFormed.ts';
+import { MAX_JSON_DEPTH, repairWellFormed } from './wellFormed.ts';
 import { createDb } from './db/connection.ts';
 import type { DB } from './db/types.ts';
 import { startTestDatabase } from './test/postgres.ts';
@@ -42,6 +42,17 @@ describe('a command the database cannot store', () => {
     const res = await run('save-config', body);
     expect(res.status).toBe(422);
     expect((await fetch(`${base}/api/sync`, { headers: h })).status).toBe(200);
+  });
+
+  // Node 26 stopped overflowing in JSON.stringify, so the depth limit (wellFormed.ts, MAX_JSON_DEPTH) is what refuses this, whatever the Node version: a body a few levels over the limit
+  // was stored before the limit existed, and the next feed answered 422 for good. Nothing may be stored and the feed must stay empty and loading.
+  it('save-config nested over the depth limit answers 422, stores nothing, and the feed still loads', async () => {
+    const depth = MAX_JSON_DEPTH;
+    const body = `{"clientId":"deep","baseVersion":null,"input":{"config":{"ex":${'{"a":'.repeat(depth)}1${'}'.repeat(depth)}}}}`;
+    expect((await run('save-config', body)).status).toBe(422);
+    const feed = await fetch(`${base}/api/sync`, { headers: h });
+    expect(feed.status).toBe(200);
+    expect(((await feed.json()) as { rows: unknown[] }).rows).toEqual([]);
   });
 
   // Overnight audit S-1: a note clipped through an emoji ends in half of it (an unpaired surrogate, written as \ud800). jsonb refuses that with 22P02, which was a 500.
