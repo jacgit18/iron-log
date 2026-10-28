@@ -1,0 +1,53 @@
+@layer base, components;
+@layer components {
+.plancards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: var(--sp-12);
+}
+.plancard {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: var(--sp-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+}
+.plancard.offer {
+  border: 2px solid var(--accent);
+  padding: 15px;
+}
+.plancard h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: 0;
+  font-size: var(--fs-xl);
+}
+.plancard ul {
+  margin: 0;
+  padding-left: var(--sp-16);
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+.planbadge {
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: var(--sp-2) var(--sp-8);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.plancard .planprice {
+  margin: 0;
+  color: var(--muted);
+}
+.plancard .actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: auto;
+  padding-top: var(--sp-8);
+}
+}
