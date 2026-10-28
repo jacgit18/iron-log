@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
 import { flag, useAppStore } from './store/useAppStore.js';
 import { takeAfterReload } from './lib/afterReload.js';
 import useTooltips from './hooks/useTooltips.js';
@@ -10,6 +10,9 @@ import Toaster from './components/Toaster.js';
 import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
 import useBadgeName from './hooks/useBadgeName.js';
+import { useWide } from './components/board/useWide.js';
+import { inAndroidApp } from './lib/androidApp.js';
+import { showPlansTab } from './lib/plansTab.js';
 import ThemeButton from './components/ThemeButton.js';
 import QaBanner from './components/QaBanner.js';
 import UpdateBanner from './components/UpdateBanner.js';
@@ -27,6 +30,7 @@ import './components/BrandLink.css';
 const Daily = lazyTab(() => import('./components/daily/Daily.js'));
 const Progress = lazyTab(() => import('./components/progress/Progress.js'));
 const Editor = lazyTab(() => import('./components/program/Editor.js'));
+const PlansTab = lazyTab(() => import('./components/plans/PlansTab.js'));
 const Settings = lazyTab(() => import('./components/settings/Settings.js'));
 // The Program tab's "plan on a computer" tip floats above the page and draws nothing until it is due, so its chunk is fetched with the tab.
 const ProgramOnComputer = lazy(mapChunkError(() => import('./components/ProgramOnComputer.js')));
@@ -56,7 +60,7 @@ function Modal() {
   return open ? <ErrorBoundary where="view"><Suspense fallback={null}><LazyModal /></Suspense></ErrorBoundary> : null;
 }
 
-const TABS: [string, string, ComponentType][] = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['settings', 'Settings', Settings]];
+const TABS: [string, string, ComponentType][] = [['board', 'Board', BoardTab], ['daily', 'Daily', Daily], ['progress', 'Progress', Progress], ['program', 'Program', Editor], ['plans', 'Plans', PlansTab], ['settings', 'Settings', Settings]];
 
 const APP_TITLE = appTitle(window.location.hostname); // "Loadbearer - QA" on the QA host, "Loadbearer - Staging" on staging
 
@@ -77,8 +81,11 @@ export default function App() {
   useTabbarHeight(tabsRef);
 
   // With the account badge showing, the badge is the way to Settings, so the Settings tab is not drawn (it is when nobody is signed in).
-  const { name: badgeName, pending: badgePending } = useBadgeName();
-  const tabs = badgeName === null && !badgePending ? TABS : TABS.filter(([k]) => k !== 'settings');
+  const { name: badgeName, pending: badgePending, who } = useBadgeName();
+  // The Plans tab is for a signed-in free account on a wide screen (src/lib/plansTab.ts); everyone else's bar is as before.
+  const [inApp] = useState(inAndroidApp); // asked once: the Play build shows no prices, whatever the screen width (ADR 065 point 8)
+  const plansShown = showPlansTab(useWide(), who, inApp);
+  const tabs = TABS.filter(([k]) => (k !== 'settings' || badgeName === null && !badgePending) && (k !== 'plans' || plansShown));
   const tabDrawn = tabs.some(([k]) => k === tab); // false on Settings reached through the badge
   const label = TABS.find(([k]) => k === tab)![1];
   useEffect(() => { document.title = `${label} · ${APP_TITLE}`; }, [label]);
@@ -103,7 +110,10 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, [closeModal]);
 
-  const View = TABS.find(([k]) => k === tab)![2];
+  // Plans reached after it stopped applying (the window narrowed, a plan was bought, signed out): back to the Board.
+  const plansGone = tab === 'plans' && !plansShown;
+  useEffect(() => { if (plansGone && !badgePending) setTab('board'); }, [plansGone, badgePending, setTab]);
+  const View = TABS.find(([k]) => k === (plansGone ? 'board' : tab))![2];
   return (
     <>
       <a className="skip" href="#view">Skip to content</a>
