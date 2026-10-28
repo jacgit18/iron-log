@@ -3,7 +3,7 @@
 # Cloud Run sets PORT; locally it is 8080 unless you pass -e PORT=....
 
 # --- Build the app and bundle the API ---------------------------------------------------------------------------
-FROM node:22-slim AS build
+FROM node:26-slim AS build
 WORKDIR /app
 # The dependency layer is cached until package.json or the lockfile changes.
 COPY package.json package-lock.json ./
@@ -21,7 +21,7 @@ ENV VITE_API_SYNC=$VITE_API_SYNC
 RUN npm run build && npm run build:server
 
 # --- Run: Node and two build outputs, nothing else ----------------------------------------------------------------
-FROM node:22-slim
+FROM node:26-slim
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/dist ./dist

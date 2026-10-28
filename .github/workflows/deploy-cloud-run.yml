@@ -64,7 +64,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
       - name: Install the database tools
         run: npm ci --ignore-scripts --no-audit --no-fund
@@ -161,7 +161,7 @@ jobs:
       # Secret Manager (after its own checks), and the run checks none is left. Only then is the revision built and deployed. With nothing waiting these steps do nothing.
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
       - name: Install the database tools
         run: npm ci --ignore-scripts --no-audit --no-fund

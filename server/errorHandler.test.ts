@@ -117,6 +117,9 @@ describe('the app', () => {
     for (let i = 0; i < 20000; i++) deep = { a: deep };
     let err: unknown;
     try { JSON.stringify(deep); } catch (e) { err = e; }
+    // Node 26's JSON.stringify no longer overflows the stack (the request-depth limit in wellFormed.ts covers it there), but Node 22 still does and engines allows it,
+    // so where the real overflow does not happen the same error is built by hand: the handler must answer it with a 422 on either.
+    err ??= Object.assign(new RangeError('Maximum call stack size exceeded'), { stack: 'RangeError: Maximum call stack size exceeded\n    at JSON.stringify (<anonymous>)' });
     expect(err).toBeInstanceOf(RangeError);
     const base = await throwing(err as Error);
     expect((await fetch(`${base}/boom`)).status).toBe(422);
