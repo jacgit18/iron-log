@@ -49,7 +49,7 @@ export function billingConfigFrom(env: Record<string, string | undefined>, retur
   const { STRIPE_SECRET_KEY: secretKey, STRIPE_WEBHOOK_SECRET: webhookSecret, STRIPE_PRICE_MONTHLY: priceMonthly, STRIPE_PRICE_YEARLY: priceYearly } = env;
   if (!secretKey && !webhookSecret && !priceMonthly && !priceYearly) return {};
   if (!secretKey || !webhookSecret || !priceMonthly || !priceYearly || !returnUrl) return { problem: 'billing is off: set all of STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY' };
-  if (secretKey.startsWith('sk_live_') && env.BILLING_LIVE !== '1') return { problem: 'billing is off: a live Stripe key needs BILLING_LIVE=1' };
+  if (/^(sk|rk)_live_/.test(secretKey) && env.BILLING_LIVE !== '1') return { problem: 'billing is off: a live Stripe key needs BILLING_LIVE=1' };
   if (!/^(sk|rk)_(test|live)_/.test(secretKey)) return { problem: 'billing is off: STRIPE_SECRET_KEY does not look like a Stripe key' };
   return { config: { secretKey, webhookSecret, priceMonthly, priceYearly, returnUrl: returnUrl.replace(/\/$/, '') } };
 }
