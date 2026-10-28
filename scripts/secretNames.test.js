@@ -14,7 +14,7 @@ describe('expectedSecrets', () => {
     expect(names).toContain('iron-log-staging-auth-secret');
     expect(names).toContain('iron-log-qa-google-client-id');
     expect(names).toContain('iron-log-parity-production-url');
-    expect(names).not.toContain('ANTHROPIC_API_KEY'); // a GitHub secret, not Secret Manager
+    expect(names).not.toContain('CLAUDE_CODE_OAUTH_TOKEN'); // a GitHub secret, not Secret Manager
     expect(expectedSecrets().find(x => x.name === 'iron-log-pii-key').envs).toEqual(['production']); // staging has its own since backlog EP2
     expect(names).toContain('iron-log-staging-pii-key');
     expect(names).toContain('iron-log-qa-pii-key');
