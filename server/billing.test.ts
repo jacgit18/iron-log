@@ -27,6 +27,12 @@ describe('settings', () => {
     expect(billingConfigFrom(live, 'https://app.example')).toEqual({ problem: expect.stringMatching(/BILLING_LIVE=1/) });
     expect(billingConfigFrom({ ...live, BILLING_LIVE: '1' }, 'https://app.example').config?.secretKey).toBe('sk_live_1');
   });
+  it('refuses a live restricted key (rk_live_) unless BILLING_LIVE=1, like an sk_live_ key', () => {
+    const live = { ...env, STRIPE_SECRET_KEY: 'rk_live_1' };
+    expect(billingConfigFrom(live, 'https://app.example')).toEqual({ problem: expect.stringMatching(/BILLING_LIVE=1/) });
+    expect(billingConfigFrom({ ...live, BILLING_LIVE: '1' }, 'https://app.example').config?.secretKey).toBe('rk_live_1');
+    expect(billingConfigFrom({ ...env, STRIPE_SECRET_KEY: 'rk_test_1' }, 'https://app.example').config?.secretKey).toBe('rk_test_1');
+  });
   it('refuses a value that is not a Stripe key, and trims the trailing slash of the return address', () => {
     expect(billingConfigFrom({ ...env, STRIPE_SECRET_KEY: 'hello' }, 'https://app.example').problem).toMatch(/does not look like/);
     expect(billingConfigFrom(env, 'https://app.example/').config?.returnUrl).toBe('https://app.example');
