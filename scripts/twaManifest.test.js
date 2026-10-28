@@ -19,6 +19,11 @@ describe('android/twa-manifest.json', () => {
     expect(twa.host).toBe('loadbearer.app');
     for (const url of [twa.iconUrl, twa.maskableIconUrl]) expect(url).toMatch(/^https:\/\/loadbearer\.app\/icons\/[\w-]+\.png$/);
   });
+  it('keeps the settings the first Play build needed', () => {
+    expect(twa.minSdkVersion).toBeGreaterThanOrEqual(24); // androidbrowserhelper 2.7.4 needs API 24; Bubblewrap's default 21 fails the build
+    expect(twa.appVersionCode).toBeGreaterThanOrEqual(1);
+    expect(twa.signingKey.path).toBe('./android.keystore'); // relative, never a path on one machine
+  });
   it('sells nothing: no Play Billing feature', () => {
     expect(twa.features?.playBilling).toBeUndefined();
   });
