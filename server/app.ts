@@ -20,7 +20,7 @@ import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
 import { backupsRoutes } from './backups.ts';
-import { ADMIN_ONLY, billingRoutes, billingSummary, cancelBillingFor, webhookRoute, type BillingConfig, type StripeApi } from './billing.ts';
+import { billingRoutes, billingSummary, cancelBillingFor, webhookRoute, type BillingConfig, type StripeApi } from './billing.ts';
 import { originGuard } from './originGuard.ts';
 import { fireRoute, type FireDeps } from './push/fire.ts';
 import { pushRoutes } from './push/routes.ts';
@@ -197,8 +197,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api/commands', rateLimit(limits.commands, undefined, byUser));
   app.use('/api/sync', rateLimit(limits.sync, undefined, byUser));
   // The admin Issues screen (ADR 013 amendment): admin-only, and the database checks users.is_admin again.
-  // Billing (ADR 065): admin-only while Stripe is in test mode (ADMIN_ONLY in billing.ts).
-  if (db) app.use('/api/billing', ...(ADMIN_ONLY ? [requireAdmin] : []), rateLimit(limits.billing, undefined, byUser), billingRoutes({ db, api: billing?.api, config: billing?.config }));
+  // Billing (ADR 065): open to every signed-in account; whether it is on at all is the BILLING_LIVE / STRIPE_OFF config.
+  if (db) app.use('/api/billing', rateLimit(limits.billing, undefined, byUser), billingRoutes({ db, api: billing?.api, config: billing?.config }));
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
@@ -222,7 +222,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     const account = res.locals.account as Account;
     // QA only (qaPersonas.ts): whether this session is a test account, and whether an admin may switch. Absent everywhere else, so production's answer is unchanged.
     const qa = auth && (await auth.qaPersonasOn()) ? { persona: personaByEmail(account.email)?.name ?? null, canSwitch: account.isAdmin === true } : undefined;
-    res.json({ ok: true, userId: row?.id, minClientVersion, ...(qa ? { qa } : {}), account: { ...account, plan: row?.plan ?? 'free', isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, account.isAdmin, !!billing) } });
+    res.json({ ok: true, userId: row?.id, minClientVersion, ...(qa ? { qa } : {}), account: { ...account, plan: row?.plan ?? 'free', isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, !!billing) } });
   });
 
   app.post('/api/commands/import-legacy', async (req, res) => {

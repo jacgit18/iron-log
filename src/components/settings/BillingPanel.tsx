@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import './BillingPanel.css';
 import BillingNotice from './BillingNotice.js';
-import { useFeature } from '../../features.js';
 import { inAndroidApp } from '../../lib/androidApp.js';
 import { createAccountClient } from '../../sync/account.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
@@ -10,7 +9,7 @@ import { useOnline } from './useOnline.js';
 import { useWho } from './useWho.js';
 
 // The Billing section (ADR 065, brief billing-stripe-subscriptions): the plan, Subscribe (Stripe's hosted Checkout) and Manage billing
-// (Stripe's hosted Customer Portal). Admin-only while Stripe is in test mode (the `billing` line in src/features.ts); it draws nothing when
+// (Stripe's hosted Customer Portal). Open to every signed-in account; it draws nothing when
 // the server has billing off. The plan itself is set by the server from Stripe's events; this only shows it and sends the browser to Stripe.
 const PLAN_NAMES: Record<string, string> = { beta: 'Beta tester', founder: 'Founder', free: 'Free', lifetime: 'Lifetime', paid: 'Plus' };
 const dateOf = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null);
@@ -19,9 +18,8 @@ const POLL_TRIES = 5;
 
 export default function BillingPanel() {
   const api = getSyncApi();
-  const on = useFeature('billing');
   const client = useMemo(() => createAccountClient({ headers: devHeaders }), []);
-  const { who, recheck } = useWho(!!api && on, client);
+  const { who, recheck } = useWho(!!api, client);
   const [busy, setBusy] = useState<string | null>(null);
   const [returned] = useState<'success' | 'cancel' | null>(() => {
     const how = typeof window === 'undefined' ? null : new URL(window.location.href).searchParams.get('billing');
@@ -33,11 +31,11 @@ export default function BillingPanel() {
   // Back from Stripe's Checkout: the address says how it went (read once above). Take it off the address, and since the webhook may be
   // a moment behind, look again a few times below.
   useEffect(() => {
-    if (!on || !returned) return;
+    if (!returned) return;
     const url = new URL(window.location.href);
     url.searchParams.delete('billing');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-  }, [on, returned]);
+  }, [returned]);
   const signedIn = who?.status === 'signed-in' ? who : null;
   const settled = signedIn?.billing?.source === 'stripe' && signedIn.isPaid;
   useEffect(() => {
@@ -48,7 +46,7 @@ export default function BillingPanel() {
 
   // Nothing is drawn until the first answer: when the server has billing off (every admin until go-live) a placeholder would appear and then
   // vanish, moving the Settings page. When billing is on the panel appears once, after the answer.
-  if (!api || !on || who === null || who.status === 'signed-out') return null;
+  if (!api || who === null || who.status === 'signed-out') return null;
   if (signedIn && !signedIn.billing?.available) return null;
 
   const go = async (what: string, open: () => ReturnType<typeof client.billingPortal>) => {

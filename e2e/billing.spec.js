@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// The Billing section in Settings (BillingPanel.tsx, ADR 065). Admin-only until go-live (the `billing` line in src/features.ts and ADMIN_ONLY in server/billing.ts). There is no real API behind
+// The Billing section in Settings (BillingPanel.tsx, ADR 065). Open to every signed-in account (the admin gate came off at go-live). There is no real API behind
 // `vite preview`, so /api is scripted; Stripe's own pages are stood in for by a routed address.
 const json = (body, status = 200) => route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 const meWith = (account = {}, billing = {}) => ({
