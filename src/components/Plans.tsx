@@ -9,7 +9,7 @@ import { appTitle } from '../lib/envName.js';
 // The plans as shown to visitors. Plus is users.plan 'paid' (the stored value keeps its name; the shown name is Plus). Pro is the planned higher tier with AI: shown so people know, not for sale, no stored value yet.
 // The amounts must match the two Stripe prices (STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY); Stripe, not this text, is what is charged.
 const PLANS = [
-  { name: 'Beta', price: 'Free during the beta', limits: 'Everything below, no caps', features: 'All of Free and Plus while the beta lasts' },
+  { name: 'Beta', price: 'Free during the beta', limits: 'The same as Free', features: 'Everything in Free while the beta lasts. Plus features, such as backups on your account, need a Plus plan' },
   { name: 'Free', price: '$0', limits: '7 daily backups kept in your browser', features: 'The weekly board, logging, programs, progress, timers, sync across devices, export and delete' },
   { name: 'Plus', price: '$5.99 a month, or $49.99 a year', limits: '30 daily backups kept on your account', features: 'Everything in Free, plus automatic off-device backups you can restore from' },
   { name: 'Pro', price: 'Coming later, not priced yet', limits: 'A monthly AI allowance, to be set', features: 'Everything in Plus, plus AI features. Not available yet: a beta test comes first, to see how much people want it' },
@@ -30,8 +30,8 @@ export default function Plans() {
         <p className="landing-fine">Free stays free: your data, export and delete never depend on a plan. Plus is optional, renews until you cancel, and can be cancelled any time.</p>
         <ul className="landing-plans">
           {PLANS.map(p => (
-            <li key={p.name} className={`landing-plan${p.name === 'Beta' ? ' now' : ''}`}>
-              <h3>{p.name}{p.name === 'Beta' && <span className="landing-now">Now</span>}</h3>
+            <li key={p.name} className="landing-plan">
+              <h3>{p.name}</h3>
               <dl>
                 <dt>Price</dt><dd>{p.price}</dd>
                 <dt>Limits</dt><dd>{p.limits}</dd>

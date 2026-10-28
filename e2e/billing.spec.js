@@ -6,7 +6,7 @@ const json = (body, status = 200) => route => route.fulfill({ status, contentTyp
 const meWith = (account = {}, billing = {}) => ({
   ok: true,
   userId: 'u1',
-  account: { kind: 'session', email: 'jo@example.com', name: 'Jo Lifter', isAdmin: true, isPaid: false, plan: 'free', billing: { available: true, source: 'manual', status: null, renewsAt: null, hasCustomer: false, ...billing }, ...account },
+  account: { kind: 'session', email: 'jo@example.com', name: 'Jo Lifter', isAdmin: false, isPaid: false, plan: 'free', billing: { available: true, source: 'manual', status: null, renewsAt: null, hasCustomer: false, ...billing }, ...account },
 });
 
 async function open(page, me, path = '/', { referrer = '' } = {}) {

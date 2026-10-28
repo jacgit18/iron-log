@@ -127,27 +127,12 @@
   border-radius: var(--r-lg);
   padding: var(--sp-16);
 }
-.landing-plan.now {
-  border: 2px solid var(--accent);
-  padding: 15px;
-}
 .landing-plan h3 {
   display: flex;
   align-items: center;
   gap: var(--sp-8);
   margin: 0 0 var(--sp-8);
   font-size: var(--fs-xl);
-}
-.landing-now {
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-radius: var(--r-pill);
-  padding: var(--sp-2) var(--sp-8);
-  font-family: "Barlow","Barlow Fallback",system-ui,sans-serif;
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
 }
 .landing-plan dl {
   margin: 0;
