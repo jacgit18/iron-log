@@ -10,5 +10,8 @@
     { "line": "npm run e2e`", "needs": ["e2e"] }
   ],
   "autoTickWhenNoUi": "lighthouse\\.mjs",
+  "review": {
+    "highRisk": ["^src/store/", "^src/sync/", "^server/(?!test/)", "^db/", "^src/lib/logic\\.ts$", "^src/features\\.ts$"]
+  },
   "everyoneReason": "user-visible files changed and no admin-only or paid entry was added (standing rule: ship to everyone for now)"
 }
