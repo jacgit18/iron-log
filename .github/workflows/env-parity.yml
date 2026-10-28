@@ -32,11 +32,11 @@ jobs:
         with:
           ref: main
           fetch-depth: 0 # the running-commit table counts commits between a service's commit and main's tip
-      - uses: google-github-actions/auth@v3
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v3
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
       - name: Compare each environment with main
         env:
           # Staging migrates on every merge to main (migrate-staging.yml), so a staging that is behind is a real problem: red.

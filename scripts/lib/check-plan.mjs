@@ -11,7 +11,8 @@ export const is = {
   docs: f => f !== '.github/pull_request_template.md' && !is.tocDoc(f) && !is.workflow(f) && (/\.md$/.test(f) || f.startsWith('docs/') || f.startsWith('.github/') || f === 'LICENSE'),
   workflow: f => f.startsWith('.github/workflows/') || f.startsWith('.github/actions/') || f === '.github/pr-kit.json',
   unitTest: f => /\.test\.(js|ts|tsx|jsx)$/.test(f) || f.startsWith('src/test/'),
-  e2eSpec: f => f.startsWith('e2e/') || f.startsWith('e2e-accounts/'),
+  e2eSpec: f => f.startsWith('e2e/'),
+  accountsSpec: f => f.startsWith('e2e-accounts/'), // run by `npm run e2e:sync` (both configs), not by `npm run e2e`
   css: f => /\.css$/.test(f),
   sync: f => f.startsWith('src/sync/') || f.startsWith('src/shared/') || f.startsWith('server/') || f.startsWith('src/store/') || f.startsWith('e2e-sync/') || f === 'playwright.sync.config.js',
   migration: f => f.startsWith('db/migrations/') || f === 'server/db/types.ts',
@@ -54,10 +55,13 @@ export function planChecks(files, all = false) {
       if (/\.tsx?$/.test(f)) want('typecheck', `${f} is typed`);
     } else if (is.e2eSpec(f)) {
       want('lint', `${f} is a browser test`);
-      // Only a spec file directly in e2e/ runs alone; a fixture or helper (or e2e-accounts/) can change many specs, so it runs them all.
+      // Only a spec file directly in e2e/ runs alone; a fixture or helper can change many specs, so it runs them all.
       const alone = /^e2e\/[^/]+\.spec\.[jt]s$/.test(f) && existsSync(f);
       if (alone) specs.push(f);
       want('e2e', `${f} is a browser test`, alone);
+    } else if (is.accountsSpec(f)) {
+      want('lint', `${f} is a browser test`);
+      want('e2e:sync', `${f} is an accounts browser test (e2e:sync runs it, e2e does not)`);
     } else if (is.tocDoc(f)) {
       want('lint', `${f} has a generated table of contents (npm run docs:toc)`);
     } else if (is.script(f) || f === '.github/pull_request_template.md') {
