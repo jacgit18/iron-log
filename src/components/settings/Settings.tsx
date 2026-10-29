@@ -9,14 +9,13 @@ import ProgramOnComputerRow from './ProgramOnComputerRow.js';
 import BackupCopies from './BackupCopies.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
 import SyncSection, { SyncVersion } from './SyncPanel.js';
-import type { Cfg } from '../../types.ts';
-import type { PhaseKey, ProgKey } from '../../types.ts';
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import type { ProgKey } from '../../types.ts';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { getSyncApi, useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
+import { PHASES, PH_KEYS } from '../../lib/data.js';
 import { MON, fmtShort } from '../../shared/dates.js';
-import { programFor, progName, programWeights, bestByPhase, injuryPreventionOn, round } from '../../lib/logic.js';
+import { programFor, progName, injuryPreventionOn } from '../../lib/logic.js';
 import CommitInput from '../CommitInput.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import { motionOK } from '../../lib/motion.js';
@@ -30,34 +29,11 @@ import { notifySupported, restNotifyOn, setRestNotify } from '../../lib/restNoti
 import { usePwa, install, keepData, isIOS } from '../../lib/pwa.js';
 import { inAndroidApp } from '../../lib/androidApp.js';
 import { IMPORT_ACCEPT } from '../../lib/importFile.js';
+import { SavedTicks, Tick, useSaving } from './SavedTicks.js';
+import MaxesScreen from './MaxesScreen.js';
+import { weightedExIds } from '../../lib/oneRepMax.js';
 import './Settings.css';
 
-/* ---------- "Saved" ticks ----------
-   A field that saves when you leave it gets a short tick beside it, so a change is seen to land without scrolling up to the header.
-   Kept here, not in CommitInput: Settings remounts a field (its `key`) once its value saves. Visual only: the header's status line
-   already announces "Saved" to screen readers. */
-const SAVED_MS = 3000;
-const SavedCtx = createContext<{ saved: string | null; mark: (id: string) => void }>({ saved: null, mark: () => {} });
-function SavedTicks({ children }: { children: ReactNode }) {
-  const [saved, setSaved] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mark = useCallback((id: string) => {
-    setSaved(id);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setSaved(null), SAVED_MS);
-  }, []);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-  return <SavedCtx.Provider value={{ saved, mark }}>{children}</SavedCtx.Provider>;
-}
-// Wraps a field's onCommit: a save that was not refused ticks that field.
-function useSaving() {
-  const { mark } = useContext(SavedCtx);
-  return (id: string, save: (v: string) => unknown) => (v: string) => { const r = save(v); if (r !== false) mark(id); return r; };
-}
-function Tick({ id }: { id: string }) {
-  const { saved } = useContext(SavedCtx);
-  return saved === id ? <span className="savedtick" aria-hidden="true">✓ Saved</span> : null;
-}
 
 // The panel pattern: heading, one line on what it is for, the controls, then the background in a fold named for the panel.
 function More({ about, children }: { about: string; children: ReactNode }) {
@@ -351,55 +327,6 @@ function ErasePanel() {
   );
 }
 
-// One line per phase, e.g. "35 lb · Strength", so a lift trained in two phases shows which weight is which.
-// With a 1RM given, each phase line also shows what that phase's % of the 1RM works out to, to compare with the logged weight.
-function PhaseWeights({ list, rm, cfg }: { list: { ph: PhaseKey | null; w: number }[]; rm?: number; cfg?: Cfg }) {
-  return list.map(({ ph, w }) => {
-    const pct = ph && cfg ? (cfg.pct[ph] ?? PHASES[ph as PhaseKey].pct) : 0;
-    return (
-      <div key={`${ph}:${w}`} className="phw"><span className="dot" data-p={ph || undefined} /> {w} lb · {ph ? PHASES[ph as PhaseKey].label : 'No phase'}{rm! > 0 && pct > 0 ? ` · ${pct}% of 1RM is ${round(rm! * pct / 100)} lb` : ''}</div>
-    );
-  });
-}
-
-function RmPanel() {
-  const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs); const programs = useAppStore(s => s.programs);
-  const st = useAppStore.getState();
-  const all = [...slotsFor(programs.A), ...slotsFor(programs.B)]; const saving = useSaving();
-  // Program ids too: synced, a card can use an exercise that isn't in the account's library (ADR 024).
-  const weighted = [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
-  const withRm = weighted.filter(id => cfg.rm[id] != null).length;
-  return (
-    <section className="panel wide">
-      <h3>1-rep maxes</h3>
-      <p>For reference only: a 1RM never sets your targets.</p>
-      {/* Folded: one row per weighted exercise is most of the page on a phone, and it is rarely edited. */}
-      <details className="fold">
-        <summary>{weighted.length ? `Show all ${weighted.length} exercises (${withRm ? `${withRm} with a 1RM` : 'none set yet'})` : 'No weighted exercises in your programs yet'}</summary>
-      <div className="tbl">
-        <table>
-          <thead><tr><th>Exercise</th><th>Program weight</th><th>1RM (lb)</th><th>Best logged</th></tr></thead>
-          <tbody>
-            {weighted.map(id => {
-              const best = bestByPhase(logs[id]);
-              return (
-                <tr key={id}>
-                  <td>{exInfo(cfg, id).n}</td>
-                  <td><PhaseWeights list={programWeights(cfg, all, id)} /></td>
-                  <td><CommitInput key={`${id}:${cfg.rm[id] ?? ''}`} type="number" id={`rm-${id}`} aria-label={`${exInfo(cfg, id).n} 1RM (lb)`} min="0" step="any" value={cfg.rm[id] ?? ''} placeholder="—" onCommit={saving(`rm-${id}`, v => st.setRm(id, v))} /> <Tick id={`rm-${id}`} /></td>
-                  <td>{best.length ? <PhaseWeights list={best} rm={cfg.rm[id]} cfg={cfg} /> : '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      </details>
-      <More about="1-rep maxes"><p>A one-rep max (1RM) is the most you can lift once. It shows next to your logged weights; targets start from the weight you last logged.</p></More>
-    </section>
-  );
-}
-
 // Where each group starts, for the jump row. The page is long on a phone; the row gets to a group in one tap.
 const jump = (id: string) => { closeSettingsScreen(); void jumpToGroup(id, { find: findVisible, raf: requestAnimationFrame, smooth: motionOK() }); };
 
@@ -445,8 +372,7 @@ function Group({ id, title, children }: { id: string; title: string; children: R
 // Training: summary rows that each open their own screen (Program mode, Phases, 1-rep maxes), and the Injury prevention switch.
 function TrainingRows({ open }: { open: (s: Screen) => void }) {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
-  const all = [...slotsFor(programs.A), ...slotsFor(programs.B)];
-  const weighted = [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
+  const weighted = weightedExIds(cfg, programs);
   const rows: [Screen, string, string][] = [
     ['mode', 'Program mode', modeSummary(cfg.mode, progName(cfg, 'A'))],
     ['phases', 'Phases', phasesSummary(cfg)],
@@ -465,18 +391,18 @@ function TrainingRows({ open }: { open: (s: Screen) => void }) {
 }
 
 // One of those screens: a back link, then the panel as it was. Opening it pushes a history entry, so the browser's Back button closes it.
-function SettingsScreen({ screen, onBack }: { screen: Screen; onBack: () => void }) {
+function SettingsScreen({ screen, sub, openSub, onBack }: { screen: Screen; sub: string | null; openSub: (id: string) => void; onBack: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     window.scrollTo(0, 0);
     const h = ref.current?.querySelector('h3'); h?.setAttribute('tabindex', '-1'); (h as HTMLElement | null)?.focus({ preventScroll: true });
-  }, []);
+  }, [sub]); // a 1-rep max row opens a screen inside the screen: the new heading takes focus
   return (
     <div className="sscreen" ref={ref}>
-      <button type="button" className="sback" onClick={onBack}><Icon name="chevron-left" /> Training</button>
+      <button type="button" className="sback" onClick={onBack}><Icon name="chevron-left" /> {sub ? '1-rep maxes' : 'Training'}</button>
       {screen === 'mode' && <ModePanel />}
       {screen === 'phases' && <PhasePanel />}
-      {screen === 'maxes' && <RmPanel />}
+      {screen === 'maxes' && <MaxesScreen sub={sub} open={openSub} />}
     </div>
   );
 }
@@ -485,15 +411,17 @@ export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
   const cur = useCurrentGroup();
   const [screen, setScreen] = useState<Screen | null>(null);
+  const [sub, setSub] = useState<string | null>(null); // an exercise's screen inside 1-rep maxes
   const was = useRef<{ screen: Screen; y: number } | null>(null); // where the screen was opened from, to go back to
   const open = (s: Screen) => { was.current = { screen: s, y: window.scrollY }; history.pushState({ settingsScreen: s }, ''); setScreen(s); };
+  const openSub = (id: string) => { history.pushState({ settingsScreen: 'maxes', sub: id }, ''); setSub(id); };
   const back = () => { if (history.state?.settingsScreen) history.back(); else setScreen(null); };
   useEffect(() => {
     // Only ever closes or switches a screen of ours: a popstate with no `settingsScreen` in its state leaves a closed Settings as it is.
-    const onPop = (e: PopStateEvent) => setScreen(now => (e.state?.settingsScreen as Screen | undefined) ?? (now ? null : now));
+    const onPop = (e: PopStateEvent) => { setScreen(now => (e.state?.settingsScreen as Screen | undefined) ?? (now ? null : now)); setSub((e.state?.sub as string | undefined) ?? null); };
     window.addEventListener('popstate', onPop);
     // Sent to a group by the account menu or the jump row: close the screen now, and drop its history entry without leaving the page.
-    const off = onCloseSettingsScreen(() => { setScreen(null); was.current = null; if (history.state?.settingsScreen) history.replaceState(null, ''); });
+    const off = onCloseSettingsScreen(() => { setScreen(null); setSub(null); was.current = null; if (history.state?.settingsScreen) history.replaceState(null, ''); });
     return () => {
       window.removeEventListener('popstate', onPop); off();
       if (history.state?.settingsScreen) history.back(); // another tab was chosen with a screen open: take its history entry back, so Back is not a dead press
@@ -542,7 +470,7 @@ export default function Settings() {
           </Group>
         </div>
       </div>
-      {screen && <SettingsScreen screen={screen} onBack={back} />}
+      {screen && <SettingsScreen screen={screen} sub={sub} openSub={openSub} onBack={back} />}
     </div></SavedTicks>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currentMax, estimateMax, liftsOf, phaseRows } from './oneRepMax.js';
+import { currentMax, estimateMax, liftsOf, maxLine, phaseRows, targetNote } from './oneRepMax.js';
 import type { LogEntry } from '../types.ts';
 
 const e = (ph: LogEntry['ph'], w: number, r: number, sets?: { w: number; r: number }[]): LogEntry => ({ d: '2026-10-01', ph, w, r, ...(sets ? { sets } : {}) });
@@ -61,5 +61,22 @@ describe('phaseRows', () => {
 describe('liftsOf', () => {
   it('skips entries with no weight or no reps', () => {
     expect(liftsOf([{ d: '2026-10-01', w: 0, r: 5 }, { d: '2026-10-01', w: 50 }])).toEqual([]);
+  });
+});
+
+describe('maxLine and targetNote', () => {
+  it('says what the number is, or what to do to get one', () => {
+    expect(maxLine(currentMax(null, [e('strength', 245, 5)]))).toBe('Estimated 286 lb');
+    expect(maxLine(currentMax(315, []))).toBe('Tested 315 lb');
+    expect(maxLine(null)).toBe('Log a set of 10 reps or fewer to get an estimate');
+  });
+
+  it('compares a phase with its target in words', () => {
+    const row = (diff: number | null, target: number | null) => ({ ph: 'strength' as const, w: 1, r: 1, pct: 0, target, diff });
+    expect(targetNote(row(1, 85))).toBe('Target 85%. 1 point over.');
+    expect(targetNote(row(-4, 90))).toBe('Target 90%. 4 points under.');
+    expect(targetNote(row(0, 65))).toBe('Target 65%. On target.');
+    expect(targetNote(row(null, 85))).toBe('Target 85%.');
+    expect(targetNote(row(null, null))).toBe('No target for this phase.');
   });
 });

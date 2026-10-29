@@ -1,4 +1,4 @@
-import { PHASES } from './data.js';
+import { PHASES, allExIds, slotsFor } from './data.js';
 import type { Cfg, LogEntry, PhaseKey } from '../types.ts';
 
 // A 1-rep max worked out from what was logged, so it need not be guessed. It is for reference only: a 1RM never sets a target weight.
@@ -50,4 +50,25 @@ export function phaseRows(entries: readonly LogEntry[] | null | undefined, max: 
     const target = l.ph ? (cfg.pct?.[l.ph] ?? PHASES[l.ph].pct) || null : null; // Mobility has no share
     return { ph: l.ph, w: l.w, r: l.r, pct, target, diff: pct != null && target != null ? pct - target : null };
   });
+}
+
+/** The exercises that have a program weight, in the library's order: the ones a 1RM is worth showing for. Program ids too: synced, a card can use an exercise that is not in the library (ADR 024). */
+export function weightedExIds(cfg: Cfg, programs: Record<string, Parameters<typeof slotsFor>[0]>): string[] {
+  const all = [...slotsFor(programs.A!), ...slotsFor(programs.B!)];
+  return [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
+}
+
+/** The second line of an exercise's row: "Estimated 286 lb", "Tested 315 lb", or what to do to get one. */
+export function maxLine(m: Max | null): string {
+  if (!m) return 'Log a set of 10 reps or fewer to get an estimate';
+  return `${m.source === 'tested' ? 'Tested' : 'Estimated'} ${m.value} lb`;
+}
+
+/** How a phase's best lift compares with its target: "Target 85%. 1 point over." */
+export function targetNote(row: PhaseRow): string {
+  if (row.target == null) return 'No target for this phase.';
+  if (row.diff == null) return `Target ${row.target}%.`;
+  if (row.diff === 0) return `Target ${row.target}%. On target.`;
+  const n = Math.abs(row.diff);
+  return `Target ${row.target}%. ${n} ${n === 1 ? 'point' : 'points'} ${row.diff < 0 ? 'under' : 'over'}.`;
 }
