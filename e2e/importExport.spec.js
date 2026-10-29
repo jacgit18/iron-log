@@ -3,13 +3,19 @@ import { test, expect } from './fixtures.js';
 
 // The data file is the one backup (ADR 035): Export all data, change things, and bring the file back with Cancel, Add and Replace.
 const openSettings = page => page.getByRole('tab', { name: 'Settings', exact: true }).click();
-const setRest = async (page, seconds) => {
-  const rest = page.locator('#rest-s');
+// The rest time is on the Phases screen, one tap in from Training; these open it, do the thing and come back to the list (where Export and Import are).
+const inPhases = async (page, fn) => {
+  await page.locator('#drill-phases').click();
+  await fn(page.locator('#rest-s'));
+  await page.getByRole('button', { name: 'Training', exact: true }).click();
+};
+const setRest = (page, seconds) => inPhases(page, async rest => {
   await rest.fill(String(seconds));
   await rest.press('Enter');
   await expect(rest).toHaveValue(String(seconds));
   await expect(page.locator('label[for="rest-s"]').getByText('✓ Saved')).toBeVisible();
-};
+});
+const expectRest = (page, seconds) => inPhases(page, rest => expect(rest).toHaveValue(String(seconds)));
 const exportFile = async page => {
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export all data' }).first().click()]);
   expect(download.suggestedFilename()).toMatch(/^iron-log-data-.*\.json$/);
@@ -35,7 +41,7 @@ test('Cancel on the import review changes nothing', async ({ page }) => {
   await importText(page, file.text);
   await page.getByRole('dialog', { name: 'Import data' }).getByRole('button', { name: 'Cancel' }).click();
   await expect(page.getByRole('dialog', { name: 'Import data' })).toHaveCount(0);
-  await expect(page.locator('#rest-s')).toHaveValue('45');
+  await expectRest(page, 45);
 });
 
 test('Replace makes the ticked tabs match the file', async ({ page }) => {
@@ -47,7 +53,7 @@ test('Replace makes the ticked tabs match the file', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: 'Import data' })).toBeVisible();
   await dialog.getByRole('button', { name: /^Tap again to replace/ }).click();
   await expect(page.getByRole('dialog', { name: 'Import data' })).toHaveCount(0);
-  await expect(page.locator('#rest-s')).toHaveValue('120');
+  await expectRest(page, 120);
   const again = await exportFile(page);
   expect(again.data.config).toEqual(file.data.config);
   expect(again.data.programs).toEqual(file.data.programs);

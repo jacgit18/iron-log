@@ -21,3 +21,6 @@ export function jumpToGroup(id: string, { find, raf, smooth, tries = 30 }: JumpD
     go(tries);
   });
 }
+
+/** A heading that is on the page and drawn (not inside a hidden screen), or null; for `jumpToGroup`'s `find`. */
+export const findVisible = (id: string) => { const e = document.getElementById(id); return e && e.getClientRects().length ? e : null; };
