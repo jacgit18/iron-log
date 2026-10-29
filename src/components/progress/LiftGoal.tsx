@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
-import { GOAL_KEYS, goalFromMultiplier, goalPhaseLabel, liftGoalsOf, liftGoalStatus, multiplierOf, suggestedMultiplier } from '../../lib/liftGoal.js';
+import { GOAL_KEYS, goalFromMultiplier, goalPhaseLabel, liftGoalsOf, liftGoalStatus, multiplierOf, scaledGoal, suggestedMultiplier } from '../../lib/liftGoal.js';
 import { tagsOf } from '../../lib/muscles.js';
 import { bwSorted, fmtLb, signed } from '../../lib/body.js';
 import ArmedButton from '../ArmedButton.jsx';
@@ -24,12 +24,12 @@ export function GoalForm({ exId, prepare, from, goal, taken, defKey, tags, onDon
   // Goal and multiplier follow each other at your latest body weight: the goal in steps of 5 lb, the multiplier to two places.
   const onScale = (on: boolean) => {
     setScale(on);
-    if (!on) return;
+    if (!on) { if (goal?.bw) setW(String(scaledGoal(goal, useAppStore.getState().body).w)); return; } // unticking keeps the target you were shown, not the base
     const n = Number(w);
     if (n > 0) setMult(String(multiplierOf(n, bodyLb)));
     else { setMult(String(suggested)); setW(String(goalFromMultiplier(suggested, bodyLb))); }
   };
-  const onMult = (v: string) => { setMult(v); const n = Number(v); if (n > 0) setW(String(goalFromMultiplier(n, bodyLb))); };
+  const onMult = (v: string) => { setMult(v); const n = Number(v); if (n > 0 && hasBody) setW(String(goalFromMultiplier(n, bodyLb))); };
   const onW = (v: string) => { setW(v); const n = Number(v); if (scale && n > 0 && hasBody) setMult(String(multiplierOf(n, bodyLb))); };
   return (
     <form className="goalform" noValidate onSubmit={e => { e.preventDefault(); const id = prepare ? prepare() : exId; if (id && setLiftGoal(id, key, w, by, from, scale)) onDone(); }}>
@@ -43,7 +43,7 @@ export function GoalForm({ exId, prepare, from, goal, taken, defKey, tags, onDon
         <label className="field">By (optional)<input type="date" value={by} onChange={e => setBy(e.target.value)} /></label>
       </div>
       <label className="inline"><input type="checkbox" checked={scale} disabled={!hasBody && !scale} onChange={e => onScale(e.target.checked)} /> Scale with my body weight</label>
-      {scale && <label className="field">Multiplier (× body weight)<input type="number" inputMode="decimal" step="0.1" min="0" value={mult} onChange={e => onMult(e.target.value)} /></label>}
+      {scale && <label className="field">Multiplier (× body weight)<input type="number" inputMode="decimal" step="0.1" min="0" value={mult} disabled={!hasBody} onChange={e => onMult(e.target.value)} /></label>}
       <p className="note">{!hasBody && !scale ? 'Log your body weight first. ' : ''}The goal rises with your body weight in steps of 5 lb, and stays put if your weight drops.</p>
       <div className="actions">
         <button type="button" className="btn sm" onClick={onDone}>Cancel</button>

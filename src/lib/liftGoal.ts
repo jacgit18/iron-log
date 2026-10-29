@@ -1,7 +1,6 @@
-import type { BodyEntry, Cfg, LiftGoal, LogEntry, PhaseKey } from '../types.ts';
+import type { BodyEntry, Cfg, LiftGoal, LogEntry, MuscleKey, MuscleTags, PhaseKey } from '../types.ts';
 import { setsOfEntry } from './logic.js';
 import { PHASES, PH_KEYS } from './data.js';
-import type { MuscleKey, MuscleTags } from '../types.ts';
 import { fmtLb } from './body.js';
 
 /* ---------- Lift weight goals ----------

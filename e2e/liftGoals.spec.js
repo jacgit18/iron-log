@@ -83,6 +83,14 @@ test('300 lb set at 120 lb body weight shows 375 lb after a 150 lb weigh-in, and
   await setBody([['2026-09-06', '2026-09-07', 120], ['2026-09-13', '2026-09-14', 150], ['2026-09-20', '2026-09-21', 135]]);
   await page.reload(); await page.click('#tab-progress');
   await expect(panel(page).locator('.goalrow')).toContainText('Any phase: 375 lb');
+
+  // Unticking the switch keeps the 375 lb shown, not the 300 lb base.
+  await panel(page).getByRole('button', { name: 'Change Any phase goal' }).click();
+  await panel(page).getByLabel('Scale with my body weight').uncheck();
+  await expect(panel(page).getByLabel('Goal (lb)')).toHaveValue('375');
+  await panel(page).getByRole('button', { name: 'Save goal' }).click();
+  await expect(panel(page).locator('.goalrow')).toContainText('Any phase: 375 lb');
+  await expect(panel(page).locator('.goalrow')).not.toContainText('Scales with');
 });
 
 test('the multiplier starts at 1.5 for an upper body lift and 2.5 for lower, fills the goal, and follows an edit either way', async ({ page }) => {
