@@ -455,7 +455,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
       mutateCatalogue(g => {
         const x = g.groups?.find(y => y.id === id);
         if (!x) return null;
-        if (named) { x.gone = true; x.stores = []; x.people.forEach(p => { p.gone = true; }); } else g.groups = g.groups!.filter(y => y.id !== id);
+        if (named) { x.gone = true; x.stores = []; delete x.allStores; x.people.forEach(p => { p.gone = true; }); } else g.groups = g.groups!.filter(y => y.id !== id);
         if (!g.groups!.length) delete g.groups;
         return null;
       });
@@ -508,6 +508,16 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         g.groups?.forEach(x => { x.stores = x.stores.filter(s => s !== store); }); // one group at most
         const x = groupId ? g.groups?.find(y => y.id === groupId) : undefined;
         if (x) x.stores.push(store);
+        return null;
+      });
+    },
+    setGroceryAllStores(groupId, on) {
+      pinPastParties(); // earlier months keep the split they were counted with
+      mutateCatalogue(g => {
+        const x = g.groups?.find(y => y.id === groupId && !y.gone);
+        if (!x) return 'That group is gone.';
+        if (on) { g.groups?.forEach(y => { delete y.allStores; }); x.allStores = true; } // one group at most
+        else delete x.allStores;
         return null;
       });
     },

@@ -35,7 +35,17 @@ function GroupRow({ group, stores }: { group: GroceryGroup; stores: string[] }) 
         <input type="text" aria-label={`New person in ${group.n}`} placeholder="Add a person" maxLength={40} value={person} onChange={e => setPerson(e.target.value)} />
         <button type="submit" className="btn sm" disabled={!person.trim() || group.people.filter(p => !p.gone).length >= MAX_PEOPLE}>Add person</button>
       </form>
-      {stores.length > 0 && (
+      <fieldset className="gsstores">
+        <legend>Splits with {group.n} by default at</legend>
+        <label className="gsstore">
+          <input type="radio" name={`gs-where-${group.id}`} checked={!!group.allStores} onChange={() => s.setGroceryAllStores(group.id, true)} /> All stores
+        </label>
+        <label className="gsstore">
+          <input type="radio" name={`gs-where-${group.id}`} checked={!group.allStores} onChange={() => s.setGroceryAllStores(group.id, false)} /> Only these stores
+        </label>
+        {group.allStores && <p className="note">A store with a group of its own keeps that group. An item set to Just me stays yours.</p>}
+      </fieldset>
+      {!group.allStores && stores.length > 0 && (
         <fieldset className="gsstores">
           <legend>Stores that split with {group.n} by default</legend>
           {stores.map(st => (

@@ -329,6 +329,7 @@ export interface GrocerySlice {
   updateGroceryPerson(groupId: string, personId: string, patch: Partial<{ n: string; covered: boolean }>): string | null;
   removeGroceryPerson(groupId: string, personId: string): void;
   setGroceryStoreGroup(store: string, groupId: string | null): void; // a store defaults to one group at most
+  setGroceryAllStores(groupId: string, on: boolean): void; // the group is the default for every store with no group of its own; at most one group has it
   setGroceryItemShare(id: string, share: GroceryShare | null): void; // the item's usual share; null goes back to the store's group
   setGroceryLineShare(month: string, id: string, share: GroceryShare | null): void; // this month's share for the item; null goes back to the item's
   setGroceryPackShare(month: string, id: string, index: number, share: GroceryShare | null): void; // one pack of an item priced pack by pack
