@@ -28,6 +28,23 @@ export function splitIngredient(line: string): RecipeIngredient {
   return name ? { n: name, ...(amt ? { amt } : {}) } : { n: text };
 }
 
+/* ---------- Same ingredient, two names ----------
+   Pairs that are the same thing in a US kitchen, folded to one name before words are compared, so "scallions" finds "Green onions".
+   Keep it short and exact: near-substitutes (butter and margarine, lemon and lime juice) are a swap, not a synonym, and a regional name
+   that means something else elsewhere (coriander seeds, castor sugar) is left out. Each row: the name the others become, then the others. */
+export const SYNONYMS: readonly (readonly [string, ...string[]])[] = [
+  ['scallion', 'green onion'],
+  ['cilantro', 'coriander leaf', 'coriander leaves', 'fresh coriander'],
+  ['chickpea', 'garbanzo bean', 'garbanzo'],
+  ['powdered sugar', 'confectioners sugar', 'icing sugar'],
+  ['zucchini', 'courgette'],
+  ['eggplant', 'aubergine'],
+  ['bell pepper', 'sweet pepper'],
+];
+const SYNONYM_RULES: readonly [RegExp, string][] = SYNONYMS.flatMap(([to, ...from]) =>
+  [...from].sort((a, b) => b.length - a.length).map((f): [RegExp, string] => [new RegExp(`\\b${f}(?:s|es)?\\b`, 'g'), to]));
+const fold = (text: string): string => SYNONYM_RULES.reduce((t, [re, to]) => t.replace(re, to), text);
+
 const singular = (w: string): string =>
   w.length > 4 && w.endsWith('ies') ? `${w.slice(0, -3)}y`
   : w.length > 4 && /(ch|sh|x|z|ss|o)es$/.test(w) ? w.slice(0, -2)
@@ -35,17 +52,26 @@ const singular = (w: string): string =>
 
 /** The words of a name that carry its meaning: lower case, punctuation gone, plurals made singular, cooking filler dropped. */
 export function nameWords(name: string): string[] {
-  const all = name.toLowerCase().replace(/['’]/g, '').split(/[^\p{L}\p{N}]+/u).filter(Boolean).map(singular);
+  const all = fold(name.toLowerCase().replace(/['’]/g, '')).split(/[^\p{L}\p{N}]+/u).filter(Boolean).map(singular);
   const kept = all.filter(w => !FILLER.has(w) && !NUMBER.test(w) && !UNITS.has(w));
   return kept.length ? kept : all;
 }
 
+const WATER_KINDS = new Set(['tap', 'cold', 'warm', 'hot', 'boiling', 'ice', 'iced', 'lukewarm', 'filtered']);
+/** Water, which every kitchen has: "water", "cold water", "boiling water", "ice water". "Coconut water" and "water chestnuts" are not. */
+export const isAlwaysHave = (name: string): boolean => {
+  const w = nameWords(name);
+  return w.includes('water') && w.every(x => x === 'water' || WATER_KINDS.has(x));
+};
+
 /** What the ingredient is called when you cook it: the swap if there is one, else the name in the recipe. */
 export const ingredientName = (ing: RecipeIngredient): string => ing.sub || ing.n;
 
-/** The At home item an ingredient is: the one it is pinned to, else the item with the same words, else a one-word name that is the first word
- *  of the other ("Parmesan" for "Parmesan cheese", "chicken" for "chicken thighs"). A one-word name found elsewhere in the other ("butter" in
- *  "peanut butter", "milk" in "coconut milk") is a different product, so it is not a match; pin it by hand when it is one. Null when none. */
+/** The At home item an ingredient is: the one it is pinned to, else the item with the same words, else the item whose name holds all the
+ *  words of a two-or-more-word name or is held by it ("chicken breast" and "boneless chicken breast"; the fewest extra words wins), else a
+ *  one-word name that is the first word of the other ("Parmesan" for "Parmesan cheese", "chicken" for "chicken thighs"). A one-word name
+ *  found elsewhere in the other ("butter" in "peanut butter", "milk" in "coconut milk") is a different product, so it is not a match; pin it
+ *  by hand when it is one. Names are compared after synonyms are folded ("scallion" is "green onion"). Null when none. */
 export function matchHome(ing: RecipeIngredient, items: GroceryItem[]): GroceryItem | null {
   if (ing.home) { const pinned = items.find(i => i.id === ing.home); if (pinned) return pinned; }
   const w = nameWords(ingredientName(ing));
@@ -53,20 +79,54 @@ export function matchHome(ing: RecipeIngredient, items: GroceryItem[]): GroceryI
   const key = [...w].sort().join(' ');
   const exact = items.find(i => [...nameWords(i.n)].sort().join(' ') === key);
   if (exact) return exact;
+  const holds = (long: string[], short: string[]) => short.length >= 2 && short.every(x => long.includes(x));
+  const around = items.flatMap(i => { const iw = nameWords(i.n); return iw.length > 0 && (holds(iw, w) || holds(w, iw)) ? [{ i, extra: Math.abs(iw.length - w.length) }] : []; });
+  if (around.length) return around.reduce((a, b) => (b.extra < a.extra ? b : a)).i;
   const lead = (short: string[], long: string[]) => short.length === 1 && long.length <= 2 && long[0] === short[0];
   return items.find(i => { const iw = nameWords(i.n); return iw.length > 0 && (lead(iw, w) || lead(w, iw)); }) ?? null;
 }
 
-export interface IngredientStatus { ing: RecipeIngredient; item: GroceryItem | null; have: boolean; skipped: boolean }
+/* Words too general to say two names are alike: "red onion" and "red wine vinegar" are not close because both are red. */
+const COMMON_ADJECTIVES = new Set(['red', 'green', 'white', 'black', 'brown', 'yellow', 'dark', 'light', 'sweet', 'hot', 'cold', 'warm', 'whole', 'extra', 'virgin', 'plain', 'dry', 'dried', 'low', 'fat', 'free', 'organic', 'boneless', 'skinless', 'baby']);
+const closeness = (ing: RecipeIngredient, item: GroceryItem): number => {
+  const a = nameWords(ingredientName(ing)).filter(x => !COMMON_ADJECTIVES.has(x));
+  const b = new Set(nameWords(item.n));
+  return a.filter(x => b.has(x)).length;
+};
+
+/** Your At home items from the likeliest for this ingredient to the least, for the pick list: most words in common first, then the shorter
+ *  name, then A to Z. */
+export function rankItems(ing: RecipeIngredient, items: GroceryItem[]): GroceryItem[] {
+  return items.map(i => ({ i, c: closeness(ing, i) }))
+    .sort((x, y) => y.c - x.c || x.i.n.length - y.i.n.length || x.i.n.localeCompare(y.i.n, undefined, { sensitivity: 'base' }))
+    .map(x => x.i);
+}
+
+/** The item to offer as "Maybe" for an ingredient that matches nothing by itself: the likeliest one that shares a meaningful word, or null.
+ *  Never used as a match: only a tap pins it. */
+export function suggestItem(ing: RecipeIngredient, items: GroceryItem[]): GroceryItem | null {
+  const best = rankItems(ing, items)[0];
+  return best && closeness(ing, best) > 0 ? best : null;
+}
+
+export interface IngredientStatus { ing: RecipeIngredient; item: GroceryItem | null; have: boolean; skipped: boolean; always: boolean; suggest: GroceryItem | null }
 export interface PantryStatus { lines: IngredientStatus[]; have: number; total: number }
 
 /** Each ingredient against the list for one month: the item it is, and whether it is at home (or already bought) that month. A skipped
  *  ingredient stays in `lines` but is not counted in `have` and `total`. */
 export function pantryStatus(recipe: Pick<Recipe, 'ing'>, g: Grocery, month: GroceryMonth): PantryStatus {
-  const lines = recipe.ing.map(ing => { const item = matchHome(ing, g.items); return { ing, item, have: !!item && !!haveOf(item, month), skipped: !!ing.skip }; });
+  const lines = recipe.ing.map((ing): IngredientStatus => {
+    const skipped = !!ing.skip, always = !skipped && isAlwaysHave(ingredientName(ing));
+    const item = always ? null : matchHome(ing, g.items);
+    return { ing, item, have: always || (!!item && !!haveOf(item, month)), skipped, always, suggest: item || skipped || always ? null : suggestItem(ing, g.items) };
+  });
   const counted = lines.filter(l => !l.skipped);
   return { lines, have: counted.filter(l => l.have).length, total: counted.length };
 }
+
+/** The suggestions one tap can accept: the position of each unmatched ingredient and the item it would be pinned to. */
+export const suggestionPins = (status: PantryStatus): { index: number; home: string }[] =>
+  status.lines.flatMap((l, index) => (l.suggest ? [{ index, home: l.suggest.id }] : []));
 
 /** What "Add missing to To get" works on: the ingredients that are not at home. One that is already an item on your list is on To get as it
  *  is (an item with no tick shows there), so it only counts; one with no item is a new name to add, once each by its words. */
