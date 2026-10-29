@@ -51,7 +51,7 @@ describe('connectHost', () => {
     expect(connectHost(`postgres://o:p@${PROD_HOST}/neondb`)).toBe(PROD_HOST);
     expect(connectHost(`postgres://o:p@${PROD_HOST.toUpperCase()}/neondb`)).toBe(PROD_HOST);
     expect(connectHost(`postgres://o:p@${PROD_HOST}./neondb`)).toBe(PROD_HOST);
-    expect(connectHost(`postgres://o:p@${PROD_HOST.replace('-', '%2D')}/neondb`)).toBe(PROD_HOST);
+    expect(connectHost(`postgres://o:p@${PROD_HOST.replaceAll('-', '%2D')}/neondb`)).toBe(PROD_HOST);
     expect(connectHost(`postgres://o:p@${OTHER}/neondb?host=${PROD_HOST}`)).toBe(PROD_HOST); // the ?host= parameter wins in pg, so it wins here
   });
 });
@@ -64,7 +64,7 @@ describe('guardHost refuses production, however the URL is spelled', () => {
     ['upper case', `postgres://o:p@${PROD_HOST.toUpperCase()}/neondb`],
     ['an upper case pooled host', 'postgres://o:p@EP-COOL-123-POOLER.US-EAST-2.AWS.NEON.TECH/neondb'],
     ['a trailing dot', `postgres://o:p@${PROD_HOST}./neondb`],
-    ['a percent-escaped hyphen', `postgres://o:p@${PROD_HOST.replace('-', '%2D')}/neondb`],
+    ['a percent-escaped hyphen', `postgres://o:p@${PROD_HOST.replaceAll('-', '%2D')}/neondb`],
     ['a ?host= parameter on another host', `postgres://o:p@${OTHER}/neondb?host=${PROD_HOST}`],
     ['production in the userinfo and another host after it', `postgres://${PROD_HOST}@${OTHER}/neondb?host=${PROD_HOST}`],
   ])('%s', async (_name, url) => {

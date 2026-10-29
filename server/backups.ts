@@ -39,6 +39,7 @@ export const shouldReplace = (stored: number | null, next: number): boolean => s
 
 /** A data file the server will keep: gzip (or plain) JSON that is a Loadbearer export. Returns the gzipped bytes to store, or why not. */
 export function prepareFile(raw: Buffer, encoding: string): { ok: true; zipped: Buffer } | { ok: false; error: string } {
+  if (!Buffer.isBuffer(raw)) return { ok: false, error: 'send the data file as the request body' }; // a request body is bytes, never a string or a list
   let text: Buffer;
   try { text = encoding === 'gzip' ? gunzipSync(raw, { maxOutputLength: MAX_UNZIPPED }) : raw; } catch { return { ok: false, error: 'the body is not a gzip file' }; }
   try {
