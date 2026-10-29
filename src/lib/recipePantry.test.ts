@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Grocery, GroceryItem } from '../types.ts';
-import { addMissingMessage, ingredientName, matchHome, missingParts, nameWords, pantryStatus, splitIngredient } from './recipePantry.js';
+import { SYNONYMS, addMissingMessage, ingredientName, isAlwaysHave, matchHome, missingParts, nameWords, pantryStatus, rankItems, splitIngredient, suggestItem, suggestionPins } from './recipePantry.js';
 
 const it_ = (id: string, n: string): GroceryItem => ({ id, n, store: 'Anywhere', qty: 1, cents: null, every: false, out: false });
 const g = (...items: GroceryItem[]): Grocery => ({ stores: ['Anywhere'], items });
@@ -90,6 +90,78 @@ describe('a skipped ingredient', () => {
   it('is never added to To get', () => expect(missingParts(pantryStatus(recipe, grocery, month)).add).toEqual(['paprika']));
   it('leaves nothing to count when every ingredient is skipped', () => {
     expect(pantryStatus({ ing: [{ n: 'salt', skip: true }] }, grocery, month)).toMatchObject({ have: 0, total: 0 });
+  });
+});
+
+describe('water is always at home', () => {
+  it.each(['water', 'Water', 'cold water', 'boiling water', 'warm water', 'ice water', 'tap water', 'lukewarm water', 'hot water'])('%s', n => expect(isAlwaysHave(n)).toBe(true));
+  it.each(['coconut water', 'water chestnuts', 'rose water', 'watermelon', 'salt', 'sparkling water and lime'])('%s is not', n => expect(isAlwaysHave(n)).toBe(false));
+  it('shows Have with no At home items, counts, and is never added to To get', () => {
+    const s = pantryStatus({ ing: [{ n: 'cold water' }, { n: 'rice' }] }, g(), { lines: {}, pulled: [] });
+    expect(s.lines.map(l => [l.have, l.always])).toEqual([[true, true], [false, false]]);
+    expect(s).toMatchObject({ have: 1, total: 2 });
+    expect(missingParts(s).add).toEqual(['rice']);
+  });
+  it('is not water when it is skipped, and a swap to water is water', () => {
+    expect(pantryStatus({ ing: [{ n: 'water', skip: true }] }, g(), { lines: {}, pulled: [] })).toMatchObject({ have: 0, total: 0 });
+    expect(pantryStatus({ ing: [{ n: 'stock', sub: 'water' }] }, g(), { lines: {}, pulled: [] })).toMatchObject({ have: 1, total: 1 });
+  });
+});
+
+describe('matching by all the words of a longer name', () => {
+  const home = [it_('c', 'Boneless skinless chicken breast'), it_('o', 'Extra virgin olive oil'), it_('p', 'Peanut butter'), it_('b', 'Butter')];
+  it('finds the item in either direction when the shorter name has two or more words', () => {
+    expect(matchHome({ n: 'chicken breast' }, home)?.id).toBe('c');
+    expect(matchHome({ n: 'olive oil' }, home)?.id).toBe('o');
+    expect(matchHome({ n: 'boneless skinless chicken breast, sliced' }, [it_('x', 'Chicken breast')])?.id).toBe('x');
+  });
+  it('takes the closest when several hold the words', () => {
+    expect(matchHome({ n: 'chicken breast' }, [it_('l', 'Large boneless skinless chicken breast'), it_('m', 'Boneless chicken breast')])?.id).toBe('m');
+  });
+  it('still does not match a one-word name found inside another', () => {
+    expect(matchHome({ n: 'butter' }, [it_('p', 'Peanut butter')])).toBeNull();
+    expect(matchHome({ n: 'oil' }, [it_('o', 'Extra virgin olive oil')])).toBeNull();
+    expect(matchHome({ n: 'peanut butter' }, [it_('b', 'Butter')])).toBeNull();
+  });
+  it('keeps a pin above it', () => expect(matchHome({ n: 'chicken breast', home: 'b' }, home)?.id).toBe('b'));
+  it('needs the same last word, so a different product that starts with the same words is not a match', () => {
+    for (const [ing, item] of [['red wine vinegar', 'Red wine'], ['red wine', 'Red wine vinegar'], ['cream cheese frosting', 'Cream cheese'], ['coconut milk powder', 'Coconut milk'], ['ice cream cones', 'Ice cream']]) {
+      expect(matchHome({ n: ing! }, [it_('x', item!)]), `${ing} / ${item}`).toBeNull();
+    }
+  });
+});
+
+describe('the same ingredient under two names', () => {
+  it.each([
+    ['scallions', 'Green onions'], ['green onion', 'Scallion'], ['cilantro', 'Fresh coriander leaves'], ['garbanzo beans', 'Chickpeas'],
+    ["confectioners' sugar", 'Powdered sugar'], ['icing sugar', 'Powdered sugar'], ['courgette', 'Zucchini'], ['aubergines', 'Eggplant'], ['sweet pepper', 'Bell peppers'],
+  ])('%s is %s', (a, b) => expect(matchHome({ n: a }, [it_('x', b)])?.id).toBe('x'));
+  it('folds to the same words', () => expect(nameWords('Green onions, sliced')).toEqual(nameWords('scallion')));
+  it('leaves near-substitutes and other regional meanings apart', () => {
+    for (const [a, b] of [['butter', 'Margarine'], ['lemon juice', 'Lime juice'], ['coriander seeds', 'Cilantro'], ['castor sugar', 'Powdered sugar']]) {
+      expect(matchHome({ n: a! }, [it_('x', b!)]), `${a} / ${b}`).toBeNull();
+    }
+  });
+  it('keeps the list to named pairs', () => expect(SYNONYMS.every(r => r.length >= 2)).toBe(true));
+});
+
+describe('suggestions for what matches nothing', () => {
+  const home = [it_('p', 'Peanut butter'), it_('r', 'Red wine vinegar'), it_('v', 'White wine vinegar'), it_('g', 'Garlic powder'), it_('o', 'Red onions')];
+  it('offers the item that shares a meaningful word, never one that shares only a colour', () => {
+    expect(suggestItem({ n: 'butter' }, home)?.id).toBe('p');
+    expect(suggestItem({ n: 'apple cider vinegar' }, home)?.id).toBe('r'); // vinegar: the shorter name, then A to Z
+    expect(suggestItem({ n: 'red pepper' }, home)).toBeNull();
+    expect(suggestItem({ n: 'saffron' }, home)).toBeNull();
+  });
+  it('ranks the whole list, most in common first', () => {
+    expect(rankItems({ n: 'garlic' }, home)[0]!.id).toBe('g');
+    expect(rankItems({ n: 'garlic' }, home)).toHaveLength(home.length);
+  });
+  it('is only given to an ingredient with no match, not skipped, not water', () => {
+    const s = pantryStatus({ ing: [{ n: 'butter' }, { n: 'garlic powder' }, { n: 'butter', skip: true }, { n: 'water' }] }, g(...home), { lines: {}, pulled: [] });
+    expect(s.lines.map(l => l.suggest?.id ?? null)).toEqual(['p', null, null, null]);
+    expect(s.lines[0]).toMatchObject({ item: null, have: false }); // a suggestion never counts as a match
+    expect(suggestionPins(s)).toEqual([{ index: 0, home: 'p' }]);
   });
 });
 
