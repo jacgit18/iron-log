@@ -36,4 +36,8 @@ describe('recipeMeta, stepsFromText, sameName', () => {
     expect(sameName(list, 'garlic chickens')).toBe(true);
     expect(sameName(list, 'Garlic chicken', 'a')).toBe(false);
   });
+  it('counts two names for one ingredient as the same recipe name (synonyms are folded)', () => {
+    expect(sameName([r('e', 'Eggplant parmesan', 'protein', ['eggplant'])], 'Aubergine parmesan')).toBe(true);
+    expect(sameName([r('e', 'Eggplant parmesan', 'protein', ['eggplant'])], 'Zucchini parmesan')).toBe(false);
+  });
 });

@@ -104,6 +104,9 @@
   max-width: 100%;
   min-height: 44px;
 }
+.rc-ing .btn {
+  min-height: 44px;
+}
 .rc-steps {
   margin: 0 0 var(--sp-12);
   padding-left: var(--sp-16);
