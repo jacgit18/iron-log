@@ -21,7 +21,7 @@ async function open(page) {
 test('the menu lists the groups, opens Settings at the chosen one from another tab, and closes', async ({ page }) => {
   await open(page);
   await page.locator('#tab-progress').click();
-  await page.locator('#account-menu-btn').click();
+  await page.locator('#account-badge').click();
   const menu = page.getByRole('group', { name: 'Account menu' });
   await expect(menu.getByRole('button')).toHaveText(['Training', 'Data', 'App', 'Erase & delete', 'Sign out']);
   await expect(menu).toContainText('jo@example.com');
@@ -33,7 +33,7 @@ test('the menu lists the groups, opens Settings at the chosen one from another t
 
 test('Escape and a tap outside close it, and Escape returns focus to the button', async ({ page }) => {
   await open(page);
-  const btn = page.locator('#account-menu-btn');
+  const btn = page.locator('#account-badge');
   await btn.click();
   await expect(btn).toHaveAttribute('aria-expanded', 'true');
   await page.keyboard.press('Escape');
@@ -47,7 +47,7 @@ test('Escape and a tap outside close it, and Escape returns focus to the button'
 test('on a phone it is a bottom sheet with 44px rows, and the scrim closes it', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
-  await page.locator('#account-menu-btn').click();
+  await page.locator('#account-badge').click();
   const menu = page.getByRole('group', { name: 'Account menu' });
   const box = await menu.boundingBox();
   expect(box.width).toBeGreaterThan(385);
@@ -62,6 +62,7 @@ test('opening Settings signed in draws no Account panel at any point and does no
   await page.waitForLoadState('networkidle');
   const before = meCalls;
   await page.locator('#account-badge').click();
+  await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
   await expect(page.getByRole('heading', { name: 'Backups & data' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Account', exact: true })).toHaveCount(0);
   await page.waitForTimeout(500);
@@ -71,9 +72,10 @@ test('opening Settings signed in draws no Account panel at any point and does no
 test('choosing a group while a Training screen is open closes the screen and lands on the group', async ({ page }) => {
   await open(page);
   await page.locator('#account-badge').click();
+  await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
   await page.locator('#drill-phases').click();
   await expect(page.locator('#rest-s')).toBeVisible();
-  await page.locator('#account-menu-btn').click();
+  await page.locator('#account-badge').click();
   await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'App' }).click();
   await expect(page.locator('#rest-s')).toHaveCount(0);
   await expect(page.locator('#set-app-h')).toBeFocused();
@@ -83,6 +85,7 @@ test('on a phone the account menu replaces the jump row on Settings', async ({ p
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
   await page.locator('#account-badge').click();
+  await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
   await expect(page.getByRole('heading', { name: 'Backups & data' })).toBeVisible();
   await expect(page.locator('.sjump')).toBeHidden();
 });

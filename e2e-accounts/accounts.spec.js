@@ -3,6 +3,15 @@ import { expect, test } from '@playwright/test';
 import pg from 'pg';
 import { BUILTIN } from '../src/lib/data.ts';
 
+// Signed in, the badge opens the account menu and a row opens Settings; signed out, Settings keeps its tab.
+const goSettings = async page => {
+  if (await page.locator('#tab-settings').count()) await page.locator('#tab-settings').click();
+  else {
+    await page.locator('#account-badge').click();
+    await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
+  }
+};
+
 // Signing in and out for real: the production build, the real API, a real session cookie. See playwright.accounts.config.js.
 const pool = new pg.Pool({ connectionString: process.env.E2E_DATABASE_URL });
 test.afterAll(() => pool.end());
@@ -87,7 +96,7 @@ test('signed in: the account menu names the account, a tick reaches the server, 
   await page.locator('#chk-A-d1s1').check();
   await expect.poll(() => rowsOf(email), { message: 'the check-off reaches the database under her own account' }).toBe(1);
 
-  await page.locator('#account-menu-btn').click(); // signed in, the account menu names the account and signs out (the Account panel is not drawn)
+  await page.locator('#account-badge').click(); // signed in, the account menu names the account and signs out (the Account panel is not drawn)
   const menu = page.getByRole('group', { name: 'Account menu' });
   await expect(menu).toContainText(email);
   await menu.getByRole('button', { name: 'Sign out' }).click();
@@ -157,7 +166,7 @@ test('deleting the account removes the user, the data and every sign-in record, 
             (select count(*) from users u join auth."user" a on a.id::text = u.auth_user_id where a.email = $1)::int as users`, [email])).rows[0];
   expect(await left()).toEqual({ logins: 1, users: 1 });
 
-  await page.locator('#tab-settings, #account-badge').first().click();
+  await goSettings(page);
   const panel = page.getByRole('region', { name: 'Delete my data' });
   await panel.getByLabel(/Type DELETE/).fill('DELETE');
   await panel.getByRole('button', { name: 'Delete my account permanently' }).click();
