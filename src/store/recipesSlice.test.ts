@@ -30,6 +30,38 @@ describe('saveRecipe', () => {
   });
 });
 
+describe('Edited mark', () => {
+  const copy = () => { st().copyCatalogRecipe(lib); return st().recipes[0]!; };
+  const resave = (r: ReturnType<typeof copy>, patch: object = {}) => st().saveRecipe({ ...r, ...patch });
+  it('stays off an untouched copy, also when it is saved again as it is', () => {
+    const r = copy();
+    expect(r).not.toHaveProperty('edited');
+    expect(resave(r)).toBeNull();
+    expect(st().recipes[0]).not.toHaveProperty('edited');
+  });
+  it('turns on when a swap or a skip is saved, and stays on', () => {
+    const r = copy();
+    resave(r, { ing: [{ ...r.ing[0]!, sub: 'shallot' }, ...r.ing.slice(1)] });
+    expect(st().recipes[0]).toMatchObject({ edited: true, ing: [{ n: 'garlic', sub: 'shallot' }, { n: 'olive oil' }] });
+    resave(st().recipes[0]!);
+    expect(st().recipes[0]).toHaveProperty('edited', true);
+  });
+  it('never appears on a recipe you wrote', () => {
+    st().saveRecipe(draft);
+    const r = st().recipes[0]!;
+    resave(r, { n: 'Chili 2' });
+    expect(st().recipes[0]).not.toHaveProperty('edited');
+  });
+  it('is not set by pinning an ingredient to an At home item, and a pin keeps the swap', () => {
+    const r = copy();
+    resave(r, { ing: [{ ...r.ing[0]!, sub: 'shallot' }, ...r.ing.slice(1)] });
+    st().linkIngredient(r.id, 0, 'item-1');
+    expect(st().recipes[0]!.ing[0]).toEqual({ n: 'garlic', amt: '2 cloves', sub: 'shallot', home: 'item-1' });
+    st().linkIngredient(r.id, 0, null);
+    expect(st().recipes[0]!.ing[0]).toEqual({ n: 'garlic', amt: '2 cloves', sub: 'shallot' });
+  });
+});
+
 describe('copyCatalogRecipe', () => {
   it('adds a copy that remembers the library recipe, once', () => {
     expect(st().copyCatalogRecipe(lib)).toBeNull();

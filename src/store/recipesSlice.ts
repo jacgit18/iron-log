@@ -1,4 +1,4 @@
-import { newRecipeId, recipeError, recipeFromCatalog } from '../lib/recipeDraft.js';
+import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../lib/recipeDraft.js';
 import { missingParts, pantryStatus } from '../lib/recipePantry.js';
 import { MAX_RECIPES, normRecipe, normRecipes } from '../shared/recipes.js';
 import type { CatalogItem, Recipe, RecipeIngredient } from '../types.ts';
@@ -20,8 +20,9 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const err = recipeError(others, d);
     if (err) return err;
     const id = d.id ?? newRecipeId(list.map(r => r.id), d.n);
-    const item = normRecipe({ ...d, id, n: clean(d.n) });
-    if (!item) return 'That recipe can’t be saved.';
+    const made = normRecipe({ ...d, id, n: clean(d.n) });
+    if (!made) return 'That recipe can’t be saved.';
+    const item = withEditedMark(d.id ? list.find(r => r.id === d.id) : undefined, made);
     set({ recipes: d.id ? list.map(r => (r.id === d.id ? item : r)) : [...list, item] });
     get().saveRecipes();
     return null;
@@ -53,7 +54,8 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   linkIngredient(id, index, home) {
     const list = get().recipes; const r = list.find(x => x.id === id); const ing = r?.ing[index];
     if (!r || !ing) return;
-    const next: RecipeIngredient = { n: ing.n, ...(ing.amt ? { amt: ing.amt } : {}), ...(home ? { home } : {}) };
+    const { home: _old, ...rest } = ing;
+    const next: RecipeIngredient = { ...rest, ...(home ? { home } : {}) };
     set({ recipes: list.map(x => (x.id === id ? { ...r, ing: r.ing.map((y, j) => (j === index ? next : y)) } : x)) });
     get().saveRecipes();
   },

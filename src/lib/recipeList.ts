@@ -15,7 +15,7 @@ export function filterRecipes(list: Recipe[], f: RecipeFilter, makeable: Readonl
     .filter(r => (!f.cat || r.cat === f.cat) && (!f.canMake || makeable.has(r.id)))
     .filter(r => {
       if (!words.length) return true;
-      const hay = ` ${textWords(`${r.n} ${r.ing.map(i => i.n).join(' ')}`).join(' ')}`;
+      const hay = ` ${textWords(`${r.n} ${r.ing.map(i => `${i.n} ${i.sub ?? ''}`).join(' ')}`).join(' ')}`;
       return words.every(w => hay.includes(` ${w}`));
     })
     .sort((a, b) => a.n.localeCompare(b.n, undefined, { sensitivity: 'base' }) || a.id.localeCompare(b.id));

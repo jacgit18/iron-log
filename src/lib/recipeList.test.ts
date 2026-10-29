@@ -6,6 +6,12 @@ const r = (id: string, n: string, cat: Recipe['cat'], ing: string[]): Recipe => 
 const list = [r('b', 'Taco seasoning', 'seasonings', ['chili powder', 'cumin']), r('a', 'Garlic chicken', 'protein', ['chicken thighs', 'garlic']), r('c', 'Chimichurri', 'sauces', ['parsley', 'garlic'])];
 const none = new Set<string>();
 
+describe('filterRecipes with a swapped ingredient', () => {
+  const swapped: Recipe = { id: 's', n: 'Chimichurri', cat: 'sauces', ing: [{ n: 'white wine vinegar', sub: 'apple cider vinegar' }], steps: ['Mix.'] };
+  const f = (q: string) => filterRecipes([swapped], { q, cat: null, canMake: false }, new Set()).length;
+  it('finds a recipe by the name in the recipe and by the swap', () => { expect(f('wine')).toBe(1); expect(f('cider')).toBe(1); expect(f('rice')).toBe(0); });
+});
+
 describe('filterRecipes', () => {
   it('sorts by name and keeps all with no filter', () => expect(filterRecipes(list, { q: '', cat: null, canMake: false }, none).map(x => x.id)).toEqual(['c', 'a', 'b']));
   it('finds words at the start of a word in the name or an ingredient', () => {

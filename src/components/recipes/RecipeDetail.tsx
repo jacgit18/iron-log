@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
 import { monthKey } from '../../lib/grocery.js';
-import { addMissingMessage, missingParts, pantryStatus } from '../../lib/recipePantry.js';
+import { addMissingMessage, ingredientName, missingParts, pantryStatus } from '../../lib/recipePantry.js';
 import { recipeMeta } from '../../lib/recipeList.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -23,17 +23,17 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
       <div className="rc-head">
         <button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button>
       </div>
-      <h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}</h2>
+      <h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
-      <h3>Ingredients <span className="rc-have">{status.have} of {status.total} at home</span></h3>
+      <h3>Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}</h3>
       {grocery.items.length === 0 && <p className="note">Add items under Groceries, At home to see what you have.</p>}
       <ul className="rc-ings">
         {status.lines.map((l, i) => (
           <li className="rc-ing" key={i}>
-            <span>{l.ing.amt ? `${l.ing.amt} ` : ''}{l.ing.n}</span>
-            <span className={`rc-state ${l.have ? 'have' : 'miss'}`}>{l.have ? 'Have' : 'Missing'}</span>
-            {mine && grocery.items.length > 0 && (
-              <select aria-label={`At home item for ${l.ing.n}`} value={l.ing.home ?? ''} onChange={e => useAppStore.getState().linkIngredient(recipe.id, i, e.target.value || null)}>
+            <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${l.ing.amt} ` : ''}{ingredientName(l.ing)}{l.ing.sub && <span className="rc-instead"> (instead of {l.ing.n})</span>}</span>
+            <span className={`rc-state ${l.skipped ? 'skip' : l.have ? 'have' : 'miss'}`}>{l.skipped ? 'Skipped' : l.have ? 'Have' : 'Missing'}</span>
+            {mine && !l.skipped && grocery.items.length > 0 && (
+              <select aria-label={`At home item for ${ingredientName(l.ing)}`} value={l.ing.home ?? ''} onChange={e => useAppStore.getState().linkIngredient(recipe.id, i, e.target.value || null)}>
                 <option value="">{l.item ? `Matched: ${l.item.n}` : 'No match'}</option>
                 {grocery.items.map(it => <option key={it.id} value={it.id}>{it.n}</option>)}
               </select>
@@ -43,13 +43,13 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
       </ul>
       {mine && grocery.items.length > 0 && (
         <div className="rc-actions">
-          <button type="button" className="btn" onClick={addMissing}>{toAdd ? `Add ${toAdd} missing to To get` : 'Add missing to To get'}</button>
+          <button type="button" className="btn" disabled={status.total === 0} onClick={addMissing}>{toAdd ? `Add ${toAdd} missing to To get` : 'Add missing to To get'}</button>
         </div>
       )}
       <p className="note" role="status">{msg}</p>
       {recipe.steps.length > 0 && (<><h3>Steps</h3><ol className="rc-steps">{recipe.steps.map((s, i) => <li key={i}>{s}</li>)}</ol></>)}
       {recipe.note && <p className="note">{recipe.note}</p>}
-      {!mine && <p className="rc-attrib">From the Wikibooks Cookbook, CC BY-SA 4.0.</p>}
+      {(!mine || recipe.from?.startsWith('c:wbc:')) && <p className="rc-attrib">{recipe.edited ? 'Adapted from' : 'From'} the Wikibooks Cookbook, CC BY-SA 4.0.</p>}
       <div className="rc-actions">
         {mine ? (
           <>
