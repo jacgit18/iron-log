@@ -19,6 +19,8 @@ import { errorHandler } from './errorHandler.ts';
 import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
+import { usageRecord } from './usage.ts';
+import { usageRoutes } from './usageRoutes.ts';
 import { backupsRoutes } from './backups.ts';
 import { ADMIN_ONLY, billingRoutes, billingSummary, cancelBillingFor, webhookRoute, type BillingConfig, type StripeApi } from './billing.ts';
 import { originGuard } from './originGuard.ts';
@@ -63,6 +65,8 @@ export interface AppDeps {
   push?: { publicKey?: string; scheduler?: PushScheduler; now?: () => number; fire?: Pick<FireDeps, 'verify' | 'send'> };
   /** Stripe billing (ADR 065). Unset: the billing routes answer 503 and /api/me says billing is not available. */
   billing?: { api: StripeApi; config: BillingConfig };
+  /** The key that hashes the random install ids of opt-in usage counts (usageKeyFrom). Unset: POST /api/usage answers 503. */
+  usageKey?: string;
   /** Limits on the rest of the API (see LIMITS). They are generous: a phone back online after two days sends a burst. */
   limits?: Partial<typeof LIMITS>;
 }
@@ -78,6 +82,8 @@ const LIMITS = {
   sync: { max: 120, windowMs: 60_000 } as Limit,
   importLegacy: { max: 10, windowMs: 60 * 60_000 } as Limit,
   clientErrors: { max: 20, windowMs: 60_000 } as Limit,
+  // Opt-in usage counts: a phone sends one a day, so this stops a loop and nothing a person does. Public, per address.
+  usage: { max: 10, windowMs: 60_000 } as Limit,
   // The database health check runs a query and is public, so it is limited per address and its answer is reused for a few seconds.
   healthDb: { max: 30, windowMs: 60_000 } as Limit,
   // Erasing data or deleting the account: a handful an hour is already far more than anyone means to do.
@@ -114,7 +120,7 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, usageKey }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   const recordIssue = db ? issueRecorder(db) : undefined;
@@ -141,6 +147,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   }
   // The phone's error reports: anyone may send one (a signed-out phone has errors too), so they are small, rate-limited and scrubbed.
   app.post('/api/client-errors', rateLimit(limits.clientErrors), express.json({ limit: '4kb' }), repairBody, clientErrors(recordIssue));
+  // Opt-in anonymous usage counts: no sign-in (a signed-out phone can opt in), a tiny fixed-shape body, nothing stored that names a person.
+  app.post('/api/usage', rateLimit(limits.usage), express.json({ limit: '2kb' }), repairBody, usageRecord(db, usageKey));
   // Stripe's webhook: no sign-in, and its body must reach the signature check as the exact bytes, so it comes before every JSON parser.
   if (db) app.post('/api/stripe/webhook', rateLimit(limits.stripeWebhook), ...webhookRoute(db, billing?.api));
   // The one-time upload of a phone's old data is far bigger than any other request (years of entries), so it alone gets a larger limit,
@@ -202,6 +210,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
+  if (db) app.use('/api/usage-admin', requireAdmin, rateLimit(limits.issues, undefined, byUser), usageRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
   if (db) app.use('/api/push', rateLimit(limits.push, undefined, byUser), pushRoutes({ db, publicKey: push?.publicKey, scheduler: push?.scheduler, now: push?.now }));
   app.post('/api/account/erase-data', rateLimit(limits.account, undefined, byUser), async (req, res) => {

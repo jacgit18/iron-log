@@ -1,5 +1,6 @@
 import { signIn } from '../sync/devUser.js';
 import { LS } from './storage.js';
+import { countUsage } from './usage.js';
 
 // The phone's side of Web Push (ADR 044): subscribe this browser, and ask the server to push a timer end or a "day not finished" nudge
 // later, so it reaches a phone that has locked. Released to everyone signed in (was admin-only). Device-local opt-in, like lib/restNotify.ts;
@@ -61,6 +62,7 @@ export async function enablePush(): Promise<'on' | 'denied' | 'unsupported' | 'u
     if (sub === 'unavailable') return 'unavailable';
     if (!(await registered(sub))) { if (!existing) await sub.unsubscribe().catch(() => false); return 'failed'; }
     LS.set(ON, true);
+    countUsage('push_on'); // opt-in usage counts: a no-op unless the person switched them on
     return 'on';
   } catch { return 'failed'; }
 }
