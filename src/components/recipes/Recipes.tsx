@@ -1,9 +1,129 @@
-// Recipes will live here. Nothing is stored yet; the layout is decided once there is something to keep. Admin-only for now (`recipes` in features.ts).
+import { useEffect, useMemo, useRef, useState } from 'react';
+import RemovedNotice from '../RemovedNotice.jsx';
+import RecipeDetail from './RecipeDetail.js';
+import RecipeForm from './RecipeForm.js';
+import './Recipes.css';
+import { monthKey } from '../../lib/grocery.js';
+import { recipeFromCatalog } from '../../lib/recipeDraft.js';
+import { filterRecipes, recipeMeta } from '../../lib/recipeList.js';
+import { pantryStatus } from '../../lib/recipePantry.js';
+import { RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { useAppStore } from '../../store/useAppStore.js';
+import { signIn as devHeaders } from '../../sync/devUser.js';
+import { searchRecipes } from '../../sync/recipeCatalog.js';
+import type { CatalogItem, Recipe, RecipeCategory } from '../../types.ts';
+
+// Recipes (ADR 084): yours (Mine, synced with the account) and the library (Wikibooks Cookbook, searched on the server). Each recipe's
+// ingredients are checked against Groceries, At home. Its logic is in lib/recipeList.ts, lib/recipePantry.ts and the store's recipesSlice.
+type View = { kind: 'list' } | { kind: 'mine'; id: string } | { kind: 'library'; item: CatalogItem } | { kind: 'form'; id?: string };
+type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean } | { status: 'failed'; reason: string };
+
 export default function Recipes() {
+  const recipes = useAppStore(s => s.recipes);
+  const grocery = useAppStore(s => s.grocery);
+  const months = useAppStore(s => s.groceryMonths);
+  const syncing = useAppStore(s => s.sync !== null);
+  const [view, setView] = useState<View>({ kind: 'list' });
+  const [src, setSrc] = useState<'mine' | 'library'>('mine');
+  const [q, setQ] = useState('');
+  const [cat, setCat] = useState<RecipeCategory | null>(null);
+  const [canMake, setCanMake] = useState(false);
+  const [lib, setLib] = useState<Library>({ status: 'loading' });
+  const [tries, setTries] = useState(0);
+  const month = monthKey(new Date());
+  const asked = useRef(''); // the search the library list shows; a page that arrives for an older one is dropped
+  asked.current = `${q}|${cat}|${tries}`;
+  const libCopy = useMemo(() => (view.kind === 'library' ? recipeFromCatalog(view.item, []) : null), [view]);
+
+  const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] })])), [recipes, grocery, months, month]);
+  const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
+  const shown = useMemo(() => filterRecipes(recipes, { q, cat, canMake }, makeable), [recipes, q, cat, canMake, makeable]);
+
+  useEffect(() => {
+    if (src !== 'library' || !syncing) return;
+    let live = true;
+    const t = setTimeout(() => {
+      setLib({ status: 'loading' });
+      void searchRecipes(q, cat, 0, devHeaders).then(r => { if (live) setLib(r.ok ? { status: 'ready', items: r.items, more: r.more } : { status: 'failed', reason: r.reason }); });
+    }, q ? 300 : 0);
+    return () => { live = false; clearTimeout(t); };
+  }, [src, syncing, q, cat, tries]);
+  const more = async () => {
+    if (lib.status !== 'ready') return;
+    const key = asked.current;
+    const r = await searchRecipes(q, cat, lib.items.length, devHeaders);
+    if (r.ok && key === asked.current) setLib({ status: 'ready', items: [...lib.items, ...r.items.filter(i => !lib.items.some(x => x.id === i.id))], more: r.more });
+  };
+
+  const back = () => setView({ kind: 'list' });
+  const mineRecipe = view.kind === 'mine' ? recipes.find(r => r.id === view.id) : undefined;
+  if (view.kind === 'form') return <section className="panel"><RecipeForm recipe={recipes.find(r => r.id === view.id)} onDone={id => { if (id) setView({ kind: 'mine', id }); else back(); }} /></section>;
+  if (view.kind === 'mine' && mineRecipe) return <RecipeDetail key={mineRecipe.id} recipe={mineRecipe} mine onBack={back} onEdit={() => setView({ kind: 'form', id: mineRecipe.id })} onAdd={back} />;
+  if (view.kind === 'library') {
+    if (libCopy) return <RecipeDetail key={libCopy.id} recipe={libCopy} mine={false} onBack={back} onEdit={back} onAdd={servings => {
+      useAppStore.getState().copyCatalogRecipe(view.item, servings); // an error here means it is already in Mine, which is where it opens
+      const added = useAppStore.getState().recipes.find(r => r.from === view.item.id);
+      if (added) { setSrc('mine'); setView({ kind: 'mine', id: added.id }); }
+    }} />;
+  }
+
+  const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void, edited = false) => (
+    <li key={key}>
+      <button type="button" className="rc-row" onClick={open}>
+        <span><b>{title}</b><span className="pill custom">{pill}</span>{edited && <span className="rc-edited">Edited</span>}<span className="rc-meta">{meta}</span></span>
+        {tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}
+      </button>
+    </li>
+  );
+
   return (
     <section className="panel" aria-labelledby="recipes-h">
       <h2 id="recipes-h" tabIndex={-1}>Recipes</h2>
-      <p className="note">Nothing here yet. This is where your recipes will go.</p>
+      <div className="seg" role="group" aria-label="Recipe source">
+        <button type="button" id="recipes-mine" className={src === 'mine' ? 'on' : ''} aria-pressed={src === 'mine'} onClick={() => setSrc('mine')}>Mine</button>
+        <button type="button" id="recipes-library" className={src === 'library' ? 'on' : ''} aria-pressed={src === 'library'} onClick={() => setSrc('library')}>Library</button>
+      </div>
+      <div className="rc-top">
+        <input type="search" aria-label="Search recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
+        {src === 'mine' && <button type="button" className="btn" onClick={() => setView({ kind: 'form' })}>New recipe</button>}
+      </div>
+      <div className="rc-chips" role="group" aria-label="Category">
+        <button type="button" aria-pressed={cat === null} onClick={() => setCat(null)}>All</button>
+        {RECIPE_CATEGORIES.map(c => <button type="button" key={c} aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{RECIPE_CATEGORY_LABEL[c]}</button>)}
+        {src === 'mine' && <button type="button" aria-pressed={canMake} onClick={() => setCanMake(!canMake)}>Can make</button>}
+      </div>
+      <RemovedNotice scope="recipes" />
+
+      {src === 'mine' && (
+        <>
+          {!recipes.length && <p className="note">Write your first recipe, or add one from the Library.</p>}
+          {recipes.length > 0 && !shown.length && <p className="note">No recipe matches. Clear the search or the filters.</p>}
+          <ul className="rc-list">
+            {shown.map((r: Recipe) => {
+              const s = status.get(r.id)!;
+              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.servings, r.minutes), r.from ? 'Library' : 'Custom', s.total ? `${s.have} of ${s.total}` : null, s.total > 0 && s.have === s.total, () => setView({ kind: 'mine', id: r.id }), !!r.edited);
+            })}
+          </ul>
+        </>
+      )}
+
+      {src === 'library' && (
+        <>
+          {!syncing && <p className="note">Sign in to browse the recipe library.</p>}
+          {syncing && lib.status === 'loading' && <p className="note" role="status">Loading recipes…</p>}
+          {syncing && lib.status === 'failed' && <p className="note gerr" role="alert">{lib.reason === 'offline' ? 'You’re offline. The library needs a connection.' : 'Couldn’t load the library.'} <button type="button" className="btn sm" onClick={() => setTries(tries + 1)}>Try again</button></p>}
+          {syncing && lib.status === 'ready' && !lib.items.length && <p className="note">No library recipe matches.</p>}
+          {syncing && lib.status === 'ready' && (
+            <>
+              <ul className="rc-list">
+                {lib.items.map(it => row(it.id, it.name, recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), recipes.some(r => r.from === it.id) ? 'In Mine' : 'Library', null, false, () => setView({ kind: 'library', item: it })))}
+              </ul>
+              {lib.more && <div className="rc-actions"><button type="button" className="btn" onClick={() => void more()}>Show more</button></div>}
+              <p className="rc-attrib">Library recipes are from the Wikibooks Cookbook, CC BY-SA 4.0.</p>
+            </>
+          )}
+        </>
+      )}
     </section>
   );
 }

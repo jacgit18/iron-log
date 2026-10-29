@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -287,6 +287,18 @@ export interface RemovedSlice {
   dismissRemoved(scope?: string): void;
 }
 
+/** Your recipes (ADR 084): saved as the document recipes/main, like the other lists. */
+export interface RecipesSlice {
+  recipes: Recipe[];
+  saveRecipes(): void;
+  saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
+  copyCatalogRecipe(item: CatalogItem, servings?: number): string | null; // a Library recipe joins Mine as a copy of its own (at `servings`, amounts scaled, when set)
+  removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')
+  linkIngredient(id: string, index: number, home: string | null): void; // pin one ingredient to an At home item (null unpins)
+  acceptSuggestions(id: string, month: string): number; // pin every "Maybe" suggestion of one recipe at once; how many were pinned
+  addMissingToGrocery(id: string, month: string): { added: number; already: number; refused: string | null }; // new names go on the list; the rest are on To get already; `refused`: why an add was refused (a full list), else null
+}
+
 /** The grocery list (ADR 039): the catalogue and every saved month, saved like every other document (synced when syncing is on). */
 export interface GrocerySlice {
   grocery: Grocery;
@@ -318,6 +330,7 @@ export interface GrocerySlice {
   updateGroceryPerson(groupId: string, personId: string, patch: Partial<{ n: string; covered: boolean }>): string | null;
   removeGroceryPerson(groupId: string, personId: string): void;
   setGroceryStoreGroup(store: string, groupId: string | null): void; // a store defaults to one group at most
+  setGroceryAllStores(groupId: string, on: boolean): void; // the group is the default for every store with no group of its own; at most one group has it
   setGroceryItemShare(id: string, share: GroceryShare | null): void; // the item's usual share; null goes back to the store's group
   setGroceryLineShare(month: string, id: string, share: GroceryShare | null): void; // this month's share for the item; null goes back to the item's
   setGroceryPackShare(month: string, id: string, index: number, share: GroceryShare | null): void; // one pack of an item priced pack by pack
@@ -483,6 +496,6 @@ export interface BackupSlice {
   restoreServerBackup(date: string): Promise<void>;
 }
 
-export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice;
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice & RecipesSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];

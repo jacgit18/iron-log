@@ -131,7 +131,7 @@ describe('listSecretNames (the Secret Manager call, with a fake fetch)', () => {
   it('returns the last path segment of every secret across pages, using the job\'s own token and asking for metadata only', async () => {
     const { fn, calls } = fake([{ secrets: [{ name: 'projects/1/secrets/a' }], nextPageToken: 'p2' }, { secrets: [{ name: 'projects/1/secrets/b' }] }]);
     expect(await listSecretNames({ fetchFn: fn })).toEqual(['a', 'b']);
-    const api = calls.filter(c => c.url.startsWith('https://secretmanager.googleapis.com'));
+    const api = calls.filter(c => new URL(c.url).host === 'secretmanager.googleapis.com');
     expect(api).toHaveLength(2);
     expect(api[0].url).toContain('/projects/proj-1/secrets');
     expect(api[0].init.headers.Authorization).toBe('Bearer tok');

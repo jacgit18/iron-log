@@ -4,6 +4,7 @@ import QaAccountsPanel from './QaAccountsPanel.js';
 import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
 import IssuesPanel from './IssuesPanel.js';
+import ExportUpload from './ExportUpload.js';
 import UsageAdminPanel from './UsageAdminPanel.js';
 import UsagePanel from './UsagePanel.js';
 import ProgramOnComputerRow from './ProgramOnComputerRow.js';
@@ -21,6 +22,7 @@ import { programFor, progName, programWeights, bestByPhase, injuryPreventionOn, 
 import CommitInput from '../CommitInput.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import { motionOK } from '../../lib/motion.js';
+import { GROUPS, jumpToGroup } from '../../lib/settingsGroups.js';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import WaterReminderControls from './WaterReminderControls.js';
 import { disablePush, enablePush, pushKindWanted, pushOn, pushSupported, setPushKind } from '../../lib/pushClient.js';
@@ -289,6 +291,7 @@ function DataPanel() {
       <More about="export and import">
         <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
       </More>
+      <ExportUpload />
       </details>
       {dl && (
         <div className="subblock">
@@ -394,13 +397,7 @@ function RmPanel() {
 }
 
 // Where each group starts, for the jump row. The page is long on a phone; the row gets to a group in one tap.
-const GROUPS = [['training', 'Training'], ['data', 'Data'], ['app', 'App'], ['erase', 'Erase']] as const;
-const jump = (id: string) => {
-  const h = document.getElementById(`set-${id}-h`);
-  if (!h) return;
-  h.focus({ preventScroll: true }); // before the scroll: focusing mid-scroll cancels a smooth scroll
-  h.scrollIntoView({ behavior: motionOK() ? 'smooth' : 'instant', block: 'start' });
-};
+const jump = (id: string) => { void jumpToGroup(id, { find: i => document.getElementById(i), raf: requestAnimationFrame, smooth: motionOK() }); };
 
 // The group being read: the last whose heading has scrolled up under the sticky jump row (the last one at the bottom of the page).
 function useCurrentGroup() {

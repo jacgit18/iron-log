@@ -80,8 +80,10 @@ describe('the policy and the system agree', () => {
     expect(read('server/push/routes.ts')).toMatch(/router\.post\('\/unsubscribe'[\s\S]*deleteFrom\('push_subscription'\)/);
     expect(read('db/migrations/20261014000003_push_subscription.sql')).toMatch(/delete from push_subscription where user_id = uid/);
     expect(read('db/migrations/20261014000003_push_subscription.sql')).toMatch(/user_id\s+bigint not null references users \(id\) on delete cascade/);
-    // "sign out": the Sign out button takes this phone off the server first, while still signed in (PR 6).
-    expect(read('src/components/settings/AccountPanel.tsx')).toMatch(/await disablePush\(\)[^\n]*\n\s*const done = await account\.signOut\(\)/);
+    // "sign out": Sign out (the account menu) takes this phone off the server first, while still signed in (PR 6); both places that sign out use the one flow.
+    expect(read('src/lib/signOutFlow.ts')).toMatch(/await s\.disablePush\(\)[^\n]*\n\s*const done = await s\.signOut\(\)/);
+    expect(read('src/components/AccountBadge.tsx')).toMatch(/signOutFlow\(\{ disablePush,/);
+    expect(read('src/components/OtherAccountCard.tsx')).toMatch(/signOutFlow\(\{ disablePush,/);
     expect(text).toMatch(/Push alerts: your device’s address and keys[^.]*turn the alerts off[^.]*erase your data or delete your account/);
   });
 

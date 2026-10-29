@@ -236,7 +236,7 @@ export type GroceryUnit = 'lb' | 'kg' | 'oz';
  *  `gone`: removed from the group but still named by past months (a split or a payer), so those months read as they did; hidden everywhere else and left out of anything new. */
 export interface GroceryPerson { id: string; n: string; covered?: true; gone?: true }
 /** A sharing group: the people you split with ("Home", "Costco run"), and the stores that default to it. You are always in it and are not listed. */
-export interface GroceryGroup { id: string; n: string; people: GroceryPerson[]; stores: string[]; gone?: true } // `gone`: removed, but past months still name its people (all marked gone too); hidden everywhere else
+export interface GroceryGroup { id: string; n: string; people: GroceryPerson[]; stores: string[]; allStores?: true; gone?: true } // `allStores`: the default split for every store that has no group of its own (at most one live group has it); `gone`: removed, but past months still name its people (all marked gone too); hidden everywhere else
 /** Who shares one purchase with you: `with` are the people's ids (none = just you). `notMine`: it is for them, not you, so your share is nothing. */
 export interface GroceryShare { with: string[]; notMine?: true }
 /** A thing you buy. `store` is where ('' = anywhere), `qty` the usual count, `cents` the last unit price in cents. `every`: on each month's list
@@ -278,7 +278,7 @@ export type MuscleKey = 'neck' | 'traps' | 'frontdelt' | 'sidedelt' | 'reardelt'
 export interface MuscleTags { p?: MuscleKey[]; s?: MuscleKey[]; mob?: true }
 
 /* ---------- Catalog (ADR 025, 026, 028) ---------- */
-export type CatalogKind = 'exercise' | 'stretch' | 'supplement';
+export type CatalogKind = 'exercise' | 'stretch' | 'supplement' | 'recipe';
 /** A catalog row's `data`: the fields the app shows, already mapped to the app's names by `catalog:import`. */
 export interface CatalogData {
   /** null: the dataset gives none (shown blank, not Other). */
@@ -292,10 +292,22 @@ export interface CatalogData {
   instructions?: string[];
   /** Supplements (DSLD): the product's form, e.g. Capsule, Powder. */
   form?: string;
+  /** Recipes (Wikibooks Cookbook): the recipe's category, ingredient lines (amount text included), steps and the time and servings it gives. */
+  recipe?: { cat: RecipeCategory; ing: string[]; steps: string[]; servings?: number; minutes?: number };
 }
 
 /** A catalog row as GET /api/catalog lists it (no instructions), or as the search returns it (supplements carry a brand). */
 export interface CatalogItem { id: string; name: string; brand?: string; data: CatalogData }
+
+/* ---------- Recipes (synced to the account as the list 'recipe', ADR 084) ---------- */
+export type RecipeCategory = 'protein' | 'sides' | 'sauces' | 'seasonings' | 'drinks' | 'breakfast' | 'dessert' | 'other';
+/** One ingredient line: `n` is the name that is matched against the At home list, `amt` the free-text amount ("2 cups"); `home` is the id
+ *  of the At home item the person linked it to by hand. `sub` is what they use instead of `n` (it is matched in `n`'s place); `skip` marks an
+ *  ingredient they leave out (listed, but not counted and never added to To get). */
+export interface RecipeIngredient { n: string; amt?: string; home?: string; sub?: string; skip?: true }
+/** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
+ *  after copying it (only on a recipe with a `from`). */
+export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string; edited?: true }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */
@@ -314,6 +326,7 @@ export interface Snapshot {
   stretchWeeks?: Record<string, StretchWeek>;
   supp?: Supplements;
   grocery?: GroceryData;
+  recipes?: Recipe[];
 }
 
 /** A data file after `normalizeData` has checked and cleaned it. `config` holds only the keys the file had. */
@@ -330,6 +343,7 @@ export interface DataFile {
   stretchWeeks: Record<string, StretchWeek>;
   supplements: Supplements | null;
   grocery: GroceryData | null;
+  recipes?: Recipe[]; // left out when the file has none
 }
 
 /* ---------- Production issues (admin screen; the server's /api/issues, ADR 013 amendment) ---------- */

@@ -1,5 +1,11 @@
 @layer base, components;
 @layer components {
+/* The badge and its menu button sit together (AccountBadge.tsx); the wrapper is what the header lays out. */
+.acctwrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
 /* The signed-in badge at the right end of the header (AccountBadge.tsx). The button is the 44px touch target; the avatar inside is smaller. */
 .acctbadge {
   display: inline-flex;
@@ -56,11 +62,126 @@
 }
 /* On a phone the header is full already: the initial and the dot say it, and the name is in the label and on Settings. */
 @media (max-width:700px) {
-  .acctbadge {
+  .acctwrap {
     grid-column: 4;
   }
   .acctname {
     display: none;
+  }
+}
+/* The menu button: a 44px target with a small chevron that turns over when open. */
+.acctchev {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  font-size: var(--fs-lg);
+}
+.acctchev[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+@media (hover:hover) {
+  .acctchev:hover {
+    color: var(--ink);
+  }
+}
+/* Desktop: a dropdown under the badge. */
+.acctmenu {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-end: 0;
+  inline-size: 14rem;
+  z-index: var(--z-sheet);
+  padding: var(--sp-6);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lift);
+}
+.acctgrab {
+  display: none;
+}
+.acctwho {
+  margin: 0;
+  padding: var(--sp-8) var(--sp-10) var(--sp-6);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+.acctwho b {
+  display: block;
+  color: var(--ink);
+  font-size: var(--fs-base);
+}
+.acctlbl {
+  margin: 0;
+  padding: var(--sp-6) var(--sp-10) var(--sp-2);
+  border-block-start: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.acctitem {
+  display: block;
+  inline-size: 100%;
+  min-height: 44px;
+  padding: 0 var(--sp-10);
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-base);
+  text-align: start;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.acctsep {
+  margin: var(--sp-4) var(--sp-6);
+  border-block-start: 1px solid var(--line);
+}
+.acctitem.danger {
+  color: var(--str);
+}
+@media (hover:hover) {
+  .acctitem:hover {
+    background: var(--m1);
+  }
+}
+.acctscrim {
+  display: none;
+}
+/* Phone: the same menu as a bottom sheet over a scrim, rows full width. */
+@media (max-width:700px) {
+  .acctscrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-sheet);
+    background: rgb(0 0 0 / .4);
+  }
+  .acctmenu {
+    position: fixed;
+    inset-inline: 0;
+    inset-block: auto 0;
+    inline-size: auto;
+    padding: var(--sp-8) var(--sp-12) calc(var(--sp-16) + env(safe-area-inset-bottom,0px));
+    border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+    border-inline: 0;
+    border-block-end: 0;
+  }
+  .acctgrab {
+    display: block;
+    inline-size: 36px;
+    block-size: 4px;
+    margin: 0 auto var(--sp-8);
+    border-radius: var(--r-sm);
+    background: var(--line);
   }
 }
 }

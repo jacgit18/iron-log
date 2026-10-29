@@ -10,6 +10,7 @@ import Toaster from './components/Toaster.js';
 import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
 import useBadgeName from './hooks/useBadgeName.js';
+import { WhoContext } from './components/settings/useWho.js';
 import { useWide } from './components/board/useWide.js';
 import { inAndroidApp } from './lib/androidApp.js';
 import { showPlansTab } from './lib/plansTab.js';
@@ -81,7 +82,7 @@ export default function App() {
   useTabbarHeight(tabsRef);
 
   // With the account badge showing, the badge is the way to Settings, so the Settings tab is not drawn (it is when nobody is signed in).
-  const { name: badgeName, pending: badgePending, who } = useBadgeName();
+  const { name: badgeName, pending: badgePending, who, ask } = useBadgeName();
   // The Plans tab is for a signed-in free account on a wide screen (src/lib/plansTab.ts); everyone else's bar is as before.
   const [inApp] = useState(inAndroidApp); // asked once: the Play build shows no prices, whatever the screen width (ADR 065 point 8)
   const plansShown = showPlansTab(useWide(), who, inApp);
@@ -115,9 +116,9 @@ export default function App() {
   useEffect(() => { if (plansGone && !badgePending) setTab('board'); }, [plansGone, badgePending, setTab]);
   const View = TABS.find(([k]) => k === (plansGone ? 'board' : tab))![2];
   return (
-    <>
+    <WhoContext.Provider value={ask}>
       <a className="skip" href="#view">Skip to content</a>
-      <div className="wrap">
+      <div className="wrap" data-acctmenu={badgeName !== null || badgePending ? '' : undefined}>
         <header className="top">
           <h1><button type="button" className="brandlink" aria-current={tab === 'board' ? 'page' : undefined} onClick={() => { setTab('board'); window.scrollTo({ top: 0 }); }}>{APP_TITLE}</button></h1>
           <div className="topact">
@@ -132,7 +133,7 @@ export default function App() {
               ))}
             </div>
           </nav>
-          <AccountBadge name={badgeName} />
+          <AccountBadge name={badgeName} email={who?.status === 'signed-in' ? who.email : null} canSignOut={who?.status === 'signed-in' && who.kind === 'session'} />
         </header>
         <UpdateBanner />
         <QaBanner />
@@ -158,6 +159,6 @@ export default function App() {
       <Toaster info={!ready && !saveFlag && !signedOut ? 'Loading…' : saveFlag} />
       <Modal />
       <aside className="timer-region" aria-label="Timer"><TimerBar /></aside>
-    </>
+    </WhoContext.Provider>
   );
 }

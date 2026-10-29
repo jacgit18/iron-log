@@ -226,7 +226,8 @@ test('an export file from another copy of the app is uploaded into an empty acco
   const a = await newPhone(browser, user);
   const page = await a.open({ blank: true });
   await page.locator('#tab-settings, #account-badge').first().click();
-  const panel = page.getByRole('region', { name: 'Account' });
+  await page.getByText('Save or load a file yourself').click(); // the upload is in that fold of Backups & data
+  const panel = page.locator('details.manualcopy');
   const choose = () => panel.locator('input[aria-label="Loadbearer export file"]').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exportFile)) });
   await choose();
   await expect(panel).toContainText('2 logged sessions');

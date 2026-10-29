@@ -39,6 +39,7 @@ export const shouldReplace = (stored: number | null, next: number): boolean => s
 
 /** A data file the server will keep: gzip (or plain) JSON that is a Loadbearer export. Returns the gzipped bytes to store, or why not. */
 export function prepareFile(raw: Buffer, encoding: string): { ok: true; zipped: Buffer } | { ok: false; error: string } {
+  if (!Buffer.isBuffer(raw)) return { ok: false, error: 'send the data file as the request body' }; // a request body is bytes, never a string or a list
   let text: Buffer;
   try { text = encoding === 'gzip' ? gunzipSync(raw, { maxOutputLength: MAX_UNZIPPED }) : raw; } catch { return { ok: false, error: 'the body is not a gzip file' }; }
   try {
@@ -46,7 +47,7 @@ export function prepareFile(raw: Buffer, encoding: string): { ok: true; zipped: 
     if (!file || typeof file !== 'object' || Array.isArray(file) || (file as { app?: unknown }).app !== 'iron-log') return { ok: false, error: 'the body is not a Loadbearer data file' };
   } catch { return { ok: false, error: 'the body is not valid JSON' }; }
   const zipped = encoding === 'gzip' ? raw : gzipSync(text);
-  return zipped.length > MAX_BYTES ? { ok: false, error: 'the backup is too large' } : { ok: true, zipped };
+  return zipped.byteLength > MAX_BYTES ? { ok: false, error: 'the backup is too large' } : { ok: true, zipped };
 }
 
 export interface BackupsDeps {
@@ -109,7 +110,7 @@ export function backupsRoutes({ db, now = Date.now }: BackupsDeps): Router {
     const refuse = (status: number, error: string) => void res.status(status).json({ ok: false, error });
     if (!day || !dayIsNear(day, now())) return refuse(422, 'day must be today, as YYYY-MM-DD');
     if (!COUNT.test(entries) || !COUNT.test(score) || (encoding !== 'gzip' && encoding !== 'identity')) return refuse(422, 'x-backup-entries, x-backup-score and x-backup-encoding are required');
-    if (!Buffer.isBuffer(req.body) || req.body.length === 0) return refuse(422, 'send the data file as the request body');
+    if (!Buffer.isBuffer(req.body) || req.body.byteLength === 0) return refuse(422, 'send the data file as the request body');
     const file = prepareFile(req.body, encoding);
     if (!file.ok) return refuse(file.error === 'the backup is too large' ? 413 : 422, file.error);
     const userId = String(res.locals.userId);
@@ -117,7 +118,7 @@ export function backupsRoutes({ db, now = Date.now }: BackupsDeps): Router {
       // The conflict clause carries the shrink guard, so two phones writing at once cannot race past it.
       const { rows } = await sql<{ id: string }>`
         insert into backup_snapshots (user_id, day, entries, score, size_bytes, data, device)
-        values (current_setting('app.user_id')::bigint, ${day}::date, ${Number(entries)}, ${Number(score)}, ${file.zipped.length}, ${file.zipped}, ${device})
+        values (current_setting('app.user_id')::bigint, ${day}::date, ${Number(entries)}, ${Number(score)}, ${file.zipped.byteLength}, ${file.zipped}, ${device})
         on conflict (user_id, day) do update set saved_at = now(), entries = excluded.entries, score = excluded.score, size_bytes = excluded.size_bytes, data = excluded.data, device = excluded.device
           where backup_snapshots.score < ${SHRINK_FLOOR} or excluded.score >= backup_snapshots.score * ${SHRINK_RATIO}::numeric
         returning id`.execute(trx);

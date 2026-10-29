@@ -16,7 +16,7 @@ type Props = {
   mine: MineOption[];
   /** More of yours: not listed, but their catalog duplicates are left out too (see pickerOptions). */
   also?: MineOption[];
-  kind: CatalogKind;
+  kind: Exclude<CatalogKind, 'recipe'>; // recipes have their own picker (ADR 084)
   /** The grey line under a catalog item: equipment, muscle group, brand. */
   catalogMeta?: (c: CatalogItem) => string;
   /** The create row's text. No function: no create row (the caller has its own way to add a new one). */
