@@ -4,6 +4,7 @@ import QaAccountsPanel from './QaAccountsPanel.js';
 import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
 import IssuesPanel from './IssuesPanel.js';
+import ExportUpload from './ExportUpload.js';
 import ProgramOnComputerRow from './ProgramOnComputerRow.js';
 import BackupCopies from './BackupCopies.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
@@ -288,6 +289,7 @@ function DataPanel() {
       <More about="export and import">
         <p><b>Export all data</b> makes one <b>iron-log-data</b> file with everything: your log, weekly check-offs, body weight, programs, saved versions, the Experiment list and settings. Keep it as a copy, move to another account or device, or go back to an earlier state.</p>
       </More>
+      <ExportUpload />
       </details>
       {dl && (
         <div className="subblock">
