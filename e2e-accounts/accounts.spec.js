@@ -76,7 +76,7 @@ test('a browser that has been signed in, whose session has expired, gets the app
   await context.close();
 });
 
-test('signed in: the Account panel names the account, a tick reaches the server, and signing out ends at the landing page', async ({ browser }) => {
+test('signed in: the account menu names the account, a tick reaches the server, and signing out ends at the landing page', async ({ browser }) => {
   const { context, page, devHeaders } = await phone(browser);
   const email = emailFor('ann');
   await signUp(page, email, 'Ann');
@@ -87,10 +87,10 @@ test('signed in: the Account panel names the account, a tick reaches the server,
   await page.locator('#chk-A-d1s1').check();
   await expect.poll(() => rowsOf(email), { message: 'the check-off reaches the database under her own account' }).toBe(1);
 
-  await page.locator('#tab-settings, #account-badge').first().click();
-  const panel = page.getByRole('region', { name: 'Account' });
-  await expect(panel).toContainText(email);
-  await panel.getByRole('button', { name: 'Sign out' }).click();
+  await page.locator('#account-menu-btn').click(); // signed in, the account menu names the account and signs out (the Account panel is not drawn)
+  const menu = page.getByRole('group', { name: 'Account menu' });
+  await expect(menu).toContainText(email);
+  await menu.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('#tab-board')).toHaveCount(0); // the app is hidden again until the next sign-in
   expect(await page.evaluate(() => localStorage.getItem('ironlog:session/known'))).toBeNull();

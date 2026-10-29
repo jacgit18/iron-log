@@ -7,7 +7,7 @@ import { createAccountClient } from '../../sync/account.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { flag, getSyncApi } from '../../store/useAppStore.js';
 import { useOnline } from './useOnline.js';
-import { useWho } from './useWho.js';
+import { useSharedWho } from './useWho.js';
 
 // The Billing section (ADR 065, brief billing-stripe-subscriptions): the plan, Subscribe (Stripe's hosted Checkout) and Manage billing
 // (Stripe's hosted Customer Portal). Admin-only while Stripe is in test mode (the `billing` line in src/features.ts); it draws nothing when
@@ -21,7 +21,7 @@ export default function BillingPanel() {
   const api = getSyncApi();
   const on = useFeature('billing');
   const client = useMemo(() => createAccountClient({ headers: devHeaders }), []);
-  const { who, recheck } = useWho(!!api && on, client);
+  const { who, recheck } = useSharedWho(!!api && on, client);
   const [busy, setBusy] = useState<string | null>(null);
   const [returned] = useState<'success' | 'cancel' | null>(() => {
     const how = typeof window === 'undefined' ? null : new URL(window.location.href).searchParams.get('billing');

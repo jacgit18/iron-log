@@ -1,4 +1,4 @@
-import { useWho } from './useWho.js';
+import { useSharedWho } from './useWho.js';
 import EmailCodeSignIn from '../EmailCodeSignIn.js';
 import LegalLinks from '../LegalLinks.js';
 import { useGoogleSignIn } from '../../sync/useGoogleSignIn.js';
@@ -9,8 +9,8 @@ import { getSyncApi } from '../../store/useAppStore.js';
 export default function AccountPanel() {
   const api = getSyncApi();
   const { client: account, busy, start: signIn } = useGoogleSignIn();
-  const { who: state, recheck } = useWho(!!api, account);
-  if (!api || state?.status === 'signed-in') return null;
+  const { who: state, recheck } = useSharedWho(!!api, account);
+  if (!api || state?.status === 'signed-in') return null; // never drawn for a signed-in person, so nothing under it moves when the answer comes
 
   return (
     <section className="panel accountpanel" aria-labelledby="account-h">
