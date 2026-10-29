@@ -77,6 +77,10 @@
   border-color: var(--m4);
   color: var(--accent-ink);
 }
+/* With the account menu in the header (a signed-in badge, or one expected), the menu is the way to a group and the row is not drawn. Without it (Settings is a tab) the row stays. */
+.wrap[data-acctmenu] .sjump {
+  display: none;
+}
 /* Focus not obscured (2.4.12) under the sticky jump row, at every width: keep focus and jump targets below the row's real height (--sjump-h, set from a ResizeObserver, so two wrapped lines of chips count). */
 html:has(.sjump) {
   scroll-padding-top: calc(var(--sjump-h,64px) + 8px + env(safe-area-inset-top,0px));
