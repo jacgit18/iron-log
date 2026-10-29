@@ -180,7 +180,7 @@ export interface LogSlice {
   addEntry(slotId: string, idx: number, entry: LogEntry, opts?: { check?: boolean }): boolean;
   quickLog(slotId: string, idx: number): void;
   submitLog(slotId: string, idx: number, form: LogForm): boolean;
-  setLiftGoal(exId: string, key: string, raw: string | number, by?: string, from?: string): boolean;
+  setLiftGoal(exId: string, key: string, raw: string | number, by?: string, from?: string, scale?: boolean): boolean;
   clearLiftGoal(exId: string, key: string): void;
   setFreqGoal(exId: string, raw: string | number): boolean;
   clearFreqGoal(exId: string): void;

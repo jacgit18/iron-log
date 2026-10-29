@@ -36,7 +36,7 @@ function NewGoal({ onDone }: { onDone: () => void }) {
         placeholder="Type to search, e.g. Barbell Curl" onText={onText} onPick={setPick} autoFocus />
       {chosen?.kind === 'catalog' && <p className="note">From the catalog. It will be added to your exercise library when you save.</p>}
       {err && <p className="note" role="alert">{err}</p>}
-      {chosen && <GoalForm key={goalId} exId={goalId} prepare={prepare} taken={taken} onDone={onDone} />}
+      {chosen && <GoalForm key={goalId} exId={goalId} prepare={prepare} taken={taken} tags={chosen.kind === 'catalog' ? chosen.item.data.muscles : undefined} onDone={onDone} />}
       {!chosen && <div className="actions"><button type="button" className="btn sm" onClick={onDone}>Cancel</button></div>}
     </div>
   );

@@ -48,3 +48,67 @@ test('cancel leaves no goal; a goal already set from the exercise sheet is liste
   await page.keyboard.press('Escape');
   await expect(panel(page).locator('.goalrow')).toContainText('315 lb');
 });
+
+// A goal that scales with body weight (the maths is tested in src/lib/liftGoal.test.js): the switch, the 375 lb target, and the disabled switch with no body weight.
+test('the scale switch is off with no body weight logged, and a scaled goal shows the raised target', async ({ page }) => {
+  await page.goto('/');
+  await page.click('#tab-progress');
+  await panel(page).getByRole('button', { name: 'Set a goal' }).click();
+  await panel(page).getByRole('combobox', { name: 'Exercise' }).fill('Hack Squat');
+  await panel(page).getByRole('option', { name: /Hack Squat/ }).first().click();
+  await expect(panel(page).getByLabel('Scale with my body weight')).toBeDisabled();
+  await expect(panel(page)).toContainText('Log your body weight first');
+});
+
+test('300 lb set at 120 lb body weight shows 375 lb after a 150 lb weigh-in, and keeps it when weight drops', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('ironlog:body/main')) localStorage.setItem('ironlog:body/main', JSON.stringify({ entries: [{ wk: '2026-09-06', d: '2026-09-07', w: 120 }] })); // only on the first load
+  });
+  await page.goto('/');
+  await page.click('#tab-progress');
+  await panel(page).getByRole('button', { name: 'Set a goal' }).click();
+  await panel(page).getByRole('combobox', { name: 'Exercise' }).fill('Hack Squat');
+  await panel(page).getByRole('option', { name: /Hack Squat/ }).first().click();
+  await panel(page).getByLabel('Goal (lb)').fill('300');
+  await panel(page).getByLabel('Scale with my body weight').check();
+  await panel(page).getByRole('button', { name: 'Save goal' }).click();
+  const row = panel(page).locator('.goalrow');
+  await expect(row).toContainText('Any phase: 300 lb');
+  await expect(row).toContainText('Scales with your body weight: 300 lb at 120 lb body weight.');
+
+  const setBody = ws => page.evaluate(w => localStorage.setItem('ironlog:body/main', JSON.stringify({ entries: w.map(([wk, d, x]) => ({ wk, d, w: x })) })), ws);
+  await setBody([['2026-09-06', '2026-09-07', 120], ['2026-09-13', '2026-09-14', 150]]);
+  await page.reload(); await page.click('#tab-progress');
+  await expect(panel(page).locator('.goalrow')).toContainText('Any phase: 375 lb');
+  await setBody([['2026-09-06', '2026-09-07', 120], ['2026-09-13', '2026-09-14', 150], ['2026-09-20', '2026-09-21', 135]]);
+  await page.reload(); await page.click('#tab-progress');
+  await expect(panel(page).locator('.goalrow')).toContainText('Any phase: 375 lb');
+});
+
+test('the multiplier starts at 1.5 for an upper body lift and 2.5 for lower, fills the goal, and follows an edit either way', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('ironlog:body/main')) localStorage.setItem('ironlog:body/main', JSON.stringify({ entries: [{ wk: '2026-09-06', d: '2026-09-07', w: 120 }] }));
+  });
+  await page.goto('/');
+  await page.click('#tab-progress');
+  const pick = async name => {
+    await panel(page).getByRole('combobox', { name: 'Exercise' }).fill(name);
+    await panel(page).getByRole('option', { name: new RegExp(name) }).first().click();
+  };
+  await panel(page).getByRole('button', { name: 'Set a goal' }).click();
+  await pick('Hack Squat');
+  await panel(page).getByLabel('Scale with my body weight').check();
+  await expect(panel(page).getByLabel('Multiplier (× body weight)')).toHaveValue('2.5');
+  await expect(panel(page).getByLabel('Goal (lb)')).toHaveValue('300');
+  await panel(page).getByLabel('Multiplier (× body weight)').fill('3');
+  await expect(panel(page).getByLabel('Goal (lb)')).toHaveValue('360');
+  await panel(page).getByLabel('Goal (lb)').fill('240');
+  await expect(panel(page).getByLabel('Multiplier (× body weight)')).toHaveValue('2');
+  await panel(page).getByRole('button', { name: 'Cancel' }).first().click();
+
+  await panel(page).getByRole('button', { name: 'Set a goal' }).click();
+  await pick('Lat Pulldown');
+  await panel(page).getByLabel('Scale with my body weight').check();
+  await expect(panel(page).getByLabel('Multiplier (× body weight)')).toHaveValue('1.5');
+  await expect(panel(page).getByLabel('Goal (lb)')).toHaveValue('180');
+});
