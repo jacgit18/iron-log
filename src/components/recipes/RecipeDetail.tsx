@@ -4,8 +4,10 @@ import { monthKey } from '../../lib/grocery.js';
 import { addMissingMessage, ingredientName, missingParts, pantryStatus } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
+import { scaleAmount } from '../../lib/recipeScale.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import ServingsScaler from './ServingsScaler.js';
 import type { Recipe } from '../../types.ts';
 
 // One recipe (ADR 084): its ingredients checked against At home, the steps, and what you can do with it. `mine`: one of yours; otherwise it
@@ -14,6 +16,8 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
   const grocery = useAppStore(s => s.grocery);
   const months = useAppStore(s => s.groceryMonths);
   const [msg, setMsg] = useState('');
+  const [tonight, setTonight] = useState<number | null>(null); // servings for tonight; the amounts shown scale to it, nothing is saved
+  const shown = recipe.servings ? tonight ?? recipe.servings : null;
   const month = monthKey(new Date());
   const status = useMemo(() => pantryStatus(recipe, grocery, months[month] ?? { lines: {}, pulled: [] }), [recipe, grocery, months, month]);
   const credit = attribution(recipe, mine);
@@ -27,12 +31,13 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
       </div>
       <h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
+      {recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
       <h3>Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}</h3>
       {grocery.items.length === 0 && <p className="note">Add items under Groceries, At home to see what you have.</p>}
       <ul className="rc-ings">
         {status.lines.map((l, i) => (
           <li className="rc-ing" key={i}>
-            <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${l.ing.amt} ` : ''}{ingredientName(l.ing)}{l.ing.sub && <span className="rc-instead"> (instead of {l.ing.n})</span>}</span>
+            <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${recipe.servings && shown ? scaleAmount(l.ing.amt, shown / recipe.servings).text : l.ing.amt} ` : ''}{ingredientName(l.ing)}{l.ing.sub && <span className="rc-instead"> (instead of {l.ing.n})</span>}</span>
             <span className={`rc-state ${l.skipped ? 'skip' : l.have ? 'have' : 'miss'}`}>{l.skipped ? 'Skipped' : l.have ? 'Have' : 'Missing'}</span>
             {mine && !l.skipped && grocery.items.length > 0 && (
               <select aria-label={`At home item for ${ingredientName(l.ing)}`} value={l.ing.home ?? ''} onChange={e => useAppStore.getState().linkIngredient(recipe.id, i, e.target.value || null)}>

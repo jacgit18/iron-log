@@ -183,4 +183,19 @@
 .rc-ing .rc-state.skip {
   color: var(--muted);
 }
+.rc-scale {
+  display: flex;
+  min-height: 44px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.rc-scale .btn {
+  min-height: 44px;
+}
+.rc-scale output {
+  min-width: 5.5rem;
+  text-align: center;
+}
 }

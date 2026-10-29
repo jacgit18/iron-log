@@ -55,6 +55,10 @@ describe('withEditedMark', () => {
     expect(withEditedMark(lib, { ...lib, ing: [{ n: 'garlic', home: 'g1' }] })).not.toHaveProperty('edited');
     expect(withEditedMark({ ...lib, ing: [{ n: 'garlic', home: 'g1' }] }, { ...lib })).not.toHaveProperty('edited');
   });
+  it('marks a copy whose servings and amounts were scaled', () => {
+    const withAmt: Recipe = { ...lib, servings: 4, ing: [{ n: 'garlic', amt: '2 cloves' }] };
+    expect(withEditedMark(withAmt, { ...withAmt, servings: 8, ing: [{ n: 'garlic', amt: '4 cloves' }] })).toHaveProperty('edited', true);
+  });
   it('does not mark a new recipe', () => expect(withEditedMark(undefined, lib)).not.toHaveProperty('edited'));
 });
 
