@@ -124,6 +124,11 @@ describe('matching by all the words of a longer name', () => {
     expect(matchHome({ n: 'peanut butter' }, [it_('b', 'Butter')])).toBeNull();
   });
   it('keeps a pin above it', () => expect(matchHome({ n: 'chicken breast', home: 'b' }, home)?.id).toBe('b'));
+  it('needs the same last word, so a different product that starts with the same words is not a match', () => {
+    for (const [ing, item] of [['red wine vinegar', 'Red wine'], ['red wine', 'Red wine vinegar'], ['cream cheese frosting', 'Cream cheese'], ['coconut milk powder', 'Coconut milk'], ['ice cream cones', 'Ice cream']]) {
+      expect(matchHome({ n: ing! }, [it_('x', item!)]), `${ing} / ${item}`).toBeNull();
+    }
+  });
 });
 
 describe('the same ingredient under two names', () => {

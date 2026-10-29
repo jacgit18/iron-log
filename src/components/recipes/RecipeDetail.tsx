@@ -36,7 +36,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
           <li className="rc-ing" key={i}>
             <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${l.ing.amt} ` : ''}{ingredientName(l.ing)}{l.ing.sub && <span className="rc-instead"> (instead of {l.ing.n})</span>}</span>
             <span className={`rc-state ${l.skipped ? 'skip' : l.have ? 'have' : 'miss'}`}>{l.skipped ? 'Skipped' : l.have ? 'Have' : 'Missing'}</span>
-            {mine && l.suggest && <button type="button" className="btn sm" onClick={() => useAppStore.getState().linkIngredient(recipe.id, i, l.suggest!.id)}>Maybe: {l.suggest.n}</button>}
+            {mine && l.suggest && <button type="button" className="btn sm" aria-label={`Maybe: ${l.suggest.n} for ${ingredientName(l.ing)}`} onClick={() => useAppStore.getState().linkIngredient(recipe.id, i, l.suggest!.id)}>Maybe: {l.suggest.n}</button>}
             {mine && !l.skipped && !l.always && grocery.items.length > 0 && (
               <select aria-label={`At home item for ${ingredientName(l.ing)}`} value={l.ing.home ?? ''} onChange={e => useAppStore.getState().linkIngredient(recipe.id, i, e.target.value || null)}>
                 <option value="">{l.item ? `Matched: ${l.item.n}` : 'No match'}</option>

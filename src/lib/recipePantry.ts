@@ -68,7 +68,7 @@ export const isAlwaysHave = (name: string): boolean => {
 export const ingredientName = (ing: RecipeIngredient): string => ing.sub || ing.n;
 
 /** The At home item an ingredient is: the one it is pinned to, else the item with the same words, else the item whose name holds all the
- *  words of a two-or-more-word name or is held by it ("chicken breast" and "boneless chicken breast"; the fewest extra words wins), else a
+ *  words of a two-or-more-word name or is held by it and ends in the same word ("chicken breast" and "boneless chicken breast"; the fewest extra words wins), else a
  *  one-word name that is the first word of the other ("Parmesan" for "Parmesan cheese", "chicken" for "chicken thighs"). A one-word name
  *  found elsewhere in the other ("butter" in "peanut butter", "milk" in "coconut milk") is a different product, so it is not a match; pin it
  *  by hand when it is one. Names are compared after synonyms are folded ("scallion" is "green onion"). Null when none. */
@@ -79,7 +79,8 @@ export function matchHome(ing: RecipeIngredient, items: GroceryItem[]): GroceryI
   const key = [...w].sort().join(' ');
   const exact = items.find(i => [...nameWords(i.n)].sort().join(' ') === key);
   if (exact) return exact;
-  const holds = (long: string[], short: string[]) => short.length >= 2 && short.every(x => long.includes(x));
+  // The same last word (the thing itself) is required, so "red wine" is not "red wine vinegar" and "cream cheese" is not "cream cheese frosting".
+  const holds = (long: string[], short: string[]) => short.length >= 2 && long.at(-1) === short.at(-1) && short.every(x => long.includes(x));
   const around = items.flatMap(i => { const iw = nameWords(i.n); return iw.length > 0 && (holds(iw, w) || holds(w, iw)) ? [{ i, extra: Math.abs(iw.length - w.length) }] : []; });
   if (around.length) return around.reduce((a, b) => (b.extra < a.extra ? b : a)).i;
   const lead = (short: string[], long: string[]) => short.length === 1 && long.length <= 2 && long[0] === short[0];
