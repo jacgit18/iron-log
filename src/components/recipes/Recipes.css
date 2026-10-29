@@ -1,0 +1,150 @@
+@layer base, components;
+@layer components {
+/* Recipes (ADR 084): the list, the library search, a recipe and its form. Plain flat rows like Groceries; every tap target is 44px tall. */
+.rc-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  align-items: center;
+  margin: var(--sp-8) 0;
+}
+.rc-top input[type='search'] {
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: 44px;
+}
+.rc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+}
+.rc-chips button {
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: inherit;
+  font-size: var(--fs-md);
+}
+.rc-chips button[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.rc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rc-list li {
+  border-top: 1px solid var(--line);
+}
+.rc-row {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  padding: var(--sp-10) 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+.rc-row b {
+  font-weight: 600;
+}
+.rc-meta {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.rc-have {
+  flex: none;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.rc-have.all {
+  color: var(--exp);
+}
+.rc-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-8);
+}
+.rc-ings {
+  list-style: none;
+  margin: 0 0 var(--sp-12);
+  padding: 0;
+}
+.rc-ing {
+  display: flex;
+  min-height: 44px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-6) var(--sp-8);
+  border-top: 1px solid var(--line);
+}
+.rc-ing .rc-state {
+  font-size: var(--fs-sm);
+}
+.rc-ing .rc-state.have {
+  color: var(--exp);
+}
+.rc-ing .rc-state.miss {
+  color: var(--warn-ink);
+}
+.rc-ing select {
+  max-width: 100%;
+  min-height: 44px;
+}
+.rc-steps {
+  margin: 0 0 var(--sp-12);
+  padding-left: var(--sp-16);
+}
+.rc-steps li {
+  margin: var(--sp-6) 0;
+}
+.rc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin: var(--sp-12) 0;
+}
+.rc-actions .btn {
+  min-height: 44px;
+}
+.rc-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+}
+.rc-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+.rc-form input,
+.rc-form select,
+.rc-form textarea {
+  min-width: 0;
+  min-height: 44px;
+}
+.rc-ingrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 7rem) auto;
+  gap: var(--sp-6);
+  align-items: end;
+}
+.rc-attrib {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+}

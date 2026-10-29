@@ -3,6 +3,7 @@ import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
 import { parseDataFile, importSel, cfgSection, entriesChanged, mergeEntries, mergeWeek, sameProg, progBody, libDate } from '../lib/export.js';
 import { WEEK_RE } from '../lib/trends.js';
 import { validPct, validRest, validRm } from '../shared/validate.js';
+import { normRecipes } from '../shared/recipes.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import type { AppState, Flag, SettingsSlice, StoreGet, StoreSet } from './types.ts';
 import type { Logs, Program } from '../types.ts';
@@ -110,6 +111,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           patch.strWeek = d.stretchWeeks[wk] ? structuredClone(d.stretchWeeks[wk]) : normStretchWeek(null); saves.push('saveStrWeek');
         }
         if (on.supplements && d.supplements) { patch.supp = structuredClone(d.supplements); saves.push('saveSupp'); }
+        if (on.recipes && d.recipes) { patch.recipes = structuredClone(d.recipes); docs.push(['recipes/main', { items: structuredClone(d.recipes) }]); }
         const groceryIn = on.grocery && d.grocery ? structuredClone(d.grocery) : null;
         let newLogs: Logs | null = null;
         if (on.progress) {
@@ -181,6 +183,11 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           if (ch) { set({ supp: { ...cur, water, boost, items, taken } }); get().saveSupp(); }
         }
         if (on.grocery && d.grocery) get().addGrocery(d.grocery);
+        if (on.recipes && d.recipes) {
+          const have = new Set(get().recipes.map(r => r.id)); const from = new Set(get().recipes.flatMap(r => (r.from ? [r.from] : [])));
+          const add = d.recipes.filter((r: any) => !have.has(r.id) && !(r.from && from.has(r.from))); // a library recipe you already copied is not copied twice
+          if (add.length) { set({ recipes: normRecipes([...get().recipes, ...add]) }); get().saveRecipes(); }
+        }
         const body = get().body; const addB = !on.board ? [] : d.body.filter((e: any) => !body.some(x => x.wk === e.wk));
         if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); }
         ent(on.progress ? d.logs : {}).forEach(([id, l]) => {

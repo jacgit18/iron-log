@@ -324,6 +324,7 @@ export interface Snapshot {
   stretchWeeks?: Record<string, StretchWeek>;
   supp?: Supplements;
   grocery?: GroceryData;
+  recipes?: Recipe[];
 }
 
 /** A data file after `normalizeData` has checked and cleaned it. `config` holds only the keys the file had. */
@@ -340,6 +341,7 @@ export interface DataFile {
   stretchWeeks: Record<string, StretchWeek>;
   supplements: Supplements | null;
   grocery: GroceryData | null;
+  recipes?: Recipe[]; // left out when the file has none
 }
 
 /* ---------- Production issues (admin screen; the server's /api/issues, ADR 013 amendment) ---------- */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_INGREDIENTS, MAX_STEPS, normRecipe, validRecipe } from './recipes.js';
+import { MAX_INGREDIENTS, MAX_STEPS, normRecipe, normRecipes, validRecipe } from './recipes.js';
 
 const base = { id: 'r1', n: 'Chili', cat: 'protein', ing: [{ n: 'Beans', amt: '2 cans' }], steps: ['Simmer.'] };
 
@@ -38,5 +38,12 @@ describe('validRecipe', () => {
     expect(validRecipe({ ...base, extra: 1 })).toBe(false);
     expect(validRecipe({ ...base, n: ' Chili' })).toBe(false);
     expect(validRecipe(null)).toBe(false);
+  });
+});
+
+describe('normRecipes', () => {
+  it('drops what cannot be used and a repeated id, and tolerates a non-list', () => {
+    expect(normRecipes([base, { ...base, n: 'Again' }, { id: 'x' }, null])).toEqual([base]);
+    expect(normRecipes(undefined)).toEqual([]);
   });
 });

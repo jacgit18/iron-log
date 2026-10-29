@@ -163,7 +163,7 @@ test('Groceries comes before Supplements, and the store lists offer the suggeste
   await page.click('#tab-daily');
   await expect(page.locator('#daily-grocery')).toBeVisible(); // the tab is its own chunk, fetched on first open
   const ids = await page.locator('[aria-label="Daily section"] button').evaluateAll(b => b.map(x => x.id));
-  expect(ids).toEqual(['daily-grocery', 'daily-supplements']); // Medical and Recipes are admin-only
+  expect(ids).toEqual(['daily-grocery', 'daily-supplements', 'daily-recipes']); // Medical is admin-only
   await expect(page.locator('#daily-supplements')).toHaveText('Nutrition');
   await expect(page.locator('#daily-supplements')).toHaveAttribute('aria-pressed', 'true'); // Nutrition still opens first
   await page.click('#daily-grocery');

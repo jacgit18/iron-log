@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -287,6 +287,17 @@ export interface RemovedSlice {
   dismissRemoved(scope?: string): void;
 }
 
+/** Your recipes (ADR 084): saved as the document recipes/main, like the other lists. */
+export interface RecipesSlice {
+  recipes: Recipe[];
+  saveRecipes(): void;
+  saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
+  copyCatalogRecipe(item: CatalogItem): string | null; // a Library recipe joins Mine as a copy of its own
+  removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')
+  linkIngredient(id: string, index: number, home: string | null): void; // pin one ingredient to an At home item (null unpins)
+  addMissingToGrocery(id: string, month: string): { added: number; already: number; refused: string | null }; // new names go on the list; the rest are on To get already; `refused`: why an add was refused (a full list), else null
+}
+
 /** The grocery list (ADR 039): the catalogue and every saved month, saved like every other document (synced when syncing is on). */
 export interface GrocerySlice {
   grocery: Grocery;
@@ -483,6 +494,6 @@ export interface BackupSlice {
   restoreServerBackup(date: string): Promise<void>;
 }
 
-export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice;
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice & RecipesSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];
