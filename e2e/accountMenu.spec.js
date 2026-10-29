@@ -21,7 +21,8 @@ test('the menu lists the groups, opens Settings at the chosen one from another t
   await page.locator('#tab-progress').click();
   await page.locator('#account-menu-btn').click();
   const menu = page.getByRole('group', { name: 'Account menu' });
-  await expect(menu.getByRole('button')).toHaveText(['Training', 'Data', 'App', 'Erase & delete']);
+  await expect(menu.getByRole('button')).toHaveText(['Training', 'Data', 'App', 'Erase & delete', 'Sign out']);
+  await expect(menu).toContainText('jo@example.com');
   await menu.getByRole('button', { name: 'App' }).click();
   await expect(menu).toHaveCount(0);
   await expect(page.locator('#set-app-h')).toBeFocused();

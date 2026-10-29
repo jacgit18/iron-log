@@ -132,7 +132,7 @@ export default function App() {
               ))}
             </div>
           </nav>
-          <AccountBadge name={badgeName} />
+          <AccountBadge name={badgeName} email={who?.status === 'signed-in' ? who.email : null} canSignOut={who?.status === 'signed-in' && who.kind === 'session'} />
         </header>
         <UpdateBanner />
         <QaBanner />

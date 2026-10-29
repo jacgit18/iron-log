@@ -1,4 +1,7 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { createAccountClient } from '../../sync/account.js';
+import { signIn as devHeaders } from '../../sync/devUser.js';
+import { useWho } from './useWho.js';
 import { parseDataFile } from '../../lib/export.js';
 import { dataFileDocs, describeLegacy, planLegacy, type LegacyPlan } from '../../sync/legacy.js';
 import { writeLegacyMarker } from '../../sync/legacyMarker.js';
@@ -11,11 +14,13 @@ import { flag, getSyncApi, useAppStore } from '../../store/useAppStore.js';
 export default function ExportUpload() {
   const sync = useAppStore(s => s.sync);
   const api = getSyncApi();
+  const account = useMemo(() => createAccountClient({ headers: devHeaders }), []);
+  const { who } = useWho(!!api, account); // only a signed-in account can take an upload
   const input = useRef<HTMLInputElement>(null);
   const [picked, setPicked] = useState<{ name: string; exportedAt: string | null; plan: LegacyPlan } | null>(null);
   const [problem, setProblem] = useState('');
   const [busy, setBusy] = useState(false);
-  if (!api || !sync) return null;
+  if (!api || !sync || who?.status !== 'signed-in') return null;
 
   const choose = async (file: File | undefined) => {
     setProblem('');
