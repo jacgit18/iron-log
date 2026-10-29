@@ -12,7 +12,7 @@ import { signIn as devHeaders } from '../sync/devUser.js';
 import './AccountBadge.css';
 
 // Who is signed in, at the right end of the header: a round initial with a green dot, and the name beside it where there is room. It
-// opens the account menu (one button, no separate arrow); the Account panel in Settings has the sign-out. Shown only when syncing is on and the server says someone is signed in:
+// opens the account menu (one button, no separate arrow), which has the Settings groups and Sign out. Shown only when syncing is on and the server says someone is signed in:
 // "could not check" and "signed out" show nothing here (the sign-in card and the Account panel already say those), so the badge never
 // claims an account that is not there. The state is a word for a screen reader and a dot for the eye, never the colour alone.
 // The menu is a dropdown under the badge, a bottom sheet on a phone (CSS only; one set of markup). Each row opens Settings at that group,
