@@ -63,6 +63,6 @@ test('Settings: every text field, number field and select is styled, on each Tra
   expect(await unstyled(page, 1)).toEqual([]); // Mode 2 shows its "Even months run" select
   await page.getByRole('button', { name: 'Training', exact: true }).click();
   await page.click('#drill-maxes');
-  await page.locator('details.fold summary').click();
+  await page.locator('.sdrill[id^="max-"]').first().click(); // an exercise's screen has the "I tested this" field
   expect(await unstyled(page, 1)).toEqual([]);
 });
