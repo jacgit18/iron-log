@@ -299,7 +299,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.get('/api/catalog/search', async (req, res) => {
     const search = parseSearch(req.query);
     if (!search) {
-      res.status(400).json({ ok: false, error: 'kind must be supplement, q 2 to 100 characters and at most 6 words, offset a whole number up to 600' });
+      res.status(400).json({ ok: false, error: 'kind must be supplement or recipe, q 2 to 100 characters (recipes may leave it out) and at most 6 words, cat a recipe category (recipes only), offset a whole number up to 600' });
       return;
     }
     res.set('Cache-Control', 'private, max-age=300');

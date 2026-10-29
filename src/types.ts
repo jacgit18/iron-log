@@ -278,7 +278,7 @@ export type MuscleKey = 'neck' | 'traps' | 'frontdelt' | 'sidedelt' | 'reardelt'
 export interface MuscleTags { p?: MuscleKey[]; s?: MuscleKey[]; mob?: true }
 
 /* ---------- Catalog (ADR 025, 026, 028) ---------- */
-export type CatalogKind = 'exercise' | 'stretch' | 'supplement';
+export type CatalogKind = 'exercise' | 'stretch' | 'supplement' | 'recipe';
 /** A catalog row's `data`: the fields the app shows, already mapped to the app's names by `catalog:import`. */
 export interface CatalogData {
   /** null: the dataset gives none (shown blank, not Other). */
@@ -292,10 +292,20 @@ export interface CatalogData {
   instructions?: string[];
   /** Supplements (DSLD): the product's form, e.g. Capsule, Powder. */
   form?: string;
+  /** Recipes (Wikibooks Cookbook): the recipe's category, ingredient lines (amount text included), steps and the time and servings it gives. */
+  recipe?: { cat: RecipeCategory; ing: string[]; steps: string[]; servings?: number; minutes?: number };
 }
 
 /** A catalog row as GET /api/catalog lists it (no instructions), or as the search returns it (supplements carry a brand). */
 export interface CatalogItem { id: string; name: string; brand?: string; data: CatalogData }
+
+/* ---------- Recipes (synced to the account as the list 'recipe', ADR 084) ---------- */
+export type RecipeCategory = 'protein' | 'sides' | 'sauces' | 'seasonings' | 'drinks' | 'breakfast' | 'dessert' | 'other';
+/** One ingredient line: `n` is the name that is matched against the At home list, `amt` the free-text amount ("2 cups"); `home` is the id
+ *  of the At home item the person linked it to by hand. */
+export interface RecipeIngredient { n: string; amt?: string; home?: string }
+/** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. */
+export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */

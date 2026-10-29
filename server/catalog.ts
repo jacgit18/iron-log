@@ -1,5 +1,6 @@
 import { sql, type Kysely, type RawBuilder } from 'kysely';
-import type { CatalogData, CatalogKind } from '../src/types.ts';
+import type { CatalogData, CatalogKind, RecipeCategory } from '../src/types.ts';
+import { RECIPE_CATEGORIES } from '../src/shared/recipes.ts';
 import { inUserTransaction } from './auth.ts';
 import type { DB } from './db/types.ts';
 
@@ -32,11 +33,14 @@ export async function listCatalog(db: Kysely<DB>, userId: string, kind: CatalogK
 // starting with the first word, then shorter names. One page of SEARCH_PAGE at a time, `more` when there is another. The trigram index
 // (migration 20261016000001) covers the same expression, so this stays fast.
 
-export const SEARCHED_KINDS: readonly CatalogKind[] = ['supplement'];
+// Recipes (ADR 084) are searched the same way, on the name and the ingredient lines; with no words they page through the whole kind in name
+// order, and `cat` narrows either to one category.
+export const SEARCHED_KINDS: readonly CatalogKind[] = ['supplement', 'recipe'];
 export const SEARCH_PAGE = 30;
 const MAX_OFFSET = 600;
+const MAX_RECIPE_OFFSET = 5000; // the whole library (about 3,700 recipes) can be paged through
 
-export interface CatalogSearch { kind: CatalogKind; words: string[]; offset: number }
+export interface CatalogSearch { kind: CatalogKind; words: string[]; offset: number; cat?: RecipeCategory }
 export interface CatalogSearchResult { items: (CatalogListItem & { brand?: string })[]; more: boolean }
 
 /** The words of a text as the search compares them: lower case, apostrophes dropped, other punctuation as spaces. */
@@ -45,12 +49,17 @@ export const searchWords = (text: string) => text.toLowerCase().replace(/['’]/
 /** The search a query asks for, or null when it is not one we answer. */
 export function parseSearch(query: Record<string, unknown>): CatalogSearch | null {
   const kind = SEARCHED_KINDS.find(k => k === query.kind);
-  if (!kind || typeof query.q !== 'string') return null;
-  const words = searchWords(query.q);
-  if (query.q.trim().length < 2 || query.q.length > 100 || words.length > 6) return null;
+  if (!kind) return null;
+  const recipes = kind === 'recipe';
+  const q = recipes && query.q === undefined ? '' : query.q;
+  if (typeof q !== 'string') return null;
+  const words = searchWords(q);
+  if (q.length > 100 || words.length > 6 || (!recipes && q.trim().length < 2)) return null;
   const raw = query.offset ?? '0';
-  if (typeof raw !== 'string' || !/^\d{1,4}$/.test(raw) || Number(raw) > MAX_OFFSET) return null;
-  return { kind, words, offset: Number(raw) };
+  if (typeof raw !== 'string' || !/^\d{1,4}$/.test(raw) || Number(raw) > (recipes ? MAX_RECIPE_OFFSET : MAX_OFFSET)) return null;
+  if (query.cat === undefined) return { kind, words, offset: Number(raw) };
+  const cat = RECIPE_CATEGORIES.find(c => c === query.cat);
+  return recipes && cat ? { kind, words, offset: Number(raw), cat } : null;
 }
 
 // A typed word, matched literally: % and _ are LIKE wildcards, and a backslash escapes them (words are letters and digits only, so
@@ -61,20 +70,24 @@ const escapeLike = (w: string) => w.replace(/[\\%_]/g, c => `\\${c}`);
 const normalized = (expr: RawBuilder<string>) =>
   sql<string>`lower(regexp_replace(regexp_replace(${expr}, ${sql.lit("['’]")}, '', 'g'), ${sql.lit('[^[:alnum:]]+')}, ' ', 'g'))`;
 
-export async function searchCatalog(db: Kysely<DB>, userId: string, { kind, words, offset }: CatalogSearch): Promise<CatalogSearchResult> {
-  if (!words.length) return { items: [], more: false };
-  const text = normalized(sql`name || ' ' || coalesce(brand, '')`);
+export async function searchCatalog(db: Kysely<DB>, userId: string, { kind, words, offset, cat }: CatalogSearch): Promise<CatalogSearchResult> {
+  if (!words.length && kind !== 'recipe') return { items: [], more: false };
+  const text = normalized(kind === 'recipe' ? sql`name || ' ' || coalesce(data #>> '{recipe,ing}', '')` : sql`name || ' ' || coalesce(brand, '')`);
   const nameText = normalized(sql`name`);
   const phrase = escapeLike(words.join(' '));
+  const first = escapeLike(words[0] ?? '');
   const wordStarts = sql.join(words.map(w => sql`(' ' || ${text}) like ${`% ${escapeLike(w)}%`}`), sql` and `);
   const rows = await inUserTransaction(db, userId, trx => {
     let q = trx.selectFrom('catalog_items').select(['id', 'name', 'brand', 'data'])
       .where('kind', '=', kind).where('retired_at', 'is', null);
+    if (cat) q = q.where(sql`data #>> '{recipe,cat}'`, '=', cat);
     for (const w of words) q = q.where(text, 'like', `%${escapeLike(w)}%`);
-    return q.orderBy(sql`${nameText} like ${`${phrase}%`}`, 'desc')
+    // No words (recipes browsed by category): plain name order.
+    if (words.length) q = q.orderBy(sql`${nameText} like ${`${phrase}%`}`, 'desc')
       .orderBy(sql`(${wordStarts})`, 'desc')
-      .orderBy(sql`${nameText} like ${`${escapeLike(words[0]!)}%`}`, 'desc')
-      .orderBy(sql`char_length(name)`).orderBy(sql`lower(name)`).orderBy('id')
+      .orderBy(sql`${nameText} like ${`${first}%`}`, 'desc');
+    if (!words.length) q = q.orderBy(sql`lower(name)`);
+    return q.orderBy(sql`char_length(name)`).orderBy(sql`lower(name)`).orderBy('id')
       .limit(SEARCH_PAGE + 1).offset(offset).execute();
   });
   return {
