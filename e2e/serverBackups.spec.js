@@ -23,7 +23,7 @@ async function open(page, { list, uploads, paid = true } = {}) {
   await page.route('**/api/backups/2026-09-24', route => { uploads?.push({ method: route.request().method(), headers: route.request().headers() }); return json({ ok: true, saved: true })(route); });
   await page.goto('/');
   await page.waitForLoadState('networkidle').catch(() => {});
-  await page.locator('#account-badge').click();
+  await page.locator('#account-badge').click(); await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
   return page.getByRole('group', { name: 'Backups' });
 }
 
