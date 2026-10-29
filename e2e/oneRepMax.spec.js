@@ -42,6 +42,19 @@ test('a typed number wins over the estimate, shows as Tested on the list, and Us
   await page.locator(`#max-${id}`).click();
   await page.getByRole('button', { name: 'Use estimate' }).click();
   await expect(page.locator('.maxdetail .maxnum')).toHaveText('—');
-  await page.goBack(); // the browser's Back closes the exercise screen too
-  await expect(page.locator(`#max-${id}`)).toContainText('Log a set');
+  await expect(page.locator(`#max-${id}`)).toHaveCount(0); // (the exercise screen is open here)
+  await page.goBack(); // the browser's Back closes the 1-rep max screens: one history entry for all of them
+  await expect(page.locator('#drill-maxes')).toBeVisible();
+});
+
+test('choosing another tab with an exercise screen open leaves no stale history entry, and 1-rep maxes reopens on its list', async ({ page }) => {
+  await page.goto('/');
+  await openMaxes(page);
+  await page.locator('.sdrill[id^="max-"]').first().click();
+  await expect(page.locator('.maxdetail')).toBeVisible();
+  await page.locator('#tab-board').click();
+  await expect.poll(() => page.evaluate(() => history.state?.settingsScreen ?? null)).toBeNull();
+  await openMaxes(page);
+  await expect(page.locator('.maxdetail')).toHaveCount(0); // the list, not the old exercise
+  await expect(page.locator('.sdrill[id^="max-"]').first()).toBeVisible();
 });

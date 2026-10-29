@@ -414,8 +414,13 @@ export default function Settings() {
   const [sub, setSub] = useState<string | null>(null); // an exercise's screen inside 1-rep maxes
   const was = useRef<{ screen: Screen; y: number } | null>(null); // where the screen was opened from, to go back to
   const open = (s: Screen) => { was.current = { screen: s, y: window.scrollY }; history.pushState({ settingsScreen: s }, ''); setScreen(s); };
-  const openSub = (id: string) => { history.pushState({ settingsScreen: 'maxes', sub: id }, ''); setSub(id); };
-  const back = () => { if (history.state?.settingsScreen) history.back(); else setScreen(null); };
+  // An exercise's screen inside 1-rep maxes replaces the entry instead of pushing another: one entry per Settings screen, so Back (or choosing another tab) leaves nothing behind.
+  const openSub = (id: string) => { history.replaceState({ settingsScreen: 'maxes', sub: id }, ''); setSub(id); };
+  const back = () => {
+    if (sub) { history.replaceState({ settingsScreen: 'maxes' }, ''); setSub(null); return; } // from an exercise to the list
+    if (history.state?.settingsScreen) history.back(); else setScreen(null);
+    setSub(null);
+  };
   useEffect(() => {
     // Only ever closes or switches a screen of ours: a popstate with no `settingsScreen` in its state leaves a closed Settings as it is.
     const onPop = (e: PopStateEvent) => { setScreen(now => (e.state?.settingsScreen as Screen | undefined) ?? (now ? null : now)); setSub((e.state?.sub as string | undefined) ?? null); };

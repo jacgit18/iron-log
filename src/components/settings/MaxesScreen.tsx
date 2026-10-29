@@ -1,7 +1,6 @@
 import CommitInput from '../CommitInput.jsx';
 import Icon from '../Icon.js';
-import { PHASES } from '../../lib/data.js';
-import { exInfo } from '../../lib/data.js';
+import { PHASES, exInfo } from '../../lib/data.js';
 import { currentMax, maxLine, phaseRows, targetNote, weightedExIds } from '../../lib/oneRepMax.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { Tick, useSaving } from './SavedTicks.js';
