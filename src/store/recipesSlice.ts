@@ -1,5 +1,5 @@
 import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../lib/recipeDraft.js';
-import { missingParts, pantryStatus } from '../lib/recipePantry.js';
+import { missingParts, pantryStatus, suggestionPins } from '../lib/recipePantry.js';
 import { MAX_RECIPES, normRecipe, normRecipes } from '../shared/recipes.js';
 import type { CatalogItem, Recipe, RecipeIngredient } from '../types.ts';
 import type { RecipesSlice, StoreGet, StoreSet } from './types.ts';
@@ -58,6 +58,16 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const next: RecipeIngredient = { ...rest, ...(home ? { home } : {}) };
     set({ recipes: list.map(x => (x.id === id ? { ...r, ing: r.ing.map((y, j) => (j === index ? next : y)) } : x)) });
     get().saveRecipes();
+  },
+
+  acceptSuggestions(id, month) {
+    const list = get().recipes; const r = list.find(x => x.id === id);
+    if (!r) return 0;
+    const pins = new Map(suggestionPins(pantryStatus(r, get().grocery, get().groceryMonths[month] ?? { lines: {}, pulled: [] })).map(p => [p.index, p.home]));
+    if (!pins.size) return 0;
+    set({ recipes: list.map(x => (x.id === id ? { ...r, ing: r.ing.map((y, j) => (pins.has(j) ? { ...y, home: pins.get(j)! } : y)) } : x)) });
+    get().saveRecipes();
+    return pins.size;
   },
 
   addMissingToGrocery(id, month) {

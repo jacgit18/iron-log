@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
 import { monthKey } from '../../lib/grocery.js';
-import { addMissingMessage, ingredientName, missingParts, pantryStatus } from '../../lib/recipePantry.js';
+import { addMissingMessage, ingredientName, missingParts, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
@@ -19,6 +19,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
   const credit = attribution(recipe, mine);
   const missing = missingParts(status);
   const toAdd = missing.add.length;
+  const maybes = mine ? suggestionPins(status).length : 0;
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
   return (
     <section className="panel" aria-labelledby="rc-h">
@@ -29,15 +30,17 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
       <h3>Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}</h3>
       {grocery.items.length === 0 && <p className="note">Add items under Groceries, At home to see what you have.</p>}
+      {maybes > 0 && <div className="rc-actions"><button type="button" className="btn sm" onClick={() => useAppStore.getState().acceptSuggestions(recipe.id, month)}>Accept all suggestions</button></div>}
       <ul className="rc-ings">
         {status.lines.map((l, i) => (
           <li className="rc-ing" key={i}>
             <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${l.ing.amt} ` : ''}{ingredientName(l.ing)}{l.ing.sub && <span className="rc-instead"> (instead of {l.ing.n})</span>}</span>
             <span className={`rc-state ${l.skipped ? 'skip' : l.have ? 'have' : 'miss'}`}>{l.skipped ? 'Skipped' : l.have ? 'Have' : 'Missing'}</span>
-            {mine && !l.skipped && grocery.items.length > 0 && (
+            {mine && l.suggest && <button type="button" className="btn sm" onClick={() => useAppStore.getState().linkIngredient(recipe.id, i, l.suggest!.id)}>Maybe: {l.suggest.n}</button>}
+            {mine && !l.skipped && !l.always && grocery.items.length > 0 && (
               <select aria-label={`At home item for ${ingredientName(l.ing)}`} value={l.ing.home ?? ''} onChange={e => useAppStore.getState().linkIngredient(recipe.id, i, e.target.value || null)}>
                 <option value="">{l.item ? `Matched: ${l.item.n}` : 'No match'}</option>
-                {grocery.items.map(it => <option key={it.id} value={it.id}>{it.n}</option>)}
+                {rankItems(l.ing, grocery.items).map(it => <option key={it.id} value={it.id}>{it.n}</option>)}
               </select>
             )}
           </li>

@@ -83,6 +83,21 @@ describe('removeRecipe', () => {
   });
 });
 
+describe('acceptSuggestions', () => {
+  it('pins every Maybe at once, leaves matched, skipped and water ingredients alone, and then has nothing left', async () => {
+    const { monthKey } = await import('../lib/grocery.js');
+    for (const n of ['Peanut butter', 'Roasted garlic powder', 'Rice']) st().addGroceryItem({ n, store: '', qty: '1', price: '', every: false });
+    const id_ = (n: string) => st().grocery.items.find(i => i.n === n)!.id;
+    const pb = { id: id_('Peanut butter') }, gp = { id: id_('Roasted garlic powder') };
+    st().saveRecipe({ n: 'Sauce', cat: 'sauces', ing: [{ n: 'butter' }, { n: 'garlic' }, { n: 'rice' }, { n: 'water' }, { n: 'butter', skip: true }], steps: [] });
+    const id = st().recipes[0]!.id;
+    expect(st().acceptSuggestions(id, monthKey(new Date()))).toBe(2);
+    expect(st().recipes[0]!.ing.map(i => i.home ?? null)).toEqual([pb.id, gp.id, null, null, null]);
+    expect(st().acceptSuggestions(id, monthKey(new Date()))).toBe(0);
+    expect(st().acceptSuggestions('gone', monthKey(new Date()))).toBe(0);
+  });
+});
+
 describe('addMissingToGrocery', () => {
   it('adds each missing ingredient once as an item to get, and counts those already on the list', async () => {
     const { monthKey } = await import('../lib/grocery.js');
