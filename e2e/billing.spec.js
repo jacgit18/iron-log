@@ -28,7 +28,7 @@ async function open(page, me, path = '/', { referrer = '' } = {}) {
   await page.route('**/api/sync*', json({ rows: [], cursor: '0', more: false }));
   await page.route('**/api/me', typeof me === 'function' ? me : json(me));
   await page.goto(path);
-  await page.locator('#account-badge').click();
+  await page.locator('#account-badge').click(); await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
 }
 
 test.describe('Billing section', () => {

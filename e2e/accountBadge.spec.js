@@ -18,13 +18,14 @@ async function open(page, who) {
 }
 
 test.describe('signed-in badge', () => {
-  test('shows who is signed in, and opens Settings', async ({ page }) => {
+  test('shows who is signed in, and its menu opens Settings', async ({ page }) => {
     await open(page, json(me));
     const badge = page.getByRole('button', { name: /Signed in as Jo Lifter/ });
     await expect(badge).toBeVisible();
     await expect(badge).toContainText('Jo Lifter'); // desktop: the name is beside the initial
     await expect(page.locator('#tab-settings')).toHaveCount(0); // the badge is the way to Settings, so the tab is not drawn
     await badge.click();
+    await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
     await expect(badge).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('heading', { name: 'Backups & data' })).toBeVisible(); // the Account panel is not drawn when signed in
     await expect(page.locator('#tab-board')).toHaveAttribute('aria-selected', 'false');
@@ -44,6 +45,7 @@ test.describe('signed-in badge', () => {
   test('on Settings, reached through the badge, the tab list is still reachable by keyboard and the panel has a name', async ({ page }) => {
     await open(page, json(me));
     await page.locator('#account-badge').click();
+    await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
     await expect(page.locator('#view')).toHaveAttribute('aria-label', 'Settings');
     await expect(page.locator('#view')).not.toHaveAttribute('aria-labelledby', /.+/); // it does not point at a tab that is not drawn
     await expect(page.locator('#tab-board')).toHaveAttribute('tabindex', '0'); // no tab is selected, so the first one is the way in

@@ -1,5 +1,14 @@
 import { expect, newPhone, server, test } from './stack.js';
 
+// Signed in, the badge opens the account menu and a row opens Settings; signed out, Settings keeps its tab.
+const goSettings = async page => {
+  if (await page.locator('#tab-settings').count()) await page.locator('#tab-settings').click();
+  else {
+    await page.locator('#account-badge').click();
+    await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
+  }
+};
+
 // The whole stack, nothing mocked: a browser with the sync flag on, the real API, a real Postgres. These cover what the unit and
 // API tests cannot: the actual screens, the actual store, and the browser's own storage and network events.
 
@@ -91,7 +100,7 @@ test('two phones tick the same card: the server keeps one check-off and both pho
   await expect.poll(async () => (await pageB.evaluate(() => JSON.parse(localStorage.getItem('ironlog:sync/pending') || '{}'))), { timeout: 30_000 }).toEqual({});
   const entries = await server.entries(user);
   expect(entries.filter(e => e.auto && e.slot === 'A-d3s1')).toHaveLength(1);
-  await pageB.locator('#tab-settings, #account-badge').first().click();
+  await goSettings(pageB);
   await expect(pageB.getByRole('heading', { name: 'Sync, backups & data', exact: true })).toBeVisible();
   await expect(pageB.locator('.syncstatus')).toContainText('Synced');
   await expect(pageB.getByText('already checked off or logged on another device')).toBeVisible();
@@ -225,7 +234,7 @@ test('an export file from another copy of the app is uploaded into an empty acco
   };
   const a = await newPhone(browser, user);
   const page = await a.open({ blank: true });
-  await page.locator('#tab-settings, #account-badge').first().click();
+  await goSettings(page);
   await page.getByText('Save or load a file yourself').click(); // the upload is in that fold of Backups & data
   const panel = page.locator('details.manualcopy');
   const choose = () => panel.locator('input[aria-label="Loadbearer export file"]').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exportFile)) });
@@ -260,7 +269,7 @@ test('erasing everything from one phone empties the database, and the other phon
   const second = await b.open();
   await expect(second.locator('#chk-A-d1s1')).toBeChecked(); // the other phone has it
 
-  await first.locator('#tab-settings, #account-badge').first().click();
+  await goSettings(first);
   const panel = first.getByRole('region', { name: 'Delete my data' });
   await panel.getByLabel(/Type ERASE/).fill('ERASE');
   await panel.getByRole('button', { name: 'Erase everything permanently' }).click();

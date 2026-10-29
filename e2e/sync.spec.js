@@ -176,13 +176,20 @@ async function openSynced(page, commands, me = signedInAsDev, pull = accountPull
   else if (pull.rows.length) await expect(page.locator('#chk-A-d1s1')).toBeVisible();
   else await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
 }
-const openSettings = async page => { await page.locator('#tab-settings, #account-badge').first().click(); await expect(page.getByRole('heading', { name: 'Sync, backups & data', exact: true })).toBeVisible(); };
+const goSettings = async page => {
+  if (await page.locator('#tab-settings').count()) await page.locator('#tab-settings').click();
+  else {
+    await page.locator('#account-badge').click(); // signed in: the badge opens the menu, and a row opens Settings
+    await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
+  }
+};
+const openSettings = async page => { await goSettings(page); await expect(page.getByRole('heading', { name: 'Sync, backups & data', exact: true })).toBeVisible(); };
 
 test.describe('the Sync panel', () => {
   test('is not there at all when the flag is off', async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); });
     await page.goto('/');
-    await page.locator('#tab-settings, #account-badge').first().click();
+    await goSettings(page);
     await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Sync, backups & data', exact: true })).toHaveCount(0);
   });
@@ -316,21 +323,21 @@ test.describe('the Account panel', () => {
   const settle = async (page, meAnswer, extra) => {
     if (extra) await extra(page);
     await openSynced(page, undefined, meAnswer, accountPull, { board: false });
-    await page.locator('#tab-settings, #account-badge').first().click();
+    await goSettings(page);
     await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible(); // Settings is open; the Account panel (signed out) or the account menu (signed in) follows the /api/me answer
   };
 
   test('is not there at all when the flag is off', async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); });
     await page.goto('/');
-    await page.locator('#tab-settings, #account-badge').first().click();
+    await goSettings(page);
     await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Account', exact: true })).toHaveCount(0);
   });
 
   test('signed in: the account menu says who and offers Sign out, the Account panel is not drawn, and there are no accessibility violations', async ({ page }) => {
     await settle(page, me(200, signedIn));
-    await page.locator('#account-menu-btn').click();
+    await page.locator('#account-badge').click();
     const menu = page.getByRole('group', { name: 'Account menu' });
     await expect(menu.getByText('ann@example.com')).toBeVisible();
     await expect(menu.getByRole('button', { name: 'Sign out' })).toBeVisible();
@@ -393,7 +400,7 @@ test.describe('the Account panel', () => {
     await settle(page, route => (out ? me(401, {})(route) : me(200, signedIn)(route)), async p => {
       await p.route('**/api/auth/sign-out', route => { out = true; return route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }); });
     });
-    await page.locator('#account-menu-btn').click();
+    await page.locator('#account-badge').click();
     await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Sign out' }).click();
     await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible();
     await expect(page.locator('#tab-board')).toHaveCount(0); // the app is not behind it
@@ -460,7 +467,7 @@ test.describe('another account signs in on a device that holds the first one’s
     // Erasing now would wipe Bob's account and forget Ann's unsent change on this device.
     await openAsBob(page);
     await expect(page.getByRole('alert').filter({ hasText: 'holds data from another account' })).toBeVisible();
-    await page.locator('#tab-settings, #account-badge').first().click();
+    await goSettings(page);
     await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Delete my data' })).toHaveCount(0);
   });
@@ -597,7 +604,7 @@ test.describe('uploading from an export file', () => {
   const open = async (page, importAnswer) => {
     await page.route('**/api/commands/import-legacy', importAnswer);
     await openSynced(page, undefined, signedInAsDev, emptyPull);
-    await page.locator('#tab-settings, #account-badge').first().click();
+    await goSettings(page);
     await page.getByText('Save or load a file yourself').click(); // the upload sits in that fold, in Backups & data
     await expect(page.getByRole('heading', { name: 'Upload a file to an empty account' })).toBeVisible();
   };
@@ -659,7 +666,7 @@ test.describe('Delete my data', () => {
       await page.route(`**${path}`, route => { calls.push({ path, body: route.request().postDataJSON() }); return answer(route); });
     }
     await openSynced(page);
-    await page.locator('#tab-settings, #account-badge').first().click();
+    await goSettings(page);
     await expect(page.getByRole('heading', { name: 'Delete my data' })).toBeVisible();
     return calls;
   };
@@ -679,7 +686,7 @@ test.describe('Delete my data', () => {
     await page.addInitScript(() => { localStorage.setItem('ironlog:hidetip', '1'); localStorage.setItem('ironlog:hidelocal', '1'); localStorage.setItem('ironlog:flag:apiSync', 'true'); if (!sessionStorage.getItem('knownSeeded')) { sessionStorage.setItem('knownSeeded', '1'); localStorage.setItem('ironlog:session/known', 'true'); } });
     await page.route('**/api/**', route => route.fulfill({ status: 401, contentType: 'application/json', body: '{"ok":false}' }));
     await page.goto('/');
-    await page.locator('#tab-settings, #account-badge').first().click();
+    await goSettings(page);
     await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Delete my data' })).toHaveCount(0);
   });
