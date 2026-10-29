@@ -16,9 +16,10 @@ function useSettledHeadline(status: { headline: string; tone: string } | null) {
   return said;
 }
 
-// How syncing is going, and the changes the server would not take (build spec, Phase D6). Only shown when syncing through
-// the API is switched on (feature-flags.md). Nothing here is shown by colour alone: every state is a sentence.
-export default function SyncPanel() {
+// How syncing is going, and the changes the server would not take (build spec, Phase D6). It is the top of the Sync, backups & data
+// panel (DataPanel in Settings.tsx), not a panel of its own. Only shown when syncing through the API is switched on
+// (feature-flags.md). Nothing here is shown by colour alone: every state is a sentence.
+export default function SyncSection() {
   const sync = useAppStore(s => s.sync);
   const dl = useAppStore(s => s.dl);
   const cfg = useAppStore(s => s.cfg);
@@ -39,9 +40,7 @@ export default function SyncPanel() {
   };
 
   return (
-    <section className="panel syncpanel" aria-labelledby="sync-h">
-      <h3 id="sync-h">Sync</h3>
-
+    <div className="syncpanel syncblock">
       <div className={status.tone === 'wait' || status.tone === 'bad' ? 'notice' : undefined}>
         <p className="syncstatus"><b>{status.headline}</b>{status.detail ? ` ${status.detail}` : ''}</p>
       </div>
@@ -88,7 +87,13 @@ export default function SyncPanel() {
       )}
 
       {uploaded?.state === 'uploaded' && <p className="note">Data from before accounts was uploaded on {formatWhen(uploaded.at)} ({uploaded.total} items). The old copy is still on this device.</p>}
-      <p className="note">App version {versionLabel(__APP_VERSION__)}</p>
-    </section>
+    </div>
   );
+}
+
+/** The app version, at the foot of the panel; like the sync status it is only shown when syncing is on. */
+export function SyncVersion() {
+  const sync = useAppStore(s => s.sync);
+  if (!sync || !getSyncApi()) return null;
+  return <p className="note">App version {versionLabel(__APP_VERSION__)}</p>;
 }

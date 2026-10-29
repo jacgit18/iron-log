@@ -8,11 +8,11 @@ import ExportUpload from './ExportUpload.js';
 import ProgramOnComputerRow from './ProgramOnComputerRow.js';
 import BackupCopies from './BackupCopies.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
-import SyncPanel from './SyncPanel.js';
+import SyncSection, { SyncVersion } from './SyncPanel.js';
 import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useAppStore } from '../../store/useAppStore.js';
+import { getSyncApi, useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../shared/dates.js';
@@ -262,9 +262,11 @@ function DataPanel() {
   const weekStart = useAppStore(s => s.weekStart); const shownWeek = fmtShort(weekStart); // the week the Board shows, which may not be this one
   const importError = useAppStore(s => s.importError);
   const [paste, setPaste] = useState('');
+  const syncing = useAppStore(s => s.sync !== null) && !!getSyncApi(); // sync is on: its status is the top of this panel
   return (
     <section className="panel" aria-labelledby="data-h">
-      <h3 id="data-h">Backups &amp; data</h3>
+      <h3 id="data-h">{syncing ? 'Sync, backups & data' : 'Backups & data'}</h3>
+      <SyncSection />
       {/* Nothing while loading: a signed-in person must not read "this browser only" before the data source is known. */}
       {storeMode === 'db' && <p>Your data is already saved to your account, and Loadbearer keeps backups for you.</p>}
       {storeMode === 'local' && <p>Your data is in this browser only. Loadbearer keeps a backup for you each day; save a file now and then for a copy outside the browser.</p>}
@@ -305,6 +307,7 @@ function DataPanel() {
           <More about="the reports"><p><b>iron-log.xlsx</b> has a summary per exercise, every session and weekly totals; each week also has its own workbook. The .csv lists logged sessions only.</p></More>
         </div>
       )}
+      <SyncVersion />
     </section>
   );
 }
@@ -455,7 +458,6 @@ export default function Settings() {
           <AccountPanel />
           {!inAndroidApp() && <BillingPanel />}
           <QaAccountsPanel />
-          <SyncPanel />
         </div>
         <div className="scol"><DataPanel key={importCount} /></div>
       </Group>
