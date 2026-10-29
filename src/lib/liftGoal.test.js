@@ -21,6 +21,10 @@ describe('lift weight goal', () => {
     expect(liftGoalStatus({ w: 225, start: 175 }, logs, today)).toMatchObject({ now: 200, left: 25, reached: false, pct: 50 });
     expect(liftGoalStatus({ w: 225, start: 175 }, logs, today, 'strength')).toMatchObject({ now: 185, left: 40, pct: 20 });
   });
+  it('a goal on an exercise with no log starts at 0 and has nothing to show yet', () => {
+    expect(liftGoalStatus({ w: 100, start: 0 }, [], today)).toMatchObject({ best: null, now: null, left: 100, reached: false, pct: 0 });
+    expect(liftGoalStatus({ w: 100, start: 0 }, logs.slice(0, 1), today)).toMatchObject({ now: 185, reached: true, pct: 100 });
+  });
   it('gives the weekly gain needed to hit a date', () => {
     const g = liftGoalStatus({ w: 225, start: 175, by: '2026-11-01' }, logs, today);
     expect(g.weeksLeft).toBeCloseTo(30 / 7, 1);
