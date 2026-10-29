@@ -489,11 +489,15 @@ export default function Settings() {
   const open = (s: Screen) => { was.current = { screen: s, y: window.scrollY }; history.pushState({ settingsScreen: s }, ''); setScreen(s); };
   const back = () => { if (history.state?.settingsScreen) history.back(); else setScreen(null); };
   useEffect(() => {
-    const onPop = (e: PopStateEvent) => setScreen((e.state?.settingsScreen as Screen | undefined) ?? null);
+    // Only ever closes or switches a screen of ours: a popstate with no `settingsScreen` in its state leaves a closed Settings as it is.
+    const onPop = (e: PopStateEvent) => setScreen(now => (e.state?.settingsScreen as Screen | undefined) ?? (now ? null : now));
     window.addEventListener('popstate', onPop);
     // Sent to a group by the account menu or the jump row: close the screen now, and drop its history entry without leaving the page.
     const off = onCloseSettingsScreen(() => { setScreen(null); was.current = null; if (history.state?.settingsScreen) history.replaceState(null, ''); });
-    return () => { window.removeEventListener('popstate', onPop); off(); };
+    return () => {
+      window.removeEventListener('popstate', onPop); off();
+      if (history.state?.settingsScreen) history.back(); // another tab was chosen with a screen open: take its history entry back, so Back is not a dead press
+    };
   }, []);
   useEffect(() => {
     if (screen !== null || !was.current) return; // closed by Back: land where the row is, focus on it

@@ -199,3 +199,14 @@ test('a change on a screen shows in its summary row', async ({ page }) => {
   await page.getByRole('button', { name: 'Training', exact: true }).click();
   await expect(page.locator('#drill-mode')).toContainText('Mode 2 · Alternate monthly');
 });
+
+test('choosing another tab with a Training screen open leaves no stale history entry behind', async ({ page }) => {
+  await page.goto('/');
+  await openSettings(page);
+  await page.locator('#drill-phases').click();
+  expect(await page.evaluate(() => history.state?.settingsScreen)).toBe('phases');
+  await page.locator('#tab-board').click();
+  await expect.poll(() => page.evaluate(() => history.state?.settingsScreen ?? null)).toBeNull(); // Back is not a dead press
+  await page.locator('#tab-settings, #account-badge').first().click();
+  await expect(page.locator('#drill-phases')).toBeVisible(); // Settings opens on its list, not on the screen
+});

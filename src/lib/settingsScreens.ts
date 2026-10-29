@@ -1,7 +1,7 @@
 import { PHASES, PH_KEYS } from './data.js';
 import type { PhaseKey } from '../types.ts';
 
-// The Training group on Settings: each of these is a summary row that opens its own screen (Settings.tsx `TrainingGroup`).
+// The Training group on Settings: each of these is a summary row that opens its own screen (Settings.tsx `TrainingRows`).
 export const SCREENS = ['mode', 'phases', 'maxes'] as const;
 export type Screen = (typeof SCREENS)[number];
 
