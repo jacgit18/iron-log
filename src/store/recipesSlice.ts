@@ -60,12 +60,12 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
 
   addMissingToGrocery(id, month) {
     const r = get().recipes.find(x => x.id === id);
-    if (!r) return { added: 0, already: 0 };
+    if (!r) return { added: 0, already: 0, refused: null };
     const status = pantryStatus(r, get().grocery, get().groceryMonths[month] ?? { lines: {}, pulled: [] });
     const { already, add } = missingParts(status);
-    let added = 0;
-    for (const n of add) if (!get().addGroceryItem({ n, store: '', qty: '1', price: '', every: false })) added++;
-    return { added, already: already.length };
+    let added = 0; let refused: string | null = null;
+    for (const n of add) { const e = get().addGroceryItem({ n, store: '', qty: '1', price: '', every: false }); if (e) refused ??= e; else added++; }
+    return { added, already: already.length, refused };
   },
 });
 

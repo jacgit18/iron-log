@@ -295,7 +295,7 @@ export interface RecipesSlice {
   copyCatalogRecipe(item: CatalogItem): string | null; // a Library recipe joins Mine as a copy of its own
   removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')
   linkIngredient(id: string, index: number, home: string | null): void; // pin one ingredient to an At home item (null unpins)
-  addMissingToGrocery(id: string, month: string): { added: number; already: number }; // new names go on the list; the rest are on To get already
+  addMissingToGrocery(id: string, month: string): { added: number; already: number; refused: string | null }; // new names go on the list; the rest are on To get already; `refused`: why an add was refused (a full list), else null
 }
 
 /** The grocery list (ADR 039): the catalogue and every saved month, saved like every other document (synced when syncing is on). */

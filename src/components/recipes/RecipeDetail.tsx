@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
 import { monthKey } from '../../lib/grocery.js';
-import { missingParts, pantryStatus } from '../../lib/recipePantry.js';
+import { addMissingMessage, missingParts, pantryStatus } from '../../lib/recipePantry.js';
 import { recipeMeta } from '../../lib/recipeList.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -17,10 +17,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
   const status = useMemo(() => pantryStatus(recipe, grocery, months[month] ?? { lines: {}, pulled: [] }), [recipe, grocery, months, month]);
   const missing = missingParts(status);
   const toAdd = missing.add.length;
-  const addMissing = () => {
-    const r = useAppStore.getState().addMissingToGrocery(recipe.id, month);
-    setMsg(r.added || r.already ? `${r.added ? `Added ${r.added} to To get.` : ''}${r.added && r.already ? ' ' : ''}${r.already ? `${r.already} ${r.already === 1 ? 'is' : 'are'} on To get already.` : ''}` : 'Everything is at home.');
-  };
+  const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
   return (
     <section className="panel" aria-labelledby="rc-h">
       <div className="rc-head">

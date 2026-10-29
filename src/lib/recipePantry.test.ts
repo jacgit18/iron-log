@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Grocery, GroceryItem } from '../types.ts';
-import { matchHome, missingParts, nameWords, pantryStatus, splitIngredient } from './recipePantry.js';
+import { addMissingMessage, matchHome, missingParts, nameWords, pantryStatus, splitIngredient } from './recipePantry.js';
 
 const it_ = (id: string, n: string): GroceryItem => ({ id, n, store: 'Anywhere', qty: 1, cents: null, every: false, out: false });
 const g = (...items: GroceryItem[]): Grocery => ({ stores: ['Anywhere'], items });
@@ -59,4 +59,15 @@ describe('pantryStatus and missingParts', () => {
     expect(already.map(i => i.id)).toEqual(['d']);
     expect(add).toEqual(['parsley']);
   });
+});
+
+describe('addMissingMessage', () => {
+  it.each([
+    [{ added: 2, already: 0, refused: null }, 'Added 2 to To get.'],
+    [{ added: 0, already: 1, refused: null }, '1 is on To get already.'],
+    [{ added: 1, already: 3, refused: null }, 'Added 1 to To get. 3 are on To get already.'],
+    [{ added: 0, already: 0, refused: null }, 'Everything is at home.'],
+    [{ added: 1, already: 0, refused: 'Too many items.' }, 'Added 1 to To get. Too many items.'],
+    [{ added: 0, already: 0, refused: 'Too many items.' }, 'Too many items.'],
+  ])('%j', (r, text) => expect(addMissingMessage(r)).toBe(text));
 });
