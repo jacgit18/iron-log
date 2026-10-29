@@ -27,6 +27,7 @@ import { startAutoBackup } from './autoBackupRunner.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
 import { deviceGrocery, grocerySlice } from './grocerySlice.js';
+import { recipesSlice } from './recipesSlice.js';
 import { removedSlice } from './removedSlice.js';
 import { MONTH_RE, monthEmpty, normGrocery, normGroceryMonth } from '../lib/grocery.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
@@ -37,6 +38,7 @@ import { mimeFor } from '../lib/mime.js';
 import { loadView, saveView, openFromUrl } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
 import { normEntries, normBody, normProgram, normLibrary, SCHEMA_VERSION } from '../shared/validate.js';
+import { normRecipes } from '../shared/recipes.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
 // binding from the original app (window.claude.use('db')); without it everything uses localStorage.
@@ -161,6 +163,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   ...backupSlice(set, get, flag),
   ...wellnessSlice(set, get, flag),
   ...grocerySlice(set, get),
+  ...recipesSlice(set, get),
   ...removedSlice(set, get, flag),
   cfg: structuredClone(DEFAULT_CFG),
   weekStart: weekStartOf(new Date()),
@@ -173,6 +176,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   mDay: restored.mDay ?? null, // day shown on phones; null = pick the first day with open work
   library: [], // saved program versions
   experiments: [], // exercises to try: [{id, ex, ph, note}]
+  recipes: [], // recipes you wrote or copied (ADR 084)
   body: [], // body weight: [{wk, d, w}], one per week
   programs: { A: BUILTIN.A, B: BUILTIN.B },
   storeMode: 'loading',
@@ -206,7 +210,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().noteRemoved('muscles', `your muscle tags for ${exInfo(get().cfg, exId).n}`, () => !get().cfg.muscleMap?.[exId] && get().mutateCfg(c => { c.muscleMap = { ...(c.muscleMap || {}), [exId]: own }; }));
   },
 
-  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, grocery: { ...s.grocery, months: s.groceryMonths } }; },
+  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, recipes: s.recipes, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, grocery: { ...s.grocery, months: s.groceryMonths } }; },
 
   // The snapshot plus every saved stretch week (the week on screen taken live), for the data file.
   async stretchWeeksAll() {
@@ -408,6 +412,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         body: normBody((LS.get('body/main') || {}).entries),
         library: padLibrary(normLibrary((LS.get('library/main') || {}).items)),
         experiments: normExperiments((LS.get('experiments/main') || {}).items),
+        recipes: normRecipes((LS.get('recipes/main') || {}).items),
         stretches: normStretches(LS.get('stretches/main')).items,
         stretchExps: normStretches(LS.get('stretches/main')).experiments,
         supp: normSupplements(LS.get('supplements/main')),
@@ -445,6 +450,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (queue.pending('experiments/main')) return;
       set(state => ({ experiments: s.exists ? normExperiments((s.data() || {}).items) : [], ...markReady('exp')(state) }));
     }, () => flag('Couldn’t load your experiments. Reload the page.'));
+    db.doc('recipes/main').onSnapshot((s: any) => {
+      if (queue.pending('recipes/main')) return;
+      set({ recipes: s.exists ? normRecipes((s.data() || {}).items) : [] });
+    }, () => flag('Couldn’t load your recipes. Reload the page.'));
     db.doc('stretches/main').onSnapshot((s: any) => {
       if (queue.pending('stretches/main')) return;
       const d = normStretches(s.exists ? s.data() : null);
@@ -528,6 +537,7 @@ export function fromOtherTab(e: { key?: string | null; newValue?: string | null 
   else if (path === 'body/main') set({ body: (v || {}).entries || [] });
   else if (path === 'library/main') set({ library: padLibrary(normLibrary((v || {}).items)) });
   else if (path === 'experiments/main') set({ experiments: normExperiments((v || {}).items) });
+  else if (path === 'recipes/main') set({ recipes: normRecipes((v || {}).items) });
   else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: loadProgram(k as 'A' | 'B', v) } })); useAppStore.getState().refreshRan(); }
   else if (path === 'stretches/main') { const d = normStretches(v); set({ stretches: d.items, stretchExps: d.experiments }); }
   else if (path === 'supplements/main') set({ supp: normSupplements(v) });

@@ -1,20 +1,20 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-// The Daily row (Groceries, Nutrition, Medical, Recipes): Supplements is now called Nutrition, and Medical, Recipes and the Diet section inside
-// Nutrition are admin-only for now. An account that is not an admin sees only Groceries and Nutrition, with no Diet.
+// The Daily row (Groceries, Nutrition, Medical, Recipes): Supplements is now called Nutrition, and Medical and the Diet section inside Nutrition
+// are admin-only for now; Recipes is for everyone (ADR 084). An account that is not an admin sees Groceries, Nutrition and Recipes, with no Diet or Medical.
 const asAdmin = async page => { await page.evaluate(() => localStorage.setItem('ironlog:session/admin', 'true')); await page.reload(); };
 const ids = page => page.locator('[aria-label="Daily section"] button').evaluateAll(b => b.map(x => x.id));
 
-test('a regular account sees Groceries and Nutrition, with no Diet, Medical or Recipes', async ({ page }) => {
+test('a regular account sees Groceries, Nutrition and Recipes, with no Diet or Medical', async ({ page }) => {
   await page.click('#tab-daily');
   await expect(page.locator('#daily-grocery')).toBeVisible();
-  expect(await ids(page)).toEqual(['daily-grocery', 'daily-supplements']);
+  expect(await ids(page)).toEqual(['daily-grocery', 'daily-supplements', 'daily-recipes']);
   await expect(page.locator('#daily-supplements')).toHaveText('Nutrition');
   await expect(page.getByRole('heading', { name: 'Diet' })).toHaveCount(0);
 });
 
-test('an admin also sees Medical and Recipes, and a Diet section inside Nutrition', async ({ page }) => {
+test('an admin also sees Medical, and a Diet section inside Nutrition', async ({ page }) => {
   await asAdmin(page);
   await page.click('#tab-daily');
   await expect(page.locator('#daily-grocery')).toBeVisible();

@@ -46,3 +46,9 @@ const same = (a: unknown, b: unknown): boolean => {
 };
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */
 export const validRecipe = (v: unknown): v is Recipe => { const c = normRecipe(v); return c !== null && same(c, v); };
+
+/** The recipes of a stored list, cleaned: the unusable and repeated ones dropped, at most MAX_RECIPES. */
+export function normRecipes(items: unknown): Recipe[] {
+  const seen = new Set<string>();
+  return (Array.isArray(items) ? items : []).map(normRecipe).filter((r): r is Recipe => !!r && !seen.has(r.id) && !!seen.add(r.id)).slice(0, MAX_RECIPES);
+}
