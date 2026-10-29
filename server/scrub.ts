@@ -5,7 +5,9 @@ import { createHash } from 'node:crypto';
 
 export const mask = (text: string, max: number) =>
   text
-    .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[email]')
+    // Bounded repeats (an address is at most 64 characters before the @, labels at most 63): an unbounded run of word characters with no @
+    // in an error message made this expression retry from every position (polynomial backtracking).
+    .replace(/[\w.+-]{1,64}@[\w-]{1,63}(\.[\w-]{1,63}){1,8}/g, '[email]')
     .replace(/\b(eyJ[\w-]{10,}|ghp_\w+|gho_\w+|github_pat_\w+|sk-\w{10,}|[A-Za-z0-9_-]{32,})\b/g, '[secret]')
     .replace(/\d/g, '#')
     .slice(0, max);
