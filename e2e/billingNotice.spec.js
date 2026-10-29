@@ -21,7 +21,10 @@ async function open(page, answer, { toSettings = true } = {}) {
   await page.route('**/api/sync*', json({ rows: [], cursor: '0', more: false }));
   await page.route('**/api/me', answer);
   await page.goto('/');
-  if (toSettings) await page.locator('#account-badge').click();
+  if (toSettings) {
+    await page.locator('#account-badge').click();
+    await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
+  }
 }
 
 const notice = page => page.getByText(/Plus is here/);
@@ -37,7 +40,7 @@ test.describe('the one-time billing notice', () => {
     await expect(notice(page)).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Plus, $5.99 a month' })).toBeVisible(); // the Billing section itself stays
     await page.reload();
-    await page.locator('#account-badge').click();
+    await page.locator('#account-badge').click(); await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
     await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible();
     await expect(notice(page)).toHaveCount(0);
   });
@@ -66,7 +69,7 @@ test.describe('the one-time billing notice', () => {
     await page.getByRole('button', { name: 'Dismiss' }).click();
     await expect(notice(page)).toHaveCount(0);
     await page.reload();
-    await page.locator('#account-badge').click();
+    await page.locator('#account-badge').click(); await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
     await expect(notice(page)).toBeVisible();
   });
 
