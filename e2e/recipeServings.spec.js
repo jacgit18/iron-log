@@ -56,6 +56,20 @@ test('with no servings yet, entering one only sets what the amounts are for', as
   await expect(page.getByText('The amounts are taken as being for 6 servings.')).toBeVisible();
 });
 
+test('typing a two-digit Servings key by key does not scale the amounts by the first digit', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: 'New recipe' }).click();
+  await page.getByLabel('Ingredient 1', { exact: true }).fill('stock');
+  await amount(page, 0).fill('2 cups');
+  const servings = page.getByLabel('Servings', { exact: true });
+  await servings.click();
+  await servings.pressSequentially('12');
+  await expect(amount(page, 0)).toHaveValue('2 cups');
+  await servings.press('Tab'); // the amounts are now for 12 servings
+  await servings.fill('24');
+  await expect(amount(page, 0)).toHaveValue('4 cups');
+});
+
 test('Scale for tonight changes the amounts shown and saves nothing', async ({ page }) => {
   await make(page);
   await page.getByRole('button', { name: 'Save recipe' }).click();

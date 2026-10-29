@@ -58,9 +58,9 @@ export default function Recipes() {
   const back = () => setView({ kind: 'list' });
   const mineRecipe = view.kind === 'mine' ? recipes.find(r => r.id === view.id) : undefined;
   if (view.kind === 'form') return <section className="panel"><RecipeForm recipe={recipes.find(r => r.id === view.id)} onDone={id => { if (id) setView({ kind: 'mine', id }); else back(); }} /></section>;
-  if (view.kind === 'mine' && mineRecipe) return <RecipeDetail recipe={mineRecipe} mine onBack={back} onEdit={() => setView({ kind: 'form', id: mineRecipe.id })} onAdd={back} />;
+  if (view.kind === 'mine' && mineRecipe) return <RecipeDetail key={mineRecipe.id} recipe={mineRecipe} mine onBack={back} onEdit={() => setView({ kind: 'form', id: mineRecipe.id })} onAdd={back} />;
   if (view.kind === 'library') {
-    if (libCopy) return <RecipeDetail recipe={libCopy} mine={false} onBack={back} onEdit={back} onAdd={servings => {
+    if (libCopy) return <RecipeDetail key={libCopy.id} recipe={libCopy} mine={false} onBack={back} onEdit={back} onAdd={servings => {
       useAppStore.getState().copyCatalogRecipe(view.item, servings); // an error here means it is already in Mine, which is where it opens
       const added = useAppStore.getState().recipes.find(r => r.from === view.item.id);
       if (added) { setSrc('mine'); setView({ kind: 'mine', id: added.id }); }

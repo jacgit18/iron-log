@@ -41,10 +41,15 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     setServings(t);
     const v = whole(t);
     if (!v || v > 99) return;
+    setErr('');
+    // With no earlier number the amounts are only taken as being for it. The anchor is fixed on blur, not here: typing "12" key by key would
+    // otherwise anchor on "1" and then read the "2" as a scale-up by 12.
+    if (lastServings === null) { setScaleNote(servingsNote(null, v, 0, ing.some(x => x.amt.trim()))); return; }
     const r = rescale(ing, lastServings, v);
-    setIng(r.rows); setLastServings(v); setErr('');
+    setIng(r.rows); setLastServings(v);
     setScaleNote(servingsNote(lastServings, v, r.left, ing.some(x => x.amt.trim())));
   };
+  const anchorServings = () => { const v = whole(servings); if (lastServings === null && v && v <= 99) setLastServings(v); };
   const typeAmount = (i: number, amt: string) => { setIng(ing.map((x, j) => (j === i ? typedAmount(x, amt, lastServings) : x))); setErr(''); };
   const setRow = (i: number, patch: Partial<RecipeIngredient>) => { setIng(ing.map((x, j) => (j === i ? { ...x, ...patch } : x))); setErr(''); };
   // Renaming an ingredient drops its pin to an At home item (the pin was for the old name), unless the new name is exactly one of your
@@ -66,7 +71,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
         </select>
       </label>
       <div className="rc-ingrow">
-        <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} /></label>
+        <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>
         <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
         <span />
       </div>
