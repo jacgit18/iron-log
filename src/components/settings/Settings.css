@@ -78,12 +78,111 @@
   color: var(--accent-ink);
 }
 /* With the account menu in the header (a signed-in badge, or one expected), the menu is the way to a group and the row is not drawn. Without it (Settings is a tab) the row stays. */
-.wrap[data-acctmenu] .sjump {
-  display: none;
+@media (max-width:900px) {
+  .wrap[data-acctmenu] .sjump {
+    display: none;
+  }
 }
 /* Focus not obscured (2.4.12) under the sticky jump row, at every width: keep focus and jump targets below the row's real height (--sjump-h, set from a ResizeObserver, so two wrapped lines of chips count). */
 html:has(.sjump) {
   scroll-padding-top: calc(var(--sjump-h,64px) + 8px + env(safe-area-inset-top,0px));
+}
+.sgroups {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.smain[hidden] {
+  display: none;
+}
+/* A wide screen: the groups in one readable column, and the jump row becomes a rail down the left, sticky beside them. */
+@media (min-width:901px) {
+  .smain {
+    display: grid;
+    grid-template-columns: 11rem minmax(0,46rem);
+    column-gap: var(--sp-16);
+    align-items: start;
+  }
+  .sjump {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: var(--sp-2);
+    top: var(--sp-16);
+    padding: 0;
+    align-self: start;
+  }
+  .sjump .chip {
+    border-color: transparent;
+    background: transparent;
+    border-radius: var(--r-md);
+    text-align: start;
+  }
+  .sjump .chip[aria-current="true"] {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--ink);
+  }
+  html:has(.sjump) {
+    scroll-padding-top: var(--sp-16);
+  }
+}
+/* Training's summary rows: a title and one line of what is set, a chevron, one tap target each. */
+.sdrills {
+  padding-block: var(--sp-4);
+}
+.sdrill {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  inline-size: 100%;
+  min-height: 56px;
+  padding: var(--sp-10) 0;
+  border: 0;
+  border-block-start: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+.sdrill:first-child {
+  border-block-start: 0;
+}
+.sdt {
+  flex: 1;
+  min-width: 0;
+}
+.sdt b {
+  display: block;
+}
+.sdt span {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-md);
+  overflow-wrap: anywhere;
+}
+.sdrill svg {
+  flex: none;
+  color: var(--muted);
+}
+.sscreen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+  max-inline-size: 46rem;
+}
+.sback {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 44px;
+  padding: 0 var(--sp-8) 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
 }
 .sgroup {
   display: flex;
@@ -107,7 +206,7 @@ html:has(.sjump) {
 .sgrid {
   display: grid;
   gap: var(--sp-16);
-  grid-template-columns: repeat(2,minmax(0,1fr));
+  grid-template-columns: minmax(0,1fr);
   align-items: start;
 }
 .settings .scol {
@@ -115,11 +214,6 @@ html:has(.sjump) {
   flex-direction: column;
   gap: var(--sp-16);
   min-width: 0;
-}
-@media (max-width:900px) {
-  .sgrid {
-    grid-template-columns: minmax(0,1fr);
-  }
 }
 .syncblock {
   display: flex;
