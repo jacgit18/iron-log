@@ -1,6 +1,7 @@
 import type { CatalogItem, Recipe } from '../types.ts';
 import { MAX_RECIPES, normRecipe } from '../shared/recipes.js';
 import { splitIngredient } from './recipePantry.js';
+import { scaleAmount } from './recipeScale.js';
 
 /* ---------- Making and checking a recipe (ADR 084): pure, so the store and the form share one rule ---------- */
 
@@ -15,10 +16,13 @@ export function newRecipeId(used: Iterable<string>, name: string): string {
 }
 
 /** The recipe a catalog row becomes in your list: a copy you can change, remembering where it came from. */
-export function recipeFromCatalog(item: CatalogItem, used: Iterable<string>): Recipe | null {
+export function recipeFromCatalog(item: CatalogItem, used: Iterable<string>, servings?: number): Recipe | null {
   const d = item.data.recipe;
   if (!d) return null;
-  return normRecipe({ id: newRecipeId(used, item.name), n: item.name, cat: d.cat, ing: d.ing.map(splitIngredient), steps: d.steps, servings: d.servings, minutes: d.minutes, from: item.id });
+  // Copied after scaling to other servings in the recipe view: the copy holds those servings and amounts, and counts as changed.
+  const scale = servings && d.servings && servings !== d.servings ? servings / d.servings : null;
+  const ing = d.ing.map(splitIngredient).map(i => (scale && i.amt ? { ...i, amt: scaleAmount(i.amt, scale).text } : i));
+  return normRecipe({ id: newRecipeId(used, item.name), n: item.name, cat: d.cat, ing, steps: d.steps, servings: scale ? servings : d.servings, minutes: d.minutes, from: item.id, ...(scale ? { edited: true } : {}) });
 }
 
 /** Why a recipe can't be saved as it is, or null. `list` is your recipes without this one. */
