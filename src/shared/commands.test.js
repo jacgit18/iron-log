@@ -278,7 +278,7 @@ describe('validateSaveListItem', () => {
     }
   });
   it('caps the grocery lists at the app\'s own limits', () => {
-    expect(LIST_CAPS).toEqual({ grocery_group: 20, grocery_item: 500, grocery_store: 60 });
+    expect(LIST_CAPS).toEqual({ grocery_group: 20, grocery_item: 500, recipe: 300, grocery_store: 60 });
   });
 });
 
@@ -318,5 +318,13 @@ describe('validateDeleteGroceryMonth', () => {
     expect(validateDeleteGroceryMonth({ month: '2026-00' })).toBeNull();
     expect(validateDeleteGroceryMonth({})).toBeNull();
     expect(validateDeleteGroceryMonth(null)).toBeNull();
+  });
+});
+
+describe('validateSaveListItem: recipe', () => {
+  const recipe = { id: 'r1', n: 'Chili', cat: 'protein', ing: [{ n: 'Beans' }], steps: ['Simmer.'] };
+  it('accepts a clean recipe and refuses one the app would not send', () => {
+    expect(validateSaveListItem({ list: 'recipe', item: recipe, position: 0 })).toEqual({ list: 'recipe', item: recipe, position: 0 });
+    expect(validateSaveListItem({ list: 'recipe', item: { ...recipe, cat: 'soup' }, position: 0 })).toBeNull();
   });
 });

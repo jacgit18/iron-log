@@ -4,7 +4,7 @@
 import type { CatalogKind } from '../types.ts';
 import { fetchCatalog, type CatalogResult } from './catalog.js';
 
-type ListKind = Exclude<CatalogKind, 'supplement'>;
+type ListKind = Exclude<CatalogKind, 'supplement' | 'recipe'>; // supplements and recipes are searched, not listed
 const kept = new Map<ListKind, Promise<CatalogResult>>();
 
 export function loadCatalog(kind: ListKind, headers: () => Record<string, string>, doFetch: typeof fetch = fetch): Promise<CatalogResult> {
