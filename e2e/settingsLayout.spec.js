@@ -67,7 +67,7 @@ for (const [width, height] of [[375, 812], [1280, 800]]) test(`the jump row stay
   await expect(nav.getByRole('button', { name: 'Training' })).toHaveAttribute('aria-current', 'true');
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect(nav).toBeInViewport();
-  await expect(nav.getByRole('button', { name: 'Erase' })).toHaveAttribute('aria-current', 'true');
+  await expect(nav.getByRole('button', { name: 'Erase & delete' })).toHaveAttribute('aria-current', 'true');
   await nav.getByRole('button', { name: 'Data' }).click();
   await expect(page.locator('#set-data-h')).toBeFocused();
   await expect(nav.getByRole('button', { name: 'Data' })).toHaveAttribute('aria-current', 'true');

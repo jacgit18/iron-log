@@ -117,7 +117,7 @@ export default function App() {
   return (
     <>
       <a className="skip" href="#view">Skip to content</a>
-      <div className="wrap">
+      <div className="wrap" data-acctmenu={badgeName !== null || badgePending ? '' : undefined}>
         <header className="top">
           <h1><button type="button" className="brandlink" aria-current={tab === 'board' ? 'page' : undefined} onClick={() => { setTab('board'); window.scrollTo({ top: 0 }); }}>{APP_TITLE}</button></h1>
           <div className="topact">
