@@ -8,6 +8,7 @@ import { describe, lastLog, stallOf, backoffOf } from '../../lib/logic.js';
 import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
 import { avgPerTrainingDay } from '../../lib/freqGoal.js';
 import FreqGoals from './FreqGoals.jsx';
+import GoalsPanel from './GoalsPanel.jsx';
 import Trends from './Trends.jsx';
 import Muscles from '../muscles/Muscles.jsx';
 import LineChart from '../LineChart.js';
@@ -105,6 +106,7 @@ function ProgressMain() {
       <Trends />
       <History />
       <FreqGoals />
+      <GoalsPanel />
       <LiftList />
     </>
   );
