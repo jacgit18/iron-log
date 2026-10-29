@@ -2,7 +2,7 @@
    One module for what the phone sends and the API accepts. Each command has a name, an input type and a validator;
    the offline queue stores a Command and replays it unchanged. Framework-free: client and server import it. */
 
-import type { BodyEntry, Boost, Experiment, GroceryGroup, GroceryItem, GroceryMonth, GroceryStore, LibraryItem, Recipe, LogEntry, Program, ProgKey, Stretch, StretchExperiment, StretchWeek, SupplementItem, Week } from '../types.ts';
+import type { BodyEntry, Boost, Experiment, GroceryGroup, GroceryItem, GroceryMonth, GroceryStore, LibraryItem, LogEntry, Program, ProgKey, Recipe, Stretch, StretchExperiment, StretchWeek, SupplementItem, Week } from '../types.ts';
 import { LIMITS, normBody, normEntry, normLibrary, normProgram, validDate } from './validate.js';
 import { normConfigDoc, type ConfigDoc } from './config.js';
 import { MONTH_RE, normGroceryGroup, normGroceryItem, normGroceryMonth, normGroceryStore, validGroceryGroup, validGroceryItem, validGroceryStore } from './grocery.js';
