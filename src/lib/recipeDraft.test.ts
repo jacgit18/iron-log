@@ -55,6 +55,10 @@ describe('withEditedMark', () => {
     expect(withEditedMark(lib, { ...lib, ing: [{ n: 'garlic', home: 'g1' }] })).not.toHaveProperty('edited');
     expect(withEditedMark({ ...lib, ing: [{ n: 'garlic', home: 'g1' }] }, { ...lib })).not.toHaveProperty('edited');
   });
+  it('marks a copy whose servings and amounts were scaled', () => {
+    const withAmt: Recipe = { ...lib, servings: 4, ing: [{ n: 'garlic', amt: '2 cloves' }] };
+    expect(withEditedMark(withAmt, { ...withAmt, servings: 8, ing: [{ n: 'garlic', amt: '4 cloves' }] })).toHaveProperty('edited', true);
+  });
   it('does not mark a new recipe', () => expect(withEditedMark(undefined, lib)).not.toHaveProperty('edited'));
 });
 
@@ -65,4 +69,17 @@ describe('attribution', () => {
     expect(attribution({ from: 'c:wbc:x', edited: true }, true)).toBe('Adapted from the Wikibooks Cookbook, CC BY-SA 4.0.');
   });
   it('credits nothing on a recipe you wrote', () => expect(attribution({}, true)).toBeNull());
+});
+
+describe('recipeFromCatalog at other servings', () => {
+  const four: CatalogItem = { id: 'c:wbc:r9', name: 'Pancakes', data: { recipe: { cat: 'breakfast', ing: ['2 cups flour', 'pinch of salt'], steps: ['Mix.'], servings: 4 } } };
+  it('copies the amounts and servings as scaled, and marks the copy edited', () => {
+    expect(recipeFromCatalog(four, [], 8)).toMatchObject({ servings: 8, edited: true, ing: [{ n: 'flour', amt: '4 cups' }, { n: 'pinch of salt' }] });
+  });
+  it('copies as it is with the same servings, none given, or none in the recipe', () => {
+    for (const sv of [undefined, 4]) expect(recipeFromCatalog(four, [], sv)).toMatchObject({ servings: 4, ing: [{ n: 'flour', amt: '2 cups' }, { n: 'pinch of salt' }] });
+    expect(recipeFromCatalog(four, [], 4)).not.toHaveProperty('edited');
+    const none = { ...four, data: { recipe: { ...four.data.recipe!, servings: undefined } } };
+    expect(recipeFromCatalog(none, [], 8)).not.toHaveProperty('edited');
+  });
 });
