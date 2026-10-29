@@ -210,7 +210,8 @@ export interface PersonalBest { id: string; d: string; w: number; r: number; pre
 /** Body-weight goal: the target, where you were when you set it, and an optional ISO date. */
 export interface BodyGoal { w: number; start?: { w: number; d?: string }; by?: string }
 /** A lift goal for one exercise and key ('any' or a phase). */
-export interface LiftGoal { w: number; start?: number; by?: string }
+// `bw`, `bwd`: body weight (lb) and date when a goal that scales with body weight was set; `w` is then the base goal.
+export interface LiftGoal { w: number; start?: number; by?: string; bw?: number; bwd?: string }
 
 /* ---------- Supplements, water and stretches ---------- */
 export type SupplementSlot = 'morning' | 'noon' | 'night' | '';

@@ -60,6 +60,7 @@ function History() {
 function LiftList() {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
   const openModal = useAppStore(s => s.openModal);
+  const body = useAppStore(s => s.body);
   const today = useToday(s => s.today);
   const ids = Object.keys(logs).filter(id => logs[id].length);
   if (!ids.length) return <div className="empty">No sessions logged yet. Tap <b>Log</b> on any exercise card to record weight, sets and reps.</div>;
@@ -72,7 +73,7 @@ function LiftList() {
         const best = ws.length ? Math.max(...ws) : null;
         const phName = last.ph ? PHASES[last.ph].label : 'No phase';
         const phs = [...new Set(L.map(e => e.ph || null))]; const multi = phs.length > 1;
-        const goals = liftGoalsStatus(cfg, id, L, today);
+        const goals = liftGoalsStatus(cfg, id, L, today, undefined, body);
         const label = (p: PhaseKey | null) => (p ? PHASES[p as PhaseKey].label : 'No phase');
         const backoff = phs.filter(p => backoffOf(cfg, logs, { ex: id }, p));
         const stalled = phs.filter(p => !backoff.includes(p) && stallOf(cfg, logs, id, p)).map(label);

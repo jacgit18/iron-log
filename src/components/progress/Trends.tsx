@@ -1,4 +1,4 @@
-import type { Cfg, Logs, MuscleKey, PhaseKey, WeightChange as Change } from '../../types.ts';
+import type { BodyEntry, Cfg, Logs, MuscleKey, PhaseKey, WeightChange as Change } from '../../types.ts';
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -7,7 +7,7 @@ import { ymd, parseDate, addDays, fmtShort, weekStartOf } from '../../shared/dat
 import { MUSCLES, M_KEYS, level, fmtSets } from '../../lib/muscles.js';
 import { trendWeeks, setsByWeek, muscleWeeks, weightChanges, weekSummary, currentWeekRecord, niceStep, mdLabel, volumeByWeek, personalBests } from '../../lib/trends.js';
 import { bwSorted, fmtLb, signed, goalStatus } from '../../lib/body.js';
-import { liftGoalStatus, goalPhaseLabel } from '../../lib/liftGoal.js';
+import { liftGoalStatus, goalPhaseLabel, scaledGoal } from '../../lib/liftGoal.js';
 import LineChart from '../LineChart.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import ArmedButton from '../ArmedButton.jsx';
@@ -149,15 +149,15 @@ function Bests({ since }: { since: string }) {
 }
 
 // The goal a row of the change chart is measured against: the goal for that phase, or else the any-phase goal.
-function rowGoal(cfg: Cfg, logs: Logs, c: Change, today: Date) {
+function rowGoal(cfg: Cfg, logs: Logs, body: BodyEntry[], c: Change, today: Date) {
   const G = (cfg.liftGoals || {})[c.id]; if (!G) return null;
   const k = c.ph && G[c.ph] ? c.ph : G.any ? 'any' : null;
-  return k ? liftGoalStatus(G[k], logs[c.id], today, k) : null;
+  return k ? liftGoalStatus(scaledGoal(G[k], body), logs[c.id], today, k) : null;
 }
 
 function ChangeChart({ changes }: { changes: Change[] }) {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
-  const today = useToday(s => s.today);
+  const today = useToday(s => s.today); const body = useAppStore(s => s.body);
   if (!changes.length) return (
     <section className="panel tchart"><h2>Weight change by exercise</h2>
       <p className="note">Once you log the same lift with weight on two different days, this shows how much heavier (or lighter) it is now, over the last 8 weeks.</p>
@@ -167,7 +167,7 @@ function ChangeChart({ changes }: { changes: Change[] }) {
   const shown = [...changes.filter((c) => c.pct >= 0).slice(0, 10 - downs.length), ...downs];
   // A goal is drawn as a tick at the % change it would be from the first weight. The scale stretches to fit goals,
   // up to twice the bars' own scale; a goal past that sits at the end, pointing on.
-  const goals = shown.map(c => { const g = rowGoal(cfg, logs, c, today); return g ? { ...g, gp: (g.target - c.w0) / c.w0 * 100 } : null; });
+  const goals = shown.map(c => { const g = rowGoal(cfg, logs, body, c, today); return g ? { ...g, gp: (g.target - c.w0) / c.w0 * 100 } : null; });
   const barLim = Math.max(10, ...shown.map(c => Math.abs(c.pct)));
   const lim = Math.max(barLim, ...goals.filter((g): g is NonNullable<typeof g> => !!g).map(g => Math.min(Math.abs(g.gp), barLim * 2)));
   const mixed = shown.some(c => c.pct < 0) || goals.some(g => g && g.gp < 0); const zero = mixed ? 50 : 0, span = mixed ? 50 : 100;
