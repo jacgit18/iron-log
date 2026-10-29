@@ -1,8 +1,14 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { useAppStore } from '../store/useAppStore.js';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { flag, useAppStore } from '../store/useAppStore.js';
 import Icon from './Icon.js';
 import { motionOK } from '../lib/motion.js';
+import { forgetSession } from '../lib/gate.js';
+import { disablePush } from '../lib/pushClient.js';
+import { signOutFlow } from '../lib/signOutFlow.js';
 import { GROUPS, jumpToGroup } from '../lib/settingsGroups.js';
+import { LS } from '../lib/storage.js';
+import { createAccountClient } from '../sync/account.js';
+import { signIn as devHeaders } from '../sync/devUser.js';
 import './AccountBadge.css';
 
 // Who is signed in, at the right end of the header: a round initial with a green dot, and the name beside it where there is room. It
@@ -13,12 +19,15 @@ import './AccountBadge.css';
 // opens Settings at that group, so Settings itself needs no row of jump pills here. The badge keeps its own job (open Settings), and the
 // menu is a separate button, so the badge's id and name stay what the rest of the app and its tests use.
 // The initial is drawn by CSS from data-initial, so the button's visible text is the name alone and the accessible name contains it (axe label-content-name-mismatch).
-export default function AccountBadge({ name }: { name: string | null }) {
+// `email` is shown under the name when it adds something; `canSignOut` is false for the development user, who has no real session to end.
+export default function AccountBadge({ name, email = null, canSignOut = false }: { name: string | null; email?: string | null; canSignOut?: boolean }) {
   const tab = useAppStore(s => s.tab);
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const btn = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  const [busy, setBusy] = useState(false);
+  const account = useMemo(() => createAccountClient({ headers: devHeaders }), []);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); btn.current?.focus(); } };
@@ -34,6 +43,11 @@ export default function AccountBadge({ name }: { name: string | null }) {
     useAppStore.getState().setTab('settings');
     void jumpToGroup(id, { find: i => document.getElementById(i), raf: requestAnimationFrame, smooth: motionOK() });
   };
+  const signOut = async () => {
+    setBusy(true);
+    const ok = await signOutFlow({ disablePush, signOut: () => account.signOut(), forgetSession: () => forgetSession(LS), forgetBackups: () => useAppStore.getState().forgetBackups(), reload: () => window.location.reload(), tell: flag });
+    if (!ok) setBusy(false);
+  };
   return (
     <div className="acctwrap" ref={wrap}>
       <button type="button" className="acctbadge" id="account-badge" aria-label={`Signed in as ${name}. Open account settings`} title={`Signed in as ${name}`} aria-current={tab === 'settings' ? 'page' : undefined}
@@ -48,11 +62,17 @@ export default function AccountBadge({ name }: { name: string | null }) {
       {open && (
         <div className="acctmenu" id={menuId} role="group" aria-label="Account menu">
           <div className="acctgrab" aria-hidden="true" />
-          <p className="acctwho"><b>{name}</b>Signed in</p>
+          <p className="acctwho"><b>{name}</b>{email && email !== name ? email : 'Signed in'}</p>
           <p className="acctlbl">Settings</p>
           {GROUPS.map(([id, label]) => (
             <button key={id} type="button" className={`acctitem${id === 'erase' ? ' danger' : ''}`} onClick={() => go(id)}>{label}</button>
           ))}
+          {canSignOut && (
+            <>
+              <div className="acctsep" aria-hidden="true" />
+              <button type="button" className="acctitem" disabled={busy} onClick={() => void signOut()}>Sign out</button>
+            </>
+          )}
         </div>
       )}
     </div>

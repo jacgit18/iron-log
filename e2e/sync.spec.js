@@ -317,7 +317,7 @@ test.describe('the Account panel', () => {
     if (extra) await extra(page);
     await openSynced(page, undefined, meAnswer, accountPull, { board: false });
     await page.locator('#tab-settings, #account-badge').first().click();
-    await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible(); // Settings is open; the Account panel (signed out) or the account menu (signed in) follows the /api/me answer
   };
 
   test('is not there at all when the flag is off', async ({ page }) => {
@@ -328,10 +328,13 @@ test.describe('the Account panel', () => {
     await expect(page.getByRole('heading', { name: 'Account', exact: true })).toHaveCount(0);
   });
 
-  test('says who is signed in, offers Sign out, and has no accessibility violations', async ({ page }) => {
+  test('signed in: the account menu says who and offers Sign out, the Account panel is not drawn, and there are no accessibility violations', async ({ page }) => {
     await settle(page, me(200, signedIn));
-    await expect(page.getByText('ann@example.com')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await page.locator('#account-menu-btn').click();
+    const menu = page.getByRole('group', { name: 'Account menu' });
+    await expect(menu.getByText('ann@example.com')).toBeVisible();
+    await expect(menu.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Account', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Sign in with Google' })).toHaveCount(0);
     const { violations } = await scan(page);
     expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
@@ -390,7 +393,8 @@ test.describe('the Account panel', () => {
     await settle(page, route => (out ? me(401, {})(route) : me(200, signedIn)(route)), async p => {
       await p.route('**/api/auth/sign-out', route => { out = true; return route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' }); });
     });
-    await page.getByRole('button', { name: 'Sign out' }).click();
+    await page.locator('#account-menu-btn').click();
+    await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Sign out' }).click();
     await expect(page.getByRole('heading', { level: 1, name: /A weekly training board/ })).toBeVisible();
     await expect(page.locator('#tab-board')).toHaveCount(0); // the app is not behind it
     expect(await page.evaluate(() => localStorage.getItem('ironlog:session/known'))).toBeNull();
@@ -594,9 +598,10 @@ test.describe('uploading from an export file', () => {
     await page.route('**/api/commands/import-legacy', importAnswer);
     await openSynced(page, undefined, signedInAsDev, emptyPull);
     await page.locator('#tab-settings, #account-badge').first().click();
+    await page.getByText('Save or load a file yourself').click(); // the upload sits in that fold, in Backups & data
     await expect(page.getByRole('heading', { name: 'Upload a file to an empty account' })).toBeVisible();
   };
-  const panel = page => page.getByRole('region', { name: 'Account' });
+  const panel = page => page.locator('details.manualcopy');
 
   test('shows what the file holds before anything is sent, then uploads it in one request', async ({ page }) => {
     let body;

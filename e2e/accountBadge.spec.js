@@ -26,7 +26,7 @@ test.describe('signed-in badge', () => {
     await expect(page.locator('#tab-settings')).toHaveCount(0); // the badge is the way to Settings, so the tab is not drawn
     await badge.click();
     await expect(badge).toHaveAttribute('aria-current', 'page');
-    await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Backups & data' })).toBeVisible(); // the Account panel is not drawn when signed in
     await expect(page.locator('#tab-board')).toHaveAttribute('aria-selected', 'false');
   });
 
