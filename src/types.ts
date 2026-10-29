@@ -304,7 +304,7 @@ export type RecipeCategory = 'protein' | 'sides' | 'sauces' | 'seasonings' | 'dr
 /** One ingredient line: `n` is the name that is matched against the At home list, `amt` the free-text amount ("2 cups"); `home` is the id
  *  of the At home item the person linked it to by hand. */
 export interface RecipeIngredient { n: string; amt?: string; home?: string }
-/** A recipe you wrote or copied from the catalog (`cat` is its catalog id then). Custom when it has no `from`. */
+/** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. */
 export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string }
 
 /* ---------- Snapshots and the data file ---------- */
