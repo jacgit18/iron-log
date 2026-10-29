@@ -28,3 +28,22 @@ export function recipeError(list: Recipe[], r: { n: string; ing: { n: string }[]
   if (list.length >= MAX_RECIPES) return `You can keep up to ${MAX_RECIPES} recipes. Delete one to add another.`;
   return null;
 }
+
+// What counts as changing a recipe: everything you can edit in the form. `edited` itself and `id` are not part of it.
+// Compared the way the form hands them back (name spaces collapsed, steps one per line), so saving a copy unchanged never marks it.
+const lines = (steps: string[]) => steps.join('\n').split('\n').map(s => s.trim()).filter(Boolean);
+// The pin to an At home item (`home`) is a link, not a change to the recipe, so it is left out (pinning from the detail never marks either).
+const content = (r: Recipe) => JSON.stringify([r.n.replace(/\s+/g, ' ').trim(), r.cat, r.ing.map(({ home: _h, ...i }) => i), lines(r.steps), r.servings ?? null, r.minutes ?? null, r.note ?? null]);
+
+/** `next` with the Edited mark: set when it has a library source and its content differs from `prev`, kept once set. A recipe written from
+ *  scratch (no `from`) never gets it; saving without a change leaves the mark as it was. */
+export function withEditedMark(prev: Recipe | undefined, next: Recipe): Recipe {
+  if (!next.from) return next;
+  const { edited: _drop, ...rest } = next;
+  return prev && (prev.edited || content(prev) !== content(next)) ? { ...rest, edited: true } : rest;
+}
+
+/** The credit line for a recipe from the Wikibooks Cookbook (CC BY-SA asks for it on every copy), or null when it needs none. */
+export function attribution(r: Pick<Recipe, 'from' | 'edited'>, mine: boolean): string | null {
+  return !mine || r.from?.startsWith('c:wbc:') ? `${r.edited ? 'Adapted from' : 'From'} the Wikibooks Cookbook, CC BY-SA 4.0.` : null;
+}

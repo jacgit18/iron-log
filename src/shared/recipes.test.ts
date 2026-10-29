@@ -47,3 +47,19 @@ describe('normRecipes', () => {
     expect(normRecipes(undefined)).toEqual([]);
   });
 });
+
+describe('swap, skip and Edited', () => {
+  it('keeps a swap and a skip, and drops a swap equal to the name or empty', () => {
+    const r = normRecipe({ ...base, ing: [{ n: 'Beans', sub: ' pinto beans ', skip: true }, { n: 'Rice', sub: 'rice' }, { n: 'Salt', sub: ' ' }, { n: 'Oil', skip: 'yes' }] })!;
+    expect(r.ing).toEqual([{ n: 'Beans', sub: 'pinto beans', skip: true }, { n: 'Rice' }, { n: 'Salt' }, { n: 'Oil' }]);
+  });
+  it('keeps Edited only on a copy with a library source', () => {
+    expect(normRecipe({ ...base, from: 'c:wbc:chili', edited: true })).toHaveProperty('edited', true);
+    expect(normRecipe({ ...base, edited: true })).not.toHaveProperty('edited');
+    expect(normRecipe({ ...base, from: 'c:wbc:chili', edited: 'yes' })).not.toHaveProperty('edited');
+  });
+  it('accepts the new fields as clean and still reads a recipe saved before them', () => {
+    expect(validRecipe({ ...base, ing: [{ n: 'Beans', sub: 'pinto beans', skip: true }], from: 'c:wbc:chili', edited: true })).toBe(true);
+    expect(validRecipe(base)).toBe(true);
+  });
+});

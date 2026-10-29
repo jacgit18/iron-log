@@ -302,10 +302,12 @@ export interface CatalogItem { id: string; name: string; brand?: string; data: C
 /* ---------- Recipes (synced to the account as the list 'recipe', ADR 084) ---------- */
 export type RecipeCategory = 'protein' | 'sides' | 'sauces' | 'seasonings' | 'drinks' | 'breakfast' | 'dessert' | 'other';
 /** One ingredient line: `n` is the name that is matched against the At home list, `amt` the free-text amount ("2 cups"); `home` is the id
- *  of the At home item the person linked it to by hand. */
-export interface RecipeIngredient { n: string; amt?: string; home?: string }
-/** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string }
+ *  of the At home item the person linked it to by hand. `sub` is what they use instead of `n` (it is matched in `n`'s place); `skip` marks an
+ *  ingredient they leave out (listed, but not counted and never added to To get). */
+export interface RecipeIngredient { n: string; amt?: string; home?: string; sub?: string; skip?: true }
+/** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
+ *  after copying it (only on a recipe with a `from`). */
+export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string; edited?: true }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */

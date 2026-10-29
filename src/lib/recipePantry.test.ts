@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Grocery, GroceryItem } from '../types.ts';
-import { addMissingMessage, matchHome, missingParts, nameWords, pantryStatus, splitIngredient } from './recipePantry.js';
+import { addMissingMessage, ingredientName, matchHome, missingParts, nameWords, pantryStatus, splitIngredient } from './recipePantry.js';
 
 const it_ = (id: string, n: string): GroceryItem => ({ id, n, store: 'Anywhere', qty: 1, cents: null, every: false, out: false });
 const g = (...items: GroceryItem[]): Grocery => ({ stores: ['Anywhere'], items });
@@ -58,6 +58,38 @@ describe('pantryStatus and missingParts', () => {
     const { already, add } = missingParts(s);
     expect(already.map(i => i.id)).toEqual(['d']);
     expect(add).toEqual(['parsley']);
+  });
+});
+
+describe('a swapped ingredient', () => {
+  const items = [it_('v', 'Apple cider vinegar'), it_('w', 'White wine vinegar')];
+  const ing = { n: 'white wine vinegar', sub: 'apple cider vinegar' };
+  it('is called by the swap', () => {
+    expect(ingredientName(ing)).toBe('apple cider vinegar');
+    expect(ingredientName({ n: 'salt' })).toBe('salt');
+  });
+  it('matches the swap, not the name in the recipe', () => expect(matchHome(ing, items)?.id).toBe('v'));
+  it('matches the name again with no swap', () => expect(matchHome({ n: 'white wine vinegar' }, items)?.id).toBe('w'));
+  it('yields to a pin', () => expect(matchHome({ ...ing, home: 'w' }, items)?.id).toBe('w'));
+  it('is added to To get by the swap name when it is not on the list', () => {
+    const s = pantryStatus({ ing: [{ n: 'white wine vinegar', sub: 'rice vinegar' }] }, g(), { lines: {}, pulled: [] });
+    expect(missingParts(s).add).toEqual(['rice vinegar']);
+  });
+});
+
+describe('a skipped ingredient', () => {
+  const grocery = g(it_('a', 'Chicken thighs'));
+  const recipe = { ing: [{ n: 'chicken thighs' }, { n: 'parsley', skip: true as const }, { n: 'paprika' }] };
+  const month = { lines: { a: { have: true as const } }, pulled: [] };
+  it('stays listed but is not counted', () => {
+    const s = pantryStatus(recipe, grocery, month);
+    expect(s.lines).toHaveLength(3);
+    expect(s.lines.map(l => l.skipped)).toEqual([false, true, false]);
+    expect(s).toMatchObject({ have: 1, total: 2 });
+  });
+  it('is never added to To get', () => expect(missingParts(pantryStatus(recipe, grocery, month)).add).toEqual(['paprika']));
+  it('leaves nothing to count when every ingredient is skipped', () => {
+    expect(pantryStatus({ ing: [{ n: 'salt', skip: true }] }, grocery, month)).toMatchObject({ have: 0, total: 0 });
   });
 });
 

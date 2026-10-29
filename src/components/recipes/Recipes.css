@@ -147,4 +147,40 @@
   color: var(--muted);
   font-size: var(--fs-xs);
 }
+.rc-edited {
+  margin-left: var(--sp-6);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-style: italic;
+}
+.rc-ingblock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-8);
+  border-bottom: 1px solid var(--line);
+}
+.rc-ingopts {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.rc-skip {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.rc-skip input {
+  min-height: 0;
+}
+.rc-skipped {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.rc-instead {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.rc-ing .rc-state.skip {
+  color: var(--muted);
+}
 }

@@ -40,12 +40,15 @@ export function nameWords(name: string): string[] {
   return kept.length ? kept : all;
 }
 
+/** What the ingredient is called when you cook it: the swap if there is one, else the name in the recipe. */
+export const ingredientName = (ing: RecipeIngredient): string => ing.sub || ing.n;
+
 /** The At home item an ingredient is: the one it is pinned to, else the item with the same words, else a one-word name that is the first word
  *  of the other ("Parmesan" for "Parmesan cheese", "chicken" for "chicken thighs"). A one-word name found elsewhere in the other ("butter" in
  *  "peanut butter", "milk" in "coconut milk") is a different product, so it is not a match; pin it by hand when it is one. Null when none. */
 export function matchHome(ing: RecipeIngredient, items: GroceryItem[]): GroceryItem | null {
   if (ing.home) { const pinned = items.find(i => i.id === ing.home); if (pinned) return pinned; }
-  const w = nameWords(ing.n);
+  const w = nameWords(ingredientName(ing));
   if (!w.length) return null;
   const key = [...w].sort().join(' ');
   const exact = items.find(i => [...nameWords(i.n)].sort().join(' ') === key);
@@ -54,13 +57,15 @@ export function matchHome(ing: RecipeIngredient, items: GroceryItem[]): GroceryI
   return items.find(i => { const iw = nameWords(i.n); return iw.length > 0 && (lead(iw, w) || lead(w, iw)); }) ?? null;
 }
 
-export interface IngredientStatus { ing: RecipeIngredient; item: GroceryItem | null; have: boolean }
+export interface IngredientStatus { ing: RecipeIngredient; item: GroceryItem | null; have: boolean; skipped: boolean }
 export interface PantryStatus { lines: IngredientStatus[]; have: number; total: number }
 
-/** Each ingredient against the list for one month: the item it is, and whether it is at home (or already bought) that month. */
+/** Each ingredient against the list for one month: the item it is, and whether it is at home (or already bought) that month. A skipped
+ *  ingredient stays in `lines` but is not counted in `have` and `total`. */
 export function pantryStatus(recipe: Pick<Recipe, 'ing'>, g: Grocery, month: GroceryMonth): PantryStatus {
-  const lines = recipe.ing.map(ing => { const item = matchHome(ing, g.items); return { ing, item, have: !!item && !!haveOf(item, month) }; });
-  return { lines, have: lines.filter(l => l.have).length, total: lines.length };
+  const lines = recipe.ing.map(ing => { const item = matchHome(ing, g.items); return { ing, item, have: !!item && !!haveOf(item, month), skipped: !!ing.skip }; });
+  const counted = lines.filter(l => !l.skipped);
+  return { lines, have: counted.filter(l => l.have).length, total: counted.length };
 }
 
 /** What "Add missing to To get" works on: the ingredients that are not at home. One that is already an item on your list is on To get as it
@@ -68,10 +73,11 @@ export function pantryStatus(recipe: Pick<Recipe, 'ing'>, g: Grocery, month: Gro
 export function missingParts(status: PantryStatus): { already: GroceryItem[]; add: string[] } {
   const already: GroceryItem[] = []; const add: string[] = []; const seen = new Set<string>();
   for (const l of status.lines) {
-    if (l.have) continue;
+    if (l.have || l.skipped) continue;
     if (l.item) { if (!already.includes(l.item)) already.push(l.item); continue; }
-    const key = [...nameWords(l.ing.n)].sort().join(' ');
-    if (key && !seen.has(key)) { seen.add(key); add.push(l.ing.n); }
+    const name = ingredientName(l.ing);
+    const key = [...nameWords(name)].sort().join(' ');
+    if (key && !seen.has(key)) { seen.add(key); add.push(name); }
   }
   return { already, add };
 }

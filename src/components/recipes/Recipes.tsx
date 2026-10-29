@@ -67,10 +67,10 @@ export default function Recipes() {
     }} />;
   }
 
-  const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void) => (
+  const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void, edited = false) => (
     <li key={key}>
       <button type="button" className="rc-row" onClick={open}>
-        <span><b>{title}</b><span className="pill custom">{pill}</span><span className="rc-meta">{meta}</span></span>
+        <span><b>{title}</b><span className="pill custom">{pill}</span>{edited && <span className="rc-edited">Edited</span>}<span className="rc-meta">{meta}</span></span>
         {tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}
       </button>
     </li>
@@ -101,7 +101,7 @@ export default function Recipes() {
           <ul className="rc-list">
             {shown.map((r: Recipe) => {
               const s = status.get(r.id)!;
-              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.servings, r.minutes), r.from ? 'Library' : 'Custom', s.total ? `${s.have} of ${s.total}` : null, s.total > 0 && s.have === s.total, () => setView({ kind: 'mine', id: r.id }));
+              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.servings, r.minutes), r.from ? 'Library' : 'Custom', s.total ? `${s.have} of ${s.total}` : null, s.total > 0 && s.have === s.total, () => setView({ kind: 'mine', id: r.id }), !!r.edited);
             })}
           </ul>
         </>
