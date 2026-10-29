@@ -8,13 +8,14 @@ import { fmtLb, signed } from '../../lib/body.js';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 
-function GoalForm({ exId, from, goal, taken, defKey, onDone }: { exId: string; from?: string; goal?: LiftGoalT; taken: string[]; defKey?: string; onDone: () => void }) {
+// `prepare` gives the exercise id when the form is saved, for an exercise that joins the library only then (a catalog pick); null stops the save.
+export function GoalForm({ exId, prepare, from, goal, taken, defKey, onDone }: { exId: string; prepare?: () => string | null; from?: string; goal?: LiftGoalT; taken: string[]; defKey?: string; onDone: () => void }) {
   const { setLiftGoal } = useAppStore.getState();
   const free = GOAL_KEYS.filter(k => k === from || !taken.includes(k));
   const [key, setKey] = useState(from || (free.includes(defKey as string) ? (defKey as string) : free[0]));
   const [w, setW] = useState(goal ? fmtLb(goal.w) : ''); const [by, setBy] = useState(goal && goal.by ? goal.by : '');
   return (
-    <form className="goalform" noValidate onSubmit={e => { e.preventDefault(); if (setLiftGoal(exId, key, w, by, from)) onDone(); }}>
+    <form className="goalform" noValidate onSubmit={e => { e.preventDefault(); const id = prepare ? prepare() : exId; if (id && setLiftGoal(id, key, w, by, from)) onDone(); }}>
       <div className="fields">
         <label className="field">Phase
           <select value={key} onChange={e => setKey(e.target.value)}>
@@ -63,7 +64,8 @@ function GoalView({ exId, k, goal, entries, today, onEdit }: { exId: string; k: 
 
 // The weight you want to lift on this exercise, per phase or in any phase: set it, see your best against it,
 // and the weekly gain needed to hit a date.
-export default function LiftGoal({ exId }: { exId: string }) {
+// `bare`: inside the Weight goals panel, where the exercise's name and the panel already head it.
+export default function LiftGoal({ exId, bare = false }: { exId: string; bare?: boolean }) {
   const cfg = useAppStore(s => s.cfg);
   const L = useAppStore(s => s.logs[exId]);
   const today = useToday(s => s.today);
@@ -73,16 +75,16 @@ export default function LiftGoal({ exId }: { exId: string }) {
   const defKey = goals.length ? (last && last.ph) || 'any' : 'any';
   const done = () => setEditing(null);
   return (
-    <div className="bwgoal">
-      <h3>Weight goals</h3>
+    <div className={bare ? 'goalbare' : 'bwgoal'}>
+      {!bare && <h3>Weight goals</h3>}
       <RemovedNotice scope={'liftgoal:' + exId} />
-      {!goals.length && editing !== 'new' && <p className="note">The most weight you want to lift, in one phase or any. Your heaviest logged set counts toward it.</p>}
+      {!goals.length && !bare && editing !== 'new' && <p className="note">The most weight you want to lift, in one phase or any. Your heaviest logged set counts toward it.</p>}
       {goals.map(([k, goal]) => (editing === k
         ? <GoalForm key={k} exId={exId} from={k} goal={goal} taken={taken} onDone={done} />
         : <GoalView key={k} exId={exId} k={k} goal={goal} entries={L} today={today} onEdit={() => setEditing(k)} />))}
       {editing === 'new'
         ? <GoalForm exId={exId} taken={taken} defKey={defKey} onDone={done} />
-        : taken.length < GOAL_KEYS.length && <div className="actions"><button type="button" className="btn sm" onClick={() => setEditing('new')}>{goals.length ? 'Add a goal' : 'Set a goal'}</button></div>}
+          : taken.length < GOAL_KEYS.length && !(bare && !goals.length) && <div className="actions"><button type="button" className="btn sm" onClick={() => setEditing('new')}>{goals.length ? 'Add a goal' : 'Set a goal'}</button></div>}
     </div>
   );
 }

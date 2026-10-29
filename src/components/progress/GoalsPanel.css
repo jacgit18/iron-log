@@ -1,0 +1,19 @@
+@layer base, components;
+@layer components {
+/* Weight goals on Progress (GoalsPanel.tsx): one block per exercise, then the picker that sets a goal on any exercise. */
+.goalspanel .goalrow {
+  border-top: 1px solid var(--line);
+  padding-top: var(--sp-8);
+  margin-top: var(--sp-8);
+}
+.goalspanel .goalrow h3 {
+  margin: 0 0 var(--sp-4);
+  font-size: var(--fs-base);
+}
+.goalspanel .goalbare .goalitem:first-child {
+  margin-top: 0;
+}
+.goalspanel .newgoal {
+  margin-top: var(--sp-10);
+}
+}

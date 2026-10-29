@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import type { CatalogItem, Cfg, EquipmentId } from '../types.ts';
-import { allExIds, exInfo, isCatalogId, isOwnExercise, EQUIPMENT } from '../lib/data.js';
+import { exInfo, EQUIPMENT } from '../lib/data.js';
+import { exerciseOptions } from '../lib/exerciseOptions.js';
 import { findExIdIn, muscleList } from '../lib/exerciseLibrary.js';
 import { useExIdsInUse } from '../hooks/useExIdsInUse.js';
-import { pickerKey, type MineOption } from '../lib/picker.js';
-import { eqName } from '../lib/equipment.js';
+import { pickerKey } from '../lib/picker.js';
 import EquipmentField from './EquipmentField.jsx';
 import ItemPicker from './ItemPicker.jsx';
 
@@ -20,21 +20,9 @@ type Props = {
 const catalogMeta = (c: CatalogItem) => [c.data.eq ? EQUIPMENT[c.data.eq] : '', c.data.muscles?.p?.length ? muscleList(c.data.muscles.p) : ''].filter(Boolean).join(' · ');
 
 export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onUrl, onEq, cat = null, onCat }: Props) {
-  // Your library, plus exercises your programs, versions, experiments or logs still use that are not in it (a built-in an older
-  // program kept, ADR 024): listed as yours, so the catalog does not offer a second one under that name.
+  // Your library, plus exercises your programs, versions, experiments or logs still use that are not in it (exerciseOptions).
   const inUse = useExIdsInUse(cfg);
-  const ids = [...new Set([...allExIds(cfg), ...inUse])];
-  // A name a built-in also uses stays unmarked, so the built-in is never labelled Custom.
-  const builtin = new Set(ids.filter(x => !isOwnExercise(x) && !isCatalogId(x)).map(x => exInfo(cfg, x).n));
-  const seen = new Set<string>();
-  const mine: MineOption[] = [];
-  for (const x of ids) {
-    const info = exInfo(cfg, x); const k = pickerKey(info.n);
-    if (!k || seen.has(k)) continue;
-    seen.add(k);
-    const badge = isCatalogId(x) ? 'Library' : isOwnExercise(x) && !builtin.has(info.n) ? 'Custom' : undefined;
-    mine.push({ id: x, name: info.n, ...(isCatalogId(x) ? { catalogId: x } : {}), ...(badge ? { badge } : {}), ...(info.eq ? { meta: eqName(cfg, info.eq) } : {}) });
-  }
+  const mine = exerciseOptions(cfg, inUse);
   const held = cat && pickerKey(cat.name) === pickerKey(name) ? cat : null;
   const known = name.trim() !== '' && !held ? findExIdIn(cfg, name, inUse) : null; // finds an in-use built-in too, as listed above
   const isNew = name.trim() !== '' && !known && !held;
