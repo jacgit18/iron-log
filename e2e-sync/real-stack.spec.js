@@ -92,7 +92,7 @@ test('two phones tick the same card: the server keeps one check-off and both pho
   const entries = await server.entries(user);
   expect(entries.filter(e => e.auto && e.slot === 'A-d3s1')).toHaveLength(1);
   await pageB.locator('#tab-settings, #account-badge').first().click();
-  await expect(pageB.getByRole('heading', { name: 'Sync', exact: true })).toBeVisible();
+  await expect(pageB.getByRole('heading', { name: 'Sync, backups & data', exact: true })).toBeVisible();
   await expect(pageB.locator('.syncstatus')).toContainText('Synced');
   await expect(pageB.getByText('already checked off or logged on another device')).toBeVisible();
   await a.close();
