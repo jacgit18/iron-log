@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryItem, Recipe } from '../types.ts';
-import { MAX_SUGGESTIONS, exactItem, suggestIngredients } from './recipeSuggest.js';
+import { MAX_SUGGESTIONS, exactItem, pinFor, suggestIngredients } from './recipeSuggest.js';
 
 const item = (id: string, n: string): GroceryItem => ({ id, n, store: 'Anywhere', qty: 1, cents: null, every: false, out: false });
 const recipe = (...ing: string[]): Recipe => ({ id: 'r', n: 'R', cat: 'other', ing: ing.map(n => ({ n })), steps: [] });
@@ -41,5 +41,14 @@ describe('exactItem', () => {
   it('is null for a partial name or nothing', () => {
     expect(exactItem('chicken', items)).toBeNull();
     expect(exactItem('', items)).toBeNull();
+  });
+});
+
+describe('pinFor', () => {
+  const items = [item('a', 'Garlic')];
+  it('pins an ingredient whose name is exactly a Groceries item', () => expect(pinFor('garlic', undefined, items)).toBe('a'));
+  it('pins nothing for another name, or for a swapped ingredient', () => {
+    expect(pinFor('garlic powder', undefined, items)).toBeUndefined();
+    expect(pinFor('garlic', 'shallot', items)).toBeUndefined();
   });
 });

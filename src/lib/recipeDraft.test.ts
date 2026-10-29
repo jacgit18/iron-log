@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CatalogItem } from '../types.ts';
 import type { Recipe } from '../types.ts';
-import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from './recipeDraft.js';
+import { attribution, newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from './recipeDraft.js';
 
 const cat: CatalogItem = { id: 'c:wbc:recipe_00_001', name: 'Garlic Dressing', data: { recipe: { cat: 'sauces', ing: ['1 cup olive oil', '2 cloves garlic'], steps: ['Whisk.'], servings: 4 } } };
 
@@ -51,5 +51,18 @@ describe('withEditedMark', () => {
     const odd: Recipe = { ...lib, n: 'Garlic  dressing', steps: ['Whisk.\nServe.'] };
     expect(withEditedMark(odd, { ...odd, n: 'Garlic dressing', steps: ['Whisk.', 'Serve.'] })).not.toHaveProperty('edited');
   });
+  it('is not marked by a pin to an At home item alone, nor by clearing one', () => {
+    expect(withEditedMark(lib, { ...lib, ing: [{ n: 'garlic', home: 'g1' }] })).not.toHaveProperty('edited');
+    expect(withEditedMark({ ...lib, ing: [{ n: 'garlic', home: 'g1' }] }, { ...lib })).not.toHaveProperty('edited');
+  });
   it('does not mark a new recipe', () => expect(withEditedMark(undefined, lib)).not.toHaveProperty('edited'));
+});
+
+describe('attribution', () => {
+  it('credits the Wikibooks Cookbook on a library recipe and on a copy, and says Adapted once it is edited', () => {
+    expect(attribution({ from: 'c:wbc:x' }, false)).toBe('From the Wikibooks Cookbook, CC BY-SA 4.0.');
+    expect(attribution({ from: 'c:wbc:x' }, true)).toBe('From the Wikibooks Cookbook, CC BY-SA 4.0.');
+    expect(attribution({ from: 'c:wbc:x', edited: true }, true)).toBe('Adapted from the Wikibooks Cookbook, CC BY-SA 4.0.');
+  });
+  it('credits nothing on a recipe you wrote', () => expect(attribution({}, true)).toBeNull());
 });

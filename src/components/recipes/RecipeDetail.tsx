@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
 import { monthKey } from '../../lib/grocery.js';
 import { addMissingMessage, ingredientName, missingParts, pantryStatus } from '../../lib/recipePantry.js';
+import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -15,6 +16,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
   const [msg, setMsg] = useState('');
   const month = monthKey(new Date());
   const status = useMemo(() => pantryStatus(recipe, grocery, months[month] ?? { lines: {}, pulled: [] }), [recipe, grocery, months, month]);
+  const credit = attribution(recipe, mine);
   const missing = missingParts(status);
   const toAdd = missing.add.length;
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
@@ -49,7 +51,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
       <p className="note" role="status">{msg}</p>
       {recipe.steps.length > 0 && (<><h3>Steps</h3><ol className="rc-steps">{recipe.steps.map((s, i) => <li key={i}>{s}</li>)}</ol></>)}
       {recipe.note && <p className="note">{recipe.note}</p>}
-      {(!mine || recipe.from?.startsWith('c:wbc:')) && <p className="rc-attrib">{recipe.edited ? 'Adapted from' : 'From'} the Wikibooks Cookbook, CC BY-SA 4.0.</p>}
+      {credit && <p className="rc-attrib">{credit}</p>}
       <div className="rc-actions">
         {mine ? (
           <>

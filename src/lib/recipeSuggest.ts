@@ -42,3 +42,7 @@ export function exactItem(text: string, items: GroceryItem[]): GroceryItem | nul
   const t = text.trim().replace(/\s+/g, ' ').toLowerCase();
   return t ? items.find(i => i.n.trim().replace(/\s+/g, ' ').toLowerCase() === t) ?? null : null;
 }
+
+/** The Groceries item id an ingredient is pinned to when its name is typed: the item with exactly that name, but never for a swapped
+ *  ingredient (a pin outranks the swap in the match, so it would hide the swap). */
+export const pinFor = (name: string, sub: string | undefined, items: GroceryItem[]): string | undefined => (sub ? undefined : exactItem(name, items)?.id);

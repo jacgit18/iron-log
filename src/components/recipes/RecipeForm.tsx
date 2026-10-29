@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { MAX_INGREDIENTS, MAX_RECIPE_NAME, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
-import { exactItem, suggestIngredients } from '../../lib/recipeSuggest.js';
+import { pinFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Recipe, RecipeCategory, RecipeIngredient } from '../../types.ts';
 
@@ -33,7 +33,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const setRow = (i: number, patch: Partial<RecipeIngredient>) => { setIng(ing.map((x, j) => (j === i ? { ...x, ...patch } : x))); setErr(''); };
   // Renaming an ingredient drops its pin to an At home item (the pin was for the old name), unless the new name is exactly one of your
   // Groceries items. A swapped ingredient is never pinned by its name, and changing a swap drops the pin: a pin outranks the swap in the match.
-  const rename = (i: number, name: string) => setRow(i, { n: name, home: ing[i]?.sub ? undefined : exactItem(name, items)?.id });
+  const rename = (i: number, name: string) => setRow(i, { n: name, home: pinFor(name, ing[i]?.sub, items) });
   const activeText = active === null ? '' : ing[active]?.n ?? '';
   const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id)), [activeText, items, recipes, recipe?.id]);
 
