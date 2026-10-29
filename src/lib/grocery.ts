@@ -58,14 +58,16 @@ export function newGroceryId(items: GroceryItem[], name: string, used: Iterable<
 
 /** The sharing groups, cleaned: a store that is not in the list is dropped from a group, and a store defaults to one group only (the first). */
 function normGroups(raw: unknown, stores: string[]): GroceryGroup[] {
-  const groups: GroceryGroup[] = []; const ids = new Set<string>(); const taken = new Set<string>();
+  const groups: GroceryGroup[] = []; const ids = new Set<string>(); const taken = new Set<string>(); let everywhere = false;
   (Array.isArray(raw) ? raw : []).forEach((x: unknown) => {
     const g = normGroceryGroup(x);
     if (!g || ids.has(g.id) || groups.filter(x => !!x.gone === !!g.gone).length >= MAX_GROUPS) return; // up to MAX_GROUPS live groups, and as many again that are gone
     ids.add(g.id);
     const own = g.stores.filter(s => stores.includes(s) && !taken.has(s));
     own.forEach(s => taken.add(s));
-    groups.push({ ...g, stores: own });
+    const { allStores, ...rest } = g; const keep = !!allStores && !g.gone && !everywhere; // the default for every store belongs to one live group: the first
+    if (keep) everywhere = true;
+    groups.push({ ...rest, stores: own, ...(keep ? { allStores: true as const } : {}) });
   });
   return groups;
 }
@@ -166,15 +168,18 @@ export const storeKnown = (g: Grocery, store: string): boolean => g.stores.inclu
 export const own = <T,>(map: Record<string, T> | undefined, key: string): T | undefined => map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
 
 export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { store: string; label: string; items: GroceryItem[]; group?: GroceryGroup }[] {
+  const live = (x: GroceryGroup) => x.people.some(p => !p.gone);
+  const groupOf = (store: string) => sharing ? g.groups?.find(x => live(x) && x.stores.includes(store)) ?? g.groups?.find(x => live(x) && x.allStores) : undefined; // the store's own group, else the one for all stores (as groupOfStore, Anywhere included)
   const out = [...g.stores, ...(g.retired ?? [])].map(store => { // a retired store has a section only in a past month that still names it
-    const group = sharing ? g.groups?.find(x => x.people.some(p => !p.gone) && x.stores.includes(store)) : undefined;
+    const group = groupOf(store);
     return { store, label: store, items: items.filter(i => i.store === store), ...(group ? { group } : {}) };
   });
-  const shared = out.filter(x => x.group);
-  out.splice(0, out.length, ...shared, ...out.filter(x => !x.group));
   // An item whose store is not in the list (a store removed on another device while this one added to it, an import into a full list) would vanish from the
   // screens, so it is shown under Anywhere.
-  out.push({ store: '', label: ANYWHERE, items: items.filter(i => !i.store || !storeKnown(g, i.store)) });
+  const anywhere = groupOf('');
+  out.push({ store: '', label: ANYWHERE, items: items.filter(i => !i.store || !storeKnown(g, i.store)), ...(anywhere ? { group: anywhere } : {}) });
+  const shared = out.filter(x => x.group);
+  out.splice(0, out.length, ...shared, ...out.filter(x => !x.group));
   return out.filter(x => x.items.length);
 }
 
@@ -282,7 +287,8 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     if (have.has(x.id) || (g.groups ?? []).filter(y => !y.gone).length >= MAX_GROUPS) return;
     const stores = x.stores.filter(st => g.stores.includes(st) && !defaulted.has(st));
     stores.forEach(st => defaulted.add(st));
-    g.groups = [...(g.groups ?? []), { ...x, stores }]; have.add(x.id); changed = true;
+    const { allStores, ...rest } = x; const keep = !!allStores && !x.gone && !(g.groups ?? []).some(y => y.allStores && !y.gone); // one default for every store here
+    g.groups = [...(g.groups ?? []), { ...rest, stores, ...(keep ? { allStores: true as const } : {}) }]; have.add(x.id); changed = true;
   });
   Object.entries(inc.months).forEach(([k, fm]) => {
     const lines: Record<string, GroceryLine> = {};

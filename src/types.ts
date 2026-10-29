@@ -236,7 +236,7 @@ export type GroceryUnit = 'lb' | 'kg' | 'oz';
  *  `gone`: removed from the group but still named by past months (a split or a payer), so those months read as they did; hidden everywhere else and left out of anything new. */
 export interface GroceryPerson { id: string; n: string; covered?: true; gone?: true }
 /** A sharing group: the people you split with ("Home", "Costco run"), and the stores that default to it. You are always in it and are not listed. */
-export interface GroceryGroup { id: string; n: string; people: GroceryPerson[]; stores: string[]; gone?: true } // `gone`: removed, but past months still name its people (all marked gone too); hidden everywhere else
+export interface GroceryGroup { id: string; n: string; people: GroceryPerson[]; stores: string[]; allStores?: true; gone?: true } // `allStores`: the default split for every store that has no group of its own (at most one live group has it); `gone`: removed, but past months still name its people (all marked gone too); hidden everywhere else
 /** Who shares one purchase with you: `with` are the people's ids (none = just you). `notMine`: it is for them, not you, so your share is nothing. */
 export interface GroceryShare { with: string[]; notMine?: true }
 /** A thing you buy. `store` is where ('' = anywhere), `qty` the usual count, `cents` the last unit price in cents. `every`: on each month's list

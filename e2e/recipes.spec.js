@@ -70,6 +70,16 @@ test('ingredients are checked against At home, and Add missing puts the rest on 
   await expect(page.getByText('fresh parsley')).toBeVisible();
 });
 
+test('with nothing in Groceries yet, every ingredient is missing and Add missing still puts them on To get', async ({ page }) => {
+  await recipes(page);
+  await write(page, 'Plain rice', ['rice', 'salt']);
+  await expect(page.getByText('Add items under Groceries, At home to see what you have.')).toBeVisible();
+  await page.getByRole('button', { name: 'Add 2 missing to To get' }).click();
+  await expect(page.getByText('Added 2 to To get.')).toBeVisible();
+  await page.click('#daily-grocery'); await page.click('#groc-view-get');
+  await expect(page.getByText('rice', { exact: true })).toBeVisible();
+});
+
 test('a recipe can be deleted with Undo', async ({ page }) => {
   await recipes(page);
   await write(page, 'Short lived', ['salt']);

@@ -48,7 +48,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
           </li>
         ))}
       </ul>
-      {mine && grocery.items.length > 0 && (
+      {mine && (
         <div className="rc-actions">
           <button type="button" className="btn" disabled={status.total === 0} onClick={addMissing}>{toAdd ? `Add ${toAdd} missing to To get` : 'Add missing to To get'}</button>
         </div>
