@@ -42,6 +42,12 @@ describe('scaleAmount', () => {
     for (const a of ['2 tablespoons plus 1 teaspoon', '1 lb / 450 g', '1 cup or 2 sticks', '1 cup + 2 tbsp', '1 cup and 2 tbsp']) expect(scaleAmount(a, 2)).toEqual({ text: a, scaled: false });
     expect(s('1 (14 oz) can', 2)).toBe('2 (14 oz) can'); // a size in parentheses is not a second quantity
   });
+  it('scales a bracketed equivalent after a unit, but not a size right after the number', () => {
+    expect(s('1 cup (240 ml)', 2)).toBe('2 cup (480 ml)');
+    expect(s('2 cups (1/2 lb)', 2)).toBe('4 cups (1 lb)');
+    expect(s('1 (14 oz) can', 2)).toBe('2 (14 oz) can');
+    expect(s('1 cup (about the size of a fist)', 2)).toBe('2 cup (about the size of a fist)');
+  });
   it('does not treat a zero denominator as a fraction', () => expect(scaleAmount('1/0 cup', 2).scaled).toBe(false));
 });
 

@@ -12,7 +12,7 @@ import type { Recipe } from '../../types.ts';
 
 // One recipe (ADR 084): its ingredients checked against At home, the steps, and what you can do with it. `mine`: one of yours; otherwise it
 // is a library recipe (a copy, not yet in your list) and "Add to Mine" copies it.
-export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { recipe: Recipe; mine: boolean; onBack: () => void; onEdit: () => void; onAdd: () => void }) {
+export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { recipe: Recipe; mine: boolean; onBack: () => void; onEdit: () => void; onAdd: (servings?: number) => void }) {
   const grocery = useAppStore(s => s.grocery);
   const months = useAppStore(s => s.groceryMonths);
   const [msg, setMsg] = useState('');
@@ -63,7 +63,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
             <button type="button" className="btn" onClick={onEdit}>Edit</button>
             <ArmedButton className="btn danger" label="Delete" armedLabel="Tap again to delete" aria-label={`Delete the recipe ${recipe.n}`} onConfirm={() => { useAppStore.getState().removeRecipe(recipe.id); onBack(); }} />
           </>
-        ) : <button type="button" className="btn primary" onClick={onAdd}>Add to Mine</button>}
+        ) : <button type="button" className="btn primary" onClick={() => onAdd(shown ?? undefined)}>Add to Mine</button>}
       </div>
     </section>
   );

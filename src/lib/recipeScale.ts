@@ -55,8 +55,15 @@ export function scaleAmount(amt: string, factor: number): Scaled {
   if (sep && second) { out += sep[0] + writeQuantity(second.value * factor); end = second.end; }
   const rest = text.slice(end);
   // "2 tbsp plus 1 tsp", "1 lb / 450 g": a second quantity cannot be scaled by reading the first, so the amount stays as written.
-  if (COMPOUND.test(rest)) return { text: amt, scaled: false };
-  const result = out + rest;
+  if (COMPOUND.test(rest.replace(/\([^)]*\)/g, ''))) return { text: amt, scaled: false };
+  // "1 cup (240 ml)": a quantity in brackets after a unit word is an equivalent and scales too; "1 (14 oz) can" (brackets right after the number) is a size and stays.
+  let tail = rest;
+  const open = rest.indexOf('(');
+  if (open > 0 && /[A-Za-z]/.test(rest.slice(0, open))) {
+    const inner = scaleAmount(rest.slice(open + 1), factor);
+    if (inner.scaled) tail = rest.slice(0, open + 1) + inner.text;
+  }
+  const result = out + tail;
   return result.length > MAX_AMOUNT ? { text: amt, scaled: false } : { text: result, scaled: true };
 }
 

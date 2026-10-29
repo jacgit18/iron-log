@@ -28,11 +28,11 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     return null;
   },
 
-  copyCatalogRecipe(item: CatalogItem) {
+  copyCatalogRecipe(item: CatalogItem, servings?: number) {
     const list = get().recipes;
     if (list.some(r => r.from === item.id)) return 'That recipe is already in Mine.';
     if (list.length >= MAX_RECIPES) return recipeError(list, { n: item.name, ing: [{ n: 'x' }] });
-    const r = recipeFromCatalog(item, list.map(x => x.id));
+    const r = recipeFromCatalog(item, list.map(x => x.id), servings);
     if (!r) return 'That recipe can’t be added.';
     set({ recipes: [...list, r] });
     get().saveRecipes();

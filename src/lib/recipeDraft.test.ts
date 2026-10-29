@@ -70,3 +70,16 @@ describe('attribution', () => {
   });
   it('credits nothing on a recipe you wrote', () => expect(attribution({}, true)).toBeNull());
 });
+
+describe('recipeFromCatalog at other servings', () => {
+  const four: CatalogItem = { id: 'c:wbc:r9', name: 'Pancakes', data: { recipe: { cat: 'breakfast', ing: ['2 cups flour', 'pinch of salt'], steps: ['Mix.'], servings: 4 } } };
+  it('copies the amounts and servings as scaled, and marks the copy edited', () => {
+    expect(recipeFromCatalog(four, [], 8)).toMatchObject({ servings: 8, edited: true, ing: [{ n: 'flour', amt: '4 cups' }, { n: 'pinch of salt' }] });
+  });
+  it('copies as it is with the same servings, none given, or none in the recipe', () => {
+    for (const sv of [undefined, 4]) expect(recipeFromCatalog(four, [], sv)).toMatchObject({ servings: 4, ing: [{ n: 'flour', amt: '2 cups' }, { n: 'pinch of salt' }] });
+    expect(recipeFromCatalog(four, [], 4)).not.toHaveProperty('edited');
+    const none = { ...four, data: { recipe: { ...four.data.recipe!, servings: undefined } } };
+    expect(recipeFromCatalog(none, [], 8)).not.toHaveProperty('edited');
+  });
+});
