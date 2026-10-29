@@ -58,14 +58,16 @@ export function newGroceryId(items: GroceryItem[], name: string, used: Iterable<
 
 /** The sharing groups, cleaned: a store that is not in the list is dropped from a group, and a store defaults to one group only (the first). */
 function normGroups(raw: unknown, stores: string[]): GroceryGroup[] {
-  const groups: GroceryGroup[] = []; const ids = new Set<string>(); const taken = new Set<string>();
+  const groups: GroceryGroup[] = []; const ids = new Set<string>(); const taken = new Set<string>(); let everywhere = false;
   (Array.isArray(raw) ? raw : []).forEach((x: unknown) => {
     const g = normGroceryGroup(x);
     if (!g || ids.has(g.id) || groups.filter(x => !!x.gone === !!g.gone).length >= MAX_GROUPS) return; // up to MAX_GROUPS live groups, and as many again that are gone
     ids.add(g.id);
     const own = g.stores.filter(s => stores.includes(s) && !taken.has(s));
     own.forEach(s => taken.add(s));
-    groups.push({ ...g, stores: own });
+    const { allStores, ...rest } = g; const keep = !!allStores && !g.gone && !everywhere; // the default for every store belongs to one live group: the first
+    if (keep) everywhere = true;
+    groups.push({ ...rest, stores: own, ...(keep ? { allStores: true as const } : {}) });
   });
   return groups;
 }
@@ -282,7 +284,8 @@ export function mergeGrocery(cur: Grocery, curMonths: Record<string, GroceryMont
     if (have.has(x.id) || (g.groups ?? []).filter(y => !y.gone).length >= MAX_GROUPS) return;
     const stores = x.stores.filter(st => g.stores.includes(st) && !defaulted.has(st));
     stores.forEach(st => defaulted.add(st));
-    g.groups = [...(g.groups ?? []), { ...x, stores }]; have.add(x.id); changed = true;
+    const { allStores, ...rest } = x; const keep = !!allStores && !x.gone && !(g.groups ?? []).some(y => y.allStores && !y.gone); // one default for every store here
+    g.groups = [...(g.groups ?? []), { ...rest, stores, ...(keep ? { allStores: true as const } : {}) }]; have.add(x.id); changed = true;
   });
   Object.entries(inc.months).forEach(([k, fm]) => {
     const lines: Record<string, GroceryLine> = {};

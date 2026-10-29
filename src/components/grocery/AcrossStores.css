@@ -1,0 +1,42 @@
+@layer base, components;
+@layer components {
+/* The month's amounts per person over every store: one block above the store cards. */
+.gacross {
+  margin: 0 0 var(--sp-12);
+  padding: var(--sp-8) var(--sp-12);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+}
+.gacross h4 {
+  margin: 0 0 var(--sp-8);
+  font-size: var(--fs-sm);
+}
+.gacrossrows {
+  display: grid;
+  gap: var(--sp-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gacrossrows li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-12);
+}
+.gacrossrows small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.gacrossrows b,
+.gacrossnet b {
+  font-variant-numeric: tabular-nums;
+}
+.gacrossnet {
+  margin: var(--sp-8) 0 0;
+  padding-top: var(--sp-8);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+}

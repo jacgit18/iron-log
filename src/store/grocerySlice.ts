@@ -511,6 +511,16 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         return null;
       });
     },
+    setGroceryAllStores(groupId, on) {
+      pinPastParties(); // earlier months keep the split they were counted with
+      mutateCatalogue(g => {
+        const x = g.groups?.find(y => y.id === groupId && !y.gone);
+        if (!x) return 'That group is gone.';
+        g.groups?.forEach(y => { delete y.allStores; }); // one group at most
+        if (on) x.allStores = true;
+        return null;
+      });
+    },
     setGroceryItemShare(id, share) {
       const clean = share === null ? null : cleanShare(share);
       if (share !== null && !clean) return;

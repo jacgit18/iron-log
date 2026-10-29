@@ -21,8 +21,9 @@ export const everyone = (g: Grocery): GroceryPerson[] => {
 /** The people you can still pick: everyone except those who are gone. */
 export const allPeople = (g: Grocery): GroceryPerson[] => everyone(g).filter(p => !p.gone);
 
-/** The group a store defaults to, if any. */
-export const groupOfStore = (g: Grocery, store: string): GroceryGroup | undefined => g.groups?.find(x => !x.gone && x.stores.includes(store));
+/** The group a store defaults to, if any: the one that lists it, else the group marked All stores (also for the no-store group). */
+export const groupOfStore = (g: Grocery, store: string): GroceryGroup | undefined =>
+  g.groups?.find(x => !x.gone && x.stores.includes(store)) ?? g.groups?.find(x => !x.gone && x.allStores);
 
 /** Who paid for a store: the person recorded, or you when none is recorded or that person no longer exists. */
 export function payerOf(g: Grocery, m: GroceryMonth, store: string): string {
