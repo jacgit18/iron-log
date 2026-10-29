@@ -1,4 +1,4 @@
-import { allPeople, everyone, purchasesOf, storeStatus, storesBought } from './grocerySettle.js';
+import { everyone, purchasesOf, storeStatus, storesBought } from './grocerySettle.js';
 import type { Grocery, GroceryMonth } from '../types.ts';
 
 /* ---------- One amount per person over every store of a month ----------
@@ -32,7 +32,7 @@ export function acrossStores(g: Grocery, m: GroceryMonth): Across | null {
       p.cents += cents; p.parts.push({ store, cents }); byPerson.set(r.id, p);
     });
   });
-  const order = new Map(allPeople(g).concat(everyone(g)).map((p, i) => [p.id, i]));
+  const order = new Map(everyone(g).map((p, i) => [p.id, i])); // the groups' own order, people who are gone included
   const people = [...byPerson.values()].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
   return people.length ? { people, net: people.reduce((a, p) => a + p.cents, 0) } : null;
 }

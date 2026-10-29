@@ -168,16 +168,18 @@ export const storeKnown = (g: Grocery, store: string): boolean => g.stores.inclu
 export const own = <T,>(map: Record<string, T> | undefined, key: string): T | undefined => map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
 
 export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { store: string; label: string; items: GroceryItem[]; group?: GroceryGroup }[] {
+  const live = (x: GroceryGroup) => x.people.some(p => !p.gone);
+  const groupOf = (store: string) => sharing ? g.groups?.find(x => live(x) && x.stores.includes(store)) ?? g.groups?.find(x => live(x) && x.allStores) : undefined; // the store's own group, else the one for all stores (as groupOfStore, Anywhere included)
   const out = [...g.stores, ...(g.retired ?? [])].map(store => { // a retired store has a section only in a past month that still names it
-    const live = (x: GroceryGroup) => x.people.some(p => !p.gone);
-    const group = sharing ? g.groups?.find(x => live(x) && x.stores.includes(store)) ?? g.groups?.find(x => live(x) && x.allStores) : undefined; // the store's own group, else the one for all stores (as groupOfStore)
+    const group = groupOf(store);
     return { store, label: store, items: items.filter(i => i.store === store), ...(group ? { group } : {}) };
   });
-  const shared = out.filter(x => x.group);
-  out.splice(0, out.length, ...shared, ...out.filter(x => !x.group));
   // An item whose store is not in the list (a store removed on another device while this one added to it, an import into a full list) would vanish from the
   // screens, so it is shown under Anywhere.
-  out.push({ store: '', label: ANYWHERE, items: items.filter(i => !i.store || !storeKnown(g, i.store)) });
+  const anywhere = groupOf('');
+  out.push({ store: '', label: ANYWHERE, items: items.filter(i => !i.store || !storeKnown(g, i.store)), ...(anywhere ? { group: anywhere } : {}) });
+  const shared = out.filter(x => x.group);
+  out.splice(0, out.length, ...shared, ...out.filter(x => !x.group));
   return out.filter(x => x.items.length);
 }
 
