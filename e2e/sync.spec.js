@@ -176,7 +176,7 @@ async function openSynced(page, commands, me = signedInAsDev, pull = accountPull
   else if (pull.rows.length) await expect(page.locator('#chk-A-d1s1')).toBeVisible();
   else await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
 }
-const openSettings = async page => { await page.locator('#tab-settings, #account-badge').first().click(); await expect(page.getByRole('heading', { name: 'Sync', exact: true })).toBeVisible(); };
+const openSettings = async page => { await page.locator('#tab-settings, #account-badge').first().click(); await expect(page.getByRole('heading', { name: 'Sync, backups & data', exact: true })).toBeVisible(); };
 
 test.describe('the Sync panel', () => {
   test('is not there at all when the flag is off', async ({ page }) => {
@@ -184,7 +184,7 @@ test.describe('the Sync panel', () => {
     await page.goto('/');
     await page.locator('#tab-settings, #account-badge').first().click();
     await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Sync', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Sync, backups & data', exact: true })).toHaveCount(0);
   });
 
   test('says Synced, and has the app version', async ({ page }) => {

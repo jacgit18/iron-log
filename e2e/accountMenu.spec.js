@@ -28,7 +28,7 @@ test('the menu lists the groups, opens Settings at the chosen one from another t
   await menu.getByRole('button', { name: 'App' }).click();
   await expect(menu).toHaveCount(0);
   await expect(page.locator('#set-app-h')).toBeFocused();
-  await expect(page.locator('.sjump')).toBeHidden(); // the menu replaces the pill row
+  await expect(page.locator('.sjump')).toBeVisible(); // on a wide screen the jump row is the rail beside the groups, menu or not
 });
 
 test('Escape and a tap outside close it, and Escape returns focus to the button', async ({ page }) => {
@@ -66,4 +66,23 @@ test('opening Settings signed in draws no Account panel at any point and does no
   await expect(page.getByRole('heading', { name: 'Account', exact: true })).toHaveCount(0);
   await page.waitForTimeout(500);
   expect(meCalls).toBe(before); // App's answer is shared with the panels, which used to ask again each
+});
+
+test('choosing a group while a Training screen is open closes the screen and lands on the group', async ({ page }) => {
+  await open(page);
+  await page.locator('#account-badge').click();
+  await page.locator('#drill-phases').click();
+  await expect(page.locator('#rest-s')).toBeVisible();
+  await page.locator('#account-menu-btn').click();
+  await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'App' }).click();
+  await expect(page.locator('#rest-s')).toHaveCount(0);
+  await expect(page.locator('#set-app-h')).toBeFocused();
+});
+
+test('on a phone the account menu replaces the jump row on Settings', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+  await page.locator('#account-badge').click();
+  await expect(page.getByRole('heading', { name: 'Backups & data' })).toBeVisible();
+  await expect(page.locator('.sjump')).toBeHidden();
 });

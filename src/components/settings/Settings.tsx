@@ -10,11 +10,11 @@ import UsagePanel from './UsagePanel.js';
 import ProgramOnComputerRow from './ProgramOnComputerRow.js';
 import BackupCopies from './BackupCopies.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
-import SyncPanel from './SyncPanel.js';
+import SyncSection, { SyncVersion } from './SyncPanel.js';
 import type { Cfg } from '../../types.ts';
 import type { PhaseKey, ProgKey } from '../../types.ts';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useAppStore } from '../../store/useAppStore.js';
+import { getSyncApi, useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS, slotsFor, exInfo, allExIds } from '../../lib/data.js';
 import { MON, fmtShort } from '../../shared/dates.js';
@@ -22,7 +22,9 @@ import { programFor, progName, programWeights, bestByPhase, injuryPreventionOn, 
 import CommitInput from '../CommitInput.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import { motionOK } from '../../lib/motion.js';
-import { GROUPS, jumpToGroup } from '../../lib/settingsGroups.js';
+import { GROUPS, findVisible, jumpToGroup } from '../../lib/settingsGroups.js';
+import { closeSettingsScreen, maxesSummary, modeSummary, onCloseSettingsScreen, phasesSummary, type Screen } from '../../lib/settingsScreens.js';
+import Icon from '../Icon.js';
 import { getAppearance, setAppearance } from '../../lib/appearance.js';
 import WaterReminderControls from './WaterReminderControls.js';
 import { disablePush, enablePush, pushKindWanted, pushOn, pushSupported, setPushKind } from '../../lib/pushClient.js';
@@ -217,9 +219,10 @@ function InjuryPanel() {
   return (
     <section className="panel">
       <h3>Injury prevention</h3>
-      <p>Warns when a move puts the same muscles on back-to-back days, and suggests a better day order after you finish a day. An exercise you do on three or more days a week at fewer than four sets is left out, because it is light.</p>
+      <p>Warns when the same muscles land on back-to-back days, and suggests a better day order when you finish a day.</p>
       <label className="inline"><input type="checkbox" role="switch" aria-label="Injury prevention" checked={on} onChange={e => st.setInjuryPrevention(e.target.checked)} /> {on ? 'On' : 'Off'}</label>
       <More about="injury prevention">
+        <p>An exercise you do on three or more days a week at fewer than four sets is left out, because it is light.</p>
         <p>When this is off, moving a card or a day never shows the Heads-up, and finishing a day never shows the Back-to-back suggestion. Undo for ticks, skips and removals still works, and so does moving cards yourself. A new account starts with it off.</p>
       </More>
     </section>
@@ -264,9 +267,11 @@ function DataPanel() {
   const weekStart = useAppStore(s => s.weekStart); const shownWeek = fmtShort(weekStart); // the week the Board shows, which may not be this one
   const importError = useAppStore(s => s.importError);
   const [paste, setPaste] = useState('');
+  const syncing = useAppStore(s => s.sync !== null) && !!getSyncApi(); // sync is on: its status is the top of this panel
   return (
     <section className="panel" aria-labelledby="data-h">
-      <h3 id="data-h">Backups &amp; data</h3>
+      <h3 id="data-h">{syncing ? 'Sync, backups & data' : 'Backups & data'}</h3>
+      <SyncSection />
       {/* Nothing while loading: a signed-in person must not read "this browser only" before the data source is known. */}
       {storeMode === 'db' && <p>Your data is already saved to your account, and Loadbearer keeps backups for you.</p>}
       {storeMode === 'local' && <p>Your data is in this browser only. Loadbearer keeps a backup for you each day; save a file now and then for a copy outside the browser.</p>}
@@ -307,6 +312,7 @@ function DataPanel() {
           <More about="the reports"><p><b>iron-log.xlsx</b> has a summary per exercise, every session and weekly totals; each week also has its own workbook. The .csv lists logged sessions only.</p></More>
         </div>
       )}
+      <SyncVersion />
     </section>
   );
 }
@@ -397,7 +403,7 @@ function RmPanel() {
 }
 
 // Where each group starts, for the jump row. The page is long on a phone; the row gets to a group in one tap.
-const jump = (id: string) => { void jumpToGroup(id, { find: i => document.getElementById(i), raf: requestAnimationFrame, smooth: motionOK() }); };
+const jump = (id: string) => { closeSettingsScreen(); void jumpToGroup(id, { find: findVisible, raf: requestAnimationFrame, smooth: motionOK() }); };
 
 // The group being read: the last whose heading has scrolled up under the sticky jump row (the last one at the bottom of the page).
 function useCurrentGroup() {
@@ -406,7 +412,8 @@ function useCurrentGroup() {
     let frame = 0;
     const look = () => {
       frame = 0;
-      const bar = document.querySelector('.sjump')?.getBoundingClientRect().bottom ?? 0;
+      const rail = window.matchMedia('(min-width:901px)').matches; // a rail down the left side, not a bar across the top
+      const bar = rail ? 0 : document.querySelector('.sjump')?.getBoundingClientRect().bottom ?? 0;
       const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
       let next: string = GROUPS[0][0];
       for (const [id] of GROUPS) { const h = document.getElementById(`set-${id}-h`); if (h && h.getBoundingClientRect().top <= bar + 24) next = id; }
@@ -437,49 +444,109 @@ function Group({ id, title, children }: { id: string; title: string; children: R
   );
 }
 
+// Training: summary rows that each open their own screen (Program mode, Phases, 1-rep maxes), and the Injury prevention switch.
+function TrainingRows({ open }: { open: (s: Screen) => void }) {
+  const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
+  const all = [...slotsFor(programs.A), ...slotsFor(programs.B)];
+  const weighted = [...new Set([...allExIds(cfg), ...all.flatMap(s => s.items.map(i => i.ex))])].filter(id => all.some(s => s.items.some(i => i.ex === id && i.w != null)));
+  const rows: [Screen, string, string][] = [
+    ['mode', 'Program mode', modeSummary(cfg.mode, progName(cfg, 'A'))],
+    ['phases', 'Phases', phasesSummary(cfg)],
+    ['maxes', '1-rep maxes', maxesSummary(weighted.length, weighted.filter(id => cfg.rm[id] != null).length)],
+  ];
+  return (
+    <section className="panel sdrills" aria-label="Training settings">
+      {rows.map(([k, title, sum]) => (
+        <button key={k} type="button" className="sdrill" id={`drill-${k}`} onClick={() => open(k)}>
+          <span className="sdt"><b>{title}</b><span>{sum}</span></span>
+          <Icon name="chevron-right" />
+        </button>
+      ))}
+    </section>
+  );
+}
+
+// One of those screens: a back link, then the panel as it was. Opening it pushes a history entry, so the browser's Back button closes it.
+function SettingsScreen({ screen, onBack }: { screen: Screen; onBack: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const h = ref.current?.querySelector('h3'); h?.setAttribute('tabindex', '-1'); (h as HTMLElement | null)?.focus({ preventScroll: true });
+  }, []);
+  return (
+    <div className="sscreen" ref={ref}>
+      <button type="button" className="sback" onClick={onBack}><Icon name="chevron-left" /> Training</button>
+      {screen === 'mode' && <ModePanel />}
+      {screen === 'phases' && <PhasePanel />}
+      {screen === 'maxes' && <RmPanel />}
+    </div>
+  );
+}
+
 export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
   const cur = useCurrentGroup();
+  const [screen, setScreen] = useState<Screen | null>(null);
+  const was = useRef<{ screen: Screen; y: number } | null>(null); // where the screen was opened from, to go back to
+  const open = (s: Screen) => { was.current = { screen: s, y: window.scrollY }; history.pushState({ settingsScreen: s }, ''); setScreen(s); };
+  const back = () => { if (history.state?.settingsScreen) history.back(); else setScreen(null); };
+  useEffect(() => {
+    // Only ever closes or switches a screen of ours: a popstate with no `settingsScreen` in its state leaves a closed Settings as it is.
+    const onPop = (e: PopStateEvent) => setScreen(now => (e.state?.settingsScreen as Screen | undefined) ?? (now ? null : now));
+    window.addEventListener('popstate', onPop);
+    // Sent to a group by the account menu or the jump row: close the screen now, and drop its history entry without leaving the page.
+    const off = onCloseSettingsScreen(() => { setScreen(null); was.current = null; if (history.state?.settingsScreen) history.replaceState(null, ''); });
+    return () => {
+      window.removeEventListener('popstate', onPop); off();
+      if (history.state?.settingsScreen) history.back(); // another tab was chosen with a screen open: take its history entry back, so Back is not a dead press
+    };
+  }, []);
+  useEffect(() => {
+    if (screen !== null || !was.current) return; // closed by Back: land where the row is, focus on it
+    const { screen: k, y } = was.current; was.current = null;
+    window.scrollTo(0, y); document.getElementById(`drill-${k}`)?.focus({ preventScroll: true });
+  }, [screen]);
   return (
     <SavedTicks><div className="settings">
-      {/* Sticky, so a group is one tap away anywhere on the long page; the group being read is marked. */}
-      <nav className="sjump" aria-label="Jump to a settings group">
-        {GROUPS.map(([id, label]) => <button key={id} type="button" className="chip" aria-current={cur === id ? 'true' : undefined} onClick={() => jump(id)}>{label}</button>)}
-      </nav>
-      <Group id="training" title="Training">
-        <div className="scol"><ModePanel /></div>
-        <div className="scol"><PhasePanel /></div>
-        <div className="scol"><InjuryPanel /></div>
-        <RmPanel />
-      </Group>
-      <Group id="data" title="Data">
-        <div className="scol">
-          <AccountPanel />
-          {!inAndroidApp() && <BillingPanel />}
-          <QaAccountsPanel />
-          <SyncPanel />
+      <div className="smain" hidden={screen !== null}>
+        {/* A bar across the top on a phone, a rail down the left on a wide screen; sticky either way, so a group is one tap away. The group being read is marked. */}
+        <nav className="sjump" aria-label="Jump to a settings group">
+          {GROUPS.map(([id, label]) => <button key={id} type="button" className="chip" aria-current={cur === id ? 'true' : undefined} onClick={() => jump(id)}>{label}</button>)}
+        </nav>
+        <div className="sgroups">
+          <Group id="training" title="Training">
+            <div className="scol"><TrainingRows open={open} /><InjuryPanel /></div>
+          </Group>
+          <Group id="data" title="Data">
+            <div className="scol">
+              <AccountPanel />
+              {!inAndroidApp() && <BillingPanel />}
+              <QaAccountsPanel />
+            </div>
+            <div className="scol"><DataPanel key={importCount} /></div>
+          </Group>
+          <Group id="app" title="App">
+            <div className="scol">
+              <TextSpacingPanel />
+              <RestAlertPanel />
+              <PushPanel />
+            </div>
+            <div className="scol">
+              <ProgramOnComputerRow />
+              <DevicePanel />
+              <FeedbackPanel />
+              <UsagePanel />
+              <IssuesPanel />
+              <UsageAdminPanel />
+            </div>
+          </Group>
+          {/* Last on the page, apart from the everyday data panels: these cannot be undone. */}
+          <Group id="erase" title="Erase & delete">
+            <div className="scol"><ErasePanel /><DeleteMyData /></div>
+          </Group>
         </div>
-        <div className="scol"><DataPanel key={importCount} /></div>
-      </Group>
-      <Group id="app" title="App">
-        <div className="scol">
-          <TextSpacingPanel />
-          <RestAlertPanel />
-          <PushPanel />
-        </div>
-        <div className="scol">
-          <ProgramOnComputerRow />
-          <DevicePanel />
-          <FeedbackPanel />
-          <UsagePanel />
-          <IssuesPanel />
-          <UsageAdminPanel />
-        </div>
-      </Group>
-      {/* Last on the page, apart from the everyday data panels: these cannot be undone. */}
-      <Group id="erase" title="Erase & delete">
-        <div className="scol"><ErasePanel /><DeleteMyData /></div>
-      </Group>
+      </div>
+      {screen && <SettingsScreen screen={screen} onBack={back} />}
     </div></SavedTicks>
   );
 }
