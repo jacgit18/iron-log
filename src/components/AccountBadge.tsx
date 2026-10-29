@@ -5,7 +5,8 @@ import { motionOK } from '../lib/motion.js';
 import { forgetSession } from '../lib/gate.js';
 import { disablePush } from '../lib/pushClient.js';
 import { signOutFlow } from '../lib/signOutFlow.js';
-import { GROUPS, jumpToGroup } from '../lib/settingsGroups.js';
+import { closeSettingsScreen } from '../lib/settingsScreens.js';
+import { GROUPS, findVisible, jumpToGroup } from '../lib/settingsGroups.js';
 import { LS } from '../lib/storage.js';
 import { createAccountClient } from '../sync/account.js';
 import { signIn as devHeaders } from '../sync/devUser.js';
@@ -41,7 +42,8 @@ export default function AccountBadge({ name, email = null, canSignOut = false }:
   const go = (id: string) => {
     setOpen(false);
     useAppStore.getState().setTab('settings');
-    void jumpToGroup(id, { find: i => document.getElementById(i), raf: requestAnimationFrame, smooth: motionOK() });
+    closeSettingsScreen(); // a Training screen may be open on Settings
+    void jumpToGroup(id, { find: findVisible, raf: requestAnimationFrame, smooth: motionOK() });
   };
   const signOut = async () => {
     setBusy(true);

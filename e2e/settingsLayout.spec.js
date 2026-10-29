@@ -37,6 +37,7 @@ test('Erase starts with nothing ticked, and its button says how many parts it er
 test('the 1RM table is folded until opened', async ({ page }) => {
   await page.goto('/');
   await openSettings(page);
+  await page.locator('#drill-maxes').click(); // Training's rows each open their own screen
   const fold = page.locator('details.fold');
   await expect(fold.locator('table')).toBeHidden();
   await fold.locator('summary').click();
@@ -47,6 +48,7 @@ test('on a phone each phase is one block: the % stays beside its box and the col
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
   await openSettings(page);
+  await page.locator('#drill-phases').click();
   const rows = await page.locator('.phrow').evaluateAll(rs => rs.map(r => {
     const pct = r.querySelector('.pctin'); const box = pct.querySelector('input');
     const sign = pct.lastChild; const range = document.createRange(); range.selectNodeContents(sign);
@@ -59,7 +61,7 @@ test('on a phone each phase is one block: the % stays beside its box and the col
   await expect(page.getByLabel('Strength sets × reps')).toBeVisible();
 });
 
-for (const [width, height] of [[375, 812], [1280, 800]]) test(`the jump row stays on screen, marks the group being read, and a jump lands below it (${width} px)`, async ({ page }) => {
+for (const [width, height] of [[375, 812], [1280, 800]]) test(`the jump row (a bar on a phone, a rail on a wide screen) stays on screen, marks the group being read, and a jump lands clear of it (${width} px)`, async ({ page }) => {
   await page.setViewportSize({ width, height });
   await page.goto('/');
   await openSettings(page);
@@ -71,8 +73,9 @@ for (const [width, height] of [[375, 812], [1280, 800]]) test(`the jump row stay
   await nav.getByRole('button', { name: 'Data' }).click();
   await expect(page.locator('#set-data-h')).toBeFocused();
   await expect(nav.getByRole('button', { name: 'Data' })).toHaveAttribute('aria-current', 'true');
-  // Once the smooth scroll settles, the heading sits just below the sticky row, not under it.
-  await expect.poll(() => page.evaluate(() => document.getElementById('set-data-h').getBoundingClientRect().top - document.querySelector('.sjump').getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(-1);
+  // Once the smooth scroll settles: on a phone the heading sits just below the sticky row, not under it; on a wide screen the row is a rail beside it, and the heading is at the top.
+  if (width > 900) await expect.poll(() => page.evaluate(() => Math.round(document.getElementById('set-data-h').getBoundingClientRect().top))).toBeLessThan(40);
+  else await expect.poll(() => page.evaluate(() => document.getElementById('set-data-h').getBoundingClientRect().top - document.querySelector('.sjump').getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(-1);
   await expect(page.locator('#set-data-h')).toBeInViewport();
 });
 
@@ -81,10 +84,11 @@ test('each panel keeps its background in a closed fold named for it', async ({ p
   await openSettings(page);
   const folds = page.locator('details.more');
   const names = await folds.locator('summary').allTextContents();
-  expect(names.length).toBeGreaterThanOrEqual(5);
+  expect(names.length).toBeGreaterThanOrEqual(3);
   expect(names.every(n => n.startsWith('More about '))).toBe(true);
   expect(new Set(names).size).toBe(names.length); // distinct, so a screen reader can tell them apart
   for (const open of await folds.evaluateAll(ds => ds.map(d => d.open))) expect(open).toBe(false);
+  await page.locator('#drill-phases').click(); // Phases is a screen of its own
   const phases = folds.filter({ has: page.locator('summary', { hasText: 'More about phases' }) });
   await expect(phases.getByText(/placeholders until you set your own/)).toBeHidden();
   await phases.locator('summary').click();
@@ -95,15 +99,16 @@ test('each panel keeps its background in a closed fold named for it', async ({ p
 const settled = page => page.waitForFunction(() => new Promise(r => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => r(scrollY === y))); }));
 const gapBelowRow = (page, id) => page.evaluate(i => document.getElementById(i).getBoundingClientRect().top - document.querySelector('.sjump').getBoundingClientRect().bottom, id);
 
-test('focus moving back up the page is never hidden under the sticky row (desktop)', async ({ page }) => {
+test('on a wide screen the jump row is a rail beside the groups, so focus is never hidden under it', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/');
   await openSettings(page);
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  // Firefox and Safari bring a focused field into view at the nearest edge (Chrome centres it): this is the case the row could cover.
-  await page.evaluate(() => document.getElementById('rx-strength').scrollIntoView({ block: 'nearest' }));
+  await page.evaluate(() => document.getElementById('set-training-h').scrollIntoView({ block: 'nearest' }));
   await settled(page);
-  expect(await gapBelowRow(page, 'rx-strength')).toBeGreaterThanOrEqual(0);
+  const { rail, head } = await page.evaluate(() => ({ rail: document.querySelector('.sjump').getBoundingClientRect().toJSON(), head: document.getElementById('set-training-h').getBoundingClientRect().toJSON() }));
+  expect(rail.right).toBeLessThanOrEqual(head.left); // beside the group, never over it
+  expect(rail.width).toBeLessThan(260);
 });
 
 test('with large text the chips wrap, and a jump still lands below the row', async ({ page }) => {
@@ -148,6 +153,7 @@ test('the report downloads fit one line on a phone, name the shown week, and kee
 test('a field that saves when you leave it shows a short Saved tick; a refused value does not', async ({ page }) => {
   await page.goto('/');
   await openSettings(page);
+  await page.locator('#drill-phases').click();
   const pct = page.locator('#pct-strength');
   const label = page.locator('.phrow').filter({ has: pct }).locator('.phfield').first();
   await pct.fill('86');
@@ -164,4 +170,43 @@ test('a field that saves when you leave it shows a short Saved tick; a refused v
   await rest.fill('120');
   await rest.press('Enter');
   await expect(page.locator('label[for="rest-s"]').getByText('✓ Saved')).toBeVisible();
+});
+
+test('Training shows three summary rows; each opens its own screen and Back returns to the row', async ({ page }) => {
+  await page.goto('/');
+  await openSettings(page);
+  await expect(page.locator('#drill-mode')).toContainText('Mode 1');
+  await expect(page.locator('#drill-phases')).toContainText('Strength 85% · 4 × 6');
+  await expect(page.locator('#drill-maxes')).toContainText('1-rep maxes');
+  await expect(page.locator('#rest-s')).toHaveCount(0); // the fields are on the screens, not on the page
+  await page.locator('#drill-mode').click();
+  await expect(page.getByRole('heading', { name: 'Program mode' })).toBeFocused();
+  await expect(page.locator('#mode-2')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Data', exact: true })).toBeHidden(); // only the screen is shown
+  await page.getByRole('button', { name: 'Training', exact: true }).click();
+  await expect(page.locator('#drill-mode')).toBeFocused();
+  await expect(page.getByRole('heading', { level: 2, name: 'Data', exact: true })).toBeVisible();
+  await page.locator('#drill-phases').click();
+  await page.goBack(); // the browser's Back closes it too
+  await expect(page.locator('#drill-phases')).toBeVisible();
+});
+
+test('a change on a screen shows in its summary row', async ({ page }) => {
+  await page.goto('/');
+  await openSettings(page);
+  await page.locator('#drill-mode').click();
+  await page.locator('#mode-2').check();
+  await page.getByRole('button', { name: 'Training', exact: true }).click();
+  await expect(page.locator('#drill-mode')).toContainText('Mode 2 · Alternate monthly');
+});
+
+test('choosing another tab with a Training screen open leaves no stale history entry behind', async ({ page }) => {
+  await page.goto('/');
+  await openSettings(page);
+  await page.locator('#drill-phases').click();
+  expect(await page.evaluate(() => history.state?.settingsScreen)).toBe('phases');
+  await page.locator('#tab-board').click();
+  await expect.poll(() => page.evaluate(() => history.state?.settingsScreen ?? null)).toBeNull(); // Back is not a dead press
+  await page.locator('#tab-settings, #account-badge').first().click();
+  await expect(page.locator('#drill-phases')).toBeVisible(); // Settings opens on its list, not on the screen
 });

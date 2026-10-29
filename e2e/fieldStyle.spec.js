@@ -8,7 +8,7 @@ import { test, expect } from './fixtures.js';
 const SELECTOR = 'input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]):not([type=range]), select, textarea';
 
 async function unstyled(page, min) {
-  await expect(page.locator(SELECTOR).first()).toBeVisible();
+  await expect(page.locator(SELECTOR).locator('visible=true').first()).toBeVisible();
   const { checked, bad } = await page.evaluate(sel => {
     const bad = []; let checked = 0;
     for (const el of document.querySelectorAll(sel)) {
@@ -45,10 +45,24 @@ for (const [name, clicks, min] of [
   ['Daily > Nutrition', ['#tab-daily', '#daily-supplements'], 2],
   ['Progress', ['#tab-progress'], 1],
   ['Program', ['#tab-program'], 2],
-  ['Settings', ['#tab-settings'], 20],
 ]) {
   test(`${name}: every text field, number field and select is styled`, async ({ page }) => {
     for (const c of clicks) await page.click(c);
     expect(await unstyled(page, min)).toEqual([]);
   });
 }
+
+// Settings keeps Training's fields on screens of their own (Program mode, Phases, 1-rep maxes), so the page and each screen are walked.
+test('Settings: every text field, number field and select is styled, on each Training screen', async ({ page }) => {
+  await page.click('#tab-settings');
+  await page.click('#drill-phases'); // the page itself has no open fields now; they are on the screens
+  expect(await unstyled(page, 10)).toEqual([]); // a % and a sets-by-reps box for each phase (Mobility has no %), and the rest time
+  await page.getByRole('button', { name: 'Training', exact: true }).click();
+  await page.click('#drill-mode');
+  await page.locator('#mode-2').check();
+  expect(await unstyled(page, 1)).toEqual([]); // Mode 2 shows its "Even months run" select
+  await page.getByRole('button', { name: 'Training', exact: true }).click();
+  await page.click('#drill-maxes');
+  await page.locator('details.fold summary').click();
+  expect(await unstyled(page, 1)).toEqual([]);
+});
