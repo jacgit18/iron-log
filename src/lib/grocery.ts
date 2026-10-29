@@ -169,7 +169,8 @@ export const own = <T,>(map: Record<string, T> | undefined, key: string): T | un
 
 export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { store: string; label: string; items: GroceryItem[]; group?: GroceryGroup }[] {
   const out = [...g.stores, ...(g.retired ?? [])].map(store => { // a retired store has a section only in a past month that still names it
-    const group = sharing ? g.groups?.find(x => x.people.some(p => !p.gone) && x.stores.includes(store)) : undefined;
+    const live = (x: GroceryGroup) => x.people.some(p => !p.gone);
+    const group = sharing ? g.groups?.find(x => live(x) && x.stores.includes(store)) ?? g.groups?.find(x => live(x) && x.allStores) : undefined; // the store's own group, else the one for all stores (as groupOfStore)
     return { store, label: store, items: items.filter(i => i.store === store), ...(group ? { group } : {}) };
   });
   const shared = out.filter(x => x.group);

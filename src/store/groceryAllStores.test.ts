@@ -23,6 +23,22 @@ describe('setGroceryAllStores', () => {
     st().setGroceryAllStores(pals, false);
     expect(st().grocery.groups!.some(x => x.allStores)).toBe(false);
   });
+  it('turning it off on one group leaves the mark on another', () => {
+    st().addGroceryGroup('Family', ['Sister']); st().addGroceryGroup('Pals', ['Bo']);
+    const [fam, pals] = ids() as [string, string];
+    st().setGroceryAllStores(fam, true);
+    st().setGroceryAllStores(pals, false);
+    expect(st().grocery.groups!.map(x => !!x.allStores)).toEqual([true, false]);
+  });
+  it('removing the group that has it, while a past month names its people, leaves no mark on the gone group', async () => {
+    st().addGroceryGroup('Family', ['Sister']);
+    const sis = st().grocery.groups![0]!.people[0]!.id;
+    useAppStore.setState({ groceryMonths: { '2026-01': { lines: { x: { got: true, share: { with: [sis] } } }, pulled: [] } } });
+    st().setGroceryAllStores(ids()[0]!, true);
+    st().removeGroceryGroup(ids()[0]!);
+    expect(st().grocery.groups![0]).toMatchObject({ gone: true });
+    expect(st().grocery.groups![0]!.allStores).toBeUndefined();
+  });
   it('does nothing for a group that is not there', () => {
     st().addGroceryGroup('Family', []);
     st().setGroceryAllStores('nope', true);

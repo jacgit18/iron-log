@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { acrossStores } from './groceryAcrossStores.js';
-import { normGrocery, paidKey } from './grocery.js';
+import { byStore, normGrocery, paidKey } from './grocery.js';
 import { groupOfStore, monthOwes, partiesFor, purchasesOf } from './grocerySettle.js';
 import { ME } from './grocerySplit.js';
 import { normGroceryGroup, validGroceryGroup } from '../shared/grocery.js';
@@ -34,6 +34,15 @@ describe('All stores group', () => {
     expect(groupOfStore({ ...g, groups: [{ ...family, gone: true }] }, 'Aldi')).toBeUndefined();
     const plain: Grocery = { ...g, groups: [{ ...family, allStores: undefined }] };
     expect(groupOfStore(plain, 'Aldi')).toBeUndefined();
+  });
+});
+
+describe('byStore', () => {
+  it('tags a store with no group of its own with the All stores group, and puts it first, with sharing on only', () => {
+    const own: GroceryGroup = { id: 'pal', n: 'Pals', people: [{ id: 'bo', n: 'Bo' }], stores: ['Aldi'] };
+    const rows = byStore({ ...g, groups: [family, own] }, g.items, true);
+    expect(rows.filter(r => r.group).map(r => [r.store, r.group!.id])).toEqual([['BJ\'s', 'fam'], ['Aldi', 'pal'], ['Lidl', 'fam']]);
+    expect(byStore(g, g.items, false).some(r => r.group)).toBe(false);
   });
 });
 
