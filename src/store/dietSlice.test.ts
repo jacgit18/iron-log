@@ -39,15 +39,18 @@ describe('addDietEntry', () => {
 describe('the hour of an entry', () => {
   it('is stamped on an entry for today and left off one for another day', () => {
     const today = ymd(new Date());
+    const before = new Date().getHours();
     const a = st().addDietEntry({ ...rice, d: today }), b = st().addDietEntry(rice);
-    expect(st().diet.find(e => e.id === a.id)!.t).toBe(new Date().getHours());
+    expect([before, new Date().getHours()]).toContain(st().diet.find(e => e.id === a.id)!.t); // the hour may turn while the test runs
     expect(st().diet.find(e => e.id === b.id)!.t).toBeUndefined();
   });
   it('survives an edit', () => {
     const today = ymd(new Date());
     const id = st().addDietEntry({ ...rice, d: today }).id!;
+    const t = st().diet[0]!.t;
+    expect(t).toBeDefined();
     st().updateDietEntry(id, { kcal: 250 });
-    expect(st().diet[0]!.t).toBe(new Date().getHours());
+    expect(st().diet[0]!.t).toBe(t);
   });
 });
 

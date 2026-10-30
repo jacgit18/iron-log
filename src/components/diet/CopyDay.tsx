@@ -19,13 +19,14 @@ export default function CopyDay({ day, onAdded }: { day: string; onAdded: (text:
   const flip = (id: string) => setTicked(t => { const n = new Set(t); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const add = () => {
     const plan = planCopy(diet, src, day, ticked);
-    let done = 0;
+    let done = 0, stopped: string | null = null;
     for (const f of plan.add) {
-      if (useAppStore.getState().addDietEntry({ d: day, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}) }).error) break;
+      stopped = useAppStore.getState().addDietEntry({ d: day, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}) }).error;
+      if (stopped) break;
       done++;
     }
-    const left = plan.left + (plan.add.length - done);
-    onAdded(`Added ${done}.${left > 0 ? ` ${left} left out: 20 a day is the limit.` : ''}`);
+    // The store's own words when an add fails (a full day, a day too far back, bad numbers); the 20 a day note only for what planCopy left out.
+    onAdded(`Added ${done}.${stopped ? ` ${stopped}` : plan.left > 0 ? ` ${plan.left} left out: 20 a day is the limit.` : ''}`);
     setOpen(false);
   };
   if (!open) {
