@@ -66,4 +66,39 @@
 .dt-ate .btn {
   min-height: 44px;
 }
+/* The pace picker under the daily target: its own classes, so the shared day-tab rules are untouched. */
+.dp-pace {
+  margin: var(--sp-8) 0;
+}
+.dp-label {
+  font-size: var(--fs-md);
+  color: var(--muted);
+  margin: 0 0 var(--sp-6);
+}
+.dp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.dp-chip {
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.dp-chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.dp-custom {
+  margin: var(--sp-8) 0;
+  max-width: 10rem;
+}
+.dp-missing .btn {
+  min-height: 44px;
+}
 }

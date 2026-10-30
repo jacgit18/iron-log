@@ -314,7 +314,9 @@ export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: Recip
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */
-export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number }
+/** How fast you want to gain or lose: a preset, or 'custom' with `rate` lb a week. Left out: the goal date sets it, else Steady. */
+export type DietPace = 'slow' | 'steady' | 'fast' | 'custom';
+export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number }
 /** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one. */
 export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string }
 

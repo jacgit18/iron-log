@@ -98,6 +98,28 @@ describe('setDietTarget', () => {
   });
 });
 
+describe('setDietPace', () => {
+  it('stores a preset, Custom with its rate, and goes back to the default with null', () => {
+    expect(st().setDietPace('fast')).toBeNull();
+    expect(st().cfg.diet).toEqual({ pace: 'fast' });
+    expect(st().setDietPace('custom', 0.8)).toBeNull();
+    expect(st().cfg.diet).toEqual({ pace: 'custom', rate: 0.8 });
+    expect(st().setDietPace('slow')).toBeNull();
+    expect(st().cfg.diet).toEqual({ pace: 'slow' }); // the Custom rate does not linger
+    st().setDietPace(null);
+    expect(st().cfg).not.toHaveProperty('diet');
+  });
+  it('refuses a Custom rate out of range or missing, and keeps the typed targets when the pace changes', () => {
+    expect(st().setDietPace('custom', 9)).toMatch(/Pace/);
+    expect(st().setDietPace('custom')).toMatch(/Pace/);
+    expect(st().cfg).not.toHaveProperty('diet');
+    st().setDietTarget('kcal', 3000); st().setDietPace('steady');
+    expect(st().cfg.diet).toEqual({ kcal: 3000, pace: 'steady' });
+    st().setDietTarget('kcal', null);
+    expect(st().cfg.diet).toEqual({ pace: 'steady' }); // clearing the typed numbers keeps the pace
+  });
+});
+
 describe('the data file', () => {
   it('carries the log and the targets out and back in', async () => {
     const { buildDataFile, parseDataFile } = await import('../lib/export.js');
