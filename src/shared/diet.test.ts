@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_DIET_PER_DAY, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
+import { MAX_DIET_PER_DAY, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
 import { normRecipe } from './recipes.js';
 import { normConfig } from './config.js';
 import { validateSaveListItem } from './commands.js';
@@ -132,4 +132,31 @@ describe('the hour an entry was added (t)', () => {
     expect(validDietEntry({ ...base, t: 24 })).toBe(false);
   });
   it('cleanHour', () => { expect(cleanHour(7)).toBe(7); expect(cleanHour(7.5)).toBeNull(); expect(cleanHour(undefined)).toBeNull(); });
+});
+
+describe('saved meals in cfg.diet', () => {
+  const it1 = { n: 'Oats', kcal: 350, p: 12 };
+  const m = (id: string, n: string, items: unknown[] = [it1]) => ({ id, n, items });
+  it('keeps good meals beside the targets', () => {
+    expect(normDietCfg({ kcal: 3000, meals: [m('a', 'Breakfast')] })).toEqual({ kcal: 3000, meals: [m('a', 'Breakfast')] });
+    expect(normDietCfg({ meals: [m('a', 'Breakfast')] })).toEqual({ meals: [m('a', 'Breakfast')] });
+  });
+  it('drops a meal with no usable food, no name, no id or a repeated id or name', () => {
+    const r = normDietCfg({ meals: [m('a', 'One'), m('b', 'Empty', []), m('c', 'Bad', [{ n: 'X', kcal: 0, p: 1 }]), m('', 'NoId'), m('a', 'RepeatId'), m('d', ' one '), m('e', '  ')] });
+    expect(r!.meals!.map(x => x.id)).toEqual(['a']);
+  });
+  it('cleans each food and keeps carbs, fat and the recipe link', () => {
+    const r = normDietCfg({ meals: [m('a', 'M', [{ n: ' Chili ', kcal: 600.4, p: 40, c: 51, f: 11, from: 'r1', junk: 1 }, { n: '', kcal: 5, p: 1 }])] });
+    expect(r!.meals![0]!.items).toEqual([{ n: 'Chili', kcal: 600, p: 40, c: 51, f: 11, from: 'r1' }]);
+  });
+  it('trims to the caps', () => {
+    const many = Array.from({ length: MAX_MEALS + 5 }, (_, i) => m(`m${i}`, `Meal ${i}`));
+    expect(normDietCfg({ meals: many })!.meals).toHaveLength(MAX_MEALS);
+    const foods = Array.from({ length: MAX_MEAL_ITEMS + 4 }, (_, i) => ({ n: `F${i}`, kcal: 10, p: 1 }));
+    expect(normDietCfg({ meals: [m('a', 'Big', foods)] })!.meals![0]!.items).toHaveLength(MAX_MEAL_ITEMS);
+  });
+  it('is undefined when nothing usable is left, and survives normConfig', () => {
+    expect(normDietCfg({ meals: [m('a', 'Empty', [])] })).toBeUndefined();
+    expect(normConfig({ diet: { meals: [m('a', 'Breakfast')] } }).diet).toEqual({ meals: [m('a', 'Breakfast')] });
+  });
 });

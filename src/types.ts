@@ -316,7 +316,11 @@ export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: Recip
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */
 /** How fast you want to gain or lose: a preset, or 'custom' with `rate` lb a week. Left out: the goal date sets it, else Steady. */
 export type DietPace = 'slow' | 'steady' | 'fast' | 'custom';
-export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number }
+/** One food in a saved meal: a diet entry without its id and day (`from` is the recipe id when it was logged from one). */
+export interface SavedItem { n: string; kcal: number; p: number; c?: number; f?: number; from?: string }
+/** A meal you saved from what you logged: a name and its foods (brief diet-saved-meals). Kept in `cfg.diet.meals`. */
+export interface SavedMeal { id: string; n: string; items: SavedItem[] }
+export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[] }
 /** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one; `t` is the local hour (0 to 23) it was added, for today only, used to suggest foods near that hour. */
 export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number }
 
