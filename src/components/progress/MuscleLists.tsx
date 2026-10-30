@@ -10,6 +10,7 @@ import { fmtLb } from '../../lib/body.js';
 import { goalPhaseLabel, liftGoalsOf, liftGoalsStatus } from '../../lib/liftGoal.js';
 import { trainsMuscle } from '../../lib/muscleFilter.js';
 import { MUSCLES } from '../../lib/muscles.js';
+import Icon from '../Icon.jsx';
 import LiftGoal from './LiftGoal.jsx';
 import './MuscleLists.css';
 
@@ -23,7 +24,7 @@ export function MuscleChip() {
   if (!sel) return <p className="note chiprow">Tap a muscle to filter goals and exercises.</p>;
   return (
     <p className="chiprow">
-      <span className="fchip">Showing: {MUSCLES[sel].n}<button type="button" aria-label={`Clear ${MUSCLES[sel].n} filter`} onClick={() => useAppStore.getState().selectMuscle(null)}>✕</button></span>
+      <span className="fchip">Showing: {MUSCLES[sel].n}<button type="button" aria-label={`Clear ${MUSCLES[sel].n} filter`} onClick={() => useAppStore.getState().selectMuscle(null)}><Icon name="close" /></button></span>
     </p>
   );
 }
@@ -79,7 +80,7 @@ export function ExerciseRows({ onAll }: { onAll: () => void }) {
       {!ids.length && <p className="note">{filtered() ? 'Nothing logged for this muscle yet.' : 'No sessions logged yet. Tap Log on any exercise card to record weight, sets and reps.'}</p>}
       {ids.slice(0, CAP).map(id => (
         <button type="button" className="mlrow" key={id} onClick={() => openModal({ type: 'detail', exId: id })}>
-          <span className="mln">{exInfo(cfg, id).n}<small>Last {describe(lastLog(logs, id)!)}</small></span><span aria-hidden="true">›</span>
+          <span className="mln">{exInfo(cfg, id).n}<small>Last {describe(lastLog(logs, id)!)}</small></span><Icon name="chevron-right" />
         </button>
       ))}
       <div className="actions"><button type="button" className="btn sm" onClick={onAll}>Exercise charts</button></div>

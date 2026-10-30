@@ -128,7 +128,7 @@ function ProgressMain() {
   );
   const tile = (k: Page, t: string, note: string) => (
     <button type="button" className="hubtile" onClick={() => setPage(k)}>
-      <span className="ht"><b>{t}</b><span className="note">{note}</span></span><span className="chev" aria-hidden="true">›</span>
+      <span className="ht"><b>{t}</b><span className="note">{note}</span></span><span className="chev"><Icon name="chevron-right" /></span>
     </button>
   );
   return (
