@@ -16,9 +16,16 @@ describe('recommend: calories from current weight and the goal', () => {
   it('a far-off date is held at 0.25 lb a week', () => {
     expect(recommend(185, 170, 100)).toEqual(bulk(2675, { maintenance: 2550, surplus: 125, rate: 0.25, weeksToGoal: 60, capped: false }));
   });
-  it('a date in the past or today uses the default pace', () => {
-    expect(recommend(185, 170, 0)).toMatchObject({ plan: { rate: 0.5 } });
-    expect(recommend(185, 170, -3)).toMatchObject({ plan: { rate: 0.5 } });
+  it('a date in the past or today uses the default pace, and the plan says the date passed', () => {
+    expect(recommend(185, 170, 0)).toMatchObject({ plan: { rate: 0.5, datePassed: true } });
+    expect(recommend(185, 170, -3)).toMatchObject({ plan: { rate: 0.5, datePassed: true } });
+    expect(recommend(185, 170)).toMatchObject({ plan: { rate: 0.5 } });
+    expect(recommend(185, 170)).not.toMatchObject({ plan: { datePassed: true } });
+  });
+  it('the pace is a clean multiple of 0.05 (7 lb in 20 weeks is 0.35, not 0.35000000000000003)', () => {
+    const r = recommend(177, 170, 20);
+    expect(r).toMatchObject({ kind: 'ok', plan: { rate: 0.35, surplus: 175 } });
+    for (const w of [4, 6, 7, 9, 11, 13, 17, 19, 23, 29]) expect(String((recommend(185, 170, w) as { plan: { rate: number } }).plan.rate)).toMatch(/^\d(\.\d{1,2})?$/);
   });
   it('protein is 0.8 g per lb of goal weight', () => {
     expect(recommend(200, 140)).toMatchObject({ protein: 160 });
@@ -56,6 +63,11 @@ describe('targetNote', () => {
   });
   it('shows maintenance, the surplus, the pace and the weeks to the goal', () => {
     expect(targetNote(recommend(185, 170), 185)).toBe('An estimate to start from, not medical advice. About 2,550 to stay the same, plus 250 a day to gain about 0.5 lb a week; about 30 weeks to 185 lb.');
+  });
+  it('writes a clean pace and says when the goal date has passed', () => {
+    expect(targetNote(recommend(177, 170, 20), 177)).toContain('gain about 0.35 lb a week');
+    expect(targetNote(recommend(185, 170, -2), 185)).toContain('Your goal date has passed, so this uses the usual 0.5 lb a week.');
+    expect(targetNote(recommend(185, 170), 185)).not.toContain('has passed');
   });
   it('says so when the goal date needs more than 1 lb a week', () => {
     expect(targetNote(recommend(185, 170, 5), 185)).toContain('more than is advised, so this uses 1');

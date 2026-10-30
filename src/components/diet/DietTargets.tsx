@@ -39,7 +39,7 @@ export default function DietTargets({ typed, rec, goalLb }: { typed: DietCfg | u
             </label>
           ))}
         </div>
-        <p className="note">Leave a box empty to use the recommended number. Carbs and fat follow your calories and protein unless you type them.</p>
+        <p className="note">Leave a box empty to use the recommended number. Carbs and fat follow your calories and protein unless you type them; if you type your own, they may not add up to your calories.</p>
         {err && <p className="note" role="alert">{err}</p>}
         <div className="actions">
           <button type="button" className="btn sm" onClick={() => setEditing(false)}>Cancel</button>

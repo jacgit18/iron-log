@@ -15,7 +15,7 @@ export const MAINTAIN_BAND = 2;
 
 export type Direction = 'bulk' | 'maintain';
 /** How the calories were reached: maintenance, the daily surplus, the pace (lb a week), and the weeks to the goal at that pace. `capped`: the goal date needs more than MAX_RATE. */
-export interface Plan { maintenance: number; surplus: number; rate: number; weeksToGoal: number | null; capped: boolean }
+export interface Plan { maintenance: number; surplus: number; rate: number; weeksToGoal: number | null; capped: boolean; datePassed?: true }
 export type Recommendation =
   | { kind: 'none'; reason: 'no-goal' | 'cut' }
   | { kind: 'ok'; direction: Direction | null; kcal: number; protein: number; plan: Plan | null }; // direction and plan are null when no weight is logged yet
@@ -39,9 +39,9 @@ export function recommend(goalLb: number | null | undefined, currentLb: number |
   const maintenance = roundTo(KCAL_PER_LB * cur, 25); // rounded like the target, so the sentence under it matches the number above it
   if (gap <= MAINTAIN_BAND) return { kind: 'ok', direction: 'maintain', kcal: roundTo(KCAL_PER_LB * cur, 25), protein, plan: { maintenance, surplus: 0, rate: 0, weeksToGoal: null, capped: false } };
   const wanted = weeksLeft != null && weeksLeft > 0 ? gap / weeksLeft : DEFAULT_RATE;
-  const rate = roundTo(Math.min(MAX_RATE, Math.max(MIN_RATE, wanted)), 0.05);
+  const rate = Math.round(Math.min(MAX_RATE, Math.max(MIN_RATE, wanted)) * 20) / 20; // steps of 0.05, as a division by 20 so 7 steps is 0.35, not 0.35000000000000003
   const surplus = Math.round((rate * KCAL_PER_LB_GAINED) / 7);
-  return { kind: 'ok', direction: 'bulk', kcal: roundTo(KCAL_PER_LB * cur + surplus, 25), protein, plan: { maintenance, surplus, rate, weeksToGoal: Math.round(gap / rate), capped: wanted > MAX_RATE } };
+  return { kind: 'ok', direction: 'bulk', kcal: roundTo(KCAL_PER_LB * cur + surplus, 25), protein, plan: { maintenance, surplus, rate, weeksToGoal: Math.round(gap / rate), capped: wanted > MAX_RATE, ...(weeksLeft != null && weeksLeft <= 0 ? { datePassed: true as const } : {}) } };
 }
 
 /** The sentence under the targets: why there is no recommendation, or what the estimate is made of. */
@@ -53,8 +53,9 @@ export function targetNote(rec: Recommendation, goalLb: number | null): string {
   const n = (v: number) => v.toLocaleString('en-US');
   if (rec.direction === 'maintain') return `${lead} About ${n(p.maintenance)} calories keeps your weight where it is.`;
   const pace = `${p.rate} lb a week`;
+  const past = p.datePassed ? ' Your goal date has passed, so this uses the usual 0.5 lb a week.' : '';
   const cap = p.capped ? ` Your goal date needs more than ${MAX_RATE} lb a week, which is more than is advised, so this uses ${MAX_RATE}.` : '';
-  return `${lead} About ${n(p.maintenance)} to stay the same, plus ${n(p.surplus)} a day to gain about ${pace}${p.weeksToGoal ? `; about ${p.weeksToGoal} weeks to ${goalLb ? `${Math.round(goalLb * 10) / 10} lb` : 'your goal'}` : ''}.${cap}`;
+  return `${lead} About ${n(p.maintenance)} to stay the same, plus ${n(p.surplus)} a day to gain about ${pace}${p.weeksToGoal ? `; about ${p.weeksToGoal} weeks to ${goalLb ? `${Math.round(goalLb * 10) / 10} lb` : 'your goal'}` : ''}.${past}${cap}`;
 }
 
 export interface Targets { kcal: number | null; protein: number | null; carbs: number | null; fat: number | null; typed: Record<TargetKey, boolean> }
