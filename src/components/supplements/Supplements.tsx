@@ -167,6 +167,7 @@ export default function Supplements() {
   const add = (oz: string | number) => { s.addWater(date, oz); };
   return (
     <div>
+      <Diet />
       <div className="weekbar">
         <div className="weeknav">
           <button type="button" className="btn sm" aria-label="Previous day" onClick={() => step(-1)}><Icon name="chevron-left" /></button>
@@ -221,7 +222,6 @@ export default function Supplements() {
         <Week water={supp.water} goalOf={(k) => goalFor(supp, body, k).oz} end={d} selected={date} onPick={(k) => setSel(k === todayKey ? null : k)} />
         <p className="note">Ounces per day. A full bar means you hit your goal.</p>
       </section>
-      <Diet />
     </div>
   );
 }

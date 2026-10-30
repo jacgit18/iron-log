@@ -35,6 +35,29 @@ describe('addDietEntry', () => {
   });
 });
 
+describe('carbs and fat', () => {
+  it('adds an entry with carbs and fat, and one without', () => {
+    st().addDietEntry({ ...rice, c: 44, f: 0.5 }); st().addDietEntry({ ...rice, n: 'Toast' });
+    expect(st().diet[0]).toMatchObject({ c: 44, f: 0.5 });
+    expect(st().diet[1]).not.toHaveProperty('c');
+  });
+  it('an edit can set and clear them', () => {
+    const id = st().addDietEntry(rice).id!;
+    expect(st().updateDietEntry(id, { c: 30, f: 5 })).toBeNull();
+    expect(st().diet[0]).toMatchObject({ c: 30, f: 5 });
+    expect(st().updateDietEntry(id, { c: null })).toBeNull();
+    expect(st().diet[0]).not.toHaveProperty('c');
+    expect(st().diet[0]).toMatchObject({ f: 5 });
+  });
+  it('typed targets can include carbs and fat, and clear one at a time', () => {
+    expect(st().setDietTarget('carbs', 400)).toBeNull(); expect(st().setDietTarget('fat', 80)).toBeNull();
+    expect(st().cfg.diet).toEqual({ carbs: 400, fat: 80 });
+    expect(st().setDietTarget('fat', 5)).toMatch(/Fat/);
+    st().setDietTarget('carbs', null);
+    expect(st().cfg.diet).toEqual({ fat: 80 });
+  });
+});
+
 describe('updateDietEntry and removeDietEntry', () => {
   it('fixes the numbers and keeps the day and the recipe link', () => {
     const id = st().addDietEntry({ ...rice, from: 'chili-1' }).id!;

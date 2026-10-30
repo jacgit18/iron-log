@@ -20,6 +20,8 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 export const cleanKcal = (v: unknown): number | null => (fin(v) && Math.round(v) >= 1 && Math.round(v) <= MAX_KCAL ? Math.round(v) : null);
 /** Protein in grams as stored: 0 to 999, one decimal, or null. */
 export const cleanProtein = (v: unknown): number | null => (fin(v) && round1(v) >= 0 && round1(v) <= MAX_PROTEIN ? round1(v) : null);
+/** Carbs or fat in grams as stored: the same range as protein (0 to 999, one decimal), or null. */
+export const cleanGrams = cleanProtein;
 
 /** One entry, cleaned. Null without an id, a real date, a name, or numbers in range. */
 export function normDietEntry(x: unknown): DietEntry | null {
@@ -28,7 +30,8 @@ export function normDietEntry(x: unknown): DietEntry | null {
   const id = str(o.id, MAX_DIET_ID), n = str(o.n, MAX_DIET_NAME), from = str(o.from, MAX_DIET_ID);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p);
   if (!id || !n || !validDate(o.d) || kcal === null || p === null) return null;
-  return { id, d: o.d, n, kcal, p, ...(from ? { from } : {}) };
+  const c = o.c === undefined ? null : cleanGrams(o.c), f = o.f === undefined ? null : cleanGrams(o.f); // optional: an unusable one is left out
+  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}) };
 }
 
 /** Whether `v` is an entry exactly as the app writes one. */
@@ -54,18 +57,20 @@ export function normDietEntries(items: unknown): DietEntry[] {
 }
 
 /** Why a typed target can't be saved, or null. `value` null means cleared. */
-export function targetError(key: 'kcal' | 'protein', value: number | null): string | null {
+export type TargetKey = 'kcal' | 'protein' | 'carbs' | 'fat';
+const TARGET_NAME: Record<TargetKey, string> = { kcal: 'Calories', protein: 'Protein', carbs: 'Carbs', fat: 'Fat' };
+export function targetError(key: TargetKey, value: number | null): string | null {
   if (value === null) return null;
   const min = key === 'kcal' ? MIN_TARGET_KCAL : MIN_TARGET_PROTEIN, max = key === 'kcal' ? MAX_KCAL : MAX_PROTEIN;
-  return Number.isFinite(value) && Math.round(value) >= min && Math.round(value) <= max ? null : `${key === 'kcal' ? 'Calories' : 'Protein'} must be ${min.toLocaleString('en-US')} to ${max.toLocaleString('en-US')}.`;
+  return Number.isFinite(value) && Math.round(value) >= min && Math.round(value) <= max ? null : `${TARGET_NAME[key]} must be ${min.toLocaleString('en-US')} to ${max.toLocaleString('en-US')}.`;
 }
 
 /** The targets you typed (`cfg.diet`): only the keys that are in range survive; undefined when none do. */
 export function normDietCfg(v: unknown): DietCfg | undefined {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
   const o = v as Record<string, unknown>;
-  const kcal = fin(o.kcal) && Math.round(o.kcal) >= MIN_TARGET_KCAL && Math.round(o.kcal) <= MAX_KCAL ? Math.round(o.kcal) : null;
-  const protein = fin(o.protein) && Math.round(o.protein) >= MIN_TARGET_PROTEIN && Math.round(o.protein) <= MAX_PROTEIN ? Math.round(o.protein) : null;
-  if (kcal === null && protein === null) return undefined;
-  return { ...(kcal !== null ? { kcal } : {}), ...(protein !== null ? { protein } : {}) };
+  const pick = (k: TargetKey) => (targetError(k, fin(o[k]) ? (o[k] as number) : NaN) === null && fin(o[k]) ? Math.round(o[k] as number) : null);
+  const out: DietCfg = {};
+  (['kcal', 'protein', 'carbs', 'fat'] as const).forEach(k => { const n = pick(k); if (n !== null) out[k] = n; });
+  return Object.keys(out).length ? out : undefined;
 }

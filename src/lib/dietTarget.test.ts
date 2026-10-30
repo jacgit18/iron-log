@@ -1,16 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { recommend, targetNote, targetsFor } from './dietTarget.js';
+import { macrosFor, recommend, targetNote, targetsFor } from './dietTarget.js';
 
-describe('recommend', () => {
-  it('bulk: 15 per lb of goal weight and 0.8 g protein per lb of goal weight', () => {
-    expect(recommend(185, 170)).toEqual({ kind: 'ok', direction: 'bulk', kcal: 2775, protein: 150 });
+const bulk = (kcal: number, plan: object) => ({ kind: 'ok', direction: 'bulk', kcal, protein: 150, plan });
+
+describe('recommend: calories from current weight and the goal', () => {
+  it('bulk with no goal date: maintenance (15 per lb) plus 250 a day for 0.5 lb a week', () => {
+    expect(recommend(185, 170)).toEqual(bulk(2800, { maintenance: 2550, surplus: 250, rate: 0.5, weeksToGoal: 30, capped: false }));
   });
-  it('caps a bulk at 500 over what the current weight needs', () => {
-    expect(recommend(200, 140)).toEqual({ kind: 'ok', direction: 'bulk', kcal: 2600, protein: 160 });
+  it('a goal date sets the pace: 15 lb in 20 weeks is 0.75 lb a week, 375 a day', () => {
+    expect(recommend(185, 170, 20)).toEqual(bulk(2925, { maintenance: 2550, surplus: 375, rate: 0.75, weeksToGoal: 20, capped: false }));
   });
-  it('maintain inside 2 lb either way', () => {
-    expect(recommend(180, 179)).toMatchObject({ direction: 'maintain', kcal: 2700 });
-    expect(recommend(180, 182)).toMatchObject({ direction: 'maintain', kcal: 2700 });
+  it('a date that needs more than 1 lb a week is held at 1 lb (500 a day) and says so', () => {
+    expect(recommend(185, 170, 5)).toEqual(bulk(3050, { maintenance: 2550, surplus: 500, rate: 1, weeksToGoal: 15, capped: true }));
+  });
+  it('a far-off date is held at 0.25 lb a week', () => {
+    expect(recommend(185, 170, 100)).toEqual(bulk(2675, { maintenance: 2550, surplus: 125, rate: 0.25, weeksToGoal: 60, capped: false }));
+  });
+  it('a date in the past or today uses the default pace', () => {
+    expect(recommend(185, 170, 0)).toMatchObject({ plan: { rate: 0.5 } });
+    expect(recommend(185, 170, -3)).toMatchObject({ plan: { rate: 0.5 } });
+  });
+  it('protein is 0.8 g per lb of goal weight', () => {
+    expect(recommend(200, 140)).toMatchObject({ protein: 160 });
+  });
+  it('maintain inside 2 lb either way: maintenance of the current weight, no surplus', () => {
+    expect(recommend(180, 179)).toMatchObject({ direction: 'maintain', kcal: 2675, plan: { surplus: 0, rate: 0 } });
+    expect(recommend(180, 182)).toMatchObject({ direction: 'maintain', kcal: 2725 });
   });
   it('cut gives no recommendation', () => {
     expect(recommend(170, 185)).toEqual({ kind: 'none', reason: 'cut' });
@@ -19,8 +34,18 @@ describe('recommend', () => {
     expect(recommend(undefined, 170)).toEqual({ kind: 'none', reason: 'no-goal' });
     expect(recommend(0, 170)).toEqual({ kind: 'none', reason: 'no-goal' });
   });
-  it('no weight logged: from the goal alone, no direction, no cap', () => {
-    expect(recommend(185, null)).toEqual({ kind: 'ok', direction: null, kcal: 2775, protein: 150 });
+  it('no weight logged: from the goal weight alone, no direction, no plan', () => {
+    expect(recommend(185, null)).toEqual({ kind: 'ok', direction: null, kcal: 2775, protein: 150, plan: null });
+  });
+});
+
+describe('macrosFor', () => {
+  it('fat is 25% of the calories and carbs fill the rest', () => {
+    expect(macrosFor(2800, 150)).toEqual({ fat: 80, carbs: 370 });
+  });
+  it('a typed fat changes the carbs, and carbs never go below 0', () => {
+    expect(macrosFor(3000, 150, 70)).toEqual({ fat: 70, carbs: 445 });
+    expect(macrosFor(800, 200)).toEqual({ fat: 20, carbs: 0 });
   });
 });
 
@@ -29,23 +54,30 @@ describe('targetNote', () => {
     expect(targetNote({ kind: 'none', reason: 'cut' }, 170)).toMatch(/Cutting/);
     expect(targetNote({ kind: 'none', reason: 'no-goal' }, null)).toMatch(/Set a goal weight/);
   });
-  it('labels the estimate and names the goal and direction', () => {
-    expect(targetNote(recommend(185, 170), 185)).toBe('An estimate to start from, not medical advice. Based on your goal of 185 lb (gaining).');
-    expect(targetNote(recommend(180, 180), 180)).toContain('(maintaining)');
-    expect(targetNote(recommend(185, null), 185)).toBe('An estimate to start from, not medical advice. Based on your goal of 185 lb.');
+  it('shows maintenance, the surplus, the pace and the weeks to the goal', () => {
+    expect(targetNote(recommend(185, 170), 185)).toBe('An estimate to start from, not medical advice. About 2,550 to stay the same, plus 250 a day to gain about 0.5 lb a week; about 30 weeks to 185 lb.');
+  });
+  it('says so when the goal date needs more than 1 lb a week', () => {
+    expect(targetNote(recommend(185, 170, 5), 185)).toContain('more than is advised, so this uses 1');
+  });
+  it('maintaining and no-weight wording', () => {
+    expect(targetNote(recommend(180, 180), 180)).toBe('An estimate to start from, not medical advice. About 2,700 calories keeps your weight where it is.');
+    expect(targetNote(recommend(185, null), 185)).toContain('log your weight for a closer number');
   });
 });
 
 describe('targetsFor', () => {
   const rec = recommend(185, 170);
-  it('uses the recommendation when nothing is typed', () => {
-    expect(targetsFor(undefined, rec)).toEqual({ kcal: 2775, protein: 150, kcalTyped: false, proteinTyped: false });
+  it('uses the recommendation, with carbs and fat that follow it, when nothing is typed', () => {
+    expect(targetsFor(undefined, rec)).toEqual({ kcal: 2800, protein: 150, fat: 80, carbs: 370, typed: { kcal: false, protein: false, carbs: false, fat: false } });
   });
-  it('a typed number wins and only for its own key', () => {
-    expect(targetsFor({ kcal: 3000 }, rec)).toEqual({ kcal: 3000, protein: 150, kcalTyped: true, proteinTyped: false });
+  it('a typed number wins for its own key, and carbs and fat follow the calories in force', () => {
+    expect(targetsFor({ kcal: 3000 }, rec)).toMatchObject({ kcal: 3000, protein: 150, fat: 85, carbs: 410, typed: { kcal: true, protein: false } });
+    expect(targetsFor({ carbs: 300 }, rec)).toMatchObject({ kcal: 2800, carbs: 300, fat: 80, typed: { carbs: true } });
   });
-  it('typed targets work with no recommendation', () => {
-    expect(targetsFor({ kcal: 3000, protein: 180 }, { kind: 'none', reason: 'cut' })).toMatchObject({ kcal: 3000, protein: 180 });
-    expect(targetsFor(undefined, { kind: 'none', reason: 'no-goal' })).toMatchObject({ kcal: null, protein: null });
+  it('typed targets work with no recommendation, and with only some typed there is nothing to derive from', () => {
+    expect(targetsFor({ kcal: 3000, protein: 180 }, { kind: 'none', reason: 'cut' })).toMatchObject({ kcal: 3000, protein: 180, fat: 85, carbs: 380 });
+    expect(targetsFor({ kcal: 3000 }, { kind: 'none', reason: 'cut' })).toMatchObject({ kcal: 3000, protein: null, fat: null, carbs: null });
+    expect(targetsFor(undefined, { kind: 'none', reason: 'no-goal' })).toMatchObject({ kcal: null, protein: null, fat: null, carbs: null });
   });
 });

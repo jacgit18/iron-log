@@ -1,5 +1,5 @@
 import type { Recipe, RecipeCategory, RecipeIngredient } from '../types.ts';
-import { cleanKcal, cleanProtein } from './diet.js';
+import { cleanGrams, cleanKcal, cleanProtein } from './diet.js';
 import { reservedId } from './grocery.js';
 import { same } from './same.js';
 import { str } from './stretchWeek.js';
@@ -38,8 +38,8 @@ export function normRecipe(x: unknown): Recipe | null {
   const servings = cleanWhole(o.servings, 99), minutes = cleanWhole(o.minutes, 1440);
   const note = str(o.note, MAX_NOTE), from = str(o.from, MAX_FROM);
   const library = from.startsWith('c:');
-  const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p); // calories and protein (g) per serving, typed by the person (ADR 086)
-  return { id, n, cat: cleanCategory(o.cat), ing, steps, ...(servings ? { servings } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(note ? { note } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
+  return { id, n, cat: cleanCategory(o.cat), ing, steps, ...(servings ? { servings } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */
