@@ -27,6 +27,7 @@ import { startAutoBackup } from './autoBackupRunner.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
 import { deviceGrocery, grocerySlice } from './grocerySlice.js';
+import { dietSlice } from './dietSlice.js';
 import { recipesSlice } from './recipesSlice.js';
 import { removedSlice } from './removedSlice.js';
 import { MONTH_RE, monthEmpty, normGrocery, normGroceryMonth } from '../lib/grocery.js';
@@ -38,6 +39,7 @@ import { mimeFor } from '../lib/mime.js';
 import { loadView, saveView, openFromUrl } from '../lib/viewState.js';
 import { useToday } from './useToday.js';
 import { normEntries, normBody, normProgram, normLibrary, SCHEMA_VERSION } from '../shared/validate.js';
+import { normDietEntries } from '../shared/diet.js';
 import { normRecipes } from '../shared/recipes.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
@@ -164,6 +166,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   ...wellnessSlice(set, get, flag),
   ...grocerySlice(set, get),
   ...recipesSlice(set, get),
+  ...dietSlice(set, get),
   ...removedSlice(set, get, flag),
   cfg: structuredClone(DEFAULT_CFG),
   weekStart: weekStartOf(new Date()),
@@ -177,6 +180,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   library: [], // saved program versions
   experiments: [], // exercises to try: [{id, ex, ph, note}]
   recipes: [], // recipes you wrote or copied (ADR 084)
+  diet: [], // things you ate (ADR 086): saved as diet/main, newest last
   body: [], // body weight: [{wk, d, w}], one per week
   programs: { A: BUILTIN.A, B: BUILTIN.B },
   storeMode: 'loading',
@@ -193,9 +197,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   historyLoading: false,
   dl: undefined, // downloads handle: undefined = not checked yet, null = unavailable
 
-  // Muscles tab view state; kept here so it survives switching tabs, like the original.
-  progView: 'trends', // Progress tab: 'trends' or 'muscles'
-  setProgView: progView => set({ progView }),
+  // Muscle map selection; the Progress page clears it when you leave.
   bodySel: null, // selected muscle key
   bodySec: true, // count secondary work as half a set
   selectMuscle: bodySel => set({ bodySel }),
@@ -210,7 +212,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().noteRemoved('muscles', `your muscle tags for ${exInfo(get().cfg, exId).n}`, () => !get().cfg.muscleMap?.[exId] && get().mutateCfg(c => { c.muscleMap = { ...(c.muscleMap || {}), [exId]: own }; }));
   },
 
-  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, recipes: s.recipes, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, grocery: { ...s.grocery, months: s.groceryMonths } }; },
+  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, recipes: s.recipes, diet: s.diet, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, grocery: { ...s.grocery, months: s.groceryMonths } }; },
 
   // The snapshot plus every saved stretch week (the week on screen taken live), for the data file.
   async stretchWeeksAll() {
@@ -413,6 +415,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         library: padLibrary(normLibrary((LS.get('library/main') || {}).items)),
         experiments: normExperiments((LS.get('experiments/main') || {}).items),
         recipes: normRecipes((LS.get('recipes/main') || {}).items),
+        diet: normDietEntries((LS.get('diet/main') || {}).items),
         stretches: normStretches(LS.get('stretches/main')).items,
         stretchExps: normStretches(LS.get('stretches/main')).experiments,
         supp: normSupplements(LS.get('supplements/main')),
@@ -450,6 +453,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (queue.pending('experiments/main')) return;
       set(state => ({ experiments: s.exists ? normExperiments((s.data() || {}).items) : [], ...markReady('exp')(state) }));
     }, () => flag('Couldn’t load your experiments. Reload the page.'));
+    db.doc('diet/main').onSnapshot((s: any) => {
+      if (queue.pending('diet/main')) return;
+      set({ diet: s.exists ? normDietEntries((s.data() || {}).items) : [] });
+    }, () => flag('Couldn’t load your food log. Reload the page.'));
     db.doc('recipes/main').onSnapshot((s: any) => {
       if (queue.pending('recipes/main')) return;
       set({ recipes: s.exists ? normRecipes((s.data() || {}).items) : [] });
@@ -538,6 +545,7 @@ export function fromOtherTab(e: { key?: string | null; newValue?: string | null 
   else if (path === 'library/main') set({ library: padLibrary(normLibrary((v || {}).items)) });
   else if (path === 'experiments/main') set({ experiments: normExperiments((v || {}).items) });
   else if (path === 'recipes/main') set({ recipes: normRecipes((v || {}).items) });
+  else if (path === 'diet/main') set({ diet: normDietEntries((v || {}).items) });
   else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: loadProgram(k as 'A' | 'B', v) } })); useAppStore.getState().refreshRan(); }
   else if (path === 'stretches/main') { const d = normStretches(v); set({ stretches: d.items, stretchExps: d.experiments }); }
   else if (path === 'supplements/main') set({ supp: normSupplements(v) });

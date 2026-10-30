@@ -43,7 +43,7 @@ test('Groceries: the add dock, the store form and the list fields are styled', a
 
 for (const [name, clicks, min] of [
   ['Daily > Nutrition', ['#tab-daily', '#daily-supplements'], 2],
-  ['Progress', ['#tab-progress'], 1],
+  ['Progress > Frequency goals', ['#tab-progress', 'button.hubtile:has-text("Frequency goals")'], 1],
   ['Program', ['#tab-program'], 2],
 ]) {
   test(`${name}: every text field, number field and select is styled`, async ({ page }) => {
@@ -63,6 +63,6 @@ test('Settings: every text field, number field and select is styled, on each Tra
   expect(await unstyled(page, 1)).toEqual([]); // Mode 2 shows its "Even months run" select
   await page.getByRole('button', { name: 'Training', exact: true }).click();
   await page.click('#drill-maxes');
-  await page.locator('details.fold summary').click();
+  await page.locator('.sdrill[id^="max-"]').first().click(); // an exercise's screen has the "I tested this" field
   expect(await unstyled(page, 1)).toEqual([]);
 });

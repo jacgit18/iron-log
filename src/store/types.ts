@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -180,7 +180,7 @@ export interface LogSlice {
   addEntry(slotId: string, idx: number, entry: LogEntry, opts?: { check?: boolean }): boolean;
   quickLog(slotId: string, idx: number): void;
   submitLog(slotId: string, idx: number, form: LogForm): boolean;
-  setLiftGoal(exId: string, key: string, raw: string | number, by?: string, from?: string): boolean;
+  setLiftGoal(exId: string, key: string, raw: string | number, by?: string, from?: string, scale?: boolean): boolean;
   clearLiftGoal(exId: string, key: string): void;
   setFreqGoal(exId: string, raw: string | number): boolean;
   clearFreqGoal(exId: string): void;
@@ -285,6 +285,24 @@ export interface RemovedSlice {
   undoRemoved(): void;
   /** Drop the Undo; with a scope, only when it belongs to that list. */
   dismissRemoved(scope?: string): void;
+}
+
+/** Your food log and typed targets (ADR 086): entries are saved as the document diet/main, the targets as cfg.diet. */
+export interface DietSlice {
+  diet: DietEntry[];
+  saveDiet(): void;
+  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
+  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null }): string | null; // an error text, or null when saved
+  removeDietEntry(id: string, undoNotice?: boolean): void; // Undo is offered (noteRemoved 'diet') unless undoNotice is false
+  setDietPace(pace: DietPace | null, rate?: number): string | null; // null goes back to the goal date (else Steady); Custom needs a rate; an error text, or null
+  saveDietMeal(name: string, entryIds: string[]): string | null; // makes a saved meal from those entries (replacing one of the same name); an error text, or null when saved
+  renameDietMeal(id: string, name: string): string | null; // an error text, or null
+  removeDietMeal(id: string): void; // Undo is offered (noteRemoved 'diet')
+  addPlanItem(day: string, kind: 'r' | 'm', id: string): string | null; // puts a recipe or saved meal on a day of the plan; an error text, or null
+  setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
+  removePlanItem(day: string, index: number): void;
+  planToGroceries(days: string[]): { added: number; already: number; refused: string | null; recipes: number }; // the days' recipes' missing ingredients go to To get, each name once
+  setDietTarget(key: 'kcal' | 'protein' | 'carbs' | 'fat', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
 }
 
 /** Your recipes (ADR 084): saved as the document recipes/main, like the other lists. */
@@ -416,11 +434,9 @@ export interface CoreSlice {
   weekHist: Record<string, Week> | null; // every saved week, loaded on demand for Progress and exports
   historyLoading: boolean;
   dl: Downloads | null | undefined; // undefined = not checked yet, null = unavailable
-  progView: string;
   bodySel: MuscleKey | null;
   bodySec: boolean;
 
-  setProgView(v: string): void;
   selectMuscle(m: MuscleKey | null): void;
   setBodySec(v: boolean): void;
   saveTags(exId: string, tags: MuscleTags): void;
@@ -496,6 +512,6 @@ export interface BackupSlice {
   restoreServerBackup(date: string): Promise<void>;
 }
 
-export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice & RecipesSlice;
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice & RecipesSlice & DietSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];

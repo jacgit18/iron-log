@@ -5,6 +5,7 @@ test('a session edited and deleted in the exercise sheet changes just that sessi
   await page.locator('#chk-A-d3s1').check();
   await page.locator('#chk-A-d5s3').check();
   await page.locator('#tab-progress').click();
+  await page.getByRole('button', { name: 'Exercise charts' }).click();
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   const rows = page.locator('table.hist tbody tr');
   await expect(rows).toHaveCount(2);

@@ -1,0 +1,193 @@
+@layer base, components;
+@layer components {
+/* Diet (ADR 086): targets, the day stepper, the meters and the list. Plain flat rows like Recipes; every tap target is 44px tall. */
+.dt {
+  margin-bottom: var(--sp-16);
+}
+.dt .btn {
+  min-height: 44px;
+}
+.dt-nums {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-16);
+  padding: 0;
+}
+.dt input {
+  min-height: 44px;
+}
+.dt-meter {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--sp-4) var(--sp-8);
+  align-items: center;
+  margin: var(--sp-8) 0;
+}
+.dt-meter .bar {
+  width: 100%;
+}
+.dt-mtext {
+  grid-column: 2;
+  font-size: var(--fs-md);
+  color: var(--muted);
+}
+.dt-list {
+  list-style: none;
+  margin: var(--sp-8) 0;
+  padding: 0;
+}
+.dt-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: var(--sp-6) 0;
+  border-top: 1px solid var(--line);
+}
+.dt-name {
+  flex: 1 1 8rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dt-recents {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+}
+.dt-ate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.dt-ate .btn {
+  min-height: 44px;
+}
+/* The pace picker under the daily target: its own classes, so the shared day-tab rules are untouched. */
+.dp-pace {
+  margin: var(--sp-8) 0;
+}
+.dp-label {
+  font-size: var(--fs-md);
+  color: var(--muted);
+  margin: 0 0 var(--sp-6);
+}
+.dp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.dp-chip {
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.dp-chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.dp-custom {
+  margin: var(--sp-8) 0;
+  max-width: 10rem;
+}
+.dp-missing .btn {
+  min-height: 44px;
+}
+.dt-recents .btn,
+.dt-meals .btn,
+.dt-copy .btn,
+.dt-plan .btn {
+  min-height: 44px;
+}
+/* The meal planner: its own week strip, not the shared day-tab rules. */
+.dt-plan {
+  margin: var(--sp-8) 0;
+}
+.dt-weeknav,
+.dt-planshop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.dt-strip {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-8) 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+}
+.dt-strip .btn[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.dt-planlist {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-8) 0;
+}
+.dt-planrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+}
+/* Saved meals: Manage turns each button into a row with Rename and Delete. */
+.dt-meals {
+  margin: var(--sp-8) 0;
+}
+.dt-mealrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  width: 100%;
+}
+/* Find a food (USDA search): the pick step keeps the grams box and its buttons 44px. */
+.dt-lookup {
+  margin: var(--sp-8) 0;
+}
+.dt-lookup .btn,
+.dt-lookup input {
+  min-height: 44px;
+}
+.dt-lookuppick {
+  margin: var(--sp-8) 0;
+}
+/* Copy from a day: the checklist keeps each row a 44px target. */
+.dt-copy {
+  margin: var(--sp-8) 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.dt-copylist {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-8) 0;
+}
+.dt-copyrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+}
+.dt-copyrow input {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+}

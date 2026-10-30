@@ -20,7 +20,7 @@ const toRow = (x: LogSet, iso: boolean) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x
 const num = (v: string | number) => (v === '' ? null : Number(v));
 
 export default function LogSheet({ slotId, idx }: { slotId: string; idx: number }) {
-  const cfg = useAppStore(s => s.cfg);
+  const cfg = useAppStore(s => s.cfg); const body = useAppStore(s => s.body);
   const week = useAppStore(s => s.week);
   const logs = useAppStore(s => s.logs);
   const weekStart = useAppStore(s => s.weekStart);
@@ -49,7 +49,7 @@ export default function LogSheet({ slotId, idx }: { slotId: string; idx: number 
   const rx = rxOf(cfg, it, phv);
   const last = lastSession(logs, it.ex, phv);
   const hist = (logs[it.ex] || []).slice(-6).reverse();
-  const goals = liftGoalsStatus(cfg, it.ex, logs[it.ex], today, phv);
+  const goals = liftGoalsStatus(cfg, it.ex, logs[it.ex], today, phv, body);
 
   const changePhase = (v: PhaseKey | '') => { setPh(v); const p = v || null; setRows(planRows(cfg, logs, it, p).map(x => toRow(x, isTimed(p)))); };
   // Editing a set fills the same field in later sets, until those are edited themselves.

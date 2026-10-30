@@ -175,6 +175,7 @@ export default function Supplements() {
           {!isToday && <button type="button" className="btn sm ghost" onClick={() => setSel(null)}>Today</button>}
         </div>
       </div>
+      <Diet day={date} />
       <Schedule date={date} supp={supp} editing={editing} setEditing={setEditing} />
       {editing && <div className="mt-16"><SupplementLibrary /></div>}
       <section className="panel suppanel mt-16" aria-labelledby="water-h">
@@ -221,7 +222,6 @@ export default function Supplements() {
         <Week water={supp.water} goalOf={(k) => goalFor(supp, body, k).oz} end={d} selected={date} onPick={(k) => setSel(k === todayKey ? null : k)} />
         <p className="note">Ounces per day. A full bar means you hit your goal.</p>
       </section>
-      <Diet />
     </div>
   );
 }

@@ -63,6 +63,7 @@ export function dataFileDocs(d: DataFile): Map<string, unknown> {
   if (d.library.length) out.set('library/main', { items: d.library });
   if (d.experiments.length) out.set('experiments/main', { items: d.experiments });
   if (d.recipes?.length) out.set('recipes/main', { items: d.recipes });
+  if (d.diet?.length) out.set('diet/main', { items: d.diet });
   if (d.stretches) out.set('stretches/main', { items: d.stretches.items, experiments: d.stretches.experiments });
   if (d.supplements) out.set('supplements/main', d.supplements);
   if (d.config && Object.keys(d.config).length) out.set('config/main', d.config);

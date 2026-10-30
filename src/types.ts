@@ -139,6 +139,8 @@ export interface Cfg extends ProgramCfg {
   exPh: Record<string, PhaseKey | null>;
   progNames?: Record<string, string>; // program key ('A', 'B') -> your name for it
   bwGoal?: BodyGoal;
+  /** Daily targets you typed (ADR 086); a key left out means the recommended number is used. */
+  diet?: DietCfg;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
   /** Equipment the user added: id (`x:` and a slug) to its name. */
   equipment?: Record<string, string>;
@@ -210,7 +212,8 @@ export interface PersonalBest { id: string; d: string; w: number; r: number; pre
 /** Body-weight goal: the target, where you were when you set it, and an optional ISO date. */
 export interface BodyGoal { w: number; start?: { w: number; d?: string }; by?: string }
 /** A lift goal for one exercise and key ('any' or a phase). */
-export interface LiftGoal { w: number; start?: number; by?: string }
+// `bw`, `bwd`: body weight (lb) and date when a goal that scales with body weight was set; `w` is then the base goal.
+export interface LiftGoal { w: number; start?: number; by?: string; bw?: number; bwd?: string }
 
 /* ---------- Supplements, water and stretches ---------- */
 export type SupplementSlot = 'morning' | 'noon' | 'night' | '';
@@ -307,7 +310,21 @@ export type RecipeCategory = 'protein' | 'sides' | 'sauces' | 'seasonings' | 'dr
 export interface RecipeIngredient { n: string; amt?: string; home?: string; sub?: string; skip?: true }
 /** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
  *  after copying it (only on a recipe with a `from`). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string; edited?: true }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number }
+
+/* ---------- Diet (ADR 086) ---------- */
+/** Daily targets you typed: calories, and protein, carbs and fat in grams. */
+/** How fast you want to gain or lose: a preset, or 'custom' with `rate` lb a week. Left out: the goal date sets it, else Steady. */
+export type DietPace = 'slow' | 'steady' | 'fast' | 'custom';
+/** One food in a saved meal: a diet entry without its id and day (`from` is the recipe id when it was logged from one). */
+export interface SavedItem { n: string; kcal: number; p: number; c?: number; f?: number; from?: string }
+/** A meal you saved from what you logged: a name and its foods (brief diet-saved-meals). Kept in `cfg.diet.meals`. */
+export interface SavedMeal { id: string; n: string; items: SavedItem[] }
+/** One planned item (brief diet-meal-planner): a recipe (`k` 'r') or a saved meal (`k` 'm') by id; `x` is the recipe's portion (0.5 to 10), left out when it is 1. */
+export interface PlanItem { k: 'r' | 'm'; id: string; x?: number }
+export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; plan?: Record<string, PlanItem[]> }
+/** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one; `t` is the local hour (0 to 23) it was added, for today only, used to suggest foods near that hour. */
+export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */
@@ -327,6 +344,7 @@ export interface Snapshot {
   supp?: Supplements;
   grocery?: GroceryData;
   recipes?: Recipe[];
+  diet?: DietEntry[];
 }
 
 /** A data file after `normalizeData` has checked and cleaned it. `config` holds only the keys the file had. */
@@ -344,6 +362,7 @@ export interface DataFile {
   supplements: Supplements | null;
   grocery: GroceryData | null;
   recipes?: Recipe[]; // left out when the file has none
+  diet?: DietEntry[]; // left out when the file has none
 }
 
 /* ---------- Production issues (admin screen; the server's /api/issues, ADR 013 amendment) ---------- */

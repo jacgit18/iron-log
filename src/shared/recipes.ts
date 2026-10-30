@@ -1,5 +1,7 @@
 import type { Recipe, RecipeCategory, RecipeIngredient } from '../types.ts';
+import { cleanGrams, cleanKcal, cleanProtein } from './diet.js';
 import { reservedId } from './grocery.js';
+import { same } from './same.js';
 import { str } from './stretchWeek.js';
 
 /* ---------- Recipe shape: one recipe of your own (ADR 084) ----------
@@ -36,15 +38,10 @@ export function normRecipe(x: unknown): Recipe | null {
   const servings = cleanWhole(o.servings, 99), minutes = cleanWhole(o.minutes, 1440);
   const note = str(o.note, MAX_NOTE), from = str(o.from, MAX_FROM);
   const library = from.startsWith('c:');
-  return { id, n, cat: cleanCategory(o.cat), ing, steps, ...(servings ? { servings } : {}), ...(minutes ? { minutes } : {}), ...(note ? { note } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
+  return { id, n, cat: cleanCategory(o.cat), ing, steps, ...(servings ? { servings } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
-const same = (a: unknown, b: unknown): boolean => {
-  if (a === b) return true;
-  if (!a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) !== Array.isArray(b)) return false;
-  const ka = Object.keys(a), kb = Object.keys(b);
-  return ka.length === kb.length && ka.every(k => k in b && same((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
-};
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */
 export const validRecipe = (v: unknown): v is Recipe => { const c = normRecipe(v); return c !== null && same(c, v); };
 

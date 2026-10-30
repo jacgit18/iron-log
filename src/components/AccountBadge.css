@@ -69,29 +69,6 @@
     display: none;
   }
 }
-/* The menu button: a 44px target with a small chevron that turns over when open. */
-.acctchev {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  min-width: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  border-radius: var(--r-pill);
-  cursor: pointer;
-  font-size: var(--fs-lg);
-}
-.acctchev[aria-expanded="true"] svg {
-  transform: rotate(180deg);
-}
-@media (hover:hover) {
-  .acctchev:hover {
-    color: var(--ink);
-  }
-}
 /* Desktop: a dropdown under the badge. */
 .acctmenu {
   position: absolute;

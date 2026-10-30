@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
 import { MAX_INGREDIENTS, MAX_RECIPE_NAME, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
 import { rescale, servingsNote, typedAmount, type ScaleRow } from '../../lib/recipeScale.js';
@@ -18,6 +19,10 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const [cat, setCat] = useState<RecipeCategory>(recipe?.cat ?? 'other');
   const [servings, setServings] = useState(recipe?.servings ? String(recipe.servings) : '');
   const [minutes, setMinutes] = useState(recipe?.minutes ? String(recipe.minutes) : '');
+  const [kcal, setKcal] = useState(recipe?.kcal !== undefined ? String(recipe.kcal) : '');
+  const [protein, setProtein] = useState(recipe?.p !== undefined ? String(recipe.p) : '');
+  const [carbs, setCarbs] = useState(recipe?.c !== undefined ? String(recipe.c) : '');
+  const [fat, setFat] = useState(recipe?.f !== undefined ? String(recipe.f) : '');
   const [ing, setIng] = useState<Row[]>(recipe?.ing.length ? recipe.ing.map(i => ({ ...i, amt: i.amt ?? '' })) : [{ n: '', amt: '' }]);
   const [lastServings, setLastServings] = useState<number | null>(recipe?.servings ?? null); // the servings the amounts are for
   const [scaleNote, setScaleNote] = useState('');
@@ -30,8 +35,13 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const save = () => {
     if (servings.trim() && !(whole(servings) && whole(servings)! <= 99)) { setErr('Servings must be a whole number from 1 to 99.'); return; }
     if (minutes.trim() && !(whole(minutes) && whole(minutes)! <= 1440)) { setErr('Minutes must be a whole number from 1 to 1440.'); return; }
+    const k = kcal.trim() ? cleanKcal(Number(kcal)) : undefined, pr = protein.trim() ? cleanProtein(Number(protein)) : undefined;
+    if (k === null) { setErr('Calories per serving must be a number from 1 to 9,999.'); return; }
+    if (pr === null) { setErr('Protein per serving must be a number from 0 to 999 g.'); return; }
+    const cb = carbs.trim() ? cleanGrams(Number(carbs)) : undefined, ft = fat.trim() ? cleanGrams(Number(fat)) : undefined;
+    if (cb === null || ft === null) { setErr('Carbs and fat per serving must be numbers from 0 to 999 g.'); return; }
     const keep = ing.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ing: keep, steps: stepsFromText(steps), servings: whole(servings), minutes: whole(minutes), note, ...(recipe?.from ? { from: recipe.from } : {}) });
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ing: keep, steps: stepsFromText(steps), servings: whole(servings), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(recipe?.from ? { from: recipe.from } : {}) });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
@@ -73,6 +83,16 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
       <div className="rc-ingrow">
         <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>
         <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
+        <span />
+      </div>
+      <div className="rc-ingrow">
+        <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => setKcal(e.target.value)} /></label>
+        <label>Protein per serving (g)<input inputMode="decimal" value={protein} onChange={e => setProtein(e.target.value)} /></label>
+        <span />
+      </div>
+      <div className="rc-ingrow">
+        <label>Carbs per serving (g), optional<input inputMode="decimal" value={carbs} onChange={e => setCarbs(e.target.value)} /></label>
+        <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => setFat(e.target.value)} /></label>
         <span />
       </div>
       <fieldset className="rc-form">

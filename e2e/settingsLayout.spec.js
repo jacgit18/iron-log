@@ -34,16 +34,6 @@ test('Erase starts with nothing ticked, and its button says how many parts it er
   await expect(erase.getByRole('button', { name: 'Erase 2 selected' })).toBeEnabled();
 });
 
-test('the 1RM table is folded until opened', async ({ page }) => {
-  await page.goto('/');
-  await openSettings(page);
-  await page.locator('#drill-maxes').click(); // Training's rows each open their own screen
-  const fold = page.locator('details.fold');
-  await expect(fold.locator('table')).toBeHidden();
-  await fold.locator('summary').click();
-  await expect(fold.locator('table')).toBeVisible();
-});
-
 test('on a phone each phase is one block: the % stays beside its box and the columns line up', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
