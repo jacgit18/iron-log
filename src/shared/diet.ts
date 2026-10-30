@@ -1,4 +1,4 @@
-import type { DietCfg, DietEntry } from '../types.ts';
+import type { DietCfg, DietEntry, SavedItem, SavedMeal } from '../types.ts';
 import { same } from './same.js';
 import { str } from './stretchWeek.js';
 import { validDate } from './validate.js';
@@ -22,6 +22,37 @@ export const cleanKcal = (v: unknown): number | null => (fin(v) && Math.round(v)
 export const cleanProtein = (v: unknown): number | null => (fin(v) && round1(v) >= 0 && round1(v) <= MAX_PROTEIN ? round1(v) : null);
 /** Carbs or fat in grams as stored: the same range as protein (0 to 999, one decimal), or null. */
 export const cleanGrams = cleanProtein;
+
+export const MAX_MEALS = 30, MAX_MEAL_ITEMS = 10, MAX_MEAL_NAME = 40;
+
+/** One food of a saved meal, cleaned: null without a name or numbers in range. */
+export function normSavedItem(x: unknown): SavedItem | null {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
+  const o = x as Record<string, unknown>;
+  const n = str(o.n, MAX_DIET_NAME), from = str(o.from, MAX_DIET_ID);
+  const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p);
+  if (!n || kcal === null || p === null) return null;
+  const c = o.c === undefined ? null : cleanGrams(o.c), f = o.f === undefined ? null : cleanGrams(o.f);
+  return { n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}) };
+}
+
+/** A name as compared: trimmed and case-blind, so "Breakfast" and "breakfast" are one meal. */
+export const mealKey = (n: string): string => n.trim().toLowerCase();
+
+/** The saved meals of a stored value, cleaned: unusable foods dropped, at most MAX_MEAL_ITEMS each, a meal with no food, a repeated id or a repeated name dropped, at most MAX_MEALS. */
+export function normMeals(v: unknown): SavedMeal[] {
+  const ids = new Set<string>(), names = new Set<string>(), out: SavedMeal[] = [];
+  for (const raw of Array.isArray(v) ? v : []) {
+    if (out.length >= MAX_MEALS) break;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const o = raw as Record<string, unknown>;
+    const id = str(o.id, MAX_DIET_ID), n = str(o.n, MAX_MEAL_NAME);
+    const items = (Array.isArray(o.items) ? o.items : []).map(normSavedItem).filter((i): i is SavedItem => i !== null).slice(0, MAX_MEAL_ITEMS);
+    if (!id || !n || !items.length || ids.has(id) || names.has(mealKey(n))) continue;
+    ids.add(id); names.add(mealKey(n)); out.push({ id, n, items });
+  }
+  return out;
+}
 
 /** The hour of day an entry was added, as stored: a whole number from 0 to 23, or null. */
 export const cleanHour = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 23 ? v : null);
@@ -80,5 +111,7 @@ export function normDietCfg(v: unknown): DietCfg | undefined {
   (['kcal', 'protein', 'carbs', 'fat'] as const).forEach(k => { const v = o[k]; if (fin(v) && targetError(k, v) === null) out[k] = Math.round(v); });
   if (o.pace === 'slow' || o.pace === 'steady' || o.pace === 'fast') out.pace = o.pace;
   else if (o.pace === 'custom' && fin(o.rate) && rateError(o.rate) === null) { out.pace = 'custom'; out.rate = Math.round(o.rate * 100) / 100; }
+  const meals = normMeals(o.meals);
+  if (meals.length) out.meals = meals;
   return Object.keys(out).length ? out : undefined;
 }

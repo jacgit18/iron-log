@@ -8,6 +8,8 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import CopyDay from './CopyDay.js';
+import SaveMeal from './SaveMeal.js';
+import SavedMeals from './SavedMeals.js';
 import EntryForm, { type EntryValues } from './EntryForm.js';
 import FindFood from './FindFood.js';
 
@@ -63,8 +65,10 @@ export default function DietLog({ day, targets }: { day: string; targets: Target
           </li>
         ))}
       </ul>
+      <SaveMeal key={day} day={day} onSaved={setMsg} />
       <RemovedNotice scope="diet" expires />
       <h3>Quick add</h3>
+      <SavedMeals day={day} full={!room} onAdded={setMsg} />
       {!room ? <p className="note">That’s 20 things for the day. Delete one to add another.</p> : (
         <>
           {suggested.length > 0 && (

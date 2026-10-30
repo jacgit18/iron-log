@@ -104,8 +104,20 @@
   min-height: 44px;
 }
 .dt-recents .btn,
+.dt-meals .btn,
 .dt-copy .btn {
   min-height: 44px;
+}
+/* Saved meals: Manage turns each button into a row with Rename and Delete. */
+.dt-meals {
+  margin: var(--sp-8) 0;
+}
+.dt-mealrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  width: 100%;
 }
 /* Copy from a day: the checklist keeps each row a 44px target. */
 .dt-copy {
