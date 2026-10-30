@@ -12,7 +12,7 @@ function Meter({ label, unit, have, target }: { label: string; unit: string; hav
       <span className="dt-mlabel">{label}</span>
       {target
         ? <div className="bar" role="progressbar" aria-label={`${label} ${text}`} aria-valuemin={0} aria-valuemax={target} aria-valuenow={Math.min(have, target)}><i style={{ width: `${barPercent(have, target)}%` }} /></div>
-        : <div className="bar" role="img" aria-label={`${label} ${text}, no target set`}><i style={{ width: '0%' }} /></div>}
+        : <div className="bar" role="img" aria-label={`${label} ${text}, no target set`}><i /></div>}
       <span className="dt-mtext">{text}</span>
     </div>
   );

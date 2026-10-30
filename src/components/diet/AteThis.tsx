@@ -26,7 +26,7 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
       <p className="note">Per serving: {fmtNum(recipe.kcal!)} kcal · {fmtNum(recipe.p!)} g protein</p>
       <div className="dt-ate">
         <button type="button" className="btn sm" disabled={servings <= 0.5} onClick={() => setServings(s => Math.max(0.5, s - 0.5))}>Less</button>
-        <span role="status" aria-label="Servings eaten">{servings} {servings === 1 ? 'serving' : 'servings'}</span>
+        <span role="status">{servings} {servings === 1 ? 'serving' : 'servings'}</span>
         <button type="button" className="btn sm" disabled={servings >= 10} onClick={() => setServings(s => Math.min(10, s + 0.5))}>More</button>
         <button type="button" className="btn primary" onClick={log}>Ate this</button>
       </div>
