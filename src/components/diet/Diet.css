@@ -17,13 +17,6 @@
 .dt input {
   min-height: 44px;
 }
-.dt-day {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-8);
-  margin: var(--sp-12) 0;
-}
 .dt-meter {
   display: grid;
   grid-template-columns: 5.5rem 1fr;

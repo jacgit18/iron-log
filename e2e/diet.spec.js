@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.js';
 
 // Diet inside Nutrition (ADR 086), the first box on that screen: the daily calorie, protein, carbs and fat targets, and a food log a day at a time. The rules (the target numbers, totals,
 // caps) are node tests (dietTarget, dietLog, shared/diet, dietSlice); this covers the wiring: the card, typing a target, quick add, "Ate this" on
-// a recipe, Undo, the day stepper, and that it all survives a reload. Syncing a second device is covered by e2e:sync, not here.
+// a recipe, Undo, the Nutrition date bar driving Diet's day, and that it all survives a reload. Syncing a second device is covered by e2e:sync, not here.
 const seedBody = (page, goal, weight) => page.addInitScript(([g, w]) => {
   if (localStorage.getItem('ironlog:config/main')) return; // seed once: the script runs again on every reload and would wipe what the test saved
   localStorage.setItem('ironlog:config/main', JSON.stringify({ bwGoal: { w: g } }));
@@ -135,29 +135,32 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await expect(diet(page).locator('.dt-entry')).toHaveCount(1);
 });
 
-test('the day stepper shows yesterday separately and cannot go past today', async ({ page }) => {
+test('Diet follows the Nutrition date bar: yesterday is a separate day, and the bar cannot go past today', async ({ page }) => {
   await nutrition(page);
   await diet(page).getByLabel('Food').fill('Toast');
   await diet(page).getByLabel('Calories', { exact: true }).last().fill('90');
   await diet(page).getByLabel('Protein (g)').last().fill('3');
   await diet(page).getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(diet(page).getByRole('button', { name: /Day after/ })).toBeDisabled();
-  await diet(page).getByRole('button', { name: /Day before/ }).click();
+  await expect(page.getByRole('button', { name: 'Next day' })).toBeDisabled();
+  await expect(diet(page)).toContainText('Food eaten · Today');
+  await page.getByRole('button', { name: 'Previous day' }).click();
   await expect(diet(page).locator('.dt-entry')).toHaveCount(0);
-  await expect(diet(page)).toContainText('Wednesday 09/23');
-  await diet(page).getByRole('button', { name: /Day after/ }).click();
+  await expect(diet(page)).toContainText('Food eaten · Wednesday 09/23');
+  await expect(page.locator('.weekbar')).toContainText('Wednesday');
+  await page.getByRole('button', { name: 'Next day' }).click();
   await expect(diet(page).locator('.dt-entry')).toHaveCount(1);
-  await expect(diet(page)).toContainText('Today');
+  await expect(diet(page)).toContainText('Food eaten · Today');
 });
 
-test('Diet is the first box on Nutrition, above the date bar, Supplements and Water', async ({ page }) => {
+test('the Nutrition screen reads date bar, Diet, Supplements, Water: Diet comes before Supplements and Water and shares the one date bar', async ({ page }) => {
   await nutrition(page);
   const y = async loc => (await loc.boundingBox()).y;
   const dietY = await y(page.locator('#diet-h'));
   await expect(page.getByRole('heading', { name: 'Supplements' })).toBeVisible();
-  expect(dietY).toBeLessThan(await y(page.locator('.weekbar')));
+  expect(await y(page.locator('.weekbar'))).toBeLessThan(dietY);
   expect(dietY).toBeLessThan(await y(page.getByRole('heading', { name: 'Supplements' })));
   expect(dietY).toBeLessThan(await y(page.locator('#water-h')));
+  await expect(diet(page).getByRole('button', { name: /Day before|Day after/ })).toHaveCount(0); // no second day selector inside Diet
 });
 
 test('an entry without carbs and fat still logs, and the log says carbs and fat count only what was entered', async ({ page }) => {

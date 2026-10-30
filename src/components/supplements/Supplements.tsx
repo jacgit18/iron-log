@@ -167,7 +167,6 @@ export default function Supplements() {
   const add = (oz: string | number) => { s.addWater(date, oz); };
   return (
     <div>
-      <Diet />
       <div className="weekbar">
         <div className="weeknav">
           <button type="button" className="btn sm" aria-label="Previous day" onClick={() => step(-1)}><Icon name="chevron-left" /></button>
@@ -176,6 +175,7 @@ export default function Supplements() {
           {!isToday && <button type="button" className="btn sm ghost" onClick={() => setSel(null)}>Today</button>}
         </div>
       </div>
+      <Diet day={date} />
       <Schedule date={date} supp={supp} editing={editing} setEditing={setEditing} />
       {editing && <div className="mt-16"><SupplementLibrary /></div>}
       <section className="panel suppanel mt-16" aria-labelledby="water-h">
