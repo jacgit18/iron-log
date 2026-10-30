@@ -307,10 +307,19 @@ test.describe('the Sync panel', () => {
       await openSynced(page, refuse);
       await page.locator('#chk-A-d1s1').check();
       await openSettings(page);
-      const before = await page.locator('.notsent li').count();
-      await page.locator('.notsent li').first().getByRole('button', { name: /^Try again/ }).click();
-      await expect(page.locator('#live-status')).toContainText('would not take it this time either');
-      await expect(page.locator('.notsent li')).toHaveCount(before);
+      // Each refused change comes into the list as its answer arrives, so wait for the list to hold still before counting it.
+      const list = page.locator('.notsent li');
+      let last = -1;
+      await expect.poll(async () => { const n = await list.count(); const held = n > 0 && n === last; last = n; return held; }, { intervals: [300] }).toBe(true);
+      const before = last;
+      // The resend is a request the server refuses again: wait for that answer, not for a message. Which message tells the person depends on
+      // timing (the resend is answered first: "would not take it this time either"; sync was paused, so the resend counted as kept in the
+      // outbox and the refusal arrives after: "Could not save"). Both say it did not go through, and the change is back in the list.
+      const refusedAgain = page.waitForResponse(r => r.url().includes('/api/commands/') && r.status() === 422);
+      await list.first().getByRole('button', { name: /^Try again/ }).click();
+      await refusedAgain;
+      await expect(list).toHaveCount(before);
+      await expect(page.locator('#live-status')).toContainText(/would not take it this time either|Could not save/);
     });
   });
 });
