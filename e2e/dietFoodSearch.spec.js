@@ -75,3 +75,14 @@ test('one letter asks nothing', async ({ page }) => {
   expect(calls).toBe(0);
   await expect(diet(page).getByRole('list', { name: 'Lookup results' })).toHaveCount(0);
 });
+
+test('editing a macro after a pick keeps the calories the search gave', async ({ page }) => {
+  await stub(page, 200, { ok: true, hits });
+  await nutrition(page);
+  await diet(page).getByLabel('Look up nutrition').fill('granola');
+  await diet(page).getByRole('button', { name: 'Granola bar (Acme) · 450 kcal per 100 g' }).click();
+  await diet(page).getByRole('button', { name: 'Use', exact: true }).click();
+  await expect(diet(page).getByLabel('Calories', { exact: true })).toHaveValue('180');
+  await diet(page).getByLabel('Protein (g)').fill('5');
+  await expect(diet(page).getByLabel('Calories', { exact: true })).toHaveValue('180');
+});

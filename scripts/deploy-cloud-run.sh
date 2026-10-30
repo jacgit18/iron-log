@@ -242,7 +242,7 @@ store_stripe_secrets() {
   STRIPE_NAMES=("${SECRET_PREFIX}-stripe-secret-key" "${SECRET_PREFIX}-stripe-webhook-secret" "${SECRET_PREFIX}-stripe-price-monthly" "${SECRET_PREFIX}-stripe-price-yearly")
 }
 
-# Only the Stripe settings, for turning billing on or changing a key without the database and Google values `secrets` also needs.
+# Only the USDA food-search key, stored and made readable to the service without the database and Google values `secrets` also needs.
 cmd_usda() {
   : "${USDA_API_KEY:?Export USDA_API_KEY (the free key from https://fdc.nal.usda.gov/api-key-signup)}"
   echo "Storing the food-search key in project $PROJECT_ID:"
@@ -251,6 +251,7 @@ cmd_usda() {
   echo "Done. Next: deploy (Actions, Deploy to Cloud Run, or scripts/deploy-cloud-run.sh deploy): it passes the key to the service."
 }
 
+# Only the Stripe settings, for turning billing on or changing a key without the database and Google values `secrets` also needs.
 cmd_stripe() {
   store_stripe_secrets
   local s

@@ -17,7 +17,7 @@ export default function EntryForm({ idp, initial, start, submitLabel, onSubmit, 
   const [c, setC] = useState(str(from?.c));
   const [f, setF] = useState(str(from?.f));
   const [err, setErr] = useState('');
-  const [typedKcal, setTypedKcal] = useState(initial !== undefined); // calories you typed (or saved) are never overwritten by the macros
+  const [typedKcal, setTypedKcal] = useState(from !== undefined); // calories you typed, saved or picked from the search are never overwritten by the macros
   // Protein, carbs and fat all filled in: calories follow (4 4 9), until calories were typed by hand.
   const macro = (set: (v: string) => void, which: 'p' | 'c' | 'f') => (v: string) => {
     set(v);
