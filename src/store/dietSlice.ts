@@ -32,7 +32,10 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   updateDietEntry(id, patch) {
     const list = get().diet; const cur = list.find(e => e.id === id);
     if (!cur) return 'That entry is gone.';
-    const e = normDietEntry({ ...cur, ...patch });
+    const merged: Record<string, unknown> = { ...cur, ...patch };
+    if (merged.c === null) delete merged.c; // null clears an optional number
+    if (merged.f === null) delete merged.f;
+    const e = normDietEntry(merged);
     if (!e) return BAD;
     set({ diet: list.map(x => (x.id === id ? e : x)) });
     get().saveDiet();

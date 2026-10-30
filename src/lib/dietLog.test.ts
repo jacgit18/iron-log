@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
-import { barPercent, entriesOn, hasMacros, meterText, oldestDay, pruned, recentQuick, roomOn, servingNumbers, shiftDay, totalsFor } from './dietLog.js';
+import { barPercent, entriesOn, entryText, hasMacros, meterText, missingCarbsFat, oldestDay, pruned, recentQuick, roomOn, servingNumbers, shiftDay, totalsFor } from './dietLog.js';
 
-const e = (id: string, d: string, n: string, kcal: number, p: number, from?: string): DietEntry => ({ id, d, n, kcal, p, ...(from ? { from } : {}) });
+const e = (id: string, d: string, n: string, kcal: number, p: number, from?: string, cf?: [number, number]): DietEntry => ({ id, d, n, kcal, p, ...(cf ? { c: cf[0], f: cf[1] } : {}), ...(from ? { from } : {}) });
 const list = [e('a', '2026-10-29', 'Rice', 200, 4), e('b', '2026-10-29', 'Chili', 600, 40.5, 'r1'), e('c', '2026-10-28', 'Eggs', 150, 12)];
 
 describe('totals and days', () => {
   it('adds up one day only', () => {
-    expect(totalsFor(list, '2026-10-29')).toEqual({ kcal: 800, protein: 44.5, count: 2 });
-    expect(totalsFor(list, '2026-10-28')).toEqual({ kcal: 150, protein: 12, count: 1 });
-    expect(totalsFor(list, '2026-10-27')).toEqual({ kcal: 0, protein: 0, count: 0 });
+    expect(totalsFor(list, '2026-10-29')).toEqual({ kcal: 800, protein: 44.5, carbs: 0, fat: 0, count: 2 });
+    expect(totalsFor(list, '2026-10-28')).toEqual({ kcal: 150, protein: 12, carbs: 0, fat: 0, count: 1 });
+    expect(totalsFor(list, '2026-10-27')).toEqual({ kcal: 0, protein: 0, carbs: 0, fat: 0, count: 0 });
     expect(entriesOn(list, '2026-10-28')).toHaveLength(1);
   });
   it('shifts across month and year ends', () => {
@@ -21,6 +21,31 @@ describe('totals and days', () => {
     const full = Array.from({ length: 20 }, (_, i) => e(`x${i}`, '2026-10-29', 'Snack', 100, 1));
     expect(roomOn(full, '2026-10-29')).toBe(false);
     expect(roomOn(full, '2026-10-28')).toBe(true);
+  });
+});
+
+describe('carbs and fat', () => {
+  const l = [e('a', '2026-10-29', 'Rice', 200, 4, undefined, [44.5, 0.5]), e('b', '2026-10-29', 'Toast', 90, 3), e('c', '2026-10-29', 'Egg', 70, 6, undefined, [0.5, 5])];
+  it('adds up what was entered and counts the rest as 0', () => {
+    expect(totalsFor(l, '2026-10-29')).toMatchObject({ carbs: 45, fat: 5.5 });
+  });
+  it('says when an entry of the day has no carbs or fat', () => {
+    expect(missingCarbsFat(l, '2026-10-29')).toBe(true);
+    expect(missingCarbsFat([l[0]!, l[2]!], '2026-10-29')).toBe(false);
+    expect(missingCarbsFat(l, '2026-10-28')).toBe(false);
+  });
+  it('words an entry, with carbs and fat only when entered', () => {
+    expect(entryText({ kcal: 1520, p: 42 })).toBe('1,520 kcal · 42 g protein');
+    expect(entryText({ kcal: 520, p: 42, c: 60, f: 12 })).toBe('520 kcal · 42 g protein · 60 g carbs · 12 g fat');
+    expect(entryText({ kcal: 520, p: 42, f: 0 })).toBe('520 kcal · 42 g protein · 0 g fat');
+  });
+  it('quick-add recents keep carbs and fat', () => {
+    expect(recentQuick(l)[1]).toEqual({ n: 'Toast', kcal: 90, p: 3 });
+    expect(recentQuick(l)[2]).toEqual({ n: 'Rice', kcal: 200, p: 4, c: 44.5, f: 0.5 });
+  });
+  it('a recipe serving brings its carbs and fat scaled', () => {
+    expect(servingNumbers({ kcal: 600, p: 40, c: 51, f: 11 }, 1.5)).toEqual({ kcal: 900, p: 60, c: 76.5, f: 16.5 });
+    expect(servingNumbers({ kcal: 600, p: 40 }, 2)).toEqual({ kcal: 1200, p: 80 });
   });
 });
 

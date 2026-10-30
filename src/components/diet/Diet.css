@@ -1,21 +1,21 @@
 @layer base, components;
 @layer components {
 /* Diet (ADR 086): targets, the day stepper, the meters and the list. Plain flat rows like Recipes; every tap target is 44px tall. */
+.dt {
+  margin-bottom: var(--sp-16);
+}
 .dt .btn {
   min-height: 44px;
 }
+.dt-nums {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-16);
+  padding: 0;
+}
 .dt input {
   min-height: 44px;
-}
-.dt-nums {
-  margin: var(--sp-6) 0;
-}
-.dt-day {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-8);
-  margin: var(--sp-12) 0;
 }
 .dt-meter {
   display: grid;

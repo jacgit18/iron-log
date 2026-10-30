@@ -310,13 +310,13 @@ export type RecipeCategory = 'protein' | 'sides' | 'sauces' | 'seasonings' | 'dr
 export interface RecipeIngredient { n: string; amt?: string; home?: string; sub?: string; skip?: true }
 /** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
  *  after copying it (only on a recipe with a `from`). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number }
 
 /* ---------- Diet (ADR 086) ---------- */
-/** Daily targets you typed: calories and protein in grams. */
-export interface DietCfg { kcal?: number; protein?: number }
-/** One thing you ate on one day (`d`, local date): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one. */
-export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; from?: string }
+/** Daily targets you typed: calories, and protein, carbs and fat in grams. */
+export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number }
+/** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one. */
+export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */
