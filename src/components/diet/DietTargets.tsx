@@ -90,7 +90,7 @@ function PaceRow({ typed, rec, hasDate }: { typed: DietCfg | undefined; rec: Rec
   const pick = (p: DietPace | 'date') => {
     setErr('');
     if (p === 'date') st.setDietPace(null);
-    else if (p === 'custom') { const r = rec.plan!.rate > 0 ? rec.plan!.rate : 0.5; setText(String(r)); st.setDietPace('custom', r); }
+    else if (p === 'custom') { const r = rec.plan!.rate > 0 ? Math.max(0.1, rec.plan!.rate) : 0.5; setText(String(r)); st.setDietPace('custom', r); }
     else st.setDietPace(p);
   };
   const saveRate = () => {
