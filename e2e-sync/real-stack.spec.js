@@ -25,6 +25,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
 
   // Edit one in the exercise sheet (it becomes a session logged by hand), and delete the other.
   await page.locator('#tab-progress').click();
+  await page.getByRole('button', { name: 'Exercise charts' }).click();
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   const rows = page.locator('table.hist tbody tr');
   await expect(rows).toHaveCount(2);
@@ -44,6 +45,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
   await page.reload(); // the app reopens on the tab it was on
   await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await page.locator('#tab-progress').click();
+  await page.getByRole('button', { name: 'Exercise charts' }).click();
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(page.locator('table.hist tbody tr')).toHaveCount(1);
   await expect(page.locator('table.hist')).toContainText('300 lb');
@@ -52,6 +54,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
   const b = await newPhone(browser, user);
   const second = await b.open();
   await second.locator('#tab-progress').click();
+  await second.getByRole('button', { name: 'Exercise charts' }).click();
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist tbody tr')).toHaveCount(1);
   await expect(second.locator('table.hist')).toContainText('300 lb');
@@ -186,6 +189,7 @@ test('data from before accounts is uploaded once, all of it, and a second phone 
 
   // The phone shows what it uploaded, and the old copy is still on the device.
   await page.locator('#tab-progress').click();
+  await page.getByRole('button', { name: 'Exercise charts' }).click();
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(page.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(2);
   expect(await page.evaluate(() => localStorage.getItem('ironlog:logs/hack'))).toContain('"w":210');
@@ -197,6 +201,7 @@ test('data from before accounts is uploaded once, all of it, and a second phone 
   const b = await newPhone(browser, user);
   const second = await b.open({ blank: true }); // the upload has no program, so the board is blank (ADR 021); the history is there
   await second.locator('#tab-progress').click();
+  await second.getByRole('button', { name: 'Exercise charts' }).click();
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(2);
   expect(await server.counts(user)).toEqual({ entries: 2, body: 1, weeks: 1 });
@@ -253,6 +258,7 @@ test('an export file from another copy of the app is uploaded into an empty acco
   const b = await newPhone(browser, user);
   const second = await b.open({ blank: true }); // the upload has no program, so the board is blank (ADR 021); the history is there
   await second.locator('#tab-progress').click();
+  await second.getByRole('button', { name: 'Exercise charts' }).click();
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(1);
   await a.close();
