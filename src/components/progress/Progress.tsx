@@ -1,6 +1,8 @@
 import type { PhaseKey } from '../../types.ts';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import { bwSorted } from '../../lib/body.js';
+import Icon from '../Icon.jsx';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { weekStartOf, ymd, parseDate, addDays, fmtShort } from '../../shared/dates.js';
@@ -13,9 +15,11 @@ import Trends from './Trends.jsx';
 import Muscles from '../muscles/Muscles.jsx';
 import LineChart from '../LineChart.js';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
+import { ExerciseRows, GoalRows, MuscleChip } from './MuscleLists.jsx';
+import './Hub.css';
 import './Progress.css';
 
-function History() {
+function History({ weeks: maxWeeks = 12, more }: { weeks?: number; more?: () => void }) {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
   const weekHist = useAppStore(s => s.weekHist); const loading = useAppStore(s => s.historyLoading);
   const week = useAppStore(s => s.week); const wk = useAppStore(s => s.weekKey());
@@ -26,7 +30,7 @@ function History() {
   const thisSun = ymd(weekStartOf(today));
   const active = Object.keys(weeks).filter(k => WEEK_RE.test(k) && k <= thisSun && weekSummary(cfg, programs, k, weeks[k]).ex > 0).sort();
   const keys = [];
-  if (active.length) { let d = parseDate(thisSun); const first = parseDate(active[0]); while (d >= first && keys.length < 12) { keys.push(ymd(d)); d = addDays(d, -7); } }
+  if (active.length) { let d = parseDate(thisSun); const first = parseDate(active[0]); while (d >= first && keys.length < maxWeeks) { keys.push(ymd(d)); d = addDays(d, -7); } }
   else keys.push(thisSun);
   const rows = keys.map(k => weekSummary(cfg, programs, k, weeks[k] || { done: {}, moved: {} }));
   const past = rows.filter(r => r.key !== thisSun);
@@ -52,6 +56,7 @@ function History() {
           </div>
         ))}
       </div>
+      {more && <button type="button" className="btn sm" onClick={more}>All 12 weeks</button>}
       <p className="note" aria-hidden="true"><i className="cleg c2" /> complete <i className="cleg c1" /> partly done <i className="cleg c0" /> not started</p>
     </section>
   );
@@ -102,29 +107,49 @@ function ProgressMain() {
   const loadHistory = useAppStore(s => s.loadHistory);
   const storeMode = useAppStore(s => s.storeMode); // history waits until the data source is known
   useEffect(() => { if (!weekHist && !loading && storeMode !== 'loading') loadHistory(); }, [weekHist, loading, storeMode, loadHistory]);
+  type Page = 'goals' | 'hist' | 'freq' | 'lifts' | 'trends' | 'body' | 'muscles';
+  const [page, setPage] = useState<Page | null>(null);
+  const body = useAppStore(s => s.body);
+  const bw = bwSorted(body).at(-1) ?? null;
+  // A muscle picked on the map filters the lists below it for this visit only.
+  useEffect(() => () => useAppStore.getState().selectMuscle(null), []);
+  useEffect(() => { window.scrollTo(0, 0); }, [page]); // a sub-page opens at its top, and Back returns to the top of the hub
+  if (page) return (
+    <>
+      <div className="hubback"><button type="button" className="btn sm" onClick={() => setPage(null)}><Icon name="chevron-left" /> Progress</button></div>
+      {page === 'goals' && <GoalsPanel />}
+      {page === 'hist' && <History />}
+      {page === 'freq' && <FreqGoals />}
+      {page === 'lifts' && <LiftList />}
+      {page === 'trends' && <Trends part="trends" />}
+      {page === 'body' && <Trends part="body" />}
+      {page === 'muscles' && <Muscles part="details" />}
+    </>
+  );
+  const tile = (k: Page, t: string, note: string) => (
+    <button type="button" className="hubtile" onClick={() => setPage(k)}>
+      <span className="ht"><b>{t}</b><span className="note">{note}</span></span><span className="chev"><Icon name="chevron-right" /></span>
+    </button>
+  );
   return (
     <>
       <Trends />
-      <History />
-      <FreqGoals />
-      <GoalsPanel />
-      <LiftList />
+      <History weeks={6} more={() => setPage('hist')} />
+      <Muscles part="map" />
+      <MuscleChip />
+      <GoalRows onAll={() => setPage('goals')} />
+      <ExerciseRows onAll={() => setPage('lifts')} />
+      <div className="hubtiles">
+        {tile('freq', 'Frequency goals', 'Times per week for each exercise')}
+        {tile('trends', 'Training trends', 'Sets, volume, bests · all lifts together')}
+        {tile('body', 'Body weight', bw ? `${bw.w} lb · week of ${fmtShort(parseDate(bw.wk))}` : 'Log your weight')}
+        {tile('muscles', 'Muscle details', 'Sets by muscle, tags to fix')}
+      </div>
     </>
   );
 }
 
-// Progress, with the muscle map one switch away.
+// One page: summary, recent weeks, then a tile for each section.
 export default function Progress() {
-  const view = useAppStore(s => s.progView); const setProgView = useAppStore(s => s.setProgView);
-  return (
-    <>
-      <div className="edtop">
-        <div className="seg" role="group" aria-label="Progress section">
-          <button type="button" id="prog-trends" className={view === 'trends' ? 'on' : ''} aria-pressed={view === 'trends'} onClick={() => setProgView('trends')}>Progress</button>
-          <button type="button" id="prog-muscles" className={view === 'muscles' ? 'on' : ''} aria-pressed={view === 'muscles'} onClick={() => setProgView('muscles')}>Muscles</button>
-        </div>
-      </div>
-      {view === 'muscles' ? <Muscles /> : <ProgressMain />}
-    </>
-  );
+  return <ProgressMain />;
 }

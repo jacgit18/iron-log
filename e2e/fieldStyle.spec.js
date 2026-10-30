@@ -43,7 +43,7 @@ test('Groceries: the add dock, the store form and the list fields are styled', a
 
 for (const [name, clicks, min] of [
   ['Daily > Nutrition', ['#tab-daily', '#daily-supplements'], 2],
-  ['Progress', ['#tab-progress'], 1],
+  ['Progress > Frequency goals', ['#tab-progress', 'button.hubtile:has-text("Frequency goals")'], 1],
   ['Program', ['#tab-program'], 2],
 ]) {
   test(`${name}: every text field, number field and select is styled`, async ({ page }) => {

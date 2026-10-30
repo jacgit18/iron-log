@@ -99,7 +99,11 @@ function Ranking({ vol, onPick }: { vol: Volume; onPick: (m: MuscleKey) => void 
   );
 }
 
-export default function Muscles() {
+// `part` 'map': the body, legend and secondary switch, for a page where a tapped muscle filters other lists.
+// 'details': the ranking, the chosen muscle's exercises and the exercises with no tags.
+export default function Muscles({ part }: { part: 'map' | 'details' }) {
+  const compact = part === 'map';
+  const details = part === 'details';
   const cfg = useAppStore(s => s.cfg);
   const programs = useAppStore(s => s.programs);
   const sel = useAppStore(s => s.bodySel); const withSec = useAppStore(s => s.bodySec);
@@ -127,21 +131,21 @@ export default function Muscles() {
 
   return (
     <>
-      <p className="note">Every exercise in {keys.map(k => progName(cfg, k)).join(' and ')}. Sets are per week, averaged across the programs.</p>
+      {details && <p className="note">Every exercise in {keys.map(k => progName(cfg, k)).join(' and ')}. Sets are per week, averaged across the programs.</p>}
       <RemovedNotice scope="muscles" />
       <div className="bodywrap">
-        <div className="figs">
+        {compact && <div className="figs">
           <Figure shapes={FRONT} label="Front" vol={vol} sel={sel} onPick={pickOnBody} />
           <Figure shapes={BACK} label="Back" vol={vol} sel={sel} onPick={pickOnBody} />
-        </div>
+        </div>}
         <div className="bodyside" ref={side}>
-          <div className="legend">
+          {compact && <div className="legend">
             <span><i className="sw l0" />Not trained</span><span><i className="sw l1" />1–4 sets</span><span><i className="sw l2" />5–9</span>
             <span><i className="sw l3" />10–20</span><span><i className="sw l4" />Over 20</span><span className="note">per week</span>
-          </div>
-          <label className="inline"><input type="checkbox" id="body-sec" checked={withSec} onChange={e => setBodySec(e.target.checked)} /> Count secondary work (as half a set)</label>
-          {sel ? <MuscleDetail m={sel} v={vol[sel]} keys={keys} withSec={withSec} /> : <Ranking vol={vol} onPick={selectMuscle} />}
-          {untagged.length > 0 && (
+          </div>}
+          {compact && <label className="inline"><input type="checkbox" id="body-sec" checked={withSec} onChange={e => setBodySec(e.target.checked)} /> Count secondary work (as half a set)</label>}
+          {details && (sel ? <MuscleDetail m={sel} v={vol[sel]} keys={keys} withSec={withSec} /> : <Ranking vol={vol} onPick={selectMuscle} />)}
+          {details && untagged.length > 0 && (
             <section className="panel">
               <h2>Not mapped yet</h2>
               <p>These exercises have no muscles tagged, so they don't show on the body.</p>
@@ -155,7 +159,7 @@ export default function Muscles() {
               </div>
             </section>
           )}
-          <p className="note">Muscle tags are a best guess for each exercise. Tap Edit on any exercise to correct them.</p>
+          {details && <p className="note">Muscle tags are a best guess for each exercise. Tap Edit on any exercise to correct them.</p>}
         </div>
       </div>
     </>
