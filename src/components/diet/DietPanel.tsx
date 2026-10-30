@@ -4,6 +4,7 @@ import { fmtDayDate, ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import DietLog from './DietLog.js';
+import DietPlan from './DietPlan.js';
 import DietTargets from './DietTargets.js';
 import './Diet.css';
 
@@ -24,6 +25,7 @@ export default function DietPanel({ day }: { day: string }) {
     <section className="panel suppanel dt" aria-labelledby="diet-h">
       <h2 id="diet-h">Diet</h2>
       <DietTargets typed={cfg.diet} rec={rec} goalLb={goalLb} hasDate={weeksLeft !== null && weeksLeft > 0} />
+      <DietPlan targets={t} />
       <h3>Food eaten · {day === today ? 'Today' : fmtDayDate(day)}</h3>
       <DietLog day={day} targets={t} />
     </section>
