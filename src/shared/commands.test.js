@@ -278,7 +278,7 @@ describe('validateSaveListItem', () => {
     }
   });
   it('caps the grocery lists at the app\'s own limits', () => {
-    expect(LIST_CAPS).toEqual({ grocery_group: 20, grocery_item: 500, recipe: 300, grocery_store: 60 });
+    expect(LIST_CAPS).toEqual({ grocery_group: 20, grocery_item: 500, recipe: 300, grocery_store: 60, diet_entry: 8000 });
   });
 });
 

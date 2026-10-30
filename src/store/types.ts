@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -287,6 +287,16 @@ export interface RemovedSlice {
   dismissRemoved(scope?: string): void;
 }
 
+/** Your food log and typed targets (ADR 086): entries are saved as the document diet/main, the targets as cfg.diet. */
+export interface DietSlice {
+  diet: DietEntry[];
+  saveDiet(): void;
+  addDietEntry(d: { d: string; n: string; kcal: number; p: number; from?: string }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id
+  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number }): string | null; // an error text, or null when saved
+  removeDietEntry(id: string, undoNotice?: boolean): void; // Undo is offered (noteRemoved 'diet') unless undoNotice is false
+  setDietTarget(key: 'kcal' | 'protein', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
+}
+
 /** Your recipes (ADR 084): saved as the document recipes/main, like the other lists. */
 export interface RecipesSlice {
   recipes: Recipe[];
@@ -496,6 +506,6 @@ export interface BackupSlice {
   restoreServerBackup(date: string): Promise<void>;
 }
 
-export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice & RecipesSlice;
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice & RecipesSlice & DietSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];
