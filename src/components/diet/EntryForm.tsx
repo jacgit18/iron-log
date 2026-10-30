@@ -9,14 +9,15 @@ const opt = (t: string) => (t.trim() === '' ? null : Number(t));
 const str = (n: number | undefined) => (n !== undefined ? String(n) : '');
 
 // One food: a name, calories, protein and optional carbs and fat. Used to add (quick add) and to edit an entry. `onSubmit` returns an error text, or null when it was saved.
-export default function EntryForm({ idp, initial, submitLabel, onSubmit, onCancel }: { idp: string; initial?: { n: string; kcal: number; p: number; c?: number; f?: number }; submitLabel: string; onSubmit: (v: EntryValues) => string | null; onCancel?: () => void }) {
-  const [n, setN] = useState(initial?.n ?? '');
-  const [kcal, setKcal] = useState(str(initial?.kcal));
-  const [p, setP] = useState(str(initial?.p));
-  const [c, setC] = useState(str(initial?.c));
-  const [f, setF] = useState(str(initial?.f));
+export default function EntryForm({ idp, initial, start, submitLabel, onSubmit, onCancel }: { idp: string; initial?: { n: string; kcal: number; p: number; c?: number; f?: number }; /** Numbers to begin with in an add form (a food picked from the search); the caller changes `key` to apply a new one. */ start?: { n: string; kcal: number; p: number; c?: number; f?: number }; submitLabel: string; onSubmit: (v: EntryValues) => string | null; onCancel?: () => void }) {
+  const from = initial ?? start;
+  const [n, setN] = useState(from?.n ?? '');
+  const [kcal, setKcal] = useState(str(from?.kcal));
+  const [p, setP] = useState(str(from?.p));
+  const [c, setC] = useState(str(from?.c));
+  const [f, setF] = useState(str(from?.f));
   const [err, setErr] = useState('');
-  const [typedKcal, setTypedKcal] = useState(initial !== undefined); // calories you typed (or saved) are never overwritten by the macros
+  const [typedKcal, setTypedKcal] = useState(from !== undefined); // calories you typed, saved or picked from the search are never overwritten by the macros
   // Protein, carbs and fat all filled in: calories follow (4 4 9), until calories were typed by hand.
   const macro = (set: (v: string) => void, which: 'p' | 'c' | 'f') => (v: string) => {
     set(v);

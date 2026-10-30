@@ -156,6 +156,17 @@
   gap: var(--sp-8);
   width: 100%;
 }
+/* Find a food (USDA search): the pick step keeps the grams box and its buttons 44px. */
+.dt-lookup {
+  margin: var(--sp-8) 0;
+}
+.dt-lookup .btn,
+.dt-lookup input {
+  min-height: 44px;
+}
+.dt-lookuppick {
+  margin: var(--sp-8) 0;
+}
 /* Copy from a day: the checklist keeps each row a 44px target. */
 .dt-copy {
   margin: var(--sp-8) 0;
