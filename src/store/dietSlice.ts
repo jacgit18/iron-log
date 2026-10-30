@@ -1,5 +1,7 @@
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
 import { renameMeal, saveMeal } from '../lib/dietMeals.js';
+import { addItem, recipeIdsFor, removeItem, setPortion, type Plan } from '../lib/dietPlan.js';
+import { monthKey } from '../lib/grocery.js';
 import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 import type { DietEntry, SavedMeal } from '../types.ts';
@@ -22,6 +24,15 @@ const putMeals = (get: StoreGet, meals: SavedMeal[]) => get().mutateCfg(c => {
   const next = { ...(c.diet || {}) };
   if (meals.length) next.meals = meals; else delete next.meals;
   const clean = normDietCfg(next);
+  if (clean) c.diet = clean; else delete c.diet;
+});
+
+// The plan lives in cfg.diet.plan (brief diet-meal-planner), keyed by date; every write goes back through normDietCfg with today, which drops earlier days.
+const planOf = (get: StoreGet): Plan => get().cfg.diet?.plan ?? {};
+const putPlan = (get: StoreGet, plan: Plan) => get().mutateCfg(c => {
+  const next = { ...(c.diet || {}) };
+  if (Object.keys(plan).length) next.plan = plan; else delete next.plan;
+  const clean = normDietCfg(next, ymd(new Date()));
   if (clean) c.diet = clean; else delete c.diet;
 });
 
@@ -93,6 +104,29 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
       if (get().blocked() || now.some(m => m.id === id || m.n.toLowerCase() === gone.n.toLowerCase())) return false;
       const l = [...now]; l.splice(Math.min(i, l.length), 0, gone); putMeals(get, l); return true;
     });
+  },
+
+  addPlanItem(day, kind, id) {
+    const there = kind === 'r' ? get().recipes.some(r => r.id === id) : mealsOf(get).some(m => m.id === id);
+    if (!there) return kind === 'r' ? 'That recipe is gone.' : 'That meal is gone.';
+    const r = addItem(planOf(get), day, { k: kind, id }, ymd(new Date()));
+    if (r.plan === null) return r.error;
+    putPlan(get, r.plan);
+    return null;
+  },
+
+  setPlanPortion(day, index, portion) {
+    const plan = planOf(get), next = setPortion(plan, day, index, portion);
+    if (next !== plan) putPlan(get, next);
+  },
+
+  removePlanItem(day, index) { putPlan(get, removeItem(planOf(get), day, index)); },
+
+  planToGroceries(days) {
+    const ids = recipeIdsFor(planOf(get), days, get().recipes), month = monthKey(new Date());
+    let added = 0, already = 0, refused: string | null = null;
+    for (const id of ids) { const r = get().addMissingToGrocery(id, month); added += r.added; already += r.already; refused ??= r.refused; }
+    return { added, already, refused, recipes: ids.length };
   },
 
   setDietPace(pace, rate) {

@@ -105,7 +105,44 @@
 }
 .dt-recents .btn,
 .dt-meals .btn,
-.dt-copy .btn {
+.dt-copy .btn,
+.dt-plan .btn {
+  min-height: 44px;
+}
+/* The meal planner: its own week strip, not the shared day-tab rules. */
+.dt-plan {
+  margin: var(--sp-8) 0;
+}
+.dt-weeknav,
+.dt-planshop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.dt-strip {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-8) 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+}
+.dt-strip .btn[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.dt-planlist {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-8) 0;
+}
+.dt-planrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
   min-height: 44px;
 }
 /* Saved meals: Manage turns each button into a row with Rename and Delete. */
