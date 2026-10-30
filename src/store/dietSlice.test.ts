@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { clearStorage } from '../test/browserStubs.js';
 import { MAX_DIET_PER_DAY } from '../shared/diet.js';
+import { ymd } from '../shared/dates.js';
 
 // Your food log and typed targets (ADR 086): added, fixed, removed with Undo, capped per day, and carried through the data file.
 let useAppStore: typeof import('./useAppStore.js').useAppStore;
@@ -32,6 +33,21 @@ describe('addDietEntry', () => {
     for (let i = 0; i < MAX_DIET_PER_DAY; i++) expect(st().addDietEntry(rice).error).toBeNull();
     expect(st().addDietEntry(rice).error).toBe('You can log 20 things a day.');
     expect(st().addDietEntry({ ...rice, d: '2026-10-28' }).error).toBeNull();
+  });
+});
+
+describe('the hour of an entry', () => {
+  it('is stamped on an entry for today and left off one for another day', () => {
+    const today = ymd(new Date());
+    const a = st().addDietEntry({ ...rice, d: today }), b = st().addDietEntry(rice);
+    expect(st().diet.find(e => e.id === a.id)!.t).toBe(new Date().getHours());
+    expect(st().diet.find(e => e.id === b.id)!.t).toBeUndefined();
+  });
+  it('survives an edit', () => {
+    const today = ymd(new Date());
+    const id = st().addDietEntry({ ...rice, d: today }).id!;
+    st().updateDietEntry(id, { kcal: 250 });
+    expect(st().diet[0]!.t).toBe(new Date().getHours());
   });
 });
 

@@ -103,4 +103,31 @@
 .dp-missing .btn {
   min-height: 44px;
 }
+.dt-recents .btn,
+.dt-copy .btn {
+  min-height: 44px;
+}
+/* Copy from a day: the checklist keeps each row a 44px target. */
+.dt-copy {
+  margin: var(--sp-8) 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.dt-copylist {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-8) 0;
+}
+.dt-copyrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+}
+.dt-copyrow input {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
 }

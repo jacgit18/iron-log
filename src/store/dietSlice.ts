@@ -20,9 +20,9 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
   addDietEntry(d) {
     const list = get().diet;
     if (!roomOn(list, d.d)) return { id: null, error: `You can log ${MAX_DIET_PER_DAY} things a day.` };
-    const e = normDietEntry({ ...d, id: newId(list) });
+    const now = new Date(), today = ymd(now);
+    const e = normDietEntry({ ...d, id: newId(list), ...(d.d === today ? { t: now.getHours() } : {}) });
     if (!e) return { id: null, error: BAD };
-    const today = ymd(new Date());
     if (e.d < oldestDay(today)) return { id: null, error: `Entries are kept for ${RETAIN_DAYS} days, so that day is too far back.` };
     set({ diet: pruned([...list, e], today) });
     get().saveDiet();

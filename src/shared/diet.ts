@@ -23,6 +23,9 @@ export const cleanProtein = (v: unknown): number | null => (fin(v) && round1(v) 
 /** Carbs or fat in grams as stored: the same range as protein (0 to 999, one decimal), or null. */
 export const cleanGrams = cleanProtein;
 
+/** The hour of day an entry was added, as stored: a whole number from 0 to 23, or null. */
+export const cleanHour = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 23 ? v : null);
+
 /** One entry, cleaned. Null without an id, a real date, a name, or numbers in range. */
 export function normDietEntry(x: unknown): DietEntry | null {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
@@ -31,7 +34,8 @@ export function normDietEntry(x: unknown): DietEntry | null {
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p);
   if (!id || !n || !validDate(o.d) || kcal === null || p === null) return null;
   const c = o.c === undefined ? null : cleanGrams(o.c), f = o.f === undefined ? null : cleanGrams(o.f); // optional: an unusable one is left out
-  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}) };
+  const t = cleanHour(o.t); // optional too
+  return { id, d: o.d, n, kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(from ? { from } : {}), ...(t !== null ? { t } : {}) };
 }
 
 /** Whether `v` is an entry exactly as the app writes one. */
