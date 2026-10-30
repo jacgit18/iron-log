@@ -38,6 +38,17 @@ describe('recommend: calories from current weight and the goal', () => {
     expect(recommend(undefined, 170)).toEqual({ kind: 'none', reason: 'no-goal' });
     expect(recommend(0, 170)).toEqual({ kind: 'none', reason: 'no-goal' });
   });
+  it('declines a cut to an unsafe goal weight, and says why', () => {
+    expect(recommend(85, 100)).toEqual({ kind: 'none', reason: 'low-goal' }); // under the absolute minimum
+    expect(recommend(110, 180)).toEqual({ kind: 'none', reason: 'low-goal' }); // more than a third off
+    expect(recommend(116, 180)).toEqual({ kind: 'none', reason: 'low-goal' }); // just under 65% of 180
+    expect(recommend(117, 180)).toMatchObject({ kind: 'ok', direction: 'cut' }); // exactly 65%
+    expect(recommend(120, 180)).toMatchObject({ kind: 'ok', direction: 'cut' }); // a third off is still allowed
+    expect(recommend(90, 100)).toMatchObject({ kind: 'ok', direction: 'cut' }); // exactly the minimum
+    expect(recommend(95, 80)).toMatchObject({ kind: 'ok', direction: 'bulk' }); // a gain is never declined
+    expect(targetNote({ kind: 'none', reason: 'low-goal' }, 85)).toMatch(/doctor or dietitian/);
+    expect(targetsFor({ kcal: 2000, protein: 100 }, { kind: 'none', reason: 'low-goal' })).toMatchObject({ kcal: 2000, protein: 100 });
+  });
   it('no weight logged: from the goal weight alone, no direction, no plan', () => {
     expect(recommend(185, null)).toEqual({ kind: 'ok', direction: null, kcal: 2775, protein: 150, plan: null });
   });
@@ -77,7 +88,7 @@ describe('recommend: cutting and the pace you pick', () => {
     expect((cut(250, 220, null, { pace: 'fast' }).plan as { floor?: number }).floor).toBeUndefined(); // a heavy person is nowhere near the floor
   });
   it('a very light person is held at maintenance, not pushed up to the floor', () => {
-    expect(cut(90, 80, null, { pace: 'slow' })).toMatchObject({ kcal: 1350, plan: { change: 0, rate: 0, weeksToGoal: null, floor: 1500 } });
+    expect(cut(95, 91, null, { pace: 'slow' })).toMatchObject({ kcal: 1425, plan: { change: 0, rate: 0, weeksToGoal: null, floor: 1500 } });
   });
   it('a passed goal date uses Steady and says so, for a cut as well', () => {
     expect(cut(180, 165, 0)).toMatchObject({ plan: { rate: 1, datePassed: true } });
@@ -110,8 +121,8 @@ describe('targetNote: cut and pace', () => {
 
 describe('targetNote: a very light person', () => {
   it('says the weight is held, not "minus 0 a day to lose about 0 lb"', () => {
-    const note = targetNote(recommend(80, 90, null, { pace: 'slow' }), 80);
-    expect(note).toContain('About 1,350 calories keeps your weight where it is.');
+    const note = targetNote(recommend(91, 95, null, { pace: 'slow' }), 91);
+    expect(note).toContain('About 1,425 calories keeps your weight where it is.');
     expect(note).not.toMatch(/minus 0|about 0 lb/);
   });
 });
