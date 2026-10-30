@@ -77,6 +77,17 @@ test('with a goal date, By date is the default and a preset overrides it', async
   await expect(diet(page)).not.toContainText('2,450 kcal');
 });
 
+test('an unsafe goal weight gets no recommendation, a note, and a way to change it', async ({ page }) => {
+  await seed(page, { goal: 110, weight: 180 }); // more than a third off
+  await page.reload();
+  await nutrition(page);
+  await expect(diet(page)).toContainText('No target yet');
+  await expect(diet(page)).toContainText('doctor or dietitian');
+  await expect(chip(page, 'Steady')).toHaveCount(0);
+  await diet(page).getByRole('button', { name: 'Change goal weight' }).click();
+  await expect(page.locator('#tab-progress')).toHaveAttribute('aria-selected', 'true');
+});
+
 test('with no goal weight there is a button to set one', async ({ page }) => {
   await nutrition(page);
   await expect(diet(page).getByRole('button', { name: 'Set a goal weight' })).toBeVisible();

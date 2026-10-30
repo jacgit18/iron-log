@@ -74,7 +74,7 @@ const recFor = (rec: Recommendation, key: TargetKey) => (rec.kind === 'ok' ? (ke
 function Missing({ rec }: { rec: Recommendation }) {
   if (rec.kind === 'ok' && rec.direction !== null) return null;
   const toProgress = () => useAppStore.getState().setTab('progress');
-  return <p className="dp-missing"><button type="button" className="btn sm" onClick={toProgress}>{rec.kind === 'none' ? 'Set a goal weight' : 'Log your weight'}</button></p>;
+  return <p className="dp-missing"><button type="button" className="btn sm" onClick={toProgress}>{rec.kind === 'none' ? (rec.reason === 'low-goal' ? 'Change goal weight' : 'Set a goal weight') : 'Log your weight'}</button></p>;
 }
 
 const PRESETS: { pace: Exclude<DietPace, 'custom'>; label: string }[] = [{ pace: 'slow', label: 'Slow' }, { pace: 'steady', label: 'Steady' }, { pace: 'fast', label: 'Fast' }];
