@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_DIET_PER_DAY, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
+import { MAX_DIET_PER_DAY, MAX_PLAN_ITEMS, MAX_MEALS, MAX_MEAL_ITEMS, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
 import { normRecipe } from './recipes.js';
 import { normConfig } from './config.js';
 import { validateSaveListItem } from './commands.js';
@@ -158,5 +158,34 @@ describe('saved meals in cfg.diet', () => {
   it('is undefined when nothing usable is left, and survives normConfig', () => {
     expect(normDietCfg({ meals: [m('a', 'Empty', [])] })).toBeUndefined();
     expect(normConfig({ diet: { meals: [m('a', 'Breakfast')] } }).diet).toEqual({ meals: [m('a', 'Breakfast')] });
+  });
+});
+
+describe('the plan in cfg.diet', () => {
+  const today = '2026-10-30';
+  it('keeps good days and items beside the targets', () => {
+    const plan = { '2026-10-30': [{ k: 'r', id: 'r1', x: 1.5 }, { k: 'm', id: 'm1' }] };
+    expect(normDietCfg({ kcal: 3000, plan })).toEqual({ kcal: 3000, plan });
+    expect(normDietCfg({ plan })).toEqual({ plan });
+  });
+  it('cleans an item: kind, id, and a portion only in half steps from 0.5 to 10 other than 1', () => {
+    const r = normDietCfg({ plan: { '2026-10-30': [{ k: 'r', id: 'a', x: 1 }, { k: 'r', id: 'b', x: 0.25 }, { k: 'r', id: 'c', x: 11 }, { k: 'r', id: 'd', x: 2.5 }, { k: 'm', id: 'e', x: 2 }, { k: 'x', id: 'f' }, { k: 'r', id: '' }, 5, null] } });
+    expect(r!.plan!['2026-10-30']).toEqual([{ k: 'r', id: 'a' }, { k: 'r', id: 'b' }, { k: 'r', id: 'c' }, { k: 'r', id: 'd', x: 2.5 }, { k: 'm', id: 'e' }]);
+  });
+  it('drops bad dates, empty days, repeats and items past the cap', () => {
+    const many = Array.from({ length: MAX_PLAN_ITEMS + 3 }, (_, i) => ({ k: 'r', id: `r${i}` }));
+    const r = normDietCfg({ plan: { 'nope': [{ k: 'r', id: 'a' }], '2026-13-45': [{ k: 'r', id: 'a' }], '2026-10-30': many, '2026-10-31': [], '2026-11-01': [{ k: 'r', id: 'a' }, { k: 'r', id: 'a' }] } });
+    expect(Object.keys(r!.plan!)).toEqual(['2026-10-30', '2026-11-01']);
+    expect(r!.plan!['2026-10-30']).toHaveLength(MAX_PLAN_ITEMS);
+    expect(r!.plan!['2026-11-01']).toEqual([{ k: 'r', id: 'a' }]);
+  });
+  it('applies the window only when given today', () => {
+    const plan = { '2026-10-29': [{ k: 'r', id: 'a' }], '2026-10-30': [{ k: 'r', id: 'a' }], '2026-11-12': [{ k: 'r', id: 'a' }], '2026-11-13': [{ k: 'r', id: 'a' }] };
+    expect(Object.keys(normDietCfg({ plan })!.plan!)).toHaveLength(4);
+    expect(Object.keys(normDietCfg({ plan }, today)!.plan!)).toEqual(['2026-10-30', '2026-11-12']);
+  });
+  it('is undefined when nothing usable is left, and survives normConfig', () => {
+    expect(normDietCfg({ plan: { '2026-10-30': [{ k: 'q' }] } })).toBeUndefined();
+    expect(normConfig({ diet: { plan: { '2026-10-30': [{ k: 'm', id: 'm1' }] } } }).diet).toEqual({ plan: { '2026-10-30': [{ k: 'm', id: 'm1' }] } });
   });
 });

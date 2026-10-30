@@ -202,3 +202,50 @@ describe('saved meals', () => {
     expect(st().cfg.diet).toBeUndefined();
   });
 });
+
+describe('the meal planner', () => {
+  const today = ymd(new Date());
+  const tomorrow = ymd(new Date(Date.now() + 864e5));
+  const recipe = (id: string, n: string, extra = {}) => ({ id, n, cat: 'protein' as const, ing: [{ n: 'Chicken' }, { n: 'Rice' }], steps: [], kcal: 600, p: 40, ...extra });
+  beforeEach(() => { useAppStore.setState({ recipes: [recipe('r1', 'Chili'), recipe('r2', 'Stir fry', { ing: [{ n: 'Chicken' }, { n: 'Peppers' }] })] }); });
+  const meal = () => { const a = st().addDietEntry({ ...rice, d: today }).id!; st().saveDietMeal('Breakfast', [a]); return st().cfg.diet!.meals![0]!.id; };
+
+  it('plans a recipe and a saved meal on a day, in order', () => {
+    const m = meal();
+    expect(st().addPlanItem(tomorrow, 'r', 'r1')).toBeNull();
+    expect(st().addPlanItem(tomorrow, 'm', m)).toBeNull();
+    expect(st().cfg.diet!.plan![tomorrow]).toEqual([{ k: 'r', id: 'r1' }, { k: 'm', id: m }]);
+  });
+  it('refuses a recipe or meal that is gone, a repeat and a day outside the window', () => {
+    expect(st().addPlanItem(today, 'r', 'zzz')).toMatch(/gone/);
+    expect(st().addPlanItem(today, 'm', 'zzz')).toMatch(/gone/);
+    st().addPlanItem(today, 'r', 'r1');
+    expect(st().addPlanItem(today, 'r', 'r1')).toMatch(/already/);
+    expect(st().addPlanItem('2020-01-01', 'r', 'r2')).toMatch(/two weeks/);
+  });
+  it('sets a portion and removes an item; removing the last leaves no plan or diet key behind', () => {
+    st().addPlanItem(today, 'r', 'r1');
+    st().setPlanPortion(today, 0, 2);
+    expect(st().cfg.diet!.plan![today]).toEqual([{ k: 'r', id: 'r1', x: 2 }]);
+    st().removePlanItem(today, 0);
+    expect(st().cfg.diet).toBeUndefined();
+  });
+  it('targets, pace and saved meals keep the plan', () => {
+    st().addPlanItem(today, 'r', 'r1');
+    st().setDietTarget('kcal', 3000); st().setDietPace('slow'); meal();
+    expect(st().cfg.diet).toMatchObject({ kcal: 3000, pace: 'slow', plan: { [today]: [{ k: 'r', id: 'r1' }] }, meals: [{ n: 'Breakfast' }] });
+  });
+  it('writing the plan drops days before today', () => {
+    st().mutateCfg(c => { c.diet = { plan: { '2020-01-01': [{ k: 'r', id: 'r1' }] } }; });
+    st().addPlanItem(today, 'r', 'r2');
+    expect(Object.keys(st().cfg.diet!.plan!)).toEqual([today]);
+  });
+  it('sends the missing ingredients of the days to To get, each name once', () => {
+    st().addPlanItem(today, 'r', 'r1'); st().addPlanItem(tomorrow, 'r', 'r2');
+    const r = st().planToGroceries([today, tomorrow]);
+    expect(r.recipes).toBe(2); expect(r.refused).toBeNull();
+    const names = st().grocery.items.map(i => i.n.toLowerCase());
+    expect(names.filter(n => n === 'chicken')).toHaveLength(1);
+    expect(names).toEqual(expect.arrayContaining(['chicken', 'rice', 'peppers']));
+  });
+});
