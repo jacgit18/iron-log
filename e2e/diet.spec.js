@@ -105,6 +105,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('Add calories and protein per serving to log this recipe.')).toBeVisible();
   await page.getByRole('button', { name: 'Add them' }).click();
+  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill('600');
   await page.getByLabel('Protein per serving (g)').fill('40');
   await page.getByLabel('Carbs per serving (g), optional').fill('51');
@@ -122,6 +123,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.click('#daily-recipes');
   await page.getByRole('button', { name: /Chili/ }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill('100');
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await nutrition(page);
