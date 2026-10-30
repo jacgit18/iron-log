@@ -110,10 +110,10 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.getByLabel('Carbs per serving (g), optional').fill('51');
   await page.getByLabel('Fat per serving (g), optional').fill('11');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await expect(page.getByText('Per serving: 600 kcal · 40 g protein · 51 g carbs · 11 g fat')).toBeVisible();
+  await expect(page.getByText('Per portion: 600 kcal · 40 g protein · 51 g carbs · 11 g fat')).toBeVisible();
   await page.getByRole('button', { name: 'More', exact: true }).click(); // 1.5 servings: 900 kcal, 60 g
   await page.getByRole('button', { name: 'Ate this' }).click();
-  await expect(page.getByText('Logged 1.5 servings of Chili to today.')).toBeVisible();
+  await expect(page.getByText('Logged 1.5 portions of Chili to today.')).toBeVisible();
   await nutrition(page);
   await expect(diet(page).locator('.dt-entry')).toContainText('Chili');
   await expect(diet(page).locator('.dt-entry')).toContainText('900 kcal');

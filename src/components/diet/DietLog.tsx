@@ -4,6 +4,7 @@ import type { Targets } from '../../lib/dietTarget.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import EntryForm, { type EntryValues } from './EntryForm.js';
+import FindFood from './FindFood.js';
 
 // One meter: a bar with the numbers in words. Past the target the bar stays full and the text says how far over (no scolding).
 function Meter({ label, unit, have, target }: { label: string; unit: string; have: number; target: number | null }) {
@@ -64,6 +65,7 @@ export default function DietLog({ day, targets }: { day: string; targets: Target
               {recents.map(r => <button key={r.n} type="button" className="btn sm" onClick={() => add({ c: null, f: null, ...r })}>{r.n} · {fmtNum(r.kcal)} kcal</button>)}
             </div>
           )}
+          <FindFood day={day} onAdded={setMsg} />
           <EntryForm idp="dt-add" submitLabel="Add" onSubmit={add} />
         </>
       )}
