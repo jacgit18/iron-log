@@ -53,7 +53,7 @@ test('supplement library has no accessibility violations', async ({ page }) => {
   await page.click('#sched-edit'); // the library shows under the schedule while editing
   await page.click('#suplib-new');
   await page.fill('#supp-name', 'Vitamin D3');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('.exlib .exrow b', { hasText: 'Vitamin D3' })).toBeVisible();
   const { violations } = await scan(page);
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);

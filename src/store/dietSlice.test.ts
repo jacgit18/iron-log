@@ -153,3 +153,52 @@ describe('the data file', () => {
     expect(buildDataFile(st().snapshot(), {})).not.toHaveProperty('diet');
   });
 });
+
+describe('saved meals', () => {
+  const log = (n: string, kcal = 100) => st().addDietEntry({ d: day, n, kcal, p: 5 }).id!;
+  it('saves the ticked entries as a meal under cfg.diet.meals', () => {
+    const a = log('Oats', 350), b = log('Banana', 100); log('Skipped');
+    expect(st().saveDietMeal('Breakfast', [a, b])).toBeNull();
+    expect(st().cfg.diet!.meals!.map(m => [m.n, m.items.map(i => i.n)])).toEqual([['Breakfast', ['Oats', 'Banana']]]);
+  });
+  it('saving the same name again replaces it', () => {
+    const a = log('Oats'), b = log('Toast');
+    st().saveDietMeal('Breakfast', [a]); st().saveDietMeal('breakfast', [b]);
+    expect(st().cfg.diet!.meals).toHaveLength(1);
+    expect(st().cfg.diet!.meals![0]!.items[0]!.n).toBe('Toast');
+  });
+  it('refuses a blank name or nothing ticked and changes nothing', () => {
+    const a = log('Oats');
+    expect(st().saveDietMeal(' ', [a])).toMatch(/name/);
+    expect(st().saveDietMeal('M', [])).toMatch(/Tick/);
+    expect(st().cfg.diet?.meals).toBeUndefined();
+  });
+  it('renames, and refuses a name another meal has', () => {
+    const a = log('Oats'), b = log('Toast');
+    st().saveDietMeal('One', [a]); st().saveDietMeal('Two', [b]);
+    const [one] = st().cfg.diet!.meals!;
+    expect(st().renameDietMeal(one!.id, 'two')).toMatch(/already/);
+    expect(st().renameDietMeal(one!.id, 'First')).toBeNull();
+    expect(st().cfg.diet!.meals!.map(m => m.n)).toEqual(['First', 'Two']);
+  });
+  it('delete offers Undo, which puts the meal back in its place', () => {
+    const a = log('Oats'), b = log('Toast'), c = log('Eggs');
+    st().saveDietMeal('One', [a]); st().saveDietMeal('Two', [b]); st().saveDietMeal('Three', [c]);
+    const two = st().cfg.diet!.meals![1]!;
+    st().removeDietMeal(two.id);
+    expect(st().cfg.diet!.meals!.map(m => m.n)).toEqual(['One', 'Three']);
+    expect(st().removed?.text).toContain('Two');
+    st().undoRemoved();
+    expect(st().cfg.diet!.meals!.map(m => m.n)).toEqual(['One', 'Two', 'Three']);
+  });
+  it('deleting the last meal leaves no diet key behind, and targets and pace keep the meals', () => {
+    const a = log('Oats');
+    st().saveDietMeal('One', [a]);
+    st().setDietTarget('kcal', 3000); st().setDietPace('slow');
+    expect(st().cfg.diet).toMatchObject({ kcal: 3000, pace: 'slow', meals: [{ n: 'One' }] });
+    st().setDietTarget('kcal', null); st().setDietPace(null);
+    expect(st().cfg.diet!.meals).toHaveLength(1);
+    st().removeDietMeal(st().cfg.diet!.meals![0]!.id);
+    expect(st().cfg.diet).toBeUndefined();
+  });
+});
