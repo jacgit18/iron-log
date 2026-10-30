@@ -40,7 +40,7 @@ test('plan a saved meal on a day, see the totals, and Log it only on today', asy
   await expect(diet(page).locator('.dt-entry')).toHaveCount(2);
   await expect(plan(page).getByRole('status')).toContainText('Logged 1 from Breakfast.');
   // tomorrow: plan it, but there is no Log button on a future day
-  await plan(page).getByRole('list', { name: /Plan/ }).getByRole('button').nth(1).click();
+  await plan(page).getByRole('list', { name: 'Plan', exact: true }).getByRole('button').nth(1).click();
   await plan(page).getByRole('button', { name: 'Add to plan' }).click();
   await plan(page).getByRole('button', { name: 'Breakfast (meal)' }).click();
   await expect(plan(page).getByRole('button', { name: 'Log Breakfast' })).toHaveCount(0);
@@ -66,7 +66,7 @@ test('a recipe has a portion stepper, and the plan sends its missing ingredients
 
 test('This week and Next week switch between two strips of seven days', async ({ page }) => {
   await nutrition(page);
-  const strip = plan(page).getByRole('list', { name: 'Plan' });
+  const strip = plan(page).getByRole('list', { name: 'Plan', exact: true });
   await expect(strip.getByRole('listitem')).toHaveCount(7);
   await expect(plan(page).getByRole('button', { name: 'This week' })).toBeDisabled();
   await plan(page).getByRole('button', { name: 'Next week' }).click();
