@@ -326,24 +326,32 @@ function MuscleHeat({ keys }: { keys: string[] }) {
   );
 }
 
-export default function Trends() {
+export type TrendPart = 'summary' | 'trends' | 'body';
+
+// One part of the trends at a time, so Progress can show the summary on the tab and each chart group on its own page.
+export default function Trends({ part = 'summary' }: { part?: TrendPart }) {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs); const body = useAppStore(s => s.body);
   const hasLogs = Object.values(logs).some(l => l && l.length);
-  if (!hasLogs && !body.length) return null;
+  if (part === 'body') return <BodyChart />;
+  if (!hasLogs && !body.length) return part === 'summary' ? null : <p className="note">Log a lift to see charts here.</p>;
   const keys = trendWeeks(logs, 12, 4); const byWeek = setsByWeek(logs, keys);
-  const changes = weightChanges(cfg, logs, keys[Math.max(0, keys.length - 8)]);
-  return (
+  const since = keys[Math.max(0, keys.length - 8)];
+  const changes = weightChanges(cfg, logs, since);
+  if (part === 'trends') return (
     <>
-      <h2 className="sr">Summary</h2>
-      <KpiTiles keys={keys} byWeek={byWeek} changes={changes} />
       <div className="tgrid">
         <SetsChart keys={keys} byWeek={byWeek} />
         <VolumeChart keys={keys} />
         <ChangeChart changes={changes} />
-        <Bests since={keys[Math.max(0, keys.length - 8)]} />
-        <BodyChart />
+        <Bests since={since} />
       </div>
       <MuscleHeat keys={keys} />
+    </>
+  );
+  return (
+    <>
+      <h2 className="sr">Summary</h2>
+      <KpiTiles keys={keys} byWeek={byWeek} changes={changes} />
     </>
   );
 }

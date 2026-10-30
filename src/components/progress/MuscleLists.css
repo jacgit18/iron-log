@@ -1,0 +1,64 @@
+@layer base, components;
+@layer components {
+.chiprow {
+  margin: var(--sp-8) 0;
+}
+.fchip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  padding: var(--sp-4) var(--sp-10);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: var(--fs-sm);
+}
+.fchip button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.mlrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-10);
+  width: 100%;
+  padding: var(--sp-8) 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mln {
+  flex: 1;
+  min-width: 0;
+}
+.mln small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.mlbar {
+  display: block;
+  height: 5px;
+  margin-top: var(--sp-4);
+  border-radius: var(--r-sm);
+  background: var(--line);
+  overflow: hidden;
+}
+.mlbar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.mlbar i.ok {
+  background: var(--accent);
+}
+}

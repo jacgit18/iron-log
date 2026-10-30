@@ -1,0 +1,45 @@
+@layer base, components;
+@layer components {
+.hubtiles {
+  display: grid;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+@media (min-width: 720px) {
+  .hubtiles {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.hubtile {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  width: 100%;
+  padding: var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hubtile .ht {
+  flex: 1;
+  min-width: 0;
+}
+.hubtile b {
+  display: block;
+  font-size: var(--fs-base);
+}
+.hubtile .note {
+  display: block;
+  margin-top: var(--sp-2);
+}
+.hubtile .chev {
+  color: var(--muted);
+}
+.hubback {
+  margin: var(--sp-8) 0;
+}
+}
