@@ -19,14 +19,14 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
     if (!nums) { setErr('Those numbers are out of range.'); return; }
     const r = useAppStore.getState().addDietEntry({ d: ymd(new Date()), n: recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: recipe.id });
     if (r.error || !r.id) { setErr(r.error ?? 'Couldn’t log that.'); return; }
-    setErr(''); setDone({ id: r.id, text: `Logged ${servings === 1 ? '1 serving' : `${servings} servings`} of ${recipe.n} to today.` });
+    setErr(''); setDone({ id: r.id, text: `Logged ${servings === 1 ? '1 portion' : `${servings} portions`} of ${recipe.n} to today.` });
   };
   return (
     <div>
-      <p className="note">Per serving: {entryText({ kcal: recipe.kcal!, p: recipe.p!, c: recipe.c, f: recipe.f })}</p>
+      <p className="note">Per portion: {entryText({ kcal: recipe.kcal!, p: recipe.p!, c: recipe.c, f: recipe.f })}</p>
       <div className="dt-ate">
         <button type="button" className="btn sm" disabled={servings <= 0.5} onClick={() => setServings(s => Math.max(0.5, s - 0.5))}>Less</button>
-        <span role="status">{servings} {servings === 1 ? 'serving' : 'servings'}</span>
+        <span role="status">{servings} {servings === 1 ? 'portion' : 'portions'}</span>
         <button type="button" className="btn sm" disabled={servings >= 10} onClick={() => setServings(s => Math.min(10, s + 0.5))}>More</button>
         <button type="button" className="btn primary" onClick={log}>Ate this</button>
       </div>
