@@ -298,6 +298,10 @@ export interface DietSlice {
   saveDietMeal(name: string, entryIds: string[]): string | null; // makes a saved meal from those entries (replacing one of the same name); an error text, or null when saved
   renameDietMeal(id: string, name: string): string | null; // an error text, or null
   removeDietMeal(id: string): void; // Undo is offered (noteRemoved 'diet')
+  addPlanItem(day: string, kind: 'r' | 'm', id: string): string | null; // puts a recipe or saved meal on a day of the plan; an error text, or null
+  setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
+  removePlanItem(day: string, index: number): void;
+  planToGroceries(days: string[]): { added: number; already: number; refused: string | null; recipes: number }; // the days' recipes' missing ingredients go to To get, each name once
   setDietTarget(key: 'kcal' | 'protein' | 'carbs' | 'fat', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
 }
 
