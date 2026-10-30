@@ -1,6 +1,16 @@
 @layer base, components;
 @layer components {
 /* Weight goals on Progress (GoalsPanel.tsx): one block per exercise, then the picker that sets a goal on any exercise. */
+.goalspanel .goalshead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+.goalspanel .goalshead h2 {
+  margin: 0;
+}
 .goalspanel .goalrow {
   border-top: 1px solid var(--line);
   padding-top: var(--sp-8);

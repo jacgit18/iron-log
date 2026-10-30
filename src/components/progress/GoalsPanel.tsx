@@ -54,17 +54,18 @@ export default function GoalsPanel() {
   const shown = [...new Map([...rows, ...seen.map(id => ({ id, name: exInfo(cfg, id).n }))].map(r => [r.id, r])).values()].sort((a, b) => a.name.localeCompare(b.name));
   return (
     <section className="panel goalspanel" aria-labelledby="goals-h">
-      <h2 id="goals-h">Weight goals</h2>
-      {!rows.length && !shown.length && !adding && <p className="note">The most weight you want to lift on an exercise, in one phase or any. Set one on any exercise, even one you have not logged yet.</p>}
+      <div className="goalshead">
+        <h2 id="goals-h">Weight goals</h2>
+        {!adding && <button type="button" className="btn sm" onClick={() => setAdding(true)}>New exercise goal</button>}
+      </div>
+      {!rows.length && !shown.length && !adding && <p className="note">The most weight you want to lift on an exercise, in one phase or any. Tap New exercise goal to set one on any exercise, even one you have not logged yet.</p>}
       {shown.map(r => (
         <div className="goalrow" key={r.id}>
           {liftGoalsOf(cfg, r.id).length > 0 && <h3>{r.name}</h3>}
           <LiftGoal exId={r.id} bare />
         </div>
       ))}
-      {adding
-        ? <NewGoal onDone={() => setAdding(false)} />
-        : <div className="actions"><button type="button" className="btn sm" onClick={() => setAdding(true)}>{rows.length ? 'Add a goal' : 'Set a goal'}</button></div>}
+      {adding && <NewGoal onDone={() => setAdding(false)} />}
     </section>
   );
 }
