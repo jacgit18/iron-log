@@ -30,6 +30,10 @@ describe('findFoods', () => {
   it('a recipe logged before is offered as the recipe', () => {
     expect(findFoods(entries, recipes, 'chi')).toEqual([{ n: 'Chili', kcal: 610, p: 41, from: 'r1' }]);
   });
+  it('newest day wins even when the list is out of order', () => {
+    const out = [{ ...e('2', 'Rice', 200, 4), d: '2026-10-29' }, { ...e('1', 'Rice', 190, 4), d: '2026-10-27' }];
+    expect(findFoods(out, [], 'rice')).toEqual([{ n: 'Rice', kcal: 200, p: 4 }]);
+  });
   it('limits', () => expect(findFoods(entries, recipes, 'r', 2)).toHaveLength(2));
 });
 

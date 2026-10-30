@@ -12,15 +12,16 @@ export function kcalFromMacros(p: number | null, c: number | null, f: number | n
 
 export interface Food { n: string; kcal: number; p: number; c?: number; f?: number; from?: string }
 
-/** Foods to offer for `query` (case-blind, a name that starts with it first, then one that contains it): what you logged before (one per name, newest first, a recipe you logged counts under its recipe) and your own recipes that have calories and protein. An empty query offers nothing. */
+/** Foods to offer for `query` (case-blind, a name that starts with it first, then one that contains it): what you logged before (one per name, newest day first, a recipe you logged counts under its recipe) and your own recipes that have calories and protein. An empty query offers nothing. */
 export function findFoods(entries: DietEntry[], recipes: Recipe[], query: string, limit = 6): Food[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   const seen = new Set<string>(), all: Food[] = [];
   const add = (x: Food) => { const k = x.n.toLowerCase(); if (!seen.has(k)) { seen.add(k); all.push(x); } };
   recipes.filter(r => r.kcal !== undefined && r.p !== undefined && !r.from?.startsWith('c:')).forEach(r => add({ n: r.n, kcal: r.kcal!, p: r.p!, ...(r.c !== undefined ? { c: r.c } : {}), ...(r.f !== undefined ? { f: r.f } : {}), from: r.id }));
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const e = entries[i]!;
+  const byDay = [...entries].sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)); // a stable sort: the list's own order breaks ties inside one day, and a synced list need not be in log order
+  for (let i = byDay.length - 1; i >= 0; i--) {
+    const e = byDay[i]!;
     if (e.from) continue; // logged from a recipe: the recipe itself is offered
     add({ n: e.n, kcal: e.kcal, p: e.p, ...(e.c !== undefined ? { c: e.c } : {}), ...(e.f !== undefined ? { f: e.f } : {}) });
   }
