@@ -1,4 +1,4 @@
-import type { DietCfg, DietPace } from '../types.ts';
+import type { DietCfg } from '../types.ts';
 import type { TargetKey } from '../shared/diet.js';
 
 /* ---------- Daily targets (ADR 086) ----------
@@ -15,6 +15,8 @@ export const GAIN_RATES = { slow: 0.25, steady: 0.5, fast: 1 } as const;
 export const LOSE_RATES = { slow: 0.5, steady: 1, fast: 1.5 } as const;
 export const MIN_RATE = 0.25, MAX_GAIN_RATE = 1, MAX_LOSE_RATE = 1.5, MAX_LOSE_SHARE = 0.01; // lb a week; a loss is also held to this share of your weight
 export const FLOOR_KCAL = 1500, FLOOR_SHARE = 0.75; // a cut never goes below the higher of FLOOR_KCAL and this share of maintenance
+/** A goal under this many lb, or this share of your weight (more than a third off), gets no cut recommendation: the app has no height or age to judge it, so it declines rather than guess. */
+export const MIN_GOAL_LB = 90, MIN_GOAL_SHARE = 0.65;
 /** Within this many lb of the goal counts as maintaining. */
 export const MAINTAIN_BAND = 2;
 
@@ -25,7 +27,7 @@ export type PaceChoice = Pick<DietCfg, 'pace' | 'rate'>;
  *  `capped`: the pace asked for was above `limit`. `floor`: set when a cut was held at that many calories. `from`: where the pace came from. */
 export interface Plan { maintenance: number; change: number; rate: number; weeksToGoal: number | null; capped: boolean; limit: number; from: 'date' | 'pick' | 'default'; datePassed?: true; floor?: number }
 export type Recommendation =
-  | { kind: 'none'; reason: 'no-goal' }
+  | { kind: 'none'; reason: 'no-goal' | 'low-goal' }
   | { kind: 'ok'; direction: Direction | null; kcal: number; protein: number; plan: Plan | null }; // direction and plan are null when no weight is logged yet
 
 const roundTo = (n: number, step: number) => Math.round(n / step) * step;
@@ -52,6 +54,7 @@ export function recommend(goalLb: number | null | undefined, currentLb: number |
   const maintenance = roundTo(KCAL_PER_LB * cur, 25); // rounded like the target, so the sentence under it matches the number above it
   if (Math.abs(gap) <= MAINTAIN_BAND) return { kind: 'ok', direction: 'maintain', kcal: maintenance, protein, plan: { maintenance, change: 0, rate: 0, weeksToGoal: null, capped: false, limit: 0, from: 'default' } };
   const direction = gap > 0 ? 'bulk' : 'cut';
+  if (direction === 'cut' && (goalLb < MIN_GOAL_LB || goalLb < MIN_GOAL_SHARE * cur)) return { kind: 'none', reason: 'low-goal' };
   const limit = maxRate(direction, cur);
   const presets = direction === 'bulk' ? GAIN_RATES : LOSE_RATES;
   const pace = choice?.pace;
@@ -79,6 +82,7 @@ export function recommend(goalLb: number | null | undefined, currentLb: number |
 
 /** The sentence under the targets: why there is no recommendation, or what the estimate is made of. */
 export function targetNote(rec: Recommendation, goalLb: number | null): string {
+  if (rec.kind === 'none' && rec.reason === 'low-goal') return 'That goal weight is lower than this app can advise a target for, so it shows no recommendation. Talk to a doctor or dietitian about a safe goal, or enter your own numbers.';
   if (rec.kind === 'none') return 'Set a goal weight under Progress to see a recommendation, or enter your own numbers.';
   const lead = 'An estimate to start from, not medical advice.';
   const p = rec.plan;

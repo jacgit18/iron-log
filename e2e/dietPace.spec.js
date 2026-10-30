@@ -55,6 +55,15 @@ test('a cut is held at the calorie floor and says so', async ({ page }) => {
   await expect(diet(page)).toContainText('Calories are held at 1,500');
 });
 
+test('Custom works when the calorie floor holds the pace under the lowest rate you can type', async ({ page }) => {
+  await seed(page, { goal: 95, weight: 101 }); // 1,525 to stay the same, floor 1,500: the held pace is 0.05 lb a week
+  await page.reload();
+  await nutrition(page);
+  await chip(page, 'Custom').click();
+  await expect(chip(page, 'Custom')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#dp-rate')).toHaveValue('0.1');
+});
+
 test('with a goal date, By date is the default and a preset overrides it', async ({ page }) => {
   const by = new Date(Date.now() + 105 * 864e5).toISOString().slice(0, 10); // about 15 weeks away: 15 lb in 15 weeks is 1 lb a week
   await seed(page, { goal: 165, weight: 180, by });
@@ -66,6 +75,17 @@ test('with a goal date, By date is the default and a preset overrides it', async
   await chip(page, 'By date').click();
   await expect(chip(page, 'By date')).toHaveAttribute('aria-pressed', 'true');
   await expect(diet(page)).not.toContainText('2,450 kcal');
+});
+
+test('an unsafe goal weight gets no recommendation, a note, and a way to change it', async ({ page }) => {
+  await seed(page, { goal: 110, weight: 180 }); // more than a third off
+  await page.reload();
+  await nutrition(page);
+  await expect(diet(page)).toContainText('No target yet');
+  await expect(diet(page)).toContainText('doctor or dietitian');
+  await expect(chip(page, 'Steady')).toHaveCount(0);
+  await diet(page).getByRole('button', { name: 'Change goal weight' }).click();
+  await expect(page.locator('#tab-progress')).toHaveAttribute('aria-selected', 'true');
 });
 
 test('with no goal weight there is a button to set one', async ({ page }) => {
