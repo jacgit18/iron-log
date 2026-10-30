@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GAIN_RATES, LOSE_RATES, targetNote, targetsFor, type Recommendation } from '../../lib/dietTarget.js';
 import { fmtNum } from '../../lib/dietLog.js';
-import { rateError, targetError, type TargetKey } from '../../shared/diet.js';
+import { MIN_RATE, rateError, targetError, type TargetKey } from '../../shared/diet.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { DietCfg, DietPace } from '../../types.ts';
 
@@ -83,14 +83,16 @@ const PRESETS: { pace: Exclude<DietPace, 'custom'>; label: string }[] = [{ pace:
 function PaceRow({ typed, rec, hasDate }: { typed: DietCfg | undefined; rec: Recommendation; hasDate: boolean }) {
   const [text, setText] = useState(typed?.rate !== undefined ? String(typed.rate) : '');
   const [err, setErr] = useState('');
+  useEffect(() => { setText(typed?.rate !== undefined ? String(typed.rate) : ''); }, [typed?.rate]); // follow a pace changed elsewhere (sync, import), so leaving the box never saves an old number back
   if (rec.kind !== 'ok' || (rec.direction !== 'bulk' && rec.direction !== 'cut') || !rec.plan) return null;
   const rates = rec.direction === 'bulk' ? GAIN_RATES : LOSE_RATES;
   const chosen: DietPace | 'date' = typed?.pace ?? (hasDate ? 'date' : 'steady');
   const st = useAppStore.getState();
+  // Custom starts from the pace now in force; a floor-held pace can be under the lowest rate you may type, so it is raised to that.
   const pick = (p: DietPace | 'date') => {
     setErr('');
     if (p === 'date') st.setDietPace(null);
-    else if (p === 'custom') { const r = rec.plan!.rate > 0 ? Math.max(0.1, rec.plan!.rate) : 0.5; setText(String(r)); st.setDietPace('custom', r); }
+    else if (p === 'custom') { const r = rec.plan!.rate > 0 ? Math.max(MIN_RATE, rec.plan!.rate) : 0.5; setText(String(r)); st.setDietPace('custom', r); }
     else st.setDietPace(p);
   };
   const saveRate = () => {

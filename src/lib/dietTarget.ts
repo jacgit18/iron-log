@@ -1,4 +1,4 @@
-import type { DietCfg, DietPace } from '../types.ts';
+import type { DietCfg } from '../types.ts';
 import type { TargetKey } from '../shared/diet.js';
 
 /* ---------- Daily targets (ADR 086) ----------
