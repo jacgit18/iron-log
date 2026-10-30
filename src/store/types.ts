@@ -291,10 +291,10 @@ export interface RemovedSlice {
 export interface DietSlice {
   diet: DietEntry[];
   saveDiet(): void;
-  addDietEntry(d: { d: string; n: string; kcal: number; p: number; from?: string }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id
-  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number }): string | null; // an error text, or null when saved
+  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id
+  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null }): string | null; // an error text, or null when saved
   removeDietEntry(id: string, undoNotice?: boolean): void; // Undo is offered (noteRemoved 'diet') unless undoNotice is false
-  setDietTarget(key: 'kcal' | 'protein', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
+  setDietTarget(key: 'kcal' | 'protein' | 'carbs' | 'fat', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
 }
 
 /** Your recipes (ADR 084): saved as the document recipes/main, like the other lists. */
@@ -426,11 +426,9 @@ export interface CoreSlice {
   weekHist: Record<string, Week> | null; // every saved week, loaded on demand for Progress and exports
   historyLoading: boolean;
   dl: Downloads | null | undefined; // undefined = not checked yet, null = unavailable
-  progView: string;
   bodySel: MuscleKey | null;
   bodySec: boolean;
 
-  setProgView(v: string): void;
   selectMuscle(m: MuscleKey | null): void;
   setBodySec(v: boolean): void;
   saveTags(exId: string, tags: MuscleTags): void;

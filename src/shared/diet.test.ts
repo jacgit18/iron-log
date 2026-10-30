@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_DIET_PER_DAY, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
+import { MAX_DIET_PER_DAY, cleanGrams, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
 import { normRecipe } from './recipes.js';
 import { normConfig } from './config.js';
 import { validateSaveListItem } from './commands.js';
@@ -17,6 +17,11 @@ describe('normDietEntry', () => {
     ['not an object', 'rice'],
   ])('refuses %s', (_w, v) => { expect(normDietEntry(v)).toBeNull(); });
   it('allows zero protein', () => { expect(normDietEntry({ ...ok, p: 0 })).toMatchObject({ p: 0 }); });
+  it('keeps optional carbs and fat, one decimal, and leaves an unusable one out (the entry is still good)', () => {
+    expect(normDietEntry({ ...ok, c: 44.26, f: 0 })).toEqual({ ...ok, c: 44.3, f: 0 });
+    expect(normDietEntry({ ...ok, c: -1, f: 'x' })).toEqual(ok);
+    expect(normDietEntry({ ...ok, c: 1000 })).toEqual(ok);
+  });
 });
 
 describe('validDietEntry', () => {
@@ -24,6 +29,8 @@ describe('validDietEntry', () => {
     expect(validDietEntry(ok)).toBe(true);
     expect(validDietEntry({ ...ok, kcal: 200.4 })).toBe(false);
     expect(validDietEntry({ ...ok, extra: 1 })).toBe(false);
+    expect(validDietEntry({ ...ok, c: 40, f: 10 })).toBe(true);
+    expect(validDietEntry({ ...ok, c: 40.26 })).toBe(false);
   });
 });
 
@@ -59,6 +66,8 @@ describe('targetError', () => {
     expect(targetError('kcal', 100)).toBe('Calories must be 500 to 9,999.');
     expect(targetError('protein', 5)).toBe('Protein must be 10 to 999.');
     expect(targetError('protein', NaN)).toMatch(/Protein/);
+    expect(targetError('carbs', 5)).toBe('Carbs must be 10 to 999.');
+    expect(targetError('fat', 80)).toBeNull();
   });
 });
 
@@ -67,6 +76,8 @@ describe('normDietCfg and the config document', () => {
     expect(normDietCfg({ kcal: 3000, protein: 180 })).toEqual({ kcal: 3000, protein: 180 });
     expect(normDietCfg({ kcal: 100, protein: 180 })).toEqual({ protein: 180 });
     expect(normDietCfg({ kcal: 100, protein: 1 })).toBeUndefined();
+    expect(normDietCfg({ kcal: 3000, carbs: 400, fat: 80 })).toEqual({ kcal: 3000, carbs: 400, fat: 80 });
+    expect(normDietCfg({ carbs: 5, fat: 1000 })).toBeUndefined();
     expect(normDietCfg([])).toBeUndefined();
   });
   it('normConfig keeps a good diet key and drops a bad one', () => {
@@ -76,6 +87,12 @@ describe('normDietCfg and the config document', () => {
 });
 
 describe('recipe macros and the list command', () => {
+  it('cleanGrams is the protein range', () => { expect(cleanGrams(12.34)).toBe(12.3); expect(cleanGrams(1000)).toBeNull(); });
+  it('a recipe keeps carbs and fat per serving too', () => {
+    const base = { id: 'r1', n: 'Chili', ing: [{ n: 'beans' }], steps: [] };
+    expect(normRecipe({ ...base, kcal: 600, p: 40, c: 51, f: 11 })).toMatchObject({ c: 51, f: 11 });
+    expect(normRecipe({ ...base, c: -2 })).not.toHaveProperty('c');
+  });
   it('a recipe keeps calories and protein per serving, and drops bad ones', () => {
     const base = { id: 'r1', n: 'Chili', ing: [{ n: 'beans' }], steps: [] };
     expect(normRecipe({ ...base, kcal: 600, p: 40 })).toMatchObject({ kcal: 600, p: 40 });
