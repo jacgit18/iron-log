@@ -105,7 +105,7 @@ export default function LiftGoal({ exId, bare = false }: { exId: string; bare?: 
         : <GoalView key={k} exId={exId} k={k} goal={goal} base={base} entries={L} today={today} onEdit={() => setEditing(k)} />); })}
       {editing === 'new'
         ? <GoalForm exId={exId} taken={taken} defKey={defKey} onDone={done} />
-          : taken.length < GOAL_KEYS.length && !(bare && !goals.length) && <div className="actions"><button type="button" className="btn sm" onClick={() => setEditing('new')}>{goals.length ? 'Add a goal' : 'Set a goal'}</button></div>}
+          : taken.length < GOAL_KEYS.length && !(bare && !goals.length) && <div className="actions"><button type="button" className="btn sm" onClick={() => setEditing('new')}>{goals.length ? 'Add a phase goal' : 'Set a goal'}</button></div>}
     </div>
   );
 }

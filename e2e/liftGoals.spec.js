@@ -10,7 +10,7 @@ test('a goal on an exercise with no log shows in Weight goals, fills in once a s
   await page.goto('/');
   await goals(page);
   await expect(panel(page)).toContainText('even one you have not logged yet');
-  await panel(page).getByRole('button', { name: 'Set a goal' }).click();
+  await panel(page).getByRole('button', { name: 'New exercise goal' }).click();
   await panel(page).getByRole('combobox', { name: 'Exercise' }).fill('Hack Squat');
   await panel(page).getByRole('option', { name: /Hack Squat/ }).first().click();
   await panel(page).getByLabel('Goal (lb)').fill('225');
@@ -39,7 +39,7 @@ test('cancel leaves no goal; a goal already set from the exercise sheet is liste
   });
   await page.goto('/');
   await goals(page);
-  await panel(page).getByRole('button', { name: 'Set a goal' }).click();
+  await panel(page).getByRole('button', { name: 'New exercise goal' }).click();
   await panel(page).getByRole('button', { name: 'Cancel' }).click();
   await expect(panel(page).locator('.goalrow')).toHaveCount(0);
 
@@ -58,7 +58,7 @@ test('cancel leaves no goal; a goal already set from the exercise sheet is liste
 test('the scale switch is off with no body weight logged, and a scaled goal shows the raised target', async ({ page }) => {
   await page.goto('/');
   await goals(page);
-  await panel(page).getByRole('button', { name: 'Set a goal' }).click();
+  await panel(page).getByRole('button', { name: 'New exercise goal' }).click();
   await panel(page).getByRole('combobox', { name: 'Exercise' }).fill('Hack Squat');
   await panel(page).getByRole('option', { name: /Hack Squat/ }).first().click();
   await expect(panel(page).getByLabel('Scale with my body weight')).toBeDisabled();
@@ -71,7 +71,7 @@ test('300 lb set at 120 lb body weight shows 375 lb after a 150 lb weigh-in, and
   });
   await page.goto('/');
   await goals(page);
-  await panel(page).getByRole('button', { name: 'Set a goal' }).click();
+  await panel(page).getByRole('button', { name: 'New exercise goal' }).click();
   await panel(page).getByRole('combobox', { name: 'Exercise' }).fill('Hack Squat');
   await panel(page).getByRole('option', { name: /Hack Squat/ }).first().click();
   await panel(page).getByLabel('Goal (lb)').fill('300');
@@ -108,7 +108,7 @@ test('the multiplier starts at 1.5 for an upper body lift and 2.5 for lower, fil
     await panel(page).getByRole('combobox', { name: 'Exercise' }).fill(name);
     await panel(page).getByRole('option', { name: new RegExp(name) }).first().click();
   };
-  await panel(page).getByRole('button', { name: 'Set a goal' }).click();
+  await panel(page).getByRole('button', { name: 'New exercise goal' }).click();
   await pick('Hack Squat');
   await panel(page).getByLabel('Scale with my body weight').check();
   await expect(panel(page).getByLabel('Multiplier (× body weight)')).toHaveValue('2.5');
@@ -119,7 +119,7 @@ test('the multiplier starts at 1.5 for an upper body lift and 2.5 for lower, fil
   await expect(panel(page).getByLabel('Multiplier (× body weight)')).toHaveValue('2');
   await panel(page).getByRole('button', { name: 'Cancel' }).first().click();
 
-  await panel(page).getByRole('button', { name: 'Set a goal' }).click();
+  await panel(page).getByRole('button', { name: 'New exercise goal' }).click();
   await pick('Lat Pulldown');
   await panel(page).getByLabel('Scale with my body weight').check();
   await expect(panel(page).getByLabel('Multiplier (× body weight)')).toHaveValue('1.5');
