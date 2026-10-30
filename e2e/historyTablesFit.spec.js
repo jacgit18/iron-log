@@ -13,6 +13,8 @@ async function open(page, w, zoom) {
   if (zoom) await page.addStyleTag({ content: 'html{font-size:200%!important}' });
 }
 const sheetFit = page => page.locator('.sheet').evaluate(s => ({ scroll: s.scrollWidth, client: s.clientWidth }));
+const drill = async (page, name) => { await page.getByRole('button', { name }).click(); };
+const back = async page => { await page.locator('.hubback').getByRole('button', { name: 'Progress' }).click(); };
 const pageFit = page => page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, w: innerWidth }));
 
 for (const [w, zoom] of [[320, true], [390, true]]) {
@@ -28,12 +30,21 @@ for (const [w, zoom] of [[320, true], [390, true]]) {
   test(`${where}: Progress does not scroll sideways, the body-weight delete buttons are on screen and the weight-change names are whole`, async ({ page }) => {
     await open(page, w, zoom);
     await page.click('#tab-progress');
+    await expect(page.locator('.kpis .kpi').first()).toBeVisible();
+    const home = await pageFit(page);
+    expect(home.scroll, `page ${home.scroll} wide in ${home.w}`).toBeLessThanOrEqual(home.w);
+    await drill(page, /Body weight/);
     await expect(page.locator('table.bwtab tbody tr').first()).toBeVisible();
     const m = await pageFit(page);
     expect(m.scroll, `page ${m.scroll} wide in ${m.w}`).toBeLessThanOrEqual(m.w);
     const dels = await page.locator('table.bwtab tbody button').evaluateAll(bs => bs.map(b => { const r = b.getBoundingClientRect(); return { right: r.right, h: r.height }; }));
     expect(dels.length).toBeGreaterThan(0);
     for (const d of dels) { expect(d.right).toBeLessThanOrEqual(w); expect(d.h).toBeGreaterThanOrEqual(44); }
+    await back(page);
+    await drill(page, /Training trends/);
+    await expect(page.locator('span.chn').first()).toBeVisible();
+    const t = await pageFit(page);
+    expect(t.scroll, `trends page ${t.scroll} wide in ${t.w}`).toBeLessThanOrEqual(t.w);
     const names = await page.locator('span.chn').evaluateAll(es => es.map(e => ({ n: e.textContent.slice(0, 16), cut: e.scrollWidth > e.clientWidth + 1 })));
     for (const n of names) expect(n.cut, `${n.n} is cut`).toBe(false);
   });
@@ -46,6 +57,7 @@ test('at a normal text size the Log table and the body-weight table stay plain t
   expect((await sheetFit(page)).scroll).toBeLessThanOrEqual(390);
   await page.keyboard.press('Escape');
   await page.click('#tab-progress');
+  await drill(page, /Body weight/);
   expect(await page.locator('table.bwtab').evaluate(t => getComputedStyle(t).display)).toBe('table');
 });
 
@@ -77,6 +89,7 @@ test('at 600px wide the KPI tiles are still two a row, not four', async ({ page 
 test('360px at a normal text size: the heat-map week labels are not cut', async ({ page }) => {
   await open(page, 360, false);
   await page.click('#tab-progress');
+  await drill(page, /Training trends/);
   const labels = page.locator('.heat .hx:not(.alt)');
   await expect(labels.first()).toBeVisible();
   const cut = await labels.evaluateAll(es => es.filter(e => e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow === 'hidden').length);
@@ -86,6 +99,7 @@ test('360px at a normal text size: the heat-map week labels are not cut', async 
 test('320px at 200% text: a weight-change bar does not sit under its value', async ({ page }) => {
   await open(page, 320, true);
   await page.click('#tab-progress');
+  await drill(page, /Training trends/);
   await expect(page.locator('.chrow').first()).toBeVisible();
   const rows = await page.locator('.chrow').evaluateAll(es => es.map(e => { const b = e.querySelector('.chbar').getBoundingClientRect(), v = e.querySelector('.chv').getBoundingClientRect(); return { overlap: b.bottom > v.top + 1 && b.top < v.bottom - 1 && b.right > v.left && b.left < v.right }; }));
   expect(rows.length).toBeGreaterThan(0);

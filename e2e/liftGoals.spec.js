@@ -3,10 +3,12 @@ import { test, expect } from './fixtures.js';
 // Progress, Weight goals: a goal on any exercise, including one with no logged set (the status maths is tested in src/lib/liftGoal.test.js).
 // These cover the wiring: the picker, the goal form, the row, a later log, Remove with Undo, and a goal set from the exercise sheet.
 const panel = page => page.locator('.goalspanel');
+// Weight goals rows are on the Progress page; the full goals page (the old panel) opens from Manage goals.
+const goals = async page => { await page.click('#tab-progress'); await page.getByRole('button', { name: 'Manage goals' }).click(); };
 
 test('a goal on an exercise with no log shows in Weight goals, fills in once a set is logged, and Remove has Undo', async ({ page }) => {
   await page.goto('/');
-  await page.click('#tab-progress');
+  await goals(page);
   await expect(panel(page)).toContainText('even one you have not logged yet');
   await panel(page).getByRole('button', { name: 'Set a goal' }).click();
   await panel(page).getByRole('combobox', { name: 'Exercise' }).fill('Hack Squat');
@@ -21,7 +23,7 @@ test('a goal on an exercise with no log shows in Weight goals, fills in once a s
 
   await page.evaluate(() => localStorage.setItem('ironlog:logs/hack', JSON.stringify({ schema: 1, entries: [{ id: 's1', d: '2026-09-21', w: 135, s: 3, r: 8, ph: 'hyp' }] })));
   await page.reload();
-  await page.click('#tab-progress');
+  await goals(page);
   await expect(panel(page).locator('.goalrow')).toContainText('135 lb');
 
   await panel(page).getByRole('button', { name: 'Any phase goal', exact: true }).dblclick();
@@ -36,23 +38,26 @@ test('cancel leaves no goal; a goal already set from the exercise sheet is liste
     localStorage.setItem('ironlog:logs/hack', JSON.stringify({ schema: 1, entries: [{ id: 's1', d: '2026-09-21', w: 135, s: 3, r: 8, ph: 'hyp' }] }));
   });
   await page.goto('/');
-  await page.click('#tab-progress');
+  await goals(page);
   await panel(page).getByRole('button', { name: 'Set a goal' }).click();
   await panel(page).getByRole('button', { name: 'Cancel' }).click();
   await expect(panel(page).locator('.goalrow')).toHaveCount(0);
 
-  await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
+  await page.locator('.hubback').getByRole('button', { name: 'Progress' }).click();
+  await page.locator('.mlrow', { hasText: 'Hack Squat' }).click();
   await page.getByRole('dialog').locator('.bwgoal').getByRole('button', { name: 'Set a goal' }).click();
   await page.getByRole('dialog').locator('.bwgoal').getByLabel('Goal (lb)').fill('315');
   await page.getByRole('dialog').locator('.bwgoal').getByRole('button', { name: 'Save goal' }).click();
   await page.keyboard.press('Escape');
+  await expect(page.locator('.mlists .mlrow', { hasText: '315 lb' })).toBeVisible();
+  await page.getByRole('button', { name: 'Manage goals' }).click();
   await expect(panel(page).locator('.goalrow')).toContainText('315 lb');
 });
 
 // A goal that scales with body weight (the maths is tested in src/lib/liftGoal.test.js): the switch, the 375 lb target, and the disabled switch with no body weight.
 test('the scale switch is off with no body weight logged, and a scaled goal shows the raised target', async ({ page }) => {
   await page.goto('/');
-  await page.click('#tab-progress');
+  await goals(page);
   await panel(page).getByRole('button', { name: 'Set a goal' }).click();
   await panel(page).getByRole('combobox', { name: 'Exercise' }).fill('Hack Squat');
   await panel(page).getByRole('option', { name: /Hack Squat/ }).first().click();
@@ -65,7 +70,7 @@ test('300 lb set at 120 lb body weight shows 375 lb after a 150 lb weigh-in, and
     if (!localStorage.getItem('ironlog:body/main')) localStorage.setItem('ironlog:body/main', JSON.stringify({ entries: [{ wk: '2026-09-06', d: '2026-09-07', w: 120 }] })); // only on the first load
   });
   await page.goto('/');
-  await page.click('#tab-progress');
+  await goals(page);
   await panel(page).getByRole('button', { name: 'Set a goal' }).click();
   await panel(page).getByRole('combobox', { name: 'Exercise' }).fill('Hack Squat');
   await panel(page).getByRole('option', { name: /Hack Squat/ }).first().click();
@@ -78,10 +83,10 @@ test('300 lb set at 120 lb body weight shows 375 lb after a 150 lb weigh-in, and
 
   const setBody = ws => page.evaluate(w => localStorage.setItem('ironlog:body/main', JSON.stringify({ entries: w.map(([wk, d, x]) => ({ wk, d, w: x })) })), ws);
   await setBody([['2026-09-06', '2026-09-07', 120], ['2026-09-13', '2026-09-14', 150]]);
-  await page.reload(); await page.click('#tab-progress');
+  await page.reload(); await goals(page);
   await expect(panel(page).locator('.goalrow')).toContainText('Any phase: 375 lb');
   await setBody([['2026-09-06', '2026-09-07', 120], ['2026-09-13', '2026-09-14', 150], ['2026-09-20', '2026-09-21', 135]]);
-  await page.reload(); await page.click('#tab-progress');
+  await page.reload(); await goals(page);
   await expect(panel(page).locator('.goalrow')).toContainText('Any phase: 375 lb');
 
   // Unticking the switch keeps the 375 lb shown, not the 300 lb base.
@@ -98,7 +103,7 @@ test('the multiplier starts at 1.5 for an upper body lift and 2.5 for lower, fil
     if (!localStorage.getItem('ironlog:body/main')) localStorage.setItem('ironlog:body/main', JSON.stringify({ entries: [{ wk: '2026-09-06', d: '2026-09-07', w: 120 }] }));
   });
   await page.goto('/');
-  await page.click('#tab-progress');
+  await goals(page);
   const pick = async name => {
     await panel(page).getByRole('combobox', { name: 'Exercise' }).fill(name);
     await panel(page).getByRole('option', { name: new RegExp(name) }).first().click();
