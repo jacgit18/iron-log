@@ -65,11 +65,16 @@ export function targetError(key: TargetKey, value: number | null): string | null
   return Number.isFinite(value) && Math.round(value) >= min && Math.round(value) <= max ? null : `${TARGET_NAME[key]} must be ${min.toLocaleString('en-US')} to ${max.toLocaleString('en-US')}.`;
 }
 
-/** The targets you typed (`cfg.diet`): only the keys that are in range survive; undefined when none do. */
+export const MIN_RATE = 0.1, MAX_RATE = 3; // lb a week you may type for Custom (the app holds you to its own limit when it works out the calories)
+export const rateError = (v: number | null): string | null => (v !== null && Number.isFinite(v) && v >= MIN_RATE && v <= MAX_RATE ? null : `Pace must be ${MIN_RATE} to ${MAX_RATE} lb a week.`);
+
+/** The targets you typed and your pace pick (`cfg.diet`): only the keys that are in range survive; undefined when none do. */
 export function normDietCfg(v: unknown): DietCfg | undefined {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
   const o = v as Record<string, unknown>;
   const out: DietCfg = {};
   (['kcal', 'protein', 'carbs', 'fat'] as const).forEach(k => { const v = o[k]; if (fin(v) && targetError(k, v) === null) out[k] = Math.round(v); });
+  if (o.pace === 'slow' || o.pace === 'steady' || o.pace === 'fast') out.pace = o.pace;
+  else if (o.pace === 'custom' && fin(o.rate) && rateError(o.rate) === null) { out.pace = 'custom'; out.rate = Math.round(o.rate * 100) / 100; }
   return Object.keys(out).length ? out : undefined;
 }

@@ -18,12 +18,12 @@ export default function DietPanel({ day }: { day: string }) {
   const goalLb = cfg.bwGoal ? Number(cfg.bwGoal.w) : null;
   const g = goalStatus(cfg.bwGoal, body, now);
   const weeksLeft = g && 'weeksLeft' in g && typeof g.weeksLeft === 'number' ? g.weeksLeft : null; // weeks to the goal date, when one is set
-  const rec = recommend(goalLb, latest, weeksLeft);
+  const rec = recommend(goalLb, latest, weeksLeft, cfg.diet);
   const t = targetsFor(cfg.diet, rec);
   return (
     <section className="panel suppanel dt" aria-labelledby="diet-h">
       <h2 id="diet-h">Diet</h2>
-      <DietTargets typed={cfg.diet} rec={rec} goalLb={goalLb} />
+      <DietTargets typed={cfg.diet} rec={rec} goalLb={goalLb} hasDate={weeksLeft !== null && weeksLeft > 0} />
       <h3>Food eaten · {day === today ? 'Today' : fmtDayDate(day)}</h3>
       <DietLog day={day} targets={t} />
     </section>

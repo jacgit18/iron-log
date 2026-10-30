@@ -1,5 +1,5 @@
 import { oldestDay, pruned, roomOn } from '../lib/dietLog.js';
-import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, targetError } from '../shared/diet.js';
+import { MAX_DIET_PER_DAY, MAX_KCAL, MAX_PROTEIN, RETAIN_DAYS, normDietCfg, normDietEntries, normDietEntry, rateError, targetError } from '../shared/diet.js';
 import { ymd } from '../shared/dates.js';
 import type { DietEntry } from '../types.ts';
 import type { DietSlice, StoreGet, StoreSet } from './types.ts';
@@ -53,6 +53,19 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
       if (get().blocked() || get().diet.some(e => e.id === id)) return false;
       const l = [...get().diet]; l.splice(Math.min(i, l.length), 0, gone); set({ diet: normDietEntries(l) }); get().saveDiet(); return true;
     });
+  },
+
+  setDietPace(pace, rate) {
+    if (pace === 'custom') { const bad = rateError(rate ?? null); if (bad) return bad; }
+    get().mutateCfg(c => {
+      const next = { ...(c.diet || {}) };
+      delete next.pace; delete next.rate;
+      if (pace) next.pace = pace;
+      if (pace === 'custom') next.rate = rate;
+      const clean = normDietCfg(next);
+      if (clean) c.diet = clean; else delete c.diet;
+    });
+    return null;
   },
 
   setDietTarget(key, value) {

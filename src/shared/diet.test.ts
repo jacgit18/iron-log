@@ -80,6 +80,16 @@ describe('normDietCfg and the config document', () => {
     expect(normDietCfg({ carbs: 5, fat: 1000 })).toBeUndefined();
     expect(normDietCfg([])).toBeUndefined();
   });
+  it('keeps a pace pick: a preset, or Custom with a rate in range', () => {
+    expect(normDietCfg({ pace: 'slow' })).toEqual({ pace: 'slow' });
+    expect(normDietCfg({ kcal: 3000, pace: 'fast', rate: 2 })).toEqual({ kcal: 3000, pace: 'fast' }); // a rate belongs to Custom only
+    expect(normDietCfg({ pace: 'custom', rate: 0.756 })).toEqual({ pace: 'custom', rate: 0.76 });
+    expect(normDietCfg({ pace: 'custom' })).toBeUndefined();
+    expect(normDietCfg({ pace: 'custom', rate: 0 })).toBeUndefined();
+    expect(normDietCfg({ pace: 'custom', rate: 9 })).toBeUndefined();
+    expect(normDietCfg({ pace: 'reckless' })).toBeUndefined();
+    expect(normConfig({ diet: { pace: 'steady' } }).diet).toEqual({ pace: 'steady' });
+  });
   it('normConfig keeps a good diet key and drops a bad one', () => {
     expect(normConfig({ diet: { kcal: 3000 } }).diet).toEqual({ kcal: 3000 });
     expect('diet' in normConfig({ diet: { kcal: 5 } })).toBe(false);
