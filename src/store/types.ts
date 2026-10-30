@@ -426,11 +426,9 @@ export interface CoreSlice {
   weekHist: Record<string, Week> | null; // every saved week, loaded on demand for Progress and exports
   historyLoading: boolean;
   dl: Downloads | null | undefined; // undefined = not checked yet, null = unavailable
-  progView: string;
   bodySel: MuscleKey | null;
   bodySec: boolean;
 
-  setProgView(v: string): void;
   selectMuscle(m: MuscleKey | null): void;
   setBodySec(v: boolean): void;
   saveTags(exId: string, tags: MuscleTags): void;
