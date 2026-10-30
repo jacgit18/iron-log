@@ -68,3 +68,23 @@ test('rename a meal, delete it in two taps, and Undo brings it back', async ({ p
   await diet(page).getByRole('button', { name: 'Undo' }).click();
   await expect(diet(page).getByText('Morning · 1 food · 350 kcal')).toBeVisible();
 });
+
+test('a meal stops at 20 a day and says how many it left out; on a full day meals can still be managed', async ({ page }) => {
+  await nutrition(page);
+  await log(page, 'Oats', 350, 12);
+  await log(page, 'Banana', 100, 1);
+  await save(page, 'Pair', ['Oats', 'Banana']);
+  await save(page, 'One', ['Oats']);
+  const list = diet(page).getByRole('list', { name: 'Saved meals' });
+  for (let i = 0; i < 17; i++) await list.getByRole('button', { name: /^One · 1 food/ }).click(); // 2 + 17 = 19
+  await expect(diet(page).locator('.dt-entry')).toHaveCount(19);
+  await list.getByRole('button', { name: /^Pair · 2 foods/ }).click();
+  await expect(diet(page).locator('.dt-entry')).toHaveCount(20);
+  await expect(diet(page).getByRole('status').last()).toContainText('Added 1 from Pair. 1 left out: 20 a day is the limit.');
+  await expect(list.getByRole('button', { name: /^One · 1 food/ })).toBeDisabled();
+  await diet(page).getByRole('button', { name: 'Manage' }).click();
+  await diet(page).getByRole('button', { name: 'Rename One' }).click();
+  await diet(page).getByLabel('Meal name').last().fill('Single');
+  await diet(page).getByRole('button', { name: 'Save name' }).click();
+  await expect(diet(page).getByText('Single · 1 food · 350 kcal')).toBeVisible();
+});

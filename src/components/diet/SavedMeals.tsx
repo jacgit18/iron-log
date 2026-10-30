@@ -6,7 +6,8 @@ import ArmedButton from '../ArmedButton.jsx';
 import './Diet.css';
 
 // Your saved meals in Quick add (brief diet-saved-meals): one tap logs each food of a meal as its own entry on the day shown. Manage renames or deletes (Undo comes from the Removed notice under the list).
-export default function SavedMeals({ day, onAdded }: { day: string; onAdded: (text: string) => void }) {
+// `full` is a day with no room left: the meals can still be managed, only logging one is off.
+export default function SavedMeals({ day, full, onAdded }: { day: string; full: boolean; onAdded: (text: string) => void }) {
   const meals = useAppStore(s => s.cfg.diet?.meals) ?? [];
   const [managing, setManaging] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export default function SavedMeals({ day, onAdded }: { day: string; onAdded: (te
                 <ArmedButton className="btn sm danger" label="Delete" armedLabel="Tap again to delete" aria-label={`Delete ${m.n}`} onConfirm={() => useAppStore.getState().removeDietMeal(m.id)} />
               </>
             ) : (
-              <button type="button" className="btn sm" onClick={() => log(m.id)}>{mealLine(m)}</button>
+              <button type="button" className="btn sm" disabled={full} onClick={() => log(m.id)}>{mealLine(m)}</button>
             )}
           </li>
         ))}

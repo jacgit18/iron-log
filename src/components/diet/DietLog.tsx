@@ -68,9 +68,9 @@ export default function DietLog({ day, targets }: { day: string; targets: Target
       <SaveMeal key={day} day={day} onSaved={setMsg} />
       <RemovedNotice scope="diet" expires />
       <h3>Quick add</h3>
+      <SavedMeals day={day} full={!room} onAdded={setMsg} />
       {!room ? <p className="note">That’s 20 things for the day. Delete one to add another.</p> : (
         <>
-          <SavedMeals day={day} onAdded={setMsg} />
           {suggested.length > 0 && (
             <>
               <p className="note" id="dt-sugg-h">Suggested now</p>
