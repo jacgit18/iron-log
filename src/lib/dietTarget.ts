@@ -36,7 +36,7 @@ export function recommend(goalLb: number | null | undefined, currentLb: number |
   if (cur === null) return { kind: 'ok', direction: null, kcal: roundTo(KCAL_PER_LB * goalLb, 25), protein, plan: null };
   const gap = goalLb - cur;
   if (gap < -MAINTAIN_BAND) return { kind: 'none', reason: 'cut' };
-  const maintenance = roundTo(KCAL_PER_LB * cur, 5);
+  const maintenance = roundTo(KCAL_PER_LB * cur, 25); // rounded like the target, so the sentence under it matches the number above it
   if (gap <= MAINTAIN_BAND) return { kind: 'ok', direction: 'maintain', kcal: roundTo(KCAL_PER_LB * cur, 25), protein, plan: { maintenance, surplus: 0, rate: 0, weeksToGoal: null, capped: false } };
   const wanted = weeksLeft != null && weeksLeft > 0 ? gap / weeksLeft : DEFAULT_RATE;
   const rate = roundTo(Math.min(MAX_RATE, Math.max(MIN_RATE, wanted)), 0.05);

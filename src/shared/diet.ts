@@ -69,8 +69,7 @@ export function targetError(key: TargetKey, value: number | null): string | null
 export function normDietCfg(v: unknown): DietCfg | undefined {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
   const o = v as Record<string, unknown>;
-  const pick = (k: TargetKey) => (targetError(k, fin(o[k]) ? (o[k] as number) : NaN) === null && fin(o[k]) ? Math.round(o[k] as number) : null);
   const out: DietCfg = {};
-  (['kcal', 'protein', 'carbs', 'fat'] as const).forEach(k => { const n = pick(k); if (n !== null) out[k] = n; });
+  (['kcal', 'protein', 'carbs', 'fat'] as const).forEach(k => { const v = o[k]; if (fin(v) && targetError(k, v) === null) out[k] = Math.round(v); });
   return Object.keys(out).length ? out : undefined;
 }

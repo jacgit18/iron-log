@@ -24,7 +24,7 @@ describe('recommend: calories from current weight and the goal', () => {
     expect(recommend(200, 140)).toMatchObject({ protein: 160 });
   });
   it('maintain inside 2 lb either way: maintenance of the current weight, no surplus', () => {
-    expect(recommend(180, 179)).toMatchObject({ direction: 'maintain', kcal: 2675, plan: { surplus: 0, rate: 0 } });
+    expect(recommend(180, 179)).toMatchObject({ direction: 'maintain', kcal: 2675, plan: { maintenance: 2675, surplus: 0, rate: 0 } });
     expect(recommend(180, 182)).toMatchObject({ direction: 'maintain', kcal: 2725 });
   });
   it('cut gives no recommendation', () => {
