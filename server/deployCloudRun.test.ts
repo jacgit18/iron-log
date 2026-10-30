@@ -39,6 +39,8 @@ case "$*" in
   # STRIPE_SECRET=1: the Stripe billing secrets are already stored (separate, so the Resend, Push and database cases stay about themselves).
   *"secrets describe iron-log-stripe"*|*"secrets describe iron-log-staging-stripe"*|*"secrets describe iron-log-qa-stripe"*) [ "$STRIPE_SECRET" = 1 ] && exit 0; exit 1;;
   *"secrets describe iron-log-vapid"*) [ "$PUSH_SECRET" = 1 ] && exit 0; exit 1;;
+  # HAS_USDA_KEY=1: the food-search key is stored (separate from SECRETS_READABLE so the Resend cases stay about Resend).
+  *"secrets describe"*usda-api-key*) [ "$HAS_USDA_KEY" = 1 ] && exit 0; exit 1;;
   # HAS_PII_KEY=1: the database encryption key is already stored (separate again, so the Resend and Push cases stay about themselves).
   *"secrets describe iron-log-pii"*) [ "$HAS_PII_KEY" = 1 ] && exit 0; exit 1;;
   *"secrets describe"*) [ "$SECRETS_READABLE" = 1 ] && exit 0; exit 1;;
@@ -486,6 +488,35 @@ exit 0
       expect(out.status).toBe(0);
       expect(secretsOf('run deploy')).toEqual(FOUR);
       expect(out.stdout).toContain('RESEND_OFF=1');
+    });
+
+    it('the USDA food-search key is passed only when its secret exists, and USDA_OFF=1 leaves it out', async () => {
+      writeFileSync(calls, '');
+      expect((await run(['deploy'], { SECRETS_READABLE: '1' })).status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual([...FOUR, RESEND]);
+      writeFileSync(calls, '');
+      const on = await run(['deploy'], { HAS_USDA_KEY: '1' });
+      expect(on.status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual([...FOUR, 'USDA_API_KEY=iron-log-usda-api-key:latest']);
+      expect(on.stdout).toContain('Food search: USDA_API_KEY is passed');
+      writeFileSync(calls, '');
+      const off = await run(['deploy'], { HAS_USDA_KEY: '1', USDA_OFF: '1' });
+      expect(secretsOf('run deploy')).toEqual(FOUR);
+      expect(off.stdout).toContain('USDA_OFF=1');
+    });
+
+    it('the usda command stores only the key, lets the runtime account read it, never puts the value in an argument, and needs the key', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['usda'], { USDA_API_KEY: 'usda-value-123' });
+      expect(out.status).toBe(0);
+      const all = recorded().join('\n');
+      expect(all).toContain('secrets create iron-log-usda-api-key');
+      expect(all).toContain('secrets add-iam-policy-binding iron-log-usda-api-key');
+      expect(all).not.toContain('usda-value-123');
+      expect(all).not.toContain('iron-log-app-database-url');
+      const none = await run(['usda'], {});
+      expect(none.status).not.toBe(0);
+      expect(none.stderr).toContain('USDA_API_KEY');
     });
 
     it('the secrets command stores it and lets the runtime account read it, and the value is never a gcloud argument', async () => {
