@@ -33,18 +33,6 @@ export function pruned(entries: DietEntry[], today: string): DietEntry[] {
   return entries.filter(e => e.d >= cutoff);
 }
 
-/** The foods typed by hand (not from a recipe), newest first, one per name, for one-tap adding again. */
-export function recentQuick(entries: DietEntry[], limit = 6): { n: string; kcal: number; p: number; c?: number; f?: number }[] {
-  const seen = new Set<string>(), out: { n: string; kcal: number; p: number; c?: number; f?: number }[] = [];
-  for (let i = entries.length - 1; i >= 0 && out.length < limit; i--) {
-    const e = entries[i]!;
-    const key = e.n.toLowerCase();
-    if (e.from || seen.has(key)) continue;
-    seen.add(key); out.push({ n: e.n, kcal: e.kcal, p: e.p, ...(e.c !== undefined ? { c: e.c } : {}), ...(e.f !== undefined ? { f: e.f } : {}) });
-  }
-  return out;
-}
-
 /** Whether a recipe has the numbers needed to log it. */
 export const hasMacros = (r: Pick<Recipe, 'kcal' | 'p'>): boolean => r.kcal !== undefined && r.p !== undefined;
 

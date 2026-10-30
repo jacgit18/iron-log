@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
-import { barPercent, entriesOn, entryText, hasMacros, meterText, missingCarbsFat, oldestDay, pruned, recentQuick, roomOn, servingNumbers, shiftDay, totalsFor } from './dietLog.js';
+import { barPercent, entriesOn, entryText, hasMacros, meterText, missingCarbsFat, oldestDay, pruned, roomOn, servingNumbers, shiftDay, totalsFor } from './dietLog.js';
 
 const e = (id: string, d: string, n: string, kcal: number, p: number, from?: string, cf?: [number, number]): DietEntry => ({ id, d, n, kcal, p, ...(cf ? { c: cf[0], f: cf[1] } : {}), ...(from ? { from } : {}) });
 const list = [e('a', '2026-10-29', 'Rice', 200, 4), e('b', '2026-10-29', 'Chili', 600, 40.5, 'r1'), e('c', '2026-10-28', 'Eggs', 150, 12)];
@@ -39,10 +39,6 @@ describe('carbs and fat', () => {
     expect(entryText({ kcal: 520, p: 42, c: 60, f: 12 })).toBe('520 kcal · 42 g protein · 60 g carbs · 12 g fat');
     expect(entryText({ kcal: 520, p: 42, f: 0 })).toBe('520 kcal · 42 g protein · 0 g fat');
   });
-  it('quick-add recents keep carbs and fat', () => {
-    expect(recentQuick(l)[1]).toEqual({ n: 'Toast', kcal: 90, p: 3 });
-    expect(recentQuick(l)[2]).toEqual({ n: 'Rice', kcal: 200, p: 4, c: 44.5, f: 0.5 });
-  });
   it('a recipe serving brings its carbs and fat scaled', () => {
     expect(servingNumbers({ kcal: 600, p: 40, c: 51, f: 11 }, 1.5)).toEqual({ kcal: 900, p: 60, c: 76.5, f: 16.5 });
     expect(servingNumbers({ kcal: 600, p: 40 }, 2)).toEqual({ kcal: 1200, p: 80 });
@@ -53,13 +49,6 @@ describe('pruned', () => {
   it('keeps 400 days', () => {
     const old = e('o', '2025-09-01', 'Old', 100, 1), edge = e('n', '2025-09-25', 'Edge', 100, 1);
     expect(pruned([old, edge, ...list], '2026-10-29').map(x => x.id)).toEqual(['n', 'a', 'b', 'c']);
-  });
-});
-
-describe('recentQuick', () => {
-  it('newest first, one per name, recipes left out', () => {
-    const l = [e('1', '2026-10-27', 'Rice', 190, 4), e('2', '2026-10-28', 'rice', 200, 4), e('3', '2026-10-28', 'Chili', 600, 40, 'r1'), e('4', '2026-10-29', 'Toast', 90, 3)];
-    expect(recentQuick(l)).toEqual([{ n: 'Toast', kcal: 90, p: 3 }, { n: 'rice', kcal: 200, p: 4 }]);
   });
 });
 

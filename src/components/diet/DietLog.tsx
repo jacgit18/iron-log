@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
-import { barPercent, entriesOn, entryText, fmtNum, meterText, missingCarbsFat, recentQuick, roomOn, totalsFor } from '../../lib/dietLog.js';
+import { barPercent, entriesOn, entryText, fmtNum, meterText, missingCarbsFat, roomOn, totalsFor } from '../../lib/dietLog.js';
+import { suggestNow } from '../../lib/dietSuggest.js';
+import type { Food } from '../../lib/foodMacros.js';
+import { ymd } from '../../shared/dates.js';
 import type { Targets } from '../../lib/dietTarget.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import { useToday } from '../../store/useToday.js';
 import RemovedNotice from '../RemovedNotice.jsx';
+import CopyDay from './CopyDay.js';
 import EntryForm, { type EntryValues } from './EntryForm.js';
 import FindFood from './FindFood.js';
 
@@ -30,7 +35,9 @@ export default function DietLog({ day, targets }: { day: string; targets: Target
   const tot = totalsFor(diet, day);
   const room = roomOn(diet, day);
   const add = (v: EntryValues): string | null => { const r = useAppStore.getState().addDietEntry({ d: day, n: v.n, kcal: v.kcal, p: v.p, ...(v.c !== null ? { c: v.c } : {}), ...(v.f !== null ? { f: v.f } : {}) }); if (!r.error) setMsg(`Added ${v.n.trim()}.`); return r.error; };
-  const recents = recentQuick(diet);
+  const now = useToday(s => s.today);
+  const suggested = suggestNow(diet, new Date().getHours(), ymd(now));
+  const addFood = (f: Food) => { const r = useAppStore.getState().addDietEntry({ d: day, n: f.n, kcal: f.kcal, p: f.p, ...(f.c !== undefined ? { c: f.c } : {}), ...(f.f !== undefined ? { f: f.f } : {}), ...(f.from ? { from: f.from } : {}) }); setMsg(r.error ?? `Added ${f.n}.`); };
   return (
     <div className="dt-log">
       <Meter label="Calories" unit="kcal" have={tot.kcal} target={targets.kcal} />
@@ -60,12 +67,16 @@ export default function DietLog({ day, targets }: { day: string; targets: Target
       <h3>Quick add</h3>
       {!room ? <p className="note">That’s 20 things for the day. Delete one to add another.</p> : (
         <>
-          {recents.length > 0 && (
-            <div className="dt-recents">
-              {recents.map(r => <button key={r.n} type="button" className="btn sm" onClick={() => add({ c: null, f: null, ...r })}>{r.n} · {fmtNum(r.kcal)} kcal</button>)}
-            </div>
+          {suggested.length > 0 && (
+            <>
+              <p className="note" id="dt-sugg-h">Suggested now</p>
+              <ul className="dt-recents" aria-labelledby="dt-sugg-h">
+                {suggested.map(f => <li key={f.n}><button type="button" className="btn sm" onClick={() => addFood(f)}>{f.n} · {fmtNum(f.kcal)} kcal</button></li>)}
+              </ul>
+            </>
           )}
           <FindFood day={day} onAdded={setMsg} />
+          <CopyDay key={day} day={day} onAdded={setMsg} />
           <EntryForm idp="dt-add" submitLabel="Add" onSubmit={add} />
         </>
       )}

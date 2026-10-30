@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_DIET_PER_DAY, cleanGrams, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
+import { MAX_DIET_PER_DAY, cleanGrams, cleanHour, dietPosition, cleanKcal, cleanProtein, normDietCfg, targetError, normDietEntries, normDietEntry, validDietEntry } from './diet.js';
 import { normRecipe } from './recipes.js';
 import { normConfig } from './config.js';
 import { validateSaveListItem } from './commands.js';
@@ -114,4 +114,22 @@ describe('recipe macros and the list command', () => {
     expect(validateSaveListItem({ list: 'diet_entry', item: ok, position: 0 })).toEqual({ list: 'diet_entry', item: ok, position: 0 });
     expect(validateSaveListItem({ list: 'diet_entry', item: { ...ok, kcal: 200.4 }, position: 0 })).toBeNull();
   });
+});
+
+describe('the hour an entry was added (t)', () => {
+  const base = { id: 'e1', d: '2026-10-30', n: 'Oats', kcal: 350, p: 12 };
+  it('keeps a whole hour from 0 to 23 and leaves out anything else', () => {
+    expect(normDietEntry({ ...base, t: 0 })).toEqual({ ...base, t: 0 });
+    expect(normDietEntry({ ...base, t: 23 })).toEqual({ ...base, t: 23 });
+    for (const t of [24, -1, 8.5, '8', null, NaN]) expect(normDietEntry({ ...base, t })).toEqual(base);
+  });
+  it('an entry without one is unchanged, so older data loads as it was', () => {
+    expect(normDietEntry(base)).toEqual(base);
+    expect(validDietEntry(base)).toBe(true);
+  });
+  it('the API refuses an hour out of range', () => {
+    expect(validDietEntry({ ...base, t: 8 })).toBe(true);
+    expect(validDietEntry({ ...base, t: 24 })).toBe(false);
+  });
+  it('cleanHour', () => { expect(cleanHour(7)).toBe(7); expect(cleanHour(7.5)).toBeNull(); expect(cleanHour(undefined)).toBeNull(); });
 });
