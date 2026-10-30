@@ -221,3 +221,20 @@ describe('the grocery list', () => {
     expect([...new Set(paths)].sort()).toEqual(['grocery/2026-10', 'grocery/main', 'supplements/main']);
   });
 });
+
+describe('diet/main (the food log)', () => {
+  const e = (id: string, d: string) => ({ id, d, n: 'Rice', kcal: 200, p: 4 });
+  const positions = (items: unknown[]) => new Map(desiredRows(kind('diet/main'), { items }, mirrorOf([])).flatMap(r => (r.table === 'list_items' ? [[r.key, r.position] as [string, number]] : [])));
+  it('is a synced path', () => { expect(kind('diet/main')).toEqual({ kind: 'diet' }); });
+  it('positions an entry by its day, so deleting one never moves the others', () => {
+    const all = [e('a', '2026-10-27'), e('b', '2026-10-28'), e('c', '2026-10-29')];
+    const before = positions(all);
+    const after = positions([all[0], all[2]]);
+    expect(after.get('diet_entry/a')).toBe(before.get('diet_entry/a'));
+    expect(after.get('diet_entry/c')).toBe(before.get('diet_entry/c'));
+    expect(before.get('diet_entry/b')).toBe(before.get('diet_entry/a')! + 1);
+  });
+  it('gives entries of one day the same position', () => {
+    expect(new Set(positions([e('a', '2026-10-29'), e('b', '2026-10-29')]).values()).size).toBe(1);
+  });
+});

@@ -139,6 +139,8 @@ export interface Cfg extends ProgramCfg {
   exPh: Record<string, PhaseKey | null>;
   progNames?: Record<string, string>; // program key ('A', 'B') -> your name for it
   bwGoal?: BodyGoal;
+  /** Daily targets you typed (ADR 086); a key left out means the recommended number is used. */
+  diet?: DietCfg;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
   /** Equipment the user added: id (`x:` and a slug) to its name. */
   equipment?: Record<string, string>;
@@ -308,7 +310,13 @@ export type RecipeCategory = 'protein' | 'sides' | 'sauces' | 'seasonings' | 'dr
 export interface RecipeIngredient { n: string; amt?: string; home?: string; sub?: string; skip?: true }
 /** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
  *  after copying it (only on a recipe with a `from`). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string; edited?: true }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number }
+
+/* ---------- Diet (ADR 086) ---------- */
+/** Daily targets you typed: calories and protein in grams. */
+export interface DietCfg { kcal?: number; protein?: number }
+/** One thing you ate on one day (`d`, local date): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one. */
+export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; from?: string }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */
@@ -328,6 +336,7 @@ export interface Snapshot {
   supp?: Supplements;
   grocery?: GroceryData;
   recipes?: Recipe[];
+  diet?: DietEntry[];
 }
 
 /** A data file after `normalizeData` has checked and cleaned it. `config` holds only the keys the file had. */
@@ -345,6 +354,7 @@ export interface DataFile {
   supplements: Supplements | null;
   grocery: GroceryData | null;
   recipes?: Recipe[]; // left out when the file has none
+  diet?: DietEntry[]; // left out when the file has none
 }
 
 /* ---------- Production issues (admin screen; the server's /api/issues, ADR 013 amendment) ---------- */

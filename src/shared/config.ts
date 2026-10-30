@@ -1,5 +1,6 @@
 import { DEFAULT_CFG } from '../lib/logic.js';
 import type { Cfg, WarmupItem } from '../types.ts';
+import { normDietCfg } from './diet.js';
 import { LIMITS, validBodyLb, validDate, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm } from './validate.js';
 
 /* ---------- Config shape ----------
@@ -29,6 +30,7 @@ export function normConfig(c: any): Partial<Cfg> {
   if (out.freqGoals) out.freqGoals = own(out.freqGoals, (_k, n) => (validFreq(n) ? n : undefined));
   if ('injuryPrevention' in out && typeof out.injuryPrevention !== 'boolean') delete out.injuryPrevention;
   if ('bwGoal' in out && !(out.bwGoal && typeof out.bwGoal === 'object' && typeof out.bwGoal.w === 'number' && validBodyLb(out.bwGoal.w))) delete out.bwGoal;
+  if ('diet' in out) { const d = normDietCfg(out.diet); if (d) out.diet = d; else delete out.diet; }
   // The GitHub backup feature is gone: never keep its settings or a token, wherever the config came from.
   ['backup', 'ghBackup', 'token', 'ghToken'].forEach(k => { delete out[k]; });
   return out;
@@ -43,7 +45,7 @@ export interface ConfigDoc extends Partial<Cfg> {
   waterMode?: 'weight' | 'fixed';
 }
 
-const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention'] as const;
+const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention'] as const;
 const progKey = (v: unknown) => v === 'A' || v === 'B';
 const MAX_WARMUP = 50;
 
