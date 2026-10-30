@@ -57,6 +57,7 @@ export default function ImportSheet() {
     ...(d.supplements ? [['supplements', 'Supplements', `water logged on ${plural(s.waterDays, 'day', 'days')}, supplement library and check-offs`]] : []),
     ...(d.grocery ? [['grocery', 'Groceries', `${plural(s.groceryItems, 'item', 'items')}, ${plural(s.groceryMonths, 'month', 'months')} of ticks and prices`]] : []),
     ...('recipes' in d && d.recipes?.length ? [['recipes', 'Recipes', plural(d.recipes.length, 'recipe', 'recipes')]] : []),
+    ...('diet' in d && d.diet?.length ? [['diet', 'Food log', plural(d.diet.length, 'entry', 'entries')]] : []),
     ['settings', 'Settings', 'program mode, rest time, phase percentages and 1RMs'],
   ];
   const when = d.exportedAt ? libDate(d.exportedAt) : 'an unknown date';

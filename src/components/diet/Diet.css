@@ -1,0 +1,69 @@
+@layer base, components;
+@layer components {
+/* Diet (ADR 086): targets, the day stepper, the meters and the list. Plain flat rows like Recipes; every tap target is 44px tall. */
+.dt .btn {
+  min-height: 44px;
+}
+.dt input {
+  min-height: 44px;
+}
+.dt-nums {
+  margin: var(--sp-6) 0;
+}
+.dt-day {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  margin: var(--sp-12) 0;
+}
+.dt-meter {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--sp-4) var(--sp-8);
+  align-items: center;
+  margin: var(--sp-8) 0;
+}
+.dt-meter .bar {
+  width: 100%;
+}
+.dt-mtext {
+  grid-column: 2;
+  font-size: var(--fs-md);
+  color: var(--muted);
+}
+.dt-list {
+  list-style: none;
+  margin: var(--sp-8) 0;
+  padding: 0;
+}
+.dt-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: var(--sp-6) 0;
+  border-top: 1px solid var(--line);
+}
+.dt-name {
+  flex: 1 1 8rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dt-recents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+}
+.dt-ate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.dt-ate .btn {
+  min-height: 44px;
+}
+}

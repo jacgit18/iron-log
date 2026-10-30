@@ -37,7 +37,7 @@ export function recipeError(list: Recipe[], r: { n: string; ing: { n: string }[]
 // Compared the way the form hands them back (name spaces collapsed, steps one per line), so saving a copy unchanged never marks it.
 const lines = (steps: string[]) => steps.join('\n').split('\n').map(s => s.trim()).filter(Boolean);
 // The pin to an At home item (`home`) is a link, not a change to the recipe, so it is left out (pinning from the detail never marks either).
-const content = (r: Recipe) => JSON.stringify([r.n.replace(/\s+/g, ' ').trim(), r.cat, r.ing.map(({ home: _h, ...i }) => i), lines(r.steps), r.servings ?? null, r.minutes ?? null, r.note ?? null]);
+const content = (r: Recipe) => JSON.stringify([r.n.replace(/\s+/g, ' ').trim(), r.cat, r.ing.map(({ home: _h, ...i }) => i), lines(r.steps), r.servings ?? null, r.minutes ?? null, r.kcal ?? null, r.p ?? null, r.note ?? null]);
 
 /** `next` with the Edited mark: set when it has a library source and its content differs from `prev`, kept once set. A recipe written from
  *  scratch (no `from`) never gets it; saving without a change leaves the mark as it was. */

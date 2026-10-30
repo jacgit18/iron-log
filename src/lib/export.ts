@@ -14,6 +14,7 @@ import { bwSorted } from './body.js';
 import { normStretches, normStretchWeek, stretchWeekEmpty } from './stretches.js';
 import { normSupplements } from './water.js';
 import { normGroceryData } from './grocery.js';
+import { normDietEntries } from '../shared/diet.js';
 import { normRecipes } from '../shared/recipes.js';
 import { normEntries, normBody, normProgram, normLibrary, validStamp } from '../shared/validate.js';
 import { normConfig } from '../shared/config.js';
@@ -175,7 +176,7 @@ export function buildDataFile(S: Snapshot, weeks: Record<string, Week>) {
   Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || w.rest || w.order || w.extra || w.split || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
   const P: Record<string, Omit<Program, 'key'>> = {}; (['A', 'B'] as const).forEach(k => { if (programs[k] !== BUILTIN[k]) P[k] = progBody(programs[k]); });
   const L: Logs = {}; Object.keys(logs).sort().forEach(id => { if (logs[id] && logs[id].length) L[id] = logs[id]; });
-  return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body), experiments: normExperiments(S.experiments), ...wellnessOut(S), ...groceryOut(S), ...recipesOut(S) };
+  return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body), experiments: normExperiments(S.experiments), ...wellnessOut(S), ...groceryOut(S), ...recipesOut(S), ...dietOut(S) };
 }
 // Stretches (library, experiments, weekly check-offs) and supplements (water). Left out when the snapshot has none, so older files read the same.
 function wellnessOut(S: Snapshot) {
@@ -188,6 +189,11 @@ function wellnessOut(S: Snapshot) {
 function recipesOut(S: Snapshot) {
   const r = normRecipes(S.recipes);
   return r.length ? { recipes: r } : {};
+}
+// Your food log, left out when there is none (ADR 086).
+function dietOut(S: Snapshot) {
+  const e = normDietEntries(S.diet);
+  return e.length ? { diet: e } : {};
 }
 function groceryOut(S: Snapshot) {
   const g = S.grocery && normGroceryData(S.grocery);
@@ -210,6 +216,8 @@ export function normalizeData(d: any): DataFile {
   Object.entries(d.stretchWeeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k)) { const n = normStretchWeek(w); if (!stretchWeekEmpty(n)) out.stretchWeeks[k] = n; } });
   const recipes = normRecipes(d.recipes);
   if (recipes.length) out.recipes = recipes;
+  const diet = normDietEntries(d.diet);
+  if (diet.length) out.diet = diet;
   out.body = normBody(d.body);
   (['A', 'B'] as const).forEach(k => { const p = normProgram(d.programs && d.programs[k], k); if (p) out.programs[k] = progBody(withAllDays({ ...p, key: k })); });
   normLibrary(d.library).forEach(it => out.library.push({ ...it, prog: withAllDays(it.prog) }));
@@ -219,7 +227,7 @@ export function normalizeData(d: any): DataFile {
 }
 // Import choices follow the app's tabs. Board: check-offs, body weight, exercises to try. Progress: logged sessions.
 // Muscles: muscle tags. Program: edited programs, saved versions, custom exercises. Settings: everything else in the config.
-export const IMPORT_SECTIONS = [['board', 'Board'], ['progress', 'Progress'], ['muscles', 'Muscles'], ['program', 'Program'], ['stretches', 'Stretches'], ['supplements', 'Supplements'], ['grocery', 'Groceries'], ['recipes', 'Recipes'], ['settings', 'Settings']];
+export const IMPORT_SECTIONS = [['board', 'Board'], ['progress', 'Progress'], ['muscles', 'Muscles'], ['program', 'Program'], ['stretches', 'Stretches'], ['supplements', 'Supplements'], ['grocery', 'Groceries'], ['recipes', 'Recipes'], ['diet', 'Food log'], ['settings', 'Settings']];
 export const importSel = (draft: { sel?: Record<string, boolean> }) => Object.fromEntries(IMPORT_SECTIONS.map(([k]) => [k, !draft.sel || draft.sel[k] !== false]));
 export const cfgSection = (k: string) => (k === 'muscleMap' ? 'muscles' : ['ex', 'progNames', 'phDef', 'exPh'].includes(k) ? 'program' : 'settings');
 /* ---------- Which logged sessions are the same one ----------
