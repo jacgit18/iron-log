@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
-import { MAX_INGREDIENTS, MAX_RECIPE_NAME, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
@@ -10,6 +10,7 @@ import type { Recipe, RecipeCategory, RecipeIngredient } from '../../types.ts';
 import IngredientList from './IngredientList.js';
 import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import IngredientRows, { type Row } from './IngredientRows.js';
+import ServingSize from './ServingSize.js';
 
 const TOO_FEW = 'Type at least one ingredient first.';
 const sameKey = (n: string, sub?: string) => `${n.trim().toLowerCase()}|${(sub ?? '').trim().toLowerCase()}`;
@@ -24,6 +25,8 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const [cat, setCat] = useState<RecipeCategory>(recipe?.cat ?? 'other');
   const [servings, setServings] = useState(recipe ? (recipe.servings ? String(recipe.servings) : '') : '1');
   const [minutes, setMinutes] = useState(recipe?.minutes ? String(recipe.minutes) : '');
+  const [serving, setServing] = useState(recipe?.serving ?? '');
+  const [servingG, setServingG] = useState(recipe?.servingG ? String(recipe.servingG) : '');
   const [kcal, setKcal] = useState(recipe?.kcal !== undefined ? String(recipe.kcal) : '');
   const [protein, setProtein] = useState(recipe?.p !== undefined ? String(recipe.p) : '');
   const [carbs, setCarbs] = useState(recipe?.c !== undefined ? String(recipe.c) : '');
@@ -72,6 +75,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const save = () => {
     if (servings.trim() && !(whole(servings) && whole(servings)! <= 99)) { setErr('Servings must be a whole number from 1 to 99.'); return; }
     if (minutes.trim() && !(whole(minutes) && whole(minutes)! <= 1440)) { setErr('Minutes must be a whole number from 1 to 1440.'); return; }
+    if (servingG.trim() && !(whole(servingG) && whole(servingG)! <= MAX_SERVING_G)) { setErr(`Grams per serving must be a whole number from 1 to ${MAX_SERVING_G}.`); return; }
     const k = kcal.trim() ? cleanKcal(Number(kcal)) : undefined, pr = protein.trim() ? cleanProtein(Number(protein)) : undefined;
     if (k === null) { setNutOpen(true); setErr('Calories per serving must be a number from 1 to 9,999.'); return; }
     if (pr === null) { setNutOpen(true); setErr('Protein per serving must be a number from 0 to 999 g.'); return; }
@@ -81,7 +85,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     if (listEdited && !fromList) { setErr(TOO_FEW); return; }
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ing: keep, steps: stepsFromText(steps), servings: whole(servings), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(recipe?.from ? { from: recipe.from } : {}) });
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(recipe?.from ? { from: recipe.from } : {}) });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
@@ -135,6 +139,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
             <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>
             <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
           </div>
+          <ServingSize serving={serving} grams={servingG} ingredients={ing} servings={whole(servings) ?? 1} onServing={v => { setServing(v); setErr(''); }} onGrams={v => { setServingG(v); setErr(''); }} />
           <div className="rc-nut">
             <div className="rc-nuthead">
               <strong>Nutrition per serving</strong>
