@@ -14,7 +14,6 @@ async function open(page, w, zoom) {
 }
 const sheetFit = page => page.locator('.sheet').evaluate(s => ({ scroll: s.scrollWidth, client: s.clientWidth }));
 const drill = async (page, name) => { await page.getByRole('button', { name }).click(); };
-const back = async page => { await page.locator('.hubback').getByRole('button', { name: 'Progress' }).click(); };
 const pageFit = page => page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, w: innerWidth }));
 
 for (const [w, zoom] of [[320, true], [390, true]]) {
@@ -33,14 +32,12 @@ for (const [w, zoom] of [[320, true], [390, true]]) {
     await expect(page.locator('.kpis .kpi').first()).toBeVisible();
     const home = await pageFit(page);
     expect(home.scroll, `page ${home.scroll} wide in ${home.w}`).toBeLessThanOrEqual(home.w);
-    await drill(page, /Body weight/);
     await expect(page.locator('table.bwtab tbody tr').first()).toBeVisible();
     const m = await pageFit(page);
     expect(m.scroll, `page ${m.scroll} wide in ${m.w}`).toBeLessThanOrEqual(m.w);
     const dels = await page.locator('table.bwtab tbody button').evaluateAll(bs => bs.map(b => { const r = b.getBoundingClientRect(); return { right: r.right, h: r.height }; }));
     expect(dels.length).toBeGreaterThan(0);
     for (const d of dels) { expect(d.right).toBeLessThanOrEqual(w); expect(d.h).toBeGreaterThanOrEqual(44); }
-    await back(page);
     await drill(page, /Training trends/);
     await expect(page.locator('span.chn').first()).toBeVisible();
     const t = await pageFit(page);
@@ -57,7 +54,7 @@ test('at a normal text size the Log table and the body-weight table stay plain t
   expect((await sheetFit(page)).scroll).toBeLessThanOrEqual(390);
   await page.keyboard.press('Escape');
   await page.click('#tab-progress');
-  await drill(page, /Body weight/);
+  await expect(page.locator('table.bwtab')).toBeVisible();
   expect(await page.locator('table.bwtab').evaluate(t => getComputedStyle(t).display)).toBe('table');
 });
 

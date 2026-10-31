@@ -6,8 +6,8 @@ const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wc
 // Each view is reached by clicking these in order.
 for (const [name, clicks] of [
   ['workout', []], ['stretches', ['#board-stretches']], ['supplements', ['#tab-daily', '#daily-supplements']],
-  ['progress', ['#tab-progress']], ['muscles', ['#tab-progress', 'button.hubtile:has-text("Muscle details")']],
-  ['training trends', ['#tab-progress', 'button.hubtile:has-text("Training trends")']], ['body weight', ['#tab-progress', 'button.hubtile:has-text("Body weight")']],
+  ['progress', ['#tab-progress']],
+  ['training trends', ['#tab-progress', 'button.hubtile:has-text("Training trends")']],
   ['frequency goals', ['#tab-progress', 'button.hubtile:has-text("Frequency goals")']], ['weight goals', ['#tab-progress', 'text=Manage goals']],
   ['exercise charts', ['#tab-progress', 'text=Exercise charts']], ['program editor', ['#tab-program']],
 ]) {
