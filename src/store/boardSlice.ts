@@ -116,7 +116,7 @@ export const boardSlice = (set: StoreSet, get: StoreGet, flag: Flag): BoardSlice
     const logs = { ...get().logs };
     Object.entries(n.entries).forEach(([id, lost]) => {
       const have = new Set((logs[id] || []).map(e => JSON.stringify(e)));
-      logs[id] = [...(logs[id] || []), ...lost.filter(e => !have.has(JSON.stringify(e)))].sort((a, b) => a.d.localeCompare(b.d));
+      logs[id] = [...(logs[id] || []), ...lost.filter(e => !have.has(JSON.stringify(e)))].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
     });
     set({ logs }); Object.keys(n.entries).forEach(id => get().saveLog(id));
     // Ticking again through the check-off path, so a card without logged numbers gets its check-off entry back too.

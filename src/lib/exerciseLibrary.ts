@@ -2,6 +2,7 @@ import type { CatalogItem, Cfg, LibraryItem, Logs, Program, Week } from '../type
 /* ---------- Exercise library: every exercise and what is set on it ---------- */
 import { EX, allExIds, exInfo, findExId, isOwnExercise, slotsFor } from './data.js';
 import { tagsOf, MUSCLES } from './muscles.js';
+import { nameCmp } from './sort.js';
 
 // Where an exercise is used: the rotation programs (by key), saved/created versions, experiments, and logged sessions.
 export function usageOf(exId: string, { programs, library, experiments, logs }: { programs: Record<string, Program>; library?: LibraryItem[]; experiments?: { ex: string }[]; logs?: Logs }) {
@@ -45,7 +46,7 @@ export function libraryRows(cfg: Cfg, state: Parameters<typeof usageOf>[1]) {
       p: tg && !tg.mob ? tg.p || [] : [], s: tg && !tg.mob ? tg.s || [] : [], mob: !!(tg && tg.mob), tagged: !!tg,
       inPrograms: usageOf(id, state).programs,
     };
-  }).sort((a, b) => a.name.localeCompare(b.name));
+  }).sort(nameCmp(x => x.name, x => x.id));
 }
 
 // q matches the name; muscle matches primary or secondary; eq is exact; 'none' matches exercises with nothing set.

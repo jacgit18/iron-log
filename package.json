@@ -24,7 +24,7 @@
     "build:server": "node scripts/build-server.mjs",
     "dev:server": "NODE_ENV=development tsx watch server/index.ts",
     "build": "vite build",
-    "lint": "oxlint && node scripts/format-css.mjs --check && node scripts/check-css-tokens.mjs && npm run docs:toc",
+    "lint": "oxlint && node scripts/format-css.mjs --check && node scripts/check-css-tokens.mjs && node scripts/check-sorts.mjs && npm run docs:toc",
     "docs:toc": "node scripts/doc-toc.mjs --check --style=md README.md SETUP.md",
     "docs:toc:write": "node scripts/doc-toc.mjs --style=md README.md SETUP.md",
     "format:css": "node scripts/format-css.mjs",
