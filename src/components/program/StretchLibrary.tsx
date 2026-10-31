@@ -6,6 +6,9 @@ import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import { catalogStretchGroup } from '../../lib/stretches.js';
+import { canReorder, groupHeading, groupOpen, isFiltering, resultText } from '../../lib/libraryFilter.js';
+import LibraryChip from './LibraryChip.jsx';
+import './Library.css';
 
 // Every stretch, by group, with when it shows on the Stretches tab. What is set here is the routine on every day.
 // Syncing, each stretch is badged Library (added from the catalog) or Custom (your own), with a Source filter once both kinds are listed
@@ -15,11 +18,14 @@ export default function StretchLibrary() {
   const syncing = useAppStore(s => s.sync !== null);
   const { openModal, moveStretch } = useAppStore.getState();
   const [q, setQ] = useState(''); const [src, setSrc] = useState('');
+  const [userOpen, setUserOpen] = useState<Record<string, boolean | undefined>>({}); // a group the person opened or closed; Every day starts open, the others closed
+  const [ordering, setOrdering] = useState(false); // Edit order: the up and down arrows show on each row
   const needle = q.trim().toLowerCase();
   const sources = syncing && items.some(i => i.catalogId) && items.some(i => !i.catalogId);
   const srcOf = (i: { catalogId?: string }) => (i.catalogId ? 'library' : 'custom');
   const shown = items.filter(i => (!needle || i.n.toLowerCase().includes(needle) || i.group.toLowerCase().includes(needle)) && (!sources || !src || srcOf(i) === src));
-  const filtering = !!needle || (sources && !!src);
+  const filtering = isFiltering({ q, src: sources ? src : '' });
+  const reordering = ordering && canReorder(filtering);
   return (
     <section className="panel edpanel exlib">
       <div className="inline spread">
@@ -29,26 +35,34 @@ export default function StretchLibrary() {
         </div>
       </div>
       <p className="note">Your stretches. “Every day” ones are on the Stretches tab each day, “Once in a while” ones sit under them, and “Library only” ones are kept here to add later.</p>
-      <div className="filterbar" role="search">
-        <label className="field">Search<input type="search" value={q} placeholder="Name or group" onChange={e => setQ(e.target.value)} /></label>
-        {sources && <label className="field">Source
-          <select value={src} onChange={e => setSrc(e.target.value)}>
-            <option value="">All</option>
+      <div className="libbar" role="search">
+        <input className="libsearch" type="search" aria-label="Search" value={q} placeholder={`Search ${items.length} stretches`} onChange={e => setQ(e.target.value)} />
+        <div className="libchips">
+          {sources && <LibraryChip label="Source" value={src} onChange={setSrc}>
+            <option value="">All sources</option>
             <option value="custom">Custom</option>
             <option value="library">Library</option>
-          </select>
-        </label>}
-        <span className="note" role="status">{filtering ? `${shown.length} of ${items.length} stretches` : `${items.length} stretches`}</span>
+          </LibraryChip>}
+          {canReorder(filtering) && <button type="button" className="btn sm" aria-pressed={ordering} onClick={() => setOrdering(o => !o)}>{ordering ? 'Done' : 'Edit order'}</button>}
+        </div>
+        <span className="note" role="status">{resultText(shown.length, items.length, filtering, 'stretches')}</span>
       </div>
       <RemovedNotice scope="stretches" />
       <div className="exrows">
         {TIERS.map(([tier]) => {
           const rows = shown.filter(i => i.tier === tier);
           if (!rows.length) return null;
+          const open = groupOpen(tier, userOpen, filtering);
           return (
             <div key={tier || 'lib'}>
-              <div className="sect">{tierLabel(tier)}</div>
-              {rows.map(r => (
+              {filtering
+                ? <div className="libgroup">{groupHeading(tierLabel(tier), rows.length)}</div> // while searching every group with a match is open and cannot be folded
+                : (
+                  <button type="button" className="libgroup" id={`slib-g-${tier || 'lib'}`} aria-expanded={open} onClick={() => setUserOpen(o => ({ ...o, [tier]: !open }))}>
+                    <span>{groupHeading(tierLabel(tier), rows.length)}</span><Icon name={open ? 'chevron-up' : 'chevron-down'} />
+                  </button>
+                )}
+              {open && rows.map(r => (
                 <div className="exrow" key={r.id}>
                   <div className="exmain">
                     <b>{r.n}{syncing && (r.catalogId
@@ -58,7 +72,7 @@ export default function StretchLibrary() {
                     {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(r.url)}</a>}
                   </div>
                   <div className="actions flush">
-                    {!filtering && <>
+                    {reordering && <>
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} up`} onClick={() => moveStretch(r.id, -1)}><Icon name="arrow-up" /></button>
                       <button type="button" className="btn sm ghost" aria-label={`Move ${r.n} down`} onClick={() => moveStretch(r.id, 1)}><Icon name="arrow-down" /></button>
                     </>}
