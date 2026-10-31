@@ -25,12 +25,45 @@ describe('GET /api/foods/search', () => {
     const res = await fetch(`${await start({ key: 'SECRET', fetch: ask as unknown as typeof fetch })}?q=chicken%20breast`);
     expect(res.status).toBe(200);
     const text = await res.text();
-    expect(JSON.parse(text)).toEqual({ ok: true, hits: [{ id: 1, name: 'Chicken breast, raw', kcal: 120, p: 22.5 }] });
+    const body = JSON.parse(text) as { ok: boolean; hits: unknown[] };
+    expect(body.ok).toBe(true);
+    expect(body.hits[0]).toEqual({ id: 1, name: 'Chicken breast, raw', kcal: 120, p: 22.5 }); // the stub answers both asks the same, so the food shows once from each
+    expect(body.hits).toHaveLength(2);
     expect(text).not.toContain('SECRET');
-    const url = new URL(String((ask.mock.calls[0] as unknown[])[0]));
-    expect(url.searchParams.get('query')).toBe('chicken breast');
-    expect(url.searchParams.get('api_key')).toBe('SECRET');
-    expect(url.searchParams.get('dataType')).toBe('Foundation,SR Legacy,Branded');
+    const urls = ask.mock.calls.map(c => new URL(String((c as unknown[])[0])));
+    expect(urls.map(u => u.searchParams.get('dataType')).sort()).toEqual(['Branded', 'Foundation,SR Legacy']);
+    for (const url of urls) { expect(url.searchParams.get('query')).toBe('chicken breast'); expect(url.searchParams.get('api_key')).toBe('SECRET'); }
+  });
+
+  describe('plain foods before store products', () => {
+    const food = (id: number, name: string, brand?: string) => ({ fdcId: id, description: name, ...(brand ? { brandOwner: brand } : {}), foodNutrients: [{ nutrientNumber: '208', value: 100 }, { nutrientNumber: '203', value: 5 }] });
+    const many = (from: number, n: number, brand?: string) => Array.from({ length: n }, (_, i) => food(from + i, `${brand ? 'Branded' : 'Plain'} ${i}`, brand));
+    const answer = (plain: unknown, branded: unknown) => vi.fn(async (u: URL) => (String(u).includes('dataType=Branded') ? branded : plain) as Response);
+    const names = async (ask: ReturnType<typeof answer>) => ((await (await fetch(`${await start({ key: 'k', fetch: ask as unknown as typeof fetch })}?q=egg`)).json()) as { hits: { name: string }[] }).hits.map(h => h.name);
+
+    it('lists up to five plain foods first, then store products, eight in all', async () => {
+      const list = await names(answer(reply({ foods: many(1, 10) }), reply({ foods: many(100, 10, 'Acme') })));
+      expect(list).toEqual(['Plain 0', 'Plain 1', 'Plain 2', 'Plain 3', 'Plain 4', 'Branded 0', 'Branded 1', 'Branded 2']);
+    });
+    it('lets plain foods take the places store products leave', async () => {
+      const list = await names(answer(reply({ foods: many(1, 10) }), reply({ foods: many(100, 2, 'Acme') })));
+      expect(list).toHaveLength(8);
+      expect(list.slice(0, 6)).toEqual(['Plain 0', 'Plain 1', 'Plain 2', 'Plain 3', 'Plain 4', 'Plain 5']);
+    });
+    it('does not hold a shortened answer: the same search asks both again', async () => {
+      let n = 0;
+      const ask = vi.fn(async (u: URL) => (String(u).includes('dataType=Branded') ? (n++ === 0 ? reply({}, 500) : reply({ foods: many(100, 3, 'Acme') })) : reply({ foods: many(1, 3) })) as Response);
+      const base = await start({ key: 'k', fetch: ask as unknown as typeof fetch });
+      const first = (await (await fetch(`${base}?q=egg`)).json()) as { hits: unknown[] };
+      expect(first.hits).toHaveLength(3); // plain foods only: the Branded ask failed
+      const second = (await (await fetch(`${base}?q=egg`)).json()) as { hits: unknown[] };
+      expect(ask).toHaveBeenCalledTimes(4); // four asks, not two: nothing was held
+      expect(second.hits).toHaveLength(6);
+    });
+    it('still answers when only one of the two asks works', async () => {
+      expect(await names(answer(reply({}, 500), reply({ foods: many(100, 3, 'Acme') })))).toEqual(['Branded 0', 'Branded 1', 'Branded 2']);
+      expect(await names(answer(reply({ foods: many(1, 3) }), reply({}, 500)))).toEqual(['Plain 0', 'Plain 1', 'Plain 2']);
+    });
   });
 
   it('refuses a missing or short query without asking USDA', async () => {
@@ -72,10 +105,10 @@ describe('GET /api/foods/search', () => {
     const ask = vi.fn(async () => reply(usda));
     const base = await start({ key: 'k', fetch: ask as unknown as typeof fetch, now: () => t });
     await fetch(`${base}?q=Oats`); await fetch(`${base}?q=oats`);
-    expect(ask).toHaveBeenCalledTimes(1);
+    expect(ask).toHaveBeenCalledTimes(2); // one search is two asks (plain foods, store products); the repeat is held
     t += 61 * 60_000;
     await fetch(`${base}?q=oats`);
-    expect(ask).toHaveBeenCalledTimes(2);
+    expect(ask).toHaveBeenCalledTimes(4);
   });
 
   it('stops a person after the daily allowance, counts per person, and starts again the next day', async () => {
