@@ -9,6 +9,7 @@ import TimerBar from './components/TimerBar.js';
 import Toaster from './components/Toaster.js';
 import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
+import useBackButton from './hooks/useBackButton.js';
 import useBadgeName from './hooks/useBadgeName.js';
 import { WhoContext } from './components/settings/useWho.js';
 import { useWide } from './components/board/useWide.js';
@@ -76,6 +77,7 @@ export default function App() {
   const ready = useAppStore(s => s.isReady());
   const signedOut = useAppStore(s => s.sync?.state === 'paused' && s.sync.pausedBecause === 'auth');
   const { setTab, closeModal, openModal } = useAppStore.getState();
+  useBackButton();
   useTooltips();
   useFocusKeeper();
   const tabsRef = useRef<HTMLElement>(null);
