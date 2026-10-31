@@ -126,7 +126,7 @@ function Bests({ since }: { since: string }) {
   const openModal = useAppStore(s => s.openModal);
   const all = personalBests(logs, since); const shown = all.slice(0, 10); // two columns of 5 on a wide page; the CSS shows the first 5 on a phone
   return (
-    <section className="panel tchart">
+    <section className="panel tchart bestspanel">
       <h2>Personal bests</h2>
       {!shown.length ? <p className="note">When you log a lift heavier than before, or more reps at your best weight, it shows here.</p> : (
         <>
@@ -141,7 +141,7 @@ function Bests({ since }: { since: string }) {
               </li>
             ))}
           </ul>
-          <p className="note">Your best set in the last 8 weeks{all.length > shown.length ? ` (the latest are shown)` : ''}: heavier, or more reps at the same weight. Ticked-off exercises don't count; log the weight you lifted.</p>
+          <p className="note">Your best set in the last 8 weeks{all.length > shown.length ? ', latest first' : ''}: heavier, or more reps at the same weight. Ticked-off exercises don't count; log the weight you lifted.</p>
         </>
       )}
     </section>

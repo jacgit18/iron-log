@@ -17,7 +17,7 @@
   margin-bottom: var(--sp-12);
   align-items: stretch;
 }
-.tgrid>:nth-child(3),.tgrid>:nth-child(4) {
+.tgrid>:nth-child(3),.bestspanel {
   grid-column: 1/-1;
 }
 .tchart h2 {
