@@ -21,6 +21,7 @@ import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import { appTitle } from './lib/envName.js';
+import { startBackNav } from './lib/backNav.js';
 import { lazyTab, mapChunkError } from './lib/lazyTab.js';
 import { renewPush } from './lib/pushClient.js';
 import { useWaterReminder } from './hooks/useWaterReminder.js';
@@ -76,6 +77,7 @@ export default function App() {
   const ready = useAppStore(s => s.isReady());
   const signedOut = useAppStore(s => s.sync?.state === 'paused' && s.sync.pausedBecause === 'auth');
   const { setTab, closeModal, openModal } = useAppStore.getState();
+  useEffect(() => startBackNav(useAppStore, window.history, window), []); // phone Back walks the tabs and closes a sheet (src/lib/backNav.ts)
   useTooltips();
   useFocusKeeper();
   const tabsRef = useRef<HTMLElement>(null);
