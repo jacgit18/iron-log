@@ -636,6 +636,13 @@ describe('creating a program', () => {
     st().loadVersion(next, 'B');
     expect(st().library.find(x => x.id === next).archived).toBeUndefined();
   });
+  it('a program loaded into both A and B is not archived when A is replaced, though B holds it under new card ids', () => {
+    st().createProgram('Shared', 'A'); st().createProgram('Other', 'empty');
+    const [shared, other] = st().library.map(x => x.id);
+    st().loadVersion(shared, 'A'); st().loadVersion(shared, 'B');
+    st().loadVersion(other, 'A');
+    expect(st().library.find(x => x.id === shared).archived).toBeUndefined();
+  });
   it('Undo puts a deleted program back where it was, saved, once', () => {
     st().saveCurrentAs('One'); st().saveCurrentAs('Two'); st().saveCurrentAs('Three');
     const before = st().library.map(x => x.id);

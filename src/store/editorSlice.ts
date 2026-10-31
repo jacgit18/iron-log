@@ -247,7 +247,7 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const out = leftRotationIds(get().library, cur, [get().programs[slot], get().programs[slot === 'A' ? 'B' : 'A']]);
     const back = src?.archived; // a program loaded into A or B is in use, so it is not archived
     if (out.length || back) get().setLibrary(get().library.map(x => { if (out.includes(x.id)) return { ...x, archived: true as const }; if (back && x.id === src!.id) { const { archived: _a, ...rest } = x; return rest; } return x; }));
-    flag((src ? `Loaded ${src.name} into Program ${slot}` : 'Loaded') + (out.length ? '. The program it replaced is in Archived' : ''));
+    flag((src ? `Loaded ${src.name} into Program ${slot}` : 'Loaded') + (out.length ? '. The program it replaced is in Archived' : '') + (back ? (out.length ? ' and it is out of Archived' : '. It is out of Archived') : ''));
   },
   deleteLibItem(id) {
     if (get().blocked()) return;

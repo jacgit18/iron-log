@@ -39,6 +39,11 @@ describe('leftRotationIds', () => {
   const lib = [{ ...item('oldA', '1'), prog: A }, { ...item('oldA2', '2'), prog: A }, { ...item('b', '3'), prog: B }, { ...item('gone', '4', true), prog: A }];
   it('archives every saved copy of the program that left the slot', () => expect(leftRotationIds(lib, A, [B, structuredClone(BUILTIN.B)])).toEqual(['oldA', 'oldA2']));
   it('does not archive a copy that is still what the other slot holds', () => expect(leftRotationIds(lib, A, [B, A])).toEqual([]));
+  it('does not archive a copy the other slot holds under new card ids (the same program loaded into A and B)', () => {
+    const Bx = structuredClone(A); Bx.days.forEach(d => d.slots.forEach(s => { s.id = 'z' + s.id; }));
+    expect(JSON.stringify(Bx) === JSON.stringify(A)).toBe(false);
+    expect(leftRotationIds(lib, A, [B, Bx])).toEqual([]);
+  });
   it('does nothing when the loaded program is the one that was there', () => expect(leftRotationIds(lib, A, [A, B])).toEqual([]));
   it('leaves programs that are not the replaced one', () => expect(leftRotationIds(lib, A, [B]).includes('b')).toBe(false));
 });
