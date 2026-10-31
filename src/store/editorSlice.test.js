@@ -617,6 +617,32 @@ describe('creating a program', () => {
     st().restoreLibItem(id); st().restoreLibItem(id);
     expect(st().library[0].archived).toBeUndefined();
   });
+  it('loading a program over A archives the saved copies of the program it replaced, and only those', () => {
+    st().saveCurrentAs('Old A');
+    st().createProgram('Next', 'empty');
+    const [oldA, next] = st().library.map(x => x.id);
+    st().loadVersion(next, 'A');
+    expect(st().library.find(x => x.id === oldA).archived).toBe(true);
+    expect(st().library.find(x => x.id === next).archived).toBeUndefined(); // what A holds now is in use
+    expect(saved('library/main').items.find(x => x.id === oldA).archived).toBe(true);
+  });
+  it('a saved copy of what B still holds is not archived, and loading an archived program brings it back', () => {
+    st().loadVersion('orig', 'B'); st().saveCurrentAs('Same as B');
+    st().createProgram('Next', 'empty');
+    const [sameB, next] = st().library.map(x => x.id);
+    st().loadVersion(next, 'A');
+    expect(st().library.find(x => x.id === sameB).archived).toBeUndefined(); // A held the original; B's copy is not what left
+    st().archiveLibItem(next);
+    st().loadVersion(next, 'B');
+    expect(st().library.find(x => x.id === next).archived).toBeUndefined();
+  });
+  it('a program loaded into both A and B is not archived when A is replaced, though B holds it under new card ids', () => {
+    st().createProgram('Shared', 'A'); st().createProgram('Other', 'empty');
+    const [shared, other] = st().library.map(x => x.id);
+    st().loadVersion(shared, 'A'); st().loadVersion(shared, 'B');
+    st().loadVersion(other, 'A');
+    expect(st().library.find(x => x.id === shared).archived).toBeUndefined();
+  });
   it('Undo puts a deleted program back where it was, saved, once', () => {
     st().saveCurrentAs('One'); st().saveCurrentAs('Two'); st().saveCurrentAs('Three');
     const before = st().library.map(x => x.id);
