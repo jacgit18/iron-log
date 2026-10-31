@@ -1,0 +1,20 @@
+@layer base, components;
+@layer components {
+.rowmenu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  margin-top: var(--sp-12);
+}
+.rowdays {
+  gap: var(--sp-4);
+  /* seven 44px chips and six gaps fit one line on a 375px phone */
+}
+.rowmenu-item {
+  min-height: 44px;
+  text-align: left;
+}
+.rowmenu-item[aria-disabled="true"] {
+  opacity: 0.45;
+}
+}

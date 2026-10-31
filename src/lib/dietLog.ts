@@ -27,6 +27,14 @@ export function shiftDay(day: string, delta: number): string {
 /** The oldest day that is kept: RETAIN_DAYS before `today`. */
 export const oldestDay = (today: string): string => shiftDay(today, -RETAIN_DAYS);
 
+/** Why a food can't be logged to `day` from the recipe page ("Ate this" on a chosen day), or null: a real date, not after `today`, not before the oldest kept day. */
+export function ateDayError(day: string, today: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || ymd(parseDate(day)) !== day) return 'Pick a day.';
+  if (day > today) return 'Pick today or an earlier day.';
+  if (day < oldestDay(today)) return `Entries are kept for ${RETAIN_DAYS} days, so that day is too far back.`;
+  return null;
+}
+
 /** The entries kept: those within RETAIN_DAYS of `today`. */
 export function pruned(entries: DietEntry[], today: string): DietEntry[] {
   const cutoff = oldestDay(today);

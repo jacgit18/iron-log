@@ -5,6 +5,7 @@ import { test, expect } from './fixtures.js';
 const diet = page => page.getByRole('region', { name: 'Diet' });
 const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const log = async (page, name, kcal, p) => {
+  if (!(await diet(page).getByLabel('Food', { exact: true }).isVisible())) await page.getByRole('button', { name: 'Add one' }).click(); // the One-off food form starts folded
   await diet(page).getByLabel('Food', { exact: true }).fill(name);
   await diet(page).getByLabel('Calories', { exact: true }).fill(String(kcal));
   await diet(page).getByLabel('Protein (g)').fill(String(p));

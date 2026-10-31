@@ -26,11 +26,20 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
   const toAdd = missing.add.length;
   const maybes = mine ? suggestionPins(status).length : 0;
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
+  if (recipe.cat === 'ready') { // bought or frozen: no ingredients, steps or scaling, only its numbers and Ate this
+    return (
+      <section className="panel" aria-labelledby="rc-h">
+        <BackBar onBack={onBack} />
+        <h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Ready-made</span></h2>
+        <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
+        {recipe.note && <p className="note">{recipe.note}</p>}
+        <div className="rc-actions"><MineActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} /></div>
+      </section>
+    );
+  }
   return (
     <section className="panel" aria-labelledby="rc-h">
-      <div className="rc-head">
-        <button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button>
-      </div>
+      <BackBar onBack={onBack} />
       <h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
       {recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
@@ -64,12 +73,18 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
       {credit && <p className="rc-attrib">{credit}</p>}
       <div className="rc-actions">
         {mine ? (
-          <>
-            <button type="button" className="btn" onClick={onEdit}>Edit</button>
-            <ArmedButton className="btn danger" label="Delete" armedLabel="Tap again to delete" aria-label={`Delete the recipe ${recipe.n}`} onConfirm={() => { useAppStore.getState().removeRecipe(recipe.id); onBack(); }} />
-          </>
+          <MineActions recipe={recipe} noun="recipe" onEdit={onEdit} onBack={onBack} />
         ) : <button type="button" className="btn primary" onClick={() => onAdd(shown ?? undefined)}>Add to Mine</button>}
       </div>
     </section>
   );
 }
+
+// Shared by a recipe's page and a ready-made food's page, so a change to the back bar or to Edit and Delete reaches both.
+const BackBar = ({ onBack }: { onBack: () => void }) => <div className="rc-head"><button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button></div>;
+const MineActions = ({ recipe, noun, onEdit, onBack }: { recipe: Recipe; noun: 'recipe' | 'food'; onEdit: () => void; onBack: () => void }) => (
+  <>
+    <button type="button" className="btn" onClick={onEdit}>Edit</button>
+    <ArmedButton className="btn danger" label="Delete" armedLabel="Tap again to delete" aria-label={`Delete the ${noun} ${recipe.n}`} onConfirm={() => { useAppStore.getState().removeRecipe(recipe.id); onBack(); }} />
+  </>
+);

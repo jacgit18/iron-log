@@ -56,32 +56,53 @@
   min-width: 0;
   flex: 1 1 220px;
 }
+.edlist .edmain {
+  flex-basis: 120px;
+  /* a program row keeps Edit and ⋯ beside the name on a phone */
+}
 .edbtns {
   display: flex;
   gap: var(--sp-4);
   flex-wrap: wrap;
 }
-.edcount {
-  display: block;
-  font-size: var(--fs-2xs);
-  font-weight: 400;
-}
-.edmove {
-  max-width: 100%;
-}
-/* A superset's own row of selects: one exercise at a time can go to another day. */
-.edsplit {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-6);
-  flex: 1 0 100%;
-}
-.edsplititem {
+/* The Day stepper (previous, a picker of the seven days, next) fills the row; the Day buttons below it jump straight to a day and are for wide screens only. */
+.daystep {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--sp-8);
-  flex-wrap: wrap;
+  flex: 1 0 100%;
+  max-width: 760px;
+  /* as wide as the program panel under it */
+}
+.daystepbtn {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
+}
+.daystepbtn[aria-disabled="true"] {
+  opacity: 0.45;
+  /* looks disabled but stays focusable, so a keyboard user who steps to Day 1 or Day 7 keeps focus */
+}
+.daypick {
+  flex: 1 1 0;
+  /* width 0 and no minimum: the picker takes what is left between the arrows and its text is cut, never pushes the row wider than the screen at large text sizes */
+  width: 0;
+  min-width: 0;
+  min-height: 44px;
+  text-align: center;
+  text-align-last: center;
+  font-weight: 600;
+}
+.edtop .seg.daybtns button {
+  min-width: 64px;
+  min-height: 44px;
+  text-align: center;
+}
+@media (max-width:700px) {
+  .edtop .seg.daybtns {
+    display: none;
+  }
 }
 .draghandle {
   flex: 0 0 auto;
