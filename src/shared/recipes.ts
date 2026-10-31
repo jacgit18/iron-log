@@ -12,9 +12,9 @@ import { str } from './stretchWeek.js';
 export const MAX_RECIPES = 300, MAX_INGREDIENTS = 40, MAX_STEPS = 40;
 export const MAX_RECIPE_ID = 60, MAX_RECIPE_NAME = 80, MAX_AMOUNT = 40, MAX_STEP = 500, MAX_NOTE = 300, MAX_FROM = 100, MAX_SERVING = 40, MAX_SERVING_G = 5000;
 
-export const RECIPE_CATEGORIES: readonly RecipeCategory[] = ['protein', 'sides', 'sauces', 'seasonings', 'drinks', 'breakfast', 'dessert', 'other'];
+export const RECIPE_CATEGORIES: readonly RecipeCategory[] = ['protein', 'sides', 'sauces', 'seasonings', 'drinks', 'breakfast', 'dessert', 'ready', 'other'];
 /** How a category reads on a chip and in a pill. */
-export const RECIPE_CATEGORY_LABEL: Record<RecipeCategory, string> = { protein: 'Protein', sides: 'Sides', sauces: 'Sauces', seasonings: 'Seasonings', drinks: 'Drinks', breakfast: 'Breakfast', dessert: 'Dessert', other: 'Other' };
+export const RECIPE_CATEGORY_LABEL: Record<RecipeCategory, string> = { protein: 'Protein', sides: 'Sides', sauces: 'Sauces', seasonings: 'Seasonings', drinks: 'Drinks', breakfast: 'Breakfast', dessert: 'Dessert', ready: 'Ready-made', other: 'Other' };
 
 const cleanCategory = (v: unknown): RecipeCategory => RECIPE_CATEGORIES.find(c => c === v) ?? 'other';
 const cleanWhole = (v: unknown, max: number): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= max ? v : null);
