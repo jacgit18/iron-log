@@ -113,7 +113,12 @@ export default function App() {
   }, [tab]);
   useEffect(() => {
     const sync = () => {
-      if (skipPop.current) { skipPop.current = false; history.replaceState(history.state, '', routeHash(useAppStore.getState().tab)); window.dispatchEvent(new Event(ROUTE_EVENT)); return; }
+      if (skipPop.current) {
+        skipPop.current = false; // a pop we asked for ourselves: only fix the address when it names another tab than the one now shown (a sheet closed on a page keeps its page)
+        const now = useAppStore.getState().tab;
+        if (parseRoute(location.hash)?.tab !== now) { history.replaceState(history.state, '', routeHash(now)); window.dispatchEvent(new Event(ROUTE_EVENT)); }
+        return;
+      }
       const r = parseRoute(location.hash);
       if (r && r.tab !== useAppStore.getState().tab) setTab(r.tab);
     };
@@ -125,7 +130,7 @@ export default function App() {
   useEffect(() => { if (history.state?.sheet) history.replaceState({ ...history.state, sheet: false }, ''); }, []);
   useEffect(() => {
     if (sheetOpen && !history.state?.sheet) history.pushState({ ...history.state, sheet: true }, '');
-    if (!sheetOpen && history.state?.sheet) history.back();
+    if (!sheetOpen && history.state?.sheet) { skipPop.current = true; history.back(); } // the sheet may close in the same update as a tab change: the entry below has the old address, fixed once in sync()
   }, [sheetOpen]);
   useEffect(() => {
     const onPop = () => { if (useAppStore.getState().modal && !history.state?.sheet) closeModal(); };

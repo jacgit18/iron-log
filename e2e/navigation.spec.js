@@ -40,6 +40,17 @@ test('Back from a Progress page returns to the Progress hub, not out of the app'
   await expect(page.locator('.hubback')).toBeVisible();
 });
 
+test('a tab switch from an open page swaps that entry; Back then lands on the hub below it', async ({ page }) => {
+  await page.click('#tab-progress');
+  await trends(page).click();
+  await page.click('#tab-board');
+  await expect.poll(() => hash(page)).toBe('#/board');
+  await page.goBack(); // the hub entry under the page: a known result of "tab switches add no Back step", stated in ux/USERFLOW.md
+  await expect(page.locator('#tab-progress')).toHaveAttribute('aria-selected', 'true');
+  await expect(trends(page)).toBeVisible();
+  expect(await hash(page)).toBe('#/progress');
+});
+
 test('the Program view is in the address and swaps in place', async ({ page }) => {
   await page.click('#tab-program');
   await page.getByRole('button', { name: 'Exercise library' }).click();

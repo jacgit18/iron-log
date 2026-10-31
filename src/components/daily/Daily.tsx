@@ -5,7 +5,7 @@ import Supplements from '../supplements/Supplements.jsx';
 import Grocery from '../grocery/Grocery.js';
 import Medical from './Medical.js';
 import Recipes from '../recipes/Recipes.js';
-import { pageOf } from '../../lib/route.js';
+import { dailyFix, dailySection } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import { pickView } from './pickView.js';
 
@@ -19,12 +19,12 @@ export default function Daily() {
   const shown: Record<string, boolean> = { medical: useFeature('medical') };
   const sections = DAILY.filter(([k]) => shown[k] !== false);
   const path = useRoutePath();
-  const routed = path.startsWith('daily/') ? path.split('/')[1] : '';
   const keys = sections.map(([k]) => k);
-  const cur = pickView(keys, keys.includes(routed) ? routed : view); // the address wins when it names a section that is offered (#/daily/recipes) // Nutrition stays the one that opens first; the buttons follow what is shown, not the raw saved view
+  // The address wins when it names a section that is offered (#/daily/recipes). Nutrition stays the one that opens first; the buttons follow what is shown, not the raw saved view.
+  const cur = pickView(keys, dailySection(path, keys) ?? view);
   const View = sections.find(([k]) => k === cur)![2];
   // The address follows the section shown, so it can be copied or reloaded; a deeper page (#/daily/recipes/mine) is left as it is.
-  useEffect(() => { if (path.split('/')[1] !== cur && path.startsWith('daily')) navigate(`daily/${cur}`, 'replace'); }, [path, cur]);
+  useEffect(() => { const fix = dailyFix(path, cur); if (fix) navigate(fix, 'replace'); }, [path, cur]);
   return (
     <>
       <div className="edtop">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PATHS, pageOf, parseRoute, PROGRESS_PAGES, routeHash } from './route.js';
+import { PATHS, dailyFix, dailySection, pageOf, parseRoute, PROGRESS_PAGES, routeHash } from './route.js';
 
 // Screen addresses (brief navigation-urls): every address round-trips, an unknown one falls back to the screen above it, and none can carry personal data.
 describe('parseRoute', () => {
@@ -32,5 +32,23 @@ describe('pageOf', () => {
     expect(pageOf('program/exercises', 'progress')).toBeNull();
     expect(pageOf('progress/zzz', 'progress')).toBeNull(); // not a screen
     expect(pageOf('daily/grocery/spend', 'daily/grocery')).toBe('spend');
+  });
+});
+
+describe('dailySection and dailyFix', () => {
+  const keys = ['grocery', 'supplements', 'recipes'];
+  it('names the section an address points at, only when it is offered', () => {
+    expect(dailySection('daily/recipes', keys)).toBe('recipes');
+    expect(dailySection('daily/recipes/mine', keys)).toBe('recipes');
+    expect(dailySection('daily/grocery/spend', keys)).toBe('grocery');
+    expect(dailySection('daily/medical', keys)).toBeNull(); // not offered to this person
+    expect(dailySection('daily', keys)).toBeNull();
+    expect(dailySection('progress/trends', keys)).toBeNull();
+  });
+  it('rewrites the address only when it does not name the section shown', () => {
+    expect(dailyFix('daily', 'supplements')).toBe('daily/supplements');
+    expect(dailyFix('daily/medical', 'supplements')).toBe('daily/supplements');
+    expect(dailyFix('daily/recipes/mine', 'recipes')).toBeNull(); // a deeper page is left as it is
+    expect(dailyFix('progress', 'recipes')).toBeNull();
   });
 });
