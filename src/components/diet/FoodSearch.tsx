@@ -1,38 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
-import { FOODS_FAILURE_TEXT, searchFoods } from '../../lib/foodsClient.js';
-import { cleanGrams, cleanQuery, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
+import { useState } from 'react';
+import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
+import { useFoodHits } from './useFoodHits.js';
 import './Diet.css';
 
 /** What a pick fills into the entry form. */
 export interface FoodFill { n: string; kcal: number; p: number; c?: number; f?: number }
 
-const PAUSE_MS = 300;
-
 // "Look up nutrition" (brief diet-food-lookup): type a few letters, pick a result from USDA FoodData Central, set the grams, and the entry form is filled in (still editable).
 // One request at a time: a newer search cancels the older, and a late answer for old words is dropped. Nothing is stored here.
 export default function FoodSearch({ onUse }: { onUse: (fill: FoodFill) => void }) {
   const [text, setText] = useState('');
-  const [hits, setHits] = useState<FoodHit[]>([]);
-  const [note, setNote] = useState('');
+  const { hits, note } = useFoodHits(text);
   const [pick, setPick] = useState<FoodHit | null>(null);
   const [grams, setGrams] = useState('100');
-  const run = useRef(0);
-
-  useEffect(() => {
-    const q = cleanQuery(text);
-    const id = ++run.current;
-    if (!q) { setHits([]); setNote(''); return; }
-    const ctl = new AbortController();
-    const timer = setTimeout(() => {
-      searchFoods(q, ctl.signal).then(r => {
-        if (id !== run.current) return;
-        if (!r.ok) { setHits([]); setNote(FOODS_FAILURE_TEXT[r.reason]); return; }
-        setHits(r.hits);
-        setNote(r.hits.length === 0 ? 'No foods found. Type the numbers instead.' : '');
-      });
-    }, PAUSE_MS);
-    return () => { clearTimeout(timer); ctl.abort(); };
-  }, [text]);
 
   const g = cleanGrams(grams);
   const scaled = pick && g !== null ? scaleFood(pick, g) : null;
@@ -40,7 +20,7 @@ export default function FoodSearch({ onUse }: { onUse: (fill: FoodFill) => void 
   const use = () => {
     if (!pick || !scaled) return;
     onUse({ n: pick.name.slice(0, 80), ...scaled });
-    setPick(null); setHits([]); setText(''); setNote('');
+    setPick(null); setText('');
   };
 
   return (

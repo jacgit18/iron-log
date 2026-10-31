@@ -5,6 +5,7 @@ import { sameName, stepsFromText } from '../../lib/recipeList.js';
 import { rescale, servingsNote, typedAmount, type ScaleRow } from '../../lib/recipeScale.js';
 import { pinFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import type { Recipe, RecipeCategory, RecipeIngredient } from '../../types.ts';
 
 // A form row: the ingredient, plus what its amount is scaled from (the Servings field rewrites amounts; see src/lib/recipeScale.ts).
@@ -30,6 +31,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const [steps, setSteps] = useState(recipe?.steps.join('\n') ?? '');
   const [note, setNote] = useState(recipe?.note ?? '');
   const [err, setErr] = useState('');
+  const [calc, setCalc] = useState(false); // the Calculate from ingredients panel is open
   const whole = (t: string) => (/^\d{1,4}$/.test(t.trim()) ? Number(t) : undefined);
 
   const save = () => {
@@ -58,6 +60,12 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     const r = rescale(ing, lastServings, v);
     setIng(r.rows); setLastServings(v);
     setScaleNote(servingsNote(lastServings, v, r.left, ing.some(x => x.amt.trim())));
+  };
+  const useNumbers = (per: PerServing) => {
+    setKcal(String(per.kcal)); setProtein(String(per.p));
+    if (per.c !== undefined) setCarbs(String(per.c));
+    if (per.f !== undefined) setFat(String(per.f));
+    setCalc(false); setErr('');
   };
   const anchorServings = () => { const v = whole(servings); if (lastServings === null && v && v <= 99) setLastServings(v); };
   const typeAmount = (i: number, amt: string) => { setIng(ing.map((x, j) => (j === i ? typedAmount(x, amt, lastServings) : x))); setErr(''); };
@@ -95,6 +103,11 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
         <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => setFat(e.target.value)} /></label>
         <span />
       </div>
+      <div className="rc-calcbar">
+        <button type="button" className="btn sm" disabled={!ing.some(i => i.n.trim() && !i.skip)} aria-expanded={calc} onClick={() => setCalc(!calc)}>Calculate from ingredients</button>
+        {!ing.some(i => i.n.trim() && !i.skip) && <span className="note"> Add ingredients first.</span>}
+      </div>
+      {calc && <IngredientMacros ingredients={ing} servings={servings} onClose={() => setCalc(false)} onUse={useNumbers} />}
       <fieldset className="rc-form">
         <legend>Ingredients</legend>
         <p className="note" role="status">{scaleNote}</p>
