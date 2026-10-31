@@ -52,6 +52,10 @@
   background: transparent;
   color: inherit;
 }
+.exwhere {
+  margin-left: auto;
+  white-space: nowrap;
+}
 .libgroup {
   display: flex;
   align-items: center;
