@@ -13,6 +13,8 @@ describe('normRecipe', () => {
     expect(normRecipe(r)).toEqual(r);
     expect(validRecipe(r)).toBe(true);
     expect(normRecipe({ ...base, cat: 'sides' })?.cat).toBe('sides'); // existing categories are unchanged
+    expect(normRecipe({ ...base, cat: 'carbs' })?.cat).toBe('carbs'); // Carbs is a category of its own
+    expect(validRecipe({ ...base, cat: 'carbs' })).toBe(true);
     expect(normRecipe({ ...base, cat: 'frozen' })?.cat).toBe('other'); // an unknown one still becomes Other
   });
   it('needs an id and a name', () => {
