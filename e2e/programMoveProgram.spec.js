@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
-const openDay = async (page, n) => { await page.click('#tab-program'); await page.getByRole('group', { name: 'Day to edit' }).getByRole('button', { name: `Day ${n}`, exact: true }).click(); };
+const openDay = async (page, n) => { await page.click('#tab-program'); await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', { name: `Day ${n}`, exact: true }).click(); };
 const names = page => page.locator('.edpanel:not(.lib) .edrow .edmain b').allTextContents();
 const firstRow = page => page.locator('.edpanel:not(.lib) .edrow').first();
 const moveBtn = page => firstRow(page).getByRole('button', { name: /^Move .* to another program or day$/ });
@@ -37,7 +37,7 @@ test('Undo puts the card back in Program A, and Program B loses it', async ({ pa
   await page.getByRole('status').filter({ hasText: 'Moved' }).getByRole('button', { name: 'Undo' }).click();
   expect(await names(page)).toEqual(before);
   await page.getByRole('group', { name: 'Program to edit' }).getByRole('button', { name: 'Program B' }).click();
-  await page.getByRole('group', { name: 'Day to edit' }).getByRole('button', { name: 'Day 2', exact: true }).click();
+  await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', { name: 'Day 2', exact: true }).click();
   expect(await names(page)).not.toContain(before[0]);
 });
 
@@ -66,7 +66,7 @@ test('Move is off while the preview says the card is already there', async ({ pa
 
 test('the sheet has 44px targets and no accessibility violations at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await openDay(page, 1);
+  await page.click('#tab-program'); // Day 1 is open; the Day buttons are not shown at phone width
   await moveBtn(page).click();
   await expect(sheet(page)).toBeVisible(); // the sheet is a lazy chunk: wait for it before reading its buttons or running axe
   for (const b of await sheet(page).getByRole('button').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
