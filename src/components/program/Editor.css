@@ -81,7 +81,9 @@
   /* looks disabled but stays focusable, so a keyboard user who steps to Day 1 or Day 7 keeps focus */
 }
 .daypick {
-  flex: 1 1 auto;
+  flex: 1 1 0;
+  /* width 0 and no minimum: the picker takes what is left between the arrows and its text is cut, never pushes the row wider than the screen at large text sizes */
+  width: 0;
   min-width: 0;
   min-height: 44px;
   text-align: center;
