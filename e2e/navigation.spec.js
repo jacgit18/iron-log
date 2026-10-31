@@ -5,14 +5,18 @@ import { test, expect } from './fixtures.js';
 const hash = page => page.evaluate(() => location.hash);
 const trends = page => page.locator('.hubtile', { hasText: 'Training trends' });
 
-test('a tab switch changes the address and adds no Back step', async ({ page }) => {
+test('a tab switch changes the address, and Back walks back through the tabs with the address following', async ({ page }) => {
   await expect.poll(() => hash(page)).toBe('#/board');
   await page.click('#tab-progress');
   await expect.poll(() => hash(page)).toBe('#/progress');
   await page.click('#tab-program');
   await expect.poll(() => hash(page)).toBe('#/program');
-  await page.goBack(); // nothing was added by the tab switches: Back leaves the app
-  await expect(page.locator('#tab-program')).toHaveCount(0);
+  await page.goBack(); // phone Back goes to the previous tab (src/lib/backNav.ts)
+  await expect(page.locator('#tab-progress')).toHaveAttribute('aria-selected', 'true');
+  expect(await hash(page)).toBe('#/progress');
+  await page.goBack();
+  await expect(page.locator('#tab-board')).toHaveAttribute('aria-selected', 'true');
+  expect(await hash(page)).toBe('#/board');
 });
 
 test('a Progress page adds one Back step, and a reload reopens it', async ({ page }) => {
@@ -40,15 +44,15 @@ test('Back from a Progress page returns to the Progress hub, not out of the app'
   await expect(page.locator('.hubback')).toBeVisible();
 });
 
-test('a tab switch from an open page swaps that entry; Back then lands on the hub below it', async ({ page }) => {
+test('a tab switch from an open page: Back returns to that page, address included', async ({ page }) => {
   await page.click('#tab-progress');
   await trends(page).click();
   await page.click('#tab-board');
   await expect.poll(() => hash(page)).toBe('#/board');
-  await page.goBack(); // the hub entry under the page: a known result of "tab switches add no Back step", stated in ux/USERFLOW.md
+  await page.goBack();
   await expect(page.locator('#tab-progress')).toHaveAttribute('aria-selected', 'true');
-  await expect(trends(page)).toBeVisible();
-  expect(await hash(page)).toBe('#/progress');
+  await expect(page.locator('.hubback')).toBeVisible(); // still on Training trends
+  expect(await hash(page)).toBe('#/progress/trends');
 });
 
 test('the Program view is in the address and swaps in place', async ({ page }) => {

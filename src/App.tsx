@@ -127,18 +127,6 @@ export default function App() {
     window.addEventListener('popstate', sync); window.addEventListener('hashchange', sync);
     return () => { window.removeEventListener('popstate', sync); window.removeEventListener('hashchange', sync); };
   }, [setTab]);
-  // A sheet adds one history entry, so Back closes the sheet and stays on the screen. An entry left over from before a reload is dropped, so Back is not a dead press.
-  const sheetOpen = useAppStore(s => s.modal !== null);
-  useEffect(() => { if (history.state?.sheet) history.replaceState({ ...history.state, sheet: false }, ''); }, []);
-  useEffect(() => {
-    if (sheetOpen && !history.state?.sheet) history.pushState({ ...history.state, sheet: true }, '');
-    if (!sheetOpen && history.state?.sheet) { skipPop.current = true; history.back(); } // the sheet may close in the same update as a tab change: the entry below has the old address, fixed once in sync()
-  }, [sheetOpen]);
-  useEffect(() => {
-    const onPop = () => { if (useAppStore.getState().modal && !history.state?.sheet) closeModal(); };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, [closeModal]);
   // A note set just before a reload (Erase everything), said once now that the page is back.
   useEffect(() => { const t = takeAfterReload(); if (t) flag(t); }, []);
   useWaterReminder();
