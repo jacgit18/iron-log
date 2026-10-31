@@ -39,3 +39,12 @@ test.describe('on a phone', () => {
     expect(violations.map(v => v.id)).toEqual([]);
   });
 });
+
+test('on a wide screen the Day buttons sit under the stepper, not beside it', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.click('#tab-program');
+  const s = await stepper(page).boundingBox();
+  const d = await page.getByRole('group', { name: 'Jump to day' }).boundingBox();
+  expect(d.y).toBeGreaterThanOrEqual(s.y + s.height); // below it, even when the row has room for both
+  expect(d.x).toBeLessThanOrEqual(s.x + 2); // starting at the same left edge
+});

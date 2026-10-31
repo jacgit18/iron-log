@@ -150,15 +150,17 @@ function ProgramEditor() {
           {['A', 'B'].map(p => <button type="button" key={p} className={p === k ? 'on' : ''} aria-pressed={p === k} onClick={() => st.setEdProg(p)}>{progName(cfg, p)}</button>)}
           {lib && <button type="button" className="on segname" aria-pressed="true">{item.name}</button>}
         </div>
-        <div className="daystep" role="group" aria-label="Day stepper">
-          <button type="button" className="btn daystepbtn" aria-label="Previous day" aria-disabled={edDay === 1} onClick={() => { if (edDay > 1) st.setEdDay(edDay - 1); }}><Icon name="chevron-left" /></button>
-          <select className="btn daypick" aria-label="Day to edit" value={edDay} onChange={e => st.setEdDay(Number(e.target.value))}>
-            {DAYS.map(d => <option key={d} value={d}>{dayPickLabel(d, DAYS.length, exerciseCount(prog.days[d - 1]?.slots ?? []))}</option>)}
-          </select>
-          <button type="button" className="btn daystepbtn" aria-label="Next day" aria-disabled={edDay === DAYS.length} onClick={() => { if (edDay < DAYS.length) st.setEdDay(edDay + 1); }}><Icon name="chevron-right" /></button>
-        </div>
-        <div className="seg daybtns" role="group" aria-label="Jump to day">
-          {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}</button>)}
+        <div className="dayctl">
+          <div className="daystep" role="group" aria-label="Day stepper">
+            <button type="button" className="btn daystepbtn" aria-label="Previous day" aria-disabled={edDay === 1} onClick={() => { if (edDay > 1) st.setEdDay(edDay - 1); }}><Icon name="chevron-left" /></button>
+            <select className="btn daypick" aria-label="Day to edit" value={edDay} onChange={e => st.setEdDay(Number(e.target.value))}>
+              {DAYS.map(d => <option key={d} value={d}>{dayPickLabel(d, DAYS.length, exerciseCount(prog.days[d - 1]?.slots ?? []))}</option>)}
+            </select>
+            <button type="button" className="btn daystepbtn" aria-label="Next day" aria-disabled={edDay === DAYS.length} onClick={() => { if (edDay < DAYS.length) st.setEdDay(edDay + 1); }}><Icon name="chevron-right" /></button>
+          </div>
+          <div className="seg daybtns" role="group" aria-label="Jump to day">
+            {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}</button>)}
+          </div>
         </div>
       </div>
       {lib ? (
