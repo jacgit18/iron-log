@@ -15,6 +15,7 @@ const newRecipe = async (page, name, kcal, p, ing) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
   await page.getByRole('button', { name: 'New recipe' }).click();
   await page.getByLabel('Name', { exact: true }).fill(name);
+  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill(String(kcal));
   await page.getByLabel('Protein per serving (g)').fill(String(p));
   for (const [i, n] of ing.entries()) {
