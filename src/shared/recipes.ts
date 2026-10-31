@@ -10,7 +10,7 @@ import { str } from './stretchWeek.js';
    API to refuse what the app would never send. Same split as the grocery list (src/shared/grocery.ts). */
 
 export const MAX_RECIPES = 300, MAX_INGREDIENTS = 40, MAX_STEPS = 40;
-export const MAX_RECIPE_ID = 60, MAX_RECIPE_NAME = 80, MAX_AMOUNT = 40, MAX_STEP = 500, MAX_NOTE = 300, MAX_FROM = 100;
+export const MAX_RECIPE_ID = 60, MAX_RECIPE_NAME = 80, MAX_AMOUNT = 40, MAX_STEP = 500, MAX_NOTE = 300, MAX_FROM = 100, MAX_SERVING = 40, MAX_SERVING_G = 5000;
 
 export const RECIPE_CATEGORIES: readonly RecipeCategory[] = ['protein', 'sides', 'sauces', 'seasonings', 'drinks', 'breakfast', 'dessert', 'ready', 'other'];
 /** How a category reads on a chip and in a pill. */
@@ -36,10 +36,11 @@ export function normRecipe(x: unknown): Recipe | null {
   const ing = (Array.isArray(o.ing) ? o.ing : []).map(normIngredient).filter((i): i is RecipeIngredient => !!i).slice(0, MAX_INGREDIENTS);
   const steps = (Array.isArray(o.steps) ? o.steps : []).map(s => str(s, MAX_STEP)).filter(Boolean).slice(0, MAX_STEPS);
   const servings = cleanWhole(o.servings, 99), minutes = cleanWhole(o.minutes, 1440);
+  const serving = str(o.serving, MAX_SERVING), servingG = cleanWhole(o.servingG, MAX_SERVING_G); // what one serving is: words and/or grams (brief recipe-serving-size)
   const note = str(o.note, MAX_NOTE), from = str(o.from, MAX_FROM);
   const library = from.startsWith('c:');
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
-  return { id, n, cat: cleanCategory(o.cat), ing, steps, ...(servings ? { servings } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  return { id, n, cat: cleanCategory(o.cat), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */
