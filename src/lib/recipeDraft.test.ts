@@ -26,6 +26,8 @@ describe('recipeError', () => {
     expect(recipeError([], { n: ' ', ing: [{ n: 'a' }] })).toBe('Give the recipe a name.');
     expect(recipeError([], { n: 'x', ing: [{ n: ' ' }] })).toBe('Add at least one ingredient.');
     expect(recipeError([], { n: 'x', ing: [{ n: 'a' }] })).toBeNull();
+    expect(recipeError([], { n: 'x', ing: [], cat: 'ready' })).toBeNull(); // a ready-made food has no ingredients
+    expect(recipeError([], { n: 'x', ing: [], cat: 'sides' })).toBe('Add at least one ingredient.');
     expect(recipeError(Array.from({ length: 300 }, () => ({}) as never), { n: 'x', ing: [{ n: 'a' }] })).toMatch(/up to 300/);
   });
 });

@@ -1,7 +1,6 @@
 import type { PhaseKey } from '../../types.ts';
 import { useEffect, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { bwSorted } from '../../lib/body.js';
 import Icon from '../Icon.jsx';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
@@ -109,12 +108,10 @@ function ProgressMain() {
   const loadHistory = useAppStore(s => s.loadHistory);
   const storeMode = useAppStore(s => s.storeMode); // history waits until the data source is known
   useEffect(() => { if (!weekHist && !loading && storeMode !== 'loading') loadHistory(); }, [weekHist, loading, storeMode, loadHistory]);
-  type Page = 'goals' | 'hist' | 'freq' | 'lifts' | 'trends' | 'body' | 'muscles';
+  type Page = 'goals' | 'hist' | 'freq' | 'lifts' | 'trends';
   // The open page is in the address (#/progress/trends): opening one adds a Back step, and a reload or a pasted address reopens it.
   const page = pageOf(useRoutePath(), 'progress') as Page | null;
   const setPage = (k: Page) => navigate(`progress/${k}`, 'push');
-  const body = useAppStore(s => s.body);
-  const bw = bwSorted(body).at(-1) ?? null;
   // A muscle picked on the map filters the lists below it for this visit only.
   useEffect(() => () => useAppStore.getState().selectMuscle(null), []);
   useEffect(() => { window.scrollTo(0, 0); }, [page]); // a sub-page opens at its top, and Back returns to the top of the hub
@@ -126,8 +123,6 @@ function ProgressMain() {
       {page === 'freq' && <FreqGoals />}
       {page === 'lifts' && <LiftList />}
       {page === 'trends' && <Trends part="trends" />}
-      {page === 'body' && <Trends part="body" />}
-      {page === 'muscles' && <Muscles part="details" />}
     </>
   );
   const tile = (k: Page, t: string, note: string) => (
@@ -139,15 +134,14 @@ function ProgressMain() {
     <>
       <Trends />
       <History weeks={6} more={() => setPage('hist')} />
-      <Muscles part="map" />
+      <Muscles />
       <MuscleChip />
       <GoalRows onAll={() => setPage('goals')} />
       <ExerciseRows onAll={() => setPage('lifts')} />
+      <Trends part="body" />
       <div className="hubtiles">
         {tile('freq', 'Frequency goals', 'Times per week for each exercise')}
         {tile('trends', 'Training trends', 'Sets, volume, bests · all lifts together')}
-        {tile('body', 'Body weight', bw ? `${bw.w} lb · week of ${fmtShort(parseDate(bw.wk))}` : 'Log your weight')}
-        {tile('muscles', 'Muscle details', 'Sets by muscle, tags to fix')}
       </div>
     </>
   );

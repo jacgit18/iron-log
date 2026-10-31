@@ -1,0 +1,76 @@
+@layer base, components;
+@layer components {
+/* The Exercise and Stretch libraries: a search box, filter chips and one button per row. */
+.libbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.libsearch {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.libchips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.libchip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--field-line);
+  /* token-ok: a pill */
+  border-radius: 999px;
+  background: var(--surface);
+  max-width: 100%;
+}
+.libchip select {
+  min-height: 44px;
+  max-width: 100%;
+  border: 0;
+  background: transparent;
+  padding-inline: var(--sp-12);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: inherit;
+}
+.libchip.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.libchip.on select {
+  padding-right: var(--sp-4);
+}
+.libchipx {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+.libgroup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  width: 100%;
+  min-height: 44px;
+  margin-top: var(--sp-8);
+  padding: 0 var(--sp-4);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  text-align: left;
+}
+}
