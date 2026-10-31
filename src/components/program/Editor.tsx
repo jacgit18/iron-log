@@ -8,6 +8,7 @@ import { PHASES } from '../../lib/data.js';
 import { progName, DAYS } from '../../lib/logic.js';
 import { dayPickLabel, exerciseCount } from '../../lib/exerciseCount.js';
 import { slotSummary } from '../../lib/programMove.js';
+import { archivedHeading, splitLibrary } from '../../lib/programArchive.js';
 import { sameProg, libDate } from '../../lib/export.js';
 import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
@@ -27,12 +28,12 @@ const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slot
 // Where a moved card went, for the Moved notice and its Go to button: a day title in this program, or the other program and its day.
 const movedWhere = (m: EdMoved, prog: { days: { title: string }[] }) => (m.toKey ? `${m.toLabel} · Day ${m.to}` : prog.days[m.to - 1]!.title);
 
-function LibRow({ name, meta, inUse, onLoad, loadLabel, extra, removing }: { name: string; meta: string; inUse: boolean; onLoad: () => void; loadLabel: string; extra?: ReactNode; removing?: boolean }) {
+function LibRow({ name, meta, inUse, onLoad, loadLabel, extra, removing }: { name: string; meta: string; inUse: boolean; onLoad?: () => void; loadLabel?: string; extra?: ReactNode; removing?: boolean }) {
   return (
     <div className={`edrow${inUse ? ' inuse' : ''}${removing ? ' removing' : ''}`}>
       <div className="edmain">{removing && <span className="tag rmtag">Will be deleted · tap Delete again</span>}<b>{name}</b><span className="note">{meta}</span></div>
       <div className="edbtns">
-        {inUse ? <span className="pill">In use</span> : <ArmedButton className="btn sm" aria-label={`Load ${name}`} label="Load" armedLabel={loadLabel} onConfirm={onLoad} />}
+        {inUse ? <span className="pill">In use</span> : !onLoad ? null : <ArmedButton className="btn sm" aria-label={`Load ${name}`} label="Load" armedLabel={loadLabel ?? 'Tap to load'} onConfirm={onLoad} />}
         {extra}
       </div>
     </div>
@@ -46,7 +47,11 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
   const [arming, setArming] = useState<string | null>(null); // the program whose Delete was pressed once
   const today = useToday(s => s.today);
   const cur = programs[k]; const pn = progName(cfg, k);
-  const items = [...library].sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  const { active: items, archived } = splitLibrary(library);
+  const metaOf = (it: LibraryItem) => `${boardNote(onBoardKeys(it.prog, programs as Record<'A' | 'B', Program>).map(b => progName(cfg, b)))} · ${libDate(it.at)} · ${progStats(it.prog)} · ${it.created ? (it.from ? `Created from ${progName(cfg, it.from)}` : 'Created new') : `From ${progName(cfg, it.from as string)}`}${it.auto ? ' · auto-saved' : ''}`;
+  const deleteBtn = (it: LibraryItem) => (
+    <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Tap again to delete" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); st.deleteLibItem(it.id); }} />
+  );
   const saved = !custom || library.some(it => sameProg(it.prog, cur));
   const loadLabel = `Tap to load into ${pn}`;
   return (
@@ -58,15 +63,32 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
         {items.map(it => (
           <LibRow
             key={it.id} name={it.name} removing={arming === it.id} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k as ProgKey)}
-            meta={`${boardNote(onBoardKeys(it.prog, programs as Record<'A' | 'B', Program>).map(b => progName(cfg, b)))} · ${libDate(it.at)} · ${progStats(it.prog)} · ${it.created ? (it.from ? `Created from ${progName(cfg, it.from)}` : 'Created new') : `From ${progName(cfg, it.from as string)}`}${it.auto ? ' · auto-saved' : ''}`}
+            meta={metaOf(it)}
             extra={<>
               <button type="button" className="btn sm" aria-label={`Edit ${it.name}`} onClick={() => { st.setEdProg('L:' + it.id); st.setEdDay(1); window.scrollTo({ top: 0 }); }}>Edit</button>
-              <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Tap again to delete" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); st.deleteLibItem(it.id); }} />
+              <button type="button" className="btn sm ghost" aria-label={`Archive ${it.name}`} onClick={() => st.archiveLibItem(it.id)}>Archive</button>
+              {deleteBtn(it)}
             </>}
           />
         ))}
-        {!items.length && <p className="note">No programs yet. Use Create a program, at the top, to build your own.</p>}
+        {!items.length && <p className="note">{archived.length ? `No active programs. ${archived.length} archived.` : 'No programs yet. Use Create a program, at the top, to build your own.'}</p>}
       </div>
+      {archived.length > 0 && (
+        <details className="libarchive">
+          <summary>{archivedHeading(archived.length)}</summary>
+          <div className="edlist">
+            {archived.map(it => (
+              <LibRow
+                key={it.id} name={it.name} removing={arming === it.id} inUse={false} meta={metaOf(it)}
+                extra={<>
+                  <button type="button" className="btn sm" aria-label={`Restore ${it.name}`} onClick={() => st.restoreLibItem(it.id)}>Restore</button>
+                  {deleteBtn(it)}
+                </>}
+              />
+            ))}
+          </div>
+        </details>
+      )}
       <form className="libsave" noValidate onSubmit={e => { e.preventDefault(); st.saveCurrentAs(name); setName(''); }}>
         <label className="field grow">Save {pn} as
           <input id="lib-name" maxLength={60} value={name} onChange={e => setName(e.target.value)} placeholder={`e.g. ${pn} · ${MON[today.getMonth()]} ${today.getFullYear()}`} />

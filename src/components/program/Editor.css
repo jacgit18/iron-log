@@ -33,6 +33,19 @@
   align-items: flex-end;
   flex-wrap: wrap;
 }
+.libarchive {
+  margin-top: var(--sp-12);
+}
+.libarchive summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+.libarchive .edlist {
+  margin-top: var(--sp-6);
+}
 .edlist {
   display: flex;
   flex-direction: column;

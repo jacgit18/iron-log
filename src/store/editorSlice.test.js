@@ -593,6 +593,30 @@ describe('creating a program', () => {
     expect(st().library).toEqual([]);
     expect(st().edKey()).toBe('A');
   });
+  it('archives a saved program, saves it, and restores it unchanged', () => {
+    st().saveCurrentAs('One'); st().saveCurrentAs('Two');
+    const [one, two] = st().library.map(x => x.id);
+    const body = st().library[0].prog;
+    st().archiveLibItem(one);
+    expect(st().library.find(x => x.id === one)).toMatchObject({ archived: true, name: 'One' });
+    expect(st().library.find(x => x.id === two).archived).toBeUndefined();
+    expect(saved('library/main').items.find(x => x.id === one).archived).toBe(true);
+    st().restoreLibItem(one);
+    expect(st().library.find(x => x.id === one).archived).toBeUndefined();
+    expect(st().library.find(x => x.id === one).prog).toEqual(body);
+  });
+  it('archiving the program being edited goes back to the board’s program; unknown or repeated calls change nothing', () => {
+    st().createProgram('My plan', 'A');
+    const id = st().library[0].id;
+    expect(st().edKey()).toBe('L:' + id);
+    st().archiveLibItem(id);
+    expect(st().edKey()).toBe('A');
+    const after = st().library;
+    st().archiveLibItem(id); st().archiveLibItem('nope'); st().restoreLibItem('nope');
+    expect(st().library).toBe(after);
+    st().restoreLibItem(id); st().restoreLibItem(id);
+    expect(st().library[0].archived).toBeUndefined();
+  });
   it('Undo puts a deleted program back where it was, saved, once', () => {
     st().saveCurrentAs('One'); st().saveCurrentAs('Two'); st().saveCurrentAs('Three');
     const before = st().library.map(x => x.id);

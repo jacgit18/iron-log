@@ -81,6 +81,12 @@ describe('Excel import', () => {
     expect(d.logs['my-hold']).toHaveLength(1);
   });
 
+  it('keeps a saved program archived through an export and import', async () => {
+    const lib = [{ id: 'keep1', name: 'Kept', at: '2026-10-01T00:00:00Z', created: true, prog: structuredClone(BUILTIN.A) }, { id: 'park1', name: 'Parked', at: '2026-10-02T00:00:00Z', archived: true, prog: structuredClone(BUILTIN.B) }];
+    const d = await parseExcelExport(toBytes(buildOverallWorkbook(X, { ...S(), library: lib }, {})), cfg());
+    expect(d.library.map(i => [i.id, !!i.archived, !!i.created])).toEqual([['keep1', false, true], ['park1', true, false]]);
+  });
+
   it('matches entries already in the app, so importing twice adds nothing', async () => {
     const d = await parseExcelExport(toBytes(buildOverallWorkbook(X, S(), {})), cfg());
     const have = new Set(Object.values(S().logs).flat().map(entryKey));
