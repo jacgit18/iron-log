@@ -305,7 +305,7 @@ export interface CatalogData {
 export interface CatalogItem { id: string; name: string; brand?: string; data: CatalogData }
 
 /* ---------- Recipes (synced to the account as the list 'recipe', ADR 084) ---------- */
-export type RecipeCategory = 'protein' | 'sides' | 'sauces' | 'seasonings' | 'drinks' | 'breakfast' | 'dessert' | 'ready' | 'other';
+export type RecipeCategory = 'protein' | 'carbs' | 'sides' | 'sauces' | 'seasonings' | 'drinks' | 'breakfast' | 'dessert' | 'ready' | 'other';
 /** One ingredient line: `n` is the name that is matched against the At home list, `amt` the free-text amount ("2 cups"); `home` is the id
  *  of the At home item the person linked it to by hand. `sub` is an Alternative to use if they do not have `n` (it never replaces `n`: the ingredient is at home when either is); `skip` marks an
  *  ingredient they leave out (listed, but not counted and never added to To get). */

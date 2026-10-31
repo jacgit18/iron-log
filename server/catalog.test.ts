@@ -160,6 +160,12 @@ describe('GET /api/catalog/search (recipes)', () => {
     expect(ids(await search('?kind=recipe&cat=sauces'))).toEqual(['c:wbc:r2']);
     expect(ids(await search('?kind=recipe&q=chicken&cat=protein'))).toEqual(['c:wbc:r1']);
   });
+  it('narrows to the Carbs category', async () => {
+    await db.insertInto('catalog_items').values([rec(5, 'Fried Rice', 'carbs', ['2 cups cooked rice'])]).execute();
+    expect(ids(await search('?kind=recipe&cat=carbs'))).toEqual(['c:wbc:r5']);
+    expect(ids(await search('?kind=recipe&q=rice&cat=carbs'))).toEqual(['c:wbc:r5']);
+    expect(ids(await search('?kind=recipe&cat=sides'))).toEqual([]);
+  });
   it('returns the recipe with its steps, and refuses a category that is not one or one used on another kind', async () => {
     expect((await search('?kind=recipe&q=olive')).body.items[0]!.data.recipe).toMatchObject({ cat: 'sauces', steps: ['Cook.'] });
     expect((await search('?kind=recipe&offset=3000')).status).toBe(200); // recipes page deeper than supplements
