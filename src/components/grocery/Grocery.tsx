@@ -4,6 +4,8 @@ import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, UNITS, byStore, carriedCount, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
+import { pageOf } from '../../lib/route.js';
+import { navigate, useRoutePath } from '../useRoute.js';
 import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.jsx';
 import { motionOK } from '../../lib/motion.js';
@@ -462,7 +464,10 @@ export default function Grocery() {
   const ready = useAppStore(s => s.isReady());
   const nowKey = monthKey(today);
   useEffect(() => { if (ready) useAppStore.getState().carryGroceryTicks(nowKey); }, [ready, nowKey]); // a new month starts with the At home ticks of the last one (ADR 079)
-  const [view, setView] = useState<View>(() => (g.items.length ? 'get' : 'home')); // nothing to get from an empty list: start where you add
+  const [chosen, setChosen] = useState<View>(() => (g.items.length ? 'get' : 'home')); // nothing to get from an empty list: start where you add
+  const routed = pageOf(useRoutePath(), 'daily/grocery'); // #/daily/grocery/spend wins over the default
+  const view = (routed ?? chosen) as View;
+  const setView = (v: View) => { setChosen(v); navigate(`daily/grocery/${v}`, 'replace'); };
   return (
     <section className="panel groc" aria-labelledby="groc-h">
       <div className="gtop">

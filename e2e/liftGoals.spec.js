@@ -4,7 +4,13 @@ import { test, expect } from './fixtures.js';
 // These cover the wiring: the picker, the goal form, the row, a later log, Remove with Undo, and a goal set from the exercise sheet.
 const panel = page => page.locator('.goalspanel');
 // Weight goals rows are on the Progress page; the full goals page (the old panel) opens from Manage goals.
-const goals = async page => { await page.click('#tab-progress'); await page.getByRole('button', { name: 'Manage goals' }).click(); };
+// A reload on the goals page reopens it (screen addresses, #/progress/goals), so the button is only there when the hub is showing.
+const goals = async page => {
+  await page.click('#tab-progress');
+  const manage = page.getByRole('button', { name: 'Manage goals' });
+  await manage.or(panel(page)).first().waitFor();
+  if (await manage.isVisible()) await manage.click();
+};
 
 test('a goal on an exercise with no log shows in Weight goals, fills in once a set is logged, and Remove has Undo', async ({ page }) => {
   await page.goto('/');

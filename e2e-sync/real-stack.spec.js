@@ -45,7 +45,10 @@ test('a ticked card and an edited session reach the server, and a second phone s
   await page.reload(); // the app reopens on the tab it was on
   await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await page.locator('#tab-progress').click();
-  await page.getByRole('button', { name: 'Exercise charts' }).click();
+  // The reload reopened the Exercise charts page it was on (screen addresses, #/progress/lifts), so the tile is only there when the hub is showing.
+  const charts = page.getByRole('button', { name: 'Exercise charts' });
+  await charts.or(page.locator('.pcard', { hasText: 'Hack Squat' })).first().waitFor();
+  if (await charts.isVisible()) await charts.click();
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(page.locator('table.hist tbody tr')).toHaveCount(1);
   await expect(page.locator('table.hist')).toContainText('300 lb');

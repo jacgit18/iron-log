@@ -17,6 +17,8 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
+import { pageOf } from '../../lib/route.js';
+import { navigate, useRoutePath } from '../useRoute.js';
 import './Editor.css';
 
 const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
@@ -252,7 +254,9 @@ function ProgramEditor() {
 
 // The Program tab: the programs, and the exercise and stretch libraries (supplements are on Daily → Supplements, under Edit).
 export default function Editor() {
-  const [view, setView] = useState('program');
+  // The view is in the address (#/program/exercises); the segmented control swaps it instead of adding a Back step.
+  const view = pageOf(useRoutePath(), 'program') ?? 'program';
+  const setView = (v: string) => navigate(v === 'program' ? 'program' : `program/${v}`, 'replace');
   return (
     <>
       <div className="edtop">
