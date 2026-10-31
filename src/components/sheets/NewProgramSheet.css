@@ -46,6 +46,8 @@
   padding: var(--sp-8) var(--sp-12);
 }
 .npnext .btn .note {
+  display: block;
+  margin-top: var(--sp-2);
   font-weight: 400;
 }
 }
