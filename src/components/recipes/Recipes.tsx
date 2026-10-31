@@ -8,7 +8,9 @@ import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { filterRecipes, recipeMeta } from '../../lib/recipeList.js';
 import { pantryStatus } from '../../lib/recipePantry.js';
 import { RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { pageOf } from '../../lib/route.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import { goUp, navigate, useRoutePath } from '../useRoute.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { searchRecipes } from '../../sync/recipeCatalog.js';
 import type { CatalogItem, Recipe, RecipeCategory } from '../../types.ts';
@@ -23,7 +25,17 @@ export default function Recipes() {
   const grocery = useAppStore(s => s.grocery);
   const months = useAppStore(s => s.groceryMonths);
   const syncing = useAppStore(s => s.sync !== null);
-  const [view, setView] = useState<View>({ kind: 'list' });
+  const [view, setViewNow] = useState<View>({ kind: 'list' });
+  // A recipe page or the form adds a Back step (#/daily/recipes/mine); the recipe itself is not in the address, so a reload or pasted address shows the list.
+  const page = pageOf(useRoutePath(), 'daily/recipes');
+  const setView = (v: View) => {
+    setViewNow(v);
+    if (v.kind === 'list') goUp('daily/recipes'); else navigate(`daily/recipes/${v.kind}`, page ? 'replace' : 'push');
+  };
+  useEffect(() => {
+    if (page && view.kind === 'list') navigate('daily/recipes', 'replace'); // an address for a page with nothing to show
+    if (!page && view.kind !== 'list') setViewNow({ kind: 'list' }); // Back to the list
+  }, [page, view.kind]);
   const [src, setSrc] = useState<'mine' | 'library'>('mine');
   const [q, setQ] = useState('');
   const [cat, setCat] = useState<RecipeCategory | null>(null);

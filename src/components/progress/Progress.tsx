@@ -16,6 +16,8 @@ import Muscles from '../muscles/Muscles.jsx';
 import LineChart from '../LineChart.js';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 import { ExerciseRows, GoalRows, MuscleChip } from './MuscleLists.jsx';
+import { pageOf } from '../../lib/route.js';
+import { goUp, navigate, useRoutePath } from '../useRoute.js';
 import './Hub.css';
 import './Progress.css';
 
@@ -108,7 +110,9 @@ function ProgressMain() {
   const storeMode = useAppStore(s => s.storeMode); // history waits until the data source is known
   useEffect(() => { if (!weekHist && !loading && storeMode !== 'loading') loadHistory(); }, [weekHist, loading, storeMode, loadHistory]);
   type Page = 'goals' | 'hist' | 'freq' | 'lifts' | 'trends' | 'body' | 'muscles';
-  const [page, setPage] = useState<Page | null>(null);
+  // The open page is in the address (#/progress/trends): opening one adds a Back step, and a reload or a pasted address reopens it.
+  const page = pageOf(useRoutePath(), 'progress') as Page | null;
+  const setPage = (k: Page) => navigate(`progress/${k}`, 'push');
   const body = useAppStore(s => s.body);
   const bw = bwSorted(body).at(-1) ?? null;
   // A muscle picked on the map filters the lists below it for this visit only.
@@ -116,7 +120,7 @@ function ProgressMain() {
   useEffect(() => { window.scrollTo(0, 0); }, [page]); // a sub-page opens at its top, and Back returns to the top of the hub
   if (page) return (
     <>
-      <div className="hubback"><button type="button" className="btn sm" onClick={() => setPage(null)}><Icon name="chevron-left" /> Progress</button></div>
+      <div className="hubback"><button type="button" className="btn sm" onClick={() => goUp('progress')}><Icon name="chevron-left" /> Progress</button></div>
       {page === 'goals' && <GoalsPanel />}
       {page === 'hist' && <History />}
       {page === 'freq' && <FreqGoals />}

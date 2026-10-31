@@ -22,6 +22,8 @@ import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import { appTitle } from './lib/envName.js';
 import { lazyTab, mapChunkError } from './lib/lazyTab.js';
+import { parseRoute, routeHash } from './lib/route.js';
+import { ROUTE_EVENT } from './components/useRoute.js';
 import { renewPush } from './lib/pushClient.js';
 import { useWaterReminder } from './hooks/useWaterReminder.js';
 import './components/BrandLink.css';
@@ -101,6 +103,35 @@ export default function App() {
     const k = tabs[(n + tabs.length) % tabs.length][0];
     setTab(k); document.getElementById(`tab-${k}`)!.focus();
   };
+  // Screen addresses (brief navigation-urls). A tab change swaps the address instead of adding a Back step; Back or an edited address moves to the tab it names.
+  const skipPop = useRef(false);
+  useEffect(() => {
+    if (parseRoute(location.hash)?.tab === tab) return;
+    if (history.state?.settingsScreen) skipPop.current = true; // leaving Settings with a screen open takes that screen's history entry back (Settings.tsx): the popstate it causes must not undo this tab change
+    history.replaceState({ ...history.state, route: false }, '', routeHash(tab));
+    window.dispatchEvent(new Event(ROUTE_EVENT));
+  }, [tab]);
+  useEffect(() => {
+    const sync = () => {
+      if (skipPop.current) { skipPop.current = false; history.replaceState(history.state, '', routeHash(useAppStore.getState().tab)); window.dispatchEvent(new Event(ROUTE_EVENT)); return; }
+      const r = parseRoute(location.hash);
+      if (r && r.tab !== useAppStore.getState().tab) setTab(r.tab);
+    };
+    window.addEventListener('popstate', sync); window.addEventListener('hashchange', sync);
+    return () => { window.removeEventListener('popstate', sync); window.removeEventListener('hashchange', sync); };
+  }, [setTab]);
+  // A sheet adds one history entry, so Back closes the sheet and stays on the screen. An entry left over from before a reload is dropped, so Back is not a dead press.
+  const sheetOpen = useAppStore(s => s.modal !== null);
+  useEffect(() => { if (history.state?.sheet) history.replaceState({ ...history.state, sheet: false }, ''); }, []);
+  useEffect(() => {
+    if (sheetOpen && !history.state?.sheet) history.pushState({ ...history.state, sheet: true }, '');
+    if (!sheetOpen && history.state?.sheet) history.back();
+  }, [sheetOpen]);
+  useEffect(() => {
+    const onPop = () => { if (useAppStore.getState().modal && !history.state?.sheet) closeModal(); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [closeModal]);
   // A note set just before a reload (Erase everything), said once now that the page is back.
   useEffect(() => { const t = takeAfterReload(); if (t) flag(t); }, []);
   useWaterReminder();
@@ -117,7 +148,7 @@ export default function App() {
   const View = TABS.find(([k]) => k === (plansGone ? 'board' : tab))![2];
   return (
     <WhoContext.Provider value={ask}>
-      <a className="skip" href="#view">Skip to content</a>
+      <a className="skip" href="#view" onClick={e => { e.preventDefault(); document.getElementById('view')?.focus(); }}>Skip to content</a>
       <div className="wrap" data-acctmenu={badgeName !== null || badgePending ? '' : undefined}>
         <header className="top">
           <h1><button type="button" className="brandlink" aria-current={tab === 'board' ? 'page' : undefined} onClick={() => { setTab('board'); window.scrollTo({ top: 0 }); }}>{APP_TITLE}</button></h1>
