@@ -1,46 +1,84 @@
 import { useMemo, useState } from 'react';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
 import { MAX_INGREDIENTS, MAX_RECIPE_NAME, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
-import { rescale, servingsNote, typedAmount, type ScaleRow } from '../../lib/recipeScale.js';
+import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { pinFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Recipe, RecipeCategory, RecipeIngredient } from '../../types.ts';
+import IngredientList from './IngredientList.js';
+import IngredientRows, { type Row } from './IngredientRows.js';
 
-// A form row: the ingredient, plus what its amount is scaled from (the Servings field rewrites amounts; see src/lib/recipeScale.ts).
-type Row = RecipeIngredient & ScaleRow;
+const TOO_FEW = 'Type at least one ingredient first.';
+const sameKey = (n: string, sub?: string) => `${n.trim().toLowerCase()}|${(sub ?? '').trim().toLowerCase()}`;
 
-// The recipe form (ADR 084): a new recipe, or one of yours to change. Steps are typed one per line. Each ingredient can be swapped for what you
-// use instead or skipped, and offers names from your Groceries items as you type (choosing one pins it to that item).
+// The recipe form (ADR 084, laid out again in brief recipe-form-mobile-desktop): a new recipe, or one of yours to change. A new recipe starts at
+// 1 serving. Ingredients are compact rows with an amount picker, or typed as a list; each can have an Alternative, and names are offered from your
+// Groceries items as you type (choosing one pins it to that item). Steps are typed one per line. Nutrition per serving is folded away until opened.
 export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone: (savedId: string | null) => void }) {
   const recipes = useAppStore(s => s.recipes);
   const items = useAppStore(s => s.grocery.items);
   const [n, setN] = useState(recipe?.n ?? '');
   const [cat, setCat] = useState<RecipeCategory>(recipe?.cat ?? 'other');
-  const [servings, setServings] = useState(recipe?.servings ? String(recipe.servings) : '');
+  const [servings, setServings] = useState(recipe ? (recipe.servings ? String(recipe.servings) : '') : '1');
   const [minutes, setMinutes] = useState(recipe?.minutes ? String(recipe.minutes) : '');
   const [kcal, setKcal] = useState(recipe?.kcal !== undefined ? String(recipe.kcal) : '');
   const [protein, setProtein] = useState(recipe?.p !== undefined ? String(recipe.p) : '');
   const [carbs, setCarbs] = useState(recipe?.c !== undefined ? String(recipe.c) : '');
   const [fat, setFat] = useState(recipe?.f !== undefined ? String(recipe.f) : '');
+  const [nutOpen, setNutOpen] = useState(false);
   const [ing, setIng] = useState<Row[]>(recipe?.ing.length ? recipe.ing.map(i => ({ ...i, amt: i.amt ?? '' })) : [{ n: '', amt: '' }]);
-  const [lastServings, setLastServings] = useState<number | null>(recipe?.servings ?? null); // the servings the amounts are for
+  const [lastServings, setLastServings] = useState<number | null>(recipe ? recipe.servings ?? null : 1); // the servings the amounts are for
   const [scaleNote, setScaleNote] = useState('');
   const [active, setActive] = useState<number | null>(null); // the ingredient field being typed in: its suggestions are offered
+  const [listMode, setListMode] = useState(false); // ingredients typed as a list; listBase is the text it opened with, so unedited text leaves the rows alone
+  const [listText, setListText] = useState('');
+  const [listBase, setListBase] = useState('');
   const [steps, setSteps] = useState(recipe?.steps.join('\n') ?? '');
   const [note, setNote] = useState(recipe?.note ?? '');
   const [err, setErr] = useState('');
   const whole = (t: string) => (/^\d{1,4}$/.test(t.trim()) ? Number(t) : undefined);
 
+  // The rows a typed list stands for. A line still exactly as an earlier row writes it keeps that row; a changed or new line is read again, and keeps
+  // the pin and Skip of an earlier row with the same name and alternative. An amount typed in the list is what the servings shown are for.
+  const read = listMode ? readList(listText, ing) : null;
+  const listRows = (): { rows: Row[]; cut: boolean } | null => {
+    if (!read || !read.lines.length) return null;
+    const old = new Map(ing.map(i => [sameKey(i.n, i.sub), i]));
+    return {
+      cut: read.cut,
+      rows: read.lines.map(l => {
+        if ('old' in l) return l.old;
+        const r = l.row, o = old.get(sameKey(r.n, r.sub)), home = o?.home ?? pinFor(r.n, r.sub, items);
+        return typedAmount<Row>({ n: r.n, amt: '', ...(r.sub ? { sub: r.sub } : {}), ...(home ? { home } : {}), ...(o?.skip ? { skip: true as const } : {}) }, r.amt, lastServings);
+      }),
+    };
+  };
+  const listEdited = listMode && listText !== listBase;
+  const showRows = (): string => {
+    if (listEdited) {
+      const r = listRows();
+      if (!r) return TOO_FEW;
+      setIng(r.rows); setScaleNote(r.cut ? `Only the first ${MAX_INGREDIENTS} ingredients were used.` : ''); setErr('');
+    }
+    setListMode(false);
+    return '';
+  };
+  const showList = () => { const t = ingredientsToText(ing); setListText(t); setListBase(t); setListMode(true); setErr(''); };
+
   const save = () => {
     if (servings.trim() && !(whole(servings) && whole(servings)! <= 99)) { setErr('Servings must be a whole number from 1 to 99.'); return; }
     if (minutes.trim() && !(whole(minutes) && whole(minutes)! <= 1440)) { setErr('Minutes must be a whole number from 1 to 1440.'); return; }
     const k = kcal.trim() ? cleanKcal(Number(kcal)) : undefined, pr = protein.trim() ? cleanProtein(Number(protein)) : undefined;
-    if (k === null) { setErr('Calories per serving must be a number from 1 to 9,999.'); return; }
-    if (pr === null) { setErr('Protein per serving must be a number from 0 to 999 g.'); return; }
+    if (k === null) { setNutOpen(true); setErr('Calories per serving must be a number from 1 to 9,999.'); return; }
+    if (pr === null) { setNutOpen(true); setErr('Protein per serving must be a number from 0 to 999 g.'); return; }
     const cb = carbs.trim() ? cleanGrams(Number(carbs)) : undefined, ft = fat.trim() ? cleanGrams(Number(fat)) : undefined;
-    if (cb === null || ft === null) { setErr('Carbs and fat per serving must be numbers from 0 to 999 g.'); return; }
-    const keep = ing.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
+    if (cb === null || ft === null) { setNutOpen(true); setErr('Carbs and fat per serving must be numbers from 0 to 999 g.'); return; }
+    const fromList = listEdited ? listRows() : null;
+    if (listEdited && !fromList) { setErr(TOO_FEW); return; }
+    const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
+    const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
     const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ing: keep, steps: stepsFromText(steps), servings: whole(servings), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(recipe?.from ? { from: recipe.from } : {}) });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
@@ -63,65 +101,71 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const typeAmount = (i: number, amt: string) => { setIng(ing.map((x, j) => (j === i ? typedAmount(x, amt, lastServings) : x))); setErr(''); };
   const setRow = (i: number, patch: Partial<RecipeIngredient>) => { setIng(ing.map((x, j) => (j === i ? { ...x, ...patch } : x))); setErr(''); };
   // Renaming an ingredient drops its pin to an At home item (the pin was for the old name), unless the new name is exactly one of your
-  // Groceries items. A swapped ingredient is never pinned by its name, and changing a swap drops the pin: a pin outranks the swap in the match.
+  // Groceries items. An ingredient with an Alternative is never pinned by its name, and changing the Alternative drops the pin: a pin outranks it in the match.
   const rename = (i: number, name: string) => setRow(i, { n: name, home: pinFor(name, ing[i]?.sub, items) });
   const activeText = active === null ? '' : ing[active]?.n ?? '';
-  const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id)), [activeText, items, recipes, recipe?.id]);
+  const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id)).map(o => o.n), [activeText, items, recipes, recipe?.id]);
+  const nutLine = [kcal.trim() && `${kcal.trim()} kcal`, protein.trim() && `${protein.trim()} g protein`, carbs.trim() && `${carbs.trim()} g carbs`, fat.trim() && `${fat.trim()} g fat`].filter(Boolean).join(' · ') || 'Not set';
+  const sv = whole(servings);
+  const servingsLine = sv && sv <= 99 ? `Amounts are for ${sv} serving${sv === 1 ? '' : 's'}.` : '';
 
   return (
     <form className="rc-form" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New recipe'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit recipe' : 'New recipe'}</h3>
-      <label>Name
-        <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
-      </label>
-      {n.trim() && sameName(recipes, n, recipe?.id) && <p className="note">You already have a recipe with this name. You can still save it.</p>}
-      <label>Category
-        <select value={cat} onChange={e => setCat(e.target.value as RecipeCategory)}>
-          {RECIPE_CATEGORIES.map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
-        </select>
-      </label>
-      <div className="rc-ingrow">
-        <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>
-        <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
-        <span />
-      </div>
-      <div className="rc-ingrow">
-        <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => setKcal(e.target.value)} /></label>
-        <label>Protein per serving (g)<input inputMode="decimal" value={protein} onChange={e => setProtein(e.target.value)} /></label>
-        <span />
-      </div>
-      <div className="rc-ingrow">
-        <label>Carbs per serving (g), optional<input inputMode="decimal" value={carbs} onChange={e => setCarbs(e.target.value)} /></label>
-        <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => setFat(e.target.value)} /></label>
-        <span />
-      </div>
-      <fieldset className="rc-form">
-        <legend>Ingredients</legend>
-        <p className="note" role="status">{scaleNote}</p>
-        <datalist id="rc-suggest">{options.map(o => <option key={o.n} value={o.n} />)}</datalist>
-        {ing.map((x, i) => (
-          <div className="rc-ingblock" key={i}>
-            <div className="rc-ingrow">
-              <label>Ingredient {i + 1}<input value={x.n} list="rc-suggest" onFocus={() => setActive(i)} onChange={e => { setActive(i); rename(i, e.target.value); }} autoComplete="off" /></label>
-              <label>Amount<input value={x.amt} onChange={e => typeAmount(i, e.target.value)} placeholder="2 cups" autoComplete="off" /></label>
-              <button type="button" className="btn sm ghost" aria-label={`Remove ingredient ${i + 1}`} onClick={() => setIng(ing.length > 1 ? ing.filter((_, j) => j !== i) : [{ n: '', amt: '' }])}>Remove</button>
-            </div>
-            <div className="rc-ingrow rc-ingopts">
-              <label>Swap<input aria-label={`Swap ingredient ${i + 1}`} value={x.sub ?? ''} maxLength={MAX_RECIPE_NAME} onChange={e => setRow(i, { sub: e.target.value, home: undefined })} placeholder="what you use instead" autoComplete="off" /></label>
-              <label className="rc-skip"><input type="checkbox" aria-label={`Skip ingredient ${i + 1}`} checked={!!x.skip} onChange={e => setRow(i, { skip: e.target.checked ? true : undefined })} />Skip</label>
-            </div>
+      <div className="rc-cols">
+        <div className="rc-col">
+          <label>Name
+            <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
+          </label>
+          {n.trim() && sameName(recipes, n, recipe?.id) && <p className="note">You already have a recipe with this name. You can still save it.</p>}
+          <div className="rc-meta">
+            <label>Category
+              <select value={cat} onChange={e => setCat(e.target.value as RecipeCategory)}>
+                {RECIPE_CATEGORIES.map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
+              </select>
+            </label>
+            <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>
+            <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
           </div>
-        ))}
-        <button type="button" className="btn sm" disabled={ing.length >= MAX_INGREDIENTS} onClick={() => setIng([...ing, { n: '', amt: '' }])}>Add ingredient</button>
-      </fieldset>
-      <label>Steps, one per line
-        <textarea rows={5} value={steps} onChange={e => setSteps(e.target.value)} />
-      </label>
-      <label>Note
-        <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
-      </label>
+          <div className="rc-nut">
+            <div className="rc-nuthead">
+              <strong>Nutrition per serving</strong>
+              <button type="button" className="btn sm" aria-expanded={nutOpen} aria-label={nutOpen ? 'Done with nutrition per serving' : 'Edit nutrition per serving'} onClick={() => setNutOpen(!nutOpen)}>{nutOpen ? 'Done' : 'Edit'}</button>
+            </div>
+            <p className="note">{nutLine}</p>
+            {nutOpen && (
+              <div className="rc-nutfields">
+                <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => setKcal(e.target.value)} /></label>
+                <label>Protein per serving (g)<input inputMode="decimal" value={protein} onChange={e => setProtein(e.target.value)} /></label>
+                <label>Carbs per serving (g), optional<input inputMode="decimal" value={carbs} onChange={e => setCarbs(e.target.value)} /></label>
+                <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => setFat(e.target.value)} /></label>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="rc-col">
+          <fieldset className="rc-form rc-ings">
+            <legend>Ingredients</legend>
+            <div className="seg" role="group" aria-label="How to enter ingredients">
+              <button type="button" className={listMode ? '' : 'on'} aria-pressed={!listMode} onClick={() => { const m = listMode ? showRows() : ''; if (m) setErr(m); }}>Rows</button>
+              <button type="button" className={listMode ? 'on' : ''} aria-pressed={listMode} onClick={() => { if (!listMode) showList(); }}>Type a list</button>
+            </div>
+            <p className="note" role="status">{scaleNote || servingsLine}</p>
+            {listMode
+              ? <IngredientList text={listText} onText={setListText} onUse={showRows} read={read!.lines.map(l => ('old' in l ? { n: l.old.n, amt: l.old.amt ?? '', ...(l.old.sub ? { sub: l.old.sub } : {}) } : l.row))} cut={read!.cut} />
+              : <IngredientRows rows={ing} options={options} onActive={setActive} onRename={rename} onType={typeAmount} onSet={setRow}
+                  onRemove={i => setIng(ing.length > 1 ? ing.filter((_, j) => j !== i) : [{ n: '', amt: '' }])} onAdd={() => setIng([...ing, { n: '', amt: '' }])} />}
+          </fieldset>
+          <label>Steps, one per line
+            <textarea rows={5} value={steps} onChange={e => setSteps(e.target.value)} />
+          </label>
+          <label>Note
+            <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
+          </label>
+        </div>
+      </div>
       {err && <p className="note gerr" role="alert">{err}</p>}
-      <div className="rc-actions">
+      <div className="rc-actions rc-bar">
         <button type="submit" className="btn primary">Save recipe</button>
         <button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button>
       </div>
