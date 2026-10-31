@@ -131,6 +131,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use(compression());
   // Before Better Auth and every body parser: a cross-origin write is refused without being read.
   app.use('/api', originGuard(allowedOrigins));
+  // Nothing under /api is stored by the browser or a proxy (sign-in answers carry the account's email and name; Back on a shared phone must not replay
+  // another account's data). A route that wants a short private cache (the catalog, backups) sets its own header after this.
+  app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
   // Better Auth reads the request body itself, so its routes come before any body parser.
   if (auth) {
     // What the sign-in screen may offer someone who is not signed in. Public on purpose; it names no address and no secret.
@@ -192,9 +195,6 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db && push?.fire) app.use('/api/push', fireRoute({ db, now: push.now, scheduler: push.scheduler, ...push.fire, limit: rateLimit(limits.pushFire) }));
 
   // Everything below this line needs a signed-in user. The per-address limit comes first, so an anonymous flood never reaches the database.
-  // Nothing signed-in is stored by the browser or a proxy: Back on a shared phone must not replay another account's answer. A route that
-  // wants a short private cache (the catalog, backups) sets its own header after this.
-  app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
   app.use('/api', rateLimit(limits.api));
   app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
   // A page that holds another account's data is refused before any route runs (server/expectedUser.ts).

@@ -1,8 +1,10 @@
+import { randomBytes } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { Kysely } from 'kysely';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.ts';
+import { createAuth } from './auth/betterAuth.ts';
 import type { DB } from './db/types.ts';
 import { ADMIN_ONLY } from './billing.ts';
 import { startTestDatabase } from './test/postgres.ts';
@@ -18,13 +20,27 @@ const PUBLIC: Record<string, string> = {
   'POST /api/stripe/webhook': 'Stripe calls it; the signature is the check',
 };
 
+/** Public only when sign-in is configured (`if (auth)` in createApp). */
+const PUBLIC_WITH_AUTH: Record<string, string> = {
+  'GET /api/auth-options': 'what the sign-in screen may offer; names no address or secret',
+  'ANY /api/auth/*splat': 'Better Auth is the sign-in itself; own limits and body cap',
+};
+
+// Not covered here: POST /api/push/fire, registered only when push.fire is configured. It is public by design (a Google-signed token is
+// its check, push/fire.ts) and its token and limit tests live in the push tests.
+
 /** Mounted routers (app.use with a prefix) cannot be listed from the router, so each prefix is probed by hand. */
 const PREFIXES = ['account', 'backups', 'billing', 'catalog', 'commands', 'foods', 'issues', 'me', 'push', 'sync'];
 
 let db: Kysely<DB>;
+let auth: ReturnType<typeof createAuth>;
 let stop: () => Promise<void>;
 let server: Server | undefined;
-beforeAll(async () => { ({ db, stop } = await startTestDatabase()); }, 120_000);
+beforeAll(async () => {
+  let dbUrl: string;
+  ({ db, stop, url: dbUrl } = await startTestDatabase());
+  auth = createAuth({ baseURL: 'http://localhost:3999', secret: randomBytes(32).toString('base64'), databaseUrl: dbUrl, google: { clientId: 'test-client.apps.googleusercontent.com', clientSecret: 'test-client-secret' }, testSignIn: true }, 'test');
+}, 120_000);
 afterEach(() => new Promise<void>(done => (server ? server.close(() => done()) : done())));
 afterAll(async () => { await stop?.(); });
 
@@ -35,18 +51,24 @@ const listen = async (app: ReturnType<typeof createApp>) => {
 };
 
 interface Layer { route?: { path: string; methods: Record<string, boolean> } }
+// app.all registers one route for every verb; it is listed once as ANY.
 const directRoutes = (app: ReturnType<typeof createApp>): string[] =>
   ((app as unknown as { router: { stack: Layer[] } }).router.stack)
-    .flatMap(l => (l.route ? Object.keys(l.route.methods).map(m => `${m.toUpperCase()} ${l.route!.path}`) : []))
+    .flatMap(l => {
+      if (!l.route) return [];
+      const methods = Object.keys(l.route.methods);
+      return methods.length > 5 ? [`ANY ${l.route.path}`] : methods.map(m => `${m.toUpperCase()} ${l.route!.path}`);
+    })
     .filter(r => r.split(' ')[1]!.startsWith('/api'));
 
 describe('route inventory', () => {
-  it('every direct /api route is public on purpose or needs a session', async () => {
-    const app = createApp({ db });
+  it.each([['without sign-in configured', false], ['with sign-in configured', true]])('every direct /api route is public on purpose or needs a session, %s', async (_name, withAuth) => {
+    const app = createApp(withAuth ? { db, auth } : { db });
     const url = await listen(app);
     const routes = directRoutes(app);
+    const allowed: Record<string, string> = withAuth ? { ...PUBLIC, ...PUBLIC_WITH_AUTH } : PUBLIC;
     expect(routes.length).toBeGreaterThan(20); // the walk found the routes at all
-    for (const route of routes.filter(r => !(r in PUBLIC))) {
+    for (const route of routes.filter(r => !(r in allowed))) {
       const [method, path] = route.split(' ') as [string, string];
       const res = await fetch(url + path, { method, headers: { 'content-type': 'application/json' }, body: method === 'GET' ? undefined : '{}' });
       expect(res.status, `${route} answered ${res.status} with no session; add a guard, or list it in PUBLIC with a reason`).toBe(401);
@@ -54,8 +76,8 @@ describe('route inventory', () => {
   });
 
   it('the public list has no stale entries', () => {
-    const routes = directRoutes(createApp({ db }));
-    for (const route of Object.keys(PUBLIC)) expect(routes, `${route} is on PUBLIC but not registered`).toContain(route);
+    const routes = directRoutes(createApp({ db, auth }));
+    for (const route of Object.keys({ ...PUBLIC, ...PUBLIC_WITH_AUTH })) expect(routes, `${route} is on PUBLIC but not registered`).toContain(route);
   });
 
   it('every mounted prefix, and any unknown /api path, needs a session', async () => {
@@ -91,5 +113,11 @@ describe('Cache-Control on /api', () => {
     expect(await cc('/api/sync?since=0', { 'x-dev-user': 'plain' })).toBe('private, no-store');
     expect(await cc('/api/me')).toBe('private, no-store'); // the 401
     expect(await cc('/api/no-such-thing')).toBe('private, no-store');
+  });
+  it('Better Auth answers (get-session carries the account email and name) are never stored either', async () => {
+    const url = await listen(createApp({ db, auth }));
+    const cc = async (path: string) => (await fetch(url + path)).headers.get('cache-control');
+    expect(await cc('/api/auth/get-session')).toMatch(/no-store/); // Better Auth sets its own header
+    expect(await cc('/api/auth-options')).toBe('private, no-store');
   });
 });
