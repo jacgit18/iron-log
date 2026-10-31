@@ -530,6 +530,46 @@ describe('creating a program', () => {
     expect(st().cfg.phDef[`${firstId}:0`]).toBe('strength');
     expect(st().edProg).toBe('L:' + it.id);
   });
+  it('keeps the open sheet when asked to, for the step that offers loading it', () => {
+    useAppStore.setState({ modal: { type: 'newprog' } });
+    expect(st().createProgram('Kept', 'empty', true)).toBe(true);
+    expect(st().modal).toEqual({ type: 'newprog' });
+    expect(st().edProg).toBe('L:' + st().library[0].id);
+  });
+  it('makes a starter into a library program without touching the board', () => {
+    expect(st().createStarterProgram('ppl', 3, ' Push day plan ')).toBeNull();
+    const it = st().library[0];
+    expect(it).toMatchObject({ name: 'Push day plan', created: true });
+    expect(it).not.toHaveProperty('from');
+    expect(it.prog.days).toHaveLength(7);
+    expect(it.prog.days.map(d => d.slots.length > 0)).toEqual([true, true, true, false, false, false, false]);
+    expect(st().programs.A).toBe(BUILTIN.A); expect(st().programs.B).toBe(BUILTIN.B);
+    expect(st().edProg).toBe('L:' + it.id);
+    // its own card ids, and the exercises it needs are now in the account's library
+    const first = it.prog.days[0].slots[0];
+    expect(first.id).toMatch(/^P.{5}-d1s1$/);
+    expect(exInfo(st().cfg, first.items[0].ex).n).toBe('Bench press');
+    expect(first.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+  it('keeps a program name to 60 characters, like renaming does', () => {
+    st().createStarterProgram('ppl', 3, 'n'.repeat(80));
+    st().createProgram('m'.repeat(80), 'empty', true);
+    expect(st().library.map(x => x.name.length)).toEqual([60, 60]);
+  });
+  it('refuses a starter it does not know, or days it does not offer', () => {
+    expect(st().createStarterProgram('nope', 3, 'X')).toMatch(/Pick a program/);
+    expect(st().createStarterProgram('ppl', 5, 'X')).toMatch(/not offered/);
+    expect(st().library).toEqual([]);
+  });
+  it('a starter program loads into B with its cards; B was untouched, so nothing is saved for it', () => {
+    st().createStarterProgram('fullbody', 3, 'Full');
+    const id = st().library[0].id;
+    st().loadVersion(id, 'B');
+    expect(slotsFor(st().programs.B).length).toBeGreaterThan(0);
+    expect(slotsFor(st().programs.B).every(sl => sl.from)).toBe(true);
+    expect(st().cfg.progNames.B).toBe('Full');
+    expect(st().library.some(x => x.auto)).toBe(false); // loadVersion only saves a program that was changed
+  });
   it('edits the copy, not the program on the board', () => {
     st().createProgram('My plan', 'A');
     st().removeEdSlot(0);

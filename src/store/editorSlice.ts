@@ -266,18 +266,33 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     flag(`${starter.name} added, ${perWeek} days a week`);
     return null;
   },
-  createProgram(name, from) {
+  createProgram(name, from, keepOpen = false) {
     if (get().blocked()) return false;
     const srcProg = from === 'empty' ? BLANK.A : get().programs[from] || get().programs.A;
-    const it = get().libSnapshot(name.trim(), srcProg, from, false); it.created = true;
+    const it = get().libSnapshot(name.trim().slice(0, 60), srcProg, from, false); it.created = true;
     if (from === 'empty') delete it.from;
     // The copy gets its own slot ids so check-offs and phase defaults never mix with the program it came from;
     // the source's saved phase defaults carry over to the new ids.
     const phDef = reId(it.prog, slotsFor(srcProg), 'P' + it.id.slice(-5), get().cfg.phDef);
     if (Object.keys(phDef).length) get().mutateCfg(c => { Object.assign(c.phDef, phDef); });
-    set({ library: get().library.map(x => (x.id === it.id ? it : x)), edProg: 'L:' + it.id, edDay: 1, modal: null });
+    set({ library: get().library.map(x => (x.id === it.id ? it : x)), edProg: 'L:' + it.id, edDay: 1, ...(keepOpen ? {} : { modal: null }) });
     get().saveLibrary(); flag('Program created');
     return true;
+  },
+  // A starter made into a library program (not onto the board, unlike applyStarter): its exercises join the account's library, and the
+  // Create sheet keeps its place to offer loading it. The new program is the open one in the editor (`edProg`).
+  createStarterProgram(starterId, perWeek, name) {
+    if (get().blocked()) return 'Wait a moment and try again.';
+    const starter = starterById(starterId);
+    if (!starter) return 'Pick a program to start from.';
+    const built = buildStarter(starter, perWeek, get().cfg, 'A', ymd(weekStartOf(new Date())));
+    if (!built) return 'That many days a week is not offered for this program.';
+    if (Object.keys(built.newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, built.newEx); c.muscleMap = { ...(c.muscleMap || {}), ...built.newTags }; });
+    const it = get().libSnapshot(name.trim().slice(0, 60), built.program, 'A', false); it.created = true; delete it.from;
+    reId(it.prog, slotsFor(built.program), 'P' + it.id.slice(-5), {}); // its own card ids, so nothing mixes with Program A's
+    set({ library: get().library.map(x => (x.id === it.id ? it : x)), edProg: 'L:' + it.id, edDay: 1 });
+    get().saveLibrary(); flag('Program created');
+    return null;
   },
 
   // Save the add/edit exercise sheet. Returns an error message, or null when saved.
