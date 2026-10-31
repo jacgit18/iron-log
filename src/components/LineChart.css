@@ -71,7 +71,7 @@
   box-shadow: 0 0 0 2px var(--accent);
 }
 .ldot.end::after {
-  background: var(--accent);
+  background: var(--accent-fill);
   left: 7px;
   top: 7px;
   width: 10px;

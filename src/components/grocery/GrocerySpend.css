@@ -47,7 +47,7 @@
   bottom: 0;
   height: var(--h);
   border-radius: 4px 4px 0 0;
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 .gbars li.cur i {
   background: repeating-linear-gradient(45deg, var(--accent) 0 4px, transparent 4px 7px);
@@ -102,7 +102,7 @@
   vertical-align: baseline;
 }
 .kbar {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-radius: 2px;
 }
 .kavg {

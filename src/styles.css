@@ -68,21 +68,22 @@
 }
 
 :root {
-  --bg: #EEF0EC;
+  --bg: #F6F6F3;
   --surface: #FFFFFF;
-  --sunk: #E3E6E1;
-  --ink: #1A1E1C;
+  --sunk: #EEEEEA;
+  --ink: #1E2326;
   --muted: #454C48;
-  --line: #D2D7D1;
-  --accent: #1B5250;
-  --accent-ink: #FFFFFF;
+  --line: #E0E0DB;
+  --accent: #7A5C00;
+  --accent-fill: #E3BE55;
+  --accent-ink: #1E2326;
   --done: #454C48;
   --field-line: #808E7E;
-  --dock: #D6E8E5;
+  --dock: #FBF1CF;
   --dock-field: #FFFFFF;
-  --dock-field-line: #5E6F63;
-  --dock-line: #1B5250;
-  --dock-shadow: 0 -6px 18px rgba(27,82,80,.22);
+  --dock-field-line: #6F6A52;
+  --dock-line: #7A5C00;
+  --dock-shadow: 0 -6px 18px rgba(122,92,0,.22);
   --str: #882B1E;
   --str-bg: #F7E3DF;
   --hyp: #244B8B;
@@ -96,13 +97,13 @@
   --warn-bg: #FFF4D6;
   --warn-ink: #6B4E00;
   --m0: #CDD2CC;
-  --m1: #C4E3DF;
-  --m2: #8CC4BD;
-  --m3: #2B615D;
-  --m4: #184947;
+  --m1: #F6EBC0;
+  --m2: #E3BE55;
+  --m3: #A9831A;
+  --m4: #6B4E00;
   --m-ink-lo: #1A1E1C;
   --m-ink-hi: #FFFFFF;
-  --up: #008A7E;
+  --up: #7A5C00;
   --down: #C4561F;
   --s-str: #e34948;
   --s-iso: #C88800;
@@ -154,21 +155,22 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #121614;
-    --surface: #1B201E;
-    --sunk: #232926;
-    --ink: #E7EBE8;
-    --muted: #B8BFBB;
-    --line: #303734;
-    --field-line: #5F6C66;
-    --dock: #26403D;
-    --dock-field: #121614;
-    --dock-field-line: #8FA8A3;
-    --dock-line: #78BFBA;
+    --bg: #161A1C;
+    --surface: #1E2326;
+    --sunk: #272D30;
+    --ink: #F5F6F4;
+    --muted: #B9C0C4;
+    --line: #343B3F;
+    --field-line: #6A757A;
+    --dock: #2A3034;
+    --dock-field: #161A1C;
+    --dock-field-line: #9AA3A8;
+    --dock-line: #E3BE55;
     --dock-shadow: 0 -6px 18px rgba(0,0,0,.55);
-    --accent: #78BFBA;
-    --accent-ink: #0D1413;
-    --done: #B8BFBB;
+    --accent: #E3BE55;
+    --accent-fill: #E3BE55;
+    --accent-ink: #1E2326;
+    --done: #B9C0C4;
     --str: #F39D8E;
     --str-bg: #3A221E;
     --hyp: #95B3ED;
@@ -177,19 +179,19 @@
     --iso-bg: #352D17;
     --exp: #6FCB94;
     --exp-bg: #18301F;
-    --none: #B8BFBB;
+    --none: #B9C0C4;
     --none-bg: #262C29;
     --warn-bg: #352D17;
     --warn-ink: #E9D08A;
     --shadow: none;
-    --m0: #353C39;
-    --m1: #24403E;
-    --m2: #255450;
-    --m3: #4BAEA5;
-    --m4: #86DCD3;
-    --m-ink-lo: #E7EBE8;
-    --m-ink-hi: #0D1413;
-    --up: #10A898;
+    --m0: #2C3236;
+    --m1: #4A4226;
+    --m2: #7A6A2C;
+    --m3: #C2A244;
+    --m4: #E3BE55;
+    --m-ink-lo: #F5F6F4;
+    --m-ink-hi: #1E2326;
+    --up: #E3BE55;
     --down: #D9772F;
     --s-str: #e34948;
     --s-iso: #c98500;
@@ -199,21 +201,22 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #121614;
-  --surface: #1B201E;
-  --sunk: #232926;
-  --ink: #E7EBE8;
-  --muted: #B8BFBB;
-  --line: #303734;
-  --field-line: #5F6C66;
-  --dock: #26403D;
-  --dock-field: #121614;
-  --dock-field-line: #8FA8A3;
-  --dock-line: #78BFBA;
+  --bg: #161A1C;
+  --surface: #1E2326;
+  --sunk: #272D30;
+  --ink: #F5F6F4;
+  --muted: #B9C0C4;
+  --line: #343B3F;
+  --field-line: #6A757A;
+  --dock: #2A3034;
+  --dock-field: #161A1C;
+  --dock-field-line: #9AA3A8;
+  --dock-line: #E3BE55;
   --dock-shadow: 0 -6px 18px rgba(0,0,0,.55);
-  --accent: #78BFBA;
-  --accent-ink: #0D1413;
-  --done: #B8BFBB;
+  --accent: #E3BE55;
+  --accent-fill: #E3BE55;
+  --accent-ink: #1E2326;
+  --done: #B9C0C4;
   --str: #F39D8E;
   --str-bg: #3A221E;
   --hyp: #95B3ED;
@@ -222,19 +225,19 @@
   --iso-bg: #352D17;
   --exp: #6FCB94;
   --exp-bg: #18301F;
-  --none: #B8BFBB;
+  --none: #B9C0C4;
   --none-bg: #262C29;
   --warn-bg: #352D17;
   --warn-ink: #E9D08A;
   --shadow: none;
-  --m0: #353C39;
-  --m1: #24403E;
-  --m2: #255450;
-  --m3: #4BAEA5;
-  --m4: #86DCD3;
-  --m-ink-lo: #E7EBE8;
-  --m-ink-hi: #0D1413;
-  --up: #10A898;
+  --m0: #2C3236;
+  --m1: #4A4226;
+  --m2: #7A6A2C;
+  --m3: #C2A244;
+  --m4: #E3BE55;
+  --m-ink-lo: #F5F6F4;
+  --m-ink-hi: #1E2326;
+  --up: #E3BE55;
   --down: #D9772F;
   --s-str: #e34948;
   --s-iso: #c98500;
@@ -325,7 +328,7 @@ header.top h1 {
   font-weight: 600;
 }
 .pill.prog {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
 }
 .tabs {
@@ -392,7 +395,7 @@ header.top h1 {
   }
 }
 .btn.primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: var(--accent);
   color: var(--accent-ink);
 }
@@ -444,7 +447,7 @@ header.top h1 {
   border: 0;
 }
 .seg button.on {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
 }
 .view-loading {
@@ -470,7 +473,7 @@ header.top h1 {
 .bar i {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 .notice {
   background: var(--warn-bg);
@@ -729,7 +732,7 @@ body.timing {
   left: 16px;
   top: -100px;
   z-index: var(--z-skip);
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
   padding: var(--sp-12) var(--sp-16);
   border-radius: var(--r-md);
@@ -847,7 +850,7 @@ body.timing {
 }
 .role.p {
   background: var(--m4);
-  color: var(--accent-ink);
+  color: var(--m-ink-hi);
 }
 .role.s {
   background: var(--m1);
@@ -872,7 +875,7 @@ body.timing {
 .chip.p {
   background: var(--m4);
   border-color: var(--m4);
-  color: var(--accent-ink);
+  color: var(--m-ink-hi);
   font-weight: 600;
 }
 .btn.danger {
@@ -997,7 +1000,7 @@ body.timing {
   cursor: pointer;
 }
 .chk:checked {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: var(--accent);
 }
 .chk:checked::after {
@@ -1526,7 +1529,7 @@ body.timing {
   color: var(--muted);
 }
 .months div.b {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
 }
 .months div.now {
@@ -1632,7 +1635,7 @@ body.timing {
     font-weight: 700;
   }
   .daytabs button[aria-selected="true"] {
-    background: var(--accent);
+    background: var(--accent-fill);
     border-color: var(--accent);
     color: var(--accent-ink);
   }
@@ -1797,7 +1800,7 @@ input[type=checkbox]:not(.chk),input[type=radio] {
   background: transparent;
 }
 .chk:checked::before {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: var(--accent);
 }
 .chk:checked::after {

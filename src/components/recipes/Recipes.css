@@ -29,7 +29,7 @@
   font-size: var(--fs-md);
 }
 .rc-chips button[aria-pressed='true'] {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: var(--accent);
   color: var(--accent-ink);
 }

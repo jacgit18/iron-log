@@ -86,7 +86,7 @@
   display: block;
   width: 62%;
   max-width: 34px;
-  background: var(--accent);
+  background: var(--accent-fill);
   border-radius: 4px 4px 0 0;
   min-height: 2px;
 }

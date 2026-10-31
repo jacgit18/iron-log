@@ -24,7 +24,7 @@
   inset-inline-start: 2px;
   inline-size: calc(50% - 2px);
   border-radius: var(--r-pill);
-  background: var(--accent);
+  background: var(--accent-fill);
   transition: transform .18s ease;
 }
 .progslider[data-pos="b"]::before {

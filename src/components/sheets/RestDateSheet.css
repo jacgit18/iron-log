@@ -15,7 +15,7 @@
   line-height: 1.15;
 }
 .restdate-chip.on {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
 }
 .restdate-chip:disabled {

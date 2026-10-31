@@ -67,7 +67,7 @@
   background: color-mix(in srgb, var(--accent) 35%, var(--sunk));
 }
 .cells i.c2,.cleg.c2 {
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 .wknum {
   color: var(--muted);

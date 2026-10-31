@@ -239,7 +239,7 @@
   display: block;
   height: 100%;
   border-radius: var(--r-pill);
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 .gqty[aria-expanded="true"] .gpill {
   border-color: var(--accent);
@@ -463,7 +463,7 @@
   flex: none;
   padding: var(--sp-2) var(--sp-10);
   border-radius: var(--r-pill);
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
   font-size: var(--fs-xs);
   letter-spacing: .06em;
@@ -492,7 +492,7 @@
   background: var(--dock-field);
 }
 .gdockadd,.gdockrow .gdone {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: var(--accent);
   color: var(--accent-ink);
 }
