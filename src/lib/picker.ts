@@ -1,6 +1,7 @@
 /* What the item picker lists for the words typed (ADR 036, spec inline-catalog-picker): your own items, then catalog items you do not have
    yet, then a row to create a new one. Pure, so the order and the duplicate rules are tested without a browser. */
 import type { CatalogItem } from '../types.ts';
+import { byName } from './sort.js';
 
 /** One of your own items as the picker shows it. `badge` is Custom or Library (ADR 027); `meta` is the grey line under the name. */
 export interface MineOption { id: string; name: string; brand?: string; catalogId?: string; badge?: string; meta?: string }
@@ -28,7 +29,7 @@ const sameItem = (a: { name: string; brand?: string }, b: { name: string; brand?
 export const plainText = (s: unknown) => pickerKey(s).replace(/['’]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 const matches = (words: string[], ...fields: (string | undefined)[]) => { const hay = plainText(fields.filter(Boolean).join(' ')); return words.every(w => hay.includes(w)); };
 const rank = <T>(list: T[], q: string, name: (x: T) => string) =>
-  [...list].sort((a, b) => Number(!pickerKey(name(a)).startsWith(q)) - Number(!pickerKey(name(b)).startsWith(q)) || name(a).localeCompare(name(b)));
+  [...list].sort((a, b) => Number(!pickerKey(name(a)).startsWith(q)) - Number(!pickerKey(name(b)).startsWith(q)) || byName(name(a), name(b)));
 
 const cap = <T>(list: T[], max: number): PickerGroup<T> => ({ shown: list.slice(0, max), hidden: Math.max(0, list.length - max) });
 

@@ -3,6 +3,7 @@ import { BUILTIN, exInfo } from './data.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
 import { weekProgKey, weekProgram, weekSlots, tally, currentLayout, DAYS, isUniform, normWeek } from './logic.js';
 import { M_KEYS, tagsOf } from './muscles.js';
+import { nameCmp } from './sort.js';
 
 export const WEEK_RE = /^\d{4}-\d{2}-\d{2}$/;
 export const weekOfDate = (d: string) => ymd(weekStartOf(parseDate(d)));
@@ -65,13 +66,13 @@ export function weightChanges(cfg: Cfg, logs: Logs, sinceKey: string) {
   Object.entries(logs).forEach(([id, L]) => {
     const by: Record<string, LogEntry[]> = {}; L.forEach(e => { const w = Number(e.w); if (!(w > 0) || entryWeek(e) < sinceKey) return; (by[e.ph || ''] = by[e.ph || ''] || []).push(e); });
     Object.entries(by).forEach(([ph, E]) => {
-      if (E.length < 2) return; E = [...E].sort((a, b) => a.d.localeCompare(b.d));
+      if (E.length < 2) return; E = [...E].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
       const a = E[0], b = E[E.length - 1]; const w0 = Number(a.w), w1 = Number(b.w);
       if (a.d === b.d) return;
       rows.push({ id, ph: ph || null, w0, w1, d0: a.d, d1: b.d, n: E.length, pct: (w1 - w0) / w0 * 100 });
     });
   });
-  return rows.sort((x, y) => y.pct - x.pct || exInfo(cfg, x.id).n.localeCompare(exInfo(cfg, y.id).n));
+  return rows.sort((x, y) => y.pct - x.pct || nameCmp((r: { id: string }) => exInfo(cfg, r.id).n, r => r.id)(x, y));
 }
 
 /* ---------- Volume (sets × reps × weight) and personal bests ---------- */
@@ -123,5 +124,5 @@ export function personalBests(logs: Logs, sinceDate: string): PersonalBest[] {
       if (!best || beats(t, best)) best = { ...t, d };
     });
   });
-  return out.sort((a, b) => b.d.localeCompare(a.d) || a.id.localeCompare(b.id));
+  return out.sort((a, b) => b.d.localeCompare(a.d) || a.id.localeCompare(b.id)); // sort-ok: ISO date strings
 }

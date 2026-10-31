@@ -19,7 +19,7 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     const ex = s.items[idx].ex;
     // Real numbers replace the planned ones a check-off logged for this card this week.
     const planned = (e: any) => e.auto && e.slot === entry.slot && e.wk === entry.wk;
-    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...clean, id: clean.id || newEntryId(), updatedAt: nowStamp() }].sort((a, b) => a.d.localeCompare(b.d));
+    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...clean, id: clean.id || newEntryId(), updatedAt: nowStamp() }].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
     // Ticked the way the board ticks: picking the other half of an either/or drops the first one's check-off, and it can finish a day.
     if (check) get().mutateChecks(w => setItemDone(w, s, idx, true));
@@ -127,7 +127,7 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     const L = get().logs[exId] || []; const i = findEntry(L, target);
     if (i < 0) { flag('That session changed meanwhile. Open it again.'); return false; }
     const arr = [...L]; arr[i] = { ...clean, id: entryId(L[i]), updatedAt: nowStamp() };
-    arr.sort((a, b) => a.d.localeCompare(b.d));
+    arr.sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
     set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId);
     flag('Session updated'); return true;
   },
@@ -141,7 +141,7 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     get().noteRemoved('log:' + exId, `the ${fmtShort(parseDate(gone.d))} session`, () => {
       const cur = get().logs[exId] || [];
       if (get().blocked() || findEntry(cur, gone) >= 0 || (gone.auto && cur.some(e => e.slot === gone.slot && e.wk === gone.wk))) return false;
-      const back = [...cur]; back.splice(Math.min(i, back.length), 0, gone); back.sort((a, b) => a.d.localeCompare(b.d));
+      const back = [...cur]; back.splice(Math.min(i, back.length), 0, gone); back.sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
       set(state => ({ logs: { ...state.logs, [exId]: back } })); get().saveLog(exId); return true;
     });
     return true;

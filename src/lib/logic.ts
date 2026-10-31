@@ -597,7 +597,7 @@ export function autoLogs(cfg: Cfg, logs: Logs, slots: Slot[], before: WeekIn, af
       const L = out[it.ex] || logs[it.ex] || [];
       if (now) {
         if (L.some(here)) return; // already logged for this card this week
-        out[it.ex] = [...L, autoEntry(cfg, logs, s, i, after, wk, date)].sort((a, b) => a.d.localeCompare(b.d));
+        out[it.ex] = [...L, autoEntry(cfg, logs, s, i, after, wk, date)].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
       } else {
         unticked = true;
         const keep = L.filter(e => !((removeLogged || e.auto) && here(e)));

@@ -5,7 +5,8 @@ import Icon from '../Icon.jsx';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { weekStartOf, ymd, parseDate, addDays, fmtShort } from '../../shared/dates.js';
-import { describe, lastLog, stallOf, backoffOf } from '../../lib/logic.js';
+import { newestFirst } from '../../lib/exerciseOrder.js';
+import { describe, stallOf, backoffOf } from '../../lib/logic.js';
 import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
 import { avgPerTrainingDay } from '../../lib/freqGoal.js';
 import FreqGoals from './FreqGoals.jsx';
@@ -68,9 +69,8 @@ function LiftList() {
   const openModal = useAppStore(s => s.openModal);
   const body = useAppStore(s => s.body);
   const today = useToday(s => s.today);
-  const ids = Object.keys(logs).filter(id => logs[id].length);
+  const ids = newestFirst(Object.keys(logs), logs, id => exInfo(cfg, id).n);
   if (!ids.length) return <div className="empty">No sessions logged yet. Tap <b>Log</b> on any exercise card to record weight, sets and reps.</div>;
-  ids.sort((a, b) => lastLog(logs, b)!.d.localeCompare(lastLog(logs, a)!.d));
   return (
     <div className="plist">
       {ids.map(id => {
