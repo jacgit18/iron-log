@@ -43,7 +43,8 @@ test('Program tab: the Day stepper shows the day’s exercise count, the Day but
 test('Program tab: moving a card to another day updates both counts', async ({ page }) => {
   await page.click('#tab-program');
   const pick = page.getByRole('combobox', { name: 'Day to edit' });
-  await page.locator('.edpanel:not(.lib) .edrow').first().getByRole('combobox', { name: /^Move to day/ }).selectOption('7');
+  await page.locator('.edpanel:not(.lib) .edrow').first().getByRole('button', { name: /^More actions for / }).click();
+  await page.getByRole('dialog').getByRole('group', { name: 'Move to day' }).getByRole('button', { name: 'Day 7', exact: true }).click();
   await expect(pick.locator('option').nth(0)).toHaveText('Day 1 of 7 · 11 exercises');
   await expect(pick.locator('option').nth(6)).toHaveText('Day 7 of 7 · 1 exercise');
 });
