@@ -17,7 +17,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
-import { pageOf } from '../../lib/route.js';
+import { pageOf, programKey, programPath } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import './Editor.css';
 
@@ -105,6 +105,15 @@ function ProgramEditor() {
   const st = useAppStore.getState();
   // Pin the editor to the program it opened on, like the original, so it doesn't follow later board changes.
   useEffect(() => { if (edProg !== k) st.setEdProg(k); }, [edProg, k, st]);
+  // The program shown is in the address (#/program/b). An address that names one opens it; picking A or B (or arriving on plain #/program) swaps the address to the one shown.
+  // A library program has no address of its own (an id never goes in one). `prevK` tells a change of program from the first look, so a pasted address is not overwritten.
+  const path = useRoutePath(); const named = programKey(path); const prevK = useRef<string | null>(null);
+  useEffect(() => { if (named && named !== k) st.setEdProg(named); }, [named]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const changed = prevK.current !== null && prevK.current !== k; prevK.current = k;
+    const to = programPath(k);
+    if (to && (path === 'program' || changed)) navigate(to, 'replace');
+  }, [k, path]); // eslint-disable-line react-hooks/exhaustive-deps
   // When the panel that held the focused button is replaced (edit/create/load), land on the editor heading.
   useEffect(() => {
     const a = document.activeElement;
@@ -255,7 +264,8 @@ function ProgramEditor() {
 // The Program tab: the programs, and the exercise and stretch libraries (supplements are on Daily → Supplements, under Edit).
 export default function Editor() {
   // The view is in the address (#/program/exercises); the segmented control swaps it instead of adding a Back step.
-  const view = pageOf(useRoutePath(), 'program') ?? 'program';
+  const page = pageOf(useRoutePath(), 'program');
+  const view = page === 'a' || page === 'b' ? 'program' : page ?? 'program';
   const setView = (v: string) => navigate(v === 'program' ? 'program' : `program/${v}`, 'replace');
   return (
     <>

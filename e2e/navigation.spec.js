@@ -6,7 +6,7 @@ const hash = page => page.evaluate(() => location.hash);
 const trends = page => page.locator('.hubtile', { hasText: 'Training trends' });
 
 test('a tab switch changes the address, and Back walks back through the tabs with the address following', async ({ page }) => {
-  await expect.poll(() => hash(page)).toBe('#/board');
+  await expect.poll(() => hash(page)).toBe('#/board/workout');
   await page.click('#tab-progress');
   await expect.poll(() => hash(page)).toBe('#/progress');
   await page.click('#tab-program');
@@ -16,7 +16,7 @@ test('a tab switch changes the address, and Back walks back through the tabs wit
   expect(await hash(page)).toBe('#/progress');
   await page.goBack();
   await expect(page.locator('#tab-board')).toHaveAttribute('aria-selected', 'true');
-  expect(await hash(page)).toBe('#/board');
+  expect(await hash(page)).toBe('#/board/workout');
 });
 
 test('a Progress page adds one Back step, and a reload reopens it', async ({ page }) => {
@@ -48,7 +48,7 @@ test('a tab switch from an open page: Back returns to that page, address include
   await page.click('#tab-progress');
   await trends(page).click();
   await page.click('#tab-board');
-  await expect.poll(() => hash(page)).toBe('#/board');
+  await expect.poll(() => hash(page)).toBe('#/board/workout');
   await page.goBack();
   await expect(page.locator('#tab-progress')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.hubback')).toBeVisible(); // still on Training trends
@@ -62,7 +62,7 @@ test('the Program view is in the address and swaps in place', async ({ page }) =
   await page.reload();
   await expect(page.getByRole('button', { name: 'Exercise library' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Programs' }).click();
-  await expect.poll(() => hash(page)).toBe('#/program');
+  await expect.poll(() => hash(page)).toMatch(/^#\/program\/[ab]$/); // the program shown has its own address (e2e/boardUrls.spec.js)
 });
 
 test('the Daily section and the Grocery view are in the address', async ({ page }) => {
@@ -93,7 +93,7 @@ test('an unknown address opens Board, and an unknown page opens its tab', async 
   await page.goto('/#/nope'); // the same document, so a reload is what opens the app on it
   await page.reload();
   await expect(page.locator('#tab-board')).toHaveAttribute('aria-selected', 'true');
-  await expect.poll(() => hash(page)).toBe('#/board');
+  await expect.poll(() => hash(page)).toBe('#/board/workout');
   await page.goto('/#/progress/zzz');
   await page.reload();
   await expect(page.locator('#tab-progress')).toHaveAttribute('aria-selected', 'true');
