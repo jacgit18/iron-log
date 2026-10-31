@@ -17,6 +17,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
+import { boardNote, onBoardKeys } from '../../lib/programDay.js';
 import { pageOf, programKey, programPath } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import './Editor.css';
@@ -50,24 +51,21 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
   const loadLabel = `Tap to load into ${pn}`;
   return (
     <section className="panel edpanel edprog lib mt-16">
-      <div className="inline spread">
-        <h2>Program library</h2>
-        <button type="button" className="btn" onClick={() => { if (!st.blocked()) st.openModal({ type: 'newprog' }); }}>Create a program</button>
-      </div>
-      <p className="note">Load a version into {pn}. Whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
+      <h2>Program library</h2>
+      <p className="note">Your saved programs. Load one into {pn} to put it on your Board; whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
       <RemovedNotice scope="library" />
       <div className="edlist">
         {items.map(it => (
           <LibRow
             key={it.id} name={it.name} removing={arming === it.id} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k as ProgKey)}
-            meta={`${it.created ? (it.from ? `Created from ${progName(cfg, it.from)}` : 'Created new') : `From ${progName(cfg, it.from as string)}`} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto ? ' · auto-saved' : ''}`}
+            meta={`${boardNote(onBoardKeys(it.prog, programs as Record<'A' | 'B', Program>).map(b => progName(cfg, b)))} · ${libDate(it.at)} · ${progStats(it.prog)} · ${it.created ? (it.from ? `Created from ${progName(cfg, it.from)}` : 'Created new') : `From ${progName(cfg, it.from as string)}`}${it.auto ? ' · auto-saved' : ''}`}
             extra={<>
               <button type="button" className="btn sm" aria-label={`Edit ${it.name}`} onClick={() => { st.setEdProg('L:' + it.id); st.setEdDay(1); window.scrollTo({ top: 0 }); }}>Edit</button>
               <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Tap again to delete" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); st.deleteLibItem(it.id); }} />
             </>}
           />
         ))}
-        {!items.length && <p className="note">No programs yet. Create one to build your own.</p>}
+        {!items.length && <p className="note">No programs yet. Use Create a program, at the top, to build your own.</p>}
       </div>
       <form className="libsave" noValidate onSubmit={e => { e.preventDefault(); st.saveCurrentAs(name); setName(''); }}>
         <label className="field grow">Save {pn} as
@@ -84,7 +82,7 @@ function LibItemPanel({ it }: { it: LibraryItem }) {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
   return (
     <section className="panel edpanel edprog lib mt-16">
-      <h2>Put it into the rotation</h2>
+      <h2>Put it on your Board</h2>
       <p className="note">Loading replaces what's in that slot. The program there now is saved to the library first if it isn't already, so nothing is lost. {it.name} stays in the library too.</p>
       <div className="actions start flexwrap">
         {(['A', 'B'] as const).map(k => (
@@ -135,6 +133,12 @@ function ProgramEditor() {
   // Same for the Moved notice. Its Go to button opens the day the card went to and puts focus on that card's ⋯ button.
   const moved = useAppStore(s => s.edMoved);
   const showMoved = moved && moved.key === k && moved.from === edDay ? moved : null;
+  const copied = useAppStore(s => s.edCopied);
+  const showCopied = copied && copied.key === k && copied.from === edDay ? copied : null;
+  const [copyPick, setCopyPick] = useState<number | null>(null);
+  const copyTo = copyPick != null && copyPick !== edDay ? copyPick : DAYS.find(d => d !== edDay)!; // a day other than the open one
+  const copiedUndoRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (copied) copiedUndoRef.current?.focus(); }, [copied]);
   const movedUndoRef = useRef<HTMLButtonElement>(null);
   const focusAfterGo = useRef<string | null>(null);
   // A move that happened (from the ⋯ sheet or the Move to another program sheet) leaves the moved row behind: focus goes to Undo.
@@ -150,6 +154,7 @@ function ProgramEditor() {
           {['A', 'B'].map(p => <button type="button" key={p} className={p === k ? 'on' : ''} aria-pressed={p === k} onClick={() => st.setEdProg(p)}>{progName(cfg, p)}</button>)}
           {lib && <button type="button" className="on segname" aria-pressed="true">{item.name}</button>}
         </div>
+        <button type="button" className="btn createprog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'newprog' }); }}>Create a program</button>
         <div className="dayctl">
           <div className="daystep" role="group" aria-label="Day stepper">
             <button type="button" className="btn daystepbtn" aria-label="Previous day" aria-disabled={edDay === 1} onClick={() => { if (edDay > 1) st.setEdDay(edDay - 1); }}><Icon name="chevron-left" /></button>
@@ -165,7 +170,7 @@ function ProgramEditor() {
       </div>
       {lib ? (
         <>
-          <div className="notice tip libnote"><span><b>{item.name}</b> is in your library, not in the rotation. Build it here, then load it into {progName(cfg, 'A')} or {progName(cfg, 'B')} when you're ready to train it.</span></div>
+          <div className="notice tip libnote"><span><b>{item.name}</b> is in your library, not on your Board. Build it here, then load it into {progName(cfg, 'A')} or {progName(cfg, 'B')} when you're ready to train it.</span></div>
           <label className="field progname">Program name
             <CommitInput key={`L${item.id}:${item.name}`} id="prog-name" maxLength={60} value={item.name} onCommit={st.renameLibItem} />
           </label>
@@ -176,7 +181,29 @@ function ProgramEditor() {
         <label className="field">Day label
           <CommitInput key={`${k}:${edDay}:${day.sub || ''}`} id="ed-sub" value={day.sub || ''} placeholder="e.g. Lower body + reactive power" onCommit={st.setDaySub} />
         </label>
-        <div className="actions edadd start">{addBtn}</div>
+        <div className="actions edadd start">
+          {addBtn}
+          {day.slots.length > 0 && (
+            <span className="copyday">
+              <label className="field">Copy this day to
+                <select className="btn" value={copyTo} onChange={e => setCopyPick(Number(e.target.value))}>
+                  {DAYS.filter(d => d !== edDay).map(d => <option key={d} value={d}>{dayPickLabel(d, DAYS.length, exerciseCount(prog.days[d - 1]?.slots ?? []))}</option>)}
+                </select>
+              </label>
+              <button type="button" className="btn" onClick={() => st.copyEdDay(copyTo)}>Copy</button>
+            </span>
+          )}
+        </div>
+        {showCopied && (
+          <div className="notice movewarn removednote" role="status">
+            <div><b>Copied</b> {showCopied.ids.length === 1 ? '1 card' : `${showCopied.ids.length} cards`} from {day.title} to {prog.days[showCopied.to - 1]!.title}.</div>
+            <div className="actions">
+              <button type="button" className="btn sm" ref={copiedUndoRef} onClick={st.undoCopyEdDay}>Undo</button>
+              <button type="button" className="btn sm" onClick={() => { st.setEdDay(showCopied.to); }}>Go to {prog.days[showCopied.to - 1]!.title}</button>
+              <button type="button" className="btn sm ghost" onClick={st.dismissEdCopied}>Dismiss</button>
+            </div>
+          </div>
+        )}
         {showRemoved && (
           <div className="notice movewarn removednote" role="status">
             <div><b>Removed</b> {slotSummary(cfg, showRemoved.slot)} from {day.title}.</div>
