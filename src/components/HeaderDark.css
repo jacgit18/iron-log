@@ -16,6 +16,27 @@
   --accent: #E3BE55;
   --accent-ink: #1E2326;
   --accent-fill: #E3BE55;
+  --str: #F39D8E;
+  --str-bg: #3A221E;
+  --hyp: #95B3ED;
+  --hyp-bg: #1E2839;
+  --iso: #E3BE55;
+  --iso-bg: #352D17;
+  --exp: #6FCB94;
+  --exp-bg: #18301F;
+  --none: #B9C0C4;
+  --none-bg: #262C29;
+  --warn-bg: #352D17;
+  --warn-ink: #E9D08A;
+  --m0: #2C3236;
+  --m1: #4A4226;
+  --m2: #7A6A2C;
+  --m3: #C2A244;
+  --m4: #E3BE55;
+  --m-ink-lo: #F5F6F4;
+  --m-ink-hi: #1E2326;
+  --done: #B9C0C4;
+  --up: #E3BE55;
   background: var(--surface);
   color: var(--ink);
   margin-inline: calc(-1 * var(--gl)) calc(-1 * var(--gr));
@@ -35,6 +56,27 @@
     --accent: #E3BE55;
     --accent-ink: #1E2326;
     --accent-fill: #E3BE55;
+    --str: #F39D8E;
+    --str-bg: #3A221E;
+    --hyp: #95B3ED;
+    --hyp-bg: #1E2839;
+    --iso: #E3BE55;
+    --iso-bg: #352D17;
+    --exp: #6FCB94;
+    --exp-bg: #18301F;
+    --none: #B9C0C4;
+    --none-bg: #262C29;
+    --warn-bg: #352D17;
+    --warn-ink: #E9D08A;
+    --m0: #2C3236;
+    --m1: #4A4226;
+    --m2: #7A6A2C;
+    --m3: #C2A244;
+    --m4: #E3BE55;
+    --m-ink-lo: #F5F6F4;
+    --m-ink-hi: #1E2326;
+    --done: #B9C0C4;
+    --up: #E3BE55;
     background: var(--surface);
     color: var(--ink);
     margin-inline: calc(-1 * var(--gl)) calc(-1 * var(--gr));
@@ -52,6 +94,17 @@
     --line: #E0E0DB;
     --accent: #7A5C00;
     --accent-ink: #1E2326;
+    --str: #882B1E;
+    --str-bg: #F7E3DF;
+    --m0: #CDD2CC;
+    --m1: #F6EBC0;
+    --m2: #E3BE55;
+    --m3: #A9831A;
+    --m4: #6B4E00;
+    --m-ink-lo: #1E2326;
+    --m-ink-hi: #FFFFFF;
+    --done: #454C48;
+    --up: #7A5C00;
   }
 }
 @media (prefers-color-scheme: light) and (max-width:700px) {
@@ -64,6 +117,17 @@
     --line: #E0E0DB;
     --accent: #7A5C00;
     --accent-ink: #1E2326;
+    --str: #882B1E;
+    --str-bg: #F7E3DF;
+    --m0: #CDD2CC;
+    --m1: #F6EBC0;
+    --m2: #E3BE55;
+    --m3: #A9831A;
+    --m4: #6B4E00;
+    --m-ink-lo: #1E2326;
+    --m-ink-hi: #FFFFFF;
+    --done: #454C48;
+    --up: #7A5C00;
   }
 }
 }

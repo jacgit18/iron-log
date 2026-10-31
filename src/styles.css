@@ -850,7 +850,7 @@ body.timing {
 }
 .role.p {
   background: var(--m4);
-  color: var(--accent-ink);
+  color: var(--m-ink-hi);
 }
 .role.s {
   background: var(--m1);
@@ -875,7 +875,7 @@ body.timing {
 .chip.p {
   background: var(--m4);
   border-color: var(--m4);
-  color: var(--accent-ink);
+  color: var(--m-ink-hi);
   font-weight: 600;
 }
 .btn.danger {
