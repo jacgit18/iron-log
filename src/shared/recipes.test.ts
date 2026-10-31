@@ -8,6 +8,13 @@ describe('normRecipe', () => {
     expect(normRecipe(base)).toEqual(base);
     expect(validRecipe(base)).toBe(true);
   });
+  it('keeps a ready-made food: its category, no ingredients or steps, its numbers', () => {
+    const r = { id: 'lasagna', n: 'Frozen lasagna', cat: 'ready', ing: [], steps: [], kcal: 420, p: 22 };
+    expect(normRecipe(r)).toEqual(r);
+    expect(validRecipe(r)).toBe(true);
+    expect(normRecipe({ ...base, cat: 'sides' })?.cat).toBe('sides'); // existing categories are unchanged
+    expect(normRecipe({ ...base, cat: 'frozen' })?.cat).toBe('other'); // an unknown one still becomes Other
+  });
   it('needs an id and a name', () => {
     expect(normRecipe({ ...base, id: '' })).toBeNull();
     expect(normRecipe({ ...base, n: '  ' })).toBeNull();

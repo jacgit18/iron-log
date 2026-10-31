@@ -152,7 +152,7 @@ test('a new stretch picked from the catalog is saved with its group and the rout
   const row = page.locator('.exlib .exrow').filter({ hasText: 'Calf Stretch' });
   await expect(row).toHaveCount(1);
   await expect(row.locator('.pill')).toHaveText('Library');
-  await expect(row.locator('xpath=ancestor::div[1]').locator('.sect')).toHaveText('Every day');
+  await expect(row.locator('xpath=ancestor::div[1]').locator('.libgroup')).toContainText('Every day'); // the group header is a button now: "Every day · n"
 });
 
 test('typing a stretch you already have offers it, and picking it opens that stretch instead of a second one', async ({ page }) => {

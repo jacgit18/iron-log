@@ -11,7 +11,7 @@ import CopyDay from './CopyDay.js';
 import SaveMeal from './SaveMeal.js';
 import SavedMeals from './SavedMeals.js';
 import EntryForm, { type EntryValues } from './EntryForm.js';
-import FoodSearch, { type FoodFill } from './FoodSearch.js';
+import type { FoodFill } from './FoodSearch.js';
 import FindFood from './FindFood.js';
 
 // One meter: a bar with the numbers in words. Past the target the bar stays full and the text says how far over (no scolding).
@@ -34,6 +34,7 @@ export default function DietLog({ day, targets }: { day: string; targets: Target
   const [editId, setEditId] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
   const [fill, setFill] = useState<{ key: number; food?: FoodFill }>({ key: 0 });
+  const [oneOff, setOneOff] = useState(false); // the One-off food form is open (a food picked from the search opens it)
   useEffect(() => { setMsg(''); setEditId(null); }, [day]); // a status line and an open edit belong to the day they were made on
   const list = entriesOn(diet, day);
   const tot = totalsFor(diet, day);
@@ -81,10 +82,17 @@ export default function DietLog({ day, targets }: { day: string; targets: Target
               </ul>
             </>
           )}
-          <FindFood day={day} onAdded={setMsg} onFood={f => setFill(old => ({ key: old.key + 1, food: f }))} />
+          <FindFood day={day} onAdded={setMsg} onFood={f => { setFill(old => ({ key: old.key + 1, food: f })); setOneOff(true); }} />
           <CopyDay key={day} day={day} onAdded={setMsg} />
-          <FoodSearch onUse={f => setFill(old => ({ key: old.key + 1, food: f }))} />
-          <EntryForm key={fill.key} idp="dt-add" start={fill.food} submitLabel="Add" onSubmit={add} />
+          <div className="dt-oneoff">
+            <div className="dt-oneoff-head">
+              <strong>One-off food</strong>
+              <button type="button" className="btn sm" aria-expanded={oneOff} aria-controls="dt-oneoff-form" onClick={() => setOneOff(!oneOff)}>{oneOff ? 'Hide' : 'Add one'}</button>
+            </div>
+            <div id="dt-oneoff-form" hidden={!oneOff}>
+              <EntryForm key={fill.key} idp="dt-add" start={fill.food} submitLabel="Add" onSubmit={add} />
+            </div>
+          </div>
         </>
       )}
       <p className="note" role="status">{msg}</p>
