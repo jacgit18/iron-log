@@ -8,6 +8,7 @@ import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types
 import type { ExerciseInfo, MuscleTags, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
 import { carryPhDef, isLibKey, moveSlotId, moveTargets, programByKey } from '../lib/programMove.js';
+import { copyDaySlots } from '../lib/programDay.js';
 
 export const SECTIONS = ['Optional', 'Regular', 'Supersets', 'Plyometric', 'Home']; // Optional and Home cards don't count toward finishing a day (countsForFinish)
 const newId = (): string => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -62,8 +63,8 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const ak = get().activeProgKey();
     set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd }, ...(fromExp ? { fromExp } : {}) } });
   },
-  setEdProg: edProg => set({ edProg, edRemoved: null, edMoved: null }),
-  setEdDay: edDay => set({ edDay, edRemoved: null, edMoved: null }),
+  setEdProg: edProg => set({ edProg, edRemoved: null, edMoved: null, edCopied: null }),
+  setEdDay: edDay => set({ edDay, edRemoved: null, edMoved: null, edCopied: null }),
 
   // Save a program by key: A or B, or a saved program (its library item).
   saveProg(key, prog) {
@@ -164,6 +165,35 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     set({ edMoved: null }); flag('Put back');
   },
   dismissEdMoved() { set({ edMoved: null }); },
+  edCopied: null,
+  copyEdDay(toDay) {
+    const key = get().edKey(); const from = get().edDay;
+    if (get().blocked() || toDay === from || !DAYS.includes(toDay)) return;
+    const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    let made: ProgramSlot[] = []; let src: ProgramSlot[] = [];
+    if (get().editProgram(prog => {
+      pinIds(prog, from); pinIds(prog, toDay);
+      src = structuredClone(prog.days[from - 1].slots);
+      made = copyDaySlots(src, i => moveSlotId(key, stamp + i));
+      made.forEach(c => insertSlot(prog.days[toDay - 1].slots, structuredClone(c)));
+    }) && made.length) {
+      // Each copy starts with the phase its original has, as a moved card does.
+      const carried = Object.assign({}, ...made.map((c, i) => carryPhDef(get().cfg.phDef, src[i]!.id, c.id, c.items.length)));
+      if (Object.keys(carried).length) get().mutateCfg(c => { Object.assign(c.phDef, carried); });
+      set({ edCopied: { key, from, to: toDay, ids: made.map(c => c.id) }, edRemoved: null, edMoved: null });
+    }
+  },
+  // Take the copies back out of the day they went to (found by id; ones edited since are still removed, ones already removed are skipped).
+  undoCopyEdDay() {
+    const c = get().edCopied;
+    if (!c || c.key !== get().edKey() || c.from !== get().edDay) { set({ edCopied: null }); return; }
+    if (get().editProgram(prog => { prog.days[c.to - 1].slots = prog.days[c.to - 1].slots.filter(sl => !c.ids.includes(sl.id)); })) {
+      // The phases carried to the copies go with them, so Undo leaves nothing behind in the synced config.
+      get().mutateCfg(cf => { Object.keys(cf.phDef).forEach(k => { if (c.ids.includes(k.slice(0, k.lastIndexOf(':')))) delete cf.phDef[k]; }); });
+      set({ edCopied: null }); flag('Copy undone');
+    }
+  },
+  dismissEdCopied() { set({ edCopied: null }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
 
   renameLibItem(raw) {

@@ -150,4 +150,20 @@
 .edadd {
   margin: var(--sp-4) 0 var(--sp-12);
 }
+.edtop .createprog {
+  margin-left: auto;
+  min-height: 44px;
+}
+.copyday {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-8);
+}
+.copyday .field {
+  min-width: 0;
+}
+.copyday .btn {
+  min-height: 44px;
+}
 }

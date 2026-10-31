@@ -474,6 +474,51 @@ describe('names, saved versions and loading', () => {
   });
 });
 
+describe('copying a day', () => {
+  const dayN = n => st().edProgram().days[n - 1].slots;
+  it('copies the open day onto another day with new ids, leaving the first day alone', () => {
+    const before = ids(day1()); const n4 = dayN(4).length;
+    st().copyEdDay(4);
+    expect(ids(day1())).toEqual(before);
+    expect(dayN(4)).toHaveLength(n4 + before.length);
+    const copies = dayN(4).filter(sl => st().edCopied.ids.includes(sl.id));
+    expect(copies).toHaveLength(before.length);
+    expect(copies.every(sl => !before.includes(sl.id))).toBe(true);
+    expect(copies.map(sl => sl.items)).toEqual(day1().map(sl => sl.items));
+    expect(saved('programs/A').days[3].slots).toHaveLength(n4 + before.length);
+    expect(st().edCopied).toMatchObject({ key: 'A', from: 1, to: 4 });
+  });
+  it('Undo takes the copies back out; stepping to another day drops the notice', () => {
+    const n4 = dayN(4).length;
+    st().copyEdDay(4); st().undoCopyEdDay();
+    expect(dayN(4)).toHaveLength(n4); expect(st().edCopied).toBeNull();
+    st().copyEdDay(4); st().setEdDay(2);
+    expect(st().edCopied).toBeNull();
+  });
+  it('Undo also removes the phases carried to the copies from the config', () => {
+    const first = day1()[0].id;
+    useAppStore.setState(s => ({ cfg: { ...s.cfg, phDef: { [`${first}:0`]: 'hyp' } } }));
+    st().copyEdDay(4);
+    const copy = st().edCopied.ids[0];
+    expect(st().cfg.phDef[`${copy}:0`]).toBe('hyp');
+    st().undoCopyEdDay();
+    expect(st().cfg.phDef).toEqual({ [`${first}:0`]: 'hyp' });
+  });
+  it('does nothing for the same day or a day that does not exist', () => {
+    const before = JSON.stringify(st().edProgram());
+    st().copyEdDay(1); st().copyEdDay(9);
+    expect(JSON.stringify(st().edProgram())).toBe(before); expect(st().edCopied).toBeNull();
+  });
+  it('works on a library program and never touches the built-in', () => {
+    st().createProgram('Mine', 'A');
+    const n = dayN(1).length;
+    st().copyEdDay(5);
+    expect(dayN(5).length).toBeGreaterThanOrEqual(n);
+    expect(ids(BUILTIN.A.days[0].slots)).toEqual(builtinA());
+    expect(st().programs.A).toBe(BUILTIN.A);
+  });
+});
+
 describe('creating a program', () => {
   it('starts an empty program with seven empty days, from nothing', () => {
     expect(st().createProgram('Mine', 'empty')).toBe(true);

@@ -203,6 +203,8 @@ export interface EdMoved {
   /** Only for a move to another program: where it went (program key and name) and the card as it was, with its old id, for Undo. */
   toKey?: string; toLabel?: string; orig?: ProgramSlot;
 }
+/** The cards the Program editor last copied from one day to another: their ids, so Undo can take them back out. */
+export interface EdCopied { key: string; from: number; to: number; ids: string[] }
 export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot }
 
 export interface EditorSlice {
@@ -239,6 +241,12 @@ export interface EditorSlice {
   moveEdSlotToProgram(i: number, toKey: string, toDay: number): void;
   undoMoveEdSlot(): void;
   dismissEdMoved(): void;
+  /** The cards last copied to another day, so the notice can offer Undo. */
+  edCopied: EdCopied | null;
+  /** Copies every card of the open day to the end of its section on day `toDay` of the same program, with new ids. */
+  copyEdDay(toDay: number): void;
+  undoCopyEdDay(): void;
+  dismissEdCopied(): void;
   setDaySub(v: string): boolean;
   renameLibItem(raw: string): false | void;
   libSnapshot(name: string, prog: Program, from: string, auto: boolean): LibraryItem;
