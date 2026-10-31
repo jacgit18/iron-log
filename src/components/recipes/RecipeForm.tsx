@@ -129,7 +129,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
           <div className="rc-meta">
             <label>Category
               <select value={cat} onChange={e => setCat(e.target.value as RecipeCategory)}>
-                {RECIPE_CATEGORIES.map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
+                {RECIPE_CATEGORIES.filter(c => c !== 'ready').map(c => <option key={c} value={c}>{RECIPE_CATEGORY_LABEL[c]}</option>)}
               </select>
             </label>
             <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>

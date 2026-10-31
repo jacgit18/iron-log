@@ -190,4 +190,13 @@
   height: 24px;
   flex: none;
 }
+.dt-oneoff-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+.dt-oneoff-head .btn {
+  min-height: 44px;
+}
 }

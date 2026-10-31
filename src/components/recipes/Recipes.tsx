@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import RemovedNotice from '../RemovedNotice.jsx';
 import RecipeDetail from './RecipeDetail.js';
+import ReadyMadeForm from './ReadyMadeForm.js';
 import RecipeForm from './RecipeForm.js';
 import './Recipes.css';
 import { monthKey } from '../../lib/grocery.js';
@@ -17,7 +18,7 @@ import type { CatalogItem, Recipe, RecipeCategory } from '../../types.ts';
 
 // Recipes (ADR 084): yours (Mine, synced with the account) and the library (Wikibooks Cookbook, searched on the server). Each recipe's
 // ingredients are checked against Groceries, At home. Its logic is in lib/recipeList.ts, lib/recipePantry.ts and the store's recipesSlice.
-type View = { kind: 'list' } | { kind: 'mine'; id: string } | { kind: 'library'; item: CatalogItem } | { kind: 'form'; id?: string };
+type View = { kind: 'list' } | { kind: 'mine'; id: string } | { kind: 'library'; item: CatalogItem } | { kind: 'form'; id?: string; ready?: boolean };
 type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean } | { status: 'failed'; reason: string };
 
 export default function Recipes() {
@@ -69,7 +70,10 @@ export default function Recipes() {
 
   const back = () => setView({ kind: 'list' });
   const mineRecipe = view.kind === 'mine' ? recipes.find(r => r.id === view.id) : undefined;
-  if (view.kind === 'form') return <section className="panel"><RecipeForm recipe={recipes.find(r => r.id === view.id)} onDone={id => { if (id) setView({ kind: 'mine', id }); else back(); }} /></section>;
+  if (view.kind === 'form') {
+    const editing = recipes.find(r => r.id === view.id), done = (id: string | null) => { if (id) setView({ kind: 'mine', id }); else back(); };
+    return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} /> : <RecipeForm recipe={editing} onDone={done} />}</section>;
+  }
   if (view.kind === 'mine' && mineRecipe) return <RecipeDetail key={mineRecipe.id} recipe={mineRecipe} mine onBack={back} onEdit={() => setView({ kind: 'form', id: mineRecipe.id })} onAdd={back} />;
   if (view.kind === 'library') {
     if (libCopy) return <RecipeDetail key={libCopy.id} recipe={libCopy} mine={false} onBack={back} onEdit={back} onAdd={servings => {
@@ -93,15 +97,16 @@ export default function Recipes() {
       <h2 id="recipes-h" tabIndex={-1}>Recipes</h2>
       <div className="seg" role="group" aria-label="Recipe source">
         <button type="button" id="recipes-mine" className={src === 'mine' ? 'on' : ''} aria-pressed={src === 'mine'} onClick={() => setSrc('mine')}>Mine</button>
-        <button type="button" id="recipes-library" className={src === 'library' ? 'on' : ''} aria-pressed={src === 'library'} onClick={() => setSrc('library')}>Library</button>
+        <button type="button" id="recipes-library" className={src === 'library' ? 'on' : ''} aria-pressed={src === 'library'} onClick={() => { setSrc('library'); if (cat === 'ready') setCat(null); }}>Library</button>
       </div>
       <div className="rc-top">
         <input type="search" aria-label="Search recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />
         {src === 'mine' && <button type="button" className="btn" onClick={() => setView({ kind: 'form' })}>New recipe</button>}
+        {src === 'mine' && <button type="button" className="btn" onClick={() => setView({ kind: 'form', ready: true })}>New ready-made food</button>}
       </div>
       <div className="rc-chips" role="group" aria-label="Category">
         <button type="button" aria-pressed={cat === null} onClick={() => setCat(null)}>All</button>
-        {RECIPE_CATEGORIES.map(c => <button type="button" key={c} aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{RECIPE_CATEGORY_LABEL[c]}</button>)}
+        {RECIPE_CATEGORIES.filter(c => src === 'mine' || c !== 'ready').map(c => <button type="button" key={c} aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{RECIPE_CATEGORY_LABEL[c]}</button>)}
         {src === 'mine' && <button type="button" aria-pressed={canMake} onClick={() => setCanMake(!canMake)}>Can make</button>}
       </div>
       <RemovedNotice scope="recipes" />
