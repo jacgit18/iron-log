@@ -7,6 +7,7 @@ import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
 import type { ExerciseInfo, MuscleTags, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
+import { leftRotationIds } from '../lib/programArchive.js';
 import { carryPhDef, isLibKey, moveSlotId, moveTargets, programByKey } from '../lib/programMove.js';
 import { copyDaySlots } from '../lib/programDay.js';
 
@@ -242,7 +243,11 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     // A program loaded from the library brings its name: the slot is called what you named the program (ADR 021).
     if (src) get().mutateCfg(c => { c.progNames = { ...(c.progNames || {}), [slot]: src.name }; });
     set({ edProg: slot });
-    flag(src ? `Loaded ${src.name} into Program ${slot}` : 'Loaded');
+    // The program that was in this slot is out of the rotation now: its saved copies go to Archived (Restore brings them back).
+    const out = leftRotationIds(get().library, cur, [get().programs[slot], get().programs[slot === 'A' ? 'B' : 'A']]);
+    const back = src?.archived; // a program loaded into A or B is in use, so it is not archived
+    if (out.length || back) get().setLibrary(get().library.map(x => { if (out.includes(x.id)) return { ...x, archived: true as const }; if (back && x.id === src!.id) { const { archived: _a, ...rest } = x; return rest; } return x; }));
+    flag((src ? `Loaded ${src.name} into Program ${slot}` : 'Loaded') + (out.length ? '. The program it replaced is in Archived' : ''));
   },
   deleteLibItem(id) {
     if (get().blocked()) return;
