@@ -73,9 +73,19 @@ describe('an ingredient with an Alternative', () => {
   });
   it('matches its own name, not the Alternative', () => expect(matchHome(ing, items)?.id).toBe('w'));
   it('yields to a pin', () => expect(matchHome({ ...ing, home: 'v' }, items)?.id).toBe('v'));
-  it('is added to To get by its own name when neither is on the list', () => {
-    const s = pantryStatus({ ing: [{ n: 'white wine vinegar', sub: 'rice vinegar' }] }, g(), month);
-    expect(missingParts(s).add).toEqual(['white wine vinegar']);
+  it('adds both names to To get when neither is at home and neither is on the list', () => {
+    const s = pantryStatus({ ing: [{ n: 'milk', sub: 'oat milk' }, { n: 'milk', sub: 'Oat milk' }] }, g(), month);
+    expect(missingParts(s).add).toEqual(['milk', 'oat milk']);
+  });
+  it('counts an Alternative already on the list as already there, and the ingredient as new', () => {
+    const s = pantryStatus({ ing: [{ n: 'milk', sub: 'oat milk' }] }, g(it_('o', 'Oat milk')), month);
+    const { already, add } = missingParts(s);
+    expect(already.map(i => i.id)).toEqual(['o']);
+    expect(add).toEqual(['milk']);
+  });
+  it('adds nothing when the Alternative is at home', () => {
+    const s = pantryStatus({ ing: [{ n: 'milk', sub: 'oat milk' }] }, g(it_('o', 'Oat milk')), { lines: { o: { have: true as const } }, pulled: [] });
+    expect(missingParts(s)).toEqual({ already: [], add: [] });
   });
   it('counts as at home when only the Alternative is', () => {
     const s = status('v');

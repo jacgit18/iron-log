@@ -110,7 +110,7 @@ export function suggestItem(ing: RecipeIngredient, items: GroceryItem[]): Grocer
   return best && closeness(ing, best) > 0 ? best : null;
 }
 
-export interface IngredientStatus { ing: RecipeIngredient; item: GroceryItem | null; have: boolean; skipped: boolean; always: boolean; suggest: GroceryItem | null }
+export interface IngredientStatus { ing: RecipeIngredient; item: GroceryItem | null; have: boolean; skipped: boolean; always: boolean; suggest: GroceryItem | null; alt: GroceryItem | null }
 export interface PantryStatus { lines: IngredientStatus[]; have: number; total: number }
 
 /** Each ingredient against the list for one month: the item it is, and whether it is at home (or already bought) that month. A skipped
@@ -123,7 +123,7 @@ export function pantryStatus(recipe: Pick<Recipe, 'ing'>, g: Grocery, month: Gro
     // The ingredient is at home when its own item is, or else when the Alternative's item is: "if you don't have it, use this".
     const altItem = always || (main && haveOf(main, month)) || !alt ? null : matchHome({ n: alt }, g.items);
     const item = altItem && haveOf(altItem, month) ? altItem : main;
-    return { ing, item, have: always || (!!item && !!haveOf(item, month)), skipped, always, suggest: item || skipped || always ? null : suggestItem(ing, g.items) };
+    return { ing, item, have: always || (!!item && !!haveOf(item, month)), skipped, always, suggest: item || skipped || always ? null : suggestItem(ing, g.items), alt: altItem };
   });
   const counted = lines.filter(l => !l.skipped);
   return { lines, have: counted.filter(l => l.have).length, total: counted.length };
@@ -137,12 +137,17 @@ export const suggestionPins = (status: PantryStatus): { index: number; home: str
  *  is (an item with no tick shows there), so it only counts; one with no item is a new name to add, once each by its words. */
 export function missingParts(status: PantryStatus): { already: GroceryItem[]; add: string[] } {
   const already: GroceryItem[] = []; const add: string[] = []; const seen = new Set<string>();
-  for (const l of status.lines) {
-    if (l.have || l.skipped) continue;
-    if (l.item) { if (!already.includes(l.item)) already.push(l.item); continue; }
-    const name = ingredientName(l.ing);
+  const want = (item: GroceryItem | null, name: string) => {
+    if (item) { if (!already.includes(item)) already.push(item); return; }
     const key = [...nameWords(name)].sort().join(' ');
     if (key && !seen.has(key)) { seen.add(key); add.push(name); }
+  };
+  for (const l of status.lines) {
+    if (l.have || l.skipped) continue;
+    want(l.item, ingredientName(l.ing));
+    // Neither is at home: the Alternative is wanted too, so either one can be bought (owner, 2026-10-31).
+    const alt = l.ing.sub?.trim();
+    if (alt) want(l.alt, alt);
   }
   return { already, add };
 }

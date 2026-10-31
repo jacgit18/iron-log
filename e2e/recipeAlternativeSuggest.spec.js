@@ -22,3 +22,17 @@ test('typing an Alternative offers your Groceries items, and the list follows th
   await page.getByLabel('Ingredient 1', { exact: true }).pressSequentially('x');
   await expect(page.locator('#rc-suggest option')).toHaveCount(0);
 });
+
+test('with neither the ingredient nor its Alternative at home, Add missing puts both on To get', async ({ page }) => {
+  await page.click('#tab-daily'); await page.click('#daily-recipes');
+  await page.getByRole('button', { name: 'New recipe' }).click();
+  await page.getByLabel('Name', { exact: true }).fill('Porridge');
+  await page.getByLabel('Ingredient 1', { exact: true }).fill('milk');
+  await page.getByLabel('Alternative for ingredient 1').fill('oat milk');
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+  await page.getByRole('button', { name: 'Add 2 missing to To get' }).click();
+  await expect(page.getByText('Added 2 to To get.')).toBeVisible();
+  await page.click('#daily-grocery'); await page.click('#groc-view-get');
+  await expect(page.getByText('milk', { exact: true })).toBeVisible();
+  await expect(page.getByText('oat milk', { exact: true })).toBeVisible();
+});
