@@ -2,15 +2,15 @@ import type { ProgKey } from '../../types.ts';
 import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { progName } from '../../lib/logic.js';
-import { slotsFor } from '../../lib/data.js';
-import { daysChoices, parseStart, START_VALUES, suggestName } from '../../lib/programStart.js';
+import { daysChoices, loadEffect, parseStart, START_VALUES, suggestName } from '../../lib/programStart.js';
+import { sameProg } from '../../lib/export.js';
 import { starterById } from '../../lib/starterPrograms.js';
 import Sheet from '../Sheet.jsx';
 import './NewProgramSheet.css';
 
 // Step 1 picks where the program starts and names it; step 2 (it is already in the library) offers to put it on the Board.
 export default function NewProgramSheet() {
-  const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs);
+  const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const st = useAppStore.getState();
   const [start, setStart] = useState(START_VALUES[0]!);
   const [days, setDays] = useState<number | null>(null);
@@ -38,6 +38,12 @@ export default function NewProgramSheet() {
       close();
       if (entryToLeave) window.addEventListener('popstate', done, { once: true }); else done();
     };
+    const loadNote = (k: ProgKey) => {
+      const label = progName(cfg, k);
+      const effect = loadEffect(st.isOriginal(programs[k], k), library.some(it => sameProg(it.prog, programs[k])));
+      return effect === 'saved first' ? `What ${label} has now is saved to your library first, so nothing is lost.`
+        : effect === 'already saved' ? `What ${label} has now is already in your library.` : `${label} has no changes of yours, so nothing needs saving.`;
+    };
     return (
       <Sheet>
         <h2 className="cond">{made.name} is ready</h2>
@@ -46,7 +52,7 @@ export default function NewProgramSheet() {
           {(['A', 'B'] as const).map(k => (
             <button key={k} type="button" className="btn" onClick={() => load(k)}>
               Load into {progName(cfg, k)}
-              <span className="note">{slotsFor(programs[k]).length === 0 || st.isOriginal(programs[k], k) ? `${progName(cfg, k)} has no changes of yours, so nothing needs saving.` : `What ${progName(cfg, k)} has now is saved to your library first, so nothing is lost.`}</span>
+              <span className="note">{loadNote(k)}</span>
             </button>
           ))}
           <button type="button" className="btn" onClick={close}>

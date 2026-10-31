@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { daysChoices, parseStart, START_VALUES, suggestName } from './programStart';
+import { daysChoices, loadEffect, NAME_MAX, parseStart, START_VALUES, suggestName } from './programStart';
 
 const label = (k: 'A' | 'B') => `Program ${k}`;
 
@@ -30,5 +30,21 @@ describe('suggestName', () => {
     expect(suggestName('copy:B', 3, label)).toBe('Copy of Program B');
     expect(suggestName('blank', 3, label)).toBe('My program');
     expect(suggestName('zzz', 3, label)).toBe('');
+  });
+});
+
+describe('suggestName length', () => {
+  it('never goes past the name limit, even for a copy of a long program name', () => {
+    const long = 'x'.repeat(60);
+    expect(suggestName('copy:A', 3, () => long)).toHaveLength(NAME_MAX);
+  });
+});
+
+describe('loadEffect', () => {
+  it('says what loadVersion does with the program in the slot', () => {
+    expect(loadEffect(true, false)).toBe('unchanged');
+    expect(loadEffect(true, true)).toBe('unchanged');
+    expect(loadEffect(false, false)).toBe('saved first');
+    expect(loadEffect(false, true)).toBe('already saved');
   });
 });

@@ -24,6 +24,17 @@ export function suggestName(v: string, days: number, progLabel: (key: 'A' | 'B')
   const s = parseStart(v);
   if (!s) return '';
   if (s.kind === 'starter') return `${starterById(s.id)!.name} · ${days} days`;
-  if (s.kind === 'copy') return `Copy of ${progLabel(s.key)}`;
+  if (s.kind === 'copy') return `Copy of ${progLabel(s.key)}`.slice(0, NAME_MAX);
   return 'My program';
+}
+
+/** The longest program name (the sheet's box limit, and what renaming a saved program keeps). */
+export const NAME_MAX = 60;
+
+/** What loading a library program into a slot does with the program there now, the same rule as `loadVersion`: it is saved to the library first
+ *  only when it differs from the original and is not already saved there. */
+export type LoadEffect = 'saved first' | 'unchanged' | 'already saved';
+export function loadEffect(isOriginal: boolean, inLibrary: boolean): LoadEffect {
+  if (isOriginal) return 'unchanged';
+  return inLibrary ? 'already saved' : 'saved first';
 }

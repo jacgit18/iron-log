@@ -515,6 +515,11 @@ describe('creating a program', () => {
     expect(exInfo(st().cfg, first.items[0].ex).n).toBe('Bench press');
     expect(first.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
+  it('keeps a program name to 60 characters, like renaming does', () => {
+    st().createStarterProgram('ppl', 3, 'n'.repeat(80));
+    st().createProgram('m'.repeat(80), 'empty', true);
+    expect(st().library.map(x => x.name.length)).toEqual([60, 60]);
+  });
   it('refuses a starter it does not know, or days it does not offer', () => {
     expect(st().createStarterProgram('nope', 3, 'X')).toMatch(/Pick a program/);
     expect(st().createStarterProgram('ppl', 5, 'X')).toMatch(/not offered/);
