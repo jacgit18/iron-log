@@ -5,13 +5,16 @@ import { PHASES, EQUIPMENT } from '../../lib/data.js';
 import { eqName, eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
 import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems } from '../../lib/exerciseLibrary.js';
+import { isFiltering, resultText } from '../../lib/libraryFilter.js';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import { progName } from '../../lib/logic.js';
 import { videoLabel, isCatalogId, exInfo } from '../../lib/data.js';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
+import LibraryChip from './LibraryChip.jsx';
 import YourEquipment from './YourEquipment.jsx';
+import './Library.css';
 
 // Every exercise (from the library, and your own marked Custom) with what is set on it, searchable, edited in one sheet.
 export default function ExerciseLibrary() {
@@ -24,7 +27,7 @@ export default function ExerciseLibrary() {
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
   const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)
   const shown = filterRows(rows, sources ? f : { ...f, src: '' });
-  const filtering = !!(f.q || f.eq || f.muscle || f.src);
+  const filtering = isFiltering(f);
   return (
     <section className="panel edpanel exlib">
       <div className="inline spread">
@@ -35,31 +38,27 @@ export default function ExerciseLibrary() {
       </div>
       <p className="note">Every exercise in one place. What you set on an exercise here applies to every card, day and week that uses it.</p>
       <YourEquipment />
-      <div className="filterbar" role="search">
-        <label className="field">Search<input type="search" value={f.q} placeholder="Name" onChange={e => setF(x => ({ ...x, q: e.target.value }))} /></label>
-        <label className="field">Equipment
-          <select value={f.eq} onChange={e => setF(x => ({ ...x, eq: e.target.value }))}>
+      <div className="libbar" role="search">
+        <input className="libsearch" type="search" aria-label="Search" value={f.q} placeholder={`Search ${rows.length} exercises`} onChange={e => setF(x => ({ ...x, q: e.target.value }))} />
+        <div className="libchips">
+          <LibraryChip label="Equipment" value={f.eq} onChange={v => setF(x => ({ ...x, eq: v }))}>
             <option value="">All equipment</option>
             {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
             <option value="none">Not set</option>
-          </select>
-        </label>
-        <label className="field">Muscle
-          <select value={f.muscle} onChange={e => setF(x => ({ ...x, muscle: e.target.value }))}>
+          </LibraryChip>
+          <LibraryChip label="Muscle" value={f.muscle} onChange={v => setF(x => ({ ...x, muscle: v }))}>
             <option value="">All muscles</option>
             {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
             <option value="untagged">Not tagged yet</option>
-          </select>
-        </label>
-        {sources && <label className="field">Source
-          <select value={f.src} onChange={e => setF(x => ({ ...x, src: e.target.value }))}>
-            <option value="">All</option>
+          </LibraryChip>
+          {sources && <LibraryChip label="Source" value={f.src} onChange={v => setF(x => ({ ...x, src: v }))}>
+            <option value="">All sources</option>
             <option value="custom">Custom</option>
             <option value="library">Library</option>
-          </select>
-        </label>}
-        {filtering && <button type="button" className="btn sm ghost" onClick={() => setF({ q: '', eq: '', muscle: '', src: '' })}>Clear</button>}
-        <span className="note" role="status">{filtering ? `${shown.length} of ${rows.length} exercises` : `${rows.length} exercises`}</span>
+          </LibraryChip>}
+          {filtering && <button type="button" className="btn sm ghost" onClick={() => setF({ q: '', eq: '', muscle: '', src: '' })}>Clear</button>}
+        </div>
+        <span className="note" role="status">{resultText(shown.length, rows.length, filtering, 'exercises')}</span>
       </div>
       <RemovedNotice scope="exercises" />
       <div className="exrows">
