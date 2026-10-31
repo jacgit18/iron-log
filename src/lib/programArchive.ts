@@ -1,9 +1,12 @@
 import type { LibraryItem, Program } from '../types.ts';
 import { progBody } from './export.js';
+import { nameCmp } from './sort.js';
 
 // Program library > Archive: saved programs split into the ones in play and the ones put away (newest first), and the heading for the put-away list.
 export function splitLibrary(library: LibraryItem[]): { active: LibraryItem[]; archived: LibraryItem[] } {
-  const newest = (a: LibraryItem, b: LibraryItem) => (b.at || '').localeCompare(a.at || '');
+  // Newest first; saved the same moment, by name, then id, so the order never jumps. The comparator is a variable on purpose (the dates are ISO strings).
+  const byName = nameCmp<LibraryItem>(it => it.name, it => it.id);
+  const newest = (a: LibraryItem, b: LibraryItem) => (b.at || '') < (a.at || '') ? -1 : (b.at || '') > (a.at || '') ? 1 : byName(a, b);
   return { active: library.filter(it => !it.archived).sort(newest), archived: library.filter(it => it.archived).sort(newest) };
 }
 

@@ -14,6 +14,12 @@ describe('splitLibrary', () => {
     expect(active.map(x => x.id)).toEqual(['c', 'a']);
     expect(archived.map(x => x.id)).toEqual(['d', 'b']);
   });
+  it('orders programs saved at the same moment by name, then id, whatever the input order', () => {
+    const at = '2026-05-01';
+    const a = { ...item('2', at), name: 'Upper' }, b = { ...item('1', at), name: 'upper' }, c = { ...item('3', at), name: 'Lower' };
+    expect(splitLibrary([a, b, c]).active.map(x => x.id)).toEqual(['3', '1', '2']);
+    expect(splitLibrary([c, b, a]).active.map(x => x.id)).toEqual(['3', '1', '2']);
+  });
   it('does not change the list it is given', () => {
     const lib = [item('a', '1'), item('b', '2')]; splitLibrary(lib);
     expect(lib.map(x => x.id)).toEqual(['a', 'b']);
