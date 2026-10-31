@@ -136,3 +136,37 @@ describe('the data file', () => {
     expect(normalizeData({ config: {} })).not.toHaveProperty('recipes');
   });
 });
+
+describe('linked sauces', () => {
+  const sauce = { n: 'Taco seasoning', cat: 'seasonings' as const, ing: [{ n: 'cumin' }], steps: [] };
+  const setup = async () => {
+    const { linkedRecipe } = await import('../lib/recipeSuggest.js');
+    st().saveRecipe(sauce);
+    const sid = st().recipes[0]!.id;
+    expect(st().saveRecipe({ n: 'Tacos', cat: 'protein', ing: [{ n: 'Taco seasoning', amt: '2 tbsp', rid: sid }, { n: 'beef' }], steps: [] })).toBeNull();
+    const taco = () => st().recipes.find(r => r.n === 'Tacos')!;
+    return { sid, taco, linkedRecipe };
+  };
+  it('keeps the link when saved, and the pantry counts the line as before', async () => {
+    const { sid, taco } = await setup();
+    expect(taco().ing[0]).toEqual({ n: 'Taco seasoning', amt: '2 tbsp', rid: sid });
+    const { pantryStatus } = await import('../lib/recipePantry.js');
+    expect(pantryStatus(taco(), st().grocery, { lines: {}, pulled: [] })).toMatchObject({ have: 0, total: 2 });
+  });
+  it('deleting the sauce leaves the ingredient as plain text, and Undo brings the link back', async () => {
+    const { sid, taco, linkedRecipe } = await setup();
+    st().removeRecipe(sid);
+    expect(taco().ing[0]!.n).toBe('Taco seasoning');
+    expect(linkedRecipe(taco().ing[0]!, st().recipes)).toBeUndefined();
+    expect(st().removed!.restore()).toBe(true);
+    expect(linkedRecipe(taco().ing[0]!, st().recipes)?.id).toBe(sid);
+  });
+  it('renaming the sauce shows the new name on the link, and the stored name is refreshed when the recipe is saved again', async () => {
+    const { sid, taco, linkedRecipe } = await setup();
+    expect(st().saveRecipe({ ...st().recipes[0]!, n: 'Taco mix' })).toBeNull();
+    expect(linkedRecipe(taco().ing[0]!, st().recipes)?.n).toBe('Taco mix');
+    const { refreshLink } = await import('../lib/recipeSuggest.js');
+    expect(st().saveRecipe({ ...taco(), ing: taco().ing.map(i => refreshLink(i, st().recipes)) })).toBeNull();
+    expect(taco().ing[0]).toEqual({ n: 'Taco mix', amt: '2 tbsp', rid: sid });
+  });
+});

@@ -16,6 +16,12 @@ describe('recipes/main', () => {
     const m = mirrorOf(desiredRows(kind, { items: [dip, chili] }, new Map()));
     expect(documentFor(kind, m as never)).toEqual({ items: [dip, chili] });
   });
+  it('keeps the link of an ingredient to a sauce through rows (backup and sync)', () => {
+    const linked = { ...chili, ing: [{ n: 'Dip', amt: '2 tbsp', rid: 'r2' }] };
+    const m = mirrorOf(desiredRows(kind, { items: [dip, linked] }, new Map()));
+    expect(documentFor(kind, m as never)).toEqual({ items: [dip, linked] });
+    expect(dataFileDocs({ logs: {}, weeks: {}, stretchWeeks: {}, programs: {}, body: [], library: [], experiments: [], stretches: null, supplements: null, config: {}, grocery: null, recipes: [linked] } as never).get('recipes/main')).toEqual({ items: [linked] });
+  });
   it('cleans what it stores and drops a recipe with no name or a repeated id', () => {
     const rows = desiredRows(kind, { items: [{ ...chili, cat: 'soup' }, { id: 'x', n: '' }, chili] }, new Map());
     expect(rows).toHaveLength(1);

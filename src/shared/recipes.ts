@@ -23,8 +23,8 @@ const cleanWhole = (v: unknown, max: number): number | null => (typeof v === 'nu
 export function normIngredient(x: unknown): RecipeIngredient | null {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return null;
   const o = x as Record<string, unknown>;
-  const n = str(o.n, MAX_RECIPE_NAME), amt = str(o.amt, MAX_AMOUNT), home = str(o.home, MAX_RECIPE_ID), sub = str(o.sub, MAX_RECIPE_NAME);
-  return n ? { n, ...(amt ? { amt } : {}), ...(home && !reservedId(home) ? { home } : {}), ...(sub && sub.toLowerCase() !== n.toLowerCase() ? { sub } : {}), ...(o.skip === true ? { skip: true as const } : {}) } : null;
+  const n = str(o.n, MAX_RECIPE_NAME), amt = str(o.amt, MAX_AMOUNT), home = str(o.home, MAX_RECIPE_ID), rid = str(o.rid, MAX_RECIPE_ID), sub = str(o.sub, MAX_RECIPE_NAME);
+  return n ? { n, ...(amt ? { amt } : {}), ...(home && !reservedId(home) ? { home } : {}), ...(rid && !reservedId(rid) ? { rid } : {}), ...(sub && sub.toLowerCase() !== n.toLowerCase() ? { sub } : {}), ...(o.skip === true ? { skip: true as const } : {}) } : null;
 }
 
 /** One recipe, cleaned: lists are capped, blank lines dropped, an unknown category becomes Other. Null without an id or a name. */
