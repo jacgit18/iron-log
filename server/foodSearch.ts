@@ -6,7 +6,10 @@ import { cleanQuery, MAX_RESULTS, parseFoods, type FoodHit } from '../src/shared
 // held in this instance's memory for an hour so a repeat does not spend the shared key's allowance (about 1,000 calls an hour per address).
 
 const USDA_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
-const DATA_TYPES = 'Foundation,SR Legacy,Branded';
+// Two asks, so plain foods ("Eggs, Grade A, Large, egg whole") come before store products: with one ask for everything, "egg" listed a Snickers egg first.
+const GENERIC_TYPES = 'Foundation,SR Legacy';
+const BRANDED_TYPE = 'Branded';
+const GENERIC_FIRST = 5; // of the 8 shown; branded products fill the rest, and plain foods take any place they leave
 const ASK_FOR = 25; // asked for more than shown: some foods have no calories or protein and are dropped
 const TIMEOUT_MS = 5000;
 const HOLD_MS = 60 * 60_000;
@@ -49,12 +52,19 @@ export function foodRoutes({ key, fetch: ask = fetch, now = Date.now }: FoodDeps
     const name = q.toLowerCase();
     const old = held.get(name);
     if (old && t - old.at < HOLD_MS) return void res.json({ ok: true, hits: old.hits });
-    const url = new URL(USDA_URL);
-    url.search = new URLSearchParams({ query: q, dataType: DATA_TYPES, pageSize: String(ASK_FOR), api_key: key }).toString();
-    try {
+    const askUsda = async (dataType: string) => {
+      const url = new URL(USDA_URL);
+      url.search = new URLSearchParams({ query: q, dataType, pageSize: String(ASK_FOR), api_key: key }).toString();
       const r = await ask(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: 'application/json' } });
       if (!r.ok) throw new Error(`upstream ${r.status}`);
-      const hits = parseFoods(await r.json()).slice(0, MAX_RESULTS);
+      return parseFoods(await r.json());
+    };
+    try {
+      // Both at once. One failing still gives the other's foods; both failing is "not available".
+      const [plain, branded] = await Promise.allSettled([askUsda(GENERIC_TYPES), askUsda(BRANDED_TYPE)]);
+      if (plain.status === 'rejected' && branded.status === 'rejected') throw plain.reason;
+      const g = plain.status === 'fulfilled' ? plain.value : [], b = branded.status === 'fulfilled' ? branded.value : [];
+      const hits = [...g.slice(0, Math.max(GENERIC_FIRST, MAX_RESULTS - b.length)), ...b].slice(0, MAX_RESULTS);
       // Oldest first out when full, so the map cannot grow without bound.
       if (held.size >= HOLD_MAX) held.delete(held.keys().next().value as string);
       held.set(name, { at: t, hits });
