@@ -255,6 +255,20 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
       const l = [...get().library]; l.splice(Math.min(i, l.length), 0, it); get().setLibrary(l); return true;
     });
   },
+  // Archive puts a saved program out of the way (library list, Move sheet); Restore brings it back. Nothing in it changes.
+  archiveLibItem(id) {
+    if (get().blocked()) return;
+    const it = get().library.find(x => x.id === id); if (!it || it.archived) return;
+    get().setLibrary(get().library.map(x => (x.id === id ? { ...x, archived: true as const } : x)));
+    if (get().edProg === 'L:' + id) set({ edProg: null });
+    flag(`Archived ${it.name}. Restore it from Archived below.`);
+  },
+  restoreLibItem(id) {
+    if (get().blocked()) return;
+    const it = get().library.find(x => x.id === id); if (!it || !it.archived) return;
+    get().setLibrary(get().library.map(x => { if (x.id !== id) return x; const { archived: _a, ...rest } = x; return rest; }));
+    flag(`Restored ${it.name}`);
+  },
   applyStarter(starterId, perWeek) {
     if (get().blocked()) return 'Wait a moment and try again.';
     const starter = starterById(starterId); const key = get().activeProgKey();
