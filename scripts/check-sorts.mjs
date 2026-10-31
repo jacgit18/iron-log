@@ -1,7 +1,9 @@
 // Fails on a new bare `.localeCompare(` inside a `.sort(` in src/: list order comes from src/lib/sort.ts (nameCmp, byName, sortByName),
 // so equal names keep a fixed order and every list agrees on case, accents and digits. A localeCompare given options is already a
 // deliberate compare and passes. A deliberate exception (ISO date strings, ids, sync table names) takes a comment on a line of the sort,
-// or the line above: // sort-ok: why
+// or on a comment-only line right above it: // sort-ok: why
+// Only comparators written inline in .sort( are seen: one kept in a variable (const newest = (a, b) => ...; list.sort(newest)) gets past the guard,
+// so keep a list's comparator inline or build it with nameCmp.
 // Usage: node scripts/check-sorts.mjs   (run by npm run lint)
 import { readFile, readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
@@ -40,8 +42,8 @@ export function findBareSorts(text) {
     const body = balanced(text, open);
     if (body === null) continue;
     const first = lineOf(open), last = lineOf(open + body.length);
-    const spanned = lines.slice(Math.max(0, first - 2), last).join('\n');
-    if (/sort-ok/.test(spanned)) continue;
+    // sort-ok counts inside this sort's own lines, or on the line above when that line is only a comment (so it cannot cover the next sort too).
+    if (/sort-ok/.test(lines.slice(first - 1, last).join('\n')) || /^\s*\/\/.*sort-ok/.test(lines[first - 2] ?? '')) continue;
     for (const c of body.matchAll(/\.localeCompare\(/g)) {
       const args = balanced(body, c.index + c[0].length - 1);
       if (args !== null && !hasSecondArg(args)) { found.push({ line: first + body.slice(0, c.index).split('\n').length - 1, text: lines[first + body.slice(0, c.index).split('\n').length - 2].trim() }); break; }
