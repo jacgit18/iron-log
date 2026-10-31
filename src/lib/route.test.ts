@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PATHS, dailyFix, dailySection, pageOf, parseRoute, PROGRESS_PAGES, routeHash } from './route.js';
+import { PATHS, boardFix, boardView, dailyFix, programKey, programPath, dailySection, pageOf, parseRoute, PROGRESS_PAGES, routeHash } from './route.js';
 
 // Screen addresses (brief navigation-urls): every address round-trips, an unknown one falls back to the screen above it, and none can carry personal data.
 describe('parseRoute', () => {
@@ -48,9 +48,38 @@ describe('dailySection and dailyFix', () => {
     expect(dailySection('progress/trends', keys)).toBeNull();
   });
   it('rewrites the address only when it does not name the section shown', () => {
-    expect(dailyFix('daily', 'supplements')).toBe('daily/supplements');
-    expect(dailyFix('daily/medical', 'supplements')).toBe('daily/supplements');
+    expect(dailyFix('daily', 'supplements')).toBe('daily/nutrition');
+    expect(dailyFix('daily/medical', 'supplements')).toBe('daily/nutrition');
+    expect(dailyFix('daily/nutrition', 'supplements')).toBeNull();
     expect(dailyFix('daily/recipes/mine', 'recipes')).toBeNull(); // a deeper page is left as it is
     expect(dailyFix('progress', 'recipes')).toBeNull();
+  });
+});
+
+describe('boardView and boardFix', () => {
+  it('names the section an address points at, and null for plain board or another screen', () => {
+    expect(boardView('board/stretches')).toBe('stretches');
+    expect(boardView('board/workout')).toBe('workout');
+    expect(boardView('board')).toBeNull();
+    expect(boardView('program/stretches')).toBeNull();
+  });
+  it('rewrites only plain board to the section shown', () => {
+    expect(boardFix('board', 'stretches')).toBe('board/stretches');
+    expect(boardFix('board/workout', 'workout')).toBeNull();
+    expect(boardFix('daily', 'workout')).toBeNull();
+  });
+  it('falls back to Board for an unknown section', () => expect(parseRoute('#/board/zzz')).toEqual({ tab: 'board', path: 'board' }));
+});
+
+describe('Nutrition and Program addresses', () => {
+  it('names the Nutrition section by its address, and still opens the old one', () => {
+    expect(dailySection('daily/nutrition', ['grocery', 'supplements'])).toBe('supplements');
+    expect(parseRoute('#/daily/supplements')).toEqual({ tab: 'daily', path: 'daily/nutrition' });
+  });
+  it('maps A and B to program addresses and back, and leaves a library program out', () => {
+    expect(programKey('program/b')).toBe('B');
+    expect(programKey('program/exercises')).toBeNull();
+    expect(programPath('A')).toBe('program/a');
+    expect(programPath('L:123')).toBeNull();
   });
 });
