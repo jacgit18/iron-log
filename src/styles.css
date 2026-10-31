@@ -68,17 +68,18 @@
 }
 
 :root {
-  --bg: #EEF0EC;
+  --bg: #F6F6F3;
   --surface: #FFFFFF;
-  --sunk: #E3E6E1;
+  --sunk: #EEEEEA;
   --ink: #1E2326;
   --muted: #454C48;
-  --line: #D2D7D1;
+  --line: #E0E0DB;
   --accent: #7A5C00;
-  --accent-ink: #FFFFFF;
+  --accent-fill: #E3BE55;
+  --accent-ink: #1E2326;
   --done: #454C48;
   --field-line: #808E7E;
-  --dock: #F3E7BE;
+  --dock: #FBF1CF;
   --dock-field: #FFFFFF;
   --dock-field-line: #6F6A52;
   --dock-line: #7A5C00;
@@ -96,7 +97,7 @@
   --warn-bg: #FFF4D6;
   --warn-ink: #6B4E00;
   --m0: #CDD2CC;
-  --m1: #F1E4B0;
+  --m1: #F6EBC0;
   --m2: #E3BE55;
   --m3: #A9831A;
   --m4: #6B4E00;
@@ -167,6 +168,7 @@
     --dock-line: #E3BE55;
     --dock-shadow: 0 -6px 18px rgba(0,0,0,.55);
     --accent: #E3BE55;
+    --accent-fill: #E3BE55;
     --accent-ink: #1E2326;
     --done: #B9C0C4;
     --str: #F39D8E;
@@ -212,6 +214,7 @@
   --dock-line: #E3BE55;
   --dock-shadow: 0 -6px 18px rgba(0,0,0,.55);
   --accent: #E3BE55;
+  --accent-fill: #E3BE55;
   --accent-ink: #1E2326;
   --done: #B9C0C4;
   --str: #F39D8E;
@@ -325,7 +328,7 @@ header.top h1 {
   font-weight: 600;
 }
 .pill.prog {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
 }
 .tabs {
@@ -392,7 +395,7 @@ header.top h1 {
   }
 }
 .btn.primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: var(--accent);
   color: var(--accent-ink);
 }
@@ -444,7 +447,7 @@ header.top h1 {
   border: 0;
 }
 .seg button.on {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
 }
 .view-loading {
@@ -470,7 +473,7 @@ header.top h1 {
 .bar i {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 .notice {
   background: var(--warn-bg);
@@ -729,7 +732,7 @@ body.timing {
   left: 16px;
   top: -100px;
   z-index: var(--z-skip);
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
   padding: var(--sp-12) var(--sp-16);
   border-radius: var(--r-md);
@@ -997,7 +1000,7 @@ body.timing {
   cursor: pointer;
 }
 .chk:checked {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: var(--accent);
 }
 .chk:checked::after {
@@ -1526,7 +1529,7 @@ body.timing {
   color: var(--muted);
 }
 .months div.b {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
 }
 .months div.now {
@@ -1632,7 +1635,7 @@ body.timing {
     font-weight: 700;
   }
   .daytabs button[aria-selected="true"] {
-    background: var(--accent);
+    background: var(--accent-fill);
     border-color: var(--accent);
     color: var(--accent-ink);
   }
@@ -1797,7 +1800,7 @@ input[type=checkbox]:not(.chk),input[type=radio] {
   background: transparent;
 }
 .chk:checked::before {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: var(--accent);
 }
 .chk:checked::after {

@@ -39,7 +39,7 @@
   transition: transform .15s, background .15s;
 }
 .injsw-input:checked + .injsw-track {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: var(--accent);
 }
 .injsw-input:checked + .injsw-track i {

@@ -38,7 +38,7 @@
   color: inherit;
 }
 .libchip.on {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
   border-color: var(--accent);
 }

@@ -38,7 +38,7 @@
   inline-size: 32px;
   block-size: 32px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
   font-size: var(--fs-base);
   line-height: 1;
