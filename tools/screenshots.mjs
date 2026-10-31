@@ -116,16 +116,16 @@ for (const dark of [false, true]) {
   await ctx.close();
 }
 
-// Progress with the muscle map, Muscle details, program editor (desktop)
+// Progress with the muscle box (and a chosen muscle's exercises in it), program editor (desktop)
 {
   const { ctx, page } = await open({ width:1440, height:1000, dpr:1.5 });
   await page.click('#tab-progress');
   await page.locator('.figs').first().scrollIntoViewIfNeeded(); await page.waitForTimeout(200);
   await shot(page, 'muscles.png');
-  await page.getByRole('button', { name: /^Muscle details/ }).click();
   await page.getByRole('button', { name: /^Hamstrings/ }).click(); await page.waitForTimeout(200);
+  await page.locator('.mapbox').scrollIntoViewIfNeeded(); await page.waitForTimeout(200);
   await shot(page, 'muscles-detail.png');
-  await page.locator('.hubback button').click(); await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(400);
+  await page.getByRole('button', { name: 'Close' }).click(); await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(400);
   await shot(page, 'progress.png');
   await page.click('#tab-program'); await page.waitForTimeout(200);
   await shot(page, 'editor.png');
