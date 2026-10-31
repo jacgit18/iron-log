@@ -4,7 +4,7 @@ import type { ProgKey } from '../../types.ts';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { PHASES, exInfo } from '../../lib/data.js';
+import { PHASES } from '../../lib/data.js';
 import { progName, DAYS } from '../../lib/logic.js';
 import { exerciseCount } from '../../lib/exerciseCount.js';
 import { slotSummary } from '../../lib/programMove.js';
@@ -132,23 +132,22 @@ function ProgramEditor() {
   const movedUndoRef = useRef<HTMLButtonElement>(null);
   const focusAfterGo = useRef<string | null>(null);
   // Arrow keys on a closed select change its value at once (on macOS they open the menu). A change that comes from them waits here for Enter (Escape or leaving drops it), so a keyboard user can look through the days before a card moves.
-  const [pendingDay, setPendingDay] = useState<{ i: number; item: number | null; to: number } | null>(null);
+  const [pendingDay, setPendingDay] = useState<{ i: number; to: number } | null>(null);
   const arrowKey = useRef(false);
-  const applyMove = (i: number, item: number | null, to: number) => {
+  const applyMove = (i: number, to: number) => {
     setPendingDay(null);
-    if (to === edDay) return;
-    if (item == null) st.moveEdSlotToDay(i, to); else st.moveEdItemToDay(i, item, to);
+    if (to !== edDay) st.moveEdSlotToDay(i, to);
   };
-  // The Move to day select of a card (item null) or of one exercise of a superset (item = its position).
-  const daySelect = (sl: { id: string }, i: number, item: number | null, label: string) => {
-    const pend = pendingDay?.i === i && pendingDay.item === item;
+  // The Move to day select of a card.
+  const daySelect = (sl: { id: string }, i: number, label: string) => {
+    const pend = pendingDay?.i === i;
     return (
-      <select className="edmove" id={item == null ? `mv-${sl.id}` : `mvi-${sl.id}-${item}`} aria-label={item == null ? `Move to day (${label})` : `Move ${label} to another day`} value={pend ? pendingDay.to : edDay}
-        onChange={e => { const to = Number(e.target.value); if (arrowKey.current) setPendingDay({ i, item, to }); else applyMove(i, item, to); }}
+      <select className="edmove" id={`mv-${sl.id}`} aria-label={`Move to day (${label})`} value={pend ? pendingDay.to : edDay}
+        onChange={e => { const to = Number(e.target.value); if (arrowKey.current) setPendingDay({ i, to }); else applyMove(i, to); }}
         onKeyDown={e => {
           arrowKey.current = e.key.startsWith('Arrow') && !e.altKey;
           if (arrowKey.current) setTimeout(() => { arrowKey.current = false; }, 0); // a closed select changes inside this keydown; where the arrow opens the menu instead (macOS) the later pick must move the card
-          if (e.key === 'Enter' && pend) { e.preventDefault(); applyMove(i, item, pendingDay.to); } else if (e.key === 'Escape') setPendingDay(null);
+          if (e.key === 'Enter' && pend) { e.preventDefault(); applyMove(i, pendingDay.to); } else if (e.key === 'Escape') setPendingDay(null);
         }}
         onBlur={() => setPendingDay(null)}>
         {DAYS.map(d => <option key={d} value={d}>{d === edDay ? `Move to… (Day ${d})` : `Move to Day ${d}`}</option>)}
@@ -168,8 +167,15 @@ function ProgramEditor() {
           {['A', 'B'].map(p => <button type="button" key={p} className={p === k ? 'on' : ''} aria-pressed={p === k} onClick={() => st.setEdProg(p)}>{progName(cfg, p)}</button>)}
           {lib && <button type="button" className="on segname" aria-pressed="true">{item.name}</button>}
         </div>
-        <div className="seg" role="group" aria-label="Day to edit">
-          {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}<span className="edcount" aria-hidden="true">{exerciseCount(prog.days[d - 1]?.slots ?? [])}</span></button>)}
+        <div className="daystep" role="group" aria-label="Day stepper">
+          <button type="button" className="btn daystepbtn" aria-label="Previous day" aria-disabled={edDay === 1} onClick={() => { if (edDay > 1) st.setEdDay(edDay - 1); }}><Icon name="chevron-left" /></button>
+          <select className="daypick" aria-label="Day to edit" value={edDay} onChange={e => st.setEdDay(Number(e.target.value))}>
+            {DAYS.map(d => { const n = exerciseCount(prog.days[d - 1]?.slots ?? []); return <option key={d} value={d}>{`Day ${d} of ${DAYS.length} · ${n} ${n === 1 ? 'exercise' : 'exercises'}`}</option>; })}
+          </select>
+          <button type="button" className="btn daystepbtn" aria-label="Next day" aria-disabled={edDay === DAYS.length} onClick={() => { if (edDay < DAYS.length) st.setEdDay(edDay + 1); }}><Icon name="chevron-right" /></button>
+        </div>
+        <div className="seg daybtns" role="group" aria-label="Jump to day">
+          {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}</button>)}
         </div>
       </div>
       {lib ? (
@@ -228,16 +234,11 @@ function ProgramEditor() {
                   <div className="edbtns">
                     <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}><Icon name="arrow-up" /></button>
                     <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}><Icon name="arrow-down" /></button>
-                    {daySelect(sl, i, null, slotSummary(cfg, sl))}
+                    {daySelect(sl, i, slotSummary(cfg, sl))}
                     <button type="button" className="btn sm" id={`mvp-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} to another program or day`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'moveprog', idx: i }); }}>Move…</button>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
                     <ArmedButton className={`btn sm ${arming === i ? 'danger' : 'ghost'}`} id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? i : null)} onConfirm={() => { setArming(null); justRemoved.current = true; st.removeEdSlot(i); }} />
                   </div>
-                  {sl.type === 'superset' && sl.items.length > 1 && (
-                    <div className="edsplit" role="group" aria-label={`Move one exercise of ${slotSummary(cfg, sl)}`}>
-                      {sl.items.map((it, idx) => <label key={idx} className="edsplititem"><span>{exInfo(cfg, it.ex).n}</span>{daySelect(sl, i, idx, exInfo(cfg, it.ex).n)}</label>)}
-                    </div>
-                  )}
                 </div>
               </Fragment>
             );

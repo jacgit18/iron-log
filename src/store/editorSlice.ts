@@ -7,7 +7,7 @@ import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
 import type { ExerciseInfo, MuscleTags, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
-import { applyWeekPatch, carryPhDef, isLibKey, moveSlotId, moveTargets, programByKey, splitPhDef, splitSuperset, splitWeekState } from '../lib/programMove.js';
+import { carryPhDef, isLibKey, moveSlotId, moveTargets, programByKey } from '../lib/programMove.js';
 
 export const SECTIONS = ['Optional', 'Regular', 'Supersets', 'Plyometric', 'Home']; // Optional and Home cards don't count toward finishing a day (countsForFinish)
 const newId = (): string => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -138,29 +138,6 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const toLabel = moveTargets(get().cfg, get().library).find(t => t.key === toKey)?.label ?? toKey;
     set({ edMoved: { key: fromKey, from, to: toDay, idx: i, slot: moved, toKey, toLabel, orig }, edRemoved: null });
   },
-  // Take exercise `k` out of the superset at `i` and put it on `toDay` of the same program as a card of its own (supersets only). It takes a new
-  // id, its phase default and this week's tick, skip and phase follow it; the superset keeps its id and its other exercises' state shifts up.
-  moveEdItemToDay(i, k, toDay) {
-    const key = get().edKey(); const from = get().edDay;
-    const orig = get().edProgram().days[from - 1]?.slots[i];
-    if (toDay === from || !DAYS.includes(toDay) || !orig || orig.type !== 'superset' || !orig.items[k]) return;
-    const moved: ProgramSlot[] = []; let ph: ReturnType<typeof splitPhDef> | null = null; let snap: ProgramSlot | null = null; let wk: ReturnType<typeof splitWeekState> | null = null;
-    if (get().editProgram(prog => {
-      pinIds(prog, from); pinIds(prog, toDay);
-      const sl = prog.days[from - 1].slots[i];
-      const split = sl && splitSuperset(sl, k, moveSlotId(key, Date.now().toString(36) + Math.random().toString(36).slice(2, 5)));
-      if (!sl || !split) return;
-      snap = structuredClone(sl); ph = splitPhDef(get().cfg.phDef, sl.id, sl.items.length, k, split.moved.id);
-      wk = splitWeekState(get().week, sl.id, sl.items.length, k, split.moved.id);
-      prog.days[from - 1].slots[i] = split.rest;
-      moved.push(structuredClone(split.moved)); insertSlot(prog.days[toDay - 1].slots, split.moved);
-    }) && moved[0] && snap && ph && wk) {
-      const p = ph as ReturnType<typeof splitPhDef>; const w = wk as ReturnType<typeof splitWeekState>;
-      get().mutateCfg(c => { p.del.forEach(d => { delete c.phDef[d]; }); Object.assign(c.phDef, p.set); });
-      if (w.changed) get().mutateWeek(x => applyWeekPatch(x, w.patch));
-      set({ edMoved: { key, from, to: toDay, idx: i, slot: moved[0], orig: snap, split: { ph: p.before, week: w.undo, weekKey: get().weekKey() } }, edRemoved: null });
-    }
-  },
   // Put the moved card back on its old day at its old place (and in its old program). The card is found by what it holds, as a library program's cards have no id.
   undoMoveEdSlot() {
     const m = get().edMoved;
@@ -171,25 +148,6 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const at = there ? there.days[m.to - 1].slots.findIndex(x => JSON.stringify(x) === want) : -1;
     // The card was changed or removed since (Edit, Remove): there is nothing to put back, and nothing is saved.
     if (!there || at < 0) { set({ edMoved: null }); flag('Could not put it back'); return; }
-    if (m.split) { // one exercise taken out of a superset: remove it from its new day and put the superset back as it was
-      const origId = m.orig!.id; const fromSlots = there!.days[m.from - 1].slots; // a saved program's cards have no id: they are found by place
-      const rest = fromSlots[m.idx]?.id === origId ? m.idx : origId ? fromSlots.findIndex(x => x.id === origId) : -1;
-      if (rest < 0) { set({ edMoved: null }); flag('Could not put it back'); return; }
-      const newId = m.slot.id; const count = m.orig!.items.length;
-      if (get().editProgram(prog => {
-        const day = prog.days[m.to - 1].slots; day.splice(day.findIndex(x => JSON.stringify(x) === want), 1);
-        prog.days[m.from - 1].slots[rest] = structuredClone(m.orig!);
-      })) {
-        get().mutateCfg(c => {
-          for (let j = 0; j < count; j++) delete c.phDef[`${origId}:${j}`];
-          delete c.phDef[`${newId}:0`]; Object.assign(c.phDef, m.split!.ph);
-        });
-        const wu = m.split!.week;
-        if (wu && m.split!.weekKey === get().weekKey()) get().mutateWeek(x => applyWeekPatch(x, wu)); // this week's ticks, skips and phases go back too
-        set({ edMoved: null }); flag('Put back');
-      }
-      return;
-    }
     if (!m.toKey) {
       if (get().editProgram(prog => {
         const day = prog.days[m.to - 1].slots; const [sl] = day.splice(day.findIndex(x => JSON.stringify(x) === want), 1);
