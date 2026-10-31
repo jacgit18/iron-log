@@ -46,9 +46,9 @@ describe('mapWbc', () => {
 describe('wbcCategory', () => {
   it.each([
     ['/wiki/Category:Sauce_recipes', 'sauces'], ['/wiki/Category:Spice_mix_recipes', 'seasonings'], ['/wiki/Category:Beverage_recipes', 'drinks'],
-    ['/wiki/Category:Chicken_recipes', 'protein'], ['/wiki/Category:Cake_recipes', 'dessert'], ['/wiki/Category:Rice_recipes', 'sides'],
+    ['/wiki/Category:Chicken_recipes', 'protein'], ['/wiki/Category:Cake_recipes', 'dessert'], ['/wiki/Category:Rice_recipes', 'carbs'], ['/wiki/Category:Salad_recipes', 'sides'], ['/wiki/Category:Potato_salad_recipes', 'carbs'], ['/wiki/Category:Pasta_salad_recipes', 'carbs'],
     ['/wiki/Category:Soup_recipes', 'other'], [null, 'other'],
-    ['/wiki/Category:Steak_recipes', 'protein'], ['/wiki/Category:Goat_recipes', 'other'], ['/wiki/Category:Sweet_potato_recipes', 'sides'], ['/wiki/Category:Starter_recipes', 'other'], ['/wiki/Category:50%_off', 'other'],
+    ['/wiki/Category:Steak_recipes', 'protein'], ['/wiki/Category:Goat_recipes', 'other'], ['/wiki/Category:Sweet_potato_recipes', 'carbs'], ['/wiki/Category:Starter_recipes', 'other'], ['/wiki/Category:50%_off', 'other'],
   ])('%s is %s', (slug, cat) => expect(wbcCategory(slug)).toBe(cat));
 });
 
