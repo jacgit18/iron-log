@@ -1,5 +1,6 @@
 import type { Recipe, RecipeCategory } from '../types.ts';
 import { nameWords } from './recipePantry.js';
+import { nameCmp } from './sort.js';
 
 /* ---------- Which of your recipes the list shows (ADR 084): pure, so a rule here is a node test, not a browser test ---------- */
 
@@ -18,7 +19,7 @@ export function filterRecipes(list: Recipe[], f: RecipeFilter, makeable: Readonl
       const hay = ` ${textWords(`${r.n} ${r.ing.map(i => `${i.n} ${i.sub ?? ''}`).join(' ')}`).join(' ')}`;
       return words.every(w => hay.includes(` ${w}`));
     })
-    .sort((a, b) => a.n.localeCompare(b.n, undefined, { sensitivity: 'base' }) || a.id.localeCompare(b.id));
+    .sort(nameCmp(r => r.n, r => r.id));
 }
 
 /** The line under a recipe in a list: "Sauces · 4 servings · 25 min". */

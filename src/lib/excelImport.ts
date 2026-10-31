@@ -90,7 +90,7 @@ function readSessions(X: XLSX, sessions: Rows, cfg: Cfg) {
     if (!tags[id]) tags[id] = { prim: String(prim || ''), sec: String(sec || '') };
   }
   // Same cleaning as a JSON file: a session on a date that doesn't exist (2026-02-31) or with numbers out of range is fixed or skipped.
-  Object.keys(logs).forEach(id => { const L = normEntries(logs[id]); skipped += logs[id].length - L.length; if (L.length) logs[id] = L.sort((a, b) => a.d.localeCompare(b.d)); else delete logs[id]; });
+  Object.keys(logs).forEach(id => { const L = normEntries(logs[id]); skipped += logs[id].length - L.length; if (L.length) logs[id] = L.sort((a, b) => a.d.localeCompare(b.d)); else delete logs[id]; }); // sort-ok: ISO date strings
 
   // Muscle tags, only where they differ from the built-in ones (e.g. new exercises or ones you re-tagged).
   const muscleMap: Record<string, MuscleTags> = {};
