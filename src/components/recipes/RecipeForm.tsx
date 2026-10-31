@@ -6,9 +6,9 @@ import { sameName, stepsFromText } from '../../lib/recipeList.js';
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { pinFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import type { Recipe, RecipeCategory, RecipeIngredient } from '../../types.ts';
 import IngredientList from './IngredientList.js';
+import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import IngredientRows, { type Row } from './IngredientRows.js';
 
 const TOO_FEW = 'Type at least one ingredient first.';
