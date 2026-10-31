@@ -51,8 +51,6 @@
   border: 0;
   background: transparent;
   color: inherit;
-  font-size: var(--fs-lg);
-  line-height: 1;
 }
 .libgroup {
   display: flex;
