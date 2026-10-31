@@ -50,6 +50,16 @@ describe('GET /api/foods/search', () => {
       expect(list).toHaveLength(8);
       expect(list.slice(0, 6)).toEqual(['Plain 0', 'Plain 1', 'Plain 2', 'Plain 3', 'Plain 4', 'Plain 5']);
     });
+    it('does not hold a shortened answer: the same search asks both again', async () => {
+      let n = 0;
+      const ask = vi.fn(async (u: URL) => (String(u).includes('dataType=Branded') ? (n++ === 0 ? reply({}, 500) : reply({ foods: many(100, 3, 'Acme') })) : reply({ foods: many(1, 3) })) as Response);
+      const base = await start({ key: 'k', fetch: ask as unknown as typeof fetch });
+      const first = (await (await fetch(`${base}?q=egg`)).json()) as { hits: unknown[] };
+      expect(first.hits).toHaveLength(3); // plain foods only: the Branded ask failed
+      const second = (await (await fetch(`${base}?q=egg`)).json()) as { hits: unknown[] };
+      expect(ask).toHaveBeenCalledTimes(4); // four asks, not two: nothing was held
+      expect(second.hits).toHaveLength(6);
+    });
     it('still answers when only one of the two asks works', async () => {
       expect(await names(answer(reply({}, 500), reply({ foods: many(100, 3, 'Acme') })))).toEqual(['Branded 0', 'Branded 1', 'Branded 2']);
       expect(await names(answer(reply({ foods: many(1, 3) }), reply({}, 500)))).toEqual(['Plain 0', 'Plain 1', 'Plain 2']);

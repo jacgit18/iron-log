@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { cleanQuery, MAX_RESULTS, parseFoods, type FoodHit } from '../src/shared/foods.ts';
+import { cleanQuery, mergeFoods, parseFoods, type FoodHit } from '../src/shared/foods.ts';
 
 // Food search (brief diet-food-lookup), mounted at /api/foods behind sign-in and a per-user limit. The server asks USDA FoodData Central so the
 // API key never reaches a phone, and answers with the few numbers a diet entry needs (src/shared/foods.ts). Nothing is stored: the answers are
@@ -9,7 +9,6 @@ const USDA_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
 // Two asks, so plain foods ("Eggs, Grade A, Large, egg whole") come before store products: with one ask for everything, "egg" listed a Snickers egg first.
 const GENERIC_TYPES = 'Foundation,SR Legacy';
 const BRANDED_TYPE = 'Branded';
-const GENERIC_FIRST = 5; // of the 8 shown; branded products fill the rest, and plain foods take any place they leave
 const ASK_FOR = 25; // asked for more than shown: some foods have no calories or protein and are dropped
 const TIMEOUT_MS = 5000;
 const HOLD_MS = 60 * 60_000;
@@ -64,10 +63,13 @@ export function foodRoutes({ key, fetch: ask = fetch, now = Date.now }: FoodDeps
       const [plain, branded] = await Promise.allSettled([askUsda(GENERIC_TYPES), askUsda(BRANDED_TYPE)]);
       if (plain.status === 'rejected' && branded.status === 'rejected') throw plain.reason;
       const g = plain.status === 'fulfilled' ? plain.value : [], b = branded.status === 'fulfilled' ? branded.value : [];
-      const hits = [...g.slice(0, Math.max(GENERIC_FIRST, MAX_RESULTS - b.length)), ...b].slice(0, MAX_RESULTS);
-      // Oldest first out when full, so the map cannot grow without bound.
-      if (held.size >= HOLD_MAX) held.delete(held.keys().next().value as string);
-      held.set(name, { at: t, hits });
+      const hits = mergeFoods(g, b);
+      // Held only when both asks worked: a shortened answer kept for an hour would hide the side that failed until it ran out.
+      if (plain.status === 'fulfilled' && branded.status === 'fulfilled') {
+        // Oldest first out when full, so the map cannot grow without bound.
+        if (held.size >= HOLD_MAX) held.delete(held.keys().next().value as string);
+        held.set(name, { at: t, hits });
+      }
       res.json({ ok: true, hits });
     } catch (err) {
       // Never log the URL: it carries the key. The status or error name is enough.

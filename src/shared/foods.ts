@@ -98,3 +98,9 @@ export const defaultGrams = (hit: FoodHit): number => hit.serving ?? 100;
 
 /** The label on a result: "Chicken breast · 120 kcal per 100 g" (the brand after the name when there is one). */
 export const hitLabel = (hit: FoodHit): string => `${hit.name}${hit.brand ? ` (${hit.brand})` : ''} · ${hit.kcal} kcal per 100 g`;
+
+/** Plain foods (Foundation, SR Legacy) before store products (Branded): up to `GENERIC_FIRST` plain foods, then the products, `MAX_RESULTS` in all; plain foods take any place the products leave. */
+export const GENERIC_FIRST = 5;
+export function mergeFoods(plain: FoodHit[], branded: FoodHit[]): FoodHit[] {
+  return [...plain.slice(0, Math.max(GENERIC_FIRST, MAX_RESULTS - branded.length)), ...branded].slice(0, MAX_RESULTS);
+}
