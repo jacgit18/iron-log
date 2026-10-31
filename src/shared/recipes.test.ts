@@ -32,6 +32,22 @@ describe('normRecipe', () => {
   });
 });
 
+describe('serving size', () => {
+  it('keeps the words and the grams, and a recipe without them is unchanged', () => {
+    const r = normRecipe({ ...base, serving: ' 1 cup ', servingG: 250 });
+    expect(r).toMatchObject({ serving: '1 cup', servingG: 250 });
+    expect(validRecipe({ ...base, serving: '1 cup', servingG: 250 })).toBe(true);
+    expect(normRecipe(base)).not.toHaveProperty('serving');
+    expect(normRecipe(base)).not.toHaveProperty('servingG');
+  });
+  it('drops empty words, and grams that are not a whole number from 1 to 5000', () => {
+    for (const servingG of [0, -5, 2.5, 5001, '250', null]) expect(normRecipe({ ...base, serving: '', servingG })).not.toHaveProperty('servingG');
+    expect(normRecipe({ ...base, serving: '' })).not.toHaveProperty('serving');
+    expect(normRecipe({ ...base, serving: 'x'.repeat(60) })?.serving).toHaveLength(40);
+    expect(normRecipe({ ...base, servingG: 5000 })?.servingG).toBe(5000);
+  });
+});
+
 describe('validRecipe', () => {
   it('refuses what the app would never send', () => {
     expect(validRecipe({ ...base, cat: 'soup' })).toBe(false);
