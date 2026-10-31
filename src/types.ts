@@ -81,6 +81,8 @@ export interface LibraryItem {
   at: string;
   auto?: true;
   created?: true;
+  /** Put away from the Program library's main list and the Move sheet; Restore brings it back. */
+  archived?: true;
   prog: Program;
 }
 
