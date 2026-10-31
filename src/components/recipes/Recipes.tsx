@@ -18,7 +18,7 @@ import type { CatalogItem, Recipe, RecipeCategory } from '../../types.ts';
 
 // Recipes (ADR 084): yours (Mine, synced with the account) and the library (Wikibooks Cookbook, searched on the server). Each recipe's
 // ingredients are checked against Groceries, At home. Its logic is in lib/recipeList.ts, lib/recipePantry.ts and the store's recipesSlice.
-type View = { kind: 'list' } | { kind: 'mine'; id: string } | { kind: 'library'; item: CatalogItem } | { kind: 'form'; id?: string; ready?: boolean };
+type View = { kind: 'list' } | { kind: 'mine'; id: string; from?: string } | { kind: 'library'; item: CatalogItem } | { kind: 'form'; id?: string; ready?: boolean };
 type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean } | { status: 'failed'; reason: string };
 
 export default function Recipes() {
@@ -36,7 +36,11 @@ export default function Recipes() {
   useEffect(() => {
     if (page && view.kind === 'list') navigate('daily/recipes', 'replace'); // an address for a page with nothing to show
     if (!page && view.kind !== 'list') setViewNow({ kind: 'list' }); // Back to the list
-  }, [page, view.kind]);
+    if (view.kind === 'mine' && view.from && page === 'mine') setViewNow({ kind: 'mine', id: view.from }); // Back from a linked sauce to the recipe it was opened from
+    if (view.kind === 'mine' && !view.from && page === 'mine/sauce') navigate('daily/recipes/mine', 'replace'); // Forward to a sauce page with nothing it was opened from
+  }, [page, view]);
+  // Opening a linked sauce is a page opened from a page: it pushes its own address, so Back returns to the recipe.
+  const openLinked = (id: string, from: string) => { setViewNow({ kind: 'mine', id, from }); navigate('daily/recipes/mine/sauce', 'push'); };
   const [src, setSrc] = useState<'mine' | 'library'>('mine');
   const [q, setQ] = useState('');
   const [cat, setCat] = useState<RecipeCategory | null>(null);
@@ -69,12 +73,13 @@ export default function Recipes() {
   };
 
   const back = () => setView({ kind: 'list' });
+  const backFromSauce = () => goUp('daily/recipes/mine'); // the address change shows the recipe it was opened from (effect above)
   const mineRecipe = view.kind === 'mine' ? recipes.find(r => r.id === view.id) : undefined;
   if (view.kind === 'form') {
     const editing = recipes.find(r => r.id === view.id), done = (id: string | null) => { if (id) setView({ kind: 'mine', id }); else back(); };
     return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} /> : <RecipeForm recipe={editing} onDone={done} />}</section>;
   }
-  if (view.kind === 'mine' && mineRecipe) return <RecipeDetail key={mineRecipe.id} recipe={mineRecipe} mine onBack={back} onEdit={() => setView({ kind: 'form', id: mineRecipe.id })} onAdd={back} onOpen={id => setView({ kind: 'mine', id })} />;
+  if (view.kind === 'mine' && mineRecipe) return <RecipeDetail key={mineRecipe.id} recipe={mineRecipe} mine onBack={view.from && recipes.some(r => r.id === view.from) ? backFromSauce : back} onEdit={() => setView({ kind: 'form', id: mineRecipe.id })} onAdd={back} onOpen={id => openLinked(id, mineRecipe.id)} />;
   if (view.kind === 'library') {
     if (libCopy) return <RecipeDetail key={libCopy.id} recipe={libCopy} mine={false} onBack={back} onEdit={back} onAdd={servings => {
       useAppStore.getState().copyCatalogRecipe(view.item, servings); // an error here means it is already in Mine, which is where it opens
