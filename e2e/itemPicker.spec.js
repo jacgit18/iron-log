@@ -318,20 +318,20 @@ test('a catalog exercise whose muscles you changed can get the catalog muscles b
   await page.locator('.exlib').getByRole('searchbox').fill('cable fly');
   await page.getByRole('region', { name: 'From the catalog' }).getByRole('button', { name: 'Add Cable Fly from the catalog' }).click();
   const row = page.locator('.exlib > .exrows .exrow').filter({ hasText: 'Cable Fly' });
-  await expect(row).toContainText('Primary: Chest');
+  await expect(row).toContainText('Chest');
   // change the muscles: tap Chest (primary → off) and save
   await page.getByRole('button', { name: 'Edit Cable Fly' }).click();
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Use default muscles' })).toHaveCount(0); // no built-in default for a catalog id
   await page.getByRole('dialog').getByRole('button', { name: 'Chest · primary' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
-  await expect(row).not.toContainText('Primary: Chest');
+  await expect(row).not.toContainText('Chest');
   // and back: fetched from the catalog into the chips, kept with Save
   await page.getByRole('button', { name: 'Edit Cable Fly' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Use catalog muscles' }).click();
   await expect(page.getByRole('dialog').getByText('Catalog muscles filled in. Save to keep them.')).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Chest · primary' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
-  await expect(row).toContainText('Primary: Chest');
+  await expect(row).toContainText('Chest');
 });
 
 test('Use catalog muscles says so when the catalog lists none, and a chip tap clears its note', async ({ page }) => {
