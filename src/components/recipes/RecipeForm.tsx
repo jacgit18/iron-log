@@ -4,7 +4,7 @@ import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, RECIPE_CATEGORIES, REC
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
-import { pinFor, suggestIngredients } from '../../lib/recipeSuggest.js';
+import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Recipe, RecipeCategory, RecipeIngredient } from '../../types.ts';
 import IngredientList from './IngredientList.js';
@@ -21,6 +21,7 @@ const sameKey = (n: string, sub?: string) => `${n.trim().toLowerCase()}|${(sub ?
 export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone: (savedId: string | null) => void }) {
   const recipes = useAppStore(s => s.recipes);
   const items = useAppStore(s => s.grocery.items);
+  const sauces = useMemo(() => sauceCandidates(recipes, recipe?.id), [recipes, recipe?.id]); // the sauces and seasonings a line can link to
   const [n, setN] = useState(recipe?.n ?? '');
   const [cat, setCat] = useState<RecipeCategory>(recipe?.cat ?? 'other');
   const [servings, setServings] = useState(recipe ? (recipe.servings ? String(recipe.servings) : '') : '1');
@@ -32,7 +33,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const [carbs, setCarbs] = useState(recipe?.c !== undefined ? String(recipe.c) : '');
   const [fat, setFat] = useState(recipe?.f !== undefined ? String(recipe.f) : '');
   const [nutOpen, setNutOpen] = useState(false);
-  const [ing, setIng] = useState<Row[]>(recipe?.ing.length ? recipe.ing.map(i => ({ ...i, amt: i.amt ?? '' })) : [{ n: '', amt: '' }]);
+  const [ing, setIng] = useState<Row[]>(recipe?.ing.length ? recipe.ing.map(i => ({ ...refreshLink(i, recipes, recipe.id), amt: i.amt ?? '' })) : [{ n: '', amt: '' }]);
   const [lastServings, setLastServings] = useState<number | null>(recipe ? recipe.servings ?? null : 1); // the servings the amounts are for
   const [scaleNote, setScaleNote] = useState('');
   const [active, setActive] = useState<{ i: number; field: 'n' | 'sub' } | null>(null); // the ingredient or Alternative field being typed in: its suggestions are offered
@@ -55,8 +56,8 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
       cut: read.cut,
       rows: read.lines.map(l => {
         if ('old' in l) return l.old;
-        const r = l.row, o = old.get(sameKey(r.n, r.sub)), home = o?.home ?? pinFor(r.n, r.sub, items);
-        return typedAmount<Row>({ n: r.n, amt: '', ...(r.sub ? { sub: r.sub } : {}), ...(home ? { home } : {}), ...(o?.skip ? { skip: true as const } : {}) }, r.amt, lastServings);
+        const r = l.row, o = old.get(sameKey(r.n, r.sub)), home = o?.home ?? pinFor(r.n, r.sub, items), rid = o?.rid ?? sauceFor(r.n, sauces)?.id;
+        return typedAmount<Row>({ n: r.n, amt: '', ...(r.sub ? { sub: r.sub } : {}), ...(home ? { home } : {}), ...(rid ? { rid } : {}), ...(o?.skip ? { skip: true as const } : {}) }, r.amt, lastServings);
       }),
     };
   };
@@ -84,7 +85,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     const fromList = listEdited ? listRows() : null;
     if (listEdited && !fromList) { setErr(TOO_FEW); return; }
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
-    const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
+    const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
     const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(recipe?.from ? { from: recipe.from } : {}) });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
@@ -114,9 +115,18 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const setRow = (i: number, patch: Partial<RecipeIngredient>) => { setIng(ing.map((x, j) => (j === i ? { ...x, ...patch } : x))); setErr(''); };
   // Renaming an ingredient drops its pin to an At home item (the pin was for the old name), unless the new name is exactly one of your
   // Groceries items. An ingredient with an Alternative is never pinned by its name, and changing the Alternative drops the pin: a pin outranks it in the match.
-  const rename = (i: number, name: string) => setRow(i, { n: name, home: pinFor(name, ing[i]?.sub, items) });
+  // The same for the link to one of your sauces or seasonings: an exact name links it, any other name drops the link.
+  const rename = (i: number, name: string) => setRow(i, { n: name, home: pinFor(name, ing[i]?.sub, items), rid: sauceFor(name, sauces)?.id });
+  // The picker's choice: a linked row, filling the empty row the form starts with instead of leaving it above. Returns the row's index.
+  const addSauce = (s: Recipe): number => {
+    if (ing.length >= MAX_INGREDIENTS && ing[ing.length - 1]!.n.trim()) return -1; // full: the picker says so
+    const last = ing[ing.length - 1], fill = !!last && !last.n.trim() && !last.amt.trim() && !last.sub, home = pinFor(s.n, undefined, items);
+    const row: Row = { n: s.n, amt: '', rid: s.id, ...(home ? { home } : {}) };
+    setIng(fill ? [...ing.slice(0, -1), row] : [...ing, row]); setErr('');
+    return fill ? ing.length - 1 : ing.length;
+  };
   const activeText = active === null ? '' : (active.field === 'sub' ? ing[active.i]?.sub : ing[active.i]?.n) ?? '';
-  const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id)).map(o => o.n), [activeText, items, recipes, recipe?.id]);
+  const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id), sauces), [activeText, items, recipes, recipe?.id, sauces]);
   const nutLine = [kcal.trim() && `${kcal.trim()} kcal`, protein.trim() && `${protein.trim()} g protein`, carbs.trim() && `${carbs.trim()} g carbs`, fat.trim() && `${fat.trim()} g fat`].filter(Boolean).join(' · ') || 'Not set';
   const sv = whole(servings);
   const servingsLine = sv && sv <= 99 ? `Amounts are for ${sv} serving${sv === 1 ? '' : 's'}.` : '';
@@ -171,8 +181,8 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
             <p className="note" role="status">{scaleNote || servingsLine}</p>
             {listMode
               ? <IngredientList text={listText} onText={setListText} onUse={showRows} read={read!.lines.map(l => ('old' in l ? { n: l.old.n, amt: l.old.amt ?? '', ...(l.old.sub ? { sub: l.old.sub } : {}) } : l.row))} cut={read!.cut} />
-              : <IngredientRows rows={ing} options={options} onActive={(i, field) => setActive({ i, field })} onRename={rename} onType={typeAmount} onSet={setRow}
-                  onRemove={i => setIng(ing.length > 1 ? ing.filter((_, j) => j !== i) : [{ n: '', amt: '' }])} onAdd={() => setIng([...ing, { n: '', amt: '' }])} />}
+              : <IngredientRows rows={ing} options={options} sauces={sauces} onActive={(i, field) => setActive({ i, field })} onRename={rename} onType={typeAmount} onSet={setRow}
+                  onRemove={i => setIng(ing.length > 1 ? ing.filter((_, j) => j !== i) : [{ n: '', amt: '' }])} onAdd={() => setIng([...ing, { n: '', amt: '' }])} onAddSauce={addSauce} />}
           </fieldset>
           <label>Steps, one per line
             <textarea rows={5} value={steps} onChange={e => setSteps(e.target.value)} />

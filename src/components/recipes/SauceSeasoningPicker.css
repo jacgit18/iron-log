@@ -1,0 +1,62 @@
+@layer base, components;
+@layer components {
+/* The sauce and seasoning list under the ingredient rows (recipe form): search box and A to Z rows, every target 44px. */
+.rc-addbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.rc-linknote {
+  margin: 0;
+}
+.rc-sauces {
+  display: grid;
+  gap: var(--sp-8);
+  margin-top: var(--sp-8);
+  padding: var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.rc-sauces input[type='search'] {
+  min-height: 44px;
+  width: 100%;
+}
+.rc-saucelist {
+  display: grid;
+  max-height: 14rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.rc-saucerow {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rc-sauces .rc-pickacts {
+  display: flex;
+  justify-content: flex-end;
+}
+.rc-link {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+}

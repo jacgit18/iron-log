@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_INGREDIENTS, MAX_STEPS, normRecipe, normRecipes, validRecipe } from './recipes.js';
+import { MAX_INGREDIENTS, MAX_RECIPE_ID, MAX_STEPS, normRecipe, normRecipes, validRecipe } from './recipes.js';
 
 const base = { id: 'r1', n: 'Chili', cat: 'protein', ing: [{ n: 'Beans', amt: '2 cans' }], steps: ['Simmer.'] };
 
@@ -86,5 +86,20 @@ describe('swap, skip and Edited', () => {
   it('accepts the new fields as clean and still reads a recipe saved before them', () => {
     expect(validRecipe({ ...base, ing: [{ n: 'Beans', sub: 'pinto beans', skip: true }], from: 'c:wbc:chili', edited: true })).toBe(true);
     expect(validRecipe(base)).toBe(true);
+  });
+});
+
+describe('rid: a link to one of your sauces or seasonings', () => {
+  it('keeps a clean rid and accepts it as valid (the API takes what the app writes)', () => {
+    const r = { ...base, ing: [{ n: 'Taco seasoning', amt: '2 tbsp', rid: 'taco-seasoning' }] };
+    expect(normRecipe(r)).toEqual(r);
+    expect(validRecipe(r)).toBe(true);
+  });
+  it('drops an empty or reserved rid, and cuts one that is too long; the line stays', () => {
+    const r = normRecipe({ ...base, ing: [{ n: 'A', rid: ' ' }, { n: 'B', rid: 'constructor' }, { n: 'C', rid: 'x'.repeat(200) }] })!;
+    expect(r.ing[0]).toEqual({ n: 'A' });
+    expect(r.ing[1]).toEqual({ n: 'B' });
+    expect(r.ing[2]!.rid).toHaveLength(MAX_RECIPE_ID);
+    expect(validRecipe({ ...base, ing: [{ n: 'B', rid: 'constructor' }] })).toBe(false);
   });
 });
