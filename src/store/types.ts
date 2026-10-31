@@ -246,7 +246,9 @@ export interface EditorSlice {
   loadVersion(target: string, slot: ProgKey): void;
   deleteLibItem(id: string): void;
   /** `from` 'empty' starts with seven empty days (ADR 021); 'A' or 'B' starts as a copy of that program. */
-  createProgram(name: string, from: ProgKey | 'empty'): boolean;
+  createProgram(name: string, from: ProgKey | 'empty', keepOpen?: boolean): boolean;
+  /** Makes a library program from a starter (lib/starterPrograms.ts) and opens it in the editor; the open sheet stays. Returns why it could not, or null. */
+  createStarterProgram(starterId: string, perWeek: number, name: string): string | null;
   saveSlot(d: SlotForm): string | null;
 }
 
