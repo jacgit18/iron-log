@@ -10,7 +10,9 @@ const seedBody = (page, goal, weight) => page.addInitScript(([g, w]) => {
   localStorage.setItem('ironlog:body/main', JSON.stringify({ schema: 1, entries: [{ wk: '2026-09-20', d: '2026-09-21', w }] }));
 }, [goal, weight]);
 const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.getByRole('button', { name: 'Add one' }).click(); }; // the One-off food form starts folded
+const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
+// The One-off food form starts folded; a test that types into it opens it first.
+const oneOff = page => page.getByRole('button', { name: 'Add one' }).click();
 const noViolations = async page => {
   const { violations } = await new AxeBuilder({ page }).include('#diet-h').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);
@@ -63,6 +65,7 @@ test('quick add logs a food, the meters move, it is offered again, Delete has Un
   await seedBody(page, 185, 170);
   await page.reload();
   await nutrition(page);
+  await oneOff(page);
   await diet(page).getByLabel('Food').fill('Rice');
   await diet(page).getByLabel('Calories', { exact: true }).last().fill('200');
   await diet(page).getByLabel('Protein (g)').last().fill('4');
@@ -89,6 +92,7 @@ test('quick add logs a food, the meters move, it is offered again, Delete has Un
 
 test('a bad number is refused with the limit stated and nothing is added', async ({ page }) => {
   await nutrition(page);
+  await oneOff(page);
   await diet(page).getByLabel('Food').fill('Feast');
   await diet(page).getByLabel('Calories', { exact: true }).last().fill('20000');
   await diet(page).getByLabel('Protein (g)').last().fill('10');
@@ -116,6 +120,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
   await page.getByRole('button', { name: 'Ate this' }).click();
   await expect(page.getByText('Logged 1.5 portions of Chili to today.')).toBeVisible();
   await nutrition(page);
+  await oneOff(page);
   await expect(diet(page).locator('.dt-entry')).toContainText('Chili');
   await expect(diet(page).locator('.dt-entry')).toContainText('900 kcal');
   await expect(diet(page).locator('.dt-entry')).toContainText('76.5 g carbs · 16.5 g fat');
@@ -139,6 +144,7 @@ test('Ate this logs a recipe with macros as a snapshot, Undo takes it back, and 
 
 test('Diet follows the Nutrition date bar: yesterday is a separate day, and the bar cannot go past today', async ({ page }) => {
   await nutrition(page);
+  await oneOff(page);
   await diet(page).getByLabel('Food').fill('Toast');
   await diet(page).getByLabel('Calories', { exact: true }).last().fill('90');
   await diet(page).getByLabel('Protein (g)').last().fill('3');
@@ -167,6 +173,7 @@ test('the Nutrition screen reads date bar, Diet, Supplements, Water: Diet comes 
 
 test('an entry without carbs and fat still logs, and the log says carbs and fat count only what was entered', async ({ page }) => {
   await nutrition(page);
+  await oneOff(page);
   await diet(page).getByLabel('Food').fill('Toast');
   await diet(page).getByLabel('Calories', { exact: true }).last().fill('90');
   await diet(page).getByLabel('Protein (g)').last().fill('3');

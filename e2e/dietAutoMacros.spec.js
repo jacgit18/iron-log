@@ -3,10 +3,13 @@ import { test, expect } from './fixtures.js';
 // Less typing for a meal (brief diet-auto-macros). The rules (calories from macros, matching, portion scaling) are node tests in foodMacros.test.ts; this covers the wiring:
 // calories fill in as the macros are typed and a typed number wins, a food you logged before comes back from "Find a food" with a portion stepper.
 const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.getByRole('button', { name: 'Add one' }).click(); }; // the One-off food form starts folded
+const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
+// The One-off food form starts folded; a test that types into it opens it first.
+const oneOff = page => page.getByRole('button', { name: 'Add one' }).click();
 
 test('calories follow protein, carbs and fat until you type calories yourself', async ({ page }) => {
   await nutrition(page);
+  await oneOff(page);
   await diet(page).getByLabel('Food', { exact: true }).fill('Bowl');
   await diet(page).getByLabel('Protein (g)').fill('40');
   await diet(page).getByLabel('Carbs (g), optional').fill('51');
@@ -22,6 +25,7 @@ test('calories follow protein, carbs and fat until you type calories yourself', 
 
 test('Search brings back what you logged with a half-portion stepper', async ({ page }) => {
   await nutrition(page);
+  await oneOff(page);
   await diet(page).getByLabel('Food', { exact: true }).fill('Rice');
   await diet(page).getByLabel('Calories', { exact: true }).fill('200');
   await diet(page).getByLabel('Protein (g)').fill('4');

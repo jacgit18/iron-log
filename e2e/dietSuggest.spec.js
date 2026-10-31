@@ -3,8 +3,9 @@ import { test, expect } from './fixtures.js';
 // Suggested now and Copy from yesterday (brief diet-suggest-and-copy). The ranking and copy rules are node tests in dietSuggest.test.ts; this covers the wiring:
 // a food you logged shows up as a one-tap suggestion, the copy checklist adds only what is ticked, and yesterday's empty day disables the button.
 const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.getByRole('button', { name: 'Add one' }).click(); }; // the One-off food form starts folded
+const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const log = async (page, name, kcal, p) => {
+  if (!(await diet(page).getByLabel('Food', { exact: true }).isVisible())) await page.getByRole('button', { name: 'Add one' }).click(); // the One-off food form starts folded
   await diet(page).getByLabel('Food', { exact: true }).fill(name);
   await diet(page).getByLabel('Calories', { exact: true }).fill(String(kcal));
   await diet(page).getByLabel('Protein (g)').fill(String(p));

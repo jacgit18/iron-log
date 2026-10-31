@@ -3,7 +3,9 @@ import { test, expect } from './fixtures.js';
 // Food search (brief diet-food-lookup; the separate Look up nutrition box was removed by recipe-first-diet-log, the same lookup now sits under the past-meals search). The parsing, scaling and caps are node tests (foods.test.ts, foodSearch.test.ts); this covers the wiring with the
 // route stubbed: type, wait for the pause, pick a result, set grams, the form fills in and stays editable, then the failure and empty texts.
 const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.getByRole('button', { name: 'Add one' }).click(); }; // the One-off food form starts folded
+const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
+// The One-off food form starts folded; a test that types into it opens it first.
+const oneOff = page => page.getByRole('button', { name: 'Add one' }).click();
 const hits = [
   { id: 1, name: 'Chicken breast, raw', kcal: 120, p: 22.5, c: 0, f: 2.6 },
   { id: 2, name: 'Granola bar', brand: 'Acme', kcal: 450, p: 8, c: 65, serving: 40 },
@@ -50,6 +52,7 @@ test('a branded food starts at its serving, and a bad grams value blocks Use', a
 
 test('no results, a server that is not set up, and a daily limit each say so and leave typing alone', async ({ page }) => {
   await nutrition(page);
+  await oneOff(page);
   const box = diet(page).getByLabel('Search your past meals and recipes');
   await stub(page, 200, { ok: true, hits: [] });
   await box.fill('zzzz');

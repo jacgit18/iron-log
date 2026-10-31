@@ -3,9 +3,10 @@ import { test, expect } from './fixtures.js';
 // The meal planner (brief diet-meal-planner). The rules (window, order, portions, totals, what logging adds, which recipes the shop needs) are node tests in dietPlan.test.ts;
 // this covers the wiring: plan a recipe and a saved meal, change a portion, Log on today, a day with no Log button, and the missing ingredients on To get.
 const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.getByRole('button', { name: 'Add one' }).click(); }; // the One-off food form starts folded
+const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const plan = page => diet(page).locator('.dt-plan');
 const logFood = async (page, name, kcal, p) => {
+  if (!(await diet(page).getByLabel('Food', { exact: true }).isVisible())) await page.getByRole('button', { name: 'Add one' }).click(); // the One-off food form starts folded
   await diet(page).getByLabel('Food', { exact: true }).fill(name);
   await diet(page).getByLabel('Calories', { exact: true }).fill(String(kcal));
   await diet(page).getByLabel('Protein (g)').fill(String(p));

@@ -3,8 +3,9 @@ import { test, expect } from './fixtures.js';
 // Saved meals (brief diet-saved-meals). The rules (make, replace, rename, total, plan) are node tests in dietMeals.test.ts; this covers the wiring:
 // tick logged foods and name a meal, tap it to log each food, rename it, delete it with Undo, and a refused name.
 const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.getByRole('button', { name: 'Add one' }).click(); }; // the One-off food form starts folded
+const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const log = async (page, name, kcal, p) => {
+  if (!(await diet(page).getByLabel('Food', { exact: true }).isVisible())) await page.getByRole('button', { name: 'Add one' }).click(); // the One-off food form starts folded
   await diet(page).getByLabel('Food', { exact: true }).fill(name);
   await diet(page).getByLabel('Calories', { exact: true }).fill(String(kcal));
   await diet(page).getByLabel('Protein (g)').fill(String(p));
