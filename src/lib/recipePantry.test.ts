@@ -61,20 +61,32 @@ describe('pantryStatus and missingParts', () => {
   });
 });
 
-describe('a swapped ingredient', () => {
+describe('an ingredient with an Alternative', () => {
   const items = [it_('v', 'Apple cider vinegar'), it_('w', 'White wine vinegar')];
   const ing = { n: 'white wine vinegar', sub: 'apple cider vinegar' };
-  it('is called by the swap', () => {
-    expect(ingredientName(ing)).toBe('apple cider vinegar');
+  const month = { lines: {}, pulled: [] };
+  const gro = (...have: string[]) => ({ grocery: g(...items), month: { lines: Object.fromEntries(have.map(id => [id, { have: true as const }])), pulled: [] } });
+  const status = (...have: string[]) => { const { grocery, month: m } = gro(...have); return pantryStatus({ ing: [ing] }, grocery, m); };
+  it('is still called by its own name', () => {
+    expect(ingredientName(ing)).toBe('white wine vinegar');
     expect(ingredientName({ n: 'salt' })).toBe('salt');
   });
-  it('matches the swap, not the name in the recipe', () => expect(matchHome(ing, items)?.id).toBe('v'));
-  it('matches the name again with no swap', () => expect(matchHome({ n: 'white wine vinegar' }, items)?.id).toBe('w'));
-  it('yields to a pin', () => expect(matchHome({ ...ing, home: 'w' }, items)?.id).toBe('w'));
-  it('is added to To get by the swap name when it is not on the list', () => {
-    const s = pantryStatus({ ing: [{ n: 'white wine vinegar', sub: 'rice vinegar' }] }, g(), { lines: {}, pulled: [] });
-    expect(missingParts(s).add).toEqual(['rice vinegar']);
+  it('matches its own name, not the Alternative', () => expect(matchHome(ing, items)?.id).toBe('w'));
+  it('yields to a pin', () => expect(matchHome({ ...ing, home: 'v' }, items)?.id).toBe('v'));
+  it('is added to To get by its own name when neither is on the list', () => {
+    const s = pantryStatus({ ing: [{ n: 'white wine vinegar', sub: 'rice vinegar' }] }, g(), month);
+    expect(missingParts(s).add).toEqual(['white wine vinegar']);
   });
+  it('counts as at home when only the Alternative is', () => {
+    const s = status('v');
+    expect(s.lines[0]).toMatchObject({ have: true });
+    expect(s.lines[0]?.item?.id).toBe('v');
+  });
+  it('counts as at home when only its own item is, and stays on its own item when both are', () => {
+    expect(status('w').lines[0]).toMatchObject({ have: true });
+    expect(status('w', 'v').lines[0]?.item?.id).toBe('w');
+  });
+  it('is missing when neither is at home', () => expect(status().lines[0]).toMatchObject({ have: false }));
 });
 
 describe('a skipped ingredient', () => {

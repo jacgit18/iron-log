@@ -69,7 +69,7 @@ test('Type a list reads amounts and "or" alternatives into rows, and the rows co
   await page.getByRole('button', { name: 'Type a list' }).click();
   await expect(page.getByLabel(/^One ingredient per line/)).toHaveValue('1 cup rolled oats\n1 cup milk or oat milk\npinch salt');
   await page.getByRole('button', { name: 'Save recipe' }).click(); // saving from the list is the same as using it
-  await expect(page.getByText('(instead of milk)')).toBeVisible();
+  await expect(page.getByText('(or oat milk)')).toBeVisible();
   await expect(page.getByText('1 cup rolled oats')).toBeVisible();
 });
 
