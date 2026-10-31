@@ -8,6 +8,7 @@ import { pinFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { Recipe, RecipeCategory, RecipeIngredient } from '../../types.ts';
 import IngredientList from './IngredientList.js';
+import IngredientMacros, { type PerServing } from './IngredientMacros.js';
 import IngredientRows, { type Row } from './IngredientRows.js';
 
 const TOO_FEW = 'Type at least one ingredient first.';
@@ -38,6 +39,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const [steps, setSteps] = useState(recipe?.steps.join('\n') ?? '');
   const [note, setNote] = useState(recipe?.note ?? '');
   const [err, setErr] = useState('');
+  const [calc, setCalc] = useState(false); // the Calculate from ingredients panel is open
   const whole = (t: string) => (/^\d{1,4}$/.test(t.trim()) ? Number(t) : undefined);
 
   // The rows a typed list stands for. A line still exactly as an earlier row writes it keeps that row; a changed or new line is read again, and keeps
@@ -97,6 +99,12 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     setIng(r.rows); setLastServings(v);
     setScaleNote(servingsNote(lastServings, v, r.left, ing.some(x => x.amt.trim())));
   };
+  const useNumbers = (per: PerServing) => {
+    setKcal(String(per.kcal)); setProtein(String(per.p));
+    if (per.c !== undefined) setCarbs(String(per.c));
+    if (per.f !== undefined) setFat(String(per.f));
+    setCalc(false); setErr('');
+  };
   const anchorServings = () => { const v = whole(servings); if (lastServings === null && v && v <= 99) setLastServings(v); };
   const typeAmount = (i: number, amt: string) => { setIng(ing.map((x, j) => (j === i ? typedAmount(x, amt, lastServings) : x))); setErr(''); };
   const setRow = (i: number, patch: Partial<RecipeIngredient>) => { setIng(ing.map((x, j) => (j === i ? { ...x, ...patch } : x))); setErr(''); };
@@ -133,6 +141,11 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
               <button type="button" className="btn sm" aria-expanded={nutOpen} aria-label={nutOpen ? 'Done with nutrition per serving' : 'Edit nutrition per serving'} onClick={() => setNutOpen(!nutOpen)}>{nutOpen ? 'Done' : 'Edit'}</button>
             </div>
             <p className="note">{nutLine}</p>
+            <div className="rc-calcbar">
+              <button type="button" className="btn sm" disabled={!ing.some(i => i.n.trim() && !i.skip)} aria-expanded={calc} onClick={() => setCalc(!calc)}>Calculate from ingredients</button>
+              {!ing.some(i => i.n.trim() && !i.skip) && <span className="note"> Add ingredients first.</span>}
+            </div>
+            {calc && <IngredientMacros ingredients={ing} servings={servings} onClose={() => setCalc(false)} onUse={useNumbers} />}
             {nutOpen && (
               <div className="rc-nutfields">
                 <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => setKcal(e.target.value)} /></label>
