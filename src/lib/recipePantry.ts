@@ -64,8 +64,8 @@ export const isAlwaysHave = (name: string): boolean => {
   return w.includes('water') && w.every(x => x === 'water' || WATER_KINDS.has(x));
 };
 
-/** What the ingredient is called when you cook it: the swap if there is one, else the name in the recipe. */
-export const ingredientName = (ing: RecipeIngredient): string => ing.sub || ing.n;
+/** What the ingredient is called: always the name in the recipe. An Alternative never replaces it (owner, 2026-10-31); it is only another way to have it at home. */
+export const ingredientName = (ing: RecipeIngredient): string => ing.n;
 
 /** The At home item an ingredient is: the one it is pinned to, else the item with the same words, else the item whose name holds all the
  *  words of a two-or-more-word name or is held by it and ends in the same word ("chicken breast" and "boneless chicken breast"; the fewest extra words wins), else a
@@ -117,8 +117,12 @@ export interface PantryStatus { lines: IngredientStatus[]; have: number; total: 
  *  ingredient stays in `lines` but is not counted in `have` and `total`. */
 export function pantryStatus(recipe: Pick<Recipe, 'ing'>, g: Grocery, month: GroceryMonth): PantryStatus {
   const lines = recipe.ing.map((ing): IngredientStatus => {
-    const skipped = !!ing.skip, always = !skipped && isAlwaysHave(ingredientName(ing));
-    const item = always ? null : matchHome(ing, g.items);
+    const alt = ing.sub?.trim();
+    const skipped = !!ing.skip, always = !skipped && (isAlwaysHave(ingredientName(ing)) || (!!alt && isAlwaysHave(alt)));
+    const main = always ? null : matchHome(ing, g.items);
+    // The ingredient is at home when its own item is, or else when the Alternative's item is: "if you don't have it, use this".
+    const altItem = always || (main && haveOf(main, month)) || !alt ? null : matchHome({ n: alt }, g.items);
+    const item = altItem && haveOf(altItem, month) ? altItem : main;
     return { ing, item, have: always || (!!item && !!haveOf(item, month)), skipped, always, suggest: item || skipped || always ? null : suggestItem(ing, g.items) };
   });
   const counted = lines.filter(l => !l.skipped);

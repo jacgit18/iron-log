@@ -13,7 +13,7 @@ export type Row = RecipeIngredient & ScaleRow;
 // third column on a wide screen and a "+ Alternative" link on a phone. Skip is not offered; a row that already has it says so and can be included
 // again, so stored data is never stuck.
 export default function IngredientRows({ rows, options, onActive, onRename, onType, onSet, onRemove, onAdd }: {
-  rows: Row[]; options: string[]; onActive: (i: number) => void; onRename: (i: number, name: string) => void; onType: (i: number, amt: string) => void;
+  rows: Row[]; options: string[]; onActive: (i: number, field: 'n' | 'sub') => void; onRename: (i: number, name: string) => void; onType: (i: number, amt: string) => void;
   onSet: (i: number, patch: Partial<RecipeIngredient>) => void; onRemove: (i: number) => void; onAdd: () => void;
 }) {
   const [open, setOpen] = useState<number | null>(null); // the row whose amount picker is open
@@ -29,15 +29,15 @@ export default function IngredientRows({ rows, options, onActive, onRename, onTy
   return (
     <>
       <datalist id="rc-suggest">{options.map(o => <option key={o} value={o} />)}</datalist>
-      <div className="rc-ingh" aria-hidden="true"><span>Amount</span><span>Ingredient</span><span>Alternative (use this instead)</span><span /></div>
+      <div className="rc-ingh" aria-hidden="true"><span>Amount</span><span>Ingredient</span><span>Alternative (if you don’t have it)</span><span /></div>
       {rows.map((x, i) => (
         <div className={`rc-ingblock${x.sub || alt.has(i) ? ' rc-altopen' : ''}`} key={i}>
           <div className="rc-ingline">
             <button type="button" id={`rc-amt-${i}`} className={`rc-amt${x.amt ? '' : ' empty'}`} aria-label={`Amount for ingredient ${i + 1}: ${x.amt || 'not set'}`} aria-expanded={open === i} onClick={() => setOpen(open === i ? null : i)}>
               <span>{x.amt || 'Amount'}</span><Icon name="chevron-down" />
             </button>
-            <input className="rc-name" aria-label={`Ingredient ${i + 1}`} placeholder="Ingredient" value={x.n} list="rc-suggest" onFocus={() => onActive(i)} onChange={e => { onActive(i); onRename(i, e.target.value); }} autoComplete="off" />
-            <input id={`rc-alt-${i}`} className="rc-alt" aria-label={`Alternative for ingredient ${i + 1}`} placeholder="Alternative" value={x.sub ?? ''} maxLength={MAX_RECIPE_NAME} onFocus={() => { if (!alt.has(i)) setAlt(new Set(alt).add(i)); }} onChange={e => onSet(i, { sub: e.target.value, home: undefined })} autoComplete="off" />
+            <input className="rc-name" aria-label={`Ingredient ${i + 1}`} placeholder="Ingredient" value={x.n} list="rc-suggest" onFocus={() => onActive(i, 'n')} onChange={e => { onActive(i, 'n'); onRename(i, e.target.value); }} autoComplete="off" />
+            <input id={`rc-alt-${i}`} className="rc-alt" aria-label={`Alternative for ingredient ${i + 1}`} placeholder="Alternative" value={x.sub ?? ''} maxLength={MAX_RECIPE_NAME} list="rc-suggest" onFocus={() => { onActive(i, 'sub'); if (!alt.has(i)) setAlt(new Set(alt).add(i)); }} onChange={e => { onActive(i, 'sub'); onSet(i, { sub: e.target.value, home: undefined }); }} autoComplete="off" />
             <button type="button" className="btn sm ghost rc-rm" aria-label={`Remove ingredient ${i + 1}`} onClick={() => { setOpen(null); setAlt(new Set([...alt].filter(k => k !== i).map(k => (k > i ? k - 1 : k)))); onRemove(i); }}><Icon name="close" /></button>
           </div>
           {!x.sub && !alt.has(i) && <button type="button" className="btn sm ghost rc-altlink" onClick={() => { setAlt(new Set(alt).add(i)); focus(`rc-alt-${i}`); }}>+ Alternative</button>}
