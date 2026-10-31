@@ -72,3 +72,9 @@ export function keepCatalogItems(items: CatalogItem[], f: { eq?: string; muscle?
 export const hasTwoSources = (rows: { custom: boolean }[]) => rows.some(r => r.custom) && rows.some(r => !r.custom);
 
 export const muscleList = (keys: string[]) => keys.map(k => ((MUSCLES as Record<string, { n: string }>)[k] ? (MUSCLES as Record<string, { n: string }>)[k].n : k)).join(', ');
+
+/** The two short lines of a library row: "Barbell · Quads, glutes, hamstrings" (equipment, then up to three muscles, primary first) and where it is used ("In A, B" or "Not used"). Default phase, 1RM, the video link and the full muscle lists live in the Edit sheet. */
+export function rowSummary(r: { p: string[]; s: string[]; mob: boolean; inPrograms: string[] }, eqLabel: string): { line: string; where: string } {
+  const muscles = r.mob ? 'Mobility' : muscleList([...new Set([...r.p, ...r.s])].slice(0, 3)).toLowerCase().replace(/^./, c => c.toUpperCase());
+  return { line: [eqLabel, muscles || 'No muscles tagged'].filter(Boolean).join(' · '), where: r.inPrograms.length ? `In ${r.inPrograms.join(', ')}` : 'Not used' };
+}

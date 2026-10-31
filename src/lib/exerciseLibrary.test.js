@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BUILTIN } from './data.js';
 import { DEFAULT_CFG } from './logic.js';
-import { libraryRows, filterRows, usageOf, hasTwoSources, keepCatalogItems, exIdsInUse, findExIdIn } from './exerciseLibrary.js';
+import { libraryRows, filterRows, usageOf, hasTwoSources, keepCatalogItems, exIdsInUse, findExIdIn, rowSummary } from './exerciseLibrary.js';
 
 const cfg = (over = {}) => ({ ...structuredClone(DEFAULT_CFG), ...over });
 const state = (over = {}) => ({ programs: { A: BUILTIN.A, B: BUILTIN.B }, library: [], experiments: [], logs: {}, ...over });
@@ -94,5 +94,19 @@ describe('findExIdIn', () => {
       expect(findExIdIn(c, 'Hack Squat', [])).toBeNull();
       expect(findExIdIn(c, '', ['hack'])).toBeNull();
     } finally { listBuiltinExercises(true); }
+  });
+});
+
+describe('rowSummary', () => {
+  it('names the equipment and up to three muscles, primary first, and where it is used', () => {
+    expect(rowSummary({ p: ['quads'], s: ['glutes', 'hamstrings'], mob: false, inPrograms: ['A'] }, 'Barbell')).toEqual({ line: 'Barbell · Quads, glutes, hamstrings', where: 'In A' });
+    expect(rowSummary({ p: ['quads', 'glutes', 'hamstrings', 'calves'], s: [], mob: false, inPrograms: ['A', 'B'] }, 'Barbell').line).toBe('Barbell · Quads, glutes, hamstrings');
+  });
+  it('shows Mobility for a mobility exercise, and says when nothing is set', () => {
+    expect(rowSummary({ p: [], s: [], mob: true, inPrograms: [] }, '')).toEqual({ line: 'Mobility', where: 'Not used' });
+    expect(rowSummary({ p: [], s: [], mob: false, inPrograms: [] }, 'Cable')).toEqual({ line: 'Cable · No muscles tagged', where: 'Not used' });
+  });
+  it('lists a muscle once when it is both primary and secondary', () => {
+    expect(rowSummary({ p: ['quads'], s: ['quads', 'glutes'], mob: false, inPrograms: [] }, '').line).toBe('Quads, glutes');
   });
 });
