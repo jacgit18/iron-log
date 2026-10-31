@@ -51,3 +51,16 @@ test('Delete in the archive still asks twice', async ({ page }) => {
   await del.click();
   await expect(page.getByText('Archived (')).toHaveCount(0);
 });
+
+test('loading another program over A archives the saved copy of the old A', async ({ page }) => {
+  await openPrograms(page);
+  await save(page, 'Old A');
+  await page.getByRole('button', { name: 'Create a program' }).click();
+  await page.getByRole('radio', { name: /Full body/ }).check();
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await page.locator('.npnext').getByRole('button', { name: /^Load into Program A/ }).click();
+  await expect(page.getByText('Archived (1)')).toBeVisible();
+  await page.getByText('Archived (1)').click();
+  await expect(page.locator('.libarchive .edrow', { hasText: 'Old A' })).toBeVisible();
+  await expect(page.locator('.lib > .edlist .edrow', { hasText: 'Old A' })).toHaveCount(0);
+});
