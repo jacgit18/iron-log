@@ -61,6 +61,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     };
   };
   const listEdited = listMode && listText !== listBase;
+  const shownRows = (): Row[] => (listEdited ? listRows()?.rows : null) ?? ing; // the rows as the list text now reads, for the helpers that work from the ingredients
   const showRows = (): string => {
     if (listEdited) {
       const r = listRows();
@@ -139,7 +140,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
             <label>Servings<input inputMode="numeric" value={servings} onChange={e => changeServings(e.target.value)} onBlur={anchorServings} /></label>
             <label>Minutes<input inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
           </div>
-          <ServingSize serving={serving} grams={servingG} ingredients={ing} servings={whole(servings) ?? 1} onServing={v => { setServing(v); setErr(''); }} onGrams={v => { setServingG(v); setErr(''); }} />
+          <ServingSize serving={serving} grams={servingG} ingredients={shownRows()} servings={whole(servings) ?? 1} onServing={v => { setServing(v); setErr(''); }} onGrams={v => { setServingG(v); setErr(''); }} />
           <div className="rc-nut">
             <div className="rc-nuthead">
               <strong>Nutrition per serving</strong>
@@ -150,7 +151,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
               <button type="button" className="btn sm" disabled={!ing.some(i => i.n.trim() && !i.skip)} aria-expanded={calc} onClick={() => setCalc(!calc)}>Calculate from ingredients</button>
               {!ing.some(i => i.n.trim() && !i.skip) && <span className="note"> Add ingredients first.</span>}
             </div>
-            {calc && <IngredientMacros ingredients={ing} servings={servings} onClose={() => setCalc(false)} onUse={useNumbers} />}
+            {calc && <IngredientMacros ingredients={shownRows()} servings={servings} onClose={() => setCalc(false)} onUse={useNumbers} />}
             {nutOpen && (
               <div className="rc-nutfields">
                 <label>Calories per serving<input inputMode="numeric" value={kcal} onChange={e => setKcal(e.target.value)} /></label>

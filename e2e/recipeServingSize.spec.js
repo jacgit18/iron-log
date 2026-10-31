@@ -60,3 +60,15 @@ test('a recipe with no serving size shows no extra line', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Ingredients' })).toBeVisible();
   await expect(page.getByText(/^Serving size:/)).toHaveCount(0);
 });
+
+test('Estimate reads the list text while the ingredients are typed as a list', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: 'New recipe' }).click();
+  await page.getByLabel('Name', { exact: true }).fill('Loaf');
+  await page.getByLabel('Servings', { exact: true }).fill('4');
+  await page.getByRole('button', { name: 'Type a list' }).click();
+  await page.getByLabel(/^One ingredient per line/).fill('500 g flour\n2 cups milk');
+  await page.getByRole('button', { name: 'Estimate from ingredients' }).click();
+  await expect(page.getByLabel('Grams per serving')).toHaveValue('125');
+  await expect(page.getByText('Counted 1 of 2 ingredients. Left out: milk.')).toBeVisible();
+});
