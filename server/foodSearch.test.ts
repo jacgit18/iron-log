@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DAILY_MAX, foodRoutes, type FoodDeps } from './foodSearch.ts';
 
 let server: Server | undefined;
-afterEach(() => new Promise<void>(done => (server ? server.close(() => done()) : done())));
+afterEach(() => { vi.restoreAllMocks(); return new Promise<void>(done => (server ? server.close(() => done()) : done())); });
 
 const usda = { foods: [{ fdcId: 1, description: 'Chicken breast, raw', foodNutrients: [{ nutrientNumber: '208', value: 120 }, { nutrientNumber: '203', value: 22.5 }] }, { fdcId: 2, description: 'No calories', foodNutrients: [] }] };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -41,9 +41,16 @@ describe('GET /api/foods/search', () => {
   });
 
   it('answers 503 when no key is set', async () => {
-    const res = await fetch(`${await start({})}?q=oats`);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const base = await start({});
+    const res = await fetch(`${base}?q=oats`);
     expect(res.status).toBe(503);
-    expect(((await res.json()) as { error: string }).error).toMatch(/not available/);
+    const body = (await res.json()) as { error: string; why: string };
+    expect(body.error).toMatch(/not available/);
+    expect(body.why).toBe('no-key');
+    await fetch(`${base}?q=rice`);
+    expect(warn.mock.calls.filter(c => String(c[0]).includes('USDA_API_KEY is not set'))).toHaveLength(1); // said once, not per search
+    warn.mockRestore();
   });
 
   it('answers 503, without the key, when USDA fails, is slow or sends junk', async () => {
@@ -51,7 +58,9 @@ describe('GET /api/foods/search', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const res = await fetch(`${await start({ key: 'SECRET', fetch: ask as unknown as typeof fetch })}?q=oats`);
       expect(res.status).toBe(503);
-      expect(await res.text()).not.toContain('SECRET');
+      const text = await res.text();
+      expect(text).not.toContain('SECRET');
+      expect(JSON.parse(text).why).toBe('upstream');
       expect(warn.mock.calls.join(' ')).not.toContain('SECRET');
       warn.mockRestore();
       await new Promise<void>(done => server!.close(() => done()));

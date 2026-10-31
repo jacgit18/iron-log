@@ -27,11 +27,16 @@ export function foodRoutes({ key, fetch: ask = fetch, now = Date.now }: FoodDeps
   const router = Router();
   const held = new Map<string, { at: number; hits: FoodHit[] }>();
   const days = new Map<string, { start: number; count: number }>();
+  let saidNoKey = false;
 
   router.get('/search', async (req, res) => {
     const q = cleanQuery(req.query.q);
     if (!q) return void res.status(422).json({ ok: false, error: 'q is 2 to 60 characters' });
-    if (!key) return void res.status(503).json({ ok: false, error: UNAVAILABLE });
+    if (!key) {
+      // Said once per instance, so a missing USDA_API_KEY shows in the logs without a line per keystroke. `why` lets a browser tell this from a USDA failure.
+      if (!saidNoKey) { saidNoKey = true; console.warn(JSON.stringify({ msg: 'food search is off: USDA_API_KEY is not set' })); }
+      return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'no-key' });
+    }
     const t = now();
     // A daily allowance per person, so one account cannot use up the shared key. Counted on every valid search, held answer or not.
     const who = String(res.locals.userId);
@@ -57,7 +62,7 @@ export function foodRoutes({ key, fetch: ask = fetch, now = Date.now }: FoodDeps
     } catch (err) {
       // Never log the URL: it carries the key. The status or error name is enough.
       console.warn(JSON.stringify({ msg: 'food search failed', reason: err instanceof Error ? err.name === 'Error' ? err.message : err.name : 'unknown' }));
-      res.status(503).json({ ok: false, error: UNAVAILABLE });
+      res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'upstream' });
     }
   });
 
