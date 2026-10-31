@@ -9,6 +9,7 @@ import { liftGoalsOf } from '../../lib/liftGoal.js';
 import { pickerKey, type PickerChoice } from '../../lib/picker.js';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import ItemPicker from '../ItemPicker.jsx';
+import { nameCmp } from '../../lib/sort.js';
 import LiftGoal, { GoalForm } from './LiftGoal.jsx';
 import './GoalsPanel.css';
 
@@ -51,7 +52,7 @@ export default function GoalsPanel() {
   const [seen, setSeen] = useState<string[]>([]); const [seenKey, setSeenKey] = useState('');
   const key = rows.map(r => r.id).join('|');
   if (key !== seenKey) { setSeenKey(key); setSeen(s => [...new Set([...s, ...rows.map(r => r.id)])]); }
-  const shown = [...new Map([...rows, ...seen.map(id => ({ id, name: exInfo(cfg, id).n }))].map(r => [r.id, r])).values()].sort((a, b) => a.name.localeCompare(b.name));
+  const shown = [...new Map([...rows, ...seen.map(id => ({ id, name: exInfo(cfg, id).n }))].map(r => [r.id, r])).values()].sort(nameCmp(r => r.name, r => r.id));
   return (
     <section className="panel goalspanel" aria-labelledby="goals-h">
       <div className="goalshead">

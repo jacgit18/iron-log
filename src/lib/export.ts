@@ -18,6 +18,7 @@ import { normDietEntries } from '../shared/diet.js';
 import { normRecipes } from '../shared/recipes.js';
 import { normEntries, normBody, normProgram, normLibrary, validStamp } from '../shared/validate.js';
 import { normConfig } from '../shared/config.js';
+import { nameCmp } from './sort.js';
 
 export { normConfig };
 
@@ -35,7 +36,7 @@ export function buildCsv(S: Snapshot) {
   const head = ['date', 'exercise', 'phase', 'weight_lb', 'sets', 'reps', 'hold_s', 'set_detail', 'primary_muscles', 'secondary_muscles', 'note', 'program_slot', 'week_of'];
   const rows: any[][] = [];
   Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => rows.push([e.d, exInfo(cfg, id).n, phaseLabel(e.ph), e.w ?? '', e.s ?? '', e.r ?? '', e.sec ?? '', setDetail(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), noteOf(e), e.slot || '', e.wk || ''])));
-  rows.sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0])));
+  rows.sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0]))); // sort-ok: export rows keep their sheet order
   return [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
 }
 
@@ -48,7 +49,7 @@ function sheet(X: XLSX, rows: Row[], widths: number[]) {
 function sessionRows(S: Snapshot, filter?: (e: LogEntry) => boolean): any[][] {
   const { cfg, logs } = S; const rows: any[][] = [];
   Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => { if (!filter || filter(e)) rows.push([e.d, e.wk || weekOfDate(e.d), exInfo(cfg, id).n, phaseLabel(e.ph), e.w ?? '', e.s ?? '', e.sec ? '' : (e.r ?? ''), e.sec ?? '', setDetail(e), entryVolume(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), noteOf(e), e.slot || '', id]); }));
-  rows.sort((a, b) => (a[0] === b[0] ? a[2].localeCompare(b[2]) : a[0].localeCompare(b[0])));
+  rows.sort((a, b) => (a[0] === b[0] ? a[2].localeCompare(b[2]) : a[0].localeCompare(b[0]))); // sort-ok: export rows keep their sheet order
   return [['Date', 'Week of', 'Exercise', 'Phase', 'Weight (lb)', 'Sets', 'Reps', 'Hold (s)', 'Set by set', 'Volume (lb)', 'Primary muscles', 'Secondary muscles', 'Note', 'Program slot', 'Exercise id'], ...rows];
 }
 const SESSION_COLS = [11, 11, 34, 13, 11, 6, 6, 9, 26, 12, 28, 28, 30, 14, 16];
@@ -56,7 +57,7 @@ const SESSION_COLS = [11, 11, 34, 13, 11, 6, 6, 9, 26, 12, 28, 28, 30, 14, 16];
 export function buildOverallWorkbook(X: XLSX, S: Snapshot, weeks: Record<string, Week>) {
   const { cfg, logs, programs, body } = S; const wb = X.utils.book_new();
   const sum: Row[] = [['Exercise', 'Latest phase', 'Sessions', 'First logged', 'Last logged', 'First weight (lb)', 'Latest weight (lb)', 'Best weight (lb)', 'Change (lb)', '1RM (lb)']];
-  Object.keys(logs).filter(id => logs[id].length).sort((a, b) => exInfo(cfg, a).n.localeCompare(exInfo(cfg, b).n)).forEach(id => {
+  Object.keys(logs).filter(id => logs[id].length).sort(nameCmp(id => exInfo(cfg, id).n, id => id)).forEach(id => {
     const L = logs[id], last = L[L.length - 1];
     const ws = L.filter(e => (e.ph || null) === (last.ph || null) && Number(e.w) > 0).map(e => Number(e.w));
     const first = ws.length ? ws[0] : '', latest = ws.length ? ws[ws.length - 1] : '';
@@ -74,7 +75,7 @@ export function buildOverallWorkbook(X: XLSX, S: Snapshot, weeks: Record<string,
     });
   });
   const mus: Row[] = [['Week of', 'Muscle', 'Primary sets', 'Secondary sets', 'Weighted sets']];
-  Object.values(mv).sort((a, b) => (a.k === b.k ? (b.p + b.s / 2) - (a.p + a.s / 2) : a.k.localeCompare(b.k))).forEach(r => mus.push([r.k, (MUSCLES as Record<string, { n: string }>)[r.m] ? (MUSCLES as Record<string, { n: string }>)[r.m].n : r.m, r.p, r.s, r.p + r.s / 2]));
+  Object.values(mv).sort((a, b) => (a.k === b.k ? (b.p + b.s / 2) - (a.p + a.s / 2) : a.k.localeCompare(b.k))).forEach(r => mus.push([r.k, (MUSCLES as Record<string, { n: string }>)[r.m] ? (MUSCLES as Record<string, { n: string }>)[r.m].n : r.m, r.p, r.s, r.p + r.s / 2])); // sort-ok: export rows keep their sheet order
   X.utils.book_append_sheet(wb, sheet(X, mus, [12, 24, 13, 15, 14]), 'Muscles');
   const wk: Row[] = [['Week of', 'Program', 'Days complete', 'Exercises done', 'Exercises planned', 'Skipped', '% done', 'Sessions logged']];
   Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => {
@@ -264,7 +265,7 @@ export function mergeEntries(a: LogEntry[], b: LogEntry[]) {
     if (!e.auto) out = out.filter(x => !(x.auto && card(x)));
     out.push(e); ids.add(id); keys.add(sameKey(e));
   });
-  return out.sort((x, y) => x.d.localeCompare(y.d));
+  return out.sort((x, y) => x.d.localeCompare(y.d)); // sort-ok: ISO date strings
 }
 // True when a merge changed the list: an entry was added, replaced or dropped. mergeEntries keeps every untouched entry as the same
 // object, so identity is the test; a count alone misses a copy replaced by a newer one and a check-off swapped for a real session.

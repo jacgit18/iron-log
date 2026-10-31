@@ -7,6 +7,7 @@ import { currentLayout, DAYS } from '../../lib/logic.js';
 import { freqGoalStatus } from '../../lib/freqGoal.js';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
+import { nameCmp } from '../../lib/sort.js';
 import './FreqGoals.css';
 
 const TIMES = [1, 2, 3, 4, 5, 6, 7];
@@ -26,7 +27,7 @@ export default function FreqGoals() {
   const rows = freqGoalStatus(cfg, logs, wk, shown ? id => cols.get(id) ?? null : undefined);
   const ids = [...new Set([...slots.flatMap(s => s.items.map(it => it.ex)), ...Object.keys(logs).filter(id => logs[id].length)])]
     .filter(id => cfg.freqGoals?.[id] == null)
-    .map(id => ({ id, name: exInfo(cfg, id).n })).sort((a, b) => a.name.localeCompare(b.name));
+    .map(id => ({ id, name: exInfo(cfg, id).n })).sort(nameCmp(r => r.name, r => r.id));
   const pick = ids.some(x => x.id === ex) ? ex : ids[0]?.id ?? ''; // a pick that left the list (synced goal, other week) falls back to the first
   return (
     <section className="panel freqgoals" aria-labelledby="freq-h">
