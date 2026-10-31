@@ -29,7 +29,7 @@ export default function Daily() {
     <>
       <div className="edtop">
         <div className="seg" role="group" aria-label="Daily section">
-          {sections.map(([k, l]) => <button type="button" key={k} id={`daily-${k}`} className={cur === k ? 'on' : ''} aria-pressed={cur === k} onClick={() => { setDailyView(k); navigate(`daily/${k}`, 'replace'); }}>{l}</button>)}
+          {sections.map(([k, l]) => <button type="button" key={k} id={`daily-${k}`} className={cur === k ? 'on' : ''} aria-pressed={cur === k} onClick={() => { setDailyView(k); navigate(dailyFix('daily', k) ?? 'daily', 'replace'); }}>{l}</button>)}
         </div>
       </div>
       <View />
