@@ -49,7 +49,7 @@ export default function AmountPicker({ value, name, recents, onDone, onClose }: 
         </div>
       )}
       <div className="rc-pickacts">
-        <input aria-label="Type an amount instead" placeholder="Or type: to taste" maxLength={MAX_AMOUNT} autoComplete="off" value={free ?? ''} onChange={e => { setFree(e.target.value); setDirty(true); }} />
+        <input aria-label="Type an amount instead" placeholder="Or type: to taste" maxLength={MAX_AMOUNT} autoComplete="off" value={free ?? ''} onChange={e => { setFree(e.target.value || null); setDirty(true); }} />
         <button type="button" className="btn" onClick={() => onDone('')}>Clear</button>
         <button type="button" className="btn primary" onClick={done}>Done</button>
       </div>

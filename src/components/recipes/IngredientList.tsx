@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { parseIngredientList } from '../../lib/ingredientList.js';
+import type { ListRow } from '../../lib/ingredientList.js';
 
 // Type a list (brief recipe-form-mobile-desktop): one ingredient per line, "or" starts an alternative, and what was read shows as you type.
 // Use these ingredients turns the lines into rows; `onUse` answers with a message when it could not.
-export default function IngredientList({ text, onText, onUse }: { text: string; onText: (t: string) => void; onUse: () => string }) {
+export default function IngredientList({ text, onText, onUse, read, cut }: { text: string; onText: (t: string) => void; onUse: () => string; read: ListRow[]; cut: boolean }) {
   const [msg, setMsg] = useState('');
-  const { rows, cut } = parseIngredientList(text);
+  const rows = read;
   return (
     <div className="rc-list">
       <label>One ingredient per line. Write "or" for an alternative.

@@ -37,7 +37,7 @@ export default function IngredientRows({ rows, options, onActive, onRename, onTy
               <span>{x.amt || 'Amount'}</span><Icon name="chevron-down" />
             </button>
             <input className="rc-name" aria-label={`Ingredient ${i + 1}`} placeholder="Ingredient" value={x.n} list="rc-suggest" onFocus={() => onActive(i)} onChange={e => { onActive(i); onRename(i, e.target.value); }} autoComplete="off" />
-            <input id={`rc-alt-${i}`} className="rc-alt" aria-label={`Alternative for ingredient ${i + 1}`} placeholder="Alternative" value={x.sub ?? ''} maxLength={MAX_RECIPE_NAME} onChange={e => onSet(i, { sub: e.target.value, home: undefined })} autoComplete="off" />
+            <input id={`rc-alt-${i}`} className="rc-alt" aria-label={`Alternative for ingredient ${i + 1}`} placeholder="Alternative" value={x.sub ?? ''} maxLength={MAX_RECIPE_NAME} onFocus={() => { if (!alt.has(i)) setAlt(new Set(alt).add(i)); }} onChange={e => onSet(i, { sub: e.target.value, home: undefined })} autoComplete="off" />
             <button type="button" className="btn sm ghost rc-rm" aria-label={`Remove ingredient ${i + 1}`} onClick={() => { setOpen(null); setAlt(new Set([...alt].filter(k => k !== i).map(k => (k > i ? k - 1 : k)))); onRemove(i); }}><Icon name="close" /></button>
           </div>
           {!x.sub && !alt.has(i) && <button type="button" className="btn sm ghost rc-altlink" onClick={() => { setAlt(new Set(alt).add(i)); focus(`rc-alt-${i}`); }}>+ Alternative</button>}

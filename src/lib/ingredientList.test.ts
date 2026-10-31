@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ingredientsToText, parseIngredientList } from './ingredientList.js';
+import { ingredientsToText, parseIngredientList, readList } from './ingredientList.js';
 
 const rows = (t: string) => parseIngredientList(t).rows;
 
@@ -50,4 +50,29 @@ describe('ingredientsToText', () => {
     ]);
   });
   it('leaves out rows with no name', () => expect(ingredientsToText([{ n: ' ', amt: '1 cup' }, { n: 'tea', amt: '' }])).toBe('tea'));
+});
+
+describe('readList', () => {
+  const tomatoes = { n: 'tomatoes', amt: '1 (14 oz) can', home: 'it-1' };
+  const saltPepper = { n: 'salt or pepper', amt: '1 tsp', skip: true as const };
+  const milk = { n: 'milk', amt: '1 cup', sub: 'oat milk' };
+  it('keeps the row of a line that was not changed, even when its text would read back differently', () => {
+    const r = readList('1 (14 oz) can tomatoes\n1 tsp salt or pepper\n1 cup milk or oat milk', [tomatoes, saltPepper, milk]);
+    expect(r.lines).toEqual([{ old: tomatoes }, { old: saltPepper }, { old: milk }]);
+  });
+  it('reads only the line that was changed or added', () => {
+    const r = readList('1 (14 oz) can tomatoes\n2 cups milk\n1 tbsp honey', [tomatoes, milk]);
+    expect(r.lines).toEqual([{ old: tomatoes }, { row: { n: 'milk', amt: '2 cups' } }, { row: { n: 'honey', amt: '1 tbsp' } }]);
+  });
+  it('uses each earlier row once, so a repeated line is read again', () => {
+    const r = readList('1 cup milk or oat milk\n1 cup milk or oat milk', [milk]);
+    expect(r.lines).toEqual([{ old: milk }, { row: { n: 'milk', amt: '1 cup', sub: 'oat milk' } }]);
+  });
+  it('drops blank lines, strips a bullet from a new line, and stops at 40', () => {
+    expect(readList('\n- 1 cup rice\n', []).lines).toEqual([{ row: { n: 'rice', amt: '1 cup' } }]);
+    const many = Array.from({ length: 45 }, (_, i) => `1 cup item${i}`).join('\n');
+    const r = readList(many, []);
+    expect(r.lines).toHaveLength(40);
+    expect(r.cut).toBe(true);
+  });
 });

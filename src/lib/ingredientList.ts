@@ -31,6 +31,23 @@ export function parseIngredientList(text: string): { rows: ListRow[]; cut: boole
   return { rows: rows.slice(0, MAX_INGREDIENTS), cut: rows.length > MAX_INGREDIENTS };
 }
 
+/** A line of the list: an earlier row left as it was (`old`), or the row its text reads as. */
+export type ListLine<T> = { old: T } | { row: ListRow };
+
+/** The list read against the rows it was written from: a line that is still exactly what an earlier row writes as keeps that row (its pin, Skip and
+ *  amount text), so only the lines the person changed are read again. Text such as "1 (14 oz) can tomatoes" or a name with "or" in it would not
+ *  read back as the same row. */
+export function readList<T extends { n: string; amt?: string; sub?: string }>(text: string, old: T[]): { lines: ListLine<T>[]; cut: boolean } {
+  const pool = [...old];
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean).flatMap((l): ListLine<T>[] => {
+    const at = pool.findIndex(r => ingredientsToText([r]) === l);
+    if (at >= 0) return [{ old: pool.splice(at, 1)[0]! }];
+    const row = parseLine(l.replace(/^(?:[-*•]\s+)/, ''));
+    return row ? [{ row }] : [];
+  });
+  return { lines: lines.slice(0, MAX_INGREDIENTS), cut: lines.length > MAX_INGREDIENTS };
+}
+
 /** The list text for some rows: amount, name, and "or" the alternative. Rows with no name are left out. */
 export const ingredientsToText = (rows: { n: string; amt?: string; sub?: string }[]): string =>
   rows.filter(r => r.n.trim()).map(r => [r.amt?.trim(), r.n.trim() + (r.sub?.trim() ? ` or ${r.sub.trim()}` : '')].filter(Boolean).join(' ')).join('\n');

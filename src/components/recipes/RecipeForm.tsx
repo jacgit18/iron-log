@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
-import { MAX_RECIPE_NAME, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
-import { ingredientsToText, parseIngredientList } from '../../lib/ingredientList.js';
+import { MAX_INGREDIENTS, MAX_RECIPE_NAME, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { pinFor, suggestIngredients } from '../../lib/recipeSuggest.js';
@@ -40,16 +40,17 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const [err, setErr] = useState('');
   const whole = (t: string) => (/^\d{1,4}$/.test(t.trim()) ? Number(t) : undefined);
 
-  // The rows a typed list stands for. A row keeps the pin and Skip of the earlier row with the same name and alternative; an amount typed in the list is
-  // what the servings shown are for.
+  // The rows a typed list stands for. A line still exactly as an earlier row writes it keeps that row; a changed or new line is read again, and keeps
+  // the pin and Skip of an earlier row with the same name and alternative. An amount typed in the list is what the servings shown are for.
+  const read = listMode ? readList(listText, ing) : null;
   const listRows = (): { rows: Row[]; cut: boolean } | null => {
-    const { rows, cut } = parseIngredientList(listText);
-    if (!rows.length) return null;
+    if (!read || !read.lines.length) return null;
     const old = new Map(ing.map(i => [sameKey(i.n, i.sub), i]));
     return {
-      cut,
-      rows: rows.map(r => {
-        const o = old.get(sameKey(r.n, r.sub)), home = o?.home ?? pinFor(r.n, r.sub, items);
+      cut: read.cut,
+      rows: read.lines.map(l => {
+        if ('old' in l) return l.old;
+        const r = l.row, o = old.get(sameKey(r.n, r.sub)), home = o?.home ?? pinFor(r.n, r.sub, items);
         return typedAmount<Row>({ n: r.n, amt: '', ...(r.sub ? { sub: r.sub } : {}), ...(home ? { home } : {}), ...(o?.skip ? { skip: true as const } : {}) }, r.amt, lastServings);
       }),
     };
@@ -59,7 +60,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     if (listEdited) {
       const r = listRows();
       if (!r) return TOO_FEW;
-      setIng(r.rows); setScaleNote(r.cut ? 'Only the first 40 ingredients were used.' : ''); setErr('');
+      setIng(r.rows); setScaleNote(r.cut ? `Only the first ${MAX_INGREDIENTS} ingredients were used.` : ''); setErr('');
     }
     setListMode(false);
     return '';
@@ -151,7 +152,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
             </div>
             <p className="note" role="status">{scaleNote || servingsLine}</p>
             {listMode
-              ? <IngredientList text={listText} onText={setListText} onUse={showRows} />
+              ? <IngredientList text={listText} onText={setListText} onUse={showRows} read={read!.lines.map(l => ('old' in l ? { n: l.old.n, amt: l.old.amt ?? '', ...(l.old.sub ? { sub: l.old.sub } : {}) } : l.row))} cut={read!.cut} />
               : <IngredientRows rows={ing} options={options} onActive={setActive} onRename={rename} onType={typeAmount} onSet={setRow}
                   onRemove={i => setIng(ing.length > 1 ? ing.filter((_, j) => j !== i) : [{ n: '', amt: '' }])} onAdd={() => setIng([...ing, { n: '', amt: '' }])} />}
           </fieldset>

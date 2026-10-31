@@ -45,6 +45,12 @@ test('the picker keeps typed text, clears, closes on Escape without writing, and
   await expect(page.getByRole('group', { name: /^Amount for/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'Add ingredient' }).click();
   await amountBtn(page, 1).click();
+  // typing something and then deleting it is no typed text: Done writes what the chips show (the amount opens at 1), not an empty amount
+  await page.getByLabel('Type an amount instead').fill('abc');
+  await page.getByLabel('Type an amount instead').fill('');
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(amountBtn(page, 1)).toHaveText('1');
+  await amountBtn(page, 1).click();
   await expect(page.getByRole('button', { name: 'to taste', exact: true })).toBeVisible(); // under Recent
   await page.getByRole('button', { name: 'Clear' }).click();
   await expect(amountBtn(page, 1)).toHaveText('Amount');
@@ -65,6 +71,24 @@ test('Type a list reads amounts and "or" alternatives into rows, and the rows co
   await page.getByRole('button', { name: 'Save recipe' }).click(); // saving from the list is the same as using it
   await expect(page.getByText('(instead of milk)')).toBeVisible();
   await expect(page.getByText('1 cup rolled oats')).toBeVisible();
+});
+
+test('Type a list keeps the rows of lines you did not change, and the pin and Skip with them', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('ironlog:recipes/main')) localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: [{ id: 'sauce-1', n: 'Sauce', cat: 'other', ing: [{ n: 'tomatoes', amt: '1 (14 oz) can' }, { n: 'salt or pepper', amt: '1 tsp', skip: true }, { n: 'garlic', amt: '2 cloves' }], steps: ['Cook.'] }] }));
+  });
+  await page.reload();
+  await page.click('#tab-daily'); await page.click('#daily-recipes');
+  await page.getByRole('button', { name: /^Sauce Custom/ }).click();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('button', { name: 'Type a list' }).click();
+  await page.getByLabel(/^One ingredient per line/).fill('1 (14 oz) can tomatoes\n1 tsp salt or pepper\n3 cloves garlic');
+  await page.getByRole('button', { name: 'Use these ingredients' }).click();
+  await expect(amountBtn(page, 0)).toHaveText('1 (14 oz) can'); // not read as "1"
+  await expect(page.getByLabel('Ingredient 2', { exact: true })).toHaveValue('salt or pepper'); // not split into an Alternative
+  await expect(page.getByLabel('Alternative for ingredient 2')).toHaveValue('');
+  await expect(page.getByText('Skipped.')).toBeVisible(); // the stored skip stayed with its row
+  await expect(amountBtn(page, 2)).toHaveText('3 cloves'); // the changed line was read again
 });
 
 test('an empty list says so instead of clearing the rows', async ({ page }) => {
@@ -100,6 +124,24 @@ test.describe('on a phone', () => {
       .filter(e => e.offsetParent && !e.closest('[hidden]')).map(e => ({ n: e.getAttribute('aria-label') || e.textContent.trim() || e.className, h: e.getBoundingClientRect().height })).filter(x => x.h < 43.5));
     expect(small).toEqual([]);
     await noViolations(page);
+  });
+});
+
+test.describe('on a phone, a recipe with an Alternative', () => {
+  test.use({ viewport: { width: 360, height: 740 } });
+  test('clearing the stored Alternative keeps the field open to type another', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (!localStorage.getItem('ironlog:recipes/main')) localStorage.setItem('ironlog:recipes/main', JSON.stringify({ schema: 1, items: [{ id: 'oats-1', n: 'Oats', cat: 'other', ing: [{ n: 'milk', amt: '1 cup', sub: 'oat milk' }], steps: ['Mix.'] }] }));
+    });
+    await page.reload();
+    await page.click('#tab-daily'); await page.click('#daily-recipes');
+    await page.getByRole('button', { name: /Oats/ }).click();
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
+    const alt = page.getByLabel('Alternative for ingredient 1');
+    await alt.fill('');
+    await expect(alt).toBeVisible();
+    await alt.fill('soy milk');
+    await expect(alt).toHaveValue('soy milk');
   });
 });
 
