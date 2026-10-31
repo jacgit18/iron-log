@@ -15,10 +15,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--sp-8);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-xl);
-  padding: var(--sp-12);
 }
 .fig {
   margin: 0;
@@ -85,6 +81,22 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-12);
+}
+.msec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+}
+.msec h2 {
+  margin: 0;
+  font-size: var(--fs-3xl);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.msec p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-md);
 }
 .mdetail {
   scroll-margin: 12px 0 calc(72px + env(safe-area-inset-bottom, 0px));
