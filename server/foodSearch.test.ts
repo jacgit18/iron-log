@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DAILY_MAX, foodRoutes, type FoodDeps } from './foodSearch.ts';
 
 let server: Server | undefined;
-afterEach(() => new Promise<void>(done => (server ? server.close(() => done()) : done())));
+afterEach(() => { vi.restoreAllMocks(); return new Promise<void>(done => (server ? server.close(() => done()) : done())); });
 
 const usda = { foods: [{ fdcId: 1, description: 'Chicken breast, raw', foodNutrients: [{ nutrientNumber: '208', value: 120 }, { nutrientNumber: '203', value: 22.5 }] }, { fdcId: 2, description: 'No calories', foodNutrients: [] }] };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
