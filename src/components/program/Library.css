@@ -54,6 +54,10 @@
   font-size: var(--fs-lg);
   line-height: 1;
 }
+.exwhere {
+  margin-left: auto;
+  white-space: nowrap;
+}
 .libgroup {
   display: flex;
   align-items: center;

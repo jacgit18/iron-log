@@ -1,15 +1,12 @@
-import type { PhaseKey } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, EQUIPMENT } from '../../lib/data.js';
+import { EQUIPMENT } from '../../lib/data.js';
 import { eqName, eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
-import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems } from '../../lib/exerciseLibrary.js';
+import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems, rowSummary } from '../../lib/exerciseLibrary.js';
 import { isFiltering, resultText } from '../../lib/libraryFilter.js';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
-import { progName } from '../../lib/logic.js';
-import { videoLabel, isCatalogId, exInfo } from '../../lib/data.js';
-import Icon from '../Icon.jsx';
+import { isCatalogId, exInfo } from '../../lib/data.js';
 import RemovedNotice from '../RemovedNotice.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import LibraryChip from './LibraryChip.jsx';
@@ -63,17 +60,14 @@ export default function ExerciseLibrary() {
       <RemovedNotice scope="exercises" />
       <div className="exrows">
         {shown.map(r => {
-          const meta = [r.eq ? eqName(cfg, r.eq) : '', r.ph ? `Default: ${PHASES[r.ph as PhaseKey].label}` : '', r.rm ? `1RM ${r.rm} lb` : ''].filter(Boolean);
-          const muscles = r.mob ? 'Mobility' : [r.p.length && `Primary: ${muscleList(r.p)}`, r.s.length && `Secondary: ${muscleList(r.s)}`].filter(Boolean).join(' · ');
-          const where = r.inPrograms.length ? `In ${r.inPrograms.map(k => progName(cfg, k)).join(', ')}` : 'Not in a program';
+          const { line, where } = rowSummary(r, r.eq ? eqName(cfg, r.eq) : '');
           return (
             <div className="exrow" key={r.id}>
               <div className="exmain">
                 <b>{r.name}{r.custom && <span className="pill custom" title="You created this exercise; it is not from the library">Custom</span>}{isCatalogId(r.id) && <span className="pill custom" title="Added from the catalog; what you change on it stays yours">Library</span>}</b>
-                <span className="note">{[...meta, where].join(' · ')}</span>
-                <span className="note">{muscles || 'No muscles tagged yet'}</span>
-                {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.name} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(r.url)}</a>}
+                <span className="note">{line}</span>
               </div>
+              <span className="note exwhere">{where}</span>
               <button type="button" className="btn sm" id={`exlib-${r.id}`} aria-label={`Edit ${r.name}`} onClick={() => openModal({ type: 'exercise', exId: r.id })}>Edit</button>
             </div>
           );
