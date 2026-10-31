@@ -4,6 +4,7 @@ import { monthKey } from '../../lib/grocery.js';
 import { addMissingMessage, ingredientName, missingParts, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
+import { servingLine } from '../../lib/recipeServing.js';
 import { scaleAmount } from '../../lib/recipeScale.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -42,6 +43,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
       <BackBar onBack={onBack} />
       <h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
+      {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       {recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
       <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
       <h3>Ingredients{status.total > 0 && <span className="rc-have"> {status.have} of {status.total} at home</span>}</h3>
