@@ -81,7 +81,7 @@ export default function DietLog({ day, targets }: { day: string; targets: Target
               </ul>
             </>
           )}
-          <FindFood day={day} onAdded={setMsg} />
+          <FindFood day={day} onAdded={setMsg} onFood={f => setFill(old => ({ key: old.key + 1, food: f }))} />
           <CopyDay key={day} day={day} onAdded={setMsg} />
           <FoodSearch onUse={f => setFill(old => ({ key: old.key + 1, food: f }))} />
           <EntryForm key={fill.key} idp="dt-add" start={fill.food} submitLabel="Add" onSubmit={add} />
