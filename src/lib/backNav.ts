@@ -1,5 +1,5 @@
 // Phone Back (swipe or button) walks the app's own history instead of leaving it: each tab change and each open sheet is one history entry.
-// These are the pure decisions; src/hooks/useBackButton.ts does the history calls. The entry's state is `{ nav: { tab, modal } }`.
+// `opsFor` and `onPop` are the pure decisions; `startBackNav` applies them to a history and a store (both passed in, so a test can fake them). The entry's state is `{ nav: { tab, modal } }`.
 
 export type Nav = { tab: string; modal: boolean };
 export type Op = { kind: 'push' | 'replace'; nav: Nav } | { kind: 'back' };
@@ -27,4 +27,36 @@ export function onPop(state: unknown, cur: Nav): { tab?: string; closeModal?: bo
   const n = navOf(state);
   if (!n) return {};
   return { ...(n.tab !== cur.tab ? { tab: n.tab } : {}), ...(!n.modal && cur.modal ? { closeModal: true } : {}) };
+}
+
+type Store = { getState(): { tab: string; modal: unknown; setTab(t: string): void; closeModal(): void }; subscribe(fn: () => void): () => void };
+type Hist = { state: unknown; replaceState(s: unknown, t: string): void; pushState(s: unknown, t: string): void; back(): void };
+type Win = { addEventListener(e: 'popstate', fn: (ev: { state: unknown }) => void): void; removeEventListener(e: 'popstate', fn: (ev: { state: unknown }) => void): void };
+
+/** Keeps the history in step with the store's tab and sheet, and the store in step with Back. Returns the function that stops it. */
+export function startBackNav(store: Store, history: Hist, win: Win): () => void {
+  const read = (): Nav => { const s = store.getState(); return { tab: s.tab, modal: s.modal !== null }; };
+  let cur = read(); // what the history entries were last made for
+  let popping = false; // the store is changing because Back did, so the history already says so
+  history.replaceState({ ...(history.state as object | null), nav: cur }, '');
+  const off = store.subscribe(() => {
+    const next = read();
+    const prev = cur; cur = next;
+    if (popping) return;
+    for (const op of opsFor(prev, next, navOf(history.state)?.modal === true)) {
+      if (op.kind === 'back') history.back();
+      else if (op.kind === 'push') history.pushState({ nav: op.nav }, '');
+      else history.replaceState({ nav: op.nav }, '');
+    }
+  });
+  const onPopState = (e: { state: unknown }) => {
+    const todo = onPop(e.state, cur);
+    popping = true;
+    try {
+      if (todo.tab) store.getState().setTab(todo.tab);
+      if (todo.closeModal) store.getState().closeModal();
+    } finally { popping = false; }
+  };
+  win.addEventListener('popstate', onPopState);
+  return () => { off(); win.removeEventListener('popstate', onPopState); };
 }
