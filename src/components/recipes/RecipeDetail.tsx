@@ -41,7 +41,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
       <ul className="rc-ings">
         {status.lines.map((l, i) => (
           <li className="rc-ing" key={i}>
-            <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${recipe.servings && shown ? scaleAmount(l.ing.amt, shown / recipe.servings).text : l.ing.amt} ` : ''}{ingredientName(l.ing)}{l.ing.sub && <span className="rc-instead"> (instead of {l.ing.n})</span>}</span>
+            <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${recipe.servings && shown ? scaleAmount(l.ing.amt, shown / recipe.servings).text : l.ing.amt} ` : ''}{ingredientName(l.ing)}{l.ing.sub && <span className="rc-instead"> (or {l.ing.sub})</span>}</span>
             <span className={`rc-state ${l.skipped ? 'skip' : l.have ? 'have' : 'miss'}`}>{l.skipped ? 'Skipped' : l.have ? 'Have' : 'Missing'}</span>
             {mine && l.suggest && <button type="button" className="btn sm" aria-label={`Maybe: ${l.suggest.n} for ${ingredientName(l.ing)}`} onClick={() => useAppStore.getState().linkIngredient(recipe.id, i, l.suggest!.id)}>Maybe: {l.suggest.n}</button>}
             {mine && !l.skipped && !l.always && grocery.items.length > 0 && (

@@ -18,14 +18,14 @@ const newRecipe = async (page, name) => {
   await page.getByLabel('Name', { exact: true }).fill(name);
 };
 
-test('an ingredient with an Alternative is checked as the alternative', async ({ page }) => {
+test('an ingredient with an Alternative stays itself and counts as at home when the Alternative is', async ({ page }) => {
   await atHome(page, 'Apple cider vinegar');
   await newRecipe(page, 'Chimichurri');
   await page.getByLabel('Ingredient 1', { exact: true }).fill('white wine vinegar');
   await page.getByLabel('Alternative for ingredient 1').fill('apple cider vinegar');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  const swapped = page.locator('.rc-ing', { has: page.getByText('(instead of white wine vinegar)') });
-  await expect(swapped).toContainText('apple cider vinegar');
+  const swapped = page.locator('.rc-ing', { has: page.getByText('(or apple cider vinegar)') });
+  await expect(swapped).toContainText('white wine vinegar');
   await expect(swapped.locator('.rc-state')).toHaveText('Have');
   await expect(page.getByText('1 of 1 at home')).toBeVisible();
   await page.getByRole('button', { name: 'Add missing to To get' }).click();
@@ -34,7 +34,7 @@ test('an ingredient with an Alternative is checked as the alternative', async ({
   await page.reload();
   await page.click('#tab-daily'); await page.click('#daily-recipes');
   await page.getByRole('button', { name: /Chimichurri/ }).click();
-  await expect(page.getByText('(instead of white wine vinegar)')).toBeVisible();
+  await expect(page.getByText('(or apple cider vinegar)')).toBeVisible();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(page.getByLabel('Alternative for ingredient 1')).toHaveValue('apple cider vinegar');
 });

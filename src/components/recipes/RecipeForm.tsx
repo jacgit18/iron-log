@@ -32,7 +32,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const [ing, setIng] = useState<Row[]>(recipe?.ing.length ? recipe.ing.map(i => ({ ...i, amt: i.amt ?? '' })) : [{ n: '', amt: '' }]);
   const [lastServings, setLastServings] = useState<number | null>(recipe ? recipe.servings ?? null : 1); // the servings the amounts are for
   const [scaleNote, setScaleNote] = useState('');
-  const [active, setActive] = useState<number | null>(null); // the ingredient field being typed in: its suggestions are offered
+  const [active, setActive] = useState<{ i: number; field: 'n' | 'sub' } | null>(null); // the ingredient or Alternative field being typed in: its suggestions are offered
   const [listMode, setListMode] = useState(false); // ingredients typed as a list; listBase is the text it opened with, so unedited text leaves the rows alone
   const [listText, setListText] = useState('');
   const [listBase, setListBase] = useState('');
@@ -111,7 +111,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   // Renaming an ingredient drops its pin to an At home item (the pin was for the old name), unless the new name is exactly one of your
   // Groceries items. An ingredient with an Alternative is never pinned by its name, and changing the Alternative drops the pin: a pin outranks it in the match.
   const rename = (i: number, name: string) => setRow(i, { n: name, home: pinFor(name, ing[i]?.sub, items) });
-  const activeText = active === null ? '' : ing[active]?.n ?? '';
+  const activeText = active === null ? '' : (active.field === 'sub' ? ing[active.i]?.sub : ing[active.i]?.n) ?? '';
   const options = useMemo(() => suggestIngredients(activeText, items, recipes.filter(r => r.id !== recipe?.id)).map(o => o.n), [activeText, items, recipes, recipe?.id]);
   const nutLine = [kcal.trim() && `${kcal.trim()} kcal`, protein.trim() && `${protein.trim()} g protein`, carbs.trim() && `${carbs.trim()} g carbs`, fat.trim() && `${fat.trim()} g fat`].filter(Boolean).join(' · ') || 'Not set';
   const sv = whole(servings);
@@ -166,7 +166,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
             <p className="note" role="status">{scaleNote || servingsLine}</p>
             {listMode
               ? <IngredientList text={listText} onText={setListText} onUse={showRows} read={read!.lines.map(l => ('old' in l ? { n: l.old.n, amt: l.old.amt ?? '', ...(l.old.sub ? { sub: l.old.sub } : {}) } : l.row))} cut={read!.cut} />
-              : <IngredientRows rows={ing} options={options} onActive={setActive} onRename={rename} onType={typeAmount} onSet={setRow}
+              : <IngredientRows rows={ing} options={options} onActive={(i, field) => setActive({ i, field })} onRename={rename} onType={typeAmount} onSet={setRow}
                   onRemove={i => setIng(ing.length > 1 ? ing.filter((_, j) => j !== i) : [{ n: '', amt: '' }])} onAdd={() => setIng([...ing, { n: '', amt: '' }])} />}
           </fieldset>
           <label>Steps, one per line
