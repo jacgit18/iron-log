@@ -310,7 +310,7 @@ export type RecipeCategory = 'protein' | 'sides' | 'sauces' | 'seasonings' | 'dr
 export interface RecipeIngredient { n: string; amt?: string; home?: string; sub?: string; skip?: true }
 /** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
  *  after copying it (only on a recipe with a `from`). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */
