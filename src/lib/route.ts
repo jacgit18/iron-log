@@ -1,7 +1,7 @@
 // Screen addresses (brief navigation-urls): the part of the address after `#` names a screen, never a person or a record. Pure, so
 // the table and the parser are unit-tested; src/components/useRoute.ts does the browser side (history, popstate).
 
-export const PROGRESS_PAGES = ['goals', 'hist', 'freq', 'lifts', 'trends', 'body', 'muscles'] as const;
+export const PROGRESS_PAGES = ['goals', 'hist', 'freq', 'lifts', 'trends'] as const;
 
 /** Every address the app knows, as a path with no `#/`. A tab is the first part. */
 export const PATHS: readonly string[] = [

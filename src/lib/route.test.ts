@@ -11,6 +11,8 @@ describe('parseRoute', () => {
   });
   it('falls back to the nearest known screen above an unknown ending', () => {
     expect(parseRoute('#/progress/zzz')).toEqual({ tab: 'progress', path: 'progress' });
+    // Body weight and muscle details are part of the Progress page now; their old addresses open it.
+    for (const gone of ['body', 'muscles']) expect(parseRoute(`#/progress/${gone}`)).toEqual({ tab: 'progress', path: 'progress' });
     expect(parseRoute('#/daily/recipes/1234/edit')).toEqual({ tab: 'daily', path: 'daily/recipes' });
   });
   it('gives null for nothing known, an empty hash, or an anchor that is not ours', () => {
