@@ -1,9 +1,9 @@
 import { test, expect } from './fixtures.js';
 
-// Food search (brief diet-food-lookup). The parsing, scaling and caps are node tests (foods.test.ts, foodSearch.test.ts); this covers the wiring with the
+// Food search (brief diet-food-lookup; the separate Look up nutrition box was removed by recipe-first-diet-log, the same lookup now sits under the past-meals search). The parsing, scaling and caps are node tests (foods.test.ts, foodSearch.test.ts); this covers the wiring with the
 // route stubbed: type, wait for the pause, pick a result, set grams, the form fills in and stays editable, then the failure and empty texts.
 const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
+const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.getByRole('button', { name: 'Add one' }).click(); }; // the One-off food form starts folded
 const hits = [
   { id: 1, name: 'Chicken breast, raw', kcal: 120, p: 22.5, c: 0, f: 2.6 },
   { id: 2, name: 'Granola bar', brand: 'Acme', kcal: 450, p: 8, c: 65, serving: 40 },
@@ -13,8 +13,8 @@ const stub = (page, status, body) => page.route('**/api/foods/search*', route =>
 test('pick a food, set the grams, and the entry form is filled in and can still be edited', async ({ page }) => {
   await stub(page, 200, { ok: true, hits });
   await nutrition(page);
-  await diet(page).getByLabel('Look up nutrition').fill('chicken');
-  const found = diet(page).getByRole('list', { name: 'Lookup results' });
+  await diet(page).getByLabel('Search your past meals and recipes').fill('chicken');
+  const found = diet(page).getByRole('list', { name: 'Food database results' });
   await expect(found.getByRole('button', { name: 'Chicken breast, raw · 120 kcal per 100 g' })).toBeVisible();
   await found.getByRole('button', { name: 'Chicken breast, raw · 120 kcal per 100 g' }).click();
   await expect(diet(page).getByLabel('Grams')).toHaveValue('100');
@@ -39,7 +39,7 @@ test('pick a food, set the grams, and the entry form is filled in and can still 
 test('a branded food starts at its serving, and a bad grams value blocks Use', async ({ page }) => {
   await stub(page, 200, { ok: true, hits });
   await nutrition(page);
-  await diet(page).getByLabel('Look up nutrition').fill('granola');
+  await diet(page).getByLabel('Search your past meals and recipes').fill('granola');
   await diet(page).getByRole('button', { name: 'Granola bar (Acme) · 450 kcal per 100 g' }).click();
   await expect(diet(page).getByLabel('Grams')).toHaveValue('40');
   await expect(diet(page).getByText('180 kcal · 3.2 g protein')).toBeVisible();
@@ -50,7 +50,7 @@ test('a branded food starts at its serving, and a bad grams value blocks Use', a
 
 test('no results, a server that is not set up, and a daily limit each say so and leave typing alone', async ({ page }) => {
   await nutrition(page);
-  const box = diet(page).getByLabel('Look up nutrition');
+  const box = diet(page).getByLabel('Search your past meals and recipes');
   await stub(page, 200, { ok: true, hits: [] });
   await box.fill('zzzz');
   await expect(diet(page).getByText('No foods found. Type the numbers instead.')).toBeVisible();
@@ -70,16 +70,16 @@ test('one letter asks nothing', async ({ page }) => {
   let calls = 0;
   await page.route('**/api/foods/search*', route => { calls++; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, hits }) }); });
   await nutrition(page);
-  await diet(page).getByLabel('Look up nutrition').fill('c');
+  await diet(page).getByLabel('Search your past meals and recipes').fill('c');
   await page.waitForTimeout(600);
   expect(calls).toBe(0);
-  await expect(diet(page).getByRole('list', { name: 'Lookup results' })).toHaveCount(0);
+  await expect(diet(page).getByRole('list', { name: 'Food database results' })).toHaveCount(0);
 });
 
 test('editing a macro after a pick keeps the calories the search gave', async ({ page }) => {
   await stub(page, 200, { ok: true, hits });
   await nutrition(page);
-  await diet(page).getByLabel('Look up nutrition').fill('granola');
+  await diet(page).getByLabel('Search your past meals and recipes').fill('granola');
   await diet(page).getByRole('button', { name: 'Granola bar (Acme) · 450 kcal per 100 g' }).click();
   await diet(page).getByRole('button', { name: 'Use', exact: true }).click();
   await expect(diet(page).getByLabel('Calories', { exact: true })).toHaveValue('180');

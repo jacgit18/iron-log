@@ -26,6 +26,20 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd }: { 
   const toAdd = missing.add.length;
   const maybes = mine ? suggestionPins(status).length : 0;
   const addMissing = () => setMsg(addMissingMessage(useAppStore.getState().addMissingToGrocery(recipe.id, month)));
+  if (recipe.cat === 'ready') { // bought or frozen: no ingredients, steps or scaling, only its numbers and Ate this
+    return (
+      <section className="panel" aria-labelledby="rc-h">
+        <div className="rc-head"><button type="button" className="btn sm ghost" onClick={onBack}>Back to recipes</button></div>
+        <h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Ready-made</span></h2>
+        <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
+        {recipe.note && <p className="note">{recipe.note}</p>}
+        <div className="rc-actions">
+          <button type="button" className="btn" onClick={onEdit}>Edit</button>
+          <ArmedButton className="btn danger" label="Delete" armedLabel="Tap again to delete" aria-label={`Delete the food ${recipe.n}`} onConfirm={() => { useAppStore.getState().removeRecipe(recipe.id); onBack(); }} />
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="panel" aria-labelledby="rc-h">
       <div className="rc-head">

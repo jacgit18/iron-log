@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.js';
 // "Search your past meals and recipes" also asks the USDA food search (brief diet-food-lookup follow-up, 2026-10-31). The parsing and caps are node tests;
 // this covers the wiring with the route stubbed: one box shows your own matches and the database results, and a database pick fills the Quick add form.
 const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
+const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.getByRole('button', { name: 'Add one' }).click(); }; // the One-off food form starts folded
 const hits = [{ id: 1, name: 'Oats, rolled', kcal: 379, p: 13.2, c: 67.7, f: 6.5 }];
 const stub = (page, status, body) => page.route('**/api/foods/search*', route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }));
 

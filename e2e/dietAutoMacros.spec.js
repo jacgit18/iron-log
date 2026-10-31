@@ -3,7 +3,7 @@ import { test, expect } from './fixtures.js';
 // Less typing for a meal (brief diet-auto-macros). The rules (calories from macros, matching, portion scaling) are node tests in foodMacros.test.ts; this covers the wiring:
 // calories fill in as the macros are typed and a typed number wins, a food you logged before comes back from "Find a food" with a portion stepper.
 const diet = page => page.getByRole('region', { name: 'Diet' });
-const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
+const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); await page.getByRole('button', { name: 'Add one' }).click(); }; // the One-off food form starts folded
 
 test('calories follow protein, carbs and fat until you type calories yourself', async ({ page }) => {
   await nutrition(page);
