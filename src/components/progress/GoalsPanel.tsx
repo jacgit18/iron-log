@@ -7,9 +7,9 @@ import { exerciseOptions } from '../../lib/exerciseOptions.js';
 import { goalExercises } from '../../lib/goalRows.js';
 import { liftGoalsOf } from '../../lib/liftGoal.js';
 import { pickerKey, type PickerChoice } from '../../lib/picker.js';
+import { nameCmp } from '../../lib/sort.js';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import ItemPicker from '../ItemPicker.jsx';
-import { nameCmp } from '../../lib/sort.js';
 import LiftGoal, { GoalForm } from './LiftGoal.jsx';
 import './GoalsPanel.css';
 

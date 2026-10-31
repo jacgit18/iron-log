@@ -5,9 +5,9 @@ import { exInfo } from '../../lib/data.js';
 import { weekStartOf, ymd } from '../../shared/dates.js';
 import { currentLayout, DAYS } from '../../lib/logic.js';
 import { freqGoalStatus } from '../../lib/freqGoal.js';
+import { nameCmp } from '../../lib/sort.js';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
-import { nameCmp } from '../../lib/sort.js';
 import './FreqGoals.css';
 
 const TIMES = [1, 2, 3, 4, 5, 6, 7];
