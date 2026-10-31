@@ -28,6 +28,7 @@ import { ROUTE_EVENT } from './components/useRoute.js';
 import { renewPush } from './lib/pushClient.js';
 import { useWaterReminder } from './hooks/useWaterReminder.js';
 import './components/BrandLink.css';
+import './components/HeaderDark.css';
 
 // The Board (the first screen) and the shell are in the main bundle; the other tabs are fetched when first opened. Every chunk is in the
 // service worker's precache, so they open offline too.

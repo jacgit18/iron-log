@@ -1,0 +1,69 @@
+@layer base, components;
+@layer components {
+/* Light mode keeps the page header dark, the same charcoal as dark mode (and the app icon). The header re-declares the dark
+   tokens, so its title, Help, theme button, account badge and (on wide screens) tabs follow without their own rules. The phone tab bar is
+   fixed to the bottom, so it puts the light tokens back. The two light-mode selectors are duplicated on purpose: an explicit
+   data-theme and the system setting, like the token blocks in styles.css. */
+:root[data-theme="light"] header.top {
+  color-scheme: dark;
+  --bg: #161A1C;
+  --surface: #1E2326;
+  --sunk: #272D30;
+  --ink: #F5F6F4;
+  --muted: #B9C0C4;
+  --line: #343B3F;
+  --field-line: #6A757A;
+  --accent: #E3BE55;
+  --accent-ink: #1E2326;
+  --accent-fill: #E3BE55;
+  background: var(--surface);
+  color: var(--ink);
+  margin-inline: calc(-1 * var(--gl)) calc(-1 * var(--gr));
+  padding-inline: var(--gl) var(--gr);
+  margin-block-end: var(--sp-12);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) header.top {
+    color-scheme: dark;
+    --bg: #161A1C;
+    --surface: #1E2326;
+    --sunk: #272D30;
+    --ink: #F5F6F4;
+    --muted: #B9C0C4;
+    --line: #343B3F;
+    --field-line: #6A757A;
+    --accent: #E3BE55;
+    --accent-ink: #1E2326;
+    --accent-fill: #E3BE55;
+    background: var(--surface);
+    color: var(--ink);
+    margin-inline: calc(-1 * var(--gl)) calc(-1 * var(--gr));
+    padding-inline: var(--gl) var(--gr);
+    margin-block-end: var(--sp-12);
+  }
+}
+@media (max-width:700px) {
+  :root[data-theme="light"] header.top .tabs {
+    color-scheme: light;
+    --surface: #FFFFFF;
+    --sunk: #EEEEEA;
+    --ink: #1E2326;
+    --muted: #4A5155;
+    --line: #E0E0DB;
+    --accent: #7A5C00;
+    --accent-ink: #1E2326;
+  }
+}
+@media (prefers-color-scheme: light) and (max-width:700px) {
+  :root:not([data-theme="dark"]) header.top .tabs {
+    color-scheme: light;
+    --surface: #FFFFFF;
+    --sunk: #EEEEEA;
+    --ink: #1E2326;
+    --muted: #4A5155;
+    --line: #E0E0DB;
+    --accent: #7A5C00;
+    --accent-ink: #1E2326;
+  }
+}
+}
