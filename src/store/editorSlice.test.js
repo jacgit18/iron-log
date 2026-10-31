@@ -495,6 +495,15 @@ describe('copying a day', () => {
     st().copyEdDay(4); st().setEdDay(2);
     expect(st().edCopied).toBeNull();
   });
+  it('Undo also removes the phases carried to the copies from the config', () => {
+    const first = day1()[0].id;
+    useAppStore.setState(s => ({ cfg: { ...s.cfg, phDef: { [`${first}:0`]: 'hyp' } } }));
+    st().copyEdDay(4);
+    const copy = st().edCopied.ids[0];
+    expect(st().cfg.phDef[`${copy}:0`]).toBe('hyp');
+    st().undoCopyEdDay();
+    expect(st().cfg.phDef).toEqual({ [`${first}:0`]: 'hyp' });
+  });
   it('does nothing for the same day or a day that does not exist', () => {
     const before = JSON.stringify(st().edProgram());
     st().copyEdDay(1); st().copyEdDay(9);

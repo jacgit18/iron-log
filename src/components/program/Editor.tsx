@@ -144,7 +144,7 @@ function ProgramEditor() {
   // A move that happened (from the ⋯ sheet or the Move to another program sheet) leaves the moved row behind: focus goes to Undo.
   useEffect(() => { if (moved) movedUndoRef.current?.focus(); }, [moved]);
   useEffect(() => { if (focusAfterGo.current) { document.getElementById(focusAfterGo.current)?.focus(); focusAfterGo.current = null; } }, [edDay, k]);
-  useEffect(() => () => { useAppStore.getState().dismissEdMoved(); }, []);
+  useEffect(() => () => { const s = useAppStore.getState(); s.dismissEdMoved(); s.dismissEdCopied(); }, []);
   const addBtn = <button type="button" className="btn primary" onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: null }); }}>+ Add exercise</button>;
 
   return (

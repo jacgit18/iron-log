@@ -187,7 +187,11 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
   undoCopyEdDay() {
     const c = get().edCopied;
     if (!c || c.key !== get().edKey() || c.from !== get().edDay) { set({ edCopied: null }); return; }
-    if (get().editProgram(prog => { prog.days[c.to - 1].slots = prog.days[c.to - 1].slots.filter(sl => !c.ids.includes(sl.id)); })) { set({ edCopied: null }); flag('Copy undone'); }
+    if (get().editProgram(prog => { prog.days[c.to - 1].slots = prog.days[c.to - 1].slots.filter(sl => !c.ids.includes(sl.id)); })) {
+      // The phases carried to the copies go with them, so Undo leaves nothing behind in the synced config.
+      get().mutateCfg(cf => { Object.keys(cf.phDef).forEach(k => { if (c.ids.includes(k.slice(0, k.lastIndexOf(':')))) delete cf.phDef[k]; }); });
+      set({ edCopied: null }); flag('Copy undone');
+    }
   },
   dismissEdCopied() { set({ edCopied: null }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },

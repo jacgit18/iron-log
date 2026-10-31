@@ -60,3 +60,27 @@ test('the Copy row fits a phone at large text, with 44px controls', async ({ pag
   expect(hs.length).toBe(3);
   for (const h of hs) expect(h).toBeGreaterThanOrEqual(44);
 });
+
+test('the Copied notice is gone after leaving the Program tab and coming back', async ({ page }) => {
+  await openPrograms(page);
+  await page.getByLabel('Copy this day to').selectOption('4');
+  await page.getByRole('button', { name: 'Copy', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Copied' })).toBeVisible();
+  await page.click('#tab-daily');
+  await openPrograms(page);
+  await expect(page.getByRole('status').filter({ hasText: 'Copied' })).toHaveCount(0);
+});
+
+// The Day stepper and day buttons are hands off: the Create button must not change where they sit (position with the button hidden = with it shown).
+for (const [w, h] of [[375, 812], [1280, 800]]) {
+  test(`the Create button does not move the Day controls at ${w} wide`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await openPrograms(page);
+    await page.evaluate(() => document.fonts.ready);
+    const pos = () => page.locator('.daystep').boundingBox();
+    const withBtn = await pos();
+    await page.addStyleTag({ content: '.createprog{display:none!important}' });
+    const without = await pos();
+    expect(withBtn).toEqual(without);
+  });
+}
