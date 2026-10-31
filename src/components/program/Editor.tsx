@@ -6,7 +6,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES } from '../../lib/data.js';
 import { progName, DAYS } from '../../lib/logic.js';
-import { exerciseCount } from '../../lib/exerciseCount.js';
+import { dayPickLabel, exerciseCount } from '../../lib/exerciseCount.js';
 import { slotSummary } from '../../lib/programMove.js';
 import { sameProg, libDate } from '../../lib/export.js';
 import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
@@ -179,7 +179,7 @@ function ProgramEditor() {
         <div className="daystep" role="group" aria-label="Day stepper">
           <button type="button" className="btn daystepbtn" aria-label="Previous day" aria-disabled={edDay === 1} onClick={() => { if (edDay > 1) st.setEdDay(edDay - 1); }}><Icon name="chevron-left" /></button>
           <select className="daypick" aria-label="Day to edit" value={edDay} onChange={e => st.setEdDay(Number(e.target.value))}>
-            {DAYS.map(d => { const n = exerciseCount(prog.days[d - 1]?.slots ?? []); return <option key={d} value={d}>{`Day ${d} of ${DAYS.length} · ${n} ${n === 1 ? 'exercise' : 'exercises'}`}</option>; })}
+            {DAYS.map(d => <option key={d} value={d}>{dayPickLabel(d, DAYS.length, exerciseCount(prog.days[d - 1]?.slots ?? []))}</option>)}
           </select>
           <button type="button" className="btn daystepbtn" aria-label="Next day" aria-disabled={edDay === DAYS.length} onClick={() => { if (edDay < DAYS.length) st.setEdDay(edDay + 1); }}><Icon name="chevron-right" /></button>
         </div>
