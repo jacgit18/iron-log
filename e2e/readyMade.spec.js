@@ -38,6 +38,9 @@ test('a ready-made food needs a name and numbers, lists under its chip, and its 
   await page.getByRole('button', { name: 'Back to recipes' }).click();
   await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Ready-made' }).click();
   await expect(page.getByRole('button', { name: /Frozen lasagna/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Can make' }).click(); // nothing is missing from a food with no ingredients, but it is not "can make"
+  await expect(page.getByRole('button', { name: /Frozen lasagna/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Can make' }).click();
   await page.reload();
   await openRecipes(page);
   await expect(page.getByRole('button', { name: /Frozen lasagna/ })).toBeVisible();
