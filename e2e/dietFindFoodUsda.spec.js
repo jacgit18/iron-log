@@ -4,6 +4,8 @@ import { test, expect } from './fixtures.js';
 // this covers the wiring with the route stubbed: one box shows your own matches and the database results, and a database pick fills the Quick add form.
 const diet = page => page.getByRole('region', { name: 'Diet' });
 const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
+// The One-off food form starts folded; a test that types into it opens it first.
+const oneOff = page => page.getByRole('button', { name: 'Add one' }).click();
 const hits = [{ id: 1, name: 'Oats, rolled', kcal: 379, p: 13.2, c: 67.7, f: 6.5 }];
 const stub = (page, status, body) => page.route('**/api/foods/search*', route => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) }));
 
@@ -25,6 +27,7 @@ test('typing in the past-meals search shows database results, and a pick fills t
 test('when the database is down the box still says so and your own matches still work', async ({ page }) => {
   await stub(page, 503, { ok: false, error: 'food search is not available right now', why: 'upstream' });
   await nutrition(page);
+  await oneOff(page);
   await diet(page).getByLabel('Food', { exact: true }).fill('Rice');
   await diet(page).getByLabel('Calories', { exact: true }).fill('200');
   await diet(page).getByLabel('Protein (g)').fill('4');
