@@ -66,11 +66,18 @@
   flex-wrap: wrap;
 }
 /* The Day stepper (previous, a picker of the seven days, next) fills the row; the Day buttons below it jump straight to a day and are for wide screens only. */
+.dayctl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-8);
+  flex: 1 0 100%;
+}
 .daystep {
   display: flex;
   align-items: center;
   gap: var(--sp-8);
-  flex: 1 0 100%;
+  width: 100%;
   max-width: 760px;
   /* as wide as the program panel under it */
 }
