@@ -43,17 +43,22 @@ test('Escape during a drag puts the exercise back', async ({ page }) => {
   expect(await names(page)).toEqual(before);
 });
 
-test('Remove marks the row first, a second tap removes it, and Undo puts it back in its place', async ({ page }) => {
+const removeFromMenu = async (page, row, name) => {
+  await row.getByRole('button', { name: `More actions for ${name}` }).click();
+  const rm = page.getByRole('dialog').getByRole('button', { name: `Remove ${name}` });
+  await rm.click();
+  return rm;
+};
+
+test('Remove in the ⋯ menu needs a second tap, and Undo puts it back in its place', async ({ page }) => {
   await page.click('#tab-program');
   const add = page.locator('.edpanel:not(.lib) .edadd').getByRole('button', { name: '+ Add exercise' });
   const addBox = await add.boundingBox(); const firstBox = await rows(page).first().boundingBox();
   expect(addBox.y).toBeLessThan(firstBox.y); // above the day's first exercise
   const before = await names(page);
-  const rm = rows(page).nth(2).getByRole('button', { name: `Remove ${before[2]}` });
-  await rm.click();
-  await expect(rows(page).nth(2)).toHaveClass(/removing/);
-  await expect(rows(page).nth(2)).toContainText('Will be removed');
+  const rm = await removeFromMenu(page, rows(page).nth(2), before[2]);
   await expect(rm).toHaveText('Tap again to remove');
+  expect(await names(page)).toEqual(before); // one tap changes nothing
   expect((await scan(page)).violations).toEqual([]);
   await rm.click();
   await expect.poll(() => names(page)).toEqual([...before.slice(0, 2), ...before.slice(3)]);
@@ -65,23 +70,23 @@ test('Remove marks the row first, a second tap removes it, and Undo puts it back
   await expect(note).toHaveCount(0);
 });
 
-test('moving away from an armed Remove leaves the exercise alone', async ({ page }) => {
+test('closing the ⋯ menu with an armed Remove leaves the exercise alone and focus on the ⋯ button', async ({ page }) => {
   await page.click('#tab-program');
   await expect(rows(page).first()).toBeVisible(); // the tab is its own chunk, fetched on first open
   const before = await names(page);
-  await rows(page).first().getByRole('button', { name: `Remove ${before[0]}` }).click();
-  await expect(page.locator('.edrow.removing')).toHaveCount(1);
-  await page.locator('#ed-title').click();
-  await expect(page.locator('.edrow.removing')).toHaveCount(0);
+  await removeFromMenu(page, rows(page).first(), before[0]);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(await names(page)).toEqual(before);
+  await expect(rows(page).first().getByRole('button', { name: /^More actions for / })).toBeFocused();
 });
 
 test('the Removed notice belongs to that visit: leave the Program tab and it is gone, with focus left alone', async ({ page }) => {
   await page.click('#tab-program');
   await expect(rows(page).first()).toBeVisible(); // the tab is its own chunk, fetched on first open
   const before = await names(page);
-  const rm = rows(page).first().getByRole('button', { name: `Remove ${before[0]}` });
-  await rm.click(); await rm.click();
+  const rm = await removeFromMenu(page, rows(page).first(), before[0]);
+  await rm.click();
   await expect(page.locator('.removednote')).toBeVisible();
   await page.click('#tab-board');
   await page.click('#tab-program');

@@ -56,6 +56,10 @@
   min-width: 0;
   flex: 1 1 220px;
 }
+.edlist .edmain {
+  flex-basis: 120px;
+  /* a program row keeps Edit and ⋯ beside the name on a phone */
+}
 .edbtns {
   display: flex;
   gap: var(--sp-4);
@@ -99,9 +103,6 @@
   .edtop .seg.daybtns {
     display: none;
   }
-}
-.edmove {
-  max-width: 100%;
 }
 .draghandle {
   flex: 0 0 auto;

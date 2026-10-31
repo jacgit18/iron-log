@@ -125,45 +125,19 @@ function ProgramEditor() {
   const { drag, rowRef, handleProps } = useDragReorder(day.slots.length, st.reorderEdSlot);
   const custom = !lib && !st.isOriginal(prog as Program, k as ProgKey);
   const edName = lib ? item.name : progName(cfg, k);
-  // The row whose Remove is armed (pressed once): it is shown marked for removal until the second press or a move away.
-  const [arming, setArming] = useState<number | null>(null);
   const removed = useAppStore(s => s.edRemoved);
   const showRemoved = removed && removed.key === k && removed.day === edDay ? removed : null;
-  // The pressed Remove button is gone with its row, so put focus on Undo: only right after a Remove, not when the tab opens again.
+  // The row (and its Remove in the ⋯ sheet) is gone, so put focus on Undo. The notice is cleared when the editor unmounts, so it only shows after a Remove made in this visit.
   const undoRef = useRef<HTMLButtonElement>(null);
-  const justRemoved = useRef(false);
-  useEffect(() => { if (removed && justRemoved.current) { justRemoved.current = false; undoRef.current?.focus(); } }, [removed]);
+  useEffect(() => { if (removed) undoRef.current?.focus(); }, [removed]);
   // The Undo belongs to this visit to the editor: leaving the Program tab drops it.
   useEffect(() => () => { useAppStore.getState().dismissEdRemoved(); }, []);
-  // Same for the Moved notice. Its Go to button opens the day the card went to and puts focus on that card's Move to select.
+  // Same for the Moved notice. Its Go to button opens the day the card went to and puts focus on that card's ⋯ button.
   const moved = useAppStore(s => s.edMoved);
   const showMoved = moved && moved.key === k && moved.from === edDay ? moved : null;
   const movedUndoRef = useRef<HTMLButtonElement>(null);
   const focusAfterGo = useRef<string | null>(null);
-  // Arrow keys on a closed select change its value at once (on macOS they open the menu). A change that comes from them waits here for Enter (Escape or leaving drops it), so a keyboard user can look through the days before a card moves.
-  const [pendingDay, setPendingDay] = useState<{ i: number; to: number } | null>(null);
-  const arrowKey = useRef(false);
-  const applyMove = (i: number, to: number) => {
-    setPendingDay(null);
-    if (to !== edDay) st.moveEdSlotToDay(i, to);
-  };
-  // The Move to day select of a card.
-  const daySelect = (sl: { id: string }, i: number, label: string) => {
-    const pend = pendingDay?.i === i;
-    return (
-      <select className="edmove" id={`mv-${sl.id}`} aria-label={`Move to day (${label})`} value={pend ? pendingDay.to : edDay}
-        onChange={e => { const to = Number(e.target.value); if (arrowKey.current) setPendingDay({ i, to }); else applyMove(i, to); }}
-        onKeyDown={e => {
-          arrowKey.current = e.key.startsWith('Arrow') && !e.altKey;
-          if (arrowKey.current) setTimeout(() => { arrowKey.current = false; }, 0); // a closed select changes inside this keydown; where the arrow opens the menu instead (macOS) the later pick must move the card
-          if (e.key === 'Enter' && pend) { e.preventDefault(); applyMove(i, pendingDay.to); } else if (e.key === 'Escape') setPendingDay(null);
-        }}
-        onBlur={() => setPendingDay(null)}>
-        {DAYS.map(d => <option key={d} value={d}>{d === edDay ? `Move to… (Day ${d})` : `Move to Day ${d}`}</option>)}
-      </select>
-    );
-  };
-  // A move that happened (from the select or the Move… sheet) leaves the moved row behind: focus goes to Undo.
+  // A move that happened (from the ⋯ sheet or the Move to another program sheet) leaves the moved row behind: focus goes to Undo.
   useEffect(() => { if (moved) movedUndoRef.current?.focus(); }, [moved]);
   useEffect(() => { if (focusAfterGo.current) { document.getElementById(focusAfterGo.current)?.focus(); focusAfterGo.current = null; } }, [edDay, k]);
   useEffect(() => () => { useAppStore.getState().dismissEdMoved(); }, []);
@@ -215,7 +189,7 @@ function ProgramEditor() {
             <div><b>Moved</b> {slotSummary(cfg, showMoved.slot)} to {movedWhere(showMoved, prog)}.</div>
             <div className="actions">
               <button type="button" className="btn sm" ref={movedUndoRef} onClick={st.undoMoveEdSlot}>Undo</button>
-              <button type="button" className="btn sm" onClick={() => { focusAfterGo.current = showMoved.slot.id ? `mv-${showMoved.slot.id}` : null; if (showMoved.toKey) st.setEdProg(showMoved.toKey); st.setEdDay(showMoved.to); }}>Go to {movedWhere(showMoved, prog)}</button>
+              <button type="button" className="btn sm" onClick={() => { focusAfterGo.current = showMoved.slot.id ? `more-${showMoved.slot.id}` : null; if (showMoved.toKey) st.setEdProg(showMoved.toKey); st.setEdDay(showMoved.to); }}>Go to {movedWhere(showMoved, prog)}</button>
               <button type="button" className="btn sm ghost" onClick={st.dismissEdMoved}>Dismiss</button>
             </div>
           </div>
@@ -231,22 +205,18 @@ function ProgramEditor() {
                 {newSec && <div className="sect">{sl.sec || ''}</div>}
                 <div
                   ref={rowRef(i)}
-                  className={`edrow${drag?.from === i ? ' dragging' : drag ? ' shifting' : ''}${arming === i ? ' removing' : ''}`}
+                  className={`edrow${drag?.from === i ? ' dragging' : drag ? ' shifting' : ''}`}
                   style={drag ? { transform: `translateY(${drag.from === i ? drag.dy : shiftOf(drag, i)}px)` } : undefined}
                 >
                   <span className="draghandle" aria-hidden="true" title="Drag to reorder" {...handleProps(i)}>⠿</span>
                   <div className="edmain">
-                    {arming === i ? <span className="tag rmtag">Will be removed · tap Remove again</span> : tag && <span className="tag">{tag}</span>}
+                    {tag && <span className="tag">{tag}</span>}
                     <b>{slotSummary(cfg, sl)}</b>
                     <span className="note">{sl.items.map(it => [it.ph ? PHASES[it.ph].label : 'No phase', it.w != null ? it.w + ' lb' : (it.bw ? 'bodyweight' : ''), it.rx || ''].filter(Boolean).join(' · ')).join('  |  ')}</span>
                   </div>
                   <div className="edbtns">
-                    <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}><Icon name="arrow-up" /></button>
-                    <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}><Icon name="arrow-down" /></button>
-                    {daySelect(sl, i, slotSummary(cfg, sl))}
-                    <button type="button" className="btn sm" id={`mvp-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} to another program or day`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'moveprog', idx: i }); }}>Move…</button>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
-                    <ArmedButton className={`btn sm ${arming === i ? 'danger' : 'ghost'}`} id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? i : null)} onConfirm={() => { setArming(null); justRemoved.current = true; st.removeEdSlot(i); }} />
+                    <button type="button" className="btn sm" id={`more-${sl.id}`} aria-label={`More actions for ${slotSummary(cfg, sl)}`} aria-haspopup="dialog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'rowmenu', idx: i }); }}>⋯</button>
                   </div>
                 </div>
               </Fragment>

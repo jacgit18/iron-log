@@ -4,13 +4,15 @@ import { test, expect } from './fixtures.js';
 const openDay = async (page, n) => { await page.click('#tab-program'); await page.getByRole('group', { name: 'Jump to day' }).getByRole('button', { name: `Day ${n}`, exact: true }).click(); };
 const names = page => page.locator('.edpanel:not(.lib) .edrow .edmain b').allTextContents();
 const firstRow = page => page.locator('.edpanel:not(.lib) .edrow').first();
-const moveBtn = page => firstRow(page).getByRole('button', { name: /^Move .* to another program or day$/ });
 const sheet = page => page.getByRole('dialog');
+const moreBtn = page => firstRow(page).getByRole('button', { name: /^More actions for / });
+// ⋯ on the first row, then Move to another program… in its menu: that opens the Move sheet.
+const openMove = async page => { await moreBtn(page).click(); await sheet(page).getByRole('button', { name: 'Move to another program…' }).click(); };
 
-test('Move… opens a sheet that previews where the card lands, then moves it to Program B', async ({ page }) => {
+test('Move to another program… opens a sheet that previews where the card lands, then moves it to Program B', async ({ page }) => {
   await openDay(page, 1);
   const before = await names(page);
-  await moveBtn(page).click();
+  await openMove(page);
   await expect(sheet(page).getByRole('heading', { name: `Move ${before[0]}` })).toBeVisible();
   await expect(sheet(page).getByRole('status')).toContainText('Program A · Day 2'); // opens on this program and the next day
   await sheet(page).getByRole('button', { name: 'Program B', exact: true }).click();
@@ -31,7 +33,7 @@ test('Move… opens a sheet that previews where the card lands, then moves it to
 test('Undo puts the card back in Program A, and Program B loses it', async ({ page }) => {
   await openDay(page, 1);
   const before = await names(page);
-  await moveBtn(page).click();
+  await openMove(page);
   await sheet(page).getByRole('button', { name: 'Program B', exact: true }).click();
   await sheet(page).getByRole('button', { name: 'Move', exact: true }).click();
   await page.getByRole('status').filter({ hasText: 'Moved' }).getByRole('button', { name: 'Undo' }).click();
@@ -41,22 +43,22 @@ test('Undo puts the card back in Program A, and Program B loses it', async ({ pa
   expect(await names(page)).not.toContain(before[0]);
 });
 
-test('Cancel and Escape change nothing and return focus to Move…', async ({ page }) => {
+test('Cancel and Escape change nothing and return focus to ⋯', async ({ page }) => {
   await openDay(page, 1);
   const before = await names(page);
-  await moveBtn(page).click();
+  await openMove(page);
   await sheet(page).getByRole('button', { name: 'Cancel' }).click();
-  await expect(moveBtn(page)).toBeFocused();
-  await moveBtn(page).click();
+  await expect(moreBtn(page)).toBeFocused();
+  await openMove(page);
   await page.keyboard.press('Escape');
   await expect(sheet(page)).toHaveCount(0);
-  await expect(moveBtn(page)).toBeFocused();
+  await expect(moreBtn(page)).toBeFocused();
   expect(await names(page)).toEqual(before);
 });
 
 test('Move is off while the preview says the card is already there', async ({ page }) => {
   await openDay(page, 1);
-  await moveBtn(page).click();
+  await openMove(page);
   await sheet(page).getByRole('button', { name: 'Day 1', exact: true }).click();
   await expect(sheet(page).getByRole('status')).toContainText('already there');
   await expect(sheet(page).getByRole('button', { name: 'Move', exact: true })).toBeDisabled();
@@ -67,7 +69,7 @@ test('Move is off while the preview says the card is already there', async ({ pa
 test('the sheet has 44px targets and no accessibility violations at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.click('#tab-program'); // Day 1 is open; the Day buttons are not shown at phone width
-  await moveBtn(page).click();
+  await openMove(page);
   await expect(sheet(page)).toBeVisible(); // the sheet is a lazy chunk: wait for it before reading its buttons or running axe
   for (const b of await sheet(page).getByRole('button').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
   const { violations } = await new AxeBuilder({ page }).include('[role=dialog]').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
