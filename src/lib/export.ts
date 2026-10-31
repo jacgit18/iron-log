@@ -137,7 +137,7 @@ function addDataSheets(X: XLSX, wb: ReturnType<XLSX['utils']['book_new']>, S: Sn
   Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const r = normWeek(weeks[k]).ran; if (r) { prow.push(...programRows(cfg, `ran:${k}`, r.program)); info.push([`ran:${k}`, r.program.warm ?? '']); } });
   X.utils.book_append_sheet(wb, sheet(X, [PROG_HEAD, ...prow], [10, 5, 12, 26, 10, 7, 12, 11, 10, 9, 24, 14, 30, 11, 11, 10, 16, 24]), 'Programs');
   X.utils.book_append_sheet(wb, sheet(X, info, [12, 40]), 'Program info');
-  X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Name', 'From', 'Saved at', 'Auto-saved', 'Created'], ...library.map(it => [it.id, it.name, it.from ?? '', it.at ?? '', it.auto ? 'Yes' : '', it.created ? 'Yes' : ''])], [14, 36, 7, 26, 11, 9]), 'Saved versions');
+  X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Name', 'From', 'Saved at', 'Auto-saved', 'Created', 'Archived'], ...library.map(it => [it.id, it.name, it.from ?? '', it.at ?? '', it.auto ? 'Yes' : '', it.created ? 'Yes' : '', it.archived ? 'Yes' : ''])], [14, 36, 7, 26, 11, 9, 9]), 'Saved versions');
   X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Exercise id', 'Exercise', 'Phase', 'Note'], ...(experiments || []).map(e => [e.id, e.ex, exInfo(cfg, e.ex).n, e.ph ?? '', e.note ?? ''])], [14, 16, 30, 11, 40]), 'Experiments');
   X.utils.book_append_sheet(wb, sheet(X, [CHECK_HEAD, ...checkRows(weeks)], [12, 9, 24, 12]), 'Check-offs');
   X.utils.book_append_sheet(wb, sheet(X, [['Setting', 'Value (JSON)'], ...Object.keys(cfg).sort().map(k => [k, JSON.stringify((cfg as any)[k])])], [18, 60]), 'Config');
