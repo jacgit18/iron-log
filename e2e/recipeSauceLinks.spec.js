@@ -80,3 +80,40 @@ test('with no sauces the picker says so; on a phone it fits the screen and has n
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await noViolations(page);
 });
+
+const hash = page => page.evaluate(() => location.hash);
+
+test('opening a linked sauce adds a Back step: Back returns to the recipe, then to the list', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Aioli', 'Sauces', 'egg');
+  await page.getByRole('button', { name: 'New recipe' }).click();
+  await page.getByLabel('Name', { exact: true }).fill('Fries');
+  await page.getByLabel('Ingredient 1', { exact: true }).fill('aioli');
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+  await expect.poll(() => hash(page)).toBe('#/daily/recipes/mine');
+  await page.getByRole('button', { name: 'Open Aioli, sauce' }).click();
+  await expect.poll(() => hash(page)).toBe('#/daily/recipes/mine/sauce');
+  await expect(page.getByRole('heading', { name: 'Aioli' })).toBeVisible();
+  await page.goBack(); // the browser's Back
+  await expect(page.getByRole('heading', { name: 'Fries' })).toBeVisible();
+  await page.getByRole('button', { name: 'Open Aioli, sauce' }).click();
+  await expect(page.getByRole('heading', { name: 'Aioli' })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to recipes' }).click(); // the page's own Back goes up one screen too
+  await expect(page.getByRole('heading', { name: 'Fries' })).toBeVisible();
+  await page.getByRole('button', { name: 'Back to recipes' }).click();
+  await expect(page.getByRole('button', { name: 'New recipe' })).toBeVisible();
+});
+
+test('a full ingredient list stops the picker with a note instead of adding a row that would be cut', async ({ page }) => {
+  await openRecipes(page);
+  await make(page, 'Aioli', 'Sauces', 'egg');
+  await page.getByRole('button', { name: 'New recipe' }).click();
+  await page.getByRole('button', { name: 'Type a list' }).click();
+  await page.getByPlaceholder(/1 cup milk/).fill(Array.from({ length: 40 }, (_, i) => `item ${i + 1}`).join('\n'));
+  await page.getByRole('button', { name: 'Use these ingredients' }).click();
+  await expect(page.getByLabel('Ingredient 40', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '+ Sauce or seasoning' }).click();
+  await expect(page.getByText('A recipe holds at most 40 ingredients.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Aioli/ })).toBeDisabled();
+  await expect(page.getByLabel('Ingredient 41', { exact: true })).toHaveCount(0);
+});
