@@ -17,7 +17,7 @@ export type Row = RecipeIngredient & ScaleRow;
 export default function IngredientRows({ rows, options, sauces, onActive, onRename, onType, onSet, onRemove, onAdd, onAddSauce }: {
   rows: Row[]; options: Suggestion[]; sauces: Recipe[]; onActive: (i: number, field: 'n' | 'sub') => void; onRename: (i: number, name: string) => void; onType: (i: number, amt: string) => void;
   onSet: (i: number, patch: Partial<RecipeIngredient>) => void; onRemove: (i: number) => void; onAdd: () => void;
-  onAddSauce: (sauce: Recipe) => number; // adds a linked row; the index it landed on
+  onAddSauce: (sauce: Recipe) => number; // adds a linked row; the index it landed on, or -1 when the list is full
 }) {
   const [open, setOpen] = useState<number | null>(null); // the row whose amount picker is open
   const [alt, setAlt] = useState<ReadonlySet<number>>(new Set()); // rows whose Alternative was opened on a phone
@@ -52,9 +52,9 @@ export default function IngredientRows({ rows, options, sauces, onActive, onRena
       ))}
       <div className="rc-addbar">
         <button type="button" className="btn sm" disabled={rows.length >= MAX_INGREDIENTS} onClick={() => { onAdd(); focus(`rc-amt-${rows.length}`); }}>Add ingredient</button>
-        <button type="button" id="rc-sauce-open" className="btn sm" disabled={rows.length >= MAX_INGREDIENTS && !browse} aria-expanded={browse} onClick={() => setBrowse(!browse)}>+ Sauce or seasoning</button>
+        <button type="button" id="rc-sauce-open" className="btn sm" aria-expanded={browse} onClick={() => setBrowse(!browse)}>+ Sauce or seasoning</button>
       </div>
-      {browse && <SauceSeasoningPicker sauces={sauces} onPick={s => { const at = onAddSauce(s); setBrowse(false); focus(`rc-amt-${at}`); }} onClose={() => { setBrowse(false); focus('rc-sauce-open'); }} />}
+      {browse && <SauceSeasoningPicker sauces={sauces} full={rows.length >= MAX_INGREDIENTS && !!rows[rows.length - 1]?.n.trim()} onPick={s => { const at = onAddSauce(s); if (at < 0) return; setBrowse(false); focus(`rc-amt-${at}`); }} onClose={() => { setBrowse(false); focus('rc-sauce-open'); }} />}
     </>
   );
 }

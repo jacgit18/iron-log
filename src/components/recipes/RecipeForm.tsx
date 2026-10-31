@@ -119,6 +119,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const rename = (i: number, name: string) => setRow(i, { n: name, home: pinFor(name, ing[i]?.sub, items), rid: sauceFor(name, sauces)?.id });
   // The picker's choice: a linked row, filling the empty row the form starts with instead of leaving it above. Returns the row's index.
   const addSauce = (s: Recipe): number => {
+    if (ing.length >= MAX_INGREDIENTS && ing[ing.length - 1]!.n.trim()) return -1; // full: the picker says so
     const last = ing[ing.length - 1], fill = !!last && !last.n.trim() && !last.amt.trim() && !last.sub, home = pinFor(s.n, undefined, items);
     const row: Row = { n: s.n, amt: '', rid: s.id, ...(home ? { home } : {}) };
     setIng(fill ? [...ing.slice(0, -1), row] : [...ing, row]); setErr('');
