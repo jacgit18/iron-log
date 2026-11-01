@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import './QaPersonaList.css';
+import QaScenarioTags from './QaScenarioTags.js';
 import { ALL_GROUPS, filterPersonas, groupChips, groupPersonas, missingIds, parseRecent, planBadge, pushRecent, RECENT_KEY, recentRows, resetAria, rowState, seededWord, switchLabel, youAre, type QaPersonaRow } from '../lib/qaPersonas.js';
 import { LS } from '../lib/storage.js';
 import { flag } from '../store/useAppStore.js';
@@ -9,7 +10,7 @@ import { loadPersonas, resetPersona, switchPersona } from '../sync/qaPersonas.js
 // "Seed missing accounts". Used by the picker sheet and the Settings panel, so they cannot differ. The pure rules are in src/lib/qaPersonas.ts.
 const UNREACHABLE = 'Could not reach the server. Nothing changed.';
 
-export default function QaPersonaList({ idPrefix }: { idPrefix: string }) {
+export default function QaPersonaList({ idPrefix, highlight = null }: { idPrefix: string; highlight?: string | null }) {
   const [rows, setRows] = useState<QaPersonaRow[] | null>(null);
   const [current, setCurrent] = useState<string | null>(null);
   const [canReset, setCanReset] = useState(false);
@@ -62,11 +63,13 @@ export default function QaPersonaList({ idPrefix }: { idPrefix: string }) {
     setBusy(null);
   };
 
+  // The account a link asked for scrolls into view once the list is drawn.
+  const marked = useCallback((el: HTMLLIElement | null) => { el?.scrollIntoView({ block: 'nearest' }); }, []);
   const row = (p: QaPersonaRow, key: string) => {
     const st = rowState(p, current, canReset);
     const working = busy === p.id;
     return (
-      <li key={key} className={`qarow${st.current ? ' cur' : ''}`}>
+      <li key={key} className={`qarow${st.current ? ' cur' : ''}${highlight === p.id ? ' hl' : ''}`} ref={highlight === p.id && key === p.id ? marked : undefined}>
         <div className="qatext">
           <div className="qaname">
             <span className={`qadot${p.seeded ? ' on' : ''}`} aria-hidden="true" />
@@ -78,6 +81,7 @@ export default function QaPersonaList({ idPrefix }: { idPrefix: string }) {
           <p className="qadesc">{p.scenario}</p>
           <p className="qatry">Try: {p.tryThis}</p>
           {st.hint && <p className="qahint">{st.hint}</p>}
+          <QaScenarioTags row={p} idPrefix={`${idPrefix}-${key}`} />
         </div>
         <div className="qaacts">
           <button type="button" className="btn sm" disabled={busy !== null || !st.canSwitch} aria-label={switchLabel(p.name)} onClick={() => void go(p)}>Switch</button>
