@@ -100,6 +100,9 @@ test('rename a tag (and merge into one that exists), then delete one after a con
   await page.getByRole('button', { name: 'Manage filters' }).click();
   const sheet = page.getByRole('dialog', { name: 'Manage filters' });
   await sheet.getByRole('button', { name: 'Rename dinner' }).click();
+  await sheet.getByLabel('New name for dinner').fill('  ');
+  await sheet.getByRole('button', { name: 'Save name' }).click();
+  await expect(sheet.getByRole('alert')).toHaveText('Type a name for the tag.'); // an empty name is refused and shown
   await sheet.getByLabel('New name for dinner').fill('weeknight');
   await sheet.getByRole('button', { name: 'Save name' }).click(); // merges into weeknight
   await expect(sheet.getByText('weeknight · 3 recipes')).toBeVisible();
