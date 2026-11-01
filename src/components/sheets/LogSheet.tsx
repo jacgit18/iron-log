@@ -7,14 +7,14 @@ import { entryId } from '../../lib/export.js';
 import { PHASES, PH_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
 import { ymd, parseDate, fmtShort } from '../../shared/dates.js';
 import {
-  phaseOf, isItemDone, isTimed, targetOf, rxOf, lastSession, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
+  phaseOf, isItemDone, isItemSkipped, isSkipped, isTimed, targetOf, rxOf, lastSession, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
 } from '../../lib/logic.js';
 import Icon from '../Icon.jsx';
 import EditEntry from './EditEntry.jsx';
 import EquipmentField from '../EquipmentField.jsx';
 import Sheet from '../Sheet.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
-import { loggedEntryFor } from '../../lib/loggedEntry.js';
+import { sheetEntryFor } from '../../lib/loggedEntry.js';
 import { setError } from '../../shared/validate.js';
 import { selectOnFocus, advanceOnEnter, cellHint } from '../../lib/setCells.js';
 import './SetRows.css';
@@ -171,8 +171,8 @@ function RecentTable({ entries }: { entries: LogEntry[] }) {
   );
 }
 
-// A checked-off card whose session is logged: the numbers can be corrected here, the way they can from Progress.
-function LoggedView({ slotId, idx, entry }: { slotId: string; idx: number; entry: LogEntry }) {
+// A checked-off or skipped card whose session is logged: the numbers can be corrected here, the way they can from Progress.
+function LoggedView({ slotId, idx, entry, skipped }: { slotId: string; idx: number; entry: LogEntry; skipped: boolean }) {
   const cfg = useAppStore(s => s.cfg);
   const logs = useAppStore(s => s.logs);
   const st = useAppStore.getState();
@@ -184,20 +184,24 @@ function LoggedView({ slotId, idx, entry }: { slotId: string; idx: number; entry
         <h2 className="cond">{ex.n}</h2>
         <span className="loggedchip"><Icon name="check" />Logged</span>
       </div>
-      <p className="loggedsum">{fmtShort(parseDate(entry.d))} · {entry.ph ? PHASES[entry.ph].label : 'No phase'} · {describe(entry)}</p>
+      <p className="loggedsum">{fmtShort(parseDate(entry.d))} · {entry.ph ? PHASES[entry.ph].label : 'No phase'} · {describe(entry)}{skipped ? ' · Skipped this week' : ''}</p>
       <EditEntry key={entryId(entry)} exId={it.ex} entry={entry} onDone={st.closeModal} cancelLabel="Close"
-        footer={<button type="button" className="btn sm ghost mr-auto" onClick={() => { st.checkItem(slotId, idx, false); st.closeModal(); }}>Uncheck and remove</button>} />
+        footer={skipped
+          ? <button type="button" className="btn sm ghost mr-auto" onClick={() => { if (isItemSkipped(s, idx, st.week)) st.skipItem(slotId, idx); else st.skipCard(slotId); st.checkItem(slotId, idx, true); st.closeModal(); }}>Undo skip</button>
+          : <button type="button" className="btn sm ghost mr-auto" onClick={() => { st.checkItem(slotId, idx, false); st.closeModal(); }}>Uncheck and remove</button>} />
       <RecentTable entries={recentOf(logs[it.ex])} />
     </Sheet>
   );
 }
 
-// The Log button: a blank form for a card that is not logged yet, the logged session to edit once it is.
+// The Log button: a blank form for a card that is not logged yet, the logged session to edit once it is (also when the card was skipped after).
 export default function LogSheet({ slotId, idx }: { slotId: string; idx: number }) {
   const week = useAppStore(s => s.week);
   const wk = useAppStore(s => s.weekKey());
   const logs = useAppStore(s => s.logs);
   const s = useAppStore.getState().slotById(slotId)!;
-  const entry = isItemDone(s, idx, week) ? loggedEntryFor(logs[s.items[idx].ex], slotId, wk) : null;
-  return entry ? <LoggedView slotId={slotId} idx={idx} entry={entry} /> : <NewLogForm slotId={slotId} idx={idx} />;
+  // A skipped exercise is not done, but a session logged for it this week is still there to correct (planned check-off entries go with the skip).
+  const skipped = isSkipped(s, week) || isItemSkipped(s, idx, week);
+  const entry = sheetEntryFor(logs[s.items[idx].ex], slotId, wk, isItemDone(s, idx, week), skipped);
+  return entry ? <LoggedView slotId={slotId} idx={idx} entry={entry} skipped={skipped} /> : <NewLogForm slotId={slotId} idx={idx} />;
 }

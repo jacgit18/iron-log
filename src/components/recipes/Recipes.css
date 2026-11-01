@@ -83,17 +83,77 @@
 }
 .rc-row {
   display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--sp-6);
   width: 100%;
   min-height: 44px;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-8);
-  padding: var(--sp-10) 0;
+  padding: var(--sp-12);
   border: 0;
   background: transparent;
   color: inherit;
   text-align: left;
   font: inherit;
+}
+.rc-row .rc-meta {
+  display: block;
+}
+.rc-row .rc-have {
+  white-space: nowrap;
+}
+.rc-row .rc-badge {
+  margin-top: auto;
+}
+.rc-main {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rc-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+/* (.rc-list.rc-cards: the plain .rc-list further down is a column of the ingredient list, so the grid needs the extra class.) Recipes and Library as a grid of cards: 1 column on a phone, 2 from 600px, 3 from 1100px, 4 from 1600px (viewport widths). */
+.rc-list.rc-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-12);
+}
+.rc-list.rc-cards li {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+@media (min-width: 600px) {
+  .rc-list.rc-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1100px) {
+  .rc-list.rc-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1600px) {
+  .rc-list.rc-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* Category, Tags and Nutrition chips and Sort share one row that wraps only when it must; Sort sits at the right end. */
+.rc-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-16);
+  margin: var(--sp-8) 0;
+}
+.rc-filterbar .rc-chips,
+.rc-filterbar .rc-sort {
+  margin: 0;
+}
+.rc-filterbar .rc-sort {
+  margin-inline-start: auto;
 }
 .rc-row b {
   font-weight: 600;
