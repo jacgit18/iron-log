@@ -12,6 +12,7 @@ import { pantryStatus } from '../../lib/recipePantry.js';
 import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { pageOf } from '../../lib/route.js';
+import { takeRecipeStart } from '../../lib/shareTarget.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import SortControl from '../SortControl.jsx';
 import { useSortChoice } from '../useSortChoice.js';
@@ -23,7 +24,7 @@ import type { CatalogItem, Recipe, RecipeCategory } from '../../types.ts';
 
 // Recipes (ADR 084): yours (Mine, synced with the account) and the library (Wikibooks Cookbook, searched on the server). Each recipe's
 // ingredients are checked against Groceries, At home. Its logic is in lib/recipeList.ts, lib/recipePantry.ts and the store's recipesSlice.
-type View = { kind: 'list' } | { kind: 'mine'; id: string; from?: string } | { kind: 'library'; item: CatalogItem } | { kind: 'form'; id?: string; ready?: boolean };
+type View = { kind: 'list' } | { kind: 'mine'; id: string; from?: string } | { kind: 'library'; item: CatalogItem } | { kind: 'form'; id?: string; ready?: boolean; start?: { title: string; url: string } | null };
 type Library = { status: 'loading' } | { status: 'ready'; items: CatalogItem[]; more: boolean } | { status: 'failed'; reason: string };
 
 export default function Recipes() {
@@ -40,6 +41,7 @@ export default function Recipes() {
     if (v.kind === 'list') goUp('daily/recipes'); else navigate(`daily/recipes/${v.kind}`, page ? 'replace' : 'push');
   };
   useEffect(() => {
+    if (page === 'form' && view.kind === 'list') { const start = takeRecipeStart(); if (start) { setViewNow({ kind: 'form', start }); return; } } // New recipe with a shared link (the share sheet)
     if (page && view.kind === 'list') navigate('daily/recipes', 'replace'); // an address for a page with nothing to show
     if (!page && view.kind !== 'list') setViewNow({ kind: 'list' }); // Back to the list
     if (view.kind === 'mine' && view.from && page === 'mine') setViewNow({ kind: 'mine', id: view.from }); // Back from a linked sauce to the recipe it was opened from
@@ -92,7 +94,7 @@ export default function Recipes() {
   const mineRecipe = view.kind === 'mine' ? recipes.find(r => r.id === view.id) : undefined;
   if (view.kind === 'form') {
     const editing = recipes.find(r => r.id === view.id), done = (id: string | null) => { if (id) setView({ kind: 'mine', id }); else back(); };
-    return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} /> : <RecipeForm recipe={editing} onDone={done} />}</section>;
+    return <section className="panel">{view.ready || editing?.cat === 'ready' ? <ReadyMadeForm recipe={editing} onDone={done} /> : <RecipeForm recipe={editing} start={view.start} onDone={done} />}</section>;
   }
   if (view.kind === 'mine' && mineRecipe) return <RecipeDetail key={mineRecipe.id} recipe={mineRecipe} mine onBack={view.from && recipes.some(r => r.id === view.from) ? backFromSauce : back} onEdit={() => setView({ kind: 'form', id: mineRecipe.id })} onAdd={back} onOpen={id => openLinked(id, mineRecipe.id)} />;
   if (view.kind === 'library') {
