@@ -130,3 +130,39 @@ export const scenarioToggleLabel = (r: Pick<QaPersonaRow, 'name' | 'scenarios'>,
 
 /** Copy for a row with nothing to run. */
 export const NO_SCENARIOS = 'No scenarios yet';
+
+/* ---------- The /?qa=<account id> link (brief: qa-scenarios) ----------
+   A link in the scenarios document that opens the picker with one account marked. It never switches: the tester still taps Switch. The parameter is
+   read once at start, held in memory until /api/me says this person may use the picker, and taken out of the address at once whatever it holds. */
+
+export const QA_LINK_PARAM = 'qa';
+const QA_LINK_ID = /^[a-z0-9-]{1,40}$/;
+
+/** The account id a page address asks for, or null: no `qa` parameter, an empty one, or one that is not a plausible account id (never trusted further). */
+export function qaLinkFromSearch(search: string): string | null {
+  const v = new URLSearchParams(search).get(QA_LINK_PARAM);
+  return v !== null && QA_LINK_ID.test(v) ? v : null;
+}
+
+/** The address search with the `qa` parameter removed and every other parameter kept (a share or shortcut parameter has its own reader). */
+export function searchWithoutQaLink(search: string): string {
+  const q = new URLSearchParams(search);
+  q.delete(QA_LINK_PARAM);
+  const rest = q.toString();
+  return rest ? `?${rest}` : '';
+}
+
+/** Whether this address carries a `qa` parameter at all, so it is removed even when its value is refused. */
+export const hasQaLink = (search: string): boolean => new URLSearchParams(search).has(QA_LINK_PARAM);
+
+/** Whether the picker may open from a link: the same rule as its two entries (an admin on their own account, or on a test account with the way back). */
+export function qaLinkAllowed(qa: { persona: string | null; canSwitch: boolean } | undefined): boolean {
+  const e = qaEntries(qa);
+  return e.menuRow || e.bannerSwitch;
+}
+
+/** The account to mark when the link opens the picker: the held id when it names one of the listed accounts, else null (nothing opens). */
+export const qaLinkTarget = (held: string | null, rows: readonly Pick<QaPersonaRow, 'id'>[]): string | null => (held && rows.some(r => r.id === held) ? held : null);
+
+/** The account a picker modal was opened to mark, or null. */
+export const qaHighlightOf = (modal: Record<string, unknown> | null | undefined): string | null => (typeof modal?.highlight === 'string' && QA_LINK_ID.test(modal.highlight) ? modal.highlight : null);

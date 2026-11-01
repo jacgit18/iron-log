@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bannerText, filterPersonas, groupChips, groupPersonas, missingIds, parsePersonaList, parseRecent, NO_SCENARIOS, planBadge, pushRecent, qaEntries, recentRows, rowState, scenarioTag, scenarioToggleLabel, seededWord, youAre, type QaPersonaRow } from './qaPersonas.js';
+import { bannerText, filterPersonas, groupChips, groupPersonas, missingIds, parsePersonaList, parseRecent, hasQaLink, NO_SCENARIOS, planBadge, pushRecent, qaEntries, qaHighlightOf, qaLinkAllowed, qaLinkFromSearch, qaLinkTarget, recentRows, rowState, scenarioTag, scenarioToggleLabel, searchWithoutQaLink, seededWord, youAre, type QaPersonaRow } from './qaPersonas.js';
 
 const row = (id: string, group: string): QaPersonaRow => ({ id, name: id.toUpperCase(), group, plan: 'free', planStatus: null, scenario: 's', tryThis: 't', seeded: true, scenarios: [] });
 
@@ -105,5 +105,46 @@ describe('the picker rules', () => {
     expect(youAre(rows, null)).toBe('You are: your own account');
     expect(seededWord(true)).toBe('Seeded');
     expect(seededWord(false)).toBe('Not seeded');
+  });
+});
+
+describe('the /?qa=<id> link', () => {
+  it('reads an account id and refuses anything that is not a plausible one', () => {
+    expect(qaLinkFromSearch('?qa=meal-planner')).toBe('meal-planner');
+    expect(qaLinkFromSearch('?x=1&qa=diet-fresh')).toBe('diet-fresh');
+    for (const bad of ['', '?qa=', '?qa=Meal-Planner', '?qa=a%20b', '?qa=../etc', '?qa=<script>', `?qa=${'a'.repeat(41)}`, '?other=meal-planner', '?qa=a&qa=b%20']) {
+      if (bad === '?qa=a&qa=b%20') expect(qaLinkFromSearch(bad)).toBe('a'); // the first value is the one URLSearchParams returns
+      else expect(qaLinkFromSearch(bad), bad).toBeNull();
+    }
+    expect(qaLinkFromSearch(`?qa=${'a'.repeat(40)}`)).toBe('a'.repeat(40));
+  });
+  it('notices the parameter even when its value is refused, and removes only that parameter', () => {
+    expect(hasQaLink('?qa=')).toBe(true);
+    expect(hasQaLink('?qa=<x>')).toBe(true);
+    expect(hasQaLink('?open=daily')).toBe(false);
+    expect(searchWithoutQaLink('?qa=meal-planner')).toBe('');
+    expect(searchWithoutQaLink('?qa=')).toBe('');
+    expect(searchWithoutQaLink('?open=daily&qa=meal-planner')).toBe('?open=daily');
+    expect(searchWithoutQaLink('')).toBe('');
+  });
+  it('may open the picker where its entries show: an admin on their own account, or a test account with the way back', () => {
+    expect(qaLinkAllowed({ persona: null, canSwitch: true })).toBe(true);
+    expect(qaLinkAllowed({ persona: 'Founder', canSwitch: false })).toBe(true);
+    expect(qaLinkAllowed({ persona: null, canSwitch: false })).toBe(false);
+    expect(qaLinkAllowed(undefined)).toBe(false);
+  });
+  it('marks the held account only when the list has it', () => {
+    const rows = [{ id: 'a' }, { id: 'b' }];
+    expect(qaLinkTarget('b', rows)).toBe('b');
+    expect(qaLinkTarget('zzz', rows)).toBeNull();
+    expect(qaLinkTarget(null, rows)).toBeNull();
+    expect(qaLinkTarget('a', [])).toBeNull();
+  });
+  it('reads the account a picker modal was opened to mark', () => {
+    expect(qaHighlightOf({ highlight: 'meal-planner' })).toBe('meal-planner');
+    expect(qaHighlightOf({ highlight: 'Bad Id' })).toBeNull();
+    expect(qaHighlightOf({ highlight: 5 })).toBeNull();
+    expect(qaHighlightOf({})).toBeNull();
+    expect(qaHighlightOf(null)).toBeNull();
   });
 });
