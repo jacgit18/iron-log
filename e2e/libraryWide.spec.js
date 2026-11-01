@@ -54,6 +54,8 @@ test('Stretch library: two columns from 1280px with the group headings full widt
   const c = await cols(page);
   expect(c.xs).toHaveLength(2);
   expect(c.panel.w).toBeGreaterThan(1800);
+  const folded = page.locator('.exlib .libsect:has(button.libgroup[aria-expanded=false])').first();
+  await expect(folded.locator('.exrow')).toHaveCount(0); // a folded group keeps its heading and shows no rows
   const head = await page.locator('.exlib .libgroup').first().boundingBox();
   expect(head.width).toBeGreaterThan(1500);
   await page.getByRole('button', { name: 'Edit order' }).click();
