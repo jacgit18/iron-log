@@ -9,10 +9,10 @@ export const WEIGHT_GOAL_SORTS = [
 export type WeightGoalSort = typeof WEIGHT_GOAL_SORTS[number]['key'];
 export const DEFAULT_WEIGHT_GOAL_SORT: WeightGoalSort = 'name';
 
-/** An exercise's progress toward its nearest open goal, 0 to 99, or null when every goal is reached or none has data. */
+/** An exercise's progress toward its nearest open goal (0 to 99, 0 when nothing is logged yet), `reached` when every goal is met, or null when it has no goal. */
 export type GoalProgress = { pct: number; reached: boolean } | null;
 
-/** Weight goal rows in the chosen order (a new array). Closest to goal puts the highest percentage first, then reached goals, then rows with nothing to measure; ties by name, then id. */
+/** Weight goal rows in the chosen order (a new array). Closest to goal puts the highest percentage first (a deadline is not weighed), then reached goals, then rows with no goal; ties by name, then id. */
 export function sortWeightGoalRows<R extends { id: string; name: string }>(rows: readonly R[], sort: WeightGoalSort, progressOf: (id: string) => GoalProgress): R[] {
   const byName = nameCmp<R>(r => r.name, r => r.id);
   if (sort !== 'closest') return [...rows].sort(byName);
@@ -29,7 +29,7 @@ export const FREQ_GOAL_SORTS = [
 export type FreqGoalSort = typeof FREQ_GOAL_SORTS[number]['key'];
 export const DEFAULT_FREQ_GOAL_SORT: FreqGoalSort = 'open';
 
-/** Frequency rows in the chosen order (a new array). Not met first keeps the order given; Closest to goal puts unmet goals with the most sessions done against the target first, met goals last. */
+/** Frequency rows in the chosen order (a new array). Not met first keeps the order given (freqGoalStatus: unmet first, then by id, which is not name order, kept as it has always been); Closest to goal puts unmet goals with the most sessions done against the target first, met goals last. */
 export function sortFreqRows<R extends { id: string; goal: number; done: number; met: boolean }>(rows: readonly R[], sort: FreqGoalSort, nameOf: (id: string) => string): R[] {
   const byName = nameCmp<R>(r => nameOf(r.id), r => r.id);
   if (sort === 'name') return [...rows].sort(byName);

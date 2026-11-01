@@ -63,7 +63,7 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
       <h2>Program library</h2>
       <p className="note">Your saved programs. Load one into {pn} to put it on your Board; whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
       <RemovedNotice scope="library" />
-      {library.length > 1 && <div className="inline"><SortControl options={PROGRAM_SORTS} value={sort} onChange={setSort} /></div>}
+      {(items.length > 1 || archived.length > 1) && <div className="inline"><SortControl options={PROGRAM_SORTS} value={sort} onChange={setSort} /></div>}
       <div className="edlist">
         {items.map(it => (
           <LibRow
