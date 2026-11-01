@@ -6,7 +6,7 @@ import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
 import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems, rowSummary } from '../../lib/exerciseLibrary.js';
 import { DEFAULT_EXERCISE_SORT, EXERCISE_SORTS, sortExerciseRows } from '../../lib/exerciseSort.js';
 import { isFiltering, resultText } from '../../lib/libraryFilter.js';
-import { useSortChoice } from '../../hooks/useSortChoice.js';
+import { useSortChoice } from '../useSortChoice.js';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import { isCatalogId, exInfo } from '../../lib/data.js';
 import RemovedNotice from '../RemovedNotice.jsx';
