@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import type { Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.ts';
 import { createAuth } from './auth/betterAuth.ts';
@@ -34,11 +34,13 @@ const PREFIXES = ['account', 'backups', 'billing', 'catalog', 'commands', 'foods
 
 let db: Kysely<DB>;
 let auth: ReturnType<typeof createAuth>;
+let qaUrl: string;
 let stop: () => Promise<void>;
 let server: Server | undefined;
 beforeAll(async () => {
   let dbUrl: string;
   ({ db, stop, url: dbUrl } = await startTestDatabase());
+  qaUrl = dbUrl;
   auth = createAuth({ baseURL: 'http://localhost:3999', secret: randomBytes(32).toString('base64'), databaseUrl: dbUrl, google: { clientId: 'test-client.apps.googleusercontent.com', clientSecret: 'test-client-secret' }, testSignIn: true }, 'test');
 }, 120_000);
 afterEach(() => new Promise<void>(done => (server ? server.close(() => done()) : done())));
@@ -87,6 +89,28 @@ describe('route inventory', () => {
         const res = await fetch(`${url}/api/${prefix}/x`, { method, headers: { 'content-type': 'application/json' }, body: method === 'GET' ? undefined : '{}' });
         expect(res.status, `${method} /api/${prefix}/x`).toBe(401);
       }
+    }
+  });
+});
+
+describe('QA persona routes (list, switch, reset, return) under /api/auth/qa/personas', () => {
+  const probes: [string, string][] = [['GET', ''], ['POST', '/switch'], ['POST', '/reset'], ['POST', '/return']];
+  const hit = async (url: string, method: string, path: string) => (await fetch(`${url}/api/auth/qa/personas${path}`, { method, headers: { 'content-type': 'application/json' }, body: method === 'GET' ? undefined : '{}' })).status;
+
+  it('answer 404 where QA is off (production and staging)', async () => {
+    const url = await listen(createApp({ db, auth }));
+    for (const [method, path] of probes) expect(await hit(url, method, path), `${method} ${path}`).toBe(404);
+  });
+
+  it('need a session where QA is on and the database is marked', async () => {
+    await sql`do $$ begin execute format('comment on database %I is %L', current_database(), 'iron-log qa'); end $$`.execute(db);
+    const qa = createAuth({ baseURL: 'http://localhost:3999', secret: randomBytes(32).toString('base64'), databaseUrl: qaUrl, google: { clientId: 'test-client.apps.googleusercontent.com', clientSecret: 'test-client-secret' }, testSignIn: true, qaPersonas: true }, 'test');
+    try {
+      const url = await listen(createApp({ db, auth: qa }));
+      for (const [method, path] of probes) expect(await hit(url, method, path), `${method} ${path}`).toBe(401);
+    } finally {
+      await qa.pool.end();
+      await sql`do $$ begin execute format('comment on database %I is %L', current_database(), null); end $$`.execute(db);
     }
   });
 });

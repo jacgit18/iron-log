@@ -1,8 +1,12 @@
 import type { BetterAuthPlugin } from 'better-auth';
 import { APIError, createAuthEndpoint, sessionMiddleware } from 'better-auth/api';
 import { deleteSessionCookie, expireCookie, setSessionCookie } from 'better-auth/cookies';
-import type pg from 'pg';
+import pg from 'pg';
+import { pinSslMode } from '../db/sslMode.ts';
 import { PERSONAS, personaAuthId, personaById } from '../qa/personas.ts';
+import { SEED_EXERCISE_IDS, seedPersona } from '../qa/seedPersona.ts';
+import { buildPersonaRows } from '../qa/seedPlan.ts';
+import type { PiiCrypto } from './piiCrypto.ts';
 
 /* ---------- QA test accounts: an admin switches to a seeded account and back (brief: qa-persona-picker) ----------
    A small plugin for Better Auth with three routes under /api/auth/qa/personas. It does what the library's own admin plugin does for impersonation (a
@@ -26,7 +30,14 @@ export interface QaPersonasConfig {
   /** Lower-case emails that count as admins (ADMIN_EMAILS). */
   admins: ReadonlySet<string>;
   pool: Pick<pg.Pool, 'query'>;
+  /** The names and emails the auth tables seal (the same crypto the auth adapter uses); none when they are stored in the clear. */
+  pii?: PiiCrypto;
+  /** The owner URL of the QA branch (QA_OWNER_DATABASE_URL). Without it Reset is off. Used only after the QA-mark check. */
+  ownerDatabaseUrl?: string;
+  makeOwnerPool?: (url: string) => pg.Pool;
 }
+
+const CLEAR: PiiCrypto = { seal: x => x, sealStable: x => x, open: x => x, isSealed: () => false };
 
 /** Whether this database is QA's. Cached once true; a false is asked again next time (a database marked after boot still works). */
 export function qaMarkReader(pool: Pick<pg.Pool, 'query'>) {
@@ -49,28 +60,47 @@ export function qaPersonas(config: QaPersonasConfig): BetterAuthPlugin {
   const isAdminSession = (s: { user: { email?: string | null; emailVerified?: boolean } }) =>
     s.user.emailVerified === true && !!s.user.email && config.admins.has(s.user.email.toLowerCase());
 
+  // Reset needs the database owner (the API's own role cannot delete rows or set plans). The pool is made on the first reset, so a service
+  // that is not QA never opens it: every route checks the QA mark first.
+  let ownerPool: pg.Pool | undefined;
+  let resetting = false;
+  const owner = () => (ownerPool ??= (config.makeOwnerPool ?? (url => new pg.Pool({ connectionString: pinSslMode(url), max: 1, statement_timeout: 60_000 })))(config.ownerDatabaseUrl!));
+
+  /** Whether the kept admin session behind a test account's session is still there, still an admin's, and not expired. */
+  async function keptAdminOk(ctx: { context: { createAuthCookie: (n: string) => { name: string }; secret: string; internalAdapter: { findSession: (t: string) => Promise<{ session: { expiresAt: Date }; user: { email?: string | null; emailVerified?: boolean } } | null> } }; getSignedCookie: (n: string, s: string) => Promise<string | null | undefined> }) {
+    const token = await ctx.getSignedCookie(ctx.context.createAuthCookie(ADMIN_COOKIE).name, ctx.context.secret);
+    if (!token) return null;
+    const admin = await ctx.context.internalAdapter.findSession(token);
+    return admin && isAdminSession(admin) && admin.session.expiresAt > new Date() ? { token, admin } : null;
+  }
+
   return {
     id: 'qa-personas',
     endpoints: {
       listQaPersonas: createAuthEndpoint('/qa/personas', { method: 'GET', use: [sessionMiddleware] }, async ctx => {
         if (!(await isQa())) throw notFound();
         const session = ctx.context.session;
-        const hasReturn = !!(await ctx.getSignedCookie(ctx.context.createAuthCookie(ADMIN_COOKIE).name, ctx.context.secret));
         const current = PERSONAS.find(p => personaAuthId(p.id) === session.user.id)?.id ?? null;
-        // Someone already switched has no admin session of their own, only the way back; they may see where they are, not switch again. The way back
+        // Someone already switched has no admin session of their own, only the way back; the kept admin session must still be valid. The way back
         // counts only for a test account's session: the cookie is signed over its value, so any signed cookie value could be copied into it.
-        if (!isAdminSession(session) && !(hasReturn && current)) throw new APIError('FORBIDDEN', { message: 'Not allowed' });
+        if (!isAdminSession(session) && !(current && (await keptAdminOk(ctx)))) throw new APIError('FORBIDDEN', { message: 'Not allowed' });
+        const { rows } = await config.pool.query<{ id: string }>('select id from auth."user" where id = any($1)', [PERSONAS.map(p => personaAuthId(p.id))]);
+        const seeded = new Set(rows.map(r => r.id));
         return ctx.json({
           ok: true,
           current,
-          personas: PERSONAS.map(p => ({ id: p.id, name: p.name, group: p.group, plan: p.plan, planStatus: p.planStatus, scenario: p.scenario, tryThis: p.tryThis })),
+          canReset: !!config.ownerDatabaseUrl,
+          personas: PERSONAS.map(p => ({ id: p.id, name: p.name, group: p.group, plan: p.plan, planStatus: p.planStatus, scenario: p.scenario, tryThis: p.tryThis, seeded: seeded.has(personaAuthId(p.id)) })),
         });
       }),
 
       switchQaPersona: createAuthEndpoint('/qa/personas/switch', { method: 'POST', use: [sessionMiddleware] }, async ctx => {
         if (!(await isQa())) throw notFound();
         const session = ctx.context.session;
-        if (!isAdminSession(session)) throw new APIError('FORBIDDEN', { message: 'Not allowed' });
+        // An admin switches from their own session. A test account may switch to another directly, but only with the admin's session still kept behind it.
+        const fromPersona = PERSONAS.some(p => personaAuthId(p.id) === session.user.id);
+        const kept = isAdminSession(session) ? null : fromPersona ? await keptAdminOk(ctx) : null;
+        if (!isAdminSession(session) && !kept) throw new APIError('FORBIDDEN', { message: 'Not allowed' });
         const id = (ctx.body as { id?: unknown } | undefined)?.id;
         const persona = typeof id === 'string' ? personaById(id) : undefined;
         if (!persona) throw new APIError('BAD_REQUEST', { message: 'Unknown test account' });
@@ -81,9 +111,41 @@ export function qaPersonas(config: QaPersonasConfig): BetterAuthPlugin {
         const cookies = ctx.context.authCookies;
         const adminCookie = ctx.context.createAuthCookie(ADMIN_COOKIE);
         deleteSessionCookie(ctx);
-        await ctx.setSignedCookie(adminCookie.name, session.session.token, ctx.context.secret, { ...cookies.sessionToken.attributes, maxAge: PERSONA_SESSION_SECONDS });
+        // From a test account the old test session goes, and the kept admin token is carried over with a fresh hour.
+        if (kept) await ctx.context.internalAdapter.deleteSession(session.session.token);
+        await ctx.setSignedCookie(adminCookie.name, kept ? kept.token : session.session.token, ctx.context.secret, { ...cookies.sessionToken.attributes, maxAge: PERSONA_SESSION_SECONDS });
         await setSessionCookie(ctx, { session: created, user: target }, true);
         return ctx.json({ ok: true, current: persona.id });
+      }),
+
+      resetQaPersona: createAuthEndpoint('/qa/personas/reset', { method: 'POST', use: [sessionMiddleware] }, async ctx => {
+        if (!(await isQa())) throw notFound();
+        const session = ctx.context.session;
+        const fromPersona = PERSONAS.some(p => personaAuthId(p.id) === session.user.id);
+        if (!isAdminSession(session) && !(fromPersona && (await keptAdminOk(ctx)))) throw new APIError('FORBIDDEN', { message: 'Not allowed' });
+        const id = (ctx.body as { id?: unknown } | undefined)?.id;
+        const persona = typeof id === 'string' ? personaById(id) : undefined;
+        if (!persona) throw new APIError('BAD_REQUEST', { message: 'Unknown test account' });
+        if (!config.ownerDatabaseUrl) throw new APIError('NOT_IMPLEMENTED', { message: 'Reset is not set up on this service' });
+        // Deleting the account you hold would delete your own session.
+        if (personaAuthId(persona.id) === session.user.id) throw new APIError('CONFLICT', { message: 'Switch away to reset it' });
+        if (resetting) throw new APIError('CONFLICT', { message: 'A reset is already running' });
+        resetting = true;
+        try {
+          const client = await owner().connect();
+          try {
+            const now = new Date();
+            await seedPersona(client, config.pii ?? CLEAR, persona, buildPersonaRows(persona, SEED_EXERCISE_IDS, now), now);
+          } finally {
+            client.release();
+          }
+        } catch (e) {
+          console.error(JSON.stringify({ msg: 'qa reset failed', persona: persona.id, error: e instanceof Error ? e.message : String(e) }));
+          throw new APIError('INTERNAL_SERVER_ERROR', { message: 'Reset failed. The account is as it was before.' });
+        } finally {
+          resetting = false;
+        }
+        return ctx.json({ ok: true, id: persona.id, seeded: true });
       }),
 
       returnFromQaPersona: createAuthEndpoint('/qa/personas/return', { method: 'POST', use: [sessionMiddleware] }, async ctx => {

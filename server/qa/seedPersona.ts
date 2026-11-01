@@ -10,6 +10,9 @@ import type { PersonaRows } from './seedPlan.ts';
 
 const BATCH = 500;
 
+/** The exercises a seeded log entry may use: every one in the two built-in programs. */
+export const SEED_EXERCISE_IDS: readonly string[] = [...new Set((['A', 'B'] as const).flatMap(k => BUILTIN[k].days.flatMap(d => d.slots.flatMap(sl => sl.items.map(i => i.ex)))))];
+
 export async function seedPersona(client: Pick<pg.PoolClient, 'query'>, crypto: PiiCrypto, persona: Persona, rows: PersonaRows, today: Date): Promise<void> {
   const authId = personaAuthId(persona.id);
   try {

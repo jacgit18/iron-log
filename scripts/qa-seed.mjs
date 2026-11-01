@@ -9,10 +9,9 @@
 // Names and emails are sealed with QA's own key, which only --apply needs: export it as QA_PII_ENCRYPTION_KEY (the value of the Secret Manager
 // secret iron-log-qa-pii-key; never production's, whose rows QA could not open). The URL and the key are never printed.
 // --host must be the host in the URL (typed on purpose), as in qa-db.mjs.
-import { BUILTIN } from '../src/lib/data.ts';
 import { createPiiCrypto, parsePiiKey } from '../server/auth/piiCrypto.ts';
 import { PERSONAS, personaAuthId, personaEmail } from '../server/qa/personas.ts';
-import { seedPersona } from '../server/qa/seedPersona.ts';
+import { SEED_EXERCISE_IDS, seedPersona } from '../server/qa/seedPersona.ts';
 import { buildPersonaRows } from '../server/qa/seedPlan.ts';
 import { connect, fail, guardHost, readMark } from './lib/db-script.mjs';
 
@@ -37,7 +36,7 @@ if (apply) {
 }
 await guardHost(url, host, 'QA_DATABASE_URL');
 
-const exerciseIds = [...new Set(['A', 'B'].flatMap(k => BUILTIN[k].days.flatMap(d => d.slots.flatMap(s => s.items.map(i => i.ex)))))];
+const exerciseIds = SEED_EXERCISE_IDS;
 const today = new Date();
 const client = await connect(url, 'QA');
 let code = 0;
