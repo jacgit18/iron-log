@@ -83,7 +83,7 @@ test('each exercise of a superset swipes on its own: right ticks it, left skips 
   await expect(one).not.toHaveClass(/iskipped/);
   await expect(card).not.toHaveClass(/skipped/);
   await expect(card.getByRole('button', { name: /Undo skip for/ })).toHaveCount(1);
-  await expect(two.getByRole('button', { name: /^Log / })).toHaveCount(0); // a skipped exercise has nothing to log
+  await expect(two.getByRole('button', { name: /^Log / })).toHaveCount(1); // a skipped exercise can still be logged: saving brings it back
   await expect(one.getByRole('button', { name: /^Log / })).toHaveCount(1);
   await swipe(page, second, 140, 0, { from: '.exh' }); // a skipped exercise comes back
   await expect(two).not.toHaveClass(/iskipped/);
