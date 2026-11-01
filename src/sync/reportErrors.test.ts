@@ -45,13 +45,14 @@ describe('installErrorReporting', () => {
     const throughPage = Object.assign(new Error('mixed'), { stack: 'Error: mixed\n    at x (chrome-extension://abc/a.js:1:1)\n    at y (https://app.example/assets/index-1.js:2:3)' });
     w.fire('unhandledrejection', { reason: inExtension });
     w.fire('error', { message: 'Script error', filename: 'moz-extension://abc/content.js' });
+    w.fire('error', { message: 'wrapped', filename: 'chrome-extension://abc/wrap.js', error: Object.assign(new Error('wrapped'), { stack: throughPage.stack }) });
     w.fire('unhandledrejection', { reason: throughPage });
     w.fire('unhandledrejection', { reason: new Error('no stack frames') });
-    expect(sent.map(s => s.message)).toEqual(['mixed', 'no stack frames']);
+    expect(sent.map(s => s.message)).toEqual(['wrapped', 'mixed', 'no stack frames']);
   });
 
   it('fromExtension: every extension scheme counts, the page and plain text do not', () => {
-    for (const u of ['chrome-extension://a/b.js:1:1', 'moz-extension://a/b.js', 'safari-web-extension://a/b.js', 'safari-extension://a/b.js']) expect(fromExtension(`at f (${u})`)).toBe(true);
+    for (const u of ['chrome-extension://a/b.js:1:1', 'moz-extension://a/b.js', 'safari-web-extension://a/b.js', 'safari-extension://a/b.js', 'ms-browser-extension://a/b.js']) expect(fromExtension(`at f (${u})`)).toBe(true);
     expect(fromExtension('at f (https://app.example/assets/a.js:1:1)')).toBe(false);
     expect(fromExtension('')).toBe(false);
     expect(fromExtension('mentions chrome-extension in words only')).toBe(false);
