@@ -238,7 +238,7 @@ describe('looking at the other program', () => {
     expect(st().week.rest).toEqual([5]);
   });
   it('knows when every check-off is on the other program', () => {
-    const even = (new Date().getMonth() + 1) % 2 === 0;
+    const even = (weekStartOf(new Date()).getMonth() + 1) % 2 === 0;
     useAppStore.setState(s => ({ cfg: { ...s.cfg, m2Even: even ? 'A' : 'B' } })); // mode 2 gives this month A, whatever the month
     st().setMode(2);
     st().checkCard(firstCard().id, true);
