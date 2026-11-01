@@ -11,7 +11,11 @@ export interface QaPersonaRow {
   tryThis: string;
   /** The account exists on the server (it was seeded). */
   seeded: boolean;
+  /** The QA scenarios that run as this account (brief: qa-scenarios); none when it has no tag. */
+  scenarios: QaScenarioRef[];
 }
+
+export interface QaScenarioRef { id: string; title: string }
 
 export interface QaPersonaGroup { group: string; items: QaPersonaRow[] }
 
@@ -35,6 +39,12 @@ export function planBadge(plan: string, status: string | null): string {
 /** What the banner says while a test account is signed in. */
 export const bannerText = (name: string): string => `QA test account: ${name}`;
 
+/** The scenario refs of one row; anything that is not a list of `{ id, title }` strings is no list (an old server sends none). */
+function parseScenarios(v: unknown): QaScenarioRef[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap(x => (x && typeof x === 'object' && typeof (x as QaScenarioRef).id === 'string' && typeof (x as QaScenarioRef).title === 'string' ? [{ id: (x as QaScenarioRef).id, title: (x as QaScenarioRef).title }] : []));
+}
+
 /** Reads the list route's answer, or null when it is not one (an error page, an old server). */
 export function parsePersonaList(body: unknown): { current: string | null; canReset: boolean; personas: QaPersonaRow[] } | null {
   if (!body || typeof body !== 'object') return null;
@@ -43,7 +53,7 @@ export function parsePersonaList(body: unknown): { current: string | null; canRe
   const s = (v: unknown) => (typeof v === 'string' ? v : '');
   const personas = b.personas
     .filter((p): p is Record<string, unknown> => !!p && typeof p === 'object' && typeof (p as Record<string, unknown>).id === 'string' && typeof (p as Record<string, unknown>).name === 'string')
-    .map(p => ({ id: s(p.id), name: s(p.name), group: s(p.group) || 'Other', plan: s(p.plan), planStatus: typeof p.planStatus === 'string' ? p.planStatus : null, scenario: s(p.scenario), tryThis: s(p.tryThis), seeded: p.seeded !== false }));
+    .map(p => ({ id: s(p.id), name: s(p.name), group: s(p.group) || 'Other', plan: s(p.plan), planStatus: typeof p.planStatus === 'string' ? p.planStatus : null, scenario: s(p.scenario), tryThis: s(p.tryThis), seeded: p.seeded !== false, scenarios: parseScenarios(p.scenarios) }));
   return { current: typeof b.current === 'string' ? b.current : null, canReset: (body as { canReset?: unknown }).canReset === true, personas };
 }
 
@@ -61,10 +71,10 @@ export function qaEntries(qa: { persona: string | null; canSwitch: boolean } | u
 /** The chips above the list: All, then the groups present, in the screen's order. */
 export const groupChips = (rows: readonly QaPersonaRow[]): string[] => [ALL_GROUPS, ...groupPersonas(rows).map(g => g.group)];
 
-/** Rows matching the search (case-blind, on name, scenario and "try this") and the group chip. */
+/** Rows matching the search (case-blind, on name, scenario, "try this", and the ids and titles of the QA scenarios) and the group chip. */
 export function filterPersonas(rows: readonly QaPersonaRow[], query: string, group: string): QaPersonaRow[] {
   const q = query.trim().toLowerCase();
-  return rows.filter(r => (group === ALL_GROUPS || r.group === group) && (!q || `${r.name} ${r.scenario} ${r.tryThis}`.toLowerCase().includes(q)));
+  return rows.filter(r => (group === ALL_GROUPS || r.group === group) && (!q || `${r.name} ${r.scenario} ${r.tryThis} ${r.scenarios.map(s => `${s.id} ${s.title}`).join(' ')}`.toLowerCase().includes(q)));
 }
 
 /** The recent accounts that still exist, in recent order. */
@@ -109,3 +119,14 @@ export const youAre = (rows: readonly QaPersonaRow[], currentId: string | null):
 export const seededWord = (seeded: boolean): string => (seeded ? 'Seeded' : 'Not seeded');
 export const switchLabel = (name: string): string => `Switch to ${name}`;
 export const resetAria = (name: string, seeded: boolean): string => `${seeded ? 'Reset' : 'Seed'} ${name}`;
+
+/* ---------- Scenario tags (brief: qa-scenarios) ---------- */
+
+/** The tag line under a row: "Used in S-04, S-11", or null when the account has no scenario. */
+export const scenarioTag = (r: Pick<QaPersonaRow, 'scenarios'>): string | null => (r.scenarios.length ? `Used in ${r.scenarios.map(s => s.id).join(', ')}` : null);
+
+/** The label of the expand button: how many scenarios, so a screen reader hears more than "Scenarios". */
+export const scenarioToggleLabel = (r: Pick<QaPersonaRow, 'name' | 'scenarios'>, open: boolean): string => `${open ? 'Hide' : 'Show'} ${r.scenarios.length} scenario${r.scenarios.length === 1 ? '' : 's'} for ${r.name}`;
+
+/** Copy for a row with nothing to run. */
+export const NO_SCENARIOS = 'No scenarios yet';

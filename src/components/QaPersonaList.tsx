@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import './QaPersonaList.css';
+import QaScenarioTags from './QaScenarioTags.js';
 import { ALL_GROUPS, filterPersonas, groupChips, groupPersonas, missingIds, parseRecent, planBadge, pushRecent, RECENT_KEY, recentRows, resetAria, rowState, seededWord, switchLabel, youAre, type QaPersonaRow } from '../lib/qaPersonas.js';
 import { LS } from '../lib/storage.js';
 import { flag } from '../store/useAppStore.js';
@@ -78,6 +79,7 @@ export default function QaPersonaList({ idPrefix }: { idPrefix: string }) {
           <p className="qadesc">{p.scenario}</p>
           <p className="qatry">Try: {p.tryThis}</p>
           {st.hint && <p className="qahint">{st.hint}</p>}
+          <QaScenarioTags row={p} idPrefix={`${idPrefix}-${key}`} />
         </div>
         <div className="qaacts">
           <button type="button" className="btn sm" disabled={busy !== null || !st.canSwitch} aria-label={switchLabel(p.name)} onClick={() => void go(p)}>Switch</button>

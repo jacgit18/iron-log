@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { bannerText, filterPersonas, groupChips, groupPersonas, missingIds, parsePersonaList, parseRecent, planBadge, pushRecent, qaEntries, recentRows, rowState, seededWord, youAre, type QaPersonaRow } from './qaPersonas.js';
+import { bannerText, filterPersonas, groupChips, groupPersonas, missingIds, parsePersonaList, parseRecent, NO_SCENARIOS, planBadge, pushRecent, qaEntries, recentRows, rowState, scenarioTag, scenarioToggleLabel, seededWord, youAre, type QaPersonaRow } from './qaPersonas.js';
 
-const row = (id: string, group: string): QaPersonaRow => ({ id, name: id.toUpperCase(), group, plan: 'free', planStatus: null, scenario: 's', tryThis: 't', seeded: true });
+const row = (id: string, group: string): QaPersonaRow => ({ id, name: id.toUpperCase(), group, plan: 'free', planStatus: null, scenario: 's', tryThis: 't', seeded: true, scenarios: [] });
 
 describe('QA test account list', () => {
   it('orders groups Plans, Limits, Data volume, Features, Diet, an unknown one last, and keeps the order inside a group', () => {
@@ -57,6 +57,28 @@ describe('the picker rules', () => {
     expect(filterPersonas(rows, '', 'Diet').map(r => r.id)).toEqual(['b', 'c']);
     expect(filterPersonas(rows, 'meal', 'Plans')).toEqual([]);
     expect(filterPersonas(rows, '  ', 'All')).toHaveLength(3);
+  });
+  it('searches the ids and titles of the QA scenarios too', () => {
+    const tagged: QaPersonaRow[] = [
+      { ...row('a', 'Diet'), name: 'Meal planner', scenarios: [{ id: 'S-07', title: 'Read a planned day' }, { id: 'S-09', title: 'Plan to Groceries' }] },
+      { ...row('b', 'Diet'), name: 'Recipe collector', scenarios: [{ id: 'S-21', title: 'Nutrition badges' }] },
+      row('c', 'Plans'),
+    ];
+    expect(filterPersonas(tagged, 's-09', 'All').map(r => r.id)).toEqual(['a']);
+    expect(filterPersonas(tagged, 'badges', 'All').map(r => r.id)).toEqual(['b']);
+    expect(filterPersonas(tagged, 'groceries', 'Plans')).toEqual([]);
+  });
+  it('writes the tag line from the scenario ids, and none for an account without scenarios', () => {
+    expect(scenarioTag({ scenarios: [{ id: 'S-04', title: 'x' }, { id: 'S-11', title: 'y' }] })).toBe('Used in S-04, S-11');
+    expect(scenarioTag({ scenarios: [] })).toBeNull();
+    expect(NO_SCENARIOS).toBe('No scenarios yet');
+    expect(scenarioToggleLabel({ name: 'Meal planner', scenarios: [{ id: 'S-07', title: 'x' }] }, false)).toBe('Show 1 scenario for Meal planner');
+    expect(scenarioToggleLabel({ name: 'Meal planner', scenarios: [{ id: 'S-07', title: 'x' }, { id: 'S-08', title: 'y' }] }, true)).toBe('Hide 2 scenarios for Meal planner');
+  });
+  it('reads the scenarios of a row, and none from an old server or a malformed list', () => {
+    const base = { name: 'N', group: 'Diet', plan: 'free', scenario: 's', tryThis: 't' };
+    const out = parsePersonaList({ personas: [{ id: 'a', ...base, scenarios: [{ id: 'S-01', title: 'One' }, { id: 5, title: 'bad' }, null, { id: 'S-02' }] }, { id: 'b', ...base }, { id: 'c', ...base, scenarios: 'x' }] });
+    expect(out?.personas.map(p => p.scenarios)).toEqual([[{ id: 'S-01', title: 'One' }], [], []]);
   });
   it('keeps the last three switches, newest first, with no repeats', () => {
     expect(pushRecent(pushRecent(pushRecent(pushRecent([], 'a'), 'b'), 'c'), 'd')).toEqual(['d', 'c', 'b']);
