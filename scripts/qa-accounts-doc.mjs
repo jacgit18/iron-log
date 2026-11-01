@@ -4,6 +4,7 @@
 // It holds no secret: the accounts have no password (nobody signs in as them directly; an admin switches to one), and the seed needs QA's own key,
 // which is named here and kept in Secret Manager.
 import { PERSONAS, personaEmail } from '../server/qa/personas.ts';
+import { scenariosForPersona } from '../server/qa/scenarios.ts';
 
 const today = new Date().toISOString().slice(0, 10);
 const plan = p => `${p.plan}${p.planStatus === 'past_due' ? ', past due' : ''}`;
@@ -21,6 +22,8 @@ const volume = p => {
   if (d.recipes) parts.push(`${d.recipes} recipes`);
   return parts.join('; ') || 'none';
 };
+
+const usedIn = p => scenariosForPersona(p.id).map(s => s.id).join(', ') || '-';
 
 console.log(`---
 tags:
@@ -41,9 +44,9 @@ Relates: "[[briefs/qa-persona-picker]], [[qa-and-staging-guide]], [[080-qa-test-
 Nobody can sign in as these accounts directly: they have no password and their addresses end in \`.invalid\`. Only a signed-in admin on QA can switch to them, and only on a database carrying the QA mark.
 
 ## The accounts (${PERSONAS.length})
-| Account | Plan | What it is | Try | Data |
-|---|---|---|---|---|`);
-for (const p of PERSONAS) console.log(`| **${p.name}** (\`${p.id}\`, ${personaEmail(p.id)}) | ${plan(p)} | ${p.scenario} | ${p.tryThis} | ${volume(p)} |`);
+| Account | Plan | What it is | Try | Data | Used in |
+|---|---|---|---|---|---|`);
+for (const p of PERSONAS) console.log(`| **${p.name}** (\`${p.id}\`, ${personaEmail(p.id)}) | ${plan(p)} | ${p.scenario} | ${p.tryThis} | ${volume(p)} | ${usedIn(p)} |`);
 console.log(`
 ## Seeding and resetting them
 The accounts exist only after the seed has run. It resets each account to its starting state, so running it again undoes any test damage.
