@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import ArmedButton from '../ArmedButton.jsx';
+import Icon from '../Icon.js';
+import { videoLabel } from '../../lib/data.js';
 import { monthKey } from '../../lib/grocery.js';
 import { addMissingMessage, ingredientName, missingParts, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
@@ -45,6 +47,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
       <BackBar onBack={onBack} />
       <h2 id="rc-h" tabIndex={-1}>{recipe.n}{recipe.from || !mine ? <span className="pill custom" title="From the recipe library; what you change on it stays yours">Library</span> : <span className="pill custom" title="You created this recipe">Custom</span>}{recipe.edited && <span className="rc-edited" title="You changed this recipe from the library version">Edited</span>}</h2>
       <p className="note">{recipeMeta(RECIPE_CATEGORY_LABEL[recipe.cat], recipe.servings, recipe.minutes)}</p>
+      {recipe.url && <p className="note"><a className="rc-video" href={recipe.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(recipe.url)}: ${recipe.n} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(recipe.url)}</a></p>}
       {servingLine(recipe.serving, recipe.servingG) && <p className="note">Serving size: {servingLine(recipe.serving, recipe.servingG)}</p>}
       {recipe.servings && shown && <ServingsScaler base={recipe.servings} value={shown} onChange={setTonight} />}
       <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
