@@ -96,6 +96,11 @@
   color: var(--muted);
   font-size: var(--fs-sm);
 }
+.rc-badge {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
 .rc-have {
   flex: none;
   font-size: var(--fs-sm);

@@ -1,21 +1,22 @@
 import type { Recipe, RecipeCategory } from '../types.ts';
 import { nameWords } from './recipePantry.js';
+import { matchesNutrition, type NutritionKey } from './recipeNutrition.js';
 import { hasTags } from './recipeTags.js';
 import { nameCmp } from './sort.js';
 import type { SortOption } from './sortChoice.js';
 
 /* ---------- Which of your recipes the list shows (ADR 084): pure, so a rule here is a node test, not a browser test ---------- */
 
-export interface RecipeFilter { q: string; cat: RecipeCategory | null; canMake: boolean; tags?: readonly string[] }
+export interface RecipeFilter { q: string; cat: RecipeCategory | null; canMake: boolean; tags?: readonly string[]; nutrition?: readonly NutritionKey[] }
 
 const textWords = (s: string) => s.toLowerCase().replace(/['’]/g, '').split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 
-/** Your recipes matching the typed words (every word in the name or an ingredient, as a word start), the category AND every selected tag, and "can make"
+/** Your recipes matching the typed words (every word in the name or an ingredient, as a word start), the category AND every selected tag AND every nutrition filter, and "can make"
  *  (`makeable`: ids of recipes with every ingredient at home), by name. */
 export function filterRecipes(list: Recipe[], f: RecipeFilter, makeable: ReadonlySet<string>): Recipe[] {
   const words = textWords(f.q);
   return list
-    .filter(r => (!f.cat || r.cat === f.cat) && (!f.tags?.length || hasTags(r, f.tags)) && (!f.canMake || makeable.has(r.id)))
+    .filter(r => (!f.cat || r.cat === f.cat) && (!f.tags?.length || hasTags(r, f.tags)) && (!f.nutrition?.length || matchesNutrition(r, f.nutrition)) && (!f.canMake || makeable.has(r.id)))
     .filter(r => {
       if (!words.length) return true;
       const hay = ` ${textWords(`${r.n} ${r.ing.map(i => `${i.n} ${i.sub ?? ''}`).join(' ')}`).join(' ')}`;

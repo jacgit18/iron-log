@@ -27,6 +27,15 @@ export function tagLimitError(others: readonly Recipe[], tags: readonly string[]
   return used.size > MAX_TAGS ? `You can use up to ${MAX_TAGS} different tags. Remove one from a recipe first.` : null;
 }
 
+/** Meal-type starters offered in the tag picker. They are ordinary tags: they count toward the cap only once a recipe has one. */
+export const STARTER_TAGS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'] as const;
+
+/** The starter tags to offer beside a recipe's form: not already in use on a recipe (those show with the tags in use) and not on this recipe. */
+export function starterTags(list: readonly Recipe[], current: readonly string[]): string[] {
+  const taken = new Set([...tagCounts(list).map(c => tagKey(c.tag)), ...current.map(tagKey)]);
+  return STARTER_TAGS.filter(t => !taken.has(tagKey(t)));
+}
+
 /** Whether a recipe has every tag in `want` (any case). */
 export const hasTags = (r: Pick<Recipe, 'tags'>, want: readonly string[]): boolean => {
   const have = new Set((r.tags ?? []).map(tagKey));
