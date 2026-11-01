@@ -3,9 +3,8 @@ import { PERSONAS, personaById } from './personas.ts';
 import { SCENARIO_FEATURES, SCENARIOS, scenarioById, scenariosForPersona } from './scenarios.ts';
 
 describe('QA scenarios', () => {
-  it('has 35 to 40 scenarios with ids S-01 upward, unique', () => {
-    expect(SCENARIOS.length).toBeGreaterThanOrEqual(35);
-    expect(SCENARIOS.length).toBeLessThanOrEqual(40);
+  it('has at least 35 live scenarios (the first batch was 40) with ids S-01 upward, unique and never reused', () => {
+    expect(SCENARIOS.filter(s => !s.retired).length).toBeGreaterThanOrEqual(35);
     expect(new Set(SCENARIOS.map(s => s.id)).size).toBe(SCENARIOS.length);
     for (const s of SCENARIOS) expect(s.id).toMatch(/^S-\d{2,}$/);
     SCENARIOS.forEach((s, i) => expect(s.id).toBe(`S-${String(i + 1).padStart(2, '0')}`));
