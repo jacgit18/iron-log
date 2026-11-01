@@ -30,7 +30,7 @@ export default function ExerciseLibrary() {
   const shown = sortExerciseRows(filterRows(rows, sources ? f : { ...f, src: '' }), sort, logs);
   const filtering = isFiltering(f);
   return (
-    <section className="panel edpanel exlib">
+    <section className="panel edpanel exlib exlibwide">
       <div className="inline spread">
         <h2 id="exlib-h" tabIndex={-1}>Exercise library</h2>
         <div className="inline">
