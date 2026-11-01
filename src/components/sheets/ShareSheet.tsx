@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import { exInfo } from '../../lib/data.js';
+import type { EquipmentId } from '../../types.ts';
 import { exerciseOptions } from '../../lib/exerciseOptions.js';
+import { cleanName, newExerciseError, startName, MAX_EXERCISE_NAME } from '../../lib/shareExercise.js';
+import EquipmentField from '../EquipmentField.jsx';
+import ItemPicker from '../ItemPicker.jsx';
+import { catalogMeta } from '../ExerciseField.jsx';
 import { pickerKey } from '../../lib/picker.js';
 import { afterSheetClose } from '../../lib/backNav.js';
 import { setRecipeStart } from '../../lib/shareTarget.js';
@@ -11,7 +16,7 @@ import Sheet from '../Sheet.jsx';
 import './ShareSheet.css';
 
 const SHOWN = 12;
-type Step = { k: 'pick' } | { k: 'exercise'; q: string; ask?: { id: string; name: string } } | { k: 'recipe'; q: string; ask?: { id: string; name: string } } | { k: 'saved'; text: string };
+type Step = { k: 'pick' } | { k: 'create'; name: string; eq: EquipmentId | ''; err: string } | { k: 'exercise'; q: string; err?: string; ask?: { id: string; name: string } } | { k: 'recipe'; q: string; ask?: { id: string; name: string } } | { k: 'saved'; text: string };
 
 // A link shared from another app (the manifest's share_target, brief share-target): save it as an exercise's video link or a recipe's.
 export default function ShareSheet({ title, url }: { title: string; url: string }) {
@@ -60,21 +65,47 @@ export default function ShareSheet({ title, url }: { title: string; url: string 
       )}
       {step.k === 'exercise' && !step.ask && (
         <>
-          <label className="field">Find an exercise
-            <input type="search" value={step.q} autoFocus onChange={e => setStep({ k: 'exercise', q: e.target.value })} />
-          </label>
-          <ul className="sharelist">
-            {exerciseOptions(cfg, inUse).filter(o => match(o.name, step.q)).slice(0, SHOWN).map(o => (
-              <li key={o.id}>
-                <button type="button" className="btn ghost" onClick={() => {
-                  const had = exInfo(cfg, o.id).url || '';
-                  if (had && had !== url) setStep({ k: 'exercise', q: step.q, ask: { id: o.id, name: o.name } }); else saveExercise(o.id, o.name);
-                }}>{o.name}</button>
-              </li>
-            ))}
-          </ul>
+          <button type="button" className="btn" onClick={() => setStep({ k: 'create', name: startName(title), eq: '', err: '' })}>Create new exercise</button>
+          <ItemPicker id="share-ex" label="Find an exercise" kind="exercise" value={step.q} mine={exerciseOptions(cfg, inUse)} catalogMeta={catalogMeta}
+            placeholder="Type to search, or add a new one" createLabel={n => `Create “${n}” as a new exercise`}
+            onText={q => setStep({ k: 'exercise', q })}
+            onPick={c => {
+              if (c.kind === 'create') { setStep({ k: 'create', name: startName(c.name), eq: '', err: '' }); return; }
+              if (c.kind === 'catalog') {
+                const st = useAppStore.getState(); const have = !!st.cfg.ex[c.item.id]; // already yours: same Replace check as any of your exercises
+                if (!have) {
+                  const err = st.addCatalogExercise(c.item);
+                  if (err || !useAppStore.getState().cfg.ex[c.item.id]) { setStep({ k: 'exercise', q: step.q, err: err ?? 'Could not add it yet. Try again in a moment.' }); return; } // not added: data still loading
+                }
+              }
+              const id = c.kind === 'catalog' ? c.item.id : c.id; const name = c.kind === 'catalog' ? c.item.name : exerciseOptions(cfg, inUse).find(x => x.id === id)?.name;
+              if (!name) return;
+              const had = exInfo(useAppStore.getState().cfg, id).url || '';
+              if (had && had !== url) setStep({ k: 'exercise', q: step.q, ask: { id, name } }); else saveExercise(id, name);
+            }} />
+          {step.err && <p className="note err" role="alert">{step.err}</p>}
           <div className="actions"><button type="button" className="btn" onClick={() => setStep({ k: 'pick' })}>Back</button><button type="button" className="btn" onClick={closeModal}>Cancel</button></div>
         </>
+      )}
+      {step.k === 'create' && (
+        <form noValidate onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          const err = newExerciseError(cfg, step.name, inUse); if (err) { setStep({ ...step, err }); return; }
+          const name = cleanName(step.name); const st = useAppStore.getState();
+          const id = st.createExercise({ nn: name, nu: url, ne: step.eq });
+          if (!useAppStore.getState().cfg.ex[id]) { setStep({ ...step, err: 'Could not save yet. Try again in a moment.' }); return; } // data still loading
+          setStep({ k: 'saved', text: `Saved as the video link for ${name}.` });
+        }}>
+          <label className="field">Exercise name
+            <input value={step.name} maxLength={MAX_EXERCISE_NAME} autoFocus placeholder="e.g. Cable Lateral Raise" onChange={e => setStep({ ...step, name: e.target.value, err: '' })} />
+          </label>
+          <EquipmentField cfg={cfg} value={step.eq} onChange={eq => setStep({ ...step, eq })} />
+          {step.err && <p className="note err" role="alert">{step.err}</p>}
+          <div className="actions">
+            <button type="button" className="btn" onClick={() => setStep({ k: 'exercise', q: '' })}>Back</button>
+            <button type="submit" className="btn primary">Save exercise</button>
+          </div>
+        </form>
       )}
       {step.k === 'exercise' && step.ask && (
         <>
