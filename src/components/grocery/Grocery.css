@@ -659,4 +659,12 @@ html:has(.gdock) body .toasts {
   min-width: 0;
   min-height: 44px;
 }
+/* At 200% text on a 320px phone the pill's picker would be wider than the row: let it shrink with the row instead. */
+.groc .gbar .sortctl {
+  min-width: 0;
+}
+.groc .gbar .sortctl select {
+  min-width: 0;
+  flex: 1 1 0;
+}
 }
