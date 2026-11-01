@@ -41,6 +41,19 @@ test('the panels keep their order in the page: Diet, Supplements, Water, Last 7 
   expect(ids).toEqual(['diet-h', 'sched-h', 'water-h', 'water7-h']);
 });
 
+test('Edit mode keeps the supplement library in the right column, under the schedule', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await open(page);
+  await page.click('#sched-edit');
+  const inRight = await page.evaluate(() => {
+    const right = document.querySelector('.nutcols > .nutcol:last-child');
+    const lib = [...right.querySelectorAll('h2')].map(h => h.id);
+    return { count: lib.length, first: lib[0] };
+  });
+  expect(inRight.count).toBeGreaterThan(3); // Supplements, the library, Water, Last 7 days
+  expect(inRight.first).toBe('sched-h');
+});
+
 for (const [w, h] of [[1920, 1080], [375, 800]]) {
   test(`Nutrition has no accessibility violations at ${w}px`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: h });

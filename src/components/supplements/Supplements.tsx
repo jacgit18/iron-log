@@ -176,57 +176,57 @@ export default function Supplements() {
         </div>
       </div>
       <div className="nutcols">
-      <div className="nutcol">
-      <Diet day={date} />
-      </div>
-      <div className="nutcol">
-      <Schedule date={date} supp={supp} editing={editing} setEditing={setEditing} />
-      {editing && <div className="mt-16"><SupplementLibrary /></div>}
-      <section className="panel suppanel mt-16" aria-labelledby="water-h">
-        <h2 id="water-h">Water</h2>
-        <div className="kpi wkpi" role="status">
-          <span className="kl">{isToday ? 'Today' : 'That day'}</span>
-          <span className="kv">{fmtOz(total)} <small>/ {fmtOz(goal)} oz</small></span>
-          <span className="ks">{cupsOf(total)} of {cupsOf(goal)} cups · {left > 0 ? `${fmtOz(left)} oz (${cupsOf(left)} cups) to go` : 'goal met'}</span>
-          <div className="bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
+        <div className="nutcol">
+          <Diet day={date} />
         </div>
-        <div>
-          <div className="sect">Add a drink</div>
-          <div className="chips wchips" role="group" aria-label="Add water by container size">
-            {BOTTLES.map(b => (
-              <button type="button" key={b.oz} className="chip" id={`water-${b.oz}`} onClick={() => add(b.oz)}>
-                <b>+{fmtOz(b.oz)} oz</b> <span className="note">{b.label}{b.oz % CUP_OZ === 0 ? ` · ${b.oz / CUP_OZ} cup${b.oz === CUP_OZ ? '' : 's'}` : ''}</span>
-              </button>
-            ))}
-          </div>
-          <form className="wcustom" noValidate onSubmit={e => { e.preventDefault(); if (s.addWater(date, custom)) setCustom(''); }}>
-            <label className="field">Other amount (oz)<input id="water-custom" type="number" inputMode="decimal" min="0" step="any" value={custom} onChange={e => setCustom(e.target.value)} /></label>
-            <button type="submit" className="btn sm primary" disabled={custom === ''}>Add</button>
-          </form>
+        <div className="nutcol">
+          <Schedule date={date} supp={supp} editing={editing} setEditing={setEditing} />
+          {editing && <div className="mt-16"><SupplementLibrary /></div>}
+          <section className="panel suppanel mt-16" aria-labelledby="water-h">
+            <h2 id="water-h">Water</h2>
+            <div className="kpi wkpi" role="status">
+              <span className="kl">{isToday ? 'Today' : 'That day'}</span>
+              <span className="kv">{fmtOz(total)} <small>/ {fmtOz(goal)} oz</small></span>
+              <span className="ks">{cupsOf(total)} of {cupsOf(goal)} cups · {left > 0 ? `${fmtOz(left)} oz (${cupsOf(left)} cups) to go` : 'goal met'}</span>
+              <div className="bar" aria-hidden="true"><i style={{ width: `${pct}%` }} /></div>
+            </div>
+            <div>
+              <div className="sect">Add a drink</div>
+              <div className="chips wchips" role="group" aria-label="Add water by container size">
+                {BOTTLES.map(b => (
+                  <button type="button" key={b.oz} className="chip" id={`water-${b.oz}`} onClick={() => add(b.oz)}>
+                    <b>+{fmtOz(b.oz)} oz</b> <span className="note">{b.label}{b.oz % CUP_OZ === 0 ? ` · ${b.oz / CUP_OZ} cup${b.oz === CUP_OZ ? '' : 's'}` : ''}</span>
+                  </button>
+                ))}
+              </div>
+              <form className="wcustom" noValidate onSubmit={e => { e.preventDefault(); if (s.addWater(date, custom)) setCustom(''); }}>
+                <label className="field">Other amount (oz)<input id="water-custom" type="number" inputMode="decimal" min="0" step="any" value={custom} onChange={e => setCustom(e.target.value)} /></label>
+                <button type="submit" className="btn sm primary" disabled={custom === ''}>Add</button>
+              </form>
+            </div>
+            <div>
+              <div className="sect">{isToday ? 'Logged today' : 'Logged'}</div>
+              <RemovedNotice scope={'water:' + date} />
+              {!list.length ? <p className="note">Nothing logged yet.</p> : (
+                <ul className="exrows wlogged">
+                  {list.map((oz, i) => (
+                    <li className={`exrow${armingDrink === i ? ' removing' : ''}`} key={i}>
+                      <span><b className="rmname">{fmtOz(oz)} oz</b> <span className="note">{cupsOf(oz)} cups</span></span>
+                      <ArmedButton className={`btn sm ${armingDrink === i ? 'danger' : 'ghost'}`} aria-label={`Remove ${fmtOz(oz)} ounces, drink ${i + 1}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArmingDrink(a ? i : null)} onConfirm={() => { setArmingDrink(null); s.removeWater(date, i); }} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <Boost key={`${date}:${supp.boost[date]?.mins ?? ''}`} date={date} boost={supp.boost[date]} extra={gi.extra} />
+            <WaterGoal goal={gi} mode={supp.waterMode} />
+          </section>
+          <section className="panel suppanel mt-16" aria-labelledby="water7-h">
+            <h2 id="water7-h">Last 7 days</h2>
+            <Week water={supp.water} goalOf={(k) => goalFor(supp, body, k).oz} end={d} selected={date} onPick={(k) => setSel(k === todayKey ? null : k)} />
+            <p className="note">Ounces per day. A full bar means you hit your goal.</p>
+          </section>
         </div>
-        <div>
-          <div className="sect">{isToday ? 'Logged today' : 'Logged'}</div>
-          <RemovedNotice scope={'water:' + date} />
-          {!list.length ? <p className="note">Nothing logged yet.</p> : (
-            <ul className="exrows wlogged">
-              {list.map((oz, i) => (
-                <li className={`exrow${armingDrink === i ? ' removing' : ''}`} key={i}>
-                  <span><b className="rmname">{fmtOz(oz)} oz</b> <span className="note">{cupsOf(oz)} cups</span></span>
-                  <ArmedButton className={`btn sm ${armingDrink === i ? 'danger' : 'ghost'}`} aria-label={`Remove ${fmtOz(oz)} ounces, drink ${i + 1}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArmingDrink(a ? i : null)} onConfirm={() => { setArmingDrink(null); s.removeWater(date, i); }} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <Boost key={`${date}:${supp.boost[date]?.mins ?? ''}`} date={date} boost={supp.boost[date]} extra={gi.extra} />
-        <WaterGoal goal={gi} mode={supp.waterMode} />
-      </section>
-      <section className="panel suppanel mt-16" aria-labelledby="water7-h">
-        <h2 id="water7-h">Last 7 days</h2>
-        <Week water={supp.water} goalOf={(k) => goalFor(supp, body, k).oz} end={d} selected={date} onPick={(k) => setSel(k === todayKey ? null : k)} />
-        <p className="note">Ounces per day. A full bar means you hit your goal.</p>
-      </section>
-      </div>
       </div>
     </div>
   );
