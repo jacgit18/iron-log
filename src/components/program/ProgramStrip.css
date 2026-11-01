@@ -1,0 +1,42 @@
+@layer base, components;
+@layer components {
+/* The programs as cards across the top of the Program editor, from 1280px. Below that the strip is not drawn and the Create a program button stays in the top row. */
+.progstrip {
+  display: none;
+}
+@media (min-width:1280px) {
+  .progstrip {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(0,1fr));
+    gap: var(--sp-12);
+    margin-bottom: var(--sp-16);
+  }
+  .progstrip .pc {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-2);
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: var(--sp-12);
+    background: var(--surface);
+    overflow-wrap: anywhere;
+  }
+  .progstrip .pc small {
+    color: var(--muted);
+    font-size: var(--fs-sm);
+    margin-bottom: var(--sp-8);
+  }
+  .progstrip .pc .btn {
+    margin-top: auto;
+    min-height: 44px;
+  }
+  .progstrip .pc.cur {
+    border-color: var(--accent);
+  }
+  .progstrip .pc.new {
+    border-style: dashed;
+  }
+}
+}
