@@ -1,5 +1,5 @@
 import type { LogEntry, PhaseKey } from '../../types.ts';
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS } from '../../lib/data.js';
 import { isTimed, setsOfEntry, summarizeSets } from '../../lib/logic.js';
@@ -9,7 +9,8 @@ import './SetRows.css';
 
 const num = (v: string | number) => (v === '' ? null : Number(v));
 
-export default function EditEntry({ exId, entry, onDone }: { exId: string; entry: LogEntry; onDone: () => void }) {
+// `cancelLabel`, `children` (extra rows above the buttons) and `footer` (a button at the left of them) are for the Log sheet; Progress passes none.
+export default function EditEntry({ exId, entry, onDone, cancelLabel = 'Cancel', footer, children }: { exId: string; entry: LogEntry; onDone: () => void; cancelLabel?: string; footer?: ReactNode; children?: ReactNode }) {
   const { updateLog } = useAppStore.getState();
   const [date, setDate] = useState(entry.d);
   const [ph, setPh] = useState<PhaseKey | ''>(entry.ph || '');
@@ -54,9 +55,11 @@ export default function EditEntry({ exId, entry, onDone }: { exId: string; entry
         <button type="button" className="btn sm ghost" onClick={() => setRows(rs => (rs.length > 1 ? rs.slice(0, -1) : rs))}>− Set</button>
       </div>
       <label className="field">Note<input type="text" value={note} onChange={e => setNote(e.target.value)} /></label>
+      {children}
       {err && <p className="note err" role="alert">{err}</p>}
       <div className="actions">
-        <button type="button" className="btn" onClick={onDone}>Cancel</button>
+        {footer}
+        <button type="button" className="btn" onClick={onDone}>{cancelLabel}</button>
         <button type="submit" className="btn primary">Save changes</button>
       </div>
     </form>
