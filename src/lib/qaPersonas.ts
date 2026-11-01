@@ -125,9 +125,6 @@ export const resetAria = (name: string, seeded: boolean): string => `${seeded ? 
 /** The tag line under a row: "Used in S-04, S-11", or null when the account has no scenario. */
 export const scenarioTag = (r: Pick<QaPersonaRow, 'scenarios'>): string | null => (r.scenarios.length ? `Used in ${r.scenarios.map(s => s.id).join(', ')}` : null);
 
-/** The label of the expand button: how many scenarios, so a screen reader hears more than "Scenarios". */
-export const scenarioToggleLabel = (r: Pick<QaPersonaRow, 'name' | 'scenarios'>, open: boolean): string => `${open ? 'Hide' : 'Show'} ${r.scenarios.length} scenario${r.scenarios.length === 1 ? '' : 's'} for ${r.name}`;
-
 /** Copy for a row with nothing to run. */
 export const NO_SCENARIOS = 'No scenarios yet';
 

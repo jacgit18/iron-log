@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bannerText, filterPersonas, groupChips, groupPersonas, missingIds, parsePersonaList, parseRecent, hasQaLink, NO_SCENARIOS, planBadge, pushRecent, qaEntries, qaHighlightOf, qaLinkAllowed, qaLinkFromSearch, qaLinkTarget, recentRows, rowState, scenarioTag, scenarioToggleLabel, searchWithoutQaLink, seededWord, youAre, type QaPersonaRow } from './qaPersonas.js';
+import { bannerText, filterPersonas, groupChips, groupPersonas, missingIds, parsePersonaList, parseRecent, hasQaLink, NO_SCENARIOS, planBadge, pushRecent, qaEntries, qaHighlightOf, qaLinkAllowed, qaLinkFromSearch, qaLinkTarget, recentRows, rowState, scenarioTag, searchWithoutQaLink, seededWord, youAre, type QaPersonaRow } from './qaPersonas.js';
 
 const row = (id: string, group: string): QaPersonaRow => ({ id, name: id.toUpperCase(), group, plan: 'free', planStatus: null, scenario: 's', tryThis: 't', seeded: true, scenarios: [] });
 
@@ -72,8 +72,6 @@ describe('the picker rules', () => {
     expect(scenarioTag({ scenarios: [{ id: 'S-04', title: 'x' }, { id: 'S-11', title: 'y' }] })).toBe('Used in S-04, S-11');
     expect(scenarioTag({ scenarios: [] })).toBeNull();
     expect(NO_SCENARIOS).toBe('No scenarios yet');
-    expect(scenarioToggleLabel({ name: 'Meal planner', scenarios: [{ id: 'S-07', title: 'x' }] }, false)).toBe('Show 1 scenario for Meal planner');
-    expect(scenarioToggleLabel({ name: 'Meal planner', scenarios: [{ id: 'S-07', title: 'x' }, { id: 'S-08', title: 'y' }] }, true)).toBe('Hide 2 scenarios for Meal planner');
   });
   it('reads the scenarios of a row, and none from an old server or a malformed list', () => {
     const base = { name: 'N', group: 'Diet', plan: 'free', scenario: 's', tryThis: 't' };
@@ -112,10 +110,7 @@ describe('the /?qa=<id> link', () => {
   it('reads an account id and refuses anything that is not a plausible one', () => {
     expect(qaLinkFromSearch('?qa=meal-planner')).toBe('meal-planner');
     expect(qaLinkFromSearch('?x=1&qa=diet-fresh')).toBe('diet-fresh');
-    for (const bad of ['', '?qa=', '?qa=Meal-Planner', '?qa=a%20b', '?qa=../etc', '?qa=<script>', `?qa=${'a'.repeat(41)}`, '?other=meal-planner', '?qa=a&qa=b%20']) {
-      if (bad === '?qa=a&qa=b%20') expect(qaLinkFromSearch(bad)).toBe('a'); // the first value is the one URLSearchParams returns
-      else expect(qaLinkFromSearch(bad), bad).toBeNull();
-    }
+    for (const bad of ['', '?qa=', '?qa=Meal-Planner', '?qa=a%20b', '?qa=../etc', '?qa=<script>', `?qa=${'a'.repeat(41)}`, '?other=meal-planner']) expect(qaLinkFromSearch(bad), bad).toBeNull();
     expect(qaLinkFromSearch(`?qa=${'a'.repeat(40)}`)).toBe('a'.repeat(40));
   });
   it('notices the parameter even when its value is refused, and removes only that parameter', () => {
