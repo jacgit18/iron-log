@@ -6,6 +6,9 @@ import { weekStartOf, ymd } from '../../shared/dates.js';
 import { currentLayout, DAYS } from '../../lib/logic.js';
 import { freqGoalStatus } from '../../lib/freqGoal.js';
 import { nameCmp } from '../../lib/sort.js';
+import { DEFAULT_FREQ_GOAL_SORT, FREQ_GOAL_SORTS, sortFreqRows } from '../../lib/goalSort.js';
+import { useSortChoice } from '../useSortChoice.js';
+import SortControl from '../SortControl.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import './FreqGoals.css';
@@ -18,13 +21,14 @@ export default function FreqGoals() {
   const week = useAppStore(s => s.week); useAppStore(s => s.programs); // the exercise list follows the shown week's program
   const today = useToday(s => s.today);
   const { setFreqGoal, clearFreqGoal, activeSlots } = useAppStore.getState();
+  const [sort, setSort] = useSortChoice('goals-freq', FREQ_GOAL_SORTS, DEFAULT_FREQ_GOAL_SORT);
   const [ex, setEx] = useState(''); const [n, setN] = useState('3');
   const wk = ymd(weekStartOf(today));
   // A check-off is dated the day you tapped it: when the board shows this week, count it on the day its card is on.
   const slots = activeSlots(); const shown = useAppStore.getState().weekKey() === wk;
   const cols = new Map<string, number>();
   if (shown) { const layout = currentLayout(week, slots); DAYS.forEach(c => layout[c].forEach(s => cols.set(s.id, c))); }
-  const rows = freqGoalStatus(cfg, logs, wk, shown ? id => cols.get(id) ?? null : undefined);
+  const rows = sortFreqRows(freqGoalStatus(cfg, logs, wk, shown ? id => cols.get(id) ?? null : undefined), sort, id => exInfo(cfg, id).n);
   const ids = [...new Set([...slots.flatMap(s => s.items.map(it => it.ex)), ...Object.keys(logs).filter(id => logs[id].length)])]
     .filter(id => cfg.freqGoals?.[id] == null)
     .map(id => ({ id, name: exInfo(cfg, id).n })).sort(nameCmp(r => r.name, r => r.id));
@@ -34,6 +38,7 @@ export default function FreqGoals() {
       <h2 id="freq-h">Exercise frequency</h2>
       <RemovedNotice scope="freqgoal" />
       {!rows.length && <p className="note">How many times a week you want to do an exercise. A day you log it or tick it off counts once.</p>}
+      {rows.length > 1 && <div className="inline"><SortControl options={FREQ_GOAL_SORTS} value={sort} onChange={setSort} /></div>}
       {rows.length > 0 && (
         <ul className="freqlist">
           {rows.map(r => {
