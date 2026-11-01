@@ -20,11 +20,12 @@ const sameKey = (n: string, sub?: string) => `${n.trim().toLowerCase()}|${(sub ?
 // The recipe form (ADR 084, laid out again in brief recipe-form-mobile-desktop): a new recipe, or one of yours to change. A new recipe starts at
 // 1 serving. Ingredients are compact rows with an amount picker, or typed as a list; each can have an Alternative, and names are offered from your
 // Groceries items as you type (choosing one pins it to that item). Steps are typed one per line. Nutrition per serving is folded away until opened.
-export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone: (savedId: string | null) => void }) {
+// `start`: a name and link to begin a new recipe with (a link shared in from another app, lib/shareTarget.ts).
+export default function RecipeForm({ recipe, start, onDone }: { recipe?: Recipe; start?: { title: string; url: string } | null; onDone: (savedId: string | null) => void }) {
   const recipes = useAppStore(s => s.recipes);
   const items = useAppStore(s => s.grocery.items);
   const sauces = useMemo(() => sauceCandidates(recipes, recipe?.id), [recipes, recipe?.id]); // the sauces and seasonings a line can link to
-  const [n, setN] = useState(recipe?.n ?? '');
+  const [n, setN] = useState(recipe?.n ?? start?.title ?? '');
   const [cat, setCat] = useState<RecipeCategory>(recipe?.cat ?? 'other');
   const [servings, setServings] = useState(recipe ? (recipe.servings ? String(recipe.servings) : '') : '1');
   const [minutes, setMinutes] = useState(recipe?.minutes ? String(recipe.minutes) : '');
@@ -46,7 +47,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const [listBase, setListBase] = useState('');
   const [steps, setSteps] = useState(recipe?.steps.join('\n') ?? '');
   const [note, setNote] = useState(recipe?.note ?? '');
-  const [url, setUrl] = useState(recipe?.url ?? '');
+  const [url, setUrl] = useState(recipe?.url ?? start?.url ?? '');
   const [err, setErr] = useState('');
   const [calc, setCalc] = useState(false); // the Calculate from ingredients panel is open
   const whole = (t: string) => (/^\d{1,4}$/.test(t.trim()) ? Number(t) : undefined);
