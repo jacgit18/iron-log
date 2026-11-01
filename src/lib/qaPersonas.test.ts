@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { bannerText, groupPersonas, parsePersonaList, planBadge, type QaPersonaRow } from './qaPersonas.js';
+import { bannerText, filterPersonas, groupChips, groupPersonas, missingIds, parsePersonaList, parseRecent, planBadge, pushRecent, qaEntries, recentRows, rowState, seededWord, youAre, type QaPersonaRow } from './qaPersonas.js';
 
-const row = (id: string, group: string): QaPersonaRow => ({ id, name: id.toUpperCase(), group, plan: 'free', planStatus: null, scenario: 's', tryThis: 't' });
+const row = (id: string, group: string): QaPersonaRow => ({ id, name: id.toUpperCase(), group, plan: 'free', planStatus: null, scenario: 's', tryThis: 't', seeded: true });
 
 describe('QA test account list', () => {
-  it('orders groups Plans, Limits, Data volume, Features, an unknown one last, and keeps the order inside a group', () => {
-    const out = groupPersonas([row('f1', 'Features'), row('x1', 'Mystery'), row('p1', 'Plans'), row('d1', 'Data volume'), row('p2', 'Plans'), row('l1', 'Limits')]);
-    expect(out.map(g => g.group)).toEqual(['Plans', 'Limits', 'Data volume', 'Features', 'Mystery']);
+  it('orders groups Plans, Limits, Data volume, Features, Diet, an unknown one last, and keeps the order inside a group', () => {
+    const out = groupPersonas([row('f1', 'Features'), row('x1', 'Mystery'), row('p1', 'Plans'), row('d1', 'Data volume'), row('di1', 'Diet'), row('p2', 'Plans'), row('l1', 'Limits')]);
+    expect(out.map(g => g.group)).toEqual(['Plans', 'Limits', 'Data volume', 'Features', 'Diet', 'Mystery']);
     expect(out[0]!.items.map(i => i.id)).toEqual(['p1', 'p2']);
   });
   it('gives no groups for no personas', () => { expect(groupPersonas([])).toEqual([]); });
@@ -25,5 +25,63 @@ describe('QA test account list', () => {
   });
   it('answers null for anything that is not the list', () => {
     for (const bad of [null, undefined, 'x', 5, {}, { personas: 'no' }]) expect(parsePersonaList(bad)).toBeNull();
+  });
+
+  it('reads seeded and canReset, treating a missing seeded as seeded (an older server)', () => {
+    const base = { name: 'A', group: 'Plans', plan: 'free', planStatus: null, scenario: 'a', tryThis: 'b' };
+    const out = parsePersonaList({ canReset: true, personas: [{ id: 'a', ...base, seeded: false }, { id: 'b', ...base }] });
+    expect(out?.canReset).toBe(true);
+    expect(out?.personas.map(p => p.seeded)).toEqual([false, true]);
+    expect(parsePersonaList({ personas: [] })?.canReset).toBe(false);
+  });
+});
+
+describe('the picker rules', () => {
+  const rows: QaPersonaRow[] = [
+    { ...row('a', 'Plans'), name: 'Paid, monthly', scenario: 'Active subscription', tryThis: 'Billing screen' },
+    { ...row('b', 'Diet'), name: 'Meal planner', scenario: 'A 7-day plan', tryThis: 'Portions and copying', seeded: false },
+    { ...row('c', 'Diet'), name: 'Recipe collector', scenario: 'About 30 recipes', tryThis: 'The Maybe matches' },
+  ];
+
+  it('shows the menu row to an admin on their own account and the banner button on a test account, nothing elsewhere', () => {
+    expect(qaEntries({ persona: null, canSwitch: true })).toEqual({ menuRow: true, bannerSwitch: false });
+    expect(qaEntries({ persona: 'Founder', canSwitch: false })).toEqual({ menuRow: false, bannerSwitch: true });
+    expect(qaEntries({ persona: null, canSwitch: false })).toEqual({ menuRow: false, bannerSwitch: false });
+    expect(qaEntries(undefined)).toEqual({ menuRow: false, bannerSwitch: false });
+  });
+  it('lists All then the groups present', () => { expect(groupChips(rows)).toEqual(['All', 'Plans', 'Diet']); });
+  it('searches name, scenario and try-this text without regard to case, and narrows by group', () => {
+    expect(filterPersonas(rows, 'MEAL', 'All').map(r => r.id)).toEqual(['b']);
+    expect(filterPersonas(rows, 'subscription', 'All').map(r => r.id)).toEqual(['a']);
+    expect(filterPersonas(rows, 'maybe', 'All').map(r => r.id)).toEqual(['c']);
+    expect(filterPersonas(rows, '', 'Diet').map(r => r.id)).toEqual(['b', 'c']);
+    expect(filterPersonas(rows, 'meal', 'Plans')).toEqual([]);
+    expect(filterPersonas(rows, '  ', 'All')).toHaveLength(3);
+  });
+  it('keeps the last three switches, newest first, with no repeats', () => {
+    expect(pushRecent(pushRecent(pushRecent(pushRecent([], 'a'), 'b'), 'c'), 'd')).toEqual(['d', 'c', 'b']);
+    expect(pushRecent(['b', 'a'], 'a')).toEqual(['a', 'b']);
+    expect(recentRows(rows, ['c', 'zzz', 'a']).map(r => r.id)).toEqual(['c', 'a']);
+  });
+  it('reads a saved recent list and survives junk', () => {
+    expect(parseRecent(['a', 'b'])).toEqual(['a', 'b']);
+    for (const bad of [null, undefined, '', 'text', { a: 1 }, 5]) expect(parseRecent(bad)).toEqual([]);
+    expect(parseRecent(['a', 3, 'b', 'c', 'd'])).toEqual(['a', 'b', 'c']);
+  });
+  it('disables Switch on the current or an unseeded account, and Reset on the current one, and names Seed for an unseeded one', () => {
+    expect(rowState(rows[0]!, 'a', true)).toMatchObject({ current: true, canSwitch: false, canReset: false, hint: 'Switch away to reset it' });
+    expect(rowState(rows[1]!, 'a', true)).toMatchObject({ canSwitch: false, canReset: true, resetLabel: 'Seed', hint: 'Seed it first' });
+    expect(rowState(rows[2]!, 'a', true)).toMatchObject({ canSwitch: true, canReset: true, resetLabel: 'Reset', hint: null });
+    expect(rowState(rows[2]!, null, false).canReset).toBe(false); // the server has no owner URL
+  });
+  it('lists the accounts to seed, never the one you are on', () => {
+    expect(missingIds(rows, null)).toEqual(['b']);
+    expect(missingIds(rows, 'b')).toEqual([]);
+  });
+  it('words the line and the dot', () => {
+    expect(youAre(rows, 'c')).toBe('You are: Recipe collector');
+    expect(youAre(rows, null)).toBe('You are: your own account');
+    expect(seededWord(true)).toBe('Seeded');
+    expect(seededWord(false)).toBe('Not seeded');
   });
 });

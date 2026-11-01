@@ -353,7 +353,11 @@
   line-height: 1;
   color: var(--m-ink-lo);
 }
-.heat .hc.l3,.heat .hc.l4 {
+.heat .hc.l3 {
+  /* Level 3 is mid-tone in both themes: white on the light-theme fill is 3.5:1, so it has its own ink (4.8:1 light, dark theme unchanged). */
+  color: var(--m-ink-3);
+}
+.heat .hc.l4 {
   color: var(--m-ink-hi);
 }
 @media (max-width:700px) {
