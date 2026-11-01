@@ -100,6 +100,10 @@ describe('an ingredient linked to a sauce or seasoning', () => {
     expect(missingParts(pantryStatus(meal, bare, at('c'), [taco])).add).toEqual(['paprika']);
     expect(missingParts(pantryStatus(meal, bare, at(), [taco]))).toMatchObject({ already: [{ id: 'c' }], add: ['paprika'] }); // cumin is on the list, only unticked
   });
+  it('is partly at home when only part of a sauce inside a sauce is', () => {
+    const rub = { id: 'rub', ing: [{ n: 'Taco seasoning', rid: 'taco' }, { n: 'salsa' }] } as unknown as Recipe;
+    expect(pantryStatus({ ing: [{ n: 'Rub', rid: 'rub' }] }, grocery, at('c'), [taco, rub]).lines[0]).toMatchObject({ have: false, partial: true });
+  });
   it('without the recipes list a link counts as before', () => {
     expect(pantryStatus(meal, grocery, at('c', 'p')).lines[0]!.have).toBe(false);
   });
