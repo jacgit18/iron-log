@@ -4,7 +4,9 @@ import { parseDate, ymd } from '../shared/dates.js';
 
 /* ---------- Food log helpers (ADR 086): what a day adds up to, what is offered again, what is kept. Pure; the store and the view call these. ---------- */
 
-export const entriesOn = (entries: DietEntry[], day: string): DietEntry[] => entries.filter(e => e.d === day);
+/** A day's entries by hour added (`t`), then the order they were added; an entry with no hour (a past day) follows the timed ones. A stable sort, so ties keep insertion order. */
+export const entriesOn = (entries: DietEntry[], day: string): DietEntry[] =>
+  entries.filter(e => e.d === day).sort((a, b) => (a.t ?? Infinity) - (b.t ?? Infinity) || 0);
 
 export interface Totals { kcal: number; protein: number; carbs: number; fat: number; count: number }
 const sum1 = (n: number) => Math.round(n * 10) / 10;

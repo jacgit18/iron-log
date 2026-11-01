@@ -2,6 +2,7 @@ import type { DietEntry, PlanItem, Recipe, SavedItem, SavedMeal } from '../types
 import { MAX_DIET_PER_DAY, MAX_PLAN_AHEAD, MAX_PLAN_ITEMS } from '../shared/diet.js';
 import { fmtNum, hasMacros, servingNumbers, shiftDay } from './dietLog.js';
 import { planMeal } from './dietMeals.js';
+import { sortByName } from './sort.js';
 
 /* ---------- The meal planner (brief diet-meal-planner): a day's list of recipes and saved meals, what it adds up to, what logging it does, what it needs from the shop. Pure; the store and the panel call these. ---------- */
 
@@ -91,4 +92,12 @@ export function recipeIdsFor(plan: Plan, days: string[], recipes: Recipe[]): str
   const seen = new Set<string>();
   for (const d of days) for (const it of plan[d] ?? []) if (it.k === 'r' && recipes.some(r => r.id === it.id)) seen.add(it.id);
   return [...seen];
+}
+
+export const MAX_FIND_MATCHES = 8;
+
+/** The recipes or meals whose name contains `query` (case-blind; empty matches all), A to Z, then capped: the cap keeps the first alphabetical ones, not the first stored. */
+export function findMatches<T extends { id: string; n: string }>(list: readonly T[], query: string): T[] {
+  const needle = query.trim().toLowerCase();
+  return sortByName(list.filter(x => !needle || x.n.toLowerCase().includes(needle)), x => x.n, x => x.id).slice(0, MAX_FIND_MATCHES);
 }
