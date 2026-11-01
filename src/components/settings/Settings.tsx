@@ -341,7 +341,8 @@ function useCurrentGroup() {
       const bar = rail ? 0 : document.querySelector('.sjump')?.getBoundingClientRect().bottom ?? 0;
       const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
       let next: string = GROUPS[0][0];
-      for (const [id] of GROUPS) { const h = document.getElementById(`set-${id}-h`); if (h && h.getBoundingClientRect().top <= bar + 24) next = id; }
+      let best = -Infinity; // side by side columns share a top: the earlier group wins a tie, unless a jump just focused the later one's heading
+      for (const [id] of GROUPS) { const h = document.getElementById(`set-${id}-h`); const t = h?.getBoundingClientRect().top; if (h && t !== undefined && t <= bar + 24 && (t > best + 1 || (t >= best - 1 && document.activeElement === h))) { best = Math.max(best, t); next = id; } }
       setCur(atEnd ? GROUPS[GROUPS.length - 1][0] : next);
     };
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(look); };
@@ -362,7 +363,7 @@ function useCurrentGroup() {
 
 function Group({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section className="sgroup" aria-labelledby={`set-${id}-h`}>
+    <section className="sgroup" data-group={id} aria-labelledby={`set-${id}-h`}>
       <h2 id={`set-${id}-h`} tabIndex={-1}>{title}</h2>
       <div className="sgrid">{children}</div>
     </section>

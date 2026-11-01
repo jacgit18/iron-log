@@ -27,7 +27,7 @@ export default function StretchLibrary() {
   const filtering = isFiltering({ q, src: sources ? src : '' });
   const reordering = ordering && canReorder(filtering);
   return (
-    <section className="panel edpanel exlib">
+    <section className={`panel edpanel exlib exlibwide${reordering ? ' exreorder' : ''}`}>
       <div className="inline spread">
         <h2 id="slib-h" tabIndex={-1}>Stretch library</h2>
         <div className="inline">
@@ -54,7 +54,7 @@ export default function StretchLibrary() {
           if (!rows.length) return null;
           const open = groupOpen(tier, userOpen, filtering);
           return (
-            <div key={tier || 'lib'}>
+            <div key={tier || 'lib'} className="libsect">
               {filtering
                 ? <div className="libgroup">{groupHeading(tierLabel(tier), rows.length)}</div> // while searching every group with a match is open and cannot be folded
                 : (

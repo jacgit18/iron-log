@@ -1,5 +1,29 @@
 @layer base, components;
 @layer components {
+/* The Log sheet of a card that is already logged (LogSheet.tsx, LoggedView): the name with a "Logged" chip, and one line saying what was logged. */
+.loggedhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+.loggedchip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-2) var(--sp-8);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-pill);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.loggedsum {
+  margin: 0 0 var(--sp-8);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
 /* The "Recent" table in the Log sheet (LogSheet.tsx). When its box is narrow for the text size (under 15rem wide: a large text size on a phone, since the
    rem grows with the text and the sheet does not), it is no longer a four-column table, which ran past the sheet (381px in a 320px sheet at 200% text):
    each entry is a two-line card (date, load and sets, then the phase) whose pieces wrap when they do not fit. At a normal text size on any phone, and on
