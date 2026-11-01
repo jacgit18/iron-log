@@ -52,7 +52,7 @@ export default function Recipes() {
   asked.current = `${q}|${cat}|${tries}`;
   const libCopy = useMemo(() => (view.kind === 'library' ? recipeFromCatalog(view.item, []) : null), [view]);
 
-  const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] })])), [recipes, grocery, months, month]);
+  const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes)])), [recipes, grocery, months, month]);
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
   const shown = useMemo(() => filterRecipes(recipes, { q, cat, canMake }, makeable), [recipes, q, cat, canMake, makeable]);
 
