@@ -103,6 +103,7 @@
   --m4: #6B4E00;
   --m-ink-lo: #1A1E1C;
   --m-ink-hi: #FFFFFF;
+  --m-ink-3: #1A1E1C;
   --up: #7A5C00;
   --down: #C4561F;
   --s-str: #e34948;
@@ -191,6 +192,7 @@
     --m4: #E3BE55;
     --m-ink-lo: #F5F6F4;
     --m-ink-hi: #1E2326;
+    --m-ink-3: #1E2326;
     --up: #E3BE55;
     --down: #D9772F;
     --s-str: #e34948;
@@ -237,6 +239,7 @@
   --m4: #E3BE55;
   --m-ink-lo: #F5F6F4;
   --m-ink-hi: #1E2326;
+  --m-ink-3: #1E2326;
   --up: #E3BE55;
   --down: #D9772F;
   --s-str: #e34948;
