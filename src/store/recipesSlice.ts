@@ -63,7 +63,7 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   acceptSuggestions(id, month) {
     const list = get().recipes; const r = list.find(x => x.id === id);
     if (!r) return 0;
-    const pins = new Map(suggestionPins(pantryStatus(r, get().grocery, get().groceryMonths[month] ?? { lines: {}, pulled: [] })).map(p => [p.index, p.home]));
+    const pins = new Map(suggestionPins(pantryStatus(r, get().grocery, get().groceryMonths[month] ?? { lines: {}, pulled: [] }, list)).map(p => [p.index, p.home]));
     if (!pins.size) return 0;
     set({ recipes: list.map(x => (x.id === id ? { ...r, ing: r.ing.map((y, j) => (pins.has(j) ? { ...y, home: pins.get(j)! } : y)) } : x)) });
     get().saveRecipes();
@@ -73,7 +73,7 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   addMissingToGrocery(id, month) {
     const r = get().recipes.find(x => x.id === id);
     if (!r) return { added: 0, already: 0, refused: null };
-    const status = pantryStatus(r, get().grocery, get().groceryMonths[month] ?? { lines: {}, pulled: [] });
+    const status = pantryStatus(r, get().grocery, get().groceryMonths[month] ?? { lines: {}, pulled: [] }, get().recipes);
     const { already, add } = missingParts(status);
     let added = 0; let refused: string | null = null;
     for (const n of add) { const e = get().addGroceryItem({ n, store: '', qty: '1', price: '', every: false }); if (e) refused ??= e; else added++; }

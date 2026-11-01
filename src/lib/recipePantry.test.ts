@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Grocery, GroceryItem } from '../types.ts';
+import type { Grocery, GroceryItem, Recipe } from '../types.ts';
 import { SYNONYMS, addMissingMessage, ingredientName, isAlwaysHave, matchHome, missingParts, nameWords, pantryStatus, rankItems, splitIngredient, suggestItem, suggestionPins } from './recipePantry.js';
 
 const it_ = (id: string, n: string): GroceryItem => ({ id, n, store: 'Anywhere', qty: 1, cents: null, every: false, out: false });
@@ -58,6 +58,58 @@ describe('pantryStatus and missingParts', () => {
     const { already, add } = missingParts(s);
     expect(already.map(i => i.id)).toEqual(['d']);
     expect(add).toEqual(['parsley']);
+  });
+});
+
+describe('an ingredient linked to a sauce or seasoning', () => {
+  const grocery = g(it_('c', 'Cumin'), it_('p', 'Paprika'), it_('s', 'Salsa'));
+  const taco = { id: 'taco', ing: [{ n: 'cumin' }, { n: 'paprika' }, { n: 'water' }] } as unknown as Recipe;
+  const meal = { id: 'meal', ing: [{ n: 'Taco seasoning', rid: 'taco' }] };
+  const at = (...have: string[]) => ({ lines: Object.fromEntries(have.map(id => [id, { have: true as const }])), pulled: [] });
+  it('is at home when everything it is made from is', () => {
+    const s = pantryStatus(meal, grocery, at('c', 'p'), [taco]);
+    expect(s).toMatchObject({ have: 1, total: 1 });
+    expect(s.lines[0]).toMatchObject({ have: true, partial: false });
+  });
+  it('is partly at home when only some of it is, and still missing', () => {
+    const s = pantryStatus(meal, grocery, at('c'), [taco]);
+    expect(s.lines[0]).toMatchObject({ have: false, partial: true });
+    expect(s.have).toBe(0);
+  });
+  it('is missing, not partial, when none of it is at home', () => {
+    expect(pantryStatus(meal, grocery, at(), [taco]).lines[0]).toMatchObject({ have: false, partial: false });
+  });
+  it('is at home when the sauce is itself on your At home list and ticked', () => {
+    expect(pantryStatus({ ing: [{ n: 'Salsa', rid: 'taco' }] }, grocery, at('s'), [taco]).lines[0]!.have).toBe(true);
+  });
+  it('ignores a skipped ingredient of the sauce and a sauce with no ingredients', () => {
+    const skipping = { id: 'taco', ing: [{ n: 'cumin' }, { n: 'paprika', skip: true }] } as unknown as Recipe;
+    expect(pantryStatus(meal, grocery, at('c'), [skipping]).lines[0]!.have).toBe(true);
+    const empty = { id: 'taco', ing: [] } as unknown as Recipe;
+    expect(pantryStatus(meal, grocery, at('c'), [empty]).lines[0]).toMatchObject({ have: false, partial: false });
+  });
+  it('follows a sauce inside a sauce, and stops at a loop', () => {
+    const rub = { id: 'rub', ing: [{ n: 'Taco seasoning', rid: 'taco' }, { n: 'salsa' }] } as unknown as Recipe;
+    expect(pantryStatus({ ing: [{ n: 'Rub', rid: 'rub' }] }, grocery, at('c', 'p', 's'), [taco, rub]).lines[0]!.have).toBe(true);
+    const loop = { id: 'loop', ing: [{ n: 'Loop', rid: 'loop' }] } as unknown as Recipe;
+    expect(pantryStatus(loop, grocery, at(), [loop]).lines[0]).toMatchObject({ have: false, partial: false });
+  });
+  it('sends the missing part of a sauce to To get, not the sauce name', () => {
+    expect(missingParts(pantryStatus(meal, grocery, at('c'), [taco]))).toMatchObject({ already: [{ id: 'p' }], add: [] });
+    const bare = g(it_('c', 'Cumin'));
+    expect(missingParts(pantryStatus(meal, bare, at('c'), [taco])).add).toEqual(['paprika']);
+    expect(missingParts(pantryStatus(meal, bare, at(), [taco]))).toMatchObject({ already: [{ id: 'c' }], add: ['paprika'] }); // cumin is on the list, only unticked
+  });
+  it('is partly at home when only part of a sauce inside a sauce is', () => {
+    const rub = { id: 'rub', ing: [{ n: 'Taco seasoning', rid: 'taco' }, { n: 'salsa' }] } as unknown as Recipe;
+    expect(pantryStatus({ ing: [{ n: 'Rub', rid: 'rub' }] }, grocery, at('c'), [taco, rub]).lines[0]).toMatchObject({ have: false, partial: true });
+  });
+  it('offers no Maybe for a sauce that is at home because it is made', () => {
+    const butter = g(it_('c', 'Cumin'), it_('p', 'Paprika'), it_('b', 'Taco butter'));
+    expect(pantryStatus({ ing: [{ n: 'Taco butter sauce', rid: 'taco' }] }, butter, at('c', 'p'), [taco]).lines[0]).toMatchObject({ have: true, suggest: null });
+  });
+  it('without the recipes list a link counts as before', () => {
+    expect(pantryStatus(meal, grocery, at('c', 'p')).lines[0]!.have).toBe(false);
   });
 });
 
