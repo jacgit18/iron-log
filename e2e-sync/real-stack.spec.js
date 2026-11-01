@@ -9,6 +9,14 @@ const goSettings = async page => {
   }
 };
 
+// Progress is a hub with an "Exercise charts" tile under 1280px, and one page with the exercise cards already on it from 1280px (these phones are
+// 1440px wide). A reload also reopens the Exercise charts page it was on (screen addresses, #/progress/lifts). So click the tile only when it is there.
+const openExerciseCharts = async page => {
+  const charts = page.getByRole('button', { name: 'Exercise charts' });
+  await charts.or(page.locator('.pcard', { hasText: 'Hack Squat' })).first().waitFor();
+  if (await charts.isVisible()) await charts.click();
+};
+
 // The whole stack, nothing mocked: a browser with the sync flag on, the real API, a real Postgres. These cover what the unit and
 // API tests cannot: the actual screens, the actual store, and the browser's own storage and network events.
 
@@ -25,7 +33,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
 
   // Edit one in the exercise sheet (it becomes a session logged by hand), and delete the other.
   await page.locator('#tab-progress').click();
-  await page.getByRole('button', { name: 'Exercise charts' }).click();
+  await openExerciseCharts(page);
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   const rows = page.locator('table.hist tbody tr');
   await expect(rows).toHaveCount(2);
@@ -45,10 +53,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
   await page.reload(); // the app reopens on the tab it was on
   await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await page.locator('#tab-progress').click();
-  // The reload reopened the Exercise charts page it was on (screen addresses, #/progress/lifts), so the tile is only there when the hub is showing.
-  const charts = page.getByRole('button', { name: 'Exercise charts' });
-  await charts.or(page.locator('.pcard', { hasText: 'Hack Squat' })).first().waitFor();
-  if (await charts.isVisible()) await charts.click();
+  await openExerciseCharts(page);
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(page.locator('table.hist tbody tr')).toHaveCount(1);
   await expect(page.locator('table.hist')).toContainText('300 lb');
@@ -57,7 +62,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
   const b = await newPhone(browser, user);
   const second = await b.open();
   await second.locator('#tab-progress').click();
-  await second.getByRole('button', { name: 'Exercise charts' }).click();
+  await openExerciseCharts(second);
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist tbody tr')).toHaveCount(1);
   await expect(second.locator('table.hist')).toContainText('300 lb');
@@ -192,7 +197,7 @@ test('data from before accounts is uploaded once, all of it, and a second phone 
 
   // The phone shows what it uploaded, and the old copy is still on the device.
   await page.locator('#tab-progress').click();
-  await page.getByRole('button', { name: 'Exercise charts' }).click();
+  await openExerciseCharts(page);
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(page.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(2);
   expect(await page.evaluate(() => localStorage.getItem('ironlog:logs/hack'))).toContain('"w":210');
@@ -204,7 +209,7 @@ test('data from before accounts is uploaded once, all of it, and a second phone 
   const b = await newPhone(browser, user);
   const second = await b.open({ blank: true }); // the upload has no program, so the board is blank (ADR 021); the history is there
   await second.locator('#tab-progress').click();
-  await second.getByRole('button', { name: 'Exercise charts' }).click();
+  await openExerciseCharts(second);
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(2);
   expect(await server.counts(user)).toEqual({ entries: 2, body: 1, weeks: 1 });
@@ -261,7 +266,7 @@ test('an export file from another copy of the app is uploaded into an empty acco
   const b = await newPhone(browser, user);
   const second = await b.open({ blank: true }); // the upload has no program, so the board is blank (ADR 021); the history is there
   await second.locator('#tab-progress').click();
-  await second.getByRole('button', { name: 'Exercise charts' }).click();
+  await openExerciseCharts(second);
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(1);
   await a.close();
