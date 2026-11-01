@@ -5,7 +5,8 @@ import { MAX_NOTE, UNITS, byStore, carriedCount, centsText, emptyMonth, gotLast,
 import { DEFAULT_GROCERY_SORT, GET_SORTS, HOME_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
-import { pageOf } from '../../lib/route.js';
+import { dailyFix, pageOf } from '../../lib/route.js';
+import EmptyTiles from '../EmptyTiles.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import ArmedButton from '../ArmedButton.jsx';
 import GroceryBar, { NoMatch } from './GroceryBar.js';
@@ -453,7 +454,13 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
       )}
       {sharingOpen && <SharingGroups g={g} />}
       <RemovedNotice scope="grocery" />
-      {!g.items.length && !editing && <p className="note">Your list is empty. Use Edit to add what you buy and where.</p>}
+      {!g.items.length && !editing && (
+        <EmptyTiles heading="Start your grocery list" tiles={[
+          { id: 'groc-tile-add', label: 'Add an item', hint: 'Type what you buy and where', onClick: () => { focusAfter.current = 'groc-name'; setEditMode(true); } },
+          { id: 'groc-tile-sharing', label: 'Set up sharing', hint: 'Split the bill with others', onClick: () => setSharingOpen(true) },
+          { id: 'groc-tile-recipes', label: 'Browse recipes', hint: 'Add what a recipe needs to your list', onClick: () => { useAppStore.getState().setDailyView('recipes'); navigate(dailyFix('daily', 'recipes') ?? 'daily', 'replace'); } },
+        ]} />
+      )}
       {!editing && g.items.length > 0 && <GroceryBar q={q} onQ={setQ} options={HOME_SORTS} sort={sort} onSort={setSort} />}
       {!editing && !!q.trim() && !shown.length && <NoMatch q={q} />}
       {shown.map((grp, gi) => (

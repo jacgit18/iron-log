@@ -6,6 +6,7 @@ import './Icon.css';
 const STROKE = {
   'arrow-down': 'M12 5v14M6 13l6 6 6-6',
   'arrow-up': 'M12 19V5M6 11l6-6 6 6',
+  check: 'M5 12l5 5L20 7',
   'chevron-down': 'M5 9l7 7 7-7',
   'chevron-left': 'M15 5l-7 7 7 7',
   'chevron-right': 'M9 5l7 7-7 7',

@@ -331,15 +331,26 @@ html:has(.sjump) {
 .imppaste summary {
   padding: var(--sp-12) 0;
 }
-/* Last in the file so it wins over the one-column .sgrid rule above: from 1280px the two columns of a group (.scol) sit side by side, each at most 46rem, instead of stacking in one column with the right half of the screen empty. DOM order is unchanged. */
+/* Last in the file so it wins over the one-column rules above: from 1280px the page is two columns, each at most 46rem. Training sits on the left; Data, App and Erase & delete stack on the right in their DOM order (Erase last, as before). Grid placement only, so DOM and tab order are unchanged. */
 @media (min-width:1280px) {
   .smain {
     grid-template-columns: 11rem minmax(0,1fr);
   }
-  .sgrid {
+  .sgroups {
+    display: grid;
     grid-template-columns: repeat(2,minmax(0,46rem));
+    gap: 24px var(--sp-16);
+    align-items: start;
   }
-  /* A column with nothing in it (Data's account column when signed out) would leave the left half blank and push the next column right. */
+  .sgroups>.sgroup {
+    grid-column: 2;
+  }
+  /* Training spans the three right-hand groups (Data, App, Erase & delete); add to the span if a group is added there. */
+  .sgroups>.sgroup[data-group="training"] {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+  }
+  /* A column with nothing in it (Data's account column when signed out) would leave a blank gap in the group. */
   .settings .scol:empty {
     display: none;
   }
