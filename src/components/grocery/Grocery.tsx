@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, UNITS, byStore, carriedCount, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, lineTotal, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
 import { DEFAULT_GROCERY_SORT, GET_SORTS, HOME_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
+import { columnsClass } from '../../lib/groceryColumns.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
 import { dailyFix, pageOf } from '../../lib/route.js';
@@ -222,6 +223,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       )}
       <RemovedNotice scope="groceryoff" />
       {current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought.</p>}
+      <div className={`gcols ${columnsClass(shownTodo.length + goneOnly.length)}`}>
       {shownTodo.map((grp, gi) => {
         const gt = tally(grp.items, month); const gone = removed[grp.store]; // the tally counts a purchase of a removed item too
         if (gone) { gt.got += gone.count; gt.count += gone.count; gt.planned += gone.cents; }
@@ -247,10 +249,12 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
           {taxRow(store)}
         </section>
       ))}
+      </div>
       {bought.length > 0 && (
         <details className="gbought" id="groc-bought" open={boughtOpen} onToggle={e => setBoughtOpen(e.currentTarget.open)}>
           <summary id="groc-bought-sum">Bought this month ({bought.length})</summary>
           <p className="note">You have these at home, so they are ticked <b>Have</b> on At home. Untick one to put it back on the list.</p>
+          <div className={`gcols ${columnsClass(shownBought.length)}`}>
           {shownBought.map(grp => (
             <section key={grp.store || '_'} className="gstore" aria-label={`Bought from ${grp.label}`}>
               <div className="gstorehead"><h3>{grp.label}{split && grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3></div>
@@ -259,6 +263,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
               <ul className="glist">{grp.items.map(it => <GetRow key={it.id} g={g} item={it} month={month} mk={mk} future={false} carries={off >= 0} onGot={on => tick(it.id, on)} open={openIds.has(it.id)} onOpen={on => setPanel(it.id, on)} onMove={id => { focusAfter.current = `groc-store-${id}`; }} />)}</ul>
             </section>
           ))}
+          </div>
         </details>
       )}
       {split && <SplitSection g={g} month={month} mk={mk} open={splitOpen === mk} onToggle={on => setSplitOpen(on ? mk : null)} />}
@@ -463,6 +468,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
       )}
       {!editing && g.items.length > 0 && <GroceryBar q={q} onQ={setQ} options={HOME_SORTS} sort={sort} onSort={setSort} />}
       {!editing && !!q.trim() && !shown.length && <NoMatch q={q} />}
+      <div className={`gcols ${columnsClass(shown.length)}`}>
       {shown.map((grp, gi) => (
         <section key={grp.store || '_'} className="gstore" aria-labelledby={`groc-home-h-${gi}`}>
           <div className="gstorehead">
@@ -477,6 +483,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
           <ul className="glist">{grp.items.map(it => (editing ? <EditRow key={it.id} item={it} g={g} adjust={adjusting.has(grp.store)} have={hasIt(it)} onHave={on => setHave(it, on)} open={openEdit.has(it.id)} onOpen={on => setEdits([it.id], on)} onMove={id => { focusAfter.current = `groc-edit-store-${id}`; }} onRemoved={afterRemoved} /> : <HomeRow key={it.id} item={it} have={hasIt(it)} bought={lineOf(it, month).got} onHave={on => setHave(it, on)} />))}</ul>
         </section>
       ))}
+      </div>
       {editing && <Stores g={g} />}
       {editing && <EditDock g={g} onDone={() => setEditMode(false)} />}
     </div>
