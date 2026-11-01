@@ -12,6 +12,7 @@ import MoveSheet from './MoveSheet.js';
 import NewProgramSheet from './NewProgramSheet.js';
 import ImportSheet from './ImportSheet.js';
 import HelpSheet from './HelpSheet.js';
+import ShareSheet from './ShareSheet.js';
 import RestDateSheet from './RestDateSheet.js';
 import RecipeFilters from '../recipes/RecipeFilters.js';
 import RowMenuSheet from '../program/RowMenuSheet.js';
@@ -39,6 +40,7 @@ export default function Modal() {
     case 'restdate': return <RestDateSheet key={modal.day as number} day={modal.day as number} />;
     case 'recipefilters': return <RecipeFilters />;
     case 'help': return <HelpSheet />;
+    case 'share': return <ShareSheet title={String(modal.title ?? '')} url={String(modal.url ?? '')} />;
     default: return null;
   }
 }

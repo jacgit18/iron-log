@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { navOf, onPop, opsFor, startBackNav } from './backNav';
+import { afterSheetClose, navOf, onPop, opsFor, startBackNav } from './backNav';
 
 const board = { tab: 'board', modal: false };
 const daily = { tab: 'daily', modal: false };
@@ -83,5 +83,24 @@ describe('startBackNav', () => {
   });
   it('stops listening when stopped', () => {
     const a = setup(); a.stop(); a.st.setTab('daily'); expect(a.tabEntry()).toBe('board');
+  });
+});
+
+describe('afterSheetClose', () => {
+  const win = () => { const fns = new Set<(e: { state: unknown }) => void>(); return { fns, addEventListener: (_: 'popstate', f: (e: { state: unknown }) => void) => fns.add(f), removeEventListener: (_: 'popstate', f: (e: { state: unknown }) => void) => fns.delete(f) }; };
+  it('waits for the step back when the current entry is the sheet\'s own, then runs once', () => {
+    const w = win(); let n = 0;
+    afterSheetClose({ state: { nav: { tab: 'board', modal: true } } }, w, () => { n++; });
+    expect(n).toBe(0);
+    w.fns.forEach(f => f({ state: null })); w.fns.forEach(f => f({ state: null }));
+    expect(n).toBe(1);
+    expect(w.fns.size).toBe(0);
+  });
+  it('runs at once when no sheet entry is current', () => {
+    const w = win(); let n = 0;
+    afterSheetClose({ state: { nav: { tab: 'board', modal: false } } }, w, () => { n++; });
+    afterSheetClose({ state: null }, w, () => { n++; });
+    expect(n).toBe(2);
+    expect(w.fns.size).toBe(0);
   });
 });
