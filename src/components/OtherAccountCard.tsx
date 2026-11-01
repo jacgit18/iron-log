@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { exInfo } from '../lib/data.js';
 import { forgetSession } from '../lib/gate.js';
 import { signOutFlow } from '../lib/signOutFlow.js';
 import { disablePush } from '../lib/pushClient.js';
+import { autoWipeDecision, markIsFresh, SWITCH_MARK_KEY } from '../lib/qaSwitchWipe.js';
 import { LS } from '../lib/storage.js';
 import { ymd } from '../shared/dates.js';
 import { deviceDataFile, versionLabel } from '../sync/labels.js';
+import { useQa } from '../sync/qaState.js';
 import { useGoogleSignIn } from '../sync/useGoogleSignIn.js';
 import { flag, getSyncApi, useAppStore } from '../store/useAppStore.js';
 import ArmedButton from './ArmedButton.js';
@@ -19,6 +21,12 @@ export default function OtherAccountCard() {
   const { client, busy, setBusy } = useGoogleSignIn();
   const [email, setEmail] = useState<string | null>(null);
   const api = getSyncApi();
+  const qa = useQa();
+  // QA only (brief qa-auto-wipe-on-switch): a switch or Return just left a stamp, so this card wipes by itself instead of asking. `hold` keeps the card
+  // hidden while that is decided; any other case (no stamp, a stale one, no `qa`) shows the card as before.
+  const [hold, setHold] = useState(() => { try { return markIsFresh(sessionStorage.getItem(SWITCH_MARK_KEY), Date.now()); } catch { return false; } });
+  const running = useRef(false);
+  const dropMark = () => { try { sessionStorage.removeItem(SWITCH_MARK_KEY); } catch { /* ignore */ } };
 
   useEffect(() => {
     if (!blocked) return;
@@ -27,7 +35,29 @@ export default function OtherAccountCard() {
     return () => { current = false; };
   }, [blocked, client]);
 
-  if (!blocked || !api) return null;
+  useEffect(() => {
+    if (!hold || !blocked || !api || running.current) return;
+    let mark: string | null = null;
+    try { mark = sessionStorage.getItem(SWITCH_MARK_KEY); } catch { /* ignore */ }
+    const d = autoWipeDecision({ mark, now: Date.now(), qa: !!qa, pausedBecause: 'account' });
+    if (d === 'wait') return;
+    dropMark();
+    if (d === 'drop') { setHold(false); return; }
+    running.current = true;
+    void api.wipeForNewAccount().then(async out => {
+      if (out === 'done') { await useAppStore.getState().forgetBackups(); window.location.reload(); return; }
+      running.current = false;
+      setHold(false); // the wipe could not run: the card stays so the person can choose
+    }, () => { running.current = false; setHold(false); });
+  }, [hold, blocked, api, qa]);
+  // /api/me never said this is QA: stop waiting and let the person choose.
+  useEffect(() => {
+    if (!hold) return;
+    const t = setTimeout(() => { if (!running.current) { dropMark(); setHold(false); } }, 10_000);
+    return () => clearTimeout(t);
+  }, [hold]);
+
+  if (!blocked || !api || hold) return null;
   const who = email ?? 'the account you just signed in to';
 
   const download = () => {
