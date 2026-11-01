@@ -1,5 +1,5 @@
 import type pg from 'pg';
-import { BUILTIN } from '../../src/lib/data.ts';
+import { BUILTIN_PROGRAMS } from './builtinPrograms.ts';
 import type { PiiCrypto } from '../auth/piiCrypto.ts';
 import { personaAuthId, personaEmail, type Persona } from './personas.ts';
 import type { PersonaRows } from './seedPlan.ts';
@@ -11,7 +11,7 @@ import type { PersonaRows } from './seedPlan.ts';
 const BATCH = 500;
 
 /** The exercises a seeded log entry may use: every one in the two built-in programs. */
-export const SEED_EXERCISE_IDS: readonly string[] = [...new Set((['A', 'B'] as const).flatMap(k => BUILTIN[k].days.flatMap(d => d.slots.flatMap(sl => sl.items.map(i => i.ex)))))];
+export const SEED_EXERCISE_IDS: readonly string[] = [...new Set((['A', 'B'] as const).flatMap(k => BUILTIN_PROGRAMS[k].days.flatMap(d => d.slots.flatMap(sl => sl.items.map(i => i.ex)))))];
 
 export async function seedPersona(client: Pick<pg.PoolClient, 'query'>, crypto: PiiCrypto, persona: Persona, rows: PersonaRows, today: Date): Promise<void> {
   const authId = personaAuthId(persona.id);
@@ -30,7 +30,7 @@ export async function seedPersona(client: Pick<pg.PoolClient, 'query'>, crypto: 
       [authId, persona.plan, source, persona.planStatus, renews, rows.erased ? 2 : 1]);
     let seq = 0;
     if (rows.programs) {
-      for (const k of ['A', 'B'] as const) await client.query('insert into programs (user_id, seq, key, data) values ($1, $2, $3, $4)', [u.id, ++seq, k, JSON.stringify(BUILTIN[k])]);
+      for (const k of ['A', 'B'] as const) await client.query('insert into programs (user_id, seq, key, data) values ($1, $2, $3, $4)', [u.id, ++seq, k, JSON.stringify(BUILTIN_PROGRAMS[k])]);
     }
     for (let i = 0; i < rows.logs.length; i += BATCH) {
       const chunk = rows.logs.slice(i, i + BATCH).map(l => ({ ...l, seq: ++seq }));

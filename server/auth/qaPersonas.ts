@@ -67,7 +67,7 @@ export function qaPersonas(config: QaPersonasConfig): BetterAuthPlugin {
   const owner = () => (ownerPool ??= (config.makeOwnerPool ?? (url => new pg.Pool({ connectionString: pinSslMode(url), max: 1, statement_timeout: 60_000 })))(config.ownerDatabaseUrl!));
 
   /** Whether the kept admin session behind a test account's session is still there, still an admin's, and not expired. */
-  async function keptAdminOk(ctx: { context: { createAuthCookie: (n: string) => { name: string }; secret: string; internalAdapter: { findSession: (t: string) => Promise<{ session: { expiresAt: Date }; user: { email?: string | null; emailVerified?: boolean } } | null> } }; getSignedCookie: (n: string, s: string) => Promise<string | null | undefined> }) {
+  async function keptAdminOk(ctx: { context: { createAuthCookie: (n: string) => { name: string }; secret: string; internalAdapter: { findSession: (t: string) => Promise<{ session: { expiresAt: Date }; user: { email?: string | null; emailVerified?: boolean } } | null> } }; getSignedCookie: (n: string, s: string) => Promise<string | false | null | undefined> }) {
     const token = await ctx.getSignedCookie(ctx.context.createAuthCookie(ADMIN_COOKIE).name, ctx.context.secret);
     if (!token) return null;
     const admin = await ctx.context.internalAdapter.findSession(token);
