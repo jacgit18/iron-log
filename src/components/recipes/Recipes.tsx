@@ -15,6 +15,7 @@ import { pageOf } from '../../lib/route.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import SortControl from '../SortControl.jsx';
 import { useSortChoice } from '../useSortChoice.js';
+import EmptyTiles from '../EmptyTiles.js';
 import { goUp, navigate, useRoutePath } from '../useRoute.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { searchRecipes } from '../../sync/recipeCatalog.js';
@@ -153,7 +154,13 @@ export default function Recipes() {
 
       {src === 'mine' && (
         <>
-          {!recipes.length && <p className="note">Write your first recipe, or add one from the Library.</p>}
+          {!recipes.length && (
+            <EmptyTiles heading="Add your first recipe" tiles={[
+              { id: 'rc-tile-new', label: 'Write a recipe', hint: 'Your own, ingredient by ingredient', onClick: () => setView({ kind: 'form' }) },
+              { id: 'rc-tile-library', label: 'Browse the Library', hint: 'Copy a ready recipe into Mine', onClick: () => setSrc('library') },
+              { id: 'rc-tile-ready', label: 'Add a ready-made food', hint: 'A packaged food with its nutrition', onClick: () => setView({ kind: 'form', ready: true }) },
+            ]} />
+          )}
           {recipes.length > 0 && !shown.length && <p className="note">No recipe matches. Clear the search or the filters.</p>}
           <ul className="rc-list">
             {shown.map((r: Recipe) => {

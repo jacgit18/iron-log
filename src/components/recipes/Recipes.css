@@ -1,5 +1,12 @@
 @layer base, components;
 @layer components {
+/* The video link under a recipe's title (RecipeDetail.tsx): a target of at least 44px on a phone. */
+.rc-video {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 44px;
+}
 /* Recipes (ADR 084): the list, the library search, a recipe and its form. Plain flat rows like Groceries; every tap target is 44px tall. */
 .rc-top {
   display: flex;
