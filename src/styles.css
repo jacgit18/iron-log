@@ -911,6 +911,14 @@ body.timing {
   padding-bottom: var(--sp-12);
   scroll-snap-type: x mandatory;
 }
+/* From 1870px (a 1920px screen with its scrollbar) all seven days fit: 7 x 250px + 6 x 12px of gap = 1822px, the widest the container can be at this width minus its
+   padding and the scrollbar. Below that the columns keep their 270px minimum and the Board scrolls sideways, as before. If the gutter, the gap or the 250px minimum changes, move 1870px too;
+   `e2e/boardWide.spec.js` checks the switch at 1869 and 1870px. */
+@media (min-width:1870px) {
+  .board {
+    grid-auto-columns: minmax(250px,1fr);
+  }
+}
 .daytabs {
   display: none;
 }
