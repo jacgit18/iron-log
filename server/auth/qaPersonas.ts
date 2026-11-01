@@ -4,6 +4,7 @@ import { deleteSessionCookie, expireCookie, setSessionCookie } from 'better-auth
 import pg from 'pg';
 import { pinSslMode } from '../db/sslMode.ts';
 import { PERSONAS, personaAuthId, personaById } from '../qa/personas.ts';
+import { scenariosForPersona } from '../qa/scenarios.ts';
 import { SEED_EXERCISE_IDS, seedPersona } from '../qa/seedPersona.ts';
 import { buildPersonaRows } from '../qa/seedPlan.ts';
 import type { PiiCrypto } from './piiCrypto.ts';
@@ -90,7 +91,7 @@ export function qaPersonas(config: QaPersonasConfig): BetterAuthPlugin {
           ok: true,
           current,
           canReset: !!config.ownerDatabaseUrl,
-          personas: PERSONAS.map(p => ({ id: p.id, name: p.name, group: p.group, plan: p.plan, planStatus: p.planStatus, scenario: p.scenario, tryThis: p.tryThis, seeded: seeded.has(personaAuthId(p.id)) })),
+          personas: PERSONAS.map(p => ({ id: p.id, name: p.name, group: p.group, plan: p.plan, planStatus: p.planStatus, scenario: p.scenario, tryThis: p.tryThis, seeded: seeded.has(personaAuthId(p.id)), scenarios: scenariosForPersona(p.id).map(s => ({ id: s.id, title: s.title })) })),
         });
       }),
 

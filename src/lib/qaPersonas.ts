@@ -11,7 +11,11 @@ export interface QaPersonaRow {
   tryThis: string;
   /** The account exists on the server (it was seeded). */
   seeded: boolean;
+  /** The QA scenarios that run as this account (brief: qa-scenarios); none when it has no tag. */
+  scenarios: QaScenarioRef[];
 }
+
+export interface QaScenarioRef { id: string; title: string }
 
 export interface QaPersonaGroup { group: string; items: QaPersonaRow[] }
 
@@ -35,6 +39,12 @@ export function planBadge(plan: string, status: string | null): string {
 /** What the banner says while a test account is signed in. */
 export const bannerText = (name: string): string => `QA test account: ${name}`;
 
+/** The scenario refs of one row; anything that is not a list of `{ id, title }` strings is no list (an old server sends none). */
+function parseScenarios(v: unknown): QaScenarioRef[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap(x => (x && typeof x === 'object' && typeof (x as QaScenarioRef).id === 'string' && typeof (x as QaScenarioRef).title === 'string' ? [{ id: (x as QaScenarioRef).id, title: (x as QaScenarioRef).title }] : []));
+}
+
 /** Reads the list route's answer, or null when it is not one (an error page, an old server). */
 export function parsePersonaList(body: unknown): { current: string | null; canReset: boolean; personas: QaPersonaRow[] } | null {
   if (!body || typeof body !== 'object') return null;
@@ -43,7 +53,7 @@ export function parsePersonaList(body: unknown): { current: string | null; canRe
   const s = (v: unknown) => (typeof v === 'string' ? v : '');
   const personas = b.personas
     .filter((p): p is Record<string, unknown> => !!p && typeof p === 'object' && typeof (p as Record<string, unknown>).id === 'string' && typeof (p as Record<string, unknown>).name === 'string')
-    .map(p => ({ id: s(p.id), name: s(p.name), group: s(p.group) || 'Other', plan: s(p.plan), planStatus: typeof p.planStatus === 'string' ? p.planStatus : null, scenario: s(p.scenario), tryThis: s(p.tryThis), seeded: p.seeded !== false }));
+    .map(p => ({ id: s(p.id), name: s(p.name), group: s(p.group) || 'Other', plan: s(p.plan), planStatus: typeof p.planStatus === 'string' ? p.planStatus : null, scenario: s(p.scenario), tryThis: s(p.tryThis), seeded: p.seeded !== false, scenarios: parseScenarios(p.scenarios) }));
   return { current: typeof b.current === 'string' ? b.current : null, canReset: (body as { canReset?: unknown }).canReset === true, personas };
 }
 
@@ -61,10 +71,10 @@ export function qaEntries(qa: { persona: string | null; canSwitch: boolean } | u
 /** The chips above the list: All, then the groups present, in the screen's order. */
 export const groupChips = (rows: readonly QaPersonaRow[]): string[] => [ALL_GROUPS, ...groupPersonas(rows).map(g => g.group)];
 
-/** Rows matching the search (case-blind, on name, scenario and "try this") and the group chip. */
+/** Rows matching the search (case-blind, on name, scenario, "try this", and the ids and titles of the QA scenarios) and the group chip. */
 export function filterPersonas(rows: readonly QaPersonaRow[], query: string, group: string): QaPersonaRow[] {
   const q = query.trim().toLowerCase();
-  return rows.filter(r => (group === ALL_GROUPS || r.group === group) && (!q || `${r.name} ${r.scenario} ${r.tryThis}`.toLowerCase().includes(q)));
+  return rows.filter(r => (group === ALL_GROUPS || r.group === group) && (!q || `${r.name} ${r.scenario} ${r.tryThis} ${r.scenarios.map(s => `${s.id} ${s.title}`).join(' ')}`.toLowerCase().includes(q)));
 }
 
 /** The recent accounts that still exist, in recent order. */
@@ -109,3 +119,47 @@ export const youAre = (rows: readonly QaPersonaRow[], currentId: string | null):
 export const seededWord = (seeded: boolean): string => (seeded ? 'Seeded' : 'Not seeded');
 export const switchLabel = (name: string): string => `Switch to ${name}`;
 export const resetAria = (name: string, seeded: boolean): string => `${seeded ? 'Reset' : 'Seed'} ${name}`;
+
+/* ---------- Scenario tags (brief: qa-scenarios) ---------- */
+
+/** The tag line under a row: "Used in S-04, S-11", or null when the account has no scenario. */
+export const scenarioTag = (r: Pick<QaPersonaRow, 'scenarios'>): string | null => (r.scenarios.length ? `Used in ${r.scenarios.map(s => s.id).join(', ')}` : null);
+
+/** Copy for a row with nothing to run. */
+export const NO_SCENARIOS = 'No scenarios yet';
+
+/* ---------- The /?qa=<account id> link (brief: qa-scenarios) ----------
+   A link in the scenarios document that opens the picker with one account marked. It never switches: the tester still taps Switch. The parameter is
+   read once at start, held in memory until /api/me says this person may use the picker, and taken out of the address at once whatever it holds. */
+
+export const QA_LINK_PARAM = 'qa';
+const QA_LINK_ID = /^[a-z0-9-]{1,40}$/;
+
+/** The account id a page address asks for, or null: no `qa` parameter, an empty one, or one that is not a plausible account id (never trusted further). */
+export function qaLinkFromSearch(search: string): string | null {
+  const v = new URLSearchParams(search).get(QA_LINK_PARAM);
+  return v !== null && QA_LINK_ID.test(v) ? v : null;
+}
+
+/** The address search with the `qa` parameter removed and every other parameter kept (a share or shortcut parameter has its own reader). */
+export function searchWithoutQaLink(search: string): string {
+  const q = new URLSearchParams(search);
+  q.delete(QA_LINK_PARAM);
+  const rest = q.toString();
+  return rest ? `?${rest}` : '';
+}
+
+/** Whether this address carries a `qa` parameter at all, so it is removed even when its value is refused. */
+export const hasQaLink = (search: string): boolean => new URLSearchParams(search).has(QA_LINK_PARAM);
+
+/** Whether the picker may open from a link: the same rule as its two entries (an admin on their own account, or on a test account with the way back). */
+export function qaLinkAllowed(qa: { persona: string | null; canSwitch: boolean } | undefined): boolean {
+  const e = qaEntries(qa);
+  return e.menuRow || e.bannerSwitch;
+}
+
+/** The account to mark when the link opens the picker: the held id when it names one of the listed accounts, else null (nothing opens). */
+export const qaLinkTarget = (held: string | null, rows: readonly Pick<QaPersonaRow, 'id'>[]): string | null => (held && rows.some(r => r.id === held) ? held : null);
+
+/** The account a picker modal was opened to mark, or null. */
+export const qaHighlightOf = (modal: Record<string, unknown> | null | undefined): string | null => (typeof modal?.highlight === 'string' && QA_LINK_ID.test(modal.highlight) ? modal.highlight : null);
