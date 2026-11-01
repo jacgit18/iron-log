@@ -4,10 +4,13 @@ import { EQUIPMENT } from '../../lib/data.js';
 import { eqName, eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
 import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems, rowSummary } from '../../lib/exerciseLibrary.js';
+import { DEFAULT_EXERCISE_SORT, EXERCISE_SORTS, sortExerciseRows } from '../../lib/exerciseSort.js';
 import { isFiltering, resultText } from '../../lib/libraryFilter.js';
+import { useSortChoice } from '../../hooks/useSortChoice.js';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import { isCatalogId, exInfo } from '../../lib/data.js';
 import RemovedNotice from '../RemovedNotice.jsx';
+import SortControl from '../SortControl.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
 import LibraryChip from './LibraryChip.jsx';
 import YourEquipment from './YourEquipment.jsx';
@@ -23,7 +26,8 @@ export default function ExerciseLibrary() {
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
   const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)
-  const shown = filterRows(rows, sources ? f : { ...f, src: '' });
+  const [sort, setSort] = useSortChoice('exercises', EXERCISE_SORTS, DEFAULT_EXERCISE_SORT);
+  const shown = sortExerciseRows(filterRows(rows, sources ? f : { ...f, src: '' }), sort, logs);
   const filtering = isFiltering(f);
   return (
     <section className="panel edpanel exlib">
@@ -38,6 +42,7 @@ export default function ExerciseLibrary() {
       <div className="libbar" role="search">
         <input className="libsearch" type="search" aria-label="Search" value={f.q} placeholder={`Search ${rows.length} exercises`} onChange={e => setF(x => ({ ...x, q: e.target.value }))} />
         <div className="libchips">
+          <SortControl options={EXERCISE_SORTS} value={sort} onChange={setSort} />
           <LibraryChip label="Equipment" value={f.eq} onChange={v => setF(x => ({ ...x, eq: v }))}>
             <option value="">All equipment</option>
             {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
