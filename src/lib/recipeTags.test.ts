@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe } from '../types.ts';
-import { chipOrder, cleanTag, hasTags, liveTags, moveChip, removeTag, renameTag, tagCounts, tagLimitError, toggleChip, visibleChips } from './recipeTags.js';
+import { chipOrder, cleanTag, hasTags, liveTags, moveChip, removeTag, renameTag, starterTags, tagCounts, tagLimitError, toggleChip, visibleChips } from './recipeTags.js';
 import { RECIPE_CATEGORIES } from '../shared/recipes.js';
 
 const r = (id: string, tags?: string[]): Recipe => ({ id, n: id, cat: 'other', ing: [{ n: 'x' }], steps: [], ...(tags ? { tags } : {}) });
@@ -86,5 +86,18 @@ describe('built-in chips: hide and order', () => {
     const cfg = moveChip({ hide: ['drinks'] }, 'sides', -1);
     expect(cfg?.hide).toEqual(['drinks']);
     expect(visibleChips(cfg, true).indexOf('sides')).toBeLessThan(visibleChips(cfg, true).indexOf('carbs'));
+  });
+});
+
+describe('starter tags', () => {
+  const list = [r('a', ['dinner', 'Weeknight'])];
+  it('offers the meal types not already in use or on the recipe', () => {
+    expect(starterTags([], [])).toEqual(['Breakfast', 'Lunch', 'Dinner', 'Snack']);
+    expect(starterTags(list, ['SNACK'])).toEqual(['Breakfast', 'Lunch']);
+  });
+  it('does not count toward the tag cap until a recipe has one', () => {
+    const many = Array.from({ length: 5 }, (_, i) => r(`m${i}`, Array.from({ length: 6 }, (_, j) => `t${i * 6 + j}`)));
+    expect(tagLimitError(many, ['t1'])).toBeNull();
+    expect(tagLimitError(many, ['Lunch'])).toMatch(/30/); // using one at the cap is refused like any new tag
   });
 });

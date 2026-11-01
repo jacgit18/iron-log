@@ -3,7 +3,7 @@ import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
 import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, MAX_TAG, MAX_TAGS_PER_RECIPE, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
-import { cleanTag, tagCounts, tagKey } from '../../lib/recipeTags.js';
+import { cleanTag, starterTags, tagCounts, tagKey, tagLimitError } from '../../lib/recipeTags.js';
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -77,11 +77,14 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const showList = () => { const t = ingredientsToText(ing); setListText(t); setListBase(t); setListMode(true); setErr(''); };
 
   const inUse = useMemo(() => tagCounts(recipes).filter(c => !tags.some(t => tagKey(t) === tagKey(c.tag))), [recipes, tags]); // tags other recipes have that this one does not: offered
+  const starters = useMemo(() => starterTags(recipes, tags), [recipes, tags]); // Breakfast, Lunch, Dinner, Snack until a recipe uses them
   const addTag = (raw: string) => {
     const t = cleanTag(raw);
     if (!t) return;
     if (tags.some(x => tagKey(x) === tagKey(t))) { setTagText(''); return; }
     if (tags.length >= MAX_TAGS_PER_RECIPE) { setErr(`A recipe can have up to ${MAX_TAGS_PER_RECIPE} tags.`); return; }
+    const full = tagLimitError(recipes.filter(x => x.id !== recipe?.id), [...tags, t]);
+    if (full) { setErr(full); return; }
     const known = tagCounts(recipes).find(c => tagKey(c.tag) === tagKey(t))?.tag; // an existing tag keeps its spelling
     setTags([...tags, known ?? t]); setTagText(''); setErr('');
   };
@@ -172,6 +175,11 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
             {inUse.length > 0 && (
               <div className="rc-chips2" role="group" aria-label="Tags you use">
                 {inUse.map(c => <button type="button" key={c.tag} className="btn sm ghost" onClick={() => addTag(c.tag)}>Use {c.tag}</button>)}
+              </div>
+            )}
+            {starters.length > 0 && (
+              <div className="rc-chips2" role="group" aria-label="Suggested tags">
+                {starters.map(t => <button type="button" key={t} className="btn sm ghost" onClick={() => addTag(t)}>Use {t}</button>)}
               </div>
             )}
           </fieldset>
