@@ -16,6 +16,7 @@ import ShareSheet from './ShareSheet.js';
 import RestDateSheet from './RestDateSheet.js';
 import RecipeFilters from '../recipes/RecipeFilters.js';
 import RowMenuSheet from '../program/RowMenuSheet.js';
+import QaPickerSheet from './QaPickerSheet.js';
 
 // The open sheet, if any (state.modal). Its own chunk: App loads it after the first screen.
 export default function Modal() {
@@ -38,6 +39,7 @@ export default function Modal() {
     case 'import': return <ImportSheet />;
     case 'rowmenu': return <RowMenuSheet key={`rowmenu-${modal.idx}`} idx={modal.idx as number} />;
     case 'restdate': return <RestDateSheet key={modal.day as number} day={modal.day as number} />;
+    case 'qapicker': return <QaPickerSheet />;
     case 'recipefilters': return <RecipeFilters />;
     case 'help': return <HelpSheet />;
     case 'share': return <ShareSheet title={String(modal.title ?? '')} url={String(modal.url ?? '')} />;
