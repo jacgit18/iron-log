@@ -10,6 +10,10 @@ describe('exercise library sort', () => {
   it('name: case-blind, equal names by id', () => expect(ids('name')).toEqual(['a', 'b', 'c', 'd']));
   it('used: most logged first, never logged last, ties by name', () => expect(ids('used')).toEqual(['b', 'c', 'd', 'a']));
   it('last: newest log first, never logged last', () => expect(ids('last')).toEqual(['d', 'c', 'b', 'a']));
+  it('ignores check-off (auto) entries', () => {
+    const l = { a: [{ d: '2026-10-30', auto: true as const }], c: [{ d: '2026-10-01' }] };
+    expect(sortExerciseRows(rows, 'last', l).map(r => r.id)[0]).toBe('c');
+  });
   it('does not change the input and handles no logs', () => {
     const copy = [...rows];
     expect(sortExerciseRows(rows, 'last', {}).map(r => r.id)).toEqual(['a', 'b', 'c', 'd']);
