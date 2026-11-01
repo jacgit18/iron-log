@@ -37,15 +37,17 @@ for (const w of [375, 768, 1024, 1279]) {
   });
 }
 
-test('at 1920px a rail jump link still scrolls to its group, in the right column too', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 700 });
-  await open(page);
-  await page.locator('.sjump .chip', { hasText: 'App' }).click();
-  await expect(page.locator('#set-app-h')).toBeFocused();
-  // Smooth scrolling is still moving just after the click; the group ends near the top, or as high as the page can scroll when it is short.
-  await expect.poll(() => page.evaluate(() => {
-    const top = document.getElementById('set-app-h').getBoundingClientRect().top;
-    const room = document.documentElement.scrollHeight - innerHeight - scrollY;
-    return top >= 0 && (top < 100 || room < 2);
-  })).toBe(true);
-});
+for (const [id, label] of [['training', 'Training'], ['data', 'Data'], ['app', 'App'], ['erase', 'Erase & delete']]) {
+  test(`at 1920px the rail's ${label} link scrolls to its group, in either column`, async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 700 });
+    await open(page);
+    await page.locator('.sjump .chip', { hasText: label }).click();
+    await expect(page.locator(`#set-${id}-h`)).toBeFocused();
+    // Smooth scrolling is still moving just after the click; the group ends near the top, or as high as the page can scroll when it is short.
+    await expect.poll(() => page.evaluate(h => {
+      const top = document.getElementById(h).getBoundingClientRect().top;
+      const room = document.documentElement.scrollHeight - innerHeight - scrollY;
+      return top >= 0 && (top < 100 || room < 2);
+    }, `set-${id}-h`)).toBe(true);
+  });
+}

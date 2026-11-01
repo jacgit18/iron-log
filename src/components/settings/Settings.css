@@ -345,7 +345,8 @@ html:has(.sjump) {
   .sgroups>.sgroup {
     grid-column: 2;
   }
-  .sgroups>.sgroup:first-child {
+  /* Training spans the three right-hand groups (Data, App, Erase & delete); add to the span if a group is added there. */
+  .sgroups>.sgroup[data-group="training"] {
     grid-column: 1;
     grid-row: 1 / span 3;
   }

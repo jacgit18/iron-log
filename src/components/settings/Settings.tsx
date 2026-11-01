@@ -362,7 +362,7 @@ function useCurrentGroup() {
 
 function Group({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section className="sgroup" aria-labelledby={`set-${id}-h`}>
+    <section className="sgroup" data-group={id} aria-labelledby={`set-${id}-h`}>
       <h2 id={`set-${id}-h`} tabIndex={-1}>{title}</h2>
       <div className="sgrid">{children}</div>
     </section>
