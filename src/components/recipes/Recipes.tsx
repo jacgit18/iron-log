@@ -6,7 +6,7 @@ import RecipeForm from './RecipeForm.js';
 import './Recipes.css';
 import { monthKey } from '../../lib/grocery.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
-import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, filterRecipes, librarySortedBy, recipeMeta, sortRecipes } from '../../lib/recipeList.js';
+import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, filterRecipes, haveBadge, librarySortedBy, recipeMeta, sortRecipes } from '../../lib/recipeList.js';
 import { NUTRITION_FILTERS, nutritionBadge, type NutritionKey } from '../../lib/recipeNutrition.js';
 import { pantryStatus } from '../../lib/recipePantry.js';
 import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
@@ -108,8 +108,11 @@ export default function Recipes() {
   const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void, edited = false, badge: string | null = null) => (
     <li key={key}>
       <button type="button" className="rc-row" onClick={open}>
-        <span><b>{title}</b><span className="pill custom">{pill}</span>{edited && <span className="rc-edited">Edited</span>}<span className="rc-meta">{meta}</span>{badge && <span className="rc-badge">{badge}</span>}</span>
-        {tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}
+        <span className="rc-main">
+          <span className="rc-title"><span><b>{title}</b><span className="pill custom">{pill}</span>{edited && <span className="rc-edited">Edited</span>}</span>{tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}</span>
+          <span className="rc-meta">{meta}</span>
+        </span>
+        {badge && <span className="rc-badge">{badge}</span>}
       </button>
     </li>
   );
@@ -126,31 +129,33 @@ export default function Recipes() {
         {src === 'mine' && <button type="button" className="btn" onClick={() => setView({ kind: 'form' })}>New recipe</button>}
         {src === 'mine' && <button type="button" className="btn" onClick={() => setView({ kind: 'form', ready: true })}>New ready-made food</button>}
       </div>
-      <div className="rc-chips" role="group" aria-label="Category">
-        <button type="button" aria-pressed={cat === null} onClick={() => setCat(null)}>All</button>
-        {chips.map(c => <button type="button" key={c} aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{RECIPE_CATEGORY_LABEL[c]}</button>)}
-        {src === 'mine' && <button type="button" aria-pressed={canMake} onClick={() => setCanMake(!canMake)}>Can make</button>}
-        <button type="button" className="rc-manage" onClick={() => useAppStore.getState().openModal({ type: 'recipefilters' })}>Manage filters</button>
-      </div>
-      {src === 'mine' && tags.length > 0 && (
-        <div className="rc-chips" role="group" aria-label="Tags">
-          {tags.map(t => {
-            const on = activeTags.some(a => a.toLowerCase() === t.tag.toLowerCase());
-            return <button type="button" key={t.tag} aria-pressed={on} onClick={() => setTagSel(on ? activeTags.filter(a => a.toLowerCase() !== t.tag.toLowerCase()) : [...activeTags, t.tag])}>{t.tag}</button>;
-          })}
+      <div className="rc-filterbar">
+        <div className="rc-chips" role="group" aria-label="Category">
+          <button type="button" aria-pressed={cat === null} onClick={() => setCat(null)}>All</button>
+          {chips.map(c => <button type="button" key={c} aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{RECIPE_CATEGORY_LABEL[c]}</button>)}
+          {src === 'mine' && <button type="button" aria-pressed={canMake} onClick={() => setCanMake(!canMake)}>Can make</button>}
+          <button type="button" className="rc-manage" onClick={() => useAppStore.getState().openModal({ type: 'recipefilters' })}>Manage filters</button>
         </div>
-      )}
-      {src === 'mine' && (
-        <div className="rc-chips" role="group" aria-label="Nutrition">
-          {NUTRITION_FILTERS.map(f => {
-            const on = nutSel.includes(f.key);
-            return <button type="button" key={f.key} aria-pressed={on} onClick={() => setNutSel(on ? nutSel.filter(k => k !== f.key) : [...nutSel, f.key])}>{f.label}</button>;
-          })}
+        {src === 'mine' && tags.length > 0 && (
+          <div className="rc-chips" role="group" aria-label="Tags">
+            {tags.map(t => {
+              const on = activeTags.some(a => a.toLowerCase() === t.tag.toLowerCase());
+              return <button type="button" key={t.tag} aria-pressed={on} onClick={() => setTagSel(on ? activeTags.filter(a => a.toLowerCase() !== t.tag.toLowerCase()) : [...activeTags, t.tag])}>{t.tag}</button>;
+            })}
+          </div>
+        )}
+        {src === 'mine' && (
+          <div className="rc-chips" role="group" aria-label="Nutrition">
+            {NUTRITION_FILTERS.map(f => {
+              const on = nutSel.includes(f.key);
+              return <button type="button" key={f.key} aria-pressed={on} onClick={() => setNutSel(on ? nutSel.filter(k => k !== f.key) : [...nutSel, f.key])}>{f.label}</button>;
+            })}
+          </div>
+        )}
+        <div className="rc-sort">
+          {src === 'mine' ? <SortControl options={RECIPE_SORTS} value={mineSort} onChange={setMineSort} /> : syncing && <SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} />}
+          {src === 'library' && syncing && <span className="rc-sortedby">{librarySortedBy(libSort, q)}</span>}
         </div>
-      )}
-      <div className="rc-sort">
-        {src === 'mine' ? <SortControl options={RECIPE_SORTS} value={mineSort} onChange={setMineSort} /> : syncing && <SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} />}
-        {src === 'library' && syncing && <span className="rc-sortedby">{librarySortedBy(libSort, q)}</span>}
       </div>
       <RemovedNotice scope="recipes" />
 
@@ -164,10 +169,10 @@ export default function Recipes() {
             ]} />
           )}
           {recipes.length > 0 && !shown.length && <p className="note">No recipe matches. Clear the search or the filters.</p>}
-          <ul className="rc-list">
+          <ul className="rc-list rc-cards">
             {shown.map((r: Recipe) => {
-              const s = status.get(r.id)!;
-              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.servings, r.minutes), r.from ? 'Library' : 'Custom', s.total ? `${s.have} of ${s.total}` : null, s.total > 0 && s.have === s.total, () => setView({ kind: 'mine', id: r.id }), !!r.edited, nutritionBadge(r));
+              const have = haveBadge(status.get(r.id)!);
+              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.servings, r.minutes), r.from ? 'Library' : 'Custom', have?.text ?? null, !!have?.all, () => setView({ kind: 'mine', id: r.id }), !!r.edited, nutritionBadge(r));
             })}
           </ul>
         </>
@@ -181,7 +186,7 @@ export default function Recipes() {
           {syncing && lib.status === 'ready' && !lib.items.length && <p className="note">No library recipe matches.</p>}
           {syncing && lib.status === 'ready' && (
             <>
-              <ul className="rc-list">
+              <ul className="rc-list rc-cards">
                 {lib.items.map(it => row(it.id, it.name, recipeMeta(RECIPE_CATEGORY_LABEL[it.data.recipe!.cat], it.data.recipe!.servings, it.data.recipe!.minutes), recipes.some(r => r.from === it.id) ? 'In Mine' : 'Library', null, false, () => setView({ kind: 'library', item: it })))}
               </ul>
               {lib.more && <div className="rc-actions"><button type="button" className="btn" onClick={() => void more()}>Show more</button></div>}

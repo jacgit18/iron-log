@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.js';
 
 // The Log button on a card that is already checked off opens the logged session to correct (EditEntry), not a blank form;
-// on a skipped card it opens the blank form, and saving brings the card back. A unit test cannot show the wiring between the card, the store and the sheet.
+// on a skipped card with nothing logged it opens the blank form (saving brings the card back), with a session logged it opens that session with Undo skip. A unit test cannot show the wiring between the card, the store and the sheet.
 const CARD = 'A-d1s1';
 
 async function logSet(page, weight, reps) {
@@ -57,4 +57,37 @@ test('a skipped card has a Log button; saving brings the card back, checked', as
   await logSet(page, 90, 10);
   await expect(page.locator(`#chk-${CARD}`)).toBeChecked();
   await expect(page.locator('.card.skipped')).toHaveCount(0);
+});
+
+test('a skipped card with a logged session opens it to edit, with Undo skip', async ({ page }) => {
+  await logSet(page, 100, 8);
+  await page.locator(`.card:has(#log-${CARD}-0)`).getByRole('button', { name: /^More actions/ }).click();
+  await page.click(`#skip-${CARD}`);
+  await expect(page.locator('.card.skipped').first()).toBeVisible();
+  await page.click(`#log-${CARD}-0`);
+  await expect(page.getByText('Skipped this week').last()).toBeVisible();
+  await expect(page.locator('input[aria-label^="Set 1 weight"]')).toHaveValue('100');
+  await page.locator('.sheet').getByRole('button', { name: 'Undo skip' }).click();
+  await expect(page.locator('.card.skipped')).toHaveCount(0);
+  await expect(page.locator(`#chk-${CARD}`)).toBeChecked(); // a logged session means it was done
+});
+
+test('a skipped superset exercise with a logged session opens it, and Undo skip brings back just that exercise', async ({ page }) => {
+  const card = page.locator('article.card.group').filter({ has: page.locator('.tag', { hasText: 'Superset' }) }).first();
+  await card.getByRole('button', { name: /^More actions/ }).click();
+  await card.locator('[id^="skipi-"]').first().click();
+  const log = card.locator('[id^="log-"]').first();
+  await log.click(); // nothing logged yet: the blank form; saving without the check-off leaves the exercise skipped
+  await page.waitForSelector('#f-d');
+  await page.fill('input[aria-label^="Set 1 weight"]', '70');
+  await page.fill('input[aria-label^="Set 1 reps"]', '10');
+  await page.getByLabel('Check off this exercise').uncheck();
+  await page.click('button:has-text("Save set")');
+  await expect(page.locator('#f-d')).toHaveCount(0);
+  await expect(card.locator('.iskipped')).toHaveCount(1);
+  await log.click();
+  await expect(page.getByText('Skipped this week').last()).toBeVisible();
+  await expect(page.locator('input[aria-label^="Set 1 weight"]')).toHaveValue('70');
+  await page.locator('.sheet').getByRole('button', { name: 'Undo skip' }).click();
+  await expect(card.locator('.iskipped')).toHaveCount(0);
 });
