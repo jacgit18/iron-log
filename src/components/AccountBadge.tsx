@@ -6,9 +6,11 @@ import { disablePush } from '../lib/pushClient.js';
 import { signOutFlow } from '../lib/signOutFlow.js';
 import { closeSettingsScreen } from '../lib/settingsScreens.js';
 import { GROUPS, findVisible, jumpToGroup } from '../lib/settingsGroups.js';
+import { qaEntries } from '../lib/qaPersonas.js';
 import { LS } from '../lib/storage.js';
 import { createAccountClient } from '../sync/account.js';
 import { signIn as devHeaders } from '../sync/devUser.js';
+import { useQa } from '../sync/qaState.js';
 import './AccountBadge.css';
 
 // Who is signed in, at the right end of the header: a round initial with a green dot, and the name beside it where there is room. It
@@ -26,6 +28,7 @@ export default function AccountBadge({ name, email = null, canSignOut = false }:
   const btn = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const [busy, setBusy] = useState(false);
+  const qaRow = qaEntries(useQa()).menuRow; // QA service, admin on their own account (brief qa-picker-access)
   const account = useMemo(() => createAccountClient({ headers: devHeaders }), []);
   useEffect(() => {
     if (!open) return;
@@ -64,6 +67,7 @@ export default function AccountBadge({ name, email = null, canSignOut = false }:
           {GROUPS.map(([id, label]) => (
             <button key={id} type="button" className={`acctitem${id === 'erase' ? ' danger' : ''}`} onClick={() => go(id)}>{label}</button>
           ))}
+          {qaRow && <button type="button" className="acctitem" onClick={() => { setOpen(false); useAppStore.getState().openModal({ type: 'qapicker' }); }}>QA test accounts</button>}
           {canSignOut && (
             <>
               <div className="acctsep" aria-hidden="true" />

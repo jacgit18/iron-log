@@ -42,6 +42,10 @@ export interface AuthConfig {
   piiMatchPlaintext?: boolean;
   /** QA_PERSONAS=true (set by the deploy script for the QA service only): an admin may switch to a seeded test account (qaPersonas.ts). Also needs the QA mark on the database. */
   qaPersonas?: boolean;
+  /** QA_OWNER_DATABASE_URL, QA service only: lets the in-app Reset run the seed as the database owner (qaPersonas.ts). Read only when qaPersonas is on; the pool opens on the first reset, after the QA-mark check. */
+  qaOwnerDatabaseUrl?: string;
+  /** Test seam: how the owner pool is made. */
+  qaOwnerPool?: (url: string) => pg.Pool;
 }
 
 export const SESSION_DAYS = 30;
@@ -168,7 +172,7 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
       }),
     },
     plugins: [
-      ...(config.qaPersonas ? [qaPersonas({ admins: config.capExempt ?? new Set<string>(), pool })] : []),
+      ...(config.qaPersonas ? [qaPersonas({ admins: config.capExempt ?? new Set<string>(), pool, pii, ownerDatabaseUrl: config.qaOwnerDatabaseUrl, makeOwnerPool: config.qaOwnerPool })] : []),
       ...(config.sendCode
       ? [
           emailOTP({
@@ -257,6 +261,6 @@ export function authConfigFrom(env: NodeJS.ProcessEnv): AuthSetup {
   if (reasons.length) return { enabled: false, reasons };
   return {
     enabled: true,
-    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, emailCodeAdminsOnly: env.EMAIL_CODE_OPEN !== 'true', signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS), piiKey, piiMatchPlaintext: env.PII_PLAINTEXT_DONE !== 'true', qaPersonas: env.QA_PERSONAS === 'true' },
+    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, emailCodeAdminsOnly: env.EMAIL_CODE_OPEN !== 'true', signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS), piiKey, piiMatchPlaintext: env.PII_PLAINTEXT_DONE !== 'true', qaPersonas: env.QA_PERSONAS === 'true', qaOwnerDatabaseUrl: env.QA_PERSONAS === 'true' ? env.QA_OWNER_DATABASE_URL?.trim() || undefined : undefined },
   };
 }

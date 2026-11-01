@@ -143,6 +143,11 @@ resend_secret_wanted() { secret_wanted "$RESEND_SECRET" RESEND_API_KEY RESEND_OF
 USDA_SECRET="${SECRET_PREFIX}-usda-api-key"
 usda_secret_wanted() { secret_wanted "$USDA_SECRET" USDA_API_KEY USDA_OFF; }
 
+# QA only (brief qa-picker-access): the owner URL of the QA branch, so the in-app Reset can run the seed (the app's own role cannot delete rows or
+# set plans). Never stored or mapped for staging or production; the server also opens it only after the QA-mark check. QA_OWNER_OFF=1 removes it.
+QA_OWNER_SECRET="${SECRET_PREFIX}-owner-database-url"
+qa_owner_secret_wanted() { [ "$IRON_LOG_ENV" = qa ] && secret_wanted "$QA_OWNER_SECRET" QA_OWNER_DATABASE_URL QA_OWNER_OFF; }
+
 # Stripe billing (ADR 065): four secrets, each environment with its own (iron-log-stripe-*, iron-log-staging-stripe-*, iron-log-qa-stripe-*): the
 # secret key, the webhook signing secret and the two price ids (the price ids are not secret, but a CI deploy can only pass what it can name).
 # Optional like Resend: without them the server's billing stays off. STRIPE_OFF=1 removes them from the service.
@@ -324,6 +329,12 @@ cmd_secrets() {
   else
     echo "  $RESEND_SECRET: not touched (export RESEND_API_KEY to store it)"
   fi
+  if [ "$IRON_LOG_ENV" = qa ] && [ -n "${QA_OWNER_DATABASE_URL:-}" ]; then
+    printf '%s' "$QA_OWNER_DATABASE_URL" | put_secret "$QA_OWNER_SECRET"
+    secret_names+=("$QA_OWNER_SECRET")
+  elif [ "$IRON_LOG_ENV" = qa ]; then
+    echo "  $QA_OWNER_SECRET: not touched (export QA_OWNER_DATABASE_URL, the owner URL of the QA branch, to store it; the in-app Reset needs it)"
+  fi
   if [ -n "${USDA_API_KEY:-}" ]; then
     printf '%s' "$USDA_API_KEY" | put_secret "$USDA_SECRET"
     secret_names+=("$USDA_SECRET")
@@ -437,6 +448,7 @@ deploy_image() {
   # QA only: an admin may switch to the seeded test accounts (server/auth/qaPersonas.ts). The server also needs the QA mark on its database, so
   # this setting alone does nothing on another environment, and it is never passed to staging or production.
   if [ "$IRON_LOG_ENV" = qa ]; then env_vars+=",QA_PERSONAS=true"; fi
+  if qa_owner_secret_wanted; then secrets+=",QA_OWNER_DATABASE_URL=${QA_OWNER_SECRET}:latest"; echo "QA reset: QA_OWNER_DATABASE_URL is passed to the service."; elif [ "$IRON_LOG_ENV" = qa ]; then echo "QA reset: no QA_OWNER_DATABASE_URL, so Reset and Seed in the picker are off."; fi
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
     ${public[@]+"${public[@]}"} \
