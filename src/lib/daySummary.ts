@@ -6,6 +6,7 @@ import { eqName } from './equipment.js';
 import { exerciseCount } from './exerciseCount.js';
 import { defaultPhase, rxOf } from './logic.js';
 import { MUSCLES, tagsOf } from './muscles.js';
+import { byName } from './sort.js';
 
 export const SUMMARY_MUSCLES = 5; // muscles listed before "and N more"
 
@@ -34,13 +35,13 @@ export function daySummary(cfg: Cfg, day: ProgramDay): DaySummary {
       (tg.p || []).forEach(mu => { if (MUSCLES[mu]) muscles.set(mu, (muscles.get(mu) ?? 0) + n); });
     });
   }
-  const ranked = [...muscles].map(([key, s]) => ({ key, name: MUSCLES[key].n, sets: s })).sort((a, b) => b.sets - a.sets || a.name.localeCompare(b.name));
+  const ranked = [...muscles].map(([key, s]) => ({ key, name: MUSCLES[key].n, sets: s })).sort((a, b) => b.sets - a.sets || byName(a.name, b.name));
   return {
     exercises: exerciseCount(day.slots),
     sets: Math.round(sets),
     phases: PHASE_ORDER.filter(k => phases.has(k)).map(key => ({ key, count: phases.get(key)! })),
     muscles: ranked.slice(0, SUMMARY_MUSCLES),
     moreMuscles: Math.max(0, ranked.length - SUMMARY_MUSCLES),
-    equipment: [...equip].map(([id, count]) => ({ id, name: eqName(cfg, id), count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+    equipment: [...equip].map(([id, count]) => ({ id, name: eqName(cfg, id), count })).sort((a, b) => b.count - a.count || byName(a.name, b.name)),
   };
 }
