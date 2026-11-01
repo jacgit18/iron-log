@@ -25,6 +25,15 @@ describe('filterRecipes', () => {
   });
 });
 
+describe('filterRecipes by tags', () => {
+  const t = (id: string, cat: Recipe['cat'], tags: string[]): Recipe => ({ ...r(id, id, cat, ['x']), ...(tags.length ? { tags } : {}) });
+  const tagged = [t('a', 'protein', ['Weeknight', 'Meal prep']), t('b', 'protein', ['weeknight']), t('c', 'sides', ['Weeknight', 'Meal prep']), t('d', 'sides', [])];
+  const ids = (cat: Recipe['cat'] | null, tags: string[]) => filterRecipes(tagged, { q: '', cat, canMake: false, tags }, none).map(x => x.id);
+  it('keeps every recipe with no tag selected', () => expect(ids(null, [])).toEqual(['a', 'b', 'c', 'd']));
+  it('needs every selected tag, in any case', () => { expect(ids(null, ['weeknight'])).toEqual(['a', 'b', 'c']); expect(ids(null, ['WEEKNIGHT', 'meal prep'])).toEqual(['a', 'c']); });
+  it('combines the category with the tags by AND', () => { expect(ids('protein', ['weeknight'])).toEqual(['a', 'b']); expect(ids('sides', ['weeknight', 'meal prep'])).toEqual(['c']); expect(ids('sauces', ['weeknight'])).toEqual([]); });
+});
+
 describe('recipeMeta, stepsFromText, sameName', () => {
   it('writes the meta line', () => {
     expect(recipeMeta('Sauces', 4, 25)).toBe('Sauces · 4 servings · 25 min');

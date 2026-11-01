@@ -8,7 +8,8 @@ import { monthKey } from '../../lib/grocery.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { filterRecipes, recipeMeta } from '../../lib/recipeList.js';
 import { pantryStatus } from '../../lib/recipePantry.js';
-import { RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
+import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { pageOf } from '../../lib/route.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { goUp, navigate, useRoutePath } from '../useRoute.js';
@@ -26,6 +27,7 @@ export default function Recipes() {
   const grocery = useAppStore(s => s.grocery);
   const months = useAppStore(s => s.groceryMonths);
   const syncing = useAppStore(s => s.sync !== null);
+  const chipCfg = useAppStore(s => s.cfg.recipeChips);
   const [view, setViewNow] = useState<View>({ kind: 'list' });
   // A recipe page or the form adds a Back step (#/daily/recipes/mine); the recipe itself is not in the address, so a reload or pasted address shows the list.
   const page = pageOf(useRoutePath(), 'daily/recipes');
@@ -45,6 +47,7 @@ export default function Recipes() {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState<RecipeCategory | null>(null);
   const [canMake, setCanMake] = useState(false);
+  const [tagSel, setTagSel] = useState<string[]>([]);
   const [lib, setLib] = useState<Library>({ status: 'loading' });
   const [tries, setTries] = useState(0);
   const month = monthKey(new Date());
@@ -52,9 +55,14 @@ export default function Recipes() {
   asked.current = `${q}|${cat}|${tries}`;
   const libCopy = useMemo(() => (view.kind === 'library' ? recipeFromCatalog(view.item, []) : null), [view]);
 
+  const chips = visibleChips(chipCfg, src === 'mine');
+  const tags = useMemo(() => tagCounts(recipes), [recipes]);
+  const activeTags = useMemo(() => liveTags(recipes, tagSel), [recipes, tagSel]); // a renamed or deleted tag leaves the selection
+  useEffect(() => { if (activeTags.length !== tagSel.length) setTagSel(activeTags); }, [activeTags, tagSel]); // drop a renamed or deleted tag so it cannot come back selected
+  useEffect(() => { if (cat && !visibleChips(chipCfg, true).includes(cat)) setCat(null); }, [cat, chipCfg]); // a chip hidden while it is the filter: the filter clears
   const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes)])), [recipes, grocery, months, month]);
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
-  const shown = useMemo(() => filterRecipes(recipes, { q, cat, canMake }, makeable), [recipes, q, cat, canMake, makeable]);
+  const shown = useMemo(() => filterRecipes(recipes, { q, cat, canMake, tags: activeTags }, makeable), [recipes, q, cat, canMake, activeTags, makeable]);
 
   useEffect(() => {
     if (src !== 'library' || !syncing) return;
@@ -111,9 +119,18 @@ export default function Recipes() {
       </div>
       <div className="rc-chips" role="group" aria-label="Category">
         <button type="button" aria-pressed={cat === null} onClick={() => setCat(null)}>All</button>
-        {RECIPE_CATEGORIES.filter(c => src === 'mine' || c !== 'ready').map(c => <button type="button" key={c} aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{RECIPE_CATEGORY_LABEL[c]}</button>)}
+        {chips.map(c => <button type="button" key={c} aria-pressed={cat === c} onClick={() => setCat(cat === c ? null : c)}>{RECIPE_CATEGORY_LABEL[c]}</button>)}
         {src === 'mine' && <button type="button" aria-pressed={canMake} onClick={() => setCanMake(!canMake)}>Can make</button>}
+        <button type="button" className="rc-manage" onClick={() => useAppStore.getState().openModal({ type: 'recipefilters' })}>Manage filters</button>
       </div>
+      {src === 'mine' && tags.length > 0 && (
+        <div className="rc-chips" role="group" aria-label="Tags">
+          {tags.map(t => {
+            const on = activeTags.some(a => a.toLowerCase() === t.tag.toLowerCase());
+            return <button type="button" key={t.tag} aria-pressed={on} onClick={() => setTagSel(on ? activeTags.filter(a => a.toLowerCase() !== t.tag.toLowerCase()) : [...activeTags, t.tag])}>{t.tag}</button>;
+          })}
+        </div>
+      )}
       <RemovedNotice scope="recipes" />
 
       {src === 'mine' && (

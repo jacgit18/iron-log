@@ -151,6 +151,8 @@ export interface Cfg extends ProgramCfg {
   rest?: number; // rest timer, seconds
   /** Off (false) turns off the heads-up when a move puts the same muscles on back-to-back days and the day-order suggestions. On when unset. */
   injuryPrevention?: boolean;
+  /** Recipe filter chips you hid, and the order you put the rest in (built-in categories only; custom tags live on the recipes). */
+  recipeChips?: RecipeChips;
 }
 
 /** An Experiment (or added) card on one week. */
@@ -313,7 +315,9 @@ export type RecipeCategory = 'protein' | 'carbs' | 'sides' | 'sauces' | 'seasoni
 export interface RecipeIngredient { n: string; amt?: string; home?: string; rid?: string; sub?: string; skip?: true }
 /** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
  *  after copying it (only on a recipe with a `from`). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number }
+/** The recipe chips the person hid and reordered (brief recipe-filter-editing). */
+export interface RecipeChips { hide?: RecipeCategory[]; order?: RecipeCategory[] }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */

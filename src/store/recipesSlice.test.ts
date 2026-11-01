@@ -170,3 +170,59 @@ describe('linked sauces', () => {
     expect(taco().ing[0]).toEqual({ n: 'Taco mix', amt: '2 tbsp', rid: sid });
   });
 });
+
+
+describe('recipe tags', () => {
+  const tagged = async () => {
+    for (const [n, tags] of [['Chili', ['weeknight', 'Meal prep']], ['Tacos', ['Weeknight']], ['Soup', ['meal prep']], ['Cake', []]] as const) {
+      expect(st().saveRecipe({ ...draft, n, ...(tags.length ? { tags: [...tags] } : {}) })).toBeNull();
+    }
+    return (n: string) => st().recipes.find(r => r.n === n)!;
+  };
+  it('saves tags on the recipe and cleans them', () => {
+    expect(st().saveRecipe({ ...draft, tags: ['  weeknight ', 'WEEKNIGHT'] })).toBeNull();
+    expect(st().recipes[0]!.tags).toEqual(['weeknight']);
+  });
+  it('refuses a recipe that would take the list past the tag limit', () => {
+    for (let i = 0; i < 5; i++) expect(st().saveRecipe({ ...draft, n: `R${i}`, tags: Array.from({ length: 6 }, (_, j) => `t${i * 6 + j}`) })).toBeNull();
+    expect(st().saveRecipe({ ...draft, n: 'Last', tags: ['one more'] })).toMatch(/up to 30 different tags/);
+    expect(st().saveRecipe({ ...draft, n: 'Last', tags: ['T0'] })).toBeNull(); // a tag already in use is not new
+  });
+  it('renames a tag on every recipe that has it, without touching the rest', async () => {
+    const get = await tagged();
+    expect(st().renameTag('weeknight', 'quick')).toEqual({ error: null, name: 'quick' });
+    expect(get('Chili').tags).toEqual(['quick', 'Meal prep']);
+    expect(get('Tacos').tags).toEqual(['quick']);
+    expect(get('Soup').tags).toEqual(['meal prep']);
+    expect(st().recipes).toHaveLength(4);
+  });
+  it('merges into a tag that exists, keeping its spelling and not doubling it on a recipe', async () => {
+    const get = await tagged();
+    expect(st().renameTag('weeknight', 'MEAL PREP')).toEqual({ error: null, name: 'Meal prep' }); // the spelling in use, not the typed one
+    expect(get('Chili').tags).toEqual(['Meal prep']); // had both: now one
+    expect(get('Tacos').tags).toEqual(['Meal prep']);
+    expect(get('Soup').tags).toEqual(['meal prep']);
+  });
+  it('refuses an empty new name and changes nothing', async () => {
+    const get = await tagged();
+    expect(st().renameTag('weeknight', '   ').error).toMatch(/name/);
+    expect(get('Tacos').tags).toEqual(['Weeknight']);
+  });
+  it('deletes a tag from every recipe and says how many had it; the recipes stay', async () => {
+    const get = await tagged();
+    expect(st().removeTag('WEEKNIGHT')).toBe(2);
+    expect(get('Chili').tags).toEqual(['Meal prep']);
+    expect('tags' in get('Tacos')).toBe(false);
+    expect(st().recipes).toHaveLength(4);
+    expect(st().removeTag('weeknight')).toBe(0);
+  });
+});
+
+describe('setRecipeChips', () => {
+  it('saves the chip setting in the settings and clears it', () => {
+    st().setRecipeChips({ hide: ['drinks'] });
+    expect(st().cfg.recipeChips).toEqual({ hide: ['drinks'] });
+    st().setRecipeChips(undefined);
+    expect('recipeChips' in st().cfg).toBe(false);
+  });
+});

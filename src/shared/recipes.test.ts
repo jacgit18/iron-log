@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_INGREDIENTS, MAX_RECIPE_ID, MAX_STEPS, normRecipe, normRecipes, validRecipe } from './recipes.js';
+import { MAX_INGREDIENTS, MAX_RECIPE_ID, MAX_STEPS, MAX_TAG, MAX_TAGS, MAX_TAGS_PER_RECIPE, normRecipe, normRecipeChips, normRecipes, normTags, validRecipe } from './recipes.js';
 
 const base = { id: 'r1', n: 'Chili', cat: 'protein', ing: [{ n: 'Beans', amt: '2 cans' }], steps: ['Simmer.'] };
 
@@ -101,5 +101,38 @@ describe('rid: a link to one of your sauces or seasonings', () => {
     expect(r.ing[1]).toEqual({ n: 'B' });
     expect(r.ing[2]!.rid).toHaveLength(MAX_RECIPE_ID);
     expect(validRecipe({ ...base, ing: [{ n: 'B', rid: 'constructor' }] })).toBe(false);
+  });
+});
+
+describe('recipe tags', () => {
+  it('keeps clean tags and drops the field when there are none', () => {
+    const r = { ...base, tags: ['weeknight', 'Meal prep'] };
+    expect(normRecipe(r)).toEqual(r);
+    expect(validRecipe(r)).toBe(true);
+    expect('tags' in normRecipe({ ...base, tags: ['', '  ', 5] })!).toBe(false);
+  });
+  it('collapses spaces, cuts the length, drops repeats of any case and caps the count', () => {
+    expect(normTags(['  Meal   prep ', 'meal PREP', 'x'.repeat(40)])).toEqual(['Meal prep', 'x'.repeat(MAX_TAG)]);
+    expect(normTags(Array.from({ length: 12 }, (_, i) => `t${i}`))).toHaveLength(MAX_TAGS_PER_RECIPE);
+    expect(normTags('weeknight')).toEqual([]);
+    expect(validRecipe({ ...base, tags: ['a', 'A'] })).toBe(false); // the API refuses what the app would not send
+  });
+  it('allows at most MAX_TAGS different tags in a list, the first spelling winning', () => {
+    const list = Array.from({ length: 6 }, (_, i) => ({ ...base, id: `r${i}`, tags: Array.from({ length: 6 }, (_, j) => `t${i * 6 + j}`) }));
+    const out = normRecipes([...list, { ...base, id: 'late', tags: ['T0', 't99'] }]);
+    const all = new Set(out.flatMap(r => (r.tags ?? []).map(t => t.toLowerCase())));
+    expect(all.size).toBe(MAX_TAGS);
+    expect(out.find(r => r.id === 'late')!.tags).toEqual(['t0']); // joins the tag already in use; the new one is over the limit
+  });
+});
+
+describe('normRecipeChips', () => {
+  it('keeps known categories without repeats', () => {
+    expect(normRecipeChips({ hide: ['drinks', 'drinks', 'soup'], order: ['sides', 'protein'] })).toEqual({ hide: ['drinks'], order: ['sides', 'protein'] });
+  });
+  it('is null when nothing usable is left', () => {
+    expect(normRecipeChips({ hide: [], order: ['nope'] })).toBeNull();
+    expect(normRecipeChips('x')).toBeNull();
+    expect(normRecipeChips([])).toBeNull();
   });
 });
