@@ -11,3 +11,6 @@ export default function GroceryBar<K extends string>({ q, onQ, options, sort, on
     </div>
   );
 }
+
+/** The note shown when the search matches nothing. */
+export const NoMatch = ({ q }: { q: string }) => <p className="note" id="groc-nomatch" role="status">{`No items match “${q.trim()}”.`}</p>;

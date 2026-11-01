@@ -8,7 +8,7 @@ import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
 import { pageOf } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import ArmedButton from '../ArmedButton.jsx';
-import GroceryBar from './GroceryBar.js';
+import GroceryBar, { NoMatch } from './GroceryBar.js';
 import Icon from '../Icon.jsx';
 import { motionOK } from '../../lib/motion.js';
 import Notice, { UNDO_MS } from '../Notice.jsx';
@@ -156,7 +156,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const shape = (items: GroceryItem[]) => byStore(g, filterGroceryItems(items, q), split).map(grp => ({ ...grp, items: sortGroceryItems(grp.items, sort, facts) }));
   const shownTodo = shape(todo); const shownBought = shape(bought);
   const noMatch = !!q.trim() && !shownTodo.length && !shownBought.length;
-  const todoStores = new Set(byStore(g, todo, split).map(x => x.store)); // a shared store with nothing left to get shows its money line in the bought fold instead
+  const todoStores = new Set(shownTodo.map(x => x.store)); // a shared store with nothing left to get shows its money line in the bought fold instead
   // A store's tax box, once something is ticked there (or a tax is already typed): the receipt's tax for this month and what it comes to as a percent of the ticked items.
   // Items bought and then removed from the list still count in their store's tally and tax (audit X-8); a store left with none of its own items shows only its tax box.
   const removed = removedBoughtByStore(g, month);
@@ -182,7 +182,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
   const [ticked, setTicked] = useState<{ id: string; name: string; mk: string; t: number } | null>(null); // the item just ticked bought, for the Undo notice
   const setPanel = (id: string, on: boolean) => setPanels([id], on);
-  const setOff = (f: (o: number) => number) => { setOffNow(f); clearPanels(); setSplitOpen(null); }; // another month starts with every row and the split card folded
+  const setOff = (f: (o: number) => number) => { setOffNow(f); clearPanels(); setSplitOpen(null); setQ(''); }; // another month starts with every row and the split card folded
   useEffect(() => { if (!bought.length && boughtOpen) setBoughtOpen(false); }, [bought.length, boughtOpen]); // an emptied fold starts folded next time
   const focusAfter = useRef<string | null>(null);
   useEffect(() => { if (focusAfter.current) { document.getElementById(focusAfter.current)?.focus(); focusAfter.current = null; } });
@@ -212,8 +212,8 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       {split && <MonthMoney g={g} month={month} onOpen={openSplit} />}
       {!t.count && off === 0 && <p className="note">Add what you buy on <b>At home</b>. Tick an item there when you have it and it comes off this month’s list.</p>}
       {list.length > 0 && <GroceryBar q={q} onQ={setQ} options={GET_SORTS} sort={sort} onSort={setSort} />}
-      {noMatch && <p className="note" id="groc-nomatch" role="status">{`No items match “${q.trim()}”.`}</p>}
-      {current && todo.length > 0 && (
+      {noMatch && <NoMatch q={q} />}
+      {current && todo.length > 0 && !q.trim() && ( // not while a search hides rows: it would skip items you cannot see
         <div className="gskiprow">
           <ArmedButton className={`btn sm ${armingSkip ? 'danger' : 'ghost'}`} id="groc-skipall" aria-label={`Skip all ${todo.length} items still to get this month`} label="Skip all" armedLabel={`Tap again to skip ${todo.length}`}
             onArmedChange={setArmingSkip} onConfirm={() => { setArmingSkip(false); useAppStore.getState().takeGroceryAllOff(mk); }} />
@@ -455,7 +455,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
       <RemovedNotice scope="grocery" />
       {!g.items.length && !editing && <p className="note">Your list is empty. Use Edit to add what you buy and where.</p>}
       {!editing && g.items.length > 0 && <GroceryBar q={q} onQ={setQ} options={HOME_SORTS} sort={sort} onSort={setSort} />}
-      {!editing && !!q.trim() && !shown.length && <p className="note" id="groc-nomatch" role="status">{`No items match “${q.trim()}”.`}</p>}
+      {!editing && !!q.trim() && !shown.length && <NoMatch q={q} />}
       {shown.map((grp, gi) => (
         <section key={grp.store || '_'} className="gstore" aria-labelledby={`groc-home-h-${gi}`}>
           <div className="gstorehead">
