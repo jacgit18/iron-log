@@ -24,18 +24,27 @@ export interface ReportOptions {
 // one-of-each and per-load limit. Null when reporting is off: a development build, or before main.tsx has installed it.
 let current: ((kind: ReportKind, message: string, stack: string) => void) | null = null;
 
+const EXTENSION_URL = /\b(?:chrome|moz|safari(?:-web)?|ms-browser)-extension:\/\//;
+const PAGE_URL = /\b(?:https?|file|blob):\/\//;
+
+/** True when a stack or script address belongs to a browser extension and nothing of the page's own scripts is in it: a failure inside
+ *  an extension's injected script is not the app's to fix, and it would only bury the app's own errors. A stack with no addresses stays reported. */
+export const fromExtension = (stack: string) => EXTENSION_URL.test(stack) && !PAGE_URL.test(stack);
+
 const text = (v: unknown) => (v instanceof Error ? v : { message: typeof v === 'string' ? v : 'non-error value', stack: '' });
 
 /** Starts listening; returns how to stop. */
 export function installErrorReporting({ version, send, target = globalThis as unknown as ReportTarget, max = 5 }: ReportOptions): () => void {
   const seen = new Set<string>();
   const report = (kind: ReportKind, message: string, stack: string) => {
+    if (fromExtension(stack)) return;
     const key = `${kind}|${message}`;
     if (seen.size >= max || seen.has(key)) return;
     seen.add(key);
     try { send({ kind, message: message || 'unknown error', stack, page: target.location.pathname, version }); } catch { /* never an error of its own */ }
   };
-  const onError = (e: { message?: string; error?: unknown }) => {
+  const onError = (e: { message?: string; error?: unknown; filename?: string }) => {
+    if (e.filename && fromExtension(e.filename)) return;
     const err = text(e.error);
     report('error', e.message || err.message, err.stack ?? '');
   };

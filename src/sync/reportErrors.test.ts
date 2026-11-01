@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { installErrorReporting, reportCaught, reportSync, type ReportTarget } from './reportErrors.js';
+import { fromExtension, installErrorReporting, reportCaught, reportSync, type ReportTarget } from './reportErrors.js';
 
 function fakeWindow() {
   const handlers = new Map<string, (e: never) => void>();
@@ -35,6 +35,26 @@ describe('installErrorReporting', () => {
     expect(n).toBe(1);
     for (let i = 0; i < 10; i++) w.fire('error', { message: `different ${i}` });
     expect(n).toBe(3);
+  });
+
+  it('leaves out a failure inside a browser extension, and keeps one that has the page in its stack or no stack at all', () => {
+    const w = fakeWindow();
+    const sent: { message: string }[] = [];
+    installErrorReporting({ version: '9', send: b => sent.push(b), target: w.target });
+    const inExtension = Object.assign(new TypeError('Failed to fetch'), { stack: 'TypeError: Failed to fetch\n    at OnFj (chrome-extension://abc/injectScriptAdjust.js:1:3271)' });
+    const throughPage = Object.assign(new Error('mixed'), { stack: 'Error: mixed\n    at x (chrome-extension://abc/a.js:1:1)\n    at y (https://app.example/assets/index-1.js:2:3)' });
+    w.fire('unhandledrejection', { reason: inExtension });
+    w.fire('error', { message: 'Script error', filename: 'moz-extension://abc/content.js' });
+    w.fire('unhandledrejection', { reason: throughPage });
+    w.fire('unhandledrejection', { reason: new Error('no stack frames') });
+    expect(sent.map(s => s.message)).toEqual(['mixed', 'no stack frames']);
+  });
+
+  it('fromExtension: every extension scheme counts, the page and plain text do not', () => {
+    for (const u of ['chrome-extension://a/b.js:1:1', 'moz-extension://a/b.js', 'safari-web-extension://a/b.js', 'safari-extension://a/b.js']) expect(fromExtension(`at f (${u})`)).toBe(true);
+    expect(fromExtension('at f (https://app.example/assets/a.js:1:1)')).toBe(false);
+    expect(fromExtension('')).toBe(false);
+    expect(fromExtension('mentions chrome-extension in words only')).toBe(false);
   });
 
   it('a send that throws is forgotten, and the listeners can be removed', () => {
