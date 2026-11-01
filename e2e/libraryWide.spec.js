@@ -56,6 +56,8 @@ test('Stretch library: two columns from 1280px with the group headings full widt
   expect(c.panel.w).toBeGreaterThan(1800);
   const head = await page.locator('.exlib .libgroup').first().boundingBox();
   expect(head.width).toBeGreaterThan(1500);
+  await page.getByRole('button', { name: 'Edit order' }).click();
+  expect((await cols(page)).xs).toHaveLength(1); // arrows move a row up or down, so Edit order stays one column
   await page.setViewportSize({ width: 1279, height: 1000 });
   expect((await cols(page)).xs).toHaveLength(1);
 });

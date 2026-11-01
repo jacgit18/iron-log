@@ -75,9 +75,9 @@
   letter-spacing: .06em;
   text-align: left;
 }
-/* A wide desktop: the Exercise library fills the page. The search box and the filters share one full-width row, and the rows flow in two columns (row by row, so the DOM and
+/* A wide desktop: the Exercise and Stretch libraries fill the page. The search box and the filters share one full-width row, and the rows flow in two columns (row by row, so the DOM and
    keyboard order do not change). Scoped to .exlibwide, which the Exercise and Stretch libraries have (the Supplement library shares .exlib and stays as it is; owner approved Stretches 2026-11-01). The catalog
-   section below the list is not a direct child of the panel's .exrows, so it stays one column. Below 1280px nothing here applies. */
+   section below the list is not a direct child of the panel's .exrows, so it stays one column. Edit order (Stretch) keeps one column, so up and down move a row up or down. Below 1280px nothing here applies. */
 @media (min-width:1280px) {
   .exlibwide.edpanel {
     max-width: none;
@@ -92,27 +92,27 @@
     width: auto;
     min-width: 0;
   }
-  .exlibwide>.exrows {
+  .exlibwide:not(.exreorder)>.exrows {
     display: grid;
     grid-template-columns: repeat(2,minmax(0,1fr));
     column-gap: var(--sp-16);
   }
-  .exlibwide>.exrows>.note {
+  .exlibwide:not(.exreorder)>.exrows>.note {
     grid-column: 1/-1;
   }
-  .exlibwide>.exrows>.exrow:nth-last-child(2):nth-child(odd) {
+  .exlibwide:not(.exreorder)>.exrows>.exrow:nth-last-child(2):nth-child(odd) {
     border-bottom: 0;
   }
-  .exlibwide>.exrows>.libsect {
+  .exlibwide:not(.exreorder)>.exrows>.libsect {
     grid-column: 1/-1;
     display: grid;
     grid-template-columns: repeat(2,minmax(0,1fr));
     column-gap: var(--sp-16);
   }
-  .exlibwide>.exrows>.libsect>.libgroup {
+  .exlibwide:not(.exreorder)>.exrows>.libsect>.libgroup {
     grid-column: 1/-1;
   }
-  .exlibwide>.exrows>.libsect>.exrow:nth-last-child(2):nth-child(even) {
+  .exlibwide:not(.exreorder)>.exrows>.libsect>.exrow:nth-last-child(2):nth-child(even) {
     border-bottom: 0;
   }
 }

@@ -27,7 +27,7 @@ export default function StretchLibrary() {
   const filtering = isFiltering({ q, src: sources ? src : '' });
   const reordering = ordering && canReorder(filtering);
   return (
-    <section className="panel edpanel exlib exlibwide">
+    <section className={`panel edpanel exlib exlibwide${reordering ? ' exreorder' : ''}`}>
       <div className="inline spread">
         <h2 id="slib-h" tabIndex={-1}>Stretch library</h2>
         <div className="inline">
