@@ -149,7 +149,8 @@ function NewLogForm({ slotId, idx }: { slotId: string; idx: number }) {
 
 const recentOf = (entries: LogEntry[] | undefined) => (entries || []).slice(-6).reverse();
 
-function RecentTable({ entries }: { entries: LogEntry[] }) {
+// With `onEdit` each date is a button that opens that session in the edit form (the Log sheet of a done or skipped card); `editingId` marks the open one.
+function RecentTable({ entries, onEdit, editingId }: { entries: LogEntry[]; onEdit?: (e: LogEntry) => void; editingId?: string }) {
   if (!entries.length) return null;
   return (
     <div className="hist-box">
@@ -159,7 +160,9 @@ function RecentTable({ entries }: { entries: LogEntry[] }) {
         <tbody role="rowgroup">
           {entries.map((e, i) => (
             <tr role="row" key={i}>
-              <td role="cell">{fmtShort(parseDate(e.d))}</td>
+              <td role="cell">{!onEdit ? fmtShort(parseDate(e.d)) : editingId === entryId(e)
+                ? <>{fmtShort(parseDate(e.d))} · Editing</>
+                : <button type="button" className="btn sm ghost" aria-label={`Edit entry from ${fmtShort(parseDate(e.d))}`} onClick={() => onEdit(e)}>{fmtShort(parseDate(e.d))} · Edit</button>}</td>
               <td role="cell">{e.ph ? PHASES[e.ph].label : '—'}</td>
               <td role="cell" className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
               <td role="cell" className="num">{volText(e)}</td>
@@ -178,18 +181,20 @@ function LoggedView({ slotId, idx, entry, skipped }: { slotId: string; idx: numb
   const st = useAppStore.getState();
   const s = st.slotById(slotId)!;
   const it = s.items[idx]; const ex = exInfo(cfg, it.ex);
+  const [shown, setShown] = useState(entry); // the session in the form: this card's, or one picked from Recent
+  const mine = entryId(shown) === entryId(entry);
   return (
     <Sheet>
       <div className="loggedhead">
         <h2 className="cond">{ex.n}</h2>
         <span className="loggedchip"><Icon name="check" />Logged</span>
       </div>
-      <p className="loggedsum">{fmtShort(parseDate(entry.d))} · {entry.ph ? PHASES[entry.ph].label : 'No phase'} · {describe(entry)}{skipped ? ' · Skipped this week' : ''}</p>
-      <EditEntry key={entryId(entry)} exId={it.ex} entry={entry} onDone={st.closeModal} cancelLabel="Close"
-        footer={skipped
+      <p className="loggedsum">{fmtShort(parseDate(shown.d))} · {shown.ph ? PHASES[shown.ph].label : 'No phase'} · {describe(shown)}{mine && skipped ? ' · Skipped this week' : ''}</p>
+      <EditEntry key={entryId(shown)} exId={it.ex} entry={shown} onDone={st.closeModal} cancelLabel="Close"
+        footer={!mine ? undefined : skipped
           ? <button type="button" className="btn sm ghost mr-auto" onClick={() => { if (isItemSkipped(s, idx, st.week)) st.skipItem(slotId, idx); else st.skipCard(slotId); st.checkItem(slotId, idx, true); st.closeModal(); }}>Undo skip</button>
           : <button type="button" className="btn sm ghost mr-auto" onClick={() => { st.checkItem(slotId, idx, false); st.closeModal(); }}>Uncheck and remove</button>} />
-      <RecentTable entries={recentOf(logs[it.ex])} />
+      <RecentTable entries={recentOf(logs[it.ex])} onEdit={setShown} editingId={entryId(shown)} />
     </Sheet>
   );
 }
