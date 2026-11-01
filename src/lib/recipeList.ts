@@ -57,7 +57,7 @@ export function sortRecipes(list: readonly Recipe[], sort: RecipeSort, all: read
     const x = v(a), y = v(b);
     return x === y ? byNameId(a, b) : x === undefined ? 1 : y === undefined ? -1 : x - y;
   };
-  const at = new Map(all.map((r, i) => [r.id, i]));
+  const at = sort === 'newest' ? new Map(all.map((r, i) => [r.id, i])) : new Map<string, number>();
   const by: Record<RecipeSort, (a: Recipe, b: Recipe) => number> = {
     name: byNameId,
     newest: (a, b) => (at.get(b.id) ?? -1) - (at.get(a.id) ?? -1) || byNameId(a, b),
@@ -78,5 +78,5 @@ export const LIBRARY_SORTS = [
 export type LibrarySort = typeof LIBRARY_SORTS[number]['key'];
 export const DEFAULT_LIBRARY_SORT: LibrarySort = 'relevance';
 
-/** The line saying how the Library list is ordered right now. */
+/** The line saying how the Library list is ordered right now (`typing`: the search holds a letter or digit; the server ignores punctuation). */
 export const librarySortedBy = (sort: LibrarySort, typing: boolean): string => (sort === 'name' || !typing ? 'Sorted by name, A to Z' : 'Sorted by best match');

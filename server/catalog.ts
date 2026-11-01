@@ -96,9 +96,8 @@ export async function searchCatalog(db: Kysely<DB>, userId: string, { kind, word
     if (!byName) q = q.orderBy(sql`${nameText} like ${`${phrase}%`}`, 'desc')
       .orderBy(sql`(${wordStarts})`, 'desc')
       .orderBy(sql`${nameText} like ${`${first}%`}`, 'desc');
-    if (byName) return q.orderBy(sql`lower(name)`).orderBy('id').limit(SEARCH_PAGE + 1).offset(offset).execute();
-    return q.orderBy(sql`char_length(name)`).orderBy(sql`lower(name)`).orderBy('id')
-      .limit(SEARCH_PAGE + 1).offset(offset).execute();
+    if (!byName) q = q.orderBy(sql`char_length(name)`);
+    return q.orderBy(sql`lower(name)`).orderBy('id').limit(SEARCH_PAGE + 1).offset(offset).execute();
   });
   return {
     items: rows.slice(0, SEARCH_PAGE).map(r => ({ id: r.id, name: r.name, ...(r.brand ? { brand: r.brand } : {}), data: (r.data ?? {}) as CatalogData })),
