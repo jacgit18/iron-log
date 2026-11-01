@@ -43,7 +43,6 @@
   padding-inline: var(--gl) var(--gr);
   margin-block-end: var(--sp-12);
   position: relative;
-  isolation: isolate;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) header.top {
@@ -85,7 +84,6 @@
     padding-inline: var(--gl) var(--gr);
     margin-block-end: var(--sp-12);
     position: relative;
-    isolation: isolate;
   }
 }
 @media (max-width:700px) {
