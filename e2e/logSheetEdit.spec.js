@@ -91,3 +91,26 @@ test('a skipped superset exercise with a logged session opens it, and Undo skip 
   await page.locator('.sheet').getByRole('button', { name: 'Undo skip' }).click();
   await expect(card.locator('.iskipped')).toHaveCount(0);
 });
+
+test('a logged card lists its recent sessions, and any of them opens in the edit form', async ({ page }) => {
+  await logSet(page, 100, 8);
+  await page.evaluate(() => { // an older session of the same exercise, in place before the page reloads
+    const key = Object.keys(localStorage).find(k => k.startsWith('ironlog:logs/'));
+    const doc = JSON.parse(localStorage.getItem(key));
+    doc.entries.unshift({ id: 'old1', d: '2026-09-08', w: 50, s: 3, r: 10, ph: null });
+    localStorage.setItem(key, JSON.stringify(doc));
+  });
+  await page.reload();
+  await page.click(`#log-${CARD}-0`);
+  await expect(page.locator('input[aria-label^="Set 1 weight"]')).toHaveValue('100'); // this week's session first
+  await expect(page.getByText('Sep 24 · Editing')).toBeVisible();
+  await page.getByRole('button', { name: 'Sep 8 · Edit entry' }).click();
+  await expect(page.locator('input[aria-label^="Set 1 weight"]')).toHaveValue('50');
+  await expect(page.getByText('Sep 8 · Editing')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Uncheck and remove' })).toHaveCount(0); // that button is for this card's session only
+  await page.locator('input[aria-label^="Set 1 weight"]').fill('55');
+  await page.click('button:has-text("Save changes")');
+  await expect(page.locator('.sheet')).toHaveCount(0);
+  await page.click(`#log-${CARD}-0`);
+  await expect(page.locator('.hist-recent tbody tr').filter({ hasText: '55 lb' })).toHaveCount(1);
+});
