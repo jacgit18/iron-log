@@ -15,6 +15,10 @@ const volume = p => {
   if (d.logEntries) parts.push(`${d.logEntries} log entries over ${d.logDays} days`);
   if (d.bodyWeeks) parts.push(`${d.bodyWeeks} weekly weights`);
   if (d.groceryItems) parts.push(`${d.groceryItems} grocery items`);
+  if (d.diet) parts.push(`${d.diet.targets ? 'diet targets, ' : ''}${d.diet.pastDays + (d.diet.todayPct > 0 ? 1 : 0)} days of diet log`);
+  if (d.meals) parts.push(`${d.meals} saved meals`);
+  if (d.planDays) parts.push(`${d.planDays}-day meal plan`);
+  if (d.recipes) parts.push(`${d.recipes} recipes`);
   return parts.join('; ') || 'none';
 };
 
@@ -30,7 +34,7 @@ Relates: "[[briefs/qa-persona-picker]], [[qa-and-staging-guide]], [[080-qa-test-
 
 ## How to use them
 1. Open QA (https://qa.loadbearer.app) and sign in with Google as your own admin account (the one on QA's \`ADMIN_EMAILS\`).
-2. Settings, Data, **QA test accounts**: open the list and press **Switch** on an account.
+2. Open the account menu (your initial, top right) and choose **QA test accounts**, or go to Settings, Data, **QA test accounts** (open by default). Search, filter by group, and press **Switch** on an account. While you are on a test account, the banner has a **Switch** button too, so you can go straight to another account without returning first.
 3. The page reloads and asks to wipe this device's data (the app's check for another account's data). Tap **Wipe it and continue**; your own account keeps its data on the server.
 4. A banner on every screen says which test account you are. **Return to admin** puts your own session back. A test-account session lasts one hour.
 
@@ -41,8 +45,12 @@ Nobody can sign in as these accounts directly: they have no password and their a
 |---|---|---|---|---|`);
 for (const p of PERSONAS) console.log(`| **${p.name}** (\`${p.id}\`, ${personaEmail(p.id)}) | ${plan(p)} | ${p.scenario} | ${p.tryThis} | ${volume(p)} |`);
 console.log(`
-## Seeding them (owner runs this)
+## Seeding and resetting them
 The accounts exist only after the seed has run. It resets each account to its starting state, so running it again undoes any test damage.
+
+**In the app (QA service with \`QA_OWNER_DATABASE_URL\` set):** the picker shows a hollow dot for an account that is not seeded. **Reset** (or **Seed** for an unseeded one) re-runs that account's seed; **Seed missing accounts** does each missing one in turn. The account you are on cannot be reset: switch away first. Where the server has no owner URL, the buttons are not shown.
+
+**From a terminal (owner runs this):**
 1. Dry run (changes nothing): \`QA_DATABASE_URL=<owner URL of the QA branch> npm run qa:seed -- --host <the host in that URL>\`
 2. Write: add \`--apply\`, with \`QA_PII_ENCRYPTION_KEY\` set to the value of the Secret Manager secret \`iron-log-qa-pii-key\` (QA's own key, never production's). One account only: \`--persona <id>\`.
 3. It refuses a database without the QA mark and production's host. Neither the URL nor the key is printed.
