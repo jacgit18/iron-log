@@ -203,6 +203,7 @@ function ProgramEditor() {
           </label>
         </>
       ) : null}
+      <div className="edcols">
       <section className="panel edpanel edprog">
         <div className="inline flexwrap"><h2 id="ed-title" tabIndex={-1} className="mr-auto">{edName} · {day.title}</h2></div>
         <label className="field">Day label
@@ -284,6 +285,7 @@ function ProgramEditor() {
         {lib ? 'Changes are saved to this library program only. Nothing on the board changes until you load it into A or B.' : `Changes apply to every week that uses ${progName(cfg, k)}. Your logged sets stay as they are.`}
       </p>
       {lib ? <LibItemPanel it={item} /> : <Library k={k} custom={custom} />}
+      </div>
     </>
   );
 }

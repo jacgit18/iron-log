@@ -331,4 +331,17 @@ html:has(.sjump) {
 .imppaste summary {
   padding: var(--sp-12) 0;
 }
+/* Last in the file so it wins over the one-column .sgrid rule above: from 1280px the two columns of a group (.scol) sit side by side, each at most 46rem, instead of stacking in one column with the right half of the screen empty. DOM order is unchanged. */
+@media (min-width:1280px) {
+  .smain {
+    grid-template-columns: 11rem minmax(0,1fr);
+  }
+  .sgrid {
+    grid-template-columns: repeat(2,minmax(0,46rem));
+  }
+  /* A column with nothing in it (Data's account column when signed out) would leave the left half blank and push the next column right. */
+  .settings .scol:empty {
+    display: none;
+  }
+}
 }
