@@ -1,6 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
+// The Progress pages are hub drill-ins, which is what a window under 1280px shows (the one page is scanned in progressOnePage.spec.js).
+test.use({ viewport: { width: 1100, height: 900 } });
+
 const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 
 // Each view is reached by clicking these in order.

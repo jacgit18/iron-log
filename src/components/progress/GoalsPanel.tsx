@@ -15,6 +15,7 @@ import SortControl from '../SortControl.jsx';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import ItemPicker from '../ItemPicker.jsx';
 import LiftGoal, { GoalForm } from './LiftGoal.jsx';
+import { useFiltered } from './useFiltered.js';
 import './GoalsPanel.css';
 
 const catalogMeta = (c: CatalogItem) => [c.data.eq ? EQUIPMENT[c.data.eq] : '', c.data.muscles?.p?.length ? muscleList(c.data.muscles.p) : ''].filter(Boolean).join(' · ');
@@ -48,17 +49,19 @@ function NewGoal({ onDone }: { onDone: () => void }) {
 }
 
 // Every exercise with a weight goal, logged or not, and a way to set one on any exercise. The goal itself is the same one the exercise's detail sheet edits.
-export default function GoalsPanel() {
+export default function GoalsPanel({ byMuscle = false }: { byMuscle?: boolean }) {
   const cfg = useAppStore(s => s.cfg);
   const [adding, setAdding] = useState(false);
   const logs = useAppStore(s => s.logs); const body = useAppStore(s => s.body); const today = useToday(s => s.today);
   const [sort, setSort] = useSortChoice('goals-weight', WEIGHT_GOAL_SORTS, DEFAULT_WEIGHT_GOAL_SORT);
-  const rows = goalExercises(cfg);
+  const all = goalExercises(cfg);
+  const kept = useFiltered(all.map(r => r.id)); // the muscle picked on the map, when this panel sits under it (Progress on one page)
+  const rows = byMuscle ? all.filter(r => kept.includes(r.id)) : all;
   // A row whose last goal was just removed stays until you leave the screen, so its Undo notice has somewhere to show.
   const [seen, setSeen] = useState<string[]>([]); const [seenKey, setSeenKey] = useState('');
   const key = rows.map(r => r.id).join('|');
   if (key !== seenKey) { setSeenKey(key); setSeen(s => [...new Set([...s, ...rows.map(r => r.id)])]); }
-  const shown = [...new Map([...rows, ...seen.map(id => ({ id, name: exInfo(cfg, id).n }))].map(r => [r.id, r])).values()];
+  const shown = [...new Map([...rows, ...seen.map(id => ({ id, name: exInfo(cfg, id).n }))].map(r => [r.id, r])).values()].filter(r => !byMuscle || kept.includes(r.id) || !all.some(a => a.id === r.id));
   const progressOf = (id: string): GoalProgress => {
     const gs = liftGoalsStatus(cfg, id, logs[id] || [], today, undefined, body);
     if (!gs.length) return null;
@@ -72,7 +75,8 @@ export default function GoalsPanel() {
         <h2 id="goals-h">Weight goals</h2>
         {!adding && <button type="button" className="btn sm" onClick={() => setAdding(true)}>New exercise goal</button>}
       </div>
-      {!rows.length && !shown.length && !adding && <p className="note">The most weight you want to lift on an exercise, in one phase or any. Tap New exercise goal to set one on any exercise, even one you have not logged yet.</p>}
+      {byMuscle && !rows.length && !shown.length && all.length > 0 && <p className="note">No goals on exercises for this muscle.</p>}
+      {!rows.length && !shown.length && !adding && !(byMuscle && all.length) && <p className="note">The most weight you want to lift on an exercise, in one phase or any. Tap New exercise goal to set one on any exercise, even one you have not logged yet.</p>}
       {shown.length > 1 && <div className="inline"><SortControl options={WEIGHT_GOAL_SORTS} value={sort} onChange={setSort} /></div>}
       {ordered.map(r => (
         <div className="goalrow" key={r.id}>

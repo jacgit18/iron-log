@@ -3,7 +3,7 @@
    Change a persona here and all three follow. Emails end in .invalid, which can never be a real address (RFC 2606). */
 
 export type PersonaPlan = 'free' | 'paid' | 'lifetime' | 'founder' | 'beta';
-export type PersonaGroup = 'Plans' | 'Limits' | 'Data volume' | 'Features';
+export type PersonaGroup = 'Plans' | 'Limits' | 'Data volume' | 'Features' | 'Diet';
 
 export interface Persona {
   /** Stable slug: the key in the route, the auth id suffix and the email prefix. */
@@ -35,6 +35,25 @@ export interface PersonaData {
   groceryItems: number;
   /** Erase-my-data happened: data epoch 2, nothing left. */
   erased?: boolean;
+  /** Diet (brief: qa-picker-access): targets, a logged history and how far through today's targets the account is. Left out: no diet data. */
+  diet?: DietSpec;
+  /** Saved meals in `cfg.diet.meals` (0 to 4). */
+  meals?: number;
+  /** Days from today with a meal plan (0 to 13). */
+  planDays?: number;
+  /** Recipes to create (0 to 300). */
+  recipes?: number;
+}
+
+export interface DietSpec {
+  /** Whether the daily targets are set (`cfg.diet`). */
+  targets: boolean;
+  /** Fully logged days before today. */
+  pastDays: number;
+  /** Today's calories as a share of the target (0.6 = 60%). 0 = nothing logged today. */
+  todayPct: number;
+  /** Today's protein as a share of the protein target. */
+  todayProteinPct: number;
 }
 
 const NONE: PersonaData = { programs: false, logDays: 0, logEntries: 0, bodyWeeks: 0, groceryItems: 0 };
@@ -52,6 +71,11 @@ export const PERSONAS: readonly Persona[] = [
   { id: 'three-year-veteran', name: 'Three-year veteran', group: 'Data volume', plan: 'paid', planStatus: 'active', renewsInDays: 200, scenario: 'About 5,000 entries over three years.', tryThis: 'Slow screens, large exports and sync size.', data: { programs: true, logDays: 1095, logEntries: 5000, bodyWeeks: 156, groceryItems: 0 } },
   { id: 'superset-builder', name: 'Superset builder', group: 'Features', plan: 'free', planStatus: null, renewsInDays: null, scenario: 'Both programs are full of supersets across the week.', tryThis: 'Moving one exercise of a superset to another day.', data: { programs: true, logDays: 28, logEntries: 80, bodyWeeks: 4, groceryItems: 0 } },
   { id: 'grocery-shopper', name: 'Grocery shopper', group: 'Features', plan: 'paid', planStatus: 'active', renewsInDays: 20, scenario: 'A working grocery list: 60 items across 4 stores, some priced.', tryThis: 'To get and At home lists, prices and unpriced items.', data: { programs: true, logDays: 30, logEntries: 60, bodyWeeks: 4, groceryItems: 60 } },
+  { id: 'diet-on-target', name: 'Diet, on target', group: 'Diet', plan: 'free', planStatus: null, renewsInDays: null, scenario: 'Targets set, 14 days logged, today about 60% of the calories.', tryThis: 'The Diet day view mid-day and the history on a steady week.', data: { programs: true, logDays: 14, logEntries: 20, bodyWeeks: 2, groceryItems: 0, diet: { targets: true, pastDays: 13, todayPct: 0.6, todayProteinPct: 0.6 } } },
+  { id: 'diet-over-target', name: 'Diet, over target', group: 'Diet', plan: 'free', planStatus: null, renewsInDays: null, scenario: 'Today is about 120% of the calories and the protein is short.', tryThis: 'Over-target colours and wording, and the protein shortfall.', data: { programs: true, logDays: 14, logEntries: 20, bodyWeeks: 2, groceryItems: 0, diet: { targets: true, pastDays: 13, todayPct: 1.2, todayProteinPct: 0.55 } } },
+  { id: 'diet-fresh', name: 'Diet, fresh', group: 'Diet', plan: 'free', planStatus: null, renewsInDays: null, scenario: 'Trains in the app but has never set diet targets or logged a food.', tryThis: 'The Diet first-run screen and setting targets for the first time.', data: { programs: true, logDays: 14, logEntries: 20, bodyWeeks: 2, groceryItems: 0 } },
+  { id: 'meal-planner', name: 'Meal planner', group: 'Diet', plan: 'free', planStatus: null, renewsInDays: null, scenario: '4 saved meals, 4 recipes and a 7-day plan with portions.', tryThis: 'The planner, portions, copying a day and logging from the plan.', data: { programs: true, logDays: 14, logEntries: 20, bodyWeeks: 2, groceryItems: 0, diet: { targets: true, pastDays: 6, todayPct: 0.35, todayProteinPct: 0.35 }, meals: 4, planDays: 7, recipes: 4 } },
+  { id: 'recipe-collector', name: 'Recipe collector', group: 'Diet', plan: 'free', planStatus: null, renewsInDays: null, scenario: 'About 30 recipes with nutrition badges and a 30-item grocery list.', tryThis: 'Recipe search and filters, ingredient matches against At home, and the Maybe matches.', data: { programs: true, logDays: 14, logEntries: 20, bodyWeeks: 2, groceryItems: 30, recipes: 30 } },
 ];
 
 export const personaById = (id: string): Persona | undefined => PERSONAS.find(p => p.id === id);
