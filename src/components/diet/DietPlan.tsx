@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { fmtNum, shiftDay } from '../../lib/dietLog.js';
-import { dayTotals, daysFrom, inWindow, planLog, recipeIdsFor, resolve, totalsText, type Resolved } from '../../lib/dietPlan.js';
+import { dayTotals, daysFrom, findMatches, inWindow, planLog, recipeIdsFor, resolve, totalsText, type Resolved } from '../../lib/dietPlan.js';
 import type { Targets } from '../../lib/dietTarget.js';
 import { addMissingMessage } from '../../lib/recipePantry.js';
 import { MAX_PLAN_ITEMS } from '../../shared/diet.js';
@@ -43,9 +43,8 @@ export default function DietPlan({ targets }: { targets: Targets }) {
     const left = out.left + (out.add.length - done - (stopped ? 1 : 0));
     setMsg(`Logged ${done} from ${r.name}.${stopped ? ` ${stopped}` : left > 0 ? ` ${left} left out: 20 a day is the limit.` : ''}`);
   };
-  const needle = q.trim().toLowerCase();
-  const rMatch = recipes.filter(r => !needle || r.n.toLowerCase().includes(needle)).slice(0, 8);
-  const mMatch = meals.filter(m => !needle || m.n.toLowerCase().includes(needle)).slice(0, 8);
+  const rMatch = findMatches(recipes, q);
+  const mMatch = findMatches(meals, q);
   return (
     <div className="dt-plan">
       <h3 id="dt-plan-h">Plan</h3>
