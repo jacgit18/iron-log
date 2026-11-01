@@ -31,6 +31,11 @@ export function recipeMeta(label: string, servings?: number, minutes?: number): 
   return [label, servings ? `${servings} serving${servings === 1 ? '' : 's'}` : '', time].filter(Boolean).join(' · ');
 }
 
+/** The "3 of 4" badge on a recipe card: ingredients at home out of all counted ones, and whether that is all of them. Null when the recipe has no counted ingredient. */
+export function haveBadge(s: { have: number; total: number }): { text: string; all: boolean } | null {
+  return s.total > 0 ? { text: `${s.have} of ${s.total}`, all: s.have === s.total } : null;
+}
+
 /** Steps typed one per line, as a list (blank lines dropped). */
 export const stepsFromText = (t: string): string[] => t.split('\n').map(s => s.trim()).filter(Boolean);
 
