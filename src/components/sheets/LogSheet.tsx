@@ -162,7 +162,7 @@ function RecentTable({ entries, onEdit, editingId }: { entries: LogEntry[]; onEd
             <tr role="row" key={i}>
               <td role="cell">{!onEdit ? fmtShort(parseDate(e.d)) : editingId === entryId(e)
                 ? <>{fmtShort(parseDate(e.d))} · Editing</>
-                : <button type="button" className="btn sm ghost" aria-label={`Edit entry from ${fmtShort(parseDate(e.d))}`} onClick={() => onEdit(e)}>{fmtShort(parseDate(e.d))} · Edit</button>}</td>
+                : <button type="button" className="btn sm ghost" aria-label={`${fmtShort(parseDate(e.d))} · Edit entry`} onClick={() => onEdit(e)}>{fmtShort(parseDate(e.d))} · Edit</button>}</td>
               <td role="cell">{e.ph ? PHASES[e.ph].label : '—'}</td>
               <td role="cell" className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
               <td role="cell" className="num">{volText(e)}</td>

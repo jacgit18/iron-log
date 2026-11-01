@@ -104,7 +104,7 @@ test('a logged card lists its recent sessions, and any of them opens in the edit
   await page.click(`#log-${CARD}-0`);
   await expect(page.locator('input[aria-label^="Set 1 weight"]')).toHaveValue('100'); // this week's session first
   await expect(page.getByText('Sep 24 · Editing')).toBeVisible();
-  await page.getByRole('button', { name: 'Edit entry from Sep 8' }).click();
+  await page.getByRole('button', { name: 'Sep 8 · Edit entry' }).click();
   await expect(page.locator('input[aria-label^="Set 1 weight"]')).toHaveValue('50');
   await expect(page.getByText('Sep 8 · Editing')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Uncheck and remove' })).toHaveCount(0); // that button is for this card's session only
