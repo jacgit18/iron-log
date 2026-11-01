@@ -179,4 +179,27 @@
 .copyday .btn {
   min-height: 44px;
 }
+/* A wide desktop: the program editor and the program library sit side by side, each as wide as the editor panel (760px), instead of one column with the right half empty. The
+   DOM order stays editor, note, library, so keyboard and screen-reader order do not change; only the grid places them. Below 1280px .edcols is a plain block and nothing moves. */
+@media (min-width:1280px) {
+  .edcols {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,760px));
+    column-gap: var(--sp-16);
+    align-items: start;
+  }
+  .edcols>.edprog:not(.lib) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .edcols>.note {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .edcols>.lib.edprog {
+    grid-column: 2;
+    grid-row: 1/span 2;
+    margin-top: 0 !important;
+  }
+}
 }
