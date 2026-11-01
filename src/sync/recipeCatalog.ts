@@ -21,13 +21,14 @@ export function cleanLibraryRecipe(raw: unknown): CatalogItem | null {
   return { id: raw.id, name: raw.name.trim().slice(0, MAX_RECIPE_NAME), data: { recipe: { cat, ing, steps, ...(servings ? { servings } : {}), ...(minutes ? { minutes } : {}) } } };
 }
 
-/** One page of library recipes for the typed words (none: every recipe in name order), optionally of one category. */
-export async function searchRecipes(q: string, cat: RecipeCategory | null, offset: number, headers: () => Record<string, string>, doFetch: typeof fetch = fetch): Promise<RecipeSearch> {
+/** One page of library recipes for the typed words (none: every recipe in name order), optionally of one category. `sort` 'name' orders by name even when words are typed. */
+export async function searchRecipes(q: string, cat: RecipeCategory | null, offset: number, sort: 'relevance' | 'name', headers: () => Record<string, string>, doFetch: typeof fetch = fetch): Promise<RecipeSearch> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, reason: 'offline' };
   try {
     const params = new URLSearchParams({ kind: 'recipe', offset: String(offset) });
     if (q.trim()) params.set('q', q.trim());
     if (cat) params.set('cat', cat);
+    if (sort === 'name') params.set('sort', 'name'); // relevance is the server's default: left out
     const res = await doFetch(`/api/catalog/search?${params}`, { headers: { accept: 'application/json', ...headers() }, credentials: 'same-origin' });
     if (res.status === 401 || res.status === 403) return { ok: false, reason: 'refused' };
     if (!res.ok) return { ok: false, reason: 'unreachable' };
