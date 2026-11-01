@@ -16,6 +16,7 @@ import ArmedButton from './ArmedButton.js';
 // the user chooses: keep a copy and wipe, or sign out again. Wiping is the only way on, and it takes a second press.
 export default function OtherAccountCard() {
   const blocked = useAppStore(s => s.sync?.state === 'paused' && s.sync.pausedBecause === 'account');
+  const pausedBecause = useAppStore(s => s.sync?.pausedBecause);
   const dl = useAppStore(s => s.dl);
   const cfg = useAppStore(s => s.cfg);
   const { client, busy, setBusy } = useGoogleSignIn();
@@ -39,17 +40,18 @@ export default function OtherAccountCard() {
     if (!hold || !blocked || !api || running.current) return;
     let mark: string | null = null;
     try { mark = sessionStorage.getItem(SWITCH_MARK_KEY); } catch { /* ignore */ }
-    const d = autoWipeDecision({ mark, now: Date.now(), qa: !!qa, pausedBecause: 'account' });
+    const d = autoWipeDecision({ mark, now: Date.now(), qa: !!qa, pausedBecause });
     if (d === 'wait') return;
     dropMark();
     if (d === 'drop') { setHold(false); return; }
     running.current = true;
+    const giveUp = () => { running.current = false; setHold(false); }; // the wipe could not run: the card shows so the person can choose
     void api.wipeForNewAccount().then(async out => {
-      if (out === 'done') { await useAppStore.getState().forgetBackups(); window.location.reload(); return; }
-      running.current = false;
-      setHold(false); // the wipe could not run: the card stays so the person can choose
-    }, () => { running.current = false; setHold(false); });
-  }, [hold, blocked, api, qa]);
+      if (out !== 'done') { giveUp(); return; }
+      try { await useAppStore.getState().forgetBackups(); } catch { /* the wipe is done; reload onto the new account whatever this says */ }
+      window.location.reload();
+    }, giveUp);
+  }, [hold, blocked, api, qa, pausedBecause]);
   // /api/me never said this is QA: stop waiting and let the person choose.
   useEffect(() => {
     if (!hold) return;
