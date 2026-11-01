@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Recipe } from '../types.ts';
-import { DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, filterRecipes, librarySortedBy, recipeMeta, sameName, sortRecipes, stepsFromText } from './recipeList.js';
+import { DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, filterRecipes, haveBadge, librarySortedBy, recipeMeta, sameName, sortRecipes, stepsFromText } from './recipeList.js';
 
 const r = (id: string, n: string, cat: Recipe['cat'], ing: string[]): Recipe => ({ id, n, cat, ing: ing.map(x => ({ n: x })), steps: ['Cook.'] });
 const list = [r('b', 'Taco seasoning', 'seasonings', ['chili powder', 'cumin']), r('a', 'Garlic chicken', 'protein', ['chicken thighs', 'garlic']), r('c', 'Chimichurri', 'sauces', ['parsley', 'garlic'])];
@@ -71,5 +71,16 @@ describe('the library sort label', () => {
     expect(librarySortedBy('relevance', 'bread')).toBe('Sorted by best match');
     expect(librarySortedBy('relevance', '!! ')).toBe('Sorted by name, A to Z'); // punctuation only: the server has no words
     expect(librarySortedBy('name', 'bread')).toBe('Sorted by name, A to Z');
+  });
+});
+
+describe('haveBadge', () => {
+  it('reads "have of total" and flags a full set', () => {
+    expect(haveBadge({ have: 3, total: 4 })).toEqual({ text: '3 of 4', all: false });
+    expect(haveBadge({ have: 4, total: 4 })).toEqual({ text: '4 of 4', all: true });
+    expect(haveBadge({ have: 0, total: 2 })).toEqual({ text: '0 of 2', all: false });
+  });
+  it('shows nothing for a recipe with no counted ingredient', () => {
+    expect(haveBadge({ have: 0, total: 0 })).toBeNull();
   });
 });
