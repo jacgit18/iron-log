@@ -78,5 +78,5 @@ export const LIBRARY_SORTS = [
 export type LibrarySort = typeof LIBRARY_SORTS[number]['key'];
 export const DEFAULT_LIBRARY_SORT: LibrarySort = 'relevance';
 
-/** The line saying how the Library list is ordered right now (`typing`: the search holds a letter or digit; the server ignores punctuation). */
-export const librarySortedBy = (sort: LibrarySort, typing: boolean): string => (sort === 'name' || !typing ? 'Sorted by name, A to Z' : 'Sorted by best match');
+/** The line saying how the Library list is ordered right now. `q` is the raw search: the server ignores punctuation, so only a letter or digit counts as typed. */
+export const librarySortedBy = (sort: LibrarySort, q: string): string => (sort === 'name' || !/[\p{L}\p{N}]/u.test(q) ? 'Sorted by name, A to Z' : 'Sorted by best match');

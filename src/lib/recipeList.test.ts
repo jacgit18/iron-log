@@ -67,8 +67,9 @@ describe('sortRecipes', () => {
 describe('the library sort label', () => {
   it('says name when sorted by name or when nothing is typed, best match otherwise', () => {
     expect(LIBRARY_SORTS.map(o => o.key)).toEqual(['relevance', 'name']);
-    expect(librarySortedBy('relevance', false)).toBe('Sorted by name, A to Z');
-    expect(librarySortedBy('relevance', true)).toBe('Sorted by best match');
-    expect(librarySortedBy('name', true)).toBe('Sorted by name, A to Z');
+    expect(librarySortedBy('relevance', '')).toBe('Sorted by name, A to Z');
+    expect(librarySortedBy('relevance', 'bread')).toBe('Sorted by best match');
+    expect(librarySortedBy('relevance', '!! ')).toBe('Sorted by name, A to Z'); // punctuation only: the server has no words
+    expect(librarySortedBy('name', 'bread')).toBe('Sorted by name, A to Z');
   });
 });

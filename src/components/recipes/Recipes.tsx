@@ -136,8 +136,8 @@ export default function Recipes() {
         </div>
       )}
       <div className="rc-sort">
-        {src === 'mine' ? <SortControl options={RECIPE_SORTS} value={mineSort} onChange={setMineSort} /> : <SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} />}
-        {src === 'library' && syncing && <span className="rc-sortedby">{librarySortedBy(libSort, /[\p{L}\p{N}]/u.test(q))}</span>}
+        {src === 'mine' ? <SortControl options={RECIPE_SORTS} value={mineSort} onChange={setMineSort} /> : syncing && <SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} />}
+        {src === 'library' && syncing && <span className="rc-sortedby">{librarySortedBy(libSort, q)}</span>}
       </div>
       <RemovedNotice scope="recipes" />
 
