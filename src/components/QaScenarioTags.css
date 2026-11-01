@@ -1,0 +1,24 @@
+@layer base, components;
+@layer components {
+.qascn {
+  margin-top: var(--sp-4);
+}
+.qascnbtn {
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--fs-md);
+  min-height: 44px;
+  padding: 0;
+  text-align: start;
+  text-decoration: underline;
+}
+.qascnlist {
+  color: var(--muted);
+  font-size: var(--fs-md);
+  margin: 0;
+  padding-inline-start: var(--sp-16);
+}
+}
