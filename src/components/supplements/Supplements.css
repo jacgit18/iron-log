@@ -203,4 +203,18 @@
     padding: var(--sp-12);
   }
 }
+
+/* From 1280px Nutrition is two columns: Diet on the left, Supplements, Water and Last 7 days on the right. DOM order is unchanged (Diet first), so reading and tab order stay the same; below 1280px the divs are plain blocks. */
+@media (min-width:1280px) {
+  .nutcols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 46rem));
+    justify-content: center;
+    align-items: start;
+    gap: var(--sp-16);
+  }
+  .nutcol {
+    min-width: 0;
+  }
+}
 }
