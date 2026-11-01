@@ -1,6 +1,6 @@
 import { parsePersonaList } from '../lib/qaPersonas.js';
 
-/* ---------- QA test accounts: the three calls (brief qa-persona-picker, server/auth/qaPersonas.ts) ----------
+/* ---------- QA test accounts: the four calls (brief qa-persona-picker, server/auth/qaPersonas.ts) ----------
    Same-origin, cookie only. Like the rest of src/sync none of these throws: a network failure is an answer. */
 
 export type SwitchOutcome = 'ok' | 'refused' | 'unreachable';
@@ -26,4 +26,5 @@ async function post(path: string, body: unknown): Promise<SwitchOutcome> {
 }
 
 export const switchPersona = (id: string) => post('/switch', { id });
+export const resetPersona = (id: string) => post('/reset', { id });
 export const returnToAdmin = () => post('/return', {});
