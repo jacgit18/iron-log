@@ -1,13 +1,11 @@
 import type { LibraryItem, Program } from '../types.ts';
 import { progBody } from './export.js';
-import { nameCmp } from './sort.js';
+import { DEFAULT_PROGRAM_SORT, sortLibraryItems, type ProgramSort } from './programSort.js';
 
 // Program library > Archive: saved programs split into the ones in play and the ones put away (newest first), and the heading for the put-away list.
-export function splitLibrary(library: LibraryItem[]): { active: LibraryItem[]; archived: LibraryItem[] } {
-  // Newest first; saved the same moment, by name, then id, so the order never jumps. The comparator is a variable on purpose (the dates are ISO strings).
-  const byName = nameCmp<LibraryItem>(it => it.name, it => it.id);
-  const newest = (a: LibraryItem, b: LibraryItem) => (b.at || '') < (a.at || '') ? -1 : (b.at || '') > (a.at || '') ? 1 : byName(a, b);
-  return { active: library.filter(it => !it.archived).sort(newest), archived: library.filter(it => it.archived).sort(newest) };
+export function splitLibrary(library: LibraryItem[], sort: ProgramSort = DEFAULT_PROGRAM_SORT): { active: LibraryItem[]; archived: LibraryItem[] } {
+  // Saved the same moment, by name, then id, so the order never jumps (`sortLibraryItems`).
+  return { active: sortLibraryItems(library.filter(it => !it.archived), sort), archived: sortLibraryItems(library.filter(it => it.archived), sort) };
 }
 
 export const archivedHeading = (n: number) => `Archived (${n})`;
