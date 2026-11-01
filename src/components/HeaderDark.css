@@ -42,6 +42,9 @@
   margin-inline: calc(-1 * var(--gl)) calc(-1 * var(--gr));
   padding-inline: var(--gl) var(--gr);
   margin-block-end: var(--sp-12);
+  /* Above the 1920px page cap the band runs to the screen edges: the shadow paints it sideways, the clip keeps it from spreading up or down. Neither changes the box or the scroll width. */
+  box-shadow: 0 0 0 100vw var(--surface);
+  clip-path: inset(0 -100vw);
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) header.top {
@@ -82,6 +85,9 @@
     margin-inline: calc(-1 * var(--gl)) calc(-1 * var(--gr));
     padding-inline: var(--gl) var(--gr);
     margin-block-end: var(--sp-12);
+    /* Above the 1920px page cap the band runs to the screen edges: the shadow paints it sideways, the clip keeps it from spreading up or down. Neither changes the box or the scroll width. */
+    box-shadow: 0 0 0 100vw var(--surface);
+    clip-path: inset(0 -100vw);
   }
 }
 @media (max-width:700px) {
