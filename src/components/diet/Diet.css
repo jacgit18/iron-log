@@ -206,4 +206,11 @@
 .dt-oneoff-head .btn {
   min-height: 44px;
 }
+/* Sort pill and its one-line honesty note above the food search results. */
+.dt-sortrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+}
 }
