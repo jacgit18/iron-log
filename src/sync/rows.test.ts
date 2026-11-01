@@ -90,6 +90,13 @@ describe('applyRows', () => {
     expect(back.get('log_entries|L1')).toMatchObject({ deleted: false, version: 3 });
   });
 
+  it('a list this build does not know is left out instead of throwing, and the known rows around it still apply', () => {
+    const known = row({ list: 'grocery_store', client_id: 'Aldi', position: 0, data: { id: 'Aldi', n: 'Aldi' } });
+    const unknown = row({ list: 'from_a_newer_server', client_id: 'x1', position: 0, data: { id: 'x1' } });
+    const out = applyRows(new Map(), 'list_items', [unknown, known]);
+    expect([...out.keys()]).toEqual(['list_items|grocery_store/Aldi']);
+  });
+
   it('idOfRow names the row in the mirror', () => {
     expect(idOfRow({ table: 'list_items', key: 'stretch/s1' })).toBe('list_items|stretch/s1');
   });
