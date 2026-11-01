@@ -10,14 +10,17 @@ const boxes = page => page.evaluate(() => {
 const open = async page => { await page.goto('/#/daily/nutrition'); await expect(page.locator('#diet-h')).toBeVisible(); await expect(page.locator('#sched-h')).toBeVisible(); };
 
 for (const w of [1280, 1920, 2560]) {
-  test(`at ${w}px Diet and the Supplements, Water and Last 7 days column are side by side, each at most 46rem`, async ({ page }) => {
+  test(`at ${w}px Diet and the Supplements, Water and Last 7 days column are side by side, together fill the page container`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 1000 });
     await open(page);
     const { a, b, vw } = await boxes(page);
     expect(b.x).toBeGreaterThan(a.right - 1);
     expect(Math.abs(b.y - a.y)).toBeLessThan(2);
-    expect(a.w).toBeLessThanOrEqual(736.5);
-    expect(b.w).toBeLessThanOrEqual(736.5);
+    const wrap = await page.evaluate(() => { const b = document.querySelector('.nutcols').getBoundingClientRect(); return { x: b.x, right: b.right, w: b.width }; });
+    expect(Math.abs(a.x - wrap.x)).toBeLessThan(2);
+    expect(Math.abs(b.right - wrap.right)).toBeLessThan(2);
+    expect(Math.abs(a.w - b.w)).toBeLessThan(2);
+    expect(wrap.w).toBeGreaterThan(Math.min(vw, 1920) - 80); // the container, not a 1490px cap
     expect(b.right).toBeLessThanOrEqual(vw);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
   });
