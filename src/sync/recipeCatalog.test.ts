@@ -20,13 +20,20 @@ describe('searchRecipes', () => {
   it('asks for the words, the category and the page, and cleans the answer', async () => {
     let url = '';
     const doFetch = (async (u: string) => { url = u; return new Response(JSON.stringify({ items: [row, { id: 'bad' }], more: true }), { status: 200 }); }) as unknown as typeof fetch;
-    const r = await searchRecipes(' dip ', 'sauces', 30, () => ({}), doFetch);
+    const r = await searchRecipes(' dip ', 'sauces', 30, 'relevance', () => ({}), doFetch);
     expect(url).toBe('/api/catalog/search?kind=recipe&offset=30&q=dip&cat=sauces');
     expect(r).toMatchObject({ ok: true, more: true });
     expect(r.ok && r.items).toHaveLength(1);
   });
+  it('sends sort=name only for a name sort', async () => {
+    const urls: string[] = [];
+    const doFetch = (async (u: string) => { urls.push(u); return new Response(JSON.stringify({ items: [], more: false }), { status: 200 }); }) as unknown as typeof fetch;
+    await searchRecipes('dip', null, 0, 'name', () => ({}), doFetch);
+    await searchRecipes('dip', null, 0, 'relevance', () => ({}), doFetch);
+    expect(urls).toEqual(['/api/catalog/search?kind=recipe&offset=0&q=dip&sort=name', '/api/catalog/search?kind=recipe&offset=0&q=dip']);
+  });
   it('says why it failed', async () => {
-    expect(await searchRecipes('', null, 0, () => ({}), (async () => new Response('', { status: 401 })) as unknown as typeof fetch)).toEqual({ ok: false, reason: 'refused' });
-    expect(await searchRecipes('', null, 0, () => ({}), ok({ nope: 1 }))).toEqual({ ok: false, reason: 'unreachable' });
+    expect(await searchRecipes('', null, 0, 'relevance', () => ({}), (async () => new Response('', { status: 401 })) as unknown as typeof fetch)).toEqual({ ok: false, reason: 'refused' });
+    expect(await searchRecipes('', null, 0, 'relevance', () => ({}), ok({ nope: 1 }))).toEqual({ ok: false, reason: 'unreachable' });
   });
 });

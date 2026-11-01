@@ -166,6 +166,23 @@ describe('GET /api/catalog/search (recipes)', () => {
     expect(ids(await search('?kind=recipe&q=rice&cat=carbs'))).toEqual(['c:wbc:r5']);
     expect(ids(await search('?kind=recipe&cat=sides'))).toEqual([]);
   });
+  it('sort=name orders by lower-cased name then id even when words are typed; relevance keeps the best match first', async () => {
+    await db.insertInto('catalog_items').values([rec(6, 'chicken soup', 'other', ['water']), rec(7, 'Zesty Chicken', 'protein', ['chicken']), rec(8, 'Chicken Soup', 'other', ['water'])]).execute();
+    expect(ids(await search('?kind=recipe&q=chicken&sort=relevance'))[0]).toBe('c:wbc:r3'); // shortest name starting with the word
+    expect(ids(await search('?kind=recipe&q=chicken&sort=name'))).toEqual(['c:wbc:r3', 'c:wbc:r6', 'c:wbc:r8', 'c:wbc:r1', 'c:wbc:r7']); // r3, r6, r8 share a name ignoring case: id breaks the tie
+    expect(ids(await search('?kind=recipe&sort=name&cat=protein'))).toEqual(['c:wbc:r1', 'c:wbc:r7']);
+    expect(ids(await search('?kind=recipe&sort=relevance'))).toEqual(ids(await search('?kind=recipe'))); // no words: name order either way
+  });
+  it('pages a name sort without a repeat or a gap', async () => {
+    await db.insertInto('catalog_items').values(Array.from({ length: 40 }, (_, i) => rec(100 + i, `Dish ${String(i).padStart(2, '0')}`, 'other', ['salt']))).execute();
+    const one = await search('?kind=recipe&q=dish&sort=name');
+    const two = await search('?kind=recipe&q=dish&sort=name&offset=30');
+    expect(one.body.more).toBe(true);
+    expect([...ids(one), ...ids(two)]).toEqual(Array.from({ length: 40 }, (_, i) => `c:wbc:r${100 + i}`));
+  });
+  it('refuses a sort that is not one, and a sort on another kind', async () => {
+    for (const q of ['?kind=recipe&sort=newest', '?kind=recipe&sort=', '?kind=recipe&sort=name&sort=relevance', '?kind=supplement&q=fish&sort=name']) expect((await search(q)).status, q).toBe(400);
+  });
   it('returns the recipe with its steps, and refuses a category that is not one or one used on another kind', async () => {
     expect((await search('?kind=recipe&q=olive')).body.items[0]!.data.recipe).toMatchObject({ cat: 'sauces', steps: ['Cook.'] });
     expect((await search('?kind=recipe&offset=3000')).status).toBe(200); // recipes page deeper than supplements
