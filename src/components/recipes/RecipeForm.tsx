@@ -3,7 +3,7 @@ import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
 import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, MAX_TAG, MAX_TAGS_PER_RECIPE, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
-import { cleanTag, starterTags, tagCounts, tagKey } from '../../lib/recipeTags.js';
+import { cleanTag, starterTags, tagCounts, tagKey, tagLimitError } from '../../lib/recipeTags.js';
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -83,6 +83,8 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     if (!t) return;
     if (tags.some(x => tagKey(x) === tagKey(t))) { setTagText(''); return; }
     if (tags.length >= MAX_TAGS_PER_RECIPE) { setErr(`A recipe can have up to ${MAX_TAGS_PER_RECIPE} tags.`); return; }
+    const full = tagLimitError(recipes.filter(x => x.id !== recipe?.id), [...tags, t]);
+    if (full) { setErr(full); return; }
     const known = tagCounts(recipes).find(c => tagKey(c.tag) === tagKey(t))?.tag; // an existing tag keeps its spelling
     setTags([...tags, known ?? t]); setTagText(''); setErr('');
   };

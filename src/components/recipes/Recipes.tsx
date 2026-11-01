@@ -116,7 +116,7 @@ export default function Recipes() {
       <h2 id="recipes-h" tabIndex={-1}>Recipes</h2>
       <div className="seg" role="group" aria-label="Recipe source">
         <button type="button" id="recipes-mine" className={src === 'mine' ? 'on' : ''} aria-pressed={src === 'mine'} onClick={() => setSrc('mine')}>Mine</button>
-        <button type="button" id="recipes-library" className={src === 'library' ? 'on' : ''} aria-pressed={src === 'library'} onClick={() => { setSrc('library'); if (cat === 'ready') setCat(null); }}>Library</button>
+        <button type="button" id="recipes-library" className={src === 'library' ? 'on' : ''} aria-pressed={src === 'library'} onClick={() => { setSrc('library'); setNutSel([]); if (cat === 'ready') setCat(null); }}>Library</button>
       </div>
       <div className="rc-top">
         <input type="search" aria-label="Search recipes" placeholder="Search by name or ingredient" value={q} onChange={e => setQ(e.target.value)} autoComplete="off" />

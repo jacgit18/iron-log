@@ -14,7 +14,7 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
   const [err, setErr] = useState('');
   const today = ymd(useToday(s => s.today)); // the shared "today" (it moves at midnight), not a Date read during render
   const [day, setDay] = useState(today);
-  if (!mine) return <p className="note">{hasMacros(recipe) ? 'Add this recipe to Mine first, then log it.' : NO_NUTRITION}</p>;
+  if (!mine) return <p className="note">{recipe.kcal === undefined && recipe.p === undefined ? NO_NUTRITION : 'Add this recipe to Mine first, then log it.'}</p>;
   if (!hasMacros(recipe)) {
     return <div className="dt-ate"><p className="note">Add calories and protein per serving to log this recipe.</p><button type="button" className="btn sm" onClick={onEdit}>Add them</button></div>;
   }
