@@ -1,4 +1,4 @@
-import type { Program, ProgramDay } from '../../types.ts';
+import type { ProgramDay } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES } from '../../lib/data.js';
 import { daySummary } from '../../lib/daySummary.js';
@@ -6,9 +6,9 @@ import { fmtSets } from '../../lib/muscles.js';
 import './DaySummary.css';
 
 // Wide desktop only (the stylesheet hides it below 1280px): what the open day of the program holds. Planned from the cards, never from the log.
-export default function DaySummary({ day, prog, dayNo }: { day: ProgramDay; prog: Program; dayNo: number }) {
+export default function DaySummary({ day, dayNo }: { day: ProgramDay; dayNo: number }) {
   const cfg = useAppStore(s => s.cfg);
-  const sm = daySummary(cfg, prog.days[dayNo - 1] ?? day);
+  const sm = daySummary(cfg, day);
   const top = sm.muscles[0]?.sets || 1;
   return (
     <section className="panel daysum" aria-label={`Day ${dayNo} at a glance`}>

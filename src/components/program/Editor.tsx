@@ -205,7 +205,7 @@ function ProgramEditor() {
           </label>
         </>
       ) : null}
-      <ProgramStrip k={k} />
+      <ProgramStrip />
       <div className="edcols">
       <section className="panel edpanel edprog">
         <div className="inline flexwrap"><h2 id="ed-title" tabIndex={-1} className="mr-auto">{edName} · {day.title}</h2></div>
@@ -284,7 +284,7 @@ function ProgramEditor() {
           })}
         </div>
       </section>
-      <DaySummary day={day} prog={prog as Program} dayNo={edDay} />
+      <DaySummary day={day} dayNo={edDay} />
       <p className="note mt-12">
         {lib ? 'Changes are saved to this library program only. Nothing on the board changes until you load it into A or B.' : `Changes apply to every week that uses ${progName(cfg, k)}. Your logged sets stay as they are.`}
       </p>
