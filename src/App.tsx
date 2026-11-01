@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
 import { flag, useAppStore } from './store/useAppStore.js';
 import { takeAfterReload } from './lib/afterReload.js';
+import { takeShare } from './lib/shareTarget.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
 import useTabbarHeight from './hooks/useTabbarHeight.js';
@@ -81,6 +82,8 @@ export default function App() {
   const signedOut = useAppStore(s => s.sync?.state === 'paused' && s.sync.pausedBecause === 'auth');
   const { setTab, closeModal, openModal } = useAppStore.getState();
   useEffect(() => startBackNav(useAppStore, window.history, window), []); // phone Back walks the tabs and closes a sheet (src/lib/backNav.ts)
+  // A link shared in from another app opens its sheet once the app is ready, after Back handling has started so the sheet gets its own history entry (lib/shareTarget.ts).
+  useEffect(() => { if (!ready) return; const s = takeShare(); if (s) useAppStore.getState().openModal({ type: 'share', title: s.title, url: s.url }); }, [ready]);
   useTooltips();
   useFocusKeeper();
   const tabsRef = useRef<HTMLElement>(null);

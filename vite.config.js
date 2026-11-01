@@ -164,6 +164,8 @@ export default defineConfig({
           { name: "Today's workout", short_name: 'Today', url: './?open=board', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
           { name: 'Daily log', short_name: 'Daily', url: './?open=daily', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
         ],
+        // Android's share sheet lists the app for a shared link or text; the page opens at ./?share_url=... and the app shows a "Save this link" sheet (lib/shareTarget.ts).
+        share_target: { action: './', method: 'GET', params: { title: 'share_title', text: 'share_text', url: 'share_url' } },
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
