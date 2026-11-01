@@ -94,13 +94,13 @@ test('a bought item leaves the list and waits under Bought this month, where it 
   await done(page);
   await page.click('#groc-view-get');
   const names = () => page.getByRole('region', { name: 'Market' }).locator('li').allTextContents();
-  expect((await names()).map(t => t.split('1 ×')[0])).toEqual(['Bread', 'Apples']); // a new item goes on top
+  expect((await names()).map(t => t.split('1 ×')[0])).toEqual(['Apples', 'Bread']); // A to Z, not newest first
   await page.locator('#groc-apples').check();
   await expect.poll(async () => (await names()).map(t => t.split('1 ×')[0])).toEqual(['Bread']);
   await page.click('#groc-bought summary');
   await expect(page.locator('#groc-bought')).toContainText('Apples');
   await page.locator('#groc-apples').uncheck();
-  await expect.poll(async () => (await names()).map(t => t.split('1 ×')[0])).toEqual(['Bread', 'Apples']);
+  await expect.poll(async () => (await names()).map(t => t.split('1 ×')[0])).toEqual(['Apples', 'Bread']);
   await page.locator('#groc-apples').check(); await page.locator('#groc-bread').check();
   await expect(page.locator('#groc-alldone')).toBeVisible();
 });
