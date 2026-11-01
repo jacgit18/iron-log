@@ -11,7 +11,7 @@ import { str } from './stretchWeek.js';
 
 export const MAX_RECIPES = 300, MAX_INGREDIENTS = 40, MAX_STEPS = 40;
 export const MAX_TAG = 24, MAX_TAGS_PER_RECIPE = 8, MAX_TAGS = 30; // custom filter tags (brief recipe-filter-editing): name length, per recipe, different tags in all
-export const MAX_RECIPE_ID = 60, MAX_RECIPE_NAME = 80, MAX_AMOUNT = 40, MAX_STEP = 500, MAX_NOTE = 300, MAX_FROM = 100, MAX_SERVING = 40, MAX_SERVING_G = 5000;
+export const MAX_RECIPE_ID = 60, MAX_RECIPE_NAME = 80, MAX_AMOUNT = 40, MAX_STEP = 500, MAX_NOTE = 300, MAX_FROM = 100, MAX_SERVING = 40, MAX_SERVING_G = 5000, MAX_URL = 500; // MAX_URL: a video link on a recipe (brief recipe-video-link)
 
 export const RECIPE_CATEGORIES: readonly RecipeCategory[] = ['protein', 'carbs', 'sides', 'sauces', 'seasonings', 'drinks', 'breakfast', 'dessert', 'ready', 'other'];
 /** How a category reads on a chip and in a pill. */
@@ -58,10 +58,11 @@ export function normRecipe(x: unknown): Recipe | null {
   const servings = cleanWhole(o.servings, 99), minutes = cleanWhole(o.minutes, 1440);
   const serving = str(o.serving, MAX_SERVING), servingG = cleanWhole(o.servingG, MAX_SERVING_G); // what one serving is: words and/or grams (brief recipe-serving-size)
   const note = str(o.note, MAX_NOTE), from = str(o.from, MAX_FROM);
+  const urlText = typeof o.url === 'string' ? o.url.trim() : '', url = urlText.length <= MAX_URL && /^https?:\/\/\S+$/i.test(urlText) ? urlText : ''; // only a web link, cut never (a cut address would not open): a script or file address never becomes a link
   const library = from.startsWith('c:');
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
-  return { id, n, cat: cleanCategory(o.cat), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  return { id, n, cat: cleanCategory(o.cat), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */
