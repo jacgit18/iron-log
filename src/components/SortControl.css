@@ -1,0 +1,29 @@
+@layer base, components;
+@layer components {
+/* The shared list sort control: a "Sort" label and a native picker inside one pill (same look as a library filter chip). */
+.sortctl {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding-left: var(--sp-12);
+  border: 1px solid var(--field-line);
+  /* token-ok: a pill */
+  border-radius: 999px;
+  background: var(--surface);
+  max-width: 100%;
+}
+.sortlab {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.sortctl select {
+  min-height: 44px;
+  max-width: 100%;
+  border: 0;
+  background: transparent;
+  padding-inline: var(--sp-4) var(--sp-12);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: inherit;
+}
+}
