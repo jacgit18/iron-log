@@ -119,6 +119,12 @@ export function LiftList({ byMuscle = false }: { byMuscle?: boolean }) {
   );
 }
 
+// The summary cards, or one tile when there is nothing to chart. Subscribes here so the hub on a phone does not re-render on every logged set.
+function Overview() {
+  const logs = useAppStore(s => s.logs); const bodyCount = useAppStore(s => s.body.length);
+  return hasProgressData(logs, bodyCount) ? <Trends /> : <div className="empty">Nothing to chart yet. Log a lift on the Board and your weeks, charts and bests fill this page.</div>;
+}
+
 function ProgressMain() {
   const weekHist = useAppStore(s => s.weekHist); const loading = useAppStore(s => s.historyLoading);
   const loadHistory = useAppStore(s => s.loadHistory);
@@ -131,12 +137,11 @@ function ProgressMain() {
   // A muscle picked on the map filters the lists below it for this visit only.
   useEffect(() => () => useAppStore.getState().selectMuscle(null), []);
   const onePage = useOnePage();
-  const logs = useAppStore(s => s.logs); const bodyCount = useAppStore(s => s.body.length);
   useEffect(() => { if (!onePage) window.scrollTo(0, 0); }, [page, onePage]); // a sub-page opens at its top, and Back returns to the top of the hub
   // A wide screen: every section on one page, the same components the hub and its pages use. `progress/<page>` scrolls to its section (OnePage).
   if (onePage) return (
     <OnePage sections={{
-      overview: hasProgressData(logs, bodyCount) ? <Trends /> : <div className="empty">Nothing to chart yet. Log a lift on the Board and your weeks, charts and bests fill this page.</div>,
+      overview: <Overview />,
       history: <History />,
       muscles: <><Muscles /><MuscleChip /></>,
       goals: <GoalsPanel byMuscle />,

@@ -37,10 +37,11 @@ test('a Progress address scrolls to its section, on a reload too, and the rail s
   await seed(page);
   await page.goto('/#/progress/lifts');
   await expect(rail(page)).toBeVisible();
-  await expect.poll(async () => (await page.locator('#pg-lifts').boundingBox()).y).toBeLessThan(500);
-  await expect(rail(page).getByRole('button', { name: 'Overview' })).not.toHaveAttribute('aria-current', 'true'); // the rail follows the scroll
+  await expect.poll(async () => (await page.locator('#pg-lifts').boundingBox()).y).toBeLessThan(300);
+  // The rail follows the scroll: the page is too short to put Exercises at the top, so the section read is Exercises or one after it, never one before.
+  await expect(rail(page).locator('[aria-current="true"]')).toHaveText(/^(Exercises|Trends|Body weight)$/);
   await page.reload();
-  await expect.poll(async () => (await page.locator('#pg-lifts').boundingBox()).y).toBeLessThan(500);
+  await expect.poll(async () => (await page.locator('#pg-lifts').boundingBox()).y).toBeLessThan(300);
   const before = await page.evaluate(() => history.length);
   await rail(page).getByRole('button', { name: 'Trends' }).click();
   await expect.poll(() => hash(page)).toBe('#/progress/trends');
