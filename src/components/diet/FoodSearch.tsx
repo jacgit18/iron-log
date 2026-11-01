@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
 import { useFoodHits } from './useFoodHits.js';
+import { DEFAULT_FOOD_SORT, FOOD_SORTS, sortFoodHits } from '../../lib/foodSort.js';
+import { useSortChoice } from '../useSortChoice.js';
+import SortControl from '../SortControl.jsx';
 import './Diet.css';
 
 /** What a pick fills into the entry form. */
@@ -13,6 +16,8 @@ export default function FoodSearch({ onUse, text: given }: { onUse: (fill: FoodF
   const [own, setText] = useState('');
   const text = given ?? own;
   const { hits, note } = useFoodHits(text);
+  const [sort, setSort] = useSortChoice('foods', FOOD_SORTS, DEFAULT_FOOD_SORT);
+  const shown = sortFoodHits(hits, sort); // the page already fetched, reordered here only
   const [pick, setPick] = useState<FoodHit | null>(null);
   const [grams, setGrams] = useState('100');
   useEffect(() => { if (given !== undefined) setPick(null); }, [given]); // new words in the other box drop a pick made for the old ones
@@ -34,9 +39,15 @@ export default function FoodSearch({ onUse, text: given }: { onUse: (fill: FoodF
         </label>
       )}
       {note && <p className="note" role="status">{note}</p>}
+      {hits.length > 1 && !pick && (
+        <div className="dt-sortrow">
+          <SortControl options={FOOD_SORTS} value={sort} onChange={setSort} />
+          <p className="note">Sorts these {hits.length} results only, not the whole food database.</p>
+        </div>
+      )}
       {hits.length > 0 && !pick && (
         <ul className="dt-recents" aria-label={given === undefined ? 'Lookup results' : 'Food database results'}>
-          {hits.map(h => <li key={h.id}><button type="button" className="btn sm" onClick={() => choose(h)}>{hitLabel(h)}</button></li>)}
+          {shown.map(h => <li key={h.id}><button type="button" className="btn sm" onClick={() => choose(h)}>{hitLabel(h)}</button></li>)}
         </ul>
       )}
       {pick && (
