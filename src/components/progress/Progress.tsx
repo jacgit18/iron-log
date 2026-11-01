@@ -6,6 +6,9 @@ import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { weekStartOf, ymd, parseDate, addDays, fmtShort } from '../../shared/dates.js';
 import { newestFirst } from '../../lib/exerciseOrder.js';
+import { DEFAULT_LIFT_SORT, LIFT_SORTS, sortLiftIds } from '../../lib/liftSort.js';
+import { useSortChoice } from '../useSortChoice.js';
+import SortControl from '../SortControl.jsx';
 import { describe, stallOf, backoffOf } from '../../lib/logic.js';
 import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
 import { avgPerTrainingDay } from '../../lib/freqGoal.js';
@@ -69,37 +72,44 @@ function LiftList() {
   const openModal = useAppStore(s => s.openModal);
   const body = useAppStore(s => s.body);
   const today = useToday(s => s.today);
-  const ids = newestFirst(Object.keys(logs), logs, id => exInfo(cfg, id).n);
+  const [sort, setSort] = useSortChoice('lifts', LIFT_SORTS, DEFAULT_LIFT_SORT);
+  const nameOf = (id: string) => exInfo(cfg, id).n;
+  const phasesOf = (id: string) => [...new Set(logs[id].map(e => e.ph || null))];
+  const needsAttention = (id: string) => phasesOf(id).some(p => backoffOf(cfg, logs, { ex: id }, p) || stallOf(cfg, logs, id, p));
+  const ids = sortLiftIds(newestFirst(Object.keys(logs), logs, nameOf), sort, nameOf, needsAttention); // only the Stalled first sort calls needsAttention, once per lift
   if (!ids.length) return <div className="empty">No sessions logged yet. Tap <b>Log</b> on any exercise card to record weight, sets and reps.</div>;
   return (
-    <div className="plist">
-      {ids.map(id => {
-        const L = logs[id], last = L[L.length - 1];
-        const ws = L.filter(e => (e.ph || null) === (last.ph || null)).map(e => Number(e.w)).filter(n => !isNaN(n) && n > 0);
-        const best = ws.length ? Math.max(...ws) : null;
-        const phName = last.ph ? PHASES[last.ph].label : 'No phase';
-        const phs = [...new Set(L.map(e => e.ph || null))]; const multi = phs.length > 1;
-        const goals = liftGoalsStatus(cfg, id, L, today, undefined, body);
-        const label = (p: PhaseKey | null) => (p ? PHASES[p as PhaseKey].label : 'No phase');
-        const backoff = phs.filter(p => backoffOf(cfg, logs, { ex: id }, p));
-        const stalled = phs.filter(p => !backoff.includes(p) && stallOf(cfg, logs, id, p)).map(label);
-        return (
-          <button type="button" className="pcard" key={id} onClick={() => openModal({ type: 'detail', exId: id })}>
-            <h3>{exInfo(cfg, id).n}</h3>
-            <div className="pstats">
-              <span>Last <b>{describe(last)}</b>{last.auto && ' (from check-off)'}</span>
-              {best != null && <span>Best{multi ? ` ${phName.toLowerCase()}` : ''} <b>{best} lb</b></span>}
-              <span>Sessions <b>{L.length}</b></span>
-            </div>
-            {goals.map(g => <span key={g.key} className={`note${g.reached ? ' goalmet' : ''}`}>{liftGoalNote(g)}</span>)}
-            {backoff.length > 0 && <span className="stall">Back off{multi ? ` (${backoff.map(label).join(', ')})` : ''} · fell short 2 sessions in a row</span>}
-            {stalled.length > 0 && <span className="stall">Stalled{multi ? ` (${stalled.join(', ')})` : ''} · no gain in 3 weeks</span>}
-            {!multi && <span className="note"><span className="dot" data-p={last.ph || ''} /> {phName} trend</span>}
-            <LineChart entries={L} height={110} byPhase={multi} />
-          </button>
-        );
-      })}
-    </div>
+    <>
+      {ids.length > 1 && <div className="inline"><SortControl options={LIFT_SORTS} value={sort} onChange={setSort} /></div>}
+      <div className="plist">
+        {ids.map(id => {
+          const L = logs[id], last = L[L.length - 1];
+          const ws = L.filter(e => (e.ph || null) === (last.ph || null)).map(e => Number(e.w)).filter(n => !isNaN(n) && n > 0);
+          const best = ws.length ? Math.max(...ws) : null;
+          const phName = last.ph ? PHASES[last.ph].label : 'No phase';
+          const phs = [...new Set(L.map(e => e.ph || null))]; const multi = phs.length > 1;
+          const goals = liftGoalsStatus(cfg, id, L, today, undefined, body);
+          const label = (p: PhaseKey | null) => (p ? PHASES[p as PhaseKey].label : 'No phase');
+          const backoff = phs.filter(p => backoffOf(cfg, logs, { ex: id }, p));
+          const stalled = phs.filter(p => !backoff.includes(p) && stallOf(cfg, logs, id, p)).map(label);
+          return (
+            <button type="button" className="pcard" key={id} onClick={() => openModal({ type: 'detail', exId: id })}>
+              <h3>{exInfo(cfg, id).n}</h3>
+              <div className="pstats">
+                <span>Last <b>{describe(last)}</b>{last.auto && ' (from check-off)'}</span>
+                {best != null && <span>Best{multi ? ` ${phName.toLowerCase()}` : ''} <b>{best} lb</b></span>}
+                <span>Sessions <b>{L.length}</b></span>
+              </div>
+              {goals.map(g => <span key={g.key} className={`note${g.reached ? ' goalmet' : ''}`}>{liftGoalNote(g)}</span>)}
+              {backoff.length > 0 && <span className="stall">Back off{multi ? ` (${backoff.map(label).join(', ')})` : ''} · fell short 2 sessions in a row</span>}
+              {stalled.length > 0 && <span className="stall">Stalled{multi ? ` (${stalled.join(', ')})` : ''} · no gain in 3 weeks</span>}
+              {!multi && <span className="note"><span className="dot" data-p={last.ph || ''} /> {phName} trend</span>}
+              <LineChart entries={L} height={110} byPhase={multi} />
+            </button>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
