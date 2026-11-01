@@ -44,7 +44,7 @@ export function installErrorReporting({ version, send, target = globalThis as un
     try { send({ kind, message: message || 'unknown error', stack, page: target.location.pathname, version }); } catch { /* never an error of its own */ }
   };
   const onError = (e: { message?: string; error?: unknown; filename?: string }) => {
-    if (e.filename && fromExtension(e.filename)) return;
+    if (e.filename && fromExtension(e.filename) && !(e.error instanceof Error && e.error.stack)) return;
     const err = text(e.error);
     report('error', e.message || err.message, err.stack ?? '');
   };
