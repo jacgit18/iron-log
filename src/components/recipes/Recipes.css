@@ -13,6 +13,17 @@
   min-width: 0;
   min-height: 44px;
 }
+.rc-sort {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  align-items: center;
+  margin: var(--sp-8) 0;
+}
+.rc-sortedby {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
 .rc-chips {
   display: flex;
   flex-wrap: wrap;

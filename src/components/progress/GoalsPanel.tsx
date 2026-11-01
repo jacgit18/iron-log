@@ -7,7 +7,11 @@ import { exerciseOptions } from '../../lib/exerciseOptions.js';
 import { goalExercises } from '../../lib/goalRows.js';
 import { liftGoalsOf } from '../../lib/liftGoal.js';
 import { pickerKey, type PickerChoice } from '../../lib/picker.js';
-import { nameCmp } from '../../lib/sort.js';
+import { DEFAULT_WEIGHT_GOAL_SORT, sortWeightGoalRows, WEIGHT_GOAL_SORTS, type GoalProgress } from '../../lib/goalSort.js';
+import { liftGoalsStatus } from '../../lib/liftGoal.js';
+import { useToday } from '../../store/useToday.js';
+import { useSortChoice } from '../useSortChoice.js';
+import SortControl from '../SortControl.jsx';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import ItemPicker from '../ItemPicker.jsx';
 import LiftGoal, { GoalForm } from './LiftGoal.jsx';
@@ -47,12 +51,21 @@ function NewGoal({ onDone }: { onDone: () => void }) {
 export default function GoalsPanel() {
   const cfg = useAppStore(s => s.cfg);
   const [adding, setAdding] = useState(false);
+  const logs = useAppStore(s => s.logs); const body = useAppStore(s => s.body); const today = useToday(s => s.today);
+  const [sort, setSort] = useSortChoice('goals-weight', WEIGHT_GOAL_SORTS, DEFAULT_WEIGHT_GOAL_SORT);
   const rows = goalExercises(cfg);
   // A row whose last goal was just removed stays until you leave the screen, so its Undo notice has somewhere to show.
   const [seen, setSeen] = useState<string[]>([]); const [seenKey, setSeenKey] = useState('');
   const key = rows.map(r => r.id).join('|');
   if (key !== seenKey) { setSeenKey(key); setSeen(s => [...new Set([...s, ...rows.map(r => r.id)])]); }
-  const shown = [...new Map([...rows, ...seen.map(id => ({ id, name: exInfo(cfg, id).n }))].map(r => [r.id, r])).values()].sort(nameCmp(r => r.name, r => r.id));
+  const shown = [...new Map([...rows, ...seen.map(id => ({ id, name: exInfo(cfg, id).n }))].map(r => [r.id, r])).values()];
+  const progressOf = (id: string): GoalProgress => {
+    const gs = liftGoalsStatus(cfg, id, logs[id] || [], today, undefined, body);
+    if (!gs.length) return null;
+    const open = gs.filter(g => !g.reached);
+    return open.length ? { pct: Math.max(...open.map(g => g.pct)), reached: false } : { pct: 100, reached: true };
+  };
+  const ordered = sortWeightGoalRows(shown, sort, progressOf);
   return (
     <section className="panel goalspanel" aria-labelledby="goals-h">
       <div className="goalshead">
@@ -60,7 +73,8 @@ export default function GoalsPanel() {
         {!adding && <button type="button" className="btn sm" onClick={() => setAdding(true)}>New exercise goal</button>}
       </div>
       {!rows.length && !shown.length && !adding && <p className="note">The most weight you want to lift on an exercise, in one phase or any. Tap New exercise goal to set one on any exercise, even one you have not logged yet.</p>}
-      {shown.map(r => (
+      {shown.length > 1 && <div className="inline"><SortControl options={WEIGHT_GOAL_SORTS} value={sort} onChange={setSort} /></div>}
+      {ordered.map(r => (
         <div className="goalrow" key={r.id}>
           {liftGoalsOf(cfg, r.id).length > 0 && <h3>{r.name}</h3>}
           <LiftGoal exId={r.id} bare />
