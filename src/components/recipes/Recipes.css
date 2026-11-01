@@ -100,6 +100,9 @@
 .rc-ing .rc-state.miss {
   color: var(--warn-ink);
 }
+.rc-ing .rc-state.part {
+  color: var(--warn-ink);
+}
 .rc-ing select {
   max-width: 100%;
   min-height: 44px;

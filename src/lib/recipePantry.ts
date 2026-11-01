@@ -110,12 +110,15 @@ export function suggestItem(ing: RecipeIngredient, items: GroceryItem[]): Grocer
   return best && closeness(ing, best) > 0 ? best : null;
 }
 
-export interface IngredientStatus { ing: RecipeIngredient; item: GroceryItem | null; have: boolean; skipped: boolean; always: boolean; suggest: GroceryItem | null }
+export interface IngredientStatus { ing: RecipeIngredient; item: GroceryItem | null; have: boolean; skipped: boolean; always: boolean; partial: boolean; suggest: GroceryItem | null }
 export interface PantryStatus { lines: IngredientStatus[]; have: number; total: number }
 
 /** Each ingredient against the list for one month: the item it is, and whether it is at home (or already bought) that month. A skipped
- *  ingredient stays in `lines` but is not counted in `have` and `total`. */
-export function pantryStatus(recipe: Pick<Recipe, 'ing'>, g: Grocery, month: GroceryMonth): PantryStatus {
+ *  ingredient stays in `lines` but is not counted in `have` and `total`. A line linked to one of your sauces or seasonings (`rid`, found in
+ *  `recipes`) is also at home when every ingredient of that sauce is, since you make it rather than buy it; `seen` stops a sauce that links
+ *  back to itself. */
+export function pantryStatus(recipe: Pick<Recipe, 'ing'> & { id?: string }, g: Grocery, month: GroceryMonth, recipes: readonly Recipe[] = [], seen: ReadonlySet<string> = new Set()): PantryStatus {
+  const visited = recipe.id ? new Set(seen).add(recipe.id) : seen;
   const lines = recipe.ing.map((ing): IngredientStatus => {
     const alt = ing.sub?.trim();
     const skipped = !!ing.skip, always = !skipped && (isAlwaysHave(ingredientName(ing)) || (!!alt && isAlwaysHave(alt)));
@@ -123,7 +126,13 @@ export function pantryStatus(recipe: Pick<Recipe, 'ing'>, g: Grocery, month: Gro
     // The ingredient is at home when its own item is, or else when the Alternative's item is: "if you don't have it, use this".
     const altItem = always || (main && haveOf(main, month)) || !alt ? null : matchHome({ n: alt }, g.items);
     const item = altItem && haveOf(altItem, month) ? altItem : main;
-    return { ing, item, have: always || (!!item && !!haveOf(item, month)), skipped, always, suggest: item || skipped || always ? null : suggestItem(ing, g.items) };
+    const sauce = ing.rid && !visited.has(ing.rid) ? recipes.find(r => r.id === ing.rid) : undefined;
+    const made = !skipped && !always && sauce ? pantryStatus(sauce, g, month, recipes, visited) : null;
+    const madeAtHome = !!made && made.total > 0 && made.have === made.total;
+    const have = always || madeAtHome || (!!item && !!haveOf(item, month));
+    // Some of what the sauce is made from is at home, but not all of it: shown as "Have some", still counted as missing.
+    const partial = !have && !!made && made.lines.some(l => l.have && !l.always && !l.skipped); // water alone is not "some"
+    return { ing, item, have, skipped, always, partial, suggest: item || skipped || always ? null : suggestItem(ing, g.items) };
   });
   const counted = lines.filter(l => !l.skipped);
   return { lines, have: counted.filter(l => l.have).length, total: counted.length };
