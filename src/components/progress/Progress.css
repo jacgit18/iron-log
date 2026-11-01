@@ -130,4 +130,10 @@
 .goalmet {
   font-weight: 600;
 }
+/* 1920 page cap: the All 12 weeks button is as wide as its text, not the panel. */
+@media (min-width:1501px) {
+  .hist-panel > .btn {
+    width: fit-content;
+  }
+}
 }
