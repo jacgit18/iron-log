@@ -162,23 +162,24 @@ export const gotLast = (items: GroceryItem[], m: GroceryMonth) => [...items.filt
 /** Whether a store name still means something: a live store, or one that was removed while history uses it (retired). */
 export const storeKnown = (g: Grocery, store: string): boolean => g.stores.includes(store) || !!g.retired?.includes(store);
 
-/** The list split by store, in the order of `stores`; items with no store come last. Empty stores are left out. Items inside a store are A to Z (a display order only: the stored list, its ids and what syncs are untouched). With `sharing` on, stores shared with a group of other people come first, then your own, and `group` is the group a shared store
- *  defaults to; with it off the order is plain, whatever groups the data holds. */
 /** A value stored under a store's name (its tax or payer), or undefined. Only the map's own keys count: a store called "constructor" or "toString" must
  *  not find a function on the object's prototype. */
 export const own = <T,>(map: Record<string, T> | undefined, key: string): T | undefined => map && Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
 
+/** The list split by store, in the order of `stores`; items with no store come last. Empty stores are left out. Items inside a store are A to Z (a display order only: the stored list, its ids and what syncs are untouched). With `sharing` on, stores shared with a group of other people come first, then your own, and `group` is the group a shared store
+ *  defaults to; with it off the order is plain, whatever groups the data holds. */
+const az = (list: GroceryItem[]) => sortByName(list, i => i.n, i => i.id);
 export function byStore(g: Grocery, items: GroceryItem[], sharing = false): { store: string; label: string; items: GroceryItem[]; group?: GroceryGroup }[] {
   const live = (x: GroceryGroup) => x.people.some(p => !p.gone);
   const groupOf = (store: string) => sharing ? g.groups?.find(x => live(x) && x.stores.includes(store)) ?? g.groups?.find(x => live(x) && x.allStores) : undefined; // the store's own group, else the one for all stores (as groupOfStore, Anywhere included)
   const out = [...g.stores, ...(g.retired ?? [])].map(store => { // a retired store has a section only in a past month that still names it
     const group = groupOf(store);
-    return { store, label: store, items: sortByName(items.filter(i => i.store === store), i => i.n, i => i.id), ...(group ? { group } : {}) };
+    return { store, label: store, items: az(items.filter(i => i.store === store)), ...(group ? { group } : {}) };
   });
   // An item whose store is not in the list (a store removed on another device while this one added to it, an import into a full list) would vanish from the
   // screens, so it is shown under Anywhere.
   const anywhere = groupOf('');
-  out.push({ store: '', label: ANYWHERE, items: sortByName(items.filter(i => !i.store || !storeKnown(g, i.store)), i => i.n, i => i.id), ...(anywhere ? { group: anywhere } : {}) });
+  out.push({ store: '', label: ANYWHERE, items: az(items.filter(i => !i.store || !storeKnown(g, i.store))), ...(anywhere ? { group: anywhere } : {}) });
   const shared = out.filter(x => x.group);
   out.splice(0, out.length, ...shared, ...out.filter(x => !x.group));
   return out.filter(x => x.items.length);
