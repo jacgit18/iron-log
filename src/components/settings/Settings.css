@@ -331,7 +331,7 @@ html:has(.sjump) {
 .imppaste summary {
   padding: var(--sp-12) 0;
 }
-/* Last in the file so it wins over the one-column rules above: from 1280px the page is two columns, each at most 46rem. Training sits on the left; Data, App and Erase & delete stack on the right in their DOM order (Erase last, as before). Grid placement only, so DOM and tab order are unchanged. */
+/* Last in the file so it wins over the one-column rules above: from 1280px the page has two columns, each at most 46rem. Training and Data share the first row (Training left, Data right); App and Erase & delete run across both columns with their own two panel columns lined up under them. Grid placement only, so DOM and tab order are unchanged. */
 @media (min-width:1280px) {
   .smain {
     grid-template-columns: 11rem minmax(0,1fr);
@@ -342,13 +342,13 @@ html:has(.sjump) {
     gap: 24px var(--sp-16);
     align-items: start;
   }
-  .sgroups>.sgroup {
-    grid-column: 2;
+  .sgroups>.sgroup[data-group="app"],
+  .sgroups>.sgroup[data-group="erase"] {
+    grid-column: 1 / -1;
   }
-  /* Training spans the three right-hand groups (Data, App, Erase & delete); add to the span if a group is added there. */
-  .sgroups>.sgroup[data-group="training"] {
-    grid-column: 1;
-    grid-row: 1 / span 3;
+  .sgroups>.sgroup[data-group="app"] .sgrid,
+  .sgroups>.sgroup[data-group="erase"] .sgrid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
   }
   /* A column with nothing in it (Data's account column when signed out) would leave a blank gap in the group. */
   .settings .scol:empty {
