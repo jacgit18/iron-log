@@ -90,6 +90,24 @@
 .gstore.done .gstorehead h3 {
   color: var(--accent);
 }
+/* Wide screens: the stores of To get and At home side by side, one column each (2 from 1100px, 3 from 1700px, never more columns than stores: the gcolsN class
+   caps it). Store order is the DOM order, so Tab goes column by column; a short store just ends early (no masonry). Under 1100px the sections stack as before. */
+@media (min-width:1100px) {
+  .gcols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: var(--sp-16) 32px;
+  }
+  .gcols2,.gcols3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width:1700px) {
+  .gcols3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 .glist {
   list-style: none;
   margin: 0;
