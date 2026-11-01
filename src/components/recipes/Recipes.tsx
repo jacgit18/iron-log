@@ -1,4 +1,3 @@
-import { takeRecipeStart } from '../../lib/shareTarget.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import RemovedNotice from '../RemovedNotice.jsx';
 import RecipeDetail from './RecipeDetail.js';
@@ -13,6 +12,7 @@ import { pantryStatus } from '../../lib/recipePantry.js';
 import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { pageOf } from '../../lib/route.js';
+import { takeRecipeStart } from '../../lib/shareTarget.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import SortControl from '../SortControl.jsx';
 import { useSortChoice } from '../useSortChoice.js';

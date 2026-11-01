@@ -4,13 +4,14 @@ import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
 import { exInfo } from '../../lib/data.js';
 import { exerciseOptions } from '../../lib/exerciseOptions.js';
 import { pickerKey } from '../../lib/picker.js';
+import { afterSheetClose } from '../../lib/backNav.js';
 import { setRecipeStart } from '../../lib/shareTarget.js';
 import { navigate } from '../useRoute.js';
 import Sheet from '../Sheet.jsx';
 import './ShareSheet.css';
 
 const SHOWN = 12;
-type Step = { k: 'pick' } | { k: 'exercise'; q: string; ask?: { id: string; name: string } } | { k: 'recipe'; q: string } | { k: 'saved'; text: string };
+type Step = { k: 'pick' } | { k: 'exercise'; q: string; ask?: { id: string; name: string } } | { k: 'recipe'; q: string; ask?: { id: string; name: string } } | { k: 'saved'; text: string };
 
 // A link shared from another app (the manifest's share_target, brief share-target): save it as an exercise's video link or a recipe's.
 export default function ShareSheet({ title, url }: { title: string; url: string }) {
@@ -36,12 +37,9 @@ export default function ShareSheet({ title, url }: { title: string; url: string 
     const err = useAppStore.getState().saveRecipe({ ...r, url });
     setStep({ k: 'saved', text: err ?? `Saved as the video link for ${name}.` });
   };
-  // Closing a sheet steps the history back one entry (lib/backNav.ts), so the page is opened once that has happened, or after a short wait when nothing went back.
   const newRecipe = () => {
     setRecipeStart({ title, url });
-    let went = false;
-    const go = () => { if (went) return; went = true; window.removeEventListener('popstate', go); useAppStore.getState().setTab('daily'); navigate('daily/recipes/form', 'push'); };
-    window.addEventListener('popstate', go); setTimeout(go, 300);
+    afterSheetClose(window.history, window, () => { useAppStore.getState().setTab('daily'); navigate('daily/recipes/form', 'push'); }); // after the sheet's own Back step (lib/backNav.ts)
     closeModal();
   };
   const match = (name: string, q: string) => !q.trim() || pickerKey(name).includes(pickerKey(q));
@@ -87,7 +85,16 @@ export default function ShareSheet({ title, url }: { title: string; url: string 
           </div>
         </>
       )}
-      {step.k === 'recipe' && (
+      {step.k === 'recipe' && step.ask && (
+        <>
+          <p className="note" role="alert">Replace the link on {step.ask.name}?</p>
+          <div className="actions">
+            <button type="button" className="btn" onClick={() => setStep({ k: 'recipe', q: step.q })}>Keep the old link</button>
+            <button type="button" className="btn primary" onClick={() => saveRecipe(step.ask!.id, step.ask!.name)}>Replace</button>
+          </div>
+        </>
+      )}
+      {step.k === 'recipe' && !step.ask && (
         <>
           <button type="button" className="btn" onClick={newRecipe}>New recipe with this link</button>
           <label className="field">Or add it to one of yours
@@ -95,7 +102,7 @@ export default function ShareSheet({ title, url }: { title: string; url: string 
           </label>
           <ul className="sharelist">
             {recipes.filter(r => r.cat !== 'ready' && match(r.n, step.q)).slice(0, SHOWN).map(r => (
-              <li key={r.id}><button type="button" className="btn ghost" onClick={() => saveRecipe(r.id, r.n)}>{r.n}</button></li>
+              <li key={r.id}><button type="button" className="btn ghost" onClick={() => (r.url && r.url !== url ? setStep({ k: 'recipe', q: step.q, ask: { id: r.id, name: r.n } }) : saveRecipe(r.id, r.n))}>{r.n}</button></li>
             ))}
           </ul>
           <div className="actions"><button type="button" className="btn" onClick={() => setStep({ k: 'pick' })}>Back</button><button type="button" className="btn" onClick={closeModal}>Cancel</button></div>

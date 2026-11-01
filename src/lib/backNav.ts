@@ -60,3 +60,11 @@ export function startBackNav(store: Store, history: Hist, win: Win): () => void 
   win.addEventListener('popstate', onPopState);
   return () => { off(); win.removeEventListener('popstate', onPopState); };
 }
+
+/** Runs `go` once a sheet that was just closed has been stepped back over: closing a sheet makes `history.back()` (opsFor), which finishes later, so a page
+ *  opened at once would be undone by it. Waits for that step when the current entry is the sheet's own; runs `go` at once otherwise. Call before closing the sheet. */
+export function afterSheetClose(history: Pick<Hist, 'state'>, win: Win, go: () => void): void {
+  if (navOf(history.state)?.modal !== true) { go(); return; }
+  const once = () => { win.removeEventListener('popstate', once); go(); };
+  win.addEventListener('popstate', once);
+}

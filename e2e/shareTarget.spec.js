@@ -64,3 +64,20 @@ test('Recipe: add the link to one of yours, or start a new recipe with it', asyn
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Best stew');
   await expect(page.getByLabel('Video link (optional)')).toHaveValue('https://youtu.be/abc123');
 });
+
+test('Recipe: a recipe that already has a different link asks before it is replaced', async ({ page }) => {
+  await page.click('#tab-daily'); await page.click('#daily-recipes');
+  await page.getByRole('button', { name: 'New recipe' }).click();
+  await page.getByLabel('Name', { exact: true }).fill('Soup');
+  await page.getByLabel('Ingredient 1', { exact: true }).fill('onion');
+  await page.getByLabel('Video link (optional)').fill('https://vimeo.com/1');
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+  await share(page, `share_url=${YT}`);
+  await page.getByRole('button', { name: 'Recipe', exact: true }).click();
+  await page.getByRole('button', { name: 'Soup' }).click();
+  await expect(page.getByText('Replace the link on Soup?')).toBeVisible();
+  await page.getByRole('button', { name: 'Keep the old link' }).click();
+  await page.getByRole('button', { name: 'Soup' }).click();
+  await page.getByRole('button', { name: 'Replace' }).click();
+  await expect(page.getByText('Saved as the video link for Soup.')).toBeVisible();
+});
