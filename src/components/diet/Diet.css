@@ -27,6 +27,13 @@
 .dt-meter .bar {
   width: 100%;
 }
+/* 1920 page cap: keep the target and the meters a readable width, with Set target beside them. */
+@media (min-width:1501px) {
+  .dt-targets,
+  .dt-meter {
+    max-width: 1100px;
+  }
+}
 .dt-mtext {
   grid-column: 2;
   font-size: var(--fs-md);
