@@ -86,7 +86,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     setTags([...tags, known ?? t]); setTagText(''); setErr('');
   };
 
-  const tagsToSave = () => { const t = cleanTag(tagText); return t && !tags.some(x => tagKey(x) === tagKey(t)) ? [...tags, tagCounts(recipes).find(c => tagKey(c.tag) === tagKey(t))?.tag ?? t].slice(0, MAX_TAGS_PER_RECIPE) : tags; }; // a tag typed but not added yet is kept
+  const pendingTag = () => { const t = cleanTag(tagText); return t && !tags.some(x => tagKey(x) === tagKey(t)) ? tagCounts(recipes).find(c => tagKey(c.tag) === tagKey(t))?.tag ?? t : ''; }; // a tag typed but not added yet is kept on Save
   const save = () => {
     if (servings.trim() && !(whole(servings) && whole(servings)! <= 99)) { setErr('Servings must be a whole number from 1 to 99.'); return; }
     if (minutes.trim() && !(whole(minutes) && whole(minutes)! <= 1440)) { setErr('Minutes must be a whole number from 1 to 1440.'); return; }
@@ -96,11 +96,13 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     if (pr === null) { setNutOpen(true); setErr('Protein per serving must be a number from 0 to 999 g.'); return; }
     const cb = carbs.trim() ? cleanGrams(Number(carbs)) : undefined, ft = fat.trim() ? cleanGrams(Number(fat)) : undefined;
     if (cb === null || ft === null) { setNutOpen(true); setErr('Carbs and fat per serving must be numbers from 0 to 999 g.'); return; }
+    const pending = pendingTag(), allTags = pending ? [...tags, pending] : tags;
+    if (allTags.length > MAX_TAGS_PER_RECIPE) { setErr(`A recipe can have up to ${MAX_TAGS_PER_RECIPE} tags.`); return; }
     const fromList = listEdited ? listRows() : null;
     if (listEdited && !fromList) { setErr(TOO_FEW); return; }
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ...(tagsToSave().length ? { tags: tagsToSave() } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(recipe?.from ? { from: recipe.from } : {}) });
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ...(allTags.length ? { tags: allTags } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(recipe?.from ? { from: recipe.from } : {}) });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
@@ -163,7 +165,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
             )}
             <div className="rc-tagadd">
               <input aria-label="New tag" placeholder="weeknight, meal prep…" value={tagText} maxLength={MAX_TAG} autoComplete="off"
-                onChange={e => setTagText(e.target.value.replace(',', ''))}
+                onChange={e => setTagText(e.target.value.replace(/,/g, ''))}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagText); } }} />
               <button type="button" className="btn sm" disabled={!tagText.trim()} onClick={() => addTag(tagText)}>Add tag</button>
             </div>

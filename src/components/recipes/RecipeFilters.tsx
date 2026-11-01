@@ -16,17 +16,18 @@ export default function RecipeFilters() {
   const [err, setErr] = useState('');
   const [note, setNote] = useState('');
   const st = useAppStore.getState();
+  const toDone = () => setTimeout(() => document.getElementById('rcf-done')?.focus(), 0); // the row that held focus is replaced: focus moves to Done, not to the page
   const order = chipOrder(chips), hidden = chips?.hide ?? [], counts = tagCounts(recipes);
 
   const rename = () => {
     if (editing === null) return;
     const e = st.renameTag(editing, name);
     if (e) { setErr(e); return; }
-    setNote(`Renamed to ${name.trim()}.`); setEditing(null); setErr('');
+    setNote(`Renamed to ${name.trim()}.`); setEditing(null); setErr(''); toDone();
   };
   const remove = (tag: string) => {
     const n = st.removeTag(tag);
-    setNote(`Removed ${tag} from ${n} recipe${n === 1 ? '' : 's'}.`); setAsking(null);
+    setNote(`Removed ${tag} from ${n} recipe${n === 1 ? '' : 's'}.`); setAsking(null); toDone();
   };
 
   return (
@@ -58,13 +59,13 @@ export default function RecipeFilters() {
               <form className="rcf-edit" onSubmit={e => { e.preventDefault(); rename(); }}>
                 <label>New name for {tag}<input value={name} maxLength={MAX_TAG} onChange={e => { setName(e.target.value); setErr(''); }} autoComplete="off" autoFocus /></label>
                 <button type="submit" className="btn sm primary">Save name</button>
-                <button type="button" className="btn sm" onClick={() => { setEditing(null); setErr(''); }}>Cancel rename</button>
+                <button type="button" className="btn sm" onClick={() => { setEditing(null); setErr(''); toDone(); }}>Cancel rename</button>
               </form>
             ) : asking === tag ? (
               <div className="rcf-ask" role="group" aria-label={`Delete tag ${tag}`}>
                 <p>Remove “{tag}” from {n} recipe{n === 1 ? '' : 's'}? The recipes stay.</p>
                 <button type="button" className="btn sm danger" onClick={() => remove(tag)}>Remove tag</button>
-                <button type="button" className="btn sm" onClick={() => setAsking(null)}>Keep tag</button>
+                <button type="button" className="btn sm" onClick={() => { setAsking(null); toDone(); }} autoFocus>Keep tag</button>
               </div>
             ) : (
               <>
@@ -79,7 +80,7 @@ export default function RecipeFilters() {
       {err && <p className="note gerr" role="alert">{err}</p>}
       <p className="note" role="status">{note}</p>
       <div className="actions">
-        <button type="button" className="btn primary" onClick={st.closeModal}>Done</button>
+        <button type="button" id="rcf-done" className="btn primary" onClick={st.closeModal}>Done</button>
       </div>
     </Sheet>
   );

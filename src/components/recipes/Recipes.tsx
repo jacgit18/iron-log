@@ -58,6 +58,7 @@ export default function Recipes() {
   const chips = visibleChips(chipCfg, src === 'mine');
   const tags = useMemo(() => tagCounts(recipes), [recipes]);
   const activeTags = useMemo(() => liveTags(recipes, tagSel), [recipes, tagSel]); // a renamed or deleted tag leaves the selection
+  useEffect(() => { if (activeTags.length !== tagSel.length) setTagSel(activeTags); }, [activeTags, tagSel]); // drop a renamed or deleted tag so it cannot come back selected
   useEffect(() => { if (cat && !visibleChips(chipCfg, true).includes(cat)) setCat(null); }, [cat, chipCfg]); // a chip hidden while it is the filter: the filter clears
   const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes)])), [recipes, grocery, months, month]);
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
