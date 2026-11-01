@@ -1,0 +1,89 @@
+@layer base, components;
+@layer components {
+/* Progress on one page (from 1280px, see useOnePage): a rail down the left, sticky, and the sections beside it. */
+.pone {
+  display: grid;
+  grid-template-columns: 11rem minmax(0,1fr);
+  column-gap: var(--sp-16);
+  align-items: start;
+}
+.prail {
+  position: sticky;
+  top: var(--sp-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.prail .chip {
+  border-color: transparent;
+  background: transparent;
+  border-radius: var(--r-md);
+  text-align: start;
+}
+.prail .chip[aria-current="true"] {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+html:has(.prail) {
+  scroll-padding-top: var(--sp-16);
+}
+/* Sections in two columns (Weight goals beside Frequency, the rest full width); the panels inside keep their own margins, so the grid gap is the only space between them. */
+.pmain {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: var(--sp-16);
+  align-items: start;
+}
+.psec {
+  min-width: 0;
+}
+.psec:focus {
+  outline: none;
+}
+.psec-overview,
+.psec-history,
+.psec-muscles,
+.psec-lifts,
+.psec-trends,
+.psec-body {
+  grid-column: 1 / -1;
+}
+.psec > .panel {
+  margin: 0;
+}
+/* Weekly history: 12 weeks in two columns, newest at the top of the first. */
+.psec .weeks {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(6,auto);
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  column-gap: var(--sp-16);
+  row-gap: var(--sp-6);
+}
+.psec .hist-panel {
+  margin-bottom: 0;
+}
+.psec .kpis,
+.psec .heat-panel {
+  margin-bottom: 0;
+}
+.psec .tgrid {
+  margin-bottom: var(--sp-16);
+}
+.psec .plist {
+  grid-template-columns: repeat(auto-fill,minmax(320px,1fr));
+}
+.pone-h {
+  margin: 0 0 var(--sp-12);
+  font-size: var(--fs-3xl);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.psec-overview > .empty {
+  margin: 0;
+}
+.psec-muscles > .chiprow {
+  margin: var(--sp-8) 0 0;
+}
+}

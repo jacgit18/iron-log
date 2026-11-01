@@ -1,5 +1,5 @@
 import type { PhaseKey } from '../../types.ts';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import Icon from '../Icon.jsx';
 import { useToday } from '../../store/useToday.js';
@@ -21,6 +21,10 @@ import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 import { ExerciseRows, GoalRows, MuscleChip } from './MuscleLists.jsx';
 import { pageOf } from '../../lib/route.js';
 import { goUp, navigate, useRoutePath } from '../useRoute.js';
+import { useFiltered } from './useFiltered.js';
+import { hasProgressData } from '../../lib/progressPage.js';
+import OnePage from './OnePage.jsx';
+import { useOnePage } from './useOnePage.js';
 import './Hub.css';
 import './Progress.css';
 
@@ -67,7 +71,7 @@ function History({ weeks: maxWeeks = 12, more }: { weeks?: number; more?: () => 
   );
 }
 
-function LiftList() {
+export function LiftList({ byMuscle = false }: { byMuscle?: boolean }) {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
   const openModal = useAppStore(s => s.openModal);
   const body = useAppStore(s => s.body);
@@ -76,7 +80,9 @@ function LiftList() {
   const nameOf = (id: string) => exInfo(cfg, id).n;
   const phasesOf = (id: string) => [...new Set(logs[id].map(e => e.ph || null))];
   const needsAttention = (id: string) => phasesOf(id).some(p => backoffOf(cfg, logs, { ex: id }, p) || stallOf(cfg, logs, id, p));
-  const ids = sortLiftIds(newestFirst(Object.keys(logs), logs, nameOf), sort, nameOf, needsAttention); // only the Stalled first sort calls needsAttention, once per lift
+  const kept = useFiltered(Object.keys(logs)); // the muscle picked on the map, when the list sits under it (Progress on one page)
+  const ids = sortLiftIds(newestFirst(byMuscle ? kept : Object.keys(logs), logs, nameOf), sort, nameOf, needsAttention); // only the Stalled first sort calls needsAttention, once per lift
+  if (!ids.length && byMuscle && Object.keys(logs).length) return <div className="empty">Nothing logged for this muscle yet.</div>;
   if (!ids.length) return <div className="empty">No sessions logged yet. Tap <b>Log</b> on any exercise card to record weight, sets and reps.</div>;
   return (
     <>
@@ -124,7 +130,22 @@ function ProgressMain() {
   const setPage = (k: Page) => navigate(`progress/${k}`, 'push');
   // A muscle picked on the map filters the lists below it for this visit only.
   useEffect(() => () => useAppStore.getState().selectMuscle(null), []);
-  useEffect(() => { window.scrollTo(0, 0); }, [page]); // a sub-page opens at its top, and Back returns to the top of the hub
+  const onePage = useOnePage();
+  const logs = useAppStore(s => s.logs); const bodyCount = useAppStore(s => s.body.length);
+  useEffect(() => { if (!onePage) window.scrollTo(0, 0); }, [page, onePage]); // a sub-page opens at its top, and Back returns to the top of the hub
+  // A wide screen: every section on one page, the same components the hub and its pages use. `progress/<page>` scrolls to its section (OnePage).
+  if (onePage) return (
+    <OnePage sections={{
+      overview: hasProgressData(logs, bodyCount) ? <Trends /> : <div className="empty">Nothing to chart yet. Log a lift on the Board and your weeks, charts and bests fill this page.</div>,
+      history: <History />,
+      muscles: <><Muscles /><MuscleChip /></>,
+      goals: <GoalsPanel byMuscle />,
+      lifts: <><h2 className="pone-h">Exercises</h2><LiftList byMuscle /></>,
+      freq: <FreqGoals />,
+      trends: <><h2 className="pone-h">Training trends</h2><Trends part="trends" /></>,
+      body: <Trends part="body" />,
+    }} />
+  );
   if (page) return (
     <>
       <div className="hubback"><button type="button" className="btn sm" onClick={() => goUp('progress')}><Icon name="chevron-left" /> Progress</button></div>
