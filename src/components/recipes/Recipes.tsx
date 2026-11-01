@@ -6,12 +6,14 @@ import RecipeForm from './RecipeForm.js';
 import './Recipes.css';
 import { monthKey } from '../../lib/grocery.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
-import { filterRecipes, recipeMeta } from '../../lib/recipeList.js';
+import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, filterRecipes, librarySortedBy, recipeMeta, sortRecipes } from '../../lib/recipeList.js';
 import { pantryStatus } from '../../lib/recipePantry.js';
 import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { pageOf } from '../../lib/route.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import SortControl from '../SortControl.jsx';
+import { useSortChoice } from '../useSortChoice.js';
 import { goUp, navigate, useRoutePath } from '../useRoute.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { searchRecipes } from '../../sync/recipeCatalog.js';
@@ -48,11 +50,13 @@ export default function Recipes() {
   const [cat, setCat] = useState<RecipeCategory | null>(null);
   const [canMake, setCanMake] = useState(false);
   const [tagSel, setTagSel] = useState<string[]>([]);
+  const [mineSort, setMineSort] = useSortChoice('recipes', RECIPE_SORTS, DEFAULT_RECIPE_SORT);
+  const [libSort, setLibSort] = useSortChoice('recipes-library', LIBRARY_SORTS, DEFAULT_LIBRARY_SORT);
   const [lib, setLib] = useState<Library>({ status: 'loading' });
   const [tries, setTries] = useState(0);
   const month = monthKey(new Date());
   const asked = useRef(''); // the search the library list shows; a page that arrives for an older one is dropped
-  asked.current = `${q}|${cat}|${tries}`;
+  asked.current = `${q}|${cat}|${libSort}|${tries}`;
   const libCopy = useMemo(() => (view.kind === 'library' ? recipeFromCatalog(view.item, []) : null), [view]);
 
   const chips = visibleChips(chipCfg, src === 'mine');
@@ -62,21 +66,21 @@ export default function Recipes() {
   useEffect(() => { if (cat && !visibleChips(chipCfg, true).includes(cat)) setCat(null); }, [cat, chipCfg]); // a chip hidden while it is the filter: the filter clears
   const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes)])), [recipes, grocery, months, month]);
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
-  const shown = useMemo(() => filterRecipes(recipes, { q, cat, canMake, tags: activeTags }, makeable), [recipes, q, cat, canMake, activeTags, makeable]);
+  const shown = useMemo(() => sortRecipes(filterRecipes(recipes, { q, cat, canMake, tags: activeTags }, makeable), mineSort, recipes, makeable), [recipes, q, cat, canMake, activeTags, makeable, mineSort]);
 
   useEffect(() => {
     if (src !== 'library' || !syncing) return;
     let live = true;
     const t = setTimeout(() => {
       setLib({ status: 'loading' });
-      void searchRecipes(q, cat, 0, devHeaders).then(r => { if (live) setLib(r.ok ? { status: 'ready', items: r.items, more: r.more } : { status: 'failed', reason: r.reason }); });
+      void searchRecipes(q, cat, 0, libSort, devHeaders).then(r => { if (live) setLib(r.ok ? { status: 'ready', items: r.items, more: r.more } : { status: 'failed', reason: r.reason }); });
     }, q ? 300 : 0);
     return () => { live = false; clearTimeout(t); };
-  }, [src, syncing, q, cat, tries]);
+  }, [src, syncing, q, cat, libSort, tries]);
   const more = async () => {
     if (lib.status !== 'ready') return;
     const key = asked.current;
-    const r = await searchRecipes(q, cat, lib.items.length, devHeaders);
+    const r = await searchRecipes(q, cat, lib.items.length, libSort, devHeaders);
     if (r.ok && key === asked.current) setLib({ status: 'ready', items: [...lib.items, ...r.items.filter(i => !lib.items.some(x => x.id === i.id))], more: r.more });
   };
 
@@ -131,6 +135,10 @@ export default function Recipes() {
           })}
         </div>
       )}
+      <div className="rc-sort">
+        {src === 'mine' ? <SortControl options={RECIPE_SORTS} value={mineSort} onChange={setMineSort} /> : <SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} />}
+        {src === 'library' && syncing && <span className="rc-sortedby">{librarySortedBy(libSort, q.trim() !== '')}</span>}
+      </div>
       <RemovedNotice scope="recipes" />
 
       {src === 'mine' && (

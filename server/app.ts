@@ -308,7 +308,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.get('/api/catalog/search', async (req, res) => {
     const search = parseSearch(req.query);
     if (!search) {
-      res.status(400).json({ ok: false, error: 'kind must be supplement or recipe, q 2 to 100 characters (recipes may leave it out) and at most 6 words, cat a recipe category (recipes only), offset a whole number up to 600 (up to 5000 for recipes)' });
+      res.status(400).json({ ok: false, error: 'kind must be supplement or recipe, q 2 to 100 characters (recipes may leave it out) and at most 6 words, cat a recipe category and sort relevance or name (recipes only), offset a whole number up to 600 (up to 5000 for recipes)' });
       return;
     }
     res.set('Cache-Control', 'private, max-age=300');

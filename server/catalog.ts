@@ -40,7 +40,9 @@ export const SEARCH_PAGE = 30;
 const MAX_OFFSET = 600;
 const MAX_RECIPE_OFFSET = 5000; // the whole library (about 3,700 recipes) can be paged through
 
-export interface CatalogSearch { kind: CatalogKind; words: string[]; offset: number; cat?: RecipeCategory }
+export const SEARCH_SORTS = ['relevance', 'name'] as const; // recipes only: `name` skips the best-match order (lower-cased name, then id)
+export type SearchSort = typeof SEARCH_SORTS[number];
+export interface CatalogSearch { kind: CatalogKind; words: string[]; offset: number; cat?: RecipeCategory; sort?: SearchSort }
 export interface CatalogSearchResult { items: (CatalogListItem & { brand?: string })[]; more: boolean }
 
 /** The words of a text as the search compares them: lower case, apostrophes dropped, other punctuation as spaces. */
@@ -57,9 +59,16 @@ export function parseSearch(query: Record<string, unknown>): CatalogSearch | nul
   if (q.length > 100 || words.length > 6 || (!recipes && q.trim().length < 2)) return null;
   const raw = query.offset ?? '0';
   if (typeof raw !== 'string' || !/^\d{1,4}$/.test(raw) || Number(raw) > (recipes ? MAX_RECIPE_OFFSET : MAX_OFFSET)) return null;
-  if (query.cat === undefined) return { kind, words, offset: Number(raw) };
+  const offset = Number(raw);
+  let sort: SearchSort | undefined;
+  if (query.sort !== undefined) {
+    sort = SEARCH_SORTS.find(x => x === query.sort);
+    if (!recipes || !sort) return null;
+  }
+  const out: CatalogSearch = { kind, words, offset, ...(sort ? { sort } : {}) };
+  if (query.cat === undefined) return out;
   const cat = RECIPE_CATEGORIES.find(c => c === query.cat);
-  return recipes && cat ? { kind, words, offset: Number(raw), cat } : null;
+  return recipes && cat ? { ...out, cat } : null;
 }
 
 // A typed word, matched literally: % and _ are LIKE wildcards, and a backslash escapes them (words are letters and digits only, so
@@ -70,7 +79,7 @@ const escapeLike = (w: string) => w.replace(/[\\%_]/g, c => `\\${c}`);
 const normalized = (expr: RawBuilder<string>) =>
   sql<string>`lower(regexp_replace(regexp_replace(${expr}, ${sql.lit("['’]")}, '', 'g'), ${sql.lit('[^[:alnum:]]+')}, ' ', 'g'))`;
 
-export async function searchCatalog(db: Kysely<DB>, userId: string, { kind, words, offset, cat }: CatalogSearch): Promise<CatalogSearchResult> {
+export async function searchCatalog(db: Kysely<DB>, userId: string, { kind, words, offset, cat, sort }: CatalogSearch): Promise<CatalogSearchResult> {
   if (!words.length && kind !== 'recipe') return { items: [], more: false };
   const text = normalized(kind === 'recipe' ? sql`name || ' ' || coalesce(data #>> '{recipe,ing}', '')` : sql`name || ' ' || coalesce(brand, '')`);
   const nameText = normalized(sql`name`);
@@ -82,11 +91,12 @@ export async function searchCatalog(db: Kysely<DB>, userId: string, { kind, word
       .where('kind', '=', kind).where('retired_at', 'is', null);
     if (cat) q = q.where(sql`data #>> '{recipe,cat}'`, '=', cat);
     for (const w of words) q = q.where(text, 'like', `%${escapeLike(w)}%`);
-    // No words (recipes browsed by category): plain name order.
-    if (words.length) q = q.orderBy(sql`${nameText} like ${`${phrase}%`}`, 'desc')
+    // No words (recipes browsed by category), or sort=name: plain name order (lower-cased name, then id), so paging is stable.
+    const byName = !words.length || sort === 'name';
+    if (!byName) q = q.orderBy(sql`${nameText} like ${`${phrase}%`}`, 'desc')
       .orderBy(sql`(${wordStarts})`, 'desc')
       .orderBy(sql`${nameText} like ${`${first}%`}`, 'desc');
-    if (!words.length) q = q.orderBy(sql`lower(name)`);
+    if (byName) return q.orderBy(sql`lower(name)`).orderBy('id').limit(SEARCH_PAGE + 1).offset(offset).execute();
     return q.orderBy(sql`char_length(name)`).orderBy(sql`lower(name)`).orderBy('id')
       .limit(SEARCH_PAGE + 1).offset(offset).execute();
   });

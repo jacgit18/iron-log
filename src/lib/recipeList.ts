@@ -2,6 +2,7 @@ import type { Recipe, RecipeCategory } from '../types.ts';
 import { nameWords } from './recipePantry.js';
 import { hasTags } from './recipeTags.js';
 import { nameCmp } from './sort.js';
+import type { SortOption } from './sortChoice.js';
 
 /* ---------- Which of your recipes the list shows (ADR 084): pure, so a rule here is a node test, not a browser test ---------- */
 
@@ -34,3 +35,48 @@ export const stepsFromText = (t: string): string[] => t.split('\n').map(s => s.t
 
 /** Whether a typed name is one the person already has as a recipe (used to warn, not to refuse). */
 export const sameName = (list: Recipe[], name: string, exceptId?: string) => list.some(r => r.id !== exceptId && nameWords(r.n).join(' ') === nameWords(name).join(' '));
+
+/* ---------- Order of your recipes (brief recipes-sort) ---------- */
+
+/** Mine's sort choices. The first is the default. "Newest" is the order recipes were added (the list is appended to; a recipe has no date). */
+export const RECIPE_SORTS = [
+  { key: 'name', label: 'Name A to Z' },
+  { key: 'newest', label: 'Newest added' },
+  { key: 'time', label: 'Quickest first' },
+  { key: 'kcal', label: 'Fewest calories' },
+  { key: 'canmake', label: 'Can make first' },
+] as const satisfies readonly SortOption[];
+export type RecipeSort = typeof RECIPE_SORTS[number]['key'];
+export const DEFAULT_RECIPE_SORT: RecipeSort = 'name';
+
+/** Recipes in the chosen order (a new array). `all` is every recipe in stored order (for Newest), `makeable` the ids with every ingredient at home.
+ *  A recipe with no time or calories goes last; every tie falls back to name, then id, so a tie never swaps places. */
+export function sortRecipes(list: readonly Recipe[], sort: RecipeSort, all: readonly Recipe[], makeable: ReadonlySet<string>): Recipe[] {
+  const byNameId = nameCmp<Recipe>(r => r.n, r => r.id);
+  const asc = (v: (r: Recipe) => number | undefined) => (a: Recipe, b: Recipe) => {
+    const x = v(a), y = v(b);
+    return x === y ? byNameId(a, b) : x === undefined ? 1 : y === undefined ? -1 : x - y;
+  };
+  const at = new Map(all.map((r, i) => [r.id, i]));
+  const by: Record<RecipeSort, (a: Recipe, b: Recipe) => number> = {
+    name: byNameId,
+    newest: (a, b) => (at.get(b.id) ?? -1) - (at.get(a.id) ?? -1) || byNameId(a, b),
+    time: asc(r => r.minutes || undefined),
+    kcal: asc(r => (typeof r.kcal === 'number' ? r.kcal : undefined)),
+    canmake: (a, b) => Number(makeable.has(b.id)) - Number(makeable.has(a.id)) || byNameId(a, b),
+  };
+  return [...list].sort(by[sort]);
+}
+
+/* ---------- Order of the library (server `sort` value) ---------- */
+
+/** The Library's sort choices. Relevance is the server's order: best match when words are typed, name order when not. */
+export const LIBRARY_SORTS = [
+  { key: 'relevance', label: 'Best match' },
+  { key: 'name', label: 'Name A to Z' },
+] as const satisfies readonly SortOption[];
+export type LibrarySort = typeof LIBRARY_SORTS[number]['key'];
+export const DEFAULT_LIBRARY_SORT: LibrarySort = 'relevance';
+
+/** The line saying how the Library list is ordered right now. */
+export const librarySortedBy = (sort: LibrarySort, typing: boolean): string => (sort === 'name' || !typing ? 'Sorted by name, A to Z' : 'Sorted by best match');
