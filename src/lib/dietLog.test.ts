@@ -5,6 +5,21 @@ import { ateDayError, barPercent, entriesOn, entryText, hasMacros, meterText, mi
 const e = (id: string, d: string, n: string, kcal: number, p: number, from?: string, cf?: [number, number]): DietEntry => ({ id, d, n, kcal, p, ...(cf ? { c: cf[0], f: cf[1] } : {}), ...(from ? { from } : {}) });
 const list = [e('a', '2026-10-29', 'Rice', 200, 4), e('b', '2026-10-29', 'Chili', 600, 40.5, 'r1'), e('c', '2026-10-28', 'Eggs', 150, 12)];
 
+describe('entriesOn order', () => {
+  const at = (id: string, t?: number): DietEntry => ({ ...e(id, '2026-10-29', id, 100, 1), ...(t !== undefined ? { t } : {}) });
+  it('orders by hour added, then insertion order', () => {
+    expect(entriesOn([at('lunch2', 12), at('dinner', 18), at('breakfast', 8), at('lunch1', 12)], '2026-10-29').map(x => x.id)).toEqual(['breakfast', 'lunch2', 'lunch1', 'dinner']);
+  });
+  it('puts entries with no hour after the timed ones, in insertion order', () => {
+    expect(entriesOn([at('old1'), at('late', 20), at('old2'), at('early', 7)], '2026-10-29').map(x => x.id)).toEqual(['early', 'late', 'old1', 'old2']);
+  });
+  it('does not reorder the input', () => {
+    const input = [at('b', 9), at('a', 8)];
+    entriesOn(input, '2026-10-29');
+    expect(input.map(x => x.id)).toEqual(['b', 'a']);
+  });
+});
+
 describe('totals and days', () => {
   it('adds up one day only', () => {
     expect(totalsFor(list, '2026-10-29')).toEqual({ kcal: 800, protein: 44.5, carbs: 0, fat: 0, count: 2 });
