@@ -1,4 +1,5 @@
 import { parsePersonaList } from '../lib/qaPersonas.js';
+import { SWITCH_MARK_KEY, switchMark } from '../lib/qaSwitchWipe.js';
 
 /* ---------- QA test accounts: the four calls (brief qa-persona-picker, server/auth/qaPersonas.ts) ----------
    Same-origin, cookie only. Like the rest of src/sync none of these throws: a network failure is an answer. */
@@ -25,6 +26,13 @@ async function post(path: string, body: unknown): Promise<SwitchOutcome> {
   }
 }
 
-export const switchPersona = (id: string) => post('/switch', { id });
+/** After a switch or Return that worked, leave a stamp for the reload to read (lib/qaSwitchWipe.ts); a failed call leaves none. */
+async function postSwitch(path: string, body: unknown): Promise<SwitchOutcome> {
+  const out = await post(path, body);
+  if (out === 'ok') try { sessionStorage.setItem(SWITCH_MARK_KEY, switchMark(Date.now())); } catch { /* the card then asks, as before */ }
+  return out;
+}
+
+export const switchPersona = (id: string) => postSwitch('/switch', { id });
 export const resetPersona = (id: string) => post('/reset', { id });
-export const returnToAdmin = () => post('/return', {});
+export const returnToAdmin = () => postSwitch('/return', {});
