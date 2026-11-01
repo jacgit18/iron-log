@@ -104,6 +104,10 @@ describe('an ingredient linked to a sauce or seasoning', () => {
     const rub = { id: 'rub', ing: [{ n: 'Taco seasoning', rid: 'taco' }, { n: 'salsa' }] } as unknown as Recipe;
     expect(pantryStatus({ ing: [{ n: 'Rub', rid: 'rub' }] }, grocery, at('c'), [taco, rub]).lines[0]).toMatchObject({ have: false, partial: true });
   });
+  it('offers no Maybe for a sauce that is at home because it is made', () => {
+    const butter = g(it_('c', 'Cumin'), it_('p', 'Paprika'), it_('b', 'Taco butter'));
+    expect(pantryStatus({ ing: [{ n: 'Taco butter sauce', rid: 'taco' }] }, butter, at('c', 'p'), [taco]).lines[0]).toMatchObject({ have: true, suggest: null });
+  });
   it('without the recipes list a link counts as before', () => {
     expect(pantryStatus(meal, grocery, at('c', 'p')).lines[0]!.have).toBe(false);
   });

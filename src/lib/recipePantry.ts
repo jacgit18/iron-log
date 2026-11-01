@@ -132,7 +132,7 @@ export function pantryStatus(recipe: Pick<Recipe, 'ing'> & { id?: string }, g: G
     const have = always || madeAtHome || (!!item && !!haveOf(item, month));
     // Some of what the sauce is made from is at home, but not all of it: shown as "Have some", still counted as missing.
     const partial = !have && !!made && made.lines.some(l => (l.have || l.partial) && !l.always && !l.skipped); // water alone is not "some"
-    return { ing, item, have, skipped, always, partial, made, suggest: item || skipped || always ? null : suggestItem(ing, g.items) };
+    return { ing, item, have, skipped, always, partial, made, suggest: item || skipped || always || madeAtHome ? null : suggestItem(ing, g.items) };
   });
   const counted = lines.filter(l => !l.skipped);
   return { lines, have: counted.filter(l => l.have).length, total: counted.length };
