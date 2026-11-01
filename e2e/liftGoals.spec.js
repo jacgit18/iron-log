@@ -1,5 +1,8 @@
 import { test, expect } from './fixtures.js';
 
+// The goals page is a drill-in of the hub, which is what a window under 1280px shows.
+test.use({ viewport: { width: 1100, height: 900 } });
+
 // Progress, Weight goals: a goal on any exercise, including one with no logged set (the status maths is tested in src/lib/liftGoal.test.js).
 // These cover the wiring: the picker, the goal form, the row, a later log, Remove with Undo, and a goal set from the exercise sheet.
 const panel = page => page.locator('.goalspanel');
@@ -32,7 +35,7 @@ test('a goal on an exercise with no log shows in Weight goals, fills in once a s
   await goals(page);
   await expect(panel(page).locator('.goalrow')).toContainText('135 lb');
 
-  await panel(page).getByRole('button', { name: 'Any phase goal', exact: true }).dblclick();
+  await panel(page).getByRole('button', { name: 'Remove Any phase goal', exact: true }).dblclick();
   await expect(panel(page).locator('.goalrow .goalitem')).toHaveCount(0);
   await panel(page).getByRole('button', { name: 'Undo' }).click();
   await expect(panel(page).locator('.goalrow .goalitem')).toHaveCount(1);

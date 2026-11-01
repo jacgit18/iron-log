@@ -1,5 +1,8 @@
 import { test, expect } from './fixtures.js';
 
+// Progress here is the hub with drill-in pages, which is what a window under 1280px shows (progressOnePage.spec.js covers the wide page).
+test.use({ viewport: { width: 1100, height: 900 } });
+
 // Screen addresses and one Back model (brief navigation-urls). The route table is unit tested (src/lib/route.test.ts); this checks what a node test cannot:
 // the real history stack, reload, an edited address, and the sheet entry. Tab switches swap the address; opening a page adds a Back step.
 const hash = page => page.evaluate(() => location.hash);
