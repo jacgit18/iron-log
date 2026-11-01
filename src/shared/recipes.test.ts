@@ -41,6 +41,21 @@ describe('normRecipe', () => {
   });
 });
 
+describe('recipe video link', () => {
+  const base = { id: 'r1', n: 'Soup', cat: 'dinner', ing: [{ n: 'Onion' }], steps: ['Cook.'] };
+  it('keeps a web link and loads an old recipe without one unchanged', () => {
+    expect(normRecipe({ ...base, url: 'https://youtu.be/abc' })?.url).toBe('https://youtu.be/abc');
+    expect(normRecipe(base)).not.toHaveProperty('url');
+  });
+  it('drops anything that is not an http or https address', () => {
+    for (const bad of ['javascript:alert(1)', 'youtube.com/x', 'file:///etc/passwd', 'https://a b', '', '  ', 42, null]) expect(normRecipe({ ...base, url: bad })).not.toHaveProperty('url');
+  });
+  it('drops a link over 500 characters and keeps one on a saved library copy', () => {
+    expect(normRecipe({ ...base, url: 'https://x.com/' + 'a'.repeat(500) })).not.toHaveProperty('url');
+    expect(normRecipe({ ...base, from: 'c:wbc:r1', url: 'https://vimeo.com/1' })?.url).toBe('https://vimeo.com/1');
+  });
+});
+
 describe('serving size', () => {
   it('keeps the words and the grams, and a recipe without them is unchanged', () => {
     const r = normRecipe({ ...base, serving: ' 1 cup ', servingG: 250 });
