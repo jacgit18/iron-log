@@ -14,11 +14,13 @@ import { sameProg, libDate } from '../../lib/export.js';
 import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
+import DaySummary from './DaySummary.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import SortControl from '../SortControl.jsx';
 import { useSortChoice } from '../useSortChoice.js';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
+import ProgramStrip from './ProgramStrip.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
 import { boardNote, onBoardKeys } from '../../lib/programDay.js';
@@ -203,6 +205,7 @@ function ProgramEditor() {
           </label>
         </>
       ) : null}
+      <ProgramStrip />
       <div className="edcols">
       <section className="panel edpanel edprog">
         <div className="inline flexwrap"><h2 id="ed-title" tabIndex={-1} className="mr-auto">{edName} · {day.title}</h2></div>
@@ -281,6 +284,7 @@ function ProgramEditor() {
           })}
         </div>
       </section>
+      <DaySummary day={day} dayNo={edDay} />
       <p className="note mt-12">
         {lib ? 'Changes are saved to this library program only. Nothing on the board changes until you load it into A or B.' : `Changes apply to every week that uses ${progName(cfg, k)}. Your logged sets stay as they are.`}
       </p>

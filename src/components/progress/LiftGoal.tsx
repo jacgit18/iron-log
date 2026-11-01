@@ -77,7 +77,7 @@ function GoalView({ exId, k, goal, base, entries, today, onEdit }: { exId: strin
       {lines.map(t => <p className="note" key={t}>{t}</p>)}
       <div className="actions">
         <button type="button" className="btn sm" aria-label={`Change ${name}`} onClick={onEdit}>Change</button>
-        <ArmedButton className="btn sm ghost" aria-label={name} label="Remove" armedLabel="Tap again to remove" onConfirm={() => clearLiftGoal(exId, k)} />
+        <ArmedButton className="btn sm ghost" aria-label={`Remove ${name}`} label="Remove" armedLabel="Tap again to remove" onConfirm={() => clearLiftGoal(exId, k)} />
       </div>
     </div>
   );

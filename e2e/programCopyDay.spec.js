@@ -14,9 +14,9 @@ test('Create a program is at the top, above the library, and still opens the she
   await openPrograms(page);
   const create = page.getByRole('button', { name: 'Create a program' });
   const top = await create.boundingBox(); const lib = await page.getByRole('heading', { name: 'Program library' }).boundingBox();
-  const seg = await page.getByRole('group', { name: 'Program to edit' }).boundingBox();
   expect(top.y).toBeLessThan(lib.y);
-  expect(top.y).toBeLessThan(seg.y + seg.height); // on the row of the A | B switch (or just under it when narrow)
+  // from 1280px (this run is 1440) it sits in the strip of program cards, below the switch; narrower it is in the top row (`programWide.spec.js`)
+  await expect(page.locator('.progstrip').getByRole('button', { name: 'Create a program' })).toBeVisible();
   await create.click();
   await expect(page.getByRole('heading', { name: 'Create a program' })).toBeVisible();
 });
