@@ -7,6 +7,7 @@ import './Recipes.css';
 import { monthKey } from '../../lib/grocery.js';
 import { recipeFromCatalog } from '../../lib/recipeDraft.js';
 import { DEFAULT_LIBRARY_SORT, DEFAULT_RECIPE_SORT, LIBRARY_SORTS, RECIPE_SORTS, filterRecipes, librarySortedBy, recipeMeta, sortRecipes } from '../../lib/recipeList.js';
+import { NUTRITION_FILTERS, nutritionBadge, type NutritionKey } from '../../lib/recipeNutrition.js';
 import { pantryStatus } from '../../lib/recipePantry.js';
 import { liveTags, tagCounts, visibleChips } from '../../lib/recipeTags.js';
 import { RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
@@ -50,6 +51,7 @@ export default function Recipes() {
   const [cat, setCat] = useState<RecipeCategory | null>(null);
   const [canMake, setCanMake] = useState(false);
   const [tagSel, setTagSel] = useState<string[]>([]);
+  const [nutSel, setNutSel] = useState<NutritionKey[]>([]);
   const [mineSort, setMineSort] = useSortChoice('recipes', RECIPE_SORTS, DEFAULT_RECIPE_SORT);
   const [libSort, setLibSort] = useSortChoice('recipes-library', LIBRARY_SORTS, DEFAULT_LIBRARY_SORT);
   const [lib, setLib] = useState<Library>({ status: 'loading' });
@@ -66,7 +68,7 @@ export default function Recipes() {
   useEffect(() => { if (cat && !visibleChips(chipCfg, true).includes(cat)) setCat(null); }, [cat, chipCfg]); // a chip hidden while it is the filter: the filter clears
   const status = useMemo(() => new Map(recipes.map(r => [r.id, pantryStatus(r, grocery, months[month] ?? { lines: {}, pulled: [] }, recipes)])), [recipes, grocery, months, month]);
   const makeable = useMemo(() => new Set([...status].filter(([, s]) => s.total > 0 && s.have === s.total).map(([id]) => id)), [status]);
-  const shown = useMemo(() => sortRecipes(filterRecipes(recipes, { q, cat, canMake, tags: activeTags }, makeable), mineSort, recipes, makeable), [recipes, q, cat, canMake, activeTags, makeable, mineSort]);
+  const shown = useMemo(() => sortRecipes(filterRecipes(recipes, { q, cat, canMake, tags: activeTags, nutrition: nutSel }, makeable), mineSort, recipes, makeable), [recipes, q, cat, canMake, activeTags, nutSel, makeable, mineSort]);
 
   useEffect(() => {
     if (src !== 'library' || !syncing) return;
@@ -100,10 +102,10 @@ export default function Recipes() {
     }} />;
   }
 
-  const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void, edited = false) => (
+  const row = (key: string, title: string, meta: string, pill: string, tail: string | null, tailAll: boolean, open: () => void, edited = false, badge: string | null = null) => (
     <li key={key}>
       <button type="button" className="rc-row" onClick={open}>
-        <span><b>{title}</b><span className="pill custom">{pill}</span>{edited && <span className="rc-edited">Edited</span>}<span className="rc-meta">{meta}</span></span>
+        <span><b>{title}</b><span className="pill custom">{pill}</span>{edited && <span className="rc-edited">Edited</span>}<span className="rc-meta">{meta}</span>{badge && <span className="rc-badge">{badge}</span>}</span>
         {tail && <span className={`rc-have${tailAll ? ' all' : ''}`}>{tail}</span>}
       </button>
     </li>
@@ -135,6 +137,14 @@ export default function Recipes() {
           })}
         </div>
       )}
+      {src === 'mine' && (
+        <div className="rc-chips" role="group" aria-label="Nutrition">
+          {NUTRITION_FILTERS.map(f => {
+            const on = nutSel.includes(f.key);
+            return <button type="button" key={f.key} aria-pressed={on} onClick={() => setNutSel(on ? nutSel.filter(k => k !== f.key) : [...nutSel, f.key])}>{f.label}</button>;
+          })}
+        </div>
+      )}
       <div className="rc-sort">
         {src === 'mine' ? <SortControl options={RECIPE_SORTS} value={mineSort} onChange={setMineSort} /> : syncing && <SortControl options={LIBRARY_SORTS} value={libSort} onChange={setLibSort} />}
         {src === 'library' && syncing && <span className="rc-sortedby">{librarySortedBy(libSort, q)}</span>}
@@ -148,7 +158,7 @@ export default function Recipes() {
           <ul className="rc-list">
             {shown.map((r: Recipe) => {
               const s = status.get(r.id)!;
-              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.servings, r.minutes), r.from ? 'Library' : 'Custom', s.total ? `${s.have} of ${s.total}` : null, s.total > 0 && s.have === s.total, () => setView({ kind: 'mine', id: r.id }), !!r.edited);
+              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.servings, r.minutes), r.from ? 'Library' : 'Custom', s.total ? `${s.have} of ${s.total}` : null, s.total > 0 && s.have === s.total, () => setView({ kind: 'mine', id: r.id }), !!r.edited, nutritionBadge(r));
             })}
           </ul>
         </>

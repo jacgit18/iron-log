@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { NO_NUTRITION } from '../../lib/recipeNutrition.js';
 import { ateDayError, entryText, hasMacros, oldestDay, servingNumbers } from '../../lib/dietLog.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -13,7 +14,7 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
   const [err, setErr] = useState('');
   const today = ymd(useToday(s => s.today)); // the shared "today" (it moves at midnight), not a Date read during render
   const [day, setDay] = useState(today);
-  if (!mine) return <p className="note">Add this recipe to Mine first, then add its calories and protein to log it.</p>;
+  if (!mine) return <p className="note">{hasMacros(recipe) ? 'Add this recipe to Mine first, then log it.' : NO_NUTRITION}</p>;
   if (!hasMacros(recipe)) {
     return <div className="dt-ate"><p className="note">Add calories and protein per serving to log this recipe.</p><button type="button" className="btn sm" onClick={onEdit}>Add them</button></div>;
   }
