@@ -13,6 +13,7 @@ import { decideGate, quickGate } from './lib/gate.js';
 import { isPlansPath } from './lib/plansPage.js';
 import { initPwa } from './lib/pwa.js';
 import { LS } from './lib/storage.js';
+import { startUsage } from './lib/usage.js';
 import { apiSyncEnabled, FLAG_KEY } from './sync/flag.js';
 import { createAccountClient } from './sync/account.js';
 import { applyDevUserFromUrl, signIn as devHeaders } from './sync/devUser.js';
@@ -32,7 +33,7 @@ const root = createRoot(document.getElementById('root')!, { onCaughtError: hande
 const show = (node: ReactNode) => root.render(<StrictMode>{node}</StrictMode>);
 // Start loading before the first render. Saved in this browser, the data is read right away, so the
 // first frame already shows it instead of a "Loading…" frame that the page then jumps away from.
-const openApp = () => { useAppStore.getState().init(); show(<ErrorBoundary where="app"><App /></ErrorBoundary>); learnAdmin(); };
+const openApp = () => { useAppStore.getState().init(); show(<ErrorBoundary where="app"><App /></ErrorBoundary>); learnAdmin(); startUsage(useAppStore); };
 
 // With syncing on, ask the API whether this account is an admin (src/features.ts). Offline or unreachable keeps what the browser last knew.
 function learnAdmin() {

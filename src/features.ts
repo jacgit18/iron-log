@@ -14,6 +14,7 @@ import { LS } from './lib/storage.js';
    use `requireAdmin` (server/admin.ts), or `requirePaid` (server/plan.ts) for a 'paid' feature. Add a feature with a line here, in alphabetical order, then `useFeature('name')` in the component. */
 export const FEATURES = {
   adminIssues: 'admin', // Production issues in Settings (ADR 013 amendment): an internal tool, so it stays admin-only for good; remove it only together with /api/issues and the Issues panel
+  adminUsage: 'admin', // Usage counts in Settings (brief opt-in-usage-counts): an internal tool, so it stays admin-only for good; remove it only together with /api/usage-admin and the Usage panel
   billing: 'admin', // The Billing section in Settings (ADR 065), Stripe in test mode; remove this line and its useFeature check in components/settings/BillingPanel.tsx, and ADMIN_ONLY in server/billing.ts, when the owner goes live
   medical: 'admin', // The Medical section on Daily (a placeholder, nothing is stored); remove this line and its useFeature check in components/daily/Daily.tsx when the owner releases it
   serverBackups: 'paid', // Backups kept on the account (ADR 066): the upload, and the Your account rows of the Backups list in Settings; paid subscribers and admins; routes use requirePaid; remove this line, its useFeature check in components/settings/BackupCopies.tsx and featureNow in store/backupSlice.ts, and requirePaid in server/app.ts if the owner opens it to everyone

@@ -5,6 +5,8 @@ import DeleteMyData from './DeleteMyData.js';
 import FeedbackPanel from './FeedbackPanel.js';
 import IssuesPanel from './IssuesPanel.js';
 import ExportUpload from './ExportUpload.js';
+import UsageAdminPanel from './UsageAdminPanel.js';
+import UsagePanel from './UsagePanel.js';
 import ProgramOnComputerRow from './ProgramOnComputerRow.js';
 import BackupCopies from './BackupCopies.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
@@ -467,7 +469,9 @@ export default function Settings() {
               <ProgramOnComputerRow />
               <DevicePanel />
               <FeedbackPanel />
+              <UsagePanel />
               <IssuesPanel />
+              <UsageAdminPanel />
             </div>
           </Group>
           {/* Last on the page, apart from the everyday data panels: these cannot be undone. */}
