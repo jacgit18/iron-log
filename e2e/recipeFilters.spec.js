@@ -105,6 +105,7 @@ test('rename a tag (and merge into one that exists), then delete one after a con
   await expect(sheet.getByRole('alert')).toHaveText('Type a name for the tag.'); // an empty name is refused and shown
   await sheet.getByLabel('New name for dinner').fill('weeknight');
   await sheet.getByRole('button', { name: 'Save name' }).click(); // merges into weeknight
+  await expect(sheet.getByText('Renamed to weeknight.')).toBeVisible();
   await expect(sheet.getByText('weeknight · 3 recipes')).toBeVisible();
   await sheet.getByRole('button', { name: 'Delete tag meal prep' }).click();
   await expect(sheet.getByText('Remove “meal prep” from 1 recipe? The recipes stay.')).toBeVisible();

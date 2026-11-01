@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
-import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_TAG, MAX_TAGS_PER_RECIPE, MAX_SERVING_G, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, MAX_TAG, MAX_TAGS_PER_RECIPE, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
 import { cleanTag, tagCounts, tagKey } from '../../lib/recipeTags.js';

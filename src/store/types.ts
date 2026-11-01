@@ -318,7 +318,7 @@ export interface RecipesSlice {
   saveRecipes(): void;
   saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
   copyCatalogRecipe(item: CatalogItem, servings?: number): string | null; // a Library recipe joins Mine as a copy of its own (at `servings`, amounts scaled, when set)
-  renameTag(from: string, to: string): string | null; // rename a tag on every recipe that has it (a name in use merges); an error text, or null
+  renameTag(from: string, to: string): { error: string | null; name: string }; // rename a tag on every recipe that has it (a name in use merges); an error text, or null, and the name it ends up with
   removeTag(tag: string): number; // take a tag off every recipe (the recipes stay); how many recipes had it
   setRecipeChips(chips: RecipeChips | undefined): void; // hide and reorder the built-in category chips (saved in the settings)
   removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')

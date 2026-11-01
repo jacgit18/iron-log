@@ -41,9 +41,9 @@ export function liveTags(list: readonly Recipe[], selected: readonly string[]): 
 
 /** `list` with tag `from` renamed to `to` on every recipe that has it; a `to` that exists already merges the two. `changed` counts the recipes
  *  touched; `error` says why nothing was done. Never adds or removes a recipe. */
-export function renameTag(list: readonly Recipe[], from: string, to: string): { list: Recipe[]; changed: number; error: string | null } {
+export function renameTag(list: readonly Recipe[], from: string, to: string): { list: Recipe[]; changed: number; error: string | null; name: string } {
   const next = cleanTag(to);
-  if (!next) return { list: [...list], changed: 0, error: 'Type a name for the tag.' };
+  if (!next) return { list: [...list], changed: 0, error: 'Type a name for the tag.', name: '' };
   let changed = 0;
   const existing = tagCounts(list).find(c => tagKey(c.tag) === tagKey(next))?.tag; // keep the spelling already in use when merging
   const name = existing && tagKey(existing) !== tagKey(from) ? existing : next;
@@ -53,7 +53,7 @@ export function renameTag(list: readonly Recipe[], from: string, to: string): { 
     changed++;
     return { ...r, tags };
   });
-  return { list: out, changed, error: null };
+  return { list: out, changed, error: null, name }; // `name`: the spelling the tag ends up with
 }
 
 /** `list` without tag `tag` on any recipe, and how many recipes had it. The recipes stay; one left with no tags drops the field. */

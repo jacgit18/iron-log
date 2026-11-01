@@ -190,7 +190,7 @@ describe('recipe tags', () => {
   });
   it('renames a tag on every recipe that has it, without touching the rest', async () => {
     const get = await tagged();
-    expect(st().renameTag('weeknight', 'quick')).toBeNull();
+    expect(st().renameTag('weeknight', 'quick')).toEqual({ error: null, name: 'quick' });
     expect(get('Chili').tags).toEqual(['quick', 'Meal prep']);
     expect(get('Tacos').tags).toEqual(['quick']);
     expect(get('Soup').tags).toEqual(['meal prep']);
@@ -198,14 +198,14 @@ describe('recipe tags', () => {
   });
   it('merges into a tag that exists, keeping its spelling and not doubling it on a recipe', async () => {
     const get = await tagged();
-    expect(st().renameTag('weeknight', 'MEAL PREP')).toBeNull();
+    expect(st().renameTag('weeknight', 'MEAL PREP')).toEqual({ error: null, name: 'Meal prep' }); // the spelling in use, not the typed one
     expect(get('Chili').tags).toEqual(['Meal prep']); // had both: now one
     expect(get('Tacos').tags).toEqual(['Meal prep']);
     expect(get('Soup').tags).toEqual(['meal prep']);
   });
   it('refuses an empty new name and changes nothing', async () => {
     const get = await tagged();
-    expect(st().renameTag('weeknight', '   ')).toMatch(/name/);
+    expect(st().renameTag('weeknight', '   ').error).toMatch(/name/);
     expect(get('Tacos').tags).toEqual(['Weeknight']);
   });
   it('deletes a tag from every recipe and says how many had it; the recipes stay', async () => {

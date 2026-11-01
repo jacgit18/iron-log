@@ -21,9 +21,9 @@ export default function RecipeFilters() {
 
   const rename = () => {
     if (editing === null) return;
-    const e = st.renameTag(editing, name);
-    if (e) { setErr(e); return; }
-    setNote(`Renamed to ${name.trim()}.`); setEditing(null); setErr(''); toDone();
+    const r = st.renameTag(editing, name);
+    if (r.error) { setErr(r.error); return; }
+    setNote(`Renamed to ${r.name}.`); setEditing(null); setErr(''); toDone();
   };
   const remove = (tag: string) => {
     const n = st.removeTag(tag);

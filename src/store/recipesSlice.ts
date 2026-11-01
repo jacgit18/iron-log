@@ -44,9 +44,8 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
 
   renameTag(from, to) {
     const r = renameTag(get().recipes, from, to);
-    if (r.error) return r.error;
     if (r.changed) { set({ recipes: r.list }); get().saveRecipes(); }
-    return null;
+    return { error: r.error, name: r.name };
   },
 
   removeTag(tag) {
