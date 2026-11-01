@@ -2,6 +2,7 @@ import { test, expect } from './fixtures.js';
 
 // What a unit test cannot catch: the Board's seven day columns are a CSS grid, so whether they fit depends on the real container width, the gap and the
 // scrollbar, which only a browser lays out. At a 1920px desktop all seven columns sit inside the viewport; at 1280px the Board still scrolls sideways.
+// Headless Chromium draws no 15px page scrollbar, so these widths are 15px wider than a real desktop's; the 1870px test below pins the breakpoint that allows for it.
 const columns = page => page.locator('.board .col');
 
 test('at 1920px all seven day columns are inside the viewport and the Board does not scroll sideways', async ({ page }) => {
@@ -22,6 +23,15 @@ test('at 1280px the day columns keep their 270px minimum and the Board scrolls s
   const { client, scroll, first } = await page.locator('.board').evaluate(b => ({ client: b.clientWidth, scroll: b.scrollWidth, first: b.querySelector('.col').getBoundingClientRect().width }));
   expect(scroll).toBeGreaterThan(client);
   expect(first).toBeCloseTo(270, 0);
+});
+
+// A real 1920px desktop loses 15px to the page scrollbar, which headless Chromium does not draw: cap the page container at 1873px (1888px less 15px) to get the same board.
+test('at 1920px with a 15px scrollbar taken off the page, all seven columns still fit', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.addStyleTag({ content: '.wrap { max-width: 1873px !important; }' });
+  const { client, scroll } = await page.locator('.board').evaluate(b => ({ client: b.clientWidth, scroll: b.scrollWidth }));
+  expect(client).toBe(1873);
+  expect(scroll).toBeLessThanOrEqual(client);
 });
 
 // The 1870px breakpoint is 7 x 250 + 6 x 12 + 32px of page padding + a 15px scrollbar. One pixel either side pins it, so a change to the padding, the gap
