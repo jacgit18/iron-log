@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { cleanGrams, cleanKcal, cleanProtein } from '../../shared/diet.js';
-import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_SERVING_G, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
+import { MAX_INGREDIENTS, MAX_RECIPE_NAME, MAX_TAG, MAX_TAGS_PER_RECIPE, MAX_SERVING_G, RECIPE_CATEGORIES, RECIPE_CATEGORY_LABEL } from '../../shared/recipes.js';
 import { ingredientsToText, readList } from '../../lib/ingredientList.js';
 import { sameName, stepsFromText } from '../../lib/recipeList.js';
+import { cleanTag, tagCounts, tagKey } from '../../lib/recipeTags.js';
 import { rescale, servingsNote, typedAmount } from '../../lib/recipeScale.js';
 import { pinFor, refreshLink, sauceCandidates, sauceFor, suggestIngredients } from '../../lib/recipeSuggest.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -32,6 +33,8 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   const [protein, setProtein] = useState(recipe?.p !== undefined ? String(recipe.p) : '');
   const [carbs, setCarbs] = useState(recipe?.c !== undefined ? String(recipe.c) : '');
   const [fat, setFat] = useState(recipe?.f !== undefined ? String(recipe.f) : '');
+  const [tags, setTags] = useState<string[]>(recipe?.tags ?? []);
+  const [tagText, setTagText] = useState('');
   const [nutOpen, setNutOpen] = useState(false);
   const [ing, setIng] = useState<Row[]>(recipe?.ing.length ? recipe.ing.map(i => ({ ...refreshLink(i, recipes, recipe.id), amt: i.amt ?? '' })) : [{ n: '', amt: '' }]);
   const [lastServings, setLastServings] = useState<number | null>(recipe ? recipe.servings ?? null : 1); // the servings the amounts are for
@@ -73,6 +76,17 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
   };
   const showList = () => { const t = ingredientsToText(ing); setListText(t); setListBase(t); setListMode(true); setErr(''); };
 
+  const inUse = useMemo(() => tagCounts(recipes).filter(c => !tags.some(t => tagKey(t) === tagKey(c.tag))), [recipes, tags]); // tags other recipes have that this one does not: offered
+  const addTag = (raw: string) => {
+    const t = cleanTag(raw);
+    if (!t) return;
+    if (tags.some(x => tagKey(x) === tagKey(t))) { setTagText(''); return; }
+    if (tags.length >= MAX_TAGS_PER_RECIPE) { setErr(`A recipe can have up to ${MAX_TAGS_PER_RECIPE} tags.`); return; }
+    const known = tagCounts(recipes).find(c => tagKey(c.tag) === tagKey(t))?.tag; // an existing tag keeps its spelling
+    setTags([...tags, known ?? t]); setTagText(''); setErr('');
+  };
+
+  const tagsToSave = () => { const t = cleanTag(tagText); return t && !tags.some(x => tagKey(x) === tagKey(t)) ? [...tags, tagCounts(recipes).find(c => tagKey(c.tag) === tagKey(t))?.tag ?? t].slice(0, MAX_TAGS_PER_RECIPE) : tags; }; // a tag typed but not added yet is kept
   const save = () => {
     if (servings.trim() && !(whole(servings) && whole(servings)! <= 99)) { setErr('Servings must be a whole number from 1 to 99.'); return; }
     if (minutes.trim() && !(whole(minutes) && whole(minutes)! <= 1440)) { setErr('Minutes must be a whole number from 1 to 1440.'); return; }
@@ -86,7 +100,7 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
     if (listEdited && !fromList) { setErr(TOO_FEW); return; }
     const source: RecipeIngredient[] = fromList ? fromList.rows : ing;
     const keep = source.filter(i => i.n.trim()).map(i => ({ n: i.n, ...(i.amt?.trim() ? { amt: i.amt } : {}), ...(i.home ? { home: i.home } : {}), ...(i.rid ? { rid: i.rid } : {}), ...(i.sub?.trim() ? { sub: i.sub } : {}), ...(i.skip ? { skip: true as const } : {}) }));
-    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(recipe?.from ? { from: recipe.from } : {}) });
+    const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat, ...(tagsToSave().length ? { tags: tagsToSave() } : {}), ing: keep, steps: stepsFromText(steps), servings: whole(servings), ...(serving.trim() ? { serving: serving.trim() } : {}), ...(servingG.trim() ? { servingG: whole(servingG) ?? undefined } : {}), minutes: whole(minutes), ...(k !== undefined ? { kcal: k } : {}), ...(pr !== undefined ? { p: pr } : {}), ...(cb !== undefined ? { c: cb } : {}), ...(ft !== undefined ? { f: ft } : {}), note, ...(recipe?.from ? { from: recipe.from } : {}) });
     if (e) { setErr(e); return; }
     const list = useAppStore.getState().recipes;
     onDone(recipe?.id ?? list[list.length - 1]?.id ?? null); // a new recipe is the last one: open it
@@ -140,6 +154,25 @@ export default function RecipeForm({ recipe, onDone }: { recipe?: Recipe; onDone
             <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
           </label>
           {n.trim() && sameName(recipes, n, recipe?.id) && <p className="note">You already have a recipe with this name. You can still save it.</p>}
+          <fieldset className="rc-tags">
+            <legend>Tags</legend>
+            {tags.length > 0 && (
+              <div className="rc-chips2">
+                {tags.map(t => <button type="button" key={t} className="btn sm" onClick={() => setTags(tags.filter(x => x !== t))}>Remove {t}</button>)}
+              </div>
+            )}
+            <div className="rc-tagadd">
+              <input aria-label="New tag" placeholder="weeknight, meal prep…" value={tagText} maxLength={MAX_TAG} autoComplete="off"
+                onChange={e => setTagText(e.target.value.replace(',', ''))}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagText); } }} />
+              <button type="button" className="btn sm" disabled={!tagText.trim()} onClick={() => addTag(tagText)}>Add tag</button>
+            </div>
+            {inUse.length > 0 && (
+              <div className="rc-chips2" role="group" aria-label="Tags you use">
+                {inUse.map(c => <button type="button" key={c.tag} className="btn sm ghost" onClick={() => addTag(c.tag)}>Use {c.tag}</button>)}
+              </div>
+            )}
+          </fieldset>
           <div className="rc-meta">
             <label>Category
               <select value={cat} onChange={e => setCat(e.target.value as RecipeCategory)}>

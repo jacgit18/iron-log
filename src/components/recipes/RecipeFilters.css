@@ -1,0 +1,51 @@
+@layer base, components;
+@layer components {
+/* Manage filters sheet: one row per category or tag, every target 44px. */
+.rcf-list {
+  list-style: none;
+  margin: var(--sp-8) 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-6);
+}
+.rcf-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.rcf-list li.off .rcf-name {
+  opacity: 0.6;
+}
+.rcf-name {
+  flex: 1 1 8rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rcf-state {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.rcf-list .btn,
+.rcf .btn.sm {
+  min-height: 44px;
+}
+.rcf-edit,
+.rcf-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--sp-6);
+  width: 100%;
+}
+.rcf-ask p {
+  flex: 1 1 100%;
+  margin: 0;
+}
+.rcf-edit label {
+  flex: 1 1 10rem;
+}
+.rcf-edit input {
+  min-height: 44px;
+}
+}
