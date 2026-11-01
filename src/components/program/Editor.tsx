@@ -9,12 +9,15 @@ import { progName, DAYS } from '../../lib/logic.js';
 import { dayPickLabel, exerciseCount } from '../../lib/exerciseCount.js';
 import { slotSummary } from '../../lib/programMove.js';
 import { archivedHeading, splitLibrary } from '../../lib/programArchive.js';
+import { DEFAULT_PROGRAM_SORT, PROGRAM_SORTS } from '../../lib/programSort.js';
 import { sameProg, libDate } from '../../lib/export.js';
 import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
+import SortControl from '../SortControl.jsx';
+import { useSortChoice } from '../useSortChoice.js';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
@@ -47,7 +50,8 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
   const [arming, setArming] = useState<string | null>(null); // the program whose Delete was pressed once
   const today = useToday(s => s.today);
   const cur = programs[k]; const pn = progName(cfg, k);
-  const { active: items, archived } = splitLibrary(library);
+  const [sort, setSort] = useSortChoice('programs', PROGRAM_SORTS, DEFAULT_PROGRAM_SORT);
+  const { active: items, archived } = splitLibrary(library, sort);
   const metaOf = (it: LibraryItem) => `${boardNote(onBoardKeys(it.prog, programs as Record<'A' | 'B', Program>).map(b => progName(cfg, b)))} · ${libDate(it.at)} · ${progStats(it.prog)} · ${it.created ? (it.from ? `Created from ${progName(cfg, it.from)}` : 'Created new') : `From ${progName(cfg, it.from as string)}`}${it.auto ? ' · auto-saved' : ''}`;
   const deleteBtn = (it: LibraryItem) => (
     <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Tap again to delete" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); st.deleteLibItem(it.id); }} />
@@ -59,6 +63,7 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
       <h2>Program library</h2>
       <p className="note">Your saved programs. Load one into {pn} to put it on your Board; whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
       <RemovedNotice scope="library" />
+      {library.length > 1 && <div className="inline"><SortControl options={PROGRAM_SORTS} value={sort} onChange={setSort} /></div>}
       <div className="edlist">
         {items.map(it => (
           <LibRow
