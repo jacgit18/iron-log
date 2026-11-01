@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { MAX_NOTE, UNITS, byStore, carriedCount, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
+import { MAX_NOTE, UNITS, byStore, carriedCount, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, lineTotal, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
+import { DEFAULT_GROCERY_SORT, GET_SORTS, HOME_SORTS, filterGroceryItems, sortGroceryItems } from '../../lib/grocerySort.js';
 import { allPeople, hasSharing, partiesFor, shareText } from '../../lib/grocerySettle.js';
 import { removedBoughtByStore } from '../../lib/groceryRemoved.js';
 import { pageOf } from '../../lib/route.js';
 import { navigate, useRoutePath } from '../useRoute.js';
 import ArmedButton from '../ArmedButton.jsx';
+import GroceryBar from './GroceryBar.js';
 import Icon from '../Icon.jsx';
 import { motionOK } from '../../lib/motion.js';
 import Notice, { UNDO_MS } from '../Notice.jsx';
@@ -19,6 +21,7 @@ import SplitSection from './SplitSection.js';
 import StoreTax from './StoreTax.js';
 import { MonthMoney, StoreMoney } from './StoreMoney.js';
 import useDockHeight from './useDockHeight.js';
+import { useSortChoice } from '../useSortChoice.js';
 import type { Grocery as GroceryT, GroceryItem, GroceryMonth, GroceryUnit } from '../../types.ts';
 import type { GroceryForm } from '../../store/types.ts';
 import './Grocery.css';
@@ -146,6 +149,13 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const todo = current ? list.filter(i => !lineOf(i, month).got) : list;
   const bought = current ? list.filter(i => lineOf(i, month).got) : [];
   const carried = useMemo(() => (current ? carriedCount(g, months, mk) : 0), [current, g, months, mk]); // ticks the month started with that are still ticked (ADR 079)
+  // Search and Sort change only what is shown: the stored list, the tallies and Skip all still see the whole month.
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useSortChoice('grocery-get', GET_SORTS, DEFAULT_GROCERY_SORT);
+  const facts = { cents: (i: GroceryItem) => { const l = lineOf(i, month); return l.cents == null && !l.prices ? null : lineCost(l); }, ticked: (i: GroceryItem) => lineOf(i, month).got };
+  const shape = (items: GroceryItem[]) => byStore(g, filterGroceryItems(items, q), split).map(grp => ({ ...grp, items: sortGroceryItems(grp.items, sort, facts) }));
+  const shownTodo = shape(todo); const shownBought = shape(bought);
+  const noMatch = !!q.trim() && !shownTodo.length && !shownBought.length;
   const todoStores = new Set(byStore(g, todo, split).map(x => x.store)); // a shared store with nothing left to get shows its money line in the bought fold instead
   // A store's tax box, once something is ticked there (or a tax is already typed): the receipt's tax for this month and what it comes to as a percent of the ticked items.
   // Items bought and then removed from the list still count in their store's tally and tax (audit X-8); a store left with none of its own items shows only its tax box.
@@ -168,7 +178,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   // The money line over the list opens it, takes you there and puts focus on its header, so the next Tab is inside it; reduced motion jumps instead of gliding.
   const openSplit = () => { setSplitOpen(mk); window.setTimeout(() => { const at = document.getElementById(`groc-split-${mk}`); at?.scrollIntoView({ block: 'start', behavior: motionOK() ? 'smooth' : 'instant' }); at?.querySelector<HTMLElement>('.gsplittoggle')?.focus({ preventScroll: true }); }, 0); };
   // Expand all and Collapse all on a store cover its rows to get and the ones already bought this month (a row ticked while open stays open in the fold).
-  const storeRows = (grp: { store: string; items: GroceryItem[] }) => [...grp.items, ...bought.filter(i => i.store === grp.store)];
+  const storeRows = (grp: { store: string; items: GroceryItem[] }) => [...grp.items, ...(shownBought.find(b => b.store === grp.store)?.items ?? [])];
   const [armingSkip, setArmingSkip] = useState(false); // Skip all was pressed once
   const [ticked, setTicked] = useState<{ id: string; name: string; mk: string; t: number } | null>(null); // the item just ticked bought, for the Undo notice
   const setPanel = (id: string, on: boolean) => setPanels([id], on);
@@ -179,7 +189,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
   const tick = (id: string, on: boolean) => {
     if (!useAppStore.getState().setGroceryGot(mk, id, on)) return; // nothing changed (data still loading): no Undo notice and no focus jump for it
     if (current) {
-      const order = byStore(g, todo, split).flatMap(grp => gotLast(grp.items, month)).map(i => i.id);
+      const order = shownTodo.flatMap(grp => gotLast(grp.items, month)).map(i => i.id);
       const at = order.indexOf(id); const next = order[at + 1] ?? order[at - 1];
       const typing = on && openIds.has(id); // its panel is open: stay with the row in the fold, to finish the price
       if (typing) setBoughtOpen(true);
@@ -201,6 +211,8 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       {current && carried > 0 && <p className="note" id="groc-carried">{`Carried over ${carried} ${carried === 1 ? 'item' : 'items'} you still have from ${monthLabel(month.carried!)}.`}</p>}
       {split && <MonthMoney g={g} month={month} onOpen={openSplit} />}
       {!t.count && off === 0 && <p className="note">Add what you buy on <b>At home</b>. Tick an item there when you have it and it comes off this month’s list.</p>}
+      {list.length > 0 && <GroceryBar q={q} onQ={setQ} options={GET_SORTS} sort={sort} onSort={setSort} />}
+      {noMatch && <p className="note" id="groc-nomatch" role="status">{`No items match “${q.trim()}”.`}</p>}
       {current && todo.length > 0 && (
         <div className="gskiprow">
           <ArmedButton className={`btn sm ${armingSkip ? 'danger' : 'ghost'}`} id="groc-skipall" aria-label={`Skip all ${todo.length} items still to get this month`} label="Skip all" armedLabel={`Tap again to skip ${todo.length}`}
@@ -209,7 +221,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
       )}
       <RemovedNotice scope="groceryoff" />
       {current && t.count > 0 && !todo.length && <p className="note" id="groc-alldone">Everything on this month’s list is bought.</p>}
-      {byStore(g, todo, split).map((grp, gi) => {
+      {shownTodo.map((grp, gi) => {
         const gt = tally(grp.items, month); const gone = removed[grp.store]; // the tally counts a purchase of a removed item too
         if (gone) { gt.got += gone.count; gt.count += gone.count; gt.planned += gone.cents; }
         return (
@@ -238,7 +250,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
         <details className="gbought" id="groc-bought" open={boughtOpen} onToggle={e => setBoughtOpen(e.currentTarget.open)}>
           <summary id="groc-bought-sum">Bought this month ({bought.length})</summary>
           <p className="note">You have these at home, so they are ticked <b>Have</b> on At home. Untick one to put it back on the list.</p>
-          {byStore(g, bought, split).map(grp => (
+          {shownBought.map(grp => (
             <section key={grp.store || '_'} className="gstore" aria-label={`Bought from ${grp.label}`}>
               <div className="gstorehead"><h3>{grp.label}{split && grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3></div>
               {split && grp.group && !todoStores.has(grp.store) && <StoreMoney g={g} month={month} store={grp.store} />}
@@ -410,6 +422,11 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
   const [adjusting, setAdjust] = useIdSet(); // stores whose rows show their share controls while editing (the rest show them only when an item has its own split)
   const toggleAdjust = (store: string) => setAdjust([store], !adjusting.has(store));
   const month = months[nowKey] || emptyMonth();
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useSortChoice('grocery-home', HOME_SORTS, DEFAULT_GROCERY_SORT);
+  // A row being edited keeps its place (A to Z), so it does not jump while its name, price or tick changes; the sort and the search apply when you are not editing.
+  const facts = { cents: (i: GroceryItem) => (i.cents == null ? null : lineTotal(i.qty, i.cents)), ticked: (i: GroceryItem) => haveOf(i, month) };
+  const shown = editing ? byStore(g, g.items, true) : byStore(g, filterGroceryItems(g.items, q), true).map(grp => ({ ...grp, items: sortGroceryItems(grp.items, sort, facts) }));
   // A row moved to another store, or removed, drops keyboard focus to the page: keep it on the row's store select, or after a removal on the next row's arrow
   // (else the one before, else the Edit/Done button).
   const focusAfter = useRef<string | null>(null);
@@ -420,7 +437,7 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
     focusAfter.current = next ? `groc-edit-arrow-${next}` : 'groc-edit';
   };
   const hasIt = (it: GroceryItem) => haveOf(it, month);
-  const setHave = (it: GroceryItem, on: boolean) => useAppStore.getState().setGroceryHave(nowKey, it.id, on);
+  const setHave = (it: GroceryItem, on: boolean) => { focusAfter.current = `groc-have-${it.id}`; useAppStore.getState().setGroceryHave(nowKey, it.id, on); }; // a sorted row may move: keep focus on its box
   return (
     <div className={editing ? 'gathome editing' : 'gathome'}>
       <div className="ghomehead gsharehead">
@@ -437,7 +454,9 @@ function AtHome({ g, months, nowKey }: { g: GroceryT; months: Record<string, Gro
       {sharingOpen && <SharingGroups g={g} />}
       <RemovedNotice scope="grocery" />
       {!g.items.length && !editing && <p className="note">Your list is empty. Use Edit to add what you buy and where.</p>}
-      {byStore(g, g.items, true).map((grp, gi) => (
+      {!editing && g.items.length > 0 && <GroceryBar q={q} onQ={setQ} options={HOME_SORTS} sort={sort} onSort={setSort} />}
+      {!editing && !!q.trim() && !shown.length && <p className="note" id="groc-nomatch" role="status">{`No items match “${q.trim()}”.`}</p>}
+      {shown.map((grp, gi) => (
         <section key={grp.store || '_'} className="gstore" aria-labelledby={`groc-home-h-${gi}`}>
           <div className="gstorehead">
             <h3 id={`groc-home-h-${gi}`}>{grp.label}{grp.group && <span className="gtag"> {groupTag(grp.group)}</span>}</h3>
