@@ -1,0 +1,119 @@
+@layer base, components;
+@layer components {
+.qalistwrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-10);
+  min-width: 0;
+}
+.qayou {
+  color: var(--muted);
+  font-size: var(--fs-md);
+  margin: 0;
+}
+.qasearch input {
+  inline-size: 100%;
+  min-height: 44px;
+}
+.qachips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+}
+.qachip {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--fs-md);
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+}
+.qachip.on {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-ink);
+}
+.qagroup {
+  font-size: var(--fs-sm);
+  margin: var(--sp-12) 0 var(--sp-4);
+}
+.qalist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.qarow {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: var(--sp-12);
+  padding: var(--sp-8) 0;
+}
+.qarow.cur {
+  background: var(--sunk);
+  margin-inline: calc(var(--sp-8) * -1);
+  padding-inline: var(--sp-8);
+}
+.qatext {
+  flex: 1;
+  min-width: 0;
+}
+.qaname {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.qadot {
+  border: 2px solid var(--exp);
+  border-radius: 50%;
+  box-sizing: border-box;
+  flex: none;
+  inline-size: 10px;
+  block-size: 10px;
+}
+.qadot.on {
+  background: var(--exp);
+}
+.qabadge {
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-xs);
+  padding: 0 var(--sp-8);
+}
+.qadesc,
+.qatry,
+.qahint {
+  font-size: var(--fs-sm);
+  margin: var(--sp-2) 0 0;
+}
+.qatry,
+.qahint {
+  color: var(--muted);
+}
+.qaacts {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.qafoot {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-12);
+  justify-content: space-between;
+}
+@media (max-width:480px) {
+  .qarow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .qaacts {
+    flex-direction: row;
+  }
+}
+}
