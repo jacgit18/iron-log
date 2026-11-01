@@ -440,4 +440,10 @@
   min-width: 5.5rem;
   text-align: center;
 }
+/* 1920 page cap: a search field this wide is hard to scan. */
+@media (min-width:1501px) {
+  .rc-top input[type='search'] {
+    max-width: 720px;
+  }
+}
 }
