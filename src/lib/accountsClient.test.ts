@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { listAccounts, setSuspendedState } from './accountsClient.js';
 
 // The admin accounts screen's calls: every failure is a plain reason, never a throw (brief admin-accounts-screen).
-const reply = (status: number, body?: unknown) => vi.fn(async () => new Response(body === undefined ? null : JSON.stringify(body), { status }));
+const reply = (status: number, body?: unknown) => vi.fn(async (_url: string, _init?: RequestInit) => new Response(body === undefined ? null : JSON.stringify(body), { status }));
 afterEach(() => vi.unstubAllGlobals());
 
 describe('listAccounts', () => {
@@ -33,7 +33,7 @@ describe('setSuspendedState', () => {
     vi.stubGlobal('fetch', f);
     expect(await setSuspendedState('15', true)).toEqual({ ok: true });
     expect(await setSuspendedState('15', false)).toEqual({ ok: true });
-    expect(f.mock.calls.map(c => [c[0], (c[1] as RequestInit).method])).toEqual([['/api/accounts/15/suspend', 'POST'], ['/api/accounts/15/restore', 'POST']]);
+    expect(f.mock.calls.map(c => [c[0], c[1]?.method])).toEqual([['/api/accounts/15/suspend', 'POST'], ['/api/accounts/15/restore', 'POST']]);
   });
   it('names a refused admin target and a missing account', async () => {
     vi.stubGlobal('fetch', reply(422, { ok: false }));
