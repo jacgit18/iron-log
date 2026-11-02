@@ -2,7 +2,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import express from 'express';
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import { rateLimit } from './rateLimit.ts';
+import { byIp, ipKey, MAX_KEYS, rateLimit } from './rateLimit.ts';
 
 const servers: Server[] = [];
 async function start(limit: Parameters<typeof rateLimit>[0], now?: () => number, trustProxy?: number): Promise<string> {
@@ -65,5 +65,63 @@ describe('rateLimit', () => {
     const direct = await start({ max: 1, windowMs: 60_000 });
     expect((await fetch(direct, { headers: { 'x-forwarded-for': '203.0.113.1' } })).status).toBe(200);
     expect((await fetch(direct, { headers: { 'x-forwarded-for': '203.0.113.9' } })).status).toBe(429);
+  });
+
+  it('keys an IPv6 address by its /64, so rotating inside one block gains nothing', () => {
+    const a = ipKey('2001:db8:1:2:aaaa:bbbb:cccc:dddd');
+    expect(ipKey('2001:db8:1:2::1')).toBe(a);
+    expect(ipKey('2001:0DB8:0001:0002:ffff:ffff:ffff:ffff')).toBe(a);
+    expect(ipKey('2001:db8:1:2:1:2:3:4%eth0')).toBe(a);
+    expect(ipKey('2001:db8:1:3::1')).not.toBe(a);
+    expect(ipKey('2001:db8:2:2::1')).not.toBe(a);
+    expect(ipKey('::1')).toBe('0:0:0:0::/64');
+  });
+
+  it('leaves IPv4, IPv4-mapped IPv6 and unparseable values as they are', () => {
+    expect(ipKey('203.0.113.7')).toBe('203.0.113.7');
+    expect(ipKey('::ffff:203.0.113.7')).toBe('::ffff:203.0.113.7');
+    expect(ipKey('::ffff:cb00:7107')).toBe('::ffff:cb00:7107');
+    expect(ipKey('::ffff:203.0.113.8')).not.toBe(ipKey('::ffff:203.0.113.7'));
+    expect(ipKey('unknown')).toBe('unknown');
+    expect(byIp({ ip: undefined } as never)).toBe('unknown');
+    expect(byIp({ ip: '203.0.113.7' } as never)).toBe('203.0.113.7');
+  });
+
+  it('shares one bucket inside a /64 and separates /64s, through the limiter', () => {
+    const handler = rateLimit({ max: 2, windowMs: 60_000 });
+    const hit = (ip: string): number => {
+      let status = 200;
+      handler({ ip, baseUrl: '', path: '/' } as never, { setHeader() {}, status(c: number) { status = c; return this; }, json() {} } as never, () => {});
+      return status;
+    };
+    expect(hit('2001:db8:1:2::1')).toBe(200);
+    expect(hit('2001:db8:1:2:9::2')).toBe(200);
+    expect(hit('2001:db8:1:2:8:8:8:8')).toBe(429);
+    expect(hit('2001:db8:1:3::1')).toBe(200);
+    expect(hit('203.0.113.1')).toBe(200);
+  });
+
+  it('at the key cap, new keys share one overflow bucket and tracked keys keep their counts', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let n = 0;
+    let who = 'abuser';
+    const handler = rateLimit({ max: 2, windowMs: 1_000_000 }, () => 5_000_000, () => who);
+    const hit = (): number => {
+      let status = 200;
+      handler({ baseUrl: '', path: '/' } as never, { setHeader() {}, status(c: number) { status = c; return this; }, json() {} } as never, () => {});
+      return status;
+    };
+    expect(hit()).toBe(200);
+    expect(hit()).toBe(200);
+    expect(hit()).toBe(429);
+    for (let i = 0; i < MAX_KEYS; i++) { who = `flood${n++}`; hit(); } // fill the map and push past the cap
+    who = 'abuser';
+    expect(hit()).toBe(429); // a flood of new keys did not reset the abuser's counter
+    who = 'latecomer1';
+    const first = [hit(), hit(), hit()];
+    who = 'latecomer2';
+    expect(hit()).toBe(429); // untracked callers share one limited bucket
+    expect(first).toContain(429);
+    warn.mockRestore();
   });
 });
