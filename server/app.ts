@@ -341,8 +341,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     });
     // QA and staging: the same files with the environment in the name, so the installed apps can be told apart (appLabel.ts).
     if (appLabel) {
-      app.get('/manifest.webmanifest', (_req, res) => void res.set('Cache-Control', NO_CACHE).type('application/manifest+json').send(brandManifest(readFileSync(join(root, 'manifest.webmanifest'), 'utf8'), appLabel)));
-      app.get(['/', '/index.html'], (_req, res) => void res.set('Cache-Control', NO_CACHE).type('html').send(brandHtml(readFileSync(join(root, 'index.html'), 'utf8'), appLabel)));
+      app.get('/manifest.webmanifest', rateLimit(byUser, { windowMs: 60_000, max: 60 }), (_req, res) => void res.set('Cache-Control', NO_CACHE).type('application/manifest+json').send(brandManifest(readFileSync(join(root, 'manifest.webmanifest'), 'utf8'), appLabel)));
+      app.get(['/', '/index.html'], rateLimit(byUser, { windowMs: 60_000, max: 60 }), (_req, res) => void res.set('Cache-Control', NO_CACHE).type('html').send(brandHtml(readFileSync(join(root, 'index.html'), 'utf8'), appLabel)));
     }
     app.use(express.static(root, { index: false, setHeaders: (res, file) => void res.setHeader('Cache-Control', cacheControl(file, root)) }));
     // A page route (no file extension) gets the app, which draws it. A missing file (/assets/old.js) stays a 404, so a
