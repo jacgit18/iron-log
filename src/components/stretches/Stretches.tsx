@@ -173,7 +173,7 @@ export default function Stretches() {
               </div>
               <RemovedNotice scope={`sday:${wk}:${d}`} />
               {drawn && items.length > 0 && <WarmUp d={d} />}
-              {!drawn ? null : t.skipped ?<p className="note">Skipped. It doesn’t count for or against this week.</p> : <>
+              {!drawn ? null : t.skipped ? <p className="note">Skipped. It doesn’t count for or against this week.</p> : <>
               {!primary.length && !extras.length && <p className="note">No daily stretches yet. Add some in the Program tab.</p>}
               {primary.map(g => <GroupCard key={g.name} d={d} name={g.name} items={g.items} tier="primary" />)}
               {extras.length > 0 && (
