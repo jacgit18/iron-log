@@ -19,6 +19,23 @@
   font-weight: 600;
   white-space: nowrap;
 }
+/* The Edit mode banner at the top of a checked-off card's sheet (brief board-edit-button). */
+.editbanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4) var(--sp-8);
+  margin-bottom: var(--sp-12);
+  padding: var(--sp-8) var(--sp-12);
+  border-radius: var(--r-md);
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-size: var(--fs-md);
+}
+.editbanner b {
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
 .loggedsum {
   margin: 0 0 var(--sp-8);
   color: var(--muted);
