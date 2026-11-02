@@ -83,6 +83,7 @@ test('restoring the account backup brings a lost food log back on screen and int
   await expect(dialog).toContainText('Food log: 2 entries');
   await dialog.getByRole('button', { name: 'Add to my data' }).click();
   await expect.poll(async () => (await dietRows(user)).map(r => r.data.n).sort(), { message: 'the restored entries are written to the account' }).toEqual(['Eggs', 'Oats']);
-  await nutrition(page).catch(() => {});
+  await nutrition(page);
+  await expect(diet(page).locator('.dt-entry')).toHaveCount(2);
   await a.close();
 });
