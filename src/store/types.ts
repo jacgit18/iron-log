@@ -332,7 +332,7 @@ export interface GrocerySlice {
   grocery: Grocery;
   groceryMonths: Record<string, GroceryMonth>; // "YYYY-MM" -> that month; a month with no entry is the fresh list
   loadGrocery(): void; // syncing off: read the list from this browser's storage
-  setGrocery(data: GroceryData): void; // an import replaces everything
+  setGrocery(data: GroceryData, deferRemoves?: boolean): string[]; // an import replaces everything; with deferRemoves the old months' paths are returned, not removed
   addGrocery(data: GroceryData): void; // an import, or this device's old list reaching the account, adds what is missing
   addGroceryItem(d: GroceryForm): string | null;
   updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean; note: string; unit: GroceryUnit | '' }>): string | null;
@@ -491,6 +491,7 @@ export interface CoreSlice {
   removeDoc(path: string): void;
   mutateCfg(fn: (c: Cfg) => void): boolean;
   mutateWeek(fn: (w: Week) => void): boolean;
+  transact<T>(fn: () => T, fallback: T): T;
   /** Rewrites this week's record of what it runs (ADR 022) from today's program, when the board shows this week and it has one. */
   refreshRan(): void;
 
