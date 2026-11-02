@@ -130,6 +130,12 @@ function cacheControl(file: string, root: string): string {
   return ONE_HOUR;
 }
 
+/** Better Auth keeps a code under `<kind>-otp-<email>`; every kind is cleared, so nothing carrying the address is left after the account goes. */
+async function purgeCodesFor(auth: Auth, email: string): Promise<void> {
+  const adapter = (await auth.$context).internalAdapter;
+  for (const kind of ['sign-in', 'email-verification', 'forget-password']) await adapter.deleteVerificationByIdentifier(`${kind}-otp-${email.toLowerCase()}`);
+}
+
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
 export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, appLabel, signupCap, pii }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
@@ -225,7 +231,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
-  if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap }));
+  if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
   if (db) app.use('/api/push', rateLimit(limits.push, undefined, byUser), pushRoutes({ db, publicKey: push?.publicKey, scheduler: push?.scheduler, now: push?.now }));
@@ -235,8 +241,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   });
   app.post('/api/account/delete', rateLimit(limits.account, undefined, byUser), async (req, res) => {
     const email = (res.locals.account as Account).email;
-    // Better Auth keeps a code under `<kind>-otp-<email>`; every kind is cleared, so nothing carrying the address is left after the account goes.
-    const purge = auth && email ? async () => { const adapter = (await auth.$context).internalAdapter; for (const kind of ['sign-in', 'email-verification', 'forget-password']) await adapter.deleteVerificationByIdentifier(`${kind}-otp-${email.toLowerCase()}`); } : undefined;
+    const purge = auth && email ? () => purgeCodesFor(auth, email) : undefined;
     const userId = String(res.locals.userId);
     const result = await deleteMyAccount(db!, userId, req.body, purge, () => cancelBillingFor(db!, billing?.api)(userId));
     res.status(result.status).json(result.body);

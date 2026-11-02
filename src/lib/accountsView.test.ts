@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actionText, capPercent, capText, joinedText, planText } from './accountsView.js';
+import { actionText, capPercent, capText, deleteConfirmMatches, joinedText, planText } from './accountsView.js';
 
 describe('accountsView', () => {
   it('writes the cap', () => {
@@ -24,5 +24,11 @@ describe('accountsView', () => {
   it('writes a log line, also for an account that is gone', () => {
     expect(actionText({ action: 'suspend', targetId: '15' })).toBe('Suspended account 15');
     expect(actionText({ action: 'restore', targetId: null })).toBe('Restored an account that was deleted');
+  });
+  it('writes the delete line without a number, and matches the typed number exactly', () => {
+    expect(actionText({ action: 'delete', targetId: null })).toBe('Deleted an account');
+    expect(deleteConfirmMatches('15', '15')).toBe(true);
+    expect(deleteConfirmMatches(' 15 ', '15')).toBe(true);
+    for (const typed of ['', '1', '150', '015', 'fifteen', '15x']) expect(deleteConfirmMatches(typed, '15')).toBe(false);
   });
 });
