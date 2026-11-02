@@ -12,8 +12,38 @@
 .filtergroup {
   display: contents;
 }
-.filtertoggle {
-  display: none;
+.filtericon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  padding: 0;
+  margin-left: auto;
+  font-size: var(--fs-md);
+}
+.filterbadge {
+  position: absolute;
+  top: calc(-1 * var(--sp-6));
+  right: calc(-1 * var(--sp-6));
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  /* token-ok: a count badge */
+  border-radius: 9px;
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.filtersummary {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 36px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
 }
 .filterfields {
   display: flex;
@@ -58,25 +88,8 @@
   .boardroot .filterbar {
     margin-block: 0 var(--sp-4);
   }
-  .filtertoggle {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-  }
-  .filterfields {
-    display: none;
-  }
-  .filterfields.open {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    width: 100%;
-  }
-  .filterfields .field {
-    min-width: 0;
-  }
-  .filterfields .btn {
-    grid-column: 1/-1;
-    justify-self: start;
+  .boardroot .filterbar .injsw {
+    margin-left: 0;
   }
   .edtop.boardtabtop {
     padding-block: var(--sp-4) var(--sp-8);

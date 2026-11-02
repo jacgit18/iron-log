@@ -13,6 +13,7 @@ const STROKE = {
   'chevron-up': 'M5 15l7-7 7 7',
   close: 'M6 6l12 12M18 6L6 18',
   edit: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
+  filter: 'M4 6h16M7 12h10M10 18h4',
   info: 'M12 11v6M12 7.5v.01M12 3a9 9 0 100 18 9 9 0 000-18z',
   moon: 'M12 3a6 6 0 009 9 9 9 0 11-9-9z',
   spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z',
