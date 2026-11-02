@@ -28,11 +28,12 @@ export function actionText(a: { action: string; targetId: string | null }): stri
 export const deleteConfirmMatches = (typed: string, id: string): boolean => typed.trim() === id;
 
 /** What the page says for each failure. */
-export const SAY: Record<'failed' | 'forbidden' | 'offline' | 'refused' | 'gone' | 'unavailable', string> = {
+export const SAY: Record<'failed' | 'forbidden' | 'offline' | 'refused' | 'gone' | 'unavailable' | 'changed', string> = {
   failed: 'Could not load the accounts. Try again.',
   forbidden: 'Not allowed. An admin needs both the admin list entry on the server and is_admin set in the database.',
   offline: 'You are offline. Accounts need a connection.',
   refused: 'That account cannot be changed: an admin account cannot be suspended or deleted, and an account must be suspended before it is deleted.',
+  changed: 'The account changed while it was being deleted. Nothing was deleted, but its subscription was already ended; check it.',
   unavailable: 'Could not cancel the subscription, so nothing was deleted. Try again.',
   gone: 'That account no longer exists.',
 };

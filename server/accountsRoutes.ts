@@ -78,12 +78,15 @@ export function accountsRoutes({ db, pii, signupCap, deleteCustomer, purgeCodes 
     if (!/^[1-9]\d{0,17}$/.test(id)) return void res.status(422).json({ ok: false, error: 'send an account number' });
     const confirm = (req.body as { confirm?: unknown } | undefined)?.confirm;
     if (confirm !== id) return void res.status(422).json({ ok: false, error: `send {"confirm":"${id}"} to delete the account` });
+    let endedStripe = false;
     try {
       const info = await asAdmin(res.locals.userId, async trx =>
         (await sql<{ i: { sealedEmail: string | null; stripeCustomerId: string | null } | null }>`select admin_account_for_delete(${id}::bigint) as i`.execute(trx)).rows[0]!.i);
       if (!info) return void res.status(404).json({ ok: false, error: 'no such account' });
+      // Known narrow race: Stripe cannot join the database transaction, so the customer is ended before the delete re-checks the account. If another
+      // admin presses Restore in that gap the delete is refused (below) with the customer already gone; that case is logged and said out loud.
       try {
-        if (info.stripeCustomerId) await deleteCustomer?.(info.stripeCustomerId);
+        if (info.stripeCustomerId && deleteCustomer) { await deleteCustomer(info.stripeCustomerId); endedStripe = true; }
       } catch (err) {
         console.error(JSON.stringify({ msg: 'could not end the subscription before an admin deleted an account', error: err instanceof Error ? err.message : String(err) }));
         return void res.status(503).json({ ok: false, error: 'could not cancel the subscription, so nothing was deleted; try again' });
@@ -104,7 +107,13 @@ export function accountsRoutes({ db, pii, signupCap, deleteCustomer, purgeCodes 
       res.json({ ok: true });
     } catch (err) {
       if (notAllowed(err)) return void res.status(403).json({ ok: false, error: 'not available' });
-      if (refusedTarget(err)) return void res.status(422).json({ ok: false, error: err instanceof Error && /suspend/.test(err.message) ? 'suspend the account first' : 'an admin account cannot be deleted' });
+      if (refusedTarget(err)) {
+        if (endedStripe) {
+          console.error(JSON.stringify({ msg: 'an admin delete was refused after the Stripe customer was ended: the account changed in between', accountId: id }));
+          return void res.status(409).json({ ok: false, error: 'the account changed while it was being deleted, nothing was deleted, but its subscription was already ended; check it' });
+        }
+        return void res.status(422).json({ ok: false, error: err instanceof Error && /suspend/.test(err.message) ? 'suspend the account first' : 'an admin account cannot be deleted' });
+      }
       throw err;
     }
   });

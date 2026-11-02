@@ -60,5 +60,7 @@ describe('deleteAccount', () => {
     expect(await deleteAccount('15')).toEqual({ ok: false, reason: 'gone' });
     vi.stubGlobal('fetch', reply(503, { ok: false }));
     expect(await deleteAccount('15')).toEqual({ ok: false, reason: 'unavailable' });
+    vi.stubGlobal('fetch', reply(409, { ok: false }));
+    expect(await deleteAccount('15')).toEqual({ ok: false, reason: 'changed' });
   });
 });

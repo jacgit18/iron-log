@@ -4,7 +4,7 @@
 --   * admin_actions.action may now be 'delete'. The log row is written before the account goes; its target id is then set null by the foreign key.
 --   * admin_account_for_delete(): what the server needs before deleting (sealed email for the emailed-code purge, Stripe customer id, flags).
 --   * admin_delete_account(): the body of delete_my_account() (migration 20261008000003) for another account. It is a copy, not a refactor, so the
---     self-service function and its tests stay as they are; server/db/rls.test.ts checks both leave no row in any table with a user_id column.
+--     self-service function and its tests stay as they are; server/accountsRoutes.test.ts (`rowsOf`) checks the delete leaves no row in any table with a user_id column.
 -- Each raises SQLSTATE 42501 unless the caller has users.is_admin; 22023 for the caller, another admin, or an account that is not suspended.
 alter table admin_actions drop constraint admin_actions_action_check;
 alter table admin_actions add constraint admin_actions_action_check check (action in ('suspend', 'restore', 'delete'));
@@ -72,6 +72,7 @@ grant execute on function admin_delete_account(bigint) to ironlog_app;
 
 drop function admin_delete_account(bigint);
 drop function admin_account_for_delete(bigint);
-delete from admin_actions where action = 'delete';
+-- Rollback keeps the audit rows of admin deletes (the deletes cannot be undone, so the record stays): the old check is added NOT VALID, so it
+-- applies to new rows only and the existing 'delete' rows are left alone.
 alter table admin_actions drop constraint admin_actions_action_check;
-alter table admin_actions add constraint admin_actions_action_check check (action in ('suspend', 'restore'));
+alter table admin_actions add constraint admin_actions_action_check check (action in ('suspend', 'restore')) not valid;

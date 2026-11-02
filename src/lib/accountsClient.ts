@@ -2,7 +2,7 @@ import { signIn } from '../sync/devUser.js';
 
 // The admin accounts screen's calls to /api/accounts (brief admin-accounts-screen). Nothing here is stored or synced: it is read from the
 // server each time, and every failure comes back as a plain reason, never a throw, so the screen can say what happened.
-export type AccountsFailure = { ok: false; reason: 'failed' | 'forbidden' | 'offline' | 'refused' | 'gone' | 'unavailable' };
+export type AccountsFailure = { ok: false; reason: 'failed' | 'forbidden' | 'offline' | 'refused' | 'gone' | 'unavailable' | 'changed' };
 
 export interface AccountRow { id: string; label: string; plan: string; isAdmin: boolean; joined: string; suspended: boolean }
 export interface AccountAction { id: string; action: 'suspend' | 'restore' | 'delete'; adminId: string | null; targetId: string | null; at: string }
@@ -17,6 +17,7 @@ async function call(method: 'GET' | 'POST', path: string, body?: unknown): Promi
   } catch { return { ok: false, reason: 'offline' }; }
   if (res.status === 403) return { ok: false, reason: 'forbidden' };
   if (res.status === 404) return { ok: false, reason: 'gone' };
+  if (res.status === 409) return { ok: false, reason: 'changed' };
   if (res.status === 422) return { ok: false, reason: 'refused' };
   if (res.status === 503) return { ok: false, reason: 'unavailable' };
   if (!res.ok) return { ok: false, reason: 'failed' };

@@ -243,6 +243,15 @@ describe('delete forever', () => {
     expect((await owner.selectFrom('users').select('id').where('id', '=', target).execute()).length).toBe(1);
   });
 
+  it('says so, and deletes nothing, when the account is restored while its Stripe customer is being ended', async () => {
+    const { admin, target } = await seedSuspended('race-login', { stripe_customer_id: 'cus_789' });
+    const base = await routerApp({ deleteCustomer: async () => { await owner.updateTable('users').set({ suspended_at: null }).where('id', '=', target).execute(); } });
+    const res = await fetch(`${base}/api/accounts/${target}/delete`, { method: 'POST', headers: { 'x-uid': String(admin), 'content-type': 'application/json' }, body: JSON.stringify({ confirm: String(target) }) });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toMatch(/subscription was already ended/);
+    expect((await owner.selectFrom('users').select('id').where('id', '=', target).execute()).length).toBe(1);
+  });
+
   it('still deletes when clearing the codes fails (they expire by themselves)', async () => {
     const base = await routerApp({ purgeCodes: async () => { throw new Error('auth down'); } });
     const { admin, target } = await seedSuspended('codes-login');
