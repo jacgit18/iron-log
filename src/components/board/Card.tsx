@@ -5,6 +5,7 @@ import type { PhaseKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import type { AppState } from '../../store/types.ts';
 import { cardWeek, cardLogs, type CardWeek } from '../../lib/cardView.js';
+import { logButtonLabel } from '../../lib/loggedEntry.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, exInfo, videoLabel } from '../../lib/data.js';
 import { eqName } from '../../lib/equipment.js';
@@ -47,6 +48,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
   const cfg = useAppStore(st => st.cfg);
   // Only this card's part of the week and logs (lib/cardView.ts), so a tick on another card does not redraw this one.
   const week = useCardWeek(s);
+  const wk = useAppStore(st => st.weekKey());
   const logs = useAppStore(useShallow((st: AppState) => cardLogs(st.logs, s)));
   const { checkCard, checkItem, setPhase, quickLog, openModal, moveSlot, moveSupersetItem, unmoveSupersetItem, skipCard, skipItem, removeExtra } = useAppStore.getState();
   const startHold = useTimerStore(st => st.startHold);
@@ -126,6 +128,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
         const t = targetOf(cfg, logs, it, ph); const last = lastSession(logs, it.ex, ph);
         const idone = paired && isItemDone(s, idx, week);
         const isk = isItemSkipped(s, idx, week); // this exercise skipped on its own (superset)
+        const editing = logButtonLabel(logs[it.ex], s.id, wk, isItemDone(s, idx, week), sk || isk) === 'Edit'; // checked off with a logged session: the button says Edit
         const rx = rxOf(cfg, it, ph);
         const bo = backoffOf(cfg, logs, it, ph); const st = !bo && stallOf(cfg, logs, it.ex, ph);
         const hp = isTimed(ph) ? holdPlan(cfg, week, logs, s, idx) : null;
@@ -166,7 +169,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
                   : t.src && <span className="rx">{t.src}</span>}
                 {hp && !isk && !sk && <button type="button" className="btn sm" id={`hold-${s.id}-${idx}`} aria-label={`Hold ${hp.sets}×${hp.hold}s: ${ex.n}`} onClick={() => startHold(ex.n, hp.sets, hp.hold)}>Hold {hp.sets}×{hp.hold}s</button>}
                 {last && !isk && !sk && <button type="button" className="btn sm" id={`rep-${s.id}-${idx}`} aria-label={`Same as last: log ${ex.n} again, ${describe(last)}`} onClick={() => quickLog(s.id, idx)}>Same as last</button>}
-                <button type="button" className="btn sm logbtn" id={`log-${s.id}-${idx}`} aria-label={`Log ${ex.n}`} onClick={() => openModal({ type: 'log', slotId: s.id, idx })}>Log</button>
+                <button type="button" className={`btn sm logbtn${editing ? ' editbtn' : ''}`} id={`log-${s.id}-${idx}`} aria-label={`${editing ? 'Edit' : 'Log'} ${ex.n}`} onClick={() => openModal({ type: 'log', slotId: s.id, idx })}>{editing && <Icon name="edit" />}{editing ? 'Edit' : 'Log'}</button>
               </div>
               {it.note && <div className="note">{it.note}</div>}
               {last && <div className="lastlog">Last: {describe(last)} · {fmtShort(parseDate(last.d))}</div>}
