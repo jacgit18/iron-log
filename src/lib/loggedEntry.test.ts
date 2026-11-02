@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loggedEntryFor, sheetEntryFor } from './loggedEntry.js';
+import { editModeText, loggedEntryFor, logButtonLabel, sheetEntryFor } from './loggedEntry.js';
 import type { LogEntry } from '../types.ts';
 
 const e = (d: string, slot: string, wk: string, extra: Partial<LogEntry> = {}): LogEntry => ({ d, ph: null, w: 100, s: 3, r: 8, slot, wk, ...extra });
@@ -32,5 +32,29 @@ describe('sheetEntryFor', () => {
   it('gives the blank form to a card that is neither done nor skipped, or has nothing logged', () => {
     expect(sheetEntryFor([real], 'a', '2026-11-02', false, false)).toBeNull();
     expect(sheetEntryFor(undefined, 'a', '2026-11-02', false, true)).toBeNull();
+  });
+});
+
+describe('logButtonLabel and editModeText (brief board-edit-button)', () => {
+  const real = e('2026-10-27', 'A-d1s1', '2026-10-26');
+  const auto = e('2026-10-27', 'A-d1s1', '2026-10-26', { auto: true });
+  it('says Edit for a checked-off card with a logged session, auto or real', () => {
+    expect(logButtonLabel([real], 'A-d1s1', '2026-10-26', true, false)).toBe('Edit');
+    expect(logButtonLabel([auto], 'A-d1s1', '2026-10-26', true, false)).toBe('Edit');
+  });
+  it('says Log for an unchecked card, a checked card with no session, another week, or another card', () => {
+    expect(logButtonLabel([real], 'A-d1s1', '2026-10-26', false, false)).toBe('Log');
+    expect(logButtonLabel([], 'A-d1s1', '2026-10-26', true, false)).toBe('Log');
+    expect(logButtonLabel(undefined, 'A-d1s1', '2026-10-26', true, false)).toBe('Log');
+    expect(logButtonLabel([real], 'A-d1s1', '2026-11-02', true, false)).toBe('Log');
+    expect(logButtonLabel([real], 'B-d2s1', '2026-10-26', true, false)).toBe('Log');
+  });
+  it('says Log for a skipped card, with or without a session (its button and sheet are unchanged)', () => {
+    expect(logButtonLabel([real], 'A-d1s1', '2026-10-26', false, true)).toBe('Log');
+    expect(logButtonLabel([real], 'A-d1s1', '2026-10-26', true, true)).toBe('Log');
+    expect(logButtonLabel([], 'A-d1s1', '2026-10-26', false, true)).toBe('Log');
+  });
+  it('writes the banner line with the session date', () => {
+    expect(editModeText('Nov 1')).toBe('You are changing the session logged Nov 1');
   });
 });
