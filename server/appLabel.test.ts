@@ -13,13 +13,13 @@ describe('appLabelFrom', () => {
 });
 
 describe('branding', () => {
-  it('renames the manifest and keeps its other fields', () => {
+  it('keeps the installed name and every other manifest field', () => {
     const out = JSON.parse(brandManifest('{"name":"Loadbearer","short_name":"Loadbearer","display":"standalone"}', 'QA'));
-    expect(out).toEqual({ name: 'Loadbearer QA', short_name: 'Loadbearer QA', display: 'standalone' });
+    expect(out).toEqual({ name: 'Loadbearer', short_name: 'Loadbearer', display: 'standalone' });
   });
-  it('renames the page title and the iOS home-screen title', () => {
+  it('renames the page title and leaves the iOS home-screen title plain', () => {
     const html = '<title>Loadbearer</title><meta name="apple-mobile-web-app-title" content="Loadbearer">';
-    expect(brandHtml(html, 'Staging')).toBe('<title>Loadbearer Staging</title><meta name="apple-mobile-web-app-title" content="Loadbearer Staging">');
+    expect(brandHtml(html, 'Staging')).toBe('<title>Loadbearer Staging</title><meta name="apple-mobile-web-app-title" content="Loadbearer">');
   });
 });
 
@@ -49,7 +49,7 @@ describe('the real index.html', () => {
     const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     const out = brandHtml(html, 'QA');
     expect(out).toContain('<title>Loadbearer QA</title>');
-    expect(out).toContain('name="apple-mobile-web-app-title" content="Loadbearer QA"');
+    expect(out).toContain('name="apple-mobile-web-app-title" content="Loadbearer"');
     expect(out).toContain('href="/icons/qa/apple-touch-icon.png"');
     expect(out).toContain('href="/icons/qa/logo.svg"');
   });

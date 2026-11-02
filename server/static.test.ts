@@ -202,20 +202,20 @@ describe('a build under a hidden folder', () => {
 });
 
 describe('APP_LABEL (appLabel.ts)', () => {
-  it('names the installed app after the environment, and leaves production unchanged', async () => {
-    writeFileSync(join(dir, 'manifest.webmanifest'), '{"name":"Loadbearer","short_name":"Loadbearer"}');
+  it('marks the page title and icons with the environment, and leaves production unchanged', async () => {
+    writeFileSync(join(dir, 'manifest.webmanifest'), '{"name":"Loadbearer","short_name":"Loadbearer","icons":[{"src":"icons/icon-192.png"}]}');
     const labelled = createApp({ staticDir: dir, appLabel: 'QA' }).listen(0);
     await new Promise(done => labelled.once('listening', done));
     const url = `http://127.0.0.1:${(labelled.address() as AddressInfo).port}`;
     try {
-      expect(((await (await fetch(`${url}/manifest.webmanifest`)).json()) as { name: string }).name).toBe('Loadbearer QA');
+      expect(((await (await fetch(`${url}/manifest.webmanifest`)).json()) as { icons: { src: string }[] }).icons[0]!.src).toBe('icons/qa/icon-192.png');
       expect(await (await fetch(`${url}/`)).text()).toContain('<title>Loadbearer QA</title>');
       expect(await (await fetch(`${url}/progress`)).text()).toContain('<title>Loadbearer QA</title>');
       // The service worker precaches both files by asking the server for them with a revision query. Those copies are what it answers
       // later visits with, so they must be the branded ones too (the page, the name and the icons all come from them).
-      expect(((await (await fetch(`${url}/manifest.webmanifest?__WB_REVISION__=abc`)).json()) as { name: string }).name).toBe('Loadbearer QA');
+      expect(((await (await fetch(`${url}/manifest.webmanifest?__WB_REVISION__=abc`)).json()) as { icons: { src: string }[] }).icons[0]!.src).toBe('icons/qa/icon-192.png');
       expect(await (await fetch(`${url}/index.html?__WB_REVISION__=abc`)).text()).toContain('<title>Loadbearer QA</title>');
-      expect(((await (await get('/manifest.webmanifest')).json()) as { name: string }).name).toBe('Loadbearer');
+      expect(((await (await get('/manifest.webmanifest')).json()) as { icons: { src: string }[] }).icons[0]!.src).toBe('icons/icon-192.png');
       expect(await (await get('/')).text()).toContain('<title>Loadbearer</title>');
     } finally {
       await new Promise<void>(done => labelled.close(() => done()));
