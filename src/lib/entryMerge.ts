@@ -83,5 +83,5 @@ export function mergeWeek(a: unknown, b: unknown): Week {
 
 export function dataStats(d: Partial<DataFile>) {
   const L = Object.values(d.logs || {}); const sets = L.reduce((a, l) => a + l.length, 0);
-  return { entries: sets, exercises: L.filter(l => l.length).length, weeks: Object.keys(d.weeks || {}).length, programs: Object.keys(d.programs || {}), saved: (d.library || []).length, body: (d.body || []).length, experiments: (d.experiments || []).length, stretches: d.stretches ? d.stretches.items.length : 0, stretchWeeks: Object.keys(d.stretchWeeks || {}).length, waterDays: d.supplements ? Object.keys(d.supplements.water).length : 0, groceryItems: d.grocery ? d.grocery.items.length : 0, groceryMonths: d.grocery ? Object.keys(d.grocery.months).length : 0 };
+  return { entries: sets, exercises: L.filter(l => l.length).length, weeks: Object.keys(d.weeks || {}).length, programs: Object.keys(d.programs || {}), saved: (d.library || []).length, body: (d.body || []).length, experiments: (d.experiments || []).length, stretches: d.stretches ? d.stretches.items.length : 0, stretchWeeks: Object.keys(d.stretchWeeks || {}).length, waterDays: d.supplements ? Object.keys(d.supplements.water).length : 0, groceryItems: d.grocery ? d.grocery.items.length : 0, groceryMonths: d.grocery ? Object.keys(d.grocery.months).length : 0, dietEntries: (d.diet || []).length };
 }
