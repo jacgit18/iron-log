@@ -136,5 +136,5 @@ QA (ADR 060) also needs a GitHub environment named qa with one secret, QA_DATABA
 after scripts/qa-db.mjs reset --apply has marked it. Its first deploy is made by hand (IRON_LOG_ENV=qa scripts/deploy-cloud-run.sh deploy).
 
 Then the next merge to main deploys itself once its tests pass. Optional: Settings -> Environments -> production -> Required reviewers
-to approve each deploy by hand.
+to approve each deploy by hand (iron-log runs without them since 2026-11-02).
 OUT
