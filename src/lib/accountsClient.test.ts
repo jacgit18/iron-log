@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listAccounts, setSuspendedState } from './accountsClient.js';
+import { deleteAccount, listAccounts, setSuspendedState } from './accountsClient.js';
 
 // The admin accounts screen's calls: every failure is a plain reason, never a throw (brief admin-accounts-screen).
 const reply = (status: number, body?: unknown) => vi.fn(async (_url: string, _init?: RequestInit) => new Response(body === undefined ? null : JSON.stringify(body), { status }));
@@ -40,5 +40,27 @@ describe('setSuspendedState', () => {
     expect(await setSuspendedState('1', true)).toEqual({ ok: false, reason: 'refused' });
     vi.stubGlobal('fetch', reply(404, { ok: false }));
     expect(await setSuspendedState('9', true)).toEqual({ ok: false, reason: 'gone' });
+  });
+});
+
+describe('deleteAccount', () => {
+  it('posts the account number as the confirmation', async () => {
+    const f = reply(200, { ok: true });
+    vi.stubGlobal('fetch', f);
+    expect(await deleteAccount('15')).toEqual({ ok: true });
+    const [url, init] = f.mock.calls[0]!;
+    expect(url).toBe('/api/accounts/15/delete');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({ confirm: '15' });
+  });
+  it('names a refusal, a missing account and a Stripe failure', async () => {
+    vi.stubGlobal('fetch', reply(422, { ok: false }));
+    expect(await deleteAccount('15')).toEqual({ ok: false, reason: 'refused' });
+    vi.stubGlobal('fetch', reply(404, { ok: false }));
+    expect(await deleteAccount('15')).toEqual({ ok: false, reason: 'gone' });
+    vi.stubGlobal('fetch', reply(503, { ok: false }));
+    expect(await deleteAccount('15')).toEqual({ ok: false, reason: 'unavailable' });
+    vi.stubGlobal('fetch', reply(409, { ok: false }));
+    expect(await deleteAccount('15')).toEqual({ ok: false, reason: 'changed' });
   });
 });
