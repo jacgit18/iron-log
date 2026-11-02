@@ -1,4 +1,5 @@
 import { dietPosition } from '../../src/shared/diet.ts';
+import { BUILTIN_EXERCISES } from './builtinExercises.ts';
 import type { Persona } from './personas.ts';
 
 /* ---------- What the seed script writes for one persona, as plain rows ----------
@@ -14,7 +15,7 @@ export interface PersonaRows {
   dietEntries: SeedDiet[];
   recipes: SeedRecipe[];
   /** The config row's document, or null when the account has no settings. */
-  config: { diet: Record<string, unknown> } | null;
+  config: { diet?: Record<string, unknown>; ex?: Record<string, { n: string; eq?: string }> } | null;
   logs: SeedLog[];
   body: SeedBody[];
   groceryItems: SeedGrocery[];
@@ -98,7 +99,7 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
   }
   const dietEntries = buildDiet(persona, t);
   const recipes = buildRecipes(persona);
-  return { logs, body, groceryItems, groceryStores, dietEntries, recipes, config: buildConfig(persona, t, recipes), programs: spec.programs, erased: spec.erased === true };
+  return { logs, body, groceryItems, groceryStores, dietEntries, recipes, config: buildConfig(persona, t, recipes, exerciseIds), programs: spec.programs, erased: spec.erased === true };
 }
 
 /** The diet log: `pastDays` full days, then today up to its share of the targets (the first foods in order, or every food scaled up when over). */
@@ -144,8 +145,8 @@ function buildRecipes(persona: Persona): SeedRecipe[] {
   return out;
 }
 
-/** The settings document: the diet targets, saved meals and the plan (which uses the saved meals and the first recipe of each day). */
-function buildConfig(persona: Persona, today: Date, recipes: SeedRecipe[]): PersonaRows['config'] {
+/** The settings document: the exercises the programs use (so the library lists them: a synced account lists only cfg.ex, ADR 024), the diet targets, saved meals and the plan (which uses the saved meals and the first recipe of each day). */
+function buildConfig(persona: Persona, today: Date, recipes: SeedRecipe[], exerciseIds: readonly string[]): PersonaRows['config'] {
   const spec = persona.data;
   const diet: Record<string, unknown> = {};
   if (spec.diet?.targets) Object.assign(diet, DIET_TARGETS, { pace: 'steady' });
@@ -163,5 +164,10 @@ function buildConfig(persona: Persona, today: Date, recipes: SeedRecipe[]): Pers
     plan[iso(addDays(today, day))] = items;
   }
   if (Object.keys(plan).length) diet.plan = plan;
-  return Object.keys(diet).length ? { diet } : null;
+  const ex: Record<string, { n: string; eq?: string }> = {};
+  if (spec.programs) for (const id of exerciseIds) { const b = BUILTIN_EXERCISES[id]; if (b) ex[id] = b.eq ? { n: b.n, eq: b.eq } : { n: b.n }; }
+  const config: NonNullable<PersonaRows['config']> = {};
+  if (Object.keys(ex).length) config.ex = ex;
+  if (Object.keys(diet).length) config.diet = diet;
+  return Object.keys(config).length ? config : null;
 }

@@ -55,15 +55,15 @@ export interface Scenario {
 export const SCENARIOS: readonly Scenario[] = [
   // ---- Diet targets and log ----
   {
-    id: 'S-01', feature: 'Diet targets and log', title: 'Read today and quick add a food', persona: 'diet-on-target', brief: 'diet-targets-and-log',
+    id: 'S-01', feature: 'Diet targets and log', title: 'Read today and add a one-off food', persona: 'diet-on-target', brief: 'diet-targets-and-log',
     steps: [
       'Open Nutrition and look at the Diet card for today.',
-      'Tap Quick add, enter "Rice", 200 kcal and 4 g protein, and press Add.',
+      'Under One-off food tap Add one, enter "Rice", 200 kcal and 4 g protein, and press Add.',
       'Edit the Rice entry to 250 kcal, then delete it.',
       'Use the day stepper to go back one day.',
     ],
     expected: [
-      'Before adding: three foods are logged and the bars read about "Calories 1,440 of 2,400" and "Protein 96 of 160".',
+      'Before adding: three foods are logged and the bars read about "Calories 1,440 of 2,400" and "Protein 58 of 160".',
       'Adding Rice moves the totals by 200 kcal and 4 g; editing and deleting move them again; the total returns to where it began.',
       'Yesterday shows its own full day of five foods, not today\'s.',
     ],
@@ -72,12 +72,12 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-02', feature: 'Diet targets and log', title: 'Over target, and the 20 entries a day limit', persona: 'diet-over-target', brief: 'diet-targets-and-log', edge: true,
     steps: [
       'Open Nutrition and read the Diet card for today.',
-      'Add small quick-add foods (for example "Tea", 5 kcal, 0 g) until the day holds 20 entries.',
-      'Try to add a 21st.',
+      'Add small one-off foods (for example "Tea", 5 kcal, 0 g) until the day holds 20 entries.',
+      'Look for a way to add a 21st.',
     ],
     expected: [
-      'Today is about 120% of the calories (about 2,880 of 2,400) and shown as over target; protein reads short (about 88 of 160).',
-      'The 21st add is refused and the message states the limit of 20 entries a day.',
+      'Today is about 120% of the calories (about 2,880 of 2,400) and shown as over target; protein reads short (about 106 of 160).',
+      'At 20 entries the add form is replaced by "That\'s 20 things for the day. Delete one to add another.", so a 21st cannot be tried; deleting one brings the form back.',
     ],
   },
 
@@ -117,11 +117,11 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Open Nutrition and use the day stepper to go to yesterday.',
       'In Saved meals tap "Usual breakfast".',
-      'Rename the meal "Weekday breakfast", then delete it and press Undo.',
+      'Rename the meal "Weekday breakfast", then press Delete, press it again ("Tap again to delete"), and press Undo.',
     ],
     expected: [
       'Tapping the meal adds each food as its own entry with the meal\'s numbers (two foods for Usual breakfast).',
-      'The rename shows at once; Delete shows an Undo notice and Undo brings the meal back.',
+      'The rename shows at once; Delete takes two taps and then shows an Undo notice; Undo brings the meal back.',
     ],
   },
   {
@@ -178,15 +178,15 @@ export const SCENARIOS: readonly Scenario[] = [
 
   // ---- Suggest and copy ----
   {
-    id: 'S-10', feature: 'Suggest and copy', title: 'Quick add suggests by the hour', persona: 'diet-on-target', brief: 'diet-suggest-and-copy',
+    id: 'S-10', feature: 'Suggest and copy', title: 'One-off food suggests by the hour', persona: 'diet-on-target', brief: 'diet-suggest-and-copy',
     steps: [
-      'Open Nutrition and Quick add.',
+      'Open Nutrition and, under One-off food, tap Add one.',
       'Read the suggested foods (the seed logged Oatmeal with berries near 8, Greek yogurt 10, Chicken and rice bowl 13, Almonds and fruit 16, Salmon with potatoes 19).',
-      'Tap the first suggestion, then press Undo.',
+      'Tap the first suggestion.',
     ],
     expected: [
       'The food eaten nearest to the current hour comes first; foods never eaten near this hour still appear after the ranked ones.',
-      'Tapping adds one portion with the latest numbers of that food and the totals move; Undo removes only that entry.',
+      'Tapping adds one portion with the latest numbers of that food and the totals move and the notice reads "Added <food>." (there is no Undo here; delete the entry by hand to put the day back).',
     ],
   },
   {
@@ -205,7 +205,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-12', feature: 'Auto macros', title: 'Calories follow typed macros', persona: 'diet-on-target', brief: 'diet-auto-macros',
     steps: [
-      'Open Quick add. Type protein 30, carbs 50 and fat 10 without touching Calories.',
+      'Open One-off food (Add one). Type protein 30, carbs 50 and fat 10 without touching Calories.',
       'Change Calories by hand to 500, then change protein to 40.',
     ],
     expected: [
@@ -216,7 +216,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-13', feature: 'Auto macros', title: 'Calories typed first are not overwritten', persona: 'diet-fresh', brief: 'diet-auto-macros', edge: true,
     steps: [
-      'Open Quick add and type Calories 300 first.',
+      'Open One-off food (Add one) and type Calories 300 first.',
       'Then type protein 20, carbs 20 and fat 5.',
     ],
     expected: [
@@ -226,7 +226,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-14', feature: 'Auto macros', title: 'Search past meals and recipes, with a portion stepper', persona: 'meal-planner', brief: 'diet-auto-macros',
     steps: [
-      'In Quick add open "Search your past meals and recipes" and type "oat".',
+      'On the Diet card use the "Search your past meals and recipes" box and type "oat".',
       'Pick Overnight oats, set the portion to 1.5, and press Add.',
     ],
     expected: [
@@ -263,7 +263,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-17', feature: 'Food lookup', title: 'Look up a food and scale it by grams', persona: 'diet-on-target', brief: 'diet-food-lookup',
     steps: [
-      'Open Quick add and type "banana" in the food search.',
+      'In the "Search your past meals and recipes" box type "banana".',
       'Pick a result and enter 150 g.',
       'Change Protein by hand and press Add.',
     ],
@@ -277,10 +277,10 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-18', feature: 'Food lookup', title: 'Food search offline', persona: 'diet-on-target', brief: 'diet-food-lookup', edge: true,
     steps: [
       'Turn the browser offline (DevTools Network, Offline).',
-      'Type "banana" in the food search, then type the numbers by hand and press Add.',
+      'In the "Search your past meals and recipes" box type "banana", then type the numbers by hand and press Add.',
     ],
     expected: [
-      'The search says "Food search is not available right now. You can still type the numbers." and the rest of the form keeps working; Add still logs the entry.',
+      'The search says "You are offline. You can still type the numbers." ("Food search is not available right now." is the message when the service is down, not when you are offline) and the rest of the form keeps working; Add still logs the entry.',
     ],
   },
 
@@ -290,11 +290,11 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'Open Recipes, then a recipe with calories and protein (for example Overnight oats).',
       'Press Ate this, choose yesterday in the Day field and confirm.',
-      'Press Undo. Then try a day 31 days back and a day in the future.',
+      'Press Undo. Then try a day 401 days back and a day in the future.',
     ],
     expected: [
       'One entry with the recipe\'s numbers and its recipe link is added to the chosen day; Undo removes only that entry.',
-      'A future day and a day over 30 days back are refused.',
+      'A future day ("Pick today or an earlier day.") and a day over 400 days back are refused; the app keeps 400 days of diet history.',
     ],
   },
   {
@@ -359,7 +359,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Change the recipe\'s Servings and look at the serving size.',
     ],
     expected: [
-      'The detail reads "N servings, about 1 bowl (250 g) each".',
+      'The detail reads "Serving size: 1 bowl (250 g)".',
       'Changing Servings leaves the text and the grams per serving as they were.',
     ],
   },
@@ -389,10 +389,12 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-27', feature: 'Recipe video link', title: 'A link must start with https://', persona: 'recipe-collector', brief: 'recipe-video-link', edge: true,
     steps: [
-      'Edit a recipe and enter "youtube.com/abc" in Video link, then press Save.',
+      'Edit a recipe and enter "youtube.com/abc" in Video link (a URL box), then press Save.',
+      'Then enter "http://youtube.com/abc" and press Save.',
     ],
     expected: [
-      'The form shows "Video link should start with https://" and does not save.',
+      'The browser blocks the first with its own "Please enter a URL." message and nothing saves; the app\'s "should start with https://" text only shows for a value the browser lets through.',
+      'The http:// link is accepted and saved.',
     ],
   },
 
@@ -413,13 +415,13 @@ export const SCENARIOS: readonly Scenario[] = [
     id: 'S-29', feature: 'Recipe auto-match', title: 'Maybe matches and Accept all', persona: 'recipe-collector', brief: 'recipe-auto-match', edge: true,
     steps: [
       'Open "Chicken and rice bowl" (ingredient "Chicken breast") while At home holds a "Chicken thighs" item.',
-      'Tap a "Maybe: <item>" line, then undo the pin by hand.',
+      'Choose the item from the "Maybe: <item>" dropdown, then undo the pin by hand.',
       'Open another recipe with several Maybe lines and press Accept all suggestions.',
     ],
     expected: [
-      'A close but inexact name shows "Maybe: <item>" and is not counted as a match until tapped.',
-      'Tapping pins it; Accept all pins every suggestion in one action and the button disappears when none are left.',
-      'The seeded names decide which recipes show Maybe; if none does, record that and add an At home item with a shared word.',
+      'A close but inexact name shows "Maybe: <item>" as a dropdown choice and is not counted as a match until chosen.',
+      'Choosing it pins it; Accept all pins every suggestion in one action and the button disappears when none are left.',
+      'Press Reset on the account first: anything added to the grocery list since the seed changes which recipes show Maybe. The seeded names decide which recipes show Maybe; if none does, record that and add an At home item with a shared word.',
     ],
   },
 
@@ -496,18 +498,18 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Reset is disabled on the account you are on ("Switch away to reset it").',
-      'After Reset, the account is back to its seed: three foods today and no recipes.',
+      'After Reset, the account is back to its seed: three foods today and the saved meal you added is gone. This account is seeded with no recipes (for a recipe check use Meal planner or Recipe collector).',
     ],
   },
   {
     id: 'S-36', feature: 'QA picker', title: 'Seed missing accounts and the Recent list', persona: 'new-user', brief: 'qa-picker-access', edge: true,
     steps: [
-      'Open the picker and look for a hollow dot (an account not seeded) and the "Seed missing accounts" button.',
+      'Open the picker and look for an account marked Not seeded (hollow dot) and the "Seed missing accounts" button. If every account is seeded, delete one through the app first (for example Legacy beta).',
       'Press it if shown, then switch to two accounts in turn.',
       'Reopen the picker.',
     ],
     expected: [
-      'An unseeded account\'s Switch is disabled with "Seed it first"; seeding fills the dot.',
+      'An unseeded account\'s Switch is disabled with "Seed it first"; pressing Seed missing accounts seeds it, fills the dot and the button goes away.',
       'The last three accounts appear under Recent, newest first.',
     ],
   },
@@ -538,7 +540,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-39', feature: 'Wide layouts', title: 'Exercise library in two columns', persona: 'superset-builder', brief: 'library-two-columns',
     steps: [
-      'Open the exercise library at 1920 px and at 1024 px.',
+      'Open Program, then Exercise library (`#/program/exercises`), at 1920 px and at 1024 px. The heading reads "Exercise library" and the search box "Search 46 exercises" (the account\'s two programs use 46; if it says 0, press Reset on the account).',
       'Use Search and an Equipment chip at 1920 px.',
     ],
     expected: [
