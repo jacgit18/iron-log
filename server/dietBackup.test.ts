@@ -11,7 +11,7 @@ import { normDietEntries } from '../src/shared/diet.js';
 import type { DietEntry } from '../src/types.ts';
 
 // Diet safety checks (brief diet-safety-checks): an account backup file holding a food log, comes back from the
-// server byte for byte, parses to the same entries, and a later wipe of the log the same day does not replace it (the shrink guard sees the log).
+// server byte for byte, parses to the same entries, and a later same-day copy with a smaller score is refused. This test covers storage and the header-based guard only; the score here is a stand-in (the server may import only src/shared), and the real backupScore counting the food log is covered by src/lib/dietBackup.test.ts.
 let db: Kysely<DB>;
 let app: Kysely<DB>;
 let stop: () => Promise<void>;
