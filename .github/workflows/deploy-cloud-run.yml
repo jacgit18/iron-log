@@ -5,7 +5,8 @@ name: Deploy to Cloud Run
 # left a run that only said so). The `staging` job deploys main to the staging service
 # first (ADRs 055 to 058): it migrates the staging database, deploys a revision with no traffic, checks it, promotes it and checks the
 # live staging service. Only when that passes does the `deploy` job (production) start, with no manual approval (owner's call 2026-11-02:
-# QA is where features are tested; running this workflow is the release decision; ADR 017 amended). Production builds nothing twice: it reuses the image staging built for the same commit.
+# QA is where features are tested; running this workflow is the release decision; ADR 017 amended). Nothing gates production beyond that:
+# it also runs when staging is skipped (STAGING_ENABLED is not `true`, or a person ticked "skip staging"), with no reviewer on those paths either. Production builds nothing twice: it reuses the image staging built for the same commit.
 #
 # The production job builds (or reuses) the image and deploys it to Cloud Run (scripts/deploy-cloud-run.sh) as a revision with no
 # traffic, checks it on its own address, and only then sends it traffic. If the live service fails its check afterwards it rolls back
@@ -14,7 +15,7 @@ name: Deploy to Cloud Run
 # No keys are stored in GitHub: it signs in to Google with Workload Identity Federation, which only accepts this repository on the main
 # branch (set up once by scripts/ci-deploy-setup.sh, which also prints the three repository variables this reads).
 #
-# The production job migrates production's database itself, once staging has passed (brief production-migrates-in-deploy): it asks the database which
+# The production job migrates production's database itself, without an approval step (brief production-migrates-in-deploy): it asks the database which
 # migrations wait, refuses a destructive one (apply it by hand: runbook section 8), backs production up, applies the rest and checks none is left,
 # then deploys. The staging job migrates the staging database the same way before it.
 on:
@@ -154,7 +155,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Live: $revision (commit ${sha:-unknown})"
 
-      # Production migrates here, once staging has passed (brief production-migrates-in-deploy). Which migrations are waiting is asked of the database
+      # Production migrates here, without an approval step (brief production-migrates-in-deploy). Which migrations are waiting is asked of the database
       # itself with the read-only login (MIGRATIONS_CHECK_URL, the same login the parity report uses). If any: a migration that drops, renames,
       # truncates or deletes is refused (scripts/migration-guard.mjs: apply it by hand with scripts/prod-db.sh migrate --apply, runbook section 8),
       # the backup job runs and must succeed, the migrations are handed to the migrate job, which applies them with the owner login kept in
