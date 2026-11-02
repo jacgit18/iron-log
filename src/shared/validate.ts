@@ -185,6 +185,7 @@ export function normLibrary(list: unknown): LibraryItem[] {
     x.at = text(it.at, 40) || '';
     if (it.auto === true) x.auto = true;
     if (it.created === true) x.created = true;
+    if (it.archived === true) x.archived = true;
     x.prog = prog; out.push(x as LibraryItem);
   });
   return out;

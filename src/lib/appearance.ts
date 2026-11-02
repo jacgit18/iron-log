@@ -12,7 +12,7 @@ export function applyAppearance(a: Appearance = getAppearance()) {
   document.querySelectorAll('meta[name="theme-color"]').forEach(m => {
     const own = (m.getAttribute('media') || '').includes('dark');
     const useDark = a.theme === 'system' ? own : dark;
-    m.setAttribute('content', useDark ? '#121614' : '#1F5E5B');
+    m.setAttribute('content', useDark ? '#161A1C' : '#1E2326');
   });
 }
 export function setAppearance(patch: Partial<Appearance>) { const a = { ...getAppearance(), ...patch }; LS.set('appearance', a); applyAppearance(a); return a; }

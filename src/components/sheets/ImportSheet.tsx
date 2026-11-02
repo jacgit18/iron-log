@@ -2,7 +2,7 @@ import type { ImportDraft } from '../../store/types.ts';
 import type { ExcelImport as ExcelData } from '../../lib/excelImport.ts';
 type Stats = ReturnType<typeof dataStats>;
 import { useAppStore } from '../../store/useAppStore.js';
-import { dataStats, libDate, importSel } from '../../lib/export.js';
+import { dataStats, importSel, libDate } from '../../lib/entryMerge.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
@@ -56,6 +56,8 @@ export default function ImportSheet() {
     ...(d.stretches ? [['stretches', 'Stretches', `${plural(s.stretches, 'stretch', 'stretches')} in the library, ${plural(s.stretchWeeks, 'week', 'weeks')} of check-offs`]] : []),
     ...(d.supplements ? [['supplements', 'Supplements', `water logged on ${plural(s.waterDays, 'day', 'days')}, supplement library and check-offs`]] : []),
     ...(d.grocery ? [['grocery', 'Groceries', `${plural(s.groceryItems, 'item', 'items')}, ${plural(s.groceryMonths, 'month', 'months')} of ticks and prices`]] : []),
+    ...('recipes' in d && d.recipes?.length ? [['recipes', 'Recipes', plural(d.recipes.length, 'recipe', 'recipes')]] : []),
+    ...('diet' in d && d.diet?.length ? [['diet', 'Food log', plural(d.diet.length, 'entry', 'entries')]] : []),
     ['settings', 'Settings', 'program mode, rest time, phase percentages and 1RMs'],
   ];
   const when = d.exportedAt ? libDate(d.exportedAt) : 'an unknown date';

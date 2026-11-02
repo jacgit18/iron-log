@@ -6,6 +6,8 @@
 #   secrets   put the four secrets in Secret Manager from your shell (once, and when one changes); with RESEND_API_KEY exported it also
 #             stores the email-code key (optional: without it the email sign-in code stays off, ADR 042)
 #             With VAPID_SUBJECT exported (mailto:you@example.com) it also stores the Web Push keys, making the pair once; see push-setup (ADR 044)
+#             With USDA_API_KEY exported it also stores the food-search key (optional: without it the lookup in Quick add says it is not available)
+#   usda      put only the USDA food-search key (USDA_API_KEY) in Secret Manager and let the service read it
 #   stripe    put only the four Stripe billing settings in Secret Manager (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY; ADR 065)
 #   push-setup  make the Cloud Tasks queue, the invoker account and the permissions for Web Push (once; needs the cloudtasks API)
 #   url       print the address people sign in on (the Cloud Run address, or PUBLIC_BASE_URL), for the Google console's redirect URI (needs no deploy)
@@ -137,6 +139,15 @@ sys.exit(0 if any(e.get("name") == sys.argv[1] and e.get("valueFrom", {}).get("s
 }
 resend_secret_wanted() { secret_wanted "$RESEND_SECRET" RESEND_API_KEY RESEND_OFF; }
 
+# The optional USDA FoodData Central key for the food search in Quick add (brief diet-food-lookup). Without it the lookup says it is not available. Each environment has its own name; one free key may be stored in all three.
+USDA_SECRET="${SECRET_PREFIX}-usda-api-key"
+usda_secret_wanted() { secret_wanted "$USDA_SECRET" USDA_API_KEY USDA_OFF; }
+
+# QA only (brief qa-picker-access): the owner URL of the QA branch, so the in-app Reset can run the seed (the app's own role cannot delete rows or
+# set plans). Never stored or mapped for staging or production; the server also opens it only after the QA-mark check. QA_OWNER_OFF=1 removes it.
+QA_OWNER_SECRET="${SECRET_PREFIX}-owner-database-url"
+qa_owner_secret_wanted() { [ "$IRON_LOG_ENV" = qa ] && secret_wanted "$QA_OWNER_SECRET" QA_OWNER_DATABASE_URL QA_OWNER_OFF; }
+
 # Stripe billing (ADR 065): four secrets, each environment with its own (iron-log-stripe-*, iron-log-staging-stripe-*, iron-log-qa-stripe-*): the
 # secret key, the webhook signing secret and the two price ids (the price ids are not secret, but a CI deploy can only pass what it can name).
 # Optional like Resend: without them the server's billing stays off. STRIPE_OFF=1 removes them from the service.
@@ -236,6 +247,15 @@ store_stripe_secrets() {
   STRIPE_NAMES=("${SECRET_PREFIX}-stripe-secret-key" "${SECRET_PREFIX}-stripe-webhook-secret" "${SECRET_PREFIX}-stripe-price-monthly" "${SECRET_PREFIX}-stripe-price-yearly")
 }
 
+# Only the USDA food-search key, stored and made readable to the service without the database and Google values `secrets` also needs.
+cmd_usda() {
+  : "${USDA_API_KEY:?Export USDA_API_KEY (the free key from https://fdc.nal.usda.gov/api-key-signup)}"
+  echo "Storing the food-search key in project $PROJECT_ID:"
+  printf '%s' "$USDA_API_KEY" | put_secret "$USDA_SECRET"
+  gc secrets add-iam-policy-binding "$USDA_SECRET" --member "serviceAccount:${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" --role roles/secretmanager.secretAccessor >/dev/null
+  echo "Done. Next: deploy (Actions, Deploy to Cloud Run, or scripts/deploy-cloud-run.sh deploy): it passes the key to the service."
+}
+
 # Only the Stripe settings, for turning billing on or changing a key without the database and Google values `secrets` also needs.
 cmd_stripe() {
   store_stripe_secrets
@@ -309,6 +329,18 @@ cmd_secrets() {
   else
     echo "  $RESEND_SECRET: not touched (export RESEND_API_KEY to store it)"
   fi
+  if [ "$IRON_LOG_ENV" = qa ] && [ -n "${QA_OWNER_DATABASE_URL:-}" ]; then
+    printf '%s' "$QA_OWNER_DATABASE_URL" | put_secret "$QA_OWNER_SECRET"
+    secret_names+=("$QA_OWNER_SECRET")
+  elif [ "$IRON_LOG_ENV" = qa ]; then
+    echo "  $QA_OWNER_SECRET: not touched (export QA_OWNER_DATABASE_URL, the owner URL of the QA branch, to store it; the in-app Reset needs it)"
+  fi
+  if [ -n "${USDA_API_KEY:-}" ]; then
+    printf '%s' "$USDA_API_KEY" | put_secret "$USDA_SECRET"
+    secret_names+=("$USDA_SECRET")
+  else
+    echo "  $USDA_SECRET: not touched (export USDA_API_KEY to store it)"
+  fi
   # Optional: the Web Push keys. VAPID_SUBJECT (a mailto: address the push services can reach) says to store them. The key pair is made once
   # here and never shown; an existing pair is kept (a new one would orphan every device that already subscribed).
   if [ "$IRON_LOG_ENV" != production ]; then
@@ -378,6 +410,7 @@ deploy_image() {
   gc run services describe "$SERVICE" --region "$REGION" >/dev/null 2>&1 || public=(--allow-unauthenticated)
   local secrets="APP_DATABASE_URL=${SECRET_PREFIX}-app-database-url:latest,BETTER_AUTH_SECRET=${SECRET_PREFIX}-auth-secret:latest,GOOGLE_CLIENT_ID=${SECRET_PREFIX}-google-client-id:latest,GOOGLE_CLIENT_SECRET=${SECRET_PREFIX}-google-client-secret:latest"
   if resend_secret_wanted; then secrets+=",RESEND_API_KEY=${RESEND_SECRET}:latest"; echo "Email sign-in code: RESEND_API_KEY is passed to the service."; else echo "Email sign-in code: no RESEND_API_KEY, so the feature stays off${RESEND_OFF:+ (RESEND_OFF=1: any mapping is removed)}."; fi
+  if usda_secret_wanted; then secrets+=",USDA_API_KEY=${USDA_SECRET}:latest"; echo "Food search: USDA_API_KEY is passed to the service."; else echo "Food search: no USDA_API_KEY, so the lookup says it is not available${USDA_OFF:+ (USDA_OFF=1: any mapping is removed)}."; fi
   if pii_secret_wanted; then secrets+=",PII_ENCRYPTION_KEY=${PII_SECRET}:latest"; echo "Database encryption: PII_ENCRYPTION_KEY is passed to the service."; else
     # Production refuses to start without the key (server/auth/piiBootCheck.ts): this revision will exit at boot and, as a candidate, get no traffic.
     echo "Database encryption: no PII_ENCRYPTION_KEY is available ($PII_SECRET does not exist and the live service does not map it). The server refuses to start in production without it, so this revision will fail its start-up check. Make the key first: PII_KEY_CREATE=1 $0 secrets (runbook section 20)." >&2
@@ -415,6 +448,9 @@ deploy_image() {
   # QA only: an admin may switch to the seeded test accounts (server/auth/qaPersonas.ts). The server also needs the QA mark on its database, so
   # this setting alone does nothing on another environment, and it is never passed to staging or production.
   if [ "$IRON_LOG_ENV" = qa ]; then env_vars+=",QA_PERSONAS=true"; fi
+  # The installed name says which environment it is ("Loadbearer QA", "Loadbearer Staging"; server/appLabel.ts). Production has none.
+  case "$IRON_LOG_ENV" in qa) env_vars+=",APP_LABEL=QA";; staging) env_vars+=",APP_LABEL=Staging";; esac
+  if qa_owner_secret_wanted; then secrets+=",QA_OWNER_DATABASE_URL=${QA_OWNER_SECRET}:latest"; echo "QA reset: QA_OWNER_DATABASE_URL is passed to the service."; elif [ "$IRON_LOG_ENV" = qa ]; then echo "QA reset: no QA_OWNER_DATABASE_URL, so Reset and Seed in the picker are off."; fi
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
     ${public[@]+"${public[@]}"} \
@@ -473,6 +509,7 @@ case "${1:-}" in
   setup) cmd_setup;;
   secrets) cmd_secrets;;
   stripe) cmd_stripe;;
+  usda) cmd_usda;;
   push-setup) cmd_push_setup;;
   url) public_base_url;;
   deploy) cmd_deploy;;

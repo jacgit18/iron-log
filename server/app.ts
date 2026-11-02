@@ -1,6 +1,7 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { toNodeHandler } from 'better-auth/node';
+import { brandHtml, brandManifest } from './appLabel.ts';
 import { personaByEmail } from './qa/personas.ts';
 import compression from 'compression';
 import express from 'express';
@@ -18,6 +19,7 @@ import { clientVersionGate } from './clientVersion.ts';
 import { errorHandler } from './errorHandler.ts';
 import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
+import { foodRoutes, type FoodDeps } from './foodSearch.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
 import { backupsRoutes } from './backups.ts';
 import { billingRoutes, billingSummary, cancelBillingFor, webhookRoute, type BillingConfig, type StripeApi } from './billing.ts';
@@ -42,6 +44,8 @@ import type { DB } from './db/types.ts';
 import { repairBody } from './wellFormed.ts';
 
 export interface AppDeps {
+  /** "QA" or "Staging" (appLabel.ts): the installed name and page title say so. Unset in production. */
+  appLabel?: string;
   db?: Kysely<DB>;
   /** The built PWA (dist/). When set, the app is served from the same origin as the API (ADR 010). */
   staticDir?: string;
@@ -63,6 +67,8 @@ export interface AppDeps {
   push?: { publicKey?: string; scheduler?: PushScheduler; now?: () => number; fire?: Pick<FireDeps, 'verify' | 'send'> };
   /** Stripe billing (ADR 065). Unset: the billing routes answer 503 and /api/me says billing is not available. */
   billing?: { api: StripeApi; config: BillingConfig };
+  /** Food search (brief diet-food-lookup): the USDA key and, in tests, a stand-in for fetch. Unset key: the route answers 503. */
+  foods?: FoodDeps;
   /** Limits on the rest of the API (see LIMITS). They are generous: a phone back online after two days sends a burst. */
   limits?: Partial<typeof LIMITS>;
 }
@@ -89,6 +95,8 @@ const LIMITS = {
   stripeWebhook: { max: 600, windowMs: 60_000 } as Limit,
   // The admin Issues screen: a person reading a list and changing a status, a few calls a minute at most.
   issues: { max: 60, windowMs: 60_000 } as Limit,
+  // Food search: a person typing, one request per pause. The daily allowance is in foodSearch.ts.
+  foods: { max: 20, windowMs: 60_000 } as Limit,
   // Server backup history (ADR 066): the app uploads once a day and reads the list in Settings; a loop is what this stops.
   backups: { max: 30, windowMs: 60_000 } as Limit,
   // Cloud Tasks calling the fire route: per address (a few Google ones), checked before the token. A 429 would push an alert past its
@@ -114,7 +122,7 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, appLabel }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   const recordIssue = db ? issueRecorder(db) : undefined;
@@ -126,6 +134,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use(compression());
   // Before Better Auth and every body parser: a cross-origin write is refused without being read.
   app.use('/api', originGuard(allowedOrigins));
+  // Nothing under /api is stored by the browser or a proxy (sign-in answers carry the account's email and name; Back on a shared phone must not replay
+  // another account's data). A route that wants a short private cache (the catalog, backups) sets its own header after this.
+  app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
   // Better Auth reads the request body itself, so its routes come before any body parser.
   if (auth) {
     // What the sign-in screen may offer someone who is not signed in. Public on purpose; it names no address and no secret.
@@ -201,6 +212,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db) app.use('/api/billing', rateLimit(limits.billing, undefined, byUser), billingRoutes({ db, api: billing?.api, config: billing?.config }));
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
+  if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
   if (db) app.use('/api/push', rateLimit(limits.push, undefined, byUser), pushRoutes({ db, publicKey: push?.publicKey, scheduler: push?.scheduler, now: push?.now }));
@@ -299,7 +311,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.get('/api/catalog/search', async (req, res) => {
     const search = parseSearch(req.query);
     if (!search) {
-      res.status(400).json({ ok: false, error: 'kind must be supplement, q 2 to 100 characters and at most 6 words, offset a whole number up to 600' });
+      res.status(400).json({ ok: false, error: 'kind must be supplement or recipe, q 2 to 100 characters (recipes may leave it out) and at most 6 words, cat a recipe category and sort relevance or name (recipes only), offset a whole number up to 600 (up to 5000 for recipes)' });
       return;
     }
     res.set('Cache-Control', 'private, max-age=300');
@@ -327,11 +339,20 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     app.get('/delete-account', (_req, res, next) => {
       res.set('Cache-Control', cacheControl(join(root, 'delete-account.html'), root)).sendFile('delete-account.html', { root }, err => void (err && next()));
     });
+    // QA and staging: the same files with the environment in the name, so the installed apps can be told apart (appLabel.ts). Branded once here: the files never change inside an image.
+    const labelled = appLabel && existsSync(join(root, 'manifest.webmanifest'))
+      ? { manifest: brandManifest(readFileSync(join(root, 'manifest.webmanifest'), 'utf8'), appLabel), page: brandHtml(readFileSync(join(root, 'index.html'), 'utf8'), appLabel) }
+      : undefined;
+    if (labelled) {
+      app.get('/manifest.webmanifest', (_req, res) => void res.set('Cache-Control', NO_CACHE).type('application/manifest+json').send(labelled.manifest));
+      app.get(['/', '/index.html'], (_req, res) => void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page));
+    }
     app.use(express.static(root, { index: false, setHeaders: (res, file) => void res.setHeader('Cache-Control', cacheControl(file, root)) }));
     // A page route (no file extension) gets the app, which draws it. A missing file (/assets/old.js) stays a 404, so a
     // stale link never receives HTML where JavaScript was expected. /.well-known has no files, as on GitHub Pages, except assetlinks.json above.
     app.use((req, res, next) => {
       if ((req.method !== 'GET' && req.method !== 'HEAD') || extname(req.path) !== '' || req.path.startsWith('/.well-known/')) return next();
+      if (labelled) return void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page);
       res.set('Cache-Control', NO_CACHE).sendFile('index.html', { root }); // with `root`, so a checkout under a hidden folder (.claude/worktrees/...) still serves the page
     });
   }

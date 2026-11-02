@@ -4,11 +4,10 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
-import type { WeekPatch } from '../lib/programMove.ts';
 import type { BackupInfo } from '../lib/autoBackup.ts';
 import type { ServerBackupList } from '../lib/serverBackups.ts';
 
@@ -180,7 +179,7 @@ export interface LogSlice {
   addEntry(slotId: string, idx: number, entry: LogEntry, opts?: { check?: boolean }): boolean;
   quickLog(slotId: string, idx: number): void;
   submitLog(slotId: string, idx: number, form: LogForm): boolean;
-  setLiftGoal(exId: string, key: string, raw: string | number, by?: string, from?: string): boolean;
+  setLiftGoal(exId: string, key: string, raw: string | number, by?: string, from?: string, scale?: boolean): boolean;
   clearLiftGoal(exId: string, key: string): void;
   setFreqGoal(exId: string, raw: string | number): boolean;
   clearFreqGoal(exId: string): void;
@@ -203,9 +202,9 @@ export interface EdMoved {
   key: string; from: number; to: number; idx: number; slot: ProgramSlot;
   /** Only for a move to another program: where it went (program key and name) and the card as it was, with its old id, for Undo. */
   toKey?: string; toLabel?: string; orig?: ProgramSlot;
-  /** Only for one exercise taken out of a superset: `slot` is that exercise as a card of its own, `orig` the superset as it was, `ph` its phase defaults. */
-  split?: { ph: Record<string, PhaseKey | null>; /** What to write back into this week (null = remove the key) if it is still the same week. */ week?: WeekPatch; weekKey?: string };
 }
+/** The cards the Program editor last copied from one day to another: their ids, so Undo can take them back out. */
+export interface EdCopied { key: string; from: number; to: number; ids: string[] }
 export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot }
 
 export interface EditorSlice {
@@ -240,18 +239,26 @@ export interface EditorSlice {
   moveEdSlotToDay(i: number, toDay: number): void;
   /** Moves the open day's card at `i` to day `toDay` of another program (or the same one: then it is `moveEdSlotToDay`). */
   moveEdSlotToProgram(i: number, toKey: string, toDay: number): void;
-  /** Takes exercise `k` out of the superset at `i` on the open day and puts it, as a card of its own, on day `toDay` of the same program. */
-  moveEdItemToDay(i: number, k: number, toDay: number): void;
   undoMoveEdSlot(): void;
   dismissEdMoved(): void;
+  /** The cards last copied to another day, so the notice can offer Undo. */
+  edCopied: EdCopied | null;
+  /** Copies every card of the open day to the end of its section on day `toDay` of the same program, with new ids. */
+  copyEdDay(toDay: number): void;
+  undoCopyEdDay(): void;
+  dismissEdCopied(): void;
   setDaySub(v: string): boolean;
   renameLibItem(raw: string): false | void;
   libSnapshot(name: string, prog: Program, from: string, auto: boolean): LibraryItem;
   saveCurrentAs(name: string): void;
   loadVersion(target: string, slot: ProgKey): void;
   deleteLibItem(id: string): void;
+  archiveLibItem(id: string): void;
+  restoreLibItem(id: string): void;
   /** `from` 'empty' starts with seven empty days (ADR 021); 'A' or 'B' starts as a copy of that program. */
-  createProgram(name: string, from: ProgKey | 'empty'): boolean;
+  createProgram(name: string, from: ProgKey | 'empty', keepOpen?: boolean): boolean;
+  /** Makes a library program from a starter (lib/starterPrograms.ts) and opens it in the editor; the open sheet stays. Returns why it could not, or null. */
+  createStarterProgram(starterId: string, perWeek: number, name: string): string | null;
   saveSlot(d: SlotForm): string | null;
 }
 
@@ -269,7 +276,7 @@ export interface SettingsSlice {
   setRm(exId: string, raw: string | number): boolean;
   setCfgField<K extends keyof Cfg>(k: K, v: Cfg[K]): void;
   readImportFile(file: File | null | undefined): Promise<void>;
-  pasteImport(text: string): void;
+  pasteImport(text: string): Promise<void>;
   applyImport(mode: 'merge' | 'replace'): Promise<void>;
 }
 
@@ -285,6 +292,39 @@ export interface RemovedSlice {
   undoRemoved(): void;
   /** Drop the Undo; with a scope, only when it belongs to that list. */
   dismissRemoved(scope?: string): void;
+}
+
+/** Your food log and typed targets (ADR 086): entries are saved as the document diet/main, the targets as cfg.diet. */
+export interface DietSlice {
+  diet: DietEntry[];
+  saveDiet(): void;
+  addDietEntry(d: { d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string }): { id: string | null; error: string | null }; // an error text (full day, bad numbers), else the new id; an entry for today is stamped with the local hour (`t`)
+  updateDietEntry(id: string, patch: { n?: string; kcal?: number; p?: number; c?: number | null; f?: number | null }): string | null; // an error text, or null when saved
+  removeDietEntry(id: string, undoNotice?: boolean): void; // Undo is offered (noteRemoved 'diet') unless undoNotice is false
+  setDietPace(pace: DietPace | null, rate?: number): string | null; // null goes back to the goal date (else Steady); Custom needs a rate; an error text, or null
+  saveDietMeal(name: string, entryIds: string[]): string | null; // makes a saved meal from those entries (replacing one of the same name); an error text, or null when saved
+  renameDietMeal(id: string, name: string): string | null; // an error text, or null
+  removeDietMeal(id: string): void; // Undo is offered (noteRemoved 'diet')
+  addPlanItem(day: string, kind: 'r' | 'm', id: string): string | null; // puts a recipe or saved meal on a day of the plan; an error text, or null
+  setPlanPortion(day: string, index: number, portion: number): void; // a recipe's portion (half steps, 0.5 to 10)
+  removePlanItem(day: string, index: number): void;
+  planToGroceries(days: string[]): { added: number; already: number; refused: string | null; recipes: number }; // the days' recipes' missing ingredients go to To get, each name once
+  setDietTarget(key: 'kcal' | 'protein' | 'carbs' | 'fat', value: number | null): string | null; // null clears the typed number (the recommendation is used again); an error text, or null
+}
+
+/** Your recipes (ADR 084): saved as the document recipes/main, like the other lists. */
+export interface RecipesSlice {
+  recipes: Recipe[];
+  saveRecipes(): void;
+  saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
+  copyCatalogRecipe(item: CatalogItem, servings?: number): string | null; // a Library recipe joins Mine as a copy of its own (at `servings`, amounts scaled, when set)
+  renameTag(from: string, to: string): { error: string | null; name: string }; // rename a tag on every recipe that has it (a name in use merges); an error text, or null, and the name it ends up with
+  removeTag(tag: string): number; // take a tag off every recipe (the recipes stay); how many recipes had it
+  setRecipeChips(chips: RecipeChips | undefined): void; // hide and reorder the built-in category chips (saved in the settings)
+  removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')
+  linkIngredient(id: string, index: number, home: string | null): void; // pin one ingredient to an At home item (null unpins)
+  acceptSuggestions(id: string, month: string): number; // pin every "Maybe" suggestion of one recipe at once; how many were pinned
+  addMissingToGrocery(id: string, month: string): { added: number; already: number; refused: string | null }; // new names go on the list; the rest are on To get already; `refused`: why an add was refused (a full list), else null
 }
 
 /** The grocery list (ADR 039): the catalogue and every saved month, saved like every other document (synced when syncing is on). */
@@ -318,6 +358,7 @@ export interface GrocerySlice {
   updateGroceryPerson(groupId: string, personId: string, patch: Partial<{ n: string; covered: boolean }>): string | null;
   removeGroceryPerson(groupId: string, personId: string): void;
   setGroceryStoreGroup(store: string, groupId: string | null): void; // a store defaults to one group at most
+  setGroceryAllStores(groupId: string, on: boolean): void; // the group is the default for every store with no group of its own; at most one group has it
   setGroceryItemShare(id: string, share: GroceryShare | null): void; // the item's usual share; null goes back to the store's group
   setGroceryLineShare(month: string, id: string, share: GroceryShare | null): void; // this month's share for the item; null goes back to the item's
   setGroceryPackShare(month: string, id: string, index: number, share: GroceryShare | null): void; // one pack of an item priced pack by pack
@@ -403,11 +444,9 @@ export interface CoreSlice {
   weekHist: Record<string, Week> | null; // every saved week, loaded on demand for Progress and exports
   historyLoading: boolean;
   dl: Downloads | null | undefined; // undefined = not checked yet, null = unavailable
-  progView: string;
   bodySel: MuscleKey | null;
   bodySec: boolean;
 
-  setProgView(v: string): void;
   selectMuscle(m: MuscleKey | null): void;
   setBodySec(v: boolean): void;
   saveTags(exId: string, tags: MuscleTags): void;
@@ -483,6 +522,6 @@ export interface BackupSlice {
   restoreServerBackup(date: string): Promise<void>;
 }
 
-export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice;
+export type AppState = BackupSlice & BodySlice & CoreSlice & EditorSlice & ExportSlice & SettingsSlice & WellnessSlice & GrocerySlice & LibrarySlice & ProgramSlice & BoardSlice & LogSlice & RemovedSlice & RecipesSlice & DietSlice;
 export type StoreSet = StoreApi<AppState>['setState'];
 export type StoreGet = StoreApi<AppState>['getState'];

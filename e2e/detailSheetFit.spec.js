@@ -21,6 +21,7 @@ async function seed(page) {
 }
 async function openDetail(page) {
   await page.click('#tab-progress');
+  await page.getByRole('button', { name: 'Exercise charts' }).click();
   await page.locator('button.pcard').first().click();
   await expect(page.locator('.sheet table.hist tbody tr')).toHaveCount(SESSIONS.length);
 }

@@ -13,7 +13,7 @@ const WAIT_MS = 300;
 export const MIN_LETTERS = 2;
 
 /** `active`: the picker is open; nothing is fetched for a picker nobody is using. `retry` asks again after a failure. */
-export function useCatalogSearch(kind: CatalogKind, q: string, active: boolean): { state: CatalogState; retry: () => void } {
+export function useCatalogSearch(kind: Exclude<CatalogKind, 'recipe'>, /* recipes have their own search (ADR 084) */  q: string, active: boolean): { state: CatalogState; retry: () => void } {
   const syncing = useAppStore(s => s.sync !== null);
   const [tries, setTries] = useState(0);
   const words = q.trim();

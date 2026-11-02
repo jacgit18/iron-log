@@ -36,7 +36,7 @@ test('phone 390x844: every button, field and tab is at least 44x44 on each tab',
 
 // The test above only sees each tab's first view; these are the other views a tab opens (Groceries and Medical are admin-only, Stretches is its own area).
 for (const [name, clicks] of [
-  ['Progress > Muscles', [['tab', 'Progress'], ['button', 'Muscles']]],
+  ['Progress > Training trends', [['tab', 'Progress'], ['button', /Training trends/]]],
   ['Daily > Nutrition', [['tab', 'Daily'], ['button', 'Nutrition']]],
   ['Program > Exercise library', [['tab', 'Program'], ['button', 'Exercise library']]],
   ['Program > Stretch library', [['tab', 'Program'], ['button', 'Stretch library']]],

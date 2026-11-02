@@ -1,7 +1,7 @@
 import { normGroceryMonth } from '../shared/grocery.js';
 import { normSplit, normWeek } from '../shared/week.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
-import { mergeWeek } from '../lib/export.js';
+import { mergeWeek } from '../lib/entryMerge.js';
 import { stable } from './canon.js';
 import type { GroceryLine, GroceryMonth, StretchWeek, Week } from '../types.ts';
 

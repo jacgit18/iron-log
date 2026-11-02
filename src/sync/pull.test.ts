@@ -106,6 +106,15 @@ describe('pullAll', () => {
       expect(store.rows().size).toBe(0);
     });
 
+    it('a list this version does not know stops the pull without moving the cursor, so its rows come down after the app updates', async () => {
+      const store = createMirrorStore(memoryStorage());
+      const unknown = { table: 'list_items', ...(serverRow({ list: 'from_a_newer_server', client_id: 'x1', position: 0, data: { id: 'x1' } }, { seq: '2' }) as object) };
+      const out = await pullAll(scripted([page([L('L1', '1'), unknown], '2', false)]), store);
+      expect(out).toMatchObject({ ok: false, class: 'outdated' });
+      expect(store.cursor()).toBe('0');
+      expect(store.rows().size).toBe(0);
+    });
+
     it('a page that says there is more but does not move the cursor would loop, so it stops', async () => {
       const store = createMirrorStore(memoryStorage());
       const out = await pullAll(scripted([page([], '0', true)]), store);

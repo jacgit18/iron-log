@@ -1,63 +1,39 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadPersonas, returnToAdmin, switchPersona } from './qaPersonas.js';
-import { getQa, setQa } from './qaState.js';
+import { SWITCH_MARK_KEY } from '../lib/qaSwitchWipe.js';
+import { resetPersona, returnToAdmin, switchPersona } from './qaPersonas.js';
 
-// The three calls to the QA-only routes (brief qa-persona-picker): none throws, a failure is an answer.
-const reply = (status: number, body: unknown = {}) => vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
-afterEach(() => { vi.unstubAllGlobals(); setQa(undefined); });
+// The stamp the reload reads (lib/qaSwitchWipe.ts) is written only after a switch or Return that worked.
+function stub(status: number) {
+  const store = new Map<string, string>();
+  vi.stubGlobal('sessionStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); }, removeItem: (k: string) => { store.delete(k); } });
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: status >= 200 && status < 300, status, json: async () => ({}) })));
+  return store;
+}
+afterEach(() => { vi.unstubAllGlobals(); });
 
-describe('loadPersonas', () => {
-  it('asks the list route with the cookie and returns the parsed list', async () => {
-    const f = reply(200, { ok: true, current: null, personas: [{ id: 'founder', name: 'Founder', group: 'Plans', plan: 'founder', planStatus: null, scenario: 'a', tryThis: 'b' }] });
-    vi.stubGlobal('fetch', f);
-    const out = await loadPersonas();
-    expect(out?.personas.map(p => p.id)).toEqual(['founder']);
-    expect(f.mock.calls[0]![0]).toBe('/api/auth/qa/personas');
-    expect((f.mock.calls[0]![1] as RequestInit).credentials).toBe('same-origin');
-  });
-  it('answers null for a refusal, an unreadable body and a network failure', async () => {
-    vi.stubGlobal('fetch', reply(403));
-    expect(await loadPersonas()).toBeNull();
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>', { status: 200 })));
-    expect(await loadPersonas()).toBeNull();
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
-    expect(await loadPersonas()).toBeNull();
-  });
-});
-
-describe('switchPersona and returnToAdmin', () => {
-  it('post the id, or nothing, to their own routes', async () => {
-    const f = reply(200);
-    vi.stubGlobal('fetch', f);
-    expect(await switchPersona('paid-past-due')).toBe('ok');
+describe('the switch stamp', () => {
+  it('is written after a switch and after Return that worked', async () => {
+    const a = stub(200);
+    expect(await switchPersona('new-user')).toBe('ok');
+    expect(a.get(SWITCH_MARK_KEY)).toMatch(/^\d+$/);
+    const b = stub(200);
     expect(await returnToAdmin()).toBe('ok');
-    expect(f.mock.calls[0]![0]).toBe('/api/auth/qa/personas/switch');
-    expect((f.mock.calls[0]![1] as RequestInit).body).toBe(JSON.stringify({ id: 'paid-past-due' }));
-    expect(f.mock.calls[1]![0]).toBe('/api/auth/qa/personas/return');
-    expect((f.mock.calls[1]![1] as RequestInit).method).toBe('POST');
+    expect(b.has(SWITCH_MARK_KEY)).toBe(true);
   });
-  it('tell a refusal from a server or network problem', async () => {
-    vi.stubGlobal('fetch', reply(403));
-    expect(await switchPersona('x')).toBe('refused');
-    vi.stubGlobal('fetch', reply(404));
-    expect(await returnToAdmin()).toBe('refused');
-    vi.stubGlobal('fetch', reply(500));
-    expect(await switchPersona('x')).toBe('unreachable');
-    vi.stubGlobal('fetch', reply(429));
-    expect(await returnToAdmin()).toBe('unreachable');
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline'); }));
-    expect(await switchPersona('x')).toBe('unreachable');
+  it('is not written after a refused or unreachable switch, or after Reset', async () => {
+    for (const status of [403, 404, 500, 429]) {
+      const s = stub(status);
+      await switchPersona('new-user');
+      await returnToAdmin();
+      expect(s.has(SWITCH_MARK_KEY), String(status)).toBe(false);
+    }
+    const r = stub(200);
+    expect(await resetPersona('new-user')).toBe('ok');
+    expect(r.has(SWITCH_MARK_KEY)).toBe(false);
   });
-});
-
-describe('qaState', () => {
-  it('holds what /api/me last said, and clears it', () => {
-    expect(getQa()).toBeUndefined();
-    setQa({ persona: 'Founder', canSwitch: false });
-    expect(getQa()).toEqual({ persona: 'Founder', canSwitch: false });
-    setQa({ persona: 'Founder', canSwitch: false }); // the same answer again changes nothing
-    expect(getQa()).toEqual({ persona: 'Founder', canSwitch: false });
-    setQa(undefined);
-    expect(getQa()).toBeUndefined();
+  it('still switches when storage is blocked', async () => {
+    stub(200);
+    vi.stubGlobal('sessionStorage', { setItem: () => { throw new Error('blocked'); } });
+    expect(await switchPersona('new-user')).toBe('ok');
   });
 });

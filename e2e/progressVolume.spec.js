@@ -15,6 +15,7 @@ test('weekly volume and personal bests show on a phone without sideways scrollin
   await seed(page);
   await page.goto('/');
   await page.click('#tab-progress');
+  await page.getByRole('button', { name: /Training trends/ }).click();
   const vol = page.locator('.tchart', { has: page.getByRole('heading', { name: 'Weekly volume' }) });
   // This week: the check-off, 3 × 8 × 200.
   await expect(vol.getByRole('listitem').last()).toHaveAttribute('aria-label', /All exercises, week of .* \(so far\): 4,800 lb/);
@@ -44,6 +45,7 @@ test('set a times-a-week goal, see this week against it, and remove it', async (
   });
   await page.goto('/');
   await page.click('#tab-progress');
+  await page.getByRole('button', { name: /Frequency goals/ }).click();
   const panel = page.locator('.freqgoals');
   await panel.getByLabel('Exercise').selectOption({ label: 'Hack Squat' });
   await panel.getByLabel('Times a week').selectOption('3');

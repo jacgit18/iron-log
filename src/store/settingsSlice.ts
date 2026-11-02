@@ -1,14 +1,17 @@
 import { PHASES } from '../lib/data.js';
 import { DEFAULT_CFG, normWeek, progName } from '../lib/logic.js';
-import { parseDataFile, importSel, cfgSection, entriesChanged, mergeEntries, mergeWeek, sameProg, progBody, libDate } from '../lib/export.js';
+import { importSel, cfgSection, entriesChanged, mergeEntries, mergeWeek, sameProg, progBody, libDate } from '../lib/entryMerge.js';
 import { WEEK_RE } from '../lib/trends.js';
 import { validPct, validRest, validRm } from '../shared/validate.js';
+import { normDietEntries } from '../shared/diet.js';
+import { normRecipes } from '../shared/recipes.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import type { AppState, Flag, SettingsSlice, StoreGet, StoreSet } from './types.ts';
 import type { Logs, Program } from '../types.ts';
 import { importFileProblem, readFailure } from '../lib/importFile.js';
 // The spreadsheet reader is only needed once a file is chosen or applied, so it loads then and not with the first screen.
 const loadExcelImport = () => import('../lib/excelImport.js');
+const loadExport = () => import('../lib/export.js'); // the data-file parser loads when a file is read, not at startup
 
 const ent = (o: any): [string, any][] => Object.entries(o); // eslint-disable-line
 
@@ -49,17 +52,17 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
         set({ importDraft: { data: await (await loadExcelImport()).parseCsvExport(text, get().cfg), name: file.name, kind: 'excel', useSettings: false }, modal: { type: 'import' } });
         return;
       }
-      set({ importDraft: { data: parseDataFile(text), name: file.name, kind: 'json' }, modal: { type: 'import' } });
+      set({ importDraft: { data: (await loadExport()).parseDataFile(text), name: file.name, kind: 'json' }, modal: { type: 'import' } });
     } catch (e) {
       const msg = (e as Error).message || 'Couldn’t read that file';
       set({ importDraft: null, importError: msg }); flag(msg);
     }
   },
-  pasteImport(text) {
+  async pasteImport(text) {
     if (get().blocked()) return;
     set({ importError: '' });
     if (!text.trim()) { set({ importError: 'Paste the file contents first' }); flag('Paste the file contents first'); return; }
-    try { set({ importDraft: { data: parseDataFile(text), name: 'Pasted data', kind: 'json' }, modal: { type: 'import' } }); }
+    try { set({ importDraft: { data: (await loadExport()).parseDataFile(text), name: 'Pasted data', kind: 'json' }, modal: { type: 'import' } }); }
     catch (e) { const msg = (e as Error).message; set({ importError: msg }); flag(msg); }
   },
 
@@ -110,6 +113,8 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           patch.strWeek = d.stretchWeeks[wk] ? structuredClone(d.stretchWeeks[wk]) : normStretchWeek(null); saves.push('saveStrWeek');
         }
         if (on.supplements && d.supplements) { patch.supp = structuredClone(d.supplements); saves.push('saveSupp'); }
+        if (on.recipes && d.recipes) { patch.recipes = structuredClone(d.recipes); docs.push(['recipes/main', { items: structuredClone(d.recipes) }]); }
+        if (on.diet && d.diet) { patch.diet = structuredClone(d.diet); docs.push(['diet/main', { items: structuredClone(d.diet) }]); }
         const groceryIn = on.grocery && d.grocery ? structuredClone(d.grocery) : null;
         let newLogs: Logs | null = null;
         if (on.progress) {
@@ -181,8 +186,18 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           if (ch) { set({ supp: { ...cur, water, boost, items, taken } }); get().saveSupp(); }
         }
         if (on.grocery && d.grocery) get().addGrocery(d.grocery);
+        if (on.recipes && d.recipes) {
+          const have = new Set(get().recipes.map(r => r.id)); const from = new Set(get().recipes.flatMap(r => (r.from ? [r.from] : [])));
+          const add = d.recipes.filter((r: any) => !have.has(r.id) && !(r.from && from.has(r.from))); // a library recipe you already copied is not copied twice
+          if (add.length) { set({ recipes: normRecipes([...get().recipes, ...add]) }); get().saveRecipes(); }
+        }
+        if (on.diet && d.diet) {
+          const have = new Set(get().diet.map(e => e.id));
+          const add = d.diet.filter((e: any) => !have.has(e.id));
+          if (add.length) { set({ diet: normDietEntries([...get().diet, ...add]) }); get().saveDiet(); }
+        }
         const body = get().body; const addB = !on.board ? [] : d.body.filter((e: any) => !body.some(x => x.wk === e.wk));
-        if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); }
+        if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); } // sort-ok: ISO date strings
         ent(on.progress ? d.logs : {}).forEach(([id, l]) => {
           const cur = get().logs[id] || []; const m = mergeEntries(cur, l);
           if (entriesChanged(cur, m)) { set(s => ({ logs: { ...s.logs, [id]: m } })); get().saveLog(id); }

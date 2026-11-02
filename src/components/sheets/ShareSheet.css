@@ -1,0 +1,29 @@
+@layer base, components;
+@layer components {
+/* The "Save this link" sheet (ShareSheet.tsx): the shared link, two choices, and a short list to pick from. */
+.sharelink {
+  margin: 0 0 var(--sp-8);
+  overflow-wrap: anywhere;
+  font-size: var(--fs-sm);
+}
+.sharelink span {
+  color: var(--muted);
+}
+.sharechoices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-8);
+}
+.sharelist {
+  display: grid;
+  gap: var(--sp-4);
+  margin: 0 0 var(--sp-8);
+  padding: 0;
+  list-style: none;
+}
+.sharelist .btn {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+}

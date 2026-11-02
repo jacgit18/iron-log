@@ -1,12 +1,18 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.js';
 
+// The Progress pages are hub drill-ins, which is what a window under 1280px shows (the one page is scanned in progressOnePage.spec.js).
+test.use({ viewport: { width: 1100, height: 900 } });
+
 const scan = page => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 
 // Each view is reached by clicking these in order.
 for (const [name, clicks] of [
   ['workout', []], ['stretches', ['#board-stretches']], ['supplements', ['#tab-daily', '#daily-supplements']],
-  ['progress', ['#tab-progress']], ['muscles', ['#tab-progress', '#prog-muscles']], ['program editor', ['#tab-program']],
+  ['progress', ['#tab-progress']],
+  ['training trends', ['#tab-progress', 'button.hubtile:has-text("Training trends")']],
+  ['frequency goals', ['#tab-progress', 'button.hubtile:has-text("Frequency goals")']], ['weight goals', ['#tab-progress', 'text=Manage goals']],
+  ['exercise charts', ['#tab-progress', 'text=Exercise charts']], ['program editor', ['#tab-program']],
 ]) {
   test(`${name} has no accessibility violations`, async ({ page }) => {
     for (const c of clicks) { await page.click(c); await page.waitForTimeout(300); }
@@ -50,7 +56,7 @@ test('supplement library has no accessibility violations', async ({ page }) => {
   await page.click('#sched-edit'); // the library shows under the schedule while editing
   await page.click('#suplib-new');
   await page.fill('#supp-name', 'Vitamin D3');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('.exlib .exrow b', { hasText: 'Vitamin D3' })).toBeVisible();
   const { violations } = await scan(page);
   expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(', ')}`)).toEqual([]);

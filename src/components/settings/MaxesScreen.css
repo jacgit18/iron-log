@@ -1,0 +1,38 @@
+@layer base, components;
+@layer components {
+/* The 1-rep max screens (MaxesScreen.tsx): the exercise rows reuse .sdrill from Settings.css; this is the exercise's own screen. */
+.maxbig {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-6);
+}
+.maxnum {
+  font-size: var(--fs-6xl);
+  font-weight: 700;
+  line-height: 1;
+}
+.maxunit {
+  color: var(--muted);
+}
+.maxsrc {
+  margin-inline-start: auto;
+  align-self: center;
+  padding: var(--sp-2) var(--sp-8);
+  border-radius: var(--r-sm);
+  background: var(--m1);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.maxphase {
+  display: grid;
+  grid-template-columns: minmax(0,1.2fr) minmax(0,1fr) auto;
+  gap: var(--sp-4) var(--sp-12);
+  align-items: center;
+  padding-block: var(--sp-10);
+  border-block-start: 1px solid var(--line);
+}
+.maxnote {
+  grid-column: 1/-1;
+  margin: 0;
+}
+}

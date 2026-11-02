@@ -28,7 +28,7 @@ async function open(page, me, path = '/', { referrer = '' } = {}) {
   await page.route('**/api/sync*', json({ rows: [], cursor: '0', more: false }));
   await page.route('**/api/me', typeof me === 'function' ? me : json(me));
   await page.goto(path);
-  await page.locator('#account-badge').click();
+  await page.locator('#account-badge').click(); await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
 }
 
 test.describe('Billing section', () => {
@@ -102,13 +102,13 @@ test.describe('Billing section', () => {
 
   test('is not drawn for a non-admin, nor when the server has billing off', async ({ page }) => {
     await open(page, meWith({ isAdmin: false }, { available: false }));
-    await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible(); // Settings is open (signed in, the Account panel is not drawn)
     await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toHaveCount(0);
   });
 
   test('is not drawn when the server has billing off, even for an admin', async ({ page }) => {
     await open(page, meWith({}, { available: false }));
-    await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Erase data' })).toBeVisible(); // Settings is open (signed in, the Account panel is not drawn)
     await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toHaveCount(0);
   });
 });

@@ -133,3 +133,59 @@ describe('GET /api/catalog/search (supplements)', () => {
     expect((await fetch(`${await start()}/api/catalog/search?kind=supplement&q=fish`)).status).toBe(401);
   });
 });
+
+describe('GET /api/catalog/search (recipes)', () => {
+  const rec = (n: number, name: string, cat: string, ing: string[], extra: object = {}) => ({ id: `c:wbc:r${n}`, kind: 'recipe', source: 'wbc', license: 'CC BY-SA 4.0', name, brand: null, data: JSON.stringify({ recipe: { cat, ing, steps: ['Cook.'] } }), ...extra });
+  beforeEach(async () => {
+    await db.insertInto('catalog_items').values([
+      rec(1, 'Garlic Chicken', 'protein', ['2 chicken thighs', '3 cloves garlic']),
+      rec(2, 'Lemon Dressing', 'sauces', ['1 lemon', '2 tbsp olive oil']),
+      rec(3, 'Chicken Soup', 'other', ['1 whole chicken', 'carrots']),
+      rec(4, 'Old Recipe', 'protein', ['chicken'], { retired_at: '2026-10-01T00:00:00Z' }),
+    ]).execute();
+  });
+  const search = async (query: string) => {
+    const res = await fetch(`${await start()}/api/catalog/search${query}`, { headers: { 'x-dev-user': 'guest' } });
+    return { status: res.status, body: (await res.json()) as { items: { id: string; name: string; data: { recipe?: { cat: string } } }[]; more: boolean } };
+  };
+  const ids = (r: { body: { items: { id: string }[] } }) => r.body.items.map(i => i.id);
+
+  it('finds a recipe by a word of its name or of an ingredient, retired ones left out', async () => {
+    expect(ids(await search('?kind=recipe&q=chicken'))).toEqual(['c:wbc:r3', 'c:wbc:r1']); // a name starting with the word first
+    expect(ids(await search('?kind=recipe&q=olive'))).toEqual(['c:wbc:r2']);
+    expect(ids(await search('?kind=recipe&q=garlic%20thighs'))).toEqual(['c:wbc:r1']);
+  });
+  it('pages every recipe in name order when there are no words, and narrows to a category', async () => {
+    expect(ids(await search('?kind=recipe'))).toEqual(['c:wbc:r3', 'c:wbc:r1', 'c:wbc:r2']);
+    expect(ids(await search('?kind=recipe&cat=sauces'))).toEqual(['c:wbc:r2']);
+    expect(ids(await search('?kind=recipe&q=chicken&cat=protein'))).toEqual(['c:wbc:r1']);
+  });
+  it('narrows to the Carbs category', async () => {
+    await db.insertInto('catalog_items').values([rec(5, 'Fried Rice', 'carbs', ['2 cups cooked rice'])]).execute();
+    expect(ids(await search('?kind=recipe&cat=carbs'))).toEqual(['c:wbc:r5']);
+    expect(ids(await search('?kind=recipe&q=rice&cat=carbs'))).toEqual(['c:wbc:r5']);
+    expect(ids(await search('?kind=recipe&cat=sides'))).toEqual([]);
+  });
+  it('sort=name orders by lower-cased name then id even when words are typed; relevance keeps the best match first', async () => {
+    await db.insertInto('catalog_items').values([rec(6, 'chicken soup', 'other', ['water']), rec(7, 'Zesty Chicken', 'protein', ['chicken']), rec(8, 'Chicken Soup', 'other', ['water'])]).execute();
+    expect(ids(await search('?kind=recipe&q=chicken&sort=relevance'))[0]).toBe('c:wbc:r3'); // shortest name starting with the word
+    expect(ids(await search('?kind=recipe&q=chicken&sort=name'))).toEqual(['c:wbc:r3', 'c:wbc:r6', 'c:wbc:r8', 'c:wbc:r1', 'c:wbc:r7']); // r3, r6, r8 share a name ignoring case: id breaks the tie
+    expect(ids(await search('?kind=recipe&sort=name&cat=protein'))).toEqual(['c:wbc:r1', 'c:wbc:r7']);
+    expect(ids(await search('?kind=recipe&sort=relevance'))).toEqual(ids(await search('?kind=recipe'))); // no words: name order either way
+  });
+  it('pages a name sort without a repeat or a gap', async () => {
+    await db.insertInto('catalog_items').values(Array.from({ length: 40 }, (_, i) => rec(100 + i, `Dish ${String(i).padStart(2, '0')}`, 'other', ['salt']))).execute();
+    const one = await search('?kind=recipe&q=dish&sort=name');
+    const two = await search('?kind=recipe&q=dish&sort=name&offset=30');
+    expect(one.body.more).toBe(true);
+    expect([...ids(one), ...ids(two)]).toEqual(Array.from({ length: 40 }, (_, i) => `c:wbc:r${100 + i}`));
+  });
+  it('refuses a sort that is not one, and a sort on another kind', async () => {
+    for (const q of ['?kind=recipe&sort=newest', '?kind=recipe&sort=', '?kind=recipe&sort=name&sort=relevance', '?kind=supplement&q=fish&sort=name']) expect((await search(q)).status, q).toBe(400);
+  });
+  it('returns the recipe with its steps, and refuses a category that is not one or one used on another kind', async () => {
+    expect((await search('?kind=recipe&q=olive')).body.items[0]!.data.recipe).toMatchObject({ cat: 'sauces', steps: ['Cook.'] });
+    expect((await search('?kind=recipe&offset=3000')).status).toBe(200); // recipes page deeper than supplements
+    for (const q of ['?kind=recipe&cat=soup', '?kind=supplement&q=fish&cat=sauces', '?kind=recipe&offset=5001']) expect((await search(q)).status, q).toBe(400);
+  });
+});

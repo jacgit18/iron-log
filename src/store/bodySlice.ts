@@ -10,7 +10,7 @@ export const bodySlice = (set: StoreSet, get: StoreGet, flag: Flag): BodySlice =
     const n = Number(v); if (!validBodyLb(n)) { flag('Enter your weight in lb'); return false; }
     const wk = get().weekKey(); const today = ymd(new Date());
     const d = (today >= wk && today <= ymd(addDays(get().weekStart, 6))) ? today : wk;
-    set(state => ({ body: [...state.body.filter(e => e.wk !== wk), { wk, d, w: Math.round(n * 10) / 10, updatedAt: nowStamp() }].sort((a, b) => a.wk.localeCompare(b.wk)) }));
+    set(state => ({ body: [...state.body.filter(e => e.wk !== wk), { wk, d, w: Math.round(n * 10) / 10, updatedAt: nowStamp() }].sort((a, b) => a.wk.localeCompare(b.wk)) })); // sort-ok: ISO date strings
     get().saveBody();
     const g = get().cfg.bwGoal; if (g && !g.start) get().mutateCfg(c => { c.bwGoal = { ...g, start: { w: Math.round(n * 10) / 10, d } }; }); // first weigh-in after setting a goal
     flag('Body weight saved'); return true;
@@ -35,7 +35,7 @@ export const bodySlice = (set: StoreSet, get: StoreGet, flag: Flag): BodySlice =
     // Undo only if that week has not been weighed again since.
     get().noteRemoved('body', `the ${fmtShort(parseDate(gone.d))} weigh-in`, () => {
       if (get().blocked() || get().body.some(x => x.wk === wk)) return false;
-      set(state => ({ body: [...state.body, gone].sort((a, b) => a.wk.localeCompare(b.wk)) })); get().saveBody(); return true;
+      set(state => ({ body: [...state.body, gone].sort((a, b) => a.wk.localeCompare(b.wk)) })); get().saveBody(); return true; // sort-ok: ISO date strings
     });
   },
 });

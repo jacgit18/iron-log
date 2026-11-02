@@ -94,13 +94,13 @@ test('a bought item leaves the list and waits under Bought this month, where it 
   await done(page);
   await page.click('#groc-view-get');
   const names = () => page.getByRole('region', { name: 'Market' }).locator('li').allTextContents();
-  expect((await names()).map(t => t.split('1 ×')[0])).toEqual(['Bread', 'Apples']); // a new item goes on top
+  expect((await names()).map(t => t.split('1 ×')[0])).toEqual(['Apples', 'Bread']); // A to Z, not newest first
   await page.locator('#groc-apples').check();
   await expect.poll(async () => (await names()).map(t => t.split('1 ×')[0])).toEqual(['Bread']);
   await page.click('#groc-bought summary');
   await expect(page.locator('#groc-bought')).toContainText('Apples');
   await page.locator('#groc-apples').uncheck();
-  await expect.poll(async () => (await names()).map(t => t.split('1 ×')[0])).toEqual(['Bread', 'Apples']);
+  await expect.poll(async () => (await names()).map(t => t.split('1 ×')[0])).toEqual(['Apples', 'Bread']);
   await page.locator('#groc-apples').check(); await page.locator('#groc-bread').check();
   await expect(page.locator('#groc-alldone')).toBeVisible();
 });
@@ -163,7 +163,7 @@ test('Groceries comes before Supplements, and the store lists offer the suggeste
   await page.click('#tab-daily');
   await expect(page.locator('#daily-grocery')).toBeVisible(); // the tab is its own chunk, fetched on first open
   const ids = await page.locator('[aria-label="Daily section"] button').evaluateAll(b => b.map(x => x.id));
-  expect(ids).toEqual(['daily-grocery', 'daily-supplements']); // Medical and Recipes are admin-only
+  expect(ids).toEqual(['daily-grocery', 'daily-supplements', 'daily-recipes']); // Medical is admin-only
   await expect(page.locator('#daily-supplements')).toHaveText('Nutrition');
   await expect(page.locator('#daily-supplements')).toHaveAttribute('aria-pressed', 'true'); // Nutrition still opens first
   await page.click('#daily-grocery');

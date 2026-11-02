@@ -2,7 +2,8 @@ import { exInfo } from '../lib/data.js';
 import { fmtShort, parseDate } from '../shared/dates.js';
 import { defaultLogDate, describe, lastSession, newEntryId, phaseOf, setItemDone } from '../lib/logic.js';
 import { setExerciseDefault, setOverride } from './librarySlice.js';
-import { entryId, findEntry } from '../lib/export.js';
+import { entryId, findEntry } from '../lib/entryMerge.js';
+import { bwSorted } from '../lib/body.js';
 import { GOAL_KEYS, bestLift, goalPhaseLabel, liftGoalsOf } from '../lib/liftGoal.js';
 import { normEntry, nowStamp, validFreq, validLiftGoalLb } from '../shared/validate.js';
 import type { LogEntry } from '../types.ts';
@@ -18,7 +19,7 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     const ex = s.items[idx].ex;
     // Real numbers replace the planned ones a check-off logged for this card this week.
     const planned = (e: any) => e.auto && e.slot === entry.slot && e.wk === entry.wk;
-    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...clean, id: clean.id || newEntryId(), updatedAt: nowStamp() }].sort((a, b) => a.d.localeCompare(b.d));
+    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...clean, id: clean.id || newEntryId(), updatedAt: nowStamp() }].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
     set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
     // Ticked the way the board ticks: picking the other half of an either/or drops the first one's check-off, and it can finish a day.
     if (check) get().mutateChecks(w => setItemDone(w, s, idx, true));
@@ -40,7 +41,7 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     if (get().blocked()) return false;
     const s = get().slotById(slotId); if (!s) return false;
     const it = s.items[idx]; const key = `${slotId}:${idx}`;
-    const goals = liftGoalsOf(get().cfg, it.ex).filter(([k]) => k === 'any' || k === (entry.ph || null));
+    const goals = liftGoalsOf(get().cfg, it.ex, get().body).filter(([k]) => k === 'any' || k === (entry.ph || null));
     const before = goals.map(([k]) => bestLift(get().logs[it.ex], k));
     if (!get().addEntry(slotId, idx, entry)) return false; // refused (invalid date): nothing else from the sheet is applied
     get().applyExerciseUrl(it.ex, url);
@@ -67,7 +68,7 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
   },
   // Weight you want to lift on an exercise, in one phase or any ('any'), optionally by a date. Your best so far
   // in that phase is kept as the starting point. Passing `from` moves an existing goal to a different phase.
-  setLiftGoal(exId, key, raw, by, from) {
+  setLiftGoal(exId, key, raw, by, from, scale = false) {
     if (get().blocked()) return false;
     if (!GOAL_KEYS.includes(key)) { flag('Pick a phase for the goal'); return false; }
     const n = Number(raw); if (!validLiftGoalLb(n)) { flag('Enter a goal weight in lb'); return false; }
@@ -77,9 +78,17 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     const w = Math.round(n * 10) / 10; const old = G[from ?? key];
     const best = bestLift(get().logs[exId], key);
     const start = old && old.w === w && (from ?? key) === key ? old.start : (best ? best.w : 0); // changing only the date keeps the start
+    // Scaling with body weight is anchored to your latest logged body weight, kept when only the date changes.
+    let anchor: { bw: number; bwd: string } | null = null;
+    if (scale) {
+      const keep = old && old.bw && old.bwd && old.w === w ? { bw: old.bw, bwd: old.bwd } : null;
+      const last = bwSorted(get().body).at(-1);
+      if (!keep && !last) { flag('Log your body weight first'); return false; }
+      anchor = keep || { bw: Number(last!.w), bwd: last!.d };
+    }
     get().mutateCfg(c => {
       const g = { ...((c.liftGoals || {})[exId] || {}) }; if (from && from !== key) delete g[from];
-      g[key] = { w, start, ...(by ? { by } : {}) };
+      g[key] = { w, start, ...(by ? { by } : {}), ...(anchor || {}) };
       c.liftGoals = { ...(c.liftGoals || {}), [exId]: g };
     });
     flag('Goal saved'); return true;
@@ -118,7 +127,7 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     const L = get().logs[exId] || []; const i = findEntry(L, target);
     if (i < 0) { flag('That session changed meanwhile. Open it again.'); return false; }
     const arr = [...L]; arr[i] = { ...clean, id: entryId(L[i]), updatedAt: nowStamp() };
-    arr.sort((a, b) => a.d.localeCompare(b.d));
+    arr.sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
     set(state => ({ logs: { ...state.logs, [exId]: arr } })); get().saveLog(exId);
     flag('Session updated'); return true;
   },
@@ -132,7 +141,7 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     get().noteRemoved('log:' + exId, `the ${fmtShort(parseDate(gone.d))} session`, () => {
       const cur = get().logs[exId] || [];
       if (get().blocked() || findEntry(cur, gone) >= 0 || (gone.auto && cur.some(e => e.slot === gone.slot && e.wk === gone.wk))) return false;
-      const back = [...cur]; back.splice(Math.min(i, back.length), 0, gone); back.sort((a, b) => a.d.localeCompare(b.d));
+      const back = [...cur]; back.splice(Math.min(i, back.length), 0, gone); back.sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
       set(state => ({ logs: { ...state.logs, [exId]: back } })); get().saveLog(exId); return true;
     });
     return true;

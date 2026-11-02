@@ -156,7 +156,7 @@ export default defineConfig({
         start_url: './',
         scope: './',
         display: 'standalone',
-        theme_color: '#1F5E5B',
+        theme_color: '#1E2326',
         background_color: '#EEF0EC',
         categories: ['health', 'fitness', 'sports'],
         // Long-press the home-screen icon (Android). Both open the app on a tab; the store reads ?open= (lib/viewState.ts).
@@ -164,6 +164,8 @@ export default defineConfig({
           { name: "Today's workout", short_name: 'Today', url: './?open=board', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
           { name: 'Daily log', short_name: 'Daily', url: './?open=daily', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
         ],
+        // Android's share sheet lists the app for a shared link or text; the page opens at ./?share_url=... and the app shows a "Save this link" sheet (lib/shareTarget.ts).
+        share_target: { action: './', method: 'GET', params: { title: 'share_title', text: 'share_text', url: 'share_url' } },
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

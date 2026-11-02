@@ -27,16 +27,23 @@ import { startAutoBackup } from './autoBackupRunner.js';
 import { settingsSlice } from './settingsSlice.js';
 import { wellnessSlice } from './wellnessSlice.js';
 import { deviceGrocery, grocerySlice } from './grocerySlice.js';
+import { dietSlice } from './dietSlice.js';
+import { recipesSlice } from './recipesSlice.js';
 import { removedSlice } from './removedSlice.js';
 import { MONTH_RE, monthEmpty, normGrocery, normGroceryMonth } from '../lib/grocery.js';
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { normSupplements } from '../lib/water.js';
 import { WEEK_RE } from '../lib/trends.js';
-import { sameProg, normConfig } from '../lib/export.js';
+import { normConfig } from '../shared/config.js';
+import { sameProg } from '../lib/entryMerge.js';
 import { mimeFor } from '../lib/mime.js';
+import { parseRoute } from '../lib/route.js';
 import { loadView, saveView, openFromUrl } from '../lib/viewState.js';
+import { holdShare, shareFromSearch } from '../lib/shareTarget.js';
 import { useToday } from './useToday.js';
 import { normEntries, normBody, normProgram, normLibrary, SCHEMA_VERSION } from '../shared/validate.js';
+import { normDietEntries } from '../shared/diet.js';
+import { normRecipes } from '../shared/recipes.js';
 
 // Non-reactive handles for the async plumbing. `db` mirrors the optional Firestore-like host
 // binding from the original app (window.claude.use('db')); without it everything uses localStorage.
@@ -144,6 +151,10 @@ const restored = loadView(ymd(new Date()));
 // A home-screen shortcut (./?open=daily) wins over the remembered tab; the parameter is then dropped so a refresh does not re-apply it.
 const shortcutTab = typeof location === 'undefined' ? undefined : openFromUrl(location.search);
 if (shortcutTab) try { history.replaceState(null, '', location.pathname + location.hash); } catch { /* ignore */ }
+// A link shared from another app (./?share_url=...): kept in memory for the Save this link sheet, and the parameters are dropped from the address (lib/shareTarget.ts).
+const sharedIn = typeof location === 'undefined' ? null : shareFromSearch(location.search);
+if (sharedIn) { holdShare(sharedIn); try { history.replaceState(null, '', location.pathname + location.hash); } catch { /* ignore */ } }
+const hashTab = typeof location === 'undefined' ? undefined : parseRoute(location.hash)?.tab; // an address like #/progress/trends opens that tab (brief navigation-urls)
 let keepMDay = restored.mDay != null; // the first week load must not clear a restored phone day
 const loadedMDay = (state: AppState) => { const m = keepMDay ? state.mDay : null; keepMDay = false; return m; };
 
@@ -161,6 +172,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   ...backupSlice(set, get, flag),
   ...wellnessSlice(set, get, flag),
   ...grocerySlice(set, get),
+  ...recipesSlice(set, get),
+  ...dietSlice(set, get),
   ...removedSlice(set, get, flag),
   cfg: structuredClone(DEFAULT_CFG),
   weekStart: weekStartOf(new Date()),
@@ -169,10 +182,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   unsaved: [], // doc paths whose last write was refused (storage full, permission): kept until a write succeeds
   refusals: 0, // writes refused so far this session
   sync: null, // how syncing through the API is going; null when it is off
-  tab: shortcutTab || restored.tab || 'board',
+  tab: shortcutTab || hashTab || restored.tab || 'board',
   mDay: restored.mDay ?? null, // day shown on phones; null = pick the first day with open work
   library: [], // saved program versions
   experiments: [], // exercises to try: [{id, ex, ph, note}]
+  recipes: [], // recipes you wrote or copied (ADR 084)
+  diet: [], // things you ate (ADR 086): saved as diet/main, newest last
   body: [], // body weight: [{wk, d, w}], one per week
   programs: { A: BUILTIN.A, B: BUILTIN.B },
   storeMode: 'loading',
@@ -189,9 +204,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   historyLoading: false,
   dl: undefined, // downloads handle: undefined = not checked yet, null = unavailable
 
-  // Muscles tab view state; kept here so it survives switching tabs, like the original.
-  progView: 'trends', // Progress tab: 'trends' or 'muscles'
-  setProgView: progView => set({ progView }),
+  // Muscle map selection; the Progress page clears it when you leave.
   bodySel: null, // selected muscle key
   bodySec: true, // count secondary work as half a set
   selectMuscle: bodySel => set({ bodySel }),
@@ -206,7 +219,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().noteRemoved('muscles', `your muscle tags for ${exInfo(get().cfg, exId).n}`, () => !get().cfg.muscleMap?.[exId] && get().mutateCfg(c => { c.muscleMap = { ...(c.muscleMap || {}), [exId]: own }; }));
   },
 
-  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, grocery: { ...s.grocery, months: s.groceryMonths } }; },
+  snapshot: () => { const s = get(); return { cfg: s.cfg, logs: s.logs, programs: s.programs, library: s.library, body: s.body, experiments: s.experiments, recipes: s.recipes, diet: s.diet, stretches: s.stretches, stretchExps: s.stretchExps, supp: s.supp, grocery: { ...s.grocery, months: s.groceryMonths } }; },
 
   // The snapshot plus every saved stretch week (the week on screen taken live), for the data file.
   async stretchWeeksAll() {
@@ -408,6 +421,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         body: normBody((LS.get('body/main') || {}).entries),
         library: padLibrary(normLibrary((LS.get('library/main') || {}).items)),
         experiments: normExperiments((LS.get('experiments/main') || {}).items),
+        recipes: normRecipes((LS.get('recipes/main') || {}).items),
+        diet: normDietEntries((LS.get('diet/main') || {}).items),
         stretches: normStretches(LS.get('stretches/main')).items,
         stretchExps: normStretches(LS.get('stretches/main')).experiments,
         supp: normSupplements(LS.get('supplements/main')),
@@ -445,6 +460,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (queue.pending('experiments/main')) return;
       set(state => ({ experiments: s.exists ? normExperiments((s.data() || {}).items) : [], ...markReady('exp')(state) }));
     }, () => flag('Couldn’t load your experiments. Reload the page.'));
+    db.doc('diet/main').onSnapshot((s: any) => {
+      if (queue.pending('diet/main')) return;
+      set({ diet: s.exists ? normDietEntries((s.data() || {}).items) : [] });
+    }, () => flag('Couldn’t load your food log. Reload the page.'));
+    db.doc('recipes/main').onSnapshot((s: any) => {
+      if (queue.pending('recipes/main')) return;
+      set({ recipes: s.exists ? normRecipes((s.data() || {}).items) : [] });
+    }, () => flag('Couldn’t load your recipes. Reload the page.'));
     db.doc('stretches/main').onSnapshot((s: any) => {
       if (queue.pending('stretches/main')) return;
       const d = normStretches(s.exists ? s.data() : null);
@@ -528,6 +551,8 @@ export function fromOtherTab(e: { key?: string | null; newValue?: string | null 
   else if (path === 'body/main') set({ body: (v || {}).entries || [] });
   else if (path === 'library/main') set({ library: padLibrary(normLibrary((v || {}).items)) });
   else if (path === 'experiments/main') set({ experiments: normExperiments((v || {}).items) });
+  else if (path === 'recipes/main') set({ recipes: normRecipes((v || {}).items) });
+  else if (path === 'diet/main') set({ diet: normDietEntries((v || {}).items) });
   else if (path === 'programs/A' || path === 'programs/B') { const k = path.slice(9); set(s => ({ programs: { ...s.programs, [k]: loadProgram(k as 'A' | 'B', v) } })); useAppStore.getState().refreshRan(); }
   else if (path === 'stretches/main') { const d = normStretches(v); set({ stretches: d.items, stretchExps: d.experiments }); }
   else if (path === 'supplements/main') set({ supp: normSupplements(v) });

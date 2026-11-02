@@ -4,7 +4,7 @@ import { disablePush } from '../../lib/pushClient.js';
 import { LS } from '../../lib/storage.js';
 import { parsePath } from '../../sync/documents.js';
 import { createAccountClient } from '../../sync/account.js';
-import { useWho } from './useWho.js';
+import { useSharedWho } from './useWho.js';
 import { noteAfterReload } from '../../lib/afterReload.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import { localPaths, writeLegacyMarker } from '../../sync/legacyMarker.js';
@@ -42,7 +42,7 @@ export default function DeleteMyData() {
   const dl = useAppStore(s => s.dl);
   const exporting = useAppStore(s => s.exporting);
   const account = useMemo(() => createAccountClient({ headers: devHeaders }), []);
-  const { who } = useWho(!!api, account);
+  const { who } = useSharedWho(!!api, account);
   const [typed, setTyped] = useState<Record<What, string>>({ data: '', account: '' });
   const [busy, setBusy] = useState<What | null>(null);
   const [problem, setProblem] = useState('');

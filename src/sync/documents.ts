@@ -2,6 +2,8 @@ import { normConfigDoc, type ConfigDoc } from '../shared/config.js';
 import { MONTH_RE, monthEmpty, normGroceryGroup, normGroceryItem, normGroceryMonth, normGroceryStore } from '../shared/grocery.js';
 import { normExperimentItem, normStretchExperimentItem, normStretchItem, normSupplementItem } from '../shared/listItems.js';
 import { validateSaveProgram, type ListName } from '../shared/commands.js';
+import { dietPosition, normDietEntry } from '../shared/diet.js';
+import { normRecipe } from '../shared/recipes.js';
 import { normStretchWeek } from '../shared/stretchWeek.js';
 import { normBoost, normTakenDay, normWaterDay, r1 } from '../shared/supplementDay.js';
 import { SCHEMA_VERSION, normBody, normEntries, normLibrary, validDate, validGoal } from '../shared/validate.js';
@@ -9,8 +11,8 @@ import { normWeek } from '../shared/week.js';
 import { padLibrary } from '../lib/data.js';
 import { normGrocery } from '../lib/grocery.js';
 import { DEFAULT_GOAL_OZ } from '../lib/water.js';
-import { entryId } from '../lib/export.js';
-import type { LibraryItem, LogEntry, Supplements } from '../types.ts';
+import { entryId } from '../lib/entryMerge.js';
+import type { DietEntry, LibraryItem, LogEntry, Supplements } from '../types.ts';
 import type { MergedTable } from './merge.js';
 import { mirrorId, type DesiredRow, type Mirror, type MirrorRow } from './types.js';
 
@@ -28,6 +30,8 @@ export type PathKind =
   | { kind: 'stretchweeks'; weekStart: string }
   | { kind: 'body' }
   | { kind: 'library' }
+  | { kind: 'diet' }
+  | { kind: 'recipes' }
   | { kind: 'experiments' }
   | { kind: 'stretches' }
   | { kind: 'supplements' }
@@ -47,7 +51,7 @@ export function parsePath(path: string): PathKind | null {
     case 'programs': return rest === 'A' || rest === 'B' ? { kind: 'programs', key: rest } : null;
     // The grocery list (ADR 039): the catalogue is grocery/main, each month grocery/YYYY-MM.
     case 'grocery': return rest === 'main' ? { kind: 'grocery' } : MONTH_RE.test(rest) ? { kind: 'grocerymonths', month: rest } : null;
-    case 'body': case 'library': case 'experiments': case 'stretches': case 'supplements': case 'config':
+    case 'body': case 'diet': case 'library': case 'recipes': case 'experiments': case 'stretches': case 'supplements': case 'config':
       return rest === 'main' ? ({ kind: head } as PathKind) : null;
     default: return null;
   }
@@ -71,7 +75,7 @@ export function pathsOf(row: MirrorRow): string[] {
 
 const LIST_PATH: Record<ListName, string> = {
   stretch: 'stretches/main', stretch_experiment: 'stretches/main', experiment: 'experiments/main', supplement_item: 'supplements/main',
-  grocery_group: 'grocery/main', grocery_item: 'grocery/main', grocery_store: 'grocery/main',
+  grocery_group: 'grocery/main', grocery_item: 'grocery/main', grocery_store: 'grocery/main', recipe: 'recipes/main', diet_entry: 'diet/main',
 };
 /** For a path whose document is merged three-way rather than replaced (a week, a stretch week, a grocery month): its row's table and
  *  key. Null for every other path. */
@@ -98,6 +102,8 @@ export function scopeRows(kind: PathKind, mirror: Mirror): MirrorRow[] {
     case 'body': return all.filter(r => r.table === 'body_entries');
     case 'library': return all.filter(r => r.table === 'library_items');
     case 'experiments': return all.filter(r => r.table === 'list_items' && r.list === 'experiment');
+    case 'diet': return all.filter(r => r.table === 'list_items' && r.list === 'diet_entry');
+    case 'recipes': return all.filter(r => r.table === 'list_items' && r.list === 'recipe');
     case 'stretches': return all.filter(r => r.table === 'list_items' && (r.list === 'stretch' || r.list === 'stretch_experiment'));
     case 'supplements': return all.filter(r => r.table === 'supplement_days' || (r.table === 'list_items' && r.list === 'supplement_item'));
     case 'programs': return all.filter(r => r.table === 'programs' && r.key === kind.key);
@@ -129,6 +135,8 @@ export function documentFor(kind: PathKind, mirror: Mirror): unknown {
     case 'stretchweeks': { const r = live[0]; return r && r.table === 'stretch_weeks' ? r.week : null; }
     case 'programs': { const r = live[0]; return r && r.table === 'programs' ? r.program : null; }
     case 'grocerymonths': { const r = live[0]; return r && r.table === 'grocery_months' ? r.record : null; }
+    case 'diet': return scope.length ? { items: listOf(live, 'diet_entry') } : null;
+    case 'recipes': return scope.length ? { items: listOf(live, 'recipe') } : null;
     case 'grocery': {
       if (!scope.length) return null;
       const stores = listOf(live, 'grocery_store') as { n: string; retired?: true }[];
@@ -213,6 +221,8 @@ export function desiredRows(kind: PathKind, doc: unknown, mirror: Mirror): Desir
     case 'library':
       return normLibrary(d.items).map((item: LibraryItem) => padLibrary([item])[0]!).map(item => ({ table: 'library_items' as const, key: item.id, item }));
     case 'experiments': return listRows('experiment', d.items, normExperimentItem);
+    case 'diet': return listRows('diet_entry', d.items, normDietEntry, x => dietPosition((x as DietEntry).d));
+    case 'recipes': return listRows('recipe', d.items, normRecipe);
     case 'stretches': return [...listRows('stretch', d.items, normStretchItem), ...listRows('stretch_experiment', d.experiments, normStretchExperimentItem)];
     case 'supplements': return supplementRows(d, mirror);
     case 'grocery': {
@@ -235,14 +245,14 @@ export function desiredRows(kind: PathKind, doc: unknown, mirror: Mirror): Desir
   }
 }
 
-function listRows(list: ListName, items: unknown, clean: (x: unknown) => { id: string } | null): DesiredRow[] {
+function listRows(list: ListName, items: unknown, clean: (x: unknown) => { id: string } | null, positionOf?: (item: { id: string }) => number): DesiredRow[] {
   const seen = new Set<string>();
   const out: DesiredRow[] = [];
   (Array.isArray(items) ? items : []).forEach(raw => {
     const item = clean(raw);
     if (!item || item.id.length > 100 || seen.has(item.id)) return;
     seen.add(item.id);
-    out.push({ table: 'list_items', key: `${list}/${item.id}`, list, position: out.length, item: item as never });
+    out.push({ table: 'list_items', key: `${list}/${item.id}`, list, position: positionOf ? positionOf(item) : out.length, item: item as never });
   });
   return out;
 }

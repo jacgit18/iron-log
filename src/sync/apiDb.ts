@@ -1,7 +1,7 @@
 import type { AccountState } from './account.js';
 import { backoffMs } from './backoff.js';
 import { desiredRows, documentFor, mergedDoc, mergedRowOf, parsePath, pathsOf, scopeRows, type PathKind } from './documents.js';
-import { entryId } from '../lib/export.js';
+import { entryId } from '../lib/entryMerge.js';
 import { createMirrorStore, type Storage } from './mirrorStore.js';
 import { merge3, type MergedTable } from './merge.js';
 import { createOutbox, isDeleted, type QuarantineEntry } from './outbox.js';

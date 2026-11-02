@@ -7,7 +7,7 @@ import { useCatalogSearch, MIN_LETTERS } from '../../hooks/useCatalogSearch.js';
    Replaces the Browse catalog sheets. Shown only when syncing (local mode has no catalog, ADR 025) and something is typed. What Add
    copies is yours from then on (ADR 026), so the row leaves this list and shows above as one of yours. */
 type Props = {
-  kind: CatalogKind;
+  kind: Exclude<CatalogKind, 'recipe'>;
   q: string;
   /** Every item in the library, so catalog items you already have (by catalog id or name) are left out. */
   mine: MineOption[];

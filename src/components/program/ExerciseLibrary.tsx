@@ -1,17 +1,20 @@
-import type { PhaseKey } from '../../types.ts';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { PHASES, EQUIPMENT } from '../../lib/data.js';
+import { EQUIPMENT } from '../../lib/data.js';
 import { eqName, eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS } from '../../lib/muscles.js';
-import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems } from '../../lib/exerciseLibrary.js';
+import { libraryRows, filterRows, muscleList, hasTwoSources, keepCatalogItems, rowSummary } from '../../lib/exerciseLibrary.js';
+import { DEFAULT_EXERCISE_SORT, EXERCISE_SORTS, sortExerciseRows } from '../../lib/exerciseSort.js';
+import { isFiltering, resultText } from '../../lib/libraryFilter.js';
+import { useSortChoice } from '../useSortChoice.js';
 import { useExIdsInUse } from '../../hooks/useExIdsInUse.js';
-import { progName } from '../../lib/logic.js';
-import { videoLabel, isCatalogId, exInfo } from '../../lib/data.js';
-import Icon from '../Icon.jsx';
+import { isCatalogId, exInfo } from '../../lib/data.js';
 import RemovedNotice from '../RemovedNotice.jsx';
+import SortControl from '../SortControl.jsx';
 import CatalogMatches from './CatalogMatches.jsx';
+import LibraryChip from './LibraryChip.jsx';
 import YourEquipment from './YourEquipment.jsx';
+import './Library.css';
 
 // Every exercise (from the library, and your own marked Custom) with what is set on it, searchable, edited in one sheet.
 export default function ExerciseLibrary() {
@@ -23,10 +26,11 @@ export default function ExerciseLibrary() {
   const [f, setF] = useState({ q: '', eq: '', muscle: '', src: '' });
   const rows = libraryRows(cfg, { programs, library, experiments, logs });
   const sources = hasTwoSources(rows); // synced, every exercise is your own until catalog items arrive (ADR 024, 027)
-  const shown = filterRows(rows, sources ? f : { ...f, src: '' });
-  const filtering = !!(f.q || f.eq || f.muscle || f.src);
+  const [sort, setSort] = useSortChoice('exercises', EXERCISE_SORTS, DEFAULT_EXERCISE_SORT);
+  const shown = sortExerciseRows(filterRows(rows, sources ? f : { ...f, src: '' }), sort, logs);
+  const filtering = isFiltering(f);
   return (
-    <section className="panel edpanel exlib">
+    <section className="panel edpanel exlib exlibwide">
       <div className="inline spread">
         <h2 id="exlib-h" tabIndex={-1}>Exercise library</h2>
         <div className="inline">
@@ -35,46 +39,40 @@ export default function ExerciseLibrary() {
       </div>
       <p className="note">Every exercise in one place. What you set on an exercise here applies to every card, day and week that uses it.</p>
       <YourEquipment />
-      <div className="filterbar" role="search">
-        <label className="field">Search<input type="search" value={f.q} placeholder="Name" onChange={e => setF(x => ({ ...x, q: e.target.value }))} /></label>
-        <label className="field">Equipment
-          <select value={f.eq} onChange={e => setF(x => ({ ...x, eq: e.target.value }))}>
+      <div className="libbar" role="search">
+        <input className="libsearch" type="search" aria-label="Search" value={f.q} placeholder={`Search ${rows.length} exercises`} onChange={e => setF(x => ({ ...x, q: e.target.value }))} />
+        <div className="libchips">
+          <SortControl options={EXERCISE_SORTS} value={sort} onChange={setSort} />
+          <LibraryChip label="Equipment" value={f.eq} onChange={v => setF(x => ({ ...x, eq: v }))}>
             <option value="">All equipment</option>
             {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
             <option value="none">Not set</option>
-          </select>
-        </label>
-        <label className="field">Muscle
-          <select value={f.muscle} onChange={e => setF(x => ({ ...x, muscle: e.target.value }))}>
+          </LibraryChip>
+          <LibraryChip label="Muscle" value={f.muscle} onChange={v => setF(x => ({ ...x, muscle: v }))}>
             <option value="">All muscles</option>
             {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
             <option value="untagged">Not tagged yet</option>
-          </select>
-        </label>
-        {sources && <label className="field">Source
-          <select value={f.src} onChange={e => setF(x => ({ ...x, src: e.target.value }))}>
-            <option value="">All</option>
+          </LibraryChip>
+          {sources && <LibraryChip label="Source" value={f.src} onChange={v => setF(x => ({ ...x, src: v }))}>
+            <option value="">All sources</option>
             <option value="custom">Custom</option>
             <option value="library">Library</option>
-          </select>
-        </label>}
-        {filtering && <button type="button" className="btn sm ghost" onClick={() => setF({ q: '', eq: '', muscle: '', src: '' })}>Clear</button>}
-        <span className="note" role="status">{filtering ? `${shown.length} of ${rows.length} exercises` : `${rows.length} exercises`}</span>
+          </LibraryChip>}
+          {filtering && <button type="button" className="btn sm ghost" onClick={() => setF({ q: '', eq: '', muscle: '', src: '' })}>Clear</button>}
+        </div>
+        <span className="note" role="status">{resultText(shown.length, rows.length, filtering, 'exercises')}</span>
       </div>
       <RemovedNotice scope="exercises" />
       <div className="exrows">
         {shown.map(r => {
-          const meta = [r.eq ? eqName(cfg, r.eq) : '', r.ph ? `Default: ${PHASES[r.ph as PhaseKey].label}` : '', r.rm ? `1RM ${r.rm} lb` : ''].filter(Boolean);
-          const muscles = r.mob ? 'Mobility' : [r.p.length && `Primary: ${muscleList(r.p)}`, r.s.length && `Secondary: ${muscleList(r.s)}`].filter(Boolean).join(' · ');
-          const where = r.inPrograms.length ? `In ${r.inPrograms.map(k => progName(cfg, k)).join(', ')}` : 'Not in a program';
+          const { line, where } = rowSummary(r, r.eq ? eqName(cfg, r.eq) : '');
           return (
             <div className="exrow" key={r.id}>
               <div className="exmain">
                 <b>{r.name}{r.custom && <span className="pill custom" title="You created this exercise; it is not from the library">Custom</span>}{isCatalogId(r.id) && <span className="pill custom" title="Added from the catalog; what you change on it stays yours">Library</span>}</b>
-                <span className="note">{[...meta, where].join(' · ')}</span>
-                <span className="note">{muscles || 'No muscles tagged yet'}</span>
-                {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`${videoLabel(r.url)}: ${r.name} (opens in a new tab)`}><Icon name="play" />{' '}{videoLabel(r.url)}</a>}
+                <span className="note">{line}</span>
               </div>
+              <span className="note exwhere">{where}</span>
               <button type="button" className="btn sm" id={`exlib-${r.id}`} aria-label={`Edit ${r.name}`} onClick={() => openModal({ type: 'exercise', exId: r.id })}>Edit</button>
             </div>
           );

@@ -1,0 +1,532 @@
+@layer base, components;
+@layer components {
+/* The video link under a recipe's title (RecipeDetail.tsx): a target of at least 44px on a phone. */
+.rc-video {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 44px;
+}
+/* Recipes (ADR 084): the list, the library search, a recipe and its form. Plain flat rows like Groceries; every tap target is 44px tall. */
+.rc-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  align-items: center;
+  margin: var(--sp-8) 0;
+}
+.rc-top input[type='search'] {
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: 44px;
+}
+.rc-sort {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  align-items: center;
+  margin: var(--sp-8) 0;
+}
+.rc-sortedby {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.rc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+}
+.rc-chips button {
+  min-height: 44px;
+  padding: 0 var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: inherit;
+  font-size: var(--fs-md);
+}
+.rc-chips button[aria-pressed='true'] {
+  background: var(--accent-fill);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.rc-chips .rc-manage {
+  border-style: dashed;
+}
+.rc-tags {
+  border: 0;
+  margin: var(--sp-8) 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-6);
+}
+.rc-tagadd {
+  display: flex;
+  gap: var(--sp-6);
+}
+.rc-tagadd input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+}
+.rc-tags .btn {
+  min-height: 44px;
+}
+.rc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rc-list li {
+  border-top: 1px solid var(--line);
+}
+.rc-row {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--sp-6);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-12);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+.rc-row .rc-meta {
+  display: block;
+}
+.rc-row .rc-have {
+  white-space: nowrap;
+}
+.rc-row .rc-badge {
+  margin-top: auto;
+}
+.rc-main {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rc-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+/* (.rc-list.rc-cards: the plain .rc-list further down is a column of the ingredient list, so the grid needs the extra class.) Recipes and Library as a grid of cards: 1 column on a phone, 2 from 600px, 3 from 1100px, 4 from 1600px (viewport widths). */
+.rc-list.rc-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-12);
+}
+.rc-list.rc-cards li {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+@media (min-width: 600px) {
+  .rc-list.rc-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1100px) {
+  .rc-list.rc-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1600px) {
+  .rc-list.rc-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* Category, Tags and Nutrition chips and Sort share one row that wraps only when it must; Sort sits at the right end. */
+.rc-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-16);
+  margin: var(--sp-8) 0;
+}
+.rc-filterbar .rc-chips,
+.rc-filterbar .rc-sort {
+  margin: 0;
+}
+.rc-filterbar .rc-sort {
+  margin-inline-start: auto;
+}
+.rc-row b {
+  font-weight: 600;
+}
+.rc-meta {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.rc-badge {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.rc-have {
+  flex: none;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.rc-have.all {
+  color: var(--exp);
+}
+.rc-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-8);
+}
+.rc-ings {
+  list-style: none;
+  margin: 0 0 var(--sp-12);
+  padding: 0;
+}
+.rc-ing {
+  display: flex;
+  min-height: 44px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-6) var(--sp-8);
+  border-top: 1px solid var(--line);
+}
+.rc-ing .rc-state {
+  font-size: var(--fs-sm);
+}
+.rc-ing .rc-state.have {
+  color: var(--exp);
+}
+.rc-ing .rc-state.miss {
+  color: var(--warn-ink);
+}
+.rc-ing .rc-state.part {
+  color: var(--warn-ink);
+}
+.rc-ing select {
+  max-width: 100%;
+  min-height: 44px;
+}
+.rc-ing .btn {
+  min-height: 44px;
+}
+.rc-steps {
+  margin: 0 0 var(--sp-12);
+  padding-left: var(--sp-16);
+}
+.rc-steps li {
+  margin: var(--sp-6) 0;
+}
+.rc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin: var(--sp-12) 0;
+}
+.rc-actions .btn {
+  min-height: 44px;
+}
+.rc-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+}
+.rc-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+.rc-form input,
+.rc-form select,
+.rc-form textarea {
+  min-width: 0;
+  min-height: 44px;
+}
+.rc-attrib {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.rc-edited {
+  margin-left: var(--sp-6);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-style: italic;
+}
+.rc-cols {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+}
+.rc-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+  min-width: 0;
+}
+.rc-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sp-8);
+}
+.rc-nut {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  padding: var(--sp-10) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+.rc-nut .note {
+  margin: 0;
+}
+.rc-nuthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+}
+.rc-nuthead .btn {
+  min-height: 44px;
+}
+.rc-nutfields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-8);
+}
+.rc-ings {
+  min-width: 0;
+}
+.rc-ings .seg {
+  align-self: flex-start;
+}
+.rc-ingh {
+  display: none;
+}
+.rc-ingblock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-8);
+  border-bottom: 1px solid var(--line);
+}
+.rc-ingline {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr) 44px;
+  grid-template-areas: 'amt name rm' 'alt alt alt';
+  gap: var(--sp-6);
+  align-items: center;
+}
+.rc-amt {
+  grid-area: amt;
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-8);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.rc-amt span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rc-amt.empty {
+  color: var(--muted);
+}
+.rc-amt[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+.rc-name {
+  grid-area: name;
+}
+.rc-alt {
+  display: none;
+  grid-area: alt;
+}
+.rc-altopen .rc-alt {
+  display: block;
+}
+.rc-rm {
+  grid-area: rm;
+  min-width: 44px;
+  min-height: 44px;
+}
+.rc-altlink {
+  align-self: flex-start;
+  min-height: 44px;
+}
+.rc-altopen .rc-altlink {
+  display: none;
+}
+.rc-skipnote {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: 0;
+}
+.rc-skipnote .btn {
+  min-height: 44px;
+}
+.rc-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-10);
+  padding: var(--sp-12);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.rc-picker:focus {
+  outline: none;
+}
+.rc-picker .btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+.rc-pickprev {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0;
+}
+.rc-pickprev output {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+}
+.rc-pickrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-12) var(--sp-16);
+}
+.rc-picklab {
+  display: block;
+  margin-bottom: var(--sp-4);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.rc-step {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+.rc-step output {
+  min-width: 2.5rem;
+  font-size: var(--fs-xl);
+  text-align: center;
+}
+.rc-chips2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+}
+.rc-pickacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+}
+.rc-pickacts input {
+  flex: 1 1 10rem;
+}
+.rc-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+}
+.rc-preview ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rc-preview li {
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+.rc-pamt {
+  display: inline-block;
+  min-width: 5rem;
+  color: var(--muted);
+}
+.rc-bar {
+  position: sticky;
+  bottom: calc(var(--tabbar, 0px) + env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-sticky);
+  margin: 0;
+  padding: var(--sp-8) 0;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+@media (min-width: 701px) {
+  .rc-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
+    gap: var(--sp-16);
+    align-items: start;
+  }
+  .rc-ingh {
+    display: grid;
+    grid-template-columns: 8rem minmax(0, 1fr) minmax(0, 1fr) 44px;
+    gap: var(--sp-6);
+    color: var(--muted);
+    font-size: var(--fs-xs);
+  }
+  .rc-ingline {
+    grid-template-columns: 8rem minmax(0, 1fr) minmax(0, 1fr) 44px;
+    grid-template-areas: 'amt name alt rm';
+  }
+  .rc-alt {
+    display: block;
+  }
+  .rc-altlink {
+    display: none;
+  }
+  .rc-bar {
+    justify-content: flex-end;
+  }
+}
+.rc-skipped {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.rc-instead {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.rc-ing .rc-state.skip {
+  color: var(--muted);
+}
+.rc-scale {
+  display: flex;
+  min-height: 44px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.rc-scale .btn {
+  min-height: 44px;
+}
+.rc-scale output {
+  min-width: 5.5rem;
+  text-align: center;
+}
+/* 1920 page cap: a search field this wide is hard to scan. */
+@media (min-width:1501px) {
+  .rc-top input[type='search'] {
+    max-width: 720px;
+  }
+}
+}

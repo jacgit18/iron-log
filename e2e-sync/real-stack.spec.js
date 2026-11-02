@@ -1,5 +1,22 @@
 import { expect, newPhone, server, test } from './stack.js';
 
+// Signed in, the badge opens the account menu and a row opens Settings; signed out, Settings keeps its tab.
+const goSettings = async page => {
+  if (await page.locator('#tab-settings').count()) await page.locator('#tab-settings').click();
+  else {
+    await page.locator('#account-badge').click();
+    await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
+  }
+};
+
+// Progress is a hub with an "Exercise charts" tile under 1280px, and one page with the exercise cards already on it from 1280px (these phones are
+// 1440px wide). A reload also reopens the Exercise charts page it was on (screen addresses, #/progress/lifts). So click the tile only when it is there.
+const openExerciseCharts = async page => {
+  const charts = page.getByRole('button', { name: 'Exercise charts' });
+  await charts.or(page.locator('.pcard', { hasText: 'Hack Squat' })).first().waitFor();
+  if (await charts.isVisible()) await charts.click();
+};
+
 // The whole stack, nothing mocked: a browser with the sync flag on, the real API, a real Postgres. These cover what the unit and
 // API tests cannot: the actual screens, the actual store, and the browser's own storage and network events.
 
@@ -16,6 +33,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
 
   // Edit one in the exercise sheet (it becomes a session logged by hand), and delete the other.
   await page.locator('#tab-progress').click();
+  await openExerciseCharts(page);
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   const rows = page.locator('table.hist tbody tr');
   await expect(rows).toHaveCount(2);
@@ -35,6 +53,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
   await page.reload(); // the app reopens on the tab it was on
   await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
   await page.locator('#tab-progress').click();
+  await openExerciseCharts(page);
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(page.locator('table.hist tbody tr')).toHaveCount(1);
   await expect(page.locator('table.hist')).toContainText('300 lb');
@@ -43,6 +62,7 @@ test('a ticked card and an edited session reach the server, and a second phone s
   const b = await newPhone(browser, user);
   const second = await b.open();
   await second.locator('#tab-progress').click();
+  await openExerciseCharts(second);
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist tbody tr')).toHaveCount(1);
   await expect(second.locator('table.hist')).toContainText('300 lb');
@@ -91,8 +111,8 @@ test('two phones tick the same card: the server keeps one check-off and both pho
   await expect.poll(async () => (await pageB.evaluate(() => JSON.parse(localStorage.getItem('ironlog:sync/pending') || '{}'))), { timeout: 30_000 }).toEqual({});
   const entries = await server.entries(user);
   expect(entries.filter(e => e.auto && e.slot === 'A-d3s1')).toHaveLength(1);
-  await pageB.locator('#tab-settings, #account-badge').first().click();
-  await expect(pageB.getByRole('heading', { name: 'Sync', exact: true })).toBeVisible();
+  await goSettings(pageB);
+  await expect(pageB.getByRole('heading', { name: 'Sync, backups & data', exact: true })).toBeVisible();
   await expect(pageB.locator('.syncstatus')).toContainText('Synced');
   await expect(pageB.getByText('already checked off or logged on another device')).toBeVisible();
   await a.close();
@@ -177,6 +197,7 @@ test('data from before accounts is uploaded once, all of it, and a second phone 
 
   // The phone shows what it uploaded, and the old copy is still on the device.
   await page.locator('#tab-progress').click();
+  await openExerciseCharts(page);
   await page.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(page.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(2);
   expect(await page.evaluate(() => localStorage.getItem('ironlog:logs/hack'))).toContain('"w":210');
@@ -188,6 +209,7 @@ test('data from before accounts is uploaded once, all of it, and a second phone 
   const b = await newPhone(browser, user);
   const second = await b.open({ blank: true }); // the upload has no program, so the board is blank (ADR 021); the history is there
   await second.locator('#tab-progress').click();
+  await openExerciseCharts(second);
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(2);
   expect(await server.counts(user)).toEqual({ entries: 2, body: 1, weeks: 1 });
@@ -225,8 +247,9 @@ test('an export file from another copy of the app is uploaded into an empty acco
   };
   const a = await newPhone(browser, user);
   const page = await a.open({ blank: true });
-  await page.locator('#tab-settings, #account-badge').first().click();
-  const panel = page.getByRole('region', { name: 'Account' });
+  await goSettings(page);
+  await page.getByText('Save or load a file yourself').click(); // the upload is in that fold of Backups & data
+  const panel = page.locator('details.manualcopy');
   const choose = () => panel.locator('input[aria-label="Loadbearer export file"]').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exportFile)) });
   await choose();
   await expect(panel).toContainText('2 logged sessions');
@@ -243,6 +266,7 @@ test('an export file from another copy of the app is uploaded into an empty acco
   const b = await newPhone(browser, user);
   const second = await b.open({ blank: true }); // the upload has no program, so the board is blank (ADR 021); the history is there
   await second.locator('#tab-progress').click();
+  await openExerciseCharts(second);
   await second.locator('.pcard', { hasText: 'Hack Squat' }).click();
   await expect(second.locator('table.hist:not(.bwtab) tbody tr')).toHaveCount(1);
   await a.close();
@@ -259,7 +283,7 @@ test('erasing everything from one phone empties the database, and the other phon
   const second = await b.open();
   await expect(second.locator('#chk-A-d1s1')).toBeChecked(); // the other phone has it
 
-  await first.locator('#tab-settings, #account-badge').first().click();
+  await goSettings(first);
   const panel = first.getByRole('region', { name: 'Delete my data' });
   await panel.getByLabel(/Type ERASE/).fill('ERASE');
   await panel.getByRole('button', { name: 'Erase everything permanently' }).click();

@@ -1,0 +1,116 @@
+@layer base, components;
+@layer components {
+/* Day at a glance: a side panel of the Program editor from 1280px; below that it is not drawn, so phones and tablets keep today's page. */
+.daysum {
+  display: none;
+}
+@media (min-width:1280px) {
+  .daysum {
+    display: flex;
+  }
+  .daysum h3 {
+    margin: var(--sp-4) 0 0;
+    font-size: var(--fs-md);
+    font-weight: 700;
+  }
+  .daysum-sub {
+    margin: 0;
+  }
+  .daysum-strip {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .daysum-strip div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--sp-10) var(--sp-8);
+  }
+  .daysum-strip div+div {
+    border-left: 1px solid var(--line);
+  }
+  .daysum-strip b {
+    font-size: var(--fs-6xl);
+    line-height: 1.05;
+  }
+  .daysum-strip span {
+    font-size: var(--fs-sm);
+    color: var(--muted);
+  }
+  .daysum-phbar {
+    display: flex;
+    gap: var(--sp-2);
+    height: 14px;
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .daysum-phbar i {
+    display: block;
+    flex-basis: 0;
+    background: var(--none);
+  }
+  .daysum-phbar i[data-p="strength"] {
+    background: var(--str);
+  }
+  .daysum-phbar i[data-p="hyp"] {
+    background: var(--hyp);
+  }
+  .daysum-phbar i[data-p="iso"] {
+    background: var(--iso);
+  }
+  .daysum-phbar i[data-p="exp"] {
+    background: var(--exp);
+  }
+  .daysum-legend,
+  .daysum-equip,
+  .daysum-muscles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .daysum-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-4) var(--sp-12);
+    font-size: var(--fs-sm);
+    color: var(--muted);
+  }
+  .daysum-legend .dot {
+    margin-right: var(--sp-6);
+  }
+  .daysum-muscles {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-6);
+  }
+  .daysum-muscles li {
+    display: grid;
+    grid-template-columns: 120px minmax(0,1fr) 28px;
+    gap: var(--sp-10);
+    align-items: center;
+    font-size: var(--fs-md);
+  }
+  .daysum-muscles b {
+    text-align: right;
+  }
+  .daysum-track {
+    height: 8px;
+    border-radius: var(--r-sm);
+    background: var(--m0);
+    overflow: hidden;
+  }
+  .daysum-track i {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+  }
+  .daysum-equip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-6);
+  }
+}
+}

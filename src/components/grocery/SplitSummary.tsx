@@ -4,6 +4,7 @@ import { allPeople, everyone, monthOwed, monthShare, payerOf, purchasesOf, store
 import { ME } from '../../lib/grocerySplit.js';
 import { monthOwes, storeStatus, type RowStatus } from '../../lib/grocerySettle.js';
 import type { Grocery, GroceryMonth } from '../../types.ts';
+import AcrossStores from './AcrossStores.js';
 import './SplitSummary.css';
 
 // What a month's shared groceries come to: what you paid, your own share (the number that is your spending), and what is owed to you, then
@@ -37,6 +38,7 @@ export default function SplitSummary({ g, month, mk }: { g: Grocery; month: Groc
         <div><dt>Still owed to you</dt><dd className={owed ? 'gowed' : undefined}>{money(owed)}</dd></div>
         {youOwe > 0 && <div><dt>You still owe</dt><dd>{money(youOwe)}</dd></div>}
       </dl>
+      <AcrossStores g={g} month={month} />
       {cards.map(({ store, payer, s: st, t }) => (
         <div key={store || '_'} className="gsplitcard">
           <div className="gsplithead">

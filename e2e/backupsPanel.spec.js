@@ -20,7 +20,7 @@ async function open(page, paid) {
   await page.route('**/api/backups', json({ ok: true, days: 30, backups: paid ? days(30) : [] }));
   await page.goto('/');
   await page.waitForLoadState('networkidle').catch(() => {});
-  await page.locator('#account-badge').click();
+  await page.locator('#account-badge').click(); await page.getByRole('group', { name: 'Account menu' }).getByRole('button', { name: 'Data' }).click();
   return page.getByRole('group', { name: 'Backups' });
 }
 

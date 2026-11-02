@@ -75,11 +75,11 @@ const jsonGet = async url => { const r = await fetch(url, { headers: { accept: '
 
 /** Registry facts for one name; null when it does not exist, undefined when the registry could not be reached. */
 export async function lookup(name, get = jsonGet) {
-  const doc = await registry(`https://registry.npmjs.org/${name.replace('/', '%2F')}`, get);
+  const doc = await registry(`https://registry.npmjs.org/${name.replaceAll('/', '%2F')}`, get);
   if (doc === undefined) return undefined;
   if (doc === null) return null;
   const latest = doc.versions?.[doc['dist-tags']?.latest] ?? {};
-  const dlUrl = `https://api.npmjs.org/downloads/point/last-week/${name.replace('/', '%2F')}`;
+  const dlUrl = `https://api.npmjs.org/downloads/point/last-week/${name.replaceAll('/', '%2F')}`;
   const dl = (await registry(dlUrl, get)) ?? (await registry(dlUrl, get)); // the downloads API rate-limits: one retry
   return { created: doc.time?.created ?? null, weeklyDownloads: typeof dl?.downloads === 'number' ? dl.downloads : null, scripts: latest.scripts ?? {}, repository: doc.repository ?? latest.repository ?? null, license: latest.license ?? doc.license ?? null };
 }

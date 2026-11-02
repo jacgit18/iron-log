@@ -83,13 +83,13 @@ export function normGroceryGroup(x: unknown): GroceryGroup | null {
     seen.add(pid); people.push({ id: pid, n: pn, ...(po.covered === true ? { covered: true as const } : {}), ...(po.gone === true ? { gone: true as const } : {}) });
   });
   const stores = [...new Set((Array.isArray(o.stores) ? o.stores : []).map((s: unknown) => str(s, MAX_STORE)).filter(Boolean))].slice(0, MAX_STORES);
-  return { id, n, people, stores, ...(o.gone === true ? { gone: true as const } : {}) };
+  return { id, n, people, stores, ...(o.allStores === true ? { allStores: true as const } : {}), ...(o.gone === true ? { gone: true as const } : {}) };
 }
 
 /** True when `x` is a group exactly as the app writes one. */
 export function validGroceryGroup(x: unknown): x is GroceryGroup {
   const o = asObject(x);
-  if (!o || !exact(o.id, MAX_ID) || reservedId(o.id as string) || !exact(o.n, MAX_PERSON) || (o.gone !== undefined && o.gone !== true)) return false;
+  if (!o || !exact(o.id, MAX_ID) || reservedId(o.id as string) || !exact(o.n, MAX_PERSON) || (o.gone !== undefined && o.gone !== true) || (o.allStores !== undefined && o.allStores !== true)) return false;
   if (!Array.isArray(o.people) || o.people.length > MAX_PEOPLE * 2 || o.people.filter((p: unknown) => asObject(p)?.gone !== true).length > MAX_PEOPLE || !Array.isArray(o.stores) || o.stores.length > MAX_STORES) return false;
   const ids = new Set<string>();
   for (const p of o.people) {

@@ -1,0 +1,251 @@
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { clearStorage } from '../test/browserStubs.js';
+import { MAX_DIET_PER_DAY } from '../shared/diet.js';
+import { ymd } from '../shared/dates.js';
+
+// Your food log and typed targets (ADR 086): added, fixed, removed with Undo, capped per day, and carried through the data file.
+let useAppStore: typeof import('./useAppStore.js').useAppStore;
+const st = () => useAppStore.getState();
+beforeAll(async () => { ({ useAppStore } = await import('./useAppStore.js')); await st().init(); });
+beforeEach(() => { clearStorage(); useAppStore.setState({ diet: [], removed: null }); st().mutateCfg(c => { delete c.diet; }); });
+
+const day = '2026-10-29';
+const rice = { d: day, n: 'Rice', kcal: 200, p: 4 };
+
+describe('addDietEntry', () => {
+  it('adds an entry with an id and keeps the numbers', () => {
+    const r = st().addDietEntry(rice);
+    expect(r.error).toBeNull();
+    expect(st().diet).toEqual([{ id: r.id, ...rice }]);
+  });
+  it('refuses bad numbers or a blank name and changes nothing', () => {
+    expect(st().addDietEntry({ ...rice, kcal: 0 }).error).toMatch(/calories/);
+    expect(st().addDietEntry({ ...rice, n: ' ' }).error).toMatch(/name/);
+    expect(st().addDietEntry({ ...rice, p: NaN }).error).toBeTruthy();
+    expect(st().diet).toEqual([]);
+  });
+  it('refuses a day too far back to keep, saying so', () => {
+    const r = st().addDietEntry({ ...rice, d: '2020-01-01' });
+    expect(r.id).toBeNull(); expect(r.error).toMatch(/400 days/);
+    expect(st().diet).toEqual([]);
+  });
+  it('refuses the 21st entry of a day but not of another day', () => {
+    for (let i = 0; i < MAX_DIET_PER_DAY; i++) expect(st().addDietEntry(rice).error).toBeNull();
+    expect(st().addDietEntry(rice).error).toBe('You can log 20 things a day.');
+    expect(st().addDietEntry({ ...rice, d: '2026-10-28' }).error).toBeNull();
+  });
+});
+
+describe('the hour of an entry', () => {
+  it('is stamped on an entry for today and left off one for another day', () => {
+    const today = ymd(new Date());
+    const before = new Date().getHours();
+    const a = st().addDietEntry({ ...rice, d: today }), b = st().addDietEntry(rice);
+    expect([before, new Date().getHours()]).toContain(st().diet.find(e => e.id === a.id)!.t); // the hour may turn while the test runs
+    expect(st().diet.find(e => e.id === b.id)!.t).toBeUndefined();
+  });
+  it('survives an edit', () => {
+    const today = ymd(new Date());
+    const id = st().addDietEntry({ ...rice, d: today }).id!;
+    const t = st().diet[0]!.t;
+    expect(t).toBeDefined();
+    st().updateDietEntry(id, { kcal: 250 });
+    expect(st().diet[0]!.t).toBe(t);
+  });
+});
+
+describe('carbs and fat', () => {
+  it('adds an entry with carbs and fat, and one without', () => {
+    st().addDietEntry({ ...rice, c: 44, f: 0.5 }); st().addDietEntry({ ...rice, n: 'Toast' });
+    expect(st().diet[0]).toMatchObject({ c: 44, f: 0.5 });
+    expect(st().diet[1]).not.toHaveProperty('c');
+  });
+  it('an edit can set and clear them', () => {
+    const id = st().addDietEntry(rice).id!;
+    expect(st().updateDietEntry(id, { c: 30, f: 5 })).toBeNull();
+    expect(st().diet[0]).toMatchObject({ c: 30, f: 5 });
+    expect(st().updateDietEntry(id, { c: null })).toBeNull();
+    expect(st().diet[0]).not.toHaveProperty('c');
+    expect(st().diet[0]).toMatchObject({ f: 5 });
+  });
+  it('typed targets can include carbs and fat, and clear one at a time', () => {
+    expect(st().setDietTarget('carbs', 400)).toBeNull(); expect(st().setDietTarget('fat', 80)).toBeNull();
+    expect(st().cfg.diet).toEqual({ carbs: 400, fat: 80 });
+    expect(st().setDietTarget('fat', 5)).toMatch(/Fat/);
+    st().setDietTarget('carbs', null);
+    expect(st().cfg.diet).toEqual({ fat: 80 });
+  });
+});
+
+describe('updateDietEntry and removeDietEntry', () => {
+  it('fixes the numbers and keeps the day and the recipe link', () => {
+    const id = st().addDietEntry({ ...rice, from: 'chili-1' }).id!;
+    expect(st().updateDietEntry(id, { kcal: 250, p: 5 })).toBeNull();
+    expect(st().diet[0]).toMatchObject({ id, d: day, kcal: 250, p: 5, from: 'chili-1' });
+    expect(st().updateDietEntry(id, { kcal: 99999 })).toMatch(/calories/);
+    expect(st().diet[0]!.kcal).toBe(250);
+  });
+  it('removes with an Undo that puts the entry back in place', () => {
+    const a = st().addDietEntry(rice).id!; const b = st().addDietEntry({ ...rice, n: 'Toast' }).id!;
+    st().removeDietEntry(a);
+    expect(st().diet.map(e => e.id)).toEqual([b]);
+    expect(st().removed?.scope).toBe('diet');
+    st().undoRemoved();
+    expect(st().diet.map(e => e.id)).toEqual([a, b]);
+  });
+  it('removes quietly when asked (the "Ate this" undo)', () => {
+    const id = st().addDietEntry(rice).id!;
+    st().removeDietEntry(id, false);
+    expect(st().diet).toEqual([]);
+    expect(st().removed).toBeNull();
+  });
+});
+
+describe('setDietTarget', () => {
+  it('stores only what you typed, clears with null, and drops the key when empty', () => {
+    expect(st().setDietTarget('kcal', 3000)).toBeNull();
+    expect(st().cfg.diet).toEqual({ kcal: 3000 });
+    expect(st().setDietTarget('protein', 180)).toBeNull();
+    expect(st().cfg.diet).toEqual({ kcal: 3000, protein: 180 });
+    st().setDietTarget('kcal', null); st().setDietTarget('protein', null);
+    expect(st().cfg).not.toHaveProperty('diet');
+  });
+  it('refuses a number out of range', () => {
+    expect(st().setDietTarget('kcal', 100)).toMatch(/Calories/);
+    expect(st().setDietTarget('protein', 5)).toMatch(/Protein/);
+    expect(st().cfg).not.toHaveProperty('diet');
+  });
+});
+
+describe('setDietPace', () => {
+  it('stores a preset, Custom with its rate, and goes back to the default with null', () => {
+    expect(st().setDietPace('fast')).toBeNull();
+    expect(st().cfg.diet).toEqual({ pace: 'fast' });
+    expect(st().setDietPace('custom', 0.8)).toBeNull();
+    expect(st().cfg.diet).toEqual({ pace: 'custom', rate: 0.8 });
+    expect(st().setDietPace('slow')).toBeNull();
+    expect(st().cfg.diet).toEqual({ pace: 'slow' }); // the Custom rate does not linger
+    st().setDietPace(null);
+    expect(st().cfg).not.toHaveProperty('diet');
+  });
+  it('refuses a Custom rate out of range or missing, and keeps the typed targets when the pace changes', () => {
+    expect(st().setDietPace('custom', 9)).toMatch(/Pace/);
+    expect(st().setDietPace('custom')).toMatch(/Pace/);
+    expect(st().cfg).not.toHaveProperty('diet');
+    st().setDietTarget('kcal', 3000); st().setDietPace('steady');
+    expect(st().cfg.diet).toEqual({ kcal: 3000, pace: 'steady' });
+    st().setDietTarget('kcal', null);
+    expect(st().cfg.diet).toEqual({ pace: 'steady' }); // clearing the typed numbers keeps the pace
+  });
+});
+
+describe('the data file', () => {
+  it('carries the log and the targets out and back in', async () => {
+    const { buildDataFile, parseDataFile } = await import('../lib/export.js');
+    st().addDietEntry(rice); st().setDietTarget('kcal', 3000);
+    const text = JSON.stringify(buildDataFile(st().snapshot(), {}));
+    const back = parseDataFile(text);
+    expect(back.diet).toEqual(st().diet);
+    expect(back.config.diet).toEqual({ kcal: 3000 });
+  });
+  it('leaves the log out of the file when there is none', async () => {
+    const { buildDataFile } = await import('../lib/export.js');
+    expect(buildDataFile(st().snapshot(), {})).not.toHaveProperty('diet');
+  });
+});
+
+describe('saved meals', () => {
+  const log = (n: string, kcal = 100) => st().addDietEntry({ d: day, n, kcal, p: 5 }).id!;
+  it('saves the ticked entries as a meal under cfg.diet.meals', () => {
+    const a = log('Oats', 350), b = log('Banana', 100); log('Skipped');
+    expect(st().saveDietMeal('Breakfast', [a, b])).toBeNull();
+    expect(st().cfg.diet!.meals!.map(m => [m.n, m.items.map(i => i.n)])).toEqual([['Breakfast', ['Oats', 'Banana']]]);
+  });
+  it('saving the same name again replaces it', () => {
+    const a = log('Oats'), b = log('Toast');
+    st().saveDietMeal('Breakfast', [a]); st().saveDietMeal('breakfast', [b]);
+    expect(st().cfg.diet!.meals).toHaveLength(1);
+    expect(st().cfg.diet!.meals![0]!.items[0]!.n).toBe('Toast');
+  });
+  it('refuses a blank name or nothing ticked and changes nothing', () => {
+    const a = log('Oats');
+    expect(st().saveDietMeal(' ', [a])).toMatch(/name/);
+    expect(st().saveDietMeal('M', [])).toMatch(/Tick/);
+    expect(st().cfg.diet?.meals).toBeUndefined();
+  });
+  it('renames, and refuses a name another meal has', () => {
+    const a = log('Oats'), b = log('Toast');
+    st().saveDietMeal('One', [a]); st().saveDietMeal('Two', [b]);
+    const [one] = st().cfg.diet!.meals!;
+    expect(st().renameDietMeal(one!.id, 'two')).toMatch(/already/);
+    expect(st().renameDietMeal(one!.id, 'First')).toBeNull();
+    expect(st().cfg.diet!.meals!.map(m => m.n)).toEqual(['First', 'Two']);
+  });
+  it('delete offers Undo, which puts the meal back in its place', () => {
+    const a = log('Oats'), b = log('Toast'), c = log('Eggs');
+    st().saveDietMeal('One', [a]); st().saveDietMeal('Two', [b]); st().saveDietMeal('Three', [c]);
+    const two = st().cfg.diet!.meals![1]!;
+    st().removeDietMeal(two.id);
+    expect(st().cfg.diet!.meals!.map(m => m.n)).toEqual(['One', 'Three']);
+    expect(st().removed?.text).toContain('Two');
+    st().undoRemoved();
+    expect(st().cfg.diet!.meals!.map(m => m.n)).toEqual(['One', 'Two', 'Three']);
+  });
+  it('deleting the last meal leaves no diet key behind, and targets and pace keep the meals', () => {
+    const a = log('Oats');
+    st().saveDietMeal('One', [a]);
+    st().setDietTarget('kcal', 3000); st().setDietPace('slow');
+    expect(st().cfg.diet).toMatchObject({ kcal: 3000, pace: 'slow', meals: [{ n: 'One' }] });
+    st().setDietTarget('kcal', null); st().setDietPace(null);
+    expect(st().cfg.diet!.meals).toHaveLength(1);
+    st().removeDietMeal(st().cfg.diet!.meals![0]!.id);
+    expect(st().cfg.diet).toBeUndefined();
+  });
+});
+
+describe('the meal planner', () => {
+  const today = ymd(new Date());
+  const tomorrow = ymd(new Date(Date.now() + 864e5));
+  const recipe = (id: string, n: string, extra = {}) => ({ id, n, cat: 'protein' as const, ing: [{ n: 'Chicken' }, { n: 'Rice' }], steps: [], kcal: 600, p: 40, ...extra });
+  beforeEach(() => { useAppStore.setState({ recipes: [recipe('r1', 'Chili'), recipe('r2', 'Stir fry', { ing: [{ n: 'Chicken' }, { n: 'Peppers' }] })] }); });
+  const meal = () => { const a = st().addDietEntry({ ...rice, d: today }).id!; st().saveDietMeal('Breakfast', [a]); return st().cfg.diet!.meals![0]!.id; };
+
+  it('plans a recipe and a saved meal on a day, in order', () => {
+    const m = meal();
+    expect(st().addPlanItem(tomorrow, 'r', 'r1')).toBeNull();
+    expect(st().addPlanItem(tomorrow, 'm', m)).toBeNull();
+    expect(st().cfg.diet!.plan![tomorrow]).toEqual([{ k: 'r', id: 'r1' }, { k: 'm', id: m }]);
+  });
+  it('refuses a recipe or meal that is gone, a repeat and a day outside the window', () => {
+    expect(st().addPlanItem(today, 'r', 'zzz')).toMatch(/gone/);
+    expect(st().addPlanItem(today, 'm', 'zzz')).toMatch(/gone/);
+    st().addPlanItem(today, 'r', 'r1');
+    expect(st().addPlanItem(today, 'r', 'r1')).toMatch(/already/);
+    expect(st().addPlanItem('2020-01-01', 'r', 'r2')).toMatch(/two weeks/);
+  });
+  it('sets a portion and removes an item; removing the last leaves no plan or diet key behind', () => {
+    st().addPlanItem(today, 'r', 'r1');
+    st().setPlanPortion(today, 0, 2);
+    expect(st().cfg.diet!.plan![today]).toEqual([{ k: 'r', id: 'r1', x: 2 }]);
+    st().removePlanItem(today, 0);
+    expect(st().cfg.diet).toBeUndefined();
+  });
+  it('targets, pace and saved meals keep the plan', () => {
+    st().addPlanItem(today, 'r', 'r1');
+    st().setDietTarget('kcal', 3000); st().setDietPace('slow'); meal();
+    expect(st().cfg.diet).toMatchObject({ kcal: 3000, pace: 'slow', plan: { [today]: [{ k: 'r', id: 'r1' }] }, meals: [{ n: 'Breakfast' }] });
+  });
+  it('writing the plan drops days before today', () => {
+    st().mutateCfg(c => { c.diet = { plan: { '2020-01-01': [{ k: 'r', id: 'r1' }] } }; });
+    st().addPlanItem(today, 'r', 'r2');
+    expect(Object.keys(st().cfg.diet!.plan!)).toEqual([today]);
+  });
+  it('sends the missing ingredients of the days to To get, each name once', () => {
+    st().addPlanItem(today, 'r', 'r1'); st().addPlanItem(tomorrow, 'r', 'r2');
+    const r = st().planToGroceries([today, tomorrow]);
+    expect(r.recipes).toBe(2); expect(r.refused).toBeNull();
+    const names = st().grocery.items.map(i => i.n.toLowerCase());
+    expect(names.filter(n => n === 'chicken')).toHaveLength(1);
+    expect(names).toEqual(expect.arrayContaining(['chicken', 'rice', 'peppers']));
+  });
+});

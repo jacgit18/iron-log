@@ -1,9 +1,9 @@
 /* ---------- CSV / Excel export, full data file ----------
    Every builder takes a state snapshot S = {cfg, logs, programs, library, body}. */
 import { PHASES, PH_KEYS, BUILTIN, exInfo, withAllDays, DAY_COUNT } from './data.js';
-import { ymd, fmtShort } from '../shared/dates.js';
+import { ymd } from '../shared/dates.js';
 import type { DayDraft, Cfg, DataFile, LogEntry, Logs, PhaseKey, Program, Snapshot, Week } from '../types.ts';
-import { weekSlots, weekProgram, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, isItemSkipped, isSkipped, normWeek, colOf, progName, touched, AUTO_NOTE } from './logic.js';
+import { weekSlots, weekProgram, defaultPhase, normExperiments, setsOfEntry, setVal, rxOf, isItemDone, isItemSkipped, isSkipped, normWeek, colOf, progName, AUTO_NOTE } from './logic.js';
 
 type XLSX = typeof import('xlsx');
 type Row = (string | number | boolean | null | undefined)[];
@@ -14,10 +14,15 @@ import { bwSorted } from './body.js';
 import { normStretches, normStretchWeek, stretchWeekEmpty } from './stretches.js';
 import { normSupplements } from './water.js';
 import { normGroceryData } from './grocery.js';
-import { normEntries, normBody, normProgram, normLibrary, validStamp } from '../shared/validate.js';
+import { normDietEntries } from '../shared/diet.js';
+import { normRecipes } from '../shared/recipes.js';
+import { normEntries, normBody, normProgram, normLibrary } from '../shared/validate.js';
 import { normConfig } from '../shared/config.js';
+import { nameCmp } from './sort.js';
 
 export { normConfig };
+export * from './entryMerge.js';
+import { progBody } from './entryMerge.js';
 
 // SheetJS is bundled (0.20.x, patched for reading untrusted files) and loaded only when needed.
 export const loadXLSX = () => import('xlsx').catch(() => { throw new Error('Excel library failed to load'); });
@@ -33,7 +38,7 @@ export function buildCsv(S: Snapshot) {
   const head = ['date', 'exercise', 'phase', 'weight_lb', 'sets', 'reps', 'hold_s', 'set_detail', 'primary_muscles', 'secondary_muscles', 'note', 'program_slot', 'week_of'];
   const rows: any[][] = [];
   Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => rows.push([e.d, exInfo(cfg, id).n, phaseLabel(e.ph), e.w ?? '', e.s ?? '', e.r ?? '', e.sec ?? '', setDetail(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), noteOf(e), e.slot || '', e.wk || ''])));
-  rows.sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0])));
+  rows.sort((a, b) => (a[0] === b[0] ? a[1].localeCompare(b[1]) : a[0].localeCompare(b[0]))); // sort-ok: export rows keep their sheet order
   return [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
 }
 
@@ -46,7 +51,7 @@ function sheet(X: XLSX, rows: Row[], widths: number[]) {
 function sessionRows(S: Snapshot, filter?: (e: LogEntry) => boolean): any[][] {
   const { cfg, logs } = S; const rows: any[][] = [];
   Object.keys(logs).forEach(id => (logs[id] || []).forEach(e => { if (!filter || filter(e)) rows.push([e.d, e.wk || weekOfDate(e.d), exInfo(cfg, id).n, phaseLabel(e.ph), e.w ?? '', e.s ?? '', e.sec ? '' : (e.r ?? ''), e.sec ?? '', setDetail(e), entryVolume(e), muscleNames(cfg, id, 'p'), muscleNames(cfg, id, 's'), noteOf(e), e.slot || '', id]); }));
-  rows.sort((a, b) => (a[0] === b[0] ? a[2].localeCompare(b[2]) : a[0].localeCompare(b[0])));
+  rows.sort((a, b) => (a[0] === b[0] ? a[2].localeCompare(b[2]) : a[0].localeCompare(b[0]))); // sort-ok: export rows keep their sheet order
   return [['Date', 'Week of', 'Exercise', 'Phase', 'Weight (lb)', 'Sets', 'Reps', 'Hold (s)', 'Set by set', 'Volume (lb)', 'Primary muscles', 'Secondary muscles', 'Note', 'Program slot', 'Exercise id'], ...rows];
 }
 const SESSION_COLS = [11, 11, 34, 13, 11, 6, 6, 9, 26, 12, 28, 28, 30, 14, 16];
@@ -54,7 +59,7 @@ const SESSION_COLS = [11, 11, 34, 13, 11, 6, 6, 9, 26, 12, 28, 28, 30, 14, 16];
 export function buildOverallWorkbook(X: XLSX, S: Snapshot, weeks: Record<string, Week>) {
   const { cfg, logs, programs, body } = S; const wb = X.utils.book_new();
   const sum: Row[] = [['Exercise', 'Latest phase', 'Sessions', 'First logged', 'Last logged', 'First weight (lb)', 'Latest weight (lb)', 'Best weight (lb)', 'Change (lb)', '1RM (lb)']];
-  Object.keys(logs).filter(id => logs[id].length).sort((a, b) => exInfo(cfg, a).n.localeCompare(exInfo(cfg, b).n)).forEach(id => {
+  Object.keys(logs).filter(id => logs[id].length).sort(nameCmp(id => exInfo(cfg, id).n, id => id)).forEach(id => {
     const L = logs[id], last = L[L.length - 1];
     const ws = L.filter(e => (e.ph || null) === (last.ph || null) && Number(e.w) > 0).map(e => Number(e.w));
     const first = ws.length ? ws[0] : '', latest = ws.length ? ws[ws.length - 1] : '';
@@ -72,7 +77,7 @@ export function buildOverallWorkbook(X: XLSX, S: Snapshot, weeks: Record<string,
     });
   });
   const mus: Row[] = [['Week of', 'Muscle', 'Primary sets', 'Secondary sets', 'Weighted sets']];
-  Object.values(mv).sort((a, b) => (a.k === b.k ? (b.p + b.s / 2) - (a.p + a.s / 2) : a.k.localeCompare(b.k))).forEach(r => mus.push([r.k, (MUSCLES as Record<string, { n: string }>)[r.m] ? (MUSCLES as Record<string, { n: string }>)[r.m].n : r.m, r.p, r.s, r.p + r.s / 2]));
+  Object.values(mv).sort((a, b) => (a.k === b.k ? (b.p + b.s / 2) - (a.p + a.s / 2) : a.k.localeCompare(b.k))).forEach(r => mus.push([r.k, (MUSCLES as Record<string, { n: string }>)[r.m] ? (MUSCLES as Record<string, { n: string }>)[r.m].n : r.m, r.p, r.s, r.p + r.s / 2])); // sort-ok: export rows keep their sheet order
   X.utils.book_append_sheet(wb, sheet(X, mus, [12, 24, 13, 15, 14]), 'Muscles');
   const wk: Row[] = [['Week of', 'Program', 'Days complete', 'Exercises done', 'Exercises planned', 'Skipped', '% done', 'Sessions logged']];
   Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => {
@@ -135,7 +140,7 @@ function addDataSheets(X: XLSX, wb: ReturnType<XLSX['utils']['book_new']>, S: Sn
   Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const r = normWeek(weeks[k]).ran; if (r) { prow.push(...programRows(cfg, `ran:${k}`, r.program)); info.push([`ran:${k}`, r.program.warm ?? '']); } });
   X.utils.book_append_sheet(wb, sheet(X, [PROG_HEAD, ...prow], [10, 5, 12, 26, 10, 7, 12, 11, 10, 9, 24, 14, 30, 11, 11, 10, 16, 24]), 'Programs');
   X.utils.book_append_sheet(wb, sheet(X, info, [12, 40]), 'Program info');
-  X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Name', 'From', 'Saved at', 'Auto-saved', 'Created'], ...library.map(it => [it.id, it.name, it.from ?? '', it.at ?? '', it.auto ? 'Yes' : '', it.created ? 'Yes' : ''])], [14, 36, 7, 26, 11, 9]), 'Saved versions');
+  X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Name', 'From', 'Saved at', 'Auto-saved', 'Created', 'Archived'], ...library.map(it => [it.id, it.name, it.from ?? '', it.at ?? '', it.auto ? 'Yes' : '', it.created ? 'Yes' : '', it.archived ? 'Yes' : ''])], [14, 36, 7, 26, 11, 9, 9]), 'Saved versions');
   X.utils.book_append_sheet(wb, sheet(X, [['Id', 'Exercise id', 'Exercise', 'Phase', 'Note'], ...(experiments || []).map(e => [e.id, e.ex, exInfo(cfg, e.ex).n, e.ph ?? '', e.note ?? ''])], [14, 16, 30, 11, 40]), 'Experiments');
   X.utils.book_append_sheet(wb, sheet(X, [CHECK_HEAD, ...checkRows(weeks)], [12, 9, 24, 12]), 'Check-offs');
   X.utils.book_append_sheet(wb, sheet(X, [['Setting', 'Value (JSON)'], ...Object.keys(cfg).sort().map(k => [k, JSON.stringify((cfg as any)[k])])], [18, 60]), 'Config');
@@ -161,10 +166,6 @@ export function buildWeekWorkbook(X: XLSX, S: Snapshot, key: string, w: Week) {
   return wb;
 }
 
-/* ---------- Programs in the library ---------- */
-export const progBody = <T extends { key?: unknown }>(p: T): Omit<T, 'key'> => { const { key: _key, ...b } = structuredClone(p); return b; }; // eslint-disable-line no-unused-vars
-export const sameProg = (a: { key?: unknown }, b: { key?: unknown }) => JSON.stringify(progBody(a)) === JSON.stringify(progBody(b));
-export const libDate = (iso: string) => { const d = new Date(iso); return isNaN(d.getTime()) ? '' : `${fmtShort(d)}, ${d.getFullYear()}`; };
 
 /* ---------- Full data file (JSON) ---------- */
 export const DATA_FORMAT = 1;
@@ -174,7 +175,7 @@ export function buildDataFile(S: Snapshot, weeks: Record<string, Week>) {
   Object.keys(weeks).filter(k => WEEK_RE.test(k)).sort().forEach(k => { const w = normWeek(weeks[k]); if (w.prog || w.rest || w.order || w.extra || w.split || [w.done, w.skipped, w.moved, w.ph, w.warm].some(o => Object.keys(o).length)) W[k] = w; });
   const P: Record<string, Omit<Program, 'key'>> = {}; (['A', 'B'] as const).forEach(k => { if (programs[k] !== BUILTIN[k]) P[k] = progBody(programs[k]); });
   const L: Logs = {}; Object.keys(logs).sort().forEach(id => { if (logs[id] && logs[id].length) L[id] = logs[id]; });
-  return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body), experiments: normExperiments(S.experiments), ...wellnessOut(S), ...groceryOut(S) };
+  return { app: 'iron-log', format: DATA_FORMAT, exportedAt: new Date().toISOString(), config: structuredClone(cfg), programs: P, library: structuredClone(library), logs: L, weeks: W, body: bwSorted(body), experiments: normExperiments(S.experiments), ...wellnessOut(S), ...groceryOut(S), ...recipesOut(S), ...dietOut(S) };
 }
 // Stretches (library, experiments, weekly check-offs) and supplements (water). Left out when the snapshot has none, so older files read the same.
 function wellnessOut(S: Snapshot) {
@@ -183,13 +184,19 @@ function wellnessOut(S: Snapshot) {
   return { stretches: { items: structuredClone(S.stretches), experiments: structuredClone(S.stretchExps || []) }, stretchWeeks: SW, supplements: normSupplements(S.supp) };
 }
 // The grocery list, left out when there is none, so files without one read the same.
+// Your recipes, left out when there are none (ADR 084).
+function recipesOut(S: Snapshot) {
+  const r = normRecipes(S.recipes);
+  return r.length ? { recipes: r } : {};
+}
+// Your food log, left out when there is none (ADR 086).
+function dietOut(S: Snapshot) {
+  const e = normDietEntries(S.diet);
+  return e.length ? { diet: e } : {};
+}
 function groceryOut(S: Snapshot) {
   const g = S.grocery && normGroceryData(S.grocery);
   return g ? { grocery: g } : {};
-}
-export function dataStats(d: Partial<DataFile>) {
-  const L = Object.values(d.logs || {}); const sets = L.reduce((a, l) => a + l.length, 0);
-  return { entries: sets, exercises: L.filter(l => l.length).length, weeks: Object.keys(d.weeks || {}).length, programs: Object.keys(d.programs || {}), saved: (d.library || []).length, body: (d.body || []).length, experiments: (d.experiments || []).length, stretches: d.stretches ? d.stretches.items.length : 0, stretchWeeks: Object.keys(d.stretchWeeks || {}).length, waterDays: d.supplements ? Object.keys(d.supplements.water).length : 0, groceryItems: d.grocery ? d.grocery.items.length : 0, groceryMonths: d.grocery ? Object.keys(d.grocery.months).length : 0 };
 }
 export function parseDataFile(text: string): DataFile {
   let d: any; try { d = JSON.parse(text); } catch { throw new Error('That file isn’t valid JSON.'); }
@@ -202,6 +209,10 @@ export function parseDataFile(text: string): DataFile {
 export function normalizeData(d: any): DataFile {
   const out: DataFile = { exportedAt: d.exportedAt, config: normConfig(d.config), programs: {}, library: [], logs: {}, weeks: {}, body: [], experiments: normExperiments(d.experiments), stretches: d.stretches ? normStretches(d.stretches) : null, stretchWeeks: {}, supplements: d.supplements ? normSupplements(d.supplements) : null, grocery: d.grocery ? normGroceryData(d.grocery) : null };
   Object.entries(d.stretchWeeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k)) { const n = normStretchWeek(w); if (!stretchWeekEmpty(n)) out.stretchWeeks[k] = n; } });
+  const recipes = normRecipes(d.recipes);
+  if (recipes.length) out.recipes = recipes;
+  const diet = normDietEntries(d.diet);
+  if (diet.length) out.diet = diet;
   out.body = normBody(d.body);
   (['A', 'B'] as const).forEach(k => { const p = normProgram(d.programs && d.programs[k], k); if (p) out.programs[k] = progBody(withAllDays({ ...p, key: k })); });
   normLibrary(d.library).forEach(it => out.library.push({ ...it, prog: withAllDays(it.prog) }));
@@ -209,73 +220,4 @@ export function normalizeData(d: any): DataFile {
   Object.entries(d.weeks || {}).forEach(([k, w]) => { if (WEEK_RE.test(k) && w && typeof w === 'object') out.weeks[k] = normWeek(w); });
   return out;
 }
-// Import choices follow the app's tabs. Board: check-offs, body weight, exercises to try. Progress: logged sessions.
-// Muscles: muscle tags. Program: edited programs, saved versions, custom exercises. Settings: everything else in the config.
-export const IMPORT_SECTIONS = [['board', 'Board'], ['progress', 'Progress'], ['muscles', 'Muscles'], ['program', 'Program'], ['stretches', 'Stretches'], ['supplements', 'Supplements'], ['grocery', 'Groceries'], ['settings', 'Settings']];
-export const importSel = (draft: { sel?: Record<string, boolean> }) => Object.fromEntries(IMPORT_SECTIONS.map(([k]) => [k, !draft.sel || draft.sel[k] !== false]));
-export const cfgSection = (k: string) => (k === 'muscleMap' ? 'muscles' : ['ex', 'progNames', 'phDef', 'exPh'].includes(k) ? 'program' : 'settings');
-/* ---------- Which logged sessions are the same one ----------
-   An entry's values in a fixed field order, so the same session matches however its fields were written (a workbook
-   rebuilds entries in another key order). The id is left out, and a stored `wk` that is just the week of the date
-   carries no information. */
-const kv = (v: unknown) => (v === '' || v == null ? null : Number(v));
-export const sameKey = (e: LogEntry) => JSON.stringify([e.d, e.ph || null, kv(e.w), kv(e.s), kv(e.r), kv(e.sec),
-  Array.isArray(e.sets) && e.sets.length ? e.sets.map(x => [kv(x.w), kv(x.r), kv(x.sec)]) : null,
-  e.n || null, !!e.auto, e.slot || null, e.wk && e.wk !== weekOfDate(e.d) ? e.wk : null]);
-const hash = (t: string) => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h.toString(36); };
-// An entry's identity: its id, or for one saved before entries had ids, a hash of its values. Editing such an entry
-// stores that hash as its id, so an older copy of it (from a backup) is still known as the same session.
-export const entryId = (e: LogEntry) => e.id || 'k' + hash(sameKey(e));
-// Where `target` (an entry as it was read) is in list L now, or -1 if it is gone or changed meanwhile.
-export const findEntry = (L: LogEntry[], target: LogEntry) => (target.id ? L.findIndex(x => x.id === target.id) : L.findIndex(x => !x.id && sameKey(x) === sameKey(target)));
-// Adds b's entries that a doesn't have. A check-off (auto) entry is one per card and week: it isn't added next to
-// any entry for that card and week, and a session logged by hand replaces it, as on the board.
-// Same id on both sides: this device's copy stays, unless both carry an updatedAt and the incoming one is later (it was edited
-// after this one), in which case it replaces it. Copies without a timestamp (older data, Excel files) never replace anything.
-// Entries it leaves alone are returned as the same objects: `entriesChanged` (below) tells a change by identity, so do not copy them here.
-export function mergeEntries(a: LogEntry[], b: LogEntry[]) {
-  let out = [...a]; const ids = new Set(a.map(entryId)); const keys = new Set(a.map(sameKey));
-  b.forEach(e => {
-    const id = entryId(e);
-    if (ids.has(id)) {
-      const i = out.findIndex(x => entryId(x) === id);
-      if (i >= 0 && newer(e, out[i])) { out[i] = { ...e, id }; keys.add(sameKey(e)); }
-      return;
-    }
-    if (keys.has(sameKey(e))) return;
-    const card = (x: LogEntry) => !!(e.slot && e.wk) && x.slot === e.slot && x.wk === e.wk;
-    if (e.auto && out.some(card)) return;
-    if (!e.auto) out = out.filter(x => !(x.auto && card(x)));
-    out.push(e); ids.add(id); keys.add(sameKey(e));
-  });
-  return out.sort((x, y) => x.d.localeCompare(y.d));
-}
-// True when a merge changed the list: an entry was added, replaced or dropped. mergeEntries keeps every untouched entry as the same
-// object, so identity is the test; a count alone misses a copy replaced by a newer one and a check-off swapped for a real session.
-export const entriesChanged = (before: LogEntry[], after: LogEntry[]) => {
-  const kept = new Set(before);
-  return before.length !== after.length || after.some(e => !kept.has(e));
-};
-const newer = (x: LogEntry, y: LogEntry) => validStamp(x.updatedAt) && validStamp(y.updatedAt) && Date.parse(x.updatedAt) > Date.parse(y.updatedAt);
-export function mergeWeek(a: unknown, b: unknown): Week {
-  const w = normWeek(a); const o = normWeek(b);
-  w.prog = w.prog || o.prog;
-  if (!w.rest && o.rest) w.rest = o.rest;
-  if (w.rest && !w.restOn && o.restOn && JSON.stringify(o.rest) === JSON.stringify(w.rest)) w.restOn = o.restOn;
-  if (!w.order && o.order) w.order = o.order;
-  (['moved', 'ph'] as const).forEach(k => { (w as any)[k] = { ...o[k], ...w[k] }; });
-  Object.keys(o.warm).forEach(d => { w.warm[d] = { ...o.warm[d], ...(w.warm[d] || {}) }; });
-  const have = new Set((w.extra || []).map(x => x.id)); const more = (o.extra || []).filter(x => !have.has(x.id)); if (more.length) w.extra = [...(w.extra || []), ...more];
-  const haveSplit = new Set((w.split || []).flatMap(x => [x.id, x.rest])); const haveFrom = new Set((w.split || []).map(x => x.from)); const moreSplit = (o.split || []).filter(x => !haveSplit.has(x.id) && !haveSplit.has(x.rest) && !haveFrom.has(x.from)); if (moreSplit.length) w.split = [...(w.split || []), ...moreSplit];
-  w.done = { ...o.done, ...w.done }; w.skipped = { ...o.skipped, ...w.skipped }; Object.keys(w.done).forEach(id => delete w.skipped[id]);
-  // What the week ran (ADR 022): this device's record, else the other's. With the same program, a card only the other record has stays
-  // when the merged week ticked, skipped or moved it, so that check-off still counts.
-  if (!w.ran && o.ran) w.ran = o.ran;
-  else if (w.ran && o.ran && w.ran.prog === o.ran.prog) {
-    const have = new Set(w.ran.program.days.flatMap(d => d.slots.map(s => s.id)));
-    o.ran.program.days.forEach((d, di) => d.slots.forEach(s => { if (!have.has(s.id) && touched(s, w) && w.ran!.program.days[di]) w.ran!.program.days[di].slots.push(s); }));
-  }
-  return w;
-}
-
 export const todayStamp = () => ymd(new Date());

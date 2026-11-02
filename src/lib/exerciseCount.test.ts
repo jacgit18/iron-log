@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BUILTIN } from './data.js';
-import { exerciseCount } from './exerciseCount.js';
+import { dayPickLabel, exerciseCount } from './exerciseCount.js';
 import { unitsOf } from './logic.js';
 
 const one = { items: [{ ex: 'a' }] };
@@ -18,5 +18,13 @@ describe('exerciseCount', () => {
       const cards = d.slots.map(s => ({ ...s, id: s.id || 'x' }));
       expect(exerciseCount(d.slots)).toBe(cards.reduce((n, s) => n + unitsOf(s as never), 0));
     }
+  });
+});
+
+describe('dayPickLabel', () => {
+  it('names the day, the number of days and the exercise count, singular for one', () => {
+    expect(dayPickLabel(3, 7, 6)).toBe('Day 3 of 7 · 6 exercises');
+    expect(dayPickLabel(2, 7, 1)).toBe('Day 2 of 7 · 1 exercise');
+    expect(dayPickLabel(7, 7, 0)).toBe('Day 7 of 7 · 0 exercises');
   });
 });

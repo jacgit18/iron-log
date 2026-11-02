@@ -198,85 +198,6 @@ describe('moving a card to another day', () => {
   });
 });
 
-describe('moving one exercise of a superset to another day', () => {
-  const day = n => st().edProgram().days[n - 1].slots;
-  const ssIdx = () => day1().findIndex(s => s.type === 'superset');
-  const addCard = (type, n) => st().editProgram(p => { p.days[0].slots.push({ id: 'T-' + type + n, day: 1, sec: type === 'superset' ? 'Supersets' : 'Regular', type, items: Array.from({ length: n }, (_, j) => ({ ex: 'arnold', ph: 'strength', w: 10 + j })) }); });
-  const lastIdx = () => day1().length - 1;
-  it('does nothing for a plain card, an either/or card, the same day, a day that is not there or a position that is not there', () => {
-    addCard('either', 2);
-    const before = structuredClone(st().programs.A);
-    st().moveEdItemToDay(0, 0, 2);
-    st().moveEdItemToDay(lastIdx(), 0, 2);
-    st().moveEdItemToDay(ssIdx(), 0, 1); st().moveEdItemToDay(ssIdx(), 0, 8); st().moveEdItemToDay(ssIdx(), 9, 2); st().moveEdItemToDay(99, 0, 2);
-    expect(st().programs.A).toEqual(before);
-    expect(st().edMoved).toBeNull();
-  });
-  it('a two-exercise superset becomes two plain cards: the rest keeps the id, the exercise lands on the other day', () => {
-    addCard('superset', 2); const i = lastIdx(); const items = structuredClone(day1()[i].items);
-    st().moveEdItemToDay(i, 0, 3);
-    expect(day1()[i]).toMatchObject({ id: 'T-superset2', sec: 'Regular', items: [items[1]] });
-    expect(day1()[i].type).toBeUndefined();
-    const moved = day(3).find(x => x.id === st().edMoved.slot.id);
-    expect(moved.items).toEqual([items[0]]); expect(moved.id).not.toBe('T-superset2'); expect(moved.type).toBeUndefined();
-    expect(st().edMoved).toMatchObject({ from: 1, to: 3, idx: i });
-  });
-  it('a three-exercise superset stays a superset of two', () => {
-    addCard('superset', 3); const i = lastIdx(); const items = structuredClone(day1()[i].items);
-    st().moveEdItemToDay(i, 1, 2);
-    expect(day1()[i].type).toBe('superset'); expect(day1()[i].items).toEqual([items[0], items[2]]);
-    expect(day(2).find(x => x.id === st().edMoved.slot.id).items).toEqual([items[1]]);
-  });
-  it('phase defaults follow the exercise and the later ones shift up', () => {
-    addCard('superset', 3); const i = lastIdx();
-    useAppStore.setState(x => ({ cfg: { ...x.cfg, phDef: { 'T-superset3:0': 'iso', 'T-superset3:1': 'hyp', 'T-superset3:2': 'strength' } } }));
-    st().moveEdItemToDay(i, 0, 2);
-    const newId = st().edMoved.slot.id;
-    expect(st().cfg.phDef).toEqual({ [`${newId}:0`]: 'iso', 'T-superset3:0': 'hyp', 'T-superset3:1': 'strength' });
-  });
-  it('this week\'s ticks follow their exercises: a ticked two-exercise superset keeps both ticked, and a half-ticked three-exercise one shifts up', () => {
-    addCard('superset', 2); const i = lastIdx();
-    useAppStore.setState(x => ({ week: { ...x.week, done: { 'T-superset2': true } } }));
-    st().moveEdItemToDay(i, 1, 2);
-    const newId = st().edMoved.slot.id;
-    expect(st().week.done).toEqual({ 'T-superset2': true, [newId]: true });
-    addCard('superset', 3); const i3 = lastIdx();
-    useAppStore.setState(x => ({ week: { ...x.week, done: { 'T-superset3#1': true }, skipped: { 'T-superset3#2': true }, ph: {} } }));
-    st().moveEdItemToDay(i3, 0, 2);
-    expect(st().week.done).toEqual({ 'T-superset3#0': true });
-    expect(st().week.skipped).toEqual({ 'T-superset3#1': true });
-  });
-  it('Undo puts the superset, its phase defaults and this week\'s state back', () => {
-    addCard('superset', 3); const i = lastIdx(); const card = structuredClone(day1()[i]);
-    const phDef = { 'T-superset3:0': 'iso', 'T-superset3:2': 'hyp' };
-    useAppStore.setState(x => ({ cfg: { ...x.cfg, phDef: { ...phDef } }, week: { ...x.week, done: { 'T-superset3#1': true }, skipped: { 'T-superset3#2': true }, ph: {} } }));
-    const week = structuredClone(st().week.done); const skipped = structuredClone(st().week.skipped);
-    const before = structuredClone(st().programs.A);
-    st().moveEdItemToDay(i, 0, 4);
-    st().undoMoveEdSlot();
-    expect(day1()[i]).toEqual(card); expect(day(4)).toHaveLength(before.days[3].slots.length);
-    expect(st().cfg.phDef).toEqual(phDef); expect(st().week.done).toEqual(week); expect(st().week.skipped).toEqual(skipped);
-    expect(st().edMoved).toBeNull();
-  });
-  it('Undo says it could not put it back when the moved exercise was changed, and saves nothing', () => {
-    addCard('superset', 2); st().moveEdItemToDay(lastIdx(), 0, 2);
-    const id = st().edMoved.slot.id;
-    st().editProgram(p => { p.days[1].slots.find(s => s.id === id).note = 'changed'; });
-    const before = structuredClone(st().programs.A);
-    st().undoMoveEdSlot();
-    expect(st().programs.A).toEqual(before);
-    expect(st().edMoved).toBeNull();
-  });
-  it('Undo says it could not put it back when the superset it left was removed', () => {
-    addCard('superset', 2); st().moveEdItemToDay(lastIdx(), 0, 2);
-    st().editProgram(p => { p.days[0].slots.pop(); });
-    const before = structuredClone(st().programs.A);
-    st().undoMoveEdSlot();
-    expect(st().programs.A).toEqual(before);
-    expect(st().edMoved).toBeNull();
-  });
-});
-
 describe('moving a card to another program', () => {
   const dayOf = (key, n) => (key.startsWith('L:') ? st().library.find(x => 'L:' + x.id === key).prog : st().programs[key]).days[n - 1].slots;
   const total = () => ['A', 'B'].reduce((a, k) => a + st().programs[k].days.reduce((b, d) => b + d.slots.length, 0), 0);
@@ -553,6 +474,51 @@ describe('names, saved versions and loading', () => {
   });
 });
 
+describe('copying a day', () => {
+  const dayN = n => st().edProgram().days[n - 1].slots;
+  it('copies the open day onto another day with new ids, leaving the first day alone', () => {
+    const before = ids(day1()); const n4 = dayN(4).length;
+    st().copyEdDay(4);
+    expect(ids(day1())).toEqual(before);
+    expect(dayN(4)).toHaveLength(n4 + before.length);
+    const copies = dayN(4).filter(sl => st().edCopied.ids.includes(sl.id));
+    expect(copies).toHaveLength(before.length);
+    expect(copies.every(sl => !before.includes(sl.id))).toBe(true);
+    expect(copies.map(sl => sl.items)).toEqual(day1().map(sl => sl.items));
+    expect(saved('programs/A').days[3].slots).toHaveLength(n4 + before.length);
+    expect(st().edCopied).toMatchObject({ key: 'A', from: 1, to: 4 });
+  });
+  it('Undo takes the copies back out; stepping to another day drops the notice', () => {
+    const n4 = dayN(4).length;
+    st().copyEdDay(4); st().undoCopyEdDay();
+    expect(dayN(4)).toHaveLength(n4); expect(st().edCopied).toBeNull();
+    st().copyEdDay(4); st().setEdDay(2);
+    expect(st().edCopied).toBeNull();
+  });
+  it('Undo also removes the phases carried to the copies from the config', () => {
+    const first = day1()[0].id;
+    useAppStore.setState(s => ({ cfg: { ...s.cfg, phDef: { [`${first}:0`]: 'hyp' } } }));
+    st().copyEdDay(4);
+    const copy = st().edCopied.ids[0];
+    expect(st().cfg.phDef[`${copy}:0`]).toBe('hyp');
+    st().undoCopyEdDay();
+    expect(st().cfg.phDef).toEqual({ [`${first}:0`]: 'hyp' });
+  });
+  it('does nothing for the same day or a day that does not exist', () => {
+    const before = JSON.stringify(st().edProgram());
+    st().copyEdDay(1); st().copyEdDay(9);
+    expect(JSON.stringify(st().edProgram())).toBe(before); expect(st().edCopied).toBeNull();
+  });
+  it('works on a library program and never touches the built-in', () => {
+    st().createProgram('Mine', 'A');
+    const n = dayN(1).length;
+    st().copyEdDay(5);
+    expect(dayN(5).length).toBeGreaterThanOrEqual(n);
+    expect(ids(BUILTIN.A.days[0].slots)).toEqual(builtinA());
+    expect(st().programs.A).toBe(BUILTIN.A);
+  });
+});
+
 describe('creating a program', () => {
   it('starts an empty program with seven empty days, from nothing', () => {
     expect(st().createProgram('Mine', 'empty')).toBe(true);
@@ -573,6 +539,46 @@ describe('creating a program', () => {
     expect(st().cfg.phDef[`${firstId}:0`]).toBe('strength');
     expect(st().edProg).toBe('L:' + it.id);
   });
+  it('keeps the open sheet when asked to, for the step that offers loading it', () => {
+    useAppStore.setState({ modal: { type: 'newprog' } });
+    expect(st().createProgram('Kept', 'empty', true)).toBe(true);
+    expect(st().modal).toEqual({ type: 'newprog' });
+    expect(st().edProg).toBe('L:' + st().library[0].id);
+  });
+  it('makes a starter into a library program without touching the board', () => {
+    expect(st().createStarterProgram('ppl', 3, ' Push day plan ')).toBeNull();
+    const it = st().library[0];
+    expect(it).toMatchObject({ name: 'Push day plan', created: true });
+    expect(it).not.toHaveProperty('from');
+    expect(it.prog.days).toHaveLength(7);
+    expect(it.prog.days.map(d => d.slots.length > 0)).toEqual([true, true, true, false, false, false, false]);
+    expect(st().programs.A).toBe(BUILTIN.A); expect(st().programs.B).toBe(BUILTIN.B);
+    expect(st().edProg).toBe('L:' + it.id);
+    // its own card ids, and the exercises it needs are now in the account's library
+    const first = it.prog.days[0].slots[0];
+    expect(first.id).toMatch(/^P.{5}-d1s1$/);
+    expect(exInfo(st().cfg, first.items[0].ex).n).toBe('Bench press');
+    expect(first.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+  it('keeps a program name to 60 characters, like renaming does', () => {
+    st().createStarterProgram('ppl', 3, 'n'.repeat(80));
+    st().createProgram('m'.repeat(80), 'empty', true);
+    expect(st().library.map(x => x.name.length)).toEqual([60, 60]);
+  });
+  it('refuses a starter it does not know, or days it does not offer', () => {
+    expect(st().createStarterProgram('nope', 3, 'X')).toMatch(/Pick a program/);
+    expect(st().createStarterProgram('ppl', 5, 'X')).toMatch(/not offered/);
+    expect(st().library).toEqual([]);
+  });
+  it('a starter program loads into B with its cards; B was untouched, so nothing is saved for it', () => {
+    st().createStarterProgram('fullbody', 3, 'Full');
+    const id = st().library[0].id;
+    st().loadVersion(id, 'B');
+    expect(slotsFor(st().programs.B).length).toBeGreaterThan(0);
+    expect(slotsFor(st().programs.B).every(sl => sl.from)).toBe(true);
+    expect(st().cfg.progNames.B).toBe('Full');
+    expect(st().library.some(x => x.auto)).toBe(false); // loadVersion only saves a program that was changed
+  });
   it('edits the copy, not the program on the board', () => {
     st().createProgram('My plan', 'A');
     st().removeEdSlot(0);
@@ -586,6 +592,56 @@ describe('creating a program', () => {
     st().deleteLibItem(st().library[0].id);
     expect(st().library).toEqual([]);
     expect(st().edKey()).toBe('A');
+  });
+  it('archives a saved program, saves it, and restores it unchanged', () => {
+    st().saveCurrentAs('One'); st().saveCurrentAs('Two');
+    const [one, two] = st().library.map(x => x.id);
+    const body = st().library[0].prog;
+    st().archiveLibItem(one);
+    expect(st().library.find(x => x.id === one)).toMatchObject({ archived: true, name: 'One' });
+    expect(st().library.find(x => x.id === two).archived).toBeUndefined();
+    expect(saved('library/main').items.find(x => x.id === one).archived).toBe(true);
+    st().restoreLibItem(one);
+    expect(st().library.find(x => x.id === one).archived).toBeUndefined();
+    expect(st().library.find(x => x.id === one).prog).toEqual(body);
+  });
+  it('archiving the program being edited goes back to the board’s program; unknown or repeated calls change nothing', () => {
+    st().createProgram('My plan', 'A');
+    const id = st().library[0].id;
+    expect(st().edKey()).toBe('L:' + id);
+    st().archiveLibItem(id);
+    expect(st().edKey()).toBe('A');
+    const after = st().library;
+    st().archiveLibItem(id); st().archiveLibItem('nope'); st().restoreLibItem('nope');
+    expect(st().library).toBe(after);
+    st().restoreLibItem(id); st().restoreLibItem(id);
+    expect(st().library[0].archived).toBeUndefined();
+  });
+  it('loading a program over A archives the saved copies of the program it replaced, and only those', () => {
+    st().saveCurrentAs('Old A');
+    st().createProgram('Next', 'empty');
+    const [oldA, next] = st().library.map(x => x.id);
+    st().loadVersion(next, 'A');
+    expect(st().library.find(x => x.id === oldA).archived).toBe(true);
+    expect(st().library.find(x => x.id === next).archived).toBeUndefined(); // what A holds now is in use
+    expect(saved('library/main').items.find(x => x.id === oldA).archived).toBe(true);
+  });
+  it('a saved copy of what B still holds is not archived, and loading an archived program brings it back', () => {
+    st().loadVersion('orig', 'B'); st().saveCurrentAs('Same as B');
+    st().createProgram('Next', 'empty');
+    const [sameB, next] = st().library.map(x => x.id);
+    st().loadVersion(next, 'A');
+    expect(st().library.find(x => x.id === sameB).archived).toBeUndefined(); // A held the original; B's copy is not what left
+    st().archiveLibItem(next);
+    st().loadVersion(next, 'B');
+    expect(st().library.find(x => x.id === next).archived).toBeUndefined();
+  });
+  it('a program loaded into both A and B is not archived when A is replaced, though B holds it under new card ids', () => {
+    st().createProgram('Shared', 'A'); st().createProgram('Other', 'empty');
+    const [shared, other] = st().library.map(x => x.id);
+    st().loadVersion(shared, 'A'); st().loadVersion(shared, 'B');
+    st().loadVersion(other, 'A');
+    expect(st().library.find(x => x.id === shared).archived).toBeUndefined();
   });
   it('Undo puts a deleted program back where it was, saved, once', () => {
     st().saveCurrentAs('One'); st().saveCurrentAs('Two'); st().saveCurrentAs('Three');

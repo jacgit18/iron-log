@@ -81,6 +81,8 @@ export interface LibraryItem {
   at: string;
   auto?: true;
   created?: true;
+  /** Put away from the Program library's main list and the Move sheet; Restore brings it back. */
+  archived?: true;
   prog: Program;
 }
 
@@ -139,6 +141,8 @@ export interface Cfg extends ProgramCfg {
   exPh: Record<string, PhaseKey | null>;
   progNames?: Record<string, string>; // program key ('A', 'B') -> your name for it
   bwGoal?: BodyGoal;
+  /** Daily targets you typed (ADR 086); a key left out means the recommended number is used. */
+  diet?: DietCfg;
   liftGoals?: Record<string, Record<string, LiftGoal>>;
   /** Equipment the user added: id (`x:` and a slug) to its name. */
   equipment?: Record<string, string>;
@@ -147,6 +151,8 @@ export interface Cfg extends ProgramCfg {
   rest?: number; // rest timer, seconds
   /** Off (false) turns off the heads-up when a move puts the same muscles on back-to-back days and the day-order suggestions. On when unset. */
   injuryPrevention?: boolean;
+  /** Recipe filter chips you hid, and the order you put the rest in (built-in categories only; custom tags live on the recipes). */
+  recipeChips?: RecipeChips;
 }
 
 /** An Experiment (or added) card on one week. */
@@ -210,7 +216,8 @@ export interface PersonalBest { id: string; d: string; w: number; r: number; pre
 /** Body-weight goal: the target, where you were when you set it, and an optional ISO date. */
 export interface BodyGoal { w: number; start?: { w: number; d?: string }; by?: string }
 /** A lift goal for one exercise and key ('any' or a phase). */
-export interface LiftGoal { w: number; start?: number; by?: string }
+// `bw`, `bwd`: body weight (lb) and date when a goal that scales with body weight was set; `w` is then the base goal.
+export interface LiftGoal { w: number; start?: number; by?: string; bw?: number; bwd?: string }
 
 /* ---------- Supplements, water and stretches ---------- */
 export type SupplementSlot = 'morning' | 'noon' | 'night' | '';
@@ -236,7 +243,7 @@ export type GroceryUnit = 'lb' | 'kg' | 'oz';
  *  `gone`: removed from the group but still named by past months (a split or a payer), so those months read as they did; hidden everywhere else and left out of anything new. */
 export interface GroceryPerson { id: string; n: string; covered?: true; gone?: true }
 /** A sharing group: the people you split with ("Home", "Costco run"), and the stores that default to it. You are always in it and are not listed. */
-export interface GroceryGroup { id: string; n: string; people: GroceryPerson[]; stores: string[]; gone?: true } // `gone`: removed, but past months still name its people (all marked gone too); hidden everywhere else
+export interface GroceryGroup { id: string; n: string; people: GroceryPerson[]; stores: string[]; allStores?: true; gone?: true } // `allStores`: the default split for every store that has no group of its own (at most one live group has it); `gone`: removed, but past months still name its people (all marked gone too); hidden everywhere else
 /** Who shares one purchase with you: `with` are the people's ids (none = just you). `notMine`: it is for them, not you, so your share is nothing. */
 export interface GroceryShare { with: string[]; notMine?: true }
 /** A thing you buy. `store` is where ('' = anywhere), `qty` the usual count, `cents` the last unit price in cents. `every`: on each month's list
@@ -278,7 +285,7 @@ export type MuscleKey = 'neck' | 'traps' | 'frontdelt' | 'sidedelt' | 'reardelt'
 export interface MuscleTags { p?: MuscleKey[]; s?: MuscleKey[]; mob?: true }
 
 /* ---------- Catalog (ADR 025, 026, 028) ---------- */
-export type CatalogKind = 'exercise' | 'stretch' | 'supplement';
+export type CatalogKind = 'exercise' | 'stretch' | 'supplement' | 'recipe';
 /** A catalog row's `data`: the fields the app shows, already mapped to the app's names by `catalog:import`. */
 export interface CatalogData {
   /** null: the dataset gives none (shown blank, not Other). */
@@ -292,10 +299,39 @@ export interface CatalogData {
   instructions?: string[];
   /** Supplements (DSLD): the product's form, e.g. Capsule, Powder. */
   form?: string;
+  /** Recipes (Wikibooks Cookbook): the recipe's category, ingredient lines (amount text included), steps and the time and servings it gives. */
+  recipe?: { cat: RecipeCategory; ing: string[]; steps: string[]; servings?: number; minutes?: number };
 }
 
 /** A catalog row as GET /api/catalog lists it (no instructions), or as the search returns it (supplements carry a brand). */
 export interface CatalogItem { id: string; name: string; brand?: string; data: CatalogData }
+
+/* ---------- Recipes (synced to the account as the list 'recipe', ADR 084) ---------- */
+export type RecipeCategory = 'protein' | 'carbs' | 'sides' | 'sauces' | 'seasonings' | 'drinks' | 'breakfast' | 'dessert' | 'ready' | 'other';
+/** One ingredient line: `n` is the name that is matched against the At home list, `amt` the free-text amount ("2 cups"); `home` is the id
+ *  of the At home item the person linked it to by hand. `sub` is an Alternative to use if they do not have `n` (it never replaces `n`: the ingredient is at home when either is); `skip` marks an
+ *  ingredient they leave out (listed, but not counted and never added to To get). `rid` is the id of one of the person's own Sauces or Seasonings recipes the
+ *  line links to (`n` stays as the fallback text). */
+export interface RecipeIngredient { n: string; amt?: string; home?: string; rid?: string; sub?: string; skip?: true }
+/** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
+ *  after copying it (only on a recipe with a `from`). */
+/** The recipe chips the person hid and reordered (brief recipe-filter-editing). */
+export interface RecipeChips { hide?: RecipeCategory[]; order?: RecipeCategory[] }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string }
+
+/* ---------- Diet (ADR 086) ---------- */
+/** Daily targets you typed: calories, and protein, carbs and fat in grams. */
+/** How fast you want to gain or lose: a preset, or 'custom' with `rate` lb a week. Left out: the goal date sets it, else Steady. */
+export type DietPace = 'slow' | 'steady' | 'fast' | 'custom';
+/** One food in a saved meal: a diet entry without its id and day (`from` is the recipe id when it was logged from one). */
+export interface SavedItem { n: string; kcal: number; p: number; c?: number; f?: number; from?: string }
+/** A meal you saved from what you logged: a name and its foods (brief diet-saved-meals). Kept in `cfg.diet.meals`. */
+export interface SavedMeal { id: string; n: string; items: SavedItem[] }
+/** One planned item (brief diet-meal-planner): a recipe (`k` 'r') or a saved meal (`k` 'm') by id; `x` is the recipe's portion (0.5 to 10), left out when it is 1. */
+export interface PlanItem { k: 'r' | 'm'; id: string; x?: number }
+export interface DietCfg { kcal?: number; protein?: number; carbs?: number; fat?: number; pace?: DietPace; rate?: number; meals?: SavedMeal[]; plan?: Record<string, PlanItem[]> }
+/** One thing you ate on one day (`d`, local date; `c` and `f` are carbs and fat in grams, left out when not entered): the numbers are a snapshot, so editing a recipe later never changes them. `from` is the recipe id when it was logged from one; `t` is the local hour (0 to 23) it was added, for today only, used to suggest foods near that hour. */
+export interface DietEntry { id: string; d: string; n: string; kcal: number; p: number; c?: number; f?: number; from?: string; t?: number }
 
 /* ---------- Snapshots and the data file ---------- */
 /** An exercise to try (an Experiment list entry). */
@@ -314,6 +350,8 @@ export interface Snapshot {
   stretchWeeks?: Record<string, StretchWeek>;
   supp?: Supplements;
   grocery?: GroceryData;
+  recipes?: Recipe[];
+  diet?: DietEntry[];
 }
 
 /** A data file after `normalizeData` has checked and cleaned it. `config` holds only the keys the file had. */
@@ -330,6 +368,8 @@ export interface DataFile {
   stretchWeeks: Record<string, StretchWeek>;
   supplements: Supplements | null;
   grocery: GroceryData | null;
+  recipes?: Recipe[]; // left out when the file has none
+  diet?: DietEntry[]; // left out when the file has none
 }
 
 /* ---------- Production issues (admin screen; the server's /api/issues, ADR 013 amendment) ---------- */

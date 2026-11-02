@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
 import { flag, useAppStore } from './store/useAppStore.js';
 import { takeAfterReload } from './lib/afterReload.js';
+import { takeShare } from './lib/shareTarget.js';
 import useTooltips from './hooks/useTooltips.js';
 import useFocusKeeper from './hooks/useFocusKeeper.js';
 import useTabbarHeight from './hooks/useTabbarHeight.js';
@@ -10,20 +11,26 @@ import Toaster from './components/Toaster.js';
 import InstallHint from './components/board/InstallHint.js';
 import AccountBadge from './components/AccountBadge.js';
 import useBadgeName from './hooks/useBadgeName.js';
+import { WhoContext } from './components/settings/useWho.js';
 import { useWide } from './components/board/useWide.js';
 import { inAndroidApp } from './lib/androidApp.js';
 import { showPlansTab } from './lib/plansTab.js';
 import ThemeButton from './components/ThemeButton.js';
 import QaBanner from './components/QaBanner.js';
+import QaDeepLink from './components/QaDeepLink.js';
 import UpdateBanner from './components/UpdateBanner.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import { appTitle } from './lib/envName.js';
+import { startBackNav } from './lib/backNav.js';
 import { lazyTab, mapChunkError } from './lib/lazyTab.js';
+import { parseRoute, routeHash } from './lib/route.js';
+import { ROUTE_EVENT } from './components/useRoute.js';
 import { renewPush } from './lib/pushClient.js';
 import { useWaterReminder } from './hooks/useWaterReminder.js';
 import './components/BrandLink.css';
+import './components/HeaderDark.css';
 
 // The Board (the first screen) and the shell are in the main bundle; the other tabs are fetched when first opened. Every chunk is in the
 // service worker's precache, so they open offline too.
@@ -75,13 +82,16 @@ export default function App() {
   const ready = useAppStore(s => s.isReady());
   const signedOut = useAppStore(s => s.sync?.state === 'paused' && s.sync.pausedBecause === 'auth');
   const { setTab, closeModal, openModal } = useAppStore.getState();
+  useEffect(() => startBackNav(useAppStore, window.history, window), []); // phone Back walks the tabs and closes a sheet (src/lib/backNav.ts)
+  // A link shared in from another app opens its sheet once the app is ready, after Back handling has started so the sheet gets its own history entry (lib/shareTarget.ts).
+  useEffect(() => { if (!ready) return; const s = takeShare(); if (s) useAppStore.getState().openModal({ type: 'share', title: s.title, url: s.url }); }, [ready]);
   useTooltips();
   useFocusKeeper();
   const tabsRef = useRef<HTMLElement>(null);
   useTabbarHeight(tabsRef);
 
   // With the account badge showing, the badge is the way to Settings, so the Settings tab is not drawn (it is when nobody is signed in).
-  const { name: badgeName, pending: badgePending, who } = useBadgeName();
+  const { name: badgeName, pending: badgePending, who, ask } = useBadgeName();
   // The Plans tab is for a signed-in free account on a wide screen (src/lib/plansTab.ts); everyone else's bar is as before.
   const [inApp] = useState(inAndroidApp); // asked once: the Play build shows no prices, whatever the screen width (ADR 065 point 8)
   const plansShown = showPlansTab(useWide(), who, inApp);
@@ -100,6 +110,28 @@ export default function App() {
     const k = tabs[(n + tabs.length) % tabs.length][0];
     setTab(k); document.getElementById(`tab-${k}`)!.focus();
   };
+  // Screen addresses (brief navigation-urls). A tab change swaps the address instead of adding a Back step; Back or an edited address moves to the tab it names.
+  const skipPop = useRef(false);
+  useEffect(() => {
+    if (parseRoute(location.hash)?.tab === tab) return;
+    if (history.state?.settingsScreen) skipPop.current = true; // leaving Settings with a screen open takes that screen's history entry back (Settings.tsx): the popstate it causes must not undo this tab change
+    history.replaceState({ ...history.state, route: false }, '', routeHash(tab));
+    window.dispatchEvent(new Event(ROUTE_EVENT));
+  }, [tab]);
+  useEffect(() => {
+    const sync = () => {
+      if (skipPop.current) {
+        skipPop.current = false; // a pop we asked for ourselves: only fix the address when it names another tab than the one now shown (a sheet closed on a page keeps its page)
+        const now = useAppStore.getState().tab;
+        if (parseRoute(location.hash)?.tab !== now) { history.replaceState(history.state, '', routeHash(now)); window.dispatchEvent(new Event(ROUTE_EVENT)); }
+        return;
+      }
+      const r = parseRoute(location.hash);
+      if (r && r.tab !== useAppStore.getState().tab) setTab(r.tab);
+    };
+    window.addEventListener('popstate', sync); window.addEventListener('hashchange', sync);
+    return () => { window.removeEventListener('popstate', sync); window.removeEventListener('hashchange', sync); };
+  }, [setTab]);
   // A note set just before a reload (Erase everything), said once now that the page is back.
   useEffect(() => { const t = takeAfterReload(); if (t) flag(t); }, []);
   useWaterReminder();
@@ -115,9 +147,9 @@ export default function App() {
   useEffect(() => { if (plansGone && !badgePending) setTab('board'); }, [plansGone, badgePending, setTab]);
   const View = TABS.find(([k]) => k === (plansGone ? 'board' : tab))![2];
   return (
-    <>
-      <a className="skip" href="#view">Skip to content</a>
-      <div className="wrap">
+    <WhoContext.Provider value={ask}>
+      <a className="skip" href="#view" onClick={e => { e.preventDefault(); document.getElementById('view')?.focus(); }}>Skip to content</a>
+      <div className="wrap" data-acctmenu={badgeName !== null || badgePending ? '' : undefined}>
         <header className="top">
           <h1><button type="button" className="brandlink" aria-current={tab === 'board' ? 'page' : undefined} onClick={() => { setTab('board'); window.scrollTo({ top: 0 }); }}>{APP_TITLE}</button></h1>
           <div className="topact">
@@ -132,10 +164,11 @@ export default function App() {
               ))}
             </div>
           </nav>
-          <AccountBadge name={badgeName} />
+          <AccountBadge name={badgeName} email={who?.status === 'signed-in' ? who.email : null} canSignOut={who?.status === 'signed-in' && who.kind === 'session'} />
         </header>
         <UpdateBanner />
         <QaBanner />
+        <QaDeepLink />
         <OfflineNotice />
         <SyncNotice />
         <WhenSyncing><SignInCard /></WhenSyncing>
@@ -158,6 +191,6 @@ export default function App() {
       <Toaster info={!ready && !saveFlag && !signedOut ? 'Loading…' : saveFlag} />
       <Modal />
       <aside className="timer-region" aria-label="Timer"><TimerBar /></aside>
-    </>
+    </WhoContext.Provider>
   );
 }

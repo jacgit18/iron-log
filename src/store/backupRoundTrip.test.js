@@ -27,7 +27,8 @@ async function fillEverything() {
   const wk = st().weekKey();
   const mine = structuredClone(BUILTIN.A); mine.days[0].title = 'Push day';
   useAppStore.setState({
-    cfg: { ...structuredClone(DEFAULT_CFG), rest: 120 },
+    cfg: { ...structuredClone(DEFAULT_CFG), rest: 120, recipeChips: { hide: ['drinks'], order: ['sides', 'protein'] } },
+    recipes: [{ id: 'chili-ab12', n: 'Chili', cat: 'protein', tags: ['Meal prep', 'weeknight'], ing: [{ n: 'beans' }], steps: ['Simmer.'] }],
     programs: { A: mine, B: BUILTIN.B },
     body: [{ wk, d: wk, w: 181.5 }],
     experiments: [{ id: 'E1', ex: 'hack', ph: 'hyp', note: 'try a slower tempo' }],
@@ -54,6 +55,8 @@ describe('backup round trip', () => {
     expect(Object.values(first.logs).flat().length).toBeGreaterThan(0);
     expect(first.config.rest).toBe(120);
     expect(first.programs.A.days[0].title).toBe('Push day');
+    expect(first.recipes[0].tags).toEqual(['Meal prep', 'weeknight']); // recipe tags and the chip setting are in the file
+    expect(first.config.recipeChips).toEqual({ hide: ['drinks'], order: ['sides', 'protein'] });
     expect(first.body).toHaveLength(1);
     expect(first.experiments).toHaveLength(1);
     expect(first.stretches.items).toHaveLength(1);
@@ -71,7 +74,7 @@ describe('backup round trip', () => {
     expect(wiped.supplements.water).toEqual({});
     expect(wiped.experiments).toEqual([]);
 
-    st().pasteImport(JSON.stringify(first));
+    await st().pasteImport(JSON.stringify(first));
     await st().applyImport('replace'); await tick();
     const second = await exportData();
     expect(withoutTime(second)).toEqual(withoutTime(first));
@@ -80,9 +83,9 @@ describe('backup round trip', () => {
   it('a second Replace of the same file changes nothing', async () => {
     await fillEverything();
     const file = await exportData();
-    st().pasteImport(JSON.stringify(file)); await st().applyImport('replace'); await tick();
+    await st().pasteImport(JSON.stringify(file)); await st().applyImport('replace'); await tick();
     const once = await exportData();
-    st().pasteImport(JSON.stringify(file)); await st().applyImport('replace'); await tick();
+    await st().pasteImport(JSON.stringify(file)); await st().applyImport('replace'); await tick();
     const twice = await exportData();
     expect(withoutTime(twice)).toEqual(withoutTime(once));
   });

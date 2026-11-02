@@ -1,5 +1,6 @@
 import type { Cfg, EquipmentId } from '../types.ts';
 import { EQUIPMENT, EQ_KEYS } from './data.js';
+import { nameCmp } from './sort.js';
 
 /* ---------- Equipment: the built-in list plus what the user added ----------
    cfg.equipment[id] = name, with id `x:` and a slug of the name. Menus show the built-ins and the added ones together,
@@ -15,7 +16,7 @@ export const eqName = (cfg: Pick<Cfg, 'equipment'>, id: string | null | undefine
 export function eqOptions(cfg: Pick<Cfg, 'equipment'>): { id: EquipmentId; name: string }[] {
   const all = [...EQ_KEYS.filter(k => k !== 'other').map(k => ({ id: k as EquipmentId, name: EQUIPMENT[k] })),
     ...Object.entries(cfg.equipment || {}).map(([id, name]) => ({ id: id as EquipmentId, name }))];
-  all.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  all.sort(nameCmp(e => e.name, e => e.id));
   return [...all, { id: 'other', name: EQUIPMENT.other }];
 }
 

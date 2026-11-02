@@ -1,7 +1,7 @@
 /* ---------- Automatic backup: one copy of your data a day, for the last 7 days, kept in this browser ----------
    Each copy is the same file Export all data makes, so Restore feeds it to the normal import review. Kept in IndexedDB (a data file can
    be too big for localStorage). Nothing here throws: a browser that blocks IndexedDB (a private window) simply has no backups. */
-import { dataStats } from './export.js';
+import { dataStats } from './entryMerge.js';
 import { addDays, parseDate, ymd } from '../shared/dates.js';
 import type { DataFile } from '../types.ts';
 
@@ -47,7 +47,7 @@ const info = ({ date, savedAt, score, entries }: BackupRecord): BackupInfo => ({
 
 export async function listBackups(): Promise<BackupInfo[]> {
   const all = await tx<BackupRecord[]>('readonly', s => s.getAll() as IDBRequest<BackupRecord[]>, []);
-  return all.map(info).sort((a, b) => b.date.localeCompare(a.date));
+  return all.map(info).sort((a, b) => b.date.localeCompare(a.date)); // sort-ok: ISO date strings
 }
 export const getBackup = (date: string) => tx<BackupRecord | undefined>('readonly', s => s.get(date) as IDBRequest<BackupRecord | undefined>, undefined);
 export async function clearBackups(): Promise<void> { await tx('readwrite', s => s.clear(), undefined); }

@@ -44,7 +44,7 @@ test('an admin sees who owes what, and changing who shares a pack updates it and
 test('who paid flips the card: when the mom paid you owe her your share', async ({ page }) => {
   await seed(page);
   await split(page).getByLabel("Who paid at BJ's").selectOption({ label: 'Mom' });
-  await expect(split(page).getByText('You owe Mom')).toBeVisible();
+  await expect(split(page).locator('.gsplitcard').getByText('You owe Mom')).toBeVisible(); // the Across all stores block says it too
   await expect(split(page).getByText('Sister owes Mom')).toBeVisible();
   await expect(split(page).getByText('Sister owes you')).toHaveCount(0);
   // What you paid is only the stores you paid for: the mom paid BJ's, so only the Aldi rice was yours.

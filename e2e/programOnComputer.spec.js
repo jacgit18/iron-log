@@ -23,12 +23,12 @@ test.describe('on a phone', () => {
     await expect(card(page)).toBeVisible();
     await expect(card(page)).toContainText('Planning a program is easier on a computer.');
     await expect(card(page).getByRole('button', { name: 'Send me the link' })).toBeVisible();
-    const days = page.getByRole('group', { name: 'Day to edit' });
+    const days = page.getByRole('group', { name: 'Day stepper' });
     const before = await days.boundingBox();
     expect(await scan(page).then(r => r.violations)).toEqual([]);
     await card(page).getByRole('button', { name: 'Not now' }).click();
     await expect(card(page)).toHaveCount(0);
-    expect(await days.boundingBox()).toEqual(before); // it floated: the Day buttons were not pushed down or pulled back
+    expect(await days.boundingBox()).toEqual(before); // it floated: the Day stepper was not pushed down or pulled back
     await page.reload();
     await openTab(page, 'Program');
     await expect(page.getByRole('heading', { name: 'Program' }).first()).toBeVisible();

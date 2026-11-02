@@ -2,6 +2,7 @@ import type { CatalogItem, Cfg, LibraryItem, Logs, Program, Week } from '../type
 /* ---------- Exercise library: every exercise and what is set on it ---------- */
 import { EX, allExIds, exInfo, findExId, isOwnExercise, slotsFor } from './data.js';
 import { tagsOf, MUSCLES } from './muscles.js';
+import { nameCmp } from './sort.js';
 
 // Where an exercise is used: the rotation programs (by key), saved/created versions, experiments, and logged sessions.
 export function usageOf(exId: string, { programs, library, experiments, logs }: { programs: Record<string, Program>; library?: LibraryItem[]; experiments?: { ex: string }[]; logs?: Logs }) {
@@ -45,7 +46,7 @@ export function libraryRows(cfg: Cfg, state: Parameters<typeof usageOf>[1]) {
       p: tg && !tg.mob ? tg.p || [] : [], s: tg && !tg.mob ? tg.s || [] : [], mob: !!(tg && tg.mob), tagged: !!tg,
       inPrograms: usageOf(id, state).programs,
     };
-  }).sort((a, b) => a.name.localeCompare(b.name));
+  }).sort(nameCmp(x => x.name, x => x.id));
 }
 
 // q matches the name; muscle matches primary or secondary; eq is exact; 'none' matches exercises with nothing set.
@@ -72,3 +73,9 @@ export function keepCatalogItems(items: CatalogItem[], f: { eq?: string; muscle?
 export const hasTwoSources = (rows: { custom: boolean }[]) => rows.some(r => r.custom) && rows.some(r => !r.custom);
 
 export const muscleList = (keys: string[]) => keys.map(k => ((MUSCLES as Record<string, { n: string }>)[k] ? (MUSCLES as Record<string, { n: string }>)[k].n : k)).join(', ');
+
+/** The two short lines of a library row: "Barbell · Quads, glutes, hamstrings" (equipment, then up to three muscles, primary first) and where it is used ("In A, B" or "Not used"). Default phase, 1RM, the video link and the full muscle lists live in the Edit sheet. */
+export function rowSummary(r: { p: string[]; s: string[]; mob: boolean; inPrograms: string[] }, eqLabel: string): { line: string; where: string } {
+  const muscles = r.mob ? 'Mobility' : muscleList([...new Set([...r.p, ...r.s])].slice(0, 3)).toLowerCase().replace(/^./, c => c.toUpperCase());
+  return { line: [eqLabel, muscles || 'No muscles tagged'].filter(Boolean).join(' · '), where: r.inPrograms.length ? `In ${r.inPrograms.join(', ')}` : 'Not used' };
+}

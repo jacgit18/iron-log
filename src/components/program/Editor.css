@@ -33,6 +33,19 @@
   align-items: flex-end;
   flex-wrap: wrap;
 }
+.libarchive {
+  margin-top: var(--sp-12);
+}
+.libarchive summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+.libarchive .edlist {
+  margin-top: var(--sp-6);
+}
 .edlist {
   display: flex;
   flex-direction: column;
@@ -56,32 +69,60 @@
   min-width: 0;
   flex: 1 1 220px;
 }
+.edlist .edmain {
+  flex-basis: 120px;
+  /* a program row keeps Edit and ⋯ beside the name on a phone */
+}
 .edbtns {
   display: flex;
   gap: var(--sp-4);
   flex-wrap: wrap;
 }
-.edcount {
-  display: block;
-  font-size: var(--fs-2xs);
-  font-weight: 400;
-}
-.edmove {
-  max-width: 100%;
-}
-/* A superset's own row of selects: one exercise at a time can go to another day. */
-.edsplit {
+/* The Day stepper (previous, a picker of the seven days, next) fills the row; the Day buttons below it jump straight to a day and are for wide screens only. */
+.dayctl {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-6);
+  align-items: flex-start;
+  gap: var(--sp-8);
   flex: 1 0 100%;
 }
-.edsplititem {
+.daystep {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--sp-8);
-  flex-wrap: wrap;
+  width: 100%;
+  max-width: 760px;
+  /* as wide as the program panel under it */
+}
+.daystepbtn {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
+}
+.daystepbtn[aria-disabled="true"] {
+  opacity: 0.45;
+  /* looks disabled but stays focusable, so a keyboard user who steps to Day 1 or Day 7 keeps focus */
+}
+.daypick {
+  flex: 1 1 0;
+  /* width 0 and no minimum: the picker takes what is left between the arrows and its text is cut, never pushes the row wider than the screen at large text sizes */
+  width: 0;
+  min-width: 0;
+  min-height: 44px;
+  text-align: center;
+  text-align-last: center;
+  font-weight: 600;
+}
+.edtop .seg.daybtns button {
+  min-width: 64px;
+  min-height: 44px;
+  text-align: center;
+}
+@media (max-width:700px) {
+  .edtop .seg.daybtns {
+    display: none;
+  }
 }
 .draghandle {
   flex: 0 0 auto;
@@ -121,5 +162,52 @@
 }
 .edadd {
   margin: var(--sp-4) 0 var(--sp-12);
+}
+.edtop .createprog {
+  margin-left: auto;
+  min-height: 44px;
+}
+.copyday {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-8);
+}
+.copyday .field {
+  min-width: 0;
+}
+.copyday .btn {
+  min-height: 44px;
+}
+/* A wide desktop: the editor panel and the Day at a glance panel sit side by side, and the library panel goes under the editor note. The DOM order stays editor, summary, note, library,
+   so keyboard and screen-reader order do not change; only the grid places them. The Create a program button moves to the strip of program cards (ProgramStrip) from here, so the top-row button hides.
+   Below 1280px .edcols is a plain block, the summary and the strip are not drawn and nothing moves. */
+@media (min-width:1280px) {
+  .edtop .createprog {
+    display: none;
+  }
+  .edcols {
+    display: grid;
+    grid-template-columns: minmax(0,1100px) minmax(0,400px);
+    column-gap: var(--sp-16);
+    align-items: start;
+  }
+  .edcols>.edprog:not(.lib) {
+    grid-column: 1;
+    grid-row: 1;
+    max-width: none;
+  }
+  .edcols>.daysum {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .edcols>.note {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .edcols>.lib.edprog {
+    grid-column: 1;
+    grid-row: 3;
+  }
 }
 }
