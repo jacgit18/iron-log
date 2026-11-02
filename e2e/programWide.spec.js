@@ -32,6 +32,10 @@ for (const w of [375, 768, 1024, 1279]) {
     await expect(page.locator('.progstrip')).toBeHidden();
     await expect(page.locator('.daysum')).toBeHidden();
     await expect(page.locator('.edtop .createprog')).toBeVisible();
+    // Under 1280px the button starts at the left, in line with the A and B tabs, never pushed to the right edge.
+    const left = await page.evaluate(() => ({ seg: document.querySelector('.edtop .createprog').parentElement.querySelector('.seg').getBoundingClientRect().left, btn: document.querySelector('.edtop .createprog').getBoundingClientRect().left, segRight: document.querySelector('.edtop .createprog').parentElement.querySelector('.seg').getBoundingClientRect().right }));
+    expect(left.btn === left.seg || left.btn >= left.segRight, `button at ${left.btn}, tabs ${left.seg} to ${left.segRight}`).toBe(true);
+    expect(left.btn, `button at ${left.btn}`).toBeLessThan(left.segRight + 20);
   });
 }
 
