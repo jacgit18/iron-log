@@ -47,11 +47,30 @@ function billingFrom(v: unknown): BillingInfo | undefined {
   return { available: b.available === true, source: asString(b.source) ?? 'manual', status: asString(b.status), renewsAt: asString(b.renewsAt), hasCustomer: b.hasCustomer === true };
 }
 
+/* The app asks /api/me from several places while it starts (the admin check in main.tsx, the header badge, panels): one request serves them all.
+   Only the browser's own fetch shares (a test that passes `fetch` gets a client of its own). A request in flight is joined; a signed-in or signed-out
+   answer is reused for a few seconds; "unreachable" is never kept, so a retry asks again. Signing in or out clears it. */
+const ME_REUSE_MS = 3000;
+let sharedMe: { key: string; promise: Promise<AccountState>; at: number } | null = null;
+export function resetMeCache() { sharedMe = null; }
+
 export function createAccountClient(options: AccountOptions = {}) {
   const { baseUrl = '', headers, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   const doFetch = options.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
 
-  async function me(): Promise<AccountState> {
+  /** `fresh` skips the reuse window (a deliberate re-check, such as the wait for a plan to turn paid after Checkout) but still joins nothing stale: it asks the server. */
+  function me(opts: { fresh?: boolean } = {}): Promise<AccountState> {
+    if (options.fetch) return meFetch();
+    if (opts.fresh) resetMeCache();
+    const key = `${baseUrl}|${JSON.stringify(headers?.() ?? {})}`;
+    if (sharedMe && sharedMe.key === key && Date.now() - sharedMe.at < ME_REUSE_MS) return sharedMe.promise;
+    const entry = { key, at: Date.now(), promise: meFetch() };
+    entry.promise = entry.promise.then(state => { if (state.status === 'unreachable' && sharedMe === entry) sharedMe = null; return state; });
+    sharedMe = entry;
+    return entry.promise;
+  }
+
+  async function meFetch(): Promise<AccountState> {
     // The sign-in gate waits on this, so it must end: the timer runs until the body is read, and an abort at any point is "can't tell".
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -76,6 +95,7 @@ export function createAccountClient(options: AccountOptions = {}) {
 
   /** Asks Better Auth for the Google sign-in address. The caller sends the browser there; it comes back to the app root. */
   async function startGoogleSignIn(): Promise<{ ok: true; url: string } | { ok: false; reason: 'unreachable' | 'refused' }> {
+    resetMeCache();
     try {
       const res = await doFetch(`${baseUrl}/api/auth/sign-in/social`, {
         method: 'POST',
@@ -119,6 +139,7 @@ export function createAccountClient(options: AccountOptions = {}) {
 
   /** Checks the code. On success the session cookie is set and the caller reloads into the app. */
   async function signInWithEmailCode(email: string, otp: string): Promise<EmailCodeOutcome> {
+    resetMeCache();
     try {
       const res = await post('/api/auth/sign-in/email-otp', { email, otp });
       if (res.ok) return 'ok';
@@ -142,6 +163,7 @@ export function createAccountClient(options: AccountOptions = {}) {
   const billingPortal = () => billingUrl('/api/billing/portal', {});
 
   async function signOut(): Promise<boolean> {
+    resetMeCache();
     try {
       const res = await doFetch(`${baseUrl}/api/auth/sign-out`, { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' }, credentials: 'same-origin', body: '{}' });
       return res.ok;
