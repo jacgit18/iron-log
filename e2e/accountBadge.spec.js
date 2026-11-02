@@ -49,7 +49,12 @@ test.describe('signed-in badge', () => {
     await expect(page.locator('#view')).toHaveAttribute('aria-label', 'Settings');
     await expect(page.locator('#view')).not.toHaveAttribute('aria-labelledby', /.+/); // it does not point at a tab that is not drawn
     await expect(page.locator('#tab-board')).toHaveAttribute('tabindex', '0'); // no tab is selected, so the first one is the way in
-    await page.locator('#account-badge').focus();
+    await expect(page.getByRole('group', { name: 'Account menu' })).toHaveCount(0); // the menu has closed, so it cannot hand focus back after ours
+    // Under load the header can redraw after the first focus() and drop it, so focus until it sticks; Shift+Tab goes from the badge only once it holds focus.
+    await expect(async () => {
+      await page.locator('#account-badge').focus();
+      await expect(page.locator('#account-badge')).toBeFocused({ timeout: 500 });
+    }).toPass({ timeout: 5000 });
     await page.keyboard.press('Shift+Tab');
     await expect(page.locator('#tab-board')).toBeFocused();
     await page.keyboard.press('ArrowRight'); // from the tab that has focus
