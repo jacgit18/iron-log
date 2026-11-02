@@ -448,6 +448,8 @@ deploy_image() {
   # QA only: an admin may switch to the seeded test accounts (server/auth/qaPersonas.ts). The server also needs the QA mark on its database, so
   # this setting alone does nothing on another environment, and it is never passed to staging or production.
   if [ "$IRON_LOG_ENV" = qa ]; then env_vars+=",QA_PERSONAS=true"; fi
+  # The installed name says which environment it is ("Loadbearer QA", "Loadbearer Staging"; server/appLabel.ts). Production has none.
+  case "$IRON_LOG_ENV" in qa) env_vars+=",APP_LABEL=QA";; staging) env_vars+=",APP_LABEL=Staging";; esac
   if qa_owner_secret_wanted; then secrets+=",QA_OWNER_DATABASE_URL=${QA_OWNER_SECRET}:latest"; echo "QA reset: QA_OWNER_DATABASE_URL is passed to the service."; elif [ "$IRON_LOG_ENV" = qa ]; then echo "QA reset: no QA_OWNER_DATABASE_URL, so Reset and Seed in the picker are off."; fi
   gc run deploy "$SERVICE" --image "$image" --region "$REGION" \
     --service-account "${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" \
