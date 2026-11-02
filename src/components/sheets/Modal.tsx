@@ -14,6 +14,7 @@ import ImportSheet from './ImportSheet.js';
 import HelpSheet from './HelpSheet.js';
 import ShareSheet from './ShareSheet.js';
 import RestDateSheet from './RestDateSheet.js';
+import BoardFilterSheet from '../board/BoardFilterSheet.js';
 import RecipeFilters from '../recipes/RecipeFilters.js';
 import RowMenuSheet from '../program/RowMenuSheet.js';
 import QaPickerSheet from './QaPickerSheet.js';
@@ -40,6 +41,7 @@ export default function Modal() {
     case 'rowmenu': return <RowMenuSheet key={`rowmenu-${modal.idx}`} idx={modal.idx as number} />;
     case 'restdate': return <RestDateSheet key={modal.day as number} day={modal.day as number} />;
     case 'qapicker': return <QaPickerSheet />;
+    case 'boardfilter': return <BoardFilterSheet />;
     case 'recipefilters': return <RecipeFilters />;
     case 'help': return <HelpSheet />;
     case 'share': return <ShareSheet title={String(modal.title ?? '')} url={String(modal.url ?? '')} />;

@@ -8,6 +8,7 @@ import { eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
 import { colOf, restDatesOf, restsOf, weekSlots, workoutsOf, tally, currentLayout, isOpen, isSkipped, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
+import { boardFilterCount, boardFilterSummary } from '../../lib/boardFilter.js';
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
@@ -17,6 +18,7 @@ import FirstRun from './FirstRun.jsx';
 import InjurySwitch from './InjurySwitch.jsx';
 import Icon from '../Icon.jsx';
 import ProgramSwitch from './ProgramSwitch.js';
+import { useBoardFilter } from './useBoardFilter.js';
 import { useWide } from './useWide.js';
 import './BoardTop.css';
 import './DayCount.css';
@@ -109,8 +111,9 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
   const yCol = todayCol(today) - 1; const todayKey = ymd(today);
   const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey && !onlyElsewhere(slots, week) ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
-  const [filter, setFilter] = useState({ muscle: '', eq: '' });
-  const [filterOpen, setFilterOpen] = useState(false); // phones only: the sort and equipment fields fold away
+  const filter = { muscle: useBoardFilter(f => f.muscle), eq: useBoardFilter(f => f.eq) }; // a phone picks them in a sheet (BoardFilterSheet)
+  const { set: setFilter, clear: clearFilter } = useBoardFilter.getState();
+  const eqLabel = filter.eq ? eqOptions(cfg).find(o => o.id === filter.eq)?.name ?? '' : '';
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
   const filtering = !!filter.eq;
   const sorting = !!filter.muscle;
@@ -188,29 +191,39 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
       {slots.length === 0 && <FirstRun />}
       {!wide && <BodyWeightRow draft={bodyWeight} />}
       <div className="filterbar">
-        <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
-          <button type="button" className="btn sm filtertoggle" aria-expanded={filterOpen} aria-controls="filter-fields" onClick={() => setFilterOpen(o => !o)}>
-            Sort &amp; filter{filtering || sorting ? ` · ${(filtering ? 1 : 0) + (sorting ? 1 : 0)} on` : ''}
-          </button>
-          <div className={`filterfields${filterOpen ? ' open' : ''}`} id="filter-fields">
-            <label className="field">Sort by muscle
-              <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
-                <option value="">Program order</option>
-                {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-              </select>
-            </label>
-            <label className="field">Equipment
-              <select value={filter.eq} onChange={e => setFilter(f => ({ ...f, eq: e.target.value }))}>
-                <option value="">All equipment</option>
-                {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-            </label>
-            {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear</button>}
+        {wide && (
+          <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
+            <div className="filterfields" id="filter-fields">
+              <label className="field">Sort by muscle
+                <select value={filter.muscle} onChange={e => setFilter({ muscle: e.target.value })}>
+                  <option value="">Program order</option>
+                  {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
+                </select>
+              </label>
+              <label className="field">Equipment
+                <select value={filter.eq} onChange={e => setFilter({ eq: e.target.value })}>
+                  <option value="">All equipment</option>
+                  {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              </label>
+              {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>}
+            </div>
           </div>
-        </div>
+        )}
         <InjurySwitch />
-        {filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
-        {sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
+        {!wide && (
+          <button type="button" className="btn filtericon" aria-label={`Sort and filter${boardFilterCount(filter) ? `, ${boardFilterCount(filter)} on` : ''}`} onClick={() => st.openModal({ type: 'boardfilter' })}>
+            <Icon name="filter" />{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
+          </button>
+        )}
+        {!wide && boardFilterCount(filter) > 0 && (
+          <div className="filtersummary" role="status">
+            <span>{boardFilterSummary(muscleName, eqLabel)}</span>
+            <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>
+          </div>
+        )}
+        {wide && filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
+        {wide && sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
       </div>
 
       <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
