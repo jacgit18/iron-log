@@ -1,9 +1,13 @@
-import { buildDataFile, dataStats, parseDataFile } from '../lib/export.js';
+import { dataStats } from '../lib/entryMerge.js';
+import type { buildDataFile } from '../lib/export.js';
 import { backupScore, clearBackups, getBackup, listBackups, pruneBackups, saveDailyBackup } from '../lib/autoBackup.js';
 import { featureNow } from '../features.js';
 import { fetchServerBackup, hasExpectedUser, listServerBackups, uploadBackup, uploadKey } from '../lib/serverBackups.js';
 import { ymd } from '../shared/dates.js';
 import type { BackupSlice, Flag, StoreGet, StoreSet } from './types.ts';
+
+// The data-file builders load when a backup or restore runs, not at startup.
+const loadExport = () => import('../lib/export.js');
 
 // The automatic backup (one copy a day for the last 7 days, in this browser). When it runs is in autoBackupRunner.ts.
 // Once the copies are deleted (Sign out, Erase everything, Delete my account, a new-account wipe) nothing is written again until the page is
@@ -18,7 +22,7 @@ export const backupSlice = (set: StoreSet, get: StoreGet, flag: Flag): BackupSli
     if (stopped || !get().isReady()) return; // never copy a half-loaded app
     let uploadAfter: { file: ReturnType<typeof buildDataFile>; text: string; day: string } | null = null;
     try {
-      const file = buildDataFile(await get().fullSnapshot(), await get().allWeeks());
+      const file = (await loadExport()).buildDataFile(await get().fullSnapshot(), await get().allWeeks());
       if (stopped) return; // deleted while the file was being built
       const text = JSON.stringify(file); const day = ymd(new Date());
       const saved = await saveDailyBackup(file, text, day);
@@ -42,7 +46,7 @@ export const backupSlice = (set: StoreSet, get: StoreGet, flag: Flag): BackupSli
     if (get().blocked()) return;
     const rec = await getBackup(date);
     if (!rec) { flag('That backup is gone'); await get().refreshBackups(); return; }
-    try { set({ importDraft: { data: parseDataFile(rec.text), name: `Automatic backup of ${date}`, kind: 'json' }, importError: '', modal: { type: 'import' } }); }
+    try { const { parseDataFile } = await loadExport(); set({ importDraft: { data: parseDataFile(rec.text), name: `Automatic backup of ${date}`, kind: 'json' }, importError: '', modal: { type: 'import' } }); }
     catch { flag('That backup could not be read'); }
   },
   async downloadBackup(date) {
@@ -58,7 +62,7 @@ export const backupSlice = (set: StoreSet, get: StoreGet, flag: Flag): BackupSli
     if (get().blocked()) return;
     const text = await fetchServerBackup(date);
     if (text == null) { flag('That backup could not be fetched'); await get().refreshServerBackups(); return; }
-    try { set({ importDraft: { data: parseDataFile(text), name: `Account backup of ${date}`, kind: 'json' }, importError: '', modal: { type: 'import' } }); }
+    try { const { parseDataFile } = await loadExport(); set({ importDraft: { data: parseDataFile(text), name: `Account backup of ${date}`, kind: 'json' }, importError: '', modal: { type: 'import' } }); }
     catch { flag('That backup could not be read'); }
   },
 });

@@ -74,7 +74,7 @@ describe('backup round trip', () => {
     expect(wiped.supplements.water).toEqual({});
     expect(wiped.experiments).toEqual([]);
 
-    st().pasteImport(JSON.stringify(first));
+    await st().pasteImport(JSON.stringify(first));
     await st().applyImport('replace'); await tick();
     const second = await exportData();
     expect(withoutTime(second)).toEqual(withoutTime(first));
@@ -83,9 +83,9 @@ describe('backup round trip', () => {
   it('a second Replace of the same file changes nothing', async () => {
     await fillEverything();
     const file = await exportData();
-    st().pasteImport(JSON.stringify(file)); await st().applyImport('replace'); await tick();
+    await st().pasteImport(JSON.stringify(file)); await st().applyImport('replace'); await tick();
     const once = await exportData();
-    st().pasteImport(JSON.stringify(file)); await st().applyImport('replace'); await tick();
+    await st().pasteImport(JSON.stringify(file)); await st().applyImport('replace'); await tick();
     const twice = await exportData();
     expect(withoutTime(twice)).toEqual(withoutTime(once));
   });

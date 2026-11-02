@@ -10,7 +10,7 @@ import { dayPickLabel, exerciseCount } from '../../lib/exerciseCount.js';
 import { slotSummary } from '../../lib/programMove.js';
 import { archivedHeading, splitLibrary } from '../../lib/programArchive.js';
 import { DEFAULT_PROGRAM_SORT, PROGRAM_SORTS } from '../../lib/programSort.js';
-import { sameProg, libDate } from '../../lib/export.js';
+import { sameProg, libDate } from '../../lib/entryMerge.js';
 import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';

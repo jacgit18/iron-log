@@ -1,7 +1,7 @@
 /* ---------- Automatic backup: one copy of your data a day, for the last 7 days, kept in this browser ----------
    Each copy is the same file Export all data makes, so Restore feeds it to the normal import review. Kept in IndexedDB (a data file can
    be too big for localStorage). Nothing here throws: a browser that blocks IndexedDB (a private window) simply has no backups. */
-import { dataStats } from './export.js';
+import { dataStats } from './entryMerge.js';
 import { addDays, parseDate, ymd } from '../shared/dates.js';
 import type { DataFile } from '../types.ts';
 

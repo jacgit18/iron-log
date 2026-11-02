@@ -264,7 +264,7 @@ function DataPanel() {
         <summary>Can't pick a file? Paste its contents instead</summary>
         <textarea id="imp-text" rows={4} aria-label="Contents of an iron-log-data file" placeholder="Paste the contents of an iron-log-data file" value={paste} onChange={e => setPaste(e.target.value)} />
         <div className="actions">
-          <button type="button" className="btn sm" onClick={() => st.pasteImport(paste)}>Review import</button>
+          <button type="button" className="btn sm" onClick={() => void st.pasteImport(paste)}>Review import</button>
         </div>
       </details>
       <More about="export and import">

@@ -6,7 +6,7 @@ import { progName, dayAt, DAYS, colOf, currentLayout, isFinished } from '../lib/
 import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
 import type { ExerciseInfo, MuscleTags, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
-import { progBody, sameProg, libDate } from '../lib/export.js';
+import { progBody, sameProg, libDate } from '../lib/entryMerge.js';
 import { leftRotationIds } from '../lib/programArchive.js';
 import { carryPhDef, isLibKey, moveSlotId, moveTargets, programByKey } from '../lib/programMove.js';
 import { copyDaySlots } from '../lib/programDay.js';
