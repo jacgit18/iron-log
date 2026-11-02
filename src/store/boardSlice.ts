@@ -38,32 +38,34 @@ export const boardSlice = (set: StoreSet, get: StoreGet, flag: Flag): BoardSlice
   // `removeLogged`: unticking a box also removes the entries you logged yourself for that card this week.
   // A box that was unticked leaves an Undo notice (`label` names what was unticked).
   mutateChecks(fn, { removeLogged = false, label = '' } = {}) {
-    const slots = get().activeSlots(); const before = get().week; const logs = get().logs;
-    if (!get().mutateWeek(fn)) return false;
-    const changed = autoLogs(get().cfg, logs, slots, before, get().week, get().weekKey(), defaultLogDate(get().weekStart), { removeLogged });
-    if (Object.keys(changed).length) {
-      set(state => ({ logs: { ...state.logs, ...changed } }));
-      Object.keys(changed).forEach(id => get().saveLog(id));
-    }
-    // Entries you logged yourself that this removed, kept so the uncheck can be undone.
-    const entries: Logs = {}; let gone = 0;
-    Object.keys(changed).forEach(id => {
-      const kept = new Set(changed[id].map(e => JSON.stringify(e)));
-      const lost = (logs[id] || []).filter(e => !e.auto && !kept.has(JSON.stringify(e)));
-      if (lost.length) { entries[id] = lost; gone += lost.length; }
-    });
-    const done: Record<string, boolean> = {}; const after = get().week.done || {};
-    new Set([...Object.keys(before.done || {}), ...Object.keys(after)]).forEach(k => { if (!!(before.done || {})[k] !== !!after[k]) done[k] = !!(before.done || {})[k]; });
-    // A superset's per-exercise ticks fold into the card's own tick when its last half is ticked: that is not an uncheck.
-    const stillDone = (k: string) => !!after[k] || (k.includes('#') && !!after[k.split('#')[0]]);
-    const unticked = Object.entries(done).some(([k, was]) => was && !stillDone(k));
-    get().suggestOrder(slots, before);
-    if (get().weekKey() === ymd(weekStartOf(new Date()))) trackNudge(before, get().week, slots); // only this week's days are worth a nudge
-    if (removeLogged && unticked) {
-      const text = `Unchecked${label ? ' ' + label : ''}${gone ? ` · removed ${gone} logged ${gone === 1 ? 'entry' : 'entries'}` : ''}.`;
-      set({ uncheckNote: { week: get().weekKey(), text, entries, done } });
-    } else if (get().uncheckNote) set({ uncheckNote: null }); // any other check-off change replaces the old notice
-    return true;
+    return get().transact(() => {
+      const slots = get().activeSlots(); const before = get().week; const logs = get().logs;
+      if (!get().mutateWeek(fn)) return false;
+      const changed = autoLogs(get().cfg, logs, slots, before, get().week, get().weekKey(), defaultLogDate(get().weekStart), { removeLogged });
+      if (Object.keys(changed).length) {
+        set(state => ({ logs: { ...state.logs, ...changed } }));
+        Object.keys(changed).forEach(id => get().saveLog(id));
+      }
+      // Entries you logged yourself that this removed, kept so the uncheck can be undone.
+      const entries: Logs = {}; let gone = 0;
+      Object.keys(changed).forEach(id => {
+        const kept = new Set(changed[id].map(e => JSON.stringify(e)));
+        const lost = (logs[id] || []).filter(e => !e.auto && !kept.has(JSON.stringify(e)));
+        if (lost.length) { entries[id] = lost; gone += lost.length; }
+      });
+      const done: Record<string, boolean> = {}; const after = get().week.done || {};
+      new Set([...Object.keys(before.done || {}), ...Object.keys(after)]).forEach(k => { if (!!(before.done || {})[k] !== !!after[k]) done[k] = !!(before.done || {})[k]; });
+      // A superset's per-exercise ticks fold into the card's own tick when its last half is ticked: that is not an uncheck.
+      const stillDone = (k: string) => !!after[k] || (k.includes('#') && !!after[k.split('#')[0]]);
+      const unticked = Object.entries(done).some(([k, was]) => was && !stillDone(k));
+      get().suggestOrder(slots, before);
+      if (get().weekKey() === ymd(weekStartOf(new Date()))) trackNudge(before, get().week, slots); // only this week's days are worth a nudge
+      if (removeLogged && unticked) {
+        const text = `Unchecked${label ? ' ' + label : ''}${gone ? ` · removed ${gone} logged ${gone === 1 ? 'entry' : 'entries'}` : ''}.`;
+        set({ uncheckNote: { week: get().weekKey(), text, entries, done } });
+      } else if (get().uncheckNote) set({ uncheckNote: null }); // any other check-off change replaces the old notice
+      return true;
+    }, false);
   },
   // A check-off change (tick or skip) that finished a column suggests a fix for the days ahead (planFix): moving the
   // rest day, one card, or the day order. A change that un-finishes that column drops one not yet applied.
