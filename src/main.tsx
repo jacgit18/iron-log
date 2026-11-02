@@ -5,7 +5,7 @@ import './styles.css';
 import './utilities.css';
 import App from './App.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
-import Landing, { Splash } from './components/Landing.js';
+import { Splash } from './components/Splash.js';
 import { setAdmin, setPaid } from './features.js';
 import { inAndroidApp } from './lib/androidApp.js';
 import { applyAppearance } from './lib/appearance.js';
@@ -58,5 +58,6 @@ if (onPlans) {
 } else {
   show(<Splash />);
   decideGate(createAccountClient({ headers: devHeaders }).me, LS, reportCaught)
-    .then(d => (d === 'app' ? openApp() : show(<Landing offline={d === 'landing-offline'} />)));
+    .then(d => (d === 'app' ? openApp() : import('./components/Landing.js').then(l => show(<l.default offline={d === 'landing-offline'} />))))
+    .catch(reportCaught); // the landing page is its own chunk; a failed load leaves the splash
 }
