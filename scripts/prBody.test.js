@@ -217,6 +217,7 @@ describe('QA scenarios line (the project qa config)', () => {
     expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'S-01', known, scenariosChanged: false })).toEqual([expect.stringContaining('does not change the scenario file')]);
     expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'S-01', known, scenariosChanged: true })).toEqual([]);
     expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'n/a: covered by S-01', known, scenariosChanged: false })).toEqual([]);
+    expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'n/a: covered by S-99', known })).toEqual([expect.stringContaining('S-99 not found')]);
   });
   it('reads ids from the scenario file text, retired ones included', () => {
     expect(scenarioIds("{ id: 'S-01', a: 1 }, { id: 'S-12', retired: true }, { persona: 'S-77' }")).toEqual(['S-01', 'S-12']);

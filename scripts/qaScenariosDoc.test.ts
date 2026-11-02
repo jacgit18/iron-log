@@ -17,4 +17,8 @@ describe('QA scenarios page', () => {
     expect(docIssues(`${doc}\n### S-98. Gone\n`)).toEqual(['S-98 is on the page but not in the list']);
     expect(docIssues(doc.replace(/^(### S-02\. .*)$/m, '$1 (retired)'))).toEqual(['S-02 is live in the list but retired on the page']);
   });
+  it('reports a scenario whose steps or title changed in the list, not only its id', () => {
+    expect(docIssues(doc.replace(/^  1\. .*$/m, '  1. An old first step'))).toEqual([expect.stringMatching(/^S-\d+ reads differently/)]);
+    expect(docIssues(doc.replace(/^(### S-03\. )/m, '$1Old title: '))).toEqual(['S-03 reads differently on the page than in the list (title, account, steps or expected lines changed)']);
+  });
 });

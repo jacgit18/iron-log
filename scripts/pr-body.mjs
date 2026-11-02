@@ -136,11 +136,13 @@ export const scenarioIds = (text, idPattern = 'S-\\d{2,}') => [...text.matchAll(
 export function qaWarnings({ enabled = false, qa, audience, known = [], idPattern = 'S-\\d{2,}', scenariosChanged = true }) {
   if (!enabled) return [];
   if (!qa) return audience === 'na' ? [] : ['QA: no --qa given. This change is user-visible: add the scenarios that cover it to the scenario file (brief: QA scenarios section) and pass --qa "S-41, S-42", or --qa "n/a: <why>".'];
-  if (/^n\/a\b/i.test(qa.trim())) return /^n\/a:\s*\S/i.test(qa.trim()) ? [] : ['QA: --qa "n/a" needs a reason: --qa "n/a: <why>".'];
   const ids = qa.match(new RegExp(idPattern, 'g')) ?? [];
-  if (!ids.length) return [`QA: --qa names no scenario id (${idPattern}). Pass the ids, or --qa "n/a: <why>".`];
   const missing = ids.filter(id => !known.includes(id));
-  if (missing.length) return [`QA: ${missing.join(', ')} not found in the scenario file. Add the scenario (ids are never reused), or fix the id.`];
+  const notFound = [`QA: ${missing.join(', ')} not found in the scenario file. Add the scenario (ids are never reused), or fix the id.`];
+  // An "n/a: <why>" reason may name the scenario that covers the change ("covered by S-01"); those ids are checked too.
+  if (/^n\/a\b/i.test(qa.trim())) return !/^n\/a:\s*\S/i.test(qa.trim()) ? ['QA: --qa "n/a" needs a reason: --qa "n/a: <why>".'] : missing.length ? notFound : [];
+  if (!ids.length) return [`QA: --qa names no scenario id (${idPattern}). Pass the ids, or --qa "n/a: <why>".`];
+  if (missing.length) return notFound;
   return scenariosChanged ? [] : [`QA: ${ids.join(', ')} exist, but this PR does not change the scenario file. Add a scenario for this change, or say what covers it: --qa "n/a: covered by ${ids[0]}".`];
 }
 

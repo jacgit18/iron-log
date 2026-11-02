@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Prints the QA user scenarios document (brief: qa-scenarios) from server/qa/scenarios.ts, the list the picker's "Used in" tags and the accounts
 // document also read, so the three cannot drift.   npx tsx scripts/qa-scenarios-doc.mjs > "<project docs>/ops/qa-scenarios.md"
-//   npx tsx scripts/qa-scenarios-doc.mjs --check "<project docs>/ops/qa-scenarios.md"   exits 1 when the page lacks a live scenario, lists one that no longer exists, or shows a retired one as live (Results filled in by hand are not compared)
+//   npx tsx scripts/qa-scenarios-doc.mjs --check "<project docs>/ops/qa-scenarios.md"   exits 1 when the page lacks a live scenario, lists one that no longer exists, or shows a retired one as live (Results filled in by hand are not compared; a changed title, account, step or expected line is)
 // The Result column is blank on purpose: the owner fills it by hand (date, pass or fail, note) while walking the scenarios on QA.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -53,13 +53,19 @@ Steps are written from each shipped brief's Done when lines and the feature map.
 }
 
 
-/** What is out of step between a scenarios page and the list: ids missing from the page, ids on it that no longer exist, a retired one shown as live (or the reverse). Results written by hand are not compared. */
+/** Each scenario's text on a page, keyed by id: from its `### S-nn.` heading up to its Result line, so the Results written by hand are not part of it. */
+const blocksOf = doc => new Map([...doc.matchAll(/^### (S-\d+)\. [\s\S]*?(?=^- \*\*Result\*\*)/gm)].map(m => [m[1], m[0]]));
+
+/** What is out of step between a scenarios page and the list: ids missing from the page, ids on it that no longer exist, a retired one shown as live (or the reverse), and a scenario whose title, account, steps or expected lines differ. Results written by hand are not compared. */
 export function docIssues(doc) {
   const onPage = new Map([...doc.matchAll(/^### (S-\d+)\. .*?( \(retired\))?$/gm)].map(m => [m[1], Boolean(m[2])]));
+  const fresh = blocksOf(buildDoc());
+  const page = blocksOf(doc);
   const issues = [];
   for (const s of SCENARIOS) {
     if (!onPage.has(s.id)) issues.push(`${s.id} is not on the page`);
     else if (onPage.get(s.id) !== Boolean(s.retired)) issues.push(`${s.id} is ${s.retired ? 'retired' : 'live'} in the list but ${s.retired ? 'live' : 'retired'} on the page`);
+    else if (page.get(s.id) !== fresh.get(s.id)) issues.push(`${s.id} reads differently on the page than in the list (title, account, steps or expected lines changed)`);
   }
   for (const id of onPage.keys()) if (!SCENARIOS.some(s => s.id === id)) issues.push(`${id} is on the page but not in the list`);
   return issues;
