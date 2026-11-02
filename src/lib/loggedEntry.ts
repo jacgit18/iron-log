@@ -15,3 +15,12 @@ export function sheetEntryFor(entries: LogEntry[] | undefined, slotId: string, w
   if (skipped) return loggedEntryFor(entries, slotId, wk, true);
   return null;
 }
+
+/** The word on a card's Log button: Edit when the exercise is checked off and its logged session is there to change, else Log. A skipped card is always
+ *  Log (its button and sheet stay as they were, owner 2026-11-01). */
+export function logButtonLabel(entries: LogEntry[] | undefined, slotId: string, wk: string, done: boolean, skipped: boolean): 'Edit' | 'Log' {
+  return !skipped && done && sheetEntryFor(entries, slotId, wk, done, skipped) ? 'Edit' : 'Log';
+}
+
+/** The second line of the Edit mode banner on the sheet of a checked-off card. `when` is the session's short date. */
+export const editModeText = (when: string): string => `You are changing the session logged ${when}`;

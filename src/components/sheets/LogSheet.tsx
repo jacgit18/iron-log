@@ -14,7 +14,7 @@ import EditEntry from './EditEntry.jsx';
 import EquipmentField from '../EquipmentField.jsx';
 import Sheet from '../Sheet.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
-import { sheetEntryFor } from '../../lib/loggedEntry.js';
+import { editModeText, sheetEntryFor } from '../../lib/loggedEntry.js';
 import { setError } from '../../shared/validate.js';
 import { selectOnFocus, advanceOnEnter, cellHint } from '../../lib/setCells.js';
 import './SetRows.css';
@@ -185,12 +185,13 @@ function LoggedView({ slotId, idx, entry, skipped }: { slotId: string; idx: numb
   const mine = entryId(shown) === entryId(entry);
   return (
     <Sheet>
+      {!skipped && <div className="editbanner"><Icon name="edit" /><b>Edit mode</b><span>{editModeText(fmtShort(parseDate(shown.d)))}</span></div>}
       <div className="loggedhead">
         <h2 className="cond">{ex.n}</h2>
         <span className="loggedchip"><Icon name="check" />Logged</span>
       </div>
       <p className="loggedsum">{fmtShort(parseDate(shown.d))} · {shown.ph ? PHASES[shown.ph].label : 'No phase'} · {describe(shown)}{mine && skipped ? ' · Skipped this week' : ''}</p>
-      <EditEntry key={entryId(shown)} exId={it.ex} entry={shown} onDone={st.closeModal} cancelLabel="Close"
+      <EditEntry key={entryId(shown)} exId={it.ex} entry={shown} onDone={st.closeModal} cancelLabel={skipped ? 'Close' : 'Cancel'}
         footer={!mine ? undefined : skipped
           ? <button type="button" className="btn sm ghost mr-auto" onClick={() => { if (isItemSkipped(s, idx, st.week)) st.skipItem(slotId, idx); else st.skipCard(slotId); st.checkItem(slotId, idx, true); st.closeModal(); }}>Undo skip</button>
           : <button type="button" className="btn sm ghost mr-auto" onClick={() => { st.checkItem(slotId, idx, false); st.closeModal(); }}>Uncheck and remove</button>} />
