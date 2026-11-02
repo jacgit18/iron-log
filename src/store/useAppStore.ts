@@ -35,7 +35,8 @@ import { MONTH_RE, monthEmpty, normGrocery, normGroceryMonth } from '../lib/groc
 import { normStretches, normStretchWeek } from '../lib/stretches.js';
 import { normSupplements } from '../lib/water.js';
 import { WEEK_RE } from '../lib/trends.js';
-import { sameProg, normConfig } from '../lib/export.js';
+import { normConfig } from '../shared/config.js';
+import { sameProg } from '../lib/entryMerge.js';
 import { mimeFor } from '../lib/mime.js';
 import { parseRoute } from '../lib/route.js';
 import { loadView, saveView, openFromUrl } from '../lib/viewState.js';

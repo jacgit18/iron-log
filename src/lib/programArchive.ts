@@ -1,5 +1,5 @@
 import type { LibraryItem, Program } from '../types.ts';
-import { progBody } from './export.js';
+import { progBody } from './entryMerge.js';
 import { DEFAULT_PROGRAM_SORT, sortLibraryItems, type ProgramSort } from './programSort.js';
 
 // Program library > Archive: saved programs split into the ones in play and the ones put away (newest first), and the heading for the put-away list.

@@ -122,19 +122,19 @@ describe('reading an import file', () => {
     await st().readImportFile(null);
     expect(st().importDraft).toBeNull();
   });
-  it('imports pasted text, and complains about empty or invalid paste', () => {
-    st().pasteImport('   ');
+  it('imports pasted text, and complains about empty or invalid paste', async () => {
+    await st().pasteImport('   ');
     expect(st().importError).toMatch(/Paste the file contents/);
-    st().pasteImport('{');
+    await st().pasteImport('{');
     expect(st().importError).toMatch(/valid JSON/);
-    st().pasteImport(dataText());
+    await st().pasteImport(dataText());
     expect(st().importDraft).toMatchObject({ name: 'Pasted data', kind: 'json' });
     expect(st().importError).toBe('');
   });
 });
 
 describe('adding imported data', () => {
-  const addJson = async (text, mode = 'merge') => { st().pasteImport(text); await st().applyImport(mode); };
+  const addJson = async (text, mode = 'merge') => { await st().pasteImport(text); await st().applyImport(mode); };
 
   it('does nothing without a draft', async () => {
     await st().applyImport('merge');
@@ -179,7 +179,7 @@ describe('adding imported data', () => {
     expect(st().cfg.ex.zz.n).toBe('Zed Press');
   });
   it('honours the section choices', async () => {
-    st().pasteImport(dataText({ logs: { row: [entry('2026-01-12')] }, body: [{ wk: '2026-01-12', d: '2026-01-12', w: 201 }], cfg: { ...structuredClone(DEFAULT_CFG), rm: { row: 150 } } }));
+    await st().pasteImport(dataText({ logs: { row: [entry('2026-01-12')] }, body: [{ wk: '2026-01-12', d: '2026-01-12', w: 201 }], cfg: { ...structuredClone(DEFAULT_CFG), rm: { row: 150 } } }));
     st().setImportSection('progress', false); st().setImportSection('board', false); st().setImportSection('settings', false);
     await st().applyImport('merge');
     expect(st().logs).toEqual({});
@@ -234,7 +234,7 @@ describe('adding imported data', () => {
     expect(st().supp.taken['2026-01-05']).toEqual({ creatine: true });
   });
   it('reports a failure instead of leaving the sheet stuck', async () => {
-    st().pasteImport(dataText());
+    await st().pasteImport(dataText());
     const allWeeks = st().allWeeks; useAppStore.setState({ allWeeks: async () => { throw new Error('boom'); } });
     await st().applyImport('merge');
     useAppStore.setState({ allWeeks });
@@ -281,7 +281,7 @@ describe('replacing with imported data', () => {
       weekHist: { '2019-12-30': { done: { x: true } } },
     });
     const wk = st().weekKey();
-    st().pasteImport(dataText({
+    await st().pasteImport(dataText({
       cfg: { ...structuredClone(DEFAULT_CFG), mode: 2, rm: { hack: 300 } },
       logs: { hack: [entry('2026-02-02', 120)] },
       programs: { A: custom },
@@ -304,13 +304,13 @@ describe('replacing with imported data', () => {
   it('clears the undo and suggestion notes, which describe the data before it', async () => {
     const wk = st().weekKey();
     useAppStore.setState({ uncheckNote: { week: wk, text: 'x', entries: {}, done: {} }, moveNote: { week: wk, slot: 'A-d1s1', lines: [] }, orderNote: { week: wk, kind: 'card', applied: false } });
-    st().pasteImport(dataText());
+    await st().pasteImport(dataText());
     await st().applyImport('replace');
     expect(st()).toMatchObject({ uncheckNote: null, moveNote: null, orderNote: null });
   });
   it('replaces stretches and supplements only when the file has them', async () => {
     const wk = st().weekKey();
-    st().pasteImport(dataText());
+    await st().pasteImport(dataText());
     await st().applyImport('replace');
     const items = st().stretches;
     expect(items.length).toBeGreaterThan(0); // a file without them leaves the local ones alone
@@ -336,7 +336,7 @@ describe('replacing with imported data', () => {
   });
   it('leaves sections the user turned off untouched', async () => {
     useAppStore.setState({ logs: { hack: [entry('2026-01-05')] }, cfg: { ...structuredClone(DEFAULT_CFG), rm: { hack: 300 } } });
-    st().pasteImport(dataText({ logs: { row: [entry('2026-02-02')] }, cfg: { ...structuredClone(DEFAULT_CFG), rm: { row: 100 } } }));
+    await st().pasteImport(dataText({ logs: { row: [entry('2026-02-02')] }, cfg: { ...structuredClone(DEFAULT_CFG), rm: { row: 100 } } }));
     st().setImportSection('progress', false); st().setImportSection('settings', false);
     await st().applyImport('replace');
     expect(Object.keys(st().logs)).toEqual(['hack']);
@@ -360,7 +360,7 @@ describe('edge cases while reading', () => {
   });
   it('ignores pasted text and imports while data is still loading', async () => {
     const ready = st().isReady; useAppStore.setState({ isReady: () => false });
-    st().pasteImport(dataText());
+    await st().pasteImport(dataText());
     await st().readImportFile(file('d.json', dataText()));
     useAppStore.setState({ importDraft: { kind: 'json', data: {} } });
     await st().applyImport('merge');
@@ -373,7 +373,7 @@ describe('edge cases while reading', () => {
 describe('edge cases when replacing', () => {
   it('strips GitHub backup settings from a file and from the config already here', async () => {
     useAppStore.setState(s => ({ cfg: { ...s.cfg, ghBackup: { repo: 'me/mine', branch: 'data', token: 'ghp_secret' }, backup: { repo: 'me/old' } } }));
-    st().pasteImport(dataText({ cfg: { ...structuredClone(DEFAULT_CFG), ghBackup: { repo: 'you/x', token: 'ghp_other' }, backup: { repo: 'you/y', branch: 'main', hashes: {} } } }));
+    await st().pasteImport(dataText({ cfg: { ...structuredClone(DEFAULT_CFG), ghBackup: { repo: 'you/x', token: 'ghp_other' }, backup: { repo: 'you/y', branch: 'main', hashes: {} } } }));
     await st().applyImport('replace');
     expect(st().cfg).not.toHaveProperty('ghBackup');
     expect(st().cfg).not.toHaveProperty('backup');
@@ -395,7 +395,7 @@ describe('edge cases when replacing', () => {
     const orig = localStorage.setItem;
     localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
     try {
-      st().pasteImport(dataText({ logs: { hack: [entry('2026-09-21')] } }));
+      await st().pasteImport(dataText({ logs: { hack: [entry('2026-09-21')] } }));
       await st().applyImport('replace');
     } finally { localStorage.setItem = orig; }
     expect(st().saveFlag).toBe('Storage full');
@@ -403,7 +403,7 @@ describe('edge cases when replacing', () => {
   const bare = over => ({ kind: 'json', name: 'x', data: { config: {}, programs: {}, library: [], logs: {}, weeks: {}, body: [], stretchWeeks: {}, ...over } });
 
   it('ignores keys of a section left out', async () => {
-    st().pasteImport(dataText({ cfg: { ...structuredClone(DEFAULT_CFG), zzz: 1 } }));
+    await st().pasteImport(dataText({ cfg: { ...structuredClone(DEFAULT_CFG), zzz: 1 } }));
     st().setImportSection('settings', false);
     await st().applyImport('replace');
     expect(st().cfg.zzz).toBeUndefined();
@@ -411,7 +411,7 @@ describe('edge cases when replacing', () => {
   it('can leave out the program and the board', async () => {
     useAppStore.setState({ body: [{ wk: '2026-01-05', d: '2026-01-05', w: 200 }] });
     const custom = structuredClone(BUILTIN.A); custom.days[1].title = 'Nope';
-    st().pasteImport(dataText({ programs: { A: custom }, body: [] }));
+    await st().pasteImport(dataText({ programs: { A: custom }, body: [] }));
     st().setImportSection('program', false); st().setImportSection('board', false);
     await st().applyImport('replace');
     expect(st().programs.A).toBe(BUILTIN.A);
@@ -441,12 +441,12 @@ describe('edge cases when adding', () => {
   it('skips a library version it already has, and the program section when it is off', async () => {
     const prog = structuredClone(BUILTIN.B); prog.days[1].title = 'Saved B';
     useAppStore.setState({ library: [{ id: 'v1', name: 'mine', from: 'B', at: '', prog }] });
-    st().pasteImport(dataText({ library: [{ id: 'v1', name: 'dup', from: 'B', at: '', prog }, { id: 'v2', name: 'new', from: 'B', at: '', prog: { ...prog, days: prog.days.map(d => ({ ...d })) } }] }));
+    await st().pasteImport(dataText({ library: [{ id: 'v1', name: 'dup', from: 'B', at: '', prog }, { id: 'v2', name: 'new', from: 'B', at: '', prog: { ...prog, days: prog.days.map(d => ({ ...d })) } }] }));
     await st().applyImport('merge');
     expect(st().library.map(l => l.id)).toEqual(['v1', 'v2']);
 
     const custom = structuredClone(BUILTIN.A); custom.days[1].title = 'Off';
-    st().pasteImport(dataText({ programs: { A: custom }, library: [{ id: 'v3', name: 'x', from: 'A', at: '', prog: custom }] }));
+    await st().pasteImport(dataText({ programs: { A: custom }, library: [{ id: 'v3', name: 'x', from: 'A', at: '', prog: custom }] }));
     st().setImportSection('program', false);
     await st().applyImport('merge');
     expect(st().programs.A).toBe(BUILTIN.A);

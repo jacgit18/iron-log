@@ -1,6 +1,6 @@
 // Small pure rules for the Program editor: copying a day's cards, and saying where a library program is on the Board.
 import type { Program, ProgramSlot } from '../types.ts';
-import { sameProg } from './export.js';
+import { sameProg } from './entryMerge.js';
 
 /** Copies of `slots` with new ids (`idFor(i)` for card i), for another day of the same program. Nothing else changes: phase, targets, notes and
  *  the week a card starts in are kept, and a superset stays one card. */

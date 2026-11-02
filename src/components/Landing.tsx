@@ -73,13 +73,3 @@ export default function Landing({ offline = false }: { offline?: boolean }) {
     </main>
   );
 }
-
-// Shown for the moment a new visitor is being checked, so the page is never blank.
-export function Splash() {
-  return (
-    <main className="landing landing-splash" aria-busy="true">
-      <img src="/logo.svg" alt="" width="48" height="48" />
-      <p role="status">Loading…</p>
-    </main>
-  );
-}

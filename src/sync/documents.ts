@@ -11,7 +11,7 @@ import { normWeek } from '../shared/week.js';
 import { padLibrary } from '../lib/data.js';
 import { normGrocery } from '../lib/grocery.js';
 import { DEFAULT_GOAL_OZ } from '../lib/water.js';
-import { entryId } from '../lib/export.js';
+import { entryId } from '../lib/entryMerge.js';
 import type { DietEntry, LibraryItem, LogEntry, Supplements } from '../types.ts';
 import type { MergedTable } from './merge.js';
 import { mirrorId, type DesiredRow, type Mirror, type MirrorRow } from './types.js';
