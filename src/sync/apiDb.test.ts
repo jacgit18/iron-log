@@ -1281,6 +1281,17 @@ describe('erasing the account (Phase F)', () => {
     expect([...server.rows.keys()].filter(k => k.startsWith('log_entries'))).toHaveLength(2);
   });
 
+  it('an erase refused because this page is for another account erases nothing and pauses for the account choice', async () => {
+    const { server, storage, db } = setup();
+    db.start();
+    await settle();
+    await db.doc('logs/squat').set(logs2('e1'));
+    server.fail.push({ ok: false, class: 'account', status: 409, retryAfterMs: null, message: 'another account' });
+    expect(await db.eraseEverything('data')).toMatchObject({ ok: false, class: 'account' });
+    expect(storage.data.has(MIRROR_KEY)).toBe(true);
+    expect(db.status()).toMatchObject({ state: 'paused', pausedBecause: 'account' });
+  });
+
   it('a write that was waiting to retry when the erase failed is still sent', async () => {
     // The halt made the waiting send let go; a failed erase has to start it again, or it sits unsent until a reload.
     const { server, gate, db } = setup();
