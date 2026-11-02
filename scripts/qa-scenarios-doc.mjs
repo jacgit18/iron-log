@@ -1,16 +1,22 @@
 #!/usr/bin/env node
 // Prints the QA user scenarios document (brief: qa-scenarios) from server/qa/scenarios.ts, the list the picker's "Used in" tags and the accounts
 // document also read, so the three cannot drift.   npx tsx scripts/qa-scenarios-doc.mjs > "<project docs>/ops/qa-scenarios.md"
+//   npx tsx scripts/qa-scenarios-doc.mjs --check "<project docs>/ops/qa-scenarios.md"   exits 1 when the page lacks a live scenario, lists one that no longer exists, or shows a retired one as live (Results filled in by hand are not compared; a changed title, account, step or expected line is)
 // The Result column is blank on purpose: the owner fills it by hand (date, pass or fail, note) while walking the scenarios on QA.
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { personaById, personaEmail } from '../server/qa/personas.ts';
 import { SCENARIO_FEATURES, SCENARIOS } from '../server/qa/scenarios.ts';
 
-const today = new Date().toISOString().slice(0, 10);
-const live = SCENARIOS.filter(s => !s.retired);
-const devices = live.filter(s => s.device).length;
-const cell = t => t.replaceAll('|', '\\|');
+/** The page as text, for the test and for printing. Built on demand, so importing this file (or running --check) does no work. */
+export function buildDoc() {
+  const out = [];
+  const today = new Date().toISOString().slice(0, 10);
+  const live = SCENARIOS.filter(s => !s.retired);
+  const devices = live.filter(s => s.device).length;
+  const cell = t => t.replaceAll('|', '\\|');
 
-console.log(`---
+  out.push(`---
 tags:
 Purpose: Numbered user scenarios to walk on QA, each tied to a test account, with a Result column to fill by hand
 Status: current (${today}, generated); no scenario has been run
@@ -24,22 +30,55 @@ ${live.length} scenarios across ${SCENARIO_FEATURES.length} features. ${devices}
 
 Steps are written from each shipped brief's Done when lines and the feature map. If the app does something else, record the difference in Result: the scenario text is a script, not proof the feature works.
 `);
-for (const feature of SCENARIO_FEATURES) {
-  const rows = SCENARIOS.filter(s => s.feature === feature);
-  if (!rows.length) continue;
-  console.log(`## ${feature}\n`);
-  for (const s of rows) {
-    const p = personaById(s.persona);
-    console.log(`### ${s.id}. ${s.title}${s.retired ? ' (retired)' : ''}`);
-    console.log(`- **Account:** ${p ? `${p.name} (\`${p.id}\`, ${personaEmail(p.id)}); open it with \`/?qa=${p.id}\`` : `\`${s.persona}\``}`);
-    console.log(`- **Kind:** ${s.edge ? 'edge case' : 'happy path'}${s.device ? '; **device** (needs a real phone)' : ''}`);
-    console.log(`- **From:** ${s.brief === 'feature-map' ? 'the feature map (no brief)' : `[[briefs/${s.brief}]]`}`);
-    console.log('- **Steps:**');
-    s.steps.forEach((t, i) => console.log(`  ${i + 1}. ${t}`));
-    console.log('- **Expected:**');
-    s.expected.forEach(t => console.log(`  - ${t}`));
-    console.log('- **Result** (date, pass or fail, note): \\_\\_\\_\n');
+  for (const feature of SCENARIO_FEATURES) {
+    const rows = SCENARIOS.filter(s => s.feature === feature);
+    if (!rows.length) continue;
+    out.push(`## ${feature}\n`);
+    for (const s of rows) {
+      const p = personaById(s.persona);
+      out.push(`### ${s.id}. ${s.title}${s.retired ? ' (retired)' : ''}`);
+      out.push(`- **Account:** ${p ? `${p.name} (\`${p.id}\`, ${personaEmail(p.id)}); open it with \`/?qa=${p.id}\`` : `\`${s.persona}\``}`);
+      out.push(`- **Kind:** ${s.edge ? 'edge case' : 'happy path'}${s.device ? '; **device** (needs a real phone)' : ''}`);
+      out.push(`- **From:** ${s.brief === 'feature-map' ? 'the feature map (no brief)' : `[[briefs/${s.brief}]]`}`);
+      out.push('- **Steps:**');
+      s.steps.forEach((t, i) => out.push(`  ${i + 1}. ${t}`));
+      out.push('- **Expected:**');
+      s.expected.forEach(t => out.push(`  - ${t}`));
+      out.push('- **Result** (date, pass or fail, note): \\_\\_\\_\n');
+    }
+  }
+  out.push('## Summary\n\n| Id | Feature | Account | Device | Result |\n|---|---|---|---|---|');
+  for (const s of SCENARIOS) out.push(`| ${s.id} | ${cell(s.feature)} | \`${s.persona}\` | ${s.device ? 'yes' : ''} |  |`);
+  return out.join('\n') + '\n';
+}
+
+
+/** Each scenario's text on a page, keyed by id: from its `### S-nn.` heading up to its Result line, so the Results written by hand are not part of it. */
+const blocksOf = doc => new Map([...doc.matchAll(/^### (S-\d+)\. [\s\S]*?(?=^- \*\*Result\*\*)/gm)].map(m => [m[1], m[0]]));
+
+/** What is out of step between a scenarios page and the list: ids missing from the page, ids on it that no longer exist, a retired one shown as live (or the reverse), and a scenario whose title, account, steps or expected lines differ. Results written by hand are not compared. */
+export function docIssues(doc) {
+  const onPage = new Map([...doc.matchAll(/^### (S-\d+)\. .*?( \(retired\))?$/gm)].map(m => [m[1], Boolean(m[2])]));
+  const fresh = blocksOf(buildDoc());
+  const page = blocksOf(doc);
+  const issues = [];
+  for (const s of SCENARIOS) {
+    if (!onPage.has(s.id)) issues.push(`${s.id} is not on the page`);
+    else if (onPage.get(s.id) !== Boolean(s.retired)) issues.push(`${s.id} is ${s.retired ? 'retired' : 'live'} in the list but ${s.retired ? 'live' : 'retired'} on the page`);
+    else if (page.get(s.id) !== fresh.get(s.id)) issues.push(`${s.id} reads differently on the page than in the list (title, account, steps or expected lines changed)`);
+  }
+  for (const id of onPage.keys()) if (!SCENARIOS.some(s => s.id === id)) issues.push(`${id} is on the page but not in the list`);
+  return issues;
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const at = process.argv.indexOf('--check');
+  if (at < 0) process.stdout.write(buildDoc());
+  else {
+    if (!process.argv[at + 1]) { console.error('usage: qa-scenarios-doc.mjs --check "<path of the scenarios page>"'); process.exit(2); }
+    const issues = docIssues(readFileSync(process.argv[at + 1], 'utf8'));
+    for (const i of issues) console.error(`qa-scenarios: ${i}`);
+    if (issues.length) { console.error('Regenerate the page (without --check) and copy the Result column across by hand.'); process.exit(1); }
+    console.error('qa-scenarios: the page matches the list.');
   }
 }
-console.log('## Summary\n\n| Id | Feature | Account | Device | Result |\n|---|---|---|---|---|');
-for (const s of SCENARIOS) console.log(`| ${s.id} | ${cell(s.feature)} | \`${s.persona}\` | ${s.device ? 'yes' : ''} |  |`);
