@@ -208,10 +208,10 @@ describe('APP_LABEL (appLabel.ts)', () => {
     await new Promise(done => labelled.once('listening', done));
     const url = `http://127.0.0.1:${(labelled.address() as AddressInfo).port}`;
     try {
-      expect((await (await fetch(`${url}/manifest.webmanifest`)).json()).name).toBe('Loadbearer QA');
+      expect(((await (await fetch(`${url}/manifest.webmanifest`)).json()) as { name: string }).name).toBe('Loadbearer QA');
       expect(await (await fetch(`${url}/`)).text()).toContain('<title>Loadbearer QA</title>');
       expect(await (await fetch(`${url}/progress`)).text()).toContain('<title>Loadbearer QA</title>');
-      expect((await (await get('/manifest.webmanifest')).json()).name).toBe('Loadbearer');
+      expect(((await (await get('/manifest.webmanifest')).json()) as { name: string }).name).toBe('Loadbearer');
       expect(await (await get('/')).text()).toContain('<title>Loadbearer</title>');
     } finally {
       await new Promise<void>(done => labelled.close(() => done()));

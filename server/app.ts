@@ -339,17 +339,20 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     app.get('/delete-account', (_req, res, next) => {
       res.set('Cache-Control', cacheControl(join(root, 'delete-account.html'), root)).sendFile('delete-account.html', { root }, err => void (err && next()));
     });
-    // QA and staging: the same files with the environment in the name, so the installed apps can be told apart (appLabel.ts).
-    if (appLabel) {
-      app.get('/manifest.webmanifest', (_req, res) => void res.set('Cache-Control', NO_CACHE).type('application/manifest+json').send(brandManifest(readFileSync(join(root, 'manifest.webmanifest'), 'utf8'), appLabel)));
-      app.get(['/', '/index.html'], (_req, res) => void res.set('Cache-Control', NO_CACHE).type('html').send(brandHtml(readFileSync(join(root, 'index.html'), 'utf8'), appLabel)));
+    // QA and staging: the same files with the environment in the name, so the installed apps can be told apart (appLabel.ts). Branded once here: the files never change inside an image.
+    const labelled = appLabel && existsSync(join(root, 'manifest.webmanifest'))
+      ? { manifest: brandManifest(readFileSync(join(root, 'manifest.webmanifest'), 'utf8'), appLabel), page: brandHtml(readFileSync(join(root, 'index.html'), 'utf8'), appLabel) }
+      : undefined;
+    if (labelled) {
+      app.get('/manifest.webmanifest', (_req, res) => void res.set('Cache-Control', NO_CACHE).type('application/manifest+json').send(labelled.manifest));
+      app.get(['/', '/index.html'], (_req, res) => void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page));
     }
     app.use(express.static(root, { index: false, setHeaders: (res, file) => void res.setHeader('Cache-Control', cacheControl(file, root)) }));
     // A page route (no file extension) gets the app, which draws it. A missing file (/assets/old.js) stays a 404, so a
     // stale link never receives HTML where JavaScript was expected. /.well-known has no files, as on GitHub Pages, except assetlinks.json above.
     app.use((req, res, next) => {
       if ((req.method !== 'GET' && req.method !== 'HEAD') || extname(req.path) !== '' || req.path.startsWith('/.well-known/')) return next();
-      if (appLabel) return void res.set('Cache-Control', NO_CACHE).type('html').send(brandHtml(readFileSync(join(root, 'index.html'), 'utf8'), appLabel));
+      if (labelled) return void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page);
       res.set('Cache-Control', NO_CACHE).sendFile('index.html', { root }); // with `root`, so a checkout under a hidden folder (.claude/worktrees/...) still serves the page
     });
   }
