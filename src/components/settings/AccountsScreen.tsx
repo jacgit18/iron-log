@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { listAccounts, setSuspendedState, type AccountsOverview } from '../../lib/accountsClient.js';
-import { actionText, capPercent, capText, joinedText, planText, SAY } from '../../lib/accountsView.js';
+import { deleteAccount, listAccounts, setSuspendedState, type AccountsOverview } from '../../lib/accountsClient.js';
+import { actionText, capPercent, capText, deleteConfirmMatches, joinedText, planText, SAY } from '../../lib/accountsView.js';
 import { timeAgo } from '../../lib/timeAgo.js';
 import ArmedButton from '../ArmedButton.js';
 import './AccountsScreen.css';
@@ -12,6 +12,9 @@ export default function AccountsScreen() {
   const [data, setData] = useState<AccountsOverview | null>(null);
   const [problem, setProblem] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null); // the account whose Delete forever form is open
+  const [typed, setTyped] = useState('');
+  const typedRef = useRef<HTMLInputElement>(null);
   const head = useRef<HTMLHeadingElement>(null);
   const latest = useRef(0);
   const load = useCallback(async () => {
@@ -28,8 +31,19 @@ export default function AccountsScreen() {
   const change = async (id: string, suspend: boolean) => {
     setBusy(id); setProblem('');
     const r = await setSuspendedState(id, suspend);
+    await load(); // a successful reload clears the message, so a refusal is said after it
     if (!r.ok) setProblem(SAY[r.reason]);
-    await load();
+    setBusy(null);
+  };
+
+  const openDelete = (id: string) => { setDeleting(id); setTyped(''); setTimeout(() => typedRef.current?.focus(), 0); };
+  const closeDelete = () => { const id = deleting; setDeleting(null); setTyped(''); setTimeout(() => document.getElementById(`delete-${id}`)?.focus(), 0); };
+  const remove = async (id: string) => {
+    setBusy(id); setProblem('');
+    const r = await deleteAccount(id);
+    setDeleting(null); setTyped('');
+    await load(); // a successful reload clears the message, so a refusal is said after it
+    if (!r.ok) setProblem(SAY[r.reason]);
     setBusy(null);
   };
 
@@ -64,9 +78,23 @@ export default function AccountsScreen() {
                 <div className="acctjoined"><small>{joinedText(a.joined)}</small>{a.suspended && <span className="accttag sus">Suspended</span>}</div>
                 <div>
                   {a.isAdmin ? null : a.suspended
-                    ? <button type="button" className="btn sm" disabled={busy !== null} aria-label={`Restore account ${a.id}`} onClick={() => void change(a.id, false)}>Restore</button>
+                    ? <span className="acctacts">
+                        <button type="button" className="btn sm" disabled={busy !== null} aria-label={`Restore account ${a.id}`} onClick={() => void change(a.id, false)}>Restore</button>
+                        <button type="button" className="btn sm" disabled={busy !== null} aria-label={`Delete forever account ${a.id}`} id={`delete-${a.id}`} onClick={() => openDelete(a.id)}>Delete forever</button>
+                      </span>
                     : <ArmedButton className="btn sm" disabled={busy !== null} label="Suspend" armedLabel="Press again to suspend" aria-label={`Suspend account ${a.id}`} onConfirm={() => change(a.id, true)} />}
                 </div>
+                {deleting === a.id && (
+                  <form className="acctdelete" onSubmit={e => { e.preventDefault(); if (deleteConfirmMatches(typed, a.id)) void remove(a.id); }}>
+                    <label htmlFor={`del-${a.id}`}>Account number</label>
+                    <p role="status">Type the account number ({a.id}) to delete this account and everything it holds. This cannot be undone.</p>
+                    <div className="acctdeleteacts">
+                      <input id={`del-${a.id}`} ref={typedRef} inputMode="numeric" autoComplete="off" value={typed} onChange={e => setTyped(e.target.value)} />
+                      <button type="submit" className="btn sm" disabled={busy !== null || !deleteConfirmMatches(typed, a.id)} aria-label={`Confirm delete forever account ${a.id}`}>Delete forever</button>
+                      <button type="button" className="btn sm" disabled={busy !== null} onClick={closeDelete}>Cancel</button>
+                    </div>
+                  </form>
+                )}
               </li>
             ))}
           </ul>

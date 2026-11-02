@@ -605,6 +605,29 @@ export const SCENARIOS: readonly Scenario[] = [
       'Back returns to Settings, not out of the app.',
     ],
   },
+  {
+    id: 'S-45', feature: 'Admin accounts', title: 'Delete a suspended test account for good', persona: 'recipe-collector', brief: 'admin-delete-account',
+    steps: [
+      'Signed in as your own admin account, open Settings, Open accounts, and suspend the Recipe collector test account.',
+      'Press Delete forever on that row, type the account number shown, and press Delete forever again.',
+      'Re-seed the QA test accounts afterwards so Recipe collector exists again.',
+    ],
+    expected: [
+      'Delete forever is disabled until the typed number is exactly the account number, and Cancel closes the form with nothing deleted.',
+      'After confirming, the row is gone and Last actions says "Deleted an account"; switching to that test account no longer works.',
+    ],
+  },
+  {
+    id: 'S-46', feature: 'Admin accounts', title: 'Delete forever only on a suspended row', persona: 'new-user', brief: 'admin-delete-account', edge: true,
+    steps: [
+      'On the Accounts page look at the New user row while it is active, then at your own admin row.',
+      'Suspend New user and look at its row again, then restore it.',
+    ],
+    expected: [
+      'An active row and an admin row have no Delete forever button.',
+      'Once New user is suspended, Delete forever appears beside Restore; after Restore it is gone again.',
+    ],
+  },
 ];
 
 export const scenarioById = (id: string): Scenario | undefined => SCENARIOS.find(s => s.id === id);
