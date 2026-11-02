@@ -1,13 +1,14 @@
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import express from 'express';
 import { sql, type Kysely } from 'kysely';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.ts';
 import { inUserTransaction } from './auth.ts';
 import { createDb } from './db/connection.ts';
 import { createPiiCrypto } from './auth/piiCrypto.ts';
 import type { DB } from './db/types.ts';
-import { labelFor } from './accountsRoutes.ts';
+import { accountsRoutes, labelFor } from './accountsRoutes.ts';
 import { startTestDatabase } from './test/postgres.ts';
 
 // The admin accounts API (brief admin-accounts-screen): two locks (ADMIN_EMAILS at the route, users.is_admin in the database), what the
@@ -137,6 +138,118 @@ describe('suspend and restore', () => {
     await owner.deleteFrom('users').where('id', '=', id).execute();
     const log = await owner.selectFrom('admin_actions').select('target_user_id').execute();
     expect(log).toEqual([{ target_user_id: null }]);
+  });
+});
+
+// Delete forever (brief admin-delete-account): every guard, then the same result as Delete my account.
+async function tablesWithUserId() {
+  return (await sql<{ table_name: string }>`select c.table_name from information_schema.columns c join information_schema.tables t using (table_schema, table_name) where c.table_schema = 'public' and c.column_name = 'user_id' and t.table_type = 'BASE TABLE'`.execute(owner)).rows.map(r => r.table_name);
+}
+const rowsOf = async (id: string) => {
+  let n = 0;
+  for (const t of await tablesWithUserId()) n += Number((await sql<{ n: string }>`select count(*) as n from ${sql.table(t)} where user_id = ${id}`.execute(owner)).rows[0]!.n);
+  return n;
+};
+
+describe('delete forever', () => {
+  it('deletes a suspended account and everything it owns, leaves another account alone, and logs it with the target nulled', async () => {
+    const { call, makeAdmin, idOf } = await start(['dev:boss']);
+    await makeAdmin('boss');
+    const victim = await idOf('victim');
+    const bystander = await idOf('bystander');
+    for (const id of [victim, bystander]) await owner.insertInto('config').values({ user_id: id, data: JSON.stringify({ a: 1 }), seq: id }).execute();
+    await owner.deleteFrom('admin_actions').execute();
+    await call('boss', 'POST', `/${victim}/suspend`);
+    const res = await fetch(`${(await call('boss', 'GET', '')).url}/${victim}/delete`, { method: 'POST', headers: { 'x-dev-user': 'boss', 'content-type': 'application/json' }, body: JSON.stringify({ confirm: victim }) });
+    expect(await res.json()).toEqual({ ok: true });
+    expect(await owner.selectFrom('users').select('id').where('id', '=', victim).execute()).toEqual([]);
+    expect(await rowsOf(victim)).toBe(0);
+    expect(await rowsOf(bystander)).toBeGreaterThan(0);
+    expect((await owner.selectFrom('users').select('id').where('id', '=', bystander).execute()).length).toBe(1);
+    const log = await owner.selectFrom('admin_actions').select(['action', 'target_user_id']).orderBy('id').execute();
+    expect(log).toEqual([{ action: 'suspend', target_user_id: null }, { action: 'delete', target_user_id: null }]);
+    const listed = (await (await call('boss', 'GET', '')).json()) as { actions: Array<{ action: string; targetId: string | null }> };
+    expect(listed.actions[0]).toMatchObject({ action: 'delete', targetId: null });
+  });
+
+  const post = async (base: string, who: string, id: string, body: unknown) =>
+    fetch(`${base}/api/accounts/${id}/delete`, { method: 'POST', headers: { 'x-dev-user': who, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
+  it('refuses a wrong or missing confirm, an unsuspended account, an admin and the caller, and deletes nothing', async () => {
+    const { base, call, makeAdmin, idOf } = await start(['dev:boss']);
+    await makeAdmin('boss');
+    await makeAdmin('boss2');
+    const active = await idOf('active');
+    const suspended = await idOf('suspended1');
+    const boss = await idOf('boss');
+    const boss2 = await idOf('boss2');
+    await call('boss', 'POST', `/${suspended}/suspend`);
+    expect((await post(base, 'boss', suspended, {})).status).toBe(422);
+    expect((await post(base, 'boss', suspended, { confirm: '1' + suspended })).status).toBe(422);
+    expect((await post(base, 'boss', suspended, { confirm: Number(suspended) })).status).toBe(422);
+    expect(await (await post(base, 'boss', active, { confirm: active })).json()).toEqual({ ok: false, error: 'suspend the account first' });
+    expect((await post(base, 'boss', boss, { confirm: boss })).status).toBe(422);
+    expect((await post(base, 'boss', boss2, { confirm: boss2 })).status).toBe(422);
+    expect((await post(base, 'boss', '999999999', { confirm: '999999999' })).status).toBe(404);
+    expect((await post(base, 'boss', 'abc', { confirm: 'abc' })).status).toBe(422);
+    for (const id of [active, suspended, boss, boss2]) expect((await owner.selectFrom('users').select('id').where('id', '=', id).execute()).length, id).toBe(1);
+  });
+
+  it('is 403 for a plain account and the functions refuse a non-admin on their own', async () => {
+    const { base, idOf } = await start(['dev:boss']);
+    const id = await idOf('victim2');
+    expect((await post(base, 'guest', id, { confirm: id })).status).toBe(403);
+    const plain = (await owner.insertInto('users').values({ auth_user_id: 'plain-delete' }).returning('id').executeTakeFirstOrThrow()).id;
+    await expect(inUserTransaction(app, plain, trx => sql`select admin_delete_account(${id}::bigint)`.execute(trx))).rejects.toMatchObject({ code: '42501' });
+    await expect(inUserTransaction(app, plain, trx => sql`select admin_account_for_delete(${id}::bigint)`.execute(trx))).rejects.toMatchObject({ code: '42501' });
+    await expect(sql`select admin_delete_account(${id}::bigint)`.execute(app)).rejects.toMatchObject({ code: '42501' });
+  });
+
+  // The router alone, with stand-ins for Stripe and the code purge and a header that says who the admin is.
+  async function routerApp(deps: { deleteCustomer?: (id: string) => Promise<void>; purgeCodes?: (email: string) => Promise<void> }) {
+    const a = express();
+    a.use(express.json());
+    a.use((req, res, next) => { res.locals.userId = req.get('x-uid'); next(); });
+    a.use('/api/accounts', accountsRoutes({ db: app, pii, ...deps }));
+    server = a.listen(0);
+    await new Promise(done => server!.once('listening', done));
+    return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  }
+  const seedSuspended = async (login: string, extra: Record<string, unknown> = {}) => {
+    const admin = (await owner.insertInto('users').values({ auth_user_id: `admin-${login}`, is_admin: true }).returning('id').executeTakeFirstOrThrow()).id;
+    const target = (await owner.insertInto('users').values({ auth_user_id: login, suspended_at: new Date(), ...extra }).returning('id').executeTakeFirstOrThrow()).id;
+    return { admin, target };
+  };
+
+  it('ends the Stripe customer and clears the emailed codes first, using the opened address', async () => {
+    const deleteCustomer = vi.fn(async (_id: string) => undefined);
+    const purgeCodes = vi.fn(async (_email: string) => undefined);
+    const base = await routerApp({ deleteCustomer, purgeCodes });
+    const { admin, target } = await seedSuspended('paying-login', { stripe_customer_id: 'cus_123' });
+    await sql`insert into auth."user" (id, name, email, "emailVerified", "createdAt", "updatedAt") values ('paying-login', ${pii.seal('Pay Ing')}, ${pii.sealStable('pay@example.com')}, true, now(), now())`.execute(owner);
+    const res = await fetch(`${base}/api/accounts/${target}/delete`, { method: 'POST', headers: { 'x-uid': String(admin), 'content-type': 'application/json' }, body: JSON.stringify({ confirm: String(target) }) });
+    expect(await res.json()).toEqual({ ok: true });
+    expect(deleteCustomer).toHaveBeenCalledWith('cus_123');
+    expect(purgeCodes).toHaveBeenCalledWith('pay@example.com');
+    expect((await sql`select 1 from auth."user" where id = 'paying-login'`.execute(owner)).rows).toEqual([]);
+    expect((await owner.selectFrom('users').select('id').where('id', '=', target).execute())).toEqual([]);
+  });
+
+  it('deletes nothing and answers 503 when Stripe cannot be reached', async () => {
+    const base = await routerApp({ deleteCustomer: async () => { throw new Error('stripe down'); } });
+    const { admin, target } = await seedSuspended('stuck-login', { stripe_customer_id: 'cus_456' });
+    const res = await fetch(`${base}/api/accounts/${target}/delete`, { method: 'POST', headers: { 'x-uid': String(admin), 'content-type': 'application/json' }, body: JSON.stringify({ confirm: String(target) }) });
+    expect(res.status).toBe(503);
+    expect((await owner.selectFrom('users').select('id').where('id', '=', target).execute()).length).toBe(1);
+  });
+
+  it('still deletes when clearing the codes fails (they expire by themselves)', async () => {
+    const base = await routerApp({ purgeCodes: async () => { throw new Error('auth down'); } });
+    const { admin, target } = await seedSuspended('codes-login');
+    await sql`insert into auth."user" (id, name, email, "emailVerified", "createdAt", "updatedAt") values ('codes-login', ${pii.seal('C')}, ${pii.sealStable('c@example.com')}, true, now(), now())`.execute(owner);
+    const res = await fetch(`${base}/api/accounts/${target}/delete`, { method: 'POST', headers: { 'x-uid': String(admin), 'content-type': 'application/json' }, body: JSON.stringify({ confirm: String(target) }) });
+    expect(res.status).toBe(200);
+    expect((await owner.selectFrom('users').select('id').where('id', '=', target).execute())).toEqual([]);
   });
 });
 

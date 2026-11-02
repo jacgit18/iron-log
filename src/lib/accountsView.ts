@@ -18,15 +18,21 @@ export function joinedText(iso: string): string {
   return Number.isNaN(d.getTime()) ? 'Joined unknown' : `Joined ${d.getUTCDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-/** One line of the log: "Suspended account 15", "Restored account 15", or "an account that was deleted". */
-export const actionText = (a: { action: string; targetId: string | null }): string =>
-  `${a.action === 'suspend' ? 'Suspended' : 'Restored'} ${a.targetId ? `account ${a.targetId}` : 'an account that was deleted'}`;
+/** One line of the log: "Suspended account 15", "Restored account 15", "Deleted an account" (a deleted account has no number left), or "Restored an account that was deleted". */
+export function actionText(a: { action: string; targetId: string | null }): string {
+  if (a.action === 'delete') return 'Deleted an account';
+  return `${a.action === 'suspend' ? 'Suspended' : 'Restored'} ${a.targetId ? `account ${a.targetId}` : 'an account that was deleted'}`;
+}
+
+/** True when what was typed is the account's number (spaces around it ignored). Delete forever stays off until it is. */
+export const deleteConfirmMatches = (typed: string, id: string): boolean => typed.trim() === id;
 
 /** What the page says for each failure. */
-export const SAY: Record<'failed' | 'forbidden' | 'offline' | 'refused' | 'gone', string> = {
+export const SAY: Record<'failed' | 'forbidden' | 'offline' | 'refused' | 'gone' | 'unavailable', string> = {
   failed: 'Could not load the accounts. Try again.',
   forbidden: 'Not allowed. An admin needs both the admin list entry on the server and is_admin set in the database.',
   offline: 'You are offline. Accounts need a connection.',
-  refused: 'An admin account cannot be suspended.',
+  refused: 'That account cannot be changed: an admin account cannot be suspended or deleted, and an account must be suspended before it is deleted.',
+  unavailable: 'Could not cancel the subscription, so nothing was deleted. Try again.',
   gone: 'That account no longer exists.',
 };
