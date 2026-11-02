@@ -4,14 +4,14 @@ import type { AccountState } from '../../sync/account.js';
 // Who is signed in, for the Account and Delete my data panels. Checked when the panel opens; a check that could not reach the server
 // (offline at the time) is made again when the connection or the app comes back, and `recheck` does it on a tap. Before, one failed
 // check left "Could not check who is signed in" (and Delete my data hidden) until Settings was opened again.
-export function useWho(enabled: boolean, account: { me(): Promise<AccountState> }) {
+export function useWho(enabled: boolean, account: { me(opts?: { fresh?: boolean }): Promise<AccountState> }) {
   const [who, setWho] = useState<AccountState | null>(null);
   const [tries, setTries] = useState(0);
   const recheck = useCallback(() => setTries(n => n + 1), []);
   useEffect(() => {
     if (!enabled) return;
     let current = true;
-    void account.me().then(s => { if (current) setWho(s); });
+    void account.me({ fresh: tries > 0 }).then(s => { if (current) setWho(s); });
     return () => { current = false; };
   }, [enabled, account, tries]);
   const unreachable = who?.status === 'unreachable';
@@ -32,7 +32,7 @@ export function useWho(enabled: boolean, account: { me(): Promise<AccountState> 
 export const WhoContext = createContext<{ who: AccountState | null; recheck: () => void } | null>(null);
 
 /** The shared answer when App provides one; otherwise this component's own check (a panel drawn outside App's tree). */
-export function useSharedWho(enabled: boolean, account: { me(): Promise<AccountState> }) {
+export function useSharedWho(enabled: boolean, account: { me(opts?: { fresh?: boolean }): Promise<AccountState> }) {
   const shared = useContext(WhoContext);
   const own = useWho(enabled && !shared, account);
   return shared ?? own;

@@ -16,14 +16,13 @@ import { useWide } from './components/board/useWide.js';
 import { inAndroidApp } from './lib/androidApp.js';
 import { showPlansTab } from './lib/plansTab.js';
 import ThemeButton from './components/ThemeButton.js';
-import QaBanner from './components/QaBanner.js';
-import QaDeepLink from './components/QaDeepLink.js';
 import UpdateBanner from './components/UpdateBanner.js';
 import SuspendedNotice from './components/SuspendedNotice.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import { appTitle } from './lib/envName.js';
+import { useQa } from './sync/qaState.js';
 import { startBackNav } from './lib/backNav.js';
 import { lazyTab, mapChunkError } from './lib/lazyTab.js';
 import { parseRoute, routeHash } from './lib/route.js';
@@ -44,10 +43,17 @@ const Settings = lazyTab(() => import('./components/settings/Settings.js'));
 const ProgramOnComputer = lazy(mapChunkError(() => import('./components/ProgramOnComputer.js')));
 // The sync cards (sign in, other account, upload this device's data) only exist while syncing is on, so their code (and the sync
 // planner behind it) loads only then. They draw nothing until they are needed, so waiting for the chunk moves nothing.
+// The QA banner and the QA deep link only ever draw on a QA service (/api/me sends `qa` only there), so they are fetched only once that answer says
+// so: production, staging and the Cloud Run address never download them. They draw nothing before it, so waiting for the chunk moves nothing.
+const QaBanner = lazy(mapChunkError(() => import('./components/QaBanner.js')));
+const QaDeepLink = lazy(mapChunkError(() => import('./components/QaDeepLink.js')));
 const loadSyncCards = () => import('./components/SyncCards.js');
 const SignInCard = lazy(mapChunkError(() => loadSyncCards().then(m => ({ default: m.SignInCard }))));
 const OtherAccountCard = lazy(mapChunkError(() => loadSyncCards().then(m => ({ default: m.OtherAccountCard }))));
 const LegacyCard = lazy(mapChunkError(() => loadSyncCards().then(m => ({ default: m.LegacyCard }))));
+function QaParts() {
+  return useQa() ? <ErrorBoundary where="view"><Suspense fallback={null}><QaBanner /><QaDeepLink /></Suspense></ErrorBoundary> : null;
+}
 function WhenSyncing({ children }: { children: ReactNode }) {
   const syncing = useAppStore(s => s.sync !== null);
   return syncing ? <ErrorBoundary where="view"><Suspense fallback={null}>{children}</Suspense></ErrorBoundary> : null;
@@ -168,9 +174,8 @@ export default function App() {
           <AccountBadge name={badgeName} email={who?.status === 'signed-in' ? who.email : null} canSignOut={who?.status === 'signed-in' && who.kind === 'session'} />
         </header>
         <UpdateBanner />
-        <QaBanner />
+        <QaParts />
         <SuspendedNotice />
-        <QaDeepLink />
         <OfflineNotice />
         <SyncNotice />
         <WhenSyncing><SignInCard /></WhenSyncing>
