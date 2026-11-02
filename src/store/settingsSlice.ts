@@ -196,7 +196,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           if (add.length) { set({ diet: normDietEntries([...get().diet, ...add]) }); get().saveDiet(); }
         }
         const body = get().body; const addB = !on.board ? [] : d.body.filter((e: any) => !body.some(x => x.wk === e.wk));
-        if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); }
+        if (addB.length) { set({ body: [...body, ...addB].sort((a, b) => a.wk.localeCompare(b.wk)) }); get().saveBody(); } // sort-ok: ISO date strings
         ent(on.progress ? d.logs : {}).forEach(([id, l]) => {
           const cur = get().logs[id] || []; const m = mergeEntries(cur, l);
           if (entriesChanged(cur, m)) { set(s => ({ logs: { ...s.logs, [id]: m } })); get().saveLog(id); }

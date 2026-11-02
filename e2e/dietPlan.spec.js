@@ -6,6 +6,7 @@ const diet = page => page.getByRole('region', { name: 'Diet' });
 const nutrition = async page => { await page.click('#tab-daily'); await page.click('#daily-supplements'); };
 const plan = page => diet(page).locator('.dt-plan');
 const logFood = async (page, name, kcal, p) => {
+  if (!(await diet(page).getByLabel('Food', { exact: true }).isVisible())) await page.getByRole('button', { name: 'Add one' }).click(); // the One-off food form starts folded
   await diet(page).getByLabel('Food', { exact: true }).fill(name);
   await diet(page).getByLabel('Calories', { exact: true }).fill(String(kcal));
   await diet(page).getByLabel('Protein (g)').fill(String(p));
@@ -15,6 +16,7 @@ const newRecipe = async (page, name, kcal, p, ing) => {
   await page.click('#tab-daily'); await page.click('#daily-recipes');
   await page.getByRole('button', { name: 'New recipe' }).click();
   await page.getByLabel('Name', { exact: true }).fill(name);
+  await page.getByRole('button', { name: 'Edit nutrition per serving' }).click();
   await page.getByLabel('Calories per serving').fill(String(kcal));
   await page.getByLabel('Protein per serving (g)').fill(String(p));
   for (const [i, n] of ing.entries()) {

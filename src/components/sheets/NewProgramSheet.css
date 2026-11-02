@@ -1,0 +1,53 @@
+@layer base, components;
+@layer components {
+.npstart {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-8);
+}
+.npstart legend {
+  padding: 0;
+  margin-bottom: var(--sp-6);
+  font-weight: 700;
+}
+.npopt {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-10);
+  min-height: 44px;
+  padding: var(--sp-8) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+}
+.npopt:has(input:checked) {
+  border-color: var(--accent);
+}
+.npopt input {
+  margin-top: var(--sp-4);
+}
+.npopt b {
+  display: block;
+}
+.npopt .note {
+  display: block;
+}
+.npnext {
+  display: grid;
+  gap: var(--sp-8);
+}
+.npnext .btn {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  text-align: left;
+  padding: var(--sp-8) var(--sp-12);
+}
+.npnext .btn .note {
+  display: block;
+  margin-top: var(--sp-2);
+  font-weight: 400;
+}
+}

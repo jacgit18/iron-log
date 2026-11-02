@@ -1,6 +1,6 @@
 import { normDietEntry } from '../shared/diet.js';
 import { normRecipe } from '../shared/recipes.js';
-import type { ListName } from '../shared/commands.js';
+import { LIST_NAMES, type ListItem, type ListName } from '../shared/commands.js';
 import { normConfigDoc } from '../shared/config.js';
 import { normGroceryGroup, normGroceryItem, normGroceryMonth, normGroceryStore } from '../shared/grocery.js';
 import { normExperimentItem, normStretchExperimentItem, normStretchItem, normSupplementItem } from '../shared/listItems.js';
@@ -9,6 +9,7 @@ import { normBoost, normTakenDay, normWaterDay } from '../shared/supplementDay.j
 import { normLibrary } from '../shared/validate.js';
 import { normWeek } from '../shared/week.js';
 import type { BodyEntry, LogEntry, LogSet } from '../types.ts';
+import { reportSync } from './reportErrors.js';
 import { mirrorId, type MirrorRow, type ServerRow, type SyncTable } from './types.js';
 
 /* ---------- A server row, in the app's own shapes ----------
@@ -36,6 +37,15 @@ function entryFrom(row: ServerRow): LogEntry {
   return e;
 }
 
+// Typed over every ListName, so a new list without a cleaner here fails the typecheck.
+const LIST_CLEANERS: Record<ListName, (x: unknown) => ListItem | null> = {
+  stretch: normStretchItem, stretch_experiment: normStretchExperimentItem, experiment: normExperimentItem, supplement_item: (x: unknown) => normSupplementItem(x),
+  grocery_group: normGroceryGroup, grocery_item: normGroceryItem, grocery_store: normGroceryStore, recipe: normRecipe, diet_entry: normDietEntry,
+};
+
+/** A list_items row of a list this build does not know (a newer server, an app not yet updated) cannot be read; it is left out. */
+const readable = (table: SyncTable, raw: ServerRow) => table !== 'list_items' || LIST_NAMES.includes(raw.list as ListName);
+
 export function fromServerRow(table: SyncTable, row: ServerRow): MirrorRow {
   const base = { version: row.version, deleted: row.deleted_at !== null, seq: String(row.seq) };
   switch (table) {
@@ -50,7 +60,7 @@ export function fromServerRow(table: SyncTable, row: ServerRow): MirrorRow {
     case 'library_items': { const item = normLibrary([row.data])[0]; return { ...base, table, key: String(row.client_id), item: item ?? (row.data as never) }; }
     case 'list_items': {
       const list = row.list as ListName;
-      const clean = { stretch: normStretchItem, stretch_experiment: normStretchExperimentItem, experiment: normExperimentItem, supplement_item: (x: unknown) => normSupplementItem(x), grocery_group: normGroceryGroup, grocery_item: normGroceryItem, grocery_store: normGroceryStore, recipe: normRecipe, diet_entry: normDietEntry }[list](row.data);
+      const clean = LIST_CLEANERS[list](row.data);
       return { ...base, table, key: `${list}/${row.client_id}`, list, position: Number(row.position), item: clean ?? (row.data as never) };
     }
     case 'grocery_months': return { ...base, table, key: String(row.month), record: normGroceryMonth(row.data) };
@@ -64,6 +74,7 @@ export const idOfRow = (row: Pick<MirrorRow, 'table' | 'key'>) => mirrorId(row.t
 export function applyRows(mirror: ReadonlyMap<string, MirrorRow>, table: SyncTable, rows: ServerRow[]): Map<string, MirrorRow> {
   const next = new Map(mirror);
   for (const raw of rows) {
+    if (!readable(table, raw)) { reportSync(`sync: skipped a row of unknown list ${String(raw.list).slice(0, 40)}`); continue; }
     const row = fromServerRow(table, raw);
     const have = next.get(idOfRow(row));
     if (!have || row.version >= have.version) next.set(idOfRow(row), row);

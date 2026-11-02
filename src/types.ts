@@ -81,6 +81,8 @@ export interface LibraryItem {
   at: string;
   auto?: true;
   created?: true;
+  /** Put away from the Program library's main list and the Move sheet; Restore brings it back. */
+  archived?: true;
   prog: Program;
 }
 
@@ -149,6 +151,8 @@ export interface Cfg extends ProgramCfg {
   rest?: number; // rest timer, seconds
   /** Off (false) turns off the heads-up when a move puts the same muscles on back-to-back days and the day-order suggestions. On when unset. */
   injuryPrevention?: boolean;
+  /** Recipe filter chips you hid, and the order you put the rest in (built-in categories only; custom tags live on the recipes). */
+  recipeChips?: RecipeChips;
 }
 
 /** An Experiment (or added) card on one week. */
@@ -303,14 +307,17 @@ export interface CatalogData {
 export interface CatalogItem { id: string; name: string; brand?: string; data: CatalogData }
 
 /* ---------- Recipes (synced to the account as the list 'recipe', ADR 084) ---------- */
-export type RecipeCategory = 'protein' | 'sides' | 'sauces' | 'seasonings' | 'drinks' | 'breakfast' | 'dessert' | 'other';
+export type RecipeCategory = 'protein' | 'carbs' | 'sides' | 'sauces' | 'seasonings' | 'drinks' | 'breakfast' | 'dessert' | 'ready' | 'other';
 /** One ingredient line: `n` is the name that is matched against the At home list, `amt` the free-text amount ("2 cups"); `home` is the id
- *  of the At home item the person linked it to by hand. `sub` is what they use instead of `n` (it is matched in `n`'s place); `skip` marks an
- *  ingredient they leave out (listed, but not counted and never added to To get). */
-export interface RecipeIngredient { n: string; amt?: string; home?: string; sub?: string; skip?: true }
+ *  of the At home item the person linked it to by hand. `sub` is an Alternative to use if they do not have `n` (it never replaces `n`: the ingredient is at home when either is); `skip` marks an
+ *  ingredient they leave out (listed, but not counted and never added to To get). `rid` is the id of one of the person's own Sauces or Seasonings recipes the
+ *  line links to (`n` stays as the fallback text). */
+export interface RecipeIngredient { n: string; amt?: string; home?: string; rid?: string; sub?: string; skip?: true }
 /** A recipe you wrote or copied from the catalog (`from` is its catalog id then). Custom when it has no `from`. `edited`: a copy you changed
  *  after copying it (only on a recipe with a `from`). */
-export interface Recipe { id: string; n: string; cat: RecipeCategory; ing: RecipeIngredient[]; steps: string[]; servings?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number }
+/** The recipe chips the person hid and reordered (brief recipe-filter-editing). */
+export interface RecipeChips { hide?: RecipeCategory[]; order?: RecipeCategory[] }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */

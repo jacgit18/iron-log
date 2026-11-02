@@ -1,5 +1,8 @@
 import { test, expect } from './fixtures.js';
 
+// The exercise charts are a drill-in of the hub, which is what a window under 1280px shows.
+test.use({ viewport: { width: 1100, height: 900 } });
+
 test('a session edited and deleted in the exercise sheet changes just that session', async ({ page }) => {
   // Two check-offs of Hack Squat this week (Day 3 and Day 5 cards) give two sessions.
   await page.locator('#chk-A-d3s1').check();

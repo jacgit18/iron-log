@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_INGREDIENTS, MAX_STEPS, normRecipe, normRecipes, validRecipe } from './recipes.js';
+import { MAX_INGREDIENTS, MAX_RECIPE_ID, MAX_STEPS, MAX_TAG, MAX_TAGS, MAX_TAGS_PER_RECIPE, normRecipe, normRecipeChips, normRecipes, normTags, validRecipe } from './recipes.js';
 
 const base = { id: 'r1', n: 'Chili', cat: 'protein', ing: [{ n: 'Beans', amt: '2 cans' }], steps: ['Simmer.'] };
 
@@ -7,6 +7,15 @@ describe('normRecipe', () => {
   it('keeps a clean recipe as it is', () => {
     expect(normRecipe(base)).toEqual(base);
     expect(validRecipe(base)).toBe(true);
+  });
+  it('keeps a ready-made food: its category, no ingredients or steps, its numbers', () => {
+    const r = { id: 'lasagna', n: 'Frozen lasagna', cat: 'ready', ing: [], steps: [], kcal: 420, p: 22 };
+    expect(normRecipe(r)).toEqual(r);
+    expect(validRecipe(r)).toBe(true);
+    expect(normRecipe({ ...base, cat: 'sides' })?.cat).toBe('sides'); // existing categories are unchanged
+    expect(normRecipe({ ...base, cat: 'carbs' })?.cat).toBe('carbs'); // Carbs is a category of its own
+    expect(validRecipe({ ...base, cat: 'carbs' })).toBe(true);
+    expect(normRecipe({ ...base, cat: 'frozen' })?.cat).toBe('other'); // an unknown one still becomes Other
   });
   it('needs an id and a name', () => {
     expect(normRecipe({ ...base, id: '' })).toBeNull();
@@ -29,6 +38,37 @@ describe('normRecipe', () => {
   it('keeps from only when it is a catalog id', () => {
     expect(normRecipe({ ...base, from: 'c:wbc:chili' })).toHaveProperty('from', 'c:wbc:chili');
     expect(normRecipe({ ...base, from: 'evil' })).not.toHaveProperty('from');
+  });
+});
+
+describe('recipe video link', () => {
+  const base = { id: 'r1', n: 'Soup', cat: 'dinner', ing: [{ n: 'Onion' }], steps: ['Cook.'] };
+  it('keeps a web link and loads an old recipe without one unchanged', () => {
+    expect(normRecipe({ ...base, url: 'https://youtu.be/abc' })?.url).toBe('https://youtu.be/abc');
+    expect(normRecipe(base)).not.toHaveProperty('url');
+  });
+  it('drops anything that is not an http or https address', () => {
+    for (const bad of ['javascript:alert(1)', 'youtube.com/x', 'file:///etc/passwd', 'https://a b', '', '  ', 42, null]) expect(normRecipe({ ...base, url: bad })).not.toHaveProperty('url');
+  });
+  it('drops a link over 500 characters and keeps one on a saved library copy', () => {
+    expect(normRecipe({ ...base, url: 'https://x.com/' + 'a'.repeat(500) })).not.toHaveProperty('url');
+    expect(normRecipe({ ...base, from: 'c:wbc:r1', url: 'https://vimeo.com/1' })?.url).toBe('https://vimeo.com/1');
+  });
+});
+
+describe('serving size', () => {
+  it('keeps the words and the grams, and a recipe without them is unchanged', () => {
+    const r = normRecipe({ ...base, serving: ' 1 cup ', servingG: 250 });
+    expect(r).toMatchObject({ serving: '1 cup', servingG: 250 });
+    expect(validRecipe({ ...base, serving: '1 cup', servingG: 250 })).toBe(true);
+    expect(normRecipe(base)).not.toHaveProperty('serving');
+    expect(normRecipe(base)).not.toHaveProperty('servingG');
+  });
+  it('drops empty words, and grams that are not a whole number from 1 to 5000', () => {
+    for (const servingG of [0, -5, 2.5, 5001, '250', null]) expect(normRecipe({ ...base, serving: '', servingG })).not.toHaveProperty('servingG');
+    expect(normRecipe({ ...base, serving: '' })).not.toHaveProperty('serving');
+    expect(normRecipe({ ...base, serving: 'x'.repeat(60) })?.serving).toHaveLength(40);
+    expect(normRecipe({ ...base, servingG: 5000 })?.servingG).toBe(5000);
   });
 });
 
@@ -61,5 +101,53 @@ describe('swap, skip and Edited', () => {
   it('accepts the new fields as clean and still reads a recipe saved before them', () => {
     expect(validRecipe({ ...base, ing: [{ n: 'Beans', sub: 'pinto beans', skip: true }], from: 'c:wbc:chili', edited: true })).toBe(true);
     expect(validRecipe(base)).toBe(true);
+  });
+});
+
+describe('rid: a link to one of your sauces or seasonings', () => {
+  it('keeps a clean rid and accepts it as valid (the API takes what the app writes)', () => {
+    const r = { ...base, ing: [{ n: 'Taco seasoning', amt: '2 tbsp', rid: 'taco-seasoning' }] };
+    expect(normRecipe(r)).toEqual(r);
+    expect(validRecipe(r)).toBe(true);
+  });
+  it('drops an empty or reserved rid, and cuts one that is too long; the line stays', () => {
+    const r = normRecipe({ ...base, ing: [{ n: 'A', rid: ' ' }, { n: 'B', rid: 'constructor' }, { n: 'C', rid: 'x'.repeat(200) }] })!;
+    expect(r.ing[0]).toEqual({ n: 'A' });
+    expect(r.ing[1]).toEqual({ n: 'B' });
+    expect(r.ing[2]!.rid).toHaveLength(MAX_RECIPE_ID);
+    expect(validRecipe({ ...base, ing: [{ n: 'B', rid: 'constructor' }] })).toBe(false);
+  });
+});
+
+describe('recipe tags', () => {
+  it('keeps clean tags and drops the field when there are none', () => {
+    const r = { ...base, tags: ['weeknight', 'Meal prep'] };
+    expect(normRecipe(r)).toEqual(r);
+    expect(validRecipe(r)).toBe(true);
+    expect('tags' in normRecipe({ ...base, tags: ['', '  ', 5] })!).toBe(false);
+  });
+  it('collapses spaces, cuts the length, drops repeats of any case and caps the count', () => {
+    expect(normTags(['  Meal   prep ', 'meal PREP', 'x'.repeat(40)])).toEqual(['Meal prep', 'x'.repeat(MAX_TAG)]);
+    expect(normTags(Array.from({ length: 12 }, (_, i) => `t${i}`))).toHaveLength(MAX_TAGS_PER_RECIPE);
+    expect(normTags('weeknight')).toEqual([]);
+    expect(validRecipe({ ...base, tags: ['a', 'A'] })).toBe(false); // the API refuses what the app would not send
+  });
+  it('allows at most MAX_TAGS different tags in a list, the first spelling winning', () => {
+    const list = Array.from({ length: 6 }, (_, i) => ({ ...base, id: `r${i}`, tags: Array.from({ length: 6 }, (_, j) => `t${i * 6 + j}`) }));
+    const out = normRecipes([...list, { ...base, id: 'late', tags: ['T0', 't99'] }]);
+    const all = new Set(out.flatMap(r => (r.tags ?? []).map(t => t.toLowerCase())));
+    expect(all.size).toBe(MAX_TAGS);
+    expect(out.find(r => r.id === 'late')!.tags).toEqual(['t0']); // joins the tag already in use; the new one is over the limit
+  });
+});
+
+describe('normRecipeChips', () => {
+  it('keeps known categories without repeats', () => {
+    expect(normRecipeChips({ hide: ['drinks', 'drinks', 'soup'], order: ['sides', 'protein'] })).toEqual({ hide: ['drinks'], order: ['sides', 'protein'] });
+  });
+  it('is null when nothing usable is left', () => {
+    expect(normRecipeChips({ hide: [], order: ['nope'] })).toBeNull();
+    expect(normRecipeChips('x')).toBeNull();
+    expect(normRecipeChips([])).toBeNull();
   });
 });

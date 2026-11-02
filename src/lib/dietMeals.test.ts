@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, SavedMeal } from '../types.ts';
 import { MAX_DIET_PER_DAY, MAX_MEALS, MAX_MEAL_ITEMS } from '../shared/diet.js';
-import { mealLine, mealTotals, planMeal, renameMeal, saveMeal } from './dietMeals.js';
+import { mealLine, mealTotals, planMeal, renameMeal, saveMeal, sortedMeals } from './dietMeals.js';
 
 let n = 0;
 const e = (name: string, kcal = 100, extra: Partial<DietEntry> = {}, d = '2026-10-30'): DietEntry => ({ id: `e${++n}`, d, n: name, kcal, p: 5, ...extra });
@@ -61,5 +61,17 @@ describe('planMeal', () => {
   it('counts only the viewed day', () => {
     const other = Array.from({ length: MAX_DIET_PER_DAY }, () => e('F', 1, {}, '2026-10-29'));
     expect(planMeal(other, '2026-10-30', m).left).toBe(0);
+  });
+});
+
+describe('sortedMeals', () => {
+  const m = (id: string, n: string): SavedMeal => ({ id, n, items: [] });
+  it('lists A to Z, ignoring case and reading digits as numbers, without changing the input', () => {
+    const stored = [m('a', 'zucchini bowl'), m('b', 'Meal 10'), m('c', 'apple oats'), m('d', 'Meal 2')];
+    expect(sortedMeals(stored).map(x => x.n)).toEqual(['apple oats', 'Meal 2', 'Meal 10', 'zucchini bowl']);
+    expect(stored.map(x => x.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+  it('keeps equal names in id order', () => {
+    expect(sortedMeals([m('b', 'Lunch'), m('a', 'lunch')]).map(x => x.id)).toEqual(['a', 'b']);
   });
 });

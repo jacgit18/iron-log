@@ -343,7 +343,8 @@ function useCurrentGroup() {
       const bar = rail ? 0 : document.querySelector('.sjump')?.getBoundingClientRect().bottom ?? 0;
       const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
       let next: string = GROUPS[0][0];
-      for (const [id] of GROUPS) { const h = document.getElementById(`set-${id}-h`); if (h && h.getBoundingClientRect().top <= bar + 24) next = id; }
+      let best = -Infinity; // side by side columns share a top: the earlier group wins a tie, unless a jump just focused the later one's heading
+      for (const [id] of GROUPS) { const h = document.getElementById(`set-${id}-h`); const t = h?.getBoundingClientRect().top; if (h && t !== undefined && t <= bar + 24 && (t > best + 1 || (t >= best - 1 && document.activeElement === h))) { best = Math.max(best, t); next = id; } }
       setCur(atEnd ? GROUPS[GROUPS.length - 1][0] : next);
     };
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(look); };
@@ -364,7 +365,7 @@ function useCurrentGroup() {
 
 function Group({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section className="sgroup" aria-labelledby={`set-${id}-h`}>
+    <section className="sgroup" data-group={id} aria-labelledby={`set-${id}-h`}>
       <h2 id={`set-${id}-h`} tabIndex={-1}>{title}</h2>
       <div className="sgrid">{children}</div>
     </section>
@@ -415,11 +416,11 @@ export default function Settings() {
   const [screen, setScreen] = useState<Screen | null>(null);
   const [sub, setSub] = useState<string | null>(null); // an exercise's screen inside 1-rep maxes
   const was = useRef<{ screen: Screen; y: number } | null>(null); // where the screen was opened from, to go back to
-  const open = (s: Screen) => { was.current = { screen: s, y: window.scrollY }; history.pushState({ settingsScreen: s }, ''); setScreen(s); };
+  const open = (s: Screen) => { was.current = { screen: s, y: window.scrollY }; history.pushState({ nav: history.state?.nav, settingsScreen: s }, ''); setScreen(s); };
   // An exercise's screen inside 1-rep maxes replaces the entry instead of pushing another: one entry per Settings screen, so Back (or choosing another tab) leaves nothing behind.
-  const openSub = (id: string) => { history.replaceState({ settingsScreen: 'maxes', sub: id }, ''); setSub(id); };
+  const openSub = (id: string) => { history.replaceState({ nav: history.state?.nav, settingsScreen: 'maxes', sub: id }, ''); setSub(id); };
   const back = () => {
-    if (sub) { history.replaceState({ settingsScreen: 'maxes' }, ''); setSub(null); return; } // from an exercise to the list
+    if (sub) { history.replaceState({ nav: history.state?.nav, settingsScreen: 'maxes' }, ''); setSub(null); return; } // from an exercise to the list
     if (history.state?.settingsScreen) history.back(); else setScreen(null);
     setSub(null);
   };
@@ -428,7 +429,7 @@ export default function Settings() {
     const onPop = (e: PopStateEvent) => { setScreen(now => (e.state?.settingsScreen as Screen | undefined) ?? (now ? null : now)); setSub((e.state?.sub as string | undefined) ?? null); };
     window.addEventListener('popstate', onPop);
     // Sent to a group by the account menu or the jump row: close the screen now, and drop its history entry without leaving the page.
-    const off = onCloseSettingsScreen(() => { setScreen(null); setSub(null); was.current = null; if (history.state?.settingsScreen) history.replaceState(null, ''); });
+    const off = onCloseSettingsScreen(() => { setScreen(null); setSub(null); was.current = null; if (history.state?.settingsScreen) history.replaceState({ nav: history.state.nav }, ''); });
     return () => {
       window.removeEventListener('popstate', onPop); off();
       if (history.state?.settingsScreen) history.back(); // another tab was chosen with a screen open: take its history entry back, so Back is not a dead press
@@ -475,7 +476,8 @@ export default function Settings() {
           </Group>
           {/* Last on the page, apart from the everyday data panels: these cannot be undone. */}
           <Group id="erase" title="Erase & delete">
-            <div className="scol"><ErasePanel /><DeleteMyData /></div>
+            <div className="scol"><ErasePanel /></div>
+            <div className="scol"><DeleteMyData /></div>
           </Group>
         </div>
       </div>

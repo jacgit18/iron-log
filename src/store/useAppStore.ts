@@ -36,7 +36,9 @@ import { normSupplements } from '../lib/water.js';
 import { WEEK_RE } from '../lib/trends.js';
 import { sameProg, normConfig } from '../lib/export.js';
 import { mimeFor } from '../lib/mime.js';
+import { parseRoute } from '../lib/route.js';
 import { loadView, saveView, openFromUrl } from '../lib/viewState.js';
+import { holdShare, shareFromSearch } from '../lib/shareTarget.js';
 import { useToday } from './useToday.js';
 import { normEntries, normBody, normProgram, normLibrary, SCHEMA_VERSION } from '../shared/validate.js';
 import { normDietEntries } from '../shared/diet.js';
@@ -148,6 +150,10 @@ const restored = loadView(ymd(new Date()));
 // A home-screen shortcut (./?open=daily) wins over the remembered tab; the parameter is then dropped so a refresh does not re-apply it.
 const shortcutTab = typeof location === 'undefined' ? undefined : openFromUrl(location.search);
 if (shortcutTab) try { history.replaceState(null, '', location.pathname + location.hash); } catch { /* ignore */ }
+// A link shared from another app (./?share_url=...): kept in memory for the Save this link sheet, and the parameters are dropped from the address (lib/shareTarget.ts).
+const sharedIn = typeof location === 'undefined' ? null : shareFromSearch(location.search);
+if (sharedIn) { holdShare(sharedIn); try { history.replaceState(null, '', location.pathname + location.hash); } catch { /* ignore */ } }
+const hashTab = typeof location === 'undefined' ? undefined : parseRoute(location.hash)?.tab; // an address like #/progress/trends opens that tab (brief navigation-urls)
 let keepMDay = restored.mDay != null; // the first week load must not clear a restored phone day
 const loadedMDay = (state: AppState) => { const m = keepMDay ? state.mDay : null; keepMDay = false; return m; };
 
@@ -175,7 +181,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   unsaved: [], // doc paths whose last write was refused (storage full, permission): kept until a write succeeds
   refusals: 0, // writes refused so far this session
   sync: null, // how syncing through the API is going; null when it is off
-  tab: shortcutTab || restored.tab || 'board',
+  tab: shortcutTab || hashTab || restored.tab || 'board',
   mDay: restored.mDay ?? null, // day shown on phones; null = pick the first day with open work
   library: [], // saved program versions
   experiments: [], // exercises to try: [{id, ex, ph, note}]

@@ -1,6 +1,9 @@
 import { test, expect } from './fixtures.js';
 
-// Progress as one page: summary, recent weeks, the body map, a filter line, Weight goals, Exercises, then tiles. The fixture's clock is Thu Sep 24 2026.
+// These are the hub (a window under 1280px); from 1280px Progress is one page (progressOnePage.spec.js).
+test.use({ viewport: { width: 1100, height: 900 } });
+
+// Progress as one page: summary, recent weeks, the muscle box, a filter line, Weight goals, Exercises, the Body weight panel, then two tiles. The fixture's clock is Thu Sep 24 2026.
 // Seed: Hack Squat (quads) and Lat Pulldown (lats), each with a log and a goal; nothing on the chest.
 const seed = page => page.addInitScript(() => {
   if (localStorage.getItem('ironlog:seeded')) return; // only on the first load, so a goal removed in a test stays removed
@@ -23,9 +26,11 @@ test('one page with no Progress/Muscles switch, sections in order', async ({ pag
   await expect(page.locator('#prog-trends')).toHaveCount(0);
   const tops = [];
   for (const loc of [page.locator('.kpis'), page.getByRole('heading', { name: 'Weekly history' }), page.locator('.figs'), page.locator('.chiprow'),
-    page.getByRole('heading', { name: 'Weight goals' }), page.getByRole('heading', { name: 'Exercises' }), page.locator('.hubtile').first()]) tops.push((await loc.boundingBox()).y);
+    page.getByRole('heading', { name: 'Weight goals' }), page.getByRole('heading', { name: 'Exercises' }), page.getByRole('heading', { name: 'Body weight', exact: true }), page.locator('.hubtile').first()]) tops.push((await loc.boundingBox()).y);
   expect(tops).toEqual([...tops].sort((a, b) => a - b));
-  await expect(page.locator('.hubtile')).toHaveCount(4);
+  await expect(page.locator('.hubtile')).toHaveCount(2);
+  await expect(page.locator('.mapbox .legend')).toBeVisible();
+  await expect(page.locator('.mapbox .mbar').first()).toBeVisible();
 });
 
 test('tapping a muscle filters goals and exercises, the chip clears it, and leaving Progress starts unfiltered', async ({ page }) => {
@@ -67,7 +72,7 @@ test('removing the last goal on a row keeps its Undo notice visible', async ({ p
   await page.reload();
   await open(page);
   await goals(page).locator('.mlrow', { hasText: 'Hack Squat' }).click();
-  await goals(page).getByRole('button', { name: 'Any phase goal', exact: true }).dblclick();
+  await goals(page).getByRole('button', { name: 'Remove Any phase goal', exact: true }).dblclick();
   const undo = goals(page).getByRole('button', { name: 'Undo' });
   await expect(undo).toBeVisible();
   await expect(goals(page).locator('.mlrow', { hasText: 'Hack Squat' })).toHaveCount(0);

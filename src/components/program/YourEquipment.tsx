@@ -1,10 +1,11 @@
 import { useAppStore } from '../../store/useAppStore.js';
+import { nameCmp } from '../../lib/sort.js';
 import ArmedButton from '../ArmedButton.jsx';
 
 // The equipment you added from an Equipment menu, with Remove (refused while an exercise uses it).
 export default function YourEquipment() {
   const equipment = useAppStore(s => s.cfg.equipment);
-  const entries = Object.entries(equipment || {}).sort((a, b) => a[1].localeCompare(b[1]));
+  const entries = Object.entries(equipment || {}).sort(nameCmp(e => e[1], e => e[0]));
   if (!entries.length) return null;
   const { removeEquipment } = useAppStore.getState();
   return (

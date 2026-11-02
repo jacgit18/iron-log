@@ -24,11 +24,11 @@ export function programByKey(programs: Record<string, Program | undefined>, libr
   return it ? { ...it.prog, key: 'N' } : null;
 }
 
-// A and B, then the saved programs by name. Only A and B can be on the board; a saved program waits until it is loaded.
+// A and B, then the saved programs (not the archived ones). Only A and B can be on the board; a saved program waits until it is loaded.
 export function moveTargets(cfg: Cfg, library: LibraryItem[]): MoveTarget[] {
   return [
     ...(['A', 'B'] as const).map(key => ({ key, label: progName(cfg, key), onBoard: true })),
-    ...library.map(it => ({ key: 'L:' + it.id, label: it.name, onBoard: false })),
+    ...library.filter(it => !it.archived).map(it => ({ key: 'L:' + it.id, label: it.name, onBoard: false })),
   ];
 }
 

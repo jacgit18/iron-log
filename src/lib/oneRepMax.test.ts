@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { currentMax, estimateMax, liftsOf, maxLine, phaseRows, targetNote } from './oneRepMax.js';
+import { currentMax, estimateMax, liftsOf, maxLine, phaseRows, targetNote, weightedExIds } from './oneRepMax.js';
+import { BUILTIN, exInfo, slotsFor } from './data.js';
+import { DEFAULT_CFG } from './logic.js';
 import type { LogEntry } from '../types.ts';
 
 const e = (ph: LogEntry['ph'], w: number, r: number, sets?: { w: number; r: number }[]): LogEntry => ({ d: '2026-10-01', ph, w, r, ...(sets ? { sets } : {}) });
@@ -78,5 +80,17 @@ describe('maxLine and targetNote', () => {
     expect(targetNote(row(0, 65))).toBe('Target 65%. On target.');
     expect(targetNote(row(null, 85))).toBe('Target 85%.');
     expect(targetNote(row(null, null))).toBe('No target for this phase.');
+  });
+});
+
+describe('weightedExIds', () => {
+  it('lists the weighted exercises A to Z by name', () => {
+    const cfg = structuredClone(DEFAULT_CFG);
+    const ids = weightedExIds(cfg, BUILTIN);
+    expect(ids.length).toBeGreaterThan(1);
+    const names = ids.map(id => exInfo(cfg, id).n);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true })));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.every(id => slotsFor(BUILTIN.A).concat(slotsFor(BUILTIN.B)).some(s => s.items.some(i => i.ex === id && i.w != null)))).toBe(true);
   });
 });

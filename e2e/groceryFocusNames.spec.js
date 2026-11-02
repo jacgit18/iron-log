@@ -37,7 +37,7 @@ test('removing an edit row puts focus on the next row\'s arrow, else the one bef
   await page.getByRole('button', { name: 'Expand Toilet paper' }).click();
   await page.getByRole('button', { name: 'Remove Toilet paper from your list' }).click();
   await page.getByRole('button', { name: 'Remove Toilet paper from your list' }).click();
-  await expect(page.getByRole('button', { name: 'Expand Rice' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Expand Milk' })).toBeFocused(); // the screen is A to Z: Rice, Toilet paper, Milk (Aldi)
   await page.getByRole('button', { name: 'Expand Milk' }).click();
   await page.getByRole('button', { name: 'Remove Milk from your list' }).click();
   await page.getByRole('button', { name: 'Remove Milk from your list' }).click();

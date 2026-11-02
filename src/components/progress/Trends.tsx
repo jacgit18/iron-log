@@ -124,9 +124,9 @@ function VolumeChart({ keys }: { keys: string[] }) {
 function Bests({ since }: { since: string }) {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
   const openModal = useAppStore(s => s.openModal);
-  const all = personalBests(logs, since); const shown = all.slice(0, 8);
+  const all = personalBests(logs, since); const shown = all.slice(0, 10); // two columns of 5 on a wide page; the CSS shows the first 5 on a phone
   return (
-    <section className="panel tchart">
+    <section className="panel tchart bestspanel">
       <h2>Personal bests</h2>
       {!shown.length ? <p className="note">When you log a lift heavier than before, or more reps at your best weight, it shows here.</p> : (
         <>
@@ -141,7 +141,7 @@ function Bests({ since }: { since: string }) {
               </li>
             ))}
           </ul>
-          <p className="note">Your best set in the last 8 weeks{all.length > shown.length ? ` (latest ${shown.length} of ${all.length})` : ''}: heavier, or more reps at the same weight. Ticked-off exercises don't count; log the weight you lifted.</p>
+          <p className="note">Your best set in the last 8 weeks{all.length > shown.length ? ', latest first' : ''}: heavier, or more reps at the same weight. Ticked-off exercises don't count; log the weight you lifted.</p>
         </>
       )}
     </section>

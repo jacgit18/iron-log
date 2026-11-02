@@ -77,7 +77,7 @@ export function goalFor(supp: Supplements, body: { d: string; w: number }[] | nu
 }
 
 function baseGoal(supp: Supplements, body: { d: string; w: number }[] | null | undefined, date: string) {
-  const L = (body || []).filter(e => e && Number(e.w) > 0).sort((a, b) => a.d.localeCompare(b.d));
+  const L = (body || []).filter(e => e && Number(e.w) > 0).sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
   if (supp.waterMode === 'weight' && L.length) {
     const e = [...L].reverse().find(x => x.d <= date) || L[0];
     return { oz: validGoal(Number(e.w) * OZ_PER_LB) ? r1(Number(e.w) * OZ_PER_LB) : supp.waterGoal, source: 'weight', lb: Number(e.w) };

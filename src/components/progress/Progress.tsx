@@ -1,12 +1,15 @@
 import type { PhaseKey } from '../../types.ts';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
-import { bwSorted } from '../../lib/body.js';
 import Icon from '../Icon.jsx';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, DAY_COUNT, exInfo } from '../../lib/data.js';
 import { weekStartOf, ymd, parseDate, addDays, fmtShort } from '../../shared/dates.js';
-import { describe, lastLog, stallOf, backoffOf } from '../../lib/logic.js';
+import { newestFirst } from '../../lib/exerciseOrder.js';
+import { DEFAULT_LIFT_SORT, LIFT_SORTS, sortLiftIds } from '../../lib/liftSort.js';
+import { useSortChoice } from '../useSortChoice.js';
+import SortControl from '../SortControl.jsx';
+import { describe, stallOf, backoffOf } from '../../lib/logic.js';
 import { WEEK_RE, WEEK_GOAL_DAYS, weekSummary } from '../../lib/trends.js';
 import { avgPerTrainingDay } from '../../lib/freqGoal.js';
 import FreqGoals from './FreqGoals.jsx';
@@ -16,6 +19,12 @@ import Muscles from '../muscles/Muscles.jsx';
 import LineChart from '../LineChart.js';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 import { ExerciseRows, GoalRows, MuscleChip } from './MuscleLists.jsx';
+import { pageOf } from '../../lib/route.js';
+import { goUp, navigate, useRoutePath } from '../useRoute.js';
+import { useFiltered } from './useFiltered.js';
+import { hasProgressData } from '../../lib/progressPage.js';
+import OnePage from './OnePage.jsx';
+import { useOnePage } from './useOnePage.js';
 import './Hub.css';
 import './Progress.css';
 
@@ -62,44 +71,58 @@ function History({ weeks: maxWeeks = 12, more }: { weeks?: number; more?: () => 
   );
 }
 
-function LiftList() {
+export function LiftList({ byMuscle = false }: { byMuscle?: boolean }) {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs);
   const openModal = useAppStore(s => s.openModal);
   const body = useAppStore(s => s.body);
   const today = useToday(s => s.today);
-  const ids = Object.keys(logs).filter(id => logs[id].length);
+  const [sort, setSort] = useSortChoice('lifts', LIFT_SORTS, DEFAULT_LIFT_SORT);
+  const nameOf = (id: string) => exInfo(cfg, id).n;
+  const phasesOf = (id: string) => [...new Set(logs[id].map(e => e.ph || null))];
+  const needsAttention = (id: string) => phasesOf(id).some(p => backoffOf(cfg, logs, { ex: id }, p) || stallOf(cfg, logs, id, p));
+  const kept = useFiltered(Object.keys(logs)); // the muscle picked on the map, when the list sits under it (Progress on one page)
+  const ids = sortLiftIds(newestFirst(byMuscle ? kept : Object.keys(logs), logs, nameOf), sort, nameOf, needsAttention); // only the Stalled first sort calls needsAttention, once per lift
+  if (!ids.length && byMuscle && Object.keys(logs).length) return <div className="empty">Nothing logged for this muscle yet.</div>;
   if (!ids.length) return <div className="empty">No sessions logged yet. Tap <b>Log</b> on any exercise card to record weight, sets and reps.</div>;
-  ids.sort((a, b) => lastLog(logs, b)!.d.localeCompare(lastLog(logs, a)!.d));
   return (
-    <div className="plist">
-      {ids.map(id => {
-        const L = logs[id], last = L[L.length - 1];
-        const ws = L.filter(e => (e.ph || null) === (last.ph || null)).map(e => Number(e.w)).filter(n => !isNaN(n) && n > 0);
-        const best = ws.length ? Math.max(...ws) : null;
-        const phName = last.ph ? PHASES[last.ph].label : 'No phase';
-        const phs = [...new Set(L.map(e => e.ph || null))]; const multi = phs.length > 1;
-        const goals = liftGoalsStatus(cfg, id, L, today, undefined, body);
-        const label = (p: PhaseKey | null) => (p ? PHASES[p as PhaseKey].label : 'No phase');
-        const backoff = phs.filter(p => backoffOf(cfg, logs, { ex: id }, p));
-        const stalled = phs.filter(p => !backoff.includes(p) && stallOf(cfg, logs, id, p)).map(label);
-        return (
-          <button type="button" className="pcard" key={id} onClick={() => openModal({ type: 'detail', exId: id })}>
-            <h3>{exInfo(cfg, id).n}</h3>
-            <div className="pstats">
-              <span>Last <b>{describe(last)}</b>{last.auto && ' (from check-off)'}</span>
-              {best != null && <span>Best{multi ? ` ${phName.toLowerCase()}` : ''} <b>{best} lb</b></span>}
-              <span>Sessions <b>{L.length}</b></span>
-            </div>
-            {goals.map(g => <span key={g.key} className={`note${g.reached ? ' goalmet' : ''}`}>{liftGoalNote(g)}</span>)}
-            {backoff.length > 0 && <span className="stall">Back off{multi ? ` (${backoff.map(label).join(', ')})` : ''} · fell short 2 sessions in a row</span>}
-            {stalled.length > 0 && <span className="stall">Stalled{multi ? ` (${stalled.join(', ')})` : ''} · no gain in 3 weeks</span>}
-            {!multi && <span className="note"><span className="dot" data-p={last.ph || ''} /> {phName} trend</span>}
-            <LineChart entries={L} height={110} byPhase={multi} />
-          </button>
-        );
-      })}
-    </div>
+    <>
+      {ids.length > 1 && <div className="inline"><SortControl options={LIFT_SORTS} value={sort} onChange={setSort} /></div>}
+      <div className="plist">
+        {ids.map(id => {
+          const L = logs[id], last = L[L.length - 1];
+          const ws = L.filter(e => (e.ph || null) === (last.ph || null)).map(e => Number(e.w)).filter(n => !isNaN(n) && n > 0);
+          const best = ws.length ? Math.max(...ws) : null;
+          const phName = last.ph ? PHASES[last.ph].label : 'No phase';
+          const phs = [...new Set(L.map(e => e.ph || null))]; const multi = phs.length > 1;
+          const goals = liftGoalsStatus(cfg, id, L, today, undefined, body);
+          const label = (p: PhaseKey | null) => (p ? PHASES[p as PhaseKey].label : 'No phase');
+          const backoff = phs.filter(p => backoffOf(cfg, logs, { ex: id }, p));
+          const stalled = phs.filter(p => !backoff.includes(p) && stallOf(cfg, logs, id, p)).map(label);
+          return (
+            <button type="button" className="pcard" key={id} onClick={() => openModal({ type: 'detail', exId: id })}>
+              <h3>{exInfo(cfg, id).n}</h3>
+              <div className="pstats">
+                <span>Last <b>{describe(last)}</b>{last.auto && ' (from check-off)'}</span>
+                {best != null && <span>Best{multi ? ` ${phName.toLowerCase()}` : ''} <b>{best} lb</b></span>}
+                <span>Sessions <b>{L.length}</b></span>
+              </div>
+              {goals.map(g => <span key={g.key} className={`note${g.reached ? ' goalmet' : ''}`}>{liftGoalNote(g)}</span>)}
+              {backoff.length > 0 && <span className="stall">Back off{multi ? ` (${backoff.map(label).join(', ')})` : ''} · fell short 2 sessions in a row</span>}
+              {stalled.length > 0 && <span className="stall">Stalled{multi ? ` (${stalled.join(', ')})` : ''} · no gain in 3 weeks</span>}
+              {!multi && <span className="note"><span className="dot" data-p={last.ph || ''} /> {phName} trend</span>}
+              <LineChart entries={L} height={110} byPhase={multi} />
+            </button>
+          );
+        })}
+      </div>
+    </>
   );
+}
+
+// The summary cards, or one tile when there is nothing to chart. Subscribes here so the hub on a phone does not re-render on every logged set.
+function Overview() {
+  const logs = useAppStore(s => s.logs); const bodyCount = useAppStore(s => s.body.length);
+  return hasProgressData(logs, bodyCount) ? <Trends /> : <div className="empty">Nothing to chart yet. Log a lift on the Board and your weeks, charts and bests fill this page.</div>;
 }
 
 function ProgressMain() {
@@ -107,23 +130,35 @@ function ProgressMain() {
   const loadHistory = useAppStore(s => s.loadHistory);
   const storeMode = useAppStore(s => s.storeMode); // history waits until the data source is known
   useEffect(() => { if (!weekHist && !loading && storeMode !== 'loading') loadHistory(); }, [weekHist, loading, storeMode, loadHistory]);
-  type Page = 'goals' | 'hist' | 'freq' | 'lifts' | 'trends' | 'body' | 'muscles';
-  const [page, setPage] = useState<Page | null>(null);
-  const body = useAppStore(s => s.body);
-  const bw = bwSorted(body).at(-1) ?? null;
+  type Page = 'goals' | 'hist' | 'freq' | 'lifts' | 'trends';
+  // The open page is in the address (#/progress/trends): opening one adds a Back step, and a reload or a pasted address reopens it.
+  const page = pageOf(useRoutePath(), 'progress') as Page | null;
+  const setPage = (k: Page) => navigate(`progress/${k}`, 'push');
   // A muscle picked on the map filters the lists below it for this visit only.
   useEffect(() => () => useAppStore.getState().selectMuscle(null), []);
-  useEffect(() => { window.scrollTo(0, 0); }, [page]); // a sub-page opens at its top, and Back returns to the top of the hub
+  const onePage = useOnePage();
+  useEffect(() => { if (!onePage) window.scrollTo(0, 0); }, [page, onePage]); // a sub-page opens at its top, and Back returns to the top of the hub
+  // A wide screen: every section on one page, the same components the hub and its pages use. `progress/<page>` scrolls to its section (OnePage).
+  if (onePage) return (
+    <OnePage sections={{
+      overview: <Overview />,
+      history: <History />,
+      muscles: <><Muscles /><MuscleChip /></>,
+      goals: <GoalsPanel byMuscle />,
+      lifts: <><h2 className="pone-h">Exercises</h2><LiftList byMuscle /></>,
+      freq: <FreqGoals />,
+      trends: <><h2 className="pone-h">Training trends</h2><Trends part="trends" /></>,
+      body: <Trends part="body" />,
+    }} />
+  );
   if (page) return (
     <>
-      <div className="hubback"><button type="button" className="btn sm" onClick={() => setPage(null)}><Icon name="chevron-left" /> Progress</button></div>
+      <div className="hubback"><button type="button" className="btn sm" onClick={() => goUp('progress')}><Icon name="chevron-left" /> Progress</button></div>
       {page === 'goals' && <GoalsPanel />}
       {page === 'hist' && <History />}
       {page === 'freq' && <FreqGoals />}
       {page === 'lifts' && <LiftList />}
       {page === 'trends' && <Trends part="trends" />}
-      {page === 'body' && <Trends part="body" />}
-      {page === 'muscles' && <Muscles part="details" />}
     </>
   );
   const tile = (k: Page, t: string, note: string) => (
@@ -135,15 +170,14 @@ function ProgressMain() {
     <>
       <Trends />
       <History weeks={6} more={() => setPage('hist')} />
-      <Muscles part="map" />
+      <Muscles />
       <MuscleChip />
       <GoalRows onAll={() => setPage('goals')} />
       <ExerciseRows onAll={() => setPage('lifts')} />
+      <Trends part="body" />
       <div className="hubtiles">
         {tile('freq', 'Frequency goals', 'Times per week for each exercise')}
         {tile('trends', 'Training trends', 'Sets, volume, bests · all lifts together')}
-        {tile('body', 'Body weight', bw ? `${bw.w} lb · week of ${fmtShort(parseDate(bw.wk))}` : 'Log your weight')}
-        {tile('muscles', 'Muscle details', 'Sets by muscle, tags to fix')}
       </div>
     </>
   );

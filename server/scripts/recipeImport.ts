@@ -27,7 +27,8 @@ const RULES: [RecipeCategory, RegExp][] = [
   ['breakfast', /breakfast|pancake|waffle|porridge|oat/],
   ['dessert', /dessert|cake|cookie|pudding|pastry|confection|pie|tart|ice_cream|candy/],
   ['protein', /chicken|meat|pork|beef|lamb|turkey|fish|seafood|shrimp|egg|tofu|bean|lentil|steak|sausage/],
-  ['sides', /salad|vegetable|rice|side_dish|potato|bread|flatbread|sandwich|pasta|noodle/],
+  ['carbs', /rice|potato|bread|flatbread|pasta|noodle/],
+  ['sides', /salad|vegetable|side_dish|sandwich/],
 ];
 const CATEGORY_RULES = RULES.map(([cat, re]): [RecipeCategory, RegExp] => [cat, words(re)]);
 export function wbcCategory(slug: string | null | undefined): RecipeCategory {

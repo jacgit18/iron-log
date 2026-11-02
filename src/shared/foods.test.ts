@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanGrams, cleanHits, cleanQuery, defaultGrams, hitLabel, MAX_RESULTS, parseFoods, scaleFood } from './foods.js';
+import { cleanGrams, cleanHits, cleanQuery, defaultGrams, hitLabel, MAX_RESULTS, mergeFoods, parseFoods, scaleFood, type FoodHit } from './foods.js';
 
 const nut = (n: string, v: number) => ({ nutrientNumber: n, value: v });
 const food = (over: Record<string, unknown> = {}) => ({ fdcId: 1, description: 'Chicken breast, raw', dataType: 'SR Legacy', foodNutrients: [nut('208', 120), nut('203', 22.5), nut('205', 0), nut('204', 2.6)], ...over });
@@ -64,4 +64,17 @@ describe('scaleFood', () => {
 describe('labels', () => {
   it('defaults to the serving, else 100 g', () => { expect(defaultGrams({ id: 1, name: 'x', kcal: 1, p: 1, serving: 28.4 })).toBe(28.4); expect(defaultGrams({ id: 1, name: 'x', kcal: 1, p: 1 })).toBe(100); });
   it('names the food, brand and calories', () => { expect(hitLabel({ id: 1, name: 'Oats', brand: 'Acme', kcal: 380, p: 13 })).toBe('Oats (Acme) · 380 kcal per 100 g'); expect(hitLabel({ id: 1, name: 'Oats', kcal: 380, p: 13 })).toBe('Oats · 380 kcal per 100 g'); });
+});
+
+describe('mergeFoods', () => {
+  const list = (tag: string, n: number): FoodHit[] => Array.from({ length: n }, (_, i) => ({ id: i, name: `${tag} ${i}`, kcal: 100, p: 5 }));
+  it('puts up to five plain foods first, then products, eight in all', () => {
+    expect(mergeFoods(list('P', 10), list('B', 10)).map(h => h.name)).toEqual(['P 0', 'P 1', 'P 2', 'P 3', 'P 4', 'B 0', 'B 1', 'B 2']);
+  });
+  it('lets plain foods take the places products leave, and handles an empty side', () => {
+    expect(mergeFoods(list('P', 10), list('B', 2))).toHaveLength(8);
+    expect(mergeFoods(list('P', 10), list('B', 2)).slice(0, 6).map(h => h.name)).toEqual(['P 0', 'P 1', 'P 2', 'P 3', 'P 4', 'P 5']);
+    expect(mergeFoods([], list('B', 3))).toHaveLength(3);
+    expect(mergeFoods(list('P', 3), [])).toHaveLength(3);
+  });
 });

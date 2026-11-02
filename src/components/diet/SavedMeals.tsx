@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { mealLine, planMeal } from '../../lib/dietMeals.js';
+import { mealLine, planMeal, sortedMeals } from '../../lib/dietMeals.js';
 import { MAX_MEAL_NAME } from '../../shared/diet.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import ArmedButton from '../ArmedButton.jsx';
@@ -36,7 +36,7 @@ export default function SavedMeals({ day, full, onAdded }: { day: string; full: 
     <div className="dt-meals">
       <p className="note" id="dt-meals-h">Saved meals</p>
       <ul className="dt-recents" aria-labelledby="dt-meals-h">
-        {meals.map(m => (
+        {sortedMeals(meals).map(m => (
           <li key={m.id} className={managing ? 'dt-mealrow' : undefined}>
             {managing && renaming === m.id ? (
               <>

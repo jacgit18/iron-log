@@ -7,7 +7,9 @@ import { addDays, weekStartOf, ymd } from '../shared/dates.js';
 import type { PhaseChoice, Flag, StoreGet, StoreSet, EditorSlice } from './types.ts';
 import type { ExerciseInfo, MuscleTags, LibraryItem, Program, ProgramItem, ProgramSlot, PhaseKey, ProgKey } from '../types.ts';
 import { progBody, sameProg, libDate } from '../lib/export.js';
-import { applyWeekPatch, carryPhDef, isLibKey, moveSlotId, moveTargets, programByKey, splitPhDef, splitSuperset, splitWeekState } from '../lib/programMove.js';
+import { leftRotationIds } from '../lib/programArchive.js';
+import { carryPhDef, isLibKey, moveSlotId, moveTargets, programByKey } from '../lib/programMove.js';
+import { copyDaySlots } from '../lib/programDay.js';
 
 export const SECTIONS = ['Optional', 'Regular', 'Supersets', 'Plyometric', 'Home']; // Optional and Home cards don't count toward finishing a day (countsForFinish)
 const newId = (): string => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -62,8 +64,8 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const ak = get().activeProgKey();
     set({ modal: { type: 'slot', idx: null, col, target: { key: get().programs[ak] ? ak : 'A', day: pd }, ...(fromExp ? { fromExp } : {}) } });
   },
-  setEdProg: edProg => set({ edProg, edRemoved: null, edMoved: null }),
-  setEdDay: edDay => set({ edDay, edRemoved: null, edMoved: null }),
+  setEdProg: edProg => set({ edProg, edRemoved: null, edMoved: null, edCopied: null }),
+  setEdDay: edDay => set({ edDay, edRemoved: null, edMoved: null, edCopied: null }),
 
   // Save a program by key: A or B, or a saved program (its library item).
   saveProg(key, prog) {
@@ -138,29 +140,6 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const toLabel = moveTargets(get().cfg, get().library).find(t => t.key === toKey)?.label ?? toKey;
     set({ edMoved: { key: fromKey, from, to: toDay, idx: i, slot: moved, toKey, toLabel, orig }, edRemoved: null });
   },
-  // Take exercise `k` out of the superset at `i` and put it on `toDay` of the same program as a card of its own (supersets only). It takes a new
-  // id, its phase default and this week's tick, skip and phase follow it; the superset keeps its id and its other exercises' state shifts up.
-  moveEdItemToDay(i, k, toDay) {
-    const key = get().edKey(); const from = get().edDay;
-    const orig = get().edProgram().days[from - 1]?.slots[i];
-    if (toDay === from || !DAYS.includes(toDay) || !orig || orig.type !== 'superset' || !orig.items[k]) return;
-    const moved: ProgramSlot[] = []; let ph: ReturnType<typeof splitPhDef> | null = null; let snap: ProgramSlot | null = null; let wk: ReturnType<typeof splitWeekState> | null = null;
-    if (get().editProgram(prog => {
-      pinIds(prog, from); pinIds(prog, toDay);
-      const sl = prog.days[from - 1].slots[i];
-      const split = sl && splitSuperset(sl, k, moveSlotId(key, Date.now().toString(36) + Math.random().toString(36).slice(2, 5)));
-      if (!sl || !split) return;
-      snap = structuredClone(sl); ph = splitPhDef(get().cfg.phDef, sl.id, sl.items.length, k, split.moved.id);
-      wk = splitWeekState(get().week, sl.id, sl.items.length, k, split.moved.id);
-      prog.days[from - 1].slots[i] = split.rest;
-      moved.push(structuredClone(split.moved)); insertSlot(prog.days[toDay - 1].slots, split.moved);
-    }) && moved[0] && snap && ph && wk) {
-      const p = ph as ReturnType<typeof splitPhDef>; const w = wk as ReturnType<typeof splitWeekState>;
-      get().mutateCfg(c => { p.del.forEach(d => { delete c.phDef[d]; }); Object.assign(c.phDef, p.set); });
-      if (w.changed) get().mutateWeek(x => applyWeekPatch(x, w.patch));
-      set({ edMoved: { key, from, to: toDay, idx: i, slot: moved[0], orig: snap, split: { ph: p.before, week: w.undo, weekKey: get().weekKey() } }, edRemoved: null });
-    }
-  },
   // Put the moved card back on its old day at its old place (and in its old program). The card is found by what it holds, as a library program's cards have no id.
   undoMoveEdSlot() {
     const m = get().edMoved;
@@ -171,25 +150,6 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     const at = there ? there.days[m.to - 1].slots.findIndex(x => JSON.stringify(x) === want) : -1;
     // The card was changed or removed since (Edit, Remove): there is nothing to put back, and nothing is saved.
     if (!there || at < 0) { set({ edMoved: null }); flag('Could not put it back'); return; }
-    if (m.split) { // one exercise taken out of a superset: remove it from its new day and put the superset back as it was
-      const origId = m.orig!.id; const fromSlots = there!.days[m.from - 1].slots; // a saved program's cards have no id: they are found by place
-      const rest = fromSlots[m.idx]?.id === origId ? m.idx : origId ? fromSlots.findIndex(x => x.id === origId) : -1;
-      if (rest < 0) { set({ edMoved: null }); flag('Could not put it back'); return; }
-      const newId = m.slot.id; const count = m.orig!.items.length;
-      if (get().editProgram(prog => {
-        const day = prog.days[m.to - 1].slots; day.splice(day.findIndex(x => JSON.stringify(x) === want), 1);
-        prog.days[m.from - 1].slots[rest] = structuredClone(m.orig!);
-      })) {
-        get().mutateCfg(c => {
-          for (let j = 0; j < count; j++) delete c.phDef[`${origId}:${j}`];
-          delete c.phDef[`${newId}:0`]; Object.assign(c.phDef, m.split!.ph);
-        });
-        const wu = m.split!.week;
-        if (wu && m.split!.weekKey === get().weekKey()) get().mutateWeek(x => applyWeekPatch(x, wu)); // this week's ticks, skips and phases go back too
-        set({ edMoved: null }); flag('Put back');
-      }
-      return;
-    }
     if (!m.toKey) {
       if (get().editProgram(prog => {
         const day = prog.days[m.to - 1].slots; const [sl] = day.splice(day.findIndex(x => JSON.stringify(x) === want), 1);
@@ -206,6 +166,35 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     set({ edMoved: null }); flag('Put back');
   },
   dismissEdMoved() { set({ edMoved: null }); },
+  edCopied: null,
+  copyEdDay(toDay) {
+    const key = get().edKey(); const from = get().edDay;
+    if (get().blocked() || toDay === from || !DAYS.includes(toDay)) return;
+    const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    let made: ProgramSlot[] = []; let src: ProgramSlot[] = [];
+    if (get().editProgram(prog => {
+      pinIds(prog, from); pinIds(prog, toDay);
+      src = structuredClone(prog.days[from - 1].slots);
+      made = copyDaySlots(src, i => moveSlotId(key, stamp + i));
+      made.forEach(c => insertSlot(prog.days[toDay - 1].slots, structuredClone(c)));
+    }) && made.length) {
+      // Each copy starts with the phase its original has, as a moved card does.
+      const carried = Object.assign({}, ...made.map((c, i) => carryPhDef(get().cfg.phDef, src[i]!.id, c.id, c.items.length)));
+      if (Object.keys(carried).length) get().mutateCfg(c => { Object.assign(c.phDef, carried); });
+      set({ edCopied: { key, from, to: toDay, ids: made.map(c => c.id) }, edRemoved: null, edMoved: null });
+    }
+  },
+  // Take the copies back out of the day they went to (found by id; ones edited since are still removed, ones already removed are skipped).
+  undoCopyEdDay() {
+    const c = get().edCopied;
+    if (!c || c.key !== get().edKey() || c.from !== get().edDay) { set({ edCopied: null }); return; }
+    if (get().editProgram(prog => { prog.days[c.to - 1].slots = prog.days[c.to - 1].slots.filter(sl => !c.ids.includes(sl.id)); })) {
+      // The phases carried to the copies go with them, so Undo leaves nothing behind in the synced config.
+      get().mutateCfg(cf => { Object.keys(cf.phDef).forEach(k => { if (c.ids.includes(k.slice(0, k.lastIndexOf(':')))) delete cf.phDef[k]; }); });
+      set({ edCopied: null }); flag('Copy undone');
+    }
+  },
+  dismissEdCopied() { set({ edCopied: null }); },
   setDaySub(v) { return get().editProgram(prog => { const day = prog.days[get().edDay - 1]; if (v.trim()) day.sub = v.trim(); else delete day.sub; }); },
 
   renameLibItem(raw) {
@@ -254,7 +243,11 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     // A program loaded from the library brings its name: the slot is called what you named the program (ADR 021).
     if (src) get().mutateCfg(c => { c.progNames = { ...(c.progNames || {}), [slot]: src.name }; });
     set({ edProg: slot });
-    flag(src ? `Loaded ${src.name} into Program ${slot}` : 'Loaded');
+    // The program that was in this slot is out of the rotation now: its saved copies go to Archived (Restore brings them back).
+    const out = leftRotationIds(get().library, cur, [get().programs[slot], get().programs[slot === 'A' ? 'B' : 'A']]);
+    const back = src?.archived; // a program loaded into A or B is in use, so it is not archived
+    if (out.length || back) get().setLibrary(get().library.map(x => { if (out.includes(x.id)) return { ...x, archived: true as const }; if (back && x.id === src!.id) { const { archived: _a, ...rest } = x; return rest; } return x; }));
+    flag((src ? `Loaded ${src.name} into Program ${slot}` : 'Loaded') + (out.length ? '. The program it replaced is in Archived' : '') + (back ? (out.length ? ' and it is out of Archived' : '. It is out of Archived') : ''));
   },
   deleteLibItem(id) {
     if (get().blocked()) return;
@@ -266,6 +259,20 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
       if (get().blocked() || get().library.some(x => x.id === id)) return false;
       const l = [...get().library]; l.splice(Math.min(i, l.length), 0, it); get().setLibrary(l); return true;
     });
+  },
+  // Archive puts a saved program out of the way (library list, Move sheet); Restore brings it back. Nothing in it changes.
+  archiveLibItem(id) {
+    if (get().blocked()) return;
+    const it = get().library.find(x => x.id === id); if (!it || it.archived) return;
+    get().setLibrary(get().library.map(x => (x.id === id ? { ...x, archived: true as const } : x)));
+    if (get().edProg === 'L:' + id) set({ edProg: null });
+    flag(`Archived ${it.name}. Restore it from Archived below.`);
+  },
+  restoreLibItem(id) {
+    if (get().blocked()) return;
+    const it = get().library.find(x => x.id === id); if (!it || !it.archived) return;
+    get().setLibrary(get().library.map(x => { if (x.id !== id) return x; const { archived: _a, ...rest } = x; return rest; }));
+    flag(`Restored ${it.name}`);
   },
   applyStarter(starterId, perWeek) {
     if (get().blocked()) return 'Wait a moment and try again.';
@@ -282,18 +289,33 @@ export const editorSlice = (set: StoreSet, get: StoreGet, flag: Flag): EditorSli
     flag(`${starter.name} added, ${perWeek} days a week`);
     return null;
   },
-  createProgram(name, from) {
+  createProgram(name, from, keepOpen = false) {
     if (get().blocked()) return false;
     const srcProg = from === 'empty' ? BLANK.A : get().programs[from] || get().programs.A;
-    const it = get().libSnapshot(name.trim(), srcProg, from, false); it.created = true;
+    const it = get().libSnapshot(name.trim().slice(0, 60), srcProg, from, false); it.created = true;
     if (from === 'empty') delete it.from;
     // The copy gets its own slot ids so check-offs and phase defaults never mix with the program it came from;
     // the source's saved phase defaults carry over to the new ids.
     const phDef = reId(it.prog, slotsFor(srcProg), 'P' + it.id.slice(-5), get().cfg.phDef);
     if (Object.keys(phDef).length) get().mutateCfg(c => { Object.assign(c.phDef, phDef); });
-    set({ library: get().library.map(x => (x.id === it.id ? it : x)), edProg: 'L:' + it.id, edDay: 1, modal: null });
+    set({ library: get().library.map(x => (x.id === it.id ? it : x)), edProg: 'L:' + it.id, edDay: 1, ...(keepOpen ? {} : { modal: null }) });
     get().saveLibrary(); flag('Program created');
     return true;
+  },
+  // A starter made into a library program (not onto the board, unlike applyStarter): its exercises join the account's library, and the
+  // Create sheet keeps its place to offer loading it. The new program is the open one in the editor (`edProg`).
+  createStarterProgram(starterId, perWeek, name) {
+    if (get().blocked()) return 'Wait a moment and try again.';
+    const starter = starterById(starterId);
+    if (!starter) return 'Pick a program to start from.';
+    const built = buildStarter(starter, perWeek, get().cfg, 'A', ymd(weekStartOf(new Date())));
+    if (!built) return 'That many days a week is not offered for this program.';
+    if (Object.keys(built.newEx).length) get().mutateCfg(c => { Object.assign(c.ex!, built.newEx); c.muscleMap = { ...(c.muscleMap || {}), ...built.newTags }; });
+    const it = get().libSnapshot(name.trim().slice(0, 60), built.program, 'A', false); it.created = true; delete it.from;
+    reId(it.prog, slotsFor(built.program), 'P' + it.id.slice(-5), {}); // its own card ids, so nothing mixes with Program A's
+    set({ library: get().library.map(x => (x.id === it.id ? it : x)), edProg: 'L:' + it.id, edDay: 1 });
+    get().saveLibrary(); flag('Program created');
+    return null;
   },
 
   // Save the add/edit exercise sheet. Returns an error message, or null when saved.

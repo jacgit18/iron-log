@@ -26,9 +26,9 @@ export function recipeFromCatalog(item: CatalogItem, used: Iterable<string>, ser
 }
 
 /** Why a recipe can't be saved as it is, or null. `list` is your recipes without this one. */
-export function recipeError(list: Recipe[], r: { n: string; ing: { n: string }[] }): string | null {
+export function recipeError(list: Recipe[], r: { n: string; ing: { n: string }[]; cat?: string }): string | null {
   if (!r.n.trim()) return 'Give the recipe a name.';
-  if (!r.ing.some(i => i.n.trim())) return 'Add at least one ingredient.';
+  if (r.cat !== 'ready' && !r.ing.some(i => i.n.trim())) return 'Add at least one ingredient.'; // a ready-made food has none
   if (list.length >= MAX_RECIPES) return `You can keep up to ${MAX_RECIPES} recipes. Delete one to add another.`;
   return null;
 }

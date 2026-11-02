@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { MuscleKey } from '../../types.ts';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { exInfo } from '../../lib/data.js';
@@ -8,10 +7,10 @@ import { newestFirst } from '../../lib/exerciseOrder.js';
 import { goalExercises } from '../../lib/goalRows.js';
 import { fmtLb } from '../../lib/body.js';
 import { goalPhaseLabel, liftGoalsOf, liftGoalsStatus } from '../../lib/liftGoal.js';
-import { trainsMuscle } from '../../lib/muscleFilter.js';
 import { MUSCLES } from '../../lib/muscles.js';
 import Icon from '../Icon.jsx';
 import LiftGoal from './LiftGoal.jsx';
+import { useFiltered } from './useFiltered.js';
 import './MuscleLists.css';
 
 const CAP = 5;
@@ -29,10 +28,6 @@ export function MuscleChip() {
   );
 }
 
-function useFiltered(ids: string[]) {
-  const cfg = useAppStore(s => s.cfg); const sel = useAppStore(s => s.bodySel) as MuscleKey | null; const withSec = useAppStore(s => s.bodySec);
-  return ids.filter(id => trainsMuscle(cfg, id, sel, withSec));
-}
 
 // One line per goal: name, bar, percent. Tap a row for its edit form.
 export function GoalRows({ onAll }: { onAll: () => void }) {

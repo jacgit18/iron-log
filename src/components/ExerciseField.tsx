@@ -17,7 +17,7 @@ type Props = {
   cat?: CatalogItem | null; onCat?: (c: CatalogItem | null) => void;
 };
 
-const catalogMeta = (c: CatalogItem) => [c.data.eq ? EQUIPMENT[c.data.eq] : '', c.data.muscles?.p?.length ? muscleList(c.data.muscles.p) : ''].filter(Boolean).join(' · ');
+export const catalogMeta = (c: CatalogItem) => [c.data.eq ? EQUIPMENT[c.data.eq] : '', c.data.muscles?.p?.length ? muscleList(c.data.muscles.p) : ''].filter(Boolean).join(' · ');
 
 export default function ExerciseField({ cfg, id, name, url, eq = '', onName, onUrl, onEq, cat = null, onCat }: Props) {
   // Your library, plus exercises your programs, versions, experiments or logs still use that are not in it (exerciseOptions).

@@ -11,8 +11,9 @@ for (const [w, zoom] of [[320, true], [390, true], [320, false]]) {
     await page.click('#tab-program');
     await page.getByRole('button', { name: 'Programs', exact: true }).click();
     await page.getByRole('button', { name: 'Create a program' }).click();
-    await page.locator('.sheet input').fill(NAME);
+    await page.getByLabel('Name').fill(NAME);
     await page.keyboard.press('Enter');
+    await page.getByRole('button', { name: /^Not yet/ }).click();
     await expect(page.locator('#ed-title')).toContainText('Supercalifragilisticexpialidocious');
     const m = await page.evaluate(() => { const h = document.querySelector('#ed-title').getBoundingClientRect(); return { scroll: document.documentElement.scrollWidth, w: innerWidth, hRight: h.right }; });
     expect(m.scroll, `page ${m.scroll} wide in ${m.w}`).toBeLessThanOrEqual(m.w);
@@ -42,8 +43,9 @@ for (const [w, zoom] of [[320, false], [320, true]]) {
     await page.click('#tab-program');
     await page.getByRole('button', { name: 'Programs', exact: true }).click();
     await page.getByRole('button', { name: 'Create a program' }).click();
-    await page.locator('.sheet input').fill(NAME);
+    await page.getByLabel('Name').fill(NAME);
     await page.keyboard.press('Enter');
+    await page.getByRole('button', { name: /^Not yet/ }).click();
     await expect(page.locator('#ed-title')).toContainText('Supercalifragilisticexpialidocious');
     await page.getByRole('group', { name: 'Program to edit' }).getByRole('button', { name: 'Program A' }).click(); // the library list is under Program A and B
     const rowBtns = page.locator('.lib .edrow .edbtns .btn');

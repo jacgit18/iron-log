@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FOODS_FAILURE_TEXT, searchFoods } from './foodsClient.js';
 
 // The phone's side of the food search (brief diet-food-lookup): what is asked, how an answer is read, and each way it can fail. Every failure is a reason, never a throw.
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const answer = (status: number, body: unknown = {}) => vi.fn(async () => new Response(typeof body === 'string' ? body : JSON.stringify(body), { status }));
 
 describe('searchFoods', () => {
@@ -23,6 +23,17 @@ describe('searchFoods', () => {
     vi.stubGlobal('fetch', answer(503)); expect(await searchFoods('rice')).toEqual({ ok: false, reason: 'unavailable' });
     vi.stubGlobal('fetch', answer(200, '<html>')); expect(await searchFoods('rice')).toEqual({ ok: false, reason: 'unavailable' });
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); })); expect(await searchFoods('rice')).toEqual({ ok: false, reason: 'offline' });
+  });
+  it('logs the real status and the server’s reason, so a missing key reads differently from a missing route', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubGlobal('fetch', answer(503, { ok: false, why: 'no-key' })); await searchFoods('rice');
+    vi.stubGlobal('fetch', answer(404, '<html>')); await searchFoods('rice');
+    vi.stubGlobal('fetch', answer(200, '<html>')); await searchFoods('rice');
+    expect(warn.mock.calls.map(c => c[0])).toEqual([
+      'food search unavailable: status 503, no-key',
+      'food search unavailable: status 404, unreadable',
+      'food search unavailable: status 200, unreadable',
+    ]);
   });
   it('has words for every reason', () => {
     for (const reason of ['offline', 'limit', 'unavailable'] as const) expect(FOODS_FAILURE_TEXT[reason]).toMatch(/type the numbers/);

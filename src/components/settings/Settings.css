@@ -75,7 +75,7 @@
 .sjump .chip[aria-current="true"] {
   background: var(--m4);
   border-color: var(--m4);
-  color: var(--accent-ink);
+  color: var(--m-ink-hi);
 }
 /* With the account menu in the header (a signed-in badge, or one expected), the menu is the way to a group and the row is not drawn. Without it (Settings is a tab) the row stays. */
 @media (max-width:900px) {
@@ -330,5 +330,29 @@ html:has(.sjump) {
 .manualcopy summary,
 .imppaste summary {
   padding: var(--sp-12) 0;
+}
+/* Last in the file so it wins over the one-column rules above: from 1280px the page has two columns, each at most 46rem. Training and Data share the first row (Training left, Data right); App and Erase & delete run across both columns with their own two panel columns lined up under them. Grid placement only, so DOM and tab order are unchanged. */
+@media (min-width:1280px) {
+  .smain {
+    grid-template-columns: 11rem minmax(0,1fr);
+  }
+  .sgroups {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,46rem));
+    gap: 24px var(--sp-16);
+    align-items: start;
+  }
+  .sgroups>.sgroup[data-group="app"],
+  .sgroups>.sgroup[data-group="erase"] {
+    grid-column: 1 / -1;
+  }
+  .sgroups>.sgroup[data-group="app"] .sgrid,
+  .sgroups>.sgroup[data-group="erase"] .sgrid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  /* A column with nothing in it (Data's account column when signed out) would leave a blank gap in the group. */
+  .settings .scol:empty {
+    display: none;
+  }
 }
 }

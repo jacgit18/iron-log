@@ -1,0 +1,16 @@
+@layer base, components;
+@layer components {
+/* Serving size (recipe form): two boxes and a button under Category, Servings and Minutes, every target 44px. */
+.rc-serving {
+  display: grid;
+  gap: var(--sp-8);
+  margin: var(--sp-8) 0;
+}
+.rc-serving input,
+.rc-serving .btn {
+  min-height: 44px;
+}
+.rc-serving .btn {
+  justify-self: start;
+}
+}

@@ -1,0 +1,6 @@
+@layer base, components;
+@layer components {
+.qasheet {
+  max-width: 640px;
+}
+}

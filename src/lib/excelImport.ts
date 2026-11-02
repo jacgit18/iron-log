@@ -90,7 +90,7 @@ function readSessions(X: XLSX, sessions: Rows, cfg: Cfg) {
     if (!tags[id]) tags[id] = { prim: String(prim || ''), sec: String(sec || '') };
   }
   // Same cleaning as a JSON file: a session on a date that doesn't exist (2026-02-31) or with numbers out of range is fixed or skipped.
-  Object.keys(logs).forEach(id => { const L = normEntries(logs[id]); skipped += logs[id].length - L.length; if (L.length) logs[id] = L.sort((a, b) => a.d.localeCompare(b.d)); else delete logs[id]; });
+  Object.keys(logs).forEach(id => { const L = normEntries(logs[id]); skipped += logs[id].length - L.length; if (L.length) logs[id] = L.sort((a, b) => a.d.localeCompare(b.d)); else delete logs[id]; }); // sort-ok: ISO date strings
 
   // Muscle tags, only where they differ from the built-in ones (e.g. new exercises or ones you re-tagged).
   const muscleMap: Record<string, MuscleTags> = {};
@@ -198,9 +198,9 @@ function readDataSheets(X: XLSX, rows: (name: string) => Rows | null) {
   const warms = Object.fromEntries(info.slice(1).map(([o, w]) => [str(o), str(w)]));
   const owners = Object.create(null); prog.slice(1).forEach(r => { (owners[str(r[0])] = owners[str(r[0])] || []).push(r); });
   const programs: Record<string, Program> = {}; ['A', 'B'].forEach(k => { if (owners[k]) programs[k] = readProgram(owners[k], warms[k]); });
-  const library = lib.slice(1).filter(r => r[0] !== '').map(([id, name, from, at, auto, created]) => {
+  const library = lib.slice(1).filter(r => r[0] !== '').map(([id, name, from, at, auto, created, archived]) => {
     const it: any = { id: str(id), name: str(name), at: str(at), prog: readProgram(owners[str(id)] || [], warms[str(id)]) };
-    put(it, 'from', str(from)); if (str(auto) === 'Yes') it.auto = true; if (str(created) === 'Yes') it.created = true; return it;
+    put(it, 'from', str(from)); if (str(auto) === 'Yes') it.auto = true; if (str(created) === 'Yes') it.created = true; if (str(archived) === 'Yes') it.archived = true; return it;
   });
   const config: Record<string, unknown> = {};
   conf.slice(1).forEach(([k, v]) => { try { config[str(k)] = JSON.parse(str(v)); } catch { /* skip an unreadable setting */ } });

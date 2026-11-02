@@ -1,3 +1,4 @@
+import { LIST_NAMES, type ListName } from '../shared/commands.js';
 import type { MirrorStore } from './mirrorStore.js';
 import type { FailureClass, PullOutcome, Transport } from './transport.js';
 import type { ServerRow, SyncTable } from './types.js';
@@ -33,6 +34,8 @@ export async function pullAll(transport: Pick<Transport, 'pull'>, store: MirrorS
     for (const row of out.rows) {
       // A table this version of the app does not know: the server is newer. Stop without moving the cursor, so nothing is skipped.
       if (!KNOWN.includes(row.table)) return stop('outdated', `the server sent a table this version does not know: ${String(row.table)}`, null);
+      // The same for a list this version does not know: the rows would be skipped and the cursor would move past them for good.
+      if (row.table === 'list_items' && !LIST_NAMES.includes(row.list as ListName)) return stop('outdated', `the server sent a list this version does not know: ${String(row.list).slice(0, 40)}`, null);
       (byTable[row.table] ||= []).push(row);
     }
     if (!/^\d+$/.test(out.cursor)) return stop('server', 'the server sent a cursor that is not a number', null);

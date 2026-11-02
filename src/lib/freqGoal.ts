@@ -16,7 +16,7 @@ export const sessionsInWeek = (entries: LogEntry[] | null | undefined, weekKey: 
 export function freqGoalStatus(cfg: Cfg, logs: Logs, weekKey: string, columnOf?: (slot: string) => number | null) {
   return Object.entries(cfg.freqGoals || {})
     .map(([id, goal]) => { const done = sessionsInWeek(logs[id], weekKey, columnOf); return { id, goal, done, met: done >= goal }; })
-    .sort((a, b) => Number(a.met) - Number(b.met) || a.id.localeCompare(b.id));
+    .sort((a, b) => Number(a.met) - Number(b.met) || a.id.localeCompare(b.id)); // sort-ok: ids, after the met flag
 }
 
 /** Average exercises done on a day you trained, over the given weeks (null when no day had any). `dayDone` is each board day's count (weekSummary). */

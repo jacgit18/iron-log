@@ -3,14 +3,18 @@ import type { EquipmentId, LogEntry, LogSet, PhaseKey } from '../../types.ts';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
+import { entryId } from '../../lib/export.js';
 import { PHASES, PH_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
 import { ymd, parseDate, fmtShort } from '../../shared/dates.js';
 import {
-  phaseOf, isTimed, targetOf, rxOf, lastSession, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
+  phaseOf, isItemDone, isItemSkipped, isSkipped, isTimed, targetOf, rxOf, lastSession, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
 } from '../../lib/logic.js';
+import Icon from '../Icon.jsx';
+import EditEntry from './EditEntry.jsx';
 import EquipmentField from '../EquipmentField.jsx';
 import Sheet from '../Sheet.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
+import { editModeText, sheetEntryFor } from '../../lib/loggedEntry.js';
 import { setError } from '../../shared/validate.js';
 import { selectOnFocus, advanceOnEnter, cellHint } from '../../lib/setCells.js';
 import './SetRows.css';
@@ -19,7 +23,7 @@ import './SetRows.css';
 const toRow = (x: LogSet, iso: boolean) => ({ w: x.w ?? '', r: (iso ? x.sec ?? x.r : x.r ?? x.sec) ?? '', tw: false, tr: false });
 const num = (v: string | number) => (v === '' ? null : Number(v));
 
-export default function LogSheet({ slotId, idx }: { slotId: string; idx: number }) {
+function NewLogForm({ slotId, idx }: { slotId: string; idx: number }) {
   const cfg = useAppStore(s => s.cfg); const body = useAppStore(s => s.body);
   const week = useAppStore(s => s.week);
   const logs = useAppStore(s => s.logs);
@@ -138,24 +142,72 @@ export default function LogSheet({ slotId, idx }: { slotId: string; idx: number 
         <button type="button" className="btn" onClick={st.closeModal}>Cancel</button>
         <button type="submit" className="btn primary">Save set</button>
       </div>
-      {hist.length > 0 && (
-        <div className="hist-box">
-          <div className="sect sect-tight">Recent</div>
-          <table className="hist hist-recent" role="table">
-            <thead role="rowgroup"><tr role="row"><th role="columnheader">Date</th><th role="columnheader">Phase</th><th role="columnheader" className="num">Load</th><th role="columnheader" className="num">Sets</th></tr></thead>
-            <tbody role="rowgroup">
-              {hist.map((e, i) => (
-                <tr role="row" key={i}>
-                  <td role="cell">{fmtShort(parseDate(e.d))}</td>
-                  <td role="cell">{e.ph ? PHASES[e.ph].label : '—'}</td>
-                  <td role="cell" className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
-                  <td role="cell" className="num">{volText(e)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <RecentTable entries={hist} />
     </Sheet>
   );
+}
+
+const recentOf = (entries: LogEntry[] | undefined) => (entries || []).slice(-6).reverse();
+
+// With `onEdit` each date is a button that opens that session in the edit form (the Log sheet of a done or skipped card); `editingId` marks the open one.
+function RecentTable({ entries, onEdit, editingId }: { entries: LogEntry[]; onEdit?: (e: LogEntry) => void; editingId?: string }) {
+  if (!entries.length) return null;
+  return (
+    <div className="hist-box">
+      <div className="sect sect-tight">Recent</div>
+      <table className="hist hist-recent" role="table">
+        <thead role="rowgroup"><tr role="row"><th role="columnheader">Date</th><th role="columnheader">Phase</th><th role="columnheader" className="num">Load</th><th role="columnheader" className="num">Sets</th></tr></thead>
+        <tbody role="rowgroup">
+          {entries.map((e, i) => (
+            <tr role="row" key={i}>
+              <td role="cell">{!onEdit ? fmtShort(parseDate(e.d)) : editingId === entryId(e)
+                ? <>{fmtShort(parseDate(e.d))} · Editing</>
+                : <button type="button" className="btn sm ghost" aria-label={`${fmtShort(parseDate(e.d))} · Edit entry`} onClick={() => onEdit(e)}>{fmtShort(parseDate(e.d))} · Edit</button>}</td>
+              <td role="cell">{e.ph ? PHASES[e.ph].label : '—'}</td>
+              <td role="cell" className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
+              <td role="cell" className="num">{volText(e)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// A checked-off or skipped card whose session is logged: the numbers can be corrected here, the way they can from Progress.
+function LoggedView({ slotId, idx, entry, skipped }: { slotId: string; idx: number; entry: LogEntry; skipped: boolean }) {
+  const cfg = useAppStore(s => s.cfg);
+  const logs = useAppStore(s => s.logs);
+  const st = useAppStore.getState();
+  const s = st.slotById(slotId)!;
+  const it = s.items[idx]; const ex = exInfo(cfg, it.ex);
+  const [shown, setShown] = useState(entry); // the session in the form: this card's, or one picked from Recent
+  const mine = entryId(shown) === entryId(entry);
+  return (
+    <Sheet>
+      {!skipped && <div className="editbanner"><Icon name="edit" /><b>Edit mode</b><span>{editModeText(fmtShort(parseDate(shown.d)))}</span></div>}
+      <div className="loggedhead">
+        <h2 className="cond">{ex.n}</h2>
+        <span className="loggedchip"><Icon name="check" />Logged</span>
+      </div>
+      <p className="loggedsum">{fmtShort(parseDate(shown.d))} · {shown.ph ? PHASES[shown.ph].label : 'No phase'} · {describe(shown)}{mine && skipped ? ' · Skipped this week' : ''}</p>
+      <EditEntry key={entryId(shown)} exId={it.ex} entry={shown} onDone={st.closeModal} cancelLabel={skipped ? 'Close' : 'Cancel'}
+        footer={!mine ? undefined : skipped
+          ? <button type="button" className="btn sm ghost mr-auto" onClick={() => { if (isItemSkipped(s, idx, st.week)) st.skipItem(slotId, idx); else st.skipCard(slotId); st.checkItem(slotId, idx, true); st.closeModal(); }}>Undo skip</button>
+          : <button type="button" className="btn sm ghost mr-auto" onClick={() => { st.checkItem(slotId, idx, false); st.closeModal(); }}>Uncheck and remove</button>} />
+      <RecentTable entries={recentOf(logs[it.ex])} onEdit={setShown} editingId={entryId(shown)} />
+    </Sheet>
+  );
+}
+
+// The Log button: a blank form for a card that is not logged yet, the logged session to edit once it is (also when the card was skipped after).
+export default function LogSheet({ slotId, idx }: { slotId: string; idx: number }) {
+  const week = useAppStore(s => s.week);
+  const wk = useAppStore(s => s.weekKey());
+  const logs = useAppStore(s => s.logs);
+  const s = useAppStore.getState().slotById(slotId)!;
+  // A skipped exercise is not done, but a session logged for it this week is still there to correct (planned check-off entries go with the skip).
+  const skipped = isSkipped(s, week) || isItemSkipped(s, idx, week);
+  const entry = sheetEntryFor(logs[s.items[idx].ex], slotId, wk, isItemDone(s, idx, week), skipped);
+  return entry ? <LoggedView slotId={slotId} idx={idx} entry={entry} skipped={skipped} /> : <NewLogForm slotId={slotId} idx={idx} />;
 }

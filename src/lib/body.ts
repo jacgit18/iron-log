@@ -1,6 +1,6 @@
 import type { BodyEntry, BodyGoal } from '../types.ts';
 
-export const bwSorted = (body: BodyEntry[]) => [...body].filter(e => e && e.wk && Number(e.w) > 0).sort((a, b) => a.wk.localeCompare(b.wk));
+export const bwSorted = (body: BodyEntry[]) => [...body].filter(e => e && e.wk && Number(e.w) > 0).sort((a, b) => a.wk.localeCompare(b.wk)); // sort-ok: ISO date strings
 export const fmtLb = (n: number | string) => `${Math.round(Number(n) * 10) / 10}`;
 export const signed = (n: number, dp = 0) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toFixed(dp)}`;
 

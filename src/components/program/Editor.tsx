@@ -4,19 +4,28 @@ import type { ProgKey } from '../../types.ts';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { PHASES, exInfo } from '../../lib/data.js';
+import { PHASES } from '../../lib/data.js';
 import { progName, DAYS } from '../../lib/logic.js';
-import { exerciseCount } from '../../lib/exerciseCount.js';
+import { dayPickLabel, exerciseCount } from '../../lib/exerciseCount.js';
 import { slotSummary } from '../../lib/programMove.js';
+import { archivedHeading, splitLibrary } from '../../lib/programArchive.js';
+import { DEFAULT_PROGRAM_SORT, PROGRAM_SORTS } from '../../lib/programSort.js';
 import { sameProg, libDate } from '../../lib/export.js';
 import { MON, fmtShort, parseDate, weekStartOf, ymd } from '../../shared/dates.js';
 import ArmedButton from '../ArmedButton.jsx';
 import CommitInput from '../CommitInput.jsx';
+import DaySummary from './DaySummary.jsx';
 import Icon from '../Icon.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
+import SortControl from '../SortControl.jsx';
+import { useSortChoice } from '../useSortChoice.js';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
+import ProgramStrip from './ProgramStrip.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
+import { boardNote, onBoardKeys } from '../../lib/programDay.js';
+import { pageOf, programKey, programPath } from '../../lib/route.js';
+import { navigate, useRoutePath } from '../useRoute.js';
 import './Editor.css';
 
 const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slots.length, 0); return `${n} exercise${n === 1 ? '' : 's'}`; };
@@ -24,12 +33,12 @@ const progStats = (p: Program) => { const n = p.days.reduce((a, d) => a + d.slot
 // Where a moved card went, for the Moved notice and its Go to button: a day title in this program, or the other program and its day.
 const movedWhere = (m: EdMoved, prog: { days: { title: string }[] }) => (m.toKey ? `${m.toLabel} · Day ${m.to}` : prog.days[m.to - 1]!.title);
 
-function LibRow({ name, meta, inUse, onLoad, loadLabel, extra, removing }: { name: string; meta: string; inUse: boolean; onLoad: () => void; loadLabel: string; extra?: ReactNode; removing?: boolean }) {
+function LibRow({ name, meta, inUse, onLoad, loadLabel, extra, removing }: { name: string; meta: string; inUse: boolean; onLoad?: () => void; loadLabel?: string; extra?: ReactNode; removing?: boolean }) {
   return (
     <div className={`edrow${inUse ? ' inuse' : ''}${removing ? ' removing' : ''}`}>
       <div className="edmain">{removing && <span className="tag rmtag">Will be deleted · tap Delete again</span>}<b>{name}</b><span className="note">{meta}</span></div>
       <div className="edbtns">
-        {inUse ? <span className="pill">In use</span> : <ArmedButton className="btn sm" aria-label={`Load ${name}`} label="Load" armedLabel={loadLabel} onConfirm={onLoad} />}
+        {inUse ? <span className="pill">In use</span> : !onLoad ? null : <ArmedButton className="btn sm" aria-label={`Load ${name}`} label="Load" armedLabel={loadLabel ?? 'Tap to load'} onConfirm={onLoad} />}
         {extra}
       </div>
     </div>
@@ -43,30 +52,50 @@ function Library({ k, custom }: { k: string; custom: boolean }) {
   const [arming, setArming] = useState<string | null>(null); // the program whose Delete was pressed once
   const today = useToday(s => s.today);
   const cur = programs[k]; const pn = progName(cfg, k);
-  const items = [...library].sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  const [sort, setSort] = useSortChoice('programs', PROGRAM_SORTS, DEFAULT_PROGRAM_SORT);
+  const { active: items, archived } = splitLibrary(library, sort);
+  const metaOf = (it: LibraryItem) => `${boardNote(onBoardKeys(it.prog, programs as Record<'A' | 'B', Program>).map(b => progName(cfg, b)))} · ${libDate(it.at)} · ${progStats(it.prog)} · ${it.created ? (it.from ? `Created from ${progName(cfg, it.from)}` : 'Created new') : `From ${progName(cfg, it.from as string)}`}${it.auto ? ' · auto-saved' : ''}`;
+  const deleteBtn = (it: LibraryItem) => (
+    <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Tap again to delete" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); st.deleteLibItem(it.id); }} />
+  );
   const saved = !custom || library.some(it => sameProg(it.prog, cur));
   const loadLabel = `Tap to load into ${pn}`;
   return (
     <section className="panel edpanel edprog lib mt-16">
-      <div className="inline spread">
-        <h2>Program library</h2>
-        <button type="button" className="btn" onClick={() => { if (!st.blocked()) st.openModal({ type: 'newprog' }); }}>Create a program</button>
-      </div>
-      <p className="note">Load a version into {pn}. Whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
+      <h2>Program library</h2>
+      <p className="note">Your saved programs. Load one into {pn} to put it on your Board; whatever {pn} has now is saved here first if it isn't already, so loading never loses anything.</p>
       <RemovedNotice scope="library" />
+      {(items.length > 1 || archived.length > 1) && <div className="inline"><SortControl options={PROGRAM_SORTS} value={sort} onChange={setSort} /></div>}
       <div className="edlist">
         {items.map(it => (
           <LibRow
             key={it.id} name={it.name} removing={arming === it.id} inUse={custom && sameProg(it.prog, cur)} loadLabel={loadLabel} onLoad={() => st.loadVersion(it.id, k as ProgKey)}
-            meta={`${it.created ? (it.from ? `Created from ${progName(cfg, it.from)}` : 'Created new') : `From ${progName(cfg, it.from as string)}`} · ${libDate(it.at)} · ${progStats(it.prog)}${it.auto ? ' · auto-saved' : ''}`}
+            meta={metaOf(it)}
             extra={<>
               <button type="button" className="btn sm" aria-label={`Edit ${it.name}`} onClick={() => { st.setEdProg('L:' + it.id); st.setEdDay(1); window.scrollTo({ top: 0 }); }}>Edit</button>
-              <ArmedButton className={`btn sm ${arming === it.id ? 'danger' : 'ghost'}`} aria-label={`Delete ${it.name}`} label="Delete" armedLabel="Tap again to delete" onArmedChange={a => setArming(a ? it.id : null)} onConfirm={() => { setArming(null); st.deleteLibItem(it.id); }} />
+              <button type="button" className="btn sm ghost" aria-label={`Archive ${it.name}`} onClick={() => st.archiveLibItem(it.id)}>Archive</button>
+              {deleteBtn(it)}
             </>}
           />
         ))}
-        {!items.length && <p className="note">No programs yet. Create one to build your own.</p>}
+        {!items.length && <p className="note">{archived.length ? `No active programs. ${archived.length} archived.` : 'No programs yet. Use Create a program, at the top, to build your own.'}</p>}
       </div>
+      {archived.length > 0 && (
+        <details className="libarchive">
+          <summary>{archivedHeading(archived.length)}</summary>
+          <div className="edlist">
+            {archived.map(it => (
+              <LibRow
+                key={it.id} name={it.name} removing={arming === it.id} inUse={false} meta={metaOf(it)}
+                extra={<>
+                  <button type="button" className="btn sm" aria-label={`Restore ${it.name}`} onClick={() => st.restoreLibItem(it.id)}>Restore</button>
+                  {deleteBtn(it)}
+                </>}
+              />
+            ))}
+          </div>
+        </details>
+      )}
       <form className="libsave" noValidate onSubmit={e => { e.preventDefault(); st.saveCurrentAs(name); setName(''); }}>
         <label className="field grow">Save {pn} as
           <input id="lib-name" maxLength={60} value={name} onChange={e => setName(e.target.value)} placeholder={`e.g. ${pn} · ${MON[today.getMonth()]} ${today.getFullYear()}`} />
@@ -82,7 +111,7 @@ function LibItemPanel({ it }: { it: LibraryItem }) {
   const cfg = useAppStore(s => s.cfg); const st = useAppStore.getState();
   return (
     <section className="panel edpanel edprog lib mt-16">
-      <h2>Put it into the rotation</h2>
+      <h2>Put it on your Board</h2>
       <p className="note">Loading replaces what's in that slot. The program there now is saved to the library first if it isn't already, so nothing is lost. {it.name} stays in the library too.</p>
       <div className="actions start flexwrap">
         {(['A', 'B'] as const).map(k => (
@@ -103,6 +132,15 @@ function ProgramEditor() {
   const st = useAppStore.getState();
   // Pin the editor to the program it opened on, like the original, so it doesn't follow later board changes.
   useEffect(() => { if (edProg !== k) st.setEdProg(k); }, [edProg, k, st]);
+  // The program shown is in the address (#/program/b). An address that names one opens it; picking A or B (or arriving on plain #/program) swaps the address to the one shown.
+  // A library program has no address of its own (an id never goes in one). `prevK` tells a change of program from the first look, so a pasted address is not overwritten.
+  const path = useRoutePath(); const named = programKey(path); const prevK = useRef<string | null>(null);
+  useEffect(() => { if (named && named !== k) st.setEdProg(named); }, [named]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const changed = prevK.current !== null && prevK.current !== k; prevK.current = k;
+    const to = programPath(k);
+    if (to && (path === 'program' || changed)) navigate(to, 'replace');
+  }, [k, path]); // eslint-disable-line react-hooks/exhaustive-deps
   // When the panel that held the focused button is replaced (edit/create/load), land on the editor heading.
   useEffect(() => {
     const a = document.activeElement;
@@ -114,49 +152,28 @@ function ProgramEditor() {
   const { drag, rowRef, handleProps } = useDragReorder(day.slots.length, st.reorderEdSlot);
   const custom = !lib && !st.isOriginal(prog as Program, k as ProgKey);
   const edName = lib ? item.name : progName(cfg, k);
-  // The row whose Remove is armed (pressed once): it is shown marked for removal until the second press or a move away.
-  const [arming, setArming] = useState<number | null>(null);
   const removed = useAppStore(s => s.edRemoved);
   const showRemoved = removed && removed.key === k && removed.day === edDay ? removed : null;
-  // The pressed Remove button is gone with its row, so put focus on Undo: only right after a Remove, not when the tab opens again.
+  // The row (and its Remove in the ⋯ sheet) is gone, so put focus on Undo. The notice is cleared when the editor unmounts, so it only shows after a Remove made in this visit.
   const undoRef = useRef<HTMLButtonElement>(null);
-  const justRemoved = useRef(false);
-  useEffect(() => { if (removed && justRemoved.current) { justRemoved.current = false; undoRef.current?.focus(); } }, [removed]);
+  useEffect(() => { if (removed) undoRef.current?.focus(); }, [removed]);
   // The Undo belongs to this visit to the editor: leaving the Program tab drops it.
   useEffect(() => () => { useAppStore.getState().dismissEdRemoved(); }, []);
-  // Same for the Moved notice. Its Go to button opens the day the card went to and puts focus on that card's Move to select.
+  // Same for the Moved notice. Its Go to button opens the day the card went to and puts focus on that card's ⋯ button.
   const moved = useAppStore(s => s.edMoved);
   const showMoved = moved && moved.key === k && moved.from === edDay ? moved : null;
+  const copied = useAppStore(s => s.edCopied);
+  const showCopied = copied && copied.key === k && copied.from === edDay ? copied : null;
+  const [copyPick, setCopyPick] = useState<number | null>(null);
+  const copyTo = copyPick != null && copyPick !== edDay ? copyPick : DAYS.find(d => d !== edDay)!; // a day other than the open one
+  const copiedUndoRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (copied) copiedUndoRef.current?.focus(); }, [copied]);
   const movedUndoRef = useRef<HTMLButtonElement>(null);
   const focusAfterGo = useRef<string | null>(null);
-  // Arrow keys on a closed select change its value at once (on macOS they open the menu). A change that comes from them waits here for Enter (Escape or leaving drops it), so a keyboard user can look through the days before a card moves.
-  const [pendingDay, setPendingDay] = useState<{ i: number; item: number | null; to: number } | null>(null);
-  const arrowKey = useRef(false);
-  const applyMove = (i: number, item: number | null, to: number) => {
-    setPendingDay(null);
-    if (to === edDay) return;
-    if (item == null) st.moveEdSlotToDay(i, to); else st.moveEdItemToDay(i, item, to);
-  };
-  // The Move to day select of a card (item null) or of one exercise of a superset (item = its position).
-  const daySelect = (sl: { id: string }, i: number, item: number | null, label: string) => {
-    const pend = pendingDay?.i === i && pendingDay.item === item;
-    return (
-      <select className="edmove" id={item == null ? `mv-${sl.id}` : `mvi-${sl.id}-${item}`} aria-label={item == null ? `Move to day (${label})` : `Move ${label} to another day`} value={pend ? pendingDay.to : edDay}
-        onChange={e => { const to = Number(e.target.value); if (arrowKey.current) setPendingDay({ i, item, to }); else applyMove(i, item, to); }}
-        onKeyDown={e => {
-          arrowKey.current = e.key.startsWith('Arrow') && !e.altKey;
-          if (arrowKey.current) setTimeout(() => { arrowKey.current = false; }, 0); // a closed select changes inside this keydown; where the arrow opens the menu instead (macOS) the later pick must move the card
-          if (e.key === 'Enter' && pend) { e.preventDefault(); applyMove(i, item, pendingDay.to); } else if (e.key === 'Escape') setPendingDay(null);
-        }}
-        onBlur={() => setPendingDay(null)}>
-        {DAYS.map(d => <option key={d} value={d}>{d === edDay ? `Move to… (Day ${d})` : `Move to Day ${d}`}</option>)}
-      </select>
-    );
-  };
-  // A move that happened (from the select or the Move… sheet) leaves the moved row behind: focus goes to Undo.
+  // A move that happened (from the ⋯ sheet or the Move to another program sheet) leaves the moved row behind: focus goes to Undo.
   useEffect(() => { if (moved) movedUndoRef.current?.focus(); }, [moved]);
   useEffect(() => { if (focusAfterGo.current) { document.getElementById(focusAfterGo.current)?.focus(); focusAfterGo.current = null; } }, [edDay, k]);
-  useEffect(() => () => { useAppStore.getState().dismissEdMoved(); }, []);
+  useEffect(() => () => { const s = useAppStore.getState(); s.dismissEdMoved(); s.dismissEdCopied(); }, []);
   const addBtn = <button type="button" className="btn primary" onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: null }); }}>+ Add exercise</button>;
 
   return (
@@ -166,24 +183,58 @@ function ProgramEditor() {
           {['A', 'B'].map(p => <button type="button" key={p} className={p === k ? 'on' : ''} aria-pressed={p === k} onClick={() => st.setEdProg(p)}>{progName(cfg, p)}</button>)}
           {lib && <button type="button" className="on segname" aria-pressed="true">{item.name}</button>}
         </div>
-        <div className="seg" role="group" aria-label="Day to edit">
-          {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}<span className="edcount" aria-hidden="true">{exerciseCount(prog.days[d - 1]?.slots ?? [])}</span></button>)}
+        <button type="button" className="btn createprog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'newprog' }); }}>Create a program</button>
+        <div className="dayctl">
+          <div className="daystep" role="group" aria-label="Day stepper">
+            <button type="button" className="btn daystepbtn" aria-label="Previous day" aria-disabled={edDay === 1} onClick={() => { if (edDay > 1) st.setEdDay(edDay - 1); }}><Icon name="chevron-left" /></button>
+            <select className="btn daypick" aria-label="Day to edit" value={edDay} onChange={e => st.setEdDay(Number(e.target.value))}>
+              {DAYS.map(d => <option key={d} value={d}>{dayPickLabel(d, DAYS.length, exerciseCount(prog.days[d - 1]?.slots ?? []))}</option>)}
+            </select>
+            <button type="button" className="btn daystepbtn" aria-label="Next day" aria-disabled={edDay === DAYS.length} onClick={() => { if (edDay < DAYS.length) st.setEdDay(edDay + 1); }}><Icon name="chevron-right" /></button>
+          </div>
+          <div className="seg daybtns" role="group" aria-label="Jump to day">
+            {DAYS.map(d => <button type="button" key={d} className={d === edDay ? 'on' : ''} aria-pressed={d === edDay} onClick={() => st.setEdDay(d)}>Day {d}</button>)}
+          </div>
         </div>
       </div>
       {lib ? (
         <>
-          <div className="notice tip libnote"><span><b>{item.name}</b> is in your library, not in the rotation. Build it here, then load it into {progName(cfg, 'A')} or {progName(cfg, 'B')} when you're ready to train it.</span></div>
+          <div className="notice tip libnote"><span><b>{item.name}</b> is in your library, not on your Board. Build it here, then load it into {progName(cfg, 'A')} or {progName(cfg, 'B')} when you're ready to train it.</span></div>
           <label className="field progname">Program name
             <CommitInput key={`L${item.id}:${item.name}`} id="prog-name" maxLength={60} value={item.name} onCommit={st.renameLibItem} />
           </label>
         </>
       ) : null}
+      <ProgramStrip />
+      <div className="edcols">
       <section className="panel edpanel edprog">
         <div className="inline flexwrap"><h2 id="ed-title" tabIndex={-1} className="mr-auto">{edName} · {day.title}</h2></div>
         <label className="field">Day label
           <CommitInput key={`${k}:${edDay}:${day.sub || ''}`} id="ed-sub" value={day.sub || ''} placeholder="e.g. Lower body + reactive power" onCommit={st.setDaySub} />
         </label>
-        <div className="actions edadd start">{addBtn}</div>
+        <div className="actions edadd start">
+          {addBtn}
+          {day.slots.length > 0 && (
+            <span className="copyday">
+              <label className="field">Copy this day to
+                <select className="btn" value={copyTo} onChange={e => setCopyPick(Number(e.target.value))}>
+                  {DAYS.filter(d => d !== edDay).map(d => <option key={d} value={d}>{dayPickLabel(d, DAYS.length, exerciseCount(prog.days[d - 1]?.slots ?? []))}</option>)}
+                </select>
+              </label>
+              <button type="button" className="btn" onClick={() => st.copyEdDay(copyTo)}>Copy</button>
+            </span>
+          )}
+        </div>
+        {showCopied && (
+          <div className="notice movewarn removednote" role="status">
+            <div><b>Copied</b> {showCopied.ids.length === 1 ? '1 card' : `${showCopied.ids.length} cards`} from {day.title} to {prog.days[showCopied.to - 1]!.title}.</div>
+            <div className="actions">
+              <button type="button" className="btn sm" ref={copiedUndoRef} onClick={st.undoCopyEdDay}>Undo</button>
+              <button type="button" className="btn sm" onClick={() => { st.setEdDay(showCopied.to); }}>Go to {prog.days[showCopied.to - 1]!.title}</button>
+              <button type="button" className="btn sm ghost" onClick={st.dismissEdCopied}>Dismiss</button>
+            </div>
+          </div>
+        )}
         {showRemoved && (
           <div className="notice movewarn removednote" role="status">
             <div><b>Removed</b> {slotSummary(cfg, showRemoved.slot)} from {day.title}.</div>
@@ -198,7 +249,7 @@ function ProgramEditor() {
             <div><b>Moved</b> {slotSummary(cfg, showMoved.slot)} to {movedWhere(showMoved, prog)}.</div>
             <div className="actions">
               <button type="button" className="btn sm" ref={movedUndoRef} onClick={st.undoMoveEdSlot}>Undo</button>
-              <button type="button" className="btn sm" onClick={() => { focusAfterGo.current = showMoved.slot.id ? `mv-${showMoved.slot.id}` : null; if (showMoved.toKey) st.setEdProg(showMoved.toKey); st.setEdDay(showMoved.to); }}>Go to {movedWhere(showMoved, prog)}</button>
+              <button type="button" className="btn sm" onClick={() => { focusAfterGo.current = showMoved.slot.id ? `more-${showMoved.slot.id}` : null; if (showMoved.toKey) st.setEdProg(showMoved.toKey); st.setEdDay(showMoved.to); }}>Go to {movedWhere(showMoved, prog)}</button>
               <button type="button" className="btn sm ghost" onClick={st.dismissEdMoved}>Dismiss</button>
             </div>
           </div>
@@ -214,45 +265,41 @@ function ProgramEditor() {
                 {newSec && <div className="sect">{sl.sec || ''}</div>}
                 <div
                   ref={rowRef(i)}
-                  className={`edrow${drag?.from === i ? ' dragging' : drag ? ' shifting' : ''}${arming === i ? ' removing' : ''}`}
+                  className={`edrow${drag?.from === i ? ' dragging' : drag ? ' shifting' : ''}`}
                   style={drag ? { transform: `translateY(${drag.from === i ? drag.dy : shiftOf(drag, i)}px)` } : undefined}
                 >
                   <span className="draghandle" aria-hidden="true" title="Drag to reorder" {...handleProps(i)}>⠿</span>
                   <div className="edmain">
-                    {arming === i ? <span className="tag rmtag">Will be removed · tap Remove again</span> : tag && <span className="tag">{tag}</span>}
+                    {tag && <span className="tag">{tag}</span>}
                     <b>{slotSummary(cfg, sl)}</b>
                     <span className="note">{sl.items.map(it => [it.ph ? PHASES[it.ph].label : 'No phase', it.w != null ? it.w + ' lb' : (it.bw ? 'bodyweight' : ''), it.rx || ''].filter(Boolean).join(' · ')).join('  |  ')}</span>
                   </div>
                   <div className="edbtns">
-                    <button type="button" className="btn sm" id={`up-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} up`} disabled={i === 0} onClick={() => st.moveEdSlot(i, -1)}><Icon name="arrow-up" /></button>
-                    <button type="button" className="btn sm" id={`down-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} down`} disabled={i === day.slots.length - 1} onClick={() => st.moveEdSlot(i, 1)}><Icon name="arrow-down" /></button>
-                    {daySelect(sl, i, null, slotSummary(cfg, sl))}
-                    <button type="button" className="btn sm" id={`mvp-${sl.id}`} aria-label={`Move ${slotSummary(cfg, sl)} to another program or day`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'moveprog', idx: i }); }}>Move…</button>
                     <button type="button" className="btn sm" id={`edit-${sl.id}`} aria-label={`Edit ${slotSummary(cfg, sl)}`} onClick={() => { if (!st.blocked()) st.openModal({ type: 'slot', idx: i }); }}>Edit</button>
-                    <ArmedButton className={`btn sm ${arming === i ? 'danger' : 'ghost'}`} id={`rm-${sl.id}`} aria-label={`Remove ${slotSummary(cfg, sl)}`} label="Remove" armedLabel="Tap again to remove" onArmedChange={a => setArming(a ? i : null)} onConfirm={() => { setArming(null); justRemoved.current = true; st.removeEdSlot(i); }} />
+                    <button type="button" className="btn sm" id={`more-${sl.id}`} aria-label={`More actions for ${slotSummary(cfg, sl)}`} aria-haspopup="dialog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'rowmenu', idx: i }); }}>⋯</button>
                   </div>
-                  {sl.type === 'superset' && sl.items.length > 1 && (
-                    <div className="edsplit" role="group" aria-label={`Move one exercise of ${slotSummary(cfg, sl)}`}>
-                      {sl.items.map((it, idx) => <label key={idx} className="edsplititem"><span>{exInfo(cfg, it.ex).n}</span>{daySelect(sl, i, idx, exInfo(cfg, it.ex).n)}</label>)}
-                    </div>
-                  )}
                 </div>
               </Fragment>
             );
           })}
         </div>
       </section>
+      <DaySummary day={day} dayNo={edDay} />
       <p className="note mt-12">
         {lib ? 'Changes are saved to this library program only. Nothing on the board changes until you load it into A or B.' : `Changes apply to every week that uses ${progName(cfg, k)}. Your logged sets stay as they are.`}
       </p>
       {lib ? <LibItemPanel it={item} /> : <Library k={k} custom={custom} />}
+      </div>
     </>
   );
 }
 
 // The Program tab: the programs, and the exercise and stretch libraries (supplements are on Daily → Supplements, under Edit).
 export default function Editor() {
-  const [view, setView] = useState('program');
+  // The view is in the address (#/program/exercises); the segmented control swaps it instead of adding a Back step.
+  const page = pageOf(useRoutePath(), 'program');
+  const view = page === 'a' || page === 'b' ? 'program' : page ?? 'program';
+  const setView = (v: string) => navigate(v === 'program' ? 'program' : `program/${v}`, 'replace');
   return (
     <>
       <div className="edtop">

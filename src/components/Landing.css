@@ -139,7 +139,7 @@
   font-size: var(--fs-xl);
 }
 .landing-now {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
   border-radius: var(--r-pill);
   padding: var(--sp-2) var(--sp-8);

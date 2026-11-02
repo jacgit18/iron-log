@@ -47,7 +47,7 @@ const info = ({ date, savedAt, score, entries }: BackupRecord): BackupInfo => ({
 
 export async function listBackups(): Promise<BackupInfo[]> {
   const all = await tx<BackupRecord[]>('readonly', s => s.getAll() as IDBRequest<BackupRecord[]>, []);
-  return all.map(info).sort((a, b) => b.date.localeCompare(a.date));
+  return all.map(info).sort((a, b) => b.date.localeCompare(a.date)); // sort-ok: ISO date strings
 }
 export const getBackup = (date: string) => tx<BackupRecord | undefined>('readonly', s => s.get(date) as IDBRequest<BackupRecord | undefined>, undefined);
 export async function clearBackups(): Promise<void> { await tx('readwrite', s => s.clear(), undefined); }

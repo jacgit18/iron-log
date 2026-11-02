@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry, PlanItem, Recipe, SavedMeal } from '../types.ts';
 import { MAX_DIET_PER_DAY, MAX_PLAN_ITEMS } from '../shared/diet.js';
-import { addItem, dayTotals, daysFrom, inWindow, planLog, prunePlan, recipeIdsFor, removeItem, resolve, setPortion, totalsText } from './dietPlan.js';
+import { addItem, dayTotals, daysFrom, findMatches, inWindow, planLog, prunePlan, recipeIdsFor, removeItem, resolve, setPortion, totalsText } from './dietPlan.js';
 
 const today = '2026-10-30';
 const recipes: Recipe[] = [
@@ -87,5 +87,19 @@ describe('recipeIdsFor', () => {
   it('lists the recipes of the days once each, skipping meals and removed recipes', () => {
     const p = { [today]: [r('r1'), m('m1'), r('gone')], '2026-10-31': [r('r3'), r('r1')], '2026-11-20': [r('r2')] };
     expect(recipeIdsFor(p, daysFrom(today, 7), recipes)).toEqual(['r1', 'r3']);
+  });
+});
+
+describe('findMatches', () => {
+  const r = (id: string, n: string) => ({ id, n });
+  it('sorts A to Z before the cap of 8, so the first alphabetical ones show', () => {
+    const list = ['k', 'j', 'i', 'h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'].map(x => r(x, `Dish ${x}`));
+    expect(findMatches(list, '').map(x => x.id)).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+  });
+  it('filters by text, case-blind, then sorts', () => {
+    expect(findMatches([r('1', 'Beef chili'), r('2', 'Rice'), r('3', 'chili Bean')], ' CHILI ').map(x => x.id)).toEqual(['1', '3']);
+  });
+  it('keeps equal names in id order', () => {
+    expect(findMatches([r('b', 'Soup'), r('a', 'soup')], '').map(x => x.id)).toEqual(['a', 'b']);
   });
 });

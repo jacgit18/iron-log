@@ -45,7 +45,7 @@ function MuscleDetail({ m, v, keys, withSec }: { m: MuscleKey; v: Volume[MuscleK
   const where = (r: Grouped) => keys.filter(k => r.at[k]).map(k => `${keys.length > 1 ? progName(cfg, k) + ': ' : ''}${[...r.at[k]].sort().map(d => 'D' + d).join(' ')}`).join(' · ');
   const progs = keys.map(k => progName(cfg, k)).join(' and ');
   return (
-    <section className="panel mdetail">
+    <div className="msec mdetail">
       <div className="inline between">
         <h2>{MUSCLES[m].n}</h2>
         <button type="button" className="btn sm ghost" onClick={() => selectMuscle(null)}>Close</button>
@@ -67,7 +67,7 @@ function MuscleDetail({ m, v, keys, withSec }: { m: MuscleKey; v: Volume[MuscleK
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -76,7 +76,7 @@ function Ranking({ vol, onPick }: { vol: Volume; onPick: (m: MuscleKey) => void 
   const top = Math.max(...ranked.map(x => x.s));
   const none = ranked.filter(r => !r.s);
   return (
-    <section className="panel">
+    <div className="msec">
       <h2>Weekly sets by muscle</h2>
       <p>Tap a muscle on the body or in this list to see the exercises that train it.</p>
       <div className="mbars">
@@ -95,15 +95,13 @@ function Ranking({ vol, onPick }: { vol: Volume; onPick: (m: MuscleKey) => void 
           ))}
         </p>
       )}
-    </section>
+    </div>
   );
 }
 
-// `part` 'map': the body, legend and secondary switch, for a page where a tapped muscle filters other lists.
-// 'details': the ranking, the chosen muscle's exercises and the exercises with no tags.
-export default function Muscles({ part }: { part: 'map' | 'details' }) {
-  const compact = part === 'map';
-  const details = part === 'details';
+// One box: the legend and secondary switch on top, the body on the left and, beside it, the ranking (or the chosen muscle's exercises)
+// and the exercises with no tags. A tapped muscle also filters the lists below the box on the Progress page.
+export default function Muscles() {
   const cfg = useAppStore(s => s.cfg);
   const programs = useAppStore(s => s.programs);
   const sel = useAppStore(s => s.bodySel); const withSec = useAppStore(s => s.bodySec);
@@ -130,23 +128,22 @@ export default function Muscles({ part }: { part: 'map' | 'details' }) {
   }, [sel]);
 
   return (
-    <>
-      {details && <p className="note">Every exercise in {keys.map(k => progName(cfg, k)).join(' and ')}. Sets are per week, averaged across the programs.</p>}
+    <section className="panel mapbox">
       <RemovedNotice scope="muscles" />
+      <div className="legend">
+        <span><i className="sw l0" />Not trained</span><span><i className="sw l1" />1–4 sets</span><span><i className="sw l2" />5–9</span>
+        <span><i className="sw l3" />10–20</span><span><i className="sw l4" />Over 20</span><span className="note">per week</span>
+      </div>
+      <label className="inline"><input type="checkbox" id="body-sec" checked={withSec} onChange={e => setBodySec(e.target.checked)} /> Count secondary work (as half a set)</label>
       <div className="bodywrap">
-        {compact && <div className="figs">
+        <div className="figs">
           <Figure shapes={FRONT} label="Front" vol={vol} sel={sel} onPick={pickOnBody} />
           <Figure shapes={BACK} label="Back" vol={vol} sel={sel} onPick={pickOnBody} />
-        </div>}
+        </div>
         <div className="bodyside" ref={side}>
-          {compact && <div className="legend">
-            <span><i className="sw l0" />Not trained</span><span><i className="sw l1" />1–4 sets</span><span><i className="sw l2" />5–9</span>
-            <span><i className="sw l3" />10–20</span><span><i className="sw l4" />Over 20</span><span className="note">per week</span>
-          </div>}
-          {compact && <label className="inline"><input type="checkbox" id="body-sec" checked={withSec} onChange={e => setBodySec(e.target.checked)} /> Count secondary work (as half a set)</label>}
-          {details && (sel ? <MuscleDetail m={sel} v={vol[sel]} keys={keys} withSec={withSec} /> : <Ranking vol={vol} onPick={selectMuscle} />)}
-          {details && untagged.length > 0 && (
-            <section className="panel">
+          {sel ? <MuscleDetail m={sel} v={vol[sel]} keys={keys} withSec={withSec} /> : <Ranking vol={vol} onPick={selectMuscle} />}
+          {untagged.length > 0 && (
+            <div className="msec">
               <h2>Not mapped yet</h2>
               <p>These exercises have no muscles tagged, so they don't show on the body.</p>
               <div className="mlist">
@@ -157,11 +154,11 @@ export default function Muscles({ part }: { part: 'map' | 'details' }) {
                   </div>
                 ))}
               </div>
-            </section>
+            </div>
           )}
-          {details && <p className="note">Muscle tags are a best guess for each exercise. Tap Edit on any exercise to correct them.</p>}
+          <p className="note">Every exercise in {keys.map(k => progName(cfg, k)).join(' and ')} counts, averaged across the programs. Muscle tags are a best guess; tap Edit on any exercise to correct them.</p>
         </div>
       </div>
-    </>
+    </section>
   );
 }

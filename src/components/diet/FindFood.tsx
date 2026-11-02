@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { entryText } from '../../lib/dietLog.js';
 import { findFoods, scaleFood, type Food } from '../../lib/foodMacros.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import FoodSearch, { type FoodFill } from './FoodSearch.js';
 import './Diet.css';
 
 // "Find a food" (brief diet-auto-macros): type a name, see what you logged before and your own recipes with their numbers, pick one, set a portion, add it. Nothing is stored for this; it reads the log and the recipes.
-export default function FindFood({ day, onAdded }: { day: string; onAdded: (text: string) => void }) {
+// The same words also go to the USDA food search (brief diet-food-lookup) so one box finds both; a USDA pick fills the Quick add form below, like the Look up nutrition box.
+export default function FindFood({ day, onAdded, onFood }: { day: string; onAdded: (text: string) => void; onFood: (fill: FoodFill) => void }) {
   const diet = useAppStore(s => s.diet);
   const recipes = useAppStore(s => s.recipes);
   const [q, setQ] = useState('');
@@ -30,7 +32,7 @@ export default function FindFood({ day, onAdded }: { day: string; onAdded: (text
           {found.map(f => <li key={f.n}><button type="button" className="btn sm" onClick={() => { setPicked(f); setPortion(1); }}>{f.n}{f.from ? ' (recipe)' : ''} · {entryText(f)}</button></li>)}
         </ul>
       )}
-      {q.trim() !== '' && !picked && found.length === 0 && <p className="note">No match. Add it below and it shows up here next time.</p>}
+      {q.trim() !== '' && !picked && found.length === 0 && <p className="note">Nothing in your meals or recipes matches.</p>}
       {picked && (
         <div>
           <p className="note">{picked.n}: {nums ? entryText(nums) : 'out of range'}</p>
@@ -43,6 +45,7 @@ export default function FindFood({ day, onAdded }: { day: string; onAdded: (text
           </div>
         </div>
       )}
+      {!picked && <FoodSearch text={q} onUse={f => { setQ(''); onFood(f); }} />}
       {err && <p className="note" role="alert">{err}</p>}
     </div>
   );

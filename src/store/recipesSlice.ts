@@ -1,6 +1,7 @@
 import { newRecipeId, recipeError, recipeFromCatalog, withEditedMark } from '../lib/recipeDraft.js';
+import { removeTag, renameTag, tagLimitError } from '../lib/recipeTags.js';
 import { missingParts, pantryStatus, suggestionPins } from '../lib/recipePantry.js';
-import { MAX_RECIPES, normRecipe, normRecipes } from '../shared/recipes.js';
+import { MAX_RECIPES, normRecipe, normRecipes, normTags } from '../shared/recipes.js';
 import type { CatalogItem, Recipe, RecipeIngredient } from '../types.ts';
 import type { RecipesSlice, StoreGet, StoreSet } from './types.ts';
 
@@ -20,6 +21,8 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     const err = recipeError(others, d);
     if (err) return err;
     const id = d.id ?? newRecipeId(list.map(r => r.id), d.n);
+    const limit = tagLimitError(others, normTags(d.tags));
+    if (limit) return limit;
     const made = normRecipe({ ...d, id, n: clean(d.n) });
     if (!made) return 'That recipe can’t be saved.';
     const item = withEditedMark(d.id ? list.find(r => r.id === d.id) : undefined, made);
@@ -37,6 +40,22 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
     set({ recipes: [...list, r] });
     get().saveRecipes();
     return null;
+  },
+
+  renameTag(from, to) {
+    const r = renameTag(get().recipes, from, to);
+    if (r.changed) { set({ recipes: r.list }); get().saveRecipes(); }
+    return { error: r.error, name: r.name };
+  },
+
+  removeTag(tag) {
+    const r = removeTag(get().recipes, tag);
+    if (r.changed) { set({ recipes: r.list }); get().saveRecipes(); }
+    return r.changed;
+  },
+
+  setRecipeChips(chips) {
+    get().mutateCfg(c => { if (chips) c.recipeChips = chips; else delete c.recipeChips; });
   },
 
   removeRecipe(id) {
@@ -63,7 +82,7 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   acceptSuggestions(id, month) {
     const list = get().recipes; const r = list.find(x => x.id === id);
     if (!r) return 0;
-    const pins = new Map(suggestionPins(pantryStatus(r, get().grocery, get().groceryMonths[month] ?? { lines: {}, pulled: [] })).map(p => [p.index, p.home]));
+    const pins = new Map(suggestionPins(pantryStatus(r, get().grocery, get().groceryMonths[month] ?? { lines: {}, pulled: [] }, list)).map(p => [p.index, p.home]));
     if (!pins.size) return 0;
     set({ recipes: list.map(x => (x.id === id ? { ...r, ing: r.ing.map((y, j) => (pins.has(j) ? { ...y, home: pins.get(j)! } : y)) } : x)) });
     get().saveRecipes();
@@ -73,7 +92,7 @@ export const recipesSlice = (set: StoreSet, get: StoreGet): RecipesSlice => ({
   addMissingToGrocery(id, month) {
     const r = get().recipes.find(x => x.id === id);
     if (!r) return { added: 0, already: 0, refused: null };
-    const status = pantryStatus(r, get().grocery, get().groceryMonths[month] ?? { lines: {}, pulled: [] });
+    const status = pantryStatus(r, get().grocery, get().groceryMonths[month] ?? { lines: {}, pulled: [] }, get().recipes);
     const { already, add } = missingParts(status);
     let added = 0; let refused: string | null = null;
     for (const n of add) { const e = get().addGroceryItem({ n, store: '', qty: '1', price: '', every: false }); if (e) refused ??= e; else added++; }

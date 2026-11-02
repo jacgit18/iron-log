@@ -6,11 +6,13 @@ import './Icon.css';
 const STROKE = {
   'arrow-down': 'M12 5v14M6 13l6 6 6-6',
   'arrow-up': 'M12 19V5M6 11l6-6 6 6',
+  check: 'M5 12l5 5L20 7',
   'chevron-down': 'M5 9l7 7 7-7',
   'chevron-left': 'M15 5l-7 7 7 7',
   'chevron-right': 'M9 5l7 7-7 7',
   'chevron-up': 'M5 15l7-7 7 7',
   close: 'M6 6l12 12M18 6L6 18',
+  edit: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
   info: 'M12 11v6M12 7.5v.01M12 3a9 9 0 100 18 9 9 0 000-18z',
   moon: 'M12 3a6 6 0 009 9 9 9 0 11-9-9z',
   spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z',

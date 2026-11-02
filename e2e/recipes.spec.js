@@ -22,7 +22,7 @@ const write = async (page, name, ingredients, steps = 'Mix.') => {
 test('Recipes is on the Daily tab for everyone and starts empty', async ({ page }) => {
   await recipes(page);
   await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
-  await expect(page.getByText('Write your first recipe')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Add your first recipe' })).toBeVisible();
   await noViolations(page);
 });
 
@@ -85,7 +85,7 @@ test('a recipe can be deleted with Undo', async ({ page }) => {
   await write(page, 'Short lived', ['salt']);
   const del = page.getByRole('button', { name: /Delete the recipe Short lived|Tap again to delete/ });
   await del.click(); await del.click();
-  await expect(page.getByText('Write your first recipe')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Add your first recipe' })).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByRole('button', { name: /Short lived/ })).toBeVisible();
 });

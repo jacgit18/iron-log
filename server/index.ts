@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { adminsFrom } from './admin.ts';
 import { createApp } from './app.ts';
+import { appLabelFrom } from './appLabel.ts';
 import { authConfigFrom, createAuth } from './auth/betterAuth.ts';
 import { piiBootCheck } from './auth/piiBootCheck.ts';
 import { billingConfigFrom, stripeApi } from './billing.ts';
@@ -80,7 +81,7 @@ if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 
 const trustProxy = process.env.TRUST_PROXY !== undefined ? (process.env.TRUST_PROXY === 'false' ? false : Number(process.env.TRUST_PROXY)) : process.env.K_SERVICE ? 1 : undefined;
 if (typeof trustProxy === 'number' && !Number.isInteger(trustProxy)) throw new Error('TRUST_PROXY must be a whole number of proxies, or false');
 
-const server = createApp({ db, staticDir, minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], canonicalOrigin: setup.enabled ? setup.config.baseURL : undefined, trustProxy, push, billing, foods: { key: process.env.USDA_API_KEY || undefined }, usageKey: usageKeyFrom(process.env.BETTER_AUTH_SECRET) }).listen(port, () => {
+const server = createApp({ db, staticDir, appLabel: appLabelFrom(process.env.APP_LABEL), minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], canonicalOrigin: setup.enabled ? setup.config.baseURL : undefined, trustProxy, push, billing, foods: { key: process.env.USDA_API_KEY || undefined }, usageKey: usageKeyFrom(process.env.BETTER_AUTH_SECRET) }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 

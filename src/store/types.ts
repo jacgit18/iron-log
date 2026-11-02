@@ -4,11 +4,10 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
-import type { WeekPatch } from '../lib/programMove.ts';
 import type { BackupInfo } from '../lib/autoBackup.ts';
 import type { ServerBackupList } from '../lib/serverBackups.ts';
 
@@ -203,9 +202,9 @@ export interface EdMoved {
   key: string; from: number; to: number; idx: number; slot: ProgramSlot;
   /** Only for a move to another program: where it went (program key and name) and the card as it was, with its old id, for Undo. */
   toKey?: string; toLabel?: string; orig?: ProgramSlot;
-  /** Only for one exercise taken out of a superset: `slot` is that exercise as a card of its own, `orig` the superset as it was, `ph` its phase defaults. */
-  split?: { ph: Record<string, PhaseKey | null>; /** What to write back into this week (null = remove the key) if it is still the same week. */ week?: WeekPatch; weekKey?: string };
 }
+/** The cards the Program editor last copied from one day to another: their ids, so Undo can take them back out. */
+export interface EdCopied { key: string; from: number; to: number; ids: string[] }
 export interface EdRemoved { key: string; day: number; idx: number; slot: ProgramSlot }
 
 export interface EditorSlice {
@@ -240,18 +239,26 @@ export interface EditorSlice {
   moveEdSlotToDay(i: number, toDay: number): void;
   /** Moves the open day's card at `i` to day `toDay` of another program (or the same one: then it is `moveEdSlotToDay`). */
   moveEdSlotToProgram(i: number, toKey: string, toDay: number): void;
-  /** Takes exercise `k` out of the superset at `i` on the open day and puts it, as a card of its own, on day `toDay` of the same program. */
-  moveEdItemToDay(i: number, k: number, toDay: number): void;
   undoMoveEdSlot(): void;
   dismissEdMoved(): void;
+  /** The cards last copied to another day, so the notice can offer Undo. */
+  edCopied: EdCopied | null;
+  /** Copies every card of the open day to the end of its section on day `toDay` of the same program, with new ids. */
+  copyEdDay(toDay: number): void;
+  undoCopyEdDay(): void;
+  dismissEdCopied(): void;
   setDaySub(v: string): boolean;
   renameLibItem(raw: string): false | void;
   libSnapshot(name: string, prog: Program, from: string, auto: boolean): LibraryItem;
   saveCurrentAs(name: string): void;
   loadVersion(target: string, slot: ProgKey): void;
   deleteLibItem(id: string): void;
+  archiveLibItem(id: string): void;
+  restoreLibItem(id: string): void;
   /** `from` 'empty' starts with seven empty days (ADR 021); 'A' or 'B' starts as a copy of that program. */
-  createProgram(name: string, from: ProgKey | 'empty'): boolean;
+  createProgram(name: string, from: ProgKey | 'empty', keepOpen?: boolean): boolean;
+  /** Makes a library program from a starter (lib/starterPrograms.ts) and opens it in the editor; the open sheet stays. Returns why it could not, or null. */
+  createStarterProgram(starterId: string, perWeek: number, name: string): string | null;
   saveSlot(d: SlotForm): string | null;
 }
 
@@ -311,6 +318,9 @@ export interface RecipesSlice {
   saveRecipes(): void;
   saveRecipe(d: Omit<Recipe, 'id'> & { id?: string }): string | null; // create (no id) or update; an error text, or null when saved
   copyCatalogRecipe(item: CatalogItem, servings?: number): string | null; // a Library recipe joins Mine as a copy of its own (at `servings`, amounts scaled, when set)
+  renameTag(from: string, to: string): { error: string | null; name: string }; // rename a tag on every recipe that has it (a name in use merges); an error text, or null, and the name it ends up with
+  removeTag(tag: string): number; // take a tag off every recipe (the recipes stay); how many recipes had it
+  setRecipeChips(chips: RecipeChips | undefined): void; // hide and reorder the built-in category chips (saved in the settings)
   removeRecipe(id: string): void; // Undo is offered (noteRemoved 'recipes')
   linkIngredient(id: string, index: number, home: string | null): void; // pin one ingredient to an At home item (null unpins)
   acceptSuggestions(id: string, month: string): number; // pin every "Maybe" suggestion of one recipe at once; how many were pinned

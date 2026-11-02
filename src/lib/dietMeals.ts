@@ -1,6 +1,7 @@
 import type { DietEntry, SavedItem, SavedMeal } from '../types.ts';
 import { MAX_DIET_PER_DAY, MAX_MEALS, MAX_MEAL_ITEMS, MAX_MEAL_NAME, mealKey } from '../shared/diet.js';
 import { entriesOn, fmtNum } from './dietLog.js';
+import { sortByName } from './sort.js';
 
 /* ---------- Saved meals (brief diet-saved-meals): make one from logged foods, replace or rename it, total it, plan logging it. Pure; the store and the view call these. ---------- */
 
@@ -45,3 +46,6 @@ export function planMeal(entries: DietEntry[], day: string, m: SavedMeal): { add
   const room = Math.max(0, MAX_DIET_PER_DAY - entriesOn(entries, day).length);
   return { add: m.items.slice(0, room), left: Math.max(0, m.items.length - room) };
 }
+
+/** The saved meals A to Z for display (storage order is untouched, so Manage and sync still see the order they were made in). */
+export const sortedMeals = (meals: readonly SavedMeal[]): SavedMeal[] => sortByName(meals, m => m.n, m => m.id);
