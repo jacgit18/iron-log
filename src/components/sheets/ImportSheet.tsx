@@ -2,7 +2,8 @@ import type { ImportDraft } from '../../store/types.ts';
 import type { ExcelImport as ExcelData } from '../../lib/excelImport.ts';
 type Stats = ReturnType<typeof dataStats>;
 import { useAppStore } from '../../store/useAppStore.js';
-import { dataStats, libDate, importSel } from '../../lib/export.js';
+import { dataStats } from '../../lib/entryMerge.js';
+import { libDate, importSel } from '../../lib/entryMerge.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 

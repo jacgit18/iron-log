@@ -3,7 +3,7 @@ import type { EquipmentId, LogEntry, LogSet, PhaseKey } from '../../types.ts';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
-import { entryId } from '../../lib/export.js';
+import { entryId } from '../../lib/entryMerge.js';
 import { PHASES, PH_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
 import { ymd, parseDate, fmtShort } from '../../shared/dates.js';
 import {

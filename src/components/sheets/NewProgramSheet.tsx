@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
 import { progName } from '../../lib/logic.js';
 import { daysChoices, loadEffect, parseStart, START_VALUES, suggestName } from '../../lib/programStart.js';
-import { sameProg } from '../../lib/export.js';
+import { sameProg } from '../../lib/entryMerge.js';
 import { starterById } from '../../lib/starterPrograms.js';
 import Sheet from '../Sheet.jsx';
 import './NewProgramSheet.css';

@@ -1,4 +1,5 @@
-import { buildCsv, buildDataFile, buildOverallWorkbook, buildWeekWorkbook, loadXLSX } from '../lib/export.js';
+// The builders load on first export, not at startup.
+const loadExport = () => import('../lib/export.js');
 import { ymd } from '../shared/dates.js';
 import type { ExportSlice, Flag, StoreGet, StoreSet } from './types.ts';
 
@@ -19,15 +20,15 @@ export const exportSlice = (set: StoreSet, get: StoreGet, flag: Flag): ExportSli
       else flag(e && e.message && !c ? e.message : 'Export isn’t available here');
     } finally { set({ exporting: null }); }
   },
-  exportCsv() { return get().runExport('csv', dl => dl.save({ filename: `iron-log-${ymd(new Date())}.csv`, data: buildCsv(get().snapshot()) })); },
+  exportCsv() { return get().runExport('csv', async dl => dl.save({ filename: `iron-log-${ymd(new Date())}.csv`, data: (await loadExport()).buildCsv(get().snapshot()) })); },
   // The file an export produces, built the same way for every download.
   async buildExportFile(kind) {
     if (kind === 'data') {
-      const d = buildDataFile(await get().fullSnapshot(), await get().allWeeks());
+      const d = (await loadExport()).buildDataFile(await get().fullSnapshot(), await get().allWeeks());
       return { filename: `iron-log-data-${ymd(new Date())}.json`, data: JSON.stringify(d, null, 1) };
     }
     const which = kind === 'xlsx-week' ? 'week' : 'all';
-    const X = await loadXLSX(); const S = get().snapshot();
+    const { loadXLSX, buildWeekWorkbook, buildOverallWorkbook } = await loadExport(); const X = await loadXLSX(); const S = get().snapshot();
     const wb = which === 'week' ? buildWeekWorkbook(X, S, get().weekKey(), get().week) : buildOverallWorkbook(X, S, await get().allWeeks());
     const data = X.write(wb, { type: 'array', bookType: 'xlsx', compression: true });
     return { filename: which === 'week' ? `iron-log-week-${get().weekKey()}.xlsx` : `iron-log-${ymd(new Date())}.xlsx`, data };

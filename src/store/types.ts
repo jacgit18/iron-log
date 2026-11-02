@@ -276,7 +276,7 @@ export interface SettingsSlice {
   setRm(exId: string, raw: string | number): boolean;
   setCfgField<K extends keyof Cfg>(k: K, v: Cfg[K]): void;
   readImportFile(file: File | null | undefined): Promise<void>;
-  pasteImport(text: string): void;
+  pasteImport(text: string): Promise<void>;
   applyImport(mode: 'merge' | 'replace'): Promise<void>;
 }
 
