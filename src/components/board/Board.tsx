@@ -19,6 +19,7 @@ import InjurySwitch from './InjurySwitch.jsx';
 import Icon from '../Icon.jsx';
 import ProgramSwitch from './ProgramSwitch.js';
 import { useBoardFilter } from './useBoardFilter.js';
+import { useMountedDays } from './useMountedDays.js';
 import { useWide } from './useWide.js';
 import './BoardTop.css';
 import './DayCount.css';
@@ -96,6 +97,9 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
   // Phones show one day; default to the first day that still has open work.
   let day = mDay;
   if (day == null) { day = DAYS.find(d => !rest.includes(d)) ?? null; for (const d of DAYS) { if (!rest.includes(d) && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
+
+  // A phone draws the selected day's cards first and the other days one per idle slice (lib/boardMount.ts); a wide screen draws all seven.
+  const dayDrawn = useMountedDays(day, wide);
 
   // A rest on an empty day takes its place and asks nothing. One workout that no longer fits is skipped with a message (the store).
   // Two or more ask first: skip them for the week, or cancel and move them yourself.
@@ -254,7 +258,7 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
-                  {shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                  {dayDrawn(d) && shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
                 </>
               ) : <p className="note">Your workouts moved one day later. Untick to put them back.</p>}
             </section>
@@ -266,8 +270,9 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
           const count = wide ? <span>{t.done}/{t.total} exercises</span> : null; // the phone's day tabs already show it
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const vis = shown(list);
-          const open = vis.filter(s => isOpen(s, week));
-          const finished = [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))];
+          const drawn = dayDrawn(d); // a day that has not drawn yet keeps its header and no cards
+          const open = drawn ? vis.filter(s => isOpen(s, week)) : [];
+          const finished = drawn ? [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))] : [];
           const ft = tally(finished, week); // counts the cards under the header (the day's own count ignores the filter)
           return (
             <section
