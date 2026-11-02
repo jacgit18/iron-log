@@ -2,7 +2,7 @@ import { exInfo } from '../lib/data.js';
 import { fmtShort, parseDate } from '../shared/dates.js';
 import { defaultLogDate, describe, lastSession, newEntryId, phaseOf, setItemDone } from '../lib/logic.js';
 import { setExerciseDefault, setOverride } from './librarySlice.js';
-import { entryId, findEntry } from '../lib/export.js';
+import { entryId, findEntry } from '../lib/entryMerge.js';
 import { bwSorted } from '../lib/body.js';
 import { GOAL_KEYS, bestLift, goalPhaseLabel, liftGoalsOf } from '../lib/liftGoal.js';
 import { normEntry, nowStamp, validFreq, validLiftGoalLb } from '../shared/validate.js';

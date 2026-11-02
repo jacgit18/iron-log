@@ -199,7 +199,7 @@ describe('log data: saves that are refused', () => {
   it('replace-import keeps the old data when the file\'s data couldn\'t be written', async () => {
     const old = { d: '2026-01-06', ph: 'hyp', w: 250, s: 4, r: 12 };
     useAppStore.setState({ logs: { hack: [old] } }); st().saveLog('hack');
-    st().pasteImport(JSON.stringify(buildDataFile({ ...st().snapshot(), logs: { legext: [{ d: '2026-01-07', ph: 'hyp', w: 90, s: 3, r: 12 }] } }, {})));
+    await st().pasteImport(JSON.stringify(buildDataFile({ ...st().snapshot(), logs: { legext: [{ d: '2026-01-07', ph: 'hyp', w: 90, s: 3, r: 12 }] } }, {})));
     await full(() => st().applyImport('replace'));
     expect(saved('logs/hack').entries).toEqual([old]); // not deleted, since the new data wasn't saved
     st().retryUnsaved();
@@ -458,7 +458,7 @@ describe('log data: what an account starts with (ADR 016, ADR 021)', () => {
     try {
       const { s2, BLANK: BL } = await boot(fdb);
       const file = await fileOf(s2); delete file.programs.A; file.logs = {};
-      s2().pasteImport(JSON.stringify(file)); await s2().applyImport('replace'); await tick();
+      await s2().pasteImport(JSON.stringify(file)); await s2().applyImport('replace'); await tick();
       expect(s2().programs.A).toBe(BL.A);
       expect(fdb.docs.has('programs/A')).toBe(false);
     } finally { delete globalThis.claude; }
@@ -470,7 +470,7 @@ describe('log data: what an account starts with (ADR 016, ADR 021)', () => {
     try {
       const { s2, BLANK: BL } = await boot(fdb);
       const file = await fileOf(s2); delete file.programs.A;
-      s2().pasteImport(JSON.stringify(file)); await s2().applyImport('replace'); await tick();
+      await s2().pasteImport(JSON.stringify(file)); await s2().applyImport('replace'); await tick();
       expect(s2().programs.A).toBe(BL.A);
       expect(fdb.docs.has('programs/A')).toBe(false);
       const again = await boot(fdb);

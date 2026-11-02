@@ -1,4 +1,4 @@
-import { entryId } from '../lib/export.js';
+import { entryId } from '../lib/entryMerge.js';
 import type { DataFile, LogEntry } from '../types.js';
 import { desiredRows, parsePath } from './documents.js';
 import { createCommand } from './plan.js';

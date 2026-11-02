@@ -5,7 +5,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, exInfo } from '../../lib/data.js';
 import { parseDate, fmtShort } from '../../shared/dates.js';
 import { volText, AUTO_NOTE } from '../../lib/logic.js';
-import { entryId, findEntry } from '../../lib/export.js';
+import { entryId, findEntry } from '../../lib/entryMerge.js';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 import LineChart from '../LineChart.js';
