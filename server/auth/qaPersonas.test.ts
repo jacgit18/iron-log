@@ -7,6 +7,7 @@ import pg from 'pg';
 import { createApp } from '../app.ts';
 import type { DB } from '../db/types.ts';
 import { PERSONAS, personaAuthId, personaById, personaEmail } from '../qa/personas.ts';
+import { scenariosForPersona } from '../qa/scenarios.ts';
 import { SEED_EXERCISE_IDS } from '../qa/seedPersona.ts';
 import { buildPersonaRows } from '../qa/seedPlan.ts';
 import { startTestDatabase } from '../test/postgres.ts';
@@ -161,6 +162,11 @@ describe('switching and returning', () => {
     expect(list.personas.find(p => p.id === 'paid-past-due')!.seeded).toBe(true);
     expect(list.personas.find(p => p.id === 'founder')!.seeded).toBe(false);
     expect(JSON.stringify(list)).not.toContain('qa.invalid');
+    // Each account carries the scenarios that run as it (brief: qa-scenarios): ids and titles only, not the steps.
+    const tagged = list.personas.find(p => p.id === 'meal-planner') as { scenarios: { id: string; title: string }[] };
+    expect(tagged.scenarios.map(s => s.id)).toEqual(scenariosForPersona('meal-planner').map(s => s.id));
+    expect(Object.keys(tagged.scenarios[0]!).sort()).toEqual(['id', 'title']);
+    expect((list.personas.find(p => p.id === 'legacy-beta') as { scenarios: unknown[] }).scenarios).toEqual([]);
 
     expect((await call(base, jar, 'POST', '/qa/personas/switch', { id: 'paid-past-due' })).status).toBe(200);
     expect(jar.has('admin_session')).toBe(true);

@@ -57,6 +57,10 @@
   margin-inline: calc(var(--sp-8) * -1);
   padding-inline: var(--sp-8);
 }
+.qarow.hl {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 .qatext {
   flex: 1;
   min-width: 0;
