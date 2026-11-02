@@ -8,6 +8,7 @@ import {
   weekSlots,
   normExperiments,
 } from '../lib/logic.js';
+import { makeBatchWriter } from '../lib/saveBatch.js';
 import { LS, makeSaveQueue, onDamaged, removeLegacyGitHubToken } from '../lib/storage.js';
 import { FLAG_KEY, apiSyncEnabled } from '../sync/flag.js';
 import { reportCaught } from '../sync/reportErrors.js';
@@ -92,6 +93,9 @@ const queue = makeSaveQueue({
   onStored: takeStoredWeek, rebase: rebaseWeek,
   onError: (err: unknown) => { console.error(err); reportCaught(err); },
 });
+
+// Document writes made by the store go through this: `transact` holds them until a multi-document action has finished.
+const writer = makeBatchWriter(queue);
 
 // Status line. Messages stay until the next tap or key press (no timer, WCAG 2.2.3), and a routine
 // "Saved" / "Loading…" never replaces a message you haven't had the chance to act on yet.
@@ -305,24 +309,37 @@ export const useAppStore = create<AppState>((set, get) => ({
   openModal: modal => set({ modal }),
   closeModal: () => set({ modal: null }),
 
-  saveCfg() { queue.save('config/main', get().cfg); },
+  saveCfg() { writer.save('config/main', get().cfg); },
   saveWeek() {
-    const key = get().weekKey(); queue.save('weeks/' + key, get().week);
+    const key = get().weekKey(); writer.save('weeks/' + key, get().week);
     // Keep a loaded history in step, so an export, backup, import or erase after visiting another week sees this edit.
     if (get().weekHist) set(s => ({ weekHist: { ...s.weekHist, [key]: s.week } }));
   },
-  saveBody() { queue.save('body/main', { schema: SCHEMA_VERSION, entries: get().body }); },
-  saveLibrary() { queue.save('library/main', { schema: SCHEMA_VERSION, items: get().library }); },
-  saveExperiments() { queue.save('experiments/main', { schema: SCHEMA_VERSION, items: get().experiments }); },
-  saveLog(exId) { queue.save('logs/' + exId, { schema: SCHEMA_VERSION, entries: get().logs[exId] || [] }); },
+  saveBody() { writer.save('body/main', { schema: SCHEMA_VERSION, entries: get().body }); },
+  saveLibrary() { writer.save('library/main', { schema: SCHEMA_VERSION, items: get().library }); },
+  saveExperiments() { writer.save('experiments/main', { schema: SCHEMA_VERSION, items: get().experiments }); },
+  saveLog(exId) { writer.save('logs/' + exId, { schema: SCHEMA_VERSION, entries: get().logs[exId] || [] }); },
   saveProgram(k, prog) {
     const body = structuredClone(prog); delete body.key;
     set(state => ({ programs: { ...state.programs, [k]: { ...body, key: k as Program['key'] } } }));
-    queue.save('programs/' + k, body);
+    writer.save('programs/' + k, body);
     get().refreshRan();
   },
-  saveDoc: (path, data) => queue.save(path, data),
-  removeDoc: path => queue.removeDoc(path),
+  saveDoc: (path, data) => writer.save(path, data),
+  removeDoc: path => writer.removeDoc(path),
+
+  // All-or-nothing: the state changes and document writes of `fn` take effect together. If it throws, the state is put back, no
+  // write is queued, and `fallback` is returned. Called inside another transact it just runs `fn` (the outer one decides).
+  transact(fn, fallback) {
+    if (!writer.begin()) return fn();
+    const before = get();
+    try { const out = fn(); writer.commit(); return out; }
+    catch (err) {
+      writer.discard(); set(before, true);
+      console.error(err); reportCaught(err); flag('Couldn’t save that, nothing was changed');
+      return fallback;
+    }
+  },
 
   mutateCfg(fn) {
     if (get().blocked()) return false;
