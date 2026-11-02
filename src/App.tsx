@@ -17,6 +17,7 @@ import { inAndroidApp } from './lib/androidApp.js';
 import { showPlansTab } from './lib/plansTab.js';
 import ThemeButton from './components/ThemeButton.js';
 import QaBanner from './components/QaBanner.js';
+import QaDeepLink from './components/QaDeepLink.js';
 import UpdateBanner from './components/UpdateBanner.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
@@ -167,6 +168,7 @@ export default function App() {
         </header>
         <UpdateBanner />
         <QaBanner />
+        <QaDeepLink />
         <OfflineNotice />
         <SyncNotice />
         <WhenSyncing><SignInCard /></WhenSyncing>

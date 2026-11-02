@@ -10,7 +10,7 @@ export default function QaAccountsPanel() {
   return (
     <section className="panel qapanel" aria-labelledby="qa-h">
       <h3 id="qa-h">QA test accounts</h3>
-      <p className="note">Switch to a seeded account to see the app as that user. The banner at the top brings you back. Because this device holds your own data, the app then asks to wipe it and carry on as the test account; your account keeps its data on the server.</p>
+      <p className="note">Switch to a seeded account to see the app as that user. The banner at the top brings you back. The app then wipes this device by itself and carries on as the test account, so any edit not yet sent from the account you left is lost; every account keeps its data on the server.</p>
       <QaPersonaList idPrefix="qa-panel" />
     </section>
   );
