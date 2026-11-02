@@ -14,9 +14,10 @@ export const eqName = (cfg: Pick<Cfg, 'equipment'>, id: string | null | undefine
 
 /** Every choice for a menu: built-ins and added items by name, Other last. */
 export function eqOptions(cfg: Pick<Cfg, 'equipment'>): { id: EquipmentId; name: string }[] {
-  const all = [...EQ_KEYS.filter(k => k !== 'other').map(k => ({ id: k as EquipmentId, name: EQUIPMENT[k] })),
-    ...Object.entries(cfg.equipment || {}).map(([id, name]) => ({ id: id as EquipmentId, name }))];
-  all.sort(nameCmp(e => e.name, e => e.id));
+  const builtIn = EQ_KEYS.filter(k => k !== 'other').map(k => ({ id: k as EquipmentId, name: EQUIPMENT[k] }));
+  const added = Object.entries(cfg.equipment || {}).map(([id, name]) => ({ id: id as EquipmentId, name }));
+  // EQ_KEYS is already in name order (equipment.test.js checks it), so a menu with nothing added needs no sort, and the Board's first render does not build the collator.
+  const all = added.length ? [...builtIn, ...added].sort(nameCmp(e => e.name, e => e.id)) : builtIn;
   return [...all, { id: 'other', name: EQUIPMENT.other }];
 }
 
