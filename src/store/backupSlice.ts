@@ -1,3 +1,4 @@
+import { dataStats } from '../lib/entryMerge.js';
 import type { buildDataFile } from '../lib/export.js';
 import { backupScore, clearBackups, getBackup, listBackups, pruneBackups, saveDailyBackup } from '../lib/autoBackup.js';
 import { featureNow } from '../features.js';
@@ -33,7 +34,7 @@ export const backupSlice = (set: StoreSet, get: StoreGet, flag: Flag): BackupSli
       const { file, text, day } = uploadAfter; const score = backupScore(file);
       const key = uploadKey(day, score, text.length);
       if (key !== lastSent) {
-        const r = await uploadBackup(day, text, (await loadExport()).dataStats(file).entries, score);
+        const r = await uploadBackup(day, text, dataStats(file).entries, score);
         if (r === 'saved' || r === 'kept' || r === 'refused') lastSent = key; // a refused file is not sent again until the data changes
         if (r === 'off' || r === 'signed-out' || r === 'account') serverOff = true; // no account to save to (a signed-out or other account, or switched off): quiet until the page reloads
         if (r === 'saved' && !stopped) void get().refreshServerBackups();
