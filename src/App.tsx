@@ -19,6 +19,7 @@ import ThemeButton from './components/ThemeButton.js';
 import QaBanner from './components/QaBanner.js';
 import QaDeepLink from './components/QaDeepLink.js';
 import UpdateBanner from './components/UpdateBanner.js';
+import SuspendedNotice from './components/SuspendedNotice.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
@@ -168,6 +169,7 @@ export default function App() {
         </header>
         <UpdateBanner />
         <QaBanner />
+        <SuspendedNotice />
         <QaDeepLink />
         <OfflineNotice />
         <SyncNotice />
