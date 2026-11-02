@@ -107,6 +107,13 @@ export const sendUsage: SendUsage = async report => {
   } catch { return 'retry'; }
 };
 
+let quiet = 0;
+/** Runs `fn` (a store write that took in what another tab or the sync server holds) without counting it: it is not something this person did here. */
+export function quietUsage<T>(fn: () => T): T {
+  quiet++;
+  try { return fn(); } finally { quiet--; }
+}
+
 /** Counts the open and watches the store for the other events; flushes when due. Returns the way to stop. */
 export function startUsage(store: Pick<StoreApi<AppState>, 'getState' | 'subscribe'>, deps: FlushDeps = { send: sendUsage, version: __APP_VERSION__, fromApp: inAndroidApp(), now: Date.now }): () => void {
   countUsage('app_open');
@@ -114,7 +121,7 @@ export function startUsage(store: Pick<StoreApi<AppState>, 'getState' | 'subscri
   let last: Parameters<typeof eventsBetween>[0] | null = null;
   return store.subscribe(s => {
     if (!s.isReady()) return;
-    if (last) for (const event of eventsBetween(last, s)) countUsage(event);
+    if (last && !quiet) for (const event of eventsBetween(last, s)) countUsage(event);
     last = { exporting: s.exporting, logs: s.logs, programs: s.programs, sync: s.sync };
   });
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { USAGE_EVENTS, USAGE_MAX_COUNT, type UsageReport } from '../shared/usage.js';
-import { addCount, buildReport, cleanCounts, countUsage, eventsBetween, flushUsage, setUsage, startUsage, subtractCounts, usageDue, usageOn, utcDay, type SendResult } from './usage.js';
+import { addCount, buildReport, cleanCounts, countUsage, eventsBetween, flushUsage, quietUsage, setUsage, startUsage, subtractCounts, usageDue, usageOn, utcDay, type SendResult } from './usage.js';
 
 const memory = () => {
   const m = new Map<string, string>();
@@ -158,6 +158,35 @@ describe('startUsage', () => {
     listener({ ...ready, isReady: () => false, programs: { A: {} } });
     listener(ready); // first ready state: the baseline
     expect(raw('usage:counts')).toEqual({ app_open: 1 });
+    listener({ ...ready, programs: { A: {} } });
+    expect(raw('usage:counts')).toEqual({ app_open: 1, program_edited: 1 });
+  });
+
+  it('does not count a change taken in from another tab or the sync server, and counts the next local one', () => {
+    setUsage(true, () => 'id-1');
+    let listener: (s: object) => void = () => undefined;
+    const api = { getState: () => ({}) as never, subscribe: ((fn: (s: object) => void) => { listener = fn; return () => undefined; }) as never };
+    startUsage(api, deps(sender('retry').send, DAY));
+    const ready = { isReady: () => true, exporting: null, logs: {}, programs: {}, sync: null };
+    const entry = { d: '2026-10-28' } as never;
+    const pulled = { A: {} };
+    listener(ready);
+    quietUsage(() => listener({ ...ready, logs: { a: [entry] } })); // another tab logged it
+    quietUsage(() => listener({ ...ready, logs: { a: [entry] }, programs: pulled })); // a pull replaced the program
+    expect(raw('usage:counts')).toEqual({ app_open: 1 });
+    listener({ ...ready, logs: { a: [entry, entry] }, programs: pulled }); // this device logged a second one
+    expect(raw('usage:counts')).toEqual({ app_open: 1, workout_logged: 1 });
+  });
+
+  it('quietUsage returns the value and ends even when the write throws', () => {
+    expect(quietUsage(() => 5)).toBe(5);
+    expect(() => quietUsage(() => { throw new Error('x'); })).toThrow('x');
+    setUsage(true, () => 'id-1');
+    let listener: (s: object) => void = () => undefined;
+    const api = { getState: () => ({}) as never, subscribe: ((fn: (s: object) => void) => { listener = fn; return () => undefined; }) as never };
+    startUsage(api, deps(sender('retry').send, DAY));
+    const ready = { isReady: () => true, exporting: null, logs: {}, programs: {}, sync: null };
+    listener(ready);
     listener({ ...ready, programs: { A: {} } });
     expect(raw('usage:counts')).toEqual({ app_open: 1, program_edited: 1 });
   });

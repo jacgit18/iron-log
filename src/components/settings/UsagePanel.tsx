@@ -11,7 +11,7 @@ export default function UsagePanel() {
       <label className="inline">
         <input type="checkbox" checked={on} aria-describedby="usage-what" onChange={e => { setUsage(e.target.checked); setOn(usageOn()); }} /> Share anonymous usage counts
       </label>
-      <p id="usage-what">Off unless you turn it on. When it is on, once a day Loadbearer sends how many times the app was opened and how often six features were used: logging a workout, editing a program, exporting, syncing, alerts. It never sends your name, your email or anything you logged, and it is not linked to your account. Turn it off and this phone forgets its random ID. Saved on this device only. <a href="/privacy.html">Privacy Policy</a></p>
+      <p id="usage-what">Off unless you turn it on. When it is on, once a day Loadbearer sends how many times the app was opened and how often five features were used: logging a workout, editing a program, exporting, syncing, alerts. It never sends your name, your email or anything you logged, and it is not linked to your account. Turn it off and this phone forgets its random ID. Saved on this device only. <a href="/privacy.html">Privacy Policy</a></p>
     </section>
   );
 }
