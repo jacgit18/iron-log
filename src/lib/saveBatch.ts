@@ -22,6 +22,5 @@ export function makeBatchWriter(inner: DocWriter) {
       writes?.forEach((w, path) => { if (w.remove) inner.removeDoc(path); else inner.save(path, w.data); });
     },
     discard() { held = null; },
-    isHeld: (path: string) => !!held?.has(path),
   };
 }

@@ -330,6 +330,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // All-or-nothing: the state changes and document writes of `fn` take effect together. If it throws, the state is put back, no
   // write is queued, and `fallback` is returned. Called inside another transact it just runs `fn` (the outer one decides).
+  // Not undone by a rollback: side effects outside the store (mutateChecks' push nudge), so keep them last in an action.
   transact(fn, fallback) {
     if (!writer.begin()) return fn();
     const before = get();

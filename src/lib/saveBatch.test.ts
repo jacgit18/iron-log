@@ -17,10 +17,8 @@ describe('makeBatchWriter', () => {
     expect(b.begin()).toBe(true);
     b.save('a', 1); b.save('b', 2); b.save('a', 3); b.removeDoc('c');
     expect(w.calls).toEqual([]);
-    expect(b.isHeld('a')).toBe(true);
     b.commit();
     expect(w.calls).toEqual(['save a 3', 'save b 2', 'remove c']);
-    expect(b.isHeld('a')).toBe(false);
   });
   it('drops everything on discard', () => {
     const w = spy(); const b = makeBatchWriter(w);

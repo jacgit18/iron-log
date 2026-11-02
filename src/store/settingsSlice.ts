@@ -131,10 +131,10 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
         progRemoves.forEach(path => get().removeDoc(path));
         saves.forEach(f => get()[f]());
         progSaves.forEach(([k, body]) => get().saveProgram(k, body));
-        if (groceryIn) get().setGrocery(groceryIn);
+        const groceryStale = groceryIn ? get().setGrocery(groceryIn, true) : [];
         docs.forEach(([path, data]) => get().saveDoc(path, data));
         if (newLogs) Object.keys(newLogs).forEach(id => get().saveLog(id));
-        lateRemoves = removes;
+        lateRemoves = [...removes, ...groceryStale];
       } else {
         if (draft.kind === 'excel') {
           const xs = d.excel.settings;

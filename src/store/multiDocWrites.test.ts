@@ -127,4 +127,15 @@ describe('multi-document writes are all or nothing', () => {
     expect(st().logs.hack).toHaveLength(1);
     expect(st().saveFlag).toBe('Data added');
   });
+  it('applyImport replace with a grocery list: a full storage keeps the old grocery months', async () => {
+    const list = { stores: ['Costco'], items: [{ id: 'rice', n: 'Rice', store: 'Costco', qty: 1, cents: 100, every: true, out: false }], months: { '2026-01': { lines: { rice: { got: true } }, pulled: [] } } };
+    useAppStore.setState({ grocery: { stores: ['Costco'], items: list.items }, groceryMonths: { '2026-01': list.months['2026-01'] } });
+    const text = JSON.stringify(buildDataFile(st().snapshot(), {}));
+    const old = { lines: { milk: { got: true } }, pulled: [] };
+    useAppStore.setState({ groceryMonths: { '2025-12': old } }); st().saveDoc('grocery/2025-12', old);
+    await st().readImportFile({ name: 'd.json', arrayBuffer: async () => new TextEncoder().encode(text).buffer });
+    const setItem = localStorage.setItem; localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
+    try { await st().applyImport('replace'); } finally { localStorage.setItem = setItem; }
+    expect(Object.keys(mem).some(k => k.endsWith('grocery/2025-12'))).toBe(true); // not removed
+  });
 });
