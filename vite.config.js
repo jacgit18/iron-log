@@ -183,7 +183,8 @@ export default defineConfig({
         // Everything the app needs, including the Excel reader and fonts, is cached so it works offline.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // The iOS splash images are only fetched by iPhone Safari at install time, so they stay out of the offline cache.
-        globIgnores: ['splash/**'],
+        // The QA and Staging icons are only linked on those services (server/appLabel.ts); production never shows them.
+        globIgnores: ['splash/**', 'icons/qa/**', 'icons/staging/**'],
       },
     }),
   ],
