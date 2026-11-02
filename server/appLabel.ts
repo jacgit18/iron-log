@@ -23,5 +23,6 @@ export function brandHtml(html: string, label: string): string {
   return html
     .replace(`<title>${APP_NAME}</title>`, `<title>${APP_NAME} ${label}</title>`)
     .replace(`name="apple-mobile-web-app-title" content="${APP_NAME}"`, `name="apple-mobile-web-app-title" content="${APP_NAME} ${label}"`)
+    .replace('href="/logo.svg"', `href="/${iconDir(label)}logo.svg"`)
     .replace('href="/icons/apple-touch-icon.png"', `href="/${iconDir(label)}apple-touch-icon.png"`);
 }
