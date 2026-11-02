@@ -11,7 +11,7 @@ export const PATHS: readonly string[] = [
   'plans',
   'program', 'program/a', 'program/b', 'program/exercises', 'program/stretches',
   'progress', ...PROGRESS_PAGES.map(p => `progress/${p}`),
-  'settings',
+  'settings', 'settings/accounts',
 ];
 const KNOWN = new Set(PATHS);
 

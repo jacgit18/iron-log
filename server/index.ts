@@ -4,6 +4,7 @@ import { createApp } from './app.ts';
 import { appLabelFrom } from './appLabel.ts';
 import { authConfigFrom, createAuth } from './auth/betterAuth.ts';
 import { piiBootCheck } from './auth/piiBootCheck.ts';
+import { createPiiCrypto, parsePiiKey } from './auth/piiCrypto.ts';
 import { billingConfigFrom, stripeApi } from './billing.ts';
 import { minVersionFrom } from './clientVersion.ts';
 import { createDb } from './db/connection.ts';
@@ -80,7 +81,13 @@ if (!auth && process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 
 const trustProxy = process.env.TRUST_PROXY !== undefined ? (process.env.TRUST_PROXY === 'false' ? false : Number(process.env.TRUST_PROXY)) : process.env.K_SERVICE ? 1 : undefined;
 if (typeof trustProxy === 'number' && !Number.isInteger(trustProxy)) throw new Error('TRUST_PROXY must be a whole number of proxies, or false');
 
-const server = createApp({ db, staticDir, appLabel: appLabelFrom(process.env.APP_LABEL), minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], canonicalOrigin: setup.enabled ? setup.config.baseURL : undefined, trustProxy, push, billing, foods: { key: process.env.USDA_API_KEY || undefined } }).listen(port, () => {
+// Opens the sealed emails the admin accounts screen masks; without a valid key (development) they are stored in the clear and nothing opens.
+function piiCryptoFrom(raw: string | undefined) {
+  const parsed = parsePiiKey(raw);
+  return 'key' in parsed ? createPiiCrypto(parsed.key) : undefined;
+}
+
+const server = createApp({ db, staticDir, appLabel: appLabelFrom(process.env.APP_LABEL), minClientVersion, auth, admins: adminsFrom(process.env.ADMIN_EMAILS), allowedOrigins: setup.enabled ? [setup.config.baseURL] : [], canonicalOrigin: setup.enabled ? setup.config.baseURL : undefined, trustProxy, push, billing, signupCap: setup.enabled ? setup.config.signupCap : undefined, pii: piiCryptoFrom(process.env.PII_ENCRYPTION_KEY), foods: { key: process.env.USDA_API_KEY || undefined } }).listen(port, () => {
   console.log(JSON.stringify({ msg: 'listening', port }));
 });
 

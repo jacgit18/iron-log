@@ -17,6 +17,7 @@ import { inAndroidApp } from './lib/androidApp.js';
 import { showPlansTab } from './lib/plansTab.js';
 import ThemeButton from './components/ThemeButton.js';
 import UpdateBanner from './components/UpdateBanner.js';
+import SuspendedNotice from './components/SuspendedNotice.js';
 import SyncNotice from './components/SyncNotice.js';
 import OfflineNotice from './components/OfflineNotice.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
@@ -174,6 +175,7 @@ export default function App() {
         </header>
         <UpdateBanner />
         <QaParts />
+        <SuspendedNotice />
         <OfflineNotice />
         <SyncNotice />
         <WhenSyncing><SignInCard /></WhenSyncing>
