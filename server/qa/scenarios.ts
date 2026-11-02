@@ -24,12 +24,13 @@ export type ScenarioFeature =
   | 'Share target'
   | 'Account menu'
   | 'QA picker'
-  | 'Wide layouts';
+  | 'Wide layouts'
+  | 'Admin accounts';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
-  'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts',
+  'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
 ];
 
 export interface Scenario {
@@ -552,6 +553,54 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'From 1280 px Diet and Supplements are side by side with tops aligned; below it the order is Diet, Supplements, Water, Last 7 days in one column.',
+    ],
+  },
+  // ---- Admin accounts (run as the owner's own admin account; the persona is the test account acted on) ----
+  {
+    id: 'S-41', feature: 'Admin accounts', title: 'Read the cap and the account list', persona: 'new-user', brief: 'admin-accounts-screen',
+    steps: [
+      'Signed in as your own admin account, open Settings and press Open accounts.',
+      'Look at the cap, the counts and the list of newest accounts.',
+    ],
+    expected: [
+      'The address ends #/settings/accounts and the page shows the sign-up cap used, free and paid counts and a suspended count.',
+      'Each account is a masked email such as j***@gmail.com with its number, plan and join date; no name, full email or workout content appears; admin accounts have no Suspend button.',
+    ],
+  },
+  {
+    id: 'S-42', feature: 'Admin accounts', title: 'Suspend and restore a test account', persona: 'new-user', brief: 'admin-accounts-screen',
+    steps: [
+      'On the Accounts page find the New user test account and press Suspend, then press Press again to suspend.',
+      'Use the account menu to switch to the New user test account.',
+      'Return to your admin account and press Restore on that row.',
+      'Switch to the New user test account again.',
+    ],
+    expected: [
+      'The row shows Suspended and Last actions lists "Suspended account" with the number.',
+      'As the suspended account every screen shows "This account is suspended" and nothing syncs; Settings still offers export and delete.',
+      'After Restore the notice is gone and the app works as before with no data lost.',
+    ],
+  },
+  {
+    id: 'S-43', feature: 'Admin accounts', title: 'A non-admin cannot reach the page', persona: 'paid-monthly', brief: 'admin-accounts-screen', edge: true,
+    steps: [
+      'Switch to the Paid, monthly test account and open Settings.',
+      'Type #/settings/accounts at the end of the address and press Enter.',
+    ],
+    expected: [
+      'Settings has no Accounts section and no Open accounts button.',
+      'The typed address shows Settings and no list of accounts.',
+    ],
+  },
+  {
+    id: 'S-44', feature: 'Admin accounts', title: 'Back and reload on the Accounts page', persona: 'new-user', brief: 'admin-accounts-screen', edge: true, device: true,
+    steps: [
+      'On a phone, as your admin account, open Settings, then Open accounts.',
+      'Reload the page, then swipe back (or press the phone Back button).',
+    ],
+    expected: [
+      'The reload reopens the Accounts page.',
+      'Back returns to Settings, not out of the app.',
     ],
   },
 ];

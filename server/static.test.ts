@@ -211,6 +211,10 @@ describe('APP_LABEL (appLabel.ts)', () => {
       expect(((await (await fetch(`${url}/manifest.webmanifest`)).json()) as { name: string }).name).toBe('Loadbearer QA');
       expect(await (await fetch(`${url}/`)).text()).toContain('<title>Loadbearer QA</title>');
       expect(await (await fetch(`${url}/progress`)).text()).toContain('<title>Loadbearer QA</title>');
+      // The service worker precaches both files by asking the server for them with a revision query. Those copies are what it answers
+      // later visits with, so they must be the branded ones too (the page, the name and the icons all come from them).
+      expect(((await (await fetch(`${url}/manifest.webmanifest?__WB_REVISION__=abc`)).json()) as { name: string }).name).toBe('Loadbearer QA');
+      expect(await (await fetch(`${url}/index.html?__WB_REVISION__=abc`)).text()).toContain('<title>Loadbearer QA</title>');
       expect(((await (await get('/manifest.webmanifest')).json()) as { name: string }).name).toBe('Loadbearer');
       expect(await (await get('/')).text()).toContain('<title>Loadbearer</title>');
     } finally {

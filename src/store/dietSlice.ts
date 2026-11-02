@@ -16,7 +16,8 @@ const newId = (taken: DietEntry[]) => {
 const newMealId = (taken: SavedMeal[]) => {
   for (;;) { const id = `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`; if (!taken.some(m => m.id === id)) return id; }
 };
-const BAD = `Give it a name, calories (1 to ${MAX_KCAL.toLocaleString('en-US')}) and protein (0 to ${MAX_PROTEIN} g).`;
+// A function, not a constant: toLocaleString at module load cost startup time for a message shown only on a bad entry.
+const bad = () => `Give it a name, calories (1 to ${MAX_KCAL.toLocaleString('en-US')}) and protein (0 to ${MAX_PROTEIN} g).`;
 
 // Saved meals live in cfg.diet.meals (brief diet-saved-meals), so they sync and export with the settings. Every write goes back through normDietCfg.
 const mealsOf = (get: StoreGet): SavedMeal[] => get().cfg.diet?.meals ?? [];
@@ -46,7 +47,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (!roomOn(list, d.d)) return { id: null, error: `You can log ${MAX_DIET_PER_DAY} things a day.` };
     const now = new Date(), today = ymd(now);
     const e = normDietEntry({ ...d, id: newId(list), ...(d.d === today ? { t: now.getHours() } : {}) });
-    if (!e) return { id: null, error: BAD };
+    if (!e) return { id: null, error: bad() };
     if (e.d < oldestDay(today)) return { id: null, error: `Entries are kept for ${RETAIN_DAYS} days, so that day is too far back.` };
     set({ diet: pruned([...list, e], today) });
     get().saveDiet();
@@ -60,7 +61,7 @@ export const dietSlice = (set: StoreSet, get: StoreGet): DietSlice => ({
     if (merged.c === null) delete merged.c; // null clears an optional number
     if (merged.f === null) delete merged.f;
     const e = normDietEntry(merged);
-    if (!e) return BAD;
+    if (!e) return bad();
     set({ diet: list.map(x => (x.id === id ? e : x)) });
     get().saveDiet();
     return null;

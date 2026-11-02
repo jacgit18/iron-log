@@ -6,7 +6,7 @@
   gap: var(--sp-10);
   min-height: 44px;
   cursor: pointer;
-  /* The right end of the Sort & filter row. It follows the fields in the page, so the Tab order matches what is drawn. */
+  /* The right end of the Sort & filter row on a wide screen; the phone puts the filter icon there. It follows the fields in the page, so the Tab order matches what is drawn. */
   margin-left: auto;
 }
 .injsw-input {

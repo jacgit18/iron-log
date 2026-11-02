@@ -20,6 +20,7 @@ import { errorHandler } from './errorHandler.ts';
 import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { foodRoutes, type FoodDeps } from './foodSearch.ts';
+import { accountsRoutes } from './accountsRoutes.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
 import { usageRecord } from './usage.ts';
 import { usageRoutes } from './usageRoutes.ts';
@@ -43,6 +44,8 @@ import { deleteGroceryMonth, deleteLibraryItem, deleteListItem, deleteProgram, d
 import { untickCard } from './commands/untickCard.ts';
 import { parseLimit, parseSince, syncPage } from './commands/sync.ts';
 import type { DB } from './db/types.ts';
+import type { PiiCrypto } from './auth/piiCrypto.ts';
+import { suspendedGate } from './suspended.ts';
 import { repairBody } from './wellFormed.ts';
 
 export interface AppDeps {
@@ -73,6 +76,10 @@ export interface AppDeps {
   usageKey?: string;
   /** Food search (brief diet-food-lookup): the USDA key and, in tests, a stand-in for fetch. Unset key: the route answers 503. */
   foods?: FoodDeps;
+  /** The most accounts that may exist (SIGNUP_CAP), shown on the admin accounts screen; unset means no cap. */
+  signupCap?: number;
+  /** Opens the sealed emails the admin accounts screen masks (ADR 046); unset in development, where they are stored in the clear. */
+  pii?: PiiCrypto;
   /** Limits on the rest of the API (see LIMITS). They are generous: a phone back online after two days sends a burst. */
   limits?: Partial<typeof LIMITS>;
 }
@@ -101,6 +108,8 @@ const LIMITS = {
   stripeWebhook: { max: 600, windowMs: 60_000 } as Limit,
   // The admin Issues screen: a person reading a list and changing a status, a few calls a minute at most.
   issues: { max: 60, windowMs: 60_000 } as Limit,
+  // The admin accounts screen: a person reading a list and pressing Suspend now and then.
+  accounts: { max: 60, windowMs: 60_000 } as Limit,
   // Food search: a person typing, one request per pause. The daily allowance is in foodSearch.ts.
   foods: { max: 20, windowMs: 60_000 } as Limit,
   // Server backup history (ADR 066): the app uploads once a day and reads the list in Settings; a loop is what this stops.
@@ -128,7 +137,7 @@ function cacheControl(file: string, root: string): string {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, appLabel, usageKey }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, appLabel, signupCap, pii, usageKey }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   const recordIssue = db ? issueRecorder(db) : undefined;
@@ -208,6 +217,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Everything below this line needs a signed-in user. The per-address limit comes first, so an anonymous flood never reaches the database.
   app.use('/api', rateLimit(limits.api));
   app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
+  // A suspended account is refused here, before any route runs, except /api/me, erase-data and delete (server/suspended.ts).
+  app.use('/api', suspendedGate);
   // A page that holds another account's data is refused before any route runs (server/expectedUser.ts).
   app.use(['/api/commands', '/api/sync', '/api/backups'], expectedUserGate());
   // Per signed-in user, after the lookup.
@@ -221,6 +232,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
+  if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   if (db) app.use('/api/usage-admin', requireAdmin, rateLimit(limits.issues, undefined, byUser), usageRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
@@ -243,7 +255,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     const account = res.locals.account as Account;
     // QA only (qaPersonas.ts): whether this session is a test account, and whether an admin may switch. Absent everywhere else, so production's answer is unchanged.
     const qa = auth && (await auth.qaPersonasOn()) ? { persona: personaByEmail(account.email)?.name ?? null, canSwitch: account.isAdmin === true } : undefined;
-    res.json({ ok: true, userId: row?.id, minClientVersion, ...(qa ? { qa } : {}), account: { ...account, plan: row?.plan ?? 'free', isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, account.isAdmin, !!billing) } });
+    res.json({ ok: true, userId: row?.id, minClientVersion, ...(qa ? { qa } : {}), account: { ...account, plan: row?.plan ?? 'free', suspended: res.locals.suspended === true, isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, account.isAdmin, !!billing) } });
   });
 
   app.post('/api/commands/import-legacy', async (req, res) => {

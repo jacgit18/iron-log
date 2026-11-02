@@ -29,13 +29,15 @@ function preloadTitleFont() {
 // (Lighthouse mobile: render-blocking, about 0.3 s on Slow 4G); inlined, the first paint needs only the page and the script. The
 // service worker precaches index.html, so repeat and offline visits lose nothing. The file itself stays in the build: the tabs loaded later
 // list it as a dependency and would fail with "Unable to preload CSS" (and their screen would not open) if it were gone.
+// The Icon stylesheet (a few hundred bytes, linked from the entry because every screen draws icons) is inlined the same way: left linked it is
+// a second render-blocking request for almost nothing (Lighthouse mobile: render-blocking-resources).
 function inlineEntryCss() {
   return {
     name: 'inline-entry-css',
     apply: 'build',
     transformIndexHtml: {
       order: 'post',
-      handler: (html, ctx) => html.replace(/<link rel="stylesheet"[^>]*href="[^"]*\/(assets\/index-[\w-]+\.css)"[^>]*>/, (tag, file) => {
+      handler: (html, ctx) => html.replace(/<link rel="stylesheet"[^>]*href="[^"]*\/(assets\/(?:index|Icon)-[\w-]+\.css)"[^>]*>/g, (tag, file) => {
         const asset = ctx.bundle?.[file];
         if (!asset || asset.type !== 'asset') return tag;
         return `<style>${String(asset.source).replace(/<\/style/gi, '<\\/style')}</style>`;
@@ -181,7 +183,8 @@ export default defineConfig({
         // Everything the app needs, including the Excel reader and fonts, is cached so it works offline.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // The iOS splash images are only fetched by iPhone Safari at install time, so they stay out of the offline cache.
-        globIgnores: ['splash/**'],
+        // The QA and Staging icons are only linked on those services (server/appLabel.ts); production never shows them.
+        globIgnores: ['splash/**', 'icons/qa/**', 'icons/staging/**'],
       },
     }),
   ],
