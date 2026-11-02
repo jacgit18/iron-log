@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// Production migrates inside the approved deploy (briefs production-migrates-in-deploy and production-migrate-job). The production job of
+// Production migrates inside the deploy (briefs production-migrates-in-deploy and production-migrate-job). The production job of
 // deploy-cloud-run.yml hands the migrations to the migrate job, which holds the owner login in Secret Manager; GitHub holds no owner URL for
 // production. The order of the steps is pinned here. Read as text: no YAML library.
 const all = readFileSync('.github/workflows/deploy-cloud-run.yml', 'utf8');
@@ -16,7 +16,7 @@ const step = (name: string) => {
   return job.slice(start, next < 0 ? undefined : next);
 };
 
-describe('the production job migrates production after the approval', () => {
+describe('the production job migrates production inside the deploy', () => {
   it('is the production environment, and the old box and fallback are gone', () => {
     expect(job).toContain('environment: production');
     expect(all).not.toContain('migrations_applied');
