@@ -5,15 +5,6 @@
 .edpanel.edprog {
   overflow-wrap: anywhere;
 }
-/* The library program's name in the Program switch and in the note under it: one long word breaks inside itself. This is a class of its own on that one button,
-   so the shared .seg rules, the A and B buttons and the Day buttons are not touched. */
-.edtop .seg button.segname {
-  min-width: 0;
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  text-align: left;
-}
 .libnote b {
   overflow-wrap: anywhere;
 }
@@ -163,8 +154,8 @@
 .edadd {
   margin: var(--sp-4) 0 var(--sp-12);
 }
+/* Below 1280px the button sits at the left, right after the A and B tabs, and drops to its own row (still at the left) when the tabs fill the row, as long program names do. */
 .edtop .createprog {
-  margin-left: auto;
   min-height: 44px;
 }
 .copyday {
