@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { normDietCfg, normDietEntries } from '../../src/shared/diet.ts';
 import { normRecipes } from '../../src/shared/recipes.ts';
+import { BUILTIN_EXERCISES } from './builtinExercises.ts';
+import { SEED_EXERCISE_IDS } from './seedPersona.ts';
 import { PERSONAS, personaAuthId, personaById, personaEmail } from './personas.ts';
 import { buildPersonaRows, DIET_TARGETS } from './seedPlan.ts';
 
@@ -61,6 +63,31 @@ describe('QA personas', () => {
     expect(buildPersonaRows(personaById('grocery-shopper')!, EXERCISES, TODAY).groceryItems.length).toBeLessThan(500);
   });
 
+  describe('the exercise library', () => {
+    const all = Object.keys(BUILTIN_EXERCISES);
+
+    it('lists every exercise the programs use in cfg.ex of each account that has programs, with name and equipment', () => {
+      for (const p of PERSONAS) {
+        const r = buildPersonaRows(p, all, TODAY);
+        if (!p.data.programs) { expect(r.config?.ex).toBeUndefined(); continue; }
+        expect(Object.keys(r.config!.ex!)).toEqual(all);
+        expect(r.config!.ex!['latpd']).toEqual({ n: BUILTIN_EXERCISES['latpd']!.n, eq: 'cable' });
+      }
+    });
+
+    it('has 30 or more exercises for the superset builder and the heavy logger, so the two-column layout shows', () => {
+      for (const id of ['superset-builder', 'heavy-logger']) {
+        expect(Object.keys(buildPersonaRows(personaById(id)!, SEED_EXERCISE_IDS, TODAY).config!.ex!).length).toBeGreaterThanOrEqual(30);
+      }
+    });
+
+    it('keeps the diet document beside the exercises, and skips ids it has no name for', () => {
+      const r = buildPersonaRows(personaById('meal-planner')!, [...EXERCISES, 'no-such-exercise'], TODAY);
+      expect(r.config?.diet).toMatchObject(DIET_TARGETS);
+      expect(r.config?.ex).not.toHaveProperty('no-such-exercise');
+    });
+  });
+
   describe('the Diet group', () => {
     const rowsOf = (id: string) => buildPersonaRows(personaById(id)!, EXERCISES, TODAY);
     const sumOn = (rows: ReturnType<typeof rowsOf>, d: string, k: 'kcal' | 'p') => rows.dietEntries.filter(e => e.data.d === d).reduce((a, e) => a + e.data[k], 0);
@@ -85,7 +112,7 @@ describe('QA personas', () => {
 
     it('gives the fresh account no targets, no log and no recipes', () => {
       const r = rowsOf('diet-fresh');
-      expect(r.config).toBeNull();
+      expect(r.config?.diet).toBeUndefined();
       expect(r.dietEntries).toHaveLength(0);
       expect(r.recipes).toHaveLength(0);
     });
@@ -115,7 +142,7 @@ describe('QA personas', () => {
         const r = rowsOf(id);
         expect(normDietEntries(r.dietEntries.map(e => e.data))).toHaveLength(r.dietEntries.length);
         expect(normRecipes(r.recipes.map(x => x.data))).toHaveLength(r.recipes.length);
-        if (r.config) {
+        if (r.config?.diet) {
           const kept = normDietCfg(r.config.diet, '2026-10-27')!;
           expect(Object.keys(kept.plan ?? {})).toHaveLength(Object.keys((r.config.diet.plan as object) ?? {}).length);
           expect(kept.meals ?? []).toHaveLength(((r.config.diet.meals as unknown[]) ?? []).length);
