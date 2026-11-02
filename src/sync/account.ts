@@ -51,18 +51,20 @@ function billingFrom(v: unknown): BillingInfo | undefined {
    Only the browser's own fetch shares (a test that passes `fetch` gets a client of its own). A request in flight is joined; a signed-in or signed-out
    answer is reused for a few seconds; "unreachable" is never kept, so a retry asks again. Signing in or out clears it. */
 const ME_REUSE_MS = 3000;
-let sharedMe: { key: string; promise: Promise<AccountState>; at: number; keep: boolean } | null = null;
+let sharedMe: { key: string; promise: Promise<AccountState>; at: number } | null = null;
 export function resetMeCache() { sharedMe = null; }
 
 export function createAccountClient(options: AccountOptions = {}) {
   const { baseUrl = '', headers, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   const doFetch = options.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
 
-  function me(): Promise<AccountState> {
+  /** `fresh` skips the reuse window (a deliberate re-check, such as the wait for a plan to turn paid after Checkout) but still joins nothing stale: it asks the server. */
+  function me(opts: { fresh?: boolean } = {}): Promise<AccountState> {
     if (options.fetch) return meFetch();
+    if (opts.fresh) resetMeCache();
     const key = `${baseUrl}|${JSON.stringify(headers?.() ?? {})}`;
-    if (sharedMe && sharedMe.key === key && (!sharedMe.keep || Date.now() - sharedMe.at < ME_REUSE_MS)) return sharedMe.promise;
-    const entry = { key, at: Date.now(), keep: true, promise: meFetch() };
+    if (sharedMe && sharedMe.key === key && Date.now() - sharedMe.at < ME_REUSE_MS) return sharedMe.promise;
+    const entry = { key, at: Date.now(), promise: meFetch() };
     entry.promise = entry.promise.then(state => { if (state.status === 'unreachable' && sharedMe === entry) sharedMe = null; return state; });
     sharedMe = entry;
     return entry.promise;

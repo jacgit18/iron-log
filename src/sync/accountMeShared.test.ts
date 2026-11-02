@@ -34,6 +34,16 @@ describe('one /api/me for the whole page load', () => {
     expect(count()).toBe(2);
   });
 
+  it('asks the server again when a re-check says fresh, even inside the reuse window', async () => {
+    const c = createAccountClient();
+    await c.me();
+    await c.me({ fresh: true });
+    await c.me({ fresh: true });
+    expect(count()).toBe(3);
+    await c.me();
+    expect(count()).toBe(3); // the answer from the last fresh ask is reused again
+  });
+
   it('never keeps an unreachable answer, so a retry asks again', async () => {
     answer = () => new Response(null, { status: 503 });
     const c = createAccountClient();
