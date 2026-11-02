@@ -200,3 +200,21 @@ describe('a build under a hidden folder', () => {
     } finally { await new Promise<void>(done => s.close(() => done())); rmSync(hidden, { recursive: true, force: true }); }
   });
 });
+
+describe('APP_LABEL (appLabel.ts)', () => {
+  it('names the installed app after the environment, and leaves production unchanged', async () => {
+    writeFileSync(join(dir, 'manifest.webmanifest'), '{"name":"Loadbearer","short_name":"Loadbearer"}');
+    const labelled = createApp({ staticDir: dir, appLabel: 'QA' }).listen(0);
+    await new Promise(done => labelled.once('listening', done));
+    const url = `http://127.0.0.1:${(labelled.address() as AddressInfo).port}`;
+    try {
+      expect(((await (await fetch(`${url}/manifest.webmanifest`)).json()) as { name: string }).name).toBe('Loadbearer QA');
+      expect(await (await fetch(`${url}/`)).text()).toContain('<title>Loadbearer QA</title>');
+      expect(await (await fetch(`${url}/progress`)).text()).toContain('<title>Loadbearer QA</title>');
+      expect(((await (await get('/manifest.webmanifest')).json()) as { name: string }).name).toBe('Loadbearer');
+      expect(await (await get('/')).text()).toContain('<title>Loadbearer</title>');
+    } finally {
+      await new Promise<void>(done => labelled.close(() => done()));
+    }
+  });
+});

@@ -20,6 +20,12 @@
 .logbtn {
   margin-left: auto;
 }
+/* A checked-off card's button says Edit with a pencil (brief board-edit-button). */
+.editbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
 @media (max-width:700px) {
   .logbtn {
     min-width: 64px;
