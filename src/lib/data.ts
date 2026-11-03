@@ -263,7 +263,7 @@ export function slotsFor(prog: Program): FlatSlot[] {
 
 // A saved/edited program only replaces the built-in one when it has the right shape.
 export function resolveProgram(k: 'A' | 'B', data: unknown): Program { return hasValidDays(data) ? withAllDays({ ...structuredClone(data as Program), key: k }) : BUILTIN[k]; }
-export const VIDEO_ERR = 'Video link should start with https://';
+export const VIDEO_ERR = 'Video link should start with http:// or https://';
 // "Watch on YouTube" / "Watch on Instagram" from the link's host; unknown hosts show their domain.
 const PLATFORMS: Record<string, string> = { 'youtube.com': 'YouTube', 'youtu.be': 'YouTube', 'instagram.com': 'Instagram', 'tiktok.com': 'TikTok', 'vimeo.com': 'Vimeo', 'facebook.com': 'Facebook', 'fb.watch': 'Facebook', 'x.com': 'X', 'twitter.com': 'X' };
 export function videoLabel(url: unknown): string {
