@@ -217,8 +217,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
   // A suspended account is refused here, before any route runs, except /api/me, erase-data and delete (server/suspended.ts).
   app.use('/api', suspendedGate);
-  // A page that holds another account's data is refused before any route runs (server/expectedUser.ts).
-  app.use(['/api/commands', '/api/sync', '/api/backups'], expectedUserGate());
+  // A page that holds another account's data is refused before any route runs (server/expectedUser.ts). Erase and delete are covered too: they run after
+  // the suspended gate, which lets a suspended account through, so a stale tab cannot erase or delete the wrong account.
+  app.use(['/api/commands', '/api/sync', '/api/backups', '/api/account/erase-data', '/api/account/delete'], expectedUserGate());
   // Per signed-in user, after the lookup.
   app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
   app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }), repairBody);
