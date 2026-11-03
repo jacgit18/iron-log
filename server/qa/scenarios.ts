@@ -26,13 +26,14 @@ export type ScenarioFeature =
   | 'QA picker'
   | 'Wide layouts'
   | 'Admin accounts'
-  | 'kg beside lb';
+  | 'kg beside lb'
+  | 'Label scan';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb',
+  'kg beside lb', 'Label scan',
 ];
 
 export interface Scenario {
@@ -658,7 +659,32 @@ export const SCENARIOS: readonly Scenario[] = [
       'The kg figures return when it is switched on again; no logged weight changed.',
     ],
   },
+  // ---- Label scan ----
+  {
+    id: 'S-49', feature: 'Label scan', title: 'Fill a ready-made food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
+    steps: [
+      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan label and photograph a nutrition-facts label (frozen gnocchi, cereal, a can).',
+      'Compare the filled calories, protein, carbs and fat with the printed per-serving column and fix anything that differs.',
+      'Press Save food, open it, and use Ate this with 1.5 portions.',
+    ],
+    expected: [
+      'The form fills in a few seconds with the name, per-serving numbers and a Note like "1 serving = 2/3 cup (55 g). About 6 servings per pack." and says to check the numbers; nothing is saved yet.',
+      'After Save food the food is in the Ready-made list; Ate this logs 1.5 times the calories and protein to today.',
+    ],
+  },
+  {
+    id: 'S-50', feature: 'Label scan', title: 'A blurry photo or a non-admin account', persona: 'diet-fresh', brief: 'label-photo-scan', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, press Scan label and photograph something that is not a label (a table), then a label that only shows a per 100 g column if you have one.',
+      'Sign in as a test account that is not an admin and open New ready-made food.',
+    ],
+    expected: [
+      'The form stays empty and says it could not read the numbers (or that the label shows per 100 g only); you can still type the numbers and save.',
+      'The non-admin account sees no Scan label button.',
+    ],
+  },
 ];
+
 
 export const scenarioById = (id: string): Scenario | undefined => SCENARIOS.find(s => s.id === id);
 /** The scenarios a persona runs (retired ones left out), in id order. */

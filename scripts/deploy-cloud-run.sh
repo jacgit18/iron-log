@@ -7,7 +7,9 @@
 #             stores the email-code key (optional: without it the email sign-in code stays off, ADR 042)
 #             With VAPID_SUBJECT exported (mailto:you@example.com) it also stores the Web Push keys, making the pair once; see push-setup (ADR 044)
 #             With USDA_API_KEY exported it also stores the food-search key (optional: without it the lookup in Quick add says it is not available)
+#             With ANTHROPIC_API_KEY exported it also stores the Scan label key (optional: without it Scan label says it is not available)
 #   usda      put only the USDA food-search key (USDA_API_KEY) in Secret Manager and let the service read it
+#   anthropic put only the Claude API key for Scan label (ANTHROPIC_API_KEY) in Secret Manager and let the service read it
 #   stripe    put only the four Stripe billing settings in Secret Manager (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY; ADR 065)
 #   push-setup  make the Cloud Tasks queue, the invoker account and the permissions for Web Push (once; needs the cloudtasks API)
 #   url       print the address people sign in on (the Cloud Run address, or PUBLIC_BASE_URL), for the Google console's redirect URI (needs no deploy)
@@ -142,6 +144,9 @@ resend_secret_wanted() { secret_wanted "$RESEND_SECRET" RESEND_API_KEY RESEND_OF
 # The optional USDA FoodData Central key for the food search in Quick add (brief diet-food-lookup). Without it the lookup says it is not available. Each environment has its own name; one free key may be stored in all three.
 USDA_SECRET="${SECRET_PREFIX}-usda-api-key"
 usda_secret_wanted() { secret_wanted "$USDA_SECRET" USDA_API_KEY USDA_OFF; }
+# The optional Claude API key for Scan label (brief label-photo-scan, ADR 099): an API key from console.anthropic.com, not a Claude subscription token. Without it the scan says it is not available. Each environment has its own secret name; give each its own key (own spend limit) or store one key in all three.
+ANTHROPIC_SECRET="${SECRET_PREFIX}-anthropic-api-key"
+anthropic_secret_wanted() { secret_wanted "$ANTHROPIC_SECRET" ANTHROPIC_API_KEY ANTHROPIC_OFF; }
 
 # QA only (brief qa-picker-access): the owner URL of the QA branch, so the in-app Reset can run the seed (the app's own role cannot delete rows or
 # set plans). Never stored or mapped for staging or production; the server also opens it only after the QA-mark check. QA_OWNER_OFF=1 removes it.
@@ -247,6 +252,15 @@ store_stripe_secrets() {
   STRIPE_NAMES=("${SECRET_PREFIX}-stripe-secret-key" "${SECRET_PREFIX}-stripe-webhook-secret" "${SECRET_PREFIX}-stripe-price-monthly" "${SECRET_PREFIX}-stripe-price-yearly")
 }
 
+# Only the Claude API key for Scan label, stored and made readable to the service (read it from the prompt, never put it on the command line).
+cmd_anthropic() {
+  : "${ANTHROPIC_API_KEY:?Export ANTHROPIC_API_KEY (an API key from console.anthropic.com, with a spend limit set on it)}"
+  echo "Storing the Scan label key in project $PROJECT_ID:"
+  printf '%s' "$ANTHROPIC_API_KEY" | put_secret "$ANTHROPIC_SECRET"
+  gc secrets add-iam-policy-binding "$ANTHROPIC_SECRET" --member "serviceAccount:${RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com" --role roles/secretmanager.secretAccessor >/dev/null
+  echo "Done. Next: deploy (Actions, Deploy to Cloud Run, or scripts/deploy-cloud-run.sh deploy): it passes the key to the service."
+}
+
 # Only the USDA food-search key, stored and made readable to the service without the database and Google values `secrets` also needs.
 cmd_usda() {
   : "${USDA_API_KEY:?Export USDA_API_KEY (the free key from https://fdc.nal.usda.gov/api-key-signup)}"
@@ -341,6 +355,12 @@ cmd_secrets() {
   else
     echo "  $USDA_SECRET: not touched (export USDA_API_KEY to store it)"
   fi
+  if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    printf '%s' "$ANTHROPIC_API_KEY" | put_secret "$ANTHROPIC_SECRET"
+    secret_names+=("$ANTHROPIC_SECRET")
+  else
+    echo "  $ANTHROPIC_SECRET: not touched (export ANTHROPIC_API_KEY to store it)"
+  fi
   # Optional: the Web Push keys. VAPID_SUBJECT (a mailto: address the push services can reach) says to store them. The key pair is made once
   # here and never shown; an existing pair is kept (a new one would orphan every device that already subscribed).
   if [ "$IRON_LOG_ENV" != production ]; then
@@ -411,6 +431,7 @@ deploy_image() {
   local secrets="APP_DATABASE_URL=${SECRET_PREFIX}-app-database-url:latest,BETTER_AUTH_SECRET=${SECRET_PREFIX}-auth-secret:latest,GOOGLE_CLIENT_ID=${SECRET_PREFIX}-google-client-id:latest,GOOGLE_CLIENT_SECRET=${SECRET_PREFIX}-google-client-secret:latest"
   if resend_secret_wanted; then secrets+=",RESEND_API_KEY=${RESEND_SECRET}:latest"; echo "Email sign-in code: RESEND_API_KEY is passed to the service."; else echo "Email sign-in code: no RESEND_API_KEY, so the feature stays off${RESEND_OFF:+ (RESEND_OFF=1: any mapping is removed)}."; fi
   if usda_secret_wanted; then secrets+=",USDA_API_KEY=${USDA_SECRET}:latest"; echo "Food search: USDA_API_KEY is passed to the service."; else echo "Food search: no USDA_API_KEY, so the lookup says it is not available${USDA_OFF:+ (USDA_OFF=1: any mapping is removed)}."; fi
+  if anthropic_secret_wanted; then secrets+=",ANTHROPIC_API_KEY=${ANTHROPIC_SECRET}:latest"; echo "Scan label: ANTHROPIC_API_KEY is passed to the service."; else echo "Scan label: no ANTHROPIC_API_KEY, so the scan says it is not available${ANTHROPIC_OFF:+ (ANTHROPIC_OFF=1: any mapping is removed)}."; fi
   if pii_secret_wanted; then secrets+=",PII_ENCRYPTION_KEY=${PII_SECRET}:latest"; echo "Database encryption: PII_ENCRYPTION_KEY is passed to the service."; else
     # Production refuses to start without the key (server/auth/piiBootCheck.ts): this revision will exit at boot and, as a candidate, get no traffic.
     echo "Database encryption: no PII_ENCRYPTION_KEY is available ($PII_SECRET does not exist and the live service does not map it). The server refuses to start in production without it, so this revision will fail its start-up check. Make the key first: PII_KEY_CREATE=1 $0 secrets (runbook section 20)." >&2
@@ -510,6 +531,7 @@ case "${1:-}" in
   secrets) cmd_secrets;;
   stripe) cmd_stripe;;
   usda) cmd_usda;;
+  anthropic) cmd_anthropic;;
   push-setup) cmd_push_setup;;
   url) public_base_url;;
   deploy) cmd_deploy;;

@@ -1,5 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useFeature } from '../../features.js';
+import './ReadyMadeScan.css';
 import { readyMadeValues } from '../../lib/readyMade.js';
+import { planFill } from '../../lib/labelFill.js';
+import { SCAN_TEXT, scanLabel } from '../../lib/scanPhoto.js';
 import { MAX_RECIPE_NAME } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import FoodSearch, { type FoodFill } from '../diet/FoodSearch.js';
@@ -18,9 +22,29 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
   const [fat, setFat] = useState(str(recipe?.f));
   const [note, setNote] = useState(recipe?.note ?? '');
   const [err, setErr] = useState('');
+  const canScan = useFeature('scan') && !recipe;
+  const [scanning, setScanning] = useState(false);
+  const [scanNote, setScanNote] = useState('');
+  const pick = useRef<HTMLInputElement>(null);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []); // a scan that ends after Cancel changes nothing
   const fillFrom = (f: FoodFill) => {
     if (!n.trim()) setN(f.n);
     setKcal(String(f.kcal)); setProtein(String(f.p)); setCarbs(str(f.c)); setFat(str(f.f)); setErr('');
+  };
+  // Scan label (brief label-photo-scan): fills the form from a photo, never saves. Only empty text boxes are kept, numbers are replaced because they come from the label.
+  const scan = async (file: File | undefined) => {
+    if (!file || scanning) return;
+    setScanning(true); setScanNote('');
+    const r = await scanLabel(file);
+    if (!mounted.current) return;
+    setScanning(false);
+    if (!r.ok) { setScanNote(SCAN_TEXT[r.reason]); return; }
+    const plan = planFill(r.result, { n: '', note: '' }); // what the label offers; a name or note typed while it was reading is kept below
+    if (plan.n !== undefined) setN(cur => (cur.trim() ? cur : plan.n ?? ''));
+    if (plan.kcal !== undefined) { setKcal(plan.kcal); setProtein(plan.p ?? ''); setCarbs(plan.c ?? ''); setFat(plan.f ?? ''); setErr(''); }
+    if (plan.note !== undefined) setNote(cur => (cur.trim() ? cur : plan.note ?? ''));
+    setScanNote(plan.message);
   };
   const save = () => {
     const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat });
@@ -36,6 +60,13 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
       <div onKeyDown={e => { if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault(); }}>{/* Enter in the lookup box searches, it does not save the form */}
         <FoodSearch onUse={fillFrom} />
       </div>
+      {canScan && (
+        <div className="rc-scan">
+          <input ref={pick} type="file" accept="image/*" hidden aria-label="Label photo" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />
+          <button type="button" className="btn sm" disabled={scanning} onClick={() => pick.current?.click()}>{scanning ? 'Reading label...' : 'Scan label'}</button>
+          {scanNote && <p className="note" role="status">{scanNote}</p>}
+        </div>
+      )}
       <label>Name
         <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
       </label>
