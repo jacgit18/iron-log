@@ -61,3 +61,20 @@ export function perAddressLimit(max: number, windowMs: number, now: () => number
     return true;
   };
 }
+
+/**
+ * At most `max` codes in total in the last 24 hours, whatever the address, per server instance (rolling). Resend's free plan sends 100 a day, so a bot using many
+ * made-up addresses could otherwise spend the day's mail and stop every real code. Zero or less means no cap. The caller decides what a refusal looks like.
+ */
+export function dailyCap(max: number, now: () => number = Date.now): () => boolean {
+  const DAY_MS = 24 * 60 * 60_000;
+  let sent: number[] = [];
+  return () => {
+    if (max <= 0) return true;
+    const t = now();
+    sent = sent.filter(at => t - at < DAY_MS);
+    if (sent.length >= max) return false;
+    sent.push(t);
+    return true;
+  };
+}

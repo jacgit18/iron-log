@@ -28,7 +28,8 @@ import { originGuard } from './originGuard.ts';
 import { fireRoute, type FireDeps } from './push/fire.ts';
 import { pushRoutes } from './push/routes.ts';
 import type { PushScheduler } from './push/scheduler.ts';
-import { byUser, rateLimit, type Limit } from './rateLimit.ts';
+import { NETWORK_HEADER } from './auth/tryGate.ts';
+import { byUser, ipKey, rateLimit, type Limit } from './rateLimit.ts';
 import { securityHeaders } from './securityHeaders.ts';
 import { AUTH_CHECK_PAGE } from './dev/authCheckPage.ts';
 import { deleteMyAccount, eraseMyData } from './commands/account.ts';
@@ -163,6 +164,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     app.use('/api/auth', rateLimit(authLimits.other));
     // Better Auth buffers a whole body before it checks it, so the size is judged first (bodyLimit.ts).
     app.use('/api/auth', bodyLimit());
+    // The client's network key (IPv6 by /64) goes to Better Auth's hooks in a header the server sets itself, so a caller cannot choose its own.
+    app.use('/api/auth', (req, _res, next) => { req.headers[NETWORK_HEADER] = ipKey(req.ip ?? 'unknown'); next(); });
     app.all('/api/auth/*splat', toNodeHandler(auth));
   }
   // The phone's error reports: anyone may send one (a signed-out phone has errors too), so they are small, rate-limited and scrubbed.
