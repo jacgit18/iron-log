@@ -12,7 +12,7 @@ let db: Kysely<DB>;
 let stop: () => Promise<void>;
 let server: Server;
 let base: string;
-const model = async () => new Response(JSON.stringify({ content: [{ type: 'text', text: '{"kcal":120,"p":4}' }] }), { status: 200 });
+const model = async () => new Response(JSON.stringify({ content: [{ type: 'text', text: '{"kcal":120,"p":4,"lines":[{"text":"EGGS","total":500,"match":"eggs"}]}' }] }), { status: 200 });
 
 beforeAll(async () => {
   ({ db, stop } = await startTestDatabase());
@@ -26,8 +26,9 @@ afterAll(async () => {
 });
 
 const photo = (chars: number) => JSON.stringify({ image: '/9j/' + 'A'.repeat(chars - 4) });
-const post = (body: string, user?: string) =>
-  fetch(`${base}/api/scan/label`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-client-version': 'test-1', ...(user ? { 'x-dev-user': user } : {}) }, body });
+const receiptPhoto = (chars: number) => JSON.stringify({ image: '/9j/' + 'A'.repeat(chars - 4), items: [{ id: 'eggs', n: 'Eggs' }] });
+const post = (body: string, user?: string, path = 'label') =>
+  fetch(`${base}/api/scan/${path}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-client-version': 'test-1', ...(user ? { 'x-dev-user': user } : {}) }, body });
 
 describe('POST /api/scan/label through the whole app', () => {
   it('reads a 500 kB photo from an admin (over the 100 kb app limit)', async () => {
@@ -43,5 +44,16 @@ describe('POST /api/scan/label through the whole app', () => {
   it('gives an anonymous caller 401 and a non-admin 403, with no parser run for either', async () => {
     expect((await post(photo(500_000))).status).toBe(401);
     expect((await post(photo(500_000), 'plain')).status).toBe(403);
+  });
+
+  it('reads a 1 MB receipt photo from an admin through the whole app, refuses over 5 MB, and keeps anonymous and non-admin out', async () => {
+    const body = receiptPhoto(1_000_000);
+    expect(body.length).toBeGreaterThan(100_000);
+    const res = await post(body, 'boss', 'receipt');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, result: { kind: 'ok' } });
+    expect((await post(receiptPhoto(5_400_000), 'boss', 'receipt')).status).toBe(413);
+    expect((await post(body, undefined, 'receipt')).status).toBe(401);
+    expect((await post(body, 'plain', 'receipt')).status).toBe(403);
   });
 });

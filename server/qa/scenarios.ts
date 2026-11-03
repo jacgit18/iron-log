@@ -27,13 +27,15 @@ export type ScenarioFeature =
   | 'Wide layouts'
   | 'Admin accounts'
   | 'kg beside lb'
-  | 'Label scan';
+  | 'Label scan'
+  | 'Whole pack'
+  | 'Receipt scan';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan',
 ];
 
 export interface Scenario {
@@ -663,7 +665,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-49', feature: 'Label scan', title: 'Fill a ready-made food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan label and photograph a nutrition-facts label (frozen gnocchi, cereal, a can).',
+      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Choose photo and pick a saved photo of a label.',
       'Compare the filled calories, protein, carbs and fat with the printed per-serving column and fix anything that differs.',
       'Press Save food, open it, and use Ate this with 1.5 portions.',
     ],
@@ -683,7 +685,58 @@ export const SCENARIOS: readonly Scenario[] = [
       'The non-admin account sees no Scan label button.',
     ],
   },
+  // ---- Whole pack ----
+  {
+    id: 'S-51', feature: 'Whole pack', title: 'Log a whole pack of a ready-made food', persona: 'diet-on-target', brief: 'whole-pack',
+    steps: [
+      'On Recipes press New ready-made food, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
+      'Open the food, look under Per portion, then press Whole pack (12) and press More once.',
+      'Press Whole pack (12) again, press Ate this, then press Undo.',
+    ],
+    expected: [
+      'The page says "12 servings per pack"; Whole pack (12) sets the stepper to 12 portions and More is disabled at 12.',
+      'Ate this logs "12 portions" with 2,520 calories to today; Undo removes it. A food saved with no pack size has no Whole pack button and its stepper stops at 10.',
+    ],
+  },
+  {
+    id: 'S-52', feature: 'Whole pack', title: 'A wrong pack size is refused', persona: 'diet-fresh', brief: 'whole-pack', edge: true,
+    steps: [
+      'On New ready-made food fill the name and numbers and type 2.5 in Servings per pack, then press Save food.',
+      'Change it to 8, save, then edit the food and clear the box.',
+    ],
+    expected: [
+      'It says "Servings per pack must be a whole number from 1 to 99." and saves nothing.',
+      'With 8 the page shows "8 servings per pack"; after clearing the box the line and the Whole pack button are gone.',
+    ],
+  },
+  // ---- Receipt scan ----
+  {
+    id: 'S-53', feature: 'Receipt scan', title: 'Scan a BJ\'s receipt and apply it', persona: 'grocery-shopper', brief: 'receipt-scan', device: true,
+    steps: [
+      'On a phone, sign in as an admin account with items like the ones on your receipt. On Groceries, To get, press Scan receipt and photograph a BJ\'s receipt.',
+      'In the sheet, compare each line with the paper: the item it matched, the quantity and the price after the instant savings. Change one match and untick one line.',
+      'Check the Total check line, pick the store for the tax if it asks, then press Apply and look at the list; then press Undo.',
+    ],
+    expected: [
+      'The sheet lists every receipt line; a discount is taken off the item above it and the old price shows crossed out; lines with no item on your list are greyed and skipped.',
+      'Apply ticks the matched items as bought this month with the right quantity and price and sets the store tax; Undo puts every price, tick and the tax back as they were.',
+    ],
+  },
+  {
+    id: 'S-54', feature: 'Receipt scan', title: 'A bad photo or a total that does not add up', persona: 'grocery-shopper', brief: 'receipt-scan', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, press Scan receipt and photograph something that is not a receipt, or half of one.',
+      'Scan a real receipt again with the bottom cut off, so a line is missing, and look at the Total check.',
+      'Sign in as a test account that is not an admin and open Groceries.',
+    ],
+    expected: [
+      'A photo that is not a receipt says it could not read it and changes nothing on the list.',
+      'A cut-off receipt shows the missing amount in the Total check but still lets you Apply; a non-admin account sees no Scan receipt button.',
+    ],
+  },
 ];
+
+
 
 
 export const scenarioById = (id: string): Scenario | undefined => SCENARIOS.find(s => s.id === id);

@@ -17,6 +17,7 @@ import Notice, { UNDO_MS } from '../Notice.jsx';
 import RemovedNotice from '../RemovedNotice.jsx';
 import GrocerySpend from './GrocerySpend.js';
 import PriceChips from './PriceChips.js';
+import ReceiptScan from './ReceiptScan.js';
 import SharePicker from './SharePicker.js';
 import SharingGroups from './SharingGroups.js';
 import SplitSection from './SplitSection.js';
@@ -206,6 +207,7 @@ function ToGet({ g, months, nowKey }: { g: GroceryT; months: Record<string, Groc
         <b id="groc-month" role="status" aria-live="polite">{monthLabel(mk)}{off === 0 ? ' (this month)' : off > 0 ? ' (ahead)' : ''}</b>
         <button type="button" className="btn sm" id="groc-next" aria-label="Next month" disabled={off >= AHEAD} onClick={() => setOff(o => Math.min(AHEAD, o + 1))}><Icon name="chevron-right" /></button>
       </div>
+      <ReceiptScan g={g} mk={mk} />
       {t.count > 0 && <div className="gprog" aria-hidden="true"><span style={{ width: `${Math.round((t.got / t.count) * 100)}%` }} /></div>}
       <p className="note" id="groc-summary" role="status">
         {t.count ? <>{`Got ${t.got} of ${t.count} · Spent ${money(t.spent)}${t.taxed ? ' with tax' : ''} · Expected ${money(t.planned)}`}{t.unpriced > 0 && <>{' · '}<span className="gwarn">{t.unpriced} without a price</span></>}</> : off > 0 ? 'Nothing planned yet. Items you add on At home show up here.' : 'Nothing on this month’s list.'}

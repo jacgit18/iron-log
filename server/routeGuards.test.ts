@@ -123,6 +123,7 @@ describe('role guards: a plain signed-in account', () => {
     expect((await fetch(`${url}/api/issues`, { headers: plain })).status).toBe(403);
     expect((await fetch(`${url}/api/accounts`, { headers: plain })).status).toBe(403);
     expect((await fetch(`${url}/api/scan/label`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
+    expect((await fetch(`${url}/api/scan/receipt`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
     expect((await fetch(`${url}/api/backups`, { headers: { ...plain, 'x-client-version': 'dev' } })).status).toBe(402);
     if (ADMIN_ONLY) expect((await fetch(`${url}/api/billing/checkout`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
   });
