@@ -55,6 +55,15 @@ export function servingNumbers(r: Pick<Recipe, 'kcal' | 'p' | 'c' | 'f'>, servin
   return { kcal, p, ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}) };
 }
 
+/** The most portions Ate this, the planner and Find food offer. */
+export const PORTION_MAX = 10;
+
+/** Servings in the pack of a ready-made food (brief whole-pack): 2 to 99, or null for a food with no pack size, a pack of 1, or any other recipe. */
+export const packServings = (r: Pick<Recipe, 'cat' | 'servings'>): number | null => (r.cat === 'ready' && r.servings !== undefined && r.servings >= 2 ? r.servings : null);
+
+/** The top of Ate this's portion stepper: PORTION_MAX, or the pack size when that is larger (up to 99). */
+export const ateMax = (r: Pick<Recipe, 'cat' | 'servings'>): number => Math.min(99, Math.max(PORTION_MAX, packServings(r) ?? 0));
+
 /** One entry in words: "520 kcal · 42 g protein", with " · 60 g carbs" and " · 12 g fat" when they were entered. */
 export const entryText = (e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f'>): string =>
   [`${fmtNum(e.kcal)} kcal`, `${fmtNum(e.p)} g protein`, ...(e.c !== undefined ? [`${fmtNum(e.c)} g carbs`] : []), ...(e.f !== undefined ? [`${fmtNum(e.f)} g fat`] : [])].join(' · ');

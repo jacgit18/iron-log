@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NO_NUTRITION } from '../../lib/recipeNutrition.js';
-import { ateDayError, entryText, hasMacros, oldestDay, servingNumbers } from '../../lib/dietLog.js';
+import { ateDayError, ateMax, entryText, hasMacros, oldestDay, packServings, servingNumbers } from '../../lib/dietLog.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -19,6 +19,7 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
     return <div className="dt-ate"><p className="note">Add calories and protein per serving to log this recipe.</p><button type="button" className="btn sm" onClick={onEdit}>Add them</button></div>;
   }
   const nums = servingNumbers(recipe, servings);
+  const max = ateMax(recipe), pack = packServings(recipe);
   const log = () => {
     if (!nums) { setErr('Those numbers are out of range.'); return; }
     const bad = ateDayError(day, today);
@@ -36,7 +37,8 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
       <div className="dt-ate">
         <button type="button" className="btn sm" disabled={servings <= 0.5} onClick={() => setServings(s => Math.max(0.5, s - 0.5))}>Less</button>
         <span role="status">{servings} {servings === 1 ? 'portion' : 'portions'}</span>
-        <button type="button" className="btn sm" disabled={servings >= 10} onClick={() => setServings(s => Math.min(10, s + 0.5))}>More</button>
+        <button type="button" className="btn sm" disabled={servings >= max} onClick={() => setServings(s => Math.min(max, s + 0.5))}>More</button>
+        {pack !== null && <button type="button" className="btn sm" disabled={servings === pack} onClick={() => setServings(pack)}>Whole pack ({pack})</button>}
         <button type="button" className="btn primary" onClick={log}>Ate this</button>
       </div>
       {err && <p className="note" role="alert">{err}</p>}

@@ -27,13 +27,14 @@ export type ScenarioFeature =
   | 'Wide layouts'
   | 'Admin accounts'
   | 'kg beside lb'
-  | 'Label scan';
+  | 'Label scan'
+  | 'Whole pack';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan',
+  'kg beside lb', 'Label scan', 'Whole pack',
 ];
 
 export interface Scenario {
@@ -683,7 +684,32 @@ export const SCENARIOS: readonly Scenario[] = [
       'The non-admin account sees no Scan label button.',
     ],
   },
+  // ---- Whole pack ----
+  {
+    id: 'S-51', feature: 'Whole pack', title: 'Log a whole pack of a ready-made food', persona: 'diet-on-target', brief: 'whole-pack',
+    steps: [
+      'On Recipes press New ready-made food, type a name, 210 calories and 6 protein, set Servings per pack to 12 and press Save food.',
+      'Open the food, look under Per portion, then press Whole pack (12) and press More once.',
+      'Press Whole pack (12) again, press Ate this, then press Undo.',
+    ],
+    expected: [
+      'The page says "12 servings per pack"; Whole pack (12) sets the stepper to 12 portions and More is disabled at 12.',
+      'Ate this logs "12 portions" with 2,520 calories to today; Undo removes it. A food saved with no pack size has no Whole pack button and its stepper stops at 10.',
+    ],
+  },
+  {
+    id: 'S-52', feature: 'Whole pack', title: 'A wrong pack size is refused', persona: 'diet-fresh', brief: 'whole-pack', edge: true,
+    steps: [
+      'On New ready-made food fill the name and numbers and type 2.5 in Servings per pack, then press Save food.',
+      'Change it to 8, save, then edit the food and clear the box.',
+    ],
+    expected: [
+      'It says "Servings per pack must be a whole number from 1 to 99." and saves nothing.',
+      'With 8 the page shows "8 servings per pack"; after clearing the box the line and the Whole pack button are gone.',
+    ],
+  },
 ];
+
 
 
 export const scenarioById = (id: string): Scenario | undefined => SCENARIOS.find(s => s.id === id);
