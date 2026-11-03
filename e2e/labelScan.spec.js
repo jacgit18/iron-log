@@ -31,6 +31,18 @@ test.describe('as an admin', () => {
     await expect(page.getByRole('button', { name: /Gnocchi/ })).toHaveCount(0); // cancelled: nothing was saved
   });
 
+  test('Scan label opens the camera and Choose photo opens the library, and either fills the form', async ({ page }) => {
+    await answer(page, 200, { ok: true, result: { kind: 'ok', label: { kcal: 95, p: 3 } } });
+    await openForm(page);
+    await expect(page.getByLabel('Label camera')).toHaveAttribute('capture', 'environment');
+    await expect(page.getByLabel('Label photo')).not.toHaveAttribute('capture');
+    await page.getByLabel('Label camera').setInputFiles(photo);
+    await expect(page.getByLabel('Calories per serving')).toHaveValue('95');
+    await page.getByLabel('Calories per serving').fill('');
+    await page.getByLabel('Label photo').setInputFiles(photo);
+    await expect(page.getByLabel('Calories per serving')).toHaveValue('95');
+  });
+
   test('an unreadable label and a failed call leave the form empty and usable', async ({ page }) => {
     await answer(page, 200, { ok: true, result: { kind: 'unreadable' } });
     await openForm(page);
@@ -63,4 +75,5 @@ test('a person who is not an admin sees no Scan label button', async ({ page }) 
   await openForm(page);
   await expect(page.getByRole('button', { name: 'Save food' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Scan label' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Choose photo' })).toHaveCount(0);
 });

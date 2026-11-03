@@ -663,7 +663,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-49', feature: 'Label scan', title: 'Fill a ready-made food from a label photo', persona: 'diet-on-target', brief: 'label-photo-scan', device: true,
     steps: [
-      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan label and photograph a nutrition-facts label (frozen gnocchi, cereal, a can).',
+      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan label (opens the camera) and photograph a nutrition-facts label (frozen gnocchi, cereal, a can); on a second food press Choose photo and pick a saved photo of a label.',
       'Compare the filled calories, protein, carbs and fat with the printed per-serving column and fix anything that differs.',
       'Press Save food, open it, and use Ate this with 1.5 portions.',
     ],
