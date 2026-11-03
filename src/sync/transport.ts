@@ -192,6 +192,7 @@ export function createTransport(options: TransportOptions) {
     if (waiting) return waiting;
     if (res.ok) return { ok: true };
     const answer = res.body as { error?: unknown } | undefined;
+    if (isAccountRefusal(res.status, answer)) return accountPause(); // this page is for another account: nothing was erased or deleted
     return { ok: false, class: 'refused', status: res.status, message: typeof answer?.error === 'string' ? answer.error : `status ${res.status}` };
   }
   const eraseData = () => accountAction('/api/account/erase-data', 'ERASE');
