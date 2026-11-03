@@ -5,6 +5,7 @@ import { PHASES, PH_KEYS } from '../../lib/data.js';
 import { isTimed, setsOfEntry, summarizeSets } from '../../lib/logic.js';
 import { setError } from '../../shared/validate.js';
 import { selectOnFocus, advanceOnEnter, cellHint } from '../../lib/setCells.js';
+import Kg from '../Kg.jsx';
 import './SetRows.css';
 
 const num = (v: string | number) => (v === '' ? null : Number(v));
@@ -45,7 +46,10 @@ export default function EditEntry({ exId, entry, onDone, cancelLabel = 'Cancel',
       {rows.map((r, j) => (
         <div className="setrow" key={j}>
           <span className="setn">{j + 1}</span>
-          <input type="number" inputMode="decimal" step="any" min="0" value={r.w} placeholder="bodyweight" aria-label={`Set ${j + 1} weight in lb`} enterKeyHint={cellHint(false)} onFocus={selectOnFocus} onKeyDown={advanceOnEnter} onChange={e => edit(j, 'w', e.target.value)} />
+          <span className="setw">
+            <input type="number" inputMode="decimal" step="any" min="0" value={r.w} placeholder="bodyweight" aria-label={`Set ${j + 1} weight in lb`} enterKeyHint={cellHint(false)} onFocus={selectOnFocus} onKeyDown={advanceOnEnter} onChange={e => edit(j, 'w', e.target.value)} />
+            <Kg lb={r.w} />
+          </span>
           <span className="setx">×</span>
           <input type="number" inputMode="numeric" step="any" min="0" value={r.r} aria-label={`Set ${j + 1} ${iso ? 'hold in seconds' : 'reps'}`} enterKeyHint={cellHint(j === rows.length - 1)} onFocus={selectOnFocus} onKeyDown={advanceOnEnter} onChange={e => edit(j, 'r', e.target.value)} />
         </div>

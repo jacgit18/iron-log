@@ -25,12 +25,14 @@ export type ScenarioFeature =
   | 'Account menu'
   | 'QA picker'
   | 'Wide layouts'
-  | 'Admin accounts';
+  | 'Admin accounts'
+  | 'kg beside lb';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
+  'kg beside lb',
 ];
 
 export interface Scenario {
@@ -630,6 +632,30 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'An active row and an admin row have no Delete forever button.',
       'Once New user is suspended, Delete forever appears beside Restore; after Restore it is gone again.',
+    ],
+  },
+  // ---- kg beside lb ----
+  {
+    id: 'S-47', feature: 'kg beside lb', title: 'See the kg beside a pound weight', persona: 'heavy-logger', brief: 'lb-kg-toggle',
+    steps: [
+      'On the Board press Log on an exercise and type 135 in Set 1 weight.',
+      'Fill the reps, press Save set, then open the Log sheet again and look at Recent.',
+    ],
+    expected: [
+      'A small grey "61.2 kg" shows right of the weight box as you type, and nothing shows when the box is empty.',
+      'The Recent list shows the load as "135 lb (61.2 kg)". The saved weight is still 135 lb.',
+    ],
+  },
+  {
+    id: 'S-48', feature: 'kg beside lb', title: 'Hide the kg figures', persona: 'heavy-logger', brief: 'lb-kg-toggle', edge: true,
+    steps: [
+      'Open Settings, find Kilograms and turn off Show kg beside lb.',
+      'Open a Log sheet and type a weight; open Maxes.',
+      'Turn the switch back on.',
+    ],
+    expected: [
+      'No kg figure appears in the Log sheet, Recent or Maxes while it is off.',
+      'The kg figures return when it is switched on again; no logged weight changed.',
     ],
   },
 ];

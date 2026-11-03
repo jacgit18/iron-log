@@ -272,6 +272,7 @@ export interface SettingsSlice {
   setPct(p: PhaseKey, raw: string | number): boolean; // false: refused (bad value, or still loading)
   setRxOverride(p: PhaseKey, raw: string): boolean;
   setRest(raw: string | number): boolean;
+  setHideKg(hide: boolean): void;
   setInjuryPrevention(on: boolean): void;
   setRm(exId: string, raw: string | number): boolean;
   setCfgField<K extends keyof Cfg>(k: K, v: Cfg[K]): void;

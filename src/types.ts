@@ -151,6 +151,8 @@ export interface Cfg extends ProgramCfg {
   rest?: number; // rest timer, seconds
   /** Off (false) turns off the heads-up when a move puts the same muscles on back-to-back days and the day-order suggestions. On when unset. */
   injuryPrevention?: boolean;
+  /** True hides the kg figure shown beside pound weights. Shown when unset. */
+  hideKg?: true;
   /** Recipe filter chips you hid, and the order you put the rest in (built-in categories only; custom tags live on the recipes). */
   recipeChips?: RecipeChips;
 }
