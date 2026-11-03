@@ -25,7 +25,8 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
   const canScan = useFeature('scan') && !recipe;
   const [scanning, setScanning] = useState(false);
   const [scanNote, setScanNote] = useState('');
-  const pick = useRef<HTMLInputElement>(null);
+  const camera = useRef<HTMLInputElement>(null);
+  const library = useRef<HTMLInputElement>(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []); // a scan that ends after Cancel changes nothing
   const fillFrom = (f: FoodFill) => {
@@ -62,8 +63,13 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
       </div>
       {canScan && (
         <div className="rc-scan">
-          <input ref={pick} type="file" accept="image/*" hidden aria-label="Label photo" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />
-          <button type="button" className="btn sm" disabled={scanning} onClick={() => pick.current?.click()}>{scanning ? 'Reading label...' : 'Scan label'}</button>
+          {/* Two inputs: Android's photo picker offers only the gallery, so the camera needs its own `capture` input; on a desktop `capture` is ignored and both open the file picker. */}
+          <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label="Label camera" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />
+          <input ref={library} type="file" accept="image/*" hidden aria-label="Label photo" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />
+          <div className="rc-scanbtns">
+            <button type="button" className="btn sm" disabled={scanning} onClick={() => camera.current?.click()}>{scanning ? 'Reading label...' : 'Scan label'}</button>
+            <button type="button" className="btn sm" disabled={scanning} onClick={() => library.current?.click()}>Choose photo</button>
+          </div>
           {scanNote && <p className="note" role="status">{scanNote}</p>}
         </div>
       )}
