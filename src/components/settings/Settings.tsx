@@ -198,7 +198,7 @@ function KgPanel() {
     <section className="panel">
       <h3>Kilograms</h3>
       <p>Weights stay in pounds. This shows the kg equivalent in small grey text beside each pound weight in the Log sheet, Recent lists and Maxes.</p>
-      <label className="inline"><input type="checkbox" role="switch" aria-label="Show kg beside lb" checked={shown} onChange={e => st.setHideKg(!e.target.checked)} /> {shown ? 'Shown' : 'Hidden'}</label>
+      <label className="inline"><input type="checkbox" role="switch" checked={shown} onChange={e => st.setHideKg(!e.target.checked)} /> Show kg beside lb</label>
     </section>
   );
 }

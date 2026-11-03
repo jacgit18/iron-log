@@ -34,7 +34,7 @@ function RmBox({ id, typed, onCommit }: { id: string; typed: number | undefined;
   const [draft, setDraft] = useState<string | number>(typed ?? '');
   return (
     <>
-      <CommitInput type="number" id={`rm-${id}`} min="0" step="any" value={typed ?? ''} placeholder="None" className="w-80" onCommit={onCommit} onType={setDraft} /> lb <KgAfter lb={draft} />
+      <CommitInput type="number" id={`rm-${id}`} min="0" step="any" value={typed ?? ''} placeholder="None" className="w-80" onCommit={v => { const r = onCommit(v); if (r === false) setDraft(typed ?? ''); return r; }} onType={setDraft} /> lb <KgAfter lb={draft} />
     </>
   );
 }
