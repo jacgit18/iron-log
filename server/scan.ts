@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import express from 'express';
+import { dayCap } from './dayCap.ts';
 import { cleanLabel, isJpegBase64, jsonFromReply, type LabelResult } from '../src/shared/scan.ts';
 
 // Label photo scan (brief label-photo-scan), mounted at /api/scan behind sign-in, requireAdmin and a per-user limit. The server sends one photo of a
@@ -13,7 +14,6 @@ export const DEFAULT_MODEL = 'claude-haiku-5-5';
 export const BODY_LIMIT = '2mb';
 export const DEFAULT_DAILY_MAX = 30;
 const TIMEOUT_MS = 30_000;
-const DAY_MS = 24 * 60 * 60_000;
 const UNAVAILABLE = 'label scan is not available right now';
 
 const SYSTEM = [
@@ -64,7 +64,8 @@ export async function readLabel(ask: typeof fetch, key: string, model: string, i
 
 export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAILY_MAX, fetch: ask = fetch, now = Date.now }: ScanDeps = {}): Router {
   const router = Router();
-  let day = { start: 0, count: 0 };
+  const daily = dayCap(now);
+  if (key) console.warn(JSON.stringify({ msg: 'label scan is on', note: 'the daily cap is per instance and restarts with it; the spend limit set on the key in the Anthropic console is the real ceiling' }));
   let saidNoKey = false;
 
   router.post('/label', express.json({ limit: BODY_LIMIT }), async (req, res) => {
@@ -74,12 +75,8 @@ export function scanRoutes({ key, model = DEFAULT_MODEL, dailyMax = DEFAULT_DAIL
       if (!saidNoKey) { saidNoKey = true; console.warn(JSON.stringify({ msg: 'label scan is off: ANTHROPIC_API_KEY is not set' })); }
       return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'no-key' });
     }
-    // A daily ceiling for the whole server, counted before the call so a loop cannot run past it. A restart or a second instance resets or doubles it;
-    // the real ceiling is the spend limit set on the key in the Anthropic console.
-    const t = now();
-    if (t - day.start >= DAY_MS) day = { start: t, count: 0 };
-    if (day.count >= dailyMax) return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'cap' });
-    day.count++;
+    // A daily ceiling for the whole server, counted before the call so a loop cannot run past it (dayCap.ts: per instance, so the spend limit on the key is the real ceiling).
+    if (!daily.take('all', dailyMax).ok) return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'cap' });
     try {
       res.json({ ok: true, result: await readLabel(ask, key, model, image) });
     } catch (err) {

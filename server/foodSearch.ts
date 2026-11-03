@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { dayCap } from './dayCap.ts';
 import { cleanQuery, mergeFoods, parseFoods, type FoodHit } from '../src/shared/foods.ts';
 
 // Food search (brief diet-food-lookup), mounted at /api/foods behind sign-in and a per-user limit. The server asks USDA FoodData Central so the
@@ -14,7 +15,6 @@ const TIMEOUT_MS = 5000;
 const HOLD_MS = 60 * 60_000;
 const HOLD_MAX = 500;
 export const DAILY_MAX = 200;
-const DAY_MS = 24 * 60 * 60_000;
 
 export interface FoodDeps {
   /** USDA_API_KEY. Unset: every search answers 503 and the app says the search is not available. */
@@ -28,7 +28,7 @@ const UNAVAILABLE = 'food search is not available right now';
 export function foodRoutes({ key, fetch: ask = fetch, now = Date.now }: FoodDeps = {}): Router {
   const router = Router();
   const held = new Map<string, { at: number; hits: FoodHit[] }>();
-  const days = new Map<string, { start: number; count: number }>();
+  const daily = dayCap(now);
   let saidNoKey = false;
 
   router.get('/search', async (req, res) => {
@@ -41,11 +41,9 @@ export function foodRoutes({ key, fetch: ask = fetch, now = Date.now }: FoodDeps
     }
     const t = now();
     // A daily allowance per person, so one account cannot use up the shared key. Counted on every valid search, held answer or not.
-    const who = String(res.locals.userId);
-    let day = days.get(who);
-    if (!day || t - day.start >= DAY_MS) { day = { start: t, count: 0 }; days.set(who, day); }
-    if (++day.count > DAILY_MAX) {
-      res.setHeader('Retry-After', String(Math.max(1, Math.ceil((day.start + DAY_MS - t) / 1000))));
+    const allowed = daily.take(String(res.locals.userId), DAILY_MAX);
+    if (!allowed.ok) {
+      res.setHeader('Retry-After', String(allowed.retryAfterSec));
       return void res.status(429).json({ ok: false, error: 'you have used today\'s food searches, try again tomorrow' });
     }
     const name = q.toLowerCase();
