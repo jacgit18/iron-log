@@ -11,7 +11,7 @@ import { encryptedAdapter } from './encryptedAdapter.ts';
 import { otpHasher } from './otpHash.ts';
 import { qaMarkReader, qaPersonas } from './qaPersonas.ts';
 import { createPiiCrypto, parsePiiKey } from './piiCrypto.ts';
-import { createTryGate, NETWORK_HEADER } from './tryGate.ts';
+import { createTryGate, NETWORK_HEADER, type Turn } from './tryGate.ts';
 import { CODE_MINUTES, dailyCap, perAddressLimit, RESEND_TEST_FROM, resendSender, type SendCode } from './otpEmail.ts';
 
 /* ---------- Sign-in: Better Auth inside our API (ADR 004) ----------
@@ -106,6 +106,9 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
   const pii = config.piiKey ? createPiiCrypto(config.piiKey) : undefined;
   const allowCode = perAddressLimit(OTP_PER_ADDRESS.max, OTP_PER_ADDRESS.windowMs);
   const tries = createTryGate(OTP_WRONG_CODES);
+  // The turn a try was given in the before hook, found again in the after hook of the same request.
+  const turns = new WeakMap<object, Turn>();
+  const turnKey = (ctx: { request?: Request; headers?: Headers }): object => ctx.request ?? ctx.headers ?? ctx;
   const allowDaily = dailyCap(config.otpDailyCap ?? OTP_DAILY_CAP);
   const auth = betterAuth({
     baseURL: config.baseURL,
@@ -162,13 +165,15 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
         // creates no account and sends no mail. The answer is the usual one, so it does not reveal who is an admin.
         // Every address is counted alike, before the owner-only check, so the answer does not tell an admin address from another.
         // The tries for one address run one at a time and only wrong codes count, per address and network (tryGate.ts); the after hook below ends the turn.
-        if (ctx.path === '/sign-in/email-otp' && email && !(await tries.begin(email, ctx.headers?.get(NETWORK_HEADER) ?? ''))) {
+        const turn = ctx.path === '/sign-in/email-otp' && email ? await tries.begin(email, ctx.headers?.get(NETWORK_HEADER) ?? '') : undefined;
+        if (turn) turns.set(turnKey(ctx), turn);
+        if (turn === null) {
           console.warn(JSON.stringify({ msg: 'sign-in refused: too many wrong codes for one address', kind: 'otp-tries-refused' }));
           throw new APIError('TOO_MANY_REQUESTS', { message: 'TOO_MANY_ATTEMPTS' });
         }
         const notYet = config.emailCodeAdminsOnly === true && !config.capExempt?.has(email);
         if (ctx.path === '/sign-in/email-otp' && notYet) {
-          tries.end(email, true);
+          turn?.end(true);
           throw new APIError('BAD_REQUEST', { message: 'INVALID_OTP' });
         }
         if (ctx.path !== '/email-otp/send-verification-otp') return;
@@ -189,9 +194,7 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
       }),
       after: createAuthMiddleware(async ctx => {
         if (ctx.path !== '/sign-in/email-otp') return;
-        const body = ctx.body as { email?: unknown } | undefined;
-        const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
-        if (email) tries.end(email, ctx.context.returned instanceof Error);
+        turns.get(turnKey(ctx))?.end(ctx.context.returned instanceof Error);
       }),
     },
     plugins: [

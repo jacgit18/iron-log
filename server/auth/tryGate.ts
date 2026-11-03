@@ -20,17 +20,20 @@ export interface TryGateOptions {
   now?: () => number;
 }
 
+/** One try's turn. Only the turn that was handed out can end it, so a late report from a try that timed out cannot end someone else's turn. */
+export interface Turn {
+  /** The try is over; `wrong` counts it against the address and the network it came from. Safe to call twice. */
+  end(wrong: boolean): void;
+}
+
 export interface TryGate {
-  /** Waits for this address's turn. False: refused (too many wrong codes, or too many waiting). True: the caller must call `end`. */
-  begin(email: string, network: string): Promise<boolean>;
-  /** The try is over; `wrong` counts it against the address and network. Safe to call twice or without a turn (then nothing happens). */
-  end(email: string, wrong: boolean): void;
+  /** Waits for this address's turn. Null: refused (too many wrong codes, or too many waiting). Otherwise the caller must call `end` on the turn. */
+  begin(email: string, network: string): Promise<Turn | null>;
 }
 
 export function createTryGate({ perNetwork, perAddress, windowMs, holdMs = 10_000, maxWaiting = 20, now = Date.now }: TryGateOptions): TryGate {
   const tails = new Map<string, Promise<void>>();
   const waiting = new Map<string, number>();
-  const holders = new Map<string, { network: string; release: () => void }>();
   const wrongs = new Map<string, { network: string; at: number }[]>();
   let swept = 0;
 
@@ -44,7 +47,7 @@ export function createTryGate({ perNetwork, perAddress, windowMs, holdMs = 10_00
 
   return {
     async begin(email, network) {
-      if ((waiting.get(email) ?? 0) >= maxWaiting) return false;
+      if ((waiting.get(email) ?? 0) >= maxWaiting) return null;
       waiting.set(email, (waiting.get(email) ?? 0) + 1);
       const prev = tails.get(email) ?? Promise.resolve();
       let release!: () => void;
@@ -59,7 +62,6 @@ export function createTryGate({ perNetwork, perAddress, windowMs, holdMs = 10_00
         if (freed) return;
         freed = true;
         clearTimeout(timer);
-        if (holders.get(email)?.release === free) holders.delete(email);
         release();
         if (tails.get(email) === tail) tails.delete(email);
       };
@@ -68,21 +70,21 @@ export function createTryGate({ perNetwork, perAddress, windowMs, holdMs = 10_00
       const list = recent(email);
       if (list.length >= perAddress || list.filter(w => w.network === network).length >= perNetwork) {
         free();
-        return false;
+        return null;
       }
-      holders.set(email, { network, release: free });
-      return true;
-    },
-    end(email, wrong) {
-      const holder = holders.get(email);
-      if (!holder) return;
-      if (wrong) {
-        const t = now();
-        wrongs.set(email, [...recent(email), { network: holder.network, at: t }]);
-        // Drop addresses whose window has passed, once a second at most (a flood of made-up addresses must not make each request cost more).
-        if (wrongs.size > 5000 && t - swept >= 1000) { swept = t; for (const k of [...wrongs.keys()]) recent(k); }
-      }
-      holder.release();
+      let counted = false;
+      return {
+        end(wrong) {
+          if (wrong && !counted) {
+            counted = true;
+            const t = now();
+            wrongs.set(email, [...recent(email), { network, at: t }]);
+            // Drop addresses whose window has passed, once a second at most (a flood of made-up addresses must not make each request cost more).
+            if (wrongs.size > 5000 && t - swept >= 1000) { swept = t; for (const k of [...wrongs.keys()]) recent(k); }
+          }
+          free();
+        },
+      };
     },
   };
 }

@@ -99,7 +99,7 @@ cmd_check() {
   if [ "$age" -gt "$max" ]; then echo "BACKUP OLD: the newest dump is ${age}h old (limit ${max}h): $(awk '{print $3}' <<<"$newest"). Run: scripts/backup-cloud-run.sh run" >&2; exit 1; fi
   echo "BACKUP OK: the newest dump is ${age}h old (limit ${max}h)."
 }
-cmd_list() { gc storage ls -l "gs://$BUCKET/"; cmd_check || true; }
+cmd_list() { gc storage ls -l "gs://$BUCKET/"; ( cmd_check ) || true; }
 cmd_fetch() {
   mkdir -p backups
   local newest; newest="$(gc storage ls "gs://$BUCKET/ironlog-*.dump" | sort | tail -1)"
