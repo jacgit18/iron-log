@@ -192,6 +192,17 @@ function DevicePanel() {
   );
 }
 
+function KgPanel() {
+  const shown = useAppStore(s => s.cfg.hideKg !== true); const st = useAppStore.getState();
+  return (
+    <section className="panel">
+      <h3>Kilograms</h3>
+      <p>Weights stay in pounds. This shows the kg equivalent in small grey text beside each pound weight in the Log sheet, Recent lists and Maxes.</p>
+      <label className="inline"><input type="checkbox" role="switch" aria-label="Show kg beside lb" checked={shown} onChange={e => st.setHideKg(!e.target.checked)} /> {shown ? 'Shown' : 'Hidden'}</label>
+    </section>
+  );
+}
+
 function InjuryPanel() {
   const on = useAppStore(s => injuryPreventionOn(s.cfg)); const st = useAppStore.getState();
   return (
@@ -465,7 +476,7 @@ export default function Settings() {
         </nav>
         <div className="sgroups">
           <Group id="training" title="Training">
-            <div className="scol"><TrainingRows open={open} /><InjuryPanel /></div>
+            <div className="scol"><TrainingRows open={open} /><InjuryPanel /><KgPanel /></div>
           </Group>
           <Group id="data" title="Data">
             <div className="scol">

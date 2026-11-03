@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import CommitInput from '../CommitInput.jsx';
+import { KgAfter } from '../Kg.jsx';
 import Icon from '../Icon.js';
 import { PHASES, exInfo } from '../../lib/data.js';
 import { currentMax, maxLine, phaseRows, targetNote, weightedExIds } from '../../lib/oneRepMax.js';
@@ -27,6 +29,16 @@ export function MaxesList({ open }: { open: (id: string) => void }) {
   );
 }
 
+// The 1RM box with its kg figure following each keystroke (remounted by its key when the saved value changes).
+function RmBox({ id, typed, onCommit }: { id: string; typed: number | undefined; onCommit: (v: string) => unknown }) {
+  const [draft, setDraft] = useState<string | number>(typed ?? '');
+  return (
+    <>
+      <CommitInput type="number" id={`rm-${id}`} min="0" step="any" value={typed ?? ''} placeholder="None" className="w-80" onCommit={onCommit} onType={setDraft} /> lb <KgAfter lb={draft} />
+    </>
+  );
+}
+
 export function MaxDetail({ id }: { id: string }) {
   const cfg = useAppStore(s => s.cfg); const logs = useAppStore(s => s.logs); const st = useAppStore.getState(); const saving = useSaving();
   const max = currentMax(cfg.rm[id], logs[id]);
@@ -46,7 +58,7 @@ export function MaxDetail({ id }: { id: string }) {
       </p>
       <div className="inline">
         <label htmlFor={`rm-${id}`}>I tested this</label>
-        <CommitInput key={`${id}:${typed ?? ''}`} type="number" id={`rm-${id}`} min="0" step="any" value={typed ?? ''} placeholder="None" className="w-80" onCommit={saving(`rm-${id}`, v => st.setRm(id, v))} /> lb <Tick id={`rm-${id}`} />
+        <RmBox key={`${id}:${typed ?? ''}`} id={id} typed={typed} onCommit={saving(`rm-${id}`, v => st.setRm(id, v))} /> <Tick id={`rm-${id}`} />
         {typed != null && <button type="button" className="btn sm" onClick={() => st.setRm(id, '')}>Use estimate</button>}
       </div>
       <h4>Best lift by phase</h4>
@@ -54,7 +66,7 @@ export function MaxDetail({ id }: { id: string }) {
       {rows.map(r => (
         <div className="maxphase" key={String(r.ph)}>
           <span className="phname"><span className="dot" data-p={r.ph || undefined} /> {r.ph ? PHASES[r.ph].label : 'No phase'}</span>
-          <span>{r.w} lb × {r.r}</span>
+          <span>{r.w} lb <KgAfter lb={r.w} /> × {r.r}</span>
           <b>{r.pct != null ? `${r.pct}%` : '—'}</b>
           <span className="note maxnote">{targetNote(r)}</span>
         </div>

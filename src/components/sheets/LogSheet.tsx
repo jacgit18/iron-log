@@ -12,6 +12,7 @@ import {
 import Icon from '../Icon.jsx';
 import EditEntry from './EditEntry.jsx';
 import EquipmentField from '../EquipmentField.jsx';
+import Kg, { KgAfter } from '../Kg.jsx';
 import Sheet from '../Sheet.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
 import { editModeText, sheetEntryFor } from '../../lib/loggedEntry.js';
@@ -81,7 +82,7 @@ function NewLogForm({ slotId, idx }: { slotId: string; idx: number }) {
     <Sheet as="form" noValidate onSubmit={submit}>
       <h2 className="cond">{ex.n}</h2>
       <div className="target">
-        <span>Target<br /><b>{t.w != null ? `${t.w} lb` : (t.src || '—')}</b></span>
+        <span>Target<br /><b>{t.w != null ? <>{t.w} lb <KgAfter lb={t.w} /></> : (t.src || '—')}</b></span>
         <span>Prescription<br /><b>{rx || '—'}</b></span>
         {t.w != null && <span className="note self-end">{t.src}</span>}
         {goals.map(g => <span key={g.key} className="note self-end">{liftGoalNote(g)}</span>)}
@@ -106,8 +107,11 @@ function NewLogForm({ slotId, idx }: { slotId: string; idx: number }) {
           {rows.map((r, i) => (
             <div className="setrow" key={i}>
               <span className="setn">{i + 1}</span>
-              <input ref={i === 0 ? firstRef : null} type="number" inputMode="decimal" step="any" min="0" value={r.w} placeholder="bodyweight"
-                aria-label={`Set ${i + 1} weight in lb`} enterKeyHint={cellHint(false)} onFocus={selectOnFocus} onKeyDown={advanceOnEnter} onChange={e => editCell(i, 'w', e.target.value)} />
+              <span className="setw">
+                <input ref={i === 0 ? firstRef : null} type="number" inputMode="decimal" step="any" min="0" value={r.w} placeholder="bodyweight"
+                  aria-label={`Set ${i + 1} weight in lb`} enterKeyHint={cellHint(false)} onFocus={selectOnFocus} onKeyDown={advanceOnEnter} onChange={e => editCell(i, 'w', e.target.value)} />
+                <Kg lb={r.w} />
+              </span>
               <span className="setx">×</span>
               <input type="number" inputMode="numeric" step="any" min="0" value={r.r}
                 aria-label={`Set ${i + 1} ${iso ? 'hold in seconds' : 'reps'}`} enterKeyHint={cellHint(i === rows.length - 1)} onFocus={selectOnFocus} onKeyDown={advanceOnEnter} onChange={e => editCell(i, 'r', e.target.value)} />
@@ -164,7 +168,7 @@ function RecentTable({ entries, onEdit, editingId }: { entries: LogEntry[]; onEd
                 ? <>{fmtShort(parseDate(e.d))} · Editing</>
                 : <button type="button" className="btn sm ghost" aria-label={`${fmtShort(parseDate(e.d))} · Edit entry`} onClick={() => onEdit(e)}>{fmtShort(parseDate(e.d))} · Edit</button>}</td>
               <td role="cell">{e.ph ? PHASES[e.ph].label : '—'}</td>
-              <td role="cell" className="num">{e.w != null && (e.w as unknown) !== '' ? `${e.w} lb` : 'Bodyweight'}</td>
+              <td role="cell" className="num">{e.w != null && (e.w as unknown) !== '' ? <>{e.w} lb <KgAfter lb={e.w} /></> : 'Bodyweight'}</td>
               <td role="cell" className="num">{volText(e)}</td>
             </tr>
           ))}
