@@ -205,6 +205,9 @@
 .rc-ing .rc-state.miss {
   color: var(--warn-ink);
 }
+.rc-ing .rc-state.onlist {
+  color: var(--muted);
+}
 .rc-ing .rc-state.part {
   color: var(--warn-ink);
 }

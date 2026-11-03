@@ -138,6 +138,9 @@ export function pantryStatus(recipe: Pick<Recipe, 'ing'> & { id?: string }, g: G
   return { lines, have: counted.filter(l => l.have).length, total: counted.length };
 }
 
+/** An ingredient that is not at home but is already an item on To get: it shows "On your list" beside Missing, so you know buying it is covered. */
+export const onToGet = (l: IngredientStatus): boolean => !l.have && !l.skipped && !l.always && !!l.item;
+
 /** The suggestions one tap can accept: the position of each unmatched ingredient and the item it would be pinned to. */
 export const suggestionPins = (status: PantryStatus): { index: number; home: string }[] =>
   status.lines.flatMap((l, index) => (l.suggest ? [{ index, home: l.suggest.id }] : []));
