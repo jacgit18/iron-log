@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Grocery, GroceryItem, Recipe } from '../types.ts';
-import { SYNONYMS, addMissingMessage, ingredientName, isAlwaysHave, matchHome, missingParts, nameWords, pantryStatus, rankItems, splitIngredient, suggestItem, suggestionPins } from './recipePantry.js';
+import { SYNONYMS, addMissingMessage, ingredientName, isAlwaysHave, matchHome, missingParts, nameWords, onToGet, pantryStatus, rankItems, splitIngredient, suggestItem, suggestionPins } from './recipePantry.js';
 
 const it_ = (id: string, n: string): GroceryItem => ({ id, n, store: 'Anywhere', qty: 1, cents: null, every: false, out: false });
 const g = (...items: GroceryItem[]): Grocery => ({ stores: ['Anywhere'], items });
@@ -58,6 +58,10 @@ describe('pantryStatus and missingParts', () => {
     const { already, add } = missingParts(s);
     expect(already.map(i => i.id)).toEqual(['d']);
     expect(add).toEqual(['parsley']);
+  });
+  it('marks a missing ingredient that is already an item on To get', () => {
+    const s = pantryStatus(recipe, grocery, { lines: { a: { have: true } }, pulled: [] });
+    expect(s.lines.map(onToGet)).toEqual([false, true, false, false]); // at home, on To get, no item, no item
   });
 });
 

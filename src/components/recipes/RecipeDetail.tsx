@@ -4,7 +4,7 @@ import Icon from '../Icon.js';
 import { videoLabel } from '../../lib/data.js';
 import { packServings } from '../../lib/dietLog.js';
 import { monthKey } from '../../lib/grocery.js';
-import { addMissingMessage, ingredientName, missingParts, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
+import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
 import { recipeMeta } from '../../lib/recipeList.js';
 import { servingLine } from '../../lib/recipeServing.js';
@@ -61,6 +61,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
           <li className="rc-ing" key={i}>
             <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${recipe.servings && shown ? scaleAmount(l.ing.amt, shown / recipe.servings).text : l.ing.amt} ` : ''}{(() => { const s = mine && onOpen ? linkedRecipe(l.ing, recipes, recipe.id) : undefined; return s ? <button type="button" className="rc-link" aria-label={`Open ${s.n}, ${s.cat === 'seasonings' ? 'seasoning' : 'sauce'}`} onClick={() => onOpen!(s.id)}>{s.n}</button> : ingredientName(l.ing); })()}{l.ing.sub && <span className="rc-instead"> (or {l.ing.sub})</span>}</span>
             <span className={`rc-state ${l.skipped ? 'skip' : l.have ? 'have' : l.partial ? 'part' : 'miss'}`}>{l.skipped ? 'Skipped' : l.have ? 'Have' : l.partial ? 'Have some' : 'Missing'}</span>
+            {onToGet(l) && <span className="rc-state onlist">On your list</span>}
             {mine && l.suggest && <button type="button" className="btn sm" aria-label={`Maybe: ${l.suggest.n} for ${ingredientName(l.ing)}`} onClick={() => useAppStore.getState().linkIngredient(recipe.id, i, l.suggest!.id)}>Maybe: {l.suggest.n}</button>}
             {mine && !l.skipped && !l.always && grocery.items.length > 0 && (
               <select aria-label={`At home item for ${ingredientName(l.ing)}`} value={l.ing.home ?? ''} onChange={e => useAppStore.getState().linkIngredient(recipe.id, i, e.target.value || null)}>
