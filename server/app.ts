@@ -122,8 +122,8 @@ const LIMITS = {
 const DB_HEALTH_TTL_MS = 5_000;
 /** The path Express matches for `app.use('/api/commands/import-legacy')`: a prefix on a segment boundary, any letter case. */
 const IMPORT_LEGACY_PATH = /^\/api\/commands\/import-legacy(\/|$)/i;
-/** Label scan takes a photo (a few hundred kB as base64), so it also skips the 100 kb parser; its own 2 MB parser runs after sign-in, the admin check and the per-user limit (scan.ts). */
-const SCAN_LABEL_PATH = /^\/api\/scan\/label(\/|$)/i;
+/** Label and receipt scan take a photo (hundreds of kB as base64), so they also skip the 100 kb parser; its own parser (2 MB for a label, 5 MB for a receipt) runs after sign-in, the admin check and the per-user limit (scan.ts). */
+const SCAN_PHOTO_PATH = /^\/api\/scan\/(label|receipt)(\/|$)/i;
 
 const NO_CACHE = 'no-cache';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -183,7 +183,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // but only once the caller is signed in and counted (below, after sessionAuth and its per-user limit). Before that it gets no parser
   // at all: an anonymous caller must not be able to make the one small instance buffer and parse 4 MB per request (audit run-2).
   const smallJson = express.json({ limit: '100kb' });
-  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) || SCAN_LABEL_PATH.test(req.path) ? next() : smallJson(req, res, next)));
+  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) || SCAN_PHOTO_PATH.test(req.path) ? next() : smallJson(req, res, next)));
   app.use(repairBody); // a note clipped through an emoji must not reach the database as a lone surrogate (it was a 500; overnight audit S-1)
   app.disable('x-powered-by');
 
@@ -241,7 +241,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
-  // Label photo scan (brief label-photo-scan): admin-only, per-user limit; the 2 MB body parser is on its one route (scan.ts), after sign-in.
+  // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): admin-only, per-user limit; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
   if (db) app.use('/api/scan', requireAdmin, rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
   if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));

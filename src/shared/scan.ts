@@ -72,6 +72,6 @@ export function labelNote(l: LabelFill): string {
 }
 
 /** The base64 of a JPEG: only that is sent on, so the route never forwards a different kind of file. */
-export function isJpegBase64(v: unknown): v is string {
-  return typeof v === 'string' && v.length > 100 && v.length <= MAX_PHOTO_BASE64 && v.length % 4 === 0 && v.startsWith('/9j/') && /^[A-Za-z0-9+/]+={0,2}$/.test(v);
+export function isJpegBase64(v: unknown, max: number = MAX_PHOTO_BASE64): v is string {
+  return typeof v === 'string' && v.length > 100 && v.length <= max && v.length % 4 === 0 && v.startsWith('/9j/') && /^[A-Za-z0-9+/]+={0,2}$/.test(v);
 }

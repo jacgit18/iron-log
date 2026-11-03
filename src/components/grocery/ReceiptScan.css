@@ -1,0 +1,130 @@
+@layer base, components;
+@layer components {
+/* Scan receipt (brief receipt-scan): the button row under the month arrows on To get, and the review sheet it opens. Wide screens show a table, a narrow sheet shows cards. */
+.rcscan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+}
+.rcscan .btn {
+  min-height: 44px;
+}
+.rcsheet {
+  max-width: 860px;
+  container-type: inline-size;
+}
+.rcmeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-16);
+  margin: 0;
+}
+.rccheck {
+  margin: 0;
+  padding: var(--sp-10) var(--sp-12);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+}
+.rccheck.bad {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  border-color: transparent;
+}
+.rcnums {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-16);
+  font-variant-numeric: tabular-nums;
+}
+.rcwarn {
+  margin: 0;
+  padding: var(--sp-6) var(--sp-10);
+  border-radius: var(--r-md);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+.rcnote {
+  grid-column: 2 / -1;
+}
+.rclines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.rcrow {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1.3fr) 4.5rem 6.5rem;
+  gap: var(--sp-10);
+  align-items: center;
+  padding: var(--sp-6) 0;
+  border-bottom: 1px solid var(--line);
+}
+.rcrow.rcoff {
+  opacity: .65;
+}
+.rctext {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: var(--fs-xs);
+  overflow-wrap: anywhere;
+}
+.rcrow select {
+  min-height: 44px;
+  max-width: 100%;
+}
+.rcqty {
+  font-variant-numeric: tabular-nums;
+}
+.rcnet {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.rcnet s {
+  display: block;
+  font-weight: 400;
+  font-size: var(--fs-xs);
+}
+.rctick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+.rchead {
+  font-size: var(--fs-xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.rcfoot {
+  position: sticky;
+  bottom: 0;
+  padding-top: var(--sp-10);
+  background: var(--surface);
+}
+@container (max-width: 640px) {
+  .rchead {
+    display: none;
+  }
+  .rcrow {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    row-gap: var(--sp-4);
+  }
+  .rcrow .rctext {
+    grid-column: 2 / 4;
+  }
+  .rcrow select {
+    grid-column: 2 / 3;
+  }
+  .rcrow .rcnet {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .rcrow .rcqty {
+    grid-column: 2;
+  }
+}
+}
