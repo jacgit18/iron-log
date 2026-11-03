@@ -8,6 +8,8 @@
 #   deploy   build the job image, create or update the job, and schedule it every night (3:15 AM New York)
 #   run      run a backup now and wait for it
 #   list     show the backups in the bucket
+#   check    exit 1 and say so when the newest dump is older than MAX_AGE_HOURS (default 26) or there is none; reads file names and times only.
+#            Cloud Monitoring cannot alert on a gap this long, so run this each morning (runbook section 9).
 #   fetch    download the newest dump and manifest into ./backups/ (git-ignored) and prove it restores (scripts/restore-check.sh). A dump holds
 #            every user's data in plain text, so on a successful check both files are deleted from this machine; KEEP_LOCAL=1 keeps them
 #            (files are made readable by you only). The bucket copy is the backup; this one is for checking.
@@ -87,7 +89,17 @@ cmd_deploy() {
 }
 
 cmd_run() { gc run jobs execute "$JOB" --region "$REGION" --wait; }
-cmd_list() { gc storage ls -l "gs://$BUCKET/"; }
+# The newest dump's age, from `storage ls -l` lines (size, ISO time, url). Prints a line; exits 1 when it is too old or missing.
+cmd_check() {
+  local max="${MAX_AGE_HOURS:-26}" newest at age
+  newest="$(gc storage ls -l "gs://$BUCKET/ironlog-*.dump" 2>/dev/null | grep '\.dump$' | sort -k2 | tail -1 || true)"
+  if [ -z "$newest" ]; then echo "BACKUP MISSING: no dump in gs://$BUCKET." >&2; exit 1; fi
+  at="$(awk '{print $2}' <<<"$newest")"
+  age=$(( ( $(date +%s) - $(date -d "$at" +%s) ) / 3600 ))
+  if [ "$age" -gt "$max" ]; then echo "BACKUP OLD: the newest dump is ${age}h old (limit ${max}h): $(awk '{print $3}' <<<"$newest"). Run: scripts/backup-cloud-run.sh run" >&2; exit 1; fi
+  echo "BACKUP OK: the newest dump is ${age}h old (limit ${max}h)."
+}
+cmd_list() { gc storage ls -l "gs://$BUCKET/"; ( cmd_check ) || true; }
 cmd_fetch() {
   mkdir -p backups
   local newest; newest="$(gc storage ls "gs://$BUCKET/ironlog-*.dump" | sort | tail -1)"
@@ -110,6 +122,6 @@ cmd_fetch() {
 }
 
 case "${1:-}" in
-  setup) cmd_setup;; secret) cmd_secret;; deploy) cmd_deploy;; run) cmd_run;; list) cmd_list;; fetch) cmd_fetch;;
-  *) sed -n '2,16p' "$0"; exit 2;;
+  setup) cmd_setup;; secret) cmd_secret;; deploy) cmd_deploy;; run) cmd_run;; list) cmd_list;; check) cmd_check;; fetch) cmd_fetch;;
+  *) sed -n '2,18p' "$0"; exit 2;;
 esac

@@ -11,7 +11,8 @@ import { encryptedAdapter } from './encryptedAdapter.ts';
 import { otpHasher } from './otpHash.ts';
 import { qaMarkReader, qaPersonas } from './qaPersonas.ts';
 import { createPiiCrypto, parsePiiKey } from './piiCrypto.ts';
-import { CODE_MINUTES, perAddressLimit, RESEND_TEST_FROM, resendSender, type SendCode } from './otpEmail.ts';
+import { createTryGate, NETWORK_HEADER, type Turn } from './tryGate.ts';
+import { CODE_MINUTES, dailyCap, perAddressLimit, RESEND_TEST_FROM, resendSender, type SendCode } from './otpEmail.ts';
 
 /* ---------- Sign-in: Better Auth inside our API (ADR 004) ----------
    Google, plus an emailed one-time code (emailOTP, ADR 042) when RESEND_API_KEY is set. Sessions are server-side rows with a 30-day sliding lifetime, so a two-day offline gap never forces
@@ -28,6 +29,8 @@ export interface AuthConfig {
   google: { clientId: string; clientSecret: string };
   /** How a sign-in code is delivered (otpEmail.ts). Unset: email-code sign-in is off. */
   sendCode?: SendCode;
+  /** Codes sent in 24 hours across all addresses (OTP_DAILY_CAP); unset means 60, 0 means no cap. */
+  otpDailyCap?: number;
   /** True: only the addresses in `capExempt` (the admins) may use the emailed code, on the server, whatever the app shows. authConfigFrom turns it on unless EMAIL_CODE_OPEN=true. */
   emailCodeAdminsOnly?: boolean;
   /** Email and password sign-in for automated tests only. Never in production: see createAuth. */
@@ -51,10 +54,13 @@ export interface AuthConfig {
 export const SESSION_DAYS = 30;
 /** Codes sent to one address (per server instance, otpEmail.ts). */
 export const OTP_PER_ADDRESS = { max: 3, windowMs: 10 * 60_000 };
-/** Tries at the sign-in route for one address (per server instance). Better Auth's own limit of 3 wrong guesses per code counts with a read then a write, so
- *  parallel guesses all get evaluated before the count catches up (60 parallel wrong guesses: 59 checked); counting every attempt here, at the moment it
- *  arrives and before anything is awaited, cannot be raced. 10 is a little over what an honest person can need: 3 codes in 10 minutes, 3 tries each. */
-export const OTP_TRIES_PER_ADDRESS = { max: 10, windowMs: 10 * 60_000 };
+/** Wrong codes at the sign-in route (per server instance), see tryGate.ts. Better Auth's own limit of 3 wrong guesses per code counts with a read then a write, so
+ *  tries for one address run one at a time. 10 from one network is a little over what an honest person can need (3 codes in 10 minutes, 3 tries each);
+ *  30 from anywhere is the backstop, so a stranger on another network cannot lock an address out (#407). */
+export const OTP_WRONG_CODES = { perNetwork: 10, perAddress: 30, windowMs: 10 * 60_000 };
+/** Codes sent in a day across all addresses; OTP_DAILY_CAP overrides it, 0 turns it off. Resend's free plan allows 100 a day. */
+export const OTP_DAILY_CAP = 60;
+
 const DAY = 60 * 60 * 24;
 
 /**
@@ -99,7 +105,11 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
   });
   const pii = config.piiKey ? createPiiCrypto(config.piiKey) : undefined;
   const allowCode = perAddressLimit(OTP_PER_ADDRESS.max, OTP_PER_ADDRESS.windowMs);
-  const allowTry = perAddressLimit(OTP_TRIES_PER_ADDRESS.max, OTP_TRIES_PER_ADDRESS.windowMs);
+  const tries = createTryGate(OTP_WRONG_CODES);
+  // The turn a try was given in the before hook, found again in the after hook of the same request.
+  const turns = new WeakMap<object, Turn>();
+  const turnKey = (ctx: { request?: Request; headers?: Headers }): object => ctx.request ?? ctx.headers ?? ctx;
+  const allowDaily = dailyCap(config.otpDailyCap ?? OTP_DAILY_CAP);
   const auth = betterAuth({
     baseURL: config.baseURL,
     secret: config.secret,
@@ -154,21 +164,37 @@ export function createAuth(config: AuthConfig, env: string | undefined = process
         // While the feature is owner-only, anyone else is turned away here, before a code is made, so calling the routes directly
         // creates no account and sends no mail. The answer is the usual one, so it does not reveal who is an admin.
         // Every address is counted alike, before the owner-only check, so the answer does not tell an admin address from another.
-        if (ctx.path === '/sign-in/email-otp' && email && !allowTry(email)) {
-          console.warn(JSON.stringify({ msg: 'sign-in refused: too many tries for one address' }));
+        // The tries for one address run one at a time and only wrong codes count, per address and network (tryGate.ts); the after hook below ends the turn.
+        const turn = ctx.path === '/sign-in/email-otp' && email ? await tries.begin(email, ctx.headers?.get(NETWORK_HEADER) ?? '') : undefined;
+        if (turn) turns.set(turnKey(ctx), turn);
+        if (turn === null) {
+          console.warn(JSON.stringify({ msg: 'sign-in refused: too many wrong codes for one address', kind: 'otp-tries-refused' }));
           throw new APIError('TOO_MANY_REQUESTS', { message: 'TOO_MANY_ATTEMPTS' });
         }
         const notYet = config.emailCodeAdminsOnly === true && !config.capExempt?.has(email);
-        if (ctx.path === '/sign-in/email-otp' && notYet) throw new APIError('BAD_REQUEST', { message: 'INVALID_OTP' });
+        if (ctx.path === '/sign-in/email-otp' && notYet) {
+          turn?.end(true);
+          throw new APIError('BAD_REQUEST', { message: 'INVALID_OTP' });
+        }
         if (ctx.path !== '/email-otp/send-verification-otp') return;
         // Only a sign-in code is ever sent or kept. A request for any other kind (password reset, email verification) is answered like a sent one without
         // calling the plugin, which would store a record of that kind under the address, for anyone to plant for any account (code audit S-06).
         if (body?.type !== 'sign-in') return ctx.json({ success: true });
         if (!email) return;
         if (notYet) return ctx.json({ success: true });
-        if (allowCode(email)) return;
-        console.warn(JSON.stringify({ msg: 'sign-in code skipped: too many for one address' }));
-        return ctx.json({ success: true });
+        if (!allowCode(email)) {
+          console.warn(JSON.stringify({ msg: 'sign-in code skipped: too many for one address', kind: 'otp-address-skipped' }));
+          return ctx.json({ success: true });
+        }
+        // Across all addresses (admins excepted, so the owner can always get in): past the day's cap nothing is mailed and the answer is the usual one.
+        if (!config.capExempt?.has(email) && !allowDaily()) {
+          console.warn(JSON.stringify({ msg: 'sign-in code skipped: daily cap reached', kind: 'otp-cap' }));
+          return ctx.json({ success: true });
+        }
+      }),
+      after: createAuthMiddleware(async ctx => {
+        if (ctx.path !== '/sign-in/email-otp') return;
+        turns.get(turnKey(ctx))?.end(ctx.context.returned instanceof Error);
       }),
     },
     plugins: [
@@ -255,12 +281,18 @@ export function authConfigFrom(env: NodeJS.ProcessEnv): AuthSetup {
     if (/^\d{1,6}$/.test(capText)) signupCap = Number(capText);
     else reasons.push('SIGNUP_CAP must be a whole number');
   }
+  let otpDailyCap: number | undefined;
+  const dailyText = env.OTP_DAILY_CAP?.trim();
+  if (dailyText) {
+    if (/^\d{1,6}$/.test(dailyText)) otpDailyCap = Number(dailyText);
+    else reasons.push('OTP_DAILY_CAP must be a whole number');
+  }
   // RESEND_API_KEY turns email-code sign-in on; EMAIL_FROM is the sender (default: Resend's test address, which only reaches the account owner).
   const resendKey = env.RESEND_API_KEY?.trim();
   const sendCode = resendKey ? resendSender({ apiKey: resendKey, from: env.EMAIL_FROM?.trim() || RESEND_TEST_FROM }) : undefined;
   if (reasons.length) return { enabled: false, reasons };
   return {
     enabled: true,
-    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, emailCodeAdminsOnly: env.EMAIL_CODE_OPEN !== 'true', signupCap, capExempt: adminsFrom(env.ADMIN_EMAILS), piiKey, piiMatchPlaintext: env.PII_PLAINTEXT_DONE !== 'true', qaPersonas: env.QA_PERSONAS === 'true', qaOwnerDatabaseUrl: env.QA_PERSONAS === 'true' ? env.QA_OWNER_DATABASE_URL?.trim() || undefined : undefined },
+    config: { baseURL: new URL(baseURL).origin, secret, databaseUrl, google: { clientId, clientSecret }, testSignIn: env.AUTH_TEST_SIGNIN === 'true', sendCode, emailCodeAdminsOnly: env.EMAIL_CODE_OPEN !== 'true', signupCap, otpDailyCap, capExempt: adminsFrom(env.ADMIN_EMAILS), piiKey, piiMatchPlaintext: env.PII_PLAINTEXT_DONE !== 'true', qaPersonas: env.QA_PERSONAS === 'true', qaOwnerDatabaseUrl: env.QA_PERSONAS === 'true' ? env.QA_OWNER_DATABASE_URL?.trim() || undefined : undefined },
   };
 }
