@@ -38,9 +38,10 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
         <button type="button" className="btn sm" disabled={servings <= 0.5} onClick={() => setServings(s => Math.max(0.5, s - 0.5))}>Less</button>
         <span role="status">{servings} {servings === 1 ? 'portion' : 'portions'}</span>
         <button type="button" className="btn sm" disabled={servings >= max} onClick={() => setServings(s => Math.min(max, s + 0.5))}>More</button>
-        {pack !== null && <button type="button" className="btn sm" disabled={servings === pack} onClick={() => setServings(pack)}>Whole pack ({pack})</button>}
+        {pack !== null && pack <= max && <button type="button" className="btn sm" disabled={servings === pack} onClick={() => setServings(pack)}>Whole pack ({pack})</button>}
         <button type="button" className="btn primary" onClick={log}>Ate this</button>
       </div>
+      {pack !== null && pack > max && <p className="note">A whole pack ({pack} servings) is more than one entry can hold. Log it in parts, up to {max} portions at a time.</p>}
       {err && <p className="note" role="alert">{err}</p>}
       {done && (
         <p className="note" role="status">{done.text} <button type="button" className="btn sm ghost" onClick={() => { useAppStore.getState().removeDietEntry(done.id, false); setDone(null); }}>Undo</button></p>

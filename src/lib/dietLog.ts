@@ -61,8 +61,14 @@ export const PORTION_MAX = 10;
 /** Servings in the pack of a ready-made food (brief whole-pack): 2 to 99, or null for a food with no pack size, a pack of 1, or any other recipe. */
 export const packServings = (r: Pick<Recipe, 'cat' | 'servings'>): number | null => (r.cat === 'ready' && r.servings !== undefined && r.servings >= 2 ? r.servings : null);
 
-/** The top of Ate this's portion stepper: PORTION_MAX, or the pack size when that is larger (up to 99). */
-export const ateMax = (r: Pick<Recipe, 'cat' | 'servings'>): number => Math.min(99, Math.max(PORTION_MAX, packServings(r) ?? 0));
+/** The top of Ate this's portion stepper: PORTION_MAX, or the pack size when that is larger (up to 99), lowered in half steps until the totals still fit one entry
+ * (calories and protein have caps in shared/diet.ts), so More and Whole pack never reach a number Ate this would refuse. */
+export function ateMax(r: Pick<Recipe, 'cat' | 'servings' | 'kcal' | 'p' | 'c' | 'f'>): number {
+  let top = Math.min(99, Math.max(PORTION_MAX, packServings(r) ?? 0));
+  if (!hasMacros(r)) return top;
+  while (top > 0.5 && servingNumbers(r, top) === null) top -= 0.5;
+  return top;
+}
 
 /** One entry in words: "520 kcal · 42 g protein", with " · 60 g carbs" and " · 12 g fat" when they were entered. */
 export const entryText = (e: Pick<DietEntry, 'kcal' | 'p' | 'c' | 'f'>): string =>

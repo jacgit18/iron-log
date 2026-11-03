@@ -126,6 +126,12 @@ describe('whole pack (ready-made foods)', () => {
     expect(ateMax({ cat: 'protein', servings: 40 })).toBe(PORTION_MAX);
     expect(ateMax({ cat: 'ready', servings: 99 })).toBe(99);
   });
+  it('stops the stepper at the most portions whose totals still fit one entry', () => {
+    expect(ateMax({ cat: 'ready', servings: 24, kcal: 450, p: 10 })).toBe(22); // 22 x 450 = 9,900; 22.5 would be 10,125 over the 9,999 calorie cap
+    expect(ateMax({ cat: 'ready', servings: 40, kcal: 100, p: 30 })).toBe(33); // 33 x 30 = 990 g protein; 33.5 would be 1,005 g over the 999 g cap
+    expect(ateMax({ cat: 'ready', servings: 12, kcal: 210, p: 6 })).toBe(12); // fits: unchanged
+    expect(ateMax({ cat: 'ready', servings: 24 })).toBe(24); // no numbers yet: Ate this shows the "Add them" prompt, not the stepper
+  });
   it('multiplies the per-serving numbers by the whole pack', () => {
     expect(servingNumbers({ kcal: 210, p: 6, c: 40, f: 1 }, 12)).toEqual({ kcal: 2520, p: 72, c: 480, f: 12 });
   });
