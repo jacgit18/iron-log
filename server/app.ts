@@ -122,7 +122,7 @@ const LIMITS = {
 const DB_HEALTH_TTL_MS = 5_000;
 /** The path Express matches for `app.use('/api/commands/import-legacy')`: a prefix on a segment boundary, any letter case. */
 const IMPORT_LEGACY_PATH = /^\/api\/commands\/import-legacy(\/|$)/i;
-/** Label and receipt scan take a photo (hundreds of kB as base64), so they also skip the 100 kb parser; its own 2 MB parser runs after sign-in, the admin check and the per-user limit (scan.ts). */
+/** Label and receipt scan take a photo (hundreds of kB as base64), so they also skip the 100 kb parser; its own parser (2 MB for a label, 5 MB for a receipt) runs after sign-in, the admin check and the per-user limit (scan.ts). */
 const SCAN_PHOTO_PATH = /^\/api\/scan\/(label|receipt)(\/|$)/i;
 
 const NO_CACHE = 'no-cache';
@@ -241,7 +241,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
-  // Label photo scan (brief label-photo-scan): admin-only, per-user limit; the 2 MB body parser is on its one route (scan.ts), after sign-in.
+  // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): admin-only, per-user limit; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
   if (db) app.use('/api/scan', requireAdmin, rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
   if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));

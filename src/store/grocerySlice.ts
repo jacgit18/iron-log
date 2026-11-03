@@ -581,7 +581,7 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     },
     // Puts one month line back exactly as it was (null: it had none), for Undo after a receipt is applied (brief receipt-scan).
     restoreGroceryLine(month, id, line) {
-      if (!MONTH_RE.test(month) || !get().grocery.items.some(i => i.id === id)) return;
+      if (!MONTH_RE.test(month) || get().blocked() || !get().grocery.items.some(i => i.id === id)) return; // blocked: sync is loading, so an Undo does not write
       mutateMonth(month, m => { if (line && Object.keys(line).length) m.lines[id] = line; else delete m.lines[id]; });
     },
     setGroceryTax(month, store, cents) {

@@ -45,6 +45,9 @@
   background: var(--warn-bg);
   color: var(--warn-ink);
 }
+.rcnote {
+  grid-column: 2 / -1;
+}
 .rclines {
   list-style: none;
   margin: 0;

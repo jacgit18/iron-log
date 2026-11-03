@@ -1,5 +1,5 @@
 import type { GroceryItem, GroceryLine } from '../types.ts';
-import type { Receipt, ReceiptLine } from '../shared/receipt.js';
+import type { Receipt, ReceiptLine, ReceiptUnit } from '../shared/receipt.js';
 import { MAX_PRICES, lineTotal, money } from './grocery.js';
 
 /* ---------- Receipt scan (brief receipt-scan): from the lines on a receipt and the person's choices to the grocery writes, and the total check. Pure; the sheet calls
@@ -15,7 +15,12 @@ export type Step =
   | { kind: 'tax'; store: string; cents: number };
 
 export interface Check { linesCents: number; taxCents: number; totalCents: number | null; diffCents: number | null }
-export interface Plan { steps: Step[]; items: number; itemsCents: number; check: Check; taxStore: string | null }
+/** `notes` says why a ticked line was left out of the writes (by line index): a weight that cannot be matched to the item's unit. */
+export interface Plan { steps: Step[]; items: number; itemsCents: number; check: Check; taxStore: string | null; notes: Record<number, string> }
+
+const GRAMS: Record<ReceiptUnit, number> = { lb: 453.59237, kg: 1000, oz: 28.349523125 };
+/** A weight in another unit (2.2 lb in kg is 1), to two decimals, the way a count is kept. */
+export const convertWeight = (qty: number, from: ReceiptUnit, to: ReceiptUnit): number => Math.round((qty * GRAMS[from] / GRAMS[to]) * 100) / 100;
 
 export const netOf = (l: Pick<ReceiptLine, 'grossCents' | 'discountCents'>): number => l.grossCents - l.discountCents;
 
@@ -43,27 +48,35 @@ export function checkTotals(receipt: Receipt): Check {
 
 /** The writes for the ticked, matched lines. Two lines for one item are added up; a weighed item takes the weight and a price per unit; any other item becomes packs whose prices add up to the net total to the cent. */
 export function planReceipt(receipt: Receipt, choices: readonly Choice[], items: readonly GroceryItem[], taxStore: string | null): Plan {
-  const byItem = new Map<string, ReceiptLine[]>();
+  const byItem = new Map<string, { l: ReceiptLine; qty: number }[]>();
+  const notes: Record<number, string> = {};
   receipt.lines.forEach((l, i) => {
     const c = choices[i];
     if (!c || !c.include || !c.itemId || l.grossCents <= 0) return;
-    byItem.set(c.itemId, [...(byItem.get(c.itemId) ?? []), l]);
+    const item = items.find(x => x.id === c.itemId);
+    let qty = l.qty;
+    if (item?.unit) {
+      // A weighed item takes a weight in its own unit: convert a weighed line, and leave out a line sold by count (its quantity is not a weight).
+      if (!l.unit) { notes[i] = `Sold by count on the receipt, but ${item.n} is kept by ${item.unit}. Not applied.`; return; }
+      qty = l.unit === item.unit ? l.qty : convertWeight(l.qty, l.unit, item.unit);
+    } else if (l.unit) qty = 1; // a weighed line for an item kept by count is one purchase, not a number of packs
+    byItem.set(c.itemId, [...(byItem.get(c.itemId) ?? []), { l, qty }]);
   });
   const steps: Step[] = [];
   let itemsCents = 0;
-  for (const [id, lines] of byItem) {
+  for (const [id, rows] of byItem) {
     const item = items.find(i => i.id === id);
     if (!item) continue;
-    const net = lines.reduce((a, l) => a + netOf(l), 0);
+    const net = rows.reduce((a, r) => a + netOf(r.l), 0);
     if (item.unit) {
-      const qty = Math.round(lines.reduce((a, l) => a + l.qty, 0) * 100) / 100;
+      const qty = Math.round(rows.reduce((a, r) => a + r.qty, 0) * 100) / 100;
       if (qty <= 0) continue;
       const cents = Math.round(net / qty);
       steps.push({ kind: 'single', id, qty, cents });
       itemsCents += lineTotal(qty, cents);
       continue;
     }
-    const packs = lines.flatMap(l => splitCents(netOf(l), Number.isInteger(l.qty) && l.qty >= 1 ? l.qty : 1));
+    const packs = rows.flatMap(r => splitCents(netOf(r.l), Number.isInteger(r.qty) && r.qty >= 1 ? r.qty : 1));
     if (packs.length > MAX_PRICES) { const cents = Math.round(net / packs.length); steps.push({ kind: 'single', id, qty: packs.length, cents }); itemsCents += lineTotal(packs.length, cents); continue; }
     if (packs.every(p => p === packs[0])) steps.push({ kind: 'single', id, qty: packs.length, cents: packs[0]! });
     else steps.push({ kind: 'prices', id, prices: packs });
@@ -71,7 +84,7 @@ export function planReceipt(receipt: Receipt, choices: readonly Choice[], items:
   }
   const taxOn = taxStore !== null && (receipt.taxCents ?? 0) > 0;
   if (taxOn) steps.push({ kind: 'tax', store: taxStore, cents: receipt.taxCents! });
-  return { steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null };
+  return { steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null, notes };
 }
 
 /** "Total check" in words for the sheet: whether the lines and tax explain the receipt total, and what is left over when they do not. */

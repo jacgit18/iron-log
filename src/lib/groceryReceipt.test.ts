@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryItem, GroceryLine } from '../types.ts';
 import type { Receipt } from '../shared/receipt.js';
-import { applyPlan, checkText, checkTotals, matchStore, planReceipt, restoreSnapshot, splitCents, takeSnapshot, type Choice, type GroceryApi } from './groceryReceipt.js';
+import { applyPlan, checkText, checkTotals, convertWeight, matchStore, planReceipt, restoreSnapshot, splitCents, takeSnapshot, type Choice, type GroceryApi } from './groceryReceipt.js';
 
 const item = (id: string, n: string, extra: Partial<GroceryItem> = {}): GroceryItem => ({ id, n, store: "BJ's", qty: 1, cents: null, every: true, out: false, ...extra });
 const items = [item('chicken', 'Chicken breast', { unit: 'lb' }), item('oil', 'Kirkland olive oil'), item('eggs', 'Eggs'), item('bananas', 'Bananas', { unit: 'lb' }), item('towels', 'Paper towels'), item('milk', 'Milk', { store: 'Aldi' })];
@@ -101,6 +101,27 @@ describe('planReceipt', () => {
   it('sets no tax without a store or a tax amount', () => {
     expect(planReceipt(receipt, matched, items, null).steps.some(s => s.kind === 'tax')).toBe(false);
     expect(planReceipt({ ...receipt, taxCents: 0 }, matched, items, "BJ's").taxStore).toBeNull();
+  });
+});
+
+describe('weights in another unit, and lines sold by count', () => {
+  const kgItems = [item('beef', 'Ground beef', { unit: 'kg' }), item('rice', 'Rice', { unit: 'lb' }), item('soap', 'Soap')];
+  const one = (l: Partial<Receipt['lines'][number]>, id: string) => planReceipt({ lines: [{ text: 'X', qty: 1, grossCents: 1000, discountCents: 0, matchId: id, ...l }] }, [{ itemId: id, include: true }], kgItems, null);
+  it('converts pounds and ounces to the item\'s unit before pricing it', () => {
+    expect(convertWeight(2.2046, 'lb', 'kg')).toBe(1);
+    expect(convertWeight(16, 'oz', 'lb')).toBe(1);
+    expect(convertWeight(1, 'kg', 'oz')).toBe(35.27);
+    expect(one({ qty: 4.4092, unit: 'lb', grossCents: 2000 }, 'beef').steps).toEqual([{ kind: 'single', id: 'beef', qty: 2, cents: 1000 }]); // 2 kg for $20.00: $10.00 a kg, not 4.41 kg at $4.54
+    expect(one({ qty: 32, unit: 'oz', grossCents: 800 }, 'rice').steps).toEqual([{ kind: 'single', id: 'rice', qty: 2, cents: 400 }]);
+    expect(one({ qty: 3, unit: 'lb', grossCents: 900 }, 'rice').steps).toEqual([{ kind: 'single', id: 'rice', qty: 3, cents: 300 }]); // same unit: unchanged
+  });
+  it('leaves a line sold by count out of a weighed item and says why', () => {
+    const p = one({ qty: 2, grossCents: 1000 }, 'rice');
+    expect(p.steps).toEqual([]);
+    expect(p.notes[0]).toContain('Sold by count on the receipt');
+  });
+  it('treats a weighed line for an item kept by count as one purchase', () => {
+    expect(one({ qty: 2, unit: 'lb', grossCents: 1000 }, 'soap').steps).toEqual([{ kind: 'single', id: 'soap', qty: 1, cents: 1000 }]);
   });
 });
 

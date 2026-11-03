@@ -70,6 +70,7 @@ export default function ReceiptSheet() {
               </select>
               <span className="rcqty">{l.qty}{l.unit ? ` ${l.unit}` : ''}</span>
               <span className="rcnet">{l.discountCents > 0 && <s>{money(l.grossCents)}</s>}{money(netOf(l))}</span>
+              {plan.notes[i] && <span className="note rcwarn rcnote">{plan.notes[i]}</span>}
             </li>
           );
         })}
