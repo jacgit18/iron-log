@@ -32,7 +32,7 @@ test('a recipe without a link shows no link', async ({ page }) => {
 test('an address that is not a web link is refused', async ({ page }) => {
   await start(page, 'javascript:alert(1)');
   await page.getByRole('button', { name: 'Save recipe' }).click();
-  await expect(page.getByText('Video link should start with https://')).toBeVisible();
+  await expect(page.getByText('Video link should start with http:// or https://')).toBeVisible();
   await expect(page.getByLabel('Video link (optional)')).toBeVisible(); // still on the form
 });
 
