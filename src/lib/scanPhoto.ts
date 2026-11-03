@@ -1,9 +1,11 @@
 import { signIn } from '../sync/devUser.js';
+import { cleanReceiptAnswer, type ItemRef, type ReceiptResult } from '../shared/receipt.js';
 import { cleanScanAnswer, type LabelResult } from '../shared/scan.js';
 
 // Label photo scan, app side (brief label-photo-scan): shrink the photo in the browser, send it to /api/scan/label, read the answer. The photo is
 // never stored; every failure comes back as a plain reason, never a throw.
 export const MAX_SIDE = 1600; // long side in pixels: a label stays readable and the upload stays well under the route's 2 MB limit
+export const MAX_RECEIPT_SIDE = 2400; // a receipt is tall and its print small: more pixels than a label, still a few hundred kB as JPEG (brief receipt-scan)
 export const JPEG_QUALITY = 0.82;
 
 /** The size a photo is drawn at: the long side at most `max`, never enlarged, whole pixels. */
@@ -24,9 +26,9 @@ export const SCAN_TEXT = {
   per100g: 'That label only shows numbers per 100 g, so nothing was filled in. Type the numbers for one serving.',
 } as const;
 
-async function shrinkToJpegBase64(file: Blob): Promise<string> {
+async function shrinkToJpegBase64(file: Blob, maxSide = MAX_SIDE): Promise<string> {
   const bitmap = await createImageBitmap(file);
-  const { w, h } = fitSize(bitmap.width, bitmap.height);
+  const { w, h } = fitSize(bitmap.width, bitmap.height, maxSide);
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
@@ -51,4 +53,26 @@ export async function scanLabel(file: Blob, signal?: AbortSignal): Promise<{ ok:
   if (res.status === 429) return { ok: false, reason: 'limit' };
   if (!res.ok) { console.warn(`label scan unavailable: status ${res.status}`); return { ok: false, reason: 'unavailable' }; }
   try { return { ok: true, result: cleanScanAnswer(await res.json()) }; } catch { return { ok: false, reason: 'unavailable' }; }
+}
+
+/** Words for the receipt sheet's failures and empty results (brief receipt-scan). */
+export const RECEIPT_TEXT = {
+  offline: 'You are offline. You can still tick items and type prices.',
+  limit: 'Too many scans just now. Try again in a minute, or type the prices.',
+  unavailable: 'Scan is not available right now. You can still tick items and type prices.',
+  photo: 'Could not open that photo. Try another one.',
+  unreadable: 'Could not read that receipt. Try a flatter photo with the whole receipt in view. Nothing on your list changed.',
+} as const;
+
+/** One receipt photo and the list's item ids and names to /api/scan/receipt. The answer is re-checked against the same ids; every failure is a plain reason. */
+export async function scanReceipt(file: Blob, items: ItemRef[], signal?: AbortSignal): Promise<{ ok: true; result: ReceiptResult } | ScanFailure> {
+  let image: string;
+  try { image = await shrinkToJpegBase64(file, MAX_RECEIPT_SIDE); } catch { return { ok: false, reason: 'photo' }; }
+  let res: Response;
+  try {
+    res = await fetch('/api/scan/receipt', { method: 'POST', headers: { 'content-type': 'application/json', 'x-client-version': __APP_VERSION__, ...signIn() }, body: JSON.stringify({ image, items }), ...(signal ? { signal } : {}) });
+  } catch { return { ok: false, reason: 'offline' }; }
+  if (res.status === 429) return { ok: false, reason: 'limit' };
+  if (!res.ok) { console.warn(`receipt scan unavailable: status ${res.status}`); return { ok: false, reason: 'unavailable' }; }
+  try { return { ok: true, result: cleanReceiptAnswer(await res.json(), new Set(items.map(i => i.id))) }; } catch { return { ok: false, reason: 'unavailable' }; }
 }

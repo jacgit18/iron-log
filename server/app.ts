@@ -122,8 +122,8 @@ const LIMITS = {
 const DB_HEALTH_TTL_MS = 5_000;
 /** The path Express matches for `app.use('/api/commands/import-legacy')`: a prefix on a segment boundary, any letter case. */
 const IMPORT_LEGACY_PATH = /^\/api\/commands\/import-legacy(\/|$)/i;
-/** Label scan takes a photo (a few hundred kB as base64), so it also skips the 100 kb parser; its own 2 MB parser runs after sign-in, the admin check and the per-user limit (scan.ts). */
-const SCAN_LABEL_PATH = /^\/api\/scan\/label(\/|$)/i;
+/** Label and receipt scan take a photo (hundreds of kB as base64), so they also skip the 100 kb parser; its own 2 MB parser runs after sign-in, the admin check and the per-user limit (scan.ts). */
+const SCAN_PHOTO_PATH = /^\/api\/scan\/(label|receipt)(\/|$)/i;
 
 const NO_CACHE = 'no-cache';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -183,7 +183,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // but only once the caller is signed in and counted (below, after sessionAuth and its per-user limit). Before that it gets no parser
   // at all: an anonymous caller must not be able to make the one small instance buffer and parse 4 MB per request (audit run-2).
   const smallJson = express.json({ limit: '100kb' });
-  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) || SCAN_LABEL_PATH.test(req.path) ? next() : smallJson(req, res, next)));
+  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) || SCAN_PHOTO_PATH.test(req.path) ? next() : smallJson(req, res, next)));
   app.use(repairBody); // a note clipped through an emoji must not reach the database as a lone surrogate (it was a 500; overnight audit S-1)
   app.disable('x-powered-by');
 

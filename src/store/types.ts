@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -342,6 +342,7 @@ export interface GrocerySlice {
   removeGroceryStore(name: string): string | null;
   setGroceryOut(id: string, out: boolean): void; // the At home list: unchecking "Have" puts a When-out item on this month's list
   setGroceryGot(month: string, id: string, on: boolean): boolean; // bought this month: it counts as had, and leaves that month's list; false when nothing changed
+  restoreGroceryLine(month: string, id: string, line: GroceryLine | null): void; // one month line back exactly as it was, for Undo after a receipt is applied
   setGroceryHave(month: string, id: string, on: boolean): void; // the At home tick: had this month, so off that month's list (ADR 054)
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
