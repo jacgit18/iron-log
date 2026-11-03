@@ -1,7 +1,7 @@
 // Renders the PWA icons in public/icons/ and the iOS launch screens in public/splash/ from public/logo.svg.
 // Usage: npm i -D playwright && npx playwright install chromium && node scripts/make-icons.mjs
 import { chromium } from 'playwright';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 
 const logo = await readFile(new URL('../public/logo.svg', import.meta.url), 'utf8');
 const out = new URL('../public/icons/', import.meta.url);
@@ -33,6 +33,8 @@ for (const [env, label, color, fs] of ENVS) {
     icons.push([`${env}/${name}`, size, withRibbon(svg, rounded, label, color, fs, name.startsWith('maskable') ? 12 : 7)]);
   }
 }
+// The browser tab icon: logo.svg with the same ribbon, in each environment's folder.
+for (const [env, label, color, fs] of ENVS) await writeFile(new URL(`${env}/logo.svg`, out), withRibbon(logo, true, label, color, fs, 7));
 const browser = await chromium.launch();
 for (const [name, size, svg] of icons) {
   const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });

@@ -20,6 +20,7 @@ import { errorHandler } from './errorHandler.ts';
 import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { foodRoutes, type FoodDeps } from './foodSearch.ts';
+import { scanRoutes, type ScanDeps } from './scan.ts';
 import { accountsRoutes } from './accountsRoutes.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
 import { usageRecord } from './usage.ts';
@@ -30,7 +31,8 @@ import { originGuard } from './originGuard.ts';
 import { fireRoute, type FireDeps } from './push/fire.ts';
 import { pushRoutes } from './push/routes.ts';
 import type { PushScheduler } from './push/scheduler.ts';
-import { byUser, rateLimit, type Limit } from './rateLimit.ts';
+import { NETWORK_HEADER } from './auth/tryGate.ts';
+import { byUser, ipKey, rateLimit, type Limit } from './rateLimit.ts';
 import { securityHeaders } from './securityHeaders.ts';
 import { AUTH_CHECK_PAGE } from './dev/authCheckPage.ts';
 import { deleteMyAccount, eraseMyData } from './commands/account.ts';
@@ -76,6 +78,8 @@ export interface AppDeps {
   usageKey?: string;
   /** Food search (brief diet-food-lookup): the USDA key and, in tests, a stand-in for fetch. Unset key: the route answers 503. */
   foods?: FoodDeps;
+  /** Label photo scan (brief label-photo-scan): the Anthropic key, model and daily ceiling. Unset key: the route answers 503. Admin only. */
+  scan?: ScanDeps;
   /** The most accounts that may exist (SIGNUP_CAP), shown on the admin accounts screen; unset means no cap. */
   signupCap?: number;
   /** Opens the sealed emails the admin accounts screen masks (ADR 046); unset in development, where they are stored in the clear. */
@@ -112,6 +116,8 @@ const LIMITS = {
   accounts: { max: 60, windowMs: 60_000 } as Limit,
   // Food search: a person typing, one request per pause. The daily allowance is in foodSearch.ts.
   foods: { max: 20, windowMs: 60_000 } as Limit,
+  // Label scan: a person photographing a label now and then, each call costs money; the daily ceiling is in scan.ts.
+  scan: { max: 10, windowMs: 60_000 } as Limit,
   // Server backup history (ADR 066): the app uploads once a day and reads the list in Settings; a loop is what this stops.
   backups: { max: 30, windowMs: 60_000 } as Limit,
   // Cloud Tasks calling the fire route: per address (a few Google ones), checked before the token. A 429 would push an alert past its
@@ -122,6 +128,8 @@ const LIMITS = {
 const DB_HEALTH_TTL_MS = 5_000;
 /** The path Express matches for `app.use('/api/commands/import-legacy')`: a prefix on a segment boundary, any letter case. */
 const IMPORT_LEGACY_PATH = /^\/api\/commands\/import-legacy(\/|$)/i;
+/** Label scan takes a photo (a few hundred kB as base64), so it also skips the 100 kb parser; its own 2 MB parser runs after sign-in, the admin check and the per-user limit (scan.ts). */
+const SCAN_LABEL_PATH = /^\/api\/scan\/label(\/|$)/i;
 
 const NO_CACHE = 'no-cache';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -136,8 +144,14 @@ function cacheControl(file: string, root: string): string {
   return ONE_HOUR;
 }
 
+/** Better Auth keeps a code under `<kind>-otp-<email>`; every kind is cleared, so nothing carrying the address is left after the account goes. */
+async function purgeCodesFor(auth: Auth, email: string): Promise<void> {
+  const adapter = (await auth.$context).internalAdapter;
+  for (const kind of ['sign-in', 'email-verification', 'forget-password']) await adapter.deleteVerificationByIdentifier(`${kind}-otp-${email.toLowerCase()}`);
+}
+
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, appLabel, signupCap, pii, usageKey }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, scan, appLabel, signupCap, pii, usageKey }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   const recordIssue = db ? issueRecorder(db) : undefined;
@@ -163,6 +177,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     app.use('/api/auth', rateLimit(authLimits.other));
     // Better Auth buffers a whole body before it checks it, so the size is judged first (bodyLimit.ts).
     app.use('/api/auth', bodyLimit());
+    // The client's network key (IPv6 by /64) goes to Better Auth's hooks in a header the server sets itself, so a caller cannot choose its own.
+    app.use('/api/auth', (req, _res, next) => { req.headers[NETWORK_HEADER] = ipKey(req.ip ?? 'unknown'); next(); });
     app.all('/api/auth/*splat', toNodeHandler(auth));
   }
   // The phone's error reports: anyone may send one (a signed-out phone has errors too), so they are small, rate-limited and scrubbed.
@@ -175,7 +191,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // but only once the caller is signed in and counted (below, after sessionAuth and its per-user limit). Before that it gets no parser
   // at all: an anonymous caller must not be able to make the one small instance buffer and parse 4 MB per request (audit run-2).
   const smallJson = express.json({ limit: '100kb' });
-  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) ? next() : smallJson(req, res, next)));
+  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) || SCAN_LABEL_PATH.test(req.path) ? next() : smallJson(req, res, next)));
   app.use(repairBody); // a note clipped through an emoji must not reach the database as a lone surrogate (it was a 500; overnight audit S-1)
   app.disable('x-powered-by');
 
@@ -219,8 +235,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
   // A suspended account is refused here, before any route runs, except /api/me, erase-data and delete (server/suspended.ts).
   app.use('/api', suspendedGate);
-  // A page that holds another account's data is refused before any route runs (server/expectedUser.ts).
-  app.use(['/api/commands', '/api/sync', '/api/backups'], expectedUserGate());
+  // A page that holds another account's data is refused before any route runs (server/expectedUser.ts). Erase and delete are covered too: they run after
+  // the suspended gate, which lets a suspended account through, so a stale tab cannot erase or delete the wrong account.
+  app.use(['/api/commands', '/api/sync', '/api/backups', '/api/account/erase-data', '/api/account/delete'], expectedUserGate());
   // Per signed-in user, after the lookup.
   app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
   app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }), repairBody);
@@ -232,7 +249,9 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
-  if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap }));
+  // Label photo scan (brief label-photo-scan): admin-only, per-user limit; the 2 MB body parser is on its one route (scan.ts), after sign-in.
+  if (db) app.use('/api/scan', requireAdmin, rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
+  if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   if (db) app.use('/api/usage-admin', requireAdmin, rateLimit(limits.issues, undefined, byUser), usageRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
@@ -243,8 +262,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   });
   app.post('/api/account/delete', rateLimit(limits.account, undefined, byUser), async (req, res) => {
     const email = (res.locals.account as Account).email;
-    // Better Auth keeps a code under `<kind>-otp-<email>`; every kind is cleared, so nothing carrying the address is left after the account goes.
-    const purge = auth && email ? async () => { const adapter = (await auth.$context).internalAdapter; for (const kind of ['sign-in', 'email-verification', 'forget-password']) await adapter.deleteVerificationByIdentifier(`${kind}-otp-${email.toLowerCase()}`); } : undefined;
+    const purge = auth && email ? () => purgeCodesFor(auth, email) : undefined;
     const userId = String(res.locals.userId);
     const result = await deleteMyAccount(db!, userId, req.body, purge, () => cancelBillingFor(db!, billing?.api)(userId));
     res.status(result.status).json(result.body);

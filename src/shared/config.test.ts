@@ -24,3 +24,11 @@ describe('recipeChips', () => {
     expect(normConfigDoc({ recipeChips: { order: ['sides'] } })!.recipeChips).toEqual({ order: ['sides'] });
   });
 });
+
+describe('normConfig hideKg', () => {
+  it('keeps hideKg only when it is exactly true, and the config document keeps it', () => {
+    expect(normConfig({ hideKg: true }).hideKg).toBe(true);
+    ['yes', 1, false, null].forEach(v => expect('hideKg' in normConfig({ hideKg: v })).toBe(false));
+    expect(normConfigDoc({ hideKg: true })?.hideKg).toBe(true);
+  });
+});

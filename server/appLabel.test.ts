@@ -13,13 +13,13 @@ describe('appLabelFrom', () => {
 });
 
 describe('branding', () => {
-  it('renames the manifest and keeps its other fields', () => {
+  it('keeps the installed name and every other manifest field', () => {
     const out = JSON.parse(brandManifest('{"name":"Loadbearer","short_name":"Loadbearer","display":"standalone"}', 'QA'));
-    expect(out).toEqual({ name: 'Loadbearer QA', short_name: 'Loadbearer QA', display: 'standalone' });
+    expect(out).toEqual({ name: 'Loadbearer', short_name: 'Loadbearer', display: 'standalone' });
   });
-  it('renames the page title and the iOS home-screen title', () => {
+  it('renames the page title and leaves the iOS home-screen title plain', () => {
     const html = '<title>Loadbearer</title><meta name="apple-mobile-web-app-title" content="Loadbearer">';
-    expect(brandHtml(html, 'Staging')).toBe('<title>Loadbearer Staging</title><meta name="apple-mobile-web-app-title" content="Loadbearer Staging">');
+    expect(brandHtml(html, 'Staging')).toBe('<title>Loadbearer Staging</title><meta name="apple-mobile-web-app-title" content="Loadbearer">');
   });
 });
 
@@ -34,7 +34,11 @@ describe('environment icons', () => {
   it('points the iOS touch icon at the environment folder', () => {
     expect(brandHtml('<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">', 'Staging')).toBe('<link rel="apple-touch-icon" href="/icons/staging/apple-touch-icon.png">');
   });
+  it('points the browser tab icon at the environment folder', () => {
+    expect(brandHtml('<link rel="icon" href="/logo.svg" type="image/svg+xml">', 'QA')).toBe('<link rel="icon" href="/icons/qa/logo.svg" type="image/svg+xml">');
+  });
   it('has the environment icon files the branding points at', () => {
+    for (const env of ['qa', 'staging']) expect(existsSync(new URL(`../public/icons/${env}/logo.svg`, import.meta.url)), `${env}/logo.svg`).toBe(true);
     for (const env of ['qa', 'staging']) for (const f of ['icon-192.png', 'icon-512.png', 'maskable-512.png', 'apple-touch-icon.png'])
       expect(existsSync(new URL(`../public/icons/${env}/${f}`, import.meta.url)), `${env}/${f}`).toBe(true);
   });
@@ -45,7 +49,8 @@ describe('the real index.html', () => {
     const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     const out = brandHtml(html, 'QA');
     expect(out).toContain('<title>Loadbearer QA</title>');
-    expect(out).toContain('name="apple-mobile-web-app-title" content="Loadbearer QA"');
+    expect(out).toContain('name="apple-mobile-web-app-title" content="Loadbearer"');
     expect(out).toContain('href="/icons/qa/apple-touch-icon.png"');
+    expect(out).toContain('href="/icons/qa/logo.svg"');
   });
 });

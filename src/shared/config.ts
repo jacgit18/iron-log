@@ -30,6 +30,8 @@ export function normConfig(c: any): Partial<Cfg> {
   if (out.equipment) out.equipment = own(out.equipment, (k, v) => (/^x:[a-z0-9-]{1,40}$/.test(k) && typeof v === 'string' && v.trim() && v.length <= 30 ? v.trim() : undefined));
   if (out.freqGoals) out.freqGoals = own(out.freqGoals, (_k, n) => (validFreq(n) ? n : undefined));
   if ('injuryPrevention' in out && typeof out.injuryPrevention !== 'boolean') delete out.injuryPrevention;
+  // hideKg is only ever true: absent means the kg figures are shown, so a false (or anything else) is dropped.
+  if ('hideKg' in out && out.hideKg !== true) delete out.hideKg;
   if ('bwGoal' in out && !(out.bwGoal && typeof out.bwGoal === 'object' && typeof out.bwGoal.w === 'number' && validBodyLb(out.bwGoal.w))) delete out.bwGoal;
   if ('diet' in out) { const d = normDietCfg(out.diet); if (d) out.diet = d; else delete out.diet; }
   if ('recipeChips' in out) { const rc = normRecipeChips(out.recipeChips); if (rc) out.recipeChips = rc; else delete out.recipeChips; }
@@ -47,7 +49,7 @@ export interface ConfigDoc extends Partial<Cfg> {
   waterMode?: 'weight' | 'fixed';
 }
 
-const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention', 'recipeChips'] as const;
+const DOC_KEYS = ['ex', 'muscleMap', 'mode', 'm3Start', 'm3First', 'm2Even', 'pct', 'rxOverride', 'rm', 'phDef', 'exPh', 'progNames', 'bwGoal', 'diet', 'liftGoals', 'equipment', 'freqGoals', 'rest', 'warmup', 'injuryPrevention', 'hideKg', 'recipeChips'] as const;
 const progKey = (v: unknown) => v === 'A' || v === 'B';
 const MAX_WARMUP = 50;
 

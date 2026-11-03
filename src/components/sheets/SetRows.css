@@ -14,6 +14,16 @@
   color: var(--muted);
   text-align: center;
 }
+.setw {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  min-width: 0;
+}
+.setw input {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .setbtns {
   display: flex;
   flex-wrap: wrap;

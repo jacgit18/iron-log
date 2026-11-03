@@ -187,7 +187,6 @@ function ProgramEditor() {
       <div className="edtop">
         <div className="seg" role="group" aria-label="Program to edit">
           {['A', 'B'].map(p => <button type="button" key={p} className={p === k ? 'on' : ''} aria-pressed={p === k} onClick={() => st.setEdProg(p)}>{progName(cfg, p)}</button>)}
-          {lib && <button type="button" className="on segname" aria-pressed="true">{item.name}</button>}
         </div>
         <button type="button" className="btn createprog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'newprog' }); }}>Create a program</button>
         <div className="dayctl">

@@ -687,6 +687,7 @@ export function createApiDb(options: ApiDbOptions) {
         // The halt made every waiting send let go, so start them again, as start() does; else they wait for a reload.
         halted = false;
         outbox.paths().forEach(path => { void exclusive(() => flushPath(path, () => {})).catch(() => undefined); });
+        if (out.class === 'account') setState('paused', 'account'); // shows the other-account choice; nothing was erased
         return out;
       }
       mirror.clear();
