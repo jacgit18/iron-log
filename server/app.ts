@@ -20,6 +20,7 @@ import { errorHandler } from './errorHandler.ts';
 import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { foodRoutes, type FoodDeps } from './foodSearch.ts';
+import { scanRoutes, type ScanDeps } from './scan.ts';
 import { accountsRoutes } from './accountsRoutes.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
 import { backupsRoutes } from './backups.ts';
@@ -73,6 +74,8 @@ export interface AppDeps {
   billing?: { api: StripeApi; config: BillingConfig };
   /** Food search (brief diet-food-lookup): the USDA key and, in tests, a stand-in for fetch. Unset key: the route answers 503. */
   foods?: FoodDeps;
+  /** Label photo scan (brief label-photo-scan): the Anthropic key, model and daily ceiling. Unset key: the route answers 503. Admin only. */
+  scan?: ScanDeps;
   /** The most accounts that may exist (SIGNUP_CAP), shown on the admin accounts screen; unset means no cap. */
   signupCap?: number;
   /** Opens the sealed emails the admin accounts screen masks (ADR 046); unset in development, where they are stored in the clear. */
@@ -107,6 +110,8 @@ const LIMITS = {
   accounts: { max: 60, windowMs: 60_000 } as Limit,
   // Food search: a person typing, one request per pause. The daily allowance is in foodSearch.ts.
   foods: { max: 20, windowMs: 60_000 } as Limit,
+  // Label scan: a person photographing a label now and then, each call costs money; the daily ceiling is in scan.ts.
+  scan: { max: 10, windowMs: 60_000 } as Limit,
   // Server backup history (ADR 066): the app uploads once a day and reads the list in Settings; a loop is what this stops.
   backups: { max: 30, windowMs: 60_000 } as Limit,
   // Cloud Tasks calling the fire route: per address (a few Google ones), checked before the token. A 429 would push an alert past its
@@ -138,7 +143,7 @@ async function purgeCodesFor(auth: Auth, email: string): Promise<void> {
 }
 
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, appLabel, signupCap, pii }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, scan, appLabel, signupCap, pii }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   const recordIssue = db ? issueRecorder(db) : undefined;
@@ -234,6 +239,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
+  // Label photo scan (brief label-photo-scan): admin-only, per-user limit; the 2 MB body parser is on its one route (scan.ts), after sign-in.
+  if (db) app.use('/api/scan', requireAdmin, rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
   if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
