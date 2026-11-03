@@ -64,10 +64,10 @@ describe('cleanScanAnswer', () => {
 
 describe('labelNote', () => {
   it('says what a serving is and how many a pack holds', () => {
-    expect(labelNote({ kcal: 1, p: 1, serving: '2/3 cup', servingG: 55, servingsPerPack: 6 })).toBe('1 serving = 2/3 cup (55 g). About 6 servings per pack.');
+    expect(labelNote({ kcal: 1, p: 1, serving: '2/3 cup', servingG: 55, servingsPerPack: 6 })).toBe('1 serving = 2/3 cup (55 g).'); // servings per pack has its own box
     expect(labelNote({ kcal: 1, p: 1, servingG: 55 })).toBe('1 serving = 55 g.');
     expect(labelNote({ kcal: 1, p: 1, serving: '1 piece' })).toBe('1 serving = 1 piece.');
-    expect(labelNote({ kcal: 1, p: 1, servingsPerPack: 2.5 })).toBe('About 2.5 servings per pack.');
+    expect(labelNote({ kcal: 1, p: 1, servingsPerPack: 2.5 })).toBe('');
     expect(labelNote({ kcal: 1, p: 1 })).toBe('');
   });
 });

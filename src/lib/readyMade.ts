@@ -2,8 +2,9 @@ import { cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
 
 /* ---------- Ready-made food form (brief recipe-first-diet-log): what the typed boxes mean, or why they can't be saved. Pure; the form calls this. ---------- */
 
-export interface ReadyMadeText { n: string; kcal: string; p: string; c: string; f: string }
-export type ReadyMadeValues = { kcal: number; p: number; c?: number; f?: number };
+export interface ReadyMadeText { n: string; kcal: string; p: string; c: string; f: string; pack?: string }
+/** `servings` is servings per pack (brief whole-pack): the recipe's existing whole-number servings field, left out when blank. */
+export type ReadyMadeValues = { kcal: number; p: number; c?: number; f?: number; servings?: number };
 
 /** The numbers a ready-made food saves with, or the sentence to show. Name, calories and protein are needed; carbs and fat are optional. */
 export function readyMadeValues(t: ReadyMadeText): { error: string } | ReadyMadeValues {
@@ -13,5 +14,8 @@ export function readyMadeValues(t: ReadyMadeText): { error: string } | ReadyMade
   if (!t.p.trim() || p === null) return { error: 'Protein per serving must be a number from 0 to 999 g.' };
   const c = t.c.trim() ? cleanGrams(Number(t.c)) : undefined, f = t.f.trim() ? cleanGrams(Number(t.f)) : undefined;
   if (c === null || f === null) return { error: 'Carbs and fat per serving must be numbers from 0 to 999 g.' };
-  return { kcal, p, ...(c !== undefined ? { c } : {}), ...(f !== undefined ? { f } : {}) };
+  const pack = (t.pack ?? '').trim();
+  const servings = pack === '' || pack === '0' ? undefined : /^\d{1,2}$/.test(pack) ? Number(pack) : null;
+  if (servings === null) return { error: 'Servings per pack must be a whole number from 1 to 99.' };
+  return { kcal, p, ...(c !== undefined ? { c } : {}), ...(f !== undefined ? { f } : {}), ...(servings !== undefined ? { servings } : {}) };
 }

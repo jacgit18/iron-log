@@ -64,11 +64,10 @@ export function cleanScanAnswer(body: unknown): LabelResult {
   return { kind: 'unreadable' };
 }
 
-/** A line for the Note field: what one serving is and how many a pack holds ("1 serving = 2/3 cup (55 g). About 6 servings per pack."). Empty when the label gave neither. */
+/** A line for the Note field: what one serving is ("1 serving = 2/3 cup (55 g)."). Empty when the label gave neither. Servings per pack has its own box on the form (brief whole-pack). */
 export function labelNote(l: LabelFill): string {
   const parts: string[] = [];
   if (l.serving || l.servingG) parts.push(`1 serving = ${[l.serving, l.servingG ? `${l.serving ? '(' : ''}${l.servingG} g${l.serving ? ')' : ''}` : ''].filter(Boolean).join(' ')}.`);
-  if (l.servingsPerPack) parts.push(`About ${l.servingsPerPack} servings per pack.`);
   return parts.join(' ').slice(0, 300);
 }
 

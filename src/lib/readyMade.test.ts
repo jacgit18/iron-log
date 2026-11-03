@@ -19,4 +19,13 @@ describe('readyMadeValues', () => {
     expect(readyMadeValues({ ...ok, f: 'x' })).toHaveProperty('error');
     expect(readyMadeValues({ ...ok, p: '0' })).toEqual({ kcal: 420, p: 0 });
   });
+
+  it('takes an optional whole number of servings per pack, 1 to 99', () => {
+    const base = { n: 'Gnocchi', kcal: '210', p: '6', c: '', f: '' };
+    expect(readyMadeValues({ ...base, pack: '12' })).toEqual({ kcal: 210, p: 6, servings: 12 });
+    expect(readyMadeValues({ ...base, pack: '' })).toEqual({ kcal: 210, p: 6 });
+    expect(readyMadeValues({ ...base })).toEqual({ kcal: 210, p: 6 });
+    expect(readyMadeValues({ ...base, pack: '0' })).toEqual({ kcal: 210, p: 6 });
+    for (const bad of ['2.5', '100', '-3', 'ten', '1e2']) expect(readyMadeValues({ ...base, pack: bad }), bad).toEqual({ error: 'Servings per pack must be a whole number from 1 to 99.' });
+  });
 });

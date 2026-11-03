@@ -25,7 +25,8 @@ test.describe('as an admin', () => {
     await expect(page.getByLabel('Protein per serving (g)')).toHaveValue('6');
     await expect(page.getByLabel('Carbs per serving (g), optional')).toHaveValue('40');
     await expect(page.getByLabel('Fat per serving (g), optional')).toHaveValue('1');
-    await expect(page.getByLabel('Note')).toHaveValue('1 serving = 1 cup (140 g). About 3 servings per pack.');
+    await expect(page.getByLabel('Note')).toHaveValue('1 serving = 1 cup (140 g).');
+    await expect(page.getByLabel('Servings per pack, optional')).toHaveValue('3');
     await page.getByRole('button', { name: 'Cancel' }).click();
     await page.getByRole('group', { name: 'Category' }).getByRole('button', { name: 'Ready-made' }).click();
     await expect(page.getByRole('button', { name: /Gnocchi/ })).toHaveCount(0); // cancelled: nothing was saved

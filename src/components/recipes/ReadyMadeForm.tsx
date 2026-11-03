@@ -21,6 +21,7 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
   const [carbs, setCarbs] = useState(str(recipe?.c));
   const [fat, setFat] = useState(str(recipe?.f));
   const [note, setNote] = useState(recipe?.note ?? '');
+  const [pack, setPack] = useState(str(recipe?.servings));
   const [err, setErr] = useState('');
   const canScan = useFeature('scan') && !recipe;
   const [scanning, setScanning] = useState(false);
@@ -41,14 +42,15 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
     if (!mounted.current) return;
     setScanning(false);
     if (!r.ok) { setScanNote(SCAN_TEXT[r.reason]); return; }
-    const plan = planFill(r.result, { n: '', note: '' }); // what the label offers; a name or note typed while it was reading is kept below
+    const plan = planFill(r.result, { n: '', note: '', pack: '' }); // what the label offers; a name or note typed while it was reading is kept below
     if (plan.n !== undefined) setN(cur => (cur.trim() ? cur : plan.n ?? ''));
     if (plan.kcal !== undefined) { setKcal(plan.kcal); setProtein(plan.p ?? ''); setCarbs(plan.c ?? ''); setFat(plan.f ?? ''); setErr(''); }
     if (plan.note !== undefined) setNote(cur => (cur.trim() ? cur : plan.note ?? ''));
+    if (plan.pack !== undefined) setPack(cur => (cur.trim() ? cur : plan.pack ?? ''));
     setScanNote(plan.message);
   };
   const save = () => {
-    const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat });
+    const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat, pack });
     if ('error' in v) { setErr(v.error); return; }
     const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat: 'ready', ing: [], steps: [], ...v, note });
     if (e) { setErr(e); return; }
@@ -82,6 +84,10 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
         <label>Carbs per serving (g), optional<input inputMode="decimal" value={carbs} onChange={e => { setCarbs(e.target.value); setErr(''); }} /></label>
         <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => { setFat(e.target.value); setErr(''); }} /></label>
       </div>
+      <label>Servings per pack, optional
+        <input inputMode="numeric" value={pack} onChange={e => { setPack(e.target.value); setErr(''); }} aria-describedby="rc-pack-help" />
+      </label>
+      <p id="rc-pack-help" className="note">Lets Ate this log the whole pack in one step.</p>
       <label>Note
         <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
       </label>
