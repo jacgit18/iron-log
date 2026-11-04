@@ -29,6 +29,7 @@ export type ScenarioFeature =
   | 'kg beside lb'
   | 'Label scan'
   | 'Whole pack'
+  | 'Receipt photos'
   | 'Receipt scan'
   | 'Usual amount'
   | 'Finished group';
@@ -37,7 +38,7 @@ export type ScenarioFeature =
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos',
 ];
 
 export interface Scenario {
@@ -784,8 +785,33 @@ export const SCENARIOS: readonly Scenario[] = [
       'A name already in that store says it is already in the list and to pick it instead; an empty name says to give the item a name; neither adds anything to the row.',
     ],
   },
+  // ---- Receipt photos ----
   {
-    id: 'S-59', feature: 'Finished group', title: 'Done and skipped exercises fold into one bar', persona: 'superset-builder', brief: 'finished-group-fold',
+    id: 'S-59', feature: 'Receipt photos', title: 'Keep a receipt photo, then open, note, download and delete it', persona: 'grocery-shopper', brief: 'receipt-save-photo', device: true,
+    steps: [
+      'On a phone as an admin, scan a BJ\'s receipt. In the sheet, tick Keep a copy of this photo and press Apply.',
+      'Press Receipts beside Scan receipt. Find the receipt under its month, open it, read every line of the photo (scroll inside it), type a note and press Save note.',
+      'Press Download, then Delete this receipt and Keep it, then Delete this receipt and Delete. Press Back.',
+    ],
+    expected: [
+      'The box starts unticked; after Apply a line says "Photo saved. Find it under Receipts." and the receipt is listed as store, date and total, newest month first.',
+      'The photo is sharp enough to read every line; the note is still there when you close and reopen it; Download saves a .jpg named with the date and store; Keep it changes nothing, Delete removes the row; Back goes up to the grocery list.',
+    ],
+  },
+  {
+    id: 'S-60', feature: 'Receipt photos', title: 'Not ticked saves nothing; a failed or full save says so', persona: 'grocery-shopper', brief: 'receipt-save-photo', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt and press Apply with the box unticked; then scan another, tick the box and press Cancel. Open Receipts.',
+      'Scan a receipt, tick the box, turn on airplane mode and press Apply; turn it off and press Try again.',
+      'Sign in as a test account that is not an admin and open Groceries.',
+    ],
+    expected: [
+      'Neither the unticked Apply nor the cancelled one leaves a receipt on the Receipts page, which says "No saved receipts yet" when it is empty.',
+      'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. A non-admin account sees no Receipts button and no Keep box. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
+    ],
+  },
+  {
+    id: 'S-61', feature: 'Finished group', title: 'Done and skipped exercises fold into one bar', persona: 'superset-builder', brief: 'finished-group-fold',
     steps: [
       'Open the Board on Day 1. Tick one exercise and skip another from its ⋯ menu.',
       'Look at the bottom of the day: press the Finished bar to open it, then press it again to close it.',
@@ -796,7 +822,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-60', feature: 'Finished group', title: 'Edit a done exercise and put cards back', persona: 'superset-builder', brief: 'finished-group-fold',
+    id: 'S-62', feature: 'Finished group', title: 'Edit a done exercise and put cards back', persona: 'superset-builder', brief: 'finished-group-fold',
     steps: [
       'Log a set for an exercise so it is done, open the Finished bar and press Edit on its row; change a number and save.',
       'Press Untick on that row, then press Undo skip on a skipped row.',
@@ -807,7 +833,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-61', feature: 'Finished group', title: 'A superset and a day with nothing left', persona: 'superset-builder', brief: 'finished-group-fold', edge: true,
+    id: 'S-63', feature: 'Finished group', title: 'A superset and a day with nothing left', persona: 'superset-builder', brief: 'finished-group-fold', edge: true,
     steps: [
       'Tick both halves of a superset, then finish every other card in the day (tick or skip).',
       'Open the Finished bar and Untick one half of the superset.',

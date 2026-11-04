@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { addedText, applyPlan, checkText, createStaged, isStaged, matchStore, netOf, planReceipt, proposeItem, remapPlan, restoreSnapshot, stageDraft, takeSnapshot, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
 import { money, monthLabel } from '../../lib/grocery.js';
+import { keepMeta, type KeepMeta } from '../../lib/receiptsClient.js';
 import type { Receipt } from '../../shared/receipt.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import Sheet from '../Sheet.js';
@@ -17,6 +18,9 @@ export default function ReceiptSheet() {
   const receipt = modal?.receipt as Receipt | undefined;
   const mk = String(modal?.mk ?? '');
   const onApplied = modal?.onApplied as ((a: Applied) => void) | undefined;
+  const canKeep = !!modal?.image; // the photo is held by Scan receipt only for an account that has Receipts (brief receipt-save-photo)
+  const onKeep = modal?.onKeep as ((meta: KeepMeta) => void) | undefined;
+  const [keep, setKeep] = useState(false); // off for every receipt: nothing is uploaded unless this is ticked and Apply is pressed
   const [choices, setChoices] = useState<Choice[]>(() => (receipt?.lines ?? []).map(l => ({ itemId: l.matchId, include: !!l.matchId })));
   const [pickedStore, setPickedStore] = useState('');
   const [staged, setStaged] = useState<Staged[]>([]);
@@ -54,6 +58,7 @@ export default function ReceiptSheet() {
     const snap = takeSnapshot(real, mk, month?.lines ?? {}, st.grocery.items, month?.tax, made.created.map(x => made.ids[x.id]!));
     const done = applyPlan(real, mk, st);
     closeModal();
+    if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
     if (done > 0 || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${addedText(made.created, made.refused)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
   };
   const nothing = plan.steps.length === 0;
@@ -122,6 +127,12 @@ export default function ReceiptSheet() {
       </ul>
       <p className="note">Existing prices on the ticked items are replaced. Lines that are not on your list are skipped and count only in the total check, unless you add them with Add to list.</p>
       <div className="rcfoot">
+        {canKeep && (
+          <label className="rckeep" htmlFor="rc-keep">
+            <input id="rc-keep" type="checkbox" checked={keep} onChange={e => setKeep(e.target.checked)} />
+            <span>Keep a copy of this photo<small>Saved under Receipts. Only you can see it, and you can delete it any time.</small></span>
+          </label>
+        )}
         <p className="note">{plan.items} {plan.items === 1 ? 'item' : 'items'}, {money(plan.itemsCents)}{plan.taxStore ? ` + ${plan.taxStore} tax ${money(plan.check.taxCents)}` : ''}{newCount > 0 ? `. ${newCount} new ${newCount === 1 ? 'item' : 'items'} will be added.` : ''}</p>
         <div className="actions">
           <button type="button" className="btn" id="rc-cancel" onClick={closeModal}>Cancel</button>

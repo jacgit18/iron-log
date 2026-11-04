@@ -34,6 +34,7 @@ describe('pageOf', () => {
     expect(pageOf('program/exercises', 'progress')).toBeNull();
     expect(pageOf('progress/zzz', 'progress')).toBeNull(); // not a screen
     expect(pageOf('daily/grocery/spend', 'daily/grocery')).toBe('spend');
+    expect(pageOf('daily/grocery/receipts', 'daily/grocery')).toBe('receipts');
   });
 });
 

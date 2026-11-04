@@ -1,0 +1,86 @@
+@layer base, components;
+@layer components {
+/* Saved receipts (brief receipt-save-photo): the page of text rows under Groceries, and the viewer sheet. No thumbnails: the list loads no pictures. */
+.rcspagehead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-12);
+}
+.rcspagehead .btn {
+  min-height: 44px;
+}
+.rcspagehead h2 {
+  margin: 0;
+}
+.rcsempty {
+  display: grid;
+  justify-items: start;
+  gap: var(--sp-8);
+}
+.rcsgroup h3 {
+  margin: var(--sp-12) 0 var(--sp-4);
+}
+.rcslist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-4);
+}
+.rcsrow {
+  display: grid;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-10) var(--sp-12);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rcsrow small {
+  color: var(--muted);
+}
+@media (hover:hover) {
+  .rcsrow:hover {
+    border-color: var(--text);
+  }
+}
+.rcview {
+  max-width: 860px;
+}
+.rcphoto {
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.rcphoto img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.rcphoto > p,
+.rcphoto > div {
+  margin: 0;
+  padding: var(--sp-12);
+}
+.rcview .actions .btn {
+  min-height: 44px;
+}
+.rcview a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  text-decoration: none;
+}
+.rcconfirm p {
+  margin: 0 0 var(--sp-8);
+}
+}
