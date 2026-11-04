@@ -19,5 +19,5 @@ export function importFileProblem(file: { name: string; size: number }): string 
 export function readFailure(err: unknown): string {
   const m = err instanceof Error ? err.message : '';
   if (/requested file could not be read|NotReadableError|NotFoundError/i.test(m) || (err instanceof Error && /NotReadable|NotFound/.test(err.name))) return 'Couldn’t read that file. If it is in a cloud drive, download it to the phone first, then pick it again.';
-  return m || 'Couldn’t read that file';
+  return 'Couldn’t read that file.';
 }

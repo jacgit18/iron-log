@@ -1,0 +1,17 @@
+@layer base, components;
+@layer components {
+/* Tap feedback (brief polish-theme-flash-pressed-errors): a button sinks a little while it is pressed, so a tap never feels dead.
+   Scoped to .btn and the section tabs, and kept off the Board (.boardroot) and its Swap day buttons, which are hands off (CLAUDE.md). */
+:where(.btn, .tabs button):not(.boardroot *, .swapbtn) {
+  transition: transform 80ms ease-out, filter 80ms ease-out;
+}
+:where(.btn, .tabs button):not(.boardroot *, .swapbtn):active:not(:disabled) {
+  transform: scale(.98);
+  filter: brightness(.95);
+}
+@media (prefers-reduced-motion:reduce) {
+  :where(.btn, .tabs button):not(.boardroot *, .swapbtn):active:not(:disabled) {
+    transform: none;
+  }
+}
+}

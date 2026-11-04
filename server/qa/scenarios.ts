@@ -34,13 +34,14 @@ export type ScenarioFeature =
   | 'Usual amount'
   | 'Finished group'
   | 'Weight step'
-  | 'Program compare';
+  | 'Program compare'
+  | 'Polish pass';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass',
 ];
 
 export interface Scenario {
@@ -890,6 +891,37 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'A day empty on both sides says "Nothing on this day in either program."; a day with exercises on one side lists them all as Only here on that side and an empty board on the other.',
       'The section is closed again after you leave the Program tab and come back, and the phone view does not scroll sideways.',
+    ],
+  },
+  {
+    id: 'S-68', feature: 'Polish pass', title: 'Dark mode opens dark, with no white flash', persona: 'new-user', brief: 'polish-theme-flash-pressed-errors', device: true,
+    steps: [
+      'On a phone, tap the Colours button until it says dark, then close the app completely.',
+      'Open the app again from the home screen or the browser, on a throttled connection if you can.',
+    ],
+    expected: [
+      'The screen is dark from the first moment: no white or light-grey flash before the app appears.',
+      'Choosing light, or match this device, and reopening shows light, or the phone\'s own setting, from the first moment as well.',
+    ],
+  },
+  {
+    id: 'S-69', feature: 'Polish pass', title: 'Buttons and section tabs respond to a press', persona: 'new-user', brief: 'polish-theme-flash-pressed-errors',
+    steps: [
+      'Press and hold a section tab (Daily, Progress, Program, Settings) and a plain button such as Cancel on a sheet, without letting go.',
+      'Press and hold a Board card button or a Swap day button.',
+    ],
+    expected: [
+      'The tab and the plain button sink slightly and darken while held, and return when released; with "reduce motion" on the phone, they only darken.',
+      'The Board card buttons and Swap day buttons look and behave exactly as before.',
+    ],
+  },
+  {
+    id: 'S-70', feature: 'Polish pass', title: 'A file that cannot be read gives a plain sentence', persona: 'new-user', brief: 'polish-theme-flash-pressed-errors', edge: true,
+    steps: [
+      'In Settings, pick an export file to import that is on a cloud drive and not downloaded to the phone (or one that is revoked or corrupt).',
+    ],
+    expected: [
+      'A plain sentence appears (about downloading it first, or that the file could not be read), with no text such as "Error:", a status number or "undefined".',
     ],
   },
 ];
