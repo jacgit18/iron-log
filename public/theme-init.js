@@ -5,4 +5,4 @@
 try {
   var saved = JSON.parse(localStorage.getItem('ironlog:appearance') || 'null');
   if (saved && (saved.theme === 'light' || saved.theme === 'dark')) document.documentElement.dataset.theme = saved.theme;
-} catch (e) { /* storage blocked or a damaged value: follow the OS */ }
+} catch { /* storage blocked or a damaged value: follow the OS */ }
