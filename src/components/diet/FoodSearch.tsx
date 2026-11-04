@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useFeature } from '../../features.js';
+import { useAppStore } from '../../store/useAppStore.js';
 import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
 import { useFoodHits } from './useFoodHits.js';
 import { DEFAULT_FOOD_SORT, FOOD_SORTS, sortFoodHits } from '../../lib/foodSort.js';
@@ -31,8 +33,13 @@ export default function FoodSearch({ onUse, text: given }: { onUse: (fill: FoodF
     setPick(null); setText('');
   };
 
+  // Scan barcode (brief barcode-scan): another way to ask the same source, by a product code instead of a name. A found product is picked like a typed result.
+  const scanOn = useFeature('barcode');
+  const scan = () => useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => choose(h) });
+
   return (
     <div className="dt-lookup">
+      {scanOn && <button type="button" className="btn sm" id="dt-scan-barcode" onClick={scan}>Scan barcode</button>}
       {given === undefined && (
         <label className="field" htmlFor="dt-lookup-q">Look up nutrition
           <input id="dt-lookup-q" type="search" autoComplete="off" maxLength={60} value={own} onChange={e => { setText(e.target.value); setPick(null); }} />
