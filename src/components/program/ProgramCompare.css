@@ -1,0 +1,149 @@
+@layer base, components;
+@layer components {
+/* The Program tab's Compare section: two programs stacked, read-only. Rows are the editor's own (.edrow); only the status stripe, the status tag and the phase pill are new. */
+.cmppanel {
+  max-width: 760px;
+}
+.cmphead {
+  margin: 0;
+}
+.cmptoggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  padding: 0;
+}
+.cmptoggle::after {
+  content: "▸";
+  color: var(--muted);
+}
+.cmptoggle[aria-expanded="true"]::after {
+  content: "▾";
+}
+.cmpbody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+  margin-top: var(--sp-8);
+}
+.cmppick {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+  gap: var(--sp-8);
+}
+.cmpmixes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.cmpmix {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.cmpbar {
+  display: flex;
+  height: 8px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background: var(--sunk);
+}
+.cmpbar span {
+  min-width: 2px;
+}
+.cmpdays,.cmpchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+}
+.cmpday small {
+  font-size: var(--fs-2xs);
+  color: var(--muted);
+}
+.cmpday[aria-pressed="true"],.cmpchip[aria-pressed="true"] {
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+.cmpday[aria-pressed="true"] small {
+  color: inherit;
+}
+.cmpboards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-16);
+}
+.cmpboard h3 {
+  margin: 0 0 var(--sp-6);
+  font-size: var(--fs-base);
+}
+.cmprow {
+  border-left-width: 4px;
+  cursor: default;
+}
+.cmp-same {
+  border-left-color: var(--line);
+}
+.cmp-chg {
+  border-left-color: var(--accent);
+}
+.cmp-ph {
+  border-left-color: var(--hyp);
+}
+.cmp-only {
+  border-left-color: var(--iso);
+}
+.cmphint {
+  color: var(--ink);
+}
+.cmpph {
+  display: inline-block;
+  border-radius: var(--r-pill);
+  padding: 0 var(--sp-8);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.cmpph-strength {
+  background: var(--str-bg);
+  color: var(--str);
+}
+.cmpph-hyp {
+  background: var(--hyp-bg);
+  color: var(--hyp);
+}
+.cmpph-iso {
+  background: var(--iso-bg);
+  color: var(--iso);
+}
+.cmpph-exp,.cmpph-mob {
+  background: var(--exp-bg);
+  color: var(--exp);
+}
+.cmpph-none {
+  background: var(--none-bg);
+  color: var(--none);
+}
+.cmpbar .cmpph-strength {
+  background: var(--str);
+}
+.cmpbar .cmpph-hyp {
+  background: var(--hyp);
+}
+.cmpbar .cmpph-iso {
+  background: var(--iso);
+}
+.cmpbar .cmpph-exp,.cmpbar .cmpph-mob {
+  background: var(--exp);
+}
+.cmpbar .cmpph-none {
+  background: var(--none);
+}
+}
