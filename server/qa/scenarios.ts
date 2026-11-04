@@ -29,6 +29,7 @@ export type ScenarioFeature =
   | 'kg beside lb'
   | 'Label scan'
   | 'Whole pack'
+  | 'Receipt photos'
   | 'Receipt scan'
   | 'Usual amount';
 

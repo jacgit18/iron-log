@@ -31,6 +31,9 @@ async function start(options: Parameters<typeof createApp>[0] = {}) {
     fetch(`${base}/api/receipts${path}`, { method, headers: { 'x-client-version': 'test-1', ...(who ? { 'x-dev-user': who } : {}), ...(body === undefined ? {} : { 'content-type': 'application/json' }) }, ...(body === undefined ? {} : { body: typeof body === 'string' ? body : JSON.stringify(body) }) });
   return { base, call };
 }
+/** A response body read as loosely typed JSON (the tests check the fields they care about). */
+type Json = Record<string, any>; // oxlint-disable-line no-explicit-any
+const body = async (r: Response): Promise<Json> => (await r.json()) as Json;
 const idOf = async (name: string) => String((await sql<{ id: string }>`select id from users where auth_user_id = ${'dev:' + name}`.execute(db)).rows[0]!.id);
 const count = async (name?: string) => Number((await sql<{ n: string }>`select count(*) as n from receipts ${name ? sql`where user_id = ${await idOf(name)}` : sql``}`.execute(db)).rows[0]!.n);
 
@@ -69,10 +72,10 @@ describe('/api/receipts', () => {
     const a = await call('boss', 'POST', '', good({ store: 'First' }));
     expect(a.status).toBe(201);
     expect(a.headers.get('cache-control')).toBe('private, no-store');
-    const first = (await a.json()).receipt as { id: string; sizeBytes: number };
+    const first = (await body(a)).receipt as { id: string; sizeBytes: number };
     expect(first.sizeBytes).toBeGreaterThan(0);
     await call('boss', 'POST', '', good({ store: 'Second' }));
-    const list = await (await call('boss', 'GET', '')).json();
+    const list = await body(await call('boss', 'GET', ''));
     expect(list).toMatchObject({ ok: true, count: 2, maxReceipts: MAX_RECEIPTS, maxBytes: MAX_TOTAL_BYTES });
     expect(list.receipts.map((r: { store: string }) => r.store)).toEqual(['Second', 'First']);
     expect(list.receipts[0]).toMatchObject({ month: '2026-11', receiptDate: '2026-11-02', totalCents: 14231, note: '' });
@@ -87,7 +90,7 @@ describe('/api/receipts', () => {
 
     const edited = await call('boss', 'PATCH', `/${first.id}`, { note: 'for the fridge' });
     expect(edited.status).toBe(200);
-    expect((await edited.json()).receipt.note).toBe('for the fridge');
+    expect((await body(edited)).receipt.note).toBe('for the fridge');
     expect((await call('boss', 'PATCH', `/${first.id}`, { note: 'x'.repeat(MAX_NOTE + 1) })).status).toBe(422);
     expect((await call('boss', 'PATCH', `/${first.id}`, {})).status).toBe(422);
 
@@ -100,7 +103,7 @@ describe('/api/receipts', () => {
     const { call } = await start();
     const res = await call('boss', 'POST', '', { image: jpeg(), month: '2026-11' });
     expect(res.status).toBe(201);
-    expect((await res.json()).receipt).toMatchObject({ receiptDate: null, totalCents: null, store: '' });
+    expect((await body(res)).receipt).toMatchObject({ receiptDate: null, totalCents: null, store: '' });
   });
 
   it('answers 401 with no session, 403 for a non-admin, 422 for a bad body, 404 for an odd id', async () => {
@@ -120,9 +123,9 @@ describe('/api/receipts', () => {
 
   it('shows and changes only the caller\'s own rows (another account\'s id answers 404)', async () => {
     const { call } = await start();
-    const mine = ((await (await call('boss', 'POST', '', good())).json()).receipt as { id: string }).id;
+    const mine = ((await body(await call('boss', 'POST', '', good()))).receipt as { id: string }).id;
     await call('other', 'GET', '');
-    expect((await (await call('other', 'GET', '')).json()).count).toBe(0);
+    expect((await body(await call('other', 'GET', ''))).count).toBe(0);
     expect((await call('other', 'GET', `/${mine}/photo`)).status).toBe(404);
     expect((await call('other', 'PATCH', `/${mine}`, { note: 'mine now' })).status).toBe(404);
     expect((await call('other', 'DELETE', `/${mine}`)).status).toBe(404);
@@ -138,9 +141,9 @@ describe('/api/receipts', () => {
     expect((await call('boss', 'POST', '', good())).status).toBe(201);
     const full = await call('boss', 'POST', '', good());
     expect(full.status).toBe(409);
-    expect(await full.json()).toMatchObject({ ok: false, why: 'cap', error: expect.stringContaining('Delete some') });
+    expect(await body(full)).toMatchObject({ ok: false, why: 'cap', error: expect.stringContaining('Delete some') });
     expect(await count('boss')).toBe(MAX_RECEIPTS);
-    const first = (await (await call('boss', 'GET', '')).json()).receipts[0] as { id: string };
+    const first = (await body(await call('boss', 'GET', ''))).receipts[0] as { id: string };
     expect((await call('boss', 'DELETE', `/${first.id}`)).status).toBe(200);
     expect((await call('boss', 'POST', '', good())).status).toBe(201);
 
