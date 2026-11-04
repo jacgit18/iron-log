@@ -41,9 +41,17 @@ describe('readyMadeValues', () => {
   });
   it('refuses a usual amount off the half steps or out of range, a bad unit, and a plural with no unit', () => {
     const base = { n: 'Egg', kcal: '72', p: '6', c: '', f: '' };
-    for (const bad of ['2.3', '0', '100', '-1', 'four', '0.25']) expect(readyMadeValues({ ...base, usual: bad }), bad).toEqual({ error: 'Usual amount must be from 0.5 to 99 in half steps, like 4 or 1.5.' });
+    for (const bad of ['2.3', '0', '100', '-1', 'four', '0.25', '0x4', '0x10', '1e1', '4.', '.', '4 5']) expect(readyMadeValues({ ...base, usual: bad }), bad).toEqual({ error: 'Usual amount must be from 0.5 to 99 in half steps, like 4 or 1.5.' });
+    expect(readyMadeValues({ ...base, usual: '.5' })).toEqual({ kcal: 72, p: 6, usual: 0.5 });
+    expect(readyMadeValues({ ...base, usual: '4.0' })).toEqual({ kcal: 72, p: 6, usual: 4 });
     for (const bad of ['4 eggs', 'egg!', 'a'.repeat(21)]) expect(readyMadeValues({ ...base, unit: bad }), bad).toEqual({ error: 'The unit name must be 1 to 20 letters, like egg or slice.' });
     expect(readyMadeValues({ ...base, plural: 'eggs' })).toEqual({ error: 'Add the unit name first, or clear the plural.' });
     expect(readyMadeValues({ ...base, unit: 'egg', plural: 'eggs!' })).toEqual({ error: 'The plural must be 1 to 20 letters, like loaves.' });
+  });
+  it('refuses a usual amount that one entry cannot hold for these numbers, and says the most', () => {
+    const big = { n: 'Lasagna', kcal: '450', p: '10', c: '', f: '' };
+    expect(readyMadeValues({ ...big, usual: '40' })).toEqual({ error: 'One entry holds at most 22 of these, so a usual amount of 40 is too big. Lower it to 22 or less.' });
+    expect(readyMadeValues({ ...big, usual: '22' })).toEqual({ kcal: 450, p: 10, usual: 22 });
+    expect(readyMadeValues({ n: 'Egg', kcal: '72', p: '6', c: '', f: '', usual: '40' })).toEqual({ kcal: 72, p: 6, usual: 40 }); // 40 eggs fit
   });
 });

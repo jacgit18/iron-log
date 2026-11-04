@@ -1,5 +1,6 @@
 import { cleanGrams, cleanKcal, cleanProtein } from '../shared/diet.js';
 import { cleanUsual, isUnit } from '../shared/recipes.js';
+import { ateMax } from './dietLog.js';
 import { pluralOf } from './foodUnit.js';
 
 /* ---------- Ready-made food form (brief recipe-first-diet-log): what the typed boxes mean, or why they can't be saved. Pure; the form calls this. ---------- */
@@ -21,8 +22,14 @@ export function readyMadeValues(t: ReadyMadeText): { error: string } | ReadyMade
   const servings = pack === '' || pack === '0' ? undefined : /^\d{1,2}$/.test(pack) ? Number(pack) : null;
   if (servings === null) return { error: 'Servings per pack must be a whole number from 1 to 99.' };
   const usualText = (t.usual ?? '').trim();
-  const usualNum = usualText === '' ? undefined : Number(usualText);
+  // Plain digits only (no 0x4, 1e1 or "4."), like the pack box above, then half steps from 0.5 to 99.
+  const usualNum = usualText === '' ? undefined : /^\d{0,2}(\.\d+)?$/.test(usualText) ? Number(usualText) : NaN;
   if (usualNum !== undefined && cleanUsual(usualNum) === null && usualNum !== 1) return { error: 'Usual amount must be from 0.5 to 99 in half steps, like 4 or 1.5.' };
+  // More than one entry can hold for these numbers (9,999 calories, 999 g protein): the stepper would open lower than the page says, so it is refused here.
+  if (usualNum !== undefined) {
+    const most = ateMax({ cat: 'ready', kcal, p, ...(c !== undefined ? { c } : {}), ...(f !== undefined ? { f } : {}), usual: usualNum });
+    if (usualNum > most) return { error: `One entry holds at most ${most} of these, so a usual amount of ${usualNum} is too big. Lower it to ${most} or less.` };
+  }
   const unit = (t.unit ?? '').trim(), plural = (t.plural ?? '').trim();
   if (unit && !isUnit(unit)) return { error: 'The unit name must be 1 to 20 letters, like egg or slice.' };
   if (plural && !unit) return { error: 'Add the unit name first, or clear the plural.' };
