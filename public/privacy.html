@@ -26,7 +26,7 @@
 <main>
 <a class="back" href="./">← Back to Loadbearer</a>
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated: 27 October 2026 · Version 1.5</p>
+<p class="meta">Last updated: 4 November 2026 · Version 1.7</p>
 
 <p>Loadbearer is a workout log. This policy explains what personal data it collects when you use the signed-in version of the app, why, where it is kept, who can see it, how long it is kept, and the choices and rights you have. It is written to be read. If anything here is unclear, ask: the contact details are at the end.</p>
 
@@ -39,12 +39,16 @@
   <li>There is <b>no advertising, no analytics and no tracking</b>. We do not sell your data and do not share it for advertising.</li>
   <li>Your data is stored with two service providers (Google Cloud and Neon), in the United States. If you sign in with an emailed code instead of Google, a third, Resend, sends you that code: it sees your email address and the code, and nothing you log.</li>
   <li>You can <b>export</b> everything and <b>erase</b> it, or <b>delete your account</b>, yourself, at any time, in Settings. Deleted data is removed from the live service immediately and from backups within 30 days.</li>
+  <li>If you use <b>Scan label</b> or <b>Scan receipt</b>, the photo is sent to an artificial intelligence (AI) service, Anthropic, which reads it and sends back text. Only when you press scan. If you choose to keep a receipt photo, we store it in your account until you delete it.</li>
   <li>The app is for people aged <b>18 and over</b>.</li>
 </ul>
 
 <h2>3. What we collect</h2>
 <h3>Provided by you</h3>
 <p>The workout data you enter: logged sessions (exercise, date, weight, sets, reps, time, notes), check-offs on the weekly board, body weight entries, body-weight goals, programs you edit or save, exercises you add, stretches and supplement or water logs, and your settings (for example program mode, rest times and one-rep maxes).</p>
+<h3>Photos you scan (only if you use Scan label or Scan receipt)</h3>
+<p>When you press <b>Scan label</b> (a food’s nutrition-facts label) or <b>Scan receipt</b> (a store receipt), the app sends that one photo to our server, which sends it to <b>Anthropic</b>, an artificial intelligence (AI) service, so that an AI model can read the printed text. The model sends back a few fields (for a label: the product name, serving size and calories, protein, carbohydrate and fat; for a receipt: the store, date, totals and item lines), which the app shows for you to check and correct. Nothing is decided about you by this. We do not send your name, email or any other data with the photo, we do not keep a label photo, and we do not keep a receipt photo unless you choose to save it (next paragraph). Anthropic’s own terms govern what it does with data it receives, and it is listed as a service provider in section 6. Do not scan a photo that shows information you do not want sent to it, such as a card number or a name and address on a receipt.</p>
+<p><b>Saved receipts.</b> If you choose to keep a scanned receipt, we store the photo, the store name, the date, the total, the month and a short note you may add, in your account, so you can look at it later. Only you can see it. You can delete one receipt at a time in the app; erasing your data or deleting your account removes all of them.</p>
 <h3>From Google, when you sign in with Google</h3>
 <p>Your Google account’s email address, name, profile picture address and Google’s identifier for your account, and the sign-in tokens Google issues for the app (stored encrypted; we do not use them to access anything in your Google account). We do not receive your Google password. We request only basic profile access (identity, email and profile) and do not read your Gmail, contacts, calendar or anything else.</p>
 <h3>When you sign in with an emailed code</h3>
@@ -68,6 +72,7 @@
   <tbody>
     <tr><td>Create and secure your account, keep you signed in</td><td>Google profile data or the email address you give for a code, session records</td><td>Performance of the contract (providing the service you asked for); legitimate interests in security</td></tr>
     <tr><td>Store, show and sync your workouts and settings</td><td>The data you enter</td><td>Performance of the contract. For health-related data: your <b>explicit consent</b> (Art. 9(2)(a)), given when you choose to enter it and sign in to sync it. You can withdraw consent at any time by erasing your data or deleting your account.</td></tr>
+    <tr><td>Read a label or receipt photo you scan, and keep a receipt photo you choose to save</td><td>The photo you scan (sent to Anthropic); for a saved receipt, the photo, store, date, total, month and note</td><td>Performance of the contract; your consent, given each time you press scan or save</td></tr>
     <tr><td>Send the alerts you ask for (timer ended, day not finished)</td><td>Push address and keys, the alert text and time</td><td>Performance of the contract; your consent, given when you turn the alerts on and allow notifications</td></tr>
     <tr><td>Protect the service from abuse, find and fix errors, keep backups</td><td>Logs, rate-limit counters, error reports, backups</td><td>Legitimate interests in running a reliable and secure service</td></tr>
     <tr><td>Answer your requests and comply with the law</td><td>Whatever the request needs</td><td>Legal obligation; legitimate interests</td></tr>
@@ -82,6 +87,7 @@
     <tr><td>Google (Google Cloud: Cloud Run, Cloud Storage, Cloud Build, Cloud Tasks, Secret Manager, Cloud Logging; Google Sign-In)</td><td>Hosting the app and API, nightly encrypted backups, logs, signing you in, and sending the alerts you turn on at the right time</td><td>United States (us-central1)</td></tr>
     <tr><td>The notification service of your browser or phone maker (Google for Chrome and Android, Apple for iPhone and iPad, Mozilla for Firefox)</td><td>Delivering the alerts you turn on to your device. It sees the address of your device and the time, and carries the encrypted message</td><td>Wherever that provider runs it</td></tr>
     <tr><td>Neon (database hosting, on Amazon Web Services)</td><td>Storing your account and workout data</td><td>United States (us-east-2)</td></tr>
+    <tr><td>Anthropic (AI service that reads the photo, only if you use Scan label or Scan receipt)</td><td>Reading the one photo you scan and sending back the text it finds. It sees that photo and nothing else about you</td><td>United States</td></tr>
     <tr><td>Resend (email delivery, only if you sign in with an emailed code)</td><td>Sending you the sign-in code by email. It sees your email address and the text of the message. It keeps its delivery logs for up to 30 days, under a data processing agreement</td><td>United States</td></tr>
   </tbody>
 </table>
@@ -95,6 +101,7 @@
   <thead><tr><th>Data</th><th>Kept</th></tr></thead>
   <tbody>
     <tr><td>Your workout data and settings</td><td>Until you erase it or delete your account. Erasing removes the rows from the live database immediately, including older versions of edited entries kept for recovery.</td></tr>
+    <tr><td>Saved receipts (photo, store, date, total, month, note)</td><td>Until you delete the receipt, erase your data or delete your account (removed immediately from the live service; backups within 30 days). A photo you scan but do not save is not kept by us.</td></tr>
     <tr><td>Your account and its sign-in record (Google or email)</td><td>Until you delete your account (removed immediately from the live service).</td></tr>
     <tr><td>Push alerts: your device’s address and keys</td><td>Until you turn the alerts off, sign out, erase your data or delete your account (removed immediately from the live service). A notification service may drop an address that stops working.</td></tr>
     <tr><td>A queued alert</td><td>Until it is sent, at most 3 hours ahead, and removed when sent. A cancelled alert is sent to nothing and removed.</td></tr>
@@ -128,7 +135,7 @@
 <p>Loadbearer is not intended for anyone under 18 and we do not knowingly collect data from them. If you believe a child has an account, tell us and we will delete it.</p>
 
 <h2>13. Automated decisions</h2>
-<p>We make no decisions about you by automated means that have legal or similarly significant effects. Targets shown in the app (for example suggested weights) are simple calculations from your own entries.</p>
+<p>We make no decisions about you by automated means that have legal or similarly significant effects. Targets shown in the app (for example suggested weights) are simple calculations from your own entries. Where AI reads a photo you scan, it only turns the picture into text; you check the result before it is used.</p>
 
 <h2>14. Changes</h2>
 <p>We will update this policy when the service changes. The date and version are at the top. For a material change (for example a new provider, a new purpose, or the introduction of payments) we will tell you in the app before it takes effect where we can, and ask for your consent again where the law requires it.</p>
