@@ -35,13 +35,15 @@ export type ScenarioFeature =
   | 'Finished group'
   | 'Weight step'
   | 'Program compare'
-  | 'Polish pass';
+  | 'Polish pass'
+  | 'Program on phones'
+  | 'Stale page guard';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard',
 ];
 
 export interface Scenario {
@@ -422,7 +424,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Press Add missing to Groceries.',
     ],
     expected: [
-      'Water shows as Have and is included in "Have x of y".',
+      'Water shows as Have with the note "Always at home" and is included in "Have x of y"; the Have, Missing and On your list marks line up in one column down the page.',
       'Add missing does not add water to the grocery list.',
     ],
   },
@@ -526,6 +528,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'An unseeded account\'s Switch is disabled with "Seed it first"; pressing Seed missing accounts seeds it, fills the dot and the button goes away.',
       'The last three accounts appear under Recent, newest first.',
+      'Leave the picker page idle for several minutes, then open it and switch again: it still opens and lists accounts, with no error page or crash.',
     ],
   },
 
@@ -726,6 +729,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The sheet lists every receipt line; a discount is taken off the item above it and the old price shows crossed out; lines with no item on your list are greyed and skipped.',
       'Apply ticks the matched items as bought this month with the right quantity and price and sets the store tax; Undo puts every price, tick and the tax back as they were.',
+      'A line sold by weight (lb or oz on the paper) is converted into the item\'s own unit; Undo is held back while the app is still syncing the apply and works once it has finished.',
     ],
   },
   {
@@ -810,7 +814,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Neither the unticked Apply nor the cancelled one leaves a receipt on the Receipts page, which says "No saved receipts yet" when it is empty.',
-      'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. A non-admin account sees no Receipts button and no Keep box. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
+      'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. A non-admin account sees no Receipts button and no Keep box. Opening a saved receipt and closing it, or pressing Retry, before the photo has loaded never shows that photo on the wrong sheet. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
     ],
   },
   {
@@ -922,6 +926,44 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'A plain sentence appears (about downloading it first, or that the file could not be read), with no text such as "Error:", a status number or "undefined".',
+    ],
+  },
+  // ---- Recipe auto-match (On your list) ----
+  {
+    id: 'S-71', feature: 'Recipe auto-match', title: 'A missing ingredient already on the list says On your list', persona: 'recipe-collector', brief: 'feature-map',
+    steps: [
+      'Open "Chicken and rice bowl" and note an ingredient shown as Missing that has an item on Groceries, To get (add one with the ingredient\'s name if there is none).',
+      'Look at that line, then press Add missing to Groceries.',
+      'Open Groceries, To get and check how many times the item appears.',
+    ],
+    expected: [
+      'The line shows Missing with a small "On your list" mark beside it; an ingredient that is at home, skipped or "Always at home" (water) never shows it.',
+      'Add missing does not add that item a second time; it stays on the list once.',
+    ],
+  },
+  // ---- Program on phones ----
+  {
+    id: 'S-72', feature: 'Program on phones', title: 'Create a program starts at the left, and the switch shows A and B', persona: 'new-user', brief: 'feature-map', device: true,
+    steps: [
+      'On a phone (or a 375 px wide window), open the Program tab.',
+      'Look at the row holding Create a program and the program switch.',
+    ],
+    expected: [
+      'Create a program starts at the left edge of the screen and is not pushed off to the right or cut off.',
+      'The switch shows only A and B (no other labels), and the row does not scroll sideways.',
+    ],
+  },
+  // ---- Stale page guard ----
+  {
+    id: 'S-73', feature: 'Stale page guard', title: 'Erase or delete is refused from a page for another account', persona: 'new-user', brief: 'x-expected-user-409',
+    steps: [
+      'In one browser tab sign in as New user and open Settings. Leave it open.',
+      'In a second tab of the same browser, switch to another test account (the QA picker).',
+      'Back in the first tab, open Delete my data and press Erase everything in my account (then, in a repeat, Delete my account) and confirm.',
+    ],
+    expected: [
+      'Both are refused and the notice says nothing was erased (for example "The server would not do it. Nothing was erased."); neither account loses anything.',
+      'After reloading the first tab it shows the account you are now signed in as, and the other test account\'s data is untouched.',
     ],
   },
 ];
