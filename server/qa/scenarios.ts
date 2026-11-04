@@ -31,7 +31,8 @@ export type ScenarioFeature =
   | 'Whole pack'
   | 'Receipt photos'
   | 'Receipt scan'
-  | 'Usual amount';
+  | 'Usual amount'
+  | 'Weight step';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
