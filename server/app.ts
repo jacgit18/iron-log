@@ -20,6 +20,7 @@ import { errorHandler } from './errorHandler.ts';
 import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
 import { foodRoutes, type FoodDeps } from './foodSearch.ts';
+import { receiptsRoutes } from './receipts.ts';
 import { scanRoutes, type ScanDeps } from './scan.ts';
 import { accountsRoutes } from './accountsRoutes.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
@@ -112,6 +113,8 @@ const LIMITS = {
   foods: { max: 20, windowMs: 60_000 } as Limit,
   // Label scan: a person photographing a label now and then, each call costs money; the daily ceiling is in scan.ts.
   scan: { max: 10, windowMs: 60_000 } as Limit,
+  // Saved receipt photos (brief receipt-save-photo): a person keeping a photo, reading the list, opening one; a loop is what this stops.
+  receipts: { max: 30, windowMs: 60_000 } as Limit,
   // Server backup history (ADR 066): the app uploads once a day and reads the list in Settings; a loop is what this stops.
   backups: { max: 30, windowMs: 60_000 } as Limit,
   // Cloud Tasks calling the fire route: per address (a few Google ones), checked before the token. A 429 would push an alert past its
@@ -124,6 +127,8 @@ const DB_HEALTH_TTL_MS = 5_000;
 const IMPORT_LEGACY_PATH = /^\/api\/commands\/import-legacy(\/|$)/i;
 /** Label and receipt scan take a photo (hundreds of kB as base64), so they also skip the 100 kb parser; its own parser (2 MB for a label, 5 MB for a receipt) runs after sign-in, the admin check and the per-user limit (scan.ts). */
 const SCAN_PHOTO_PATH = /^\/api\/scan\/(label|receipt)(\/|$)/i;
+/** Keeping a receipt photo (POST /api/receipts, up to 1 MB as base64) also skips the 100 kb parser; the route's own 2 MB one runs after sign-in, the admin check and the per-user limit (receipts.ts). Other methods and paths keep the small one. */
+const RECEIPT_SAVE_PATH = /^\/api\/receipts\/?$/i;
 
 const NO_CACHE = 'no-cache';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -183,7 +188,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // but only once the caller is signed in and counted (below, after sessionAuth and its per-user limit). Before that it gets no parser
   // at all: an anonymous caller must not be able to make the one small instance buffer and parse 4 MB per request (audit run-2).
   const smallJson = express.json({ limit: '100kb' });
-  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) || SCAN_PHOTO_PATH.test(req.path) ? next() : smallJson(req, res, next)));
+  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) || SCAN_PHOTO_PATH.test(req.path) || (req.method === 'POST' && RECEIPT_SAVE_PATH.test(req.path)) ? next() : smallJson(req, res, next)));
   app.use(repairBody); // a note clipped through an emoji must not reach the database as a lone surrogate (it was a 500; overnight audit S-1)
   app.disable('x-powered-by');
 
@@ -243,6 +248,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
   // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): admin-only, per-user limit; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
   if (db) app.use('/api/scan', requireAdmin, rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
+  // Saved receipt photos (brief receipt-save-photo): admin-only, per-user limit; the 2 MB body parser is on the POST route only, after sign-in (receipts.ts).
+  if (db) app.use('/api/receipts', requireAdmin, rateLimit(limits.receipts, undefined, byUser), receiptsRoutes({ db }));
   if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
