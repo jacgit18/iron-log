@@ -67,7 +67,7 @@ describe('progression and stalls', () => {
     const logs = { hack: [...real, { ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] };
     expect(lastSession(logs, 'hack', 'hyp')).toBe(real[1]);
     expect(lastSession({ hack: [{ ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] }, 'hack', 'hyp')).toBeNull();
-    expect(targetOf(cfg(), logs, item, 'hyp')).toEqual({ w: 185, src: 'up from 180 lb', up: true }); // still the green suggestion, not "last session"
+    expect(targetOf(cfg(), logs, item, 'hyp')).toEqual({ w: 185, src: 'suggested · 2 full sessions at 180 lb', up: true }); // still the green suggestion, not "last session"
     const ticked = { hack: [{ ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] };
     expect(targetOf(cfg(), ticked, { ...item, w: 150 }, 'hyp')).toEqual({ w: 150, src: 'program' }); // only ticks so far: the program weight, not the ticked 185
   });
