@@ -33,13 +33,14 @@ export type ScenarioFeature =
   | 'Receipt scan'
   | 'Usual amount'
   | 'Finished group'
-  | 'Weight step';
+  | 'Weight step'
+  | 'Program compare';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare',
 ];
 
 export interface Scenario {
@@ -865,6 +866,30 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'Each of 60, 0, 2.3 and abc shows "Enter a step above 0, up to 50, in 0.5 steps." and Save keeps the sheet open without saving.',
       '7.5 is accepted and shown again when the sheet is reopened.',
+    ],
+  },
+  {
+    id: 'S-66', feature: 'Program compare', title: 'Compare two programs day by day and filter the differences', persona: 'superset-builder', brief: 'program-compare',
+    steps: [
+      'Open Program, scroll to the end and tap Compare programs. Program A and Program B are chosen.',
+      'Tap Day 2, then Any difference, then Changed. Tap Phase differs, then pick a phase under Phase.',
+      'Choose a saved program (save a copy of A first if the list is empty) as the second program.',
+    ],
+    expected: [
+      'Two boards appear one above the other, each with its phase mix and the day buttons showing how many exercises differ; every row is tagged Same, Changed, Phase differs or Only here, and shows the editor\'s name, phase, weight and sets.',
+      'Each filter hides the other rows and the numbers on the chips stay the same; nothing on the page can be dragged or edited, and Program A and B are unchanged afterwards.',
+      'A saved copy of A against A shows no differences; choosing the same program on both sides says "Both sides are the same program."',
+    ],
+  },
+  {
+    id: 'S-67', feature: 'Program compare', title: 'An empty day, and a day that exists on one side only', persona: 'new-user', brief: 'program-compare', edge: true,
+    steps: [
+      'As a new account, create a program, open Program, Compare programs, and pick it against Program A.',
+      'Step through the day buttons.',
+    ],
+    expected: [
+      'A day empty on both sides says "Nothing on this day in either program."; a day with exercises on one side lists them all as Only here on that side and an empty board on the other.',
+      'The section is closed again after you leave the Program tab and come back, and the phone view does not scroll sideways.',
     ],
   },
 ];
