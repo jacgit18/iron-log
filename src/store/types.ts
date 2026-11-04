@@ -337,7 +337,7 @@ export interface GrocerySlice {
   addGrocery(data: GroceryData): void; // an import, or this device's old list reaching the account, adds what is missing
   addGroceryItem(d: GroceryForm): string | null;
   updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean; note: string; unit: GroceryUnit | '' }>): string | null;
-  removeGroceryItem(id: string): void;
+  removeGroceryItem(id: string, opts?: { quiet?: boolean }): void;
   addGroceryStore(name: string): string | null;
   removeGroceryStore(name: string): string | null;
   setGroceryOut(id: string, out: boolean): void; // the At home list: unchecking "Have" puts a When-out item on this month's list
