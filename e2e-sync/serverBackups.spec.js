@@ -22,7 +22,7 @@ test('a signed-in phone uploads its daily copy, and Settings lists it from the s
   const a = await newPhone(browser, user);
   await a.page.clock.setSystemTime(new Date()); // the server accepts only a day near its own today; the other tests run on a fixed September date
   const page = await a.open();
-  await page.locator('#chk-A-d1s1').check(); // some data, so the copy is worth keeping
+  await page.locator('#chk-A-d1s1').click(); // some data, so the copy is worth keeping
   await page.clock.fastForward(40_000);
   await expect.poll(async () => (await snapshots(user)).length, { timeout: 30_000 }).toBe(1);
   const [row] = await snapshots(user);

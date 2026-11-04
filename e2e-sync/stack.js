@@ -78,7 +78,8 @@ export async function newPhone(browser, user, old = {}) {
     /** `blank`: the account is new, so the board has no cards to wait for. */
     async open({ blank = false } = {}) {
       await page.goto('/');
-      if (!blank) await expect(page.locator('#chk-A-d1s1')).toBeVisible({ timeout: 30_000 });
+      // A card already ticked on the account is folded into Day 1's Finished bar, so either one means the board is drawn.
+      if (!blank) await expect(page.locator('#chk-A-d1s1').or(page.locator('#finished-bar-1'))).toBeVisible({ timeout: 30_000 });
       // The store refuses writes until everything has loaded, which waits for the first pull: wait for that, not just the board.
       await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
       return page;

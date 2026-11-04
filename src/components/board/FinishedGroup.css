@@ -1,0 +1,118 @@
+@layer base, components;
+@layer components {
+/* A day's Finished bar and its compact rows (brief finished-group-fold). */
+.finished {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  margin-top: var(--sp-6);
+}
+.finishedbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-8) var(--sp-12);
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+}
+.finishedchev {
+  display: inline-flex;
+  color: var(--muted);
+  transition: transform .15s;
+}
+.finishedbar[aria-expanded="true"] .finishedchev {
+  transform: rotate(90deg);
+}
+.finishedtitle {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: var(--fs-md);
+}
+.finishedpill {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  border-radius: var(--r-pill);
+  padding: var(--sp-2) var(--sp-8);
+  background: var(--exp-bg);
+  color: var(--exp);
+}
+.finishedpill.skipped {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+.finishedrows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.finishedrow {
+  display: flex;
+  flex-wrap: wrap;
+  /* in a narrow day column the buttons drop under the name */
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-8) var(--sp-2) var(--sp-10);
+  border-top: 1px solid var(--line);
+}
+.finishedrow:first-child {
+  border-top: 0;
+}
+.finishedmark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.finishedrow.done .finishedmark {
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+}
+.finishedrow.skipped .finishedmark {
+  border: 1.5px dashed var(--field-line);
+  color: var(--muted);
+}
+.finishedname {
+  flex: 1 1 7rem;
+  min-width: 0;
+  color: var(--done);
+  font-size: var(--fs-md);
+  overflow-wrap: break-word;
+  /* a narrow day column (seven across on a wide screen) wraps the name instead of cutting it off */
+}
+.finishedacts {
+  display: flex;
+  gap: var(--sp-4);
+  margin-left: auto;
+}
+.finishedrow.done .finishedname {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.finishedrow.skipped .finishedname {
+  text-decoration: line-through;
+  text-decoration-style: dashed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .finishedchev {
+    transition: none;
+  }
+}
+}
