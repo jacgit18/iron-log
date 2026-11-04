@@ -5,10 +5,13 @@ import { useAppStore } from '../../store/useAppStore.js';
 import { PHASES, PH_KEYS, exInfo, isOwnExercise, isCatalogId } from '../../lib/data.js';
 import { MUSCLE_MAP, draftOf, draftOfTags, tagsOfDraft } from '../../lib/muscles.js';
 import { catalogSnapshot } from '../../lib/catalogExercise.js';
+import { defaultStep } from '../../lib/logic.js';
+import { STEP_ERR, parseStep, stepText } from '../../lib/weightStep.js';
 import { loadCatalog } from '../../sync/catalogCache.js';
 import { signIn as devHeaders } from '../../sync/devUser.js';
 import MuscleChips from '../muscles/MuscleChips.jsx';
 import EquipmentField from '../EquipmentField.jsx';
+import StepField from '../StepField.jsx';
 import Sheet from '../Sheet.jsx';
 import ArmedButton from '../ArmedButton.jsx';
 
@@ -27,6 +30,7 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
   const [tags, setTags] = useState(() => (isNew ? { mob: false, st: {} } : draftOfTags(cfg, exId)));
   const [tagsTouched, setTagsTouched] = useState(false);
   const [err, setErr] = useState('');
+  const [stepTxt, setStepTxt] = useState(() => (isNew ? '' : stepText(info.step)));
   const up = (patch: Partial<typeof d>) => setD(x => ({ ...x, ...patch }));
   const hasOwnTags = !isNew && !!(cfg.muscleMap && cfg.muscleMap[exId]) && !!MUSCLE_MAP[exId];
   // A catalog exercise has no built-in default (MUSCLE_MAP), so Use default muscles stays hidden for it; syncing, its catalog tags can be
@@ -38,7 +42,8 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
   const chipEdits = useRef(0); // counts chip taps, so a catalog answer arriving after one never overwrites it
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const out = { ...d, ...(tagsTouched ? { tags: tagsOfDraft(tags) } : {}) };
+    const stepIn = parseStep(stepTxt); if (!stepIn.ok) { setErr(STEP_ERR); return; }
+    const out = { ...d, ...(isNew ? {} : { step: stepIn.step }), ...(tagsTouched ? { tags: tagsOfDraft(tags) } : {}) };
     const msg = isNew ? st.createLibraryExercise(out) : st.saveExerciseDetails(exId!, out);
     if (msg) setErr(msg);
   };
@@ -68,6 +73,9 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
           <input type="number" inputMode="decimal" step="any" min="0" value={d.rm} placeholder="not set" onChange={e => up({ rm: e.target.value })} />
         </label>
       </div>
+      {!isNew && <StepField value={stepTxt} onChange={setStepTxt} placeholder={`Default: ${defaultStep(0)} lb`}>
+        <span className="note">How much the suggested weight goes up by, on every card, day and week.</span>
+      </StepField>}
         <label className="field">Phase for this exercise on every card (replaces saved card phases)
           <select value={d.ph ?? ''} onChange={e => up({ ph: e.target.value as PhaseChoice })}>
             <option value="">Use each card's own</option>

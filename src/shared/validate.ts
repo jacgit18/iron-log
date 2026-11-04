@@ -27,6 +27,7 @@ export const validFreq = (n: unknown) => typeof n === 'number' && Number.isInteg
 export const validRest = (n: unknown) => fin(n) && n >= LIMITS.rest.min && n <= LIMITS.rest.max;
 export const validPct = (n: unknown) => fin(n) && n >= LIMITS.pct.min && n <= LIMITS.pct.max;
 export const validRm = (n: unknown) => fin(n) && n > 0;
+export const validStep = (n: unknown): n is number => fin(n) && n > 0 && n <= 50 && Number.isInteger(n * 2); // the weight an exercise goes up by, in lb: up to 50, in 0.5 steps
 export const validMode = (n: unknown) => n === 1 || n === 2 || n === 3;
 export const validOz = (n: unknown) => fin(n) && n > 0 && n <= LIMITS.oz.max;
 export const validGoal = (n: unknown) => fin(n) && n >= LIMITS.waterGoal.min && n <= LIMITS.waterGoal.max;

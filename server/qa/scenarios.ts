@@ -37,7 +37,7 @@ export type ScenarioFeature =
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Receipt photos',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Receipt photos', 'Weight step',
 ];
 
 export interface Scenario {
@@ -807,6 +807,29 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'Neither the unticked Apply nor the cancelled one leaves a receipt on the Receipts page, which says "No saved receipts yet" when it is empty.',
       'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. A non-admin account sees no Receipts button and no Keep box. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
+    ],
+  },
+  {
+    id: 'S-61', feature: 'Weight step', title: 'Set how far an exercise goes up, and see the suggestion follow', persona: 'heavy-logger', brief: 'progression-step-per-exercise',
+    steps: [
+      'Open Program, Exercise library and press Edit on an exercise you have logged at the same weight twice in a row with every set done (the heavy logger has several).',
+      'Under Equipment, tap the 10 chip in Weight step and save. Go to the Board and find that exercise\'s card.',
+      'Open the exercise again and tap the lit 10 chip once more, then save.',
+    ],
+    expected: [
+      'The card\'s green badge reads "suggested, from N lb" with the weight 10 lb above N, not the usual 2.5 or 5.',
+      'Tapping the lit chip empties the box (its placeholder reads "Default: 5 lb"); after saving, the badge goes back to the usual step. On a card with nothing logged, the Log sheet has the same field under Equipment.',
+    ],
+  },
+  {
+    id: 'S-62', feature: 'Weight step', title: 'A step that is not allowed is refused', persona: 'heavy-logger', brief: 'progression-step-per-exercise', edge: true,
+    steps: [
+      'In Program, Exercise library, Edit an exercise and type 60 in the Weight step box; then try 0, 2.3 and abc.',
+      'Type 7.5 and save, then open it again. Press Save with the box showing 60 once more.',
+    ],
+    expected: [
+      'Each of 60, 0, 2.3 and abc shows "Enter a step above 0, up to 50, in 0.5 steps." and Save keeps the sheet open without saving.',
+      '7.5 is accepted and shown again when the sheet is reopened.',
     ],
   },
 ];

@@ -5,7 +5,7 @@ import { setExerciseDefault, setOverride } from './librarySlice.js';
 import { entryId, findEntry } from '../lib/entryMerge.js';
 import { bwSorted } from '../lib/body.js';
 import { GOAL_KEYS, bestLift, goalPhaseLabel, liftGoalsOf } from '../lib/liftGoal.js';
-import { normEntry, nowStamp, validFreq, validLiftGoalLb } from '../shared/validate.js';
+import { normEntry, nowStamp, validFreq, validLiftGoalLb, validStep } from '../shared/validate.js';
 import type { LogEntry } from '../types.ts';
 import type { Flag, LogSlice, StoreGet, StoreSet } from './types.ts';
 
@@ -39,7 +39,7 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     if (get().addEntry(slotId, idx, e, { check: true })) flag(`Logged ${describe(e)}`);
   },
   // The log sheet's save: entry + optional phase change / phase default / 1RM / check-off.
-  submitLog(slotId, idx, { entry, ph, makeDefault, makeExDefault, rm, done, eq, url }) {
+  submitLog(slotId, idx, { entry, ph, makeDefault, makeExDefault, rm, done, eq, url, step }) {
     return get().transact(() => {
       if (get().blocked()) return false;
       const s = get().slotById(slotId); if (!s) return false;
@@ -52,9 +52,11 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
       // Every card of this exercise in the shown week, on any day (added cards included).
       const sameEx = (get().activeSlots()).flatMap(sl => sl.items.map((x, i) => x.ex === it.ex && `${sl.id}:${i}`).filter((k): k is string => !!k));
       const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
-      const cfgChange = eqChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : ((rm ?? 0) > 0 && rm !== cfg.rm[it.ex]));
+      const stepChange = step !== undefined && (validStep(step) ? step : undefined) !== exInfo(cfg, it.ex).step;
+      const cfgChange = eqChange || stepChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : ((rm ?? 0) > 0 && rm !== cfg.rm[it.ex]));
       if (cfgChange) get().mutateCfg(c => {
         if (eqChange) setOverride(c, it.ex, { eq });
+        if (stepChange) setOverride(c, it.ex, { step: validStep(step) ? step : null });
         if (makeExDefault && ph) { setExerciseDefault(c, it.ex, ph, get().programs, get().library); sameEx.forEach(k => { delete c.phDef[k]; }); }
         if (makeDefault && ph) c.phDef[key] = ph; // after the exercise default, so ticking both keeps this slot's
         if (rm === null) delete c.rm[it.ex]; else if (rm != null && rm > 0) c.rm[it.ex] = rm;

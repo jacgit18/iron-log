@@ -23,7 +23,7 @@ export type PhaseChoice = PhaseKey | '' | null;
 /** The Experiment sheet and the board's add-to-day sheet (which has no id). */
 export interface ExperimentForm extends ExerciseChoice, ExerciseExtras { id?: string; ph: PhaseChoice; note?: string }
 /** The exercise details sheet. Fields left out stay as they were. `tags: null` means back to the default tags. */
-export interface ExerciseDetailsForm { name?: string; url?: string; eq?: EquipmentId | ''; ph?: PhaseChoice; rm?: string | number | null; tags?: MuscleTags | null }
+export interface ExerciseDetailsForm { name?: string; url?: string; eq?: EquipmentId | ''; step?: number | null; ph?: PhaseChoice; rm?: string | number | null; tags?: MuscleTags | null }
 export interface SlotFormItem extends ExerciseChoice, ExerciseExtras { ph: PhaseChoice; w: number | null; bw?: boolean; rx?: string; note?: string }
 /** The card (slot) editor. `target` aims it at a program and day when it was opened from the board. */
 export interface SlotForm {
@@ -42,6 +42,7 @@ export interface SupplementForm { id?: string; n: string; slot?: string; dose?: 
 export interface LogForm {
   entry: LogEntry; ph: PhaseKey | null; makeDefault: boolean; makeExDefault: boolean;
   rm: number | null | undefined; done: boolean; eq?: EquipmentId | ''; url?: string;
+  step?: number | null; // lb the exercise goes up by; null clears it, left out leaves it as saved
 }
 /** Anything a sheet or host gives us that has no shape of its own yet. */
 type Loose = any; // eslint-disable-line @typescript-eslint/no-explicit-any
