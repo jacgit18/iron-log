@@ -37,13 +37,14 @@ export type ScenarioFeature =
   | 'Program compare'
   | 'Polish pass'
   | 'Program on phones'
-  | 'Stale page guard';
+  | 'Stale page guard'
+  | 'Barcode scan';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan',
 ];
 
 export interface Scenario {
@@ -965,6 +966,34 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The request is refused: the Delete my data panel goes away and the other-account card takes its place; neither account loses anything. The same happens for Delete my account.',
       'After reloading the first tab it shows the account you are now signed in as, and the other test account\'s data is untouched.',
+    ],
+  },
+  // ---- Barcode scan ----
+  {
+    id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a ready-made food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
+    steps: [
+      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and allow the camera.',
+      'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
+      'Check the picked product and its grams (its own serving), press Use, then compare the calories and protein with the printed label and press Save food.',
+      'Repeat on the diet day: open Diet, use the food search box there, and scan a second product.',
+    ],
+    expected: [
+      'The sheet reads the code within a few seconds, closes, and shows the product name (with brand) and its calories per 100 g; the grams start at the product\'s serving.',
+      'Use fills the name, calories and protein (carbs and fat when USDA has them) for that serving; they match the label, and nothing is saved until Save food.',
+      'The camera light goes off when the sheet closes. On the diet day the pick fills the Quick add form the same way.',
+    ],
+  },
+  {
+    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, no camera, and a non-admin account', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
+    steps: [
+      'As an admin, open New ready-made food, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
+      'Close the sheet. In your browser settings block the camera for the site, press Scan barcode again, and press Photo instead with a saved photo of a barcode (or of a table).',
+      'Sign in as a test account that is not an admin and open New ready-made food.',
+    ],
+    expected: [
+      'The sheet says the barcode is not in the food database and to type the name instead; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
+      'With the camera blocked the sheet says it is not available and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
+      'The non-admin account sees no Scan barcode button.',
     ],
   },
 ];
