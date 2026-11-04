@@ -14,6 +14,24 @@ export async function searchFoods(q: string, signal?: AbortSignal): Promise<{ ok
   try { return { ok: true, hits: cleanHits(await res.json()) }; } catch { return fail(res.status, 'unreadable'); }
 }
 
+/** Barcode lookup (brief barcode-scan): the one product with this 14-digit code, or why there is none. 404 is "not found", not a failure of the service. */
+export async function lookupBarcode(gtin: string, signal?: AbortSignal): Promise<{ ok: true; hit: FoodHit } | { ok: false; reason: 'notfound' | FoodsFailure['reason'] }> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/foods/barcode/${encodeURIComponent(gtin)}`, { headers: { 'x-client-version': __APP_VERSION__, ...signIn() }, ...(signal ? { signal } : {}) });
+  } catch { return { ok: false, reason: 'offline' }; }
+  if (res.status === 429) return { ok: false, reason: 'limit' };
+  if (!res.ok) {
+    const reason = await why(res);
+    // Only our route's own "not found" counts; a 404 for a route that is not mounted answers a page, which reads as unavailable.
+    return res.status === 404 && reason === 'not-found' ? { ok: false, reason: 'notfound' } : fail(res.status, reason);
+  }
+  try {
+    const hit = cleanHits({ hits: [((await res.json()) as { hit?: unknown }).hit] })[0];
+    return hit ? { ok: true, hit } : fail(res.status, 'unreadable');
+  } catch { return fail(res.status, 'unreadable'); }
+}
+
 // Every non-ok answer shows as the same words under the box, so the real status (and the server's `why`) goes to the console: that is what tells a missing key (503 no-key) from a route that is not mounted (404) or a page served instead of JSON.
 const fail = (status: number, why: string): FoodsFailure => {
   console.warn(`food search unavailable: status ${status}, ${why}`);
