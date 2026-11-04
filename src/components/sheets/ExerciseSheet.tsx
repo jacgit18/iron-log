@@ -73,7 +73,7 @@ export default function ExerciseSheet({ exId }: { exId: string | null | undefine
           <input type="number" inputMode="decimal" step="any" min="0" value={d.rm} placeholder="not set" onChange={e => up({ rm: e.target.value })} />
         </label>
       </div>
-      {!isNew && <StepField value={stepTxt} onChange={setStepTxt} placeholder={`Default: ${defaultStep(0)} lb`}>
+      {!isNew && <StepField value={stepTxt} onChange={setStepTxt} placeholder={`Default: ${defaultStep(0)} lb under 50 lb, else ${defaultStep(50)}`}>
         <span className="note">How much the suggested weight goes up by, on every card, day and week.</span>
       </StepField>}
         <label className="field">Phase for this exercise on every card (replaces saved card phases)

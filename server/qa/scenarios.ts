@@ -819,7 +819,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'The card\'s green badge reads "suggested, from N lb" with the weight 10 lb above N, not the usual 2.5 or 5.',
-      'Tapping the lit chip empties the box (its placeholder reads "Default: 5 lb"); after saving, the badge goes back to the usual step. On a card with nothing logged, the Log sheet has the same field under Equipment.',
+      'Tapping the lit chip empties the box (its placeholder reads "Default: 2.5 lb under 50 lb, else 5"); after saving, the badge goes back to the usual step. On a card with nothing logged, the Log sheet has the same field under Equipment.',
     ],
   },
   {
