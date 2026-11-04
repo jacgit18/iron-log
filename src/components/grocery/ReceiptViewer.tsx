@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { monthLabel } from '../../lib/grocery.js';
 import { MAX_NOTE, downloadName, fetchPhoto, receiptTitle, removeReceipt, saveNote, type SavedReceipt } from '../../lib/receiptsClient.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -19,10 +19,14 @@ export default function ReceiptViewer() {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const id = receipt?.id;
+  const asked = useRef(0); // the newest photo request; a closed sheet or a Retry makes an older one stale, so it creates no object URL that nothing would release
+  useEffect(() => () => { asked.current = -1; }, []);
   const load = useCallback(async () => {
     if (!id) return;
+    const mine = ++asked.current;
     setPhoto({ kind: 'loading' });
     const blob = await fetchPhoto(id);
+    if (asked.current !== mine) return;
     setPhoto(blob ? { kind: 'ok', url: URL.createObjectURL(blob), blob } : { kind: 'error' });
   }, [id]);
   useEffect(() => { void load(); }, [load]);
