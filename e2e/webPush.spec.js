@@ -73,7 +73,7 @@ test('ticking a card on a day with more to do asks for a nudge 30 minutes on; fi
   const calls = await setup(page);
   const n = await page.locator('.col.sel article.card:not(.done):not(.skipped)').count(); // every open card counts, Home and Optional ones too
   expect(n).toBeGreaterThan(2);
-  await (await firstOpen(page)).check();
+  await (await firstOpen(page)).click();
   await expect.poll(() => scheduled(calls).length).toBe(1);
   const ask = scheduled(calls)[0];
   expect(ask.path).toBe('/schedule');
@@ -81,7 +81,7 @@ test('ticking a card on a day with more to do asks for a nudge 30 minutes on; fi
   expect(ask.body.at).toBe(Number(ask.body.key) + 30 * 60_000); // the key is the tick time; the nudge is 30 minutes after it
   expect(Math.abs(Number(ask.body.key) - NOW.getTime())).toBeLessThan(60_000);
   expect(ask.body.body).toBe(`Day not finished: ${n - 1} ${n - 1 === 1 ? 'exercise' : 'exercises'} left.`);
-  await (await firstOpen(page)).check(); // a second tick moves it on, with one less left
+  await (await firstOpen(page)).click(); // a second tick moves it on, with one less left
   await expect.poll(() => scheduled(calls).filter(c => c.path === '/schedule').length).toBe(2);
   expect(scheduled(calls).at(-1).body.body).toBe(`Day not finished: ${n - 2} ${n - 2 === 1 ? 'exercise' : 'exercises'} left.`);
   await page.locator('.col.sel .colhead input[id^="day-"]').check(); // the day's own box finishes the whole day
@@ -92,14 +92,14 @@ test('ticking a card on a day with more to do asks for a nudge 30 minutes on; fi
 
 test('a tick whose nudge would land after 9:30 pm asks for nothing', async ({ page }) => {
   const calls = await setup(page, { now: new Date('2026-09-24T21:10:00-04:00') });
-  await (await firstOpen(page)).check();
+  await (await firstOpen(page)).click();
   await expect.poll(() => scheduled(calls).length).toBeGreaterThan(0);
   expect(scheduled(calls).map(c => c.path)).toEqual(['/cancel']);
 });
 
 test('with push off on this device, ticking asks for nothing', async ({ page }) => {
   const calls = await setup(page, { on: false });
-  await (await firstOpen(page)).check();
+  await (await firstOpen(page)).click();
   await page.waitForTimeout(300);
   expect(calls).toEqual([]);
 });
