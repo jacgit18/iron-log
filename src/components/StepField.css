@@ -1,0 +1,17 @@
+@layer base, components;
+@layer components {
+.stepchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.stepchips .btn {
+  min-height: 44px;
+  min-width: 56px;
+}
+.stepchips .btn[aria-pressed="true"] {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-ink);
+}
+}

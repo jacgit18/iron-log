@@ -7,14 +7,16 @@ import { entryId } from '../../lib/entryMerge.js';
 import { PHASES, PH_KEYS, exInfo, isVideoUrl, VIDEO_ERR } from '../../lib/data.js';
 import { ymd, parseDate, fmtShort } from '../../shared/dates.js';
 import {
-  phaseOf, isItemDone, isItemSkipped, isSkipped, isTimed, targetOf, rxOf, lastSession, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate,
+  phaseOf, isItemDone, isItemSkipped, isSkipped, isTimed, targetOf, rxOf, lastSession, describe, volText, isPaired, planRows, setsOfEntry, summarizeSets, defaultLogDate, defaultStep,
 } from '../../lib/logic.js';
 import Icon from '../Icon.jsx';
 import EditEntry from './EditEntry.jsx';
 import EquipmentField from '../EquipmentField.jsx';
+import StepField from '../StepField.jsx';
 import Kg, { KgAfter } from '../Kg.jsx';
 import Sheet from '../Sheet.jsx';
 import { liftGoalsStatus, liftGoalNote } from '../../lib/liftGoal.js';
+import { STEP_ERR, parseStep, stepText } from '../../lib/weightStep.js';
 import { editModeText, sheetEntryFor } from '../../lib/loggedEntry.js';
 import { setError } from '../../shared/validate.js';
 import { selectOnFocus, advanceOnEnter, cellHint } from '../../lib/setCells.js';
@@ -42,6 +44,7 @@ function NewLogForm({ slotId, idx }: { slotId: string; idx: number }) {
   const [note, setNote] = useState('');
   const [eq, setEq] = useState<EquipmentId | ''>(ex.eq || '');
   const [url, setUrl] = useState(ex.url || '');
+  const [stepTxt, setStepTxt] = useState(() => stepText(ex.step));
   const [makeDefault, setMakeDefault] = useState(false);
   const [makeExDefault, setMakeExDefault] = useState(false);
   const [done, setDone] = useState(true);
@@ -72,10 +75,11 @@ function NewLogForm({ slotId, idx }: { slotId: string; idx: number }) {
     if (!sets.length) { setErr('Enter at least one set.'); return; }
     const bad = setError(sets, iso); if (bad) { setErr(bad); return; }
     if (!isVideoUrl(url)) { setErr(VIDEO_ERR); return; }
+    const stepIn = parseStep(stepTxt); if (!stepIn.ok) { setErr(STEP_ERR); return; }
     const entry: LogEntry = { d: date || ymd(today), ph: phv, ...summarizeSets(sets, iso), slot: slotId, wk: st.weekKey() };
     if (note.trim()) entry.n = note.trim();
     const rmVal = rm === '' ? null : Number(rm);
-    if (st.submitLog(slotId, idx, { entry, ph: phv, makeDefault, makeExDefault, rm: rmVal, done, eq, url })) st.closeModal();
+    if (st.submitLog(slotId, idx, { entry, ph: phv, makeDefault, makeExDefault, rm: rmVal, done, eq, url, step: stepIn.step })) st.closeModal();
   };
 
   return (
@@ -135,6 +139,9 @@ function NewLogForm({ slotId, idx }: { slotId: string; idx: number }) {
       <EquipmentField cfg={cfg} value={eq} onChange={setEq}>
         <span className="note">Changing it updates {ex.n} everywhere.</span>
       </EquipmentField>
+      <StepField value={stepTxt} onChange={setStepTxt} placeholder={`Default: ${defaultStep(t.w ?? 0)} lb`}>
+        <span className="note">How much the suggested weight goes up by. Saved for {ex.n} on every day and every week.</span>
+      </StepField>
       {!s.experiment && <label className="inline"><input type="checkbox" checked={makeDefault} onChange={e => setMakeDefault(e.target.checked)} /> Make this phase the default for this slot</label>}
       <label className="inline"><input type="checkbox" checked={makeExDefault} onChange={e => setMakeExDefault(e.target.checked)} /> Make this phase the default for {ex.n} everywhere</label>
       <label className="inline"><input type="checkbox" checked={done} onChange={e => setDone(e.target.checked)} /> {isPaired(s) ? 'Check off this exercise' : 'Check off the card'}</label>

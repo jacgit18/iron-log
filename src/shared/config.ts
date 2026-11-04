@@ -2,7 +2,7 @@ import { DEFAULT_CFG } from '../lib/logic.js';
 import type { Cfg, WarmupItem } from '../types.ts';
 import { normDietCfg } from './diet.js';
 import { normRecipeChips } from './recipes.js';
-import { LIMITS, validBodyLb, validDate, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm } from './validate.js';
+import { LIMITS, validBodyLb, validDate, validFreq, validGoal, validLiftGoalLb, validMode, validPct, validRest, validRm, validStep } from './validate.js';
 
 /* ---------- Config shape ----------
    normConfig takes anything (a stored doc, a file, a database snapshot) and returns the keys that can be used.
@@ -25,6 +25,7 @@ export function normConfig(c: any): Partial<Cfg> {
   if ('rest' in out && !validRest(out.rest)) delete out.rest;
   const own = (o: any, f: (k: string, v: any) => unknown) => { const r: Record<string, unknown> = {}; Object.entries(o).forEach(([k, v]) => { if (!UNSAFE.has(k)) { const x = f(k, v); if (x !== undefined) r[k] = x; } }); return r; };
   if (out.pct) out.pct = { ...DEFAULT_CFG.pct, ...own(out.pct, (k, v) => (typeof v === 'number' && validPct(v) ? v : undefined)) };
+  if (out.ex) out.ex = own(out.ex, (_k, v) => { if (!v || typeof v !== 'object' || Array.isArray(v) || !('step' in v) || validStep(v.step)) return v; const { step: _step, ...rest } = v; return rest; });
   if (out.rm) out.rm = own(out.rm, (k, v) => (typeof v === 'number' && validRm(v) ? v : undefined));
   if (out.liftGoals) out.liftGoals = own(out.liftGoals, (k, byKey) => (byKey && typeof byKey === 'object' && !Array.isArray(byKey) ? own(byKey, (_k, g) => (g && typeof g === 'object' && typeof g.w === 'number' && validLiftGoalLb(g.w) ? cleanGoal(g) : undefined)) : undefined));
   if (out.equipment) out.equipment = own(out.equipment, (k, v) => (/^x:[a-z0-9-]{1,40}$/.test(k) && typeof v === 'string' && v.trim() && v.length <= 30 ? v.trim() : undefined));
