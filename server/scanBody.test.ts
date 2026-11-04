@@ -57,3 +57,28 @@ describe('POST /api/scan/label through the whole app', () => {
     expect((await post(body, 'plain', 'receipt')).status).toBe(403);
   });
 });
+
+describe('POST /api/receipts through the whole app', () => {
+  const save = (body: string, user?: string) =>
+    fetch(`${base}/api/receipts`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-client-version': 'test-1', ...(user ? { 'x-dev-user': user } : {}) }, body });
+  // A real (tiny) JPEG start padded with base64 zeros: the route checks the type and size, not that it decodes as a picture.
+  const jpeg = (chars: number) => '/9j/' + 'A'.repeat(chars - 4);
+  const body = (chars: number) => JSON.stringify({ image: jpeg(chars), month: '2026-11' });
+
+  it('keeps a 900 kB photo from an admin (over the 100 kb app limit), refuses over its own 2 MB limit, and keeps anonymous and non-admin out', async () => {
+    const ok = body(900_000);
+    expect(ok.length).toBeGreaterThan(100_000);
+    const res = await save(ok, 'boss');
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({ ok: true, receipt: { month: '2026-11' } });
+    expect((await save(body(2_200_000), 'boss')).status).toBe(413);
+    expect((await save(ok)).status).toBe(401);
+    expect((await save(ok, 'plain')).status).toBe(403);
+  });
+  it('still holds every other receipts call to the 100 kb parser', async () => {
+    const big = JSON.stringify({ note: 'x'.repeat(150_000) });
+    const res = await fetch(`${base}/api/receipts/1`, { method: 'PATCH', headers: { 'content-type': 'application/json', 'x-client-version': 'test-1', 'x-dev-user': 'boss' }, body: big });
+    expect(res.status).toBe(413);
+  });
+});
+

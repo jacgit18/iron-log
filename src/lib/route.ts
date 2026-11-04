@@ -6,7 +6,7 @@ export const PROGRESS_PAGES = ['goals', 'hist', 'freq', 'lifts', 'trends'] as co
 /** Every address the app knows, as a path with no `#/`. A tab is the first part. */
 export const PATHS: readonly string[] = [
   'board', 'board/stretches', 'board/workout',
-  'daily', 'daily/grocery', 'daily/grocery/get', 'daily/grocery/home', 'daily/grocery/spend', 'daily/medical', 'daily/recipes',
+  'daily', 'daily/grocery', 'daily/grocery/get', 'daily/grocery/home', 'daily/grocery/receipts', 'daily/grocery/spend', 'daily/medical', 'daily/recipes',
   'daily/recipes/form', 'daily/recipes/library', 'daily/nutrition', 'daily/recipes/mine', 'daily/recipes/mine/sauce',
   'plans',
   'program', 'program/a', 'program/b', 'program/exercises', 'program/stretches',

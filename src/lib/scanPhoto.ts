@@ -64,8 +64,8 @@ export const RECEIPT_TEXT = {
   unreadable: 'Could not read that receipt. Try a flatter photo with the whole receipt in view. Nothing on your list changed.',
 } as const;
 
-/** One receipt photo and the list's item ids and names to /api/scan/receipt. The answer is re-checked against the same ids; every failure is a plain reason. */
-export async function scanReceipt(file: Blob, items: ItemRef[], signal?: AbortSignal): Promise<{ ok: true; result: ReceiptResult } | ScanFailure> {
+/** One receipt photo and the list's item ids and names to /api/scan/receipt. The answer is re-checked against the same ids; every failure is a plain reason. The shrunk photo comes back too, held in memory so the sheet can offer to keep it (receiptsClient.ts); it goes nowhere unless the person ticks that box. */
+export async function scanReceipt(file: Blob, items: ItemRef[], signal?: AbortSignal): Promise<{ ok: true; result: ReceiptResult; image: string } | ScanFailure> {
   let image: string;
   try { image = await shrinkToJpegBase64(file, MAX_RECEIPT_SIDE); } catch { return { ok: false, reason: 'photo' }; }
   let res: Response;
@@ -74,5 +74,5 @@ export async function scanReceipt(file: Blob, items: ItemRef[], signal?: AbortSi
   } catch { return { ok: false, reason: 'offline' }; }
   if (res.status === 429) return { ok: false, reason: 'limit' };
   if (!res.ok) { console.warn(`receipt scan unavailable: status ${res.status}`); return { ok: false, reason: 'unavailable' }; }
-  try { return { ok: true, result: cleanReceiptAnswer(await res.json(), new Set(items.map(i => i.id))) }; } catch { return { ok: false, reason: 'unavailable' }; }
+  try { return { ok: true, result: cleanReceiptAnswer(await res.json(), new Set(items.map(i => i.id))), image }; } catch { return { ok: false, reason: 'unavailable' }; }
 }
