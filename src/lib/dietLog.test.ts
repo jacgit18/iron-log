@@ -132,6 +132,10 @@ describe('whole pack (ready-made foods)', () => {
     expect(ateMax({ cat: 'ready', servings: 12, kcal: 210, p: 6 })).toBe(12); // fits: unchanged
     expect(ateMax({ cat: 'ready', servings: 24 })).toBe(24); // no numbers yet: Ate this shows the "Add them" prompt, not the stepper
   });
+  it('lets the stepper reach a usual amount over 10', () => {
+    expect(ateMax({ cat: 'ready', usual: 12, kcal: 100, p: 5 })).toBe(12);
+    expect(ateMax({ cat: 'ready', usual: 40, kcal: 450, p: 10 })).toBe(22); // still held to what one entry can hold
+  });
   it('multiplies the per-serving numbers by the whole pack', () => {
     expect(servingNumbers({ kcal: 210, p: 6, c: 40, f: 1 }, 12)).toEqual({ kcal: 2520, p: 72, c: 480, f: 12 });
   });
