@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, openFinished } from './fixtures.js';
 
 // The kg equivalent shows beside a pound weight as you type, in the Recent list, and goes away when Settings hides it.
 // A unit test cannot show the wiring between the sheet, the store and the Settings switch.
@@ -16,7 +16,8 @@ test('kg shows beside the set weight, and in Recent', async ({ page }) => {
   await page.fill('input[aria-label^="Set 1 reps"]', '8');
   await page.click('button:has-text("Save set")');
   await expect(page.locator('#f-d')).toHaveCount(0);
-  await page.click(`#log-${CARD}-0`);
+  await openFinished(page); // a saved set ticks the card, which folds into the Finished bar
+  await page.click(`[id="fin-log-${CARD}"]`);
   await expect(page.locator('.hist-recent .kg').first()).toHaveText('(61.2 kg)');
 });
 

@@ -60,7 +60,8 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
   // Skip and Undo skip swap which button is on the card, so the one that had focus goes away: hand focus to the new one.
   const focusById = (id: string) => { if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => document.getElementById(id)?.focus()); };
   const focusMore = () => focusById(`more-${s.id}`);
-  const focusSkipped = () => focusById(`skip-${s.id}`);
+  // A skipped card now sits in its day's closed Finished bar, so the Undo skip button is not on the page: the bar takes the focus instead.
+  const focusSkipped = () => { if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => (document.getElementById(`skip-${s.id}`) ?? document.getElementById(`finished-bar-${cur}`))?.focus()); };
   const moreOpen = more || removing; // armed Remove keeps its panel open so the second tap has somewhere to land
 
   const done = isDone(s, week); const sk = isSkipped(s, week); const paired = isPaired(s);

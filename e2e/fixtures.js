@@ -20,4 +20,13 @@ export const test = base.extend({
 export const seedExperiments = (page, exercises = ['hack']) => page.addInitScript(items => {
   localStorage.setItem('ironlog:experiments/main', JSON.stringify({ schema: 1, items }));
 }, exercises.map((ex, i) => ({ id: 'E' + i, ex, ph: 'hyp', note: '' })));
+// Done and skipped cards are folded into a closed "Finished (N)" bar below the day's open cards; open it (once) and return the row list.
+export const openFinished = async (page, day = 1) => {
+  const bar = page.locator(`#finished-bar-${day}`);
+  await expect(bar).toBeVisible();
+  if ((await bar.getAttribute('aria-expanded')) !== 'true') await bar.click();
+  const list = page.locator(`#finished-list-${day}`);
+  await expect(list).toBeVisible();
+  return list;
+};
 export { expect };

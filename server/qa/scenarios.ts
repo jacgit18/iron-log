@@ -32,13 +32,14 @@ export type ScenarioFeature =
   | 'Receipt photos'
   | 'Receipt scan'
   | 'Usual amount'
+  | 'Finished group'
   | 'Weight step';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Receipt photos', 'Weight step',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step',
 ];
 
 export interface Scenario {
@@ -811,7 +812,40 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-61', feature: 'Weight step', title: 'Set how far an exercise goes up, and see the suggestion follow', persona: 'heavy-logger', brief: 'progression-step-per-exercise',
+    id: 'S-61', feature: 'Finished group', title: 'Done and skipped exercises fold into one bar', persona: 'superset-builder', brief: 'finished-group-fold',
+    steps: [
+      'Open the Board on Day 1. Tick one exercise and skip another from its ⋯ menu.',
+      'Look at the bottom of the day: press the Finished bar to open it, then press it again to close it.',
+    ],
+    expected: [
+      'Both cards leave the list of open cards, which keeps its usual look. A closed Finished (2) bar sits below them with "1 done" and "1 skipped".',
+      'Open, it shows one short row per exercise: the done one has Edit and Untick, the skipped one has Undo skip. Closed, only the bar shows.',
+    ],
+  },
+  {
+    id: 'S-62', feature: 'Finished group', title: 'Edit a done exercise and put cards back', persona: 'superset-builder', brief: 'finished-group-fold',
+    steps: [
+      'Log a set for an exercise so it is done, open the Finished bar and press Edit on its row; change a number and save.',
+      'Press Untick on that row, then press Undo skip on a skipped row.',
+    ],
+    expected: [
+      'Edit opens the log sheet in Edit mode ("You are changing the session logged ...") and the saved number shows.',
+      'Each card returns to the open list as a normal card; when the last finished row goes, the bar disappears and the day shows only open cards.',
+    ],
+  },
+  {
+    id: 'S-63', feature: 'Finished group', title: 'A superset and a day with nothing left', persona: 'superset-builder', brief: 'finished-group-fold', edge: true,
+    steps: [
+      'Tick both halves of a superset, then finish every other card in the day (tick or skip).',
+      'Open the Finished bar and Untick one half of the superset.',
+    ],
+    expected: [
+      'The superset shows as two rows in the bar, one per exercise. With every card finished the day shows its header and the closed bar, with no extra text between them.',
+      'Only that half goes back; the superset returns to the open list with the other half still ticked.',
+    ],
+  },
+  {
+    id: 'S-64', feature: 'Weight step', title: 'Set how far an exercise goes up, and see the suggestion follow', persona: 'heavy-logger', brief: 'progression-step-per-exercise',
     steps: [
       'Open Program, Exercise library and press Edit on an exercise you have logged at the same weight twice in a row with every set done (the heavy logger has several).',
       'Under Equipment, tap the 10 chip in Weight step and save. Go to the Board and find that exercise\'s card.',
@@ -823,7 +857,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-62', feature: 'Weight step', title: 'A step that is not allowed is refused', persona: 'heavy-logger', brief: 'progression-step-per-exercise', edge: true,
+    id: 'S-65', feature: 'Weight step', title: 'A step that is not allowed is refused', persona: 'heavy-logger', brief: 'progression-step-per-exercise', edge: true,
     steps: [
       'In Program, Exercise library, Edit an exercise and type 60 in the Weight step box; then try 0, 2.3 and abc.',
       'Type 7.5 and save, then open it again. Press Save with the box showing 60 once more.',

@@ -54,7 +54,7 @@ const signUp = async (page, email, name, { seed = true } = {}) => {
 const rowsOf = async email => (await pool.query(
   `select count(*)::int as n from log_entries l join users u on u.id = l.user_id join auth."user" a on a.id::text = u.auth_user_id where a.email = $1`, [email])).rows[0].n;
 const ready = async page => {
-  await expect(page.locator('#chk-A-d1s1')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#chk-A-d1s1').or(page.locator('#finished-bar-1'))).toBeVisible({ timeout: 30_000 }); // a card already ticked is folded into the Finished bar
   await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
 };
 
@@ -93,7 +93,7 @@ test('signed in: the account menu names the account, a tick reaches the server, 
   await ready(page);
   await expect(page.getByRole('status').filter({ hasText: 'Sign in to sync' })).toHaveCount(0);
 
-  await page.locator('#chk-A-d1s1').check();
+  await page.locator('#chk-A-d1s1').click();
   await expect.poll(() => rowsOf(email), { message: 'the check-off reaches the database under her own account' }).toBe(1);
 
   await page.locator('#account-badge').click(); // signed in, the account menu names the account and signs out (the Account panel is not drawn)
@@ -114,7 +114,7 @@ test('a second account on the same device is held back: the first one\'s data is
   await signUp(page, ann, 'Ann');
   await page.goto('/');
   await ready(page);
-  await page.locator('#chk-A-d1s1').check();
+  await page.locator('#chk-A-d1s1').click();
   await expect.poll(() => rowsOf(ann)).toBe(1);
 
   await page.request.post('/api/auth/sign-out', { data: {} });
@@ -159,7 +159,7 @@ test('deleting the account removes the user, the data and every sign-in record, 
   await signUp(page, email, 'Del');
   await page.goto('/');
   await ready(page);
-  await page.locator('#chk-A-d1s1').check();
+  await page.locator('#chk-A-d1s1').click();
   await expect.poll(() => rowsOf(email)).toBe(1);
   const left = async () => (await pool.query(
     `select (select count(*) from auth."user" where email = $1)::int as logins,
