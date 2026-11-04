@@ -60,8 +60,11 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
         {status.lines.map((l, i) => (
           <li className="rc-ing" key={i}>
             <span className={l.skipped ? 'rc-skipped' : undefined}>{l.ing.amt ? `${recipe.servings && shown ? scaleAmount(l.ing.amt, shown / recipe.servings).text : l.ing.amt} ` : ''}{(() => { const s = mine && onOpen ? linkedRecipe(l.ing, recipes, recipe.id) : undefined; return s ? <button type="button" className="rc-link" aria-label={`Open ${s.n}, ${s.cat === 'seasonings' ? 'seasoning' : 'sauce'}`} onClick={() => onOpen!(s.id)}>{s.n}</button> : ingredientName(l.ing); })()}{l.ing.sub && <span className="rc-instead"> (or {l.ing.sub})</span>}</span>
-            <span className={`rc-state ${l.skipped ? 'skip' : l.have ? 'have' : l.partial ? 'part' : 'miss'}`}>{l.skipped ? 'Skipped' : l.have ? 'Have' : l.partial ? 'Have some' : 'Missing'}</span>
-            {onToGet(l) && <span className="rc-state onlist">On your list</span>}
+            <span className="rc-states">
+              <span className={`rc-state ${l.skipped ? 'skip' : l.have ? 'have' : l.partial ? 'part' : 'miss'}`}>{l.skipped ? 'Skipped' : l.have ? 'Have' : l.partial ? 'Have some' : 'Missing'}</span>
+              {onToGet(l) && <span className="rc-state onlist">On your list</span>}
+            </span>
+            <span className="rc-pick">
             {mine && l.suggest && <button type="button" className="btn sm" aria-label={`Maybe: ${l.suggest.n} for ${ingredientName(l.ing)}`} onClick={() => useAppStore.getState().linkIngredient(recipe.id, i, l.suggest!.id)}>Maybe: {l.suggest.n}</button>}
             {mine && !l.skipped && !l.always && grocery.items.length > 0 && (
               <select aria-label={`At home item for ${ingredientName(l.ing)}`} value={l.ing.home ?? ''} onChange={e => useAppStore.getState().linkIngredient(recipe.id, i, e.target.value || null)}>
@@ -69,6 +72,8 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
                 {rankItems(l.ing, grocery.items).map(it => <option key={it.id} value={it.id}>{it.n}</option>)}
               </select>
             )}
+            {l.always && !l.skipped && <span className="note">Always at home</span>}
+            </span>
           </li>
         ))}
       </ul>
