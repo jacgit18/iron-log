@@ -11,7 +11,7 @@ test('an experiment ticked off as a card does not show a Last weight it never ha
   await entry.getByRole('button', { name: /^This week only: add .* to Day 1$/ }).click();
   await expect(entry.locator('.onday')).toHaveText('On Day 1 this week');
   const card = page.locator('#col-1 article.card').filter({ hasText: name }).first();
-  await card.locator('input.chk').check();
-  await expect(card.locator('input.chk')).toBeChecked();
+  await card.locator('input.chk').click();
+  await expect(card).toHaveCount(0); // ticked: the card folds into the Finished bar
   await expect(entry.locator('.lastlog')).toHaveCount(0);
 });
