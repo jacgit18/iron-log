@@ -959,10 +959,11 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'In one browser tab sign in as New user and open Settings. Leave it open.',
       'In a second tab of the same browser, switch to another test account (the QA picker).',
-      'Back in the first tab, open Delete my data and press Erase everything in my account (then, in a repeat, Delete my account) and confirm.',
+      'Back in the first tab, open Delete my data and press Erase everything in my account, and confirm.',
+      'Repeat steps 1 to 3 from the start, pressing Delete my account instead (the first page no longer has the panel after a refusal).',
     ],
     expected: [
-      'Both are refused and the notice says nothing was erased (for example "The server would not do it. Nothing was erased."); neither account loses anything.',
+      'The request is refused: the Delete my data panel goes away and the other-account card takes its place; neither account loses anything. The same happens for Delete my account.',
       'After reloading the first tab it shows the account you are now signed in as, and the other test account\'s data is untouched.',
     ],
   },
