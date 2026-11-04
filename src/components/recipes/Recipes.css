@@ -188,13 +188,39 @@
   padding: 0;
 }
 .rc-ing {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 11rem minmax(0, 20rem);
   min-height: 44px;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--sp-6) var(--sp-8);
   border-top: 1px solid var(--line);
+}
+/* Each part of an ingredient row has its own column, so Have, Missing and On your list line up from row to row whether or not the row has a picker. */
+.rc-states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-8);
+}
+.rc-pick {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-6) var(--sp-8);
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .rc-ing {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .rc-pick {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+  .rc-pick:empty,
+  .rc-pick:has(> .note:only-child) {
+    /* water and other always-at-home rows: the Have mark says it, so no second line on a phone */
+    display: none;
+  }
 }
 .rc-ing .rc-state {
   font-size: var(--fs-sm);
