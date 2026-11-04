@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect } from './fixtures.js';
+import { test, expect, openFinished } from './fixtures.js';
 
 // Swipe a card sideways: right ticks it off, left skips it, either way puts it back. Synthetic touch events: a real finger is the real test.
 const phone = async page => {
@@ -25,39 +25,44 @@ const swipe = (page, selector, dx, dy, { from = '', fx = 0.5, fy = 0.5 } = {}) =
 const CARD = '.col.sel article.card:has(input.chk.cardchk)'; // a card with its own checkbox (not a superset)
 // A ticked or skipped card sinks to the end of its day, so pin the card under test by its ⋯ button id.
 const pin = async (page, cards) => { const id = await page.locator(cards).first().locator('> .row1 > .morebtn').getAttribute('id'); return `.col.sel article.card:has(> .row1 > #${id})`; };
-const pick = async page => { const sel = await pin(page, CARD); return { sel, box: page.locator(`${sel} input.chk.cardchk`) }; };
+const pick = async page => { const sel = await pin(page, CARD); return { sel, box: page.locator(`${sel} input.chk.cardchk`), key: (await page.locator(CARD).first().locator('> .row1 > .morebtn').getAttribute('id')).replace('more-', '') }; };
+// A done or skipped card folds into the day's Finished bar (it is no longer on the page as a card); its Untick / Undo skip button is on its row.
+const unfold = async (page, key) => { await openFinished(page); await page.locator(`#fin-undo-${key}`).click(); };
 const day = page => page.locator('.daytabs [aria-selected="true"]');
 
 test('a long swipe right ticks a card off, and a swipe either way puts it back, like the checkbox', async ({ page }) => {
   await phone(page);
-  const { sel, box } = await pick(page);
+  const { sel, box, key } = await pick(page);
   await expect(box).not.toBeChecked();
   await swipe(page, sel, 140, 4, { from: '.exh' });
-  await expect(box).toBeChecked();
-  await expect(page.locator(sel)).toHaveClass(/done/);
-  await swipe(page, sel, -140, -4, { from: '.exh' }); // left on a done card: back to open, never skipped
+  await expect(page.locator(sel)).toHaveCount(0); // done: folded into the Finished bar
+  await expect(page.locator('#finished-bar-1')).toContainText('1 done');
+  // Changed: a finished card is not on the page, so there is nothing to swipe back; Untick on its Finished row is the way back (never skipped).
+  await unfold(page, key);
   await expect(box).not.toBeChecked();
   await expect(page.locator(sel)).not.toHaveClass(/skipped/);
+  await expect(page.locator('#finished-bar-1')).toHaveCount(0);
   await swipe(page, sel, 140, 0, { from: '.exh' });
-  await swipe(page, sel, 140, 0, { from: '.exh' });
+  await unfold(page, key);
   await expect(box).not.toBeChecked();
 });
 
 test('a long swipe left skips a card for the week, and the notice\'s Undo brings it back', async ({ page }) => {
   await phone(page);
-  const { sel, box } = await pick(page);
+  const { sel, box, key } = await pick(page);
   await swipe(page, sel, -140, 0, { from: '.exh' });
-  await expect(page.locator(sel)).toHaveClass(/skipped/);
-  await expect(box).not.toBeChecked();
+  await expect(page.locator(sel)).toHaveCount(0); // skipped: folded into the Finished bar
+  await expect(page.locator('#finished-bar-1')).toContainText('1 skipped');
   const note = page.locator('.toasts .notice', { hasText: 'for this week.' });
   await expect(note).toBeVisible();
   await note.getByRole('button', { name: 'Undo' }).click();
   await expect(page.locator(sel)).not.toHaveClass(/skipped/);
+  await expect(page.locator('#finished-bar-1')).toHaveCount(0);
   await expect(note).toHaveCount(0);
-  // Skip again, then a swipe either way puts it back; the notice goes with it.
+  // Skip again, then put it back. Changed: there is no swipe back on a finished card, so Undo skip on its Finished row does it; the notice goes with it.
   await swipe(page, sel, -140, 0, { from: '.exh' });
-  await expect(page.locator(sel)).toHaveClass(/skipped/);
-  await swipe(page, sel, 140, 0, { from: '.exh' });
+  await expect(page.locator(sel)).toHaveCount(0);
+  await unfold(page, key);
   await expect(page.locator(sel)).not.toHaveClass(/skipped/);
   await expect(box).not.toBeChecked();
   await expect(note).toHaveCount(0);
@@ -88,8 +93,9 @@ test('each exercise of a superset swipes on its own: right ticks it, left skips 
   await swipe(page, second, 140, 0, { from: '.exh' }); // a skipped exercise comes back
   await expect(two).not.toHaveClass(/iskipped/);
   await swipe(page, first, -140, 0, { from: '.exh' });
-  await swipe(page, second, -140, 0, { from: '.exh' }); // both skipped: the card is skipped
-  await expect(card).toHaveClass(/skipped/);
+  await swipe(page, second, -140, 0, { from: '.exh' }); // both skipped: the card is skipped, so it folds into the Finished bar
+  await expect(card).toHaveCount(0);
+  await expect(page.locator('#finished-bar-1')).toContainText('1 skipped');
   await expect(day(page)).toHaveAttribute('id', before);
 });
 
@@ -105,8 +111,11 @@ test('an either/or option skips on its own, the card stays put until the other i
   await expect(card.locator('.excard').nth(0)).toHaveClass(/iskipped/);
   await expect(card).not.toHaveClass(/skipped/); // not moved down yet: the other option may still be done
   await swipe(page, second, 140, 0, { from: '.exh' });
-  await expect(card.locator('input.chk').nth(1)).toBeChecked();
-  await expect(card).not.toHaveClass(/skipped/);
+  await expect(card).toHaveCount(0); // the other option is done: the card is finished and folds into the Finished bar
+  const dayNo = Number((await page.locator('.col.sel').getAttribute('id')).replace('col-', '')); // the loop above may have moved to another day tab
+  const list = await openFinished(page, dayNo);
+  await expect(list.locator('li.finishedrow.done')).toHaveCount(1);
+  await expect(list.locator('li.finishedrow.skipped')).toHaveCount(1);
 });
 
 test('a short swipe, a vertical swipe and a swipe that starts on a control do nothing to the card', async ({ page }) => {
@@ -124,11 +133,11 @@ test('a short swipe, a vertical swipe and a swipe that starts on a control do no
 
 test('a card swipe does not also change the day, and a swipe on the day area still does', async ({ page }) => {
   await phone(page);
-  const { sel, box } = await pick(page);
+  const { sel, box, key } = await pick(page);
   const before = await day(page).getAttribute('id');
   await swipe(page, sel, 140, 0, { from: '.exh' });
-  await expect(box).toBeChecked();
-  await swipe(page, sel, -140, 0, { from: '.exh' });
+  await expect(page.locator(sel)).toHaveCount(0); // done: folded into the Finished bar
+  await unfold(page, key); // Changed: no swipe back on a finished card; Untick on its row
   await expect(box).not.toBeChecked();
   await expect(day(page)).toHaveAttribute('id', before);
   await swipe(page, '.weekbar', -150, 0);
@@ -137,10 +146,11 @@ test('a card swipe does not also change the day, and a swipe on the day area sti
 
 test('a default (non-admin) user can swipe a card done, and a card swipe never moves the day', async ({ page }) => {
   await phone(page);
-  const { sel, box } = await pick(page);
+  const { sel } = await pick(page);
   await expect(page.locator(sel)).toHaveClass(/swipable/);
   await swipe(page, sel, 140, 0, { from: '.exh' });
-  await expect(box).toBeChecked();
+  await expect(page.locator(sel)).toHaveCount(0); // done: folded into the Finished bar
+  await expect(page.locator('#finished-bar-1')).toContainText('1 done');
 });
 
 test('the day tabs still change the day on a phone', async ({ page }) => {

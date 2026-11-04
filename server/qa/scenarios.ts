@@ -30,13 +30,14 @@ export type ScenarioFeature =
   | 'Label scan'
   | 'Whole pack'
   | 'Receipt scan'
-  | 'Usual amount';
+  | 'Usual amount'
+  | 'Finished group';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group',
 ];
 
 export interface Scenario {
@@ -781,6 +782,39 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'Not now, Remove and Cancel each leave the list exactly as it was.',
       'A name already in that store says it is already in the list and to pick it instead; an empty name says to give the item a name; neither adds anything to the row.',
+    ],
+  },
+  {
+    id: 'S-59', feature: 'Finished group', title: 'Done and skipped exercises fold into one bar', persona: 'superset-builder', brief: 'finished-group-fold',
+    steps: [
+      'Open the Board on Day 1. Tick one exercise and skip another from its ⋯ menu.',
+      'Look at the bottom of the day: press the Finished bar to open it, then press it again to close it.',
+    ],
+    expected: [
+      'Both cards leave the list of open cards, which keeps its usual look. A closed Finished (2) bar sits below them with "1 done" and "1 skipped".',
+      'Open, it shows one short row per exercise: the done one has Edit and Untick, the skipped one has Undo skip. Closed, only the bar shows.',
+    ],
+  },
+  {
+    id: 'S-60', feature: 'Finished group', title: 'Edit a done exercise and put cards back', persona: 'superset-builder', brief: 'finished-group-fold',
+    steps: [
+      'Log a set for an exercise so it is done, open the Finished bar and press Edit on its row; change a number and save.',
+      'Press Untick on that row, then press Undo skip on a skipped row.',
+    ],
+    expected: [
+      'Edit opens the log sheet in Edit mode ("You are changing the session logged ...") and the saved number shows.',
+      'Each card returns to the open list as a normal card; when the last finished row goes, the bar disappears and the day shows only open cards.',
+    ],
+  },
+  {
+    id: 'S-61', feature: 'Finished group', title: 'A superset and a day with nothing left', persona: 'superset-builder', brief: 'finished-group-fold', edge: true,
+    steps: [
+      'Tick both halves of a superset, then finish every other card in the day (tick or skip).',
+      'Open the Finished bar and Untick one half of the superset.',
+    ],
+    expected: [
+      'The superset shows as two rows in the bar, one per exercise. With every card finished the day shows its header and the closed bar, with no extra text between them.',
+      'Only that half goes back; the superset returns to the open list with the other half still ticked.',
     ],
   },
 ];
