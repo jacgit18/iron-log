@@ -39,7 +39,7 @@ export default function FoodSearch({ onUse, text: given }: { onUse: (fill: FoodF
 
   return (
     <div className="dt-lookup">
-      {scanOn && <button type="button" className="btn sm bcbtn" id="dt-scan-barcode" onClick={scan}>Scan barcode</button>}
+      {scanOn && <button type="button" className="btn sm" id="dt-scan-barcode" onClick={scan}>Scan barcode</button>}
       {given === undefined && (
         <label className="field" htmlFor="dt-lookup-q">Look up nutrition
           <input id="dt-lookup-q" type="search" autoComplete="off" maxLength={60} value={own} onChange={e => { setText(e.target.value); setPick(null); }} />

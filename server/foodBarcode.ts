@@ -22,7 +22,7 @@ export function barcodeRoutes({ key, fetch: ask = fetch, now = Date.now }: FoodD
     const gtin = cleanGtin(req.params.gtin);
     if (!gtin) return void res.status(422).json({ ok: false, error: 'that is not a product barcode' });
     if (!key) return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'no-key' });
-    // The same daily allowance as typed search, kept per person; counted on every valid code, held answer or not.
+    // The same daily number as typed search (DAILY_MAX) but its own counter, kept per person; counted on every valid code, held answer or not. An admin can use both budgets against the shared USDA key.
     const allowed = daily.take(String(res.locals.userId), DAILY_MAX);
     if (!allowed.ok) {
       res.setHeader('Retry-After', String(allowed.retryAfterSec));
