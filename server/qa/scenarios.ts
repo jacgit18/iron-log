@@ -943,7 +943,7 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   // ---- Program on phones ----
   {
-    id: 'S-72', feature: 'Program on phones', title: 'Create a program starts at the left, and the switch shows A and B', persona: 'new-user', brief: 'feature-map', device: true,
+    id: 'S-72', feature: 'Program on phones', title: 'Create a program starts at the left, and the switch shows A and B', persona: 'new-user', brief: 'feature-map',
     steps: [
       'On a phone (or a 375 px wide window), open the Program tab.',
       'Look at the row holding Create a program and the program switch.',
