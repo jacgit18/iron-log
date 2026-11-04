@@ -3,6 +3,7 @@ import ArmedButton from '../ArmedButton.jsx';
 import Icon from '../Icon.js';
 import { videoLabel } from '../../lib/data.js';
 import { packServings } from '../../lib/dietLog.js';
+import { amountText } from '../../lib/foodUnit.js';
 import { monthKey } from '../../lib/grocery.js';
 import { addMissingMessage, ingredientName, missingParts, onToGet, pantryStatus, rankItems, suggestionPins } from '../../lib/recipePantry.js';
 import { attribution } from '../../lib/recipeDraft.js';
@@ -39,6 +40,7 @@ export default function RecipeDetail({ recipe, mine, onBack, onEdit, onAdd, onOp
         <h2 id="rc-h" tabIndex={-1}>{recipe.n}<span className="pill custom">Ready-made</span></h2>
         <AteThis recipe={recipe} mine={mine} onEdit={onEdit} />
         {packServings(recipe) !== null && <p className="note">{recipe.servings} servings per pack</p>}
+        {recipe.usual !== undefined && <p className="note">Usual: {amountText(recipe.usual, recipe)}</p>}
         {recipe.note && <p className="note">{recipe.note}</p>}
         <div className="rc-actions"><MineActions recipe={recipe} noun="food" onEdit={onEdit} onBack={onBack} /></div>
       </section>

@@ -319,7 +319,7 @@ export interface RecipeIngredient { n: string; amt?: string; home?: string; rid?
  *  after copying it (only on a recipe with a `from`). */
 /** The recipe chips the person hid and reordered (brief recipe-filter-editing). */
 export interface RecipeChips { hide?: RecipeCategory[]; order?: RecipeCategory[] }
-export interface Recipe { id: string; n: string; cat: RecipeCategory; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */
