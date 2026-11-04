@@ -74,6 +74,36 @@
   min-height: 44px;
   max-width: 100%;
 }
+.rcpill {
+  justify-self: start;
+  padding: var(--sp-2) var(--sp-8);
+  border-radius: var(--r-pill);
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.rcaddbtn,
+.rcunstage {
+  min-height: 44px;
+}
+.rcnew {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--sp-10);
+  padding: var(--sp-10);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+.rcnew .actions,
+.rcformerr {
+  grid-column: 1 / -1;
+}
+.rcnew input,
+.rcnew select {
+  min-height: 44px;
+}
 .rcqty {
   font-variant-numeric: tabular-nums;
 }

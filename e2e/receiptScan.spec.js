@@ -1,10 +1,9 @@
 import { test, expect } from './fixtures.js';
+import { photo } from './receiptHelpers.js';
 
 // Scan receipt (brief receipt-scan). The validator, the plan, the total check and the route are node tests (receipt.test.ts, groceryReceipt.test.ts, server/scan.test.ts,
 // server/scanBody.test.ts); this covers the wiring a unit test cannot: the button only for an admin, the sheet drawn from an answer, a changed match and an unticked
 // line changing what Apply does, Apply ticking items with prices and Undo putting them back, and a failure leaving the list alone. The route is stubbed: no photo leaves the test.
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-const photo = { name: 'receipt.png', mimeType: 'image/png', buffer: PNG };
 const asAdmin = page => page.addInitScript(() => localStorage.setItem('ironlog:session/admin', 'true'));
 const add = async (page, n) => { await page.fill('#groc-name', n); await page.click('#groc-add'); await expect(page.locator('#groc-name')).toHaveValue(''); };
 const setup = async page => {
