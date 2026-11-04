@@ -63,7 +63,7 @@ test('restoring the account backup brings a lost food log back on screen and int
   const a = await newPhone(browser, user);
   await a.page.clock.setSystemTime(new Date()); // the server accepts only a day near its own today
   const page = await a.open();
-  await page.locator('#chk-A-d1s1').check(); // some training data so the copy is worth keeping
+  await page.locator('#chk-A-d1s1').click(); // some training data so the copy is worth keeping
   await nutrition(page);
   await addFood(page, 'Oats', 300, 10);
   await addFood(page, 'Eggs', 160, 13);

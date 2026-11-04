@@ -1,5 +1,13 @@
 import { expect, newPhone, server, test } from './stack.js';
 
+// A ticked card folds into its day's Finished bar: open the bar and find the row (the checkbox is gone from the board).
+const expectFolded = async (page, slot, timeout = 5_000) => {
+  const bar = page.locator(`#finished-bar-${slot.match(/d(\d)/)[1]}`);
+  await expect(bar).toBeVisible({ timeout });
+  if ((await bar.getAttribute('aria-expanded')) !== 'true') await bar.click();
+  await expect(page.locator(`#fin-undo-${slot}`)).toBeVisible();
+};
+
 // Signed in, the badge opens the account menu and a row opens Settings; signed out, Settings keeps its tab.
 const goSettings = async page => {
   if (await page.locator('#tab-settings').count()) await page.locator('#tab-settings').click();
@@ -26,8 +34,8 @@ test('a ticked card and an edited session reach the server, and a second phone s
   const page = await a.open();
 
   // Two check-offs of Hack Squat give two sessions (Day 3 and Day 5 cards).
-  await page.locator('#chk-A-d3s1').check();
-  await page.locator('#chk-A-d5s3').check();
+  await page.locator('#chk-A-d3s1').click();
+  await page.locator('#chk-A-d5s3').click();
   await expect.poll(async () => (await server.entries(user)).filter(e => e.auto).length, { message: 'both check-offs reach the database' }).toBe(2);
   expect((await server.week(user, '2026-09-20')).data.done).toMatchObject({ 'A-d3s1': true, 'A-d5s3': true });
 
@@ -76,8 +84,8 @@ test('offline, a tick is kept and the app says so; back online it arrives and th
   const page = await a.open();
 
   await a.context.setOffline(true);
-  await page.locator('#chk-A-d1s1').check();
-  await expect(page.locator('#chk-A-d1s1')).toBeChecked();
+  await page.locator('#chk-A-d1s1').click();
+  await expectFolded(page, 'A-d1s1');
   const waiting = page.getByRole('status').filter({ hasText: 'waiting to sync' });
   await expect(waiting).toBeVisible({ timeout: 15_000 });
   await expect(waiting).toContainText('safe on this device');
@@ -88,7 +96,7 @@ test('offline, a tick is kept and the app says so; back online it arrives and th
   await a.context.setOffline(false);
   await page.goto('/');
   await expect(page.locator('#live-status')).not.toContainText('Loading…', { timeout: 30_000 });
-  await expect(page.locator('#chk-A-d1s1')).toBeChecked({ timeout: 30_000 });
+  await expectFolded(page, 'A-d1s1', 30_000);
 
   await expect.poll(async () => (await server.entries(user)).filter(e => e.auto).length, { timeout: 30_000 }).toBe(1);
   await expect(page.getByRole('status').filter({ hasText: 'waiting to sync' })).toHaveCount(0, { timeout: 30_000 });
@@ -102,10 +110,10 @@ test('two phones tick the same card: the server keeps one check-off and both pho
   const pageA = await a.open();
   const pageB = await b.open(); // b has pulled before a ticks, so it will not know about a's tick
 
-  await pageA.locator('#chk-A-d3s1').check();
+  await pageA.locator('#chk-A-d3s1').click();
   await expect.poll(async () => (await server.entries(user)).filter(e => e.auto).length).toBe(1);
-  await pageB.locator('#chk-A-d3s1').check();
-  await expect(pageB.locator('#chk-A-d3s1')).toBeChecked();
+  await pageB.locator('#chk-A-d3s1').click();
+  await expectFolded(pageB, 'A-d3s1');
 
   // b's tick is not a second check-off: it adopts the one that is there.
   await expect.poll(async () => (await pageB.evaluate(() => JSON.parse(localStorage.getItem('ironlog:sync/pending') || '{}'))), { timeout: 30_000 }).toEqual({});
@@ -129,13 +137,13 @@ test('two phones tick different cards of one week before either pulls: the week 
   const pageA = await a.open();
   const pageB = await b.open(); // b has pulled before a ticks, so its week is the old one
 
-  await pageA.locator('#chk-A-d1s1').check();
+  await pageA.locator('#chk-A-d1s1').click();
   await expect.poll(async () => (await server.week(user, '2026-09-20'))?.data.done ?? {}).toEqual({ 'A-d1s1': true });
-  await pageB.locator('#chk-A-d3s1').check();
+  await pageB.locator('#chk-A-d3s1').click();
   await expect.poll(() => pendingOf(pageB), { timeout: 30_000 }).toEqual({});
 
   expect((await server.week(user, '2026-09-20')).data.done).toEqual({ 'A-d1s1': true, 'A-d3s1': true });
-  await expect(pageB.locator('#chk-A-d1s1')).toBeChecked(); // shown at once, not at the next pull
+  await expectFolded(pageB, 'A-d1s1'); // shown at once, not at the next pull
   await a.close();
   await b.close();
 });
@@ -144,14 +152,15 @@ test('a card unticked on one phone stays unticked when the other phone saves the
   await server.seedPrograms(user);
   const a = await newPhone(browser, user);
   const pageA = await a.open();
-  await pageA.locator('#chk-A-d1s1').check();
+  await pageA.locator('#chk-A-d1s1').click();
   await expect.poll(async () => (await server.week(user, '2026-09-20'))?.data.done ?? {}).toEqual({ 'A-d1s1': true });
   const b = await newPhone(browser, user);
   const pageB = await b.open(); // b sees A-d1s1 ticked
 
-  await pageA.locator('#chk-A-d1s1').uncheck();
+  await pageA.locator('#finished-bar-1').click();
+  await pageA.locator('#fin-undo-A-d1s1').click(); // Untick, from the Finished bar
   await expect.poll(async () => (await server.week(user, '2026-09-20')).data.done).toEqual({});
-  await pageB.locator('#chk-A-d3s1').check();
+  await pageB.locator('#chk-A-d3s1').click();
   await expect.poll(() => pendingOf(pageB), { timeout: 30_000 }).toEqual({});
 
   expect((await server.week(user, '2026-09-20')).data.done).toEqual({ 'A-d3s1': true });
@@ -163,7 +172,7 @@ test('a user sees only their own data', async ({ browser, user }) => {
   await server.seedPrograms(user); await server.seedPrograms(`${user}-other`);
   const mine = await newPhone(browser, user);
   const page = await mine.open();
-  await page.locator('#chk-A-d1s1').check();
+  await page.locator('#chk-A-d1s1').click();
   await expect.poll(async () => (await server.entries(user)).length).toBe(1);
 
   const other = await newPhone(browser, `${user}-other`);
@@ -278,10 +287,10 @@ test('erasing everything from one phone empties the database, and the other phon
   const a = await newPhone(browser, user);
   const b = await newPhone(browser, user);
   const first = await a.open();
-  await first.locator('#chk-A-d1s1').check();
+  await first.locator('#chk-A-d1s1').click();
   await expect.poll(async () => (await server.counts(user)).entries).toBe(1);
   const second = await b.open();
-  await expect(second.locator('#chk-A-d1s1')).toBeChecked(); // the other phone has it
+  await expectFolded(second, 'A-d1s1'); // the other phone has it
 
   await goSettings(first);
   const panel = first.getByRole('region', { name: 'Delete my data' });
