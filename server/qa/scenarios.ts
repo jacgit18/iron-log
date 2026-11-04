@@ -758,6 +758,8 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The stepper reads "2 loaves", then "1.5 loaves", then "1 loaf".',
       'Saving 2.3 says the amount must be from 0.5 to 99 in half steps; "4 eggs" as a unit says it must be 1 to 20 letters; with all three boxes cleared the food opens at "1 portion" again.',
+    ],
+  },
   {
     id: 'S-57', feature: 'Receipt scan', title: 'Add an unmatched receipt line to the list', persona: 'grocery-shopper', brief: 'receipt-add-item', device: true,
     steps: [
