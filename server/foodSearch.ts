@@ -6,13 +6,13 @@ import { cleanQuery, mergeFoods, parseFoods, type FoodHit } from '../src/shared/
 // API key never reaches a phone, and answers with the few numbers a diet entry needs (src/shared/foods.ts). Nothing is stored: the answers are
 // held in this instance's memory for an hour so a repeat does not spend the shared key's allowance (about 1,000 calls an hour per address).
 
-const USDA_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
+export const USDA_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search'; // also asked by the barcode lookup (foodBarcode.ts)
 // Two asks, so plain foods ("Eggs, Grade A, Large, egg whole") come before store products: with one ask for everything, "egg" listed a Snickers egg first.
 const GENERIC_TYPES = 'Foundation,SR Legacy';
 const BRANDED_TYPE = 'Branded';
 const ASK_FOR = 25; // asked for more than shown: some foods have no calories or protein and are dropped
-const TIMEOUT_MS = 5000;
-const HOLD_MS = 60 * 60_000;
+export const TIMEOUT_MS = 5000;
+export const HOLD_MS = 60 * 60_000;
 const HOLD_MAX = 500;
 export const DAILY_MAX = 200;
 
