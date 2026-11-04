@@ -44,6 +44,16 @@ test('every day lists both programs, the counts add up, and a status filter hide
   expect(await count(body, 'All')).toBe(all); // a filter never changes the counts
 });
 
+test('changing the day clears the phase filter, so a pressed chip always shows', async ({ page }) => {
+  const body = await open(page);
+  const phases = body.getByRole('group', { name: 'Phase' }).getByRole('button');
+  await phases.nth(1).click();
+  await expect(phases.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('.cmpdays button').nth(3).click();
+  await expect(phases.first()).toHaveText('Any phase');
+  await expect(phases.first()).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('a saved copy on the other side compares as the same, and the same program twice says so', async ({ page }) => {
   await page.click('#tab-program');
   await page.locator('#lib-name').fill('Compare copy');

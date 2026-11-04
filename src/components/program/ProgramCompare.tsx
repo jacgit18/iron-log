@@ -1,6 +1,7 @@
 import type { LibraryItem, PhaseKey, Program } from '../../types.ts';
 import { useId, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore.js';
+import Icon from '../Icon.jsx';
 import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { DAYS, progName } from '../../lib/logic.js';
 import { splitLibrary } from '../../lib/programArchive.js';
@@ -106,7 +107,7 @@ function Panel() {
           <div className="cmpdays" role="group" aria-label="Compare day">
             {DAYS.slice(0, days.length).map(d => {
               const n = countRows(days[d - 1] ?? []).diff;
-              return <button type="button" key={d} className="btn sm cmpday" aria-pressed={d === day} onClick={() => setDay(d)}>Day {d}<small>{n ? ` · ${n} differ` : ''}</small></button>;
+              return <button type="button" key={d} className="btn sm cmpday" aria-pressed={d === day} onClick={() => { setDay(d); setPhase(null); }}>Day {d}<small>{n ? ` · ${n} differ` : ''}</small></button>;
             })}
           </div>
           <div className="cmpchips" role="group" aria-label="Show rows">
@@ -136,7 +137,7 @@ export default function ProgramCompare() {
   return (
     <section className="panel cmppanel">
       <h2 className="cmphead">
-        <button type="button" className="cmptoggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen(o => !o)}>Compare programs</button>
+        <button type="button" className="cmptoggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen(o => !o)}>Compare programs<span className="cmpchev" aria-hidden="true"><Icon name="chevron-down" /></span></button>
       </h2>
       <div id={id} hidden={!open}>{open && <Panel />}</div>
     </section>

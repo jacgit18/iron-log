@@ -21,12 +21,13 @@
   text-align: left;
   padding: 0;
 }
-.cmptoggle::after {
-  content: "▸";
+.cmpchev {
+  display: inline-flex;
   color: var(--muted);
+  transform: rotate(-90deg);
 }
-.cmptoggle[aria-expanded="true"]::after {
-  content: "▾";
+.cmptoggle[aria-expanded="true"] .cmpchev {
+  transform: none;
 }
 .cmpbody {
   display: flex;
