@@ -29,13 +29,14 @@ export type ScenarioFeature =
   | 'kg beside lb'
   | 'Label scan'
   | 'Whole pack'
-  | 'Receipt scan';
+  | 'Receipt scan'
+  | 'Usual amount';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount',
 ];
 
 export interface Scenario {
@@ -734,8 +735,31 @@ export const SCENARIOS: readonly Scenario[] = [
       'A cut-off receipt shows the missing amount in the Total check but still lets you Apply; a non-admin account sees no Scan receipt button.',
     ],
   },
+  // ---- Usual amount ----
   {
-    id: 'S-55', feature: 'Receipt scan', title: 'Add an unmatched receipt line to the list', persona: 'grocery-shopper', brief: 'receipt-add-item', device: true,
+    id: 'S-55', feature: 'Usual amount', title: 'Log 4 eggs in two taps', persona: 'diet-on-target', brief: 'usual-amount-and-unit',
+    steps: [
+      'On Recipes press New ready-made food, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
+      'Look at the food\'s page: the Usual line, the Per line and the stepper. Press More once, then Less once.',
+      'Press Ate this, look at today\'s Diet log, then press Undo.',
+    ],
+    expected: [
+      'The page says "Usual: 4 eggs", "Per egg: 72 kcal · 6 g protein" and the stepper opens at "4 eggs"; More shows "4.5 eggs".',
+      'Ate this says "Logged 4 eggs of Egg (large) to today." and adds 288 calories to the day; Undo removes it. A food saved with neither box still opens at "1 portion".',
+    ],
+  },
+  {
+    id: 'S-56', feature: 'Usual amount', title: 'An odd plural, and a wrong amount is refused', persona: 'diet-fresh', brief: 'usual-amount-and-unit', edge: true,
+    steps: [
+      'Make a ready-made food Bread with Usual amount 2, One serving is called loaf and Plural loaves; open it and press Less twice.',
+      'Edit it and type 2.3 in Usual amount, then 4 eggs in One serving is called, pressing Save food each time.',
+      'Clear all three boxes, save, and open the food again.',
+    ],
+    expected: [
+      'The stepper reads "2 loaves", then "1.5 loaves", then "1 loaf".',
+      'Saving 2.3 says the amount must be from 0.5 to 99 in half steps; "4 eggs" as a unit says it must be 1 to 20 letters; with all three boxes cleared the food opens at "1 portion" again.',
+  {
+    id: 'S-57', feature: 'Receipt scan', title: 'Add an unmatched receipt line to the list', persona: 'grocery-shopper', brief: 'receipt-add-item', device: true,
     steps: [
       'On a phone as an admin, scan a BJ\'s receipt that has a line your list does not have (for example a soda).',
       'On that line press Add to list. Check the name, store, count and price the form filled in, then press Add item.',
@@ -747,7 +771,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-56', feature: 'Receipt scan', title: 'Cancel, remove or repeat a new item', persona: 'grocery-shopper', brief: 'receipt-add-item', edge: true, device: true,
+    id: 'S-58', feature: 'Receipt scan', title: 'Cancel, remove or repeat a new item', persona: 'grocery-shopper', brief: 'receipt-add-item', edge: true, device: true,
     steps: [
       'On a phone as an admin, on the receipt sheet press Add to list on a line, then Not now. Add it again, press Remove on the row, add it again and press Cancel on the sheet.',
       'Press Add to list on a line and type the name of an item that is already in that store (such as Eggs), then press Add item. Empty the name and press Add item.',
@@ -758,6 +782,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
 ];
+
 
 
 

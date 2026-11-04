@@ -37,6 +37,13 @@ export function normRecipeChips(v: unknown): RecipeChips | null {
 }
 
 const cleanCategory = (v: unknown): RecipeCategory => RECIPE_CATEGORIES.find(c => c === v) ?? 'other';
+/** A unit name or plural for a ready-made food (brief usual-amount-and-unit): letters first, then letters, spaces, hyphens or apostrophes, 1 to MAX_UNIT characters. */
+export const MAX_UNIT = 20;
+export const UNIT_RE = /^\p{L}[\p{L} '-]*$/u;
+export const isUnit = (s: string): boolean => s.length >= 1 && s.length <= MAX_UNIT && UNIT_RE.test(s);
+/** A usual amount of a ready-made food: 0.5 to 99 in half steps, and not 1 (that is what Ate this opens at anyway). */
+export const cleanUsual = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= 0.5 && v <= 99 && v !== 1 && Math.round(v * 2) === v * 2 ? v : null);
+
 const cleanWhole = (v: unknown, max: number): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= max ? v : null);
 
 /** One ingredient line, or null when it has no name. */
@@ -60,9 +67,12 @@ export function normRecipe(x: unknown): Recipe | null {
   const note = str(o.note, MAX_NOTE), from = str(o.from, MAX_FROM);
   const urlText = typeof o.url === 'string' ? o.url.trim() : '', url = urlText.length <= MAX_URL && /^https?:\/\/\S+$/i.test(urlText) ? urlText : ''; // only a web link, cut never (a cut address would not open): a script or file address never becomes a link
   const library = from.startsWith('c:');
+  const ready = cleanCategory(o.cat) === 'ready'; // a usual amount and a unit name belong to a ready-made food only
+  const usual = ready ? cleanUsual(o.usual) : null, unitText = ready ? str(o.unit, MAX_UNIT) : '', unit = isUnit(unitText) ? unitText : '';
+  const pluralText = unit ? str(o.plural, MAX_UNIT) : '', plural = isUnit(pluralText) ? pluralText : '';
   const tags = normTags(o.tags);
   const kcal = cleanKcal(o.kcal), p = cleanProtein(o.p), c = cleanGrams(o.c), f = cleanGrams(o.f); // calories, protein, carbs and fat (g) per serving, typed by the person (ADR 086)
-  return { id, n, cat: cleanCategory(o.cat), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
+  return { id, n, cat: cleanCategory(o.cat), ...(tags.length ? { tags } : {}), ing, steps, ...(servings ? { servings } : {}), ...(serving ? { serving } : {}), ...(servingG ? { servingG } : {}), ...(minutes ? { minutes } : {}), ...(kcal !== null ? { kcal } : {}), ...(p !== null ? { p } : {}), ...(c !== null ? { c } : {}), ...(f !== null ? { f } : {}), ...(note ? { note } : {}), ...(url ? { url } : {}), ...(usual !== null ? { usual } : {}), ...(unit ? { unit } : {}), ...(plural ? { plural } : {}), ...(library ? { from } : {}), ...(library && o.edited === true ? { edited: true as const } : {}) };
 }
 
 /** Whether `v` is a recipe exactly as the app writes one (the API refuses anything else). */
