@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { addedText, applyPlan, checkText, createStaged, isStaged, matchStore, netOf, planReceipt, proposeItem, remapPlan, restoreSnapshot, stageDraft, takeSnapshot, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
+import { addedText, applyPlan, checkText, createStaged, isStaged, matchStore, movedText, moveNote, movesText, netOf, planReceipt, proposeItem, remapPlan, restoreSnapshot, stageDraft, takeSnapshot, type Choice, type ItemDraft, type Staged } from '../../lib/groceryReceipt.js';
 import { money, monthLabel } from '../../lib/grocery.js';
 import { keepMeta, type KeepMeta } from '../../lib/receiptsClient.js';
 import type { Receipt } from '../../shared/receipt.js';
@@ -23,12 +23,14 @@ export default function ReceiptSheet() {
   const [keep, setKeep] = useState(false); // off for every receipt: nothing is uploaded unless this is ticked and Apply is pressed
   const [choices, setChoices] = useState<Choice[]>(() => (receipt?.lines ?? []).map(l => ({ itemId: l.matchId, include: !!l.matchId })));
   const [pickedStore, setPickedStore] = useState('');
+  const [usual, setUsual] = useState(false); // brief receipt-bought-at: off for every receipt; ticked, Apply also makes the receipt's store the items' usual store
+  const monthLines = useAppStore(s => s.groceryMonths[mk]?.lines);
   const [staged, setStaged] = useState<Staged[]>([]);
   const [form, setForm] = useState<{ line: number; draft: ItemDraft; error: string } | null>(null); // one form open at a time
   const seq = useRef(0);
   const known = receipt ? matchStore(receipt.store, g.stores) : null;
   const taxStore = known ?? (pickedStore || null);
-  const plan = useMemo(() => (receipt ? planReceipt(receipt, choices, g.items, taxStore, staged) : null), [receipt, choices, g.items, taxStore, staged]);
+  const plan = useMemo(() => (receipt ? planReceipt(receipt, choices, g.items, taxStore, staged, { at: taxStore, makeUsual: usual, g, lines: monthLines ?? {} }) : null), [receipt, choices, g, taxStore, staged, usual, monthLines]);
   if (!receipt || !plan) return null;
 
   const check = checkText(plan.check);
@@ -56,12 +58,15 @@ export default function ReceiptSheet() {
     const st = useAppStore.getState(); // read after the items were made
     const month = st.groceryMonths[mk];
     const snap = takeSnapshot(real, mk, month?.lines ?? {}, st.grocery.items, month?.tax, made.created.map(x => made.ids[x.id]!));
-    const done = applyPlan(real, mk, st);
+    const out = { refused: [] as string[] };
+    const done = applyPlan(real, mk, st, out);
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
-    if (done > 0 || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${addedText(made.created, made.refused)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
+    if (done > 0 || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${addedText(made.created, made.refused)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
   };
   const nothing = plan.steps.length === 0;
+  const moved = (id: string | null) => (id ? plan.moves.find(m => m.id === id) : undefined);
+  const words = movesText(plan.moves);
   return (
     <Sheet className="rcsheet">
       <h2 className="cond">Receipt</h2>
@@ -71,10 +76,10 @@ export default function ReceiptSheet() {
         <span>Applies to <b>{monthLabel(mk)}</b></span>
       </p>
       {dateMonth && dateMonth !== mk && <p className="note rcwarn" role="status">This receipt is dated {monthLabel(dateMonth)}, but you are on {monthLabel(mk)}. Close this sheet and change the month first if that is not what you want.</p>}
-      {!known && (receipt.taxCents ?? 0) > 0 && (
-        <label className="field" htmlFor="rc-store">Store for the tax {receipt.store ? `("${receipt.store}" is not on your list)` : ''}
+      {!known && receipt.lines.length > 0 && (
+        <label className="field" htmlFor="rc-store">Store for this receipt {receipt.store ? `("${receipt.store}" is not on your list)` : ''}
           <select id="rc-store" value={pickedStore} onChange={e => setPickedStore(e.target.value)}>
-            <option value="">Do not set the tax</option>
+            <option value="">Do not set the store or the tax</option>
             {g.stores.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
@@ -103,6 +108,7 @@ export default function ReceiptSheet() {
               <span className="rcqty">{l.qty}{l.unit ? ` ${l.unit}` : ''}</span>
               <span className="rcnet">{l.discountCents > 0 && <s>{money(l.grossCents)}</s>}{money(netOf(l))}</span>
               {plan.notes[i] && <span className="note rcwarn rcnote">{plan.notes[i]}</span>}
+              {!off && moved(c.itemId) && <span className="note rcnote rcatnote">{moveNote(moved(c.itemId)!)}</span>}
               {form?.line === i && (
                 <div className="rcnew" role="group" aria-label={`Add to your list: ${l.text}`}>
                   <label className="field">Name<input id="rc-new-name" value={form.draft.n} maxLength={80} onChange={e => setDraft({ n: e.target.value })} /></label>
@@ -125,6 +131,16 @@ export default function ReceiptSheet() {
           );
         })}
       </ul>
+      {words.summary && (
+        <div className="rcbought">
+          <p className="note" role="status">{words.summary}</p>
+          {words.split && <p className="note rcwarn" role="status">{words.split}</p>}
+          <label className="rckeep" htmlFor="rc-usual">
+            <input id="rc-usual" type="checkbox" checked={usual} onChange={e => setUsual(e.target.checked)} />
+            <span>Also make {plan.moves[0]!.to} the usual store for these items<small>Changes where they are listed on At home. Undo puts it back.</small></span>
+          </label>
+        </div>
+      )}
       <p className="note">Existing prices on the ticked items are replaced. Lines that are not on your list are skipped and count only in the total check, unless you add them with Add to list.</p>
       <div className="rcfoot">
         {canKeep && (

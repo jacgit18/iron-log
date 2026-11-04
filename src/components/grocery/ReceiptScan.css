@@ -175,4 +175,12 @@
     grid-column: 2;
   }
 }
+.rcbought {
+  display: grid;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+}
+.rcbought .rckeep {
+  margin: 0;
+}
 }

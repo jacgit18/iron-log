@@ -38,13 +38,14 @@ export type ScenarioFeature =
   | 'Polish pass'
   | 'Program on phones'
   | 'Stale page guard'
-  | 'Barcode scan';
+  | 'Barcode scan'
+  | 'Receipt store';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Receipt store',
 ];
 
 export interface Scenario {
@@ -994,6 +995,46 @@ export const SCENARIOS: readonly Scenario[] = [
       'The sheet says the barcode is not in the food database and to type the name instead; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
       'With the camera blocked the sheet says it is not available and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
       'The non-admin account sees no Scan barcode button.',
+    ],
+  },
+  // ---- Receipt store ----
+  {
+    id: 'S-76', feature: 'Receipt store', title: 'A scanned receipt marks the items as bought at its store', persona: 'grocery-shopper', brief: 'receipt-bought-at', device: true,
+    steps: [
+      'On a phone, sign in as an admin account (Grocery shopper has Costco, Trader Joe\'s, Farmers market and Corner shop). On Groceries, At home, make sure a few items you also bought on your receipt are listed under other stores or Anywhere (add them with Edit if needed).',
+      'On To get press Scan receipt and photograph a Costco receipt (or choose a saved photo of one; any store that is on your list works).',
+      'In the sheet read the rows and the line under the list, then press Apply.',
+      'Open To get and At home, then press Undo on the notice.',
+    ],
+    expected: [
+      'Every ticked item that is not already at the receipt\'s store says "Bought at Costco (usually ...)" and a line says how many items will be marked bought at Costco this month; nothing is saved before Apply.',
+      'After Apply To get shows those items under Costco, ticked and priced, the store\'s bill and tax follow, and At home still lists each item under its old store.',
+      'Undo puts every item back to its old store and unticks it.',
+    ],
+  },
+  {
+    id: 'S-77', feature: 'Receipt store', title: 'Make the receipt\'s store the usual store, and a name already there is refused', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
+    steps: [
+      'As an admin, add an item named Oats to Costco on At home (Edit), and make sure another item named Oats is under Trader Joe\'s.',
+      'Scan a Costco receipt that has an oats line matched to the Trader Joe\'s Oats, and a second item matched to something under another store.',
+      'In the sheet tick "Also make Costco the usual store for these items" and press Apply.',
+      'Look at the notice and At home, then press Undo.',
+    ],
+    expected: [
+      'The second item moves to Costco on At home; the Trader Joe\'s Oats stays under Trader Joe\'s (an Oats is already at Costco) but is still bought at Costco this month, and the notice says "except Oats" with the reason.',
+      'Undo restores the usual store of the item that moved, and both lines go back to unticked.',
+    ],
+  },
+  {
+    id: 'S-78', feature: 'Receipt store', title: 'A store that is not on the list, and moving between sharing groups', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
+    steps: [
+      'As an admin scan a receipt from a store that is not on your list (for example Walmart).',
+      'Check the sheet: no row says Bought at, and "Store for this receipt" is set to Do not set the store or the tax. Pick Costco in it.',
+      'Close the sheet. On At home > Edit > Sharing, make a group that splits with one person and give it Costco only; scan the receipt again with Costco picked and look under the list.',
+    ],
+    expected: [
+      'With no store picked nothing moves and no row says Bought at; picking Costco adds the Bought at notes and the "will be marked bought at Costco" line.',
+      'When the items\' old store has no sharing group and Costco has one, a warning says moving them changes who shares them; items with a split of their own are not counted in it.',
     ],
   },
 ];
