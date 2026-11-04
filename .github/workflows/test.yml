@@ -75,7 +75,9 @@ jobs:
           for i in $(seq 1 30); do curl -fs http://127.0.0.1:8080/api/health && break; sleep 1; done
           curl -fsS http://127.0.0.1:8080/api/health
           curl -fsS -o /dev/null http://127.0.0.1:8080/
-          curl -fsS -o /dev/null http://127.0.0.1:8080/some/page
+          curl -fsS -o /dev/null http://127.0.0.1:8080/plans
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/some/page)" = 404
+          curl -s http://127.0.0.1:8080/some/page | grep -q 'Page not found'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/assets/missing-1.js)" = 404
           docker exec app id -u | grep -vx 0
       - name: Show the container log

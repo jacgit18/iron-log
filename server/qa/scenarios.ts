@@ -38,13 +38,14 @@ export type ScenarioFeature =
   | 'Polish pass'
   | 'Program on phones'
   | 'Stale page guard'
-  | 'Barcode scan';
+  | 'Barcode scan'
+  | 'Custom 404';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404',
 ];
 
 export interface Scenario {
@@ -994,6 +995,39 @@ export const SCENARIOS: readonly Scenario[] = [
       'The sheet says the barcode is not in the food database and to type the name instead; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
       'With the camera blocked the sheet says it is not available and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
       'The non-admin account sees no Scan barcode button.',
+    ],
+  },
+  {
+    id: 'S-76', feature: 'Custom 404', title: 'A wrong page address shows the Page not found page', persona: 'new-user', brief: 'custom-404',
+    steps: [
+      'In a browser, signed out, open the app address followed by /zzz (for example qa.loadbearer.app/zzz).',
+      'Tap Go to Loadbearer. Then sign in and open /zzz again.',
+    ],
+    expected: [
+      'A plain Page not found page with the line "That address does not exist." appears, light or dark to match the device, and it does not repeat the address you typed.',
+      'Go to Loadbearer opens the landing page when signed out and the app when signed in. The page looks the same signed in and out.',
+    ],
+  },
+  {
+    id: 'S-77', feature: 'Custom 404', title: 'An installed app still opens, and a wrong address reaches the 404 page', persona: 'new-user', brief: 'custom-404', device: true, edge: true,
+    steps: [
+      'On a phone with the app installed and opened at least once, open the browser and type the app address followed by /zzz.',
+      'Open the installed app from the home screen, then turn on airplane mode and open it again.',
+    ],
+    expected: [
+      'The first step shows the Page not found page, not the app.',
+      'The installed app opens normally, online and offline, on its home screen address and on /plans.',
+    ],
+  },
+  {
+    id: 'S-78', feature: 'Custom 404', title: 'Real pages, files and in-app addresses are not affected', persona: 'new-user', brief: 'custom-404', edge: true,
+    steps: [
+      'Open /plans, /delete-account and /privacy.html.',
+      'Open /assets/old.js, and then the app with #/progress/zzz after the address.',
+    ],
+    expected: [
+      'The first three open as they did before. /privacy without .html shows Page not found.',
+      '/assets/old.js shows a blank not found answer, not a page. #/progress/zzz opens Progress.',
     ],
   },
 ];
