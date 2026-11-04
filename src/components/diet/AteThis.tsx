@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NO_NUTRITION } from '../../lib/recipeNutrition.js';
 import { ateDayError, ateMax, entryText, hasMacros, oldestDay, packServings, servingNumbers } from '../../lib/dietLog.js';
+import { amountText, unitWord, usualStart } from '../../lib/foodUnit.js';
 import { ymd } from '../../shared/dates.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
@@ -9,7 +10,7 @@ import './Diet.css';
 
 // "Ate this" on a recipe (ADR 086): logs the recipe's calories and protein per serving to a day (today unless the Day field is changed), as a snapshot. Only your own recipes with both numbers.
 export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine: boolean; onEdit: () => void }) {
-  const [servings, setServings] = useState(1);
+  const [servings, setServings] = useState(() => usualStart(recipe)); // the usual amount of a ready-made food (brief usual-amount-and-unit), else 1
   const [done, setDone] = useState<{ id: string; text: string } | null>(null);
   const [err, setErr] = useState('');
   const today = ymd(useToday(s => s.today)); // the shared "today" (it moves at midnight), not a Date read during render
@@ -26,17 +27,17 @@ export default function AteThis({ recipe, mine, onEdit }: { recipe: Recipe; mine
     if (bad) { setErr(bad); return; }
     const r = useAppStore.getState().addDietEntry({ d: day, n: recipe.n, kcal: nums.kcal, p: nums.p, ...(nums.c !== undefined ? { c: nums.c } : {}), ...(nums.f !== undefined ? { f: nums.f } : {}), from: recipe.id });
     if (r.error || !r.id) { setErr(r.error ?? 'Couldn’t log that.'); return; }
-    setErr(''); setDone({ id: r.id, text: `Logged ${servings === 1 ? '1 portion' : `${servings} portions`} of ${recipe.n} to ${day === today ? 'today' : day}.` });
+    setErr(''); setDone({ id: r.id, text: `Logged ${amountText(servings, recipe)} of ${recipe.n} to ${day === today ? 'today' : day}.` });
   };
   return (
     <div>
-      <p className="note">Per portion: {entryText({ kcal: recipe.kcal!, p: recipe.p!, c: recipe.c, f: recipe.f })}</p>
+      <p className="note">Per {unitWord(1, recipe)}: {entryText({ kcal: recipe.kcal!, p: recipe.p!, c: recipe.c, f: recipe.f })}</p>
       <label className="field" htmlFor="dt-ate-day">Day
         <input id="dt-ate-day" type="date" value={day} min={oldestDay(today)} max={today} onChange={e => { setDay(e.target.value); setErr(''); setDone(null); }} />
       </label>
       <div className="dt-ate">
         <button type="button" className="btn sm" disabled={servings <= 0.5} onClick={() => setServings(s => Math.max(0.5, s - 0.5))}>Less</button>
-        <span role="status">{servings} {servings === 1 ? 'portion' : 'portions'}</span>
+        <span role="status">{amountText(servings, recipe)}</span>
         <button type="button" className="btn sm" disabled={servings >= max} onClick={() => setServings(s => Math.min(max, s + 0.5))}>More</button>
         {pack !== null && pack <= max && <button type="button" className="btn sm" disabled={servings === pack} onClick={() => setServings(pack)}>Whole pack ({pack})</button>}
         <button type="button" className="btn primary" onClick={log}>Ate this</button>

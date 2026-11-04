@@ -22,6 +22,9 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
   const [fat, setFat] = useState(str(recipe?.f));
   const [note, setNote] = useState(recipe?.note ?? '');
   const [pack, setPack] = useState(str(recipe?.servings));
+  const [usual, setUsual] = useState(str(recipe?.usual)); // brief usual-amount-and-unit: how many Ate this opens at, and what one serving is called
+  const [unit, setUnit] = useState(recipe?.unit ?? '');
+  const [plural, setPlural] = useState(recipe?.plural ?? '');
   const [err, setErr] = useState('');
   const canScan = useFeature('scan') && !recipe;
   const [scanning, setScanning] = useState(false);
@@ -50,7 +53,7 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
     setScanNote(plan.message);
   };
   const save = () => {
-    const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat, pack });
+    const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat, pack, usual, unit, plural });
     if ('error' in v) { setErr(v.error); return; }
     const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat: 'ready', ing: [], steps: [], ...v, note });
     if (e) { setErr(e); return; }
@@ -88,6 +91,18 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
         <input inputMode="numeric" value={pack} onChange={e => { setPack(e.target.value); setErr(''); }} aria-describedby="rc-pack-help" />
       </label>
       <p id="rc-pack-help" className="note">Lets Ate this log the whole pack in one step.</p>
+      <label>Usual amount, optional
+        <input inputMode="decimal" value={usual} onChange={e => { setUsual(e.target.value); setErr(''); }} aria-describedby="rc-usual-help" />
+      </label>
+      <label>One serving is called, optional
+        <input value={unit} maxLength={20} onChange={e => { setUnit(e.target.value); if (!e.target.value.trim()) setPlural(''); setErr(''); }} /* a plural with no unit is hidden, so it is cleared with it */ autoComplete="off" aria-describedby="rc-usual-help" />
+      </label>
+      {unit.trim() && (
+        <label>Plural, only if adding s is wrong
+          <input value={plural} maxLength={20} onChange={e => { setPlural(e.target.value); setErr(''); }} autoComplete="off" />
+        </label>
+      )}
+      <p id="rc-usual-help" className="note">Ate this opens at your usual amount and reads in your word: 4 and egg give "4 eggs".</p>
       <label>Note
         <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
       </label>

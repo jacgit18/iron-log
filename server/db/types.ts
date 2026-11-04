@@ -196,6 +196,19 @@ export interface PushSubscription {
   user_id: Int8;
 }
 
+export interface Receipts {
+  data: Buffer;
+  id: Generated<Int8>;
+  month: string;
+  note: Generated<string>;
+  receipt_date: string | null;
+  saved_at: Generated<Timestamp>;
+  size_bytes: number;
+  store: Generated<string>;
+  total_cents: number | null;
+  user_id: Int8;
+}
+
 export interface RefusedWrites {
   client_id: string | null;
   client_version: string | null;
@@ -303,6 +316,7 @@ export interface DB {
   log_entries: LogEntries;
   programs: Programs;
   push_subscription: PushSubscription;
+  receipts: Receipts;
   refused_writes: RefusedWrites;
   row_history: RowHistory;
   stretch_weeks: StretchWeeks;

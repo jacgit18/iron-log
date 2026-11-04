@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GroceryItem, GroceryLine } from '../types.ts';
 import type { Receipt } from '../shared/receipt.js';
-import { applyPlan, checkText, checkTotals, convertWeight, matchStore, planReceipt, restoreSnapshot, splitCents, takeSnapshot, type Choice, type GroceryApi } from './groceryReceipt.js';
+import { addedText, applyPlan, checkText, checkTotals, convertWeight, createStaged, matchStore, planReceipt, proposeItem, remapPlan, restoreSnapshot, splitCents, stageDraft, takeSnapshot, tidyName, type Choice, type GroceryApi, type Staged } from './groceryReceipt.js';
 
 const item = (id: string, n: string, extra: Partial<GroceryItem> = {}): GroceryItem => ({ id, n, store: "BJ's", qty: 1, cents: null, every: true, out: false, ...extra });
 const items = [item('chicken', 'Chicken breast', { unit: 'lb' }), item('oil', 'Kirkland olive oil'), item('eggs', 'Eggs'), item('bananas', 'Bananas', { unit: 'lb' }), item('towels', 'Paper towels'), item('milk', 'Milk', { store: 'Aldi' })];
@@ -136,6 +136,7 @@ describe('applyPlan and restoreSnapshot', () => {
       setGroceryTax: (m, s, c) => { calls.push(`tax ${s} ${c}`); },
       restoreGroceryLine: (m, id, l) => { calls.push(`restore ${id} ${JSON.stringify(l)}`); },
       updateGroceryItem: (id, patch) => { calls.push(`usual ${id} ${JSON.stringify(patch)}`); return null; },
+      removeGroceryItem: (id, opts) => { calls.push(`remove ${id} ${opts?.quiet ? 'quiet' : 'loud'}`); },
     };
     return { api, calls };
   };
@@ -159,5 +160,107 @@ describe('applyPlan and restoreSnapshot', () => {
     const { api, calls } = makeApi();
     restoreSnapshot(snap, api);
     expect(calls).toEqual(['restore eggs {"got":true,"qty":1,"cents":1100}', 'restore oil null', 'usual eggs {"qty":1,"cents":1100}', 'usual oil {"qty":2,"cents":null}', "tax BJ's 150"]);
+  });
+});
+
+describe('proposeItem and tidyName', () => {
+  const line = (p: Partial<Receipt['lines'][number]> = {}) => ({ text: 'ZEVIA SODA 12PK', qty: 1, grossCents: 899, discountCents: 0, matchId: null, ...p });
+  it('tidies the case and spaces and caps the name at 80 characters', () => {
+    expect(tidyName('ZEVIA   SODA 12PK ')).toBe('Zevia soda 12pk');
+    expect(tidyName('X'.repeat(120))).toHaveLength(80);
+    expect(tidyName('')).toBe('');
+  });
+  it('fills a plain count line with the receipt store when it is on the list', () => {
+    expect(proposeItem(line(), 'BJS WHOLESALE CLUB', ["BJ's", 'Aldi'])).toEqual({ n: 'Zevia soda 12pk', store: "BJ's", qty: '1', price: '8.99', unit: '' });
+  });
+  it('uses the picked store, or Anywhere, when the receipt store is not on the list', () => {
+    expect(proposeItem(line(), 'SAMS CLUB', ["BJ's"], 'Aldi').store).toBe('Aldi');
+    expect(proposeItem(line(), 'SAMS CLUB', ["BJ's"]).store).toBe('');
+  });
+  it('counts a discount and divides by the count for the price per unit', () => {
+    expect(proposeItem(line({ qty: 2, grossCents: 2000, discountCents: 400 }), undefined, []).price).toBe('8.00');
+  });
+  it('gives a weighed line its weight and unit, with the price per unit', () => {
+    expect(proposeItem(line({ text: 'GRAPES', qty: 2.5, unit: 'lb', grossCents: 1000 }), undefined, [])).toMatchObject({ qty: '2.5', unit: 'lb', price: '4.00' });
+  });
+  it('copes with odd text and a zero quantity', () => {
+    expect(proposeItem(line({ text: '   ', qty: 0 }), undefined, [])).toMatchObject({ n: '', qty: '1' });
+  });
+});
+
+describe('stageDraft', () => {
+  const draft = { n: 'Zevia soda 12pk', store: "BJ's", qty: '1', price: '8.99', unit: '' as const };
+  it('stages a good draft with cents and a count', () => {
+    expect(stageDraft(draft, items, [], 'new:1')).toEqual({ ok: true, item: { id: 'new:1', n: 'Zevia soda 12pk', store: "BJ's", qty: 1, cents: 899 } });
+    expect(stageDraft({ ...draft, price: '', unit: 'lb' }, items, [], 'new:1')).toMatchObject({ ok: true, item: { cents: null, unit: 'lb' } });
+  });
+  it('says what is wrong in plain words and stages nothing', () => {
+    const err = (d: Partial<typeof draft>, staged: Staged[] = [], list = items) => { const r = stageDraft({ ...draft, ...d }, list, staged, 'new:9'); return r.ok ? null : r.error; };
+    expect(err({ n: '   ' })).toBe('Give the item a name.');
+    expect(err({ qty: 'lots' })).toBe('The count must be a number from 0.01 to 999.');
+    expect(err({ qty: '0' })).toBe('The count must be a number from 0.01 to 999.');
+    expect(err({ price: '3,49' })).toBe('The price must be dollars, like 3.49.');
+    expect(err({ n: 'eggs' })).toContain('already in this store');
+    expect(err({ n: 'eggs', store: 'Aldi' })).toBeNull(); // another store is allowed
+    expect(err({}, [{ id: 'new:1', n: 'ZEVIA soda 12pk', store: "bj's", qty: 1, cents: null }])).toContain('Pick it in the list');
+    expect(err({}, [], Array.from({ length: 500 }, (_, i) => item(`i${i}`, `Item ${i}`)))).toContain('list is full');
+  });
+});
+
+describe('staged items in the plan', () => {
+  const zevia: Staged = { id: 'new:1', n: 'Zevia soda 12pk', store: "BJ's", qty: 1, cents: 899 };
+  const withZevia = receipt.lines.map((l, i) => (i === 5 ? { itemId: 'new:1', include: true } : matched[i]!));
+  it('plans a staged item like a matched one and counts it', () => {
+    const p = planReceipt(receipt, withZevia, items, "BJ's", [zevia]);
+    expect(p.steps).toContainEqual({ kind: 'single', id: 'new:1', qty: 1, cents: 899 });
+    expect(p.items).toBe(6);
+    expect(p.itemsCents).toBe(8668 + 899);
+  });
+  it('sums two lines for one staged item', () => {
+    const r: Receipt = { lines: [{ text: 'ZEVIA A', qty: 1, grossCents: 899, discountCents: 0, matchId: null }, { text: 'ZEVIA B', qty: 1, grossCents: 799, discountCents: 0, matchId: null }] };
+    const p = planReceipt(r, [{ itemId: 'new:1', include: true }, { itemId: 'new:1', include: true }], items, null, [zevia]);
+    expect(p.steps).toEqual([{ kind: 'prices', id: 'new:1', prices: [899, 799] }]);
+  });
+  it('drops an unticked staged item, and a weighed staged item takes the weight', () => {
+    expect(planReceipt(receipt, withZevia.map((c, i) => (i === 5 ? { ...c, include: false } : c)), items, null, [zevia]).steps.some(s => s.kind !== 'tax' && s.id === 'new:1')).toBe(false);
+    const grapes: Staged = { id: 'new:2', n: 'Grapes', store: '', qty: 2.5, cents: 400, unit: 'lb' };
+    const r: Receipt = { lines: [{ text: 'GRAPES', qty: 2.5, unit: 'lb', grossCents: 1000, discountCents: 0, matchId: null }] };
+    expect(planReceipt(r, [{ itemId: 'new:2', include: true }], items, null, [grapes]).steps).toEqual([{ kind: 'single', id: 'new:2', qty: 2.5, cents: 400 }]);
+  });
+});
+
+describe('createStaged, remapPlan and Undo of what Apply made', () => {
+  const zevia: Staged = { id: 'new:1', n: 'Zevia soda 12pk', store: "BJ's", qty: 1, cents: 899 };
+  const unused: Staged = { id: 'new:2', n: 'Never used', store: '', qty: 1, cents: null };
+  const r: Receipt = { lines: [{ text: 'ZEVIA', qty: 1, grossCents: 899, discountCents: 0, matchId: null }] };
+  const plan = planReceipt(r, [{ itemId: 'new:1', include: true }], items, null, [zevia, unused]);
+  const store = (err: string | null = null) => {
+    const list: GroceryItem[] = [...items]; const adds: string[] = [];
+    return { adds, api: { addGroceryItem: (d: { n: string; store: string; qty: string; price: string; unit?: string }) => { adds.push(`${d.n}|${d.store}|${d.qty}|${d.price}|${d.unit}`); if (err) return err; list.unshift(item('made-1', d.n, { store: d.store })); return null; }, items: () => list } };
+  };
+  it('creates each used staged item once, and not an unused one', () => {
+    const s = store();
+    const made = createStaged(plan, [zevia, unused], s.api);
+    expect(s.adds).toEqual(["Zevia soda 12pk|BJ's|1|8.99|"]);
+    expect(made).toEqual({ ids: { 'new:1': 'made-1' }, created: [zevia], refused: [] });
+    expect(remapPlan(plan, made.ids).steps).toEqual([{ kind: 'single', id: 'made-1', qty: 1, cents: 899 }]);
+  });
+  it('names a refusal, drops that item from the plan and still reports the rest', () => {
+    const made = createStaged(plan, [zevia], store('The list is full (500 items).').api);
+    expect(made.refused).toEqual(['Zevia soda 12pk (The list is full (500 items).)']);
+    expect(remapPlan(plan, made.ids).steps).toEqual([]);
+    expect(addedText(made.created, made.refused)).toBe(' Could not add: Zevia soda 12pk (The list is full (500 items).).');
+  });
+  it('says what was added in the Undo text', () => {
+    expect(addedText([zevia, unused], [])).toBe(' Added Zevia soda 12pk to BJ\'s and Never used to Anywhere.');
+    expect(addedText([], [])).toBe('');
+  });
+  it('removes the made item quietly after putting its line back', () => {
+    const real = remapPlan(plan, { 'new:1': 'made-1' });
+    const snap = takeSnapshot(real, '2026-11', {}, [...items, item('made-1', 'Zevia soda 12pk')], undefined, ['made-1']);
+    expect(snap).toEqual({ month: '2026-11', lines: { 'made-1': null }, usual: {}, tax: null, created: ['made-1'] });
+    const calls: string[] = [];
+    restoreSnapshot(snap, { restoreGroceryLine: (_m: string, id: string, l: GroceryLine | null) => { calls.push(`restore ${id} ${l}`); }, removeGroceryItem: (id: string, o?: { quiet?: boolean }) => { calls.push(`remove ${id} ${o?.quiet}`); } } as unknown as GroceryApi);
+    expect(calls).toEqual(['restore made-1 null', 'remove made-1 true']);
   });
 });

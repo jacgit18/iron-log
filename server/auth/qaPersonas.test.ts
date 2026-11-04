@@ -296,6 +296,7 @@ describe('reset (the seed, run in the app on QA)', () => {
     expect(list.canReset).toBe(true);
     expect(list.personas.find(p => p.id === 'diet-on-target')!.seeded).toBe(true);
     expect(opened).toHaveLength(1); // one pool, made on the first reset
+    expect(ownerPools[0]!.listenerCount('error')).toBeGreaterThan(0); // a dropped idle connection must not crash the process (it failed the Tests run on main 2026-11-03: the test database was dropped under an idle owner connection)
   }, 60_000);
 
   it('can then be switched to, and the account has the data it was described with', async () => {

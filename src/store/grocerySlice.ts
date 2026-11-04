@@ -244,11 +244,12 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     },
 
     // Undo puts it back in its place (its ticks in each month were never removed), and its store if that went meanwhile.
-    removeGroceryItem(id) {
+    removeGroceryItem(id, opts) {
       const i = get().grocery.items.findIndex(x => x.id === id); if (i < 0) return;
       const it = get().grocery.items[i];
       pinRemoved(it);
       if (mutateCatalogue(g => { g.items = g.items.filter(x => x.id !== id); return null; }) !== null) return;
+      if (opts?.quiet) return; // the receipt Undo removes what Apply made and has its own notice
       get().noteRemoved('grocery', it.n, () => {
         return mutateCatalogue(g => {
           if (g.items.some(x => x.id === id)) return 'back';

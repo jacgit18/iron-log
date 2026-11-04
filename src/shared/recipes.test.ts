@@ -151,3 +151,25 @@ describe('normRecipeChips', () => {
     expect(normRecipeChips([])).toBeNull();
   });
 });
+
+describe('usual amount and unit name (ready-made foods)', () => {
+  const food = { id: 'egg', n: 'Egg', cat: 'ready', ing: [], steps: [], kcal: 72, p: 6 };
+  it('keeps a usual amount, a unit and a plural on a ready-made food and round-trips through validRecipe', () => {
+    const r = normRecipe({ ...food, usual: 4, unit: 'loaf', plural: 'loaves' });
+    expect(r).toMatchObject({ usual: 4, unit: 'loaf', plural: 'loaves' });
+    expect(validRecipe(r)).toBe(true);
+  });
+  it('drops them from any other category, and drops bad values', () => {
+    expect(normRecipe({ ...food, cat: 'protein', usual: 4, unit: 'egg' })).not.toHaveProperty('usual');
+    expect(normRecipe({ ...food, cat: 'protein', usual: 4, unit: 'egg' })).not.toHaveProperty('unit');
+    const bad = normRecipe({ ...food, usual: 2.3, unit: '4 eggs', plural: 'x' });
+    expect(bad).not.toHaveProperty('usual');
+    expect(bad).not.toHaveProperty('unit');
+    expect(bad).not.toHaveProperty('plural'); // a plural needs a unit
+    expect(normRecipe({ ...food, usual: 1 })).not.toHaveProperty('usual');
+    expect(normRecipe({ ...food, usual: 100 })).not.toHaveProperty('usual');
+  });
+  it('is not a valid recipe while it carries a value normRecipe would change', () => {
+    expect(validRecipe({ ...food, usual: 2.3 })).toBe(false);
+  });
+});

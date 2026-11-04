@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { MAX_NOTE, UNITS, byStore, carriedCount, centsText, emptyMonth, gotLast, groupTag, haveOf, inMonth, lineCost, lineOf, lineTotal, money, monthKey, monthLabel, onList, own, parseDollars, removedBought, shiftMonth, storeChoices, tally, unitWords } from '../../lib/grocery.js';
@@ -18,6 +19,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import GrocerySpend from './GrocerySpend.js';
 import PriceChips from './PriceChips.js';
 import ReceiptScan from './ReceiptScan.js';
+import Receipts from './Receipts.js';
 import SharePicker from './SharePicker.js';
 import SharingGroups from './SharingGroups.js';
 import SplitSection from './SplitSection.js';
@@ -501,8 +503,11 @@ export default function Grocery() {
   useEffect(() => { if (ready) useAppStore.getState().carryGroceryTicks(nowKey); }, [ready, nowKey]); // a new month starts with the At home ticks of the last one (ADR 079)
   const [chosen, setChosen] = useState<View>(() => (g.items.length ? 'get' : 'home')); // nothing to get from an empty list: start where you add
   const routed = pageOf(useRoutePath(), 'daily/grocery'); // #/daily/grocery/spend wins over the default
-  const view = (routed ?? chosen) as View;
+  const receiptsOn = useFeature('receipts');
+  const showReceipts = routed === 'receipts' && receiptsOn; // the saved receipts page (brief receipt-save-photo): admin only, and a reload of its address falls back to the list for anyone else
+  const view = ((routed && routed !== 'receipts' ? routed : chosen)) as View;
   const setView = (v: View) => { setChosen(v); navigate(`daily/grocery/${v}`, 'replace'); };
+  if (showReceipts) return <section className="panel groc" aria-labelledby="rcs-h"><Receipts /></section>;
   return (
     <section className="panel groc" aria-labelledby="groc-h">
       <div className="gtop">

@@ -29,13 +29,15 @@ export type ScenarioFeature =
   | 'kg beside lb'
   | 'Label scan'
   | 'Whole pack'
-  | 'Receipt scan';
+  | 'Receipt photos'
+  | 'Receipt scan'
+  | 'Usual amount';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Receipt photos',
 ];
 
 export interface Scenario {
@@ -734,7 +736,81 @@ export const SCENARIOS: readonly Scenario[] = [
       'A cut-off receipt shows the missing amount in the Total check but still lets you Apply; a non-admin account sees no Scan receipt button.',
     ],
   },
+  // ---- Usual amount ----
+  {
+    id: 'S-55', feature: 'Usual amount', title: 'Log 4 eggs in two taps', persona: 'diet-on-target', brief: 'usual-amount-and-unit',
+    steps: [
+      'On Recipes press New ready-made food, name it Egg (large), type 72 calories and 6 protein, set Usual amount to 4 and One serving is called to egg, and press Save food.',
+      'Look at the food\'s page: the Usual line, the Per line and the stepper. Press More once, then Less once.',
+      'Press Ate this, look at today\'s Diet log, then press Undo.',
+    ],
+    expected: [
+      'The page says "Usual: 4 eggs", "Per egg: 72 kcal · 6 g protein" and the stepper opens at "4 eggs"; More shows "4.5 eggs".',
+      'Ate this says "Logged 4 eggs of Egg (large) to today." and adds 288 calories to the day; Undo removes it. A food saved with neither box still opens at "1 portion".',
+    ],
+  },
+  {
+    id: 'S-56', feature: 'Usual amount', title: 'An odd plural, and a wrong amount is refused', persona: 'diet-fresh', brief: 'usual-amount-and-unit', edge: true,
+    steps: [
+      'Make a ready-made food Bread with Usual amount 2, One serving is called loaf and Plural loaves; open it and press Less twice.',
+      'Edit it and type 2.3 in Usual amount, then 4 eggs in One serving is called, pressing Save food each time.',
+      'Clear all three boxes, save, and open the food again.',
+    ],
+    expected: [
+      'The stepper reads "2 loaves", then "1.5 loaves", then "1 loaf".',
+      'Saving 2.3 says the amount must be from 0.5 to 99 in half steps; "4 eggs" as a unit says it must be 1 to 20 letters; with all three boxes cleared the food opens at "1 portion" again.',
+    ],
+  },
+  {
+    id: 'S-57', feature: 'Receipt scan', title: 'Add an unmatched receipt line to the list', persona: 'grocery-shopper', brief: 'receipt-add-item', device: true,
+    steps: [
+      'On a phone as an admin, scan a BJ\'s receipt that has a line your list does not have (for example a soda).',
+      'On that line press Add to list. Check the name, store, count and price the form filled in, then press Add item.',
+      'Look at the row and the footer, then press Apply and open the To get list and Bought this month. Then press Undo.',
+    ],
+    expected: [
+      'The form starts with the receipt text tidied (Zevia soda 12pk), the receipt\'s store (or Anywhere), the count and the price after any savings; Add item marks the row New and the footer says 1 new item will be added, with nothing yet on the list.',
+      'Apply adds the item under that store, ticked bought with the receipt price; Undo removes it again along with the other prices and ticks.',
+    ],
+  },
+  {
+    id: 'S-58', feature: 'Receipt scan', title: 'Cancel, remove or repeat a new item', persona: 'grocery-shopper', brief: 'receipt-add-item', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, on the receipt sheet press Add to list on a line, then Not now. Add it again, press Remove on the row, add it again and press Cancel on the sheet.',
+      'Press Add to list on a line and type the name of an item that is already in that store (such as Eggs), then press Add item. Empty the name and press Add item.',
+    ],
+    expected: [
+      'Not now, Remove and Cancel each leave the list exactly as it was.',
+      'A name already in that store says it is already in the list and to pick it instead; an empty name says to give the item a name; neither adds anything to the row.',
+    ],
+  },
+  // ---- Receipt photos ----
+  {
+    id: 'S-59', feature: 'Receipt photos', title: 'Keep a receipt photo, then open, note, download and delete it', persona: 'grocery-shopper', brief: 'receipt-save-photo', device: true,
+    steps: [
+      'On a phone as an admin, scan a BJ\'s receipt. In the sheet, tick Keep a copy of this photo and press Apply.',
+      'Press Receipts beside Scan receipt. Find the receipt under its month, open it, read every line of the photo (scroll inside it), type a note and press Save note.',
+      'Press Download, then Delete this receipt and Keep it, then Delete this receipt and Delete. Press Back.',
+    ],
+    expected: [
+      'The box starts unticked; after Apply a line says "Photo saved. Find it under Receipts." and the receipt is listed as store, date and total, newest month first.',
+      'The photo is sharp enough to read every line; the note is still there when you close and reopen it; Download saves a .jpg named with the date and store; Keep it changes nothing, Delete removes the row; Back goes up to the grocery list.',
+    ],
+  },
+  {
+    id: 'S-60', feature: 'Receipt photos', title: 'Not ticked saves nothing; a failed or full save says so', persona: 'grocery-shopper', brief: 'receipt-save-photo', edge: true, device: true,
+    steps: [
+      'On a phone as an admin, scan a receipt and press Apply with the box unticked; then scan another, tick the box and press Cancel. Open Receipts.',
+      'Scan a receipt, tick the box, turn on airplane mode and press Apply; turn it off and press Try again.',
+      'Sign in as a test account that is not an admin and open Groceries.',
+    ],
+    expected: [
+      'Neither the unticked Apply nor the cancelled one leaves a receipt on the Receipts page, which says "No saved receipts yet" when it is empty.',
+      'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. A non-admin account sees no Receipts button and no Keep box. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
+    ],
+  },
 ];
+
 
 
 
