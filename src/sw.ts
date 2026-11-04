@@ -2,6 +2,7 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { CacheFirst } from 'workbox-strategies';
+import { PAGE_PATH_PATTERNS } from './lib/pagePaths.js';
 import { onNotificationClick, onPush } from './swPush.js';
 
 // The service worker (ADR 044 PR 5). It does what the generated one did (vite.config.js used to describe it with `workbox: {}`) and adds
@@ -13,8 +14,9 @@ precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
 // The API shares the origin (ADR 010). A page load of an /api path, such as the sign-in callback, must reach the server, not be
-// answered with the app by the service worker.
-registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: [/^\/api\//, /^\/delete-account\/?(\?|$)/] }));
+// answered with the app by the service worker. Only the app's own page addresses get the app (src/lib/pagePaths.ts); any other page load reaches
+// the server, which answers a real 404 page (public/404.html) instead of the cached app.
+registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), { allowlist: [...PAGE_PATH_PATTERNS], denylist: [/^\/api\//, /^\/delete-account\/?(\?|$)/] }));
 
 // The landing page's screenshots (WebP) are left out of the install download, as only signed-out visitors see them. Cached the first
 // time they load instead, so the landing page still shows them offline. Names are hashed, so a cached copy never goes stale; the limit
