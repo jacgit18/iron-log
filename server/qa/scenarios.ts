@@ -39,13 +39,14 @@ export type ScenarioFeature =
   | 'Program on phones'
   | 'Stale page guard'
   | 'Barcode scan'
+  | 'Custom 404'
   | 'Receipt store';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Receipt store',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store',
 ];
 
 export interface Scenario {
@@ -997,9 +998,42 @@ export const SCENARIOS: readonly Scenario[] = [
       'The non-admin account sees no Scan barcode button.',
     ],
   },
+  {
+    id: 'S-76', feature: 'Custom 404', title: 'A wrong page address shows the Page not found page', persona: 'new-user', brief: 'custom-404',
+    steps: [
+      'In a browser, signed out, open the app address followed by /zzz (for example qa.loadbearer.app/zzz).',
+      'Tap Go to Loadbearer. Then sign in and open /zzz again.',
+    ],
+    expected: [
+      'A plain Page not found page with the line "That address does not exist." appears, light or dark to match the device, and it does not repeat the address you typed.',
+      'Go to Loadbearer opens the landing page when signed out and the app when signed in. The page looks the same signed in and out.',
+    ],
+  },
+  {
+    id: 'S-77', feature: 'Custom 404', title: 'An installed app still opens, and a wrong address reaches the 404 page', persona: 'new-user', brief: 'custom-404', device: true, edge: true,
+    steps: [
+      'On a phone with the app installed and opened at least once, open the browser and type the app address followed by /zzz.',
+      'Open the installed app from the home screen, then turn on airplane mode and open it again.',
+    ],
+    expected: [
+      'The first step shows the Page not found page, not the app.',
+      'The installed app opens normally, online and offline, on its home screen address and on /plans.',
+    ],
+  },
+  {
+    id: 'S-78', feature: 'Custom 404', title: 'Real pages, files and in-app addresses are not affected', persona: 'new-user', brief: 'custom-404', edge: true,
+    steps: [
+      'Open /plans, /delete-account and /privacy.html.',
+      'Open /assets/old.js, and then the app with #/progress/zzz after the address.',
+    ],
+    expected: [
+      'The first three open as they did before. /privacy without .html shows Page not found.',
+      '/assets/old.js shows a blank not found answer, not a page. #/progress/zzz opens Progress.',
+    ],
+  },
   // ---- Receipt store ----
   {
-    id: 'S-76', feature: 'Receipt store', title: 'A scanned receipt marks the items as bought at its store', persona: 'grocery-shopper', brief: 'receipt-bought-at', device: true,
+    id: 'S-79', feature: 'Receipt store', title: 'A scanned receipt marks the items as bought at its store', persona: 'grocery-shopper', brief: 'receipt-bought-at', device: true,
     steps: [
       'On a phone, sign in as an admin account (Grocery shopper has Costco, Trader Joe\'s, Farmers market and Corner shop). On Groceries, At home, make sure a few items you also bought on your receipt are listed under other stores or Anywhere (add them with Edit if needed).',
       'On To get press Scan receipt and photograph a Costco receipt (or choose a saved photo of one; any store that is on your list works).',
@@ -1013,7 +1047,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-77', feature: 'Receipt store', title: 'Make the receipt\'s store the usual store, and a name already there is refused', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
+    id: 'S-80', feature: 'Receipt store', title: 'Make the receipt\'s store the usual store, and a name already there is refused', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
     steps: [
       'As an admin, add an item named Oats to Costco on At home (Edit), and make sure another item named Oats is under Trader Joe\'s.',
       'Scan a Costco receipt that has an oats line matched to the Trader Joe\'s Oats, and a second item matched to something under another store.',
@@ -1026,7 +1060,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-78', feature: 'Receipt store', title: 'A store that is not on the list, and moving between sharing groups', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
+    id: 'S-81', feature: 'Receipt store', title: 'A store that is not on the list, and moving between sharing groups', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
     steps: [
       'As an admin scan a receipt from a store that is not on your list (for example Walmart).',
       'Check the sheet: no row says Bought at, and "Store for this receipt" is set to Do not set the store or the tax. Pick Costco in it.',
