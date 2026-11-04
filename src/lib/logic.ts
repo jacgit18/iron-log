@@ -121,7 +121,7 @@ export function progressionOf(cfg: Cfg, logs: Logs, item: Pick<CardItem, 'ex'> &
 }
 export function targetOf(cfg: Cfg, logs: Logs, item: CardItem, ph: PhaseKey | null | undefined): { w: number | null; src: string; up?: true } {
   const base = baseTargetOf(cfg, logs, item, ph); const up = progressionOf(cfg, logs, item, ph);
-  if (up && (base.w == null || up.w > base.w)) return { w: up.w, src: `up from ${up.from} lb`, up: true };
+  if (up && (base.w == null || up.w > base.w)) return { w: up.w, src: `suggested, from ${up.from} lb`, up: true };
   return base;
 }
 // The starting weight: the weight last logged for this exercise in this phase (on any card), else the program's weight.
