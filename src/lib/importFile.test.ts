@@ -8,10 +8,14 @@ describe('readFailure', () => {
     expect(readFailure(e)).toMatch(/download it to the phone first/);
   });
 
+  it('keeps a plain sentence the app threw itself', () => {
+    expect(readFailure(new Error('Excel library failed to load'))).toBe('Excel library failed to load');
+  });
+
   it('never returns the raw message of an unknown error', () => {
     for (const e of [new Error('Error: 500 undefined'), new TypeError('x is not a function'), 'boom', undefined, { message: 'raw' }]) {
       const out = readFailure(e);
-      expect(out).toBe('Couldn’t read that file.');
+      expect(out).toBe('Couldn’t read that file');
       expect(out).not.toMatch(/500|undefined|not a function|boom|raw/);
     }
   });
