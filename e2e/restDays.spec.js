@@ -27,7 +27,7 @@ test('a rest on an empty earlier day takes its place: nothing moves and no messa
   await page.locator('#rest-3').uncheck(); // untick: only that date goes, and Day 3 is back in column 3
   await expect(page.locator('#restdate-3')).toHaveCount(0);
   await expect(page.locator('#restdate-5')).toHaveCount(1);
-  await expect(page.locator('#col-3 #chk-A-d3s1')).toHaveCount(1);
+  await expect(page.locator('#col-3 #finished-bar-3')).toHaveCount(1); // Day 3's cards were all skipped, so they sit in its Finished bar
 });
 
 test('one workout that no longer fits is skipped with a message; two ask first', async ({ page }) => {

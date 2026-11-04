@@ -2,11 +2,17 @@ import { test, expect } from './fixtures.js';
 
 // The notices that answer an action (undo after an uncheck, move heads-up, order, Removed ..., the status line) float: above the
 // bottom bar on a phone, in the bottom left corner on a wider screen, so they show where you are scrolled and never push the page.
+// The ticked card moves into the selected day's Finished bar (brief finished-group-fold): open the bar and press the first row's Untick.
+const unfoldUntick = async page => {
+  const bar = page.locator('.col.sel .finishedbar');
+  await bar.click();
+  await page.locator('.col.sel .finishedrow').getByRole('button', { name: /^Untick / }).first().click();
+};
 const untick = async page => {
   const box = page.locator('.col.sel article.card input.chk.cardchk').first();
-  await box.check();
+  await box.click();
   await page.evaluate(() => window.scrollTo(0, 700));
-  await box.uncheck();
+  await unfoldUntick(page);
 };
 
 test('on a phone the undo notice floats in view over the cards, above the bottom bar', async ({ page }) => {
@@ -33,10 +39,10 @@ test('on a phone the undo notice floats in view over the cards, above the bottom
 
 test('on a wide screen the undo notice floats in the bottom left corner and does not move the page', async ({ page }) => {
   const box = page.locator('.col.sel article.card input.chk.cardchk').first();
-  await box.check();
+  await box.click();
   const top = () => page.evaluate(() => document.querySelector('.board').getBoundingClientRect().top + window.scrollY);
   const before = await top();
-  await box.uncheck();
+  await unfoldUntick(page);
   const notice = page.locator('.toasts .notice');
   await expect(notice).toBeVisible();
   await expect(page.locator('.toasts')).toHaveCSS('position', 'fixed');

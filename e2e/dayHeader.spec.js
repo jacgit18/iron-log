@@ -26,7 +26,7 @@ for (const [name, w, h] of [['phone 360', 360, 780], ['phone 390', 390, 844], ['
     const long = await tops();
     expect(Math.abs(long.rest - long.day), 'Rest is level with the day box (long title)').toBeLessThan(12);
     if (w <= 700) expect(Math.abs(long.arrows - long.day), 'the arrows are on the same level on a phone (long title)').toBeLessThan(12);
-    await col.locator('article.card input.cardchk').first().check(); // the first logged set stamps the day's date
+    await col.locator('article.card input.cardchk').first().click(); // the first logged set stamps the day's date
     await expect(col.locator('.dd-text')).toBeVisible();
     await expect(col.locator('.colhead h3')).toHaveText('Lower body + reactive power'); // still the long title: the tightest case, both together
     const both = await tops();
@@ -62,7 +62,7 @@ test('stamping a date on a day moves neither the Rest box nor the arrows, and li
   });
   await expect(col.locator('.dd-text')).toHaveCount(0);
   const before = await head();
-  await col.locator('article.card input.cardchk').first().check(); // the first logged set stamps the day's date
+  await col.locator('article.card input.cardchk').first().click(); // the first logged set stamps the day's date
   await expect(col.locator('.dd-text')).toBeVisible();
   const after = await head();
   expect(after.arrows).toEqual(before.arrows);

@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, openFinished } from './fixtures.js';
 
 // One exercise of a superset card goes to another day for this week only, from the card's ⋯ panel. The pure rules (nothing lost or duplicated,
 // ticks, skips and phases follow, Undo exact, either/or and plain cards unchanged) are unit tests; these cover what a node test cannot: the
@@ -30,10 +30,15 @@ test('the move is kept after a reload, and the ticked state goes with the exerci
   await card.getByRole('checkbox', { name: `Mark ${first} done` }).check();
   await card.getByRole('button', { name: /^More actions/ }).click();
   await card.getByRole('combobox', { name: `Move ${first} to another day (this week)` }).selectOption('3');
-  const moved = column(page, 3).locator('article.card').filter({ has: page.locator('.exh', { hasText: first }) }).last();
-  await expect(moved.getByRole('checkbox', { name: `Mark ${first} done` })).toBeChecked();
+  // Changed: the moved exercise is a card of its own that is already ticked, so it sits in Day 3's Finished bar as a done row, not as an open card.
+  const list = await openFinished(page, 3);
+  await expect(list.locator('li.finishedrow.done', { hasText: first })).toHaveCount(1);
   await page.reload();
-  await expect(column(page, 3).locator('.exh', { hasText: first })).toHaveCount(on3 + 1);
+  // The open cards on Day 3 are as before; the moved (ticked) exercise is the extra done row in its Finished bar.
+  await expect(column(page, 3).locator('.exh', { hasText: first })).toHaveCount(on3);
+  await expect(page.locator('#finished-list-3 li.finishedrow.done', { hasText: first })).toHaveCount(0); // closed again after a reload
+  const reopened = await openFinished(page, 3);
+  await expect(reopened.locator('li.finishedrow.done', { hasText: first })).toHaveCount(1);
 });
 
 test('plain and either/or cards have no per-exercise move, and neither does a closed superset', async ({ page }) => {

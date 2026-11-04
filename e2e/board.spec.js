@@ -1,13 +1,16 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, openFinished } from './fixtures.js';
 
 const restBox = (page, d) => page.locator(`#rest-${d}`);
 
 test('checking a card off counts it done, and unchecking undoes it', async ({ page }) => {
   const box = page.locator('#chk-A-d1s1');
   await expect(box).not.toBeChecked();
-  await box.check();
-  await expect(box).toBeChecked();
-  await box.uncheck();
+  await box.click();
+  await expect(box).toHaveCount(0); // a done card folds into the Finished bar instead of staying on the page
+  await expect(page.locator('#finished-bar-1')).toContainText('Finished (1)');
+  await openFinished(page);
+  await page.locator('#fin-undo-A-d1s1').click(); // Untick: the card is open again
+  await expect(page.locator('#finished-bar-1')).toHaveCount(0);
   await expect(box).not.toBeChecked();
 });
 
@@ -38,7 +41,7 @@ test('finishing a day\'s workout suggests moving one card; Apply moves it and fo
   await page.locator('#tab-settings, #account-badge').first().click(); // suggestions need Injury prevention, which is off by default
   await page.getByRole('switch', { name: 'Injury prevention' }).check();
   await page.locator('#tab-board').click();
-  for (const id of ['A-d2s1', 'A-d2s2-0', 'A-d2s3', 'A-d2s4', 'A-d2s5-0', 'A-d2s5-1', 'A-d2s6-0', 'A-d2s6-1']) await page.locator(`#chk-${id}`).check();
+  for (const id of ['A-d2s1', 'A-d2s2-0', 'A-d2s3', 'A-d2s4', 'A-d2s5-0', 'A-d2s5-1', 'A-d2s6-0', 'A-d2s6-1']) await page.locator(`#chk-${id}`).click(); // click, not check(): a ticked card leaves the page (Finished bar)
   await expect(page.locator('#chk-A-sled2')).not.toBeChecked();
   await expect(page.locator('#day-2')).not.toBeChecked(); // the day's box waits for the sled and Home cards
   const note = page.getByRole('status').filter({ hasText: 'Back-to-back' });

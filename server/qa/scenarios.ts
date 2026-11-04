@@ -31,13 +31,20 @@ export type ScenarioFeature =
   | 'Whole pack'
   | 'Receipt photos'
   | 'Receipt scan'
-  | 'Usual amount';
+  | 'Usual amount'
+  | 'Finished group'
+  | 'Weight step'
+  | 'Program compare'
+  | 'Polish pass'
+  | 'Program on phones'
+  | 'Stale page guard'
+  | 'Barcode scan';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Receipt photos',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan',
 ];
 
 export interface Scenario {
@@ -418,7 +425,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Press Add missing to Groceries.',
     ],
     expected: [
-      'Water shows as Have and is included in "Have x of y".',
+      'Water shows as Have with the note "Always at home" and is included in "Have x of y"; the Have, Missing and On your list marks line up in one column down the page.',
       'Add missing does not add water to the grocery list.',
     ],
   },
@@ -522,6 +529,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'An unseeded account\'s Switch is disabled with "Seed it first"; pressing Seed missing accounts seeds it, fills the dot and the button goes away.',
       'The last three accounts appear under Recent, newest first.',
+      'Leave the picker page idle for several minutes, then open it and switch again: it still opens and lists accounts, with no error page or crash.',
     ],
   },
 
@@ -722,6 +730,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The sheet lists every receipt line; a discount is taken off the item above it and the old price shows crossed out; lines with no item on your list are greyed and skipped.',
       'Apply ticks the matched items as bought this month with the right quantity and price and sets the store tax; Undo puts every price, tick and the tax back as they were.',
+      'A line sold by weight (lb or oz on the paper) is converted into the item\'s own unit; Undo is held back while the app is still syncing the apply and works once it has finished.',
     ],
   },
   {
@@ -806,7 +815,185 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
     expected: [
       'Neither the unticked Apply nor the cancelled one leaves a receipt on the Receipts page, which says "No saved receipts yet" when it is empty.',
-      'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. A non-admin account sees no Receipts button and no Keep box. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
+      'Offline, the prices still apply and the notice says the photo was not saved, with Try again; Try again saves it once. A non-admin account sees no Receipts button and no Keep box. Opening a saved receipt and closing it, or pressing Retry, before the photo has loaded never shows that photo on the wrong sheet. (At 200 receipts or 60 MB the notice says to delete some in Receipts.)',
+    ],
+  },
+  {
+    id: 'S-61', feature: 'Finished group', title: 'Done and skipped exercises fold into one bar', persona: 'superset-builder', brief: 'finished-group-fold',
+    steps: [
+      'Open the Board on Day 1. Tick one exercise and skip another from its ⋯ menu.',
+      'Look at the bottom of the day: press the Finished bar to open it, then press it again to close it.',
+    ],
+    expected: [
+      'Both cards leave the list of open cards, which keeps its usual look. A closed Finished (2) bar sits below them with "1 done" and "1 skipped".',
+      'Open, it shows one short row per exercise: the done one has Edit and Untick, the skipped one has Undo skip. Closed, only the bar shows.',
+    ],
+  },
+  {
+    id: 'S-62', feature: 'Finished group', title: 'Edit a done exercise and put cards back', persona: 'superset-builder', brief: 'finished-group-fold',
+    steps: [
+      'Log a set for an exercise so it is done, open the Finished bar and press Edit on its row; change a number and save.',
+      'Press Untick on that row, then press Undo skip on a skipped row.',
+    ],
+    expected: [
+      'Edit opens the log sheet in Edit mode ("You are changing the session logged ...") and the saved number shows.',
+      'Each card returns to the open list as a normal card; when the last finished row goes, the bar disappears and the day shows only open cards.',
+    ],
+  },
+  {
+    id: 'S-63', feature: 'Finished group', title: 'A superset and a day with nothing left', persona: 'superset-builder', brief: 'finished-group-fold', edge: true,
+    steps: [
+      'Tick both halves of a superset, then finish every other card in the day (tick or skip).',
+      'Open the Finished bar and Untick one half of the superset.',
+    ],
+    expected: [
+      'The superset shows as two rows in the bar, one per exercise. With every card finished the day shows its header and the closed bar, with no extra text between them.',
+      'Only that half goes back; the superset returns to the open list with the other half still ticked.',
+    ],
+  },
+  {
+    id: 'S-64', feature: 'Weight step', title: 'Set how far an exercise goes up, and see the suggestion follow', persona: 'heavy-logger', brief: 'progression-step-per-exercise',
+    steps: [
+      'Open Program, Exercise library and press Edit on an exercise you have logged at the same weight twice in a row with every set done (the heavy logger has several).',
+      'Under Equipment, tap the 10 chip in Weight step and save. Go to the Board and find that exercise\'s card.',
+      'Open the exercise again and tap the lit 10 chip once more, then save.',
+    ],
+    expected: [
+      'The card\'s green badge reads "suggested, from N lb" with the weight 10 lb above N, not the usual 2.5 or 5.',
+      'Tapping the lit chip empties the box (its placeholder reads "Default: 2.5 lb under 50 lb, else 5"); after saving, the badge goes back to the usual step. On a card with nothing logged, the Log sheet has the same field under Equipment.',
+    ],
+  },
+  {
+    id: 'S-65', feature: 'Weight step', title: 'A step that is not allowed is refused', persona: 'heavy-logger', brief: 'progression-step-per-exercise', edge: true,
+    steps: [
+      'In Program, Exercise library, Edit an exercise and type 60 in the Weight step box; then try 0, 2.3 and abc.',
+      'Type 7.5 and save, then open it again. Press Save with the box showing 60 once more.',
+    ],
+    expected: [
+      'Each of 60, 0, 2.3 and abc shows "Enter a step above 0, up to 50, in 0.5 steps." and Save keeps the sheet open without saving.',
+      '7.5 is accepted and shown again when the sheet is reopened.',
+    ],
+  },
+  {
+    id: 'S-66', feature: 'Program compare', title: 'Compare two programs day by day and filter the differences', persona: 'superset-builder', brief: 'program-compare',
+    steps: [
+      'Open Program, scroll to the end and tap Compare programs. Program A and Program B are chosen.',
+      'Tap Day 2, then Any difference, then Changed. Tap Phase differs, then pick a phase under Phase.',
+      'Choose a saved program (save a copy of A first if the list is empty) as the second program.',
+    ],
+    expected: [
+      'Two boards appear one above the other, each with its phase mix and the day buttons showing how many exercises differ; every row is tagged Same, Changed, Phase differs or Only here, and shows the editor\'s name, phase, weight and sets.',
+      'Each filter hides the other rows and the numbers on the chips stay the same; nothing on the page can be dragged or edited, and Program A and B are unchanged afterwards.',
+      'A saved copy of A against A shows no differences; choosing the same program on both sides says "Both sides are the same program."',
+    ],
+  },
+  {
+    id: 'S-67', feature: 'Program compare', title: 'An empty day, and a day that exists on one side only', persona: 'new-user', brief: 'program-compare', edge: true,
+    steps: [
+      'As a new account, create a program, open Program, Compare programs, and pick it against Program A.',
+      'Step through the day buttons.',
+    ],
+    expected: [
+      'A day empty on both sides says "Nothing on this day in either program."; a day with exercises on one side lists them all as Only here on that side and an empty board on the other.',
+      'The section is closed again after you leave the Program tab and come back, and the phone view does not scroll sideways.',
+    ],
+  },
+  {
+    id: 'S-68', feature: 'Polish pass', title: 'Dark mode opens dark, with no white flash', persona: 'new-user', brief: 'polish-theme-flash-pressed-errors', device: true,
+    steps: [
+      'On a phone, tap the Colours button until it says dark, then close the app completely.',
+      'Open the app again from the home screen or the browser, on a throttled connection if you can.',
+    ],
+    expected: [
+      'The screen is dark from the first moment: no white or light-grey flash before the app appears.',
+      'Choosing light, or match this device, and reopening shows light, or the phone\'s own setting, from the first moment as well.',
+    ],
+  },
+  {
+    id: 'S-69', feature: 'Polish pass', title: 'Buttons and section tabs respond to a press', persona: 'new-user', brief: 'polish-theme-flash-pressed-errors',
+    steps: [
+      'Press and hold a section tab (Daily, Progress, Program, Settings) and a plain button such as Cancel on a sheet, without letting go.',
+      'Press and hold a Board card button or a Swap day button.',
+    ],
+    expected: [
+      'The tab and the plain button sink slightly and darken while held, and return when released; with "reduce motion" on the phone, they only darken.',
+      'The Board card buttons and Swap day buttons look and behave exactly as before.',
+    ],
+  },
+  {
+    id: 'S-70', feature: 'Polish pass', title: 'A file that cannot be read gives a plain sentence', persona: 'new-user', brief: 'polish-theme-flash-pressed-errors', edge: true,
+    steps: [
+      'In Settings, pick an export file to import that is on a cloud drive and not downloaded to the phone (or one that is revoked or corrupt).',
+    ],
+    expected: [
+      'A plain sentence appears (about downloading it first, or that the file could not be read), with no text such as "Error:", a status number or "undefined".',
+    ],
+  },
+  // ---- Recipe auto-match (On your list) ----
+  {
+    id: 'S-71', feature: 'Recipe auto-match', title: 'A missing ingredient already on the list says On your list', persona: 'recipe-collector', brief: 'feature-map',
+    steps: [
+      'Open "Chicken and rice bowl" and note an ingredient shown as Missing that has an item on Groceries, To get (add one with the ingredient\'s name if there is none).',
+      'Look at that line, then press Add missing to Groceries.',
+      'Open Groceries, To get and check how many times the item appears.',
+    ],
+    expected: [
+      'The line shows Missing with a small "On your list" mark beside it; an ingredient that is at home, skipped or "Always at home" (water) never shows it.',
+      'Add missing does not add that item a second time; it stays on the list once.',
+    ],
+  },
+  // ---- Program on phones ----
+  {
+    id: 'S-72', feature: 'Program on phones', title: 'Create a program starts at the left, and the switch shows A and B', persona: 'new-user', brief: 'feature-map',
+    steps: [
+      'On a phone (or a 375 px wide window), open the Program tab.',
+      'Look at the row holding Create a program and the program switch.',
+    ],
+    expected: [
+      'Create a program starts at the left edge of the screen and is not pushed off to the right or cut off.',
+      'The switch shows only A and B (no other labels), and the row does not scroll sideways.',
+    ],
+  },
+  // ---- Stale page guard ----
+  {
+    id: 'S-73', feature: 'Stale page guard', title: 'Erase or delete is refused from a page for another account', persona: 'new-user', brief: 'x-expected-user-409',
+    steps: [
+      'In one browser tab sign in as New user and open Settings. Leave it open.',
+      'In a second tab of the same browser, switch to another test account (the QA picker).',
+      'Back in the first tab, open Delete my data and press Erase everything in my account, and confirm.',
+      'Repeat steps 1 to 3 from the start, pressing Delete my account instead (the first page no longer has the panel after a refusal).',
+    ],
+    expected: [
+      'The request is refused: the Delete my data panel goes away and the other-account card takes its place; neither account loses anything. The same happens for Delete my account.',
+      'After reloading the first tab it shows the account you are now signed in as, and the other test account\'s data is untouched.',
+    ],
+  },
+  // ---- Barcode scan ----
+  {
+    id: 'S-74', feature: 'Barcode scan', title: 'Scan a packaged food\'s barcode into a ready-made food', persona: 'diet-on-target', brief: 'barcode-scan', device: true,
+    steps: [
+      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and allow the camera.',
+      'Point the camera at the barcode of a packaged US food (cereal, a can, frozen gnocchi) until the sheet closes by itself.',
+      'Check the picked product and its grams (its own serving), press Use, then compare the calories and protein with the printed label and press Save food.',
+      'Repeat on the diet day: open Diet, use the food search box there, and scan a second product.',
+    ],
+    expected: [
+      'The sheet reads the code within a few seconds, closes, and shows the product name (with brand) and its calories per 100 g; the grams start at the product\'s serving.',
+      'Use fills the name, calories and protein (carbs and fat when USDA has them) for that serving; they match the label, and nothing is saved until Save food.',
+      'The camera light goes off when the sheet closes. On the diet day the pick fills the Quick add form the same way.',
+    ],
+  },
+  {
+    id: 'S-75', feature: 'Barcode scan', title: 'A code that is not found, no camera, and a non-admin account', persona: 'diet-fresh', brief: 'barcode-scan', edge: true,
+    steps: [
+      'As an admin, open New ready-made food, press Scan barcode and scan something that is not in USDA (a book\'s barcode, a store-brand item, a local product).',
+      'Close the sheet. In your browser settings block the camera for the site, press Scan barcode again, and press Photo instead with a saved photo of a barcode (or of a table).',
+      'Sign in as a test account that is not an admin and open New ready-made food.',
+    ],
+    expected: [
+      'The sheet says the barcode is not in the food database and to type the name instead; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
+      'With the camera blocked the sheet says it is not available and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
+      'The non-admin account sees no Scan barcode button.',
     ],
   },
 ];

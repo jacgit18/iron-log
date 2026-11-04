@@ -2,7 +2,13 @@ import { test, expect } from './fixtures.js';
 
 // How long notices stay, how many show, and the way out of the injury prevention ones. The fixture's clock is fake: runFor moves it.
 const first = page => page.locator('.col.sel article.card input.chk.cardchk').first();
-const untick = async page => { const box = first(page); await box.check(); await box.uncheck(); };
+// The ticked card moves into the selected day's Finished bar (brief finished-group-fold): open the bar and press the first row's Untick.
+const unfoldUntick = async page => {
+  const bar = page.locator('.col.sel .finishedbar');
+  await bar.click();
+  await page.locator('.col.sel .finishedrow').getByRole('button', { name: /^Untick / }).first().click();
+};
+const untick = async page => { const box = first(page); await box.click(); await unfoldUntick(page); };
 const undoNote = page => page.locator('.toasts .notice[data-kind="undo"]');
 const info = page => page.locator('.toasts .notice[data-kind="info"]');
 
@@ -43,7 +49,7 @@ test('the heads-up and the suggestion can turn injury prevention off from the no
   await page.locator('#tab-settings, #account-badge').first().click();
   await page.getByRole('switch', { name: 'Injury prevention' }).check();
   await page.locator('#tab-board').click();
-  for (const id of ['A-d2s1', 'A-d2s2-0', 'A-d2s3', 'A-d2s4', 'A-d2s5-0', 'A-d2s5-1', 'A-d2s6-0', 'A-d2s6-1']) await page.locator(`#chk-${id}`).check();
+  for (const id of ['A-d2s1', 'A-d2s2-0', 'A-d2s3', 'A-d2s4', 'A-d2s5-0', 'A-d2s5-1', 'A-d2s6-0', 'A-d2s6-1']) await page.locator(`#chk-${id}`).click();
   const note = page.locator('.toasts .notice[data-kind="suggestion"]');
   await expect(note).toContainText('Back-to-back');
   await note.getByRole('button', { name: 'Turn off' }).click();

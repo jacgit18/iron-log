@@ -20,6 +20,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import SortControl from '../SortControl.jsx';
 import { useSortChoice } from '../useSortChoice.js';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
+import ProgramCompare from './ProgramCompare.jsx';
 import ProgramStrip from './ProgramStrip.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
@@ -295,6 +296,7 @@ function ProgramEditor() {
       </p>
       {lib ? <LibItemPanel it={item} /> : <Library k={k} custom={custom} />}
       </div>
+      <ProgramCompare />
     </>
   );
 }

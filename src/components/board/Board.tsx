@@ -14,6 +14,7 @@ import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import BodyWeightRow, { type BodyWeightDraft } from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
+import FinishedGroup from './FinishedGroup.jsx';
 import FirstRun from './FirstRun.jsx';
 import InjurySwitch from './InjurySwitch.jsx';
 import Icon from '../Icon.jsx';
@@ -304,12 +305,8 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
                   </Fragment>
                 );
               })}
-              {finished.length > 0 && (
-                <>
-                  <div className={`sect donesect${!open.length && wide ? ' withcount' : ''}`}>{[ft.done ? `${ft.done} done` : '', ft.skipped ? `${ft.skipped} skipped` : ''].filter(Boolean).join(' · ')}{!open.length && count}</div>
-                  {finished.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
-                </>
-              )}
+              {!open.length && wide && finished.length > 0 && <div className="sect withcount"><span aria-hidden="true" />{count}</div>}
+              {finished.length > 0 && <FinishedGroup day={d} cards={finished} tally={ft} />}
             </section>
           );
         })}

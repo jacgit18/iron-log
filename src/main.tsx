@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './fonts.js';
 import './styles.css';
 import './utilities.css';
+import './components/pressed.css';
 import App from './App.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import { Splash } from './components/Splash.js';

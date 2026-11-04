@@ -97,6 +97,8 @@ export interface ExerciseInfo {
   n: string;
   url?: string;
   eq?: EquipmentId;
+  /** How many lb the suggested weight goes up by; absent means the default (2.5 under 50 lb, else 5). */
+  step?: number;
 }
 
 export interface WarmupItem {

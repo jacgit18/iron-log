@@ -4,7 +4,7 @@ import { eqNameError, newEqId } from '../lib/equipment.js';
 import { exIdsInUse, usageOf } from '../lib/exerciseLibrary.js';
 import { EX, exInfo, findExId, isCatalogId, isOwnExercise, isVideoUrl, newExId, slotsFor, VIDEO_ERR, warmupOf } from '../lib/data.js';
 import { MUSCLE_MAP } from '../lib/muscles.js';
-import { validRm } from '../shared/validate.js';
+import { validRm, validStep } from '../shared/validate.js';
 import type { Cfg, LibraryItem, PhaseKey, Program } from '../types.ts';
 import type { Flag, LibrarySlice, StoreGet, StoreSet } from './types.ts';
 
@@ -128,7 +128,7 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     }
     get().mutateCfg(c => {
       // Fields left out stay as they were.
-      setOverride(c, exId, { ...(url !== undefined ? { url } : {}), ...(d.eq !== undefined ? { eq: d.eq || '' } : {}) });
+      setOverride(c, exId, { ...(url !== undefined ? { url } : {}), ...(d.eq !== undefined ? { eq: d.eq || '' } : {}), ...(d.step !== undefined ? { step: validStep(d.step) ? d.step : null } : {}) });
       if (custom && name) c.ex[exId] = { ...c.ex[exId], n: name };
       const ph = d.ph;
       if (ph !== undefined && ph !== ((c.exPh || {})[exId] || '')) setExerciseDefault(c, exId, ph, get().programs, get().library);

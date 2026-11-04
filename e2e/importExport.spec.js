@@ -60,7 +60,7 @@ test('Replace makes the ticked tabs match the file', async ({ page }) => {
 });
 
 test('Add to my data closes the review and does not lose or duplicate what is here', async ({ page }) => {
-  await page.locator('#chk-A-d1s1').check(); // a ticked card, so there is a week to keep
+  await page.locator('#chk-A-d1s1').click(); // a ticked card, so there is a week to keep
   await page.locator('#bw-in').fill('181.5'); // and a body weight, so a duplicate would show
   await page.getByRole('button', { name: 'Save', exact: true }).first().click();
   const file = await exportedWithRest120(page);
