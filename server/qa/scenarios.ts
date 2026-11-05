@@ -41,13 +41,14 @@ export type ScenarioFeature =
   | 'Barcode scan'
   | 'Custom 404'
   | 'Receipt store'
-  | 'Receipt merge';
+  | 'Receipt merge'
+  | 'Bulk share';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share',
 ];
 
 export interface Scenario {
@@ -1106,6 +1107,47 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The row splits into its original rows (nothing is saved yet) and the link goes away.',
       'The second add is refused with "That item is already in this store\u2019s list. Pick it in the list instead.", as it always was; picking the first row\u2019s new item in the second row\u2019s picker joins them.',
+    ],
+  },
+  // ---- Bulk share ----
+  {
+    id: 'S-85', feature: 'Bulk share', title: 'Select all in Costco, share with one person, and Undo', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
+    steps: [
+      'Sign in as Grocery shopper (it has a sharing group, Home with Sam and Alex, that Costco splits with). Open Groceries, To get.',
+      'Press Select. A checkbox appears on each row, each store heading says "Select all in ...", and a bar at the bottom says "0 selected".',
+      'Press "Select all in Costco", then Share... In the sheet tick Sam only and press Apply.',
+      'Look at the Costco rows and the notice, then press Undo.',
+    ],
+    expected: [
+      'Nothing changes until Apply; the bar counts the Costco items and Share... is off while nothing is selected.',
+      'Every Costco row now says "Me +1" (it said "Me +2" before), the notice reads "Shared N items: Me +1.", Select mode is off and focus is on the Select button.',
+      'Undo puts every row back to "Me +2".',
+    ],
+  },
+  {
+    id: 'S-86', feature: 'Bulk share', title: 'The usual-split box changes At home, and this month only is the default', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
+    steps: [
+      'On To get, Select two Costco items and press Share... Tick Alex only and press Apply (leave "Also make this the usual split" unticked).',
+      'Open At home, Edit, and open one of those items\' sharing chip. Then Undo is not needed: go back to To get, Select the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
+      'Open At home again and look at the same items\' split.',
+    ],
+    expected: [
+      'After the first Apply To get shows the new split but At home still shows the store\'s split for those items (this month only).',
+      'After the second Apply At home shows Sam as the items\' usual split, and the notice\'s Undo restores both the rows and the usual split.',
+    ],
+  },
+  {
+    id: 'S-87', feature: 'Bulk share', title: 'A pack-priced item takes the split on every pack, and no group means no Select', persona: 'grocery-shopper', brief: 'grocery-bulk-share', edge: true,
+    steps: [
+      'On To get open a Costco item, give it two pack prices (Add price) and give pack 1 its own split (Sam only). Close it.',
+      'Press Select, tick that item and one other, press Share..., and read the sheet. Tick Alex and press Apply.',
+      'Open the pack-priced item and look at both packs; press Undo on the notice.',
+      'Sign in as New user (or any account with no sharing group) and open Groceries, To get.',
+    ],
+    expected: [
+      'The sheet says "1 picked item is priced pack by pack: every pack gets this split."',
+      'After Apply both packs show Alex\'s split (pack 1\'s own split is gone); Undo brings back pack 1\'s Sam-only split.',
+      'An account with no sharing group has no Select button on To get.',
     ],
   },
 ];
