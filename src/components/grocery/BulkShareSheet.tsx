@@ -14,7 +14,7 @@ export default function BulkShareSheet() {
   const g = useAppStore(s => s.grocery);
   const mk = String(modal?.mk ?? '');
   const ids = (modal?.ids as string[] | undefined) ?? [];
-  const lines = useAppStore(s => s.groceryMonths[mk]?.lines);
+  const lines = useAppStore.getState().groceryMonths[mk]?.lines; // read once: the note needs no re-render on every grocery write
   const [form, setForm] = useState(emptyForm);
   const [usual, setUsual] = useState(false); // off every time: the usual split changes only when this is ticked
   const people = allPeople(g);
@@ -32,7 +32,7 @@ export default function BulkShareSheet() {
     const snap = takeShareSnapshot(mk, live, st.groceryMonths[mk]?.lines ?? {}, st.grocery.items);
     const done = applyBulkShare(st, () => useAppStore.getState().grocery.items, snap, share, usual && !form.reset);
     closeModal();
-    (modal.onApplied as ((a: BulkApplied) => void) | undefined)?.({ text: sharedText(done, share), undo: () => restoreShareSnapshot(snap, useAppStore.getState()) });
+    (modal.onApplied as ((a: BulkApplied) => void) | undefined)?.({ text: sharedText(done, share), undo: () => { const st = useAppStore.getState(); return restoreShareSnapshot(snap, st, (m, id) => st.groceryMonths[m]?.lines[id]); } });
   };
   return (
     <Sheet className="bssheet">

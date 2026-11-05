@@ -74,25 +74,36 @@ export function takeShareSnapshot(month: string, ids: readonly string[], lines: 
 
 const same = (a: GroceryShare | null | undefined, b: GroceryShare | null | undefined) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-/** Runs the choice over the snapshot's items. `setGroceryLineShare` also moves an item's usual split on from this month, so the usual is put back afterwards
- *  unless `usual` asks for it (a reset never changes the usual); packs' own shares are dropped so every pack takes the line's split. Returns how many items were written. */
+/** Runs the choice over the snapshot's items. By default only the month's line is written (straight to the line, so the item's usual split and the earlier months stay untouched);
+ *  with `usual` the existing `setGroceryLineShare` also makes it the item's usual split. Packs' own shares are dropped so every pack takes the line's split. The snapshot keeps
+ *  a usual split only for the items whose usual was written, so Undo touches nothing else. Returns how many items were written. */
 export function applyBulkShare(api: ShareApi, items: () => readonly GroceryItem[], snap: ShareSnapshot, share: GroceryShare | null, usual: boolean): number {
   let done = 0;
   for (const id of Object.keys(snap.lines)) {
-    const wanted = usual && share ? share : snap.usual[id] ?? null;
-    api.setGroceryLineShare(snap.month, id, share);
-    if (snap.lines[id]?.packShares) api.restoreGroceryLine(snap.month, id, lineWithShare(snap.lines[id] ?? undefined, share)); // the packs go after the line was written
-    if (!same(items().find(i => i.id === id)?.share, wanted)) api.setGroceryItemShare(id, wanted);
+    const line = snap.lines[id] ?? undefined;
+    if (usual && share) {
+      api.setGroceryLineShare(snap.month, id, share);
+      if (line?.packShares) api.restoreGroceryLine(snap.month, id, lineWithShare(line, share)); // the packs go after the line was written
+      if (!same(items().find(i => i.id === id)?.share, share)) api.setGroceryItemShare(id, share); // an earlier month: the action above leaves the usual alone
+    } else {
+      api.restoreGroceryLine(snap.month, id, lineWithShare(line, share));
+      delete snap.usual[id];
+    }
     done++;
   }
   return done;
 }
-/** Puts every touched line and usual split back; false (and nothing written) while sync is loading. The usual goes first: changing a usual split pins earlier bought lines to the split they were counted with, and a line restored first
- *  would be pinned to the new one. */
-export function restoreShareSnapshot(snap: ShareSnapshot, api: ShareApi): boolean {
+/** Puts every touched usual split and line share back; false (and nothing written) while sync is loading. Only the share and pack shares of a line are put back, on the line as it is now,
+ *  so a tick or price changed since Apply stays. The usual goes first: changing a usual split pins earlier bought lines to the split they were counted with. */
+export function restoreShareSnapshot(snap: ShareSnapshot, api: ShareApi, lineNow: (month: string, id: string) => GroceryLine | undefined): boolean {
   if (api.blocked()) return false; // nothing is written; the caller keeps the notice so Undo can be pressed again
   for (const [id, share] of Object.entries(snap.usual)) api.setGroceryItemShare(id, share);
-  for (const [id, line] of Object.entries(snap.lines)) api.restoreGroceryLine(snap.month, id, line);
+  for (const [id, saved] of Object.entries(snap.lines)) {
+    const l: GroceryLine = { ...(lineNow(snap.month, id) ?? {}) };
+    delete l.share; delete l.packShares;
+    if (saved?.share) l.share = saved.share;
+    if (saved?.packShares) l.packShares = saved.packShares;
+    api.restoreGroceryLine(snap.month, id, Object.keys(l).length ? l : null);
+  }
   return true;
 }
-

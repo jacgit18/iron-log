@@ -61,7 +61,7 @@ describe('Apply and Undo on the real store', () => {
     const before = JSON.stringify({ lines: st().groceryMonths[mk()]?.lines, items: st().grocery.items });
     const { snap } = run([e, idOf('Beef'), idOf('Rice')], { with: [SAM], notMine: true }, true);
     expect(JSON.stringify({ lines: st().groceryMonths[mk()]?.lines, items: st().grocery.items })).not.toBe(before);
-    bulk.restoreShareSnapshot(snap, st());
+    bulk.restoreShareSnapshot(snap, st(), (m, id) => st().groceryMonths[m]?.lines[id]);
     expect(JSON.stringify({ lines: st().groceryMonths[mk()]?.lines, items: st().grocery.items })).toBe(before);
   });
 });

@@ -49,6 +49,7 @@ describe('labels', () => {
   });
 });
 
+const now = (lines: Record<string, GroceryLine>) => (_m: string, id: string) => lines[id];
 // A fake of the three store actions: setGroceryLineShare moves the usual from this month on, as the real one does.
 function fake(items: GroceryItem[], lines: Record<string, GroceryLine>, blocked = false) {
   const api: ShareApi = {
@@ -97,7 +98,7 @@ describe('apply and undo', () => {
     const snap = takeShareSnapshot('2026-11', ['a', 'b', 'c'], lines, items);
     applyBulkShare(api, () => items, snap, { with: ['sam'], notMine: true }, true);
     expect(JSON.stringify({ items, lines })).not.toBe(before);
-    restoreShareSnapshot(snap, api);
+    restoreShareSnapshot(snap, api, now(lines));
     expect(JSON.stringify({ items, lines })).toBe(before);
   });
   it('undo while sync is loading writes nothing and says so, then works once ready', () => {
@@ -105,10 +106,19 @@ describe('apply and undo', () => {
     const snap = takeShareSnapshot('2026-11', ['a', 'b'], lines, items);
     applyBulkShare(fake(items, lines), () => items, snap, { with: ['sam'] }, true);
     const after = JSON.stringify({ items, lines });
-    expect(restoreShareSnapshot(snap, fake(items, lines, true))).toBe(false);
+    expect(restoreShareSnapshot(snap, fake(items, lines, true), now(lines))).toBe(false);
     expect(JSON.stringify({ items, lines })).toBe(after);
-    expect(restoreShareSnapshot(snap, fake(items, lines))).toBe(true);
+    expect(restoreShareSnapshot(snap, fake(items, lines), now(lines))).toBe(true);
     expect(lines.a).toEqual({ got: true });
+  });
+  it('undo keeps a tick made after Apply and leaves an untouched usual split alone', () => {
+    const { items, lines, api } = setup();
+    const snap = takeShareSnapshot('2026-11', ['a'], lines, items);
+    applyBulkShare(api, () => items, snap, { with: ['sam'] }, false);
+    expect(Object.keys(snap.usual)).toEqual([]);
+    lines.a = { ...lines.a!, cents: 450 };
+    restoreShareSnapshot(snap, api, now(lines));
+    expect(lines.a).toEqual({ got: true, cents: 450 });
   });
   it('skips an item that is gone', () => {
     const { items, lines, api } = setup();
