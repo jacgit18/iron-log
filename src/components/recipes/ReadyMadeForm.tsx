@@ -64,7 +64,7 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
     <form className="rc-form" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New ready-made food'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit ready-made food' : 'New ready-made food'}</h3>
       <div onKeyDown={e => { if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault(); }}>{/* Enter in the lookup box searches, it does not save the form */}
-        <FoodSearch onUse={fillFrom} />
+        <FoodSearch onUse={fillFrom} {...(canScan ? { onLabelPhoto: () => camera.current?.click() } : {})} />
       </div>
       {canScan && (
         <div className="rc-scan">

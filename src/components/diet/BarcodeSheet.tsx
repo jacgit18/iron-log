@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BARCODE_TEXT, makeReader, readGtin, type BarcodeFailure, type Reader } from '../../lib/barcodeScan.js';
+import { barcodeText, makeReader, readGtin, type BarcodeFailure, type Reader } from '../../lib/barcodeScan.js';
 import { lookupBarcode } from '../../lib/foodsClient.js';
 import type { FoodHit } from '../../shared/foods.js';
 import { useAppStore } from '../../store/useAppStore.js';
@@ -15,6 +15,7 @@ export default function BarcodeSheet() {
   const modal = useAppStore(s => s.modal);
   const closeModal = useAppStore(s => s.closeModal);
   const onFound = modal?.onFound as ((hit: FoodHit) => void) | undefined;
+  const onLabel = modal?.onLabel as (() => void) | undefined; // set where a label camera exists (the Ready-made form)
   const video = useRef<HTMLVideoElement>(null);
   const photo = useRef<HTMLInputElement>(null);
   const reader = useRef<Reader | null>(null);
@@ -81,7 +82,7 @@ export default function BarcodeSheet() {
     void finish(gtin);
   };
 
-  const text = looking ? 'Looking up...' : fail ? BARCODE_TEXT[fail] : camera === 'starting' ? 'Starting the camera...' : camera === 'live' ? 'Point the camera at the barcode.' : '';
+  const text = looking ? 'Looking up...' : fail ? barcodeText(fail, !!onLabel) : camera === 'starting' ? 'Starting the camera...' : camera === 'live' ? 'Point the camera at the barcode.' : '';
   return (
     <Sheet className="bcsheet">
       <h2 className="cond">Scan barcode</h2>
@@ -91,6 +92,7 @@ export default function BarcodeSheet() {
       <div className="actions">
         {!scanning && camera === 'live' && !looking && <button type="button" className="btn" id="bc-again" onClick={() => { setFail(null); setScanning(true); }}>Scan again</button>}
         {fail !== 'nodetector' && <button type="button" className="btn" id="bc-photo" disabled={looking} onClick={() => photo.current?.click()}>Photo instead</button>}
+        {fail === 'notfound' && onLabel && !looking && <button type="button" className="btn" id="bc-label" onClick={() => { closeModal(); onLabel(); }}>Photo the label</button>}
         <button type="button" className="btn primary" id="bc-close" onClick={closeModal}>Close</button>
       </div>
     </Sheet>

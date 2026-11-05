@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
+import { OFF_SOURCE_TEXT } from '../../lib/barcodeScan.js';
 import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
 import { useFoodHits } from './useFoodHits.js';
 import { DEFAULT_FOOD_SORT, FOOD_SORTS, sortFoodHits } from '../../lib/foodSort.js';
@@ -14,7 +15,7 @@ export interface FoodFill { n: string; kcal: number; p: number; c?: number; f?: 
 // "Look up nutrition" (brief diet-food-lookup): type a few letters, pick a result from USDA FoodData Central, set the grams, and the entry form is filled in (still editable).
 // One request at a time: a newer search cancels the older, and a late answer for old words is dropped. Nothing is stored here.
 // With `text` given, the words come from another box (the "Search your past meals and recipes" box) and this shows only the results and the grams step.
-export default function FoodSearch({ onUse, text: given }: { onUse: (fill: FoodFill) => void; text?: string }) {
+export default function FoodSearch({ onUse, text: given, onLabelPhoto }: { onUse: (fill: FoodFill) => void; text?: string; onLabelPhoto?: () => void }) {
   const [own, setText] = useState('');
   const text = given ?? own;
   const { hits, note } = useFoodHits(text);
@@ -35,7 +36,7 @@ export default function FoodSearch({ onUse, text: given }: { onUse: (fill: FoodF
 
   // Scan barcode (brief barcode-scan): another way to ask the same source, by a product code instead of a name. A found product is picked like a typed result.
   const scanOn = useFeature('barcode');
-  const scan = () => useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => choose(h) });
+  const scan = () => useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => choose(h), ...(onLabelPhoto ? { onLabel: onLabelPhoto } : {}) });
 
   return (
     <div className="dt-lookup">
@@ -60,6 +61,7 @@ export default function FoodSearch({ onUse, text: given }: { onUse: (fill: FoodF
       {pick && (
         <div className="dt-lookuppick">
           <p>{hitLabel(pick)}</p>
+          {pick.source === 'off' && <p className="note">{OFF_SOURCE_TEXT}</p>}
           <label className="field" htmlFor={given === undefined ? 'dt-lookup-g' : 'dt-find-g'}>Grams
             <input id={given === undefined ? 'dt-lookup-g' : 'dt-find-g'} type="number" inputMode="decimal" min="1" max="5000" step="any" value={grams} onChange={e => setGrams(e.target.value)} />
           </label>
