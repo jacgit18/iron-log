@@ -94,3 +94,68 @@ describe('GET /api/foods/barcode/:gtin', () => {
     expect(Number(over.headers.get('retry-after'))).toBeGreaterThan(0);
   });
 });
+
+// Open Food Facts after a USDA miss (brief barcode-coverage). One stub answers both hosts, by address.
+describe('GET /api/foods/barcode/:gtin when USDA has no such product', () => {
+  const OFF = { status: 1, product: { code: CODE, product_name: 'Woven Whole Wheat Crackers', brands: 'Aldi', serving_quantity: 28, nutriments: { 'energy-kcal_100g': 428.6, proteins_100g: 7.1, carbohydrates_100g: 71.4, fat_100g: 14.3 } } };
+  const both = (off: () => Response | Promise<Response>) => vi.fn(async (u: URL | string) => (String(u).includes('openfoodfacts') ? off() : reply({ foods: [] })));
+  const OFF_HIT = { id: 16000275287, name: 'Woven Whole Wheat Crackers', brand: 'Aldi', kcal: 429, p: 7.1, c: 71.4, f: 14.3, serving: 28, source: 'off' };
+
+  it('asks Open Food Facts for the same 14-digit code with the contact in the User-Agent and answers its product with source off', async () => {
+    const ask = both(() => reply(OFF));
+    const res = await fetch(`${await start({ key: 'SECRET', offContact: 'owner@example.test', fetch: ask as unknown as typeof fetch })}/${CODE}`);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(JSON.parse(text)).toEqual({ ok: true, hit: OFF_HIT });
+    expect(text).not.toContain('SECRET');
+    expect(text).not.toContain('owner@example.test');
+    const off = ask.mock.calls.map(c => [new URL(String(c[0])), (c as unknown[])[1] as { headers: Record<string, string> }] as const).find(([u]) => u.host === 'world.openfoodfacts.org')!;
+    expect(off[0].pathname).toBe('/api/v2/product/00016000275287.json');
+    expect(off[1].headers['user-agent']).toBe('Loadbearer/1.0 (owner@example.test)');
+    expect(off[0].toString()).not.toContain('SECRET'); // the USDA key never goes to the second source
+  });
+
+  it('does not ask Open Food Facts when USDA has the product, or when no contact is set', async () => {
+    const found = vi.fn(async () => reply(usda));
+    await fetch(`${await start({ key: 'k', offContact: 'a@b.test', fetch: found as unknown as typeof fetch })}/${CODE}`);
+    expect(found).toHaveBeenCalledTimes(1);
+    await new Promise<void>(done => server!.close(() => done()));
+    const none = both(() => reply(OFF));
+    const res = await fetch(`${await start({ key: 'k', fetch: none as unknown as typeof fetch })}/${CODE}`);
+    expect(res.status).toBe(404);
+    expect(none).toHaveBeenCalledTimes(1); // USDA only
+  });
+
+  it('answers 404 not-found when neither source has it, and holds that for an hour', async () => {
+    const ask = both(() => reply({ status: 0 }));
+    const base = await start({ key: 'k', offContact: 'a@b.test', fetch: ask as unknown as typeof fetch });
+    const res = await fetch(`${base}/${CODE}`);
+    expect(res.status).toBe(404);
+    expect(((await res.json()) as { why: string }).why).toBe('not-found');
+    await fetch(`${base}/${CODE}`);
+    expect(ask).toHaveBeenCalledTimes(2); // one USDA ask and one Open Food Facts ask, the repeat was held
+  });
+
+  it('holds a found Open Food Facts product too', async () => {
+    const ask = both(() => reply(OFF));
+    const base = await start({ key: 'k', offContact: 'a@b.test', fetch: ask as unknown as typeof fetch });
+    await fetch(`${base}/${CODE}`); const again = await fetch(`${base}/${CODE}`);
+    expect(((await again.json()) as { hit: { source: string } }).hit.source).toBe('off');
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+
+  it('answers 503 unavailable (not not-found) when Open Food Facts cannot be asked (429, 5xx, timeout), holds nothing, and logs neither code, key nor contact', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let n = 0;
+    const ask = both(() => { n++; if (n === 1) return reply({}, 429); if (n === 2) throw new DOMException('t', 'TimeoutError'); return reply(OFF); });
+    const base = await start({ key: 'SECRET', offContact: 'owner@example.test', fetch: ask as unknown as typeof fetch });
+    const first = await fetch(`${base}/${CODE}`);
+    expect(first.status).toBe(503);
+    expect(((await first.json()) as { why: string }).why).toBe('upstream');
+    expect((await fetch(`${base}/${CODE}`)).status).toBe(503);
+    expect((await fetch(`${base}/${CODE}`)).status).toBe(200); // not held: asked again and found
+    const logged = warn.mock.calls.map(c => String(c[0])).join('\n');
+    expect(logged).toContain('open food facts lookup failed');
+    for (const secret of ['SECRET', 'owner@example.test', '16000275287']) expect(logged).not.toContain(secret);
+  });
+});

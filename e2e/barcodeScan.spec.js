@@ -57,6 +57,40 @@ test.describe('as an admin', () => {
     await expect(page.getByRole('heading', { name: /Typed instead/ })).toBeVisible();
   });
 
+  test('a product from Open Food Facts shows where it came from and to check the label; a USDA product shows no such note', async ({ page }) => {
+    await asAdmin(page); await withReader(page, [{ rawValue: '4099100063851', format: 'ean_13' }]); await noCamera(page);
+    await answer(page, 200, { ok: true, hit: { id: 4099100063851, name: 'Woven Whole Wheat Crackers', brand: 'Aldi', kcal: 429, p: 7.1, c: 71.4, f: 14.3, serving: 28, source: 'off' } });
+    await page.reload();
+    await openForm(page);
+    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByLabel('Barcode photo').setInputFiles(photo);
+    await expect(page.getByText('Data from Open Food Facts. Crowd-sourced: check the numbers against the label.')).toBeVisible();
+    await page.getByRole('button', { name: 'Use', exact: true }).click();
+    await expect(page.getByLabel('Calories per serving')).toHaveValue('120'); // 28 g of 429 kcal per 100 g; still editable, nothing saved
+    await expect(page.getByText('Data from Open Food Facts')).toHaveCount(0);
+
+    await answer(page, 200, CHEERIOS);
+    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByLabel('Barcode photo').setInputFiles(photo);
+    await expect(page.getByText('Cheerios Cereal (General Mills)')).toBeVisible();
+    await expect(page.getByText('Data from Open Food Facts')).toHaveCount(0);
+  });
+
+  test('a code found nowhere offers Photo the label on the Ready-made form, which opens the label camera', async ({ page }) => {
+    await asAdmin(page); await withReader(page, [{ rawValue: '4006381333931', format: 'ean_13' }]); await noCamera(page);
+    await answer(page, 404, { ok: false, error: 'no product has that barcode', why: 'not-found' });
+    await page.reload();
+    await openForm(page);
+    await page.getByRole('button', { name: 'Scan barcode' }).click();
+    await page.getByLabel('Barcode photo').setInputFiles(photo);
+    await expect(page.getByRole('status').filter({ hasText: 'Take a photo of the label' })).toBeVisible();
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Photo the label' }).click();
+    await chooser; // the same camera input as Scan label
+    await expect(page.getByRole('heading', { name: 'Scan barcode' })).toHaveCount(0);
+    await expect(page.getByLabel('Calories per serving')).toHaveValue('');
+  });
+
   test('a photo with no readable code, and a browser with no reader, each say what to do', async ({ page }) => {
     await asAdmin(page); await withReader(page, []); await noCamera(page);
     await page.reload();

@@ -996,7 +996,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Sign in as a test account that is not an admin and open New ready-made food.',
     ],
     expected: [
-      'The sheet says the barcode is not in the food database and to type the name instead; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
+      'The sheet says the barcode is not in the food databases (USDA, then Open Food Facts), offers Photo the label on the Ready-made form, and says to type the name; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
       'With the camera blocked the sheet says it is not available and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
       'The non-admin account sees no Scan barcode button.',
     ],
@@ -1152,7 +1152,34 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-88', feature: 'Receipt reconcile', title: 'Tick items in the store, scan the receipt at home, and see Was and Now', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', device: true,
+    id: 'S-88', feature: 'Barcode scan', title: 'A store-brand frozen food (Aldi, Trader Joe\'s) is found in Open Food Facts', persona: 'diet-on-target', brief: 'barcode-coverage', device: true,
+    steps: [
+      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
+      'When the sheet closes, read the product name, its calories per 100 g and the line under it.',
+      'Press Use, compare the calories, protein, carbs and fat with the printed label, and press Save food only if you want it.',
+      'Scan a product USDA does know (oatmeal) and read the same place.',
+    ],
+    expected: [
+      'The product is found; under it the line "Data from Open Food Facts. Crowd-sourced: check the numbers against the label." shows, and the grams start at the product\'s serving when it has one.',
+      'Use fills the form with that serving\'s numbers (editable); nothing is saved until Save food. A number that disagrees with the label is yours to correct before saving.',
+      'The USDA product shows no Open Food Facts line.',
+    ],
+  },
+  {
+    id: 'S-89', feature: 'Barcode scan', title: 'A code in neither database offers a photo of the label', persona: 'diet-fresh', brief: 'barcode-coverage', device: true, edge: true,
+    steps: [
+      'On a phone, as an admin, open New ready-made food, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
+      'Read the sheet, then press Photo the label.',
+      'Take a photo of the product\'s nutrition label and check the form fills; close without saving.',
+    ],
+    expected: [
+      'The sheet says the barcode is not in the food databases and offers Photo the label next to Close.',
+      'Photo the label closes the sheet and opens the same camera as Scan label; the photo fills the form like any label scan.',
+      'Nothing is saved until Save food.',
+    ],
+  },
+  {
+    id: 'S-90', feature: 'Receipt reconcile', title: 'Tick items in the store, scan the receipt at home, and see Was and Now', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', device: true,
     steps: [
       'On a phone, sign in as an admin account. On Groceries, To get, tick three items as if you were in the store without typing a price (or with an old one).',
       'Later, press Scan receipt and photograph a receipt that has those three items, and read the note under each of their rows.',
@@ -1164,7 +1191,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-89', feature: 'Receipt reconcile', title: 'A ticked item that is not on the receipt is listed, kept, or unticked', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
+    id: 'S-91', feature: 'Receipt reconcile', title: 'A ticked item that is not on the receipt is listed, kept, or unticked', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
     steps: [
       'On a phone, on To get, tick an item you will not put on the receipt (say Milk, with a price) and two that are on it. Scan the receipt.',
       'Find "Ticked, not on this receipt" under the lines and read the row for Milk. Press Apply without touching it and look at Milk.',
@@ -1178,7 +1205,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-90', feature: 'Receipt reconcile', title: 'The receipt has a different count than you ticked', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
+    id: 'S-92', feature: 'Receipt reconcile', title: 'The receipt has a different count than you ticked', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
     steps: [
       'On a phone, tick one item with a count of 1 and a price. Scan a receipt where that item is bought twice (a count of 2 at the same unit price).',
       'Read the note under its row, then press Apply and open the item.',
