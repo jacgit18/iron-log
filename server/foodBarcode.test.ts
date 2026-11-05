@@ -99,7 +99,7 @@ describe('GET /api/foods/barcode/:gtin', () => {
 describe('GET /api/foods/barcode/:gtin when USDA has no such product', () => {
   const OFF = { status: 1, product: { code: CODE, product_name: 'Woven Whole Wheat Crackers', brands: 'Aldi', serving_quantity: 28, nutriments: { 'energy-kcal_100g': 428.6, proteins_100g: 7.1, carbohydrates_100g: 71.4, fat_100g: 14.3 } } };
   const both = (off: () => Response | Promise<Response>) => vi.fn(async (u: URL | string) => (String(u).includes('openfoodfacts') ? off() : reply({ foods: [] })));
-  const OFF_HIT = { id: 16000275287, name: 'Woven Whole Wheat Crackers', brand: 'Aldi', kcal: 428.6, p: 7.1, c: 71.4, f: 14.3, serving: 28, source: 'off' };
+  const OFF_HIT = { id: 16000275287, name: 'Woven Whole Wheat Crackers', brand: 'Aldi', kcal: 429, p: 7.1, c: 71.4, f: 14.3, serving: 28, source: 'off' };
 
   it('asks Open Food Facts for the same 14-digit code with the contact in the User-Agent and answers its product with source off', async () => {
     const ask = both(() => reply(OFF));
@@ -144,13 +144,15 @@ describe('GET /api/foods/barcode/:gtin when USDA has no such product', () => {
     expect(ask).toHaveBeenCalledTimes(2);
   });
 
-  it('ends as not-found when Open Food Facts cannot be asked (429, 5xx, timeout), holds nothing, and logs neither code, key nor contact', async () => {
+  it('answers 503 unavailable (not not-found) when Open Food Facts cannot be asked (429, 5xx, timeout), holds nothing, and logs neither code, key nor contact', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     let n = 0;
     const ask = both(() => { n++; if (n === 1) return reply({}, 429); if (n === 2) throw new DOMException('t', 'TimeoutError'); return reply(OFF); });
     const base = await start({ key: 'SECRET', offContact: 'owner@example.test', fetch: ask as unknown as typeof fetch });
-    expect((await fetch(`${base}/${CODE}`)).status).toBe(404);
-    expect((await fetch(`${base}/${CODE}`)).status).toBe(404);
+    const first = await fetch(`${base}/${CODE}`);
+    expect(first.status).toBe(503);
+    expect(((await first.json()) as { why: string }).why).toBe('upstream');
+    expect((await fetch(`${base}/${CODE}`)).status).toBe(503);
     expect((await fetch(`${base}/${CODE}`)).status).toBe(200); // not held: asked again and found
     const logged = warn.mock.calls.map(c => String(c[0])).join('\n');
     expect(logged).toContain('open food facts lookup failed');

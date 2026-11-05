@@ -59,14 +59,14 @@ test.describe('as an admin', () => {
 
   test('a product from Open Food Facts shows where it came from and to check the label; a USDA product shows no such note', async ({ page }) => {
     await asAdmin(page); await withReader(page, [{ rawValue: '4099100063851', format: 'ean_13' }]); await noCamera(page);
-    await answer(page, 200, { ok: true, hit: { id: 4099100063851, name: 'Woven Whole Wheat Crackers', brand: 'Aldi', kcal: 428.6, p: 7.1, c: 71.4, f: 14.3, serving: 28, source: 'off' } });
+    await answer(page, 200, { ok: true, hit: { id: 4099100063851, name: 'Woven Whole Wheat Crackers', brand: 'Aldi', kcal: 429, p: 7.1, c: 71.4, f: 14.3, serving: 28, source: 'off' } });
     await page.reload();
     await openForm(page);
     await page.getByRole('button', { name: 'Scan barcode' }).click();
     await page.getByLabel('Barcode photo').setInputFiles(photo);
     await expect(page.getByText('Data from Open Food Facts. Crowd-sourced: check the numbers against the label.')).toBeVisible();
     await page.getByRole('button', { name: 'Use', exact: true }).click();
-    await expect(page.getByLabel('Calories per serving')).toHaveValue('120'); // 28 g of 428.6 kcal per 100 g; still editable, nothing saved
+    await expect(page.getByLabel('Calories per serving')).toHaveValue('120'); // 28 g of 429 kcal per 100 g; still editable, nothing saved
     await expect(page.getByText('Data from Open Food Facts')).toHaveCount(0);
 
     await answer(page, 200, CHEERIOS);

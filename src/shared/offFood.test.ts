@@ -7,11 +7,11 @@ const TRADER = { status: 1, product: { code: '00665636', product_name: 'Mandarin
 
 describe('offHit', () => {
   it('reads an Aldi product per 100 g with its serving in grams and the off source', () => {
-    expect(offHit(ALDI, '04099100063851')).toEqual({ id: 4099100063851, name: 'Woven Whole Wheat Crackers', brand: 'Aldi', kcal: 428.6, p: 7.1, c: 71.4, f: 14.3, serving: 28, source: 'off' });
+    expect(offHit(ALDI, '04099100063851')).toEqual({ id: 4099100063851, name: 'Woven Whole Wheat Crackers', brand: 'Aldi', kcal: 429, p: 7.1, c: 71.4, f: 14.3, serving: 28, source: 'off' });
   });
 
   it('reads a Trader Joe’s product (8-digit code padded to 14)', () => {
-    expect(offHit(TRADER, '00000000665636')).toEqual({ id: 665636, name: 'Mandarin Orange Chicken', brand: "Trader Joe's", kcal: 196.3, p: 13.5, c: 21.5, f: 6.1, serving: 163, source: 'off' });
+    expect(offHit(TRADER, '00000000665636')).toEqual({ id: 665636, name: 'Mandarin Orange Chicken', brand: "Trader Joe's", kcal: 196, p: 13.5, c: 21.5, f: 6.1, serving: 163, source: 'off' });
   });
 
   it('takes the first brand, reads numbers written as text, and leaves out what is missing', () => {

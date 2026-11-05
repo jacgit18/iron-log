@@ -9,8 +9,8 @@ import type { FoodHit } from '../src/shared/foods.ts';
 // USDA FoodData Central for Branded foods with that code and answers with the one product whose own code is exactly the scanned one (src/shared/barcode.ts), in the
 // same shape a typed search gives. Nothing is stored. The code is never logged: a failure line names only the status or error. Answers (including "not found") are
 // held in this instance's memory for an hour so a repeat scan does not spend the shared key's allowance. When USDA has no such product and OFF_CONTACT is set, Open
-// Food Facts is asked next (brief barcode-coverage, server/openFoodFacts.ts); its answer has source 'off'. If it cannot be asked (timeout, 429, 5xx) the scan ends as "not
-// found" and nothing is held, so the next scan asks again.
+// Food Facts is asked next (brief barcode-coverage, server/openFoodFacts.ts); its answer has source 'off'. If it cannot be asked (timeout, 429, 5xx) and USDA had nothing, the scan answers
+// "unavailable" (503, try again) rather than "not found", and nothing is held, so the next scan asks again.
 
 const ASK_FOR = 10; // a code normally has one product; a few spare in case USDA returns near matches first
 const HOLD_MAX = 500;
@@ -42,17 +42,16 @@ export function barcodeRoutes({ key, offContact, fetch: ask = fetch, now = Date.
       const r = await ask(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: 'application/json' } });
       if (!r.ok) throw new Error(`upstream ${r.status}`);
       let hit = hitForGtin(await r.json(), gtin);
-      let sure = true; // false when Open Food Facts could not be asked: the miss is not held
+      let sure = true; // false when Open Food Facts could not be asked: the miss is not held and the answer is "unavailable"
       if (!hit && offContact) {
         try { hit = await askOpenFoods(gtin, { contact: offContact, fetch: ask, timeoutMs: TIMEOUT_MS }); } catch (err) {
           sure = false;
           console.warn(JSON.stringify({ msg: 'open food facts lookup failed', reason: err instanceof Error ? err.name === 'Error' ? err.message : err.name : 'unknown' }));
         }
       }
-      if (sure) {
-        if (held.size >= HOLD_MAX) held.delete(held.keys().next().value as string);
-        held.set(gtin, { at: t, hit });
-      }
+      if (!sure) return void res.status(503).json({ ok: false, error: UNAVAILABLE, why: 'upstream' });
+      if (held.size >= HOLD_MAX) held.delete(held.keys().next().value as string);
+      held.set(gtin, { at: t, hit });
       answer(hit);
     } catch (err) {
       // Never log the URL: it carries the key and the code.

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
-import { OFF_SOURCE_TEXT } from '../../lib/barcodeScan.js';
 import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
 import { useFoodHits } from './useFoodHits.js';
+import { OFF_SOURCE_TEXT } from '../../lib/barcodeScan.js';
 import { DEFAULT_FOOD_SORT, FOOD_SORTS, sortFoodHits } from '../../lib/foodSort.js';
 import { useSortChoice } from '../useSortChoice.js';
 import SortControl from '../SortControl.jsx';

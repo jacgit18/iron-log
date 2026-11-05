@@ -26,7 +26,7 @@ export function offHit(json: unknown, gtin: string): FoodHit | null {
   const id = Number(gtin);
   if (!Number.isSafeInteger(id)) return null;
   return {
-    id, name, ...(brand ? { brand } : {}), kcal: round1(kcal), p: round1(protein),
+    id, name, ...(brand ? { brand } : {}), kcal: Math.round(kcal), p: round1(protein),
     ...(c !== null ? { c: round1(c) } : {}), ...(f !== null ? { f: round1(f) } : {}),
     ...(size !== null && size > 0 && size <= MAX_GRAMS ? { serving: round1(size) } : {}),
     source: 'off',
