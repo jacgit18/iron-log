@@ -41,13 +41,14 @@ export type ScenarioFeature =
   | 'Barcode scan'
   | 'Custom 404'
   | 'Receipt store'
+  | 'Receipt merge'
   | 'Bulk share';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Bulk share',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share',
 ];
 
 export interface Scenario {
@@ -1070,6 +1071,42 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'With no store picked nothing moves and no row says Bought at; picking Costco adds the Bought at notes and the "will be marked bought at Costco" line.',
       'When the items\' old store has no sharing group and Costco has one, a warning says moving them changes who shares them; items with a split of their own are not counted in it.',
+    ],
+  },
+  {
+    id: 'S-82', feature: 'Receipt merge', title: 'The same item twice on a receipt is one row', persona: 'grocery-shopper', brief: 'receipt-merge-lines', device: true,
+    steps: [
+      'As an admin, on your phone, photograph and scan a Costco receipt where the same item (for example eggs) is printed on two lines with the same price.',
+      'In the sheet find that item. Tick it, pick the matching item from the list, and press Apply.',
+      'On To get look at the item, then press Undo.',
+    ],
+    expected: [
+      'The sheet shows ONE row for the two lines, with one checkbox, one item picker, a count of 2 and "$X each" under the price; the total check and the Apply count are unchanged by the merge.',
+      'After Apply the item is ticked bought with a count of 2 at that price; Undo puts it back.',
+    ],
+  },
+  {
+    id: 'S-83', feature: 'Receipt merge', title: 'Two packs at different prices stay one item with both prices', persona: 'grocery-shopper', brief: 'receipt-merge-lines', device: true, edge: true,
+    steps: [
+      'As an admin, on your phone, photograph and scan a receipt that has the same meat (for example chuck roast) on two lines at different prices, such as $14.12 and $17.86, with no match on your list.',
+      'Press Add to list once on the merged row and check the count and price in the form, then Add item and Apply.',
+      'Look at At home and at the month on To get, then press Undo.',
+    ],
+    expected: [
+      'One row with a note "2 packs, each at its own price: $14.12 + $17.86"; the form starts with Count 2 and the average price, both editable.',
+      'At home gets ONE item (not two); the month shows both packs at their own prices and the bill matches the receipt; Undo removes the item and the month line.',
+    ],
+  },
+  {
+    id: 'S-84', feature: 'Receipt merge', title: 'Show these lines separately', persona: 'grocery-shopper', brief: 'receipt-merge-lines', edge: true,
+    steps: [
+      'As an admin, scan a receipt with the same item on two lines (no match on your list).',
+      'On the merged row press "Show these lines separately".',
+      'Press Add to list on the first row and add it, then press Add to list on the second row with the same name and press Add item.',
+    ],
+    expected: [
+      'The row splits into its original rows (nothing is saved yet) and the link goes away.',
+      'The second add is refused with "That item is already in this store\u2019s list. Pick it in the list instead.", as it always was; picking the first row\u2019s new item in the second row\u2019s picker joins them.',
     ],
   },
   // ---- Bulk share ----
