@@ -159,7 +159,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
   // First of all: a browser opening the old Cloud Run address goes to the custom domain (BASE_URL) before anything else runs.
   app.use(canonicalHost(canonicalOrigin));
-  app.use(securityHeaders());
+  app.use(securityHeaders(staticDir));
   // gzip/brotli for the app's scripts and the sync pages: Cloud Run does not compress, and the first load is on a phone's connection.
   app.use(compression());
   // Before Better Auth and every body parser: a cross-origin write is refused without being read.
