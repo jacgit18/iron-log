@@ -76,4 +76,7 @@ describe('cleanItemRefs', () => {
     expect(cleanItemRefs([])).toBeNull();
     expect(cleanItemRefs('x')).toBeNull();
   });
+  it('keeps got only when it is exactly true (ticked this month), so a request without it still validates', () => {
+    expect(cleanItemRefs([{ id: 'a', n: 'Eggs', got: true }, { id: 'b', n: 'Milk', got: 'yes' }, { id: 'c', n: 'Rice', got: false }, { id: 'd', n: 'Oil' }])).toEqual([{ id: 'a', n: 'Eggs', got: true }, { id: 'b', n: 'Milk' }, { id: 'c', n: 'Rice' }, { id: 'd', n: 'Oil' }]);
+  });
 });

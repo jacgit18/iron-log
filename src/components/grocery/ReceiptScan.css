@@ -199,4 +199,72 @@
 .rcbought .rckeep {
   margin: 0;
 }
+/* brief receipt-reconcile-ticked: the Was → Now note under a ticked row, and the list of ticked items the receipt does not show. */
+.rcwas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4) var(--sp-10);
+  font-variant-numeric: tabular-nums;
+}
+.rctag {
+  padding: var(--sp-2) var(--sp-8);
+  border-radius: var(--r-pill);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.rctag.rcsame {
+  background: var(--sunk);
+  color: var(--muted);
+}
+.rcmiss {
+  display: grid;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+  padding: var(--sp-10) var(--sp-12);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-lg);
+}
+.rcmiss h3,
+.rcmiss .note {
+  margin: 0;
+}
+.rcmiss ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.rcmiss li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--sp-10);
+  align-items: center;
+  border-top: 1px solid var(--line);
+}
+.rcmiss li:first-child {
+  border-top: 0;
+}
+.rcuntick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+  cursor: pointer;
+}
+.rcuntick input {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+.rcmisswhat small {
+  display: block;
+  color: var(--muted);
+}
+.rcmissstate {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
 }
