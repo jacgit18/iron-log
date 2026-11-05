@@ -137,6 +137,8 @@ describe('applyPlan and restoreSnapshot', () => {
       restoreGroceryLine: (m, id, l) => { calls.push(`restore ${id} ${JSON.stringify(l)}`); },
       updateGroceryItem: (id, patch) => { calls.push(`usual ${id} ${JSON.stringify(patch)}`); return null; },
       removeGroceryItem: (id, opts) => { calls.push(`remove ${id} ${opts?.quiet ? 'quiet' : 'loud'}`); },
+      setGroceryLineStore: (m, id, store) => { calls.push(`at ${id} ${store}`); return null; },
+      makeGroceryStoreUsual: (m, id) => { calls.push(`make usual ${id}`); return null; },
     };
     return { api, calls };
   };
