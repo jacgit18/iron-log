@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { currentAllowance, resetAllowance } from './labelAllowance.js';
 import { fitSize, MAX_SIDE, SCAN_TEXT, scanLabel } from './scanPhoto.js';
 
 describe('fitSize', () => {
@@ -38,6 +39,19 @@ describe('scanLabel', () => {
     answer(200, { ok: true, result: { kind: 'ok', label: { kcal: 100, p: 2 } } });
     expect(await scanLabel(new Blob(['x']))).toEqual({ ok: true, result: { kind: 'ok', label: { kcal: 100, p: 2 } } });
     expect(atob(sent!.image)).toHaveLength(BYTES); // no byte lost between chunks
+  });
+  it('remembers the count an answer carries, and a 503 with why cap marks the day used up', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    resetAllowance();
+    answer(200, { ok: true, result: { kind: 'unreadable' }, left: 7, max: 30 });
+    await scanLabel(new Blob(['x']));
+    expect(currentAllowance()).toEqual({ left: 7, max: 30 });
+    answer(503, { ok: false, why: 'cap' });
+    expect(await scanLabel(new Blob(['x']))).toEqual({ ok: false, reason: 'cap' });
+    expect(currentAllowance()).toEqual({ left: 0, max: 30 });
+    answer(503, { ok: false, why: 'upstream' });
+    expect(await scanLabel(new Blob(['x']))).toEqual({ ok: false, reason: 'unavailable' });
+    resetAllowance();
   });
   it('maps 429 to limit, other failures to unavailable, a thrown fetch to offline, an unopenable photo to photo', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});

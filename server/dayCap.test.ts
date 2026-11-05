@@ -13,4 +13,17 @@ describe('dayCap', () => {
     t += 24 * 60 * 60_000;
     expect(cap.take('a', 2)).toEqual({ ok: true });
   });
+
+  it('says how many uses are left without counting one', () => {
+    let t = 1_000;
+    const cap = dayCap(() => t);
+    expect(cap.left('a', 3)).toBe(3);
+    cap.take('a', 3);
+    expect(cap.left('a', 3)).toBe(2);
+    expect(cap.left('a', 3)).toBe(2);
+    cap.take('a', 3); cap.take('a', 3);
+    expect(cap.left('a', 3)).toBe(0);
+    t += 24 * 60 * 60_000;
+    expect(cap.left('a', 3)).toBe(3);
+  });
 });

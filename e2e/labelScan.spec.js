@@ -51,7 +51,7 @@ test.describe('as an admin', () => {
     await expect(page.getByRole('status').filter({ hasText: 'Could not read' })).toBeVisible();
     await expect(page.getByLabel('Calories per serving')).toHaveValue('');
     await page.unroute('**/api/scan/label');
-    await answer(page, 503, { ok: false, error: 'label scan is not available right now', why: 'cap' });
+    await answer(page, 503, { ok: false, error: 'label scan is not available right now', why: 'upstream' });
     await page.getByLabel('Label photo').setInputFiles(photo);
     await expect(page.getByRole('status').filter({ hasText: 'Scan is not available right now' })).toBeVisible();
     await page.getByLabel('Name', { exact: true }).fill('Typed instead');

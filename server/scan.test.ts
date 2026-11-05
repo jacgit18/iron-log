@@ -27,7 +27,7 @@ describe('POST /api/scan/label', () => {
     const res = await post({ image: jpeg });
     expect(res.status).toBe(200);
     const text = await res.text();
-    expect(JSON.parse(text)).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'Gnocchi', serving: '1 cup', servingG: 140, servingsPerPack: 3, kcal: 210, p: 6, c: 40, f: 1 } } });
+    expect(JSON.parse(text)).toEqual({ ok: true, result: { kind: 'ok', label: { name: 'Gnocchi', serving: '1 cup', servingG: 140, servingsPerPack: 3, kcal: 210, p: 6, c: 40, f: 1 } }, left: 29, max: 30 }); // the shared count after this call (brief barcode-miss-ladder)
     expect(text).not.toContain('SECRET');
     const [url, init] = ask.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.anthropic.com/v1/messages');
@@ -46,9 +46,9 @@ describe('POST /api/scan/label', () => {
 
   it('answers "unreadable" for a reply that is not the fixed shape, and never forwards extra fields', async () => {
     const post = await start({ key: 'k', fetch: (async () => model('I think it says 200 calories')) as unknown as typeof fetch });
-    expect(await (await post({ image: jpeg })).json()).toEqual({ ok: true, result: { kind: 'unreadable' } });
+    expect(((await (await post({ image: jpeg })).json()) as { result: unknown }).result).toEqual({ kind: 'unreadable' });
     const post2 = await start({ key: 'k', fetch: (async () => model('{"kcal":100,"p":2,"evil":"x"}')) as unknown as typeof fetch });
-    expect(await (await post2({ image: jpeg })).json()).toEqual({ ok: true, result: { kind: 'ok', label: { kcal: 100, p: 2 } } });
+    expect(((await (await post2({ image: jpeg })).json()) as { result: unknown }).result).toEqual({ kind: 'ok', label: { kcal: 100, p: 2 } });
   });
 
   it('refuses a body that is not one JPEG', async () => {

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFeature } from '../../features.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import { cleanGrams, defaultGrams, hitLabel, scaleFood, type FoodHit } from '../../shared/foods.js';
 import { useFoodHits } from './useFoodHits.js';
-import { OFF_SOURCE_TEXT } from '../../lib/barcodeScan.js';
+import { AI_LABEL_TEXT, OFF_SOURCE_TEXT } from '../../lib/barcodeScan.js';
+import { SCAN_TEXT, scanLabel } from '../../lib/scanPhoto.js';
 import { DEFAULT_FOOD_SORT, FOOD_SORTS, sortFoodHits } from '../../lib/foodSort.js';
 import { useSortChoice } from '../useSortChoice.js';
 import SortControl from '../SortControl.jsx';
@@ -14,6 +15,8 @@ export interface FoodFill { n: string; kcal: number; p: number; c?: number; f?: 
 
 // "Look up nutrition" (brief diet-food-lookup): type a few letters, pick a result from USDA FoodData Central, set the grams, and the entry form is filled in (still editable).
 // One request at a time: a newer search cancels the older, and a late answer for old words is dropped. Nothing is stored here.
+// A scan miss can offer the AI label photo (brief barcode-miss-ladder): where the caller has no label camera of its own (`onLabelPhoto`, the Ready-made form's) this opens one,
+// reads the photo and shows the numbers marked "AI", with the check line, before Use.
 // With `text` given, the words come from another box (the "Search your past meals and recipes" box) and this shows only the results and the grams step.
 export default function FoodSearch({ onUse, text: given, onLabelPhoto }: { onUse: (fill: FoodFill) => void; text?: string; onLabelPhoto?: () => void }) {
   const [own, setText] = useState('');
@@ -23,6 +26,12 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto }: { onUse
   const shown = sortFoodHits(hits, sort); // the page already fetched, reordered here only
   const [pick, setPick] = useState<FoodHit | null>(null);
   const [grams, setGrams] = useState('100');
+  const [ai, setAi] = useState<{ fill: FoodFill; name: string } | null>(null); // a label read from a photo, waiting for Use
+  const [aiNote, setAiNote] = useState('');
+  const [reading, setReading] = useState(false);
+  const labelCamera = useRef<HTMLInputElement>(null);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { if (given !== undefined) setPick(null); }, [given]); // new words in the other box drop a pick made for the old ones
 
   const g = cleanGrams(grams);
@@ -34,9 +43,26 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto }: { onUse
     setPick(null); setText('');
   };
 
+  const readPhoto = async (file: File | undefined) => {
+    if (!file || reading) return;
+    setReading(true); setAiNote(''); setAi(null); setPick(null);
+    const r = await scanLabel(file);
+    if (!mounted.current) return;
+    setReading(false);
+    if (!r.ok) { setAiNote(SCAN_TEXT[r.reason]); return; }
+    if (r.result.kind === 'unreadable') { setAiNote(SCAN_TEXT.unreadable); return; }
+    if (r.result.kind === 'per100g') { setAiNote(SCAN_TEXT.per100g); return; }
+    const l = r.result.label;
+    const name = l.name || 'Food from a label';
+    setAi({ name, fill: { n: name.slice(0, 80), kcal: l.kcal, p: l.p, ...(l.c !== undefined ? { c: l.c } : {}), ...(l.f !== undefined ? { f: l.f } : {}) } });
+  };
+  const useAi = () => { if (!ai) return; onUse(ai.fill); setAi(null); setText(''); };
+
   // Scan barcode (brief barcode-scan): another way to ask the same source, by a product code instead of a name. A found product is picked like a typed result.
   const scanOn = useFeature('barcode');
-  const scan = () => useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => choose(h), ...(onLabelPhoto ? { onLabel: onLabelPhoto } : {}) });
+  const labelOn = useFeature('scan');
+  const openLabel = onLabelPhoto ?? (() => labelCamera.current?.click());
+  const scan = () => useAppStore.getState().openModal({ type: 'barcode', onFound: (h: FoodHit) => choose(h), ...(onLabelPhoto || labelOn ? { onLabel: openLabel } : {}) });
 
   return (
     <div className="dt-lookup">
@@ -45,6 +71,20 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto }: { onUse
         <label className="field" htmlFor="dt-lookup-q">Look up nutrition
           <input id="dt-lookup-q" type="search" autoComplete="off" maxLength={60} value={own} onChange={e => { setText(e.target.value); setPick(null); }} />
         </label>
+      )}
+      {!onLabelPhoto && labelOn && <input ref={labelCamera} type="file" accept="image/*" capture="environment" hidden aria-label="Label camera" onChange={e => { void readPhoto(e.target.files?.[0]); e.target.value = ''; }} />}
+      {reading && <p className="note" role="status">Reading label...</p>}
+      {aiNote && <p className="note" role="status">{aiNote}</p>}
+      {ai && (
+        <div className="dt-lookuppick">
+          <p>{ai.name} <span className="dt-aimark">AI</span></p>
+          <p className="note">{`${ai.fill.kcal} kcal · ${ai.fill.p} g protein per serving`}</p>
+          <p className="note" role="status">{AI_LABEL_TEXT}</p>
+          <div className="actions">
+            <button type="button" className="btn sm" onClick={() => setAi(null)}>Back</button>
+            <button type="button" className="btn sm primary" onClick={useAi}>Use</button>
+          </div>
+        </div>
       )}
       {note && <p className="note" role="status">{note}</p>}
       {hits.length > 1 && !pick && (
