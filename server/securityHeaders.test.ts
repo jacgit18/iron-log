@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -54,6 +55,19 @@ describe('security headers', () => {
 });
 
 describe('style sources', () => {
+  it('createApp hashes the inline styles of the pages it serves into the policy it sends', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ironlog-csp-app-'));
+    try {
+      const block = 'body{margin:0}\r\n[hidden]{display:none}';
+      writeFileSync(join(dir, 'index.html'), `<!doctype html><style>${block}</style><p>x`);
+      const base = await start({ staticDir: dir });
+      const csp = (await fetch(`${base}/`)).headers.get('content-security-policy')!;
+      const expected = `'sha256-${createHash('sha256').update(block.replace(/\r\n/g, '\n')).digest('base64')}'`;
+      expect(csp).toContain(expected); // the hash the browser computes (CRLF read as LF)
+      expect(csp).toMatch(/style-src 'self' 'sha256-/);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+
   it('lets only the hashed inline <style> blocks of the built pages style the page, and keeps style attributes working', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ironlog-csp-'));
     try {

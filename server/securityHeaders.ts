@@ -7,12 +7,12 @@ import type { RequestHandler } from 'express';
 // styles, images and fonts, plus the one outside host it calls (GitHub, for the update check).
 // Anything else, including an injected inline script or an injected <style> element, is refused by the browser.
 
-/** The `'sha256-...'` sources for every inline <style> element in the built pages (index.html, privacy.html, ...), so those, and nothing injected later, may style the page. */
+/** The `'sha256-...'` sources for every inline <style> element in the built pages (index.html, privacy.html, ...), so those, and nothing injected later, may style the page. A browser hashes the block with CRLF read as LF, so the text is normalised the same way. */
 export function inlineStyleHashes(staticDir: string | undefined): string[] {
   if (!staticDir || !existsSync(staticDir)) return [];
   const hashes = new Set<string>();
   for (const file of readdirSync(staticDir).filter(f => f.endsWith('.html'))) {
-    for (const m of readFileSync(join(staticDir, file), 'utf8').matchAll(/<style(?:\s[^>]*)?>([\s\S]*?)<\/style>/gi)) hashes.add(`'sha256-${createHash('sha256').update(m[1]).digest('base64')}'`);
+    for (const m of readFileSync(join(staticDir, file), 'utf8').matchAll(/<style(?:\s[^>]*)?>([\s\S]*?)<\/style>/gi)) hashes.add(`'sha256-${createHash('sha256').update(m[1].replace(/\r\n?/g, '\n')).digest('base64')}'`);
   }
   return [...hashes].sort();
 }
