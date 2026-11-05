@@ -42,7 +42,8 @@ export default function ReceiptScan({ g, mk }: { g: Grocery; mk: string }) {
   const scan = async (file: File | undefined) => {
     if (!file || busy) return;
     setBusy(true); setMsg(''); setApplied(null); setKept(null);
-    const items: ItemRef[] = g.items.map(i => ({ id: i.id, n: i.n, ...(i.unit ? { unit: i.unit } : {}) }));
+    const lines = useAppStore.getState().groceryMonths[mk]?.lines ?? {}; // the items ticked this month go with `got`, so the scan prefers them for a close name (brief receipt-reconcile-ticked)
+    const items: ItemRef[] = g.items.map(i => ({ id: i.id, n: i.n, ...(i.unit ? { unit: i.unit } : {}), ...(lines[i.id]?.got ? { got: true as const } : {}) }));
     const r = await scanReceipt(file, items);
     if (!mounted.current) return;
     setBusy(false);

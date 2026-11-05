@@ -38,7 +38,7 @@ const RECEIPT_SYSTEM = [
   '"store" the store name; "date" the purchase date as YYYY-MM-DD; "tax" the total tax; "total" the final total charged;',
   '"lines" one entry per purchased item in receipt order: "text" the receipt wording; "qty" the count, or the weight when the line is sold by weight; "unit" "lb", "kg" or "oz" for a weighed line;',
   '"total" the line total before any discount; "discount" the savings printed for this item as a positive number, 0 when none (an "instant savings" or coupon line printed under an item belongs to that item);',
-  '"match" the "id" of the item in the list below that this line is, or null when none of them is clearly the same product.',
+  '"match" the "id" of the item in the list below that this line is, or null when none of them is clearly the same product. An item with "got": true is already ticked as bought this month: when a line could be that item or another with a similar name, choose the ticked one.',
   'A line that is a return or a discount you cannot attach to an item has a negative "total" and "match" null. Do not read or return card numbers, loyalty or member numbers, phone numbers or addresses.',
   'If the photo is not a receipt, answer {}.',
 ].join(' ');
@@ -85,7 +85,7 @@ export async function readLabel(ask: typeof fetch, key: string, model: string, i
 
 /** One receipt photo and the list's item ids and names in, one checked receipt out. The items are sent as data inside the user turn, never as instructions. */
 export async function readReceipt(ask: typeof fetch, key: string, model: string, image: string, items: ItemRef[]): Promise<ReceiptResult> {
-  const text = `Items on the list (JSON, ids and names only):\n${JSON.stringify(items)}\nRead this receipt.`;
+  const text = `Items on the list (JSON: id, name, unit when weighed, got when ticked this month):\n${JSON.stringify(items)}\nRead this receipt.`;
   return receiptFromReply(await askModel(ask, key, model, image, { system: RECEIPT_SYSTEM, text, maxTokens: 3000 }), new Set(items.map(i => i.id)));
 }
 

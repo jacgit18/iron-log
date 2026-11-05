@@ -31,6 +31,7 @@ export type ScenarioFeature =
   | 'Whole pack'
   | 'Receipt photos'
   | 'Receipt scan'
+  | 'Receipt reconcile'
   | 'Usual amount'
   | 'Finished group'
   | 'Weight step'
@@ -48,7 +49,7 @@ export type ScenarioFeature =
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile',
 ];
 
 export interface Scenario {
@@ -1148,6 +1149,43 @@ export const SCENARIOS: readonly Scenario[] = [
       'The sheet says "1 picked item is priced pack by pack: every pack gets this split."',
       'After Apply both packs show Alex\'s split (pack 1\'s own split is gone); Undo brings back pack 1\'s Sam-only split.',
       'An account with no sharing group has no Select button on To get.',
+    ],
+  },
+  {
+    id: 'S-88', feature: 'Receipt reconcile', title: 'Tick items in the store, scan the receipt at home, and see Was and Now', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', device: true,
+    steps: [
+      'On a phone, sign in as an admin account. On Groceries, To get, tick three items as if you were in the store without typing a price (or with an old one).',
+      'Later, press Scan receipt and photograph a receipt that has those three items, and read the note under each of their rows.',
+      'Press Apply and look at the three items; then press Undo.',
+    ],
+    expected: [
+      'Each ticked item\'s row says what the list had and what the receipt says ("Was no price, now 1 × $8.99"), with a label: Price added, Price changed, Count changed or Matches the list; an item you did not tick has no note.',
+      'Apply gives the three items the receipt\'s price and count, and the item that had no price now has one; Undo puts the old price, count and "no price" back.',
+    ],
+  },
+  {
+    id: 'S-89', feature: 'Receipt reconcile', title: 'A ticked item that is not on the receipt is listed, kept, or unticked', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
+    steps: [
+      'On a phone, on To get, tick an item you will not put on the receipt (say Milk, with a price) and two that are on it. Scan the receipt.',
+      'Find "Ticked, not on this receipt" under the lines and read the row for Milk. Press Apply without touching it and look at Milk.',
+      'Scan again, tick Untick on Milk, and read the footer; press Apply, look at Milk, then press Undo.',
+      'Scan a receipt that has none of your ticked items.',
+    ],
+    expected: [
+      'Milk is listed with what it holds now ("Ticked now: 1 × $3.79") and "Kept"; applying leaves Milk ticked with its price.',
+      'With Untick on, the row says "Will be unticked", the footer says "1 will be unticked.", Apply puts Milk back to get with the notice "1 item unticked.", and Undo ticks it again with its price.',
+      'When none of your ticked items are on the receipt, the list opens with "None of your ticked items are on this receipt. Is this the right one?"',
+    ],
+  },
+  {
+    id: 'S-90', feature: 'Receipt reconcile', title: 'The receipt has a different count than you ticked', persona: 'grocery-shopper', brief: 'receipt-reconcile-ticked', edge: true, device: true,
+    steps: [
+      'On a phone, tick one item with a count of 1 and a price. Scan a receipt where that item is bought twice (a count of 2 at the same unit price).',
+      'Read the note under its row, then press Apply and open the item.',
+    ],
+    expected: [
+      'The note says "Count changed" with "Was 1 × $4.49, now 2 × $4.49".',
+      'After Apply the item shows a count of 2 at $4.49; the receipt\'s count wins over the one you ticked with.',
     ],
   },
 ];
