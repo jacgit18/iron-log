@@ -46,3 +46,11 @@ export const BARCODE_TEXT: Record<BarcodeFailure, string> = {
   notfound: 'That barcode is not in the food database. Close this and type the name instead.',
   ...FOODS_FAILURE_TEXT,
 };
+
+/** The sheet's line for a failure. Where a label camera is on hand (the Ready-made form) a not-found scan also offers the label photo. */
+export function barcodeText(fail: BarcodeFailure, canLabel: boolean): string {
+  return fail === 'notfound' && canLabel ? 'That barcode is not in the food databases. Take a photo of the label instead, or close this and type the name.' : BARCODE_TEXT[fail];
+}
+
+/** Under a product from Open Food Facts (brief barcode-coverage): where it came from and that anyone can edit it there. USDA products show nothing. */
+export const OFF_SOURCE_TEXT = 'Data from Open Food Facts. Crowd-sourced: check the numbers against the label.';

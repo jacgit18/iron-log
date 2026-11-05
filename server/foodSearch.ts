@@ -19,6 +19,8 @@ export const DAILY_MAX = 200;
 export interface FoodDeps {
   /** USDA_API_KEY. Unset: every search answers 503 and the app says the search is not available. */
   key?: string;
+  /** OFF_CONTACT: the contact address sent to Open Food Facts in the barcode lookup's User-Agent (brief barcode-coverage). Unset: a code USDA does not know is simply not found. */
+  offContact?: string;
   fetch?: typeof fetch;
   now?: () => number;
 }
