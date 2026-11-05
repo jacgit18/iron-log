@@ -69,7 +69,7 @@ export default function ReceiptSheet() {
     const done = applyPlan(real, mk, st, out);
     closeModal();
     if (keep && canKeep) onKeep?.(keepMeta(receipt, mk));
-    if (done > 0 || out.unticked || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: done === 0 && out.unticked ? `Unticked ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${addedText(made.created, made.refused)}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
+    if (done > 0 || out.unticked || real.taxStore || made.created.length || made.refused.length) onApplied?.({ text: done === 0 && out.unticked && !real.taxStore ? `Unticked ${out.unticked} ${out.unticked === 1 ? 'item' : 'items'} for ${monthLabel(mk)}.${addedText(made.created, made.refused)}` : `Applied ${done} ${done === 1 ? 'item' : 'items'}${real.taxStore ? ` and ${real.taxStore} tax` : ''} for ${monthLabel(mk)}.${movedText(real.moves, real.makeUsual, out.refused)}${addedText(made.created, made.refused)}${untickedText(out.unticked ?? 0)}`, undo: () => restoreSnapshot(snap, useAppStore.getState()) });
   };
   const unitOf = (i: number) => (receipt.lines[i]!.unit ? ` ${receipt.lines[i]!.unit}` : '');
   const nothing = plan.steps.length === 0 && plan.untick.length === 0;
@@ -188,7 +188,7 @@ export default function ReceiptSheet() {
         <p className="note">{plan.items} {plan.items === 1 ? 'item' : 'items'}, {money(plan.itemsCents)}{plan.taxStore ? ` + ${plan.taxStore} tax ${money(plan.check.taxCents)}` : ''}{newCount > 0 ? `. ${newCount} new ${newCount === 1 ? 'item' : 'items'} will be added.` : ''}{plan.untick.length > 0 ? `. ${plan.untick.length} will be unticked.` : ''}</p>
         <div className="actions">
           <button type="button" className="btn" id="rc-cancel" onClick={closeModal}>Cancel</button>
-          <button type="button" className="btn primary" id="rc-apply" disabled={nothing} onClick={apply}>{plan.items === 0 && plan.untick.length > 0 ? `Untick ${plan.untick.length} ${plan.untick.length === 1 ? 'item' : 'items'}` : `Apply ${plan.items} ${plan.items === 1 ? 'item' : 'items'}`}</button>
+          <button type="button" className="btn primary" id="rc-apply" disabled={nothing} onClick={apply}>{plan.items === 0 && plan.untick.length > 0 && !plan.taxStore ? `Untick ${plan.untick.length} ${plan.untick.length === 1 ? 'item' : 'items'}` : `Apply ${plan.items} ${plan.items === 1 ? 'item' : 'items'}`}</button>
         </div>
       </div>
     </Sheet>
