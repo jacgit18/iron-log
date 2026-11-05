@@ -23,13 +23,7 @@ export default function ReceiptSheet() {
   const onKeep = modal?.onKeep as ((meta: KeepMeta) => void) | undefined;
   const [keep, setKeep] = useState(false); // off for every receipt: nothing is uploaded unless this is ticked and Apply is pressed
   const [separate, setSeparate] = useState<ReadonlySet<string>>(() => new Set()); // brief receipt-merge-lines: text keys whose lines the person split back into their own rows (sheet only)
-  const [choices, setChoices] = useState<Choice[]>(() => {
-    // Lines with one text are one row, so they start with one choice: the first match any of them has.
-    const lines = receipt?.lines ?? [];
-    const out: Choice[] = lines.map(l => ({ itemId: l.matchId, include: !!l.matchId }));
-    for (const r of groupLines(lines)) { const id = r.lines.map(i => lines[i]!.matchId).find(Boolean) ?? null; for (const i of r.lines) out[i] = { itemId: id, include: !!id }; }
-    return out;
-  });
+  const [choices, setChoices] = useState<Choice[]>(() => (receipt?.lines ?? []).map(l => ({ itemId: l.matchId, include: !!l.matchId }))); // the lines of one row share a match (groupLines), so they start with one choice
   const [pickedStore, setPickedStore] = useState('');
   const [usual, setUsual] = useState(false); // brief receipt-bought-at: off for every receipt; ticked, Apply also makes the receipt's store the items' usual store
   const monthLines = useAppStore(s => s.groceryMonths[mk]?.lines);

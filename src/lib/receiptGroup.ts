@@ -18,13 +18,14 @@ const packCount = (l: ReceiptLine) => (Number.isInteger(l.qty) && l.qty >= 1 ? l
  *  them are two purchases, not two packs; a line with no price (a return or an unattached discount) cannot be matched at all. */
 const mergeable = (l: ReceiptLine) => !l.unit && l.grossCents > 0;
 
-/** The receipt's lines as rows, in receipt order: mergeable lines with the same text (not the same price) become one row at the place of the first; a row's text key listed in `separate` stays as its lines. */
+/** The receipt's lines as rows, in receipt order: mergeable lines with the same text and the same match (not the same price) become one row at the place of the first; a row's text key listed in `separate` stays as its lines. */
 export function groupLines(lines: readonly ReceiptLine[], separate: ReadonlySet<string> = new Set()): ReceiptRow[] {
   const rows: ReceiptRow[] = [];
   const open = new Map<string, ReceiptRow>();
   lines.forEach((l, i) => {
     const key = textKey(l.text);
-    const into = mergeable(l) && !separate.has(key) ? open.get(key) : undefined;
+    const group = `${key}\u0000${l.matchId ?? ''}`; // lines the scan matched to different items (or one matched, one not) are not the same item: they stay rows of their own
+    const into = mergeable(l) && !separate.has(key) ? open.get(group) : undefined;
     if (into) {
       into.lines.push(i);
       into.qty = Math.round((into.qty + l.qty) * 100) / 100;
@@ -34,7 +35,7 @@ export function groupLines(lines: readonly ReceiptLine[], separate: ReadonlySet<
     }
     const row: ReceiptRow = { key, text: l.text, lines: [i], qty: l.qty, grossCents: l.grossCents, discountCents: l.discountCents, netCents: lineNet(l), packs: l.unit || l.grossCents <= 0 ? [] : packsOf(lineNet(l), packCount(l)) };
     rows.push(row);
-    if (mergeable(l)) open.set(key, row);
+    if (mergeable(l)) open.set(group, row);
   });
   return rows;
 }

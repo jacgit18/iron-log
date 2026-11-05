@@ -30,6 +30,11 @@ describe('groupLines', () => {
     expect(textKey('  Eggs   LRG ')).toBe('eggs lrg');
     expect(groupLines([L('EGGS LRG', 500), L(' eggs  lrg', 500)])).toHaveLength(1);
   });
+  it('keeps lines apart when the scan matched them to different items, or only one of them to an item', () => {
+    expect(groupLines([L('EGGS', 500, { matchId: 'a' }), L('EGGS', 500, { matchId: 'b' })]).map(r => r.lines)).toEqual([[0], [1]]);
+    expect(groupLines([L('EGGS', 500, { matchId: 'a' }), L('EGGS', 500)]).map(r => r.lines)).toEqual([[0], [1]]);
+    expect(groupLines([L('EGGS', 500, { matchId: 'a' }), L('EGGS', 500, { matchId: 'a' })]).map(r => r.lines)).toEqual([[0, 1]]);
+  });
   it('uses the net price after a discount, and a line with its own count splits into packs that add up to its net', () => {
     const rows = groupLines([L('SODA', 1000, { discountCents: 200 }), L('SODA', 1000, { qty: 2 })]);
     expect(rows[0]).toMatchObject({ qty: 3, grossCents: 2000, discountCents: 200, netCents: 1800, packs: [800, 500, 500] });
