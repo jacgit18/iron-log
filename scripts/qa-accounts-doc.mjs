@@ -16,6 +16,7 @@ const volume = p => {
   if (d.logEntries) parts.push(`${d.logEntries} log entries over ${d.logDays} days`);
   if (d.bodyWeeks) parts.push(`${d.bodyWeeks} weekly weights`);
   if (d.groceryItems) parts.push(`${d.groceryItems} grocery items`);
+  if (d.groceryGroup) parts.push('a sharing group (Home: Sam and Alex, on Costco)');
   if (d.diet) parts.push(`${d.diet.targets ? 'diet targets, ' : ''}${d.diet.pastDays + (d.diet.todayPct > 0 ? 1 : 0)} days of diet log`);
   if (d.meals) parts.push(`${d.meals} saved meals`);
   if (d.planDays) parts.push(`${d.planDays}-day meal plan`);
