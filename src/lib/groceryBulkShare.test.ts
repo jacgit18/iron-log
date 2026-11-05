@@ -50,8 +50,9 @@ describe('labels', () => {
 });
 
 // A fake of the three store actions: setGroceryLineShare moves the usual from this month on, as the real one does.
-function fake(items: GroceryItem[], lines: Record<string, GroceryLine>) {
+function fake(items: GroceryItem[], lines: Record<string, GroceryLine>, blocked = false) {
   const api: ShareApi = {
+    blocked: () => blocked,
     setGroceryLineShare(_m, id, share) {
       const it = items.find(i => i.id === id); if (!it) return;
       if (share) it.share = share; else delete it.share;
@@ -98,6 +99,16 @@ describe('apply and undo', () => {
     expect(JSON.stringify({ items, lines })).not.toBe(before);
     restoreShareSnapshot(snap, api);
     expect(JSON.stringify({ items, lines })).toBe(before);
+  });
+  it('undo while sync is loading writes nothing and says so, then works once ready', () => {
+    const { items, lines } = setup();
+    const snap = takeShareSnapshot('2026-11', ['a', 'b'], lines, items);
+    applyBulkShare(fake(items, lines), () => items, snap, { with: ['sam'] }, true);
+    const after = JSON.stringify({ items, lines });
+    expect(restoreShareSnapshot(snap, fake(items, lines, true))).toBe(false);
+    expect(JSON.stringify({ items, lines })).toBe(after);
+    expect(restoreShareSnapshot(snap, fake(items, lines))).toBe(true);
+    expect(lines.a).toEqual({ got: true });
   });
   it('skips an item that is gone', () => {
     const { items, lines, api } = setup();

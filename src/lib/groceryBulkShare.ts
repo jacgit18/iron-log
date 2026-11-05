@@ -51,6 +51,8 @@ export function sharedText(count: number, share: GroceryShare | null): string {
 
 /** The store actions Apply and Undo run. */
 export interface ShareApi {
+  /** True while sync is still loading: every write is refused then, and the store says so itself. */
+  blocked(): boolean;
   setGroceryLineShare(month: string, id: string, share: GroceryShare | null): void;
   setGroceryItemShare(id: string, share: GroceryShare | null): void;
   restoreGroceryLine(month: string, id: string, line: GroceryLine | null): void;
@@ -85,10 +87,12 @@ export function applyBulkShare(api: ShareApi, items: () => readonly GroceryItem[
   }
   return done;
 }
-/** Puts every touched line and usual split back. The usual goes first: changing a usual split pins earlier bought lines to the split they were counted with, and a line restored first
+/** Puts every touched line and usual split back; false (and nothing written) while sync is loading. The usual goes first: changing a usual split pins earlier bought lines to the split they were counted with, and a line restored first
  *  would be pinned to the new one. */
-export function restoreShareSnapshot(snap: ShareSnapshot, api: ShareApi): void {
+export function restoreShareSnapshot(snap: ShareSnapshot, api: ShareApi): boolean {
+  if (api.blocked()) return false; // nothing is written; the caller keeps the notice so Undo can be pressed again
   for (const [id, share] of Object.entries(snap.usual)) api.setGroceryItemShare(id, share);
   for (const [id, line] of Object.entries(snap.lines)) api.restoreGroceryLine(snap.month, id, line);
+  return true;
 }
 
