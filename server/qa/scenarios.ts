@@ -38,13 +38,17 @@ export type ScenarioFeature =
   | 'Polish pass'
   | 'Program on phones'
   | 'Stale page guard'
-  | 'Barcode scan';
+  | 'Barcode scan'
+  | 'Custom 404'
+  | 'Receipt store'
+  | 'Receipt merge'
+  | 'Bulk share';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share',
 ];
 
 export interface Scenario {
@@ -991,9 +995,186 @@ export const SCENARIOS: readonly Scenario[] = [
       'Sign in as a test account that is not an admin and open New ready-made food.',
     ],
     expected: [
-      'The sheet says the barcode is not in the food database and to type the name instead; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
+      'The sheet says the barcode is not in the food databases (USDA, then Open Food Facts), offers Photo the label on the Ready-made form, and says to type the name; scanning stops (no repeated lookups) and Close leaves the form empty and usable.',
       'With the camera blocked the sheet says it is not available and offers Photo instead; a photo with a readable barcode works, a table photo says it could not read one.',
       'The non-admin account sees no Scan barcode button.',
+    ],
+  },
+  {
+    id: 'S-76', feature: 'Custom 404', title: 'A wrong page address shows the Page not found page', persona: 'new-user', brief: 'custom-404',
+    steps: [
+      'In a browser, signed out, open the app address followed by /zzz (for example qa.loadbearer.app/zzz).',
+      'Tap Go to Loadbearer. Then sign in and open /zzz again.',
+    ],
+    expected: [
+      'A plain Page not found page with the line "That address does not exist." appears, light or dark to match the device, and it does not repeat the address you typed.',
+      'Go to Loadbearer opens the landing page when signed out and the app when signed in. The page looks the same signed in and out.',
+    ],
+  },
+  {
+    id: 'S-77', feature: 'Custom 404', title: 'An installed app still opens, and a wrong address reaches the 404 page', persona: 'new-user', brief: 'custom-404', device: true, edge: true,
+    steps: [
+      'On a phone with the app installed and opened at least once, open the browser and type the app address followed by /zzz.',
+      'Open the installed app from the home screen, then turn on airplane mode and open it again.',
+    ],
+    expected: [
+      'The first step shows the Page not found page, not the app.',
+      'The installed app opens normally, online and offline, on its home screen address and on /plans.',
+    ],
+  },
+  {
+    id: 'S-78', feature: 'Custom 404', title: 'Real pages, files and in-app addresses are not affected', persona: 'new-user', brief: 'custom-404', edge: true,
+    steps: [
+      'Open /plans, /delete-account and /privacy.html.',
+      'Open /assets/old.js, and then the app with #/progress/zzz after the address.',
+    ],
+    expected: [
+      'The first three open as they did before. /privacy without .html shows Page not found.',
+      '/assets/old.js shows a blank not found answer, not a page. #/progress/zzz opens Progress.',
+    ],
+  },
+  // ---- Receipt store ----
+  {
+    id: 'S-79', feature: 'Receipt store', title: 'A scanned receipt marks the items as bought at its store', persona: 'grocery-shopper', brief: 'receipt-bought-at', device: true,
+    steps: [
+      'On a phone, sign in as an admin account (Grocery shopper has Costco, Trader Joe\'s, Farmers market and Corner shop). On Groceries, At home, make sure a few items you also bought on your receipt are listed under other stores or Anywhere (add them with Edit if needed).',
+      'On To get press Scan receipt and photograph a Costco receipt (or choose a saved photo of one; any store that is on your list works).',
+      'In the sheet read the rows and the line under the list, then press Apply.',
+      'Open To get and At home, then press Undo on the notice.',
+    ],
+    expected: [
+      'Every ticked item that is not already at the receipt\'s store says "Bought at Costco (usually ...)" and a line says how many items will be marked bought at Costco this month; nothing is saved before Apply.',
+      'After Apply To get shows those items under Costco, ticked and priced, the store\'s bill and tax follow, and At home still lists each item under its old store.',
+      'Undo puts every item back to its old store and unticks it.',
+    ],
+  },
+  {
+    id: 'S-80', feature: 'Receipt store', title: 'Make the receipt\'s store the usual store, and a name already there is refused', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
+    steps: [
+      'As an admin, add an item named Oats to Costco on At home (Edit), and make sure another item named Oats is under Trader Joe\'s.',
+      'Scan a Costco receipt that has an oats line matched to the Trader Joe\'s Oats, and a second item matched to something under another store.',
+      'In the sheet tick "Also make Costco the usual store for these items" and press Apply.',
+      'Look at the notice and At home, then press Undo.',
+    ],
+    expected: [
+      'The second item moves to Costco on At home; the Trader Joe\'s Oats stays under Trader Joe\'s (an Oats is already at Costco) but is still bought at Costco this month, and the notice says "except Oats" with the reason.',
+      'Undo restores the usual store of the item that moved, and both lines go back to unticked.',
+    ],
+  },
+  {
+    id: 'S-81', feature: 'Receipt store', title: 'A store that is not on the list, and moving between sharing groups', persona: 'grocery-shopper', brief: 'receipt-bought-at', edge: true,
+    steps: [
+      'As an admin scan a receipt from a store that is not on your list (for example Walmart).',
+      'Check the sheet: no row says Bought at, and "Store for this receipt" is set to Do not set the store or the tax. Pick Costco in it.',
+      'Close the sheet. On At home > Edit > Sharing, make a group that splits with one person and give it Costco only; scan the receipt again with Costco picked and look under the list.',
+    ],
+    expected: [
+      'With no store picked nothing moves and no row says Bought at; picking Costco adds the Bought at notes and the "will be marked bought at Costco" line.',
+      'When the items\' old store has no sharing group and Costco has one, a warning says moving them changes who shares them; items with a split of their own are not counted in it.',
+    ],
+  },
+  {
+    id: 'S-82', feature: 'Receipt merge', title: 'The same item twice on a receipt is one row', persona: 'grocery-shopper', brief: 'receipt-merge-lines', device: true,
+    steps: [
+      'As an admin, on your phone, photograph and scan a Costco receipt where the same item (for example eggs) is printed on two lines with the same price.',
+      'In the sheet find that item. Tick it, pick the matching item from the list, and press Apply.',
+      'On To get look at the item, then press Undo.',
+    ],
+    expected: [
+      'The sheet shows ONE row for the two lines, with one checkbox, one item picker, a count of 2 and "$X each" under the price; the total check and the Apply count are unchanged by the merge.',
+      'After Apply the item is ticked bought with a count of 2 at that price; Undo puts it back.',
+    ],
+  },
+  {
+    id: 'S-83', feature: 'Receipt merge', title: 'Two packs at different prices stay one item with both prices', persona: 'grocery-shopper', brief: 'receipt-merge-lines', device: true, edge: true,
+    steps: [
+      'As an admin, on your phone, photograph and scan a receipt that has the same meat (for example chuck roast) on two lines at different prices, such as $14.12 and $17.86, with no match on your list.',
+      'Press Add to list once on the merged row and check the count and price in the form, then Add item and Apply.',
+      'Look at At home and at the month on To get, then press Undo.',
+    ],
+    expected: [
+      'One row with a note "2 packs, each at its own price: $14.12 + $17.86"; the form starts with Count 2 and the average price, both editable.',
+      'At home gets ONE item (not two); the month shows both packs at their own prices and the bill matches the receipt; Undo removes the item and the month line.',
+    ],
+  },
+  {
+    id: 'S-84', feature: 'Receipt merge', title: 'Show these lines separately', persona: 'grocery-shopper', brief: 'receipt-merge-lines', edge: true,
+    steps: [
+      'As an admin, scan a receipt with the same item on two lines (no match on your list).',
+      'On the merged row press "Show these lines separately".',
+      'Press Add to list on the first row and add it, then press Add to list on the second row with the same name and press Add item.',
+    ],
+    expected: [
+      'The row splits into its original rows (nothing is saved yet) and the link goes away.',
+      'The second add is refused with "That item is already in this store\u2019s list. Pick it in the list instead.", as it always was; picking the first row\u2019s new item in the second row\u2019s picker joins them.',
+    ],
+  },
+  // ---- Bulk share ----
+  {
+    id: 'S-85', feature: 'Bulk share', title: 'Select all in Costco, share with one person, and Undo', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
+    steps: [
+      'Sign in as Grocery shopper (it has a sharing group, Home with Sam and Alex, that Costco splits with). Open Groceries, To get.',
+      'Press Select. A checkbox appears on each row, each store heading says "Select all in ...", and a bar at the bottom says "0 selected".',
+      'Press "Select all in Costco", then Share... In the sheet tick Sam only and press Apply.',
+      'Look at the Costco rows and the notice, then press Undo.',
+    ],
+    expected: [
+      'Nothing changes until Apply; the bar counts the Costco items and Share... is off while nothing is selected.',
+      'Every Costco row now says "Me +1" (it said "Me +2" before), the notice reads "Shared N items: Me +1.", Select mode is off and focus is on the Select button.',
+      'Undo puts every row back to "Me +2".',
+    ],
+  },
+  {
+    id: 'S-86', feature: 'Bulk share', title: 'The usual-split box changes At home, and this month only is the default', persona: 'grocery-shopper', brief: 'grocery-bulk-share',
+    steps: [
+      'On To get, Select two Costco items and press Share... Tick Alex only and press Apply (leave "Also make this the usual split" unticked).',
+      'Open At home, Edit, and open one of those items\' sharing chip. Then Undo is not needed: go back to To get, Select the same two items, tick Sam only, tick "Also make this the usual split for these items" and press Apply.',
+      'Open At home again and look at the same items\' split.',
+    ],
+    expected: [
+      'After the first Apply To get shows the new split but At home still shows the store\'s split for those items (this month only).',
+      'After the second Apply At home shows Sam as the items\' usual split, and the notice\'s Undo restores both the rows and the usual split.',
+    ],
+  },
+  {
+    id: 'S-87', feature: 'Bulk share', title: 'A pack-priced item takes the split on every pack, and no group means no Select', persona: 'grocery-shopper', brief: 'grocery-bulk-share', edge: true,
+    steps: [
+      'On To get open a Costco item, give it two pack prices (Add price) and give pack 1 its own split (Sam only). Close it.',
+      'Press Select, tick that item and one other, press Share..., and read the sheet. Tick Alex and press Apply.',
+      'Open the pack-priced item and look at both packs; press Undo on the notice.',
+      'Sign in as New user (or any account with no sharing group) and open Groceries, To get.',
+    ],
+    expected: [
+      'The sheet says "1 picked item is priced pack by pack: every pack gets this split."',
+      'After Apply both packs show Alex\'s split (pack 1\'s own split is gone); Undo brings back pack 1\'s Sam-only split.',
+      'An account with no sharing group has no Select button on To get.',
+    ],
+  },
+  {
+    id: 'S-88', feature: 'Barcode scan', title: 'A store-brand frozen food (Aldi, Trader Joe\'s) is found in Open Food Facts', persona: 'diet-on-target', brief: 'barcode-coverage', device: true,
+    steps: [
+      'On a phone, sign in as an admin account. On Recipes press New ready-made food, then Scan barcode and point the camera at an Aldi or Trader Joe\'s frozen food (the ones USDA did not know in S-74).',
+      'When the sheet closes, read the product name, its calories per 100 g and the line under it.',
+      'Press Use, compare the calories, protein, carbs and fat with the printed label, and press Save food only if you want it.',
+      'Scan a product USDA does know (oatmeal) and read the same place.',
+    ],
+    expected: [
+      'The product is found; under it the line "Data from Open Food Facts. Crowd-sourced: check the numbers against the label." shows, and the grams start at the product\'s serving when it has one.',
+      'Use fills the form with that serving\'s numbers (editable); nothing is saved until Save food. A number that disagrees with the label is yours to correct before saving.',
+      'The USDA product shows no Open Food Facts line.',
+    ],
+  },
+  {
+    id: 'S-89', feature: 'Barcode scan', title: 'A code in neither database offers a photo of the label', persona: 'diet-fresh', brief: 'barcode-coverage', device: true, edge: true,
+    steps: [
+      'On a phone, as an admin, open New ready-made food, press Scan barcode and scan something neither source knows (a book, a local product with no entry).',
+      'Read the sheet, then press Photo the label.',
+      'Take a photo of the product\'s nutrition label and check the form fills; close without saving.',
+    ],
+    expected: [
+      'The sheet says the barcode is not in the food databases and offers Photo the label next to Close.',
+      'Photo the label closes the sheet and opens the same camera as Scan label; the photo fills the form like any label scan.',
+      'Nothing is saved until Save food.',
     ],
   },
 ];

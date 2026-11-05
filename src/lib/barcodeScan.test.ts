@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BARCODE_TEXT, makeReader, pickGtin, readGtin, type BarcodeFailure } from './barcodeScan.js';
+import { BARCODE_TEXT, barcodeText, makeReader, OFF_SOURCE_TEXT, pickGtin, readGtin, type BarcodeFailure } from './barcodeScan.js';
 import { lookupBarcode } from './foodsClient.js';
 
 // The phone's side of the barcode scan (brief barcode-scan): which reading counts as a product code, what the browser's reader is asked for, how the server's
@@ -64,5 +64,25 @@ describe('BARCODE_TEXT', () => {
   it('has plain words for every way a scan can end', () => {
     const all: BarcodeFailure[] = ['nodetector', 'camera', 'unreadable', 'notfound', 'offline', 'limit', 'unavailable'];
     for (const k of all) expect(BARCODE_TEXT[k].length, k).toBeGreaterThan(10);
+  });
+});
+
+describe('barcodeText', () => {
+  it('offers the label photo on a not-found scan only where a label camera exists, and leaves every other failure alone', () => {
+    expect(barcodeText('notfound', true)).toContain('Take a photo of the label');
+    expect(barcodeText('notfound', false)).toBe(BARCODE_TEXT.notfound);
+    for (const k of ['nodetector', 'camera', 'unreadable', 'offline', 'limit', 'unavailable'] as const) expect(barcodeText(k, true), k).toBe(BARCODE_TEXT[k]);
+  });
+
+  it('names Open Food Facts and says to check the label', () => {
+    expect(OFF_SOURCE_TEXT).toContain('Open Food Facts');
+    expect(OFF_SOURCE_TEXT).toContain('check the numbers against the label');
+  });
+});
+
+describe('lookupBarcode with a product from Open Food Facts', () => {
+  it('keeps the source so the app can show where it came from', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: true, hit: { id: 7, name: 'Crackers', kcal: 400, p: 7, source: 'off' } }), { status: 200 })));
+    expect(await lookupBarcode('00000000000017')).toEqual({ ok: true, hit: { id: 7, name: 'Crackers', kcal: 400, p: 7, source: 'off' } });
   });
 });

@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { toNodeHandler } from 'better-auth/node';
 import { brandHtml, brandManifest } from './appLabel.ts';
+import { isPagePath } from './pagePaths.ts';
 import { personaByEmail } from './qa/personas.ts';
 import compression from 'compression';
 import express from 'express';
@@ -164,7 +165,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
   // First of all: a browser opening the old Cloud Run address goes to the custom domain (BASE_URL) before anything else runs.
   app.use(canonicalHost(canonicalOrigin));
-  app.use(securityHeaders());
+  app.use(securityHeaders(staticDir));
   // gzip/brotli for the app's scripts and the sync pages: Cloud Run does not compress, and the first load is on a phone's connection.
   app.use(compression());
   // Before Better Auth and every body parser: a cross-origin write is refused without being read.
@@ -397,10 +398,16 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
       app.get(['/', '/index.html'], (_req, res) => void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page));
     }
     app.use(express.static(root, { index: false, setHeaders: (res, file) => void res.setHeader('Cache-Control', cacheControl(file, root)) }));
-    // A page route (no file extension) gets the app, which draws it. A missing file (/assets/old.js) stays a 404, so a
+    // A page route (no file extension) on the allowlist (pagePaths.ts) gets the app, which draws it; any other is a 404 page. A missing file (/assets/old.js) stays a 404, so a
     // stale link never receives HTML where JavaScript was expected. /.well-known has no files, as on GitHub Pages, except assetlinks.json above.
     app.use((req, res, next) => {
       if ((req.method !== 'GET' && req.method !== 'HEAD') || extname(req.path) !== '' || req.path.startsWith('/.well-known/')) return next();
+      // Only the app's own page addresses get the app. Any other extensionless path is a real 404 with a small static page (never an echo of the path), or plain text if the build lacks it.
+      if (!isPagePath(req.path)) {
+        res.set('Cache-Control', NO_CACHE).status(404);
+        if (!existsSync(join(root, '404.html'))) return void res.type('text').send('Not found');
+        return void res.sendFile('404.html', { root }, err => void (err && !res.headersSent && res.type('text').send('Not found')));
+      }
       if (labelled) return void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page);
       res.set('Cache-Control', NO_CACHE).sendFile('index.html', { root }); // with `root`, so a checkout under a hidden folder (.claude/worktrees/...) still serves the page
     });

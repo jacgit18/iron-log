@@ -16,6 +16,7 @@ import ShareSheet from './ShareSheet.js';
 import RestDateSheet from './RestDateSheet.js';
 import BarcodeSheet from '../diet/BarcodeSheet.js';
 import BoardFilterSheet from '../board/BoardFilterSheet.js';
+import BulkShareSheet from '../grocery/BulkShareSheet.js';
 import ReceiptSheet from '../grocery/ReceiptSheet.js';
 import ReceiptViewer from '../grocery/ReceiptViewer.js';
 import RecipeFilters from '../recipes/RecipeFilters.js';
@@ -46,6 +47,7 @@ export default function Modal() {
     case 'qapicker': return <QaPickerSheet />;
     case 'barcode': return <BarcodeSheet />;
     case 'boardfilter': return <BoardFilterSheet />;
+    case 'bulkshare': return <BulkShareSheet />;
     case 'receipt': return <ReceiptSheet />;
     case 'receiptview': return <ReceiptViewer key={String((modal.receipt as { id?: string } | undefined)?.id ?? '')} />;
     case 'recipefilters': return <RecipeFilters />;

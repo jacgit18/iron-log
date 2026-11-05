@@ -40,6 +40,13 @@ describe('parseFoods', () => {
   });
 });
 
+describe('cleanHits source', () => {
+  it('keeps source off and drops any other value', () => {
+    const r = cleanHits({ hits: [{ id: 1, name: 'A', kcal: 1, p: 1, source: 'off' }, { id: 2, name: 'B', kcal: 1, p: 1, source: 'other' }, { id: 3, name: 'C', kcal: 1, p: 1 }] });
+    expect(r.map(h => h.source)).toEqual(['off', undefined, undefined]);
+  });
+});
+
 describe('cleanHits', () => {
   it('keeps good hits and drops bad ones', () => {
     const r = cleanHits({ hits: [{ id: 1, name: 'Rice', kcal: 130, p: 2.7, c: 28 }, { id: 2, name: '', kcal: 1, p: 1 }, { id: 3, name: 'Bad', kcal: -1, p: 1 }, 'x'] });

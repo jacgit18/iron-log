@@ -6,6 +6,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import type { AppState } from '../../store/types.ts';
 import { cardWeek, cardLogs, type CardWeek } from '../../lib/cardView.js';
 import { logButtonLabel } from '../../lib/loggedEntry.js';
+import { movedFromLabel } from '../../lib/movedFromLabel.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, exInfo, videoLabel } from '../../lib/data.js';
 import { eqName } from '../../lib/equipment.js';
@@ -93,7 +94,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
       <div className="row1">
         <div className="cardmain">
           {(label || s.tier || s.experiment) && <span className="tag">{[s.experiment && (s.added ? 'Added' : 'Experiment'), s.tier, label].filter(Boolean).join(' · ')}</span>}
-          {week.moved[s.id] && <span className="moved">From Day {planned}</span>}
+          {week.moved[s.id] && <span className="moved">{movedFromLabel(planned, s.day)}</span>}
           {sk && <span className="skiptag">Skipped this week</span>}
         </div>
         {sk && <button type="button" className="btn sm ghost" id={`skip-${s.id}`} aria-label={`Undo skip for ${cardName}`} onClick={() => { skipCard(s.id); focusMore(); }}>Undo skip</button>}

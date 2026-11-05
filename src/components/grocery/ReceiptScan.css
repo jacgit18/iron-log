@@ -48,6 +48,22 @@
 .rcnote {
   grid-column: 2 / -1;
 }
+.rcmerge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--sp-10);
+}
+.rclink {
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .rclines {
   list-style: none;
   margin: 0;
@@ -174,5 +190,13 @@
   .rcrow .rcqty {
     grid-column: 2;
   }
+}
+.rcbought {
+  display: grid;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+}
+.rcbought .rckeep {
+  margin: 0;
 }
 }
