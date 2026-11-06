@@ -44,13 +44,17 @@ export type ScenarioFeature =
   | 'Custom 404'
   | 'Receipt store'
   | 'Receipt merge'
-  | 'Bulk share';
+  | 'Bulk share'
+  | 'Link previews'
+  | 'Moved-card tag'
+  | 'Search hiding'
+  | 'Security headers';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Moved-card tag',
 ];
 
 export interface Scenario {
@@ -456,10 +460,12 @@ export const SCENARIOS: readonly Scenario[] = [
       'On an Android phone with Loadbearer installed, open a YouTube video and choose Share, then Loadbearer.',
       'In the "Save this link" sheet pick an exercise and confirm.',
       'Share a different link to the same exercise.',
+      'On a computer, open Chrome\'s developer tools on the QA site, Application, Manifest, and read the warnings.',
     ],
     expected: [
       'Loadbearer is listed in the share sheet and opens "Save this link" over the board.',
       'The link is saved as the exercise\'s video and shows on its card; a different link first asks "Replace the link on <exercise>?"',
+      'The Manifest page shows no warning about the share target\'s enctype, and sharing a link still works as above.',
     ],
   },
   {
@@ -1264,6 +1270,100 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The panel stays open and the Home group says "That person is already in this group."; no "Sharing saved." note appears.',
       'With the box empty, Done closes the panel and says "Sharing saved.".',
+    ],
+  },
+  {
+    id: 'S-97', feature: 'Security headers', title: 'The barcode scanner\'s live camera opens on a phone', persona: 'diet-fresh', brief: 'camera-and-headers', device: true,
+    steps: [
+      'On a phone, sign in as an admin on QA, open Daily, Diet and press Scan barcode in the food search box.',
+      'When the browser asks to use the camera, allow it. Read the line under the camera view.',
+      'Scan any product barcode, then close the sheet and reopen it.',
+    ],
+    expected: [
+      'The sheet says "Starting the camera..." and then shows the live camera view with "Point the camera at the barcode."; it does not drop to the photo-of-the-barcode choice because the site blocked the camera.',
+      'A scanned code is looked up; closing the sheet switches the camera off (the browser\'s camera light goes out), and reopening starts it again.',
+    ],
+  },
+  {
+    id: 'S-98', feature: 'Security headers', title: 'Every tab and the plain pages render styled with no security errors in the console', persona: 'diet-fresh', brief: 'camera-and-headers', edge: true,
+    steps: [
+      'On a computer, open the QA site in Chrome with developer tools open on the Console tab, and sign in.',
+      'Open each tab in turn (Daily, Progress, Program, Settings) and open one sheet on each.',
+      'Open /privacy, /terms and an address that does not exist, such as /nothing-here, one after another.',
+    ],
+    expected: [
+      'Every screen is styled as normal (colours, fonts and layout, not bare text).',
+      'The Console shows no red errors that mention Content Security Policy, Permissions Policy or "Refused to".',
+      'The privacy and terms pages and the "Page not found" page are styled the same way and show no such errors.',
+    ],
+  },
+  {
+    id: 'S-99', feature: 'Link previews', title: 'Pasting the app address into a chat app shows a title, description and picture', persona: 'new-user', brief: 'share-preview-sitemap', device: true,
+    steps: [
+      'On a phone, paste the QA address (https://qa.loadbearer.app/) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
+      'Read the title, the description and the picture on the card.',
+    ],
+    expected: [
+      'The card is titled "Loadbearer: a weekly training board that remembers your lifts" with the description "A weekly workout board with A/B program rotation, phase-based targets, timers and a muscle map. Works offline."',
+      'A wide picture (the Loadbearer logo beside the title line) shows on the card. A chat app that cached the address earlier may show an old card; try a different app or add ?x=1 to the address.',
+    ],
+  },
+  {
+    id: 'S-100', feature: 'Link previews', title: 'The sitemap and icon files load, and the plain pages have their own titles', persona: 'new-user', brief: 'share-preview-sitemap',
+    steps: [
+      'In a browser, open /sitemap.xml and /favicon.ico on the QA address.',
+      'Open /privacy.html, /terms.html and /delete-account and read each browser tab\'s title.',
+      'Open the app itself and read its tab title and icon.',
+    ],
+    expected: [
+      '/sitemap.xml shows an XML list of five addresses (the home page, /plans, /privacy.html, /terms.html and /delete-account), all naming loadbearer.app, the production host; /favicon.ico loads a small picture, not a "not found" page.',
+      'The tabs are titled "Privacy Policy · Loadbearer", "Terms of Use · Loadbearer" and "Delete your account · Loadbearer".',
+      'The app tab is titled "Loadbearer" with the logo as its icon.',
+    ],
+  },
+  {
+    id: 'S-101', feature: 'Search hiding', title: 'QA asks search engines to stay out', persona: 'new-user', brief: 'qa-noindex-robots',
+    steps: [
+      'In a terminal, run curl https://qa.loadbearer.app/robots.txt (or open that address in a browser) and read the answer.',
+      'Open /sitemap.xml on QA and confirm the app itself still loads normally.',
+    ],
+    expected: [
+      'robots.txt answers exactly two lines, "User-agent: *" and "Disallow: /", with no Sitemap line.',
+      'The sitemap and the app still load; only crawlers are asked to stay away. The same holds on the Staging address if it is up.',
+    ],
+  },
+  {
+    id: 'S-102', feature: 'Search hiding', title: 'Production\'s robots.txt still allows search, once production has the new build', persona: 'new-user', brief: 'qa-noindex-robots', edge: true,
+    steps: [
+      'In a terminal, run curl https://loadbearer.app/robots.txt (or open that address in a browser) and read the answer.',
+    ],
+    expected: [
+      'Production answers "User-agent: *", "Allow: /" and a "Sitemap: https://loadbearer.app/sitemap.xml" line. It never answers Disallow: /.',
+      'Until production is deployed with PR 740, it may still answer the older file (no Sitemap line); that is expected, not a fail. A "Disallow: /" on production is a fail.',
+    ],
+  },
+  {
+    id: 'S-103', feature: 'Moved-card tag', title: 'A card moved to another day is tagged with the day it came from', persona: 'superset-builder', brief: 'moved-from-label',
+    steps: [
+      'Open the Board and open the ⋯ menu on a card that sits on Day 2.',
+      'In Move to choose Day 4. Find the card in the Day 4 column and read its tag.',
+      'Move it back to Day 2 (Day 2 shows "(planned)") and look for the tag.',
+    ],
+    expected: [
+      'On Day 4 the card carries the tag "From Day 2".',
+      'Back on its planned day the tag is gone.',
+    ],
+  },
+  {
+    id: 'S-104', feature: 'Moved-card tag', title: 'A moved card whose home day is off the board names its program day', persona: 'superset-builder', brief: 'moved-from-label', edge: true,
+    steps: [
+      'Open the ⋯ menu on a card from the Day 7 workout and move it to Day 3; its tag says "From Day 7".',
+      'Tick Rest on Day 6, so every workout from Day 6 on slips one column later and the Day 7 workout\'s home column is past the end of the board (if the page asks to confirm, read it and press OK).',
+      'Read the tag on the card you moved. Untick Rest on Day 6 and read it again.',
+    ],
+    expected: [
+      'With the rest day on, the tag reads "From Day 7’s workout, off this week" (the program day, not a column number that does not exist).',
+      'With the rest day off, the tag is back to "From Day 7".',
     ],
   },
 ];
