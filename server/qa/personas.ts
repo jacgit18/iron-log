@@ -45,6 +45,8 @@ export interface PersonaData {
   planDays?: number;
   /** Recipes to create (0 to 300). */
   recipes?: number;
+  /** An exercise id logged in two strength sessions in a row (3 and 1 days back), 4 sets of 6 at 100 lb, so its Board card shows "suggested, from 100 lb" (the Weight step scenarios). It has no other strength entries. */
+  progressionReady?: string;
 }
 
 export interface DietSpec {
@@ -69,7 +71,7 @@ export const PERSONAS: readonly Persona[] = [
   { id: 'paid-past-due', name: 'Paid, past due', group: 'Limits', plan: 'paid', planStatus: 'past_due', renewsInDays: -2, scenario: 'Payment failed two days ago; the plan is still paid.', tryThis: 'The warning and the downgrade path.', data: { programs: true, logDays: 60, logEntries: 150, bodyWeeks: 9, groceryItems: 0 } },
   { id: 'grocery-at-cap', name: 'Grocery at the cap', group: 'Limits', plan: 'free', planStatus: null, renewsInDays: null, scenario: 'The grocery catalogue holds 500 items, the most allowed.', tryThis: 'The over-the-cap message and what a 501st item does.', data: { programs: true, logDays: 14, logEntries: 30, bodyWeeks: 2, groceryItems: 500 } },
   { id: 'erased-account', name: 'Erased account', group: 'Limits', plan: 'free', planStatus: null, renewsInDays: null, scenario: 'Used Erase my data; the data epoch was bumped and nothing is left.', tryThis: 'A second device resetting after an erase.', data: { ...NONE, erased: true } },
-  { id: 'heavy-logger', name: 'Heavy logger', group: 'Data volume', plan: 'free', planStatus: null, renewsInDays: null, scenario: 'About six months of daily logs, weekly body weight, two programs.', tryThis: 'Progress charts and history speed.', data: { programs: true, logDays: 183, logEntries: 1000, bodyWeeks: 26, groceryItems: 0 } },
+  { id: 'heavy-logger', name: 'Heavy logger', group: 'Data volume', plan: 'free', planStatus: null, renewsInDays: null, scenario: 'About six months of daily logs, weekly body weight, two programs.', tryThis: 'Progress charts and history speed.', data: { programs: true, logDays: 183, logEntries: 1000, bodyWeeks: 26, groceryItems: 0, progressionReady: 'cablecrunch' } },
   { id: 'three-year-veteran', name: 'Three-year veteran', group: 'Data volume', plan: 'paid', planStatus: 'active', renewsInDays: 200, scenario: 'About 5,000 entries over three years.', tryThis: 'Slow screens, large exports and sync size.', data: { programs: true, logDays: 1095, logEntries: 5000, bodyWeeks: 156, groceryItems: 0 } },
   { id: 'superset-builder', name: 'Superset builder', group: 'Features', plan: 'free', planStatus: null, renewsInDays: null, scenario: 'Both programs are full of supersets across the week.', tryThis: 'Moving one exercise of a superset to another day.', data: { programs: true, logDays: 28, logEntries: 80, bodyWeeks: 4, groceryItems: 0 } },
   { id: 'grocery-shopper', name: 'Grocery shopper', group: 'Features', plan: 'paid', planStatus: 'active', renewsInDays: 20, scenario: 'A working grocery list: 60 items across 4 stores, some priced, and a sharing group (Home: Sam and Alex) that Costco splits with.', tryThis: 'To get and At home lists, prices and unpriced items, and splitting with people (Select on To get).', data: { programs: true, logDays: 30, logEntries: 60, bodyWeeks: 4, groceryItems: 60, groceryGroup: true } },

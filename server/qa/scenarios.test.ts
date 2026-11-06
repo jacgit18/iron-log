@@ -57,7 +57,7 @@ describe('QA scenarios', () => {
 
   it('looks up by id and by account', () => {
     expect(scenarioById('S-01')?.persona).toBe('diet-on-target');
-    expect(scenarioById('S-99')).toBeUndefined();
+    expect(scenarioById('S-999')).toBeUndefined();
     expect(scenariosForPersona('diet-on-target').map(s => s.id)).toContain('S-01');
     expect(scenariosForPersona('no-such-account')).toEqual([]);
   });

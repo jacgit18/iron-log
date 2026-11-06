@@ -18,8 +18,8 @@ export type ReceiptUnit = 'lb' | 'kg' | 'oz';
 export interface ReceiptLine { text: string; qty: number; unit?: ReceiptUnit; grossCents: number; discountCents: number; matchId: string | null }
 export interface Receipt { store?: string; date?: string; lines: ReceiptLine[]; taxCents?: number; totalCents?: number }
 export type ReceiptResult = { kind: 'ok'; receipt: Receipt } | { kind: 'unreadable' };
-/** What the route sends the model about the grocery list: ids and names only (no prices, notes or sharing). */
-export interface ItemRef { id: string; n: string; unit?: ReceiptUnit }
+/** What the route sends the model about the grocery list: ids and names only (no prices, notes or sharing), and `got` when the item is ticked as bought this month (brief receipt-reconcile-ticked), so a ticked item wins a close match. */
+export interface ItemRef { id: string; n: string; unit?: ReceiptUnit; got?: true }
 
 const obj = (v: unknown): Record<string, unknown> | null => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 const text = (v: unknown, max: number): string | undefined => {
@@ -85,7 +85,7 @@ export function cleanItemRefs(v: unknown): ItemRef[] | null {
     const id = text(o?.id, 60), n = text(o?.n, 80);
     if (!o || !id || !n || seen.has(id)) continue;
     seen.add(id);
-    out.push({ id, n, ...(typeof o.unit === 'string' && UNITS.includes(o.unit) ? { unit: o.unit as ReceiptUnit } : {}) });
+    out.push({ id, n, ...(typeof o.unit === 'string' && UNITS.includes(o.unit) ? { unit: o.unit as ReceiptUnit } : {}), ...(o.got === true ? { got: true as const } : {}) });
   }
   return out.length ? out : null;
 }

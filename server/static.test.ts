@@ -255,4 +255,27 @@ describe('APP_LABEL (appLabel.ts)', () => {
       await new Promise<void>(done => labelled.close(() => done()));
     }
   });
+
+  it('asks search engines to stay out of QA and Staging, and leaves production\'s robots.txt alone', async () => {
+    writeFileSync(join(dir, 'manifest.webmanifest'), '{"name":"Loadbearer","icons":[]}');
+    writeFileSync(join(dir, 'robots.txt'), 'User-agent: *\nAllow: /\n\nSitemap: https://loadbearer.app/sitemap.xml\n');
+    for (const label of ['QA', 'Staging']) {
+      const labelled = createApp({ staticDir: dir, appLabel: label }).listen(0);
+      await new Promise(done => labelled.once('listening', done));
+      try {
+        const res = await fetch(`http://127.0.0.1:${(labelled.address() as AddressInfo).port}/robots.txt`);
+        expect(res.status, label).toBe(200);
+        const text = await res.text();
+        expect(text, label).toContain('Disallow: /\n');
+        expect(text, label).not.toContain('Allow: /\n');
+        expect(text, label).not.toContain('Sitemap');
+      } finally {
+        await new Promise<void>(done => labelled.close(() => done()));
+      }
+    }
+    const production = await (await get('/robots.txt')).text();
+    expect(production).toContain('Allow: /\n');
+    expect(production).toContain('Sitemap: https://loadbearer.app/sitemap.xml');
+    expect(production).not.toContain('Disallow');
+  });
 });

@@ -31,7 +31,8 @@ export interface Where { at: string | null; makeUsual: boolean; g: Grocery; line
 export interface Check { linesCents: number; taxCents: number; totalCents: number | null; diffCents: number | null }
 /** `notes` says why a ticked line was left out of the writes (by line index): a weight that cannot be matched to the item's unit. */
 /** `moves`: the items to mark bought at the receipt's store (none when no store is known); `makeUsual`: Apply also makes that store their usual one. */
-export interface Plan { steps: Step[]; items: number; itemsCents: number; check: Check; taxStore: string | null; notes: Record<number, string>; moves: Move[]; makeUsual: boolean }
+/** `untick`: ticked items the receipt does not show that the person chose to untick (brief receipt-reconcile-ticked); Apply unticks them and Undo ticks them back. `planReceipt` leaves it empty: the review sheet sets it from the person's choices. */
+export interface Plan { steps: Step[]; items: number; itemsCents: number; check: Check; taxStore: string | null; notes: Record<number, string>; moves: Move[]; makeUsual: boolean; untick: string[] }
 
 const GRAMS: Record<ReceiptUnit, number> = { lb: 453.59237, kg: 1000, oz: 28.349523125 };
 /** A weight in another unit (2.2 lb in kg is 1), to two decimals, the way a count is kept. */
@@ -101,7 +102,7 @@ export function planReceipt(receipt: Receipt, choices: readonly Choice[], listIt
   const taxOn = taxStore !== null && (receipt.taxCents ?? 0) > 0;
   if (taxOn) steps.push({ kind: 'tax', store: taxStore, cents: receipt.taxCents! });
   const moves = where?.at ? movesFor(steps, items, where.at, where) : [];
-  return { steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null, notes, moves, makeUsual: !!where?.makeUsual && moves.length > 0 };
+  return { steps, items: steps.filter(s => s.kind !== 'tax').length, itemsCents, check: checkTotals(receipt), taxStore: taxOn ? taxStore : null, notes, moves, makeUsual: !!where?.makeUsual && moves.length > 0, untick: [] };
 }
 
 /** The items of the plan that are not already bought at `at` this month. An item added from the sheet keeps the store its own form chose; an item with a split of its own (or one on its line) keeps it whatever the store. */
@@ -173,11 +174,12 @@ export function takeSnapshot(plan: Plan, month: string, lines: Record<string, Gr
     const it = created.includes(s.id) ? undefined : items.find(i => i.id === s.id); // a created item is removed on Undo, so its usual values need no restoring
     if (it) snap.usual[s.id] = { qty: it.qty, cents: it.cents, ...(plan.makeUsual && plan.moves.some(m => m.id === s.id) ? { store: it.store } : {}) }; // the usual store is put back only when Apply changes it
   }
+  for (const id of plan.untick) if (!(id in snap.lines)) snap.lines[id] = lines[id] ? structuredClone(lines[id]!) : null; // an unticked line is put back exactly as it was
   return snap;
 }
 
 /** Runs the plan: each item is ticked bought for the month, marked bought at the receipt's store when it is not there already, then gets its count and price (or its packs' prices), and the store's tax is set. With `makeUsual` the receipt's store also becomes the item's usual one; an item that action refuses (the name is already there) is named in `out.refused` and stays bought at the store for the month only. Returns how many items were written. */
-export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { refused: string[] }): number {
+export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { refused: string[]; unticked?: number }): number {
   let done = 0;
   for (const s of plan.steps) {
     if (s.kind === 'tax') { api.setGroceryTax(month, s.store, s.cents); continue; }
@@ -188,6 +190,7 @@ export function applyPlan(plan: Plan, month: string, api: GroceryApi, out?: { re
     if (move && plan.makeUsual) { const err = api.makeGroceryStoreUsual(month, s.id); if (err) out?.refused.push(`${move.name} (${err})`); }
     done++;
   }
+  for (const id of plan.untick) if (api.setGroceryGot(month, id, false) && out) out.unticked = (out.unticked ?? 0) + 1; // after the items: a ticked item the receipt does not show, unticked by choice
   return done;
 }
 
