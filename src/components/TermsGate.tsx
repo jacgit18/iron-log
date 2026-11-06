@@ -44,6 +44,12 @@ export default function TermsGate({ owed }: { owed: TermsDecision }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
   }, []);
 
+  // The precached shell can be the old bundle that just got the 409: ask the service worker to look for the new one first, then reload.
+  const reloadFresh = async () => {
+    try { await (await navigator.serviceWorker?.getRegistration())?.update(); } catch { /* reload anyway */ }
+    window.location.reload();
+  };
+
   const signOut = async () => {
     setBusy(true);
     const ok = await signOutFlow({ disablePush, signOut: () => client.signOut(), forgetSession: () => forgetSession(LS), forgetBackups: () => useAppStore.getState().forgetBackups(), reload: () => window.location.reload(), tell: setMessage });
@@ -61,7 +67,7 @@ export default function TermsGate({ owed }: { owed: TermsDecision }) {
       {message && <p className="notice" role="alert"><b>{message}</b></p>}
       <div className="actions">
         {stale
-          ? <button type="button" className="btn primary" onClick={() => window.location.reload()}>Reload</button>
+          ? <button type="button" className="btn primary" onClick={() => void reloadFresh()}>Reload</button>
           : <button type="button" className="btn primary" disabled={busy || !ticked} onClick={() => void accept()}>{busy ? 'Saving…' : 'Continue'}</button>}
         <button type="button" className="btn" disabled={busy} onClick={() => void signOut()}>Sign out</button>
       </div>
