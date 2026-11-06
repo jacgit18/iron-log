@@ -6,46 +6,56 @@ import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { DAYS, progName } from '../../lib/logic.js';
 import { splitLibrary } from '../../lib/programArchive.js';
 import {
-  compareProgram, countRows, diffNote, filterRows, loadLine, phaseMix, phaseOf,
-  type CompareRow, type CompareStatus, type PhaseFilter, type StatusFilter,
+  compareProgram, countRows, diffParts, filterRows, loadLine, phaseMix, phaseOf,
+  type CompareRow, type PhaseFilter, type StatusFilter,
 } from '../../lib/programCompare.js';
 import './ProgramCompare.css';
 
-const STATUS_TAG: Record<CompareStatus, string> = { same: 'Same', chg: 'Changed', ph: 'Phase differs', onlyA: 'Only here', onlyB: 'Only here' };
+const STATUS_TAG: Record<'same' | 'chg' | 'ph', string> = { same: 'Same', chg: 'Changed', ph: 'Phase differs' };
 const phKey = (p: PhaseKey | null) => p ?? 'none';
 const phName = (p: PhaseKey | null) => (p ? PHASES[p].label : 'No phase');
 
-function Pill({ ph }: { ph: PhaseKey | null }) {
-  return <span className={`cmpph cmpph-${phKey(ph)}`}>{phName(ph)}</span>;
+function Pill({ ph, hot }: { ph: PhaseKey | null; hot?: boolean }) {
+  return <span className={`cmpph cmpph-${phKey(ph)}${hot ? ' cmpph-hot' : ''}`}>{phName(ph)}</span>;
 }
 
-// One program as a board of rows. The rows are the editor's own (`.edrow`) without drag handle or buttons: nothing here can be edited.
-function Board({ name, side, rows }: { name: string; side: 'left' | 'right'; rows: CompareRow[] }) {
-  const cfg = useAppStore(st => st.cfg);
-  const other = side === 'left' ? 'right' : 'left';
-  const mine = rows.filter(r => r[side]);
+// One program's side of a row: its load and phase, with what differs from the other side marked, or a note that the exercise is not in it.
+// The program's name is the label on a narrow panel (A over B); on a wide one the column heading carries it and this stays for screen readers.
+function Side({ who, it, markLoad, markPhase }: { who: string; it: CompareRow['left']; markLoad: boolean; markPhase: boolean }) {
   return (
-    <section className="cmpboard" aria-label={name}>
-      <h3>{name}</h3>
-      <div className="edlist">
-        {!mine.length && <p className="note">Nothing to show here for this day and filter.</p>}
-        {mine.map((r, i) => {
-          const it = r[side]!;
-          const away = side === 'left' ? r.status === 'onlyA' : r.status === 'onlyB';
-          const note = side === 'left' && r[other] ? diffNote(r) : '';
-          return (
-            <div key={i} className={`edrow cmprow cmp-${away ? 'only' : r.status}`}>
-              <div className="edmain">
-                <span className="tag">{away ? 'Only here' : STATUS_TAG[r.status]}</span>
-                <b>{exInfo(cfg, it.ex).n}</b>
-                <span className="note"><Pill ph={it.ph} />{loadLine(it) && ` ${loadLine(it)}`}</span>
-                {note && <span className="note cmphint">Other program: {note}</span>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+    <div className="cmpside">
+      <span className="cmpwho">{who}</span>
+      {it ? (
+        <span className="cmpval">
+          {loadLine(it) && <span className={markLoad ? 'cmpdiff' : undefined}>{loadLine(it)}</span>}
+          <Pill ph={it.ph} hot={markPhase} />
+        </span>
+      ) : <span className="note cmpmiss">Not in this program</span>}
+    </div>
+  );
+}
+
+// Both programs in one list, each exercise once with the first program's line over the second's (side by side when the panel is wide). The rows are the
+// editor's own (`.edrow`) without drag handle or buttons: nothing here can be edited.
+function Aligned({ an, bn, rows }: { an: string; bn: string; rows: CompareRow[] }) {
+  const cfg = useAppStore(st => st.cfg);
+  return (
+    <div className="edlist cmpaligned">
+      <div className="cmpcols" aria-hidden="true"><span /><b>{an}</b><b>{bn}</b></div>
+      {!rows.length && <p className="note">Nothing to show here for this day and filter.</p>}
+      {rows.map((r, i) => {
+        const away = r.status === 'onlyA' || r.status === 'onlyB';
+        const diff = diffParts(r);
+        const tag = r.status === 'onlyA' ? `Only in ${an}` : r.status === 'onlyB' ? `Only in ${bn}` : STATUS_TAG[r.status];
+        return (
+          <div key={i} className={`edrow cmprow cmp-${away ? 'only' : r.status}`}>
+            <div className="cmpname"><b>{exInfo(cfg, (r.left ?? r.right)!.ex).n}</b><span className="tag">{tag}</span></div>
+            <Side who={an} it={r.left} markLoad={diff.load} markPhase={diff.phase} />
+            <Side who={bn} it={r.right} markLoad={diff.load} markPhase={diff.phase} />
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -73,6 +83,8 @@ function Panel() {
   const [one, setOne] = useState('A'); const [two, setTwo] = useState('B');
   const [day, setDay] = useState(() => useAppStore.getState().edDay);
   const [status, setStatus] = useState<StatusFilter>('all'); const [phase, setPhase] = useState<PhaseFilter>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false); // only matters on a narrow panel, where the filters fold behind a button (ProgramCompare.css)
+  const filtersId = useId();
   const active = splitLibrary(library).active;
   const a = sel(programs, library, one) ?? sel(programs, library, 'A')!; const b = sel(programs, library, two) ?? sel(programs, library, 'B')!;
   const nameOf = (s: { name: string }) => (s.name === 'A' || s.name === 'B' ? progName(cfg, s.name) : s.name);
@@ -82,6 +94,7 @@ function Panel() {
   const dayRows = days[day - 1] ?? [];
   const counts = countRows(dayRows);
   const shown = filterRows(dayRows, status, phase);
+  const filtersOn = (status !== 'all' ? 1 : 0) + (phase !== null ? 1 : 0);
   const phases: PhaseKey[] = PH_KEYS.filter(k => dayRows.some(r => phaseOf(r, 'left') === k || phaseOf(r, 'right') === k));
   const hasNone = dayRows.some(r => phaseOf(r, 'left') === null || phaseOf(r, 'right') === null);
   const options = (
@@ -110,27 +123,27 @@ function Panel() {
               return <button type="button" key={d} className="btn sm cmpday" aria-pressed={d === day} onClick={() => { setDay(d); setPhase(null); }}>Day {d}<small>{n ? ` · ${n} differ` : ''}</small></button>;
             })}
           </div>
-          <div className="cmpchips" role="group" aria-label="Show rows">
-            {chips.map(([k, label, n]) => <button type="button" key={k} className="btn sm cmpchip" aria-pressed={status === k} onClick={() => setStatus(k)}>{label} {n}</button>)}
-          </div>
-          <div className="cmpchips" role="group" aria-label="Phase">
-            <button type="button" className="btn sm cmpchip" aria-pressed={phase === null} onClick={() => setPhase(null)}>Any phase</button>
-            {phases.map(k => <button type="button" key={k} className="btn sm cmpchip" aria-pressed={phase === k} onClick={() => setPhase(k)}>{PHASES[k].label}</button>)}
-            {hasNone && <button type="button" className="btn sm cmpchip" aria-pressed={phase === 'none'} onClick={() => setPhase('none')}>No phase</button>}
-          </div>
-          {!dayRows.length ? <p className="note" role="status">Nothing on this day in either program.</p> : (
-            <div className="cmpboards">
-              <Board name={an} side="left" rows={shown} />
-              <Board name={bn} side="right" rows={shown} />
+          <button type="button" className="btn sm cmpfilterbtn" aria-expanded={filtersOpen} aria-controls={filtersId} onClick={() => setFiltersOpen(o => !o)}>
+            Filter{filtersOn ? ` · ${filtersOn} on` : ''}<span className="cmpchev" aria-hidden="true"><Icon name="chevron-down" /></span>
+          </button>
+          <div id={filtersId} className="cmpfilters" data-open={filtersOpen}>
+            <div className="cmpchips" role="group" aria-label="Show rows">
+              {chips.map(([k, label, n]) => <button type="button" key={k} className="btn sm cmpchip" aria-pressed={status === k} onClick={() => setStatus(k)}>{label} {n}</button>)}
             </div>
-          )}
+            <div className="cmpchips" role="group" aria-label="Phase">
+              <button type="button" className="btn sm cmpchip" aria-pressed={phase === null} onClick={() => setPhase(null)}>Any phase</button>
+              {phases.map(k => <button type="button" key={k} className="btn sm cmpchip" aria-pressed={phase === k} onClick={() => setPhase(k)}>{PHASES[k].label}</button>)}
+              {hasNone && <button type="button" className="btn sm cmpchip" aria-pressed={phase === 'none'} onClick={() => setPhase('none')}>No phase</button>}
+            </div>
+          </div>
+          {!dayRows.length ? <p className="note" role="status">Nothing on this day in either program.</p> : <Aligned an={an} bn={bn} rows={shown} />}
         </>
       )}
     </div>
   );
 }
 
-// The Program tab's last section: two programs stacked, compared day by day. Read-only; it never touches the store's programs or the editor's day.
+// The Program tab's last section: two programs compared day by day, one row per exercise. Read-only; it never touches the store's programs or the editor's day.
 export default function ProgramCompare() {
   const [open, setOpen] = useState(false);
   const id = useId();

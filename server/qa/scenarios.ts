@@ -894,7 +894,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Choose a saved program (save a copy of A first if the list is empty) as the second program.',
     ],
     expected: [
-      'Two boards appear one above the other, each with its phase mix and the day buttons showing how many exercises differ; every row is tagged Same, Changed, Phase differs or Only here, and shows the editor\'s name, phase, weight and sets.',
+      'One list appears under each program\'s phase mix, with the day buttons showing how many exercises differ; each exercise is one row with both programs\' lines (side by side on a wide screen, the second under the first on a phone), tagged Same, Changed, Phase differs or Only in that program, with the editor\'s name, phase, weight and sets; where the two differ, the weight and sets are marked on both sides.',
       'Each filter hides the other rows and the numbers on the chips stay the same; nothing on the page can be dragged or edited, and Program A and B are unchanged afterwards.',
       'A saved copy of A against A shows no differences; choosing the same program on both sides says "Both sides are the same program."',
     ],
@@ -906,7 +906,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Step through the day buttons.',
     ],
     expected: [
-      'A day empty on both sides says "Nothing on this day in either program."; a day with exercises on one side lists them all as Only here on that side and an empty board on the other.',
+      'A day empty on both sides says "Nothing on this day in either program."; a day with exercises on one side lists them all as Only in that program, with "Not in this program" on the other side.',
       'The section is closed again after you leave the Program tab and come back, and the phone view does not scroll sideways.',
     ],
   },
@@ -1364,6 +1364,17 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'With the rest day on, the tag reads "From Day 7’s workout, off this week" (the program day, not a column number that does not exist).',
       'With the rest day off, the tag is back to "From Day 7".',
+    ],
+  },
+  {
+    id: 'S-105', feature: 'Program compare', title: 'On a phone the programs line up one over the other, and the filters fold behind a button', persona: 'superset-builder', brief: 'program-compare', edge: true,
+    steps: [
+      'On a phone (or a browser window 375 px wide), open Program, Compare programs. Look at the first rows.',
+      'Tap Filter, then Any difference; tap Filter again. Then open the same page in a window wider than 800 px.',
+    ],
+    expected: [
+      'Each exercise is one row: the first program\'s line with its name in front of it, the second program\'s line right under it. The Day buttons stay in one row you can swipe sideways, and the status and phase buttons are hidden behind a Filter button.',
+      'Filter opens and closes the status and phase buttons, and says "Filter · 1 on" once one is chosen; the rows keep the filter when it is folded. On the wide window the programs are two columns under their names, Filter is not shown and the buttons stay in view.',
     ],
   },
 ];
