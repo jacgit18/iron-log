@@ -116,6 +116,13 @@ describe('QA scenarios page', () => {
         expect(got.find(r => r.startsWith(`| ${c} |`))).toContain('| noted by hand | 2026-11-02 looked fine |');
       });
 
+      it('shows a hand-written Result that sits only in the Summary cell, unescaped', () => {
+        const id = phone[0].id;
+        const summaryOnly = doc.replace(new RegExp(`(^## Summary$[\\s\\S]*?^\\| ${id} \\|.*\\|)  \\|$`, 'm'), '$1 2026-11-02 pass; a \\| b |');
+        const row = rows(buildDoc(summaryOnly)).find(r => r.startsWith(`| ${id} |`)) ?? '';
+        expect(row).toContain('| noted by hand | 2026-11-02 pass; a \\| b |');
+      });
+
       it('leaves --check and the Results a page carries unchanged', () => {
         expect(docIssues(doc)).toEqual([]);
         const recorded = recordedResults(JSON.stringify([{ id: phone[0].id, outcome: 'pass', date: '2026-11-06', by: 'owner' }]));
