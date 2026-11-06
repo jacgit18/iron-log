@@ -6,7 +6,7 @@ import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { DAYS, progName } from '../../lib/logic.js';
 import { splitLibrary } from '../../lib/programArchive.js';
 import {
-  compareProgram, countRows, diffParts, filterRows, loadLine, phaseMix, phaseOf, rowTag,
+  compareProgram, compareSections, countRows, diffParts, loadLine, phaseMix, phaseOf, rowTag,
   type CompareRow, type PhaseFilter, type StatusFilter,
 } from '../../lib/programCompare.js';
 import './ProgramCompare.css';
@@ -91,9 +91,9 @@ function Panel() {
   const same = a.prog === b.prog || one === two;
   const days = compareProgram(a.prog, b.prog);
   const dayRows = day === 0 ? days.flat() : (days[day - 1] ?? []); // day 0 is the All days view
-  const counts = countRows(dayRows);
   const counts0 = countRows(days.flat());
-  const shown = filterRows(dayRows, status, phase);
+  const counts = day === 0 ? counts0 : countRows(dayRows);
+  const sections = compareSections(days, day, status, phase);
   const filtersOn = (status !== 'all' ? 1 : 0) + (phase !== null ? 1 : 0);
   const phases: PhaseKey[] = PH_KEYS.filter(k => dayRows.some(r => phaseOf(r, 'left') === k || phaseOf(r, 'right') === k));
   const hasNone = dayRows.some(r => phaseOf(r, 'left') === null || phaseOf(r, 'right') === null);
@@ -137,10 +137,9 @@ function Panel() {
               {hasNone && <button type="button" className="btn sm cmpchip" aria-pressed={phase === 'none'} onClick={() => setPhase('none')}>No phase</button>}
             </div>
           </div>
-          {!dayRows.length ? <p className="note" role="status">Nothing on this day in either program.</p> : day === 0 ? (
-            shown.length ? days.map((d, i) => { const r = filterRows(d, status, phase); return r.length ? <Aligned key={i} an={an} bn={bn} rows={r} heading={`Day ${i + 1}`} /> : null; })
-              : <p className="note">Nothing to show here for this filter.</p>
-          ) : <Aligned an={an} bn={bn} rows={shown} />}
+          {!dayRows.length ? <p className="note" role="status">{day === 0 ? 'Nothing in either program.' : 'Nothing on this day in either program.'}</p>
+            : sections.some(sec => sec.rows.length) ? sections.map((sec, i) => <Aligned key={i} an={an} bn={bn} rows={sec.rows} heading={sec.heading} />)
+            : <Aligned an={an} bn={bn} rows={[]} />}
         </>
       )}
     </div>

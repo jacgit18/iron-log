@@ -88,3 +88,11 @@ export function diffParts(r: CompareRow): { load: boolean; phase: boolean } {
   if (!r.left || !r.right) return { load: false, phase: false };
   return { load: !sameLoad(r.left, r.right), phase: r.phDiff };
 }
+
+export interface CompareSection { heading?: string; rows: CompareRow[] }
+
+/** What the list shows. One day (1-based) is a single section with no heading; day 0 is every day that still has rows after the filters, each under "Day N". */
+export function compareSections(days: CompareRow[][], day: number, status: StatusFilter, phase: PhaseFilter): CompareSection[] {
+  if (day !== 0) return [{ rows: filterRows(days[day - 1] ?? [], status, phase) }];
+  return days.map((d, i) => ({ heading: `Day ${i + 1}`, rows: filterRows(d, status, phase) })).filter(sec => sec.rows.length);
+}
