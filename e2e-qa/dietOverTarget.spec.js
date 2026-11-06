@@ -9,7 +9,7 @@ test('S-02: over target on open, and the 20-entries-a-day limit replaces the add
   await page.click('#daily-supplements');
   const diet = page.getByRole('region', { name: 'Diet' });
   await expect(diet.locator('.dt-entry').first()).toBeVisible({ timeout: 30_000 });
-  await expect(diet.getByRole('progressbar', { name: /Calories 2,\d{3} of 2,400/ })).toBeVisible();
+  await expect(diet.getByRole('progressbar', { name: /Calories 2,(?:[5-9]\d\d|4\d[1-9]|4[1-9]\d) of 2,400 kcal, [\d,]+ over/ })).toBeVisible();
   await expect(diet.getByRole('progressbar', { name: /Protein 10\d of 160/ })).toBeVisible();
   const full = diet.getByText(/That.s 20 things for the day\. Delete one to add another\./);
   for (let guard = 0; guard < 25 && !(await full.isVisible()); guard++) {
