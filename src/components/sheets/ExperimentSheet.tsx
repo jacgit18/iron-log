@@ -20,7 +20,7 @@ export default function ExperimentSheet({ id }: { id?: string | null }) {
   const submit = (e: FormEvent) => { e.preventDefault(); const msg = st.saveExperiment({ id: d.id, ...pickedChoice(cfg, d.name, d.cat), nu: d.nu.trim(), ne: d.ne, ph: d.ph, note: d.note.trim() }); if (msg) setErr(msg); };
   return (
     <Sheet>
-      <h2 className="cond">{cur ? 'Edit experiment' : 'Add an exercise to try'}</h2>
+      <h2 className="cond">{cur ? 'Edit idea' : 'Add an exercise to try'}</h2>
       <form id="exp-form" noValidate onSubmit={submit}>
       <ExerciseField cfg={cfg} id="exp-ex" name={d.name} url={d.nu} eq={d.ne} onName={(name) => up({ name })} onUrl={(nu) => up({ nu })} onEq={(ne) => up({ ne: ne as EquipmentId | '' })} cat={d.cat} onCat={cat => up({ cat })} />
       <label className="field">Phase

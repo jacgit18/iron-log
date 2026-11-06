@@ -73,12 +73,12 @@ function Experiments({ day }: { day: number }) {
   return (
     <section className="experiments" aria-labelledby="sexp-h">
       <div className="exphead">
-        <h2 id="sexp-h" className="cond" tabIndex={-1}>Experiments</h2>
+        <h2 id="sexp-h" className="cond" tabIndex={-1}>Stretches to try</h2>
         <button type="button" className="btn sm" id="sexp-add" onClick={() => s.openModal({ type: 'stretchexp' })}>+ Add stretch</button>
       </div>
       <RemovedNotice scope="stretchexps" />
       {hasFilter(items.length) && <ExperimentSearch id="sexp-q" q={q} onQ={setQ} shown={shown.length} total={items.length} what="stretches" />}
-      {!items.length ? <p className="note">Keep stretches you want to try here, then add them to a day.</p> : !shown.length ? <p className="note">No stretch matches. Clear the search.</p> : (
+      {!items.length ? <p className="note">Stretches you saw somewhere and want to test. Keep them here, then add them to a day.</p> : !shown.length ? <p className="note">No stretch matches. Clear the search.</p> : (
         <ul className="explist">
           {shown.map(e => {
             const to = pick[e.id] ?? day;

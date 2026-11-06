@@ -539,7 +539,7 @@ describe('experiment cards on a week', () => {
   it('weekSlots adds the week’s experiment cards after the program’s', () => {
     const s = weekSlots(prog, { extra: [x] });
     expect(s.map(c => c.id)).toEqual(['p1', 'X-a1']);
-    expect(s[1]).toEqual({ id: 'X-a1', day: 3, type: 'single', sec: 'Experiment', experiment: true, items: [{ ex: 'legext', ph: 'hyp' }], note: 'try light' });
+    expect(s[1]).toEqual({ id: 'X-a1', day: 3, type: 'single', sec: 'To try', experiment: true, items: [{ ex: 'legext', ph: 'hyp' }], note: 'try light' });
   });
   it('weekSlots without extras is the program’s cards; an empty note is left off', () => {
     expect(weekSlots(prog, {}).map(c => c.id)).toEqual(['p1']);
