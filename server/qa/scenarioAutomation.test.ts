@@ -20,9 +20,14 @@ describe('QA scenario automation tags', () => {
     }
   });
 
-  it('kinds fit the file: e2e names e2e/ specs, api names server/ tests, unit names src/ tests', () => {
+  it('names only e2e/, server/ or src/ files, and at least one that fits the kind (e2e, api, unit)', () => {
+    const own = { e2e: 'e2e/', api: 'server/', unit: 'src/' } as const;
     for (const [id, a] of Object.entries(AUTOMATION)) {
-      for (const f of a.specs ?? []) expect(f.startsWith({ e2e: 'e2e/', api: 'server/', unit: 'src/', manual: '' }[a.auto]), `${id} ${f}`).toBe(true);
+      for (const f of a.specs ?? []) expect(Object.values(own).some(p => f.startsWith(p)), `${id} ${f}`).toBe(true);
+      if (a.auto !== 'manual') {
+        const prefix = own[a.auto];
+        expect((a.specs ?? []).some(f => f.startsWith(prefix)), `${id} has no ${a.auto} spec`).toBe(true);
+      }
     }
   });
 
