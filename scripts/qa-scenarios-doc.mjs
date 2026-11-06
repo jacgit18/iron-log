@@ -14,7 +14,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { personaById, personaEmail } from '../server/qa/personas.ts';
 import { automationOf, coverageCounts } from '../server/qa/scenarioAutomation.ts';
-import { appendEntry, entryProblem, formatResult, latestById, parseResults } from '../server/qa/scenarioResults.ts';
+import { appendEntry, deviceState, entryProblem, formatResult, latestById, parseResults } from '../server/qa/scenarioResults.ts';
 import { SCENARIO_FEATURES, SCENARIOS } from '../server/qa/scenarios.ts';
 
 const PLACEHOLDER = '\\_\\_\\_';
@@ -23,7 +23,7 @@ const DEVICES = new Set(SCENARIOS.filter(s => s.device).map(s => s.id));
 
 /** The recorded Result text per scenario id from the results file's text (empty text is none; a malformed file throws). */
 export function recordedResults(text) {
-  return new Map([...latestById(parseResults(text, KNOWN, DEVICES))].map(([id, e]) => [id, formatResult(e)]));
+  return new Map([...latestById(parseResults(text, KNOWN, DEVICES))].map(([id, e]) => [id, { text: formatResult(e), entry: e }]));
 }
 const splitRow = line => line.replace(/^\|\s*|\s*\|\s*$/g, '').split(/(?<!\\)\|/).map(c => c.trim());
 
@@ -110,11 +110,22 @@ Steps are written from each shipped brief's Done when lines and the feature map.
       out.push('- **Expected:**');
       s.expected.forEach(t => out.push(`  - ${t}`));
       out.push(`- **Automation:** ${automationText(s.id)}`);
-      out.push(`- **Result** (date, pass or fail, note): ${recorded.get(s.id) ?? kept.get(s.id)?.line ?? PLACEHOLDER}\n`);
+      out.push(`- **Result** (date, pass or fail, note): ${recorded.get(s.id)?.text ?? kept.get(s.id)?.line ?? PLACEHOLDER}\n`);
     }
   }
+  const phone = live.filter(s => s.device).map(s => {
+    const latest = recorded.get(s.id)?.entry;
+    const state = deviceState(latest, Boolean(kept.get(s.id)));
+    return { s, state, last: recorded.get(s.id)?.text ?? kept.get(s.id)?.line ?? kept.get(s.id)?.cell?.replaceAll('\\|', '|') ?? '' }; // the Summary cell is stored escaped
+  });
+  const tally = {};
+  for (const { state } of phone) tally[state] = (tally[state] ?? 0) + 1;
+  const counts = Object.entries(tally).map(([k, n]) => `${n} ${k}`).join(', ');
+  out.push(`## Device checklist\n\n${phone.length ? `${phone.length} scenarios need a real phone: ${counts}.` : 'No scenario needs a real phone.'} State comes from the latest run recorded with \`--record\` (a Result written by hand only shows as noted by hand).\n\n| Id | Feature | State | Last result |\n|---|---|---|---|`);
+  for (const { s, state, last } of phone) out.push(`| ${s.id} | ${cell(s.feature)} | ${state} | ${cell(last)} |`);
+  out.push('');
   out.push('## Summary\n\n| Id | Feature | Account | Device | Result |\n|---|---|---|---|---|');
-  for (const s of SCENARIOS) out.push(`| ${s.id} | ${cell(s.feature)} | \`${s.persona}\` | ${s.device ? 'yes' : ''} | ${recorded.has(s.id) ? cell(recorded.get(s.id)) : (kept.get(s.id)?.cell ?? '')} |`);
+  for (const s of SCENARIOS) out.push(`| ${s.id} | ${cell(s.feature)} | \`${s.persona}\` | ${s.device ? 'yes' : ''} | ${recorded.has(s.id) ? cell(recorded.get(s.id).text) : (kept.get(s.id)?.cell ?? '')} |`);
   return out.join('\n') + '\n';
 }
 
