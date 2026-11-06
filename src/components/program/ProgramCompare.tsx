@@ -80,7 +80,8 @@ const sel = (progs: Record<string, Program>, library: LibraryItem[], key: string
 function Panel() {
   const cfg = useAppStore(s => s.cfg); const programs = useAppStore(s => s.programs); const library = useAppStore(s => s.library);
   const [one, setOne] = useState('A'); const [two, setTwo] = useState('B');
-  const [day, setDay] = useState(() => useAppStore.getState().edDay);
+  // A wide screen has room for every day at once (0 is All days); a phone starts on the editor's current day.
+  const [day, setDay] = useState(() => (window.matchMedia('(min-width: 1000px)').matches ? 0 : useAppStore.getState().edDay));
   const [status, setStatus] = useState<StatusFilter>('all'); const [phase, setPhase] = useState<PhaseFilter>(null);
   const [filtersOpen, setFiltersOpen] = useState(false); // only matters on a narrow panel, where the filters fold behind a button (ProgramCompare.css)
   const filtersId = useId();
