@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendEntry, entryProblem, formatResult, latestById, parseResults, type ResultEntry } from './scenarioResults.ts';
+import { appendEntry, deviceState, entryProblem, formatResult, latestById, parseResults, type ResultEntry } from './scenarioResults.ts';
 
 const known = new Set(['S-01', 'S-02', 'S-03']);
 const devices = new Set(['S-03']);
@@ -45,5 +45,13 @@ describe('QA scenario results', () => {
     expect(parseResults(second, known, devices).map(r => r.id)).toEqual(['S-01', 'S-02']);
     expect(second.endsWith('\n')).toBe(true);
     expect(() => appendEntry('[{"id":"S-99"}]', e(), known, devices)).toThrow(/entry 1/);
+  });
+
+  it('reads a phone scenario as not tried, passed, failed, blocked, or noted by hand', () => {
+    expect(deviceState(undefined, false)).toBe('not tried');
+    expect(deviceState(undefined, true)).toBe('noted by hand');
+    expect(deviceState(e({ outcome: 'pass' }), false)).toBe('passed');
+    expect(deviceState(e({ outcome: 'fail' }), true)).toBe('failed');
+    expect(deviceState(e({ outcome: 'blocked' }), false)).toBe('blocked');
   });
 });
