@@ -6,12 +6,11 @@ import { PHASES, PH_KEYS, exInfo } from '../../lib/data.js';
 import { DAYS, progName } from '../../lib/logic.js';
 import { splitLibrary } from '../../lib/programArchive.js';
 import {
-  compareProgram, countRows, diffParts, filterRows, loadLine, phaseMix, phaseOf,
+  compareProgram, countRows, diffParts, filterRows, loadLine, phaseMix, phaseOf, rowTag,
   type CompareRow, type PhaseFilter, type StatusFilter,
 } from '../../lib/programCompare.js';
 import './ProgramCompare.css';
 
-const STATUS_TAG: Record<'same' | 'chg' | 'ph', string> = { same: 'Same', chg: 'Changed', ph: 'Phase differs' };
 const phKey = (p: PhaseKey | null) => p ?? 'none';
 const phName = (p: PhaseKey | null) => (p ? PHASES[p].label : 'No phase');
 
@@ -46,10 +45,9 @@ function Aligned({ an, bn, rows }: { an: string; bn: string; rows: CompareRow[] 
       {rows.map((r, i) => {
         const away = r.status === 'onlyA' || r.status === 'onlyB';
         const diff = diffParts(r);
-        const tag = r.status === 'onlyA' ? `Only in ${an}` : r.status === 'onlyB' ? `Only in ${bn}` : STATUS_TAG[r.status];
         return (
           <div key={i} className={`edrow cmprow cmp-${away ? 'only' : r.status}`}>
-            <div className="cmpname"><b>{exInfo(cfg, (r.left ?? r.right)!.ex).n}</b><span className="tag">{tag}</span></div>
+            <div className="cmpname"><b>{exInfo(cfg, (r.left ?? r.right)!.ex).n}</b><span className="tag">{rowTag(r, an, bn)}</span></div>
             <Side who={an} it={r.left} markLoad={diff.load} markPhase={diff.phase} />
             <Side who={bn} it={r.right} markLoad={diff.load} markPhase={diff.phase} />
           </div>

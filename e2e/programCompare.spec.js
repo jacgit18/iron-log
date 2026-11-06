@@ -135,3 +135,21 @@ test('on a phone the filters fold behind a Filter button; on a wide screen they 
   await expect(body.getByRole('group', { name: 'Show rows' })).toBeHidden();
   expect(await body.locator('.cmprow .tag').allTextContents()).not.toContain('Same'); // a folded filter still applies
 });
+
+test('a changed exercise marks the differing weight on both sides', async ({ page }) => {
+  await page.click('#tab-program');
+  await page.locator('#lib-name').fill('Compare copy');
+  await page.getByRole('button', { name: 'Save a copy' }).click();
+  await page.locator('.edpanel:not(.lib) .edrow').first().getByRole('button', { name: /^Edit / }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Weight (lb)').fill('123');
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toHaveCount(0);
+  const body = await open(page);
+  await body.getByLabel('Second program').selectOption({ label: 'Compare copy' });
+  const changed = body.locator('.cmprow.cmp-chg');
+  await expect(changed).toHaveCount(1);
+  await expect(changed.locator('.cmpdiff')).toHaveCount(2); // the weight is marked on both sides
+  await expect(changed.locator('.cmpside').first().locator('.cmpdiff')).toHaveText(/123 lb/);
+  await expect(body.locator('.cmprow:not(.cmp-chg) .cmpdiff')).toHaveCount(0); // and nowhere else
+});
