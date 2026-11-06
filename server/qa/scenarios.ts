@@ -1031,8 +1031,8 @@ export const SCENARIOS: readonly Scenario[] = [
       'Open /assets/old.js, and then the app with #/progress/zzz after the address.',
     ],
     expected: [
-      'The first three open as they did before. /privacy without .html shows Page not found.',
-      '/assets/old.js shows a blank not found answer, not a page. #/progress/zzz opens Progress.',
+      'The first three open as they did before. /privacy without .html shows Page not found on a first visit; in a browser where the app\'s service worker is already active the Privacy Policy may still open.',
+      '/assets/old.js shows a small plain 404 error, not the Loadbearer page. #/progress/zzz opens Progress.',
     ],
   },
   // ---- Receipt store ----
