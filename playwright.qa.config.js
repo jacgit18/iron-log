@@ -20,7 +20,7 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  timeout: 60_000,
+  timeout: 120_000, // a scenario may wait for the sign-in limit (10 a minute, see e2e-qa/persona.js)
   reporter: process.env.CI ? [['github'], ['html', { open: 'never', outputFolder: 'playwright-report-qa' }], ['json', { outputFile: 'test-results-qa/results.json' }]] : 'list',
   outputDir: 'test-results-qa',
   use: { baseURL: ORIGIN, serviceWorkers: 'block', timezoneId: 'America/New_York', trace: 'retain-on-failure' },

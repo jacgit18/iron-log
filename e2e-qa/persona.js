@@ -11,6 +11,19 @@ const PASSWORD = 'correct horse battery staple';
 const plain = { seal: s => s, sealStable: s => s, open: s => s, isSealed: () => false }; // the test server has no PII key, so names and emails are stored as typed
 
 
+// The server limits sign-in to 10 a minute per address (AUTH_LIMITS in server/app.ts), and one run signs in once per scenario, so spread the sign-ins
+// out: never more than 9 in any 60 seconds. The tests run one at a time in one process, so a list here is enough.
+const WINDOW_MS = 60_000;
+const signIns = [];
+async function pace() {
+  for (;;) {
+    const now = Date.now();
+    while (signIns.length && now - signIns[0] >= WINDOW_MS) signIns.shift();
+    if (signIns.length < 9) { signIns.push(now); return; }
+    await new Promise(r => setTimeout(r, signIns[0] + WINDOW_MS - now + 250));
+  }
+}
+
 /** Seeds the account (a fresh start every time) and gives it a password only this test knows. */
 async function seed(id) {
   const persona = personaById(id);
@@ -30,6 +43,7 @@ async function seed(id) {
 /** A page signed in as the account, with the clock fixed and the usual tips hidden. */
 export async function signInAs(browser, id, { viewport = { width: 1440, height: 900 } } = {}) {
   await seed(id);
+  await pace();
   const context = await browser.newContext({ serviceWorkers: 'block', timezoneId: 'America/New_York', viewport });
   await context.addInitScript(() => {
     localStorage.setItem('ironlog:hidetip', '1');
