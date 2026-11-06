@@ -8,15 +8,19 @@ import { eqOptions } from '../../lib/equipment.js';
 import { MUSCLES, M_KEYS, matchesFilter, muscleRank } from '../../lib/muscles.js';
 import { weekStartOf, ymd, addDays, fmtShort, fmtDayDate } from '../../shared/dates.js';
 import { colOf, restDatesOf, restsOf, weekSlots, workoutsOf, tally, currentLayout, isOpen, isSkipped, progName, DAYS, dayAt, dayTitle, dayDate, todayCol, leftovers, moveTargets, onlyElsewhere } from '../../lib/logic.js';
+import { boardFilterCount, boardFilterSummary } from '../../lib/boardFilter.js';
 import { LS } from '../../lib/storage.js';
 import { motionOK } from '../../lib/motion.js';
 import Card from './Card.jsx';
 import BodyWeightRow, { type BodyWeightDraft } from './BodyWeightRow.jsx';
 import Experiments from './Experiments.jsx';
+import FinishedGroup from './FinishedGroup.jsx';
 import FirstRun from './FirstRun.jsx';
 import InjurySwitch from './InjurySwitch.jsx';
 import Icon from '../Icon.jsx';
 import ProgramSwitch from './ProgramSwitch.js';
+import { useBoardFilter } from './useBoardFilter.js';
+import { useMountedDays } from './useMountedDays.js';
 import { useWide } from './useWide.js';
 import './BoardTop.css';
 import './DayCount.css';
@@ -95,6 +99,9 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
   let day = mDay;
   if (day == null) { day = DAYS.find(d => !rest.includes(d)) ?? null; for (const d of DAYS) { if (!rest.includes(d) && cols[d].some(s => isOpen(s, week))) { day = d; break; } } }
 
+  // A phone draws the selected day's cards first and the other days one per idle slice (lib/boardMount.ts); a wide screen draws all seven.
+  const dayDrawn = useMountedDays(day, wide);
+
   // A rest on an empty day takes its place and asks nothing. One workout that no longer fits is skipped with a message (the store).
   // Two or more ask first: skip them for the week, or cancel and move them yourself.
   const tickRest = (d: number) => {
@@ -109,8 +116,9 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
   const yCol = todayCol(today) - 1; const todayKey = ymd(today);
   const left = ymd(weekStartOf(today)) === wk && yCol >= 1 && LS.get('hideleftovers') !== todayKey && !onlyElsewhere(slots, week) ? leftovers(week, slots, yCol) : [];
   const targets = left.length ? moveTargets(week, slots, yCol) : [];
-  const [filter, setFilter] = useState({ muscle: '', eq: '' });
-  const [filterOpen, setFilterOpen] = useState(false); // phones only: the sort and equipment fields fold away
+  const filter = { muscle: useBoardFilter(f => f.muscle), eq: useBoardFilter(f => f.eq) }; // a phone picks them in a sheet (BoardFilterSheet)
+  const { set: setFilter, clear: clearFilter } = useBoardFilter.getState();
+  const eqLabel = filter.eq ? eqOptions(cfg).find(o => o.id === filter.eq)?.name ?? '' : '';
   // Equipment filters cards out; a muscle only sorts them: cards that train it come first (primary, then secondary).
   const filtering = !!filter.eq;
   const sorting = !!filter.muscle;
@@ -188,29 +196,39 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
       {slots.length === 0 && <FirstRun />}
       {!wide && <BodyWeightRow draft={bodyWeight} />}
       <div className="filterbar">
-        <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
-          <button type="button" className="btn sm filtertoggle" aria-expanded={filterOpen} aria-controls="filter-fields" onClick={() => setFilterOpen(o => !o)}>
-            Sort &amp; filter{filtering || sorting ? ` · ${(filtering ? 1 : 0) + (sorting ? 1 : 0)} on` : ''}
-          </button>
-          <div className={`filterfields${filterOpen ? ' open' : ''}`} id="filter-fields">
-            <label className="field">Sort by muscle
-              <select value={filter.muscle} onChange={e => setFilter(f => ({ ...f, muscle: e.target.value }))}>
-                <option value="">Program order</option>
-                {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
-              </select>
-            </label>
-            <label className="field">Equipment
-              <select value={filter.eq} onChange={e => setFilter(f => ({ ...f, eq: e.target.value }))}>
-                <option value="">All equipment</option>
-                {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-            </label>
-            {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={() => setFilter({ muscle: '', eq: '' })}>Clear</button>}
+        {wide && (
+          <div className="filtergroup" role="group" aria-label="Sort and filter exercises">
+            <div className="filterfields" id="filter-fields">
+              <label className="field">Sort by muscle
+                <select value={filter.muscle} onChange={e => setFilter({ muscle: e.target.value })}>
+                  <option value="">Program order</option>
+                  {M_KEYS.map(k => <option key={k} value={k}>{MUSCLES[k].n}</option>)}
+                </select>
+              </label>
+              <label className="field">Equipment
+                <select value={filter.eq} onChange={e => setFilter({ eq: e.target.value })}>
+                  <option value="">All equipment</option>
+                  {eqOptions(cfg).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              </label>
+              {(filtering || sorting) && <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>}
+            </div>
           </div>
-        </div>
+        )}
         <InjurySwitch />
-        {filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
-        {sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
+        {!wide && (
+          <button type="button" className="btn filtericon" aria-label={`Sort and filter${boardFilterCount(filter) ? `, ${boardFilterCount(filter)} on` : ''}`} onClick={() => st.openModal({ type: 'boardfilter' })}>
+            <Icon name="filter" />{boardFilterCount(filter) > 0 && <span className="filterbadge" aria-hidden="true">{boardFilterCount(filter)}</span>}
+          </button>
+        )}
+        {!wide && boardFilterCount(filter) > 0 && (
+          <div className="filtersummary" role="status">
+            <span>{boardFilterSummary(muscleName, eqLabel)}</span>
+            <button type="button" className="btn sm ghost" onClick={clearFilter}>Clear</button>
+          </div>
+        )}
+        {wide && filtering && <span className="note" role="status">Showing {slots.filter(s => matchesFilter(cfg, s, { eq: filter.eq })).length} of {slots.length} cards</span>}
+        {wide && sorting && <span className="note" role="status">Cards that train {muscleName.toLowerCase()} are listed first in each day.</span>}
       </div>
 
       <div className="daytabs" role="tablist" aria-label="Day" onKeyDown={e => {
@@ -241,7 +259,7 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
               {cols[d].length > 0 ? (
                 <>
                   <div className="notice">Day {d} has exercises. Untick Rest day to train them normally.</div>
-                  {shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
+                  {dayDrawn(d) && shown(cols[d]).map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
                 </>
               ) : <p className="note">Your workouts moved one day later. Untick to put them back.</p>}
             </section>
@@ -253,8 +271,9 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
           const count = wide ? <span>{t.done}/{t.total} exercises</span> : null; // the phone's day tabs already show it
           // Unfinished cards first (grouped by section); done and skipped ones drop to the bottom.
           const vis = shown(list);
-          const open = vis.filter(s => isOpen(s, week));
-          const finished = [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))];
+          const drawn = dayDrawn(d); // a day that has not drawn yet keeps its header and no cards
+          const open = drawn ? vis.filter(s => isOpen(s, week)) : [];
+          const finished = drawn ? [...vis.filter(s => !isOpen(s, week) && !isSkipped(s, week)), ...vis.filter(s => isSkipped(s, week))] : [];
           const ft = tally(finished, week); // counts the cards under the header (the day's own count ignores the filter)
           return (
             <section
@@ -286,12 +305,8 @@ export default function Board({ bodyWeight }: { bodyWeight: BodyWeightDraft }) {
                   </Fragment>
                 );
               })}
-              {finished.length > 0 && (
-                <>
-                  <div className={`sect donesect${!open.length && wide ? ' withcount' : ''}`}>{[ft.done ? `${ft.done} done` : '', ft.skipped ? `${ft.skipped} skipped` : ''].filter(Boolean).join(' · ')}{!open.length && count}</div>
-                  {finished.map(s => <Card key={s.id} s={s} onDragStart={onDragStart} onDragEnd={onDragEnd} dragging={dragId === s.id} />)}
-                </>
-              )}
+              {!open.length && wide && finished.length > 0 && <div className="sect withcount"><span aria-hidden="true" />{count}</div>}
+              {finished.length > 0 && <FinishedGroup day={d} cards={finished} tally={ft} />}
             </section>
           );
         })}

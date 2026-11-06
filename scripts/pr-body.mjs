@@ -7,6 +7,7 @@
 //   --brief <path or "n/a: why">   fills the Delivery section's Brief line (feature-delivery.md: one brief, one branch, one PR)
 //   --split "<reason>"             fills "Split because:" when the feature is not this PR alone (the reasons are in feature-delivery.md)
 //   --tracker "<note>"             fills the "PR tracker:" line: the PR-TRACKER.md row you updated (feature; for a fix PR also the cause code)
+//   --qa "<S-ids or n/a: why>"     fills the "QA scenarios:" line: the scenarios that cover this change (only for a project whose .github/pr-kit.json has a `qa` key)
 //   --type <bug|enhancement|documentation|dependencies|chore>   the PR's label when the guess below is wrong
 //   --apply <pr number>            after the PR exists, add its label: `node scripts/pr-body.mjs --apply 478` (creates the label if the repo lacks it)
 //   gh pr create --title "..." --body-file /tmp/body.md --label <the label printed on stderr>
@@ -32,6 +33,8 @@ const DEFAULTS = {
   ui: ['\\.(css|tsx|jsx|vue|svelte|svg|png|webp|woff2?)$', '^index\\.html$', '^public/'],
   // A Checks line (regex source, case-insensitive) that is ticked for a change that touches no UI, because it reads n/a then. Empty: none.
   autoTickWhenNoUi: '',
+  // QA scenarios per feature: { scenarioFile: path of the file that defines the scenarios, idPattern: regex source of a scenario id }. null: the project has none, and the QA line and warning are off.
+  qa: null,
   // Reason shown for the fallback audience.
   everyoneReason: 'user-visible files changed and no other audience rule matched',
 };
@@ -102,7 +105,8 @@ export function buildBody(template, audience, what = '', ui = false, changelog =
   const oneLine = t => t.trim().replace(/\s+/g, ' ');
   const withBrief = delivery.brief ? withWhat.replace(/^Brief:.*$/m, () => `Brief: ${oneLine(delivery.brief)}`) : withWhat;
   const withSplit = delivery.split ? withBrief.replace(/^Split because:.*$/m, () => `Split because: ${oneLine(delivery.split)}`) : withBrief;
-  const body = delivery.tracker ? withSplit.replace(/^PR tracker:.*$/m, () => `PR tracker: ${oneLine(delivery.tracker)}`) : withSplit;
+  const withTracker = delivery.tracker ? withSplit.replace(/^PR tracker:.*$/m, () => `PR tracker: ${oneLine(delivery.tracker)}`) : withSplit;
+  const body = delivery.qa ? withTracker.replace(/^QA scenarios:.*$/m, () => `QA scenarios: ${oneLine(delivery.qa)}`) : withTracker;
   const audienceSection = body.split('\n').reduce((acc, line) => { if (/^## /.test(line)) acc.on = /^## Audience/.test(line); if (acc.on) acc.lines.push(line); return acc; }, { on: false, lines: [] }).lines;
   if (audienceSection.filter(l => /^- \[x\]/i.test(l)).length !== 1) throw new Error('The template has no Audience box matching ' + audience);
   return body;
@@ -122,6 +126,24 @@ export function deliveryWarnings({ brief, split, tracker, trackerLine = false, o
   if (!split && overlaps.length) w.push(`Delivery: this PR changes ${overlaps.map(o => `${o.shared.slice(0, 3).join(', ')}${o.shared.length > 3 ? ` and ${o.shared.length - 3} more` : ''} (also in #${o.number})`).join('; ')}. Wait for that PR to merge and branch off main, fold this into it, or say why with --split "file overlap: <file>". PRs with no file in common need no warning.`);
   if (trackerLine && !tracker) w.push('Delivery: no --tracker given. Update this feature\'s row in PR-TRACKER.md (project docs) and say which with --tracker "<feature; fix cause>", or --tracker "n/a: <why>" (tooling, docs, Dependabot).');
   return w;
+}
+
+/** Scenario ids a project's scenario file defines (`id: 'S-01'`), read as text so this script needs no TypeScript loader. */
+export const scenarioIds = (text, idPattern = 'S-\\d{2,}') => [...text.matchAll(new RegExp(`id: '(${idPattern})'`, 'g'))].map(m => m[1]);
+
+/** Warnings for the QA scenarios line (the project's `qa` config). Advisory like the Delivery ones. A user-visible change names the scenarios that cover it, or says
+ *  `n/a: <why>`; every id named must exist in the scenario file. `enabled` is false for a project with no `qa` config or a template without the line. */
+export function qaWarnings({ enabled = false, qa, audience, known = [], idPattern = 'S-\\d{2,}', scenariosChanged = true }) {
+  if (!enabled) return [];
+  if (!qa) return audience === 'na' ? [] : ['QA: no --qa given. This change is user-visible: add the scenarios that cover it to the scenario file (brief: QA scenarios section) and pass --qa "S-41, S-42", or --qa "n/a: <why>".'];
+  const ids = qa.match(new RegExp(idPattern, 'g')) ?? [];
+  const missing = ids.filter(id => !known.includes(id));
+  const notFound = [`QA: ${missing.join(', ')} not found in the scenario file. Add the scenario (ids are never reused), or fix the id.`];
+  // An "n/a: <why>" reason may name the scenario that covers the change ("covered by S-01"); those ids are checked too.
+  if (/^n\/a\b/i.test(qa.trim())) return !/^n\/a:\s*\S/i.test(qa.trim()) ? ['QA: --qa "n/a" needs a reason: --qa "n/a: <why>".'] : missing.length ? notFound : [];
+  if (!ids.length) return [`QA: --qa names no scenario id (${idPattern}). Pass the ids, or --qa "n/a: <why>".`];
+  if (missing.length) return notFound;
+  return scenariosChanged ? [] : [`QA: ${ids.join(', ')} exist, but this PR does not change the scenario file. Add a scenario for this change, or say what covers it: --qa "n/a: covered by ${ids[0]}".`];
 }
 
 const otherOpenPrs = git => { try { const branch = git('branch', '--show-current').trim(); return JSON.parse(execFileSync('gh', ['pr', 'list', '--author', '@me', '--state', 'open', '--json', 'number,headRefName,files'], { encoding: 'utf8', timeout: 8000 })).filter(p => p.headRefName !== branch); } catch { return []; } };
@@ -155,12 +177,15 @@ function main(argv) {
   const template = readFileSync(fileURLToPath(new URL('../.github/pull_request_template.md', import.meta.url)), 'utf8');
   if (!arg('--changelog') && arg('--what')) console.error('No --changelog given: the Changelog section is the --what text (cut at a sentence end past 600 characters). Pass --changelog "..." to say it shorter.');
   for (const w of deliveryWarnings({ brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker'), trackerLine: /^PR tracker:/m.test(template), overlaps: overlappingPrs(files, otherOpenPrs(git)) })) console.error(w);
+  const qaFile = config.qa ? fileURLToPath(new URL(`../${config.qa.scenarioFile}`, import.meta.url)) : null;
+  const qaGiven = arg('--qa');
+  for (const w of qaWarnings({ enabled: Boolean(qaFile) && /^QA scenarios:/m.test(template), qa: qaGiven, audience: found.audience, known: qaFile && existsSync(qaFile) ? scenarioIds(readFileSync(qaFile, 'utf8'), config.qa.idPattern) : [], idPattern: config.qa?.idPattern, scenariosChanged: Boolean(config.qa) && files.includes(config.qa.scenarioFile) })) console.error(w);
   // Checks boxes the last `npm run check` backs for this exact commit (rules: autoTickFromCheck in .github/pr-kit.json). Anything else stays open.
   const stampPath = git('rev-parse', '--git-path', STAMP_FILE).trim();
   const stamp = existsSync(stampPath) ? JSON.parse(readFileSync(stampPath, 'utf8')) : null;
   const ticks = ticksFrom(stamp, git('rev-parse', 'HEAD').trim(), config.autoTickFromCheck);
   if (ticks.note) console.error(ticks.note);
-  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files, config), arg('--changelog'), config, { brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker') }, ticks.lines));
+  process.stdout.write(buildBody(template, found.audience, arg('--what'), touchesUi(files, config), arg('--changelog'), config, { brief: arg('--brief'), split: arg('--split'), tracker: arg('--tracker'), qa: qaGiven ?? (config.qa && found.audience === 'na' ? 'n/a: no user-facing change' : undefined) }, ticks.lines));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main(process.argv.slice(2));

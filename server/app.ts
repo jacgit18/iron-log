@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { toNodeHandler } from 'better-auth/node';
-import { brandHtml, brandManifest } from './appLabel.ts';
+import { brandHtml, brandManifest, HIDE_FROM_SEARCH_ROBOTS } from './appLabel.ts';
+import { isPagePath } from './pagePaths.ts';
 import { personaByEmail } from './qa/personas.ts';
 import compression from 'compression';
 import express from 'express';
@@ -19,7 +20,11 @@ import { clientVersionGate } from './clientVersion.ts';
 import { errorHandler } from './errorHandler.ts';
 import { expectedUserGate } from './expectedUser.ts';
 import { issueRecorder } from './issues.ts';
+import { barcodeRoutes } from './foodBarcode.ts';
 import { foodRoutes, type FoodDeps } from './foodSearch.ts';
+import { receiptsRoutes } from './receipts.ts';
+import { scanRoutes, type ScanDeps } from './scan.ts';
+import { accountsRoutes } from './accountsRoutes.ts';
 import { issuesRoutes } from './issuesRoutes.ts';
 import { backupsRoutes } from './backups.ts';
 import { billingRoutes, billingSummary, cancelBillingFor, webhookRoute, type BillingConfig, type StripeApi } from './billing.ts';
@@ -27,7 +32,8 @@ import { originGuard } from './originGuard.ts';
 import { fireRoute, type FireDeps } from './push/fire.ts';
 import { pushRoutes } from './push/routes.ts';
 import type { PushScheduler } from './push/scheduler.ts';
-import { byUser, rateLimit, type Limit } from './rateLimit.ts';
+import { NETWORK_HEADER } from './auth/tryGate.ts';
+import { byUser, ipKey, rateLimit, type Limit } from './rateLimit.ts';
 import { securityHeaders } from './securityHeaders.ts';
 import { AUTH_CHECK_PAGE } from './dev/authCheckPage.ts';
 import { deleteMyAccount, eraseMyData } from './commands/account.ts';
@@ -41,6 +47,8 @@ import { deleteGroceryMonth, deleteLibraryItem, deleteListItem, deleteProgram, d
 import { untickCard } from './commands/untickCard.ts';
 import { parseLimit, parseSince, syncPage } from './commands/sync.ts';
 import type { DB } from './db/types.ts';
+import type { PiiCrypto } from './auth/piiCrypto.ts';
+import { suspendedGate } from './suspended.ts';
 import { repairBody } from './wellFormed.ts';
 
 export interface AppDeps {
@@ -69,6 +77,12 @@ export interface AppDeps {
   billing?: { api: StripeApi; config: BillingConfig };
   /** Food search (brief diet-food-lookup): the USDA key and, in tests, a stand-in for fetch. Unset key: the route answers 503. */
   foods?: FoodDeps;
+  /** Label photo scan (brief label-photo-scan): the Anthropic key, model and daily ceiling. Unset key: the route answers 503. Admin only. */
+  scan?: ScanDeps;
+  /** The most accounts that may exist (SIGNUP_CAP), shown on the admin accounts screen; unset means no cap. */
+  signupCap?: number;
+  /** Opens the sealed emails the admin accounts screen masks (ADR 046); unset in development, where they are stored in the clear. */
+  pii?: PiiCrypto;
   /** Limits on the rest of the API (see LIMITS). They are generous: a phone back online after two days sends a burst. */
   limits?: Partial<typeof LIMITS>;
 }
@@ -95,8 +109,14 @@ const LIMITS = {
   stripeWebhook: { max: 600, windowMs: 60_000 } as Limit,
   // The admin Issues screen: a person reading a list and changing a status, a few calls a minute at most.
   issues: { max: 60, windowMs: 60_000 } as Limit,
+  // The admin accounts screen: a person reading a list and pressing Suspend now and then.
+  accounts: { max: 60, windowMs: 60_000 } as Limit,
   // Food search: a person typing, one request per pause. The daily allowance is in foodSearch.ts.
   foods: { max: 20, windowMs: 60_000 } as Limit,
+  // Label scan: a person photographing a label now and then, each call costs money; the daily ceiling is in scan.ts.
+  scan: { max: 10, windowMs: 60_000 } as Limit,
+  // Saved receipt photos (brief receipt-save-photo): a person keeping a photo, reading the list, opening one; a loop is what this stops.
+  receipts: { max: 30, windowMs: 60_000 } as Limit,
   // Server backup history (ADR 066): the app uploads once a day and reads the list in Settings; a loop is what this stops.
   backups: { max: 30, windowMs: 60_000 } as Limit,
   // Cloud Tasks calling the fire route: per address (a few Google ones), checked before the token. A 429 would push an alert past its
@@ -107,6 +127,10 @@ const LIMITS = {
 const DB_HEALTH_TTL_MS = 5_000;
 /** The path Express matches for `app.use('/api/commands/import-legacy')`: a prefix on a segment boundary, any letter case. */
 const IMPORT_LEGACY_PATH = /^\/api\/commands\/import-legacy(\/|$)/i;
+/** Label and receipt scan take a photo (hundreds of kB as base64), so they also skip the 100 kb parser; its own parser (2 MB for a label, 5 MB for a receipt) runs after sign-in, the admin check and the per-user limit (scan.ts). */
+const SCAN_PHOTO_PATH = /^\/api\/scan\/(label|receipt)(\/|$)/i;
+/** Keeping a receipt photo (POST /api/receipts, up to 1 MB as base64) also skips the 100 kb parser; the route's own 2 MB one runs after sign-in, the admin check and the per-user limit (receipts.ts). Other methods and paths keep the small one. */
+const RECEIPT_SAVE_PATH = /^\/api\/receipts\/?$/i;
 
 const NO_CACHE = 'no-cache';
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -121,15 +145,21 @@ function cacheControl(file: string, root: string): string {
   return ONE_HOUR;
 }
 
+/** Better Auth keeps a code under `<kind>-otp-<email>`; every kind is cleared, so nothing carrying the address is left after the account goes. */
+async function purgeCodesFor(auth: Auth, email: string): Promise<void> {
+  const adapter = (await auth.$context).internalAdapter;
+  for (const kind of ['sign-in', 'email-verification', 'forget-password']) await adapter.deleteVerificationByIdentifier(`${kind}-otp-${email.toLowerCase()}`);
+}
+
 // The app is built here and listened on in index.ts, so tests can start it on a free port.
-export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, appLabel }: AppDeps = {}) {
+export function createApp({ db, staticDir, minClientVersion = null, auth, admins, allowedOrigins, canonicalOrigin, trustProxy, authLimits = AUTH_LIMITS, limits: limitOverrides, push, billing, foods, scan, appLabel, signupCap, pii }: AppDeps = {}) {
   const limits = { ...LIMITS, ...limitOverrides };
   const app = express();
   const recordIssue = db ? issueRecorder(db) : undefined;
   if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
   // First of all: a browser opening the old Cloud Run address goes to the custom domain (BASE_URL) before anything else runs.
   app.use(canonicalHost(canonicalOrigin));
-  app.use(securityHeaders());
+  app.use(securityHeaders(staticDir));
   // gzip/brotli for the app's scripts and the sync pages: Cloud Run does not compress, and the first load is on a phone's connection.
   app.use(compression());
   // Before Better Auth and every body parser: a cross-origin write is refused without being read.
@@ -148,6 +178,8 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     app.use('/api/auth', rateLimit(authLimits.other));
     // Better Auth buffers a whole body before it checks it, so the size is judged first (bodyLimit.ts).
     app.use('/api/auth', bodyLimit());
+    // The client's network key (IPv6 by /64) goes to Better Auth's hooks in a header the server sets itself, so a caller cannot choose its own.
+    app.use('/api/auth', (req, _res, next) => { req.headers[NETWORK_HEADER] = ipKey(req.ip ?? 'unknown'); next(); });
     app.all('/api/auth/*splat', toNodeHandler(auth));
   }
   // The phone's error reports: anyone may send one (a signed-out phone has errors too), so they are small, rate-limited and scrubbed.
@@ -158,7 +190,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // but only once the caller is signed in and counted (below, after sessionAuth and its per-user limit). Before that it gets no parser
   // at all: an anonymous caller must not be able to make the one small instance buffer and parse 4 MB per request (audit run-2).
   const smallJson = express.json({ limit: '100kb' });
-  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) ? next() : smallJson(req, res, next)));
+  app.use((req, res, next) => (IMPORT_LEGACY_PATH.test(req.path) || SCAN_PHOTO_PATH.test(req.path) || (req.method === 'POST' && RECEIPT_SAVE_PATH.test(req.path)) ? next() : smallJson(req, res, next)));
   app.use(repairBody); // a note clipped through an emoji must not reach the database as a lone surrogate (it was a 500; overnight audit S-1)
   app.disable('x-powered-by');
 
@@ -200,8 +232,11 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   // Everything below this line needs a signed-in user. The per-address limit comes first, so an anonymous flood never reaches the database.
   app.use('/api', rateLimit(limits.api));
   app.use('/api', db ? sessionAuth(db, auth, admins) : (_req, res) => void res.status(503).json({ ok: false, error: 'database not configured' }));
-  // A page that holds another account's data is refused before any route runs (server/expectedUser.ts).
-  app.use(['/api/commands', '/api/sync', '/api/backups'], expectedUserGate());
+  // A suspended account is refused here, before any route runs, except /api/me, erase-data and delete (server/suspended.ts).
+  app.use('/api', suspendedGate);
+  // A page that holds another account's data is refused before any route runs (server/expectedUser.ts). Erase and delete are covered too: they run after
+  // the suspended gate, which lets a suspended account through, so a stale tab cannot erase or delete the wrong account.
+  app.use(['/api/commands', '/api/sync', '/api/backups', '/api/account/erase-data', '/api/account/delete'], expectedUserGate());
   // Per signed-in user, after the lookup.
   app.use('/api/commands/import-legacy', rateLimit(limits.importLegacy, undefined, byUser));
   app.use('/api/commands/import-legacy', express.json({ limit: '4mb' }), repairBody);
@@ -212,7 +247,14 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   if (db) app.use('/api/billing', rateLimit(limits.billing, undefined, byUser), billingRoutes({ db, api: billing?.api, config: billing?.config }));
   // Server backup history (ADR 066): paid subscribers and admins only (owner, 2026-10-22), 30 days; a free account gets 402. The 1 MB body parser is on the PUT route only.
   if (db) app.use('/api/backups', clientVersionGate({ min: minClientVersion ?? 0, allowDev: devAuthAllowed(process.env.NODE_ENV) }), rateLimit(limits.backups, undefined, byUser), requirePaid(db), backupsRoutes({ db }));
+  // Barcode lookup (brief barcode-scan): admin-only, so it is mounted before the everyone prefix it sits under; same per-user limit as typed search.
+  if (db) app.use('/api/foods/barcode', requireAdmin, rateLimit(limits.foods, undefined, byUser), barcodeRoutes(foods));
   if (db) app.use('/api/foods', rateLimit(limits.foods, undefined, byUser), foodRoutes(foods));
+  // Label and receipt photo scan (briefs label-photo-scan, receipt-scan): admin-only, per-user limit; each route has its own body parser (2 MB label, 5 MB receipt, scan.ts), after sign-in.
+  if (db) app.use('/api/scan', requireAdmin, rateLimit(limits.scan, undefined, byUser), scanRoutes(scan));
+  // Saved receipt photos (brief receipt-save-photo): admin-only, per-user limit; the 2 MB body parser is on the POST route only, after sign-in (receipts.ts).
+  if (db) app.use('/api/receipts', requireAdmin, rateLimit(limits.receipts, undefined, byUser), receiptsRoutes({ db }));
+  if (db) app.use('/api/accounts', requireAdmin, rateLimit(limits.accounts, undefined, byUser), accountsRoutes({ db, pii, signupCap, deleteCustomer: billing ? id => billing.api.deleteCustomer(id) : undefined, purgeCodes: auth ? email => purgeCodesFor(auth, email) : undefined }));
   if (db) app.use('/api/issues', requireAdmin, rateLimit(limits.issues, undefined, byUser), issuesRoutes({ db }));
   // Web Push (ADR 044): released to every signed-in account 2026-10-19; the per-user limit below is the cost guard.
   if (db) app.use('/api/push', rateLimit(limits.push, undefined, byUser), pushRoutes({ db, publicKey: push?.publicKey, scheduler: push?.scheduler, now: push?.now }));
@@ -222,8 +264,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
   });
   app.post('/api/account/delete', rateLimit(limits.account, undefined, byUser), async (req, res) => {
     const email = (res.locals.account as Account).email;
-    // Better Auth keeps a code under `<kind>-otp-<email>`; every kind is cleared, so nothing carrying the address is left after the account goes.
-    const purge = auth && email ? async () => { const adapter = (await auth.$context).internalAdapter; for (const kind of ['sign-in', 'email-verification', 'forget-password']) await adapter.deleteVerificationByIdentifier(`${kind}-otp-${email.toLowerCase()}`); } : undefined;
+    const purge = auth && email ? () => purgeCodesFor(auth, email) : undefined;
     const userId = String(res.locals.userId);
     const result = await deleteMyAccount(db!, userId, req.body, purge, () => cancelBillingFor(db!, billing?.api)(userId));
     res.status(result.status).json(result.body);
@@ -234,7 +275,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     const account = res.locals.account as Account;
     // QA only (qaPersonas.ts): whether this session is a test account, and whether an admin may switch. Absent everywhere else, so production's answer is unchanged.
     const qa = auth && (await auth.qaPersonasOn()) ? { persona: personaByEmail(account.email)?.name ?? null, canSwitch: account.isAdmin === true } : undefined;
-    res.json({ ok: true, userId: row?.id, minClientVersion, ...(qa ? { qa } : {}), account: { ...account, plan: row?.plan ?? 'free', isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, !!billing) } });
+    res.json({ ok: true, userId: row?.id, minClientVersion, ...(qa ? { qa } : {}), account: { ...account, plan: row?.plan ?? 'free', suspended: res.locals.suspended === true, isPaid: isPaid(row?.plan, account.isAdmin), billing: await billingSummary(db!, userId, !!billing) } });
   });
 
   app.post('/api/commands/import-legacy', async (req, res) => {
@@ -346,12 +387,19 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     if (labelled) {
       app.get('/manifest.webmanifest', (_req, res) => void res.set('Cache-Control', NO_CACHE).type('application/manifest+json').send(labelled.manifest));
       app.get(['/', '/index.html'], (_req, res) => void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page));
+      app.get('/robots.txt', (_req, res) => void res.set('Cache-Control', NO_CACHE).type('text').send(HIDE_FROM_SEARCH_ROBOTS));
     }
     app.use(express.static(root, { index: false, setHeaders: (res, file) => void res.setHeader('Cache-Control', cacheControl(file, root)) }));
-    // A page route (no file extension) gets the app, which draws it. A missing file (/assets/old.js) stays a 404, so a
+    // A page route (no file extension) on the allowlist (pagePaths.ts) gets the app, which draws it; any other is a 404 page. A missing file (/assets/old.js) stays a 404, so a
     // stale link never receives HTML where JavaScript was expected. /.well-known has no files, as on GitHub Pages, except assetlinks.json above.
     app.use((req, res, next) => {
       if ((req.method !== 'GET' && req.method !== 'HEAD') || extname(req.path) !== '' || req.path.startsWith('/.well-known/')) return next();
+      // Only the app's own page addresses get the app. Any other extensionless path is a real 404 with a small static page (never an echo of the path), or plain text if the build lacks it.
+      if (!isPagePath(req.path)) {
+        res.set('Cache-Control', NO_CACHE).status(404);
+        if (!existsSync(join(root, '404.html'))) return void res.type('text').send('Not found');
+        return void res.sendFile('404.html', { root }, err => void (err && !res.headersSent && res.type('text').send('Not found')));
+      }
       if (labelled) return void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page);
       res.set('Cache-Control', NO_CACHE).sendFile('index.html', { root }); // with `root`, so a checkout under a hidden folder (.claude/worktrees/...) still serves the page
     });

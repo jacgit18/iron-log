@@ -97,6 +97,8 @@ export interface ExerciseInfo {
   n: string;
   url?: string;
   eq?: EquipmentId;
+  /** How many lb the suggested weight goes up by; absent means the default (2.5 under 50 lb, else 5). */
+  step?: number;
 }
 
 export interface WarmupItem {
@@ -151,6 +153,8 @@ export interface Cfg extends ProgramCfg {
   rest?: number; // rest timer, seconds
   /** Off (false) turns off the heads-up when a move puts the same muscles on back-to-back days and the day-order suggestions. On when unset. */
   injuryPrevention?: boolean;
+  /** True hides the kg figure shown beside pound weights. Shown when unset. */
+  hideKg?: true;
   /** Recipe filter chips you hid, and the order you put the rest in (built-in categories only; custom tags live on the recipes). */
   recipeChips?: RecipeChips;
 }
@@ -317,7 +321,7 @@ export interface RecipeIngredient { n: string; amt?: string; home?: string; rid?
  *  after copying it (only on a recipe with a `from`). */
 /** The recipe chips the person hid and reordered (brief recipe-filter-editing). */
 export interface RecipeChips { hide?: RecipeCategory[]; order?: RecipeCategory[] }
-export interface Recipe { id: string; n: string; cat: RecipeCategory; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string }
+export interface Recipe { id: string; n: string; cat: RecipeCategory; tags?: string[]; ing: RecipeIngredient[]; steps: string[]; servings?: number; serving?: string; servingG?: number; minutes?: number; note?: string; from?: string; edited?: true; kcal?: number; p?: number; c?: number; f?: number; url?: string; usual?: number; unit?: string; plural?: string }
 
 /* ---------- Diet (ADR 086) ---------- */
 /** Daily targets you typed: calories, and protein, carbs and fat in grams. */

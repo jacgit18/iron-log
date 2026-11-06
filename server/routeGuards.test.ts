@@ -29,7 +29,7 @@ const PUBLIC_WITH_AUTH: Record<string, string> = {
 // its check, push/fire.ts) and its token and limit tests live in the push tests.
 
 /** Mounted routers (app.use with a prefix) cannot be listed from the router, so each prefix is probed by hand. */
-const PREFIXES = ['account', 'backups', 'billing', 'catalog', 'commands', 'foods', 'issues', 'me', 'push', 'sync'];
+const PREFIXES = ['account', 'accounts', 'backups', 'billing', 'catalog', 'commands', 'foods', 'issues', 'me', 'push', 'receipts', 'scan', 'sync'];
 
 let db: Kysely<DB>;
 let auth: ReturnType<typeof createAuth>;
@@ -119,6 +119,11 @@ describe('role guards: a plain signed-in account', () => {
   it('is refused the admin and paid routes', async () => {
     const url = await listen(createApp({ db }));
     expect((await fetch(`${url}/api/issues`, { headers: plain })).status).toBe(403);
+    expect((await fetch(`${url}/api/accounts`, { headers: plain })).status).toBe(403);
+    expect((await fetch(`${url}/api/scan/label`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
+    expect((await fetch(`${url}/api/scan/receipt`, { method: 'POST', headers: { ...plain, 'content-type': 'application/json' }, body: '{}' })).status).toBe(403);
+    expect((await fetch(`${url}/api/receipts`, { headers: plain })).status).toBe(403);
+    expect((await fetch(`${url}/api/foods/barcode/016000275287`, { headers: plain })).status).toBe(403); // admin only, though /api/foods itself is for everyone
     expect((await fetch(`${url}/api/backups`, { headers: { ...plain, 'x-client-version': 'dev' } })).status).toBe(402);
   });
   it('is let through to the routes every account has', async () => {

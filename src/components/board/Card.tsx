@@ -6,6 +6,7 @@ import { useAppStore } from '../../store/useAppStore.js';
 import type { AppState } from '../../store/types.ts';
 import { cardWeek, cardLogs, type CardWeek } from '../../lib/cardView.js';
 import { logButtonLabel } from '../../lib/loggedEntry.js';
+import { movedFromLabel } from '../../lib/movedFromLabel.js';
 import { useTimerStore } from '../../store/useTimerStore.js';
 import { PHASES, PH_KEYS, exInfo, videoLabel } from '../../lib/data.js';
 import { eqName } from '../../lib/equipment.js';
@@ -60,7 +61,8 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
   // Skip and Undo skip swap which button is on the card, so the one that had focus goes away: hand focus to the new one.
   const focusById = (id: string) => { if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => document.getElementById(id)?.focus()); };
   const focusMore = () => focusById(`more-${s.id}`);
-  const focusSkipped = () => focusById(`skip-${s.id}`);
+  // A skipped card now sits in its day's closed Finished bar, so the Undo skip button is not on the page: the bar takes the focus instead.
+  const focusSkipped = () => { if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => (document.getElementById(`skip-${s.id}`) ?? document.getElementById(`finished-bar-${cur}`))?.focus()); };
   const moreOpen = more || removing; // armed Remove keeps its panel open so the second tap has somewhere to land
 
   const done = isDone(s, week); const sk = isSkipped(s, week); const paired = isPaired(s);
@@ -92,7 +94,7 @@ function Card({ s, onDragStart, onDragEnd, dragging }: CardProps) {
       <div className="row1">
         <div className="cardmain">
           {(label || s.tier || s.experiment) && <span className="tag">{[s.experiment && (s.added ? 'Added' : 'Experiment'), s.tier, label].filter(Boolean).join(' · ')}</span>}
-          {week.moved[s.id] && <span className="moved">From Day {planned}</span>}
+          {week.moved[s.id] && <span className="moved">{movedFromLabel(planned, s.day)}</span>}
           {sk && <span className="skiptag">Skipped this week</span>}
         </div>
         {sk && <button type="button" className="btn sm ghost" id={`skip-${s.id}`} aria-label={`Undo skip for ${cardName}`} onClick={() => { skipCard(s.id); focusMore(); }}>Undo skip</button>}

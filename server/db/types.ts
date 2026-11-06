@@ -27,6 +27,14 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface AdminActions {
+  action: string;
+  admin_user_id: Int8 | null;
+  created_at: Generated<Timestamp>;
+  id: Generated<Int8>;
+  target_user_id: Int8 | null;
+}
+
 export interface BackupSnapshots {
   data: Buffer;
   day: string;
@@ -188,6 +196,19 @@ export interface PushSubscription {
   user_id: Int8;
 }
 
+export interface Receipts {
+  data: Buffer;
+  id: Generated<Int8>;
+  month: string;
+  note: Generated<string>;
+  receipt_date: string | null;
+  saved_at: Generated<Timestamp>;
+  size_bytes: number;
+  store: Generated<string>;
+  total_cents: number | null;
+  user_id: Int8;
+}
+
 export interface RefusedWrites {
   client_id: string | null;
   client_version: string | null;
@@ -257,6 +278,7 @@ export interface Users {
   plan_status: string | null;
   plan_updated_at: Timestamp | null;
   stripe_customer_id: string | null;
+  suspended_at: Timestamp | null;
 }
 
 export interface Weeks {
@@ -274,6 +296,7 @@ export interface Weeks {
 }
 
 export interface DB {
+  admin_actions: AdminActions;
   backup_snapshots: BackupSnapshots;
   body_entries: BodyEntries;
   catalog_items: CatalogItems;
@@ -285,6 +308,7 @@ export interface DB {
   log_entries: LogEntries;
   programs: Programs;
   push_subscription: PushSubscription;
+  receipts: Receipts;
   refused_writes: RefusedWrites;
   row_history: RowHistory;
   stretch_weeks: StretchWeeks;

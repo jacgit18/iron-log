@@ -14,6 +14,20 @@ describe('normConfig lift goals', () => {
   });
 });
 
+describe('normConfig exercise step', () => {
+  const run = (ex: object) => normConfig({ ex }).ex;
+  it('keeps a good step and the rest of the entry', () => {
+    expect(run({ hack: { eq: 'machine', step: 10 } })).toEqual({ hack: { eq: 'machine', step: 10 } });
+    expect(run({ hack: { n: 'Hack', step: 2.5 } })).toEqual({ hack: { n: 'Hack', step: 2.5 } });
+  });
+  it('drops a bad step and keeps everything else on that entry', () => {
+    [0, -5, 51, 2.3, '10', null, NaN, {}].forEach(step => expect(run({ hack: { eq: 'machine', step } })).toEqual({ hack: { eq: 'machine' } }));
+  });
+  it('leaves entries without a step alone', () => {
+    expect(run({ hack: { eq: 'machine' } })).toEqual({ hack: { eq: 'machine' } });
+  });
+});
+
 describe('recipeChips', () => {
   it('is cleaned, and dropped when nothing usable is left', () => {
     expect(normConfig({ recipeChips: { hide: ['drinks', 'soup'] } }).recipeChips).toEqual({ hide: ['drinks'] });
@@ -22,5 +36,13 @@ describe('recipeChips', () => {
   });
   it('is kept in the config document the API stores', () => {
     expect(normConfigDoc({ recipeChips: { order: ['sides'] } })!.recipeChips).toEqual({ order: ['sides'] });
+  });
+});
+
+describe('normConfig hideKg', () => {
+  it('keeps hideKg only when it is exactly true, and the config document keeps it', () => {
+    expect(normConfig({ hideKg: true }).hideKg).toBe(true);
+    ['yes', 1, false, null].forEach(v => expect('hideKg' in normConfig({ hideKg: v })).toBe(false));
+    expect(normConfigDoc({ hideKg: true })?.hideKg).toBe(true);
   });
 });

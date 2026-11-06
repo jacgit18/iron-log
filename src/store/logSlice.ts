@@ -5,7 +5,7 @@ import { setExerciseDefault, setOverride } from './librarySlice.js';
 import { entryId, findEntry } from '../lib/entryMerge.js';
 import { bwSorted } from '../lib/body.js';
 import { GOAL_KEYS, bestLift, goalPhaseLabel, liftGoalsOf } from '../lib/liftGoal.js';
-import { normEntry, nowStamp, validFreq, validLiftGoalLb } from '../shared/validate.js';
+import { normEntry, nowStamp, validFreq, validLiftGoalLb, validStep } from '../shared/validate.js';
 import type { LogEntry } from '../types.ts';
 import type { Flag, LogSlice, StoreGet, StoreSet } from './types.ts';
 
@@ -13,17 +13,19 @@ import type { Flag, LogSlice, StoreGet, StoreSet } from './types.ts';
 export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => ({
   // Append a log entry (kept sorted by date), optionally checking the exercise off.
   addEntry(slotId, idx, entry, { check } = {}) {
-    if (get().blocked()) return false;
-    const s = get().slotById(slotId); if (!s) return false;
-    const clean = normEntry(entry); if (!clean) { flag('That session has an invalid date'); return false; }
-    const ex = s.items[idx].ex;
-    // Real numbers replace the planned ones a check-off logged for this card this week.
-    const planned = (e: any) => e.auto && e.slot === entry.slot && e.wk === entry.wk;
-    const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...clean, id: clean.id || newEntryId(), updatedAt: nowStamp() }].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
-    set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
-    // Ticked the way the board ticks: picking the other half of an either/or drops the first one's check-off, and it can finish a day.
-    if (check) get().mutateChecks(w => setItemDone(w, s, idx, true));
-    return true;
+    return get().transact(() => {
+      if (get().blocked()) return false;
+      const s = get().slotById(slotId); if (!s) return false;
+      const clean = normEntry(entry); if (!clean) { flag('That session has an invalid date'); return false; }
+      const ex = s.items[idx].ex;
+      // Real numbers replace the planned ones a check-off logged for this card this week.
+      const planned = (e: any) => e.auto && e.slot === entry.slot && e.wk === entry.wk;
+      const arr = [...(get().logs[ex] || []).filter(e => !planned(e)), { ...clean, id: clean.id || newEntryId(), updatedAt: nowStamp() }].sort((a, b) => a.d.localeCompare(b.d)); // sort-ok: ISO date strings
+      set(state => ({ logs: { ...state.logs, [ex]: arr } })); get().saveLog(ex);
+      // Ticked the way the board ticks: picking the other half of an either/or drops the first one's check-off, and it can finish a day.
+      if (check) get().mutateChecks(w => setItemDone(w, s, idx, true));
+      return true;
+    }, false);
   },
   quickLog(slotId, idx) {
     const s = get().slotById(slotId); if (!s) return;
@@ -37,34 +39,38 @@ export const logSlice = (set: StoreSet, get: StoreGet, flag: Flag): LogSlice => 
     if (get().addEntry(slotId, idx, e, { check: true })) flag(`Logged ${describe(e)}`);
   },
   // The log sheet's save: entry + optional phase change / phase default / 1RM / check-off.
-  submitLog(slotId, idx, { entry, ph, makeDefault, makeExDefault, rm, done, eq, url }) {
-    if (get().blocked()) return false;
-    const s = get().slotById(slotId); if (!s) return false;
-    const it = s.items[idx]; const key = `${slotId}:${idx}`;
-    const goals = liftGoalsOf(get().cfg, it.ex, get().body).filter(([k]) => k === 'any' || k === (entry.ph || null));
-    const before = goals.map(([k]) => bestLift(get().logs[it.ex], k));
-    if (!get().addEntry(slotId, idx, entry)) return false; // refused (invalid date): nothing else from the sheet is applied
-    get().applyExerciseUrl(it.ex, url);
-    const { cfg, week } = get();
-    // Every card of this exercise in the shown week, on any day (added cards included).
-    const sameEx = (get().activeSlots()).flatMap(sl => sl.items.map((x, i) => x.ex === it.ex && `${sl.id}:${i}`).filter((k): k is string => !!k));
-    const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
-    const cfgChange = eqChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : ((rm ?? 0) > 0 && rm !== cfg.rm[it.ex]));
-    if (cfgChange) get().mutateCfg(c => {
-      if (eqChange) setOverride(c, it.ex, { eq });
-      if (makeExDefault && ph) { setExerciseDefault(c, it.ex, ph, get().programs, get().library); sameEx.forEach(k => { delete c.phDef[k]; }); }
-      if (makeDefault && ph) c.phDef[key] = ph; // after the exercise default, so ticking both keeps this slot's
-      if (rm === null) delete c.rm[it.ex]; else if (rm != null && rm > 0) c.rm[it.ex] = rm;
-    });
-    get().mutateChecks(w => {
-      if (ph && ph !== phaseOf(cfg, week, s, idx)) w.ph[key] = ph;
-      if (makeExDefault && ph) sameEx.forEach(k => { delete w.ph[k]; });
-      if ((makeDefault || makeExDefault) && ph) delete w.ph[key];
-      if (done) setItemDone(w, s, idx, true);
-    });
-    const hit = goals.find(([k, g], i) => { const after = bestLift(get().logs[it.ex], k); return after && after.w >= g.w && !(before[i] && before[i].w >= g.w); });
-    if (hit) flag(`Goal reached: ${hit[1].w} lb on ${exInfo(get().cfg, it.ex).n}${hit[0] !== 'any' ? ` (${goalPhaseLabel(hit[0])})` : ''}`);
-    return true;
+  submitLog(slotId, idx, { entry, ph, makeDefault, makeExDefault, rm, done, eq, url, step }) {
+    return get().transact(() => {
+      if (get().blocked()) return false;
+      const s = get().slotById(slotId); if (!s) return false;
+      const it = s.items[idx]; const key = `${slotId}:${idx}`;
+      const goals = liftGoalsOf(get().cfg, it.ex, get().body).filter(([k]) => k === 'any' || k === (entry.ph || null));
+      const before = goals.map(([k]) => bestLift(get().logs[it.ex], k));
+      if (!get().addEntry(slotId, idx, entry)) return false; // refused (invalid date): nothing else from the sheet is applied
+      get().applyExerciseUrl(it.ex, url);
+      const { cfg, week } = get();
+      // Every card of this exercise in the shown week, on any day (added cards included).
+      const sameEx = (get().activeSlots()).flatMap(sl => sl.items.map((x, i) => x.ex === it.ex && `${sl.id}:${i}`).filter((k): k is string => !!k));
+      const eqChange = eq !== undefined && eq !== (exInfo(cfg, it.ex).eq || '');
+      const stepChange = step !== undefined && (validStep(step) ? step : undefined) !== exInfo(cfg, it.ex).step;
+      const cfgChange = eqChange || stepChange || ((makeDefault || makeExDefault) && ph) || (rm === null ? cfg.rm[it.ex] != null : ((rm ?? 0) > 0 && rm !== cfg.rm[it.ex]));
+      if (cfgChange) get().mutateCfg(c => {
+        if (eqChange) setOverride(c, it.ex, { eq });
+        if (stepChange) setOverride(c, it.ex, { step: validStep(step) ? step : null });
+        if (makeExDefault && ph) { setExerciseDefault(c, it.ex, ph, get().programs, get().library); sameEx.forEach(k => { delete c.phDef[k]; }); }
+        if (makeDefault && ph) c.phDef[key] = ph; // after the exercise default, so ticking both keeps this slot's
+        if (rm === null) delete c.rm[it.ex]; else if (rm != null && rm > 0) c.rm[it.ex] = rm;
+      });
+      get().mutateChecks(w => {
+        if (ph && ph !== phaseOf(cfg, week, s, idx)) w.ph[key] = ph;
+        if (makeExDefault && ph) sameEx.forEach(k => { delete w.ph[k]; });
+        if ((makeDefault || makeExDefault) && ph) delete w.ph[key];
+        if (done) setItemDone(w, s, idx, true);
+      });
+      const hit = goals.find(([k, g], i) => { const after = bestLift(get().logs[it.ex], k); return after && after.w >= g.w && !(before[i] && before[i].w >= g.w); });
+      if (hit) flag(`Goal reached: ${hit[1].w} lb on ${exInfo(get().cfg, it.ex).n}${hit[0] !== 'any' ? ` (${goalPhaseLabel(hit[0])})` : ''}`);
+      return true;
+    }, false);
   },
   // Weight you want to lift on an exercise, in one phase or any ('any'), optionally by a date. Your best so far
   // in that phase is kept as the starting point. Passing `from` moves an existing goal to a different phase.

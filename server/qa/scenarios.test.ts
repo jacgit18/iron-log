@@ -47,9 +47,17 @@ describe('QA scenarios', () => {
     for (const s of SCENARIOS.filter(s => s.device)) expect(s.feature === 'Share target' || /phone|back-swipe/i.test(s.steps.join(' ')), s.id).toBe(true);
   });
 
+  it('gives every listed feature a happy-path scenario, not only edge cases', () => {
+    for (const f of SCENARIO_FEATURES) expect(SCENARIOS.some(s => s.feature === f && !s.retired && !s.edge), f).toBe(true);
+  });
+
+  it('names the brief a scenario comes from as a slug or "feature-map", so it can be found', () => {
+    for (const s of SCENARIOS) expect(s.brief, s.id).toMatch(/^(feature-map|[a-z0-9]+(-[a-z0-9]+)*)$/);
+  });
+
   it('looks up by id and by account', () => {
     expect(scenarioById('S-01')?.persona).toBe('diet-on-target');
-    expect(scenarioById('S-99')).toBeUndefined();
+    expect(scenarioById('S-999')).toBeUndefined();
     expect(scenariosForPersona('diet-on-target').map(s => s.id)).toContain('S-01');
     expect(scenariosForPersona('no-such-account')).toEqual([]);
   });

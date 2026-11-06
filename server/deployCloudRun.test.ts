@@ -41,6 +41,8 @@ case "$*" in
   *"secrets describe iron-log-vapid"*) [ "$PUSH_SECRET" = 1 ] && exit 0; exit 1;;
   # HAS_USDA_KEY=1: the food-search key is stored (separate from SECRETS_READABLE so the Resend cases stay about Resend).
   *"secrets describe"*usda-api-key*) [ "$HAS_USDA_KEY" = 1 ] && exit 0; exit 1;;
+  # HAS_ANTHROPIC_KEY=1: the Scan label key is stored (separate, like the USDA one).
+  *"secrets describe"*anthropic-api-key*) [ "$HAS_ANTHROPIC_KEY" = 1 ] && exit 0; exit 1;;
   # HAS_PII_KEY=1: the database encryption key is already stored (separate again, so the Resend and Push cases stay about themselves).
   *"secrets describe iron-log-pii"*) [ "$HAS_PII_KEY" = 1 ] && exit 0; exit 1;;
   *"secrets describe"*) [ "$SECRETS_READABLE" = 1 ] && exit 0; exit 1;;
@@ -503,6 +505,32 @@ exit 0
       const off = await run(['deploy'], { HAS_USDA_KEY: '1', USDA_OFF: '1' });
       expect(secretsOf('run deploy')).toEqual(FOUR);
       expect(off.stdout).toContain('USDA_OFF=1');
+    });
+
+    it('the Scan label key is passed only when its secret exists, and ANTHROPIC_OFF=1 leaves it out', async () => {
+      writeFileSync(calls, '');
+      const on = await run(['deploy'], { HAS_ANTHROPIC_KEY: '1' });
+      expect(on.status).toBe(0);
+      expect(secretsOf('run deploy')).toEqual([...FOUR, 'ANTHROPIC_API_KEY=iron-log-anthropic-api-key:latest']);
+      expect(on.stdout).toContain('Scan label: ANTHROPIC_API_KEY is passed');
+      writeFileSync(calls, '');
+      const off = await run(['deploy'], { HAS_ANTHROPIC_KEY: '1', ANTHROPIC_OFF: '1' });
+      expect(secretsOf('run deploy')).toEqual(FOUR);
+      expect(off.stdout).toContain('ANTHROPIC_OFF=1');
+    });
+
+    it('the anthropic command stores only the key, lets the runtime account read it, never puts the value in an argument, and needs the key', async () => {
+      writeFileSync(calls, '');
+      const out = await run(['anthropic'], { ANTHROPIC_API_KEY: 'sk-ant-value-123' });
+      expect(out.status).toBe(0);
+      const all = recorded().join('\n');
+      expect(all).toContain('secrets create iron-log-anthropic-api-key');
+      expect(all).toContain('secrets add-iam-policy-binding iron-log-anthropic-api-key');
+      expect(all).not.toContain('sk-ant-value-123');
+      expect(all).not.toContain('iron-log-app-database-url');
+      const none = await run(['anthropic'], {});
+      expect(none.status).not.toBe(0);
+      expect(none.stderr).toContain('ANTHROPIC_API_KEY');
     });
 
     it('the usda command stores only the key, lets the runtime account read it, never puts the value in an argument, and needs the key', async () => {

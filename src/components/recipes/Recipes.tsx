@@ -172,7 +172,7 @@ export default function Recipes() {
           <ul className="rc-list rc-cards">
             {shown.map((r: Recipe) => {
               const have = haveBadge(status.get(r.id)!);
-              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.servings, r.minutes), r.from ? 'Library' : 'Custom', have?.text ?? null, !!have?.all, () => setView({ kind: 'mine', id: r.id }), !!r.edited, nutritionBadge(r));
+              return row(r.id, r.n, recipeMeta(RECIPE_CATEGORY_LABEL[r.cat], r.cat === 'ready' ? undefined : r.servings, r.minutes), r.from ? 'Library' : 'Custom', have?.text ?? null, !!have?.all, () => setView({ kind: 'mine', id: r.id }), !!r.edited, nutritionBadge(r));
             })}
           </ul>
         </>

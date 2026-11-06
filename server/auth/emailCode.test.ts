@@ -18,10 +18,10 @@ const BASE = 'http://localhost:3999';
 
 const running: { close: () => Promise<void> }[] = [];
 /** A server whose "sent" mail is kept in `sent`, newest last. */
-async function serve(over: Partial<AuthConfig> = {}, authLimits?: { signIn: { max: number; windowMs: number }; other: { max: number; windowMs: number } }) {
+async function serve(over: Partial<AuthConfig> = {}, authLimits?: { signIn: { max: number; windowMs: number }; other: { max: number; windowMs: number } }, trustProxy?: number) {
   const sent: { email: string; otp: string }[] = [];
   const auth = createAuth({ baseURL: BASE, secret: SECRET, databaseUrl: url, google: GOOGLE, sendCode: async (email, otp) => void sent.push({ email, otp }), ...over }, 'test');
-  const server: Server = createApp({ db, auth, ...(authLimits ? { authLimits } : {}) }).listen(0);
+  const server: Server = createApp({ db, auth, ...(authLimits ? { authLimits } : {}), ...(trustProxy !== undefined ? { trustProxy } : {}) }).listen(0);
   await new Promise(done => server.once('listening', done));
   running.push({ close: async () => { await new Promise<void>(done => server.close(() => done())); await auth.pool.end(); } });
   return { sent, base: `http://127.0.0.1:${(server.address() as AddressInfo).port}` };
@@ -305,6 +305,49 @@ describe('guessing a code in parallel', () => {
       const res = await Promise.all(Array.from({ length: 14 }, (_, n) => enter(base, n % 2 ? email.toUpperCase() : ` ${email} `, '000000')));
       expect(res.filter(r => r.status === 429).length).toBeGreaterThanOrEqual(4);
     }
+  });
+});
+
+// #407: a stranger's wrong codes from another network must not lock an address out; the daily cap protects the mail quota.
+describe('lockout and daily cap', () => {
+  const from = (base: string, ip: string, email: string, otp: string) =>
+    fetch(`${base}/api/auth/sign-in/email-otp`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify({ email, otp }) });
+
+  it('wrong codes from one network lock out that network only: the owner of the address still signs in from theirs', async () => {
+    const { base, sent } = await serve({}, NO_IP_LIMIT, 1);
+    await ask(base, 'victim@example.com');
+    const res = await Promise.all(Array.from({ length: 14 }, () => from(base, '203.0.113.9', 'victim@example.com', '000000')));
+    expect(res.filter(r => r.status === 429).length).toBeGreaterThanOrEqual(4);
+    expect((await from(base, '203.0.113.9', 'victim@example.com', sent[0]!.otp)).status).toBe(429);
+    // The three wrong guesses did use up that code (Better Auth's own limit, any one-time code has it); a new one signs in from the other network.
+    await ask(base, 'victim@example.com');
+    expect((await from(base, '198.51.100.7', 'victim@example.com', sent[1]!.otp)).status).toBe(200);
+  });
+
+  it('a made-up network header from the caller changes nothing', async () => {
+    const { base } = await serve({}, NO_IP_LIMIT, 1);
+    const spoof = (n: number) => fetch(`${base}/api/auth/sign-in/email-otp`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.9', 'x-lb-network': `fake${n}` }, body: JSON.stringify({ email: 'v@example.com', otp: '000000' }) });
+    const res = await Promise.all(Array.from({ length: 14 }, (_, n) => spoof(n)));
+    expect(res.filter(r => r.status === 429).length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('past the daily cap nothing is mailed and the answer is the usual one; an admin address still gets its code', async () => {
+    const { base, sent } = await serve({ otpDailyCap: 2, capExempt: new Set(['owner@example.com']) }, NO_IP_LIMIT);
+    for (const email of ['a@example.com', 'b@example.com', 'c@example.com']) expect((await ask(base, email)).status).toBe(200);
+    expect(sent.map(s => s.email)).toEqual(['a@example.com', 'b@example.com']);
+    expect((await ask(base, 'owner@example.com')).status).toBe(200);
+    expect(sent.map(s => s.email)).toContain('owner@example.com');
+  });
+
+  it('OTP_DAILY_CAP is read from the environment: default 60 (unset), 0 for none, a bad value turns sign-in off', () => {
+    const env = { BASE_URL: 'http://localhost:3999', BETTER_AUTH_SECRET: SECRET, DATABASE_URL: 'postgres://x', GOOGLE_CLIENT_ID: 'a', GOOGLE_CLIENT_SECRET: 'b' };
+    const cfg = (extra: Record<string, string>) => authConfigFrom({ ...env, ...extra });
+    const on = cfg({ OTP_DAILY_CAP: '0' });
+    expect(on.enabled && on.config.otpDailyCap).toBe(0);
+    const unset = cfg({});
+    expect(unset.enabled && unset.config.otpDailyCap).toBeUndefined();
+    const bad = cfg({ OTP_DAILY_CAP: 'lots' });
+    expect(bad.enabled).toBe(false);
   });
 });
 

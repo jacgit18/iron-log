@@ -1,9 +1,17 @@
 import { describe, it, expect } from 'vitest';
+import { EQUIPMENT, EQ_KEYS } from './data.js';
 import { eqName, eqOptions, findEq, newEqId, eqNameError } from './equipment.js';
+import { nameCmp } from './sort.js';
 
 const cfg = { equipment: { 'x:landmine': 'Landmine', 'x:ab-wheel': 'Ab wheel' } };
 
 describe('equipment list', () => {
+  it('keeps the built-ins in name order, so a menu with nothing added needs no sort', () => {
+    const ids = EQ_KEYS.filter(k => k !== 'other');
+    expect(ids).toEqual([...ids].sort(nameCmp(k => EQUIPMENT[k], k => k)));
+    expect(eqOptions({}).map(o => o.id)).toEqual([...ids, 'other']);
+  });
+
   it('names built-ins and added items, and nothing for an unknown id', () => {
     expect(eqName(cfg, 'barbell')).toBe('Barbell');
     expect(eqName(cfg, 'x:landmine')).toBe('Landmine');

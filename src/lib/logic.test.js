@@ -67,7 +67,7 @@ describe('progression and stalls', () => {
     const logs = { hack: [...real, { ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] };
     expect(lastSession(logs, 'hack', 'hyp')).toBe(real[1]);
     expect(lastSession({ hack: [{ ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] }, 'hack', 'hyp')).toBeNull();
-    expect(targetOf(cfg(), logs, item, 'hyp')).toEqual({ w: 185, src: 'up from 180 lb', up: true }); // still the green suggestion, not "last session"
+    expect(targetOf(cfg(), logs, item, 'hyp')).toEqual({ w: 185, src: 'suggested, from 180 lb', up: true }); // still the green suggestion, not "last session"
     const ticked = { hack: [{ ...e('2026-09-14', 185, 15, '2026-09-14'), auto: true }] };
     expect(targetOf(cfg(), ticked, { ...item, w: 150 }, 'hyp')).toEqual({ w: 150, src: 'program' }); // only ticks so far: the program weight, not the ticked 185
   });
@@ -77,6 +77,17 @@ describe('progression and stalls', () => {
     expect(targetOf(cfg(), logs, item, 'hyp')).toMatchObject({ w: 275, up: true });
     const light = { hack: [e('2026-09-01', 40, 15), e('2026-09-08', 40, 15)] };
     expect(progressionOf(cfg(), light, item, 'hyp').w).toBe(42.5);
+  });
+  it('goes up by the step set on the exercise, and by the default when none is set or the saved one is unusable', () => {
+    const logs = { hack: [e('2026-09-01', 270, 15), e('2026-09-08', 270, 15)] };
+    expect(progressionOf(cfg({ ex: { hack: { step: 10 } } }), logs, item, 'hyp')).toEqual({ w: 280, from: 270 });
+    expect(progressionOf(cfg({ ex: { hack: { step: 2.5 } } }), logs, item, 'hyp')).toEqual({ w: 272.5, from: 270 });
+    expect(targetOf(cfg({ ex: { hack: { step: 10 } } }), logs, item, 'hyp')).toEqual({ w: 280, src: 'suggested, from 270 lb', up: true });
+    expect(progressionOf(cfg(), logs, item, 'hyp')).toEqual({ w: 275, from: 270 }); // not set: today's rule
+    expect(progressionOf(cfg({ ex: { hack: { step: 0 } } }), logs, item, 'hyp').w).toBe(275);
+    expect(progressionOf(cfg({ ex: { hack: { step: 'x' } } }), logs, item, 'hyp').w).toBe(275);
+    expect(progressionOf(cfg({ ex: { hack: { step: 60 } } }), logs, item, 'hyp').w).toBe(275);
+    expect(progressionOf(cfg({ ex: { other: { step: 10 } } }), logs, item, 'hyp').w).toBe(275); // another exercise's step does not leak
   });
   it('does not progress when a set fell short', () => {
     const logs = { hack: [e('2026-09-01', 270, 15), e('2026-09-08', 270, 12)] };
@@ -146,6 +157,13 @@ describe('back off', () => {
     expect(backoffOf(cfg(), logs, { ex: 'legext', ph: 'iso' }, 'iso')).toEqual({ w: 70, lo: 65, hi: 65, since: '2026-09-01' });
     const ok = { legext: [h('2026-09-01', 70, [30, 20, 15]), h('2026-09-03', 70, [25, 15, 15])] };
     expect(backoffOf(cfg(), ok, { ex: 'legext', ph: 'iso' }, 'iso')).toBeNull();
+  });
+  it('Isometric back-off drops the exercise\'s own step; the strength drop ignores it', () => {
+    const logs = { legext: [h('2026-09-01', 70, [30, 20, 14]), h('2026-09-03', 70, [25, 12, 10])] };
+    expect(backoffOf(cfg({ ex: { legext: { step: 10 } } }), logs, { ex: 'legext', ph: 'iso' }, 'iso')).toEqual({ w: 70, lo: 60, hi: 60, since: '2026-09-01' });
+    const heavy = { zercher: [s('2026-09-01', 225, [6, 6, 5, 4]), s('2026-09-03', 225, [6, 5, 4, 4])] };
+    expect(backoffOf(cfg({ ex: { zercher: { step: 20 } } }), heavy, z, 'strength')).toEqual(backoffOf(cfg(), heavy, z, 'strength'));
+    expect(backoffOf(cfg({ ex: { legext: { step: 10 } } }), { legext: [h('2026-09-01', 10, [10, 10]), h('2026-09-03', 10, [10, 10])] }, { ex: 'legext', ph: 'iso' }, 'iso')).toBeNull(); // a 10 lb drop from 10 lb would reach 0
   });
   it('keeps light weights on the 2.5 lb step, and stops at the lightest step', () => {
     const light = { curl: [s('2026-09-01', 30, [6, 4]), s('2026-09-03', 30, [6, 3])] };

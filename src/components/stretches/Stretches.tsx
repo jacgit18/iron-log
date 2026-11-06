@@ -8,7 +8,9 @@ import { videoLabel } from '../../lib/data.js';
 import { groupsOf, dayTally, weekDaysDone, weekDaysCounted, isStretchDone, extrasOn, STRETCH_DAYS } from '../../lib/stretches.js';
 import { hasFilter, matchesQuery } from '../../lib/experimentFilter.js';
 import { motionOK } from '../../lib/motion.js';
+import { useMountedDays } from '../board/useMountedDays.js';
 import { useSwipeCard } from '../board/useSwipeCard.js';
+import { useWide } from '../board/useWide.js';
 import ArmedButton from '../ArmedButton.jsx';
 import ExperimentCard from '../ExperimentCard.jsx';
 import ExperimentSearch from '../ExperimentSearch.jsx';
@@ -106,6 +108,8 @@ export default function Stretches() {
   const [pick, setPick] = useState<{ wk: string; d: number } | null>(null); // {wk, d}: the phone's day, only for the week it was picked in
   const day = pick && pick.wk === wk ? pick.d : thisWeek ? today.getDay() : 0;
   const choose = (d: number) => setPick({ wk, d });
+  // Same as the Board (lib/boardMount.ts): a phone draws the selected day's stretches at once and the other days on idle. That hook counts days from 1.
+  const dayDrawn = useMountedDays(day + 1, useWide());
   const [arming, setArming] = useState<string | null>(null); // the added stretch whose Remove was pressed once
   const primary = groupsOf(items, 'primary'); const secondary = groupsOf(items, 'secondary');
   const days = weekDaysDone(items, week);
@@ -151,6 +155,7 @@ export default function Stretches() {
           const t = dayTally(items, week, d); const date = addDays(weekStart, d);
           const extras = extrasOn(week, d);
           const allIds = [...items.filter(i => i.tier === 'primary').map(i => i.id), ...extras.map(x => x.id)];
+          const drawn = dayDrawn(d + 1);
           return (
             <section key={d} id={`scol-${d}`} aria-labelledby={`scolh-${d}`} className={`col${t.full || t.skipped ? ' complete' : ''}${t.skipped ? ' skipd' : ''}${d === day ? ' sel' : ''}${dayMore === d ? ' more' : ''}`}>
               <div className="colhead">
@@ -167,8 +172,8 @@ export default function Stretches() {
                 <button type="button" className="btn sm ghost" id={`sskip-${d}`} aria-pressed={!!t.skipped} aria-label={t.skipped ? `Undo skip for ${DAY_NAMES[d]}` : `Skip day for ${DAY_NAMES[d]}`} onClick={() => { s.skipStretchDay(d, !t.skipped); if (t.skipped && dayMore !== d) requestAnimationFrame(() => document.getElementById(`sdaymore-${d}`)?.focus()); }}>{t.skipped ? 'Undo skip' : 'Skip day'}</button>
               </div>
               <RemovedNotice scope={`sday:${wk}:${d}`} />
-              {items.length > 0 && <WarmUp d={d} />}
-              {t.skipped ? <p className="note">Skipped. It doesn’t count for or against this week.</p> : <>
+              {drawn && items.length > 0 && <WarmUp d={d} />}
+              {!drawn ? null : t.skipped ? <p className="note">Skipped. It doesn’t count for or against this week.</p> : <>
               {!primary.length && !extras.length && <p className="note">No daily stretches yet. Add some in the Program tab.</p>}
               {primary.map(g => <GroupCard key={g.name} d={d} name={g.name} items={g.items} tier="primary" />)}
               {extras.length > 0 && (

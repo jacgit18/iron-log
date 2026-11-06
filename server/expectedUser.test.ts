@@ -64,6 +64,38 @@ describe('x-expected-user', () => {
     expect(await rows()).toBe(0);
   });
 
+  it('refuses erase-data and delete-account meant for another account, and erases and deletes nothing', async () => {
+    const alice = await idOf('alice');
+    const bob = await idOf('bob');
+    await log('bob');
+    for (const [path, confirm] of [['erase-data', 'ERASE'], ['delete', 'DELETE']] as const) {
+      const res = await fetch(`${base}/api/account/${path}`, { method: 'POST', headers: headers('bob', alice), body: JSON.stringify({ confirm }) });
+      expect(res.status, path).toBe(409);
+      expect(await res.json()).toEqual({ ok: false, error: 'account' });
+    }
+    expect(await rows()).toBe(1);
+    expect(await db.selectFrom('users').select('id').where('id', '=', bob).execute()).toHaveLength(1);
+  });
+
+  it('lets erase-data and delete-account through with a matching header, or none (an older client)', async () => {
+    const bob = await idOf('bob');
+    const erase = await fetch(`${base}/api/account/erase-data`, { method: 'POST', headers: headers('bob', bob), body: JSON.stringify({ confirm: 'ERASE' }) });
+    expect(erase.status).toBe(200);
+    const del = await fetch(`${base}/api/account/delete`, { method: 'POST', headers: headers('bob'), body: JSON.stringify({ confirm: 'DELETE' }) });
+    expect(del.status).toBe(200);
+    const carol = await idOf('carol');
+    const del2 = await fetch(`${base}/api/account/delete`, { method: 'POST', headers: headers('carol', carol), body: JSON.stringify({ confirm: 'DELETE' }) });
+    expect(del2.status).toBe(200);
+  });
+
+  it('is read by the real client transport as an account pause on erase and delete', async () => {
+    const alice = await idOf('alice');
+    await idOf('bob');
+    const transport = createTransport({ clientVersion: '1', baseUrl: base, headers: () => ({ 'x-dev-user': 'bob', 'x-expected-user': alice }) });
+    expect(await transport.eraseData()).toMatchObject({ ok: false, class: 'account', status: 409 });
+    expect(await transport.deleteAccount()).toMatchObject({ ok: false, class: 'account', status: 409 });
+  });
+
   it('takes a request with no header, as an older client sends it', async () => {
     const res = await log('bob');
     expect(res.ok).toBe(true);

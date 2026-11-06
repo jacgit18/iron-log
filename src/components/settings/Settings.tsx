@@ -1,4 +1,5 @@
 import AccountPanel from './AccountPanel.js';
+import AccountsRow from './AccountsRow.js';
 import BillingPanel from './BillingPanel.js';
 import QaAccountsPanel from './QaAccountsPanel.js';
 import DeleteMyData from './DeleteMyData.js';
@@ -10,7 +11,10 @@ import BackupCopies from './BackupCopies.js';
 import { BACKUP_DAYS } from '../../lib/autoBackup.js';
 import SyncSection, { SyncVersion } from './SyncPanel.js';
 import type { ProgKey } from '../../types.ts';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useFeature } from '../../features.js';
+import { pageOf } from '../../lib/route.js';
+import { goUp, useRoutePath } from '../useRoute.js';
 import { getSyncApi, useAppStore } from '../../store/useAppStore.js';
 import { useToday } from '../../store/useToday.js';
 import { PHASES, PH_KEYS } from '../../lib/data.js';
@@ -184,6 +188,17 @@ function DevicePanel() {
             <div className="actions"><button type="button" className="btn" onClick={keepData}>Keep my data on this device</button></div>
           </>
         ) : <p>Your data is saved in this browser only (it isn't synced to an account).</p>)}
+    </section>
+  );
+}
+
+function KgPanel() {
+  const shown = useAppStore(s => s.cfg.hideKg !== true); const st = useAppStore.getState();
+  return (
+    <section className="panel">
+      <h3>Kilograms</h3>
+      <p>Weights stay in pounds. This shows the kg equivalent in small grey text beside each pound weight in the Log sheet, Recent lists and Maxes.</p>
+      <label className="inline"><input type="checkbox" role="switch" checked={shown} onChange={e => st.setHideKg(!e.target.checked)} /> Show kg beside lb</label>
     </section>
   );
 }
@@ -391,6 +406,18 @@ function TrainingRows({ open }: { open: (s: Screen) => void }) {
   );
 }
 
+// The admin accounts page (brief admin-accounts-screen, #/settings/accounts): its own chunk, asked for only when the address names it. Back goes up to Settings.
+const AccountsScreen = lazy(() => import('./AccountsScreen.js'));
+function AccountsPage() {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  return (
+    <div className="sscreen">
+      <button type="button" className="sback" onClick={() => goUp('settings')}><Icon name="chevron-left" /> Settings</button>
+      <Suspense fallback={<p role="status">Loading accounts…</p>}><AccountsScreen /></Suspense>
+    </div>
+  );
+}
+
 // One of those screens: a back link, then the panel as it was. Opening it pushes a history entry, so the browser's Back button closes it.
 function SettingsScreen({ screen, sub, openSub, onBack }: { screen: Screen; sub: string | null; openSub: (id: string) => void; onBack: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -412,6 +439,8 @@ export default function Settings() {
   const importCount = useAppStore(s => s.importCount);
   const cur = useCurrentGroup();
   const [screen, setScreen] = useState<Screen | null>(null);
+  const canSeeAccounts = useFeature('adminAccounts');
+  const accountsOpen = pageOf(useRoutePath(), 'settings') === 'accounts' && canSeeAccounts; // a non-admin who types the address just sees Settings
   const [sub, setSub] = useState<string | null>(null); // an exercise's screen inside 1-rep maxes
   const was = useRef<{ screen: Screen; y: number } | null>(null); // where the screen was opened from, to go back to
   const open = (s: Screen) => { was.current = { screen: s, y: window.scrollY }; history.pushState({ nav: history.state?.nav, settingsScreen: s }, ''); setScreen(s); };
@@ -440,14 +469,14 @@ export default function Settings() {
   }, [screen]);
   return (
     <SavedTicks><div className="settings">
-      <div className="smain" hidden={screen !== null}>
+      <div className="smain" hidden={screen !== null || accountsOpen}>
         {/* A bar across the top on a phone, a rail down the left on a wide screen; sticky either way, so a group is one tap away. The group being read is marked. */}
         <nav className="sjump" aria-label="Jump to a settings group">
           {GROUPS.map(([id, label]) => <button key={id} type="button" className="chip" aria-current={cur === id ? 'true' : undefined} onClick={() => jump(id)}>{label}</button>)}
         </nav>
         <div className="sgroups">
           <Group id="training" title="Training">
-            <div className="scol"><TrainingRows open={open} /><InjuryPanel /></div>
+            <div className="scol"><TrainingRows open={open} /><InjuryPanel /><KgPanel /></div>
           </Group>
           <Group id="data" title="Data">
             <div className="scol">
@@ -467,6 +496,7 @@ export default function Settings() {
               <ProgramOnComputerRow />
               <DevicePanel />
               <FeedbackPanel />
+              <AccountsRow />
               <IssuesPanel />
             </div>
           </Group>
@@ -477,6 +507,7 @@ export default function Settings() {
           </Group>
         </div>
       </div>
+      {accountsOpen && <AccountsPage />}
       {screen && <SettingsScreen screen={screen} sub={sub} openSub={openSub} onBack={back} />}
     </div></SavedTicks>
   );

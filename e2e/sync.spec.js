@@ -83,8 +83,8 @@ test('with the flag on and the server answering, the app finishes loading and sh
   });
   await expect(page.locator('#chk-A-d1s1')).toBeVisible();
   await expect(page.getByRole('alert').filter({ hasText: 'Update needed' })).toHaveCount(0);
-  await page.locator('#chk-A-d1s1').check(); // writes go out as commands; the 404 is a server problem, so they wait and nothing breaks
-  await expect(page.locator('#chk-A-d1s1')).toBeChecked();
+  await page.locator('#chk-A-d1s1').click(); // writes go out as commands; the 404 is a server problem, so they wait and nothing breaks
+  await expect(page.locator('#finished-bar-1')).toContainText('1 done'); // the ticked card sits in the Finished bar
 });
 
 // ---- A new account's empty board (ADR 016) ----
@@ -208,8 +208,8 @@ test.describe('the Sync panel', () => {
     // Settings is its own chunk; here the service worker is off, so fetch it before going offline (in the app it is precached).
     await openSettings(page); await page.click('#tab-board');
     await context.setOffline(true);
-    await page.locator('#chk-A-d1s1').check();
-    await expect(page.locator('#chk-A-d1s1')).toBeChecked();
+    await page.locator('#chk-A-d1s1').click();
+    await expect(page.locator('#finished-bar-1')).toContainText('1 done'); // the ticked card sits in the Finished bar
     const notice = page.getByRole('status').filter({ hasText: 'waiting to sync' });
     await expect(notice).toBeVisible();
     await expect(notice).toContainText('safe on this device');
@@ -231,8 +231,8 @@ test.describe('the Sync panel', () => {
       await context.setOffline(true);
       await expect(offlineNote(page)).toBeVisible();
       await expect(offlineNote(page)).toContainText('will sync when you are back online');
-      await page.locator('#chk-A-d1s1').check();
-      await expect(page.locator('#chk-A-d1s1')).toBeChecked(); // nothing is blocked while offline
+      await page.locator('#chk-A-d1s1').click();
+      await expect(page.locator('#finished-bar-1')).toContainText('1 done'); // the ticked card sits in the Finished bar // nothing is blocked while offline
       const { violations } = await scan(page);
       expect(violations.map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).join(', ')}`)).toEqual([]);
       const before = commandsSeen;
@@ -241,7 +241,7 @@ test.describe('the Sync panel', () => {
       await expect.poll(() => commandsSeen, { timeout: 30_000 }).toBeGreaterThan(before); // the wake sends the kept write again
       // the send failed, so sync is paused again: the notice must not stay up claiming to sync (SyncNotice says the change is waiting)
       await expect(page.getByRole('status').filter({ hasText: 'Back online' })).toHaveCount(0);
-      await expect(page.locator('#chk-A-d1s1')).toBeChecked();
+      await expect(page.locator('#finished-bar-1')).toContainText('1 done'); // the ticked card sits in the Finished bar
     });
 
     test('is shown to someone who is not an admin too', async ({ page, context }) => {
@@ -257,7 +257,7 @@ test.describe('the Sync panel', () => {
 
     test('are listed with the reason, and a notice says so', async ({ page }) => {
       await openSynced(page, refuse);
-      await page.locator('#chk-A-d1s1').check();
+      await page.locator('#chk-A-d1s1').click();
       const alert = page.getByRole('alert').filter({ hasText: 'Not sent' });
       await expect(alert).toBeVisible();
       await expect(alert).toContainText('set aside');
@@ -273,7 +273,7 @@ test.describe('the Sync panel', () => {
 
     test('can be downloaded, with the whole document in the file', async ({ page }) => {
       await openSynced(page, refuse);
-      await page.locator('#chk-A-d1s1').check();
+      await page.locator('#chk-A-d1s1').click();
       await openSettings(page);
       const first = page.locator('.notsent li').first();
       await expect(first).toBeVisible();
@@ -288,7 +288,7 @@ test.describe('the Sync panel', () => {
 
     test('are discarded only on a second press, and then the notice goes', async ({ page }) => {
       await openSynced(page, refuse);
-      await page.locator('#chk-A-d1s1').check();
+      await page.locator('#chk-A-d1s1').click();
       await openSettings(page);
       const count = await page.locator('.notsent li').count();
       expect(count).toBeGreaterThan(0);
@@ -305,7 +305,7 @@ test.describe('the Sync panel', () => {
 
     test('Try again sends it again, and says so when the server still will not take it', async ({ page }) => {
       await openSynced(page, refuse);
-      await page.locator('#chk-A-d1s1').check();
+      await page.locator('#chk-A-d1s1').click();
       await openSettings(page);
       // Each refused change comes into the list as its answer arrives, so wait for the list to hold still before counting it.
       const list = page.locator('.notsent li');

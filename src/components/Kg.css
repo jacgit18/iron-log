@@ -1,0 +1,9 @@
+@layer base, components;
+@layer components {
+.kg {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+}

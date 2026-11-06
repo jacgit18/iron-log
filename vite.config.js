@@ -29,13 +29,15 @@ function preloadTitleFont() {
 // (Lighthouse mobile: render-blocking, about 0.3 s on Slow 4G); inlined, the first paint needs only the page and the script. The
 // service worker precaches index.html, so repeat and offline visits lose nothing. The file itself stays in the build: the tabs loaded later
 // list it as a dependency and would fail with "Unable to preload CSS" (and their screen would not open) if it were gone.
+// The Icon stylesheet (a few hundred bytes, linked from the entry because every screen draws icons) is inlined the same way: left linked it is
+// a second render-blocking request for almost nothing (Lighthouse mobile: render-blocking-resources).
 function inlineEntryCss() {
   return {
     name: 'inline-entry-css',
     apply: 'build',
     transformIndexHtml: {
       order: 'post',
-      handler: (html, ctx) => html.replace(/<link rel="stylesheet"[^>]*href="[^"]*\/(assets\/index-[\w-]+\.css)"[^>]*>/, (tag, file) => {
+      handler: (html, ctx) => html.replace(/<link rel="stylesheet"[^>]*href="[^"]*\/(assets\/(?:index|Icon)-[\w-]+\.css)"[^>]*>/g, (tag, file) => {
         const asset = ctx.bundle?.[file];
         if (!asset || asset.type !== 'asset') return tag;
         return `<style>${String(asset.source).replace(/<\/style/gi, '<\\/style')}</style>`;
@@ -157,7 +159,8 @@ export default defineConfig({
         scope: './',
         display: 'standalone',
         theme_color: '#1E2326',
-        background_color: '#EEF0EC',
+        // The phone's launch splash reads this one fixed value, so it matches the dark theme (the app's own first paint follows the chosen theme).
+        background_color: '#1E2326',
         categories: ['health', 'fitness', 'sports'],
         // Long-press the home-screen icon (Android). Both open the app on a tab; the store reads ?open= (lib/viewState.ts).
         shortcuts: [
@@ -165,7 +168,7 @@ export default defineConfig({
           { name: 'Daily log', short_name: 'Daily', url: './?open=daily', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
         ],
         // Android's share sheet lists the app for a shared link or text; the page opens at ./?share_url=... and the app shows a "Save this link" sheet (lib/shareTarget.ts).
-        share_target: { action: './', method: 'GET', params: { title: 'share_title', text: 'share_text', url: 'share_url' } },
+        share_target: { action: './', method: 'GET', enctype: 'application/x-www-form-urlencoded', params: { title: 'share_title', text: 'share_text', url: 'share_url' } },
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -181,7 +184,9 @@ export default defineConfig({
         // Everything the app needs, including the Excel reader and fonts, is cached so it works offline.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // The iOS splash images are only fetched by iPhone Safari at install time, so they stay out of the offline cache.
-        globIgnores: ['splash/**'],
+        // The QA and Staging icons are only linked on those services (server/appLabel.ts); production never shows them.
+        // og-image.png is only fetched by the sites that show a link preview.
+        globIgnores: ['splash/**', 'icons/qa/**', 'icons/staging/**', 'og-image.png'],
       },
     }),
   ],

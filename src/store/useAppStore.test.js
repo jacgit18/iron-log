@@ -684,6 +684,30 @@ describe('experiment board', () => {
 });
 
 describe('exercise details, default phase and adding to a day', () => {
+  it('keeps a weight step per exercise, clears it, and ignores a bad one', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    expect(exInfo(st().cfg, 'hack').step).toBeUndefined();
+    expect(st().saveExerciseDetails('hack', { step: 10 })).toBeNull();
+    expect(exInfo(st().cfg, 'hack').step).toBe(10);
+    expect(exInfo(st().cfg, 'legext').step).toBeUndefined(); // only that exercise
+    expect(st().saveExerciseDetails('hack', { url: '' })).toBeNull(); // left out: stays as saved
+    expect(exInfo(st().cfg, 'hack').step).toBe(10);
+    st().saveExerciseDetails('hack', { step: 60 });
+    expect(exInfo(st().cfg, 'hack').step).toBeUndefined(); // refused value clears it, never stores it
+    st().saveExerciseDetails('hack', { step: 5 });
+    st().saveExerciseDetails('hack', { step: null });
+    expect(exInfo(st().cfg, 'hack').step).toBeUndefined();
+  });
+  it('saves the step from the Log sheet with the entry', async () => {
+    const { exInfo } = await import('../lib/data.js');
+    const entry = { d: '2026-09-01', ph: 'hyp', w: 270, s: 4, r: 15, slot: 'A-d3s1', wk: st().weekKey() };
+    expect(st().submitLog('A-d3s1', 0, { entry, ph: 'hyp', makeDefault: false, makeExDefault: false, rm: undefined, done: false, step: 10 })).toBe(true);
+    expect(exInfo(st().cfg, 'hack').step).toBe(10);
+    st().submitLog('A-d3s1', 0, { entry: { ...entry, d: '2026-09-02' }, ph: 'hyp', makeDefault: false, makeExDefault: false, rm: undefined, done: false });
+    expect(exInfo(st().cfg, 'hack').step).toBe(10); // not sent: unchanged
+    st().submitLog('A-d3s1', 0, { entry: { ...entry, d: '2026-09-03' }, ph: 'hyp', makeDefault: false, makeExDefault: false, rm: undefined, done: false, step: null });
+    expect(exInfo(st().cfg, 'hack').step).toBeUndefined();
+  });
   it('keeps a video link and equipment over a built-in exercise, and can clear them', async () => {
     const { exInfo } = await import('../lib/data.js');
     expect(exInfo(st().cfg, 'hack')).toMatchObject({ n: 'Hack Squat', eq: 'machine' });

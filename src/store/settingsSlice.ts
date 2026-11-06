@@ -27,6 +27,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
   setPct(p, raw) { const n = Number(raw); if (raw === '' || !validPct(n)) return false; return get().mutateCfg(c => { c.pct[p] = n; }); },
   setRxOverride(p, raw) { const v = raw.trim(); return get().mutateCfg(c => { if (v && v !== PHASES[p].rx) c.rxOverride[p] = v; else delete c.rxOverride[p]; }); },
   setRest(raw) { const n = Number(raw); if (raw === '' || !validRest(n)) return false; return get().mutateCfg(c => { c.rest = n; }); },
+  setHideKg(hide) { get().mutateCfg(c => { if (hide) c.hideKg = true; else delete c.hideKg; }); },
   setInjuryPrevention(on) { if (get().mutateCfg(c => { if (on) c.injuryPrevention = true; else delete c.injuryPrevention; }) && !on) set(s => ({ moveNote: null, orderNote: s.orderNote?.applied ? s.orderNote : null })); }, // off drops the heads-up and any suggestion not yet applied; an applied one keeps its Put back
   setRm(exId, raw) { const n = Number(raw); if (raw !== '' && !validRm(n) && get().cfg.rm[exId] == null) return false; return get().mutateCfg(c => { if (raw === '' || !validRm(n)) delete c.rm[exId]; else c.rm[exId] = n; }); }, // 0 or empty clears a saved 1RM; junk with nothing saved is rejected so the field reverts
   setCfgField(k, v) { get().mutateCfg(c => { c[k] = v; }); },
@@ -76,6 +77,11 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
       const localWeeks = await get().allWeeks();
       const xl = draft.kind === 'excel' ? await loadExcelImport() : null; // already loaded by readImportFile; this only waits for it
       const wk = get().weekKey();
+      // Everything that has to wait for the database is read here, so the changes below run as one all-or-nothing step.
+      const stretchKeys: string[] = mode === 'replace' && on.stretches && d.stretches ? await get().stretchWeekKeys() : [];
+      const localSW: any = mode !== 'replace' && on.stretches && d.stretches ? await get().stretchWeeksAll() : {};
+      let lateRemoves: string[] = []; const refused = get().refusals;
+      const applied = get().transact(() => {
       if (mode === 'replace') {
         // Plan first (everything that can throw: cloning, normalizing, reading), then apply. A failure while
         // planning leaves the app exactly as it was; the apply step only sets state and queues saves.
@@ -108,7 +114,7 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
         }
         if (on.stretches && d.stretches) {
           const st = normStretches(d.stretches); patch.stretches = st.items; patch.stretchExps = st.experiments; saves.push('saveStretches');
-          (await get().stretchWeekKeys()).forEach(k => { if (!d.stretchWeeks[k]) removes.push('stretchweeks/' + k); });
+          stretchKeys.forEach(k => { if (!d.stretchWeeks[k]) removes.push('stretchweeks/' + k); });
           ent(d.stretchWeeks).forEach(([k, w]) => { if (k !== wk) docs.push(['stretchweeks/' + k, structuredClone(w)]); });
           patch.strWeek = d.stretchWeeks[wk] ? structuredClone(d.stretchWeeks[wk]) : normStretchWeek(null); saves.push('saveStrWeek');
         }
@@ -122,16 +128,14 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           Object.keys(get().logs).forEach(id => { if (!d.logs[id]) removes.push('logs/' + id); });
           patch.logs = newLogs;
         }
-        const refused = get().refusals;
         set(patch);
         progRemoves.forEach(path => get().removeDoc(path));
         saves.forEach(f => get()[f]());
         progSaves.forEach(([k, body]) => get().saveProgram(k, body));
-        if (groceryIn) get().setGrocery(groceryIn);
+        const groceryStale = groceryIn ? get().setGrocery(groceryIn, true) : [];
         docs.forEach(([path, data]) => get().saveDoc(path, data));
         if (newLogs) Object.keys(newLogs).forEach(id => get().saveLog(id));
-        // Old data goes only once the file's data is written: a write refused (storage full) keeps it, so nothing is lost.
-        if (get().refusals === refused) removes.forEach(path => get().removeDoc(path));
+        lateRemoves = [...removes, ...groceryStale];
       } else {
         if (draft.kind === 'excel') {
           const xs = d.excel.settings;
@@ -167,7 +171,6 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
           const exps = get().stretchExps; const eIds = new Set(exps.map(x => x.id)); const addX = d.stretches.experiments.filter((x: any) => !eIds.has(x.id));
           if (addS.length || addX.length) { set({ stretches: [...items, ...structuredClone(addS)], stretchExps: [...exps, ...structuredClone(addX)] }); get().saveStretches(); }
           const mergeSW = (a: any, b: any) => { const x = normStretchWeek(a); const have = new Set(x.extra.map(e => e.id)); return { done: { ...b.done, ...x.done }, skipped: { ...b.skipped, ...x.skipped }, extra: [...x.extra, ...b.extra.filter((e: any) => !have.has(e.id))] }; };
-          const localSW = await get().stretchWeeksAll();
           ent(d.stretchWeeks).forEach(([k, w]) => {
             if (k === wk) { const m = mergeSW(get().strWeek, w); if (JSON.stringify(m) !== JSON.stringify(get().strWeek)) { set({ strWeek: m }); get().saveStrWeek(); } return; }
             const m = localSW[k] ? mergeSW(localSW[k], w) : w;
@@ -210,6 +213,11 @@ export const settingsSlice = (set: StoreSet, get: StoreGet, flag: Flag): Setting
       }
       // Undo and suggestion notes describe the data before the import: none of them may write it back.
       set(s => ({ weekHist: null, moveNote: null, orderNote: null, uncheckNote: null, skipNote: null, importDraft: null, importBusy: false, importError: '', modal: null, importCount: s.importCount + 1 }));
+      return true;
+      }, false);
+      if (!applied) { set({ importBusy: false }); flag('Import failed'); return; } // nothing was changed: transact put everything back
+      // Old data goes only once the file's data is written: a write refused (storage full) keeps it, so nothing is lost.
+      if (get().refusals === refused) lateRemoves.forEach(path => get().removeDoc(path));
       if (get().saveFlag !== 'Storage full') flag(mode === 'replace' ? 'Data replaced' : 'Data added'); // some writes were refused: keep that warning
     } catch {
       set({ importBusy: false }); flag('Import failed');

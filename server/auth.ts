@@ -33,9 +33,10 @@ const signInRequired = { ok: false, error: 'sign-in required' };
 // ensure_user() (migration 009) finds or makes the row. It runs as the table owner, because under row-level security the
 // API's own role cannot insert into users or see a row that does not exist yet. One round trip, safe under concurrent first
 // requests (the no-op update inside lets RETURNING work on a conflict).
-async function ensureUser(db: Kysely<DB>, authUserId: string): Promise<string> {
-  const { rows } = await sql<{ id: string }>`select ensure_user(${authUserId}) as id`.execute(db);
-  return rows[0]!.id;
+// ensure_user_state() (brief admin-accounts-screen) is the same, and also says whether an admin has suspended the account.
+async function ensureUser(db: Kysely<DB>, authUserId: string): Promise<{ id: string; suspended: boolean }> {
+  const { rows } = await sql<{ id: string; suspended: boolean }>`select id, suspended from ensure_user_state(${authUserId})`.execute(db);
+  return { id: rows[0]!.id, suspended: rows[0]!.suspended };
 }
 
 export function sessionAuth(db: Kysely<DB>, auth?: Auth, admins: Admins = new Set()): RequestHandler {
@@ -43,7 +44,9 @@ export function sessionAuth(db: Kysely<DB>, auth?: Auth, admins: Admins = new Se
     try {
       const session = auth ? await auth.api.getSession({ headers: fromNodeHeaders(req.headers) }) : null;
       if (session) {
-        res.locals.userId = await ensureUser(db, session.user.id);
+        const user = await ensureUser(db, session.user.id);
+        res.locals.userId = user.id;
+        res.locals.suspended = user.suspended;
         const who = { kind: 'session', email: session.user.email ?? null, name: session.user.name ?? null } as const;
         res.locals.account = { ...who, isAdmin: isAdmin(who, admins, session.user.emailVerified === true) } satisfies Account;
         next();
@@ -55,7 +58,9 @@ export function sessionAuth(db: Kysely<DB>, auth?: Auth, admins: Admins = new Se
         res.status(401).json(signInRequired);
         return;
       }
-      res.locals.userId = await ensureUser(db, `dev:${name}`);
+      const user = await ensureUser(db, `dev:${name}`);
+      res.locals.userId = user.id;
+      res.locals.suspended = user.suspended;
       const who = { kind: 'dev', email: null, name: `dev:${name}` } as const;
       res.locals.account = { ...who, isAdmin: isAdmin(who, admins) } satisfies Account;
       next();

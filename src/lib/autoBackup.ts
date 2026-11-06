@@ -13,10 +13,10 @@ const DB_NAME = 'ironlog-backups'; const STORE = 'days';
 export interface BackupInfo { date: string; savedAt: string; score: number; entries: number; device?: string }
 interface BackupRecord extends BackupInfo { text: string }
 
-/** How much a data file holds, as one number: sessions, body weights, weeks, saved programs, experiments, stretches, water days, groceries, edited programs. */
+/** How much a data file holds, as one number: sessions, body weights, weeks, saved programs, experiments, stretches, water days, groceries, food log entries, edited programs. */
 export function backupScore(d: Partial<DataFile>): number {
   const s = dataStats(d);
-  return s.entries + s.body + s.weeks + s.saved + s.experiments + s.stretches + s.waterDays + s.groceryItems + s.programs.length;
+  return s.entries + s.body + s.weeks + s.saved + s.experiments + s.stretches + s.waterDays + s.groceryItems + s.dietEntries + s.programs.length;
 }
 /** Today's copy is only replaced by one that holds at least half as much, so a wipe or a failed load cannot overwrite a good copy the same day. */
 export const shouldWrite = (before: number | null, after: number) => before == null || before < SHRINK_FLOOR || after >= before * SHRINK_RATIO;

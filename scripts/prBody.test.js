@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildBody, deliveryWarnings, inferAudience, inferType, labelsOf, loadConfig, overlappingPrs, shorten, touchesUi } from './pr-body.mjs';
+import { buildBody, deliveryWarnings, inferAudience, inferType, labelsOf, loadConfig, overlappingPrs, qaWarnings, scenarioIds, shorten, touchesUi } from './pr-body.mjs';
 
 const projectTemplate = readFileSync(new URL('../.github/pull_request_template.md', import.meta.url), 'utf8');
 const template = `## What and why
@@ -193,5 +193,44 @@ describe('inferType (the PR label)', () => {
     expect(inferType({ branch: 'c-ci', files: ui }).type).toBe('chore');
     expect(inferType({ branch: 'p-zod', files: ui }).type).toBe('dependencies');
     expect(inferType({ branch: 'f-x', files: ['scripts/a.mjs', 'e2e/a.spec.js'] }).type).toBe('chore');
+  });
+});
+
+describe('QA scenarios line (the project qa config)', () => {
+  const known = ['S-01', 'S-02', 'S-41'];
+  it('is off for a project with no qa config or no QA line in its template', () => {
+    expect(loadConfig('/nonexistent').qa).toBeNull();
+    expect(qaWarnings({ enabled: false, audience: 'everyone' })).toEqual([]);
+  });
+  it('warns on a user-visible change with no --qa, not on an n/a audience', () => {
+    expect(qaWarnings({ enabled: true, audience: 'everyone', known })).toEqual([expect.stringContaining('no --qa given')]);
+    expect(qaWarnings({ enabled: true, audience: 'na', known })).toEqual([]);
+  });
+  it('accepts known ids and "n/a: why", and says what is wrong otherwise', () => {
+    expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'S-01, S-41', known })).toEqual([]);
+    expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'n/a: tooling only', known })).toEqual([]);
+    expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'n/a', known })).toEqual([expect.stringContaining('needs a reason')]);
+    expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'S-99, S-01', known })).toEqual([expect.stringContaining('S-99 not found')]);
+    expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'the diet scenarios', known })).toEqual([expect.stringContaining('names no scenario id')]);
+  });
+  it('warns when real ids are named but the PR does not change the scenario file', () => {
+    expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'S-01', known, scenariosChanged: false })).toEqual([expect.stringContaining('does not change the scenario file')]);
+    expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'S-01', known, scenariosChanged: true })).toEqual([]);
+    expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'n/a: covered by S-01', known, scenariosChanged: false })).toEqual([]);
+    expect(qaWarnings({ enabled: true, audience: 'everyone', qa: 'n/a: covered by S-99', known })).toEqual([expect.stringContaining('S-99 not found')]);
+  });
+  it('reads ids from the scenario file text, retired ones included', () => {
+    expect(scenarioIds("{ id: 'S-01', a: 1 }, { id: 'S-12', retired: true }, { persona: 'S-77' }")).toEqual(['S-01', 'S-12']);
+  });
+  it('fills the QA line from --qa and leaves it alone otherwise', () => {
+    const t = '## What and why\n\n## Audience\n\n- [ ] n/a: x\n\n## Delivery\n\nQA scenarios: none given (pass --qa)\n';
+    expect(buildBody(t, 'na', '', false, '', config, { qa: 'S-41, S-42' })).toContain('QA scenarios: S-41, S-42');
+    expect(buildBody(t, 'na', '', false, '', config)).toContain('QA scenarios: none given');
+  });
+  it('the real config points at a scenario file that exists and defines ids, and the real template has the line', () => {
+    const real = loadConfig();
+    expect(projectTemplate).toMatch(/^QA scenarios:/m);
+    const ids = scenarioIds(readFileSync(new URL(`../${real.qa.scenarioFile}`, import.meta.url), 'utf8'), real.qa.idPattern);
+    expect(ids.length).toBeGreaterThan(30);
   });
 });

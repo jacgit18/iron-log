@@ -3,6 +3,7 @@
    throws for a network problem: "can't tell" is an answer of its own, and must never read as "signed out". Browser calls are
    same-origin, so the API's Origin check passes and the session cookie travels without any extra setup. */
 import { setQa } from './qaState.js';
+import { setSuspended } from './suspendedState.js';
 import { DEFAULT_TIMEOUT_MS } from './timeouts.js';
 
 /** What /api/me says about billing (ADR 065): `available` is false when billing is off or not yet offered to this account. */
@@ -24,7 +25,7 @@ const qaFrom = (v: unknown): QaInfo | undefined => {
 
 export type AccountState =
   | { status: 'signed-out' }
-  | { status: 'signed-in'; userId: string; kind: 'session' | 'dev'; email: string | null; name: string | null; isAdmin: boolean; isPaid: boolean; plan?: string; billing?: BillingInfo; qa?: QaInfo }
+  | { status: 'signed-in'; userId: string; kind: 'session' | 'dev'; email: string | null; name: string | null; isAdmin: boolean; isPaid: boolean; plan?: string; billing?: BillingInfo; qa?: QaInfo; suspended?: true }
   | { status: 'unreachable' };
 
 /** `refused` is a code that is wrong, used or expired, or an address that is not one; `slow-down` is the rate limit. */
@@ -47,26 +48,47 @@ function billingFrom(v: unknown): BillingInfo | undefined {
   return { available: b.available === true, source: asString(b.source) ?? 'manual', status: asString(b.status), renewsAt: asString(b.renewsAt), hasCustomer: b.hasCustomer === true };
 }
 
+/* The app asks /api/me from several places while it starts (the admin check in main.tsx, the header badge, panels): one request serves them all.
+   Only the browser's own fetch shares (a test that passes `fetch` gets a client of its own). A request in flight is joined; a signed-in or signed-out
+   answer is reused for a few seconds; "unreachable" is never kept, so a retry asks again. Signing in or out clears it. */
+const ME_REUSE_MS = 3000;
+let sharedMe: { key: string; promise: Promise<AccountState>; at: number } | null = null;
+export function resetMeCache() { sharedMe = null; }
+
 export function createAccountClient(options: AccountOptions = {}) {
   const { baseUrl = '', headers, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   const doFetch = options.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
 
-  async function me(): Promise<AccountState> {
+  /** `fresh` skips the reuse window (a deliberate re-check, such as the wait for a plan to turn paid after Checkout) but still joins nothing stale: it asks the server. */
+  function me(opts: { fresh?: boolean } = {}): Promise<AccountState> {
+    if (options.fetch) return meFetch();
+    if (opts.fresh) resetMeCache();
+    const key = `${baseUrl}|${JSON.stringify(headers?.() ?? {})}`;
+    if (sharedMe && sharedMe.key === key && Date.now() - sharedMe.at < ME_REUSE_MS) return sharedMe.promise;
+    const entry = { key, at: Date.now(), promise: meFetch() };
+    entry.promise = entry.promise.then(state => { if (state.status === 'unreachable' && sharedMe === entry) sharedMe = null; return state; });
+    sharedMe = entry;
+    return entry.promise;
+  }
+
+  async function meFetch(): Promise<AccountState> {
     // The sign-in gate waits on this, so it must end: the timer runs until the body is read, and an abort at any point is "can't tell".
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await doFetch(`${baseUrl}/api/me`, { headers: { accept: 'application/json', ...(headers?.() ?? {}) }, credentials: 'same-origin', signal: controller.signal });
-      if (res.status === 401) { setQa(undefined); return { status: 'signed-out' }; }
+      if (res.status === 401) { setQa(undefined); setSuspended(false); return { status: 'signed-out' }; }
       if (!res.ok) return { status: 'unreachable' };
-      const body = (await res.json().catch(() => undefined)) as { userId?: unknown; qa?: unknown; account?: { kind?: unknown; email?: unknown; name?: unknown; isAdmin?: unknown; isPaid?: unknown; plan?: unknown; billing?: unknown } } | undefined;
+      const body = (await res.json().catch(() => undefined)) as { userId?: unknown; qa?: unknown; account?: { kind?: unknown; email?: unknown; name?: unknown; isAdmin?: unknown; isPaid?: unknown; plan?: unknown; billing?: unknown; suspended?: unknown } } | undefined;
       const userId = asString(body?.userId);
       // An answer that is not what the API sends (a proxy page, a half-deployed API) says nothing about who is signed in.
       if (!userId) return { status: 'unreachable' };
       const plan = asString(body?.account?.plan);
       const billing = billingFrom(body?.account?.billing);
       setQa(qaFrom(body?.qa));
-      return { status: 'signed-in', userId, kind: body?.account?.kind === 'dev' ? 'dev' : 'session', email: asString(body?.account?.email), name: asString(body?.account?.name), isAdmin: body?.account?.isAdmin === true, isPaid: body?.account?.isPaid === true, ...(qaFrom(body?.qa) ? { qa: qaFrom(body?.qa) } : {}), ...(plan ? { plan } : {}), ...(billing ? { billing } : {}) };
+      const suspended = body?.account?.suspended === true;
+      setSuspended(suspended);
+      return { status: 'signed-in', userId, kind: body?.account?.kind === 'dev' ? 'dev' : 'session', email: asString(body?.account?.email), name: asString(body?.account?.name), isAdmin: body?.account?.isAdmin === true, isPaid: body?.account?.isPaid === true, ...(suspended ? { suspended: true as const } : {}), ...(qaFrom(body?.qa) ? { qa: qaFrom(body?.qa) } : {}), ...(plan ? { plan } : {}), ...(billing ? { billing } : {}) };
     } catch {
       return { status: 'unreachable' };
     } finally {
@@ -76,6 +98,7 @@ export function createAccountClient(options: AccountOptions = {}) {
 
   /** Asks Better Auth for the Google sign-in address. The caller sends the browser there; it comes back to the app root. */
   async function startGoogleSignIn(): Promise<{ ok: true; url: string } | { ok: false; reason: 'unreachable' | 'refused' }> {
+    resetMeCache();
     try {
       const res = await doFetch(`${baseUrl}/api/auth/sign-in/social`, {
         method: 'POST',
@@ -119,6 +142,7 @@ export function createAccountClient(options: AccountOptions = {}) {
 
   /** Checks the code. On success the session cookie is set and the caller reloads into the app. */
   async function signInWithEmailCode(email: string, otp: string): Promise<EmailCodeOutcome> {
+    resetMeCache();
     try {
       const res = await post('/api/auth/sign-in/email-otp', { email, otp });
       if (res.ok) return 'ok';
@@ -142,6 +166,7 @@ export function createAccountClient(options: AccountOptions = {}) {
   const billingPortal = () => billingUrl('/api/billing/portal', {});
 
   async function signOut(): Promise<boolean> {
+    resetMeCache();
     try {
       const res = await doFetch(`${baseUrl}/api/auth/sign-out`, { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json' }, credentials: 'same-origin', body: '{}' });
       return res.ok;

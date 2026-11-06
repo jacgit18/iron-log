@@ -20,6 +20,7 @@ import RemovedNotice from '../RemovedNotice.jsx';
 import SortControl from '../SortControl.jsx';
 import { useSortChoice } from '../useSortChoice.js';
 import ExerciseLibrary from './ExerciseLibrary.jsx';
+import ProgramCompare from './ProgramCompare.jsx';
 import ProgramStrip from './ProgramStrip.jsx';
 import StretchLibrary from './StretchLibrary.jsx';
 import { shiftOf, useDragReorder } from './useDragReorder.js';
@@ -135,12 +136,18 @@ function ProgramEditor() {
   // The program shown is in the address (#/program/b). An address that names one opens it; picking A or B (or arriving on plain #/program) swaps the address to the one shown.
   // A library program has no address of its own (an id never goes in one). `prevK` tells a change of program from the first look, so a pasted address is not overwritten.
   const path = useRoutePath(); const named = programKey(path); const prevK = useRef<string | null>(null);
-  useEffect(() => { if (named && named !== k) st.setEdProg(named); }, [named]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sheetOpen = useAppStore(s => s.modal !== null);
+  // The A or B address left behind when a library program opened. It is dropped (below), and not taken as a request to show that program, when a closing sheet's
+  // history entry brings it back: the create sheet's "Not yet" opens the new program while the sheet is still up, and popping the sheet restores the old address.
+  const left = useRef<string | null>(null);
+  useEffect(() => { if (named && named !== k && !(left.current && named === left.current)) st.setEdProg(named); }, [named]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const changed = prevK.current !== null && prevK.current !== k; prevK.current = k;
     const to = programPath(k);
-    if (to && (path === 'program' || changed)) navigate(to, 'replace');
-  }, [k, path]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (to) { left.current = null; if (path === 'program' || changed) navigate(to, 'replace'); return; }
+    if (changed) left.current = named ?? left.current;
+    if (named && named === left.current && !sheetOpen) navigate('program', 'replace'); // a library program is open: the address no longer names A or B
+  }, [k, path, sheetOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   // When the panel that held the focused button is replaced (edit/create/load), land on the editor heading.
   useEffect(() => {
     const a = document.activeElement;
@@ -181,7 +188,6 @@ function ProgramEditor() {
       <div className="edtop">
         <div className="seg" role="group" aria-label="Program to edit">
           {['A', 'B'].map(p => <button type="button" key={p} className={p === k ? 'on' : ''} aria-pressed={p === k} onClick={() => st.setEdProg(p)}>{progName(cfg, p)}</button>)}
-          {lib && <button type="button" className="on segname" aria-pressed="true">{item.name}</button>}
         </div>
         <button type="button" className="btn createprog" onClick={() => { if (!st.blocked()) st.openModal({ type: 'newprog' }); }}>Create a program</button>
         <div className="dayctl">
@@ -290,6 +296,7 @@ function ProgramEditor() {
       </p>
       {lib ? <LibItemPanel it={item} /> : <Library k={k} custom={custom} />}
       </div>
+      <ProgramCompare />
     </>
   );
 }

@@ -1,6 +1,6 @@
 import { applySplits } from './boardSplit.js';
 import { PHASES, PH_KEYS, exInfo, DAY_COUNT, slotsFor } from './data.js';
-import { nowStamp } from '../shared/validate.js';
+import { nowStamp, validStep } from '../shared/validate.js';
 import { weekStartOf, ymd, parseDate, addDays } from '../shared/dates.js';
 import { normExperimentItem } from '../shared/listItems.js';
 import { isOrder, normWeek, restDatesIn, restTookIn } from '../shared/week.js';
@@ -68,7 +68,10 @@ function sessionsOf(logs: Logs, exId: string, ph: PhaseKey | null | undefined): 
   return Object.keys(byDay).sort().map(d => byDay[d]);
 }
 const workOf = (e: LogEntry) => setsOfEntry(e).reduce((a, x) => a + (Number(x.sec ?? x.r) || 0), 0); // total reps (or hold seconds)
-const step = (w: number) => (w < 50 ? 2.5 : 5);
+export const defaultStep = (w: number) => (w < 50 ? 2.5 : 5);
+const step = defaultStep;
+// How far this exercise goes up (and an isometric hold backs off): the step set on it, else 2.5 lb under 50 lb and 5 lb from there.
+export const stepOf = (cfg: Pick<Cfg, 'ex'>, exId: string, w: number): number => { const s = cfg.ex?.[exId]?.step; return validStep(s) ? s : step(w); };
 
 // Stall: a lift is judged on its best session of each week (heaviest, then most reps), so lighter back-off days
 // in a week trained 2–3 times don't count against it. Stalled when the last 3 training weeks never went above the
@@ -103,8 +106,9 @@ export function backoffOf(cfg: Cfg, logs: Logs, item: Pick<CardItem, 'ex'> & Par
   const short = (e: LogEntry) => setsOfEntry(e).some(x => (ph === 'iso' ? x.sec != null && Number(x.sec) < target : x.r != null && Number(x.r) <= target - 2));
   if (!L.every(short)) return null;
   const w = Number(L[1].w);
-  if (w - step(w) <= 0) return null; // already the lightest step
-  if (ph === 'iso') return { w, lo: w - step(w), hi: w - step(w), since: L[0].d };
+  const down = ph === 'iso' ? stepOf(cfg, item.ex, w) : step(w); // the strength drop is a percentage; only the one-step floor follows the default
+  if (w - down <= 0) return null; // already the lightest step
+  if (ph === 'iso') return { w, lo: w - down, hi: w - down, since: L[0].d };
   const hi = Math.min(round(w * 0.95), w - step(w));
   return { w, lo: Math.min(round(w * 0.9), hi), hi, since: L[0].d };
 }
@@ -117,11 +121,11 @@ export function progressionOf(cfg: Cfg, logs: Logs, item: Pick<CardItem, 'ex'> &
   const sets = Number(m[1]), reps = Number(m[2]);
   const full = (e: LogEntry) => setsOfEntry(e).filter(x => Number(x.w) >= w && (isTimed(ph) ? Number(x.sec) >= 30 : Number(x.r) >= reps)).length >= sets;
   if (!full(a) || !full(b)) return null;
-  return { w: w + (w < 50 ? 2.5 : 5), from: w };
+  return { w: w + stepOf(cfg, item.ex, w), from: w };
 }
 export function targetOf(cfg: Cfg, logs: Logs, item: CardItem, ph: PhaseKey | null | undefined): { w: number | null; src: string; up?: true } {
   const base = baseTargetOf(cfg, logs, item, ph); const up = progressionOf(cfg, logs, item, ph);
-  if (up && (base.w == null || up.w > base.w)) return { w: up.w, src: `up from ${up.from} lb`, up: true };
+  if (up && (base.w == null || up.w > base.w)) return { w: up.w, src: `suggested, from ${up.from} lb`, up: true };
   return base;
 }
 // The starting weight: the weight last logged for this exercise in this phase (on any card), else the program's weight.

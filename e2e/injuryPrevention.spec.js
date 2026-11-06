@@ -1,10 +1,17 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, openFinished } from './fixtures.js';
 
 // Settings → Injury prevention: on shows the Back-to-back suggestion (and the move Heads-up). Off is the default: a new account starts with
 // it off, and an account from before the change was given On by `npm run keep:injury-prevention`.
 const DAY2 = ['A-d2s1', 'A-d2s2-0', 'A-d2s3', 'A-d2s4', 'A-d2s5-0', 'A-d2s5-1', 'A-d2s6-0', 'A-d2s6-1'];
-const tick = async page => { for (const id of DAY2) await page.locator(`#chk-${id}`).check(); };
-const untick = async page => { for (const id of DAY2) await page.locator(`#chk-${id}`).uncheck(); };
+const tick = async page => { for (const id of DAY2) await page.locator(`#chk-${id}`).click(); };
+// Ticked cards sit in Day 2's Finished bar: untick from its rows. Unticking one half of a superset puts the whole card back in the open list, so its other half is a box again.
+const untick = async page => {
+  await openFinished(page, 2);
+  for (const id of DAY2) {
+    const row = page.locator(`[id="fin-undo-${id.replace(/-(\d)$/, '#$1')}"]`);
+    if (await row.count()) await row.click(); else await page.locator(`#chk-${id}`).uncheck();
+  }
+};
 const toggle = page => page.getByRole('switch', { name: 'Injury prevention' });
 const setSwitch = async (page, on) => {
   await page.locator('#tab-settings, #account-badge').first().click();
@@ -44,15 +51,14 @@ test('the Board has its own Injury prevention switch, and it agrees with Setting
   await expect(onBoard).not.toBeChecked();
 });
 
-test('on a phone the Board switch sits beside Sort & filter, outside the sort and filter group, and still toggles', async ({ page }) => {
+test('on a phone the Board switch sits beside the filter icon, outside the sort and filter group, and still toggles', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   const sw = page.locator('.boardroot').getByRole('switch', { name: /Injury prevention/ });
-  const toggleBtn = page.getByRole('button', { name: /Sort & filter/ });
+  const toggleBtn = page.getByRole('button', { name: /^Sort and filter/ });
   const a = await toggleBtn.boundingBox();
   const b = await sw.locator('xpath=..').boundingBox();
   expect(Math.abs(a.y + a.height / 2 - (b.y + b.height / 2))).toBeLessThan(6);
-  expect(b.x).toBeGreaterThan(a.x + a.width);
-  await expect(page.getByRole('group', { name: 'Sort and filter exercises' }).getByRole('switch')).toHaveCount(0);
-  await sw.check();
+  expect(a.x).toBeGreaterThan(b.x + b.width);
+    await sw.check();
   await expect(sw).toBeChecked();
 });

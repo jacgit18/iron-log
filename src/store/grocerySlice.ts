@@ -165,14 +165,18 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     },
 
     // An import replaces the list. The file's data is written first; the old months go only if every write went through, so a full storage loses nothing.
-    setGrocery(data) {
+    // `deferRemoves` (inside a transact, where the writes are only held and `unsaved` is not up to date yet): the old months are
+    // not touched; their paths come back for the caller to remove once the new ones are committed and known to be stored.
+    setGrocery(data, deferRemoves) {
       const inc = normGroceryData(data) || { ...normGrocery(null), months: {} };
       const { months, ...clean } = inc;
       const old = Object.keys(get().groceryMonths);
       set({ grocery: clean, groceryMonths: months });
       saveMain(clean); Object.entries(months).forEach(([k, m]) => saveMonth(k, m));
+      if (deferRemoves) return old.filter(k => !months[k]).map(monthPath);
       const failed = new Set(get().unsaved);
       if (![MAIN, ...Object.keys(months).map(monthPath)].some(p => failed.has(p))) old.forEach(k => { if (!months[k]) get().removeDoc(monthPath(k)); });
+      return [];
     },
 
     // "Add to my data", and the one-time upload of this device's list into the account (useAppStore adoptDeviceGrocery): what is
@@ -240,11 +244,12 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
     },
 
     // Undo puts it back in its place (its ticks in each month were never removed), and its store if that went meanwhile.
-    removeGroceryItem(id) {
+    removeGroceryItem(id, opts) {
       const i = get().grocery.items.findIndex(x => x.id === id); if (i < 0) return;
       const it = get().grocery.items[i];
       pinRemoved(it);
       if (mutateCatalogue(g => { g.items = g.items.filter(x => x.id !== id); return null; }) !== null) return;
+      if (opts?.quiet) return; // the receipt Undo removes what Apply made and has its own notice
       get().noteRemoved('grocery', it.n, () => {
         return mutateCatalogue(g => {
           if (g.items.some(x => x.id === id)) return 'back';
@@ -574,6 +579,11 @@ export const grocerySlice = (set: StoreSet, get: StoreGet): GrocerySlice => {
         if (paid === row.usual) delete marks[row.key]; else marks[row.key] = paid ? row.cents : false; // paid: the cents settled now
         if (Object.keys(marks).length) mm.paid = marks; else delete mm.paid;
       });
+    },
+    // Puts one month line back exactly as it was (null: it had none), for Undo after a receipt is applied (brief receipt-scan).
+    restoreGroceryLine(month, id, line) {
+      if (!MONTH_RE.test(month) || get().blocked() || !get().grocery.items.some(i => i.id === id)) return; // blocked: sync is loading, so an Undo does not write
+      mutateMonth(month, m => { if (line && Object.keys(line).length) m.lines[id] = line; else delete m.lines[id]; });
     },
     setGroceryTax(month, store, cents) {
       if (cents !== null && (cleanCents(cents) == null || cents <= 0)) return;

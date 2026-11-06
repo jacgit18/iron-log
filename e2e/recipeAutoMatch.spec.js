@@ -31,6 +31,15 @@ test('water is Have with nothing in Groceries and is not added to To get', async
   await expect(page.getByRole('button', { name: 'Add 1 missing to To get' })).toBeVisible();
 });
 
+test('the Have mark sits in the same column for water and for a matched item, and water has no picker', async ({ page }) => {
+  await addHome(page, ['Rice']);
+  await newRecipe(page, 'Rice and water', ['water', 'rice']);
+  const x = async name => (await state(page, name).boundingBox()).x;
+  expect(Math.abs((await x('water')) - (await x('rice')))).toBeLessThan(1);
+  await expect(page.locator('.rc-ing', { hasText: 'water' }).getByRole('combobox')).toHaveCount(0);
+  await expect(page.locator('.rc-ing', { hasText: 'water' }).getByText('Always at home')).toBeVisible();
+});
+
 test('a longer At home name is matched by itself', async ({ page }) => {
   await addHome(page, ['Boneless skinless chicken breast']);
   await newRecipe(page, 'Grilled chicken', ['chicken breast']);

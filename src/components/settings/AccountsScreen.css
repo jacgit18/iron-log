@@ -1,0 +1,130 @@
+@layer base, components;
+@layer components {
+.accts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-12);
+}
+.acctstats {
+  display: grid;
+  gap: var(--sp-8);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.acctstat {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-10);
+}
+.acctstat b {
+  font-size: var(--fs-3xl);
+  font-variant-numeric: tabular-nums;
+}
+.acctstat span {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.capbar {
+  background: var(--line);
+  border-radius: var(--r-pill);
+  height: 8px;
+  overflow: hidden;
+}
+.capbar i {
+  background: var(--accent-fill);
+  display: block;
+  height: 100%;
+}
+.acctlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.acctrow {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  display: grid;
+  gap: var(--sp-10);
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  padding: var(--sp-10) var(--sp-12);
+}
+.acctwho {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.acctwho small,
+.acctjoined small {
+  color: var(--muted);
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+.accttag {
+  background: var(--line);
+  border-radius: var(--r-pill);
+  display: inline-block;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: var(--sp-2) var(--sp-10);
+}
+.accttag.sus {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+.acctacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+}
+.acctdelete {
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  grid-column: 1 / -1;
+  padding-top: var(--sp-10);
+}
+.acctdelete p {
+  color: var(--muted);
+  margin: 0;
+}
+.acctdeleteacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.acctdeleteacts input {
+  min-height: 36px;
+  width: 8em;
+}
+.acctlog {
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.acctlog li {
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: var(--sp-10);
+  justify-content: space-between;
+  padding-top: var(--sp-4);
+}
+@media (max-width: 560px) {
+  .acctrow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .acctplan,
+  .acctjoined {
+    grid-column: 1;
+  }
+}
+}

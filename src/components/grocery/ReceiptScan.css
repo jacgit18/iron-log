@@ -1,0 +1,270 @@
+@layer base, components;
+@layer components {
+/* Scan receipt (brief receipt-scan): the button row under the month arrows on To get, and the review sheet it opens. Wide screens show a table, a narrow sheet shows cards. */
+.rcscan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+}
+.rcscan .btn {
+  min-height: 44px;
+}
+.rcsheet {
+  max-width: 860px;
+  container-type: inline-size;
+}
+.rcmeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8) var(--sp-16);
+  margin: 0;
+}
+.rccheck {
+  margin: 0;
+  padding: var(--sp-10) var(--sp-12);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+}
+.rccheck.bad {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  border-color: transparent;
+}
+.rcnums {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-16);
+  font-variant-numeric: tabular-nums;
+}
+.rcwarn {
+  margin: 0;
+  padding: var(--sp-6) var(--sp-10);
+  border-radius: var(--r-md);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+.rcnote {
+  grid-column: 2 / -1;
+}
+.rcmerge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--sp-10);
+}
+.rclink {
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+  border: 0;
+  background: none;
+  color: var(--accent-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.rclines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.rcrow {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1.3fr) 4.5rem 6.5rem;
+  gap: var(--sp-10);
+  align-items: center;
+  padding: var(--sp-6) 0;
+  border-bottom: 1px solid var(--line);
+}
+.rcrow.rcoff {
+  opacity: .65;
+}
+.rctext {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: var(--fs-xs);
+  overflow-wrap: anywhere;
+}
+.rcrow select {
+  min-height: 44px;
+  max-width: 100%;
+}
+.rcpill {
+  justify-self: start;
+  padding: var(--sp-2) var(--sp-8);
+  border-radius: var(--r-pill);
+  background: var(--accent-fill);
+  color: var(--accent-ink);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.rcaddbtn,
+.rcunstage {
+  min-height: 44px;
+}
+.rcnew {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--sp-10);
+  padding: var(--sp-10);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+.rcnew .actions,
+.rcformerr {
+  grid-column: 1 / -1;
+}
+.rcnew input,
+.rcnew select {
+  min-height: 44px;
+}
+.rcqty {
+  font-variant-numeric: tabular-nums;
+}
+.rcnet {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.rcnet s {
+  display: block;
+  font-weight: 400;
+  font-size: var(--fs-xs);
+}
+.rctick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+.rchead {
+  font-size: var(--fs-xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.rckeep {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-10);
+  min-height: 44px;
+  margin: 0 0 var(--sp-8);
+  cursor: pointer;
+}
+.rckeep input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: var(--sp-4) 0 0;
+}
+.rckeep small {
+  display: block;
+  color: var(--muted);
+}
+.rcfoot {
+  position: sticky;
+  bottom: 0;
+  padding-top: var(--sp-10);
+  background: var(--surface);
+}
+@container (max-width: 640px) {
+  .rchead {
+    display: none;
+  }
+  .rcrow {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    row-gap: var(--sp-4);
+  }
+  .rcrow .rctext {
+    grid-column: 2 / 4;
+  }
+  .rcrow select {
+    grid-column: 2 / 3;
+  }
+  .rcrow .rcnet {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .rcrow .rcqty {
+    grid-column: 2;
+  }
+}
+.rcbought {
+  display: grid;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+}
+.rcbought .rckeep {
+  margin: 0;
+}
+/* brief receipt-reconcile-ticked: the Was → Now note under a ticked row, and the list of ticked items the receipt does not show. */
+.rcwas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4) var(--sp-10);
+  font-variant-numeric: tabular-nums;
+}
+.rctag {
+  padding: var(--sp-2) var(--sp-8);
+  border-radius: var(--r-pill);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.rctag.rcsame {
+  background: var(--sunk);
+  color: var(--muted);
+}
+.rcmiss {
+  display: grid;
+  gap: var(--sp-6);
+  margin: var(--sp-8) 0;
+  padding: var(--sp-10) var(--sp-12);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-lg);
+}
+.rcmiss h3,
+.rcmiss .note {
+  margin: 0;
+}
+.rcmiss ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.rcmiss li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--sp-10);
+  align-items: center;
+  border-top: 1px solid var(--line);
+}
+.rcmiss li:first-child {
+  border-top: 0;
+}
+.rcuntick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-8);
+  min-height: 44px;
+  cursor: pointer;
+}
+.rcuntick input {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+.rcmisswhat small {
+  display: block;
+  color: var(--muted);
+}
+.rcmissstate {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+}

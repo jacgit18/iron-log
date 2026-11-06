@@ -57,4 +57,16 @@ describe('transport: a body that never arrives', () => {
     const t = createTransport({ clientVersion: 'x', timeoutMs: 50, fetch: ok });
     expect(await guard(t.eraseData())).toEqual({ ok: true });
   });
+
+  it('erase and delete carry the expected-user header, and a 409 account answer is a pause, not a refusal', async () => {
+    const seen: Array<Record<string, string>> = [];
+    const stub = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      seen.push(init?.headers as Record<string, string>);
+      return { ok: false, status: 409, headers: new Headers(), json: async () => ({ ok: false, error: 'account' }) } as unknown as Response;
+    }) as typeof fetch;
+    const t = createTransport({ clientVersion: 'x', fetch: stub, headers: () => ({ 'x-expected-user': '42' }) });
+    expect(await guard(t.eraseData())).toMatchObject({ ok: false, class: 'account', status: 409 });
+    expect(await guard(t.deleteAccount())).toMatchObject({ ok: false, class: 'account', status: 409 });
+    expect(seen.map(h => h['x-expected-user'])).toEqual(['42', '42']);
+  });
 });

@@ -4,7 +4,7 @@
 import type { StoreApi } from 'zustand';
 import type { SyncStatus } from '../sync/apiDb.js';
 import type {
-  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
+  BodyEntry, CatalogItem, Cfg, DataFile, DietEntry, DietPace, Grocery, GroceryData, GroceryLine, GroceryMonth, GroceryShare, GroceryUnit, EquipmentId, Experiment, FlatSlot, LibraryItem, LogEntry, Logs, Recipe, RecipeChips, MuscleKey, MuscleTags, PhaseKey, ProgKey, Program,
   ProgramSlot, SlotType, Snapshot, Stretch, StretchExperiment, StretchWeek, SupplementSlot, Supplements, Week,
 } from '../types.ts';
 import type { ExcelImport } from '../lib/excelImport.ts';
@@ -23,7 +23,7 @@ export type PhaseChoice = PhaseKey | '' | null;
 /** The Experiment sheet and the board's add-to-day sheet (which has no id). */
 export interface ExperimentForm extends ExerciseChoice, ExerciseExtras { id?: string; ph: PhaseChoice; note?: string }
 /** The exercise details sheet. Fields left out stay as they were. `tags: null` means back to the default tags. */
-export interface ExerciseDetailsForm { name?: string; url?: string; eq?: EquipmentId | ''; ph?: PhaseChoice; rm?: string | number | null; tags?: MuscleTags | null }
+export interface ExerciseDetailsForm { name?: string; url?: string; eq?: EquipmentId | ''; step?: number | null; ph?: PhaseChoice; rm?: string | number | null; tags?: MuscleTags | null }
 export interface SlotFormItem extends ExerciseChoice, ExerciseExtras { ph: PhaseChoice; w: number | null; bw?: boolean; rx?: string; note?: string }
 /** The card (slot) editor. `target` aims it at a program and day when it was opened from the board. */
 export interface SlotForm {
@@ -42,6 +42,7 @@ export interface SupplementForm { id?: string; n: string; slot?: string; dose?: 
 export interface LogForm {
   entry: LogEntry; ph: PhaseKey | null; makeDefault: boolean; makeExDefault: boolean;
   rm: number | null | undefined; done: boolean; eq?: EquipmentId | ''; url?: string;
+  step?: number | null; // lb the exercise goes up by; null clears it, left out leaves it as saved
 }
 /** Anything a sheet or host gives us that has no shape of its own yet. */
 type Loose = any; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -272,6 +273,7 @@ export interface SettingsSlice {
   setPct(p: PhaseKey, raw: string | number): boolean; // false: refused (bad value, or still loading)
   setRxOverride(p: PhaseKey, raw: string): boolean;
   setRest(raw: string | number): boolean;
+  setHideKg(hide: boolean): void;
   setInjuryPrevention(on: boolean): void;
   setRm(exId: string, raw: string | number): boolean;
   setCfgField<K extends keyof Cfg>(k: K, v: Cfg[K]): void;
@@ -332,15 +334,16 @@ export interface GrocerySlice {
   grocery: Grocery;
   groceryMonths: Record<string, GroceryMonth>; // "YYYY-MM" -> that month; a month with no entry is the fresh list
   loadGrocery(): void; // syncing off: read the list from this browser's storage
-  setGrocery(data: GroceryData): void; // an import replaces everything
+  setGrocery(data: GroceryData, deferRemoves?: boolean): string[]; // an import replaces everything; with deferRemoves the old months' paths are returned, not removed
   addGrocery(data: GroceryData): void; // an import, or this device's old list reaching the account, adds what is missing
   addGroceryItem(d: GroceryForm): string | null;
   updateGroceryItem(id: string, patch: Partial<{ n: string; store: string; qty: number; cents: number | null; every: boolean; note: string; unit: GroceryUnit | '' }>): string | null;
-  removeGroceryItem(id: string): void;
+  removeGroceryItem(id: string, opts?: { quiet?: boolean }): void;
   addGroceryStore(name: string): string | null;
   removeGroceryStore(name: string): string | null;
   setGroceryOut(id: string, out: boolean): void; // the At home list: unchecking "Have" puts a When-out item on this month's list
   setGroceryGot(month: string, id: string, on: boolean): boolean; // bought this month: it counts as had, and leaves that month's list; false when nothing changed
+  restoreGroceryLine(month: string, id: string, line: GroceryLine | null): void; // one month line back exactly as it was, for Undo after a receipt is applied
   setGroceryHave(month: string, id: string, on: boolean): void; // the At home tick: had this month, so off that month's list (ADR 054)
   setGroceryQty(month: string, id: string, qty: number): void;
   setGroceryCents(month: string, id: string, cents: number | null): void;
@@ -491,6 +494,7 @@ export interface CoreSlice {
   removeDoc(path: string): void;
   mutateCfg(fn: (c: Cfg) => void): boolean;
   mutateWeek(fn: (w: Week) => void): boolean;
+  transact<T>(fn: () => T, fallback: T): T;
   /** Rewrites this week's record of what it runs (ADR 022) from today's program, when the board shows this week and it has one. */
   refreshRan(): void;
 

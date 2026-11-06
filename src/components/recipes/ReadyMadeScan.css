@@ -1,0 +1,17 @@
+@layer base, components;
+@layer components {
+/* Scan label (brief label-photo-scan): the button and its status line above the Name box of a new ready-made food; the button is 44px tall. */
+.rc-scan {
+  display: grid;
+  gap: var(--sp-6);
+  justify-items: start;
+}
+.rc-scanbtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+}
+.rc-scan .btn {
+  min-height: 44px;
+}
+}

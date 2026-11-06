@@ -65,7 +65,14 @@ export function qaPersonas(config: QaPersonasConfig): BetterAuthPlugin {
   // that is not QA never opens it: every route checks the QA mark first.
   let ownerPool: pg.Pool | undefined;
   let resetting = false;
-  const owner = () => (ownerPool ??= (config.makeOwnerPool ?? (url => new pg.Pool({ connectionString: pinSslMode(url), max: 1, statement_timeout: 60_000 })))(config.ownerDatabaseUrl!));
+  const owner = () => {
+    if (ownerPool) return ownerPool;
+    const pool = (config.makeOwnerPool ?? (url => new pg.Pool({ connectionString: pinSslMode(url), max: 1, statement_timeout: 60_000 })))(config.ownerDatabaseUrl!);
+    // An idle pooled connection can be dropped at any time (a database restart, Neon scaling to zero, a test database dropped under it). pg reports that as an
+    // 'error' event on the pool; with no listener Node would crash the whole process, as the auth pool and createDb already guard against.
+    pool.on('error', err => { console.error(JSON.stringify({ msg: 'idle QA owner database connection dropped', error: err.message })); });
+    return (ownerPool = pool);
+  };
 
   /** Whether the kept admin session behind a test account's session is still there, still an admin's, and not expired. */
   async function keptAdminOk(ctx: { context: { createAuthCookie: (n: string) => { name: string }; secret: string; internalAdapter: { findSession: (t: string) => Promise<{ session: { expiresAt: Date }; user: { email?: string | null; emailVerified?: boolean } } | null> } }; getSignedCookie: (n: string, s: string) => Promise<string | false | null | undefined> }) {

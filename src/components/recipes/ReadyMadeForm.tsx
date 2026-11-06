@@ -1,5 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useFeature } from '../../features.js';
+import './ReadyMadeScan.css';
 import { readyMadeValues } from '../../lib/readyMade.js';
+import { planFill } from '../../lib/labelFill.js';
+import { SCAN_TEXT, scanLabel } from '../../lib/scanPhoto.js';
 import { MAX_RECIPE_NAME } from '../../shared/recipes.js';
 import { useAppStore } from '../../store/useAppStore.js';
 import FoodSearch, { type FoodFill } from '../diet/FoodSearch.js';
@@ -17,13 +21,39 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
   const [carbs, setCarbs] = useState(str(recipe?.c));
   const [fat, setFat] = useState(str(recipe?.f));
   const [note, setNote] = useState(recipe?.note ?? '');
+  const [pack, setPack] = useState(str(recipe?.servings));
+  const [usual, setUsual] = useState(str(recipe?.usual)); // brief usual-amount-and-unit: how many Ate this opens at, and what one serving is called
+  const [unit, setUnit] = useState(recipe?.unit ?? '');
+  const [plural, setPlural] = useState(recipe?.plural ?? '');
   const [err, setErr] = useState('');
+  const canScan = useFeature('scan') && !recipe;
+  const [scanning, setScanning] = useState(false);
+  const [scanNote, setScanNote] = useState('');
+  const camera = useRef<HTMLInputElement>(null);
+  const library = useRef<HTMLInputElement>(null);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []); // a scan that ends after Cancel changes nothing
   const fillFrom = (f: FoodFill) => {
     if (!n.trim()) setN(f.n);
     setKcal(String(f.kcal)); setProtein(String(f.p)); setCarbs(str(f.c)); setFat(str(f.f)); setErr('');
   };
+  // Scan label (brief label-photo-scan): fills the form from a photo, never saves. Only empty text boxes are kept, numbers are replaced because they come from the label.
+  const scan = async (file: File | undefined) => {
+    if (!file || scanning) return;
+    setScanning(true); setScanNote('');
+    const r = await scanLabel(file);
+    if (!mounted.current) return;
+    setScanning(false);
+    if (!r.ok) { setScanNote(SCAN_TEXT[r.reason]); return; }
+    const plan = planFill(r.result, { n: '', note: '', pack: '' }); // what the label offers; a name or note typed while it was reading is kept below
+    if (plan.n !== undefined) setN(cur => (cur.trim() ? cur : plan.n ?? ''));
+    if (plan.kcal !== undefined) { setKcal(plan.kcal); setProtein(plan.p ?? ''); setCarbs(plan.c ?? ''); setFat(plan.f ?? ''); setErr(''); }
+    if (plan.note !== undefined) setNote(cur => (cur.trim() ? cur : plan.note ?? ''));
+    if (plan.pack !== undefined) setPack(cur => (cur.trim() ? cur : plan.pack ?? ''));
+    setScanNote(plan.message);
+  };
   const save = () => {
-    const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat });
+    const v = readyMadeValues({ n, kcal, p: protein, c: carbs, f: fat, pack, usual, unit, plural });
     if ('error' in v) { setErr(v.error); return; }
     const e = useAppStore.getState().saveRecipe({ ...(recipe ? { id: recipe.id } : {}), n, cat: 'ready', ing: [], steps: [], ...v, note });
     if (e) { setErr(e); return; }
@@ -34,8 +64,20 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
     <form className="rc-form" onSubmit={e => { e.preventDefault(); save(); }} aria-label={recipe ? `Edit ${recipe.n}` : 'New ready-made food'}>
       <h3 tabIndex={-1}>{recipe ? 'Edit ready-made food' : 'New ready-made food'}</h3>
       <div onKeyDown={e => { if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.preventDefault(); }}>{/* Enter in the lookup box searches, it does not save the form */}
-        <FoodSearch onUse={fillFrom} />
+        <FoodSearch onUse={fillFrom} {...(canScan ? { onLabelPhoto: () => camera.current?.click() } : {})} />
       </div>
+      {canScan && (
+        <div className="rc-scan">
+          {/* Two inputs: Android's photo picker offers only the gallery, so the camera needs its own `capture` input; on a desktop `capture` is ignored and both open the file picker. */}
+          <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label="Label camera" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />
+          <input ref={library} type="file" accept="image/*" hidden aria-label="Label photo" onChange={e => { void scan(e.target.files?.[0]); e.target.value = ''; }} />
+          <div className="rc-scanbtns">
+            <button type="button" className="btn sm" disabled={scanning} onClick={() => camera.current?.click()}>{scanning ? 'Reading label...' : 'Scan label'}</button>
+            <button type="button" className="btn sm" disabled={scanning} onClick={() => library.current?.click()}>Choose photo</button>
+          </div>
+          {scanNote && <p className="note" role="status">{scanNote}</p>}
+        </div>
+      )}
       <label>Name
         <input value={n} maxLength={MAX_RECIPE_NAME} onChange={e => { setN(e.target.value); setErr(''); }} autoComplete="off" />
       </label>
@@ -45,6 +87,22 @@ export default function ReadyMadeForm({ recipe, onDone }: { recipe?: Recipe; onD
         <label>Carbs per serving (g), optional<input inputMode="decimal" value={carbs} onChange={e => { setCarbs(e.target.value); setErr(''); }} /></label>
         <label>Fat per serving (g), optional<input inputMode="decimal" value={fat} onChange={e => { setFat(e.target.value); setErr(''); }} /></label>
       </div>
+      <label>Servings per pack, optional
+        <input inputMode="numeric" value={pack} onChange={e => { setPack(e.target.value); setErr(''); }} aria-describedby="rc-pack-help" />
+      </label>
+      <p id="rc-pack-help" className="note">Lets Ate this log the whole pack in one step.</p>
+      <label>Usual amount, optional
+        <input inputMode="decimal" value={usual} onChange={e => { setUsual(e.target.value); setErr(''); }} aria-describedby="rc-usual-help" />
+      </label>
+      <label>One serving is called, optional
+        <input value={unit} maxLength={20} onChange={e => { setUnit(e.target.value); if (!e.target.value.trim()) setPlural(''); setErr(''); }} /* a plural with no unit is hidden, so it is cleared with it */ autoComplete="off" aria-describedby="rc-usual-help" />
+      </label>
+      {unit.trim() && (
+        <label>Plural, only if adding s is wrong
+          <input value={plural} maxLength={20} onChange={e => { setPlural(e.target.value); setErr(''); }} autoComplete="off" />
+        </label>
+      )}
+      <p id="rc-usual-help" className="note">Ate this opens at your usual amount and reads in your word: 4 and egg give "4 eggs".</p>
       <label>Note
         <input value={note} maxLength={300} onChange={e => setNote(e.target.value)} />
       </label>

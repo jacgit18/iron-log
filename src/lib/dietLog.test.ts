@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DietEntry } from '../types.ts';
-import { ateDayError, barPercent, entriesOn, entryText, hasMacros, meterText, missingCarbsFat, oldestDay, pruned, roomOn, servingNumbers, shiftDay, totalsFor } from './dietLog.js';
+import { ateDayError, ateMax, barPercent, entriesOn, entryText, hasMacros, meterText, missingCarbsFat, oldestDay, packServings, PORTION_MAX, pruned, roomOn, servingNumbers, shiftDay, totalsFor } from './dietLog.js';
 
 const e = (id: string, d: string, n: string, kcal: number, p: number, from?: string, cf?: [number, number]): DietEntry => ({ id, d, n, kcal, p, ...(cf ? { c: cf[0], f: cf[1] } : {}), ...(from ? { from } : {}) });
 const list = [e('a', '2026-10-29', 'Rice', 200, 4), e('b', '2026-10-29', 'Chili', 600, 40.5, 'r1'), e('c', '2026-10-28', 'Eggs', 150, 12)];
@@ -109,5 +109,34 @@ describe('ateDayError', () => {
     expect(ateDayError(shiftDay(oldestDay(today), -1), today)).toMatch(/too far back/);
     expect(ateDayError('', today)).toBe('Pick a day.');
     expect(ateDayError('2026-02-30', today)).toBe('Pick a day.');
+  });
+});
+
+describe('whole pack (ready-made foods)', () => {
+  it('gives a pack size of 2 or more for a ready-made food only', () => {
+    expect(packServings({ cat: 'ready', servings: 12 })).toBe(12);
+    expect(packServings({ cat: 'ready', servings: 1 })).toBeNull();
+    expect(packServings({ cat: 'ready' })).toBeNull();
+    expect(packServings({ cat: 'protein', servings: 4 })).toBeNull(); // a recipe's servings are not a pack
+  });
+  it('lets the stepper go to the pack size when that is over 10, else 10, never past 99', () => {
+    expect(ateMax({ cat: 'ready', servings: 12 })).toBe(12);
+    expect(ateMax({ cat: 'ready', servings: 6 })).toBe(PORTION_MAX);
+    expect(ateMax({ cat: 'ready' })).toBe(PORTION_MAX);
+    expect(ateMax({ cat: 'protein', servings: 40 })).toBe(PORTION_MAX);
+    expect(ateMax({ cat: 'ready', servings: 99 })).toBe(99);
+  });
+  it('stops the stepper at the most portions whose totals still fit one entry', () => {
+    expect(ateMax({ cat: 'ready', servings: 24, kcal: 450, p: 10 })).toBe(22); // 22 x 450 = 9,900; 22.5 would be 10,125 over the 9,999 calorie cap
+    expect(ateMax({ cat: 'ready', servings: 40, kcal: 100, p: 30 })).toBe(33); // 33 x 30 = 990 g protein; 33.5 would be 1,005 g over the 999 g cap
+    expect(ateMax({ cat: 'ready', servings: 12, kcal: 210, p: 6 })).toBe(12); // fits: unchanged
+    expect(ateMax({ cat: 'ready', servings: 24 })).toBe(24); // no numbers yet: Ate this shows the "Add them" prompt, not the stepper
+  });
+  it('lets the stepper reach a usual amount over 10', () => {
+    expect(ateMax({ cat: 'ready', usual: 12, kcal: 100, p: 5 })).toBe(12);
+    expect(ateMax({ cat: 'ready', usual: 40, kcal: 450, p: 10 })).toBe(22); // still held to what one entry can hold
+  });
+  it('multiplies the per-serving numbers by the whole pack', () => {
+    expect(servingNumbers({ kcal: 210, p: 6, c: 40, f: 1 }, 12)).toEqual({ kcal: 2520, p: 72, c: 480, f: 12 });
   });
 });

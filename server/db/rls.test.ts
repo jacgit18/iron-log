@@ -172,6 +172,37 @@ describe('push_subscription', () => {
 });
 
 // Backup snapshots (migration 20261022000002, ADR 066) are copies of an export, not synced data: the API role may delete its own (pruning).
+describe('receipts', () => {
+  const receipt = (user: string, month = '2026-11') => sql`insert into receipts (user_id, month, size_bytes, data) values (${user}, ${month}, 3, '\\x010203')`;
+
+  it('a user sees only their own, and can add, change and delete them', async () => {
+    await asUser(A, trx => receipt(A).execute(trx));
+    await asUser(B, trx => receipt(B).execute(trx));
+    expect(await asUser(A, trx => count(trx as never, 'receipts'))).toBe(1);
+    await asUser(A, trx => sql`update receipts set note = 'fridge'`.execute(trx));
+    expect(await asUser(A, trx => sql`delete from receipts`.execute(trx)).then(r => Number(r.numAffectedRows))).toBe(1);
+    expect(await count(owner, 'receipts')).toBe(1);
+  });
+
+  it("a user cannot add one for someone else, change or delete someone else's, and with no user set nothing is visible", async () => {
+    await asUser(B, trx => receipt(B).execute(trx));
+    expect(await refusal(asUser(A, trx => receipt(B, '2026-10').execute(trx)))).toMatch(/row-level security/);
+    expect(Number((await asUser(A, trx => sql`delete from receipts`.execute(trx))).numAffectedRows)).toBe(0);
+    expect(Number((await asUser(A, trx => sql`update receipts set note = 'x'`.execute(trx))).numAffectedRows)).toBe(0);
+    expect(await count(app, 'receipts')).toBe(0);
+    expect(await count(owner, 'receipts')).toBe(1);
+  });
+
+  it('refuses a bad month and an oversized note or store', async () => {
+    const add = (month: string, extra = '') => refusal(asUser(A, trx => sql.raw(`insert into receipts (user_id, month, size_bytes, data${extra ? ', ' + extra.split('=')[0] : ''}) values (${A}, '${month}', 3, '\\x010203'${extra ? ', ' + extra.split('=')[1] : ''})`).execute(trx)));
+    expect(await add('2026-13')).toMatch(/check constraint/);
+    expect(await add('Nov')).toMatch(/check constraint/);
+    expect(await add('2026-11', `note='${'x'.repeat(201)}'`)).toMatch(/check constraint/);
+    expect(await add('2026-11', `store='${'x'.repeat(61)}'`)).toMatch(/check constraint/);
+    expect(await add('2026-11')).toBe('');
+  });
+});
+
 describe('backup_snapshots', () => {
   const snap = (user: string, day = '2026-10-20') => sql`insert into backup_snapshots (user_id, day, entries, score, size_bytes, data) values (${user}, ${day}, 1, 1, 3, '\\x010203')`;
 
@@ -294,7 +325,7 @@ describe('every table is covered (a forgotten table fails here)', () => {
         select has_table_privilege('ironlog_app', ${`public.${relname}`}, 'delete') as del,
                has_table_privilege('ironlog_app', ${`public.${relname}`}, 'truncate') as trunc,
                has_table_privilege('ironlog_app', ${`public.${relname}`}, 'select') as sel`.execute(owner)).rows[0]!;
-      expect(p.del, `${relname}: delete`).toBe(relname === 'push_subscription' || relname === 'backup_snapshots'); // the tables a user may delete from: turning push off, and pruning old backup days
+      expect(p.del, `${relname}: delete`).toBe(relname === 'push_subscription' || relname === 'backup_snapshots' || relname === 'receipts'); // the tables a user may delete from: turning push off, pruning old backup days, and deleting a saved receipt
       expect(p.trunc, `${relname}: truncate`).toBe(false);
       if (relname === 'row_history' || relname === 'refused_writes') expect(p.sel, `${relname}: select`).toBe(false);
     }
