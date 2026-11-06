@@ -32,6 +32,7 @@ export type ScenarioFeature =
   | 'Receipt photos'
   | 'Receipt scan'
   | 'Receipt reconcile'
+  | 'Sharing done'
   | 'Usual amount'
   | 'Finished group'
   | 'Weight step'
@@ -49,7 +50,7 @@ export type ScenarioFeature =
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done',
 ];
 
 export interface Scenario {
@@ -1239,6 +1240,29 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'Before any label has been read in this session the note says only "Uses AI"; after one it says how many are left today, for example "Uses AI · 29 of 30 left today". The count is shared by the whole server, not by you.',
       'With none left, Photo the label is switched off with "Label photos are used up for today. Type the name instead."; Type the name still works.',
+    ],
+  },
+  {
+    id: 'S-95', feature: 'Sharing done', title: 'Done closes the Sharing panel and adds what you typed', persona: 'grocery-shopper', brief: 'sharing-done-button',
+    steps: [
+      'Open Daily, Groceries, At home, press Sharing and look at the bottom of the panel.',
+      'In the Home group type Jo in Add a person without pressing Add person, then press Done.',
+      'Press Sharing again and look at the Home group.',
+    ],
+    expected: [
+      'A Done button sits at the bottom of the panel. Pressing it closes the panel, a note says "Sharing saved." under the buttons, and focus is back on the Sharing button.',
+      'Jo is in the Home group, added by Done; the note is gone while the panel is open again.',
+    ],
+  },
+  {
+    id: 'S-96', feature: 'Sharing done', title: 'Text that cannot be added keeps the panel open', persona: 'grocery-shopper', brief: 'sharing-done-button', edge: true,
+    steps: [
+      'Open the Sharing panel, type Sam in Add a person in the Home group (Sam is already there) and press Done.',
+      'Clear the box and press Done.',
+    ],
+    expected: [
+      'The panel stays open and the Home group says "That person is already in this group."; no "Sharing saved." note appears.',
+      'With the box empty, Done closes the panel and says "Sharing saved.".',
     ],
   },
 ];
