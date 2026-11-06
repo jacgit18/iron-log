@@ -14,9 +14,15 @@ function GroupRow({ group, stores, flushers }: { group: GroceryGroup; stores: st
   const s = useAppStore.getState();
   const [name, setName] = useState(group.n); const [person, setPerson] = useState(''); const [err, setErr] = useState<string | null>(null);
   const [arming, setArming] = useState<string | null>(null);
-  // Done asks each group to add the person typed in its box; a message back means it could not, and the panel stays open.
+  // Done asks each group to save its pending rename and add the person typed in its box; a message back means it could not, and the panel stays open.
   const flush = useRef<() => string | null>(() => null);
-  flush.current = () => { if (!person.trim()) return null; const m = s.addGroceryPerson(group.id, person); setErr(m); if (!m) setPerson(''); return m; };
+  // A rename that failed when the name box lost focus (a name another group has) is tried again, so Done never closes over a lost change.
+  flush.current = () => {
+    if (name.trim() && name.trim() !== group.n) { const m = s.renameGroceryGroup(group.id, name); if (m) { setErr(m); return m; } }
+    if (!person.trim()) return null;
+    const m = s.addGroceryPerson(group.id, person); setErr(m); if (!m) setPerson('');
+    return m;
+  };
   useEffect(() => { const map = flushers.current; map.set(group.id, () => flush.current()); return () => { map.delete(group.id); }; }, [flushers, group.id]);
   return (
     <li className="gsgroup">
