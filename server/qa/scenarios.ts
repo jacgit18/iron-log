@@ -1423,7 +1423,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'On the Board press Stretches at the top. Look for the line about trying a stretch you saw online, and at the heading under the days.',
       'Press "+ Add stretch" and read the sheet\'s title; Cancel.',
-      'Go back to Workout, press Help at the top and read the Board and Glossary parts.',
+      'Go back to Workout, press Help at the top and read the Board item under "Where things are" and the "Words and abbreviations" list.',
     ],
     expected: [
       'The heading under the stretch days reads "Stretches to try" and its button "+ Add stretch"; the line reads "To try a stretch you saw online, add it under Stretches to try, below, with a link to the video."',
