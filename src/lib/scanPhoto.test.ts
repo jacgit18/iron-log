@@ -46,9 +46,10 @@ describe('scanLabel', () => {
     answer(200, { ok: true, result: { kind: 'unreadable' }, left: 7, max: 30 });
     await scanLabel(new Blob(['x']));
     expect(currentAllowance()).toEqual({ left: 7, max: 30 });
-    answer(503, { ok: false, why: 'cap' });
+    answer(503, { ok: false, why: 'cap', retryAfterSec: 60 });
     expect(await scanLabel(new Blob(['x']))).toEqual({ ok: false, reason: 'cap' });
     expect(currentAllowance()).toEqual({ left: 0, max: 30 });
+    expect(currentAllowance(Date.now() + 61_000)).toBeNull(); // held only until the server's retry time
     answer(503, { ok: false, why: 'upstream' });
     expect(await scanLabel(new Blob(['x']))).toEqual({ ok: false, reason: 'unavailable' });
     resetAllowance();

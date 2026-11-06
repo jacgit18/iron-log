@@ -3,18 +3,25 @@
 export interface Allowance { left: number; max: number }
 
 let known: Allowance | null = null;
+let until = 0; // when a "none left" count stops being believed: the day rolls over, and another server instance may still have uses (the cap is per instance)
+export const USED_UP_MAX_MS = 10 * 60_000;
+const holdMs = (retryAfterSec: unknown) => (typeof retryAfterSec === 'number' && retryAfterSec > 0 ? Math.min(retryAfterSec * 1000, USED_UP_MAX_MS) : USED_UP_MAX_MS);
 
 /** Keeps what an answer said (a missing or odd count is ignored). */
-export function rememberAllowance(body: unknown): void {
+export function rememberAllowance(body: unknown, now = Date.now()): void {
   const o = body as { left?: unknown; max?: unknown } | null;
-  if (o && Number.isInteger(o.left) && Number.isInteger(o.max) && (o.max as number) > 0 && (o.left as number) >= 0 && (o.left as number) <= (o.max as number)) known = { left: o.left as number, max: o.max as number };
+  if (o && Number.isInteger(o.left) && Number.isInteger(o.max) && (o.max as number) > 0 && (o.left as number) >= 0 && (o.left as number) <= (o.max as number)) { known = { left: o.left as number, max: o.max as number }; until = known.left === 0 ? now + USED_UP_MAX_MS : 0; }
 }
 
 /** The cap said no: nothing is left, whatever the last count was. */
-export function markUsedUp(): void { known = { left: 0, max: known?.max ?? 0 }; }
+export function markUsedUp(retryAfterSec?: unknown, now = Date.now()): void { known = { left: 0, max: known?.max ?? 0 }; until = now + holdMs(retryAfterSec); }
 
-export const currentAllowance = (): Allowance | null => known;
-export function resetAllowance(): void { known = null; }
+/** What the last answer said; a "none left" count older than its hold is forgotten, so the button comes back and the next try asks the server. */
+export function currentAllowance(now = Date.now()): Allowance | null {
+  if (known && known.left === 0 && until > 0 && now >= until) { known = null; until = 0; }
+  return known;
+}
+export function resetAllowance(): void { known = null; until = 0; }
 
 /** The note under Photo the label. */
 export const labelCostText = (a: Allowance | null): string => (a && a.max > 0 ? `Uses AI · ${a.left} of ${a.max} left today` : 'Uses AI');

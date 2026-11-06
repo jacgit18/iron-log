@@ -32,7 +32,7 @@ export default function FoodSearch({ onUse, text: given, onLabelPhoto }: { onUse
   const labelCamera = useRef<HTMLInputElement>(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { if (given !== undefined) setPick(null); }, [given]); // new words in the other box drop a pick made for the old ones
+  useEffect(() => { if (given !== undefined) { setPick(null); setAi(null); setAiNote(''); } }, [given]); // new words in the other box drop a pick or a label read made for the old ones
 
   const g = cleanGrams(grams);
   const scaled = pick && g !== null ? scaleFood(pick, g) : null;

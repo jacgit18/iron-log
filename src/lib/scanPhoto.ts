@@ -57,8 +57,8 @@ export async function scanLabel(file: Blob, signal?: AbortSignal): Promise<{ ok:
   } catch { return { ok: false, reason: 'offline' }; }
   if (res.status === 429) return { ok: false, reason: 'limit' };
   if (!res.ok) {
-    const why = await res.json().then((b: { why?: unknown }) => b.why, () => undefined);
-    if (res.status === 503 && why === 'cap') { markUsedUp(); return { ok: false, reason: 'cap' }; }
+    const why = await res.json().then((b: { why?: unknown; retryAfterSec?: unknown }) => b, () => ({} as { why?: unknown; retryAfterSec?: unknown }));
+    if (res.status === 503 && why.why === 'cap') { markUsedUp(why.retryAfterSec); return { ok: false, reason: 'cap' }; }
     console.warn(`label scan unavailable: status ${res.status}`);
     return { ok: false, reason: 'unavailable' };
   }

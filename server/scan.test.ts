@@ -90,7 +90,7 @@ describe('POST /api/scan/label', () => {
     expect((await post({ image: jpeg })).status).toBe(200);
     const over = await post({ image: jpeg });
     expect(over.status).toBe(503);
-    expect(await over.json()).toMatchObject({ why: 'cap' });
+    expect(await over.json()).toMatchObject({ why: 'cap', retryAfterSec: expect.any(Number) });
     expect(ask).toHaveBeenCalledTimes(2);
     t += 24 * 60 * 60_000;
     expect((await post({ image: jpeg })).status).toBe(200);
