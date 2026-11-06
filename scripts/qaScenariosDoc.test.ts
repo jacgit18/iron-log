@@ -14,7 +14,7 @@ describe('QA scenarios page', () => {
   });
   it('reports a missing, an unknown and a wrongly retired scenario', () => {
     expect(docIssues(doc.replace(/^### S-01\. .*$/m, ''))).toEqual(['S-01 is not on the page']);
-    expect(docIssues(`${doc}\n### S-98. Gone\n`)).toEqual(['S-98 is on the page but not in the list']);
+    expect(docIssues(`${doc}\n### S-998. Gone\n`)).toEqual(['S-998 is on the page but not in the list']);
     expect(docIssues(doc.replace(/^(### S-02\. .*)$/m, '$1 (retired)'))).toEqual(['S-02 is live in the list but retired on the page']);
   });
   it('reports a scenario whose steps or title changed in the list, not only its id', () => {

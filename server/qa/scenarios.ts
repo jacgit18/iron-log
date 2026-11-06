@@ -32,6 +32,7 @@ export type ScenarioFeature =
   | 'Receipt photos'
   | 'Receipt scan'
   | 'Receipt reconcile'
+  | 'Sharing done'
   | 'Usual amount'
   | 'Finished group'
   | 'Weight step'
@@ -43,13 +44,17 @@ export type ScenarioFeature =
   | 'Custom 404'
   | 'Receipt store'
   | 'Receipt merge'
-  | 'Bulk share';
+  | 'Bulk share'
+  | 'Link previews'
+  | 'Moved-card tag'
+  | 'Search hiding'
+  | 'Security headers';
 
 /** Every feature a scenario may cover, in the order the document lists them. The test fails on one with no scenario. */
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Moved-card tag',
 ];
 
 export interface Scenario {
@@ -455,10 +460,12 @@ export const SCENARIOS: readonly Scenario[] = [
       'On an Android phone with Loadbearer installed, open a YouTube video and choose Share, then Loadbearer.',
       'In the "Save this link" sheet pick an exercise and confirm.',
       'Share a different link to the same exercise.',
+      'On a computer, open Chrome\'s developer tools on the QA site, Application, Manifest, and read the warnings.',
     ],
     expected: [
       'Loadbearer is listed in the share sheet and opens "Save this link" over the board.',
       'The link is saved as the exercise\'s video and shows on its card; a different link first asks "Replace the link on <exercise>?"',
+      'The Manifest page shows no warning about the share target\'s enctype, and sharing a link still works as above.',
     ],
   },
   {
@@ -859,7 +866,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-64', feature: 'Weight step', title: 'Set how far an exercise goes up, and see the suggestion follow', persona: 'heavy-logger', brief: 'progression-step-per-exercise',
     steps: [
-      'Open Program, Exercise library and press Edit on an exercise you have logged at the same weight twice in a row with every set done (the heavy logger has several).',
+      'Open Program, Exercise library and press Edit on Kneeling Cable Ab Crunch (the heavy logger logged it twice in a row at 100 lb, every set done). Its card is on Day 2 of the Board.',
       'Under Equipment, tap the 10 chip in Weight step and save. Go to the Board and find that exercise\'s card.',
       'Open the exercise again and tap the lit 10 chip once more, then save.',
     ],
@@ -887,7 +894,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Choose a saved program (save a copy of A first if the list is empty) as the second program.',
     ],
     expected: [
-      'Two boards appear one above the other, each with its phase mix and the day buttons showing how many exercises differ; every row is tagged Same, Changed, Phase differs or Only here, and shows the editor\'s name, phase, weight and sets.',
+      'One list appears under each program\'s phase mix, with the day buttons showing how many exercises differ; each exercise is one row with both programs\' lines (side by side on a wide screen, the second under the first on a phone), tagged Same, Changed, Phase differs or Only in that program, with the editor\'s name, phase, weight and sets; where the two differ, the weight and sets are marked on both sides.',
       'Each filter hides the other rows and the numbers on the chips stay the same; nothing on the page can be dragged or edited, and Program A and B are unchanged afterwards.',
       'A saved copy of A against A shows no differences; choosing the same program on both sides says "Both sides are the same program."',
     ],
@@ -899,7 +906,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Step through the day buttons.',
     ],
     expected: [
-      'A day empty on both sides says "Nothing on this day in either program."; a day with exercises on one side lists them all as Only here on that side and an empty board on the other.',
+      'A day empty on both sides says "Nothing on this day in either program."; a day with exercises on one side lists them all as Only in that program, with "Not in this program" on the other side.',
       'The section is closed again after you leave the Program tab and come back, and the phone view does not scroll sideways.',
     ],
   },
@@ -912,6 +919,7 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'The screen is dark from the first moment: no white or light-grey flash before the app appears.',
       'Choosing light, or match this device, and reopening shows light, or the phone\'s own setting, from the first moment as well.',
+      'The launch splash (the app icon) is on a dark background in every mode. An installed app may need to be removed and added again before it takes the new colour.',
     ],
   },
   {
@@ -966,10 +974,10 @@ export const SCENARIOS: readonly Scenario[] = [
       'In one browser tab sign in as New user and open Settings. Leave it open.',
       'In a second tab of the same browser, switch to another test account (the QA picker).',
       'Back in the first tab, open Delete my data and press Erase everything in my account, and confirm.',
-      'Repeat steps 1 to 3 from the start, pressing Delete my account instead (the first page no longer has the panel after a refusal).',
+      'Repeat steps 1 to 3 from the start, pressing Delete my account instead.',
     ],
     expected: [
-      'The request is refused: the Delete my data panel goes away and the other-account card takes its place; neither account loses anything. The same happens for Delete my account.',
+      'The request is refused: the Delete my data panel stays with a note that this is not available right now and nothing was erased (a card saying the device holds data from another account may show for a moment first); neither account loses anything. The same happens for Delete my account.',
       'After reloading the first tab it shows the account you are now signed in as, and the other test account\'s data is untouched.',
     ],
   },
@@ -1030,8 +1038,8 @@ export const SCENARIOS: readonly Scenario[] = [
       'Open /assets/old.js, and then the app with #/progress/zzz after the address.',
     ],
     expected: [
-      'The first three open as they did before. /privacy without .html shows Page not found.',
-      '/assets/old.js shows a blank not found answer, not a page. #/progress/zzz opens Progress.',
+      'The first three open as they did before. /privacy without .html shows Page not found on a first visit; in a browser where the app\'s service worker is already active the Privacy Policy may still open.',
+      '/assets/old.js shows a small plain 404 error, not the Loadbearer page. #/progress/zzz opens Progress.',
     ],
   },
   // ---- Receipt store ----
@@ -1239,6 +1247,134 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'Before any label has been read in this session the note says only "Uses AI"; after one it says how many are left today, for example "Uses AI · 29 of 30 left today". The count is shared by the whole server, not by you.',
       'With none left, Photo the label is switched off with "Label photos are used up for today. Type the name instead."; Type the name still works.',
+    ],
+  },
+  {
+    id: 'S-95', feature: 'Sharing done', title: 'Done closes the Sharing panel and adds what you typed', persona: 'grocery-shopper', brief: 'sharing-done-button',
+    steps: [
+      'Open Daily, Groceries, At home, press Sharing and look at the bottom of the panel.',
+      'In the Home group type Jo in Add a person without pressing Add person, then press Done.',
+      'Press Sharing again and look at the Home group.',
+    ],
+    expected: [
+      'A Done button sits at the bottom of the panel. Pressing it closes the panel, a note says "Sharing saved." under the buttons, and focus is back on the Sharing button.',
+      'Jo is in the Home group, added by Done; the note is gone while the panel is open again.',
+    ],
+  },
+  {
+    id: 'S-96', feature: 'Sharing done', title: 'Text that cannot be added keeps the panel open', persona: 'grocery-shopper', brief: 'sharing-done-button', edge: true,
+    steps: [
+      'Open the Sharing panel, type Sam in Add a person in the Home group (Sam is already there) and press Done.',
+      'Clear the box and press Done.',
+    ],
+    expected: [
+      'The panel stays open and the Home group says "That person is already in this group."; no "Sharing saved." note appears.',
+      'With the box empty, Done closes the panel and says "Sharing saved.".',
+    ],
+  },
+  {
+    id: 'S-97', feature: 'Security headers', title: 'The barcode scanner\'s live camera opens on a phone', persona: 'diet-fresh', brief: 'camera-and-headers', device: true,
+    steps: [
+      'On a phone, sign in as an admin on QA, open Daily, Diet and press Scan barcode in the food search box.',
+      'When the browser asks to use the camera, allow it. Read the line under the camera view.',
+      'Scan any product barcode, then close the sheet and reopen it.',
+    ],
+    expected: [
+      'The sheet says "Starting the camera..." and then shows the live camera view with "Point the camera at the barcode."; it does not drop to the photo-of-the-barcode choice because the site blocked the camera.',
+      'A scanned code is looked up; closing the sheet switches the camera off (the browser\'s camera light goes out), and reopening starts it again.',
+    ],
+  },
+  {
+    id: 'S-98', feature: 'Security headers', title: 'Every tab and the plain pages render styled with no security errors in the console', persona: 'diet-fresh', brief: 'camera-and-headers', edge: true,
+    steps: [
+      'On a computer, open the QA site in Chrome with developer tools open on the Console tab, and sign in.',
+      'Open each tab in turn (Daily, Progress, Program, Settings) and open one sheet on each.',
+      'Open /privacy, /terms and an address that does not exist, such as /nothing-here, one after another.',
+    ],
+    expected: [
+      'Every screen is styled as normal (colours, fonts and layout, not bare text).',
+      'The Console shows no red errors that mention Content Security Policy, Permissions Policy or "Refused to".',
+      'The privacy and terms pages and the "Page not found" page are styled the same way and show no such errors.',
+    ],
+  },
+  {
+    id: 'S-99', feature: 'Link previews', title: 'Pasting the app address into a chat app shows a title, description and picture', persona: 'new-user', brief: 'share-preview-sitemap', device: true,
+    steps: [
+      'On a phone, paste the QA address (https://qa.loadbearer.app/) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
+      'Read the title, the description and the picture on the card.',
+    ],
+    expected: [
+      'The card is titled "Loadbearer: a weekly training board that remembers your lifts" with the description "A weekly workout board with A/B program rotation, phase-based targets, timers and a muscle map. Works offline."',
+      'A wide picture (the Loadbearer logo beside the title line) shows on the card. A chat app that cached the address earlier may show an old card; try a different app or add ?x=1 to the address.',
+    ],
+  },
+  {
+    id: 'S-100', feature: 'Link previews', title: 'The sitemap and icon files load, and the plain pages have their own titles', persona: 'new-user', brief: 'share-preview-sitemap',
+    steps: [
+      'In a browser, open /sitemap.xml and /favicon.ico on the QA address.',
+      'Open /privacy.html, /terms.html and /delete-account and read each browser tab\'s title.',
+      'Open the app itself and read its tab title and icon.',
+    ],
+    expected: [
+      '/sitemap.xml shows an XML list of five addresses (the home page, /plans, /privacy.html, /terms.html and /delete-account), all naming loadbearer.app, the production host; /favicon.ico loads a small picture, not a "not found" page.',
+      'The tabs are titled "Privacy Policy · Loadbearer", "Terms of Use · Loadbearer" and "Delete your account · Loadbearer".',
+      'The app tab is titled "Loadbearer" with the logo as its icon.',
+    ],
+  },
+  {
+    id: 'S-101', feature: 'Search hiding', title: 'QA asks search engines to stay out', persona: 'new-user', brief: 'qa-noindex-robots',
+    steps: [
+      'In a terminal, run curl https://qa.loadbearer.app/robots.txt (or open that address in a browser) and read the answer.',
+      'Open /sitemap.xml on QA and confirm the app itself still loads normally.',
+    ],
+    expected: [
+      'robots.txt answers exactly two lines, "User-agent: *" and "Disallow: /", with no Sitemap line.',
+      'The sitemap and the app still load; only crawlers are asked to stay away. The same holds on the Staging address if it is up.',
+    ],
+  },
+  {
+    id: 'S-102', feature: 'Search hiding', title: 'Production\'s robots.txt still allows search, once production has the new build', persona: 'new-user', brief: 'qa-noindex-robots', edge: true,
+    steps: [
+      'In a terminal, run curl https://loadbearer.app/robots.txt (or open that address in a browser) and read the answer.',
+    ],
+    expected: [
+      'Production answers "User-agent: *", "Allow: /" and a "Sitemap: https://loadbearer.app/sitemap.xml" line. It never answers Disallow: /.',
+      'Until production is deployed with PR 740, it may still answer the older file (no Sitemap line); that is expected, not a fail. A "Disallow: /" on production is a fail.',
+    ],
+  },
+  {
+    id: 'S-103', feature: 'Moved-card tag', title: 'A card moved to another day is tagged with the day it came from', persona: 'superset-builder', brief: 'moved-from-label',
+    steps: [
+      'Open the Board and open the ⋯ menu on a card that sits on Day 2.',
+      'In Move to choose Day 4. Find the card in the Day 4 column and read its tag.',
+      'Move it back to Day 2 (Day 2 shows "(planned)") and look for the tag.',
+    ],
+    expected: [
+      'On Day 4 the card carries the tag "From Day 2".',
+      'Back on its planned day the tag is gone.',
+    ],
+  },
+  {
+    id: 'S-104', feature: 'Moved-card tag', title: 'A moved card whose home day is off the board names its program day', persona: 'superset-builder', brief: 'moved-from-label', edge: true,
+    steps: [
+      'Open the ⋯ menu on a card from the Day 7 workout and move it to Day 3; its tag says "From Day 7".',
+      'Tick Rest on Day 6, so every workout from Day 6 on slips one column later and the Day 7 workout\'s home column is past the end of the board (if the page asks to confirm, read it and press OK).',
+      'Read the tag on the card you moved. Untick Rest on Day 6 and read it again.',
+    ],
+    expected: [
+      'With the rest day on, the tag reads "From Day 7’s workout, off this week" (the program day, not a column number that does not exist).',
+      'With the rest day off, the tag is back to "From Day 7".',
+    ],
+  },
+  {
+    id: 'S-105', feature: 'Program compare', title: 'On a phone the programs line up one over the other, and the filters fold behind a button', persona: 'superset-builder', brief: 'program-compare', edge: true,
+    steps: [
+      'On a phone (or a browser window 375 px wide), open Program, Compare programs. Look at the first rows.',
+      'Tap Filter, then Any difference; tap Filter again. Then open the same page in a window wider than 800 px.',
+    ],
+    expected: [
+      'Each exercise is one row: the first program\'s line with its name in front of it, the second program\'s line right under it. The Day buttons stay in one row you can swipe sideways, and the status and phase buttons are hidden behind a Filter button.',
+      'Filter opens and closes the status and phase buttons, and says "Filter · 1 on" once one is chosen; the rows keep the filter when it is folded. On the wide window the programs are two columns under their names, Filter is not shown and the buttons stay in view.',
     ],
   },
 ];

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { toNodeHandler } from 'better-auth/node';
-import { brandHtml, brandManifest } from './appLabel.ts';
+import { brandHtml, brandManifest, HIDE_FROM_SEARCH_ROBOTS } from './appLabel.ts';
 import { isPagePath } from './pagePaths.ts';
 import { personaByEmail } from './qa/personas.ts';
 import compression from 'compression';
@@ -387,6 +387,7 @@ export function createApp({ db, staticDir, minClientVersion = null, auth, admins
     if (labelled) {
       app.get('/manifest.webmanifest', (_req, res) => void res.set('Cache-Control', NO_CACHE).type('application/manifest+json').send(labelled.manifest));
       app.get(['/', '/index.html'], (_req, res) => void res.set('Cache-Control', NO_CACHE).type('html').send(labelled.page));
+      app.get('/robots.txt', (_req, res) => void res.set('Cache-Control', NO_CACHE).type('text').send(HIDE_FROM_SEARCH_ROBOTS));
     }
     app.use(express.static(root, { index: false, setHeaders: (res, file) => void res.setHeader('Cache-Control', cacheControl(file, root)) }));
     // A page route (no file extension) on the allowlist (pagePaths.ts) gets the app, which draws it; any other is a 404 page. A missing file (/assets/old.js) stays a 404, so a

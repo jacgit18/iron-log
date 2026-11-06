@@ -74,7 +74,8 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
     for (let back = 0; back < spec.logDays; back++) if (rand() < 0.62) trainingDays.push(back);
     if (!trainingDays.length) trainingDays.push(0);
     let i = 0;
-    while (logs.length < spec.logEntries) {
+    const ready = spec.progressionReady && exerciseIds.includes(spec.progressionReady) ? spec.progressionReady : null;
+    while (logs.length < spec.logEntries - (ready ? 2 : 0)) {
       const back = trainingDays[i % trainingDays.length]!;
       const d = addDays(t, -back);
       const ex = exerciseIds[Math.floor(rand() * exerciseIds.length)]!;
@@ -83,7 +84,14 @@ export function buildPersonaRows(persona: Persona, exerciseIds: readonly string[
         exerciseId: ex, d: iso(d), wk: iso(monday(d)), phase: PHASES[Math.floor(rand() * PHASES.length)]!,
         weightLb: 10 + Math.round(rand() * 40) * 5, setsCount: 2 + Math.floor(rand() * 4), reps: 6 + Math.floor(rand() * 10),
       });
+      const last = logs[logs.length - 1]!;
+      if (last.exerciseId === ready && last.phase === 'strength') last.phase = 'hyp'; // the ready exercise keeps only the two entries below as strength
       i++;
+    }
+    // Two strength sessions in a row (3 and 1 days back) at the same weight, every set at the full 4 x 6: the app then suggests going up.
+    if (ready) for (const back of [3, 1]) {
+      const d = addDays(t, -back);
+      logs.push({ clientId: `qa-${persona.id}-${String(logs.length + 1).padStart(5, '0')}`, exerciseId: ready, d: iso(d), wk: iso(monday(d)), phase: 'strength', weightLb: 100, setsCount: 4, reps: 6 });
     }
   }
   const body: SeedBody[] = [];

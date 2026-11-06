@@ -1,8 +1,9 @@
 @layer base, components;
 @layer components {
-/* The Program tab's Compare section: two programs stacked, read-only. Rows are the editor's own (.edrow); only the status stripe, the status tag and the phase pill are new. */
+/* The Program tab's Compare section: two programs in one list, read-only. `.edrow.cmprow` is two classes on purpose: Editor.css loads after this file and its `.edrow` (flex, one border colour) would otherwise win over the grid and the status stripe. Rows are the editor's own (.edrow); only the status stripe, the status tag, the phase pill and the marks on what differs are new. */
 .cmppanel {
   max-width: 760px;
+  container-type: inline-size;
 }
 .cmphead {
   margin: 0;
@@ -77,33 +78,139 @@
 .cmpday[aria-pressed="true"] small {
   color: inherit;
 }
-.cmpboards {
+.cmpfilterbtn {
+  display: none;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.cmpfilterbtn .cmpchev {
+  transform: rotate(-90deg);
+}
+.cmpfilterbtn[aria-expanded="true"] .cmpchev {
+  transform: none;
+}
+.cmpfilters {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-16);
+  gap: var(--sp-12);
 }
-.cmpboard h3 {
-  margin: 0 0 var(--sp-6);
-  font-size: var(--fs-base);
+.cmpcols {
+  display: none;
 }
-.cmprow {
+.edrow.cmprow {
+  display: grid;
+  grid-template-columns: minmax(0,1fr);
+  align-items: start;
+  justify-content: stretch;
+  gap: var(--sp-4);
   border-left-width: 4px;
   cursor: default;
 }
-.cmp-same {
+.cmpname {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  min-width: 0;
+}
+.cmpname b {
+  overflow-wrap: anywhere;
+}
+.cmpside {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  min-width: 0;
+}
+.cmpwho {
+  max-width: 9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+}
+.cmpval {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+}
+.cmpmiss {
+  font-style: italic;
+}
+.cmpdiff {
+  border-radius: var(--r-sm);
+  padding: 0 var(--sp-4);
+  background: var(--warn-bg);
+  font-weight: 700;
+}
+.cmpph-hot {
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+/* The panel's own width decides: a narrow panel (a phone) puts the first program's line over the second's and folds the filters behind a button;
+   from 560px the programs are two columns under their names and the filters stay in view. */
+@container (max-width: 559px) {
+  .cmpfilterbtn {
+    display: inline-flex;
+  }
+  .cmpfilters[data-open="false"] {
+    display: none;
+  }
+  .cmpdays {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .cmpday {
+    flex: none;
+    white-space: nowrap;
+  }
+}
+@container (min-width: 560px) {
+  .cmpcols,.edrow.cmprow {
+    display: grid;
+    grid-template-columns: minmax(8rem,1.1fr) minmax(0,1fr) minmax(0,1fr);
+    gap: var(--sp-10);
+  }
+  .cmpcols {
+    padding: 0 var(--sp-10) 0 calc(var(--sp-10) + 4px);
+    font-size: var(--fs-sm);
+    color: var(--muted);
+  }
+  .cmpcols b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cmpname {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: var(--sp-2);
+  }
+  .cmpwho {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+.edrow.cmp-same {
   border-left-color: var(--line);
 }
-.cmp-chg {
+.edrow.cmp-chg {
   border-left-color: var(--accent);
 }
-.cmp-ph {
+.edrow.cmp-ph {
   border-left-color: var(--hyp);
 }
-.cmp-only {
+.edrow.cmp-only {
   border-left-color: var(--iso);
-}
-.cmphint {
-  color: var(--ink);
 }
 .cmpph {
   display: inline-block;
