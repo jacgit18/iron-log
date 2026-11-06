@@ -184,7 +184,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // The iOS splash images are only fetched by iPhone Safari at install time, so they stay out of the offline cache.
         // The QA and Staging icons are only linked on those services (server/appLabel.ts); production never shows them.
-        globIgnores: ['splash/**', 'icons/qa/**', 'icons/staging/**'],
+        // og-image.png is only fetched by the sites that show a link preview.
+        globIgnores: ['splash/**', 'icons/qa/**', 'icons/staging/**', 'og-image.png'],
       },
     }),
   ],
