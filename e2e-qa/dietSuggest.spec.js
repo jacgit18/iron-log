@@ -14,7 +14,7 @@ test('S-10: tapping the first suggestion adds that food and the notice says Adde
   const name = (await first.innerText()).split('\n')[0].trim();
   await first.click();
   await expect(diet.locator('.dt-entry')).toHaveCount(4);
-  await expect(page.getByText(/^Added /).first()).toBeVisible();
-  expect(name.length).toBeGreaterThan(0);
+  await expect(diet.locator('.dt-entry', { hasText: name }).first()).toBeVisible();
+  await expect(page.getByText(`Added ${name}.`, { exact: true }).first()).toBeVisible();
   await context.close();
 });
