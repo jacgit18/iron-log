@@ -30,12 +30,12 @@ export default function Experiments({ day, onDragStart, onDragEnd }: { day: numb
   return (
     <section className="experiments" aria-labelledby="exp-h">
       <div className="exphead">
-        <h2 id="exp-h" className="cond" tabIndex={-1}>Experiments</h2>
-        <button type="button" className="btn sm" onClick={() => st.openModal({ type: 'experiment' })}>+ Add experiment</button>
+        <h2 id="exp-h" className="cond" tabIndex={-1}>Ideas to try</h2>
+        <button type="button" className="btn sm" onClick={() => st.openModal({ type: 'experiment' })}>+ Add idea</button>
       </div>
       <RemovedNotice scope="experiments" />
       {hasFilter(items.length) && <ExperimentSearch id="exp-q" q={q} onQ={setQ} shown={shown.length} total={items.length} what="exercises" />}
-      {!items.length ? <p className="note">Keep exercises you want to try here, then add them to a day.</p> : !shown.length ? <p className="note">No exercise matches. Clear the search.</p> : (
+      {!items.length ? <p className="note">Exercises you saw somewhere and want to test. Keep them here, then add them to a day.</p> : !shown.length ? <p className="note">No exercise matches. Clear the search.</p> : (
         <ul className="explist">
           {shown.map(e => {
             const n = exInfo(cfg, e.ex).n; const last = lastSession(logs, e.ex); // a ticked-off card writes an auto entry for a weight never lifted; only a session you logged is "Last"

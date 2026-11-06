@@ -44,7 +44,7 @@ export const librarySlice = (set: StoreSet, get: StoreGet, flag: Flag): LibraryS
     if (d.cat) { const err = catalogPickError(get().cfg, d.cat, exIdsInUse(get(), get().cfg)); if (err) return err; }
     const chosen = d.ex === '__new' ? findExId(get().cfg, d.nn) ?? '__new' : d.ex; // a typed name an exercise already has is that exercise
     const target = d.cat ? d.cat.id : chosen;
-    if (target !== '__new' && get().experiments.some(x => x.ex === target && x.id !== d.id)) return `${exInfo(get().cfg, target).n} is already on the Experiment list.`;
+    if (target !== '__new' && get().experiments.some(x => x.ex === target && x.id !== d.id)) return `${exInfo(get().cfg, target).n} is already on the Ideas to try list.`;
     const ex = get().resolveExerciseChoice(d, chosen);
     const item = { id: d.id || uid('E'), ex, ph: d.ph || null, note: (d.note || '').trim().slice(0, 200) };
     const list = get().experiments;
