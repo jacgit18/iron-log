@@ -116,7 +116,7 @@ Steps are written from each shipped brief's Done when lines and the feature map.
   const phone = live.filter(s => s.device).map(s => {
     const latest = recorded.get(s.id)?.entry;
     const state = deviceState(latest, Boolean(kept.get(s.id)));
-    return { s, state, last: recorded.get(s.id)?.text ?? kept.get(s.id)?.line ?? '' };
+    return { s, state, last: recorded.get(s.id)?.text ?? kept.get(s.id)?.line ?? kept.get(s.id)?.cell?.replaceAll('\\|', '|') ?? '' };
   });
   const tally = {};
   for (const { state } of phone) tally[state] = (tally[state] ?? 0) + 1;
