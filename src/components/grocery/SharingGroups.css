@@ -48,4 +48,9 @@
 .gsnew {
   flex-wrap: wrap;
 }
+.gsdone {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--sp-12);
+}
 }
