@@ -1302,7 +1302,7 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'S-99', feature: 'Link previews', title: 'Pasting the app address into a chat app shows a title, description and picture', persona: 'new-user', brief: 'share-preview-sitemap', device: true,
     steps: [
-      'On a phone, paste the QA address (https://qa.loadbearer.app/) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
+      'On a phone, paste the production address (https://loadbearer.app/; the QA page points its card picture and address at production, so production is the one to try) into a chat message to yourself in a chat app (Messages, WhatsApp or similar) and read the card it shows.',
       'Read the title, the description and the picture on the card.',
     ],
     expected: [
@@ -1400,7 +1400,7 @@ export const SCENARIOS: readonly Scenario[] = [
       'Make the window narrower than 1000 px (or open the same page on a phone), reload, and open Compare programs again.',
     ],
     expected: [
-      'All days is highlighted and the list shows every day under its own heading, in three columns (name, Program A, Program B); the panel is about 1100 px wide, not the narrow 760 px column it used to be, and the status and phase buttons stay in view.',
+      'All days is highlighted and the days are cards side by side, each with its own Day heading and three columns (name, Program A, Program B): three cards across at 1920 px, two from a window about 1360 px wide (when the panel is 1240 px or more) and one below that. The panel fills the page width, not the narrow 760 px column it used to be, and the status and phase buttons stay in view. Pressing one day shows just that day as a single card.',
       'In the narrower window the editor\'s current day (Day 1 for a fresh account) is highlighted instead, there are no day headings, and All days is still there to press.',
     ],
   },
@@ -1424,7 +1424,7 @@ export const SCENARIOS: readonly Scenario[] = [
     steps: [
       'On the Board press Stretches at the top. Look for the line about trying a stretch you saw online, and at the heading under the days.',
       'Press "+ Add stretch" and read the sheet\'s title; Cancel.',
-      'Go back to Workout, press Help at the top and read the Board and Glossary parts.',
+      'Go back to Workout, press Help at the top and read the Board item under "Where things are" and the "Words and abbreviations" list.',
     ],
     expected: [
       'The heading under the stretch days reads "Stretches to try" and its button "+ Add stretch"; the line reads "To try a stretch you saw online, add it under Stretches to try, below, with a link to the video."',
@@ -1433,7 +1433,35 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-110', feature: 'Terms', title: 'Both sign-in buttons stay off until the Terms box is ticked', persona: 'new-user', brief: 'terms-acceptance',
+    id: 'S-110', feature: 'Receipt store', title: 'A store the list does not have is added from the receipt', persona: 'recipe-collector', brief: 'receipt-add-store', device: true,
+    steps: [
+      'As an admin on a phone, open Groceries, At home, Edit and check the list has no stores (delete any stores it has; items may stay).',
+      'On To get press Scan receipt and photograph a receipt from a store (for example Costco) that has a few items from your list.',
+      'In the sheet read the box under the store line and the line under the list; do not press Apply yet.',
+      'Press Apply, then open To get and At home, then press Undo on the notice.',
+    ],
+    expected: [
+      'A ticked box says "Add this store to your stores" with a tidy name in the box (COSTCO WHOLESALE #123 reads Costco); the line under the list says how many items will be marked bought at it this month. Nothing is added before Apply.',
+      'After Apply the store exists, the notice says "Added the store Costco.", and To get lists the matched items under Costco, ticked and priced.',
+      'Undo removes the store again and puts the items back and unticked.',
+    ],
+  },
+  {
+    id: 'S-111', feature: 'Receipt store', title: 'Edit the new store name, or untick the box and nothing is added', persona: 'recipe-collector', brief: 'receipt-add-store', edge: true,
+    steps: [
+      'As an admin with no stores on the list, scan a receipt from a store.',
+      'Change the name in the box to something else, and press Apply. Press Undo.',
+      'Scan again, untick "Add this store to your stores", look at the sheet, and press Apply.',
+      'Add a store named like the receipt\'s (Edit, Stores), then scan once more.',
+    ],
+    expected: [
+      'The store is added under the name you typed, and Undo removes it.',
+      'With the box unticked the name box disappears, no "will be marked bought" line shows, and Apply adds no store.',
+      'When the list already has the store there is no box and the items are marked bought at it as before.',
+    ],
+  },
+  {
+    id: 'S-112', feature: 'Terms', title: 'Both sign-in buttons stay off until the Terms box is ticked', persona: 'new-user', brief: 'terms-acceptance',
     steps: [
       'Sign out from the account menu so the sign-in page shows, and look under the headline.',
       'Without ticking anything, try Sign in with Google and Sign in with email.',
@@ -1449,7 +1477,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-111', feature: 'Terms', title: 'The email-code form cannot be used with the box unticked', persona: 'new-user', brief: 'terms-acceptance', edge: true,
+    id: 'S-113', feature: 'Terms', title: 'The email-code form cannot be used with the box unticked', persona: 'new-user', brief: 'terms-acceptance', edge: true,
     steps: [
       'On the sign-in page tick the box, press Sign in with email and type an address.',
       'Untick the box before pressing Send code.',
@@ -1459,7 +1487,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-112', feature: 'Terms', title: 'A first sign-in records the acceptance and opens the app', persona: 'new-user', brief: 'terms-acceptance',
+    id: 'S-114', feature: 'Terms', title: 'A first sign-in records the acceptance and opens the app', persona: 'new-user', brief: 'terms-acceptance',
     steps: [
       'On the sign-in page tick the box and press Sign in with Google with an account that has never used the app. (Test accounts count as accepted, so use a real sign-in.)',
       'When Google sends you back, look at what opens.',
@@ -1470,7 +1498,7 @@ export const SCENARIOS: readonly Scenario[] = [
     ],
   },
   {
-    id: 'S-113', feature: 'Terms', title: 'A signed-in account that never accepted sees only the accept screen', persona: 'new-user', brief: 'terms-acceptance', edge: true,
+    id: 'S-115', feature: 'Terms', title: 'A signed-in account that never accepted sees only the accept screen', persona: 'new-user', brief: 'terms-acceptance', edge: true,
     steps: [
       'Open the app signed in with an account that signed in before this feature existed (or one whose box was not remembered). (Test accounts count as accepted, so use a real account.)',
       'Look at the screen, and try the Board behind it. Press Continue without ticking, then tick and turn the connection off and press Continue.',

@@ -139,7 +139,7 @@ function Panel() {
             </div>
           </div>
           {!dayRows.length ? <p className="note" role="status">{day === 0 ? 'Nothing in either program.' : 'Nothing on this day in either program.'}</p>
-            : sections.some(sec => sec.rows.length) ? sections.map((sec, i) => <Aligned key={i} an={an} bn={bn} rows={sec.rows} heading={sec.heading} />)
+            : sections.some(sec => sec.rows.length) ? <div className="cmpdaygrid">{sections.map((sec, i) => <Aligned key={i} an={an} bn={bn} rows={sec.rows} heading={sec.heading} />)}</div>
             : <Aligned an={an} bn={bn} rows={[]} />}
         </>
       )}
