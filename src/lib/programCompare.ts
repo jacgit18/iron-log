@@ -76,12 +76,15 @@ export const itemLine = (it: ProgramItem): string => [it.ph ? PHASES[it.ph].labe
 /** Weight and sets alone ("85 lb · 3×8"; empty when the exercise has neither). */
 export const loadLine = loadOf;
 
-/** What differs, in words, for the side that is not the first: "85 lb · 3×8, Strength" (empty for a Same row). */
-export function diffNote(r: CompareRow): string {
-  if (!r.left || !r.right || r.status === 'same') return '';
-  const load = (it: ProgramItem) => loadOf(it) || 'no load';
-  const parts: string[] = [];
-  if (!sameLoad(r.left, r.right)) parts.push(load(r.right));
-  if (r.phDiff) parts.push(r.right.ph ? PHASES[r.right.ph].label : 'No phase');
-  return parts.join(', ');
+const STATUS_LABEL: Record<'same' | 'chg' | 'ph', string> = { same: 'Same', chg: 'Changed', ph: 'Phase differs' };
+
+/** The tag on a row: Same, Changed or Phase differs, or "Only in <program>" naming the side that has the exercise. */
+export function rowTag(r: CompareRow, first: string, second: string): string {
+  return r.status === 'onlyA' ? `Only in ${first}` : r.status === 'onlyB' ? `Only in ${second}` : STATUS_LABEL[r.status];
+}
+
+/** Which parts of a row that has both sides differ, so the screen can mark them on both sides (nothing differs on a row that is only on one side). */
+export function diffParts(r: CompareRow): { load: boolean; phase: boolean } {
+  if (!r.left || !r.right) return { load: false, phase: false };
+  return { load: !sameLoad(r.left, r.right), phase: r.phDiff };
 }
