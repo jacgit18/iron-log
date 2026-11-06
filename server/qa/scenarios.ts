@@ -36,6 +36,7 @@ export type ScenarioFeature =
   | 'Usual amount'
   | 'Finished group'
   | 'Weight step'
+  | 'Ideas to try'
   | 'Program compare'
   | 'Polish pass'
   | 'Program on phones'
@@ -54,7 +55,7 @@ export type ScenarioFeature =
 export const SCENARIO_FEATURES: readonly ScenarioFeature[] = [
   'Diet targets and log', 'Goal calories and pace', 'Saved meals', 'Meal planner', 'Suggest and copy', 'Auto macros', 'Ingredient macros', 'Food lookup',
   'Recipe-first log', 'Recipe nutrition', 'Recipe servings', 'Recipe video link', 'Recipe auto-match', 'Share target', 'Account menu', 'QA picker', 'Wide layouts', 'Admin accounts',
-  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Moved-card tag',
+  'kg beside lb', 'Label scan', 'Whole pack', 'Receipt scan', 'Usual amount', 'Finished group', 'Receipt photos', 'Weight step', 'Program compare', 'Polish pass', 'Program on phones', 'Stale page guard', 'Barcode scan', 'Custom 404', 'Receipt store', 'Receipt merge', 'Bulk share', 'Receipt reconcile', 'Sharing done', 'Security headers', 'Link previews', 'Search hiding', 'Moved-card tag', 'Ideas to try',
 ];
 
 export interface Scenario {
@@ -1376,6 +1377,58 @@ export const SCENARIOS: readonly Scenario[] = [
     expected: [
       'Each exercise is one row: the first program\'s line with its name in front of it, the second program\'s line right under it. The Day buttons stay in one row you can swipe sideways, and the status and phase buttons are hidden behind a Filter button.',
       'Filter opens and closes the status and phase buttons, and says "Filter · 1 on" once one is chosen; the rows keep the filter when it is folded. All days lists every day one after the other, each under its own Day heading, with the same filter applied to all of them. On the wide window the programs are two columns under their names, Filter is not shown and the buttons stay in view.',
+    ],
+  },
+  {
+    id: 'S-106', feature: 'Program compare', title: 'All days lists every day under its own heading, and the filters apply to all of them', persona: 'superset-builder', brief: 'program-compare',
+    steps: [
+      'On a phone, open Program, Compare programs. In the Day strip the first button is "All days"; press it.',
+      'Scroll down the list. Then press Filter, choose Same, and look at the headings and at the Filter button.',
+      'Press the Day 3 button, then press All days again.',
+    ],
+    expected: [
+      'Every day that has exercises is listed one after the other under its own heading ("Day 1", "Day 2" and so on); a day with no exercises has no heading. The All days button carries a count such as "· 42 differ", the total over the days, and each exercise is still one row with Program A over Program B.',
+      'With Same chosen the headings stay and only the rows that match are left (fewer rows than before); the Filter button reads "Filter · 1 on".',
+      'Day 3 alone shows only that day\'s rows with no day heading; All days brings the whole list back.',
+    ],
+  },
+  {
+    id: 'S-107', feature: 'Program compare', title: 'On a wide screen Compare opens on All days in a wider panel; a narrower window starts on the current day', persona: 'superset-builder', brief: 'program-compare', edge: true,
+    steps: [
+      'On a computer, in a window 1000 px wide or more, open Program, then press Compare programs to open the panel. Look at which button in the Day strip is highlighted, and at how wide the panel is.',
+      'Make the window narrower than 1000 px (or open the same page on a phone), reload, and open Compare programs again.',
+    ],
+    expected: [
+      'All days is highlighted and the list shows every day under its own heading, in three columns (name, Program A, Program B); the panel is about 1100 px wide, not the narrow 760 px column it used to be, and the status and phase buttons stay in view.',
+      'In the narrower window the editor\'s current day (Day 1 for a fresh account) is highlighted instead, there are no day headings, and All days is still there to press.',
+    ],
+  },
+  {
+    id: 'S-108', feature: 'Ideas to try', title: 'The Board section for exercises you saw online is called Ideas to try, and adding one works as before', persona: 'superset-builder', brief: 'ideas-to-try-rename',
+    steps: [
+      'Open the Board, Workout, and scroll under the days. Read the heading and the button next to it.',
+      'Press "+ Add idea", read the sheet\'s title, type Face Pull in Exercise, pick it from the list, add a note and press Save.',
+      'On the new idea press the pencil (Edit) and read the sheet\'s title, then Cancel. Press "+ Add idea" again and add Face Pull a second time.',
+      'On the idea press "This week only" for the day shown, and look at the card that appears on that day.',
+    ],
+    expected: [
+      'The heading reads "Ideas to try" and the button "+ Add idea"; the word "Experiments" is nowhere on the page.',
+      'The add sheet is titled "Add an exercise to try"; after Save the idea is listed under the heading with its note and "Add to" day buttons.',
+      'The edit sheet is titled "Edit idea". Adding Face Pull again is refused with "Face Pull is already on the Ideas to try list." and the sheet stays open.',
+      'The notice reads "Added Face Pull to <day>" and the card on that day is tagged "To try"; the idea stays listed.',
+    ],
+  },
+  {
+    id: 'S-109', feature: 'Ideas to try', title: 'Stretches to try and Help use the new name, and nothing else on the page still says Experiments', persona: 'superset-builder', brief: 'ideas-to-try-rename', edge: true,
+    steps: [
+      'On the Board press Stretches at the top. Look for the line about trying a stretch you saw online, and at the heading under the days.',
+      'Press "+ Add stretch" and read the sheet\'s title; Cancel.',
+      'Go back to Workout, press Help at the top and read the Board item under "Where things are" and the "Words and abbreviations" list.',
+    ],
+    expected: [
+      'The heading under the stretch days reads "Stretches to try" and its button "+ Add stretch"; the line reads "To try a stretch you saw online, add it under Stretches to try, below, with a link to the video."',
+      'The sheet is titled "Add a stretch to try".',
+      'Help says "Ideas to try sit under the days" in its Board part and has an "Ideas to try" entry among its terms; the word "Experiments" does not appear in Help. (An exported workbook still has a sheet named Experiments, on purpose, so older files import.)',
     ],
   },
 ];

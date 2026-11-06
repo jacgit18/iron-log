@@ -97,7 +97,7 @@ describe('stretches', () => {
   });
   it('refuses a stretch experiment that is already on the list or already in your stretches', () => {
     expect(st().saveStretchExp({ n: 'Frog Stretch' })).toBeNull();
-    expect(st().saveStretchExp({ n: ' frog  stretch ' })).toMatch(/already on the Experiment list/);
+    expect(st().saveStretchExp({ n: ' frog  stretch ' })).toMatch(/already on the Stretches to try list/);
     const own = st().stretches[0].n;
     expect(st().saveStretchExp({ n: own.toUpperCase() })).toMatch(/already have that stretch/);
     expect(st().stretchExps).toHaveLength(1);
