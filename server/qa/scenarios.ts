@@ -47,6 +47,7 @@ export type ScenarioFeature =
   | 'Bulk share'
   | 'Link previews'
   | 'Moved-card tag'
+  | 'Terms'
   | 'Search hiding'
   | 'Security headers';
 
