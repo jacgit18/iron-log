@@ -14,7 +14,7 @@ export interface ScenarioAutomation {
 }
 
 export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
-  'S-01': { auto: 'e2e', specs: ['e2e/diet.spec.js'], partial: 'quick add and delete only; the seeded totals, yesterday list and the edit step are not checked' },
+  'S-01': { auto: 'e2e', specs: ['e2e-qa/dietToday.spec.js', 'e2e/diet.spec.js'] },
   'S-02': { auto: 'unit', specs: ['src/store/dietSlice.test.ts'], partial: 'the 20-a-day rule only; the over-target display and the message text are not tested' },
   'S-03': { auto: 'e2e', specs: ['e2e/dietPace.spec.js'] },
   'S-04': { auto: 'e2e', specs: ['e2e/dietPace.spec.js'] },
@@ -45,12 +45,12 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-29': { auto: 'e2e', specs: ['e2e/recipeAutoMatch.spec.js'] },
   'S-30': { auto: 'manual' },
   'S-31': { auto: 'manual' },
-  'S-32': { auto: 'e2e', specs: ['e2e/accountMenu.spec.js'] },
+  'S-32': { auto: 'e2e', specs: ['e2e-qa/accountMenu.spec.js', 'e2e/accountMenu.spec.js'] },
   'S-33': { auto: 'e2e', specs: ['e2e/accountMenu.spec.js'] },
   'S-34': { auto: 'e2e', specs: ['e2e/qaPicker.spec.js', 'e2e/qaSwitchWipe.spec.js'], partial: 'switch and the wipe; switching to Diet and Return to admin is not tested' },
   'S-35': { auto: 'manual' },
   'S-36': { auto: 'e2e', specs: ['e2e/qaPicker.spec.js', 'e2e/qaSwitchWipe.spec.js'], partial: 'a stubbed Seed button only; the Recent list, Seed it first and the idle session are not tested' },
-  'S-37': { auto: 'e2e', specs: ['e2e/boardWide.spec.js', 'e2e/headerWide.spec.js', 'e2e/libraryWide.spec.js', 'e2e/nutritionWide.spec.js', 'e2e/programWide.spec.js', 'e2e/settingsWide.spec.js'] },
+  'S-37': { auto: 'e2e', specs: ['e2e-qa/boardWide.spec.js', 'e2e/boardWide.spec.js', 'e2e/headerWide.spec.js', 'e2e/libraryWide.spec.js', 'e2e/nutritionWide.spec.js', 'e2e/programWide.spec.js', 'e2e/settingsWide.spec.js'] },
   'S-38': { auto: 'e2e', specs: ['e2e/boardWide.spec.js', 'e2e/headerWide.spec.js', 'e2e/libraryWide.spec.js', 'e2e/nutritionWide.spec.js', 'e2e/programWide.spec.js', 'e2e/settingsWide.spec.js'] },
   'S-39': { auto: 'e2e', specs: ['e2e/boardWide.spec.js', 'e2e/headerWide.spec.js', 'e2e/libraryWide.spec.js', 'e2e/nutritionWide.spec.js', 'e2e/programWide.spec.js', 'e2e/settingsWide.spec.js'] },
   'S-40': { auto: 'e2e', specs: ['e2e/boardWide.spec.js', 'e2e/headerWide.spec.js', 'e2e/libraryWide.spec.js', 'e2e/nutritionWide.spec.js', 'e2e/programWide.spec.js', 'e2e/settingsWide.spec.js'] },
@@ -98,7 +98,7 @@ export const AUTOMATION: Readonly<Record<string, ScenarioAutomation>> = {
   'S-82': { auto: 'manual' },
   'S-83': { auto: 'manual' },
   'S-84': { auto: 'e2e', specs: ['e2e/receiptMerge.spec.js'] },
-  'S-85': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
+  'S-85': { auto: 'e2e', specs: ['e2e-qa/bulkShare.spec.js', 'e2e/groceryBulkShare.spec.js'] },
   'S-86': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
   'S-87': { auto: 'e2e', specs: ['e2e/groceryBulkShare.spec.js'] },
   'S-88': { auto: 'manual' },

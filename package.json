@@ -34,6 +34,7 @@
     "coverage": "sh scripts/coverage.sh",
     "e2e": "playwright test",
     "check": "node scripts/check.mjs",
+    "e2e:qa": "E2E_CONFIGS=playwright.qa.config.js node scripts/e2e-sync.mjs",
     "e2e:sync": "node scripts/e2e-sync.mjs",
     "screenshots": "node tools/screenshots.mjs",
     "db:start": "docker compose up -d --wait db",

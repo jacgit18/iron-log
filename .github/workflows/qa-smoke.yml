@@ -1,0 +1,61 @@
+name: QA scenario smoke run
+
+# Every night, and on demand (Actions -> QA scenario smoke run -> Run workflow): the QA scenarios in e2e-qa/ run as their seeded test accounts
+# (server/qa/personas.ts) against a real stack: the production build, the real API and a scratch Postgres, with Better Auth's test-only
+# sign-in. It never runs on a pull request, holds no secret and is not a required check, so it adds no minutes to a PR and cannot block a
+# merge. A red run is read next morning in Actions (the run summary lists each scenario). Brief: briefs/qa-nightly-smoke.md.
+on:
+  schedule:
+    - cron: '15 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15 # timeout-ok: not measured yet (estimate 4 to 6 min, same steps as e2e-sync); a cold apt cache on a slow mirror can double it
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ironlog
+          POSTGRES_PASSWORD: ironlog
+          POSTGRES_DB: ironlog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ironlog"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - uses: ./.github/actions/install-chromium
+      # Makes and drops its own scratch database on this server.
+      - run: npm run e2e:qa
+        env:
+          DATABASE_URL: postgres://ironlog:ironlog@127.0.0.1:5432/ironlog?sslmode=disable
+      - name: Write the run summary
+        if: always()
+        run: |
+          if [ -f test-results-qa/results.json ]; then node scripts/qa-smoke-summary.mjs test-results-qa/results.json "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"; else echo "No report was written: the run failed before the tests started." >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report-qa
+          path: |
+            playwright-report-qa
+            test-results-qa
+          retention-days: 7
