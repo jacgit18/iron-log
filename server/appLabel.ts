@@ -8,6 +8,9 @@ export function appLabelFrom(value: string | undefined): string | undefined {
   return value === 'QA' || value === 'Staging' ? value : undefined;
 }
 
+/** What QA and Staging answer for /robots.txt: crawlers are asked to stay out (owner, 2026-11-06). Production serves public/robots.txt, which allows everything and names the sitemap. */
+export const HIDE_FROM_SEARCH_ROBOTS = 'User-agent: *\nDisallow: /\n';
+
 // Each environment has its own copies of the icons in icons/<label>/ (scripts/make-icons.mjs draws a corner ribbon on them).
 const iconDir = (label: string) => `icons/${label.toLowerCase()}/`;
 const ownIcon = (src: string, label: string) => src.replace(/^(\.?\/)?icons\/(?!qa\/|staging\/)/, (_m, lead: string | undefined) => `${lead ?? ''}${iconDir(label)}`);
